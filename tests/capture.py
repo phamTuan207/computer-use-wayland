@@ -29,8 +29,8 @@ check('native PPM reader: long header, comment, exact pixels')
 assert Image.open(io.BytesIO(encoded(image,'PNG'))).convert('RGB').tobytes()==image.tobytes()
 check('PPM and PNG decode to identical pixels')
 
-monitor={'id':0,'name':'test','width':1920,'height':1200,'scale':1,'x':0,'y':0}
-client={'address':'0x1','monitor':0,'at':[0,0],'size':[1920,1200]}
+monitor={'id':0,'name':'test','width':1920,'height':1200,'scale':1,'x':0,'y':0,'activeWorkspace':{'id':1}}
+client={'address':'0x1','monitor':0,'at':[0,0],'size':[1920,1200],'workspace':{'id':1}}
 base=Image.new('RGB',(1920,1200),'white')
 actions=[{'type':'click','x':211,'y':211}]
 with tempfile.TemporaryDirectory() as folder,patch.object(cu,'STATE',Path(folder)/'state'),patch.object(cu,'CANCEL',Path(folder)/'cancelled'):

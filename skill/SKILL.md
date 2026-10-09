@@ -27,6 +27,7 @@ Use `--screen MONITOR` for layer-shell, popups or other regions without a window
 ```
 
 - Group predictable steps; observe again at unknown menus/layout changes. Inspect `after.image` only when needed. Default output is compact; `--verbose` exposes desktop geometry for debugging.
+- `observe --window` leaves focus and workspace unchanged and requires a visible target. Use `--focus` only when intentionally activating that window; it may switch workspace. Captures contain visible screen pixels, including overlapping windows.
 - This machine uses fcitx5 Bamboo; manual toggle is Ctrl+Space. `type` defaults to literal text: the tool checks IME state, temporarily deactivates composition and restores it even on failure. Do not toggle blindly. Use `ime:"compose"` only to intentionally type Telex. Before sending/submitting, verify recipient and exact draft in a separate step; `ok` means events executed, not success.
 - Focus-changing keys split internal keyboard groups so IME restoration occurs in the original field. Use aliases/chords such as `["Ctrl","a"]`, `["Enter"]`, `["PageDown"]`; no handwritten wtype modifier sequences.
 - Never reuse coordinates after screen/focus/geometry changes. A screen-change refusal returns `after` with fresh image/observation; inspect it before retrying. Failure may follow partial input; check `completed` and actual state. Do not repeat uncertain submissions. After two failed targeting attempts, change backend or ask.

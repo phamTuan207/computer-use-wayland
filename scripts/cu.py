@@ -197,13 +197,20 @@ def save_observation(image, meta, max_width, persist=True):
             old.unlink()
     return meta
 
-def observe(env, address, crop=None, max_width=1280, activate=True, persist=True):
+def require_visible_window(c, m):
+    visible={m.get('activeWorkspace',{}).get('id'),m.get('specialWorkspace',{}).get('id')}
+    visible.discard(None);visible.discard(0)
+    if c.get('mapped') is False or c.get('hidden') or (not c.get('pinned') and c.get('workspace',{}).get('id') not in visible):
+        raise RuntimeError('window is not visible on its monitor; switch workspace yourself or use observe --window ADDRESS --focus')
+
+def observe(env, address, crop=None, max_width=1280, activate=False, persist=True):
     from PIL import Image
     if activate: focus(env,address)
     c=window(env,address)
     monitors=hypr(env,'monitors')
     m=next((m for m in monitors if m['id']==c['monitor']),None)
     if not m: raise RuntimeError('window monitor unavailable')
+    require_visible_window(c,m)
     wb=bounds(c);mb=monitor_box(m)
     if crop is None:
         region=wb
@@ -223,7 +230,12 @@ def observe(env, address, crop=None, max_width=1280, activate=True, persist=True
     # PPM avoids zlib; cursor zoom needs no capture suspension (no -c).
     raw=run(['grim','-s','1','-g',geometry,'-t','ppm','-'],env,text=False)
     image=Image.open(io.BytesIO(raw)).convert('RGB')
-    if bounds(window(env,address)) != wb: raise RuntimeError('window moved during capture; observe again')
+    current=window(env,address)
+    if bounds(current) != wb or current['monitor']!=c['monitor']: raise RuntimeError('window moved during capture; observe again')
+    current_monitor=next((item for item in hypr(env,'monitors') if item['id']==current['monitor']),None)
+    if not current_monitor or monitor_box(current_monitor)!=mb or current_monitor['scale']!=m['scale'] or current_monitor.get('transform',0)!=m.get('transform',0):
+        raise RuntimeError('monitor layout changed during capture; observe again')
+    require_visible_window(current,current_monitor)
     meta={'backend':'desktop','scope':'window','window':address,'window_bounds':wb,'monitor':m['name'],
           'monitor_box':mb,'monitor_scale':m['scale'],'monitor_transform':m.get('transform',0),
           'region':region,'crop':crop,'capture_ms':round((time.monotonic()-start)*1000)}
@@ -518,11 +530,13 @@ def main():
     sub.add_parser('finish');sub.add_parser('recover');sub.add_parser('cancel')
     sub.add_parser('doctor');sub.add_parser('windows');sub.add_parser('resume');sub.add_parser('status')
     obs=sub.add_parser('observe');target=obs.add_mutually_exclusive_group(required=True);target.add_argument('--window');target.add_argument('--screen');obs.add_argument('--crop',nargs=4,type=int);obs.add_argument('--max-width',type=int,default=1280)
+    obs.add_argument('--focus',action='store_true',help='explicitly focus the target window before capture (may switch workspace)')
     act=sub.add_parser('act');act.add_argument('--observation',required=True);act.add_argument('--actions',required=True)
     obs.add_argument('--verbose',action='store_true');act.add_argument('--verbose',action='store_true')
     b=sub.add_parser('browser');b.add_argument('operation',choices=['start','tabs','observe','act']);b.add_argument('--endpoint',default='http://127.0.0.1:9222');b.add_argument('--target');b.add_argument('--snapshot');b.add_argument('--actions');b.add_argument('--image',action='store_true')
     a=sub.add_parser('a11y');a.add_argument('operation',choices=['apps','observe','act']);a.add_argument('--pid',type=int);a.add_argument('--snapshot');a.add_argument('--actions')
     args=parser.parse_args()
+    if args.command=='observe' and args.focus and not args.window:parser.error('--focus requires --window')
     # Local state commands and CDP requests do not use a compositor environment.
     env=(environment() if args.command in ('session','recover','doctor','windows','observe','act','a11y') or
          (args.command=='browser' and args.operation=='start') else None)
@@ -547,7 +561,7 @@ def main():
     elif args.command=='observe':
         check_cancel()
         with locked(): result=(observe_screen(env,args.screen,args.crop,args.max_width) if args.screen else
-                               observe(env,args.window,args.crop,args.max_width))
+                               observe(env,args.window,args.crop,args.max_width,activate=args.focus))
     elif args.command=='act':
         require_session()
         actions=json.loads(sys.stdin.read() if args.actions=='-' else Path(args.actions).read_text())

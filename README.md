@@ -56,6 +56,11 @@ JSON
 **in the returned image** and converts them itself, so they stay correct no
 matter how the image was scaled for viewing.
 
+`observe --window` captures visible screen pixels without changing focus or
+workspace. Hidden windows and windows on inactive workspaces are refused.
+Add `--focus` to explicitly activate the target before capture; this may switch
+workspace. Overlapping windows can still cover the captured area.
+
 ### Session boundary
 
 Launch the program responsible for the whole task with
