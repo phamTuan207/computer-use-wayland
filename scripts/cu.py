@@ -182,9 +182,10 @@ def save_observation(image, meta, max_width, persist=True):
                 pixel_sha256=hashlib.sha256(image.tobytes()).hexdigest(),max_width=max_width)
     out=STATE/(token+'.json');meta['observation']=str(out)
     out.write_text(json.dumps(meta));out.chmod(0o600)
-    # Keep recent observations; no indefinite screenshot accumulation.
+    # Only observation filenames are disposable; session.json is recovery state.
     for old in STATE.iterdir():
-        if old.suffix in ('.png','.json') and time.time()-old.stat().st_mtime>86400: old.unlink()
+        if re.fullmatch(r'[0-9a-f]{12}\.(?:png|json)',old.name) and time.time()-old.stat().st_mtime>86400:
+            old.unlink()
     return meta
 
 def observe(env, address, crop=None, max_width=1280, activate=True, persist=True):

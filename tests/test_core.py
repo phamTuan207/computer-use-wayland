@@ -49,6 +49,26 @@ finally:
                 self.assertTrue(result.stderr.endswith('cleanup_calls=1\n'))
 
 class Coordinates(unittest.TestCase):
+    def test_observation_cleanup_preserves_cursor_recovery_snapshot(self):
+        import os
+        from PIL import Image
+        with tempfile.TemporaryDirectory() as folder,patch.object(cu,'STATE',pathlib.Path(folder)):
+            stale=['session.json','other.json','abcdef012345.json','abcdef012345.png']
+            for name in stale:
+                item=cu.STATE/name
+                item.write_text('retained state')
+                os.utime(item,(0,0))
+            recent=cu.STATE/'123456abcdef.json'
+            recent.write_text('recent observation')
+            meta=cu.save_observation(Image.new('RGB',(2,2)),{},1280)
+            self.assertEqual((cu.STATE/'session.json').read_text(),'retained state')
+            self.assertTrue((cu.STATE/'other.json').exists())
+            self.assertFalse((cu.STATE/'abcdef012345.json').exists())
+            self.assertFalse((cu.STATE/'abcdef012345.png').exists())
+            self.assertTrue(recent.exists())
+            self.assertTrue(pathlib.Path(meta['image']).exists())
+            self.assertTrue(pathlib.Path(meta['observation']).exists())
+
     def test_local_state_and_cdp_do_not_discover_desktop_environment(self):
         import io
         for argv in (['cu','status'],['cu','browser','tabs']):
