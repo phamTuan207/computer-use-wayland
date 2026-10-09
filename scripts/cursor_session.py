@@ -169,14 +169,10 @@ def stop_group(group):
 
 def terminate_driver(driver):
     if driver is None:return
-    # Include ordinary child commands; reap our direct child in every case.
-    try:os.killpg(driver.pid,signal.SIGTERM)
-    except ProcessLookupError:pass
-    try:driver.wait(timeout=1)
-    except subprocess.TimeoutExpired:
-        try:os.killpg(driver.pid,signal.SIGKILL)
-        except ProcessLookupError:pass
-        driver.wait()
+    # A reaped group leader does not imply its descendants have stopped.
+    # Escalate for the entire group before reaping our direct child.
+    stop_group(driver.pid)
+    driver.wait()
 
 
 def supervise(env, argv):

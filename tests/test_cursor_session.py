@@ -152,6 +152,40 @@ class Lifecycle(unittest.TestCase):
         else:self.fail('guardian child not found')
         p.communicate(timeout=8);self.assert_restored()
 
+    def _kill_group(self,pid):
+        try:os.killpg(os.getpgid(pid),signal.SIGKILL)
+        except (ProcessLookupError,PermissionError):pass
+
+    def test_guardian_death_reaps_whole_driver_group(self):
+        # stop_group() escalates to SIGKILL for the whole driver group. When the
+        # guardian is killed instead, the wrapper's terminate_driver must not leave
+        # a SIGTERM-ignoring grandchild alive after restore.
+        heart=self.folder/'heartbeat';pidf=self.folder/'grandchild.pid';ready=self.folder/'driver-ready'
+        grand=("import os,signal,sys,time\nfrom pathlib import Path\n"
+               "signal.signal(signal.SIGTERM,signal.SIG_IGN)\n"
+               "Path(sys.argv[2]).write_text(str(os.getpid()))\n"
+               "heart=Path(sys.argv[1])\n"
+               "while True:\n"
+               "    heart.write_text(str(time.time()));time.sleep(.1)\n")
+        code=(f"import subprocess,sys,time\nfrom pathlib import Path\n"
+              f"subprocess.Popen([sys.executable,'-c',{grand!r},{str(heart)!r},{str(pidf)!r}])\n"
+              f"Path({str(ready)!r}).touch()\n"
+              f"time.sleep(60)\n")
+        p=self.launch(code)
+        try:
+            self.wait_for(lambda:ready.exists() and heart.exists())
+            children=Path('/proc',str(p.pid),'task',str(p.pid),'children').read_text().split()
+            for child in children:
+                if b'cursor_session.py' in Path('/proc',child,'cmdline').read_bytes() and b'guard' in Path('/proc',child,'cmdline').read_bytes():
+                    os.kill(int(child),signal.SIGKILL);break
+            else:self.fail('guardian child not found')
+            p.wait(timeout=8);self.assert_restored()
+            frozen=heart.read_text();time.sleep(.3)
+            self.assertEqual(heart.read_text(),frozen,'SIGTERM-ignoring grandchild survived guardian death')
+            p.communicate(timeout=2)
+        finally:
+            if pidf.exists():self._kill_group(int(pidf.read_text()))
+
     def test_startup_failures_restore_if_write_may_have_applied(self):
         for flag in ('partial_failure','hotkey_failure'):
             with self.subTest(flag=flag):
