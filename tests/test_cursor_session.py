@@ -315,4 +315,44 @@ class Lifecycle(unittest.TestCase):
         self.assertTrue(snapshot.exists())
 
 
+class QuietFrames(unittest.TestCase):
+    def test_pixel_layout_and_output_changes_reset_gate(self):
+        import io
+        from PIL import Image
+        base={'name':'test','x':0,'y':0,'width':4,'height':4,'scale':1}
+        def ppm(color):
+            image=Image.new('RGB',(4,4));image.putpixel((0,0),color)
+            out=io.BytesIO();image.save(out,format='PPM');return out.getvalue()
+        black=ppm((0,0,0))
+        # All three channels and a sub-mean pixel change must reset equality.
+        changes=[([base],ppm(color)) for color in ((1,0,0),(0,1,0),(0,0,1))]
+        changes += [([dict(base,**change)],black) for change in
+                    ({'x':1},{'scale':2},{'transform':1},{'name':'other'})]
+        changes += [([base,dict(base,name='second')],black)]
+        for changed in changes:
+            with self.subTest(changed=changed[0]):
+                rounds=iter([([base],black)]*3+[changed]*4)
+                current=[None];captures=[0]
+                def run(argv,**kwargs):
+                    if argv[0]=='hyprctl':
+                        current[0]=next(rounds);captures[0]+=1
+                        raw=json.dumps(current[0][0]).encode()
+                    else:raw=current[0][1]
+                    return subprocess.CompletedProcess(argv,0,raw,b'')
+                with patch.object(session.subprocess,'run',side_effect=run):
+                    session.wait_for_quiet({},lambda:False,attempts=7)
+                self.assertEqual(captures[0],7)
+
+    def test_static_gate_still_requires_four_captures(self):
+        import io
+        from PIL import Image
+        out=io.BytesIO();Image.new('RGB',(2,2)).save(out,format='PPM')
+        monitors=b'[{"name":"test","x":0,"y":0,"width":2,"height":2,"scale":1}]'
+        def run(argv,**kwargs):
+            return subprocess.CompletedProcess(argv,0,monitors if argv[0]=='hyprctl' else out.getvalue(),b'')
+        with patch.object(session.subprocess,'run',side_effect=run) as capture:
+            session.wait_for_quiet({},lambda:False,attempts=4)
+        self.assertEqual(capture.call_count,8)
+
+
 if __name__=='__main__':unittest.main()

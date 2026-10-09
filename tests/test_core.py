@@ -9,7 +9,53 @@ from unittest.mock import patch
 path=pathlib.Path(__file__).resolve().parents[1]/'scripts/cu.py'
 spec=importlib.util.spec_from_file_location('cu',path);cu=importlib.util.module_from_spec(spec);spec.loader.exec_module(cu)
 
+class CliExit(unittest.TestCase):
+    def run_cli(self, args):
+        import subprocess
+        import sys
+        # Execute the real entry point, but replace session cleanup entirely.
+        # No desktop discovery or live session files can be touched here.
+        code='''import os, runpy, sys, types
+from unittest.mock import Mock
+session = types.ModuleType('cursor_session')
+session.request_stop = Mock()
+sys.modules['cursor_session'] = session
+os.environ['CU_SESSION_TOKEN'] = 'fixture'
+sys.argv = sys.argv[1:]
+try:
+    runpy.run_path(sys.argv[0], run_name='__main__')
+finally:
+    print('cleanup_calls=' + str(session.request_stop.call_count), file=sys.stderr)
+'''
+        return subprocess.run([sys.executable,'-c',code,str(path),*args],
+                              capture_output=True,text=True,timeout=5)
+
+    def test_help_succeeds_without_stopping_session(self):
+        for args in (['--help'],['browser','--help'],['session','--help']):
+            with self.subTest(args=args):
+                result=self.run_cli(args)
+                self.assertEqual(result.returncode,0,result.stderr)
+                self.assertIn('usage:',result.stdout)
+                self.assertNotIn('"ok": false',result.stdout)
+                self.assertEqual(result.stderr,'cleanup_calls=0\n')
+
+    def test_invalid_arguments_preserve_exit_code_and_stop_session(self):
+        for args in ([],['unknown-command'],['observe']):
+            with self.subTest(args=args):
+                result=self.run_cli(args)
+                self.assertEqual(result.returncode,2,result.stderr)
+                self.assertEqual(result.stdout,'')
+                self.assertIn('error:',result.stderr)
+                self.assertTrue(result.stderr.endswith('cleanup_calls=1\n'))
+
 class Coordinates(unittest.TestCase):
+    def test_local_state_and_cdp_do_not_discover_desktop_environment(self):
+        import io
+        for argv in (['cu','status'],['cu','browser','tabs']):
+            with self.subTest(argv=argv),patch.object(cu.sys,'argv',argv),patch.object(cu.sys,'stdout',io.StringIO()),patch.object(cu,'environment') as environment,patch.object(cu,'check_cancel'),patch.object(cu,'locked'),patch.object(cu,'browser',return_value={'ok':True}):
+                self.assertEqual(cu.main(),0)
+                environment.assert_not_called()
+
     def test_cancel_interrupts_running_adapter_and_latches(self):
         with tempfile.TemporaryDirectory() as folder,patch.object(cu,'CANCEL',pathlib.Path(folder)/'cancelled'):
             def cancel_soon():

@@ -2,7 +2,6 @@
 """Shared local computer-use CLI. No model API calls or daemon required."""
 import argparse
 from contextlib import contextmanager
-import base64
 import fcntl
 import hashlib
 import io
@@ -17,8 +16,6 @@ import subprocess
 import sys
 import time
 import uuid
-import urllib.request
-import urllib.parse
 
 ROOT = Path(__file__).resolve().parents[1]
 STATE = Path(os.environ.get('XDG_CACHE_HOME', str(Path.home()/'.cache'))) / 'agent-computer-use'
@@ -471,6 +468,8 @@ def browser(request):
     raise RuntimeError('CDP adapter failed')
 
 def browser_start(env,endpoint):
+    import urllib.request
+    import urllib.parse
     url=urllib.parse.urlparse(endpoint)
     if url.hostname not in ('localhost','127.0.0.1','::1') or url.scheme!='http':raise ValueError('loopback http endpoint required')
     port=url.port or 9222
@@ -510,7 +509,10 @@ def main():
     obs.add_argument('--verbose',action='store_true');act.add_argument('--verbose',action='store_true')
     b=sub.add_parser('browser');b.add_argument('operation',choices=['start','tabs','observe','act']);b.add_argument('--endpoint',default='http://127.0.0.1:9222');b.add_argument('--target');b.add_argument('--snapshot');b.add_argument('--actions');b.add_argument('--image',action='store_true')
     a=sub.add_parser('a11y');a.add_argument('operation',choices=['apps','observe','act']);a.add_argument('--pid',type=int);a.add_argument('--snapshot');a.add_argument('--actions')
-    args=parser.parse_args();env=environment()
+    args=parser.parse_args()
+    # Local state commands and CDP requests do not use a compositor environment.
+    env=(environment() if args.command in ('session','recover','doctor','windows','observe','act','a11y') or
+         (args.command=='browser' and args.operation=='start') else None)
     if args.command in ('session','finish','recover','cancel'):
         import cursor_session
         if args.command=='session':return cursor_session.supervise(env,args.driver)
@@ -559,6 +561,7 @@ def main():
         with locked():result=browser(request)
         raw=result.pop('image_base64',None) if isinstance(result,dict) else None
         if raw:
+            import base64
             from PIL import Image
             result['image']=save_observation(Image.open(io.BytesIO(base64.b64decode(raw))).convert('RGB'),{'backend':'browser','target':args.target},1280)['image']
     if args.command in ('observe','act') and not args.verbose:result=compact_result(result)
@@ -579,6 +582,11 @@ def stop_session_on_error():
 
 if __name__=='__main__':
     try: exit_code=main()
+    except SystemExit as exc:
+        # argparse uses SystemExit for help (0) and invalid arguments (2).
+        # Help is successful and must not stop an active automation session.
+        exit_code=exc.code
+        if exit_code:stop_session_on_error()
     except BaseException as exc:
         stop_session_on_error()
         print(json.dumps({'ok':False,'error':str(exc)},ensure_ascii=False),flush=True);exit_code=1

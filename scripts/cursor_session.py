@@ -155,8 +155,13 @@ def wait_for_quiet(env, cancelled, timeout=6.0, attempts=120):
                 if layout!=old_layout or image.size!=old.size:
                     equal=False;break
                 diff=ImageChops.difference(old,image)
-                means.append(sum(ImageStat.Stat(diff).mean)/3)
-                if diff.getbbox() is not None:equal=False
+                # Mean is diagnostic only. An identical diff has mean zero;
+                # skip its histogram without adding work to changing frames.
+                if diff.getbbox() is None:
+                    means.append(0.0)
+                else:
+                    equal=False
+                    means.append(sum(ImageStat.Stat(diff).mean)/3)
         last_mean=max(means) if means else None
         matches=matches+1 if equal else 0
         if matches>=3:

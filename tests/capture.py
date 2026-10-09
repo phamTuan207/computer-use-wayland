@@ -123,7 +123,9 @@ with tempfile.TemporaryDirectory() as folder,patch.object(cu,'STATE',Path(folder
             cu.browser({'actions':[{'type':typ,field:value}]*32})
             assert adapter.call_args.kwargs['timeout']==expected
     check('browser timeout clamps 32 asserts/waits to 60 seconds')
-    with patch.object(cu.urllib.request,'urlopen',return_value=io.StringIO('{}')) as urlopen:
+    # urllib is imported lazily inside browser_start, so patch the module itself
+    # rather than a name on cu, which no longer exists at import time.
+    with patch('urllib.request.urlopen',return_value=io.StringIO('{}')) as urlopen:
         assert cu.browser_start({},'http://[::1]:9222')['reused'] is True
         assert urlopen.call_args.args[0]=='http://[::1]:9222/json/version'
     check('IPv6 loopback endpoint accepted and probed unchanged')
