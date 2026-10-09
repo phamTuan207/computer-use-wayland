@@ -40,9 +40,17 @@ Offline validation passed: 31 unittest cases and tests/capture.py, including
 late focus settlement (tests/capture.py:61), capture without overlay subprocesses
 (tests/capture.py:108), and 32-action adapter timeout caps (tests/capture.py:121).
 
-OPEN: live observe wall time after removal. The requested quickshell environment
-donor was unavailable in the sandbox process namespace. Inherited session
-sockets were visible, but connection attempts to both Wayland and Hyprland
-returned EPERM; hyprctl monitors exited 2. No live timing was obtained. The
-reported 376 ms observe and roughly 530 ms act remain the user's baseline,
-not measurements of this working tree. No live input or focus changes were run.
+Live observe timing, 2026-10-09. Measured on a real desktop session (monitor
+eDP-2, 1920x1200, scale 1) with a read-only harness: seven runs of
+`observe --screen eDP-2`, each with a throwaway XDG_CACHE_HOME that is removed
+on exit. No act, focus change, or pointer movement.
+
+- per-run wall time (ms): 173.2, 174.6, 171.7, 168.3, 167.4, 176.1, 169.9
+- median wall time: 171.7 ms
+- median capture_ms (grim plus decode inside scripts/cu.py:239-245): 41 ms
+- returned image: 1280x800
+
+The reported 376 ms observe remains the user's baseline, not a measurement of
+this working tree. Against it, median wall time here is about 54% lower
+(2.19x faster); treat the delta as indicative because the methods may differ.
+The roughly 530 ms act baseline is still unmeasured.

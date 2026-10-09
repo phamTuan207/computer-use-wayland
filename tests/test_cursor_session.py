@@ -173,6 +173,7 @@ class Lifecycle(unittest.TestCase):
         p=self.launch('pass');p.communicate(timeout=8);self.assert_restored()
         self.configure(restore_failures=3)
         p=self.launch('pass');out,err=p.communicate(timeout=8)
+        self.assertEqual(p.returncode,1,(out,err))
         self.assertIn('snapshot retained',err)
         self.assertTrue((self.state/'session.json').exists())
         result=subprocess.run([sys.executable,str(ROOT/'scripts/cu.py'),'recover'],env=self.env,

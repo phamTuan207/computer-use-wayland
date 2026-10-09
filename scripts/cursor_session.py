@@ -186,6 +186,7 @@ def supervise(env, argv):
     read_fd,write_fd=os.pipe()
     token=uuid.uuid4().hex
     guard=None;driver=None;gate_read=None;gate_write=None
+    outcome=1
     previous={}
     def interrupted(signum,frame):raise KeyboardInterrupt('automation session interrupted')
     try:
@@ -213,9 +214,10 @@ def supervise(env, argv):
         while driver.poll() is None:
             if guard.poll() is not None or CANCEL.exists() or (STATE/('stop-'+token)).exists():
                 terminate_driver(driver)
-                return 1
+                break
             time.sleep(.05)
-        return driver.returncode if driver.returncode>=0 else 1
+        else:
+            outcome=driver.returncode if driver.returncode>=0 else 1
     finally:
         # Do not let another termination signal interrupt restoration/reaping.
         for sig in previous:signal.signal(sig,signal.SIG_IGN)
@@ -233,7 +235,10 @@ def supervise(env, argv):
             if guard.returncode<0 and SNAPSHOT.exists():
                 # The guardian itself died: wrapper remains a second restoration owner.
                 recover(env,token)
+            # A successful driver cannot hide failed cursor restoration.
+            if guard.returncode!=0 and outcome==0:outcome=1
         for sig,handler in previous.items():signal.signal(sig,handler)
+    return outcome
 
 
 if __name__=='__main__':
