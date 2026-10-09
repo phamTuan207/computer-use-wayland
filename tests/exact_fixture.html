@@ -1,0 +1,12 @@
+<!doctype html><meta charset="utf-8"><title>CU Exact Lab</title>
+<style>body{font:22px sans-serif;margin:40px}input{font:22px sans-serif;width:650px}#list{height:220px;overflow:auto;border:4px solid #ff00ff;margin-top:25px;width:650px}.row{height:50px}</style>
+<h1>Local exact-text and scroll test</h1><input id="draft" autofocus><p id="result">No external messages</p><div id="list"></div>
+<script>
+let sent=0,wheel=null,hover=null;const draft=document.querySelector('#draft'),list=document.querySelector('#list');
+for(let i=0;i<60;i++)list.insertAdjacentHTML('beforeend',`<div class="row">Local row ${i}</div>`);
+function update(){const r=list.getBoundingClientRect();document.title='CU Exact Lab|'+JSON.stringify({text:draft.value,sent,scroll:list.scrollTop,wheel,hover,origin:[window.mozInnerScreenX,window.mozInnerScreenY],rect:[r.x+r.width/2,r.y+r.height/2]})}
+window.addEventListener('wheel',e=>{wheel={delta:e.deltaY,ctrl:e.ctrlKey,shift:e.shiftKey,target:e.target.id||e.target.className};update()},{passive:true});
+window.addEventListener('mousemove',e=>{hover=e.target.id||e.target.className;update()});
+draft.oninput=update;draft.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();sent++;document.querySelector('#result').textContent='Local only: '+draft.value;update()}};
+list.onscroll=update;window.onresize=update;window.onload=()=>{draft.focus();update()};
+</script>

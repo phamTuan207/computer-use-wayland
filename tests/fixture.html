@@ -1,0 +1,15 @@
+<!doctype html><meta charset="utf-8"><title>Computer Use Test Lab</title>
+<style>body{font:18px sans-serif;padding:36px;background:#f7f8fa}input{font:inherit;width:340px;padding:12px}button{font:inherit;padding:12px;margin:10px}#tiny{padding:0;width:24px;height:24px;font-size:12px}#overlay{display:none;position:fixed;inset:0;background:#3338;z-index:10}#drag{width:40px;height:40px;background:#25b;position:absolute;left:500px;top:300px;cursor:grab}#drop{position:absolute;left:620px;top:300px;width:100px;height:100px;border:3px dashed #25b}</style>
+<h1>Computer Use Test Lab</h1><label>Name <input id="name" aria-label="Name"></label>
+<button id="save">Save</button><button id="tiny" aria-label="Small target">+</button>
+<button id="show" onclick="document.querySelector('#overlay').style.display='block'">Show overlay</button>
+<p id="status">Ready</p><div id="drag" draggable="true"></div><div id="drop">Drop here</div><div id="overlay"></div>
+<script>
+globalThis.lab={save:0,tiny:0,trusted:0,drag:0,events:[]};
+document.addEventListener('click',e=>{lab.events.push({id:e.target.id,x:e.clientX,y:e.clientY,trusted:e.isTrusted});if(e.isTrusted)lab.trusted++});
+save.onclick=()=>{lab.save++;status.textContent='Saved '+name.value};
+document.querySelector('#save').onclick=()=>{lab.save++;document.querySelector('#status').textContent='Saved '+document.querySelector('#name').value};
+tiny.onclick=()=>{lab.tiny++;document.querySelector('#status').textContent='Small '+lab.tiny};
+drag.ondragstart=e=>e.dataTransfer.setData('text/plain','test');
+drop.ondragover=e=>e.preventDefault();drop.ondrop=e=>{e.preventDefault();lab.drag++;document.querySelector('#status').textContent='Dropped'};
+</script>
