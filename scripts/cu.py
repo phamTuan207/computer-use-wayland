@@ -23,9 +23,6 @@ import urllib.parse
 ROOT = Path(__file__).resolve().parents[1]
 STATE = Path(os.environ.get('XDG_CACHE_HOME', str(Path.home()/'.cache'))) / 'agent-computer-use'
 CANCEL = STATE / 'cancelled'
-OVERLAY = ROOT / 'overlay/shell.qml'
-GLASS_PLUGIN = ROOT / 'native/hyprglass.so'
-_overlay_active = False
 SESSION_KEYS = {'XDG_RUNTIME_DIR','WAYLAND_DISPLAY','DISPLAY','HYPRLAND_INSTANCE_SIGNATURE',
                 'DBUS_SESSION_BUS_ADDRESS','XDG_CURRENT_DESKTOP','XDG_SESSION_TYPE',
                 'GDK_BACKEND','QT_QPA_PLATFORM','ELECTRON_OZONE_PLATFORM_HINT','MOZ_ENABLE_WAYLAND'}
@@ -121,7 +118,10 @@ def focus(env, address):
     if not re.fullmatch(r'0x[0-9a-fA-F]+',address or ''):raise ValueError('exact window address required')
     if hypr(env,'activewindow').get('address')==address:return
     run(['hyprctl','dispatch',f'hl.dsp.focus({{ window = "address:{address}" }})'],env)
-    if hypr(env,'activewindow').get('address')==address:return
+    # Dispatch acknowledgment can precede compositor focus; allow five settling polls.
+    for _ in range(5):
+        time.sleep(.04)
+        if hypr(env,'activewindow').get('address')==address:return
     raise RuntimeError('target window did not gain focus')
 
 def bounds(c): return c['at']+c['size']
@@ -137,63 +137,13 @@ def prepare_state():
     STATE.chmod(0o700)
 
 def check_cancel():
+    token=os.environ.get('CU_SESSION_TOKEN')
+    if token:
+        try:current=json.loads((STATE/'session.json').read_text()).get('token')
+        except (OSError,ValueError):current=None
+        if current!=token or (STATE/('stop-'+token)).exists():
+            raise RuntimeError('automation session ended; stop this task')
     if CANCEL.exists(): raise RuntimeError('cancelled by user; stop this task. Run computer-use resume only after the user asks to continue')
-
-def overlay_ipc(env, command):
-    return subprocess.run(['quickshell','ipc','-p',str(OVERLAY),'call','computerUse',command],
-                          env=env,capture_output=True,timeout=1).returncode == 0
-
-def ensure_overlay_glass(env):
-    if not GLASS_PLUGIN.is_file(): return
-    try:
-        if 'Plugin hyprglass ' in run(['hyprctl','plugin','list'],env,timeout=3): return
-        run(['hyprctl','plugin','load',str(GLASS_PLUGIN)],env,timeout=5)
-        run(['hyprctl','reload'],env,timeout=5)  # Apply the overlay-only Lua preset.
-    except (RuntimeError,OSError,subprocess.TimeoutExpired):
-        pass  # The status pill still works with Hyprland's ordinary blur.
-
-def overlay_show(env):
-    global _overlay_active
-    if CANCEL.exists() or not env.get('WAYLAND_DISPLAY') or not shutil.which('quickshell'): return
-    try:
-        ensure_overlay_glass(env)
-        run(['python3',str(ROOT/'scripts/overlayctl.py'),'hotkey-on'],env,timeout=4)
-        if not overlay_ipc(env,'activate'):
-            prepare_state()
-            log=open(STATE/'overlay.log','a')
-            try:
-                subprocess.Popen(['quickshell','-d','-n','-p',str(OVERLAY)],env=env,
-                                 stdin=subprocess.DEVNULL,stdout=log,stderr=log,start_new_session=True)
-            finally: log.close()
-            for _ in range(20):
-                time.sleep(.05)
-                if overlay_ipc(env,'activate'): break
-            else:
-                run(['python3',str(ROOT/'scripts/overlayctl.py'),'hotkey-off'],env,timeout=4)
-                return
-        _overlay_active=True
-    except (OSError,subprocess.TimeoutExpired): pass
-
-def overlay_hide(env):
-    global _overlay_active
-    if not _overlay_active: return
-    try: overlay_ipc(env,'deactivate')
-    except (OSError,subprocess.TimeoutExpired): pass
-    _overlay_active=False
-
-@contextmanager
-def clear_capture(env):
-    was_active=_overlay_active
-    # A previous CLI process may have left its daemon visible.
-    present=was_active or (shutil.which('quickshell') and json.loads(run(
-        ['quickshell','list','-p',str(OVERLAY),'-j'],env,timeout=1)))
-    if present:
-        if not overlay_ipc(env,'suspend'):raise RuntimeError('overlay suspend failed; refusing capture')
-        time.sleep(.04)  # Let the compositor present one frame without the overlay.
-    try: yield
-    finally:
-        if was_active and not CANCEL.exists():
-            if not overlay_ipc(env,'restore'):raise RuntimeError('overlay restore failed')
 
 def run_cancelable(argv, env=None, input=None, timeout=12):
     check_cancel()
@@ -263,9 +213,8 @@ def observe(env, address, crop=None, max_width=1280, activate=True, persist=True
     # grim -s 1 uses logical layout pixels; explicitly exclude the cursor (no -c).
     geometry=f'{region[0]},{region[1]} {region[2]}x{region[3]}'
     start=time.monotonic()
-    with clear_capture(env):
-        # PPM avoids zlib; -l is a PNG compression level and does not apply.
-        raw=run(['grim','-s','1','-g',geometry,'-t','ppm','-'],env,text=False)
+    # PPM avoids zlib; cursor zoom needs no capture suspension (no -c).
+    raw=run(['grim','-s','1','-g',geometry,'-t','ppm','-'],env,text=False)
     image=Image.open(io.BytesIO(raw)).convert('RGB')
     if bounds(window(env,address)) != wb: raise RuntimeError('window moved during capture; observe again')
     meta={'backend':'desktop','scope':'window','window':address,'window_bounds':wb,'monitor':m['name'],
@@ -288,9 +237,8 @@ def observe_screen(env,monitor,crop=None,max_width=1280,persist=True):
     mb=monitor_box(m);region=screen_region(mb,crop)
     geometry=f'{region[0]},{region[1]} {region[2]}x{region[3]}'
     start=time.monotonic()
-    with clear_capture(env):
-        # PPM avoids zlib; -l is a PNG compression level and does not apply.
-        raw=run(['grim','-s','1','-g',geometry,'-t','ppm','-'],env,text=False)
+    # PPM avoids zlib; cursor zoom needs no capture suspension (no -c).
+    raw=run(['grim','-s','1','-g',geometry,'-t','ppm','-'],env,text=False)
     current=next((m for m in hypr(env,'monitors') if m['name']==monitor),None)
     if not current or monitor_box(current)!=mb or current['scale']!=m['scale'] or current.get('transform',0)!=m.get('transform',0):
         raise RuntimeError('monitor layout changed during capture; observe again')
@@ -515,9 +463,10 @@ def desktop_act(env,meta,actions):
 def browser(request):
     # Keep setup/snapshot allowance; each guard can take 5s, and the final
     # assert evaluation can overrun its polling budget by another 5s.
+    # Cap adapter execution instead of accumulating unbounded per-action allowance.
     budget=sum(5000+(max(0,min(a.get('timeout_ms',1000),3000))+5000 if a['type']=='assert' else
                      a.get('ms',100) if a['type']=='wait' else 0) for a in request.get('actions',[]))
-    out=run_cancelable(['node',str(ROOT/'scripts/cdp.mjs')],input=json.dumps(request),timeout=35+budget/1000)
+    out=run_cancelable(['node',str(ROOT/'scripts/cdp.mjs')],input=json.dumps(request),timeout=min(60,35+budget/1000))
     if out.strip(): return json.loads(out)
     raise RuntimeError('CDP adapter failed')
 
@@ -553,6 +502,8 @@ def locked():
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     sub=parser.add_subparsers(dest='command',required=True)
+    session=sub.add_parser('session');session.add_argument('driver',nargs=argparse.REMAINDER)
+    sub.add_parser('finish');sub.add_parser('recover');sub.add_parser('cancel')
     sub.add_parser('doctor');sub.add_parser('windows');sub.add_parser('resume');sub.add_parser('status')
     obs=sub.add_parser('observe');target=obs.add_mutually_exclusive_group(required=True);target.add_argument('--window');target.add_argument('--screen');obs.add_argument('--crop',nargs=4,type=int);obs.add_argument('--max-width',type=int,default=1280)
     act=sub.add_parser('act');act.add_argument('--observation',required=True);act.add_argument('--actions',required=True)
@@ -560,7 +511,15 @@ def main():
     b=sub.add_parser('browser');b.add_argument('operation',choices=['start','tabs','observe','act']);b.add_argument('--endpoint',default='http://127.0.0.1:9222');b.add_argument('--target');b.add_argument('--snapshot');b.add_argument('--actions');b.add_argument('--image',action='store_true')
     a=sub.add_parser('a11y');a.add_argument('operation',choices=['apps','observe','act']);a.add_argument('--pid',type=int);a.add_argument('--snapshot');a.add_argument('--actions')
     args=parser.parse_args();env=environment()
-    if args.command=='resume':
+    if args.command in ('session','finish','recover','cancel'):
+        import cursor_session
+        if args.command=='session':return cursor_session.supervise(env,args.driver)
+        if args.command=='recover':return cursor_session.recover(env)
+        if args.command=='cancel':
+            prepare_state();CANCEL.touch(mode=0o600)
+        cursor_session.request_stop()
+        result={'ok':True}
+    elif args.command=='resume':
         CANCEL.unlink(missing_ok=True)
         result={'ok':True,'cancelled':False}
     elif args.command=='status': result={'ok':True,'cancelled':CANCEL.exists()}
@@ -571,27 +530,30 @@ def main():
         result['monitors']=[{k:m[k] for k in ('name','width','height','scale','transform')} for m in result['monitors']]
     elif args.command=='windows': result=[{k:c.get(k) for k in ('address','class','title','at','size','workspace')} for c in hypr(env,'clients')]
     elif args.command=='observe':
-        check_cancel();overlay_show(env)
+        check_cancel()
         with locked(): result=(observe_screen(env,args.screen,args.crop,args.max_width) if args.screen else
                                observe(env,args.window,args.crop,args.max_width))
     elif args.command=='act':
+        require_session()
         actions=json.loads(sys.stdin.read() if args.actions=='-' else Path(args.actions).read_text())
-        check_cancel();overlay_show(env)
+        check_cancel()
         with locked(): result=desktop_act(env,json.loads(Path(args.observation).read_text()),actions)
     elif args.command=='a11y':
-        check_cancel();overlay_show(env)
+        check_cancel()
         request={'operation':args.operation,'pid':args.pid,'snapshot':args.snapshot}
         if args.operation=='act':
+            require_session()
             if not args.actions: raise ValueError('--actions required')
             request['actions']=json.loads(sys.stdin.read() if args.actions=='-' else Path(args.actions).read_text())
         with locked():out=run_cancelable(['python3',str(ROOT/'scripts/a11y.py')],env=env,input=json.dumps(request),timeout=15)
         result=json.loads(out) if out.strip() else {'ok':False,'error':'accessibility adapter returned no data'}
     else:
-        check_cancel();overlay_show(env)
+        check_cancel()
         if args.operation=='start':
             print(json.dumps(browser_start(env,args.endpoint)));return 0
         request={'operation':args.operation,'endpoint':args.endpoint,'target':args.target,'snapshot':args.snapshot,'image':args.image}
         if args.operation=='act':
+            require_session()
             if not args.actions: raise ValueError('--actions required')
             request['actions']=json.loads(sys.stdin.read() if args.actions=='-' else Path(args.actions).read_text());validate_actions(request['actions'],'browser')
         with locked():result=browser(request)
@@ -600,11 +562,24 @@ def main():
             from PIL import Image
             result['image']=save_observation(Image.open(io.BytesIO(base64.b64decode(raw))).convert('RGB'),{'backend':'browser','target':args.target},1280)['image']
     if args.command in ('observe','act') and not args.verbose:result=compact_result(result)
-    print(json.dumps(result,ensure_ascii=False,separators=(',',':')))
-    if isinstance(result,dict) and result.get('ok') is False: return 1
+    print(json.dumps(result,ensure_ascii=False,separators=(',',':')),flush=True)
+    if isinstance(result,dict) and result.get('ok') is False:
+        stop_session_on_error();return 1
     return 0
 
+def require_session():
+    if not os.environ.get('CU_SESSION_TOKEN'):
+        raise RuntimeError('input requires computer-use session -- DRIVER [ARGS...]')
+    check_cancel()
+
+def stop_session_on_error():
+    if os.environ.get('CU_SESSION_TOKEN'):
+        import cursor_session
+        cursor_session.request_stop(os.environ['CU_SESSION_TOKEN'])
+
 if __name__=='__main__':
-    try: sys.exit(main())
-    except Exception as exc:
-        print(json.dumps({'ok':False,'error':str(exc)},ensure_ascii=False));sys.exit(1)
+    try: exit_code=main()
+    except BaseException as exc:
+        stop_session_on_error()
+        print(json.dumps({'ok':False,'error':str(exc)},ensure_ascii=False),flush=True);exit_code=1
+    sys.exit(exit_code)

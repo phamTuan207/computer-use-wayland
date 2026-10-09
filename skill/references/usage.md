@@ -1,3 +1,15 @@
+## Automation sessions
+
+Run the whole task driver as `computer-use session -- DRIVER [ARGS...]`, not a
+separate session around each action. Its child commands inherit cursor ownership.
+Input commands require a live session; standalone capture remains available.
+Cursor zoom uses the saved `getoption cursor:zoom_factor` value and Lua `eval`;
+it never changes cursor theme or size. `finish` requests completion; `cancel`
+latches cancellation. Escape works throughout the session, without a timer.
+The wrapper waits for restoration on exit. A refusal or tool error ends the
+session. Use `recover` for retained snapshots after restoration failures.
+Browser adapter timeout is capped at 60 seconds; split larger batches.
+
 # Commands and schemas
 
 All commands emit bounded JSON. `--actions -` accepts JSON from stdin. Prefer a JSON file for complex input; never interpolate user text into shell code.

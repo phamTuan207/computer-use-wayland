@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Persistent user cancellation latch for the computer-use overlay."""
+"""Persistent user cancellation latch for a computer-use session."""
 import argparse
 import json
 import os
@@ -9,7 +9,6 @@ import sys
 
 STATE = Path(os.environ.get('XDG_CACHE_HOME', str(Path.home() / '.cache'))) / 'agent-computer-use'
 CANCEL = STATE / 'cancelled'
-OVERLAY = Path(__file__).resolve().parents[1] / 'overlay/shell.qml'
 HOTKEY = 'agentComputerUseEscapeBind'
 
 def hypr_eval(code):
@@ -43,9 +42,9 @@ def main():
         fd = os.open(CANCEL, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
         with os.fdopen(fd, 'w') as stream:
             stream.write('cancelled by user\n')
-        hotkey_off()
-        subprocess.run(['quickshell', 'ipc', '-p', str(OVERLAY), 'call', 'computerUse', 'deactivate'],
-                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=2)
+        # Latch first; the session guardian restores independently of unbinding.
+        import cursor_session
+        cursor_session.request_stop()
     elif command == 'resume':
         CANCEL.unlink(missing_ok=True)
     elif command == 'hotkey-on':

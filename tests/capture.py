@@ -52,12 +52,15 @@ with tempfile.TemporaryDirectory() as folder,patch.object(cu,'STATE',Path(folder
 
     with patch.object(cu,'hypr',return_value={'address':'0x1'}),patch.object(cu,'run') as dispatch:
         cu.focus({},'0x1');dispatch.assert_not_called()
-    with patch.object(cu,'hypr',return_value={'address':'0x2'}) as query,patch.object(cu,'run') as dispatch:
+    with patch.object(cu,'hypr',return_value={'address':'0x2'}) as query,patch.object(cu,'run') as dispatch,patch.object(cu.time,'sleep') as sleep:
         raises('target window did not gain focus',lambda:cu.focus({},'0x1'))
-        assert query.call_count==2 and dispatch.call_count==1
+        assert query.call_count==6 and dispatch.call_count==1
+        assert sleep.call_args_list==[__import__('unittest').mock.call(.04)]*5
     with patch.object(cu,'hypr',side_effect=[{'address':'0x2'},{'address':'0x1'}]),patch.object(cu,'run') as dispatch:
         cu.focus({},'0x1');assert dispatch.call_count==1
-    check('focus: no redundant dispatch, one check after dispatch, same refusal message')
+    with patch.object(cu,'hypr',side_effect=[{'address':'0x2'}]*5+[{'address':'0x1'}]),patch.object(cu,'run'),patch.object(cu.time,'sleep') as sleep:
+        cu.focus({},'0x1');assert sleep.call_count==5
+    check('focus: no redundant dispatch, settles on fifth poll, bounded refusal')
 
     for screen in (False,True):
         pixels=[base]
@@ -66,7 +69,7 @@ with tempfile.TemporaryDirectory() as folder,patch.object(cu,'STATE',Path(folder
             assert argv==['grim','-s','1','-g','0,0 1920x1200','-t','ppm','-'] and text is False
             return encoded(pixels[0],'PPM')
         with patch.object(cu,'hypr',side_effect=hypr),patch.object(cu,'window',return_value=client),\
-             patch.object(cu,'clear_capture',side_effect=lambda env:nullcontext()),patch.object(cu,'run',side_effect=grim),\
+             patch.object(cu,'run',side_effect=grim),\
              patch.object(cu,'focus') as focus,patch.object(cu,'Pointer') as pointer:
             def observe(persist):
                 return (cu.observe_screen({},'test',persist=persist) if screen else
@@ -101,28 +104,25 @@ with tempfile.TemporaryDirectory() as folder,patch.object(cu,'STATE',Path(folder
             else:assert focus.call_count==2
     check('window/screen pre-action capture writes nothing; refusal saves readable PNG and scale')
 
-    with patch.object(cu,'_overlay_active',True),patch.object(cu,'overlay_ipc',return_value=False):
-        def capture():
-            with cu.clear_capture({}):raise AssertionError('must not capture')
-        raises('overlay suspend failed; refusing capture',capture)
-    with patch.object(cu,'_overlay_active',True),patch.object(cu,'overlay_ipc',side_effect=[True,False]):
-        def capture():
-            with cu.clear_capture({}):pass
-        raises('overlay restore failed',capture)
-    with patch.object(cu,'_overlay_active',False),patch.object(cu.shutil,'which',return_value='quickshell'),\
-         patch.object(cu,'run',return_value='[{"pid":123}]'),patch.object(cu,'overlay_ipc',return_value=True) as ipc:
-        with cu.clear_capture({}):pass
-        ipc.assert_called_once_with({},'suspend')
-    check('overlay IPC failures surface; daemon from previous process is suspended')
+    # Capture has no overlay discovery, IPC or cursor configuration dependencies.
+    with patch.object(cu,'hypr',return_value=[monitor]),patch.object(cu,'run',return_value=encoded(base,'PPM')) as capture:
+        cu.observe_screen({},'test',persist=False)
+        assert capture.call_count==1 and capture.call_args.args[0][0]=='grim'
+    check('capture only invokes grim; no overlay hot path remains')
+
+    moved=dict(client,at=[1,0])
+    with patch.object(cu,'hypr',return_value=[monitor]),patch.object(cu,'window',side_effect=[client,moved]),patch.object(cu,'run',return_value=encoded(base,'PPM')):
+        raises('window moved during capture; observe again',lambda:cu.observe({},'0x1',activate=False,persist=False))
+    check('capture body geometry error remains unmasked')
 
     raises('python3: {"ok":false,"error":"validation reason"}',lambda:cu.run_cancelable(
         [sys.executable,'-c','import sys; print(\'{"ok":false,"error":"validation reason"}\'); sys.exit(1)']))
     check('failed adapter stdout survives in error')
-    for typ,field,value,expected in [('assert','timeout_ms',3000,451),('assert','timeout_ms',9000,451),('wait','ms',2000,259)]:
+    for typ,field,value,expected in [('assert','timeout_ms',3000,60),('assert','timeout_ms',9000,60),('wait','ms',2000,60)]:
         with patch.object(cu,'run_cancelable',return_value='{}') as adapter:
             cu.browser({'actions':[{'type':typ,field:value}]*32})
             assert adapter.call_args.kwargs['timeout']==expected
-    check('browser timeout includes 32 asserts/waits and CDP evaluation allowance')
+    check('browser timeout clamps 32 asserts/waits to 60 seconds')
     with patch.object(cu.urllib.request,'urlopen',return_value=io.StringIO('{}')) as urlopen:
         assert cu.browser_start({},'http://[::1]:9222')['reused'] is True
         assert urlopen.call_args.args[0]=='http://[::1]:9222/json/version'
