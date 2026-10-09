@@ -3,8 +3,14 @@
 Run the whole task driver as `computer-use session -- DRIVER [ARGS...]`, not a
 separate session around each action. Its child commands inherit session ownership.
 Input commands require a live session; standalone capture remains available.
-Sessions keep the normal cursor and desktop unchanged; there is no separate
-visible indicator. No startup captures or frame-settlement wait are needed.
+Sessions show a click-through layer-shell badge "Computer use active"; the badge takes
+no keyboard focus and lets clicks through. The badge surface asks the compositor for a
+per-surface backdrop blur (`ext_background-effect-v1`), applied only inside the rounded
+pill. The actual cursor stays normal: no marker is drawn and no cursor theme or screen
+scale changes. Window and screen captures both hide the badge for the shot and restore
+it after; hiding clears the blur region together with the pixels, so no blurred copy
+survives in the capture. Outputs are taken once at startup: adding or removing a
+monitor mid-session ends the indicator.
 `finish` requests completion; `cancel` latches cancellation. Best-effort physical
 Escape works throughout the session, without a timer; installation failures warn.
 The wrapper waits for input to stop and the temporary binding to be removed.
@@ -55,13 +61,14 @@ Actions: `{"type":"click","ref":"e2"}` or `{"type":"set_text","ref":"e1","text":
 
 ## Desktop
 
-`doctor`: dependencies and monitor names. `windows`: exact address, title, bounds, workspace. `observe --window ADDRESS [--crop X Y W H]` captures visible screen pixels without changing focus or workspace; hidden windows and inactive workspaces are refused. Add `--focus` to explicitly activate the window before capture (may switch workspace); this flag requires `--window`. Overlapping windows can cover the capture. `observe --screen MONITOR [--crop X Y W H]` captures the whole monitor or a monitor-relative region, including layer-shell and popups; use pointer actions only with this scope. Both accept `--max-width 320..3840` and return image + observation paths; full metadata stays in the JSON file. Add `--verbose` to print it. Captures use `grim -s 1` without cursor, and actions recheck monitor geometry and the target region before input. Cache is user-private; files older than 24 hours are pruned on the next capture.
+`doctor`: dependencies and monitor names. `windows`: exact address, title, bounds, workspace. `observe --window ADDRESS [--crop X Y W H]` captures visible screen pixels without changing focus or workspace; hidden windows and inactive workspaces are refused. Add `--focus` to explicitly activate the window before capture (may switch workspace); this flag requires `--window`. A window on an inactive workspace is refused without it. When `act` will focus the window anyway, run `observe --window ADDRESS --focus` first: a plain observe leaves focus unchanged, so the later act focus can restack windows and change the view you captured. Overlapping windows can cover the capture. `observe --screen MONITOR [--crop X Y W H]` captures the whole monitor or a monitor-relative region, including layer-shell and popups; use pointer actions only with this scope. Both accept `--max-width 320..3840` and return image + observation paths; full metadata stays in the JSON file. Add `--verbose` to print it. Captures use `grim -s 1` without cursor; a live session's badge is hidden for the capture and restored after, for both window and screen scopes; hiding also clears its blur region. Actions recheck monitor geometry and the target region before input. Cache is user-private; files older than 24 hours are pruned on the next capture.
 
 Desktop actions:
 
 ```json
 [
  {"type":"click","x":210,"y":140,"button":"left"},
+ {"type":"click","x":300,"y":180,"modifiers":["Ctrl","Shift"]},
  {"type":"key","keys":["Ctrl","a"]},
  {"type":"type","text":"example","delay_ms":0},
  {"type":"key","keys":["Shift","ArrowRight"],"repeat":3},
@@ -69,10 +76,10 @@ Desktop actions:
 ]
 ```
 
-- `move`, `click`, `double_click`: image `x`,`y`; click button left/right/middle.
-- `drag`: image `from:[x,y]`, `to:[x,y]`, duration `ms` 50..2000 (default 300). Held pointer survives the whole drag; release attempted on failure.
+- `move`, `click`, `double_click`: image `x`,`y`; click button left/right/middle. `click`, `double_click`, `drag` and `scroll` accept `modifiers`, an array of up to 5 names from `Ctrl`, `Shift`, `Alt`, `Super`, `AltGr` (aliases `Control`, `Meta`, `Win`, `Logo`); the modifiers are held for that one action and released after. `move` rejects `modifiers`.
+- `drag`: image `from:[x,y]`, `to:[x,y]`, `button` left/right/middle (default left), duration `ms` 50..2000 (default 300). Held pointer survives the whole drag; release attempted on failure.
 - `scroll`: image `x`,`y`, `dx`,`dy` in Wayland axis units; positive dy down. Wheel output includes discrete steps (one per 15 axis units, minimum one for nonzero input) and a 30 ms pointer-enter settling gap. These are not necessarily browser CSS pixels.
-- `key`: array of modifiers and XKB/alias key names. `repeat` 1..30, `hold_ms` 0..2000 (default 12); modifiers released in the same process. Shift+Tab maps to `ISO_Left_Tab` with Shift; editing-key-only groups also bypass composition temporarily. A one-character key is a keysym, not a physical US scancode. Prefer lowercase letters with Shift explicitly for shortcuts.
+- `key`: array of modifiers and XKB/alias key names. Modifier entries are held for the whole action while the non-modifier keys are pressed and released one at a time in array order, so `["Ctrl","a"]` is the Ctrl+a chord but `["a","b"]` types `a` then `b`, not held together. `repeat` 1..30, `hold_ms` 0..2000 (default 12); modifiers released in the same process. Shift+Tab maps to `ISO_Left_Tab` with Shift; editing-key-only groups also bypass composition temporarily. A one-character key is a keysym, not a physical US scancode. Prefer lowercase letters with Shift explicitly for shortcuts.
 - `type`: exact text by default (`ime:"literal"`), temporarily disables and restores fcitx5 composition. Use `ime:"compose"` for intentional Telex input. `delay_ms` 0..100 (default 0). Leading-dash text uses a standalone literal invocation. Enter/newlines typed as content may trigger app behavior; choose keys explicitly when needed.
 - `wait`: `ms` 0..2000. Adjacent key/type/wait actions are combined with a 12 ms settling gap; Tab/Enter/Escape, delay reset and IME-mode changes split groups to preserve the correct input context. A keyboard group may last at most 5 seconds.
 

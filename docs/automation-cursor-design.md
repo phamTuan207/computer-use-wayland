@@ -1,4 +1,27 @@
-# Automation session: normal cursor, no separate indicator
+# Automation session: indicator and clean capture
+
+Current design: a session-owned, click-through layer-shell surface per output
+draws a top-center pill only. The pointer itself is never overdrawn: the user's
+normal cursor is the single cursor, and no global cursor theme or screen-scale
+setting is changed. The pill requests a per-surface backdrop blur through
+`ext_background_effect_manager_v1`; hiding it clears the blur region together with
+the pixels. Capture clears the surface buffer, waits for
+`wp_presentation_feedback.presented` on each output, runs grim, then restores
+visibility in a finally block. EOF and parent-loss signals end the helper.
+Monitor hotplug ends the session rather than allowing an unmarked output.
+
+Material and light reference only, no code or asset vendored:
+<https://github.com/emilkowalski/skills> (Apple design skill) and
+<https://github.com/sdegenaar/liquid_glass_widgets> (Flutter liquid-glass
+widgets). The shipped look is plain Cairo drawing on a compositor blur surface;
+the Flutter widget and its shader-based refraction are not ported.
+
+Current measurements and limits: [indicator-validation.md](indicator-validation.md).
+
+The historical removal decision below describes the previous version, not the
+current overlay. The prohibition on magnifying the whole screen remains.
+
+## Historical removal decision
 
 Decision, 2026-10-09: use the user's normal cursor. The actions themselves are the
 visible signal. Nothing changes screen scale, cursor theme, or cursor size; no
@@ -55,6 +78,6 @@ magnification/theme/overlay behind because this version creates none.
 
 ## Evidence
 
-See [indicator-removal-report.md](indicator-removal-report.md) for real-desktop
-before/after measurements, test outputs and reproduction method. Earlier startup
-settlement results are withdrawn as guidance for the current implementation.
+The earlier removal report is historical local evidence, not part of this
+publication. Earlier startup settlement results are withdrawn as guidance for
+the current implementation; see the current validation report linked above.
