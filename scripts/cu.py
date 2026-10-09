@@ -113,13 +113,22 @@ def window(env, address):
 
 def focus(env, address):
     if not re.fullmatch(r'0x[0-9a-fA-F]+',address or ''):raise ValueError('exact window address required')
+    check_cancel()
     if hypr(env,'activewindow').get('address')==address:return
-    run(['hyprctl','dispatch',f'hl.dsp.focus({{ window = "address:{address}" }})'],env)
-    # Dispatch acknowledgment can precede compositor focus; allow five settling polls.
-    for _ in range(5):
-        time.sleep(.04)
-        if hypr(env,'activewindow').get('address')==address:return
-    raise RuntimeError('target window did not gain focus')
+    window(env,address)  # Reject a stale target before changing the desktop.
+    reply=run(['hyprctl','dispatch',f'hl.dsp.focus({{ window = "address:{address}" }})'],env).strip()
+    if reply!='ok':raise RuntimeError('focus dispatch rejected: '+reply[:400])
+    # Acknowledgment is not focus completion; allow workspace animations to settle.
+    deadline=time.monotonic()+1.5
+    while True:
+        check_cancel()
+        active=hypr(env,'activewindow').get('address')
+        if active==address:return
+        remaining=deadline-time.monotonic()
+        if remaining<=0:break
+        time.sleep(min(.04,remaining))
+    window(env,address)  # Distinguish a closed target from a focus timeout.
+    raise RuntimeError(f'target window did not gain focus within 1.5s (target={address}, active={active or "none"})')
 
 def bounds(c): return c['at']+c['size']
 

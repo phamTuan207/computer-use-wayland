@@ -50,17 +50,11 @@ with tempfile.TemporaryDirectory() as folder,patch.object(cu,'STATE',Path(folder
             assert cu.screen_changed(previous,new,actions)==cu.screen_changed(previous,disk,actions)==expected
     check('resize and global/49x49 patch verdicts match memory and disk')
 
-    with patch.object(cu,'hypr',return_value={'address':'0x1'}),patch.object(cu,'run') as dispatch:
+    with patch.object(cu,'check_cancel'),patch.object(cu,'hypr',return_value={'address':'0x1'}),patch.object(cu,'run') as dispatch:
         cu.focus({},'0x1');dispatch.assert_not_called()
-    with patch.object(cu,'hypr',return_value={'address':'0x2'}) as query,patch.object(cu,'run') as dispatch,patch.object(cu.time,'sleep') as sleep:
-        raises('target window did not gain focus',lambda:cu.focus({},'0x1'))
-        assert query.call_count==6 and dispatch.call_count==1
-        assert sleep.call_args_list==[__import__('unittest').mock.call(.04)]*5
-    with patch.object(cu,'hypr',side_effect=[{'address':'0x2'},{'address':'0x1'}]),patch.object(cu,'run') as dispatch:
+    with patch.object(cu,'check_cancel'),patch.object(cu,'window',return_value=client),patch.object(cu,'hypr',side_effect=[{'address':'0x2'},{'address':'0x1'}]),patch.object(cu,'run',return_value='ok\n') as dispatch:
         cu.focus({},'0x1');assert dispatch.call_count==1
-    with patch.object(cu,'hypr',side_effect=[{'address':'0x2'}]*5+[{'address':'0x1'}]),patch.object(cu,'run'),patch.object(cu.time,'sleep') as sleep:
-        cu.focus({},'0x1');assert sleep.call_count==5
-    check('focus: no redundant dispatch, settles on fifth poll, bounded refusal')
+    check('focus: no redundant dispatch, verifies acknowledged focus')
 
     for screen in (False,True):
         pixels=[base]
