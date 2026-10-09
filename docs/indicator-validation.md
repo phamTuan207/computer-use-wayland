@@ -34,7 +34,22 @@ network actions. Grim ran silently, without screenshot shortcuts or notification
   session snapshots after cleanup. Cancellation stayed latched in isolated
   test state. Glass-session cleanup measured 61–685 ms, not a guaranteed upper bound.
 
-## Limits
+## Installed release checks
+
+The installed command's symlink was resolved before smoke tests. All tracked
+release sources matched the repository, excluding an unrelated uncommitted
+historical validation edit. Helpers were rebuilt in the installed directory.
+The installed copy passed 127 unit tests in 20.225 seconds, capture/adapter
+regressions, the no-magnifier check and all seven real-input demo assertions.
+Five installed crash/cancel cases also had zero pixel difference from the
+pre-session baseline in the expanded pill/shadow region after cleanup, as well
+as zero owned living children, layers or snapshots. Measured cleanup was
+62–726 ms in that run; cancellation remained latched in isolated test state.
+The installed copy also repeated both clean-capture paths five times with
+zero selected-region pixel differences and unchanged focus: 66, 64, 58, 40,
+39 ms. These are capture samples, not throughput or percentile statistics.
+
+## Unverified configurations
 
 Physical Escape input, multiple physical outputs, fractional scales, rotated
 outputs and compositor loss have not been live-tested. Automated Escape binding
