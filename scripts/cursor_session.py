@@ -45,7 +45,7 @@ def restore(env):
     if SNAPSHOT.exists():
         try:
             saved=json.loads(SNAPSHOT.read_text())
-            if saved.get('version')!=2 or not re.fullmatch(r'[0-9a-f]{32}',saved['token']):
+            if saved.get('version') not in (2,3) or not re.fullmatch(r'[0-9a-f]{32}',saved['token']):
                 raise ValueError('unsupported session snapshot')
         except (OSError,ValueError,TypeError,KeyError,AttributeError):
             print('unsupported session snapshot; recover with the previous version before upgrading',file=sys.stderr)
@@ -54,6 +54,8 @@ def restore(env):
         try:
             cancel_hotkey.hotkey_off()
             if saved is not None:
+                import indicator
+                indicator.endpoint(STATE,saved['token']).unlink(missing_ok=True)
                 SNAPSHOT.unlink(missing_ok=True)
                 (STATE/('stop-'+saved['token'])).unlink(missing_ok=True)
             return True
@@ -99,6 +101,7 @@ def recover(env, expected=None):
 
 def guardian(env, pipe, token):
     import cancel_hotkey
+    import indicator
     stopping=[False]
     def stop(signum, frame):stopping[0]=True
     for sig in (signal.SIGTERM,signal.SIGINT,signal.SIGHUP):signal.signal(sig,stop)
@@ -106,20 +109,27 @@ def guardian(env, pipe, token):
         if SNAPSHOT.exists() and not restore(env):
             raise RuntimeError('previous session cleanup failed')
         if CANCEL.exists():raise RuntimeError('cancelled by user')
-        driver_group=None
+        driver_group=None;native=None;server=None
         try:
             # Persist before installing the temporary Escape binding.
             with open(SNAPSHOT,'x',opener=lambda path,flags:os.open(path,flags,0o600)) as stream:
-                json.dump({'version':2,'token':token},stream)
+                json.dump({'version':3,'token':token},stream)
                 stream.flush();os.fsync(stream.fileno())
-            try:cancel_hotkey.hotkey_on()
+            escape_available=False
+            try:
+                cancel_hotkey.hotkey_on();escape_available=True
             except Exception as exc:
                 print(f'warning: temporary Escape binding unavailable: {exc}',file=sys.stderr)
             if stopping[0] or CANCEL.exists():raise RuntimeError('session cancelled during startup')
+            server=indicator.listen(STATE,token)
+            native=indicator.Native({**env,'CU_ESCAPE_AVAILABLE':'1' if escape_available else '0'})
+            if stopping[0] or CANCEL.exists():raise RuntimeError('session cancelled during indicator startup')
             print('ready',flush=True)
             while not stopping[0] and not CANCEL.exists() and not (STATE/('stop-'+token)).exists():
-                ready,_,_=select.select([pipe],[],[],.05)
-                if ready:
+                if native.process.poll() is not None:raise RuntimeError('session indicator lost')
+                ready,_,_=select.select([pipe,server],[],[],.05)
+                if server in ready:indicator.serve(server,native,token)
+                if pipe in ready:
                     message=os.read(pipe,4096)
                     if not message:break
                     if message.strip().isdigit():
@@ -128,7 +138,9 @@ def guardian(env, pipe, token):
         finally:
             cleanup_ok=True
             try:
-                for cleanup in (request_stop,lambda:stop_group(driver_group) if driver_group is not None else None,drain_input):
+                for cleanup in (request_stop,lambda:stop_group(driver_group) if driver_group is not None else None,drain_input,
+                                lambda:native.close() if native is not None else None,
+                                lambda:server.close() if server is not None else None):
                     try:cleanup()
                     except BaseException as exc:
                         cleanup_ok=False

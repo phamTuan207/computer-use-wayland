@@ -37,6 +37,37 @@ else:sys.exit(1)
 p.write_text(json.dumps(s))
 '''
 
+FAKE_INDICATOR = '''#!/usr/bin/env python3
+import sys
+print('ready',flush=True)
+for line in sys.stdin:
+    print({'hide':'hidden','show':'visible'}.get(line.strip(),'ok'),flush=True)
+'''
+
+# Instrumented helper for lifecycle tests: marks itself active in a fixture
+# file, exits on a stop trigger or stdin EOF, or fails startup when asked.
+TRACKED_INDICATOR = '''#!/usr/bin/env python3
+import os,select,sys
+active=os.environ.get('INDICATOR_ACTIVE')
+if os.environ.get('INDICATOR_FAIL'):
+    sys.exit(1)
+if active:open(active,'w').write(str(os.getpid()))
+print('ready',flush=True)
+stop=os.environ.get('INDICATOR_STOP')
+try:
+    while True:
+        if stop and os.path.exists(stop):break
+        ready,_,_=select.select([sys.stdin],[],[],0.05)
+        if sys.stdin in ready:
+            line=sys.stdin.readline()
+            if not line:break
+            print({'hide':'hidden','show':'visible'}.get(line.strip(),'ok'),flush=True)
+finally:
+    if active:
+        try:os.unlink(active)
+        except OSError:pass
+'''
+
 
 class Lifecycle(unittest.TestCase):
     def setUp(self):
@@ -45,9 +76,15 @@ class Lifecycle(unittest.TestCase):
         self.desktop.write_text(json.dumps({'zoom':'1.750000','calls':[]}))
         binary=self.folder/'bin';binary.mkdir()
         for name,code in [('hyprctl',FAKE),('pgrep','#!/bin/sh\nexit 0\n'),
+                          ('computer-use-indicator',FAKE_INDICATOR),
                           ('grim',"#!/usr/bin/env python3\nimport sys\nsys.stdout.buffer.write(b'P6\\n2 2\\n255\\n'+bytes(12))\n"),
                           ('node','#!/bin/sh\nprintf \'{"ok":false,"error":"refusal"}\\n\'\n')]:
             p=binary/name;p.write_text(code);p.chmod(0o700)
+        # A second PATH entry so lifecycle tests can use the instrumented helper
+        # without changing the default fake used by the rest of the suite.
+        self.altbin=self.folder/'altbin';self.altbin.mkdir()
+        p=self.altbin/'computer-use-indicator'
+        p.write_text(TRACKED_INDICATOR);p.chmod(0o700)
         self.env=os.environ.copy();self.env.pop('CU_SESSION_TOKEN',None)
         self.env.update(PATH=str(binary)+os.pathsep+self.env['PATH'],
                         XDG_CACHE_HOME=str(self.folder/'cache'),FAKE_DESKTOP=str(self.desktop))
@@ -70,6 +107,10 @@ class Lifecycle(unittest.TestCase):
                             sys.executable,'-c',code],env=self.env,
                            stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
         self.processes.append(p);return p
+
+    def tracked(self,**values):
+        self.env.update({k:str(v) for k,v in values.items()})
+        self.env['PATH']=str(self.altbin)+os.pathsep+self.env['PATH']
 
     def wait_for(self,predicate):
         deadline=time.monotonic()+8
@@ -194,10 +235,14 @@ class Lifecycle(unittest.TestCase):
 
     def test_cleanup_exceptions_cannot_skip_restore(self):
         import cancel_hotkey
+        import indicator
         for failing in ('request_stop','stop_group','drain_input'):
             with self.subTest(failing=failing),patch.object(session.signal,'signal'),patch.object(session,'STATE',self.folder),patch.object(session,'SNAPSHOT',self.folder/'snapshot'),patch.object(session,'CANCEL',self.folder/'cancel'),patch.object(session,'owner_lock'),patch.object(cancel_hotkey,'hotkey_on'),patch.object(cancel_hotkey,'hotkey_off'),patch.object(session,'request_stop'),patch.object(session,'stop_group'),patch.object(session,'drain_input'),patch.object(session,'restore',return_value=True) as restore,patch.object(session.select,'select',return_value=([1],[],[])),patch.object(session.os,'read',side_effect=[b'123',b'']),patch.object(session,failing,side_effect=RuntimeError('cleanup injected')):
-                self.assertEqual(session.guardian(self.env,1,'a'*32),1)
-                restore.assert_called_once_with(self.env)
+                with patch.object(indicator,'Native') as native,patch.object(indicator,'listen'):
+                    native.return_value.process.poll.return_value=None
+                    self.assertEqual(session.guardian(self.env,1,'a'*32),1)
+                    restore.assert_called_once_with(self.env)
+                    (self.folder/'snapshot').unlink(missing_ok=True)
                 (self.folder/'snapshot').unlink(missing_ok=True)
 
     def test_startup_never_reads_cursor_or_captures(self):
@@ -270,6 +315,48 @@ class Lifecycle(unittest.TestCase):
              patch.object(session.time,'sleep'):
             self.assertFalse(session.restore(self.env));self.assertEqual(off.call_count,3)
         self.assertTrue(snapshot.exists())
+
+    def test_indicator_loss_kills_driver_and_cleans_up(self):
+        heart=self.folder/'heartbeat';ready=self.folder/'driver-ready'
+        self.tracked(INDICATOR_STOP=str(self.folder/'stop-indicator'))
+        code=(f"import time\nfrom pathlib import Path\n"
+              f"heart=Path({str(heart)!r})\n"
+              f"Path({str(ready)!r}).touch()\n"
+              f"while True:\n    heart.write_text(str(time.time()));time.sleep(.1)\n")
+        p=self.launch(code)
+        self.wait_for(ready.exists)
+        time.sleep(.3)  # let the driver heartbeat while the helper is alive
+        self.assertTrue(heart.exists())
+        (self.folder/'stop-indicator').write_text('x')  # helper exits -> loss
+        p.communicate(timeout=8)
+        self.assertNotEqual(p.returncode,0)
+        frozen=heart.read_text();time.sleep(.3)
+        self.assertEqual(heart.read_text(),frozen,'driver survived indicator loss')
+        self.assert_restored()
+
+    def test_indicator_startup_failure_never_runs_driver(self):
+        marker=self.folder/'must-not-run'
+        self.tracked(INDICATOR_FAIL='1')
+        p=self.launch(f"from pathlib import Path;Path({str(marker)!r}).touch()")
+        out,err=p.communicate(timeout=8)
+        self.assertNotEqual(p.returncode,0,(out,err))
+        self.assertFalse(marker.exists(),'driver ran despite indicator startup failure')
+        self.assert_restored()
+        self.assertEqual(list(self.state.glob('indicator-*.sock')),[],'indicator socket leaked')
+
+    def test_guardian_crash_helper_exits_on_eof(self):
+        active=self.folder/'indicator-active'
+        self.tracked(INDICATOR_ACTIVE=str(active))
+        p=self.idle()
+        self.wait_for(active.exists)
+        children=Path('/proc',str(p.pid),'task',str(p.pid),'children').read_text().split()
+        for child in children:
+            if b'cursor_session.py' in Path('/proc',child,'cmdline').read_bytes():
+                os.kill(int(child),signal.SIGKILL);break
+        else:self.fail('guardian child not found')
+        p.communicate(timeout=8)
+        self.wait_for(lambda:not active.exists())
+        self.assert_restored()
 
 
 if __name__=='__main__':unittest.main()
