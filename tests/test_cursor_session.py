@@ -27,7 +27,8 @@ if a==['getoption','cursor:zoom_factor']:
     if s.get('bad_read'):print('unknown option')
     else:print('float: '+s['zoom'])
 elif a==['-j','devices']:print('{"keyboards":[{"name":"test-keyboard"}]}')
-elif a==['-j','monitors']:print('[]')
+elif a==['-j','monitors']:
+    print('[]' if s.get('no_monitors') else '[{"name":"test","x":0,"y":0,"width":2,"height":2,"scale":1}]')
 elif a and a[0]=='eval':
     m=re.search(r'zoom_factor = ([0-9.]+)',a[1])
     if m:
@@ -54,6 +55,7 @@ class Lifecycle(unittest.TestCase):
         self.desktop.write_text(json.dumps({'zoom':'1.750000','calls':[]}))
         binary=self.folder/'bin';binary.mkdir()
         for name,code in [('hyprctl',FAKE),('pgrep','#!/bin/sh\nexit 0\n'),
+                          ('grim',"#!/usr/bin/env python3\nimport sys\nsys.stdout.buffer.write(b'P6\\n2 2\\n255\\n'+bytes(12))\n"),
                           ('node','#!/bin/sh\nprintf \'{"ok":false,"error":"refusal"}\\n\'\n')]:
             p=binary/name;p.write_text(code);p.chmod(0o700)
         self.env=os.environ.copy();self.env.pop('CU_SESSION_TOKEN',None)
@@ -187,13 +189,65 @@ class Lifecycle(unittest.TestCase):
             if pidf.exists():self._kill_group(int(pidf.read_text()))
 
     def test_startup_failures_restore_if_write_may_have_applied(self):
-        for flag in ('partial_failure','hotkey_failure'):
+        for flag in ('partial_failure',):
             with self.subTest(flag=flag):
                 self.configure(**{flag:True})
                 p=self.launch('raise AssertionError("must not start")')
                 out,err=p.communicate(timeout=8)
                 self.assertNotEqual(p.returncode,0);self.assertNotIn('must not start',err)
                 self.assert_restored();self.configure(**{flag:False})
+
+    def test_hotkey_failure_warns_but_driver_runs(self):
+        self.configure(hotkey_failure=True)
+        p=self.launch('print("driver ran")');out,err=p.communicate(timeout=8)
+        self.assertEqual(p.returncode,0,(out,err))
+        self.assertIn('driver ran',out);self.assertIn('warning:',err)
+        self.assert_restored()
+
+    def test_mixed_case_physical_keyboard(self):
+        import cancel_hotkey
+        devices=subprocess.CompletedProcess([],0,'{"keyboards":[{"name":"Keychron K8 Keyboard"},{"name":"Virtual Keyboard"}]}','')
+        with patch.object(cancel_hotkey.subprocess,'run',return_value=devices),patch.object(cancel_hotkey,'hypr_eval') as evaluate:
+            cancel_hotkey.hotkey_on()
+        code=evaluate.call_args.args[0]
+        self.assertIn('Keychron K8 Keyboard',code);self.assertNotIn('Virtual Keyboard',code)
+
+    def test_cleanup_exceptions_cannot_skip_restore(self):
+        import cancel_hotkey
+        for failing in ('request_stop','stop_group','drain_input'):
+            with self.subTest(failing=failing),patch.object(session.signal,'signal'),patch.object(session,'STATE',self.folder),patch.object(session,'SNAPSHOT',self.folder/'snapshot'),patch.object(session,'CANCEL',self.folder/'cancel'),patch.object(session,'owner_lock'),patch.object(session,'read_zoom',side_effect=['1.0','5.0']),patch.object(session,'zoom'),patch.object(session,'wait_for_quiet'),patch.object(cancel_hotkey,'hotkey_on'),patch.object(cancel_hotkey,'hotkey_off'),patch.object(session,'request_stop'),patch.object(session,'stop_group'),patch.object(session,'drain_input'),patch.object(session,'restore',return_value=True) as restore,patch.object(session.select,'select',return_value=([1],[],[])),patch.object(session.os,'read',side_effect=[b'123',b'']),patch.object(session,failing,side_effect=RuntimeError('cleanup injected')):
+                self.assertEqual(session.guardian(self.env,1,'a'*32),1)
+                restore.assert_called_once_with(self.env)
+                (self.folder/'snapshot').unlink(missing_ok=True)
+
+    def test_quiet_capture_is_bounded_and_cancelable(self):
+        from PIL import Image
+        import io
+        def ppm(value):
+            output=io.BytesIO();Image.new('RGB',(2,2),(value,0,0)).save(output,format='PPM');return output.getvalue()
+        monitors=b'[{"name":"test","x":0,"y":0,"width":2,"height":2,"scale":1}]'
+        frames=iter([ppm(0),ppm(255)]*5)
+        def capture(*args,**kwargs):
+            return subprocess.CompletedProcess(args,0,monitors if args[0][0]=='hyprctl' else next(frames),b'')
+        with patch.object(session.subprocess,'run',side_effect=capture):
+            with self.assertRaisesRegex(RuntimeError,'did not settle after 4 captures'):
+                session.wait_for_quiet(self.env,lambda:False,attempts=4)
+        with self.assertRaisesRegex(RuntimeError,'cancelled during startup'):
+            session.wait_for_quiet(self.env,lambda:True)
+        with self.assertRaisesRegex(RuntimeError,'startup deadline'):
+            session.wait_for_quiet(self.env,lambda:False,timeout=0)
+        frames=iter([ppm(0),ppm(255),ppm(255),ppm(255),ppm(255)])
+        with patch.object(session.subprocess,'run',side_effect=capture) as run:
+            session.wait_for_quiet(self.env,lambda:False,attempts=5)
+            self.assertEqual(run.call_count,10)
+
+    def test_capture_failure_aborts_startup_and_restores(self):
+        self.configure(no_monitors=True)
+        p=self.launch('raise AssertionError("must not start")')
+        out,err=p.communicate(timeout=8)
+        self.assertEqual(p.returncode,1,(out,err))
+        self.assertIn('no enabled outputs',err);self.assertNotIn('must not start',err)
+        self.assert_restored()
 
     def test_unknown_value_never_changes_cursor(self):
         self.configure(bad_read=True)
@@ -209,6 +263,10 @@ class Lifecycle(unittest.TestCase):
         p=self.launch('pass');out,err=p.communicate(timeout=8)
         self.assertEqual(p.returncode,1,(out,err))
         self.assertIn('snapshot retained',err)
+        self.assert_restored()
+        self.configure(restore_failures=6)
+        p=self.launch('pass');out,err=p.communicate(timeout=8)
+        self.assertEqual(p.returncode,1,(out,err))
         self.assertTrue((self.state/'session.json').exists())
         result=subprocess.run([sys.executable,str(ROOT/'scripts/cu.py'),'recover'],env=self.env,
                               capture_output=True,text=True,timeout=8)

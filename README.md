@@ -65,7 +65,16 @@ the original value read from Hyprland is restored when the driver finishes,
 fails, receives cancellation, or a tool refuses an operation. Input commands
 require this session. Standalone observations remain available.
 
-Physical Escape cancels even while the driver is thinking. `computer-use cancel`
+Before handing control to the driver, the guardian captures every enabled
+monitor until three consecutive image pairs are identical at up to 1280 pixels
+wide. There is no fixed startup sleep. Sampling is limited to 120 rounds and a
+six-second deadline, with bounded capture commands. A desktop that keeps changing
+(for example video playback), failed captures, or cancellation aborts startup and
+restores the saved zoom; the driver does not run.
+
+Physical Escape cancels even while the driver is thinking. Its temporary binding
+is best-effort: a failure logs a warning; explicit cancellation and signals still
+work. `computer-use cancel`
 also latches cancellation; `computer-use finish` requests completion. The wrapper
 waits for input to stop and cursor restoration before it exits. Use
 `computer-use resume` only after the user asks to continue, then launch a new
@@ -73,7 +82,7 @@ session. Failed restoration keeps the saved value; `computer-use recover`
 retries it without guessing a default. These commands replace the old status pill.
 
 The guardian survives an abruptly killed wrapper; the wrapper also recovers if
-the guardian is killed. Simultaneous loss of both processes, a broken compositor,
+the guardian is killed or retains a snapshot after failed restoration. Simultaneous loss of both processes, a broken compositor,
 or system failure cannot guarantee automatic restoration. The saved snapshot
 supports recovery after those failures.
 

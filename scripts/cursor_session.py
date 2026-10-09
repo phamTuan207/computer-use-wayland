@@ -115,6 +115,60 @@ def recover(env, expected=None):
         return 0 if restored else 1
 
 
+def wait_for_quiet(env, cancelled, timeout=6.0, attempts=120):
+    """Require three identical resized RGB frame pairs on every enabled output.
+
+    No guessed startup sleep: grim paces the samples. Abort startup on a busy
+    desktop or capture failure, so no driver receives a known unstable image.
+    The deadline also bounds each subprocess, not just the sampling loop.
+    """
+    import io
+    from PIL import Image, ImageChops, ImageStat
+    import cu
+    deadline=time.monotonic()+timeout
+    previous=None;matches=0;last_mean=None
+    def capture_command(*args):
+        remaining=deadline-time.monotonic()
+        if remaining<=0:raise RuntimeError('desktop did not settle before startup deadline')
+        p=subprocess.run(args,env=env,capture_output=True,timeout=min(2.0,remaining))
+        if p.returncode:raise RuntimeError('startup capture failed: '+p.stderr.decode(errors='replace')[:180])
+        return p.stdout
+    for attempt in range(attempts):
+        if cancelled():raise RuntimeError('session cancelled during startup')
+        monitors=json.loads(capture_command('hyprctl','-j','monitors'))
+        current={}
+        for monitor in monitors:
+            if monitor.get('disabled'):continue
+            box=cu.monitor_box(monitor)
+            geometry=f'{box[0]},{box[1]} {box[2]}x{box[3]}'
+            raw=capture_command('grim','-s','1','-g',geometry,'-t','ppm','-')
+            image=Image.open(io.BytesIO(raw)).convert('RGB')
+            if image.width>1280:
+                image=image.resize((1280,round(image.height*1280/image.width)))
+            current[monitor['name']]=(box,monitor['scale'],monitor.get('transform',0),image)
+        if not current:raise RuntimeError('no enabled outputs for startup capture')
+        equal=previous is not None and current.keys()==previous.keys()
+        means=[]
+        if equal:
+            for name,(*layout,image) in current.items():
+                *old_layout,old=previous[name]
+                if layout!=old_layout or image.size!=old.size:
+                    equal=False;break
+                diff=ImageChops.difference(old,image)
+                means.append(sum(ImageStat.Stat(diff).mean)/3)
+                if diff.getbbox() is not None:equal=False
+        last_mean=max(means) if means else None
+        matches=matches+1 if equal else 0
+        if matches>=3:
+            if time.monotonic()>=deadline:
+                raise RuntimeError('desktop did not settle before startup deadline')
+            if cancelled():raise RuntimeError('session cancelled during startup')
+            print(f'desktop quiet after {attempt+1} captures; global mean={last_mean:.6f}',file=sys.stderr)
+            return
+        previous=current
+    raise RuntimeError(f'desktop did not settle after {attempts} captures; last global mean={last_mean}')
+
+
 def guardian(env, pipe, token):
     import cancel_hotkey
     stopping=[False]
@@ -131,10 +185,13 @@ def guardian(env, pipe, token):
             with open(SNAPSHOT,'x',opener=lambda path,flags:os.open(path,flags,0o600)) as stream:
                 json.dump({'original':original,'token':token},stream)
                 stream.flush();os.fsync(stream.fileno())
-            cancel_hotkey.hotkey_on()
+            try:cancel_hotkey.hotkey_on()
+            except Exception as exc:
+                print(f'warning: temporary Escape binding unavailable: {exc}',file=sys.stderr)
             if stopping[0] or CANCEL.exists():raise RuntimeError('session cancelled during startup')
             zoom(env,'5.0')
             if float(read_zoom(env))!=5.0:raise RuntimeError('cursor zoom verification failed')
+            wait_for_quiet(env,lambda:stopping[0] or CANCEL.exists() or (STATE/('stop-'+token)).exists())
             print('ready',flush=True)
             while not stopping[0] and not CANCEL.exists() and not (STATE/('stop-'+token)).exists():
                 ready,_,_=select.select([pipe],[],[],.05)
@@ -145,14 +202,20 @@ def guardian(env, pipe, token):
                         driver_group=int(message.strip())
                         print('registered',flush=True)
         finally:
-            request_stop()
-            if driver_group is not None:stop_group(driver_group)
-            drain_input()
-            restored=restore(env)
-            try:cancel_hotkey.hotkey_off()
-            except (OSError,RuntimeError,subprocess.TimeoutExpired):
-                print('temporary Escape binding cleanup failed',file=sys.stderr)
-        return 0 if restored else 1
+            cleanup_ok=True
+            try:
+                for cleanup in (request_stop,lambda:stop_group(driver_group) if driver_group is not None else None,drain_input):
+                    try:cleanup()
+                    except BaseException as exc:
+                        cleanup_ok=False
+                        print(f'session cleanup failed: {exc}',file=sys.stderr)
+            finally:
+                try:restored=restore(env)
+                finally:
+                    try:cancel_hotkey.hotkey_off()
+                    except Exception as exc:
+                        print(f'warning: temporary Escape binding cleanup failed: {exc}',file=sys.stderr)
+        return 0 if restored and cleanup_ok else 1
 
 
 def stop_group(group):
@@ -228,8 +291,8 @@ def supervise(env, argv):
                 guard.terminate()
                 guard.wait()  # Never SIGKILL the cursor owner during restoration.
             guard.stdout.close()
-            if guard.returncode<0 and SNAPSHOT.exists():
-                # The guardian itself died: wrapper remains a second restoration owner.
+            if SNAPSHOT.exists():
+                # Retry any retained snapshot, including exhausted guardian retries.
                 recover(env,token)
             # A successful driver cannot hide failed cursor restoration.
             if guard.returncode!=0 and outcome==0:outcome=1
