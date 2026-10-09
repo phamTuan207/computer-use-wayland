@@ -5,7 +5,6 @@ Compare the same command with an unedited scripts copy. Timings are local,
 synthetic frame timings are NOT live desktop/session timings.
 """
 import argparse
-import contextlib
 import io
 import json
 from pathlib import Path
@@ -30,7 +29,6 @@ def main():
     if args.samples<1:parser.error('--samples must be positive')
     scripts=args.scripts.resolve();sys.path.insert(0,str(scripts))
     import cu
-    import cursor_session
     from PIL import Image, ImageDraw
     results={}
     def measure(name,fn):
@@ -45,28 +43,6 @@ def main():
     measure('cli_status',lambda:subprocess.run([sys.executable,'-c',code+';cu.main()','status'],check=True,capture_output=True))
     # In-memory PPM; no desktop pixels or identifying metadata enter the results.
     image=Image.new('RGB',(1920,1200),(128,64,32));out=io.BytesIO();image.save(out,format='PPM');raw=out.getvalue()
-    monitor=json.dumps([{'name':'test','x':0,'y':0,'width':1920,'height':1200,'scale':1}]).encode()
-    calls=[]
-    def capture(argv,**kwargs):
-        calls.append(argv[0]);return subprocess.CompletedProcess(argv,0,monitor if argv[0]=='hyprctl' else raw,b'')
-    def quiet():
-        with patch.object(cursor_session.subprocess,'run',side_effect=capture),contextlib.redirect_stderr(io.StringIO()):
-            cursor_session.wait_for_quiet({},lambda:False)
-    measure('quiet_static_mock_capture',quiet)
-    results['quiet_calls_per_sample']={name:calls.count(name)/args.samples for name in set(calls)}
-    alternate=io.BytesIO();Image.new('RGB',(1920,1200),'white').save(alternate,format='PPM')
-    frames=[raw,alternate.getvalue()];index=[0]
-    def busy_capture(argv,**kwargs):
-        if argv[0]=='hyprctl':data=monitor
-        else:data=frames[index[0]%2];index[0]+=1
-        return subprocess.CompletedProcess(argv,0,data,b'')
-    def busy():
-        with patch.object(cursor_session.subprocess,'run',side_effect=busy_capture):
-            try:cursor_session.wait_for_quiet({},lambda:False,attempts=4)
-            except RuntimeError as error:
-                if 'did not settle after 4 captures' not in str(error):raise
-            else:raise AssertionError('busy frames must not pass the gate')
-    measure('quiet_busy_mock_capture',busy)
     scaled=image.resize((1280,800))
     measure('stale_full_image_compare',lambda:cu.screen_changed(scaled,scaled,[{'type':'click','x':600,'y':400}]))
     changed=scaled.copy();ImageDraw.Draw(changed).rectangle((0,0,400,799),fill='white')

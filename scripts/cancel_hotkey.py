@@ -45,7 +45,7 @@ def main():
         fd = os.open(CANCEL, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
         with os.fdopen(fd, 'w') as stream:
             stream.write('cancelled by user\n')
-        # Latch first; the session guardian restores independently of unbinding.
+        # Latch first; the session guardian stops the driver and removes the binding.
         import cursor_session
         cursor_session.request_stop()
     elif command == 'resume':

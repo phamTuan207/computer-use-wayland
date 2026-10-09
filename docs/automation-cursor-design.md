@@ -1,56 +1,60 @@
-# Automation cursor lifecycle
+# Automation session: normal cursor, no separate indicator
 
-The previous setcursor design is superseded by readable cursor zoom. The runtime
-implementation is in scripts/cursor_session.py; lifecycle regressions are in
-tests/test_cursor_session.py. No live desktop changes are part of these tests.
+Decision, 2026-10-09: use the user's normal cursor. The actions themselves are the
+visible signal. Nothing changes screen scale, cursor theme, or cursor size; no
+layer-shell surface is created and captures need no suspension.
 
-The session wrapper runs the automation driver, not a single action. A separate
-guardian owns cursor.lock, saves the original zoom before any write, installs
-physical Escape cancellation, then sets zoom factor 5 with Lua eval. The driver
-starts only after the guardian confirms its process group registration. A gate
-pipe prevents driver input if the wrapper dies during this handshake.
+The removed `cursor:zoom_factor` mechanism magnified the entire desktop. Omitting
+the cursor from grim did not omit that screen transformation. Claims that it
+only enlarged the pointer, or was invisible in captures, were incorrect.
 
-Success, failure, refusal, explicit finish, Escape, and wrapper signal/death end
-the session. Stop markers reject subsequent commands. The driver group is stopped
-before cursor restore. The guardian watches pipe EOF independently of the wrapper;
-the surviving wrapper provides fallback when the guardian dies. Saved originals
-are never overwritten by a concurrent session. Restoration retries and verifies
-the readable value; a failed restore retains its snapshot for explicit recover.
+## Alternatives and their costs
 
-The pill, stale-daemon probe, capture suspension, glass-plugin loading and reload
-are removed. Captures call grim without -c, so zoom needs no capture cleanup.
-Focus checks up to five times with 40 ms sleeps after dispatch. Browser adapter
-execution timeout is capped at 60 seconds; it is not a measured maximum lock time.
+- A small static Quickshell corner badge would avoid the old 282x38 top-centre
+  pill's placement, but still cover pixels in captures. Suspending it would add
+  capture transitions and crash cleanup. A static badge's effect on refusal rate
+  has not been measured; no claim of safety is made for it. It is not shipped.
+- `hyprctl setcursor` has no corresponding current-theme readback here. The loaded
+  user config is `~/.config/hypr/hyprland.lua`; Omarchy's bootstrap loads generated
+  theme state from `~/.local/state/omarchy/current/theme/hyprland.lua`. That file
+  sets borders and terminal opacity, not a cursor theme. The loaded default
+  `/usr/share/omarchy/default/hypr/envs.lua` only sets XCURSOR_SIZE and
+  HYPRCURSOR_SIZE to 24. Live Hyprland environment has neither theme name; sampled
+  Quickshell environments only have size 24. Config/environment defaults would
+  not prove the current theme after a runtime setcursor change anyway. A reliable
+  restoration source was not found, so no theme change is shipped.
+- No separate indicator adds no pixels, subprocess or appearance restoration.
+  It does not advertise ownership while the driver is idle; the human explicitly
+  accepts that tradeoff. This is the preferred choice, not a temporary fallback.
 
-OPEN: visual cursor visibility across real applications and physical outputs.
-OPEN: simultaneous death of wrapper and guardian, unavailable compositor, or
-system failure cannot guarantee automatic restore. Durable snapshot recovery is
-provided, but no process can promise cleanup after all processes have been killed.
+## Lifecycle and recovery
 
-## Capture-path verification, 2026-10-09
+`scripts/cursor_session.py` retains its separate guardian, process-group
+registration gate, cancellation latch, durable session token and exclusive lock.
+The historical `cursor.lock` name stays compatible with the previous version's
+lock. Version-2 records contain only a version and token, no appearance setting.
+Startup installs best-effort physical Escape cancellation, then releases the
+registered driver. No capture, quiescence gate or guessed startup delay remains.
+The unchanged action preflight still checks focus, layout, global image changes
+and a 49x49 region around pointer targets.
 
-Only two production grim calls remain: scripts/cu.py:217 (window) and
-scripts/cu.py:241 (monitor). The preflight and final action captures reuse those
-functions at scripts/cu.py:390 and scripts/cu.py:457. Neither call includes -c;
-there is no tool-owned layer-shell surface or capture suspension path. The old
-overlayctl.py is removed; physical Escape cancellation now lives in
-scripts/cancel_hotkey.py:22, imported at scripts/cursor_session.py:119.
+Success, driver error, refusal, finish, Escape and signals stop the driver group,
+drain in-flight input, then remove the temporary Escape binding. Cleanup retries
+three times. A failed cleanup retains the record; the wrapper provides fallback
+recovery and `computer-use recover` can retry later. SIGKILL of the wrapper is
+handled by the guardian's pipe EOF; SIGKILL of the guardian is handled by the
+wrapper. Tests include a SIGTERM-ignoring descendant and interrupted startup gate.
+There is one less desktop setting to restore: no cursor/screen mutation occurs.
 
-Offline validation passed: 31 unittest cases and tests/capture.py, including
-late focus settlement (tests/capture.py:61), capture without overlay subprocesses
-(tests/capture.py:108), and 32-action adapter timeout caps (tests/capture.py:121).
+An older appearance snapshot is preserved and rejected before the driver starts;
+recover it using the previous implementation before upgrading. Never replace it
+with a guessed default. Simultaneous death of wrapper and guardian, system failure,
+or an unavailable compositor can still leave the temporary Escape binding behind.
+Recover when the compositor is available. Those events cannot leave a new
+magnification/theme/overlay behind because this version creates none.
 
-Live observe timing, 2026-10-09. Measured on a real desktop session (monitor
-eDP-2, 1920x1200, scale 1) with a read-only harness: seven runs of
-`observe --screen eDP-2`, each with a throwaway XDG_CACHE_HOME that is removed
-on exit. No act, focus change, or pointer movement.
+## Evidence
 
-- per-run wall time (ms): 173.2, 174.6, 171.7, 168.3, 167.4, 176.1, 169.9
-- median wall time: 171.7 ms
-- median capture_ms (grim plus decode inside scripts/cu.py:239-245): 41 ms
-- returned image: 1280x800
-
-The reported 376 ms observe remains the user's baseline, not a measurement of
-this working tree. Against it, median wall time here is about 54% lower
-(2.19x faster); treat the delta as indicative because the methods may differ.
-The roughly 530 ms act baseline is still unmeasured.
+See [indicator-removal-report.md](indicator-removal-report.md) for real-desktop
+before/after measurements, test outputs and reproduction method. Earlier startup
+settlement results are withdrawn as guidance for the current implementation.

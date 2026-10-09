@@ -405,6 +405,9 @@ def desktop_act(env,meta,actions):
         # Hyprland to deliver enter/motion to a newly mapped surface. Establish
         # real motion without clicking; the action still ends at its exact target.
         if any(a['type'] in ('move','click','double_click','scroll','drag') for a in actions):
+            # Capture can outlast cancellation or a focus/layout change. The
+            # preparatory motion is input too, so validate before sending it.
+            guard()
             first=next(a for a in actions if a['type'] in ('move','click','double_click','scroll','drag'))
             point=first['from'] if first['type']=='drag' else [first['x'],first['y']]
             gx,gy=image_point(meta,*point);mx,my,mw,mh=meta['monitor_box'];rx,ry,rw,rh=meta['region']

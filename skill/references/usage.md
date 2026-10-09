@@ -1,13 +1,16 @@
 ## Automation sessions
 
 Run the whole task driver as `computer-use session -- DRIVER [ARGS...]`, not a
-separate session around each action. Its child commands inherit cursor ownership.
+separate session around each action. Its child commands inherit session ownership.
 Input commands require a live session; standalone capture remains available.
-Cursor zoom uses the saved `getoption cursor:zoom_factor` value and Lua `eval`;
-it never changes cursor theme or size. `finish` requests completion; `cancel`
-latches cancellation. Escape works throughout the session, without a timer.
-The wrapper waits for restoration on exit. A refusal or tool error ends the
-session. Use `recover` for retained snapshots after restoration failures.
+Sessions keep the normal cursor and desktop unchanged; there is no separate
+visible indicator. No startup captures or frame-settlement wait are needed.
+`finish` requests completion; `cancel` latches cancellation. Best-effort physical
+Escape works throughout the session, without a timer; installation failures warn.
+The wrapper waits for input to stop and the temporary binding to be removed.
+A refusal or tool error ends the session. Use `recover` for retained records
+after cleanup failure. Recover older magnifier records with the previous version
+before upgrading; the new version preserves and rejects them.
 Browser adapter timeout is capped at 60 seconds; split larger batches.
 
 # Commands and schemas

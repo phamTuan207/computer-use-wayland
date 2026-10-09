@@ -1,58 +1,74 @@
-"""Live startup proof without moving, clicking or typing; run explicitly.
+"""Opt-in real-desktop observation/preflight benchmark; no movement or typing.
 
-python3 tests/session_quiet_live.py
-Uses isolated cache state and only an act wait:0. Capture comparison is measured
-inside the real screen_changed function; the CLI and guard remain unchanged.
+Use a static disposable terminal opened by the operator. Never starts a browser
+or touches installed tool files. Each sample uses a fresh session and isolated
+cache; the production act guard is unchanged, even when it refuses.
 """
+import argparse
 import json
-import os
 from pathlib import Path
+import statistics
 import subprocess
 import sys
 import tempfile
+import time
 
 ROOT=Path(__file__).resolve().parents[1]
-sys.path.insert(0,str(ROOT/'scripts'))
-import cu
 
 
-def act_probe(observation):
-    from PIL import ImageChops,ImageStat
-    original=cu.screen_changed
-    def measured(old,new,actions):
-        mean=sum(ImageStat.Stat(ImageChops.difference(old,new)).mean)/3
-        print('GUARD_MEAN='+str(mean),file=sys.stderr)
-        return original(old,new,actions)
-    cu.screen_changed=measured
-    sys.argv=[str(ROOT/'scripts/cu.py'),'act','--observation',observation,'--actions','-']
-    return cu.main()
-
-
-def driver():
-    p=subprocess.run([sys.executable,str(ROOT/'scripts/cu.py'),'observe','--screen','eDP-2'],capture_output=True,text=True,check=True)
+def driver(cli,screen,destination):
+    def call(args,**kwargs):
+        start=time.perf_counter()
+        p=subprocess.run([sys.executable,cli,*args],capture_output=True,text=True,timeout=15,**kwargs)
+        return p,(time.perf_counter()-start)*1000
+    p,elapsed=call(['observe','--screen',screen])
+    if p.returncode:raise RuntimeError(p.stderr)
     observation=json.loads(p.stdout)
-    p=subprocess.run([sys.executable,str(Path(__file__).resolve()),'act-probe',observation['observation']],
-                     input='[{"type":"wait","ms":0}]',capture_output=True,text=True)
-    mean=next(float(line.split('=',1)[1]) for line in p.stderr.splitlines() if line.startswith('GUARD_MEAN='))
+    p,action_elapsed=call(['act','--observation',observation['observation'],'--actions','-'],
+                          input='[{"type":"wait","ms":0}]')
     result=json.loads(p.stdout)
-    print(json.dumps({'guard_mean':mean,'act_exit':p.returncode,'act':result,
-                      'zoom_during':cu.run(['hyprctl','getoption','cursor:zoom_factor'],cu.environment()).strip()}))
+    Path(destination).write_text(json.dumps({'observe_ms':elapsed,'act_ms':action_elapsed,
+        'act_exit':p.returncode,'refused':result.get('ok') is False,'error':result.get('error'),
+        'capture_ms':observation['capture_ms'],'image_size':observation['image_size']}))
     return p.returncode
 
 
 def main():
-    env=cu.environment()
-    with tempfile.TemporaryDirectory(prefix='cu-quiet-live-') as cache:
+    parser=argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--cli',type=Path,default=ROOT/'scripts/cu.py')
+    parser.add_argument('--screen',default='eDP-2')
+    parser.add_argument('--samples',type=int,default=20)
+    parser.add_argument('--output',type=Path)
+    args=parser.parse_args()
+    if args.samples<1:parser.error('--samples must be positive')
+    # Read the real compositor environment using the selected tool version.
+    sys.path.insert(0,str(args.cli.resolve().parent))
+    import cu
+    env=cu.environment();env.pop('CU_SESSION_TOKEN',None)
+    rows=[]
+    with tempfile.TemporaryDirectory(prefix='cu-session-live-') as cache:
         env['XDG_CACHE_HOME']=cache
-        print('zoom_before: '+cu.run(['hyprctl','getoption','cursor:zoom_factor'],env).strip(),flush=True)
-        p=subprocess.run([sys.executable,str(ROOT/'scripts/cu.py'),'session','--',
-                          sys.executable,str(Path(__file__).resolve()),'driver'],env=env)
-        print('session_exit: '+str(p.returncode),flush=True)
-        print('zoom_after: '+cu.run(['hyprctl','getoption','cursor:zoom_factor'],env).strip(),flush=True)
-        return p.returncode
+        for _ in range(args.samples):
+            destination=Path(cache)/'result.json';start=time.perf_counter()
+            p=subprocess.run([sys.executable,str(args.cli.resolve()),'session','--',
+                sys.executable,str(Path(__file__).resolve()),'driver',str(args.cli.resolve()),
+                args.screen,str(destination)],env=env,capture_output=True,text=True,timeout=45)
+            row=json.loads(destination.read_text()) if destination.exists() else {'startup_error':p.stderr}
+            row.update(session_ms=(time.perf_counter()-start)*1000,session_exit=p.returncode,
+                       startup_log=p.stderr.strip());rows.append(row)
+            destination.unlink(missing_ok=True)
+    result={'n':len(rows),'refusals':sum(r.get('refused',False) for r in rows),
+            'startup_failures':sum('startup_error' in r for r in rows),
+            'act_errors':sum(r.get('act_exit',0)!=0 and not r.get('refused',False) for r in rows),
+            'rows':rows}
+    for key in ('observe_ms','act_ms','session_ms'):
+        values=[r[key] for r in rows if key in r]
+        result[key+'_median']=statistics.median(values) if values else None
+    if args.output:args.output.write_text(json.dumps(result,indent=2)+'\n')
+    print(json.dumps(result,indent=2))
+    return int(bool(result['startup_failures'] or result['act_errors']))
 
 
 if __name__=='__main__':
-    if sys.argv[1:2]==['act-probe']:sys.exit(act_probe(sys.argv[2]))
-    if sys.argv[1:2]==['driver']:sys.exit(driver())
+    if sys.argv[1:2]==['driver']:sys.exit(driver(*sys.argv[2:]))
     sys.exit(main())

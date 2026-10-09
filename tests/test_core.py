@@ -106,6 +106,50 @@ class Coordinates(unittest.TestCase):
             with self.assertRaisesRegex(ValueError,'pointer actions only'):
                 cu.desktop_act({},meta,[{'type':'key','keys':['a']}])
             focus.assert_not_called();pointer.assert_not_called()
+    def test_preparatory_motion_rechecks_state_after_capture(self):
+        from contextlib import ExitStack
+        from PIL import Image
+        image=Image.new('RGB',(20,20))
+        monitor={'name':'test','x':0,'y':0,'width':20,'height':20,'scale':1}
+        meta={'backend':'desktop','scope':'window','created':time.time(),
+              'window':'fixture','window_bounds':[0,0,20,20],
+              'monitor':'test','monitor_box':[0,0,20,20],'monitor_scale':1,
+              'monitor_transform':0,'image_size':[20,20],'region':[0,0,20,20],
+              'image':'synthetic.png','max_width':1280,'pixel_sha256':'fixture'}
+        for defect,error in (('cancel','cancelled'),('window','window geometry changed'),
+                             ('monitor','monitor layout changed'),('focus','focus changed')):
+            with self.subTest(defect=defect),ExitStack() as stack:
+                captured=[False]
+                def check_cancel():
+                    if captured[0] and defect=='cancel':raise RuntimeError('cancelled')
+                def window(env,address):
+                    return {'at':[1,0] if captured[0] and defect=='window' else [0,0],
+                            'size':[20,20]}
+                def hypr(env,query):
+                    if query=='monitors':
+                        return [dict(monitor,scale=2 if captured[0] and defect=='monitor' else 1)]
+                    if query=='activewindow':
+                        return {'address':'other' if captured[0] and defect=='focus' else 'fixture'}
+                    raise AssertionError('unexpected compositor query')
+                def observe(env,address,crop,max_width,**kwargs):
+                    if kwargs.get('persist') is False:
+                        captured[0]=True
+                        return image,meta.copy()
+                    return meta.copy()
+                # Every desktop operation is mocked; no compositor or input helper runs.
+                for name,replacement in (('check_cancel',check_cancel),('window',window),
+                                         ('hypr',hypr),('observe',observe)):
+                    stack.enter_context(patch.object(cu,name,side_effect=replacement))
+                stack.enter_context(patch.object(cu,'focus'))
+                stack.enter_context(patch.object(cu.time,'sleep'))
+                stack.enter_context(patch('PIL.Image.open',return_value=image))
+                pointer=stack.enter_context(patch.object(cu,'Pointer')).return_value
+                result=cu.desktop_act({},meta,[{'type':'move','x':10,'y':10}])
+                self.assertFalse(result['ok'])
+                self.assertEqual(result['completed'],0)
+                self.assertIn(error,result['error'])
+                pointer.command.assert_not_called()
+                pointer.close.assert_called_once()
     def test_reject_invalid_points(self):
         m={'image_size':[640,400],'region':[0,0,1280,800]}
         for x,y in [(640,0),(-1,20),(0,400),(float('nan'),0),(float('inf'),0)]:

@@ -5,7 +5,7 @@ CLI drives the pointer, keyboard, screen capture, Chromium DOM and native
 accessibility, so an agent can act on a real desktop instead of guessing.
 
 No model API calls. CLI commands print bounded JSON; an explicit automation
-session uses a cursor guardian that exits when the session ends.
+session uses a session guardian that exits when the session ends.
 
 ## What it does
 
@@ -60,44 +60,30 @@ matter how the image was scaled for viewing.
 
 Launch the program responsible for the whole task with
 `computer-use session -- DRIVER [ARGS...]`. Commands launched by that driver
-inherit the session. The real cursor uses zoom factor 5 throughout the session;
-the original value read from Hyprland is restored when the driver finishes,
-fails, receives cancellation, or a tool refuses an operation. Input commands
-require this session. Standalone observations remain available.
+inherit the session. Sessions leave the normal cursor and desktop appearance
+alone: no magnification, cursor theme change, badge, or capture suspension.
+The visible actions themselves signal control. Input commands require this
+session; standalone observations remain available.
 
-Before handing control to the driver, the guardian captures every enabled
-monitor until three consecutive image pairs are identical at up to 1280 pixels
-wide. There is no fixed startup sleep. Sampling is limited to 120 rounds and a
-six-second deadline, with bounded capture commands. A desktop that keeps changing
-(for example video playback), failed captures, or cancellation aborts startup and
-restores the saved zoom; the driver does not run.
+Startup installs best-effort physical Escape cancellation and registers the
+driver's process group before releasing it. It does not capture the desktop or
+wait for identical frames. Each action still checks geometry, focus and image
+changes immediately before input.
 
-Physical Escape cancels even while the driver is thinking. Its temporary binding
-is best-effort: a failure logs a warning; explicit cancellation and signals still
-work. `computer-use cancel`
-also latches cancellation; `computer-use finish` requests completion. The wrapper
-waits for input to stop and cursor restoration before it exits. Use
-`computer-use resume` only after the user asks to continue, then launch a new
-session. Failed restoration keeps the saved value; `computer-use recover`
-retries it without guessing a default. These commands replace the old status pill.
+Physical Escape cancels even while the driver is thinking. If its temporary
+binding cannot be installed, a warning is logged; explicit cancellation and
+signals still work. `computer-use cancel` latches cancellation;
+`computer-use finish` requests completion. Use `computer-use resume` only after
+the user asks to continue, then launch a new session.
 
-The guardian survives an abruptly killed wrapper; the wrapper also recovers if
-the guardian is killed or retains a snapshot after failed restoration. Simultaneous loss of both processes, a broken compositor,
-or system failure cannot guarantee automatic restoration. The saved snapshot
-supports recovery after those failures.
-
-### Coordinate rule
-
-Coordinates belong to the image `observe` returned. Do not measure them off a
-resized copy of it. If a target is too small to read, capture it again with a
-smaller `--crop` or a larger `--max-width` and take the coordinates from *that*
-fresh observation.
-
-### When to stop
-
-If a click misses twice, stop and re-observe rather than nudging the
-coordinates. Repeated misses mean the layout moved or the target is not what it
-looked like.
+The guardian survives an abruptly killed wrapper; the wrapper provides fallback
+if the guardian dies. Cleanup stops the driver group, drains input, then removes
+the temporary Escape binding. Failed cleanup retains the session record for
+`computer-use recover`. Simultaneous loss of both processes or an unavailable
+compositor can leave that binding installed; recover after service returns.
+There is no cursor or screen setting to restore. For a retained record from the
+old magnifier implementation, run that previous version's recovery before
+upgrading; the new version refuses to discard it or guess the old setting.
 
 ## Agent skill
 
@@ -119,7 +105,7 @@ ln -s "$PWD/skill" ~/.config/opencode/skills/computer-use
 | `scripts/cdp.mjs` | Chromium CDP backend |
 | `scripts/a11y.py` | AT-SPI backend |
 | `native/` | Wayland pointer protocol and C source |
-| `scripts/cursor_session.py` | session cursor ownership and recovery |
+| `scripts/cursor_session.py` | session ownership and cleanup recovery |
 | `scripts/cancel_hotkey.py` | physical Escape cancellation binding |
 | `skill/` | agent-facing documentation |
 | `tests/` | unit tests and live fixtures |

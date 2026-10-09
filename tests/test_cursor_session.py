@@ -1,5 +1,4 @@
 """No live GUI: fake hyprctl plus real pipes/processes/signals for lifecycle proof."""
-import importlib.util
 import json
 import os
 from pathlib import Path
@@ -17,28 +16,19 @@ import cursor_session as session
 import cu
 
 FAKE = '''#!/usr/bin/env python3
-import json,os,re,sys
+import json,os,sys
 from pathlib import Path
 p=Path(os.environ['FAKE_DESKTOP'])
 s=json.loads(p.read_text())
 a=sys.argv[1:]
 s['calls'].append(a)
-if a==['getoption','cursor:zoom_factor']:
-    if s.get('bad_read'):print('unknown option')
-    else:print('float: '+s['zoom'])
-elif a==['-j','devices']:print('{"keyboards":[{"name":"test-keyboard"}]}')
+if a==['-j','devices']:print('{"keyboards":[{"name":"test-keyboard"}]}')
 elif a==['-j','monitors']:
     print('[]' if s.get('no_monitors') else '[{"name":"test","x":0,"y":0,"width":2,"height":2,"scale":1}]')
 elif a and a[0]=='eval':
-    m=re.search(r'zoom_factor = ([0-9.]+)',a[1])
-    if m:
-        s['zoom']=m[1]
-        if m[1]=='5.0' and s.get('partial_failure'):
-            p.write_text(json.dumps(s));sys.exit(1)
-        if m[1]!='5.0' and s.get('restore_failures',0):
-            s['zoom']='5.0';s['restore_failures']-=1
-            p.write_text(json.dumps(s));sys.exit(1)
-    elif 'hl.bind' in a[1] and s.get('hotkey_failure'):
+    if 'hl.bind' in a[1]:s['hotkey_active']=True
+    elif ':unbind()' in a[1] and not s.get('unbind_failure'):s['hotkey_active']=False
+    if 'hl.bind' in a[1] and s.get('hotkey_failure'):
         p.write_text(json.dumps(s));sys.exit(1)
     elif ':unbind()' in a[1] and 'hl.bind' not in a[1] and s.get('unbind_failure'):
         p.write_text(json.dumps(s));sys.exit(1)
@@ -94,36 +84,35 @@ class Lifecycle(unittest.TestCase):
         marker=self.folder/'driver-ready'
         p=self.launch('from pathlib import Path; import time; Path('+repr(str(marker))+').touch(); time.sleep(30)')
         self.wait_for(marker.exists)
-        self.assertEqual(json.loads(self.desktop.read_text())['zoom'],'5.0')
+        self.assertTrue((self.state/'session.json').exists())
         return p
 
     def assert_restored(self):
         self.wait_for(lambda:json.loads(self.desktop.read_text())['zoom']=='1.750000' and not (self.state/'session.json').exists())
         calls=json.loads(self.desktop.read_text())['calls']
-        zooms=[a[1] for a in calls if a[0]=='eval' and 'zoom_factor' in a[1]]
-        self.assertEqual(zooms[-1],'hl.config({ cursor = { zoom_factor = 1.750000 } })')
-        self.assertFalse(any(a[0] in ('keyword','setcursor') for a in calls))
+        self.assertFalse(any(a[0] in ('keyword','setcursor','getoption') or 'hl.config' in str(a) for a in calls))
+        self.assertTrue(any(':unbind()' in str(a) for a in calls))
+        self.assertFalse(json.loads(self.desktop.read_text()).get('hotkey_active'))
 
-    def test_success_and_driver_error_restore_nondefault(self):
+    def test_success_and_driver_error_leave_desktop_unchanged(self):
         for status in (0,7):
             with self.subTest(status=status):
                 p=self.launch('import sys;sys.exit('+str(status)+')')
                 out,err=p.communicate(timeout=8)
                 self.assertEqual(p.returncode,status,(out,err));self.assert_restored()
 
-    def test_keeps_zoom_between_commands_and_finish_restores(self):
+    def test_session_between_commands_and_finish_cleans_up(self):
         marker=self.folder/'driver-ready'
         args=repr([sys.executable,str(ROOT/'scripts/cu.py'),'status'])
         code='import subprocess,time;from pathlib import Path;subprocess.run('+args+',check=True);subprocess.run('+args+',check=True);Path('+repr(str(marker))+').touch();time.sleep(30)'
         p=self.launch(code);self.wait_for(marker.exists)
         time.sleep(.1)
-        self.assertEqual(json.loads(self.desktop.read_text())['zoom'],'5.0')
+        self.assertTrue((self.state/'session.json').exists())
         subprocess.run([sys.executable,str(ROOT/'scripts/cu.py'),'finish'],env=self.env,
                        capture_output=True,check=True,timeout=4)
         p.communicate(timeout=8);self.assert_restored()
 
-    def test_escape_cancel_restores_even_when_unbind_fails(self):
-        self.configure(unbind_failure=True)
+    def test_escape_cancel_cleans_up(self):
         p=self.idle()
         subprocess.run([sys.executable,str(ROOT/'scripts/cancel_hotkey.py'),'cancel'],env=self.env,
                        capture_output=True,check=True,timeout=4)
@@ -188,15 +177,6 @@ class Lifecycle(unittest.TestCase):
         finally:
             if pidf.exists():self._kill_group(int(pidf.read_text()))
 
-    def test_startup_failures_restore_if_write_may_have_applied(self):
-        for flag in ('partial_failure',):
-            with self.subTest(flag=flag):
-                self.configure(**{flag:True})
-                p=self.launch('raise AssertionError("must not start")')
-                out,err=p.communicate(timeout=8)
-                self.assertNotEqual(p.returncode,0);self.assertNotIn('must not start',err)
-                self.assert_restored();self.configure(**{flag:False})
-
     def test_hotkey_failure_warns_but_driver_runs(self):
         self.configure(hotkey_failure=True)
         p=self.launch('print("driver ran")');out,err=p.communicate(timeout=8)
@@ -215,62 +195,38 @@ class Lifecycle(unittest.TestCase):
     def test_cleanup_exceptions_cannot_skip_restore(self):
         import cancel_hotkey
         for failing in ('request_stop','stop_group','drain_input'):
-            with self.subTest(failing=failing),patch.object(session.signal,'signal'),patch.object(session,'STATE',self.folder),patch.object(session,'SNAPSHOT',self.folder/'snapshot'),patch.object(session,'CANCEL',self.folder/'cancel'),patch.object(session,'owner_lock'),patch.object(session,'read_zoom',side_effect=['1.0','5.0']),patch.object(session,'zoom'),patch.object(session,'wait_for_quiet'),patch.object(cancel_hotkey,'hotkey_on'),patch.object(cancel_hotkey,'hotkey_off'),patch.object(session,'request_stop'),patch.object(session,'stop_group'),patch.object(session,'drain_input'),patch.object(session,'restore',return_value=True) as restore,patch.object(session.select,'select',return_value=([1],[],[])),patch.object(session.os,'read',side_effect=[b'123',b'']),patch.object(session,failing,side_effect=RuntimeError('cleanup injected')):
+            with self.subTest(failing=failing),patch.object(session.signal,'signal'),patch.object(session,'STATE',self.folder),patch.object(session,'SNAPSHOT',self.folder/'snapshot'),patch.object(session,'CANCEL',self.folder/'cancel'),patch.object(session,'owner_lock'),patch.object(cancel_hotkey,'hotkey_on'),patch.object(cancel_hotkey,'hotkey_off'),patch.object(session,'request_stop'),patch.object(session,'stop_group'),patch.object(session,'drain_input'),patch.object(session,'restore',return_value=True) as restore,patch.object(session.select,'select',return_value=([1],[],[])),patch.object(session.os,'read',side_effect=[b'123',b'']),patch.object(session,failing,side_effect=RuntimeError('cleanup injected')):
                 self.assertEqual(session.guardian(self.env,1,'a'*32),1)
                 restore.assert_called_once_with(self.env)
                 (self.folder/'snapshot').unlink(missing_ok=True)
 
-    def test_quiet_capture_is_bounded_and_cancelable(self):
-        from PIL import Image
-        import io
-        def ppm(value):
-            output=io.BytesIO();Image.new('RGB',(2,2),(value,0,0)).save(output,format='PPM');return output.getvalue()
-        monitors=b'[{"name":"test","x":0,"y":0,"width":2,"height":2,"scale":1}]'
-        frames=iter([ppm(0),ppm(255)]*5)
-        def capture(*args,**kwargs):
-            return subprocess.CompletedProcess(args,0,monitors if args[0][0]=='hyprctl' else next(frames),b'')
-        with patch.object(session.subprocess,'run',side_effect=capture):
-            with self.assertRaisesRegex(RuntimeError,'did not settle after 4 captures'):
-                session.wait_for_quiet(self.env,lambda:False,attempts=4)
-        with self.assertRaisesRegex(RuntimeError,'cancelled during startup'):
-            session.wait_for_quiet(self.env,lambda:True)
-        with self.assertRaisesRegex(RuntimeError,'startup deadline'):
-            session.wait_for_quiet(self.env,lambda:False,timeout=0)
-        frames=iter([ppm(0),ppm(255),ppm(255),ppm(255),ppm(255)])
-        with patch.object(session.subprocess,'run',side_effect=capture) as run:
-            session.wait_for_quiet(self.env,lambda:False,attempts=5)
-            self.assertEqual(run.call_count,10)
-
-    def test_capture_failure_aborts_startup_and_restores(self):
-        self.configure(no_monitors=True)
-        p=self.launch('raise AssertionError("must not start")')
-        out,err=p.communicate(timeout=8)
-        self.assertEqual(p.returncode,1,(out,err))
-        self.assertIn('no enabled outputs',err);self.assertNotIn('must not start',err)
+    def test_startup_never_reads_cursor_or_captures(self):
+        self.configure(bad_read=True,no_monitors=True)
+        p=self.launch('print("driver ran")');out,err=p.communicate(timeout=8)
+        self.assertEqual(p.returncode,0,(out,err));self.assertIn('driver ran',out)
         self.assert_restored()
+        self.assertFalse(any(a==['-j','monitors'] for a in json.loads(self.desktop.read_text())['calls']))
 
-    def test_unknown_value_never_changes_cursor(self):
-        self.configure(bad_read=True)
-        p=self.launch('raise AssertionError("must not start")');p.communicate(timeout=8)
-        self.assertNotEqual(p.returncode,0)
-        self.assertFalse((self.state/'session.json').exists())
-        self.assertFalse(any('zoom_factor' in str(a) and a[0]=='eval' for a in json.loads(self.desktop.read_text())['calls']))
-
-    def test_retry_and_persistent_recovery_after_failed_restore(self):
-        self.configure(restore_failures=1)
-        p=self.launch('pass');p.communicate(timeout=8);self.assert_restored()
-        self.configure(restore_failures=3)
+    def test_retry_and_persistent_recovery_after_failed_cleanup(self):
+        self.configure(unbind_failure=True)
         p=self.launch('pass');out,err=p.communicate(timeout=8)
         self.assertEqual(p.returncode,1,(out,err))
         self.assertIn('snapshot retained',err)
-        self.assert_restored()
-        self.configure(restore_failures=6)
-        p=self.launch('pass');out,err=p.communicate(timeout=8)
-        self.assertEqual(p.returncode,1,(out,err))
         self.assertTrue((self.state/'session.json').exists())
+        self.configure(unbind_failure=False)
         result=subprocess.run([sys.executable,str(ROOT/'scripts/cu.py'),'recover'],env=self.env,
                               capture_output=True,text=True,timeout=8)
         self.assertEqual(result.returncode,0,result.stderr);self.assert_restored()
+
+    def test_old_snapshot_is_retained_and_driver_does_not_run(self):
+        self.state.mkdir(parents=True)
+        snapshot=self.state/'session.json'
+        saved=json.dumps({'original':'1.750000','token':'a'*32})
+        snapshot.write_text(saved)
+        p=self.launch('raise AssertionError("must not start")');out,err=p.communicate(timeout=8)
+        self.assertNotEqual(p.returncode,0);self.assertNotIn('must not start',err)
+        self.assertEqual(snapshot.read_text(),saved)
+        self.assertEqual(json.loads(self.desktop.read_text())['calls'],[])
 
     def test_concurrent_session_cannot_overwrite_original(self):
         first=self.idle()
@@ -283,7 +239,7 @@ class Lifecycle(unittest.TestCase):
     def test_old_command_cannot_stop_new_session(self):
         self.state.mkdir(parents=True)
         snapshot=self.state/'session.json'
-        snapshot.write_text(json.dumps({'original':'1.750000','token':'b'*32}))
+        snapshot.write_text(json.dumps({'version':2,'token':'b'*32}))
         with patch.object(session,'STATE',self.state),patch.object(session,'SNAPSHOT',snapshot):
             session.request_stop('a'*32)
         self.assertFalse((self.state/('stop-'+'b'*32)).exists())
@@ -304,55 +260,16 @@ class Lifecycle(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError,'input requires'):
                 cu.require_session()
 
-    def test_restore_timeout_preserves_snapshot_and_does_not_raise(self):
+    def test_cleanup_timeout_preserves_snapshot_and_does_not_raise(self):
+        import cancel_hotkey
         self.state.mkdir(parents=True)
         snapshot=self.state/'session.json'
-        snapshot.write_text(json.dumps({'original':'1.750000','token':'a'*32}))
+        snapshot.write_text(json.dumps({'version':2,'token':'a'*32}))
         with patch.object(session,'STATE',self.state),patch.object(session,'SNAPSHOT',snapshot),\
-             patch.object(session,'zoom',side_effect=subprocess.TimeoutExpired('fake',2)) as zoom,\
+             patch.object(cancel_hotkey,'hotkey_off',side_effect=subprocess.TimeoutExpired('fake',2)) as off,\
              patch.object(session.time,'sleep'):
-            self.assertFalse(session.restore(self.env));self.assertEqual(zoom.call_count,3)
+            self.assertFalse(session.restore(self.env));self.assertEqual(off.call_count,3)
         self.assertTrue(snapshot.exists())
-
-
-class QuietFrames(unittest.TestCase):
-    def test_pixel_layout_and_output_changes_reset_gate(self):
-        import io
-        from PIL import Image
-        base={'name':'test','x':0,'y':0,'width':4,'height':4,'scale':1}
-        def ppm(color):
-            image=Image.new('RGB',(4,4));image.putpixel((0,0),color)
-            out=io.BytesIO();image.save(out,format='PPM');return out.getvalue()
-        black=ppm((0,0,0))
-        # All three channels and a sub-mean pixel change must reset equality.
-        changes=[([base],ppm(color)) for color in ((1,0,0),(0,1,0),(0,0,1))]
-        changes += [([dict(base,**change)],black) for change in
-                    ({'x':1},{'scale':2},{'transform':1},{'name':'other'})]
-        changes += [([base,dict(base,name='second')],black)]
-        for changed in changes:
-            with self.subTest(changed=changed[0]):
-                rounds=iter([([base],black)]*3+[changed]*4)
-                current=[None];captures=[0]
-                def run(argv,**kwargs):
-                    if argv[0]=='hyprctl':
-                        current[0]=next(rounds);captures[0]+=1
-                        raw=json.dumps(current[0][0]).encode()
-                    else:raw=current[0][1]
-                    return subprocess.CompletedProcess(argv,0,raw,b'')
-                with patch.object(session.subprocess,'run',side_effect=run):
-                    session.wait_for_quiet({},lambda:False,attempts=7)
-                self.assertEqual(captures[0],7)
-
-    def test_static_gate_still_requires_four_captures(self):
-        import io
-        from PIL import Image
-        out=io.BytesIO();Image.new('RGB',(2,2)).save(out,format='PPM')
-        monitors=b'[{"name":"test","x":0,"y":0,"width":2,"height":2,"scale":1}]'
-        def run(argv,**kwargs):
-            return subprocess.CompletedProcess(argv,0,monitors if argv[0]=='hyprctl' else out.getvalue(),b'')
-        with patch.object(session.subprocess,'run',side_effect=run) as capture:
-            session.wait_for_quiet({},lambda:False,attempts=4)
-        self.assertEqual(capture.call_count,8)
 
 
 if __name__=='__main__':unittest.main()
