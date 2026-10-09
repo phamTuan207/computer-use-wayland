@@ -77,7 +77,7 @@ ShellRoot {
 
     Process {
       id: hotkeyOff
-      command: ["python3", "scripts/overlayctl.py", "hotkey-off"]
+      command: ["python3", Quickshell.shellDir + "/../scripts/overlayctl.py", "hotkey-off"]
     }
   }
 }

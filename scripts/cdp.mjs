@@ -83,6 +83,7 @@ async function click(a) {
 async function key(keys) {
   const mods={alt:1,ctrl:2,meta:4,super:4,shift:8};let modifiers=0;const regular=[];
   for(const k of keys){if(k.toLowerCase() in mods)modifiers|=mods[k.toLowerCase()];else regular.push(k);}
+  if(!regular.length)throw new Error('key action needs a non-modifier key');
   const special={Enter:13,Tab:9,Escape:27,BackSpace:8,Backspace:8,Delete:46,ArrowLeft:37,ArrowUp:38,ArrowRight:39,ArrowDown:40,Home:36,End:35,PageUp:33,PageDown:34,space:32,' ':32};
   // US-layout shift layer, for the keys where uppercase is not the shifted form.
   const shifted={'1':'!','2':'@','3':'#','4':'$','5':'%','6':'^','7':'&','8':'*','9':'(','0':')',
@@ -123,6 +124,7 @@ try {
     // Preflight the entire schema before any side effects.
     for(const a of request.actions){
       if(['click','fill','assert'].includes(a.type)&&!a.ref&&!a.selector)throw new Error('ref or selector required');
+      if(a.type==='key'&&a.keys.every(k=>/^(ctrl|alt|shift|meta|super)$/i.test(k)))throw new Error('key action needs a non-modifier key');
       if(a.type==='key')for(const k of a.keys)if(!/^(ctrl|alt|shift|meta|super|Enter|Tab|Escape|Back[Ss]pace|Delete|Arrow(Left|Right|Up|Down)|Home|End|PageUp|PageDown|space|.)$/.test(k))throw new Error('unsupported key');
       if(a.type==='scroll'&&!Number.isFinite(a.dy))throw new Error('scroll dy required');
     }

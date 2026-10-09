@@ -119,10 +119,9 @@ def window(env, address):
 
 def focus(env, address):
     if not re.fullmatch(r'0x[0-9a-fA-F]+',address or ''):raise ValueError('exact window address required')
+    if hypr(env,'activewindow').get('address')==address:return
     run(['hyprctl','dispatch',f'hl.dsp.focus({{ window = "address:{address}" }})'],env)
-    for _ in range(15):
-        if hypr(env,'activewindow').get('address')==address: return
-        time.sleep(.04)
+    if hypr(env,'activewindow').get('address')==address:return
     raise RuntimeError('target window did not gain focus')
 
 def bounds(c): return c['at']+c['size']
@@ -185,12 +184,16 @@ def overlay_hide(env):
 @contextmanager
 def clear_capture(env):
     was_active=_overlay_active
-    if was_active:
-        overlay_ipc(env,'suspend')
+    # A previous CLI process may have left its daemon visible.
+    present=was_active or (shutil.which('quickshell') and json.loads(run(
+        ['quickshell','list','-p',str(OVERLAY),'-j'],env,timeout=1)))
+    if present:
+        if not overlay_ipc(env,'suspend'):raise RuntimeError('overlay suspend failed; refusing capture')
         time.sleep(.04)  # Let the compositor present one frame without the overlay.
     try: yield
     finally:
-        if was_active and not CANCEL.exists(): overlay_ipc(env,'restore')
+        if was_active and not CANCEL.exists():
+            if not overlay_ipc(env,'restore'):raise RuntimeError('overlay restore failed')
 
 def run_cancelable(argv, env=None, input=None, timeout=12):
     check_cancel()
@@ -207,7 +210,7 @@ def run_cancelable(argv, env=None, input=None, timeout=12):
             except subprocess.TimeoutExpired:
                 first=False
                 if time.monotonic()>=deadline: raise RuntimeError(f'{Path(argv[0]).name}: timed out')
-        if p.returncode: raise RuntimeError(f'{Path(argv[0]).name}: {err.strip()[:400]}')
+        if p.returncode: raise RuntimeError(f'{Path(argv[0]).name}: {(err.strip() or out.strip())[:400]}')
         check_cancel()
         return out
     except Exception:
@@ -217,11 +220,13 @@ def run_cancelable(argv, env=None, input=None, timeout=12):
             except subprocess.TimeoutExpired:p.kill();p.communicate()
         raise
 
-def save_observation(image, meta, max_width):
+def save_observation(image, meta, max_width, persist=True):
     from PIL import Image
     if max_width < 320 or max_width > 3840: raise ValueError('max-width must be 320..3840')
     if image.width>max_width:
         image=image.resize((max_width,round(image.height*max_width/image.width)),Image.Resampling.LANCZOS)
+    meta.update(image_size=list(image.size),max_width=max_width)
+    if not persist:return image,meta
     prepare_state()
     token=uuid.uuid4().hex[:12]
     path=STATE/(token+'.png')
@@ -235,7 +240,7 @@ def save_observation(image, meta, max_width):
         if old.suffix in ('.png','.json') and time.time()-old.stat().st_mtime>86400: old.unlink()
     return meta
 
-def observe(env, address, crop=None, max_width=1280, activate=True):
+def observe(env, address, crop=None, max_width=1280, activate=True, persist=True):
     from PIL import Image
     if activate: focus(env,address)
     c=window(env,address)
@@ -259,13 +264,14 @@ def observe(env, address, crop=None, max_width=1280, activate=True):
     geometry=f'{region[0]},{region[1]} {region[2]}x{region[3]}'
     start=time.monotonic()
     with clear_capture(env):
-        raw=run(['grim','-s','1','-g',geometry,'-l','1','-'],env,text=False)
+        # PPM avoids zlib; -l is a PNG compression level and does not apply.
+        raw=run(['grim','-s','1','-g',geometry,'-t','ppm','-'],env,text=False)
     image=Image.open(io.BytesIO(raw)).convert('RGB')
     if bounds(window(env,address)) != wb: raise RuntimeError('window moved during capture; observe again')
     meta={'backend':'desktop','scope':'window','window':address,'window_bounds':wb,'monitor':m['name'],
           'monitor_box':mb,'monitor_scale':m['scale'],'monitor_transform':m.get('transform',0),
           'region':region,'crop':crop,'capture_ms':round((time.monotonic()-start)*1000)}
-    return save_observation(image,meta,max_width)
+    return save_observation(image,meta,max_width,persist)
 
 def screen_region(monitor_box_,crop):
     mx,my,mw,mh=monitor_box_
@@ -275,7 +281,7 @@ def screen_region(monitor_box_,crop):
         raise ValueError('crop must be a positive rectangle inside the selected monitor')
     return [mx+x,my+y,w,h]
 
-def observe_screen(env,monitor,crop=None,max_width=1280):
+def observe_screen(env,monitor,crop=None,max_width=1280,persist=True):
     from PIL import Image
     m=next((m for m in hypr(env,'monitors') if m['name']==monitor),None)
     if not m:raise ValueError('monitor no longer exists; use doctor to list monitors')
@@ -283,7 +289,8 @@ def observe_screen(env,monitor,crop=None,max_width=1280):
     geometry=f'{region[0]},{region[1]} {region[2]}x{region[3]}'
     start=time.monotonic()
     with clear_capture(env):
-        raw=run(['grim','-s','1','-g',geometry,'-l','1','-'],env,text=False)
+        # PPM avoids zlib; -l is a PNG compression level and does not apply.
+        raw=run(['grim','-s','1','-g',geometry,'-t','ppm','-'],env,text=False)
     current=next((m for m in hypr(env,'monitors') if m['name']==monitor),None)
     if not current or monitor_box(current)!=mb or current['scale']!=m['scale'] or current.get('transform',0)!=m.get('transform',0):
         raise RuntimeError('monitor layout changed during capture; observe again')
@@ -291,7 +298,7 @@ def observe_screen(env,monitor,crop=None,max_width=1280):
     meta={'backend':'desktop','scope':'screen','monitor':monitor,'monitor_box':mb,
           'monitor_scale':m['scale'],'monitor_transform':m.get('transform',0),
           'region':region,'crop':crop,'capture_ms':round((time.monotonic()-start)*1000)}
-    return save_observation(image,meta,max_width)
+    return save_observation(image,meta,max_width,persist)
 
 def image_point(meta,x,y):
     if not all(isinstance(v,(int,float)) and math.isfinite(v) for v in (x,y)): raise ValueError('finite coordinates required')
@@ -432,11 +439,12 @@ def desktop_act(env,meta,actions):
     if not screen_scope:focus(env,address)
     guard()
     # Refuse coordinates from an image superseded by a visible layout change.
-    fresh=(observe_screen(env,meta['monitor'],meta.get('crop'),meta['max_width']) if screen_scope else
-           observe(env,address,meta.get('crop'),meta['max_width'],activate=False))
+    new,fresh=(observe_screen(env,meta['monitor'],meta.get('crop'),meta['max_width'],persist=False) if screen_scope else
+               observe(env,address,meta.get('crop'),meta['max_width'],activate=False,persist=False))
     from PIL import Image
-    old=Image.open(meta['image']);new=Image.open(fresh['image'])
+    old=Image.open(meta['image'])
     if screen_changed(old,new,actions):
+        fresh=save_observation(new,fresh,meta['max_width'])
         return {'ok':False,'completed':0,'error':'screen changed since observation; inspect after.image','after':fresh}
     pointer=Pointer(env,meta['monitor']);completed=0;error=None
     def move(x,y):
@@ -505,28 +513,32 @@ def desktop_act(env,meta,actions):
     return result
 
 def browser(request):
-    out=run_cancelable(['node',str(ROOT/'scripts/cdp.mjs')],input=json.dumps(request),timeout=35)
+    # Keep setup/snapshot allowance; each guard can take 5s, and the final
+    # assert evaluation can overrun its polling budget by another 5s.
+    budget=sum(5000+(max(0,min(a.get('timeout_ms',1000),3000))+5000 if a['type']=='assert' else
+                     a.get('ms',100) if a['type']=='wait' else 0) for a in request.get('actions',[]))
+    out=run_cancelable(['node',str(ROOT/'scripts/cdp.mjs')],input=json.dumps(request),timeout=35+budget/1000)
     if out.strip(): return json.loads(out)
     raise RuntimeError('CDP adapter failed')
 
 def browser_start(env,endpoint):
     url=urllib.parse.urlparse(endpoint)
-    if url.hostname not in ('localhost','127.0.0.1') or url.scheme!='http':raise ValueError('loopback http endpoint required')
+    if url.hostname not in ('localhost','127.0.0.1','::1') or url.scheme!='http':raise ValueError('loopback http endpoint required')
     port=url.port or 9222
     try:
-        json.load(urllib.request.urlopen(f'http://127.0.0.1:{port}/json/version',timeout=1))
+        json.load(urllib.request.urlopen(urllib.parse.urljoin(endpoint,'/json/version'),timeout=1))
         return {'ok':True,'endpoint':endpoint,'reused':True}
     except Exception:pass
     prepare_state();profile=ROOT/'browser-profile';profile.mkdir(mode=0o700,exist_ok=True)
     log=open(STATE/'browser.log','a');log_path=STATE/'browser.log';log_path.chmod(0o600)
     p=subprocess.Popen(['chromium',f'--user-data-dir={profile}',f'--remote-debugging-port={port}',
-        '--remote-debugging-address=127.0.0.1','--no-first-run','--no-default-browser-check','about:blank'],
+        f'--remote-debugging-address={url.hostname if url.hostname!="localhost" else "127.0.0.1"}','--no-first-run','--no-default-browser-check','about:blank'],
         env=env,stdin=subprocess.DEVNULL,stdout=log,stderr=log,start_new_session=True)
     log.close()
     for _ in range(50):
         check_cancel()
         try:
-            json.load(urllib.request.urlopen(f'http://127.0.0.1:{port}/json/version',timeout=.3))
+            json.load(urllib.request.urlopen(urllib.parse.urljoin(endpoint,'/json/version'),timeout=.3))
             return {'ok':True,'endpoint':endpoint,'reused':False,'pid':p.pid,'profile':str(profile)}
         except Exception:time.sleep(.1)
     raise RuntimeError('managed browser did not expose CDP; see '+str(log_path))
