@@ -2,6 +2,15 @@
 native/pointer
 native/pointer-protocol.h
 native/pointer-protocol.c
+native/indicator
+native/presentation-protocol.h
+native/presentation-protocol.c
+native/background-effect-protocol.h
+native/background-effect-protocol.c
+native/keyboard-protocol.c
+native/keyboard-protocol.h
+native/keyboard-protocol.o
+native/modifiers
 native/hyprglass.so
 __pycache__/
 *.pyc
