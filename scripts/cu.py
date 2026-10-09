@@ -12,6 +12,7 @@ from pathlib import Path
 import re
 import select
 import shutil
+import socket
 import subprocess
 import sys
 import time
@@ -75,6 +76,16 @@ def keyboard_argv(actions):
     if total_ms>5000:raise ValueError('keyboard group exceeds 5 seconds; split at a checkpoint')
     return args
 
+def standalone_type_argv(a):
+    # Leading-dash text cannot be an argv token, so it is typed through stdin by
+    # its own wtype process. Preflight the same 5-second budget as a grouped
+    # invocation so a standalone literal cannot bypass the group limit.
+    if len(a['text'])*a.get('delay_ms',0)+12>5000:
+        raise ValueError('keyboard group exceeds 5 seconds; split at a checkpoint')
+    argv=['wtype']
+    if a.get('delay_ms',0):argv+=['-d',str(a['delay_ms'])]
+    return argv+['-','-p','VoidSymbol']
+
 def environment():
     env = os.environ.copy()
     # Refresh even a stale inherited session signature; do not copy secrets or PATH.
@@ -98,6 +109,29 @@ def run(argv, env=None, text=True, input=None, timeout=12):
     return p.stdout
 
 def hypr(env, what):
+    # The documented read-only IPC avoids a fork/exec for every safety check.
+    # Keep CLI compatibility for callers without an explicit session environment.
+    if env and env.get('XDG_RUNTIME_DIR') and env.get('HYPRLAND_INSTANCE_SIGNATURE'):
+        if what not in ('clients','monitors','activewindow','cursorpos','devices','workspaces','layers'):
+            raise ValueError('unsupported read-only compositor query')
+        path=Path(env['XDG_RUNTIME_DIR'])/'hypr'/env['HYPRLAND_INSTANCE_SIGNATURE']/'.socket.sock'
+        with socket.socket(socket.AF_UNIX,socket.SOCK_STREAM) as connection:
+            deadline=time.monotonic()+1
+            try:
+                connection.settimeout(1);connection.connect(str(path))
+                connection.sendall(('j/'+what).encode())
+                data=bytearray()
+                while True:
+                    remaining=deadline-time.monotonic()
+                    if remaining<=0:raise RuntimeError('compositor query timed out')
+                    connection.settimeout(remaining)
+                    part=connection.recv(65536)
+                    if not part:break
+                    data.extend(part)
+                    if len(data)>4*1024*1024:raise RuntimeError('compositor response exceeds 4 MiB')
+            except socket.timeout:
+                raise RuntimeError('compositor query timed out') from None
+        return json.loads(data)
     return json.loads(run(['hyprctl','-j',what],env))
 
 def monitor_box(m):
@@ -227,8 +261,9 @@ def observe(env, address, crop=None, max_width=1280, activate=False, persist=Tru
     # grim -s 1 uses logical layout pixels; explicitly exclude the cursor (no -c).
     geometry=f'{region[0]},{region[1]} {region[2]}x{region[3]}'
     start=time.monotonic()
-    # PPM avoids zlib; cursor zoom needs no capture suspension (no -c).
-    raw=run(['grim','-s','1','-g',geometry,'-t','ppm','-'],env,text=False)
+    from indicator import capture_clean
+    with capture_clean(STATE):
+        raw=run(['grim','-s','1','-g',geometry,'-t','ppm','-'],env,text=False)
     image=Image.open(io.BytesIO(raw)).convert('RGB')
     current=window(env,address)
     if bounds(current) != wb or current['monitor']!=c['monitor']: raise RuntimeError('window moved during capture; observe again')
@@ -256,8 +291,9 @@ def observe_screen(env,monitor,crop=None,max_width=1280,persist=True):
     mb=monitor_box(m);region=screen_region(mb,crop)
     geometry=f'{region[0]},{region[1]} {region[2]}x{region[3]}'
     start=time.monotonic()
-    # PPM avoids zlib; cursor zoom needs no capture suspension (no -c).
-    raw=run(['grim','-s','1','-g',geometry,'-t','ppm','-'],env,text=False)
+    from indicator import capture_clean
+    with capture_clean(STATE):
+        raw=run(['grim','-s','1','-g',geometry,'-t','ppm','-'],env,text=False)
     current=next((m for m in hypr(env,'monitors') if m['name']==monitor),None)
     if not current or monitor_box(current)!=mb or current['scale']!=m['scale'] or current.get('transform',0)!=m.get('transform',0):
         raise RuntimeError('monitor layout changed during capture; observe again')
@@ -280,10 +316,11 @@ def screen_changed(old,new,actions):
     if sum(ImageStat.Stat(diff).mean)/3>3:return True
     # A small button can move without changing the global average appreciably.
     for a in actions:
-        point=a.get('from') if a['type']=='drag' else [a.get('x'),a.get('y')]
-        if not point or point[0] is None:continue
-        x,y=point;patch=diff.crop((max(0,int(x)-24),max(0,int(y)-24),min(old.width,int(x)+25),min(old.height,int(y)+25)))
-        if sum(ImageStat.Stat(patch).mean)/3>6:return True
+        points=[a.get('from'),a.get('to')] if a['type']=='drag' else [[a.get('x'),a.get('y')]]
+        for point in points:
+            if not point or point[0] is None:continue
+            x,y=point;patch=diff.crop((max(0,int(x)-24),max(0,int(y)-24),min(old.width,int(x)+25),min(old.height,int(y)+25)))
+            if sum(ImageStat.Stat(patch).mean)/3>6:return True
     return False
 
 def validate_actions(actions,backend):
@@ -291,6 +328,11 @@ def validate_actions(actions,backend):
     allowed={'click','double_click','move','drag','scroll','type','key','wait'} if backend=='desktop' else {'click','fill','key','scroll','wait','assert'}
     for a in actions:
         if not isinstance(a,dict) or a.get('type') not in allowed: raise ValueError('unsupported action')
+        if backend=='desktop' and a['type'] in ('move','click','double_click','drag','scroll'):
+            modifiers=a.get('modifiers',[])
+            if not isinstance(modifiers,list) or len(modifiers)>5 or not all(isinstance(m,str) and m.lower() in MODIFIERS for m in modifiers):
+                raise ValueError('mouse modifiers must be an array of Ctrl/Shift/Alt/Super/AltGr')
+            if a['type']=='move' and modifiers:raise ValueError('modifiers require click, drag or scroll')
         if a['type']=='wait' and not 0<=a.get('ms',100)<=2000: raise ValueError('wait ms must be 0..2000')
         if a['type'] in ('type','fill') and (not isinstance(a.get('text'),str) or len(a['text'])>10000): raise ValueError('text must be string <=10000 chars')
         if a['type']=='key' and (not isinstance(a.get('keys'),list) or not a['keys'] or not all(isinstance(k,str) and len(k)<40 for k in a['keys'])): raise ValueError('keys must be an array of key names')
@@ -321,6 +363,7 @@ def keyboard_groups(actions):
 @contextmanager
 def literal_keyboard(env,enabled=True):
     """Bypass composition for exact text; preserve the focused context's IME state."""
+    import signal
     remote=shutil.which('fcitx5-remote') if enabled else None
     if not remote:
         yield
@@ -336,11 +379,24 @@ def literal_keyboard(env,enabled=True):
             if time.monotonic()>=deadline:raise RuntimeError('fcitx5 state change timed out')
             time.sleep(.01)
     original=state()
+    previous={}
+    # Without a handler, the default SIGTERM/SIGHUP disposes the process mid-yield
+    # and skips finally(), leaving the IME disabled. Raise instead so cleanup runs.
+    def interrupted(signum,frame):
+        raise RuntimeError(f'keyboard input interrupted by signal {signum}')
+    for sig in (signal.SIGTERM,signal.SIGHUP):
+        previous[sig]=signal.getsignal(sig)
+        signal.signal(sig,interrupted)
     try:
         if original=='2':switch('-c','1')
         yield
     finally:
-        if original=='2':switch('-o','2')
+        try:
+            # Keep the handler until the IME is restored so a late signal still cleans up.
+            if original=='2':switch('-o','2')
+        finally:
+            for sig,handler in previous.items():
+                signal.signal(sig,handler)
 
 def compact_result(result):
     """Only strip presentation data; immutable observations retain full geometry."""
@@ -357,9 +413,13 @@ def compact_result(result):
     return {k:compact_result(v) if k=='after' else v for k,v in result.items()}
 
 class Pointer:
-    def __init__(self,env,monitor):
-        self.p=subprocess.Popen([str(ROOT/'native/pointer'),monitor],env=env,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,bufsize=1)
-        if self.reply()!='ready': self.close();raise RuntimeError('pointer startup failed')
+    def __init__(self,env,monitor,binary='pointer'):
+        self.p=subprocess.Popen([str(ROOT/'native'/binary),*([monitor] if monitor is not None else [])],env=env,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,bufsize=1)
+        try:
+            if self.reply()!='ready':raise RuntimeError('pointer startup failed')
+        except BaseException:
+            self.close()
+            raise
     def reply(self):
         if not select.select([self.p.stdout],[],[],2)[0]: raise RuntimeError('pointer timed out')
         line=self.p.stdout.readline().strip()
@@ -369,9 +429,42 @@ class Pointer:
         self.p.stdin.write(s+'\n');self.p.stdin.flush()
         if self.reply()!='ok': raise RuntimeError('pointer action failed')
     def close(self):
-        if self.p.stdin and not self.p.stdin.closed: self.p.stdin.close()
-        try: self.p.wait(timeout=2)
-        except subprocess.TimeoutExpired: self.p.terminate();self.p.wait(timeout=2)
+        try:
+            if self.p.stdin and not self.p.stdin.closed:
+                try:self.p.stdin.close()
+                except (BrokenPipeError,OSError):pass
+            try:self.p.wait(timeout=2)
+            except subprocess.TimeoutExpired:
+                self.p.terminate()
+                try:self.p.wait(timeout=2)
+                except subprocess.TimeoutExpired:self.p.kill();self.p.wait()
+        finally:
+            for stream in (self.p.stdout,self.p.stderr):
+                if stream and not stream.closed:stream.close()
+
+def wait_cancelable(seconds):
+    deadline=time.monotonic()+seconds
+    while True:
+        check_cancel()
+        remaining=deadline-time.monotonic()
+        if remaining<=0:return
+        time.sleep(min(.01,remaining))
+
+@contextmanager
+def mouse_modifiers(env,names):
+    if not names:
+        yield
+        return
+    masks={'shift':1,'ctrl':4,'alt':8,'logo':64,'altgr':128}
+    mask=0
+    for name in names:mask|=masks[MODIFIERS[name.lower()]]
+    keyboard=Pointer(env,None,binary='modifiers')
+    try:
+        check_cancel();keyboard.command(f'mods {mask}')
+        yield
+    finally:
+        try:keyboard.command('mods 0')
+        finally:keyboard.close()
 
 def desktop_act(env,meta,actions):
     check_cancel()
@@ -387,13 +480,14 @@ def desktop_act(env,meta,actions):
             image_point(meta,a['x'],a['y'])
         if a['type']=='drag':
             image_point(meta,*a['from']);image_point(meta,*a['to'])
-        if a['type'] in ('click','double_click') and a.get('button','left') not in ('left','right','middle'): raise ValueError('invalid button')
+        if a['type'] in ('click','double_click','drag') and a.get('button','left') not in ('left','right','middle'): raise ValueError('invalid button')
         if a['type']=='scroll' and not all(isinstance(a.get(k,0),(int,float)) and math.isfinite(a.get(k,0)) and abs(a.get(k,0))<=2000 for k in ('dx','dy')): raise ValueError('invalid scroll')
         if a['type']=='drag' and not 50<=a.get('ms',300)<=2000: raise ValueError('drag ms must be 50..2000')
     # Group adjacent keyboard operations into one existing wtype process.
     groups=keyboard_groups(actions)
     for group in groups:
         if isinstance(group,list):keyboard_argv(group)
+        elif group.get('type')=='type':standalone_type_argv(group)
     address=None if screen_scope else meta['window']
     def guard():
         check_cancel()
@@ -413,13 +507,53 @@ def desktop_act(env,meta,actions):
     if screen_changed(old,new,actions):
         fresh=save_observation(new,fresh,meta['max_width'])
         return {'ok':False,'completed':0,'error':'screen changed since observation; inspect after.image','after':fresh}
-    pointer=Pointer(env,meta['monitor']);completed=0;error=None
+    # A keyboard-only batch must not open the virtual pointer device at all.
+    pointer=(Pointer(env,meta['monitor']) if any(a['type'] in ('move','click','double_click','scroll','drag') for a in actions) else None)
+    completed=0;error=None
     def move(x,y):
         gx,gy=image_point(meta,x,y);mx,my,mw,mh=meta['monitor_box']
         # High resolution normalized coordinates, independent of image resize / output scale.
         pointer.command(f'abs {round((gx-mx)/mw*1000000)} {round((gy-my)/mh*1000000)} 1000000 1000000')
         pos=hypr(env,'cursorpos')
         if math.hypot(pos['x']-gx,pos['y']-gy)>3: raise RuntimeError('pointer missed target; refusing click')
+    def execute_group(a):
+        guard()
+        if isinstance(a,list):
+            exact=any(x['type']=='type' and x.get('ime','literal')=='literal' for x in a)
+            if not any(x['type']=='type' and x.get('ime')=='compose' for x in a):
+                exact=exact or any(x['type']=='key' and any(k in ('BackSpace','Delete','Home','End','Left','Right','Up','Down','Prior','Next') for k in key_names(x['keys'])[1]) for x in a)
+            with literal_keyboard(env,exact):
+                guard();run_cancelable(keyboard_argv(a),env)
+            return len(a)
+        typ=a['type']
+        if typ in ('move','click','double_click','scroll'):
+            move(a['x'],a['y'])
+            if typ in ('click','double_click'):
+                b={'left':0,'right':1,'middle':2}[a.get('button','left')]
+                presses=2 if typ=='double_click' else 1
+                for press in range(presses):
+                    guard();pointer.command(f'button {b} 1')
+                    try:wait_cancelable(.025)
+                    finally:pointer.command(f'button {b} 0')
+                    # 35 ms only separates the two double-click presses; after the
+                    # last press it would only add latency before the action ends.
+                    if press+1<presses:wait_cancelable(.035)
+            elif typ=='scroll':
+                wait_cancelable(.03);guard()
+                pointer.command(f"scroll {a.get('dx',0)} {a.get('dy',0)}")
+        elif typ=='drag':
+            sx,sy=a['from'];ex,ey=a['to'];move(sx,sy);guard()
+            b={'left':0,'right':1,'middle':2}[a.get('button','left')]
+            pointer.command(f'button {b} 1')
+            try:
+                for i in range(1,11):
+                    guard();move(sx+(ex-sx)*i/10,sy+(ey-sy)*i/10);wait_cancelable(a.get('ms',300)/10000)
+            finally:pointer.command(f'button {b} 0')
+        elif typ=='type':
+            with literal_keyboard(env,a.get('ime','literal')=='literal'):
+                guard();run_cancelable(standalone_type_argv(a),env,input=a['text'])
+        elif typ=='wait':wait_cancelable(a.get('ms',100)/1000)
+        return 1
     start=time.monotonic()
     try:
         # A new virtual device at an unchanged cursor position may not cause
@@ -436,42 +570,12 @@ def desktop_act(env,meta,actions):
             pointer.command(f'abs {round((nx-mx)/mw*1000000)} {round((ny-my)/mh*1000000)} 1000000 1000000')
         for a in groups:
             guard()
-            if isinstance(a,list):
-                exact=any(x['type']=='type' and x.get('ime','literal')=='literal' for x in a)
-                if not any(x['type']=='type' and x.get('ime')=='compose' for x in a):
-                    exact=exact or any(x['type']=='key' and any(k in ('BackSpace','Delete','Home','End','Left','Right','Up','Down','Prior','Next') for k in key_names(x['keys'])[1]) for x in a)
-                with literal_keyboard(env,exact):
-                    guard();run_cancelable(keyboard_argv(a),env);completed+=len(a)
-                guard();continue
-            typ=a['type']
-            if typ in ('move','click','double_click','scroll'):
-                move(a['x'],a['y'])
-                if typ in ('click','double_click'):
-                    b={'left':0,'right':1,'middle':2}[a.get('button','left')]
-                    for _ in range(2 if typ=='double_click' else 1):
-                        pointer.command(f'button {b} 1');time.sleep(.025);pointer.command(f'button {b} 0');time.sleep(.035)
-                elif typ=='scroll':
-                    # Let the app receive pointer enter/motion before its wheel event.
-                    time.sleep(.03)
-                    pointer.command(f"scroll {a.get('dx',0)} {a.get('dy',0)}")
-            elif typ=='drag':
-                sx,sy=a['from'];ex,ey=a['to'];move(sx,sy);pointer.command('button 0 1')
-                try:
-                    for i in range(1,11):
-                        guard();move(sx+(ex-sx)*i/10,sy+(ey-sy)*i/10);time.sleep(a.get('ms',300)/10000)
-                finally: pointer.command('button 0 0')
-            elif typ=='type':
-                with literal_keyboard(env,a.get('ime','literal')=='literal'):
-                    argv=['wtype']
-                    if a.get('delay_ms',0):argv+=['-d',str(a['delay_ms'])]
-                    guard();run_cancelable(argv+['-','-p','VoidSymbol'],env,input=a['text'])
-            elif typ=='wait':
-                deadline=time.monotonic()+a.get('ms',100)/1000
-                while time.monotonic()<deadline:
-                    check_cancel();time.sleep(min(.05,deadline-time.monotonic()))
-            completed+=1
+            with mouse_modifiers(env,a.get('modifiers',[]) if isinstance(a,dict) else []):
+                completed+=execute_group(a)
+            guard()
     except Exception as exc: error=str(exc)
-    finally: pointer.close()
+    finally:
+        if pointer:pointer.close()
     time.sleep(.08)
     result={'ok':error is None,'completed':completed,'execution_ms':round((time.monotonic()-start)*1000)}
     if error: result['error']=error
@@ -479,7 +583,9 @@ def desktop_act(env,meta,actions):
         result['after']=(observe_screen(env,meta['monitor'],meta.get('crop'),meta['max_width']) if screen_scope else
                          observe(env,address,meta.get('crop'),meta['max_width'],activate=False))
         result['changed']=result['after']['pixel_sha256']!=meta['pixel_sha256']
-    except Exception as exc: result['capture_error']=str(exc)
+    except Exception as exc:
+        result['ok']=False;result['capture_error']=str(exc)
+        result.setdefault('error','final capture failed: '+str(exc))
     return result
 
 def browser(request):

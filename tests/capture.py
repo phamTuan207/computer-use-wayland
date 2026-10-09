@@ -10,6 +10,7 @@ from unittest.mock import patch
 from PIL import Image, ImageDraw
 
 root=Path(__file__).resolve().parents[1]
+sys.path.insert(0,str(root/'scripts'))
 spec=importlib.util.spec_from_file_location('cu',root/'scripts/cu.py')
 cu=importlib.util.module_from_spec(spec);spec.loader.exec_module(cu)
 
@@ -102,7 +103,7 @@ with tempfile.TemporaryDirectory() as folder,patch.object(cu,'STATE',Path(folder
     with patch.object(cu,'hypr',return_value=[monitor]),patch.object(cu,'run',return_value=encoded(base,'PPM')) as capture:
         cu.observe_screen({},'test',persist=False)
         assert capture.call_count==1 and capture.call_args.args[0][0]=='grim'
-    check('capture only invokes grim; no overlay hot path remains')
+    check('capture invokes grim without magnifier/theme commands')
 
     moved=dict(client,at=[1,0])
     with patch.object(cu,'hypr',return_value=[monitor]),patch.object(cu,'window',side_effect=[client,moved]),patch.object(cu,'run',return_value=encoded(base,'PPM')):

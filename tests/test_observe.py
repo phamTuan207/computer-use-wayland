@@ -2,12 +2,16 @@
 import importlib.util
 import io
 from pathlib import Path
+import sys
 import unittest
 from contextlib import ExitStack
 from unittest.mock import patch
 
-spec=importlib.util.spec_from_file_location('cu',Path(__file__).resolve().parents[1]/'scripts/cu.py')
+ROOT=Path(__file__).resolve().parents[1]
+sys.path.insert(0,str(ROOT/'scripts'))
+spec=importlib.util.spec_from_file_location('cu',ROOT/'scripts/cu.py')
 cu=importlib.util.module_from_spec(spec);spec.loader.exec_module(cu)
+import indicator
 
 
 class Observe(unittest.TestCase):
@@ -18,6 +22,10 @@ class Observe(unittest.TestCase):
         self.client={'address':'0x1','monitor':0,'at':[0,0],'size':[20,10],'workspace':{'id':1}}
         raw=io.BytesIO();Image.new('RGB',(20,10)).save(raw,format='PPM')
         self.stack=ExitStack();self.addCleanup(self.stack.close)
+        # Never touch a live session socket from a mock test.
+        self.indicator=self.stack.enter_context(patch.object(indicator,'request',return_value=False))
+        self.stack.enter_context(patch.object(indicator.socket,'socket',
+                                              side_effect=AssertionError('indicator real connection attempted')))
         self.focus=self.stack.enter_context(patch.object(cu,'focus'))
         self.window=self.stack.enter_context(patch.object(cu,'window',return_value=self.client))
         self.hypr=self.stack.enter_context(patch.object(cu,'hypr',return_value=[self.monitor]))
@@ -27,6 +35,12 @@ class Observe(unittest.TestCase):
         cu.observe({},'0x1',persist=False)
         self.focus.assert_not_called()
         self.capture.assert_called_once()
+        self.indicator.assert_called_once_with(cu.STATE,'hide')
+
+    def test_capture_hides_and_restores_badge(self):
+        self.indicator.side_effect=lambda state,command:True
+        cu.observe({},'0x1',persist=False)
+        self.assertEqual([call.args[1] for call in self.indicator.call_args_list],['hide','show'])
 
     def test_explicit_focus(self):
         cu.observe({},'0x1',activate=True,persist=False)
