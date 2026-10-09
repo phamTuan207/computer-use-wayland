@@ -84,12 +84,21 @@ async function key(keys) {
   const mods={alt:1,ctrl:2,meta:4,super:4,shift:8};let modifiers=0;const regular=[];
   for(const k of keys){if(k.toLowerCase() in mods)modifiers|=mods[k.toLowerCase()];else regular.push(k);}
   const special={Enter:13,Tab:9,Escape:27,BackSpace:8,Backspace:8,Delete:46,ArrowLeft:37,ArrowUp:38,ArrowRight:39,ArrowDown:40,Home:36,End:35,PageUp:33,PageDown:34,space:32,' ':32};
+  // US-layout shift layer, for the keys where uppercase is not the shifted form.
+  const shifted={'1':'!','2':'@','3':'#','4':'$','5':'%','6':'^','7':'&','8':'*','9':'(','0':')',
+                 '[':'{',']':'}','\\':'|',';':':',"'":'"',',':'<','.':'>','/':'?','-':'_','=':'+','`':'~'};
   for(const k of regular){
     const code=special[k]??(k.length===1?k.toUpperCase().charCodeAt(0):null);
     if(code===null)throw new Error('unsupported key '+k);
     const key=k==='BackSpace'?'Backspace':k==='space'?' ':k;
     const params={key,modifiers,windowsVirtualKeyCode:code,nativeVirtualKeyCode:code};
+    const ctrl=modifiers&2,alt=modifiers&1,meta=modifiers&4;
     if(key.length===1&&!modifiers)params.text=key;
+    // Shift alone turns the key into a character, so it needs text too. Without
+    // this the chord fired the page's key handler but typed nothing. toUpperCase
+    // is not the shifted character on a US layout for digits and punctuation,
+    // so map those explicitly. Ctrl/Alt/Meta are shortcuts and carry no text.
+    else if(key.length===1&&(modifiers&8)&&!ctrl&&!alt&&!meta)params.text=shifted[key]??key.toUpperCase();
     if(key==='Enter'&&!modifiers)params.text='\r';
     await call('Input.dispatchKeyEvent',{type:'keyDown',...params});
     await call('Input.dispatchKeyEvent',{type:'keyUp',...params});

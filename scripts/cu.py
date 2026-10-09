@@ -243,7 +243,17 @@ def observe(env, address, crop=None, max_width=1280, activate=True):
     m=next((m for m in monitors if m['id']==c['monitor']),None)
     if not m: raise RuntimeError('window monitor unavailable')
     wb=bounds(c);mb=monitor_box(m)
-    region=wb if crop is None else [wb[0]+crop[0],wb[1]+crop[1],crop[2],crop[3]]
+    if crop is None:
+        region=wb
+    else:
+        # screen_region() raises on an out-of-bounds crop; do the same here.
+        # intersect() alone would silently return a smaller region, so a --crop
+        # that runs past the edge would capture something other than what was
+        # asked for, and the agent would read coordinates off the wrong area.
+        x,y,w,h=crop
+        if w<=0 or h<=0 or x<0 or y<0 or x+w>wb[2] or y+h>wb[3]:
+            raise ValueError('crop must be a positive rectangle inside the selected window')
+        region=[wb[0]+x,wb[1]+y,w,h]
     region=intersect(intersect(region,wb),mb)
     # grim -s 1 uses logical layout pixels; explicitly exclude the cursor (no -c).
     geometry=f'{region[0]},{region[1]} {region[2]}x{region[3]}'
@@ -362,7 +372,14 @@ def compact_result(result):
     """Only strip presentation data; immutable observations retain full geometry."""
     if not isinstance(result,dict):return result
     if result.get('backend')=='desktop':
-        return {k:result[k] for k in ('image','observation','image_size','capture_ms') if k in result}
+        keys=('image','observation','image_size','capture_ms','region','crop')
+        out={k:result[k] for k in keys if k in result}
+        # An agent reads coordinates off the returned PNG. Without the ratio
+        # between that PNG and the window it asked for, --crop cannot be reasoned
+        # about from output alone and the contract lives only in this file.
+        if 'region' in out and out['region'][2]:
+            out['scale']=round(out['image_size'][0]/out['region'][2],6)
+        return out
     return {k:compact_result(v) if k=='after' else v for k,v in result.items()}
 
 class Pointer:
