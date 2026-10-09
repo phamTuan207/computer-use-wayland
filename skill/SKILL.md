@@ -5,7 +5,7 @@ description: Operate local Linux apps, Zen and Chromium using reliable mouse/key
 
 # Computer use
 
-Shared tool: `computer-use` (`CU`). Prefer an existing CLI/API; otherwise Chromium DOM, native accessibility, then desktop screenshots. Respect the user's browser choice: Zen uses desktop or available accessibility, not Chromium CDP.
+Shared tool: `computer-use` (`CU`). Prefer an existing CLI/API; otherwise Chromium DOM, then desktop screenshots. Native accessibility is listed in the CLI but only reaches AT-SPI apps here, which on this machine are tray daemons, so verify with `a11y apps` before relying on it. Respect the user's browser choice: Zen uses desktop or available accessibility, not Chromium CDP.
 
 ```bash
 CU=computer-use
@@ -13,7 +13,12 @@ CU=computer-use
 "$CU" observe --window 0xEXACT_ADDRESS --crop X Y W H
 "$CU" observe --screen eDP-2 --crop X Y W H
 "$CU" act --observation /returned/path.json --actions /tmp/actions.json
+"$CU" a11y apps
+"$CU" a11y observe --pid EXACT_APP_PID
+"$CU" a11y act --snapshot /returned/path.json --actions /tmp/actions.json
 ```
+
+Screenshots cost tokens proportional to pixels: a full-screen observation returns 1280x800, a 200x200 crop returns 200x200. When the region is known, crop and pass a smaller `--max-width`. `a11y apps` is cheap, but on this machine it lists only tray/background apps, not Obsidian, kitty or Chromium, so do not plan a task around accessibility targeting without checking that list first.
 
 Use `--screen MONITOR` for layer-shell, popups or other regions without a window address; get monitor names from `doctor`. Screen scope supports pointer actions only. Read the returned image before choosing coordinates. Coordinates refer to that saved image, including crop/resize. Crop arguments are logical pixels relative to the selected window or monitor. Retain the observation path, not the printed metadata. For simple batches, `--actions -` accepts JSON stdin; avoid shell interpolation of user text.
 
