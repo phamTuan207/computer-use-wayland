@@ -402,7 +402,8 @@ def compact_result(result):
     """Only strip presentation data; immutable observations retain full geometry."""
     if not isinstance(result,dict):return result
     if result.get('backend')=='desktop':
-        keys=('image','observation','image_size','capture_ms','region','crop')
+        keys=('image','observation','image_size','capture_ms','region','crop',
+              'settle_stable','settle_samples','settle_ms')
         out={k:result[k] for k in keys if k in result}
         # An agent reads coordinates off the returned PNG. Without the ratio
         # between that PNG and the window it asked for, --crop cannot be reasoned
@@ -466,7 +467,8 @@ def mouse_modifiers(env,names):
         try:keyboard.command('mods 0')
         finally:keyboard.close()
 
-def desktop_act(env,meta,actions):
+def desktop_act(env,meta,actions,after_capture=True):
+    if not isinstance(after_capture,bool): raise ValueError('after_capture must be boolean')
     check_cancel()
     if meta.get('backend')!='desktop': raise ValueError('desktop observation required')
     if time.time()-meta['created']>90: raise ValueError('observation older than 90s; observe again')
@@ -576,6 +578,9 @@ def desktop_act(env,meta,actions):
     except Exception as exc: error=str(exc)
     finally:
         if pointer:pointer.close()
+    if not after_capture and error is None:
+        return {'ok':True,'completed':completed,
+                'execution_ms':round((time.monotonic()-start)*1000),'after_skipped':True}
     time.sleep(.08)
     result={'ok':error is None,'completed':completed,'execution_ms':round((time.monotonic()-start)*1000)}
     if error: result['error']=error
@@ -629,6 +634,26 @@ def locked():
     except BlockingIOError: raise RuntimeError('another computer-use operation is active')
     return f
 
+def settled_observation(capture,settle_ms,max_width):
+    """Bounded visual stability wait, not a claim of semantic UI readiness."""
+    if not isinstance(settle_ms,int) or not 0<=settle_ms<=2000:
+        raise ValueError('settle-ms must be 0..2000')
+    start=time.monotonic();deadline=start+settle_ms/1000
+    previous=None;stable_since=None;samples=0
+    while True:
+        check_cancel()
+        image,meta=capture();samples+=1
+        fingerprint=(image.size,meta.get('region'),hashlib.sha256(image.tobytes()).digest())
+        now=time.monotonic()
+        if fingerprint!=previous:stable_since=now
+        stable=previous==fingerprint and now-stable_since>=.12
+        if stable or now>=deadline:
+            meta.update(settle_stable=stable,settle_samples=samples,
+                        settle_ms=round((now-start)*1000))
+            return save_observation(image,meta,max_width)
+        previous=fingerprint
+        wait_cancelable(min(.06,max(0,deadline-now)))
+
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     sub=parser.add_subparsers(dest='command',required=True)
@@ -637,7 +662,9 @@ def main():
     sub.add_parser('doctor');sub.add_parser('windows');sub.add_parser('resume');sub.add_parser('status')
     obs=sub.add_parser('observe');target=obs.add_mutually_exclusive_group(required=True);target.add_argument('--window');target.add_argument('--screen');obs.add_argument('--crop',nargs=4,type=int);obs.add_argument('--max-width',type=int,default=1280)
     obs.add_argument('--focus',action='store_true',help='explicitly focus the target window before capture (may switch workspace)')
+    obs.add_argument('--settle-ms',type=int,default=0,help='wait up to 2000 ms for 120 ms of unchanged crop pixels; not semantic readiness')
     act=sub.add_parser('act');act.add_argument('--observation',required=True);act.add_argument('--actions',required=True)
+    act.add_argument('--no-after',action='store_true',help='skip successful final capture; preflight safety and error captures stay enabled')
     obs.add_argument('--verbose',action='store_true');act.add_argument('--verbose',action='store_true')
     b=sub.add_parser('browser');b.add_argument('operation',choices=['start','tabs','observe','act']);b.add_argument('--endpoint',default='http://127.0.0.1:9222');b.add_argument('--target');b.add_argument('--snapshot');b.add_argument('--actions');b.add_argument('--image',action='store_true')
     a=sub.add_parser('a11y');a.add_argument('operation',choices=['apps','observe','act']);a.add_argument('--pid',type=int);a.add_argument('--snapshot');a.add_argument('--actions')
@@ -666,13 +693,21 @@ def main():
     elif args.command=='windows': result=[{k:c.get(k) for k in ('address','class','title','at','size','workspace')} for c in hypr(env,'clients')]
     elif args.command=='observe':
         check_cancel()
-        with locked(): result=(observe_screen(env,args.screen,args.crop,args.max_width) if args.screen else
-                               observe(env,args.window,args.crop,args.max_width,activate=args.focus))
+        if not 0<=args.settle_ms<=2000: raise ValueError('settle-ms must be 0..2000')
+        with locked():
+            if args.settle_ms:
+                if args.focus:focus(env,args.window)
+                capture=lambda: (observe_screen(env,args.screen,args.crop,args.max_width,persist=False) if args.screen else
+                                 observe(env,args.window,args.crop,args.max_width,activate=False,persist=False))
+                result=settled_observation(capture,args.settle_ms,args.max_width)
+            else:
+                result=(observe_screen(env,args.screen,args.crop,args.max_width) if args.screen else
+                        observe(env,args.window,args.crop,args.max_width,activate=args.focus))
     elif args.command=='act':
         require_session()
         actions=json.loads(sys.stdin.read() if args.actions=='-' else Path(args.actions).read_text())
         check_cancel()
-        with locked(): result=desktop_act(env,json.loads(Path(args.observation).read_text()),actions)
+        with locked(): result=desktop_act(env,json.loads(Path(args.observation).read_text()),actions,after_capture=not args.no_after)
     elif args.command=='a11y':
         check_cancel()
         request={'operation':args.operation,'pid':args.pid,'snapshot':args.snapshot}
