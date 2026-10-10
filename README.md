@@ -126,6 +126,15 @@ upgrading; the new version refuses to discard it or guess the old setting.
 
 `skill/SKILL.md` plus `skill/references/usage.md` are written to be loaded by
 an agent. `validation.md` records what was measured, and what was not.
+`docs/liquid-glass.md` describes the optional experimental compositor backend: it
+is ABI-specific, was built and exercised on Hyprland 0.56.2 with a measurable
+refraction effect and a backdrop that updates under motion, and setup is a manual
+two-step change to your own configuration — there is no installer. The material is
+a transparent approximation, not a reproduction of Apple's, and its appearance is
+not yet accepted. An optional startup animation is selected with
+`CU_INDICATOR_ENTRANCE` and is off by default. `tests/glass_optics.py` is an
+optional command for measuring that displacement and needs Pillow and numpy; it
+is not part of the test suite.
 
 Symlink the skill into your agent's skills directory to share one copy between
 Codex and OpenCode:
