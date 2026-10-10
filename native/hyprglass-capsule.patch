@@ -1,0 +1,137 @@
+diff --git a/src/GlassLayerSurface.cpp b/src/GlassLayerSurface.cpp
+index f5a5665..c70f51b 100644
+--- a/src/GlassLayerSurface.cpp
++++ b/src/GlassLayerSurface.cpp
+@@ -538,6 +538,23 @@ void CGlassLayerSurface::compositeAndRestore(PHLMONITOR monitor, float alpha, EM
+                 m_cachedTransformedRegion = transformedBlurRegion(monitor, rawBox);
+             CRegion& region = m_cachedTransformedRegion;
+ 
++            // Capsule SDF scoped to the computer-use pill only: the
++            // computer-use-indicator namespace in PROTOCOL_REGION. rawBox/
++            // transformBox stay full-layer so foreground the client draws outside
++            // the glass (e.g. a shadow) still renders; only the shader's rounded
++            // box and the bevel/lens scale shrink to the blur region. An empty or
++            // degenerate region keeps the previous full-box behaviour untouched.
++            if (!region.empty() && layerSurface->m_namespace == "computer-use-indicator") {
++                const auto extents = region.getExtents().intersection(transformBox);
++                if (std::isfinite(extents.x) && std::isfinite(extents.y) &&
++                    std::isfinite(extents.w) && std::isfinite(extents.h) &&
++                    extents.w > 0.0 && extents.h > 0.0) {
++                    maskInfo.glassBoxOffsetPx = Vector2D(extents.x - transformBox.x, extents.y - transformBox.y);
++                    maskInfo.glassBoxSizePx   = Vector2D(extents.w, extents.h);
++                    cornerRadius              = static_cast<float>(std::min(extents.w, extents.h)) / 2.0f;
++                }
++            }
++
+             const auto rects = region.getRects();
+             if (rects.size() <= static_cast<size_t>(GlassRenderer::MAX_REGION_RECTS)) {
+                 maskInfo.regionRectCount = static_cast<int>(rects.size());
+diff --git a/src/GlassRenderer.cpp b/src/GlassRenderer.cpp
+index 0bcb2c6..79fb88d 100644
+--- a/src/GlassRenderer.cpp
++++ b/src/GlassRenderer.cpp
+@@ -461,11 +461,24 @@ void applyGlassEffect(SP<Render::IFramebuffer> sampleFramebuffer, SP<Render::IFr
+     shader->setUniformFloat2(SHADER_FULL_SIZE,
+         static_cast<float>(fullSize.x), static_cast<float>(fullSize.y));
+ 
++    // Rounded-box SDF sub-rect within the drawn quad. Sentinel (negative size)
++    // means "the whole drawn box": windows and alpha-mask layers leave it at the
++    // default and keep the old full-box behaviour. Only region-mode layer pills
++    // (computer-use-indicator) set it to their blur region.
++    Vector2D glassBoxOffsetPx{0.0, 0.0};
++    Vector2D glassBoxSizePx = fullSize;
++    if (mask && mask->glassBoxSizePx.x >= 0.0 && mask->glassBoxSizePx.y >= 0.0) {
++        glassBoxOffsetPx = mask->glassBoxOffsetPx;
++        glassBoxSizePx   = mask->glassBoxSizePx;
++    }
++
+     // a rounding_power window rule bypasses Hyprland's [2, 10] clamp; <= 0 is NaN in the SDF
+     const float safeRoundingPower = std::max(roundingPower, 1.0f);
+ 
+     // Reciprocals computed once per draw instead of once per pixel in the shader.
+-    const float minDimensionPx = static_cast<float>(std::min(fullSize.x, fullSize.y));
++    // Bevel/lens scale with the glass SDF box, not the possibly full-output quad,
++    // so a small pill gets pill-sized distortion instead of output-edge scaling.
++    const float minDimensionPx = static_cast<float>(std::min(glassBoxSizePx.x, glassBoxSizePx.y));
+     glUniform2f(uniforms.invFullSize,
+         1.0f / static_cast<float>(fullSize.x), 1.0f / static_cast<float>(fullSize.y));
+     glUniform1f(uniforms.invRoundingPower, 1.0f / safeRoundingPower);
+@@ -567,16 +580,8 @@ void applyGlassEffect(SP<Render::IFramebuffer> sampleFramebuffer, SP<Render::IFr
+     glUniform4f(uniforms.radii, radii[0], radii[1], radii[2], radii[3]);
+     shader->setUniformFloat(SHADER_ROUNDING_POWER, safeRoundingPower);
+ 
+-    // Subsurface items only: SDF sub-rect within the drawn box (see
+-    // SMaskInfo::glassBoxSizePx). Sentinel (negative) falls back to the whole
+-    // box — windows and alpha-mask layers always take this path, unchanged
+-    // from before this uniform existed.
+-    Vector2D glassBoxOffsetPx{0.0, 0.0};
+-    Vector2D glassBoxSizePx = fullSize;
+-    if (mask && mask->glassBoxSizePx.x >= 0.0 && mask->glassBoxSizePx.y >= 0.0) {
+-        glassBoxOffsetPx = mask->glassBoxOffsetPx;
+-        glassBoxSizePx   = mask->glassBoxSizePx;
+-    }
++    // Rounded-box SDF sub-rect within the drawn box (see SMaskInfo::glassBoxSizePx);
++    // computed above already so bevel/lens could scale with it too.
+     glUniform2f(uniforms.glassBoxOffsetPx, static_cast<float>(glassBoxOffsetPx.x), static_cast<float>(glassBoxOffsetPx.y));
+     glUniform2f(uniforms.glassBoxSizePx, static_cast<float>(glassBoxSizePx.x), static_cast<float>(glassBoxSizePx.y));
+ 
+diff --git a/src/Shaders.hpp b/src/Shaders.hpp
+index 340212b..3b886df 100644
+--- a/src/Shaders.hpp
++++ b/src/Shaders.hpp
+@@ -211,16 +211,25 @@ float getBevelSDF(vec2 uv) {
+ // naturally follows the diagonal.
+ // ============================================================================
+ 
++// Center of the glass SDF box, in box UV. Equals (0.5, 0.5) for the full-box
++// sentinel (offset 0, size == fullSize), so windows and alpha-mask layers keep
++// exactly the old whole-box math.
++vec2 glassCenterUV() {
++    return (glassBoxOffsetPx + glassBoxSizePx * 0.5) / fullSize;
++}
++
+ vec2 refractionDir(vec2 uv) {
+-    vec2 toCenterPx = (vec2(0.5) - uv) * fullSize;
++    vec2 toCenterPx = (glassCenterUV() - uv) * fullSize;
+     float len = length(toCenterPx);
+     return len > 0.1 ? toCenterPx / len : vec2(0.0);
+ }
+ 
+ // Smooth edge-following field: points into the box, hugging each edge's normal
+ // away from the corners and blending crease-free through the diagonals.
++// posPx is glass-box-local pixels (see glassCenterUV); halfSize tracks the glass
++// box so the field hugs the pill, not the full drawn quad.
+ vec2 edgeDir(vec2 posPx) {
+-    vec2 halfSize = fullSize * 0.5;
++    vec2 halfSize = glassBoxSizePx * 0.5;
+     vec2 n = abs(posPx) / halfSize;
+     vec2 g = sign(posPx) * pow(n, vec2(7.0)) / halfSize;
+     float len = length(g);
+@@ -311,7 +320,7 @@ void main() {
+         if (cornerAlpha < 0.001) discard;
+     }
+ 
+-    float minDim = min(fullSize.x, fullSize.y);
++    float minDim = min(glassBoxSizePx.x, glassBoxSizePx.y);
+     float bezelWidthPx = edgeThickness * minDim;
+ 
+     // ========================================
+@@ -328,7 +337,7 @@ void main() {
+     float bevelSdf = roundingPower == 2.0 ? getBevelSDF(uv) : cornerSdf;
+     float edgeProximity = min(exp(bevelSdf * invBezelWidthPx), 1.0);
+     vec2 inwardDir = refractionDir(uv);
+-    vec2 posPx = (uv - 0.5) * fullSize; // pixel-space position for the edge-flow direction below
++    vec2 posPx = uv * fullSize - glassBoxOffsetPx - glassBoxSizePx * 0.5; // glass-box-local pixels for the edge-flow direction below
+ 
+     // ========================================
+     // EDGE REFRACTION
+@@ -370,7 +379,7 @@ void main() {
+     // ========================================
+     vec2 domeUV = vec2(0.0);
+     if (lensDistortion > 0.001) {
+-        vec2 c = (uv - 0.5) * 2.0;
++        vec2 c = (uv - glassCenterUV()) * fullSize / (glassBoxSizePx * 0.5);
+         vec2 dGrad = vec2(
+             -4.0 * c.x * (1.0 - c.y * c.y),
+             -4.0 * c.y * (1.0 - c.x * c.x)
+
