@@ -145,6 +145,19 @@ static void rounded(cairo_t *cr,double x,double y,double w,double h,double radiu
   cairo_arc(cr,x+radius,y+radius,radius,G_PI,3*G_PI/2);
   cairo_close_path(cr);
 }
+static void label(cairo_t *cr,const char *text,int liquid) {
+  if (!liquid) { cairo_show_text(cr,text);return; }
+  // Local glyph contrast, not a dark backdrop plate. The fine keyline stays
+  // attached to the letters while the refracted scene remains unobscured.
+  cairo_text_path(cr,text);
+  cairo_save(cr);
+  cairo_set_source_rgba(cr,.025,.035,.045,.92);
+  cairo_set_line_width(cr,1.8);
+  cairo_set_line_join(cr,CAIRO_LINE_JOIN_ROUND);
+  cairo_stroke_preserve(cr);
+  cairo_restore(cr);
+  cairo_fill(cr);
+}
 static void draw(GtkDrawingArea *area, cairo_t *cr, int width, int height, gpointer data) {
   (void)area;(void)height;(void)data;
   cairo_set_operator(cr,CAIRO_OPERATOR_SOURCE);
@@ -160,10 +173,10 @@ static void draw(GtkDrawingArea *area, cairo_t *cr, int width, int height, gpoin
     cairo_set_source_rgba(cr,0,0,0,.018);cairo_fill(cr);
   }
   rounded(cr,px+.5,py+.5,pw-1,ph-1,ph/2);
-  cairo_set_source_rgba(cr,.93,.95,.97,liquid?.035:.74);cairo_fill_preserve(cr);
+  cairo_set_source_rgba(cr,.93,.95,.97,liquid?0:.74);cairo_fill_preserve(cr);
   cairo_pattern_t *wash=cairo_pattern_create_linear(px,py,px+pw*.25,py+ph);
-  cairo_pattern_add_color_stop_rgba(wash,0,1,1,1,liquid?.045:.16);
-  cairo_pattern_add_color_stop_rgba(wash,.45,1,1,1,liquid?.008:.025);
+  cairo_pattern_add_color_stop_rgba(wash,0,1,1,1,liquid?0:.16);
+  cairo_pattern_add_color_stop_rgba(wash,.45,1,1,1,liquid?0:.025);
   cairo_pattern_add_color_stop_rgba(wash,1,1,1,1,0);
   cairo_set_source(cr,wash);cairo_fill_preserve(cr);cairo_pattern_destroy(wash);
   cairo_pattern_t *rim=cairo_pattern_create_linear(px,py,px+pw*.12,py+ph);
@@ -183,13 +196,13 @@ static void draw(GtkDrawingArea *area, cairo_t *cr, int width, int height, gpoin
   double available=fmax(1,pw-50-(escape?45:0));
   if (text.width>available) cairo_set_font_size(cr,13*available/text.width);
   cairo_move_to(cr,px+31,py+ph/2-text.y_bearing-text.height/2);
-  cairo_show_text(cr,"Computer use active");
+  label(cr,"Computer use active",liquid);
   if (escape) {
     if (liquid) cairo_set_source_rgb(cr,.98,.99,1);
     else cairo_set_source_rgb(cr,.20,.24,.27);
     cairo_set_font_size(cr,11);
     cairo_text_extents_t esc;cairo_text_extents(cr,"Esc",&esc);
-    cairo_move_to(cr,px+pw-29-esc.width/2,py+ph/2-esc.y_bearing-esc.height/2);cairo_show_text(cr,"Esc");
+    cairo_move_to(cr,px+pw-29-esc.width/2,py+ph/2-esc.y_bearing-esc.height/2);label(cr,"Esc",liquid);
   }
 }
 static void mapped(GtkWidget *widget, gpointer data) {

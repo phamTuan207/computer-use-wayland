@@ -11,13 +11,19 @@ if hl.plugin.hyprglass then
     refraction_strength = 0.85,
     chromatic_aberration = 0.015,
     edge_thickness = 0.35,
-    blur_strength = 0.16,
-    brightness = 0.45,
-    glass_opacity = 0.90,
-    tint_color = 0x10182050,
+    -- Preserve backdrop colour: readability belongs to the lettering, not a
+    -- dark or frosted plate. Explicit values override inherited theme tint.
+    blur_strength = 0.0,
+    brightness = 1.0,
+    contrast = 1.0,
+    saturation = 1.0,
+    adaptive_dim = 0.0,
+    adaptive_boost = 0.0,
+    glass_opacity = 1.0,
+    tint_color = 0xffffff00,
     bevel_strength = 0.35,
     bevel_size = 3.0,
     specular_strength = 0.3,
-    noise_strength = 0.01,
+    noise_strength = 0.0,
   })
 end
