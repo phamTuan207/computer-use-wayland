@@ -13,6 +13,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/prctl.h>
+#include "entrance.h"
 
 #define PILL_WIDTH 288.0
 #define PILL_HEIGHT 38
@@ -43,6 +44,10 @@ static int failed;
 static int closing;
 static int liquid_material;
 static uint32_t presentation_global,effects_global,compositor_global,liquid_global;
+static int entrance_mode;
+static double entrance_progress=1.0;
+static gint64 entrance_started;
+static guint entrance_timer;
 
 static void reply(void) {
   if (remaining) return;
@@ -89,6 +94,24 @@ static void glass_region(Output *output) {
     failed=1;fputs("indicator blur region allocation failed\n",stderr);
     g_main_loop_quit(loop);return;
   }
+  if (entrance_progress<1.0) {
+    // The region follows the actual transient silhouette; it is not a full
+    // output blur. Only this bounded 320x66 surface is rasterised during entry.
+    cairo_surface_t *mask=cairo_image_surface_create(CAIRO_FORMAT_A8,1,1);
+    cairo_t *path=cairo_create(mask);
+    entrance_shape(path,px,PILL_TOP,pw,PILL_HEIGHT,entrance_progress,entrance_mode);
+    for (int row=0;row<SURFACE_HEIGHT;row++) {
+      int start=-1;
+      for (int col=0;col<=width;col++) {
+        int inside=col<width && cairo_in_fill(path,col+.5,row+.5);
+        if (inside && start<0) start=col;
+        if (!inside && start>=0) { wl_region_add(region,start,row,col-start,1);start=-1; }
+      }
+    }
+    cairo_destroy(path);cairo_surface_destroy(mask);
+    ext_background_effect_surface_v1_set_blur_region(output->glass,region);
+    wl_region_destroy(region);return;
+  }
   // Rounded scanlines keep the blur inside the pill, not its bounding box
   // or the full-output transparent surface. Coordinates are surface-local.
   double radius=fmin(PILL_HEIGHT/2.0,pw/2);
@@ -104,11 +127,14 @@ static void glass_region(Output *output) {
 static void painted(GdkFrameClock *clock, gpointer data) {
   (void)clock;
   Output *output=data;
-  if (!output->pending || output->frame) return;
   GdkSurface *surface=gtk_native_get_surface(GTK_NATIVE(output->window));
   struct wl_surface *wl=gdk_wayland_surface_get_wl_surface(surface);
   glass_region(output);
   if (failed) return;
+  if (!output->pending || output->frame) {
+    wl_surface_commit(wl);
+    gdk_display_flush(gdk_surface_get_display(surface));return;
+  }
   // Recommit GTK's fresh buffer with damage and require actual presentation,
   // not merely a frame-scheduling callback or a server queue sync.
   output->frame=wp_presentation_feedback(presentation,wl);
@@ -136,6 +162,26 @@ static void redraw(const char *ack) {
     gtk_widget_queue_draw(output->area);
   }
 }
+static void settle_entrance(void) {
+  if (entrance_timer) {g_source_remove(entrance_timer);entrance_timer=0;}
+  entrance_progress=1.0;
+}
+static gboolean enter_frame(gpointer data) {
+  (void)data;
+  double elapsed=(g_get_monotonic_time()-entrance_started)/1000.0;
+  entrance_progress=entrance_progress_ms(elapsed);
+  if (elapsed>=ENTRANCE_DURATION_MS) {
+    entrance_timer=0;entrance_progress=1.0;
+    // Ready means the final badge was actually presented, not merely that an
+    // animation timer elapsed. Existing input/capture fencing stays intact.
+    redraw("ready");return G_SOURCE_REMOVE;
+  }
+  for (guint i=0;i<outputs->len;i++) {
+    Output *output=g_ptr_array_index(outputs,i);
+    gtk_widget_queue_draw(output->area);
+  }
+  return G_SOURCE_CONTINUE;
+}
 static void rounded(cairo_t *cr,double x,double y,double w,double h,double radius) {
   radius=fmin(radius,fmin(w,h)/2);
   cairo_new_sub_path(cr);
@@ -155,11 +201,11 @@ static void draw(GtkDrawingArea *area, cairo_t *cr, int width, int height, gpoin
   int escape=pw>=260 && g_strcmp0(g_getenv("CU_ESCAPE_AVAILABLE"),"1")==0;
   int liquid=liquid_material;
   // Restrained elevation; the compositor supplies the real backdrop blur.
-  for (int ring=4;ring>=1;ring--) {
+  for (int ring=entrance_progress<1.0?0:4;ring>=1;ring--) {
     rounded(cr,px-ring,py+2-ring,pw+2*ring,ph+2*ring,ph/2+ring);
     cairo_set_source_rgba(cr,0,0,0,.018);cairo_fill(cr);
   }
-  rounded(cr,px+.5,py+.5,pw-1,ph-1,ph/2);
+  entrance_shape(cr,px+.5,py+.5,pw-1,ph-1,entrance_progress,entrance_mode);
   cairo_set_source_rgba(cr,.93,.95,.97,liquid?0:.74);cairo_fill_preserve(cr);
   cairo_pattern_t *wash=cairo_pattern_create_linear(px,py,px+pw*.25,py+ph);
   cairo_pattern_add_color_stop_rgba(wash,0,1,1,1,liquid?0:.16);
@@ -172,6 +218,7 @@ static void draw(GtkDrawingArea *area, cairo_t *cr, int width, int height, gpoin
   cairo_pattern_add_color_stop_rgba(rim,1,1,1,1,.24);
   cairo_set_source(cr,rim);cairo_set_line_width(cr,.8);cairo_stroke(cr);
   cairo_pattern_destroy(rim);
+  if (entrance_progress<1.0) return;
   if (liquid) cairo_set_source_rgb(cr,.56,.92,.75);
   else cairo_set_source_rgb(cr,.09,.38,.31);
   cairo_arc(cr,px+19,py+ph/2,2.5,0,2*G_PI);cairo_fill(cr);
@@ -209,7 +256,7 @@ static gboolean input(GIOChannel *channel, GIOCondition condition, gpointer data
   }
   g_strstrip(line);
   double x,y;char name[128],extra;
-  if (!strcmp(line,"hide")) { hidden=1;redraw("hidden"); }
+  if (!strcmp(line,"hide")) { settle_entrance();hidden=1;redraw("hidden"); }
   else if (!strcmp(line,"show")) { hidden=0;redraw("visible"); }
   else if (sscanf(line,"move %127s %lf %lf %c",name,&x,&y,&extra)==3 &&
            isfinite(x) && isfinite(y) && x>=0 && y>=0) {
@@ -264,6 +311,10 @@ static void removed(void *data,struct wl_registry *registry,uint32_t name) {
 static const struct wl_registry_listener registry_listener={.global=global,.global_remove=removed};
 int main(void) {
   liquid_material=g_strcmp0(g_getenv("CU_INDICATOR_MATERIAL"),"liquid")==0;
+  const char *entry=g_getenv("CU_INDICATOR_ENTRANCE");
+  entrance_mode=g_strcmp0(entry,"drop")==0?ENTRANCE_MODE_DROP:
+                g_strcmp0(entry,"sheet")==0?ENTRANCE_MODE_SHEET:ENTRANCE_MODE_STATIC;
+  if (entrance_mode) entrance_progress=0.0;
   pid_t parent=getppid();
   if (prctl(PR_SET_PDEATHSIG,SIGTERM)==-1 || getppid()!=parent) return 2;
   gtk_init();
@@ -329,10 +380,14 @@ int main(void) {
   g_io_add_watch(channel,G_IO_IN|G_IO_HUP|G_IO_ERR,input,NULL);
   g_unix_signal_add(SIGTERM,stopped,NULL);g_unix_signal_add(SIGINT,stopped,NULL);
   g_unix_signal_add(SIGHUP,stopped,NULL);signal(SIGPIPE,SIG_IGN);
-  redraw("ready");g_main_loop_run(loop);
+  if (entrance_mode) {
+    entrance_started=g_get_monotonic_time();
+    entrance_timer=g_timeout_add(16,enter_frame,NULL);
+  } else redraw("ready");
+  g_main_loop_run(loop);
   // Clear the buffer before unmapping: compositor close animations must fade
   // transparent pixels, not leave a badge in a post-session screenshot.
-  closing=1;hidden=1;
+  settle_entrance();closing=1;hidden=1;
   if (timeout_id) {g_source_remove(timeout_id);timeout_id=0;}
   for (guint i=0;i<outputs->len;i++) {
     Output *output=g_ptr_array_index(outputs,i);
