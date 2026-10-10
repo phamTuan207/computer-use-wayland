@@ -48,6 +48,7 @@ static int entrance_mode;
 static double entrance_progress=1.0;
 static gint64 entrance_started;
 static guint entrance_timer;
+static double entrance_duration_ms=1000.0;
 
 static void reply(void) {
   if (remaining) return;
@@ -169,8 +170,8 @@ static void settle_entrance(void) {
 static gboolean enter_frame(gpointer data) {
   (void)data;
   double elapsed=(g_get_monotonic_time()-entrance_started)/1000.0;
-  entrance_progress=entrance_progress_ms(elapsed);
-  if (elapsed>=ENTRANCE_DURATION_MS) {
+  entrance_progress=entrance_ease(elapsed/entrance_duration_ms);
+  if (elapsed>=entrance_duration_ms) {
     entrance_timer=0;entrance_progress=1.0;
     // Ready means the final badge was actually presented, not merely that an
     // animation timer elapsed. Existing input/capture fencing stays intact.
@@ -313,8 +314,16 @@ int main(void) {
   liquid_material=g_strcmp0(g_getenv("CU_INDICATOR_MATERIAL"),"liquid")==0;
   const char *entry=g_getenv("CU_INDICATOR_ENTRANCE");
   entrance_mode=g_strcmp0(entry,"drop")==0?ENTRANCE_MODE_DROP:
-                g_strcmp0(entry,"sheet")==0?ENTRANCE_MODE_SHEET:ENTRANCE_MODE_STATIC;
+                (!entry || !*entry || !strcmp(entry,"sheet"))?ENTRANCE_MODE_SHEET:ENTRANCE_MODE_STATIC;
   if (entrance_mode) entrance_progress=0.0;
+  const char *duration=g_getenv("CU_INDICATOR_ENTRANCE_MS");
+  if (duration && *duration && strlen(duration)<=4 && strspn(duration,"0123456789")==strlen(duration)) {
+    char *end=NULL;
+    gint64 milliseconds=g_ascii_strtoll(duration,&end,10);
+    // The driver extends only an animated entrance's ready deadline.
+    if (end && !*end && milliseconds>=250 && milliseconds<=4000)
+      entrance_duration_ms=(double)milliseconds;
+  }
   pid_t parent=getppid();
   if (prctl(PR_SET_PDEATHSIG,SIGTERM)==-1 || getppid()!=parent) return 2;
   gtk_init();

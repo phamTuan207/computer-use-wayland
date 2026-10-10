@@ -66,6 +66,20 @@ class RequestState(unittest.TestCase):
 
 
 class NativeStartup(unittest.TestCase):
+    def test_animated_ready_budget_matches_default_and_overrides(self):
+        cases = [({}, 3.0), ({'CU_INDICATOR_ENTRANCE_MS': '4000'}, 5.0),
+                 ({'CU_INDICATOR_ENTRANCE': 'sheet', 'CU_INDICATOR_ENTRANCE_MS': '4000'}, 5.0),
+                 ({'CU_INDICATOR_ENTRANCE': 'off', 'CU_INDICATOR_ENTRANCE_MS': '4000'}, 3.0)]
+        cases += [({'CU_INDICATOR_ENTRANCE_MS': value}, 3.0)
+                  for value in ('+4000', ' 4000', '4001', '02499', '249')]
+        for env, expected in cases:
+            with self.subTest(env=env), \
+                    patch.object(indicator, 'liquid_available', return_value=False), \
+                    patch.object(indicator.subprocess, 'Popen'), \
+                    patch.object(indicator.Native, 'reply'):
+                native = indicator.Native(env)
+                self.assertEqual(native.ready_timeout, expected)
+
     def test_reply_timeout_closes_and_reaps_process(self):
         for readable, error in ((False, 'acknowledgement timed out'),
                                 (True, 'indicator disconnected')):

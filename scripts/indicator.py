@@ -20,6 +20,13 @@ def endpoint(state, token):
 class Native:
     def __init__(self, env):
         env = dict(env)
+        self.ready_timeout = 3.0
+        if env.get('CU_INDICATOR_ENTRANCE', '') in ('', 'drop', 'sheet'):
+            duration = env.get('CU_INDICATOR_ENTRANCE_MS', '')
+            if re.fullmatch(r'[0-9]+', duration) and len(duration) <= 4:
+                milliseconds = int(duration)
+                if 250 <= milliseconds <= 4000:
+                    self.ready_timeout = max(3.0, milliseconds / 1000.0 + 1.0)
         env.pop('CU_INDICATOR_MATERIAL', None)
         liquid = liquid_available(env)
         if liquid:
@@ -37,7 +44,7 @@ class Native:
             raise
 
     def reply(self, expected):
-        deadline = time.monotonic() + 3
+        deadline = time.monotonic() + (self.ready_timeout if expected == 'ready' else 3.0)
         value = bytearray()
         while len(value) < 128:
             remaining = deadline - time.monotonic()
