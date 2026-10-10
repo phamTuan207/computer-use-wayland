@@ -268,8 +268,26 @@ subsurface in particular — cannot activate it by accident.
 - The full source suite now passes **187 tests in 20.932 s with one optional skip**, including the
   **nine new lighting tests**. The earlier 178 figure predates them.
 
-**This candidate is not loaded on the host yet.** Nothing here is a claim about the host, and none of
-the above is visual acceptance.
+**At the time of those initial checks the candidate was not loaded on the host.** It was later loaded
+once after a fresh login; subsequent preset tuning does not replace or reload the plugin. None of
+these checks is user visual acceptance.
+
+### Latest tuning
+
+The profile now reads `refraction_strength = 2.05`, `edge_thickness = 0.32` and
+`lens_distortion = 6.0`, with `blur_strength = 0.18` and the transparent fill unchanged. The intent is
+a wider, stronger rim with a weaker continuous lens through the interior rather than more blur. The
+rim depth therefore grows to **12.16 px**, up from 9.12 px at the previous edge thickness of 0.24.
+
+These are **model results, not GPU measurements**. In the model the optical-axis displacement is
+expected to be **0**, while off-axis interior displacement is nonzero; that is the expected shape of the
+lens formula the already-loaded shader carries, where `lensMaxPx = lensDistortion * 38 * 0.006`. No
+quantitative dome displacement has been measured on hardware. A subsequent isolated ruler render was
+captured with the new preset and its hidden capture matched the baseline pixel-for-pixel. **User visual
+acceptance is pending.**
+
+No plugin rebuild was needed: the loaded shader already implements that formula, so this is a preset
+value change only.
 
 ## Historical experiment: foreground ink capability (no longer selected)
 
