@@ -225,21 +225,21 @@ static void draw(GtkDrawingArea *area, cairo_t *cr, int width, int height, gpoin
   cairo_pattern_add_color_stop_rgba(wash,1,1,1,1,liquid?.10:0);
   cairo_set_source(cr,wash);cairo_fill_preserve(cr);cairo_pattern_destroy(wash);
   cairo_pattern_t *rim=cairo_pattern_create_linear(px,py,px+pw*.12,py+ph);
-  cairo_pattern_add_color_stop_rgba(rim,0,1,1,1,liquid?.32:.60);
-  cairo_pattern_add_color_stop_rgba(rim,.50,1,1,1,.08);
-  cairo_pattern_add_color_stop_rgba(rim,1,1,1,1,liquid?.12:.24);
-  cairo_set_source(cr,rim);cairo_set_line_width(cr,.8);cairo_stroke(cr);
+  cairo_pattern_add_color_stop_rgba(rim,0,1,1,1,liquid?.44:.60);
+  cairo_pattern_add_color_stop_rgba(rim,.50,1,1,1,liquid?.10:.08);
+  cairo_pattern_add_color_stop_rgba(rim,1,1,1,1,liquid?.18:.24);
+  cairo_set_source(cr,rim);cairo_set_line_width(cr,liquid?1.05:.8);cairo_stroke(cr);
   cairo_pattern_destroy(rim);
   if (liquid) {
     // Neutral light-only reflection: never paint a dark inner rim.
     // Keep the middle fully transparent: this is a rim, not a tinted plate.
     rounded(cr,px+1.2,py+1.2,pw-2.4,ph-2.4,(ph-2.4)/2);
     cairo_pattern_t *inner=cairo_pattern_create_linear(px,py,px,py+ph);
-    cairo_pattern_add_color_stop_rgba(inner,0,1,1,1,.10);
+    cairo_pattern_add_color_stop_rgba(inner,0,1,1,1,.14);
     cairo_pattern_add_color_stop_rgba(inner,.40,1,1,1,0);
     cairo_pattern_add_color_stop_rgba(inner,.60,1,1,1,0);
-    cairo_pattern_add_color_stop_rgba(inner,1,1,1,1,.25);
-    cairo_set_source(cr,inner);cairo_set_line_width(cr,.65);cairo_stroke(cr);
+    cairo_pattern_add_color_stop_rgba(inner,1,1,1,1,.34);
+    cairo_set_source(cr,inner);cairo_set_line_width(cr,.85);cairo_stroke(cr);
     cairo_pattern_destroy(inner);
   }
   if (entrance_progress<1.0) return;
