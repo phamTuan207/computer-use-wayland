@@ -28,17 +28,33 @@ class Native:
                 if 250 <= milliseconds <= 4000:
                     self.ready_timeout = max(3.0, milliseconds / 1000.0 + 1.0)
         env.pop('CU_INDICATOR_MATERIAL', None)
-        liquid = liquid_available(env)
+        env.pop('CU_INDICATOR_INK', None)  # callers can never select an ink encoding
+        status = _status(env)              # initial read-only probe
+        liquid = _valid_liquid(status)
+        ink = False
         if liquid:
             env['CU_INDICATOR_MATERIAL'] = 'liquid'
+            # Opt in to adaptive glyph encoding only on a validated backend that
+            # advertises the exact capability string; anything else (old, malformed,
+            # missing, failed) keeps the ordinary white/native fallback.
+            ink = status.get('indicatorInkEncoding') == INK_ENCODING
+            if ink:
+                env['CU_INDICATOR_INK'] = INK_ENCODING
         binary = shutil.which('computer-use-indicator', path=env.get('PATH'))
         binary = binary or str(Path(__file__).resolve().parents[1] / 'native/indicator')
         self.process = subprocess.Popen([binary], env=env, stdin=subprocess.PIPE,
                                         stdout=subprocess.PIPE, start_new_session=True)
         try:
             self.reply('ready')
-            if liquid and not liquid_available(env, ready=True):
-                raise RuntimeError('indicator liquid backend did not become ready')
+            if liquid:
+                # Re-probe AFTER ready: a pending backend may have finished, and a
+                # failed/changed backend must be refused. Never trust the startup
+                # snapshot for readiness (that would fail pending->ready forever).
+                fresh = _status(env)
+                if not _valid_liquid(fresh, ready=True):
+                    raise RuntimeError('indicator liquid backend did not become ready')
+                if ink and fresh.get('indicatorInkEncoding') != INK_ENCODING:
+                    raise RuntimeError('indicator ink capability was not confirmed')
         except BaseException:
             self.close()
             raise
@@ -147,29 +163,26 @@ def request(state, command):
 
 LIQUID_SCHEMA = 1
 LIQUID_VERSION = '0.10.0-cu.1'
+INK_ENCODING = 'magenta-v1'
 
 
-def liquid_available(env, *, ready=False):
-    """True when hyprglass reports itself able to draw layer glass.
-
-    Metadata only: this reads `hyprglass status` and matches the published
-    schema. It is not proof that any pixel is drawn, that the capsule shader
-    looks right, or that our namespace is glassed. Those need a real test.
-
-    Read-only probe: no plugin load, no config change, no environment discovery.
-    `env` is used as given and never mutated. `ready=False` also accepts
-    hyprglass reporting its shaders as still compiling.
-    """
+def _status(env):
+    """Read `hyprglass status` once. Read-only; returns a dict or None. Never mutates env."""
     if not env.get('HYPRLAND_INSTANCE_SIGNATURE') or not env.get('WAYLAND_DISPLAY'):
-        return False
+        return None
     try:
         done = subprocess.run(['hyprctl', '-j', 'hyprglass', 'status'], env=env,
                               capture_output=True, text=True, timeout=1)
         if done.returncode != 0:
-            return False
+            return None
         status = json.loads(done.stdout)
     except (OSError, ValueError, subprocess.SubprocessError):
-        return False
+        return None
+    return status if isinstance(status, dict) else None
+
+
+def _valid_liquid(status, *, ready=False):
+    """True when a status dict reports an able liquid layer backend (metadata only)."""
     if not isinstance(status, dict):
         return False
     # int(schema) is 1 and not a bool: `True == 1` in Python, so compare types.
@@ -198,6 +211,20 @@ def liquid_available(env, *, ready=False):
     if layers['reason'] is not None:
         return False
     return windows.get('enabled') is False and subsurfaces.get('enabled') is False
+
+
+def liquid_available(env, *, ready=False):
+    """True when hyprglass reports itself able to draw layer glass.
+
+    Metadata only: this reads `hyprglass status` and matches the published
+    schema. It is not proof that any pixel is drawn, that the capsule shader
+    looks right, or that our namespace is glassed. Those need a real test.
+
+    Read-only probe: no plugin load, no config change, no environment discovery.
+    `env` is used as given and never mutated. `ready=False` also accepts
+    hyprglass reporting its shaders as still compiling.
+    """
+    return _valid_liquid(_status(env), ready=ready)
 
 
 @contextmanager
