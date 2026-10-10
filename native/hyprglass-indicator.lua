@@ -24,13 +24,13 @@ if hl.plugin.hyprglass then
     adaptive_boost = 0.0,
     glass_opacity = 1.0,
     tint_color = 0xffffff00,
-    bevel_strength = 0.80,
-    bevel_size = 2.5,
+    bevel_strength = 0.95,
+    bevel_size = 3.0,
     bevel_tint = 0.0,
     bevel_shadow = 0.0,
     bevel_angle = 300.0,
-    specular_strength = 0.62,
-    fresnel_strength = 0.26,
+    specular_strength = 0.85,
+    fresnel_strength = 0.38,
     noise_strength = 0.0,
   }
   local config = {
