@@ -314,7 +314,7 @@ int main(void) {
   liquid_material=g_strcmp0(g_getenv("CU_INDICATOR_MATERIAL"),"liquid")==0;
   const char *entry=g_getenv("CU_INDICATOR_ENTRANCE");
   entrance_mode=g_strcmp0(entry,"drop")==0?ENTRANCE_MODE_DROP:
-                (!entry || !*entry || !strcmp(entry,"sheet"))?ENTRANCE_MODE_SHEET:ENTRANCE_MODE_STATIC;
+                g_strcmp0(entry,"sheet")==0?ENTRANCE_MODE_SHEET:ENTRANCE_MODE_STATIC;
   if (entrance_mode) entrance_progress=0.0;
   const char *duration=g_getenv("CU_INDICATOR_ENTRANCE_MS");
   if (duration && *duration && strlen(duration)<=4 && strspn(duration,"0123456789")==strlen(duration)) {

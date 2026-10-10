@@ -21,7 +21,7 @@ class Native:
     def __init__(self, env):
         env = dict(env)
         self.ready_timeout = 3.0
-        if env.get('CU_INDICATOR_ENTRANCE', '') in ('', 'drop', 'sheet'):
+        if env.get('CU_INDICATOR_ENTRANCE') in ('drop', 'sheet'):
             duration = env.get('CU_INDICATOR_ENTRANCE_MS', '')
             if re.fullmatch(r'[0-9]+', duration) and len(duration) <= 4:
                 milliseconds = int(duration)

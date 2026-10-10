@@ -67,7 +67,7 @@ class RequestState(unittest.TestCase):
 
 class NativeStartup(unittest.TestCase):
     def test_animated_ready_budget_matches_default_and_overrides(self):
-        cases = [({}, 3.0), ({'CU_INDICATOR_ENTRANCE_MS': '4000'}, 5.0),
+        cases = [({}, 3.0), ({'CU_INDICATOR_ENTRANCE_MS': '4000'}, 3.0),
                  ({'CU_INDICATOR_ENTRANCE': 'sheet', 'CU_INDICATOR_ENTRANCE_MS': '4000'}, 5.0),
                  ({'CU_INDICATOR_ENTRANCE': 'off', 'CU_INDICATOR_ENTRANCE_MS': '4000'}, 3.0)]
         cases += [({'CU_INDICATOR_ENTRANCE_MS': value}, 3.0)
