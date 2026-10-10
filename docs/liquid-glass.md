@@ -178,9 +178,10 @@ Current checks:
   remains a supported candidate, not a proven cause. Legibility captures from that run were black and
   invalid, so no contrast claim comes from it.
 
-The candidate preset in the source tree is a capsule-local rounded surface normal with refraction
-approximated at an index of refraction of 1.45, no chromatic aberration and no lens dome, with
-refraction strength 0.65, edge thickness 0.20 and blur strength 0.06. There is no tint and no grain.
+An earlier candidate preset in the source tree was a capsule-local rounded surface normal with
+refraction approximated at an index of refraction of 1.45, no chromatic aberration and no lens dome,
+with refraction strength 0.65, edge thickness 0.20 and blur strength 0.06. There was no tint and no
+grain.
 The rim the effect applies to scales with edge thickness: at the built-in scale of 38 an edge
 thickness of 0.20 gives a rim of **7.6 px**, not the 3.04 px the earlier edge value of 0.08
 produced. This is an arithmetic consequence of the setting, not a measurement. An analytical bound
@@ -216,10 +217,11 @@ retained for compatibility but is not selected by this client.
 
 The liquid body has zero foreground fill alpha. Inner reflections are white-only;
 bevel shadow, adaptive dimming, vibrancy and tint alpha are explicitly zero. Blur
-remains slight (`blur_strength = 0.06`); the existing edge refraction is retained.
-Dark scenery can still appear dark through transparent glass. Fixed white text
-does not guarantee contrast over white scenery; no dark plate is added to hide
-that limitation. Visual similarity to the reference still needs user acceptance.
+was slight at this stage (`blur_strength = 0.06`); it was later raised, and the
+current candidate is described below. Dark scenery can still appear dark through
+transparent glass. Fixed white text does not guarantee contrast over white
+scenery; no dark plate is added to hide that limitation. Visual similarity to the
+reference still needs user acceptance.
 
 The pinned backend queues `preset()` and `layer()` calls until config commit:
 `hyprctl eval` returning `ok` did not prove the earlier material was applied.
@@ -230,6 +232,44 @@ normal startup for that restriction. Do not reload or replace a loaded plugin
 just to refresh it. The shader also retains a hardcoded, bottom-edge-only shadow
 (maximum 6%); there is no switch for it in this backend. No claim of completely
 shadow-free optical transmission is made.
+
+## Current candidate: shared capsule normal
+
+The current candidate keeps `blur_strength = 0.16` and `refraction_strength = 1.60`, above the earlier
+`0.06` and `0.65`. What changed is the shading model, not only the numbers.
+
+- **One normal is shared by every optical term.** Transmission, the Fresnel term and the highlight all
+  read the same `capsuleNormal`, rather than each deriving its own direction.
+- **Excess Fresnel via Schlick.** The rim response is Schlick excess over the constant term, not a
+  hand-tuned rim intensity.
+- **A half-vector highlight.** One highlight term, from the half vector between the **light direction
+  and the view direction**, rather than a separate top-band approximation.
+- **`f0` keeps its physical value of about 0.034; its constant contribution is subtracted**, rather
+  than the whole term being set to zero.
+- **No capsule bottom darkening.** The capsule path does not apply the hardcoded bottom-edge shadow
+  described above; that term still exists on the generic path this candidate bypasses.
+
+The effect is scoped by an explicit `indicatorCapsule` namespace uniform, so a non-pill surface — a
+subsurface in particular — cannot activate it by accident.
+
+### What was checked, and what kind of evidence it is
+
+- **Model tests are not GPU evidence.** The optics contract and the new lighting tests evaluate the
+  same equations the shader implements, in the model. They bound behaviour; they do not observe the
+  GPU and they do not establish what the material looks like.
+- **Nested clean captures on ruler, light and dark backgrounds were pixel-identical** to their
+  baselines. Those runs **focus their own window and then restore the host's previous focus** — that
+  is the procedure they follow, not an observation that focus happened to stay unchanged. The
+  flagged-namespace module photo test was clean as well.
+- A moving interior did change in both runs, and the backdrop cache misses rose in both. On the
+  **earlier unflagged build** they rose from 5 to 16; on the **current namespace-flagged build** they
+  rose from 6 to 16. Both are cache counters from a test, not GPU timings and not frame-rate
+  measurements. On the current build the freeze and hide checks were also pixel-exact.
+- The full source suite now passes **187 tests in 20.932 s with one optional skip**, including the
+  **nine new lighting tests**. The earlier 178 figure predates them.
+
+**This candidate is not loaded on the host yet.** Nothing here is a claim about the host, and none of
+the above is visual acceptance.
 
 ## Historical experiment: foreground ink capability (no longer selected)
 
