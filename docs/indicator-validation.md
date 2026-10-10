@@ -93,9 +93,13 @@ Measured, by tier:
 
 ## Installed release with the optional backend
 
-The installed command was synced from the reviewed commit; the source suite now passes 151 unit tests
-in 20.750 s, with the installed indicator suite at 28 tests and the source entrance suite at 9. It rebuilds
-its native helpers in place and passes the no-magnifier check. The optional backend was then built, installed and enabled on the development
+The latest full-access source suite passed **178 tests in 21.317 s, with no skips**,
+including pinned-patch applicability. A separate restricted-sandbox run failed on
+environmental restrictions; it does not invalidate the successful full-access runs.
+The following installed indicator counts are historical. The installed indicator suite is
+at 28 tests and the
+source entrance suite at 9. It
+rebuilds its native helpers in place and passes the no-magnifier check. The optional backend was then built, installed and enabled on the development
 host, which runs Hyprland 0.56.2 and therefore matches the pinned ABI: the plugin reported version
 0.10.0-cu.1 with a matching version check, active status and ready shaders, window and subsurface
 glass disabled, layer glass active, and no configuration errors after reload.
@@ -129,10 +133,33 @@ unchanged, focus being settled before the baseline. A first comparison taken str
 workspace switch failed and a rerun passed; the cause of the failure is not established, so it is
 recorded as unexplained rather than diagnosed.
 
-The label is plain Inter at 14 px with no outline, and the material is fully transparent: no tint, no
-blur, no grain, refraction 0.35, no chromatic aberration, a slight lens dome of 0.08 and radial
-sampling toward the capsule centre rather than edge-following flow.
-That is an approximation of a look, not a reproduction.
+The label is plain Inter at 14 px with no outline. The current material has no tint and no grain. The
+refraction model is a capsule-local rounded surface normal with refraction approximated at an index of
+refraction of 1.45, no chromatic aberration and no lens dome; the source candidate uses refraction
+strength 0.65, edge thickness 0.20 and blur strength 0.06. The rim scales with edge thickness: at the
+built-in scale of 38, an edge thickness of 0.20 gives a rim of **7.6 px**, not the 3.04 px that the
+earlier edge value of 0.08 produced, and the analytical displacement bound is about **5.21 px**. The
+rim figure is arithmetic and the displacement figure is computed; neither was measured here. This is
+an approximation inspired by
+the Hyprliquid project (commit `4bbb7028`, BSD 3-Clause); **no code from it was copied**. It is not
+a reproduction of a look.
+
+The installed copy still carries the earlier candidate values — refraction 0.9, edge thickness 0.12,
+blur 0.08 — and was not updated. The source candidate and the installed copy therefore differ, and
+neither is evidence of what any running session displays.
+
+The preset's `refraction_flow` and `refraction_spread` values are historical and upstream-only; the
+capsule-local normal and the refraction override in the applied patch now determine the result, so
+changing those two values has no visible effect today.
+
+A numerical contract in `tests/test_glass_optics_contract.py` parses the current preset
+and bounds modeled displacement by depth * strength * sqrt(IOR squared - 1),
+about 5.21 px. Flat-centre zero, symmetry and sampled continuity convergence passed.
+This is a numerical model, not a measured GPU displacement or visual acceptance.
+
+Earlier presets are history: refraction 0.85 with lens shaping, then 0.35 with no blur, then 0.15 at
+edge 0.08 with blur 0.5, then 0.9 at edge 0.12 with blur 0.08. The source candidate is 0.65 at edge
+0.20 with blur 0.06.
 
 The backdrop does update under motion: a nested run with the liquid path active counted backdrop
 cache misses during fixture motion, rising from 2 to 27. An earlier run suggesting otherwise fell back to
@@ -141,24 +168,67 @@ rough: the edge metric is noisy with row medians at 0, only the single-knob cont
 strength, and its legibility captures were black and invalid, so it supports a candidate setting
 rather than proving a cause.
 
-Startup animation is opt-in through `CU_INDICATOR_ENTRANCE` (`drop` or `sheet`, default off and
-static), 1000 ms with the ready acknowledgement waiting for the final presentation, cancelled by
-`hide` and not replayed by `show`. On the installed build: 1135.6 ms for `drop` and 1136.3 ms for
-`sheet`, both including GTK startup, then 11.9 ms and 17.6 ms for a `hide`/`show` pair. Private screen
-recordings exist; clips and paths stay private.
+The badge now starts statically: no animation, no startup delay. The user asked to keep the liquid
+backdrop and drop the animation. `CU_INDICATOR_ENTRANCE` still selects an animation — `drop` or
+`sheet` — but only when set explicitly; unset or empty means static. The optional duration stays at
+1000 ms and `CU_INDICATOR_ENTRANCE_MS` accepts 250 to 4000 ms. That path is experimental and inactive
+by default. Earlier installed measurements of 1135.6 ms for `drop` and 1136.3 ms for `sheet` were
+taken at a 1000 ms animation and include GTK startup, and a later revision briefly raised the default
+to 1500 ms before it was set back; nothing was measured at 1500 ms, and nothing has been measured
+since the default became static. Private screen recordings exist; clips and paths stay private.
 
 The installed candidate passed three clean-capture repetitions per path after each entrance:
 `drop` screen 39/48/44 ms, window 40/40/39 ms; `sheet` screen 35/33/29 ms, window 34/27/40 ms.
 Expanded pill/shadow pixels matched the hidden baseline and focus remained unchanged.
 
-Visual acceptance of the current material is **pending**. Readability against a live bright or
+Visual acceptance of the current material is **pending**. The host previously crashed with SIGSEGV
+after a module swap, with no stack trace and therefore **no proven root cause**; replacing a file under
+a loaded plugin is a candidate explanation, not a finding. The identical binary has since been loaded
+once as a fresh immutable hash-named file on a host with no other plugins, no hot swap and no
+autoload: shaders ready, active, version matched, and a twelve-second static session exited cleanly
+with no crash observed. One clean bounded run is not acceptance. Readability against a live bright or
 high-contrast backdrop is the open question, and no contrast figure exists for it yet. This is a
-prototype awaiting the user's choice, not a completed project.
+prototype, not a completed project.
 
 Acceptance covers one host and one ABI. Setup is manual; `docs/liquid-glass.md` documents the two
 steps.
 
 The earlier 320×44 and 288×38 measurements do not transfer to this surface.
+
+## Adaptive foreground ink — source only
+
+A near-clear backdrop gives a fixed foreground ink no safe default: white lettering that reads well on
+a dark desktop is unreadable on a bright one. The badge therefore does not pick a colour. The backend
+advertises a capability, `indicatorInkEncoding` with the exact value `magenta-v1`, the client compares
+that value for equality and only then opts the badge in, and the resulting marker is decoded inside
+the compositor, where the backdrop is already sampled. The probe also moves the badge to a separate
+layer namespace, so it runs with no glass behind it and cannot be confused with the ordinary badge.
+
+There is **no screenshot polling and no change to the acknowledgement protocol**. The client still
+gets exactly the acknowledgements it got before, and no per-pixel scan runs outside the compositor.
+
+Measured, by tier:
+
+- **Mocked unit tests** cover the capability negotiation only: an exact match opts in, and an old,
+  malformed, missing, pending or changed backend keeps the ordinary fallback.
+- **Real nested compositor runs, both backends confirmed.** Against an **exact-white background** the
+  badge resolved to **black ink**; against a **forest-like photographic background** it resolved to
+  **uniform white lettering**. The per-fragment speckle of the earlier version is gone in both.
+  Hide and show acknowledgements ran in **8.9–14.3 ms**, and a capture with the expanded pill and
+  shadow area was clean and pixel-identical to its baseline. Nested compositor only.
+- **The decision is per text element, not global.** The current version takes a shared 5-sample
+  decision **separately for the label and for the Escape hint** — two independent decisions, one per
+  element, each averaged over five samples instead of being decided per fragment. **The label and the
+  hint can therefore disagree**, and that was not checked in either confirmed run.
+- **Contrast is not guaranteed across backgrounds.** Two backends behaving correctly is a sample of
+  two. No contrast figure exists for any backdrop, no threshold has been measured, and nothing shows
+  that a luminance-based decision is enough where a backdrop is half bright and half dark.
+
+This capability exists only in the source tree. It is not in any installed copy, has not run outside
+the nested compositor, and nothing here claims the installed command or the development host
+supports it. Swapping a plugin module under a running compositor is forbidden: a new build takes
+effect only in a fresh compositor session, and an already-mapped module is never unloaded or reloaded
+to pick up new code.
 
 ## Unverified configurations
 
