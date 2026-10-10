@@ -6,7 +6,7 @@ if hl.plugin.hyprglass then
   -- Direct config values also work through eval without reloading the plugin.
   local material = {
     -- Bend only a narrow curved rim, not the whole interior scene.
-    refraction_strength = 0.65,
+    refraction_strength = 1.60,
     refraction_flow = 1.0,
     refraction_spread = 0.0,
     chromatic_aberration = 0.0,
@@ -14,7 +14,7 @@ if hl.plugin.hyprglass then
     lens_distortion = 0.0,
     -- Preserve backdrop colour: readability belongs to the lettering, not a
     -- dark plate. Soften the live backdrop without tinting it.
-    blur_strength = 0.06,
+    blur_strength = 0.16,
     brightness = 1.0,
     contrast = 1.0,
     saturation = 1.0,
