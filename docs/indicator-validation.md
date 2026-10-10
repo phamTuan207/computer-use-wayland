@@ -195,7 +195,29 @@ steps.
 
 The earlier 320×44 and 288×38 measurements do not transfer to this surface.
 
-## Adaptive foreground ink — source only
+## Current policy
+
+The current client uses fixed white lettering and the normal layer namespace;
+adaptive ink negotiation is removed. Liquid fill alpha is zero, inner rim light
+is white-only, and the preset disables bevel shadow, tint and adaptive dimming.
+These source contracts are tested; they do not establish visual acceptance or
+contrast on every backdrop. The following records describe an older experiment.
+
+Fixed-white/clear-transmission validation: native helpers built successfully;
+the source suite ran 178 tests in 20.861 s (one optional skip), and the installed
+indicator/material suites ran 39 tests successfully. A bounded no-input host
+preview using direct config had ready 139.7 ms and hide/show 27.1 ms, unchanged
+focus, no config errors, and helper exit 0. The later direct config corrected a
+real runtime problem: queued preset declarations did not apply through eval.
+
+Three installed no-input sessions then had zero startup failures, refusals or
+action errors: median observation 210.5 ms, zero-wait action 394.3 ms, whole
+session 985.0 ms; capture samples 59/62/56 ms. These small samples do not measure
+mouse/keyboard latency, prove clean screenshots pixel-for-pixel on moving
+backgrounds, establish visual similarity, or explain an earlier transient
+startup failure. No compositor plugin was swapped, unloaded or reloaded.
+
+## Historical adaptive foreground ink experiment — not selected now
 
 A near-clear backdrop gives a fixed foreground ink no safe default: white lettering that reads well on
 a dark desktop is unreadable on a bright one. The badge therefore does not pick a colour. The backend

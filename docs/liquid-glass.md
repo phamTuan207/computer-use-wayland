@@ -207,7 +207,31 @@ the first candidate, then 0.35 with no blur, then 0.15 at edge 0.08 with blur 0.
 0.12 with blur 0.08. The source candidate is the 0.65 value above. None of these is a visual
 acceptance.
 
-## Foreground ink capability, not a colour
+## Current foreground policy: fixed white, clear transmission
+
+The label and Escape hint now always use white ink, as requested. The client no
+longer negotiates or emits the magenta encoding, and the badge always uses the
+ordinary `computer-use-indicator` namespace. The backend's optional decoder is
+retained for compatibility but is not selected by this client.
+
+The liquid body has zero foreground fill alpha. Inner reflections are white-only;
+bevel shadow, adaptive dimming, vibrancy and tint alpha are explicitly zero. Blur
+remains slight (`blur_strength = 0.06`); the existing edge refraction is retained.
+Dark scenery can still appear dark through transparent glass. Fixed white text
+does not guarantee contrast over white scenery; no dark plate is added to hide
+that limitation. Visual similarity to the reference still needs user acceptance.
+
+The pinned backend queues `preset()` and `layer()` calls until config commit:
+`hyprctl eval` returning `ok` did not prove the earlier material was applied.
+This profile instead uses direct `config()` values, with identical dark/light
+overrides and the default resolution path. Namespace filtering is still parsed
+at plugin init/config reload, not immediately by `eval`; use the profile at
+normal startup for that restriction. Do not reload or replace a loaded plugin
+just to refresh it. The shader also retains a hardcoded, bottom-edge-only shadow
+(maximum 6%); there is no switch for it in this backend. No claim of completely
+shadow-free optical transmission is made.
+
+## Historical experiment: foreground ink capability (no longer selected)
 
 A near-clear backdrop makes a hardcoded foreground ink fail in both directions: white lettering is
 unreadable on a bright background and fine on a dark one. The fix is a **capability**, not a chosen
