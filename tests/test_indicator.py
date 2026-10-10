@@ -121,6 +121,151 @@ class CaptureClean(unittest.TestCase):
                     pass
 
 
+class LiquidAvailable(unittest.TestCase):
+    env = {'HYPRLAND_INSTANCE_SIGNATURE': 'sig', 'WAYLAND_DISPLAY': 'wayland-1', 'PATH': '/usr/bin'}
+
+    def status(self, **overrides):
+        payload = {
+            'schema': 1, 'version': '0.10.0-cu.1', 'versionCheck': 'match',
+            'active': True, 'shaders': 'ready', 'itemProtocol': True,
+            'features': {
+                'layers': {'enabled': True, 'active': True, 'reason': None},
+                'windows': {'enabled': False, 'active': False, 'reason': 'disabled'},
+                'subsurfaces': {'enabled': False, 'active': False, 'reason': 'disabled'},
+            },
+        }
+        payload.update(overrides)
+        return payload
+
+    def probe(self, payload=None, returncode=0):
+        done = Mock(returncode=returncode, stdout=json.dumps(payload if payload is not None else self.status()))
+        with patch.object(indicator.subprocess, 'run', return_value=done) as run:
+            result = indicator.liquid_available(dict(self.env))
+        return result, run
+
+    def test_valid_ready_status_is_available(self):
+        result, run = self.probe()
+        self.assertIs(result, True)
+        args, kwargs = run.call_args
+        self.assertEqual(args[0], ['hyprctl', '-j', 'hyprglass', 'status'])
+        self.assertEqual(kwargs['timeout'], 1)
+        self.assertEqual(kwargs['env'], self.env)
+        self.assertTrue(kwargs['capture_output'] and kwargs['text'])
+
+    def test_pending_shaders_depend_on_ready(self):
+        self.assertIs(self.probe(self.status(shaders='pending'))[0], True)
+        with patch.object(indicator.subprocess, 'run',
+                          return_value=Mock(returncode=0, stdout=json.dumps(self.status(shaders='pending')))):
+            self.assertIs(indicator.liquid_available(dict(self.env), ready=True), False)
+
+    def test_wrong_version_or_failed_version_check_is_rejected(self):
+        for overrides in ({'version': '0.10.0'}, {'version': '0.10.0-cu.2'},
+                          {'versionCheck': 'skipped'}, {'schema': 2}, {'schema': True},
+                          {'active': False}):
+            with self.subTest(**overrides):
+                self.assertIs(self.probe(self.status(**overrides))[0], False)
+
+    def test_missing_reason_key_is_rejected(self):
+        payload = self.status()
+        del payload['features']['layers']['reason']
+        self.assertIs(self.probe(payload)[0], False)
+
+    def test_malformed_feature_types_are_rejected(self):
+        for broken in ('layers', 'windows', 'subsurfaces'):
+            with self.subTest(broken=broken):
+                payload = self.status()
+                payload['features'][broken] = True
+                self.assertIs(self.probe(payload)[0], False)
+        payload = self.status()
+        payload['features'] = []
+        self.assertIs(self.probe(payload)[0], False)
+
+    def test_env_is_passed_through_unchanged(self):
+        env = dict(self.env)
+        snapshot = dict(env)
+        with patch.object(indicator.subprocess, 'run',
+                          return_value=Mock(returncode=0, stdout=json.dumps(self.status()))):
+            self.assertIs(indicator.liquid_available(env), True)
+        self.assertEqual(env, snapshot)
+        self.assertNotIn('HYPRGLASS_SKIP_VERSION_CHECK', env)
+
+    def test_layer_feature_must_be_enabled_active_and_reasonless(self):
+        for layers in ({'enabled': False, 'active': True, 'reason': None},
+                       {'enabled': True, 'active': False, 'reason': None},
+                       {'enabled': True, 'active': True, 'reason': 'hook_missing'}):
+            with self.subTest(layers=layers):
+                payload = self.status()
+                payload['features']['layers'] = layers
+                self.assertIs(self.probe(payload)[0], False)
+
+    def test_window_or_subsurface_glass_must_stay_off(self):
+        for name in ('windows', 'subsurfaces'):
+            with self.subTest(name=name):
+                payload = self.status()
+                payload['features'][name]['enabled'] = True
+                self.assertIs(self.probe(payload)[0], False)
+
+    def test_malformed_json_and_nonzero_exit_are_rejected(self):
+        for stdout in ('not json', '', '[]', '{"schema": 1}'):
+            with self.subTest(stdout=stdout):
+                with patch.object(indicator.subprocess, 'run',
+                                  return_value=Mock(returncode=0, stdout=stdout)):
+                    self.assertIs(indicator.liquid_available(dict(self.env)), False)
+        self.assertIs(self.probe(returncode=1)[0], False)
+
+    def test_timeout_and_oserror_are_rejected(self):
+        for error in (indicator.subprocess.TimeoutExpired('hyprctl', 1), OSError('missing')):
+            with self.subTest(error=type(error).__name__):
+                with patch.object(indicator.subprocess, 'run', side_effect=error):
+                    self.assertIs(indicator.liquid_available(dict(self.env)), False)
+
+    def test_missing_wayland_environment_runs_no_subprocess(self):
+        for env in ({}, {'WAYLAND_DISPLAY': 'wayland-1'}, {'HYPRLAND_INSTANCE_SIGNATURE': 'sig'}):
+            with self.subTest(env=env):
+                with patch.object(indicator.subprocess, 'run') as run:
+                    self.assertIs(indicator.liquid_available(env), False)
+                run.assert_not_called()
+
+
+class LiquidLifecycle(unittest.TestCase):
+    env = {'HYPRLAND_INSTANCE_SIGNATURE': 'sig', 'WAYLAND_DISPLAY': 'wayland-1', 'PATH': '/usr/bin'}
+
+    def helper(self, payload=b'ready\n'):
+        read_fd, write_fd = os.pipe()
+        os.write(write_fd, payload)  # stays open so select reports readable
+        self.addCleanup(os.close, write_fd)
+        stdout = os.fdopen(read_fd, 'rb', 0)
+        self.addCleanup(stdout.close)  # a native left open still owns this fd
+        return Mock(stdin=io.StringIO(), stdout=stdout, wait=Mock(return_value=0))
+
+    def test_advertised_liquid_that_never_readies_is_closed_and_reaped(self):
+        process = self.helper()
+        with patch.object(indicator.subprocess, 'Popen', return_value=process) as popen, \
+                patch.object(indicator.select, 'select',
+                             return_value=([process.stdout], [], [])), \
+                patch.object(indicator, 'liquid_available', side_effect=[True, False]):
+            with self.assertRaisesRegex(RuntimeError, 'did not become ready'):
+                indicator.Native(dict(self.env))
+        self.assertEqual(popen.call_args.kwargs['env']['CU_INDICATOR_MATERIAL'], 'liquid')
+        process.wait.assert_called_once()
+        self.assertTrue(process.stdin.closed)
+        self.assertTrue(process.stdout.closed)
+
+    def test_incoming_material_override_is_dropped_without_backend_support(self):
+        env = {'CU_INDICATOR_MATERIAL': 'liquid', 'PATH': '/usr/bin'}  # no session env: helper returns False
+        process = self.helper()
+        with patch.object(indicator.subprocess, 'Popen', return_value=process) as popen, \
+                patch.object(indicator.select, 'select',
+                             return_value=([process.stdout], [], [])), \
+                patch.object(indicator.subprocess, 'run') as query:
+            indicator.Native(env)
+        child_env = popen.call_args.kwargs['env']
+        self.assertIsNot(child_env, env)
+        self.assertNotIn('CU_INDICATOR_MATERIAL', child_env)
+        self.assertEqual(env['CU_INDICATOR_MATERIAL'], 'liquid')
+        query.assert_not_called()  # unsupported backend is never queried
+
+
 class FakeNative:
     def __init__(self, reply=None):
         self.commands = []

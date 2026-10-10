@@ -14,6 +14,14 @@
 #include <unistd.h>
 #include <sys/prctl.h>
 
+#define PILL_WIDTH 288.0
+#define PILL_HEIGHT 38
+#define PILL_LEFT 16
+#define PILL_TOP 16
+// Compact top-only layer surface; the pill sits at local (PILL_LEFT, PILL_TOP).
+#define SURFACE_WIDTH 320
+#define SURFACE_HEIGHT 66
+
 typedef struct {
   GtkWindow *window;
   GtkWidget *area;
@@ -33,6 +41,8 @@ static struct wl_compositor *compositor;
 static uint32_t effect_caps;
 static int failed;
 static int closing;
+static int liquid_material;
+static uint32_t presentation_global,effects_global,compositor_global,liquid_global;
 
 static void reply(void) {
   if (remaining) return;
@@ -71,7 +81,9 @@ static void glass_region(Output *output) {
     failed=1;fputs("indicator output has no drawable width\n",stderr);
     g_main_loop_quit(loop);return;
   }
-  double pw=fmax(1,fmin(320,width-32.0)),px=(width-pw)/2.0;
+  // Compact top-only surface: pill is left-anchored at PILL_LEFT, width clamped
+  // so it never overflows a narrower output.
+  double pw=fmax(1,fmin(PILL_WIDTH,width-2.0*PILL_LEFT)),px=PILL_LEFT;
   struct wl_region *region=wl_compositor_create_region(compositor);
   if (!region) {
     failed=1;fputs("indicator blur region allocation failed\n",stderr);
@@ -79,12 +91,12 @@ static void glass_region(Output *output) {
   }
   // Rounded scanlines keep the blur inside the pill, not its bounding box
   // or the full-output transparent surface. Coordinates are surface-local.
-  double radius=fmin(22,pw/2);
-  for (int row=0;row<44;row++) {
-    double dy=fmax(0,radius-fmin(row+.5,44-row-.5));
+  double radius=fmin(PILL_HEIGHT/2.0,pw/2);
+  for (int row=0;row<PILL_HEIGHT;row++) {
+    double dy=fmax(0,radius-fmin(row+.5,PILL_HEIGHT-row-.5));
     double inset=radius-sqrt(fmax(0,radius*radius-dy*dy));
     int left=(int)ceil(px+inset),right=(int)floor(px+pw-inset);
-    if (right>left) wl_region_add(region,left,16+row,right-left,1);
+    if (right>left) wl_region_add(region,left,PILL_TOP+row,right-left,1);
   }
   ext_background_effect_surface_v1_set_blur_region(output->glass,region);
   wl_region_destroy(region);
@@ -139,45 +151,45 @@ static void draw(GtkDrawingArea *area, cairo_t *cr, int width, int height, gpoin
   cairo_set_source_rgba(cr,0,0,0,0);cairo_paint(cr);
   cairo_set_operator(cr,CAIRO_OPERATOR_OVER);
   if (hidden) return;
-  double pw=fmax(1,fmin(320,width-32.0)),px=(width-pw)/2.0,py=16,ph=44;
-  int escape=pw>=300 && g_strcmp0(g_getenv("CU_ESCAPE_AVAILABLE"),"1")==0;
+  double pw=fmax(1,fmin(PILL_WIDTH,width-2.0*PILL_LEFT)),px=PILL_LEFT,py=PILL_TOP,ph=PILL_HEIGHT;
+  int escape=pw>=260 && g_strcmp0(g_getenv("CU_ESCAPE_AVAILABLE"),"1")==0;
+  int liquid=liquid_material;
   // Restrained elevation; the compositor supplies the real backdrop blur.
-  for (int ring=6;ring>=1;ring--) {
+  for (int ring=4;ring>=1;ring--) {
     rounded(cr,px-ring,py+2-ring,pw+2*ring,ph+2*ring,ph/2+ring);
-    cairo_set_source_rgba(cr,0,0,0,.012);cairo_fill(cr);
+    cairo_set_source_rgba(cr,0,0,0,.018);cairo_fill(cr);
   }
   rounded(cr,px+.5,py+.5,pw-1,ph-1,ph/2);
-  cairo_set_source_rgba(cr,.055,.065,.08,.66);cairo_fill_preserve(cr);
+  cairo_set_source_rgba(cr,.93,.95,.97,liquid?.035:.74);cairo_fill_preserve(cr);
   cairo_pattern_t *wash=cairo_pattern_create_linear(px,py,px+pw*.25,py+ph);
-  cairo_pattern_add_color_stop_rgba(wash,0,1,1,1,.13);
-  cairo_pattern_add_color_stop_rgba(wash,.45,1,1,1,.025);
+  cairo_pattern_add_color_stop_rgba(wash,0,1,1,1,liquid?.045:.16);
+  cairo_pattern_add_color_stop_rgba(wash,.45,1,1,1,liquid?.008:.025);
   cairo_pattern_add_color_stop_rgba(wash,1,1,1,1,0);
   cairo_set_source(cr,wash);cairo_fill_preserve(cr);cairo_pattern_destroy(wash);
   cairo_pattern_t *rim=cairo_pattern_create_linear(px,py,px+pw*.12,py+ph);
-  cairo_pattern_add_color_stop_rgba(rim,0,1,1,1,.55);
-  cairo_pattern_add_color_stop_rgba(rim,.50,1,1,1,.12);
-  cairo_pattern_add_color_stop_rgba(rim,1,1,1,1,.28);
-  cairo_set_source(cr,rim);cairo_set_line_width(cr,1);cairo_stroke(cr);
+  cairo_pattern_add_color_stop_rgba(rim,0,1,1,1,.60);
+  cairo_pattern_add_color_stop_rgba(rim,.50,1,1,1,.08);
+  cairo_pattern_add_color_stop_rgba(rim,1,1,1,1,.24);
+  cairo_set_source(cr,rim);cairo_set_line_width(cr,.8);cairo_stroke(cr);
   cairo_pattern_destroy(rim);
-  cairo_set_source_rgb(cr,.20,.82,.88);
-  cairo_arc(cr,px+22,py+ph/2,3,0,2*G_PI);cairo_fill(cr);
-  cairo_set_source_rgb(cr,.96,.96,.97);
+  if (liquid) cairo_set_source_rgb(cr,.56,.92,.75);
+  else cairo_set_source_rgb(cr,.09,.38,.31);
+  cairo_arc(cr,px+19,py+ph/2,2.5,0,2*G_PI);cairo_fill(cr);
+  if (liquid) cairo_set_source_rgb(cr,.98,.99,1);
+  else cairo_set_source_rgb(cr,.10,.14,.17);
   cairo_select_font_face(cr,"sans-serif",CAIRO_FONT_SLANT_NORMAL,CAIRO_FONT_WEIGHT_NORMAL);
-  cairo_set_font_size(cr,14);
+  cairo_set_font_size(cr,13);
   cairo_text_extents_t text;cairo_text_extents(cr,"Computer use active",&text);
-  double available=fmax(1,pw-62-(escape?66:0));
-  if (text.width>available) cairo_set_font_size(cr,14*available/text.width);
-  cairo_move_to(cr,px+38,py+ph/2+5);
+  double available=fmax(1,pw-50-(escape?45:0));
+  if (text.width>available) cairo_set_font_size(cr,13*available/text.width);
+  cairo_move_to(cr,px+31,py+ph/2-text.y_bearing-text.height/2);
   cairo_show_text(cr,"Computer use active");
   if (escape) {
-    cairo_set_source_rgba(cr,1,1,1,.10);cairo_set_line_width(cr,1);
-    cairo_move_to(cr,px+pw-77,py+13);cairo_line_to(cr,px+pw-77,py+ph-13);cairo_stroke(cr);
-    rounded(cr,px+pw-64,py+10,44,24,6);
-    cairo_set_source_rgba(cr,1,1,1,.08);cairo_fill(cr);
-    cairo_set_source_rgb(cr,.81,.84,.85);
-    cairo_set_font_size(cr,12);
+    if (liquid) cairo_set_source_rgb(cr,.98,.99,1);
+    else cairo_set_source_rgb(cr,.20,.24,.27);
+    cairo_set_font_size(cr,11);
     cairo_text_extents_t esc;cairo_text_extents(cr,"Esc",&esc);
-    cairo_move_to(cr,px+pw-42-esc.width/2,py+ph/2+4);cairo_show_text(cr,"Esc");
+    cairo_move_to(cr,px+pw-29-esc.width/2,py+ph/2-esc.y_bearing-esc.height/2);cairo_show_text(cr,"Esc");
   }
 }
 static void mapped(GtkWidget *widget, gpointer data) {
@@ -230,20 +242,28 @@ static void capabilities(void *data,struct ext_background_effect_manager_v1 *man
 static const struct ext_background_effect_manager_v1_listener effect_listener={.capabilities=capabilities};
 static void global(void *data,struct wl_registry *registry,uint32_t name,const char *interface,uint32_t version) {
   (void)data;(void)version;
-  if (!strcmp(interface,wp_presentation_interface.name))
+  if (!strcmp(interface,wp_presentation_interface.name)) {
+    presentation_global=name;
     presentation=wl_registry_bind(registry,name,&wp_presentation_interface,1);
-  else if (!strcmp(interface,wl_compositor_interface.name))
+  } else if (!strcmp(interface,wl_compositor_interface.name)) {
+    compositor_global=name;
     compositor=wl_registry_bind(registry,name,&wl_compositor_interface,1);
-  else if (!strcmp(interface,ext_background_effect_manager_v1_interface.name)) {
+  } else if (!strcmp(interface,ext_background_effect_manager_v1_interface.name)) {
+    effects_global=name;
     effects=wl_registry_bind(registry,name,&ext_background_effect_manager_v1_interface,1);
     ext_background_effect_manager_v1_add_listener(effects,&effect_listener,NULL);
-  }
+  } else if (!strcmp(interface,"hyprglass_item_manager_v1")) liquid_global=name;
 }
 static void removed(void *data,struct wl_registry *registry,uint32_t name) {
-  (void)data;(void)registry;(void)name;
+  (void)data;(void)registry;
+  if (name==presentation_global || name==effects_global || name==compositor_global ||
+      (liquid_material && name==liquid_global)) {
+    failed=1;fputs("indicator rendering backend lost\n",stderr);g_main_loop_quit(loop);
+  }
 }
 static const struct wl_registry_listener registry_listener={.global=global,.global_remove=removed};
 int main(void) {
+  liquid_material=g_strcmp0(g_getenv("CU_INDICATOR_MATERIAL"),"liquid")==0;
   pid_t parent=getppid();
   if (prctl(PR_SET_PDEATHSIG,SIGTERM)==-1 || getppid()!=parent) return 2;
   gtk_init();
@@ -258,6 +278,9 @@ int main(void) {
   if (wl_display_roundtrip(display)<0 || !compositor || !effects ||
       !(effect_caps&EXT_BACKGROUND_EFFECT_MANAGER_V1_CAPABILITY_BLUR)) {
     fputs("indicator backdrop blur unavailable\n",stderr);return 2;
+  }
+  if (liquid_material && !liquid_global) {
+    fputs("indicator liquid backend unavailable\n",stderr);return 2;
   }
   GtkCssProvider *css=gtk_css_provider_new();
   gtk_css_provider_load_from_string(css,"window.cu-indicator { background: transparent; box-shadow: none; }");
@@ -276,7 +299,17 @@ int main(void) {
     gtk_layer_set_keyboard_mode(output->window,GTK_LAYER_SHELL_KEYBOARD_MODE_NONE);
     // -1 reserves no space and ignores panel reservations for exact output coordinates.
     gtk_layer_set_exclusive_zone(output->window,-1);
-    for (int edge=0;edge<4;edge++) gtk_layer_set_anchor(output->window,edge,TRUE);
+    // Compact top-only surface: only TOP anchored, no left/right/bottom, so the
+    // compositor centres it horizontally instead of stretching it full-output.
+    for (int edge=0;edge<4;edge++) gtk_layer_set_anchor(output->window,edge,FALSE);
+    gtk_layer_set_anchor(output->window,GTK_LAYER_SHELL_EDGE_TOP,TRUE);
+    GdkRectangle geometry;gdk_monitor_get_geometry(output->monitor,&geometry);
+    // Refuse unreadable badges instead of enlarging past a tiny/unknown output.
+    if (geometry.width<220 || geometry.height<SURFACE_HEIGHT) {
+      fputs("indicator output too small for a readable status\n",stderr);return 2;
+    }
+    int surface_width=geometry.width<SURFACE_WIDTH?geometry.width:SURFACE_WIDTH;
+    gtk_window_set_default_size(output->window,surface_width,SURFACE_HEIGHT);
     gtk_widget_add_css_class(GTK_WIDGET(output->window),"cu-indicator");
     output->area=gtk_drawing_area_new();
     gtk_drawing_area_set_draw_func(GTK_DRAWING_AREA(output->area),draw,output,NULL);

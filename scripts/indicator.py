@@ -19,12 +19,19 @@ def endpoint(state, token):
 
 class Native:
     def __init__(self, env):
+        env = dict(env)
+        env.pop('CU_INDICATOR_MATERIAL', None)
+        liquid = liquid_available(env)
+        if liquid:
+            env['CU_INDICATOR_MATERIAL'] = 'liquid'
         binary = shutil.which('computer-use-indicator', path=env.get('PATH'))
         binary = binary or str(Path(__file__).resolve().parents[1] / 'native/indicator')
         self.process = subprocess.Popen([binary], env=env, stdin=subprocess.PIPE,
                                         stdout=subprocess.PIPE, start_new_session=True)
         try:
             self.reply('ready')
+            if liquid and not liquid_available(env, ready=True):
+                raise RuntimeError('indicator liquid backend did not become ready')
         except BaseException:
             self.close()
             raise
@@ -129,6 +136,61 @@ def request(state, command):
         if reply != expected:
             raise RuntimeError('indicator visibility acknowledgement failed')
     return True
+
+
+LIQUID_SCHEMA = 1
+LIQUID_VERSION = '0.10.0-cu.1'
+
+
+def liquid_available(env, *, ready=False):
+    """True when hyprglass reports itself able to draw layer glass.
+
+    Metadata only: this reads `hyprglass status` and matches the published
+    schema. It is not proof that any pixel is drawn, that the capsule shader
+    looks right, or that our namespace is glassed. Those need a real test.
+
+    Read-only probe: no plugin load, no config change, no environment discovery.
+    `env` is used as given and never mutated. `ready=False` also accepts
+    hyprglass reporting its shaders as still compiling.
+    """
+    if not env.get('HYPRLAND_INSTANCE_SIGNATURE') or not env.get('WAYLAND_DISPLAY'):
+        return False
+    try:
+        done = subprocess.run(['hyprctl', '-j', 'hyprglass', 'status'], env=env,
+                              capture_output=True, text=True, timeout=1)
+        if done.returncode != 0:
+            return False
+        status = json.loads(done.stdout)
+    except (OSError, ValueError, subprocess.SubprocessError):
+        return False
+    if not isinstance(status, dict):
+        return False
+    # int(schema) is 1 and not a bool: `True == 1` in Python, so compare types.
+    schema = status.get('schema')
+    if not isinstance(schema, int) or isinstance(schema, bool) or schema != LIQUID_SCHEMA:
+        return False
+    if status.get('version') != LIQUID_VERSION or status.get('versionCheck') != 'match':
+        return False
+    if status.get('active') is not True:
+        return False
+    if status.get('shaders') not in ('ready', 'pending'):
+        return False
+    if status['shaders'] == 'pending' and ready:
+        return False
+    features = status.get('features')
+    if not isinstance(features, dict):
+        return False
+    for name in ('layers', 'windows', 'subsurfaces'):
+        if not isinstance(features.get(name), dict):
+            return False
+    layers, windows, subsurfaces = features['layers'], features['windows'], features['subsurfaces']
+    if layers.get('enabled') is not True or layers.get('active') is not True:
+        return False
+    if 'reason' not in layers:  # absent is not the same as an explicit null
+        return False
+    if layers['reason'] is not None:
+        return False
+    return windows.get('enabled') is False and subsurfaces.get('enabled') is False
 
 
 @contextmanager
