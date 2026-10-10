@@ -134,4 +134,3 @@ index 340212b..3b886df 100644
          vec2 dGrad = vec2(
              -4.0 * c.x * (1.0 - c.y * c.y),
              -4.0 * c.y * (1.0 - c.x * c.x)
-
