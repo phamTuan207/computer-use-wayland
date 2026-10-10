@@ -8,14 +8,16 @@ if hl.plugin.hyprglass then
   hg.layer("computer-use-indicator", { preset = "cu-indicator", mask_mode = "region" })
   hg.preset("cu-indicator", {
     inherits = "pomme",
-    refraction_strength = 0.35,
-    refraction_flow = 0.0,
+    -- Bend only a narrow curved rim, not the whole interior scene.
+    refraction_strength = 0.15,
+    refraction_flow = 1.0,
+    refraction_spread = 0.0,
     chromatic_aberration = 0.0,
-    edge_thickness = 0.22,
-    lens_distortion = 0.08,
+    edge_thickness = 0.08,
+    lens_distortion = 0.0,
     -- Preserve backdrop colour: readability belongs to the lettering, not a
-    -- dark or frosted plate. Explicit values override inherited theme tint.
-    blur_strength = 0.0,
+    -- dark plate. Soften the live backdrop without tinting it.
+    blur_strength = 0.5,
     brightness = 1.0,
     contrast = 1.0,
     saturation = 1.0,

@@ -1,7 +1,7 @@
-diff --git a/src/GlassLayerSurface.cpp b/src/GlassLayerSurface.cpp
+diff --git i/src/GlassLayerSurface.cpp w/src/GlassLayerSurface.cpp
 index f5a5665..c70f51b 100644
---- a/src/GlassLayerSurface.cpp
-+++ b/src/GlassLayerSurface.cpp
+--- i/src/GlassLayerSurface.cpp
++++ w/src/GlassLayerSurface.cpp
 @@ -538,6 +538,23 @@ void CGlassLayerSurface::compositeAndRestore(PHLMONITOR monitor, float alpha, EM
                  m_cachedTransformedRegion = transformedBlurRegion(monitor, rawBox);
              CRegion& region = m_cachedTransformedRegion;
@@ -26,10 +26,10 @@ index f5a5665..c70f51b 100644
              const auto rects = region.getRects();
              if (rects.size() <= static_cast<size_t>(GlassRenderer::MAX_REGION_RECTS)) {
                  maskInfo.regionRectCount = static_cast<int>(rects.size());
-diff --git a/src/GlassRenderer.cpp b/src/GlassRenderer.cpp
+diff --git i/src/GlassRenderer.cpp w/src/GlassRenderer.cpp
 index 0bcb2c6..79fb88d 100644
---- a/src/GlassRenderer.cpp
-+++ b/src/GlassRenderer.cpp
+--- i/src/GlassRenderer.cpp
++++ w/src/GlassRenderer.cpp
 @@ -461,11 +461,24 @@ void applyGlassEffect(SP<Render::IFramebuffer> sampleFramebuffer, SP<Render::IFr
      shader->setUniformFloat2(SHADER_FULL_SIZE,
          static_cast<float>(fullSize.x), static_cast<float>(fullSize.y));
@@ -75,11 +75,11 @@ index 0bcb2c6..79fb88d 100644
      glUniform2f(uniforms.glassBoxOffsetPx, static_cast<float>(glassBoxOffsetPx.x), static_cast<float>(glassBoxOffsetPx.y));
      glUniform2f(uniforms.glassBoxSizePx, static_cast<float>(glassBoxSizePx.x), static_cast<float>(glassBoxSizePx.y));
  
-diff --git a/src/Shaders.hpp b/src/Shaders.hpp
-index 340212b..3b886df 100644
---- a/src/Shaders.hpp
-+++ b/src/Shaders.hpp
-@@ -211,16 +211,25 @@ float getBevelSDF(vec2 uv) {
+diff --git i/src/Shaders.hpp w/src/Shaders.hpp
+index 340212b..170e71e 100644
+--- i/src/Shaders.hpp
++++ w/src/Shaders.hpp
+@@ -211,16 +211,41 @@ float getBevelSDF(vec2 uv) {
  // naturally follows the diagonal.
  // ============================================================================
  
@@ -88,6 +88,22 @@ index 340212b..3b886df 100644
 +// exactly the old whole-box math.
 +vec2 glassCenterUV() {
 +    return (glassBoxOffsetPx + glassBoxSizePx * 0.5) / fullSize;
++}
++
++
++// C37: rounded-capsule normal from the closest point on the inset rectangle
++// (radius = radii.x); flat interior, narrow rim. Independently derived;
++// hyprliquid (BSD-3, zaregototsukai) used as a concept comparison only. This is an
++// approximation, not the upstream defaults (IOR 1.035 / thickness 500 / zradius).
++vec3 capsuleNormal(vec2 boxLocalPx, vec2 boxSize, out float edgeDist) {
++    float r = min(radii.x, min(boxSize.x, boxSize.y) * 0.5);
++    vec2 c = clamp(boxLocalPx, min(vec2(r), boxSize * 0.5), max(vec2(r), boxSize - vec2(r)));
++    vec2 d = boxLocalPx - c;
++    float dist = length(d);
++    edgeDist = max(0.0, r - dist);                 // distance to the capsule boundary
++    vec2 n2 = dist > 1e-5 ? d / dist : vec2(0.0);
++    float s = min(dist / max(1e-5, r), 1.0);
++    return vec3(n2 * s, sqrt(max(0.0, 1.0 - s * s)));
 +}
 +
  vec2 refractionDir(vec2 uv) {
@@ -107,7 +123,7 @@ index 340212b..3b886df 100644
      vec2 n = abs(posPx) / halfSize;
      vec2 g = sign(posPx) * pow(n, vec2(7.0)) / halfSize;
      float len = length(g);
-@@ -311,7 +320,7 @@ void main() {
+@@ -311,7 +336,7 @@ void main() {
          if (cornerAlpha < 0.001) discard;
      }
  
@@ -116,7 +132,7 @@ index 340212b..3b886df 100644
      float bezelWidthPx = edgeThickness * minDim;
  
      // ========================================
-@@ -328,7 +337,7 @@ void main() {
+@@ -328,7 +353,7 @@ void main() {
      float bevelSdf = roundingPower == 2.0 ? getBevelSDF(uv) : cornerSdf;
      float edgeProximity = min(exp(bevelSdf * invBezelWidthPx), 1.0);
      vec2 inwardDir = refractionDir(uv);
@@ -125,7 +141,27 @@ index 340212b..3b886df 100644
  
      // ========================================
      // EDGE REFRACTION
-@@ -370,7 +379,7 @@ void main() {
+@@ -354,6 +379,19 @@ void main() {
+         dir = mixedLen > 0.0001 ? mixedDir / mixedLen : inwardDir;
+     }
+     vec2 baseOffset = dir * refractionMag * invFullSize;
++    // C37 namespace-capsule only: thin-rim refraction with a true capsule normal.
++    // Sentinel full box (glassBox == fullSize) keeps the upstream path untouched.
++    if (glassBoxSizePx.x < fullSize.x - 0.5 || glassBoxSizePx.y < fullSize.y - 0.5) {
++        float edgeDist;
++        vec3 n3 = capsuleNormal(uv * fullSize - glassBoxOffsetPx, glassBoxSizePx, edgeDist);
++        float depth = edgeThickness * min(glassBoxSizePx.x, glassBoxSizePx.y);  // rim band, px
++        float band = clamp(1.0 - edgeDist / max(1e-5, depth), 0.0, 1.0);        // 0 in flat interior
++        float rim = band * band * (3.0 - 2.0 * band);
++        vec3 refr = refract(vec3(0.0, 0.0, -1.0), n3, 1.0 / 1.45);
++        float slab = depth / max(0.2, abs(refr.z));                             // cos_theta divisor
++        baseOffset = refr.xy * (slab * refractionStrength * rim) * invFullSize;
++    }
++
+ 
+     // ========================================
+     // CHROMATIC ABERRATION — per-channel refraction scale
+@@ -370,7 +408,7 @@ void main() {
      // ========================================
      vec2 domeUV = vec2(0.0);
      if (lensDistortion > 0.001) {
