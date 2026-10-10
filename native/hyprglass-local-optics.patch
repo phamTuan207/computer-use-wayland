@@ -1,0 +1,90 @@
+diff --git i/src/GlassLayerSurface.cpp w/src/GlassLayerSurface.cpp
+index f5a5665..01a69aa 100644
+--- i/src/GlassLayerSurface.cpp
++++ w/src/GlassLayerSurface.cpp
+@@ -538,6 +538,19 @@ void CGlassLayerSurface::compositeAndRestore(PHLMONITOR monitor, float alpha, EM
+                 m_cachedTransformedRegion = transformedBlurRegion(monitor, rawBox);
+             CRegion& region = m_cachedTransformedRegion;
+ 
++            // Align the original optical SDF to the indicator's actual glass,
++            // not its transparent shadow padding. Other layers are unchanged.
++            if (!region.empty() && layerSurface->m_namespace == "computer-use-indicator") {
++                const auto extents = region.getExtents().intersection(transformBox);
++                if (std::isfinite(extents.x) && std::isfinite(extents.y) &&
++                    std::isfinite(extents.w) && std::isfinite(extents.h) &&
++                    extents.w > 0.0 && extents.h > 0.0) {
++                    maskInfo.glassBoxOffsetPx = Vector2D(extents.x - transformBox.x, extents.y - transformBox.y);
++                    maskInfo.glassBoxSizePx = Vector2D(extents.w, extents.h);
++                    cornerRadius = static_cast<float>(std::min(extents.w, extents.h)) / 2.0f;
++                }
++            }
++
+             const auto rects = region.getRects();
+             if (rects.size() <= static_cast<size_t>(GlassRenderer::MAX_REGION_RECTS)) {
+                 maskInfo.regionRectCount = static_cast<int>(rects.size());
+diff --git i/src/GlassRenderer.cpp w/src/GlassRenderer.cpp
+index 0bcb2c6..516eec8 100644
+--- i/src/GlassRenderer.cpp
++++ w/src/GlassRenderer.cpp
+@@ -465,7 +465,11 @@ void applyGlassEffect(SP<Render::IFramebuffer> sampleFramebuffer, SP<Render::IFr
+     const float safeRoundingPower = std::max(roundingPower, 1.0f);
+ 
+     // Reciprocals computed once per draw instead of once per pixel in the shader.
+-    const float minDimensionPx = static_cast<float>(std::min(fullSize.x, fullSize.y));
++    const bool validOpticalBox = mask && std::isfinite(mask->glassBoxSizePx.x) && std::isfinite(mask->glassBoxSizePx.y)
++        && mask->glassBoxSizePx.x > 0.0 && mask->glassBoxSizePx.y > 0.0;
++    const Vector2D opticalSize = validOpticalBox
++        ? mask->glassBoxSizePx : fullSize;
++    const float minDimensionPx = static_cast<float>(std::min(opticalSize.x, opticalSize.y));
+     glUniform2f(uniforms.invFullSize,
+         1.0f / static_cast<float>(fullSize.x), 1.0f / static_cast<float>(fullSize.y));
+     glUniform1f(uniforms.invRoundingPower, 1.0f / safeRoundingPower);
+@@ -573,7 +577,7 @@ void applyGlassEffect(SP<Render::IFramebuffer> sampleFramebuffer, SP<Render::IFr
+     // from before this uniform existed.
+     Vector2D glassBoxOffsetPx{0.0, 0.0};
+     Vector2D glassBoxSizePx = fullSize;
+-    if (mask && mask->glassBoxSizePx.x >= 0.0 && mask->glassBoxSizePx.y >= 0.0) {
++    if (validOpticalBox) {
+         glassBoxOffsetPx = mask->glassBoxOffsetPx;
+         glassBoxSizePx   = mask->glassBoxSizePx;
+     }
+diff --git i/src/Shaders.hpp w/src/Shaders.hpp
+index 340212b..220150f 100644
+--- i/src/Shaders.hpp
++++ w/src/Shaders.hpp
+@@ -212,7 +212,7 @@ float getBevelSDF(vec2 uv) {
+ // ============================================================================
+ 
+ vec2 refractionDir(vec2 uv) {
+-    vec2 toCenterPx = (vec2(0.5) - uv) * fullSize;
++    vec2 toCenterPx = glassBoxOffsetPx + glassBoxSizePx * 0.5 - uv * fullSize;
+     float len = length(toCenterPx);
+     return len > 0.1 ? toCenterPx / len : vec2(0.0);
+ }
+@@ -220,7 +220,7 @@ vec2 refractionDir(vec2 uv) {
+ // Smooth edge-following field: points into the box, hugging each edge's normal
+ // away from the corners and blending crease-free through the diagonals.
+ vec2 edgeDir(vec2 posPx) {
+-    vec2 halfSize = fullSize * 0.5;
++    vec2 halfSize = glassBoxSizePx * 0.5;
+     vec2 n = abs(posPx) / halfSize;
+     vec2 g = sign(posPx) * pow(n, vec2(7.0)) / halfSize;
+     float len = length(g);
+@@ -311,7 +311,7 @@ void main() {
+         if (cornerAlpha < 0.001) discard;
+     }
+ 
+-    float minDim = min(fullSize.x, fullSize.y);
++    float minDim = min(glassBoxSizePx.x, glassBoxSizePx.y);
+     float bezelWidthPx = edgeThickness * minDim;
+ 
+     // ========================================
+@@ -328,7 +328,7 @@ void main() {
+     float bevelSdf = roundingPower == 2.0 ? getBevelSDF(uv) : cornerSdf;
+     float edgeProximity = min(exp(bevelSdf * invBezelWidthPx), 1.0);
+     vec2 inwardDir = refractionDir(uv);
+-    vec2 posPx = (uv - 0.5) * fullSize; // pixel-space position for the edge-flow direction below
++    vec2 posPx = uv * fullSize - glassBoxOffsetPx - glassBoxSizePx * 0.5;
+ 
+     // ========================================
+     // EDGE REFRACTION
