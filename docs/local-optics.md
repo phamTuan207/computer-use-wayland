@@ -43,5 +43,19 @@ do not provide the plugin host or these staging protocols.
    followed by `dofile("<DEST>/native/hyprglass-local-optics.lua")`.
 5. Keep the previous immutable module as rollback.
 
+For stable login activation, register `scripts/activate-glass.py LIBRARY --abi ABI`
+as a login-only command (not on every config reload). Obtain `ABI` from
+`hyprctl -j version` after verifying this build. The command verifies the library's
+SHA256 filename and exact compositor ABI, refuses activation if any plugin is
+already loaded, applies the accepted profile and checks backend availability.
+On config reload, reapply only the profile if the plugin is present; never unload
+or replace its library. An ABI change requires a rebuilt and verified plugin.
+
+To enforce this final appearance, create `native/require-liquid` in the installed
+CLI tree. Sessions then fail before driver input if the required glass backend
+is unavailable, rather than silently displaying the fallback badge. Final mode
+also ignores PATH indicator overrides and disables experimental entrance effects.
+This file does not load plugins; login activation must be configured separately.
+
 This document is the accepted overlay profile. The alternative capsule/ink paths
 and the older experimental material notes remain as experiments, not defaults.

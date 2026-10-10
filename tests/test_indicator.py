@@ -66,6 +66,27 @@ class RequestState(unittest.TestCase):
 
 
 class NativeStartup(unittest.TestCase):
+    def test_final_profile_ignores_path_override_and_entrance(self):
+        with patch.object(indicator.Path, 'exists', return_value=True), \
+                patch.object(indicator, '_status', return_value={}), \
+                patch.object(indicator, '_valid_liquid', return_value=True), \
+                patch.object(indicator.shutil, 'which', return_value='/alternate/indicator') as lookup, \
+                patch.object(indicator.subprocess, 'Popen') as launch, \
+                patch.object(indicator.Native, 'reply'):
+            indicator.Native({'CU_INDICATOR_ENTRANCE': 'drop'})
+            lookup.assert_not_called()
+            self.assertEqual(launch.call_args.args[0], [str(Path(indicator.__file__).resolve().parents[1] / 'native/indicator')])
+            self.assertNotIn('CU_INDICATOR_ENTRANCE', launch.call_args.kwargs['env'])
+            self.assertEqual(launch.call_args.kwargs['env']['CU_INDICATOR_MATERIAL'], 'liquid')
+
+    def test_required_final_profile_rejects_fallback_before_launch(self):
+        with patch.object(indicator.Path, 'exists', return_value=True), \
+                patch.object(indicator, '_status', return_value=None), \
+                patch.object(indicator.subprocess, 'Popen') as launch:
+            with self.assertRaisesRegex(RuntimeError, 'final liquid-glass profile unavailable'):
+                indicator.Native({})
+            launch.assert_not_called()
+
     def test_animated_ready_budget_matches_default_and_overrides(self):
         cases = [({}, 3.0), ({'CU_INDICATOR_ENTRANCE_MS': '4000'}, 3.0),
                  ({'CU_INDICATOR_ENTRANCE': 'sheet', 'CU_INDICATOR_ENTRANCE_MS': '4000'}, 5.0),

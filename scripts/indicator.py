@@ -31,9 +31,14 @@ class Native:
         env.pop('CU_INDICATOR_INK', None)  # callers can never select an ink encoding
         status = _status(env)              # initial read-only probe
         liquid = _valid_liquid(status)
+        final = (Path(__file__).resolve().parents[1] / 'native/require-liquid').exists()
+        if final and not liquid:
+            raise RuntimeError('final liquid-glass profile unavailable; restore the pinned plugin before computer-use')
+        if final:
+            env.pop('CU_INDICATOR_ENTRANCE', None)  # accepted profile has no entrance animation
         if liquid:
             env['CU_INDICATOR_MATERIAL'] = 'liquid'   # fixed white glyphs; no adaptive ink
-        binary = shutil.which('computer-use-indicator', path=env.get('PATH'))
+        binary = None if final else shutil.which('computer-use-indicator', path=env.get('PATH'))
         binary = binary or str(Path(__file__).resolve().parents[1] / 'native/indicator')
         self.process = subprocess.Popen([binary], env=env, stdin=subprocess.PIPE,
                                         stdout=subprocess.PIPE, start_new_session=True)
