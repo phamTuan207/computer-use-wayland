@@ -218,17 +218,17 @@ static void draw(GtkDrawingArea *area, cairo_t *cr, int width, int height, gpoin
   entrance_shape(cr,px+.5,py+.5,pw-1,ph-1,entrance_progress,entrance_mode);
   cairo_set_source_rgba(cr,.93,.95,.97,liquid?0:.74);cairo_fill_preserve(cr);
   cairo_pattern_t *wash=cairo_pattern_create_linear(px,py,px,py+ph);
-  cairo_pattern_add_color_stop_rgba(wash,0,1,1,1,liquid?.38:.16);
-  cairo_pattern_add_color_stop_rgba(wash,.16,1,1,1,liquid?.12:.08);
+  cairo_pattern_add_color_stop_rgba(wash,0,1,1,1,liquid?.18:.16);
+  cairo_pattern_add_color_stop_rgba(wash,.16,1,1,1,liquid?.05:.08);
   cairo_pattern_add_color_stop_rgba(wash,.36,1,1,1,0);
   cairo_pattern_add_color_stop_rgba(wash,.66,1,1,1,0);
-  cairo_pattern_add_color_stop_rgba(wash,.90,1,1,1,liquid?.10:.025);
-  cairo_pattern_add_color_stop_rgba(wash,1,1,1,1,liquid?.28:0);
+  cairo_pattern_add_color_stop_rgba(wash,.90,1,1,1,liquid?.035:.025);
+  cairo_pattern_add_color_stop_rgba(wash,1,1,1,1,liquid?.10:0);
   cairo_set_source(cr,wash);cairo_fill_preserve(cr);cairo_pattern_destroy(wash);
   cairo_pattern_t *rim=cairo_pattern_create_linear(px,py,px+pw*.12,py+ph);
-  cairo_pattern_add_color_stop_rgba(rim,0,1,1,1,.60);
+  cairo_pattern_add_color_stop_rgba(rim,0,1,1,1,liquid?.32:.60);
   cairo_pattern_add_color_stop_rgba(rim,.50,1,1,1,.08);
-  cairo_pattern_add_color_stop_rgba(rim,1,1,1,1,.24);
+  cairo_pattern_add_color_stop_rgba(rim,1,1,1,1,liquid?.12:.24);
   cairo_set_source(cr,rim);cairo_set_line_width(cr,.8);cairo_stroke(cr);
   cairo_pattern_destroy(rim);
   if (liquid) {
@@ -236,11 +236,11 @@ static void draw(GtkDrawingArea *area, cairo_t *cr, int width, int height, gpoin
     // Keep the middle fully transparent: this is a rim, not a tinted plate.
     rounded(cr,px+1.2,py+1.2,pw-2.4,ph-2.4,(ph-2.4)/2);
     cairo_pattern_t *inner=cairo_pattern_create_linear(px,py,px,py+ph);
-    cairo_pattern_add_color_stop_rgba(inner,0,.12,.16,.19,.34);
+    cairo_pattern_add_color_stop_rgba(inner,0,.12,.16,.19,.18);
     cairo_pattern_add_color_stop_rgba(inner,.40,.12,.16,.19,.04);
     cairo_pattern_add_color_stop_rgba(inner,.60,1,1,1,0);
-    cairo_pattern_add_color_stop_rgba(inner,1,1,1,1,.70);
-    cairo_set_source(cr,inner);cairo_set_line_width(cr,1.0);cairo_stroke(cr);
+    cairo_pattern_add_color_stop_rgba(inner,1,1,1,1,.25);
+    cairo_set_source(cr,inner);cairo_set_line_width(cr,.65);cairo_stroke(cr);
     cairo_pattern_destroy(inner);
   }
   if (entrance_progress<1.0) return;

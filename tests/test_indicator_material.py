@@ -115,10 +115,10 @@ class IndicatorMaterial(unittest.TestCase):
         self.assertAlmostEqual(self.src['alpha'], 0.018, places=6)
         self.assertEqual(self.src['zero_stop_count'], 2, 'wash midband must have two zero stops')
         self.assertIn(0.0, self.src['liquid_stops'], 'liquid body alpha 0 expected')
-        self.assertIn(0.38, self.src['liquid_stops'])
+        self.assertIn(0.18, self.src['liquid_stops'])
 
     def test_cairo_geometry_is_outside_only_and_midband_clear(self):
-        stops = [0.38, 0.12, 0.0, 0.0, 0.10, 0.28]
+        stops = [0.18, 0.05, 0.0, 0.0, 0.035, 0.10]
         got = sample(self.src['alpha'], self.src['rings'], stops)
         self.assertEqual(got['shadow_centre'], 0, 'shadow must not fill the pill centre')
         self.assertEqual(got['shadow_text'], 0, 'shadow must not reach the text')
