@@ -135,7 +135,7 @@ index 136d3de..05aa7cb 100644
  
  struct SBlurUniforms {
 diff --git i/src/Shaders.hpp w/src/Shaders.hpp
-index 340212b..98e131f 100644
+index 340212b..7a79b6b 100644
 --- i/src/Shaders.hpp
 +++ w/src/Shaders.hpp
 @@ -79,6 +79,8 @@ uniform vec2 maskUVScale;
@@ -209,12 +209,11 @@ index 340212b..98e131f 100644
  
      // ========================================
      // EDGE REFRACTION
-@@ -354,6 +381,22 @@ void main() {
+@@ -354,6 +381,36 @@ void main() {
          dir = mixedLen > 0.0001 ? mixedDir / mixedLen : inwardDir;
      }
      vec2 baseOffset = dir * refractionMag * invFullSize;
-+    // C37 namespace-capsule only: thin-rim refraction with a true capsule normal.
-+    // Sentinel full box (glassBox == fullSize) keeps the upstream path untouched.
++    // Namespace-capsule optics only; all other surfaces retain upstream optics.
 +    bool capsuleMaterial = indicatorCapsule == 1;
 +    vec3 materialNormal = vec3(0.0, 0.0, 1.0);
 +    if (capsuleMaterial) {
@@ -227,12 +226,27 @@ index 340212b..98e131f 100644
 +        vec3 refr = refract(vec3(0.0, 0.0, -1.0), n3, 1.0 / 1.45);
 +        float slab = depth / max(0.2, abs(refr.z));                             // cos_theta divisor
 +        baseOffset = refr.xy * (slab * refractionStrength * rim) * invFullSize;
++        // Independent pixel-space adaptation of liquid-glass-js's exponential
++        // rim decay and tangential ripple (container.js). Not UV-sized offsets:
++        // the desktop texture includes padding and may span a whole monitor.
++        const float capsuleRimIntensityPx = 2.4;
++        const float capsuleRimDistance = 0.24; // inverse pixels: wider than 0.8
++        const float capsuleRipplePx = 1.2;
++        float rimEnvelope = exp(-edgeDist * capsuleRimDistance);
++        float normalLength = length(n3.xy);
++        vec2 rimNormal = normalLength > 1e-5 ? n3.xy / normalLength : vec2(0.0);
++        vec2 tangent = vec2(-rimNormal.y, rimNormal.x);
++        // Fade the normal at the cylinder axis; avoid a sign jump there.
++        float ripple = sin(edgeDist / min(glassBoxSizePx.x, glassBoxSizePx.y) * 25.0)
++                     * capsuleRipplePx * rimEnvelope * normalLength;
++        vec2 rimOffsetPx = -n3.xy * capsuleRimIntensityPx * rimEnvelope;
++        baseOffset += (rimOffsetPx + tangent * ripple) * invFullSize;
 +    }
 +
  
      // ========================================
      // CHROMATIC ABERRATION — per-channel refraction scale
-@@ -370,7 +413,7 @@ void main() {
+@@ -370,7 +427,7 @@ void main() {
      // ========================================
      vec2 domeUV = vec2(0.0);
      if (lensDistortion > 0.001) {
@@ -241,7 +255,7 @@ index 340212b..98e131f 100644
          vec2 dGrad = vec2(
              -4.0 * c.x * (1.0 - c.y * c.y),
              -4.0 * c.y * (1.0 - c.x * c.x)
-@@ -471,6 +514,13 @@ void main() {
+@@ -471,6 +528,13 @@ void main() {
      // ========================================
      if (fresnelStrength > 0.001) {
          float fresnel = edgeProximity * edgeProximity * fresnelStrength * 0.15;
@@ -255,7 +269,7 @@ index 340212b..98e131f 100644
          vec3 fresnelLight = vec3(1.0);
          if (fresnelColorAlpha > 0.001) fresnelLight = mix(vec3(1.0), fresnelColor, fresnelColorAlpha);   // chosen colour, then the tint below
          if (fresnelTint > 0.001) {
-@@ -494,13 +544,23 @@ void main() {
+@@ -494,13 +558,23 @@ void main() {
          }
          float topBias = pow(specT, 2.0);
          float spec = topBias * edgeProximity * edgeProximity * specularStrength * 0.08;
@@ -280,7 +294,7 @@ index 340212b..98e131f 100644
          float bottomBias = pow(uv.y, 2.0);
          float shadow = bottomBias * edgeProximity * edgeProximity * 0.06;
          color *= 1.0 - shadow;
-@@ -515,5 +575,35 @@ void main() {
+@@ -515,5 +589,35 @@ void main() {
          // Layers only: composite the rendered surface over the glass effect
          // in a single pass. surfacePixel is premultiplied alpha from Hyprland's
          // surface rendering, so we unpremultiply before the 'over' blend.
