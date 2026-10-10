@@ -1,4 +1,4 @@
-# Upstream local optical candidate
+# Accepted local optical profile
 
 Build the pinned Hyprglass source with `scripts/build-glass.py --local-optics SOURCE`.
 This selects `native/hyprglass-local-optics.patch`; do not combine it with the
@@ -17,11 +17,31 @@ nested compositor rendered moving lake content through the candidate; cache
 misses advanced from 19 to 38 and the interior changed. After hiding the pill,
 its expanded shadow crop matched the clean baseline pixel-for-pixel. Presentation
 acknowledgments were 9.0–14.0 ms; these are not GPU timings or FPS measurements.
-Appearance still needs user acceptance; it is not claimed identical to a browser
-reference with different dimensions and background sampling.
+Appearance is the user-accepted local profile; it is not claimed identical to a
+browser reference with different dimensions and background sampling. The numbers
+above are nested-compositor measurements, not GPU timings or FPS.
 
-Publish a tested binary with `scripts/install-glass.py SOURCE DIRECTORY`.
-The installer uses an immutable hash-named path and never loads the plugin.
-Never overwrite, unload or hot-swap a running compositor plugin. Activate the
-new path only in a fresh login, followed by the matching Lua profile. Preserve
-the previous immutable module as a rollback option.
+## Final accepted build and activation
+
+This overlay is **Hyprland-specific**, not generic Wayland: it needs Hyprland
+0.56.2, the Hyprglass plugin built against that exact ABI, `wp_presentation`, the
+layer-shell protocol and `ext-background-effect-v1`. Generic Wayland compositors
+do not provide the plugin host or these staging protocols.
+
+1. Choose empty source and existing install directories (`SOURCE` and `DEST`).
+   Check out the **Hyprglass source pinned for Hyprland 0.56.2**:
+   `git clone https://github.com/hyprnux/hyprglass.git "$SOURCE"` and
+   `git -C "$SOURCE" checkout 84c1a5ab217101a317d4edaab7fba2efcc1bf346`.
+2. Build the accepted profile: `scripts/build-glass.py --local-optics "$SOURCE"`.
+   (Do not combine it with the alternative capsule patch; that stays experimental.)
+3. Publish immutably: `scripts/install-glass.py "$SOURCE/hyprglass.so" "$DEST"` writes a
+   hash-named `.so` and never loads it or overwrites a running module.
+   Copy `native/hyprglass-local-optics.lua` into `$DEST/native/` separately;
+   the installer publishes the library only, not the profile or CLI.
+4. Activate only in a **fresh login** (never hot-swap a loaded plugin), then load
+   the matching profile generically: `hl.plugin.load("<DEST>/hyprglass-<sha>.so")`
+   followed by `dofile("<DEST>/native/hyprglass-local-optics.lua")`.
+5. Keep the previous immutable module as rollback.
+
+This document is the accepted overlay profile. The alternative capsule/ink paths
+and the older experimental material notes remain as experiments, not defaults.
