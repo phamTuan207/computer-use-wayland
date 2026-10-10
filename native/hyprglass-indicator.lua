@@ -2,13 +2,9 @@
 -- This configuration does not enable glass for ordinary windows or other layers.
 if hl.plugin.hyprglass then
   local hg = hl.plugin.hyprglass
-  hg.config({ enabled = false, manage_window_blur = false,
-              subsurfaces = { enabled = false },
-              layers = { enabled = true, mask_mode = "region" } })
-  hg.layer("computer-use-indicator", { preset = "cu-indicator", mask_mode = "region" })
-  hg.layer("computer-use-indicator-ink-v1", { preset = "cu-indicator", mask_mode = "region" })
-  hg.preset("cu-indicator", {
-    inherits = "pomme",
+  -- preset()/layer() are queued until config commit in the pinned backend.
+  -- Direct config values also work through eval without reloading the plugin.
+  local material = {
     -- Bend only a narrow curved rim, not the whole interior scene.
     refraction_strength = 0.65,
     refraction_flow = 1.0,
@@ -22,6 +18,8 @@ if hl.plugin.hyprglass then
     brightness = 1.0,
     contrast = 1.0,
     saturation = 1.0,
+    vibrancy = 0.0,
+    vibrancy_darkness = 0.0,
     adaptive_dim = 0.0,
     adaptive_boost = 0.0,
     glass_opacity = 1.0,
@@ -29,10 +27,20 @@ if hl.plugin.hyprglass then
     bevel_strength = 0.65,
     bevel_size = 2.0,
     bevel_tint = 0.0,
-    bevel_shadow = 0.35,
+    bevel_shadow = 0.0,
     bevel_angle = 300.0,
     specular_strength = 0.55,
     fresnel_strength = 0.18,
     noise_strength = 0.0,
-  })
+  }
+  local config = {
+    enabled = false, manage_window_blur = false,
+    default_preset = "default",
+    subsurfaces = { enabled = false },
+    layers = { enabled = true, namespaces = "computer-use-indicator",
+               preset = "default", mask_mode = "region" },
+    dark = material, light = material,
+  }
+  for key, value in pairs(material) do config[key] = value end
+  hg.config(config)
 end

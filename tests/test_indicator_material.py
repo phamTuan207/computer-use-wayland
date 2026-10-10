@@ -106,6 +106,26 @@ def sample(alpha, rings, stops):
 
 
 class IndicatorMaterial(unittest.TestCase):
+    def test_fixed_white_ink_and_no_dark_inner_rim(self):
+        text = SOURCE.read_text()
+        self.assertNotIn('adaptive_ink', text)
+        self.assertNotIn('CU_INDICATOR_INK', text)
+        self.assertEqual(text.count('cairo_set_source_rgb(cr,.98,.99,1);'), 2)
+        self.assertIn('gtk_layer_set_namespace(output->window,"computer-use-indicator");', text)
+        stops = re.findall(r'cairo_pattern_add_color_stop_rgba\(inner,([^;]+)\);', text)
+        self.assertEqual(len(stops), 4)
+        for stop in stops:
+            self.assertEqual([float(v) for v in stop.split(',')[1:4]], [1.0, 1.0, 1.0])
+        preset = (ROOT / 'native/hyprglass-indicator.lua').read_text()
+        for key in ('bevel_shadow', 'adaptive_dim', 'adaptive_boost', 'vibrancy'):
+            self.assertRegex(preset, rf'\b{key}\s*=\s*0\.0,')
+        self.assertIn('tint_color = 0xffffff00,', preset)
+        self.assertNotIn('hg.preset(', preset)
+        self.assertNotIn('hg.layer(', preset)
+        self.assertIn('hg.config(config)', preset)
+        self.assertIn('dark = material, light = material,', preset)
+        self.assertIn('namespaces = "computer-use-indicator"', preset)
+
     @classmethod
     def setUpClass(cls):
         cls.src = parse_source()

@@ -43,7 +43,6 @@ static uint32_t effect_caps;
 static int failed;
 static int closing;
 static int liquid_material;
-static int adaptive_ink;
 static uint32_t presentation_global,effects_global,compositor_global,liquid_global;
 static int entrance_mode;
 static double entrance_progress=1.0;
@@ -232,12 +231,12 @@ static void draw(GtkDrawingArea *area, cairo_t *cr, int width, int height, gpoin
   cairo_set_source(cr,rim);cairo_set_line_width(cr,.8);cairo_stroke(cr);
   cairo_pattern_destroy(rim);
   if (liquid) {
-    // A thin opposing reflection gives clear glass an edge on white backdrops.
+    // Neutral light-only reflection: never paint a dark inner rim.
     // Keep the middle fully transparent: this is a rim, not a tinted plate.
     rounded(cr,px+1.2,py+1.2,pw-2.4,ph-2.4,(ph-2.4)/2);
     cairo_pattern_t *inner=cairo_pattern_create_linear(px,py,px,py+ph);
-    cairo_pattern_add_color_stop_rgba(inner,0,.12,.16,.19,.18);
-    cairo_pattern_add_color_stop_rgba(inner,.40,.12,.16,.19,.04);
+    cairo_pattern_add_color_stop_rgba(inner,0,1,1,1,.10);
+    cairo_pattern_add_color_stop_rgba(inner,.40,1,1,1,0);
     cairo_pattern_add_color_stop_rgba(inner,.60,1,1,1,0);
     cairo_pattern_add_color_stop_rgba(inner,1,1,1,1,.25);
     cairo_set_source(cr,inner);cairo_set_line_width(cr,.65);cairo_stroke(cr);
@@ -247,9 +246,7 @@ static void draw(GtkDrawingArea *area, cairo_t *cr, int width, int height, gpoin
   if (liquid) cairo_set_source_rgb(cr,.56,.92,.75);
   else cairo_set_source_rgb(cr,.09,.38,.31);
   cairo_arc(cr,px+19,py+ph/2,2.5,0,2*G_PI);cairo_fill(cr);
-  if (adaptive_ink) cairo_set_source_rgb(cr,1,0,1);
-  else if (liquid) cairo_set_source_rgb(cr,.98,.99,1);
-  else cairo_set_source_rgb(cr,.10,.14,.17);
+  cairo_set_source_rgb(cr,.98,.99,1);
   cairo_select_font_face(cr,"Inter",CAIRO_FONT_SLANT_NORMAL,CAIRO_FONT_WEIGHT_NORMAL);
   cairo_set_font_size(cr,14);
   cairo_text_extents_t text;cairo_text_extents(cr,"Computer use active",&text);
@@ -258,9 +255,7 @@ static void draw(GtkDrawingArea *area, cairo_t *cr, int width, int height, gpoin
   cairo_move_to(cr,px+31,py+ph/2-text.y_bearing-text.height/2);
   cairo_show_text(cr,"Computer use active");
   if (escape) {
-    if (adaptive_ink) cairo_set_source_rgb(cr,1,0,1);
-    else if (liquid) cairo_set_source_rgb(cr,.98,.99,1);
-    else cairo_set_source_rgb(cr,.20,.24,.27);
+    cairo_set_source_rgb(cr,.98,.99,1);
     cairo_set_font_size(cr,11);
     cairo_text_extents_t esc;cairo_text_extents(cr,"Esc",&esc);
     cairo_move_to(cr,px+pw-29-esc.width/2,py+ph/2-esc.y_bearing-esc.height/2);cairo_show_text(cr,"Esc");
@@ -338,7 +333,6 @@ static void removed(void *data,struct wl_registry *registry,uint32_t name) {
 static const struct wl_registry_listener registry_listener={.global=global,.global_remove=removed};
 int main(void) {
   liquid_material=g_strcmp0(g_getenv("CU_INDICATOR_MATERIAL"),"liquid")==0;
-  adaptive_ink=liquid_material && g_strcmp0(g_getenv("CU_INDICATOR_INK"),"magenta-v1")==0;
   const char *entry=g_getenv("CU_INDICATOR_ENTRANCE");
   entrance_mode=g_strcmp0(entry,"drop")==0?ENTRANCE_MODE_DROP:
                 g_strcmp0(entry,"sheet")==0?ENTRANCE_MODE_SHEET:ENTRANCE_MODE_STATIC;
@@ -380,7 +374,7 @@ int main(void) {
     output->monitor=g_list_model_get_item(monitors,i);
     output->window=GTK_WINDOW(gtk_window_new());
     gtk_layer_init_for_window(output->window);
-    gtk_layer_set_namespace(output->window,adaptive_ink?"computer-use-indicator-ink-v1":"computer-use-indicator");
+    gtk_layer_set_namespace(output->window,"computer-use-indicator");
     gtk_layer_set_monitor(output->window,output->monitor);
     gtk_layer_set_layer(output->window,GTK_LAYER_SHELL_LAYER_OVERLAY);
     gtk_layer_set_keyboard_mode(output->window,GTK_LAYER_SHELL_KEYBOARD_MODE_NONE);

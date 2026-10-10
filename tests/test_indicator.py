@@ -375,7 +375,7 @@ class SocketProtocol(unittest.TestCase):
         self.assertEqual(native.commands, [])
 
 
-class InkNegotiation(unittest.TestCase):
+class LiquidSelection(unittest.TestCase):
     env = {'HYPRLAND_INSTANCE_SIGNATURE': 'sig', 'WAYLAND_DISPLAY': 'wayland-1', 'PATH': '/usr/bin'}
 
     def status(self, **overrides):
@@ -424,44 +424,18 @@ class InkNegotiation(unittest.TestCase):
         self.assertIsNone(result['error'], result['error'])
         return result
 
-    def test_exact_capability_opts_in_and_reprobes_after_ready(self):
-        cap = self.status(indicatorInkEncoding='magenta-v1')
-        result = self.ok([cap, cap])                     # initial + fresh post-ready
-        self.assertEqual(result['env'].get('CU_INDICATOR_MATERIAL'), 'liquid')
-        self.assertEqual(result['env'].get('CU_INDICATOR_INK'), 'magenta-v1')
-        self.assertEqual(result['run'].call_count, 2, 'ready must re-probe fresh status')
-
-    def test_pending_then_ready_is_accepted(self):
-        result = self.ok([self.status(shaders='pending', indicatorInkEncoding='magenta-v1'),
-                          self.status(shaders='ready', indicatorInkEncoding='magenta-v1')])
-        self.assertEqual(result['env'].get('CU_INDICATOR_MATERIAL'), 'liquid')
-        self.assertEqual(result['env'].get('CU_INDICATOR_INK'), 'magenta-v1')
-
-    def test_pending_then_failed_is_refused_and_closed(self):
-        result = self.spawn([self.status(shaders='pending'), self.status(active=False)])
-        self.assertIsNotNone(result['error'])
-        self.assertIn('did not become ready', str(result['error']))
-        result['process'].wait.assert_called_once()      # closed and reaped
-        self.assertTrue(result['process'].stdout.closed)
-
-    def test_capability_disappearing_after_ready_is_refused(self):
-        result = self.spawn([self.status(indicatorInkEncoding='magenta-v1'), self.status()])
-        self.assertIsNotNone(result['error'])
-        self.assertIn('was not confirmed', str(result['error']))
-        result['process'].wait.assert_called_once()
-
-    def test_absent_capability_keeps_fallback(self):
-        result = self.ok([self.status(), self.status()])
+    def test_liquid_sets_material_but_never_sets_ink(self):
+        result = self.ok([self.status(), self.status()])   # initial + fresh post-ready
         self.assertEqual(result['env'].get('CU_INDICATOR_MATERIAL'), 'liquid')
         self.assertNotIn('CU_INDICATOR_INK', result['env'])
+        self.assertEqual(result['run'].call_count, 2, 'ready must re-probe fresh status')
 
-    def test_malformed_capability_is_rejected(self):
-        for bad in ('magenta-v1 ', 'MAGENTA-V1', 'magenta-v2', '', 1, None, ['magenta-v1']):
-            with self.subTest(capability=bad):
-                result = self.ok([self.status(indicatorInkEncoding=bad), self.status()])
-                self.assertNotIn('CU_INDICATOR_INK', result['env'])
+    def test_advertised_magenta_capability_is_ignored(self):
+        cap = self.status(indicatorInkEncoding='magenta-v1')
+        result = self.ok([cap, cap])
+        self.assertNotIn('CU_INDICATOR_INK', result['env'], 'fixed white policy')
 
-    def test_spoofed_caller_ink_is_ignored(self):
+    def test_spoofed_caller_ink_is_stripped(self):
         caller = {'CU_INDICATOR_INK': 'magenta-v1', 'CU_INDICATOR_MATERIAL': 'liquid'}
         env = dict(self.env)
         env.update(caller)
@@ -469,15 +443,31 @@ class InkNegotiation(unittest.TestCase):
         result = self.ok([self.status(), self.status()], caller=caller)
         self.assertNotIn('CU_INDICATOR_INK', result['env'])
         self.assertEqual(env, snapshot, 'caller env must not be mutated')
-        self.assertEqual(result['process'].stdin.getvalue(), '')   # no marker bytes
+        self.assertEqual(result['process'].stdin.getvalue(), '')
 
-    def test_old_or_failed_backend_keeps_fallback(self):
-        cases = (({'returncode': 1},), ({'payload': 'version'},), ({'payload': 'schema'},))
-        for (spec,) in cases:
-            with self.subTest(**spec):
-                payload = self.status(version='0.10.0') if spec.get('payload') == 'version' else \
-                    ({'schema': 2} if spec.get('payload') == 'schema' else self.status())
-                result = self.spawn([payload], returncodes=[spec.get('returncode', 0)])
+    def test_pending_then_ready_is_accepted(self):
+        result = self.ok([self.status(shaders='pending'), self.status(shaders='ready')])
+        self.assertEqual(result['env'].get('CU_INDICATOR_MATERIAL'), 'liquid')
+        self.assertNotIn('CU_INDICATOR_INK', result['env'])
+
+    def test_pending_then_failed_is_refused_and_closed(self):
+        result = self.spawn([self.status(shaders='pending'), self.status(active=False)])
+        self.assertIsNotNone(result['error'])
+        self.assertIn('did not become ready', str(result['error']))
+        result['process'].wait.assert_called_once()
+        self.assertTrue(result['process'].stdout.closed)
+
+    def test_changed_after_ready_is_refused(self):
+        result = self.spawn([self.status(), self.status(active=False)])
+        self.assertIsNotNone(result['error'])
+        self.assertIn('did not become ready', str(result['error']))
+        result['process'].wait.assert_called_once()
+
+    def test_old_or_failed_backend_keeps_native_fallback(self):
+        cases = ((self.status(), 1), (self.status(version='0.10.0'), 0), ({'schema': 2}, 0))
+        for payload, returncode in cases:
+            with self.subTest(returncode=returncode, schema=payload.get('schema')):
+                result = self.spawn([payload], returncodes=[returncode])
                 self.assertNotIn('CU_INDICATOR_INK', result['env'])
                 self.assertNotIn('CU_INDICATOR_MATERIAL', result['env'])
                 self.assertEqual(result['process'].stdin.getvalue(), '')

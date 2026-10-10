@@ -31,15 +31,8 @@ class Native:
         env.pop('CU_INDICATOR_INK', None)  # callers can never select an ink encoding
         status = _status(env)              # initial read-only probe
         liquid = _valid_liquid(status)
-        ink = False
         if liquid:
-            env['CU_INDICATOR_MATERIAL'] = 'liquid'
-            # Opt in to adaptive glyph encoding only on a validated backend that
-            # advertises the exact capability string; anything else (old, malformed,
-            # missing, failed) keeps the ordinary white/native fallback.
-            ink = status.get('indicatorInkEncoding') == INK_ENCODING
-            if ink:
-                env['CU_INDICATOR_INK'] = INK_ENCODING
+            env['CU_INDICATOR_MATERIAL'] = 'liquid'   # fixed white glyphs; no adaptive ink
         binary = shutil.which('computer-use-indicator', path=env.get('PATH'))
         binary = binary or str(Path(__file__).resolve().parents[1] / 'native/indicator')
         self.process = subprocess.Popen([binary], env=env, stdin=subprocess.PIPE,
@@ -53,8 +46,6 @@ class Native:
                 fresh = _status(env)
                 if not _valid_liquid(fresh, ready=True):
                     raise RuntimeError('indicator liquid backend did not become ready')
-                if ink and fresh.get('indicatorInkEncoding') != INK_ENCODING:
-                    raise RuntimeError('indicator ink capability was not confirmed')
         except BaseException:
             self.close()
             raise
@@ -163,7 +154,6 @@ def request(state, command):
 
 LIQUID_SCHEMA = 1
 LIQUID_VERSION = '0.10.0-cu.1'
-INK_ENCODING = 'magenta-v1'
 
 
 def _status(env):
