@@ -3,6 +3,7 @@
 import argparse
 import io
 import json
+import math
 from pathlib import Path
 import statistics
 import subprocess
@@ -16,7 +17,16 @@ sys.path.insert(0,str(ROOT/'scripts'))
 import session_driver
 
 
-def benchmark(args,samples):
+def timing_summary(timings,raw_samples=False):
+    ordered=sorted(timings)
+    result={'samples':len(timings),'median_ms':round(statistics.median(timings),3),
+            'p95_ms':round(ordered[math.ceil(.95*len(ordered))-1],3),
+            'min_ms':round(ordered[0],3),'max_ms':round(ordered[-1],3)}
+    if raw_samples:result['timings_ms']=list(timings)
+    return result
+
+
+def benchmark(args,samples,raw_samples=False):
     timings={'isolated':[],'resident':[]}
     for i in range(samples):
         for mode in (('isolated','resident') if i%2==0 else ('resident','isolated')):
@@ -25,11 +35,10 @@ def benchmark(args,samples):
                     if mode=='isolated' else session_driver.execute(args,''))
             if result.returncode:raise RuntimeError('benchmark command failed; inspect desktop/session state')
             timings[mode].append((time.perf_counter()-started)*1000)
-    return {k:{'samples':len(v),'median_ms':round(statistics.median(v),3),
-               'min_ms':round(min(v),3),'max_ms':round(max(v),3)} for k,v in timings.items()}
+    return {k:timing_summary(v,raw_samples) for k,v in timings.items()}
 
 
-def browser_benchmark(endpoint,target,samples):
+def browser_benchmark(endpoint,target,samples,raw_samples=False):
     import cu
     from browser_worker import BrowserWorker
     request={'operation':'observe','endpoint':endpoint,'target':target,'max_elements':16}
@@ -44,13 +53,12 @@ def browser_benchmark(endpoint,target,samples):
                 result=cu.browser(request) if mode=='isolated' else worker.request(request)
                 timings[mode].append((time.perf_counter()-started)*1000)
                 if not isinstance(result,dict) or not result.get('snapshot'):raise RuntimeError('browser fixture observation failed')
-        return {'cold_worker_ms':round(cold,3),**{k:{'samples':len(v),
-            'median_ms':round(statistics.median(v),3),'min_ms':round(min(v),3),
-            'max_ms':round(max(v),3)} for k,v in timings.items()}}
+        return {'cold_worker_ms':round(cold,3),
+                **{k:timing_summary(v,raw_samples) for k,v in timings.items()}}
     finally:worker.close()
 
 
-def encoding_benchmark(image,samples):
+def encoding_benchmark(image,samples,raw_samples=False):
     from PIL import Image
     timings={1:[],2:[]};sizes={}
     expected=image.convert('RGB').tobytes()
@@ -62,11 +70,11 @@ def encoding_benchmark(image,samples):
             sizes[level]=output.tell()
             with Image.open(io.BytesIO(output.getvalue())) as decoded:
                 assert decoded.size==image.size and decoded.convert('RGB').tobytes()==expected
-    return {str(k):{'samples':len(v),'median_ms':round(statistics.median(v),3),
+    return {str(k):{**timing_summary(v,raw_samples),
                     'bytes':sizes[k],'lossless_verified':True} for k,v in timings.items()}
 
 
-def browser_image_benchmark(raw,samples):
+def browser_image_benchmark(raw,samples,raw_samples=False):
     import cu
     from PIL import Image
     expected=Image.open(io.BytesIO(raw)).convert('RGB')
@@ -84,7 +92,7 @@ def browser_image_benchmark(raw,samples):
                 preserved[mode]=Path(meta['image']).read_bytes()==raw
                 with Image.open(meta['image']) as decoded:
                     assert decoded.size==expected.size and decoded.tobytes()==expected.tobytes()
-    return {k:{'samples':len(v),'median_ms':round(statistics.median(v),3),
+    return {k:{**timing_summary(v,raw_samples),
                'bytes':sizes[k],'original_bytes_preserved':preserved[k],
                'lossless_verified':True} for k,v in timings.items()}
 
@@ -92,6 +100,7 @@ def browser_image_benchmark(raw,samples):
 if __name__=='__main__':
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--samples',type=int,default=12)
+    parser.add_argument('--raw-samples',action='store_true',help='include unrounded timing samples in measurement order')
     parser.add_argument('--window')
     parser.add_argument('--crop',type=int,nargs=4)
     parser.add_argument('--png',type=Path,help='compare processing an existing PNG, without printing its path or pixels')
@@ -100,14 +109,14 @@ if __name__=='__main__':
     options=parser.parse_args()
     if not 3<=options.samples<=30:parser.error('samples must be 3..30')
     if options.crop and not options.window:parser.error('crop requires window')
-    report={'status':benchmark(['status'],options.samples)}
-    if options.target:report['browser']=browser_benchmark(options.endpoint,options.target,options.samples)
-    if options.png:report['browser_png_processing']=browser_image_benchmark(options.png.read_bytes(),options.samples)
+    report={'status':benchmark(['status'],options.samples,options.raw_samples)}
+    if options.target:report['browser']=browser_benchmark(options.endpoint,options.target,options.samples,options.raw_samples)
+    if options.png:report['browser_png_processing']=browser_image_benchmark(options.png.read_bytes(),options.samples,options.raw_samples)
     if options.window:
         args=['observe','--window',options.window]
         if options.crop:args+=['--crop',*[str(n) for n in options.crop]]
-        report['capture']=benchmark(args,options.samples)
+        report['capture']=benchmark(args,options.samples,options.raw_samples)
         import cu
         image,_=cu.observe(cu.environment(),options.window,options.crop,persist=False)
-        report['png_encoding']=encoding_benchmark(image,options.samples)
+        report['png_encoding']=encoding_benchmark(image,options.samples,options.raw_samples)
     print(json.dumps(report,separators=(',',':')))
