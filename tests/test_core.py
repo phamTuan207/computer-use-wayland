@@ -49,6 +49,29 @@ finally:
                 self.assertTrue(result.stderr.endswith('cleanup_calls=1\n'))
 
 class Coordinates(unittest.TestCase):
+    def test_saved_png_preserves_pixels_metadata_and_permissions(self):
+        import hashlib
+        import json
+        import stat
+        from PIL import Image
+        flat=Image.new('RGB',(640,160),(23,45,67))
+        detailed=Image.frombytes('RGB',flat.size,bytes((i*37+i//97)%256 for i in range(640*160*3)))
+        with tempfile.TemporaryDirectory() as folder,patch.object(cu,'STATE',pathlib.Path(folder)):
+            for image in (flat,detailed):
+                for width in (320,1280):
+                    with self.subTest(detailed=image is detailed,max_width=width):
+                        expected=image.resize((320,80),Image.Resampling.LANCZOS) if width==320 else image
+                        meta=cu.save_observation(image,{},width)
+                        with Image.open(meta['image']) as decoded:
+                            self.assertEqual(decoded.mode,'RGB')
+                            self.assertEqual(decoded.size,expected.size)
+                            self.assertEqual(decoded.tobytes(),expected.tobytes())
+                        self.assertEqual(meta['image_size'],list(expected.size))
+                        self.assertEqual(meta['pixel_sha256'],hashlib.sha256(expected.tobytes()).hexdigest())
+                        self.assertEqual(json.loads(pathlib.Path(meta['observation']).read_text()),meta)
+                        for key in ('image','observation'):
+                            self.assertEqual(stat.S_IMODE(pathlib.Path(meta[key]).stat().st_mode),0o600)
+
     def test_observation_cleanup_preserves_cursor_recovery_snapshot(self):
         import os
         from PIL import Image

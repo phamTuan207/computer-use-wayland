@@ -210,17 +210,52 @@ def run_cancelable(argv, env=None, input=None, timeout=12):
             except subprocess.TimeoutExpired:p.kill();p.communicate()
         raise
 
-def save_observation(image, meta, max_width, persist=True):
+def plain_rgb_png(data):
+    # Check passthrough structure only; Pillow remains the pixel decoder.
+    if data[:8]!=b'\x89PNG\r\n\x1a\n':return False
+    offset=8;seen_header=False;seen_data=False
+    while offset+12<=len(data):
+        length=int.from_bytes(data[offset:offset+4],'big')
+        kind=data[offset+4:offset+8];end=offset+12+length
+        if length>0x7fffffff or end>len(data):return False
+        if kind==b'IHDR':
+            if seen_header or offset!=8 or length!=13:return False
+            header=data[offset+8:offset+21]
+            width=int.from_bytes(header[:4],'big');height=int.from_bytes(header[4:8],'big')
+            if not (0<width<=0x7fffffff and 0<height<=0x7fffffff):return False
+            if header[8:12]!=b'\x08\x02\x00\x00' or header[12] not in (0,1):return False
+            seen_header=True
+        elif kind==b'IDAT':
+            if not seen_header:return False
+            seen_data=True
+        elif kind==b'IEND':
+            return seen_header and seen_data and length==0 and end==len(data)
+        else:return False
+        offset=end
+    return False
+
+def save_observation(image, meta, max_width, persist=True, encoded_png=None):
     from PIL import Image
     if max_width < 320 or max_width > 3840: raise ValueError('max-width must be 320..3840')
+    if encoded_png is not None:
+        with Image.open(io.BytesIO(encoded_png)) as decoded:
+            decoded.load()
+            # Preserve only plain single-frame RGB PNG; strip metadata on fallback.
+            reusable=decoded.format=='PNG' and decoded.mode=='RGB' and not decoded.info and getattr(decoded,'n_frames',1)==1 and plain_rgb_png(encoded_png)
+            image=decoded.convert('RGB')
+            image.info.clear()
+        if not reusable:encoded_png=None
     if image.width>max_width:
         image=image.resize((max_width,round(image.height*max_width/image.width)),Image.Resampling.LANCZOS)
+        encoded_png=None
     meta.update(image_size=list(image.size),max_width=max_width)
     if not persist:return image,meta
     prepare_state()
     token=uuid.uuid4().hex[:12]
     path=STATE/(token+'.png')
-    image.save(path,compress_level=2);path.chmod(0o600)
+    if encoded_png is None:image.save(path,compress_level=1)
+    else:path.write_bytes(encoded_png)
+    path.chmod(0o600)
     meta.update(id=token,created=time.time(),image=str(path),image_size=list(image.size),
                 pixel_sha256=hashlib.sha256(image.tobytes()).hexdigest(),max_width=max_width)
     out=STATE/(token+'.json');meta['observation']=str(out)
@@ -737,8 +772,7 @@ def main():
         raw=result.pop('image_base64',None) if isinstance(result,dict) else None
         if raw:
             import base64
-            from PIL import Image
-            result['image']=save_observation(Image.open(io.BytesIO(base64.b64decode(raw))).convert('RGB'),{'backend':'browser','target':args.target},1280)['image']
+            result['image']=save_observation(None,{'backend':'browser','target':args.target},1280,encoded_png=base64.b64decode(raw))['image']
     if args.command in ('observe','act') and not args.verbose:result=compact_result(result)
     print(json.dumps(result,ensure_ascii=False,separators=(',',':')),flush=True)
     if isinstance(result,dict) and result.get('ok') is False:
