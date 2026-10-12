@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
- <defs><filter id="glow" x="-100%" y="-100%" width="300%" height="300%"><feGaussianBlur stdDeviation="4"/></filter><linearGradient id="ink" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#050916"/><stop offset="1" stop-color="#163750"/></linearGradient></defs>
- <path d="M20.1 16.7 Q17.2 15.8 18 18.7 L24.7 40.2 Q25.5 42.8 26.7 40.3 L30.8 30.6 Q31.5 28.6 33.5 28 L42.7 25.3 Q45.5 24.5 42.8 23.6 Z" fill="#67cfff" opacity=".75" filter="url(#glow)"/>
- <path d="M20.1 16.7 Q17.2 15.8 18 18.7 L24.7 40.2 Q25.5 42.8 26.7 40.3 L30.8 30.6 Q31.5 28.6 33.5 28 L42.7 25.3 Q45.5 24.5 42.8 23.6 Z" fill="url(#ink)" stroke="#d6f1ff" stroke-width=".8" stroke-linejoin="round"/>
+ <defs><filter id="glow" x="-100%" y="-100%" width="300%" height="300%"><feGaussianBlur stdDeviation="3.5"/></filter><linearGradient id="ink" x1="0" y1="0" x2=".4" y2="1"><stop stop-color="#35363b"/><stop offset=".3" stop-color="#050608"/><stop offset=".75" stop-color="#050608"/><stop offset="1" stop-color="#27282d"/></linearGradient></defs>
+ <path d="M23 17 C17 14 13 18 16 25 L29 53 C31.5 59 37.5 58 39 52 L41.5 43 C42.5 39.5 44.5 38 48.5 37 L55 35.5 C61 34 61.5 28 55.5 25 Z" fill="#65b5ff" opacity=".7" filter="url(#glow)"/>
+ <path d="M23 17 C17 14 13 18 16 25 L29 53 C31.5 59 37.5 58 39 52 L41.5 43 C42.5 39.5 44.5 38 48.5 37 L55 35.5 C61 34 61.5 28 55.5 25 Z" fill="url(#ink)" stroke="#fff" stroke-width="3" stroke-linejoin="round"/>
 </svg>
