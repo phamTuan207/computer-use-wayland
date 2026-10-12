@@ -86,6 +86,15 @@ Browser actions:
 
 `click`, `fill`, `assert`: use a ref or an exact single-match CSS `selector`. `fill` uses trusted input and verifies the resulting value. `assert` accepts `text` (substring), `value` (exact), `checked` (boolean), or defaults to nonzero element width; timeout max 3000 ms. `key`: `keys` array (`Ctrl`, `Alt`, `Shift`, `Meta`, `Enter`, `Tab`, `Escape`, arrows, editing keys, one character). `scroll`: `dy`, optional `dx`,`x`,`y` in viewport CSS pixels. `wait`: `ms` max 2000. Navigation ends the old snapshot; observe the new page before further input. Result includes a fresh `after` snapshot.
 
+When the next targets and success condition are known, keep `fill`, `click` and
+the result `assert` in one `act`, as above. A fixed `wait` cannot establish that
+the application finished. Use an exact `value` assertion for field contents and
+a specific result condition for an action; the default width assertion only
+checks element presence. Split at unknown layout changes or navigation, and stop
+after failure without replaying input. This recipe reduces request roundtrips;
+it does not change the input backend or prove model-token savings. Reproduction
+and limitations: [task experiments](../../docs/optimization-experiments.md).
+
 ## Native accessibility
 
 ```bash
