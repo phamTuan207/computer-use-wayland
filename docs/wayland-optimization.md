@@ -52,7 +52,7 @@ saved with level-1 re-encoding took 7.701 ms median; reusing its original PNG to
 CDP capture, browser startup or model reasoning. Additional PNG eligibility
 checks were added after this measurement. Repeating on the synchronized installed
 build with those checks gave 8.092 versus 4.201 ms, with the same file sizes and
-twelve alternating samples. Final source tests: 253 passed with one optional
+twelve alternating samples. Final source suite: 253 tests with one optional
 skip (21.312 seconds); capture/adapter regressions passed. The installed real
 Chromium fixture passed 12/12 trusted clicks, Unicode, crop mapping, drag-drop,
 Ctrl+T/Ctrl+W and rejection of stale/covered/changed-screen targets.
