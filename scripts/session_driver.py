@@ -1,8 +1,31 @@
 """JSON-lines CLI relay kept alive by the existing session guardian."""
 import json
+import io
+from contextlib import redirect_stdout, redirect_stderr
 from pathlib import Path
 import subprocess
 import sys
+
+
+def execute(args, data):
+    import cu
+    stdout,stderr=io.StringIO(),io.StringIO()
+    argv,stdin=sys.argv,sys.stdin
+    code=0
+    try:
+        sys.argv=[str(Path(__file__).with_name('cu.py')),*args]
+        sys.stdin=io.StringIO(data)
+        with redirect_stdout(stdout),redirect_stderr(stderr):
+            try:code=cu.main()
+            except SystemExit as exc:
+                code=exc.code
+                if code:cu.stop_session_on_error()
+            except BaseException as exc:
+                cu.stop_session_on_error()
+                print(json.dumps({'ok':False,'error':str(exc)},ensure_ascii=False),flush=True)
+                code=1
+    finally:sys.argv,sys.stdin=argv,stdin
+    return subprocess.CompletedProcess(args,code,stdout.getvalue(),stderr.getvalue())
 
 
 def relay(source, sink):
@@ -22,8 +45,7 @@ def relay(source, sink):
             return 0
         if args[0] not in ('observe', 'act', 'windows', 'doctor', 'status', 'browser', 'a11y'):
             raise ValueError('unsupported driver command')
-        result = subprocess.run([sys.executable, str(Path(__file__).with_name('cu.py')), *args],
-                                input=data, capture_output=True, text=True)
+        result = execute(args,data)
         response={'returncode':result.returncode}
         try:response['result']=json.loads(result.stdout)
         except ValueError:response['stdout']=result.stdout

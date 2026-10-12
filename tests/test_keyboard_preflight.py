@@ -73,8 +73,16 @@ class DesktopPreflight(unittest.TestCase):
         self.assertTrue(result['ok'],result)
         self.assertEqual(result['completed'],3)
         self.pointer_cls.assert_not_called()
-        self.assertEqual(self.typed.call_count,3)
+        self.assertEqual(self.typed.call_count,2)
         self.indicator.assert_not_called()
+
+    def test_wait_never_opens_keyboard_or_pointer(self):
+        with patch.object(cu,'wait_cancelable') as wait:
+            result=cu.desktop_act({},self.meta,[{'type':'wait','ms':25}])
+        self.assertTrue(result['ok'],result)
+        wait.assert_called_once_with(.025)
+        self.typed.assert_not_called()
+        self.pointer_cls.assert_not_called()
 
     def test_pointer_batch_opens_and_closes_pointer_once(self):
         result=cu.desktop_act({},self.meta,[{'type':'move','x':10,'y':10}])

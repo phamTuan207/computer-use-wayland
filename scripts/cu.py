@@ -348,7 +348,7 @@ def validate_actions(actions,backend):
 def keyboard_groups(actions):
     groups=[];delay=0;boundary=False;mode=None
     for a in actions:
-        if a['type'] in ('key','type','wait') and not (a['type']=='type' and a['text'].startswith('-')):
+        if a['type'] in ('key','type') and not (a['type']=='type' and a['text'].startswith('-')):
             # wtype -d 0 is invalid: start a fresh process to reset a nonzero delay.
             reset=a['type']=='type' and delay and not a.get('delay_ms',0)
             focus_key=a['type']=='key' and any(k.lower() in ('tab','enter','return','escape','esc') for k in a['keys'])
