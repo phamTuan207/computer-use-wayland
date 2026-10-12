@@ -5,6 +5,13 @@ description: Operate local Linux apps, Zen and Chromium using reliable mouse/key
 
 # Computer use
 
+For interactive agent work, read the persistent-driver examples in
+[references/usage.md](references/usage.md#interactive-agent-driver) before input.
+Use one session for the entire task, including observation and thinking time;
+do not wrap each `act` in its own session. `doctor.session` only indicates a
+Wayland environment, not a live session or visible overlay. Capture temporarily
+hides the pill and restores it; it does not end the session.
+
 Shared tool: `computer-use` (`CU`). Prefer an existing CLI/API; otherwise Chromium DOM, then desktop screenshots. Native accessibility is listed in the CLI but only reaches AT-SPI apps here, which on this machine are tray daemons, so verify with `a11y apps` before relying on it. Respect the user's browser choice: Zen uses desktop or available accessibility, not Chromium CDP.
 
 ```bash

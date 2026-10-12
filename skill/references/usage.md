@@ -21,6 +21,30 @@ Browser adapter timeout is capped at 60 seconds; split larger batches.
 
 # Commands and schemas
 
+## Interactive agent driver
+
+Start `computer-use session -- computer-use session-driver` with your tool's
+persistent interactive process facility (PTY/stdin session or background terminal).
+Keep that process handle for the whole task; do not launch a new shell session
+for each action and do not redirect stdin to `/dev/null`. The pill remains active
+while the driver waits for the next instruction. Send one JSON object per line:
+
+```json
+{"args":["observe","--window","0xEXACT_ADDRESS","--focus"]}
+{"args":["act","--observation","/returned/path.json","--actions","-"],"stdin":"[{\"type\":\"click\",\"x\":210,\"y\":140}]"}
+{"args":["finish"]}
+```
+
+Inspect each returned image before choosing coordinates; these lines show the
+wire format, not a batch to paste blindly. The relay executes the installed CLI
+directly without a shell, preserves session ownership, and exits on CLI error.
+EOF, finish, physical Esc, or a crash lets the guardian remove the overlay.
+Do not automatically resume or repeat input after cancellation/failure.
+
+If your tool cannot keep stdin/process state between calls, run a complete task
+driver inside one session instead. Do not simulate persistence with detached
+sessions or manually copied session tokens.
+
 All commands emit bounded JSON. `--actions -` accepts JSON from stdin. Prefer a JSON file for complex input; never interpolate user text into shell code.
 
 ## Chromium

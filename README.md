@@ -113,6 +113,13 @@ Escape remains cancellation, never an instruction to automatically retry input.
 
 ### Session boundary
 
+For an interactive agent that pauses between tool calls, use
+`computer-use session -- computer-use session-driver` and keep its stdin/process
+handle alive for the entire task. Send JSON-lines requests as described in
+[the driver protocol](skill/references/usage.md#interactive-agent-driver).
+Do not start one session per `act`: the overlay would vanish between commands.
+`doctor.session` indicates a Wayland environment, not a visible/live overlay.
+
 Launch the program responsible for the whole task with
 `computer-use session -- DRIVER [ARGS...]`. Commands launched by that driver
 inherit the session. A top-center “Computer use active” pill identifies agent

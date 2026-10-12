@@ -658,6 +658,7 @@ def main():
     parser=argparse.ArgumentParser(description=__doc__)
     sub=parser.add_subparsers(dest='command',required=True)
     session=sub.add_parser('session');session.add_argument('driver',nargs=argparse.REMAINDER)
+    sub.add_parser('session-driver',help='interactive JSON-lines driver for one whole agent task')
     sub.add_parser('finish');sub.add_parser('recover');sub.add_parser('cancel')
     sub.add_parser('doctor');sub.add_parser('windows');sub.add_parser('resume');sub.add_parser('status')
     obs=sub.add_parser('observe');target=obs.add_mutually_exclusive_group(required=True);target.add_argument('--window');target.add_argument('--screen');obs.add_argument('--crop',nargs=4,type=int);obs.add_argument('--max-width',type=int,default=1280)
@@ -670,6 +671,10 @@ def main():
     a=sub.add_parser('a11y');a.add_argument('operation',choices=['apps','observe','act']);a.add_argument('--pid',type=int);a.add_argument('--snapshot');a.add_argument('--actions')
     args=parser.parse_args()
     if args.command=='observe' and args.focus and not args.window:parser.error('--focus requires --window')
+    if args.command=='session-driver':
+        require_session()
+        import session_driver
+        return session_driver.relay(sys.stdin,sys.stdout)
     # Local state commands and CDP requests do not use a compositor environment.
     env=(environment() if args.command in ('session','recover','doctor','windows','observe','act','a11y') or
          (args.command=='browser' and args.operation=='start') else None)
