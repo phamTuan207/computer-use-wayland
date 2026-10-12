@@ -29,6 +29,18 @@ def execute(args, data):
 
 
 def relay(source, sink):
+    import cu
+    from browser_worker import BrowserWorker
+    browser=cu.browser;worker=BrowserWorker()
+    try:
+        cu.browser=worker.request
+        return relay_commands(source,sink)
+    finally:
+        cu.browser=browser
+        worker.close()
+
+
+def relay_commands(source, sink):
     print(json.dumps({'ok': True, 'driver': 'ready'}), file=sink, flush=True)
     for line in source:
         request = json.loads(line)

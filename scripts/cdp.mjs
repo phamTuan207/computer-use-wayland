@@ -1,22 +1,24 @@
 // Dependency-free CDP adapter, Node >=22. Explicit target; no model API calls.
 import fs from 'node:fs';
 import crypto from 'node:crypto';
+import { createInterface } from 'node:readline';
 
-const request=JSON.parse(fs.readFileSync(0,'utf8'));
+async function handle(request) {
+let ws;
+try {
 const maxElements=request.max_elements??80;
 if(!Number.isInteger(maxElements)||maxElements<1||maxElements>80)throw new Error('max_elements must be 1..80');
 const endpoint=new URL(request.endpoint);
 if (!['127.0.0.1','localhost','[::1]'].includes(endpoint.hostname)) throw new Error('CDP endpoint must be loopback');
 const tabs=await (await fetch(new URL('/json/list',endpoint),{signal:AbortSignal.timeout(4000)})).json();
 if(request.operation==='tabs') {
-  console.log(JSON.stringify(tabs.filter(t=>t.type==='page').map(({id,title,url})=>({id,title,url}))));
-  process.exit(0);
+  return tabs.filter(t=>t.type==='page').map(({id,title,url})=>({id,title,url}));
 }
 const target=tabs.find(t=>t.type==='page'&&t.id===request.target);
 if(!target) throw new Error('exact --target required; use browser tabs');
 const debuggerUrl=new URL(target.webSocketDebuggerUrl);
 if(!['127.0.0.1','localhost','[::1]'].includes(debuggerUrl.hostname)||!['ws:','wss:'].includes(debuggerUrl.protocol))throw new Error('CDP debugger must be loopback WebSocket');
-const ws=new WebSocket(debuggerUrl.href);
+ws=new WebSocket(debuggerUrl.href);
 const pending=new Map();let sequence=0;
 ws.addEventListener('message',event=>{
   const result=JSON.parse(event.data),p=pending.get(result.id);
@@ -160,6 +162,22 @@ try {
     result.after=await snapshot();
   }else result=await snapshot();
   if(request.image)result.image_base64=(await call('Page.captureScreenshot',{format:'png',captureBeyondViewport:false})).data;
-  console.log(JSON.stringify(result));
-}catch(e){console.log(JSON.stringify({ok:false,completed,error:e.message}));process.exitCode=1;}
-finally{ws.close();}
+  return result;
+}catch(e){process.exitCode=1;return {ok:false,completed,error:e.message};}
+}finally{ws?.close();}
+}
+
+if(process.argv?.includes('--worker')) {
+  const lines=createInterface({input:process.stdin,crlfDelay:Infinity});
+  try {
+    for await(const line of lines) {
+      let result;
+      try{result=await handle(JSON.parse(line));}
+      catch(e){result={ok:false,completed:0,error:e.message};}
+      console.log(JSON.stringify(result));
+      if(result?.ok===false){process.exitCode=1;break;}
+    }
+  }finally{lines.close();process.stdin.destroy();}
+}else {
+  console.log(JSON.stringify(await handle(JSON.parse(fs.readFileSync(0,'utf8')))));
+}

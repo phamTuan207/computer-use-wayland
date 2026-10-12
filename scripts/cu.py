@@ -628,13 +628,16 @@ def desktop_act(env,meta,actions,after_capture=True):
         result.setdefault('error','final capture failed: '+str(exc))
     return result
 
-def browser(request):
+def browser_timeout(request):
     # Keep setup/snapshot allowance; each guard can take 5s, and the final
     # assert evaluation can overrun its polling budget by another 5s.
     # Cap adapter execution instead of accumulating unbounded per-action allowance.
     budget=sum(5000+(max(0,min(a.get('timeout_ms',1000),3000))+5000 if a['type']=='assert' else
                      a.get('ms',100) if a['type']=='wait' else 0) for a in request.get('actions',[]))
-    out=run_cancelable(['node',str(ROOT/'scripts/cdp.mjs')],input=json.dumps(request),timeout=min(60,35+budget/1000))
+    return min(60,35+budget/1000)
+
+def browser(request):
+    out=run_cancelable(['node',str(ROOT/'scripts/cdp.mjs')],input=json.dumps(request),timeout=browser_timeout(request))
     if out.strip(): return json.loads(out)
     raise RuntimeError('CDP adapter failed')
 
