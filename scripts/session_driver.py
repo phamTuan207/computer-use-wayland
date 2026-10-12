@@ -24,8 +24,11 @@ def relay(source, sink):
             raise ValueError('unsupported driver command')
         result = subprocess.run([sys.executable, str(Path(__file__).with_name('cu.py')), *args],
                                 input=data, capture_output=True, text=True)
-        print(json.dumps({'returncode': result.returncode, 'stdout': result.stdout,
-                          'stderr': result.stderr}), file=sink, flush=True)
+        response={'returncode':result.returncode}
+        try:response['result']=json.loads(result.stdout)
+        except ValueError:response['stdout']=result.stdout
+        if result.stderr:response['stderr']=result.stderr
+        print(json.dumps(response,ensure_ascii=False,separators=(',',':')), file=sink, flush=True)
         if result.returncode:
             return result.returncode
     return 0  # EOF lets the guardian clean up; never detach a hidden session.

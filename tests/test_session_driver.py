@@ -11,6 +11,15 @@ import session_driver
 
 
 class Driver(unittest.TestCase):
+    def test_json_result_is_not_double_encoded(self):
+        output=io.StringIO()
+        with patch.object(session_driver.subprocess,'run',return_value=subprocess.CompletedProcess([],0,'{"ok":true,"text":"Tiếng Việt"}','')):
+            session_driver.relay(io.StringIO('{"args":["status"]}'),output)
+        response=json.loads(output.getvalue().splitlines()[-1])
+        self.assertEqual(response['result']['text'],'Tiếng Việt')
+        self.assertNotIn('stdout',response)
+        self.assertNotIn('stderr',response)
+
     def test_multiple_commands_preserve_process_and_stdin(self):
         lines=[{'args':['status']}, {'args':['act','--actions','-'],'stdin':'[]'}, {'args':['finish']}]
         output=io.StringIO()
