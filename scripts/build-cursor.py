@@ -14,7 +14,7 @@ def build(directory):
         raise ValueError('theme directory already exists; refusing overwrite')
     svg = Path(__file__).resolve().parents[1] / 'native/agent-cursor.svg'
     chunks = []
-    for size in (24, 32, 48, 64):
+    for size in (24, 32, 34, 48, 64):
         raw = subprocess.check_output(['rsvg-convert', '-w', str(size), '-h', str(size), str(svg)])
         image = Image.open(io.BytesIO(raw)).convert('RGBA')
         rgba = image.tobytes()

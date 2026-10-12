@@ -28,7 +28,7 @@ class BuildCursor(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             directory=module.build(Path(tmp)/'theme')
             self.assertEqual((directory/'cursors/text').read_bytes(),(directory/'cursors/left_ptr').read_bytes())
-            for size in (24,32,48,64):
+            for size in (24,32,34,48,64):
                 pointer=lib.XcursorFilenameLoadImage(str(directory/'cursors/left_ptr').encode(),size)
                 self.assertTrue(pointer)
                 try:
@@ -36,3 +36,13 @@ class BuildCursor(unittest.TestCase):
                     self.assertEqual(pointer.contents.xhot,round(size*18/64))
                     self.assertEqual(pointer.contents.yhot,round(size*18/64))
                 finally:lib.XcursorImageDestroy(pointer)
+
+    @unittest.skipUnless(shutil.which('rsvg-convert'),'optional cursor renderer missing')
+    def test_rendered_silhouette_is_diagonally_symmetric(self):
+        import io
+        import subprocess
+        from PIL import Image,ImageChops,ImageStat
+        raw=subprocess.check_output(['rsvg-convert','-w','34','-h','34',str(ROOT/'native/agent-cursor.svg')])
+        alpha=Image.open(io.BytesIO(raw)).convert('RGBA').getchannel('A')
+        difference=ImageChops.difference(alpha,alpha.transpose(Image.Transpose.TRANSPOSE))
+        self.assertLess(ImageStat.Stat(difference).mean[0],.3)
