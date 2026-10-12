@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
  <defs><filter id="glow" x="-100%" y="-100%" width="300%" height="300%"><feGaussianBlur stdDeviation="4"/></filter><linearGradient id="ink" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#050916"/><stop offset="1" stop-color="#163750"/></linearGradient></defs>
- <path d="M18 16 L45 24 L32 29 L26 43 Z" fill="#67cfff" opacity=".75" filter="url(#glow)"/>
- <path d="M18 16 Q17 15 18 19 L25 42 Q26 44 27 41 L32 29 L44 25 Q47 24 44 23 Z" fill="url(#ink)" stroke="#d6f1ff" stroke-width="1.1" stroke-linejoin="round"/>
+ <path d="M20.1 16.7 Q17.2 15.8 18 18.7 L24.7 40.2 Q25.5 42.8 26.7 40.3 L30.8 30.6 Q31.5 28.6 33.5 28 L42.7 25.3 Q45.5 24.5 42.8 23.6 Z" fill="#67cfff" opacity=".75" filter="url(#glow)"/>
+ <path d="M20.1 16.7 Q17.2 15.8 18 18.7 L24.7 40.2 Q25.5 42.8 26.7 40.3 L30.8 30.6 Q31.5 28.6 33.5 28 L42.7 25.3 Q45.5 24.5 42.8 23.6 Z" fill="url(#ink)" stroke="#d6f1ff" stroke-width=".8" stroke-linejoin="round"/>
 </svg>
