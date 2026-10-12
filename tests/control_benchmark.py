@@ -29,6 +29,27 @@ def benchmark(args,samples):
                'min_ms':round(min(v),3),'max_ms':round(max(v),3)} for k,v in timings.items()}
 
 
+def browser_benchmark(endpoint,target,samples):
+    import cu
+    from browser_worker import BrowserWorker
+    request={'operation':'observe','endpoint':endpoint,'target':target,'max_elements':16}
+    worker=BrowserWorker();timings={'isolated':[],'resident':[]}
+    try:
+        started=time.perf_counter();first=worker.request(request)
+        cold=(time.perf_counter()-started)*1000
+        if not isinstance(first,dict) or not first.get('snapshot'):raise RuntimeError('browser fixture observation failed')
+        for i in range(samples):
+            for mode in (('isolated','resident') if i%2==0 else ('resident','isolated')):
+                started=time.perf_counter()
+                result=cu.browser(request) if mode=='isolated' else worker.request(request)
+                timings[mode].append((time.perf_counter()-started)*1000)
+                if not isinstance(result,dict) or not result.get('snapshot'):raise RuntimeError('browser fixture observation failed')
+        return {'cold_worker_ms':round(cold,3),**{k:{'samples':len(v),
+            'median_ms':round(statistics.median(v),3),'min_ms':round(min(v),3),
+            'max_ms':round(max(v),3)} for k,v in timings.items()}}
+    finally:worker.close()
+
+
 def encoding_benchmark(image,samples):
     from PIL import Image
     timings={1:[],2:[]};sizes={}
@@ -74,10 +95,13 @@ if __name__=='__main__':
     parser.add_argument('--window')
     parser.add_argument('--crop',type=int,nargs=4)
     parser.add_argument('--png',type=Path,help='compare processing an existing PNG, without printing its path or pixels')
+    parser.add_argument('--endpoint',default='http://127.0.0.1:9222')
+    parser.add_argument('--target',help='exact tab ID of an inert fixture for read-only worker benchmarking')
     options=parser.parse_args()
     if not 3<=options.samples<=30:parser.error('samples must be 3..30')
     if options.crop and not options.window:parser.error('crop requires window')
     report={'status':benchmark(['status'],options.samples)}
+    if options.target:report['browser']=browser_benchmark(options.endpoint,options.target,options.samples)
     if options.png:report['browser_png_processing']=browser_image_benchmark(options.png.read_bytes(),options.samples)
     if options.window:
         args=['observe','--window',options.window]
