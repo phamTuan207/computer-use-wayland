@@ -106,6 +106,8 @@ limit if the target is omitted. Snapshots prioritize visible controls and redact
 form values, but screenshots and page labels can still contain private data.
 See [measured results and research](docs/research-performance.md), including the
 limits of these latency and output-size measurements.
+Further [Wayland comparisons and lossless image-path measurements](docs/wayland-optimization.md)
+cover faster PNG encoding and reuse of eligible browser screenshots.
 
 `act --no-after` skips the final screenshot and its 80 ms delay on success only.
 Pre-input screen checks and error screenshots remain enabled. It does **not**
