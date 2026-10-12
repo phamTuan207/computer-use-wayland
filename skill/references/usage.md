@@ -47,6 +47,13 @@ directly without a shell, preserves session ownership, and exits on CLI error.
 EOF, finish, physical Esc, or a crash lets the guardian remove the overlay.
 Do not automatically resume or repeat input after cancellation/failure.
 
+Browser commands in this relay lazily start one private Node worker for the task.
+It reuses the runtime, not a cached snapshot or WebSocket: each command still
+checks the exact loopback target and opens/closes its own CDP connection.
+Finish/EOF/error/cancellation closes the child; failures never restart it or
+replay input. Each complete request/response is limited to 32 MiB. The cold first
+request is not faster; standalone CLI commands keep their isolated behavior.
+
 If your tool cannot keep stdin/process state between calls, run a complete task
 driver inside one session instead. Do not simulate persistence with detached
 sessions or manually copied session tokens.

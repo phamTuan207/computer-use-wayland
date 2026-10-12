@@ -99,7 +99,10 @@ observations for apps without these interfaces. Batch related actions in one
 `act` command rather than starting a process for each key or mouse movement.
 
 The interactive session driver reuses the Python CLI runtime between requests;
-standalone commands remain available. Bare `wait` actions use cancellation-aware
+browser commands lazily reuse one private Node runtime too, cleaned up at task
+end. Each browser command still revalidates its target and reconnects CDP; no
+snapshot caching or automatic action replay. Whole worker messages are bounded
+to 32 MiB. Standalone commands remain isolated. Bare `wait` actions use cancellation-aware
 timers without spawning a keyboard process. Chromium `browser observe --max-elements 16`
 can reduce DOM output (default 80, range 1..80); increase the
 limit if the target is omitted. Snapshots prioritize visible controls and redact
@@ -108,6 +111,8 @@ See [measured results and research](docs/research-performance.md), including the
 limits of these latency and output-size measurements.
 Further [Wayland comparisons and lossless image-path measurements](docs/wayland-optimization.md)
 cover faster PNG encoding and reuse of eligible browser screenshots.
+The [session-owned browser runtime experiment](docs/browser-worker-performance.md)
+records warm/cold latency separately and the worker's cleanup/transport limits.
 
 `act --no-after` skips the final screenshot and its 80 ms delay on success only.
 Pre-input screen checks and error screenshots remain enabled. It does **not**
