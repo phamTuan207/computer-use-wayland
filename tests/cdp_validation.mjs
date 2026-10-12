@@ -25,7 +25,7 @@ class WebSocket {
 const process={exitCode:0};
 await vm.runInNewContext('(async()=>{'+source.replace(/^import .*;$/gm,'')+'})()',{
   fs:{readFileSync:()=>JSON.stringify(request)},crypto:{},URL,WebSocket,process,
-  fetch:async ()=>({json:async ()=>[{type:'page',id:'test',webSocketDebuggerUrl:'ws://fake'}]}),
+  fetch:async ()=>({json:async ()=>[{type:'page',id:'test',webSocketDebuggerUrl:'ws://127.0.0.1:9222/test'}]}),
   AbortSignal,queueMicrotask,setTimeout,clearTimeout,console:{log:s=>output.push(JSON.parse(s))}
 });
 assert.equal(process.exitCode,1);

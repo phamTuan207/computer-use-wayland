@@ -40,7 +40,7 @@ while the driver waits for the next instruction. Send one JSON object per line:
 ```
 
 Inspect each returned image before choosing coordinates; these lines show the
-wire format, not a batch to paste blindly. The relay executes the installed CLI
+wire format, not a batch to paste blindly. The relay reuses the installed Python CLI runtime
 and returns decoded JSON in `result`, rather than escaped JSON in `stdout`.
 Only non-JSON output falls back to `stdout`; empty stderr is omitted. It runs
 directly without a shell, preserves session ownership, and exits on CLI error.
@@ -65,7 +65,7 @@ CU=computer-use
 
 `start` reuses a loopback CDP endpoint if available; otherwise opens Chromium with a dedicated persistent profile at `~/.local/share/agent-computer-use/browser-profile`. No `--no-sandbox` or wildcard remote origin. This profile has its own logins. Do not assume it is the user's other browser session. `--endpoint http://127.0.0.1:PORT` selects another locally exposed CDP endpoint.
 
-`observe` returns up to 80 interactive elements with short names and refs, password values redacted. Long page contents and base64 screenshots are not printed. Add `--image` when needed; an image file path is returned. DOM operation is top-document only, excludes canvas internals and does not enumerate shadow roots.
+`observe` returns up to 80 interactive elements with short names and refs, visible controls first. All form values and editable contents are redacted; checked state remains available. Screenshots and page labels may still contain private data. Use `--max-elements 16` on observe/act when a smaller output is sufficient (range 1..80, default 80); increase it if the target is absent, never guess a ref. Long page contents and base64 screenshots are not printed. Add `--image` when needed; an image file path is returned. DOM operation is top-document only, excludes canvas internals and does not enumerate shadow roots.
 
 Browser actions:
 
@@ -111,7 +111,7 @@ Desktop actions:
 - `scroll`: image `x`,`y`, `dx`,`dy` in Wayland axis units; positive dy down. Wheel output includes discrete steps (one per 15 axis units, minimum one for nonzero input) and a 30 ms pointer-enter settling gap. These are not necessarily browser CSS pixels.
 - `key`: array of modifiers and XKB/alias key names. Modifier entries are held for the whole action while the non-modifier keys are pressed and released one at a time in array order, so `["Ctrl","a"]` is the Ctrl+a chord but `["a","b"]` types `a` then `b`, not held together. `repeat` 1..30, `hold_ms` 0..2000 (default 12); modifiers released in the same process. Shift+Tab maps to `ISO_Left_Tab` with Shift; editing-key-only groups also bypass composition temporarily. A one-character key is a keysym, not a physical US scancode. Prefer lowercase letters with Shift explicitly for shortcuts.
 - `type`: exact text by default (`ime:"literal"`), temporarily disables and restores fcitx5 composition. Use `ime:"compose"` for intentional Telex input. `delay_ms` 0..100 (default 0). Leading-dash text uses a standalone literal invocation. Enter/newlines typed as content may trigger app behavior; choose keys explicitly when needed.
-- `wait`: `ms` 0..2000. Adjacent key/type/wait actions are combined with a 12 ms settling gap; Tab/Enter/Escape, delay reset and IME-mode changes split groups to preserve the correct input context. A keyboard group may last at most 5 seconds.
+- `wait`: `ms` 0..2000, cancellation-aware timer without keyboard input. Adjacent key/type actions are combined with a 12 ms settling gap; waits, Tab/Enter/Escape, delay reset and IME-mode changes split groups to preserve the correct input context. A keyboard group may last at most 5 seconds.
 
 Max 32 actions per batch. Stop at layout-changing or consequential steps. Desktop `completed` counts completed actions/groups, not confirmed application outcomes. User interaction during a keyboard group cannot be intercepted per keystroke. This is foreground automation, not an isolated desktop.
 

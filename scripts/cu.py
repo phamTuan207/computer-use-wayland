@@ -668,6 +668,7 @@ def main():
     act.add_argument('--no-after',action='store_true',help='skip successful final capture; preflight safety and error captures stay enabled')
     obs.add_argument('--verbose',action='store_true');act.add_argument('--verbose',action='store_true')
     b=sub.add_parser('browser');b.add_argument('operation',choices=['start','tabs','observe','act']);b.add_argument('--endpoint',default='http://127.0.0.1:9222');b.add_argument('--target');b.add_argument('--snapshot');b.add_argument('--actions');b.add_argument('--image',action='store_true')
+    b.add_argument('--max-elements',type=int,default=80,help='DOM output budget, 1..80 (default 80)')
     a=sub.add_parser('a11y');a.add_argument('operation',choices=['apps','observe','act']);a.add_argument('--pid',type=int);a.add_argument('--snapshot');a.add_argument('--actions')
     args=parser.parse_args()
     if args.command=='observe' and args.focus and not args.window:parser.error('--focus requires --window')
@@ -724,9 +725,10 @@ def main():
         result=json.loads(out) if out.strip() else {'ok':False,'error':'accessibility adapter returned no data'}
     else:
         check_cancel()
+        if not 1<=args.max_elements<=80:raise ValueError('max-elements must be 1..80')
         if args.operation=='start':
             print(json.dumps(browser_start(env,args.endpoint)));return 0
-        request={'operation':args.operation,'endpoint':args.endpoint,'target':args.target,'snapshot':args.snapshot,'image':args.image}
+        request={'operation':args.operation,'endpoint':args.endpoint,'target':args.target,'snapshot':args.snapshot,'image':args.image,'max_elements':args.max_elements}
         if args.operation=='act':
             require_session()
             if not args.actions: raise ValueError('--actions required')

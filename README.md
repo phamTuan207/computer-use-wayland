@@ -98,6 +98,15 @@ Prefer CLI/API or Chromium DOM targets when available; use cropped desktop
 observations for apps without these interfaces. Batch related actions in one
 `act` command rather than starting a process for each key or mouse movement.
 
+The interactive session driver reuses the Python CLI runtime between requests;
+standalone commands remain available. Bare `wait` actions use cancellation-aware
+timers without spawning a keyboard process. Chromium `browser observe/act
+--max-elements 16` can reduce DOM output (default 80, range 1..80); increase the
+limit if the target is omitted. Snapshots prioritize visible controls and redact
+form values, but screenshots and page labels can still contain private data.
+See [measured results and research](docs/research-performance.md), including the
+limits of these latency and output-size measurements.
+
 `act --no-after` skips the final screenshot and its 80 ms delay on success only.
 Pre-input screen checks and error screenshots remain enabled. It does **not**
 return a fresh observation: observe again before another coordinate-based batch.

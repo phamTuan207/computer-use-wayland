@@ -5,11 +5,13 @@ import json
 from pathlib import Path
 import statistics
 import subprocess
+import sys
 import tempfile
 import time
 import urllib.request
 
 ROOT=Path(__file__).resolve().parents[1]
+sys.path.insert(0,str(ROOT/'scripts'))
 spec=importlib.util.spec_from_file_location('cu',ROOT/'scripts/cu.py');cu=importlib.util.module_from_spec(spec);spec.loader.exec_module(cu)
 
 def cdp_eval(target,expression):

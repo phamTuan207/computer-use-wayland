@@ -3,6 +3,8 @@ import fs from 'node:fs';
 import crypto from 'node:crypto';
 
 const request=JSON.parse(fs.readFileSync(0,'utf8'));
+const maxElements=request.max_elements??80;
+if(!Number.isInteger(maxElements)||maxElements<1||maxElements>80)throw new Error('max_elements must be 1..80');
 const endpoint=new URL(request.endpoint);
 if (!['127.0.0.1','localhost','[::1]'].includes(endpoint.hostname)) throw new Error('CDP endpoint must be loopback');
 const tabs=await (await fetch(new URL('/json/list',endpoint),{signal:AbortSignal.timeout(4000)})).json();
@@ -12,7 +14,9 @@ if(request.operation==='tabs') {
 }
 const target=tabs.find(t=>t.type==='page'&&t.id===request.target);
 if(!target) throw new Error('exact --target required; use browser tabs');
-const ws=new WebSocket(target.webSocketDebuggerUrl);
+const debuggerUrl=new URL(target.webSocketDebuggerUrl);
+if(!['127.0.0.1','localhost','[::1]'].includes(debuggerUrl.hostname)||!['ws:','wss:'].includes(debuggerUrl.protocol))throw new Error('CDP debugger must be loopback WebSocket');
+const ws=new WebSocket(debuggerUrl.href);
 const pending=new Map();let sequence=0;
 ws.addEventListener('message',event=>{
   const result=JSON.parse(event.data),p=pending.get(result.id);
@@ -44,25 +48,29 @@ function pageState(snapshot,action) {
   if(!e||!e.isConnected)throw new Error('element missing; observe again');
   return e;
 }
-const elementExpression=(a,body)=>`(()=>{const e=(${pageState.toString()})(${JSON.stringify(request.snapshot)},${JSON.stringify(a)});${body}})()`;
+const elementExpression=(a,body)=>`(()=>{const e=(${pageState.toString()})(${JSON.stringify(request.snapshot)},${JSON.stringify({ref:a.ref,selector:a.selector})});${body}})()`;
 async function snapshot() {
   const id=crypto.randomUUID().slice(0,12);
   return await evaluate(`(()=>{
     const s=globalThis.__agentCu={id:${JSON.stringify(id)},created:Date.now(),url:location.href,refs:new Map()};
-    const elements=[];let index=0;
+    const elements=[],visible=[],offscreen=[];let index=0;
     const candidates=document.querySelectorAll('button,a[href],input,textarea,select,summary,[role="button"],[role="checkbox"],[role="tab"],[role="menuitem"],[contenteditable="true"]');
-    let truncated=false;
     for(const e of candidates){
       const r=e.getBoundingClientRect(),style=getComputedStyle(e);
       if(!r.width||!r.height||style.visibility==='hidden'||style.display==='none'||e.type==='hidden')continue;
-      if(elements.length>=80){truncated=true;break;}
+      const outside=r.right<=0||r.left>=innerWidth||r.bottom<=0||r.top>=innerHeight;
+      (outside?offscreen:visible).push(e);
+    }
+    const ordered=visible.concat(offscreen),truncated=ordered.length>${maxElements};
+    for(const e of ordered.slice(0,${maxElements})){
       const ref='e'+(++index);s.refs.set(ref,e);
-      const label=e.getAttribute('aria-label')||e.labels?.[0]?.innerText||e.innerText||e.getAttribute('placeholder')||e.getAttribute('title')||e.name||'';
+      const field=/^(INPUT|TEXTAREA|SELECT)$/.test(e.tagName)||e.isContentEditable;
+      const label=e.getAttribute('aria-label')||e.labels?.[0]?.innerText||(!field&&e.innerText)||e.getAttribute('placeholder')||e.getAttribute('title')||e.name||'';
       const item={ref,role:e.getAttribute('role')||e.tagName.toLowerCase(),name:label.trim().slice(0,120)};
       if(e.disabled)item.disabled=true;
-      if(e.type==='password')item.value='[redacted]';else if('value'in e)item.value=String(e.value).slice(0,120);
+      if('value'in e||e.isContentEditable)item.value='[redacted]';
       if('checked'in e&&(e.type==='checkbox'||e.type==='radio'))item.checked=e.checked;
-      if(r.bottom<0||r.top>innerHeight)item.offscreen=true;
+      if(index>visible.length)item.offscreen=true;
       elements.push(item);
     }
     return {snapshot:s.id,title:document.title,url:location.href,elements,truncated,iframes:document.querySelectorAll('iframe').length};
@@ -139,8 +147,8 @@ try {
           const editable=await evaluate(elementExpression(a,'return document.activeElement===e && !e.readOnly && (e.isContentEditable || /^(INPUT|TEXTAREA)$/.test(e.tagName));'));
           if(!editable)throw new Error('field is not editable or did not gain focus');
           await key(['ctrl','a']);await call('Input.insertText',{text:a.text});
-          const actual=await evaluate(elementExpression(a,'return e.isContentEditable?e.textContent:e.value;'));
-          if(actual!==a.text)throw new Error('fill verification failed');
+          const matches=await evaluate(elementExpression(a,'return (e.isContentEditable?e.textContent:e.value)==='+JSON.stringify(a.text)+';'));
+          if(!matches)throw new Error('fill verification failed');
         }else if(a.type==='key')await key(a.keys);
         else if(a.type==='scroll')await call('Input.dispatchMouseEvent',{type:'mouseWheel',x:a.x??100,y:a.y??100,deltaX:a.dx??0,deltaY:a.dy});
         else if(a.type==='wait')await new Promise(r=>setTimeout(r,a.ms??100));
