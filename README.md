@@ -123,8 +123,8 @@ Do not start one session per `act`: the overlay would vanish between commands.
 Launch the program responsible for the whole task with
 `computer-use session -- DRIVER [ARGS...]`. Commands launched by that driver
 inherit the session. A top-center “Computer use active” pill identifies agent
-control; the real cursor stays the user’s normal one, with no cursor theme
-change and no desktop magnification. The pill asks the compositor for a
+control. By default the cursor stays normal; an optional session cursor theme
+is described below. There is no desktop magnification. The pill asks the compositor for a
 per-surface backdrop blur, and the overlay is click-through and never takes
 keyboard focus. Input commands require this
 session; standalone observations remain available.
@@ -150,6 +150,30 @@ compositor can leave that binding installed; recover after service returns.
 No cursor theme or screen-scale setting is changed. For a retained record from the
 old magnifier implementation, run that previous version's recovery before
 upgrading; the new version refuses to discard it or guess the old setting.
+
+### Optional agent cursor
+
+`python3 scripts/build-cursor.py NEW_THEME_DIRECTORY` builds the vector-based
+dark arrow and blue glow as an XCursor theme (requires Pillow and `rsvg-convert`
+at build time). Choose a new directory under your user icon directory; existing
+themes are never overwritten. It supplies multiple resolutions and cursor aliases.
+
+Enable it by creating `native/agent-cursor.json` in the installed CLI tree:
+
+```json
+{"theme":"cu-agent-v1","size":32,"restore_theme":"default","restore_size":24}
+```
+
+The theme name must match the directory you built. Set `restore_theme` and
+`restore_size` to your actual compositor cursor settings, not blindly to this
+example. GTK settings are captured separately before changing anything.
+The guardian saves both restoration targets, applies the real theme once at
+session startup and restores it on finish, cancellation or wrapper loss. Failed
+cleanup retains the recovery snapshot. No extra cursor layer or polling is added.
+This is one shared seat, not independent user/agent pointers: user input is not
+locked, but do not operate simultaneously. Apps that supply their own cursor
+images may ignore theme changes. Old CLI versions cannot recover version-4
+cursor snapshots; use the matching updated CLI for recovery.
 
 ## Agent skill
 

@@ -136,7 +136,7 @@ def request(state, command):
         if os.environ.get('CU_SESSION_TOKEN'):
             raise RuntimeError('indicator session ended')
         return False
-    if saved.get('version') != 3:
+    if saved.get('version') not in (3,4):
         raise RuntimeError('indicator recovery required before capture/input')
     token = saved.get('token')
     if os.environ.get('CU_SESSION_TOKEN', token) != token:

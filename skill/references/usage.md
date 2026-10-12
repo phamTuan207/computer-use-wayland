@@ -1,5 +1,9 @@
 ## Automation sessions
 
+An optional installed `native/agent-cursor.json` overrides the normal-cursor
+behavior below with a temporary real theme, restored by the guardian. It does
+not create a second pointer or lock user input. Do not operate simultaneously.
+
 Run the whole task driver as `computer-use session -- DRIVER [ARGS...]`, not a
 separate session around each action. Its child commands inherit session ownership.
 Input commands require a live session; standalone capture remains available.
@@ -37,6 +41,8 @@ while the driver waits for the next instruction. Send one JSON object per line:
 
 Inspect each returned image before choosing coordinates; these lines show the
 wire format, not a batch to paste blindly. The relay executes the installed CLI
+and returns decoded JSON in `result`, rather than escaped JSON in `stdout`.
+Only non-JSON output falls back to `stdout`; empty stderr is omitted. It runs
 directly without a shell, preserves session ownership, and exits on CLI error.
 EOF, finish, physical Esc, or a crash lets the guardian remove the overlay.
 Do not automatically resume or repeat input after cancellation/failure.
