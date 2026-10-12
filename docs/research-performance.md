@@ -76,6 +76,10 @@ The isolated real Chromium fixture passed 12/12 trusted small-target clicks,
 crop mapping, Unicode input, Ctrl+T/Ctrl+W and drag-drop. Stale refs, covered
 targets, out-of-bounds batches and changed screens were rejected. These are
 scripted fixture checks, not arbitrary-app or model reasoning success rates.
+Final source suite: 242 tests, one optional skip, 21.028 seconds; capture/adapter
+regressions passed. The synchronized installed Chromium fixture passed again:
+native click batch median 194 ms (12 clicks), Unicode DOM form 28 ms (3 actions).
+These batch timings include executor checks, not model reasoning.
 
 No extra MCP service, OCR dependency, model API loop or whole-backend rewrite.
 A persistent CDP connection and alternate capture implementation remain possible
