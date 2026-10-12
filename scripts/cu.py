@@ -360,7 +360,7 @@ def screen_changed(old,new,actions):
 
 def validate_actions(actions,backend):
     if not isinstance(actions,list) or not 1<=len(actions)<=32: raise ValueError('actions must contain 1..32 items')
-    allowed={'click','double_click','move','drag','scroll','type','key','wait'} if backend=='desktop' else {'click','fill','key','scroll','wait','assert'}
+    allowed={'click','double_click','move','drag','scroll','type','key','wait'} if backend=='desktop' else {'click','fill','set_value','key','scroll','wait','assert'}
     for a in actions:
         if not isinstance(a,dict) or a.get('type') not in allowed: raise ValueError('unsupported action')
         if backend=='desktop' and a['type'] in ('move','click','double_click','drag','scroll'):
@@ -369,7 +369,7 @@ def validate_actions(actions,backend):
                 raise ValueError('mouse modifiers must be an array of Ctrl/Shift/Alt/Super/AltGr')
             if a['type']=='move' and modifiers:raise ValueError('modifiers require click, drag or scroll')
         if a['type']=='wait' and not 0<=a.get('ms',100)<=2000: raise ValueError('wait ms must be 0..2000')
-        if a['type'] in ('type','fill') and (not isinstance(a.get('text'),str) or len(a['text'])>10000): raise ValueError('text must be string <=10000 chars')
+        if a['type'] in ('type','fill','set_value') and (not isinstance(a.get('text'),str) or len(a['text'])>10000): raise ValueError('text must be string <=10000 chars')
         if a['type']=='key' and (not isinstance(a.get('keys'),list) or not a['keys'] or not all(isinstance(k,str) and len(k)<40 for k in a['keys'])): raise ValueError('keys must be an array of key names')
         if backend=='desktop' and a['type']=='type' and any(ord(c)>0xffff for c in a['text']):
             raise ValueError('non-BMP text may be corrupted by Wayland keyboard input; use browser fill or a11y set_text')

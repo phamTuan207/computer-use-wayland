@@ -184,6 +184,11 @@ class Coordinates(unittest.TestCase):
     def test_validate_bad_batches(self):
         for a in ([],[{'type':'shell'}],[{'type':'wait','ms':-1}],[{'type':'type','text':10}],[{'type':'key','keys':'Ctrl+A'}],[{'type':'wait'}]*33):
             with self.subTest(a=a),self.assertRaises(ValueError):cu.validate_actions(a,'desktop')
+    def test_browser_set_value_payload_validation(self):
+        cu.validate_actions([{'type':'set_value','text':'Tạo 🐱'}],'browser')
+        for text in (None,'x'*10001):
+            with self.subTest(length=len(text) if isinstance(text,str) else None),self.assertRaises(ValueError):
+                cu.validate_actions([{'type':'set_value','text':text}],'browser')
     def test_key_aliases(self):
         self.assertEqual(cu.key_names(['CTRL','Enter']),(['ctrl'],['Return']))
         self.assertEqual(cu.key_names(['Shift','ArrowLeft','PageUp','f12']),(['shift'],['Left','Prior','F12']))

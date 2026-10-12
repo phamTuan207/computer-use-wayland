@@ -4,11 +4,19 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 const source=fs.readFileSync(new URL('../scripts/cdp.mjs',import.meta.url),'utf8');
 const token='fake-api-token-NEVER-EXPOSE';
+class FakeInput {get value(){return this._value??'';} set value(value){this._value=value;}}
+class FakeTextarea {get value(){return this._value??'';} set value(value){this._value=value;}}
 function element(name,options={}) {
   const {left=10,top=10,width=20,height=20,tagName='BUTTON',...rest}=options;
-  return {tagName,innerText:name,textContent:name,isConnected:true,
-    getAttribute:()=>null,contains:()=>false,scrollIntoView(){},
-    getBoundingClientRect:()=>({left,top,right:left+width,bottom:top+height,width,height}),...rest};
+  const proto=tagName==='INPUT'?FakeInput.prototype:tagName==='TEXTAREA'?FakeTextarea.prototype:Object.prototype;
+  const node=Object.assign(Object.create(proto),{tagName,innerText:name,textContent:name,isConnected:true,
+    type:'text',disabled:false,readOnly:false,maxLength:-1,
+    getAttribute:key=>key==='aria-disabled'?rest.ariaDisabled??null:null,
+    closest:()=>rest.inert?node:null,matches:selector=>selector===':disabled'&&Boolean(rest.disabled),
+    contains:other=>other===node,scrollIntoView(){},getClientRects:()=>[{}],
+    dispatchEvent:event=>{(node.events??=[]).push({type:event.type,trusted:event.isTrusted});rest.onEvent?.(event,node);return true;},
+    getBoundingClientRect:()=>({left,top,right:left+width,bottom:top+height,width,height}),...rest});
+  return node;
 }
 async function run(elements,actions,{mutate=text=>text,maxElements,debuggerUrl='ws://127.0.0.1:9222/test'}={}) {
   const expressions=[],replies=[],output=[];
@@ -17,6 +25,9 @@ async function run(elements,actions,{mutate=text=>text,maxElements,debuggerUrl='
       elements.filter(e=>e.id===selector.slice(1)):elements,
     elementFromPoint:()=>elements[0]};
   const page=vm.createContext({document,location:{href:'http://fixture/'},innerWidth:100,innerHeight:100,
+    HTMLInputElement:FakeInput,HTMLTextAreaElement:FakeTextarea,
+    InputEvent:class {constructor(type,options){this.type=type;this.isTrusted=false;Object.assign(this,options);}},
+    Event:class {constructor(type,options){this.type=type;this.isTrusted=false;Object.assign(this,options);}},
     getComputedStyle:e=>({visibility:e.visibility??'visible',display:e.display??'block'})});
   if(actions){
     vm.runInContext("globalThis.__agentCu={id:'before',created:Date.now(),url:location.href,refs:new Map()}",page);
@@ -38,6 +49,7 @@ async function run(elements,actions,{mutate=text=>text,maxElements,debuggerUrl='
         } catch(error){result={exceptionDetails:{text:error.message}};}
       }else if(method==='Input.dispatchMouseEvent'&&params.type==='mousePressed'){
         document.activeElement=elements[0];
+      }else if(method==='Input.dispatchKeyEvent'&&params.type==='keyDown'&&elements[0]?.stealFocus){document.activeElement=elements[1];
       }else if(method==='Input.insertText'){
         const e=document.activeElement;
         if(e.isContentEditable)e.textContent=mutate(params.text);else e.value=mutate(params.text);
@@ -58,10 +70,54 @@ async function run(elements,actions,{mutate=text=>text,maxElements,debuggerUrl='
   return {result:output[0],expressions,replies,page};
 }
 
+// `fill` can misroute across CDP key requests. It may falsely succeed when the
+// observed target already contained the desired value; R1's set_value is bound
+// to the original object and never sends focus-dependent keyboard commands.
+let runResult;
+for(const initial of ['', 'synthetic-payload']){
+  const target=element('',{id:'field',tagName:'INPUT',value:initial});target.stealFocus=true;
+  const decoy=element('',{id:'decoy',tagName:'INPUT',value:''});
+  runResult=await run([target,decoy],[{type:'fill',ref:'e1',text:'synthetic-payload'}]);
+  assert.equal(runResult.result.ok,Boolean(initial));
+  assert.equal(decoy.value,'synthetic-payload');
+  target.stealFocus=false;decoy.value='';
+  runResult=await run([target,decoy],[{type:'set_value',ref:'e1',text:'synthetic-payload'}]);
+  assert.equal(runResult.result.ok,true,JSON.stringify(runResult.result));
+  assert.equal(target.value,'synthetic-payload');
+  assert.equal(decoy.value,'');
+  assert.equal(runResult.result.completed,1);
+}
+
+// set_value rejects non-fields and constraints before mutation; unchanged text
+// does not fire synthetic notifications.
+for(const field of [
+  element('',{tagName:'INPUT',type:'password',value:''}),
+  element('',{tagName:'INPUT',disabled:true,value:''}),
+  element('',{tagName:'INPUT',readOnly:true,value:''}),
+  element('',{tagName:'INPUT',inert:true,value:''}),
+  element('',{tagName:'INPUT',type:'text',maxLength:2,value:''}),
+  element('',{tagName:'INPUT',type:'text',visibility:'hidden',value:''}),
+  element('',{tagName:'BUTTON',value:''}),
+]){
+  runResult=await run([field],[{type:'set_value',ref:'e1',text:'payload'}]);
+  assert.equal(runResult.result.ok,false);
+  assert.equal(runResult.result.completed,0);
+  assert.equal(field.value??'', '');
+}
+const unchanged=element('',{tagName:'INPUT',value:'same'});
+runResult=await run([unchanged],[{type:'set_value',ref:'e1',text:'same'}]);
+assert.equal(runResult.result.ok,true);assert.deepEqual(unchanged.events??[],[]);
+const rewritten=element('',{tagName:'TEXTAREA',value:'',onEvent:(_event,node)=>{node.value='rewritten';}});
+runResult=await run([rewritten],[{type:'set_value',ref:'e1',text:'exact'}]);
+assert.equal(runResult.result.ok,false);assert.equal(runResult.result.mutation_may_have_occurred,true);
+assert.equal(JSON.stringify(runResult.result).includes('exact'),false);
+runResult=await run([element('',{tagName:'INPUT',value:''})],[{type:'set_value',ref:'e1',selector:'#field',text:'x'}]);
+assert.equal(runResult.result.ok,false);
+
 // Visible targets win even when the DOM starts with eighty offscreen controls.
 const outside=Array.from({length:80},(_,i)=>element('outside '+i,{top:100}));
 const visible=element('visible target');
-let runResult=await run([...outside,visible]);
+runResult=await run([...outside,visible]);
 assert.equal(runResult.result.elements.length,80);
 assert.equal(runResult.result.elements[0].name,'visible target');
 assert.equal(runResult.result.elements[0].offscreen,undefined);

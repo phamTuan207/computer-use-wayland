@@ -191,6 +191,32 @@ instead of its usual payload. All three measured warm DOM tasks matched the full
 sentence via the independent callback, with cleanup successful. These are output
 checks, not evidence that the desktop keyboard bug has been repaired.
 
-Prefer the existing semantic field route where its actual outcome can be checked.
-Keyboard replacement and acceleration remain blocked on a target/focus safety
-design review. No runtime fix is claimed by this documentation change.
+## Browser field assignment with routing faults
+
+`set_value` is a browser-only alternative for ordinary text inputs and
+textareas. It resolves one snapshot reference or one unique selector, does not
+click or change focus, uses the element's native value setter, dispatches
+synthetic `input` and `change` events, then checks that the same connected
+element still contains the requested value. These events are not trusted
+keyboard input; pages that require trusted events need a different route.
+Always verify the app's own result with a following `assert` or another
+independent check. A matching DOM value alone does not prove an app accepted it.
+
+`tests/browser_field_live.py` ran against an isolated Chromium profile and a
+loopback-only fixture using the source tree. The fixture reproduced both a
+wrong-field write and a false `fill` success after focus changed; the new setter
+left the decoy untouched and its Save/result assertion matched the requested
+Vietnamese text. The run also verified that its input event was synthetic. This
+was one live correctness run per case, not a speed benchmark or a claim about
+arbitrary web apps. The test owns its disposable profile and restores focus and
+workspace when possible.
+
+Keyboard input still has an unresolved focus race. During investigation,
+terminating stock `wtype` while Ctrl was held did not let the owned GTK fixture
+confirm that Ctrl had been released. Upstream `wtype` does not install a signal
+cleanup handler, and the issue is reported in [wtype #66](https://github.com/atx/wtype/issues/66).
+The in-flight focus-stop patch was therefore withdrawn before installation;
+between-group focus checks remain the only production protection. Do not claim
+that a long native typing action is target-bound or safe against focus changes.
+The next keyboard change needs a signal-safe input helper and live verification
+of key release before it can be accepted.

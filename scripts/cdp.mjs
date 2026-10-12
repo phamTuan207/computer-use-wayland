@@ -133,7 +133,7 @@ try {
     if(!request.snapshot)throw new Error('--snapshot required');
     // Preflight the entire schema before any side effects.
     for(const a of request.actions){
-      if(['click','fill','assert'].includes(a.type)&&!a.ref&&!a.selector)throw new Error('ref or selector required');
+      if(['click','fill','set_value','assert'].includes(a.type)&&(!a.ref&&!a.selector||a.ref&&a.selector))throw new Error('exactly one ref or selector required');
       if(a.type==='key'&&a.keys.every(k=>/^(ctrl|alt|shift|meta|super)$/i.test(k)))throw new Error('key action needs a non-modifier key');
       if(a.type==='key')for(const k of a.keys)if(!/^(ctrl|alt|shift|meta|super|Enter|Tab|Escape|Back[Ss]pace|Delete|Arrow(Left|Right|Up|Down)|Home|End|PageUp|PageDown|space|.)$/.test(k))throw new Error('unsupported key');
       if(a.type==='scroll'&&!Number.isFinite(a.dy))throw new Error('scroll dy required');
@@ -144,6 +144,28 @@ try {
         // Protect key/scroll operations as well as ref-based operations after navigation.
         await evaluate(`(()=>{const s=globalThis.__agentCu;if(!s||s.id!==${JSON.stringify(request.snapshot)}||s.url!==location.href||Date.now()-s.created>90000)throw new Error('stale snapshot');})()`);
         if(a.type==='click')await click(a);
+        else if(a.type==='set_value'){
+          const text=JSON.stringify(a.text),locator=JSON.stringify({ref:a.ref,selector:a.selector});
+          const source=`(()=>{let attempted=false;try{
+            const e=(${pageState.toString()})(${JSON.stringify(request.snapshot)},${locator});
+            if(!/^(INPUT|TEXTAREA)$/.test(e.tagName)||e.tagName==='INPUT'&&!/^(text|search|tel|url|email)$/.test(e.type||'text'))return {ok:false,error:'unsupported field'};
+            if(e.disabled||e.matches(':disabled')||e.readOnly||e.getAttribute('aria-disabled')==='true'||e.closest('[inert]'))return {ok:false,error:'field unavailable'};
+            if(e.maxLength>=0&&${text}.length>e.maxLength)return {ok:false,error:'value exceeds maxlength'};
+            const r=e.getBoundingClientRect(),style=getComputedStyle(e),x=r.left+r.width/2,y=r.top+r.height/2,hit=document.elementFromPoint(x,y);
+            if(!e.getClientRects().length||!r.width||!r.height||style.display==='none'||style.visibility!=='visible'||x<0||x>=innerWidth||y<0||y>=innerHeight||!hit||!(e===hit||e.contains(hit)))return {ok:false,error:'field is not visible'};
+            if(e.value===${text})return {ok:true};
+            const proto=e.tagName==='INPUT'?HTMLInputElement.prototype:HTMLTextAreaElement.prototype;
+            const setter=Object.getOwnPropertyDescriptor(proto,'value')?.set;if(!setter)return {ok:false,error:'field setter unavailable'};
+            attempted=true;setter.call(e,${text});
+            if(!e.isConnected||e.value!==${text})return {ok:false,error:'value verification failed',mutation_may_have_occurred:true};
+            e.dispatchEvent(new InputEvent('input',{bubbles:true,composed:true,inputType:'insertReplacementText',data:null}));
+            e.dispatchEvent(new Event('change',{bubbles:true}));
+            if(!e.isConnected||e.value!==${text})return {ok:false,error:'value verification failed',mutation_may_have_occurred:true};
+            return {ok:true};
+          }catch(_){return {ok:false,error:'value update failed',mutation_may_have_occurred:attempted};}})()`;
+          const updated=await evaluate(source);
+          if(!updated?.ok){const error=new Error(updated?.error||'value update failed');error.mutation_may_have_occurred=!!updated?.mutation_may_have_occurred;throw error;}
+        }
         else if(a.type==='fill'){
           await click(a);
           const editable=await evaluate(elementExpression(a,'return document.activeElement===e && !e.readOnly && (e.isContentEditable || /^(INPUT|TEXTAREA)$/.test(e.tagName));'));
@@ -158,8 +180,8 @@ try {
         completed++;
       }
       result={ok:true,completed,execution_ms:Date.now()-start};
-    }catch(e){result={ok:false,completed,error:e.message,execution_ms:Date.now()-start};}
-    result.after=await snapshot();
+    }catch(e){result={ok:false,completed,error:e.message,execution_ms:Date.now()-start};if(e.mutation_may_have_occurred)result.mutation_may_have_occurred=true;}
+    try{result.after=await snapshot();}catch(_){result.after_unavailable=true;}
   }else result=await snapshot();
   if(request.image)result.image_base64=(await call('Page.captureScreenshot',{format:'png',captureBeyondViewport:false})).data;
   return result;
