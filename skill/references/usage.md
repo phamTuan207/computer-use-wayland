@@ -131,10 +131,19 @@ Desktop actions:
 
 Max 32 actions per batch. Stop at layout-changing or consequential steps. Desktop `completed` counts completed actions/groups, not confirmed application outcomes. User interaction during a keyboard group cannot be intercepted per keystroke. This is foreground automation, not an isolated desktop.
 
+Desktop `type` is not a guarantee of exact field contents: an installed Chromium
+fixture lost BMP characters when a synthetic key occupied physical Backspace.
+Adding typing delay did not fix it. Prefer browser `fill` or a verified accessibility
+setter, then assert the exact application value. Desktop focus guards also cannot
+prevent input reaching another window during one running wtype group. Use an
+isolated target; a refusal can follow partial input and must not trigger replay.
+See [installed diagnostics](../../docs/optimization-experiments.md#installed-keyboard-diagnostics).
+
 ## Troubleshooting
 
 - `unknown XKB key name`: use an alias above or a validated keysym; no guessed syntax.
 - `non-BMP text...`: use browser fill/a11y setter; do not replace emoji with a different character.
+
 - `screen changed...`: inspect the returned `after.image` and reuse `after.observation` only after inspecting; for animation use a smaller target crop or semantic backend.
 - `pointer missed target...`: input is stopped before button-down; inspect monitor/transform metadata. Do not fall back to guessed deltas.
 - CDP tab missing: `browser tabs`, then select exact target; do not silently use the first tab.

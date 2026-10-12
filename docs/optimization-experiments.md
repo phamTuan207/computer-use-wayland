@@ -54,8 +54,8 @@ typing. The target received 40 characters and the other window received 24 befor
 the next guard stopped the batch. The candidate failed the safety gate and was
 removed from the staging runtime. The unpaced candidate was not live-tested or
 enabled. Parser/keymap checks and a corrected stdin signal bug do not establish
-application correctness or focus safety. This experiment did not test whether
-the stock backend has the same focus behavior.
+application correctness or focus safety. This prototype experiment did not test
+the stock backend; the later installed diagnostics below tested that separately.
 
 Further keyboard work requires reviewing how input is bound to its intended
 target while focus can change. Smaller sleeps or faster ACKs do not establish
@@ -154,3 +154,43 @@ and one never-ready cold task per route. Positive tasks passed; negative tasks
 failed as expected; all reported cleanup successful. All 17 focused installed
 tests passed. This is installed smoke plus focused tests, not full installed-tree
 parity or a second full performance comparison.
+
+## Installed keyboard diagnostics
+
+Follow-up on 2026-10-13 used the installed CLI/session and installed input code,
+stock wtype 0.4-2, temporary Chromium profiles and synthetic fixture values.
+No production profile or compositor plugin was changed.
+
+The desktop string `Tạo báo cáo nháp — 3 mục` produced
+`Tạo báo cáo nháp — 3 c` both at delay_ms=45 and delay_ms=0 (one trial each).
+Application events recorded key `ụ`, physical code `Backspace`, followed by a
+trusted `deleteContentBackward` input event. ASCII `abcdefghijklmnop`, `mục`,
+`Tiếng Việt` and a leading-dash version of the full sentence matched in one trial
+each; `abcdefghijklmục` also failed. These seven diagnostic trials demonstrate a
+keymap-dependent correctness bug, not a Unicode-wide failure rate or an IME fix.
+This matches the mechanism described in
+[wtype's control-key collision proposal](https://github.com/atx/wtype/pull/77).
+That proposal was not installed or validated here. Slower typing is not a fix.
+
+A separate fault injection used two inert GTK windows on an unused workspace.
+During a 481-character stock typing action, focus was deliberately moved to the
+second fixture. The target received 44 characters and the other fixture 436;
+the action eventually returned a failure. This single trial establishes that
+between-group focus guards do not bind ongoing keyboard input to its target.
+It does not establish the missing character's cause, a leakage-rate distribution,
+or any repair. Both fixtures were closed and the previous workspace/focus restored.
+
+For the practical browser route, a new installed `fill`/`click`/result-assert smoke
+ran three measured warm tasks with exact Vietnamese-plus-emoji fixture values.
+All passed the independent application callback check; median 72.904 ms,
+nearest-rank p95 76.919 ms. This is smoke, not another speed comparison, and does
+not prove desktop keyboard safety or identical behavior in other applications.
+
+A private copy of the same harness then used the exact failing demo sentence
+instead of its usual payload. All three measured warm DOM tasks matched the full
+sentence via the independent callback, with cleanup successful. These are output
+checks, not evidence that the desktop keyboard bug has been repaired.
+
+Prefer the existing semantic field route where its actual outcome can be checked.
+Keyboard replacement and acceleration remain blocked on a target/focus safety
+design review. No runtime fix is claimed by this documentation change.
