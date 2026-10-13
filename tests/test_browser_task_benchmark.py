@@ -285,7 +285,7 @@ class BrowserTaskHarnessTests(unittest.TestCase):
                 posted['max_elements'] = payload['max_elements']
                 return observe
             posted['act'] = payload
-            return {'ok': True, 'after_skipped': True, 'completed': 3}
+            return {'ok': True, 'after_skipped': True, 'completed': 3, 'execution_ms': 2.5}
         worker.request.side_effect = request
         state = {}
         original = benchmark.time.sleep
@@ -310,6 +310,9 @@ class BrowserTaskHarnessTests(unittest.TestCase):
         self.assertTrue(row['ok'])
         self.assertEqual(row['calls'], 2)
         self.assertGreaterEqual(row['total_ms'], row['observe_ms'])
+        self.assertEqual(row['whole_task_ms'], row['total_ms'])
+        self.assertLessEqual(row['response_ms'], row['whole_task_ms'])
+        self.assertEqual(row['execution_ms'], 2.5)
 
     def test_task_sample_requires_after_skipped(self):
         worker = Mock()
@@ -317,7 +320,7 @@ class BrowserTaskHarnessTests(unittest.TestCase):
             {'ref': 'e1', 'role': 'input', 'name': 'Task name'},
             {'ref': 'e2', 'role': 'button', 'name': 'Save fixture'},
             ]}
-        worker.request.side_effect = [observe, {'ok': True, 'after': {'elements': []}}]
+        worker.request.side_effect = [observe, {'ok': True, 'after': {'elements': []}, 'execution_ms': 2.5}]
         row = {'mode': 'task-full', 'index': 0, 'ok': False, 'calls': 0, 'result_bytes': 0}
         with self.assertRaisesRegex(RuntimeError, 'did not skip'):
             benchmark.task_sample({'endpoint': 'e', 'target': 't'}, worker, row, 'task-full',

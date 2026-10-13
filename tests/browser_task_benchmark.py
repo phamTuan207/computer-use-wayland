@@ -142,6 +142,7 @@ def task_sample(base, worker, row, mode, text, state, cu):
     if mode == 'task-after-scoped':
         act_request['after_scope'] = '#task'
     result = worker.request(act_request)
+    response_done = time.perf_counter()
     row['calls'] += 1
     row['result_bytes'] += len(json.dumps(result, ensure_ascii=False).encode())
     if not result.get('ok'):
@@ -166,6 +167,9 @@ def task_sample(base, worker, row, mode, text, state, cu):
     row['ok'] = True
     row['total_ms'] = (time.perf_counter()-started)*1000
     row['act_verify_ms'] = row['total_ms']-row['observe_ms']
+    row['response_ms'] = (response_done-started)*1000
+    row['execution_ms'] = result['execution_ms']
+    row['whole_task_ms'] = row['total_ms']
 
 
 def run(args):
