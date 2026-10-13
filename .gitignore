@@ -9,9 +9,9 @@ native/background-effect-protocol.h
 native/background-effect-protocol.c
 native/keyboard-protocol.c
 native/keyboard-protocol.h
-native/keyboard-protocol.o
 native/modifiers
-native/hyprglass.so
+native/*.so
+native/*.o
 __pycache__/
 *.pyc
 
@@ -19,9 +19,8 @@ __pycache__/
 # browser-profile/ holds a real Chromium profile: Cookies, Login Data, History.
 browser-profile/
 cache/
+# Screenshots may capture private windows; add a reviewed asset with -f if needed.
 *.png
-!docs/**/*.png
-overlay/*.png
 
 # Test output. These record the machine's real window titles, PIDs and
 # Wayland addresses from whatever was on screen when the run happened.
@@ -32,3 +31,15 @@ tests/discovery-results.json
 # Local edits
 *.bak
 backups/
+
+# Local-only notes and host-specific material, not part of the public repo.
+/CREW.md
+/TEAM.md
+/COORDINATION.md
+/PROGRESS.md
+/sessions.json
+/.commandcode/
+/docs/indicator-removal-report.md
+/skill/references/validation.md
+/native/agent-cursor.json
+/native/require-liquid
