@@ -68,6 +68,10 @@ once, here. Setup stores them in the cursor profile and puts your original curso
 back at the end of every task. If a valid `native/agent-cursor.json` already
 exists, setup keeps that file byte-identical and the two flags are not needed.
 
+Use the theme and size from the command or configuration you used to set your
+Hyprland cursor. GTK settings may differ. If you cannot identify those values
+confidently, obtain them before setup; the tool will not guess them from GTK.
+
 For paths, setup uses `~/.config/hypr/hyprland.lua`, your XDG data directory and
 `~/.local/bin`. If your config or data layout differs, `--hypr-config`,
 `--data-dir` and `--bin-dir` take the alternatives; everything else is automatic.

@@ -32,6 +32,11 @@ after cleanup failure. Recover older magnifier records with the previous version
 before upgrading; the new version preserves and rejects them.
 Browser adapter timeout is capped at 60 seconds; split larger batches.
 
+`computer-use status` is a read-only local-state command returning
+`{"ok":true,"cancelled":true}` when latched (`cancelled: false` otherwise). It reports the cancellation latch, not
+whether a session or overlay is active. It never clears cancellation; only
+user-requested `computer-use resume` does that.
+
 # Commands and schemas
 
 ## Interactive agent driver
@@ -94,6 +99,18 @@ Browser actions:
 ```
 
 `click`, `fill`, `assert`: use a ref or an exact single-match CSS `selector`. `fill` uses trusted input and verifies the resulting value. `assert` accepts `text` (substring), `value` (exact), `checked` (boolean), or defaults to nonzero element width; timeout max 3000 ms. `key`: `keys` array (`Ctrl`, `Alt`, `Shift`, `Meta`, `Enter`, `Tab`, `Escape`, arrows, editing keys, one character). `scroll`: `dy`, optional `dx`,`x`,`y` in viewport CSS pixels. `wait`: `ms` max 2000. Navigation ends the old snapshot; observe the new page before further input. Result includes a fresh `after` snapshot.
+
+`set_value` also takes one `ref` or exact `selector` plus `text`. Prefer it for
+ordinary text inputs and textareas: it avoids focus-dependent typing, uses the
+native value setter and verifies the value, but dispatches synthetic, untrusted
+`input`/`change` events. Follow it with an assertion on the app's result. Use
+`fill` when trusted keyboard events are required and the target is controlled.
+See [field routing evidence](../../docs/optimization-experiments.md#browser-field-assignment-with-routing-faults).
+
+Snapshots list interactive controls, not arbitrary status messages. A successful
+`act` and its `after` alone do not prove that Save succeeded. Use a known app-result
+assert; if the result is not yet understood, request `--image` and inspect it.
+Do not invent a status selector or expected message to avoid that check.
 
 When the next targets and success condition are known, keep `fill`, `click` and
 the result `assert` in one `act`, as above. A fixed `wait` cannot establish that

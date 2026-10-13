@@ -175,6 +175,13 @@ call. These figures describe selected output size, not compositor latency,
 real-world window counts or billed tokens. A separate real, read-only compositor
 smoke confirmed exact filtering and title-key omission; it performed no input.
 
+## Skill entrypoint size
+
+The main `skill/SKILL.md` was reduced from 8,267 to 5,821 UTF-8 bytes and from
+1,113 to 827 words (about 30% fewer bytes). Detailed schemas stay in the selected
+backend reference, so routine use need not load every backend. These are file
+counts from `wc -w -c`, not measured model tokens, billing or task duration.
+
 ## Installed keyboard diagnostics
 
 Follow-up runs used the installed CLI/session and installed input code, stock
