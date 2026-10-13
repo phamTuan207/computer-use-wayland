@@ -228,6 +228,9 @@ both routes; no runtime code changed.
 `whole_task_ms` again spans fresh observe, action construction, the checkpoint
 write/fsync, act and independent verification, so the crop derivation is inside
 the measured span. Session/setup and model time are excluded.
+The fixture supplies target geometry; discovering the area and inspecting an initial
+full view are outside this span. This measures a known-area task, not a new task
+whose target must first be discovered.
 
 | Metric | Default | Crop | Change |
 |---|---:|---:|---:|
