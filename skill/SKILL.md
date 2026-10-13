@@ -82,6 +82,9 @@ separate check before any external submit, and preserve host permissions.
 - `browser act --after-scope SELECTOR` returns the next refs from a panel that should still exist, so
   a multi-step task continues without a full page. Failed actions keep a full-page diagnostic; a
   vanished panel needs a fresh observe.
+- `observe --crop X Y W H` narrows a view you have already inspected, once the target area and the
+  context around it are known. Inspect the returned crop before choosing coordinates, and observe
+  again after any geometry, focus or screen change.
 - Browser `act --no-after` requires a final meaningful assert and forbids `--image`.
   Desktop `act --no-after` needs an independent app-result check. Use either only
   when no later view is needed.

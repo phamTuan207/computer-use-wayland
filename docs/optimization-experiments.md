@@ -206,6 +206,65 @@ For the four-block comparison, repeat in full/skip/skip/full order with a fresh
 report path for each block. Summarize `whole_task_ms` and `result_bytes` from the
 rows; the existing console summary reports historical act-plus-verifier time.
 
+## Cropped desktop observation, once the area is known
+
+`observe --crop X Y W H` narrows the captured region. Use it only after a full view has
+been inspected and the target's area is known: the crop must contain the target
+**and** the context you need to confirm you aimed at it. After any geometry, focus
+or screen change, observe again rather than reusing coordinates. Never crop an
+area you have not looked at — an unknown menu or popup is exactly where a blind
+crop hides the thing you needed. Inspect the returned cropped image before
+choosing input coordinates; the crop changes the image and its scale, not the
+window's logic.
+
+Measured with the **installed CLI** against the same owned inert GTK click
+fixture: four sequential A/B/B/A blocks, 30 samples each, both with `act --no-after`, A a
+full-window observe and B one padded 8 px crop around the fixture button. Every
+reset had a nonce, every task independently verified exactly one click, and all
+120 tasks and cleanup passed. First samples were retained. No keyboard typing,
+account activity, network or plugin activation. The runtime hash was identical on
+both routes; no runtime code changed.
+
+`whole_task_ms` again spans fresh observe, action construction, the checkpoint
+write/fsync, act and independent verification, so the crop derivation is inside
+the measured span. Session/setup and model time are excluded.
+
+| Metric | Default | Crop | Change |
+|---|---:|---:|---:|
+| `total_ms` median | 122.053 | 86.537 | −29.1% |
+| `response_ms` median | 121.960 | 86.476 | −29.1% |
+| `execution_ms` median | 29.000 | 29.000 | unchanged |
+| `whole_task_ms` median | 241.788 | 155.062 | **−86.726 ms / 35.869%** |
+| `whole_task_ms` p95 | 279.196 | 164.236 | −41.2% |
+| PNG bytes median | 117,138.5 | 5,633.0 | −95.191% |
+| `result_bytes` | 322 | 335 | **+4.037%** |
+
+Per-block whole-task median/p95 in ms: A1 239.432/259.959, B1 155.242/164.703,
+B2 154.953/163.948, A2 249.542/286.066. Disclosures: A1 ran the original HEAD
+harness, A2 the new harness at the same default, which adds the PNG statistics
+*outside* the timer; the PNG baseline comes from A2's 30 samples only, while every
+other aggregate is 60 samples per route. An extra A0 baseline run was retained
+separately and is not part of the declared ABBA. The checkpoint write/fsync is
+inside the measured span. Both gates — the 10% + 5 ms speed win and a lower p95 —
+passed.
+
+Read this honestly: PNG bytes are **not** billed model tokens, and the result JSON
+grows 4.037% because the explicit crop metadata is carried in the response. The 35.869% is the fixture's whole-task wall clock, not a claim about
+total LLM task time, other applications or other image sizes.
+
+```sh
+report_dir=$(mktemp -d)
+python3 tests/optimization_live.py --cli PATH_TO_INSTALLED_CU \
+  --report "$report_dir/full.json" --samples 30 --cases click --no-after
+python3 tests/optimization_live.py --cli PATH_TO_INSTALLED_CU \
+  --report "$report_dir/crop.json" --samples 30 --cases click --no-after --crop-button
+```
+
+`--crop-button` is a harness option that only exists for this comparison; it
+derives the crop from the fixture's own layout. A real agent chooses its own
+rectangle. For the four-block comparison, repeat in full/crop/crop/full order
+with a fresh report path for each block.
+
 ## Compact window discovery
 
 `windows --class CLASS --no-titles` filters a single client-list read by exact

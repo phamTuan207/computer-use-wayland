@@ -25,6 +25,25 @@ def summary(values):
             'p95_ms': round(ordered[math.ceil(.95 * len(values)) - 1], 3)}
 
 
+def button_crop(layout, size, pad=8):
+    """Integer logical crop around the fixture button, clamped inside the window."""
+    bx, by, bw, bh = layout['button']
+    x0, y0 = max(0, int(bx) - pad), max(0, int(by) - pad)
+    x1, y1 = min(size[0], int(bx + bw) + pad), min(size[1], int(by + bh) + pad)
+    return [x0, y0, max(1, x1 - x0), max(1, y1 - y0)]
+
+
+def local_point(meta, x, y):
+    """A window-local layout point in image pixels.
+
+    Layout coordinates are window-local while meta['region'] is global, so the
+    window origin is added first; a full uncropped region cancels out.
+    """
+    wx, wy = meta['window_bounds'][0:2]
+    rx, ry, rw, rh = meta['region']
+    return [(wx + x - rx) * meta['image_size'][0] / rw, (wy + y - ry) * meta['image_size'][1] / rh]
+
+
 def verified(case, state, expected):
     if case.startswith('type') or case == 'chord':
         return state.get('text') == expected
@@ -53,7 +72,8 @@ def run(args):
     original_workspace = json.loads(cu.run(['hyprctl', '-j', 'activeworkspace'], env))['id']
     rows, driver, fixture = [], None, None
     report = {'kind': 'real_gtk_fixture', 'samples': rows, 'ok': False,
-              'settings': {'samples': args.samples, 'cases': args.cases, 'no_after': args.no_after},
+              'settings': {'samples': args.samples, 'cases': args.cases, 'no_after': args.no_after,
+                           'crop_button': args.crop_button},
               'engine_sha256': hashlib.sha256(args.cli.resolve().read_bytes()).hexdigest()}
 
     def save_report():
@@ -149,13 +169,15 @@ def run(args):
                     fixture.stdin.flush()
                     wait_for(lambda: state().get('nonce') == nonce and state().get('text') == initial)
                     task_started = time.perf_counter()
-                    observed = command(['observe', '--window', address, '--max-width', '1280'])
-                    meta = json.loads(Path(observed['observation']).read_text())
                     layout = state()['layout']
+                    observe = ['observe', '--window', address, '--max-width', '1280']
+                    if args.crop_button:
+                        observe += ['--crop', *map(str, button_crop(layout, window['size']))]
+                    observed = command(observe)
+                    meta = json.loads(Path(observed['observation']).read_text())
                     def point(name, x=.5, y=.5):
                         bx, by, bw, bh = layout[name]
-                        return [(bx + bw*x)*meta['image_size'][0]/meta['region'][2],
-                                (by + bh*y)*meta['image_size'][1]/meta['region'][3]]
+                        return local_point(meta, bx + bw*x, by + bh*y)
                     expected = None
                     if case.startswith('type'):
                         size = int(case[4:])
@@ -190,7 +212,9 @@ def run(args):
                                response_ms=response_ms, execution_ms=result['execution_ms'],
                                whole_task_ms=(done-task_started)*1000,
                                result_bytes=sum(len(json.dumps(payload, ensure_ascii=False).encode())
-                                                for payload in (observed, result)))
+                                                for payload in (observed, result)),
+                               png_bytes=Path(observed['image']).stat().st_size,
+                               image_size=list(meta['image_size']))
                     save_report()
             driver.stdin.write('{"args":["finish"]}\n')
             driver.stdin.flush()
@@ -238,10 +262,14 @@ def main():
     parser.add_argument('--cases', nargs='+', choices=['type32', 'type481', 'chord', 'click', 'scroll', 'drag'],
                         default=['type32', 'type481', 'chord', 'click', 'scroll', 'drag'])
     parser.add_argument('--no-after', action='store_true')
+    parser.add_argument('--crop-button', action='store_true',
+                        help='observe only a padded crop around the fixture button; requires --cases click')
     parser.add_argument('--inside', action='store_true', help=argparse.SUPPRESS)
     args = parser.parse_args()
     if not 1 <= args.samples <= 30:
         parser.error('samples must be 1..30')
+    if args.crop_button and args.cases != ['click']:
+        parser.error('--crop-button requires --cases click')
     if not args.inside:
         if os.environ.get('CU_SESSION_TOKEN'):
             parser.error('launch outside a session; the harness owns exactly one session')
