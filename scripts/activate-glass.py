@@ -11,7 +11,7 @@ import cu
 import indicator
 
 
-def activate(library, abi, env):
+def activate(library, abi, env, *, before_load=None):
     library = Path(library).resolve(strict=True)
     digest = hashlib.sha256(library.read_bytes()).hexdigest()
     if library.name != 'hyprglass-' + digest + '.so':
@@ -29,6 +29,7 @@ def activate(library, abi, env):
     profile = Path(__file__).resolve().parents[1] / 'native/hyprglass-local-optics.lua'
     if not profile.is_file():
         raise RuntimeError('accepted profile missing')
+    if before_load is not None:before_load()
     answer = query('plugin', 'load', str(library)).strip()
     if answer != 'ok':
         raise RuntimeError('plugin load refused: ' + answer)

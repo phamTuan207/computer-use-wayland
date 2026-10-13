@@ -1,21 +1,62 @@
-# Optional liquid backdrop backend
+# Liquid backdrop backend
 
 The session badge always draws its foreground with Cairo. It already needs the
-compositor backdrop-blur protocol to present that badge. The **optional plugin**
-described here changes the backdrop to a refracting liquid material.
+compositor backdrop-blur protocol to present that badge. The **plugin** described
+here changes that backdrop to a refracting liquid material.
 
-Nothing here is a default. The CLI never installs or loads a plugin for you, and
-the Cairo path keeps working if you skip this entire document.
+It is a default. Standard setup builds and registers it for you; see the README
+Install section. This document explains that backend, and then documents the
+manual developer path behind it.
+
+The roles are separated on purpose:
+
+- **a session** shows and restores its visuals, without building, downloading
+  or loading a plugin;
+- **`scripts/setup.py`** prepares everything and registers a startup hook, but
+  loads nothing — it never runs `plugin load`, never hot-swaps, explicitly reloads,
+  restarts or logs out;
+- **the hook** runs once at the next fresh login and performs the single guarded
+  activation described below.
+
+If you prefer to do every step yourself, skip the setup command and follow
+[Build](#build), [Install the library immutably](#install-the-library-immutably)
+and [Activate](#activate-at-a-fresh-login-only) here. The Cairo path keeps
+working if you never build the plugin at all.
 
 At build time, `wayland-protocols` must supply the presentation-time XML and
 `staging/ext-background-effect/ext-background-effect-v1.xml`. At runtime, the
 compositor must advertise `ext_background_effect_manager_v1` and presentation
 feedback. Missing backdrop support stops the indicator and prevents input.
 
+## What the setup path does
+
+Setup clones the pinned upstream commit into a temporary directory it owns,
+builds it with the pinned local-optics patch, installs the library under a
+hash-named immutable path, records the ABI and the cursor tree in a private
+manifest, and appends one clearly marked managed block to your Hyprland config
+(after backing it up). The generated hook is a `hyprland.start` listener.
+Saving the config may trigger its normal auto-reload; the listener does not
+activate the plugin during a reload.
+
+Setup refuses to run — before building anything — when the compositor is not
+exactly `0.56.2`, when the header ABI does not match the running compositor,
+when a required dependency is missing, when any plugin is already loaded, when
+your config carries an edited managed block, or when it is running inside a
+`computer-use` session. It holds the session owner lock for the whole run so an
+automation cannot start mid-build.
+
+At the next fresh login the hook validates the manifest, the optics profile
+digest, the installed cursor tree and the recorded ABI, confirms the compositor
+actually just started (a 30-second window checked immediately before the load),
+and refuses if any of that fails or if a plugin is already loaded. It never
+falls back to a plain background on failure. **Never** hot-swap, reload or
+replace a module the compositor has loaded; to change backend, roll back to the
+previous immutable library and start a fresh login.
+
 ## Get the exact upstream source
 
-The build is pinned. Clone upstream, check out the pinned commit, and pass that
-checkout as `SOURCE`:
+Only for the manual path. The build is pinned. Clone upstream, check out the
+pinned commit, and pass that checkout as `SOURCE`:
 
 ```sh
 git clone https://github.com/hyprnux/hyprglass.git /path/to/hyprglass
@@ -96,14 +137,20 @@ ABI at a fresh login, load its immutable library first, then apply the matching
 `native/hyprglass-indicator.lua` profile manually. Do not use the local-optics
 activation helper for that alternative.
 
-Your personal configuration files are never edited by any of these scripts, and
-nothing here should be run automatically inside an automation session.
+These manual scripts never edit your personal configuration. `scripts/setup.py`
+does, and only in one way: it backs your Hyprland config up and appends a single
+clearly marked managed block that calls the generated hook. It never replaces a
+block you edited. Nothing here should be run inside an automation session; the
+session commands never load a plugin at all.
 
-## Optional fail-closed switch
+## Fail-closed switch
 
 `native/require-liquid` makes the session refuse to run when the backend is
 absent instead of silently falling back to the Cairo backdrop. It does **not**
-load a plugin. It is local configuration, not part of the source tree.
+load a plugin. Standard setup creates it; on the manual path, create it yourself.
+It is generated local configuration, not a tracked source file, along with the
+generated profile, manifest, managed Lua file and the managed block in your
+Hyprland config — none of those belong in version control.
 
 ## Attribution and limits
 

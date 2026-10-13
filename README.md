@@ -23,20 +23,29 @@ The pointer is shared with the user; simultaneous human input is not blocked.
 
 ## Requirements
 
-Runtime: Python 3 with Pillow, plus `grim`, `hyprctl` and `wtype` on PATH.
-Desktop input needs a compositor with virtual-pointer and virtual-keyboard
-support (Hyprland).
+**Hyprland exactly `0.56.2`**, with development headers from that same release.
+Setup builds a compositor plugin, so the plugin ABI must match the running
+compositor. Setup reconstructs the ABI fingerprint from your installed headers
+and compares it with `hyprctl -j version`; if the two disagree, or if
+`pkg-config --modversion hyprland` is not exactly `0.56.2`, setup refuses before
+building anything. A different Hyprland release needs a rebuild and
+re-verification, not an in-place upgrade.
 
-Native build: `cc`, `wayland-scanner` and `libwayland-client`. The session
-indicator also needs `pkg-config`, GTK4 and `gtk4-layer-shell`
-(`pkg-config --exists gtk4-layer-shell-0 gtk4 wayland-client`), plus
-`wayland-protocols` for `stable/presentation-time/presentation-time.xml` and the
-staging protocol `staging/ext-background-effect/ext-background-effect-v1.xml` used
-for the badge backdrop blur. That protocol is staging: if the file is absent from
-your `wayland-protocols` package, `wayland-scanner` fails and the build stops.
-A compositor without `ext_background_effect_manager_v1` makes the indicator exit
-with a warning instead of drawing an unblurred badge. The mouse-modifier helper
-additionally needs `libxkbcommon`.
+On `PATH`, all of:
+
+`cc`, `c++`, `pkg-config`, `wayland-scanner`, `rsvg-convert`, `make`, `git`,
+`hyprctl`, `gsettings`, `grim`, `wtype`
+
+Setup does **not** install any of them or invoke `sudo`. Install them
+with your own package manager first.
+
+Runtime and native libraries: Python 3 with Pillow, `libwayland-client`, GTK4 and
+`gtk4-layer-shell` (`pkg-config --exists gtk4-layer-shell-0 gtk4 wayland-client`),
+`libxkbcommon` for the mouse-modifier helper, and `wayland-protocols` supplying
+both `stable/presentation-time/presentation-time.xml` and the staging protocol
+`staging/ext-background-effect/ext-background-effect-v1.xml` used for the badge
+backdrop blur. That protocol is staging: if your `wayland-protocols` package
+lacks it, `wayland-scanner` fails and the build stops.
 
 Optional: browser control needs Node >= 22 and Chromium; native accessibility
 needs Python GObject/AT-SPI bindings; the safe demo fixture needs GTK bindings.
@@ -46,17 +55,69 @@ needs Python GObject/AT-SPI bindings; the safe demo fixture needs GTK bindings.
 ```sh
 git clone https://github.com/phamTuan207/computer-use-wayland
 cd computer-use-wayland
-python3 scripts/build.py
-mkdir -p ~/.local/bin
-ln -sf "$PWD/scripts/cu.py" ~/.local/bin/computer-use
-chmod +x scripts/cu.py
+python3 scripts/setup.py
 ```
 
-`scripts/build.py` regenerates protocol glue from the XML files in `native/`,
-compiles the pointer, builds the `native/indicator` binary, then builds the
-`native/modifiers` keyboard helper. Nothing is downloaded, and no compositor
-plugin is installed automatically: optional backends stay off until you build
-and enable them yourself.
+Then **log out and log back in once.** That is the whole installation.
+
+With no flags it uses `~/.config/hypr/hyprland.lua`, your XDG data directory and
+`~/.local/bin`. If your config or data layout differs, `--hypr-config`,
+`--data-dir` and `--bin-dir` take the alternatives; everything else is automatic.
+Cursor themes always go in `~/.local/share/icons`, independently of `--data-dir`.
+Setup and the login loader verify the actual libXcursor search path; an
+`XCURSOR_PATH` override that excludes this directory is refused.
+
+`scripts/setup.py` is the standard setup. It builds every native component,
+fetches a pinned Hyprglass commit into an owned temporary directory and builds
+the liquid glass from it, installs the library and the cursor theme under
+hash-named immutable paths, writes a private manifest, cursor profile and
+startup hook, backs up your Hyprland config before appending one clearly marked
+managed block to it, and links `computer-use` into `~/.local/bin`.
+
+What setup deliberately does **not** do: it never loads a plugin, never hot-swaps
+or unloads one, never restarts or logs out, and never loads anything inside a
+`computer-use` session. It also refuses to run at all if `CU_SESSION_TOKEN` is
+set or a session record is retained, and it refuses when any plugin is already
+loaded, because editing the config could auto-reload one. It holds the session
+owner lock for the whole run, so an automation cannot start in the middle of the
+build. On an unsupported version, a missing dependency, an already-loaded plugin
+or an unreadable config, setup stops with a message instead of guessing.
+
+At your next fresh login the generated hook runs once. It verifies the manifest,
+the pinned optics profile, the installed cursor tree and the recorded ABI, checks
+that the compositor really did just start, and only then loads the plugin. If any
+check fails it stops and says why; it does not fall back to a plain background
+and it does not claim a cursor state it could not measure.
+
+## Defaults after that first login
+
+Every session gets, with no further configuration:
+
+- the **session pill** ("Computer use active") overlay,
+- the **liquid glass** backdrop plugin,
+- a **34 px agent cursor** on the shared desktop pointer.
+
+### Cursor restoration policy
+
+The generated profile uses the **managed GTK** policy. At the first fresh login
+the loader synchronises the Hyprland cursor to the GTK cursor values, and the
+per-task guardian restores that GTK baseline at the end of each task.
+
+That baseline is a **policy, not a measurement**. There is no known read-only API
+that reports the compositor's previous cursor theme or size, so setup never claims
+to have captured your prior Hyprland cursor. If you had set the Hyprland cursor by
+hand and want those exact values restored instead, write
+`native/agent-cursor.json` yourself before running setup:
+
+```json
+{"theme":"your-built-theme","size":32,"restore_theme":"your-current-theme","restore_size":24}
+```
+
+Setup preserves an existing such profile **byte for byte** and never rewrites it.
+Without it, setup writes the managed GTK profile, which is refused until a
+successful fresh login records the instance. A corrupt, unreadable or unknown
+profile fails closed. Nothing in setup or the loader resumes input automatically
+after cancellation.
 
 The vendored virtual-keyboard protocol comes from
 [wtype](https://github.com/atx/wtype/blob/master/protocol/virtual-keyboard-unstable-v1.xml);
@@ -136,6 +197,10 @@ installed, a warning is logged and explicit cancellation still works. `computer-
 `finish` requests completion, and `resume` only after the user asks to continue.
 Esc cancels; it is never an instruction to retry input.
 
+A session shows and restores its visuals without building, downloading or
+loading a compositor plugin. Setup prepares the backend and registers the hook;
+the hook activates the backend at a fresh login.
+
 Desktop actions re-check window geometry, focus and screen state before
 input and **may refuse** rather than act on a stale observation. There is no
 automatic observation, retry or replay. Cleanup stops the driver group, drains
@@ -156,9 +221,13 @@ a particular window. Details and measured limits are in
 
 ## Optional extras
 
-`python3 scripts/build-cursor.py THEME_DIR` builds an XCursor theme (needs
-Pillow and `rsvg-convert` at build time); enable it by placing
-`native/agent-cursor.json` in your CLI tree with the real restoration settings:
+The three visuals above are the defaults and need no flags. The items here are
+secondary, developer-facing paths that standard setup already handles for you.
+
+**A hand-built cursor theme.** `python3 scripts/build-cursor.py THEME_DIR` builds
+an XCursor theme (needs Pillow and `rsvg-convert` at build time). To use it
+instead of the managed one, place `native/agent-cursor.json` in your CLI tree
+with the real restoration settings *before* running setup, so setup preserves it:
 
 ```json
 {"theme":"your-built-theme","size":32,"restore_theme":"your-current-theme","restore_size":24}
@@ -167,9 +236,16 @@ Pillow and `rsvg-convert` at build time); enable it by placing
 Use your actual current theme and size for restoration. The session guardian
 restores them when the task ends. This uses the shared desktop pointer.
 
-[docs/liquid-glass.md](docs/liquid-glass.md) covers the optional compositor
-backdrop backend and how to build it from pinned upstream source. Both are
-opt-in and are not defaults.
+**Building native components alone.** `python3 scripts/build.py` regenerates
+protocol glue from the XML files in `native/`, compiles the pointer, then builds
+the `indicator` and `modifiers` binaries. It is the developer/native path: it
+downloads nothing and configures **no** automatic visuals. Standard setup calls
+it for you.
+
+**Liquid glass from pinned upstream source by hand.** Standard setup fetches the
+pinned commit, builds it and registers the login hook itself.
+[docs/liquid-glass.md](docs/liquid-glass.md) documents that backend and the manual
+build, immutable install and activation steps behind it.
 
 ## Agent skill
 
@@ -185,6 +261,8 @@ ln -s "$PWD/skill" ~/.config/opencode/skills/computer-use
 | Path | What |
 |---|---|
 | `scripts/cu.py` | CLI entry point and orchestration |
+| `scripts/setup.py` | standard one-command setup and the fresh-login hook |
+| `scripts/visuals.py` | fresh-login loader that validates the manifest before activating |
 | `scripts/cdp.mjs` | Chromium CDP backend |
 | `scripts/a11y.py` | AT-SPI backend |
 | `scripts/cursor_session.py` | session ownership and cleanup recovery |

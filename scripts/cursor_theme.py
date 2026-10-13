@@ -4,13 +4,34 @@ import json
 from pathlib import Path
 import re
 import subprocess
+import sys
 
 PROFILE = Path(__file__).resolve().parents[1] / 'native/agent-cursor.json'
 SCHEMA = 'org.gnome.desktop.interface'
+# Read the compiled Xcursor search path rather than guessing an XDG default.
+SEARCH_ROOTS_CODE = """
+import ctypes
+library = ctypes.CDLL('libXcursor.so.1')
+library.XcursorLibraryPath.restype = ctypes.c_char_p
+value = library.XcursorLibraryPath()
+print(value.decode() if value else '')
+"""
 
 
 def command(env, *args):
     return subprocess.check_output(list(args), env=env, text=True, stderr=subprocess.STDOUT, timeout=5).strip()
+
+
+def search_roots(env):
+    """Where Xcursor actually looks for themes, read from the real library.
+
+    This reports the compiled-in default or the environment override the library
+    itself applies, so no XDG or home-directory constant is assumed here. It runs
+    one short interpreter and touches no desktop; call it from setup and the
+    fresh-login loader, not from every task snapshot.
+    """
+    raw = command(env, sys.executable, '-c', SEARCH_ROOTS_CODE)
+    return [Path(part).expanduser().resolve() for part in raw.split(':') if part]
 
 
 def validate(theme, size):
@@ -20,14 +41,35 @@ def validate(theme, size):
         raise ValueError('cursor size must be 16..96')
 
 
-def snapshot(env):
-    if not PROFILE.is_file():return None
-    profile = json.loads(PROFILE.read_text())
-    validate(profile['theme'],profile['size'])
-    validate(profile['restore_theme'],profile['restore_size'])
+def gtk_state(env):
+    """The two current GTK cursor values, validated. Shared by snapshot and the login loader."""
     theme = ast.literal_eval(command(env,'gsettings','get',SCHEMA,'cursor-theme'))
     size = int(command(env,'gsettings','get',SCHEMA,'cursor-size'))
     validate(theme,size)
+    return theme,size
+
+
+def snapshot(env):
+    if not PROFILE.is_file():return None
+    profile = json.loads(PROFILE.read_text())
+    if not isinstance(profile,dict):raise ValueError('cursor profile must be an object')
+    validate(profile['theme'],profile['size'])
+    mode = profile.get('restore_mode')
+    if mode not in (None,'gtk'):
+        raise ValueError('unknown restore_mode: '+repr(mode))
+    if mode == 'gtk':
+        # Managed policy: the declared compositor baseline is GTK, and GTK values
+        # are never presented as a measurement of the running compositor.
+        instance = (env.get('HYPRLAND_INSTANCE_SIGNATURE') or '').strip()
+        if not instance:
+            raise RuntimeError('automatic visuals require a compositor instance')
+        if instance != profile.get('ready_instance'):
+            raise RuntimeError('automatic visuals require fresh login; profile is for another instance')
+        theme,size = gtk_state(env)
+        return {'gtk_theme':theme,'gtk_size':size,'hypr_theme':theme,'hypr_size':size,
+                'agent_theme':profile['theme'],'agent_size':profile['size'],'restore_source':'gtk-baseline'}
+    validate(profile['restore_theme'],profile['restore_size'])
+    theme,size = gtk_state(env)
     return {'gtk_theme':theme,'gtk_size':size,'hypr_theme':profile['restore_theme'],
             'hypr_size':profile['restore_size'],'agent_theme':profile['theme'],'agent_size':profile['size']}
 

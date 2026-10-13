@@ -12,8 +12,12 @@ do not wrap each `act` in its own session. `doctor.session` only indicates a
 Wayland environment, not a live session or visible overlay. Capture temporarily
 hides the pill and restores it; it does not end the session.
 
-When `native/agent-cursor.json` is enabled, the normal-cursor description below
-is overridden: the real theme changes temporarily and the guardian restores it.
+Standard `python3 scripts/setup.py` plus one fresh login enables the approved
+pill, liquid backdrop and temporary cursor. It requires the supported Hyprland
+ABI; see [setup](../README.md#install). New profiles restore the managed GTK
+cursor baseline, not a measured prior compositor cursor; existing explicit
+restore profiles are preserved. The normal-cursor description below applies
+only to a manual installation without `native/agent-cursor.json`.
 It is one shared seat, not an independent mouse. Do not compete with user input.
 
 Shared tool: `computer-use` (`CU`). Prefer an existing CLI/API; otherwise Chromium DOM, then desktop screenshots. Native accessibility reaches only applications that actually expose AT-SPI, which varies per machine and per app, so probe with `a11y apps` before planning around it and do not reconfigure accessibility settings to force it. Respect the user's browser choice: Chromium CDP requires an enabled loopback debugging endpoint; other browsers use desktop or verified accessibility targeting.

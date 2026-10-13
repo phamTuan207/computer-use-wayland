@@ -30,6 +30,20 @@ Do not assume every subprocess is mocked, and do not assume none are real.
 One test is gated: the hyprglass patch-applicability check skips unless you point
 `CU_HYPRGLASS_SOURCE` at a pinned upstream checkout.
 
+## Default visual setup
+
+Setup and login tests use temporary files and mocked compositor RPC. Cursor
+tests also render real XCursor images, decode them with libXcursor and probe its
+real search path when the dependencies are available. Lua startup-hook tests
+use a real interpreter with a fake `hl` API. These checks do not load a plugin.
+
+An isolated setup acceptance run additionally built all three native helpers,
+the pinned glass plugin and the immutable theme with real tools, and loaded the
+cursor by name with real libXcursor. Only its empty plugin inventory, temporary
+installation paths and login desktop effects were fixtures. The running
+compositor, installed plugin and real configuration were unchanged. This proves
+artifact preparation; activation at a real fresh login remains unverified.
+
 ## Live fixtures (optional)
 
 Nothing here runs automatically on clone, and none of it assumes a specific

@@ -1,8 +1,10 @@
 ## Automation sessions
 
-An optional installed `native/agent-cursor.json` overrides the normal-cursor
-behavior below with a temporary real theme, restored by the guardian. It does
-not create a second pointer or lock user input. Do not operate simultaneously.
+Standard setup and a fresh login enable the pill, liquid backdrop and temporary
+real cursor theme, restored by the guardian. New profiles use the declared GTK
+baseline; legacy explicit restore values remain supported. The normal-cursor
+behavior below describes a manual install without `native/agent-cursor.json`.
+There is one shared pointer. Do not operate simultaneously.
 
 Run the whole task driver as `computer-use session -- DRIVER [ARGS...]`, not a
 separate session around each action. Its child commands inherit session ownership.

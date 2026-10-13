@@ -1,5 +1,8 @@
+import ctypes.util
 import json
+import os
 from pathlib import Path
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -47,3 +50,116 @@ class CursorTheme(unittest.TestCase):
                  patch.object(cancel_hotkey,'hotkey_off'),patch.object(cursor_theme,'restore',side_effect=RuntimeError('injected')):
                 self.assertFalse(cursor_session.restore({}))
             self.assertTrue(snapshot.exists())
+
+    def _profile(self,tmp,**extra):
+        profile=Path(tmp)/'profile.json'
+        data=dict(theme='cu-agent-v1',size=32,restore_mode='gtk',ready_instance='fresh-login')
+        data.update(extra)
+        profile.write_text(json.dumps(data))
+        return profile
+
+    def test_managed_policy_restores_the_current_gtk_values(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            profile=self._profile(tmp,restore_theme='stale-declared',restore_size=96)
+            env={'HYPRLAND_INSTANCE_SIGNATURE':'fresh-login'}
+            with patch.object(cursor_theme,'PROFILE',profile),patch.object(cursor_theme,'command',side_effect=["'Bibata-Modern'",'42']):
+                saved=cursor_theme.snapshot(env)
+        self.assertEqual(saved['gtk_theme'],'Bibata-Modern')
+        self.assertEqual(saved['gtk_size'],42)
+        self.assertEqual((saved['hypr_theme'],saved['hypr_size']),('Bibata-Modern',42),
+                         'the declared stale restores are ignored under managed policy')
+        self.assertEqual(saved['restore_source'],'gtk-baseline')
+
+    def test_managed_policy_requires_the_declared_fresh_instance(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            profile=self._profile(tmp)
+            with patch.object(cursor_theme,'PROFILE',profile),patch.object(cursor_theme,'command') as command:
+                with self.assertRaisesRegex(RuntimeError,'require fresh login'):
+                    cursor_theme.snapshot({'HYPRLAND_INSTANCE_SIGNATURE':'setup-login'})
+                self.assertEqual(command.call_count,0,'refused before any desktop query')
+
+    def test_missing_compositor_instance_is_refused_before_queries(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            profile=self._profile(tmp)
+            with patch.object(cursor_theme,'PROFILE',profile),patch.object(cursor_theme,'command') as command:
+                for env in ({},{'HYPRLAND_INSTANCE_SIGNATURE':'  '}):
+                    with self.subTest(env=env):
+                        with self.assertRaisesRegex(RuntimeError,'require a compositor instance'):
+                            cursor_theme.snapshot(env)
+                command.assert_not_called()
+
+    def test_unknown_restore_mode_is_refused_before_queries(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            profile=self._profile(tmp,restore_mode='guess')
+            with patch.object(cursor_theme,'PROFILE',profile),patch.object(cursor_theme,'command') as command:
+                with self.assertRaisesRegex(ValueError,'unknown restore_mode'):
+                    cursor_theme.snapshot({'HYPRLAND_INSTANCE_SIGNATURE':'fresh-login'})
+                command.assert_not_called()
+
+    def test_agent_theme_is_validated_before_any_instance_check(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            profile=self._profile(tmp,theme='bad theme; injected')
+            with patch.object(cursor_theme,'PROFILE',profile),patch.object(cursor_theme,'command') as command:
+                with self.assertRaises(ValueError):
+                    cursor_theme.snapshot({'HYPRLAND_INSTANCE_SIGNATURE':'fresh-login'})
+                command.assert_not_called()
+
+    def test_invalid_gtk_values_refuse_before_apply(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            profile=self._profile(tmp)
+            env={'HYPRLAND_INSTANCE_SIGNATURE':'fresh-login'}
+            with patch.object(cursor_theme,'PROFILE',profile),patch.object(cursor_theme,'command',side_effect=["'ok'",'24']):
+                saved=cursor_theme.snapshot(env)
+        with patch.object(cursor_theme,'command',return_value='ok') as command:
+            cursor_theme.apply({},'cu-agent-v1',saved['agent_size'])
+        self.assertEqual(command.call_args_list[-1].args[:3],({},'hyprctl','setcursor'))
+
+
+class SearchRoots(unittest.TestCase):
+    """The Xcursor search path, read from the library rather than assumed."""
+
+    def test_it_runs_one_static_ctypes_probe_with_the_supplied_env(self):
+        env={'XCURSOR_PATH':'/override','PATH':'/usr/bin'}
+        with patch.object(cursor_theme,'command',return_value='/usr/share/icons') as command:
+            roots=cursor_theme.search_roots(env)
+        command.assert_called_once_with(env, sys.executable, '-c',
+                                        cursor_theme.SEARCH_ROOTS_CODE)
+        code=cursor_theme.SEARCH_ROOTS_CODE
+        self.assertIn("ctypes.CDLL('libXcursor.so.1')", code)
+        self.assertIn('XcursorLibraryPath.restype = ctypes.c_char_p', code)
+        self.assertIn('.decode()', code)
+        self.assertEqual(roots, [Path('/usr/share/icons')])
+
+    def test_the_environment_override_and_tilde_are_expanded(self):
+        with tempfile.TemporaryDirectory() as home, patch.dict(os.environ, {'HOME': home}), \
+             patch.object(cursor_theme,'command',return_value='~/.local/share/icons:/tmp/x:'):
+            roots=cursor_theme.search_roots({})
+        self.assertEqual(roots, [Path(home).resolve()/'.local/share/icons', Path('/tmp/x')])
+        self.assertTrue(all(root.is_absolute() for root in roots))
+
+    def test_empty_and_blank_components_are_dropped(self):
+        for raw, expected in (('', []), (':', []), ('/a::/b', [Path('/a'), Path('/b')])):
+            with self.subTest(raw=raw), patch.object(cursor_theme,'command',return_value=raw):
+                self.assertEqual(cursor_theme.search_roots({}), expected)
+
+    def test_a_missing_library_fails_loudly(self):
+        with patch.object(cursor_theme,'command',
+                          side_effect=subprocess.CalledProcessError(1, 'probe')):
+            with self.assertRaises(subprocess.CalledProcessError):
+                cursor_theme.search_roots({})
+
+    @unittest.skipUnless(ctypes.util.find_library('Xcursor'),
+                         'libXcursor.so.1 is not installed here')
+    def test_real_probe_reports_absolute_paths_without_a_display(self):
+        env=dict(os.environ)
+        env.pop('XCURSOR_PATH', None)
+        env.pop('DISPLAY', None)
+        env.pop('WAYLAND_DISPLAY', None)
+        roots=cursor_theme.search_roots(env)
+        self.assertIsInstance(roots, list)
+        self.assertTrue(roots, 'a compiled Xcursor default is always reported')
+        self.assertTrue(all(root.is_absolute() for root in roots))
+
+
+if __name__ == '__main__':
+    unittest.main()

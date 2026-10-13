@@ -43,3 +43,5 @@ backups/
 /skill/references/validation.md
 /native/agent-cursor.json
 /native/require-liquid
+/native/visuals.json
+/native/visuals-login.lua

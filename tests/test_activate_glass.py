@@ -50,6 +50,14 @@ class Activation(unittest.TestCase):
             self.assertEqual(query.call_args_list[3].args[0][1], 'eval')
             ready.assert_called_once_with({})
 
+    def test_fresh_login_gate_is_the_last_check_before_loading(self):
+        with patch.object(module.subprocess,'check_output',side_effect=['{"abiHash":"expected"}','[]']) as query:
+            gate=unittest.mock.Mock(side_effect=RuntimeError('login is too old'))
+            with self.assertRaisesRegex(RuntimeError,'too old'):
+                module.activate(self.library,'expected',{},before_load=gate)
+            self.assertEqual(query.call_count,2)
+            gate.assert_called_once_with()
+
     def test_failed_load_never_applies_profile(self):
         with patch.object(module.subprocess, 'check_output', side_effect=['{"abiHash":"expected"}', '[]', 'error']) as query:
             with self.assertRaisesRegex(RuntimeError, 'load refused'):
