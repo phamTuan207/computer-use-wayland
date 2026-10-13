@@ -2,6 +2,7 @@
 import json
 import os
 from pathlib import Path
+import shutil
 import signal
 import subprocess
 import sys
@@ -13,6 +14,7 @@ from unittest.mock import patch
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/'scripts'))
 import cursor_session as session
+import cursor_theme
 import cu
 
 FAKE = '''#!/usr/bin/env python3
@@ -90,6 +92,17 @@ class Lifecycle(unittest.TestCase):
                         XDG_CACHE_HOME=str(self.folder/'cache'),FAKE_DESKTOP=str(self.desktop))
         self.state=self.folder/'cache'/'agent-computer-use'
         self.processes=[]
+        # Lifecycle subprocesses run a private copy of the project with an empty
+        # native/ directory, so a generated native/agent-cursor.json or
+        # native/require-liquid in the checkout can never make these fail.
+        self.runtime=self.folder/'runtime'
+        shutil.copytree(ROOT/'scripts',self.runtime/'scripts',
+                        ignore=shutil.ignore_patterns('__pycache__'))
+        (self.runtime/'native').mkdir()
+        # In-process guards read cursor_theme.PROFILE directly; point them at the
+        # same empty native/ so a generated profile cannot leak in either.
+        patcher=patch.object(cursor_theme,'PROFILE',self.runtime/'native/agent-cursor.json')
+        patcher.start();self.addCleanup(patcher.stop)
 
     def tearDown(self):
         for p in self.processes:
@@ -98,12 +111,16 @@ class Lifecycle(unittest.TestCase):
             except subprocess.TimeoutExpired:p.kill();p.communicate()
         self.tmp.cleanup()
 
+    def script(self,name):
+        """A script inside the isolated runtime, never the checkout itself."""
+        return str(self.runtime/'scripts'/name)
+
     def configure(self,**values):
         data=json.loads(self.desktop.read_text());data.update(values)
         self.desktop.write_text(json.dumps(data))
 
     def launch(self,code):
-        p=subprocess.Popen([sys.executable,str(ROOT/'scripts/cu.py'),'session','--',
+        p=subprocess.Popen([sys.executable,self.script('cu.py'),'session','--',
                             sys.executable,'-c',code],env=self.env,
                            stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
         self.processes.append(p);return p
@@ -144,18 +161,18 @@ class Lifecycle(unittest.TestCase):
 
     def test_session_between_commands_and_finish_cleans_up(self):
         marker=self.folder/'driver-ready'
-        args=repr([sys.executable,str(ROOT/'scripts/cu.py'),'status'])
+        args=repr([sys.executable,self.script('cu.py'),'status'])
         code='import subprocess,time;from pathlib import Path;subprocess.run('+args+',check=True);subprocess.run('+args+',check=True);Path('+repr(str(marker))+').touch();time.sleep(30)'
         p=self.launch(code);self.wait_for(marker.exists)
         time.sleep(.1)
         self.assertTrue((self.state/'session.json').exists())
-        subprocess.run([sys.executable,str(ROOT/'scripts/cu.py'),'finish'],env=self.env,
+        subprocess.run([sys.executable,self.script('cu.py'),'finish'],env=self.env,
                        capture_output=True,check=True,timeout=4)
         p.communicate(timeout=8);self.assert_restored()
 
     def test_escape_cancel_cleans_up(self):
         p=self.idle()
-        subprocess.run([sys.executable,str(ROOT/'scripts/cancel_hotkey.py'),'cancel'],env=self.env,
+        subprocess.run([sys.executable,self.script('cancel_hotkey.py'),'cancel'],env=self.env,
                        capture_output=True,check=True,timeout=4)
         p.communicate(timeout=8);self.assert_restored()
         self.assertTrue((self.state/'cancelled').exists())
@@ -164,7 +181,7 @@ class Lifecycle(unittest.TestCase):
         for args in (['browser','observe'],['observe','--screen','missing']):
             with self.subTest(args=args):
                 # Let the wrapper stay alive if a buggy command forgets to end it.
-                code='import subprocess,time;subprocess.run('+repr([sys.executable,str(ROOT/'scripts/cu.py'),*args])+');time.sleep(30)'
+                code='import subprocess,time;subprocess.run('+repr([sys.executable,self.script('cu.py'),*args])+');time.sleep(30)'
                 p=self.launch(code);p.communicate(timeout=8)
                 self.assertNotEqual(p.returncode,0);self.assert_restored()
 
@@ -259,7 +276,7 @@ class Lifecycle(unittest.TestCase):
         self.assertIn('snapshot retained',err)
         self.assertTrue((self.state/'session.json').exists())
         self.configure(unbind_failure=False)
-        result=subprocess.run([sys.executable,str(ROOT/'scripts/cu.py'),'recover'],env=self.env,
+        result=subprocess.run([sys.executable,self.script('cu.py'),'recover'],env=self.env,
                               capture_output=True,text=True,timeout=8)
         self.assertEqual(result.returncode,0,result.stderr);self.assert_restored()
 
@@ -292,7 +309,7 @@ class Lifecycle(unittest.TestCase):
     def test_gate_eof_never_starts_driver(self):
         read_fd,write_fd=os.pipe()
         marker=self.folder/'must-not-run'
-        p=subprocess.Popen([sys.executable,str(ROOT/'scripts/cursor_session.py'),'driver',str(read_fd),
+        p=subprocess.Popen([sys.executable,self.script('cursor_session.py'),'driver',str(read_fd),
                             sys.executable,'-c','from pathlib import Path;Path('+repr(str(marker))+').touch()'],
                            env=self.env,pass_fds=(read_fd,),stdout=subprocess.PIPE,stderr=subprocess.PIPE)
         self.processes.append(p)

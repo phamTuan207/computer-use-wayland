@@ -3,6 +3,7 @@ import io
 import json
 import os
 from pathlib import Path
+import shutil
 import socket
 import sys
 import tempfile
@@ -12,6 +13,31 @@ from unittest.mock import Mock, patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
 import indicator
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+class IsolatedNativeTree(unittest.TestCase):
+    """Give each test its own scripts/indicator.py above an empty native/ directory.
+
+    A checkout may legitimately carry a generated native/require-liquid and
+    native/agent-cursor.json after a standard setup. Reading the marker from the
+    checkout would make these fallback tests describe that machine, not the code.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.native = Path(self.tmp.name) / 'native'
+        self.native.mkdir()
+        scripts = Path(self.tmp.name) / 'scripts'
+        scripts.mkdir()
+        self.indicator_copy = scripts / 'indicator.py'
+        shutil.copyfile(ROOT / 'scripts/indicator.py', self.indicator_copy)
+        patcher = patch.object(indicator, '__file__', str(self.indicator_copy))
+        patcher.start()
+        self.addCleanup(patcher.stop)
 
 
 class Endpoint(unittest.TestCase):
@@ -65,7 +91,7 @@ class RequestState(unittest.TestCase):
                 indicator.request(self.state, 'hide')
 
 
-class NativeStartup(unittest.TestCase):
+class NativeStartup(IsolatedNativeTree):
     def test_final_profile_ignores_path_override_and_entrance(self):
         with patch.object(indicator.Path, 'exists', return_value=True), \
                 patch.object(indicator, '_status', return_value={}), \
@@ -262,7 +288,7 @@ class LiquidAvailable(unittest.TestCase):
                 run.assert_not_called()
 
 
-class LiquidLifecycle(unittest.TestCase):
+class LiquidLifecycle(IsolatedNativeTree):
     env = {'HYPRLAND_INSTANCE_SIGNATURE': 'sig', 'WAYLAND_DISPLAY': 'wayland-1', 'PATH': '/usr/bin'}
 
     def helper(self, payload=b'ready\n'):
@@ -396,7 +422,7 @@ class SocketProtocol(unittest.TestCase):
         self.assertEqual(native.commands, [])
 
 
-class LiquidSelection(unittest.TestCase):
+class LiquidSelection(IsolatedNativeTree):
     env = {'HYPRLAND_INSTANCE_SIGNATURE': 'sig', 'WAYLAND_DISPLAY': 'wayland-1', 'PATH': '/usr/bin'}
 
     def status(self, **overrides):
