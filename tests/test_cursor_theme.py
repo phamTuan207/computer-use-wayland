@@ -53,39 +53,33 @@ class CursorTheme(unittest.TestCase):
 
     def _profile(self,tmp,**extra):
         profile=Path(tmp)/'profile.json'
-        data=dict(theme='cu-agent-v1',size=32,restore_mode='gtk',ready_instance='fresh-login')
+        data=dict(theme='cu-agent-v1',size=32,restore_theme='Manual-base',restore_size=32)
         data.update(extra)
         profile.write_text(json.dumps(data))
         return profile
 
-    def test_managed_policy_restores_the_current_gtk_values(self):
+    def test_declared_compositor_restore_stays_distinct_from_actual_gtk(self):
         with tempfile.TemporaryDirectory() as tmp:
-            profile=self._profile(tmp,restore_theme='stale-declared',restore_size=96)
-            env={'HYPRLAND_INSTANCE_SIGNATURE':'fresh-login'}
-            with patch.object(cursor_theme,'PROFILE',profile),patch.object(cursor_theme,'command',side_effect=["'Bibata-Modern'",'42']):
-                saved=cursor_theme.snapshot(env)
-        self.assertEqual(saved['gtk_theme'],'Bibata-Modern')
-        self.assertEqual(saved['gtk_size'],42)
-        self.assertEqual((saved['hypr_theme'],saved['hypr_size']),('Bibata-Modern',42),
-                         'the declared stale restores are ignored under managed policy')
-        self.assertEqual(saved['restore_source'],'gtk-baseline')
+            profile=self._profile(tmp,restore_theme='Manual-base',restore_size=32)
+            with patch.object(cursor_theme,'PROFILE',profile),patch.object(cursor_theme,'command',side_effect=["'GTK-base'",'24']):
+                saved=cursor_theme.snapshot({})
+        self.assertEqual((saved['gtk_theme'],saved['gtk_size']),('GTK-base',24))
+        self.assertEqual((saved['hypr_theme'],saved['hypr_size']),('Manual-base',32))
 
-    def test_managed_policy_requires_the_declared_fresh_instance(self):
+    def test_missing_restore_fields_refuse_before_desktop_queries(self):
         with tempfile.TemporaryDirectory() as tmp:
             profile=self._profile(tmp)
+            profile.write_text(json.dumps({'theme':'cu-agent-v1','size':34}))
             with patch.object(cursor_theme,'PROFILE',profile),patch.object(cursor_theme,'command') as command:
-                with self.assertRaisesRegex(RuntimeError,'require fresh login'):
-                    cursor_theme.snapshot({'HYPRLAND_INSTANCE_SIGNATURE':'setup-login'})
-                self.assertEqual(command.call_count,0,'refused before any desktop query')
+                with self.assertRaises(KeyError):cursor_theme.snapshot({})
+                command.assert_not_called()
 
-    def test_missing_compositor_instance_is_refused_before_queries(self):
+    def test_gtk_guessing_policy_is_refused_before_desktop_queries(self):
         with tempfile.TemporaryDirectory() as tmp:
-            profile=self._profile(tmp)
+            profile=self._profile(tmp,restore_mode='gtk')
             with patch.object(cursor_theme,'PROFILE',profile),patch.object(cursor_theme,'command') as command:
-                for env in ({},{'HYPRLAND_INSTANCE_SIGNATURE':'  '}):
-                    with self.subTest(env=env):
-                        with self.assertRaisesRegex(RuntimeError,'require a compositor instance'):
-                            cursor_theme.snapshot(env)
+                with self.assertRaisesRegex(ValueError,'unknown restore_mode'):
+                    cursor_theme.snapshot({})
                 command.assert_not_called()
 
     def test_unknown_restore_mode_is_refused_before_queries(self):

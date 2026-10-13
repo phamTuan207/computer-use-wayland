@@ -155,7 +155,7 @@ def _load(name, path):
     return module
 
 
-def _preflight(env, config_path, data_dir, bin_dir):
+def _preflight(env, config_path, data_dir, bin_dir, restore_theme=None, restore_size=None):
     """Everything that can refuse, before a single build or write happens."""
     if env.get('CU_SESSION_TOKEN') or os.environ.get('CU_SESSION_TOKEN'):
         raise RuntimeError('setup refuses to run inside an automation session')
@@ -183,7 +183,10 @@ def _preflight(env, config_path, data_dir, bin_dir):
     for name, path in owned.items():
         if path.is_symlink() or (path.exists() and not path.is_file()):
             raise ValueError(f'{name} must be a regular file')
-    _validate_profile(cursor_theme.PROFILE)
+    # Both the existing profile and the requested declaration are settled before the
+    # library probe, the header check and the build, so a refusal costs nothing.
+    profile, profile_bytes = _validate_profile(cursor_theme.PROFILE)
+    requested = _requested_restore(profile, restore_theme, restore_size)
     if ICON_DIRECTORY.resolve() not in cursor_theme.search_roots(env):
         raise RuntimeError('Xcursor search path excludes the user icon directory; check XCURSOR_PATH')
     hook = _hook_command()
@@ -192,7 +195,7 @@ def _preflight(env, config_path, data_dir, bin_dir):
     if initial != json.loads(_checked(['hyprctl', '-j', 'version'], env=env).stdout)['abiHash']:
         raise RuntimeError('header ABI does not match the running compositor')
     _require_no_plugins(env)
-    return initial
+    return initial, requested, profile_bytes
 
 
 def _hook_command():
@@ -210,12 +213,13 @@ def _require_no_plugins(env):
 
 
 def _validate_profile(path):
-    """Validate an existing profile without touching it; returns None when absent."""
+    """Validate an existing profile without touching it; retain its exact bytes."""
     import cursor_theme
     if not path.is_file():
-        return None
+        return None, None
+    raw = path.read_bytes()
     try:
-        profile = json.loads(path.read_text())
+        profile = json.loads(raw)
     except json.JSONDecodeError as error:
         raise ValueError('cursor profile is not valid JSON') from error
     if not isinstance(profile, dict):
@@ -224,26 +228,46 @@ def _validate_profile(path):
         cursor_theme.validate(profile['theme'], profile['size'])
     except KeyError as error:
         raise ValueError('cursor profile is missing theme or size') from error
-    if profile.get('restore_mode') not in (None, 'gtk'):
-        raise ValueError('unknown restore_mode: '+repr(profile.get('restore_mode')))
-    if profile.get('restore_mode') is None:
-        try:
-            cursor_theme.validate(profile['restore_theme'], profile['restore_size'])
-        except KeyError as error:
-            raise ValueError('legacy cursor profile is missing its restore fields') from error
-    return profile
+    if profile.get('restore_mode') is not None:
+        # The GTK baseline was an unpublished experiment, not a compatibility need.
+        raise ValueError('this setup only supports an explicit manual restore declaration; '
+                         'remove restore_mode from native/agent-cursor.json')
+    try:
+        cursor_theme.validate(profile['restore_theme'], profile['restore_size'])
+    except KeyError as error:
+        raise ValueError('cursor profile is missing restore_theme or restore_size') from error
+    return profile, raw
 
 
-def _cursor_profile():
-    """Preserve a legacy profile byte for byte; manage only the GTK-mode profile."""
+def _requested_restore(profile, restore_theme, restore_size):
+    """The manual restore declaration to store, or None when a profile already holds one.
+
+    There is no way to read the compositor's previous cursor back, so a new profile
+    must be told the exact values by the user. Nothing here ever guesses them.
+    """
     import cursor_theme
-    path = cursor_theme.PROFILE
-    original = path.read_bytes() if path.is_file() else None
-    profile = _validate_profile(path)
-    return profile, original
+    given = (restore_theme, restore_size)
+    if (restore_theme is None) != (restore_size is None):
+        raise ValueError('a new cursor profile needs both --restore-theme and --restore-size')
+    if profile is None and restore_theme is None:
+        raise ValueError('a new cursor profile needs both --restore-theme and --restore-size; '
+                         'the previous Hyprland cursor cannot be read back')
+    if profile is not None:
+        if restore_theme is None:
+            return None                       # the existing declaration is authoritative
+        current = (profile['restore_theme'], profile['restore_size'])
+        if given != current:
+            raise ValueError(f'the existing cursor profile already declares {current[0]} / '
+                             f'{current[1]}; refusing to overwrite it with {restore_theme} / {restore_size}')
+        return None
+    try:
+        cursor_theme.validate(restore_theme, restore_size)
+    except ValueError as error:
+        raise ValueError('invalid restore declaration: ' + str(error)) from error
+    return given
 
 
-def setup(config_path, data_dir, bin_dir):
+def setup(config_path, data_dir, bin_dir, restore_theme=None, restore_size=None):
     """Prepare the default visuals. Publishes the manifest last; never activates."""
     import cursor_session
     if os.environ.get('CU_SESSION_TOKEN'):
@@ -252,10 +276,10 @@ def setup(config_path, data_dir, bin_dir):
     with cursor_session.owner_lock():
         if cursor_session.SNAPSHOT.exists():
             raise RuntimeError('a retained session record exists; recover it before setup')
-        return _setup(config_path, data_dir, bin_dir)
+        return _setup(config_path, data_dir, bin_dir, restore_theme, restore_size)
 
 
-def _setup(config_path, data_dir, bin_dir):
+def _setup(config_path, data_dir, bin_dir, restore_theme=None, restore_size=None):
     import cursor_session
     import cursor_theme
     import cu
@@ -264,7 +288,8 @@ def _setup(config_path, data_dir, bin_dir):
     data_dir, bin_dir = Path(data_dir).resolve(), Path(bin_dir).resolve()
     if env.get('CU_SESSION_TOKEN'):
         raise RuntimeError('setup refuses to run inside an automation session')
-    initial = _preflight(env, config_path, data_dir, bin_dir)
+    initial, requested, profile_bytes = _preflight(env, config_path, data_dir, bin_dir,
+                                                   restore_theme, restore_size)
     with tempfile.TemporaryDirectory(prefix='cu-setup-') as folder:
         owned = Path(folder)
         source = owned/'hyprglass'
@@ -285,18 +310,26 @@ def _setup(config_path, data_dir, bin_dir):
         if cursor_session.SNAPSHOT.exists():
             raise RuntimeError('a session started during setup; '
                                'aborted before anything was installed or published')
+        profile_path = cursor_theme.PROFILE
+        current_bytes = profile_path.read_bytes() if profile_path.is_file() else None
+        if profile_path.is_symlink() or current_bytes != profile_bytes:
+            raise RuntimeError('cursor profile changed during build; refusing to publish visuals')
         plugins = data_dir/'agent-computer-use/plugins'
         plugins.mkdir(parents=True, exist_ok=True)
         cursor = _load('build_cursor', ROOT/'scripts/build-cursor.py')
         theme, _existed = cursor.install(ICON_DIRECTORY)
         glass = _load('install_glass', ROOT/'scripts/install-glass.py')
         installed = glass.install(library, plugins)
-        profile, original = _cursor_profile()
-        if original is None or profile.get('restore_mode') == 'gtk':
-            managed = {'theme': theme.name, 'size': 34, 'restore_mode': 'gtk'}
-            # A new profile is not ready until a fresh login records the instance.
-            atomic_write(cursor_theme.PROFILE,
-                         (json.dumps(managed, indent=2) + '\n').encode())
+        current_bytes = profile_path.read_bytes() if profile_path.is_file() else None
+        if profile_path.is_symlink() or current_bytes != profile_bytes:
+            raise RuntimeError('cursor profile changed during install; refusing to publish visuals')
+        if requested is not None:
+            declared = {'theme': theme.name, 'size': 34,
+                        'restore_theme': requested[0], 'restore_size': requested[1]}
+            with open(profile_path, 'xb', opener=lambda path, flags:os.open(path, flags, 0o600)) as stream:
+                stream.write((json.dumps(declared, indent=2) + '\n').encode())
+                stream.flush()
+                os.fsync(stream.fileno())
         atomic_write(ROOT/'native/require-liquid', b'')
         install_hook(config_path, _hook_command(), ROOT/'native/visuals-login.lua')
         manifest = {'version': 1,
@@ -325,8 +358,13 @@ def main(argv=None):
                         default=Path(os.environ.get('XDG_CONFIG_HOME', Path.home()/'.config'))/'hypr/hyprland.lua')
     parser.add_argument('--data-dir', type=Path, default=default_data)
     parser.add_argument('--bin-dir', type=Path, default=Path.home()/'.local/bin')
+    parser.add_argument('--restore-theme',
+                        help='the cursor theme Hyprland used before this setup, e.g. Adwaita')
+    parser.add_argument('--restore-size', type=int,
+                        help='the cursor size Hyprland used before this setup, e.g. 24')
     arguments = parser.parse_args(argv)
-    result = setup(arguments.hypr_config, arguments.data_dir, arguments.bin_dir)
+    result = setup(arguments.hypr_config, arguments.data_dir, arguments.bin_dir,
+                   arguments.restore_theme, arguments.restore_size)
     print(json.dumps(result))
     print('log out and back in to finish: the visuals are prepared, not active.')
     return 0 if result['ok'] else 1

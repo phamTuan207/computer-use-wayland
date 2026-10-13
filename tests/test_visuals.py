@@ -73,16 +73,16 @@ class LoginTests(unittest.TestCase):
             callback=activate.call_args.kwargs['before_load'];callback()
             gate.assert_called_once_with(self.env)
 
-    def test_managed_login_establishes_gtk_baseline_before_marking_ready(self):
-        directory=self.dir/'cu-agent-fixture'
-        directory.mkdir()
+    def test_login_leaves_cursor_and_profile_unchanged(self):
+        directory=self.dir/'cu-agent-fixture';directory.mkdir()
         profile=visuals.cursor_theme.PROFILE
-        profile.write_text(json.dumps({'theme':'cu-agent-fixture','size':34,'restore_mode':'gtk'}))
+        profile.write_text(json.dumps({'theme':directory.name,'size':34,'restore_theme':'Manual-base','restore_size':32}))
+        original=profile.read_bytes()
         self.write(cursor_directory=str(directory),cursor_tree_sha256='fixture')
-        with mock.patch.object(visuals.cursor_theme,'search_roots',return_value=[self.dir]),mock.patch.object(visuals.runpy,'run_path',return_value={'tree_digest':lambda _: 'fixture'}),mock.patch.object(visuals.cursor_theme,'gtk_state',return_value=('GTK-base',24)),mock.patch.object(visuals.cursor_theme,'command',return_value='ok') as command:
+        with mock.patch.object(visuals.cursor_theme,'search_roots',return_value=[self.dir]),mock.patch.object(visuals.runpy,'run_path',return_value={'tree_digest':lambda _: 'fixture'}),mock.patch.object(visuals.cursor_theme,'gtk_state') as gtk,mock.patch.object(visuals.cursor_theme,'command') as command:
             visuals.login(self.manifest,self.env)
-            command.assert_called_once_with(self.env,'hyprctl','setcursor','GTK-base','24')
-        self.assertEqual(json.loads(profile.read_text())['ready_instance'],'fresh-login')
+            gtk.assert_not_called();command.assert_not_called()
+        self.assertEqual(profile.read_bytes(),original)
 
     def test_retained_or_concurrent_session_prevents_activation(self):
         visuals.cursor_session.SNAPSHOT.write_text('{}')
@@ -95,9 +95,9 @@ class LoginTests(unittest.TestCase):
                 visuals.login(self.manifest,self.env)
         self.activation.assert_not_called()
 
-    def test_managed_cursor_search_path_and_tree_are_checked_before_activation(self):
+    def test_generated_cursor_search_path_and_tree_are_checked_before_activation(self):
         directory=self.dir/'cu-agent-fixture';directory.mkdir()
-        visuals.cursor_theme.PROFILE.write_text(json.dumps({'theme':directory.name,'size':34,'restore_mode':'gtk'}))
+        visuals.cursor_theme.PROFILE.write_text(json.dumps({'theme':directory.name,'size':34,'restore_theme':'Manual-base','restore_size':32}))
         self.write(cursor_directory=str(directory),cursor_tree_sha256='fixture')
         with mock.patch.object(visuals.cursor_theme,'search_roots',return_value=[]):
             with self.assertRaisesRegex(ValueError,'Xcursor search path'):

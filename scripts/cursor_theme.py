@@ -55,19 +55,8 @@ def snapshot(env):
     if not isinstance(profile,dict):raise ValueError('cursor profile must be an object')
     validate(profile['theme'],profile['size'])
     mode = profile.get('restore_mode')
-    if mode not in (None,'gtk'):
+    if mode is not None:
         raise ValueError('unknown restore_mode: '+repr(mode))
-    if mode == 'gtk':
-        # Managed policy: the declared compositor baseline is GTK, and GTK values
-        # are never presented as a measurement of the running compositor.
-        instance = (env.get('HYPRLAND_INSTANCE_SIGNATURE') or '').strip()
-        if not instance:
-            raise RuntimeError('automatic visuals require a compositor instance')
-        if instance != profile.get('ready_instance'):
-            raise RuntimeError('automatic visuals require fresh login; profile is for another instance')
-        theme,size = gtk_state(env)
-        return {'gtk_theme':theme,'gtk_size':size,'hypr_theme':theme,'hypr_size':size,
-                'agent_theme':profile['theme'],'agent_size':profile['size'],'restore_source':'gtk-baseline'}
     validate(profile['restore_theme'],profile['restore_size'])
     theme,size = gtk_state(env)
     return {'gtk_theme':theme,'gtk_size':size,'hypr_theme':profile['restore_theme'],

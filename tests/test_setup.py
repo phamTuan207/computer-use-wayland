@@ -16,6 +16,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]/'scripts'))
 _spec = importlib.util.spec_from_file_location('setup', Path(__file__).resolve().parents[1]/'scripts/setup.py')
 setup = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(setup)
+import cursor_theme as real_cursor_theme
 
 COMMANDS = ('cc -shared -fPIC -o %s %s', 'x')
 
@@ -296,6 +297,12 @@ class _SetupFixture:
             return subprocess.CompletedProcess(argv, 0, payload, '')
         return subprocess.CompletedProcess(argv, 0, '', '')
 
+    def declared(self, **kwargs):
+        """A successful call declares the manual restore the user typed once."""
+        kwargs.setdefault('restore_theme', 'Adwaita')
+        kwargs.setdefault('restore_size', 24)
+        return setup.setup(self.config, self.data, self.bin, **kwargs)
+
     def _patched(self, installed=('installed.so',), exist_ok=False):
         self.snapshot.unlink(missing_ok=True)   # a clean machine for the happy paths
         stack = ExitStack()
@@ -313,7 +320,7 @@ class _SetupFixture:
                                             {'cursor_session': cursor_session, 'cu': cu,
                                              'cursor_theme': mock.Mock(
                                                  search_roots=mock.Mock(return_value=[self.data/'icons']),
-                                                 validate=mock.Mock(),
+                                                 validate=real_cursor_theme.validate,
                                                  PROFILE=self.root/'native/agent-cursor.json')}))
         stack.enter_context(mock.patch.object(setup, '_run', new=self._run))
         stack.enter_context(mock.patch.object(setup.shutil, 'which', new=lambda n, path=None: '/usr/bin/'+n))
@@ -363,13 +370,13 @@ class FullSetupTests(_SetupFixture, unittest.TestCase):
         self._patched()
         with mock.patch.object(sys.modules['cursor_theme'],'search_roots',return_value=[]):
             with self.assertRaisesRegex(RuntimeError,'Xcursor search path'):
-                setup.setup(self.config,self.data,self.bin)
+                self.declared()
         self.assertEqual(self.calls,[])
 
     def test_relative_cursor_install_result_is_serialized_as_absolute(self):
         cursor=self._patched()
         cursor.install.return_value=(Path('relative/cu-agent-tree'),False)
-        setup.setup(self.config,self.data,self.bin)
+        self.declared()
         manifest=json.loads((self.root/'native/visuals.json').read_text())
         self.assertTrue(Path(manifest['cursor_directory']).is_absolute())
 
@@ -394,7 +401,7 @@ class FullSetupTests(_SetupFixture, unittest.TestCase):
         self.plugins = '["some-plugin"]'      # a reload could disturb it
         self.calls.clear()
         with self.assertRaisesRegex(RuntimeError, 'plugins are already loaded'):
-            setup.setup(self.config, self.data, self.bin)
+            self.declared()
         self.calls.clear()
         self.assertFalse((self.root/'native/visuals.json').exists())
 
@@ -403,33 +410,34 @@ class FullSetupTests(_SetupFixture, unittest.TestCase):
         with mock.patch.object(setup.shutil, 'which',
                                new=lambda n, path=None: None if n=='cc' else '/usr/bin/'+n):
             with self.assertRaisesRegex(RuntimeError, 'missing prerequisite: cc'):
-                setup.setup(self.config, self.data, self.bin)
+                self.declared()
         self.assertEqual(self.calls, [])
 
     def test_abi_mismatch_refuses_before_any_write(self):
         self._patched()
         with mock.patch.object(setup, 'header_abi', new=mock.Mock(return_value='other')):
             with self.assertRaisesRegex(RuntimeError, 'header ABI does not match'):
-                setup.setup(self.config, self.data, self.bin)
+                self.declared()
         self.assertFalse((self.root/'native/visuals.json').exists())
 
     def test_edited_config_block_refuses_before_any_write(self):
         self._patched()
         self.config.write_text('# user\n-- computer-use-visuals-begin\n-- computer-use-visuals-end\n')
         with self.assertRaises(ValueError):
-            setup.setup(self.config, self.data, self.bin)
+            self.declared()
         self.assertEqual(self.calls, [])
 
     def test_pinned_clone_is_ordered_and_nothing_is_activated(self):
         cursor = self._patched()
-        result = setup.setup(self.config, self.data, self.bin)
+        result = self.declared()
         self.assertEqual(result, {'ok': True, 'restart_required': True,
                                   'cursor': 'automatic', 'liquid': 'prepared'})
         joined = ' '.join(' '.join(a) for a in self.calls)
         self.assertIn('--no-checkout', joined)
         self.assertIn(setup.GLASS_PIN, joined)
         self.assertIn('--local-optics', joined)
-        for forbidden in ('activate-glass', 'plugin load', 'restart', 'logout', 'resume', 'setcursor'):
+        for forbidden in ('activate-glass', 'plugin load', 'restart', 'logout', 'resume',
+                          'setcursor', 'gsettings'):
             self.assertNotIn(forbidden, joined, forbidden + ' must never run during setup')
         manifest = json.loads((self.root/'native/visuals.json').read_text())
         self.assertEqual(manifest['version'], 1)
@@ -437,7 +445,11 @@ class FullSetupTests(_SetupFixture, unittest.TestCase):
         self.assertEqual(manifest['cursor_tree_sha256'], 'tree')
         profile = json.loads((self.root/'native/agent-cursor.json').read_text())
         self.assertNotIn('ready_instance', profile)
+        self.assertNotIn('restore_mode', profile, 'the GTK experiment is gone')
         self.assertEqual(profile['size'], 34)
+        self.assertEqual(profile['restore_theme'], 'Adwaita')
+        self.assertEqual(profile['restore_size'], 24)
+        self.assertTrue(profile['theme'].startswith('cu-agent-'), profile['theme'])
         self.assertFalse((self.data/'agent-computer-use/native').exists(),
                          'the unused managed tree is never created')
         self.assertTrue((self.root/'native/visuals-login.lua').is_file())
@@ -450,7 +462,7 @@ class FullSetupTests(_SetupFixture, unittest.TestCase):
         original = b'{"theme":"old","size":24,"restore_theme":"default","restore_size":24}\n'
         target = self.root/'native/agent-cursor.json'      # the path cursor_theme actually reads
         target.write_bytes(original)
-        setup.setup(self.config, self.data, self.bin)
+        setup.setup(self.config, self.data, self.bin)   # an existing profile needs no flags
         self.assertEqual(target.read_bytes(), original)
 
     def test_a_failed_build_leaves_config_profile_and_link_untouched(self):
@@ -458,7 +470,7 @@ class FullSetupTests(_SetupFixture, unittest.TestCase):
         before = self.config.read_bytes()
         with mock.patch.object(setup, '_checked', side_effect=RuntimeError('build failed')):
             with self.assertRaisesRegex(RuntimeError, 'build failed'):
-                setup.setup(self.config, self.data, self.bin)
+                self.declared()
         self.assertEqual(self.config.read_bytes(), before)
         self.assertFalse((self.root/'native/visuals.json').exists())
         self.assertFalse((self.bin/'computer-use').exists())
@@ -476,10 +488,10 @@ class RerunAndDriftTests(_SetupFixture, unittest.TestCase):
 
     def test_two_runs_in_a_row_succeed_with_a_repaired_hook(self):
         self._patched()
-        setup.setup(self.config, self.data, self.bin)
+        self.declared()
         first = self.config.read_bytes()
         (self.root/'native/visuals-login.lua').unlink()      # missing owned hook
-        again = setup.setup(self.config, self.data, self.bin)
+        again = self.declared()
         self.assertTrue(again['ok'])
         self.assertEqual(self.config.read_bytes(), first, 'the managed block is not duplicated')
         self.assertTrue((self.root/'native/visuals-login.lua').is_file(), 'hook repaired')
@@ -490,7 +502,7 @@ class RerunAndDriftTests(_SetupFixture, unittest.TestCase):
         target = self.root/'native/agent-cursor.json'
         original = b'{"theme":"old","size":24,"restore_theme":"default","restore_size":24}\n'
         target.write_bytes(original)
-        setup.setup(self.config, self.data, self.bin)
+        setup.setup(self.config, self.data, self.bin)   # an existing profile needs no flags
         setup.setup(self.config, self.data, self.bin)
         self.assertEqual(target.read_bytes(), original)
 
@@ -502,7 +514,7 @@ class RerunAndDriftTests(_SetupFixture, unittest.TestCase):
             return 'abi' if calls['n'] == 1 else 'drifted'
         with mock.patch.object(setup, 'header_abi', new=mock.Mock(side_effect=drifting)):
             with self.assertRaisesRegex(RuntimeError, 'ABI drifted'):
-                setup.setup(self.config, self.data, self.bin)
+                self.declared()
         self.assertFalse((self.root/'native/visuals.json').exists())
         self.assertFalse((self.bin/'computer-use').exists())
 
@@ -520,7 +532,7 @@ class RerunAndDriftTests(_SetupFixture, unittest.TestCase):
         self.answer = answer
         self._patched()
         with self.assertRaisesRegex(RuntimeError, 'ABI drifted'):
-            setup.setup(self.config, self.data, self.bin)
+            self.declared()
         self.assertFalse((self.root/'native/visuals.json').exists())
 
     def test_a_plugin_loaded_during_the_build_blocks_the_config(self):
@@ -534,7 +546,7 @@ class RerunAndDriftTests(_SetupFixture, unittest.TestCase):
         self.answer = answer
         self._patched()
         with self.assertRaisesRegex(RuntimeError, 'plugins are already loaded'):
-            setup.setup(self.config, self.data, self.bin)
+            self.declared()
         self.assertNotIn('computer-use-visuals-begin', self.config.read_text())
         self._assert_nothing_installed_or_published()
 
@@ -561,13 +573,13 @@ class RerunAndDriftTests(_SetupFixture, unittest.TestCase):
         self.answer = answer
         self._patched()
         with self.assertRaisesRegex(RuntimeError, 'aborted before anything was installed'):
-            setup.setup(self.config, self.data, self.bin)
+            self.declared()
         self.assertIn('build-glass.py', ' '.join(' '.join(a) for a in seen))
         self._assert_nothing_installed_or_published()
 
     def test_the_manifest_carries_one_abi_key(self):
         self._patched()
-        setup.setup(self.config, self.data, self.bin)
+        self.declared()
         raw = (self.root/'native/visuals.json').read_text()
         self.assertEqual(raw.count('"abi":'), 1, 'one abi key, not a duplicated one')
         manifest = json.loads(raw)
@@ -580,7 +592,7 @@ class RerunAndDriftTests(_SetupFixture, unittest.TestCase):
         cursor = _cursor()
         with mock.patch.object(setup, '_load', new=mock.Mock(
                 side_effect=lambda name, path: glass if 'cursor' not in name else cursor)):
-            result = setup.setup(self.config, self.data, self.bin)
+            result = self.declared()
         self.assertTrue(result['ok'])
         source = Path(glass.install.call_args.args[0])
         self.assertEqual(source.name, 'hyprglass.so')
@@ -594,7 +606,7 @@ class RerunAndDriftTests(_SetupFixture, unittest.TestCase):
         cursor_session = _sys.modules['cursor_session']
         cursor_session.owner_lock = mock.MagicMock(
             side_effect=lambda: _Lock(held))
-        setup.setup(self.config, self.data, self.bin)
+        self.declared()
         self.assertEqual(held, [True, False], 'lock taken once and released')
 
     def test_invalid_profile_is_refused_before_any_build(self):
@@ -624,6 +636,105 @@ def _theme():
     module.validate = mock.Mock(side_effect=lambda theme, size: (
         None if isinstance(theme, str) and 16 <= size <= 96 else (_ for _ in ()).throw(ValueError('bad'))))
     return module
+
+
+class ManualRestoreDeclaration(_SetupFixture, unittest.TestCase):
+    """One-time declared restore values, never a guessed or GTK baseline."""
+
+    def test_a_new_profile_without_a_declaration_is_refused(self):
+        self._patched()
+        with self.assertRaisesRegex(ValueError, 'cannot be read back'):
+            setup.setup(self.config, self.data, self.bin)
+        self.assertEqual(self.calls, [], 'no external command ran')
+        self.assertFalse((self.root/'native/visuals.json').exists())
+        self.assertFalse((self.root/'native/agent-cursor.json').exists())
+        self.assertEqual(self.config.read_bytes(), b'# user config\n')
+
+    def test_a_partial_declaration_is_refused(self):
+        for args in (('Adwaita',), (None, 24)):
+            self._patched()
+            with self.subTest(args=args), self.assertRaisesRegex(ValueError, 'both --restore'):
+                setup.setup(self.config, self.data, self.bin, *args)
+            self.assertEqual(self.calls, [], 'no external command ran')
+
+    def test_an_invalid_declaration_is_refused(self):
+        for theme, size in (('bad name;', 24), ('Adwaita', 7), ('Adwaita', 128),
+                            ('Adwaita', '24'), ('', 24)):
+            self._patched()
+            with self.subTest(theme=theme, size=size), \
+                    self.assertRaisesRegex(ValueError, 'invalid restore declaration'):
+                setup.setup(self.config, self.data, self.bin, theme, size)
+            self.assertEqual(self.calls, [], 'no external command ran')
+
+    def test_an_existing_profile_with_the_same_declaration_is_accepted_and_untouched(self):
+        self._patched()
+        target = self.root/'native/agent-cursor.json'
+        original = b'{"theme":"old","size":24,"restore_theme":"Adwaita","restore_size":24}\n'
+        target.write_bytes(original)
+        self.assertTrue(self.declared()['ok'], 'identical declaration is not a conflict')
+        self.assertEqual(target.read_bytes(), original)
+
+    def test_an_existing_profile_with_a_different_declaration_is_refused(self):
+        self._patched()
+        target = self.root/'native/agent-cursor.json'
+        original = b'{"theme":"old","size":24,"restore_theme":"Adwaita","restore_size":24}\n'
+        target.write_bytes(original)
+        self.calls.clear()
+        with self.assertRaisesRegex(ValueError, 'refusing to overwrite'):
+            setup.setup(self.config, self.data, self.bin, 'Bibata', 32)
+        self.assertEqual(self.calls, [], 'no external command ran')
+        self.assertEqual(target.read_bytes(), original)
+        self.assertFalse((self.root/'native/visuals.json').exists())
+        self.assertEqual(self.config.read_bytes(), b'# user config\n')
+
+    def test_a_profile_created_during_build_is_not_overwritten(self):
+        self._patched()
+        target = self.root/'native/agent-cursor.json'
+        original = b'{"theme":"old","size":24,"restore_theme":"Manual","restore_size":24}\n'
+        default_run = self._default
+        def changed_during_build(argv, **kwargs):
+            if argv[0] == 'git' and not target.exists():
+                target.write_bytes(original)
+            return default_run(argv, **kwargs)
+        self.answer = changed_during_build
+        with self.assertRaisesRegex(RuntimeError, 'cursor profile changed during build'):
+            self.declared()
+        self.assertEqual(target.read_bytes(), original)
+        self.assertFalse((self.root/'native/visuals.json').exists())
+        self.assertEqual(self.config.read_bytes(), b'# user config\n')
+
+    def test_a_profile_created_during_install_is_not_overwritten(self):
+        cursor = self._patched()
+        target = self.root/'native/agent-cursor.json'
+        original = b'{"theme":"old","size":24,"restore_theme":"Manual","restore_size":24}\n'
+        def install(_):
+            target.write_bytes(original)
+            return self.data/'icons/cu-agent-hash', False
+        cursor.install.side_effect = install
+        with self.assertRaisesRegex(RuntimeError, 'cursor profile changed during install'):
+            self.declared()
+        self.assertEqual(target.read_bytes(), original)
+        self.assertFalse((self.root/'native/visuals.json').exists())
+        self.assertEqual(self.config.read_bytes(), b'# user config\n')
+
+    def test_a_gtk_or_unknown_profile_is_refused_outright(self):
+        for payload in (b'{"theme":"old","size":24,"restore_mode":"gtk"}',
+                        b'{"theme":"old","size":24,"restore_mode":"x11"}'):
+            self._patched()
+            with self.subTest(payload=payload):
+                (self.root/'native/agent-cursor.json').write_bytes(payload)
+                with self.assertRaisesRegex(ValueError, 'only supports an explicit manual'):
+                    setup.setup(self.config, self.data, self.bin)
+                self.assertEqual(self.calls, [])
+
+    def test_setup_never_touches_the_running_cursor(self):
+        self._patched()
+        self.declared()
+        joined = ' '.join(' '.join(argv) for argv in self.calls)
+        self.assertNotIn('gsettings', joined)
+        self.assertNotIn('setcursor', joined)
+
+
 
 
 if __name__ == '__main__':

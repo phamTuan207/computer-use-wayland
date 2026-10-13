@@ -1,9 +1,14 @@
 ## Automation sessions
 
 Standard setup and a fresh login enable the pill, liquid backdrop and temporary
-real cursor theme, restored by the guardian. New profiles use the declared GTK
-baseline; legacy explicit restore values remain supported. The normal-cursor
-behavior below describes a manual install without `native/agent-cursor.json`.
+real cursor theme, restored by the guardian. With no `native/agent-cursor.json`,
+setup requires `--restore-theme YOUR_CURRENT_HYPRLAND_THEME --restore-size
+YOUR_CURRENT_HYPRLAND_SIZE`, declared once: the compositor's cursor cannot be read
+back, and it is never guessed from GTK. An existing valid manual profile is kept
+byte for byte and needs no flags. Each session applies the agent cursor, restores
+those declared Hyprland values, and independently snapshots and restores GTK. The
+normal-cursor behavior below describes a manual install without
+`native/agent-cursor.json`.
 There is one shared pointer. Do not operate simultaneously.
 
 Run the whole task driver as `computer-use session -- DRIVER [ARGS...]`, not a
@@ -12,9 +17,11 @@ Input commands require a live session; standalone capture remains available.
 Sessions show a click-through layer-shell badge "Computer use active"; the badge takes
 no keyboard focus and lets clicks through. The badge surface asks the compositor for a
 per-surface backdrop blur (`ext_background-effect-v1`), applied only inside the rounded
-pill. The actual cursor stays normal: no marker is drawn and no cursor theme or screen
-scale changes. Window and screen captures both hide the badge for the shot and restore
-it after; hiding clears the blur region together with the pixels, so no blurred copy
+pill. With a cursor profile present, the shared pointer switches to the agent theme
+for the task and returns to the declared values when the task ends; no marker is
+drawn and the screen scale never changes. Without a profile — a manual install —
+the cursor stays normal throughout. Window and screen captures both hide the badge
+for the shot and restore it after; hiding clears the blur region together with the pixels, so no blurred copy
 survives in the capture. Outputs are taken once at startup: adding or removing a
 monitor mid-session ends the indicator.
 `finish` requests completion; `cancel` latches cancellation. Best-effort physical

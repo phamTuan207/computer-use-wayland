@@ -41,9 +41,10 @@ activate the plugin during a reload.
 Setup refuses to run — before building anything — when the compositor is not
 exactly `0.56.2`, when the header ABI does not match the running compositor,
 when a required dependency is missing, when any plugin is already loaded, when
-your config carries an edited managed block, or when it is running inside a
-`computer-use` session. It holds the session owner lock for the whole run so an
-automation cannot start mid-build.
+your config carries an edited managed block, when it is running inside a
+`computer-use` session, or when no cursor profile exists and you did not pass
+`--restore-theme` and `--restore-size`. It holds the session owner lock for the
+whole run so an automation cannot start mid-build.
 
 At the next fresh login the hook validates the manifest, the optics profile
 digest, the installed cursor tree and the recorded ABI, confirms the compositor

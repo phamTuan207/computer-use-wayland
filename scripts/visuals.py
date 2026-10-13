@@ -71,7 +71,7 @@ def require_fresh_login(env):
 
 
 def login(manifest, env):
-    """Exclude task sessions for the entire activation and cursor-baseline update."""
+    """Exclude task sessions for the entire backend activation."""
     if env.get('CU_SESSION_TOKEN') or os.environ.get('CU_SESSION_TOKEN'):
         raise RuntimeError('refusing to load visuals inside an automation session')
     with cursor_session.owner_lock():
@@ -110,27 +110,19 @@ def _login(manifest, env):
     profile=json.loads(raw)
     if not isinstance(profile,dict):raise ValueError('cursor profile must be an object')
     cursor_theme.validate(profile['theme'],profile['size'])
-    mode=profile.get('restore_mode')
-    if mode not in (None,'gtk'):raise ValueError('unknown cursor restoration policy')
-    if mode=='gtk':
-        directory=Path(manifest['cursor_directory'])
+    if profile.get('restore_mode') is not None:
+        raise ValueError('explicit cursor restoration values are required')
+    cursor_theme.validate(profile['restore_theme'],profile['restore_size'])
+    directory=Path(manifest['cursor_directory']) if 'cursor_directory' in manifest else None
+    if directory is not None and profile['theme']==directory.name:
         if not directory.is_absolute() or directory.is_symlink() or not directory.is_dir():
-            raise ValueError('managed cursor directory is unavailable')
+            raise ValueError('cursor directory is unavailable')
         if directory.parent.resolve() not in cursor_theme.search_roots(env):
-            raise ValueError('managed cursor is outside the Xcursor search path')
+            raise ValueError('cursor is outside the Xcursor search path')
         digest_tree=runpy.run_path(str(ROOT/'scripts/build-cursor.py'))['tree_digest'](directory)
         if digest_tree!=manifest['cursor_tree_sha256'] or profile['theme']!='cu-agent-'+digest_tree or directory.name!=profile['theme']:
-            raise ValueError('managed cursor tree differs from setup')
-        theme,size=cursor_theme.gtk_state(env)
-    else:
-        cursor_theme.validate(profile['restore_theme'],profile['restore_size'])
+            raise ValueError('cursor tree differs from setup')
     _activate(str(library), manifest['abi'], env)
-    if mode=='gtk':
-        if cursor_theme.command(env,'hyprctl','setcursor',theme,str(size))!='ok':
-            raise RuntimeError('managed cursor baseline refused')
-        if cursor_theme.PROFILE.read_bytes()!=raw:raise RuntimeError('cursor profile changed during login')
-        profile['ready_instance']=instance
-        atomic_write(cursor_theme.PROFILE,json.dumps(profile).encode())
     return {'ok': True}
 
 

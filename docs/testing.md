@@ -44,6 +44,11 @@ installation paths and login desktop effects were fixtures. The running
 compositor, installed plugin and real configuration were unchanged. This proves
 artifact preparation; activation at a real fresh login remains unverified.
 
+Setup tests declare their restore values explicitly with `--restore-theme` and
+`--restore-size`, or through a profile written by the test itself. No test infers
+a Hyprland cursor from GTK, and none asserts a cursor value from a real host; the
+GTK values a task captures and restores are exercised through fakes.
+
 ## Live fixtures (optional)
 
 Nothing here runs automatically on clone, and none of it assumes a specific

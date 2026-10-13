@@ -55,12 +55,20 @@ needs Python GObject/AT-SPI bindings; the safe demo fixture needs GTK bindings.
 ```sh
 git clone https://github.com/phamTuan207/computer-use-wayland
 cd computer-use-wayland
-python3 scripts/setup.py
+python3 scripts/setup.py \
+  --restore-theme YOUR_CURRENT_HYPRLAND_THEME \
+  --restore-size YOUR_CURRENT_HYPRLAND_SIZE
 ```
 
 Then **log out and log back in once.** That is the whole installation.
 
-With no flags it uses `~/.config/hypr/hyprland.lua`, your XDG data directory and
+The two `--restore-*` values are the Hyprland cursor theme and size you use
+**today**. Nothing can read them back from the compositor, so you declare them
+once, here. Setup stores them in the cursor profile and puts your original cursor
+back at the end of every task. If a valid `native/agent-cursor.json` already
+exists, setup keeps that file byte-identical and the two flags are not needed.
+
+For paths, setup uses `~/.config/hypr/hyprland.lua`, your XDG data directory and
 `~/.local/bin`. If your config or data layout differs, `--hypr-config`,
 `--data-dir` and `--bin-dir` take the alternatives; everything else is automatic.
 Cursor themes always go in `~/.local/share/icons`, independently of `--data-dir`.
@@ -85,39 +93,40 @@ or an unreadable config, setup stops with a message instead of guessing.
 
 At your next fresh login the generated hook runs once. It verifies the manifest,
 the pinned optics profile, the installed cursor tree and the recorded ABI, checks
-that the compositor really did just start, and only then loads the plugin. If any
-check fails it stops and says why; it does not fall back to a plain background
-and it does not claim a cursor state it could not measure.
+that the compositor really did just start, and only then loads the backend. If any
+check fails it stops and says why; it does not fall back to a plain background.
+Setup never hot-swaps or unloads a plugin the compositor is already running.
 
 ## Defaults after that first login
 
 Every session gets, with no further configuration:
 
 - the **session pill** ("Computer use active") overlay,
-- the **liquid glass** backdrop plugin,
-- a **34 px agent cursor** on the shared desktop pointer.
+- the **liquid glass** backdrop,
+- an agent cursor on the shared desktop pointer.
 
-### Cursor restoration policy
+### Cursor restoration
 
-The generated profile uses the **managed GTK** policy. At the first fresh login
-the loader synchronises the Hyprland cursor to the GTK cursor values, and the
-per-task guardian restores that GTK baseline at the end of each task.
+A task temporarily switches the desktop cursor to the agent theme, and at the end
+of the task the guardian puts **your declared Hyprland cursor** back. GTK is
+handled on its own track: the guardian also restores the GTK cursor values it
+recorded at task start.
 
-That baseline is a **policy, not a measurement**. There is no known read-only API
-that reports the compositor's previous cursor theme or size, so setup never claims
-to have captured your prior Hyprland cursor. If you had set the Hyprland cursor by
-hand and want those exact values restored instead, write
-`native/agent-cursor.json` yourself before running setup:
+Those restore values come only from the two `--restore-*` flags or from a profile
+you wrote yourself. Setup never infers the Hyprland cursor from GTK, and there is
+no read-only API that reports the compositor's current cursor back, so no value
+is ever guessed. If you would rather keep the file in your own hands, write
+`native/agent-cursor.json` before running setup and pass no flags:
 
 ```json
 {"theme":"your-built-theme","size":32,"restore_theme":"your-current-theme","restore_size":24}
 ```
 
-Setup preserves an existing such profile **byte for byte** and never rewrites it.
-Without it, setup writes the managed GTK profile, which is refused until a
-successful fresh login records the instance. A corrupt, unreadable or unknown
-profile fails closed. Nothing in setup or the loader resumes input automatically
-after cancellation.
+Setup preserves an existing valid profile **byte for byte** and never rewrites
+it; supplying the same two values again is accepted, different ones are refused.
+Without a profile and without the flags, setup refuses before building anything.
+A corrupt or unreadable profile fails closed. Nothing in setup or the loader
+resumes input automatically after cancellation.
 
 The vendored virtual-keyboard protocol comes from
 [wtype](https://github.com/atx/wtype/blob/master/protocol/virtual-keyboard-unstable-v1.xml);
@@ -226,7 +235,7 @@ secondary, developer-facing paths that standard setup already handles for you.
 
 **A hand-built cursor theme.** `python3 scripts/build-cursor.py THEME_DIR` builds
 an XCursor theme (needs Pillow and `rsvg-convert` at build time). To use it
-instead of the managed one, place `native/agent-cursor.json` in your CLI tree
+instead of the generated one, place `native/agent-cursor.json` in your CLI tree
 with the real restoration settings *before* running setup, so setup preserves it:
 
 ```json
