@@ -99,7 +99,7 @@ performs no input.
 `browser observe --scope SELECTOR` filters the observe enumeration to the
 interactive descendants of exactly one top-document root, plus that root when it
 is itself interactive. The scope is not retained between reads; an `act`
-after-snapshot is whole page again, and every action, focus and cancellation
+after-snapshot is whole page again unless `--after-scope` is explicit, and every action, focus and cancellation
 guard is unchanged. It is not an input, security or privacy boundary.
 
 Measured on the owned Chromium fixture, 3 blocks x 30 pairs = 90 samples per
@@ -127,6 +127,40 @@ The opt-in release passes the large-page output gate (>=50% fewer bytes).
 Use it to reduce irrelevant observation context; these measurements do not
 establish billed-token savings, model-time savings or a speed win. Default
 whole-page observation is unchanged.
+
+## Scoped successful after-snapshots
+
+`browser act --after-scope SELECTOR` returns the next snapshot from one panel
+after a successful action. Unlike `--no-after`, it supplies new refs for the next
+step. The option is explicit for each act; failures keep a whole-page diagnostic.
+If the requested root is unavailable after success, `after_unavailable` requires
+a fresh observe before more input. It does not restrict where actions can target.
+
+Source-tree Chromium fixture, one block of 30 AB/BA pairs at each page size.
+Both routes begin with the same scoped observe, then use the same
+`set_value`/Save/result-assert sequence; the candidate scopes only the successful
+after-snapshot. The timed span covers observe, ref selection, act and independent
+server POST verification, with a warm worker and a fresh CDP connection per
+request. Setup and model time are excluded. Bytes are re-encoded observe plus
+act JSON, not billed tokens. All 120 measured tasks and four warm-ups matched
+the independent app state; cleanup succeeded.
+
+| Extra controls | Full after median / p95 ms | Scoped after median / p95 ms | Median result bytes |
+|---|---:|---:|---:|
+| 0 | 64.732 / 67.385 | 65.699 / 67.758 | 663 -> 679 |
+| 1000 | 75.146 / 77.883 | 72.406 / 74.981 | 7363 -> 679 |
+
+The large fixture returns **90.78% fewer bytes**. Its 2.740 ms / 3.65% median
+time reduction does not meet the existing speed-win threshold (at least 10% and
+5 ms); the small page is 0.967 ms slower and adds 16 bytes. Use the option when
+irrelevant page controls dominate the result. These runs do not establish lower
+LLM token billing or lower end-to-end model task time.
+
+```sh
+report_dir=$(mktemp -d)
+python3 tests/browser_task_benchmark.py --report "$report_dir/after.json" \
+  --modes task-after-full task-after-scoped --samples 30 --controls 1000
+```
 
 ## Installed keyboard diagnostics
 

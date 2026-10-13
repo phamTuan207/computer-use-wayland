@@ -197,6 +197,13 @@ diagnostic `after` snapshot; preflight errors happen before input. Because no
 fresh snapshot comes back, observe again before any
 further input. The desktop `act --no-after` flag is a different feature.
 
+For a task that continues in one panel, use `browser observe --scope '#panel'`
+and pass `--after-scope '#panel'` to each `browser act` that needs the next refs.
+Successful results stay within that panel; failures keep the full-page diagnostic.
+If the panel disappears, observe again. `--after-scope` cannot combine with
+`--no-after`. See [measured results](docs/optimization-experiments.md#scoped-successful-after-snapshots)
+for the output savings and timing limits.
+
 ### Session lifecycle and limits
 
 A top-centre "Computer use active" pill identifies agent control. It is

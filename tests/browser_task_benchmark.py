@@ -21,7 +21,7 @@ from optimization_live import summary
 
 BATCH_MODES = ('batch', 'batch-no-after')
 
-TASK_MODES = ('task-full', 'task-scoped')
+TASK_MODES = ('task-full', 'task-scoped', 'task-after-full', 'task-after-scoped')
 
 
 PAGE = '''<!doctype html><meta charset="utf-8">
@@ -119,10 +119,10 @@ def pick_ref(elements, role, label):
 
 
 def task_sample(base, worker, row, mode, text, state, cu):
-    """Whole task: fresh observe, then one no_after act. The timer covers all of it."""
+    """Whole task: fresh observe, act, then independent app verification."""
     state.clear()
     observe_request = {**base, 'operation': 'observe', 'max_elements': 80}
-    if mode == 'task-scoped':
+    if mode in ('task-scoped', 'task-after-full', 'task-after-scoped'):
         observe_request['scope'] = '#task'
     started = time.perf_counter()
     snapshot = worker.request(observe_request)
@@ -135,16 +135,28 @@ def task_sample(base, worker, row, mode, text, state, cu):
                {'type': 'click', 'ref': save},
                {'type': 'assert', 'selector': '#status', 'text': 'Saved '+text,
                 'timeout_ms': 1000}]
-    result = worker.request({**base, 'operation': 'act', 'max_elements': 80,
-                             'snapshot': snapshot['snapshot'], 'actions': actions,
-                             'no_after': True})
+    act_request = {**base, 'operation': 'act', 'max_elements': 80,
+                   'snapshot': snapshot['snapshot'], 'actions': actions}
+    if mode in ('task-full', 'task-scoped'):
+        act_request['no_after'] = True
+    if mode == 'task-after-scoped':
+        act_request['after_scope'] = '#task'
+    result = worker.request(act_request)
     row['calls'] += 1
     row['result_bytes'] += len(json.dumps(result, ensure_ascii=False).encode())
     if not result.get('ok'):
         row['failure'] = {k: result[k] for k in ('error', 'completed', 'mutation_may_have_occurred') if k in result}
         raise RuntimeError('fixture task refused or condition timed out')
-    if result.get('after_skipped') is not True or 'after' in result:
-        raise RuntimeError('no_after route did not skip the after-snapshot')
+    if mode in ('task-full', 'task-scoped'):
+        if result.get('after_skipped') is not True or 'after' in result:
+            raise RuntimeError('no_after route did not skip the after-snapshot')
+    else:
+        after = result.get('after')
+        if not isinstance(after, dict) or not after.get('snapshot') or \
+                bool(after.get('scoped')) != (mode == 'task-after-scoped'):
+            raise RuntimeError('after-snapshot scope differs from requested mode')
+        pick_ref(after['elements'], 'input', 'Task name')
+        pick_ref(after['elements'], 'button', 'Save fixture')
     deadline = time.monotonic()+1
     while state.get('text') != text and time.monotonic() < deadline:
         cu.check_cancel()
@@ -354,7 +366,7 @@ def main():
     parser.add_argument('--samples', type=int, default=30)
     parser.add_argument('--delay', type=int, choices=[-1, 0, 16, 50, 100, 250], default=0)
     parser.add_argument('--modes', nargs='+',
-                        choices=['split', 'batch', 'batch-no-after', 'task-full', 'task-scoped'],
+                        choices=['split', 'batch', 'batch-no-after', *TASK_MODES],
                         default=['split', 'batch'])
     parser.add_argument('--controls', type=int, default=0,
                         help='extra inert fixture inputs, 0..1000; makes after-snapshot cost real')
@@ -369,7 +381,7 @@ def main():
     # The families time different work, so mixing them would blend two scopes.
     if len({'legacy' if mode in ('split', 'batch', 'batch-no-after') else 'task'
             for mode in args.modes}) > 1:
-        parser.error('do not mix task-full/task-scoped with split/batch/batch-no-after')
+        parser.error('do not mix task modes with split/batch/batch-no-after')
     if args.cold and (args.samples != 1 or len(args.modes) != 1):
         parser.error('cold requires --samples 1 and exactly one mode')
     args.report.parent.mkdir(parents=True, exist_ok=True)

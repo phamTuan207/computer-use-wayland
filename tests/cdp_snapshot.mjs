@@ -46,7 +46,7 @@ function element(name,options={}) {
   return node;
 }
 async function run(elements,actions,{mutate=text=>text,maxElements,debuggerUrl='ws://127.0.0.1:9222/test',
-  noAfter,operation,image,allowNoSocket=false,scope,seed,followup}={}) {
+  noAfter,operation,image,allowNoSocket=false,scope,afterScope,seed,followup}={}) {
   const expressions=[],replies=[],output=[],calls=[],measured=new Set();
   const document={title:'fixture',activeElement:null,
     querySelectorAll:selector=>{
@@ -67,6 +67,7 @@ async function run(elements,actions,{mutate=text=>text,maxElements,debuggerUrl='
   if(noAfter!==undefined)request.no_after=noAfter;
   if(image!==undefined)request.image=image;
   if(scope!==undefined)request.scope=scope;
+  if(afterScope!==undefined)request.after_scope=afterScope;
   // A followup runs the adapter again against the SAME fake page, so a scoped
   // observe can be followed by a real act using the snapshot and refs it returned.
   const runs=followup?2:1;
@@ -421,6 +422,19 @@ assert.deepEqual(acted.after.elements.map(e=>e.name).sort(),wholePageNames,
 assert.equal(acted.after.elements.length,4,'four interactive nodes, container excluded');
 assert.equal(observed.snapshot,'snapshot-tes','the act used the snapshot the observe returned');
 
+// An explicit after-scope keeps the next refs within the same task panel.
+const scopedAfter=await run([taskPanel,strayButton,strayField],undefined,
+  {operation:'observe',scope:'#task',
+   followup:observed=>({operation:'act',scope:undefined,after_scope:'#task',
+     snapshot:observed.snapshot,
+     actions:[{type:'assert',ref:observed.elements[1].ref,text:'save'}]})});
+const next=scopedAfter.outputs[1];
+assert.equal(next.ok,true,JSON.stringify(next));
+assert.equal(next.after.scoped,true);
+assert.deepEqual(next.after.elements.map(e=>e.ref),['e1','e2']);
+assert.ok(!next.after.elements.some(e=>e.name==='stray'));
+assert.equal(vm.runInContext("__agentCu.refs.get('e2').innerText",scopedAfter.page),'save');
+
 // The same flow with a failing act: the diagnostic after-snapshot is also whole page.
 const scopedThenFail=await run([taskPanel,strayButton,strayField],undefined,
   {operation:'observe',scope:'#task',
@@ -432,6 +446,45 @@ assert.equal(failedAct.after.scoped,undefined);
 assert.deepEqual(failedAct.after.elements.map(e=>e.name).sort(),wholePageNames,
   'a failed act still reports a whole-page diagnostic snapshot');
 assert.equal(observedFail.scoped,true);
+
+const scopedAfterFail=await run([taskPanel,strayButton,strayField],undefined,
+  {operation:'observe',scope:'#task',
+   followup:observed=>({operation:'act',scope:undefined,after_scope:'#task',
+     snapshot:observed.snapshot,
+     actions:[{type:'assert',ref:observed.elements[0].ref,text:'never',timeout_ms:0}]})});
+assert.equal(scopedAfterFail.outputs[1].ok,false);
+assert.equal(scopedAfterFail.outputs[1].after.scoped,undefined,
+  'a failed act retains a whole-page diagnostic');
+assert.equal(scopedAfterFail.outputs[1].after.elements.length,4);
+
+for(const [label,afterScope,noAfter,error] of [
+  ['null',null,undefined,'after_scope must be a non-empty CSS selector'],
+  ['array',['#task'],undefined,'after_scope must be a non-empty CSS selector'],
+  ['number',7,undefined,'after_scope must be a non-empty CSS selector'],
+  ['empty','',undefined,'after_scope must be a non-empty CSS selector'],
+  ['oversize','x'.repeat(1025),undefined,'after_scope must be at most 1024 characters'],
+  ['conflict','#task',true,'after_scope is incompatible with no_after'],
+]){
+  const rejected=await run([taskPanel],[{type:'assert',ref:'e1',text:'panel'}],
+    {operation:'act',afterScope,noAfter,allowNoSocket:true});
+  assert.equal(rejected.result.error,error,label);
+  assert.equal(rejected.fetches,0,label+' must reject before network');
+}
+for(const operation of ['observe','tabs']){
+  const rejected=await run([taskPanel],undefined,
+    {operation,afterScope:'#task',allowNoSocket:true});
+  assert.equal(rejected.result.error,'after_scope is only valid for act');
+  assert.equal(rejected.fetches,0);
+}
+for(const selector of ['#missing','div','#bad[[']){
+  const secondPanel=element('second',{tagName:'DIV'});
+  const unavailable=await run([taskPanel,secondPanel],
+    [{type:'assert',ref:'e1',text:'panel'}],{afterScope:selector});
+  assert.equal(unavailable.result.ok,true);
+  assert.equal(unavailable.result.completed,1);
+  assert.equal(unavailable.result.after_unavailable,true);
+  assert.equal(unavailable.result.after,undefined);
+}
 
 // --image still captures the full viewport.
 const shot=await run([taskPanel],undefined,{scope:'#task',image:true});

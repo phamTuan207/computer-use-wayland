@@ -10,6 +10,14 @@ let result,completed=0;
 try {
 const maxElements=request.max_elements??80;
 if(!Number.isInteger(maxElements)||maxElements<1||maxElements>80)throw new Error('max_elements must be 1..80');
+// The after-scope only narrows the successful act result; validate it like scope,
+// before any network request, any input, or any snapshot.
+if(request.after_scope!==undefined){
+  if(request.operation!=='act')throw new Error('after_scope is only valid for act');
+  if(typeof request.after_scope!=='string'||!request.after_scope.trim())throw new Error('after_scope must be a non-empty CSS selector');
+  if(request.after_scope.length>1024)throw new Error('after_scope must be at most 1024 characters');
+  if(request.no_after)throw new Error('after_scope is incompatible with no_after');
+}
 // Validate the substitute for the after-snapshot before any network/input effect.
 if('no_after'in request){
   if(typeof request.no_after!=='boolean')throw new Error('no_after must be a boolean');
@@ -79,10 +87,10 @@ function pageState(snapshot,action) {
 }
 const elementExpression=(a,body)=>`(()=>{const e=(${pageState.toString()})(${JSON.stringify(request.snapshot)},${JSON.stringify({ref:a.ref,selector:a.selector})});${body}})()`;
 const INTERACTIVE='button,a[href],input,textarea,select,summary,[role="button"],[role="checkbox"],[role="tab"],[role="menuitem"],[contenteditable="true"]';
-async function snapshot() {
+async function snapshot(explicitScope) {
   const id=crypto.randomUUID().slice(0,12);
-  // Validate the root before replacing a usable snapshot.
-  const resolve=JSON.stringify(request.scope);
+  // An explicit scope applies to this one snapshot only; request.scope is never mutated.
+  const resolve=JSON.stringify(explicitScope===undefined?request.scope:explicitScope);
   return await evaluate(`(()=>{
     ${resolve?`let roots;
     try{roots=document.querySelectorAll(${resolve});}catch(_){throw new Error('scope selector is not valid CSS');}
@@ -220,6 +228,7 @@ async function assertAction(a) {
     }catch(e){result={ok:false,completed,error:e.message,execution_ms:Date.now()-start};if(e.mutation_may_have_occurred)result.mutation_may_have_occurred=true;}
     // Failed tasks still need their diagnostic snapshot.
     if(result.ok&&request.no_after)result.after_skipped=true;
+    else if(result.ok)try{result.after=await snapshot(request.after_scope);}catch(_){result.after_unavailable=true;}
     else try{result.after=await snapshot();}catch(_){result.after_unavailable=true;}
   }else result=await snapshot();
   if(request.image)result.image_base64=(await call('Page.captureScreenshot',{format:'png',captureBeyondViewport:false})).data;

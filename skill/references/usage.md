@@ -124,10 +124,25 @@ traversed. `scoped: true` in the result marks it; `title` and `url` remain whole
 page metadata. `--image` still captures the full viewport.
 
 Scope is **not** an input, security or privacy boundary: existing selectors can
-address anything on the page, and every action guard is unchanged. An `act`
-after-snapshot is whole page again unless you use the validated `--no-after`
-route. This is worth reaching for when the page carries many irrelevant controls,
-because the observation is what you have to read.
+address anything on the page, and every action guard is unchanged. This is worth
+using when the page carries many irrelevant controls, because the observation is
+what you have to read.
+
+### Scope the successful after-snapshot
+
+When the next browser step is still in one panel, ask `act` for its new refs there:
+
+```bash
+"$CU" browser act --target EXACT_TAB_ID --snapshot ID_FROM_OBSERVE \
+  --actions /tmp/actions.json --after-scope '#task'
+```
+
+This scopes only a **successful** `act` after-snapshot. A failed action keeps a
+whole-page diagnostic. If the panel is gone or no longer unique after the action,
+the result says `after_unavailable`; observe again before further input. The
+default `act` still returns the whole page. `--after-scope` cannot combine with
+`--no-after`; use `--no-after` when a final assert already proves completion and
+no next refs are needed. `--image` still captures the full viewport.
 
 ### Skip the final snapshot: `browser act --no-after`
 

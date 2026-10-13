@@ -86,6 +86,32 @@ class NoAfterCli(unittest.TestCase):
             self.run_cli([ASSERT(text='ok')], '--no-after', '--image')
         self.assertEqual(self.dispatched, [])
 
+    def test_after_scope_is_opt_in_and_forwarded_for_act(self):
+        self.run_cli([ASSERT(text='ok')], '--after-scope', '#task')
+        self.assertEqual(self.dispatched[0]['after_scope'], '#task')
+        self.dispatched.clear()
+        self.run_cli([ASSERT(text='ok')])
+        self.assertNotIn('after_scope', self.dispatched[0])
+
+    def test_after_scope_rejects_invalid_or_conflicting_requests_before_dispatch(self):
+        for flags in (('--after-scope', ''), ('--after-scope', '   '),
+                      ('--after-scope', 'x'*1025),
+                      ('--after-scope', '\U0001F431'*513),
+                      ('--after-scope', '#task', '--no-after')):
+            with self.subTest(flags=flags):
+                self.dispatched.clear()
+                with self.assertRaises(ValueError):self.run_cli([ASSERT(text='ok')], *flags)
+                self.assertEqual(self.dispatched, [])
+
+    def test_after_scope_rejects_non_act_operations(self):
+        for operation in ('observe', 'tabs', 'start'):
+            with self.subTest(operation=operation):
+                out=io.StringIO()
+                with mock.patch.object(sys,'argv',['cu','browser',operation,'--after-scope','#task']), \
+                     contextlib.redirect_stdout(out):
+                    with self.assertRaises(ValueError):cu.main()
+                self.assertEqual(self.dispatched, [])
+
     def test_invalid_terminal_assert_rejected_before_dispatch(self):
         for actions in ([CLICK], [{'type': 'wait', 'ms': 5}],
                         [{'type': 'fill', 'ref': 'e1', 'text': 'x'}], [ASSERT()],
