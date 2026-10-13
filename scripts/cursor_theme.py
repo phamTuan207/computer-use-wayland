@@ -42,7 +42,7 @@ def validate(theme, size):
 
 
 def gtk_state(env):
-    """The two current GTK cursor values, validated. Shared by snapshot and the login loader."""
+    """Read validated GTK values for the task's independent cursor snapshot."""
     theme = ast.literal_eval(command(env,'gsettings','get',SCHEMA,'cursor-theme'))
     size = int(command(env,'gsettings','get',SCHEMA,'cursor-size'))
     validate(theme,size)
