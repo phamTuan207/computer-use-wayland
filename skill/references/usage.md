@@ -189,6 +189,11 @@ Actions: `{"type":"click","ref":"e2"}` or `{"type":"set_text","ref":"e1","text":
 
 ## Desktop
 
+For a known application class, `windows --class CLASS` returns only exact,
+case-sensitive matches; no match returns `[]`. Add `--no-titles` to omit the title
+field. Both options are independent, read-only and apply to one request. Every
+matching address remains in the result; verify the target before input.
+
 `doctor`: dependencies and monitor names. `windows`: exact address, title, bounds, workspace. `observe --window ADDRESS [--crop X Y W H]` captures visible screen pixels without changing focus or workspace; hidden windows and inactive workspaces are refused. Add `--focus` to explicitly activate the window before capture (may switch workspace); this flag requires `--window`. A window on an inactive workspace is refused without it. When `act` will focus the window anyway, run `observe --window ADDRESS --focus` first: a plain observe leaves focus unchanged, so the later act focus can restack windows and change the view you captured. Overlapping windows can cover the capture. `observe --screen MONITOR [--crop X Y W H]` captures the whole monitor or a monitor-relative region, including layer-shell and popups; use pointer actions only with this scope. Both accept `--max-width 320..3840` and return image + observation paths; full metadata stays in the JSON file. Add `--verbose` to print it. Captures use `grim -s 1` without cursor; a live session's badge is hidden for the capture and restored after, for both window and screen scopes; hiding also clears its blur region. Actions recheck monitor geometry and the target region before input. Cache is user-private; files older than 24 hours are pruned on the next capture.
 
 Desktop actions:

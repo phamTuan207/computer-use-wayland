@@ -29,6 +29,7 @@ Shared tool: `computer-use` (`CU`). Prefer an existing CLI/API; otherwise Chromi
 ```bash
 CU=computer-use
 "$CU" windows
+"$CU" windows --class KNOWN_APP_CLASS --no-titles
 "$CU" observe --window 0xEXACT_ADDRESS --crop X Y W H
 "$CU" observe --screen MONITOR --crop X Y W H
 "$CU" act --observation /returned/path.json --actions /tmp/actions.json
@@ -36,6 +37,10 @@ CU=computer-use
 "$CU" a11y observe --pid EXACT_APP_PID
 "$CU" a11y act --snapshot /returned/path.json --actions /tmp/actions.json
 ```
+
+For a known application class, `windows --class CLASS --no-titles` trims discovery
+output. Class matching is exact and case-sensitive; all matches remain. Verify
+the intended address rather than selecting the first match.
 
 Crop known regions and choose a suitable `--max-width` to bound image output. Use the returned image dimensions rather than assuming a fixed monitor resolution. `a11y apps` is cheap, but it lists only apps that expose AT-SPI, so do not plan a task around accessibility targeting without checking that list first.
 

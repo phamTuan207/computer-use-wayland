@@ -162,6 +162,19 @@ python3 tests/browser_task_benchmark.py --report "$report_dir/after.json" \
   --modes task-after-full task-after-scoped --samples 30 --controls 1000
 ```
 
+## Compact window discovery
+
+`windows --class CLASS --no-titles` filters a single client-list read by exact
+class and omits the title field. It returns every matching window; it does not
+focus or select one. The default output is unchanged.
+
+An offline fixture fed 100 synthetic clients through the real CLI formatter,
+with one matching class. The JSON output was 12,178 bytes by default, 9,188 with
+`--no-titles`, and 95 with both flags. Each route made exactly one mocked clients
+call. These figures describe selected output size, not compositor latency,
+real-world window counts or billed tokens. A separate real, read-only compositor
+smoke confirmed exact filtering and title-key omission; it performed no input.
+
 ## Installed keyboard diagnostics
 
 Follow-up runs used the installed CLI/session and installed input code, stock

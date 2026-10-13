@@ -153,10 +153,16 @@ The driver protocol is described in
 ## Usage
 
 ```sh
+computer-use windows --class KNOWN_APP_CLASS --no-titles
 computer-use observe --window 0xADDRESS --max-width 1280
 computer-use act --observation /tmp/obs.json --actions /tmp/actions.json
 computer-use doctor
 ```
+
+`windows --class` filters by the exact, case-sensitive application class.
+`--no-titles` omits the title field; both flags are optional. All matching windows
+are returned, so verify the intended address before input. Without the flags,
+`windows` keeps the full list and titles.
 
 Desktop `observe` returns screenshot and observation paths. Use coordinates in
 that returned image; `act` maps them to the desktop and may focus its target.

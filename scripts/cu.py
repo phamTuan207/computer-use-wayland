@@ -709,7 +709,9 @@ def main():
     session=sub.add_parser('session');session.add_argument('driver',nargs=argparse.REMAINDER)
     sub.add_parser('session-driver',help='interactive JSON-lines driver for one whole agent task')
     sub.add_parser('finish');sub.add_parser('recover');sub.add_parser('cancel')
-    sub.add_parser('doctor');sub.add_parser('windows');sub.add_parser('resume');sub.add_parser('status')
+    sub.add_parser('doctor');sub.add_parser('resume');sub.add_parser('status')
+    win=sub.add_parser('windows');win.add_argument('--class',dest='class_',help='exact class match only; no regex, no substring')
+    win.add_argument('--no-titles',action='store_true',help='omit the title key from each window')
     obs=sub.add_parser('observe');target=obs.add_mutually_exclusive_group(required=True);target.add_argument('--window');target.add_argument('--screen');obs.add_argument('--crop',nargs=4,type=int);obs.add_argument('--max-width',type=int,default=1280)
     obs.add_argument('--focus',action='store_true',help='explicitly focus the target window before capture (may switch workspace)')
     obs.add_argument('--settle-ms',type=int,default=0,help='wait up to 2000 ms for 120 ms of unchanged crop pixels; not semantic readiness')
@@ -757,7 +759,13 @@ def main():
         if shutil.which('fcitx5-remote'):
             result['ime']={'state':run(['fcitx5-remote'],env).strip(),'name':run(['fcitx5-remote','-n'],env).strip()}
         result['monitors']=[{k:m[k] for k in ('name','width','height','scale','transform')} for m in result['monitors']]
-    elif args.command=='windows': result=[{k:c.get(k) for k in ('address','class','title','at','size','workspace')} for c in hypr(env,'clients')]
+    elif args.command=='windows':
+        # Read-only discovery: one clients call, filtering before projection, no focus or input.
+        keys=('address','class','title','at','size','workspace')
+        if args.no_titles:keys=('address','class','at','size','workspace')
+        clients=hypr(env,'clients')
+        if args.class_ is not None:clients=[c for c in clients if c.get('class')==args.class_]
+        result=[{k:c.get(k) for k in keys} for c in clients]
     elif args.command=='observe':
         check_cancel()
         if not 0<=args.settle_ms<=2000: raise ValueError('settle-ms must be 0..2000')
