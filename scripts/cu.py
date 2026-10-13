@@ -380,6 +380,17 @@ def validate_actions(actions,backend):
         if backend=='desktop' and a['type']=='type' and (not isinstance(a.get('delay_ms',0),int) or not 0<=a.get('delay_ms',0)<=100):raise ValueError('delay_ms must be 0..100')
         if backend=='desktop' and a['type']=='type' and a.get('ime','literal') not in ('literal','compose'):raise ValueError('ime must be literal or compose')
 
+def validate_terminal_assert(actions):
+    """Validate the effective final predicate using adapter precedence."""
+    last=actions[-1] if actions else {}
+    if last.get('type')!='assert':raise ValueError('--no-after requires the final action to be assert')
+    effective=('value' if 'value'in last else 'text' if 'text'in last else
+               'checked' if 'checked'in last else '')
+    meaningful=(isinstance(last['value'],str) if effective=='value' else
+                isinstance(last['text'],str) and last['text'] if effective=='text' else
+                isinstance(last['checked'],bool) if effective=='checked' else False)
+    if not meaningful:raise ValueError('--no-after final assert needs text, value or checked')
+
 def keyboard_groups(actions):
     groups=[];delay=0;boundary=False;mode=None
     for a in actions:
@@ -706,6 +717,7 @@ def main():
     act.add_argument('--no-after',action='store_true',help='skip successful final capture; preflight safety and error captures stay enabled')
     obs.add_argument('--verbose',action='store_true');act.add_argument('--verbose',action='store_true')
     b=sub.add_parser('browser');b.add_argument('operation',choices=['start','tabs','observe','act']);b.add_argument('--endpoint',default='http://127.0.0.1:9222');b.add_argument('--target');b.add_argument('--snapshot');b.add_argument('--actions');b.add_argument('--image',action='store_true')
+    b.add_argument('--no-after',action='store_true',help='skip the successful after-snapshot; the final action must be a meaningful assert')
     b.add_argument('--max-elements',type=int,default=80,help='DOM output budget, 1..80 (default 80)')
     a=sub.add_parser('a11y');a.add_argument('operation',choices=['apps','observe','act']);a.add_argument('--pid',type=int);a.add_argument('--snapshot');a.add_argument('--actions')
     args=parser.parse_args()
@@ -763,6 +775,8 @@ def main():
         result=json.loads(out) if out.strip() else {'ok':False,'error':'accessibility adapter returned no data'}
     else:
         check_cancel()
+        if args.no_after and args.operation!='act':raise ValueError('--no-after requires browser act')
+        if args.no_after and args.image:raise ValueError('--no-after cannot combine with --image')
         if not 1<=args.max_elements<=80:raise ValueError('max-elements must be 1..80')
         if args.operation=='start':
             print(json.dumps(browser_start(env,args.endpoint)));return 0
@@ -771,6 +785,9 @@ def main():
             require_session()
             if not args.actions: raise ValueError('--actions required')
             request['actions']=json.loads(sys.stdin.read() if args.actions=='-' else Path(args.actions).read_text());validate_actions(request['actions'],'browser')
+            if args.no_after:
+                validate_terminal_assert(request['actions'])
+                request['no_after']=True
         with locked():result=browser(request)
         raw=result.pop('image_base64',None) if isinstance(result,dict) else None
         if raw:

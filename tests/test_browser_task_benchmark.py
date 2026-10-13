@@ -7,6 +7,7 @@ import sys
 import tempfile
 from types import SimpleNamespace
 import unittest
+from unittest import mock
 from unittest.mock import Mock, patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -107,7 +108,8 @@ class BrowserTaskHarnessTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder, ExitStack() as stack:
             report_path = Path(folder)/'report.json'
             args = SimpleNamespace(cli=root/'scripts/cu.py', report=report_path,
-                                   samples=3, delay=16, modes=['split', 'batch'], cold=False)
+                                   samples=3, delay=16, modes=['split', 'batch'], cold=False,
+                                   controls=0)
             stack.enter_context(patch.object(cu, 'require_session'))
             stack.enter_context(patch.object(cu, 'environment', return_value={}))
             stack.enter_context(patch.object(cu, 'check_cancel'))
@@ -150,6 +152,69 @@ class BrowserTaskHarnessTests(unittest.TestCase):
                 self.assertEqual(error.exception.code, 2)
                 launch.assert_not_called()
 
+    def test_summary_covers_every_selected_mode(self):
+        with tempfile.TemporaryDirectory() as folder:
+            report = {'modes': ['batch', 'batch-no-after'], 'samples': [
+                {'mode': 'batch', 'ok': True, 'total_ms': 10},
+                {'mode': 'batch-no-after', 'ok': True, 'total_ms': 6},
+                {'mode': 'split', 'ok': True, 'total_ms': 4},  # present but not selected
+                {'mode': 'batch-no-after', 'ok': False},
+            ]}
+            def cleanup():
+                report['cleanup_ok'] = True
+            benchmark.finish_report(report, Path(folder)/'report.json', cleanup)
+            self.assertEqual(list(report['summary']), ['batch', 'batch-no-after'])
+            self.assertEqual(report['summary']['batch-no-after']['samples'], 1)
+            self.assertNotIn('split', report['summary'])
+
+    def test_controls_bound_is_checked_before_session(self):
+        for value in ('-1', '1001', '1.5'):
+            with self.subTest(value=value), patch.object(sys, 'argv',
+                    ['browser_task_benchmark', '--report', 'unused.json', '--controls', value]), \
+                    patch.object(benchmark.subprocess, 'run') as launch, redirect_stderr(io.StringIO()):
+                with self.assertRaises(SystemExit) as error:
+                    benchmark.main()
+                self.assertEqual(error.exception.code, 2)
+                launch.assert_not_called()
+
+    def test_controls_add_inert_inputs_without_touching_the_page(self):
+        self.assertEqual(benchmark.page(0).count(b'<input'), 1)
+        built = benchmark.page(1000)
+        self.assertEqual(built.count(b'<input disabled aria-hidden="true">'), 1000)
+        self.assertIn(b'id="name"', built)
+        self.assertIn(b'id="save"', built)
+        self.assertIn(b'id="status"', built)
+
+    def test_worker_startup_failure_still_reaps_server_and_thread(self):
+        # The owned resources exist from the server call on, so a failure creating the
+        # worker must still shut the server down and leave a written report behind.
+        root = Path(benchmark.__file__).resolve().parents[1]
+        sys.path.insert(0, str(root/'scripts'))
+        import cu
+        import browser_worker
+        with tempfile.TemporaryDirectory() as folder, ExitStack() as stack:
+            report_path = Path(folder)/'report.json'
+            args = SimpleNamespace(cli=root/'scripts/cu.py', report=report_path,
+                                   samples=1, delay=0, modes=['batch'], cold=False, controls=0)
+            for name, value in (('require_session', mock.Mock()), ('environment', mock.Mock(return_value={})),
+                                ('check_cancel', mock.Mock())):
+                stack.enter_context(mock.patch.object(cu, name, new=value))
+            stack.enter_context(patch.object(cu, 'hypr', side_effect=lambda _e, w:
+                                              {} if w == 'activewindow' else []))
+            stack.enter_context(patch.object(cu, 'run', return_value='{"id": 1}'))
+            stack.enter_context(patch.object(browser_worker, 'BrowserWorker',
+                                             mock.Mock(side_effect=RuntimeError('worker start failed'))))
+            server = stack.enter_context(patch.object(benchmark, 'ThreadingHTTPServer')).return_value
+            thread = stack.enter_context(patch.object(benchmark.threading, 'Thread')).return_value
+            thread.is_alive.return_value = False
+            with self.assertRaisesRegex(RuntimeError, 'worker start failed'):
+                benchmark.run(args)
+            saved = json.loads(report_path.read_text())
+            self.assertFalse(saved['ok'])
+            self.assertTrue(saved['cleanup_ok'])
+            self.assertNotIn('worker_close', saved['cleanup_errors'])
+            server.shutdown.assert_called_once()
+            thread.join.assert_called_once_with(timeout=2)
 
 if __name__ == '__main__':
     unittest.main()

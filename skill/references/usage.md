@@ -95,6 +95,39 @@ after failure without replaying input. This recipe reduces request roundtrips;
 it does not change the input backend or prove model-token savings. Reproduction
 and limitations: [task experiments](../../docs/optimization-experiments.md).
 
+### Skip the final snapshot: `browser act --no-after`
+
+Opt-in. The same recipe, with the result `assert` last:
+
+```bash
+"$CU" browser act --target EXACT_TAB_ID --snapshot ID_FROM_OBSERVE \
+  --actions /tmp/actions.json --no-after
+```
+
+On a successful `act` the result carries `after_skipped: true` and no `after`
+snapshot, so the response is much smaller. An execution failure still attempts a
+diagnostic `after` snapshot (or sets `after_unavailable`) and never sets
+`after_skipped`; preflight failures happen before input. Omitting the flag keeps
+today's behaviour.
+
+Because that assert is now the only evidence of success, the last action must
+be an `assert` with a condition it really evaluates. `assert` resolves one
+predicate in `value` > `text` > `checked` order and ignores the rest, so:
+
+- `value`: a string; `""` is allowed and means "the field is empty".
+- `text`: a non-empty string. An empty `text` proves nothing.
+- `checked`: a boolean.
+- none of these — the default nonzero-width check — is refused.
+
+`--no-after` is rejected on `observe`, `tabs` and `start`, cannot be combined
+with `--image`, and is refused before any network or input effect if the final
+action is `wait`, `click` or `fill`, or if `actions` is empty.
+
+There is no automatic observation, retry or replay. If the layout or the page
+changes after the assert, the previous snapshot is spent: run `observe` again
+before any further input. Split at unknown layout changes and navigation as
+usual. This reduces response size; it is not a claim about billed model tokens.
+
 ## Native accessibility
 
 ```bash

@@ -113,6 +113,75 @@ The retained improvement is guidance to batch known actions with a specific
 result assertion. It is not evidence that every website is faster or that DOM
 fill is equivalent to trusted physical keyboard input.
 
+## Browser `act --no-after` A/B on the source fixture
+
+Measured A/B of the opt-in `browser act --no-after` flag against the same batch
+route without it. `tests/browser_task_benchmark.py` drives an inert real
+Chromium fixture from the source tree: `set_value`, `click` on Save, then a
+final `assert` on the status text. Both routes send one request with the same
+actions and the same payload length; only the flag differs. The payload carries
+a per-run nonce plus the sample index and mode, so a stale field left by the
+previous route or sample can never satisfy the assertion. `max_elements` stayed
+at 8. `--controls` adds inert inputs so the after-snapshot pays real DOM
+enumeration cost; `max_elements` unchanged.
+
+3 blocks x 30 pairs = 90 samples per route per controls value, AB/BA alternated
+by pair within each block; controls order was flipped in the middle block. 360 measured tasks plus 12
+unmeasured warm-ups, all exact, independent server POST verification on every
+task, cleanup clean. The worker is warm, but every request gets a fresh CDP
+connection. The timed span is the worker task request **plus** the independent
+app verification; compile, setup and the initial observe sit outside the timer.
+Result bytes are `len(json.dumps(result, ensure_ascii=False).encode(UTF-8))`.
+No live LLM or API billing was measured — these are bytes, not tokens.
+
+Declared criteria: no regression when candidate median <= baseline median +
+max(10%, 10 ms); p95 <= baseline p95 + max(10%, 5 ms); speed win only at median
+reduction >= 10% **and** >= 5 ms; output reduction >= 50% of median re-encoded
+result bytes, which is accepted **separately** from any speed win.
+
+| Controls | Baseline median / p95 ms | Candidate median / p95 ms | Median cut | Bytes cut |
+|---|---:|---:|---:|---:|
+| 0 | 38.458 / 84.282 | 37.440 / 84.861 | 2.647% (1.018 ms) | 79.360% |
+| 1000 | 76.814 / 100.788 | 55.870 / 91.350 | 27.267% (20.945 ms) | 91.676% |
+
+**Speed win: only at controls 1000.** Both conditions hold there (27.267% and
+20.945 ms) and the p95 improves in all three blocks. At controls 0 the median
+reduction is 2.647% / 1.018 ms, far below both thresholds, so
+`speed_win = false`. No regression and the p95 bound both pass at both values,
+and the output gate passes at both.
+
+**Small-page p95 variability, disclosed.** At controls 0 the aggregate p95
+barely moves (84.282 -> 84.861 ms) while the per-block numbers swing widely
+(blocks numbered 0..2): block 0 84.282 -> 84.861 ms, block 1 86.908 -> 85.720 ms,
+block 2 **48.372 -> 80.253 ms** — 31.881 ms worse. The small-page tail is not a
+consistent improvement and must not be read as one; block 2 is the clearest case
+where the candidate's p95 is far worse than the baseline's. At controls 1000 all
+three blocks improve on both median and p95 (100.788 -> 90.051, 100.762 ->
+88.603, 103.064 -> 92.835 ms).
+
+Method note: the earlier `fill`-based batch figures above are **historic**. The
+current `batch` mode uses `set_value` so both batch routes are focus-independent;
+it is therefore not the same backend as that historical comparison, and the two
+tables are not directly comparable.
+
+Startup smoke failures before the fixture-readiness fix are excluded from these
+figures; readiness is now established before any input is sent.
+
+Output reduction is accepted as a separate opt-in criterion: at controls 0 the
+median result drops 344 -> 71 bytes and at controls 1000 853 -> 71 bytes, both
+well past the 50% gate, with no speed win claimed at controls 0. Not installed
+or verified in the installed tree at the time of this measurement.
+
+Reproduce one block per command; repeat three blocks with distinct report names
+and alternate the controls order (reports stay outside any public repo):
+
+```bash
+python3 tests/browser_task_benchmark.py --report /private/report.json --controls 0 \
+  --modes batch batch-no-after --samples 30
+python3 tests/browser_task_benchmark.py --report /private/report.json --controls 1000 \
+  --modes batch batch-no-after --samples 30
+```
+
 ## Reproduce
 
 Run the live harnesses sequentially, outside an existing automation session.

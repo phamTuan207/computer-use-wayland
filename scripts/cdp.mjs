@@ -5,9 +5,30 @@ import { createInterface } from 'node:readline';
 
 async function handle(request) {
 let ws;
+// Preflight failures must also return completed:0 from the catch.
+let result,completed=0;
 try {
 const maxElements=request.max_elements??80;
 if(!Number.isInteger(maxElements)||maxElements<1||maxElements>80)throw new Error('max_elements must be 1..80');
+// Validate the substitute for the after-snapshot before any network/input effect.
+if('no_after'in request){
+  if(typeof request.no_after!=='boolean')throw new Error('no_after must be a boolean');
+  if(request.no_after){
+    if(request.operation!=='act')throw new Error('no_after requires act');
+    if(request.image)throw new Error('no_after is incompatible with image');
+    const actions=request.actions;
+    if(!Array.isArray(actions)||!actions.length)throw new Error('no_after requires a final assert action');
+    const last=actions[actions.length-1];
+    if(!last||last.type!=='assert')throw new Error('no_after requires the final action to be assert');
+    // Match assertAction precedence; ignored predicates cannot prove success.
+    const effective=last.value!==undefined?'value':last.text!==undefined?'text':
+      last.checked!==undefined?'checked':'';
+    const meaningful=effective==='value'?typeof last.value==='string':
+      effective==='text'?typeof last.text==='string'&&last.text.length>0:
+      effective==='checked'?typeof last.checked==='boolean':false;
+    if(!meaningful)throw new Error('no_after final assert needs text, value or checked');
+  }
+}
 const endpoint=new URL(request.endpoint);
 if (!['127.0.0.1','localhost','[::1]'].includes(endpoint.hostname)) throw new Error('CDP endpoint must be loopback');
 const tabs=await (await fetch(new URL('/json/list',endpoint),{signal:AbortSignal.timeout(4000)})).json();
@@ -127,8 +148,6 @@ async function assertAction(a) {
     await new Promise(r=>setTimeout(r,50));
   }
 }
-let result,completed=0;
-try {
   if(request.operation==='act'){
     if(!request.snapshot)throw new Error('--snapshot required');
     // Preflight the entire schema before any side effects.
@@ -181,12 +200,14 @@ try {
       }
       result={ok:true,completed,execution_ms:Date.now()-start};
     }catch(e){result={ok:false,completed,error:e.message,execution_ms:Date.now()-start};if(e.mutation_may_have_occurred)result.mutation_may_have_occurred=true;}
-    try{result.after=await snapshot();}catch(_){result.after_unavailable=true;}
+    // Failed tasks still need their diagnostic snapshot.
+    if(result.ok&&request.no_after)result.after_skipped=true;
+    else try{result.after=await snapshot();}catch(_){result.after_unavailable=true;}
   }else result=await snapshot();
   if(request.image)result.image_base64=(await call('Page.captureScreenshot',{format:'png',captureBeyondViewport:false})).data;
   return result;
 }catch(e){process.exitCode=1;return {ok:false,completed,error:e.message};}
-}finally{ws?.close();}
+finally{ws?.close();}
 }
 
 if(process.argv?.includes('--worker')) {
