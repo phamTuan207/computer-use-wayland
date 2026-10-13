@@ -95,6 +95,31 @@ after failure without replaying input. This recipe reduces request roundtrips;
 it does not change the input backend or prove model-token savings. Reproduction
 and limitations: [task experiments](../../docs/optimization-experiments.md).
 
+### Scope the observation: `browser observe --scope`
+
+Opt-in, one read, never sticky:
+
+```bash
+"$CU" browser observe --target EXACT_TAB_ID --scope '#task'
+```
+
+`--scope` is valid on `observe` only. The value is a CSS selector that must match
+exactly one top-document element; it must be non-empty and at most 1024 UTF-16
+units. The selector is resolved read-only before the snapshot is replaced, so a
+failed match leaves the previous snapshot id and refs usable — there is no
+fallback to the whole page.
+
+The result enumerates only the interactive descendants of that root, plus the root
+itself when it is interactive. Iframes inside the scope are counted but not
+traversed. `scoped: true` in the result marks it; `title` and `url` remain whole
+page metadata. `--image` still captures the full viewport.
+
+Scope is **not** an input, security or privacy boundary: existing selectors can
+address anything on the page, and every action guard is unchanged. An `act`
+after-snapshot is whole page again unless you use the validated `--no-after`
+route. This is worth reaching for when the page carries many irrelevant controls,
+because the observation is what you have to read.
+
 ### Skip the final snapshot: `browser act --no-after`
 
 Opt-in. The same recipe, with the result `assert` last:

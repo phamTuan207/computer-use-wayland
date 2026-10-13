@@ -21,6 +21,9 @@ from optimization_live import summary
 
 BATCH_MODES = ('batch', 'batch-no-after')
 
+TASK_MODES = ('task-full', 'task-scoped')
+
+
 PAGE = '''<!doctype html><meta charset="utf-8">
 <input id="name"><button id="save">Save fixture</button><p id="status">Ready</p>{controls}
 <script>
@@ -41,10 +44,18 @@ document.querySelector('#save').onclick=()=>{
 requestAnimationFrame(()=>fetch('/ready',{method:'POST',body:'{}'}));
 </script>'''
 
+TASK_PAGE = PAGE.replace('<input id="name">', '<div id="task"><input id="name" aria-label="Task name">', 1).replace('<p id="status">Ready</p>', '<p id="status">Ready</p></div>', 1)
 
-def page(controls):
-    """One page plus `controls` inert inputs, so the after-snapshot pays real DOM cost."""
-    return PAGE.replace('{controls}', '<input disabled aria-hidden="true">'*controls).encode()
+
+def page(controls, task=False):
+    """One page plus `controls` inert inputs, so the after-snapshot pays real DOM cost.
+
+    The task variant wraps the same targets and the same script in a unique #task
+    root, with the irrelevant controls after it, so every target stays in view and
+    the scope root matches exactly once.
+    """
+    template = TASK_PAGE if task else PAGE
+    return template.replace('{controls}', '<input disabled aria-hidden="true">'*controls).encode()
 
 
 def wait_workspace(cu, env, workspace, timeout=3):
@@ -94,6 +105,57 @@ def finish_report(report, path, cleanup):
         write_report(report, path)
 
 
+def text_for(nonce, index, mode):
+    """Unique per run, sample and mode, so a stale field cannot satisfy the assert."""
+    return f'{nonce} {index} {mode} Việt 🐱'
+
+
+def pick_ref(elements, role, label):
+    """Resolve one ref by unique semantic label; a selector would bypass the observe."""
+    found = [e['ref'] for e in elements if e['role'] == role and e['name'] == label]
+    if len(found) != 1:
+        raise RuntimeError(f'ref selection for {label!r} matched {len(found)} controls')
+    return found[0]
+
+
+def task_sample(base, worker, row, mode, text, state, cu):
+    """Whole task: fresh observe, then one no_after act. The timer covers all of it."""
+    state.clear()
+    observe_request = {**base, 'operation': 'observe', 'max_elements': 80}
+    if mode == 'task-scoped':
+        observe_request['scope'] = '#task'
+    started = time.perf_counter()
+    snapshot = worker.request(observe_request)
+    row['calls'] += 1
+    row['result_bytes'] += len(json.dumps(snapshot, ensure_ascii=False).encode())
+    row['observe_ms'] = (time.perf_counter()-started)*1000
+    name = pick_ref(snapshot['elements'], 'input', 'Task name')
+    save = pick_ref(snapshot['elements'], 'button', 'Save fixture')
+    actions = [{'type': 'set_value', 'ref': name, 'text': text},
+               {'type': 'click', 'ref': save},
+               {'type': 'assert', 'selector': '#status', 'text': 'Saved '+text,
+                'timeout_ms': 1000}]
+    result = worker.request({**base, 'operation': 'act', 'max_elements': 80,
+                             'snapshot': snapshot['snapshot'], 'actions': actions,
+                             'no_after': True})
+    row['calls'] += 1
+    row['result_bytes'] += len(json.dumps(result, ensure_ascii=False).encode())
+    if not result.get('ok'):
+        row['failure'] = {k: result[k] for k in ('error', 'completed', 'mutation_may_have_occurred') if k in result}
+        raise RuntimeError('fixture task refused or condition timed out')
+    if result.get('after_skipped') is not True or 'after' in result:
+        raise RuntimeError('no_after route did not skip the after-snapshot')
+    deadline = time.monotonic()+1
+    while state.get('text') != text and time.monotonic() < deadline:
+        cu.check_cancel()
+        time.sleep(.005)
+    if state.get('text') != text:
+        raise RuntimeError('independent app state differs')
+    row['ok'] = True
+    row['total_ms'] = (time.perf_counter()-started)*1000
+    row['act_verify_ms'] = row['total_ms']-row['observe_ms']
+
+
 def run(args):
     root = args.cli.resolve().parents[1]
     sys.path.insert(0, str(root/'scripts'))
@@ -106,6 +168,7 @@ def run(args):
     used = {w['id'] for w in cu.hypr(env, 'workspaces')}
     workspace = next(i for i in range(101, 201) if i not in used)
     state = {}
+    mode_family = 'task' if set(args.modes) <= set(TASK_MODES) else 'legacy'
     class Handler(BaseHTTPRequestHandler):
         def log_message(self, *_):
             pass
@@ -113,7 +176,7 @@ def run(args):
             self.send_response(200)
             self.send_header('Content-Type', 'text/html; charset=utf-8')
             self.end_headers()
-            self.wfile.write(page(args.controls))
+            self.wfile.write(page(args.controls, task=mode_family == 'task'))
         def do_POST(self):
             size = int(self.headers.get('Content-Length', 0))
             if self.path not in ('/done', '/ready') or not 0 < size < 2000:
@@ -136,6 +199,10 @@ def run(args):
     report = {'kind': 'real_chromium_fixture', 'phase': 'cold' if args.cold else 'warm',
               'delay_ms': args.delay, 'modes': list(args.modes), 'controls': args.controls,
               'samples_per_mode': args.samples,
+              'mode_family': mode_family,
+              'timing_scope': ('whole task: observe + act + independent app verification; setup outside'
+                               if mode_family == 'task'
+                               else 'act request plus independent app verification; setup outside'),
               'provenance': 'source_tree' if root == Path(__file__).resolve().parents[1] else 'external_cli',
               'runtime_sha256': {name: hashlib.sha256((root/'scripts'/name).read_bytes()).hexdigest()
                                  for name in ['cu.py', 'browser_worker.py', 'cdp.mjs']},
@@ -182,17 +249,25 @@ def run(args):
             if time.monotonic() >= deadline:
                 raise RuntimeError('fixture app readiness timed out')
             time.sleep(.01)
-        base = {'endpoint': endpoint, 'target': target, 'max_elements': 8}
+        base = {'endpoint': endpoint, 'target': target}
         nonce = os.urandom(4).hex()
         for i in range(0 if args.cold else -1, args.samples):
             for mode in (args.modes if i%2 == 0 else list(reversed(args.modes))):
                 cu.check_cancel()
+                row = {'mode': mode, 'index': i, 'ok': False, 'calls': 0, 'result_bytes': 0,
+                       'observe_ms': 0, 'act_verify_ms': 0}
+                (rows if i >= 0 else report['warmup']).append(row)
+                # Checkpoint before the timer and before the observe, so an abrupt
+                # kill still leaves the partial row.
+                write_report(report, args.report)
+                text = text_for(nonce, i, args.modes.index(mode))
+                if mode in TASK_MODES:
+                    task_sample(base, worker, row, mode, text, state, cu)
+                    write_report(report, args.report)
+                    continue
                 # Fresh observe per sample: a skipped after-snapshot cannot hand back a
                 # new snapshot id, so a route that skips it must never reuse the old one.
-                snapshot = worker.request({**base, 'operation': 'observe'})
-                # The nonce plus sample index plus mode make every value unique, so a stale
-                # field from the previous route or sample can never satisfy the assert.
-                text = f'{nonce} {i} {args.modes.index(mode)} Việt 🐱'
+                snapshot = worker.request({**base, 'operation': 'observe', 'max_elements': 8})
                 state.clear()
                 # Both batch routes use set_value, which is focus-independent; split keeps
                 # fill, so it stays comparable with its existing history.
@@ -201,14 +276,11 @@ def run(args):
                            {'type': 'click', 'selector': '#save'},
                            {'type': 'assert', 'selector': '#status', 'text': 'Saved '+text,
                             'timeout_ms': 1000}]
-                row = {'mode': mode, 'index': i, 'ok': False, 'calls': 0, 'result_bytes': 0}
-                (rows if i >= 0 else report['warmup']).append(row)
-                write_report(report, args.report)  # Keep an incomplete row if guardian kills cleanup.
                 started = time.perf_counter()
                 groups = [actions] if mode in BATCH_MODES else [actions[:1], actions[1:2],
                           [{'type': 'wait', 'ms': 80}], actions[2:]]
                 for group in groups:
-                    request = {**base, 'operation': 'act',
+                    request = {**base, 'operation': 'act', 'max_elements': 8,
                                'snapshot': snapshot['snapshot'], 'actions': group}
                     if mode == 'batch-no-after':
                         request['no_after'] = True
@@ -281,7 +353,8 @@ def main():
     parser.add_argument('--cli', type=Path, default=Path(__file__).resolve().parents[1]/'scripts/cu.py')
     parser.add_argument('--samples', type=int, default=30)
     parser.add_argument('--delay', type=int, choices=[-1, 0, 16, 50, 100, 250], default=0)
-    parser.add_argument('--modes', nargs='+', choices=['split', 'batch', 'batch-no-after'],
+    parser.add_argument('--modes', nargs='+',
+                        choices=['split', 'batch', 'batch-no-after', 'task-full', 'task-scoped'],
                         default=['split', 'batch'])
     parser.add_argument('--controls', type=int, default=0,
                         help='extra inert fixture inputs, 0..1000; makes after-snapshot cost real')
@@ -293,6 +366,10 @@ def main():
         parser.error('samples must be 1..30')
     if not 0 <= args.controls <= 1000:
         parser.error('controls must be 0..1000')
+    # The families time different work, so mixing them would blend two scopes.
+    if len({'legacy' if mode in ('split', 'batch', 'batch-no-after') else 'task'
+            for mode in args.modes}) > 1:
+        parser.error('do not mix task-full/task-scoped with split/batch/batch-no-after')
     if args.cold and (args.samples != 1 or len(args.modes) != 1):
         parser.error('cold requires --samples 1 and exactly one mode')
     args.report.parent.mkdir(parents=True, exist_ok=True)

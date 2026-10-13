@@ -719,8 +719,13 @@ def main():
     b=sub.add_parser('browser');b.add_argument('operation',choices=['start','tabs','observe','act']);b.add_argument('--endpoint',default='http://127.0.0.1:9222');b.add_argument('--target');b.add_argument('--snapshot');b.add_argument('--actions');b.add_argument('--image',action='store_true')
     b.add_argument('--no-after',action='store_true',help='skip the successful after-snapshot; the final action must be a meaningful assert')
     b.add_argument('--max-elements',type=int,default=80,help='DOM output budget, 1..80 (default 80)')
+    b.add_argument('--scope',help='observe only: one CSS selector to enumerate; one read, not sticky, not an input boundary')
     a=sub.add_parser('a11y');a.add_argument('operation',choices=['apps','observe','act']);a.add_argument('--pid',type=int);a.add_argument('--snapshot');a.add_argument('--actions')
     args=parser.parse_args()
+    if args.command=='browser' and args.scope is not None:
+        if args.operation!='observe':raise ValueError('--scope is only valid for browser observe')
+        if not args.scope.strip():raise ValueError('--scope must be a non-empty CSS selector')
+        if len(args.scope.encode('utf-16-le','surrogatepass'))>2048:raise ValueError('--scope must be at most 1024 characters')
     if args.command=='observe' and args.focus and not args.window:parser.error('--focus requires --window')
     if args.command=='session-driver':
         require_session()
@@ -781,6 +786,7 @@ def main():
         if args.operation=='start':
             print(json.dumps(browser_start(env,args.endpoint)));return 0
         request={'operation':args.operation,'endpoint':args.endpoint,'target':args.target,'snapshot':args.snapshot,'image':args.image,'max_elements':args.max_elements}
+        if args.scope is not None:request['scope']=args.scope
         if args.operation=='act':
             require_session()
             if not args.actions: raise ValueError('--actions required')

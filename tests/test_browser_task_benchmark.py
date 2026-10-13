@@ -1,9 +1,10 @@
 """Report, workspace and CLI checks with mocks; no browser or GUI input."""
-from contextlib import ExitStack, redirect_stderr
+from contextlib import ExitStack, redirect_stderr, redirect_stdout
 import io
 import json
 from pathlib import Path
 import sys
+import subprocess
 import tempfile
 from types import SimpleNamespace
 import unittest
@@ -215,6 +216,122 @@ class BrowserTaskHarnessTests(unittest.TestCase):
             self.assertNotIn('worker_close', saved['cleanup_errors'])
             server.shutdown.assert_called_once()
             thread.join.assert_called_once_with(timeout=2)
+
+    def test_cli_help_runs_without_a_session(self):
+        out = io.StringIO()
+        with patch.object(sys, 'argv', ['browser_task_benchmark', '--help']), redirect_stdout(out):
+            with self.assertRaises(SystemExit) as error:
+                benchmark.main()
+        self.assertEqual(error.exception.code, 0)
+        for flag in ('--modes', '--controls', '--samples', '--report'):
+            self.assertIn(flag, out.getvalue())
+        self.assertIn('task-full', out.getvalue())
+        self.assertIn('task-scoped', out.getvalue())
+
+    def test_task_modes_do_not_mix_with_legacy_modes(self):
+        for argv in (['--modes', 'task-full', 'batch'],
+                     ['--modes', 'split', 'task-scoped'],
+                     ['--modes', 'task-full', 'task-scoped', 'batch-no-after']):
+            with self.subTest(argv=argv), patch.object(sys, 'argv',
+                    ['browser_task_benchmark', '--report', 'unused.json', *argv]), \
+                    patch.object(benchmark.subprocess, 'run') as launch, redirect_stderr(io.StringIO()):
+                with self.assertRaises(SystemExit) as error:
+                    benchmark.main()
+                self.assertEqual(error.exception.code, 2)
+                launch.assert_not_called()
+
+    def test_task_family_summary_and_legacy_default(self):
+        with tempfile.TemporaryDirectory() as folder:
+            report = {'modes': ['task-full', 'task-scoped'], 'samples': [
+                {'mode': 'task-full', 'ok': True, 'total_ms': 12},
+                {'mode': 'task-scoped', 'ok': True, 'total_ms': 8},
+            ]}
+            def cleanup():
+                report['cleanup_ok'] = True
+            benchmark.finish_report(report, Path(folder)/'report.json', cleanup)
+            self.assertEqual(list(report['summary']), ['task-full', 'task-scoped'])
+            self.assertEqual(report['summary']['task-scoped']['samples'], 1)
+
+    def test_ref_selection_requires_a_unique_semantic_label(self):
+        elements = [{'ref': 'e1', 'role': 'input', 'name': 'Task name'},
+                    {'ref': 'e2', 'role': 'input', 'name': 'Task name'}]
+        with self.assertRaisesRegex(RuntimeError, 'matched 2 controls'):
+            benchmark.pick_ref(elements, 'input', 'Task name')
+        self.assertEqual(benchmark.pick_ref(elements[:1], 'input', 'Task name'), 'e1')
+        with self.assertRaisesRegex(RuntimeError, 'matched 0 controls'):
+            benchmark.pick_ref(elements[:1], 'button', 'Save fixture')
+
+    def test_task_sample_stops_before_input_when_refs_are_missing(self):
+        worker = Mock()
+        worker.request.return_value = {'snapshot': 's', 'elements': []}
+        row = {'mode': 'task-scoped', 'index': 0, 'ok': False, 'calls': 0, 'result_bytes': 0}
+        with self.assertRaisesRegex(RuntimeError, "matched 0 controls"):
+            benchmark.task_sample({'endpoint': 'e', 'target': 't'}, worker, row, 'task-scoped',
+                                  'payload', {}, Mock())
+        self.assertEqual(worker.request.call_count, 1, 'only the observe may run')
+        self.assertFalse(row['ok'])
+        self.assertNotIn('total_ms', row)
+
+    def test_task_sample_two_calls_refs_and_whole_task_timer(self):
+        worker = Mock()
+        observe = {'snapshot': 's', 'elements': [
+            {'ref': 'e1', 'role': 'input', 'name': 'Task name'},
+            {'ref': 'e2', 'role': 'button', 'name': 'Save fixture'},
+            ]}
+        posted = {}
+        def request(payload):
+            if payload['operation'] == 'observe':
+                posted['scope'] = payload.get('scope')
+                posted['max_elements'] = payload['max_elements']
+                return observe
+            posted['act'] = payload
+            return {'ok': True, 'after_skipped': True, 'completed': 3}
+        worker.request.side_effect = request
+        state = {}
+        original = benchmark.time.sleep
+        benchmark.time.sleep = lambda _s: state.update(text='payload')
+        try:
+            row = {'mode': 'task-scoped', 'index': 0, 'ok': False, 'calls': 0, 'result_bytes': 0}
+            benchmark.task_sample({'endpoint': 'e', 'target': 't'}, worker, row, 'task-scoped',
+                                  'payload', state, Mock())
+        finally:
+            benchmark.time.sleep = original
+        self.assertEqual(worker.request.call_count, 2, 'observe plus exactly one act')
+        self.assertEqual(posted['scope'], '#task')
+        self.assertEqual(posted['max_elements'], 80)
+        self.assertIs(posted['act']['no_after'], True)
+        # The snapshot never enumerates <p>, so only the two real controls take
+        # refs and the status assert keeps its known selector.
+        self.assertEqual(posted['act']['actions'],
+                         [{'type': 'set_value', 'ref': 'e1', 'text': 'payload'},
+                          {'type': 'click', 'ref': 'e2'},
+                          {'type': 'assert', 'selector': '#status', 'text': 'Saved payload',
+                           'timeout_ms': 1000}])
+        self.assertTrue(row['ok'])
+        self.assertEqual(row['calls'], 2)
+        self.assertGreaterEqual(row['total_ms'], row['observe_ms'])
+
+    def test_task_sample_requires_after_skipped(self):
+        worker = Mock()
+        observe = {'snapshot': 's', 'elements': [
+            {'ref': 'e1', 'role': 'input', 'name': 'Task name'},
+            {'ref': 'e2', 'role': 'button', 'name': 'Save fixture'},
+            ]}
+        worker.request.side_effect = [observe, {'ok': True, 'after': {'elements': []}}]
+        row = {'mode': 'task-full', 'index': 0, 'ok': False, 'calls': 0, 'result_bytes': 0}
+        with self.assertRaisesRegex(RuntimeError, 'did not skip'):
+            benchmark.task_sample({'endpoint': 'e', 'target': 't'}, worker, row, 'task-full',
+                                  'payload', {}, Mock())
+        self.assertFalse(row['ok'])
+
+    def test_task_fixture_wraps_targets_in_a_unique_root(self):
+        legacy = benchmark.page(3)
+        scoped = benchmark.page(3, task=True)
+        self.assertEqual(legacy.count(b'<div id="task">'), 0, 'legacy fixture unchanged')
+        self.assertEqual(scoped.count(b'<div id="task">'), 1)
+        self.assertIn(b'aria-label="Task name"', scoped)
+        self.assertEqual(scoped.count(b'/ready'), 1, 'the ready barrier is kept')
+        self.assertEqual(scoped.count(b'<input disabled aria-hidden="true">'), 3)
 
 if __name__ == '__main__':
     unittest.main()

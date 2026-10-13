@@ -83,9 +83,50 @@ python3 tests/browser_task_benchmark.py --report "$report_dir/large.json" \
 The benchmark owns its own session, so run it outside an existing one. To drive
 an installed CLI instead of the source tree, pass `--cli PATH_TO_INSTALLED_CU`.
 
+The scoped route is measured by the same harness with the paired task modes:
+
+```sh
+python3 tests/browser_task_benchmark.py --report "$report_dir/scope.json" \
+  --modes task-full task-scoped --samples 30 --controls 1000
+```
+
 `tests/control_benchmark.py` is a separate read-only comparison helper for
 capture and worker latency; `--target` points it at an inert fixture tab and it
 performs no input.
+
+## Scoped observation
+
+`browser observe --scope SELECTOR` filters the observe enumeration to the
+interactive descendants of exactly one top-document root, plus that root when it
+is itself interactive. The scope is not retained between reads; an `act`
+after-snapshot is whole page again, and every action, focus and cancellation
+guard is unchanged. It is not an input, security or privacy boundary.
+
+Measured on the owned Chromium fixture, 3 blocks x 30 pairs = 90 samples per
+route at each controls value, AB/BA alternated, warm worker with a fresh CDP
+connection per request. Both routes use `max_elements: 80`, exactly two requests
+(one observe, one act with `no_after`), equal-length, unique Unicode payloads, refs resolved
+from the returned observation, and the timer covers the observe, ref selection,
+the act, the final assert and the independent POST verification. Setup and model
+time are excluded. Bytes are re-encoded JSON for observe plus act — not
+transport bytes and not billed tokens. 360 measured tasks plus 12 warm-ups, no
+correctness failure, cleanup clean.
+
+| Controls | Full median / p95 ms | Scoped median / p95 ms | Median cut | Bytes |
+|---|---:|---:|---:|---:|
+| 0 | 65.045 / 67.030 | 64.292 / 66.918 | 1.160% (0.753 ms) | 365 -> 381, **4.38% more** |
+| 1000 | 73.153 / 76.146 | 70.643 / 74.650 | 3.430% (2.510 ms) | 7065 -> 381, **94.61% fewer** |
+
+Neither size meets the predeclared speed-win rule (median reduction >=10% and
+>=5 ms with bounded p95); both pass the no-regression gate. Large-page p95
+improves in all three blocks (75.415 -> 74.571, 76.304 -> 74.650,
+76.146 -> 74.655 ms). Small-page medians vary; block 2 worsens from 63.174
+to 63.966 ms. Its extra `scoped: true` field also adds 16 bytes.
+
+The opt-in release passes the large-page output gate (>=50% fewer bytes).
+Use it to reduce irrelevant observation context; these measurements do not
+establish billed-token savings, model-time savings or a speed win. Default
+whole-page observation is unchanged.
 
 ## Installed keyboard diagnostics
 

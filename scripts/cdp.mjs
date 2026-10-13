@@ -29,6 +29,12 @@ if('no_after'in request){
     if(!meaningful)throw new Error('no_after final assert needs text, value or checked');
   }
 }
+// Scope filters one observation; validate before any network request.
+if(request.scope!==undefined){
+  if(typeof request.scope!=='string'||!request.scope.trim())throw new Error('scope must be a non-empty CSS selector');
+  if(request.scope.length>1024)throw new Error('scope must be at most 1024 characters');
+  if(request.operation!=='observe')throw new Error('scope is only valid for observe');
+}
 const endpoint=new URL(request.endpoint);
 if (!['127.0.0.1','localhost','[::1]'].includes(endpoint.hostname)) throw new Error('CDP endpoint must be loopback');
 const tabs=await (await fetch(new URL('/json/list',endpoint),{signal:AbortSignal.timeout(4000)})).json();
@@ -72,12 +78,21 @@ function pageState(snapshot,action) {
   return e;
 }
 const elementExpression=(a,body)=>`(()=>{const e=(${pageState.toString()})(${JSON.stringify(request.snapshot)},${JSON.stringify({ref:a.ref,selector:a.selector})});${body}})()`;
+const INTERACTIVE='button,a[href],input,textarea,select,summary,[role="button"],[role="checkbox"],[role="tab"],[role="menuitem"],[contenteditable="true"]';
 async function snapshot() {
   const id=crypto.randomUUID().slice(0,12);
+  // Validate the root before replacing a usable snapshot.
+  const resolve=JSON.stringify(request.scope);
   return await evaluate(`(()=>{
+    ${resolve?`let roots;
+    try{roots=document.querySelectorAll(${resolve});}catch(_){throw new Error('scope selector is not valid CSS');}
+    if(!roots.length)throw new Error('scope selector matched no element');
+    if(roots.length!==1)throw new Error('scope selector must match exactly one element');
+    const scope=roots[0];`:'const scope=null;'}
     const s=globalThis.__agentCu={id:${JSON.stringify(id)},created:Date.now(),url:location.href,refs:new Map()};
     const elements=[],visible=[],offscreen=[];let index=0;
-    const candidates=document.querySelectorAll('button,a[href],input,textarea,select,summary,[role="button"],[role="checkbox"],[role="tab"],[role="menuitem"],[contenteditable="true"]');
+    let candidates=(scope??document).querySelectorAll(${JSON.stringify(INTERACTIVE)});
+    if(scope?.matches(${JSON.stringify(INTERACTIVE)}))candidates=[scope,...candidates];
     for(const e of candidates){
       const r=e.getBoundingClientRect(),style=getComputedStyle(e);
       if(!r.width||!r.height||style.visibility==='hidden'||style.display==='none'||e.type==='hidden')continue;
@@ -96,7 +111,10 @@ async function snapshot() {
       if(index>visible.length)item.offscreen=true;
       elements.push(item);
     }
-    return {snapshot:s.id,title:document.title,url:location.href,elements,truncated,iframes:document.querySelectorAll('iframe').length};
+    const frames=scope?(scope.matches('iframe')?1:0)+scope.querySelectorAll('iframe').length
+      :document.querySelectorAll('iframe').length;
+    return {snapshot:s.id,title:document.title,url:location.href,elements,truncated,iframes:frames,
+      ${resolve?'scoped:true,':''}};
   })()`);
 }
 async function click(a) {

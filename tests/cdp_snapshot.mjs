@@ -8,43 +8,82 @@ const source=fs.readFileSync(new URL('../scripts/cdp.mjs',import.meta.url),'utf8
 const token='fake-api-token-NEVER-EXPOSE';
 class FakeInput {get value(){return this._value??'';} set value(value){this._value=value;}}
 class FakeTextarea {get value(){return this._value??'';} set value(value){this._value=value;}}
+// The fake DOM needs enough selector support for scoped observe: which nodes are
+// interactive, and which live inside a subtree.
+const TAGS=/^(BUTTON|INPUT|TEXTAREA|SELECT|SUMMARY|A)$/;
+const ROLES=/^(button|checkbox|tab|menuitem)$/;
+function matchesSelector(node,selector){
+  if(selector==='*')return true;
+  if(selector==='iframe')return node.tagName==='IFRAME';
+  if(selector===':disabled')return Boolean(node.disabled);
+  if(/^[a-z]+$/i.test(selector))return node.tagName===selector.toUpperCase();
+  return TAGS.test(node.tagName)||ROLES.test(node.attributes?.role)||node.isContentEditable===true;
+}
+function flatten(nodes){
+  const all=[];
+  for(const node of nodes){all.push(node);all.push(...descendants(node,'*'));}
+  return all;
+}
+function descendants(node,selector){
+  const found=[];
+  for(const child of node.children??[]){
+    if(matchesSelector(child,selector))found.push(child);
+    found.push(...descendants(child,selector));
+  }
+  return found;
+}
 function element(name,options={}) {
   const {left=10,top=10,width=20,height=20,tagName='BUTTON',...rest}=options;
   const proto=tagName==='INPUT'?FakeInput.prototype:tagName==='TEXTAREA'?FakeTextarea.prototype:Object.prototype;
   const node=Object.assign(Object.create(proto),{tagName,innerText:name,textContent:name,isConnected:true,
     type:'text',disabled:false,readOnly:false,maxLength:-1,
-    getAttribute:key=>key==='aria-disabled'?rest.ariaDisabled??null:null,
-    closest:()=>rest.inert?node:null,matches:selector=>selector===':disabled'&&Boolean(rest.disabled),
+    getAttribute:key=>key==='aria-disabled'?rest.ariaDisabled??null:rest.attributes?.[key]??null,
+    closest:()=>rest.inert?node:null,children:rest.children??[],
+    matches:selector=>selector===':disabled'?Boolean(rest.disabled):matchesSelector(node,selector),
     contains:other=>other===node,scrollIntoView(){},getClientRects:()=>[{}],
     dispatchEvent:event=>{(node.events??=[]).push({type:event.type,trusted:event.isTrusted});rest.onEvent?.(event,node);return true;},
     getBoundingClientRect:()=>({left,top,right:left+width,bottom:top+height,width,height}),...rest});
   return node;
 }
 async function run(elements,actions,{mutate=text=>text,maxElements,debuggerUrl='ws://127.0.0.1:9222/test',
-  noAfter,operation,image,allowNoSocket=false}={}) {
-  const expressions=[],replies=[],output=[];
+  noAfter,operation,image,allowNoSocket=false,scope,seed,followup}={}) {
+  const expressions=[],replies=[],output=[],calls=[],measured=new Set();
   const document={title:'fixture',activeElement:null,
-    querySelectorAll:selector=>selector==='iframe'?[]:selector.startsWith('#')?
-      elements.filter(e=>e.id===selector.slice(1)):elements,
+    querySelectorAll:selector=>{
+      if(/[[]{2}|\]\]/.test(selector))throw new SyntaxError('not a valid selector');
+      if(selector.startsWith('#'))return flatten(elements).filter(e=>e.id===selector.slice(1));
+      return flatten(elements).filter(e=>matchesSelector(e,selector));},
     elementFromPoint:()=>elements[0]};
   const page=vm.createContext({document,location:{href:'http://fixture/'},innerWidth:100,innerHeight:100,
     HTMLInputElement:FakeInput,HTMLTextAreaElement:FakeTextarea,
     InputEvent:class {constructor(type,options){this.type=type;this.isTrusted=false;Object.assign(this,options);}},
     Event:class {constructor(type,options){this.type=type;this.isTrusted=false;Object.assign(this,options);}},
-    getComputedStyle:e=>({visibility:e.visibility??'visible',display:e.display??'block'})});
-  if(actions){
+    getComputedStyle:e=>{measured.add(e);return {visibility:e.visibility??'visible',display:e.display??'block'};}});
+  if(seed??Boolean(actions)){
     vm.runInContext("globalThis.__agentCu={id:'before',created:Date.now(),url:location.href,refs:new Map()}",page);
     vm.runInContext('__agentCu',page).refs.set('e1',elements[0]);
   }
   const request={operation:operation??(actions?'act':'observe'),endpoint:'http://127.0.0.1:9222',target:'test',snapshot:'before',actions,max_elements:maxElements};
   if(noAfter!==undefined)request.no_after=noAfter;
   if(image!==undefined)request.image=image;
+  if(scope!==undefined)request.scope=scope;
+  // A followup runs the adapter again against the SAME fake page, so a scoped
+  // observe can be followed by a real act using the snapshot and refs it returned.
+  const runs=followup?2:1;
+  const queue=[request];
+  const allNodes=flatten(elements);
+  for(const node of allNodes){
+    node.querySelectorAll=selector=>descendants(node,selector);
+    const box=node.getBoundingClientRect.bind(node);
+    node.getBoundingClientRect=()=>{measured.add(node);return box();};
+  }
   let closed=false,fetches=0;
   class WebSocket {
     listeners={};
     addEventListener(name,fn){this.listeners[name]=fn;if(name==='open')queueMicrotask(fn);}
     send(raw){
       const {id,method,params}=JSON.parse(raw);let result={};
+      calls.push({method,params});
       if(method==='Runtime.evaluate'){
         expressions.push(params.expression);
         try {
@@ -64,18 +103,27 @@ async function run(elements,actions,{mutate=text=>text,maxElements,debuggerUrl='
     close(){closed=true;}
   }
   const process={exitCode:0};
-  await vm.runInNewContext('(async()=>{'+source.replace(/^import .*;$/gm,'')+'})()',{
-    fs:{readFileSync:()=>JSON.stringify(request)},crypto:{randomUUID:()=> 'snapshot-test'},
+  const sandbox={fs:{readFileSync:()=>JSON.stringify(queue.shift()??request)},
+    crypto:{randomUUID:()=> 'snapshot-test'},
     URL,WebSocket,process,AbortSignal,queueMicrotask,setTimeout,clearTimeout,
     fetch:async()=>{fetches++;return {json:async()=>[{type:'page',id:'test',webSocketDebuggerUrl:debuggerUrl}]};},
-    console:{log:s=>output.push(JSON.parse(s))}
-  });
+    console:{log:s=>output.push(JSON.parse(s))}};
+  // One context, run once per queued request, so a followup sees the page state the
+  // first request left behind.
+  const context=vm.createContext(sandbox);
+  const body='(async()=>{'+source.replace(/^import .*;$/gm,'')+'})()';
+  for(let i=0;i<runs;i++){
+    // A followup may be a function of the previous result, so a real act can use
+    // the snapshot id and refs the scoped observe actually returned.
+    if(i)queue.push({...request,...(typeof followup==='function'?followup(output[i-1]):followup)});
+    await vm.runInContext(body,context);
+  }
   // A preflight rejection can return before the endpoint fetch and the socket, so
   // the harness must tolerate a run that opened neither. Callers assert the fetch
   // count themselves, since some checks legitimately run after the tab list.
   assert.equal(closed,!allowNoSocket);
-  assert.equal(output.length,1);
-  return {result:output[0],expressions,replies,page,fetches};
+  assert.equal(output.length,runs);
+  return {result:output[0],expressions,replies,page,fetches,calls,measured,outputs:output};
 }
 
 // `fill` can misroute across CDP key requests. It may falsely succeed when the
@@ -276,7 +324,166 @@ const rawCold=spawnSync('node',[fileURLToPath(new URL('../scripts/cdp.mjs',impor
 assert.equal(rawCold.status,1);
 assert.equal(rawCold.stderr,'');
 assert.deepEqual(JSON.parse(rawCold.stdout),{ok:false,completed:0,error:'no_after must be a boolean'});
-console.log('all cdp snapshot, redaction, fill, payload and no_after regressions pass');
+// Scoped observe: one read, never sticky, never an input boundary.
+const taskPanel=element('panel',{id:'task',tagName:'DIV',attributes:{role:'region'}});
+const nameField=element('name field',{id:'name',tagName:'INPUT',value:'secret-value'});
+const saveButton=element('save',{id:'save',attributes:{role:'button'}});
+taskPanel.children=[nameField,saveButton];
+const strayButton=element('stray',{id:'stray'});
+const strayField=element('stray field',{id:'strayfield',tagName:'INPUT',value:'other-secret'});
+const pageFrames=[element('',{tagName:'IFRAME'}),element('',{tagName:'IFRAME'})];
+for(const frame of pageFrames)frame.children=[element('',{tagName:'IFRAME'})];
+
+const scoped=await run([taskPanel,strayButton,strayField],undefined,{scope:'#task'});
+assert.equal(scoped.result.scoped,true);
+assert.deepEqual(scoped.result.elements.map(e=>[e.ref,e.role]),[['e1','input'],['e2','button']]);
+assert.equal(scoped.result.elements[0].value,'[redacted]','scoped field values stay redacted');
+assert.ok(!JSON.stringify(scoped.result).includes('secret-value'),'raw value never returned');
+assert.equal(scoped.result.title,'fixture');
+assert.equal(scoped.result.url,'http://fixture/','page metadata is still global');
+assert.equal(scoped.result.iframes,0,'iframes counted inside the scope only');
+assert.ok(scoped.measured.has(nameField)&&scoped.measured.has(saveButton),
+  'in-scope nodes must be measured');
+assert.ok(!scoped.measured.has(strayButton)&&!scoped.measured.has(strayField),
+  'outside nodes must never be measured');
+
+// A root that is itself interactive is included exactly once, and refs map 1:1.
+const rootButton=await run([element('root save',{id:'root'}),element('inner',{id:'inner'})],
+  undefined,{scope:'#root'});
+assert.deepEqual(rootButton.result.elements.map(e=>e.name),['root save']);
+const withRootAndChild=element('root both',{id:'both',attributes:{role:'button'}});
+const child=element('child only',{id:'child'});
+withRootAndChild.children=[child];
+const both=await run([withRootAndChild],undefined,{scope:'#both'});
+assert.deepEqual(both.result.elements.map(e=>e.name),['root both','child only'],
+  'interactive root included once, then its descendants');
+assert.deepEqual(both.result.elements.map(e=>e.ref),['e1','e2'],'refs stay sequential');
+assert.equal(vm.runInContext("__agentCu.refs.get('e1').innerText",both.page),'root both');
+
+// An iframe root counts itself plus its own subtree.
+const frameRoot=element('',{id:'fr',tagName:'IFRAME'});
+frameRoot.children=[element('',{tagName:'IFRAME'}),element('inner',{id:'inframe'})];
+const framed=await run([frameRoot,...pageFrames],undefined,{scope:'#fr'});
+assert.equal(framed.result.iframes,2,'iframe root itself plus its subtree');
+
+// Truncation and visible-first ordering survive scoping.
+const scopedMany=Array.from({length:20},(_,i)=>element('c'+i,{id:'c'+i}));
+const wide=element('wide',{id:'wide'});
+wide.children=scopedMany;
+const capped=await run([wide],undefined,{scope:'#wide',maxElements:4});
+assert.equal(capped.result.elements.length,4);
+assert.equal(capped.result.truncated,true);
+const offscreen=[element('below',{id:'below',top:200}),element('visible',{id:'vis'})];
+const box=element('box',{id:'box',tagName:'DIV'});
+box.children=offscreen;
+const ordered=await run([box],undefined,{scope:'#box'});
+assert.deepEqual(ordered.result.elements.map(e=>e.name),['visible','below'],'visible first');
+assert.equal(ordered.result.elements[1].offscreen,true);
+
+// Bad scopes fail read-only, before the usable snapshot is replaced.
+for(const [label,selector,message] of [
+  ['zero matches','#nothing','scope selector matched no element'],
+  ['multiple','div','scope selector must match exactly one element'],
+  ['invalid CSS','#a[[','scope selector is not valid CSS'],
+]){
+  const secondPanel=element('panel two',{id:'task2',tagName:'DIV'});
+  const reused=await run([taskPanel,secondPanel,strayButton],undefined,
+    {scope:selector,operation:'observe',seed:true});
+  assert.equal(reused.result.ok,false,label);
+  assert.ok(reused.result.error.startsWith(message),label+': '+reused.result.error);
+  assert.equal(vm.runInContext('__agentCu.id',reused.page),'before',label+' must keep the old snapshot id');
+  assert.equal(vm.runInContext("__agentCu.refs.get('e1').innerText",reused.page),'panel',
+    label+' must keep old refs usable');
+  assert.equal(reused.result.scoped,undefined,label+' returns no scope field');
+}
+
+// A selector is a JSON string literal, never evaluated as code.
+const injected=await run([taskPanel],undefined,{scope:'#task\").constructor.name&&1||1,globalThis.__pwned=1,#task'});
+assert.ok(injected.result.error.includes('scope selector'),'injected selector is not executed');
+assert.equal(vm.runInContext('globalThis.__pwned',injected.page),undefined);
+
+// Scope is not sticky: a real scoped observe is followed by a real act in the SAME
+// fake page, using the snapshot id and ref the observe actually returned.
+// Whole page = every interactive node in the tree: the two inside #task plus the
+// two outside it. The DIV container is not interactive and must not appear.
+const wholePageNames=['','','save','stray'];
+const scopedThenAct=await run([taskPanel,strayButton,strayField],undefined,
+  {operation:'observe',scope:'#task',
+   followup:observed=>({operation:'act',scope:undefined,snapshot:observed.snapshot,
+     actions:[{type:'assert',ref:observed.elements[1].ref,text:'save'}]})});
+const [observed,acted]=scopedThenAct.outputs;
+assert.equal(observed.scoped,true);
+assert.deepEqual(observed.elements.map(e=>e.ref),['e1','e2'],'scoped observe refs');
+assert.equal(acted.ok,true,JSON.stringify(acted));
+assert.equal(acted.after.scoped,undefined,'the act result carries no scope field');
+assert.deepEqual(acted.after.elements.map(e=>e.name).sort(),wholePageNames,
+  'the after-snapshot is whole page again, not the earlier scope');
+assert.equal(acted.after.elements.length,4,'four interactive nodes, container excluded');
+assert.equal(observed.snapshot,'snapshot-tes','the act used the snapshot the observe returned');
+
+// The same flow with a failing act: the diagnostic after-snapshot is also whole page.
+const scopedThenFail=await run([taskPanel,strayButton,strayField],undefined,
+  {operation:'observe',scope:'#task',
+   followup:observed=>({operation:'act',scope:undefined,snapshot:observed.snapshot,
+     actions:[{type:'assert',ref:observed.elements[0].ref,text:'never',timeout_ms:0}]})});
+const [observedFail,failedAct]=scopedThenFail.outputs;
+assert.equal(failedAct.ok,false);
+assert.equal(failedAct.after.scoped,undefined);
+assert.deepEqual(failedAct.after.elements.map(e=>e.name).sort(),wholePageNames,
+  'a failed act still reports a whole-page diagnostic snapshot');
+assert.equal(observedFail.scoped,true);
+
+// --image still captures the full viewport.
+const shot=await run([taskPanel],undefined,{scope:'#task',image:true});
+const capture=shot.calls.find(c=>c.method==='Page.captureScreenshot');
+assert.ok(capture,'screenshot requested');
+assert.equal(capture.params.captureBeyondViewport,false);
+assert.equal(capture.params.clip,undefined,'scoped observe must not crop the screenshot');
+
+// Raw scope values are rejected before the endpoint fetch, on both entries.
+for(const [label,value,message] of [
+  ['null',null,'scope must be a non-empty CSS selector'],
+  ['boolean',true,'scope must be a non-empty CSS selector'],
+  ['number',7,'scope must be a non-empty CSS selector'],
+  ['empty','','scope must be a non-empty CSS selector'],
+  ['whitespace','   ','scope must be a non-empty CSS selector'],
+]){
+  const rejected=await run([taskPanel],undefined,{scope:value,allowNoSocket:true});
+  assert.equal(rejected.result.ok,false,label);
+  assert.equal(rejected.result.error,message,label);
+  assert.equal(rejected.fetches,0,label+' must reject before fetch');
+}
+const wrongOperation=await run([taskPanel],undefined,{scope:'#task',operation:'tabs',allowNoSocket:true});
+assert.equal(wrongOperation.result.error,'scope is only valid for observe');
+assert.equal(wrongOperation.fetches,0);
+for(const operation of ['start','act']){
+  const refused=await run([taskPanel],undefined,{scope:'#task',operation,allowNoSocket:true});
+  assert.equal(refused.result.error,'scope is only valid for observe',operation);
+  assert.equal(refused.fetches,0,operation+' must reject before fetch');
+}
+const arrayScope=await run([taskPanel],undefined,{scope:['#task'],allowNoSocket:true});
+assert.equal(arrayScope.result.error,'scope must be a non-empty CSS selector');
+assert.equal(arrayScope.fetches,0);
+// The adapter counts UTF-16 code units, so non-BMP selectors reach the limit at half
+// the code-point count. 1024 units is accepted, 1026 is not.
+for(const [label,selector,accepted] of [
+  ['1024 units', 'x'.repeat(1024), true],
+  ['1025 units', 'x'.repeat(1025), false],
+  ['512 emoji = 1024 units', '\u{1F431}'.repeat(512), true],
+  ['513 emoji = 1026 units', '\u{1F431}'.repeat(513), false],
+]){
+  const sized=await run([taskPanel],undefined,{scope:selector,operation:'observe',
+    allowNoSocket:!accepted});
+  if(accepted)assert.ok(!/1024/.test(sized.result.error??''),
+    label+' must pass the length check, got: '+sized.result.error);
+  else{assert.equal(sized.result.error,'scope must be at most 1024 characters',label);
+    assert.equal(sized.fetches,0,label+' must reject before fetch');}
+}
+const scopeWorker=spawnSync('node',[fileURLToPath(new URL('../scripts/cdp.mjs',import.meta.url)),'--worker'],
+  {input:JSON.stringify({operation:'observe',endpoint:'http://127.0.0.1:9222',target:'test',scope:null}),
+   encoding:'utf8'});
+assert.deepEqual(JSON.parse(scopeWorker.stdout.trim()).error,'scope must be a non-empty CSS selector');
+console.log('all cdp snapshot, redaction, fill, payload, no_after and scope regressions pass');
 
 const many=Array.from({length:80},(_,i)=>element('control '+i));
 const full=await run(many);
