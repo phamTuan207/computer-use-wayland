@@ -205,7 +205,8 @@ carrying a condition it really evaluates — `value` (string, `""` allowed),
 non-empty `text`, or boolean `checked`. Execution failures still attempt a
 diagnostic `after` snapshot; preflight errors happen before input. Because no
 fresh snapshot comes back, observe again before any
-further input. The desktop `act --no-after` flag is a different feature.
+further input. Desktop `act --no-after` instead needs an independent app-result
+check; see [desktop usage](skill/references/usage.md#desktop).
 
 For a task that continues in one panel, use `browser observe --scope '#panel'`
 and pass `--after-scope '#panel'` to each `browser act` that needs the next refs.

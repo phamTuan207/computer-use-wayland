@@ -206,6 +206,13 @@ Actions: `{"type":"click","ref":"e2"}` or `{"type":"set_text","ref":"e1","text":
 
 ## Desktop
 
+Desktop `act --no-after` skips the successful final screenshot while keeping the
+fresh pre-input capture and all focus, geometry and cancellation guards. Use it
+only when an independent application result check will confirm the outcome and
+no next screenshot is needed. `ok`/`after_skipped` alone are not that check.
+Execution failures still attempt a diagnostic `after`; never replay uncertain
+input. This differs from browser `--no-after`, which requires a final assert.
+
 For a known application class, `windows --class CLASS` returns only exact,
 case-sensitive matches; no match returns `[]`. Add `--no-titles` to omit the title
 field. Both options are independent, read-only and apply to one request. Every

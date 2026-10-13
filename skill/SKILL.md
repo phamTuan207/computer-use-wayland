@@ -82,8 +82,9 @@ separate check before any external submit, and preserve host permissions.
 - `browser act --after-scope SELECTOR` returns the next refs from a panel that should still exist, so
   a multi-step task continues without a full page. Failed actions keep a full-page diagnostic; a
   vanished panel needs a fresh observe.
-- `browser act --no-after` returns a compact success when a final meaningful assert already states the
-  result and no later view is needed. It cannot combine with `--image`.
+- Browser `act --no-after` requires a final meaningful assert and forbids `--image`.
+  Desktop `act --no-after` needs an independent app-result check. Use either only
+  when no later view is needed.
 
 Scopes reduce output, not safety: they are neither an input nor a privacy boundary. Measured
 results: [optimization-experiments.md](../docs/optimization-experiments.md),

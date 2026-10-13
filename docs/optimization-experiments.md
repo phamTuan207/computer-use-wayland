@@ -162,6 +162,50 @@ python3 tests/browser_task_benchmark.py --report "$report_dir/after.json" \
   --modes task-after-full task-after-scoped --samples 30 --controls 1000
 ```
 
+## Desktop final-capture comparison
+
+The existing desktop `act --no-after` route skips the successful final screenshot.
+It retains the fresh pre-input capture, focus/geometry/cancellation checks and
+execution-error diagnostics. Use it when an independent application result check
+confirms the outcome and no next screenshot is needed; event-level `ok` is not
+that evidence.
+
+Measured with the **installed CLI** against an owned inert GTK click fixture:
+four sequential A/B/B/A blocks, 30 samples each, A with the default final capture
+and B with `--no-after`. Every reset had a nonce and every task independently
+verified exactly one click. All 120 tasks and cleanup passed. First samples were
+retained. No keyboard typing, account activity, network or plugin activation.
+
+`whole_task_ms` spans fresh observe, Python action construction, the harness
+checkpoint write/fsync, act and independent app verification. Session/setup and
+model time are excluded. Historical `total_ms` still measures act plus verifier.
+Bytes are re-encoded observe plus act JSON; PNG contents and transport framing
+are excluded, and no model-token billing was measured.
+
+| Route | Samples | Whole-task median / p95 ms | Median result bytes |
+|---|---:|---:|---:|
+| Default after | 60 | 403.891 / 424.519 | 579 |
+| No after | 60 | 234.762 / 249.736 | 322 |
+
+The fixture's median time drops **169.129 ms / 41.88%**, meeting the existing
+10% + 5 ms speed-win criterion with a lower p95. Per-block whole-task median/p95:
+A1 402.875/413.327, B1 234.164/247.589, B2 235.001/250.521, A2 410.050/426.543 ms.
+Output falls 44.39%, which **does not** meet the separate 50% output gate. This
+is a tool-driven fixture task, not an end-to-end LLM task or a guarantee for other
+applications or image sizes.
+
+```sh
+report_dir=$(mktemp -d)
+python3 tests/optimization_live.py --cli PATH_TO_INSTALLED_CU \
+  --report "$report_dir/full.json" --samples 30 --cases click
+python3 tests/optimization_live.py --cli PATH_TO_INSTALLED_CU \
+  --report "$report_dir/skip.json" --samples 30 --cases click --no-after
+```
+
+For the four-block comparison, repeat in full/skip/skip/full order with a fresh
+report path for each block. Summarize `whole_task_ms` and `result_bytes` from the
+rows; the existing console summary reports historical act-plus-verifier time.
+
 ## Compact window discovery
 
 `windows --class CLASS --no-titles` filters a single client-list read by exact
@@ -177,8 +221,8 @@ smoke confirmed exact filtering and title-key omission; it performed no input.
 
 ## Skill entrypoint size
 
-The main `skill/SKILL.md` was reduced from 8,267 to 5,821 UTF-8 bytes and from
-1,113 to 827 words (about 30% fewer bytes). Detailed schemas stay in the selected
+The main `skill/SKILL.md` was reduced from 8,267 to 5,845 UTF-8 bytes and from
+1,113 to 828 words (about 29% fewer bytes). Detailed schemas stay in the selected
 backend reference, so routine use need not load every backend. These are file
 counts from `wc -w -c`, not measured model tokens, billing or task duration.
 

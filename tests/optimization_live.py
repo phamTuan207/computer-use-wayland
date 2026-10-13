@@ -148,6 +148,7 @@ def run(args):
                     fixture.stdin.write(json.dumps({'nonce': nonce, 'text': initial}) + '\n')
                     fixture.stdin.flush()
                     wait_for(lambda: state().get('nonce') == nonce and state().get('text') == initial)
+                    task_started = time.perf_counter()
                     observed = command(['observe', '--window', address, '--max-width', '1280'])
                     meta = json.loads(Path(observed['observation']).read_text())
                     layout = state()['layout']
@@ -184,8 +185,12 @@ def run(args):
                     result = command(argv, json.dumps(actions, ensure_ascii=False))
                     response_ms = (time.perf_counter() - started)*1000
                     wait_for(lambda: verified(case, state(), expected))
-                    row.update(ok=True, total_ms=(time.perf_counter()-started)*1000,
-                               response_ms=response_ms, execution_ms=result['execution_ms'])
+                    done = time.perf_counter()
+                    row.update(ok=True, total_ms=(done-started)*1000,
+                               response_ms=response_ms, execution_ms=result['execution_ms'],
+                               whole_task_ms=(done-task_started)*1000,
+                               result_bytes=sum(len(json.dumps(payload, ensure_ascii=False).encode())
+                                                for payload in (observed, result)))
                     save_report()
             driver.stdin.write('{"args":["finish"]}\n')
             driver.stdin.flush()
