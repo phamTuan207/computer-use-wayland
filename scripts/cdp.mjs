@@ -55,18 +55,30 @@ const debuggerUrl=new URL(target.webSocketDebuggerUrl);
 if(!['127.0.0.1','localhost','[::1]'].includes(debuggerUrl.hostname)||!['ws:','wss:'].includes(debuggerUrl.protocol))throw new Error('CDP debugger must be loopback WebSocket');
 ws=new WebSocket(debuggerUrl.href);
 const pending=new Map();let sequence=0;
+ws.addEventListener('close',()=>{
+  const error=new Error('CDP WebSocket closed');
+  for(const p of pending.values()){clearTimeout(p.timer);p.reject(error);}
+  pending.clear();
+});
 ws.addEventListener('message',event=>{
   const result=JSON.parse(event.data),p=pending.get(result.id);
   if(!p)return;
   pending.delete(result.id);clearTimeout(p.timer);
   if(result.error)p.reject(new Error(result.error.message));else p.resolve(result.result);
 });
-await new Promise((resolve,reject)=>{ws.addEventListener('open',resolve,{once:true});ws.addEventListener('error',reject,{once:true});});
+await new Promise((resolve,reject)=>{
+  ws.addEventListener('open',resolve,{once:true});
+  ws.addEventListener('error',reject,{once:true});
+  ws.addEventListener('close',()=>reject(new Error('CDP WebSocket closed before open')),{once:true});
+});
 async function call(method,params={}) {
+  if(ws.readyState!==WebSocket.OPEN)throw new Error('CDP WebSocket is not open');
   const id=++sequence;
   return await new Promise((resolve,reject)=>{
     const timer=setTimeout(()=>{pending.delete(id);reject(new Error('CDP timeout: '+method));},5000);
-    pending.set(id,{resolve,reject,timer});ws.send(JSON.stringify({id,method,params}));
+    pending.set(id,{resolve,reject,timer});
+    try{ws.send(JSON.stringify({id,method,params}));}
+    catch(error){pending.delete(id);clearTimeout(timer);reject(error);}
   });
 }
 async function evaluate(expression) {

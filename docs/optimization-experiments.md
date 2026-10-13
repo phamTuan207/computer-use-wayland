@@ -351,6 +351,43 @@ cleanup handler, and the issue is reported in
 [wtype #66](https://github.com/atx/wtype/issues/66). Do not claim that a long
 native typing action is target-bound or safe against focus changes.
 
+## Closed CDP transport response
+
+An ABBA mock-protocol run (four blocks, three samples per block, including each
+block's first sample) compared the old installed adapter with the reviewed
+source adapter. Medians changed: total 10,007.440→1.342 ms, response
+10,007.396→1.331 ms, action execution 5,001→0 ms, whole task
+10,007.440→1.342 ms, and result JSON 222→210 bytes; whole-task p95 changed
+10,028.243→19.605 ms. The fixture uses Node's real clock/timers and includes
+VM fixture setup. It exercises a closed WebSocket during an assert-only action:
+this is closed-transport failure latency, not normal successful browser work.
+The response clock spans fixture/VM setup, observe and act response; execution is the
+act result's own timer, and whole/total include the protocol input/state check.
+The independent check covers only the simulated peer, not DOM or app state. It
+uses a simulated WebSocket/CDP peer, not Chrome, and makes no LLM or billed
+token claim. The WebSocket standard describes `send()`'s state behavior at
+[WHATWG WebSockets §3.1](https://websockets.spec.whatwg.org/#dom-websocket-send).
+
+The 5 s timeout for an open but unresponsive socket remains; there is no retry,
+and input ordering is unchanged. Reproduce four ABBA blocks by running three
+samples for each command, in this order; the baseline path is the archived old
+adapter, while the candidate path is the reviewed source:
+
+```sh
+node tests/cdp_worker.mjs --close-bench PATH_TO_BASELINE_CDP
+node tests/cdp_worker.mjs --close-bench scripts/cdp.mjs
+node tests/cdp_worker.mjs --close-bench scripts/cdp.mjs
+node tests/cdp_worker.mjs --close-bench PATH_TO_BASELINE_CDP
+```
+
+Each invocation emits three samples and uses the native 5 s timeout unchanged.
+
+A separate paired headless Chromium smoke closed its owned tab by timer during a
+1,000 ms wait plus assert; both routes completed one action and marked the
+after-state unavailable. Total/whole time changed 11,073.930→1,065.077 ms and
+result JSON 233→229 bytes. This single pair validates real close handling, not
+statistical throughput or LLM performance; it is separate from mock results.
+
 ## Related
 
 - [liquid-glass.md](liquid-glass.md) — optional compositor backend
