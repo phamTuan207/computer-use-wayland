@@ -110,5 +110,38 @@ class DesktopPreflight(unittest.TestCase):
         self.pointer_cls.assert_not_called()
         self.typed.assert_not_called()
 
+    def test_ime_cleanup_failure_keeps_acknowledged_count_and_stops(self):
+        from contextlib import contextmanager
+        @contextmanager
+        def cleanup_fails(*args,**kwargs):
+            yield
+            raise RuntimeError('IME restore failed')
+        cases=[([{'type':'type','text':'hello'},{'type':'type','text':'world'}],2),
+               ([{'type':'type','text':'-hello'}],1)]
+        for actions,count in cases:
+            with self.subTest(actions=actions),patch.object(cu,'literal_keyboard',cleanup_fails), \
+                 patch.object(cu,'wait_cancelable') as wait:
+                self.typed.reset_mock()
+                result=cu.desktop_act({},self.meta,actions+[{'type':'wait','ms':10}])
+                self.assertFalse(result['ok']);self.assertEqual(result['completed'],count)
+                self.assertIn('IME restore failed',result['error'])
+                self.assertIn('execution_ms',result)
+                self.assertEqual(self.typed.call_count,1);wait.assert_not_called()
+
+    def test_keyboard_error_survives_real_ime_restore_failure(self):
+        def remote(argv,env):
+            if argv==['fake-remote']:return '1' if remote.closed else '2'
+            if argv[-1]=='-o':raise RuntimeError('restore failed')
+            remote.closed=True
+            return ''
+        remote.closed=False
+        with patch.object(cu.shutil,'which',return_value='fake-remote'), \
+             patch.object(cu,'run',side_effect=remote), \
+             patch.object(cu,'run_cancelable',side_effect=RuntimeError('input failed')):
+            # Avoid a real IME; the production context manager still runs its cleanup.
+            result=cu.desktop_act({},self.meta,[{'type':'type','text':'hello'}])
+        self.assertFalse(result['ok']);self.assertEqual(result['completed'],0)
+        self.assertIn('input failed',result['error'])
+
 
 if __name__=='__main__':unittest.main()

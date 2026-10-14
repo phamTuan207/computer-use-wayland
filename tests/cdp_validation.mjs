@@ -22,7 +22,7 @@ class WebSocket {
   send(){sent++;throw new Error('preflight must not dispatch');}
   close(){closed=true;}
 }
-const process={exitCode:0};
+const process={exitCode:0,stdin:(async function*(){yield JSON.stringify(request);})(),destroy(){}};
 await vm.runInNewContext('(async()=>{'+source.replace(/^import .*;$/gm,'')+'})()',{
   fs:{readFileSync:()=>JSON.stringify(request)},crypto:{},URL,WebSocket,process,
   fetch:async ()=>({json:async ()=>[{type:'page',id:'test',webSocketDebuggerUrl:'ws://127.0.0.1:9222/test'}]}),

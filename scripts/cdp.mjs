@@ -1,7 +1,5 @@
 // Dependency-free CDP adapter, Node >=22. Explicit target; no model API calls.
-import fs from 'node:fs';
 import crypto from 'node:crypto';
-import { createInterface } from 'node:readline';
 
 async function handle(request) {
 let ws;
@@ -43,6 +41,7 @@ if(request.scope!==undefined){
   if(request.scope.length>1024)throw new Error('scope must be at most 1024 characters');
   if(request.operation!=='observe')throw new Error('scope is only valid for observe');
 }
+if(!['tabs','observe','act'].includes(request.operation))throw new Error('unknown operation');
 const endpoint=new URL(request.endpoint);
 if (!['127.0.0.1','localhost','[::1]'].includes(endpoint.hostname)) throw new Error('CDP endpoint must be loopback');
 const tabs=await (await fetch(new URL('/json/list',endpoint),{signal:AbortSignal.timeout(4000)})).json();
@@ -54,24 +53,40 @@ if(!target) throw new Error('exact --target required; use browser tabs');
 const debuggerUrl=new URL(target.webSocketDebuggerUrl);
 if(!['127.0.0.1','localhost','[::1]'].includes(debuggerUrl.hostname)||!['ws:','wss:'].includes(debuggerUrl.protocol))throw new Error('CDP debugger must be loopback WebSocket');
 ws=new WebSocket(debuggerUrl.href);
-const pending=new Map();let sequence=0;
+const pending=new Map();let sequence=0,transportError;
 ws.addEventListener('close',()=>{
   const error=new Error('CDP WebSocket closed');
+  transportError??=error;
   for(const p of pending.values()){clearTimeout(p.timer);p.reject(error);}
   pending.clear();
 });
+function failTransport(error){
+  if(transportError)return;
+  transportError=error;                 // every later send and input is refused
+  for(const p of pending.values()){clearTimeout(p.timer);p.reject(error);}
+  pending.clear();
+  try{ws.close();}catch(__){}
+}
 ws.addEventListener('message',event=>{
-  const result=JSON.parse(event.data),p=pending.get(result.id);
+  let result;
+  try{result=JSON.parse(event.data);}
+  catch(_){failTransport(new Error('malformed CDP WebSocket JSON'));return;}   // no resend
+  if(!result||typeof result!=='object'||Array.isArray(result)){failTransport(new Error('unexpected CDP WebSocket frame'));return;}
+  const p=pending.get(result.id);
   if(!p)return;
   pending.delete(result.id);clearTimeout(p.timer);
   if(result.error)p.reject(new Error(result.error.message));else p.resolve(result.result);
 });
 await new Promise((resolve,reject)=>{
-  ws.addEventListener('open',resolve,{once:true});
-  ws.addEventListener('error',reject,{once:true});
-  ws.addEventListener('close',()=>reject(new Error('CDP WebSocket closed before open')),{once:true});
+  const fail=error=>{clearTimeout(timer);reject(error);};
+  const timer=setTimeout(()=>fail(new Error('CDP WebSocket open timed out')),4000);
+  ws.addEventListener('open',()=>{clearTimeout(timer);resolve();},{once:true});
+  ws.addEventListener('error',()=>fail(new Error('CDP WebSocket error before open')),{once:true});
+  ws.addEventListener('close',()=>fail(new Error('CDP WebSocket closed before open')),{once:true});
 });
+ws.addEventListener('error',()=>failTransport(new Error('CDP WebSocket error')));
 async function call(method,params={}) {
+  if(transportError)throw transportError;
   if(ws.readyState!==WebSocket.OPEN)throw new Error('CDP WebSocket is not open');
   const id=++sequence;
   return await new Promise((resolve,reject)=>{
@@ -188,16 +203,40 @@ async function assertAction(a) {
 }
   if(request.operation==='act'){
     if(!request.snapshot)throw new Error('--snapshot required');
-    // Preflight the entire schema before any side effects.
+    // Preflight the entire batch once, before any input or DOM effect.
+    if(!Array.isArray(request.actions)||request.actions.length<1||request.actions.length>32)throw new Error('actions must contain 1..32 items');
+    const finite=v=>typeof v==='number'&&Number.isFinite(v);
     for(const a of request.actions){
-      if(['click','fill','set_value','assert'].includes(a.type)&&(!a.ref&&!a.selector||a.ref&&a.selector))throw new Error('exactly one ref or selector required');
-      if(a.type==='key'&&a.keys.every(k=>/^(ctrl|alt|shift|meta|super)$/i.test(k)))throw new Error('key action needs a non-modifier key');
-      if(a.type==='key')for(const k of a.keys)if(!/^(ctrl|alt|shift|meta|super|Enter|Tab|Escape|Back[Ss]pace|Delete|Arrow(Left|Right|Up|Down)|Home|End|PageUp|PageDown|space|.)$/.test(k))throw new Error('unsupported key');
-      if(a.type==='scroll'&&!Number.isFinite(a.dy))throw new Error('scroll dy required');
+      if(!a||typeof a!=='object'||Array.isArray(a))throw new Error('each action must be an object');
+      if(!['click','fill','set_value','key','scroll','wait','assert'].includes(a.type))throw new Error('unsupported action');
+      if(['click','fill','set_value','assert'].includes(a.type)){
+        if(('ref' in a)===('selector' in a))throw new Error('exactly one ref or selector required');
+        for(const k of ['ref','selector'])if(k in a&&(typeof a[k]!=='string'||!a[k].trim()))throw new Error(k+' must be a non-empty string');
+      }
+      if(a.type==='fill'||a.type==='set_value')
+        if(typeof a.text!=='string'||a.text.length>10000)throw new Error('text must be string <=10000 chars');
+      if(a.type==='key'){
+        if(!Array.isArray(a.keys)||!a.keys.length||!a.keys.every(k=>typeof k==='string'&&k.length<40))throw new Error('keys must be an array of key names');
+        if(a.keys.every(k=>/^(ctrl|alt|shift|meta|super)$/i.test(k)))throw new Error('key action needs a non-modifier key');
+        for(const k of a.keys)if(!/^(ctrl|alt|shift|meta|super|Enter|Tab|Escape|Back[Ss]pace|Delete|Arrow(Left|Right|Up|Down)|Home|End|PageUp|PageDown|space|.)$/.test(k))throw new Error('unsupported key');
+      }
+      if(a.type==='scroll'){
+        for(const k of ['dx','dy','x','y'])if(k in a&&!finite(a[k]))throw new Error('scroll '+k+' must be a finite number');
+        if(!finite(a.dy))throw new Error('scroll dy required');
+      }
+      if(a.type==='wait'){const ms=a.ms??100;if(!finite(ms)||ms<0||ms>2000)throw new Error('wait ms must be 0..2000');}
+      if(a.type==='assert'){
+        if('value' in a&&typeof a.value!=='string')throw new Error('assert value must be a string');
+        if('text' in a&&typeof a.text!=='string')throw new Error('assert text must be a string');
+        if('checked' in a&&typeof a.checked!=='boolean')throw new Error('assert checked must be a boolean');
+        if('timeout_ms' in a&&(typeof a.timeout_ms!=='number'||!Number.isFinite(a.timeout_ms)||a.timeout_ms<0))
+          throw new Error('assert timeout_ms must be a non-negative finite number');
+      }
     }
     const start=Date.now();
     try{
       for(const a of request.actions){
+        if(transportError)throw transportError;
         // Protect key/scroll operations as well as ref-based operations after navigation.
         await evaluate(`(()=>{const s=globalThis.__agentCu;if(!s||s.id!==${JSON.stringify(request.snapshot)}||s.url!==location.href||Date.now()-s.created>90000)throw new Error('stale snapshot');})()`);
         if(a.type==='click')await click(a);
@@ -234,7 +273,9 @@ async function assertAction(a) {
         else if(a.type==='scroll')await call('Input.dispatchMouseEvent',{type:'mouseWheel',x:a.x??100,y:a.y??100,deltaX:a.dx??0,deltaY:a.dy});
         else if(a.type==='wait')await new Promise(r=>setTimeout(r,a.ms??100));
         else if(a.type==='assert')await assertAction(a);
+        else throw new Error('unsupported action');
         completed++;
+        if(transportError)throw transportError;
       }
       result={ok:true,completed,execution_ms:Date.now()-start};
     }catch(e){result={ok:false,completed,error:e.message,execution_ms:Date.now()-start};if(e.mutation_may_have_occurred)result.mutation_may_have_occurred=true;}
@@ -243,23 +284,79 @@ async function assertAction(a) {
     else if(result.ok)try{result.after=await snapshot(request.after_scope);}catch(_){result.after_unavailable=true;}
     else try{result.after=await snapshot();}catch(_){result.after_unavailable=true;}
   }else result=await snapshot();
-  if(request.image)result.image_base64=(await call('Page.captureScreenshot',{format:'png',captureBeyondViewport:false})).data;
+  if(request.image){
+    // A capture failure updates the envelope; it never replaces count, timing or
+    // the original action error, and never becomes a transport-level exit.
+    try{result.image_base64=(await call('Page.captureScreenshot',{format:'png',captureBeyondViewport:false})).data;}
+    catch(e){
+      result.ok=false;
+      result.capture_error=e.message;
+      if(!result.error)result.error='screenshot failed: '+e.message;
+    }
+  }
   return result;
 }catch(e){process.exitCode=1;return {ok:false,completed,error:e.message};}
 finally{ws?.close();}
 }
 
+const READ_LIMIT=8*1024*1024;
+
+// UTF-8 byte length without Buffer, so the adapter also runs in a bare sandbox.
+function utf8Length(text){
+  let bytes=0;
+  for(const ch of text){const code=ch.codePointAt(0);bytes+=code<0x80?1:code<0x800?2:code<0x10000?3:4;}
+  return bytes;
+}
+
+// Bounded line source: refuse past the cap before the whole request is buffered,
+// and keep the final unterminated line of the stream exactly as it arrived.
+async function* boundedLines(stream){
+  stream.setEncoding?.('utf8');
+  let parts=[],total=0;
+  for await(const chunk of stream){
+    const text=String(chunk);
+    let start=0;
+    while(start<text.length){
+      const newline=text.indexOf('\n',start),end=newline<0?text.length:newline+1;
+      const part=text.slice(start,end);
+      total+=utf8Length(part);
+      if(total>READ_LIMIT)throw new Error('request exceeds 8 MiB');
+      parts.push(part);
+      if(newline>=0){const line=parts.join('');parts=[];total=0;yield line;}
+      start=end;
+    }
+  }
+  if(parts.length)yield parts.join('');
+}
+
+async function readBounded(stream){
+  stream.setEncoding?.('utf8');
+  const parts=[];let total=0;
+  for await(const chunk of stream){
+    const text=String(chunk);
+    total+=utf8Length(text);
+    if(total>READ_LIMIT)throw new Error('request exceeds 8 MiB');
+    parts.push(text);
+  }
+  return parts.join('');
+}
+
 if(process.argv?.includes('--worker')) {
-  const lines=createInterface({input:process.stdin,crlfDelay:Infinity});
   try {
-    for await(const line of lines) {
+    for await(const line of boundedLines(process.stdin)){
       let result;
       try{result=await handle(JSON.parse(line));}
       catch(e){result={ok:false,completed:0,error:e.message};}
       console.log(JSON.stringify(result));
       if(result?.ok===false){process.exitCode=1;break;}
     }
-  }finally{lines.close();process.stdin.destroy();}
+  }catch(e){process.exitCode=1;console.log(JSON.stringify({ok:false,completed:0,error:e.message}));}
+  finally{process.stdin.destroy();}
 }else {
-  console.log(JSON.stringify(await handle(JSON.parse(fs.readFileSync(0,'utf8')))));
+  try{
+    console.log(JSON.stringify(await handle(JSON.parse(await readBounded(process.stdin)))));
+  }catch(e){
+    console.log(JSON.stringify({ok:false,completed:0,error:e.message}));
+    process.exitCode=1;
+  }
 }

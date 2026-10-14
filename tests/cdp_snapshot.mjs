@@ -79,6 +79,7 @@ async function run(elements,actions,{mutate=text=>text,maxElements,debuggerUrl='
     node.getBoundingClientRect=()=>{measured.add(node);return box();};
   }
   let closed=false,fetches=0;
+  const sandboxRead=()=>JSON.stringify(queue.shift()??request);
   class WebSocket {
     listeners={};
     addEventListener(name,fn){this.listeners[name]=fn;if(name==='open')queueMicrotask(fn);}
@@ -103,7 +104,10 @@ async function run(elements,actions,{mutate=text=>text,maxElements,debuggerUrl='
     }
     close(){closed=true;}
   }
-  const process={exitCode:0};
+  // The adapter reads single-shot stdin as a bounded stream, not one fs call.
+  // A getter yields a fresh bounded stdin each run, mirroring one process per request.
+  const process={exitCode:0,destroy(){},
+                 get stdin(){return (async function*(){yield sandboxRead();})();}};
   const sandbox={fs:{readFileSync:()=>JSON.stringify(queue.shift()??request)},
     crypto:{randomUUID:()=> 'snapshot-test'},
     URL,WebSocket,process,AbortSignal,queueMicrotask,setTimeout,clearTimeout,

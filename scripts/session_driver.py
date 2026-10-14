@@ -40,9 +40,27 @@ def relay(source, sink):
         worker.close()
 
 
+REQUEST_LINE_LIMIT=8*1024*1024
+
+def request_lines(source):
+    """Read each request in bounded chunks, counting UTF-8 bytes before parsing."""
+    source=getattr(source,'buffer',source)
+    parts=[];total=0
+    while True:
+        chunk=source.readline(min(65536,REQUEST_LINE_LIMIT-total+1))
+        if not chunk:
+            if parts:yield b''.join(parts).decode('utf-8') if isinstance(parts[0],bytes) else ''.join(parts)
+            return
+        total+=len(chunk.encode('utf-8')) if isinstance(chunk,str) else len(chunk)
+        if total>REQUEST_LINE_LIMIT:raise ValueError('driver request line exceeds 8 MiB')
+        parts.append(chunk)
+        if chunk.endswith(b'\n' if isinstance(chunk,bytes) else '\n'):
+            yield b''.join(parts).decode('utf-8') if isinstance(parts[0],bytes) else ''.join(parts)
+            parts=[];total=0
+
 def relay_commands(source, sink):
     print(json.dumps({'ok': True, 'driver': 'ready'}), file=sink, flush=True)
-    for line in source:
+    for line in request_lines(source):
         request = json.loads(line)
         if not isinstance(request, dict):
             raise ValueError('request must be an object with args and optional stdin')

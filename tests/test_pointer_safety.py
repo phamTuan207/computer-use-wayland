@@ -269,6 +269,31 @@ class PointerSafety(unittest.TestCase):
         result = cu.desktop_act({}, self.meta, [{'type': 'click', 'x': 10, 'y': 10}])
         self.assertFalse(result['ok'], result)
         self.assertIn('capture exploded', result['capture_error'])
+        self.assertEqual(result['completed'], 1,
+                         'a failed final capture must not discard the count')
+
+    def test_main_pointer_startup_failure_returns_a_structured_zero(self):
+        self.pointer_cls.side_effect = RuntimeError('pointer device refused')
+        result = cu.desktop_act({}, self.meta, [{'type': 'click', 'x': 10, 'y': 10}])
+        self.assertFalse(result['ok'], result)
+        self.assertEqual(result['completed'], 0)
+        self.assertIn('pointer device refused', result['error'])
+
+    def test_pointer_cleanup_failure_keeps_the_count_and_fails_closed(self):
+        self.pointer.close.side_effect = RuntimeError('close exploded')
+        result = cu.desktop_act({}, self.meta, [{'type': 'click', 'x': 10, 'y': 10}])
+        self.assertFalse(result['ok'], result)
+        self.assertEqual(result['completed'], 1)
+        self.assertIn('close exploded', result['error'])
+
+    def test_a_keyboard_only_batch_never_opens_the_pointer(self):
+        self.pointer_cls.reset_mock()
+        self.pointer_cls.side_effect = AssertionError('keyboard batch opened a pointer')
+        result = cu.desktop_act({}, self.meta, [{'type': 'key', 'keys': ['a']}])
+        self.assertFalse(result['ok'])
+        self.assertEqual(result['completed'],0)
+        self.assertIn('live input',result['error'])
+        self.assertFalse(self.pointer_cls.called, 'keyboard-only batches must not open a pointer')
 
 
 if __name__ == '__main__':

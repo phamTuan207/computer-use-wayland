@@ -7,7 +7,7 @@ import uuid
 import gi
 gi.require_version('Atspi','2.0')
 from gi.repository import Atspi
-from cu import STATE,prepare_state
+from cu import STATE,prepare_state,read_json_file,read_json,validate_actions
 
 Atspi.set_timeout(1000,1000)
 
@@ -58,9 +58,9 @@ def resolve(root,item):
     return e
 
 def act(path,actions):
-    snapshot=json.loads(Path(path).read_text())
+    snapshot=read_json_file(path)
     if snapshot.get('backend')!='a11y' or time.time()-snapshot['created']>90:raise ValueError('stale accessibility snapshot')
-    if not isinstance(actions,list) or not 1<=len(actions)<=32:raise ValueError('1..32 actions required')
+    validate_actions(actions,'a11y')
     root=app(snapshot['pid']);refs={e['ref']:e for e in snapshot['elements']}
     for a in actions:
         if a.get('type') not in ('click','set_text') or a.get('ref') not in refs:raise ValueError('click/set_text and valid ref required')
@@ -83,13 +83,22 @@ def act(path,actions):
             completed+=1
     except Exception as exc:result.update(ok=False,error=str(exc))
     result.update(completed=completed,execution_ms=round((time.monotonic()-start)*1000))
-    result['after']=observe(snapshot['pid'])
+    # An ordinary failure of the final observation keeps completed, timing and any
+    # original action error. BaseException still propagates; the batch is never replayed.
+    try:
+        result['after']=observe(snapshot['pid'])
+    except Exception as exc:
+        result.update(ok=False,after_unavailable=True,capture_error=str(exc))
+        result.setdefault('error','final observation failed: '+str(exc))
     return result
 
 try:
-    request=json.load(sys.stdin)
-    if request['operation']=='apps':result=[{'pid':a.get_process_id(),'name':a.get_name()} for a in applications()]
-    elif request['operation']=='observe':result=observe(request['pid'])
+    request=read_json(sys.stdin.buffer if hasattr(sys.stdin,'buffer') else sys.stdin)
+    # An unknown operation must never reach act and mutate the desktop.
+    operation=request.get('operation') if isinstance(request,dict) else None
+    if operation not in ('apps','observe','act'):raise ValueError('unknown operation')
+    if operation=='apps':result=[{'pid':a.get_process_id(),'name':a.get_name()} for a in applications()]
+    elif operation=='observe':result=observe(request['pid'])
     else:result=act(request['snapshot'],request['actions'])
     print(json.dumps(result,ensure_ascii=False,separators=(',',':')))
 except Exception as exc:

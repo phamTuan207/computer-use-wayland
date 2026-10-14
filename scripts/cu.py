@@ -185,6 +185,28 @@ def check_cancel():
             raise RuntimeError('automation session ended; stop this task')
     if CANCEL.exists(): raise RuntimeError('cancelled by user; stop this task. Run computer-use resume only after the user asks to continue')
 
+JSON_LIMIT=8*1024*1024
+
+def read_json(stream):
+    """Parse at most 8 MiB of UTF-8 JSON, refusing before the whole input is buffered.
+
+    A text stream is capped by its encoded byte length, not its character count, so a
+    multi-byte payload cannot slip past the limit.
+    """
+    stream=getattr(stream,'buffer',stream)
+    chunks=[];total=0
+    while True:
+        chunk=stream.read(min(65536,JSON_LIMIT-total+1))
+        if not chunk:break
+        total+=len(chunk.encode()) if isinstance(chunk,str) else len(chunk)
+        if total>JSON_LIMIT:raise ValueError('JSON input exceeds 8 MiB')
+        chunks.append(chunk)
+    if not chunks:raise ValueError('empty JSON input')
+    return json.loads(''.join(chunks) if isinstance(chunks[0],str) else b''.join(chunks))
+
+def read_json_file(path):
+    with open(path,'rb') as stream:return read_json(stream)
+
 def run_cancelable(argv, env=None, input=None, timeout=12):
     check_cancel()
     p=subprocess.Popen(argv,env=env,stdin=subprocess.PIPE if input is not None else subprocess.DEVNULL,
@@ -203,11 +225,16 @@ def run_cancelable(argv, env=None, input=None, timeout=12):
         if p.returncode: raise RuntimeError(f'{Path(argv[0]).name}: {(err.strip() or out.strip())[:400]}')
         check_cancel()
         return out
-    except Exception:
+    except BaseException:
+        # KeyboardInterrupt/SystemExit must still reap the owned child, then the
+        # original termination propagates. No retry, no respawn, no continuation.
         if p.poll() is None:
-            p.terminate()
-            try:p.communicate(timeout=.5)
-            except subprocess.TimeoutExpired:p.kill();p.communicate()
+            try:
+                p.terminate()
+                p.communicate(timeout=.5)
+            except BaseException:
+                try:p.kill();p.communicate(timeout=.5)
+                except BaseException:pass      # the original termination still propagates
         raise
 
 def plain_rgb_png(data):
@@ -358,27 +385,74 @@ def screen_changed(old,new,actions):
             if sum(ImageStat.Stat(patch).mean)/3>6:return True
     return False
 
+def finite(value,name):
+    # bool is a subclass of int, so True would otherwise reach a numeric command.
+    try:valid=not isinstance(value,bool) and isinstance(value,(int,float)) and math.isfinite(value)
+    except OverflowError:valid=False
+    if not valid:raise ValueError(name+' must be a finite number')
+    return value
+
+def integer(value,name):
+    if isinstance(value,bool) or not isinstance(value,int): raise ValueError(name+' must be an integer')
+    return value
+
 def validate_actions(actions,backend):
     if not isinstance(actions,list) or not 1<=len(actions)<=32: raise ValueError('actions must contain 1..32 items')
-    allowed={'click','double_click','move','drag','scroll','type','key','wait'} if backend=='desktop' else {'click','fill','set_value','key','scroll','wait','assert'}
+    allowed=({'click','double_click','move','drag','scroll','type','key','wait'} if backend=='desktop' else
+             {'click','set_text'} if backend=='a11y' else
+             {'click','fill','set_value','key','scroll','wait','assert'})
     for a in actions:
-        if not isinstance(a,dict) or a.get('type') not in allowed: raise ValueError('unsupported action')
+        if not isinstance(a,dict) or not isinstance(a.get('type'),str) or a['type'] not in allowed: raise ValueError('unsupported action')
         if backend=='desktop' and a['type'] in ('move','click','double_click','drag','scroll'):
             modifiers=a.get('modifiers',[])
             if not isinstance(modifiers,list) or len(modifiers)>5 or not all(isinstance(m,str) and m.lower() in MODIFIERS for m in modifiers):
                 raise ValueError('mouse modifiers must be an array of Ctrl/Shift/Alt/Super/AltGr')
             if a['type']=='move' and modifiers:raise ValueError('modifiers require click, drag or scroll')
-        if a['type']=='wait' and not 0<=a.get('ms',100)<=2000: raise ValueError('wait ms must be 0..2000')
+        if a['type']=='wait':
+            if not 0<=integer(a.get('ms',100),'wait ms')<=2000: raise ValueError('wait ms must be 0..2000')
         if a['type'] in ('type','fill','set_value') and (not isinstance(a.get('text'),str) or len(a['text'])>10000): raise ValueError('text must be string <=10000 chars')
         if a['type']=='key' and (not isinstance(a.get('keys'),list) or not a['keys'] or not all(isinstance(k,str) and len(k)<40 for k in a['keys'])): raise ValueError('keys must be an array of key names')
         if backend=='desktop' and a['type']=='type' and any(ord(c)>0xffff for c in a['text']):
             raise ValueError('non-BMP text may be corrupted by Wayland keyboard input; use browser fill or a11y set_text')
         if backend=='desktop' and a['type']=='key':
             key_names(a['keys'])
-            if not isinstance(a.get('repeat',1),int) or not 1<=a.get('repeat',1)<=30:raise ValueError('repeat must be 1..30')
-            if not isinstance(a.get('hold_ms',12),int) or not 0<=a.get('hold_ms',12)<=2000:raise ValueError('hold_ms must be 0..2000')
-        if backend=='desktop' and a['type']=='type' and (not isinstance(a.get('delay_ms',0),int) or not 0<=a.get('delay_ms',0)<=100):raise ValueError('delay_ms must be 0..100')
+            if not 1<=integer(a.get('repeat',1),'repeat')<=30:raise ValueError('repeat must be 1..30')
+            if not 0<=integer(a.get('hold_ms',12),'hold_ms')<=2000:raise ValueError('hold_ms must be 0..2000')
+        if backend=='desktop' and a['type']=='type' and not 0<=integer(a.get('delay_ms',0),'delay_ms')<=100:raise ValueError('delay_ms must be 0..100')
         if backend=='desktop' and a['type']=='type' and a.get('ime','literal') not in ('literal','compose'):raise ValueError('ime must be literal or compose')
+        if backend=='a11y':
+            if not isinstance(a.get('ref'),str) or not a['ref'].strip():raise ValueError('a11y actions need a ref')
+            if a['type']=='set_text' and (not isinstance(a.get('text'),str) or len(a['text'])>10000):raise ValueError('a11y set_text needs string text <=10000')
+        if backend=='desktop' and a['type'] in ('move','click','double_click','scroll'):
+            for k in ('x','y'):
+                if k not in a:raise ValueError(a['type']+' needs numeric x and y')
+                finite(a[k],a['type']+' '+k)
+        if backend=='desktop' and a['type']=='drag':
+            for k in ('from','to'):
+                if not isinstance(a.get(k),(list,tuple)) or len(a[k])!=2:raise ValueError('drag needs exactly two [x,y] points')
+                for i,v in enumerate(a[k]):finite(v,'drag '+k+' '+str(i))
+            if not 50<=integer(a.get('ms',300),'drag ms')<=2000:raise ValueError('drag ms must be 50..2000')
+        if a['type']=='scroll':
+            for k in ('dx','dy'):
+                if k in a:finite(a[k],'scroll '+k)
+            if backend=='desktop' and not all(abs(a.get(k,0))<=2000 for k in ('dx','dy')):raise ValueError('invalid scroll')
+            if backend=='browser':
+                if 'dy' not in a:raise ValueError('browser scroll needs dy')
+                for k in ('x','y'):
+                    if k in a:finite(a[k],'scroll '+k)
+        if backend=='browser' and a['type'] in ('click','fill','set_value','assert'):
+            # Locator presence is optional here by existing contract; the adapter
+            # requires exactly one. Types and mutual exclusion are checked early.
+            if 'ref' in a and 'selector' in a:raise ValueError('ref and selector are mutually exclusive')
+            for k in ('ref','selector'):
+                if k in a and (not isinstance(a[k],str) or not a[k].strip()):raise ValueError(k+' must be a non-empty string')
+        if backend=='browser' and a['type']=='assert':
+            if 'value' in a and not isinstance(a['value'],str):raise ValueError('assert value must be a string')
+            if 'text' in a and not isinstance(a['text'],str):raise ValueError('assert text must be a string')
+            if 'checked' in a and not isinstance(a['checked'],bool):raise ValueError('assert checked must be a boolean')
+            if 'timeout_ms' in a:
+                # Non-negative finite only; the adapter clamps the wait to 3000 ms.
+                if finite(a['timeout_ms'],'assert timeout_ms')<0:raise ValueError('assert timeout_ms must not be negative')
 
 def validate_terminal_assert(actions):
     """Validate the effective final predicate using adapter precedence."""
@@ -437,9 +511,12 @@ def literal_keyboard(env,enabled=True):
         if original=='2':switch('-c','1')
         yield
     finally:
+        original_error=sys.exc_info()[1]
         try:
             # Keep the handler until the IME is restored so a late signal still cleans up.
             if original=='2':switch('-o','2')
+        except Exception:
+            if original_error is None:raise
         finally:
             for sig,handler in previous.items():
                 signal.signal(sig,handler)
@@ -555,9 +632,9 @@ def desktop_act(env,meta,actions,after_capture=True):
     if screen_changed(old,new,actions):
         fresh=save_observation(new,fresh,meta['max_width'])
         return {'ok':False,'completed':0,'error':'screen changed since observation; inspect after.image','after':fresh}
-    # A keyboard-only batch must not open the virtual pointer device at all.
-    pointer=(Pointer(env,meta['monitor']) if any(a['type'] in ('move','click','double_click','scroll','drag') for a in actions) else None)
-    completed=0;error=None
+    # A keyboard-only batch must not open the virtual pointer device at all, and an
+    # ordinary startup failure belongs in the result envelope, not outside it.
+    pointer=None;completed=0;error=None
     def move(x,y):
         gx,gy=image_point(meta,x,y);mx,my,mw,mh=meta['monitor_box']
         # High resolution normalized coordinates, independent of image resize / output scale.
@@ -565,6 +642,7 @@ def desktop_act(env,meta,actions,after_capture=True):
         pos=hypr(env,'cursorpos')
         if math.hypot(pos['x']-gx,pos['y']-gy)>3: raise RuntimeError('pointer missed target; refusing click')
     def execute_group(a):
+        nonlocal completed
         guard()
         if isinstance(a,list):
             exact=any(x['type']=='type' and x.get('ime','literal')=='literal' for x in a)
@@ -572,7 +650,8 @@ def desktop_act(env,meta,actions,after_capture=True):
                 exact=exact or any(x['type']=='key' and any(k in ('BackSpace','Delete','Home','End','Left','Right','Up','Down','Prior','Next') for k in key_names(x['keys'])[1]) for x in a)
             with literal_keyboard(env,exact):
                 guard();run_cancelable(keyboard_argv(a),env)
-            return len(a)
+                completed+=len(a)   # input acknowledged; count it before IME restore can fail
+            return
         typ=a['type']
         if typ in ('move','click','double_click','scroll'):
             move(a['x'],a['y'])
@@ -600,14 +679,17 @@ def desktop_act(env,meta,actions,after_capture=True):
         elif typ=='type':
             with literal_keyboard(env,a.get('ime','literal')=='literal'):
                 guard();run_cancelable(standalone_type_argv(a),env,input=a['text'])
+                completed+=1     # same rule: never infer a count from a failed input
+            return
         elif typ=='wait':wait_cancelable(a.get('ms',100)/1000)
-        return 1
+        completed+=1
     start=time.monotonic()
     try:
         # A new virtual device at an unchanged cursor position may not cause
         # Hyprland to deliver enter/motion to a newly mapped surface. Establish
         # real motion without clicking; the action still ends at its exact target.
         if any(a['type'] in ('move','click','double_click','scroll','drag') for a in actions):
+            pointer=Pointer(env,meta['monitor'])
             # Capture can outlast cancellation or a focus/layout change. The
             # preparatory motion is input too, so validate before sending it.
             guard()
@@ -619,11 +701,14 @@ def desktop_act(env,meta,actions,after_capture=True):
         for a in groups:
             guard()
             with mouse_modifiers(env,a.get('modifiers',[]) if isinstance(a,dict) else []):
-                completed+=execute_group(a)
+                execute_group(a)
             guard()
     except Exception as exc: error=str(exc)
     finally:
-        if pointer:pointer.close()
+        # Teardown failure must not discard the count or escape as an exception.
+        if pointer:
+            try:pointer.close()
+            except Exception as exc:error=error or 'pointer cleanup failed: '+str(exc)
     if not after_capture and error is None:
         return {'ok':True,'completed':completed,
                 'execution_ms':round((time.monotonic()-start)*1000),'after_skipped':True}
@@ -656,25 +741,47 @@ def browser_start(env,endpoint):
     import urllib.request
     import urllib.parse
     url=urllib.parse.urlparse(endpoint)
-    if url.hostname not in ('localhost','127.0.0.1','::1') or url.scheme!='http':raise ValueError('loopback http endpoint required')
-    port=url.port or 9222
+    if url.scheme!='http' or url.hostname not in ('localhost','127.0.0.1','::1'):raise ValueError('loopback http endpoint required')
+    try:port=url.port or 9222
+    except ValueError:raise ValueError('endpoint port is not a number') from None
+    if not 1<=port<=65535:raise ValueError('endpoint port must be 1..65535')
     try:
         json.load(urllib.request.urlopen(urllib.parse.urljoin(endpoint,'/json/version'),timeout=1))
         return {'ok':True,'endpoint':endpoint,'reused':True}
     except Exception:pass
     prepare_state();profile=ROOT/'browser-profile';profile.mkdir(mode=0o700,exist_ok=True)
-    log=open(STATE/'browser.log','a');log_path=STATE/'browser.log';log_path.chmod(0o600)
-    p=subprocess.Popen(['chromium',f'--user-data-dir={profile}',f'--remote-debugging-port={port}',
-        f'--remote-debugging-address={url.hostname if url.hostname!="localhost" else "127.0.0.1"}','--no-first-run','--no-default-browser-check','about:blank'],
-        env=env,stdin=subprocess.DEVNULL,stdout=log,stderr=log,start_new_session=True)
-    log.close()
-    for _ in range(50):
-        check_cancel()
+    log_path=STATE/'browser.log'
+    # Create private in one step; a separate chmod would leave a window.
+    fd=os.open(log_path,os.O_WRONLY|os.O_CREAT|os.O_APPEND,0o600)
+    try:
+        os.fchmod(fd,0o600)      # O_CREAT's mode applies only to a new file
+        log=os.fdopen(fd,'ab')
         try:
-            json.load(urllib.request.urlopen(urllib.parse.urljoin(endpoint,'/json/version'),timeout=.3))
-            return {'ok':True,'endpoint':endpoint,'reused':False,'pid':p.pid,'profile':str(profile)}
-        except Exception:time.sleep(.1)
-    raise RuntimeError('managed browser did not expose CDP; see '+str(log_path))
+            p=subprocess.Popen(['chromium',f'--user-data-dir={profile}',f'--remote-debugging-port={port}',
+                f'--remote-debugging-address={url.hostname if url.hostname!="localhost" else "127.0.0.1"}','--no-first-run','--no-default-browser-check','about:blank'],
+                env=env,stdin=subprocess.DEVNULL,stdout=log,stderr=log,start_new_session=True)
+        finally:
+            log.close()
+    except BaseException:
+        try:os.close(fd)
+        except OSError:pass
+        raise
+    try:
+        for _ in range(50):
+            check_cancel()
+            try:
+                json.load(urllib.request.urlopen(urllib.parse.urljoin(endpoint,'/json/version'),timeout=.3))
+                return {'ok':True,'endpoint':endpoint,'reused':False,'pid':p.pid,'profile':str(profile)}
+            except Exception:time.sleep(.1)
+        raise RuntimeError('managed browser did not expose CDP; see '+str(log_path))
+    except BaseException:
+        # Only the process this call started is ours; an existing endpoint is not.
+        try:
+            p.terminate();p.wait(timeout=3)
+        except BaseException:
+            try:p.kill();p.wait(timeout=3)
+            except BaseException:pass
+        raise
 
 def locked():
     prepare_state()
@@ -780,16 +887,17 @@ def main():
                         observe(env,args.window,args.crop,args.max_width,activate=args.focus))
     elif args.command=='act':
         require_session()
-        actions=json.loads(sys.stdin.read() if args.actions=='-' else Path(args.actions).read_text())
+        actions=read_json(sys.stdin) if args.actions=='-' else read_json_file(args.actions)
         check_cancel()
-        with locked(): result=desktop_act(env,json.loads(Path(args.observation).read_text()),actions,after_capture=not args.no_after)
+        with locked(): result=desktop_act(env,read_json_file(args.observation),actions,after_capture=not args.no_after)
     elif args.command=='a11y':
         check_cancel()
         request={'operation':args.operation,'pid':args.pid,'snapshot':args.snapshot}
         if args.operation=='act':
             require_session()
             if not args.actions: raise ValueError('--actions required')
-            request['actions']=json.loads(sys.stdin.read() if args.actions=='-' else Path(args.actions).read_text())
+            request['actions']=read_json(sys.stdin) if args.actions=='-' else read_json_file(args.actions)
+            validate_actions(request['actions'],'a11y')
         with locked():out=run_cancelable(['python3',str(ROOT/'scripts/a11y.py')],env=env,input=json.dumps(request),timeout=15)
         result=json.loads(out) if out.strip() else {'ok':False,'error':'accessibility adapter returned no data'}
     else:
@@ -805,7 +913,7 @@ def main():
         if args.operation=='act':
             require_session()
             if not args.actions: raise ValueError('--actions required')
-            request['actions']=json.loads(sys.stdin.read() if args.actions=='-' else Path(args.actions).read_text());validate_actions(request['actions'],'browser')
+            request['actions']=read_json(sys.stdin) if args.actions=='-' else read_json_file(args.actions);validate_actions(request['actions'],'browser')
             if args.no_after:
                 validate_terminal_assert(request['actions'])
                 request['no_after']=True
