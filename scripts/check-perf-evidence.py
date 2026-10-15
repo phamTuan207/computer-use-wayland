@@ -8,7 +8,9 @@ tasks/cleanup, 11 unit modules totalling 98 with sanitized log hashes),
 and the R4 isolation aggregate (66 blocks: 360 desktop + 0 warmup,
 480 + 48 CDP normal, 30 + 6 CDP image; recomputed summaries, per-round
 gains, seeded paired-block CI and fixed gates), plus both R5 CDP comparisons
-with Git-verified runtime sources and recomputed gates.
+with Git-verified runtime sources and recomputed gates; R5 a11y/paint
+correctness, timing/byte summaries and retained failure PNGs; and ordered
+sample hashes across all aggregates.
 
 Stdlib only. Read-only local Git blob verification; no shell, eval or network. Bounded output.
 """
@@ -19,6 +21,8 @@ import subprocess
 import math
 import re
 import statistics
+import struct
+import zlib
 import sys
 
 
@@ -48,7 +52,25 @@ DOC_ROW = re.compile(
 )
 
 
-def main(muse2_path, muse1_path, doc_path, r4_path, r5_path):
+def samples_sha256(samples):
+    """Ordered samples: sorted-key compact JSON, UTF-8, no newline or NaN.
+
+    Detects edits without a matching hash update, not independent attestation;
+    this does not verify raw_sha256 without the original raw file.
+    """
+    require(isinstance(samples, list), "samples must be a list")
+    return hashlib.sha256(json.dumps(samples, sort_keys=True, separators=(",", ":"),
+        ensure_ascii=False, allow_nan=False).encode("utf-8")).hexdigest()
+
+
+def check_samples_hash(block):
+    require(block.get("samples_sha256") == samples_sha256(block["samples"]),
+            "samples_sha256 mismatch: " + block.get("file", "live group"))
+
+
+def main(muse2_path, muse1_path, doc_path, r4_path, r5_path,
+         a11y_path="docs/benchmarks/r5_a11y_aggregate.json",
+         paint_path="docs/benchmarks/r5_paint_aggregate.json"):
     # Tiny stdlib self-check of the helpers used below.
     require(statistics.median([1, 2, 3]) == 2)
     require(median_p95([1, 2, 3, 4, 5]) == (3, 5))
@@ -68,6 +90,7 @@ def main(muse2_path, muse1_path, doc_path, r4_path, r5_path):
     require(totals == {"measured": 1440, "warmups": 48, "ok": 1440}, totals)
     rows = 0
     for block in blocks:
+        check_samples_hash(block)
         require(block["n_measured"] == 60 and block["n_ok"] == 60, block["file"])
         require(block["n_warmup"] == 2, block["file"])
         require(block["tasks_ok"] and block["cleanup_ok"], block["file"])
@@ -138,6 +161,8 @@ def main(muse2_path, muse1_path, doc_path, r4_path, r5_path):
 
     muse1 = json.load(open(muse1_path))
     live = muse1["live"]
+    for group in live.values():
+        check_samples_hash(group)
     browser = live["browser"]
     require(browser["tasks_ok"] and browser["cleanup_ok"], "browser cleanup")
     require((browser["n_measured"], browser["n_warmup"],
@@ -190,6 +215,8 @@ def main(muse2_path, muse1_path, doc_path, r4_path, r5_path):
           "11 modules, 98 ran, 0 failed, log hashes present")
     check_r4(r4_path, doc_path)
     check_r5(r5_path)
+    check_r5_a11y(a11y_path)
+    check_r5_paint(paint_path)
     print("OK: public evidence recomputed")
 
 
@@ -243,6 +270,7 @@ def check_r4(r4_path, doc_path):
     seen_files, seen_slots = set(), set()
     manifest = r4["provenance"]["raw_file_sha256"]
     for b in dblocks + cblocks:
+        check_samples_hash(b)
         require(b["file"] not in seen_files, b["file"])
         seen_files.add(b["file"])
         require(HEX64.match(b["sha256"]), b["file"])
@@ -455,6 +483,7 @@ def check_r5(path):
         require(len(blocks) == 24, "R5 block count")
         slots = set()
         for block in blocks:
+            check_samples_hash(block)
             require(block["file"] not in seen_files, "R5 duplicate raw file")
             seen_files.add(block["file"])
             require(isinstance(block["raw_sha256"], str) and HEX64.fullmatch(block["raw_sha256"]), "R5 raw hash")
@@ -515,6 +544,150 @@ def check_r5(path):
     print("r5: Git-verified sources; 2 comparisons x24 blocks, 960 measured +96 warmups; times/bytes/CI/gates recomputed")
 
 
+def metric_summary(rows, fields):
+    result = {}
+    for field in fields:
+        values = [r[field] for r in rows]
+        require(all(type(v) in (int, float) and math.isfinite(v) and v >= 0
+                    for v in values), "invalid metric: " + field)
+        med, p95 = median_p95(values)
+        result[field] = {"median": med, "p95": p95, "total": sum(values)}
+    return result
+
+
+def check_r5_a11y(path):
+    data = json.load(open(path))
+    require(data["artifact"] == "r5_a11y_aggregate", "R5 a11y artifact")
+    require(data["totals"] == {"blocks": 6, "measured": 30, "ok": 30, "warmups": 0}, "R5 a11y totals")
+    blocks = data["blocks"]
+    require(len(blocks) == 6, "R5 a11y block count")
+    slots, files = set(), set()
+    pooled = {route: [] for route in ("screenshot", "semantic")}
+    fields = ("whole_task_ms", "json_bytes", "png_bytes", "png_count", "calls", "drill_calls")
+    for b in blocks:
+        check_samples_hash(b)
+        slot = (b["round"], b["route"])
+        require(slot in {(r, route) for r in (1, 2, 3) for route in pooled} and slot not in slots, "R5 a11y block slot")
+        slots.add(slot)
+        require(b["file"] not in files, "R5 a11y duplicate file")
+        files.add(b["file"])
+        require(HEX64.fullmatch(b["raw_sha256"]) and b["engine_sha256"] == data["engine_sha256"] and HEX64.fullmatch(b["engine_sha256"]), "R5 a11y hashes")
+        require(b["ok"] is True and b["tasks_ok"] is True and b["sidecar_returncode"] == 0 and b["cleanup"] == {"children_reaped": True, "focus_preserved": True}, "R5 a11y cleanup/correctness")
+        rows = b["samples"]
+        require(len(rows) == 5 and [s["index"] for s in rows] == list(range(5)) and not b.get("warmup"), "R5 a11y rows/warmups")
+        for row in rows:
+            require(row["ok"] is True and row["pid_ok"] is True and row["clicks"] == 1 and type(row["whole_task_ms"]) in (int, float) and row["whole_task_ms"] > 0, "R5 a11y row correctness")
+            require(all(type(row[k]) is int and row[k] >= 0 for k in fields[1:]) and row["json_bytes"] > 0, "R5 a11y bytes/counts")
+            if b["route"] == "semantic":
+                require(row["calls"] == 4 and row["drill_calls"] == 2 and row["redrill"] is True and 0 < row["skeleton_elements"] <= 80 and row["png_count"] == row["png_bytes"] == 0, "R5 a11y semantic correctness")
+            else:
+                require(row["calls"] == 2 and row["drill_calls"] == 0 and row["png_count"] == 2 and row["png_bytes"] > 0, "R5 a11y screenshot correctness")
+        metrics = metric_summary(rows, fields)
+        require((b["whole_median_ms"], b["whole_p95_ms"]) == (metrics["whole_task_ms"]["median"], metrics["whole_task_ms"]["p95"]), "R5 a11y block timing summary")
+        require(b["json_bytes_median"] == metrics["json_bytes"]["median"] and b["png_bytes_total"] == metrics["png_bytes"]["total"], "R5 a11y block byte summary")
+        pooled[b["route"]].extend(rows)
+    expected = {route: {"n": len(rows), **metric_summary(rows, fields)} for route, rows in pooled.items()}
+    require(all(len(rows) == 15 for rows in pooled.values()) and data["pooled_by_route"] == expected, "R5 a11y pooled summary")
+    shot, sem = expected["screenshot"], expected["semantic"]
+    require(sem["json_bytes"]["median"] > shot["json_bytes"]["median"], "R5 a11y semantic JSON increases")
+    gain = shot["whole_task_ms"]["median"] - sem["whole_task_ms"]["median"]
+    require(data["comparison"] == {"cpu": "UNVERIFIED - unmeasured", "median_json_wire_bytes_increase": sem["json_bytes"]["median"] - shot["json_bytes"]["median"], "median_png_bytes_saved": shot["png_bytes"]["median"] - sem["png_bytes"]["median"], "png_captures_skipped": shot["png_count"]["total"] - sem["png_count"]["total"], "semantic_tasks": 15, "semantic_vs_screenshot_median_gain_pct": 100 * gain / shot["whole_task_ms"]["median"], "semantic_vs_screenshot_median_ms_saved": gain}, "R5 a11y comparison summary")
+    failed = data["failed_attempt01"]
+    require(failed["ok"] is False and failed["n_samples"] == 1 and failed["sample0"]["ok"] is False and failed["sample0"]["png_count"] == 0 and HEX64.fullmatch(failed["raw_sha256"]), "R5 a11y retained failed attempt")
+    print("r5 a11y: 6 blocks, 30 measured, no warmups; correctness/times/PNG/JSON summaries recomputed")
+
+
+def png_rgb_at(blob, xy):
+    """Decode the retained non-interlaced 8-bit RGB PNGs using stdlib only."""
+    require(blob[:8] == b"\x89PNG\r\n\x1a\n", "PNG signature")
+    offset, compressed, header = 8, bytearray(), None
+    while offset < len(blob):
+        require(offset + 12 <= len(blob), "PNG chunk truncated")
+        size = struct.unpack(">I", blob[offset:offset + 4])[0]
+        kind = blob[offset + 4:offset + 8]
+        payload = blob[offset + 8:offset + 8 + size]
+        require(offset + size + 12 <= len(blob), "PNG chunk length")
+        crc = struct.unpack(">I", blob[offset + size + 8:offset + size + 12])[0]
+        require(zlib.crc32(kind + payload) == crc, "PNG chunk CRC")
+        if kind == b"IHDR":
+            header = struct.unpack(">IIBBBBB", payload)
+        elif kind == b"IDAT":
+            compressed.extend(payload)
+        elif kind == b"IEND":
+            break
+        offset += size + 12
+    require(header is not None, "PNG header missing")
+    width, height, depth, color, compression, filtering, interlace = header
+    require((depth, color, compression, filtering, interlace) == (8, 2, 0, 0, 0) and 0 < width <= 4096 and 0 < height <= 4096, "PNG format/size")
+    x, y = xy
+    require(type(x) is int and type(y) is int and 0 <= x < width and 0 <= y < height, "PNG pixel position")
+    stride = width * 3
+    decoder = zlib.decompressobj()
+    raw = decoder.decompress(compressed, (stride + 1) * height + 1)
+    require(decoder.eof and not decoder.unused_data and len(raw) == (stride + 1) * height, "PNG decompressed size")
+    previous = bytearray(stride)
+    for row_index in range(y + 1):
+        start = row_index * (stride + 1)
+        mode = raw[start]
+        require(mode in range(5), "PNG filter")
+        row = bytearray(raw[start + 1:start + 1 + stride])
+        for i in range(stride):
+            a, b, c = (row[i - 3] if i >= 3 else 0), previous[i], (previous[i - 3] if i >= 3 else 0)
+            if mode == 4:
+                p = a + b - c
+                distances = (abs(p - a), abs(p - b), abs(p - c))
+                predictor = (a, b, c)[distances.index(min(distances))]
+            else:
+                predictor = (0, a, b, (a + b) // 2)[mode]
+            row[i] = (row[i] + predictor) & 255
+        previous = row
+    return list(previous[x * 3:x * 3 + 3])
+
+
+def check_r5_paint(path):
+    data = json.load(open(path))
+    require(data["artifact"] == "r5_paint_aggregate", "R5 paint artifact")
+    require(data["totals"] == {"blocks": 6, "failed_rows": 1, "measured": 41, "planned": 144, "successful_blocks": 5, "successful_rows": 40}, "R5 paint totals (planned is not measured)")
+    blocks = data["blocks"]
+    require(len(blocks) == 6, "R5 paint block count")
+    fields = ("whole_task_ms", "response_ms", "total_ms", "validation_probe_ms", "core_png_bytes", "core_request_json_bytes", "core_reply_json_bytes", "probe_png_bytes", "probe_request_json_bytes", "probe_reply_json_bytes")
+    slots, files, expected, failures = set(), set(), [], []
+    for b in blocks:
+        check_samples_hash(b)
+        slot = (b["sleep_ms"], b["delay_ms"])
+        require(slot in {(s, d) for s in (80, 40) for d in (0, 30, 60)} and slot not in slots and b["round"] == 1 and b["arm"] == "cand-%dms" % slot[0], "R5 paint block slot")
+        slots.add(slot)
+        require(b["file"] not in files and HEX64.fullmatch(b["raw_sha256"]) and HEX64.fullmatch(b["engine_sha256"]) and b["engine_sha256"] == b["source_cu_sha256"], "R5 paint file/hashes")
+        files.add(b["file"])
+        require(b["cleanup"] == {"children_reaped": True, "focus_preserved": True} and not b.get("warmup"), "R5 paint cleanup/warmups")
+        failed = slot == (40, 60)
+        count = 1 if failed else 8
+        rows = b["samples"]
+        require(len(rows) == b["n_measured"] == count and b["ok"] is (not failed) and b["ok_count"] == (0 if failed else count) and [r["index"] for r in rows] == list(range(count)), "R5 paint row count/status")
+        for r in rows:
+            require(r["ok"] is (not failed) and r["after_png_correct"] is (not failed) and r["click_count"] == r["core_tool_completed"] == 1, "R5 paint row correctness")
+            require(r["before_rgb"] == [251, 0, 0] and r["reference_rgb"] == [0, 251, 0] and r["after_rgb"] == ([251, 0, 0] if failed else [0, 251, 0]), "R5 paint pixel correctness")
+            require(r["failure"] == ("pilot gate: after PNG not proven correct" if failed else None), "R5 paint failure retained")
+            require(all(type(r[k]) is int and r[k] > 0 for k in fields[4:]), "R5 paint separate core/probe bytes")
+            require(0 < r["response_ms"] <= r["total_ms"] <= r["whole_task_ms"] and r["validation_probe_ms"] > 0, "R5 paint separate core/probe timers")
+        expected.append({"arm": b["arm"], "delay_ms": b["delay_ms"], "n": count, **metric_summary(rows, fields)})
+        if failed:
+            failures.extend(rows)
+    require(data["summary"] == expected, "R5 paint timing/byte summary")
+    require(len(failures) == 1, "R5 paint failed rows")
+    require(data["outcome"] == {"delay60_sleep40": "0/1 gate failure: after RGB red [251,0,0] vs late reference green [0,251,0]; click_count 1, core_tool_completed 1; no performance claim from failed candidate", "delay60_sleep80": "8/8 green (correctness pass, no performance success claim from this pilot alone)", "sleep80_retained": True}, "R5 paint outcome summary")
+    images = data["failure_images"]
+    require(set(images) == {"before", "after", "reference"}, "R5 paint failure image set")
+    for name, image in images.items():
+        require(image["file"] == "r5_paint_images/" + name + ".png", "R5 paint image path")
+        # Public retained PNGs are anchored to this repository, even for /tmp aggregates.
+        blob = (Path(__file__).resolve().parents[1] / "docs/benchmarks" / image["file"]).read_bytes()
+        require(len(blob) == image["png_bytes"] and hashlib.sha256(blob).hexdigest() == image["sha256"], "R5 paint failure PNG bytes/hash")
+        require(png_rgb_at(blob, image["pixel_xy"]) == image["rgb"] == failures[0][name + "_rgb"], "R5 paint failure PNG pixel")
+    require(images["before"]["png_bytes"] + images["after"]["png_bytes"] == failures[0]["core_png_bytes"] and images["reference"]["png_bytes"] == failures[0]["probe_png_bytes"], "R5 paint failure image byte accounting")
+    print("r5 paint: 41 measured (40 pass, 1 failure), planned 144 stopped; core/probe times/bytes separate; PNG hashes/pixels verified")
+
+
 if __name__ == "__main__":
     args = sys.argv[1:]
     base = args[0] if len(args) > 0 else "docs/benchmarks/muse2_assertion_poll_aggregate.json"
@@ -522,5 +695,7 @@ if __name__ == "__main__":
     doc = args[2] if len(args) > 2 else "docs/optimization-experiments.md"
     r4_path = args[3] if len(args) > 3 else "docs/benchmarks/r4_isolation_aggregate.json"
     r5_path = args[4] if len(args) > 4 else "docs/benchmarks/r5_cdp_aggregate.json"
-    require(len(args) <= 5, "at most five evidence paths")
-    main(base, hist, doc, r4_path, r5_path)
+    a11y_path = args[5] if len(args) > 5 else "docs/benchmarks/r5_a11y_aggregate.json"
+    paint_path = args[6] if len(args) > 6 else "docs/benchmarks/r5_paint_aggregate.json"
+    require(len(args) <= 7, "at most seven evidence paths")
+    main(base, hist, doc, r4_path, r5_path, a11y_path, paint_path)

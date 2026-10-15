@@ -107,6 +107,14 @@ The checker now verifies all nine source blobs against local Git, exact block
 runtime/source equality, 960 measured +96 warmup rows, per-round JSON bytes,
 medians/P95, seeded block CI and gates. Explicit checks remain active under
 `python3 -O`; corruption tests cover valid-looking false hashes and commits.
+Each of the 10000 bootstrap draws (seed 0) resamples the paired-block
+differences with replacement and takes the median of that resample.
+`samples_sha256` on every samples-bearing object
+is the canonical `json.dumps(samples, sort_keys=True, separators=(',', ':'),
+ensure_ascii=False, allow_nan=False)` UTF-8 bytes, no trailing newline,
+SHA256 hex: it detects samples
+changed without updating the co-located hash, not independent attestation, and
+cannot verify `raw_sha256` without the raw file.
 
 ## D — CDP worker portability (done, machine-scoped)
 

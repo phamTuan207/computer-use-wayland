@@ -1007,7 +1007,8 @@
           "total_ms": 78.93648200024472,
           "result_bytes": 7065
         }
-      ]
+      ],
+      "samples_sha256": "1ea0207fe49ec2dfb213682443a9a6fba7502b59720cd8bcdba6f56528b1af4c"
     },
     "desktop_full": {
       "n_measured": 30,
@@ -1291,7 +1292,8 @@
           "result_bytes": 579,
           "png_bytes": 41436
         }
-      ]
+      ],
+      "samples_sha256": "7c035663ea7cbb0adbd9a78857671847b5768236d6620fc7d516940cbd0218f7"
     },
     "desktop_crop": {
       "n_measured": 30,
@@ -1575,7 +1577,8 @@
           "result_bytes": 335,
           "png_bytes": 3983
         }
-      ]
+      ],
+      "samples_sha256": "218cbf94e82688e8bc1d80ad963145fb0c6cf91737e14208e0e9e91e8d7f8c84"
     }
   },
   "installed_unittests": {
