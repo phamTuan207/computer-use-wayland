@@ -56,7 +56,7 @@ function createTransport(url) {
     if(ws.readyState!==WebSocket.OPEN)throw new Error('CDP WebSocket is not open');
     const id=++sequence;
     return await new Promise((resolve,reject)=>{
-      // A failed call keeps the current diagnostic path, but cannot be cached.
+      // A failed call keeps its diagnostic path, but its transport cannot be reused.
       const timer=setTimeout(()=>{usable=false;pending.delete(id);reject(new Error('CDP timeout: '+method));},5000);
       pending.set(id,{resolve,reject,timer});
       try{ws.send(JSON.stringify({id,method,params}));}
@@ -120,7 +120,10 @@ const endpoint=new URL(request.endpoint);
 if (!['127.0.0.1','localhost','[::1]'].includes(endpoint.hostname)) throw new Error('CDP endpoint must be loopback');
 const tabs=await (await fetch(new URL('/json/list',endpoint),{signal:AbortSignal.timeout(4000)})).json();
 if(request.operation==='tabs') {
-  return tabs.filter(t=>t.type==='page').map(({id,title,url})=>({id,title,url}));
+  result=tabs.filter(t=>t.type==='page').map(({id,title,url})=>({id,title,url}));
+  // Listing grants no target authority; the next action still fetches its own list.
+  connection=owner?.connection;connectionKey=owner?.key;
+  return result;
 }
 const target=tabs.find(t=>t.type==='page'&&t.id===request.target);
 if(!target) throw new Error('exact --target required; use browser tabs');

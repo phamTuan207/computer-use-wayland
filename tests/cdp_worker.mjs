@@ -250,7 +250,12 @@ assert.equal(result.fetches,1);assert.equal(result.output.length,2);assert.equal
 result=await run([request,'{malformed',request]);
 assert.equal(result.output.length,2);assert.equal(result.fetches,1);assert.equal(result.exitCode,1);
 result=await run([request,{...request,operation:'tabs'},request]);
-assert.equal(result.sockets.length,2);assert.equal(result.fetches,3);assert.ok(Array.isArray(result.output[1]));
+assert.equal(result.sockets.length,1);assert.equal(result.fetches,3);assert.ok(Array.isArray(result.output[1]));
+for(const invalid of [[],[tab('other')],[tab('test','http://fixture/','ws://outside.example/test')]]){
+  result=await run([request,{...request,operation:'tabs'},request],{tabList:n=>n===3?invalid:[tab()]});
+  assert.equal(result.output[2].ok,false);assert.equal(result.sockets.length,1);
+  assert.equal(result.fetches,3);assert.equal(result.frames,1,'tabs never authorizes the next target');
+}
 
 // A new explicit request may replace an idle dead socket; it never retries a send.
 for(const fault of ['close','error','malformed']){
@@ -295,7 +300,7 @@ for(const stale of ['reload','url','age','id']){
   const input={...act,actions:[{type:'key',keys:['a']}]};
   result=await run([request,input,request],{onResponse:({output,page})=>{
     if(output.length!==1)return;
-    if(stale==='reload')delete page.__agentCu;
+    if(stale==='reload')vm.runInContext('delete globalThis.__agentCu',page);
     if(stale==='url')page.location.href='http://fixture/navigated';
     if(stale==='age')page.__agentCu.created=Date.now()-90001;
     if(stale==='id')page.__agentCu.id='another-snapshot';
@@ -321,7 +326,7 @@ for(const unavailable of ['removed','disabled','covered']){
   assert.equal(result.fixtureState.inputEvents,0,unavailable);assert.equal(result.sockets.length,1,unavailable);
 }
 result=await run([request,{...act,actions:[{type:'scroll',dy:20}]},request],{
-  onResponse:({output,page})=>{if(output.length===1)delete page.__agentCu;}
+  onResponse:({output,page})=>{if(output.length===1)vm.runInContext('delete globalThis.__agentCu',page);}
 });
 assert.equal(result.output[1].ok,false);assert.equal(result.fixtureState.inputEvents,0);
 
