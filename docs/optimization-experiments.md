@@ -15,7 +15,7 @@ are not repeated here.
 
 ## MUSE2 assertion polling interval
 
-An independent audit of the private run against an owned live Chromium fixture
+Root local verification of the private run against an owned live Chromium fixture
 on Hyprland 0.56.2 verified 1,440 successful tasks:
 24 blocks across six delay/control workloads and two task routes, with 60
 samples per variant per cell. The baseline used a 50 ms CDP assertion poll;
@@ -72,9 +72,97 @@ for controls in 0 1000; do
 done
 ```
 
-The audited aggregates and row checks are documented in the private
-experiment record; no runtime or model-wide performance claim follows from
-this fixture.
+The audited rows and recomputation are published in
+[docs/benchmarks/muse2_assertion_poll_aggregate.json](benchmarks/muse2_assertion_poll_aggregate.json),
+verifiable with `python3 scripts/check-perf-evidence.py`. Provenance: local owned
+live Chromium fixture runs, reviewed measurements — not a third-party
+independence claim. The poll-interval change itself is R3 work; R4 adds only
+packaging and verification, no new gain. Round4 ran its own FINAL measured
+isolation experiment below; the R3 poll gain stays R3 and is not re-claimed
+there. The 24 blocks span 6 delay/control workloads and 2 task
+routes in B,A,A,B order with 60 samples per variant per cell; these are repeats
+under that order, not 1,440 distinct scenarios. No runtime or model-wide
+performance claim follows from this fixture.
+
+## Round4 FINAL (R4 FINAL): measured isolation experiment
+
+FINAL balanced experiment, not pending and not sequential: 66 blocks,
+870 measured rows plus 54 warmups (924 rows total), every row `ok` with
+cleanup confirmed. Desktop: 36 blocks x 10 samples, 360 measured + 0 warmup,
+owned inert GTK click fixture, rounds R1 ABBA / R2 BAAB / R3 ABBA.
+CDP normal: 24 blocks x 20 samples (10 per mode), 480 measured + 48 warmup,
+owned live Chromium fixture, same round order. CDP image: 6 blocks x 5
+samples, 30 measured + 6 warmup, descriptive only. Rows and recomputation are
+published in
+[docs/benchmarks/r4_isolation_aggregate.json](benchmarks/r4_isolation_aggregate.json),
+verifiable with `python3 scripts/check-perf-evidence.py`. Independent means
+root local verification, not an external third party. Session startup,
+discovery and model inference are outside all timings below.
+
+Fixed thresholds (set before measurement): every normal cell needs
+all 3 round gains positive, the seeded chronological paired-block CI95
+(6 pairs per normal cell, 3 for image, 10000 draws, seed 0) above zero, and
+candidate p95 within baseline p95 x 1.05. Root conservatively enforces
+this cap on each round as well as pooled data; the initial pooled-only
+acceptance of the desktop candidate was withdrawn, not rounded to pass. CDP normal cells additionally need pooled gain >= 1 ms and >= 3%.
+The image cell is exploratory with no gate. The aggregate includes median
+and total JSON/PNG bytes for each variant in each round; image JSON embeds
+base64, so those two byte metrics overlap and must not be added.
+
+Desktop guard cell `exp1 guard-crop-noafter-click` (candidate: skip the outer
+guard when the group has no mouse modifier; fresh `execute_group` guard and
+modifier pre-guard kept; sleep unchanged):
+
+Cell reached FINAL gate: REJECT. Before median/p95 162.919 / 188.858 ms,
+after 161.374 / 184.528 ms, gain 1.545 ms (0.95%), CI95 [0.181, 3.569] ms.
+Per-round gains all positive (R1 +1.277, R2 +2.074, R3 +2.818 ms) but R3
+round p95 regresses +5.02% (176.577 -> 185.439 ms), over the 5% cap.
+JSON 335 -> 335 bytes, PNG 4192 -> 4192 bytes. Result-bytes/4 may be quoted
+only as an explicitly naive heuristic; visual and billed tokens stay
+UNVERIFIED. The guard optimization is NOT LANDED; the original outer guard remains.
+Four behavioral regression tests are retained. No desktop engine speed win
+is claimed.
+
+Crop guidance (same baseline engine, equal after-semantics compared only):
+existing crop feature, newly documented default — not a new backend
+algorithm. `exp2 crop-after`: full-after 411.219 / 456.618 ms becomes
+crop-after 291.779 / 317.556 ms, gain 119.439 ms (29.05%),
+CI95 [115.876, 141.829] ms, gate PASS. PNG paired bytes 83332 -> 8384,
+JSON 579 -> 606. `exp2 crop-noafter`: full-noafter 242.143 / 281.786 ms
+becomes crop-noafter 164.010 / 192.711 ms, gain 78.133 ms (32.27%),
+CI95 [74.434, 96.016] ms, gate PASS. PNG 41692 -> 4192, JSON 322 -> 335.
+Per-round gains positive in all 6 rounds. Begin with a bounded crop when app
+window, semantics or geometry determine a reliable one; full view is the
+explicit fallback when they do not.
+
+CDP one-slot worker transport (candidate reuses one slot only for a fresh
+validated same target; standalone commands stay isolated; no snapshot cache,
+no replay, terminal failures stop). All four normal cells reached FINAL
+gate: PASS. PNG is absent (null, UNVERIFIED, never 0); JSON unchanged.
+
+- `cdp C0 task-scoped`: 31.296 / 33.025 ms becomes 25.809 / 31.671 ms,
+  gain 5.488 ms (17.53%), CI95 [3.791, 6.541] ms. Rounds +3.982 / +5.017 / +6.806 ms.
+- `cdp C0 task-after-scoped`: 31.873 / 34.552 ms becomes 26.213 / 32.454 ms,
+  gain 5.660 ms (17.76%), CI95 [3.537, 6.509] ms. Rounds +5.911 / +5.071 / +5.828 ms.
+- `cdp C1000 task-scoped`: 37.091 / 39.117 ms becomes 31.615 / 36.938 ms,
+  gain 5.476 ms (14.76%), CI95 [4.336, 5.537] ms. Rounds +5.802 / +5.710 / +4.007 ms.
+- `cdp C1000 task-after-scoped`: 38.702 / 41.236 ms becomes 33.194 / 38.709 ms,
+  gain 5.508 ms (14.23%), CI95 [4.416, 5.819] ms. Rounds +5.625 / +5.940 / +4.459 ms.
+
+CDP image cell (exploratory, no gate, no speed claim): 364.949 / 382.627 ms
+vs 371.489 / 384.107 ms, gain -6.540 ms (-1.79%),
+CI95 [-7.865, 12.824] ms crossing zero. Round gains -7.451 / +12.824 / -7.865 ms.
+Actual per-row PNG bytes with dimensions are published (before+after pairs,
+e.g. medians 31963 vs 31950 bytes); image result JSON embeds base64 PNG data,
+so JSON and PNG byte metrics overlap — never add them and never divide image
+JSON by 4 to claim real model tokens. CPU per task UNVERIFIED throughout.
+
+Rejected and NOT LANDED: sleep-80ms removal/reduction (delayed-paint
+counterexample still applies, existing sleep retained) and query caching
+across safety boundaries (fresh guards retained). Non-perf CLI/a11y/ABI
+diagnostic changes carry correctness-test evidence only; their timings are
+UNVERIFIED, so no speed is inferred from tests. No universal application
+gain and no billed-token claim follow from any cell above.
 
 ## Browser `act --no-after` A/B on the source fixture
 
@@ -271,14 +359,17 @@ rows; the existing console summary reports historical act-plus-verifier time.
 
 ## Cropped desktop observation, once the area is known
 
-`observe --crop X Y W H` narrows the captured region. Use it only after a full view has
-been inspected and the target's area is known: the crop must contain the target
-**and** the context you need to confirm you aimed at it. After any geometry, focus
-or screen change, observe again rather than reusing coordinates. Never crop an
-area you have not looked at — an unknown menu or popup is exactly where a blind
-crop hides the thing you needed. Inspect the returned cropped image before
-choosing input coordinates; the crop changes the image and its scale, not the
-window's logic.
+`observe --crop X Y W H` narrows the captured region. Begin with a bounded crop
+when the app window, semantics or geometry determine one: the crop must contain
+the target **and** the context you need to confirm you aimed at it. Inspect the
+returned cropped image before choosing input coordinates; the crop changes the
+image and its scale, not the window's logic. Expand or re-observe when the
+target or its context is absent. A full view is the explicit fallback only when
+no reliable crop can be determined. Never crop past an unseen menu or popup
+change — an unknown menu or popup is exactly where a blind crop hides the thing
+you needed — and never guess action coordinates. After any geometry, focus
+or screen change, observe again rather than reusing coordinates. No runtime CLI
+default or API changes: this is instruction guidance only.
 
 Measured with the **installed CLI** against the same owned inert GTK click
 fixture: four sequential A/B/B/A blocks, 30 samples each, both with `act --no-after`, A a
@@ -316,7 +407,13 @@ passed.
 
 Read this honestly: PNG bytes are **not** billed model tokens, and the result JSON
 grows 4.037% because the explicit crop metadata is carried in the response. The 35.869% is the fixture's whole-task wall clock, not a claim about
-total LLM task time, other applications or other image sizes.
+total LLM task time, other applications or other image sizes. Docs-only impact on
+agent task tokens is UNVERIFIED until controlled measurement: a JSON-bytes/4
+heuristic may be quoted only when clearly labelled as a heuristic, and any PNG
+visual-token saving is UNVERIFIED.
+
+The sequential full-vs-crop baseline variants below were superseded by the
+R4 FINAL balanced experiment above; no causal gain is published from them.
 
 ```sh
 report_dir=$(mktemp -d)
@@ -450,6 +547,35 @@ A separate paired headless Chromium smoke closed its owned tab by timer during a
 after-state unavailable. Total/whole time changed 11,073.930→1,065.077 ms and
 result JSON 233→229 bytes. This single pair validates real close handling, not
 statistical throughput or LLM performance; it is separate from mock results.
+
+## Historical evidence (MUSE1, not Round4 validation)
+
+Earlier runs against owned live fixtures recorded 180 measured task executions —
+120 Chromium plus 30 GTK full-window and 30 GTK crop — with 4 warmups, all
+successful with cleanup confirmed. Separately, 11 installed unit-test module
+executions totalled 98 run / 98 pass / 0 failed, each with exit code 0. These
+are execution counts, not distinct test IDs; the 180 are live-fixture runs
+(real Chromium/GTK fixtures, not mocks) while the 98 are unit mocks/offline
+tests. The source basis predates Round4, so this is historical evidence, not
+validation of the current HEAD. Rows and per-module counts are published in
+[docs/benchmarks/muse1_historical_aggregate.json](benchmarks/muse1_historical_aggregate.json),
+verifiable with `python3 scripts/check-perf-evidence.py`; no private-only
+citation is needed.
+
+## Already-deliberate behaviors (no code change)
+
+The following were verified as already implemented at the cited source; they
+are documented here without reverting or changing code:
+
+- **L2 address case**: window-address comparison is case-insensitive
+  (`scripts/cu.py` `same_window_address`, used by all callers).
+- **L3 read-only query allowlist**: Hyprland queries pass a fixed-name
+  allowlist on both the socket and CLI paths; refusal carries bounded query
+  detail, not a fixed string.
+- **L4 browser `start`/`tabs --image` rejection**: refused before environment
+  or dispatch.
+- **L5 missing controller fails closed**: an own-UID fcitx5 daemon without the
+  helper refuses rather than proceeding.
 
 ## Related
 

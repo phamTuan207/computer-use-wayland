@@ -1,0 +1,1705 @@
+{
+  "artifact": "muse1_historical_aggregate",
+  "provenance": {
+    "basis": "historical MUSE1 runs against owned live fixtures plus installed unit-test logs; source basis predates Round4 (see R3 audit); not Round4 HEAD validation",
+    "live_vs_unit": "180 live-fixture task executions (real Chromium/GTK fixtures, not mocks) are distinct from 98 installed unit-test executions; test executions counted, not distinct test IDs",
+    "raw_source": "private MUSE1-live-browser.json, MUSE1-live-desktop-full.json, MUSE1-live-desktop-crop.json and 11 installed unittest logs (private; hashes below identify them, files not published)",
+    "raw_file_sha256": {
+      "MUSE1-live-browser.json": "aeaa9e0bdbabb09c9a259d83bc8892109d8f003b67f0cebbf305cce8c543a26c",
+      "MUSE1-live-desktop-full.json": "ef2c8c45186740f9ca27bdba1e5bcc1cbcb479ece1f43bf2af10d59204e45774",
+      "MUSE1-live-desktop-crop.json": "d53d28ef41da89c6ea24dabff27cc97e3c1265f551240d6a55e8fd5114023e58",
+      "install-01-stderr.log": "7fcd0c05fdfff3a92abe0e4762a8933f43f8b0cdfd628bfcb44dfac91e2853b7",
+      "install-01-exit.json": "ceee70f13a6cb3e75eac574fd3947c7fafa6f127af01f7b36090509d8b95af25",
+      "install-02-stderr.log": "e3b532ab145d1ca46b0a9e833cd7f088dd81c355dd1e2ac08faf5c291a77bdb8",
+      "install-02-exit.json": "dec5560c422c5365d79a67ca3d3f339d1ff129ba8f42e6f4cd492d8b8b7b89b1",
+      "install-03-stderr.log": "aef40dcd16aea9fa384ec352e4ff6a5691d9b6d56c1e9a440bf894d1cb22550a",
+      "install-03-exit.json": "939e5cac0cebc56970dfc129af5295cf72481cc13be3b778e300bebe45a86537",
+      "install-04-stderr.log": "0c5f7b5360b6498032958d6db61d2737b67189fee56f6bb8fdc6c69351168fa1",
+      "install-04-exit.json": "e4e84d80573c9114de9935504ef1b238e5a6751febc2db5584ae57b2f5b9c395",
+      "install-05-stderr.log": "e92f6ae19471c81ca91d9242783f6f5af5391b42f6d2aaef9a5b976bd8ca2537",
+      "install-05-exit.json": "4d9dda576fe031270e2123b25120cc2da9ff03041476ee8b1838c3d82b1e1d38",
+      "install-06-stderr.log": "18589aada1a9235192c5232996439cf4bf22f8e2a47782e5bfd57aaa6fcc6ff7",
+      "install-06-exit.json": "700ce62134aef525666678210fc9ba9ba31ac1ac230bb64afc8b4cd433da89e7",
+      "install-07-stderr.log": "551ad57a7a833d6cc5c57163fb2a2ec28b0901264cdad93fc9d840eb4d9e765f",
+      "install-07-exit.json": "fa56136e28ada8ac09cc318478d836310ffca18cd34c1c6635042a86a39efa65",
+      "install-08-stderr.log": "852a1d3e9198f1b061ea278914bece0ab3d5f0d63cc4ef7344475a49fa3174d1",
+      "install-08-exit.json": "034678b50aca0f7b707025c77b8ef07ed3fb6ee6fe990566f8306c3b81202213",
+      "install-09-stderr.log": "5c320d3e9514d005d34357fee69199f2b747d783a333b4523e9a1beb7399fdd1",
+      "install-09-exit.json": "291a765fdb1983eebd0855ab7e5575edd6b7ff8faed6f9e2fa84a9011df2593f",
+      "install-10-stderr.log": "258d90a50a9d2a4865efa7c4abcad2c8166dd76b04286622b90a03bccea5b9c1",
+      "install-10-exit.json": "639a8f73ad8009ceef749c2d9f3bfe1a7ed69a363f01e8d80c8035a55fa8463e",
+      "install-11-stderr.log": "df76c569eab1e993dcad980d89a1ac3aaef7226360c39684cc8f1056dff52316",
+      "install-11-exit.json": "8cfd788b2a8410c76f0aecdecf83eddbfc910ec618b4e1509767654d9a763f9b"
+    },
+    "timing_scope_browser": "whole task: observe + act + independent app verification; setup outside",
+    "unit_log_scope": "hashes cover 11 installed unittest stderr logs (01-11) plus matching exit JSON; stdout logs empty; commands are python3 -m unittest discover -s tests -p <module> -v with exit 0"
+  },
+  "live": {
+    "browser": {
+      "n_measured": 120,
+      "n_warmup": 4,
+      "n_ok": 120,
+      "tasks_ok": true,
+      "cleanup_ok": true,
+      "runtime_sha256": {
+        "cu.py": "52ab3798632fd5009d39e88fa5da1739d32c1a525de9fe0cb358b31dad3a9e02",
+        "browser_worker.py": "b4b80e19f8f5afba6b5d0bc2019daaae61b52ea3ad6ab71b6c36159b46269aa8",
+        "cdp.mjs": "ae2f934168841009c58da62fed2186d964fa835e0ea0c8d123cdb5d2e91e3c34"
+      },
+      "samples": [
+        {
+          "mode": "task-full",
+          "index": 0,
+          "ok": true,
+          "whole_task_ms": 73.96427000003314,
+          "total_ms": 73.96427000003314,
+          "result_bytes": 7065
+        },
+        {
+          "mode": "task-scoped",
+          "index": 0,
+          "ok": true,
+          "whole_task_ms": 67.51257799987798,
+          "total_ms": 67.51257799987798,
+          "result_bytes": 381
+        },
+        {
+          "mode": "task-after-full",
+          "index": 0,
+          "ok": true,
+          "whole_task_ms": 77.87267900039296,
+          "total_ms": 77.87267900039296,
+          "result_bytes": 7363
+        },
+        {
+          "mode": "task-after-scoped",
+          "index": 0,
+          "ok": true,
+          "whole_task_ms": 72.27743199928227,
+          "total_ms": 72.27743199928227,
+          "result_bytes": 679
+        },
+        {
+          "mode": "task-after-scoped",
+          "index": 1,
+          "ok": true,
+          "whole_task_ms": 71.91403199976776,
+          "total_ms": 71.91403199976776,
+          "result_bytes": 679
+        },
+        {
+          "mode": "task-after-full",
+          "index": 1,
+          "ok": true,
+          "whole_task_ms": 75.62868000059098,
+          "total_ms": 75.62868000059098,
+          "result_bytes": 7363
+        },
+        {
+          "mode": "task-scoped",
+          "index": 1,
+          "ok": true,
+          "whole_task_ms": 68.14710300022853,
+          "total_ms": 68.14710300022853,
+          "result_bytes": 381
+        },
+        {
+          "mode": "task-full",
+          "index": 1,
+          "ok": true,
+          "whole_task_ms": 74.32995300041512,
+          "total_ms": 74.32995300041512,
+          "result_bytes": 7065
+        },
+        {
+          "mode": "task-full",
+          "index": 2,
+          "ok": true,
+          "whole_task_ms": 69.29056599983596,
+          "total_ms": 69.29056599983596,
+          "result_bytes": 7065
+        },
+        {
+          "mode": "task-scoped",
+          "index": 2,
+          "ok": true,
+          "whole_task_ms": 71.42361299975164,
+          "total_ms": 71.42361299975164,
+          "result_bytes": 381
+        },
+        {
+          "mode": "task-after-full",
+          "index": 2,
+          "ok": true,
+          "whole_task_ms": 80.9959929993056,
+          "total_ms": 80.9959929993056,
+          "result_bytes": 7363
+        },
+        {
+          "mode": "task-after-scoped",
+          "index": 2,
+          "ok": true,
+          "whole_task_ms": 73.38357900061965,
+          "total_ms": 73.38357900061965,
+          "result_bytes": 679
+        },
+        {
+          "mode": "task-after-scoped",
+          "index": 3,
+          "ok": true,
+          "whole_task_ms": 73.34611999976914,
+          "total_ms": 73.34611999976914,
+          "result_bytes": 679
+        },
+        {
+          "mode": "task-after-full",
+          "index": 3,
+          "ok": true,
+          "whole_task_ms": 75.70923200000834,
+          "total_ms": 75.70923200000834,
+          "result_bytes": 7363
+        },
+        {
+          "mode": "task-scoped",
+          "index": 3,
+          "ok": true,
+          "whole_task_ms": 68.75033300002542,
+          "total_ms": 68.75033300002542,
+          "result_bytes": 381
+        },
+        {
+          "mode": "task-full",
+          "index": 3,
+          "ok": true,
+          "whole_task_ms": 80.19607799997175,
+          "total_ms": 80.19607799997175,
+          "result_bytes": 7065
+        },
+        {
+          "mode": "task-full",
+          "index": 4,
+          "ok": true,
+          "whole_task_ms": 69.43648299966299,
+          "total_ms": 69.43648299966299,
+          "result_bytes": 7065
+        },
+        {
+          "mode": "task-scoped",
+          "index": 4,
+          "ok": true,
+          "whole_task_ms": 68.71291499919607,
+          "total_ms": 68.71291499919607,
+          "result_bytes": 381
+        },
+        {
+          "mode": "task-after-full",
+          "index": 4,
+          "ok": true,
+          "whole_task_ms": 70.05002899950341,
+          "total_ms": 70.05002899950341,
+          "result_bytes": 7363
+        },
+        {
+          "mode": "task-after-scoped",
+          "index": 4,
+          "ok": true,
+          "whole_task_ms": 72.3378769998817,
+          "total_ms": 72.3378769998817,
+          "result_bytes": 679
+        },
+        {
+          "mode": "task-after-scoped",
+          "index": 5,
+          "ok": true,
+          "whole_task_ms": 71.31539200054249,
+          "total_ms": 71.31539200054249,
+          "result_bytes": 679
+        },
+        {
+          "mode": "task-after-full",
+          "index": 5,
+          "ok": true,
+          "whole_task_ms": 77.49501600028452,
+          "total_ms": 77.49501600028452,
+          "result_bytes": 7363
+        },
+        {
+          "mode": "task-scoped",
+          "index": 5,
+          "ok": true,
+          "whole_task_ms": 68.62782400003198,
+          "total_ms": 68.62782400003198,
+          "result_bytes": 381
+        },
+        {
+          "mode": "task-full",
+          "index": 5,
+          "ok": true,
+          "whole_task_ms": 74.21869399968273,
+          "total_ms": 74.21869399968273,
+          "result_bytes": 7065
+        },
+        {
+          "mode": "task-full",
+          "index": 6,
+          "ok": true,
+          "whole_task_ms": 72.87093100057973,
+          "total_ms": 72.87093100057973,
+          "result_bytes": 7065
+        },
+        {
+          "mode": "task-scoped",
+          "index": 6,
+          "ok": true,
+          "whole_task_ms": 73.0787849997796,
+          "total_ms": 73.0787849997796,
+          "result_bytes": 381
+        },
+        {
+          "mode": "task-after-full",
+          "index": 6,
+          "ok": true,
+          "whole_task_ms": 73.09942899973976,
+          "total_ms": 73.09942899973976,
+          "result_bytes": 7363
+        },
+        {
+          "mode": "task-after-scoped",
+          "index": 6,
+          "ok": true,
+          "whole_task_ms": 70.08485400001518,
+          "total_ms": 70.08485400001518,
+          "result_bytes": 679
+        },
+        {
+          "mode": "task-after-scoped",
+          "index": 7,
+          "ok": true,
+          "whole_task_ms": 73.21721900007105,
+          "total_ms": 73.21721900007105,
+          "result_bytes": 679
+        },
+        {
+          "mode": "task-after-full",
+          "index": 7,
+          "ok": true,
+          "whole_task_ms": 77.48882800024148,
+          "total_ms": 77.48882800024148,
+          "result_bytes": 7363
+        },
+        {
+          "mode": "task-scoped",
+          "index": 7,
+          "ok": true,
+          "whole_task_ms": 68.977206999989,
+          "total_ms": 68.977206999989,
+          "result_bytes": 381
+        },
+        {
+          "mode": "task-full",
+          "index": 7,
+          "ok": true,
+          "whole_task_ms": 73.87360499978968,
+          "total_ms": 73.87360499978968,
+          "result_bytes": 7065
+        },
+        {
+          "mode": "task-full",
+          "index": 8,
+          "ok": true,
+          "whole_task_ms": 73.97581500026718,
+          "total_ms": 73.97581500026718,
+          "result_bytes": 7065
+        },
+        {
+          "mode": "task-scoped",
+          "index": 8,
+          "ok": true,
+          "whole_task_ms": 68.14880899946729,
+          "total_ms": 68.14880899946729,
+          "result_bytes": 381
+        },
+        {
+          "mode": "task-after-full",
+          "index": 8,
+          "ok": true,
+          "whole_task_ms": 76.72483300029853,
+          "total_ms": 76.72483300029853,
+          "result_bytes": 7363
+        },
+        {
+          "mode": "task-after-scoped",
+          "index": 8,
+          "ok": true,
+          "whole_task_ms": 71.12498900005448,
+          "total_ms": 71.12498900005448,
+          "result_bytes": 679
+        },
+        {
+          "mode": "task-after-scoped",
+          "index": 9,
+          "ok": true,
+          "whole_task_ms": 69.13044300017646,
+          "total_ms": 69.13044300017646,
+          "result_bytes": 679
+        },
+        {
+          "mode": "task-after-full",
+          "index": 9,
+          "ok": true,
+          "whole_task_ms": 69.29913500061957,
+          "total_ms": 69.29913500061957,
+          "result_bytes": 7363
+        },
+        {
+          "mode": "task-scoped",
+          "index": 9,
+          "ok": true,
+          "whole_task_ms": 66.66354499975569,
+          "total_ms": 66.66354499975569,
+          "result_bytes": 381
+        },
+        {
+          "mode": "task-full",
+          "index": 9,
+          "ok": true,
+          "whole_task_ms": 73.61220900020271,
+          "total_ms": 73.61220900020271,
+          "result_bytes": 7065
+        },
+        {
+          "mode": "task-full",
+          "index": 10,
+          "ok": true,
+          "whole_task_ms": 73.87305700012803,
+          "total_ms": 73.87305700012803,
+          "result_bytes": 7065
+        },
+        {
+          "mode": "task-scoped",
+          "index": 10,
+          "ok": true,
+          "whole_task_ms": 68.28187500013883,
+          "total_ms": 68.28187500013883,
+          "result_bytes": 381
+        },
+        {
+          "mode": "task-after-full",
+          "index": 10,
+          "ok": true,
+          "whole_task_ms": 70.93509200058179,
+          "total_ms": 70.93509200058179,
+          "result_bytes": 7363
+        },
+        {
+          "mode": "task-after-scoped",
+          "index": 10,
+          "ok": true,
+          "whole_task_ms": 71.24949499939248,
+          "total_ms": 71.24949499939248,
+          "result_bytes": 679
+        },
+        {
+          "mode": "task-after-scoped",
+          "index": 11,
+          "ok": true,
+          "whole_task_ms": 66.70443199982401,
+          "total_ms": 66.70443199982401,
+          "result_bytes": 679
+        },
+        {
+          "mode": "task-after-full",
+          "index": 11,
+          "ok": true,
+          "whole_task_ms": 71.75722300053167,
+          "total_ms": 71.75722300053167,
+          "result_bytes": 7363
+        },
+        {
+          "mode": "task-scoped",
+          "index": 11,
+          "ok": true,
+          "whole_task_ms": 70.21637100024236,
+          "total_ms": 70.21637100024236,
+          "result_bytes": 381
+        },
+        {
+          "mode": "task-full",
+          "index": 11,
+          "ok": true,
+          "whole_task_ms": 73.30070900025021,
+          "total_ms": 73.30070900025021,
+          "result_bytes": 7065
+        },
+        {
+          "mode": "task-full",
+          "index": 12,
+          "ok": true,
+          "whole_task_ms": 75.37124099962966,
+          "total_ms": 75.37124099962966,
+          "result_bytes": 7065
+        },
+        {
+          "mode": "task-scoped",
+          "index": 12,
+          "ok": true,
+          "whole_task_ms": 68.8691289997223,
+          "total_ms": 68.8691289997223,
+          "result_bytes": 381
+        },
+        {
+          "mode": "task-after-full",
+          "index": 12,
+          "ok": true,
+          "whole_task_ms": 76.51468499989278,
+          "total_ms": 76.51468499989278,
+          "result_bytes": 7363
+        },
+        {
+          "mode": "task-after-scoped",
+          "index": 12,
+          "ok": true,
+          "whole_task_ms": 67.46015199951216,
+          "total_ms": 67.46015199951216,
+          "result_bytes": 679
+        },
+        {
+          "mode": "task-after-scoped",
+          "index": 13,
+          "ok": true,
+          "whole_task_ms": 73.98753100005706,
+          "total_ms": 73.98753100005706,
+          "result_bytes": 679
+        },
+        {
+          "mode": "task-after-full",
+          "index": 13,
+          "ok": true,
+          "whole_task_ms": 74.51294000020425,
+          "total_ms": 74.51294000020425,
+          "result_bytes": 7363
+        },
+        {
+          "mode": "task-scoped",
+          "index": 13,
+          "ok": true,
+          "whole_task_ms": 72.95110500035662,
+          "total_ms": 72.95110500035662,
+          "result_bytes": 381
+        },
+        {
+          "mode": "task-full",
+          "index": 13,
+          "ok": true,
+          "whole_task_ms": 71.25138900028105,
+          "total_ms": 71.25138900028105,
+          "result_bytes": 7065
+        },
+        {
+          "mode": "task-full",
+          "index": 14,
+          "ok": true,
+          "whole_task_ms": 75.0215889993342,
+          "total_ms": 75.0215889993342,
+          "result_bytes": 7065
+        },
+        {
+          "mode": "task-scoped",
+          "index": 14,
+          "ok": true,
+          "whole_task_ms": 71.55828600025416,
+          "total_ms": 71.55828600025416,
+          "result_bytes": 381
+        },
+        {
+          "mode": "task-after-full",
+          "index": 14,
+          "ok": true,
+          "whole_task_ms": 74.84906999980012,
+          "total_ms": 74.84906999980012,
+          "result_bytes": 7363
+        },
+        {
+          "mode": "task-after-scoped",
+          "index": 14,
+          "ok": true,
+          "whole_task_ms": 69.76560499970219,
+          "total_ms": 69.76560499970219,
+          "result_bytes": 679
+        },
+        {
+          "mode": "task-after-scoped",
+          "index": 15,
+          "ok": true,
+          "whole_task_ms": 73.70197500040376,
+          "total_ms": 73.70197500040376,
+          "result_bytes": 679
+        },
+        {
+          "mode": "task-after-full",
+          "index": 15,
+          "ok": true,
+          "whole_task_ms": 70.38269599979685,
+          "total_ms": 70.38269599979685,
+          "result_bytes": 7363
+        },
+        {
+          "mode": "task-scoped",
+          "index": 15,
+          "ok": true,
+          "whole_task_ms": 71.94471399998292,
+          "total_ms": 71.94471399998292,
+          "result_bytes": 381
+        },
+        {
+          "mode": "task-full",
+          "index": 15,
+          "ok": true,
+          "whole_task_ms": 72.8485500003444,
+          "total_ms": 72.8485500003444,
+          "result_bytes": 7065
+        },
+        {
+          "mode": "task-full",
+          "index": 16,
+          "ok": true,
+          "whole_task_ms": 71.91838299968367,
+          "total_ms": 71.91838299968367,
+          "result_bytes": 7065
+        },
+        {
+          "mode": "task-scoped",
+          "index": 16,
+          "ok": true,
+          "whole_task_ms": 71.15045799946529,
+          "total_ms": 71.15045799946529,
+          "result_bytes": 381
+        },
+        {
+          "mode": "task-after-full",
+          "index": 16,
+          "ok": true,
+          "whole_task_ms": 73.2011740001326,
+          "total_ms": 73.2011740001326,
+          "result_bytes": 7363
+        },
+        {
+          "mode": "task-after-scoped",
+          "index": 16,
+          "ok": true,
+          "whole_task_ms": 69.63496100070188,
+          "total_ms": 69.63496100070188,
+          "result_bytes": 679
+        },
+        {
+          "mode": "task-after-scoped",
+          "index": 17,
+          "ok": true,
+          "whole_task_ms": 67.63427700025204,
+          "total_ms": 67.63427700025204,
+          "result_bytes": 679
+        },
+        {
+          "mode": "task-after-full",
+          "index": 17,
+          "ok": true,
+          "whole_task_ms": 74.14422500005458,
+          "total_ms": 74.14422500005458,
+          "result_bytes": 7363
+        },
+        {
+          "mode": "task-scoped",
+          "index": 17,
+          "ok": true,
+          "whole_task_ms": 68.91719699979149,
+          "total_ms": 68.91719699979149,
+          "result_bytes": 381
+        },
+        {
+          "mode": "task-full",
+          "index": 17,
+          "ok": true,
+          "whole_task_ms": 69.87403500079381,
+          "total_ms": 69.87403500079381,
+          "result_bytes": 7065
+        },
+        {
+          "mode": "task-full",
+          "index": 18,
+          "ok": true,
+          "whole_task_ms": 74.25647499985644,
+          "total_ms": 74.25647499985644,
+          "result_bytes": 7065
+        },
+        {
+          "mode": "task-scoped",
+          "index": 18,
+          "ok": true,
+          "whole_task_ms": 71.08993900055793,
+          "total_ms": 71.08993900055793,
+          "result_bytes": 381
+        },
+        {
+          "mode": "task-after-full",
+          "index": 18,
+          "ok": true,
+          "whole_task_ms": 72.87676299984014,
+          "total_ms": 72.87676299984014,
+          "result_bytes": 7363
+        },
+        {
+          "mode": "task-after-scoped",
+          "index": 18,
+          "ok": true,
+          "whole_task_ms": 69.32320299983985,
+          "total_ms": 69.32320299983985,
+          "result_bytes": 679
+        },
+        {
+          "mode": "task-after-scoped",
+          "index": 19,
+          "ok": true,
+          "whole_task_ms": 72.91809100024693,
+          "total_ms": 72.91809100024693,
+          "result_bytes": 679
+        },
+        {
+          "mode": "task-after-full",
+          "index": 19,
+          "ok": true,
+          "whole_task_ms": 75.00135000009323,
+          "total_ms": 75.00135000009323,
+          "result_bytes": 7363
+        },
+        {
+          "mode": "task-scoped",
+          "index": 19,
+          "ok": true,
+          "whole_task_ms": 70.91089999994438,
+          "total_ms": 70.91089999994438,
+          "result_bytes": 381
+        },
+        {
+          "mode": "task-full",
+          "index": 19,
+          "ok": true,
+          "whole_task_ms": 71.10052400003042,
+          "total_ms": 71.10052400003042,
+          "result_bytes": 7065
+        },
+        {
+          "mode": "task-full",
+          "index": 20,
+          "ok": true,
+          "whole_task_ms": 72.89469399984227,
+          "total_ms": 72.89469399984227,
+          "result_bytes": 7065
+        },
+        {
+          "mode": "task-scoped",
+          "index": 20,
+          "ok": true,
+          "whole_task_ms": 66.6858949998641,
+          "total_ms": 66.6858949998641,
+          "result_bytes": 381
+        },
+        {
+          "mode": "task-after-full",
+          "index": 20,
+          "ok": true,
+          "whole_task_ms": 73.54866700006824,
+          "total_ms": 73.54866700006824,
+          "result_bytes": 7363
+        },
+        {
+          "mode": "task-after-scoped",
+          "index": 20,
+          "ok": true,
+          "whole_task_ms": 74.0758170004483,
+          "total_ms": 74.0758170004483,
+          "result_bytes": 679
+        },
+        {
+          "mode": "task-after-scoped",
+          "index": 21,
+          "ok": true,
+          "whole_task_ms": 73.32154499999888,
+          "total_ms": 73.32154499999888,
+          "result_bytes": 679
+        },
+        {
+          "mode": "task-after-full",
+          "index": 21,
+          "ok": true,
+          "whole_task_ms": 71.59271899945452,
+          "total_ms": 71.59271899945452,
+          "result_bytes": 7363
+        },
+        {
+          "mode": "task-scoped",
+          "index": 21,
+          "ok": true,
+          "whole_task_ms": 70.11852199957502,
+          "total_ms": 70.11852199957502,
+          "result_bytes": 381
+        },
+        {
+          "mode": "task-full",
+          "index": 21,
+          "ok": true,
+          "whole_task_ms": 73.42429799973615,
+          "total_ms": 73.42429799973615,
+          "result_bytes": 7065
+        },
+        {
+          "mode": "task-full",
+          "index": 22,
+          "ok": true,
+          "whole_task_ms": 70.07520899969677,
+          "total_ms": 70.07520899969677,
+          "result_bytes": 7065
+        },
+        {
+          "mode": "task-scoped",
+          "index": 22,
+          "ok": true,
+          "whole_task_ms": 72.33871799962799,
+          "total_ms": 72.33871799962799,
+          "result_bytes": 381
+        },
+        {
+          "mode": "task-after-full",
+          "index": 22,
+          "ok": true,
+          "whole_task_ms": 72.08057999923767,
+          "total_ms": 72.08057999923767,
+          "result_bytes": 7363
+        },
+        {
+          "mode": "task-after-scoped",
+          "index": 22,
+          "ok": true,
+          "whole_task_ms": 71.11147100022208,
+          "total_ms": 71.11147100022208,
+          "result_bytes": 679
+        },
+        {
+          "mode": "task-after-scoped",
+          "index": 23,
+          "ok": true,
+          "whole_task_ms": 67.00572699992335,
+          "total_ms": 67.00572699992335,
+          "result_bytes": 679
+        },
+        {
+          "mode": "task-after-full",
+          "index": 23,
+          "ok": true,
+          "whole_task_ms": 76.71892600046704,
+          "total_ms": 76.71892600046704,
+          "result_bytes": 7363
+        },
+        {
+          "mode": "task-scoped",
+          "index": 23,
+          "ok": true,
+          "whole_task_ms": 67.51809300021705,
+          "total_ms": 67.51809300021705,
+          "result_bytes": 381
+        },
+        {
+          "mode": "task-full",
+          "index": 23,
+          "ok": true,
+          "whole_task_ms": 73.88650600023539,
+          "total_ms": 73.88650600023539,
+          "result_bytes": 7065
+        },
+        {
+          "mode": "task-full",
+          "index": 24,
+          "ok": true,
+          "whole_task_ms": 71.18273600008251,
+          "total_ms": 71.18273600008251,
+          "result_bytes": 7065
+        },
+        {
+          "mode": "task-scoped",
+          "index": 24,
+          "ok": true,
+          "whole_task_ms": 69.28536299983534,
+          "total_ms": 69.28536299983534,
+          "result_bytes": 381
+        },
+        {
+          "mode": "task-after-full",
+          "index": 24,
+          "ok": true,
+          "whole_task_ms": 74.31836100022338,
+          "total_ms": 74.31836100022338,
+          "result_bytes": 7363
+        },
+        {
+          "mode": "task-after-scoped",
+          "index": 24,
+          "ok": true,
+          "whole_task_ms": 76.10445099999197,
+          "total_ms": 76.10445099999197,
+          "result_bytes": 679
+        },
+        {
+          "mode": "task-after-scoped",
+          "index": 25,
+          "ok": true,
+          "whole_task_ms": 68.73945600000297,
+          "total_ms": 68.73945600000297,
+          "result_bytes": 679
+        },
+        {
+          "mode": "task-after-full",
+          "index": 25,
+          "ok": true,
+          "whole_task_ms": 80.28913799989823,
+          "total_ms": 80.28913799989823,
+          "result_bytes": 7363
+        },
+        {
+          "mode": "task-scoped",
+          "index": 25,
+          "ok": true,
+          "whole_task_ms": 65.83702199986874,
+          "total_ms": 65.83702199986874,
+          "result_bytes": 381
+        },
+        {
+          "mode": "task-full",
+          "index": 25,
+          "ok": true,
+          "whole_task_ms": 73.47483499961527,
+          "total_ms": 73.47483499961527,
+          "result_bytes": 7065
+        },
+        {
+          "mode": "task-full",
+          "index": 26,
+          "ok": true,
+          "whole_task_ms": 81.93770599973504,
+          "total_ms": 81.93770599973504,
+          "result_bytes": 7065
+        },
+        {
+          "mode": "task-scoped",
+          "index": 26,
+          "ok": true,
+          "whole_task_ms": 66.27686100000574,
+          "total_ms": 66.27686100000574,
+          "result_bytes": 381
+        },
+        {
+          "mode": "task-after-full",
+          "index": 26,
+          "ok": true,
+          "whole_task_ms": 75.86370999979408,
+          "total_ms": 75.86370999979408,
+          "result_bytes": 7363
+        },
+        {
+          "mode": "task-after-scoped",
+          "index": 26,
+          "ok": true,
+          "whole_task_ms": 67.93324299997039,
+          "total_ms": 67.93324299997039,
+          "result_bytes": 679
+        },
+        {
+          "mode": "task-after-scoped",
+          "index": 27,
+          "ok": true,
+          "whole_task_ms": 70.86965300004522,
+          "total_ms": 70.86965300004522,
+          "result_bytes": 679
+        },
+        {
+          "mode": "task-after-full",
+          "index": 27,
+          "ok": true,
+          "whole_task_ms": 71.46282000030624,
+          "total_ms": 71.46282000030624,
+          "result_bytes": 7363
+        },
+        {
+          "mode": "task-scoped",
+          "index": 27,
+          "ok": true,
+          "whole_task_ms": 67.3156230004679,
+          "total_ms": 67.3156230004679,
+          "result_bytes": 381
+        },
+        {
+          "mode": "task-full",
+          "index": 27,
+          "ok": true,
+          "whole_task_ms": 74.07399499970779,
+          "total_ms": 74.07399499970779,
+          "result_bytes": 7065
+        },
+        {
+          "mode": "task-full",
+          "index": 28,
+          "ok": true,
+          "whole_task_ms": 75.69411599979503,
+          "total_ms": 75.69411599979503,
+          "result_bytes": 7065
+        },
+        {
+          "mode": "task-scoped",
+          "index": 28,
+          "ok": true,
+          "whole_task_ms": 65.66735099931975,
+          "total_ms": 65.66735099931975,
+          "result_bytes": 381
+        },
+        {
+          "mode": "task-after-full",
+          "index": 28,
+          "ok": true,
+          "whole_task_ms": 76.2251930000275,
+          "total_ms": 76.2251930000275,
+          "result_bytes": 7363
+        },
+        {
+          "mode": "task-after-scoped",
+          "index": 28,
+          "ok": true,
+          "whole_task_ms": 72.57933399978356,
+          "total_ms": 72.57933399978356,
+          "result_bytes": 679
+        },
+        {
+          "mode": "task-after-scoped",
+          "index": 29,
+          "ok": true,
+          "whole_task_ms": 71.30304699967382,
+          "total_ms": 71.30304699967382,
+          "result_bytes": 679
+        },
+        {
+          "mode": "task-after-full",
+          "index": 29,
+          "ok": true,
+          "whole_task_ms": 73.18442299947492,
+          "total_ms": 73.18442299947492,
+          "result_bytes": 7363
+        },
+        {
+          "mode": "task-scoped",
+          "index": 29,
+          "ok": true,
+          "whole_task_ms": 69.47979300002771,
+          "total_ms": 69.47979300002771,
+          "result_bytes": 381
+        },
+        {
+          "mode": "task-full",
+          "index": 29,
+          "ok": true,
+          "whole_task_ms": 78.93648200024472,
+          "total_ms": 78.93648200024472,
+          "result_bytes": 7065
+        }
+      ]
+    },
+    "desktop_full": {
+      "n_measured": 30,
+      "n_ok": 30,
+      "tasks_ok": true,
+      "cleanup": {
+        "children_reaped": true,
+        "focus_preserved": true
+      },
+      "engine_sha256": "52ab3798632fd5009d39e88fa5da1739d32c1a525de9fe0cb358b31dad3a9e02",
+      "no_after": false,
+      "crop": false,
+      "samples": [
+        {
+          "case": "click",
+          "index": 0,
+          "ok": true,
+          "whole_task_ms": 417.46896099994046,
+          "total_ms": 281.95905499978835,
+          "result_bytes": 579,
+          "png_bytes": 41315
+        },
+        {
+          "case": "click",
+          "index": 1,
+          "ok": true,
+          "whole_task_ms": 378.8274779999483,
+          "total_ms": 281.0911249998753,
+          "result_bytes": 579,
+          "png_bytes": 41506
+        },
+        {
+          "case": "click",
+          "index": 2,
+          "ok": true,
+          "whole_task_ms": 390.07269099965924,
+          "total_ms": 284.528104999481,
+          "result_bytes": 579,
+          "png_bytes": 41498
+        },
+        {
+          "case": "click",
+          "index": 3,
+          "ok": true,
+          "whole_task_ms": 396.6746769992824,
+          "total_ms": 285.40523699939513,
+          "result_bytes": 579,
+          "png_bytes": 41471
+        },
+        {
+          "case": "click",
+          "index": 4,
+          "ok": true,
+          "whole_task_ms": 378.23848300013196,
+          "total_ms": 281.2099800003125,
+          "result_bytes": 579,
+          "png_bytes": 41515
+        },
+        {
+          "case": "click",
+          "index": 5,
+          "ok": true,
+          "whole_task_ms": 388.9786160007134,
+          "total_ms": 282.67760000017006,
+          "result_bytes": 579,
+          "png_bytes": 41503
+        },
+        {
+          "case": "click",
+          "index": 6,
+          "ok": true,
+          "whole_task_ms": 390.40064199980407,
+          "total_ms": 284.02918499978114,
+          "result_bytes": 579,
+          "png_bytes": 41517
+        },
+        {
+          "case": "click",
+          "index": 7,
+          "ok": true,
+          "whole_task_ms": 390.05287700001645,
+          "total_ms": 292.001600999356,
+          "result_bytes": 579,
+          "png_bytes": 41488
+        },
+        {
+          "case": "click",
+          "index": 8,
+          "ok": true,
+          "whole_task_ms": 387.01198499984457,
+          "total_ms": 289.60078099953535,
+          "result_bytes": 579,
+          "png_bytes": 41445
+        },
+        {
+          "case": "click",
+          "index": 9,
+          "ok": true,
+          "whole_task_ms": 387.652106999667,
+          "total_ms": 290.75552099948254,
+          "result_bytes": 579,
+          "png_bytes": 41436
+        },
+        {
+          "case": "click",
+          "index": 10,
+          "ok": true,
+          "whole_task_ms": 389.58256500063726,
+          "total_ms": 291.2373879998995,
+          "result_bytes": 579,
+          "png_bytes": 41430
+        },
+        {
+          "case": "click",
+          "index": 11,
+          "ok": true,
+          "whole_task_ms": 390.26957400074025,
+          "total_ms": 283.8985490006962,
+          "result_bytes": 579,
+          "png_bytes": 41484
+        },
+        {
+          "case": "click",
+          "index": 12,
+          "ok": true,
+          "whole_task_ms": 396.0264260003896,
+          "total_ms": 284.57209000043804,
+          "result_bytes": 579,
+          "png_bytes": 41496
+        },
+        {
+          "case": "click",
+          "index": 13,
+          "ok": true,
+          "whole_task_ms": 390.20003200039355,
+          "total_ms": 279.52401699985785,
+          "result_bytes": 579,
+          "png_bytes": 41491
+        },
+        {
+          "case": "click",
+          "index": 14,
+          "ok": true,
+          "whole_task_ms": 388.69814299960126,
+          "total_ms": 282.57125499931135,
+          "result_bytes": 579,
+          "png_bytes": 41533
+        },
+        {
+          "case": "click",
+          "index": 15,
+          "ok": true,
+          "whole_task_ms": 391.7600329996276,
+          "total_ms": 284.2861119997906,
+          "result_bytes": 579,
+          "png_bytes": 41495
+        },
+        {
+          "case": "click",
+          "index": 16,
+          "ok": true,
+          "whole_task_ms": 397.01856400006363,
+          "total_ms": 285.9413489995859,
+          "result_bytes": 579,
+          "png_bytes": 41507
+        },
+        {
+          "case": "click",
+          "index": 17,
+          "ok": true,
+          "whole_task_ms": 393.69080000051326,
+          "total_ms": 288.0997420006679,
+          "result_bytes": 579,
+          "png_bytes": 41428
+        },
+        {
+          "case": "click",
+          "index": 18,
+          "ok": true,
+          "whole_task_ms": 388.6139610003738,
+          "total_ms": 281.8920839999919,
+          "result_bytes": 579,
+          "png_bytes": 41424
+        },
+        {
+          "case": "click",
+          "index": 19,
+          "ok": true,
+          "whole_task_ms": 388.4444790000998,
+          "total_ms": 282.35574800055474,
+          "result_bytes": 579,
+          "png_bytes": 41460
+        },
+        {
+          "case": "click",
+          "index": 20,
+          "ok": true,
+          "whole_task_ms": 389.4266980005341,
+          "total_ms": 280.4855580006915,
+          "result_bytes": 579,
+          "png_bytes": 41461
+        },
+        {
+          "case": "click",
+          "index": 21,
+          "ok": true,
+          "whole_task_ms": 389.05814200006716,
+          "total_ms": 282.73355300007097,
+          "result_bytes": 579,
+          "png_bytes": 41490
+        },
+        {
+          "case": "click",
+          "index": 22,
+          "ok": true,
+          "whole_task_ms": 377.13525500021206,
+          "total_ms": 279.3981610002447,
+          "result_bytes": 579,
+          "png_bytes": 41436
+        },
+        {
+          "case": "click",
+          "index": 23,
+          "ok": true,
+          "whole_task_ms": 396.1329650001062,
+          "total_ms": 283.0853670002398,
+          "result_bytes": 579,
+          "png_bytes": 41509
+        },
+        {
+          "case": "click",
+          "index": 24,
+          "ok": true,
+          "whole_task_ms": 394.1022380004142,
+          "total_ms": 288.5014660005254,
+          "result_bytes": 579,
+          "png_bytes": 41436
+        },
+        {
+          "case": "click",
+          "index": 25,
+          "ok": true,
+          "whole_task_ms": 387.8859189999275,
+          "total_ms": 282.0889790000365,
+          "result_bytes": 579,
+          "png_bytes": 41475
+        },
+        {
+          "case": "click",
+          "index": 26,
+          "ok": true,
+          "whole_task_ms": 388.7156060000052,
+          "total_ms": 279.5936860002257,
+          "result_bytes": 579,
+          "png_bytes": 41530
+        },
+        {
+          "case": "click",
+          "index": 27,
+          "ok": true,
+          "whole_task_ms": 393.38455600045563,
+          "total_ms": 283.54903800027387,
+          "result_bytes": 579,
+          "png_bytes": 41512
+        },
+        {
+          "case": "click",
+          "index": 28,
+          "ok": true,
+          "whole_task_ms": 396.5670819998195,
+          "total_ms": 286.33058200011874,
+          "result_bytes": 579,
+          "png_bytes": 41460
+        },
+        {
+          "case": "click",
+          "index": 29,
+          "ok": true,
+          "whole_task_ms": 393.42343299995264,
+          "total_ms": 283.5028780000357,
+          "result_bytes": 579,
+          "png_bytes": 41436
+        }
+      ]
+    },
+    "desktop_crop": {
+      "n_measured": 30,
+      "n_ok": 30,
+      "tasks_ok": true,
+      "cleanup": {
+        "children_reaped": true,
+        "focus_preserved": true
+      },
+      "engine_sha256": "52ab3798632fd5009d39e88fa5da1739d32c1a525de9fe0cb358b31dad3a9e02",
+      "no_after": true,
+      "crop": true,
+      "samples": [
+        {
+          "case": "click",
+          "index": 0,
+          "ok": true,
+          "whole_task_ms": 172.64860999966913,
+          "total_ms": 86.76852000007784,
+          "result_bytes": 335,
+          "png_bytes": 4006
+        },
+        {
+          "case": "click",
+          "index": 1,
+          "ok": true,
+          "whole_task_ms": 150.37211599974398,
+          "total_ms": 87.40279999983613,
+          "result_bytes": 335,
+          "png_bytes": 3983
+        },
+        {
+          "case": "click",
+          "index": 2,
+          "ok": true,
+          "whole_task_ms": 149.52875600010884,
+          "total_ms": 85.52095600043685,
+          "result_bytes": 335,
+          "png_bytes": 3983
+        },
+        {
+          "case": "click",
+          "index": 3,
+          "ok": true,
+          "whole_task_ms": 150.71856699978525,
+          "total_ms": 87.17008700023143,
+          "result_bytes": 335,
+          "png_bytes": 3983
+        },
+        {
+          "case": "click",
+          "index": 4,
+          "ok": true,
+          "whole_task_ms": 150.1887969998279,
+          "total_ms": 87.08763499998895,
+          "result_bytes": 335,
+          "png_bytes": 3983
+        },
+        {
+          "case": "click",
+          "index": 5,
+          "ok": true,
+          "whole_task_ms": 150.77963299972907,
+          "total_ms": 87.76771999964694,
+          "result_bytes": 335,
+          "png_bytes": 3983
+        },
+        {
+          "case": "click",
+          "index": 6,
+          "ok": true,
+          "whole_task_ms": 147.80113000051642,
+          "total_ms": 85.77355700072076,
+          "result_bytes": 335,
+          "png_bytes": 3983
+        },
+        {
+          "case": "click",
+          "index": 7,
+          "ok": true,
+          "whole_task_ms": 152.67929600031493,
+          "total_ms": 88.35107000049902,
+          "result_bytes": 335,
+          "png_bytes": 3983
+        },
+        {
+          "case": "click",
+          "index": 8,
+          "ok": true,
+          "whole_task_ms": 147.9829139998401,
+          "total_ms": 84.20571999977255,
+          "result_bytes": 335,
+          "png_bytes": 3983
+        },
+        {
+          "case": "click",
+          "index": 9,
+          "ok": true,
+          "whole_task_ms": 150.8514520000972,
+          "total_ms": 87.24541399988084,
+          "result_bytes": 335,
+          "png_bytes": 3983
+        },
+        {
+          "case": "click",
+          "index": 10,
+          "ok": true,
+          "whole_task_ms": 151.99841800040303,
+          "total_ms": 85.25108200046816,
+          "result_bytes": 335,
+          "png_bytes": 3983
+        },
+        {
+          "case": "click",
+          "index": 11,
+          "ok": true,
+          "whole_task_ms": 147.6413609998417,
+          "total_ms": 86.86939899962454,
+          "result_bytes": 335,
+          "png_bytes": 3983
+        },
+        {
+          "case": "click",
+          "index": 12,
+          "ok": true,
+          "whole_task_ms": 148.6838490000082,
+          "total_ms": 84.3098529994677,
+          "result_bytes": 335,
+          "png_bytes": 3983
+        },
+        {
+          "case": "click",
+          "index": 13,
+          "ok": true,
+          "whole_task_ms": 147.01192100073968,
+          "total_ms": 86.79848400061019,
+          "result_bytes": 335,
+          "png_bytes": 3983
+        },
+        {
+          "case": "click",
+          "index": 14,
+          "ok": true,
+          "whole_task_ms": 149.99735600031272,
+          "total_ms": 86.74408800015954,
+          "result_bytes": 335,
+          "png_bytes": 3983
+        },
+        {
+          "case": "click",
+          "index": 15,
+          "ok": true,
+          "whole_task_ms": 149.47538599972177,
+          "total_ms": 86.56732100007503,
+          "result_bytes": 335,
+          "png_bytes": 3983
+        },
+        {
+          "case": "click",
+          "index": 16,
+          "ok": true,
+          "whole_task_ms": 156.58790999987104,
+          "total_ms": 89.58332099973632,
+          "result_bytes": 335,
+          "png_bytes": 3983
+        },
+        {
+          "case": "click",
+          "index": 17,
+          "ok": true,
+          "whole_task_ms": 149.609516000055,
+          "total_ms": 86.34894299939333,
+          "result_bytes": 335,
+          "png_bytes": 3983
+        },
+        {
+          "case": "click",
+          "index": 18,
+          "ok": true,
+          "whole_task_ms": 148.5095199996067,
+          "total_ms": 86.0267889993338,
+          "result_bytes": 335,
+          "png_bytes": 3983
+        },
+        {
+          "case": "click",
+          "index": 19,
+          "ok": true,
+          "whole_task_ms": 149.0212110002176,
+          "total_ms": 86.35659800074791,
+          "result_bytes": 335,
+          "png_bytes": 3983
+        },
+        {
+          "case": "click",
+          "index": 20,
+          "ok": true,
+          "whole_task_ms": 149.44908100005705,
+          "total_ms": 86.02119599981961,
+          "result_bytes": 335,
+          "png_bytes": 3983
+        },
+        {
+          "case": "click",
+          "index": 21,
+          "ok": true,
+          "whole_task_ms": 158.95695600011095,
+          "total_ms": 94.85171799951786,
+          "result_bytes": 335,
+          "png_bytes": 3983
+        },
+        {
+          "case": "click",
+          "index": 22,
+          "ok": true,
+          "whole_task_ms": 154.8278449999998,
+          "total_ms": 93.18573899963667,
+          "result_bytes": 335,
+          "png_bytes": 3983
+        },
+        {
+          "case": "click",
+          "index": 23,
+          "ok": true,
+          "whole_task_ms": 149.61806399969646,
+          "total_ms": 86.37238499977684,
+          "result_bytes": 335,
+          "png_bytes": 3983
+        },
+        {
+          "case": "click",
+          "index": 24,
+          "ok": true,
+          "whole_task_ms": 149.48901800016756,
+          "total_ms": 86.44493399970088,
+          "result_bytes": 335,
+          "png_bytes": 3983
+        },
+        {
+          "case": "click",
+          "index": 25,
+          "ok": true,
+          "whole_task_ms": 149.13217800040002,
+          "total_ms": 85.03492500040011,
+          "result_bytes": 335,
+          "png_bytes": 3983
+        },
+        {
+          "case": "click",
+          "index": 26,
+          "ok": true,
+          "whole_task_ms": 149.1415099999358,
+          "total_ms": 86.21940699958941,
+          "result_bytes": 335,
+          "png_bytes": 3983
+        },
+        {
+          "case": "click",
+          "index": 27,
+          "ok": true,
+          "whole_task_ms": 156.87850899939804,
+          "total_ms": 86.49386499928369,
+          "result_bytes": 335,
+          "png_bytes": 3983
+        },
+        {
+          "case": "click",
+          "index": 28,
+          "ok": true,
+          "whole_task_ms": 154.78542599976208,
+          "total_ms": 85.55633900050452,
+          "result_bytes": 335,
+          "png_bytes": 3983
+        },
+        {
+          "case": "click",
+          "index": 29,
+          "ok": true,
+          "whole_task_ms": 149.0112780002164,
+          "total_ms": 84.9053140000251,
+          "result_bytes": 335,
+          "png_bytes": 3983
+        }
+      ]
+    }
+  },
+  "installed_unittests": {
+    "modules": [
+      {
+        "module": "test_input_validation.py",
+        "ran": 14,
+        "ok": true,
+        "exit_code": 0,
+        "skipped": 0,
+        "failed": 0,
+        "stderr_sha256": "7fcd0c05fdfff3a92abe0e4762a8933f43f8b0cdfd628bfcb44dfac91e2853b7",
+        "exit_sha256": "ceee70f13a6cb3e75eac574fd3947c7fafa6f127af01f7b36090509d8b95af25"
+      },
+      {
+        "module": "test_json_limits.py",
+        "ran": 5,
+        "ok": true,
+        "exit_code": 0,
+        "skipped": 0,
+        "failed": 0,
+        "stderr_sha256": "e3b532ab145d1ca46b0a9e833cd7f088dd81c355dd1e2ac08faf5c291a77bdb8",
+        "exit_sha256": "dec5560c422c5365d79a67ca3d3f339d1ff129ba8f42e6f4cd492d8b8b7b89b1"
+      },
+      {
+        "module": "test_a11y.py",
+        "ran": 6,
+        "ok": true,
+        "exit_code": 0,
+        "skipped": 0,
+        "failed": 0,
+        "stderr_sha256": "aef40dcd16aea9fa384ec352e4ff6a5691d9b6d56c1e9a440bf894d1cb22550a",
+        "exit_sha256": "939e5cac0cebc56970dfc129af5295cf72481cc13be3b778e300bebe45a86537"
+      },
+      {
+        "module": "test_keyboard_preflight.py",
+        "ran": 8,
+        "ok": true,
+        "exit_code": 0,
+        "skipped": 0,
+        "failed": 0,
+        "stderr_sha256": "0c5f7b5360b6498032958d6db61d2737b67189fee56f6bb8fdc6c69351168fa1",
+        "exit_sha256": "e4e84d80573c9114de9935504ef1b238e5a6751febc2db5584ae57b2f5b9c395"
+      },
+      {
+        "module": "test_pointer_safety.py",
+        "ran": 15,
+        "ok": true,
+        "exit_code": 0,
+        "skipped": 0,
+        "failed": 0,
+        "stderr_sha256": "e92f6ae19471c81ca91d9242783f6f5af5391b42f6d2aaef9a5b976bd8ca2537",
+        "exit_sha256": "4d9dda576fe031270e2123b25120cc2da9ff03041476ee8b1838c3d82b1e1d38"
+      },
+      {
+        "module": "test_session_driver.py",
+        "ran": 8,
+        "ok": true,
+        "exit_code": 0,
+        "skipped": 0,
+        "failed": 0,
+        "stderr_sha256": "18589aada1a9235192c5232996439cf4bf22f8e2a47782e5bfd57aaa6fcc6ff7",
+        "exit_sha256": "700ce62134aef525666678210fc9ba9ba31ac1ac230bb64afc8b4cd433da89e7"
+      },
+      {
+        "module": "test_browser_worker.py",
+        "ran": 13,
+        "ok": true,
+        "exit_code": 0,
+        "skipped": 0,
+        "failed": 0,
+        "stderr_sha256": "551ad57a7a833d6cc5c57163fb2a2ec28b0901264cdad93fc9d840eb4d9e765f",
+        "exit_sha256": "fa56136e28ada8ac09cc318478d836310ffca18cd34c1c6635042a86a39efa65"
+      },
+      {
+        "module": "test_browser_no_after.py",
+        "ran": 10,
+        "ok": true,
+        "exit_code": 0,
+        "skipped": 0,
+        "failed": 0,
+        "stderr_sha256": "852a1d3e9198f1b061ea278914bece0ab3d5f0d63cc4ef7344475a49fa3174d1",
+        "exit_sha256": "034678b50aca0f7b707025c77b8ef07ed3fb6ee6fe990566f8306c3b81202213"
+      },
+      {
+        "module": "test_browser_scope.py",
+        "ran": 7,
+        "ok": true,
+        "exit_code": 0,
+        "skipped": 0,
+        "failed": 0,
+        "stderr_sha256": "5c320d3e9514d005d34357fee69199f2b747d783a333b4523e9a1beb7399fdd1",
+        "exit_sha256": "291a765fdb1983eebd0855ab7e5575edd6b7ff8faed6f9e2fa84a9011df2593f"
+      },
+      {
+        "module": "test_browser_image.py",
+        "ran": 10,
+        "ok": true,
+        "exit_code": 0,
+        "skipped": 0,
+        "failed": 0,
+        "stderr_sha256": "258d90a50a9d2a4865efa7c4abcad2c8166dd76b04286622b90a03bccea5b9c1",
+        "exit_sha256": "639a8f73ad8009ceef749c2d9f3bfe1a7ed69a363f01e8d80c8035a55fa8463e"
+      },
+      {
+        "module": "test_cdp_snapshot.py",
+        "ran": 2,
+        "ok": true,
+        "exit_code": 0,
+        "skipped": 0,
+        "failed": 0,
+        "stderr_sha256": "df76c569eab1e993dcad980d89a1ac3aaef7226360c39684cc8f1056dff52316",
+        "exit_sha256": "8cfd788b2a8410c76f0aecdecf83eddbfc910ec618b4e1509767654d9a763f9b"
+      }
+    ],
+    "total_ran": 98,
+    "total_ok": 98,
+    "total_failed": 0,
+    "note": "unit mocks/offline tests, not live fixtures; execution counts, not distinct test IDs"
+  },
+  "totals": {
+    "live_measured": 180,
+    "live_warmups": 4,
+    "live_ok": 180,
+    "installed_ran": 98
+  }
+}

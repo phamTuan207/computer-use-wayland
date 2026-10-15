@@ -82,10 +82,13 @@ separate check before any external submit, and preserve host permissions.
 - `browser act --after-scope SELECTOR` returns the next refs from a panel that should still exist, so
   a multi-step task continues without a full page. Failed actions keep a full-page diagnostic; a
   vanished panel needs a fresh observe.
-- For a target area already inspected, prefer `observe --crop X Y W H` with enough surrounding
-  context to confirm the target. Inspect the returned crop before choosing coordinates, and observe
-  again after any geometry, focus or screen change. Use a full view for an unknown region or new
-  menu/popup.
+- Begin desktop observation with a bounded `observe --crop X Y W H` containing
+  the target and enough surrounding context to confirm it, when the app window,
+  semantics or geometry determine one. Inspect the returned crop before choosing
+  coordinates, and expand or observe again when the target or context is absent.
+  A full view is the explicit fallback only when no reliable crop can be
+  determined; never guess coordinates and never crop past an unseen menu or
+  popup change. Freshness, focus, layout and cancellation guards are unchanged.
 - Browser `act --no-after` requires a final meaningful assert and forbids `--image`.
   Desktop `act --no-after` needs an independent app-result check. Use either only
   when no later view is needed.

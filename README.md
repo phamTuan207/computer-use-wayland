@@ -175,10 +175,15 @@ read-only observations may run standalone. `--crop X Y W H` limits the image and
 `--settle-ms 600` waits for bounded pixel stability. `settle_stable` is not proof
 that the application finished. Screenshots may contain private data.
 
-Prefer an API or Chromium DOM when available. For desktop work, inspect a full view first
-if the region is unknown; once the target and its surrounding context are known, prefer
-`observe --crop X Y W H`. Inspect the returned crop before choosing image coordinates, and
-observe again after geometry, focus or screen changes. Batch predictable actions.
+Prefer an API or Chromium DOM when available. For desktop work, begin with an
+appropriately bounded `observe --crop X Y W H` containing the target plus enough
+surrounding label/context to confirm it, whenever the app window, semantics or
+geometry determine such a crop. Inspect the returned image before choosing
+coordinates, and expand or re-observe when the target or its context is absent.
+A full view is the explicit fallback only when no reliable crop can be
+determined; never crop past an unseen menu or popup change, and never guess
+action coordinates. Observe again after geometry, focus or screen changes.
+Batch predictable actions.
 
 For ordinary browser text fields prefer `set_value` plus a check of the app's own
 result: it is focus-independent but dispatches synthetic, untrusted events. Use
@@ -237,9 +242,10 @@ input and removes the overlay; failed cleanup retains a session record for
 `computer-use recover`.
 
 Warm driver loops reuse the Python runtime between requests and one private Node
-runtime for browser commands, cleaned up at task end. Every browser command
-revalidates its target and opens a fresh CDP connection; there is no snapshot
-caching and no persistent websocket.
+runtime for browser commands, cleaned up at task end. The worker reuses one
+slot only for a fresh, validated same target; standalone CLI commands keep
+their isolated behavior. There is no snapshot caching, no replay, and terminal
+failures stop the worker.
 
 Unicode and IME limits are real: desktop `wtype` can lose characters through key
 collisions, and non-BMP emoji are refused on that route. Use browser `set_value`
