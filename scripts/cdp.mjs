@@ -198,7 +198,7 @@ async function assertAction(a) {
         a.checked!==undefined?'e.checked==='+JSON.stringify(a.checked):'Boolean(e.getBoundingClientRect().width)'};`));
     if(ok)return;
     if(Date.now()-start>=limit)throw new Error('assertion failed');
-    await new Promise(r=>setTimeout(r,50));
+    await new Promise(r=>setTimeout(r,10));
   }
 }
   if(request.operation==='act'){

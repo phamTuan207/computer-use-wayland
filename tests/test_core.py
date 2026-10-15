@@ -1,3 +1,4 @@
+import contextlib
 import importlib.util
 import pathlib
 import tempfile
@@ -201,7 +202,7 @@ class Coordinates(unittest.TestCase):
         self.assertEqual([len(g) for g in cu.keyboard_groups(a)],[2,1])
     def test_restore_ime_on_typing_failure(self):
         calls=[];state=['2']
-        def remote(argv,env):
+        def remote(argv,env,timeout=None):
             calls.append(argv)
             if len(argv)>1:state[0]='1' if argv[1]=='-c' else '2';return ''
             return state[0]
@@ -230,5 +231,347 @@ class Coordinates(unittest.TestCase):
         ImageDraw.Draw(new).rectangle((200,200,223,223),fill='black')
         self.assertTrue(cu.screen_changed(old,new,[{'type':'click','x':211,'y':211}]))
         self.assertFalse(cu.screen_changed(old,new,[{'type':'click','x':800,'y':500}]))
+
+class SecureObservationFiles(unittest.TestCase):
+    """N7: exclusive 0600 creation before the first byte; no symlink follow."""
+
+    def test_private_mode_under_any_umask_in_isolated_child(self):
+        import subprocess
+        import sys
+        code = ('import os,sys,tempfile,pathlib\n'
+                'sys.path.insert(0,' + repr(str(pathlib.Path('scripts').resolve())) + ')\n'
+                'import cu\n'
+                'from PIL import Image\n'
+                'folder=tempfile.mkdtemp()\n'
+                'cu.STATE=pathlib.Path(folder)\n'
+                'os.umask(' + '{umask}' + ')\n'
+                'meta=cu.save_observation(Image.new("RGB",(64,32)),{},1280)\n'
+                'import stat\n'
+                'print(oct(stat.S_IMODE(pathlib.Path(meta["image"]).stat().st_mode)))\n'
+                'print(oct(stat.S_IMODE(pathlib.Path(meta["observation"]).stat().st_mode)))\n')
+        for umask in ('0', '0o777'):
+            with self.subTest(umask=umask):
+                result = subprocess.run([sys.executable, '-c', code.replace('{umask}', umask)],
+                                        capture_output=True, text=True, timeout=30)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(result.stdout.split(), ['0o600', '0o600'])
+
+    def test_mode_is_0600_before_the_first_png_byte(self):
+        import os
+        import stat
+        from PIL import Image
+        seen = {}
+
+        real_save = Image.Image.save
+
+        def spy(self, fp, *args, **kwargs):
+            seen['mode'] = stat.S_IMODE(os.fstat(fp.fileno()).st_mode)
+            return real_save(self, fp, *args, **kwargs)
+
+        with tempfile.TemporaryDirectory() as folder, \
+                patch.object(cu, 'STATE', pathlib.Path(folder)), \
+                patch.object(Image.Image, 'save', spy):
+            cu.save_observation(Image.new('RGB', (16, 16)), {}, 1280)
+        self.assertEqual(seen.get('mode'), 0o600)
+
+    def test_encoded_png_passes_through_byte_exact(self):
+        import io
+        from PIL import Image
+        with tempfile.TemporaryDirectory() as folder, \
+                patch.object(cu, 'STATE', pathlib.Path(folder)):
+            buffer = io.BytesIO()
+            Image.new('RGB', (32, 16)).save(buffer, format='PNG')
+            raw = buffer.getvalue()
+            meta = cu.save_observation(Image.new('RGB', (4, 4)), {}, 1280,
+                                       encoded_png=raw)
+            self.assertEqual(pathlib.Path(meta['image']).read_bytes(), raw)
+
+    def test_token_collision_and_symlink_refuse_without_touching_target(self):
+        import io
+        import os
+        import uuid
+        from PIL import Image
+        for setup in ('file', 'symlink'):
+            with self.subTest(setup=setup), \
+                    tempfile.TemporaryDirectory() as folder, \
+                    patch.object(cu, 'STATE', pathlib.Path(folder)):
+                token = 'abc123def456'
+                target = pathlib.Path(folder) / 'target.png'
+                target.write_bytes(b'foreign')
+                link = cu.STATE / (token + '.png')
+                if setup == 'file':
+                    link.write_bytes(b'existing')
+                else:
+                    link.symlink_to(target)
+                with patch.object(cu.uuid, 'uuid4',
+                                  return_value=uuid.UUID(hex=token + '0' * 20)):
+                    with self.assertRaises(OSError):
+                        cu.save_observation(Image.new('RGB', (8, 8)), {}, 1280)
+                self.assertEqual(target.read_bytes(), b'foreign')
+                if setup == 'file':
+                    self.assertEqual(link.read_bytes(), b'existing')
+
+    def test_json_collision_refuses_and_leaves_target(self):
+        import uuid
+        from PIL import Image
+        with tempfile.TemporaryDirectory() as folder, \
+                patch.object(cu, 'STATE', pathlib.Path(folder)):
+            token = 'abc123def456'
+            (cu.STATE / (token + '.json')).write_text('{"kept":true}')
+            with patch.object(cu.uuid, 'uuid4',
+                              return_value=uuid.UUID(hex=token + '0' * 20)):
+                with self.assertRaises(OSError):
+                    cu.save_observation(Image.new('RGB', (8, 8)), {}, 320)
+            self.assertEqual((cu.STATE / (token + '.json')).read_text(),
+                             '{"kept":true}')
+
+    def test_fdopen_or_chmod_failure_closes_fd_and_fails(self):
+        import os
+        from PIL import Image
+        for point, failure in (('fdopen', OSError('fdopen down')),
+                               ('fchmod', OSError('fchmod down'))):
+            with self.subTest(point=point), \
+                    tempfile.TemporaryDirectory() as folder, \
+                    patch.object(cu, 'STATE', pathlib.Path(folder)):
+                before = set(os.listdir('/proc/self/fd'))
+                if point == 'fdopen':
+                    patcher = patch.object(cu.os, 'fdopen', side_effect=failure)
+                else:
+                    patcher = patch.object(cu.os, 'fchmod', side_effect=failure)
+                with patcher:
+                    with self.assertRaises(OSError):
+                        cu.save_observation(Image.new('RGB', (8, 8)), {}, 1280)
+                leaked = set(os.listdir('/proc/self/fd')) - before
+                self.assertEqual(leaked, set(), 'file descriptor leaked')
+
+    def test_json_second_fd_failures_close_once(self):
+        import io
+        import os
+        from PIL import Image
+
+        class StreamFailer:
+            """Delegates everything except one injected failure."""
+
+            def __init__(self, stream, failure):
+                object.__setattr__(self, '_s', stream)
+                object.__setattr__(self, 'failure', failure)
+                object.__setattr__(self, 'failed', False)
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *exc):
+                return object.__getattribute__(self, '_s').__exit__(*exc)
+
+            def write(self, data):
+                if (object.__getattribute__(self, 'failure') == 'write'
+                        and not object.__getattribute__(self, 'failed')):
+                    object.__setattr__(self, 'failed', True)
+                    raise OSError('json write down')
+                return object.__getattribute__(self, '_s').write(data)
+
+            def flush(self):
+                if object.__getattribute__(self, 'failure') == 'flush':
+                    raise OSError('json flush down')
+                return object.__getattribute__(self, '_s').flush()
+
+            def __getattr__(self, name):
+                return getattr(object.__getattribute__(self, '_s'), name)
+
+        for point in ('fchmod', 'fdopen', 'write', 'flush'):
+            with self.subTest(point=point), \
+                    tempfile.TemporaryDirectory() as folder, \
+                    patch.object(cu, 'STATE', pathlib.Path(folder)):
+                opened, closed = [], []
+                real_open, real_close = os.open, os.close
+                real_fdopen = os.fdopen
+
+                def spy_open(*args, **kwargs):
+                    fd = real_open(*args, **kwargs)
+                    opened.append(fd)
+                    return fd
+
+                def spy_close(fd):
+                    closed.append(fd)
+                    return real_close(fd)
+
+                fdopens = {'n': 0}
+
+                def rigged_fdopen(fd, mode='r', *args, **kwargs):
+                    stream = real_fdopen(fd, mode, *args, **kwargs)
+                    fdopens['n'] += 1
+                    # PNG uses 'wb' first; the JSON text stream is second.
+                    if mode == 'w' and point == 'write':
+                        return StreamFailer(stream, point)
+                    if mode == 'w' and point == 'flush':
+                        # A real flush-time failure: the write buffers fine,
+                        # then close() flushes and the OS-level flush raises.
+                        buffer = stream.detach()
+
+                        class FlushFailer(io.TextIOWrapper):
+                            def flush(self):
+                                raise OSError('json flush down')
+
+                        return FlushFailer(buffer, encoding='utf-8')
+                    return stream
+
+                patches = [patch.object(cu.os, 'open', side_effect=spy_open),
+                           patch.object(cu.os, 'close', side_effect=spy_close),
+                           patch.object(cu.os, 'fdopen', side_effect=rigged_fdopen)]
+                if point in ('fchmod', 'fdopen'):
+                    real_point = getattr(os, point)
+                    calls = {'n': 0}
+
+                    def fail_second(target, *args, **kwargs):
+                        calls['n'] += 1
+                        if calls['n'] == 2:
+                            raise OSError(point + ' down')
+                        return target(*args, **kwargs)
+
+                    import functools
+                    patches.append(patch.object(
+                        cu.os, point,
+                        side_effect=functools.partial(fail_second, real_point)))
+                with contextlib.ExitStack() as stack:
+                    for patcher in patches:
+                        stack.enter_context(patcher)
+                    with self.assertRaisesRegex(OSError, point + ' down'):
+                        cu.save_observation(Image.new('RGB', (8, 8)), {}, 1280)
+                pngs = [f for f in pathlib.Path(folder).iterdir()
+                        if f.suffix == '.png']
+                self.assertEqual(len(opened), 2, 'PNG then JSON descriptors opened')
+                if point in ('write', 'flush'):
+                    # The stream owned its descriptor: the C-level close never
+                    # routes through os.close, so no extra rawfd close happens.
+                    self.assertEqual(closed, [])
+                else:
+                    self.assertEqual(closed, [opened[1]])
+                with self.assertRaises(OSError):
+                    os.fstat(opened[1])
+
+    def test_encoded_passthrough_write_error_closes_once(self):
+        import os
+        from PIL import Image
+        with tempfile.TemporaryDirectory() as folder, \
+                patch.object(cu, 'STATE', pathlib.Path(folder)):
+            opened, closed = [], []
+            real_open, real_close = os.open, os.close
+            real_fdopen = os.fdopen
+
+            def spy_open(*args, **kwargs):
+                fd = real_open(*args, **kwargs)
+                opened.append(fd)
+                return fd
+
+            def spy_close(fd):
+                closed.append(fd)
+                return real_close(fd)
+
+            def rigged_fdopen(fd, mode='r', *args, **kwargs):
+                stream = real_fdopen(fd, mode, *args, **kwargs)
+                if mode != 'wb':
+                    return stream
+
+                class BinaryFailer:
+                    def __enter__(self):
+                        return self
+
+                    def __exit__(self, *exc):
+                        return stream.__exit__(*exc)
+
+                    def write(self, data):
+                        raise OSError('passthrough write down')
+
+                    def __getattr__(self, name):
+                        return getattr(stream, name)
+
+                return BinaryFailer()
+
+            buffer = io.BytesIO() if False else None
+            import io as _io
+            buffer = _io.BytesIO()
+            Image.new('RGB', (32, 16)).save(buffer, format='PNG')
+            with patch.object(cu.os, 'open', side_effect=spy_open), \
+                 patch.object(cu.os, 'close', side_effect=spy_close), \
+                 patch.object(cu.os, 'fdopen', side_effect=rigged_fdopen):
+                with self.assertRaisesRegex(OSError, 'passthrough write down'):
+                    cu.save_observation(Image.new('RGB', (4, 4)), {}, 1280,
+                                        encoded_png=buffer.getvalue())
+            self.assertEqual(len(opened), 1)
+            self.assertEqual(closed, [],
+                             'no extra os.close after ownership transferred to the stream')
+            with self.assertRaises(OSError):
+                os.fstat(opened[0])
+
+    def test_persist_false_creates_no_file(self):
+        from PIL import Image
+        with tempfile.TemporaryDirectory() as folder, \
+                patch.object(cu, 'STATE', pathlib.Path(folder)):
+            cu.save_observation(Image.new('RGB', (8, 8)), {}, 1280, persist=False)
+            self.assertEqual(list(pathlib.Path(folder).iterdir()), [])
+
+    def test_fd_closed_exactly_once_on_fchmod_or_fdopen_failure(self):
+        import os
+        from PIL import Image
+        for point in ('fchmod', 'fdopen'):
+            with self.subTest(point=point), \
+                    tempfile.TemporaryDirectory() as folder, \
+                    patch.object(cu, 'STATE', pathlib.Path(folder)):
+                opened, closed = [], []
+                real_open, real_close = os.open, os.close
+
+                def spy_open(*args, **kwargs):
+                    fd = real_open(*args, **kwargs)
+                    opened.append(fd)
+                    return fd
+
+                def spy_close(fd):
+                    closed.append(fd)
+                    return real_close(fd)
+
+                with patch.object(cu.os, 'open', side_effect=spy_open), \
+                     patch.object(cu.os, 'close', side_effect=spy_close), \
+                     patch.object(cu.os, point,
+                                  side_effect=OSError(point + ' down')):
+                    with self.assertRaises(OSError):
+                        cu.save_observation(Image.new('RGB', (8, 8)), {}, 1280)
+                self.assertEqual(len(opened), 1, 'one raw descriptor opened')
+                self.assertEqual(closed, opened,
+                                 'raw descriptor closed exactly once, no foreign fd touched')
+
+    def test_write_failure_closes_stream_once_with_no_extra_close(self):
+        import os
+        from PIL import Image
+        with tempfile.TemporaryDirectory() as folder, \
+                patch.object(cu, 'STATE', pathlib.Path(folder)):
+            opened, closed = [], []
+            real_open, real_close = os.open, os.close
+
+            def spy_open(*args, **kwargs):
+                fd = real_open(*args, **kwargs)
+                opened.append(fd)
+                return fd
+
+            def spy_close(fd):
+                closed.append(fd)
+                return real_close(fd)
+
+            real_save = Image.Image.save
+
+            def failing_save(self, fp, *args, **kwargs):
+                raise OSError('save down')
+
+            with patch.object(cu.os, 'open', side_effect=spy_open), \
+                 patch.object(cu.os, 'close', side_effect=spy_close), \
+                 patch.object(Image.Image, 'save', failing_save):
+                with self.assertRaisesRegex(OSError, 'save down'):
+                    cu.save_observation(Image.new('RGB', (8, 8)), {}, 1280)
+            self.assertEqual(len(opened), 1)
+            self.assertEqual(closed, [],
+                             'no extra os.close after ownership transferred to the stream')
+            with self.assertRaises(OSError):
+                os.fstat(opened[0])
+            # EBADF above proves the stream owned and performed the one close.
+
 
 if __name__=='__main__':unittest.main()

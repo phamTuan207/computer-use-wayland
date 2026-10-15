@@ -105,5 +105,63 @@ class ScopeCli(unittest.TestCase):
         self.assertNotIn('no_after', request, 'scope must not imply no_after')
 
 
+class ImageFlagCli(ScopeCli):
+    """N1: start/tabs --image is refused before any side effect."""
+
+    def test_start_and_tabs_reject_image_before_all_side_effects(self):
+        for operation in ('start', 'tabs'):
+            with self.subTest(operation=operation):
+                self.dispatched.clear()
+                self.environment.reset_mock()
+                with self.assertRaisesRegex(ValueError, '--image is only valid'):
+                    self.run_cli(['cu', 'browser', operation, '--target', 'x', '--image'])
+                self.assertEqual(self.dispatched, [])
+                self.assertFalse(self.environment.called,
+                                 'invalid --image must not touch the GUI environment')
+
+    def test_observe_image_still_dispatches_once(self):
+        code, _ = self.run_cli(BASE + ['--image'])
+        self.assertEqual(code, 0)
+        self.assertEqual(len(self.dispatched), 1)
+        self.assertTrue(self.dispatched[0]['image'])
+        self.assertEqual(self.dispatched[0]['operation'], 'observe')
+
+    def test_act_image_without_no_after_still_dispatches(self):
+        import tempfile
+        actions = tempfile.NamedTemporaryFile('w', suffix='.json', delete=False)
+        actions.write(json.dumps([{'type': 'click', 'selector': '#a'}]))
+        actions.close()
+        self.addCleanup(lambda: __import__('os').unlink(actions.name))
+        code, _ = self.run_cli(['cu', 'browser', 'act', '--target', 'x',
+                                '--snapshot', 's', '--actions', actions.name, '--image'])
+        self.assertEqual(code, 0)
+        self.assertEqual(len(self.dispatched), 1)
+        self.assertTrue(self.dispatched[0]['image'])
+
+    def test_default_start_and_tabs_without_image_still_work(self):
+        with mock.patch.object(cu, 'browser_start', return_value={'ok': True}) as start:
+            code, _ = self.run_cli(['cu', 'browser', 'start'])
+            self.assertEqual(code, 0)
+            start.assert_called_once()
+        self.dispatched.clear()
+        code, _ = self.run_cli(['cu', 'browser', 'tabs'])
+        self.assertEqual(code, 0)
+        self.assertEqual(len(self.dispatched), 1)
+        self.assertIs(self.dispatched[0]['image'], False,
+                      'an absent --image must stay False, not gain a key')
+
+    def test_no_after_with_image_still_refused(self):
+        import tempfile
+        actions = tempfile.NamedTemporaryFile('w', suffix='.json', delete=False)
+        actions.write(json.dumps([{'type': 'assert', 'selector': '#a',
+                                   'text': 'x'}]))
+        actions.close()
+        self.addCleanup(lambda: __import__('os').unlink(actions.name))
+        with self.assertRaisesRegex(ValueError, 'cannot combine with --image'):
+            self.run_cli(['cu', 'browser', 'act', '--target', 'x', '--snapshot', 's',
+                          '--actions', actions.name, '--image', '--no-after'])
+        self.assertEqual(self.dispatched, [])
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

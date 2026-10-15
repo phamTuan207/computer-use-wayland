@@ -111,6 +111,13 @@ class PointerSafety(unittest.TestCase):
         self.assertIn('screen changed', result['error'])
         self.pointer_cls.assert_not_called()
 
+    def test_desktop_batch_guard_compares_hex_address_case_insensitively(self):
+        self.meta['window'] = '0xAB'
+        self.active = '0xab'
+        result = cu.desktop_act({}, self.meta, [{'type':'click','x':10,'y':10}])
+        self.assertTrue(result['ok'], result)
+        self.focus.assert_called_once_with({}, '0xAB')
+
     def test_cancel_while_button_held_releases_and_closes(self):
         for action in ({'type': 'click', 'x': 10, 'y': 10},
                        {'type': 'double_click', 'x': 10, 'y': 10},

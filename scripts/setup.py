@@ -148,6 +148,17 @@ def _checked(argv, **kwargs):
     return result
 
 
+def runtime_abi(env):
+    """Read the running compositor ABI, rejecting malformed JSON shapes cleanly."""
+    try:
+        response = json.loads(_checked(['hyprctl', '-j', 'version'], env=env).stdout)
+    except (json.JSONDecodeError, TypeError) as error:
+        raise RuntimeError('invalid compositor ABI response') from error
+    if not isinstance(response, dict) or not isinstance(response.get('abiHash'), str) or not response['abiHash']:
+        raise RuntimeError('invalid compositor ABI response')
+    return response['abiHash']
+
+
 def _load(name, path):
     spec = importlib.util.spec_from_file_location(name, path)
     module = importlib.util.module_from_spec(spec)
@@ -192,7 +203,7 @@ def _preflight(env, config_path, data_dir, bin_dir, restore_theme=None, restore_
     hook = _hook_command()
     install_hook(config_path, hook, ROOT/'native/visuals-login.lua', check_only=True)
     initial = header_abi(env)
-    if initial != json.loads(_checked(['hyprctl', '-j', 'version'], env=env).stdout)['abiHash']:
+    if initial != runtime_abi(env):
         raise RuntimeError('header ABI does not match the running compositor')
     _require_no_plugins(env)
     return initial, requested, profile_bytes
@@ -301,8 +312,7 @@ def _setup(config_path, data_dir, bin_dir, restore_theme=None, restore_size=None
         _checked([sys.executable, str(ROOT/'scripts/build-glass.py'), str(source),
                   '--local-optics'], env=env)
         library = source/'hyprglass.so'
-        if header_abi(env) != initial or \
-                json.loads(_checked(['hyprctl', '-j', 'version'], env=env).stdout)['abiHash'] != initial:
+        if header_abi(env) != initial or runtime_abi(env) != initial:
             raise RuntimeError('ABI drifted during the build')
         # Recheck the runtime before the first write, not after: once anything is
         # installed the honest message is "aborted", never "nothing was published".

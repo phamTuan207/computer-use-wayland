@@ -111,9 +111,9 @@ def run(argv, env=None, text=True, input=None, timeout=12):
 def hypr(env, what):
     # The documented read-only IPC avoids a fork/exec for every safety check.
     # Keep CLI compatibility for callers without an explicit session environment.
+    if what not in ('clients','monitors','activewindow','cursorpos','devices','workspaces','layers'):
+        raise ValueError('unsupported read-only compositor query')
     if env and env.get('XDG_RUNTIME_DIR') and env.get('HYPRLAND_INSTANCE_SIGNATURE'):
-        if what not in ('clients','monitors','activewindow','cursorpos','devices','workspaces','layers'):
-            raise ValueError('unsupported read-only compositor query')
         path=Path(env['XDG_RUNTIME_DIR'])/'hypr'/env['HYPRLAND_INSTANCE_SIGNATURE']/'.socket.sock'
         with socket.socket(socket.AF_UNIX,socket.SOCK_STREAM) as connection:
             deadline=time.monotonic()+1
@@ -141,14 +141,17 @@ def monitor_box(m):
 
 def window(env, address):
     if not re.fullmatch(r'0x[0-9a-fA-F]+',address or ''): raise ValueError('exact window address required')
-    matches = [c for c in hypr(env,'clients') if c['address']==address]
+    matches = [c for c in hypr(env,'clients') if same_window_address(c.get('address'),address)]
     if len(matches)!=1: raise ValueError('window no longer exists')
     return matches[0]
+
+def same_window_address(left, right):
+    return isinstance(left,str) and left.casefold()==right.casefold()
 
 def focus(env, address):
     if not re.fullmatch(r'0x[0-9a-fA-F]+',address or ''):raise ValueError('exact window address required')
     check_cancel()
-    if hypr(env,'activewindow').get('address')==address:return
+    if same_window_address(hypr(env,'activewindow').get('address'),address):return
     window(env,address)  # Reject a stale target before changing the desktop.
     reply=run(['hyprctl','dispatch',f'hl.dsp.focus({{ window = "address:{address}" }})'],env).strip()
     if reply!='ok':raise RuntimeError('focus dispatch rejected: '+reply[:400])
@@ -157,7 +160,7 @@ def focus(env, address):
     while True:
         check_cancel()
         active=hypr(env,'activewindow').get('address')
-        if active==address:return
+        if same_window_address(active,address):return
         remaining=deadline-time.monotonic()
         if remaining<=0:break
         time.sleep(min(.04,remaining))
@@ -280,13 +283,38 @@ def save_observation(image, meta, max_width, persist=True, encoded_png=None):
     prepare_state()
     token=uuid.uuid4().hex[:12]
     path=STATE/(token+'.png')
-    if encoded_png is None:image.save(path,compress_level=1)
-    else:path.write_bytes(encoded_png)
-    path.chmod(0o600)
+    # Exclusive creation at 0600 before the first byte: a colliding name or a
+    # symlink refuses instead of overwriting a foreign file. fchmod fixes the
+    # exact mode regardless of umask; no pathname chmod follows the write.
+    fd=os.open(path,os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600)
+    try:
+        os.fchmod(fd,0o600)
+        stream=os.fdopen(fd,'wb')
+    except BaseException:
+        try:os.close(fd)
+        except OSError:pass
+        raise
+    # Ownership transferred: the stream alone closes the descriptor now.
+    if encoded_png is None:
+        # fd has no .png suffix for Pillow to infer, so the format is explicit.
+        with stream:
+            image.save(stream,format='PNG',compress_level=1)
+    else:
+        with stream:
+            stream.write(encoded_png)
     meta.update(id=token,created=time.time(),image=str(path),image_size=list(image.size),
                 pixel_sha256=hashlib.sha256(image.tobytes()).hexdigest(),max_width=max_width)
     out=STATE/(token+'.json');meta['observation']=str(out)
-    out.write_text(json.dumps(meta));out.chmod(0o600)
+    fd=os.open(out,os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600)
+    try:
+        os.fchmod(fd,0o600)
+        stream=os.fdopen(fd,'w',encoding='utf-8')
+    except BaseException:
+        try:os.close(fd)
+        except OSError:pass
+        raise
+    with stream:
+        stream.write(json.dumps(meta))
     # Only observation filenames are disposable; session.json is recovery state.
     for old in STATE.iterdir():
         if re.fullmatch(r'[0-9a-f]{12}\.(?:png|json)',old.name) and time.time()-old.stat().st_mtime>86400:
@@ -480,43 +508,115 @@ def keyboard_groups(actions):
         else:groups.append(a);delay=0;boundary=False;mode=None
     return groups
 
+def fcitx5_running():
+    """True when an own-UID fcitx5 process exists; False when confidently absent.
+
+    Only the process table is read: numeric /proc entries, owner UID and the comm
+    name. Anything unreadable is refused, never treated as absent. No command
+    lines, environments, PIDs, caches or new dependencies.
+    """
+    try:
+        entries=os.listdir('/proc')
+    except OSError as exc:
+        raise RuntimeError('cannot determine whether fcitx5 is running') from exc
+    for pid in entries:
+        if not pid.isdigit():
+            continue
+        try:
+            owner=os.stat('/proc/'+pid).st_uid
+        except (FileNotFoundError,ProcessLookupError):
+            continue  # the process exited while being read
+        except OSError as exc:
+            raise RuntimeError('cannot determine whether fcitx5 is running') from exc
+        if owner!=os.geteuid():
+            continue
+        try:
+            with open('/proc/'+pid+'/comm') as stream:name=stream.read().strip()
+        except (FileNotFoundError,ProcessLookupError):
+            continue
+        except (OSError,UnicodeError) as exc:
+            raise RuntimeError('cannot determine whether fcitx5 is running') from exc
+        if not name or not name.isprintable():
+            raise RuntimeError('cannot determine whether fcitx5 is running')
+        if name=='fcitx5':
+            return True
+    return False
+
 @contextmanager
 def literal_keyboard(env,enabled=True):
     """Bypass composition for exact text; preserve the focused context's IME state."""
     import signal
     remote=shutil.which('fcitx5-remote') if enabled else None
     if not remote:
+        # No controller: proceed only when no own-UID daemon needs one.
+        if enabled and fcitx5_running():
+            raise RuntimeError('literal typing requires fcitx5-remote while fcitx5 is running')
         yield
         return
-    def state():
-        value=run([remote],env).strip()
+    def state(timeout):
+        value=run([remote],env,timeout=timeout).strip()
         if value not in ('0','1','2'):raise RuntimeError('cannot determine fcitx5 state')
         return value
-    def switch(flag,expected):
-        run([remote,flag],env)
-        deadline=time.monotonic()+.5
-        while state()!=expected:
-            if time.monotonic()>=deadline:raise RuntimeError('fcitx5 state change timed out')
-            time.sleep(.01)
-    original=state()
+    def switch(flag,expected,budget=.5):
+        # One cumulative budget per switch, set before the flag command runs.
+        deadline=time.monotonic()+budget
+        remaining=deadline-time.monotonic()
+        if remaining<=0:raise RuntimeError('fcitx5 state change timed out')
+        run([remote,flag],env,timeout=remaining)
+        while True:
+            remaining=deadline-time.monotonic()
+            if remaining<=0:raise RuntimeError('fcitx5 state change timed out')
+            if state(remaining)==expected:
+                # A reply that arrived after the budget is not a success.
+                if time.monotonic()>=deadline:raise RuntimeError('fcitx5 state change timed out')
+                return
+            time.sleep(min(.01,max(0,deadline-time.monotonic())))
+    def warn_restore(restore_error,primary):
+        # One bounded single line on stderr: a stable label plus the sanitized
+        # RESTORE detail only. The primary message is never echoed; it may carry
+        # wtype stderr or user input. Only its type names it, never its text.
+        try:
+            detail=' '.join(str(restore_error).split())
+            detail=''.join(ch for ch in detail if ch==' ' or 32<=ord(ch)<=126)
+            label=(' during '+type(primary).__name__) if primary is not None and primary is not restore_error else ''
+            sys.stderr.write(('IME restoration failed'+label+'; state may remain inactive: '+detail)[:400]+'\n')
+        except (OSError,ValueError):
+            pass
+    original=state(.5)
+    restore_needed=False
     previous={}
     # Without a handler, the default SIGTERM/SIGHUP disposes the process mid-yield
     # and skips finally(), leaving the IME disabled. Raise instead so cleanup runs.
     def interrupted(signum,frame):
         raise RuntimeError(f'keyboard input interrupted by signal {signum}')
-    for sig in (signal.SIGTERM,signal.SIGHUP):
-        previous[sig]=signal.getsignal(sig)
-        signal.signal(sig,interrupted)
     try:
-        if original=='2':switch('-c','1')
+        for sig in (signal.SIGTERM,signal.SIGHUP):
+            previous[sig]=signal.getsignal(sig)
+            signal.signal(sig,interrupted)
+    except BaseException:
+        for sig,handler in previous.items():
+            signal.signal(sig,handler)
+        raise
+    try:
+        if original=='2':
+            restore_needed=True
+            switch('-c','1')
         yield
     finally:
-        original_error=sys.exc_info()[1]
+        primary=sys.exc_info()[1]
         try:
             # Keep the handler until the IME is restored so a late signal still cleans up.
-            if original=='2':switch('-o','2')
-        except Exception:
-            if original_error is None:raise
+            if original=='2' and restore_needed:
+                try:
+                    switch('-o','2')
+                except BaseException as restore_error:
+                    warn_restore(restore_error,primary)
+                    if primary is None:
+                        raise
+                    if isinstance(restore_error,(KeyboardInterrupt,SystemExit)) and \
+                            not isinstance(primary,(KeyboardInterrupt,SystemExit)):
+                        raise
+                    # Otherwise the primary continues unwinding untouched.
         finally:
             for sig,handler in previous.items():
                 signal.signal(sig,handler)
@@ -621,7 +721,7 @@ def desktop_act(env,meta,actions,after_capture=True):
             if bounds(c)!=meta['window_bounds']: raise RuntimeError('window geometry changed; observe again')
         m=next((m for m in hypr(env,'monitors') if m['name']==meta['monitor']),None)
         if not m or monitor_box(m)!=meta['monitor_box'] or m['scale']!=meta['monitor_scale'] or m.get('transform',0)!=meta['monitor_transform']: raise RuntimeError('monitor layout changed; observe again')
-        if not screen_scope and hypr(env,'activewindow').get('address')!=address: raise RuntimeError('focus changed; batch stopped')
+        if not screen_scope and not same_window_address(hypr(env,'activewindow').get('address'),address): raise RuntimeError('focus changed; batch stopped')
     if not screen_scope:focus(env,address)
     guard()
     # Refuse coordinates from an image superseded by a visible layout change.
@@ -750,6 +850,16 @@ def browser_start(env,endpoint):
         return {'ok':True,'endpoint':endpoint,'reused':True}
     except Exception:pass
     prepare_state();profile=ROOT/'browser-profile';profile.mkdir(mode=0o700,exist_ok=True)
+    # Harden the directory's own inode before trusting it: a symlink, a file or
+    # a foreign owner refuses here, never at spawn time. Reuse never reaches this.
+    dir_fd=os.open(profile,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW|os.O_CLOEXEC)
+    try:
+        if os.fstat(dir_fd).st_uid!=os.geteuid():
+            raise RuntimeError('browser profile is not owned by the current user')
+        os.fchmod(dir_fd,0o700)
+    finally:
+        try:os.close(dir_fd)
+        except OSError:pass
     log_path=STATE/'browser.log'
     # Create private in one step; a separate chmod would leave a window.
     fd=os.open(log_path,os.O_WRONLY|os.O_CREAT|os.O_APPEND,0o600)
@@ -841,6 +951,8 @@ def main():
         if not args.after_scope.strip():raise ValueError('--after-scope must be a non-empty CSS selector')
         if len(args.after_scope.encode('utf-16-le','surrogatepass'))>2048:raise ValueError('--after-scope must be at most 1024 characters')
         if args.no_after:raise ValueError('--after-scope cannot combine with --no-after')
+    if args.command=='browser' and args.image and args.operation not in ('observe','act'):
+        raise ValueError('--image is only valid for browser observe or act')
     if args.command=='observe' and args.focus and not args.window:parser.error('--focus requires --window')
     if args.command=='session-driver':
         require_session()
@@ -864,7 +976,13 @@ def main():
     elif args.command=='doctor':
         result={'dependencies':{k:shutil.which(k) is not None for k in ('grim','wtype','hyprctl','node')},'pointer':(ROOT/'native/pointer').is_file(),'session':bool(env.get('WAYLAND_DISPLAY')),'monitors':hypr(env,'monitors')}
         if shutil.which('fcitx5-remote'):
-            result['ime']={'state':run(['fcitx5-remote'],env).strip(),'name':run(['fcitx5-remote','-n'],env).strip()}
+            # Optional probes: at most ~1s each, and a failure is a diagnostic,
+            # never a reason to stop. BaseException still propagates.
+            try:
+                result['ime']={'state':run(['fcitx5-remote'],env,timeout=1).strip(),
+                               'name':run(['fcitx5-remote','-n'],env,timeout=1).strip()}
+            except Exception as exc:
+                result['ime_error']=('fcitx5 probe failed: '+' '.join(str(exc).split()))[:400]
         result['monitors']=[{k:m[k] for k in ('name','width','height','scale','transform')} for m in result['monitors']]
     elif args.command=='windows':
         # Read-only discovery: one clients call, filtering before projection, no focus or input.

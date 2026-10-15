@@ -1,5 +1,6 @@
 """Bounded AT-SPI semantic adapter; no desktop settings changes."""
 import json
+import os
 from pathlib import Path
 import sys
 import time
@@ -47,13 +48,22 @@ def observe(pid):
         except Exception:continue
     snapshot={'backend':'a11y','pid':pid,'app_name':root.get_name(),'created':time.time(),'elements':items,'truncated':bool(pending)}
     prepare_state();path=STATE/(uuid.uuid4().hex[:12]+'.json');snapshot['snapshot']=str(path)
-    path.write_text(json.dumps(snapshot));path.chmod(0o600)
+    fd=os.open(path,os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600)
+    try:
+        os.fchmod(fd,0o600)
+        stream=os.fdopen(fd,'w',encoding='utf-8')
+    except BaseException:
+        try:os.close(fd)
+        except OSError:pass
+        raise
+    with stream:
+        stream.write(json.dumps(snapshot))
     return {**snapshot,'elements':[{k:v for k,v in item.items() if k!='path'} for item in items]}
 
 def resolve(root,item):
     e=root
     for i in item['path']:e=e.get_child_at_index(i)
-    if not e or e.get_name()[:120]!=item['name'] or e.get_role_name()!=item['role']:raise ValueError('accessibility tree changed; observe again')
+    if not e or (e.get_name() or '')[:120]!=item['name'] or e.get_role_name()!=item['role']:raise ValueError('accessibility tree changed; observe again')
     if not e.get_state_set().contains(Atspi.StateType.SENSITIVE):raise ValueError('element is disabled')
     return e
 

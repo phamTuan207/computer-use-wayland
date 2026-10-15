@@ -29,6 +29,12 @@ class Focus(unittest.TestCase):
         self.assertLess(self.now,1.5)
         self.dispatch.assert_called_once_with(['hyprctl','dispatch','hl.dsp.focus({ window = "address:0x1" })'],{})
 
+    def test_active_hex_address_case_does_not_dispatch_again(self):
+        with patch.object(cu,'hypr',return_value={'address':'0xab'}):
+            cu.focus({},'0xAB')
+        self.window.assert_not_called()
+        self.dispatch.assert_not_called()
+
     def test_timeout_is_bounded_and_reports_actual_focus(self):
         with patch.object(cu,'hypr',return_value={'address':'0x2'}):
             with self.assertRaisesRegex(RuntimeError,r'target=0x1, active=0x2'):

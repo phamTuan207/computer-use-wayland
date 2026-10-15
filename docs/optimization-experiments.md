@@ -13,6 +13,69 @@ earlier exploration used `fill` for the batch route and is not the same
 configuration, so those older numbers are not comparable with the current set and
 are not repeated here.
 
+## MUSE2 assertion polling interval
+
+An independent audit of the private run against an owned live Chromium fixture
+on Hyprland 0.56.2 verified 1,440 successful tasks:
+24 blocks across six delay/control workloads and two task routes, with 60
+samples per variant per cell. The baseline used a 50 ms CDP assertion poll;
+the candidate changed only that interval to 10 ms. Blocks ran B,A,A,B. Each
+task used the same fixture and sequence; an independent HTTP POST check
+verified the saved text. These were real browser measurements, not mocked
+benchmark runs. Session startup, discovery and model inference are outside
+these timings.
+
+| Delay | Controls | Route | Baseline median / p95 ms | Candidate median / p95 ms | Median reduction | Result JSON bytes |
+|---:|---:|---|---:|---:|---:|---:|
+| 0 | 0 | task-scoped | 63.742 / 67.811 | 30.502 / 32.577 | 52.15% (33.240 ms) | 381 → 381 |
+| 0 | 0 | task-after-scoped | 64.260 / 67.740 | 31.275 / 33.773 | 51.33% (32.985 ms) | 679 → 679 |
+| 0 | 1000 | task-scoped | 71.509 / 74.232 | 36.227 / 38.725 | 49.34% (35.282 ms) | 381 → 381 |
+| 0 | 1000 | task-after-scoped | 72.691 / 75.763 | 37.922 / 40.195 | 47.83% (34.769 ms) | 679 → 679 |
+
+All four zero-delay cells exceed the predeclared 10% and 5 ms median-win
+thresholds. Across the other eight cells (delays 50 and 250 ms), median changes
+range from a 0.877% reduction to a 0.905% increase. No cell exceeded the 15%
+median-regression limit; the whole-task p95 bound passed in all cells, as did
+the independent result and cleanup checks. No result-byte median increased.
+The harness did not request screenshots and the raw schema has no PNG byte
+field, so PNG output is absent rather than directly measured. Result sizes are
+JSON bytes, not billed tokens. These fixtures do not measure LLM inference,
+billed tokens, session startup or discovery.
+
+Separate false-assert profiling runs recorded candidate Node CPU use of
+63.181, 72.534 and 67.158 ms at controls=0, and 69.377, 60.244 and 61.565 ms
+at controls=1000. The maximum, 72.534 ms, is Node CPU in the action loop, not
+Chrome CPU or whole-machine usage. These six profiling runs are separate from
+the acceptance samples and show the increased polling work.
+
+Reproduction uses the original source basis at `f5d305e` with only the CDP
+poll interval changed from 50 to 10 ms. Supply a baseline CLI prepared from
+that source and the candidate `scripts/cu.py`; save each report outside the
+repository. Run the routes and workloads sequentially:
+
+```sh
+report_dir=$(mktemp -d)
+baseline_cli=PATH_TO_BASELINE_CLI
+for controls in 0 1000; do
+  for delay in 0 50 250; do
+    for block in B1 A1 A2 B2; do
+      case "$block" in
+        B1|B2) cli=$baseline_cli ;;
+        A1|A2) cli=scripts/cu.py ;;
+      esac
+      python3 tests/browser_task_benchmark.py \
+        --report "$report_dir/controls${controls}-delay${delay}-${block}.json" \
+        --cli "$cli" --samples 30 --controls "$controls" --delay "$delay" \
+        --modes task-scoped task-after-scoped || exit
+    done
+  done
+done
+```
+
+The audited aggregates and row checks are documented in the private
+experiment record; no runtime or model-wide performance claim follows from
+this fixture.
+
 ## Browser `act --no-after` A/B on the source fixture
 
 Measured against an inert real Chromium fixture driven from the source tree.

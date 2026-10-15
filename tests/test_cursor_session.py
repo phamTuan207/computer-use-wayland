@@ -244,11 +244,35 @@ class Lifecycle(unittest.TestCase):
 
     def test_mixed_case_physical_keyboard(self):
         import cancel_hotkey
-        devices=subprocess.CompletedProcess([],0,'{"keyboards":[{"name":"Keychron K8 Keyboard"},{"name":"Virtual Keyboard"}]}','')
-        with patch.object(cancel_hotkey.subprocess,'run',return_value=devices),patch.object(cancel_hotkey,'hypr_eval') as evaluate:
+        import shlex
+        name='Keychron café 🐈\x01 "\\ Keyboard'
+        devices=subprocess.CompletedProcess([],0,json.dumps({'keyboards':[{'name':name},
+                                                                           {'name':'Virtual Keyboard'}]}),'')
+        state=self.folder/'cache café\n\x02'
+        executable='/tmp/py café\n"\\'
+        script='/tmp/cancel 🐈\x03.py'
+        with patch.object(cancel_hotkey.subprocess,'run',return_value=devices), \
+                patch.object(cancel_hotkey,'hypr_eval') as evaluate, \
+                patch.object(cancel_hotkey,'STATE',state), \
+                patch.object(cancel_hotkey,'__file__',script), \
+                patch.object(cancel_hotkey.sys,'executable',executable):
             cancel_hotkey.hotkey_on()
         code=evaluate.call_args.args[0]
-        self.assertIn('Keychron K8 Keyboard',code);self.assertNotIn('Virtual Keyboard',code)
+        self.assertIn(cancel_hotkey.lua_string(name),code)
+        self.assertNotIn('Virtual Keyboard',code)
+        command=shlex.join(['env','XDG_CACHE_HOME='+str(state.parent),executable,
+                            str(Path(script).resolve()),'cancel'])
+        self.assertIn(cancel_hotkey.lua_string(command),code)
+        self.assertNotIn('\\u',code)
+
+    @unittest.skipUnless(shutil.which('lua'), 'Lua interpreter is unavailable')
+    def test_lua_string_literals_roundtrip_utf8_controls_and_digits(self):
+        import cancel_hotkey
+        value='prefix'+''.join(chr(i) for i in range(32))+'\x7f café 😀 "\\ 0123456789'
+        program=('io.write('+cancel_hotkey.lua_string(value)+')\n').encode('ascii')
+        result=subprocess.run([shutil.which('lua'), '-'],input=program,
+                              stdout=subprocess.PIPE,stderr=subprocess.PIPE,check=True)
+        self.assertEqual(result.stdout,value.encode('utf-8'))
 
     def test_cleanup_exceptions_cannot_skip_restore(self):
         import cancel_hotkey

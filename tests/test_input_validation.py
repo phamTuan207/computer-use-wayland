@@ -208,6 +208,137 @@ class BrowserStartLifecycle(unittest.TestCase):
             self.assertTrue(cu.browser_start({},'http://localhost:9222')['reused'])
             spawn.assert_not_called()
 
+    def test_existing_profile_dir_is_brought_to_0700_before_spawn(self):
+        import os
+        import stat
+        import tempfile
+        for mode in (0o755, 0o777):
+            with self.subTest(mode=oct(mode)):
+                with tempfile.TemporaryDirectory() as temp:
+                    root = Path(temp)
+                    profile = root/'browser-profile'
+                    profile.mkdir(mode=mode)
+                    seen = {}
+
+                    def spawn(*args, **kwargs):
+                        seen['mode'] = stat.S_IMODE(os.stat(profile).st_mode)
+                        child = mock.Mock()
+                        child.pid = 4242
+                        return child
+
+                    with mock.patch.object(cu, 'ROOT', root), \
+                         mock.patch.object(cu, 'STATE', root/'state'), \
+                         mock.patch('urllib.request.urlopen',
+                                    side_effect=[OSError('offline'), io.StringIO('{}')]), \
+                         mock.patch.object(cu.subprocess, 'Popen', side_effect=spawn):
+                        cu.browser_start({}, 'http://localhost:9222')
+                    self.assertEqual(seen['mode'], 0o700,
+                                     'the directory itself is 0700 before Chromium starts')
+                    self.assertEqual(stat.S_IMODE(os.stat(profile).st_mode), 0o700)
+
+    def test_new_profile_dir_is_created_0700(self):
+        import os
+        import stat
+        import tempfile
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            child = mock.Mock()
+            child.pid = 4242
+            with mock.patch.object(cu, 'ROOT', root), \
+                 mock.patch.object(cu, 'STATE', root/'state'), \
+                 mock.patch('urllib.request.urlopen',
+                            side_effect=[OSError('offline'), io.StringIO('{}')]), \
+                 mock.patch.object(cu.subprocess, 'Popen', return_value=child):
+                cu.browser_start({}, 'http://localhost:9222')
+            self.assertEqual(stat.S_IMODE(os.stat(root/'browser-profile').st_mode), 0o700)
+
+    def test_bad_profile_inode_never_spawns(self):
+        import os
+        import tempfile
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            target = root/'elsewhere'
+            target.mkdir()
+            profile = root/'browser-profile'
+            for label in ('symlink', 'file'):
+                with self.subTest(case=label):
+                    if profile.is_symlink() or profile.is_file():
+                        profile.unlink()
+                    elif profile.is_dir():
+                        profile.rmdir()
+                    if label == 'symlink':
+                        profile.symlink_to(target, target_is_directory=True)
+                    else:
+                        profile.write_text('x')
+                    with mock.patch.object(cu, 'ROOT', root), \
+                         mock.patch.object(cu, 'STATE', root/'state'), \
+                         mock.patch('urllib.request.urlopen', side_effect=OSError('offline')), \
+                         mock.patch.object(cu.subprocess, 'Popen') as spawn:
+                        with self.assertRaises(OSError):
+                            cu.browser_start({}, 'http://localhost:9222')
+                    spawn.assert_not_called()
+                    self.assertTrue(target.is_dir(), 'no arbitrary target was touched')
+
+    def test_foreign_owned_profile_never_spawns(self):
+        import tempfile
+        foreign = mock.Mock()
+        foreign.st_uid = 424242
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root/'browser-profile').mkdir()
+            with mock.patch.object(cu, 'ROOT', root), \
+                 mock.patch.object(cu, 'STATE', root/'state'), \
+                 mock.patch('urllib.request.urlopen', side_effect=OSError('offline')), \
+                 mock.patch.object(cu.os, 'fstat', return_value=foreign), \
+                 mock.patch.object(cu.subprocess, 'Popen') as spawn:
+                with self.assertRaisesRegex(RuntimeError, 'not owned'):
+                    cu.browser_start({}, 'http://localhost:9222')
+            spawn.assert_not_called()
+
+    def test_profile_open_or_chmod_failure_never_spawns(self):
+        import os
+        import tempfile
+        for point, error in (('open', OSError('open down')), ('chmod', OSError('chmod down'))):
+            with self.subTest(point=point):
+                with tempfile.TemporaryDirectory() as temp:
+                    root = Path(temp)
+                    (root/'browser-profile').mkdir()
+                    before = set(os.listdir('/proc/self/fd'))
+                    if point == 'open':
+                        patcher = mock.patch.object(cu.os, 'open', side_effect=error)
+                    else:
+                        patcher = mock.patch.object(cu.os, 'fchmod', side_effect=error)
+                    with mock.patch.object(cu, 'ROOT', root), \
+                         mock.patch.object(cu, 'STATE', root/'state'), \
+                         mock.patch('urllib.request.urlopen', side_effect=OSError('offline')), \
+                         patcher, \
+                         mock.patch.object(cu.subprocess, 'Popen') as spawn:
+                        with self.assertRaises(OSError):
+                            cu.browser_start({}, 'http://localhost:9222')
+                    spawn.assert_not_called()
+                    self.assertEqual(set(os.listdir('/proc/self/fd')) - before, set(),
+                                     'no file descriptor leaked')
+
+    def test_reused_endpoint_never_touches_the_profile(self):
+        import tempfile
+        opened = []
+
+        def spy_open(path, *args, **kwargs):
+            opened.append(str(path))
+            raise AssertionError('profile must not be touched on reuse')
+
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            with mock.patch.object(cu, 'ROOT', root), \
+                 mock.patch.object(cu, 'STATE', root/'state'), \
+                 mock.patch('urllib.request.urlopen', return_value=io.StringIO('{}')), \
+                 mock.patch.object(cu.os, 'open', side_effect=spy_open), \
+                 mock.patch.object(cu.subprocess, 'Popen') as spawn:
+                self.assertTrue(cu.browser_start({}, 'http://localhost:9222')['reused'])
+            spawn.assert_not_called()
+            self.assertEqual(opened, [])
+            self.assertFalse((root/'browser-profile').exists())
+
     def test_bad_port_is_refused_with_a_clear_error(self):
         for endpoint in ('http://localhost:notaport', 'http://127.0.0.1:99999'):
             with self.subTest(endpoint=endpoint):

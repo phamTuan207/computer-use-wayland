@@ -80,6 +80,10 @@ class WindowsCommand(unittest.TestCase):
         self.assertEqual([item['address'] for item in result], ['0x1', '0x4'])
         self.assertEqual(calls, ['clients'])
 
+    def test_window_lookup_compares_hex_address_case_insensitively(self):
+        with patch.object(cu, 'hypr', return_value=[{'address':'0xab'}]):
+            self.assertEqual(cu.window({}, '0xAB')['address'], '0xab')
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -16,7 +16,9 @@ async function run(request, options = {}) {
   const output = [], timers = new Set(), requestedTimeouts = [], events = [];
   let fetches = 0, inputs = 0;
   const fixtureState = { inputEvents: 0, shots: 0 };
-  const page = vm.createContext({ document: { title: 'fixture', querySelectorAll: () => [] },
+  const statusElement = { isConnected: true, textContent: 'Ready' };
+  const page = vm.createContext({ document: { title: 'fixture',
+    querySelectorAll: selector => selector === '#status' ? [statusElement] : [] },
     location: { href: 'http://fixture/' }, innerWidth: 100, innerHeight: 100,
     getComputedStyle: () => ({ visibility: 'visible', display: 'block' }),
     getBoundingClientRect: () => ({ left: 0, top: 0, width: 10, height: 10, right: 10, bottom: 10 }),
@@ -59,6 +61,11 @@ async function run(request, options = {}) {
         }
         this.reply(id, { data: 'aW1n' }); return;
       }
+      if (options.afterSnapshotFails && method === 'Runtime.evaluate' &&
+          params.expression.includes('const scope=null;')) {
+        this.emit({ id, error: { message: 'after snapshot unavailable' } });
+        return;
+      }
       // An in-loop action failure: the page rejects the next evaluate.
       if (options.actionErrorAfter !== undefined && method === 'Runtime.evaluate' &&
           options.actionErrorAfter <= (options._evaluates = (options._evaluates || 0) + 1)) {
@@ -71,7 +78,7 @@ async function run(request, options = {}) {
       let value = null;
       try {
         // The staleness guard installs the page state; the snapshot expression reads it.
-        if (params.expression.includes('if(!s||s.id!==')) {
+        if (params.expression.startsWith('(()=>{const s=globalThis.__agentCu;')) {
           vm.runInContext('globalThis.__agentCu={id:"test",created:Date.now(),url:location.href,refs:new Map()}', page);
           value = null;
         } else value = vm.runInContext(params.expression, page);
@@ -200,15 +207,16 @@ assert.ok(!/screenshot exploded/.test(r.output[0].error || ''), 'the original ac
 assert.match(r.output[0].capture_error, /screenshot exploded/);
 console.log('ok the original action error survives a later screenshot failure');
 
-// 8. A successful act still reports ok:true with a count, and no replay happens.
-//    A final observation that cannot be taken stays after_unavailable, not ok:false.
-r = await run(ACT);
+// 8. A successful act remains successful when the final observation fails.
+r = await run(ACT, { afterSnapshotFails: true });
 assert.equal(r.output[0].ok, true);
 assert.equal(r.output[0].completed, 1);
+assert.equal(r.output[0].after_unavailable, true);
+assert.equal(r.output[0].after, undefined);
 assert.equal(typeof r.output[0].execution_ms, 'number');
 assert.equal(r.output.length, 1, 'one response, never a replay');
 assert.equal(r.fixtureState.inputEvents, 0, 'a wait batch dispatches no input');
-console.log('ok a successful act reports ok:true with a count and no replay');
+console.log('ok an after-snapshot failure preserves successful act status and count');
 
 // 9. Worker mode stops on a failed batch rather than draining queued requests.
 r = await run({ ...ACT, actions: [{ type: 'click', selector: '#b' }, { type: 'click', selector: '#c' }] },
@@ -231,16 +239,39 @@ const unicode=Buffer.from(JSON.stringify({...ACT,padding:'Tiếng Việt 🙂'})
 const split=await run(ACT,{single:true,chunks:Array.from(unicode,b=>Buffer.from([b]))});
 assert.equal(split.output[0].ok,true,'UTF-8 split between bytes must round-trip');
 
-// Execute the production assertion loop against a fake clock: 9000 clamps to 3000.
+// Exercise production polling: a predicate ready at 15ms is found by 30ms.
 const assertionSource=source.slice(source.indexOf('async function assertAction('),source.indexOf("  if(request.operation==='act'){",source.indexOf('async function assertAction(')));
-let elapsed=0,evaluations=0;
-const assertAction=vm.runInNewContext(assertionSource+';assertAction',{
-  Date:{now:()=>elapsed},evaluate:async()=>{evaluations++;return false;},elementExpression:()=>'',
-  setTimeout:(fn,ms)=>{elapsed+=ms;fn();}
-});
-await assert.rejects(assertAction({timeout_ms:9000,text:'missing'}),/assertion failed/);
-assert.equal(elapsed,3000);assert.equal(evaluations,61);
-console.log('ok UTF-8 byte streams are bounded and assertion timeout 9000 clamps to 3000');
+function fakeAssert({ readyAt=Infinity, timeout_ms }={}) {
+  let elapsed=0,evaluations=0;
+  const assertAction=vm.runInNewContext(assertionSource+';assertAction',{
+    Date:{now:()=>elapsed},evaluate:async()=>{evaluations++;return elapsed>=readyAt;},elementExpression:()=>'',
+    setTimeout:(fn,ms)=>{elapsed+=ms;fn();}
+  });
+  return {run:()=>assertAction({timeout_ms,text:'expected'}),get elapsed(){return elapsed;},
+    get evaluations(){return evaluations;}};
+}
+let fake=fakeAssert({readyAt:15});
+await fake.run();
+assert.ok(fake.elapsed<=30,`15ms predicate was detected after ${fake.elapsed}ms`);
+for(const [options,limit] of [[{timeout_ms:9000},3000],[{},1000]]){
+  fake=fakeAssert(options);
+  await assert.rejects(fake.run(),/assertion failed/);
+  assert.equal(fake.elapsed,limit);
+  assert.ok(fake.evaluations>1,'false assertion is polled before its deadline');
+}
+console.log('ok assert detects a 15ms condition within 30ms and keeps default/clamped deadlines');
+
+// A false terminal assert after one acknowledged key action does not replay input.
+r=await run({...ACT,actions:[{type:'key',keys:['a']},
+  {type:'assert',selector:'#status',text:'never',timeout_ms:0}]});
+assert.equal(r.output.length,1,'failed batch returns once');
+assert.equal(r.output[0].ok,false);
+assert.equal(r.output[0].error,'assertion failed');
+assert.equal(r.output[0].completed,1,'the acknowledged key action is counted once');
+assert.equal(r.fixtureState.inputEvents,2,'one key action dispatches one keydown and one keyup');
+assert.equal(r.events.filter(event=>event==='Input.dispatchKeyEvent').length,2,
+  'no key event is replayed after the assertion failure');
+console.log('ok a failed assertion returns once without replaying acknowledged input');
 
 for(const single of [true,false]){
   const result=await run({...ACT,image:true,actions:[{type:'wait',ms:0},{type:'set_value',selector:'#field',text:'x'}]},

@@ -175,8 +175,10 @@ read-only observations may run standalone. `--crop X Y W H` limits the image and
 `--settle-ms 600` waits for bounded pixel stability. `settle_stable` is not proof
 that the application finished. Screenshots may contain private data.
 
-Prefer API/DOM targets when an app offers one; use cropped desktop observations
-only when it does not. Batch related actions into one `act`.
+Prefer an API or Chromium DOM when available. For desktop work, inspect a full view first
+if the region is unknown; once the target and its surrounding context are known, prefer
+`observe --crop X Y W H`. Inspect the returned crop before choosing image coordinates, and
+observe again after geometry, focus or screen changes. Batch predictable actions.
 
 For ordinary browser text fields prefer `set_value` plus a check of the app's own
 result: it is focus-independent but dispatches synthetic, untrusted events. Use

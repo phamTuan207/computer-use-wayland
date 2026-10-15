@@ -17,6 +17,16 @@ def hypr_eval(code):
     if result.returncode or result.stdout.strip()!='ok':
         raise RuntimeError('Hyprland rejected temporary Escape binding: ' + result.stderr.strip()[:180])
 
+def lua_string(value):
+    parts = ['"']
+    for byte in value.encode('utf-8'):
+        if byte == 34: parts.append('\\"')
+        elif byte == 92: parts.append('\\\\')
+        elif 32 <= byte <= 126: parts.append(chr(byte))
+        else: parts.append(f'\\{byte:03d}')
+    parts.append('"')
+    return ''.join(parts)
+
 def hotkey_off():
     hypr_eval(f'if _G.{HOTKEY} then _G.{HOTKEY}:unbind(); _G.{HOTKEY}=nil end')
 
@@ -28,9 +38,9 @@ def hotkey_on():
                              for excluded in ('virtual','consumer-control','system-control')))]
     if not names:
         raise RuntimeError('No physical keyboard found for Escape cancellation')
-    keys = ','.join(json.dumps(name) for name in names)
-    cmd = json.dumps(shlex.join(['env','XDG_CACHE_HOME='+str(STATE.parent),
-                                sys.executable,str(Path(__file__).resolve()),'cancel']))
+    keys = ','.join(lua_string(name) for name in names)
+    cmd = lua_string(shlex.join(['env','XDG_CACHE_HOME='+str(STATE.parent),
+                                 sys.executable,str(Path(__file__).resolve()),'cancel']))
     hypr_eval(f'if _G.{HOTKEY} then _G.{HOTKEY}:unbind() end; '
               f'_G.{HOTKEY}=hl.bind("ESCAPE", hl.dsp.exec_cmd({cmd}), '
               f'{{description="Cancel computer-use",device={{inclusive=true,list={{{keys}}}}}}})')

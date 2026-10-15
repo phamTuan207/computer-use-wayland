@@ -366,6 +366,35 @@ def _cursor():
 
 
 class FullSetupTests(_SetupFixture, unittest.TestCase):
+    def test_invalid_runtime_abi_shapes_refuse_before_build_or_publish(self):
+        for payload in ('{', '[]', 'null', '{}', '{"abiHash":null}',
+                        '{"abiHash":false}', '{"abiHash":7}', '{"abiHash":""}'):
+            with self.subTest(payload=payload):
+                self._patched()
+                self.answer = lambda argv, **kwargs: (
+                    subprocess.CompletedProcess(argv, 0, payload, '')
+                    if argv[0] == 'hyprctl' and 'version' in argv
+                    else self._default(argv, **kwargs))
+                with self.assertRaisesRegex(RuntimeError, 'invalid compositor ABI response'):
+                    self.declared()
+                self.assertFalse((self.root/'native/visuals.json').exists())
+                self.assertFalse((self.bin/'computer-use').exists())
+                self.assertFalse(any(any('build' in part or part == 'clone' for part in call)
+                                     for call in self.calls))
+
+    def test_invalid_runtime_abi_shape_after_build_refuses_publish(self):
+        versions = ['{"abiHash":"abi"}', 'null']
+        def answer(argv, **kwargs):
+            if argv[0] == 'hyprctl' and 'version' in argv:
+                return subprocess.CompletedProcess(argv, 0, versions.pop(0), '')
+            return self._default(argv, **kwargs)
+        self.answer = answer
+        self._patched()
+        with self.assertRaisesRegex(RuntimeError, 'invalid compositor ABI response'):
+            self.declared()
+        self.assertFalse((self.root/'native/visuals.json').exists())
+        self.assertFalse((self.bin/'computer-use').exists())
+
     def test_undiscoverable_user_icon_directory_refuses_before_build(self):
         self._patched()
         with mock.patch.object(sys.modules['cursor_theme'],'search_roots',return_value=[]):

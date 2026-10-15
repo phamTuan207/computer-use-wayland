@@ -95,6 +95,11 @@ class HyprIPC(unittest.TestCase):
             self.assertEqual(cu.hypr({}, 'devices'), {'keyboard': 'none'})
         run.assert_called_once_with(['hyprctl', '-j', 'devices'], {})
 
+    def test_fallback_rejects_non_read_only_query_before_cli(self):
+        with patch.object(cu, 'run') as run, self.assertRaisesRegex(ValueError, 'unsupported'):
+            cu.hypr({}, 'reload')
+        run.assert_not_called()
+
 
 if __name__ == '__main__':
     unittest.main()
