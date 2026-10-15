@@ -43,7 +43,9 @@ This is one shared seat, not an independent mouse. Do not compete with the user'
 
 ## Choosing a target
 
-Prefer an existing CLI or API, then Chromium DOM, then cropped desktop screenshots. Respect the
+Prefer an existing CLI or API, then Chromium DOM for browser pages. For native app UI,
+prefer AT-SPI skeleton → drill → act → re-drill when the app exposes usable refs;
+otherwise use cropped desktop screenshots. Respect the
 user's browser: Chromium CDP needs an enabled loopback debugging endpoint, other browsers need
 desktop or verified accessibility targeting. Accessibility reaches only applications that expose
 AT-SPI, which varies per machine, so run `a11y apps` before planning around it and never
@@ -84,7 +86,7 @@ separate check before any external submit, and preserve host permissions.
   vanished panel needs a fresh observe.
 - Begin desktop observation with a bounded `observe --crop X Y W H` containing
   the target and enough surrounding context to confirm it, when the app window,
-  semantics or geometry determine one. Inspect the returned crop before choosing
+  semantics or geometry identify a reliable crop. Inspect it before choosing
   coordinates, and expand or observe again when the target or context is absent.
   A full view is the explicit fallback only when no reliable crop can be
   determined; never guess coordinates and never crop past an unseen menu or
@@ -92,6 +94,11 @@ separate check before any external submit, and preserve host permissions.
 - Browser `act --no-after` requires a final meaningful assert and forbids `--image`.
   Desktop `act --no-after` needs an independent app-result check. Use either only
   when no later view is needed.
+- For supported app UI, start with `a11y observe --pid PID --skeleton`, then
+  `a11y drill REF --snapshot PATH` on a truncated container. Use the returned
+  snapshot/ref pair for `a11y act`, verify the app result, and re-drill or observe
+  again as needed. Skeleton is at most three levels deep; refs remain snapshot-bound.
+  This can avoid PNG rounds, not prove token savings; measure on the actual app.
 
 Scopes reduce output, not safety: they are neither an input nor a privacy boundary. Measured
 results: [optimization-experiments.md](../docs/optimization-experiments.md),

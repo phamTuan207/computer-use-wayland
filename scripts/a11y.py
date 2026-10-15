@@ -34,19 +34,28 @@ def describe(e,path,ref):
     # Do not collect field values, passwords, full text documents or the entire desktop tree.
     return result
 
-def observe(pid):
-    root=app(pid);pending=[(root,[])];items=[];visited=0;start=time.monotonic()
+def observe(pid,skeleton=False,subtree=None):
+    root=app(pid);origin,base=subtree if subtree is not None else (root,[])
+    pending=[(origin,base)];items=[];visited=0;start=time.monotonic();truncated=False
     while pending and visited<500 and time.monotonic()-start<2:
         e,path=pending.pop();visited+=1
         try:
             item=describe(e,path,'e'+str(len(items)+1))
-            if item['actions'] or item.get('editable'):
+            count=e.get_child_count() if skeleton else None
+            if skeleton:item['children_count']=count
+            if skeleton or item['actions'] or item.get('editable'):
                 items.append(item)
-                if len(items)>=80:break
-            if len(path)<12:
-                for i in reversed(range(min(e.get_child_count(),100))):pending.append((e.get_child_at_index(i),path+[i]))
+                if len(items)>=80:
+                    if skeleton:truncated=bool(count or pending)
+                    break
+            limit=min(len(base)+3,12) if skeleton else 12
+            if len(path)<limit:
+                if count is None:count=e.get_child_count()
+                if skeleton and count>100:truncated=True
+                for i in reversed(range(min(count,100))):pending.append((e.get_child_at_index(i),path+[i]))
+            elif skeleton and count:truncated=True
         except Exception:continue
-    snapshot={'backend':'a11y','pid':pid,'app_name':root.get_name(),'created':time.time(),'elements':items,'truncated':bool(pending)}
+    snapshot={'backend':'a11y','pid':pid,'app_name':root.get_name(),'created':time.time(),'elements':items,'truncated':bool(pending) or truncated}
     prepare_state();path=STATE/(uuid.uuid4().hex[:12]+'.json');snapshot['snapshot']=str(path)
     fd=os.open(path,os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600)
     try:
@@ -58,7 +67,7 @@ def observe(pid):
         raise
     with stream:
         stream.write(json.dumps(snapshot))
-    return {**snapshot,'elements':[{k:v for k,v in item.items() if k!='path'} for item in items]}
+    return {**snapshot,'elements':[{k:v for k,v in item.items() if skeleton or k!='path'} for item in items]}
 
 def resolve(root,item):
     e=root
@@ -66,6 +75,14 @@ def resolve(root,item):
     if not e or (e.get_name() or '')[:120]!=item['name'] or e.get_role_name()!=item['role']:raise ValueError('accessibility tree changed; observe again')
     if not e.get_state_set().contains(Atspi.StateType.SENSITIVE):raise ValueError('element is disabled')
     return e
+
+def drill(path,ref):
+    snapshot=read_json_file(path)
+    if snapshot.get('backend')!='a11y' or time.time()-snapshot['created']>90:raise ValueError('stale accessibility snapshot')
+    item=next((e for e in snapshot['elements'] if e['ref']==ref),None)
+    if item is None:raise ValueError('valid accessibility ref required')
+    root=app(snapshot['pid']);element=resolve(root,item)
+    return observe(snapshot['pid'],skeleton=True,subtree=(element,item['path']))
 
 def act(path,actions):
     snapshot=read_json_file(path)
@@ -106,9 +123,10 @@ try:
     request=read_json(sys.stdin.buffer if hasattr(sys.stdin,'buffer') else sys.stdin)
     # An unknown operation must never reach act and mutate the desktop.
     operation=request.get('operation') if isinstance(request,dict) else None
-    if operation not in ('apps','observe','act'):raise ValueError('unknown operation')
+    if operation not in ('apps','observe','drill','act'):raise ValueError('unknown operation')
     if operation=='apps':result=[{'pid':a.get_process_id(),'name':a.get_name()} for a in applications()]
-    elif operation=='observe':result=observe(request['pid'])
+    elif operation=='observe':result=observe(request['pid'],skeleton=request.get('skeleton',False))
+    elif operation=='drill':result=drill(request['snapshot'],request['ref'])
     else:result=act(request['snapshot'],request['actions'])
     print(json.dumps(result,ensure_ascii=False,separators=(',',':')))
 except Exception as exc:

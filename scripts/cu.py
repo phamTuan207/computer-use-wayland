@@ -958,7 +958,7 @@ def main():
     b.add_argument('--max-elements',type=int,default=80,help='DOM output budget, 1..80 (default 80)')
     b.add_argument('--scope',help='observe only: one CSS selector to enumerate; one read, not sticky, not an input boundary')
     b.add_argument('--after-scope',help='act only: scope the successful after-snapshot to one CSS selector; not sticky, not an input boundary')
-    a=sub.add_parser('a11y');a.add_argument('operation',choices=['apps','observe','act']);a.add_argument('--pid',type=int);a.add_argument('--snapshot');a.add_argument('--actions')
+    a=sub.add_parser('a11y');a.add_argument('operation',choices=['apps','observe','drill','act']);a.add_argument('ref',nargs='?');a.add_argument('--pid',type=int);a.add_argument('--snapshot');a.add_argument('--actions');a.add_argument('--skeleton',action='store_true')
     args=parser.parse_args()
     if args.command=='browser' and args.scope is not None:
         if args.operation!='observe':raise ValueError('--scope is only valid for browser observe')
@@ -1040,6 +1040,13 @@ def main():
     elif args.command=='a11y':
         check_cancel()
         request={'operation':args.operation,'pid':args.pid,'snapshot':args.snapshot}
+        if args.skeleton:
+            if args.operation!='observe':raise ValueError('--skeleton requires a11y observe')
+            request['skeleton']=True
+        if args.ref is not None and args.operation!='drill':raise ValueError('ref requires a11y drill')
+        if args.operation=='drill':
+            if not args.ref or not args.snapshot:raise ValueError('a11y drill requires ref and --snapshot')
+            request['ref']=args.ref
         if args.operation=='act':
             require_session()
             if not args.actions: raise ValueError('--actions required')

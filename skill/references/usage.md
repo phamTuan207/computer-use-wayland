@@ -200,11 +200,26 @@ usual. This reduces response size; it is not a claim about billed model tokens.
 
 ```bash
 "$CU" a11y apps
-"$CU" a11y observe --pid EXACT_APP_PID
+"$CU" a11y observe --pid EXACT_APP_PID --skeleton
+"$CU" a11y drill REF_FROM_SKELETON --snapshot SNAPSHOT_FROM_SKELETON
 "$CU" a11y act --snapshot /path/returned.json --actions /tmp/actions.json
 ```
 
 Actions: `{"type":"click","ref":"e2"}` or `{"type":"set_text","ref":"e1","text":"Tiếng Việt 🐱"}`. Setter verifies full text but does not log field contents. A native button must expose `click`, `press` or `toggle`; an entry's `activate` is never substituted for a click. Snapshot is bounded to 80 actionable elements, 500 visited nodes, depth 12 and roughly 2 seconds plus outstanding DBus calls. If app absent / tree empty / unsupported, use desktop. Do not change accessibility settings without task-specific need. A11y tree paths are rechecked by name and role; identical replacement widgets cannot be distinguished solely by that check.
+
+For native app UI, prefer skeleton → drill → act → re-drill before requesting
+screenshots when refs suffice. Skeleton includes containers, their `children_count`
+and `path`, and stops at depth three relative to its root. A truncated container's
+`ref` can be drilled with its matching snapshot; drill returns a new snapshot and
+new refs. Both modes retain the 80-element/500-node/time budgets and absolute path
+depth 12. Disabled or changed refs are refused; snapshots expire after 90 seconds.
+Keep each ref with the snapshot that issued it. After an action, verify the app
+result; re-drill a still-valid container or obtain a fresh skeleton after a tree
+change. Ordinary `a11y observe --pid PID` keeps its existing actionable-only output.
+
+The a11y JSON was already bounded, so skeleton saves little within that backend.
+Its possible benefit is skipping PNG-based rounds. Latency and output savings
+depend on the actual app and are UNVERIFIED until measured; no percentage of model-token savings has been established.
 
 ## Desktop
 
