@@ -1,0 +1,1544 @@
+{
+ "artifact": "r5_paint_aggregate",
+ "blocks": [
+  {
+   "arm": "cand-80ms",
+   "cleanup": {
+    "children_reaped": true,
+    "focus_preserved": true
+   },
+   "delay_ms": 0,
+   "engine_sha256": "58448484d13ea3f0be047fef959cb6337af3f37b30ed98ba84bb8564238f90aa",
+   "file": "R1-D0-cand-80ms.json",
+   "n_measured": 8,
+   "ok": true,
+   "ok_count": 8,
+   "raw_sha256": "d10b76b78a7f8e081a1b986386988bbc93ec17e234d6804a7f4f86885fb39880",
+   "round": 1,
+   "samples": [
+    {
+     "after_png_correct": true,
+     "after_rgb": [
+      0,
+      251,
+      0
+     ],
+     "before_rgb": [
+      251,
+      0,
+      0
+     ],
+     "click_count": 1,
+     "core_png_bytes": 84016,
+     "core_reply_json_bytes": 590,
+     "core_request_json_bytes": 276,
+     "core_tool_completed": 1,
+     "failure": null,
+     "index": 0,
+     "ok": true,
+     "probe_png_bytes": 41686,
+     "probe_reply_json_bytes": 261,
+     "probe_request_json_bytes": 88,
+     "reference_rgb": [
+      0,
+      251,
+      0
+     ],
+     "response_ms": 287.45748799701687,
+     "total_ms": 287.56904999681865,
+     "validation_probe_ms": 113.25090600075782,
+     "whole_task_ms": 438.34452199735097
+    },
+    {
+     "after_png_correct": true,
+     "after_rgb": [
+      0,
+      251,
+      0
+     ],
+     "before_rgb": [
+      251,
+      0,
+      0
+     ],
+     "click_count": 1,
+     "core_png_bytes": 83907,
+     "core_reply_json_bytes": 590,
+     "core_request_json_bytes": 276,
+     "core_tool_completed": 1,
+     "failure": null,
+     "index": 1,
+     "ok": true,
+     "probe_png_bytes": 41690,
+     "probe_reply_json_bytes": 261,
+     "probe_request_json_bytes": 88,
+     "reference_rgb": [
+      0,
+      251,
+      0
+     ],
+     "response_ms": 306.5808220017061,
+     "total_ms": 306.686260002607,
+     "validation_probe_ms": 116.62959000022965,
+     "whole_task_ms": 429.9438950001786
+    },
+    {
+     "after_png_correct": true,
+     "after_rgb": [
+      0,
+      251,
+      0
+     ],
+     "before_rgb": [
+      251,
+      0,
+      0
+     ],
+     "click_count": 1,
+     "core_png_bytes": 83860,
+     "core_reply_json_bytes": 590,
+     "core_request_json_bytes": 276,
+     "core_tool_completed": 1,
+     "failure": null,
+     "index": 2,
+     "ok": true,
+     "probe_png_bytes": 41690,
+     "probe_reply_json_bytes": 261,
+     "probe_request_json_bytes": 88,
+     "reference_rgb": [
+      0,
+      251,
+      0
+     ],
+     "response_ms": 309.6225859990227,
+     "total_ms": 309.7299449982529,
+     "validation_probe_ms": 110.96106300101383,
+     "whole_task_ms": 432.47178900128347
+    },
+    {
+     "after_png_correct": true,
+     "after_rgb": [
+      0,
+      251,
+      0
+     ],
+     "before_rgb": [
+      251,
+      0,
+      0
+     ],
+     "click_count": 1,
+     "core_png_bytes": 83854,
+     "core_reply_json_bytes": 590,
+     "core_request_json_bytes": 276,
+     "core_tool_completed": 1,
+     "failure": null,
+     "index": 3,
+     "ok": true,
+     "probe_png_bytes": 41690,
+     "probe_reply_json_bytes": 261,
+     "probe_request_json_bytes": 88,
+     "reference_rgb": [
+      0,
+      251,
+      0
+     ],
+     "response_ms": 300.439072001609,
+     "total_ms": 300.57821000082185,
+     "validation_probe_ms": 116.91041699668858,
+     "whole_task_ms": 432.8838889996405
+    },
+    {
+     "after_png_correct": true,
+     "after_rgb": [
+      0,
+      251,
+      0
+     ],
+     "before_rgb": [
+      251,
+      0,
+      0
+     ],
+     "click_count": 1,
+     "core_png_bytes": 83846,
+     "core_reply_json_bytes": 590,
+     "core_request_json_bytes": 276,
+     "core_tool_completed": 1,
+     "failure": null,
+     "index": 4,
+     "ok": true,
+     "probe_png_bytes": 41686,
+     "probe_reply_json_bytes": 261,
+     "probe_request_json_bytes": 88,
+     "reference_rgb": [
+      0,
+      251,
+      0
+     ],
+     "response_ms": 298.22351400071057,
+     "total_ms": 298.32615600025747,
+     "validation_probe_ms": 110.99063700021361,
+     "whole_task_ms": 418.9932779991068
+    },
+    {
+     "after_png_correct": true,
+     "after_rgb": [
+      0,
+      251,
+      0
+     ],
+     "before_rgb": [
+      251,
+      0,
+      0
+     ],
+     "click_count": 1,
+     "core_png_bytes": 83867,
+     "core_reply_json_bytes": 590,
+     "core_request_json_bytes": 276,
+     "core_tool_completed": 1,
+     "failure": null,
+     "index": 5,
+     "ok": true,
+     "probe_png_bytes": 41686,
+     "probe_reply_json_bytes": 261,
+     "probe_request_json_bytes": 88,
+     "reference_rgb": [
+      0,
+      251,
+      0
+     ],
+     "response_ms": 292.0490479991713,
+     "total_ms": 292.1725720007089,
+     "validation_probe_ms": 114.68251000042073,
+     "whole_task_ms": 414.7194200013473
+    },
+    {
+     "after_png_correct": true,
+     "after_rgb": [
+      0,
+      251,
+      0
+     ],
+     "before_rgb": [
+      251,
+      0,
+      0
+     ],
+     "click_count": 1,
+     "core_png_bytes": 83914,
+     "core_reply_json_bytes": 590,
+     "core_request_json_bytes": 276,
+     "core_tool_completed": 1,
+     "failure": null,
+     "index": 6,
+     "ok": true,
+     "probe_png_bytes": 41686,
+     "probe_reply_json_bytes": 261,
+     "probe_request_json_bytes": 88,
+     "reference_rgb": [
+      0,
+      251,
+      0
+     ],
+     "response_ms": 294.45573599878117,
+     "total_ms": 294.5637570010149,
+     "validation_probe_ms": 110.26133199993637,
+     "whole_task_ms": 417.7576809997845
+    },
+    {
+     "after_png_correct": true,
+     "after_rgb": [
+      0,
+      251,
+      0
+     ],
+     "before_rgb": [
+      251,
+      0,
+      0
+     ],
+     "click_count": 1,
+     "core_png_bytes": 83876,
+     "core_reply_json_bytes": 590,
+     "core_request_json_bytes": 276,
+     "core_tool_completed": 1,
+     "failure": null,
+     "index": 7,
+     "ok": true,
+     "probe_png_bytes": 41686,
+     "probe_reply_json_bytes": 261,
+     "probe_request_json_bytes": 88,
+     "reference_rgb": [
+      0,
+      251,
+      0
+     ],
+     "response_ms": 298.6540909987525,
+     "total_ms": 298.7635120007326,
+     "validation_probe_ms": 110.5711380005232,
+     "whole_task_ms": 424.8029820009833
+    }
+   ],
+   "sleep_ms": 80,
+   "source_cu_sha256": "58448484d13ea3f0be047fef959cb6337af3f37b30ed98ba84bb8564238f90aa"
+  },
+  {
+   "arm": "cand-40ms",
+   "cleanup": {
+    "children_reaped": true,
+    "focus_preserved": true
+   },
+   "delay_ms": 0,
+   "engine_sha256": "980e68ef83ed48443cba49583fd43a4c3af23299c35e74a5ab71d588dfd813f2",
+   "file": "R1-D0-cand-40ms.json",
+   "n_measured": 8,
+   "ok": true,
+   "ok_count": 8,
+   "raw_sha256": "07e6a8e1831b2161183287f6f4d634e1d43b7f197598d0994f38892f62e1b8a3",
+   "round": 1,
+   "samples": [
+    {
+     "after_png_correct": true,
+     "after_rgb": [
+      0,
+      251,
+      0
+     ],
+     "before_rgb": [
+      251,
+      0,
+      0
+     ],
+     "click_count": 1,
+     "core_png_bytes": 83724,
+     "core_reply_json_bytes": 589,
+     "core_request_json_bytes": 276,
+     "core_tool_completed": 1,
+     "failure": null,
+     "index": 0,
+     "ok": true,
+     "probe_png_bytes": 41741,
+     "probe_reply_json_bytes": 261,
+     "probe_request_json_bytes": 88,
+     "reference_rgb": [
+      0,
+      251,
+      0
+     ],
+     "response_ms": 240.6730550028442,
+     "total_ms": 240.81538600148633,
+     "validation_probe_ms": 126.61901400133502,
+     "whole_task_ms": 392.01087900073617
+    },
+    {
+     "after_png_correct": true,
+     "after_rgb": [
+      0,
+      251,
+      0
+     ],
+     "before_rgb": [
+      251,
+      0,
+      0
+     ],
+     "click_count": 1,
+     "core_png_bytes": 83790,
+     "core_reply_json_bytes": 589,
+     "core_request_json_bytes": 276,
+     "core_tool_completed": 1,
+     "failure": null,
+     "index": 1,
+     "ok": true,
+     "probe_png_bytes": 41795,
+     "probe_reply_json_bytes": 261,
+     "probe_request_json_bytes": 88,
+     "reference_rgb": [
+      0,
+      251,
+      0
+     ],
+     "response_ms": 266.91338300224743,
+     "total_ms": 267.02803900116123,
+     "validation_probe_ms": 110.16596300032688,
+     "whole_task_ms": 389.09472600062145
+    },
+    {
+     "after_png_correct": true,
+     "after_rgb": [
+      0,
+      251,
+      0
+     ],
+     "before_rgb": [
+      251,
+      0,
+      0
+     ],
+     "click_count": 1,
+     "core_png_bytes": 83839,
+     "core_reply_json_bytes": 589,
+     "core_request_json_bytes": 276,
+     "core_tool_completed": 1,
+     "failure": null,
+     "index": 2,
+     "ok": true,
+     "probe_png_bytes": 41795,
+     "probe_reply_json_bytes": 261,
+     "probe_request_json_bytes": 88,
+     "reference_rgb": [
+      0,
+      251,
+      0
+     ],
+     "response_ms": 262.726107997878,
+     "total_ms": 262.822116001189,
+     "validation_probe_ms": 109.29590899831965,
+     "whole_task_ms": 376.91066800107365
+    },
+    {
+     "after_png_correct": true,
+     "after_rgb": [
+      0,
+      251,
+      0
+     ],
+     "before_rgb": [
+      251,
+      0,
+      0
+     ],
+     "click_count": 1,
+     "core_png_bytes": 83840,
+     "core_reply_json_bytes": 589,
+     "core_request_json_bytes": 276,
+     "core_tool_completed": 1,
+     "failure": null,
+     "index": 3,
+     "ok": true,
+     "probe_png_bytes": 41795,
+     "probe_reply_json_bytes": 261,
+     "probe_request_json_bytes": 88,
+     "reference_rgb": [
+      0,
+      251,
+      0
+     ],
+     "response_ms": 252.58816899804515,
+     "total_ms": 252.67956999960006,
+     "validation_probe_ms": 112.1937269999762,
+     "whole_task_ms": 370.71874500179547
+    },
+    {
+     "after_png_correct": true,
+     "after_rgb": [
+      0,
+      251,
+      0
+     ],
+     "before_rgb": [
+      251,
+      0,
+      0
+     ],
+     "click_count": 1,
+     "core_png_bytes": 83798,
+     "core_reply_json_bytes": 589,
+     "core_request_json_bytes": 276,
+     "core_tool_completed": 1,
+     "failure": null,
+     "index": 4,
+     "ok": true,
+     "probe_png_bytes": 41760,
+     "probe_reply_json_bytes": 261,
+     "probe_request_json_bytes": 88,
+     "reference_rgb": [
+      0,
+      251,
+      0
+     ],
+     "response_ms": 262.97612900089007,
+     "total_ms": 263.0903009994654,
+     "validation_probe_ms": 111.14022899710108,
+     "whole_task_ms": 388.83419600097113
+    },
+    {
+     "after_png_correct": true,
+     "after_rgb": [
+      0,
+      251,
+      0
+     ],
+     "before_rgb": [
+      251,
+      0,
+      0
+     ],
+     "click_count": 1,
+     "core_png_bytes": 83832,
+     "core_reply_json_bytes": 589,
+     "core_request_json_bytes": 276,
+     "core_tool_completed": 1,
+     "failure": null,
+     "index": 5,
+     "ok": true,
+     "probe_png_bytes": 41739,
+     "probe_reply_json_bytes": 261,
+     "probe_request_json_bytes": 88,
+     "reference_rgb": [
+      0,
+      251,
+      0
+     ],
+     "response_ms": 255.8403389994055,
+     "total_ms": 255.9671269991668,
+     "validation_probe_ms": 119.18009900182369,
+     "whole_task_ms": 381.61868500174023
+    },
+    {
+     "after_png_correct": true,
+     "after_rgb": [
+      0,
+      251,
+      0
+     ],
+     "before_rgb": [
+      251,
+      0,
+      0
+     ],
+     "click_count": 1,
+     "core_png_bytes": 83808,
+     "core_reply_json_bytes": 589,
+     "core_request_json_bytes": 276,
+     "core_tool_completed": 1,
+     "failure": null,
+     "index": 6,
+     "ok": true,
+     "probe_png_bytes": 41763,
+     "probe_reply_json_bytes": 261,
+     "probe_request_json_bytes": 88,
+     "reference_rgb": [
+      0,
+      251,
+      0
+     ],
+     "response_ms": 259.40726599947084,
+     "total_ms": 259.5321430017066,
+     "validation_probe_ms": 120.13785100134555,
+     "whole_task_ms": 384.79101300254115
+    },
+    {
+     "after_png_correct": true,
+     "after_rgb": [
+      0,
+      251,
+      0
+     ],
+     "before_rgb": [
+      251,
+      0,
+      0
+     ],
+     "click_count": 1,
+     "core_png_bytes": 83875,
+     "core_reply_json_bytes": 589,
+     "core_request_json_bytes": 276,
+     "core_tool_completed": 1,
+     "failure": null,
+     "index": 7,
+     "ok": true,
+     "probe_png_bytes": 41781,
+     "probe_reply_json_bytes": 261,
+     "probe_request_json_bytes": 88,
+     "reference_rgb": [
+      0,
+      251,
+      0
+     ],
+     "response_ms": 255.6736810001894,
+     "total_ms": 255.78025499999058,
+     "validation_probe_ms": 112.97668800034444,
+     "whole_task_ms": 377.0218110003043
+    }
+   ],
+   "sleep_ms": 40,
+   "source_cu_sha256": "980e68ef83ed48443cba49583fd43a4c3af23299c35e74a5ab71d588dfd813f2"
+  },
+  {
+   "arm": "cand-80ms",
+   "cleanup": {
+    "children_reaped": true,
+    "focus_preserved": true
+   },
+   "delay_ms": 30,
+   "engine_sha256": "58448484d13ea3f0be047fef959cb6337af3f37b30ed98ba84bb8564238f90aa",
+   "file": "R1-D30-cand-80ms.json",
+   "n_measured": 8,
+   "ok": true,
+   "ok_count": 8,
+   "raw_sha256": "95773317f871e50c833a19eb4bc0b1998d43f8ed3aac0119e9c4195c7a0d12c4",
+   "round": 1,
+   "samples": [
+    {
+     "after_png_correct": true,
+     "after_rgb": [
+      0,
+      251,
+      0
+     ],
+     "before_rgb": [
+      251,
+      0,
+      0
+     ],
+     "click_count": 1,
+     "core_png_bytes": 83762,
+     "core_reply_json_bytes": 590,
+     "core_request_json_bytes": 276,
+     "core_tool_completed": 1,
+     "failure": null,
+     "index": 0,
+     "ok": true,
+     "probe_png_bytes": 41686,
+     "probe_reply_json_bytes": 261,
+     "probe_request_json_bytes": 88,
+     "reference_rgb": [
+      0,
+      251,
+      0
+     ],
+     "response_ms": 292.247181001585,
+     "total_ms": 292.3571440005617,
+     "validation_probe_ms": 110.53108899795916,
+     "whole_task_ms": 434.57861299975775
+    },
+    {
+     "after_png_correct": true,
+     "after_rgb": [
+      0,
+      251,
+      0
+     ],
+     "before_rgb": [
+      251,
+      0,
+      0
+     ],
+     "click_count": 1,
+     "core_png_bytes": 83883,
+     "core_reply_json_bytes": 590,
+     "core_request_json_bytes": 276,
+     "core_tool_completed": 1,
+     "failure": null,
+     "index": 1,
+     "ok": true,
+     "probe_png_bytes": 41686,
+     "probe_reply_json_bytes": 261,
+     "probe_request_json_bytes": 88,
+     "reference_rgb": [
+      0,
+      251,
+      0
+     ],
+     "response_ms": 300.00001699954737,
+     "total_ms": 300.1268650004931,
+     "validation_probe_ms": 110.4757229986717,
+     "whole_task_ms": 424.51298700325424
+    },
+    {
+     "after_png_correct": true,
+     "after_rgb": [
+      0,
+      251,
+      0
+     ],
+     "before_rgb": [
+      251,
+      0,
+      0
+     ],
+     "click_count": 1,
+     "core_png_bytes": 83871,
+     "core_reply_json_bytes": 590,
+     "core_request_json_bytes": 276,
+     "core_tool_completed": 1,
+     "failure": null,
+     "index": 2,
+     "ok": true,
+     "probe_png_bytes": 41690,
+     "probe_reply_json_bytes": 261,
+     "probe_request_json_bytes": 88,
+     "reference_rgb": [
+      0,
+      251,
+      0
+     ],
+     "response_ms": 298.99922700133175,
+     "total_ms": 299.11349399844767,
+     "validation_probe_ms": 116.8999139990774,
+     "whole_task_ms": 423.4891179985425
+    },
+    {
+     "after_png_correct": true,
+     "after_rgb": [
+      0,
+      251,
+      0
+     ],
+     "before_rgb": [
+      251,
+      0,
+      0
+     ],
+     "click_count": 1,
+     "core_png_bytes": 83797,
+     "core_reply_json_bytes": 590,
+     "core_request_json_bytes": 276,
+     "core_tool_completed": 1,
+     "failure": null,
+     "index": 3,
+     "ok": true,
+     "probe_png_bytes": 41683,
+     "probe_reply_json_bytes": 261,
+     "probe_request_json_bytes": 88,
+     "reference_rgb": [
+      0,
+      251,
+      0
+     ],
+     "response_ms": 297.81462699975236,
+     "total_ms": 297.92665599961765,
+     "validation_probe_ms": 111.62814399722265,
+     "whole_task_ms": 418.8721610007633
+    },
+    {
+     "after_png_correct": true,
+     "after_rgb": [
+      0,
+      251,
+      0
+     ],
+     "before_rgb": [
+      251,
+      0,
+      0
+     ],
+     "click_count": 1,
+     "core_png_bytes": 83864,
+     "core_reply_json_bytes": 590,
+     "core_request_json_bytes": 276,
+     "core_tool_completed": 1,
+     "failure": null,
+     "index": 4,
+     "ok": true,
+     "probe_png_bytes": 41686,
+     "probe_reply_json_bytes": 261,
+     "probe_request_json_bytes": 88,
+     "reference_rgb": [
+      0,
+      251,
+      0
+     ],
+     "response_ms": 299.6305669985304,
+     "total_ms": 299.7369799995795,
+     "validation_probe_ms": 115.68058500051848,
+     "whole_task_ms": 426.66409099911107
+    },
+    {
+     "after_png_correct": true,
+     "after_rgb": [
+      0,
+      251,
+      0
+     ],
+     "before_rgb": [
+      251,
+      0,
+      0
+     ],
+     "click_count": 1,
+     "core_png_bytes": 83875,
+     "core_reply_json_bytes": 590,
+     "core_request_json_bytes": 276,
+     "core_tool_completed": 1,
+     "failure": null,
+     "index": 5,
+     "ok": true,
+     "probe_png_bytes": 41690,
+     "probe_reply_json_bytes": 261,
+     "probe_request_json_bytes": 88,
+     "reference_rgb": [
+      0,
+      251,
+      0
+     ],
+     "response_ms": 299.3746190004458,
+     "total_ms": 299.47633299889276,
+     "validation_probe_ms": 115.92114999803016,
+     "whole_task_ms": 419.7797359993274
+    },
+    {
+     "after_png_correct": true,
+     "after_rgb": [
+      0,
+      251,
+      0
+     ],
+     "before_rgb": [
+      251,
+      0,
+      0
+     ],
+     "click_count": 1,
+     "core_png_bytes": 83799,
+     "core_reply_json_bytes": 590,
+     "core_request_json_bytes": 276,
+     "core_tool_completed": 1,
+     "failure": null,
+     "index": 6,
+     "ok": true,
+     "probe_png_bytes": 41686,
+     "probe_reply_json_bytes": 261,
+     "probe_request_json_bytes": 88,
+     "reference_rgb": [
+      0,
+      251,
+      0
+     ],
+     "response_ms": 297.8082190020359,
+     "total_ms": 297.9333850016701,
+     "validation_probe_ms": 110.2441600014572,
+     "whole_task_ms": 419.4437760015717
+    },
+    {
+     "after_png_correct": true,
+     "after_rgb": [
+      0,
+      251,
+      0
+     ],
+     "before_rgb": [
+      251,
+      0,
+      0
+     ],
+     "click_count": 1,
+     "core_png_bytes": 83831,
+     "core_reply_json_bytes": 590,
+     "core_request_json_bytes": 276,
+     "core_tool_completed": 1,
+     "failure": null,
+     "index": 7,
+     "ok": true,
+     "probe_png_bytes": 41686,
+     "probe_reply_json_bytes": 261,
+     "probe_request_json_bytes": 88,
+     "reference_rgb": [
+      0,
+      251,
+      0
+     ],
+     "response_ms": 297.7226039984089,
+     "total_ms": 297.8376440005377,
+     "validation_probe_ms": 110.64935300237266,
+     "whole_task_ms": 422.58719700112124
+    }
+   ],
+   "sleep_ms": 80,
+   "source_cu_sha256": "58448484d13ea3f0be047fef959cb6337af3f37b30ed98ba84bb8564238f90aa"
+  },
+  {
+   "arm": "cand-40ms",
+   "cleanup": {
+    "children_reaped": true,
+    "focus_preserved": true
+   },
+   "delay_ms": 30,
+   "engine_sha256": "980e68ef83ed48443cba49583fd43a4c3af23299c35e74a5ab71d588dfd813f2",
+   "file": "R1-D30-cand-40ms.json",
+   "n_measured": 8,
+   "ok": true,
+   "ok_count": 8,
+   "raw_sha256": "cc31d71b75d3a6f103a1b0ddf166330641d071894023c5bcd55b6b12363e7693",
+   "round": 1,
+   "samples": [
+    {
+     "after_png_correct": true,
+     "after_rgb": [
+      0,
+      251,
+      0
+     ],
+     "before_rgb": [
+      251,
+      0,
+      0
+     ],
+     "click_count": 1,
+     "core_png_bytes": 83750,
+     "core_reply_json_bytes": 589,
+     "core_request_json_bytes": 276,
+     "core_tool_completed": 1,
+     "failure": null,
+     "index": 0,
+     "ok": true,
+     "probe_png_bytes": 41774,
+     "probe_reply_json_bytes": 261,
+     "probe_request_json_bytes": 88,
+     "reference_rgb": [
+      0,
+      251,
+      0
+     ],
+     "response_ms": 232.90030900170677,
+     "total_ms": 233.02254300142522,
+     "validation_probe_ms": 111.11747299946728,
+     "whole_task_ms": 387.54432700079633
+    },
+    {
+     "after_png_correct": true,
+     "after_rgb": [
+      0,
+      251,
+      0
+     ],
+     "before_rgb": [
+      251,
+      0,
+      0
+     ],
+     "click_count": 1,
+     "core_png_bytes": 83870,
+     "core_reply_json_bytes": 589,
+     "core_request_json_bytes": 276,
+     "core_tool_completed": 1,
+     "failure": null,
+     "index": 1,
+     "ok": true,
+     "probe_png_bytes": 41737,
+     "probe_reply_json_bytes": 261,
+     "probe_request_json_bytes": 88,
+     "reference_rgb": [
+      0,
+      251,
+      0
+     ],
+     "response_ms": 254.44521400277154,
+     "total_ms": 254.55625200265786,
+     "validation_probe_ms": 110.92111000107252,
+     "whole_task_ms": 381.781468000554
+    },
+    {
+     "after_png_correct": true,
+     "after_rgb": [
+      0,
+      251,
+      0
+     ],
+     "before_rgb": [
+      251,
+      0,
+      0
+     ],
+     "click_count": 1,
+     "core_png_bytes": 83806,
+     "core_reply_json_bytes": 589,
+     "core_request_json_bytes": 276,
+     "core_tool_completed": 1,
+     "failure": null,
+     "index": 2,
+     "ok": true,
+     "probe_png_bytes": 41760,
+     "probe_reply_json_bytes": 261,
+     "probe_request_json_bytes": 88,
+     "reference_rgb": [
+      0,
+      251,
+      0
+     ],
+     "response_ms": 253.418807998969,
+     "total_ms": 253.5104369999317,
+     "validation_probe_ms": 111.63965800005826,
+     "whole_task_ms": 370.2255999996851
+    },
+    {
+     "after_png_correct": true,
+     "after_rgb": [
+      0,
+      251,
+      0
+     ],
+     "before_rgb": [
+      251,
+      0,
+      0
+     ],
+     "click_count": 1,
+     "core_png_bytes": 83833,
+     "core_reply_json_bytes": 589,
+     "core_request_json_bytes": 276,
+     "core_tool_completed": 1,
+     "failure": null,
+     "index": 3,
+     "ok": true,
+     "probe_png_bytes": 41737,
+     "probe_reply_json_bytes": 261,
+     "probe_request_json_bytes": 88,
+     "reference_rgb": [
+      0,
+      251,
+      0
+     ],
+     "response_ms": 256.2799139996059,
+     "total_ms": 256.3919109998096,
+     "validation_probe_ms": 111.10616400037543,
+     "whole_task_ms": 383.31954299792415
+    },
+    {
+     "after_png_correct": true,
+     "after_rgb": [
+      0,
+      251,
+      0
+     ],
+     "before_rgb": [
+      251,
+      0,
+      0
+     ],
+     "click_count": 1,
+     "core_png_bytes": 83834,
+     "core_reply_json_bytes": 589,
+     "core_request_json_bytes": 276,
+     "core_tool_completed": 1,
+     "failure": null,
+     "index": 4,
+     "ok": true,
+     "probe_png_bytes": 41795,
+     "probe_reply_json_bytes": 261,
+     "probe_request_json_bytes": 88,
+     "reference_rgb": [
+      0,
+      251,
+      0
+     ],
+     "response_ms": 263.8692920008907,
+     "total_ms": 263.9759220000997,
+     "validation_probe_ms": 110.14689099829411,
+     "whole_task_ms": 383.3767940013786
+    },
+    {
+     "after_png_correct": true,
+     "after_rgb": [
+      0,
+      251,
+      0
+     ],
+     "before_rgb": [
+      251,
+      0,
+      0
+     ],
+     "click_count": 1,
+     "core_png_bytes": 83825,
+     "core_reply_json_bytes": 589,
+     "core_request_json_bytes": 276,
+     "core_tool_completed": 1,
+     "failure": null,
+     "index": 5,
+     "ok": true,
+     "probe_png_bytes": 41763,
+     "probe_reply_json_bytes": 261,
+     "probe_request_json_bytes": 88,
+     "reference_rgb": [
+      0,
+      251,
+      0
+     ],
+     "response_ms": 256.98439500047243,
+     "total_ms": 257.09048899807385,
+     "validation_probe_ms": 117.10105200108956,
+     "whole_task_ms": 384.3094629992265
+    },
+    {
+     "after_png_correct": true,
+     "after_rgb": [
+      0,
+      251,
+      0
+     ],
+     "before_rgb": [
+      251,
+      0,
+      0
+     ],
+     "click_count": 1,
+     "core_png_bytes": 83828,
+     "core_reply_json_bytes": 589,
+     "core_request_json_bytes": 276,
+     "core_tool_completed": 1,
+     "failure": null,
+     "index": 6,
+     "ok": true,
+     "probe_png_bytes": 41739,
+     "probe_reply_json_bytes": 261,
+     "probe_request_json_bytes": 88,
+     "reference_rgb": [
+      0,
+      251,
+      0
+     ],
+     "response_ms": 256.44843299960485,
+     "total_ms": 256.55374499910977,
+     "validation_probe_ms": 117.65794099846971,
+     "whole_task_ms": 384.57779199961806
+    },
+    {
+     "after_png_correct": true,
+     "after_rgb": [
+      0,
+      251,
+      0
+     ],
+     "before_rgb": [
+      251,
+      0,
+      0
+     ],
+     "click_count": 1,
+     "core_png_bytes": 83808,
+     "core_reply_json_bytes": 589,
+     "core_request_json_bytes": 276,
+     "core_tool_completed": 1,
+     "failure": null,
+     "index": 7,
+     "ok": true,
+     "probe_png_bytes": 41737,
+     "probe_reply_json_bytes": 261,
+     "probe_request_json_bytes": 88,
+     "reference_rgb": [
+      0,
+      251,
+      0
+     ],
+     "response_ms": 251.17678999959026,
+     "total_ms": 251.2359380016278,
+     "validation_probe_ms": 110.90315799810924,
+     "whole_task_ms": 374.2653490007797
+    }
+   ],
+   "sleep_ms": 40,
+   "source_cu_sha256": "980e68ef83ed48443cba49583fd43a4c3af23299c35e74a5ab71d588dfd813f2"
+  },
+  {
+   "arm": "cand-80ms",
+   "cleanup": {
+    "children_reaped": true,
+    "focus_preserved": true
+   },
+   "delay_ms": 60,
+   "engine_sha256": "58448484d13ea3f0be047fef959cb6337af3f37b30ed98ba84bb8564238f90aa",
+   "file": "R1-D60-cand-80ms.json",
+   "n_measured": 8,
+   "ok": true,
+   "ok_count": 8,
+   "raw_sha256": "95082e6e201dde0ee9e37837d7d7e64165a02766e4401ffd1ff0278fac7c85e4",
+   "round": 1,
+   "samples": [
+    {
+     "after_png_correct": true,
+     "after_rgb": [
+      0,
+      251,
+      0
+     ],
+     "before_rgb": [
+      251,
+      0,
+      0
+     ],
+     "click_count": 1,
+     "core_png_bytes": 83759,
+     "core_reply_json_bytes": 590,
+     "core_request_json_bytes": 276,
+     "core_tool_completed": 1,
+     "failure": null,
+     "index": 0,
+     "ok": true,
+     "probe_png_bytes": 41683,
+     "probe_reply_json_bytes": 261,
+     "probe_request_json_bytes": 88,
+     "reference_rgb": [
+      0,
+      251,
+      0
+     ],
+     "response_ms": 281.3993540003139,
+     "total_ms": 281.50886000003084,
+     "validation_probe_ms": 110.9324690005451,
+     "whole_task_ms": 432.7387939993059
+    },
+    {
+     "after_png_correct": true,
+     "after_rgb": [
+      0,
+      251,
+      0
+     ],
+     "before_rgb": [
+      251,
+      0,
+      0
+     ],
+     "click_count": 1,
+     "core_png_bytes": 83891,
+     "core_reply_json_bytes": 590,
+     "core_request_json_bytes": 276,
+     "core_tool_completed": 1,
+     "failure": null,
+     "index": 1,
+     "ok": true,
+     "probe_png_bytes": 41686,
+     "probe_reply_json_bytes": 261,
+     "probe_request_json_bytes": 88,
+     "reference_rgb": [
+      0,
+      251,
+      0
+     ],
+     "response_ms": 298.8170309981797,
+     "total_ms": 298.9309240001603,
+     "validation_probe_ms": 111.1655749991769,
+     "whole_task_ms": 424.89892300000065
+    },
+    {
+     "after_png_correct": true,
+     "after_rgb": [
+      0,
+      251,
+      0
+     ],
+     "before_rgb": [
+      251,
+      0,
+      0
+     ],
+     "click_count": 1,
+     "core_png_bytes": 83864,
+     "core_reply_json_bytes": 590,
+     "core_request_json_bytes": 276,
+     "core_tool_completed": 1,
+     "failure": null,
+     "index": 2,
+     "ok": true,
+     "probe_png_bytes": 41690,
+     "probe_reply_json_bytes": 261,
+     "probe_request_json_bytes": 88,
+     "reference_rgb": [
+      0,
+      251,
+      0
+     ],
+     "response_ms": 298.51020899877767,
+     "total_ms": 298.5988729997189,
+     "validation_probe_ms": 117.9145449968928,
+     "whole_task_ms": 422.9227709984116
+    },
+    {
+     "after_png_correct": true,
+     "after_rgb": [
+      0,
+      251,
+      0
+     ],
+     "before_rgb": [
+      251,
+      0,
+      0
+     ],
+     "click_count": 1,
+     "core_png_bytes": 83931,
+     "core_reply_json_bytes": 590,
+     "core_request_json_bytes": 276,
+     "core_tool_completed": 1,
+     "failure": null,
+     "index": 3,
+     "ok": true,
+     "probe_png_bytes": 41686,
+     "probe_reply_json_bytes": 261,
+     "probe_request_json_bytes": 88,
+     "reference_rgb": [
+      0,
+      251,
+      0
+     ],
+     "response_ms": 298.92576999918674,
+     "total_ms": 299.0468880016124,
+     "validation_probe_ms": 110.88925799776916,
+     "whole_task_ms": 425.742439001624
+    },
+    {
+     "after_png_correct": true,
+     "after_rgb": [
+      0,
+      251,
+      0
+     ],
+     "before_rgb": [
+      251,
+      0,
+      0
+     ],
+     "click_count": 1,
+     "core_png_bytes": 83813,
+     "core_reply_json_bytes": 590,
+     "core_request_json_bytes": 276,
+     "core_tool_completed": 1,
+     "failure": null,
+     "index": 4,
+     "ok": true,
+     "probe_png_bytes": 41683,
+     "probe_reply_json_bytes": 261,
+     "probe_request_json_bytes": 88,
+     "reference_rgb": [
+      0,
+      251,
+      0
+     ],
+     "response_ms": 297.9082220008422,
+     "total_ms": 298.01334100193344,
+     "validation_probe_ms": 111.02549399947748,
+     "whole_task_ms": 424.5671130011033
+    },
+    {
+     "after_png_correct": true,
+     "after_rgb": [
+      0,
+      251,
+      0
+     ],
+     "before_rgb": [
+      251,
+      0,
+      0
+     ],
+     "click_count": 1,
+     "core_png_bytes": 83844,
+     "core_reply_json_bytes": 590,
+     "core_request_json_bytes": 276,
+     "core_tool_completed": 1,
+     "failure": null,
+     "index": 5,
+     "ok": true,
+     "probe_png_bytes": 41690,
+     "probe_reply_json_bytes": 261,
+     "probe_request_json_bytes": 88,
+     "reference_rgb": [
+      0,
+      251,
+      0
+     ],
+     "response_ms": 303.1040440000652,
+     "total_ms": 303.2062640013464,
+     "validation_probe_ms": 112.14103900056216,
+     "whole_task_ms": 425.2125429993612
+    },
+    {
+     "after_png_correct": true,
+     "after_rgb": [
+      0,
+      251,
+      0
+     ],
+     "before_rgb": [
+      251,
+      0,
+      0
+     ],
+     "click_count": 1,
+     "core_png_bytes": 83865,
+     "core_reply_json_bytes": 590,
+     "core_request_json_bytes": 276,
+     "core_tool_completed": 1,
+     "failure": null,
+     "index": 6,
+     "ok": true,
+     "probe_png_bytes": 41686,
+     "probe_reply_json_bytes": 261,
+     "probe_request_json_bytes": 88,
+     "reference_rgb": [
+      0,
+      251,
+      0
+     ],
+     "response_ms": 293.2454600013443,
+     "total_ms": 293.3488380003837,
+     "validation_probe_ms": 110.89729000013904,
+     "whole_task_ms": 417.21319099815446
+    },
+    {
+     "after_png_correct": true,
+     "after_rgb": [
+      0,
+      251,
+      0
+     ],
+     "before_rgb": [
+      251,
+      0,
+      0
+     ],
+     "click_count": 1,
+     "core_png_bytes": 83820,
+     "core_reply_json_bytes": 590,
+     "core_request_json_bytes": 276,
+     "core_tool_completed": 1,
+     "failure": null,
+     "index": 7,
+     "ok": true,
+     "probe_png_bytes": 41686,
+     "probe_reply_json_bytes": 261,
+     "probe_request_json_bytes": 88,
+     "reference_rgb": [
+      0,
+      251,
+      0
+     ],
+     "response_ms": 301.5458400004718,
+     "total_ms": 301.65130300156306,
+     "validation_probe_ms": 117.05970099865226,
+     "whole_task_ms": 433.53940100132604
+    }
+   ],
+   "sleep_ms": 80,
+   "source_cu_sha256": "58448484d13ea3f0be047fef959cb6337af3f37b30ed98ba84bb8564238f90aa"
+  },
+  {
+   "arm": "cand-40ms",
+   "cleanup": {
+    "children_reaped": true,
+    "focus_preserved": true
+   },
+   "delay_ms": 60,
+   "engine_sha256": "980e68ef83ed48443cba49583fd43a4c3af23299c35e74a5ab71d588dfd813f2",
+   "file": "R1-D60-cand-40ms.json",
+   "n_measured": 1,
+   "ok": false,
+   "ok_count": 0,
+   "raw_sha256": "3fb48ce73ec9c513b05b74a0943aff8fa4e33721a48d61b3985d810fd84320b8",
+   "round": 1,
+   "samples": [
+    {
+     "after_png_correct": false,
+     "after_rgb": [
+      251,
+      0,
+      0
+     ],
+     "before_rgb": [
+      251,
+      0,
+      0
+     ],
+     "click_count": 1,
+     "core_png_bytes": 83742,
+     "core_reply_json_bytes": 589,
+     "core_request_json_bytes": 276,
+     "core_tool_completed": 1,
+     "failure": "pilot gate: after PNG not proven correct",
+     "index": 0,
+     "ok": false,
+     "probe_png_bytes": 41739,
+     "probe_reply_json_bytes": 261,
+     "probe_request_json_bytes": 88,
+     "reference_rgb": [
+      0,
+      251,
+      0
+     ],
+     "response_ms": 247.62056499821483,
+     "total_ms": 247.7155099986703,
+     "validation_probe_ms": 122.46523599969805,
+     "whole_task_ms": 396.9983659990248
+    }
+   ],
+   "sleep_ms": 40,
+   "source_cu_sha256": "980e68ef83ed48443cba49583fd43a4c3af23299c35e74a5ab71d588dfd813f2"
+  }
+ ],
+ "failure_images": {
+  "after": {
+   "file": "r5_paint_images/after.png",
+   "pixel_xy": [
+    41,
+    223
+   ],
+   "png_bytes": 41841,
+   "rgb": [
+    251,
+    0,
+    0
+   ],
+   "sha256": "ba20708bb6bb690cbad20254516c02f42af5476b03f015c026ac95a6fd3cf8f7"
+  },
+  "before": {
+   "file": "r5_paint_images/before.png",
+   "pixel_xy": [
+    41,
+    223
+   ],
+   "png_bytes": 41901,
+   "rgb": [
+    251,
+    0,
+    0
+   ],
+   "sha256": "ee2b7750834047f1d7a38f9c88256cb71382bf16ef89f3a5f716d245ddb565d9"
+  },
+  "reference": {
+   "file": "r5_paint_images/reference.png",
+   "pixel_xy": [
+    41,
+    223
+   ],
+   "png_bytes": 41739,
+   "rgb": [
+    0,
+    251,
+    0
+   ],
+   "sha256": "b1dd711cae9063984169b99016e78ceec9bb46a467834b2f7cdec6eb5107d49b"
+  }
+ },
+ "method": {
+  "bytes": "core_* bytes cover initial observation(s)+act response/after capture only; probe_* bytes cover independent validation observe round(s) and are excluded from task byte claims. Request/reply JSON recorded separately; PNG byte counts are compressed PNG files, not token counts.",
+  "cpu": "UNVERIFIED - unmeasured",
+  "png_verify": "hashes/pixels verifiable with standard tools from retained PNGs; no image modifications",
+  "timing": "whole_task_ms/response_ms/total_ms are unchanged raw core timing values; validation_probe_ms is diagnostic and excluded from core times. Retained PNG copy occurs outside core timing."
+ },
+ "outcome": {
+  "delay60_sleep40": "0/1 gate failure: after RGB red [251,0,0] vs late reference green [0,251,0]; click_count 1, core_tool_completed 1; no performance claim from failed candidate",
+  "delay60_sleep80": "8/8 green (correctness pass, no performance success claim from this pilot alone)",
+  "sleep80_retained": true
+ },
+ "prior_zero30": {
+  "audit": "R5/paint-cache/old-evidence-audit.json",
+  "note": "prior zero-sleep counterexample real; old independent probe PNG missing (numeric RGB survives), explicit"
+ },
+ "provenance": {
+  "basis": "R5/paint-live-reduction: 5 successful 8-sample blocks + first failed 40ms-delay60 row = 41 measured; planned 144 stopped immediately, no later rounds",
+  "representative_evidence_dir": "R5/paint-live-reduction/pilot-failure (paths stripped in public rows)",
+  "source_manifest": "R5/paint-prepared/manifest.json"
+ },
+ "totals": {
+  "blocks": 6,
+  "failed_rows": 1,
+  "measured": 41,
+  "planned": 144,
+  "successful_blocks": 5,
+  "successful_rows": 40
+ }
+}

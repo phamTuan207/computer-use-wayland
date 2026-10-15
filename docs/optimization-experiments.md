@@ -5,6 +5,17 @@ each section states its own scope. None of it is a general claim about speed,
 success rates, other applications or billed model tokens. Raw reports are kept
 outside this repository.
 
+> **Round 5 supersedes R4 CDP numerical attribution.**
+> The R4 CDP candidate ran a private prototype hash, not the shipped commit
+> hash; R5 reran both comparisons against committed artifacts with frozen
+> provenance. See [docs/round5.md](round5.md) and
+> `docs/benchmarks/r5_cdp_aggregate.json`. R4 tables below are kept intact as
+> historical data. R5 paint refused the 40 ms sleep reduction with a measured
+> delayed-60 failure (see round5.md §A). R5 a11y skeleton/drill skips PNGs but
+> saves little JSON intrinsically: result JSON grows +1958 bytes
+> (867 → 2825 median) while whole-task median moves 1.5% only — no billed-token
+> claim follows.
+
 ## Current comparison set
 
 The browser A/B below compares the current batch route against the same route
@@ -139,6 +150,9 @@ CDP one-slot worker transport (candidate reuses one slot only for a fresh
 validated same target; standalone commands stay isolated; no snapshot cache,
 no replay, terminal failures stop). All four normal cells reached FINAL
 gate: PASS. PNG is absent (null, UNVERIFIED, never 0); JSON unchanged.
+(R4 CDP numbers only: the candidate measured here was a private prototype
+hash, not the shipped commit — R5 reruns against committed artifacts
+supersede this numerical attribution. See [docs/round5.md](round5.md).)
 
 - `cdp C0 task-scoped`: 31.296 / 33.025 ms becomes 25.809 / 31.671 ms,
   gain 5.488 ms (17.53%), CI95 [3.791, 6.541] ms. Rounds +3.982 / +5.017 / +6.806 ms.
@@ -157,8 +171,10 @@ e.g. medians 31963 vs 31950 bytes); image result JSON embeds base64 PNG data,
 so JSON and PNG byte metrics overlap — never add them and never divide image
 JSON by 4 to claim real model tokens. CPU per task UNVERIFIED throughout.
 
-Rejected and NOT LANDED: sleep-80ms removal/reduction (delayed-paint
-counterexample still applies, existing sleep retained) and query caching
+Rejected and NOT LANDED: sleep-80ms removal/reduction (R5 measured a real
+40 ms delayed-60 failure — after stays red while the late reference turns
+green — so the existing sleep is retained; see [docs/round5.md](round5.md)
+§A) and query caching
 across safety boundaries (fresh guards retained). Non-perf CLI/a11y/ABI
 diagnostic changes carry correctness-test evidence only; their timings are
 UNVERIFIED, so no speed is inferred from tests. No universal application
@@ -254,7 +270,7 @@ after-snapshot is whole page again unless `--after-scope` is explicit, and every
 guard is unchanged. It is not an input, security or privacy boundary.
 
 Measured on the owned Chromium fixture, 3 blocks x 30 pairs = 90 samples per
-route at each controls value, AB/BA alternated, warm worker with a fresh CDP
+route at each controls value, AB/BA alternated, warm worker with the pre-R4 fresh CDP
 connection per request. Both routes use `max_elements: 80`, exactly two requests
 (one observe, one act with `no_after`), equal-length, unique Unicode payloads, refs resolved
 from the returned observation, and the timer covers the observe, ref selection,
@@ -291,7 +307,7 @@ Source-tree Chromium fixture, one block of 30 AB/BA pairs at each page size.
 Both routes begin with the same scoped observe, then use the same
 `set_value`/Save/result-assert sequence; the candidate scopes only the successful
 after-snapshot. The timed span covers observe, ref selection, act and independent
-server POST verification, with a warm worker and a fresh CDP connection per
+server POST verification, with a warm worker and, in this pre-R4 experiment, a fresh CDP connection per
 request. Setup and model time are excluded. Bytes are re-encoded observe plus
 act JSON, not billed tokens. All 120 measured tasks and four warm-ups matched
 the independent app state; cleanup succeeded.
