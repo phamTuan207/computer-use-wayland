@@ -25,6 +25,9 @@ class NoAfterCli(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
         self.actions_file = Path(self.tmp.name) / 'actions.json'
+        state = mock.patch.object(cu, 'STATE', Path(self.tmp.name))
+        state.start()
+        self.addCleanup(state.stop)
         self.dispatched = []
         for name, value in (('browser', self.browser), ('require_session', None),
                             ('check_cancel', None), ('prepare_state', None),
@@ -33,7 +36,7 @@ class NoAfterCli(unittest.TestCase):
                 else mock.patch.object(cu, name)
             patcher.start()
             self.addCleanup(patcher.stop)
-        token = mock.patch.dict('os.environ', {'CU_SESSION_TOKEN': 'test'})
+        token = mock.patch.dict('os.environ', {'CU_SESSION_TOKEN': 'a' * 32})
         token.start()
         self.addCleanup(token.stop)
 
