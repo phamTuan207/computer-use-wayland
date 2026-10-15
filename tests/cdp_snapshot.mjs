@@ -83,6 +83,7 @@ async function run(elements,actions,{mutate=text=>text,maxElements,debuggerUrl='
   class WebSocket {
     listeners={};
     addEventListener(name,fn){this.listeners[name]=fn;if(name==='open')queueMicrotask(fn);}
+    removeEventListener(){}
     send(raw){
       const {id,method,params}=JSON.parse(raw);let result={};
       calls.push({method,params});
@@ -466,7 +467,7 @@ for(const [label,afterScope,noAfter,error] of [
   ['array',['#task'],undefined,'after_scope must be a non-empty CSS selector'],
   ['number',7,undefined,'after_scope must be a non-empty CSS selector'],
   ['empty','',undefined,'after_scope must be a non-empty CSS selector'],
-  ['oversize','x'.repeat(1025),undefined,'after_scope must be at most 1024 characters'],
+  ['oversize','x'.repeat(1025),undefined,'after_scope must be at most 1024 UTF-16 code units'],
   ['conflict','#task',true,'after_scope is incompatible with no_after'],
 ]){
   const rejected=await run([taskPanel],[{type:'assert',ref:'e1',text:'panel'}],
@@ -533,7 +534,7 @@ for(const [label,selector,accepted] of [
     allowNoSocket:!accepted});
   if(accepted)assert.ok(!/1024/.test(sized.result.error??''),
     label+' must pass the length check, got: '+sized.result.error);
-  else{assert.equal(sized.result.error,'scope must be at most 1024 characters',label);
+  else{assert.equal(sized.result.error,'scope must be at most 1024 UTF-16 code units',label);
     assert.equal(sized.fetches,0,label+' must reject before fetch');}
 }
 const scopeWorker=spawnSync('node',[fileURLToPath(new URL('../scripts/cdp.mjs',import.meta.url)),'--worker'],

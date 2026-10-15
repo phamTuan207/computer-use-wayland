@@ -19,6 +19,7 @@ const request={operation:'act',endpoint:'http://[::1]:9222',target:'test',snapsh
 const output=[];let sent=0,closed=false;
 class WebSocket {
   addEventListener(name,fn){if(name==='open')queueMicrotask(fn);}
+  removeEventListener(){}
   send(){sent++;throw new Error('preflight must not dispatch');}
   close(){closed=true;}
 }

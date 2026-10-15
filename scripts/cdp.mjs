@@ -1,8 +1,82 @@
 // Dependency-free CDP adapter, Node >=22. Explicit target; no model API calls.
 import crypto from 'node:crypto';
 
-async function handle(request) {
-let ws;
+function createTransport(url) {
+  const ws=new WebSocket(url),pending=new Map();
+  let sequence=0,transportError,usable=true,disposed=false;
+  function rejectPending(error){
+    for(const p of pending.values()){clearTimeout(p.timer);p.reject(error);}
+    pending.clear();
+  }
+  function closed(){
+    transportError??=new Error('CDP WebSocket closed');
+    usable=false;rejectPending(transportError);
+    ws.removeEventListener('message',message);
+    ws.removeEventListener('error',failed);
+    ws.removeEventListener('close',closed);
+  }
+  function failTransport(error){
+    if(transportError)return;
+    transportError=error;usable=false;rejectPending(error);
+    try{ws.close();}catch(_){}
+  }
+  function failed(){failTransport(new Error('CDP WebSocket error'));}
+  function message(event){
+    let result;
+    try{result=JSON.parse(event.data);}
+    catch(_){failTransport(new Error('malformed CDP WebSocket JSON'));return;}
+    if(!result||typeof result!=='object'||Array.isArray(result)){failTransport(new Error('unexpected CDP WebSocket frame'));return;}
+    const p=pending.get(result.id);
+    if(!p)return;
+    pending.delete(result.id);clearTimeout(p.timer);
+    if(result.error){usable=false;p.reject(new Error(result.error.message));}
+    else p.resolve(result.result);
+  }
+  const ready=new Promise((resolve,reject)=>{
+    const finish=error=>{
+      clearTimeout(timer);
+      ws.removeEventListener('open',opened);
+      ws.removeEventListener('error',openError);
+      ws.removeEventListener('close',openClose);
+      if(error)reject(error);else resolve();
+    };
+    const opened=()=>finish();
+    const openError=()=>finish(new Error('CDP WebSocket error before open'));
+    const openClose=()=>finish(new Error('CDP WebSocket closed before open'));
+    const timer=setTimeout(()=>finish(new Error('CDP WebSocket open timed out')),4000);
+    ws.addEventListener('open',opened,{once:true});
+    ws.addEventListener('error',openError,{once:true});
+    ws.addEventListener('close',openClose,{once:true});
+  });
+  ws.addEventListener('message',message);
+  ws.addEventListener('close',closed);
+  ws.addEventListener('error',failed);
+  async function call(method,params={}){
+    if(transportError)throw transportError;
+    if(ws.readyState!==WebSocket.OPEN)throw new Error('CDP WebSocket is not open');
+    const id=++sequence;
+    return await new Promise((resolve,reject)=>{
+      // A failed call keeps the current diagnostic path, but cannot be cached.
+      const timer=setTimeout(()=>{usable=false;pending.delete(id);reject(new Error('CDP timeout: '+method));},5000);
+      pending.set(id,{resolve,reject,timer});
+      try{ws.send(JSON.stringify({id,method,params}));}
+      catch(error){usable=false;pending.delete(id);clearTimeout(timer);reject(error);}
+    });
+  }
+  function dispose(){
+    if(disposed)return;
+    disposed=true;usable=false;
+    transportError??=new Error('CDP WebSocket closed');
+    rejectPending(transportError);
+    ws.removeEventListener('message',message);
+    try{ws.close();}catch(_){}
+  }
+  return {ready,call,dispose,get error(){return transportError;},
+    get reusable(){return usable&&!disposed&&!transportError&&ws.readyState===WebSocket.OPEN&&pending.size===0;}};
+}
+
+async function handle(request,owner=null) {
+let connection,connectionKey;
 // Preflight failures must also return completed:0 from the catch.
 let result,completed=0;
 try {
@@ -13,7 +87,7 @@ if(!Number.isInteger(maxElements)||maxElements<1||maxElements>80)throw new Error
 if(request.after_scope!==undefined){
   if(request.operation!=='act')throw new Error('after_scope is only valid for act');
   if(typeof request.after_scope!=='string'||!request.after_scope.trim())throw new Error('after_scope must be a non-empty CSS selector');
-  if(request.after_scope.length>1024)throw new Error('after_scope must be at most 1024 characters');
+  if(request.after_scope.length>1024)throw new Error('after_scope must be at most 1024 UTF-16 code units');
   if(request.no_after)throw new Error('after_scope is incompatible with no_after');
 }
 // Validate the substitute for the after-snapshot before any network/input effect.
@@ -38,7 +112,7 @@ if('no_after'in request){
 // Scope filters one observation; validate before any network request.
 if(request.scope!==undefined){
   if(typeof request.scope!=='string'||!request.scope.trim())throw new Error('scope must be a non-empty CSS selector');
-  if(request.scope.length>1024)throw new Error('scope must be at most 1024 characters');
+  if(request.scope.length>1024)throw new Error('scope must be at most 1024 UTF-16 code units');
   if(request.operation!=='observe')throw new Error('scope is only valid for observe');
 }
 if(!['tabs','observe','act'].includes(request.operation))throw new Error('unknown operation');
@@ -52,50 +126,15 @@ const target=tabs.find(t=>t.type==='page'&&t.id===request.target);
 if(!target) throw new Error('exact --target required; use browser tabs');
 const debuggerUrl=new URL(target.webSocketDebuggerUrl);
 if(!['127.0.0.1','localhost','[::1]'].includes(debuggerUrl.hostname)||!['ws:','wss:'].includes(debuggerUrl.protocol))throw new Error('CDP debugger must be loopback WebSocket');
-ws=new WebSocket(debuggerUrl.href);
-const pending=new Map();let sequence=0,transportError;
-ws.addEventListener('close',()=>{
-  const error=new Error('CDP WebSocket closed');
-  transportError??=error;
-  for(const p of pending.values()){clearTimeout(p.timer);p.reject(error);}
-  pending.clear();
-});
-function failTransport(error){
-  if(transportError)return;
-  transportError=error;                 // every later send and input is refused
-  for(const p of pending.values()){clearTimeout(p.timer);p.reject(error);}
-  pending.clear();
-  try{ws.close();}catch(__){}
+connectionKey=JSON.stringify([endpoint.href,target.id,debuggerUrl.href,target.url]);
+if(owner?.connection&&owner.key===connectionKey&&owner.connection.reusable)connection=owner.connection;
+else{
+  owner?.connection?.dispose();
+  if(owner)owner.connection=null;
+  connection=createTransport(debuggerUrl.href);
+  await connection.ready;
 }
-ws.addEventListener('message',event=>{
-  let result;
-  try{result=JSON.parse(event.data);}
-  catch(_){failTransport(new Error('malformed CDP WebSocket JSON'));return;}   // no resend
-  if(!result||typeof result!=='object'||Array.isArray(result)){failTransport(new Error('unexpected CDP WebSocket frame'));return;}
-  const p=pending.get(result.id);
-  if(!p)return;
-  pending.delete(result.id);clearTimeout(p.timer);
-  if(result.error)p.reject(new Error(result.error.message));else p.resolve(result.result);
-});
-await new Promise((resolve,reject)=>{
-  const fail=error=>{clearTimeout(timer);reject(error);};
-  const timer=setTimeout(()=>fail(new Error('CDP WebSocket open timed out')),4000);
-  ws.addEventListener('open',()=>{clearTimeout(timer);resolve();},{once:true});
-  ws.addEventListener('error',()=>fail(new Error('CDP WebSocket error before open')),{once:true});
-  ws.addEventListener('close',()=>fail(new Error('CDP WebSocket closed before open')),{once:true});
-});
-ws.addEventListener('error',()=>failTransport(new Error('CDP WebSocket error')));
-async function call(method,params={}) {
-  if(transportError)throw transportError;
-  if(ws.readyState!==WebSocket.OPEN)throw new Error('CDP WebSocket is not open');
-  const id=++sequence;
-  return await new Promise((resolve,reject)=>{
-    const timer=setTimeout(()=>{pending.delete(id);reject(new Error('CDP timeout: '+method));},5000);
-    pending.set(id,{resolve,reject,timer});
-    try{ws.send(JSON.stringify({id,method,params}));}
-    catch(error){pending.delete(id);clearTimeout(timer);reject(error);}
-  });
-}
+const call=connection.call;
 async function evaluate(expression) {
   const r=await call('Runtime.evaluate',{expression,returnByValue:true,awaitPromise:true});
   if(r.exceptionDetails)throw new Error(r.exceptionDetails.text+': '+(r.exceptionDetails.exception?.description||''));
@@ -236,7 +275,7 @@ async function assertAction(a) {
     const start=Date.now();
     try{
       for(const a of request.actions){
-        if(transportError)throw transportError;
+        if(connection.error)throw connection.error;
         // Protect key/scroll operations as well as ref-based operations after navigation.
         await evaluate(`(()=>{const s=globalThis.__agentCu;if(!s||s.id!==${JSON.stringify(request.snapshot)}||s.url!==location.href||Date.now()-s.created>90000)throw new Error('stale snapshot');})()`);
         if(a.type==='click')await click(a);
@@ -275,7 +314,7 @@ async function assertAction(a) {
         else if(a.type==='assert')await assertAction(a);
         else throw new Error('unsupported action');
         completed++;
-        if(transportError)throw transportError;
+        if(connection.error)throw connection.error;
       }
       result={ok:true,completed,execution_ms:Date.now()-start};
     }catch(e){result={ok:false,completed,error:e.message,execution_ms:Date.now()-start};if(e.mutation_may_have_occurred)result.mutation_may_have_occurred=true;}
@@ -296,7 +335,14 @@ async function assertAction(a) {
   }
   return result;
 }catch(e){process.exitCode=1;return {ok:false,completed,error:e.message};}
-finally{ws?.close();}
+finally{
+  if(owner&&connection&&result&&result.ok!==false&&connection.reusable){
+    owner.connection=connection;owner.key=connectionKey;
+  }else{
+    connection?.dispose();owner?.connection?.dispose();
+    if(owner)owner.connection=null;
+  }
+}
 }
 
 const READ_LIMIT=8*1024*1024;
@@ -342,16 +388,17 @@ async function readBounded(stream){
 }
 
 if(process.argv?.includes('--worker')) {
+  const owner={connection:null,key:null};
   try {
     for await(const line of boundedLines(process.stdin)){
       let result;
-      try{result=await handle(JSON.parse(line));}
+      try{result=await handle(JSON.parse(line),owner);}
       catch(e){result={ok:false,completed:0,error:e.message};}
       console.log(JSON.stringify(result));
       if(result?.ok===false){process.exitCode=1;break;}
     }
   }catch(e){process.exitCode=1;console.log(JSON.stringify({ok:false,completed:0,error:e.message}));}
-  finally{process.stdin.destroy();}
+  finally{owner.connection?.dispose();process.stdin.destroy();}
 }else {
   try{
     console.log(JSON.stringify(await handle(JSON.parse(await readBounded(process.stdin)))));
