@@ -231,7 +231,8 @@ class A11yObserveFileTests(unittest.TestCase):
         self.a11y = importlib.util.module_from_spec(spec)
         # The module tail is a CLI entry point that reads stdin; it is not part
         # of observe(). All defs precede it, so a SystemExit here is expected.
-        with contextlib.redirect_stdout(io.StringIO()), \
+        with mock.patch.object(_sys, 'stdin', io.StringIO('')), \
+                contextlib.redirect_stdout(io.StringIO()), \
                 contextlib.redirect_stderr(io.StringIO()):
             try:
                 spec.loader.exec_module(self.a11y)
@@ -277,6 +278,35 @@ class A11yObserveFileTests(unittest.TestCase):
             self.assertEqual(stored['app_name'], 'App')
             self.assertIn('snapshot', stored)
             self.assertNotIn('path', result['elements'][0] if result['elements'] else {})
+
+    def test_module_tail_exits_with_open_stdin_kept_open(self):
+        import os
+        import signal
+        import subprocess
+        import tempfile
+        with tempfile.TemporaryDirectory() as folder:
+            out_path, err_path = Path(folder) / 'child.stdout', Path(folder) / 'child.stderr'
+            with open(out_path, 'w') as out, open(err_path, 'w') as err:
+                proc = subprocess.Popen(
+                    [sys.executable, '-m', 'unittest',
+                     'tests.test_a11y.A11yObserveFileTests.'
+                     'test_observation_json_is_private_and_matches_schema'],
+                    stdin=subprocess.PIPE, stdout=out, stderr=err,
+                    cwd=str(ROOT), start_new_session=True)
+                try:
+                    proc.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    os.killpg(proc.pid, signal.SIGKILL)
+                    proc.wait()
+                    proc.stdin.close()
+                    self.fail('single fixture hung on open stdin; stdin EOF starvation persists')
+                finally:
+                    if proc.poll() is None:
+                        os.killpg(proc.pid, signal.SIGKILL)
+                        proc.wait()
+                    proc.stdin.close()
+            self.assertEqual(proc.returncode, 0)
+            self.assertIn('OK', err_path.read_text())
 
     def test_collision_and_symlink_refuse_without_touching_target(self):
         import tempfile

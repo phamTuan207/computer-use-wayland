@@ -180,15 +180,22 @@ class DoctorCliTests(unittest.TestCase):
         self.assertTrue(responses[2]['result']['ok'])
         stop.assert_not_called()
 
-    def test_unrelated_hypr_error_still_stops(self):
+    def test_unrelated_hypr_error_degrades_to_monitors_error_without_stop(self):
         import cu
         import session_driver
         with patch.object(cu, 'environment', return_value={}), \
                 patch.object(cu, 'hypr', side_effect=RuntimeError('compositor down')), \
+                patch.object(cu.shutil, 'which', return_value=None), \
                 patch.object(cu, 'stop_session_on_error') as stop:
             result = session_driver.execute(['doctor'], '')
-        self.assertEqual(result.returncode, 1)
-        stop.assert_called_once()
+        self.assertEqual(result.returncode, 0)
+        body = json.loads(result.stdout)
+        self.assertEqual(body['monitors'], [])
+        self.assertIn('monitors_error', body)
+        self.assertNotIn('\n', body['monitors_error'])
+        self.assertLessEqual(len(body['monitors_error']), 400)
+        self.assertNotIn('ime', body)
+        stop.assert_not_called()
 
     def test_base_exception_from_probe_is_not_converted_to_ime_error(self):
         import cu
@@ -225,6 +232,84 @@ class DoctorCliTests(unittest.TestCase):
         self.assertLessEqual(len(error), 400)
         self.assertTrue(error.startswith('fcitx5 probe failed: line one line two'))
         self.assertIn('dependencies', body)
+        stop.assert_not_called()
+
+    def test_doctor_monitors_error_variants_degrade_without_stop(self):
+        import cu
+        import session_driver
+        variants = {
+            'hypr-timeout': {'hypr': RuntimeError('compositor query timed out')},
+            'malformed-monitor': {'monitors': [{'name': 'm'}]},
+            'env-failure': {'env': OSError('env down')},
+        }
+        for name, spec in variants.items():
+            with self.subTest(variant=name):
+                patches = [patch.object(cu.shutil, 'which', return_value=None),
+                           patch.object(cu, 'stop_session_on_error')]
+                if 'env' in spec:
+                    patches.insert(0, patch.object(cu, 'environment', side_effect=spec['env']))
+                else:
+                    patches.insert(0, patch.object(cu, 'environment', return_value={}))
+                if 'hypr' in spec:
+                    patches.insert(1, patch.object(cu, 'hypr', side_effect=spec['hypr']))
+                else:
+                    value = spec.get('monitors', list(self.MONITORS))
+                    patches.insert(1, patch.object(cu, 'hypr', return_value=value))
+                from contextlib import ExitStack
+                with ExitStack() as stack:
+                    mocks = [stack.enter_context(p) for p in patches]
+                    stop = mocks[-1]
+                    result = session_driver.execute(['doctor'], '')
+                self.assertEqual(result.returncode, 0)
+                body = json.loads(result.stdout)
+                self.assertEqual(body['monitors'], [])
+                self.assertIn('monitors_error', body)
+                self.assertNotIn('\n', body['monitors_error'])
+                self.assertLessEqual(len(body['monitors_error']), 400)
+                self.assertNotIn('ime', body, 'no fabricated ime')
+                self.assertIn('dependencies', body)
+                self.assertIn('pointer', body)
+                self.assertIn('session', body)
+                stop.assert_not_called()
+
+    def test_doctor_long_crlf_control_monitors_error_single_line_bounded(self):
+        import cu
+        import session_driver
+        sentinel = 'SECRET-CTRL-\x00\x01-input-7319'
+        long_error = ('line one\r\nline two\n' + 'x' * 800 + '\r' + sentinel + '\x00end')
+        self.assertGreater(len(long_error), 800)
+        with patch.object(cu, 'environment', return_value={}), \
+                patch.object(cu, 'hypr', side_effect=RuntimeError(long_error)), \
+                patch.object(cu.shutil, 'which', return_value=None), \
+                patch.object(cu, 'stop_session_on_error') as stop:
+            result = session_driver.execute(['doctor'], '')
+        self.assertEqual(result.returncode, 0)
+        body = json.loads(result.stdout)
+        error = body['monitors_error']
+        self.assertNotIn('\n', error)
+        self.assertNotIn('\r', error)
+        self.assertNotIn('\x00', error)
+        self.assertNotIn('\x01', error)
+        self.assertLessEqual(len(error), 400)
+        self.assertTrue(error.startswith('monitors unavailable: line one line two'))
+        stop.assert_not_called()
+
+    def test_doctor_monitors_error_then_status_stays_alive_through_relay(self):
+        import cu
+        import session_driver
+        with patch.object(cu, 'environment', return_value={}), \
+                patch.object(cu, 'hypr', side_effect=RuntimeError('compositor down')), \
+                patch.object(cu.shutil, 'which', return_value=None), \
+                patch.object(cu, 'stop_session_on_error') as stop:
+            output = io.StringIO()
+            code = session_driver.relay(
+                io.StringIO('{"args":["doctor"]}\n{"args":["status"]}\n'), output)
+        self.assertEqual(code, 0)
+        responses = [json.loads(line) for line in output.getvalue().splitlines()]
+        self.assertEqual(len(responses), 3, 'ready plus two command responses')
+        self.assertEqual(responses[1]['result']['monitors'], [])
+        self.assertIn('monitors_error', responses[1]['result'])
+        self.assertTrue(responses[2]['result']['ok'])
         stop.assert_not_called()
 
     def test_relay_exposes_sibling_stderr_and_stops_next_command(self):

@@ -111,8 +111,11 @@ def run(argv, env=None, text=True, input=None, timeout=12):
 def hypr(env, what):
     # The documented read-only IPC avoids a fork/exec for every safety check.
     # Keep CLI compatibility for callers without an explicit session environment.
-    if what not in ('clients','monitors','activewindow','cursorpos','devices','workspaces','layers'):
-        raise ValueError('unsupported read-only compositor query')
+    allowed=('clients','monitors','activewindow','cursorpos','devices','workspaces','layers')
+    if what not in allowed:
+        detail=' '.join(str(what).split())
+        detail=''.join(ch for ch in detail if ch==' ' or 32<=ord(ch)<=126)[:120]
+        raise ValueError(('unsupported read-only compositor query: '+detail)[:200])
     if env and env.get('XDG_RUNTIME_DIR') and env.get('HYPRLAND_INSTANCE_SIGNATURE'):
         path=Path(env['XDG_RUNTIME_DIR'])/'hypr'/env['HYPRLAND_INSTANCE_SIGNATURE']/'.socket.sock'
         with socket.socket(socket.AF_UNIX,socket.SOCK_STREAM) as connection:
@@ -146,7 +149,7 @@ def window(env, address):
     return matches[0]
 
 def same_window_address(left, right):
-    return isinstance(left,str) and left.casefold()==right.casefold()
+    return isinstance(left,str) and isinstance(right,str) and left.casefold()==right.casefold()
 
 def focus(env, address):
     if not re.fullmatch(r'0x[0-9a-fA-F]+',address or ''):raise ValueError('exact window address required')
@@ -451,6 +454,8 @@ def validate_actions(actions,backend):
         if backend=='a11y':
             if not isinstance(a.get('ref'),str) or not a['ref'].strip():raise ValueError('a11y actions need a ref')
             if a['type']=='set_text' and (not isinstance(a.get('text'),str) or len(a['text'])>10000):raise ValueError('a11y set_text needs string text <=10000')
+        if backend=='desktop' and a['type'] in ('click','double_click','drag'):
+            if a.get('button','left') not in ('left','right','middle'):raise ValueError('invalid button')
         if backend=='desktop' and a['type'] in ('move','click','double_click','scroll'):
             for k in ('x','y'):
                 if k not in a:raise ValueError(a['type']+' needs numeric x and y')
@@ -463,7 +468,7 @@ def validate_actions(actions,backend):
         if a['type']=='scroll':
             for k in ('dx','dy'):
                 if k in a:finite(a[k],'scroll '+k)
-            if backend=='desktop' and not all(abs(a.get(k,0))<=2000 for k in ('dx','dy')):raise ValueError('invalid scroll')
+            if backend=='desktop' and not all(abs(a.get(k,0))<=2000 for k in ('dx','dy')):raise ValueError('scroll dx/dy must be finite numbers within +/-2000')
             if backend=='browser':
                 if 'dy' not in a:raise ValueError('browser scroll needs dy')
                 for k in ('x','y'):
@@ -512,13 +517,13 @@ def fcitx5_running():
     """True when an own-UID fcitx5 process exists; False when confidently absent.
 
     Only the process table is read: numeric /proc entries, owner UID and the comm
-    name. Anything unreadable is refused, never treated as absent. No command
-    lines, environments, PIDs, caches or new dependencies.
+    name. Unreadable live state is refused; exited processes are skipped as a
+    normal scan race. No command lines, environments, PIDs, caches or new dependencies.
     """
     try:
         entries=os.listdir('/proc')
     except OSError as exc:
-        raise RuntimeError('cannot determine whether fcitx5 is running') from exc
+        raise RuntimeError('cannot determine whether fcitx5 is running: process list '+type(exc).__name__) from exc
     for pid in entries:
         if not pid.isdigit():
             continue
@@ -527,7 +532,7 @@ def fcitx5_running():
         except (FileNotFoundError,ProcessLookupError):
             continue  # the process exited while being read
         except OSError as exc:
-            raise RuntimeError('cannot determine whether fcitx5 is running') from exc
+            raise RuntimeError('cannot determine whether fcitx5 is running: process status '+type(exc).__name__) from exc
         if owner!=os.geteuid():
             continue
         try:
@@ -535,9 +540,9 @@ def fcitx5_running():
         except (FileNotFoundError,ProcessLookupError):
             continue
         except (OSError,UnicodeError) as exc:
-            raise RuntimeError('cannot determine whether fcitx5 is running') from exc
+            raise RuntimeError('cannot determine whether fcitx5 is running: process name '+type(exc).__name__) from exc
         if not name or not name.isprintable():
-            raise RuntimeError('cannot determine whether fcitx5 is running')
+            raise RuntimeError('cannot determine whether fcitx5 is running: process name invalid')
         if name=='fcitx5':
             return True
     return False
@@ -562,11 +567,18 @@ def literal_keyboard(env,enabled=True):
         deadline=time.monotonic()+budget
         remaining=deadline-time.monotonic()
         if remaining<=0:raise RuntimeError('fcitx5 state change timed out')
-        run([remote,flag],env,timeout=remaining)
+        try:
+            run([remote,flag],env,timeout=remaining)
+        except subprocess.TimeoutExpired as exc:
+            raise RuntimeError('fcitx5 state change timed out') from exc
         while True:
             remaining=deadline-time.monotonic()
             if remaining<=0:raise RuntimeError('fcitx5 state change timed out')
-            if state(remaining)==expected:
+            try:
+                matched=state(remaining)==expected
+            except subprocess.TimeoutExpired as exc:
+                raise RuntimeError('fcitx5 state change timed out') from exc
+            if matched:
                 # A reply that arrived after the budget is not a success.
                 if time.monotonic()>=deadline:raise RuntimeError('fcitx5 state change timed out')
                 return
@@ -705,9 +717,6 @@ def desktop_act(env,meta,actions,after_capture=True):
             image_point(meta,a['x'],a['y'])
         if a['type']=='drag':
             image_point(meta,*a['from']);image_point(meta,*a['to'])
-        if a['type'] in ('click','double_click','drag') and a.get('button','left') not in ('left','right','middle'): raise ValueError('invalid button')
-        if a['type']=='scroll' and not all(isinstance(a.get(k,0),(int,float)) and math.isfinite(a.get(k,0)) and abs(a.get(k,0))<=2000 for k in ('dx','dy')): raise ValueError('invalid scroll')
-        if a['type']=='drag' and not 50<=a.get('ms',300)<=2000: raise ValueError('drag ms must be 50..2000')
     # Group adjacent keyboard operations into one existing wtype process.
     groups=keyboard_groups(actions)
     for group in groups:
@@ -852,7 +861,16 @@ def browser_start(env,endpoint):
     prepare_state();profile=ROOT/'browser-profile';profile.mkdir(mode=0o700,exist_ok=True)
     # Harden the directory's own inode before trusting it: a symlink, a file or
     # a foreign owner refuses here, never at spawn time. Reuse never reaches this.
-    dir_fd=os.open(profile,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW|os.O_CLOEXEC)
+    try:
+        dir_fd=os.open(profile,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW|os.O_CLOEXEC)
+    except OSError as exc:
+        try:
+            is_link=os.path.islink(profile)
+        except OSError:
+            raise exc
+        if is_link:
+            raise RuntimeError('browser profile must not be a symlink') from exc
+        raise
     try:
         if os.fstat(dir_fd).st_uid!=os.geteuid():
             raise RuntimeError('browser profile is not owned by the current user')
@@ -945,11 +963,11 @@ def main():
     if args.command=='browser' and args.scope is not None:
         if args.operation!='observe':raise ValueError('--scope is only valid for browser observe')
         if not args.scope.strip():raise ValueError('--scope must be a non-empty CSS selector')
-        if len(args.scope.encode('utf-16-le','surrogatepass'))>2048:raise ValueError('--scope must be at most 1024 characters')
+        if len(args.scope.encode('utf-16-le','surrogatepass'))>2048:raise ValueError('--scope must be at most 1024 UTF-16 code units')
     if args.command=='browser' and args.after_scope is not None:
         if args.operation!='act':raise ValueError('--after-scope is only valid for browser act')
         if not args.after_scope.strip():raise ValueError('--after-scope must be a non-empty CSS selector')
-        if len(args.after_scope.encode('utf-16-le','surrogatepass'))>2048:raise ValueError('--after-scope must be at most 1024 characters')
+        if len(args.after_scope.encode('utf-16-le','surrogatepass'))>2048:raise ValueError('--after-scope must be at most 1024 UTF-16 code units')
         if args.no_after:raise ValueError('--after-scope cannot combine with --no-after')
     if args.command=='browser' and args.image and args.operation not in ('observe','act'):
         raise ValueError('--image is only valid for browser observe or act')
@@ -959,7 +977,9 @@ def main():
         import session_driver
         return session_driver.relay(sys.stdin,sys.stdout)
     # Local state commands and CDP requests do not use a compositor environment.
-    env=(environment() if args.command in ('session','recover','doctor','windows','observe','act','a11y') or
+    # Doctor acquires its own environment inside its diagnostic branch so an
+    # environment failure degrades instead of escaping before the branch.
+    env=(environment() if args.command in ('session','recover','windows','observe','act','a11y') or
          (args.command=='browser' and args.operation=='start') else None)
     if args.command in ('session','finish','recover','cancel'):
         import cursor_session
@@ -974,7 +994,17 @@ def main():
         result={'ok':True,'cancelled':False}
     elif args.command=='status': result={'ok':True,'cancelled':CANCEL.exists()}
     elif args.command=='doctor':
-        result={'dependencies':{k:shutil.which(k) is not None for k in ('grim','wtype','hyprctl','node')},'pointer':(ROOT/'native/pointer').is_file(),'session':bool(env.get('WAYLAND_DISPLAY')),'monitors':hypr(env,'monitors')}
+        result={'dependencies':{k:shutil.which(k) is not None for k in ('grim','wtype','hyprctl','node')},'pointer':(ROOT/'native/pointer').is_file(),'session':False,'monitors':[]}
+        try:
+            env=environment()
+            result['session']=bool(env.get('WAYLAND_DISPLAY'))
+            monitors=hypr(env,'monitors')
+            result['monitors']=[{k:m[k] for k in ('name','width','height','scale','transform')} for m in monitors]
+        except Exception as exc:
+            detail=' '.join(str(exc).split())
+            detail=''.join(ch for ch in detail if ch==' ' or 32<=ord(ch)<=126)
+            result['monitors']=[]
+            result['monitors_error']=('monitors unavailable: '+detail)[:400]
         if shutil.which('fcitx5-remote'):
             # Optional probes: at most ~1s each, and a failure is a diagnostic,
             # never a reason to stop. BaseException still propagates.
@@ -983,7 +1013,6 @@ def main():
                                'name':run(['fcitx5-remote','-n'],env,timeout=1).strip()}
             except Exception as exc:
                 result['ime_error']=('fcitx5 probe failed: '+' '.join(str(exc).split()))[:400]
-        result['monitors']=[{k:m[k] for k in ('name','width','height','scale','transform')} for m in result['monitors']]
     elif args.command=='windows':
         # Read-only discovery: one clients call, filtering before projection, no focus or input.
         keys=('address','class','title','at','size','workspace')

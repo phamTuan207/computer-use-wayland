@@ -1,4 +1,4 @@
-"""Offline regressions for the STEP1 correctness batch. No GUI, no live fixture."""
+"""Offline validation, process, and browser-profile regressions. No GUI, no live fixture."""
 import importlib.util
 import io
 import json
@@ -260,24 +260,31 @@ class BrowserStartLifecycle(unittest.TestCase):
             target = root/'elsewhere'
             target.mkdir()
             profile = root/'browser-profile'
-            for label in ('symlink', 'file'):
-                with self.subTest(case=label):
-                    if profile.is_symlink() or profile.is_file():
-                        profile.unlink()
-                    elif profile.is_dir():
-                        profile.rmdir()
-                    if label == 'symlink':
-                        profile.symlink_to(target, target_is_directory=True)
-                    else:
-                        profile.write_text('x')
-                    with mock.patch.object(cu, 'ROOT', root), \
-                         mock.patch.object(cu, 'STATE', root/'state'), \
-                         mock.patch('urllib.request.urlopen', side_effect=OSError('offline')), \
-                         mock.patch.object(cu.subprocess, 'Popen') as spawn:
-                        with self.assertRaises(OSError):
-                            cu.browser_start({}, 'http://localhost:9222')
-                    spawn.assert_not_called()
-                    self.assertTrue(target.is_dir(), 'no arbitrary target was touched')
+            # Symlink refuses with a fixed helpful error, never raw ELOOP/ENOTDIR.
+            if profile.is_symlink() or profile.is_file():
+                profile.unlink()
+            elif profile.is_dir():
+                profile.rmdir()
+            profile.symlink_to(target, target_is_directory=True)
+            with mock.patch.object(cu, 'ROOT', root), \
+                 mock.patch.object(cu, 'STATE', root/'state'), \
+                 mock.patch('urllib.request.urlopen', side_effect=OSError('offline')), \
+                 mock.patch.object(cu.subprocess, 'Popen') as spawn:
+                with self.assertRaisesRegex(RuntimeError, 'must not be a symlink'):
+                    cu.browser_start({}, 'http://localhost:9222')
+            spawn.assert_not_called()
+            self.assertTrue(target.is_dir(), 'no arbitrary target was touched')
+            # An ordinary file still refuses without spawning.
+            profile.unlink()
+            profile.write_text('x')
+            with mock.patch.object(cu, 'ROOT', root), \
+                 mock.patch.object(cu, 'STATE', root/'state'), \
+                 mock.patch('urllib.request.urlopen', side_effect=OSError('offline')), \
+                 mock.patch.object(cu.subprocess, 'Popen') as spawn:
+                with self.assertRaises(OSError):
+                    cu.browser_start({}, 'http://localhost:9222')
+            spawn.assert_not_called()
+            self.assertTrue(target.is_dir(), 'no arbitrary target was touched')
 
     def test_foreign_owned_profile_never_spawns(self):
         import tempfile

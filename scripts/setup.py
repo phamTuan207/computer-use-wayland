@@ -153,9 +153,15 @@ def runtime_abi(env):
     try:
         response = json.loads(_checked(['hyprctl', '-j', 'version'], env=env).stdout)
     except (json.JSONDecodeError, TypeError) as error:
-        raise RuntimeError('invalid compositor ABI response') from error
-    if not isinstance(response, dict) or not isinstance(response.get('abiHash'), str) or not response['abiHash']:
-        raise RuntimeError('invalid compositor ABI response')
+        raise RuntimeError('invalid compositor ABI response: malformed JSON') from error
+    if not isinstance(response, dict):
+        raise RuntimeError('invalid compositor ABI response: expected object')
+    if 'abiHash' not in response:
+        raise RuntimeError('invalid compositor ABI response: missing abiHash')
+    if not isinstance(response['abiHash'], str):
+        raise RuntimeError('invalid compositor ABI response: abiHash must be a string')
+    if not response['abiHash']:
+        raise RuntimeError('invalid compositor ABI response: empty abiHash')
     return response['abiHash']
 
 

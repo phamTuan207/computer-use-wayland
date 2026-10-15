@@ -63,12 +63,17 @@ class ScopeCli(unittest.TestCase):
                                  'invalid --scope must not touch the GUI environment')
 
     def test_empty_and_oversized_scope_rejected_before_dispatch(self):
-        for value in ('', '   ', 'x' * 1025):
+        for value in ('', '   '):
             with self.subTest(value=repr(value)):
                 self.dispatched.clear()
-                with self.assertRaises(ValueError):
+                with self.assertRaisesRegex(ValueError, 'non-empty'):
                     self.run_cli(BASE + ['--scope', value])
                 self.assertEqual(self.dispatched, [])
+        with self.subTest(value='oversized'):
+            self.dispatched.clear()
+            with self.assertRaisesRegex(ValueError, '1024 UTF-16 code units'):
+                self.run_cli(BASE + ['--scope', 'x' * 1025])
+            self.assertEqual(self.dispatched, [])
 
     def test_scope_at_the_length_limit_is_accepted(self):
         self.run_cli(BASE + ['--scope', 'x' * 1024])

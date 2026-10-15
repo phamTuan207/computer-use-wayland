@@ -100,6 +100,25 @@ class HyprIPC(unittest.TestCase):
             cu.hypr({}, 'reload')
         run.assert_not_called()
 
+    def test_rejected_query_includes_bounded_sanitized_repr(self):
+        evil = 'eval\x00\x01\r\n' + 'x' * 500
+        with self.assertRaises(ValueError) as caught:
+            cu.hypr(self.env, evil)
+        message = str(caught.exception)
+        self.assertIn('unsupported read-only compositor query', message)
+        self.assertNotIn('\n', message)
+        self.assertNotIn('\r', message)
+        self.assertNotIn('\x00', message)
+        self.assertLessEqual(len(message), 200)
+        self.assertIn('eval', message)
+
+    def test_same_window_address_requires_both_str(self):
+        self.assertTrue(cu.same_window_address('0xAB', '0xab'))
+        self.assertFalse(cu.same_window_address('0xAB', None))
+        self.assertFalse(cu.same_window_address('0xAB', 42))
+        self.assertFalse(cu.same_window_address(None, '0xab'))
+        self.assertFalse(cu.same_window_address(42, '0xab'))
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -187,6 +187,35 @@ class PointerSafety(unittest.TestCase):
         self.assertEqual(buttons, ['button 0 1', 'button 0 0'])
         self.pointer.close.assert_called_once()
 
+    def test_invalid_button_rejected_by_validate_actions_before_side_effects(self):
+        for action in ({'type': 'click', 'x': 10, 'y': 10, 'button': 'wheel'},
+                       {'type': 'double_click', 'x': 10, 'y': 10, 'button': 'wheel'},
+                       {'type': 'drag', 'from': [10, 10], 'to': [20, 20], 'button': 'wheel'}):
+            with self.subTest(action=action):
+                with self.assertRaisesRegex(ValueError, 'invalid button'):
+                    cu.validate_actions([action], 'desktop')
+        with self.assertRaises(ValueError):
+            cu.desktop_act({}, self.meta, [{'type': 'click', 'x': 10, 'y': 10, 'button': 'wheel'}])
+        self.focus.assert_not_called()
+        self.pointer_cls.assert_not_called()
+
+    def test_scroll_dx_dy_boundaries_explicit(self):
+        for value in (-2000, -1, 0, 1, 2000, 2000.0, -2000.0):
+            with self.subTest(value=value):
+                cu.validate_actions([{'type': 'scroll', 'x': 10, 'y': 10, 'dx': value, 'dy': value}], 'desktop')
+        for bad in (2001, -2001, 2001.5):
+            with self.subTest(bad=repr(bad)):
+                with self.assertRaisesRegex(ValueError, 'scroll dx/dy must be finite numbers within'):
+                    cu.validate_actions([{'type': 'scroll', 'x': 10, 'y': 10, 'dx': bad}], 'desktop')
+                with self.assertRaisesRegex(ValueError, 'scroll dx/dy must be finite numbers within'):
+                    cu.validate_actions([{'type': 'scroll', 'x': 10, 'y': 10, 'dy': bad}], 'desktop')
+        for bad in (float('inf'), float('-inf'), float('nan'), True, False, 'big', None):
+            with self.subTest(bad=repr(bad)):
+                with self.assertRaisesRegex(ValueError, 'must be a finite number'):
+                    cu.validate_actions([{'type': 'scroll', 'x': 10, 'y': 10, 'dx': bad}], 'desktop')
+                with self.assertRaisesRegex(ValueError, 'must be a finite number'):
+                    cu.validate_actions([{'type': 'scroll', 'x': 10, 'y': 10, 'dy': bad}], 'desktop')
+
     def test_invalid_mouse_payload_rejected_before_side_effects(self):
         actions = [
             {'type': 'move', 'x': 10, 'y': 10, 'modifiers': ['ctrl']},

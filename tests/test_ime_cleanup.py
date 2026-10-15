@@ -255,7 +255,11 @@ class ImeCleanup(unittest.TestCase):
                            MARKER=str(marker), **extra)
                 result = self.run_driver(
                     "Path(os.environ['MARKER']).write_text('entered')", **env)
-                self.assertIn('caught TimeoutExpired', result.stdout)
+                if name == 'hang-initial-query':
+                    self.assertIn('caught TimeoutExpired', result.stdout)
+                else:
+                    self.assertIn('caught RuntimeError', result.stdout)
+                    self.assertIn('fcitx5 state change timed out', result.stdout)
                 self.assertEqual(marker.exists(), body,
                                  'body entered iff input was reached')
                 self.assertEqual(self.calls(), calls)
@@ -327,6 +331,9 @@ class Fcitx5RunningHelper(unittest.TestCase):
         with patch.object(cu.os, 'listdir', return_value=['7']), \
              patch.object(cu.os, 'stat', side_effect=FileNotFoundError()):
             self.assertFalse(cu.fcitx5_running(), 'exited PID is a normal race')
+        with patch.object(cu.os, 'listdir', return_value=['7']), \
+             patch.object(cu.os, 'stat', side_effect=ProcessLookupError()):
+            self.assertFalse(cu.fcitx5_running(), 'ESRCH race is also skipped')
         for failure in (OSError('denied'), PermissionError('denied')):
             with self.subTest(failure=type(failure).__name__), \
                  patch.object(cu.os, 'listdir', return_value=['7']), \
@@ -336,6 +343,31 @@ class Fcitx5RunningHelper(unittest.TestCase):
         with patch.object(cu.os, 'listdir', side_effect=OSError('no proc')):
             with self.assertRaisesRegex(RuntimeError, 'cannot determine'):
                 cu.fcitx5_running()
+
+    def test_stage_diagnostics_bounded_typed_no_raw_or_pid(self):
+        from unittest.mock import patch
+        cu = self.load()
+        sentinel = 'SECRET-comm-pid-path-4821'
+        with patch.object(cu.os, 'listdir', side_effect=OSError(sentinel)):
+            with self.assertRaisesRegex(RuntimeError, 'cannot determine whether fcitx5 is running: process list OSError') as caught:
+                cu.fcitx5_running()
+        self.assertNotIn(sentinel, str(caught.exception))
+        from unittest.mock import MagicMock
+        with patch.object(cu.os, 'listdir', return_value=['7']), \
+             patch.object(cu.os, 'stat', side_effect=PermissionError(sentinel)), \
+             patch.object(cu.os, 'geteuid', return_value=1000):
+            with self.assertRaisesRegex(RuntimeError, 'process status PermissionError') as caught:
+                cu.fcitx5_running()
+        self.assertNotIn(sentinel, str(caught.exception))
+        with patch.object(cu.os, 'listdir', return_value=['7']), \
+             patch.object(cu.os, 'stat', return_value=type('S', (), {'st_uid': 1000})()), \
+             patch.object(cu.os, 'geteuid', return_value=1000):
+            with patch('builtins.open', create=True) as opener:
+                opener.return_value.__enter__.side_effect = OSError(sentinel)
+                with self.assertRaisesRegex(RuntimeError, 'process name OSError') as caught:
+                    cu.fcitx5_running()
+        self.assertNotIn(sentinel, str(caught.exception))
+        self.assertLessEqual(len(str(caught.exception)), 400)
 
 
 if __name__ == '__main__':

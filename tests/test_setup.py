@@ -367,15 +367,18 @@ def _cursor():
 
 class FullSetupTests(_SetupFixture, unittest.TestCase):
     def test_invalid_runtime_abi_shapes_refuse_before_build_or_publish(self):
-        for payload in ('{', '[]', 'null', '{}', '{"abiHash":null}',
-                        '{"abiHash":false}', '{"abiHash":7}', '{"abiHash":""}'):
+        cases = {'{': 'malformed JSON', '[]': 'expected object', 'null': 'expected object',
+                 '{}': 'missing abiHash', '{"abiHash":null}': 'abiHash must be a string',
+                 '{"abiHash":false}': 'abiHash must be a string', '{"abiHash":7}': 'abiHash must be a string',
+                 '{"abiHash":""}': 'empty abiHash'}
+        for payload, detail in cases.items():
             with self.subTest(payload=payload):
                 self._patched()
                 self.answer = lambda argv, **kwargs: (
                     subprocess.CompletedProcess(argv, 0, payload, '')
                     if argv[0] == 'hyprctl' and 'version' in argv
                     else self._default(argv, **kwargs))
-                with self.assertRaisesRegex(RuntimeError, 'invalid compositor ABI response'):
+                with self.assertRaisesRegex(RuntimeError, 'invalid compositor ABI response: ' + detail):
                     self.declared()
                 self.assertFalse((self.root/'native/visuals.json').exists())
                 self.assertFalse((self.bin/'computer-use').exists())

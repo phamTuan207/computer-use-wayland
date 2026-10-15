@@ -370,7 +370,7 @@ class HangingHelperBudget(unittest.TestCase):
             return ''
 
         with patch.object(cu, 'run', side_effect=remote):
-            with self.assertRaises(subprocess.TimeoutExpired):
+            with self.assertRaisesRegex(RuntimeError, 'fcitx5 state change timed out'):
                 with cu.literal_keyboard({}):
                     self.fail('no input after a hanging switch query')
         flags = [a for a, t in calls if len(a) > 1]
@@ -395,7 +395,7 @@ class HangingHelperBudget(unittest.TestCase):
             return ''
 
         with patch.object(cu, 'run', side_effect=remote):
-            with self.assertRaises(subprocess.TimeoutExpired):
+            with self.assertRaisesRegex(RuntimeError, 'fcitx5 state change timed out'):
                 with cu.literal_keyboard({}):
                     self.fail('yield must never be reached')
         flags = [a for a, t in calls if len(a) > 1]
@@ -425,7 +425,7 @@ class HangingHelperBudget(unittest.TestCase):
 
                 entered = []
                 with patch.object(cu, 'run', side_effect=remote):
-                    with self.assertRaises(subprocess.TimeoutExpired):
+                    with self.assertRaisesRegex(RuntimeError, 'fcitx5 state change timed out'):
                         with cu.literal_keyboard({}):
                             entered.append(True)
                 self.assertEqual(entered, [True], 'input ran, restore hung')
