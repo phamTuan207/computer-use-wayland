@@ -282,9 +282,13 @@ trong top3. Tool schemas/system overhead không được đo riêng: UNVERIFIED.
 
 ## Bảo toàn và kiểm thử
 
-Không đổi tracked file production nào so với R7. File riêng
-`tests/session_quiet_live.py` không stage/commit; SHA256 phải vẫn
-`aa5af4d1cf3ad53ca28681ea25edaa9b2191b40f0a936b6825d0e9d62a4f3c63`.
+Không đổi tracked file production nào so với R7. Trong R8, thay đổi riêng của
+`tests/session_quiet_live.py` trong worktree không được stage/commit. Baseline
+có thể kiểm chứng là blob đã commit tại R8 `5664835ca2ab0000e0998a08e90d0f58ad228ccb`, SHA256:
+`cb5dafc5d5946d477acc026529b6215129438139dbf8e69bc8e5171dde7e23a8`.
+Tính lại bằng `git cat-file -p 5664835ca2ab0000e0998a08e90d0f58ad228ccb:tests/session_quiet_live.py | sha256sum`.
+Hash của thay đổi worktree chưa commit là dữ liệu lịch sử riêng, không phải
+baseline của blob trong Git.
 Session/fixture đã dọn; focus/workspace ban đầu được trả lại khi không có cancel;
 IME kiểm lại là bamboo, state2. Không xóa cancellation để chạy tiếp.
 
