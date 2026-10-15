@@ -6,7 +6,7 @@ ABI requirement. It applies one supplied patch and builds in the source tree.
 It never resets, cleans, stashes or deletes, and it never installs or loads anything.
 
 Usage:
-    python3 scripts/build-glass.py SOURCE
+    python3 scripts/build-glass.py SOURCE [--allow-dirty]
 """
 import argparse
 from pathlib import Path
@@ -41,6 +41,8 @@ def main(argv=None):
                         help='Hyprglass git worktree pinned to ' + REQUIRED_COMMIT)
     parser.add_argument('--local-optics', action='store_true',
                         help='use upstream optical formula with pill-local geometry')
+    parser.add_argument('--allow-dirty', action='store_true',
+                        help='allow pre-existing tracked or untracked source changes')
     args = parser.parse_args(argv)
     patch = PATCH.with_name('hyprglass-local-optics.patch') if args.local_optics else PATCH
 
@@ -53,6 +55,11 @@ def main(argv=None):
     head = output(['git', '-C', str(source), 'rev-parse', 'HEAD'])
     if head != REQUIRED_COMMIT:
         fail('HEAD is {}, need {}'.format(head, REQUIRED_COMMIT))
+    edits = output(['git', '-C', str(source), 'status', '--porcelain', '--untracked-files=all'])
+    print('build-glass: commit={} initial_dirty={} allow_dirty={}'.format(
+        head, bool(edits), args.allow_dirty), flush=True)
+    if edits and not args.allow_dirty:
+        fail('SOURCE is dirty; use --allow-dirty to build intentionally:\n' + edits)
 
     installed = run(['pkg-config', '--modversion', 'hyprland'])
     if installed.returncode != 0 or installed.stdout.strip() != REQUIRED_HYPRLAND:
@@ -65,9 +72,6 @@ def main(argv=None):
     if run(['git', 'apply', '--reverse', '--check', str(patch)], cwd=source).returncode == 0:
         print('capsule patch already applied')
     else:
-        edits = output(['git', '-C', str(source), 'status', '--porcelain', '--untracked-files=no'])
-        if edits:
-            fail('tracked edits present, refusing to apply:\n' + edits)
         if run(['git', 'apply', '--check', str(patch)], cwd=source).returncode != 0:
             fail('patch does not apply cleanly to ' + REQUIRED_COMMIT)
         applied = run(['git', 'apply', str(patch)], cwd=source)
@@ -75,6 +79,9 @@ def main(argv=None):
             fail('patch application failed: ' + applied.stderr.strip())
         print('capsule patch applied')
 
+    # Applying our patch dirties a clean checkout; only initial dirt needs opt-in.
+    build_edits = output(['git', '-C', str(source), 'status', '--porcelain', '--untracked-files=all'])
+    print('build-glass: commit={} build_dirty={}'.format(head, bool(build_edits)), flush=True)
     build = run(['make', '-j2', '-B', 'HYPRGLASS_VERSION=' + VERSION], cwd=source, capture=False)
     if build.returncode != 0:
         fail('make failed')

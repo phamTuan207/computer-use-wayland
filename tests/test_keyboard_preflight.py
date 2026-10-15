@@ -284,6 +284,128 @@ class DesktopPreflight(unittest.TestCase):
         wait.assert_not_called()
         self.assertIn('IME restoration failed', err.getvalue())
 
+    def test_restore_flag_envelope_cases(self):
+        import io
+        from contextlib import redirect_stderr
+        def fake_remote(state, fail_restore=True):
+            def remote(argv, env, timeout=None):
+                if argv == ['fake-remote']:
+                    return state[0]
+                if argv[-1] == '-c':
+                    state[0] = '1'
+                elif argv[-1] == '-o':
+                    if fail_restore:
+                        raise RuntimeError('restore failed')
+                    state[0] = '2'
+                return ''
+            return remote
+        # (1) restore-only failure: completed preserved, flag set, no escape.
+        # Leading-dash case exercises the standalone branch (cu.py:804).
+        for actions, count in [([{'type': 'type', 'text': 'hello'}], 1),
+                              ([{'type': 'type', 'text': '-hello'}], 1),
+                              ([{'type': 'type', 'text': 'hi'}, {'type': 'type', 'text': 'yo'}], 2)]:
+            with self.subTest(kind='restore-only', actions=actions):
+                with patch.object(cu.shutil, 'which', return_value='fake-remote'), \
+                     patch.object(cu, 'run', side_effect=fake_remote(['2'])), \
+                     patch.object(cu, 'fcitx5_running', return_value=False):
+                    self.typed.reset_mock()
+                    err = io.StringIO()
+                    with redirect_stderr(err):
+                        result = cu.desktop_act({}, self.meta, list(actions))
+                self.assertFalse(result['ok'])
+                self.assertEqual(result['completed'], count)
+                self.assertTrue(result.get('ime_restore_failed'))
+                self.assertIn('restore failed', result['error'])
+                if any(a.get('text', '').startswith('-') for a in actions):
+                    self.assertEqual(self.typed.call_args.kwargs['input'], '-hello')
+        # (2) primary+restore failure: primary preserved, flag still set.
+        # Both grouped and standalone inputs take this path.
+        for text in ('hello', '-hello'):
+            with self.subTest(kind='primary-plus-restore', text=text):
+                with patch.object(cu.shutil, 'which', return_value='fake-remote'), \
+                     patch.object(cu, 'run', side_effect=fake_remote(['2'])), \
+                     patch.object(cu, 'fcitx5_running', return_value=False), \
+                     patch.object(cu, 'run_cancelable', side_effect=RuntimeError('input failed')) as typed_fail:
+                    err = io.StringIO()
+                    with redirect_stderr(err):
+                        result = cu.desktop_act({}, self.meta, [{'type': 'type', 'text': text}])
+                self.assertFalse(result['ok'])
+                self.assertEqual(result['completed'], 0)
+                self.assertIn('input failed', result['error'])
+                self.assertTrue(result.get('ime_restore_failed'))
+                if text.startswith('-'):
+                    self.assertEqual(typed_fail.call_args.kwargs['input'], text)
+        # (3) success path: flag key absent.
+        with self.subTest(kind='success'):
+            with patch.object(cu.shutil, 'which', return_value='fake-remote'), \
+                 patch.object(cu, 'run', side_effect=fake_remote(['2'], fail_restore=False)), \
+                 patch.object(cu, 'fcitx5_running', return_value=False):
+                self.typed.reset_mock()
+                result = cu.desktop_act({}, self.meta, [{'type': 'type', 'text': 'hello'}])
+            self.assertTrue(result['ok'], result)
+            self.assertEqual(result['completed'], 1)
+            self.assertNotIn('ime_restore_failed', result)
+        # --no-after success: flag absent, capture skipped (cu.py:839).
+        with self.subTest(kind='no-after-success'):
+            with patch.object(cu.shutil, 'which', return_value='fake-remote'), \
+                 patch.object(cu, 'run', side_effect=fake_remote(['2'], fail_restore=False)), \
+                 patch.object(cu, 'fcitx5_running', return_value=False):
+                self.typed.reset_mock()
+                result = cu.desktop_act({}, self.meta, [{'type': 'type', 'text': 'hello'}],
+                                        after_capture=False)
+            self.assertTrue(result['ok'], result)
+            self.assertEqual(result['completed'], 1)
+            self.assertNotIn('ime_restore_failed', result)
+            self.assertTrue(result.get('after_skipped'))
+            self.assertNotIn('after', result)
+        # --no-after restore failure: error branch falls through to the merge
+        # at cu.py:844, so the flag is still reported (standalone input here).
+        with self.subTest(kind='no-after-restore-failure'):
+            with patch.object(cu.shutil, 'which', return_value='fake-remote'), \
+                 patch.object(cu, 'run', side_effect=fake_remote(['2'])), \
+                 patch.object(cu, 'fcitx5_running', return_value=False):
+                self.typed.reset_mock()
+                err = io.StringIO()
+                with redirect_stderr(err):
+                    result = cu.desktop_act({}, self.meta, [{'type': 'type', 'text': '-hello'}],
+                                            after_capture=False)
+            self.assertFalse(result['ok'])
+            self.assertEqual(result['completed'], 1)
+            self.assertTrue(result.get('ime_restore_failed'))
+            self.assertIn('restore failed', result['error'])
+            self.assertNotIn('after_skipped', result)
+            self.assertEqual(self.typed.call_args.kwargs['input'], '-hello')
+        # (4) compose form and no-remote-at-all: flag absent, typing proceeds.
+        with self.subTest(kind='compose'):
+            calls = []
+            def remote(argv, env, timeout=None):
+                calls.append(list(argv))
+                return '2'
+            with patch.object(cu.shutil, 'which', return_value='fake-remote'), \
+                 patch.object(cu, 'run', side_effect=remote), \
+                 patch.object(cu, 'fcitx5_running', return_value=False):
+                self.typed.reset_mock()
+                result = cu.desktop_act({}, self.meta, [{'type': 'type', 'text': 'hello', 'ime': 'compose'}])
+            self.assertTrue(result['ok'], result)
+            self.assertEqual(result['completed'], 1)
+            self.assertNotIn('ime_restore_failed', result)
+            self.assertEqual(self.typed.call_count, 1)
+            self.assertEqual([a for a in calls if len(a) > 1], [])
+        with self.subTest(kind='no-remote'):
+            self.typed.reset_mock()
+            result = cu.desktop_act({}, self.meta, [{'type': 'type', 'text': 'hello'}])
+            self.assertTrue(result['ok'], result)
+            self.assertEqual(result['completed'], 1)
+            self.assertNotIn('ime_restore_failed', result)
+            self.assertEqual(self.typed.call_count, 1)
+        # (5) cancel aborts before input.
+        with self.subTest(kind='cancel'):
+            with patch.object(cu, 'check_cancel', side_effect=RuntimeError('cancelled')):
+                self.typed.reset_mock()
+                with self.assertRaisesRegex(RuntimeError, 'cancelled'):
+                    cu.desktop_act({}, self.meta, [{'type': 'type', 'text': 'hello'}])
+            self.typed.assert_not_called()
+
     def test_cumulative_budget_is_passed_to_each_helper_call(self):
         import time as time_module
         calls = []

@@ -416,6 +416,8 @@ class FullRestoreEnvelope(unittest.TestCase):
         response = json.loads(lines[1])
         self.assertFalse(response['result']['ok'])
         self.assertIn('restore failed', response['result']['error'])
+        self.assertTrue(response['result']['ime_restore_failed'],
+                        'cu.py:844 merges the restore flag into the result')
         self.assertEqual(response['result']['completed'], 1,
                          'acknowledged input stays counted across the envelope')
         self.assertEqual(typed.call_count, 1, 'exactly one input call, no replay')
@@ -508,6 +510,8 @@ class FullRestoreEnvelope(unittest.TestCase):
         self.assertFalse(response['result']['ok'])
         self.assertEqual(response['result']['error'], 'typing failed: ' + sentinel,
                          'exact primary error preserved across the envelope')
+        self.assertTrue(response['result']['ime_restore_failed'],
+                        'cu.py:844 merges the restore flag into the result')
         self.assertEqual(response['result']['completed'], 0,
                          'failed input is never counted')
         self.assertEqual(typed.call_count, 1,

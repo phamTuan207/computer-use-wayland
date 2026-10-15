@@ -204,7 +204,9 @@ class EvidenceChecks(unittest.TestCase):
                         refresh_block_hash(block)
                     bad = Path(tmp) / "paint.json"
                     bad.write_text(json.dumps(data))
-                    reject(optimized, MUSE2, MUSE1, DOC, R4, R5, A11Y, bad)
+                    proc = reject(optimized, MUSE2, MUSE1, DOC, R4, R5, A11Y, bad)
+                    if corruption == "failure_string":
+                        require("R5 paint failure retained" in proc.stderr, proc.stderr[-2000:])
 
 
 if __name__ == "__main__":

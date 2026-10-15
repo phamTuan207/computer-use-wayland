@@ -548,7 +548,7 @@ def fcitx5_running():
     return False
 
 @contextmanager
-def literal_keyboard(env,enabled=True):
+def literal_keyboard(env,enabled=True,result=None):
     """Bypass composition for exact text; preserve the focused context's IME state."""
     import signal
     remote=shutil.which('fcitx5-remote') if enabled else None
@@ -584,6 +584,7 @@ def literal_keyboard(env,enabled=True):
                 return
             time.sleep(min(.01,max(0,deadline-time.monotonic())))
     def warn_restore(restore_error,primary):
+        if result is not None:result['ime_restore_failed']=True
         # One bounded single line on stderr: a stable label plus the sanitized
         # RESTORE detail only. The primary message is never echoed; it may carry
         # wtype stderr or user input. Only its type names it, never its text.
@@ -702,6 +703,18 @@ def mouse_modifiers(env,names):
         try:keyboard.command('mods 0')
         finally:keyboard.close()
 
+class TransientRefusal(RuntimeError):
+    """A desktop guard refused input; never classify arbitrary exception text."""
+
+
+def is_transient_refusal(result):
+    return (isinstance(result,dict) and result.get('ok') is False and
+            result.get('error') in ('screen changed','focus changed') and
+            result.get('error_code')=={'screen changed':'screen_changed',
+                                      'focus changed':'focus_changed'}[result['error']] and
+            'capture_error' not in result and 'ime_restore_failed' not in result)
+
+
 def desktop_act(env,meta,actions,after_capture=True):
     if not isinstance(after_capture,bool): raise ValueError('after_capture must be boolean')
     check_cancel()
@@ -730,9 +743,11 @@ def desktop_act(env,meta,actions,after_capture=True):
             if bounds(c)!=meta['window_bounds']: raise RuntimeError('window geometry changed; observe again')
         m=next((m for m in hypr(env,'monitors') if m['name']==meta['monitor']),None)
         if not m or monitor_box(m)!=meta['monitor_box'] or m['scale']!=meta['monitor_scale'] or m.get('transform',0)!=meta['monitor_transform']: raise RuntimeError('monitor layout changed; observe again')
-        if not screen_scope and not same_window_address(hypr(env,'activewindow').get('address'),address): raise RuntimeError('focus changed; batch stopped')
+        if not screen_scope and not same_window_address(hypr(env,'activewindow').get('address'),address): raise TransientRefusal('focus changed')
     if not screen_scope:focus(env,address)
-    guard()
+    try:guard()
+    except TransientRefusal as exc:
+        return {'ok':False,'completed':0,'error':str(exc),'error_code':'focus_changed'}
     # Refuse coordinates from an image superseded by a visible layout change.
     new,fresh=(observe_screen(env,meta['monitor'],meta.get('crop'),meta['max_width'],persist=False) if screen_scope else
                observe(env,address,meta.get('crop'),meta['max_width'],activate=False,persist=False))
@@ -740,10 +755,10 @@ def desktop_act(env,meta,actions,after_capture=True):
     old=Image.open(meta['image'])
     if screen_changed(old,new,actions):
         fresh=save_observation(new,fresh,meta['max_width'])
-        return {'ok':False,'completed':0,'error':'screen changed since observation; inspect after.image','after':fresh}
+        return {'ok':False,'completed':0,'error':'screen changed','error_code':'screen_changed','after':fresh}
     # A keyboard-only batch must not open the virtual pointer device at all, and an
     # ordinary startup failure belongs in the result envelope, not outside it.
-    pointer=None;completed=0;error=None
+    pointer=None;completed=0;error=None;ime_result={};transient_error=False
     def move(x,y):
         gx,gy=image_point(meta,x,y);mx,my,mw,mh=meta['monitor_box']
         # High resolution normalized coordinates, independent of image resize / output scale.
@@ -757,7 +772,7 @@ def desktop_act(env,meta,actions,after_capture=True):
             exact=any(x['type']=='type' and x.get('ime','literal')=='literal' for x in a)
             if not any(x['type']=='type' and x.get('ime')=='compose' for x in a):
                 exact=exact or any(x['type']=='key' and any(k in ('BackSpace','Delete','Home','End','Left','Right','Up','Down','Prior','Next') for k in key_names(x['keys'])[1]) for x in a)
-            with literal_keyboard(env,exact):
+            with literal_keyboard(env,exact,result=ime_result):
                 guard();run_cancelable(keyboard_argv(a),env)
                 completed+=len(a)   # input acknowledged; count it before IME restore can fail
             return
@@ -786,7 +801,7 @@ def desktop_act(env,meta,actions,after_capture=True):
                     guard();move(sx+(ex-sx)*i/10,sy+(ey-sy)*i/10);wait_cancelable(a.get('ms',300)/10000)
             finally:pointer.command(f'button {b} 0')
         elif typ=='type':
-            with literal_keyboard(env,a.get('ime','literal')=='literal'):
+            with literal_keyboard(env,a.get('ime','literal')=='literal',result=ime_result):
                 guard();run_cancelable(standalone_type_argv(a),env,input=a['text'])
                 completed+=1     # same rule: never infer a count from a failed input
             return
@@ -812,17 +827,22 @@ def desktop_act(env,meta,actions,after_capture=True):
             with mouse_modifiers(env,a.get('modifiers',[]) if isinstance(a,dict) else []):
                 execute_group(a)
             guard()
-    except Exception as exc: error=str(exc)
+    except Exception as exc:
+        error=str(exc);transient_error=isinstance(exc,TransientRefusal)
     finally:
         # Teardown failure must not discard the count or escape as an exception.
         if pointer:
             try:pointer.close()
-            except Exception as exc:error=error or 'pointer cleanup failed: '+str(exc)
+            except Exception as exc:
+                error=error or 'pointer cleanup failed: '+str(exc)
+                transient_error=False
     if not after_capture and error is None:
         return {'ok':True,'completed':completed,
                 'execution_ms':round((time.monotonic()-start)*1000),'after_skipped':True}
     time.sleep(.08)
     result={'ok':error is None,'completed':completed,'execution_ms':round((time.monotonic()-start)*1000)}
+    result.update(ime_result)
+    if transient_error:result['error_code']='focus_changed'
     if error: result['error']=error
     try:
         result['after']=(observe_screen(env,meta['monitor'],meta.get('crop'),meta['max_width']) if screen_scope else
@@ -1032,11 +1052,22 @@ def main():
             else:
                 result=(observe_screen(env,args.screen,args.crop,args.max_width) if args.screen else
                         observe(env,args.window,args.crop,args.max_width,activate=args.focus))
+            import session_policy
+            session_policy.record_observation(STATE,os.environ.get('CU_SESSION_TOKEN'),result)
     elif args.command=='act':
         require_session()
         actions=read_json(sys.stdin) if args.actions=='-' else read_json_file(args.actions)
         check_cancel()
-        with locked(): result=desktop_act(env,read_json_file(args.observation),actions,after_capture=not args.no_after)
+        with locked():
+            import session_policy
+            session_policy.require_observation(STATE,os.environ.get('CU_SESSION_TOKEN'),args.observation)
+            result=desktop_act(env,read_json_file(args.observation),actions,after_capture=not args.no_after)
+            if is_transient_refusal(result):
+                check_cancel()
+                session_policy.record_refusal(STATE,os.environ.get('CU_SESSION_TOKEN'))
+                print('session refusal: error='+result['error']+' action=require_reobserve',file=sys.stderr)
+            elif result.get('ok') is True:
+                session_policy.complete_requirement(STATE,os.environ.get('CU_SESSION_TOKEN'))
     elif args.command=='a11y':
         check_cancel()
         request={'operation':args.operation,'pid':args.pid,'snapshot':args.snapshot}
@@ -1052,8 +1083,14 @@ def main():
             if not args.actions: raise ValueError('--actions required')
             request['actions']=read_json(sys.stdin) if args.actions=='-' else read_json_file(args.actions)
             validate_actions(request['actions'],'a11y')
-        with locked():out=run_cancelable(['python3',str(ROOT/'scripts/a11y.py')],env=env,input=json.dumps(request),timeout=15)
-        result=json.loads(out) if out.strip() else {'ok':False,'error':'accessibility adapter returned no data'}
+        with locked():
+            if args.operation=='act':
+                import session_policy
+                session_policy.require_observation(STATE,os.environ.get('CU_SESSION_TOKEN'))
+            out=run_cancelable(['python3',str(ROOT/'scripts/a11y.py')],env=env,input=json.dumps(request),timeout=15)
+            result=json.loads(out) if out.strip() else {'ok':False,'error':'accessibility adapter returned no data'}
+            if args.operation=='act' and isinstance(result,dict) and result.get('ok') is True:
+                session_policy.complete_requirement(STATE,os.environ.get('CU_SESSION_TOKEN'))
     else:
         check_cancel()
         if args.no_after and args.operation!='act':raise ValueError('--no-after requires browser act')
@@ -1071,7 +1108,13 @@ def main():
             if args.no_after:
                 validate_terminal_assert(request['actions'])
                 request['no_after']=True
-        with locked():result=browser(request)
+        with locked():
+            if args.operation=='act':
+                import session_policy
+                session_policy.require_observation(STATE,os.environ.get('CU_SESSION_TOKEN'))
+            result=browser(request)
+            if args.operation=='act' and isinstance(result,dict) and result.get('ok') is True:
+                session_policy.complete_requirement(STATE,os.environ.get('CU_SESSION_TOKEN'))
         raw=result.pop('image_base64',None) if isinstance(result,dict) else None
         if raw:
             import base64
@@ -1079,7 +1122,8 @@ def main():
     if args.command in ('observe','act') and not args.verbose:result=compact_result(result)
     print(json.dumps(result,ensure_ascii=False,separators=(',',':')),flush=True)
     if isinstance(result,dict) and result.get('ok') is False:
-        stop_session_on_error();return 1
+        if args.command!='act' or not is_transient_refusal(result):stop_session_on_error()
+        return 1
     return 0
 
 def require_session():

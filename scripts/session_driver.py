@@ -82,5 +82,9 @@ def relay_commands(source, sink):
         if result.stderr:response['stderr']=result.stderr
         print(json.dumps(response,ensure_ascii=False,separators=(',',':')), file=sink, flush=True)
         if result.returncode:
+            import cu
+            if (result.returncode == 1 and args[0] == 'act' and
+                    cu.is_transient_refusal(response.get('result'))):
+                continue
             return result.returncode
     return 0  # EOF lets the guardian clean up; never detach a hidden session.

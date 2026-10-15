@@ -57,7 +57,10 @@ Inspect each returned image before choosing coordinates; these lines show the
 wire format, not a batch to paste blindly. The relay reuses the installed Python CLI runtime
 and returns decoded JSON in `result`, rather than escaped JSON in `stdout`.
 Only non-JSON output falls back to `stdout`; empty stderr is omitted. It runs
-directly without a shell, preserves session ownership, and exits on CLI error.
+directly without a shell, preserves session ownership, and exits on CLI error. The driver itself
+continues past exactly one case — a desktop `act` returning code 1 with a whitelisted transient
+refusal (`screen changed`/`screen_changed`, `focus changed`/`focus_changed`) — so an explicit
+observe plus fresh-path retry can follow; every other error ends the relay.
 EOF, finish, physical Esc, or a crash lets the guardian remove the overlay.
 Do not automatically resume or repeat input after cancellation/failure.
 
@@ -281,10 +284,11 @@ See [installed diagnostics](../../docs/optimization-experiments.md#installed-key
 - `unknown XKB key name`: use an alias above or a validated keysym; no guessed syntax.
 - `non-BMP text...`: use browser fill/a11y setter; do not replace emoji with a different character.
 
-- `screen changed...`: inspect the returned `after.image` and reuse `after.observation` only after inspecting; for animation use a smaller target crop or semantic backend.
+- `screen changed` / `screen_changed` or `focus changed` / `focus_changed`: inspect any returned `after.image`, then run an explicit desktop `observe` and use its fresh path for the next desktop `act`. The automatic `after.observation` does not satisfy this requirement. Other input backends are blocked until that explicit observation too. Capture, cleanup or IME restoration errors end the session even alongside a transient refusal.
 - `pointer missed target...`: input is stopped before button-down; inspect monitor/transform metadata. Do not fall back to guessed deltas.
 - CDP tab missing: `browser tabs`, then select exact target; do not silently use the first tab.
 - `element covered` / stale snapshot: inspect a fresh observation; close only the overlay the user authorized handling.
 - Native rebuild: `python3 ~/.local/share/agent-computer-use/scripts/build.py` (needs cc, wayland-scanner, libwayland; bundled protocol license preserved).
+- Glass backend build refuses a dirty source tree by default (tracked or untracked, regardless of git untracked-visibility config); pass `--allow-dirty` to build intentionally. Dirt from the build's own patch in the same run is permitted, but rerunning over an already-patched dirty tree still needs the flag. The build stamps `commit`/`initial_dirty`/`allow_dirty` before patching and `build_dirty` after.
 
 IME control follows the [official fcitx5 interface](https://fcitx-im.org/wiki/DBus_Interface): query state, deactivate with `-c`, restore with `-o`; no clipboard replacement or persistent config changes. Desktop results remain event-level confirmations; verify drafts before external submission.

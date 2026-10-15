@@ -57,8 +57,13 @@ the first one.
 
 Coordinates refer to the saved returned image, including crop and resize. Read that image before
 choosing coordinates, keep the observation path rather than the printed metadata, and never reuse
-coordinates after any geometry, focus or screen change. A refusal after a screen change returns a
-fresh `after`; inspect it before retrying. `observe --window` leaves focus and workspace alone;
+coordinates after any geometry, focus or screen change. A screen-change refusal returns a
+fresh `after` for inspection; it does not satisfy the required `observe`. Only two refusals
+keep the session alive, when no capture, cleanup or IME restoration error accompanies them: exact
+`screen changed`/`screen_changed` and exact `focus changed`/`focus_changed`. After either,
+run an explicit `observe` and use only its fresh observation path for the next input; every
+other error, and any refusal without its exact code, ends the task. Cancellation is unchanged:
+never auto-replay, resume, or restore focus after cancel. `observe --window` leaves focus and workspace alone;
 `--focus` is deliberate and may switch workspace or restack windows. Screen scope, for layer-shell
 and popups, supports pointer actions only. Crop arguments are logical pixels relative to the chosen
 window or monitor. Group predictable steps into one batch and observe again at unknown menus or
@@ -67,7 +72,9 @@ layout changes; after two failed targeting attempts, change backend or ask.
 ## Text and IME
 
 `type` defaults to literal text where fcitx5 is active; it checks IME state, suspends composition and
-restores it even on failure. Do not toggle blindly and do not assume a particular engine or a
+attempts to restore it even when input fails. A desktop result carrying `ime_restore_failed: true`
+means composition may still be off: stop, report the restoration failure, and never replay input
+automatically. Do not toggle blindly and do not assume a particular engine or a
 universal shortcut. Use `ime:"compose"` only to drive a composing layout such as Telex. Native typing
 is not bound to a target window: focus guards run between keyboard groups, not during a live typing
 run. Desktop `wtype` can lose BMP characters through key collisions and refuses non-BMP emoji, so for
