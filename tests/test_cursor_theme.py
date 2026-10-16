@@ -14,20 +14,45 @@ import cursor_session
 
 
 class CursorTheme(unittest.TestCase):
-    def test_opt_in_snapshot_and_exact_original_gtk_state(self):
+    def test_required_snapshot_records_exact_original_gtk_state(self):
         with tempfile.TemporaryDirectory() as tmp:
             profile=Path(tmp)/'profile.json'
             profile.write_text(json.dumps(dict(theme='cu-agent-v1',size=32,restore_theme='default',restore_size=24)))
-            with patch.object(cursor_theme,'PROFILE',profile),patch.object(cursor_theme,'command',side_effect=["'Adwaita'",'24']):
+            with patch.object(cursor_theme,'PROFILE',profile),patch.object(cursor_theme,'command',side_effect=['',"'Adwaita'",'24']) as command:
                 saved=cursor_theme.snapshot({})
         self.assertEqual(saved['gtk_theme'],'Adwaita')
         self.assertEqual(saved['gtk_size'],24)
         self.assertEqual(saved['hypr_theme'],'default')
+        probe=command.call_args_list[0].args
+        self.assertIn(cursor_theme.THEME_CHECK_CODE,probe)
+        self.assertEqual(probe[-2:],('cu-agent-v1','32'))
 
-    def test_no_profile_makes_no_desktop_calls(self):
+    def test_missing_profile_raises_before_desktop_calls(self):
         with patch.object(cursor_theme.Path,'is_file',return_value=False),patch.object(cursor_theme,'command') as command:
-            self.assertIsNone(cursor_theme.snapshot({}))
+            with self.assertRaisesRegex(RuntimeError,'profile required'):cursor_theme.snapshot({})
             command.assert_not_called()
+
+    def test_oversized_profile_rejected_before_desktop_calls(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            profile=Path(tmp)/'profile.json'
+            profile.write_bytes(b'{"theme":"x",' + b' '*4096 + b'}')
+            with patch.object(cursor_theme,'PROFILE',profile),patch.object(cursor_theme,'command') as command:
+                with self.assertRaisesRegex(ValueError,'exceeds 4096'):cursor_theme.snapshot({})
+                command.assert_not_called()
+
+    def test_unloadable_asset_refuses_before_gtk_queries(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            profile=self._profile(tmp)
+            with patch.object(cursor_theme,'PROFILE',profile), \
+                 patch.object(cursor_theme,'command',side_effect=subprocess.CalledProcessError(1,['probe'])) as command:
+                with self.assertRaises(subprocess.CalledProcessError):cursor_theme.snapshot({})
+                command.assert_called_once()
+
+    def test_dot_and_dotdot_theme_names_rejected(self):
+        for bad in ('.','..'):
+            with self.subTest(bad=bad),patch.object(cursor_theme,'command') as command:
+                with self.assertRaises(ValueError):cursor_theme.apply({},bad,32)
+                command.assert_not_called()
 
     def test_invalid_theme_rejected_before_side_effects(self):
         with patch.object(cursor_theme,'command') as command:
@@ -61,7 +86,7 @@ class CursorTheme(unittest.TestCase):
     def test_declared_compositor_restore_stays_distinct_from_actual_gtk(self):
         with tempfile.TemporaryDirectory() as tmp:
             profile=self._profile(tmp,restore_theme='Manual-base',restore_size=32)
-            with patch.object(cursor_theme,'PROFILE',profile),patch.object(cursor_theme,'command',side_effect=["'GTK-base'",'24']):
+            with patch.object(cursor_theme,'PROFILE',profile),patch.object(cursor_theme,'command',side_effect=['',"'GTK-base'",'24']):
                 saved=cursor_theme.snapshot({})
         self.assertEqual((saved['gtk_theme'],saved['gtk_size']),('GTK-base',24))
         self.assertEqual((saved['hypr_theme'],saved['hypr_size']),('Manual-base',32))
@@ -102,7 +127,7 @@ class CursorTheme(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             profile=self._profile(tmp)
             env={'HYPRLAND_INSTANCE_SIGNATURE':'fresh-login'}
-            with patch.object(cursor_theme,'PROFILE',profile),patch.object(cursor_theme,'command',side_effect=["'ok'",'24']):
+            with patch.object(cursor_theme,'PROFILE',profile),patch.object(cursor_theme,'command',side_effect=['',"'ok'",'24']):
                 saved=cursor_theme.snapshot(env)
         with patch.object(cursor_theme,'command',return_value='ok') as command:
             cursor_theme.apply({},'cu-agent-v1',saved['agent_size'])

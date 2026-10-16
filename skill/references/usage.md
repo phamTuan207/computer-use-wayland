@@ -6,9 +6,12 @@ setup requires `--restore-theme YOUR_CURRENT_HYPRLAND_THEME --restore-size
 YOUR_CURRENT_HYPRLAND_SIZE`, declared once: the compositor's cursor cannot be read
 back, and it is never guessed from GTK. An existing valid manual profile is kept
 byte for byte and needs no flags. Each session applies the agent cursor, restores
-those declared Hyprland values, and independently snapshots and restores GTK. The
-normal-cursor behavior below describes a manual install without
-`native/agent-cursor.json`.
+those declared Hyprland values, and independently snapshots and restores GTK.
+Compositor restoration is mandatory; GTK restoration alone never proves
+compositor state. Every session requires a configured, loadable agent cursor
+plus the ready overlay before its driver can start. Losing the overlay stops
+the running session. The repo CLI reads only its own tree's
+`native/agent-cursor.json`, never an installed copy.
 There is one shared pointer. Do not operate simultaneously.
 
 Run the whole task driver as `computer-use session -- DRIVER [ARGS...]`, not a
@@ -17,11 +20,11 @@ Input commands require a live session; standalone capture remains available.
 Sessions show a click-through layer-shell badge "Computer use active"; the badge takes
 no keyboard focus and lets clicks through. The badge surface asks the compositor for a
 per-surface backdrop blur (`ext_background-effect-v1`), applied only inside the rounded
-pill. With a cursor profile present, the shared pointer switches to the agent theme
+pill. The shared pointer switches to the agent theme
 for the task and returns to the declared values when the task ends; no marker is
-drawn and the screen scale never changes. Without a profile — a manual install —
-the cursor stays normal throughout. Window and screen captures both hide the badge
-for the shot and restore it after; hiding clears the blur region together with the pixels, so no blurred copy
+drawn and the screen scale never changes. Window and screen captures both hide the badge
+for the shot and restore it after — that hide/show fencing stays the only
+exception to overlay visibility; hiding clears the blur region together with the pixels, so no blurred copy
 survives in the capture. Outputs are taken once at startup: adding or removing a
 monitor mid-session ends the indicator.
 `finish` requests completion; `cancel` latches cancellation. Best-effort physical

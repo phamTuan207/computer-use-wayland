@@ -18,7 +18,10 @@ a temporary agent cursor. With no `native/agent-cursor.json`, setup refuses with
 `--restore-theme YOUR_CURRENT_HYPRLAND_THEME --restore-size YOUR_CURRENT_HYPRLAND_SIZE`, declared
 once: the compositor cursor cannot be read back and is never inferred from GTK. An existing valid
 manual profile is preserved byte for byte and needs no flags. A task applies the agent cursor,
-restores those declared values, and independently snapshots and restores GTK. Setup only prepares;
+restores those declared values, and independently snapshots and restores GTK. Every session
+needs that configured, loadable cursor plus the ready overlay; there is no normal-cursor
+fallback, and the repo CLI reads only its own tree's `native/agent-cursor.json`.
+Setup only prepares;
 only a fresh login loads the backend, and a running plugin is never hot-swapped. Ask the user for
 unknown Hyprland restore values before setup; GTK is not a substitute.
 

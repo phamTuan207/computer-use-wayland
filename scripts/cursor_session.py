@@ -37,7 +37,7 @@ def request_stop(expected=None):
 def restore(env):
     """Remove temporary Escape binding before discarding durable session state.
 
-    Optional cursor changes are restored before discarding the snapshot. Old snapshots must be recovered
+    Cursor changes are restored before discarding the snapshot. Old snapshots must be recovered
     with the old version first; do not silently discard an unrestored desktop.
     """
     import cancel_hotkey
@@ -118,7 +118,7 @@ def guardian(env, pipe, token):
             cursor=cursor_theme.snapshot(env)
             # Persist before installing the temporary Escape binding.
             with open(SNAPSHOT,'x',opener=lambda path,flags:os.open(path,flags,0o600)) as stream:
-                json.dump({'version':4 if cursor else 3,'token':token,**({'cursor':cursor} if cursor else {})},stream)
+                json.dump({'version':4,'token':token,'cursor':cursor},stream)
                 stream.flush();os.fsync(stream.fileno())
             escape_available=False
             try:
@@ -126,7 +126,7 @@ def guardian(env, pipe, token):
             except Exception as exc:
                 print(f'warning: temporary Escape binding unavailable: {exc}',file=sys.stderr)
             if stopping[0] or CANCEL.exists():raise RuntimeError('session cancelled during startup')
-            if cursor:cursor_theme.apply(env,cursor['agent_theme'],cursor['agent_size'])
+            cursor_theme.apply(env,cursor['agent_theme'],cursor['agent_size'])
             server=indicator.listen(STATE,token)
             native=indicator.Native({**env,'CU_ESCAPE_AVAILABLE':'1' if escape_available else '0'})
             if stopping[0] or CANCEL.exists():raise RuntimeError('session cancelled during indicator startup')

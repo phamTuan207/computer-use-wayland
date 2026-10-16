@@ -35,9 +35,38 @@ elif a and a[0]=='eval':
     elif ':unbind()' in a[1] and 'hl.bind' not in a[1] and s.get('unbind_failure'):
         p.write_text(json.dumps(s));sys.exit(1)
     print('ok')
+elif a and a[0]=='setcursor':
+    if s.get('apply_failure') and len(a)>1 and a[1]==s.get('agent_theme'):
+        print('refused')
+    else:print('ok')
 else:sys.exit(1)
 p.write_text(json.dumps(s))
 '''
+
+FAKE_GSETTINGS = '''#!/usr/bin/env python3
+import json,os,sys
+from pathlib import Path
+p=Path(os.environ['FAKE_DESKTOP'])
+s=json.loads(p.read_text())
+a=sys.argv[1:]
+if a[:3]==['get','org.gnome.desktop.interface','cursor-theme']:print(s['gtk_theme'])
+elif a[:3]==['get','org.gnome.desktop.interface','cursor-size']:print(s['gtk_size'])
+elif a[:3]==['set','org.gnome.desktop.interface','cursor-theme']:s['gtk_theme']="'%s'"%a[3];print('')
+elif a[:3]==['set','org.gnome.desktop.interface','cursor-size']:s['gtk_size']=a[3];print('')
+else:sys.exit(1)
+p.write_text(json.dumps(s))
+'''
+
+
+def write_xcursor(path, size):
+    """Minimal valid Xcursor file: one image chunk at the nominal size, no renderer."""
+    import struct
+    width=height=size
+    hot=max(1,size//16)
+    pixels=struct.pack('<I',0xFF000000)*(width*height)
+    chunk=struct.pack('<IIIIIIIII',36,0xFFFD0002,size,1,width,height,hot,hot,0)+pixels
+    toc=struct.pack('<III',0xFFFD0002,size,16+12)
+    path.write_bytes(struct.pack('<IIII',0x72756358,16,0x10000,1)+toc+chunk)
 
 FAKE_INDICATOR = '''#!/usr/bin/env python3
 import sys
@@ -75,9 +104,13 @@ class Lifecycle(unittest.TestCase):
     def setUp(self):
         self.tmp=tempfile.TemporaryDirectory();self.folder=Path(self.tmp.name)
         self.desktop=self.folder/'desktop.json'
-        self.desktop.write_text(json.dumps({'zoom':'1.750000','calls':[]}))
+        # Original desktop values are all distinct so restoration is provable.
+        self.desktop.write_text(json.dumps({'zoom':'1.750000','calls':[],
+            'gtk_theme':"'DesktopGTK'",'gtk_size':'26',
+            'agent_theme':'cu-agent-test','agent_size':32,
+            'restore_theme':'desktop-hypr','restore_size':24}))
         binary=self.folder/'bin';binary.mkdir()
-        for name,code in [('hyprctl',FAKE),('pgrep','#!/bin/sh\nexit 0\n'),
+        for name,code in [('hyprctl',FAKE),('gsettings',FAKE_GSETTINGS),('pgrep','#!/bin/sh\nexit 0\n'),
                           ('computer-use-indicator',FAKE_INDICATOR),
                           ('grim',"#!/usr/bin/env python3\nimport sys\nsys.stdout.buffer.write(b'P6\\n2 2\\n255\\n'+bytes(12))\n"),
                           ('node','#!/bin/sh\nprintf \'{"ok":false,"error":"refusal"}\\n\'\n')]:
@@ -88,19 +121,28 @@ class Lifecycle(unittest.TestCase):
         p=self.altbin/'computer-use-indicator'
         p.write_text(TRACKED_INDICATOR);p.chmod(0o700)
         self.env=os.environ.copy();self.env.pop('CU_SESSION_TOKEN',None)
+        # Minimal valid agent theme on the Xcursor search path: real files for
+        # left_ptr/pointer, an alias for text, all loadable at the agent size.
+        icons=self.folder/'icons';cursors=icons/'cu-agent-test'/'cursors';cursors.mkdir(parents=True)
+        write_xcursor(cursors/'left_ptr',32)
+        write_xcursor(cursors/'pointer',32)
+        (cursors/'text').symlink_to('left_ptr')
         self.env.update(PATH=str(binary)+os.pathsep+self.env['PATH'],
-                        XDG_CACHE_HOME=str(self.folder/'cache'),FAKE_DESKTOP=str(self.desktop))
+                        XDG_CACHE_HOME=str(self.folder/'cache'),FAKE_DESKTOP=str(self.desktop),
+                        XCURSOR_PATH=str(icons))
         self.state=self.folder/'cache'/'agent-computer-use'
         self.processes=[]
-        # Lifecycle subprocesses run a private copy of the project with an empty
-        # native/ directory, so a generated native/agent-cursor.json or
-        # native/require-liquid in the checkout can never make these fail.
+        # Lifecycle subprocesses run a private copy of the project with an
+        # explicit cursor profile, so every session exercises the required
+        # agent-cursor path instead of a normal-cursor fallback.
         self.runtime=self.folder/'runtime'
         shutil.copytree(ROOT/'scripts',self.runtime/'scripts',
                         ignore=shutil.ignore_patterns('__pycache__'))
         (self.runtime/'native').mkdir()
+        (self.runtime/'native/agent-cursor.json').write_text(json.dumps(
+            {'theme':'cu-agent-test','size':32,'restore_theme':'desktop-hypr','restore_size':24}))
         # In-process guards read cursor_theme.PROFILE directly; point them at the
-        # same empty native/ so a generated profile cannot leak in either.
+        # same explicit profile so behavior matches the subprocess runtime.
         patcher=patch.object(cursor_theme,'PROFILE',self.runtime/'native/agent-cursor.json')
         patcher.start();self.addCleanup(patcher.stop)
 
@@ -147,12 +189,20 @@ class Lifecycle(unittest.TestCase):
 
     def assert_restored(self):
         self.wait_for(lambda:json.loads(self.desktop.read_text())['zoom']=='1.750000' and not (self.state/'session.json').exists())
-        calls=json.loads(self.desktop.read_text())['calls']
-        self.assertFalse(any(a[0] in ('keyword','setcursor','getoption') or 'hl.config' in str(a) for a in calls))
+        state=json.loads(self.desktop.read_text())
+        calls=state['calls']
+        self.assertFalse(any(a[0] in ('keyword','getoption') or 'hl.config' in str(a) for a in calls))
         self.assertTrue(any(':unbind()' in str(a) for a in calls))
-        self.assertFalse(json.loads(self.desktop.read_text()).get('hotkey_active'))
+        self.assertFalse(state.get('hotkey_active'))
+        # The agent cursor was applied, then both tracks were restored: GTK
+        # values match the distinct originals and the compositor got the
+        # declared restore theme/size. GTK alone never proves compositor state.
+        self.assertIn(['setcursor','cu-agent-test','32'],calls)
+        self.assertEqual([a for a in calls if a and a[0]=='setcursor'][-1],
+                         ['setcursor','desktop-hypr','24'])
+        self.assertEqual((state['gtk_theme'],state['gtk_size']),("'DesktopGTK'",'26'))
 
-    def test_success_and_driver_error_leave_desktop_unchanged(self):
+    def test_success_and_driver_error_restore_desktop(self):
         for status in (0,7):
             with self.subTest(status=status):
                 p=self.launch('import sys;sys.exit('+str(status)+')')
@@ -278,7 +328,7 @@ class Lifecycle(unittest.TestCase):
         import cancel_hotkey
         import indicator
         for failing in ('request_stop','stop_group','drain_input'):
-            with self.subTest(failing=failing),patch.object(session.signal,'signal'),patch.object(session,'STATE',self.folder),patch.object(session,'SNAPSHOT',self.folder/'snapshot'),patch.object(session,'CANCEL',self.folder/'cancel'),patch.object(session,'owner_lock'),patch.object(cancel_hotkey,'hotkey_on'),patch.object(cancel_hotkey,'hotkey_off'),patch.object(session,'request_stop'),patch.object(session,'stop_group'),patch.object(session,'drain_input'),patch.object(session,'restore',return_value=True) as restore,patch.object(session.select,'select',return_value=([1],[],[])),patch.object(session.os,'read',side_effect=[b'123',b'']),patch.object(session,failing,side_effect=RuntimeError('cleanup injected')):
+            with self.subTest(failing=failing),patch.object(session.signal,'signal'),patch.object(session,'STATE',self.folder),patch.object(session,'SNAPSHOT',self.folder/'snapshot'),patch.object(session,'CANCEL',self.folder/'cancel'),patch.object(session,'owner_lock'),patch.object(cancel_hotkey,'hotkey_on'),patch.object(cancel_hotkey,'hotkey_off'),patch.object(session,'request_stop'),patch.object(session,'stop_group'),patch.object(session,'drain_input'),patch.object(session,'restore',return_value=True) as restore,patch.object(session.select,'select',return_value=([1],[],[])),patch.object(session.os,'read',side_effect=[b'123',b'']),patch.object(session,failing,side_effect=RuntimeError('cleanup injected')),patch.object(cursor_theme,'snapshot',return_value={'agent_theme':'cu-agent-test','agent_size':32}),patch.object(cursor_theme,'apply'):
                 with patch.object(indicator,'Native') as native,patch.object(indicator,'listen'):
                     native.return_value.process.poll.return_value=None
                     self.assertEqual(session.guardian(self.env,1,'a'*32),1)
@@ -286,7 +336,7 @@ class Lifecycle(unittest.TestCase):
                     (self.folder/'snapshot').unlink(missing_ok=True)
                 (self.folder/'snapshot').unlink(missing_ok=True)
 
-    def test_startup_never_reads_cursor_or_captures(self):
+    def test_startup_does_not_query_cursor_position_or_capture(self):
         self.configure(bad_read=True,no_monitors=True)
         p=self.launch('print("driver ran")');out,err=p.communicate(timeout=8)
         self.assertEqual(p.returncode,0,(out,err));self.assertIn('driver ran',out)
@@ -384,6 +434,48 @@ class Lifecycle(unittest.TestCase):
         self.assertFalse(marker.exists(),'driver ran despite indicator startup failure')
         self.assert_restored()
         self.assertEqual(list(self.state.glob('indicator-*.sock')),[],'indicator socket leaked')
+
+    def test_missing_profile_never_starts_driver(self):
+        marker=self.folder/'must-not-run'
+        (self.runtime/'native/agent-cursor.json').unlink()
+        p=self.launch(f"from pathlib import Path;Path({str(marker)!r}).touch()")
+        out,err=p.communicate(timeout=8)
+        self.assertNotEqual(p.returncode,0,(out,err))
+        self.assertFalse(marker.exists(),'driver ran without a cursor profile')
+        self.assertFalse(any(a and a[0]=='setcursor' for a in json.loads(self.desktop.read_text())['calls']))
+
+    def test_missing_or_corrupt_cursor_assets_never_start_driver(self):
+        cursors=self.folder/'icons/cu-agent-test/cursors'
+        for role,content in (('text',None),('left_ptr',b'not an Xcursor image')):
+            with self.subTest(role=role):
+                path=cursors/role
+                original=path.read_bytes()
+                link=path.readlink() if path.is_symlink() else None
+                path.unlink()
+                if content is not None:path.write_bytes(content)
+                try:
+                    marker=self.folder/'must-not-run'
+                    p=self.launch(f"from pathlib import Path;Path({str(marker)!r}).touch()")
+                    out,err=p.communicate(timeout=8)
+                    self.assertNotEqual(p.returncode,0,(out,err))
+                    self.assertFalse(marker.exists(),'driver ran without loadable cursor assets')
+                    self.assertFalse((self.state/'session.json').exists())
+                    desktop=json.loads(self.desktop.read_text())
+                    self.assertFalse(any(a and a[0]=='setcursor' for a in desktop['calls']))
+                    self.assertEqual((desktop['gtk_theme'],desktop['gtk_size']),("'DesktopGTK'",'26'))
+                finally:
+                    path.unlink(missing_ok=True)
+                    if link is not None:path.symlink_to(link)
+                    else:path.write_bytes(original)
+
+    def test_cursor_apply_failure_never_starts_driver(self):
+        marker=self.folder/'must-not-run'
+        self.configure(apply_failure=True)
+        p=self.launch(f"from pathlib import Path;Path({str(marker)!r}).touch()")
+        out,err=p.communicate(timeout=8)
+        self.assertNotEqual(p.returncode,0,(out,err))
+        self.assertFalse(marker.exists(),'driver ran despite cursor apply failure')
+        self.assert_restored()
 
     def test_guardian_crash_helper_exits_on_eof(self):
         active=self.folder/'indicator-active'

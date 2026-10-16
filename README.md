@@ -109,12 +109,17 @@ Every session gets, with no further configuration:
 - the **liquid glass** backdrop,
 - an agent cursor on the shared desktop pointer.
 
+Every session requires a configured, loadable agent cursor plus the ready
+overlay; there is no normal-cursor fallback. The repo CLI reads only its own
+tree's `native/agent-cursor.json`, never an installed copy.
+
 ### Cursor restoration
 
 A task temporarily switches the desktop cursor to the agent theme, and at the end
 of the task the guardian puts **your declared Hyprland cursor** back. GTK is
 handled on its own track: the guardian also restores the GTK cursor values it
-recorded at task start.
+recorded at task start. Compositor restoration is mandatory; GTK restoration
+alone never proves compositor state.
 
 Those restore values come only from the two `--restore-*` flags or from a profile
 you wrote yourself. Setup never infers the Hyprland cursor from GTK, and there is
