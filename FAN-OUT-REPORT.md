@@ -60,3 +60,11 @@ Nếu mip allocation/generation thất bại, fallback vẫn lấy mẫu full re
 - Lượt CommandCode (audit docs + chuẩn bị acceptance) báo banner CLI **Command Code 1.82.3**, model **DeepSeek v4.1 Flash, high effort** (theo yêu cầu/quan sát). Đây là banner khai báo; provider billing chưa xác minh; không tuyên bố token.
 - Các lượt Codex helper/review/judge kế thừa: model thực **chưa xác minh**; không tự gán model.
 - Quyền sở hữu: root viết gate `ROOT-REVIEWED.json`, giữ commit/push/integration, GUI và quyết định công bố; AGY sở hữu `source-work/` + build `reference-final/` (comment native) nhưng **không** ghi gate; CommandCode chỉ audit docs công khai, chuẩn bị candidate và chạy acceptance sau gate. Không có tuyên bố tiết kiệm token/chi phí nào khi không có số đo.
+
+## Chốt bản theo phản hồi người dùng
+
+Người dùng đã duyệt vòng hiệu chỉnh 5 sau demo 45.027 giây. Root sở hữu các thay đổi chính xác trong hai file native qua năm vòng; AGY hết quota nên không được khởi chạy lại liên tục. CommandCode làm bulk build trong snapshot commit riêng bằng wrapper đã review, không sửa nguồn hoặc điều khiển GUI. Root mở đủ năm ảnh mỗi vòng; reviewer hình ảnh độc lập so với vòng trước và ảnh người dùng. Các ảnh/log giữ riêng.
+
+Bản chốt: lớp trắng 2 px ít đục; vùng khúc xạ 6 px, thickness 21 px; blur mép 3 px, lòng 2.5 px. Native patch SHA256 `f7fd86cc3e4c6f9b83f217841e0c15d10a140d3e72a3545efcb85a82b8ad8028`; indicator giữ nguyên outline nhẹ. Native build/install exit 0, phiên thử mới shader ready/match và cleanup 0. Judge ghi nhận trong hơn, mép mềm hơn nhẹ; không thấy artifact mới rõ.
+
+Bằng chứng cuối: `reports/user-tune-05/`, `user-tune-05-live-01/`; brief bulk `cmd-user-tune-05-brief.md`, raw output và build-record trong artifact tương ứng. Acceptance chốt dùng wrapper/run-checks đã review, chạy trước push và trên exact pushed tree; bằng chứng lưu `reports/approved-final/`. Root giữ integration, commit/push và cài manifest fresh-login; không thay plugin đang chạy. Những báo cáo trước nói chờ người dùng duyệt là trạng thái lịch sử, được thay bằng phê duyệt hiện tại. Hai assertion test material lịch sử vẫn được báo trung thực nếu còn fail; không có tuyên bố toàn bộ test xanh.

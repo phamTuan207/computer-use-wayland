@@ -1,6 +1,6 @@
 # Phân tích shader kính: trạng thái hiện tại
 
-Tài liệu này thay cho bảng khoảng cách trước triển khai. Các bước 1–5 đã có trong candidate; điều đó không đồng nghĩa người dùng đã duyệt hình ảnh hoặc desktop chính đã chạy native mới.
+Tài liệu này thay cho bảng khoảng cách trước triển khai. Các bước 1–5 đã triển khai. Người dùng đã duyệt hình ảnh bản hiệu chỉnh cuối; desktop chính cần đăng nhập mới để nạp thư viện mới.
 
 | Bước | Kỹ thuật đã triển khai | Phạm vi và giới hạn |
 |---|---|---|
@@ -18,6 +18,18 @@ Caveat fallback: nếu format được nhận nhưng allocation/generation mip t
 
 Calibration đã chạy trong compositor thử mới (private nested) với thickness **15 logical px** trước hệ số refraction, radius interior **3.6 logical px** tại `blur_strength=0.42`, gain ánh sáng có hướng và text outline **1 px / alpha 0.30**. Log GPU thật của phiên đó in ra sample **406×158**, **9 mip levels**, level 1 **203×79**, level cuối **1×1**, `interiorRadiusPx(scale1) 3.600`, `lod(density1) 0.381`, **GL error 0**; năm capture **1920×1200**, shader status `ready`, `versionCheck match`, cleanup exit 0. Giá trị LOD **0.381** của calibration là suy từ công thức shader theo mật độ texel; không phải phép đo LOD hay thời gian GPU. Đây là phiên compositor thử, không phải kích hoạt desktop chính.
 
-Mục tiêu hình ảnh là gần reference nhưng hơi ít blur hơn; cần kiểm tra trong tương tác thật, không chỉ ảnh tĩnh. Không tuyên bố tương đương hoàn toàn với reference, runtime mip của reference, hay padding an toàn cho mọi scale/tham số. Đánh giá ảnh độc lập ghi nhận residual so với MacShell: phần giữa kính còn phẳng/sắc hơn, chữ trắng vẫn yếu trên nền sáng, và crop wallpaper là nền đen có lưới nên không đủ bằng chứng độ mềm nền tự nhiên. Phê duyệt thẩm mỹ của người dùng còn chờ; native mới trên desktop chính còn chờ phiên đăng nhập mới. Grain giữ 0; không có kết luận mới về grain hoặc shadow.
+## Bản hiệu chỉnh được người dùng duyệt
 
-Calibration đã build/cài riêng thành công (exit 0), indicator compile exit 0. Năm module focused chạy trên snapshot commit riêng: 57 tests pass, 0 skip, exit 0. Năm capture calibration **1920×1200** đã có (shader `ready`, `versionCheck match`, cleanup exit 0) và root đã xem. Năm capture `final-live-01` **1920×1200** trùng byte với calibration (shader `ready`/`versionCheck match`, cleanup exit 0); gate `ROOT-REVIEWED.json` do root viết. Full9 prepush đã chạy thật trên candidate private: 2 failure `test_indicator_material` mâu thuẫn thay đổi hình ảnh có chủ đích, lỗi Git object lịch sử R5 đã sửa bằng fetch read-only (không sửa test/data); candidate không đạt toàn bộ test không đổi. Release cần full prepush acceptance rồi kiểm tra trên đúng cây đã push, log bằng chứng lưu riêng theo từng lần chạy, và còn chờ người dùng duyệt hình ảnh.
+Sau các vòng demo, người dùng chọn bản có lớp trắng mỏng **2 logical px**, giảm độ đục và bỏ lớp trắng sữa phủ rộng. Vùng khúc xạ theo SDF rộng **6 logical px**, thickness **21 logical px** trước hệ số refraction 0.7. Ánh sáng phản chiếu có hướng dùng cùng normal quartic với tia Snell; các dải phản sáng trong vẫn nằm trong vùng mép.
+
+Ở profile trung tính `blur_strength=0.42`, bán kính blur mép **3 logical px**, lòng kính **2.5 logical px**; chuyển mềm ở độ sâu 4.8–6 px. Bán kính mép theo knob và chặn ở 6 logical px để giữ giới hạn lấy mẫu đã review. Lớp trắng chính kết thúc ở 2 px; phản xạ phụ có hướng vẫn trải trong vùng khúc xạ 6 px. Đây là kích thước theo công thức shader, không phải phép đo từ ảnh. Giữ nguyên profile trung tính, grain 0, client B và outline chữ 1 px / alpha 0.30.
+
+Năm capture mới trên dark/light/window/wallpaper/optical đều từ compositor riêng: shader `ready`, `versionCheck match`, session/compositor exit 0. Root mở đủ năm ảnh; judge độc lập thấy lớp trắng mỏng, trong hơn và mép mềm hơn chút, không thấy lỗi mới rõ. Demo tương tác chạy thực 45.027 giây, sau đó người dùng duyệt. Không suy từ ảnh tĩnh rằng độ bẻ cong đã tăng rõ bằng mắt hoặc mọi format đều được hỗ trợ.
+
+## Giới hạn và kiểm chứng
+
+Chữ trắng vẫn yếu trên nền rất sáng; hiệu ứng mép chưa phong phú hoàn toàn như ảnh tham chiếu. Chưa có runtime proof 10-bit/FP16, số đo hiệu năng, hoặc kiểm chứng dài hạn. Fallback mip còn caveat ở trên. Không thêm grain hoặc shadow mới khi chưa có bằng chứng hình ảnh.
+
+Calibration lịch sử có 57/57 focused checks pass. Lần acceptance của bản công bố trước chạy 673 tests, có hai assertion material cũ không khớp thay đổi có chủ đích (đếm lệnh màu chữ và alpha wash); các suite còn lại pass. Không sửa test để đạt xanh. Bản được duyệt phải chạy lại full acceptance trước push và trên đúng cây đã push; kết quả thật, lệnh và exit được lưu riêng theo commit. Việc người dùng duyệt hình ảnh không thay cho kết quả test.
+
+Cài đặt desktop dùng thư viện bất biến theo hash và manifest cho fresh login; không reload/unload/hot-swap plugin hiện tại. Trạng thái đã nạp trên desktop chính chỉ được xác nhận sau đăng nhập mới.

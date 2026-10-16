@@ -1,6 +1,6 @@
 # Nhật ký hiệu chỉnh kính
 
-Bản công khai rút gọn từ bằng chứng kiểm tra đã lưu riêng. Không chứa log thô hoặc thông tin môi trường cá nhân. Người dùng chưa duyệt kết quả cuối.
+Bản công khai rút gọn từ bằng chứng kiểm tra đã lưu riêng. Không chứa log thô hoặc thông tin môi trường cá nhân. Người dùng đã duyệt bản hiệu chỉnh cuối sau demo 45 giây.
 
 | Checkpoint | Thay đổi | Bằng chứng và kết luận giới hạn |
 |---|---|---|
@@ -20,6 +20,18 @@ Bản công khai rút gọn từ bằng chứng kiểm tra đã lưu riêng. Kh�
 
 Các lỗi STEP5 đã được xử lý qua review: serial theo mọi lần ghi sample; không làm mất READ framebuffer khi allocation; gate theo indicator/region hợp lệ; copy nguồn sắc trước blur; hỗ trợ swizzle của XRGB qua shader copy; cleanup kiểm context và phục hồi EGL display/surfaces. Còn caveat: khi mip thất bại ở format được nhận, fallback vẫn trả chi phí full-resolution sampling.
 
-Đích hiệu chỉnh là hơi ít blur hơn reference, có cảm giác kính trong tương tác thật. Còn cần đánh giá trong chuyển động và người dùng duyệt. Không tuyên bố đạt thẩm mỹ, hiệu năng hoặc hỗ trợ mọi format. Native mới trên desktop chính còn chờ phiên đăng nhập mới; các phiên thử không phải bằng chứng đã kích hoạt trên desktop chính.
+Đích hiệu chỉnh là kính trong với khúc xạ và phản sáng có hướng. Người dùng đã duyệt bản hiệu chỉnh cuối sau demo; không tuyên bố tương đương hoàn toàn ảnh mẫu, hiệu năng hoặc hỗ trợ mọi format. Native mới trên desktop chính còn chờ phiên đăng nhập mới; các phiên thử không phải bằng chứng đã kích hoạt trên desktop chính.
 
 Verification calibration thực chạy: native build và immutable install exit 0; indicator compile `-Wall -Wextra -Werror -O2` exit 0. Năm module focused: **57 tests, 57 pass, 0 skip, exit 0**, trên bản chụp commit riêng chứa patch và indicator cuối, backend đúng pin. Không thay test. Capture calibration live ghi shader `ready` / `versionCheck match`, năm ảnh 1920×1200, cleanup exit 0. Full9 prepush đã chạy thật trên candidate private: 2 failure `test_indicator_material` (mâu thuẫn thay đổi có chủ đích), lỗi Git object lịch sử R5 đã sửa bằng fetch read-only; candidate không đạt toàn bộ test không đổi. Release cần full prepush acceptance rồi kiểm tra trên đúng cây đã push; log bằng chứng lưu riêng theo từng lần chạy.
+
+## Hiệu chỉnh cuối theo phản hồi người dùng
+
+| Vòng | Thay đổi | Kết luận |
+|---|---|---|
+| 1–2 | Blur 2.2 rồi 2.5 px; thử dải phản sáng mảnh theo ảnh mép kính mới | Người dùng yêu cầu trắng rõ hơn và cong mạnh hơn. |
+| 3–4 | Tăng thickness, dải sáng; thử lớp trắng đục và vùng mép 6 px | Người dùng yêu cầu giảm lớp trắng đục, giữ riêng vùng khúc xạ rộng. |
+| 5 — được duyệt | Lớp trắng 2 px ít đục; khúc xạ 6 px, thickness 21 px; blur mép 3 px, lòng 2.5 px | Native build/install riêng exit 0; năm capture mới 1920×1200, shader ready/match, cleanup 0. Root và judge xem đủ năm ảnh. Demo thực 45.027 giây; người dùng chốt bản này. |
+
+Patch được duyệt có SHA256 `f7fd86cc3e4c6f9b83f217841e0c15d10a140d3e72a3545efcb85a82b8ad8028`; indicator source không đổi từ bản outline nhẹ. Ánh sáng dùng normal quartic của Snell, lớp trắng và vùng khúc xạ có kích thước riêng. Mức blur là bán kính disk sampling trong shader. Không thêm dim hoặc lớp nền xám.
+
+Giới hạn còn mở: chữ trắng trên nền rất sáng, 10-bit/FP16, hiệu năng và fallback mip. Không coi duyệt hình ảnh là full acceptance. Log acceptance mới được lưu theo commit trước push và sau push; giữ nguyên hai lỗi assertion material lịch sử nếu vẫn xuất hiện, không sửa test/fixture để xanh. Desktop chỉ nạp native mới ở fresh login.
