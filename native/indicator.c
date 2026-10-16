@@ -217,18 +217,18 @@ static void draw(GtkDrawingArea *area, cairo_t *cr, int width, int height, gpoin
   entrance_shape(cr,px+.5,py+.5,pw-1,ph-1,entrance_progress,entrance_mode);
   cairo_set_source_rgba(cr,.93,.95,.97,liquid?0:.74);cairo_fill_preserve(cr);
   cairo_pattern_t *wash=cairo_pattern_create_linear(px,py,px,py+ph);
-  cairo_pattern_add_color_stop_rgba(wash,0,1,1,1,liquid?.06:.16);
-  cairo_pattern_add_color_stop_rgba(wash,.16,1,1,1,liquid?.02:.08);
+  cairo_pattern_add_color_stop_rgba(wash,0,1,1,1,liquid?.18:.16);
+  cairo_pattern_add_color_stop_rgba(wash,.16,1,1,1,liquid?.05:.08);
   cairo_pattern_add_color_stop_rgba(wash,.36,1,1,1,0);
   cairo_pattern_add_color_stop_rgba(wash,.66,1,1,1,0);
-  cairo_pattern_add_color_stop_rgba(wash,.90,1,1,1,liquid?.012:.025);
-  cairo_pattern_add_color_stop_rgba(wash,1,1,1,1,liquid?.03:0);
+  cairo_pattern_add_color_stop_rgba(wash,.90,1,1,1,liquid?.035:.025);
+  cairo_pattern_add_color_stop_rgba(wash,1,1,1,1,liquid?.10:0);
   cairo_set_source(cr,wash);cairo_fill_preserve(cr);cairo_pattern_destroy(wash);
   cairo_pattern_t *rim=cairo_pattern_create_linear(px,py,px+pw*.12,py+ph);
-  cairo_pattern_add_color_stop_rgba(rim,0,1,1,1,liquid?.28:.60);
-  cairo_pattern_add_color_stop_rgba(rim,.50,1,1,1,liquid?.08:.08);
-  cairo_pattern_add_color_stop_rgba(rim,1,1,1,1,liquid?.12:.24);
-  cairo_set_source(cr,rim);cairo_set_line_width(cr,liquid?.8:.8);cairo_stroke(cr);
+  cairo_pattern_add_color_stop_rgba(rim,0,1,1,1,liquid?.62:.60);
+  cairo_pattern_add_color_stop_rgba(rim,.50,1,1,1,liquid?.14:.08);
+  cairo_pattern_add_color_stop_rgba(rim,1,1,1,1,liquid?.26:.24);
+  cairo_set_source(cr,rim);cairo_set_line_width(cr,liquid?1.25:.8);cairo_stroke(cr);
   cairo_pattern_destroy(rim);
   if (liquid) {
     // Neutral light-only reflection: never paint a dark inner rim.
@@ -240,8 +240,8 @@ static void draw(GtkDrawingArea *area, cairo_t *cr, int width, int height, gpoin
     cairo_pattern_add_color_stop_rgba(inner,0,1,1,1,.08);
     cairo_pattern_add_color_stop_rgba(inner,.40,1,1,1,0);
     cairo_pattern_add_color_stop_rgba(inner,.60,1,1,1,0);
-    cairo_pattern_add_color_stop_rgba(inner,1,1,1,1,.10);
-    cairo_set_source(cr,inner);cairo_set_line_width(cr,.60);cairo_stroke(cr);
+    cairo_pattern_add_color_stop_rgba(inner,1,1,1,1,.50);
+    cairo_set_source(cr,inner);cairo_set_line_width(cr,.70);cairo_stroke(cr);
     cairo_pattern_destroy(inner);
   }
   if (entrance_progress<1.0) return;
@@ -255,33 +255,12 @@ static void draw(GtkDrawingArea *area, cairo_t *cr, int width, int height, gpoin
   double available=fmax(1,pw-50-(escape?45:0));
   if (text.width>available) cairo_set_font_size(cr,14*available/text.width);
   cairo_move_to(cr,px+31,py+ph/2-text.y_bearing-text.height/2);
-  if (liquid) {
-    cairo_text_path(cr,"Computer use active");
-    cairo_set_line_join(cr,CAIRO_LINE_JOIN_ROUND);
-    cairo_set_line_width(cr,1.0);
-    cairo_set_source_rgba(cr,0,0,0,.30);
-    cairo_stroke_preserve(cr);
-    cairo_set_source_rgb(cr,.98,.99,1);
-    cairo_fill(cr);
-  } else {
-    cairo_show_text(cr,"Computer use active");
-  }
+  cairo_show_text(cr,"Computer use active");
   if (escape) {
     cairo_set_source_rgb(cr,.98,.99,1);
     cairo_set_font_size(cr,11);
     cairo_text_extents_t esc;cairo_text_extents(cr,"Esc",&esc);
-    cairo_move_to(cr,px+pw-29-esc.width/2,py+ph/2-esc.y_bearing-esc.height/2);
-    if (liquid) {
-      cairo_text_path(cr,"Esc");
-      cairo_set_line_join(cr,CAIRO_LINE_JOIN_ROUND);
-      cairo_set_line_width(cr,1.0);
-      cairo_set_source_rgba(cr,0,0,0,.30);
-      cairo_stroke_preserve(cr);
-      cairo_set_source_rgb(cr,.98,.99,1);
-      cairo_fill(cr);
-    } else {
-      cairo_show_text(cr,"Esc");
-    }
+    cairo_move_to(cr,px+pw-29-esc.width/2,py+ph/2-esc.y_bearing-esc.height/2);cairo_show_text(cr,"Esc");
   }
 }
 static void mapped(GtkWidget *widget, gpointer data) {
