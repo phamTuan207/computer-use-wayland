@@ -1,8 +1,12 @@
 """Required session-only real cursor theme with durable guardian restoration."""
 import ast
 import json
+import os
 from pathlib import Path
 import re
+import socket
+import stat
+import struct
 import subprocess
 import sys
 
@@ -90,15 +94,84 @@ def snapshot(env):
             'hypr_size':profile['restore_size'],'agent_theme':profile['theme'],'agent_size':profile['size']}
 
 
-def apply(env, theme, size):
+def guard_reply(raw, **expected):
+    if len(raw) > 4096:raise RuntimeError('cursor guard reply exceeds 4096 bytes')
+    reply = json.loads(raw)
+    if (not isinstance(reply,dict) or reply.get('ok') is not True or
+        type(reply.get('schema')) is not int or reply['schema'] != 1 or
+        any(type(reply.get(key)) is not type(value) or reply[key] != value for key,value in expected.items())):
+        raise RuntimeError('cursor guard did not confirm ownership or restoration')
+    return reply
+
+
+def check_guard(env):
+    guard_reply(command(env,'hyprctl','cu-cursor','status'),active=False,token='')
+
+
+class Guard:
+    """A non-inherited socket lease; EOF restores the latest client cursor."""
+    def __init__(self, env, theme, size, token):
+        if not isinstance(token,str) or not re.fullmatch(r'[0-9a-f]{32}',token):
+            raise ValueError('invalid cursor guard token')
+        runtime = env.get('XDG_RUNTIME_DIR','')
+        if not os.path.isabs(runtime):raise RuntimeError('cursor guard requires XDG_RUNTIME_DIR')
+        directory = Path(runtime)/'agent-computer-use'
+        info = directory.lstat()
+        if not stat.S_ISDIR(info.st_mode) or info.st_uid != os.geteuid() or stat.S_IMODE(info.st_mode) != 0o700:
+            raise RuntimeError('cursor guard directory is not private')
+        path = directory/'cursor-guard.sock'
+        info = path.lstat()
+        if not stat.S_ISSOCK(info.st_mode) or info.st_uid != os.geteuid():
+            raise RuntimeError('cursor guard endpoint is not a private socket')
+        self.socket = socket.socket(socket.AF_UNIX,socket.SOCK_STREAM)
+        self.token = token
+        try:
+            self.socket.settimeout(3)
+            self.socket.connect(str(path))
+            _,uid,_ = struct.unpack('3i',self.socket.getsockopt(socket.SOL_SOCKET,socket.SO_PEERCRED,struct.calcsize('3i')))
+            if uid != os.geteuid():raise RuntimeError('cursor guard owner changed')
+            self.socket.sendall((json.dumps({'schema':1,'theme':theme,'size':size,'token':token})+'\n').encode())
+            self.receive()
+            self.socket.settimeout(None)
+        except BaseException:
+            self.socket.close()
+            raise
+
+    def receive(self, **expected):
+        data = bytearray()
+        while b'\n' not in data and len(data) <= 4096:
+            part = self.socket.recv(4097-len(data))
+            if not part:raise RuntimeError('cursor guard disconnected before acknowledgement')
+            data.extend(part)
+        if not data.endswith(b'\n') or data.count(b'\n') != 1:
+            raise RuntimeError('invalid cursor guard acknowledgement')
+        guard_reply(data,token=self.token,**expected)
+
+    def command(self, operation):
+        if operation not in ('hide','show'):raise ValueError('invalid cursor visibility operation')
+        self.socket.settimeout(3)
+        try:
+            self.socket.sendall((json.dumps({'op':operation,'token':self.token})+'\n').encode())
+            self.receive(state='hidden' if operation=='hide' else 'visible')
+        finally:
+            self.socket.settimeout(None)
+
+    def close(self):
+        self.socket.close()
+
+
+def apply(env, theme, size, token=None):
     validate(theme,size)
-    command(env,'gsettings','set',SCHEMA,'cursor-theme',theme)
-    command(env,'gsettings','set',SCHEMA,'cursor-size',str(size))
-    if command(env,'hyprctl','setcursor',theme,str(size)) != 'ok':
-        raise RuntimeError('cursor theme dispatch refused')
+    return Guard(env,theme,size,token)
 
 
 def restore(env, saved):
+    if 'guard_token' in saved:
+        token = saved['guard_token']
+        if not isinstance(token,str) or not re.fullmatch(r'[0-9a-f]{32}',token):
+            raise ValueError('invalid saved cursor guard token')
+        guard_reply(command(env,'hyprctl','cu-cursor','release',token),released=token)
+        return
     validate(saved['gtk_theme'],saved['gtk_size'])
     validate(saved['hypr_theme'],saved['hypr_size'])
     command(env,'gsettings','set',SCHEMA,'cursor-theme',saved['gtk_theme'])

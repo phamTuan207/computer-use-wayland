@@ -16,6 +16,7 @@ _spec = importlib.util.spec_from_file_location('visuals', ROOT/'scripts/visuals.
 visuals = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(visuals)
 REAL_ACTIVATE = visuals._activate
+REAL_ACTIVATE_GUARD = visuals._activate_cursor_guard
 
 
 def sha(data):
@@ -29,6 +30,8 @@ class LoginTests(unittest.TestCase):
         self.dir = Path(self.tmp.name)
         self.library = self.dir / ('hyprglass-' + sha(b'library') + '.so')
         self.library.write_bytes(b'library')
+        self.guard = self.dir / ('cursor-guard-' + sha(b'guard') + '.so')
+        self.guard.write_bytes(b'guard')
         self.manifest = self.dir / 'visuals.json'
         profile=self.dir/'agent-cursor.json'
         profile.write_text(json.dumps({'theme':'fixture-agent','size':34,'restore_theme':'fixture-base','restore_size':24}))
@@ -42,11 +45,16 @@ class LoginTests(unittest.TestCase):
         patcher = mock.patch.object(visuals, '_activate', new=self.activation)
         patcher.start()
         self.addCleanup(patcher.stop)
+        self.guard_activation = mock.Mock(return_value=True)
+        patcher = mock.patch.object(visuals, '_activate_cursor_guard', new=self.guard_activation)
+        patcher.start()
+        self.addCleanup(patcher.stop)
         fresh=mock.patch.object(visuals,'require_fresh_login');fresh.start();self.addCleanup(fresh.stop)
 
     def write(self, **changes):
         # No library parameter: 'library' must be settable like any other key.
         data = {'version': 1, 'abi': 'abi-hash', 'library': str(self.library),
+                'cursor_guard_library': str(self.guard),
                 'profile_sha256': sha(visuals.OPTICS.read_bytes()),
                 'setup_instance': 'setup-login'}
         data.update(changes)
@@ -58,6 +66,61 @@ class LoginTests(unittest.TestCase):
         result = visuals.login(self.manifest, self.env)
         self.assertEqual(result, {'ok': True})
         self.activation.assert_called_once_with(str(self.library.resolve()), 'abi-hash', self.env)
+        self.guard_activation.assert_called_once_with(str(self.guard.resolve()), 'abi-hash', self.env)
+
+    def test_guard_backend_activates_after_glass_with_no_retry(self):
+        self.write()
+        order = []
+        self.activation.side_effect = lambda *a: order.append('glass')
+        self.guard_activation.side_effect = lambda *a: order.append('guard')
+        visuals.login(self.manifest, self.env)
+        self.assertEqual(order, ['glass', 'guard'])
+
+    def test_old_manifest_without_guard_library_fails_closed(self):
+        data = self.write()
+        del data['cursor_guard_library']
+        self.manifest.write_text(json.dumps(data))
+        with self.assertRaisesRegex(ValueError, 're-run setup'):
+            visuals.login(self.manifest, self.env)
+        self.activation.assert_not_called()
+        self.guard_activation.assert_not_called()
+
+    def test_invalid_guard_library_refuses_before_any_activation(self):
+        renamed = self.dir / 'cursor-guard-deadbeef.so'
+        self.guard.rename(renamed)
+        for value in (str(renamed), 'relative-guard.so', '', None):
+            with self.subTest(value=value):
+                self.write(cursor_guard_library=value)
+                with self.assertRaises(ValueError):
+                    visuals.login(self.manifest, self.env)
+        self.activation.assert_not_called()
+        self.guard_activation.assert_not_called()
+
+    def test_missing_guard_library_file_is_refused_before_activation(self):
+        self.guard.unlink()
+        with self.assertRaises(FileNotFoundError):
+            visuals.login(self.manifest, self.env)
+        self.activation.assert_not_called()
+        self.guard_activation.assert_not_called()
+
+    def test_symlinked_guard_library_is_refused_before_activation(self):
+        real = self.dir / 'real-guard.so'
+        self.guard.rename(real)
+        self.guard.symlink_to(real)
+        with self.assertRaisesRegex(ValueError, 'regular file'):
+            visuals.login(self.manifest, self.env)
+        self.activation.assert_not_called()
+        self.guard_activation.assert_not_called()
+
+    def test_guard_activation_wrapper_passes_the_fresh_login_gate(self):
+        activate = mock.Mock()
+        with mock.patch.object(visuals.runpy, 'run_path', return_value={'activate': activate}), \
+             mock.patch.object(visuals, 'require_fresh_login') as gate:
+            REAL_ACTIVATE_GUARD('library', 'abi', self.env)
+            callback = activate.call_args.kwargs['before_load']
+            callback()
+            gate.assert_called_once_with(self.env)
+        activate.assert_called_once()
 
     def test_rejects_non_object_and_relative_library_before_activation(self):
         self.manifest.write_text('[]')

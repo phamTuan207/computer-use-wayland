@@ -1,6 +1,10 @@
 """No live GUI: fake hyprctl plus real pipes/processes/signals for lifecycle proof."""
+import fcntl
 import json
 import os
+import re
+import socket
+import threading
 from pathlib import Path
 import shutil
 import signal
@@ -36,9 +40,36 @@ elif a and a[0]=='eval':
         p.write_text(json.dumps(s));sys.exit(1)
     print('ok')
 elif a and a[0]=='setcursor':
-    if s.get('apply_failure') and len(a)>1 and a[1]==s.get('agent_theme'):
-        print('refused')
-    else:print('ok')
+    # Legacy path only: old snapshots without a guard token restore this way.
+    # New sessions never touch the global theme; they hold a socket lease.
+    print('ok')
+elif a[:2]==['cu-cursor','status']:
+    import fcntl
+    if s.get('status_down'):p.write_text(json.dumps(s));sys.exit(1)
+    if s.get('status_busy'):
+        print(json.dumps({'ok':True,'schema':1,'active':True,'token':'f'*32}))
+    else:
+        try:
+            with open(os.environ['FAKE_GUARD']) as guard_file:
+                fcntl.flock(guard_file,fcntl.LOCK_SH)
+                guard_state=json.load(guard_file)
+        except OSError:guard_state={'token':'','active':False}
+        print(json.dumps({'ok':True,'schema':1,'active':bool(guard_state.get('active')),'token':guard_state.get('token','')}))
+elif a[:2]==['cu-cursor','release']:
+    import fcntl
+    token=a[2] if len(a)>2 else ''
+    if s.get('release_failure'):print(json.dumps({'ok':False,'schema':1}))
+    else:
+        with open(os.environ['FAKE_GUARD'],'r+') as guard_file:
+            fcntl.flock(guard_file,fcntl.LOCK_EX)
+            guard_state=json.load(guard_file)
+            if guard_state.get('active') and token!=guard_state.get('token'):
+                print('cursor guard belongs to another session')
+            else:
+                guard_state.setdefault('released',[]).append(token)
+                guard_state['token']='';guard_state['active']=False
+                guard_file.seek(0);json.dump(guard_state,guard_file);guard_file.truncate()
+                print(json.dumps({'ok':True,'schema':1,'released':token}))
 else:sys.exit(1)
 p.write_text(json.dumps(s))
 '''
@@ -75,6 +106,18 @@ for line in sys.stdin:
     print({'hide':'hidden','show':'visible'}.get(line.strip(),'ok'),flush=True)
 '''
 
+FAKE_GRIM = '''#!/usr/bin/env python3
+import fcntl,json,os,sys
+try:
+    with open(os.environ['FAKE_GUARD']) as stream:
+        fcntl.flock(stream,fcntl.LOCK_SH)
+        visibility=json.load(stream).get('visibility','unknown')
+except OSError:visibility='unknown'
+log=os.environ.get('VISIBLE_LOG')
+if log:open(log,'a').write(visibility+'\\n')
+sys.stdout.buffer.write(b'P6\\n2 2\\n255\\n'+bytes(12))
+'''
+
 # Instrumented helper for lifecycle tests: marks itself active in a fixture
 # file, exits on a stop trigger or stdin EOF, or fails startup when asked.
 TRACKED_INDICATOR = '''#!/usr/bin/env python3
@@ -100,6 +143,139 @@ finally:
 '''
 
 
+def _guard_read(state_path):
+    with open(state_path) as stream:
+        fcntl.flock(stream,fcntl.LOCK_SH)
+        return json.load(stream)
+
+
+def _guard_write(state_path, **values):
+    with open(state_path,'r+') as stream:
+        fcntl.flock(stream,fcntl.LOCK_EX)
+        state=json.load(stream);state.update(values)
+        stream.seek(0);json.dump(state,stream);stream.truncate()
+
+
+class GuardServer:
+    """Fake native cursor backend: a real AF_UNIX socket under a temp runtime.
+
+    Never the host runtime. Mirrors the plugin contract: one JSON handshake
+    (schema/theme/size/token), an acknowledgement, then the lease is held until
+    EOF. `mode` selects the acknowledgement: 'ok', 'wrong-token', 'drop',
+    'fail-hide' or 'fail-show'. Visibility is persisted in the guard state.
+    """
+
+    def __init__(self, folder, theme='cu-agent-test', size=32):
+        self.state_path=folder/'guard.json'
+        self.theme=theme;self.size=size;self.mode='ok';self._lease=''
+        runtime=folder/'run'/'agent-computer-use'
+        runtime.mkdir(parents=True,exist_ok=True);os.chmod(runtime,0o700)
+        self.sock_path=runtime/'cursor-guard.sock'
+        self._socket=socket.socket(socket.AF_UNIX,socket.SOCK_STREAM)
+        self._socket.bind(str(self.sock_path));self._socket.listen(4)
+        self._socket.settimeout(0.2)
+        self._peer=None
+        self._stop=threading.Event()
+        self._thread=threading.Thread(target=self._loop,daemon=True)
+
+    def start(self):
+        self._thread.start()
+
+    def stop(self):
+        self._stop.set()
+        self.drop()
+        self._thread.join(timeout=5)
+        try:self._socket.close()
+        except OSError:pass
+        try:self.sock_path.unlink()
+        except OSError:pass
+
+    def drop(self):
+        """Sever the lease from the backend side, as a compositor unload would."""
+        peer=self._peer
+        if peer is not None:
+            try:peer.shutdown(socket.SHUT_RDWR)
+            except OSError:pass
+
+    def acquired(self):
+        try:state=_guard_read(self.state_path)
+        except OSError:return False
+        return bool(state.get('active'))
+
+    def _loop(self):
+        while not self._stop.is_set():
+            try:conn,_=self._socket.accept()
+            except socket.timeout:continue
+            except OSError:return
+            try:self._handle(conn)
+            except OSError:pass
+
+    def _valid(self, request):
+        return (isinstance(request,dict) and type(request.get('schema')) is int and
+                request.get('schema')==1 and type(request.get('size')) is int and
+                16<=request['size']<=96 and isinstance(request.get('theme'),str) and
+                bool(re.fullmatch(r'[A-Za-z0-9_.-]{1,100}',request['theme'])) and
+                isinstance(request.get('token'),str) and
+                bool(re.fullmatch(r'[0-9a-f]{32}',request['token'])))
+
+    def _handle(self, conn):
+        with conn:
+            conn.settimeout(5)
+            data=bytearray()
+            while b'\n' not in data and len(data)<=4097:
+                try:part=conn.recv(4097-len(data))
+                except socket.timeout:continue
+                if not part:return
+                data.extend(part)
+            try:request=json.loads(data.decode())
+            except ValueError:return
+            if self.mode=='drop' or not self._valid(request):return
+            if self.mode=='wrong-token':
+                reply={'ok':True,'schema':1,'token':'0'*32}
+            else:
+                self._lease=request['token']
+                reply={'ok':True,'schema':1,'token':self._lease}
+                _guard_write(self.state_path,token=self._lease,active=True)
+            try:conn.sendall((json.dumps(reply)+'\n').encode())
+            except OSError:return
+            self._peer=conn
+            try:
+                conn.settimeout(0.5)
+                hold=bytearray()
+                while not self._stop.is_set():
+                    try:part=conn.recv(4096)
+                    except socket.timeout:continue
+                    if not part:break
+                    hold.extend(part)
+                    while b'\n' in hold:
+                        line,hold=hold.split(b'\n',1)
+                        if not self._command(conn,line):return
+            finally:
+                self._peer=None
+                try:_guard_write(self.state_path,token='',active=False)
+                except OSError:pass
+
+    def _command(self, conn, line):
+        """One visibility op; fail closed on anything unexpected."""
+        try:request=json.loads(line.decode())
+        except ValueError:return False
+        operation=request.get('op')
+        if operation not in ('hide','show') or request.get('token')!=self._lease:
+            return False
+        state='hidden' if operation=='hide' else 'visible'
+        reply={'ok':True,'schema':1,'token':self._lease,'state':state}
+        if self.mode=='fail-hide' and operation=='hide':
+            reply=dict(reply,state='visible')
+        elif self.mode=='fail-show' and operation=='show':
+            reply=dict(reply,token='0'*32)
+        if self.mode not in ('fail-hide','fail-show'):
+            try:_guard_write(self.state_path,visibility=state)
+            except OSError:return False
+        try:conn.sendall((json.dumps(reply)+'\n').encode())
+        except OSError:return False
+        return True
+
+
 class Lifecycle(unittest.TestCase):
     def setUp(self):
         self.tmp=tempfile.TemporaryDirectory();self.folder=Path(self.tmp.name)
@@ -112,7 +288,7 @@ class Lifecycle(unittest.TestCase):
         binary=self.folder/'bin';binary.mkdir()
         for name,code in [('hyprctl',FAKE),('gsettings',FAKE_GSETTINGS),('pgrep','#!/bin/sh\nexit 0\n'),
                           ('computer-use-indicator',FAKE_INDICATOR),
-                          ('grim',"#!/usr/bin/env python3\nimport sys\nsys.stdout.buffer.write(b'P6\\n2 2\\n255\\n'+bytes(12))\n"),
+                          ('grim',FAKE_GRIM),
                           ('node','#!/bin/sh\nprintf \'{"ok":false,"error":"refusal"}\\n\'\n')]:
             p=binary/name;p.write_text(code);p.chmod(0o700)
         # A second PATH entry so lifecycle tests can use the instrumented helper
@@ -121,15 +297,25 @@ class Lifecycle(unittest.TestCase):
         p=self.altbin/'computer-use-indicator'
         p.write_text(TRACKED_INDICATOR);p.chmod(0o700)
         self.env=os.environ.copy();self.env.pop('CU_SESSION_TOKEN',None)
+        # Never let read-only IPC reach the host compositor socket: without a
+        # signature every query falls back to the fake hyprctl on PATH.
+        self.env.pop('HYPRLAND_INSTANCE_SIGNATURE',None)
         # Minimal valid agent theme on the Xcursor search path: real files for
         # left_ptr/pointer, an alias for text, all loadable at the agent size.
         icons=self.folder/'icons';cursors=icons/'cu-agent-test'/'cursors';cursors.mkdir(parents=True)
         write_xcursor(cursors/'left_ptr',32)
         write_xcursor(cursors/'pointer',32)
         (cursors/'text').symlink_to('left_ptr')
+        # Fake native lease backend under a temp runtime, never the host one.
+        self.guard_file=self.folder/'guard.json'
+        self.guard_file.write_text(json.dumps({'token':'','active':False,'released':[],'visibility':'visible'}))
+        self.visible_log=self.folder/'visibility.log'
         self.env.update(PATH=str(binary)+os.pathsep+self.env['PATH'],
                         XDG_CACHE_HOME=str(self.folder/'cache'),FAKE_DESKTOP=str(self.desktop),
-                        XCURSOR_PATH=str(icons))
+                        XCURSOR_PATH=str(icons),XDG_RUNTIME_DIR=str(self.folder/'run'),
+                        FAKE_GUARD=str(self.guard_file),VISIBLE_LOG=str(self.visible_log))
+        self.guard_server=GuardServer(self.folder)
+        self.guard_server.start();self.addCleanup(self.guard_server.stop)
         self.state=self.folder/'cache'/'agent-computer-use'
         self.processes=[]
         # Lifecycle subprocesses run a private copy of the project with an
@@ -187,6 +373,9 @@ class Lifecycle(unittest.TestCase):
         self.assertTrue((self.state/'session.json').exists())
         return p
 
+    def released(self):
+        return _guard_read(self.guard_file).get('released',[])
+
     def assert_restored(self):
         self.wait_for(lambda:json.loads(self.desktop.read_text())['zoom']=='1.750000' and not (self.state/'session.json').exists())
         state=json.loads(self.desktop.read_text())
@@ -194,13 +383,16 @@ class Lifecycle(unittest.TestCase):
         self.assertFalse(any(a[0] in ('keyword','getoption') or 'hl.config' in str(a) for a in calls))
         self.assertTrue(any(':unbind()' in str(a) for a in calls))
         self.assertFalse(state.get('hotkey_active'))
-        # The agent cursor was applied, then both tracks were restored: GTK
-        # values match the distinct originals and the compositor got the
-        # declared restore theme/size. GTK alone never proves compositor state.
-        self.assertIn(['setcursor','cu-agent-test','32'],calls)
-        self.assertEqual([a for a in calls if a and a[0]=='setcursor'][-1],
-                         ['setcursor','desktop-hypr','24'])
+        # New sessions hold a native image lease: no global theme writes at all
+        # (GTK values untouched, no setcursor), and the lease is released.
+        self.assertFalse(any(a and a[0]=='setcursor' for a in calls))
         self.assertEqual((state['gtk_theme'],state['gtk_size']),("'DesktopGTK'",'26'))
+        tokens=[token for token in self.released()
+                if isinstance(token,str) and re.fullmatch(r'[0-9a-f]{32}',token)]
+        self.assertTrue(tokens,'cursor lease was never released')
+        self.assertFalse(self.guard_server.acquired(),'cursor lease remains active')
+        if self.guard_server._lease:
+            self.assertIn(self.guard_server._lease,tokens,'latest lease was not released')
 
     def test_success_and_driver_error_restore_desktop(self):
         for status in (0,7):
@@ -328,7 +520,7 @@ class Lifecycle(unittest.TestCase):
         import cancel_hotkey
         import indicator
         for failing in ('request_stop','stop_group','drain_input'):
-            with self.subTest(failing=failing),patch.object(session.signal,'signal'),patch.object(session,'STATE',self.folder),patch.object(session,'SNAPSHOT',self.folder/'snapshot'),patch.object(session,'CANCEL',self.folder/'cancel'),patch.object(session,'owner_lock'),patch.object(cancel_hotkey,'hotkey_on'),patch.object(cancel_hotkey,'hotkey_off'),patch.object(session,'request_stop'),patch.object(session,'stop_group'),patch.object(session,'drain_input'),patch.object(session,'restore',return_value=True) as restore,patch.object(session.select,'select',return_value=([1],[],[])),patch.object(session.os,'read',side_effect=[b'123',b'']),patch.object(session,failing,side_effect=RuntimeError('cleanup injected')),patch.object(cursor_theme,'snapshot',return_value={'agent_theme':'cu-agent-test','agent_size':32}),patch.object(cursor_theme,'apply'):
+            with self.subTest(failing=failing),patch.object(session.signal,'signal'),patch.object(session,'STATE',self.folder),patch.object(session,'SNAPSHOT',self.folder/'snapshot'),patch.object(session,'CANCEL',self.folder/'cancel'),patch.object(session,'owner_lock'),patch.object(cancel_hotkey,'hotkey_on'),patch.object(cancel_hotkey,'hotkey_off'),patch.object(session,'request_stop'),patch.object(session,'stop_group'),patch.object(session,'drain_input'),patch.object(session,'restore',return_value=True) as restore,patch.object(session.select,'select',return_value=([1],[],[])),patch.object(session.os,'read',side_effect=[b'123',b'']),patch.object(session,failing,side_effect=RuntimeError('cleanup injected')),patch.object(cursor_theme,'snapshot',return_value={'agent_theme':'cu-agent-test','agent_size':32}),patch.object(cursor_theme,'check_guard'),patch.object(cursor_theme,'apply'):
                 with patch.object(indicator,'Native') as native,patch.object(indicator,'listen'):
                     native.return_value.process.poll.return_value=None
                     self.assertEqual(session.guardian(self.env,1,'a'*32),1)
@@ -442,7 +634,9 @@ class Lifecycle(unittest.TestCase):
         out,err=p.communicate(timeout=8)
         self.assertNotEqual(p.returncode,0,(out,err))
         self.assertFalse(marker.exists(),'driver ran without a cursor profile')
+        self.assertFalse((self.state/'session.json').exists())
         self.assertFalse(any(a and a[0]=='setcursor' for a in json.loads(self.desktop.read_text())['calls']))
+        self.assertEqual(self.released(),[])
 
     def test_missing_or_corrupt_cursor_assets_never_start_driver(self):
         cursors=self.folder/'icons/cu-agent-test/cursors'
@@ -463,19 +657,124 @@ class Lifecycle(unittest.TestCase):
                     desktop=json.loads(self.desktop.read_text())
                     self.assertFalse(any(a and a[0]=='setcursor' for a in desktop['calls']))
                     self.assertEqual((desktop['gtk_theme'],desktop['gtk_size']),("'DesktopGTK'",'26'))
+                    self.assertEqual(self.released(),[],'no lease existed to release')
                 finally:
                     path.unlink(missing_ok=True)
                     if link is not None:path.symlink_to(link)
                     else:path.write_bytes(original)
 
-    def test_cursor_apply_failure_never_starts_driver(self):
+    def test_handshake_failure_never_starts_driver(self):
         marker=self.folder/'must-not-run'
-        self.configure(apply_failure=True)
+        self.guard_server.mode='wrong-token'
         p=self.launch(f"from pathlib import Path;Path({str(marker)!r}).touch()")
         out,err=p.communicate(timeout=8)
         self.assertNotEqual(p.returncode,0,(out,err))
-        self.assertFalse(marker.exists(),'driver ran despite cursor apply failure')
+        self.assertFalse(marker.exists(),'driver ran despite lease handshake failure')
+
+    def test_capture_hides_badge_and_cursor_until_presented_frame(self):
+        shot=self.folder/'shot-done'
+        code=('import subprocess,sys;subprocess.run([sys.executable,'+repr(self.script('cu.py'))+
+              ",'observe','--screen','test'],check=True);import pathlib;pathlib.Path("+repr(str(shot))+").touch()")
+        p=self.launch(code);out,err=p.communicate(timeout=15)
+        self.assertEqual(p.returncode,0,(out,err))
+        self.assertTrue(shot.exists())
+        # Fake grim recorded the native visibility at exposure time.
+        self.assertIn('hidden',self.visible_log.read_text().splitlines())
         self.assert_restored()
+        self.assertEqual(_guard_read(self.guard_file).get('visibility'),'visible')
+
+    def test_cursor_hide_failure_prevents_screenshot_and_ends_driver(self):
+        self.guard_server.mode='fail-hide'
+        shot=self.folder/'shot-done'
+        code=('import subprocess,sys;subprocess.run([sys.executable,'+repr(self.script('cu.py'))+
+              ",'observe','--screen','test'],check=True);import pathlib;pathlib.Path("+repr(str(shot))+").touch()")
+        p=self.launch(code);out,err=p.communicate(timeout=15)
+        self.assertNotEqual(p.returncode,0,(out,err))
+        self.assertFalse(shot.exists(),'screenshot taken despite hide refusal')
+        self.assertFalse(self.visible_log.exists(),'grim ran despite hide refusal')
+        self.assert_restored()
+
+    def test_wrong_show_ack_fails_closed_after_exposure(self):
+        self.guard_server.mode='fail-show'
+        shot=self.folder/'shot-done'
+        code=('import subprocess,sys;subprocess.run([sys.executable,'+repr(self.script('cu.py'))+
+              ",'observe','--screen','test'],check=True);import pathlib;pathlib.Path("+repr(str(shot))+").touch()")
+        p=self.launch(code);out,err=p.communicate(timeout=15)
+        self.assertNotEqual(p.returncode,0,(out,err))
+        self.assertFalse(shot.exists(),'driver continued after failed show ack')
+        self.assert_restored()
+
+    def test_session_visuals_orders_cursor_before_native(self):
+        import unittest.mock as mock
+        calls=[]
+        native=mock.Mock();native.command.side_effect=lambda command:(calls.append(('native',command)),'hidden' if command=='hide' else 'visible')
+        cursor=mock.Mock();cursor.command.side_effect=lambda command:calls.append(('cursor',command))
+        visuals=session.SessionVisuals(native,cursor)
+        visuals.command('hide')
+        visuals.command('show')
+        visuals.command('move test 1 2')
+        self.assertEqual(calls,[('cursor','hide'),('native','hide'),('cursor','show'),('native','show'),('native','move test 1 2')])
+
+    def test_missing_or_busy_backend_never_starts_driver(self):
+        for label,flags in (('missing',{'status_down':True}),('busy',{'status_busy':True})):
+            with self.subTest(label=label):
+                self.configure(**flags)
+                marker=self.folder/'must-not-run'
+                p=self.launch(f"from pathlib import Path;Path({str(marker)!r}).touch()")
+                out,err=p.communicate(timeout=8)
+                self.assertNotEqual(p.returncode,0,(out,err))
+                self.assertFalse(marker.exists(),'driver ran without an idle backend')
+                self.assertFalse((self.state/'session.json').exists())
+                self.assertEqual(self.released(),[])
+                self.configure(status_down=False,status_busy=False)
+
+    def test_lost_lease_stops_driver_and_restores(self):
+        heart=self.folder/'heartbeat';ready=self.folder/'driver-ready'
+        code=(f"import time\nfrom pathlib import Path\n"
+              f"heart=Path({str(heart)!r})\n"
+              f"Path({str(ready)!r}).touch()\n"
+              f"while True:\n    heart.write_text(str(time.time()));time.sleep(.1)\n")
+        p=self.launch(code)
+        self.wait_for(ready.exists)
+        self.wait_for(self.guard_server.acquired)
+        time.sleep(.3)
+        self.assertTrue(heart.exists())
+        self.guard_server.drop()  # backend goes away -> EOF on the lease
+        p.communicate(timeout=8)
+        self.assertNotEqual(p.returncode,0)
+        frozen=heart.read_text();time.sleep(.3)
+        self.assertEqual(heart.read_text(),frozen,'driver survived lease loss')
+        self.assert_restored()
+
+    def test_unproven_release_retains_snapshot_then_recover(self):
+        self.configure(release_failure=True)
+        p=self.launch('pass');out,err=p.communicate(timeout=8)
+        self.assertEqual(p.returncode,1,(out,err))
+        self.assertIn('snapshot retained',err)
+        self.assertTrue((self.state/'session.json').exists())
+        self.assertEqual(self.released(),[])
+        self.configure(release_failure=False)
+        result=subprocess.run([sys.executable,self.script('cu.py'),'recover'],env=self.env,
+                              capture_output=True,text=True,timeout=8)
+        self.assertEqual(result.returncode,0,result.stderr);self.assert_restored()
+
+    def test_legacy_snapshot_without_guard_token_restores_declared_values(self):
+        import cancel_hotkey
+        self.state.mkdir(parents=True)
+        snapshot=self.state/'session.json'
+        token='e'*32
+        snapshot.write_text(json.dumps({'version':3,'token':token,'cursor':{
+            'gtk_theme':'ChangedGTK','gtk_size':30,'hypr_theme':'other-hypr','hypr_size':22,
+            'agent_theme':'cu-agent-test','agent_size':32}}))
+        with patch.object(session,'STATE',self.state),patch.object(session,'SNAPSHOT',snapshot), \
+             patch.object(cancel_hotkey,'hotkey_off'):
+            self.assertTrue(session.restore(self.env))
+        self.assertFalse(snapshot.exists())
+        desktop=json.loads(self.desktop.read_text())
+        # Legacy path restores the snapshot's own recorded values.
+        self.assertEqual((desktop['gtk_theme'],desktop['gtk_size']),("'ChangedGTK'",'30'))
+        self.assertIn(['setcursor','other-hypr','22'],desktop['calls'])
+        self.assertEqual(self.released(),[],'legacy restore uses no lease')
 
     def test_guardian_crash_helper_exits_on_eof(self):
         active=self.folder/'indicator-active'

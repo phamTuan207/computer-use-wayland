@@ -107,21 +107,29 @@ Every session gets, with no further configuration:
 
 - the **session pill** ("Computer use active") overlay,
 - the **liquid glass** backdrop,
-- an agent cursor on the shared desktop pointer.
+- a native image lease holding the agent cursor on the shared desktop pointer.
 
 Every session requires a configured, loadable agent cursor plus the ready
 overlay; there is no normal-cursor fallback. The repo CLI reads only its own
 tree's `native/agent-cursor.json`, never an installed copy.
 
-### Cursor restoration
+### Cursor lease and restoration
 
-A task temporarily switches the desktop cursor to the agent theme, and at the end
-of the task the guardian puts **your declared Hyprland cursor** back. GTK is
-handled on its own track: the guardian also restores the GTK cursor values it
-recorded at task start. Compositor restoration is mandatory; GTK restoration
-alone never proves compositor state.
+A task holds a session-owned image lease for its agent cursor: the compositor
+keeps the exact decoded pixels while the lease socket stays open, and no global
+theme or GTK setting is changed. The profile and asset gate alone is not
+sufficient — the backend must also report idle, and the handshake must confirm
+the session token, or the driver never starts. Losing the lease or the overlay
+stops the session; normal cleanup stops the driver before releasing its image, and a
+release that cannot be proven retains the session record for
+`computer-use recover`. Sessions from before the lease backend keep restoring
+their declared Hyprland and GTK values from the snapshot instead; there the
+compositor restoration is mandatory and GTK restoration alone never proves
+compositor state.
 
-Those restore values come only from the two `--restore-*` flags or from a profile
+Legacy sessions (snapshots without a lease token) still end by putting **your
+declared Hyprland cursor** back and restoring the recorded GTK values. Those
+restore values come only from the two `--restore-*` flags or from a profile
 you wrote yourself. Setup never infers the Hyprland cursor from GTK, and there is
 no read-only API that reports the compositor's current cursor back, so no value
 is ever guessed. If you would rather keep the file in your own hands, write
@@ -134,8 +142,26 @@ is ever guessed. If you would rather keep the file in your own hands, write
 Setup preserves an existing valid profile **byte for byte** and never rewrites
 it; supplying the same two values again is accepted, different ones are refused.
 Without a profile and without the flags, setup refuses before building anything.
-A corrupt or unreadable profile fails closed. Nothing in setup or the loader
+A corrupt or unreadable profile fails closed. The exact profile fields
+(`theme`, `size`, `restore_theme`, `restore_size`) are retained for legacy
+recovery and setup compatibility. Nothing in setup or the loader
 resumes input automatically after cancellation.
+
+### Capture fencing
+
+Session captures hide both the badge and software cursor, wait for the native
+presented-frame acknowledgement, take the shot, then show both with another
+presentation acknowledgement. A cursor command failure prevents the screenshot
+and ends the driver instead.
+
+### Existing installations: first-load the guard
+
+Standard setup prepares everything and a fresh login activates it. An existing
+installation may first-load just the new guard through the guarded helper after
+the pinned Hyprland 0.56.2 ABI check. It requires only the accepted glass plugin
+to be loaded, refuses an already-loaded cursor backend, and never unloads or
+reloads glass. Prepare the matching immutable guard library and login manifest
+before using `scripts/activate-cursor-guard.py LIBRARY --abi ABI_HASH`.
 
 The vendored virtual-keyboard protocol comes from
 [wtype](https://github.com/atx/wtype/blob/master/protocol/virtual-keyboard-unstable-v1.xml);
@@ -243,7 +269,7 @@ the hook activates the backend at a fresh login.
 Desktop actions re-check window geometry, focus and screen state before
 input and **may refuse** rather than act on a stale observation. There is no
 automatic observation, retry or replay. Cleanup stops the driver group, drains
-input and removes the overlay; failed cleanup retains a session record for
+input, releases the cursor lease, and removes the overlay; failed cleanup retains a session record for
 `computer-use recover`.
 
 Warm driver loops reuse the Python runtime between requests and one private Node

@@ -14,11 +14,14 @@ Setup and visuals: [README](../README.md#install).
 ## Setup and what each session shows
 
 One `python3 scripts/setup.py` plus a single fresh login enables the pill, the liquid backdrop and
-a temporary agent cursor. With no `native/agent-cursor.json`, setup refuses without
+a session-owned agent cursor lease. With no `native/agent-cursor.json`, setup refuses without
 `--restore-theme YOUR_CURRENT_HYPRLAND_THEME --restore-size YOUR_CURRENT_HYPRLAND_SIZE`, declared
 once: the compositor cursor cannot be read back and is never inferred from GTK. An existing valid
-manual profile is preserved byte for byte and needs no flags. A task applies the agent cursor,
-restores those declared values, and independently snapshots and restores GTK. Every session
+manual profile is preserved byte for byte and needs no flags. A task holds the native image
+lease for its agent cursor without changing global theme or GTK settings, and the lease is
+released after the driver stops during normal cleanup; sessions from before the lease backend restore the declared
+values instead. Captures hide both badge and software cursor for the shot and restore both
+after the presented-frame fence. Every session
 needs that configured, loadable cursor plus the ready overlay; there is no normal-cursor
 fallback, and the repo CLI reads only its own tree's `native/agent-cursor.json`.
 Setup only prepares;

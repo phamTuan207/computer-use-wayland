@@ -332,8 +332,17 @@ class _SetupFixture:
         cursor = mock.Mock()
         cursor.install.return_value = (self.data/'icons/cu-agent-hash', exist_ok)
         cursor.tree_digest.return_value = 'tree'
-        stack.enter_context(mock.patch.object(setup, '_load',
-                                              mock.Mock(side_effect=lambda n, p: cursor if 'cursor' in n else _glass())))
+        self.guard = mock.Mock()
+        self.guard.build.return_value = self.dir/'built-guard.so'
+        self.guard.install.return_value = self.data/'plugins/cursor-guard-guard.so'
+        self.glass = _glass()
+        def load(name, path):
+            if name == 'build_cursor':
+                return cursor
+            if 'guard' in name:
+                return self.guard
+            return self.glass
+        stack.enter_context(mock.patch.object(setup, '_load', mock.Mock(side_effect=load)))
         return cursor
 
 
@@ -362,6 +371,13 @@ def _cursor():
     module = mock.Mock()
     module.install.return_value = (Path('/tmp/cu-agent-hash'), False)
     module.tree_digest.return_value = 'tree'
+    return module
+
+
+def _guard():
+    module = mock.Mock()
+    module.build.return_value = Path('/tmp/built-guard.so')
+    module.install.return_value = Path('/tmp/never-installed-guard.so')
     return module
 
 
@@ -475,6 +491,8 @@ class FullSetupTests(_SetupFixture, unittest.TestCase):
         self.assertEqual(manifest['version'], 1)
         self.assertEqual(manifest['setup_instance'], 'setup-login')
         self.assertEqual(manifest['cursor_tree_sha256'], 'tree')
+        self.assertEqual(manifest['cursor_guard_library'],
+                         str((self.data/'plugins/cursor-guard-guard.so').resolve()))
         profile = json.loads((self.root/'native/agent-cursor.json').read_text())
         self.assertNotIn('ready_instance', profile)
         self.assertNotIn('restore_mode', profile, 'the GTK experiment is gone')
@@ -488,6 +506,31 @@ class FullSetupTests(_SetupFixture, unittest.TestCase):
         self.assertTrue((self.root/'native/require-liquid').is_file())
         self.assertTrue((self.bin/'computer-use').is_symlink())
         self.assertIn('computer-use-visuals-begin', self.config.read_text())
+
+    def test_guard_backend_is_built_and_published_alongside_glass(self):
+        self._patched()
+        result = self.declared()
+        self.assertTrue(result['ok'])
+        self.guard.build.assert_called_once()
+        args, _ = self.guard.install.call_args
+        self.assertEqual(args[0], self.dir/'built-guard.so')
+        self.assertEqual(Path(args[1]), self.data/'agent-computer-use/plugins')
+        manifest = json.loads((self.root/'native/visuals.json').read_text())
+        self.assertTrue(Path(manifest['cursor_guard_library']).is_absolute())
+
+    def test_guard_build_failure_publishes_nothing(self):
+        cursor = self._patched()
+        glass = self.glass
+        self.guard.build.side_effect = RuntimeError('guard build failed')
+        with self.assertRaisesRegex(RuntimeError, 'guard build failed'):
+            self.declared()
+        # The build now runs before the post-build gates, so no installer ran.
+        cursor.install.assert_not_called()
+        glass.install.assert_not_called()
+        self.guard.install.assert_not_called()
+        self.assertFalse((self.root/'native/visuals.json').exists())
+        self.assertFalse((self.root/'native/visuals-login.lua').exists())
+        self.assertFalse((self.bin/'computer-use').exists())
 
     def test_legacy_cursor_profile_is_preserved_byte_exact(self):
         self._patched()
@@ -622,8 +665,10 @@ class RerunAndDriftTests(_SetupFixture, unittest.TestCase):
         self._patched()
         glass = _glass()
         cursor = _cursor()
+        guard = _guard()
         with mock.patch.object(setup, '_load', new=mock.Mock(
-                side_effect=lambda name, path: glass if 'cursor' not in name else cursor)):
+                side_effect=lambda name, path: cursor if name == 'build_cursor' else (
+                    guard if 'guard' in name else glass))):
             result = self.declared()
         self.assertTrue(result['ok'])
         source = Path(glass.install.call_args.args[0])

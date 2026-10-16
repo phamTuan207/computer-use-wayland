@@ -317,6 +317,8 @@ def _setup(config_path, data_dir, bin_dir, restore_theme=None, restore_size=None
         # build-glass prints a human diagnostic; the artefact is at a known path.
         _checked([sys.executable, str(ROOT/'scripts/build-glass.py'), str(source),
                   '--local-optics'], env=env)
+        guard_helper = _load('build_cursor_guard', ROOT/'scripts/build-cursor-guard.py')
+        guard_library = guard_helper.build(env)
         library = source/'hyprglass.so'
         if header_abi(env) != initial or runtime_abi(env) != initial:
             raise RuntimeError('ABI drifted during the build')
@@ -336,6 +338,7 @@ def _setup(config_path, data_dir, bin_dir, restore_theme=None, restore_size=None
         theme, _existed = cursor.install(ICON_DIRECTORY)
         glass = _load('install_glass', ROOT/'scripts/install-glass.py')
         installed = glass.install(library, plugins)
+        guard_installed = guard_helper.install(guard_library, plugins)
         current_bytes = profile_path.read_bytes() if profile_path.is_file() else None
         if profile_path.is_symlink() or current_bytes != profile_bytes:
             raise RuntimeError('cursor profile changed during install; refusing to publish visuals')
@@ -351,6 +354,7 @@ def _setup(config_path, data_dir, bin_dir, restore_theme=None, restore_size=None
         manifest = {'version': 1,
                     'abi': initial,
                     'library': str(Path(installed).resolve()),
+                    'cursor_guard_library': str(Path(guard_installed).resolve()),
                     'profile_sha256': hashlib.sha256((ROOT/'native/hyprglass-local-optics.lua').read_bytes()).hexdigest(),
                     'setup_instance': env['HYPRLAND_INSTANCE_SIGNATURE'],
                     'cursor_directory': str(theme.resolve()),

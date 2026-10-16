@@ -85,6 +85,16 @@ def drain_input():
         fcntl.flock(lock,fcntl.LOCK_EX)
 
 
+class SessionVisuals:
+    """One presentation fence hides the badge and the software cursor together."""
+    def __init__(self, native, cursor):
+        self.native,self.cursor=native,cursor
+
+    def command(self, command):
+        if command in ('hide','show'):self.cursor.command(command)
+        return self.native.command(command)
+
+
 def recover(env, expected=None):
     try:lock=owner_lock()
     except (OSError,RuntimeError):
@@ -112,10 +122,12 @@ def guardian(env, pipe, token):
         if SNAPSHOT.exists() and not restore(env):
             raise RuntimeError('previous session cleanup failed')
         if CANCEL.exists():raise RuntimeError('cancelled by user')
-        driver_group=None;native=None;server=None
+        driver_group=None;native=None;server=None;cursor_guard=None
         try:
             import cursor_theme
             cursor=cursor_theme.snapshot(env)
+            cursor_theme.check_guard(env)
+            cursor['guard_token']=token
             # Persist before installing the temporary Escape binding.
             with open(SNAPSHOT,'x',opener=lambda path,flags:os.open(path,flags,0o600)) as stream:
                 json.dump({'version':4,'token':token,'cursor':cursor},stream)
@@ -126,15 +138,17 @@ def guardian(env, pipe, token):
             except Exception as exc:
                 print(f'warning: temporary Escape binding unavailable: {exc}',file=sys.stderr)
             if stopping[0] or CANCEL.exists():raise RuntimeError('session cancelled during startup')
-            cursor_theme.apply(env,cursor['agent_theme'],cursor['agent_size'])
+            cursor_guard=cursor_theme.apply(env,cursor['agent_theme'],cursor['agent_size'],token)
             server=indicator.listen(STATE,token)
             native=indicator.Native({**env,'CU_ESCAPE_AVAILABLE':'1' if escape_available else '0'})
+            visuals=SessionVisuals(native,cursor_guard)
             if stopping[0] or CANCEL.exists():raise RuntimeError('session cancelled during indicator startup')
             print('ready',flush=True)
             while not stopping[0] and not CANCEL.exists() and not (STATE/('stop-'+token)).exists():
                 if native.process.poll() is not None:raise RuntimeError('session indicator lost')
-                ready,_,_=select.select([pipe,server],[],[],.05)
-                if server in ready:indicator.serve(server,native,token)
+                ready,_,_=select.select([pipe,server,cursor_guard.socket],[],[],.05)
+                if cursor_guard.socket in ready:raise RuntimeError('session cursor guard lost')
+                if server in ready:indicator.serve(server,visuals,token)
                 if pipe in ready:
                     message=os.read(pipe,4096)
                     if not message:break
@@ -146,7 +160,8 @@ def guardian(env, pipe, token):
             try:
                 for cleanup in (request_stop,lambda:stop_group(driver_group) if driver_group is not None else None,drain_input,
                                 lambda:native.close() if native is not None else None,
-                                lambda:server.close() if server is not None else None):
+                                lambda:server.close() if server is not None else None,
+                                lambda:cursor_guard.close() if cursor_guard is not None else None):
                     try:cleanup()
                     except BaseException as exc:
                         cleanup_ok=False

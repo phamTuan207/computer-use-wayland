@@ -1,16 +1,21 @@
 ## Automation sessions
 
-Standard setup and a fresh login enable the pill, liquid backdrop and temporary
-real cursor theme, restored by the guardian. With no `native/agent-cursor.json`,
+Standard setup and a fresh login enable the pill, liquid backdrop and
+session-owned agent cursor lease, released after the driver stops during normal cleanup.
+With no `native/agent-cursor.json`,
 setup requires `--restore-theme YOUR_CURRENT_HYPRLAND_THEME --restore-size
 YOUR_CURRENT_HYPRLAND_SIZE`, declared once: the compositor's cursor cannot be read
 back, and it is never guessed from GTK. An existing valid manual profile is kept
-byte for byte and needs no flags. Each session applies the agent cursor, restores
-those declared Hyprland values, and independently snapshots and restores GTK.
-Compositor restoration is mandatory; GTK restoration alone never proves
+byte for byte and needs no flags. Each session holds the native image lease
+without changing global theme or GTK settings; the profile and asset gate alone
+is not sufficient, and a backend that is not idle never starts a driver.
+Pre-lease snapshots still restore their declared Hyprland values, where the
+compositor restoration is mandatory and GTK restoration alone never proves
 compositor state. Every session requires a configured, loadable agent cursor
-plus the ready overlay before its driver can start. Losing the overlay stops
-the running session. The repo CLI reads only its own tree's
+plus the ready overlay before its driver can start. Losing the lease or the
+overlay stops the running session. Existing installations first-load only the
+guard through the guarded helper after the pinned ABI check (no unload or
+reload of glass). The repo CLI reads only its own tree's
 `native/agent-cursor.json`, never an installed copy.
 There is one shared pointer. Do not operate simultaneously.
 
@@ -20,12 +25,14 @@ Input commands require a live session; standalone capture remains available.
 Sessions show a click-through layer-shell badge "Computer use active"; the badge takes
 no keyboard focus and lets clicks through. The badge surface asks the compositor for a
 per-surface backdrop blur (`ext_background-effect-v1`), applied only inside the rounded
-pill. The shared pointer switches to the agent theme
-for the task and returns to the declared values when the task ends; no marker is
+pill. The compositor holds the session's owned agent image for the task
+and releases it after the driver stops during normal cleanup; no marker is
 drawn and the screen scale never changes. Window and screen captures both hide the badge
-for the shot and restore it after — that hide/show fencing stays the only
+and the software cursor
+for the shot and restore both after the native presented-frame acknowledgement fences the image — that hide/show fencing stays the only
 exception to overlay visibility; hiding clears the blur region together with the pixels, so no blurred copy
-survives in the capture. Outputs are taken once at startup: adding or removing a
+survives in the capture, and no cursor pixels leak into the PNG. A cursor command failure
+prevents the screenshot and ends the driver instead. Outputs are taken once at startup: adding or removing a
 monitor mid-session ends the indicator.
 `finish` requests completion; `cancel` latches cancellation. Best-effort physical
 Escape works throughout the session, without a timer; installation failures warn.

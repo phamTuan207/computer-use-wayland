@@ -22,6 +22,7 @@ OPTICS = ROOT / 'native/hyprglass-local-optics.lua'
 DEFAULT_MANIFEST = ROOT / 'native/visuals.json'
 REQUIRED = ('abi', 'library', 'profile_sha256', 'setup_instance')
 ACTIVATE = ROOT / 'scripts/activate-glass.py'
+ACTIVATE_GUARD = ROOT / 'scripts/activate-cursor-guard.py'
 PROC = Path('/proc')
 
 
@@ -51,6 +52,13 @@ def atomic_write(path, data):
 def _activate(library, abi, env):
     """Run the existing helper by path; its own guards are the only activation path."""
     namespace = runpy.run_path(str(ACTIVATE), run_name='activate_glass')
+    namespace['activate'](library, abi, env, before_load=lambda:require_fresh_login(env))
+    return True
+
+
+def _activate_cursor_guard(library, abi, env):
+    """Run root's guard helper by path; it must never unload or reload plugins."""
+    namespace = runpy.run_path(str(ACTIVATE_GUARD), run_name='activate_cursor_guard')
     namespace['activate'](library, abi, env, before_load=lambda:require_fresh_login(env))
     return True
 
@@ -122,8 +130,31 @@ def _login(manifest, env):
         digest_tree=runpy.run_path(str(ROOT/'scripts/build-cursor.py'))['tree_digest'](directory)
         if digest_tree!=manifest['cursor_tree_sha256'] or profile['theme']!='cu-agent-'+digest_tree or directory.name!=profile['theme']:
             raise ValueError('cursor tree differs from setup')
+    guard = _validated_guard_library(manifest)
     _activate(str(library), manifest['abi'], env)
+    _activate_cursor_guard(str(guard), manifest['abi'], env)
     return {'ok': True}
+
+
+def _validated_guard_library(manifest):
+    """The native cursor backend: an absolute immutable hash-named library.
+
+    Old manifests without it fail closed with setup guidance, never silently.
+    """
+    value = manifest.get('cursor_guard_library')
+    if not isinstance(value, str) or not value:
+        raise ValueError('cursor guard backend missing from manifest; re-run setup to install it')
+    if not Path(value).is_absolute():
+        raise ValueError('cursor guard library path must be absolute')
+    if Path(value).is_symlink():
+        raise ValueError('cursor guard library must be a regular file, not a symlink')
+    library = Path(value).resolve(strict=True)
+    if not library.is_file():
+        raise ValueError('cursor guard library must be a regular file')
+    digest = hashlib.sha256(library.read_bytes()).hexdigest()
+    if library.name != 'cursor-guard-' + digest + '.so':
+        raise ValueError('cursor guard library must carry its own SHA256 in the filename')
+    return library
 
 
 if __name__ == '__main__':
