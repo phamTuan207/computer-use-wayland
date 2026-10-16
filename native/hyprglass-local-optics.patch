@@ -189,7 +189,7 @@ index 6d4b59e0c9000c2c4271e38e9184c47a4517a2af..439ac7de8f54ec29e6174f57a2c376fd
      [[nodiscard]] std::string    resolvePresetName() const;
      [[nodiscard]] ELayerMaskMode resolveMaskMode() const;
 diff --git a/src/GlassRenderer.cpp b/src/GlassRenderer.cpp
-index 0bcb2c66b20571539b732bd29e64508030e6f01c..d86f8ba5bce3d180423d0bce48fe41952e8fa034 100644
+index 0bcb2c66b20571539b732bd29e64508030e6f01c..2826eaf709e1444900b65799e7920c6ba45e61fe 100644
 --- a/src/GlassRenderer.cpp
 +++ b/src/GlassRenderer.cpp
 @@ -6,7 +6,9 @@
@@ -464,14 +464,14 @@ index 0bcb2c66b20571539b732bd29e64508030e6f01c..d86f8ba5bce3d180423d0bce48fe4195
 +        glActiveTexture(static_cast<GLenum>(prevActive));
 +
 +        // Interior radius at monitor scale 1 and the LOD the shader picks for
-+        // level-0 density 1 (radius 2.5 px -> gap 0.904 texel -> LOD 0.000). Static
++        // level-0 density 1 (radius 3.6 px -> gap 1.302 texel -> LOD 0.381). Static
 +        // expectation, logged next to the measured level sizes. WARN is used
 +        // because this build aliases INFO to LOG_DEBUG, which may be disabled, and
 +        // root needs the chain visible (one bounded line per indicator layer).
-+        const double lodDensity1 = std::min(std::log2(std::max(2.5 * 0.361787, 1.0)), static_cast<double>(mip.levels - 1));
++        const double lodDensity1 = std::min(std::log2(std::max(3.6 * 0.361787, 1.0)), static_cast<double>(mip.levels - 1));
 +        Log::logger->log(Log::WARN,
 +                         "hyprglass indicator mip ready: sample {}x{} drm {:#x} internal {:#x} levels {} maxLOD {} generation {} "
-+                         "level1 {}x{} last {}x{} interiorRadiusPx(scale1) 2.500 lod(density1) {:.3f} glErr {:#x}",
++                         "level1 {}x{} last {}x{} interiorRadiusPx(scale1) 3.600 lod(density1) {:.3f} glErr {:#x}",
 +                         w, h, static_cast<uint32_t>(fmt), static_cast<unsigned>(internalFormat), mip.levels, mip.levels - 1, serial,
 +                         level1W, level1H, lastW, lastH, lodDensity1, static_cast<unsigned>(probeErr));
 +        mip.logged = true;
@@ -495,7 +495,7 @@ index 0bcb2c66b20571539b732bd29e64508030e6f01c..d86f8ba5bce3d180423d0bce48fe4195
      glUniform2f(uniforms.invFullSize,
          1.0f / static_cast<float>(fullSize.x), 1.0f / static_cast<float>(fullSize.y));
      glUniform1f(uniforms.invRoundingPower, 1.0f / safeRoundingPower);
-@@ -498,6 +777,55 @@ void applyGlassEffect(SP<Render::IFramebuffer> sampleFramebuffer, SP<Render::IFr
+@@ -498,6 +777,54 @@ void applyGlassEffect(SP<Render::IFramebuffer> sampleFramebuffer, SP<Render::IFr
      const auto monitor = g_pHyprRenderer->m_renderData.pMonitor.lock();
      glUniform1f(uniforms.monitorScale, monitor && monitor->m_scale > 0.0f ? monitor->m_scale : 1.0f);
  
@@ -507,8 +507,8 @@ index 0bcb2c66b20571539b732bd29e64508030e6f01c..d86f8ba5bce3d180423d0bce48fe4195
 +    const float indicatorScale = monitor && std::isfinite(monitor->m_scale) && monitor->m_scale > 0.0f
 +        ? monitor->m_scale : 1.0f;
 +    // Material dimensions in logical px; refractionStrength scales thickness in the shader.
-+    glUniform1f(uniforms.indicatorBezelPx, 6.0f * indicatorScale);
-+    glUniform1f(uniforms.indicatorThicknessPx, 21.0f * indicatorScale);
++    glUniform1f(uniforms.indicatorBezelPx, 3.5f * indicatorScale);
++    glUniform1f(uniforms.indicatorThicknessPx, 15.0f * indicatorScale);
 +
 +    // STEP5: indicator edge-varying blur. Reset every draw — the private mip
 +    // chain is handed over only when this exact draw's indicator owns a ready
@@ -516,16 +516,15 @@ index 0bcb2c66b20571539b732bd29e64508030e6f01c..d86f8ba5bce3d180423d0bce48fe4195
 +    const bool indicatorMipReady = indicatorOptics && mask && mask->indicatorMipTexture != 0 && mask->indicatorMaxLod > 0.0f;
 +    glUniform1i(uniforms.mipTex, kMipUnitIdx);
 +    glUniform1i(uniforms.indicatorMipReady, indicatorMipReady ? 1 : 0);
-+    // Interior disk radius: 2.5 logical px at the neutral blur_strength 0.42, scaled
++    // Interior disk radius: 3.6 logical px at the neutral blur_strength 0.42, scaled
 +    // by the profile so the knob stays meaningful, bounded so the 60 px sample
 +    // margin always covers tap + Snell displacement + mip footprint. The rim uses
-+    // 1.2x of this at the rim (3 px), capped at 6 logical px: displacement
-+    // <= 12.8 logical at mandatory CA 0.08
-+    // and <= 14.4 across CA clamp [0,1], configured radius 2.5 (max knob clamp 6).
++    // 0.45x of this in the shader: displacement <= 9.1 logical at mandatory CA 0.08
++    // and <= 10.3 across CA clamp [0,1], configured radius 3.6 (max knob clamp 6).
 +    // At scale 2, padding remains < 60 px only for strength 0.7 (displacement +
-+    // max radius ~41 px plus conservative next-level footprint < 60 px).
++    // max radius ~30 px plus conservative next-level footprint < 60 px).
 +    const float indicatorBlurStrength = resolvePresetFloat(resolveContext, &SPresetValues::blurStrength, &SOverridableConfig::blurStrength);
-+    const float indicatorBlurPx = std::clamp(2.5f * indicatorScale * (indicatorBlurStrength / 0.42f),
++    const float indicatorBlurPx = std::clamp(3.6f * indicatorScale * (indicatorBlurStrength / 0.42f),
 +                                             0.5f * indicatorScale, 6.0f * indicatorScale);
 +    glUniform1f(uniforms.indicatorBlurPx, indicatorBlurPx);
 +    glUniform1f(uniforms.indicatorMaxLod, indicatorMipReady ? mask->indicatorMaxLod : 0.0f);
@@ -551,7 +550,7 @@ index 0bcb2c66b20571539b732bd29e64508030e6f01c..d86f8ba5bce3d180423d0bce48fe4195
      uploadThemeUniforms(resolveContext);
  
      const int64_t tintColorValue = resolvePresetInt(resolveContext, &SPresetValues::tintColor, &SOverridableConfig::tintColor);
-@@ -573,7 +901,7 @@ void applyGlassEffect(SP<Render::IFramebuffer> sampleFramebuffer, SP<Render::IFr
+@@ -573,7 +900,7 @@ void applyGlassEffect(SP<Render::IFramebuffer> sampleFramebuffer, SP<Render::IFr
      // from before this uniform existed.
      Vector2D glassBoxOffsetPx{0.0, 0.0};
      Vector2D glassBoxSizePx = fullSize;
@@ -560,7 +559,7 @@ index 0bcb2c66b20571539b732bd29e64508030e6f01c..d86f8ba5bce3d180423d0bce48fe4195
          glassBoxOffsetPx = mask->glassBoxOffsetPx;
          glassBoxSizePx   = mask->glassBoxSizePx;
      }
-@@ -589,6 +917,13 @@ void applyGlassEffect(SP<Render::IFramebuffer> sampleFramebuffer, SP<Render::IFr
+@@ -589,6 +916,13 @@ void applyGlassEffect(SP<Render::IFramebuffer> sampleFramebuffer, SP<Render::IFr
      g_pHyprOpenGL->scissor(damageExtents.w > 0 && damageExtents.h > 0 ? damageExtents : rawBox);
      glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
      g_pHyprOpenGL->scissor(nullptr);
@@ -733,7 +732,7 @@ index 136d3de85ee550d13c292bd36ba59b294de0d815..e9bf8093f05611fe2898513032a5df79
 +    [[nodiscard]] bool compileCopyShader();
  };
 diff --git a/src/Shaders.hpp b/src/Shaders.hpp
-index 340212bf2eea6b838911370fcaefd2edfad23aea..c1d6ab0c5592eb2ded1413c679a67e26c6966256 100644
+index 340212bf2eea6b838911370fcaefd2edfad23aea..8e7f5b513408f3313145dfbaa1f5a8f4fdcced4c 100644
 --- a/src/Shaders.hpp
 +++ b/src/Shaders.hpp
 @@ -90,6 +90,18 @@ uniform vec4 regionRects[64];  // box-local pixels: xy = offset from box top-lef
@@ -843,7 +842,7 @@ index 340212bf2eea6b838911370fcaefd2edfad23aea..c1d6ab0c5592eb2ded1413c679a67e26
  
      // ========================================
      // EDGE REFRACTION
-@@ -337,32 +394,76 @@ void main() {
+@@ -337,32 +394,74 @@ void main() {
      // and distorts what's already behind the window, without reaching
      // beyond the window boundary.
      // ========================================
@@ -871,7 +870,6 @@ index 340212bf2eea6b838911370fcaefd2edfad23aea..c1d6ab0c5592eb2ded1413c679a67e26
 +    bool useIndicatorOptics = indicatorOptics == 1 && roundingPower == 2.0;
 +    vec2 indicatorOutward = vec2(0.0);
 +    float indicatorDepthRatio = 0.0;
-+    vec3 indicatorNormal = vec3(0.0, 0.0, 1.0);
 +    if (useIndicatorOptics) {
 +        // Analytic gradient of the same circular rounded-box SDF as the outline.
 +        vec2 halfSizePx = glassBoxSizePx * 0.5;
@@ -892,14 +890,13 @@ index 340212bf2eea6b838911370fcaefd2edfad23aea..c1d6ab0c5592eb2ded1413c679a67e26
 -    vec2 offsetR = baseOffset * (1.0 - chromaSpread);
 +        // Quartic cross-section v^4 + z^4 = 1; cap the vertical tangent at the rim.
 +        float depthPx = max(-cornerSdf, 0.0);
-+        float bezelPx = max(indicatorBezelPx, 0.0001);
++        float bezelPx = max(1.45 * indicatorBezelPx, 0.0001);
 +        indicatorOutward = outward;
 +        indicatorDepthRatio = depthPx / bezelPx;
 +        float rim = 1.0 - clamp(depthPx / bezelPx, 0.0, 1.0);
 +        float rimSquared = rim * rim;
 +        float slope = min((rimSquared * rim) / pow(max(1.0 - rimSquared * rimSquared, 0.001), 0.75), 7.0);
 +        vec3 normal = normalize(vec3(outward * slope, 1.0));
-+        indicatorNormal = normal;
 +        const float indicatorIor = 1.5;
 +        // Independent wavelength indices; clamping keeps every IOR above air (1.0).
 +        float iorSpread = 0.12 * clamp(chromaticAberration, 0.0, 1.0);
@@ -944,16 +941,16 @@ index 340212bf2eea6b838911370fcaefd2edfad23aea..c1d6ab0c5592eb2ded1413c679a67e26
  
      // ========================================
      // CENTER DOME LENS (subtle magnification in the flat interior)
-@@ -389,7 +490,17 @@ void main() {
+@@ -389,7 +488,17 @@ void main() {
      vec2 uvG = uv + offsetG + domeUV;
      vec2 uvB = uv + offsetB + domeUV;
  
 -    if (chromaticAberration > 0.001 && edgeProximity > 0.01) {
 +    if (useIndicatorOptics && indicatorMipReady == 1) {
-+        // A 3 logical px rim blur at the neutral profile, 2.5 px in the interior,
++        // Edge-distance-varying radius: .45x at the rim, 1x in the interior,
 +        // smoothly by the same SDF depth that drives the optics.
-+        float edgeMix = smoothstep(0.8, 1.0, indicatorDepthRatio);
-+        float radiusPx = mix(min(1.2 * indicatorBlurPx, 6.0 * monitorScale), indicatorBlurPx, edgeMix);
++        float edgeMix = clamp(indicatorDepthRatio, 0.0, 1.0);
++        float radiusPx = indicatorBlurPx * mix(0.45, 1.0, edgeMix);
 +        // Tap gap (unit-disk packing sqrt(pi/taps)) against the real level-0
 +        // texel density; LOD is clamped to the mip chain that actually exists.
 +        float gapTexels = max(radiusPx * 0.361787, 1.0) * max(indicatorTexelDensity.x, indicatorTexelDensity.y);
@@ -963,7 +960,7 @@ index 340212bf2eea6b838911370fcaefd2edfad23aea..c1d6ab0c5592eb2ded1413c679a67e26
          color.r = sampleBlurred(uvR).r;
          color.g = sampleBlurred(uvG).g;
          color.b = sampleBlurred(uvB).b;
-@@ -440,70 +551,100 @@ void main() {
+@@ -440,70 +549,91 @@ void main() {
      if (noiseStrength > 0.001)
          color += (pixelHash(floor(uv * fullSize)) - 0.5) * noiseStrength * 0.1;
  
@@ -976,23 +973,19 @@ index 340212bf2eea6b838911370fcaefd2edfad23aea..c1d6ab0c5592eb2ded1413c679a67e26
 -        float tail = sizePx;
 -        float ring = (1.0 - smoothstep(-core, 0.0, cornerSdf)) * smoothstep(-tail, -core, cornerSdf);
 +    if (useIndicatorOptics) {
-+        float depthPx = max(indicatorDepthRatio, 0.0) * indicatorBezelPx;
-+        float highlightWidthPx = max(6.0 * monitorScale, 1.0);
-+        float depth = depthPx / highlightWidthPx;
++        float depth = indicatorDepthRatio;
 +        float facing = clamp(dot(indicatorOutward, lightDir(specularAngle)), -1.0, 1.0);
 +        float front = max(facing, 0.0);
 +        float back = max(-facing, 0.0);
-+        float directional = front * front + 0.35 * back * back * back;
++        float directional = front * front + 0.25 * back * back * back;
  
 -        // lit side faces the light, the far side fades out and can be shadowed
 -        float facing = clamp(dot(sdfOutwardNormal(uv), lightDir(bevelAngle)) * 0.5 + 0.5, 0.0, 1.0);
-+        // Two separated reflection bands follow the refracted, curved bezel.
-+        float support = 1.0 - smoothstep(0.85, 1.0, depth);
-+        float whiteDepth = depthPx / max(2.0 * monitorScale, 1.0);
-+        float hairline = 1.0 - smoothstep(0.25, 1.0, whiteDepth);
-+        float shoulderDistance = (depth - 0.48) / 0.065;
-+        float shoulder = exp(-0.5 * shoulderDistance * shoulderDistance);
-+        float meniscusDistance = (depth - 0.80) / 0.055;
++        // Confine the reflection to the bezel; the client already paints a wash and rim.
++        float support = 1.0 - smoothstep(0.8, 1.0, depth);
++        float hairline = exp(-8.0 * depth);
++        float broadRim = exp(-2.5 * depth);
++        float meniscusDistance = (depth - 0.5) / 0.14;
 +        float meniscus = exp(-0.5 * meniscusDistance * meniscusDistance);
  
 -        vec3 bevelLight = vec3(1.0);
@@ -1000,16 +993,11 @@ index 340212bf2eea6b838911370fcaefd2edfad23aea..c1d6ab0c5592eb2ded1413c679a67e26
 -        if (bevelTint > 0.001) {
 -            float maxC = max(max(tintSource.r, tintSource.g), tintSource.b);
 -            bevelLight = mix(bevelLight, maxC > 0.001 ? tintSource / maxC : vec3(1.0), bevelTint);
-+        float hairLight = 0.70 * clamp(bevelStrength, 0.0, 1.0) * hairline * (0.30 + 0.70 * directional);
-+        float broadLight = 0.40 * clamp(fresnelStrength, 0.0, 1.0) * shoulder * (0.25 + 0.75 * directional);
-+        float meniscusLight = 0.30 * clamp(specularStrength, 0.0, 1.0) * meniscus * (0.25 + 0.75 * directional);
-+        // The Snell surface normal also bends the specular highlight around the bevel.
-+        vec3 halfLight = normalize(vec3(lightDir(specularAngle), 1.2));
-+        float curvedSpecular = pow(max(dot(indicatorNormal, halfLight), 0.0), 18.0);
-+        float curvedLight = 0.50 * clamp(specularStrength, 0.0, 1.0) * curvedSpecular;
-+        // Reflections whiten only the rim; the body keeps its original transmission.
-+        float reflection = clamp(support * (hairLight + broadLight + meniscusLight + curvedLight), 0.0, 0.75);
-+        color = mix(color, vec3(1.0), reflection);
++        float hairLight = 0.22 * clamp(bevelStrength, 0.0, 1.0) * hairline * (0.12 + 0.88 * directional);
++        float broadLight = 0.14 * clamp(fresnelStrength, 0.0, 1.0) * broadRim * directional;
++        float meniscusLight = 0.14 * clamp(specularStrength, 0.0, 1.0) * meniscus * (0.15 + 0.85 * directional);
++        // Neutral additive reflection; no absorption or dark inner rim in the indicator.
++        color += vec3(support * (hairLight + broadLight + meniscusLight));
 +    } else {
 +        // ========================================
 +        // BEVEL — thin lit line hugging the edge, brightest on the side facing the light
@@ -1120,7 +1108,7 @@ index 340212bf2eea6b838911370fcaefd2edfad23aea..c1d6ab0c5592eb2ded1413c679a67e26
      }
  
      // float framebuffers (FP16 under wide-gamut cm) store unbounded values and
-@@ -578,5 +719,23 @@ void main() {
+@@ -578,5 +708,23 @@ void main() {
  
      fragColor = result / totalWeight;
  }
