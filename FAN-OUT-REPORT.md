@@ -68,3 +68,11 @@ Người dùng đã duyệt vòng hiệu chỉnh 5 sau demo 45.027 giây. Root s
 Bản chốt: lớp trắng 2 px ít đục; vùng khúc xạ 6 px, thickness 21 px; blur mép 3 px, lòng 2.5 px. Native patch SHA256 `f7fd86cc3e4c6f9b83f217841e0c15d10a140d3e72a3545efcb85a82b8ad8028`; indicator giữ nguyên outline nhẹ. Native build/install exit 0, phiên thử mới shader ready/match và cleanup 0. Judge ghi nhận trong hơn, mép mềm hơn nhẹ; không thấy artifact mới rõ.
 
 Bằng chứng cuối: `reports/user-tune-05/`, `user-tune-05-live-01/`; brief bulk `cmd-user-tune-05-brief.md`, raw output và build-record trong artifact tương ứng. Acceptance chốt dùng wrapper/run-checks đã review, chạy trước push và trên exact pushed tree; bằng chứng lưu `reports/approved-final/`. Root giữ integration, commit/push và cài manifest fresh-login; không thay plugin đang chạy. Những báo cáo trước nói chờ người dùng duyệt là trạng thái lịch sử, được thay bằng phê duyệt hiện tại. Hai assertion test material lịch sử vẫn được báo trung thực nếu còn fail; không có tuyên bố toàn bộ test xanh.
+
+## Xác minh desktop và cập nhật hợp đồng test
+
+Sau khi người dùng tự đăng xuất/đăng nhập, desktop chính đã nạp đúng thư viện của bản được duyệt. Phiên điều khiển thật ghi shader `ready`, ABI `match`; root xem badge thật, lệnh chụp thành công, kết thúc session sạch và cursor guard trở về idle. Không reload/unload/hot-swap.
+
+Theo yêu cầu xử lý hai lỗi cũ, chỉ cập nhật `test_indicator_material.py`: kiểm từng nhánh chữ trắng và outline 1 px / alpha 0.30 thay vì đếm số lệnh đặt màu; lấy vị trí/alpha wash thật từ source vào Cairo harness thay bảng cũ; giữ assertion thân trong suốt, midband bằng 0, wash nhẹ và bóng chỉ ngoài kính. Mẫu bóng được lấy trước khi vẽ wash để tách đúng thành phần. Ba material tests đã chạy và pass. Các kết quả fail phía trên là lịch sử trước lần sửa test này; full acceptance được chạy lại theo commit và lưu log riêng, không suy từ ba tests thành toàn bộ suite xanh.
+
+Không thay đổi shader, indicator hoặc độ sáng chữ đã được người dùng duyệt. Các giới hạn 10-bit/FP16, hiệu năng và fallback mip vẫn giữ nguyên; chữ trên nền sáng được người dùng chấp nhận.

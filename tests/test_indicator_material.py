@@ -34,7 +34,7 @@ static void rounded(cairo_t *cr, double x, double y, double w, double h, double 
 int main(int argc, char **argv) {
   (void)argc;
   double alpha = atof(argv[1]); int rings = atoi(argv[2]);
-  double stops[6]; for (int i = 0; i < 6; i++) stops[i] = atof(argv[3 + i]);
+  int stop_count = atoi(argv[3]);
   const double px = 16, py = 16, pw = 288, ph = 38;
   cairo_surface_t *s = cairo_image_surface_create(CAIRO_FORMAT_A8, 320, 66);
   cairo_t *cr = cairo_create(s);
@@ -48,21 +48,19 @@ int main(int argc, char **argv) {
     cairo_set_source_rgba(cr, 0, 0, 0, alpha); cairo_fill(cr);
   }
   cairo_restore(cr);
-  rounded(cr, px, py, pw, ph, ph / 2);  // wash (reflection gradient)
-  cairo_pattern_t *w = cairo_pattern_create_linear(px, py, px, py + ph);
-  cairo_pattern_add_color_stop_rgba(w, 0.00, 1, 1, 1, stops[0]);
-  cairo_pattern_add_color_stop_rgba(w, 0.16, 1, 1, 1, stops[1]);
-  cairo_pattern_add_color_stop_rgba(w, 0.36, 1, 1, 1, stops[2]);
-  cairo_pattern_add_color_stop_rgba(w, 0.66, 1, 1, 1, stops[3]);
-  cairo_pattern_add_color_stop_rgba(w, 0.90, 1, 1, 1, stops[4]);
-  cairo_pattern_add_color_stop_rgba(w, 1.00, 1, 1, 1, stops[5]);
-  cairo_set_source(cr, w); cairo_fill(cr); cairo_pattern_destroy(w);
   cairo_surface_flush(s);
   unsigned char *d = cairo_image_surface_get_data(s);
   int stride = cairo_image_surface_get_stride(s);
   printf("shadow_centre %d\n", d[35 * stride + 144]);
   printf("shadow_text %d\n", d[34 * stride + 160]);
   printf("shadow_outside %d\n", d[15 * stride + 144]);
+  rounded(cr, px, py, pw, ph, ph / 2);  // wash (reflection gradient)
+  cairo_pattern_t *w = cairo_pattern_create_linear(px, py, px, py + ph);
+  for (int i = 0; i < stop_count; i++)
+    cairo_pattern_add_color_stop_rgba(w, atof(argv[4 + 2 * i]), 1, 1, 1,
+                                     atof(argv[5 + 2 * i]));
+  cairo_set_source(cr, w); cairo_fill(cr); cairo_pattern_destroy(w);
+  cairo_surface_flush(s);
   printf("wash_mid %d\n", d[35 * stride + 144]);
   printf("wash_top %d\n", d[18 * stride + 144]);
   cairo_destroy(cr); cairo_surface_destroy(s);
@@ -75,12 +73,15 @@ def parse_source():
     text = SOURCE.read_text()
     alpha = re.search(r'cairo_set_source_rgba\(cr,0,0,0,([0-9.]+)\);cairo_fill\(cr\);\s*\n\s*\}', text)
     rings = re.search(r'ring=entrance_progress<1\.0\?0:(\d+);ring>=1', text)
-    liquid = re.findall(r'liquid\?([0-9.]+):', text)
-    zero_stops = re.findall(r'wash,\.(?:36|66),1,1,1,0\)', text)
+    body = re.search(r'cairo_set_source_rgba\(cr,\.93,\.95,\.97,liquid\?([0-9.]+):', text)
+    wash = re.findall(r'cairo_pattern_add_color_stop_rgba\(wash,([0-9.]+),1,1,1,([^;)]+)\);', text)
+    # Select the liquid alpha from each actual stop, including unconditional zeros.
+    stops = [(float(position), float(value.removeprefix('liquid?').split(':')[0]))
+             for position, value in wash]
     return {'alpha': float(alpha.group(1)) if alpha else None,
             'rings': int(rings.group(1)) if rings else None,
-            'liquid_stops': [float(v) for v in liquid],
-            'zero_stop_count': len(zero_stops)}
+            'body_alpha': float(body.group(1)) if body else None,
+            'wash_stops': stops}
 
 
 def sample(alpha, rings, stops):
@@ -98,7 +99,8 @@ def sample(alpha, rings, stops):
                                 *cflags, *libs, '-lm'], capture_output=True, text=True)
         if build.returncode:
             raise RuntimeError(build.stderr)
-        run = subprocess.run([str(binary), str(alpha), str(rings), *[str(s) for s in stops]],
+        run = subprocess.run([str(binary), str(alpha), str(rings), str(len(stops)),
+                              *[str(value) for stop in stops for value in stop]],
                              capture_output=True, text=True, timeout=20)
         if run.returncode:
             raise RuntimeError(run.stderr)
@@ -110,7 +112,19 @@ class IndicatorMaterial(unittest.TestCase):
         text = SOURCE.read_text()
         self.assertNotIn('adaptive_ink', text)
         self.assertNotIn('CU_INDICATOR_INK', text)
-        self.assertEqual(text.count('cairo_set_source_rgb(cr,.98,.99,1);'), 2)
+        # Each label starts with white ink for the ordinary show_text branch.
+        # Liquid text paints its dark outline first, then restores the same white fill.
+        for label, setup in [('Computer use active', 'cairo_select_font_face'),
+                             ('Esc', 'cairo_set_font_size(cr,11);')]:
+            self.assertRegex(text, r'cairo_set_source_rgb\(cr,\.98,\.99,1\);\s*' + re.escape(setup))
+            self.assertRegex(text, re.escape(f'cairo_text_path(cr,"{label}");') +
+                             r'\s*cairo_set_line_join\(cr,CAIRO_LINE_JOIN_ROUND\);'
+                             r'\s*cairo_set_line_width\(cr,1\.0\);'
+                             r'\s*cairo_set_source_rgba\(cr,0,0,0,\.30\);'
+                             r'\s*cairo_stroke_preserve\(cr\);'
+                             r'\s*cairo_set_source_rgb\(cr,\.98,\.99,1\);'
+                             r'\s*cairo_fill\(cr\);\s*\}\s*else\s*\{\s*' +
+                             re.escape(f'cairo_show_text(cr,"{label}");'))
         self.assertIn('gtk_layer_set_namespace(output->window,"computer-use-indicator");', text)
         stops = re.findall(r'cairo_pattern_add_color_stop_rgba\(inner,([^;]+)\);', text)
         self.assertEqual(len(stops), 4)
@@ -133,13 +147,15 @@ class IndicatorMaterial(unittest.TestCase):
     def test_parsed_constants_are_meaningful(self):
         self.assertEqual(self.src['rings'], 4, 'shadow ring count changed upstream')
         self.assertAlmostEqual(self.src['alpha'], 0.018, places=6)
-        self.assertEqual(self.src['zero_stop_count'], 2, 'wash midband must have two zero stops')
-        self.assertIn(0.0, self.src['liquid_stops'], 'liquid body alpha 0 expected')
-        self.assertIn(0.18, self.src['liquid_stops'])
+        self.assertEqual(self.src['body_alpha'], 0.0, 'liquid body must be transparent')
+        stops = self.src['wash_stops']
+        self.assertEqual([position for position, _ in stops], [0, .16, .36, .66, .90, 1])
+        self.assertEqual(stops[2:4], [(.36, 0.0), (.66, 0.0)], 'wash midband must be clear')
+        self.assertTrue(all(0 <= alpha <= .06 for _, alpha in stops), 'wash must stay faint')
+        self.assertGreater(stops[0][1], 0, 'top reflection must remain visible')
 
     def test_cairo_geometry_is_outside_only_and_midband_clear(self):
-        stops = [0.18, 0.05, 0.0, 0.0, 0.035, 0.10]
-        got = sample(self.src['alpha'], self.src['rings'], stops)
+        got = sample(self.src['alpha'], self.src['rings'], self.src['wash_stops'])
         self.assertEqual(got['shadow_centre'], 0, 'shadow must not fill the pill centre')
         self.assertEqual(got['shadow_text'], 0, 'shadow must not reach the text')
         self.assertGreater(got['shadow_outside'], 0, 'ring band outside the pill must be non-zero')

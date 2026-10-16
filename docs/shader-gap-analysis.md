@@ -33,3 +33,11 @@ Chữ trắng vẫn yếu trên nền rất sáng; hiệu ứng mép chưa phong
 Calibration lịch sử có 57/57 focused checks pass. Lần acceptance của bản công bố trước chạy 673 tests, có hai assertion material cũ không khớp thay đổi có chủ đích (đếm lệnh màu chữ và alpha wash); các suite còn lại pass. Không sửa test để đạt xanh. Bản được duyệt phải chạy lại full acceptance trước push và trên đúng cây đã push; kết quả thật, lệnh và exit được lưu riêng theo commit. Việc người dùng duyệt hình ảnh không thay cho kết quả test.
 
 Cài đặt desktop dùng thư viện bất biến theo hash và manifest cho fresh login; không reload/unload/hot-swap plugin hiện tại. Trạng thái đã nạp trên desktop chính chỉ được xác nhận sau đăng nhập mới.
+
+## Xác minh desktop và cập nhật hợp đồng test
+
+Sau khi người dùng tự đăng xuất/đăng nhập, desktop chính đã nạp đúng thư viện của bản được duyệt. Phiên điều khiển thật ghi shader `ready`, ABI `match`; root xem badge thật, lệnh chụp thành công, kết thúc session sạch và cursor guard trở về idle. Không reload/unload/hot-swap.
+
+Theo yêu cầu xử lý hai lỗi cũ, chỉ cập nhật `test_indicator_material.py`: kiểm từng nhánh chữ trắng và outline 1 px / alpha 0.30 thay vì đếm số lệnh đặt màu; lấy vị trí/alpha wash thật từ source vào Cairo harness thay bảng cũ; giữ assertion thân trong suốt, midband bằng 0, wash nhẹ và bóng chỉ ngoài kính. Mẫu bóng được lấy trước khi vẽ wash để tách đúng thành phần. Ba material tests đã chạy và pass. Các kết quả fail phía trên là lịch sử trước lần sửa test này; full acceptance được chạy lại theo commit và lưu log riêng, không suy từ ba tests thành toàn bộ suite xanh.
+
+Không thay đổi shader, indicator hoặc độ sáng chữ đã được người dùng duyệt. Các giới hạn 10-bit/FP16, hiệu năng và fallback mip vẫn giữ nguyên; chữ trên nền sáng được người dùng chấp nhận.
