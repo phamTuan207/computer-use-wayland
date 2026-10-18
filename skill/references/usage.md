@@ -51,6 +51,10 @@ user-requested `computer-use resume` does that.
 
 ## Interactive agent driver
 
+Use one initial model view, one batch of all predictable actions, then its final image. See the
+required [batch-first policy](../SKILL.md#batch-first-required). Keep machine-side preflight
+captures and guards enabled; these checks do not need a model decision.
+
 Start `computer-use session -- computer-use session-driver` with your tool's
 persistent interactive process facility (PTY/stdin session or background terminal).
 Keep that process handle for the whole task; do not launch a new shell session
@@ -88,6 +92,30 @@ driver inside one session instead. Do not simulate persistence with detached
 sessions or manually copied session tokens.
 
 All commands emit bounded JSON. `--actions -` accepts JSON from stdin. Prefer a JSON file for complex input; never interpolate user text into shell code.
+
+If the caller exposes `yield_time_ms`, use a short output wait (about 250–1000 ms for short
+requests, allowing for a longer drag/wait batch). A persistent driver remains alive after it
+returns a response: waiting 10000 ms for it to exit adds avoidable caller latency. Consume one
+response before sending the next request; wait again only while that response is pending.
+
+### Ground once, execute, verify
+
+- Use DOM/accessibility refs where supported. For screenshots, choose the center of a visible
+  control, not its edge, and keep coordinates in the returned image's space. The executor applies
+  crop offsets, resize factors and monitor origins.
+- If small controls would be lost at 1280 px, choose a reliable crop or `--max-width 3840` on the
+  initial observation to preserve available detail; this never creates detail absent at capture.
+  With an image-viewing tool that supports it, request original detail. Avoid a second image just
+  to recheck a clear large target.
+- Example: in a visible Pinta canvas, plan ellipse-tool click → visible color click → Shift-drag
+  a square bounding box → hand-tool click to commit. Submit one action array and inspect only
+  its final result when every target is already visible and stays fixed. Setting an absolute
+  visible width value is preferable to guessing how many plus clicks a previous value needs.
+- An unseen fill-style popup is a real observation boundary. A selected-tool highlight is not.
+  Keep the final result screenshot by default. Never use a fixed two-image ceiling to ignore
+  uncertainty, errors, navigation or changed geometry.
+
+Evidence and limits: [batching and grounding research](../../docs/research/2026-10-19-batching-grounding.md).
 
 ## Chromium
 

@@ -21,6 +21,11 @@ owns the desktop for one task and cleans up afterwards.
 Desktop input is GUI-exclusive: only one automation session may hold the desktop.
 The pointer is shared with the user; simultaneous human input is not blocked.
 
+For predictable tasks, the [agent skill](skill/SKILL.md#batch-first-required) requires one initial
+model view → one ordered action batch → final result verification. The executor keeps its internal
+freshness and pointer checks. Read the [research and limits](docs/research/2026-10-19-batching-grounding.md)
+before treating a two-image workflow as an accuracy guarantee.
+
 ## Requirements
 
 **Hyprland exactly `0.56.2`**, with development headers from that same release.

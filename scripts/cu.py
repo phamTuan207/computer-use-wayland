@@ -970,7 +970,7 @@ def main():
     obs=sub.add_parser('observe');target=obs.add_mutually_exclusive_group(required=True);target.add_argument('--window');target.add_argument('--screen');obs.add_argument('--crop',nargs=4,type=int);obs.add_argument('--max-width',type=int,default=1280)
     obs.add_argument('--focus',action='store_true',help='explicitly focus the target window before capture (may switch workspace)')
     obs.add_argument('--settle-ms',type=int,default=0,help='wait up to 2000 ms for 120 ms of unchanged crop pixels; not semantic readiness')
-    act=sub.add_parser('act');act.add_argument('--observation',required=True);act.add_argument('--actions',required=True)
+    act=sub.add_parser('act',help='execute one batch of known actions, then capture its final result');act.add_argument('--observation',required=True);act.add_argument('--actions',required=True,help='JSON path or - for stdin; batch up to 32 predictable actions from one inspected observation')
     act.add_argument('--no-after',action='store_true',help='skip successful final capture; preflight safety and error captures stay enabled')
     obs.add_argument('--verbose',action='store_true');act.add_argument('--verbose',action='store_true')
     b=sub.add_parser('browser');b.add_argument('operation',choices=['start','tabs','observe','act']);b.add_argument('--endpoint',default='http://127.0.0.1:9222');b.add_argument('--target');b.add_argument('--snapshot');b.add_argument('--actions');b.add_argument('--image',action='store_true')

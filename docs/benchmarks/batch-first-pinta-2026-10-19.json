@@ -1,0 +1,56 @@
+{
+  "date": "2026-10-19",
+  "task": "Pinta circle on owned blank image",
+  "agent_policy": "one initial model image, one batch, one final model image",
+  "model_visible_images": 2,
+  "act_calls": 1,
+  "actions": [
+    {
+      "type": "click",
+      "x": 27,
+      "y": 944
+    },
+    {
+      "type": "click",
+      "x": 226,
+      "y": 1139
+    },
+    {
+      "type": "drag",
+      "from": [
+        185,
+        438
+      ],
+      "to": [
+        545,
+        798
+      ],
+      "modifiers": [
+        "Shift"
+      ],
+      "ms": 900
+    },
+    {
+      "type": "click",
+      "x": 27,
+      "y": 253
+    }
+  ],
+  "completed": 4,
+  "input_execution_ms": 1089,
+  "initial_capture_ms": 53,
+  "final_capture_ms": 51,
+  "act_caller_wait_ms": 1703,
+  "image_size": [
+    924,
+    1176
+  ],
+  "result": "pass: red circle visible and committed; ellipse added/finalized history",
+  "limits": "One live desktop trial, not a grounding accuracy benchmark. Model reasoning/end-to-end latency not measured. Internal preflight captures and safety guards retained.",
+  "baseline": {
+    "source": "previous demo trace in this session; retrospective, not a controlled paired benchmark",
+    "model_visible_images": 5,
+    "act_calls": 4
+  },
+  "agent_views_reduction": "5 to 2 (60% fewer), for this one task"
+}

@@ -11,6 +11,26 @@ Then read only your backend: [Chromium](references/usage.md#chromium),
 Use [troubleshooting](references/usage.md#troubleshooting) when needed; do not load the whole reference.
 Setup and visuals: [README](../README.md#install).
 
+## Batch first (required)
+
+For predictable UI, inspect one initial image, plan the complete known sequence, execute it in
+one `act` call (up to 32 actions), then inspect that call's final `after.image`. Target **two
+model-visible images** for a simple stable task. Each extra observation must resolve a specific
+unknown: an unseen menu/dialog, navigation/loading, a changed layout or focus, user interference,
+a refused/failed action, or an unclear result. This is a default budget, not a recovery ceiling.
+
+Batch visible tool/color/width selection, canvas dragging and committing the drawing when their
+targets stay in place. A selected-state or color repaint alone needs no intermediate model view.
+Before requesting another image, identify the unknown that prevents the next known action.
+Use the returned final image directly; an additional `observe` of the same result is redundant.
+The executor checks pointer placement, focus, geometry and freshness internally; preserve those
+checks while reducing model round trips. Never move → inspect → click just to confirm the cursor.
+
+For DOM or accessibility, batch known refs/targets and verify the application's result without
+adding screenshots solely to confirm pointer placement. Use `--no-after` only under its existing
+independent-result-check rules. Split before an unknown target or consequential submission;
+finish by verifying the actual result. Never guess unseen targets or replay uncertain input.
+
 ## Setup and what each session shows
 
 One `python3 scripts/setup.py` plus a single fresh login enables the pill, the liquid backdrop and
@@ -62,8 +82,9 @@ the first one.
 ## Observing and acting
 
 Coordinates refer to the saved returned image, including crop and resize. Read that image before
-choosing coordinates, keep the observation path rather than the printed metadata, and never reuse
-coordinates after any geometry, focus or screen change. A screen-change refusal returns a
+choosing coordinates, keep the observation path rather than the printed metadata, and target the
+unobstructed center of each control. Re-ground after geometry, focus or target-layout changes;
+predictable repaints within one batch do not require another model view. A screen-change refusal returns a
 fresh `after` for inspection; it does not satisfy the required `observe`. Only two refusals
 keep the session alive, when no capture, cleanup or IME restoration error accompanies them: exact
 `screen changed`/`screen_changed` and exact `focus changed`/`focus_changed`. After either,
