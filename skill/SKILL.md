@@ -13,7 +13,7 @@ Setup and visuals: [README](../README.md#install).
 
 ## Batch first (required)
 
-For predictable UI, inspect one initial image, plan the complete known sequence, execute it in
+For screenshot-based predictable UI, inspect one initial image, plan the complete known sequence, execute it in
 one `act` call (up to 32 actions), then inspect that call's final `after.image`. Target **two
 model-visible images** for a simple stable task. Each extra observation must resolve a specific
 unknown: an unseen menu/dialog, navigation/loading, a changed layout or focus, user interference,
@@ -30,6 +30,14 @@ For DOM or accessibility, batch known refs/targets and verify the application's 
 adding screenshots solely to confirm pointer placement. Use `--no-after` only under its existing
 independent-result-check rules. Split before an unknown target or consequential submission;
 finish by verifying the actual result. Never guess unseen targets or replay uncertain input.
+
+Prefer native `pressed`, `checked`, `selected` or `expanded` state when the app exposes it: a tool
+selection can then be confirmed with zero model images. Action acknowledgment can precede the
+app callback; re-observe state to confirm, without replaying the action. Missing flags are not
+proof that the app supports the state. A driver response with `visual.status: "unchanged"`
+means exact visual identity and coordinate context matched a prior delivered frame. Reuse that
+visual context and the new observation path; it does not establish semantic success. Request
+`image_policy: "always"` when a repeated image is actually needed.
 
 ## Setup and what each session shows
 

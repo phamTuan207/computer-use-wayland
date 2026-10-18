@@ -220,7 +220,8 @@ class A11yObserveFileTests(unittest.TestCase):
         repository = types.ModuleType('gi.repository')
         atspi = types.SimpleNamespace()
         atspi.set_timeout = lambda *a: None
-        atspi.StateType = types.SimpleNamespace(SENSITIVE='sensitive', EDITABLE='editable')
+        atspi.StateType = types.SimpleNamespace(SENSITIVE='sensitive', EDITABLE='editable',
+                PRESSED='pressed', CHECKED='checked', SELECTED='selected', EXPANDED='expanded')
         repository.Atspi = atspi
         gi.repository = repository
         _sys.modules['gi'] = gi
@@ -278,6 +279,17 @@ class A11yObserveFileTests(unittest.TestCase):
             self.assertEqual(stored['app_name'], 'App')
             self.assertIn('snapshot', stored)
             self.assertNotIn('path', result['elements'][0] if result['elements'] else {})
+
+    def test_describe_reports_native_positive_states_without_field_values(self):
+        for active in ('pressed', 'checked', 'selected', 'expanded'):
+            with self.subTest(active=active):
+                root = self.root()
+                root.get_state_set.return_value.contains.side_effect = lambda state: state in ('sensitive', active)
+                result = self.a11y.describe(root, [], 'e1')
+                self.assertTrue(result[active])
+                for absent in {'pressed', 'checked', 'selected', 'expanded'} - {active}:
+                    self.assertNotIn(absent, result)
+                root.get_text_iface.assert_not_called()
 
     def test_module_tail_exits_with_open_stdin_kept_open(self):
         import os

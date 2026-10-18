@@ -26,6 +26,12 @@ model view → one ordered action batch → final result verification. The execu
 freshness and pointer checks. Read the [research and limits](docs/research/2026-10-19-batching-grounding.md)
 before treating a two-image workflow as an accuracy guarantee.
 
+The driver can mark exact duplicate desktop images with `image_policy: "auto"` so embeddings
+can reuse a prior visual frame. Native accessibility observations also expose selected/toggled
+state, allowing supported controls to be verified without images. See the
+[delivery protocol](skill/references/usage.md#automatic-duplicate-image-delivery) and
+[local experiments](docs/research/2026-10-19-adaptive-observation-experiment.md).
+
 ## Requirements
 
 **Hyprland exactly `0.56.2`**, with development headers from that same release.

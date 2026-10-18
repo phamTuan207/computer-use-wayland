@@ -1,0 +1,67 @@
+{
+  "date": "2026-10-19",
+  "gtk_semantic": {
+    "verified_distinct_text_values": 10,
+    "verified_clicks": 10,
+    "model_images": 0,
+    "timing": "not recorded; independent application event log verified"
+  },
+  "pinta_semantic": {
+    "ellipse_pressed_verified": true,
+    "model_images": 0,
+    "note": "GTK toggle exposes pressed, not checked; app state polled after action acknowledgment"
+  },
+  "mcp_delivery": [
+    {
+      "case": "first",
+      "image_policy": "auto",
+      "attached_images": 1,
+      "wall_ms": 297.16,
+      "visual_status": "required",
+      "reason": "first or changed visual frame"
+    },
+    {
+      "case": "repeat",
+      "image_policy": "auto",
+      "attached_images": 0,
+      "wall_ms": 67.94,
+      "visual_status": "unchanged",
+      "reason": "exact PNG and coordinate frame match; not proof of app success"
+    },
+    {
+      "case": "forced",
+      "image_policy": "always",
+      "attached_images": 1,
+      "wall_ms": 62.32,
+      "visual_status": null,
+      "reason": null
+    }
+  ],
+  "transition_control": {
+    "result": "Three rapidly captured frames during toolbar transition differed; all three images delivered",
+    "changed_pixel_bounds": [
+      [
+        3,
+        97,
+        162,
+        284
+      ],
+      [
+        113,
+        97,
+        162,
+        140
+      ]
+    ]
+  },
+  "limits": "Owned fixtures only. No universal accuracy estimate. Exact image identity is not application success.",
+  "identity_overhead": {
+    "samples": 20,
+    "median_ms": 0.0446,
+    "max_ms": 0.1183,
+    "scope": "window",
+    "note": "local exact PNG hashing plus coordinate metadata read; excludes capture/model/network; remeasured on owned cached observation after pre-cache-presence fix",
+    "png_bytes": 55993,
+    "source": "owned cached observation 4ec32b8d528c (no screenshot request)"
+  }
+}

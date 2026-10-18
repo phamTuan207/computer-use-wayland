@@ -59,6 +59,8 @@ def request_lines(source):
             parts=[];total=0
 
 def relay_commands(source, sink):
+    from visual_delivery import VisualCheckpoint
+    checkpoint = VisualCheckpoint()
     print(json.dumps({'ok': True, 'driver': 'ready'}), file=sink, flush=True)
     for line in request_lines(source):
         request = json.loads(line)
@@ -66,6 +68,9 @@ def relay_commands(source, sink):
             raise ValueError('request must be an object with args and optional stdin')
         args = request.get('args')
         data = request.get('stdin', '')
+        policy = request.get('image_policy', 'always')
+        if policy not in ('auto', 'always'):
+            raise ValueError('image_policy must be auto or always')
         if not isinstance(args, list) or not args or not all(isinstance(a, str) for a in args):
             raise ValueError('args must be a non-empty array of strings')
         if not isinstance(data, str):
@@ -80,6 +85,11 @@ def relay_commands(source, sink):
         try:response['result']=json.loads(result.stdout)
         except ValueError:response['stdout']=result.stdout
         if result.stderr:response['stderr']=result.stderr
+        if policy == 'auto':
+            visual = checkpoint.assess(response)
+            if visual is not None:response['visual'] = visual
+        else:
+            checkpoint.clear()
         print(json.dumps(response,ensure_ascii=False,separators=(',',':')), file=sink, flush=True)
         if result.returncode:
             import cu

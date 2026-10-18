@@ -8,6 +8,10 @@ Make one model observation, plan the predictable sequence, execute one batch, th
 
 This is a workflow change, not evidence that the current visual model has 95% grounding accuracy. The local executor moves an already chosen coordinate; it does not contain a model that recognizes buttons. Adding a second vision model is a substantial integration and would need a representative local evaluation before claiming better accuracy or latency.
 
+Follow-up experiments now include an actual [OmniParser detector run](2026-10-19-omniparser-detector-experiment.md)
+and [native semantic targeting plus automatic duplicate delivery](2026-10-19-adaptive-observation-experiment.md).
+The latter adds runtime logic beyond the initial batching instructions.
+
 ## What OpenAI currently recommends
 
 OpenAI's integration guide explicitly supports action arrays and returning the screenshot after the whole batch. It recommends `detail: "original"`; downscaled screenshots require coordinate remapping. It also permits existing custom desktop tools and suggests comparing designs on task success, elapsed time, model turns, and recovery. [Integration recipes](https://developers.openai.com/api/docs/guides/tools-computer-use-integration)

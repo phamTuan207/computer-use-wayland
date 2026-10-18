@@ -117,6 +117,28 @@ response before sending the next request; wait again only while that response is
 
 Evidence and limits: [batching and grounding research](../../docs/research/2026-10-19-batching-grounding.md).
 
+### Automatic duplicate-image delivery
+
+The JSON-line driver accepts `"image_policy":"auto"` per request. The default remains `"always"`
+for compatibility. `auto` adds a `visual` delivery hint without removing any observation or file:
+
+```json
+{"args":["observe","--window","0xEXACT_ADDRESS"],"image_policy":"auto"}
+```
+
+`visual.status` is `required` for the first frame, changed PNG bytes, another coordinate frame,
+an error/refusal/warning, or unavailable metadata. It is `unchanged` only for identical PNG bytes
+and matching window/monitor/region/size/scale/transform metadata within this session. Unknown or
+nonvisual responses reset the checkpoint. The hint's `same_as` refers to the last required image.
+This uses exact identity, not perceptual similarity: even a one-pixel change requires delivery.
+
+An embedding/MCP wrapper may omit the image attachment only when `visual.status == "unchanged"`
+and the image path equals `visual.path`. Keep the JSON result and fresh observation path. Send
+other images normally; `image_policy: "always"` forces a repeated attachment. The local OpenCode
+and CommandCode bridge enables `auto`; a plain shell caller follows the same hint when choosing
+whether to view a returned file. Captures and all input guards still run. Visual identity says
+nothing about invisible app state or whether the preceding action succeeded.
+
 ## Chromium
 
 ```bash
@@ -238,6 +260,12 @@ before any further input. Split at unknown layout changes and navigation as
 usual. This reduces response size; it is not a claim about billed model tokens.
 
 ## Native accessibility
+
+Observations include positive native `pressed`, `checked`, `selected` and `expanded` flags when
+reported by AT-SPI. Verify the relevant app result with these flags or another independent
+app signal before requesting a screenshot. Pinta's toggle tools report `pressed`, for example.
+Callbacks can be asynchronous: if the immediate after-snapshot has not updated, re-observe
+without replaying input. A missing flag is not a claim of support for that property.
 
 ```bash
 "$CU" a11y apps

@@ -30,6 +30,9 @@ def describe(e,path,ref):
     states=e.get_state_set();editable=states.contains(Atspi.StateType.EDITABLE)
     result={'ref':ref,'role':role,'name':name[:120],'path':path,'actions':actions}
     if editable:result['editable']=True
+    for key in ('pressed', 'checked', 'selected', 'expanded'):
+        if states.contains(getattr(Atspi.StateType, key.upper())):
+            result[key] = True
     if not states.contains(Atspi.StateType.SENSITIVE):result['disabled']=True
     # Do not collect field values, passwords, full text documents or the entire desktop tree.
     return result
