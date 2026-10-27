@@ -29,8 +29,32 @@ before treating a two-image workflow as an accuracy guarantee.
 The driver can mark exact duplicate desktop images with `image_policy: "auto"` so embeddings
 can reuse a prior visual frame. Native accessibility observations also expose selected/toggled
 state, allowing supported controls to be verified without images. See the
-[delivery protocol](skill/references/usage.md#automatic-duplicate-image-delivery) and
+[delivery protocol](skill/references/session.md#automatic-duplicate-image-delivery) and
 [local experiments](docs/research/2026-10-19-adaptive-observation-experiment.md).
+
+## MCP agent integration (stdio)
+
+Launch the session tool over stdio from any MCP client:
+
+```json
+{
+  "mcpServers": {
+    "computer-use-session": {
+      "command": "python3",
+      "args": ["/absolute/path/to/this/repo/scripts/mcp_bridge.py"]
+    }
+  }
+}
+```
+
+The bridge resolves its sibling `scripts/cu.py` by default; set the
+environment variable `CU_EXECUTABLE` to the absolute path of that checkout's
+executable FILE, for example `/absolute/path/to/another/checkout/scripts/cu.py`.
+Expose one
+tool, `computer_use_session`, with operations `start`, `request`, `finish`,
+`status`. Run `python3 scripts/setup.py` first (native build + CLI
+symlinks); it does NOT register the MCP launcher above — each client uses the
+JSON snippet instead. One desktop session is controlled at a time per user.
 
 ## Requirements
 

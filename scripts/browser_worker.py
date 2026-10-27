@@ -21,8 +21,12 @@ class BrowserWorker:
             limit=32*1024*1024
             if len(payload)>limit:raise ValueError('browser worker request exceeds 32 MiB')
             if self.process is None:
+                # stderr is inherited (None), never DEVNULL: the bridge starts the
+                # driver with fd 2 on its private session stderr log, so crashes and
+                # node diagnostics from this worker reach that same log. No per-worker
+                # file and no pipe to drain — node only writes stderr when it dies.
                 self.process=subprocess.Popen(['node',str(Path(__file__).with_name('cdp.mjs')),'--worker'],
-                    stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.DEVNULL,bufsize=0)
+                    stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=None,bufsize=0)
                 os.set_blocking(self.process.stdin.fileno(),False)
             deadline=time.monotonic()+cu.browser_timeout(request)
             sent=0

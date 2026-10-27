@@ -21,6 +21,10 @@ import uuid
 ROOT = Path(__file__).resolve().parents[1]
 STATE = Path(os.environ.get('XDG_CACHE_HOME', str(Path.home()/'.cache'))) / 'agent-computer-use'
 CANCEL = STATE / 'cancelled'
+# Default browser CDP endpoint. A successful `browser start` updates it for the
+# rest of this process/session; an explicit --endpoint on one later command wins
+# for that command only and never silently replaces this default.
+BROWSER_ENDPOINT = 'http://127.0.0.1:9222'
 SESSION_KEYS = {'XDG_RUNTIME_DIR','WAYLAND_DISPLAY','DISPLAY','HYPRLAND_INSTANCE_SIGNATURE',
                 'DBUS_SESSION_BUS_ADDRESS','XDG_CURRENT_DESKTOP','XDG_SESSION_TYPE',
                 'GDK_BACKEND','QT_QPA_PLATFORM','ELECTRON_OZONE_PLATFORM_HINT','MOZ_ENABLE_WAYLAND'}
@@ -93,8 +97,18 @@ def environment():
         p = subprocess.run(['pgrep','-x',name], capture_output=True, text=True)
         for pid in p.stdout.split():
             try:
+                # A nested Quickshell shares the host PID namespace; only the
+                # host shell process (the Omarchy shell path) selects the GUI session.
+                if name == 'quickshell' and b'/usr/share/omarchy/shell' not in Path('/proc',pid,'cmdline').read_bytes():
+                    continue
                 data = dict(s.split('=',1) for s in Path('/proc',pid,'environ').read_bytes().decode().split('\0') if '=' in s)
                 if data.get('WAYLAND_DISPLAY') and data.get('HYPRLAND_INSTANCE_SIGNATURE'):
+                    # The signature must be live: the candidate session's own
+                    # Hyprland control socket has to exist as a socket, so a
+                    # stale signature falls through to the next candidate.
+                    runtime = data.get('XDG_RUNTIME_DIR', env.get('XDG_RUNTIME_DIR',''))
+                    if not Path(runtime,'hypr',data['HYPRLAND_INSTANCE_SIGNATURE'],'.socket.sock').is_socket():
+                        continue
                     env.update({k:v for k,v in data.items() if k in SESSION_KEYS})
                     return env
             except (OSError, UnicodeError):
@@ -182,6 +196,16 @@ def prepare_state():
     STATE.mkdir(parents=True,exist_ok=True,mode=0o700)
     STATE.chmod(0o700)
 
+def cancel_hotkey_module():
+    # cu.py can be loaded by file path (spec_from_file_location) without its
+    # directory on sys.path; retry the sibling import with the script dir added.
+    try:
+        import cancel_hotkey
+    except ModuleNotFoundError:
+        sys.path.insert(0,str(Path(__file__).resolve().parent))
+        import cancel_hotkey
+    return cancel_hotkey
+
 def check_cancel():
     token=os.environ.get('CU_SESSION_TOKEN')
     if token:
@@ -189,7 +213,9 @@ def check_cancel():
         except (OSError,ValueError):current=None
         if current!=token or (STATE/('stop-'+token)).exists():
             raise RuntimeError('automation session ended; stop this task')
-    if CANCEL.exists(): raise RuntimeError('cancelled by user; stop this task. Run computer-use resume only after the user asks to continue')
+    cancel=cancel_hotkey_module()
+    if cancel.latch_present(CANCEL):
+        raise RuntimeError(cancel.cancellation_message(CANCEL))
 
 JSON_LIMIT=8*1024*1024
 
@@ -707,6 +733,10 @@ class TransientRefusal(RuntimeError):
     """A desktop guard refused input; never classify arbitrary exception text."""
 
 
+class PreflightRefusal(ValueError):
+    """A request failed validation before focus or input could change."""
+
+
 def is_transient_refusal(result):
     return (isinstance(result,dict) and result.get('ok') is False and
             result.get('error') in ('screen changed','focus changed') and
@@ -716,25 +746,27 @@ def is_transient_refusal(result):
 
 
 def desktop_act(env,meta,actions,after_capture=True):
-    if not isinstance(after_capture,bool): raise ValueError('after_capture must be boolean')
-    check_cancel()
-    if meta.get('backend')!='desktop': raise ValueError('desktop observation required')
-    if time.time()-meta['created']>90: raise ValueError('observation older than 90s; observe again')
-    validate_actions(actions,'desktop')
-    screen_scope=meta.get('scope')=='screen'
-    if screen_scope and any(a['type'] in ('key','type') for a in actions):
-        raise ValueError('screen observations support pointer actions only; use a window or accessibility target for typing')
-    # Validate coordinates and payloads for the entire batch before any side effects.
-    for a in actions:
-        if a['type'] in ('click','double_click','move','scroll'):
-            image_point(meta,a['x'],a['y'])
-        if a['type']=='drag':
-            image_point(meta,*a['from']);image_point(meta,*a['to'])
-    # Group adjacent keyboard operations into one existing wtype process.
-    groups=keyboard_groups(actions)
-    for group in groups:
-        if isinstance(group,list):keyboard_argv(group)
-        elif group.get('type')=='type':standalone_type_argv(group)
+    try:
+        if not isinstance(after_capture,bool): raise ValueError('after_capture must be boolean')
+        check_cancel()
+        if meta.get('backend')!='desktop': raise ValueError('desktop observation required')
+        if time.time()-meta['created']>90: raise ValueError('observation older than 90s; observe again')
+        validate_actions(actions,'desktop')
+        screen_scope=meta.get('scope')=='screen'
+        if screen_scope and any(a['type'] in ('key','type') for a in actions):
+            raise ValueError('screen observations support pointer actions only; use a window or accessibility target for typing')
+        # Validate the entire batch before focus changes or input.
+        for a in actions:
+            if a['type'] in ('click','double_click','move','scroll'):
+                image_point(meta,a['x'],a['y'])
+            if a['type']=='drag':
+                image_point(meta,*a['from']);image_point(meta,*a['to'])
+        groups=keyboard_groups(actions)
+        for group in groups:
+            if isinstance(group,list):keyboard_argv(group)
+            elif group.get('type')=='type':standalone_type_argv(group)
+    except ValueError as exc:
+        raise PreflightRefusal(str(exc)) from exc
     address=None if screen_scope else meta['window']
     def guard():
         check_cancel()
@@ -744,6 +776,26 @@ def desktop_act(env,meta,actions,after_capture=True):
         m=next((m for m in hypr(env,'monitors') if m['name']==meta['monitor']),None)
         if not m or monitor_box(m)!=meta['monitor_box'] or m['scale']!=meta['monitor_scale'] or m.get('transform',0)!=meta['monitor_transform']: raise RuntimeError('monitor layout changed; observe again')
         if not screen_scope and not same_window_address(hypr(env,'activewindow').get('address'),address): raise TransientRefusal('focus changed')
+    # OPTIONAL diagnostic probe, run before the batch touches anything. A
+    # failure here loses a diagnostic, not the action: ordinary exceptions
+    # degrade to focus_before:null plus a bounded warning and the REQUIRED
+    # guards below run unchanged. BaseException (cancellation) still
+    # propagates.
+    focus_before=None;focus_probe_warning=None
+    try:
+        focus_before=hypr(env,'activewindow').get('address')
+    except Exception as exc:
+        focus_probe_warning=('focus probe failed: '+' '.join(str(exc).split()))[:400]
+    # Pre-batch diagnostics: what was true before this batch could touch
+    # anything. Pointer verification is cursor position only — the desktop
+    # backend cannot identify the UI element receiving the event. Diagnostics
+    # never mask the action error below and never imply the application
+    # actually applied the action.
+    diagnostics={'focus_before':focus_before,'target_window':address,
+                 'target_was_focused':(same_window_address(focus_before,address)
+                                       if address and focus_before is not None else None),
+                 'pointer_check':'cursor position only; desktop backend cannot identify the receiving UI element'}
+    if focus_probe_warning:diagnostics['focus_probe_warning']=focus_probe_warning
     if not screen_scope:focus(env,address)
     try:guard()
     except TransientRefusal as exc:
@@ -838,16 +890,20 @@ def desktop_act(env,meta,actions,after_capture=True):
                 transient_error=False
     if not after_capture and error is None:
         return {'ok':True,'completed':completed,
-                'execution_ms':round((time.monotonic()-start)*1000),'after_skipped':True}
+                'execution_ms':round((time.monotonic()-start)*1000),'after_skipped':True,
+                'input_diagnostics':diagnostics}
     time.sleep(.08)
-    result={'ok':error is None,'completed':completed,'execution_ms':round((time.monotonic()-start)*1000)}
+    result={'ok':error is None,'completed':completed,'execution_ms':round((time.monotonic()-start)*1000),
+            'input_diagnostics':diagnostics}
     result.update(ime_result)
     if transient_error:result['error_code']='focus_changed'
     if error: result['error']=error
     try:
         result['after']=(observe_screen(env,meta['monitor'],meta.get('crop'),meta['max_width']) if screen_scope else
                          observe(env,address,meta.get('crop'),meta['max_width'],activate=False))
-        result['changed']=result['after']['pixel_sha256']!=meta['pixel_sha256']
+        result['frame_bytes_changed']=result['after']['pixel_sha256']!=meta['pixel_sha256']
+        result['changed']=result['frame_bytes_changed']  # Compatibility alias, not semantic success.
+        result['change_meaning']='Exact captured pixel hash differs; animations count. Does not confirm app action succeeded.'
     except Exception as exc:
         result['ok']=False;result['capture_error']=str(exc)
         result.setdefault('error','final capture failed: '+str(exc))
@@ -959,6 +1015,7 @@ def settled_observation(capture,settle_ms,max_width):
         wait_cancelable(min(.06,max(0,deadline-now)))
 
 def main():
+    global BROWSER_ENDPOINT
     parser=argparse.ArgumentParser(description=__doc__)
     sub=parser.add_subparsers(dest='command',required=True)
     session=sub.add_parser('session');session.add_argument('driver',nargs=argparse.REMAINDER)
@@ -973,7 +1030,7 @@ def main():
     act=sub.add_parser('act',help='execute one batch of known actions, then capture its final result');act.add_argument('--observation',required=True);act.add_argument('--actions',required=True,help='JSON path or - for stdin; batch up to 32 predictable actions from one inspected observation')
     act.add_argument('--no-after',action='store_true',help='skip successful final capture; preflight safety and error captures stay enabled')
     obs.add_argument('--verbose',action='store_true');act.add_argument('--verbose',action='store_true')
-    b=sub.add_parser('browser');b.add_argument('operation',choices=['start','tabs','observe','act']);b.add_argument('--endpoint',default='http://127.0.0.1:9222');b.add_argument('--target');b.add_argument('--snapshot');b.add_argument('--actions');b.add_argument('--image',action='store_true')
+    b=sub.add_parser('browser');b.add_argument('operation',choices=['start','tabs','observe','act']);b.add_argument('--endpoint',default=None);b.add_argument('--target');b.add_argument('--snapshot');b.add_argument('--actions');b.add_argument('--image',action='store_true')
     b.add_argument('--no-after',action='store_true',help='skip the successful after-snapshot; the final action must be a meaningful assert')
     b.add_argument('--max-elements',type=int,default=80,help='DOM output budget, 1..80 (default 80)')
     b.add_argument('--scope',help='observe only: one CSS selector to enumerate; one read, not sticky, not an input boundary')
@@ -1006,13 +1063,17 @@ def main():
         if args.command=='session':return cursor_session.supervise(env,args.driver)
         if args.command=='recover':return cursor_session.recover(env)
         if args.command=='cancel':
-            prepare_state();CANCEL.touch(mode=0o600)
+            prepare_state()
+            cancel_hotkey_module().latch(CANCEL,'cli')
         cursor_session.request_stop()
         result={'ok':True}
     elif args.command=='resume':
         CANCEL.unlink(missing_ok=True)
         result={'ok':True,'cancelled':False}
-    elif args.command=='status': result={'ok':True,'cancelled':CANCEL.exists()}
+    elif args.command=='status':
+        latch_state=cancel_hotkey_module().cancellation_status(CANCEL)
+        result={'ok':True,'cancelled':latch_state['cancelled']}
+        if latch_state['cancelled']:result['cancellation']=latch_state['cancellation']
     elif args.command=='doctor':
         result={'dependencies':{k:shutil.which(k) is not None for k in ('grim','wtype','hyprctl','node')},'pointer':(ROOT/'native/pointer').is_file(),'session':False,'monitors':[]}
         try:
@@ -1097,8 +1158,15 @@ def main():
         if args.no_after and args.image:raise ValueError('--no-after cannot combine with --image')
         if not 1<=args.max_elements<=80:raise ValueError('max-elements must be 1..80')
         if args.operation=='start':
-            print(json.dumps(browser_start(env,args.endpoint)));return 0
-        request={'operation':args.operation,'endpoint':args.endpoint,'target':args.target,'snapshot':args.snapshot,'image':args.image,'max_elements':args.max_elements}
+            # Only a successful start moves the process default; a failed start
+            # leaves the previous endpoint untouched for the next command.
+            endpoint=args.endpoint or BROWSER_ENDPOINT
+            started=browser_start(env,endpoint)
+            if started.get('ok'):BROWSER_ENDPOINT=endpoint
+            print(json.dumps(started));return 0
+        # Endpoint selection stays inside the browser branch: non-browser
+        # commands have no --endpoint attribute at all.
+        request={'operation':args.operation,'endpoint':args.endpoint or BROWSER_ENDPOINT,'target':args.target,'snapshot':args.snapshot,'image':args.image,'max_elements':args.max_elements}
         if args.scope is not None:request['scope']=args.scope
         if args.after_scope is not None:request['after_scope']=args.after_scope
         if args.operation=='act':

@@ -61,11 +61,29 @@ def live(tmp, token, *, active, pre_calls, post, opened, close_error=None):
         stack.enter_context(patch.object(cu, 'window',
                                          return_value={'at': [0, 0], 'size': [20, 20]}))
 
+        # E4: desktop_act opens every batch with one pre-focus `activewindow`
+        # query (the input_diagnostics focus_before). That first query per
+        # batch sees the head of `active` WITHOUT consuming it, so every
+        # pre-existing queue still lines up with the guard queries that pop
+        # after it; focus() is mocked, so the simulated pre-focus state equals
+        # the state the first guard would see.
+        act_open = {'pre_focus': False}
+        real_desktop_act = cu.desktop_act
+
+        def act_boundary(env, meta, actions, after_capture=True):
+            act_open['pre_focus'] = True
+            return real_desktop_act(env, meta, actions, after_capture=after_capture)
+
+        stack.enter_context(patch.object(cu, 'desktop_act', side_effect=act_boundary))
+
         def hypr(env, query):
             if query == 'monitors':
                 return [{'name': 'test', 'x': 0, 'y': 0, 'width': 20,
                          'height': 20, 'scale': 1}]
             if query == 'activewindow':
+                if act_open['pre_focus']:
+                    act_open['pre_focus'] = False
+                    return {'address': active[0]}
                 return {'address': active.pop(0)}
             if query == 'cursorpos':
                 return {'x': 5, 'y': 5}
@@ -161,7 +179,10 @@ class RefusalFlow(unittest.TestCase):
             obs2.write_text(json.dumps(after))
             post = dict(after, observation=str(obs2))
             opened = {'first': old, 'second': same}
-            with live(tmp, token, active=[], pre_calls=[(big, {}), (same, {})],
+            # Screen scope: the batch still opens with the pre-focus
+            # activewindow diagnostics query, so the queue needs one head
+            # entry (peeked, never consumed; screen guards never query it).
+            with live(tmp, token, active=['0xbeef'], pre_calls=[(big, {}), (same, {})],
                        post=post, opened=None) as stop:
                 # opened differs per pre-capture: stale vs settled image.
                 with patch('PIL.Image.open',

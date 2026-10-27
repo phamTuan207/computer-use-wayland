@@ -118,7 +118,18 @@ if(request.scope!==undefined){
 if(!['tabs','observe','act'].includes(request.operation))throw new Error('unknown operation');
 const endpoint=new URL(request.endpoint);
 if (!['127.0.0.1','localhost','[::1]'].includes(endpoint.hostname)) throw new Error('CDP endpoint must be loopback');
-const tabs=await (await fetch(new URL('/json/list',endpoint),{signal:AbortSignal.timeout(4000)})).json();
+// A failed tab-list fetch must name the exact URL and the underlying cause;
+// otherwise preflight failures look like bare "fetch failed" with no anchor.
+const listUrl=new URL('/json/list',endpoint);
+let tabs;
+try {
+  const response=await fetch(listUrl,{signal:AbortSignal.timeout(4000)});
+  if(response.ok===false)throw new Error(`HTTP ${response.status}`);
+  tabs=await response.json();
+}catch(e){
+  const cause=e.cause;
+  throw new Error(`CDP GET ${listUrl.href}: ${e.message}; cause: ${cause?.code??''} ${cause?.message??'unavailable'}`);
+}
 if(request.operation==='tabs') {
   result=tabs.filter(t=>t.type==='page').map(({id,title,url})=>({id,title,url}));
   // Listing grants no target authority; the next action still fetches its own list.

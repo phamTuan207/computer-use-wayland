@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+import tempfile
 import unittest
 from unittest.mock import patch
 
@@ -38,7 +39,10 @@ class WorkerTransport(unittest.TestCase):
     def start_child(self, argv, **kwargs):
         self.assertEqual(argv[-1], '--worker')
         self.assertNotIn('start_new_session', kwargs)
-        self.assertEqual(kwargs['stderr'], subprocess.DEVNULL)
+        # stderr is inherited, never DEVNULL: the bridge starts the driver with
+        # fd 2 on its private session stderr log, so worker diagnostics reach
+        # that same log without a per-worker file or a pipe to drain.
+        self.assertIsNone(kwargs['stderr'])
         child = REAL_POPEN([sys.executable, '-u', '-c', self.code], **kwargs)
         self.children.append(child)
         return child
@@ -68,6 +72,30 @@ class WorkerTransport(unittest.TestCase):
             self.worker.request({'operation': 'observe'})
         self.assertEqual(self.spawn.call_count, calls)
         self.assert_closed()
+
+    def test_worker_stderr_flows_to_inherited_parent_stderr(self):
+        # Bridge chain proof: the bridge opens one private session stderr log
+        # and the driver inherits it as fd 2, so the worker child must inherit
+        # that same fd instead of DEVNULL. Redirect this process's fd 2 into an
+        # owned log file for the spawn window; the fixture child writes a
+        # marker to its inherited fd 2 and it must land in the log.
+        log = tempfile.TemporaryFile()
+        try:
+            saved = os.dup(2)
+            try:
+                os.dup2(log.fileno(), 2)
+                self.code = ('import os, sys\n'
+                             'sys.stdin.readline()\n'
+                             'os.write(2, b"worker-stderr-marker\\n")\n'
+                             'print(\'{"fixture": true}\', flush=True)\n')
+                self.assertEqual(self.worker.request({}), {'fixture': True})
+            finally:
+                os.dup2(saved, 2)
+                os.close(saved)
+            log.seek(0)
+            self.assertIn(b'worker-stderr-marker', log.read())
+        finally:
+            log.close()
 
     def test_two_requests_share_one_lazy_child_and_close_on_eof(self):
         self.spawn.assert_not_called()

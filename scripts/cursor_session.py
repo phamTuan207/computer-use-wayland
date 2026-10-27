@@ -121,7 +121,7 @@ def guardian(env, pipe, token):
     with owner_lock():
         if SNAPSHOT.exists() and not restore(env):
             raise RuntimeError('previous session cleanup failed')
-        if CANCEL.exists():raise RuntimeError('cancelled by user')
+        if cancel_hotkey.latch_present(CANCEL):raise RuntimeError(cancel_hotkey.cancellation_message(CANCEL))
         driver_group=None;native=None;server=None;cursor_guard=None
         try:
             import cursor_theme
@@ -137,14 +137,14 @@ def guardian(env, pipe, token):
                 cancel_hotkey.hotkey_on();escape_available=True
             except Exception as exc:
                 print(f'warning: temporary Escape binding unavailable: {exc}',file=sys.stderr)
-            if stopping[0] or CANCEL.exists():raise RuntimeError('session cancelled during startup')
+            if stopping[0] or cancel_hotkey.latch_present(CANCEL):raise RuntimeError('session cancelled during startup')
             cursor_guard=cursor_theme.apply(env,cursor['agent_theme'],cursor['agent_size'],token)
             server=indicator.listen(STATE,token)
             native=indicator.Native({**env,'CU_ESCAPE_AVAILABLE':'1' if escape_available else '0'})
             visuals=SessionVisuals(native,cursor_guard)
-            if stopping[0] or CANCEL.exists():raise RuntimeError('session cancelled during indicator startup')
+            if stopping[0] or cancel_hotkey.latch_present(CANCEL):raise RuntimeError('session cancelled during indicator startup')
             print('ready',flush=True)
-            while not stopping[0] and not CANCEL.exists() and not (STATE/('stop-'+token)).exists():
+            while not stopping[0] and not cancel_hotkey.latch_present(CANCEL) and not (STATE/('stop-'+token)).exists():
                 if native.process.poll() is not None:raise RuntimeError('session indicator lost')
                 ready,_,_=select.select([pipe,server,cursor_guard.socket],[],[],.05)
                 if cursor_guard.socket in ready:raise RuntimeError('session cursor guard lost')
@@ -195,6 +195,7 @@ def supervise(env, argv):
     if argv and argv[0]=='--':argv=argv[1:]
     if not argv:raise ValueError('session requires a driver command')
     if os.environ.get('CU_SESSION_TOKEN'):raise RuntimeError('nested automation session refused')
+    import cancel_hotkey  # no-follow presence poll, consistent with the guardian
     read_fd,write_fd=os.pipe()
     token=uuid.uuid4().hex
     guard=None;driver=None;gate_read=None;gate_write=None
@@ -224,7 +225,7 @@ def supervise(env, argv):
         os.write(gate_write,b'go')
         os.close(gate_write);gate_write=None
         while driver.poll() is None:
-            if guard.poll() is not None or CANCEL.exists() or (STATE/('stop-'+token)).exists():
+            if guard.poll() is not None or cancel_hotkey.latch_present(CANCEL) or (STATE/('stop-'+token)).exists():
                 terminate_driver(driver)
                 break
             time.sleep(.05)

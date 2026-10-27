@@ -503,7 +503,7 @@ class Lifecycle(unittest.TestCase):
         self.assertIn(cancel_hotkey.lua_string(name),code)
         self.assertNotIn('Virtual Keyboard',code)
         command=shlex.join(['env','XDG_CACHE_HOME='+str(state.parent),executable,
-                            str(Path(script).resolve()),'cancel'])
+                            str(Path(script).resolve()),'cancel','--source','physical-escape'])
         self.assertIn(cancel_hotkey.lua_string(command),code)
         self.assertNotIn('\\u',code)
 

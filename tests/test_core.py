@@ -50,6 +50,29 @@ finally:
                 self.assertTrue(result.stderr.endswith('cleanup_calls=1\n'))
 
 class Coordinates(unittest.TestCase):
+    def test_invalid_action_batch_is_typed_preflight_before_focus_or_input(self):
+        from unittest.mock import patch
+        meta={'backend':'desktop','created':time.time(),'scope':'window',
+              'window':'0x1','image':'unused'}
+        for actions in ([{'type':'wait','ms':2001}],):
+            with self.subTest(actions=actions), \
+                 patch.object(cu,'check_cancel'), patch.object(cu,'focus') as focus, \
+                 patch.object(cu,'Pointer') as pointer:
+                with self.assertRaisesRegex(cu.PreflightRefusal,'wait ms must be 0..2000'):
+                    cu.desktop_act({},meta,actions)
+                focus.assert_not_called()
+                pointer.assert_not_called()
+
+    def test_expired_observation_is_typed_preflight_before_focus_or_input(self):
+        meta={'backend':'desktop','created':time.time()-91,'scope':'window',
+              'window':'0x1','image':'unused'}
+        with patch.object(cu,'check_cancel'), patch.object(cu,'focus') as focus, \
+             patch.object(cu,'Pointer') as pointer:
+            with self.assertRaisesRegex(cu.PreflightRefusal,'observation older than 90s'):
+                cu.desktop_act({},meta,[{'type':'wait','ms':0}])
+            focus.assert_not_called()
+            pointer.assert_not_called()
+
     def test_saved_png_preserves_pixels_metadata_and_permissions(self):
         import hashlib
         import json

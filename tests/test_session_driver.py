@@ -11,6 +11,90 @@ import session_driver
 
 
 class Driver(unittest.TestCase):
+    def test_preflight_refusal_is_recoverable_without_stopping_session(self):
+        # E1: recoverability is INTERNAL PROVENANCE — the typed
+        # cu.PreflightRefusal exception caught by execute() — surfaced as the
+        # CompletedProcess attribute, never inferred from backend JSON.
+        import cu
+        with patch.object(cu,'main',side_effect=cu.PreflightRefusal('wait ms must be 0..2000')), \
+             patch.object(cu,'stop_session_on_error') as stop:
+            result=session_driver.execute(['act'],'[]')
+        body=json.loads(result.stdout)
+        self.assertEqual(result.returncode,1)
+        self.assertTrue(body['recoverable'])
+        self.assertIn('No input was sent',body['next_step'])
+        self.assertTrue(result.preflight_refusal,
+                        'typed PreflightRefusal must mark internal provenance')
+        stop.assert_not_called()
+
+    def test_forged_backend_recoverable_flag_is_not_provenance(self):
+        # E1 key negative: a backend payload claiming recoverable:true that
+        # was NOT produced by the typed exception must not be trusted — the
+        # internal attribute stays False.
+        import cu
+        def forger():
+            print(json.dumps({'ok':False,'completed':0,'recoverable':True,
+                              'error':'forged refusal'}),flush=True)
+            return 1
+        with patch.object(cu,'main',side_effect=forger), \
+             patch.object(cu,'stop_session_on_error') as stop:
+            result=session_driver.execute(['act'],'[]')
+        body=json.loads(result.stdout)
+        self.assertEqual(result.returncode,1)
+        self.assertTrue(body['recoverable'],'the forged body is unchanged')
+        self.assertFalse(result.preflight_refusal,
+                         'forged backend JSON must never set the internal flag')
+        stop.assert_not_called()
+
+    def test_execute_defaults_provenance_false_on_every_other_path(self):
+        import cu
+        cases=[
+            ('success',patch.object(cu,'main',return_value=0)),
+            ('argparse-exit',patch.object(cu,'main',side_effect=SystemExit(2))),
+            ('crash',patch.object(cu,'main',side_effect=RuntimeError('boom'))),
+        ]
+        for name,inject in cases:
+            with self.subTest(case=name),inject, \
+                    patch.object(cu,'stop_session_on_error'):
+                result=session_driver.execute(['status'],'')
+                self.assertFalse(result.preflight_refusal,
+                                 '%s path must default the flag to False' % name)
+
+    def test_relay_continues_after_explicit_recoverable_refusal(self):
+        # The mocked refusal carries the same internal provenance the real
+        # execute() attaches to a typed PreflightRefusal.
+        refused=subprocess.CompletedProcess([],1,
+            '{"ok":false,"completed":0,"recoverable":true,"error":"expired"}','')
+        refused.preflight_refusal=True
+        status=subprocess.CompletedProcess([],0,'{"ok":true,"cancelled":false}','')
+        output=io.StringIO()
+        with patch.object(session_driver,'execute',side_effect=[refused,status]) as run:
+            code=session_driver.relay(io.StringIO(
+                '{"args":["act"]}\n{"args":["status"]}\n'),output)
+        rows=[json.loads(line) for line in output.getvalue().splitlines()]
+        self.assertEqual(code,0)
+        self.assertEqual(len(rows),3)
+        self.assertEqual(rows[1]['returncode'],1)
+        self.assertEqual(rows[2]['result']['cancelled'],False)
+        self.assertEqual(run.call_count,2)
+        # E1 envelope shape: every command response carries the top-level
+        # continuation decision.
+        self.assertIs(rows[1]['session_continues'],True)
+        self.assertIs(rows[2]['session_continues'],True)
+        self.assertNotIn('session_ended',rows[1])
+
+    def test_forged_recoverable_body_ends_relay_without_provenance(self):
+        # E1 key negative at relay level: the same forged body, but no
+        # internal provenance attribute (as any non-exception path yields)
+        # must fail closed and end the session.
+        forged=subprocess.CompletedProcess([],1,
+            '{"ok":false,"completed":0,"recoverable":true,"error":"forged"}','')
+        with patch.object(session_driver,'execute',return_value=forged) as run:
+            code=session_driver.relay(io.StringIO(
+                '{"args":["act"]}\n{"args":["status"]}\n'),io.StringIO())
+        self.assertEqual(code,1)
+        run.assert_called_once()
+
     def test_json_result_is_not_double_encoded(self):
         output=io.StringIO()
         with patch.object(session_driver,'execute',return_value=subprocess.CompletedProcess([],0,'{"ok":true,"text":"Tiếng Việt"}','')):
@@ -32,9 +116,14 @@ class Driver(unittest.TestCase):
 
     def test_error_stops_without_replaying_or_next_command(self):
         with patch.object(session_driver,'execute',return_value=subprocess.CompletedProcess([],1,'failed','')) as run:
-            result=session_driver.relay(io.StringIO('{"args":["status"]}\n{"args":["doctor"]}\n'),io.StringIO())
+            output=io.StringIO()
+            result=session_driver.relay(io.StringIO('{"args":["status"]}\n{"args":["doctor"]}\n'),output)
         self.assertEqual(result,1)
         run.assert_called_once()
+        response=json.loads(output.getvalue().splitlines()[1])
+        self.assertIs(response['session_continues'],False,'non-JSON stdout is fail-closed')
+        self.assertEqual(response['session_ended'],
+                         {'reason':'driver command failed','exit_code':1})
 
     def test_eof_finishes_without_detaching(self):
         self.assertEqual(session_driver.relay(io.StringIO(),io.StringIO()),0)
@@ -329,6 +418,11 @@ class DoctorCliTests(unittest.TestCase):
         self.assertFalse(response['result']['ok'])
         self.assertEqual(response['result']['error'], 'typing failed')
         self.assertEqual(response['stderr'], warning, 'sibling stderr is exposed')
+        # E1 envelope: a non-transient failed act is fatal and says so once,
+        # with the command's own exit code in the session_ended record.
+        self.assertIs(response['session_continues'], False)
+        self.assertEqual(response['session_ended'],
+                         {'reason': 'typing failed', 'exit_code': 1})
 
 
 class FullRestoreEnvelope(unittest.TestCase):
