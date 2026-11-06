@@ -71,7 +71,7 @@ class Observe(unittest.TestCase):
                  patch.object(cu.sys,'stdout',io.StringIO()),patch.object(cu,'environment',return_value={}),\
                  patch.object(cu,'check_cancel'),patch.object(cu,'locked'),patch.object(cu,'observe',return_value={}) as observe:
                 self.assertEqual(cu.main(),0)
-                observe.assert_called_once_with({},'0x1',None,1280,activate=expected)
+                observe.assert_called_once_with({},'0x1',None,960,activate=expected)
 
     def test_screen_focus_flag_rejected_before_environment_discovery(self):
         with patch.object(cu.sys,'argv',['cu','observe','--screen','test','--focus']),\

@@ -52,7 +52,7 @@ def restore(env):
             return False
     for attempt in range(3):
         try:
-            cancel_hotkey.hotkey_off()
+            cancel_hotkey.hotkey_off(env)
             if saved is not None and saved.get('cursor') is not None:
                 import cursor_theme
                 cursor_theme.restore(env,saved['cursor'])
@@ -110,6 +110,22 @@ def recover(env, expected=None):
         drain_input()
         restored=restore(env)
         return 0 if restored else 1
+
+
+def stop(env, timeout=8):
+    """Ask the owner to clean up, then restore retained state under its lock."""
+    request_stop()
+    deadline=time.monotonic()+timeout
+    while True:
+        try:lock=owner_lock()
+        except RuntimeError:
+            if time.monotonic()>=deadline:
+                raise RuntimeError('session did not stop; cleanup still owns the desktop')
+            time.sleep(.05)
+            continue
+        with lock:
+            drain_input()
+            return 0 if restore(env) else 1
 
 
 def guardian(env, pipe, token):

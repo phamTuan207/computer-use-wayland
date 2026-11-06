@@ -356,7 +356,7 @@ def require_visible_window(c, m):
     if c.get('mapped') is False or c.get('hidden') or (not c.get('pinned') and c.get('workspace',{}).get('id') not in visible):
         raise RuntimeError('window is not visible on its monitor; switch workspace yourself or use observe --window ADDRESS --focus')
 
-def observe(env, address, crop=None, max_width=1280, activate=False, persist=True):
+def observe(env, address, crop=None, max_width=960, activate=False, persist=True):
     from PIL import Image
     if activate: focus(env,address)
     c=window(env,address)
@@ -403,7 +403,7 @@ def screen_region(monitor_box_,crop):
         raise ValueError('crop must be a positive rectangle inside the selected monitor')
     return [mx+x,my+y,w,h]
 
-def observe_screen(env,monitor,crop=None,max_width=1280,persist=True):
+def observe_screen(env,monitor,crop=None,max_width=960,persist=True):
     from PIL import Image
     m=next((m for m in hypr(env,'monitors') if m['name']==monitor),None)
     if not m:raise ValueError('monitor no longer exists; use doctor to list monitors')
@@ -744,6 +744,9 @@ def is_transient_refusal(result):
                                       'focus changed':'focus_changed'}[result['error']] and
             'capture_error' not in result and 'ime_restore_failed' not in result)
 
+DESKTOP_REOBSERVE = ('List windows and observe the new focused window, or observe the screen, before '
+                     'further input. The after image is not a new observe. Do not replay completed or uncertain actions.')
+
 
 def desktop_act(env,meta,actions,after_capture=True):
     try:
@@ -799,7 +802,8 @@ def desktop_act(env,meta,actions,after_capture=True):
     if not screen_scope:focus(env,address)
     try:guard()
     except TransientRefusal as exc:
-        return {'ok':False,'completed':0,'error':str(exc),'error_code':'focus_changed'}
+        return {'ok':False,'completed':0,'error':str(exc),'error_code':'focus_changed',
+                'next_step':DESKTOP_REOBSERVE}
     # Refuse coordinates from an image superseded by a visible layout change.
     new,fresh=(observe_screen(env,meta['monitor'],meta.get('crop'),meta['max_width'],persist=False) if screen_scope else
                observe(env,address,meta.get('crop'),meta['max_width'],activate=False,persist=False))
@@ -807,7 +811,8 @@ def desktop_act(env,meta,actions,after_capture=True):
     old=Image.open(meta['image'])
     if screen_changed(old,new,actions):
         fresh=save_observation(new,fresh,meta['max_width'])
-        return {'ok':False,'completed':0,'error':'screen changed','error_code':'screen_changed','after':fresh}
+        return {'ok':False,'completed':0,'error':'screen changed','error_code':'screen_changed',
+                'next_step':DESKTOP_REOBSERVE,'after':fresh}
     # A keyboard-only batch must not open the virtual pointer device at all, and an
     # ordinary startup failure belongs in the result envelope, not outside it.
     pointer=None;completed=0;error=None;ime_result={};transient_error=False
@@ -907,6 +912,7 @@ def desktop_act(env,meta,actions,after_capture=True):
     except Exception as exc:
         result['ok']=False;result['capture_error']=str(exc)
         result.setdefault('error','final capture failed: '+str(exc))
+    if is_transient_refusal(result):result['next_step']=DESKTOP_REOBSERVE
     return result
 
 def browser_timeout(request):
@@ -1018,13 +1024,13 @@ def main():
     global BROWSER_ENDPOINT
     parser=argparse.ArgumentParser(description=__doc__)
     sub=parser.add_subparsers(dest='command',required=True)
-    session=sub.add_parser('session');session.add_argument('driver',nargs=argparse.REMAINDER)
+    session=sub.add_parser('session');session.add_argument('--replace',action='store_true',help='stop and restore the old session before starting');session.add_argument('driver',nargs=argparse.REMAINDER)
     sub.add_parser('session-driver',help='interactive JSON-lines driver for one whole agent task')
-    sub.add_parser('finish');sub.add_parser('recover');sub.add_parser('cancel')
+    sub.add_parser('stop',help='stop the current session and wait for desktop restoration');sub.add_parser('finish');sub.add_parser('recover');sub.add_parser('cancel')
     sub.add_parser('doctor');sub.add_parser('resume');sub.add_parser('status')
     win=sub.add_parser('windows');win.add_argument('--class',dest='class_',help='exact class match only; no regex, no substring')
     win.add_argument('--no-titles',action='store_true',help='omit the title key from each window')
-    obs=sub.add_parser('observe');target=obs.add_mutually_exclusive_group(required=True);target.add_argument('--window');target.add_argument('--screen');obs.add_argument('--crop',nargs=4,type=int);obs.add_argument('--max-width',type=int,default=1280)
+    obs=sub.add_parser('observe');target=obs.add_mutually_exclusive_group(required=True);target.add_argument('--window');target.add_argument('--screen');obs.add_argument('--crop',nargs=4,type=int);obs.add_argument('--max-width',type=int,default=960)
     obs.add_argument('--focus',action='store_true',help='explicitly focus the target window before capture (may switch workspace)')
     obs.add_argument('--settle-ms',type=int,default=0,help='wait up to 2000 ms for 120 ms of unchanged crop pixels; not semantic readiness')
     act=sub.add_parser('act',help='execute one batch of known actions, then capture its final result');act.add_argument('--observation',required=True);act.add_argument('--actions',required=True,help='JSON path or - for stdin; batch up to 32 predictable actions from one inspected observation')
@@ -1056,11 +1062,15 @@ def main():
     # Local state commands and CDP requests do not use a compositor environment.
     # Doctor acquires its own environment inside its diagnostic branch so an
     # environment failure degrades instead of escaping before the branch.
-    env=(environment() if args.command in ('session','recover','windows','observe','act','a11y') or
+    env=(environment() if args.command in ('session','stop','recover','windows','observe','act','a11y') or
          (args.command=='browser' and args.operation=='start') else None)
-    if args.command in ('session','finish','recover','cancel'):
+    if args.command in ('session','stop','finish','recover','cancel'):
         import cursor_session
-        if args.command=='session':return cursor_session.supervise(env,args.driver)
+        if args.command=='stop':return cursor_session.stop(env)
+        if args.command=='session':
+            if os.environ.get('CU_SESSION_TOKEN'):raise RuntimeError('nested automation session refused; replace from a separate shell')
+            if args.replace and cursor_session.stop(env):return 1
+            return cursor_session.supervise(env,args.driver)
         if args.command=='recover':return cursor_session.recover(env)
         if args.command=='cancel':
             prepare_state()

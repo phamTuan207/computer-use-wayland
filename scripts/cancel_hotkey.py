@@ -18,8 +18,8 @@ HOTKEY = 'agentComputerUseEscapeBind'
 # Latches are tiny; never buffer more than this from any state file.
 LATCH_READ_LIMIT = 65536
 
-def hypr_eval(code):
-    result = subprocess.run(['hyprctl', 'eval', code], capture_output=True, text=True, timeout=2)
+def hypr_eval(code, env=None):
+    result = subprocess.run(['hyprctl', 'eval', code], env=env, capture_output=True, text=True, timeout=2)
     if result.returncode or result.stdout.strip()!='ok':
         raise RuntimeError('Hyprland rejected temporary Escape binding: ' + result.stderr.strip()[:180])
 
@@ -33,15 +33,18 @@ def lua_string(value):
     parts.append('"')
     return ''.join(parts)
 
-def hotkey_off():
-    hypr_eval(f'if _G.{HOTKEY} then _G.{HOTKEY}:unbind(); _G.{HOTKEY}=nil end')
+def hotkey_off(env=None):
+    hypr_eval(f'if _G.{HOTKEY} then _G.{HOTKEY}:unbind(); _G.{HOTKEY}=nil end', env=env)
 
 def hotkey_on():
     devices = subprocess.run(['hyprctl', '-j', 'devices'], capture_output=True, text=True, check=True, timeout=2)
+    # keyd relays real keys; agent-created virtual keyboards must stay excluded.
     names = [item['name'] for item in json.loads(devices.stdout).get('keyboards', [])
-             if ('keyboard' in item.get('name', '').casefold()
-                 and not any(excluded in item['name'].casefold()
-                             for excluded in ('virtual','consumer-control','system-control')))]
+             if (item.get('name') and
+                 (item['name'].casefold() == 'keyd-virtual-keyboard' or
+                  not any(excluded in item['name'].casefold()
+                          for excluded in ('virtual','consumer-control','system-control',
+                                           'video-bus','power-button','sleep-button','hotkeys'))))]
     if not names:
         raise RuntimeError('No physical keyboard found for Escape cancellation')
     keys = ','.join(lua_string(name) for name in names)

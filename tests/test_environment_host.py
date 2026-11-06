@@ -106,7 +106,7 @@ class HostEnvironment(unittest.TestCase):
                          environ=self.session_environ('host33333333'),
                          cmdline=['quickshell'])
         env = self.run_environment()
-        self.assertEqual(env['HYPRLAND_INSTANCE_SIGNATURE'],
+        self.assertEqual(env.get('HYPRLAND_INSTANCE_SIGNATURE'),
                          os.environ.get('HYPRLAND_INSTANCE_SIGNATURE'),
                          'no candidate accepted: the inherited environment stands')
 

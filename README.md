@@ -224,6 +224,7 @@ The driver protocol is described in
 
 ```sh
 computer-use windows --class KNOWN_APP_CLASS --no-titles
+# Default maximum width is 960 px; request more detail explicitly.
 computer-use observe --window 0xADDRESS --max-width 1280
 computer-use act --observation /tmp/obs.json --actions /tmp/actions.json
 computer-use doctor
@@ -295,7 +296,12 @@ click-through, never takes keyboard focus, and is mandatory by default. Startup
 registers a best-effort physical Escape cancellation binding; if it cannot be
 installed, a warning is logged and explicit cancellation still works. `computer-use cancel` latches cancellation,
 `finish` requests completion, and `resume` only after the user asks to continue.
-Esc cancels; it is never an instruction to retry input.
+Esc cancels; it is never an instruction to retry input. Physical keyboards relayed
+through keyd are included; agent-created virtual keyboards are excluded.
+`computer-use stop` waits for owner cleanup and desktop restoration.
+`computer-use session --replace -- computer-use session-driver` replaces an old CLI
+session before launching its driver. Replacement preserves the cancellation latch;
+resume after user cancellation only when the user asks to continue.
 
 A session shows and restores its visuals without building, downloading or
 loading a compositor plugin. Setup prepares the backend and registers the hook;

@@ -35,6 +35,11 @@ Physical Esc latches cancellation. Run `computer-use resume` only after the user
 continue; do not restore focus/workspace after cancellation. Retained cleanup records require
 `computer-use recover`, never deletion. This is one shared seat: do not compete with user input.
 `computer-use status` reports the latch; MCP `status` reports session liveness and logs.
+To replace a stuck or obsolete CLI session, run `computer-use stop` from a separate shell,
+then start a fresh driver, or use `computer-use session --replace -- computer-use session-driver`.
+Agents may do this when needed without asking again. Replacement waits for owner cleanup;
+on timeout, report the failure. It preserves cancellation: resume after physical Esc only
+when the user asks to continue. Never replay uncertain input after replacing a session.
 
 ## Batch-first required
 
