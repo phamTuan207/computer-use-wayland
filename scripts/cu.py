@@ -125,27 +125,33 @@ def _validate_session_tuple(env):
 def environment():
     env=os.environ.copy()
     supplied=_session_tuple(env)
-    if any(value is not None for value in supplied.values()):
+    if all(isinstance(value,str) and value for value in supplied.values()):
         _validate_session_tuple(env)
         return env
     if env.get('CU_SESSION_TOKEN'):
         raise RuntimeError('automation session has no pinned compositor tuple; refusing environment discovery')
-    # Do not select quickshell, waybar or terminal environments: they may belong
-    # to a nested compositor. Only a single verified Hyprland process is safe.
-    try:p=subprocess.run(['pgrep','-x','Hyprland'],capture_output=True,text=True,timeout=2)
-    except (OSError,subprocess.TimeoutExpired):p=None
-    candidates=[]
-    for pid in p.stdout.split() if p and p.returncode==0 else ():
-        try:
-            data=dict(s.split('=',1) for s in Path('/proc',pid,'environ').read_bytes().decode().split('\0') if '=' in s)
-            candidate=env.copy();candidate.update({k:v for k,v in data.items() if k in SESSION_KEYS})
-            if all(_session_tuple(candidate).values()):
-                _validate_session_tuple(candidate);candidates.append(candidate)
-        except (OSError,UnicodeError,RuntimeError):
-            continue
-    if len(candidates)!=1:
-        raise RuntimeError('could not identify one verified Hyprland host instance; supply its socket/instance tuple')
-    return candidates[0]
+    # Prefer the host Omarchy shell, then other GUI processes. Ignore nested
+    # Quickshells and accept only candidates whose socket tuple Hyprland verifies.
+    candidates={}
+    for name in ('quickshell','Hyprland','waybar','kitty'):
+        try:p=subprocess.run(['pgrep','-x',name],capture_output=True,text=True,timeout=2)
+        except (OSError,subprocess.TimeoutExpired):continue
+        for pid in p.stdout.split() if p.returncode==0 else ():
+            try:
+                if name=='quickshell' and b'/usr/share/omarchy/shell' not in Path('/proc',pid,'cmdline').read_bytes():
+                    continue
+                data=dict(s.split('=',1) for s in Path('/proc',pid,'environ').read_bytes().decode().split('\0') if '=' in s)
+                candidate=env.copy();candidate.update({k:v for k,v in data.items() if k in SESSION_KEYS})
+                values=_session_tuple(candidate)
+                if not all(isinstance(value,str) and value for value in values.values()):
+                    continue
+                _validate_session_tuple(candidate)
+                candidates[tuple(values.items())]=candidate
+            except (OSError,UnicodeError,RuntimeError):
+                continue
+    if len(candidates)>1:
+        raise RuntimeError('multiple verified compositor instances; supply one explicit socket/instance tuple')
+    return next(iter(candidates.values()),env)
 
 def compositor_identity(env):
     values=_session_tuple(env or {})

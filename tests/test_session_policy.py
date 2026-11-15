@@ -94,9 +94,10 @@ def live(tmp, token, *, active, pre_calls, post, close_error=None):
         act_open = {'pre_focus': False}
         real_desktop_act = cu.desktop_act
 
-        def act_boundary(env, meta, actions, after_capture=True):
+        def act_boundary(env, meta, actions, after_capture=True, observation_path=None):
             act_open['pre_focus'] = True
-            return real_desktop_act(env, meta, actions, after_capture=after_capture)
+            return real_desktop_act(env, meta, actions, after_capture=after_capture,
+                                    observation_path=observation_path)
 
         stack.enter_context(patch.object(cu, 'desktop_act', side_effect=act_boundary))
 

@@ -7,6 +7,7 @@ AF_UNIX socket inodes in a temp dir; no compositor is contacted, no focus or
 input changes, no settings touched.
 """
 import os
+import json
 import pathlib
 import socket
 import sys
@@ -31,6 +32,9 @@ class HostEnvironment(unittest.TestCase):
         self.proc.mkdir()
         self.runtime = self.fixtures / 'runtime'
         (self.runtime / 'hypr').mkdir(parents=True)
+        endpoint=socket.socket(socket.AF_UNIX,socket.SOCK_STREAM)
+        endpoint.bind(str(self.runtime/'wayland-1'))
+        endpoint.close()
         self.pids = {}
 
     def add_process(self, pid, name, environ=None, cmdline=None):
@@ -64,11 +68,15 @@ class HostEnvironment(unittest.TestCase):
                 'CANDIDATE_SECRET': 'must-not-propagate'}
 
     def run_environment(self):
-        def fake_run(argv, capture_output=None, text=None, timeout=None):
-            # Only the read-only process scan may ever run in this unit.
-            self.assertEqual(argv[:2], ['pgrep', '-x'])
-            return types.SimpleNamespace(
-                stdout=' '.join(self.pids.get(argv[2], [])), stderr='', returncode=1)
+        def fake_run(argv, env=None, capture_output=None, text=None, timeout=None):
+            if argv[:2]==['pgrep','-x']:
+                pids=self.pids.get(argv[2],[])
+                return types.SimpleNamespace(stdout=' '.join(pids),stderr='',
+                                             returncode=0 if pids else 1)
+            self.assertEqual(argv,['hyprctl','-j','instances'])
+            return types.SimpleNamespace(stdout=json.dumps([
+                {'instance':env['HYPRLAND_INSTANCE_SIGNATURE'],
+                 'wl_socket':env['WAYLAND_DISPLAY']}]),stderr='',returncode=0)
 
         def fake_path(*parts):
             if parts and parts[0] == '/proc':

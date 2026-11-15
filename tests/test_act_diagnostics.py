@@ -26,12 +26,14 @@ POINTER_CHECK = 'cursor position only; desktop backend cannot identify the recei
 
 
 def base_meta(**over):
-    meta = {'backend': 'desktop', 'scope': 'window', 'created': time.time(),
+    meta = {'backend': 'desktop','observation_schema':cu.OBSERVATION_SCHEMA,
+            'image_role':'clean-observation','scope': 'window',
             'window': ADDR, 'window_bounds': [0, 0, 20, 20], 'monitor': 'test',
             'monitor_box': [0, 0, 20, 20], 'monitor_scale': 1,
             'monitor_transform': 0, 'image_size': [20, 20],
             'region': [0, 0, 20, 20], 'image': 'synthetic.png',
-            'max_width': 1280, 'pixel_sha256': 'old-hash'}
+            'max_width': 1280, 'pixel_sha256': 'old-hash',
+            **cu._capture_identity({}),'created':time.time()}
     meta.update(over)
     return meta
 
@@ -203,7 +205,10 @@ class ActDiagnostics(unittest.TestCase):
                          'diagnostics attach only to results that reached input')
 
     def test_preflight_refusal_raises_before_any_diagnostics_query(self):
-        meta = base_meta(created=time.time() - 91)
+        meta = base_meta()
+        meta['capture_started_monotonic']-=91
+        meta['capture_started_wall']-=91
+        meta['created']-=91
         with ExitStack() as stack:
             stack.enter_context(patch.object(cu, 'STATE', self.tmp))
             stack.enter_context(patch.object(cu, 'check_cancel'))

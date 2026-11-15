@@ -42,18 +42,40 @@ WAIT_BROWSER = json.dumps([{'type': 'wait', 'ms': 10}])
 
 
 def base_meta(**over):
-    meta = {'backend': 'desktop', 'created': time.time(), 'window': ADDR,
+    meta = {'backend': 'desktop','observation_schema':cu.OBSERVATION_SCHEMA,
+            'image_role':'clean-observation','scope':'window','window': ADDR,
             'window_bounds': [0, 0, 20, 20], 'monitor': 'test',
             'monitor_box': [0, 0, 20, 20], 'monitor_scale': 1,
             'monitor_transform': 0, 'image_size': [20, 20],
             'region': [0, 0, 20, 20], 'image': 'synthetic.png',
-            'max_width': 1280, 'pixel_sha256': '0000'}
+            'max_width': 1280, 'pixel_sha256': '0000',
+            **cu._capture_identity({}),'created':time.time()}
     meta.update(over)
     return meta
 
 
+def write_observation(folder, token, *, image=None, **over):
+    from PIL import Image
+    import hashlib
+    meta=base_meta(**over)
+    if meta.get('scope')=='screen':meta.pop('window',None)
+    if image is None:image=Image.new('RGB',(20,20),(0,0,0))
+    else:image=image.convert('RGB')
+    raw=io.BytesIO();image.save(raw,format='PNG')
+    png=raw.getvalue()
+    meta.update(id=token,image=str(Path(folder)/(token+'.png')),
+        image_size=list(image.size),image_format='PNG',image_bytes=len(png),
+        image_sha256=hashlib.sha256(png).hexdigest(),
+        pixel_sha256=hashlib.sha256(image.tobytes()).hexdigest(),
+        observation=str(Path(folder)/(token+'.json')))
+    Path(meta['image']).write_bytes(png)
+    Path(meta['observation']).write_text(json.dumps(meta))
+    Path(meta['image']).chmod(0o600);Path(meta['observation']).chmod(0o600)
+    return Path(meta['observation']),meta
+
+
 @contextlib.contextmanager
-def live(tmp, token, *, active, pre_calls, post, opened, close_error=None):
+def live(tmp, token, *, active, pre_calls, post, close_error=None):
     """Patch cu below desktop_act; active/pre_calls are consumed in order.
 
     Mirrors tests/test_session_policy.live: real execute()/main()/desktop_act
@@ -79,9 +101,10 @@ def live(tmp, token, *, active, pre_calls, post, opened, close_error=None):
         act_open = {'pre_focus': False}
         real_desktop_act = cu.desktop_act
 
-        def act_boundary(env, meta, actions, after_capture=True):
+        def act_boundary(env, meta, actions, after_capture=True, observation_path=None):
             act_open['pre_focus'] = True
-            return real_desktop_act(env, meta, actions, after_capture=after_capture)
+            return real_desktop_act(env, meta, actions, after_capture=after_capture,
+                                    observation_path=observation_path)
 
         stack.enter_context(patch.object(cu, 'desktop_act', side_effect=act_boundary))
 
@@ -118,11 +141,6 @@ def live(tmp, token, *, active, pre_calls, post, opened, close_error=None):
                                                  return_value=''))
         stack.enter_context(patch.object(cu.shutil, 'which', return_value=None))
         stack.enter_context(patch.object(cu, 'fcitx5_running', return_value=False))
-        if isinstance(opened, list):
-            stack.enter_context(patch('PIL.Image.open',
-                                      side_effect=lambda *a: opened.pop(0)))
-        elif opened is not None:
-            stack.enter_context(patch('PIL.Image.open', return_value=opened))
         stack.enter_context(patch('time.sleep'))
         stop = stack.enter_context(patch.object(cu, 'stop_session_on_error'))
         yield typed, stop
@@ -145,12 +163,10 @@ class TypedRefusalRecovery(unittest.TestCase):
         token = 'b2' * 16
         same = Image.new('RGB', (20, 20))
         with tempfile.TemporaryDirectory() as tmp:
-            obs = Path(tmp) / 'obs.json'
-            obs.write_text(json.dumps(base_meta()))
+            obs, _ = write_observation(tmp, '000000000101', image=same)
             with live(tmp, token, active=[ADDR] * 12,
                       pre_calls=[(same, {})],
-                      post=dict(base_meta(pixel_sha256='1111')),
-                      opened=same) as (typed, stop):
+                      post=dict(base_meta(pixel_sha256='1111'))) as (typed, stop):
                 code, body = relay_lines([
                     {'args': act_args(obs), 'stdin': BAD_WAIT},
                     {'args': act_args(obs), 'stdin': CORRECTED_TYPE},
@@ -183,15 +199,14 @@ class TypedRefusalRecovery(unittest.TestCase):
         token = 'c3' * 16
         same = Image.new('RGB', (20, 20))
         with tempfile.TemporaryDirectory() as tmp:
-            stale = Path(tmp) / 'stale.json'
-            stale.write_text(json.dumps(base_meta(created=time.time() - 91)))
-            fresh = Path(tmp) / 'fresh.json'
-            after = base_meta(pixel_sha256='2222')
-            fresh.write_text(json.dumps(after))
-            post = dict(after, observation=str(fresh))
+            stale, _ = write_observation(
+                tmp, '000000000102', image=same, created=time.time()-91,
+                capture_started_monotonic=time.monotonic()-91,
+                capture_started_wall=time.time()-92)
+            fresh, after = write_observation(tmp, '000000000103', image=same)
+            post = dict(after)
             with live(tmp, token, active=[ADDR] * 12,
-                      pre_calls=[(same, {})], post=post,
-                      opened=same) as (typed, stop):
+                      pre_calls=[(same, {})], post=post) as (typed, stop):
                 code, body = relay_lines([
                     {'args': act_args(stale), 'stdin': WAIT},
                     {'args': ['observe', '--window', ADDR, '--verbose']},
@@ -219,15 +234,11 @@ class TransientRefusalGate(unittest.TestCase):
         token = 'd4' * 16
         same = Image.new('RGB', (20, 20))
         with tempfile.TemporaryDirectory() as tmp:
-            obs1 = Path(tmp) / 'obs1.json'
-            obs1.write_text(json.dumps(base_meta()))
-            obs2 = Path(tmp) / 'obs2.json'
-            after = base_meta(pixel_sha256='3333')
-            obs2.write_text(json.dumps(after))
-            post = dict(after, observation=str(obs2))
+            obs1, _ = write_observation(tmp, '000000000104', image=same)
+            obs2, after = write_observation(tmp, '000000000105', image=same)
+            post = dict(after)
             with live(tmp, token, active=['0xdead'] + [ADDR] * 12,
-                      pre_calls=[(same, {})], post=post,
-                      opened=same) as (typed, stop):
+                      pre_calls=[(same, {})], post=post) as (typed, stop):
                 with patch('browser_worker.BrowserWorker.request') as worker_request:
                     code, body = relay_lines([
                         {'args': act_args(obs1), 'stdin': WAIT},
@@ -271,14 +282,11 @@ class TransientRefusalGate(unittest.TestCase):
         token = 'e5' * 16
         same = Image.new('RGB', (20, 20))
         with tempfile.TemporaryDirectory() as tmp:
-            obs1 = Path(tmp) / 'obs1.json'
-            obs1.write_text(json.dumps(base_meta()))
-            obs2 = Path(tmp) / 'obs2.json'
-            obs2.write_text(json.dumps(base_meta(pixel_sha256='4444')))
-            post = dict(base_meta(pixel_sha256='4444'), observation=str(obs2))
+            obs1, _ = write_observation(tmp, '000000000106', image=same)
+            obs2, after = write_observation(tmp, '000000000107', image=same)
+            post = dict(after)
             with live(tmp, token, active=['0xdead'] + [ADDR] * 12,
-                      pre_calls=[(same, {})], post=post,
-                      opened=same) as (typed, stop):
+                      pre_calls=[(same, {})], post=post) as (typed, stop):
                 code, body = relay_lines([
                     {'args': act_args(obs1), 'stdin': WAIT},
                     {'args': ['browser', 'act', '--actions', '-'],
@@ -298,28 +306,18 @@ class TransientRefusalGate(unittest.TestCase):
         token = 'f6' * 16
         old, big, same = (Image.new('RGB', (20, 20)), Image.new('RGB', (30, 30)),
                           Image.new('RGB', (20, 20)))
-        screen_meta = base_meta(scope='screen')
-        del screen_meta['window']
         with tempfile.TemporaryDirectory() as tmp:
-            obs1 = Path(tmp) / 'obs1.json'
-            obs1.write_text(json.dumps(screen_meta))
-            obs2 = Path(tmp) / 'obs2.json'
-            after = base_meta(scope='screen', pixel_sha256='5555')
-            del after['window']
-            obs2.write_text(json.dumps(after))
-            post = dict(after, observation=str(obs2))
-            opened = [old, same]
+            obs1, _ = write_observation(tmp, '000000000108', image=old, scope='screen')
+            obs2, after = write_observation(tmp, '000000000109', image=same, scope='screen')
+            post = dict(after)
             with live(tmp, token, active=[ADDR] * 12,
-                      pre_calls=[(big, {}), (same, {})], post=post,
-                      opened=None) as (typed, stop):
-                with patch('PIL.Image.open',
-                           side_effect=lambda *a: opened.pop(0) if opened else same):
-                    code, body = relay_lines([
-                        {'args': act_args(obs1), 'stdin': WAIT},
-                        {'args': ['observe', '--screen', 'test', '--verbose']},
-                        {'args': act_args(obs2), 'stdin': WAIT},
-                        {'args': ['status']},
-                    ])
+                      pre_calls=[(big, {}), (same, {})], post=post) as (typed, stop):
+                code, body = relay_lines([
+                    {'args': act_args(obs1), 'stdin': WAIT},
+                    {'args': ['observe', '--screen', 'test', '--verbose']},
+                    {'args': act_args(obs2), 'stdin': WAIT},
+                    {'args': ['status']},
+                ])
         self.assertEqual(code, 0, 'screen refusal must not stop the relay')
         refusal, observed, fresh = body[1], body[2], body[3]
         self.assertTrue(cu.is_transient_refusal(refusal['result']))
@@ -342,11 +340,9 @@ class FatalEnvelope(unittest.TestCase):
         token = 'a7' * 16
         same = Image.new('RGB', (20, 20))
         with tempfile.TemporaryDirectory() as tmp:
-            obs = Path(tmp) / 'obs.json'
-            obs.write_text(json.dumps(base_meta()))
+            obs, _ = write_observation(tmp, '00000000010a', image=same)
             with live(tmp, token, active=[ADDR] * 12, pre_calls=[(same, {})],
-                      post=RuntimeError('after capture down'),
-                      opened=same) as (typed, stop):
+                      post=RuntimeError('after capture down')) as (typed, stop):
                 code, body = relay_lines([
                     {'args': act_args(obs), 'stdin': WAIT},
                     {'args': ['status']},
@@ -369,10 +365,9 @@ class FatalEnvelope(unittest.TestCase):
         same = Image.new('RGB', (20, 20))
         scroll = json.dumps([{'type': 'scroll', 'x': 5, 'y': 5, 'dx': 0, 'dy': 10}])
         with tempfile.TemporaryDirectory() as tmp:
-            obs = Path(tmp) / 'obs.json'
-            obs.write_text(json.dumps(base_meta()))
+            obs, _ = write_observation(tmp, '00000000010b', image=same)
             with live(tmp, token, active=[ADDR] * 12, pre_calls=[(same, {})],
-                      post=dict(base_meta(pixel_sha256='6666')), opened=same,
+                      post=dict(base_meta(pixel_sha256='6666')),
                       close_error=RuntimeError('close boom')) as (typed, stop):
                 code, body = relay_lines([
                     {'args': act_args(obs), 'stdin': scroll},
