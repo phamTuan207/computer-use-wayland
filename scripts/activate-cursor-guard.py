@@ -9,8 +9,9 @@ import subprocess
 import sys
 
 import indicator
+import plugin_inventory
 
-PIN = 'efb50993780079460b0cbed1363e2166a2de1d9f'
+PIN = '11cbc6c577b84ffb1edf4df3fc5b6128c3ae6947'
 
 
 def activate(library, abi, env, *, before_load=None):
@@ -31,21 +32,21 @@ def activate(library, abi, env, *, before_load=None):
         return answer
 
     version = json.loads(query('-j','version'))
-    if (not isinstance(version,dict) or version.get('version') != '0.56.2' or
+    if (not isinstance(version,dict) or version.get('version') != '0.57.2' or
         version.get('commit') != PIN or version.get('abiHash') != abi or
         not isinstance(abi,str) or not abi.startswith(PIN+'_')):
-        raise RuntimeError('cursor backend requires the pinned Hyprland 0.56.2 ABI')
-    loaded = json.loads(query('-j','plugin','list'))
-    if (not isinstance(loaded,list) or len(loaded) != 1 or not isinstance(loaded[0],dict) or
-        loaded[0].get('name') != 'hyprglass' or loaded[0].get('version') != indicator.LIQUID_VERSION):
-        raise RuntimeError('first-load requires only the accepted glass plugin; refusing reload or hot swap')
+        raise RuntimeError('cursor backend requires the pinned Hyprland 0.57.2 ABI')
+    loaded = plugin_inventory.cursor_baseline(query('-j','plugin','list'))
     if not indicator.liquid_available(env):raise RuntimeError('accepted glass backend is unavailable')
     if before_load is not None:before_load()
     # Recheck the runtime and inventory after the caller's last policy gate.
-    if json.loads(query('-j','version')) != version or json.loads(query('-j','plugin','list')) != loaded:
+    current_version = json.loads(query('-j','version'))
+    current_plugins = plugin_inventory.cursor_baseline(query('-j','plugin','list'))
+    if current_version != version or current_plugins != loaded:
         raise RuntimeError('compositor ownership changed before cursor activation')
     answer = query('plugin','load',str(library)).strip()
     if answer != 'ok':raise RuntimeError('cursor backend first-load refused: '+answer[:200])
+    plugin_inventory.assert_guard_added(loaded, query('-j','plugin','list'))
     import cursor_theme
     cursor_theme.check_guard(env)
     return True

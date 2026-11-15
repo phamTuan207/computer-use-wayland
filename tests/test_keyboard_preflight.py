@@ -33,11 +33,13 @@ class DesktopPreflight(unittest.TestCase):
         from PIL import Image
         self.image=Image.new('RGB',(20,20))
         self.monitor={'name':'test','x':0,'y':0,'width':20,'height':20,'scale':1}
-        self.meta={'backend':'desktop','scope':'window','created':time.time(),
+        self.meta={'backend':'desktop','observation_schema':cu.OBSERVATION_SCHEMA,
+                   'image_role':'clean-observation','scope':'window','created':time.time(),
                    'window':'fixture','window_bounds':[0,0,20,20],
                    'monitor':'test','monitor_box':[0,0,20,20],'monitor_scale':1,
                    'monitor_transform':0,'image_size':[20,20],'region':[0,0,20,20],
-                   'image':'synthetic.png','max_width':1280,'pixel_sha256':'fixture'}
+                   'image':'synthetic.png','max_width':1280,'pixel_sha256':'fixture',
+                   **cu._capture_identity({}),'created':time.time()}
         self.stack=ExitStack();self.addCleanup(self.stack.close)
         # A mock test must never reach the live session socket.
         self.indicator=self.stack.enter_context(patch.object(indicator,'request',return_value=False))
@@ -51,7 +53,7 @@ class DesktopPreflight(unittest.TestCase):
         self.stack.enter_context(patch.object(cu.shutil,'which',return_value=None))
         self.stack.enter_context(patch.object(cu,'fcitx5_running',return_value=False))
         self.stack.enter_context(patch.object(cu,'window',return_value={'at':[0,0],'size':[20,20]}))
-        self.stack.enter_context(patch.object(cu,'hypr',side_effect=self.hypr))
+        self.hypr_mock=self.stack.enter_context(patch.object(cu,'hypr',side_effect=self.hypr))
         self.stack.enter_context(patch.object(cu,'observe',side_effect=self.observe))
         self.stack.enter_context(patch('PIL.Image.open',return_value=self.image))
         self.pointer_cls=self.stack.enter_context(patch.object(cu,'Pointer'))
@@ -93,6 +95,20 @@ class DesktopPreflight(unittest.TestCase):
         self.pointer_cls.assert_called_once()
         self.pointer.close.assert_called_once()
         self.assertGreaterEqual(self.pointer.command.call_count,1)
+        self.typed.assert_not_called()
+
+    def test_focus_is_checked_immediately_before_keyboard_input(self):
+        active_queries=[0]
+        def query(env,what):
+            if what=='activewindow':
+                active_queries[0]+=1
+                return {'address':'other' if active_queries[0]==4 else 'fixture'}
+            return self.hypr(env,what)
+        self.hypr_mock.side_effect=query
+        result=cu.desktop_act({},self.meta,[{'type':'type','text':'hello'}])
+        self.assertFalse(result['ok'])
+        self.assertEqual(result['completed'],0)
+        self.assertEqual(result['error_code'],'focus_changed')
         self.typed.assert_not_called()
 
     def test_leading_dash_type_uses_stdin_within_budget(self):

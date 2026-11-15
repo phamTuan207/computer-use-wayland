@@ -5,6 +5,7 @@ import importlib.util
 import json
 import os
 from pathlib import Path
+import subprocess
 import tempfile
 import unittest
 import sys
@@ -14,7 +15,9 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'scripts'))
 _spec = importlib.util.spec_from_file_location('visuals', ROOT/'scripts/visuals.py')
 visuals = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(visuals)
+with tempfile.TemporaryDirectory() as _import_home, \
+     mock.patch.object(Path, 'home', return_value=Path(_import_home)):
+    _spec.loader.exec_module(visuals)
 REAL_ACTIVATE = visuals._activate
 REAL_ACTIVATE_GUARD = visuals._activate_cursor_guard
 
@@ -37,16 +40,29 @@ class LoginTests(unittest.TestCase):
         profile.write_text(json.dumps({'theme':'fixture-agent','size':34,'restore_theme':'fixture-base','restore_size':24}))
         profile_patch=mock.patch.object(visuals.cursor_theme,'PROFILE',profile)
         profile_patch.start();self.addCleanup(profile_patch.stop)
-        for name,value in [('SNAPSHOT',self.dir/'session.json'),('owner_lock',mock.Mock(side_effect=contextlib.nullcontext))]:
+        self.state = self.dir/'state'
+        for name,value in [('SNAPSHOT',self.dir/'session.json'),('STATE',self.state),
+                           ('owner_lock',mock.Mock(side_effect=contextlib.nullcontext))]:
             patcher=mock.patch.object(visuals.cursor_session,name,new=value);patcher.start();self.addCleanup(patcher.stop)
         self.env = {'HYPRLAND_INSTANCE_SIGNATURE': 'fresh-login'}
         self.write()
         self.activation = mock.Mock(return_value=True)
+        self.activation.side_effect = lambda *args, **kwargs: kwargs['after_reload']()
         patcher = mock.patch.object(visuals, '_activate', new=self.activation)
         patcher.start()
         self.addCleanup(patcher.stop)
         self.guard_activation = mock.Mock(return_value=True)
         patcher = mock.patch.object(visuals, '_activate_cursor_guard', new=self.guard_activation)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        self.overlay = mock.Mock()
+        self.overlay.process.poll.return_value = None
+        self.native_start = mock.patch.object(visuals.indicator, 'Native', return_value=self.overlay)
+        self.native_start.start()
+        self.addCleanup(self.native_start.stop)
+        self.final_check = mock.Mock(return_value=True)
+        patcher = mock.patch.object(visuals.activation_checks, 'wait_for_profile',
+                                    new=self.final_check)
         patcher.start()
         self.addCleanup(patcher.stop)
         fresh=mock.patch.object(visuals,'require_fresh_login');fresh.start();self.addCleanup(fresh.stop)
@@ -65,16 +81,27 @@ class LoginTests(unittest.TestCase):
         self.write()
         result = visuals.login(self.manifest, self.env)
         self.assertEqual(result, {'ok': True})
-        self.activation.assert_called_once_with(str(self.library.resolve()), 'abi-hash', self.env)
+        self.activation.assert_called_once()
+        args, kwargs = self.activation.call_args
+        self.assertEqual(args, (str(self.library.resolve()), 'abi-hash',
+                                sha(visuals.OPTICS.read_bytes()), self.env))
+        self.assertTrue(callable(kwargs['after_reload']))
         self.guard_activation.assert_called_once_with(str(self.guard.resolve()), 'abi-hash', self.env)
+        visuals.indicator.Native.assert_called_once_with(self.env)
+        self.overlay.close.assert_called_once_with()
+        self.final_check.assert_called_once_with(self.env)
 
     def test_guard_backend_activates_after_glass_with_no_retry(self):
         self.write()
         order = []
-        self.activation.side_effect = lambda *a: order.append('glass')
+        def glass(*args, **kwargs):
+            order.append('glass')
+            kwargs['after_reload']()
+        self.activation.side_effect = glass
         self.guard_activation.side_effect = lambda *a: order.append('guard')
+        visuals.indicator.Native.side_effect = lambda env: order.append('indicator') or self.overlay
         visuals.login(self.manifest, self.env)
-        self.assertEqual(order, ['glass', 'guard'])
+        self.assertEqual(order, ['glass', 'guard', 'indicator'])
 
     def test_old_manifest_without_guard_library_fails_closed(self):
         data = self.write()
@@ -132,9 +159,27 @@ class LoginTests(unittest.TestCase):
     def test_activation_wrapper_passes_the_fresh_login_gate(self):
         activate=mock.Mock()
         with mock.patch.object(visuals.runpy,'run_path',return_value={'activate':activate}),mock.patch.object(visuals,'require_fresh_login') as gate:
-            REAL_ACTIVATE('library','abi',self.env)
+            REAL_ACTIVATE('library','abi',sha(visuals.OPTICS.read_bytes()),self.env)
             callback=activate.call_args.kwargs['before_load'];callback()
             gate.assert_called_once_with(self.env)
+
+    def test_loader_writes_private_stage_failure_without_token_or_image_path(self):
+        marker = 'f' * 32
+        self.activation.side_effect = RuntimeError('activation failed ' + marker + ' /tmp/probe.png')
+        with self.assertRaisesRegex(RuntimeError, 'activation failed'):
+            visuals.login(self.manifest, self.env)
+        log = self.state/'logs/visuals.jsonl'
+        self.assertTrue(log.is_file())
+        self.assertEqual(self.state.stat().st_mode & 0o777, 0o700)
+        self.assertEqual(log.parent.stat().st_mode & 0o777, 0o700)
+        self.assertEqual(log.stat().st_mode & 0o777, 0o600)
+        record = json.loads(log.read_text())
+        self.assertEqual(record['stage'], 'glass_first_load')
+        self.assertEqual(record['instance'], 'fresh-login')
+        self.assertEqual(record['artifact_sha256'], sha(b'library'))
+        self.assertNotIn(marker, log.read_text())
+        self.assertNotIn('probe.png', log.read_text())
+        self.assertNotIn('screenshot', record)
 
     def test_login_leaves_cursor_and_profile_unchanged(self):
         directory=self.dir/'cu-agent-fixture';directory.mkdir()
@@ -186,7 +231,7 @@ class LoginTests(unittest.TestCase):
             try:yield
             finally:held[0]=False
         with mock.patch.object(visuals.cursor_session,'owner_lock',side_effect=lock):
-            self.activation.side_effect=lambda *_:self.assertTrue(held[0])
+            self.activation.side_effect=lambda *_args, **_kwargs:self.assertTrue(held[0])
             visuals.login(self.manifest,self.env)
         self.assertFalse(held[0])
 
@@ -320,6 +365,104 @@ class FreshLoginTests(unittest.TestCase):
             with self.subTest(payload=payload),mock.patch.object(visuals.subprocess,'check_output',return_value=payload):
                 with self.assertRaisesRegex(RuntimeError,'cannot verify'):
                     visuals.require_fresh_login({'HYPRLAND_INSTANCE_SIGNATURE':'fresh'})
+
+
+class StartupLogTests(unittest.TestCase):
+    def test_spawn_log_is_written_before_first_local_import(self):
+        with tempfile.TemporaryDirectory() as folder:
+            home = Path(folder)
+            script = ROOT/'scripts/visuals.py'
+            manifest = ROOT/'native/visuals.json'
+            log = home/'.cache/agent-computer-use/logs/visuals-spawn.jsonl'
+            code = r'''\
+import builtins, json, os, runpy, sys
+from pathlib import Path
+script, manifest = sys.argv[1:]
+sys.path.insert(0, str(Path(script).parent))
+sys.argv = [script, manifest]
+log = Path.home()/'.cache/agent-computer-use/logs/visuals-spawn.jsonl'
+real_import = builtins.__import__
+observed = []
+def check_import(name, globals=None, locals=None, fromlist=(), level=0):
+    if name == 'cursor_theme':
+        record = json.loads(log.read_text().splitlines()[-1])
+        assert record['argv'] == sys.argv
+        assert record['pid'] == os.getpid()
+        assert record['timestamp'].endswith('Z')
+        observed.append(name)
+    return real_import(name, globals, locals, fromlist, level)
+builtins.__import__ = check_import
+runpy.run_path(script, run_name='visuals_probe')
+assert observed == ['cursor_theme']
+'''
+            env = os.environ.copy()
+            env.update({'HOME': str(home), 'PYTHONDONTWRITEBYTECODE': '1'})
+            result = subprocess.run([sys.executable, '-c', code, str(script), str(manifest)],
+                                    env=env, text=True, capture_output=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertTrue(log.is_file())
+            self.assertTrue(log.parent.is_dir())
+            record = json.loads(log.read_text().splitlines()[0])
+            self.assertEqual(record['argv'], [str(script), str(manifest)])
+
+    def test_spawn_log_appends_timestamp_pid_and_argv(self):
+        with tempfile.TemporaryDirectory() as folder:
+            home = Path(folder)
+            argv = [str(ROOT/'scripts/visuals.py'), 'native/visuals.json']
+            with mock.patch.object(visuals.Path, 'home', return_value=home), \
+                 mock.patch.object(visuals.sys, 'argv', argv):
+                visuals._write_spawn_log()
+                visuals._write_spawn_log()
+            log = home/'.cache/agent-computer-use/logs/visuals-spawn.jsonl'
+            self.assertTrue(log.parent.is_dir())
+            rows = [json.loads(line) for line in log.read_text().splitlines()]
+            self.assertEqual(len(rows), 2)
+            for record in rows:
+                self.assertRegex(record['timestamp'], r'^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$')
+                self.assertEqual(record['pid'], os.getpid())
+                self.assertEqual(record['argv'], argv)
+
+    def test_spawn_log_skips_module_imports(self):
+        with tempfile.TemporaryDirectory() as folder:
+            home = Path(folder)
+            with mock.patch.object(visuals.Path, 'home', return_value=home), \
+                 mock.patch.object(visuals.sys, 'argv', ['python3', '-m', 'unittest']):
+                visuals._write_spawn_log()
+            self.assertFalse((home/'.cache/agent-computer-use/logs/visuals-spawn.jsonl').exists())
+
+    def test_spawn_log_failure_does_not_stop_module_import(self):
+        with tempfile.TemporaryDirectory() as folder:
+            home = Path(folder)
+            script = ROOT/'scripts/visuals.py'
+            log = home/'.cache/agent-computer-use/logs/visuals-spawn.jsonl'
+            code = r'''\
+import builtins, os, runpy, sys
+from pathlib import Path
+from unittest import mock
+script = sys.argv[1]
+sys.path.insert(0, str(Path(script).parent))
+sys.argv = [script]
+log = Path(os.environ['HOME'])/'.cache/agent-computer-use/logs/visuals-spawn.jsonl'
+patcher = mock.patch.object(Path, 'home', side_effect=OSError('cache unavailable'))
+patcher.start()
+real_import = builtins.__import__
+observed = []
+def continue_import(name, globals=None, locals=None, fromlist=(), level=0):
+    if name == 'cursor_theme':
+        patcher.stop()
+        observed.append(name)
+    return real_import(name, globals, locals, fromlist, level)
+builtins.__import__ = continue_import
+runpy.run_path(script, run_name='visuals_probe')
+assert observed == ['cursor_theme']
+assert not log.exists()
+'''
+            env = os.environ.copy()
+            env.update({'HOME': str(home), 'PYTHONDONTWRITEBYTECODE': '1'})
+            result = subprocess.run([sys.executable, '-c', code, str(script)],
+                                    env=env, text=True, capture_output=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertFalse(log.exists())
 
 
 if __name__ == '__main__':

@@ -166,7 +166,9 @@ class BrowserImage(unittest.TestCase):
                 self.assertEqual(result.size, expected.size)
                 self.assertEqual(result.tobytes(), expected.tobytes())
                 self.assertEqual(meta, {'backend': 'browser', 'image_size': list(expected.size),
-                                        'max_width': 320})
+                                        'max_width': 320, 'image_format': 'PNG',
+                                        'image_bytes': None, 'image_sha256': None,
+                                        'encode_ms': 0})
                 self.assertFalse(self.state.exists())
 
     def test_browser_cli_image_maps_flag_target_and_raw_bytes(self):

@@ -15,7 +15,22 @@ cu = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(cu)
 
 
-class RunCancelableBaseException(unittest.TestCase):
+class IsolatedCuState(unittest.TestCase):
+    def setUp(self):
+        import tempfile
+        self.state_dir = tempfile.TemporaryDirectory()
+        self.addCleanup(self.state_dir.cleanup)
+        state = Path(self.state_dir.name) / 'agent-computer-use'
+        for name, value in (('STATE', state), ('CANCEL', state / 'cancelled')):
+            patcher = mock.patch.object(cu, name, value)
+            patcher.start()
+            self.addCleanup(patcher.stop)
+        token = mock.patch.dict('os.environ', {'CU_SESSION_TOKEN': ''})
+        token.start()
+        self.addCleanup(token.stop)
+
+
+class RunCancelableBaseException(IsolatedCuState):
     """KeyboardInterrupt/SystemExit must still reap the owned child, then re-raise."""
 
     class _Child:
@@ -171,7 +186,7 @@ class SessionDriverLimit(unittest.TestCase):
             self.assertEqual(list(session_driver.request_lines(stream)),['é\n','🙂'])
 
 
-class BrowserStartLifecycle(unittest.TestCase):
+class BrowserStartLifecycle(IsolatedCuState):
     """Only a process this call started is terminated; the log is private at creation."""
 
     def test_existing_log_is_private_before_spawn_and_closed_on_spawn_error(self):

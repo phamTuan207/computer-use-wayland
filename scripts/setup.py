@@ -22,15 +22,17 @@ import sys
 import tempfile
 
 from visuals import atomic_write
+import indicator
+import plugin_inventory
 
 ROOT = Path(__file__).resolve().parents[1]
 ICON_DIRECTORY = Path.home()/'.local/share/icons'
 GLASS_REPO = 'https://github.com/hyprnux/hyprglass.git'
-GLASS_PIN = '84c1a5ab217101a317d4edaab7fba2efcc1bf346'
+GLASS_PIN = '03a57c4451b4abee38feda2ffb725f55ecc0f2fd'
 PREREQUISITES = ('cc', 'c++', 'pkg-config', 'wayland-scanner', 'rsvg-convert', 'make',
                  'git', 'hyprctl', 'gsettings', 'grim', 'wtype')
 
-REQUIRED_HYPRLAND = '0.56.2'
+REQUIRED_HYPRLAND = '0.57.2'
 MACROS = ('GIT_COMMIT_HASH', 'AQUAMARINE_VERSION', 'HYPRUTILS_VERSION',
           'HYPRGRAPHICS_VERSION', 'HYPRCURSOR_VERSION', 'HYPRLANG_VERSION')
 MACRO = re.compile(r'^#define (' + '|'.join(MACROS) + r') "([^"]*)"$', re.M)
@@ -70,9 +72,24 @@ def header_abi(env):
 
 
 def _hook_body(command):
-    # JSON quoting keeps the command inside one Lua string literal; the command
-    # itself is already shlex-escaped by the caller.
-    return (f'hl.on("hyprland.start",function() hl.exec_cmd({json.dumps(command, ensure_ascii=False)}) end)')
+    # Apply optics on reloads, but schedule first load only before glass is present.
+    profile = json.dumps(str(ROOT/'native/hyprglass-local-optics.lua'), ensure_ascii=False)
+    version = json.dumps(indicator.LIQUID_VERSION)
+    command = json.dumps(command, ensure_ascii=False)
+    return (f'local loaded = type(hl.get_loaded_plugins) == "function" and hl.get_loaded_plugins() or nil\n'
+            f'local glass_count, glass_version = 0, nil\n'
+            f'if type(loaded) == "table" then\n'
+            f'  for _, plugin in ipairs(loaded) do\n'
+            f'    if type(plugin) == "table" and plugin.name == "hyprglass" then\n'
+            f'      glass_count, glass_version = glass_count + 1, plugin.version\n'
+            f'    end\n'
+            f'  end\n'
+            f'end\n'
+            f'if glass_count == 1 and glass_version == {version} then\n'
+            f'  dofile({profile})\n'
+            f'else\n'
+            f'  hl.on("hyprland.start", function() hl.exec_cmd({command}) end)\n'
+            f'end')
 
 
 def install_hook(config_path, command, hook_path, check_only=False):
@@ -211,8 +228,8 @@ def _preflight(env, config_path, data_dir, bin_dir, restore_theme=None, restore_
     initial = header_abi(env)
     if initial != runtime_abi(env):
         raise RuntimeError('header ABI does not match the running compositor')
-    _require_no_plugins(env)
-    return initial, requested, profile_bytes
+    plugins = _setup_plugin_inventory(env)
+    return initial, requested, profile_bytes, plugins
 
 
 def _hook_command():
@@ -221,12 +238,16 @@ def _hook_command():
                        str(ROOT/'native/visuals.json')])
 
 
-def _require_no_plugins(env):
-    loaded = json.loads(_checked(['hyprctl', '-j', 'plugin', 'list'], env=env).stdout)
-    if not isinstance(loaded, list):
-        raise RuntimeError('invalid plugin inventory')
-    if loaded:
-        raise RuntimeError('plugins are already loaded; a config reload could affect them')
+def _setup_plugin_inventory(env):
+    """Snapshot the only pre-existing plugin set that setup can safely keep."""
+    return plugin_inventory.setup_baseline(
+        _checked(['hyprctl', '-j', 'plugin', 'list'], env=env).stdout)
+
+
+def _require_same_setup_plugins(env, expected):
+    current = _setup_plugin_inventory(env)
+    if current != expected:
+        raise RuntimeError('plugin inventory changed during setup; refusing publication')
 
 
 def _validate_profile(path):
@@ -305,8 +326,8 @@ def _setup(config_path, data_dir, bin_dir, restore_theme=None, restore_size=None
     data_dir, bin_dir = Path(data_dir).resolve(), Path(bin_dir).resolve()
     if env.get('CU_SESSION_TOKEN'):
         raise RuntimeError('setup refuses to run inside an automation session')
-    initial, requested, profile_bytes = _preflight(env, config_path, data_dir, bin_dir,
-                                                   restore_theme, restore_size)
+    initial, requested, profile_bytes, plugins_before = _preflight(
+        env, config_path, data_dir, bin_dir, restore_theme, restore_size)
     with tempfile.TemporaryDirectory(prefix='cu-setup-') as folder:
         owned = Path(folder)
         source = owned/'hyprglass'
@@ -324,7 +345,7 @@ def _setup(config_path, data_dir, bin_dir, restore_theme=None, restore_size=None
             raise RuntimeError('ABI drifted during the build')
         # Recheck the runtime before the first write, not after: once anything is
         # installed the honest message is "aborted", never "nothing was published".
-        _require_no_plugins(env)
+        _require_same_setup_plugins(env, plugins_before)
         if cursor_session.SNAPSHOT.exists():
             raise RuntimeError('a session started during setup; '
                                'aborted before anything was installed or published')
@@ -349,8 +370,6 @@ def _setup(config_path, data_dir, bin_dir, restore_theme=None, restore_size=None
                 stream.write((json.dumps(declared, indent=2) + '\n').encode())
                 stream.flush()
                 os.fsync(stream.fileno())
-        atomic_write(ROOT/'native/require-liquid', b'')
-        install_hook(config_path, _hook_command(), ROOT/'native/visuals-login.lua')
         manifest = {'version': 1,
                     'abi': initial,
                     'library': str(Path(installed).resolve()),
@@ -359,6 +378,9 @@ def _setup(config_path, data_dir, bin_dir, restore_theme=None, restore_size=None
                     'setup_instance': env['HYPRLAND_INSTANCE_SIGNATURE'],
                     'cursor_directory': str(theme.resolve()),
                     'cursor_tree_sha256': cursor.tree_digest(theme)}
+        _require_same_setup_plugins(env, plugins_before)
+        atomic_write(ROOT/'native/require-liquid', b'')
+        install_hook(config_path, _hook_command(), ROOT/'native/visuals-login.lua')
         atomic_write(ROOT/'native/visuals.json', (json.dumps(manifest, indent=2) + '\n').encode())
         link = Path(bin_dir)/'computer-use'
         if not link.exists() and not link.is_symlink():

@@ -45,12 +45,14 @@ class Native:
         try:
             self.reply('ready')
             if liquid:
-                # Re-probe AFTER ready: a pending backend may have finished, and a
-                # failed/changed backend must be refused. Never trust the startup
-                # snapshot for readiness (that would fail pending->ready forever).
-                fresh = _status(env)
-                if not _valid_liquid(fresh, ready=True):
-                    raise RuntimeError('indicator liquid backend did not become ready')
+                # The first overlay triggers shader compilation; keep it alive while polling.
+                import activation_checks
+                try:
+                    activation_checks.wait_for_profile(env, timeout=LIQUID_READY_TIMEOUT)
+                except RuntimeError as error:
+                    raise RuntimeError('indicator liquid backend did not become ready') from error
+                if self.process.poll() is not None:
+                    raise RuntimeError('indicator exited before liquid glass became ready')
         except BaseException:
             self.close()
             raise
@@ -158,7 +160,8 @@ def request(state, command):
 
 
 LIQUID_SCHEMA = 1
-LIQUID_VERSION = '0.10.0-cu.1'
+LIQUID_VERSION = '1.1.1-cu.1'
+LIQUID_READY_TIMEOUT = 30.0
 
 
 def _status(env):
@@ -212,8 +215,8 @@ def liquid_available(env, *, ready=False):
     """True when hyprglass reports itself able to draw layer glass.
 
     Metadata only: this reads `hyprglass status` and matches the published
-    schema. It is not proof that any pixel is drawn, that the capsule shader
-    looks right, or that our namespace is glassed. Those need a real test.
+    schema. It is not proof that any pixel is drawn, that the optics look right,
+    or that our indicator namespace is glassed. Those need a real test.
 
     Read-only probe: no plugin load, no config change, no environment discovery.
     `env` is used as given and never mutated. `ready=False` also accepts

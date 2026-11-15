@@ -1,0 +1,21 @@
+[Unit]
+Description=Computer-use SSH session broker
+BindsTo=graphical-session.target
+After=graphical-session.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/james/computer-use-wayland
+Environment=PYTHONDONTWRITEBYTECODE=1
+Environment=XDG_CACHE_HOME=/home/james/.cache
+ExecStart=/usr/bin/python3 /home/james/computer-use-wayland/scripts/session_remote.py serve --socket %t/computer-use-wayland/relay.sock
+RuntimeDirectory=computer-use-wayland
+RuntimeDirectoryMode=0700
+UMask=0077
+Restart=no
+KillMode=mixed
+TimeoutStopSec=45
+SendSIGKILL=no
+
+[Install]
+WantedBy=graphical-session.target

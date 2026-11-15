@@ -80,7 +80,7 @@ class GlassBuild(unittest.TestCase):
         fake = Fake(self.source, apply_ok=False)
         with patch.object(build_glass.subprocess, 'run', fake):
             with self.assertRaises(SystemExit) as caught:
-                build_glass.main([str(self.source)])
+                build_glass.main([str(self.source), '--local-optics'])
         self.assertEqual(caught.exception.code, 2)
         self.assertFalse([c for c in fake.calls if c[0] == 'make'], 'make ran after a failed apply')
 
@@ -88,13 +88,15 @@ class GlassBuild(unittest.TestCase):
         fake = Fake(self.source, apply_ok=True)
         with patch.object(build_glass.subprocess, 'run', fake), \
                 patch('builtins.print'):
-            self.assertEqual(build_glass.main([str(self.source)]), 0)
+            self.assertEqual(build_glass.main([str(self.source), '--local-optics']), 0)
         self.assertTrue([c for c in fake.calls if c[0] == 'make'])
         self.assertIn('HYPRGLASS_VERSION=' + build_glass.VERSION,
                       [a for c in fake.calls if c[0] == 'make' for a in c])
 
 
     def drive(self, fake, argv):
+        if '--local-optics' not in argv:
+            argv = [argv[0], '--local-optics', *argv[1:]]
         out, err = io.StringIO(), io.StringIO()
         with patch.object(build_glass.subprocess, 'run', fake), \
                 contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
@@ -102,6 +104,14 @@ class GlassBuild(unittest.TestCase):
                 return 0, build_glass.main(argv), out.getvalue(), err.getvalue()
             except SystemExit as exited:
                 return 1, exited.code, out.getvalue(), err.getvalue()
+
+    def test_local_optics_is_required_before_source_access(self):
+        with patch.object(build_glass.subprocess, 'run') as run, \
+                contextlib.redirect_stderr(io.StringIO()):
+            with self.assertRaises(SystemExit) as caught:
+                build_glass.main([str(self.source)])
+        self.assertEqual(caught.exception.code, 2)
+        run.assert_not_called()
 
     def test_dirty_tracked_initial_refuses_by_default(self):
         fake = Fake(self.source, True, initial=' M a.py')
@@ -216,7 +226,7 @@ class GlassBuild(unittest.TestCase):
         with patch.object(build_glass.subprocess, 'run', hybrid), \
                 contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
             with self.assertRaises(SystemExit) as caught:
-                build_glass.main([str(repo)])
+                build_glass.main([str(repo), '--local-optics'])
         self.assertEqual(caught.exception.code, 2)
         self.assertIn('dirty', err.getvalue())
         self.assertTrue(seen, 'no real status call made')

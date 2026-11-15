@@ -1,4 +1,5 @@
 import io
+import hashlib
 import json
 from pathlib import Path
 import subprocess
@@ -6,6 +7,7 @@ import sys
 import tempfile
 import unittest
 from unittest.mock import patch
+from PIL import Image
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
 from visual_delivery import VisualCheckpoint
@@ -18,12 +20,16 @@ class DeliveryTests(unittest.TestCase):
         self.gate = VisualCheckpoint()
 
     def response(self, name, pixels=b'owned-png-bytes', **changes):
-        image = self.folder / (name + '.png');image.write_bytes(pixels)
+        image = self.folder / (name + '.png')
+        color=tuple(hashlib.sha256(pixels).digest()[:3])
+        output=io.BytesIO();Image.new('RGB',(100,80),color).save(output,format='PNG')
+        png=output.getvalue();image.write_bytes(png)
         observation = self.folder / (name + '.json')
         meta = dict(backend='desktop', image=str(image), scope='window', window='0x1',
                     monitor='owned', region=[0,0,100,80], image_size=[100,80],
                     monitor_box=[0,0,1920,1080], monitor_scale=1, monitor_transform=0,
-                    window_bounds=[0,0,100,80])
+                    window_bounds=[0,0,100,80],image_format='PNG',image_bytes=len(png),
+                    image_sha256=hashlib.sha256(png).hexdigest())
         meta.update(changes);observation.write_text(json.dumps(meta))
         return {'returncode':0, 'result':{'image':str(image), 'observation':str(observation)}}
 
@@ -78,11 +84,15 @@ class DeliveryTests(unittest.TestCase):
 
     def test_screen_scope_without_window_key_is_tracked(self):
         def screen_response(name, pixels=b'owned-png-bytes'):
-            image = self.folder / (name + '.png');image.write_bytes(pixels)
+            image = self.folder / (name + '.png')
+            color=tuple(hashlib.sha256(pixels).digest()[:3])
+            output=io.BytesIO();Image.new('RGB',(100,80),color).save(output,format='PNG')
+            png=output.getvalue();image.write_bytes(png)
             observation = self.folder / (name + '.json')
             meta = dict(backend='desktop', image=str(image), scope='screen', monitor='owned',
                         region=[0,0,100,80], image_size=[100,80], monitor_box=[0,0,1920,1080],
-                        monitor_scale=1, monitor_transform=0)
+                        monitor_scale=1, monitor_transform=0,image_format='PNG',image_bytes=len(png),
+                        image_sha256=hashlib.sha256(png).hexdigest())
             observation.write_text(json.dumps(meta))
             return {'returncode':0, 'result':{'image':str(image), 'observation':str(observation)}}
         a,b = screen_response('a'), screen_response('b')

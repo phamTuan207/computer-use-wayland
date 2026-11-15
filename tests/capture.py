@@ -37,6 +37,8 @@ actions=[{'type':'click','x':211,'y':211}]
 with tempfile.TemporaryDirectory() as folder,patch.object(cu,'STATE',Path(folder)/'state'),patch.object(cu,'CANCEL',Path(folder)/'cancelled'):
     meta={'backend':'desktop','scope':'window','window':'0x1','window_bounds':[0,0,1920,1200],
           'monitor':'test','monitor_box':[0,0,1920,1200],'monitor_scale':1,'monitor_transform':0,'region':[0,0,1920,1200]}
+    meta.update(observation_schema=cu.OBSERVATION_SCHEMA,image_role='clean-observation',
+                **cu._capture_identity({}),created=__import__('time').time())
     old=cu.save_observation(base,meta.copy(),1280)
     for name,changed,expected in [('unchanged',base,False),('global',Image.new('RGB',base.size,(240,240,240)),True),
                                   ('patch',base.copy(),True),('distant patch',base.copy(),False)]:

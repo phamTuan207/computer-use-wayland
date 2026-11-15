@@ -58,11 +58,11 @@ JSON snippet instead. One desktop session is controlled at a time per user.
 
 ## Requirements
 
-**Hyprland exactly `0.56.2`**, with development headers from that same release.
+**Hyprland exactly `0.57.2`**, with development headers from that same release.
 Setup builds a compositor plugin, so the plugin ABI must match the running
 compositor. Setup reconstructs the ABI fingerprint from your installed headers
 and compares it with `hyprctl -j version`; if the two disagree, or if
-`pkg-config --modversion hyprland` is not exactly `0.56.2`, setup refuses before
+`pkg-config --modversion hyprland` is not exactly `0.57.2`, setup refuses before
 building anything. A different Hyprland release needs a rebuild and
 re-verification, not an in-place upgrade.
 
@@ -124,17 +124,22 @@ managed block to it, and links `computer-use` into `~/.local/bin`.
 What setup deliberately does **not** do: it never loads a plugin, never hot-swaps
 or unloads one, never restarts or logs out, and never loads anything inside a
 `computer-use` session. It also refuses to run at all if `CU_SESSION_TOKEN` is
-set or a session record is retained, and it refuses when any plugin is already
-loaded, because editing the config could auto-reload one. It holds the session
-owner lock for the whole run, so an automation cannot start in the middle of the
-build. On an unsupported version, a missing dependency, an already-loaded plugin
-or an unreadable config, setup stops with a message instead of guessing.
+set or a session record is retained, and it refuses unless the plugin inventory
+is empty or exactly one verified `hyprbars` (`Vaxry`, `1.0`), because editing
+the config could auto-reload it. The complete inventory, including handles,
+must remain unchanged. It holds the session owner lock for the whole run, so an
+automation cannot start in the middle of the build. On an unsupported version,
+a missing dependency, an unsupported plugin inventory or an unreadable config,
+setup stops with a message instead of guessing.
 
-At your next fresh login the generated hook runs once. It verifies the manifest,
-the pinned optics profile, the installed cursor tree and the recorded ABI, checks
-that the compositor really did just start, and only then loads the backend. If any
-check fails it stops and says why; it does not fall back to a plain background.
-Setup never hot-swaps or unloads a plugin the compositor is already running.
+At your next fresh login the generated hook verifies the manifest, the pinned
+optics profile, the installed cursor tree and the recorded ABI, checks that the
+compositor really did just start, and only then loads the backend. The optics
+profile is sourced on each config evaluation when exactly the accepted glass
+version is loaded. Glass first-load permits only an empty inventory or the same
+verified `hyprbars`; cursor first-load requires the accepted glass and optional
+verified `hyprbars`. Setup never hot-swaps or unloads a plugin the compositor is
+already running.
 
 ## Defaults after that first login
 
@@ -193,10 +198,11 @@ and ends the driver instead.
 
 Standard setup prepares everything and a fresh login activates it. An existing
 installation may first-load just the new guard through the guarded helper after
-the pinned Hyprland 0.56.2 ABI check. It requires only the accepted glass plugin
-to be loaded, refuses an already-loaded cursor backend, and never unloads or
-reloads glass. Prepare the matching immutable guard library and login manifest
-before using `scripts/activate-cursor-guard.py LIBRARY --abi ABI_HASH`.
+the pinned Hyprland 0.57.2 ABI check. It requires only the accepted glass plugin
+and permits the same verified `hyprbars` (`Vaxry`, `1.0`) to coexist. It refuses
+an already-loaded cursor backend or any other inventory change, and never
+unloads or hot-swaps glass. Prepare the matching immutable guard library and
+login manifest before using `scripts/activate-cursor-guard.py LIBRARY --abi ABI_HASH`.
 
 The vendored virtual-keyboard protocol comes from
 [wtype](https://github.com/atx/wtype/blob/master/protocol/virtual-keyboard-unstable-v1.xml);

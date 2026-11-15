@@ -65,6 +65,47 @@ latch file still reports `cancelled: true` with an unknown source. It
 reports the cancellation latch, not whether a session or overlay is active. It
 never clears cancellation; only user-requested `computer-use resume` does that.
 
+### Optional reconnectable broker
+
+`scripts/session_remote.py` provides a same-user Unix-socket relay for callers
+that cannot keep one process handle open. The repository includes
+`native/computer-use-relay.service` as a **template**; setup does not install,
+enable or start it. When it is started manually, the broker is idle: it owns no
+desktop session, indicator or cursor lease until an explicit `start` succeeds.
+It launches the existing `computer-use session -- computer-use session-driver`
+tree and leaves all visual/input ownership with that session guardian.
+
+The client interface is:
+
+```text
+python3 scripts/session_remote.py status
+python3 scripts/session_remote.py start --owner NAME --lease-file PRIVATE_FILE
+python3 scripts/session_remote.py request --lease-file PRIVATE_FILE --sequence N --request REQUEST_JSON
+python3 scripts/session_remote.py result --lease-file PRIVATE_FILE --sequence N
+python3 scripts/session_remote.py finish --lease-file PRIVATE_FILE
+```
+
+`REQUEST_JSON` is the existing driver envelope, for example
+`{"args":["observe","--window","0xEXACT_ADDRESS"]}`. Keep the lease file
+private (mode `0600`) and reuse that same file after a lost `start` or `request`
+response. Request sequences begin at 1. The broker remembers only the active
+and most recently completed request; an older result expires and is never
+replayed. Reusing the same sequence and payload retrieves its result, while a
+different payload conflicts. A disconnected client does not cancel accepted
+work. A broker crash makes the old generation unknown; inspect cleanup state
+before creating a new lease. The broker never resumes or restarts a failed
+driver. A refused `start` is also a saved outcome: after the condition is
+resolved and cleanup is proven, make a new private lease file for a new explicit
+start attempt.
+
+`status --lease-file PRIVATE_FILE` is an owner status check and renews the
+300-second idle lease. An ordinary status check does not renew it. `finish`
+closes the existing driver input stream and waits for the session guardian to
+clean up (up to 120 seconds per client call); a `cleanup_pending` response means
+the broker is still draining and the retained state must be checked again. It
+does not clear the cancellation latch. The local `computer-use status` remains
+a latch-only command and is separate from broker status.
+
 # Commands and schemas
 
 ## Interactive agent driver

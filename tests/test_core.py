@@ -49,30 +49,46 @@ finally:
                 self.assertIn('error:',result.stderr)
                 self.assertTrue(result.stderr.endswith('cleanup_calls=1\n'))
 
-class Coordinates(unittest.TestCase):
+class IsolatedCuState(unittest.TestCase):
+    def setUp(self):
+        self.state_dir = tempfile.TemporaryDirectory()
+        self.addCleanup(self.state_dir.cleanup)
+        state = pathlib.Path(self.state_dir.name) / 'agent-computer-use'
+        for name, value in (('STATE', state), ('CANCEL', state / 'cancelled')):
+            patcher = patch.object(cu, name, value)
+            patcher.start()
+            self.addCleanup(patcher.stop)
+        token = patch.dict('os.environ', {'CU_SESSION_TOKEN': ''})
+        token.start()
+        self.addCleanup(token.stop)
+
+
+class Coordinates(IsolatedCuState):
     def test_invalid_action_batch_is_typed_preflight_before_focus_or_input(self):
-        from unittest.mock import patch
-        meta={'backend':'desktop','created':time.time(),'scope':'window',
-              'window':'0x1','image':'unused'}
-        for actions in ([{'type':'wait','ms':2001}],):
-            with self.subTest(actions=actions), \
-                 patch.object(cu,'check_cancel'), patch.object(cu,'focus') as focus, \
-                 patch.object(cu,'Pointer') as pointer:
-                with self.assertRaisesRegex(cu.PreflightRefusal,'wait ms must be 0..2000'):
-                    cu.desktop_act({},meta,actions)
-                focus.assert_not_called()
-                pointer.assert_not_called()
+        meta={'backend':'desktop'}
+        with patch.object(cu,'check_cancel'), \
+             patch.object(cu,'validate_desktop_observation'), \
+             patch.object(cu,'focus') as focus, patch.object(cu,'Pointer') as pointer:
+            with self.assertRaisesRegex(cu.PreflightRefusal,'wait ms must be 0..2000'):
+                cu.desktop_act({},meta,[{'type':'wait','ms':2001}])
+        focus.assert_not_called()
+        pointer.assert_not_called()
 
     def test_expired_observation_is_typed_preflight_before_focus_or_input(self):
-        meta={'backend':'desktop','created':time.time()-91,'scope':'window',
-              'window':'0x1','image':'unused'}
+        meta={'backend':'desktop','observation_schema':cu.OBSERVATION_SCHEMA,
+              'image_role':'clean-observation','scope':'screen','monitor':'test',
+              'monitor_box':[0,0,20,20],'monitor_scale':1,'monitor_transform':0,
+              'image_size':[20,20],'region':[0,0,20,20],'max_width':1280,
+              **cu._capture_identity({}),'created':time.time()}
+        meta['capture_started_monotonic']-=91
+        meta['capture_started_wall']-=91
+        meta['created']-=91
         with patch.object(cu,'check_cancel'), patch.object(cu,'focus') as focus, \
              patch.object(cu,'Pointer') as pointer:
             with self.assertRaisesRegex(cu.PreflightRefusal,'observation older than 90s'):
                 cu.desktop_act({},meta,[{'type':'wait','ms':0}])
-            focus.assert_not_called()
-            pointer.assert_not_called()
-
+        focus.assert_not_called()
+        pointer.assert_not_called()
     def test_saved_png_preserves_pixels_metadata_and_permissions(self):
         import hashlib
         import json
@@ -148,7 +164,11 @@ class Coordinates(unittest.TestCase):
         for crop in ([0,0,0,10],[-1,0,10,10],[790,0,20,10]):
             with self.subTest(crop=crop),self.assertRaises(ValueError):cu.screen_region([-800,20,800,1280],crop)
     def test_screen_observation_rejects_keyboard_before_input(self):
-        meta={'backend':'desktop','scope':'screen','created':time.time()}
+        meta={'backend':'desktop','observation_schema':cu.OBSERVATION_SCHEMA,
+              'image_role':'clean-observation','scope':'screen','monitor':'test',
+              'monitor_box':[0,0,20,20],'monitor_scale':1,'monitor_transform':0,
+              'image_size':[20,20],'region':[0,0,20,20],'max_width':1280,
+              **cu._capture_identity({}),'created':time.time()}
         with patch.object(cu,'focus') as focus,patch.object(cu,'Pointer') as pointer:
             with self.assertRaisesRegex(ValueError,'pointer actions only'):
                 cu.desktop_act({},meta,[{'type':'key','keys':['a']}])
@@ -158,11 +178,13 @@ class Coordinates(unittest.TestCase):
         from PIL import Image
         image=Image.new('RGB',(20,20))
         monitor={'name':'test','x':0,'y':0,'width':20,'height':20,'scale':1}
-        meta={'backend':'desktop','scope':'window','created':time.time(),
+        meta={'backend':'desktop','observation_schema':cu.OBSERVATION_SCHEMA,
+              'image_role':'clean-observation','scope':'window','created':time.time(),
               'window':'fixture','window_bounds':[0,0,20,20],
               'monitor':'test','monitor_box':[0,0,20,20],'monitor_scale':1,
               'monitor_transform':0,'image_size':[20,20],'region':[0,0,20,20],
-              'image':'synthetic.png','max_width':1280,'pixel_sha256':'fixture'}
+              'image':'synthetic.png','max_width':1280,'pixel_sha256':'fixture',
+              **cu._capture_identity({}),'created':time.time()}
         for defect,error in (('cancel','cancelled'),('window','window geometry changed'),
                              ('monitor','monitor layout changed'),('focus','focus changed')):
             with self.subTest(defect=defect),ExitStack() as stack:
@@ -240,12 +262,11 @@ class Coordinates(unittest.TestCase):
         actions=[{'type':'key','keys':['Ctrl','a']},{'type':'type','text':'test'},{'type':'key','keys':['Tab']},{'type':'type','text':'chaof','ime':'compose'},{'type':'type','text':'test'}]
         groups=cu.keyboard_groups(actions)
         self.assertEqual([len(g) for g in groups],[2,1,1,1])
-    def test_compact_observation_retains_paths_not_internal_geometry(self):
+    def test_compact_observation_retains_paths_and_coordinate_identity(self):
         meta={'backend':'desktop','image':'a.png','observation':'a.json','image_size':[400,200],'window_bounds':[0,0,800,400]}
         output=cu.compact_result({'ok':False,'completed':0,'after':meta})
         self.assertEqual(output['after']['observation'],'a.json')
-        self.assertNotIn('window_bounds',output['after'])
-        self.assertIn('window_bounds',meta)
+        self.assertEqual(output['after']['window_bounds'],[0,0,800,400])
     def test_reject_invalid_window_before_dispatch(self):
         with self.assertRaises(ValueError):cu.focus({},'bad") os.execute("bad')
     def test_small_target_change_detected_without_global_change(self):
@@ -255,7 +276,7 @@ class Coordinates(unittest.TestCase):
         self.assertTrue(cu.screen_changed(old,new,[{'type':'click','x':211,'y':211}]))
         self.assertFalse(cu.screen_changed(old,new,[{'type':'click','x':800,'y':500}]))
 
-class SecureObservationFiles(unittest.TestCase):
+class SecureObservationFiles(IsolatedCuState):
     """N7: exclusive 0600 creation before the first byte; no symlink follow."""
 
     def test_private_mode_under_any_umask_in_isolated_child(self):
@@ -285,17 +306,36 @@ class SecureObservationFiles(unittest.TestCase):
         from PIL import Image
         seen = {}
 
-        real_save = Image.Image.save
+        real_fdopen = os.fdopen
 
-        def spy(self, fp, *args, **kwargs):
-            seen['mode'] = stat.S_IMODE(os.fstat(fp.fileno()).st_mode)
-            return real_save(self, fp, *args, **kwargs)
+        def spy_fdopen(fd, mode='r', *args, **kwargs):
+            stream = real_fdopen(fd, mode, *args, **kwargs)
+            if mode != 'wb':
+                return stream
+
+            class InspectFirstWrite:
+                def __enter__(self):
+                    return self
+
+                def __exit__(self, *exc):
+                    return stream.__exit__(*exc)
+
+                def write(self, data):
+                    seen['mode'] = stat.S_IMODE(os.fstat(fd).st_mode)
+                    seen['bytes'] = len(data)
+                    return stream.write(data)
+
+                def __getattr__(self, name):
+                    return getattr(stream, name)
+
+            return InspectFirstWrite()
 
         with tempfile.TemporaryDirectory() as folder, \
                 patch.object(cu, 'STATE', pathlib.Path(folder)), \
-                patch.object(Image.Image, 'save', spy):
+                patch.object(cu.os, 'fdopen', side_effect=spy_fdopen):
             cu.save_observation(Image.new('RGB', (16, 16)), {}, 1280)
         self.assertEqual(seen.get('mode'), 0o600)
+        self.assertGreater(seen.get('bytes', 0), 0)
 
     def test_encoded_png_passes_through_byte_exact(self):
         import io
@@ -562,7 +602,7 @@ class SecureObservationFiles(unittest.TestCase):
                 self.assertEqual(closed, opened,
                                  'raw descriptor closed exactly once, no foreign fd touched')
 
-    def test_write_failure_closes_stream_once_with_no_extra_close(self):
+    def test_png_encoding_failure_creates_no_output_file(self):
         import os
         from PIL import Image
         with tempfile.TemporaryDirectory() as folder, \
@@ -589,12 +629,9 @@ class SecureObservationFiles(unittest.TestCase):
                  patch.object(Image.Image, 'save', failing_save):
                 with self.assertRaisesRegex(OSError, 'save down'):
                     cu.save_observation(Image.new('RGB', (8, 8)), {}, 1280)
-            self.assertEqual(len(opened), 1)
-            self.assertEqual(closed, [],
-                             'no extra os.close after ownership transferred to the stream')
-            with self.assertRaises(OSError):
-                os.fstat(opened[0])
-            # EBADF above proves the stream owned and performed the one close.
+            self.assertEqual(opened, [])
+            self.assertEqual(closed, [])
+            self.assertEqual(list(pathlib.Path(folder).iterdir()), [])
 
 
 if __name__=='__main__':unittest.main()

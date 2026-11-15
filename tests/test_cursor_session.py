@@ -27,6 +27,10 @@ from pathlib import Path
 p=Path(os.environ['FAKE_DESKTOP'])
 s=json.loads(p.read_text())
 a=sys.argv[1:]
+if a==['-j','instances']:
+    print(json.dumps([{'instance':os.environ['HYPRLAND_INSTANCE_SIGNATURE'],
+                       'wl_socket':os.environ['WAYLAND_DISPLAY']}]))
+    sys.exit(0)
 s['calls'].append(a)
 if a==['-j','devices']:print('{"keyboards":[{"name":"test-keyboard"}]}')
 elif a==['-j','monitors']:
@@ -297,9 +301,44 @@ class Lifecycle(unittest.TestCase):
         p=self.altbin/'computer-use-indicator'
         p.write_text(TRACKED_INDICATOR);p.chmod(0o700)
         self.env=os.environ.copy();self.env.pop('CU_SESSION_TOKEN',None)
-        # Never let read-only IPC reach the host compositor socket: without a
-        # signature every query falls back to the fake hyprctl on PATH.
-        self.env.pop('HYPRLAND_INSTANCE_SIGNATURE',None)
+        # Supply a complete fixture tuple so strict environment validation
+        # never discovers or connects to the host compositor.
+        self.compositor_runtime=self.folder/'run'
+        self.instance='fixture-instance'
+        self.wayland='wayland-fixture'
+        ipc_socket=self.compositor_runtime/'hypr'/self.instance/'.socket.sock'
+        wayland_socket=self.compositor_runtime/self.wayland
+        ipc_socket.parent.mkdir(parents=True)
+        ipc=socket.socket(socket.AF_UNIX,socket.SOCK_STREAM)
+        ipc.bind(str(ipc_socket));ipc.listen(8);ipc.settimeout(.2)
+        wayland=socket.socket(socket.AF_UNIX,socket.SOCK_STREAM)
+        wayland.bind(str(wayland_socket))
+        stop_ipc=threading.Event()
+
+        def serve_ipc():
+            while not stop_ipc.is_set():
+                try:connection,_=ipc.accept()
+                except socket.timeout:continue
+                except OSError:return
+                with connection:
+                    query=connection.recv(128).decode().removeprefix('j/')
+                    state=json.loads(self.desktop.read_text())
+                    if query=='monitors':
+                        result=[] if state.get('no_monitors') else [
+                            {'id':0,'name':'test','x':0,'y':0,'width':2,'height':2,
+                             'scale':1,'transform':0}]
+                    elif query=='devices':result={'keyboards':[{'name':'test-keyboard'}]}
+                    elif query=='cursorpos':result={'x':0,'y':0}
+                    else:result=[]
+                    connection.sendall(json.dumps(result).encode())
+
+        ipc_thread=threading.Thread(target=serve_ipc,daemon=True)
+        ipc_thread.start()
+
+        def stop_compositor():
+            stop_ipc.set();ipc.close();wayland.close();ipc_thread.join(timeout=2)
+
+        self.addCleanup(stop_compositor)
         # Minimal valid agent theme on the Xcursor search path: real files for
         # left_ptr/pointer, an alias for text, all loadable at the agent size.
         icons=self.folder/'icons';cursors=icons/'cu-agent-test'/'cursors';cursors.mkdir(parents=True)
@@ -312,8 +351,11 @@ class Lifecycle(unittest.TestCase):
         self.visible_log=self.folder/'visibility.log'
         self.env.update(PATH=str(binary)+os.pathsep+self.env['PATH'],
                         XDG_CACHE_HOME=str(self.folder/'cache'),FAKE_DESKTOP=str(self.desktop),
-                        XCURSOR_PATH=str(icons),XDG_RUNTIME_DIR=str(self.folder/'run'),
+                        XCURSOR_PATH=str(icons),
                         FAKE_GUARD=str(self.guard_file),VISIBLE_LOG=str(self.visible_log))
+        self.env.update(XDG_RUNTIME_DIR=str(self.compositor_runtime),
+                        WAYLAND_DISPLAY=self.wayland,
+                        HYPRLAND_INSTANCE_SIGNATURE=self.instance)
         self.guard_server=GuardServer(self.folder)
         self.guard_server.start();self.addCleanup(self.guard_server.stop)
         self.state=self.folder/'cache'/'agent-computer-use'

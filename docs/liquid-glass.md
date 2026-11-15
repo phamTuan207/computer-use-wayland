@@ -36,23 +36,34 @@ hash-named immutable path, records the ABI and the cursor tree in a private
 manifest, and appends one clearly marked managed block to your Hyprland config
 (after backing it up). The generated hook is a `hyprland.start` listener.
 Saving the config may trigger its normal auto-reload; the listener does not
-activate the plugin during a reload.
+activate a plugin during a reload. On every config evaluation, the hook sources
+the repo's optics only when Hyprland reports exactly one loaded `hyprglass`
+version `1.1.1-cu.1`.
 
 Setup refuses to run — before building anything — when the compositor is not
-exactly `0.56.2`, when the header ABI does not match the running compositor,
-when a required dependency is missing, when any plugin is already loaded, when
-your config carries an edited managed block, when it is running inside a
+exactly `0.57.2`, when the header ABI does not match the running compositor,
+when a required dependency is missing, when the plugin inventory is not empty
+or exactly one verified `hyprbars` (`Vaxry`, `1.0`), when your config carries
+an edited managed block, when it is running inside a
 `computer-use` session, or when no cursor profile exists and you did not pass
 `--restore-theme` and `--restore-size`. It holds the session owner lock for the
 whole run so an automation cannot start mid-build.
 
 At the next fresh login the hook validates the manifest, the optics profile
 digest, the installed cursor tree and the recorded ABI, confirms the compositor
-actually just started (a 30-second window checked immediately before the load),
-and refuses if any of that fails or if a plugin is already loaded. It never
-falls back to a plain background on failure. **Never** hot-swap, reload or
-replace a module the compositor has loaded; to change backend, roll back to the
-previous immutable library and start a fresh login.
+actually just started (a 30-second window checked immediately before each
+first-load), and refuses if any of that fails or if the plugin inventory has
+changed. Glass first-load permits only no plugins or the same verified
+`hyprbars`; cursor first-load requires the accepted glass plus optional verified
+`hyprbars`. The complete inventory, including handles, is rechecked before each
+load. It never falls back to a plain background on failure. **Never** unload,
+hot-swap or replace a module the compositor has loaded; to change backend, use
+the previous immutable library at a fresh login.
+
+Loader results and failures are recorded as private JSON lines in
+`~/.cache/agent-computer-use/logs/visuals.jsonl`. Records include the stage,
+compositor instance and artifact hashes; they do not include session tokens or
+screenshots.
 
 ## Get the exact upstream source
 
@@ -61,7 +72,7 @@ pinned commit, and pass that checkout as `SOURCE`:
 
 ```sh
 git clone https://github.com/hyprnux/hyprglass.git /path/to/hyprglass
-git -C /path/to/hyprglass checkout 84c1a5ab217101a317d4edaab7fba2efcc1bf346
+git -C /path/to/hyprglass checkout 03a57c4451b4abee38feda2ffb725f55ecc0f2fd
 ```
 
 Run these commands from the computer-use-wayland checkout. The upstream source
@@ -77,21 +88,26 @@ compares this recorded value; it cannot infer ABI compatibility from the binary.
 python3 scripts/build-glass.py /path/to/hyprglass --local-optics
 ```
 
-`scripts/build-glass.py` enforces two constraints: the checkout must be a git
-worktree at `84c1a5ab217101a317d4edaab7fba2efcc1bf346`, and
-`pkg-config --modversion hyprland` must report exactly `0.56.2`, because the
+`scripts/build-glass.py` requires `--local-optics` and enforces two constraints:
+the checkout must be a git worktree at
+`03a57c4451b4abee38feda2ffb725f55ecc0f2fd`, and
+`pkg-config --modversion hyprland` must report exactly `0.57.2`, because the
 plugin links against that ABI. Besides the core dependencies in the README, the
-[pinned upstream Makefile](https://github.com/hyprnux/hyprglass/blob/84c1a5ab217101a317d4edaab7fba2efcc1bf346/Makefile)
+[pinned upstream Makefile](https://github.com/hyprnux/hyprglass/blob/03a57c4451b4abee38feda2ffb725f55ecc0f2fd/Makefile)
 requires `make`, a C++23 compiler and development files discoverable through
 `pkg-config` for `hyprland`, `pixman-1`, `libdrm` and `wayland-server`.
+The v1.1.1 source is the selected candidate from Hyprglass's 0.57 line; its
+upstream pin table does not list 0.57.2, so build and live acceptance on 0.57.2
+remain separate checks.
 
-**`--local-optics` is the recommended form**, and it is the form
+**`--local-optics` is required**, and it is the form
 `scripts/activate-glass.py` expects: that script loads
 `native/hyprglass-local-optics.lua` from its own tree, with no option to choose
-another. Omitting the flag applies a different patch — the capsule patch
-`native/hyprglass-capsule.patch` — which is an **exclusive experimental
-alternative** matching `native/hyprglass-indicator.lua`. Do not combine patches,
-and do not mix a library built one way with the profile of the other.
+another. This build reports version `1.1.1-cu.1`. The capsule patch
+`native/hyprglass-capsule.patch` and profile `native/hyprglass-indicator.lua`
+remain historical experimental 0.10.0 material; the current build rejects the
+old mode and does not select either file. Do not combine patches or mix a
+library with a profile from another version.
 
 The build script only selects and applies a patch. It does **not** copy or
 install any Lua profile. If you deploy these scripts somewhere other than the
@@ -114,29 +130,34 @@ matching Lua profile into place yourself.
 
 ## Activate, at a fresh login only
 
-Use the installer-returned library path and the ABI hash recorded for your
-verified build. From a fresh login with no plugins loaded:
+Use the installer-returned library path, ABI hash and optics profile hash for
+your verified build. From a fresh login with either no plugins loaded or the
+verified `hyprbars` plugin loaded:
 
 ```sh
-python3 scripts/activate-glass.py /path/to/plugin-dir/hyprglass-SHA256HERE.so --abi ABIFROMSTEP1
+python3 scripts/activate-glass.py /path/to/plugin-dir/hyprglass-SHA256HERE.so \
+  --abi ABIFROMSTEP1 --profile-sha256 "$(sha256sum native/hyprglass-local-optics.lua | cut -d' ' -f1)"
 ```
 
 `--abi` is the compositor ABI you recorded, not something detected from the
-binary. Activation reads Hyprland's ABI hash back and refuses to continue on a
-mismatch, and refuses if any plugin is already loaded.
+binary. `--profile-sha256` must match the repo optics file. Activation reads
+Hyprland's ABI and complete plugin inventory back, and refuses a mismatch or
+any plugin set other than empty or the same verified `hyprbars`.
 
-Activation **does** change the running session: it issues `plugin load` and then
-`eval dofile` on the profile. That is why it is a login-time step:
+Activation **does** change the running session: it issues `plugin load`, then a
+bounded normal config reload, and waits for clean `configerrors` and ready glass
+metadata. The config hook sources the optics during that reload, committing the
+indicator layer settings. Glass status is metadata only; it does not prove the
+indicator namespace's rendered appearance. That is why activation is a login-time
+step:
 
 - build and install never load anything;
-- **never** hot-swap, reload or replace a module the compositor has loaded;
+- **never** unload, hot-swap or replace a plugin the compositor has loaded;
 - to change backend, roll back to the previous immutable library and start a
   fresh login.
 
-For the capsule alternative there is no activation script. After verifying its
-ABI at a fresh login, load its immutable library first, then apply the matching
-`native/hyprglass-indicator.lua` profile manually. Do not use the local-optics
-activation helper for that alternative.
+The preserved capsule patch and profile are historical 0.10.0 experimental
+material and are not accepted by the current build or activation path.
 
 These manual scripts never edit your personal configuration. `scripts/setup.py`
 does, and only in one way: it backs your Hyprland config up and appends a single

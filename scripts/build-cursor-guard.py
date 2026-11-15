@@ -19,8 +19,8 @@ import tempfile
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / 'native/cursor-guard.cpp'
 OUTPUT = ROOT / 'native/cursor-guard.so'
-REQUIRED_HYPRLAND = '0.56.2'
-PINNED_COMMIT = 'efb50993780079460b0cbed1363e2166a2de1d9f'
+REQUIRED_HYPRLAND = '0.57.2'
+PINNED_COMMIT = '11cbc6c577b84ffb1edf4df3fc5b6128c3ae6947'
 
 
 def fail(message):

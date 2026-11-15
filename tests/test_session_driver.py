@@ -1,13 +1,30 @@
 import io
 import json
+import hashlib
 from pathlib import Path
 import subprocess
 import sys
+import time
 import unittest
 from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
 import session_driver
+
+
+def save_desktop_observation(folder,meta,image,token):
+    import cu
+    png_buffer=io.BytesIO();image.save(png_buffer,format='PNG');png=png_buffer.getvalue()
+    path=Path(folder)/(token+'.json');image_path=Path(folder)/(token+'.png')
+    meta.update({'scope':'window','observation_schema':cu.OBSERVATION_SCHEMA,'image_role':'clean-observation',
+                 **cu._capture_identity({}),'created':time.time(),'id':token,
+                 'image':str(image_path),'observation':str(path),'image_format':'PNG',
+                 'image_bytes':len(png),'image_sha256':hashlib.sha256(png).hexdigest(),
+                 'pixel_sha256':hashlib.sha256(image.tobytes()).hexdigest(),
+                 'image_size':list(image.size),'max_width':1280})
+    image_path.write_bytes(png);path.write_text(json.dumps(meta))
+    image_path.chmod(0o600);path.chmod(0o600)
+    return path
 
 
 class Driver(unittest.TestCase):
@@ -474,12 +491,12 @@ class FullRestoreEnvelope(unittest.TestCase):
             return image, dict(meta)
 
         with tempfile.TemporaryDirectory() as folder:
-            obs = Path(folder) / 'obs.json'
-            obs.write_text(json.dumps(meta))
+            obs=save_desktop_observation(folder,meta,image,'000000000101')
             actions = json.dumps([{'type': 'type', 'text': 'hi'}])
             token = 'a' * 32
             with contextlib.ExitStack() as stack:
                 stack.enter_context(patch.dict(os.environ, {'CU_SESSION_TOKEN': token}))
+                stack.enter_context(patch.object(cu,'STATE',Path(folder)))
                 stack.enter_context(patch.object(cu, 'check_cancel'))
                 stack.enter_context(patch.object(cu, 'environment', return_value={}))
                 stack.enter_context(patch.object(cu, 'hypr', side_effect=hypr))
@@ -494,7 +511,6 @@ class FullRestoreEnvelope(unittest.TestCase):
                                                  return_value='fake-remote'))
                 stack.enter_context(patch.object(cu, 'fcitx5_running', return_value=False))
                 stack.enter_context(patch.object(cu, 'run', side_effect=remote))
-                stack.enter_context(patch('PIL.Image.open', return_value=image))
                 stop = stack.enter_context(patch.object(cu, 'stop_session_on_error'))
                 output = io.StringIO()
                 code = session_driver.relay(
@@ -564,14 +580,14 @@ class FullRestoreEnvelope(unittest.TestCase):
             return image, dict(meta)
 
         with tempfile.TemporaryDirectory() as folder:
-            obs = Path(folder) / 'obs.json'
-            obs.write_text(json.dumps(meta))
+            obs=save_desktop_observation(folder,meta,image,'000000000102')
             actions = json.dumps([{'type': 'type', 'text': 'first'},
                                   {'type': 'wait', 'ms': 10},
                                   {'type': 'type', 'text': 'second'}])
             token = 'b' * 32
             with contextlib.ExitStack() as stack:
                 stack.enter_context(patch.dict(os.environ, {'CU_SESSION_TOKEN': token}))
+                stack.enter_context(patch.object(cu,'STATE',Path(folder)))
                 stack.enter_context(patch.object(cu, 'check_cancel'))
                 stack.enter_context(patch.object(cu, 'environment', return_value={}))
                 stack.enter_context(patch.object(cu, 'hypr', side_effect=hypr))
@@ -587,7 +603,6 @@ class FullRestoreEnvelope(unittest.TestCase):
                                                  return_value='fake-remote'))
                 stack.enter_context(patch.object(cu, 'fcitx5_running', return_value=False))
                 stack.enter_context(patch.object(cu, 'run', side_effect=remote))
-                stack.enter_context(patch('PIL.Image.open', return_value=image))
                 stop = stack.enter_context(patch.object(cu, 'stop_session_on_error'))
                 output = io.StringIO()
                 code = session_driver.relay(

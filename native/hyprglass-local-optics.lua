@@ -15,10 +15,17 @@ if hl.plugin.hyprglass then
   local config = {
     enabled = false, manage_window_blur = false, default_preset = "default",
     subsurfaces = { enabled = false },
-    layers = { enabled = true, namespaces = "computer-use-indicator",
-      preset = "default", mask_mode = "region" },
+    layers = { enabled = true, preset = "default", mask_mode = "region" },
     dark = material, light = material,
   }
   for key, value in pairs(material) do config[key] = value end
   hl.plugin.hyprglass.config(config)
+  -- mask_mode "contour": GTK 4.24 owns the surface background effect, so the
+  -- indicator cannot set a protocol blur region (a second get_background_effect
+  -- is a protocol error that kills the client). Contour traces the pill outline
+  -- from the rendered content instead; the liquid pill interior is transparent,
+  -- so "alpha" would leave a hollow frame.
+  hl.plugin.hyprglass.layer("computer-use-indicator", {
+    preset = "default", mask_mode = "contour"
+  })
 end

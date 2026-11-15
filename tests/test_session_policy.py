@@ -10,6 +10,7 @@ import contextlib
 import io
 import json
 import os
+import socket
 import subprocess
 import tempfile
 import time
@@ -36,24 +37,47 @@ WAIT = json.dumps([{'type': 'wait', 'ms': 10}])
 
 
 def base_meta(**over):
-    meta = {'backend': 'desktop', 'created': time.time(), 'window': ADDR,
+    meta = {'backend': 'desktop','observation_schema':cu.OBSERVATION_SCHEMA,
+            'image_role':'clean-observation','scope':'window','created':time.time(), 'window': ADDR,
             'window_bounds': [0, 0, 20, 20], 'monitor': 'test',
             'monitor_box': [0, 0, 20, 20], 'monitor_scale': 1,
             'monitor_transform': 0, 'image_size': [20, 20],
             'region': [0, 0, 20, 20], 'image': 'synthetic.png',
-            'max_width': 1280, 'pixel_sha256': '0000'}
+            'max_width': 1280,'pixel_sha256':'0000',**cu._capture_identity({}),
+            'created':time.time()}
     meta.update(over)
     return meta
 
 
+def write_observation(folder,token,*,image=None,**over):
+    from PIL import Image
+    import hashlib
+    meta=base_meta(**over)
+    if image is None:
+        color=tuple(hashlib.sha256(str(meta.get('pixel_sha256','default')).encode()).digest()[:3])
+        image=Image.new('RGB',(20,20),color)
+    else:image=image.convert('RGB')
+    raw=io.BytesIO();image.save(raw,format='PNG')
+    meta['image_size']=list(image.size)
+    png=raw.getvalue();meta.update(id=token,image=str(Path(folder)/(token+'.png')),
+        image_format='PNG',image_bytes=len(png),image_sha256=hashlib.sha256(png).hexdigest(),
+        pixel_sha256=hashlib.sha256(image.tobytes()).hexdigest(),
+        observation=str(Path(folder)/(token+'.json')))
+    Path(meta['image']).write_bytes(png)
+    Path(meta['observation']).write_text(json.dumps(meta))
+    Path(meta['image']).chmod(0o600);Path(meta['observation']).chmod(0o600)
+    return Path(meta['observation'])
+
+
 @contextlib.contextmanager
-def live(tmp, token, *, active, pre_calls, post, opened, close_error=None):
+def live(tmp, token, *, active, pre_calls, post, close_error=None):
     """Patch cu below desktop_act; active/pre_calls are consumed in order."""
     from PIL import Image  # noqa: F401 (ensures Pillow present like prod)
     state = Path(tmp)
     stack = contextlib.ExitStack()
     with stack:
         stack.enter_context(patch.object(cu, 'STATE', state))
+        stack.enter_context(patch.object(cu, 'CANCEL', state / 'cancelled'))
         stack.enter_context(patch.dict(os.environ, {'CU_SESSION_TOKEN': token}))
         stack.enter_context(patch.object(cu, 'check_cancel'))
         stack.enter_context(patch.object(cu, 'environment', return_value={}))
@@ -108,7 +132,6 @@ def live(tmp, token, *, active, pre_calls, post, opened, close_error=None):
         stack.enter_context(patch.object(cu, 'run_cancelable', return_value=''))
         stack.enter_context(patch.object(cu.shutil, 'which', return_value=None))
         stack.enter_context(patch.object(cu, 'fcitx5_running', return_value=False))
-        stack.enter_context(patch('PIL.Image.open', return_value=opened))
         stack.enter_context(patch('time.sleep'))
         stop = stack.enter_context(patch.object(cu, 'stop_session_on_error'))
         yield stop
@@ -121,21 +144,46 @@ def relay_lines(lines):
     return code, body
 
 
+def verified_test_environment(folder):
+    """Build the explicit fake socket tuple and pass the production verifier."""
+    runtime = Path(folder) / 'runtime'
+    instance, display = 'test-instance', 'wayland-test'
+    ipc = runtime / 'hypr' / instance / '.socket.sock'
+    wayland = runtime / display
+    ipc.parent.mkdir(parents=True)
+    sockets = []
+    try:
+        for path in (ipc, wayland):
+            endpoint = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            endpoint.bind(str(path))
+            sockets.append(endpoint)
+        supplied = {'XDG_RUNTIME_DIR': str(runtime),
+                    'WAYLAND_DISPLAY': display,
+                    'HYPRLAND_INSTANCE_SIGNATURE': instance}
+        instances = subprocess.CompletedProcess(
+            ['hyprctl', '-j', 'instances'], 0,
+            json.dumps([{'instance': instance, 'wl_socket': display}]), '')
+        with patch.dict(os.environ, supplied), \
+                patch.object(cu.subprocess, 'run', return_value=instances):
+            return cu.environment()
+    finally:
+        for endpoint in sockets:
+            endpoint.close()
+
+
 class RefusalFlow(unittest.TestCase):
     def test_focus_refusal_keeps_session_then_fresh_act_succeeds(self):
         from PIL import Image
         token = 'c' * 32
         same = Image.new('RGB', (20, 20))
         with tempfile.TemporaryDirectory() as tmp:
-            obs1 = Path(tmp) / 'obs1.json'
-            obs1.write_text(json.dumps(base_meta()))
-            obs2 = Path(tmp) / 'obs2.json'
-            after = base_meta(pixel_sha256='1111')
-            obs2.write_text(json.dumps(after))
+            obs1=write_observation(tmp,'000000000001')
+            obs2=write_observation(tmp,'000000000002',image=same,pixel_sha256='1111')
+            after=base_meta(pixel_sha256='1111')
             post = dict(after, observation=str(obs2))
             marker = Path(tmp) / ('session-reobserve-' + token + '.json')
             with live(tmp, token, active=['0xdead'] + [ADDR] * 8,
-                       pre_calls=[(same, {})], post=post, opened=same) as stop:
+                       pre_calls=[(same, {})], post=post) as stop:
                 refusal = session_driver.execute(
                     ['act', '--observation', str(obs1), '--actions', '-',
                      '--verbose'], WAIT)
@@ -168,33 +216,24 @@ class RefusalFlow(unittest.TestCase):
         token = 'd' * 32
         old, big, same = (Image.new('RGB', (20, 20)), Image.new('RGB', (30, 30)),
                           Image.new('RGB', (20, 20)))
-        screen_meta = base_meta(scope='screen')
-        del screen_meta['window']
         with tempfile.TemporaryDirectory() as tmp:
-            obs1 = Path(tmp) / 'obs1.json'
-            obs1.write_text(json.dumps(screen_meta))
-            obs2 = Path(tmp) / 'obs2.json'
-            after = base_meta(scope='screen', pixel_sha256='2222')
+            obs1=write_observation(tmp,'000000000003',image=old,scope='screen')
+            obs2=write_observation(tmp,'000000000004',image=same,scope='screen',pixel_sha256='2222')
+            after=base_meta(scope='screen',pixel_sha256='2222')
             del after['window']
-            obs2.write_text(json.dumps(after))
             post = dict(after, observation=str(obs2))
-            opened = {'first': old, 'second': same}
-            # Screen scope: the batch still opens with the pre-focus
-            # activewindow diagnostics query, so the queue needs one head
-            # entry (peeked, never consumed; screen guards never query it).
+            # The pre-batch focus diagnostic consumes one address even for a
+            # screen capture; screen guards themselves do not query focus.
             with live(tmp, token, active=['0xbeef'], pre_calls=[(big, {}), (same, {})],
-                       post=post, opened=None) as stop:
-                # opened differs per pre-capture: stale vs settled image.
-                with patch('PIL.Image.open',
-                           side_effect=lambda *a: opened.pop('first' if 'first' in opened else 'second')):
-                    code, body = relay_lines([
-                        {'args': ['act', '--observation', str(obs1),
-                                  '--actions', '-', '--verbose'], 'stdin': WAIT},
-                        {'args': ['observe', '--screen', 'test', '--verbose']},
-                        {'args': ['act', '--observation', str(obs2),
-                                  '--actions', '-', '--verbose'], 'stdin': WAIT},
-                        {'args': ['status']},
-                    ])
+                       post=post) as stop:
+                code, body = relay_lines([
+                    {'args': ['act', '--observation', str(obs1),
+                              '--actions', '-', '--verbose'], 'stdin': WAIT},
+                    {'args': ['observe', '--screen', 'test', '--verbose']},
+                    {'args': ['act', '--observation', str(obs2),
+                              '--actions', '-', '--verbose'], 'stdin': WAIT},
+                    {'args': ['status']},
+                ])
         self.assertEqual(code, 0, 'refusal must not stop the relay')
         refusal, observed, fresh, _ = body[1:]
         self.assertEqual(refusal['returncode'], 1)
@@ -212,10 +251,8 @@ class RequirementGate(unittest.TestCase):
         from PIL import Image
         token = 'e' * 32
         with tempfile.TemporaryDirectory() as tmp:
-            obs1 = Path(tmp) / 'obs1.json'
-            obs1.write_text(json.dumps(base_meta()))
-            with live(tmp, token, active=['0xdead'], pre_calls=[],
-                       post={}, opened=Image.new('RGB', (20, 20))) as stop:
+            obs1=write_observation(tmp,'000000000005')
+            with live(tmp, token, active=['0xdead'], pre_calls=[], post={}) as stop:
                 first = session_driver.execute(
                     ['act', '--observation', str(obs1), '--actions', '-',
                      '--verbose'], WAIT)
@@ -234,17 +271,12 @@ class RequirementGate(unittest.TestCase):
         stop.assert_called_once()  # non-transient act error stops the session
 
     def test_stale_path_after_new_observe_blocked(self):
-        from PIL import Image
         token = 'f' * 32
-        same = Image.new('RGB', (20, 20))
         with tempfile.TemporaryDirectory() as tmp:
-            obs1 = Path(tmp) / 'obs1.json'
-            obs1.write_text(json.dumps(base_meta()))
-            obs2 = Path(tmp) / 'obs2.json'
-            obs2.write_text(json.dumps(base_meta(pixel_sha256='3333')))
-            post = dict(base_meta(pixel_sha256='3333'), observation=str(obs2))
-            with live(tmp, token, active=['0xdead'], pre_calls=[],
-                       post=post, opened=same) as stop:
+            obs1=write_observation(tmp,'000000000006')
+            obs2=write_observation(tmp,'000000000007',pixel_sha256='3333')
+            post=dict(base_meta(pixel_sha256='3333'),observation=str(obs2))
+            with live(tmp, token, active=['0xdead'], pre_calls=[], post=post) as stop:
                 session_driver.execute(
                     ['act', '--observation', str(obs1), '--actions', '-',
                      '--verbose'], WAIT)
@@ -266,13 +298,10 @@ class KillEnvelope(unittest.TestCase):
         return ['act', '--observation', str(obs), '--actions', '-', '--verbose']
 
     def test_same_text_without_code_kills_session(self):
-        from PIL import Image
         token = 'a1' * 16
         with tempfile.TemporaryDirectory() as tmp:
-            obs = Path(tmp) / 'obs.json'
-            obs.write_text(json.dumps(base_meta()))
-            with live(tmp, token, active=[ADDR], pre_calls=[],
-                       post={}, opened=Image.new('RGB', (20, 20))) as stop:
+            obs=write_observation(tmp,'000000000008')
+            with live(tmp, token, active=[ADDR], pre_calls=[], post={}) as stop:
                 with patch.object(cu, 'desktop_act',
                                   side_effect=RuntimeError('screen changed')):
                     code, body = relay_lines([
@@ -314,11 +343,9 @@ class KillEnvelope(unittest.TestCase):
         token = 'b2' * 16
         same = Image.new('RGB', (20, 20))
         with tempfile.TemporaryDirectory() as tmp:
-            obs = Path(tmp) / 'obs.json'
-            obs.write_text(json.dumps(base_meta()))
+            obs=write_observation(tmp,'000000000009',image=same)
             with live(tmp, token, active=[ADDR] * 8, pre_calls=[(same, {})],
-                       post=RuntimeError('after capture down'),
-                       opened=same) as stop:
+                       post=RuntimeError('after capture down')) as stop:
                 result = session_driver.execute(self.act_args(obs), WAIT)
         body = json.loads(result.stdout)
         self.assertEqual(result.returncode, 1)
@@ -334,10 +361,9 @@ class KillEnvelope(unittest.TestCase):
         same = Image.new('RGB', (20, 20))
         scroll = json.dumps([{'type': 'scroll', 'x': 5, 'y': 5, 'dx': 0, 'dy': 10}])
         with tempfile.TemporaryDirectory() as tmp:
-            obs = Path(tmp) / 'obs.json'
-            obs.write_text(json.dumps(base_meta()))
+            obs=write_observation(tmp,'00000000000a',image=same)
             with live(tmp, token, active=[ADDR] * 6, pre_calls=[(same, {})],
-                       post=base_meta(pixel_sha256='4444'), opened=same,
+                       post=base_meta(pixel_sha256='4444'),
                        close_error=RuntimeError('close boom')) as stop:
                 result = session_driver.execute(self.act_args(obs), scroll)
         body = json.loads(result.stdout)
@@ -353,11 +379,10 @@ class KillEnvelope(unittest.TestCase):
         same = Image.new('RGB', (20, 20))
         click = json.dumps([{'type': 'click', 'x': 5, 'y': 5}])
         with tempfile.TemporaryDirectory() as tmp:
-            obs = Path(tmp) / 'obs.json'
-            obs.write_text(json.dumps(base_meta()))
+            obs=write_observation(tmp,'00000000000b',image=same)
             with live(tmp, token, active=[ADDR] * 5 + ['0xdead'] * 2,
                        pre_calls=[(same, {})],
-                       post=base_meta(pixel_sha256='5555'), opened=same,
+                       post=base_meta(pixel_sha256='5555'),
                        close_error=RuntimeError('close boom')) as stop:
                 result = session_driver.execute(self.act_args(obs), click)
         body = json.loads(result.stdout)
@@ -371,7 +396,10 @@ class KillEnvelope(unittest.TestCase):
     def test_cancel_never_whitelisted_real(self):
         token = 'd6' * 16
         with tempfile.TemporaryDirectory() as tmp:
-            with patch.object(cu, 'STATE', Path(tmp)), \
+            env = verified_test_environment(tmp)
+            with patch.object(cu, 'environment', return_value=env), \
+                    patch.object(cu, 'STATE', Path(tmp)), \
+                    patch.object(cu, 'CANCEL', Path(tmp) / 'cancelled'), \
                     patch.dict(os.environ, {'CU_SESSION_TOKEN': token}), \
                     patch.object(cu, 'check_cancel',
                                  side_effect=RuntimeError('cancelled by user; stop now')), \

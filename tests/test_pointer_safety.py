@@ -44,13 +44,16 @@ class PointerSafety(unittest.TestCase):
         self.image = Image.new('RGB', (1280, 800), 'white')
         self.monitor = {'name': 'fixture', 'x': 0, 'y': 0, 'width': 1280,
                         'height': 800, 'scale': 1}
-        self.meta = {'backend': 'desktop', 'scope': 'window', 'created': time.time(),
+        self.meta = {'backend': 'desktop', 'observation_schema':cu.OBSERVATION_SCHEMA,
+                     'image_role':'clean-observation','scope': 'window', 'created': time.time(),
                      'window': 'fixture', 'window_bounds': [0, 0, 1280, 800],
                      'monitor': 'fixture', 'monitor_box': [0, 0, 1280, 800],
                      'monitor_scale': 1, 'monitor_transform': 0,
                      'image_size': [1280, 800], 'region': [0, 0, 1280, 800],
                      'image': 'synthetic.png', 'max_width': 1280,
-                     'pixel_sha256': 'fixture'}
+                     'pixel_sha256': 'fixture',**cu._capture_identity({}),
+                     'capture_started_monotonic':.001,
+                     'capture_started_wall':time.time()-1,'created':time.time()}
         self.active = 'fixture'
         self.cancelled = False
         stack = ExitStack()
@@ -59,7 +62,7 @@ class PointerSafety(unittest.TestCase):
         self.focus = stack.enter_context(patch.object(cu, 'focus'))
         self.pointer_cls = stack.enter_context(patch.object(cu, 'Pointer'))
         self.pointer = self.pointer_cls.return_value
-        stack.enter_context(patch.object(cu, 'hypr', side_effect=self.hypr))
+        self.hypr_mock=stack.enter_context(patch.object(cu,'hypr',side_effect=self.hypr))
         stack.enter_context(patch.object(cu, 'window', return_value={
             'at': [0, 0], 'size': [1280, 800]}))
         self.observe = stack.enter_context(patch.object(
@@ -71,7 +74,7 @@ class PointerSafety(unittest.TestCase):
         self.typed = stack.enter_context(patch.object(cu, 'run_cancelable', side_effect=AssertionError('live input')))
         stack.enter_context(patch.object(cu.time, 'sleep'))
         stack.enter_context(patch.object(cu.time, 'monotonic',
-                                        side_effect=itertools.count(step=.01)))
+                                        side_effect=itertools.count(start=.01,step=.01)))
         # A mock test must never reach the live session socket.
         self.indicator = stack.enter_context(patch.object(indicator, 'request', return_value=False))
         stack.enter_context(patch.object(indicator.socket, 'socket',
@@ -153,6 +156,21 @@ class PointerSafety(unittest.TestCase):
         self.assertEqual(buttons, ['button 0 1', 'button 0 0'])
         self.pointer.close.assert_called_once()
 
+    def test_focus_change_after_pointer_motion_stops_next_keyboard_group(self):
+        motions=[0]
+        def command(text):
+            if text.startswith('abs '):
+                motions[0]+=1
+                if motions[0]==2:self.active='other-window'
+        self.pointer.command.side_effect=command
+        result=cu.desktop_act({},self.meta,[{'type':'move','x':10,'y':10},
+                                            {'type':'type','text':'must not type'}],
+                              after_capture=False)
+        self.assertFalse(result['ok'])
+        self.assertEqual(result['completed'],1)
+        self.assertIn('focus changed',result['error'])
+        self.typed.assert_not_called()
+
     def test_single_click_has_no_trailing_wait(self):
         waits = []
         with patch.object(cu, 'wait_cancelable', side_effect=lambda s: waits.append(s)):
@@ -162,6 +180,23 @@ class PointerSafety(unittest.TestCase):
         buttons = [c.args[0] for c in self.pointer.command.call_args_list
                    if c.args[0].startswith('button')]
         self.assertEqual(buttons, ['button 0 1', 'button 0 0'])
+
+    def test_post_click_pointer_miss_is_uncertain_and_stops_remaining_clicks(self):
+        cursor_calls=[0]
+        def query(env,what):
+            if what=='cursorpos':
+                cursor_calls[0]+=1
+                return {'x':20,'y':20} if cursor_calls[0]==5 else {'x':10,'y':10}
+            return self.hypr(env,what)
+        self.hypr_mock.side_effect=query
+        result=cu.desktop_act({},self.meta,[{'type':'click','x':10,'y':10},
+                                           {'type':'click','x':20,'y':20}])
+        self.assertFalse(result['ok'])
+        self.assertTrue(result['outcome_uncertain'])
+        self.assertIn('outcome uncertain',result['error'])
+        buttons=[call.args[0] for call in self.pointer.command.call_args_list
+                 if call.args[0].startswith('button ')]
+        self.assertEqual(buttons,['button 0 1','button 0 0'])
 
     def test_double_click_waits_between_presses_only(self):
         waits = []

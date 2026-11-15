@@ -399,8 +399,15 @@ int main(void) {
     gtk_window_set_child(output->window,output->area);
     g_signal_connect(output->window,"map",G_CALLBACK(mapped),NULL);
     gtk_widget_realize(GTK_WIDGET(output->window));
-    GdkSurface *surface=gtk_native_get_surface(GTK_NATIVE(output->window));
-    output->glass=ext_background_effect_manager_v1_get_background_effect(effects,gdk_wayland_surface_get_wl_surface(surface));
+    // GTK 4.24 requests the background effect itself for every realized
+    // surface (verified: a plain GtkWindow triggers get_background_effect on
+    // the manager GTK bound). A second request for the same surface is a
+    // protocol error ("BackgroundEffect already present") and the compositor
+    // kills the client. So the indicator must NOT request its own effect;
+    // output->glass stays NULL and glass_region() no-ops. The glass mask now
+    // comes from the plugin tracing the pill outline (mask_mode "contour"
+    // in native/hyprglass-local-optics.lua), not from a protocol blur region.
+    output->glass=NULL;
     GdkFrameClock *clock=gtk_widget_get_frame_clock(GTK_WIDGET(output->window));
     g_signal_connect_after(clock,"after-paint",G_CALLBACK(painted),output);
     g_ptr_array_add(outputs,output);
@@ -430,7 +437,7 @@ int main(void) {
   for (guint i=0;i<outputs->len;i++) {
     Output *output=g_ptr_array_index(outputs,i);
     if (output->frame) wp_presentation_feedback_destroy(output->frame);
-    ext_background_effect_surface_v1_destroy(output->glass);
+    if (output->glass) ext_background_effect_surface_v1_destroy(output->glass);
     gtk_window_destroy(output->window);g_object_unref(output->monitor);
   }
   gdk_display_sync(gdk_display_get_default());

@@ -3,19 +3,44 @@
 
 Validates a manifest before any RPC, then hands off to the existing
 activate-glass helper, which owns the ABI, plugin-inventory and profile checks.
-Only that helper performs activation; this loader never unloads or reloads plugins.
+After its one normal reload, this loader starts the cursor guard and a temporary
+indicator overlay so first-use shader compilation can finish before readiness checks.
+This loader never unloads or reloads plugins itself.
 """
 import argparse
 import hashlib
 import json
 import os
 from pathlib import Path
+import re
 import runpy
+import stat
 import sys
 import subprocess
 import tempfile
+import time
+
+
+def _write_spawn_log():
+    try:
+        if Path(sys.argv[0]).resolve() != Path(__file__).resolve():
+            return
+        directory = Path.home()/'.cache/agent-computer-use/logs'
+        directory.mkdir(parents=True, exist_ok=True, mode=0o700)
+        record = {'timestamp': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
+                  'pid': os.getpid(), 'argv': sys.argv}
+        with (directory/'visuals-spawn.jsonl').open('a', encoding='utf-8') as stream:
+            stream.write(json.dumps(record, ensure_ascii=False, separators=(',', ':')) + '\n')
+    except Exception:
+        pass
+
+
+_write_spawn_log()
+
 import cursor_theme
 import cursor_session
+import activation_checks
+import indicator
 
 ROOT = Path(__file__).resolve().parents[1]
 OPTICS = ROOT / 'native/hyprglass-local-optics.lua'
@@ -49,10 +74,12 @@ def atomic_write(path, data):
     return path
 
 
-def _activate(library, abi, env):
+def _activate(library, abi, profile_sha256, env, *, after_reload=None):
     """Run the existing helper by path; its own guards are the only activation path."""
     namespace = runpy.run_path(str(ACTIVATE), run_name='activate_glass')
-    namespace['activate'](library, abi, env, before_load=lambda:require_fresh_login(env))
+    namespace['activate'](library, abi, profile_sha256, env,
+                         before_load=lambda:require_fresh_login(env),
+                         after_reload=after_reload)
     return True
 
 
@@ -78,18 +105,85 @@ def require_fresh_login(env):
         raise RuntimeError('visuals can only load during the first 30 seconds of a fresh login')
 
 
+def _loader_log(progress, env, error=None):
+    """Append one private, bounded loader record; never log tokens or image paths."""
+    try:
+        state = Path(cursor_session.STATE)
+        if state.is_symlink():
+            return
+        state.mkdir(parents=True, exist_ok=True, mode=0o700)
+        state.chmod(0o700)
+        directory = state/'logs'
+        if directory.is_symlink():
+            return
+        directory.mkdir(mode=0o700, exist_ok=True)
+        directory.chmod(0o700)
+        path = directory/'visuals.jsonl'
+        flags = os.O_WRONLY | os.O_APPEND | os.O_CREAT | getattr(os, 'O_NOFOLLOW', 0)
+        fd = os.open(path, flags, 0o600)
+        try:
+            info = os.fstat(fd)
+            if not stat.S_ISREG(info.st_mode) or info.st_uid != os.getuid():
+                return
+            os.fchmod(fd, 0o600)
+            failure = None
+            if error is not None:
+                message = str(error).splitlines()[0][:240]
+                for token in (env.get('CU_SESSION_TOKEN'), os.environ.get('CU_SESSION_TOKEN')):
+                    if token:
+                        message = message.replace(token, '[redacted]')
+                message = re.sub(r'(?i)\b[0-9a-f]{32}\b', '[redacted]', message)
+                message = re.sub(r'(?<![\w:])/(?:[^\s"\']+)', '[path]', message)
+                message = re.sub(r'\b[^\s]+\.(?:png|jpe?g|webp|bmp|gif)\b', '[image]', message,
+                                 flags=re.IGNORECASE)
+                failure = type(error).__name__ + ': ' + message
+            record = {
+                'time': time.time(),
+                'stage': progress.get('stage', 'unknown'),
+                'instance': progress.get('instance'),
+                'artifact_sha256': progress.get('artifact_sha256'),
+                'glass_sha256': progress.get('glass_sha256'),
+                'cursor_guard_sha256': progress.get('cursor_guard_sha256'),
+                'failure': failure,
+            }
+            raw = (json.dumps(record, sort_keys=True, separators=(',', ':')) + '\n').encode()
+            if info.st_size + len(raw) > 1024*1024:
+                return
+            view = memoryview(raw)
+            while view:
+                view = view[os.write(fd, view):]
+            os.fsync(fd)
+        finally:
+            os.close(fd)
+    except (OSError, ValueError, TypeError):
+        pass
+
+
 def login(manifest, env):
     """Exclude task sessions for the entire backend activation."""
-    if env.get('CU_SESSION_TOKEN') or os.environ.get('CU_SESSION_TOKEN'):
-        raise RuntimeError('refusing to load visuals inside an automation session')
-    with cursor_session.owner_lock():
-        if cursor_session.SNAPSHOT.exists():
-            raise RuntimeError('finish or recover the retained session before loading visuals')
-        return _login(manifest, env)
+    progress = {'stage': 'session_guard',
+                'instance': (env.get('HYPRLAND_INSTANCE_SIGNATURE') or '').strip() or None,
+                'artifact_sha256': None, 'glass_sha256': None,
+                'cursor_guard_sha256': None}
+    try:
+        if env.get('CU_SESSION_TOKEN') or os.environ.get('CU_SESSION_TOKEN'):
+            raise RuntimeError('refusing to load visuals inside an automation session')
+        progress['stage'] = 'session_lock'
+        with cursor_session.owner_lock():
+            if cursor_session.SNAPSHOT.exists():
+                raise RuntimeError('finish or recover the retained session before loading visuals')
+            result = _login(manifest, env, progress)
+        _loader_log(progress, env)
+        return result
+    except Exception as error:
+        _loader_log(progress, env, error)
+        raise
 
 
-def _login(manifest, env):
+def _login(manifest, env, progress=None):
     """Validate before calling the existing guarded activation helper."""
+    progress = progress if progress is not None else {}
+    progress['stage'] = 'manifest_validation'
     if env.get('CU_SESSION_TOKEN') or os.environ.get('CU_SESSION_TOKEN'):
         raise RuntimeError('refusing to load visuals inside an automation session')
     manifest = json.loads(Path(manifest).read_text())
@@ -107,6 +201,8 @@ def _login(manifest, env):
         raise ValueError('library must carry its own SHA256 in the filename')
     if manifest['profile_sha256'] != hashlib.sha256(OPTICS.read_bytes()).hexdigest():
         raise ValueError('profile does not match the pinned optics source')
+    progress['glass_sha256'] = digest
+    progress['artifact_sha256'] = digest
     instance = (env.get('HYPRLAND_INSTANCE_SIGNATURE') or '').strip()
     if not instance:
         raise RuntimeError('no compositor instance in this environment')
@@ -131,8 +227,29 @@ def _login(manifest, env):
         if digest_tree!=manifest['cursor_tree_sha256'] or profile['theme']!='cu-agent-'+digest_tree or directory.name!=profile['theme']:
             raise ValueError('cursor tree differs from setup')
     guard = _validated_guard_library(manifest)
-    _activate(str(library), manifest['abi'], env)
-    _activate_cursor_guard(str(guard), manifest['abi'], env)
+    guard_digest = hashlib.sha256(guard.read_bytes()).hexdigest()
+    progress['cursor_guard_sha256'] = guard_digest
+    progress['stage'] = 'glass_first_load'
+    progress['artifact_sha256'] = digest
+    def after_reload():
+        progress['stage'] = 'cursor_guard_first_load'
+        progress['artifact_sha256'] = guard_digest
+        _activate_cursor_guard(str(guard), manifest['abi'], env)
+        progress['stage'] = 'indicator_shader_warmup'
+        progress['artifact_sha256'] = digest
+        overlay = indicator.Native(env)
+        try:
+            if overlay.process.poll() is not None:
+                raise RuntimeError('indicator exited during shader warm-up')
+        finally:
+            overlay.close()
+
+    _activate(str(library), manifest['abi'], manifest['profile_sha256'], env,
+              after_reload=after_reload)
+    progress['stage'] = 'final_glass_verification'
+    progress['artifact_sha256'] = digest
+    activation_checks.wait_for_profile(env)
+    progress['stage'] = 'complete'
     return {'ok': True}
 
 

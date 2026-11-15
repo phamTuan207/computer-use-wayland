@@ -1,5 +1,6 @@
 // Session-owned cursor pixels. No input interception or global theme changes.
 #include <hyprland/src/plugins/PluginAPI.hpp>
+#include <hyprland/src/ipc/s1/S1.hpp>
 #include <hyprland/src/Compositor.hpp>
 #include <hyprland/src/pointer/PointerManager.hpp>
 #include <hyprland/src/pointer/cursor/CursorManager.hpp>
@@ -335,13 +336,21 @@ UP<Guard> guard;
 APICALL EXPORT std::string PLUGIN_API_VERSION() { return HYPRLAND_API_VERSION; }
 
 APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle) {
-    if (std::string(GIT_COMMIT_HASH) != "efb50993780079460b0cbed1363e2166a2de1d9f" ||
+    if (std::string(GIT_COMMIT_HASH) != "11cbc6c577b84ffb1edf4df3fc5b6128c3ae6947" ||
         std::string(__hyprland_api_get_hash()) != __hyprland_api_get_client_hash())
-        throw std::runtime_error("cursor guard requires pinned Hyprland 0.56.2 ABI");
+        throw std::runtime_error("cursor guard requires pinned Hyprland 0.57.2 ABI");
     guard = makeUnique<Guard>();
-    if (!HyprlandAPI::registerHyprCtlCommand(handle, {"cu-cursor", false, [](eHyprCtlOutputFormat, std::string request) {
-            try { return guard->command(request); } catch (...) { return std::string("cursor guard cleanup failed"); }
-        }})) {
+    if (!HyprlandAPI::registerHyprCtlCommand(handle, IPC::Socket1::SCommand{
+            .name = "cu-cursor",
+            .match = IPC::Socket1::COMMAND_MATCH_PREFIX,
+            .handler = [](const IPC::Socket1::SRequest& request) -> IPC::Socket1::SResponse {
+                try {
+                    return guard->command(request.command);
+                } catch (...) {
+                    return std::string("cursor guard cleanup failed");
+                }
+            },
+        })) {
         guard.reset(); throw std::runtime_error("cursor guard command registration failed");
     }
     return {"computer-use-cursor", "Session-owned cursor image lease", "computer-use-wayland", "1.0.0"};

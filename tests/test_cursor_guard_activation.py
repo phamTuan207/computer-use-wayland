@@ -18,12 +18,18 @@ _spec.loader.exec_module(activate_guard)
 import indicator as real_indicator
 import cursor_session as real_session
 
-PIN = 'efb50993780079460b0cbed1363e2166a2de1d9f'
-ABI = PIN + '_aq_0.15_hu_0.14_hg_0.5_hc_0.1_hlg_0.6'
-VERSION = {'version': '0.56.2', 'commit': PIN, 'abiHash': ABI}
-PLUGINS = [{'name': 'hyprglass', 'version': real_indicator.LIQUID_VERSION}]
-
-
+PIN = '11cbc6c577b84ffb1edf4df3fc5b6128c3ae6947'
+ABI = PIN + '_aq_0.16_hu_0.14_hg_0.6_hc_0.1_hlg_0.6'
+VERSION = {'version': '0.57.2', 'commit': PIN, 'abiHash': ABI}
+GLASS = {'name': 'hyprglass', 'author': 'hyprnux', 'handle': 'aabbccddeeff',
+         'version': real_indicator.LIQUID_VERSION, 'description': 'Liquid glass'}
+BAR = {'name': 'hyprbars', 'author': 'Vaxry', 'handle': '55ae075ca090',
+       'version': '1.0', 'description': 'Window title bars'}
+GUARD = {'name': 'computer-use-cursor', 'author': 'computer-use-wayland',
+         'handle': '112233445566', 'version': '1.0.0',
+         'description': 'Session-owned cursor image lease'}
+UNKNOWN = {'name': 'other', 'author': 'Other', 'handle': '1234',
+           'version': '1', 'description': 'Unknown'}
 def sha(data):
     return hashlib.sha256(data).hexdigest()
 
@@ -38,7 +44,7 @@ class ActivateTests(unittest.TestCase):
         self.snapshot = self.dir / 'session.json'
         self.env = {'HYPRLAND_INSTANCE_SIGNATURE': 'fresh-login'}
         self.version = dict(VERSION)
-        self.plugins = [dict(PLUGINS[0])]
+        self.plugins = [dict(GLASS)]
         self.load_answer = 'ok'
         self.calls = []
         query = mock.Mock(side_effect=self._query)
@@ -64,7 +70,9 @@ class ActivateTests(unittest.TestCase):
             return json.dumps(self.version)
         if argv[:4] == ['hyprctl', '-j', 'plugin', 'list']:
             return json.dumps(self.plugins)
-        if argv[:2] == ['hyprctl', 'plugin']:
+        if argv[:3] == ['hyprctl', 'plugin', 'load']:
+            if self.load_answer == 'ok':
+                self.plugins = [*self.plugins, dict(GUARD)]
             return self.load_answer
         raise AssertionError('unexpected query: ' + ' '.join(argv))
 
@@ -80,6 +88,7 @@ class ActivateTests(unittest.TestCase):
         self.assertEqual(loads, [['hyprctl', 'plugin', 'load', str(self.library)]])
         self.before_load.assert_called_once_with()
         self.check.assert_called_once_with(self.env)
+        self.assertEqual(self.plugins, [dict(GLASS), dict(GUARD)])
         self.assertLess(self.calls.index(['hyprctl', '-j', 'version']),
                         len(self.calls))
 
@@ -151,16 +160,30 @@ class ActivateTests(unittest.TestCase):
             self.activate(abi='deadbeef_aq_0.15')
         self.assertNotIn(['hyprctl', 'plugin', 'load', str(self.library)], self.calls)
 
-    def test_plugin_inventory_must_be_only_accepted_glass(self):
-        inventories = ([], [{**self.plugins[0], 'version': 'x'}],
-                       [{'name': 'other', 'version': '1'}],
-                       self.plugins + [{'name': 'computer-use-cursor', 'version': '1.0.0'}],
+    def test_plugin_inventory_requires_accepted_glass_and_allows_hyprbars(self):
+        inventories = ([], [{**GLASS, 'version': 'x'}], [dict(UNKNOWN)],
+                       [dict(GLASS), dict(GLASS)],
+                       [{**GLASS, 'handle': 'not-hex'}],
+                       [{key: value for key, value in GLASS.items() if key != 'description'}],
                        'not-a-list')
         for inventory in inventories:
             with self.subTest(inventory=str(inventory)[:60]):
                 self.plugins = inventory
                 with self.assertRaises(RuntimeError):
                     self.activate()
+        self.assertNotIn(['hyprctl', 'plugin', 'load', str(self.library)], self.calls)
+
+    def test_verified_hyprbars_can_coexist_with_glass(self):
+        self.plugins = [dict(GLASS), dict(BAR)]
+        self.assertTrue(self.activate())
+        self.assertEqual(self.plugins, [dict(GLASS), dict(BAR), dict(GUARD)])
+
+    def test_plugin_inventory_drift_after_gate_refuses_load(self):
+        def change_handle():
+            self.plugins[0]['handle'] = 'deadbeef'
+
+        with self.assertRaisesRegex(RuntimeError, 'ownership changed'):
+            self.activate(before_load=change_handle)
         self.assertNotIn(['hyprctl', 'plugin', 'load', str(self.library)], self.calls)
 
     def test_missing_liquid_backend_refuses(self):

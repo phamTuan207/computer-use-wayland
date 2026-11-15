@@ -6,17 +6,17 @@ ABI requirement. It applies one supplied patch and builds in the source tree.
 It never resets, cleans, stashes or deletes, and it never installs or loads anything.
 
 Usage:
-    python3 scripts/build-glass.py SOURCE [--allow-dirty]
+    python3 scripts/build-glass.py SOURCE --local-optics [--allow-dirty]
 """
 import argparse
 from pathlib import Path
 import subprocess
 import sys
 
-REQUIRED_COMMIT = '84c1a5ab217101a317d4edaab7fba2efcc1bf346'
-REQUIRED_HYPRLAND = '0.56.2'
-VERSION = '0.10.0-cu.1'
-PATCH = Path(__file__).resolve().parents[1] / 'native/hyprglass-capsule.patch'
+REQUIRED_COMMIT = '03a57c4451b4abee38feda2ffb725f55ecc0f2fd'
+REQUIRED_HYPRLAND = '0.57.2'
+VERSION = '1.1.1-cu.1'
+PATCH = Path(__file__).resolve().parents[1] / 'native/hyprglass-local-optics.patch'
 
 
 def fail(message):
@@ -39,12 +39,11 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument('source', metavar='SOURCE',
                         help='Hyprglass git worktree pinned to ' + REQUIRED_COMMIT)
-    parser.add_argument('--local-optics', action='store_true',
-                        help='use upstream optical formula with pill-local geometry')
+    parser.add_argument('--local-optics', action='store_true', required=True,
+                        help='required; build the accepted upstream local-optics profile')
     parser.add_argument('--allow-dirty', action='store_true',
                         help='allow pre-existing tracked or untracked source changes')
     args = parser.parse_args(argv)
-    patch = PATCH.with_name('hyprglass-local-optics.patch') if args.local_optics else PATCH
 
     source = Path(args.source).resolve()
     if not source.is_dir():
@@ -66,18 +65,18 @@ def main(argv=None):
         fail('hyprland {} required, found {}'.format(REQUIRED_HYPRLAND,
                                                      installed.stdout.strip() or 'none'))
 
-    if not patch.is_file():
-        fail('patch not supplied: ' + str(patch))
+    if not PATCH.is_file():
+        fail('patch not supplied: ' + str(PATCH))
 
-    if run(['git', 'apply', '--reverse', '--check', str(patch)], cwd=source).returncode == 0:
-        print('capsule patch already applied')
+    if run(['git', 'apply', '--reverse', '--check', str(PATCH)], cwd=source).returncode == 0:
+        print('local-optics patch already applied')
     else:
-        if run(['git', 'apply', '--check', str(patch)], cwd=source).returncode != 0:
+        if run(['git', 'apply', '--check', str(PATCH)], cwd=source).returncode != 0:
             fail('patch does not apply cleanly to ' + REQUIRED_COMMIT)
-        applied = run(['git', 'apply', str(patch)], cwd=source)
+        applied = run(['git', 'apply', str(PATCH)], cwd=source)
         if applied.returncode != 0:
             fail('patch application failed: ' + applied.stderr.strip())
-        print('capsule patch applied')
+        print('local-optics patch applied')
 
     # Applying our patch dirties a clean checkout; only initial dirt needs opt-in.
     build_edits = output(['git', '-C', str(source), 'status', '--porcelain', '--untracked-files=all'])

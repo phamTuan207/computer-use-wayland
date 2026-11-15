@@ -53,7 +53,10 @@ def main():
             p=subprocess.run([sys.executable,str(args.cli.resolve()),'session','--',
                 sys.executable,str(Path(__file__).resolve()),'driver',str(args.cli.resolve()),
                 args.screen,str(destination)],env=env,capture_output=True,text=True,timeout=45)
-            row=json.loads(destination.read_text()) if destination.exists() else {'startup_error':p.stderr}
+            row=json.loads(destination.read_text()) if destination.exists() else {
+                'startup_error':p.stderr or p.stdout,
+                'session_stdout':p.stdout,
+            }
             row.update(session_ms=(time.perf_counter()-start)*1000,session_exit=p.returncode,
                        startup_log=p.stderr.strip());rows.append(row)
             destination.unlink(missing_ok=True)

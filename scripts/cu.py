@@ -13,6 +13,7 @@ import re
 import select
 import shutil
 import socket
+import stat
 import subprocess
 import sys
 import time
@@ -28,6 +29,9 @@ BROWSER_ENDPOINT = 'http://127.0.0.1:9222'
 SESSION_KEYS = {'XDG_RUNTIME_DIR','WAYLAND_DISPLAY','DISPLAY','HYPRLAND_INSTANCE_SIGNATURE',
                 'DBUS_SESSION_BUS_ADDRESS','XDG_CURRENT_DESKTOP','XDG_SESSION_TYPE',
                 'GDK_BACKEND','QT_QPA_PLATFORM','ELECTRON_OZONE_PLATFORM_HINT','MOZ_ENABLE_WAYLAND'}
+OBSERVATION_SCHEMA = 2
+OBSERVATION_MAX_AGE = 90
+INSTANCE_RE = re.compile(r'[A-Za-z0-9_.-]{1,200}')
 
 MODIFIERS={'ctrl':'ctrl','control':'ctrl','alt':'alt','altgr':'altgr','shift':'shift','super':'logo','meta':'logo','win':'logo','logo':'logo'}
 KEY_ALIASES={'enter':'Return','return':'Return','esc':'Escape','escape':'Escape','backspace':'BackSpace',
@@ -90,30 +94,69 @@ def standalone_type_argv(a):
     if a.get('delay_ms',0):argv+=['-d',str(a['delay_ms'])]
     return argv+['-','-p','VoidSymbol']
 
+def _session_tuple(env):
+    return {key:env.get(key) for key in ('XDG_RUNTIME_DIR','WAYLAND_DISPLAY','HYPRLAND_INSTANCE_SIGNATURE')}
+
+def _validate_session_tuple(env):
+    values=_session_tuple(env)
+    runtime,display,instance=(values[k] for k in ('XDG_RUNTIME_DIR','WAYLAND_DISPLAY','HYPRLAND_INSTANCE_SIGNATURE'))
+    if not all(isinstance(value,str) and value for value in (runtime,display,instance)):
+        raise RuntimeError('incomplete compositor socket/instance tuple; refusing environment discovery')
+    if not Path(runtime).is_absolute() or not INSTANCE_RE.fullmatch(instance) or instance in ('.','..'):
+        raise RuntimeError('invalid compositor socket/instance tuple')
+    if '/' in display or display in ('.','..'):
+        raise RuntimeError('invalid Wayland socket name')
+    socket_path=Path(runtime)/display
+    if not socket_path.is_socket():
+        raise RuntimeError('explicit Wayland socket is unavailable; refusing to switch compositor')
+    ipc_path=Path(runtime)/'hypr'/instance/'.socket.sock'
+    if not ipc_path.is_socket():
+        raise RuntimeError('explicit compositor socket is unavailable; refusing to switch compositor')
+    try:
+        response=subprocess.run(['hyprctl','-j','instances'],env=env,capture_output=True,text=True,timeout=3)
+        rows=json.loads(response.stdout) if response.returncode==0 else None
+    except (OSError,subprocess.TimeoutExpired,ValueError):
+        rows=None
+    if (not isinstance(rows,list) or sum(1 for row in rows if isinstance(row,dict) and
+            row.get('instance')==instance and row.get('wl_socket')==display)!=1):
+        raise RuntimeError('compositor instance does not match the supplied socket tuple; refusing to switch')
+    return values
+
 def environment():
-    env = os.environ.copy()
-    # Refresh even a stale inherited session signature; do not copy secrets or PATH.
-    for name in ('quickshell','Hyprland','waybar','kitty'):
-        p = subprocess.run(['pgrep','-x',name], capture_output=True, text=True)
-        for pid in p.stdout.split():
-            try:
-                # A nested Quickshell shares the host PID namespace; only the
-                # host shell process (the Omarchy shell path) selects the GUI session.
-                if name == 'quickshell' and b'/usr/share/omarchy/shell' not in Path('/proc',pid,'cmdline').read_bytes():
-                    continue
-                data = dict(s.split('=',1) for s in Path('/proc',pid,'environ').read_bytes().decode().split('\0') if '=' in s)
-                if data.get('WAYLAND_DISPLAY') and data.get('HYPRLAND_INSTANCE_SIGNATURE'):
-                    # The signature must be live: the candidate session's own
-                    # Hyprland control socket has to exist as a socket, so a
-                    # stale signature falls through to the next candidate.
-                    runtime = data.get('XDG_RUNTIME_DIR', env.get('XDG_RUNTIME_DIR',''))
-                    if not Path(runtime,'hypr',data['HYPRLAND_INSTANCE_SIGNATURE'],'.socket.sock').is_socket():
-                        continue
-                    env.update({k:v for k,v in data.items() if k in SESSION_KEYS})
-                    return env
-            except (OSError, UnicodeError):
-                continue
-    return env
+    env=os.environ.copy()
+    supplied=_session_tuple(env)
+    if any(value is not None for value in supplied.values()):
+        _validate_session_tuple(env)
+        return env
+    if env.get('CU_SESSION_TOKEN'):
+        raise RuntimeError('automation session has no pinned compositor tuple; refusing environment discovery')
+    # Do not select quickshell, waybar or terminal environments: they may belong
+    # to a nested compositor. Only a single verified Hyprland process is safe.
+    try:p=subprocess.run(['pgrep','-x','Hyprland'],capture_output=True,text=True,timeout=2)
+    except (OSError,subprocess.TimeoutExpired):p=None
+    candidates=[]
+    for pid in p.stdout.split() if p and p.returncode==0 else ():
+        try:
+            data=dict(s.split('=',1) for s in Path('/proc',pid,'environ').read_bytes().decode().split('\0') if '=' in s)
+            candidate=env.copy();candidate.update({k:v for k,v in data.items() if k in SESSION_KEYS})
+            if all(_session_tuple(candidate).values()):
+                _validate_session_tuple(candidate);candidates.append(candidate)
+        except (OSError,UnicodeError,RuntimeError):
+            continue
+    if len(candidates)!=1:
+        raise RuntimeError('could not identify one verified Hyprland host instance; supply its socket/instance tuple')
+    return candidates[0]
+
+def compositor_identity(env):
+    values=_session_tuple(env or {})
+    return {'runtime_dir':values['XDG_RUNTIME_DIR'],'wayland_display':values['WAYLAND_DISPLAY'],
+            'instance':values['HYPRLAND_INSTANCE_SIGNATURE']}
+
+def boot_identity():
+    try:value=Path('/proc/sys/kernel/random/boot_id').read_text().strip()
+    except OSError as exc:raise RuntimeError('system boot identity unavailable') from exc
+    if not re.fullmatch(r'[0-9a-fA-F-]{36}',value):raise RuntimeError('invalid system boot identity')
+    return value
 
 def run(argv, env=None, text=True, input=None, timeout=12):
     p = subprocess.run(argv, env=env, capture_output=True, text=text, input=input, timeout=timeout)
@@ -293,9 +336,158 @@ def plain_rgb_png(data):
         offset=end
     return False
 
+def _sequence(value,length,name,positive_indices=()):
+    if not isinstance(value,(list,tuple)) or len(value)!=length:
+        raise ValueError(name+' must contain '+str(length)+' values')
+    out=[]
+    for index,item in enumerate(value):
+        try:valid=not isinstance(item,bool) and isinstance(item,(int,float)) and math.isfinite(item)
+        except OverflowError:valid=False
+        if not valid or index in positive_indices and item<=0:
+            raise ValueError(name+' contains an invalid dimension')
+        out.append(item)
+    return out
+
+def _finite_number(value):
+    try:return not isinstance(value,bool) and isinstance(value,(int,float)) and math.isfinite(value)
+    except OverflowError:return False
+
+def validate_coordinate_metadata(meta,require_frame=False):
+    if not isinstance(meta,dict):raise ValueError('observation metadata must be an object')
+    iw,ih=_sequence(meta.get('image_size'),2,'image_size',(0,1))
+    rx,ry,rw,rh=_sequence(meta.get('region'),4,'region',(2,3))
+    if any(isinstance(value,bool) or not isinstance(value,int) for value in (iw,ih,rx,ry,rw,rh)):
+        raise ValueError('image_size and region must use integer pixel dimensions')
+    max_width=meta.get('max_width')
+    if max_width is not None:
+        if isinstance(max_width,bool) or not isinstance(max_width,int) or not 320<=max_width<=3840:
+            raise ValueError('max_width must be an integer from 320 to 3840')
+        expected_width=min(rw,max_width)
+        expected_height=round(rh*expected_width/rw)
+        if [iw,ih]!=[expected_width,expected_height]:
+            raise ValueError('image dimensions do not match the captured region')
+    if require_frame or 'monitor_box' in meta:
+        mx,my,mw,mh=_sequence(meta.get('monitor_box'),4,'monitor_box',(2,3))
+        if any(isinstance(value,bool) or not isinstance(value,int) for value in (mx,my,mw,mh)):
+            raise ValueError('monitor_box must use integer logical dimensions')
+        if rx<mx or ry<my or rx+rw>mx+mw or ry+rh>my+mh:
+            raise ValueError('observation region is outside its monitor')
+    if require_frame or 'monitor_scale' in meta:
+        scale=meta.get('monitor_scale')
+        if not _finite_number(scale) or scale<=0:
+            raise ValueError('monitor_scale must be finite and positive')
+        transform=meta.get('monitor_transform')
+        if isinstance(transform,bool) or not isinstance(transform,int) or not 0<=transform<=7:
+            raise ValueError('monitor_transform must be an integer from 0 to 7')
+    if meta.get('scope')=='window' or require_frame and meta.get('scope')!='screen':
+        x,y,w,h=_sequence(meta.get('window_bounds'),4,'window_bounds',(2,3))
+        if any(isinstance(value,bool) or not isinstance(value,int) for value in (x,y,w,h)):
+            raise ValueError('window_bounds must use integer logical dimensions')
+        if rx<x or ry<y or rx+rw>x+w or ry+rh>y+h:
+            raise ValueError('observation region is outside its window')
+    if meta.get('scope') not in ('window','screen') and require_frame:
+        raise ValueError('observation scope must be window or screen')
+    if 'monitor' in meta and (not isinstance(meta['monitor'],str) or not meta['monitor']):
+        raise ValueError('observation monitor is invalid')
+    if meta.get('crop') is not None:
+        cx,cy,cw,ch=_sequence(meta['crop'],4,'crop',(2,3))
+        if (any(isinstance(value,bool) or not isinstance(value,int) for value in (cx,cy,cw,ch)) or
+                cx<0 or cy<0):raise ValueError('crop must use non-negative integer coordinates')
+        if meta.get('scope')=='window':
+            x,y,w,h=meta['window_bounds']
+            if cx+cw>w or cy+ch>h or rx<x+cx or ry<y+cy or rx+rw>x+cx+cw or ry+rh>y+cy+ch:
+                raise ValueError('observation region does not match its window crop')
+        elif meta.get('scope')=='screen' and 'monitor_box' in meta:
+            mx,my,mw,mh=meta['monitor_box']
+            if cx+cw>mw or cy+ch>mh or [rx,ry,rw,rh]!=[mx+cx,my+cy,cw,ch]:
+                raise ValueError('observation region does not match its screen crop')
+    elif require_frame and meta.get('scope')=='window':
+        x,y,w,h=meta['window_bounds'];mx,my,mw,mh=meta['monitor_box']
+        expected=[max(x,mx),max(y,my),min(x+w,mx+mw)-max(x,mx),min(y+h,my+mh)-max(y,my)]
+        if [rx,ry,rw,rh]!=expected:
+            raise ValueError('observation region does not match its window bounds')
+    elif require_frame and meta.get('scope')=='screen':
+        if [rx,ry,rw,rh]!=meta['monitor_box']:
+            raise ValueError('observation region does not match its monitor')
+    return iw,ih,rx,ry,rw,rh
+
+def _valid_capture_identity(meta,env):
+    if meta.get('observation_schema')!=OBSERVATION_SCHEMA:
+        raise ValueError('legacy observation has no capture identity; observe again')
+    mono=meta.get('capture_started_monotonic')
+    wall=meta.get('capture_started_wall')
+    created=meta.get('created')
+    for value,name in ((mono,'capture_started_monotonic'),(wall,'capture_started_wall'),(created,'created')):
+        if not _finite_number(value) or value<=0:
+            raise ValueError(name+' is invalid; observe again')
+    if meta.get('capture_boot_id')!=boot_identity():
+        raise ValueError('observation belongs to another system boot; observe again')
+    age=time.monotonic()-mono
+    if not 0<=age<=OBSERVATION_MAX_AGE:
+        raise ValueError('observation older than 90s or from a future clock; observe again')
+    if created<wall:
+        raise ValueError('observation creation time predates capture; observe again')
+    if meta.get('capture_compositor')!=compositor_identity(env):
+        raise ValueError('observation belongs to another compositor instance; observe again')
+    return age
+
+def validate_desktop_observation(meta,env,observation_path=None,load_image=False):
+    if not isinstance(meta,dict) or meta.get('backend')!='desktop':
+        raise ValueError('desktop observation required')
+    if observation_path is None:
+        observation_path=meta.get('observation')
+    validate_coordinate_metadata(meta,require_frame=True)
+    _valid_capture_identity(meta,env)
+    if meta.get('image_role')!='clean-observation' or meta.get('cursor_debug') is True or meta.get('cursor_visible') is True:
+        raise ValueError('cursor-debug images cannot be used for input')
+    if observation_path is not None:
+        if not isinstance(observation_path,(str,os.PathLike)):
+            raise ValueError('observation path is invalid; observe again')
+        path=Path(observation_path)
+        try:
+            fd=os.open(path,os.O_RDONLY|os.O_NOFOLLOW|os.O_CLOEXEC)
+            with os.fdopen(fd,'rb') as stream:
+                st=os.fstat(stream.fileno())
+                if (not stat.S_ISREG(st.st_mode) or st.st_uid!=os.geteuid() or
+                        stat.S_IMODE(st.st_mode)!=0o600 or st.st_size>JSON_LIMIT):
+                    raise ValueError('observation file is not a private regular file')
+                disk_meta=read_json(stream)
+        except (OSError,ValueError) as exc:raise ValueError('observation file is unavailable or invalid; observe again') from exc
+        if disk_meta!=meta or meta.get('observation')!=str(path):
+            raise ValueError('observation file changed after delivery; observe again')
+        token=meta.get('id')
+        if not isinstance(token,str) or not re.fullmatch(r'[0-9a-f]{12}',token):
+            raise ValueError('observation identity is invalid; observe again')
+        image=Path(meta.get('image',''))
+        if (path.name!=token+'.json' or image.name!=token+'.png' or
+                path.parent.resolve()!=STATE.resolve() or image.parent.resolve()!=STATE.resolve()):
+            raise ValueError('observation paths do not match their identity; observe again')
+        try:
+            fd=os.open(image,os.O_RDONLY|os.O_NOFOLLOW|os.O_CLOEXEC)
+            with os.fdopen(fd,'rb') as stream:
+                st=os.fstat(stream.fileno())
+                if (not stat.S_ISREG(st.st_mode) or st.st_uid!=os.geteuid() or
+                        stat.S_IMODE(st.st_mode)!=0o600 or st.st_size>256*1024*1024):
+                    raise ValueError('observation PNG is not a private regular file')
+                raw=stream.read()
+            if (meta.get('image_format')!='PNG' or len(raw)!=meta.get('image_bytes') or
+                    hashlib.sha256(raw).hexdigest()!=meta.get('image_sha256')):
+                raise ValueError('observation PNG changed after delivery; observe again')
+            from PIL import Image
+            with Image.open(io.BytesIO(raw)) as decoded:
+                decoded.load()
+                if decoded.format!='PNG' or decoded.mode!='RGB' or list(decoded.size)!=meta.get('image_size'):
+                    raise ValueError('observation PNG dimensions or format changed; observe again')
+                if hashlib.sha256(decoded.tobytes()).hexdigest()!=meta.get('pixel_sha256'):
+                    raise ValueError('observation pixels changed after delivery; observe again')
+                verified_image=decoded.copy()
+        except OSError as exc:raise ValueError('observation PNG is unavailable; observe again') from exc
+        return verified_image if load_image else True
+    return True
+
 def save_observation(image, meta, max_width, persist=True, encoded_png=None):
     from PIL import Image
-    if max_width < 320 or max_width > 3840: raise ValueError('max-width must be 320..3840')
+    if isinstance(max_width,bool) or not isinstance(max_width,int) or max_width<320 or max_width>3840: raise ValueError('max-width must be 320..3840')
     if encoded_png is not None:
         with Image.open(io.BytesIO(encoded_png)) as decoded:
             decoded.load()
@@ -307,11 +499,26 @@ def save_observation(image, meta, max_width, persist=True, encoded_png=None):
     if image.width>max_width:
         image=image.resize((max_width,round(image.height*max_width/image.width)),Image.Resampling.LANCZOS)
         encoded_png=None
+    if image.width<=0 or image.height<=0:raise ValueError('observation image dimensions must be positive')
     meta.update(image_size=list(image.size),max_width=max_width)
-    if not persist:return image,meta
+    if meta.get('backend')=='desktop':
+        meta['observation_schema']=OBSERVATION_SCHEMA
+        meta.setdefault('image_role','clean-observation')
+        validate_coordinate_metadata(meta,require_frame=True)
+        if not all(key in meta for key in ('capture_started_monotonic','capture_started_wall','capture_boot_id','capture_compositor')):
+            raise ValueError('desktop capture identity is incomplete')
+    if not persist:
+        meta.update(image_format='PNG',image_bytes=None,image_sha256=None,encode_ms=0)
+        meta.pop('_environment',None)
+        return image,meta
     prepare_state()
     token=uuid.uuid4().hex[:12]
     path=STATE/(token+'.png')
+    encode_start=time.monotonic()
+    if encoded_png is None:
+        buffer=io.BytesIO();image.save(buffer,format='PNG',compress_level=1);png=buffer.getvalue()
+    else:png=encoded_png
+    encode_ms=round((time.monotonic()-encode_start)*1000,3)
     # Exclusive creation at 0600 before the first byte: a colliding name or a
     # symlink refuses instead of overwriting a foreign file. fchmod fixes the
     # exact mode regardless of umask; no pathname chmod follows the write.
@@ -324,15 +531,11 @@ def save_observation(image, meta, max_width, persist=True, encoded_png=None):
         except OSError:pass
         raise
     # Ownership transferred: the stream alone closes the descriptor now.
-    if encoded_png is None:
-        # fd has no .png suffix for Pillow to infer, so the format is explicit.
-        with stream:
-            image.save(stream,format='PNG',compress_level=1)
-    else:
-        with stream:
-            stream.write(encoded_png)
+    with stream:stream.write(png)
     meta.update(id=token,created=time.time(),image=str(path),image_size=list(image.size),
-                pixel_sha256=hashlib.sha256(image.tobytes()).hexdigest(),max_width=max_width)
+                pixel_sha256=hashlib.sha256(image.tobytes()).hexdigest(),max_width=max_width,
+                image_format='PNG',image_bytes=len(png),image_sha256=hashlib.sha256(png).hexdigest(),encode_ms=encode_ms)
+    meta.pop('_environment',None)
     out=STATE/(token+'.json');meta['observation']=str(out)
     fd=os.open(out,os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600)
     try:
@@ -343,7 +546,7 @@ def save_observation(image, meta, max_width, persist=True, encoded_png=None):
         except OSError:pass
         raise
     with stream:
-        stream.write(json.dumps(meta))
+        stream.write(json.dumps(meta,allow_nan=False))
     # Only observation filenames are disposable; session.json is recovery state.
     for old in STATE.iterdir():
         if re.fullmatch(r'[0-9a-f]{12}\.(?:png|json)',old.name) and time.time()-old.stat().st_mtime>86400:
@@ -355,6 +558,12 @@ def require_visible_window(c, m):
     visible.discard(None);visible.discard(0)
     if c.get('mapped') is False or c.get('hidden') or (not c.get('pinned') and c.get('workspace',{}).get('id') not in visible):
         raise RuntimeError('window is not visible on its monitor; switch workspace yourself or use observe --window ADDRESS --focus')
+
+def _capture_identity(env):
+    return {'capture_started_monotonic':time.monotonic(),
+            'capture_started_wall':time.time(),
+            'capture_boot_id':boot_identity(),
+            'capture_compositor':compositor_identity(env)}
 
 def observe(env, address, crop=None, max_width=960, activate=False, persist=True):
     from PIL import Image
@@ -379,11 +588,15 @@ def observe(env, address, crop=None, max_width=960, activate=False, persist=True
     region=intersect(intersect(region,wb),mb)
     # grim -s 1 uses logical layout pixels; explicitly exclude the cursor (no -c).
     geometry=f'{region[0]},{region[1]} {region[2]}x{region[3]}'
-    start=time.monotonic()
+    capture_identity=_capture_identity(env)
+    start=capture_identity['capture_started_monotonic']
     from indicator import capture_clean
     with capture_clean(STATE):
         raw=run(['grim','-s','1','-g',geometry,'-t','ppm','-'],env,text=False)
+    capture_ms=round((time.monotonic()-start)*1000,3)
+    decode_start=time.monotonic()
     image=Image.open(io.BytesIO(raw)).convert('RGB')
+    decode_ms=round((time.monotonic()-decode_start)*1000,3)
     current=window(env,address)
     if bounds(current) != wb or current['monitor']!=c['monitor']: raise RuntimeError('window moved during capture; observe again')
     current_monitor=next((item for item in hypr(env,'monitors') if item['id']==current['monitor']),None)
@@ -392,7 +605,8 @@ def observe(env, address, crop=None, max_width=960, activate=False, persist=True
     require_visible_window(current,current_monitor)
     meta={'backend':'desktop','scope':'window','window':address,'window_bounds':wb,'monitor':m['name'],
           'monitor_box':mb,'monitor_scale':m['scale'],'monitor_transform':m.get('transform',0),
-          'region':region,'crop':crop,'capture_ms':round((time.monotonic()-start)*1000)}
+          'region':region,'crop':crop,'capture_ms':capture_ms,'decode_ms':decode_ms,
+          'capture_elapsed_ms':round((time.monotonic()-start)*1000,3),**capture_identity}
     return save_observation(image,meta,max_width,persist)
 
 def screen_region(monitor_box_,crop):
@@ -409,22 +623,27 @@ def observe_screen(env,monitor,crop=None,max_width=960,persist=True):
     if not m:raise ValueError('monitor no longer exists; use doctor to list monitors')
     mb=monitor_box(m);region=screen_region(mb,crop)
     geometry=f'{region[0]},{region[1]} {region[2]}x{region[3]}'
-    start=time.monotonic()
+    capture_identity=_capture_identity(env)
+    start=capture_identity['capture_started_monotonic']
     from indicator import capture_clean
     with capture_clean(STATE):
         raw=run(['grim','-s','1','-g',geometry,'-t','ppm','-'],env,text=False)
+    capture_ms=round((time.monotonic()-start)*1000,3)
+    decode_start=time.monotonic()
+    image=Image.open(io.BytesIO(raw)).convert('RGB')
+    decode_ms=round((time.monotonic()-decode_start)*1000,3)
     current=next((m for m in hypr(env,'monitors') if m['name']==monitor),None)
     if not current or monitor_box(current)!=mb or current['scale']!=m['scale'] or current.get('transform',0)!=m.get('transform',0):
         raise RuntimeError('monitor layout changed during capture; observe again')
-    image=Image.open(io.BytesIO(raw)).convert('RGB')
     meta={'backend':'desktop','scope':'screen','monitor':monitor,'monitor_box':mb,
           'monitor_scale':m['scale'],'monitor_transform':m.get('transform',0),
-          'region':region,'crop':crop,'capture_ms':round((time.monotonic()-start)*1000)}
+          'region':region,'crop':crop,'capture_ms':capture_ms,'decode_ms':decode_ms,
+          'capture_elapsed_ms':round((time.monotonic()-start)*1000,3),**capture_identity}
     return save_observation(image,meta,max_width,persist)
 
 def image_point(meta,x,y):
-    if not all(isinstance(v,(int,float)) and math.isfinite(v) for v in (x,y)): raise ValueError('finite coordinates required')
-    iw,ih=meta['image_size'];rx,ry,rw,rh=meta['region']
+    if not all(_finite_number(v) for v in (x,y)): raise ValueError('finite coordinates required')
+    iw,ih,rx,ry,rw,rh=validate_coordinate_metadata(meta)
     if not (0<=x<iw and 0<=y<ih): raise ValueError('point outside observed image')
     return rx+x*rw/iw, ry+y*rh/ih
 
@@ -664,14 +883,23 @@ def compact_result(result):
     """Only strip presentation data; immutable observations retain full geometry."""
     if not isinstance(result,dict):return result
     if result.get('backend')=='desktop':
-        keys=('image','observation','image_size','capture_ms','region','crop',
+        keys=('image','observation','id','observation_schema','image_role','created','image_size',
+              'max_width','image_format','image_bytes','image_sha256','pixel_sha256','region',
+              'crop','scope','window','window_bounds',
+              'monitor','monitor_box','monitor_scale','monitor_transform','capture_ms',
+              'decode_ms','encode_ms','capture_elapsed_ms','capture_started_wall',
+              'capture_started_monotonic','capture_boot_id','capture_compositor',
               'settle_stable','settle_samples','settle_ms')
         out={k:result[k] for k in keys if k in result}
-        # An agent reads coordinates off the returned PNG. Without the ratio
-        # between that PNG and the window it asked for, --crop cannot be reasoned
-        # about from output alone and the contract lives only in this file.
-        if 'region' in out and out['region'][2]:
-            out['scale']=round(out['image_size'][0]/out['region'][2],6)
+        if 'monitor_scale' in result:out['monitor_scale']=result['monitor_scale']
+        if 'monitor_transform' in result:out['monitor_transform']=result['monitor_transform']
+        if 'monitor_box' in result:out['monitor_box']=result['monitor_box']
+        if 'region' in result and 'image_size' in result:
+            iw,ih,rx,ry,rw,rh=validate_coordinate_metadata(result)
+            out['scale_x']=iw/rw
+            out['scale_y']=ih/rh
+            # Retain the original x-ratio alias for existing consumers.
+            out['scale']=out['scale_x']
         return out
     return {k:compact_result(v) if k=='after' else v for k,v in result.items()}
 
@@ -748,22 +976,60 @@ DESKTOP_REOBSERVE = ('List windows and observe the new focused window, or observ
                      'further input. The after image is not a new observe. Do not replay completed or uncertain actions.')
 
 
-def desktop_act(env,meta,actions,after_capture=True):
+def _diagnostic_event(event,meta,env,*,action_index=None,action_type=None,intended=None,
+                      cursor_before=None,cursor_after=None,cursor_after_release=None,
+                      completed=0,error=None,active_window=None):
+    token=os.environ.get('CU_SESSION_TOKEN')
+    if not token:return
+    target={key:meta.get(key) for key in ('id','scope','window','window_bounds','monitor',
+            'monitor_box','monitor_scale','monitor_transform','region','image_size',
+            'image_sha256','capture_started_monotonic','capture_boot_id','capture_compositor')}
+    safe_error=None
+    if error is not None:
+        if isinstance(error,str):
+            safe_error=('pointer_missed' if error=='pointer_missed' or 'pointer missed target' in error else
+                        'post_click_pointer_moved' if error=='post_click_pointer_moved' or 'post-click pointer moved' in error else
+                        'focus_changed' if 'focus changed' in error else
+                        'screen_changed' if 'screen changed' in error else
+                        'cancelled' if 'cancelled' in error else 'operation_failed')
+        else:safe_error=type(error).__name__ if isinstance(error,BaseException) else 'operation_failed'
+    record={'event':event,'wall_time':time.time(),'monotonic':time.monotonic(),
+            'observation_id':meta.get('id'),'target':target,'action_index':action_index,
+            'action_type':action_type,'intended_global_point':intended,
+            'cursor_before_move':cursor_before,'cursor_after_move':cursor_after,
+            'cursor_after_button_release':cursor_after_release,
+            'active_window':active_window,'completed':completed,'error':safe_error}
+    raw=(json.dumps(record,ensure_ascii=False,separators=(',',':'),allow_nan=False)+'\n').encode('utf-8')
+    if len(raw)>32768:raise RuntimeError('diagnostic record exceeds size limit')
+    name='diagnostics-'+hashlib.sha256(token.encode('ascii','ignore')).hexdigest()[:16]+'.jsonl'
+    fd=os.open(STATE/name,os.O_WRONLY|os.O_APPEND|os.O_CREAT|os.O_NOFOLLOW|os.O_CLOEXEC,0o600)
+    try:
+        st=os.fstat(fd)
+        if not stat.S_ISREG(st.st_mode) or st.st_uid!=os.geteuid():
+            raise RuntimeError('diagnostic log is not a private regular file')
+        if st.st_size+len(raw)>4*1024*1024:
+            raise RuntimeError('diagnostic log reached its 4 MiB task limit')
+        os.fchmod(fd,0o600)
+        if os.write(fd,raw)!=len(raw):raise RuntimeError('diagnostic log write was incomplete')
+    finally:os.close(fd)
+
+def desktop_act(env,meta,actions,after_capture=True,observation_path=None):
+    preflight_start=time.monotonic()
     try:
         if not isinstance(after_capture,bool): raise ValueError('after_capture must be boolean')
         check_cancel()
-        if meta.get('backend')!='desktop': raise ValueError('desktop observation required')
-        if time.time()-meta['created']>90: raise ValueError('observation older than 90s; observe again')
+        verified_image=validate_desktop_observation(meta,env,observation_path,load_image=True)
         validate_actions(actions,'desktop')
         screen_scope=meta.get('scope')=='screen'
         if screen_scope and any(a['type'] in ('key','type') for a in actions):
             raise ValueError('screen observations support pointer actions only; use a window or accessibility target for typing')
-        # Validate the entire batch before focus changes or input.
+        # Validate coordinates and payloads for the entire batch before any side effects.
         for a in actions:
             if a['type'] in ('click','double_click','move','scroll'):
                 image_point(meta,a['x'],a['y'])
             if a['type']=='drag':
                 image_point(meta,*a['from']);image_point(meta,*a['to'])
+        # Group adjacent keyboard operations into one existing wtype process.
         groups=keyboard_groups(actions)
         for group in groups:
             if isinstance(group,list):keyboard_argv(group)
@@ -771,14 +1037,18 @@ def desktop_act(env,meta,actions,after_capture=True):
     except ValueError as exc:
         raise PreflightRefusal(str(exc)) from exc
     address=None if screen_scope else meta['window']
+    active_window=None
     def guard():
+        nonlocal active_window
         check_cancel()
         if not screen_scope:
             c=window(env,address)
             if bounds(c)!=meta['window_bounds']: raise RuntimeError('window geometry changed; observe again')
         m=next((m for m in hypr(env,'monitors') if m['name']==meta['monitor']),None)
         if not m or monitor_box(m)!=meta['monitor_box'] or m['scale']!=meta['monitor_scale'] or m.get('transform',0)!=meta['monitor_transform']: raise RuntimeError('monitor layout changed; observe again')
-        if not screen_scope and not same_window_address(hypr(env,'activewindow').get('address'),address): raise TransientRefusal('focus changed')
+        if not screen_scope:
+            active_window=hypr(env,'activewindow').get('address')
+            if not same_window_address(active_window,address):raise TransientRefusal('focus changed')
     # OPTIONAL diagnostic probe, run before the batch touches anything. A
     # failure here loses a diagnostic, not the action: ordinary exceptions
     # degrade to focus_before:null plus a bounded warning and the REQUIRED
@@ -802,68 +1072,106 @@ def desktop_act(env,meta,actions,after_capture=True):
     if not screen_scope:focus(env,address)
     try:guard()
     except TransientRefusal as exc:
+        _diagnostic_event('preflight_refused',meta,env,completed=0,error=str(exc),active_window=active_window)
         return {'ok':False,'completed':0,'error':str(exc),'error_code':'focus_changed',
+                'preflight_ms':round((time.monotonic()-preflight_start)*1000,3),
                 'next_step':DESKTOP_REOBSERVE}
     # Refuse coordinates from an image superseded by a visible layout change.
     new,fresh=(observe_screen(env,meta['monitor'],meta.get('crop'),meta['max_width'],persist=False) if screen_scope else
                observe(env,address,meta.get('crop'),meta['max_width'],activate=False,persist=False))
     from PIL import Image
-    old=Image.open(meta['image'])
+    old=verified_image if hasattr(verified_image,'size') else Image.open(meta['image'])
     if screen_changed(old,new,actions):
         fresh=save_observation(new,fresh,meta['max_width'])
+        _diagnostic_event('preflight_refused',meta,env,completed=0,error='screen changed',active_window=active_window)
         return {'ok':False,'completed':0,'error':'screen changed','error_code':'screen_changed',
+                'preflight_ms':round((time.monotonic()-preflight_start)*1000,3),
                 'next_step':DESKTOP_REOBSERVE,'after':fresh}
     # A keyboard-only batch must not open the virtual pointer device at all, and an
     # ordinary startup failure belongs in the result envelope, not outside it.
-    pointer=None;completed=0;error=None;ime_result={};transient_error=False
-    def move(x,y):
+    pointer=None;completed=0;error=None;ime_result={};transient_error=False;outcome_uncertain=False
+    preflight_ms=round((time.monotonic()-preflight_start)*1000,3)
+    def move(x,y,index,action_type):
         gx,gy=image_point(meta,x,y);mx,my,mw,mh=meta['monitor_box']
         # High resolution normalized coordinates, independent of image resize / output scale.
+        before=hypr(env,'cursorpos')
         pointer.command(f'abs {round((gx-mx)/mw*1000000)} {round((gy-my)/mh*1000000)} 1000000 1000000')
         pos=hypr(env,'cursorpos')
-        if math.hypot(pos['x']-gx,pos['y']-gy)>3: raise RuntimeError('pointer missed target; refusing click')
-    def execute_group(a):
-        nonlocal completed
+        missed=math.hypot(pos['x']-gx,pos['y']-gy)>3
+        _diagnostic_event('pointer_move',meta,env,action_index=index,action_type=action_type,
+                          intended=[gx,gy],cursor_before=before,cursor_after=pos,
+                          completed=completed,error='pointer_missed' if missed else None,
+                          active_window=active_window)
+        if missed:raise RuntimeError('pointer missed target; refusing click')
+        return gx,gy
+    def execute_group(a,index):
+        nonlocal completed,outcome_uncertain
         guard()
         if isinstance(a,list):
             exact=any(x['type']=='type' and x.get('ime','literal')=='literal' for x in a)
             if not any(x['type']=='type' and x.get('ime')=='compose' for x in a):
                 exact=exact or any(x['type']=='key' and any(k in ('BackSpace','Delete','Home','End','Left','Right','Up','Down','Prior','Next') for k in key_names(x['keys'])[1]) for x in a)
+            _diagnostic_event('keyboard_group_started',meta,env,action_index=index,
+                              action_type='keyboard_group',completed=completed,active_window=active_window)
             with literal_keyboard(env,exact,result=ime_result):
                 guard();run_cancelable(keyboard_argv(a),env)
                 completed+=len(a)   # input acknowledged; count it before IME restore can fail
+            _diagnostic_event('keyboard_group_completed',meta,env,action_index=index,
+                              action_type='keyboard_group',completed=completed,active_window=active_window)
             return
         typ=a['type']
         if typ in ('move','click','double_click','scroll'):
-            move(a['x'],a['y'])
+            intended=move(a['x'],a['y'],index,typ)
             if typ in ('click','double_click'):
                 b={'left':0,'right':1,'middle':2}[a.get('button','left')]
                 presses=2 if typ=='double_click' else 1
                 for press in range(presses):
-                    guard();pointer.command(f'button {b} 1')
+                    guard();pointer.command(f'button {b} 1');outcome_uncertain=True
                     try:wait_cancelable(.025)
                     finally:pointer.command(f'button {b} 0')
+                    after_release=hypr(env,'cursorpos')
+                    missed=math.hypot(after_release['x']-intended[0],after_release['y']-intended[1])>3
+                    _diagnostic_event('button_release',meta,env,action_index=index,action_type=typ,
+                                      intended=intended,cursor_after_release=after_release,
+                                      completed=completed,error='post_click_pointer_moved' if missed else None,
+                                      active_window=active_window)
+                    if missed:raise RuntimeError('post-click pointer moved; click outcome uncertain; stopping remaining input')
                     # 35 ms only separates the two double-click presses; after the
                     # last press it would only add latency before the action ends.
                     if press+1<presses:wait_cancelable(.035)
+                outcome_uncertain=False
             elif typ=='scroll':
                 wait_cancelable(.03);guard()
                 pointer.command(f"scroll {a.get('dx',0)} {a.get('dy',0)}")
         elif typ=='drag':
-            sx,sy=a['from'];ex,ey=a['to'];move(sx,sy);guard()
+            sx,sy=a['from'];ex,ey=a['to'];move(sx,sy,index,typ);guard()
             b={'left':0,'right':1,'middle':2}[a.get('button','left')]
-            pointer.command(f'button {b} 1')
+            pointer.command(f'button {b} 1');outcome_uncertain=True
             try:
                 for i in range(1,11):
-                    guard();move(sx+(ex-sx)*i/10,sy+(ey-sy)*i/10);wait_cancelable(a.get('ms',300)/10000)
-            finally:pointer.command(f'button {b} 0')
+                    guard();move(sx+(ex-sx)*i/10,sy+(ey-sy)*i/10,index,typ);wait_cancelable(a.get('ms',300)/10000)
+            finally:
+                pointer.command(f'button {b} 0')
+                after_release=hypr(env,'cursorpos')
+                end_global=image_point(meta,ex,ey)
+                _diagnostic_event('button_release',meta,env,action_index=index,action_type=typ,
+                                  intended=[end_global[0],end_global[1]],
+                                  cursor_after_release=after_release,completed=completed,
+                                  active_window=active_window)
+            outcome_uncertain=False
         elif typ=='type':
+            _diagnostic_event('typing_started',meta,env,action_index=index,action_type=typ,
+                              completed=completed,active_window=active_window)
             with literal_keyboard(env,a.get('ime','literal')=='literal',result=ime_result):
                 guard();run_cancelable(standalone_type_argv(a),env,input=a['text'])
                 completed+=1     # same rule: never infer a count from a failed input
+            _diagnostic_event('typing_completed',meta,env,action_index=index,action_type=typ,
+                              completed=completed,active_window=active_window)
             return
         elif typ=='wait':wait_cancelable(a.get('ms',100)/1000)
         completed+=1
+        _diagnostic_event('action_completed',meta,env,action_index=index,action_type=typ,
+                          completed=completed,active_window=active_window)
     start=time.monotonic()
     try:
         # A new virtual device at an unchanged cursor position may not cause
@@ -878,14 +1186,21 @@ def desktop_act(env,meta,actions,after_capture=True):
             point=first['from'] if first['type']=='drag' else [first['x'],first['y']]
             gx,gy=image_point(meta,*point);mx,my,mw,mh=meta['monitor_box'];rx,ry,rw,rh=meta['region']
             nx=gx+2 if gx<rx+rw-3 else max(rx,gx-2);ny=gy
+            before=hypr(env,'cursorpos')
             pointer.command(f'abs {round((nx-mx)/mw*1000000)} {round((ny-my)/mh*1000000)} 1000000 1000000')
-        for a in groups:
+            after=hypr(env,'cursorpos')
+            _diagnostic_event('preparatory_move',meta,env,action_index=0,action_type=first['type'],
+                              intended=[nx,ny],cursor_before=before,cursor_after=after,
+                              completed=completed,active_window=active_window)
+        for index,a in enumerate(groups):
             guard()
             with mouse_modifiers(env,a.get('modifiers',[]) if isinstance(a,dict) else []):
-                execute_group(a)
+                execute_group(a,index)
             guard()
     except Exception as exc:
         error=str(exc);transient_error=isinstance(exc,TransientRefusal)
+        _diagnostic_event('operation_stopped',meta,env,completed=completed,error=error,
+                          active_window=active_window)
     finally:
         # Teardown failure must not discard the count or escape as an exception.
         if pointer:
@@ -893,26 +1208,35 @@ def desktop_act(env,meta,actions,after_capture=True):
             except Exception as exc:
                 error=error or 'pointer cleanup failed: '+str(exc)
                 transient_error=False
+    execution_ms=round((time.monotonic()-start)*1000,3)
     if not after_capture and error is None:
-        return {'ok':True,'completed':completed,
-                'execution_ms':round((time.monotonic()-start)*1000),'after_skipped':True,
+        result={'ok':True,'completed':completed,'preflight_ms':preflight_ms,
+                'execution_ms':execution_ms,'after_skipped':True,
                 'input_diagnostics':diagnostics}
+        _diagnostic_event('operation_completed',meta,env,completed=completed,
+                          active_window=active_window)
+        return result
     time.sleep(.08)
-    result={'ok':error is None,'completed':completed,'execution_ms':round((time.monotonic()-start)*1000),
-            'input_diagnostics':diagnostics}
+    result={'ok':error is None,'completed':completed,'preflight_ms':preflight_ms,
+            'execution_ms':execution_ms,'input_diagnostics':diagnostics}
     result.update(ime_result)
     if transient_error:result['error_code']='focus_changed'
     if error: result['error']=error
+    if outcome_uncertain:result['outcome_uncertain']=True
     try:
+        after_capture_start=time.monotonic()
         result['after']=(observe_screen(env,meta['monitor'],meta.get('crop'),meta['max_width']) if screen_scope else
                          observe(env,address,meta.get('crop'),meta['max_width'],activate=False))
         result['frame_bytes_changed']=result['after']['pixel_sha256']!=meta['pixel_sha256']
         result['changed']=result['frame_bytes_changed']  # Compatibility alias, not semantic success.
         result['change_meaning']='Exact captured pixel hash differs; animations count. Does not confirm app action succeeded.'
+        result['after_capture_ms']=round((time.monotonic()-after_capture_start)*1000,3)
     except Exception as exc:
         result['ok']=False;result['capture_error']=str(exc)
         result.setdefault('error','final capture failed: '+str(exc))
     if is_transient_refusal(result):result['next_step']=DESKTOP_REOBSERVE
+    _diagnostic_event('operation_completed',meta,env,completed=completed,
+                      error=error if error else None,active_window=active_window)
     return result
 
 def browser_timeout(request):
@@ -1091,6 +1415,16 @@ def main():
             result['session']=bool(env.get('WAYLAND_DISPLAY'))
             monitors=hypr(env,'monitors')
             result['monitors']=[{k:m[k] for k in ('name','width','height','scale','transform')} for m in monitors]
+            try:result['cursorpos']=hypr(env,'cursorpos')
+            except Exception as exc:
+                detail=' '.join(str(exc).split())
+                detail=''.join(ch for ch in detail if ch==' ' or 32<=ord(ch)<=126)
+                result['cursorpos_error']=('cursor position unavailable: '+detail)[:400]
+            try:result['active_window']=hypr(env,'activewindow').get('address')
+            except Exception as exc:
+                detail=' '.join(str(exc).split())
+                detail=''.join(ch for ch in detail if ch==' ' or 32<=ord(ch)<=126)
+                result['active_window_error']=('active window unavailable: '+detail)[:400]
         except Exception as exc:
             detail=' '.join(str(exc).split())
             detail=''.join(ch for ch in detail if ch==' ' or 32<=ord(ch)<=126)
@@ -1132,7 +1466,8 @@ def main():
         with locked():
             import session_policy
             session_policy.require_observation(STATE,os.environ.get('CU_SESSION_TOKEN'),args.observation)
-            result=desktop_act(env,read_json_file(args.observation),actions,after_capture=not args.no_after)
+            result=desktop_act(env,read_json_file(args.observation),actions,
+                               after_capture=not args.no_after,observation_path=args.observation)
             if is_transient_refusal(result):
                 check_cancel()
                 session_policy.record_refusal(STATE,os.environ.get('CU_SESSION_TOKEN'))

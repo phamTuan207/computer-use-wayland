@@ -12,6 +12,7 @@ import unittest
 from unittest.mock import Mock, patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
+import activation_checks
 import indicator
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -98,12 +99,15 @@ class NativeStartup(IsolatedNativeTree):
                 patch.object(indicator, '_valid_liquid', return_value=True), \
                 patch.object(indicator.shutil, 'which', return_value='/alternate/indicator') as lookup, \
                 patch.object(indicator.subprocess, 'Popen') as launch, \
-                patch.object(indicator.Native, 'reply'):
+                patch.object(indicator.Native, 'reply'), \
+                patch.object(activation_checks, 'wait_for_profile') as ready:
+            launch.return_value.poll.return_value = None
             indicator.Native({'CU_INDICATOR_ENTRANCE': 'drop'})
             lookup.assert_not_called()
             self.assertEqual(launch.call_args.args[0], [str(Path(indicator.__file__).resolve().parents[1] / 'native/indicator')])
             self.assertNotIn('CU_INDICATOR_ENTRANCE', launch.call_args.kwargs['env'])
             self.assertEqual(launch.call_args.kwargs['env']['CU_INDICATOR_MATERIAL'], 'liquid')
+            ready.assert_called_once_with(launch.call_args.kwargs['env'], timeout=indicator.LIQUID_READY_TIMEOUT)
 
     def test_required_final_profile_rejects_fallback_before_launch(self):
         with patch.object(indicator.Path, 'exists', return_value=True), \
@@ -135,7 +139,7 @@ class NativeStartup(IsolatedNativeTree):
                 os.close(write_fd)  # immediate EOF so os.read returns b''
                 stdout = os.fdopen(read_fd, 'rb', 0)
                 process = Mock(stdin=io.StringIO(), stdout=stdout,
-                               wait=Mock(return_value=0))
+                               wait=Mock(return_value=0), poll=Mock(return_value=None))
                 ready = ([stdout], [], []) if readable else ([], [], [])
                 with patch.object(indicator.subprocess, 'Popen', return_value=process), \
                         patch.object(indicator.select, 'select', return_value=ready):
@@ -187,7 +191,7 @@ class LiquidAvailable(unittest.TestCase):
 
     def status(self, **overrides):
         payload = {
-            'schema': 1, 'version': '0.10.0-cu.1', 'versionCheck': 'match',
+            'schema': 1, 'version': '1.1.1-cu.1', 'versionCheck': 'match',
             'active': True, 'shaders': 'ready', 'itemProtocol': True,
             'features': {
                 'layers': {'enabled': True, 'active': True, 'reason': None},
@@ -220,7 +224,7 @@ class LiquidAvailable(unittest.TestCase):
             self.assertIs(indicator.liquid_available(dict(self.env), ready=True), False)
 
     def test_wrong_version_or_failed_version_check_is_rejected(self):
-        for overrides in ({'version': '0.10.0'}, {'version': '0.10.0-cu.2'},
+        for overrides in ({'version': '0.10.0-cu.1'}, {'version': '1.1.1-cu.2'},
                           {'versionCheck': 'skipped'}, {'schema': 2}, {'schema': True},
                           {'active': False}):
             with self.subTest(**overrides):
@@ -297,7 +301,8 @@ class LiquidLifecycle(IsolatedNativeTree):
         self.addCleanup(os.close, write_fd)
         stdout = os.fdopen(read_fd, 'rb', 0)
         self.addCleanup(stdout.close)  # a native left open still owns this fd
-        return Mock(stdin=io.StringIO(), stdout=stdout, wait=Mock(return_value=0))
+        return Mock(stdin=io.StringIO(), stdout=stdout, wait=Mock(return_value=0),
+                    poll=Mock(return_value=None))
 
     def test_advertised_liquid_that_never_readies_is_closed_and_reaped(self):
         process = self.helper()
@@ -305,13 +310,31 @@ class LiquidLifecycle(IsolatedNativeTree):
                 patch.object(indicator.select, 'select',
                              return_value=([process.stdout], [], [])), \
                 patch.object(indicator, '_status', return_value={'schema': 1}), \
-                patch.object(indicator, '_valid_liquid', side_effect=[True, False]):
+                patch.object(indicator, '_valid_liquid', return_value=True), \
+                patch.object(activation_checks, 'wait_for_profile',
+                             side_effect=RuntimeError('pending shaders')):
             with self.assertRaisesRegex(RuntimeError, 'did not become ready'):
                 indicator.Native(dict(self.env))
         self.assertEqual(popen.call_args.kwargs['env']['CU_INDICATOR_MATERIAL'], 'liquid')
         process.wait.assert_called_once()
         self.assertTrue(process.stdin.closed)
         self.assertTrue(process.stdout.closed)
+
+    def test_pending_shaders_are_waited_for_while_overlay_stays_alive(self):
+        process = self.helper()
+        ready = Mock()
+        with patch.object(indicator.Path, 'exists', return_value=True), \
+                patch.object(indicator, '_status', return_value={'schema': 1}), \
+                patch.object(indicator, '_valid_liquid', return_value=True), \
+                patch.object(indicator.subprocess, 'Popen', return_value=process), \
+                patch.object(indicator.select, 'select',
+                             return_value=([process.stdout], [], [])), \
+                patch.object(activation_checks, 'wait_for_profile', new=ready):
+            indicator.Native(dict(self.env))
+        child_env = ready.call_args.args[0]
+        self.assertEqual(child_env['CU_INDICATOR_MATERIAL'], 'liquid')
+        ready.assert_called_once_with(child_env, timeout=indicator.LIQUID_READY_TIMEOUT)
+        process.poll.assert_called_once_with()
 
     def test_incoming_material_override_is_dropped_without_backend_support(self):
         env = {'CU_INDICATOR_MATERIAL': 'liquid', 'PATH': '/usr/bin'}  # no session env: helper returns False
@@ -427,7 +450,7 @@ class LiquidSelection(IsolatedNativeTree):
 
     def status(self, **overrides):
         payload = {
-            'schema': 1, 'version': '0.10.0-cu.1', 'versionCheck': 'match',
+            'schema': 1, 'version': '1.1.1-cu.1', 'versionCheck': 'match',
             'active': True, 'shaders': 'ready', 'itemProtocol': True,
             'features': {
                 'layers': {'enabled': True, 'active': True, 'reason': None},
@@ -445,17 +468,26 @@ class LiquidSelection(IsolatedNativeTree):
         processes = []
         results = [Mock(returncode=(returncodes[i] if returncodes else 0), stdout=json.dumps(p))
                    for i, p in enumerate(statuses)]
+        remaining = len(results) - 1
+
+        def wait_profile(env, timeout):
+            self.assertEqual(timeout, indicator.LIQUID_READY_TIMEOUT)
+            for _ in range(remaining):
+                if indicator.liquid_available(env, ready=True):
+                    return True
+            raise RuntimeError('config reload did not reach a ready glass state')
 
         def factory(*args, **kwargs):
             read_fd, write_fd = os.pipe()
             os.write(write_fd, b'ready\n')
             self.addCleanup(os.close, write_fd)
             process = Mock(stdin=io.StringIO(), stdout=os.fdopen(read_fd, 'rb', 0),
-                           wait=Mock(return_value=0))
+                           wait=Mock(return_value=0), poll=Mock(return_value=None))
             processes.append(process)
             return process
         with patch.object(indicator.subprocess, 'run', side_effect=results) as run, \
-                patch.object(indicator.subprocess, 'Popen', side_effect=factory) as popen:
+                patch.object(indicator.subprocess, 'Popen', side_effect=factory) as popen, \
+                patch.object(activation_checks, 'wait_for_profile', side_effect=wait_profile):
             try:
                 native = indicator.Native(env)
                 error = None
@@ -472,7 +504,7 @@ class LiquidSelection(IsolatedNativeTree):
         return result
 
     def test_liquid_sets_material_but_never_sets_ink(self):
-        result = self.ok([self.status(), self.status()])   # initial + fresh post-ready
+        result = self.ok([self.status(), self.status()])   # initial + a fresh readiness probe
         self.assertEqual(result['env'].get('CU_INDICATOR_MATERIAL'), 'liquid')
         self.assertNotIn('CU_INDICATOR_INK', result['env'])
         self.assertEqual(result['run'].call_count, 2, 'ready must re-probe fresh status')
@@ -511,7 +543,7 @@ class LiquidSelection(IsolatedNativeTree):
         result['process'].wait.assert_called_once()
 
     def test_old_or_failed_backend_keeps_native_fallback(self):
-        cases = ((self.status(), 1), (self.status(version='0.10.0'), 0), ({'schema': 2}, 0))
+        cases = ((self.status(), 1), (self.status(version='0.10.0-cu.1'), 0), ({'schema': 2}, 0))
         for payload, returncode in cases:
             with self.subTest(returncode=returncode, schema=payload.get('schema')):
                 result = self.spawn([payload], returncodes=[returncode])

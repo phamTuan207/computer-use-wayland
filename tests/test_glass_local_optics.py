@@ -10,8 +10,19 @@ class LocalOptics(unittest.TestCase):
     def test_patch_scoped_to_indicator(self):
         patch = (ROOT / 'native/hyprglass-local-optics.patch').read_text()
         self.assertIn('m_namespace == "computer-use-indicator"', patch)
+        self.assertIn('region.getExtents().intersection(box)', patch)
+        self.assertIn('std::isfinite(extents.w)', patch)
         self.assertIn('const bool validOpticalBox', patch)
+        self.assertIn('!contoured', patch)
+        self.assertIn('glassBoxSizePx.x > 0.0', patch)
         self.assertIn('if (validOpticalBox)', patch)
+        self.assertNotIn('src/Shaders.hpp', patch)
+
+    def test_profile_scopes_region_mask_to_the_indicator(self):
+        text=(ROOT/'native/hyprglass-local-optics.lua').read_text()
+        self.assertNotIn('namespaces', text)
+        self.assertIn('hl.plugin.hyprglass.layer("computer-use-indicator"', text)
+        self.assertIn('mask_mode = "region"', text)
 
     def test_full_box_sentinel_equivalence(self):
         for width, height in ((320,66),(288,38),(1920,1080)):

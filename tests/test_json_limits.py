@@ -104,7 +104,13 @@ class BatchSchemaTests(unittest.TestCase):
                 from unittest import mock
                 with mock.patch.object(cu,'check_cancel'),mock.patch.object(cu,'focus') as focus, \
                      mock.patch.object(cu,'Pointer') as pointer:
-                    try:cu.desktop_act({}, {'backend':'desktop','created':__import__('time').time()}, [first,bad])
+                    meta={'backend':'desktop','observation_schema':cu.OBSERVATION_SCHEMA,
+                          'image_role':'clean-observation','scope':'window','window':'fixture',
+                          'window_bounds':[0,0,20,20],'monitor':'test','monitor_box':[0,0,20,20],
+                          'monitor_scale':1,'monitor_transform':0,'image_size':[20,20],
+                          'region':[0,0,20,20],'max_width':1280,
+                          **cu._capture_identity({}),'created':__import__('time').time()}
+                    try:cu.desktop_act({},meta,[first,bad])
                     finally:focus.assert_not_called();pointer.assert_not_called()
             else:cu.validate_actions([first, bad], backend)
 

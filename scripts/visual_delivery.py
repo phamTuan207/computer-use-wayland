@@ -31,11 +31,18 @@ class VisualCheckpoint:
             if meta['backend'] != 'desktop' or meta['scope'] not in ('window', 'screen') or meta['image'] != path:
                 raise ValueError('not a matching desktop observation')
             # Same pixels in another window/crop/monitor are not the same coordinate frame.
+            png = Path(path).read_bytes()
+            if (meta.get('image_format')!='PNG' or meta.get('image_bytes')!=len(png) or
+                    meta.get('image_sha256')!=hashlib.sha256(png).hexdigest()):
+                raise ValueError('returned PNG does not match its observation identity')
+            if (png[:8]!=b'\x89PNG\r\n\x1a\n' or len(png)<24 or png[12:16]!=b'IHDR' or
+                    list((int.from_bytes(png[16:20],'big'),int.from_bytes(png[20:24],'big')))!=meta['image_size']):
+                raise ValueError('returned PNG dimensions do not match its observation identity')
             frame = [meta[k] for k in ('scope', 'window', 'monitor', 'region', 'image_size',
                                       'monitor_box', 'monitor_scale', 'monitor_transform')
                      if k != 'window' or meta['scope'] == 'window']
             if meta['scope'] == 'window':frame.append(meta['window_bounds'])
-            key = (hashlib.sha256(Path(path).read_bytes()).hexdigest(), json.dumps(frame))
+            key = (meta['image_sha256'], json.dumps(frame))
         except (OSError, ValueError, KeyError, TypeError):
             self.clear()
             return {**required, 'reason': 'visual identity unavailable'}

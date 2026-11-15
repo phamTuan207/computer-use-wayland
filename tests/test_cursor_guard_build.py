@@ -18,7 +18,7 @@ import setup as real_setup
 
 def pkg_ok(argv, **kwargs):
     if argv[:2] == ['pkg-config', '--modversion']:
-        return subprocess.CompletedProcess(argv, 0, '0.56.2\n', '')
+        return subprocess.CompletedProcess(argv, 0, '0.57.2\n', '')
     if argv[:2] == ['pkg-config', '--cflags']:
         return subprocess.CompletedProcess(argv, 0, '-I/usr/include/hyprland\n', '')
     if argv and argv[0] == 'g++':
@@ -36,7 +36,7 @@ class BuildTests(unittest.TestCase):
         stack.start()
         self.addCleanup(stack.stop)
         abi = mock.patch.object(real_setup, 'header_abi',
-                                return_value='efb50993780079460b0cbed1363e2166a2de1d9f_aq_0.15_hu_0.14_hg_0.5_hc_0.1_hlg_0.6')
+                                return_value='11cbc6c577b84ffb1edf4df3fc5b6128c3ae6947_aq_0.16_hu_0.14_hg_0.6_hc_0.1_hlg_0.6')
         abi.start()
         self.addCleanup(abi.stop)
         out = mock.patch.object(module, 'OUTPUT', output)
@@ -97,7 +97,7 @@ class BuildTests(unittest.TestCase):
             output.write_bytes(b'\x7fELFprevious')
             with mock.patch.object(module.subprocess, 'run', new=mock.Mock(side_effect=pkg)), \
                  mock.patch.object(real_setup, 'header_abi',
-                                   return_value='efb50993780079460b0cbed1363e2166a2de1d9f_x'), \
+                                   return_value='11cbc6c577b84ffb1edf4df3fc5b6128c3ae6947_x'), \
                  mock.patch.object(module, 'OUTPUT', output):
                 with self.assertRaises(SystemExit):
                     module.build({})
@@ -112,7 +112,7 @@ class BuildTests(unittest.TestCase):
             link.symlink_to(real)
             with mock.patch.object(module.subprocess, 'run', new=mock.Mock(side_effect=pkg_ok)) as run, \
                  mock.patch.object(real_setup, 'header_abi',
-                                   return_value='efb50993780079460b0cbed1363e2166a2de1d9f_x'), \
+                                   return_value='11cbc6c577b84ffb1edf4df3fc5b6128c3ae6947_x'), \
                  mock.patch.object(module, 'OUTPUT', link):
                 with self.assertRaises(SystemExit):
                     module.build({})
@@ -158,6 +158,7 @@ class ImmutableGuardInstall(unittest.TestCase):
                 module.install(source, root)
             self.assertEqual(target.read_bytes(), b'corrupt')
 
+
     def test_symlink_or_nonregular_target_is_refused(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
@@ -174,6 +175,16 @@ class ImmutableGuardInstall(unittest.TestCase):
             source.write_bytes(b'not ELF')
             with self.assertRaisesRegex(ValueError, 'not an ELF'):
                 module.install(source, folder)
+
+
+class HyprCtlRegistrationContract(unittest.TestCase):
+    def test_uses_prefix_matched_socket1_request_handler(self):
+        source = (ROOT / 'native/cursor-guard.cpp').read_text()
+        self.assertIn('#include <hyprland/src/ipc/s1/S1.hpp>', source)
+        self.assertIn('IPC::Socket1::COMMAND_MATCH_PREFIX', source)
+        self.assertIn('const IPC::Socket1::SRequest& request', source)
+        self.assertIn('-> IPC::Socket1::SResponse', source)
+        self.assertIn('guard->command(request.command)', source)
 
 
 if __name__ == '__main__':

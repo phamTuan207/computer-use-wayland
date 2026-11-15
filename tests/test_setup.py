@@ -19,17 +19,19 @@ _spec.loader.exec_module(setup)
 import cursor_theme as real_cursor_theme
 
 COMMANDS = ('cc -shared -fPIC -o %s %s', 'x')
+HYPRBARS = {'name': 'hyprbars', 'author': 'Vaxry', 'handle': '55ae075ca090',
+            'version': '1.0', 'description': 'Window title bars'}
 
 
 def macros(**overrides):
-    values = {'GIT_COMMIT_HASH': 'v0.56.2', 'AQUAMARINE_VERSION': '0.15.2',
+    values = {'GIT_COMMIT_HASH': 'v0.57.2', 'AQUAMARINE_VERSION': '0.15.2',
               'HYPRUTILS_VERSION': '0.14.9', 'HYPRGRAPHICS_VERSION': '0.5.11',
               'HYPRCURSOR_VERSION': '0.1.9', 'HYPRLANG_VERSION': '0.6.3'}
     values.update(overrides)
     return ''.join(f'#define {k} "{v}"\n' for k, v in values.items())
 
 
-def fake_pkg(version='0.56.2', cflags='-I/usr/include/hyprland'):
+def fake_pkg(version='0.57.2', cflags='-I/usr/include/hyprland'):
     def run(argv, **kwargs):
         if argv[:2] == ['pkg-config', '--modversion']:
             return version + '\n'
@@ -43,7 +45,7 @@ def fake_preproc(text):
 
 class HeaderAbiTests(unittest.TestCase):
     def test_reconstructs_the_pinned_client_hash(self):
-        expected = ('v0.56.2' + '_aq_0.15' + '_hu_0.14' + '_hg_0.5' + '_hc_0.1' + '_hlg_0.6')
+        expected = ('v0.57.2' + '_aq_0.15' + '_hu_0.14' + '_hg_0.5' + '_hc_0.1' + '_hlg_0.6')
         with mock.patch.object(setup.subprocess, 'check_output',
                                side_effect=lambda argv, **k: fake_pkg()(argv, **k)
                                if argv[0] == 'pkg-config' else macros()):
@@ -55,10 +57,10 @@ class HeaderAbiTests(unittest.TestCase):
         self.assertEqual(setup._strip_patch('nodot'), 'nodot')
 
     def test_wrong_hyprland_version_is_refused(self):
-        for version in ('0.56.1', '0.57.0', '', '0.56.2-rc1'):
+        for version in ('0.56.2', '0.57.1', '', '0.57.2-rc1'):
             with self.subTest(version=version):
                 with mock.patch.object(setup.subprocess, 'check_output', new=fake_pkg(version)):
-                    with self.assertRaisesRegex(RuntimeError, '0.56.2 required'):
+                    with self.assertRaisesRegex(RuntimeError, '0.57.2 required'):
                         setup.header_abi({})
 
     def test_missing_macro_is_refused(self):
@@ -115,6 +117,9 @@ class InstallHookTests(unittest.TestCase):
         hook = self.hook.read_text()
         self.assertIn('hl.on("hyprland.start"', hook)
         self.assertIn('hl.exec_cmd(' + json.dumps(self.command, ensure_ascii=False) + ')', hook)
+        self.assertIn('if glass_count == 1 and glass_version == "1.1.1-cu.1" then\n', hook)
+        self.assertIn('else\n  hl.on("hyprland.start"', hook)
+        self.assertLess(hook.index('dofile('), hook.index('else\n  hl.on('))
         self.assertNotIn('sleep', hook)
 
     def _everything(self):
@@ -201,8 +206,32 @@ class InstallHookTests(unittest.TestCase):
         nasty = 'echo "Tiếng Việt \"hi\"" && true'
         self.hook=self.dir/'Dự án'/'login.lua';self.hook.parent.mkdir()
         setup.install_hook(self.config, nasty, self.hook)
-        program = 'local fn;local calls=0;hl={on=function(e,f) assert(e=="hyprland.start");fn=f end,exec_cmd=function(s) assert(s==arg[2]);calls=calls+1 end};dofile(arg[1]);assert(calls==0);fn();assert(calls==1)'
+        program = 'local fn;local calls=0;hl={get_loaded_plugins=function() return {} end,on=function(e,f) assert(e=="hyprland.start");fn=f end,exec_cmd=function(s) assert(s==arg[2]);calls=calls+1 end};dofile(arg[1]);assert(calls==0);fn();assert(calls==1)'
         subprocess.run(['lua','-',str(self.config),nasty],input=program,text=True,check=True,capture_output=True)
+
+    @unittest.skipUnless(shutil.which('lua'), 'Lua interpreter missing')
+    def test_hook_sources_profile_each_eval_only_for_the_accepted_glass(self):
+        self.hook = self.dir/'visuals-login.lua'
+        setup.install_hook(self.config, self.command, self.hook)
+        profile = str(setup.ROOT/'native/hyprglass-local-optics.lua')
+        program = r'''local run=dofile
+local loaded, sourced, starts, commands = {}, 0, 0, 0
+dofile=function(path)
+  if path==arg[2] then sourced=sourced+1 else return run(path) end
+end
+hl={get_loaded_plugins=function() return loaded end,
+    on=function(event,fn) assert(event=="hyprland.start"); starts=starts+1; start=fn end,
+    exec_cmd=function() commands=commands+1 end}
+loaded={{name="hyprglass",version="1.1.1-cu.1"}};run(arg[1])
+loaded={{name="hyprglass",version="1.1.1-cu.1"}};run(arg[1])
+assert(sourced==2 and starts==0 and commands==0)
+loaded={{name="hyprglass",version="0.10.0"}};run(arg[1])
+loaded={{name="hyprglass",version="1.1.1-cu.1"},{name="hyprglass",version="1.1.1-cu.1"}};run(arg[1])
+assert(sourced==2 and starts==2 and commands==0)
+start();assert(commands==1)
+'''
+        subprocess.run(['lua','-',str(self.hook),profile], input=program, text=True,
+                       check=True, capture_output=True)
 
     def test_missing_managed_hook_is_repaired_without_changing_config(self):
         setup.install_hook(self.config, self.command, self.hook)
@@ -448,10 +477,33 @@ class FullSetupTests(_SetupFixture, unittest.TestCase):
         self._patched()
         self.plugins = '["some-plugin"]'      # a reload could disturb it
         self.calls.clear()
-        with self.assertRaisesRegex(RuntimeError, 'plugins are already loaded'):
+        with self.assertRaisesRegex(RuntimeError, 'plugin inventory'):
             self.declared()
         self.calls.clear()
         self.assertFalse((self.root/'native/visuals.json').exists())
+
+    def test_setup_keeps_exact_hyprbars_inventory(self):
+        self._patched()
+        self.plugins = json.dumps([HYPRBARS])
+        self.assertTrue(self.declared()['ok'])
+        inventory_reads = [call for call in self.calls
+                           if call[:4] == ['hyprctl', '-j', 'plugin', 'list']]
+        self.assertGreaterEqual(len(inventory_reads), 3)
+
+    def test_duplicate_or_malformed_plugin_inventory_refuses_before_build(self):
+        self._patched()
+        cases = ([HYPRBARS, HYPRBARS],
+                 [{**HYPRBARS, 'author': 'someone else'}],
+                 [{key: value for key, value in HYPRBARS.items() if key != 'description'}],
+                 [{**HYPRBARS, 'handle': 'not-hex'}])
+        for inventory in cases:
+            with self.subTest(inventory=inventory):
+                self.plugins = json.dumps(inventory)
+                self.calls.clear()
+                with self.assertRaisesRegex(RuntimeError, 'plugin inventory|plugin handle|duplicate'):
+                    self.declared()
+                self.assertFalse(any(any('build' in part or part == 'clone' for part in call)
+                                     for call in self.calls))
 
     def test_missing_prerequisite_is_refused(self):
         self._patched()
@@ -620,10 +672,45 @@ class RerunAndDriftTests(_SetupFixture, unittest.TestCase):
             return self._default(argv, **kwargs)
         self.answer = answer
         self._patched()
-        with self.assertRaisesRegex(RuntimeError, 'plugins are already loaded'):
+        with self.assertRaisesRegex(RuntimeError, 'plugin inventory'):
             self.declared()
         self.assertNotIn('computer-use-visuals-begin', self.config.read_text())
         self._assert_nothing_installed_or_published()
+
+    def test_hyprbars_handle_drift_during_build_aborts_before_publication(self):
+        inventories = [json.dumps([HYPRBARS]),
+                       json.dumps([{**HYPRBARS, 'handle': 'deadbeef'}])]
+
+        def answer(argv, **kwargs):
+            if argv[:4] == ['hyprctl', '-j', 'plugin', 'list']:
+                return subprocess.CompletedProcess(argv, 0, inventories.pop(0), '')
+            return self._default(argv, **kwargs)
+
+        self.answer = answer
+        self._patched()
+        with self.assertRaisesRegex(RuntimeError, 'plugin inventory changed'):
+            self.declared()
+        self.assertFalse((self.root/'native/visuals-login.lua').exists())
+        self.assertFalse((self.root/'native/require-liquid').exists())
+        self.assertFalse((self.root/'native/visuals.json').exists())
+
+    def test_inventory_is_rechecked_immediately_before_publication(self):
+        changed = {**HYPRBARS, 'handle': 'deadbeef'}
+        inventories = [json.dumps([HYPRBARS]), json.dumps([HYPRBARS]),
+                       json.dumps([changed])]
+
+        def answer(argv, **kwargs):
+            if argv[:4] == ['hyprctl', '-j', 'plugin', 'list']:
+                return subprocess.CompletedProcess(argv, 0, inventories.pop(0), '')
+            return self._default(argv, **kwargs)
+
+        self.answer = answer
+        self._patched()
+        with self.assertRaisesRegex(RuntimeError, 'plugin inventory changed'):
+            self.declared()
+        self.assertFalse((self.root/'native/require-liquid').exists())
+        self.assertFalse((self.root/'native/visuals-login.lua').exists())
+        self.assertFalse((self.root/'native/visuals.json').exists())
 
     def _assert_nothing_installed_or_published(self):
         """The abort happens before the first write, so no artefact exists at all."""
