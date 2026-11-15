@@ -20,7 +20,11 @@ GUARD = {'name': 'computer-use-cursor', 'author': 'computer-use-wayland',
 class PluginInventoryTests(unittest.TestCase):
     def test_setup_accepts_empty_or_exact_hyprbars(self):
         self.assertEqual(plugin_inventory.setup_baseline('[]'), [])
-        self.assertEqual(plugin_inventory.setup_baseline(json.dumps([BAR])), [BAR])
+        identity=[{'name':'hyprbars','author':'Vaxry','version':'1.0'}]
+        self.assertEqual(plugin_inventory.setup_baseline(json.dumps([BAR])), identity)
+        self.assertEqual(plugin_inventory.setup_baseline(
+            json.dumps([{**BAR,'handle':'559e76cc0020'}])),identity)
+        self.assertEqual(plugin_inventory.setup_snapshot([BAR]),[BAR])
 
     def test_setup_rejects_unknown_duplicate_and_malformed_plugins(self):
         for plugins in ([{**BAR, 'author': 'other'}], [BAR, BAR],

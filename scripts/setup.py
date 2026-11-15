@@ -240,7 +240,7 @@ def _hook_command():
 
 def _setup_plugin_inventory(env):
     """Snapshot the only pre-existing plugin set that setup can safely keep."""
-    return plugin_inventory.setup_baseline(
+    return plugin_inventory.setup_snapshot(
         _checked(['hyprctl', '-j', 'plugin', 'list'], env=env).stdout)
 
 

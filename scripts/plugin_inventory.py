@@ -43,11 +43,24 @@ def _verified_hyprbars(plugin):
 
 
 def setup_baseline(value):
-    """Setup and glass first-load permit only no plugins or the known hyprbars."""
+    """Return stable identity for no plugins or the one accepted hyprbars build.
+
+    Hyprland assigns a new handle when a plugin is loaded in a new compositor.
+    The handle is still structurally validated by parse(), but it is not part
+    of the cross-startup plugin identity used by this baseline.
+    """
     plugins = parse(value)
     if not plugins or (len(plugins) == 1 and _verified_hyprbars(plugins[0])):
-        return plugins
+        return [{'name':plugin['name'],'author':plugin['author'],
+                 'version':plugin['version']} for plugin in plugins]
     raise RuntimeError('unsupported plugin inventory; expected none or verified hyprbars 1.0')
+
+
+def setup_snapshot(value):
+    """Validate the accepted setup set and retain a full same-session snapshot."""
+    plugins=parse(value)
+    setup_baseline(plugins)
+    return plugins
 
 
 def cursor_baseline(value):
@@ -64,7 +77,7 @@ def cursor_baseline(value):
 
 
 def assert_glass_added(before, after):
-    baseline = setup_baseline(before)
+    baseline = setup_snapshot(before)
     current = cursor_baseline(after)
     retained = [plugin for plugin in current if plugin['name'] != 'hyprglass']
     if retained != baseline:

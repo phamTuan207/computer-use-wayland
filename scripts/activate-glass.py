@@ -41,20 +41,23 @@ def activate(library, abi, profile_sha256, env, *, before_load=None, after_reloa
         raise RuntimeError('invalid compositor version response') from error
     if not isinstance(version, dict) or version.get('abiHash') != abi:
         raise RuntimeError('Hyprland ABI changed; rebuild and verify plugin before activation')
-    loaded = plugin_inventory.setup_baseline(query('-j', 'plugin', 'list'))
+    loaded_snapshot = plugin_inventory.setup_snapshot(query('-j', 'plugin', 'list'))
+    loaded = plugin_inventory.setup_baseline(loaded_snapshot)
     if before_load is not None:before_load()
     try:
         current_version = json.loads(query('-j', 'version'))
     except (json.JSONDecodeError, TypeError) as error:
         raise RuntimeError('invalid compositor version response') from error
-    current_plugins = plugin_inventory.setup_baseline(query('-j', 'plugin', 'list'))
-    if current_version != version or current_plugins != loaded:
+    current_snapshot = plugin_inventory.setup_snapshot(query('-j', 'plugin', 'list'))
+    current_plugins = plugin_inventory.setup_baseline(current_snapshot)
+    if (current_version != version or current_plugins != loaded or
+            current_snapshot != loaded_snapshot):
         raise RuntimeError('compositor ownership changed before glass activation')
     require_profile_provenance()
     answer = query('plugin', 'load', str(library)).strip()
     if answer != 'ok':
         raise RuntimeError('plugin load refused: ' + answer)
-    plugin_inventory.assert_glass_added(loaded, query('-j', 'plugin', 'list'))
+    plugin_inventory.assert_glass_added(loaded_snapshot, query('-j', 'plugin', 'list'))
     answer = query('reload').strip()
     if answer != 'ok':
         raise RuntimeError('normal config reload refused: ' + answer)
