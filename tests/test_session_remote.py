@@ -260,6 +260,22 @@ class SessionRemoteIntegration(BrokerHarness):
         self.assertEqual(stat.S_IMODE(self.socket_path.parent.stat().st_mode), 0o700)
         self.assertEqual(self.launches, [])
 
+    def test_start_returns_bounded_readiness_stage_and_diagnostic(self):
+        def refuse():
+            raise session_remote.BrokerError('native_unavailable', 'private detail',
+                                              stage='guard',
+                                              diagnostic='cursor_guard_missing')
+        self.broker.readiness = refuse
+        state = self.exchange({'command': 'status'})
+        response = self.exchange({'command': 'start', 'owner': 'stage-test',
+                                  'start_id': session_remote._new_start_id(),
+                                  'lease_secret': secrets.token_hex(32),
+                                  'broker_generation': state['broker_generation']})
+        self.assertEqual(response, {'ok': False, 'error': 'native_unavailable',
+                                    'stage': 'guard', 'diagnostic': 'cursor_guard_missing'})
+        self.assertNotIn('private detail', json.dumps(response))
+        self.assertEqual(self.launches, [])
+
     def test_production_launch_uses_fixed_existing_session_driver_argv(self):
         with patch.object(session_remote.subprocess, 'Popen') as popen:
             session_remote.Broker._launch({'PATH': '/usr/bin'})

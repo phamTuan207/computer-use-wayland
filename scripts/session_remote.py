@@ -42,8 +42,10 @@ SECRET = re.compile(r'[0-9a-f]{64}\Z')
 
 
 class BrokerError(RuntimeError):
-    def __init__(self, error, message=None):
+    def __init__(self, error, message=None, *, stage=None, diagnostic=None):
         self.error = error
+        self.stage = stage
+        self.diagnostic = diagnostic
         super().__init__(message or error)
 
 
@@ -197,40 +199,68 @@ def _compositor_identity(env):
 
 
 def native_readiness(env=None):
-    """Read-only native/task readiness gate. It never loads or reloads anything."""
+    """Read-only native/task readiness gate with bounded stage diagnostics."""
     env = dict(os.environ) if env is None else dict(env)
-    identity = _compositor_identity(env)
-    version = _hypr_json(env, '-j', 'version')
+    try:
+        identity = _compositor_identity(env)
+    except BrokerError as error:
+        raise BrokerError(error.error, str(error), stage='compositor',
+                          diagnostic='compositor_identity_unavailable') from error
+    try:
+        version = _hypr_json(env, '-j', 'version')
+    except BrokerError as error:
+        raise BrokerError(error.error, str(error), stage='abi',
+                          diagnostic='version_probe_failed') from error
     if (not isinstance(version, dict) or version.get('version') != '0.57.2' or
             version.get('commit') != HYPRLAND_PIN or
             not isinstance(version.get('abiHash'), str) or
             not version['abiHash'].startswith(HYPRLAND_PIN + '_')):
-        raise BrokerError('native_unavailable', 'running compositor ABI is not the accepted build')
+        raise BrokerError('native_unavailable', 'running compositor ABI is not the accepted build',
+                          stage='abi', diagnostic='unsupported_compositor_abi')
 
     import indicator
     import plugin_inventory
-    plugins = plugin_inventory.parse(_hypr_json(env, '-j', 'plugin', 'list'))
+    try:
+        plugins = plugin_inventory.parse(_hypr_json(env, '-j', 'plugin', 'list'))
+    except Exception as error:
+        raise BrokerError('native_unavailable', 'plugin inventory is unavailable or invalid',
+                          stage='plugins', diagnostic='plugin_inventory_invalid') from error
     by_name = {entry['name']: entry for entry in plugins}
-    allowed = {'hyprglass', 'computer-use-cursor'}
-    if 'hyprbars' in by_name:
-        allowed.add('hyprbars')
-    if set(by_name) != allowed:
-        raise BrokerError('native_unavailable', 'accepted glass and cursor plugins are not ready')
-    glass = by_name['hyprglass']
-    guard = by_name['computer-use-cursor']
-    if (glass['author'] != 'hyprnux' or glass['version'] != indicator.LIQUID_VERSION or
-            guard['author'] != 'computer-use-wayland' or guard['version'] != '1.0.0'):
-        raise BrokerError('native_unavailable', 'accepted glass and cursor plugins are not ready')
+    if set(by_name) - {'hyprglass', 'computer-use-cursor', 'hyprbars'}:
+        raise BrokerError('native_unavailable', 'plugin inventory is unsupported',
+                          stage='plugins', diagnostic='unsupported_plugin_inventory')
+    glass = by_name.get('hyprglass')
+    if glass is None:
+        raise BrokerError('native_unavailable', 'accepted glass plugin is missing',
+                          stage='glass', diagnostic='glass_plugin_missing')
+    if glass['author'] != 'Hyprnux' or glass['version'] != indicator.LIQUID_VERSION:
+        raise BrokerError('native_unavailable', 'accepted glass plugin identity is unsupported',
+                          stage='glass', diagnostic='glass_plugin_identity_mismatch')
+    guard = by_name.get('computer-use-cursor')
+    if guard is None:
+        raise BrokerError('native_unavailable', 'cursor guard plugin is missing',
+                          stage='guard', diagnostic='cursor_guard_missing')
+    if guard['author'] != 'computer-use-wayland' or guard['version'] != '1.0.0':
+        raise BrokerError('native_unavailable', 'cursor guard plugin identity is unsupported',
+                          stage='guard', diagnostic='cursor_guard_identity_mismatch')
     if 'hyprbars' in by_name and not (
             by_name['hyprbars']['author'] == 'Vaxry' and by_name['hyprbars']['version'] == '1.0'):
-        raise BrokerError('native_unavailable', 'plugin inventory is unsupported')
-    if not indicator.liquid_available(env, ready=True):
-        raise BrokerError('native_unavailable', 'accepted liquid-glass backend is not ready')
+        raise BrokerError('native_unavailable', 'plugin inventory is unsupported',
+                          stage='plugins', diagnostic='unsupported_hyprbars_build')
+    try:
+        liquid_ready = indicator.liquid_available(env, ready=True)
+    except Exception as error:
+        raise BrokerError('native_unavailable', 'liquid-glass status probe failed',
+                          stage='glass', diagnostic='liquid_status_probe_failed') from error
+    if not liquid_ready:
+        raise BrokerError('native_unavailable', 'accepted liquid-glass backend is not ready',
+                          stage='glass', diagnostic='liquid_backend_not_ready')
     import cursor_theme
     try:
         cursor_theme.check_guard(env)
     except Exception as error:
-        raise BrokerError('native_unavailable', 'cursor backend is not idle and ready') from error
+        raise BrokerError('native_unavailable', 'cursor backend is not idle and ready',
+                          stage='guard', diagnostic='cursor_guard_busy_or_unavailable') from error
     return {**identity, 'commit': version['commit'], 'abi_hash': version['abiHash']}
 
 
@@ -491,13 +521,20 @@ class Broker:
             try:
                 identity = self.readiness()
                 if not isinstance(identity, dict) or not identity.get('instance'):
-                    raise BrokerError('native_unavailable', 'native readiness check failed')
+                    raise BrokerError('native_unavailable', 'native readiness check failed',
+                                      stage='readiness', diagnostic='invalid_readiness_result')
             except BrokerError as error:
                 response = {'ok': False, 'error': error.error}
+                if error.stage:
+                    response['stage'] = error.stage[:32]
+                if error.diagnostic:
+                    response['diagnostic'] = error.diagnostic[:96]
                 record['response'] = response
                 return dict(response)
             except Exception:
-                response = {'ok': False, 'error': 'native_unavailable'}
+                response = {'ok': False, 'error': 'native_unavailable',
+                            'stage': 'readiness',
+                            'diagnostic': 'unexpected_readiness_failure'}
                 record['response'] = response
                 return dict(response)
 
