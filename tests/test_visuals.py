@@ -65,7 +65,9 @@ class LoginTests(unittest.TestCase):
                                     new=self.final_check)
         patcher.start()
         self.addCleanup(patcher.stop)
-        fresh=mock.patch.object(visuals,'require_fresh_login');fresh.start();self.addCleanup(fresh.stop)
+        self.freshness=('fresh-login',7,12345,'fixture-boot')
+        fresh=mock.patch.object(visuals,'require_fresh_login',return_value=self.freshness)
+        self.fresh_gate=fresh.start();self.addCleanup(fresh.stop)
 
     def write(self, **changes):
         # No library parameter: 'library' must be settable like any other key.
@@ -85,8 +87,11 @@ class LoginTests(unittest.TestCase):
         args, kwargs = self.activation.call_args
         self.assertEqual(args, (str(self.library.resolve()), 'abi-hash',
                                 sha(visuals.OPTICS.read_bytes()), self.env))
+        self.assertEqual(kwargs['freshness'], self.freshness)
         self.assertTrue(callable(kwargs['after_reload']))
-        self.guard_activation.assert_called_once_with(str(self.guard.resolve()), 'abi-hash', self.env)
+        self.guard_activation.assert_called_once_with(str(self.guard.resolve()), 'abi-hash', self.env,
+                                                       freshness=self.freshness)
+        self.fresh_gate.assert_called_once_with(self.env)
         visuals.indicator.Native.assert_called_once_with(self.env)
         self.overlay.close.assert_called_once_with()
         self.final_check.assert_called_once_with(self.env)
@@ -98,7 +103,7 @@ class LoginTests(unittest.TestCase):
             order.append('glass')
             kwargs['after_reload']()
         self.activation.side_effect = glass
-        self.guard_activation.side_effect = lambda *a: order.append('guard')
+        self.guard_activation.side_effect = lambda *a, **kw: order.append('guard')
         visuals.indicator.Native.side_effect = lambda env: order.append('indicator') or self.overlay
         visuals.login(self.manifest, self.env)
         self.assertEqual(order, ['glass', 'guard', 'indicator'])
@@ -143,10 +148,10 @@ class LoginTests(unittest.TestCase):
         activate = mock.Mock()
         with mock.patch.object(visuals.runpy, 'run_path', return_value={'activate': activate}), \
              mock.patch.object(visuals, 'require_fresh_login') as gate:
-            REAL_ACTIVATE_GUARD('library', 'abi', self.env)
+            REAL_ACTIVATE_GUARD('library', 'abi', self.env, freshness=self.freshness)
             callback = activate.call_args.kwargs['before_load']
             callback()
-            gate.assert_called_once_with(self.env)
+            gate.assert_called_once_with(self.env, ticket=self.freshness)
         activate.assert_called_once()
 
     def test_rejects_non_object_and_relative_library_before_activation(self):
@@ -159,9 +164,10 @@ class LoginTests(unittest.TestCase):
     def test_activation_wrapper_passes_the_fresh_login_gate(self):
         activate=mock.Mock()
         with mock.patch.object(visuals.runpy,'run_path',return_value={'activate':activate}),mock.patch.object(visuals,'require_fresh_login') as gate:
-            REAL_ACTIVATE('library','abi',sha(visuals.OPTICS.read_bytes()),self.env)
+            REAL_ACTIVATE('library','abi',sha(visuals.OPTICS.read_bytes()),self.env,
+                          freshness=self.freshness)
             callback=activate.call_args.kwargs['before_load'];callback()
-            gate.assert_called_once_with(self.env)
+            gate.assert_called_once_with(self.env,ticket=self.freshness)
 
     def test_loader_writes_private_stage_failure_without_token_or_image_path(self):
         marker = 'f' * 32
@@ -351,14 +357,32 @@ class FreshLoginTests(unittest.TestCase):
     def test_process_age_not_wall_clock_controls_loading(self):
         with tempfile.TemporaryDirectory() as folder:
             root=Path(folder);(root/'7').mkdir();(root/'uptime').write_text('1000.00 0.00')
+            boot=(root/'sys/kernel/random');boot.mkdir(parents=True)
+            (boot/'boot_id').write_text('fixture-boot\n')
             for age in (5,30,31,-1):
                 with self.subTest(age=age):
                     (root/'7'/'stat').write_text('7 (fixture process) S '+'0 '*18+str((1000-age)*100))
                     with mock.patch.object(visuals,'PROC',root),mock.patch.object(visuals.os,'sysconf',return_value=100),mock.patch.object(visuals.subprocess,'check_output',return_value='[{"instance":"fresh","pid":7}]'):
-                        if 0<=age<=30:visuals.require_fresh_login({'HYPRLAND_INSTANCE_SIGNATURE':'fresh'})
+                        if 0<=age<=30:
+                            ticket=visuals.require_fresh_login({'HYPRLAND_INSTANCE_SIGNATURE':'fresh'})
+                            self.assertEqual(ticket,('fresh',7,(1000-age)*100,'fixture-boot'))
                         else:
                             with self.assertRaisesRegex(RuntimeError,'first 30 seconds'):
                                 visuals.require_fresh_login({'HYPRLAND_INSTANCE_SIGNATURE':'fresh'})
+
+            (root/'7'/'stat').write_text('7 (fixture process) S '+'0 '*18+'99500')
+            (root/'uptime').write_text('1035.00 0.00')
+            ticket=('fresh',7,99500,'fixture-boot')
+            with mock.patch.object(visuals,'PROC',root),mock.patch.object(visuals.os,'sysconf',return_value=100),mock.patch.object(visuals.subprocess,'check_output',return_value='[{"instance":"fresh","pid":7}]'):
+                self.assertEqual(visuals.require_fresh_login(
+                    {'HYPRLAND_INSTANCE_SIGNATURE':'fresh'},ticket=ticket),ticket)
+                (root/'7'/'stat').write_text('7 (fixture process) S '+'0 '*18+'99501')
+                with self.assertRaisesRegex(RuntimeError,'compositor changed'):
+                    visuals.require_fresh_login({'HYPRLAND_INSTANCE_SIGNATURE':'fresh'},ticket=ticket)
+                (root/'7'/'stat').write_text('7 (fixture process) S '+'0 '*18+'99500')
+                (boot/'boot_id').write_text('different-boot\n')
+                with self.assertRaisesRegex(RuntimeError,'compositor changed'):
+                    visuals.require_fresh_login({'HYPRLAND_INSTANCE_SIGNATURE':'fresh'},ticket=ticket)
 
     def test_inventory_or_proc_failure_refuses_instead_of_guessing(self):
         for payload in ('[]','{}','[{"instance":"fresh","pid":true}]'):

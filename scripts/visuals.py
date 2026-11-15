@@ -74,35 +74,60 @@ def atomic_write(path, data):
     return path
 
 
-def _activate(library, abi, profile_sha256, env, *, after_reload=None):
+def _activate(library, abi, profile_sha256, env, *, freshness=None, after_reload=None):
     """Run the existing helper by path; its own guards are the only activation path."""
     namespace = runpy.run_path(str(ACTIVATE), run_name='activate_glass')
     namespace['activate'](library, abi, profile_sha256, env,
-                         before_load=lambda:require_fresh_login(env),
+                         before_load=lambda:require_fresh_login(env, ticket=freshness),
                          after_reload=after_reload)
     return True
 
 
-def _activate_cursor_guard(library, abi, env):
+def _activate_cursor_guard(library, abi, env, *, freshness=None):
     """Run root's guard helper by path; it must never unload or reload plugins."""
     namespace = runpy.run_path(str(ACTIVATE_GUARD), run_name='activate_cursor_guard')
-    namespace['activate'](library, abi, env, before_load=lambda:require_fresh_login(env))
+    namespace['activate'](library, abi, env,
+                         before_load=lambda:require_fresh_login(env, ticket=freshness))
     return True
 
 
-def require_fresh_login(env):
-    """Check process age too: a different instance alone can still be an old login."""
+def _compositor_freshness(env):
+    """Return the exact compositor process identity and its monotonic age."""
     try:
         rows=json.loads(subprocess.check_output(['hyprctl','-j','instances'],env=env,text=True,timeout=5))
-        matches=[r for r in rows if r.get('instance')==env.get('HYPRLAND_INSTANCE_SIGNATURE')]
+        instance=(env.get('HYPRLAND_INSTANCE_SIGNATURE') or '').strip()
+        matches=[r for r in rows if r.get('instance')==instance]
         if len(matches)!=1 or type(matches[0].get('pid')) is not int or matches[0]['pid']<=0:
             raise ValueError('invalid instance inventory')
-        fields=(PROC/str(matches[0]['pid'])/'stat').read_text().rsplit(')',1)[1].split()
-        age=float((PROC/'uptime').read_text().split()[0])-int(fields[19])/os.sysconf('SC_CLK_TCK')
+        pid=matches[0]['pid']
+        fields=(PROC/str(pid)/'stat').read_text().rsplit(')',1)[1].split()
+        start_ticks=int(fields[19])
+        uptime=float((PROC/'uptime').read_text().split()[0])
+        boot_id=(PROC/'sys/kernel/random/boot_id').read_text().strip()
+        if not instance or start_ticks<0 or not boot_id:
+            raise ValueError('invalid compositor process identity')
+        age=uptime-start_ticks/os.sysconf('SC_CLK_TCK')
     except (OSError,ValueError,TypeError,IndexError,KeyError,AttributeError,subprocess.SubprocessError) as exc:
         raise RuntimeError('cannot verify fresh compositor startup') from exc
-    if not 0<=age<=30:
+    return (instance,pid,start_ticks,boot_id),age
+
+
+def require_fresh_login(env, ticket=None):
+    """Accept only a loader started in the first 30 seconds of this compositor.
+
+    Later pre-load checks use the returned ticket to prove that the compositor
+    is still the same process, even if startup validation itself took longer.
+    """
+    identity,age=_compositor_freshness(env)
+    if ticket is None:
+        if not 0<=age<=30:
+            raise RuntimeError('visuals can only start during the first 30 seconds of a fresh login')
+        return identity
+    if identity!=ticket:
+        raise RuntimeError('compositor changed after fresh login was accepted')
+    if age<0:
         raise RuntimeError('visuals can only load during the first 30 seconds of a fresh login')
+    return ticket
 
 
 def _loader_log(progress, env, error=None):
@@ -168,11 +193,13 @@ def login(manifest, env):
     try:
         if env.get('CU_SESSION_TOKEN') or os.environ.get('CU_SESSION_TOKEN'):
             raise RuntimeError('refusing to load visuals inside an automation session')
+        progress['stage'] = 'fresh_login_gate'
+        freshness=require_fresh_login(env)
         progress['stage'] = 'session_lock'
         with cursor_session.owner_lock():
             if cursor_session.SNAPSHOT.exists():
                 raise RuntimeError('finish or recover the retained session before loading visuals')
-            result = _login(manifest, env, progress)
+            result = _login(manifest, env, progress, freshness=freshness)
         _loader_log(progress, env)
         return result
     except Exception as error:
@@ -180,9 +207,11 @@ def login(manifest, env):
         raise
 
 
-def _login(manifest, env, progress=None):
+def _login(manifest, env, progress=None, *, freshness=None):
     """Validate before calling the existing guarded activation helper."""
     progress = progress if progress is not None else {}
+    if freshness is None:
+        freshness=require_fresh_login(env)
     progress['stage'] = 'manifest_validation'
     if env.get('CU_SESSION_TOKEN') or os.environ.get('CU_SESSION_TOKEN'):
         raise RuntimeError('refusing to load visuals inside an automation session')
@@ -234,7 +263,7 @@ def _login(manifest, env, progress=None):
     def after_reload():
         progress['stage'] = 'cursor_guard_first_load'
         progress['artifact_sha256'] = guard_digest
-        _activate_cursor_guard(str(guard), manifest['abi'], env)
+        _activate_cursor_guard(str(guard), manifest['abi'], env, freshness=freshness)
         progress['stage'] = 'indicator_shader_warmup'
         progress['artifact_sha256'] = digest
         overlay = indicator.Native(env)
@@ -245,7 +274,7 @@ def _login(manifest, env, progress=None):
             overlay.close()
 
     _activate(str(library), manifest['abi'], manifest['profile_sha256'], env,
-              after_reload=after_reload)
+              freshness=freshness, after_reload=after_reload)
     progress['stage'] = 'final_glass_verification'
     progress['artifact_sha256'] = digest
     activation_checks.wait_for_profile(env)
