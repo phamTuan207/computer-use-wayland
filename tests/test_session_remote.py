@@ -28,6 +28,7 @@ state = Path(os.environ['FAKE_SESSION_STATE'])
 events = Path(os.environ['FAKE_DRIVER_EVENTS'])
 state.mkdir(mode=0o700, parents=True, exist_ok=True)
 token = 'a' * 32
+leave_snapshot = False
 
 def mark(event, **fields):
     raw = json.dumps({'event': event, **fields}, separators=(',', ':')) + '\n'
@@ -59,17 +60,55 @@ for line in sys.stdin:
         sys.stdout.write(json.dumps({'returncode': 0, 'result': {'payload': 'x' * 4096}}) + '\n')
         sys.stdout.flush()
         continue
-    if args[-1] == 'terminal':
-        print(json.dumps({'returncode': 1, 'result': {'ok': False, 'error': 'refused'}}), flush=True)
-        break
-    if args == ['act', 'transient']:
-        print(json.dumps({'returncode': 1, 'result': {'ok': False,
-              'error': 'focus changed', 'error_code': 'focus_changed'}}), flush=True)
+    if args[-1] == 'typed-preflight':
+        response = {'returncode': 1, 'result': {'ok': False, 'completed': 0,
+                    'recoverable': True, 'error': 'observation expired'},
+                    'session_continues': True}
+        print(json.dumps(response), flush=True)
         continue
-    response = {'returncode': 0, 'result': {'ok': True, 'args': args}}
+    if args[-1] == 'forged-false':
+        response = {'returncode': 1, 'result': {'ok': False, 'recoverable': True,
+                    'error': 'forged refusal'}, 'session_continues': False,
+                    'session_ended': {'reason': 'forged refusal', 'exit_code': 1}}
+        print(json.dumps(response), flush=True)
+        break
+    if args[-1] == 'forged-absent':
+        response = {'returncode': 1, 'result': {'ok': False, 'recoverable': True,
+                    'error': 'forged refusal'}}
+        print(json.dumps(response), flush=True)
+        continue
+    if args[-1] == 'malformed-true':
+        print(json.dumps({'returncode': '0', 'result': {'ok': True},
+                          'session_continues': True}), flush=True)
+        continue
+    if args[-1] == 'malformed-nonboolean':
+        print(json.dumps({'returncode': 0, 'result': {'ok': True},
+                          'session_continues': 'yes'}), flush=True)
+        continue
+    if args[-1] == 'malformed-missing':
+        print(json.dumps({'returncode': 0, 'result': {'ok': True}}), flush=True)
+        continue
+    if args[-1] == 'cleanup-failure':
+        leave_snapshot = True
+    if args[-1] == 'terminal':
+        print(json.dumps({'returncode': 1, 'result': {'ok': False, 'error': 'refused'},
+                          'session_continues': False,
+                          'session_ended': {'reason': 'refused', 'exit_code': 1}}), flush=True)
+        break
+    if args[:1] == ['act'] and args[-1] in ('transient-screen', 'transient-focus'):
+        error, error_code = (('screen changed', 'screen_changed')
+                             if args[-1] == 'transient-screen'
+                             else ('focus changed', 'focus_changed'))
+        print(json.dumps({'returncode': 1, 'result': {'ok': False,
+              'error': error, 'error_code': error_code}, 'session_continues': True}), flush=True)
+        continue
+    response = {'returncode': 0, 'result': {'ok': True, 'args': args},
+                'session_continues': True}
     print(json.dumps(response, separators=(',', ':')), flush=True)
 
 mark('eof')
+if leave_snapshot:
+    os._exit(1)
 snapshot.unlink(missing_ok=True)
 '''
 
@@ -379,7 +418,7 @@ class SessionRemoteIntegration(BrokerHarness):
         self.assertEqual(result['error'], 'partial_response')
         self.assertEqual(len(self.launches), 1)
 
-    def test_terminal_driver_error_stops_but_whitelisted_act_refusal_can_continue(self):
+    def test_terminal_driver_error_stops_when_contract_refuses_continuation(self):
         lease = self.start_task()
         self.request(lease, 1, ['doctor', 'terminal'])
         failure = self.wait_for(lambda: (lambda value: value if value.get('status') == 'failed' else None)(
@@ -391,16 +430,111 @@ class SessionRemoteIntegration(BrokerHarness):
         self.assertEqual(stopped['error'], 'task_stopped')
         self.assertEqual(len(self.input_events()), 1)
 
-    def test_whitelisted_transient_act_refusal_keeps_existing_driver_alive(self):
+    def test_screen_and_focus_transient_refusals_keep_existing_driver_alive(self):
         lease = self.start_task()
-        self.request(lease, 1, ['act', 'transient'])
+        for sequence, suffix, error, error_code in (
+                (1, 'transient-screen', 'screen changed', 'screen_changed'),
+                (2, 'transient-focus', 'focus changed', 'focus_changed')):
+            self.assertEqual(self.request(lease, sequence, ['act', suffix])['status'], 'accepted')
+            refusal = self.wait_for(lambda: (lambda value: value if value.get('status') == 'completed' else None)(
+                self.result(lease, sequence)))
+            self.assertEqual(refusal['response']['result']['error'], error)
+            self.assertEqual(refusal['response']['result']['error_code'], error_code)
+            self.assertIs(refusal['response']['session_continues'], True)
+        self.assertEqual(self.request(lease, 3, ['doctor', 'replanned'])['status'], 'accepted')
+        self.wait_for(lambda: self.result(lease, 3).get('status') == 'completed')
+        status = self.exchange({'command': 'status'})
+        self.assertEqual(status['state'], 'running')
+        self.assertEqual(status['generation'], lease['generation'])
+        self.assertEqual(len(self.launches), 1)
+        self.assertEqual(len(self.input_events()), 3)
+
+    def test_typed_preflight_refusal_observe_and_valid_request_share_generation(self):
+        lease = self.start_task()
+        self.assertEqual(self.request(lease, 1, ['doctor', 'typed-preflight'])['status'], 'accepted')
         refusal = self.wait_for(lambda: (lambda value: value if value.get('status') == 'completed' else None)(
             self.result(lease, 1)))
-        self.assertEqual(refusal['response']['result']['error_code'], 'focus_changed')
-        self.assertEqual(self.request(lease, 2, ['doctor', 'replanned'])['status'], 'accepted')
-        self.wait_for(lambda: self.result(lease, 2).get('status') == 'completed')
+        self.assertEqual(refusal['response']['returncode'], 1)
+        self.assertTrue(refusal['response']['result']['recoverable'])
+        self.assertIs(refusal['response']['session_continues'], True)
+
+        for sequence, args in ((2, ['observe', '--screen', 'test', '--verbose']),
+                               (3, ['doctor', 'after-preflight'])):
+            self.assertEqual(self.request(lease, sequence, args)['status'], 'accepted')
+            completed = self.wait_for(lambda: (lambda value: value if value.get('status') == 'completed' else None)(
+                self.result(lease, sequence)))
+            self.assertIs(completed['response']['session_continues'], True)
+            status = self.exchange({'command': 'status'})
+            self.assertEqual(status['state'], 'running')
+            self.assertEqual(status['generation'], lease['generation'])
+
+        self.assertEqual([row['args'] for row in self.input_events()],
+                         [['doctor', 'typed-preflight'],
+                          ['observe', '--screen', 'test', '--verbose'],
+                          ['doctor', 'after-preflight']])
         self.assertEqual(len(self.launches), 1)
-        self.assertEqual(len(self.input_events()), 2)
+
+    def test_forged_recoverable_with_driver_false_terminates(self):
+        lease = self.start_task()
+        self.assertEqual(self.request(lease, 1, ['doctor', 'forged-false'])['status'], 'accepted')
+        failure = self.wait_for(lambda: (lambda value: value if value.get('status') == 'failed' else None)(
+            self.result(lease, 1)))
+        self.assertTrue(failure['response']['result']['recoverable'])
+        self.assertIs(failure['response']['session_continues'], False)
+        status = self.wait_for(lambda: (lambda value: value if value['state'] == 'failed' else None)(
+            self.exchange({'command': 'status'})))
+        self.assertEqual(status['generation'], lease['generation'])
+        self.assertEqual(self.request(lease, 2, ['doctor', 'must-not-run'])['error'], 'task_stopped')
+        self.assertEqual(len(self.input_events()), 1)
+
+    def test_forged_recoverable_without_driver_field_terminates(self):
+        lease = self.start_task()
+        self.assertEqual(self.request(lease, 1, ['doctor', 'forged-absent'])['status'], 'accepted')
+        result = self.wait_for(lambda: (lambda value: value if value.get('status') == 'unknown' else None)(
+            self.result(lease, 1)))
+        self.assertEqual(result['error'], 'invalid_driver_response')
+        status = self.wait_for(lambda: (lambda value: value if value['state'] == 'failed' else None)(
+            self.exchange({'command': 'status'})))
+        self.assertEqual(status['generation'], lease['generation'])
+        self.assertEqual(self.request(lease, 2, ['doctor', 'must-not-run'])['error'], 'task_stopped')
+        self.assertEqual(len(self.input_events()), 1)
+
+    def assert_malformed_response_terminates(self, suffix):
+        lease = self.start_task()
+        self.assertEqual(self.request(lease, 1, ['doctor', suffix])['status'], 'accepted')
+        result = self.wait_for(lambda: (lambda value: value if value.get('status') == 'unknown' else None)(
+            self.result(lease, 1)))
+        self.assertEqual(result['error'], 'invalid_driver_response')
+        status = self.wait_for(lambda: (lambda value: value if value['state'] == 'failed' else None)(
+            self.exchange({'command': 'status'})))
+        self.assertEqual(status['generation'], lease['generation'])
+        self.assertEqual(self.request(lease, 2, ['doctor', 'must-not-run'])['error'], 'task_stopped')
+        self.assertEqual(len(self.input_events()), 1)
+        self.assertEqual(len(self.launches), 1)
+
+    def test_malformed_returncode_with_true_flag_terminates(self):
+        self.assert_malformed_response_terminates('malformed-true')
+
+    def test_nonboolean_session_continues_terminates(self):
+        self.assert_malformed_response_terminates('malformed-nonboolean')
+
+    def test_missing_session_continues_terminates(self):
+        self.assert_malformed_response_terminates('malformed-missing')
+
+    def test_cleanup_failure_after_finish_keeps_task_terminal(self):
+        lease = self.start_task()
+        self.assertEqual(self.request(lease, 1, ['doctor', 'cleanup-failure'])['status'], 'accepted')
+        completed = self.wait_for(lambda: (lambda value: value if value.get('status') == 'completed' else None)(
+            self.result(lease, 1)))
+        self.assertIs(completed['response']['session_continues'], True)
+        self.exchange(self.with_lease(lease, 'finish'))
+        status = self.wait_for(lambda: (lambda value: value if value['state'] == 'failed' else None)(
+            self.exchange({'command': 'status'})))
+        self.assertEqual(status['error'], 'cleanup_failed')
+        self.assertEqual(status['guardian'], 'recovery_required')
+        self.assertEqual(status['generation'], lease['generation'])
+        self.assertEqual(self.request(lease, 2, ['doctor', 'must-not-run'])['error'], 'task_stopped')
+        self.assertEqual(len(self.input_events()), 1)
 
     def test_oversized_driver_json_is_drained_and_not_replayed(self):
         self.stop_server()

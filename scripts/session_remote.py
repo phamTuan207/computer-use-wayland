@@ -554,18 +554,6 @@ class Broker:
                     task.stop_reason = task.error
                     task.finish_requested = True
 
-    @staticmethod
-    def _is_transient_refusal(response, command):
-        result = response.get('result') if isinstance(response, dict) else None
-        return (command == 'act' and response.get('returncode') == 1 and isinstance(result, dict) and
-                result.get('ok') is False and
-                result.get('error') in ('screen changed', 'focus changed') and
-                result.get('error_code') == {
-                    'screen changed': 'screen_changed',
-                    'focus changed': 'focus_changed',
-                }[result['error']] and 'capture_error' not in result and
-                'ime_restore_failed' not in result)
-
     def _request_worker(self, task, record, raw):
         try:
             with self.lock:
@@ -590,9 +578,11 @@ class Broker:
                     task.state = 'cleaning'
                     task.last_activity = time.monotonic()
                 return
-            if not isinstance(response, dict) or type(response.get('returncode')) is not int:
+            if (not isinstance(response, dict) or type(response.get('returncode')) is not int or
+                    type(response.get('session_continues')) is not bool):
                 raise BrokerError('invalid_driver_response', 'driver returned an invalid response')
-            terminal = response['returncode'] != 0 and not self._is_transient_refusal(response, record.command)
+            # The driver owns continuation; result payload flags are never authority.
+            terminal = response['session_continues'] is not True
             with self.lock:
                 record.response = response
                 record.status = 'failed' if terminal else 'completed'
