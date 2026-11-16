@@ -93,6 +93,17 @@ cd computer-use-wayland
 python3 scripts/setup.py \
   --restore-theme YOUR_CURRENT_HYPRLAND_THEME \
   --restore-size YOUR_CURRENT_HYPRLAND_SIZE
+python3 scripts/sync-installed.py
+python3 scripts/sync-installed.py --check
+```
+
+Run setup first, then sync the installed package, then check it. Sync is the
+mandatory final deployment step after every code, native source, or cursor
+profile change. To restore the prior managed installation, use the absolute
+snapshot path printed by sync:
+
+```sh
+python3 scripts/sync-installed.py --rollback /absolute/path/to/agent-computer-use/backups/sync-...
 ```
 
 Then **log out and log back in once.** That is the whole installation.
