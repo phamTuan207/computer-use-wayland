@@ -34,7 +34,7 @@ also deliberately leaves mixed shortcut-plus-text invocations unfixed.
 - `LICENSE`:
   `e8bd6bac1b3ba6253625830bceb30c5340f74f4bc898d1bd5450596cbd8224f0`
 - `keyboard-correction.patch`:
-  `5e40dbc831cecee1cb4cada81a26ea0b8196e5d9fdee6a14a6c0173fcff541a6`
+  `f4cc6a9f889879f741d0c2f0769b3f1eb9b2c5685fb7781cf5f5dd8ecd02267c`
 
 ## What the patch does
 
@@ -50,8 +50,20 @@ also deliberately leaves mixed shortcut-plus-text invocations unfixed.
 - All other accepted printable BMP symbols allocate from the ordered pool
   `2..13, 16..27, 30..41, 43..53` minus positions reserved by explicit keys,
   in first-occurrence order, across bounded pages (`j // N`, `pool[j % N]`).
-- Bounded pages: the uploaded map holds fixed entries plus the current
-  literal page; pages switch only between complete press/release pairs.
+- Multi-page inputs use ONE uploaded keymap holding up to four XKB groups
+  (page `j // N` becomes zero-based group `j // N`, slot `pool[j % N]`,
+  level 0). The group is selected through the virtual-keyboard
+  `modifiers` request plus roundtrip, between complete press/release
+  pairs; the keymap is prepared and validated with libxkbcommon before
+  connecting and is uploaded exactly once. Fixed/explicit entries repeat
+  identically in every group; an unused slot in a partial last group gets
+  `VoidSymbol`. The group is reset to 0 at the end of each text command.
+  (Proven 2026-11-17: on Hyprland 0.57.2 only the first uploaded map ever
+  takes effect, so the previous per-page re-upload design could not work.)
+- Ceiling: at most `4N` distinct pool literals per helper invocation
+  (188 with no reservations, 184 with `A` reserved, 180 with `A` and `S`
+  reserved). Larger sets are refused before any Wayland connection.
+  Repetition does not consume slots; fixed controls/space do not count.
 - The release-only `-p VoidSymbol` sentinel neither disables safe
   allocation nor consumes a literal ID; an unused `VoidSymbol` entry sits
   above the maximum real XKB code in every map and emits no physical event.
@@ -78,12 +90,14 @@ verifies the fourth artifact `native/wtype`).
 
 ## Supported / refused
 
-Supported: arbitrary ordering and more-than-one-page sets of accepted
-printable BMP symbols; mixed Ctrl+A/text groups; leading-dash stdin text;
+Supported: arbitrary ordering and sets of up to 188 distinct accepted
+printable BMP symbols (4 pages of at most 47); mixed Ctrl+A/text groups;
+leading-dash stdin text;
 genuine named editing keys and shortcuts (both `A`/`a`, `S`/`s` spellings).
 Refused (fail-closed, nonzero exit, no partial input): unknown canonical
-keys, conflicting named identities, text with held modifiers/keys, exhausted
-pools, invalid controls, oversized input, non-BMP input. This is not a
+keys, conflicting named identities, text with held modifiers/keys, more
+than four pages of distinct pool literals, invalid controls, oversized
+input, non-BMP input. This is not a
 promise that every application/IME inserts every Unicode sequence.
 
 ## Maintenance burden (user decision pending)

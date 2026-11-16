@@ -2,13 +2,19 @@
 
 Builds the patched translation unit (patch --batch --fuzz=0, same step as
 scripts/build.py) and a stub harness (tests/wtype_harness.c) that runs the
-real parse_args() + kbcorr_preflight() and dumps the planned keymap
-entries and command stream as JSON. No Wayland connection, no compositor,
-no input sent to any application. Actual key emission is verified by the
-live gates (i)-(iv), not here.
+real parse_args() + kbcorr_preflight() + kbcorr_prepare_keymap() and the
+real emission path (upload_keymap + run_commands) with the Wayland
+protocol calls intercepted at the source level and stubbed transport /
+delays. No Wayland connection, no compositor, no input sent to any
+application. The harness captures the single uploaded keymap, compiles it
+into one persistent libxkbcommon client state, replays the captured
+modifier/key requests through it, and reports the decoded text plus the
+full emission trace (upload count, groups, modifier bits). Actual delivery
+to applications is verified by the live gates (i)-(iv), not here.
 
 Run: python3 -B -m unittest tests.test_wtype_native -v
 """
+import base64
 import hashlib
 import json
 import os
@@ -33,6 +39,18 @@ FIXED = {" ": 57, "\n": 28, "\r": 28, "\t": 15, "\x1b": 1, "\x08": 14,
          "\x7f": 111}
 # WTYPE_COMMAND_* values from the patched TU.
 TEXT, MOD_PRESS, MOD_RELEASE, KEY_PRESS, KEY_RELEASE, SLEEP = 0, 1, 2, 3, 4, 5
+# WL_KEYBOARD_KEY_STATE_* values.
+KEY_RELEASED, KEY_PRESSED = 0, 1
+
+# Golden G==1 serialized keymaps captured from the OLD writer (pre
+# multi-page patch) with a throwaway interception harness; the new writer
+# must reproduce them byte-for-byte for single-group inputs.
+# g1: sentence direct. g2: merged Ctrl+A + sentence. g3: sentinel only.
+# g4: leading-dash stdin sentence.
+GOLDEN_SENTENCE = base64.b64decode("eGtiX2tleW1hcCB7CnhrYl9rZXljb2RlcyAiKHVubmFtZWQpIiB7Cm1pbmltdW0gPSA4OwptYXhpbXVtID0gMjQ4Owo8SzE+ID0gMTA7CjxLMj4gPSAxMTsKPEszPiA9IDEyOwo8SzQ+ID0gNjU7CjxLNT4gPSAxMzsKPEs2PiA9IDE0Owo8Szc+ID0gMTU7CjxLOD4gPSAxNjsKPEs5PiA9IDE3Owo8SzEwPiA9IDE4Owo8SzExPiA9IDE5Owo8SzEyPiA9IDIwOwo8SzEzPiA9IDIxOwo8SzE0PiA9IDI0Owo8SzE1PiA9IDI1Owo8SzE2PiA9IDI2Owo8SzE3PiA9IDI3Owo8SzE4PiA9IDI4Owo8SzE5PiA9IDI5Owo8SzIwPiA9IDMwOwo8SzIxPiA9IDMxOwo8SzIyPiA9IDMyOwo8SzIzPiA9IDMzOwo8SzI0PiA9IDM2Owo8SzI1PiA9IDI0ODsKfTsKeGtiX3R5cGVzICIodW5uYW1lZCkiIHsgaW5jbHVkZSAiY29tcGxldGUiIH07CnhrYl9jb21wYXRpYmlsaXR5ICIodW5uYW1lZCkiIHsgaW5jbHVkZSAiY29tcGxldGUiIH07CnhrYl9zeW1ib2xzICIodW5uYW1lZCkiIHsKa2V5IDxLMT4ge1tUXX07CmtleSA8SzI+IHtbb2NpcmN1bWZsZXhhY3V0ZV19OwprZXkgPEszPiB7W2ldfTsKa2V5IDxLND4ge1tzcGFjZV19OwprZXkgPEs1PiB7W25dfTsKa2V5IDxLNj4ge1thXX07CmtleSA8Szc+IHtbeV19OwprZXkgPEs4PiB7W29jaXJjdW1mbGV4XX07CmtleSA8Szk+IHtbY119OwprZXkgPEsxMD4ge1thY2lyY3VtZmxleGFjdXRlXX07CmtleSA8SzExPiB7W3VdfTsKa2V5IDxLMTI+IHtbdF19OwprZXkgPEsxMz4ge1tyXX07CmtleSA8SzE0PiB7W3VhY3V0ZV19OwprZXkgPEsxNT4ge1tkXX07CmtleSA8SzE2PiB7W3Vob3JudGlsZGVdfTsKa2V5IDxLMTc+IHtbbF19OwprZXkgPEsxOD4ge1tlY2lyY3VtZmxleGJlbG93ZG90XX07CmtleSA8SzE5PiB7WzJdfTsKa2V5IDxLMjA+IHtbMF19OwprZXkgPEsyMT4ge1tjb2xvbl19OwprZXkgPEsyMj4ge1szXX07CmtleSA8SzIzPiB7W3BlcmlvZF19OwprZXkgPEsyND4ge1tSZXR1cm5dfTsKa2V5IDxLMjU+IHtbVm9pZFN5bWJvbF19Owp9Owp9OwoA")
+GOLDEN_MERGED_A = base64.b64decode("eGtiX2tleW1hcCB7CnhrYl9rZXljb2RlcyAiKHVubmFtZWQpIiB7Cm1pbmltdW0gPSA4OwptYXhpbXVtID0gMjQ4Owo8SzE+ID0gMzg7CjxLMj4gPSAxMDsKPEszPiA9IDExOwo8SzQ+ID0gMTI7CjxLNT4gPSA2NTsKPEs2PiA9IDEzOwo8Szc+ID0gMTQ7CjxLOD4gPSAxNTsKPEs5PiA9IDE2Owo8SzEwPiA9IDE3Owo8SzExPiA9IDE4Owo8SzEyPiA9IDE5Owo8SzEzPiA9IDIwOwo8SzE0PiA9IDIxOwo8SzE1PiA9IDI0Owo8SzE2PiA9IDI1Owo8SzE3PiA9IDI2Owo8SzE4PiA9IDI3Owo8SzE5PiA9IDI4Owo8SzIwPiA9IDI5Owo8SzIxPiA9IDMwOwo8SzIyPiA9IDMxOwo8SzIzPiA9IDMyOwo8SzI0PiA9IDMzOwo8SzI1PiA9IDM2Owo8SzI2PiA9IDI0ODsKfTsKeGtiX3R5cGVzICIodW5uYW1lZCkiIHsgaW5jbHVkZSAiY29tcGxldGUiIH07CnhrYl9jb21wYXRpYmlsaXR5ICIodW5uYW1lZCkiIHsgaW5jbHVkZSAiY29tcGxldGUiIH07CnhrYl9zeW1ib2xzICIodW5uYW1lZCkiIHsKa2V5IDxLMT4ge1thXX07CmtleSA8SzI+IHtbVF19OwprZXkgPEszPiB7W29jaXJjdW1mbGV4YWN1dGVdfTsKa2V5IDxLND4ge1tpXX07CmtleSA8SzU+IHtbc3BhY2VdfTsKa2V5IDxLNj4ge1tuXX07CmtleSA8Szc+IHtbYV19OwprZXkgPEs4PiB7W3ldfTsKa2V5IDxLOT4ge1tvY2lyY3VtZmxleF19OwprZXkgPEsxMD4ge1tjXX07CmtleSA8SzExPiB7W2FjaXJjdW1mbGV4YWN1dGVdfTsKa2V5IDxLMTI+IHtbdV19OwprZXkgPEsxMz4ge1t0XX07CmtleSA8SzE0PiB7W3JdfTsKa2V5IDxLMTU+IHtbdWFjdXRlXX07CmtleSA8SzE2PiB7W2RdfTsKa2V5IDxLMTc+IHtbdWhvcm50aWxkZV19OwprZXkgPEsxOD4ge1tsXX07CmtleSA8SzE5PiB7W2VjaXJjdW1mbGV4YmVsb3dkb3RdfTsKa2V5IDxLMjA+IHtbMl19OwprZXkgPEsyMT4ge1swXX07CmtleSA8SzIyPiB7W2NvbG9uXX07CmtleSA8SzIzPiB7WzNdfTsKa2V5IDxLMjQ+IHtbcGVyaW9kXX07CmtleSA8SzI1PiB7W1JldHVybl19OwprZXkgPEsyNj4ge1tWb2lkU3ltYm9sXX07Cn07Cn07CgA=")
+GOLDEN_SENTINEL = base64.b64decode("eGtiX2tleW1hcCB7CnhrYl9rZXljb2RlcyAiKHVubmFtZWQpIiB7Cm1pbmltdW0gPSA4OwptYXhpbXVtID0gMjQ4Owo8SzE+ID0gMjQ4Owp9Owp4a2JfdHlwZXMgIih1bm5hbWVkKSIgeyBpbmNsdWRlICJjb21wbGV0ZSIgfTsKeGtiX2NvbXBhdGliaWxpdHkgIih1bm5hbWVkKSIgeyBpbmNsdWRlICJjb21wbGV0ZSIgfTsKeGtiX3N5bWJvbHMgIih1bm5hbWVkKSIgewprZXkgPEsxPiB7W1ZvaWRTeW1ib2xdfTsKfTsKfTsKAA==")
+GOLDEN_STDIN = base64.b64decode("eGtiX2tleW1hcCB7CnhrYl9rZXljb2RlcyAiKHVubmFtZWQpIiB7Cm1pbmltdW0gPSA4OwptYXhpbXVtID0gMjQ4Owo8SzE+ID0gMjQ4Owo8SzI+ID0gMTA7CjxLMz4gPSAxMTsKPEs0PiA9IDEyOwo8SzU+ID0gMTM7CjxLNj4gPSA2NTsKPEs3PiA9IDE0Owo8Szg+ID0gMTU7CjxLOT4gPSAxNjsKPEsxMD4gPSAxNzsKPEsxMT4gPSAxODsKPEsxMj4gPSAxOTsKPEsxMz4gPSAyMDsKPEsxND4gPSAyMTsKPEsxNT4gPSAyNDsKPEsxNj4gPSAyNTsKPEsxNz4gPSAyNjsKPEsxOD4gPSAyNzsKPEsxOT4gPSAyODsKPEsyMD4gPSAyOTsKPEsyMT4gPSAzMDsKPEsyMj4gPSAzMTsKPEsyMz4gPSAzMjsKPEsyND4gPSAzMzsKPEsyNT4gPSAzNDsKPEsyNj4gPSAzNjsKfTsKeGtiX3R5cGVzICIodW5uYW1lZCkiIHsgaW5jbHVkZSAiY29tcGxldGUiIH07CnhrYl9jb21wYXRpYmlsaXR5ICIodW5uYW1lZCkiIHsgaW5jbHVkZSAiY29tcGxldGUiIH07CnhrYl9zeW1ib2xzICIodW5uYW1lZCkiIHsKa2V5IDxLMT4ge1tWb2lkU3ltYm9sXX07CmtleSA8SzI+IHtbbWludXNdfTsKa2V5IDxLMz4ge1tUXX07CmtleSA8SzQ+IHtbb2NpcmN1bWZsZXhhY3V0ZV19OwprZXkgPEs1PiB7W2ldfTsKa2V5IDxLNj4ge1tzcGFjZV19OwprZXkgPEs3PiB7W25dfTsKa2V5IDxLOD4ge1thXX07CmtleSA8Szk+IHtbeV19OwprZXkgPEsxMD4ge1tvY2lyY3VtZmxleF19OwprZXkgPEsxMT4ge1tjXX07CmtleSA8SzEyPiB7W2FjaXJjdW1mbGV4YWN1dGVdfTsKa2V5IDxLMTM+IHtbdV19OwprZXkgPEsxND4ge1t0XX07CmtleSA8SzE1PiB7W3JdfTsKa2V5IDxLMTY+IHtbdWFjdXRlXX07CmtleSA8SzE3PiB7W2RdfTsKa2V5IDxLMTg+IHtbdWhvcm50aWxkZV19OwprZXkgPEsxOT4ge1tsXX07CmtleSA8SzIwPiB7W2VjaXJjdW1mbGV4YmVsb3dkb3RdfTsKa2V5IDxLMjE+IHtbMl19OwprZXkgPEsyMj4ge1swXX07CmtleSA8SzIzPiB7W2NvbG9uXX07CmtleSA8SzI0PiB7WzNdfTsKa2V5IDxLMjU+IHtbcGVyaW9kXX07CmtleSA8SzI2PiB7W1JldHVybl19Owp9Owp9OwoA")
 
 
 def expected_phys(text):
@@ -54,6 +72,11 @@ def expected_phys(text):
             out[ch] = effpool[j % len(effpool)]
             j += 1
     return out
+
+
+def distinct_chars(n, start=0x100):
+    """n distinct printable BMP pool literals (no fixed controls)."""
+    return "".join(chr(start + i) for i in range(n))
 
 
 class WtypeNativeTests(unittest.TestCase):
@@ -81,24 +104,71 @@ class WtypeNativeTests(unittest.TestCase):
             check=True, capture_output=True, text=True)
         cls.env = dict(os.environ, LC_ALL="C.UTF-8", LANG="C.UTF-8")
         cls.dump = tmp / "dump.json"
+        cls.keymap = tmp / "keymap.bin"
+        cls.trace = tmp / "trace.json"
 
     def run_harness(self, argv, input_bytes=None):
-        if self.dump.exists():
-            self.dump.unlink()
-        env = dict(self.env, KBCORR_DUMP=str(self.dump))
+        proc, dump, _, _ = self.run_traced(argv, input_bytes)
+        return proc, dump
+
+    def run_traced(self, argv, input_bytes=None):
+        for p in (self.dump, self.keymap, self.trace):
+            if p.exists():
+                p.unlink()
+        env = dict(self.env, KBCORR_DUMP=str(self.dump),
+                   KBCORR_KEYMAP=str(self.keymap),
+                   KBCORR_TRACE=str(self.trace))
         proc = subprocess.run(
             [str(self.harness), *argv], input=input_bytes,
             capture_output=True, timeout=60, env=env)
-        dump = None
-        if self.dump.exists():
-            dump = json.loads(self.dump.read_text())
-        return proc, dump
+        dump = json.loads(self.dump.read_text()) if self.dump.exists() else None
+        keymap = self.keymap.read_bytes() if self.keymap.exists() else None
+        trace = json.loads(self.trace.read_text()) if self.trace.exists() else None
+        return proc, dump, keymap, trace
 
     def phys_seq(self, dump, cmd_index=0):
         """Physical codes for a TEXT command's codes, in order."""
         entries = dump["entries"]
         cmd = dump["commands"][cmd_index]
         return [entries[c - 1]["phys"] for c in cmd["codes"]]
+
+    def assert_clean_emission(self, trace, text, max_group,
+                              extra_pairs=0, chord_keys=()):
+        """Shared emitted-behavior assertions for a literal text run.
+
+        extra_pairs / chord_keys cover non-literal press/release pairs
+        (e.g. the single Ctrl+A chord: one pair on phys 30 with Ctrl
+        depressed); every other key must carry no modifier bits.
+        """
+        self.assertIsNotNone(trace, "no emission trace produced")
+        self.assertEqual(trace["uploads"], 1,
+                         "more than one keymap upload")
+        self.assertEqual(trace["decoded"], text,
+                         "replayed client decoding differs from input")
+        presses = [k for k in trace["keys"] if k["state"] == KEY_PRESSED]
+        releases = [k for k in trace["keys"] if k["state"] == KEY_RELEASED]
+        self.assertEqual(len(presses), len(text) + extra_pairs,
+                         "one physical press per typed character (+ chord)")
+        self.assertEqual(len(releases), len(text) + extra_pairs,
+                         "one physical release per typed character (+ chord)")
+        self.assertEqual([k["key"] for k in presses],
+                         [k["key"] for k in releases],
+                         "press/release pairs must match")
+        self.assertEqual(trace["groups_seen"], list(range(max_group + 1)))
+        for k in trace["keys"]:
+            self.assertLessEqual(k["group"], max_group)
+            if k["dep"] != 0:
+                self.assertIn(
+                    k["key"], chord_keys,
+                    "modifier bits on a non-chord key")
+        self.assertFalse(trace["group_change_while_down"],
+                         "group changed while a key was held")
+        self.assertFalse(trace["overlap_press"],
+                         "a key was pressed while another was held")
+        self.assertFalse(trace["key_down_at_end"],
+                         "a key was left held at the end")
+        self.assertEqual(trace["final_group"], 0,
+                         "group was not reset to 0 at the end")
 
     def test_sentence_allocates_safe_codes(self):
         proc, dump = self.run_harness([SENTENCE])
@@ -272,7 +342,158 @@ class WtypeNativeTests(unittest.TestCase):
         self.assertEqual(
             hashlib.sha256(
                 (vendor / "keyboard-correction.patch").read_bytes()).hexdigest(),
-            "5e40dbc831cecee1cb4cada81a26ea0b8196e5d9fdee6a14a6c0173fcff541a6")
+            "f4cc6a9f889879f741d0c2f0769b3f1eb9b2c5685fb7781cf5f5dd8ecd02267c")
+
+    # ---- Multi-page emitted-behavior tests (one keymap, XKB groups) ----
+
+    def test_page_fixture_emitted_behavior(self):
+        """96-symbol fixture: 193 chars decode from ONE map, groups 0-2."""
+        chars = "".join(chr(n) for n in range(0x100, 0x160))
+        text = chars + chars[::-1] + "\n"
+        proc, dump, _, trace = self.run_traced([text])
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertEqual(proc.stderr, b"")
+        self.assertEqual(dump["group_count"], 3)
+        self.assert_clean_emission(trace, text, 2)
+
+    def test_page_fixture_all_forms(self):
+        """Same 96-symbol text via direct, trailer, merged Ctrl+A, stdin."""
+        chars = "".join(chr(n) for n in range(0x100, 0x160))
+        text = chars + chars[::-1] + "\n"
+        forms = [
+            ([text], None, {}),
+            ([text, "-s", "12", "-p", "VoidSymbol"], None, {}),
+            (["-M", "ctrl", "-P", "A", "-s", "12", "-p", "A",
+              "-m", "ctrl", "-s", "12", text, "-s", "12",
+              "-p", "VoidSymbol"], None,
+             {"extra_pairs": 1, "chord_keys": (30,)}),
+            (["-", "-p", "VoidSymbol"], text.encode("utf-8"), {}),
+        ]
+        for argv, payload, kw in forms:
+            with self.subTest(argv=argv[:2]):
+                proc, dump, _, trace = self.run_traced(argv, payload)
+                self.assertEqual(proc.returncode, 0, proc.stderr)
+                self.assertEqual(dump["group_count"], 3)
+                self.assert_clean_emission(trace, text, 2, **kw)
+
+    def test_four_group_188_symbol_fixture(self):
+        """188 distinct pool literals: 377 chars, groups 0-3, one upload."""
+        chars = distinct_chars(188)
+        text = chars + chars[::-1] + "\n"
+        proc, dump, _, trace = self.run_traced([text])
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertEqual(proc.stderr, b"")
+        self.assertEqual(dump["group_count"], 4)
+        self.assert_clean_emission(trace, text, 3)
+
+    def test_group_alternation_first_last_slots(self):
+        """Repeated jumps between the first/last slots of all four groups.
+
+        Interleaves all 188 distinct literals so every group is used on
+        nearly every step (group_count 4), not just 8 distinct chars.
+        """
+        chars = distinct_chars(188)
+        forward = "".join(
+            chars[i] + chars[47 + i] + chars[94 + i] + chars[141 + i]
+            for i in range(47))
+        text = forward + forward[::-1] + "\n"
+        proc, dump, _, trace = self.run_traced([text])
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertEqual(dump["group_count"], 4)
+        self.assert_clean_emission(trace, text, 3)
+
+    def test_boundaries_no_reservation(self):
+        """N=47: 47/48/188 accepted, 189 refused before any protocol call."""
+        for n, groups in ((47, 1), (48, 2), (188, 4)):
+            with self.subTest(n=n):
+                text = distinct_chars(n)
+                proc, dump, _, trace = self.run_traced([text])
+                self.assertEqual(proc.returncode, 0, proc.stderr)
+                self.assertEqual(dump["group_count"], groups)
+                self.assert_clean_emission(trace, text, groups - 1)
+        text = distinct_chars(189)
+        proc, dump, keymap, trace = self.run_traced([text])
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIsNone(dump)
+        self.assertIsNone(keymap)
+        self.assertIsNone(trace)
+
+    def test_boundaries_a_reserved(self):
+        """N=46 with A reserved: 46/47/184 accepted, 185 refused pre-connect."""
+        def merged(text):
+            return ["-M", "ctrl", "-P", "A", "-s", "12", "-p", "A",
+                    "-m", "ctrl", "-s", "12", text, "-s", "12",
+                    "-p", "VoidSymbol"]
+        for n, groups in ((46, 1), (47, 2), (184, 4)):
+            with self.subTest(n=n):
+                text = distinct_chars(n)
+                proc, dump, _, trace = self.run_traced(merged(text))
+                self.assertEqual(proc.returncode, 0, proc.stderr)
+                self.assertEqual(dump["group_count"], groups)
+                self.assert_clean_emission(trace, text, groups - 1,
+                                           extra_pairs=1, chord_keys=(30,))
+        text = distinct_chars(185)
+        proc, dump, keymap, trace = self.run_traced(merged(text))
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIsNone(dump)
+        self.assertIsNone(keymap)
+        self.assertIsNone(trace)
+
+    def test_fixed_symbols_repeat_in_every_group(self):
+        """Fixed space/newline decode at group 0 between later-group keys;
+        partial last group holes are VoidSymbol in the serialized map."""
+        chars = "".join(chr(n) for n in range(0x100, 0x160))
+        text = chars[:47] + " " + chars[47:94] + "\n" + chars[94:]
+        proc, dump, keymap, trace = self.run_traced([text])
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertEqual(dump["group_count"], 3)
+        self.assert_clean_emission(trace, text, 2)
+        self.assertIn(b'type[Group1]="ONE_LEVEL"', keymap)
+        self.assertIn(b'symbols[Group1]=[Amacron]', keymap)
+        self.assertIn(b'symbols[Group2]=[space]', keymap)
+        self.assertIn(b'symbols[Group3]=[VoidSymbol]', keymap)
+        self.assertIn(b'symbols[Group2]=[Return]', keymap)
+
+    def test_group_reset_before_following_chord_and_sleep(self):
+        """After multi-group text, the next explicit chord runs at group 0."""
+        chars = "".join(chr(n) for n in range(0x100, 0x160))
+        text = chars + chars[::-1] + "\n"
+        argv = [text, "-s", "12", "-M", "ctrl", "-P", "A", "-s", "12",
+                "-p", "A", "-m", "ctrl", "-s", "12", "-p", "VoidSymbol"]
+        proc, dump, _, trace = self.run_traced(argv)
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertEqual(trace["decoded"], text)
+        self.assertEqual(trace["final_group"], 0)
+        chord_presses = [k for k in trace["keys"]
+                         if k["state"] == KEY_PRESSED and k["dep"] == 4]
+        self.assertEqual(len(chord_presses), 1)
+        self.assertEqual(chord_presses[0]["key"], 30)  # canonical KeyA
+        self.assertEqual(chord_presses[0]["group"], 0)
+        mods = trace["modifiers"]
+        nonzero_idx = [i for i, m in enumerate(mods) if m["group"] != 0]
+        self.assertTrue(nonzero_idx,
+                        "expected nonzero-group selections during the text")
+        self.assertTrue(
+            any(m["group"] == 0 for m in mods[nonzero_idx[-1] + 1:]),
+            "no group-0 reset after the last nonzero-group selection")
+
+    def test_one_group_serialization_matches_old_writer(self):
+        """G==1 serialized output is byte-for-byte the old writer's."""
+        cases = [
+            ([SENTENCE], None, GOLDEN_SENTENCE),
+            (["-M", "ctrl", "-P", "A", "-s", "12", "-p", "A",
+              "-m", "ctrl", "-s", "12", SENTENCE, "-s", "12",
+              "-p", "VoidSymbol"], None, GOLDEN_MERGED_A),
+            (["-p", "VoidSymbol"], None, GOLDEN_SENTINEL),
+            (["-", "-p", "VoidSymbol"],
+             ("-" + SENTENCE).encode("utf-8"), GOLDEN_STDIN),
+        ]
+        for argv, payload, golden in cases:
+            with self.subTest(argv=argv[:2]):
+                proc, dump, keymap, _ = self.run_traced(argv, payload)
+                self.assertEqual(proc.returncode, 0, proc.stderr)
+                self.assertEqual(dump["group_count"], 1)
+                self.assertEqual(keymap, golden)
 
 
 if __name__ == "__main__":

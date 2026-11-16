@@ -55,16 +55,22 @@
  };
  
  
-@@ -79,6 +112,8 @@
+@@ -79,6 +112,14 @@
  	struct keymap_entry *keymap;
  
  	uint32_t mod_status;
-+	// Literal pool page in the currently uploaded keymap.
-+	size_t current_page;
++	// Active XKB group (0-based) of the single uploaded keymap.
++	size_t current_group;
++	// Number of XKB groups in the single uploaded keymap (1..4).
++	size_t group_count;
++	// Prepared keymap file (unlinked) and its size including the
++	// terminating NUL; created before connecting, sent exactly once.
++	FILE *keymap_file;
++	size_t keymap_size;
  	size_t command_count;
  	struct wtype_command *commands;
  };
-@@ -154,6 +189,13 @@
+@@ -154,6 +195,13 @@
  	);
  	wtype->keymap[wtype->keymap_len - 1].wchr = ch;
  	wtype->keymap[wtype->keymap_len - 1].xkb = xkb;
@@ -78,7 +84,7 @@
  	return wtype->keymap_len;
  }
  
-@@ -165,11 +207,16 @@
+@@ -165,11 +213,16 @@
  		xkb_keysym_t to;
  	} remap_table[] = {
  		{ L'\n', XKB_KEY_Return },
@@ -96,7 +102,7 @@
  			return i + 1;
  		}
  	}
-@@ -190,14 +237,341 @@
+@@ -190,15 +243,349 @@
  unsigned int get_key_code_by_xkb(struct wtype *wtype, xkb_keysym_t xkb)
  {
  	for (unsigned int i = 0; i < wtype->keymap_len; i++) {
@@ -110,9 +116,9 @@
 +	unsigned int code = append_keymap_entry(wtype, 0, xkb);
 +	wtype->keymap[code - 1].is_explicit = true;
 +	return code;
-+}
-+
-+
+ }
+ 
+ 
 +
 +// ---- Keyboard correction: preflight (runs before any Wayland connection) ----
 +
@@ -200,8 +206,8 @@
 +		free(text);
 +		cmd->type = WTYPE_COMMAND_TEXT;
 +	}
- }
- 
++}
++
 +static void kbcorr_preflight(struct wtype *wtype)
 +{
 +	kbcorr_convert_stdin(wtype);
@@ -313,6 +319,13 @@
 +		e->phys = effpool[j % npool];
 +		e->is_pool_literal = true;
 +		j++;
++	}
++
++	// One keymap holds at most four XKB groups: at most 4N distinct
++	// pool literals. Refuse larger sets before any Wayland connection.
++	wtype->group_count = j == 0 ? 1 : (j + npool - 1) / npool;
++	if (wtype->group_count > 4) {
++		fail("Too many distinct literal characters for one keymap (max 4 pages)");
 +	}
 +
 +	// 5. Ensure the unused VoidSymbol sentinel entry exists in every map.
@@ -437,10 +450,42 @@
 +	xkb_keymap_unref(ref);
 +	xkb_context_unref(ctx);
 +}
- 
++
  static void parse_args(struct wtype *wtype, int argc, const char *argv[])
  {
-@@ -334,8 +708,13 @@
+ 	wtype->commands = calloc(argc, sizeof(wtype->commands[0])); // Upper bound
+@@ -315,6 +702,22 @@
+ }
+ 
+ 
++// Select XKB group g on the single uploaded keymap. No-op when already
++// selected. Never called between a key press and its release.
++static void kbcorr_select_group(struct wtype *wtype, size_t group)
++{
++	if (group == wtype->current_group) {
++		return;
++	}
++	zwp_virtual_keyboard_v1_modifiers(
++		wtype->keyboard, wtype->mod_status & ~WTYPE_MOD_CAPSLOCK, 0,
++		wtype->mod_status & WTYPE_MOD_CAPSLOCK, (uint32_t)group
++	);
++	wl_display_roundtrip(wtype->display);
++	wtype->current_group = group;
++}
++
++
+ static void run_mod(struct wtype *wtype, struct wtype_command *cmd)
+ {
+ 	if (cmd->type == WTYPE_COMMAND_MOD_PRESS) {
+@@ -329,13 +732,23 @@
+ 	);
+ 
+ 	wl_display_roundtrip(wtype->display);
++	// This modifiers request carries group 0, so the compositor's
++	// group is 0 afterwards; keep the tracked group in sync.
++	wtype->current_group = 0;
+ }
+ 
  
  static void run_key(struct wtype *wtype, struct wtype_command *cmd)
  {
@@ -448,6 +493,8 @@
 +	if (cmd->noop) {
 +		return;
 +	}
++	// Explicit keys operate at group 0.
++	kbcorr_select_group(wtype, 0);
 +	struct keymap_entry *e = &wtype->keymap[cmd->single_key_code - 1];
  	zwp_virtual_keyboard_v1_key(
 -		wtype->keyboard, 0, cmd->single_key_code,
@@ -455,17 +502,15 @@
  		cmd->type == WTYPE_COMMAND_KEY_PRESS ?
  			WL_KEYBOARD_KEY_STATE_PRESSED : WL_KEYBOARD_KEY_STATE_RELEASED
  	);
-@@ -344,13 +723,20 @@
+@@ -344,13 +757,18 @@
  
  static void type_keycode(struct wtype *wtype, unsigned int key_code)
  {
 +	struct keymap_entry *e = &wtype->keymap[key_code - 1];
-+	// Bounded pages: load the literal's page between complete
-+	// press/release pairs, never while a key is held.
-+	if (e->is_pool_literal && e->page != wtype->current_page) {
-+		wtype->current_page = e->page;
-+		upload_keymap(wtype);
-+	}
++	// Multi-page text: select the literal's XKB group on the single
++	// uploaded keymap, between complete press/release pairs, never
++	// while a key is held. Fixed keys always decode at group 0.
++	kbcorr_select_group(wtype, e->is_pool_literal ? e->page : 0);
  	zwp_virtual_keyboard_v1_key(
 -			wtype->keyboard, 0, key_code, WL_KEYBOARD_KEY_STATE_PRESSED
 +			wtype->keyboard, 0, e->phys, WL_KEYBOARD_KEY_STATE_PRESSED
@@ -478,10 +523,12 @@
  	);
  	wl_display_roundtrip(wtype->display);
  	usleep(2000);
-@@ -364,60 +750,6 @@
+@@ -362,60 +780,8 @@
+ 		type_keycode(wtype, cmd->key_codes[i]);
+ 		usleep(cmd->delay_ms * 1000);
  	}
- }
- 
+-}
+-
 -static void run_text_stdin(struct wtype *wtype, struct wtype_command *cmd)
 -{
 -	char kbuf[8];
@@ -534,12 +581,12 @@
 -	}
 -
 -	free(cmd->key_codes);
--}
--
++	// Leave no transient group behind for the next sleep/chord.
++	kbcorr_select_group(wtype, 0);
+ }
+ 
  static void run_commands(struct wtype *wtype)
- {
- 	void (*handlers[])(struct wtype *, struct wtype_command *) = {
-@@ -427,7 +759,7 @@
+@@ -427,7 +793,7 @@
  		[WTYPE_COMMAND_KEY_PRESS] = run_key,
  		[WTYPE_COMMAND_KEY_RELEASE] = run_key,
  		[WTYPE_COMMAND_TEXT] = run_text,
@@ -548,49 +595,59 @@
  	};
  	for (unsigned int i = 0; i < wtype->command_count; i++) {
  		handlers[wtype->commands[i].type](wtype, &wtype->commands[i]);
-@@ -449,8 +781,27 @@
+@@ -449,15 +815,44 @@
  }
  
  
-+// An entry belongs in the uploaded map when it is the sentinel, or it is
-+// referenced and either fixed or a pool literal of the current page.
-+static bool kbcorr_emit_entry(struct wtype *wtype, struct keymap_entry *e)
-+{
-+	if (e->is_sentinel) {
-+		return true;
+-static void upload_keymap(struct wtype *wtype)
++// Find the referenced entry for physical code phys in group g
++// (0-based): a pool literal allocated to that slot/group, else a fixed
++// entry with that code, else NULL (an unused slot in a partial group).
++static struct keymap_entry *kbcorr_group_entry(struct wtype *wtype, unsigned int phys, size_t group)
+ {
+-	char filename[] = "/tmp/wtype-XXXXXX";
+-	int fd = mkstemp(filename);
+-	if (fd < 0) {
+-		fail("Failed to create the temporary keymap file");
++	struct keymap_entry *fixed = NULL;
++	for (size_t i = 0; i < wtype->keymap_len; i++) {
++		struct keymap_entry *e = &wtype->keymap[i];
++		if (!e->referenced || e->phys != phys) {
++			continue;
++		}
++		if (e->is_pool_literal) {
++			if (e->page == group) {
++				return e;
++			}
++		} else if (e->is_fixed) {
++			fixed = e;
++		}
 +	}
-+	if (!e->referenced) {
-+		return false;
-+	}
-+	if (e->is_fixed) {
-+		return true;
-+	}
-+	return e->is_pool_literal && e->page == wtype->current_page;
++	return fixed;
 +}
 +
- static void upload_keymap(struct wtype *wtype)
- {
-+	// Emit fixed/explicit entries plus the current literal page. The
-+	// sentinel VoidSymbol entry is present in every map, above the
-+	// maximum real XKB code, and never produces a physical event.
- 	char filename[] = "/tmp/wtype-XXXXXX";
- 	int fd = mkstemp(filename);
- 	if (fd < 0) {
-@@ -459,17 +810,27 @@
- 	unlink(filename);
- 	FILE *f = fdopen(fd, "w");
- 
++// Write the single keymap holding all groups to f. Each physical code
++// is declared once, named after its first referenced logical entry's
++// existing <K...> name. For one group this is byte-for-byte the previous
++// writer's output. For several groups every Group1..GroupG is written
++// explicitly with type ONE_LEVEL; a pool slot with no literal in a group
++// gets VoidSymbol, and fixed/explicit entries (including the sentinel)
++// repeat identically in every group.
++static void kbcorr_write_keymap(struct wtype *wtype, FILE *f)
++{
 +	unsigned int max_phys = 0;
 +	for (size_t i = 0; i < wtype->keymap_len; i++) {
-+		if (kbcorr_emit_entry(wtype, &wtype->keymap[i]) &&
++		if (wtype->keymap[i].referenced &&
 +		    wtype->keymap[i].phys > max_phys) {
 +			max_phys = wtype->keymap[i].phys;
 +		}
-+	}
-+
+ 	}
+-	unlink(filename);
+-	FILE *f = fdopen(fd, "w");
+ 
  	fprintf(f, "xkb_keymap {\n");
  
- 	fprintf(
+@@ -465,11 +860,25 @@
  		f,
  		"xkb_keycodes \"(unnamed)\" {\n"
  		"minimum = 8;\n"
@@ -601,28 +658,141 @@
  	);
  	for (size_t i = 0; i < wtype->keymap_len; i++) {
 -		fprintf(f, "<K%ld> = %ld;\n", i + 1, i + 8 + 1);
-+		if (kbcorr_emit_entry(wtype, &wtype->keymap[i])) {
-+			fprintf(f, "<K%ld> = %u;\n", i + 1, wtype->keymap[i].phys + 8);
++		struct keymap_entry *e = &wtype->keymap[i];
++		if (!e->referenced) {
++			continue;
++		}
++		bool first = true;
++		for (size_t k = 0; k < i; k++) {
++			if (wtype->keymap[k].referenced &&
++			    wtype->keymap[k].phys == e->phys) {
++				first = false;
++				break;
++			}
++		}
++		if (first) {
++			fprintf(f, "<K%ld> = %u;\n", i + 1, e->phys + 8);
 +		}
  	}
  	fprintf(f, "};\n");
  
-@@ -479,9 +840,11 @@
+@@ -479,24 +888,109 @@
  
  	fprintf(f, "xkb_symbols \"(unnamed)\" {\n");
  	for (size_t i = 0; i < wtype->keymap_len; i++) {
 -		fprintf(f, "key <K%ld> {[", i + 1);
 -		print_keysym_name(wtype->keymap[i].xkb, f);
 -		fprintf(f, "]};\n");
-+		if (kbcorr_emit_entry(wtype, &wtype->keymap[i])) {
-+			fprintf(f, "key <K%ld> {[", i + 1);
-+			print_keysym_name(wtype->keymap[i].xkb, f);
-+			fprintf(f, "]};\n");
++		struct keymap_entry *e = &wtype->keymap[i];
++		if (!e->referenced) {
++			continue;
 +		}
++		bool first = true;
++		for (size_t k = 0; k < i; k++) {
++			if (wtype->keymap[k].referenced &&
++			    wtype->keymap[k].phys == e->phys) {
++				first = false;
++				break;
++			}
++		}
++		if (!first) {
++			continue;
++		}
++		if (wtype->group_count == 1) {
++			fprintf(f, "key <K%ld> {[", i + 1);
++			print_keysym_name(e->xkb, f);
++			fprintf(f, "]};\n");
++			continue;
++		}
++		fprintf(f, "key <K%ld> {\n", i + 1);
++		for (size_t g = 0; g < wtype->group_count; g++) {
++			struct keymap_entry *ge = kbcorr_group_entry(wtype, e->phys, g);
++			fprintf(f, "\ttype[Group%lu]=\"ONE_LEVEL\", symbols[Group%lu]=[",
++				(unsigned long)(g + 1), (unsigned long)(g + 1));
++			if (ge) {
++				print_keysym_name(ge->xkb, f);
++			} else {
++				fprintf(f, "VoidSymbol");
++			}
++			fprintf(f, "]%s\n", g + 1 < wtype->group_count ? "," : "");
++		}
++		fprintf(f, "};\n");
  	}
  	fprintf(f, "};\n");
  
-@@ -511,6 +874,10 @@
+ 	fprintf(f, "};\n");
++}
++
++// Prepare the single keymap after preflight and before connecting:
++// serialize it to an unlinked file, validate the complete text with
++// libxkbcommon (format v1), and keep it for the one upload. The file
++// offset is left at the end, exactly as the previous writer left it
++// when the keymap request was issued.
++static void kbcorr_prepare_keymap(struct wtype *wtype)
++{
++	char filename[] = "/tmp/wtype-XXXXXX";
++	int fd = mkstemp(filename);
++	if (fd < 0) {
++		fail("Failed to create the temporary keymap file");
++	}
++	unlink(filename);
++	FILE *f = fdopen(fd, "w+");
++	if (!f) {
++		fail("Failed to open the temporary keymap file");
++	}
++	kbcorr_write_keymap(wtype, f);
+ 	fputc('\0', f);
+ 	fflush(f);
+-	size_t keymap_size = ftell(f);
++	wtype->keymap_size = ftell(f);
++	rewind(f);
++	size_t cap = wtype->keymap_size + 1;
++	char *text = malloc(cap);
++	if (!text) {
++		fail("Out of memory validating the keymap");
++	}
++	size_t n = fread(text, 1, wtype->keymap_size, f);
++	if (n != wtype->keymap_size) {
++		fail("Failed to read back the prepared keymap");
++	}
++	text[wtype->keymap_size] = '\0';
++	struct xkb_context *ctx = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
++	if (!ctx) {
++		fail("Cannot create xkb context for keymap validation");
++	}
++	struct xkb_keymap *map = xkb_keymap_new_from_string(
++		ctx, text, XKB_KEYMAP_FORMAT_TEXT_V1,
++		XKB_KEYMAP_COMPILE_NO_FLAGS);
++	free(text);
++	if (!map) {
++		fail("Prepared keymap failed libxkbcommon validation");
++	}
++	xkb_keymap_unref(map);
++	xkb_context_unref(ctx);
++	// Restore the offset the previous writer left at upload time.
++	fseek(f, 0, SEEK_END);
++	wtype->keymap_file = f;
++}
+ 
++static void upload_keymap(struct wtype *wtype)
++{
++	// The single prepared keymap is sent exactly once, after object
++	// creation. No upload call remains in runtime typing.
+ 	zwp_virtual_keyboard_v1_keymap(
+-		wtype->keyboard, WL_KEYBOARD_KEYMAP_FORMAT_XKB_V1, fileno(f), keymap_size
++		wtype->keyboard, WL_KEYBOARD_KEYMAP_FORMAT_XKB_V1,
++		fileno(wtype->keymap_file), (uint32_t)wtype->keymap_size
+ 	);
+ 
+ 	wl_display_roundtrip(wtype->display);
+ 
+-	fclose(f);
++	fclose(wtype->keymap_file);
++	wtype->keymap_file = NULL;
+ }
+ 
+ 
+@@ -511,6 +1005,14 @@
  
  	parse_args(&wtype, argc, argv);
  
@@ -630,14 +800,10 @@
 +	// whole command stream before connecting to Wayland.
 +	kbcorr_preflight(&wtype);
 +
++	// Multi-page correction: prepare and validate the single keymap
++	// holding all groups before connecting; it is sent exactly once.
++	kbcorr_prepare_keymap(&wtype);
++
  	wtype.display = wl_display_connect(NULL);
  	if (wtype.display == NULL) {
  		fail("Wayland connection failed");
-@@ -531,6 +898,7 @@
- 		wtype.manager, wtype.seat
- 	);
- 
-+	wtype.current_page = 0;
- 	upload_keymap(&wtype);
- 	run_commands(&wtype);
- 
