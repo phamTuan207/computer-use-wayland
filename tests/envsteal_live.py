@@ -267,6 +267,20 @@ def _start_test_broker(test_dir, environment, expected_hash):
             except subprocess.TimeoutExpired:
                 pass
         raise ProofBlocked('test_owned_broker_source_assertion_mismatch')
+    try:
+        _wait_for_status(path, lambda value: value.get('state') == 'idle' and
+                         value.get('owner') is None and value.get('cancelled') is False and
+                         value.get('recovery') == 'none', process, deadline=15)
+    except Exception as error:
+        if process.poll() is None:
+            process.send_signal(signal.SIGTERM)
+            try:
+                code = process.wait(timeout=15)
+            except subprocess.TimeoutExpired as cleanup_error:
+                raise ProofBlocked('test_owned_broker_idle_start_cleanup_timeout') from cleanup_error
+            if code != 0:
+                raise ProofBlocked('test_owned_broker_idle_start_exit_not_zero') from error
+        raise ProofBlocked('test_owned_broker_did_not_become_idle') from error
     return process, path, proof
 
 
