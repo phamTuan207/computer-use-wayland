@@ -8,6 +8,7 @@ import io
 import json
 import math
 import os
+import pathlib
 from pathlib import Path
 import re
 import select
@@ -27,8 +28,15 @@ CANCEL = STATE / 'cancelled'
 # for that command only and never silently replaces this default.
 BROWSER_ENDPOINT = 'http://127.0.0.1:9222'
 SESSION_KEYS = {'XDG_RUNTIME_DIR','WAYLAND_DISPLAY','DISPLAY','HYPRLAND_INSTANCE_SIGNATURE',
-                'DBUS_SESSION_BUS_ADDRESS','XDG_CURRENT_DESKTOP','XDG_SESSION_TYPE',
-                'GDK_BACKEND','QT_QPA_PLATFORM','ELECTRON_OZONE_PLATFORM_HINT','MOZ_ENABLE_WAYLAND'}
+                'DBUS_SESSION_BUS_ADDRESS','XDG_CURRENT_DESKTOP','XDG_SESSION_DESKTOP',
+                'XDG_SESSION_TYPE','XDG_SEAT','XDG_VTNR','USER','HOME','LOGNAME','PATH',
+                'GDK_BACKEND','QT_QPA_PLATFORM','ELECTRON_OZONE_PLATFORM_HINT',
+                'MOZ_ENABLE_WAYLAND'}
+_TUPLE_KEYS = ('XDG_RUNTIME_DIR','WAYLAND_DISPLAY','HYPRLAND_INSTANCE_SIGNATURE')
+_IDENTITY_KEYS = {'USER','HOME','LOGNAME','PATH'}
+_PLATFORM_KEYS = {'GDK_BACKEND','QT_QPA_PLATFORM','ELECTRON_OZONE_PLATFORM_HINT',
+                  'MOZ_ENABLE_WAYLAND'}
+_ROUTING_KEYS = SESSION_KEYS - _IDENTITY_KEYS
 OBSERVATION_SCHEMA = 2
 OBSERVATION_MAX_AGE = 90
 INSTANCE_RE = re.compile(r'[A-Za-z0-9_.-]{1,200}')
@@ -95,7 +103,7 @@ def standalone_type_argv(a):
     return argv+['-','-p','VoidSymbol']
 
 def _session_tuple(env):
-    return {key:env.get(key) for key in ('XDG_RUNTIME_DIR','WAYLAND_DISPLAY','HYPRLAND_INSTANCE_SIGNATURE')}
+    return {key:env.get(key) for key in _TUPLE_KEYS}
 
 def _validate_session_tuple(env):
     values=_session_tuple(env)
@@ -122,36 +130,336 @@ def _validate_session_tuple(env):
         raise RuntimeError('compositor instance does not match the supplied socket tuple; refusing to switch')
     return values
 
-def environment():
-    env=os.environ.copy()
-    supplied=_session_tuple(env)
-    if all(isinstance(value,str) and value for value in supplied.values()):
-        _validate_session_tuple(env)
-        return env
-    if env.get('CU_SESSION_TOKEN'):
-        raise RuntimeError('automation session has no pinned compositor tuple; refusing environment discovery')
-    # Prefer the host Omarchy shell, then other GUI processes. Ignore nested
-    # Quickshells and accept only candidates whose socket tuple Hyprland verifies.
-    candidates={}
-    for name in ('quickshell','Hyprland','waybar','kitty'):
-        try:p=subprocess.run(['pgrep','-x',name],capture_output=True,text=True,timeout=2)
-        except (OSError,subprocess.TimeoutExpired):continue
-        for pid in p.stdout.split() if p.returncode==0 else ():
-            try:
-                if name=='quickshell' and b'/usr/share/omarchy/shell' not in Path('/proc',pid,'cmdline').read_bytes():
-                    continue
-                data=dict(s.split('=',1) for s in Path('/proc',pid,'environ').read_bytes().decode().split('\0') if '=' in s)
-                candidate=env.copy();candidate.update({k:v for k,v in data.items() if k in SESSION_KEYS})
-                values=_session_tuple(candidate)
-                if not all(isinstance(value,str) and value for value in values.values()):
-                    continue
-                _validate_session_tuple(candidate)
-                candidates[tuple(values.items())]=candidate
-            except (OSError,UnicodeError,RuntimeError):
+def _private_runtime(path):
+    try:
+        info=Path(path).lstat()
+    except (OSError,TypeError,ValueError):
+        return False
+    return (stat.S_ISDIR(info.st_mode) and info.st_uid==os.geteuid() and
+            stat.S_IMODE(info.st_mode)==0o700)
+
+
+def _system_runtime_dir():
+    return Path(f'/run/user/{os.geteuid()}')
+
+
+def _read_process_environ(pid):
+    data={}
+    raw=Path('/proc',str(pid),'environ').read_bytes().decode('utf-8','surrogateescape')
+    for item in raw.split('\0'):
+        key,sep,value=item.partition('=')
+        if sep and key in SESSION_KEYS:
+            data[key]=value
+    return data
+
+
+def _process_owned(pid):
+    try:
+        info=Path('/proc',str(pid)).lstat()
+    except (OSError,TypeError,ValueError):
+        return False
+    return stat.S_ISDIR(info.st_mode) and info.st_uid==os.geteuid()
+
+
+def _process_donors():
+    donors=[]
+    for name in ('quickshell','waybar','kitty','Hyprland'):
+        try:
+            found=subprocess.run(['pgrep','-x',name],capture_output=True,text=True,timeout=2)
+        except (OSError,subprocess.SubprocessError):
+            continue
+        for pid in found.stdout.split() if found.returncode==0 else ():
+            if not pid.isdigit() or not _process_owned(pid):
                 continue
-    if len(candidates)>1:
+            try:
+                if (name=='quickshell' and
+                        b'/usr/share/omarchy/shell' not in
+                        Path('/proc',pid,'cmdline').read_bytes()):
+                    continue
+                donors.append({'name':name,'pid':pid,'env':_read_process_environ(pid)})
+            except (OSError,UnicodeError,ValueError):
+                continue
+    return donors
+
+
+def _probe_environment(base, runtime):
+    env=dict(base)
+    for key in _TUPLE_KEYS[1:]:
+        env.pop(key,None)
+    env['XDG_RUNTIME_DIR']=str(runtime)
+    return env
+
+
+def _instance_rows(env):
+    try:
+        response=subprocess.run(['hyprctl','-j','instances'],env=env,capture_output=True,
+                                text=True,timeout=3)
+        if response.returncode!=0 or len(response.stdout)>65536:
+            return None
+        rows=json.loads(response.stdout)
+    except (OSError,subprocess.SubprocessError,ValueError,UnicodeError):
+        return None
+    return rows if isinstance(rows,list) else None
+
+
+def _tuple_key(env):
+    return tuple(env.get(key) for key in _TUPLE_KEYS)
+
+
+def _verified_donor(donor, base):
+    raw=donor['env']
+    if not raw.get('WAYLAND_DISPLAY') or not raw.get('HYPRLAND_INSTANCE_SIGNATURE'):
+        return None
+    runtime=raw.get('XDG_RUNTIME_DIR')
+    if not runtime:
+        runtime=base.get('XDG_RUNTIME_DIR')
+    if not _private_runtime(runtime):
+        return None
+    candidate=dict(base)
+    candidate.update(raw)
+    candidate['XDG_RUNTIME_DIR']=runtime
+    try:
+        _validate_session_tuple(candidate)
+    except (OSError,RuntimeError,TypeError,ValueError):
+        return None
+    return {**raw,'XDG_RUNTIME_DIR':runtime}
+
+
+def _merge_same_tuple_donors(selected, donor_rows, key):
+    result=dict(selected)
+    anchor_seat=result.get('XDG_SEAT')
+    for donor in donor_rows:
+        if _tuple_key(donor)!=key:
+            continue
+        if anchor_seat and donor.get('XDG_SEAT') and donor['XDG_SEAT']!=anchor_seat:
+            continue
+        if not anchor_seat and donor.get('XDG_SEAT'):
+            anchor_seat=donor['XDG_SEAT']
+            result['XDG_SEAT']=anchor_seat
+        for name,value in donor.items():
+            if name not in SESSION_KEYS or not value or name in _TUPLE_KEYS:
+                continue
+            if name in _PLATFORM_KEYS and selected.get(name):
+                continue
+            if not result.get(name):
+                result[name]=value
+    return result
+
+
+def _enrich_explicit_tuple(env, donors, key, *, refresh):
+    result=dict(env)
+    updated=set()
+    seat=env.get('XDG_SEAT')
+    for donor in donors:
+        values=_verified_donor(donor,env)
+        if values is None or _tuple_key(values)!=key:
+            continue
+        if seat and values.get('XDG_SEAT') and values['XDG_SEAT']!=seat:
+            continue
+        for name,value in values.items():
+            if name not in SESSION_KEYS or not value or name in _TUPLE_KEYS:
+                continue
+            if name in _PLATFORM_KEYS and env.get(name):
+                continue
+            if name in updated:
+                continue
+            if refresh or not result.get(name):
+                result[name]=value
+            updated.add(name)
+            if name=='XDG_SEAT' and value:
+                seat=value
+    return result
+
+
+def _valid_instance_directory(path, name):
+    if not INSTANCE_RE.fullmatch(name) or name in ('.','..'):
+        return False
+    try:
+        info=path.lstat()
+        socket_info=(path/'.socket.sock').lstat()
+    except OSError:
+        return False
+    return (stat.S_ISDIR(info.st_mode) and info.st_uid==os.geteuid() and
+            stat.S_ISSOCK(socket_info.st_mode) and socket_info.st_uid==os.geteuid())
+
+
+def _row_process(pid):
+    if isinstance(pid,str) and pid.isdigit():
+        pid=int(pid)
+    if isinstance(pid,bool) or not isinstance(pid,int) or pid<=0 or not _process_owned(pid):
+        return None
+    try:
+        return _read_process_environ(str(pid))
+    except (OSError,UnicodeError,ValueError):
+        return None
+
+
+def _recovered_instances(base, donors):
+    runtimes=[]
+    for donor in donors:
+        runtime=donor['env'].get('XDG_RUNTIME_DIR')
+        if runtime and _private_runtime(runtime) and runtime not in runtimes:
+            runtimes.append(runtime)
+    inherited=base.get('XDG_RUNTIME_DIR')
+    if inherited and _private_runtime(inherited) and inherited not in runtimes:
+        runtimes.append(inherited)
+    system_runtime=_system_runtime_dir()
+    if _private_runtime(system_runtime) and str(system_runtime) not in runtimes:
+        runtimes.append(str(system_runtime))
+
+    found={}
+    for runtime in runtimes:
+        root=Path(runtime)/'hypr'
+        try:
+            root_info=root.lstat()
+            if not stat.S_ISDIR(root_info.st_mode) or root_info.st_uid!=os.geteuid():
+                continue
+            rows=_instance_rows(_probe_environment(base,runtime))
+            entries=list(root.iterdir())
+        except OSError:
+            continue
+        if rows is None:
+            continue
+        for folder in entries:
+            name=folder.name
+            if not _valid_instance_directory(folder,name):
+                continue
+            matches=[row for row in rows if isinstance(row,dict) and row.get('instance')==name]
+            if len(matches)!=1:
+                continue
+            row=matches[0]
+            pid=row.get('pid')
+            if isinstance(pid,str) and pid.isdigit():
+                pid=int(pid)
+            if isinstance(pid,bool) or not isinstance(pid,int) or pid<=0 or not _process_owned(pid):
+                continue
+            display=row.get('wl_socket')
+            if (not isinstance(display,str) or not display or '/' in display or
+                    display in ('.','..')):
+                continue
+            try:
+                wayland_info=(Path(runtime)/display).lstat()
+            except OSError:
+                continue
+            if not stat.S_ISSOCK(wayland_info.st_mode) or wayland_info.st_uid!=os.geteuid():
+                continue
+            row_env=_row_process(pid)
+            candidate=dict(base)
+            candidate.update({'XDG_RUNTIME_DIR':runtime,'WAYLAND_DISPLAY':display,
+                              'HYPRLAND_INSTANCE_SIGNATURE':name})
+            try:
+                _validate_session_tuple(candidate)
+            except (OSError,RuntimeError,TypeError,ValueError):
+                continue
+            key=_tuple_key(candidate)
+            associated=[]
+            if (row_env and row_env.get('XDG_RUNTIME_DIR')==runtime and
+                    row_env.get('WAYLAND_DISPLAY')==display):
+                associated.append(row_env)
+            for donor in donors:
+                raw=donor['env']
+                if (raw.get('XDG_RUNTIME_DIR')==runtime and
+                        raw.get('WAYLAND_DISPLAY')==display):
+                    associated.append(raw)
+            if not associated:
+                continue
+            metadata={}
+            seat=None
+            for source in associated:
+                if seat and source.get('XDG_SEAT') and source['XDG_SEAT']!=seat:
+                    continue
+                if not seat and source.get('XDG_SEAT'):
+                    seat=source['XDG_SEAT']
+                for field,value in source.items():
+                    if field in SESSION_KEYS and value and field not in _TUPLE_KEYS:
+                        metadata.setdefault(field,value)
+            metadata.update({'XDG_RUNTIME_DIR':runtime,'WAYLAND_DISPLAY':display,
+                             'HYPRLAND_INSTANCE_SIGNATURE':name})
+            found.setdefault(key,metadata)
+    return found
+
+
+def _discovery_result(base, donors):
+    verified={}
+    verified_rows=[]
+    for donor in donors:
+        values=_verified_donor(donor,base)
+        if values is None:
+            continue
+        key=_tuple_key(values)
+        if key in verified:
+            verified[key]=_merge_same_tuple_donors(verified[key],(values,),key)
+        else:
+            verified[key]=values
+        verified_rows.append(values)
+
+    recovered=_recovered_instances(base,donors)
+    for key,values in recovered.items():
+        if key in verified:
+            verified[key]=_merge_same_tuple_donors(verified[key],verified_rows,key)
+        else:
+            verified[key]=values
+    if len(verified)>1:
         raise RuntimeError('multiple verified compositor instances; supply one explicit socket/instance tuple')
-    return next(iter(candidates.values()),env)
+    if not verified:
+        raise RuntimeError('no verified Hyprland GUI environment found')
+    key,selected=next(iter(verified.items()))
+
+    # An automatic switch discards routing hints from the old shell. Caller
+    # identity and control settings remain available if the donor lacks them.
+    result=dict(base)
+    for field in _ROUTING_KEYS:
+        result.pop(field,None)
+    for field,value in selected.items():
+        if field not in SESSION_KEYS or not value:
+            continue
+        if field in _PLATFORM_KEYS and base.get(field):
+            continue
+        result[field]=value
+    result.pop('GTK_IM_MODULE',None)
+    _guard_state_home(base,result)
+    return result
+
+
+def _guard_state_home(base, selected):
+    home=selected.get('HOME')
+    if not home or home==base.get('HOME') or base.get('XDG_CACHE_HOME'):
+        return
+    try:
+        current_home=pathlib.Path.home().resolve()
+        state_root=Path(STATE).resolve()
+    except OSError:
+        return
+    if state_root==current_home/'.cache'/'agent-computer-use' and Path(home).resolve()!=current_home:
+        raise RuntimeError('donated HOME would change the already computed default computer-use state root')
+
+
+def environment(base=None, *, refresh=False):
+    """Return a new environment with one verified compositor session selected."""
+    env=dict(os.environ if base is None else base)
+    supplied=_session_tuple(env)
+    complete=all(isinstance(value,str) and value for value in supplied.values())
+    token=bool(env.get('CU_SESSION_TOKEN'))
+    explicit_key=_tuple_key(supplied) if complete else None
+    if complete:
+        try:
+            _validate_session_tuple(env)
+        except (OSError,RuntimeError,TypeError,ValueError):
+            if token or not refresh:
+                raise
+        else:
+            env.pop('GTK_IM_MODULE',None)
+            if token:
+                return env
+            selected=_enrich_explicit_tuple(
+                env,_process_donors(),explicit_key,refresh=refresh)
+            selected.pop('GTK_IM_MODULE',None)
+            _guard_state_home(env,selected)
+            return selected
+    if token:
+        raise RuntimeError('automation session has no pinned compositor tuple; refusing environment discovery')
+    donors=_process_donors()
+    return _discovery_result(env,donors)
 
 def compositor_identity(env):
     values=_session_tuple(env or {})

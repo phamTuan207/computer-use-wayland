@@ -125,9 +125,14 @@ class EnvironmentSelection(unittest.TestCase):
                 if argv==['hyprctl','-j','instances']:
                     return subprocess.CompletedProcess(argv,0,json.dumps([
                         {'instance':'host-signature','wl_socket':'wayland-1'}]),'')
-                raise AssertionError('nested process scan must not run')
-            with patch.dict(os.environ,chosen,clear=True),patch.object(cu.subprocess,'run',side_effect=run):
+                if argv[:2]==['pgrep','-x']:
+                    return subprocess.CompletedProcess(argv,1,'','')
+                raise AssertionError(argv)
+            with patch.dict(os.environ,chosen,clear=True),\
+                    patch.object(cu.subprocess,'run',side_effect=run),\
+                    patch.object(cu,'_process_donors',wraps=cu._process_donors) as scan:
                 found=cu.environment()
+            scan.assert_called_once()
             self.assertEqual(cu._session_tuple(found),chosen)
 
     def test_stale_explicit_tuple_refuses_without_falling_back(self):
@@ -145,6 +150,30 @@ class EnvironmentSelection(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError,'pinned compositor tuple'):
                 cu.environment()
         run.assert_not_called()
+
+    def test_live_task_with_invalid_tuple_refuses_even_when_refreshing(self):
+        with patch.dict(os.environ,{'CU_SESSION_TOKEN':'a'*32,
+                                    'XDG_RUNTIME_DIR':'/missing/runtime',
+                                    'WAYLAND_DISPLAY':'wayland-1',
+                                    'HYPRLAND_INSTANCE_SIGNATURE':'stale'},clear=True),\
+                patch.object(cu.subprocess,'run') as run:
+            with self.assertRaisesRegex(RuntimeError,'explicit Wayland socket is unavailable'):
+                cu.environment(refresh=True)
+        run.assert_not_called()
+
+    def test_valid_pinned_task_tuple_is_returned_without_discovery_and_strips_gtk(self):
+        with tempfile.TemporaryDirectory() as folder:
+            chosen=self.endpoint(folder)
+            env={**chosen,'CU_SESSION_TOKEN':'a'*32,'GTK_IM_MODULE':'fcitx'}
+            def run(argv,**kwargs):
+                if argv==['hyprctl','-j','instances']:
+                    return subprocess.CompletedProcess(argv,0,json.dumps([
+                        {'instance':'host-signature','wl_socket':'wayland-1'}]),'')
+                raise AssertionError('pinned tuple must not scan processes')
+            with patch.object(cu.subprocess,'run',side_effect=run):
+                found=cu.environment(env,refresh=True)
+            self.assertEqual(cu._session_tuple(found),chosen)
+            self.assertNotIn('GTK_IM_MODULE',found)
 
 
 if __name__=='__main__':unittest.main()
