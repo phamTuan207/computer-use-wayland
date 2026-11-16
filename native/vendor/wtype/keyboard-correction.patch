@@ -1,0 +1,643 @@
+--- main.c
++++ main.c
+@@ -12,7 +12,7 @@
+ #include <wchar.h>
+ #include <xkbcommon/xkbcommon.h>
+ 
+-#include "virtual-keyboard-unstable-v1-client-protocol.h"
++#include "keyboard-protocol.h"
+ 
+ #define ARRAY_SIZE(x) (sizeof(x) / sizeof(x[0]))
+ 
+@@ -51,12 +51,45 @@
+ 		enum wtype_mod mod;
+ 		unsigned int sleep_ms;
+ 	};
++	// True for a release-only sentinel command: emit no physical event.
++	bool noop;
+ };
+ 
+ 
++// Keyboard correction (vendored patch): printable physical positions
++// that are safe for literal text. This is PR 77's pool without Space,
++// which is fixed separately at evdev 57. Never put literal text on
++// Escape, BackSpace, Tab, Enter, or modifier codes.
++static const unsigned int kbcorr_pool[] = {
++	2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13,
++	16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27,
++	30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41,
++	43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53,
++};
++
++// Evdev code for the unused release-only VoidSymbol sentinel entry. It
++// sits above every real physical code used by this helper and emits no
++// physical event.
++#define KBCORR_SENTINEL_PHYS 240
++
+ struct keymap_entry {
+ 	xkb_keysym_t xkb;
+ 	wchar_t wchr;
++	// Evdev physical code emitted for this entry (assigned in preflight).
++	unsigned int phys;
++	// Literal pool page; 0 for fixed/explicit entries.
++	unsigned int page;
++	// True when allocated from kbcorr_pool (paged); false when fixed.
++	bool is_pool_literal;
++	// True for explicit keys and fixed literal controls: present in
++	// every uploaded page.
++	bool is_fixed;
++	// True for the release-only VoidSymbol sentinel: emits no event.
++	bool is_sentinel;
++	// True when created by -k/-P/-p (explicit origin), false for text.
++	bool is_explicit;
++	// True when referenced by a command after preflight merging.
++	bool referenced;
+ };
+ 
+ 
+@@ -79,6 +112,8 @@
+ 	struct keymap_entry *keymap;
+ 
+ 	uint32_t mod_status;
++	// Literal pool page in the currently uploaded keymap.
++	size_t current_page;
+ 	size_t command_count;
+ 	struct wtype_command *commands;
+ };
+@@ -154,6 +189,13 @@
+ 	);
+ 	wtype->keymap[wtype->keymap_len - 1].wchr = ch;
+ 	wtype->keymap[wtype->keymap_len - 1].xkb = xkb;
++	wtype->keymap[wtype->keymap_len - 1].phys = 0;
++	wtype->keymap[wtype->keymap_len - 1].page = 0;
++	wtype->keymap[wtype->keymap_len - 1].is_pool_literal = false;
++	wtype->keymap[wtype->keymap_len - 1].is_fixed = false;
++	wtype->keymap[wtype->keymap_len - 1].is_sentinel = false;
++	wtype->keymap[wtype->keymap_len - 1].is_explicit = false;
++	wtype->keymap[wtype->keymap_len - 1].referenced = false;
+ 	return wtype->keymap_len;
+ }
+ 
+@@ -165,11 +207,16 @@
+ 		xkb_keysym_t to;
+ 	} remap_table[] = {
+ 		{ L'\n', XKB_KEY_Return },
++		{ L'\r', XKB_KEY_Return },
+ 		{ L'\t', XKB_KEY_Tab },
+ 		{ L'\e', XKB_KEY_Escape },
++		{ L'\b', XKB_KEY_BackSpace },
++		{ (wchar_t)0x7f, XKB_KEY_Delete },
+ 	};
++	// Literal and explicit entries never share a slot, even when their
++	// keysyms coincide (e.g. literal 'a' vs explicit -P A).
+ 	for (unsigned int i = 0; i < wtype->keymap_len; i++) {
+-		if (wtype->keymap[i].wchr == ch) {
++		if (!wtype->keymap[i].is_explicit && wtype->keymap[i].wchr == ch) {
+ 			return i + 1;
+ 		}
+ 	}
+@@ -190,14 +237,341 @@
+ unsigned int get_key_code_by_xkb(struct wtype *wtype, xkb_keysym_t xkb)
+ {
+ 	for (unsigned int i = 0; i < wtype->keymap_len; i++) {
+-		if (wtype->keymap[i].xkb == xkb) {
++		if (wtype->keymap[i].is_explicit && wtype->keymap[i].xkb == xkb) {
+ 			return i + 1;
+ 		}
+ 	}
+ 
+-	return append_keymap_entry(wtype, 0, xkb);
++	unsigned int code = append_keymap_entry(wtype, 0, xkb);
++	wtype->keymap[code - 1].is_explicit = true;
++	return code;
++}
++
++
++
++// ---- Keyboard correction: preflight (runs before any Wayland connection) ----
++
++// Resolve a keysym to its canonical physical evdev code from an internal
++// evdev/pc105/us reference keymap. This is a physical-identity reference
++// only; it never changes the user's layout or IM state.
++static int kbcorr_resolve_phys(struct xkb_keymap *ref, xkb_keysym_t ks, unsigned int *phys_out)
++{
++	xkb_keycode_t min = xkb_keymap_min_keycode(ref);
++	xkb_keycode_t max = xkb_keymap_max_keycode(ref);
++	for (xkb_keycode_t kc = min; kc <= max; kc++) {
++		size_t nlevels = xkb_keymap_num_levels_for_key(ref, kc, 0);
++		for (size_t level = 0; level < nlevels; level++) {
++			const xkb_keysym_t *syms = NULL;
++			int n = xkb_keymap_key_get_syms_by_level(ref, kc, 0, level, &syms);
++			for (int i = 0; i < n; i++) {
++				if (syms[i] == ks) {
++					*phys_out = (unsigned int)kc - 8;
++					return 0;
++				}
++			}
++		}
++	}
++	return -1;
++}
++
++// Decode the complete bounded stdin payload for every TEXT_STDIN command
++// and convert it to an ordinary TEXT command before connecting.
++static void kbcorr_convert_stdin(struct wtype *wtype)
++{
++	for (size_t c = 0; c < wtype->command_count; c++) {
++		struct wtype_command *cmd = &wtype->commands[c];
++		if (cmd->type != WTYPE_COMMAND_TEXT_STDIN) {
++			continue;
++		}
++		// At most 32 stdin text actions of 10,000 characters each.
++		// (parse_args already rejects a second stdin placeholder.)
++		char *buf = NULL;
++		size_t len = 0, cap = 0;
++		for (;;) {
++			if (len == cap) {
++				if (cap >= 320000) {
++					fail("Stdin input exceeds the 320000-byte ceiling");
++				}
++				cap = cap ? cap * 2 : 4096;
++				if (cap > 320001) {
++					cap = 320001;
++				}
++				buf = realloc(buf, cap);
++				if (!buf) {
++					fail("Out of memory reading stdin");
++				}
++			}
++			size_t n = fread(buf + len, 1, cap - len, stdin);
++			if (n == 0) {
++				break;
++			}
++			len += n;
++			if (len > 320000) {
++				fail("Stdin input exceeds the 320000-byte ceiling");
++			}
++		}
++		buf[len] = '\0';
++		if (memchr(buf, '\0', len) != NULL) {
++			fail("NUL byte in stdin input");
++		}
++		setlocale(LC_CTYPE, "");
++		wchar_t *text = malloc((len + 1) * sizeof(wchar_t));
++		if (!text) {
++			fail("Out of memory reading stdin");
++		}
++		ssize_t ret = mbstowcs(text, buf, len + 1);
++		free(buf);
++		if (ret < 0) {
++			fail("Failed to decode stdin input");
++		}
++		if (ret > 10000) {
++			fail("Stdin input exceeds 10000 characters");
++		}
++		cmd->key_codes = calloc(ret > 0 ? (size_t)ret : 1, sizeof(cmd->key_codes[0]));
++		cmd->key_codes_len = (size_t)ret;
++		for (ssize_t k = 0; k < ret; k++) {
++			cmd->key_codes[k] = get_key_code_by_wchar(wtype, text[k]);
++		}
++		free(text);
++		cmd->type = WTYPE_COMMAND_TEXT;
++	}
+ }
+ 
++static void kbcorr_preflight(struct wtype *wtype)
++{
++	kbcorr_convert_stdin(wtype);
++
++	struct xkb_context *ctx = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
++	if (!ctx) {
++		fail("Cannot create xkb context for canonical keymap");
++	}
++	struct xkb_rule_names names = {
++		.rules = "evdev", .model = "pc105",
++		.layout = "us", .variant = "", .options = "",
++	};
++	struct xkb_keymap *ref = xkb_keymap_new_from_names(ctx, &names, XKB_KEYMAP_COMPILE_NO_FLAGS);
++	if (!ref) {
++		fail("Cannot build canonical evdev/pc105/us reference keymap");
++	}
++
++	// 1. Resolve explicit keys to canonical physical codes.
++	bool have_sentinel = false;
++	for (size_t i = 0; i < wtype->keymap_len; i++) {
++		struct keymap_entry *e = &wtype->keymap[i];
++		if (!e->is_explicit) {
++			continue;
++		}
++		if (e->xkb == XKB_KEY_VoidSymbol) {
++			e->phys = KBCORR_SENTINEL_PHYS;
++			e->is_fixed = true;
++			e->is_sentinel = true;
++			have_sentinel = true;
++			continue;
++		}
++		unsigned int phys = 0;
++		if (kbcorr_resolve_phys(ref, e->xkb, &phys) != 0) {
++			char name[64];
++			if (xkb_keysym_get_name(e->xkb, name, sizeof(name)) <= 0) {
++				snprintf(name, sizeof(name), "keysym %04x", e->xkb);
++			}
++			fail("No canonical physical identity for key '%s'", name);
++		}
++		e->phys = phys;
++		e->is_fixed = true;
++	}
++
++	// 2. Classify literal characters: fixed controls or pool literals.
++	for (size_t i = 0; i < wtype->keymap_len; i++) {
++		struct keymap_entry *e = &wtype->keymap[i];
++		if (e->is_explicit) {
++			continue;
++		}
++		wchar_t ch = e->wchr;
++		if (ch == L' ') {
++			e->phys = 57; e->is_fixed = true;
++		} else if (ch == L'\n' || ch == L'\r') {
++			e->phys = 28; e->is_fixed = true;
++		} else if (ch == L'\t') {
++			e->phys = 15; e->is_fixed = true;
++		} else if (ch == 0x1b) {
++			e->phys = 1; e->is_fixed = true;
++		} else if (ch == 0x08) {
++			e->phys = 14; e->is_fixed = true;
++		} else if (ch == 0x7f) {
++			e->phys = 111; e->is_fixed = true;
++		} else if (ch < 0x20 || (ch >= 0x7f && ch <= 0x9f)) {
++			fail("Unsupported control character U+%04X in literal text", (unsigned int)ch);
++		} else if (ch > 0xFFFF) {
++			fail("Non-BMP character U+%04X in literal text", (unsigned int)ch);
++		} else if (e->xkb == XKB_KEY_NoSymbol) {
++			fail("No keysym for literal character U+%04X", (unsigned int)ch);
++		}
++		// Otherwise: pool literal, assigned below.
++	}
++
++	// 3. Conflicts: different keysyms must never share a physical code.
++	for (size_t i = 0; i < wtype->keymap_len; i++) {
++		if (!wtype->keymap[i].is_fixed) continue;
++		for (size_t k = i + 1; k < wtype->keymap_len; k++) {
++			if (!wtype->keymap[k].is_fixed) continue;
++			if (wtype->keymap[i].phys == wtype->keymap[k].phys &&
++			    wtype->keymap[i].xkb != wtype->keymap[k].xkb) {
++				fail("Conflicting keys share physical code %u", wtype->keymap[i].phys);
++			}
++		}
++	}
++
++	// 4. Allocate pool literals from the safe pool minus reserved positions.
++	bool reserved[256] = { false };
++	for (size_t i = 0; i < wtype->keymap_len; i++) {
++		if (wtype->keymap[i].is_fixed) {
++			reserved[wtype->keymap[i].phys] = true;
++		}
++	}
++	unsigned int effpool[ARRAY_SIZE(kbcorr_pool)];
++	size_t npool = 0;
++	for (size_t i = 0; i < ARRAY_SIZE(kbcorr_pool); i++) {
++		if (!reserved[kbcorr_pool[i]]) {
++			effpool[npool++] = kbcorr_pool[i];
++		}
++	}
++	size_t j = 0;
++	for (size_t i = 0; i < wtype->keymap_len; i++) {
++		struct keymap_entry *e = &wtype->keymap[i];
++		if (e->is_explicit || e->is_fixed) {
++			continue;
++		}
++		if (npool == 0) {
++			fail("No safe physical positions remain for literal text");
++		}
++		e->page = j / npool;
++		e->phys = effpool[j % npool];
++		e->is_pool_literal = true;
++		j++;
++	}
++
++	// 5. Ensure the unused VoidSymbol sentinel entry exists in every map.
++	if (!have_sentinel) {
++		unsigned int code = append_keymap_entry(wtype, 0, XKB_KEY_VoidSymbol);
++		struct keymap_entry *e = &wtype->keymap[code - 1];
++		e->is_explicit = true;
++		e->phys = KBCORR_SENTINEL_PHYS;
++		e->is_fixed = true;
++		e->is_sentinel = true;
++	}
++
++	// 6. Merge entries sharing both keysym and physical code (e.g. a
++	// literal newline and an explicit Return), rewriting command references.
++	size_t *canon = calloc(wtype->keymap_len, sizeof(size_t));
++	if (!canon) {
++		fail("Out of memory in preflight");
++	}
++	for (size_t i = 0; i < wtype->keymap_len; i++) {
++		canon[i] = i;
++		for (size_t k = 0; k < i; k++) {
++			if (wtype->keymap[k].xkb == wtype->keymap[i].xkb &&
++			    wtype->keymap[k].phys == wtype->keymap[i].phys &&
++			    !wtype->keymap[k].is_sentinel && !wtype->keymap[i].is_sentinel) {
++				canon[i] = canon[k];
++				break;
++			}
++		}
++	}
++	for (size_t c = 0; c < wtype->command_count; c++) {
++		struct wtype_command *cmd = &wtype->commands[c];
++		if (cmd->type == WTYPE_COMMAND_TEXT) {
++			for (size_t t = 0; t < cmd->key_codes_len; t++) {
++				cmd->key_codes[t] = (unsigned int)canon[cmd->key_codes[t] - 1] + 1;
++			}
++		} else if (cmd->type == WTYPE_COMMAND_KEY_PRESS || cmd->type == WTYPE_COMMAND_KEY_RELEASE) {
++			cmd->single_key_code = (unsigned int)canon[cmd->single_key_code - 1] + 1;
++		}
++	}
++	free(canon);
++	for (size_t c = 0; c < wtype->command_count; c++) {
++		struct wtype_command *cmd = &wtype->commands[c];
++		if (cmd->type == WTYPE_COMMAND_TEXT) {
++			for (size_t t = 0; t < cmd->key_codes_len; t++) {
++				wtype->keymap[cmd->key_codes[t] - 1].referenced = true;
++			}
++		} else if (cmd->type == WTYPE_COMMAND_KEY_PRESS || cmd->type == WTYPE_COMMAND_KEY_RELEASE) {
++			wtype->keymap[cmd->single_key_code - 1].referenced = true;
++		}
++	}
++	for (size_t i = 0; i < wtype->keymap_len; i++) {
++		if (wtype->keymap[i].is_sentinel) {
++			wtype->keymap[i].referenced = true;
++		}
++	}
++
++	// 7. Held-key scan: literal text only with no key or modifier held.
++	uint32_t mods = 0;
++	bool *held = calloc(wtype->keymap_len, sizeof(bool));
++	if (!held) {
++		fail("Out of memory in preflight");
++	}
++	for (size_t c = 0; c < wtype->command_count; c++) {
++		struct wtype_command *cmd = &wtype->commands[c];
++		switch (cmd->type) {
++		case WTYPE_COMMAND_MOD_PRESS:
++			mods |= cmd->mod;
++			break;
++		case WTYPE_COMMAND_MOD_RELEASE:
++			mods &= ~cmd->mod;
++			break;
++		case WTYPE_COMMAND_KEY_PRESS: {
++			struct keymap_entry *e = &wtype->keymap[cmd->single_key_code - 1];
++			if (e->is_sentinel) {
++				fail("Press of the reserved VoidSymbol sentinel");
++			}
++			if (held[cmd->single_key_code - 1]) {
++				fail("Key pressed while already held");
++			}
++			held[cmd->single_key_code - 1] = true;
++			break;
++		}
++		case WTYPE_COMMAND_KEY_RELEASE: {
++			struct keymap_entry *e = &wtype->keymap[cmd->single_key_code - 1];
++			if (e->is_sentinel) {
++				cmd->noop = true;
++				break;
++			}
++			if (!held[cmd->single_key_code - 1]) {
++				fail("Key released without a matching press");
++			}
++			held[cmd->single_key_code - 1] = false;
++			break;
++		}
++		case WTYPE_COMMAND_TEXT: {
++			bool all_explicit = cmd->key_codes_len > 0;
++			for (size_t t = 0; t < cmd->key_codes_len; t++) {
++				struct keymap_entry *e = &wtype->keymap[cmd->key_codes[t] - 1];
++				if (e->is_sentinel) {
++					fail("Synthetic use of the reserved VoidSymbol sentinel");
++				}
++				if (!e->is_explicit) {
++					all_explicit = false;
++				}
++			}
++			if (!all_explicit) {
++				bool any_held = mods != 0;
++				for (size_t i = 0; i < wtype->keymap_len && !any_held; i++) {
++					any_held = held[i];
++				}
++				if (any_held) {
++					fail("Literal text with a held key or modifier");
++				}
++			}
++			break;
++		}
++		default:
++			break;
++		}
++	}
++	free(held);
++	xkb_keymap_unref(ref);
++	xkb_context_unref(ctx);
++}
+ 
+ static void parse_args(struct wtype *wtype, int argc, const char *argv[])
+ {
+@@ -334,8 +708,13 @@
+ 
+ static void run_key(struct wtype *wtype, struct wtype_command *cmd)
+ {
++	// Release-only sentinel: emit no physical event.
++	if (cmd->noop) {
++		return;
++	}
++	struct keymap_entry *e = &wtype->keymap[cmd->single_key_code - 1];
+ 	zwp_virtual_keyboard_v1_key(
+-		wtype->keyboard, 0, cmd->single_key_code,
++		wtype->keyboard, 0, e->phys,
+ 		cmd->type == WTYPE_COMMAND_KEY_PRESS ?
+ 			WL_KEYBOARD_KEY_STATE_PRESSED : WL_KEYBOARD_KEY_STATE_RELEASED
+ 	);
+@@ -344,13 +723,20 @@
+ 
+ static void type_keycode(struct wtype *wtype, unsigned int key_code)
+ {
++	struct keymap_entry *e = &wtype->keymap[key_code - 1];
++	// Bounded pages: load the literal's page between complete
++	// press/release pairs, never while a key is held.
++	if (e->is_pool_literal && e->page != wtype->current_page) {
++		wtype->current_page = e->page;
++		upload_keymap(wtype);
++	}
+ 	zwp_virtual_keyboard_v1_key(
+-			wtype->keyboard, 0, key_code, WL_KEYBOARD_KEY_STATE_PRESSED
++			wtype->keyboard, 0, e->phys, WL_KEYBOARD_KEY_STATE_PRESSED
+ 	);
+ 	wl_display_roundtrip(wtype->display);
+ 	usleep(2000);
+ 	zwp_virtual_keyboard_v1_key(
+-		wtype->keyboard, 0, key_code, WL_KEYBOARD_KEY_STATE_RELEASED
++		wtype->keyboard, 0, e->phys, WL_KEYBOARD_KEY_STATE_RELEASED
+ 	);
+ 	wl_display_roundtrip(wtype->display);
+ 	usleep(2000);
+@@ -364,60 +750,6 @@
+ 	}
+ }
+ 
+-static void run_text_stdin(struct wtype *wtype, struct wtype_command *cmd)
+-{
+-	char kbuf[8];
+-	size_t k = 0;
+-	wchar_t text_char;
+-	const size_t buf_size = 100;
+-
+-	cmd->key_codes = calloc(buf_size, sizeof(cmd->key_codes[0]));
+-	cmd->key_codes_len = 0;
+-
+-	setlocale(LC_CTYPE, "");
+-	while (1) {
+-		if ((kbuf[k] = fgetc(stdin)) == EOF) {
+-			break;
+-		}
+-
+-		kbuf[k+1] = '\0';
+-		size_t ret = mbstowcs(&text_char, kbuf, 1);
+-		if (ret == -1) {
+-			k++;
+-			if (k >= ARRAY_SIZE(kbuf) - 1) {
+-				break;
+-			}
+-			continue;
+-		} else if (ret == 0) {
+-			k = 0;
+-			continue;
+-		}
+-		k = 0;
+-
+-		unsigned int key_code = get_key_code_by_wchar(wtype, text_char);
+-		cmd->key_codes[cmd->key_codes_len++] = key_code;
+-
+-		if (cmd->key_codes_len == buf_size) {
+-			upload_keymap(wtype);
+-			for (size_t i = 0; i < cmd->key_codes_len; i++) {
+-				type_keycode(wtype, cmd->key_codes[i]);
+-				usleep(cmd->delay_ms * 1000);
+-			}
+-			cmd->key_codes_len = 0;
+-		}
+-	}
+-
+-	if (cmd->key_codes_len != 0) {
+-		upload_keymap(wtype);
+-		for (size_t i = 0; i < cmd->key_codes_len; i++) {
+-			type_keycode(wtype, cmd->key_codes[i]);
+-			usleep(cmd->delay_ms * 1000);
+-		}
+-	}
+-
+-	free(cmd->key_codes);
+-}
+-
+ static void run_commands(struct wtype *wtype)
+ {
+ 	void (*handlers[])(struct wtype *, struct wtype_command *) = {
+@@ -427,7 +759,7 @@
+ 		[WTYPE_COMMAND_KEY_PRESS] = run_key,
+ 		[WTYPE_COMMAND_KEY_RELEASE] = run_key,
+ 		[WTYPE_COMMAND_TEXT] = run_text,
+-		[WTYPE_COMMAND_TEXT_STDIN] = run_text_stdin,
++		[WTYPE_COMMAND_TEXT_STDIN] = run_text, /* converted to TEXT in preflight */
+ 	};
+ 	for (unsigned int i = 0; i < wtype->command_count; i++) {
+ 		handlers[wtype->commands[i].type](wtype, &wtype->commands[i]);
+@@ -449,8 +781,27 @@
+ }
+ 
+ 
++// An entry belongs in the uploaded map when it is the sentinel, or it is
++// referenced and either fixed or a pool literal of the current page.
++static bool kbcorr_emit_entry(struct wtype *wtype, struct keymap_entry *e)
++{
++	if (e->is_sentinel) {
++		return true;
++	}
++	if (!e->referenced) {
++		return false;
++	}
++	if (e->is_fixed) {
++		return true;
++	}
++	return e->is_pool_literal && e->page == wtype->current_page;
++}
++
+ static void upload_keymap(struct wtype *wtype)
+ {
++	// Emit fixed/explicit entries plus the current literal page. The
++	// sentinel VoidSymbol entry is present in every map, above the
++	// maximum real XKB code, and never produces a physical event.
+ 	char filename[] = "/tmp/wtype-XXXXXX";
+ 	int fd = mkstemp(filename);
+ 	if (fd < 0) {
+@@ -459,17 +810,27 @@
+ 	unlink(filename);
+ 	FILE *f = fdopen(fd, "w");
+ 
++	unsigned int max_phys = 0;
++	for (size_t i = 0; i < wtype->keymap_len; i++) {
++		if (kbcorr_emit_entry(wtype, &wtype->keymap[i]) &&
++		    wtype->keymap[i].phys > max_phys) {
++			max_phys = wtype->keymap[i].phys;
++		}
++	}
++
+ 	fprintf(f, "xkb_keymap {\n");
+ 
+ 	fprintf(
+ 		f,
+ 		"xkb_keycodes \"(unnamed)\" {\n"
+ 		"minimum = 8;\n"
+-		"maximum = %ld;\n",
+-		wtype->keymap_len + 8 + 1
++		"maximum = %u;\n",
++		max_phys + 8
+ 	);
+ 	for (size_t i = 0; i < wtype->keymap_len; i++) {
+-		fprintf(f, "<K%ld> = %ld;\n", i + 1, i + 8 + 1);
++		if (kbcorr_emit_entry(wtype, &wtype->keymap[i])) {
++			fprintf(f, "<K%ld> = %u;\n", i + 1, wtype->keymap[i].phys + 8);
++		}
+ 	}
+ 	fprintf(f, "};\n");
+ 
+@@ -479,9 +840,11 @@
+ 
+ 	fprintf(f, "xkb_symbols \"(unnamed)\" {\n");
+ 	for (size_t i = 0; i < wtype->keymap_len; i++) {
+-		fprintf(f, "key <K%ld> {[", i + 1);
+-		print_keysym_name(wtype->keymap[i].xkb, f);
+-		fprintf(f, "]};\n");
++		if (kbcorr_emit_entry(wtype, &wtype->keymap[i])) {
++			fprintf(f, "key <K%ld> {[", i + 1);
++			print_keysym_name(wtype->keymap[i].xkb, f);
++			fprintf(f, "]};\n");
++		}
+ 	}
+ 	fprintf(f, "};\n");
+ 
+@@ -511,6 +874,10 @@
+ 
+ 	parse_args(&wtype, argc, argv);
+ 
++	// Keyboard correction: allocate physical codes and validate the
++	// whole command stream before connecting to Wayland.
++	kbcorr_preflight(&wtype);
++
+ 	wtype.display = wl_display_connect(NULL);
+ 	if (wtype.display == NULL) {
+ 		fail("Wayland connection failed");
+@@ -531,6 +898,7 @@
+ 		wtype.manager, wtype.seat
+ 	);
+ 
++	wtype.current_page = 0;
+ 	upload_keymap(&wtype);
+ 	run_commands(&wtype);
+ 

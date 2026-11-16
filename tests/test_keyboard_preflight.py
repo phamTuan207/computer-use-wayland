@@ -17,12 +17,12 @@ import indicator
 class StandaloneBudget(unittest.TestCase):
     def test_standalone_argv_and_group_budget(self):
         self.assertEqual(cu.standalone_type_argv({'type':'type','text':'-x','delay_ms':0}),
-                         ['wtype','-','-p','VoidSymbol'])
+                         [str(cu.ROOT/'native/wtype'),'-','-p','VoidSymbol'])
         self.assertEqual(cu.standalone_type_argv({'type':'type','text':'-x','delay_ms':5}),
-                         ['wtype','-d','5','-','-p','VoidSymbol'])
+                         [str(cu.ROOT/'native/wtype'),'-d','5','-','-p','VoidSymbol'])
         # Same accounting as keyboard_argv: len(text)*delay_ms + one 12 ms settle.
         self.assertEqual(cu.standalone_type_argv({'type':'type','text':'-'+'a'*48,'delay_ms':100}),
-                         ['wtype','-d','100','-','-p','VoidSymbol'])
+                         [str(cu.ROOT/'native/wtype'),'-d','100','-','-p','VoidSymbol'])
         with self.assertRaisesRegex(ValueError,'5 seconds'):
             cu.standalone_type_argv({'type':'type','text':'-'+'a'*49,'delay_ms':100})
 
@@ -117,7 +117,7 @@ class DesktopPreflight(unittest.TestCase):
         self.assertEqual(result['completed'],1)
         self.pointer_cls.assert_not_called()
         self.typed.assert_called_once()
-        self.assertEqual(self.typed.call_args.args[0],['wtype','-','-p','VoidSymbol'])
+        self.assertEqual(self.typed.call_args.args[0],[str(cu.ROOT/'native/wtype'),'-','-p','VoidSymbol'])
         self.assertEqual(self.typed.call_args.kwargs['input'],'-hello')
 
     def test_oversized_leading_dash_type_rejected_before_input(self):

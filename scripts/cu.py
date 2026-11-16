@@ -63,8 +63,15 @@ def key_names(keys):
     if 'shift' in mods:regular=['ISO_Left_Tab' if k=='Tab' else k for k in regular]
     return list(dict.fromkeys(mods)),regular
 
+def _wtype_executable():
+    helper = ROOT / 'native' / 'wtype'
+    if not helper.is_file():
+        raise RuntimeError('private wtype helper is missing: ' + str(helper))
+    return str(helper)
+
+
 def keyboard_argv(actions):
-    args=['wtype'];total_ms=0
+    args=[_wtype_executable()];total_ms=0
     for a in actions:
         if a['type']=='type':
             # End-of-options text cannot be mixed with subsequent options. TEXT argv is
@@ -98,7 +105,7 @@ def standalone_type_argv(a):
     # invocation so a standalone literal cannot bypass the group limit.
     if len(a['text'])*a.get('delay_ms',0)+12>5000:
         raise ValueError('keyboard group exceeds 5 seconds; split at a checkpoint')
-    argv=['wtype']
+    argv=[_wtype_executable()]
     if a.get('delay_ms',0):argv+=['-d',str(a['delay_ms'])]
     return argv+['-','-p','VoidSymbol']
 
@@ -1777,7 +1784,8 @@ def main():
         result={'ok':True,'cancelled':latch_state['cancelled']}
         if latch_state['cancelled']:result['cancellation']=latch_state['cancellation']
     elif args.command=='doctor':
-        result={'dependencies':{k:shutil.which(k) is not None for k in ('grim','wtype','hyprctl','node')},'pointer':(ROOT/'native/pointer').is_file(),'session':False,'monitors':[]}
+        result={'dependencies':{k:shutil.which(k) is not None for k in ('grim','hyprctl','node')},'pointer':(ROOT/'native/pointer').is_file(),'session':False,'monitors':[]}
+        result['dependencies']['wtype']=(ROOT/'native/wtype').is_file()
         try:
             env=environment()
             result['session']=bool(env.get('WAYLAND_DISPLAY'))

@@ -27,8 +27,9 @@ GENERATED_FILES = (
     'native/background-effect-protocol.c', 'native/background-effect-protocol.h',
     'native/keyboard-protocol.o', 'native/cursor-guard.so',
     'native/indicator', 'native/pointer', 'native/modifiers',
+    'native/wtype',
 )
-BUILD_OUTPUTS = ('native/indicator', 'native/pointer', 'native/modifiers')
+BUILD_OUTPUTS = ('native/indicator', 'native/pointer', 'native/modifiers', 'native/wtype')
 HISTORY_FILES = (
     'tests/latest-results.json',
     'docs/automation-cursor-design.md',
@@ -899,12 +900,12 @@ def _sync(repo, installed, session):
         protocol_hashes, protocol_dir = _protocol_inputs(stage_root)
         wrapper_dir = stage_root / '.commandcode'
         real_tools = {}
-        for command in ('cc', 'pkg-config', 'wayland-scanner'):
+        for command in ('cc', 'pkg-config', 'wayland-scanner', 'patch'):
             path = shutil.which(command)
             if path:
                 real_tools[command] = path
-        if 'cc' not in real_tools or 'wayland-scanner' not in real_tools or 'pkg-config' not in real_tools:
-            raise SyncError('build requires cc, pkg-config, and wayland-scanner on PATH')
+        if 'cc' not in real_tools or 'wayland-scanner' not in real_tools or 'pkg-config' not in real_tools or 'patch' not in real_tools:
+            raise SyncError('build requires cc, pkg-config, wayland-scanner, and patch on PATH')
         staged_log = stage_parent / f'.sync-stage-commands-{uuid.uuid4().hex}.jsonl'
         staged_build = _build_with_log(stage_root, staged_log, wrapper_dir, real_tools)
         stage_outputs = _build_artifacts(stage_root)

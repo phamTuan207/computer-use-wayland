@@ -10,6 +10,7 @@ native/background-effect-protocol.c
 native/keyboard-protocol.c
 native/keyboard-protocol.h
 native/modifiers
+native/wtype
 native/*.so
 native/*.o
 __pycache__/

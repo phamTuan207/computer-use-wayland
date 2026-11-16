@@ -56,6 +56,9 @@ class SyncInstalledTests(unittest.TestCase):
         put(self.fake_bin / 'wayland-scanner',
             '#!/usr/bin/python3\nraise SystemExit("fake build must not invoke wayland-scanner")\n', 0o755)
 
+        put(self.fake_bin / 'patch',
+            '#!/usr/bin/python3\nraise SystemExit("fake build must not invoke patch")\n', 0o755)
+
     def _make_repo(self):
         files = {
             'README.md': '# Fake package\n',
@@ -80,7 +83,7 @@ class SyncInstalledTests(unittest.TestCase):
                 'from pathlib import Path\n'
                 'root = Path(__file__).resolve().parents[1] / "native"\n'
                 'for name, data in (("indicator", b"fake-indicator"), '
-                '("pointer", b"fake-pointer"), ("modifiers", b"fake-modifiers")):\n'
+                '("pointer", b"fake-pointer"), ("modifiers", b"fake-modifiers"), ("wtype", b"fake-wtype")):\n'
                 '    path = root / name\n    path.write_bytes(data)\n    path.chmod(0o755)\n'
                 'print("fake local build complete")\n'),
             'native/visuals-login.lua': '-- fixed repo hook path\n',
@@ -157,7 +160,7 @@ class SyncInstalledTests(unittest.TestCase):
         code, output, error = self._run(['--check'])
         self.assertEqual(code, 0, error)
         self.assertIn('Preserved-history exceptions:', output)
-        for name in ('scripts/indicator.py', 'native/indicator.c', 'native/indicator'):
+        for name in ('scripts/indicator.py', 'native/indicator.c', 'native/indicator', 'native/wtype'):
             self.assertTrue((self.installed / name).is_file(), name)
         self.assertFalse((self.installed / 'tests/test_report_regressions.py').exists())
         self.assertFalse((self.installed / 'tests/test_session_takeover.py').exists())

@@ -21,3 +21,19 @@ subprocess.run(['wayland-scanner','client-header',str(p/'keyboard.xml'),str(p/'k
 subprocess.run(['wayland-scanner','private-code',str(p/'keyboard.xml'),str(p/'keyboard-protocol.c')],check=True)
 subprocess.run(['cc','-Wall','-Wextra','-Werror','-O2','-o',str(p/'modifiers'),str(p/'modifiers.c'),str(p/'keyboard-protocol.c'),'-lwayland-client','-lxkbcommon'],check=True)
 print('modifiers built')
+# Vendored corrected wtype helper (keyboard correction): apply the pinned
+# v0.4 patch in a temporary directory and build the private native/wtype.
+import tempfile
+_vendored = p / 'vendor' / 'wtype'
+with tempfile.TemporaryDirectory(prefix='wtype-build-') as _td:
+    _patched = Path(_td) / 'main.c'
+    subprocess.run(['patch', '--batch', '--fuzz=0', '--output', str(_patched),
+                    str(_vendored / 'main.c'),
+                    str(_vendored / 'keyboard-correction.patch')], check=True)
+    _wtype_flags = subprocess.check_output(
+        ['pkg-config', '--cflags', '--libs', 'wayland-client', 'xkbcommon'],
+        text=True).split()
+    subprocess.run(['cc', '-Wall', '-Wextra', '-O2', '-I', str(p),
+                    '-o', str(p / 'wtype'), str(_patched),
+                    str(p / 'keyboard-protocol.c'), *_wtype_flags], check=True)
+print('wtype built')
