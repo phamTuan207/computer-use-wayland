@@ -379,8 +379,14 @@ def _cycle(case, index, process, path, donor, inherited_count):
               'inherited_gui_key_count': inherited_count}
     try:
         initial = _status(path)
-        if (initial.get('state') != 'idle' or initial.get('owner') is not None or
-                initial.get('cancelled') is not False or initial.get('recovery') != 'none'):
+        idle = (initial.get('state') == 'idle' and initial.get('owner') is None and
+                initial.get('driver') == 'idle' and initial.get('guardian') == 'idle')
+        finished = (initial.get('state') == 'finished' and
+                    initial.get('driver') == 'stopped' and
+                    initial.get('guardian') == 'clean')
+        if (not (idle or finished) or initial.get('cancelled') is not False or
+                initial.get('cancellation_state') != 'clear' or
+                initial.get('recovery') != 'none'):
             raise RuntimeError('test_owned_broker_not_idle_before_cycle')
 
         start_id = session_remote._new_start_id()
