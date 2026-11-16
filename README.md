@@ -56,6 +56,16 @@ tool, `computer_use_session`, with operations `start`, `request`, `finish`,
 symlinks); it does NOT register the MCP launcher above — each client uses the
 JSON snippet instead. One desktop session is controlled at a time per user.
 
+### Background/SSH environment discovery
+
+The CLI and MCP bridge share one resolver for an 18-key Wayland/Hyprland
+allowlist. It selects the first verified host Quickshell donor, then Waybar,
+Kitty, or Hyprland, and only fills missing values from another donor for the
+same verified session. `GTK_IM_MODULE` is never transferred. An unowned
+automatic start can recover a stale Hyprland signature; a running task stays
+pinned to its validated tuple, and an explicit stale tuple is refused. This
+contract follows the local `gui-envsteal` skill.
+
 ## Requirements
 
 **Hyprland exactly `0.57.2`**, with development headers from that same release.

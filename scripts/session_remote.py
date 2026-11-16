@@ -22,6 +22,8 @@ import tempfile
 import threading
 import time
 
+import cu
+
 
 ROOT = Path(__file__).resolve().parents[1]
 CU = ROOT / 'scripts' / 'cu.py'
@@ -93,6 +95,39 @@ def _encode_line(value, limit):
     if len(raw) > limit:
         raise BrokerError('response_too_large', 'response exceeds its size limit')
     return raw
+
+
+def _envsteal_test_proof(fd):
+    """Answer a one-use private source assertion sent over an inherited socket."""
+    if type(fd) is not int or fd < 3:
+        raise RuntimeError('test proof channel is invalid')
+    try:
+        connection = socket.socket(fileno=os.dup(fd))
+    except OSError as error:
+        raise RuntimeError('test proof channel is unavailable') from error
+    with connection:
+        connection.settimeout(2)
+        try:
+            raw = connection.recv(1025)
+            request = json.loads(raw.decode('utf-8'))
+        except (OSError,UnicodeError,json.JSONDecodeError) as error:
+            raise RuntimeError('test proof request is invalid') from error
+        if (len(raw)>1024 or not isinstance(request,dict) or
+                request.get('channel')!='envsteal-proof-v1' or
+                not isinstance(request.get('expected_cu_sha256'),str) or
+                not re.fullmatch(r'[0-9a-f]{64}',request['expected_cu_sha256'])):
+            raise RuntimeError('test proof request is invalid')
+        cu_path=Path(cu.__file__).resolve()
+        remote_path=Path(__file__).resolve()
+        expected_cu=ROOT/'scripts'/'cu.py'
+        expected_remote=ROOT/'scripts'/'session_remote.py'
+        cu_digest=hashlib.sha256(cu_path.read_bytes()).hexdigest()
+        if (cu_path!=expected_cu or remote_path!=expected_remote or
+                cu_digest!=request['expected_cu_sha256']):
+            raise RuntimeError('test broker source assertion failed')
+        proof={'ok':True,'cu_path':str(cu_path),'cu_sha256':cu_digest,
+               'session_remote_path':str(remote_path)}
+        connection.sendall(_encode_line(proof,2048))
 
 
 def _safe_read_file(path, limit):
@@ -200,12 +235,30 @@ def _compositor_identity(env):
 
 def native_readiness(env=None):
     """Read-only native/task readiness gate with bounded stage diagnostics."""
-    env = dict(os.environ) if env is None else dict(env)
+    if env is None:
+        try:
+            env = cu.environment(refresh=True)
+        except Exception as error:
+            raise BrokerError('native_unavailable', 'GUI environment is unavailable',
+                              stage='compositor',
+                              diagnostic='gui_environment_unavailable') from error
+    else:
+        env = dict(env)
+        try:
+            cu._validate_session_tuple(env)
+        except Exception as error:
+            raise BrokerError('native_unavailable', 'GUI environment is unavailable',
+                              stage='compositor',
+                              diagnostic='gui_environment_unavailable') from error
     try:
         identity = _compositor_identity(env)
     except BrokerError as error:
         raise BrokerError(error.error, str(error), stage='compositor',
-                          diagnostic='compositor_identity_unavailable') from error
+                          diagnostic='gui_environment_unavailable') from error
+    except Exception as error:
+        raise BrokerError('native_unavailable', 'GUI environment is unavailable',
+                          stage='compositor',
+                          diagnostic='gui_environment_unavailable') from error
     try:
         version = _hypr_json(env, '-j', 'version')
     except BrokerError as error:
@@ -395,9 +448,11 @@ class Broker:
         self.state_dir = Path(state_dir)
         self.snapshot_path = self.state_dir / 'session.json'
         self.cancel_path = self.state_dir / 'cancelled'
-        self.env = dict(os.environ if env is None else env)
+        self.base_env = dict(os.environ if env is None else env)
+        self.env = dict(self.base_env)
+        self.automatic_environment = env is None
         self.launcher = launcher or self._launch
-        self.readiness = readiness or (lambda: native_readiness(self.env))
+        self.readiness = readiness or self._prepare_environment
         self.compositor_check = compositor_check or (
             lambda expected: same_compositor(self.env, expected))
         self.cancelled = cancelled or (lambda: _cancelled(self.cancel_path))
@@ -421,6 +476,31 @@ class Broker:
         argv = [python, str(CU), 'session', '--', python, str(CU), 'session-driver']
         return subprocess.Popen(argv, env=env, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                                 stderr=subprocess.PIPE, bufsize=0, close_fds=True)
+
+    def _prepare_environment(self):
+        attempts = 2 if self.automatic_environment else 1
+        for attempt in range(attempts):
+            try:
+                candidate = cu.environment(self.base_env,
+                                           refresh=self.automatic_environment)
+            except Exception as error:
+                raise BrokerError('native_unavailable', 'GUI environment is unavailable',
+                                  stage='compositor',
+                                  diagnostic='gui_environment_unavailable') from error
+            try:
+                identity = native_readiness(candidate)
+            except BrokerError as error:
+                if (attempt + 1 < attempts and error.stage == 'compositor'):
+                    continue
+                if error.stage == 'compositor':
+                    raise BrokerError(error.error, 'GUI environment is unavailable',
+                                      stage='compositor',
+                                      diagnostic='gui_environment_unavailable') from error
+                raise
+            self.env = candidate
+            return identity
+        raise BrokerError('native_unavailable', 'GUI environment is unavailable',
+                          stage='compositor', diagnostic='gui_environment_unavailable')
 
     def _read_session(self):
         try:
@@ -1344,6 +1424,7 @@ def main(argv=None):
     sub = parser.add_subparsers(dest='command', required=True)
     serve = sub.add_parser('serve', help='run the idle Unix-socket broker')
     serve.add_argument('--socket', type=Path, default=_default_socket())
+    serve.add_argument('--envsteal-test-proof-fd', type=int, help=argparse.SUPPRESS)
     status = sub.add_parser('status', help='read broker and task state')
     status.add_argument('--lease-file', type=Path)
     start = sub.add_parser('start', help='start one owned session task')
@@ -1361,6 +1442,18 @@ def main(argv=None):
     args = parser.parse_args(argv)
 
     if args.command == 'serve':
+        if args.envsteal_test_proof_fd is not None:
+            try:
+                _envsteal_test_proof(args.envsteal_test_proof_fd)
+            except Exception:
+                print(json.dumps({'ok': False, 'error': 'test_proof_failed'}),
+                      file=sys.stderr, flush=True)
+                return 1
+            finally:
+                try:
+                    os.close(args.envsteal_test_proof_fd)
+                except OSError:
+                    pass
         broker = Broker()
         server = UnixSocketServer(broker, args.socket)
         previous = {}

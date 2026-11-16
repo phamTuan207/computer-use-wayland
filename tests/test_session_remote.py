@@ -1,6 +1,7 @@
 """Unix-socket broker integration tests using a private fake session-driver."""
 import json
 import io
+import hashlib
 import os
 from pathlib import Path
 import secrets
@@ -12,8 +13,9 @@ import signal
 import tempfile
 import threading
 import time
+import types
 import unittest
-from contextlib import redirect_stdout
+from contextlib import ExitStack, redirect_stdout
 from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
@@ -26,6 +28,12 @@ from pathlib import Path
 
 state = Path(os.environ['FAKE_SESSION_STATE'])
 events = Path(os.environ['FAKE_DRIVER_EVENTS'])
+session_keys = ('XDG_RUNTIME_DIR', 'WAYLAND_DISPLAY', 'DISPLAY',
+                'HYPRLAND_INSTANCE_SIGNATURE', 'DBUS_SESSION_BUS_ADDRESS',
+                'XDG_CURRENT_DESKTOP', 'XDG_SESSION_DESKTOP', 'XDG_SESSION_TYPE',
+                'XDG_SEAT', 'XDG_VTNR', 'USER', 'HOME', 'LOGNAME', 'PATH',
+                'GDK_BACKEND', 'QT_QPA_PLATFORM', 'ELECTRON_OZONE_PLATFORM_HINT',
+                'MOZ_ENABLE_WAYLAND')
 state.mkdir(mode=0o700, parents=True, exist_ok=True)
 token = 'a' * 32
 leave_snapshot = False
@@ -36,6 +44,7 @@ def mark(event, **fields):
     try: os.write(fd, raw.encode())
     finally: os.close(fd)
 
+mark('environment', values={key: os.environ.get(key) for key in session_keys})
 snapshot = state / 'session.json'
 fd = os.open(snapshot, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
 with os.fdopen(fd, 'w') as stream:
@@ -250,6 +259,403 @@ class SessionRemoteIntegration(BrokerHarness):
             code = session_remote.main(args)
         return code, json.loads(output.getvalue())
 
+    def make_shared_broker(self, base, *, automatic=False):
+        self.stop_server()
+        self.launches = []
+        self.child_environments = []
+
+        def launch(child_env):
+            self.launches.append(time.monotonic())
+            self.child_environments.append(dict(child_env))
+            return subprocess.Popen([sys.executable, str(self.child_script)], env=child_env,
+                                    stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                    stderr=subprocess.PIPE, bufsize=0, close_fds=True)
+
+        with patch.dict(os.environ, base, clear=True):
+            self.broker = session_remote.Broker(
+                state_dir=self.state, env=None if automatic else base, launcher=launch,
+                compositor_check=lambda expected: self.current_identity == expected,
+                cancelled=lambda: os.path.lexists(self.state / 'cancelled'),
+                idle_timeout=60, start_timeout=3, request_timeout=3,
+                max_request_bytes=1024 * 1024)
+        self.server = session_remote.UnixSocketServer(self.broker, self.socket_path)
+        self.server.bind()
+        self.thread = threading.Thread(target=self.server.serve, daemon=True)
+        self.thread.start()
+
+    def environment_fixture(self, *, signature='fixture-instance', display='wayland-fixture',
+                            donor_present=True):
+        root = self.root / 'resolver-fixture'
+        runtime = root / 'runtime'
+        (runtime / 'hypr' / signature).mkdir(parents=True, exist_ok=True)
+        runtime.chmod(0o700)
+        proc = root / 'proc'
+        proc.mkdir(parents=True, exist_ok=True)
+        pid = 31337
+        (proc / str(pid)).mkdir(parents=True, exist_ok=True)
+        rows = [{'instance': signature, 'wl_socket': display, 'pid': pid}]
+
+        def bind_socket(path):
+            path.parent.mkdir(parents=True, exist_ok=True)
+            connection = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            connection.bind(str(path))
+            connection.close()
+
+        bind_socket(runtime / display)
+        bind_socket(runtime / 'hypr' / signature / '.socket.sock')
+        donor = {
+            'XDG_RUNTIME_DIR': str(runtime), 'WAYLAND_DISPLAY': display,
+            'DISPLAY': ':fixture', 'HYPRLAND_INSTANCE_SIGNATURE': signature,
+            'DBUS_SESSION_BUS_ADDRESS': 'unix:path=/fixture/session-bus',
+            'XDG_CURRENT_DESKTOP': 'Hyprland', 'XDG_SESSION_DESKTOP': 'Hyprland',
+            'XDG_SESSION_TYPE': 'wayland', 'XDG_SEAT': 'seat-fixture', 'XDG_VTNR': '2',
+            'USER': os.environ.get('USER', 'james'), 'HOME': str(Path.home()),
+            'LOGNAME': os.environ.get('LOGNAME', 'james'), 'PATH': '/fixture/gui-bin:/usr/bin',
+            'GDK_BACKEND': 'wayland,x11', 'QT_QPA_PLATFORM': 'wayland;xcb',
+            'ELECTRON_OZONE_PLATFORM_HINT': 'wayland', 'MOZ_ENABLE_WAYLAND': '1',
+            'DONOR_SECRET': 'private-fixture-secret', 'GTK_IM_MODULE': 'ibus',
+        }
+
+        def write_donor(values):
+            raw = '\0'.join(f'{key}={value}' for key, value in values.items())
+            (proc / str(pid) / 'environ').write_bytes(raw.encode('utf-8', 'surrogateescape'))
+
+        if donor_present:
+            write_donor(donor)
+        base = {'HOME': str(Path.home()), 'USER': donor['USER'], 'LOGNAME': donor['LOGNAME'],
+                'PATH': '/usr/bin:/bin', 'XDG_CACHE_HOME': str(self.root / 'caller-cache'),
+                'PYTHONDONTWRITEBYTECODE': '1',
+                'FAKE_SESSION_STATE': str(self.state), 'FAKE_DRIVER_EVENTS': str(self.events),
+                'GTK_IM_MODULE': 'fcitx'}
+
+        def fake_run(argv, env=None, capture_output=None, text=None, timeout=None):
+            if argv[:2] == ['pgrep', '-x']:
+                if argv[2] == 'waybar':
+                    return types.SimpleNamespace(stdout=str(pid), stderr='', returncode=0)
+                return types.SimpleNamespace(stdout='', stderr='', returncode=1)
+            if argv == ['hyprctl', '-j', 'instances']:
+                return subprocess.CompletedProcess(argv, 0, json.dumps(rows), '')
+            raise AssertionError(argv)
+
+        def fake_path(*parts):
+            if parts and parts[0] == '/proc':
+                return Path(proc, *parts[1:])
+            return Path(*parts)
+
+        def activate_mocks(stack):
+            stack.enter_context(patch.object(session_remote.cu, 'Path', fake_path))
+            stack.enter_context(patch.object(session_remote.cu, '_system_runtime_dir',
+                                              return_value=root / 'no-system-runtime'))
+            stack.enter_context(patch.object(session_remote.cu.subprocess, 'run',
+                                              side_effect=fake_run))
+
+        def replace(values, new_signature, new_display):
+            new_dir = runtime / 'hypr' / new_signature
+            new_dir.mkdir(parents=True, exist_ok=True)
+            bind_socket(runtime / new_display)
+            bind_socket(new_dir / '.socket.sock')
+            values = dict(values, XDG_RUNTIME_DIR=str(runtime), WAYLAND_DISPLAY=new_display,
+                          HYPRLAND_INSTANCE_SIGNATURE=new_signature)
+            rows[:] = [{'instance': new_signature, 'wl_socket': new_display, 'pid': pid}]
+            write_donor(values)
+            return values
+
+        identity = {'instance': signature, 'wl_socket': display,
+                    'commit': 'fake-commit', 'abi_hash': 'fake-abi'}
+        self.current_identity = dict(identity)
+        self.identity = dict(identity)
+        return {'root': root, 'runtime': runtime, 'proc': proc, 'pid': pid,
+                'donor': donor, 'base': base, 'rows': rows, 'identity': identity,
+                'write_donor': write_donor, 'replace': replace,
+                'activate_mocks': activate_mocks}
+
+    def finish_owned_task(self, lease):
+        self.exchange(self.with_lease(lease, 'finish'))
+        final = self.wait_for(lambda: (lambda value: value if value['state'] == 'finished' else None)(
+            self.exchange({'command': 'status'})))
+        self.assertEqual(final['driver'], 'stopped')
+        self.assertEqual(final['guardian'], 'clean')
+        self.assertFalse((self.state / 'session.json').exists())
+        return final
+
+    def start_command(self, owner='environment-test'):
+        status = self.exchange({'command': 'status'})
+        return {'command': 'start', 'owner': owner,
+                'start_id': session_remote._new_start_id(),
+                'lease_secret': secrets.token_hex(32),
+                'broker_generation': status['broker_generation']}
+
+    def test_bare_injected_broker_resolves_and_child_inherits_all_allowlisted_keys(self):
+        fixture = self.environment_fixture()
+        base = dict(fixture['base'])
+        self.make_shared_broker(base)
+        seen = []
+
+        def ready(env):
+            seen.append(dict(env))
+            return {'instance': env['HYPRLAND_INSTANCE_SIGNATURE'],
+                    'wl_socket': env['WAYLAND_DISPLAY'],
+                    'commit': 'fake-commit', 'abi_hash': 'fake-abi'}
+
+        with ExitStack() as stack:
+            fixture['activate_mocks'](stack)
+            resolver = stack.enter_context(patch.object(
+                session_remote.cu, 'environment', wraps=session_remote.cu.environment))
+            stack.enter_context(patch.object(session_remote, 'native_readiness', side_effect=ready))
+            lease = self.start_task('bare-broker')
+            resolver.assert_called_once_with(self.broker.base_env, refresh=False)
+            self.assertEqual(self.broker.env, seen[0])
+        expected = {key: fixture['donor'][key] for key in session_remote.cu.SESSION_KEYS}
+        event = next(row for row in self.events_read() if row['event'] == 'environment')
+        self.assertEqual(event['values'], expected)
+        self.assertEqual({key: self.child_environments[0][key]
+                          for key in session_remote.cu.SESSION_KEYS}, expected)
+        self.assertNotIn('GTK_IM_MODULE', self.child_environments[0])
+        self.assertNotIn('DONOR_SECRET', self.child_environments[0])
+        self.assertNotIn('CU_SESSION_TOKEN', self.child_environments[0])
+        self.request(lease, 1, ['doctor'])
+        done = self.wait_for(lambda: (lambda value: value if value.get('status') == 'completed' else None)(
+            self.result(lease, 1)))
+        self.assertEqual(done['response']['result']['args'], ['doctor'])
+        self.finish_owned_task(lease)
+
+    def test_idle_broker_can_start_before_login_then_discover_on_new_start(self):
+        fixture = self.environment_fixture(donor_present=False)
+        self.make_shared_broker(fixture['base'], automatic=True)
+        self.assertEqual(self.exchange({'command': 'status'})['state'], 'idle')
+        seen = []
+
+        def ready(env):
+            seen.append(dict(env))
+            identity = {'instance': env['HYPRLAND_INSTANCE_SIGNATURE'],
+                        'wl_socket': env['WAYLAND_DISPLAY'],
+                        'commit': 'fake-commit', 'abi_hash': 'fake-abi'}
+            self.current_identity = dict(identity)
+            return identity
+
+        with ExitStack() as stack:
+            fixture['activate_mocks'](stack)
+            resolver = stack.enter_context(patch.object(
+                session_remote.cu, 'environment', wraps=session_remote.cu.environment))
+            stack.enter_context(patch.object(session_remote, 'native_readiness', side_effect=ready))
+            resolver.assert_not_called()
+            fixture['write_donor'](fixture['donor'])
+            lease = self.start_task('login-arrived-later')
+            resolver.assert_called_once_with(self.broker.base_env, refresh=True)
+        self.assertEqual(seen[0]['HYPRLAND_INSTANCE_SIGNATURE'], 'fixture-instance')
+        self.finish_owned_task(lease)
+
+    def test_automatic_broker_refreshes_stale_daemon_tuple_from_base_env(self):
+        fixture = self.environment_fixture()
+        base = dict(fixture['base'], XDG_RUNTIME_DIR=fixture['donor']['XDG_RUNTIME_DIR'],
+                    WAYLAND_DISPLAY='wayland-stale', HYPRLAND_INSTANCE_SIGNATURE='stale-signature',
+                    DISPLAY=':stale')
+        self.make_shared_broker(base, automatic=True)
+
+        def ready(env):
+            self.current_identity = {'instance': env['HYPRLAND_INSTANCE_SIGNATURE'],
+                                     'wl_socket': env['WAYLAND_DISPLAY'],
+                                     'commit': 'fake-commit', 'abi_hash': 'fake-abi'}
+            return dict(self.current_identity)
+
+        with ExitStack() as stack:
+            fixture['activate_mocks'](stack)
+            resolver = stack.enter_context(patch.object(
+                session_remote.cu, 'environment', wraps=session_remote.cu.environment))
+            stack.enter_context(patch.object(session_remote, 'native_readiness', side_effect=ready))
+            lease = self.start_task('automatic-broker')
+            resolver.assert_called_once_with(self.broker.base_env, refresh=True)
+        self.assertEqual(self.broker.env['HYPRLAND_INSTANCE_SIGNATURE'], 'fixture-instance')
+        self.assertEqual(self.broker.env['DISPLAY'], ':fixture')
+        self.assertNotEqual(self.broker.env['WAYLAND_DISPLAY'], 'wayland-stale')
+        self.finish_owned_task(lease)
+
+    def test_explicit_stale_tuple_refuses_switch_and_returns_bounded_diagnostic(self):
+        fixture = self.environment_fixture()
+        base = dict(fixture['base'], XDG_RUNTIME_DIR=fixture['donor']['XDG_RUNTIME_DIR'],
+                    WAYLAND_DISPLAY='wayland-stale', HYPRLAND_INSTANCE_SIGNATURE='stale-signature')
+        self.make_shared_broker(base)
+        with ExitStack() as stack:
+            fixture['activate_mocks'](stack)
+            resolver = stack.enter_context(patch.object(
+                session_remote.cu, 'environment', wraps=session_remote.cu.environment))
+            response = self.exchange(self.start_command('explicit-stale'))
+            resolver.assert_called_once_with(self.broker.base_env, refresh=False)
+        self.assertEqual(response, {'ok': False, 'error': 'native_unavailable',
+                                    'stage': 'compositor',
+                                    'diagnostic': 'gui_environment_unavailable'})
+        self.assertNotIn('stale-signature', json.dumps(response))
+        self.assertEqual(self.launches, [])
+
+    def test_automatic_start_retries_once_only_for_compositor_readiness(self):
+        fixture = self.environment_fixture()
+        self.make_shared_broker(fixture['base'], automatic=True)
+        first = {**fixture['base'], **{key: fixture['donor'][key]
+                                      for key in session_remote.cu.SESSION_KEYS}}
+        second = dict(first, DISPLAY=':fresh-retry')
+        identity = {'instance': second['HYPRLAND_INSTANCE_SIGNATURE'],
+                    'wl_socket': second['WAYLAND_DISPLAY'],
+                    'commit': 'fake-commit', 'abi_hash': 'fake-abi'}
+        self.current_identity = dict(identity)
+        readiness_error = session_remote.BrokerError(
+            'native_unavailable', 'private compositor race', stage='compositor',
+            diagnostic='gui_environment_unavailable')
+        with patch.object(session_remote.cu, 'environment',
+                          side_effect=[first, second]) as resolver, \
+                patch.object(session_remote, 'native_readiness',
+                             side_effect=[readiness_error, identity]) as readiness:
+            lease = self.start_task('compositor-retry')
+        self.assertEqual(resolver.call_count, 2)
+        for call in resolver.call_args_list:
+            self.assertEqual(call.args[0], self.broker.base_env)
+            self.assertEqual(call.kwargs, {'refresh': True})
+        self.assertEqual(readiness.call_args_list[0].args, (first,))
+        self.assertEqual(readiness.call_args_list[1].args, (second,))
+        self.assertEqual(self.broker.env['DISPLAY'], ':fresh-retry')
+        self.assertEqual(len(self.launches), 1)
+        self.finish_owned_task(lease)
+
+    def test_non_compositor_readiness_failure_is_not_retried(self):
+        fixture = self.environment_fixture()
+        self.make_shared_broker(fixture['base'], automatic=True)
+        candidate = {**fixture['base'], **{key: fixture['donor'][key]
+                                          for key in session_remote.cu.SESSION_KEYS}}
+        error = session_remote.BrokerError('native_unavailable', 'private glass detail',
+                                           stage='glass', diagnostic='liquid_backend_not_ready')
+        with patch.object(session_remote.cu, 'environment', return_value=candidate) as resolver, \
+                patch.object(session_remote, 'native_readiness', side_effect=error) as readiness:
+            response = self.exchange(self.start_command('glass-failure'))
+        resolver.assert_called_once_with(self.broker.base_env, refresh=True)
+        readiness.assert_called_once_with(candidate)
+        self.assertEqual(response, {'ok': False, 'error': 'native_unavailable',
+                                    'stage': 'glass', 'diagnostic': 'liquid_backend_not_ready'})
+        self.assertNotIn('private glass detail', json.dumps(response))
+        self.assertEqual(self.launches, [])
+
+    def test_discovery_failure_is_bounded_and_does_not_reach_child_or_readiness(self):
+        fixture = self.environment_fixture()
+        self.make_shared_broker(fixture['base'], automatic=True)
+        with patch.object(session_remote.cu, 'environment',
+                          side_effect=RuntimeError('private environment values')) as resolver, \
+                patch.object(session_remote, 'native_readiness') as readiness:
+            response = self.exchange(self.start_command('discovery-failure'))
+        resolver.assert_called_once_with(self.broker.base_env, refresh=True)
+        readiness.assert_not_called()
+        self.assertEqual(response, {'ok': False, 'error': 'native_unavailable',
+                                    'stage': 'compositor',
+                                    'diagnostic': 'gui_environment_unavailable'})
+        self.assertNotIn('private environment values', json.dumps(response))
+        self.assertEqual(self.launches, [])
+
+    def test_start_gates_and_duplicate_start_do_not_discover(self):
+        fixture = self.environment_fixture()
+        self.make_shared_broker(fixture['base'])
+        candidate = {**fixture['base'], **{key: fixture['donor'][key]
+                                          for key in session_remote.cu.SESSION_KEYS}}
+        identity = {'instance': candidate['HYPRLAND_INSTANCE_SIGNATURE'],
+                    'wl_socket': candidate['WAYLAND_DISPLAY'],
+                    'commit': 'fake-commit', 'abi_hash': 'fake-abi'}
+        self.current_identity = dict(identity)
+        cancelled = self.state / 'cancelled'
+        cancelled.write_text('fixture latch')
+        cancelled.chmod(0o600)
+        with patch.object(session_remote.cu, 'environment', return_value=candidate) as resolver, \
+                patch.object(session_remote, 'native_readiness', return_value=identity):
+            self.assertEqual(self.exchange(self.start_command('cancel-gate'))['error'], 'cancelled')
+            resolver.assert_not_called()
+            cancelled.unlink()
+
+            self.broker.env['CU_SESSION_TOKEN'] = 'x' * 32
+            self.assertEqual(self.exchange(self.start_command('nested-gate'))['error'], 'nested_session')
+            resolver.assert_not_called()
+            self.broker.env.pop('CU_SESSION_TOKEN')
+
+            retained = self.state / 'session.json'
+            retained.write_text(json.dumps({'version': 4, 'token': 'b' * 32}))
+            retained.chmod(0o600)
+            self.assertEqual(self.exchange(self.start_command('recovery-gate'))['error'],
+                             'recovery_required')
+            resolver.assert_not_called()
+            retained.unlink()
+
+            first = self.start_command('first-owner')
+            started = self.exchange(first)
+            self.assertTrue(started['ok'], started)
+            self.wait_for(lambda: self.exchange({'command': 'status'})['driver'] == 'ready')
+            resolver.assert_called_once_with(self.broker.base_env, refresh=False)
+
+            busy = self.exchange(self.start_command('second-owner'))
+            self.assertEqual(busy['error'], 'busy')
+            duplicate = self.exchange(first)
+            self.assertEqual(duplicate, started)
+            resolver.assert_called_once()
+
+        lease = {'owner': first['owner'], 'start_id': first['start_id'],
+                 'lease_secret': first['lease_secret'],
+                 'broker_generation': first['broker_generation'],
+                 'generation': started['generation']}
+        self.finish_owned_task(lease)
+
+    def test_completed_tasks_after_relogin_resolve_distinct_frozen_environments(self):
+        fixture = self.environment_fixture()
+        self.make_shared_broker(fixture['base'], automatic=True)
+
+        def ready(env):
+            identity = {'instance': env['HYPRLAND_INSTANCE_SIGNATURE'],
+                        'wl_socket': env['WAYLAND_DISPLAY'],
+                        'commit': 'fake-commit', 'abi_hash': 'fake-abi'}
+            self.current_identity = dict(identity)
+            return identity
+
+        with ExitStack() as stack:
+            fixture['activate_mocks'](stack)
+            resolver = stack.enter_context(patch.object(
+                session_remote.cu, 'environment', wraps=session_remote.cu.environment))
+            stack.enter_context(patch.object(session_remote, 'native_readiness', side_effect=ready))
+            first = self.start_task('before-relogin')
+            first_tuple = (self.broker.env['WAYLAND_DISPLAY'],
+                           self.broker.env['HYPRLAND_INSTANCE_SIGNATURE'])
+            self.finish_owned_task(first)
+            fixture['replace'](fixture['donor'], 'after-relogin', 'wayland-after-relogin')
+            second = self.start_task('after-relogin')
+            second_tuple = (self.broker.env['WAYLAND_DISPLAY'],
+                            self.broker.env['HYPRLAND_INSTANCE_SIGNATURE'])
+            self.assertNotEqual(first_tuple, second_tuple)
+            self.assertEqual(second_tuple, ('wayland-after-relogin', 'after-relogin'))
+            self.assertEqual(resolver.call_count, 2)
+            self.finish_owned_task(second)
+
+    def test_relogin_during_task_stops_it_without_rediscovery_or_second_launch(self):
+        fixture = self.environment_fixture()
+        self.make_shared_broker(fixture['base'], automatic=True)
+
+        def ready(env):
+            identity = {'instance': env['HYPRLAND_INSTANCE_SIGNATURE'],
+                        'wl_socket': env['WAYLAND_DISPLAY'],
+                        'commit': 'fake-commit', 'abi_hash': 'fake-abi'}
+            self.current_identity = dict(identity)
+            return identity
+
+        with ExitStack() as stack:
+            fixture['activate_mocks'](stack)
+            resolver = stack.enter_context(patch.object(
+                session_remote.cu, 'environment', wraps=session_remote.cu.environment))
+            stack.enter_context(patch.object(session_remote, 'native_readiness', side_effect=ready))
+            lease = self.start_task('active-before-relogin')
+            fixture['replace'](fixture['donor'], 'new-active-login', 'wayland-new-login')
+            self.current_identity = {'instance': 'new-active-login',
+                                    'wl_socket': 'wayland-new-login',
+                                    'commit': 'fake-commit', 'abi_hash': 'fake-abi'}
+            stopped = self.request(lease, 1, ['doctor'])
+            self.assertEqual(stopped['error'], 'compositor_changed')
+            self.wait_for(lambda: self.exchange({'command': 'status'})['state'] == 'failed')
+            self.assertEqual(resolver.call_count, 1)
+            self.assertEqual(len(self.launches), 1)
+            self.assertEqual(self.input_events(), [])
+            stopped = self.wait_for(lambda: (lambda value: value if value['state'] == 'failed' else None)(
+                self.exchange({'command': 'status'})))
+            self.assertIn(stopped['driver'], ('stopped', 'failed'))
+
     def test_idle_status_and_private_socket_start(self):
         response = self.exchange({'command': 'status'})
         self.assertEqual(response['state'], 'idle')
@@ -259,6 +665,21 @@ class SessionRemoteIntegration(BrokerHarness):
         self.assertEqual(stat.S_IMODE(info.st_mode), 0o600)
         self.assertEqual(stat.S_IMODE(self.socket_path.parent.stat().st_mode), 0o700)
         self.assertEqual(self.launches, [])
+
+    def test_private_envsteal_proof_channel_reports_repo_sources_and_hash(self):
+        parent, child = socket.socketpair()
+        self.addCleanup(parent.close)
+        self.addCleanup(child.close)
+        parent.settimeout(2)
+        expected = hashlib.sha256(
+            (Path(session_remote.cu.__file__).resolve()).read_bytes()).hexdigest()
+        parent.sendall(json.dumps({'channel': 'envsteal-proof-v1',
+                                   'expected_cu_sha256': expected}).encode())
+        session_remote._envsteal_test_proof(child.fileno())
+        proof = json.loads(parent.recv(2048).decode())
+        self.assertEqual(proof['cu_path'], str(Path(__file__).resolve().parents[1] / 'scripts' / 'cu.py'))
+        self.assertEqual(proof['cu_sha256'], expected)
+        self.assertEqual(proof['session_remote_path'], str(Path(session_remote.__file__).resolve()))
 
     def test_start_returns_bounded_readiness_stage_and_diagnostic(self):
         def refuse():

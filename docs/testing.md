@@ -56,6 +56,42 @@ machine. These fixtures own the whole GUI: run them **exclusively**, with no oth
 automation active, and never against untrusted payloads or third-party accounts.
 Physical Escape cancels; there is no automatic resume.
 
+### Background/SSH environment proof
+
+There are two different environments in this proof. A **bare SSH client** is
+the `env -i` Python process that runs the test. It starts with identity and
+`PATH` only; the installed relay service keeps its own existing environment.
+A **bare broker** is a separate test-owned process that the fixture starts with
+that same small environment and a private socket under `/tmp/opencode`. It
+shares the normal `~/.cache/agent-computer-use` state root so it still meets the
+real desktop-owner gate. The `stale` case adds the current runtime and display
+with a signature that does not exist, then proves the broker selects the live
+session.
+
+Run these only when the installed broker is idle and no other automation owns
+the desktop. The fixture checks the cancellation latch, retained snapshot,
+current donor, compositor ABI, plugins, and cursor guard before it starts. A
+blocker is reported as `blocked`; do not clear the latch or recover another
+task to make the proof pass. Each case starts a private test broker, runs two
+start/doctor/finish cycles, and verifies the driver environment and clean
+cleanup. The only driver command is read-only `doctor`; the fixture does not
+take screenshots, move the pointer, type, focus windows, or launch apps.
+
+```sh
+env -i HOME=/home/james USER=james LOGNAME=james PATH=/usr/bin:/bin \
+  PYTHONDONTWRITEBYTECODE=1 /usr/bin/python3 -B tests/envsteal_live.py \
+  --case bare --repeat 2
+env -i HOME=/home/james USER=james LOGNAME=james PATH=/usr/bin:/bin \
+  PYTHONDONTWRITEBYTECODE=1 /usr/bin/python3 -B tests/envsteal_live.py \
+  --case stale --repeat 2
+```
+
+These commands are opt-in and are not part of `unittest discover`. A passing
+JSON proof includes the imported source paths and hash asserted by the
+test-owned broker, all 18 driver keys matched to the verified donor, tuple and
+readiness results, the doctor result, and clean finish status. A full-key
+source that lacks any allowlisted value is blocked with the missing key names.
+
 ### GTK demo, two terminals
 
 The fixture and its driver share one temporary directory. Create it once:
