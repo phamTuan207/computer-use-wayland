@@ -14,6 +14,7 @@ CU = os.environ.get("CU_EXECUTABLE") or os.path.join(os.path.dirname(os.path.abs
 _HERE = os.path.dirname(os.path.abspath(__file__))
 if _HERE not in sys.path:
     sys.path.insert(0, _HERE)
+import cu
 import mcp_bridge_transport as transport
 
 # Monotonic deadlines in seconds; tests inject short values by patching
@@ -106,40 +107,11 @@ def _session_ended_error(details):
                         '; start a new session and observe current state; do not replay input')
 
 
-GUI_KEYS = {
-    "XDG_RUNTIME_DIR", "WAYLAND_DISPLAY", "DISPLAY", "HYPRLAND_INSTANCE_SIGNATURE",
-    "DBUS_SESSION_BUS_ADDRESS", "XDG_CURRENT_DESKTOP", "XDG_SESSION_DESKTOP",
-    "XDG_SESSION_TYPE", "XDG_SEAT", "XDG_VTNR", "USER", "HOME", "LOGNAME",
-    "PATH", "GDK_BACKEND", "QT_QPA_PLATFORM", "ELECTRON_OZONE_PLATFORM_HINT",
-    "MOZ_ENABLE_WAYLAND",
-}
+GUI_KEYS = cu.SESSION_KEYS
 
 
 def gui_environment():
-    # Agent daemons may inherit a stale Hyprland signature from an earlier login.
-    # Read the live compositor shell's environment for every new session.
-    for entry in os.scandir("/proc"):
-        if not entry.name.isdigit():
-            continue
-        try:
-            if open(f"/proc/{entry.name}/comm").read().strip() != "quickshell":
-                continue
-            # Serpantinum runs another Quickshell in the host PID namespace.
-            # Its Wayland display belongs to nested Sway, not host Hyprland.
-            if b"/usr/share/omarchy/shell" not in open(f"/proc/{entry.name}/cmdline", "rb").read():
-                continue
-            env = {}
-            for item in open(f"/proc/{entry.name}/environ", "rb").read().split(b"\0"):
-                key, sep, value = item.partition(b"=")
-                if sep and key.decode(errors="ignore") in GUI_KEYS:
-                    env[key.decode()] = value.decode(errors="surrogateescape")
-            sig = env.get("HYPRLAND_INSTANCE_SIGNATURE", "")
-            if (env.get("WAYLAND_DISPLAY") and env.get("XDG_RUNTIME_DIR") and sig
-                    and os.path.isdir(os.path.join(env["XDG_RUNTIME_DIR"], "hypr", sig))):
-                return {**os.environ, **env}
-        except (OSError, PermissionError):
-            continue
-    raise RuntimeError("no live Hyprland GUI environment found; start Quickshell or log into Hyprland")
+    return cu.environment(refresh=True)
 
 
 def read_message():

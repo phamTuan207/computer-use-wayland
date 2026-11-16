@@ -15,6 +15,7 @@ import itertools
 import json
 import os
 import shutil
+import socket
 import stat
 import subprocess
 import sys
@@ -217,6 +218,102 @@ class ExecutableResolutionTests(BridgeTestCase):
         with open(BRIDGE_PATH, "rb") as stream:
             self.assertTrue(stream.readline().startswith(b"#!"),
                             "shebang must be preserved")
+
+
+class EnvironmentDelegationTests(BridgeTestCase):
+    def test_gui_keys_alias_and_wrapper_delegates_to_shared_resolver(self):
+        expected = {'XDG_RUNTIME_DIR': '/run/user/1000'}
+        with mock.patch.object(self.bridge.cu, 'environment', return_value=expected) as resolve:
+            self.assertIs(self.bridge.GUI_KEYS, self.bridge.cu.SESSION_KEYS)
+            self.assertIs(self.bridge.gui_environment(), expected)
+        resolve.assert_called_once_with(refresh=True)
+
+    def discover_from_waybar(self, *, inherited_gtk=None, donor_gtk=None):
+        with tempfile.TemporaryDirectory(prefix='mcp-envsteal-') as temporary:
+            root = Path(temporary)
+            runtime = root / 'runtime'
+            (runtime / 'hypr' / 'verified-instance').mkdir(parents=True)
+            runtime.chmod(0o700)
+            sockets = []
+            for path in (runtime / 'wayland-test',
+                         runtime / 'hypr' / 'verified-instance' / '.socket.sock'):
+                connection = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+                connection.bind(str(path))
+                sockets.append(connection)
+            proc = root / 'proc'
+            (proc / '4321').mkdir(parents=True)
+            donor = {
+                'XDG_RUNTIME_DIR': str(runtime), 'WAYLAND_DISPLAY': 'wayland-test',
+                'DISPLAY': ':fixture', 'HYPRLAND_INSTANCE_SIGNATURE': 'verified-instance',
+                'DBUS_SESSION_BUS_ADDRESS': 'unix:path=/fixture/bus',
+                'XDG_CURRENT_DESKTOP': 'Hyprland', 'XDG_SESSION_DESKTOP': 'Hyprland',
+                'XDG_SESSION_TYPE': 'wayland', 'XDG_SEAT': 'seat-test', 'XDG_VTNR': '1',
+                'USER': os.environ.get('USER', 'james'), 'HOME': str(Path.home()),
+                'LOGNAME': os.environ.get('LOGNAME', 'james'), 'PATH': '/waybar/bin:/usr/bin',
+                'GDK_BACKEND': 'wayland,x11', 'QT_QPA_PLATFORM': 'wayland;xcb',
+                'ELECTRON_OZONE_PLATFORM_HINT': 'wayland', 'MOZ_ENABLE_WAYLAND': '1',
+            }
+            if donor_gtk:
+                donor['GTK_IM_MODULE'] = donor_gtk
+            (proc / '4321' / 'environ').write_bytes(
+                '\0'.join(f'{key}={value}' for key, value in donor.items()).encode())
+            calls = []
+
+            def fake_run(argv, env=None, capture_output=None, text=None, timeout=None):
+                calls.append(argv)
+                if argv[:2] == ['pgrep', '-x']:
+                    if argv[2] == 'waybar':
+                        return types.SimpleNamespace(stdout='4321', stderr='', returncode=0)
+                    return types.SimpleNamespace(stdout='', stderr='', returncode=1)
+                if argv == ['hyprctl', '-j', 'instances']:
+                    return subprocess.CompletedProcess(argv, 0, json.dumps([
+                        {'instance': 'verified-instance', 'wl_socket': 'wayland-test'}]), '')
+                raise AssertionError(argv)
+
+            def fake_path(*parts):
+                if parts and parts[0] == '/proc':
+                    return Path(proc, *parts[1:])
+                return Path(*parts)
+
+            base = {'HOME': str(Path.home()), 'USER': donor['USER'],
+                    'LOGNAME': donor['LOGNAME'], 'PATH': '/usr/bin:/bin',
+                    'XDG_CACHE_HOME': str(root / 'caller-cache')}
+            if inherited_gtk:
+                base['GTK_IM_MODULE'] = inherited_gtk
+            try:
+                with mock.patch.dict(os.environ, base, clear=True), \
+                        mock.patch.object(self.bridge.cu, 'Path', fake_path), \
+                        mock.patch.object(self.bridge.cu, '_system_runtime_dir',
+                                          return_value=root / 'no-system-runtime'), \
+                        mock.patch.object(self.bridge.cu.subprocess, 'run', side_effect=fake_run):
+                    result = self.bridge.gui_environment()
+            finally:
+                for connection in sockets:
+                    connection.close()
+            self.assertIn(['pgrep', '-x', 'quickshell'], calls)
+            self.assertEqual(result['HYPRLAND_INSTANCE_SIGNATURE'], 'verified-instance')
+            self.assertEqual(result['PATH'], '/waybar/bin:/usr/bin')
+            return result
+
+    def test_shared_discovery_works_without_quickshell(self):
+        result = self.discover_from_waybar()
+        self.assertEqual(result['XDG_CURRENT_DESKTOP'], 'Hyprland')
+
+    def test_shared_discovery_drops_inherited_and_donor_gtk_im_module(self):
+        result = self.discover_from_waybar(inherited_gtk='fcitx', donor_gtk='ibus')
+        self.assertNotIn('GTK_IM_MODULE', result)
+
+    def test_shared_resolution_failure_prevents_spawn_and_cleans_start_logs(self):
+        with mock.patch.object(self.bridge.cu, 'environment',
+                               side_effect=RuntimeError('no verified Hyprland GUI environment found')), \
+                mock.patch.object(self.bridge.subprocess, 'Popen') as popen:
+            with self.assertRaisesRegex(RuntimeError, 'no verified Hyprland GUI environment found'):
+                self.bridge.tool_call({'operation': 'start'})
+        popen.assert_not_called()
+        self.assertIsNone(self.bridge.proc)
+        self.assertIsNone(self.bridge.stderr_log)
+        self.assertTrue(list(self.tmp.glob('session-*.log')))
+        self.assertTrue(list(self.tmp.glob('session-*.stderr.log')))
 
 
 class McpProtocolTests(BridgeTestCase):
