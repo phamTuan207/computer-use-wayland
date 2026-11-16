@@ -101,6 +101,47 @@ class RealChildCleanup(unittest.TestCase):
                 if child.poll() is None:child.kill();child.wait(timeout=2)
 
 
+class RunCancelableCaptureStderr(IsolatedCuState):
+    """Astra v2 section 8.4: capture_stderr bounds stderr, never hides failure."""
+
+    def test_success_returns_stdout_and_bounded_stderr(self):
+        capture = []
+        out = cu.run_cancelable(
+            [sys.executable, '-c',
+             'import sys; sys.stdout.write("hello"); sys.stderr.write("e"*500)'],
+            capture_stderr=capture)
+        self.assertEqual(out, 'hello')
+        self.assertEqual(capture, ['e' * 400])
+
+    def test_nonzero_exit_preserves_failure_and_captures_once(self):
+        capture = []
+        with self.assertRaisesRegex(RuntimeError, 'boom-stderr'):
+            cu.run_cancelable(
+                [sys.executable, '-c',
+                 'import sys; sys.stderr.write("boom-stderr"); sys.exit(3)'],
+                capture_stderr=capture)
+        self.assertEqual(capture, ['boom-stderr'])
+
+    def test_interruption_preserves_failure_captures_once_and_reaps(self):
+        child = RunCancelableBaseException._Child()
+
+        def communicate(input=None, timeout=None):
+            if not child.terminated:
+                raise KeyboardInterrupt('owned child')
+            child.reaped = True
+            return ('', '')
+        child.communicate = communicate
+        capture = []
+        with mock.patch.object(cu.subprocess, 'Popen', return_value=child):
+            with self.assertRaises(KeyboardInterrupt):
+                cu.run_cancelable(['node', 'adapter.mjs'], input='{}',
+                                  capture_stderr=capture)
+        self.assertTrue(child.terminated, 'child was not terminated')
+        self.assertTrue(child.reaped, 'child was not reaped')
+        self.assertEqual(capture, [''], 'stderr captured exactly once')
+
+
+
 class JsonReadLimit(unittest.TestCase):
     """Untrusted JSON is capped at 8 MiB before the whole input is buffered."""
 

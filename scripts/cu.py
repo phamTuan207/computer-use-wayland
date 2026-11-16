@@ -596,10 +596,24 @@ def read_json(stream):
 def read_json_file(path):
     with open(path,'rb') as stream:return read_json(stream)
 
-def run_cancelable(argv, env=None, input=None, timeout=12):
-    check_cancel()
-    p=subprocess.Popen(argv,env=env,stdin=subprocess.PIPE if input is not None else subprocess.DEVNULL,
-                       stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
+def run_cancelable(argv, env=None, input=None, timeout=12, capture_stderr=None):
+    try:check_cancel()
+    except BaseException:
+        if capture_stderr is not None:capture_stderr.append('')
+        raise
+    try:
+        p=subprocess.Popen(argv,env=env,stdin=subprocess.PIPE if input is not None else subprocess.DEVNULL,
+                           stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
+    except BaseException:
+        if capture_stderr is not None:capture_stderr.append('')
+        raise
+    stderr_captured=False
+    def save_stderr(value):
+        nonlocal stderr_captured
+        if capture_stderr is not None and not stderr_captured:
+            if isinstance(value,bytes):value=value.decode('utf-8','replace')
+            capture_stderr.append((value or '')[:400])
+            stderr_captured=True
     try:
         deadline=time.monotonic()+timeout
         first=True
@@ -607,6 +621,7 @@ def run_cancelable(argv, env=None, input=None, timeout=12):
             check_cancel()
             try:
                 out,err=p.communicate(input if first else None,timeout=min(.05,max(.001,deadline-time.monotonic())))
+                save_stderr(err)
                 break
             except subprocess.TimeoutExpired:
                 first=False
@@ -614,16 +629,19 @@ def run_cancelable(argv, env=None, input=None, timeout=12):
         if p.returncode: raise RuntimeError(f'{Path(argv[0]).name}: {(err.strip() or out.strip())[:400]}')
         check_cancel()
         return out
-    except BaseException:
+    except BaseException as error:
         # KeyboardInterrupt/SystemExit must still reap the owned child, then the
         # original termination propagates. No retry, no respawn, no continuation.
         if p.poll() is None:
             try:
                 p.terminate()
-                p.communicate(timeout=.5)
+                out,err=p.communicate(timeout=.5)
+                save_stderr(err)
             except BaseException:
-                try:p.kill();p.communicate(timeout=.5)
+                try:
+                    p.kill();out,err=p.communicate(timeout=.5);save_stderr(err)
                 except BaseException:pass      # the original termination still propagates
+        if not stderr_captured:save_stderr(getattr(error,'stderr',None))
         raise
 
 def plain_rgb_png(data):
@@ -1111,11 +1129,18 @@ def literal_keyboard(env,enabled=True,result=None):
     """Bypass composition for exact text; preserve the focused context's IME state."""
     import signal
     remote=shutil.which('fcitx5-remote') if enabled else None
+    trace=result.setdefault('ime_state_trace',[]) if result is not None else []
+    def record(phase,value=None,source='not_observed',status='skipped'):
+        trace.append({'phase':phase,'state':value,'im':None,
+                      'state_source':source,'status':status})
     if not remote:
-        # No controller: proceed only when no own-UID daemon needs one.
+        reason='remote_absent' if enabled else 'compose_disabled'
+        record('before',status=reason)
         if enabled and fcitx5_running():
             raise RuntimeError('literal typing requires fcitx5-remote while fcitx5 is running')
-        yield
+        record('after_switch',status=reason)
+        try:yield
+        finally:record('after_restore',status=reason)
         return
     def state(timeout):
         value=run([remote],env,timeout=timeout).strip()
@@ -1130,18 +1155,19 @@ def literal_keyboard(env,enabled=True,result=None):
             run([remote,flag],env,timeout=remaining)
         except subprocess.TimeoutExpired as exc:
             raise RuntimeError('fcitx5 state change timed out') from exc
-        while True:
+        for _ in range(50):
             remaining=deadline-time.monotonic()
             if remaining<=0:raise RuntimeError('fcitx5 state change timed out')
             try:
-                matched=state(remaining)==expected
+                current=state(remaining)
             except subprocess.TimeoutExpired as exc:
                 raise RuntimeError('fcitx5 state change timed out') from exc
-            if matched:
+            if current==expected:
                 # A reply that arrived after the budget is not a success.
                 if time.monotonic()>=deadline:raise RuntimeError('fcitx5 state change timed out')
-                return
+                return current
             time.sleep(min(.01,max(0,deadline-time.monotonic())))
+        raise RuntimeError('fcitx5 state change timed out')
     def warn_restore(restore_error,primary):
         if result is not None:result['ime_restore_failed']=True
         # One bounded single line on stderr: a stable label plus the sanitized
@@ -1154,7 +1180,11 @@ def literal_keyboard(env,enabled=True,result=None):
             sys.stderr.write(('IME restoration failed'+label+'; state may remain inactive: '+detail)[:400]+'\n')
         except (OSError,ValueError):
             pass
-    original=state(.5)
+    try:original=state(.5)
+    except BaseException:
+        record('before',status='failed')
+        raise
+    record('before',original,'initial_query','observed')
     restore_needed=False
     previous={}
     # Without a handler, the default SIGTERM/SIGHUP disposes the process mid-yield
@@ -1172,7 +1202,13 @@ def literal_keyboard(env,enabled=True,result=None):
     try:
         if original=='2':
             restore_needed=True
-            switch('-c','1')
+            try:switched=switch('-c','1')
+            except BaseException:
+                record('after_switch',status='failed')
+                raise
+            record('after_switch',switched,'switch_query','observed')
+        else:
+            record('after_switch',original,'initial_query','unchanged')
         yield
     finally:
         primary=sys.exc_info()[1]
@@ -1180,8 +1216,9 @@ def literal_keyboard(env,enabled=True,result=None):
             # Keep the handler until the IME is restored so a late signal still cleans up.
             if original=='2' and restore_needed:
                 try:
-                    switch('-o','2')
+                    restored=switch('-o','2')
                 except BaseException as restore_error:
+                    record('after_restore',status='failed')
                     warn_restore(restore_error,primary)
                     if primary is None:
                         raise
@@ -1189,6 +1226,10 @@ def literal_keyboard(env,enabled=True,result=None):
                             not isinstance(primary,(KeyboardInterrupt,SystemExit)):
                         raise
                     # Otherwise the primary continues unwinding untouched.
+                else:
+                    record('after_restore',restored,'switch_query','observed')
+            else:
+                record('after_restore',original,'initial_query','not_requeried')
         finally:
             for sig,handler in previous.items():
                 signal.signal(sig,handler)
@@ -1418,6 +1459,12 @@ def desktop_act(env,meta,actions,after_capture=True,observation_path=None):
                           active_window=active_window)
         if missed:raise RuntimeError('pointer missed target; refusing click')
         return gx,gy
+    def store_wtype_stderr(captured):
+        stderr=''.join(captured)
+        if stderr:
+            previous=ime_result.get('wtype_stderr','')
+            ime_result['wtype_stderr']=((previous+'\n' if previous else '')+stderr)[:400]
+        else:ime_result.setdefault('wtype_stderr','')
     def execute_group(a,index):
         nonlocal completed,outcome_uncertain
         guard()
@@ -1427,9 +1474,12 @@ def desktop_act(env,meta,actions,after_capture=True,observation_path=None):
                 exact=exact or any(x['type']=='key' and any(k in ('BackSpace','Delete','Home','End','Left','Right','Up','Down','Prior','Next') for k in key_names(x['keys'])[1]) for x in a)
             _diagnostic_event('keyboard_group_started',meta,env,action_index=index,
                               action_type='keyboard_group',completed=completed,active_window=active_window)
-            with literal_keyboard(env,exact,result=ime_result):
-                guard();run_cancelable(keyboard_argv(a),env)
-                completed+=len(a)   # input acknowledged; count it before IME restore can fail
+            capture=[]
+            try:
+                with literal_keyboard(env,exact,result=ime_result):
+                    guard();run_cancelable(keyboard_argv(a),env,capture_stderr=capture)
+                    completed+=len(a)   # input acknowledged; count it before IME restore can fail
+            finally:store_wtype_stderr(capture)
             _diagnostic_event('keyboard_group_completed',meta,env,action_index=index,
                               action_type='keyboard_group',completed=completed,active_window=active_window)
             return
@@ -1476,9 +1526,12 @@ def desktop_act(env,meta,actions,after_capture=True,observation_path=None):
         elif typ=='type':
             _diagnostic_event('typing_started',meta,env,action_index=index,action_type=typ,
                               completed=completed,active_window=active_window)
-            with literal_keyboard(env,a.get('ime','literal')=='literal',result=ime_result):
-                guard();run_cancelable(standalone_type_argv(a),env,input=a['text'])
-                completed+=1     # same rule: never infer a count from a failed input
+            capture=[]
+            try:
+                with literal_keyboard(env,a.get('ime','literal')=='literal',result=ime_result):
+                    guard();run_cancelable(standalone_type_argv(a),env,input=a['text'],capture_stderr=capture)
+                    completed+=1     # same rule: never infer a count from a failed input
+            finally:store_wtype_stderr(capture)
             _diagnostic_event('typing_completed',meta,env,action_index=index,action_type=typ,
                               completed=completed,active_window=active_window)
             return
@@ -1527,6 +1580,7 @@ def desktop_act(env,meta,actions,after_capture=True,observation_path=None):
         result={'ok':True,'completed':completed,'preflight_ms':preflight_ms,
                 'execution_ms':execution_ms,'after_skipped':True,
                 'input_diagnostics':diagnostics}
+        result.update(ime_result)
         _diagnostic_event('operation_completed',meta,env,completed=completed,
                           active_window=active_window)
         return result

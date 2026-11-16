@@ -422,6 +422,38 @@ class DesktopPreflight(unittest.TestCase):
                     cu.desktop_act({}, self.meta, [{'type': 'type', 'text': 'hello'}])
             self.typed.assert_not_called()
 
+    def test_grouped_and_leading_dash_typing_preserve_stderr_trace(self):
+        # Astra v2 section 8.3: stderr capture survives result merging in both
+        # capture branches, completed counts stay exact, aggregate stays <=400.
+        def fake_typed(argv, env=None, input=None, timeout=12, capture_stderr=None):
+            if capture_stderr is not None:
+                capture_stderr.append('w' * 300)
+            return ''
+        cases = [
+            # (actions, completed, groups, after_capture, expected stderr length)
+            ([{'type': 'type', 'text': 'hello'}, {'type': 'type', 'text': 'world'}],
+             2, 1, True, 300),
+            ([{'type': 'type', 'text': '-hello'}], 1, 1, False, 300),
+            ([{'type': 'type', 'text': 'a'}, {'type': 'wait', 'ms': 10},
+              {'type': 'type', 'text': 'b'}], 3, 2, True, 400),
+        ]
+        for actions, count, groups, after_capture, stderr_len in cases:
+            with self.subTest(actions=actions, after_capture=after_capture):
+                with patch.object(cu, 'run_cancelable', side_effect=fake_typed):
+                    result = cu.desktop_act({}, self.meta, actions,
+                                            after_capture=after_capture)
+                self.assertTrue(result['ok'], result)
+                self.assertEqual(result['completed'], count)
+                self.assertEqual(result.get('after_skipped', False), not after_capture)
+                self.assertEqual(len(result['wtype_stderr']), stderr_len,
+                                 'aggregate stderr capped at 400')
+                trace = result['ime_state_trace']
+                self.assertEqual(len(trace), 3 * groups, 'one triple per keyboard group')
+                self.assertEqual([t['phase'] for t in trace[:3]],
+                                 ['before', 'after_switch', 'after_restore'])
+                self.assertTrue(all(t['im'] is None for t in trace))
+                self.assertTrue(all(t['status'] == 'remote_absent' for t in trace))
+
     def test_cumulative_budget_is_passed_to_each_helper_call(self):
         import time as time_module
         calls = []
@@ -646,6 +678,191 @@ class HangingHelperBudget(unittest.TestCase):
         restores = [a for a, t in seen if a[-1:] == ['-o']]
         self.assertEqual(len(restores), 1, 'restore attempted exactly once')
 
+    def test_frozen_clock_deactivate_timeout_caps_at_fifty_queries(self):
+        # Astra v2 section 8.1: a frozen clock plus a state that never changes
+        # must terminate after exactly 50 deactivate queries, never spin.
+        calls = []
+        state = ['2']
+
+        def remote(argv, env, timeout=None):
+            calls.append((list(argv), timeout))
+            if argv == ['fake-remote']:
+                if len([a for a, t in calls if len(a) == 1]) > 52:
+                    raise AssertionError('unbounded polling: query ceiling 52 exceeded')
+                return state[0]
+            if argv[-1] == '-c':
+                return ''  # state never changes
+            if argv[-1] == '-o':
+                state[0] = '2'
+                return ''
+            raise AssertionError('unexpected flag ' + argv[-1])
+
+        entered = []
+        with patch.object(cu, 'run', side_effect=remote):
+            with self.assertRaisesRegex(RuntimeError, 'fcitx5 state change timed out'):
+                with cu.literal_keyboard({}):
+                    entered.append(True)
+        self.assertEqual(entered, [], 'body never runs after a timed-out switch')
+        queries = [a for a, t in calls if len(a) == 1]
+        self.assertEqual(len(queries), 52, 'initial + 50 deactivate + 1 restore query')
+        flags = [a for a, t in calls if len(a) > 1]
+        self.assertEqual(flags, [['fake-remote', '-c'], ['fake-remote', '-o']])
+        self.assertNotIn(['fake-remote', '-n'], [a for a, t in calls],
+                         'record() never queries')
+
+
+
+class TraceContracts(unittest.TestCase):
+    """Astra v2 section 8.2: the passive trace records only existing queries."""
+
+    def _fake_remote(self, state, calls, advance=None, fail_restore=False):
+        def remote(argv, env, timeout=None):
+            calls.append(list(argv))
+            if advance is not None:
+                advance[0] += 0.05
+            if argv == ['fake-remote']:
+                return state[0]
+            if argv[-1] == '-c':
+                state[0] = '1'
+            elif argv[-1] == '-o':
+                if fail_restore:
+                    raise RuntimeError('restore failed')
+                state[0] = '2'
+            return ''
+        return remote
+
+    def _run_success(self, initial, frozen):
+        clock = [1000.0]
+        calls = []
+        stack = ExitStack()
+        stack.enter_context(patch.object(cu.shutil, 'which', return_value='fake-remote'))
+        stack.enter_context(patch.object(cu, 'fcitx5_running', return_value=False))
+        stack.enter_context(patch.object(
+            cu, 'run', side_effect=self._fake_remote(
+                [initial], calls, advance=None if frozen else clock)))
+        stack.enter_context(patch.object(cu.time, 'monotonic', side_effect=lambda: clock[0]))
+        stack.enter_context(patch.object(cu.time, 'sleep'))
+        try:
+            result = {}
+            with cu.literal_keyboard({}, result=result):
+                pass
+            return result, calls
+        finally:
+            stack.close()
+
+    def test_success_trace_states_sources_and_null_im(self):
+        for frozen in (True, False):
+            with self.subTest(frozen=frozen):
+                result, calls = self._run_success('2', frozen)
+                self.assertEqual([len(a) for a in calls], [1, 2, 1, 2, 1],
+                                 'query, -c, query, -o, query')
+                self.assertNotIn(['fake-remote', '-n'], calls)
+                self.assertEqual(result['ime_state_trace'], [
+                    {'phase': 'before', 'state': '2', 'im': None,
+                     'state_source': 'initial_query', 'status': 'observed'},
+                    {'phase': 'after_switch', 'state': '1', 'im': None,
+                     'state_source': 'switch_query', 'status': 'observed'},
+                    {'phase': 'after_restore', 'state': '2', 'im': None,
+                     'state_source': 'switch_query', 'status': 'observed'},
+                ])
+
+    def test_untouched_state_zero_and_one_trace_is_initial_only(self):
+        for initial in ('0', '1'):
+            with self.subTest(initial=initial):
+                result, calls = self._run_success(initial, frozen=True)
+                self.assertEqual(calls, [['fake-remote']], 'no command for state ' + initial)
+                self.assertEqual(result['ime_state_trace'], [
+                    {'phase': 'before', 'state': initial, 'im': None,
+                     'state_source': 'initial_query', 'status': 'observed'},
+                    {'phase': 'after_switch', 'state': initial, 'im': None,
+                     'state_source': 'initial_query', 'status': 'unchanged'},
+                    {'phase': 'after_restore', 'state': initial, 'im': None,
+                     'state_source': 'initial_query', 'status': 'not_requeried'},
+                ])
+
+    def test_compose_trace_is_unobserved_and_makes_no_calls(self):
+        calls = []
+        with patch.object(cu.shutil, 'which', return_value='fake-remote'), \
+             patch.object(cu, 'fcitx5_running', return_value=False), \
+             patch.object(cu, 'run', side_effect=self._fake_remote(['2'], calls)):
+            result = {}
+            with cu.literal_keyboard({}, enabled=False, result=result):
+                pass
+        self.assertEqual(calls, [])
+        self.assertEqual(result['ime_state_trace'], [
+            {'phase': phase, 'state': None, 'im': None,
+             'state_source': 'not_observed', 'status': 'compose_disabled'}
+            for phase in ('before', 'after_switch', 'after_restore')
+        ])
+
+    def test_missing_remote_with_daemon_refuses_and_traces_only_before(self):
+        with patch.object(cu.shutil, 'which', return_value=None), \
+             patch.object(cu, 'fcitx5_running', return_value=True):
+            result = {}
+            with self.assertRaisesRegex(
+                    RuntimeError, 'literal typing requires fcitx5-remote'):
+                with cu.literal_keyboard({}, result=result):
+                    self.fail('yield must never be reached')
+        self.assertEqual(result['ime_state_trace'], [
+            {'phase': 'before', 'state': None, 'im': None,
+             'state_source': 'not_observed', 'status': 'remote_absent'},
+        ])
+
+    def test_initial_timeout_traces_failed_before_and_nothing_after(self):
+        import subprocess
+        calls = []
+
+        def remote(argv, env, timeout=None):
+            calls.append(list(argv))
+            raise subprocess.TimeoutExpired(argv, timeout)
+
+        with patch.object(cu.shutil, 'which', return_value='fake-remote'), \
+             patch.object(cu, 'fcitx5_running', return_value=False), \
+             patch.object(cu, 'run', side_effect=remote):
+            result = {}
+            with self.assertRaises(subprocess.TimeoutExpired):
+                with cu.literal_keyboard({}, result=result):
+                    self.fail('yield must never be reached')
+        self.assertEqual(len(calls), 1, 'only the initial query ran')
+        self.assertEqual(result['ime_state_trace'], [
+            {'phase': 'before', 'state': None, 'im': None,
+             'state_source': 'not_observed', 'status': 'failed'},
+        ])
+
+    def test_restore_timeout_traces_failed_restore_with_null_state(self):
+        import io
+        import subprocess
+        from contextlib import redirect_stderr
+        calls = []
+
+        def remote(argv, env, timeout=None):
+            calls.append(list(argv))
+            if argv == ['fake-remote']:
+                return '1' if '-c' in [a[-1] for a in calls if len(a) > 1] else '2'
+            if argv[-1] == '-c':
+                return ''
+            if argv[-1] == '-o':
+                raise subprocess.TimeoutExpired(argv, timeout)
+            return ''
+
+        with patch.object(cu.shutil, 'which', return_value='fake-remote'), \
+             patch.object(cu, 'fcitx5_running', return_value=False), \
+             patch.object(cu, 'run', side_effect=remote):
+            result = {}
+            err = io.StringIO()
+            with redirect_stderr(err):
+                with self.assertRaisesRegex(RuntimeError, 'fcitx5 state change timed out'):
+                    with cu.literal_keyboard({}, result=result):
+                        pass
+        self.assertTrue(result.get('ime_restore_failed'))
+        self.assertIn('IME restoration failed', err.getvalue())
+        trace = result['ime_state_trace']
+        self.assertEqual([t['phase'] for t in trace],
+                         ['before', 'after_switch', 'after_restore'])
+        self.assertEqual(trace[0]['state'], '2')
+        self.assertEqual(trace[1]['state'], '1')
+        self.assertIsNone(trace[2]['state'], 'a failed restore has no known state')
+        self.assertEqual(trace[2]['status'], 'failed')
 
 
 
