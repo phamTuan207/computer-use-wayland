@@ -23,15 +23,16 @@
     "observation_max_age_s": 90
   },
   "wait_tuning": {
-    "method": "time from the File-menu click to the first after-image showing the menu",
+    "method": "conservative File-menu click-to-first-after-image upper bound: act execution_ms + retained 80 ms pre-capture sleep + after_capture_ms; full-frame OCR confirmed File and Save As",
     "target_samples": 50,
     "minimum_samples": 10,
     "historical_valid_samples": 6,
-    "historical_p95_upper_bound_ms": 80,
+    "historical_samples_ms": [309, 348, 350, 358, 363, 374],
+    "historical_p95_upper_bound_ms": 374,
     "margin_ms": 100,
     "cap_ms": 2000,
-    "selected_wait_ms": 500,
-    "status": "provisional, historical sample count is below the 10-sample minimum"
+    "selected_wait_ms": 474,
+    "status": "provisional, p95 plus 100 ms is 474 ms; 6 historical samples are below the 10-sample minimum"
   },
   "coordinates": {
     "banner_close": {
@@ -111,7 +112,7 @@
       "window": "editor",
       "batch": [
         {"type": "click", "point": "file_menu"},
-        {"type": "wait", "ms": 500},
+        {"type": "wait", "ms": 474},
         {"type": "click", "point": "save_as_row"}
       ],
       "no_after": true,

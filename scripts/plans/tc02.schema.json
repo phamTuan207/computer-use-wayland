@@ -83,6 +83,7 @@
         "target_samples",
         "minimum_samples",
         "historical_valid_samples",
+        "historical_samples_ms",
         "historical_p95_upper_bound_ms",
         "margin_ms",
         "cap_ms",
@@ -94,6 +95,10 @@
         "target_samples": {"type": "integer", "minimum": 10},
         "minimum_samples": {"type": "integer", "minimum": 10},
         "historical_valid_samples": {"type": "integer", "minimum": 0},
+        "historical_samples_ms": {
+          "type": "array",
+          "items": {"type": "integer", "minimum": 0}
+        },
         "historical_p95_upper_bound_ms": {"type": "integer", "minimum": 0},
         "margin_ms": {"type": "integer", "minimum": 0},
         "cap_ms": {"type": "integer", "minimum": 1, "maximum": 2000},

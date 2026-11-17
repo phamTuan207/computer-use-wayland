@@ -85,8 +85,25 @@ def validate_plan(plan, schema):
         raise ValueError('plan must keep the 90-second observation limit')
     if pre.get('editor_geometry', {}).get('size') != [901, 1176]:
         raise ValueError('validated editor geometry must be 901x1176')
-    if not 0 <= plan.get('wait_tuning', {}).get('selected_wait_ms', -1) <= 2000:
+    tuning = plan.get('wait_tuning', {})
+    if not 0 <= tuning.get('selected_wait_ms', -1) <= 2000:
         raise ValueError('S2 wait must be between 0 and 2000 ms')
+    samples = tuning.get('historical_samples_ms')
+    if (not isinstance(samples, list) or
+            any(type(value) is not int or value < 0 for value in samples) or
+            len(samples) != tuning.get('historical_valid_samples')):
+        raise ValueError('S2 historical sample list and valid-sample count disagree')
+    if samples:
+        p95_index = (95 * len(samples) + 99) // 100 - 1
+        measured_p95 = sorted(samples)[p95_index]
+        if measured_p95 != tuning.get('historical_p95_upper_bound_ms'):
+            raise ValueError('S2 p95 upper bound does not match the recorded sample list')
+        expected_wait = min(tuning.get('cap_ms', 2000), measured_p95 + tuning.get('margin_ms', 0))
+        if tuning.get('selected_wait_ms') != expected_wait:
+            raise ValueError('S2 wait must equal measured p95 plus its margin, capped at 2000 ms')
+    if (len(samples) < tuning.get('minimum_samples', 10) and
+            'provisional' not in tuning.get('status', '').casefold()):
+        raise ValueError('S2 wait must be marked provisional until the minimum sample count is met')
     coords = plan.get('coordinates')
     if not isinstance(coords, dict) or not coords:
         raise ValueError('plan must declare coordinates')
