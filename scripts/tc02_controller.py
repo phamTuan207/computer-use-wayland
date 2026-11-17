@@ -818,6 +818,10 @@ class Tc02Controller:
             self.emit('editor-teardown', closed=True,
                       process_fallback=process_fallback,
                       close_error=close_error)
+            failure = self._close_orphan_dialogs()
+            if failure is not None:
+                self.editor_cleanup_failure = failure
+                return failure
             return None
 
         failure = Escalate(
@@ -828,6 +832,56 @@ class Tc02Controller:
         self.editor_cleanup_failure = failure
         self.emit('editor-teardown-failed', reason=failure.reason)
         return failure
+
+    def _close_orphan_dialogs(self):
+        """Close test-owned dialogs left after the editor closed, then verify.
+
+        Preflight hygiene guarantees no dialog existed before the run, so any
+        dialog now is test-owned: the xdg-desktop-portal-gtk Save As dialog
+        (S2 opened it late and a later step escalated) or a VS Code save
+        prompt (class 'code'). Portal dialogs close by window; VS Code dialogs
+        belong to the launched editor process, so SIGTERM/SIGKILL that PID
+        (the existing fallback) closes them. Verification is mandatory: if any
+        test-owned window remains, return an Escalate so the run reports a
+        teardown failure instead of moving on with a dialog on screen.
+        """
+        def dialogs(windows):
+            return [row for row in (windows or [])
+                    if row.get('class') in ('xdg-desktop-portal-gtk', 'code')]
+
+        try:
+            clients = self.current_clients()
+            remaining = dialogs(clients)
+            if any(row.get('class') == 'code' for row in remaining):
+                self.emit('orphan-dialog-process-fallback',
+                          dialogs=[window_line(row) for row in remaining])
+                self._terminate_editor_process()
+                clients = self.current_clients()
+                remaining = dialogs(clients)
+            for row in remaining:
+                address = row['address']
+                try:
+                    self._dispatch_hyprland(
+                        f'hl.dsp.window.close({{ window = "address:{address}" }})')
+                except Exception as exc:
+                    self.emit('orphan-dialog-close-error', address=address,
+                              error=str(exc))
+                    continue
+                self.emit('orphan-dialog-closed', address=address,
+                          cls=row.get('class'), title=row.get('title'))
+            clients = self.current_clients()
+            remaining = dialogs(clients)
+            if remaining:
+                return Escalate(
+                    'P0', 'teardown-dialog-verification',
+                    f'test-owned dialog remains after teardown: '
+                    f'{[window_line(row) for row in remaining]}', hygiene=True)
+            self.emit('teardown-verified',
+                      clients=[window_line(row) for row in clients])
+        except Exception as exc:
+            return Escalate('P0', 'teardown-dialog-verification',
+                            f'dialog verification failed: {exc}', hygiene=True)
+        return None
 
     def _assert_geometry(self, window, which):
         spec = self.plan['preconditions']['editor_geometry' if which == 'editor' else 'dialog_geometry']
@@ -1137,10 +1191,21 @@ class Tc02Controller:
             t_act_done = time.monotonic()
             if body.get('completed') != len(step['batch']):
                 raise Escalate('S2', step['checkpoint'], 'S2 action count is incomplete')
-            windows = self._windows('S2-windows')
+            # The portal dialog spawns after the row click (measured 0.44s on
+            # 2026-11-17); a single immediate windows check races it. Poll
+            # boundedly for exactly one dialog; the check itself is unchanged.
+            dialogs = []
+            windows = []
             t_windows_done = time.monotonic()
-            dialogs = [row for row in windows if row.get('class') == 'xdg-desktop-portal-gtk' and
-                       row.get('title') == 'Save As']
+            deadline = time.monotonic() + 3.0
+            while True:
+                windows = self._windows('S2-windows')
+                t_windows_done = time.monotonic()
+                dialogs = [row for row in windows if row.get('class') == 'xdg-desktop-portal-gtk' and
+                           row.get('title') == 'Save As']
+                if len(dialogs) == 1 or time.monotonic() >= deadline:
+                    break
+                time.sleep(0.2)
             if len(dialogs) != 1:
                 raise Escalate('S2', step['checkpoint'],
                                f'expected one Save As dialog, found {len(dialogs)}')

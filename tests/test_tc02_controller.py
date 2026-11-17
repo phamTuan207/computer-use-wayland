@@ -484,6 +484,7 @@ class Tc02EditorLifecycleTests(unittest.TestCase):
                 (True, [{'editor_size': None, 'dialog_windows': []}], []),
             ])
             controller._dispatch_hyprland = Mock(return_value='ok')
+            controller.current_clients = Mock(return_value=[])
 
             failure = controller._cleanup_editor()
 
@@ -534,6 +535,71 @@ class Tc02EditorLifecycleTests(unittest.TestCase):
             summary = tc02_controller.load_json(controller.summary_path)
             self.assertEqual(summary['execution_s'], 23.0)
             self.assertEqual(summary['end_to_end_s'], 33.0)
+
+    def test_teardown_closes_orphan_portal_dialog_and_verifies_desktop(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            controller = self.make_controller(temporary)
+            controller.process = Mock()
+            controller.process.poll.return_value = 0
+            dialog = {'address': '0xdialog', 'class': 'xdg-desktop-portal-gtk',
+                      'title': 'Save As', 'at': [0, 0], 'size': [875, 600],
+                      'workspace': '2'}
+            controller._wait_for_editor_gone = Mock(return_value=(True, [], []))
+            controller._dispatch_hyprland = Mock(return_value='ok')
+            controller.current_clients = Mock(side_effect=[[dialog], []])
+
+            failure = controller._cleanup_editor()
+
+            self.assertIsNone(failure)
+            self.assertEqual(controller._dispatch_hyprland.call_args_list, [
+                unittest.mock.call(
+                    'hl.dsp.window.close({ window = "address:0xeditor" })'),
+                unittest.mock.call(
+                    'hl.dsp.window.close({ window = "address:0xdialog" })'),
+            ])
+            controller.emit.assert_any_call(
+                'orphan-dialog-closed', address='0xdialog',
+                cls='xdg-desktop-portal-gtk', title='Save As')
+            controller.emit.assert_any_call('teardown-verified', clients=[])
+
+    def test_teardown_sigterms_launched_pid_for_vscode_save_dialog(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            controller = self.make_controller(temporary)
+            process = Mock()
+            process.pid = 4321
+            process.poll.return_value = None
+            controller.process = process
+            dialog = {'address': '0xdialog', 'class': 'code',
+                      'title': 'Visual Studio Code', 'at': [0, 0],
+                      'size': [500, 200], 'workspace': '2'}
+            controller._wait_for_editor_gone = Mock(return_value=(True, [], []))
+            controller._dispatch_hyprland = Mock(return_value='ok')
+            controller.current_clients = Mock(side_effect=[[dialog], [], []])
+
+            failure = controller._cleanup_editor()
+
+            self.assertIsNone(failure)
+            process.terminate.assert_called_once_with()
+            controller._dispatch_hyprland.assert_called_once_with(
+                'hl.dsp.window.close({ window = "address:0xeditor" })')
+            controller.emit.assert_any_call('teardown-verified', clients=[])
+
+    def test_teardown_fails_when_orphan_dialog_survives(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            controller = self.make_controller(temporary)
+            controller.process = Mock()
+            controller.process.poll.return_value = 0
+            dialog = {'address': '0xdialog', 'class': 'xdg-desktop-portal-gtk',
+                      'title': 'Save As', 'at': [0, 0], 'size': [875, 600],
+                      'workspace': '2'}
+            controller._wait_for_editor_gone = Mock(return_value=(True, [], []))
+            controller._dispatch_hyprland = Mock(return_value='ok')
+            controller.current_clients = Mock(side_effect=[[dialog], [dialog]])
+
+            failure = controller._cleanup_editor()
+
+            self.assertIsInstance(failure, tc02_controller.Escalate)
+            self.assertIn('teardown-dialog-verification', failure.checkpoint)
 
 
 class Tc02MenuBarTests(unittest.TestCase):
