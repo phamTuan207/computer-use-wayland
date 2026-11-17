@@ -13,6 +13,7 @@ import shutil
 import stat
 import subprocess
 import sys
+import time
 import uuid
 
 
@@ -932,12 +933,23 @@ def _restart_relay(repo):
     if result.returncode != 0:
         detail = (result.stderr or result.stdout).strip()[:400]
         raise SyncError(f'computer-use relay restart failed: {detail or result.returncode}')
-    updated = _relay_public_status(repo)
-    if (not _relay_idle(updated) or updated.get('loaded_code_sha256') != expected or
-            updated.get('broker_generation') == status.get('broker_generation')):
-        raise SyncError('computer-use relay restarted but its loaded code is not current and idle')
-    print('Computer-use relay restarted; loaded broker code hash matches the source.')
-    return True
+    deadline = time.monotonic() + 10
+    last_error = 'broker status did not become current and idle'
+    while True:
+        try:
+            updated = _relay_public_status(repo)
+        except SyncError as exc:
+            last_error = str(exc)
+        else:
+            if (not _relay_idle(updated) or updated.get('loaded_code_sha256') != expected or
+                    updated.get('broker_generation') == status.get('broker_generation')):
+                last_error = 'broker status did not become current and idle'
+            else:
+                print('Computer-use relay restarted; loaded broker code hash matches the source.')
+                return True
+        if time.monotonic() >= deadline:
+            raise SyncError(f'computer-use relay restarted but readiness was not verified: {last_error}')
+        time.sleep(0.1)
 
 
 def _sync(repo, installed, session):

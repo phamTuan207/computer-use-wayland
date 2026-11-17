@@ -279,11 +279,13 @@ class SyncInstalledTests(unittest.TestCase):
     def test_relay_restarts_when_stale_and_idle_then_verifies_new_identity(self):
         before = self._broker_status(loaded_code_sha256='0' * 64)
         after = self._broker_status(broker_generation='c' * 32)
-        with mock.patch.object(sync, '_relay_public_status', side_effect=[before, after]):
+        with mock.patch.object(sync, '_relay_public_status',
+                               side_effect=[before, sync.SyncError('broker_unavailable'), after]):
             with mock.patch.object(sync.subprocess, 'run',
                                    return_value=subprocess.CompletedProcess([], 0, '', '')) as run:
-                with contextlib.redirect_stdout(io.StringIO()):
-                    self.assertTrue(sync._restart_relay(self.repo))
+                with mock.patch.object(sync.time, 'sleep'):
+                    with contextlib.redirect_stdout(io.StringIO()):
+                        self.assertTrue(sync._restart_relay(self.repo))
         run.assert_called_once()
         self.assertEqual(run.call_args.args[0], [
             'systemctl', '--user', 'restart', 'computer-use-relay.service'])
