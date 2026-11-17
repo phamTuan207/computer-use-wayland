@@ -33,6 +33,7 @@ GUI_ENV_KEYS = {
     'MOZ_ENABLE_WAYLAND',
 }
 ALLOWED_BACKGROUND_CLASSES = frozenset({'zen'})
+ALLOWED_BACKGROUND_WINDOWS = frozenset({('kitty', 'drift')})
 SPECIAL_WORKSPACE_PREFIX = 'special:'
 
 
@@ -527,6 +528,10 @@ class Tc02Controller:
             reasons = []
             if str(row.get('class') or '').lower() in ALLOWED_BACKGROUND_CLASSES:
                 reasons.append('zen-class')
+            identity = (str(row.get('class') or '').lower(),
+                        str(row.get('title') or '').lower())
+            if identity in ALLOWED_BACKGROUND_WINDOWS:
+                reasons.append('music-player-drift')
             workspace = row.get('workspace')
             if isinstance(workspace, str) and workspace.startswith(SPECIAL_WORKSPACE_PREFIX):
                 reasons.append('special-workspace')

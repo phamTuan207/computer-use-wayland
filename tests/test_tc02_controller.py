@@ -76,6 +76,30 @@ class Tc02DesktopHygieneTests(unittest.TestCase):
         self.assertEqual(evidence['unexpected_windows'], [])
         controller._assert_no_unexpected_windows([background], [])
 
+    def test_exact_drift_window_is_allowed_and_admitted_after_p0(self):
+        drift = self.window('0xdrift', 'KiTtY', 'DrIfT')
+        controller = self.make_controller([drift])
+
+        controller._check_desktop_hygiene()
+
+        self.assertEqual(controller.known_background, [drift])
+        evidence = self.hygiene_evidence(controller)
+        self.assertEqual(evidence['allow_listed_windows'], [
+            {'window': drift, 'reasons': ['music-player-drift']}])
+        self.assertEqual(evidence['unexpected_windows'], [])
+        controller._assert_no_unexpected_windows([drift], [])
+
+    def test_different_kitty_window_still_fails_p0(self):
+        kitty = self.window('0xkitty', 'kitty', 'another terminal')
+        controller = self.make_controller([kitty])
+
+        with self.assertRaises(tc02_controller.Escalate) as raised:
+            controller._check_desktop_hygiene()
+
+        self.assertEqual(raised.exception.step, 'P0')
+        self.assertTrue(raised.exception.hygiene)
+        self.assertEqual(self.hygiene_evidence(controller)['unexpected_windows'], [kitty])
+
     def test_window_line_preserves_hyprland_workspace_without_identity_change(self):
         first = self.window('0xmove', 'app', 'Window', {'name': '1'})
         moved = dict(first, workspace={'name': 'special:test'})
