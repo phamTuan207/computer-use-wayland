@@ -526,10 +526,25 @@ class Tc02Controller:
         )
         if not clean:
             raise Escalate('P0', 'broker-clean', f'broker is not clean: {status}', hygiene=True)
+        code_path = Path(__file__).resolve().with_name('session_remote.py')
+        try:
+            disk_code_sha256 = hashlib.sha256(code_path.read_bytes()).hexdigest()
+        except OSError as exc:
+            raise Escalate('P1', 'broker-preflight',
+                           f'cannot verify broker code on disk: {exc}') from exc
+        loaded_code_sha256 = status.get('loaded_code_sha256')
+        code_matches = loaded_code_sha256 == disk_code_sha256
+        self.emit('broker-preflight', state=status.get('state'), driver=status.get('driver'),
+                  guardian=status.get('guardian'), generation=status.get('broker_generation'),
+                  loaded_code_sha256=loaded_code_sha256,
+                  disk_code_sha256=disk_code_sha256,
+                  started_git_head=status.get('started_git_head'), code_matches=code_matches)
+        if not code_matches:
+            raise Escalate('P1', 'broker-preflight',
+                           'broker code stale, restart the relay '
+                           f'(loaded={loaded_code_sha256!r}, disk={disk_code_sha256})')
         self.broker_generation = status.get('broker_generation')
         self.broker_status = status
-        self.emit('broker-preflight', state=status.get('state'), driver=status.get('driver'),
-                  guardian=status.get('guardian'), generation=self.broker_generation)
 
     def _check_desktop_hygiene(self):
         try:

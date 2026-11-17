@@ -1,4 +1,5 @@
 import copy
+import hashlib
 import tempfile
 import unittest
 from unittest.mock import Mock, patch
@@ -180,6 +181,60 @@ class Tc02DesktopHygieneTests(unittest.TestCase):
         self.assertEqual(raised.exception.step, 'P0')
         self.assertTrue(raised.exception.hygiene)
         self.assertIn(blank, self.hygiene_evidence(controller)['unexpected_windows'])
+
+
+class Tc02BrokerPreflightTests(unittest.TestCase):
+    def make_controller(self, temporary):
+        plan = tc02_controller.load_json(tc02_controller.DEFAULT_PLAN)
+        controller = tc02_controller.Tc02Controller(
+            plan, 'tc02-broker-preflight-unit-test', temporary)
+        controller.emit = Mock()
+        return controller
+
+    def clean_status(self, loaded_code_sha256):
+        return {
+            'ok': True,
+            'broker_generation': 'a' * 32,
+            'loaded_code_sha256': loaded_code_sha256,
+            'started_git_head': 'b' * 40,
+            'state': 'idle',
+            'driver': 'idle',
+            'guardian': 'idle',
+            'active_sequence': None,
+            'error': None,
+            'recovery': 'none',
+            'cancelled': False,
+        }
+
+    def test_matching_loaded_code_hash_passes_preflight(self):
+        source = tc02_controller.Path(__file__).resolve().parents[1] / 'scripts' / 'session_remote.py'
+        digest = hashlib.sha256(source.read_bytes()).hexdigest()
+        with tempfile.TemporaryDirectory() as temporary:
+            controller = self.make_controller(temporary)
+            controller.run_remote = Mock(return_value=(self.clean_status(digest), None))
+
+            controller._ensure_clean_broker()
+
+        self.assertEqual(controller.broker_generation, 'a' * 32)
+        event = next(call.kwargs for call in controller.emit.call_args_list
+                     if call.args[0] == 'broker-preflight')
+        self.assertTrue(event['code_matches'])
+        self.assertEqual(event['loaded_code_sha256'], digest)
+        self.assertEqual(event['disk_code_sha256'], digest)
+
+    def test_stale_loaded_code_hash_escalates_fail_closed(self):
+        source = tc02_controller.Path(__file__).resolve().parents[1] / 'scripts' / 'session_remote.py'
+        disk_hash = hashlib.sha256(source.read_bytes()).hexdigest()
+        stale_hash = '0' * 64 if disk_hash != '0' * 64 else '1' * 64
+        with tempfile.TemporaryDirectory() as temporary:
+            controller = self.make_controller(temporary)
+            controller.run_remote = Mock(return_value=(self.clean_status(stale_hash), None))
+
+            with self.assertRaises(tc02_controller.Escalate) as raised:
+                controller._ensure_clean_broker()
+
+        self.assertEqual(raised.exception.step, 'P1')
+        self.assertIn('broker code stale, restart the relay', raised.exception.reason)
 
 
 class Tc02SampleTests(unittest.TestCase):

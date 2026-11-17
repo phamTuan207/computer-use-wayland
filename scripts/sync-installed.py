@@ -53,6 +53,7 @@ GLASS_COMMIT = '03a57c4451b4abee38feda2ffb725f55ecc0f2fd'
 HYPRLAND_VERSION = '0.57.2'
 FORMAT_VERSION = 1
 SNAPSHOT_MARKER = 'computer-use-wayland/sync-installed.py'
+BROKER_SOURCE = 'scripts/session_remote.py'
 
 
 class SyncError(RuntimeError):
@@ -878,6 +879,67 @@ def _source_commit(repo):
                                    text=True, stderr=subprocess.PIPE).strip()
 
 
+def _relay_public_status(repo):
+    try:
+        result = subprocess.run([sys.executable, str(repo / BROKER_SOURCE), 'status'],
+                                capture_output=True, text=True, timeout=5)
+        status = json.loads(result.stdout)
+    except (OSError, subprocess.SubprocessError, json.JSONDecodeError) as exc:
+        raise SyncError(f'computer-use relay status is unavailable: {exc}') from exc
+    if result.returncode != 0 or not isinstance(status, dict) or status.get('ok') is not True:
+        raise SyncError(f'computer-use relay status is unavailable: {status}')
+    return status
+
+
+def _relay_idle(status):
+    return (
+        status.get('state') in ('idle', 'finished') and
+        status.get('driver') in ('idle', 'stopped') and
+        status.get('guardian') in ('idle', 'clean') and
+        status.get('active_sequence') is None and
+        status.get('error') is None and
+        status.get('recovery') in (None, 'none') and
+        status.get('cancelled') is False
+    )
+
+
+def _relay_restart_needed(repo):
+    status = _relay_public_status(repo)
+    expected = _sha256(repo / BROKER_SOURCE)
+    if status.get('loaded_code_sha256') == expected:
+        return False
+    if not _relay_idle(status):
+        print('WARNING: broker code is stale and the relay is busy; refusing sync. '
+              'The sync cannot be claimed live until the relay is idle.', file=sys.stderr)
+        raise SyncError('broker-loaded code changed while the relay is busy')
+    return True
+
+
+def _restart_relay(repo):
+    status = _relay_public_status(repo)
+    expected = _sha256(repo / BROKER_SOURCE)
+    if status.get('loaded_code_sha256') == expected:
+        return False
+    if not _relay_idle(status):
+        print('WARNING: broker code is stale and the relay became busy; refusing restart. '
+              'The sync is not live.', file=sys.stderr)
+        raise SyncError('computer-use relay is not idle; restart refused')
+    try:
+        result = subprocess.run(['systemctl', '--user', 'restart', 'computer-use-relay.service'],
+                                capture_output=True, text=True, timeout=45)
+    except (OSError, subprocess.SubprocessError) as exc:
+        raise SyncError(f'computer-use relay restart failed: {exc}') from exc
+    if result.returncode != 0:
+        detail = (result.stderr or result.stdout).strip()[:400]
+        raise SyncError(f'computer-use relay restart failed: {detail or result.returncode}')
+    updated = _relay_public_status(repo)
+    if (not _relay_idle(updated) or updated.get('loaded_code_sha256') != expected or
+            updated.get('broker_generation') == status.get('broker_generation')):
+        raise SyncError('computer-use relay restarted but its loaded code is not current and idle')
+    print('Computer-use relay restarted; loaded broker code hash matches the source.')
+    return True
+
+
 def _sync(repo, installed, session):
     _managed_dir_check(repo, require_exists=True)
     _managed_dir_check(installed)
@@ -1103,7 +1165,10 @@ def main(argv=None):
             if args.rollback:
                 _rollback(repo, installed, args.rollback, session)
                 return 0
+            restart_relay = _relay_restart_needed(repo)
             _sync(repo, installed, session)
+            if restart_relay:
+                _restart_relay(repo)
             return 0
     except (SyncError, OSError, ValueError, subprocess.SubprocessError) as exc:
         print(f'sync-installed: error: {exc}', file=sys.stderr)

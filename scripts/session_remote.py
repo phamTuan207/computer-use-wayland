@@ -97,6 +97,16 @@ def _encode_line(value, limit):
     return raw
 
 
+def _git_head_at_start():
+    try:
+        result = subprocess.run(['git', '-C', str(ROOT), 'rev-parse', 'HEAD'],
+                                check=True, capture_output=True, text=True, timeout=2)
+        head = result.stdout.strip()
+        return head if re.fullmatch(r'[0-9a-f]{40,64}', head) else None
+    except (OSError, subprocess.SubprocessError):
+        return None
+
+
 def _envsteal_test_proof(fd):
     """Answer a one-use private source assertion sent over an inherited socket."""
     if type(fd) is not int or fd < 3:
@@ -463,6 +473,12 @@ class Broker:
         self.max_request_bytes = max_request_bytes
         self.max_response_bytes = max_response_bytes
         self.broker_generation = secrets.token_hex(16)
+        try:
+            self.loaded_code_sha256 = hashlib.sha256(
+                Path(__file__).resolve().read_bytes()).hexdigest()
+        except OSError:
+            self.loaded_code_sha256 = None
+        self.started_git_head = _git_head_at_start()
         self.lock = threading.RLock()
         self.task = None
         self.last_start = None
@@ -837,6 +853,8 @@ class Broker:
                 cancellation_state = 'unknown'
             body = {'ok': True, 'broker': 'running',
                     'broker_generation': self.broker_generation,
+                    'loaded_code_sha256': self.loaded_code_sha256,
+                    'started_git_head': self.started_git_head,
                     'state': 'idle' if task is None else task.state,
                     'owner': None if task is None else task.owner,
                     'generation': None if task is None else task.generation,

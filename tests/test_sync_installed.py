@@ -145,12 +145,30 @@ class SyncInstalledTests(unittest.TestCase):
         for directory in ('backups', 'browser-profile', 'plugins', 'vendor/hyprglass'):
             put(self.installed / directory / 'keep.txt', f'{directory} sentinel\n')
 
-    def _run(self, args):
+    def _broker_status(self, **changes):
+        status = {
+            'ok': True,
+            'broker_generation': 'a' * 32,
+            'loaded_code_sha256': sync._sha256(self.repo / sync.BROKER_SOURCE),
+            'state': 'idle',
+            'driver': 'idle',
+            'guardian': 'idle',
+            'active_sequence': None,
+            'error': None,
+            'recovery': 'none',
+            'cancelled': False,
+        }
+        status.update(changes)
+        return status
+
+    def _run(self, args, *, relay_status=None):
         output = io.StringIO()
         errors = io.StringIO()
+        relay_status = relay_status or self._broker_status()
         with mock.patch.dict(os.environ, self.env, clear=True):
-            with contextlib.redirect_stdout(output), contextlib.redirect_stderr(errors):
-                code = sync.main(['--repo', str(self.repo), '--installed', str(self.installed), *args])
+            with mock.patch.object(sync, '_relay_public_status', return_value=relay_status):
+                with contextlib.redirect_stdout(output), contextlib.redirect_stderr(errors):
+                    code = sync.main(['--repo', str(self.repo), '--installed', str(self.installed), *args])
         return code, output.getvalue(), errors.getvalue()
 
     def test_successful_publication_and_read_only_check(self):
@@ -226,9 +244,10 @@ class SyncInstalledTests(unittest.TestCase):
 
         output, errors = io.StringIO(), io.StringIO()
         with mock.patch.dict(os.environ, self.env, clear=True):
-            with mock.patch.object(sync.os, 'rename', side_effect=fail_once):
-                with contextlib.redirect_stdout(output), contextlib.redirect_stderr(errors):
-                    code = sync.main(['--repo', str(self.repo), '--installed', str(self.installed)])
+            with mock.patch.object(sync, '_relay_public_status', return_value=self._broker_status()):
+                with mock.patch.object(sync.os, 'rename', side_effect=fail_once):
+                    with contextlib.redirect_stdout(output), contextlib.redirect_stderr(errors):
+                        code = sync.main(['--repo', str(self.repo), '--installed', str(self.installed)])
         self.assertNotEqual(code, 0)
         self.assertIn('previous release was restored', errors.getvalue())
         self.assertEqual((self.installed / 'scripts/old-release.txt').read_text(), 'old scripts\n')
@@ -247,6 +266,36 @@ class SyncInstalledTests(unittest.TestCase):
         code, _output, error = self._run(['--check'])
         self.assertNotEqual(code, 0)
         self.assertIn('managed installed file differs', error)
+
+    def test_relay_restart_required_only_when_loaded_hash_is_stale(self):
+        current = self._broker_status()
+        with mock.patch.object(sync, '_relay_public_status', return_value=current):
+            self.assertFalse(sync._relay_restart_needed(self.repo))
+
+        stale = self._broker_status(loaded_code_sha256='0' * 64)
+        with mock.patch.object(sync, '_relay_public_status', return_value=stale):
+            self.assertTrue(sync._relay_restart_needed(self.repo))
+
+    def test_relay_restarts_when_stale_and_idle_then_verifies_new_identity(self):
+        before = self._broker_status(loaded_code_sha256='0' * 64)
+        after = self._broker_status(broker_generation='c' * 32)
+        with mock.patch.object(sync, '_relay_public_status', side_effect=[before, after]):
+            with mock.patch.object(sync.subprocess, 'run',
+                                   return_value=subprocess.CompletedProcess([], 0, '', '')) as run:
+                with contextlib.redirect_stdout(io.StringIO()):
+                    self.assertTrue(sync._restart_relay(self.repo))
+        run.assert_called_once()
+        self.assertEqual(run.call_args.args[0], [
+            'systemctl', '--user', 'restart', 'computer-use-relay.service'])
+
+    def test_busy_stale_relay_warns_and_refuses_sync_before_publication(self):
+        busy = self._broker_status(loaded_code_sha256='0' * 64, state='running',
+                                   driver='ready', guardian='active', active_sequence=1)
+        code, _output, error = self._run([], relay_status=busy)
+        self.assertNotEqual(code, 0)
+        self.assertIn('WARNING: broker code is stale and the relay is busy', error)
+        self.assertIn('broker-loaded code changed while the relay is busy', error)
+        self.assertEqual(list((self.installed / 'backups').glob('sync-*')), [])
 
 
 if __name__ == '__main__':
