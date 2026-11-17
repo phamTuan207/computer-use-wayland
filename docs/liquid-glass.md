@@ -114,6 +114,10 @@ install any Lua profile. If you deploy these scripts somewhere other than the
 repository root, `native/hyprglass-local-optics.lua` must exist at
 `native/` in the same project or installation root as `scripts/`.
 
+After editing `native/hyprglass-local-optics.lua`, follow the manifest check,
+sync, and commit rule in the README Install section; the repository pre-commit
+hook enforces it after `bash scripts/install-git-hooks.sh` is run once per clone.
+
 ## Install the library immutably
 
 The destination directory must already exist:

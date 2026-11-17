@@ -1,0 +1,23 @@
+#!/bin/sh
+set -eu
+
+if ! repo_root=$(git rev-parse --show-toplevel 2>/dev/null); then
+    printf '%s\n' 'error: cannot find the git checkout for the pre-commit hook' >&2
+    exit 1
+fi
+
+if ! staged_files=$(git -C "$repo_root" diff --cached --name-only); then
+    printf '%s\n' 'error: cannot read staged paths for the pre-commit hook' >&2
+    exit 1
+fi
+if ! printf '%s\n' "$staged_files" | grep -Fxq 'native/hyprglass-local-optics.lua'; then
+    exit 0
+fi
+
+if [ ! -f "$repo_root/native/visuals.json" ]; then
+    printf '%s\n' 'visuals manifest not present (setup has not run); skipping pin check'
+    exit 0
+fi
+
+cd "$repo_root"
+python3 scripts/check-visuals-manifest.py

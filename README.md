@@ -122,6 +122,18 @@ snapshot path printed by sync:
 python3 scripts/sync-installed.py --rollback /absolute/path/to/agent-computer-use/backups/sync-...
 ```
 
+Install the repository-local commit guard once per clone:
+
+```sh
+bash scripts/install-git-hooks.sh
+```
+
+After any edit to `native/hyprglass-local-optics.lua`, refresh the manifest,
+run `python3 scripts/check-visuals-manifest.py`, run
+`python3 scripts/sync-installed.py` and
+`python3 scripts/sync-installed.py --check`, and only then commit. The
+pre-commit hook enforces this rule; the check script is its manual form.
+
 Then **log out and log back in once.** That is the whole installation.
 
 The two `--restore-*` values are the Hyprland cursor theme and size you use
@@ -406,6 +418,7 @@ ln -s "$PWD/skill" ~/.config/opencode/skills/computer-use
 | `scripts/cu.py` | CLI entry point and orchestration |
 | `scripts/setup.py` | standard one-command setup and the fresh-login hook |
 | `scripts/visuals.py` | fresh-login loader that validates the manifest before activating |
+| `scripts/check-visuals-manifest.py` | cheap pin check; fails when the Lua profile hash differs from the manifest |
 | `scripts/cdp.mjs` | Chromium CDP backend |
 | `scripts/a11y.py` | AT-SPI backend |
 | `scripts/cursor_session.py` | session ownership and cleanup recovery |
