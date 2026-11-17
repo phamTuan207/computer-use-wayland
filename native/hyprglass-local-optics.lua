@@ -2,7 +2,9 @@
 if hl.plugin.hyprglass then
   local material = {
     refraction_strength = 0.75, refraction_flow = 1.0,
-    refraction_spread = 0.15, edge_thickness = 0.12,
+    -- cylindrical bottle profile (step 0, 2026-11-17): the falloff is 0 at the
+    -- centre line by construction, so no rim windowing; spread kept at 1.0
+    refraction_spread = 1.0, edge_thickness = 0.12,
     lens_distortion = 0.6, blur_strength = 0.18,
     chromatic_aberration = 0.04, fresnel_strength = 0.20,
     specular_strength = 0.50, bevel_strength = 0.70, bevel_size = 3.0,

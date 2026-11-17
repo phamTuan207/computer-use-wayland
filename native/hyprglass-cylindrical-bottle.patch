@@ -1,0 +1,69 @@
+diff --git a/src/Shaders.hpp b/src/Shaders.hpp
+index 5f4a0ab..c22f609 100644
+--- a/src/Shaders.hpp
++++ b/src/Shaders.hpp
+@@ -17,8 +17,9 @@ precision highp float;
+  *     the window boundary, creating natural color bleeding
+  *
+  * Rendering layers:
+- * 1. Edge refraction via smooth outward direction (optionally along the edges,
+- *    optionally rim-only) + exponential proximity
++ * 1. Edge refraction via smooth outward direction (optionally along the edges)
++ *    + cylindrical bottle profile (step 0): ray-traced displacement law, 0
++ *    only at the centre line, rising smoothly toward the rim
+  * 2. Chromatic aberration (per-channel refraction scale)
+  * 3. Edge raw-texture blend for vivid color pickup
+  * 4. Subtle center dome lens magnification
+@@ -490,18 +491,42 @@ void main() {
+     // ========================================
+     // EDGE REFRACTION
+     // Offset sampling UV inward (toward center) at edges — like looking
+-    // through the curved thick edge of a glass slab. This compresses
+-    // and distorts what's already behind the window, without reaching
+-    // beyond the window boundary.
++    // through a cylindrical glass bottle lying on its side (axis along the
++    // pill length). This compresses and distorts what's already behind the
++    // window, without reaching beyond the window boundary.
+     // ========================================
+     float refractionPx = refractionStrength * 50.0;
+-    float lensFalloff = edgeProximity;
+-    if (refractionSpread < 0.999) {
+-        // rim-only lens: window the exponential tail so the centre stays flat
+-        float depth = -bevelSdf;
+-        float tailWindow = 1.0 - smoothstep(1.5 * bezelWidthPx, 3.0 * bezelWidthPx, depth);
+-        lensFalloff = mix(edgeProximity * tailWindow, edgeProximity, refractionSpread);
+-    }
++    // CYLINDRICAL BOTTLE PROFILE (step 0, 2026-11-17; supersedes the
++    // exponential edgeProximity falloff). Ray-traced displacement law
++    // (Sohum / quickLiquid) for a semicircular cross-section, index n = 1.5:
++    //   w = distance from the centre line, 0 at the line, 1 at the rim
++    //   theta_s = asin(w), theta_r = asin(w / n)
++    //   d(w) = sqrt(1 - w*w) * tan(theta_s - theta_r), peak-normalised
++    // Displacement is 0 ONLY at the centre line and rises smoothly toward
++    // the rim, peaking just inside it and returning to 0 at the rim edge
++    // (continuity with the outside). No refractionSpread windowing: the
++    // profile itself is 0 at the centre, so the old tailWindow (which cut
++    // everything past 3 bezel widths) would cut the bottle shape.
++    // refractionSpread is currently inert for the falloff; bezelWidthPx is
++    // kept for a future rim-window reintroduction. Peak of the unnormalised
++    // curve is 0.2310 at w = 0.85, hence the 4.33 normalisation.
++    // The profile scale is the distance from rim to centre line. Under
++    // CONTOUR the field measures distance to the pill outline itself, so
++    // that distance is PILL_HEIGHT/2 = 19px (native/indicator.c: 38px pill
++    // in a 66px layer, monitor scale 1); contourReferencePx is the 66px
++    // layer, so minDim/2 would put the zero 14px past the centre line.
++#ifdef HYPRGLASS_FEATURE_CONTOUR
++    float cylHalfPx = 19.0 * monitorScale;
++#else
++    float cylHalfPx = minDim * 0.5;
++#endif
++    float depth = -bevelSdf;
++    float wCyl = 1.0 - clamp(depth / cylHalfPx, 0.0, 1.0);
++    float sinS = clamp(wCyl, 0.0, 0.999);
++    float thetaS = asin(sinS);
++    float thetaR = asin(sinS / 1.5);
++    float thick = sqrt(max(1.0 - wCyl * wCyl, 0.0));
++    float lensFalloff = clamp(thick * tan(thetaS - thetaR) * 4.33, 0.0, 1.0);
+     float refractionMag = lensFalloff * refractionPx;
+     vec2 dir = inwardDir;
+ #ifndef HYPRGLASS_FEATURE_CONTOUR
