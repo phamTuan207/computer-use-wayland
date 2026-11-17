@@ -306,7 +306,10 @@ class Tc02Controller:
         self.sequence = 1
         self.session_started = False
         self.session_finished = False
+        self.run_completed_mono = None
         self.process = None
+        self.editor_cleanup_attempted = False
+        self.editor_cleanup_failure = None
         self.known_background = []
         self.metrics = {
             'task_requests': 0,
@@ -378,6 +381,14 @@ class Tc02Controller:
 
     def current_clients(self):
         return [window_line(row) for row in hypr_query(self.gui_env, 'clients')]
+
+    def _dispatch_hyprland(self, lua):
+        proc = subprocess.run(['hyprctl', 'dispatch', lua], env=self.gui_env,
+                              capture_output=True, text=True, timeout=5)
+        if proc.returncode:
+            raise Escalate(self.step, self.current_checkpoint,
+                           f'hyprctl dispatch failed: {proc.stderr.strip()[:300]}')
+        return proc.stdout.strip()
 
     def update_windows(self, windows):
         if not isinstance(windows, list) or any(not isinstance(row, dict) for row in windows):
@@ -639,11 +650,159 @@ class Tc02Controller:
                 if unexpected:
                     raise Escalate('P0', 'no-unexpected-surfaces',
                                    f'unexpected surface appeared during P0: {unexpected}')
+                self._set_editor_geometry()
                 self._assert_geometry(self.editor, 'editor')
                 self.emit('vscode-window-mapped', **self.editor)
                 return
             time.sleep(.25)
         raise Escalate('P0', 'vscode-window-mapped', 'no new blank.txt window appeared in 60 seconds')
+
+    def _set_editor_geometry(self):
+        spec = self.plan['preconditions']['editor_geometry']
+        expected = spec['size']
+        tolerance = spec['tolerance_px']
+        address = f"address:{self.editor['address']}"
+        self._dispatch_hyprland(
+            f'hl.dsp.window.float({{ window = "{address}", action = "set" }})')
+        self._dispatch_hyprland(
+            f'hl.dsp.window.resize({{ window = "{address}", x = {expected[0]}, y = {expected[1]} }})')
+        self._dispatch_hyprland(
+            f'hl.dsp.window.center({{ window = "{address}" }})')
+
+        observed_sizes = []
+        deadline = time.monotonic() + 10
+        while True:
+            current = next((row for row in self.current_clients()
+                            if row.get('address') == self.editor['address']), None)
+            size = current.get('size') if current else None
+            observed_sizes.append(size)
+            if (isinstance(size, list) and len(size) == 2 and
+                    all(abs(actual - target) <= tolerance
+                        for actual, target in zip(size, expected))):
+                self.editor = current
+                self.emit('editor-geometry-settled', expected=expected,
+                          tolerance_px=tolerance, observed_sizes=observed_sizes)
+                return
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                break
+            time.sleep(min(.25, remaining))
+        raise Escalate('P0', 'editor-geometry-settled',
+                       f'editor geometry did not settle within 10 seconds; observed sizes: {observed_sizes}')
+
+    def _wait_for_editor_gone(self, timeout_s):
+        deadline = time.monotonic() + timeout_s
+        observations = []
+        while True:
+            windows = self.current_clients()
+            editor = next((row for row in windows
+                           if row.get('address') == self.editor['address']), None)
+            dialogs = [row for row in windows
+                       if str(row.get('class') or '').lower() == 'code' and
+                       row.get('address') != self.editor['address']]
+            observations.append({
+                'editor_size': editor.get('size') if editor else None,
+                'dialog_windows': dialogs,
+            })
+            if editor is None:
+                return True, observations, windows
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                return False, observations, windows
+            time.sleep(min(.25, remaining))
+
+    def _terminate_editor_process(self):
+        if self.process is None or self.process.poll() is not None:
+            return True
+        pid = self.process.pid
+        try:
+            self.process.terminate()
+            self.emit('editor-process-sigterm', pid=pid)
+        except ProcessLookupError:
+            return True
+        except OSError as exc:
+            self.emit('editor-process-sigterm-error', pid=pid, error=str(exc))
+            return False
+        try:
+            self.process.wait(timeout=5)
+            return True
+        except subprocess.TimeoutExpired:
+            if self.process.poll() is not None:
+                return True
+        except OSError as exc:
+            self.emit('editor-process-wait-error', pid=pid, error=str(exc))
+            return False
+
+        try:
+            self.process.kill()
+            self.emit('editor-process-sigkill', pid=pid)
+            self.process.wait(timeout=5)
+            return True
+        except ProcessLookupError:
+            return True
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            self.emit('editor-process-sigkill-error', pid=pid, error=str(exc))
+            return False
+
+    def _cleanup_editor(self):
+        if self.editor_cleanup_attempted:
+            return self.editor_cleanup_failure
+        self.editor_cleanup_attempted = True
+        if self.editor is None:
+            if self.process is None:
+                return None
+            if self._terminate_editor_process():
+                self.emit('editor-teardown', closed=False, process_fallback=True,
+                          reason='no editor window address was captured')
+                return None
+            failure = Escalate('P0', 'editor-teardown',
+                               'launched editor process could not be stopped safely')
+            self.editor_cleanup_failure = failure
+            return failure
+
+        address = f"address:{self.editor['address']}"
+        close_error = None
+        try:
+            self._dispatch_hyprland(
+                f'hl.dsp.window.close({{ window = "{address}" }})')
+            self.emit('editor-graceful-close-request', address=self.editor['address'])
+        except Escalate as exc:
+            close_error = exc.reason
+            self.emit('editor-graceful-close-error', address=self.editor['address'],
+                      error=close_error)
+
+        process_fallback = False
+        try:
+            gone, observations, windows = self._wait_for_editor_gone(5)
+        except Exception as exc:
+            gone, observations, windows = False, [], []
+            close_error = close_error or f'client poll failed: {exc}'
+        if not gone:
+            dialog_seen = any(item['dialog_windows'] for item in observations)
+            self.emit('editor-close-wait-expired', address=self.editor['address'],
+                      observations=observations, save_dialog_seen=dialog_seen)
+            process_fallback = True
+            process_stopped = self._terminate_editor_process()
+            if process_stopped:
+                try:
+                    gone, observations, windows = self._wait_for_editor_gone(5)
+                except Exception as exc:
+                    close_error = close_error or f'client poll after process fallback failed: {exc}'
+                    gone = False
+        if gone:
+            self.emit('editor-teardown', closed=True,
+                      process_fallback=process_fallback,
+                      close_error=close_error)
+            return None
+
+        failure = Escalate(
+            'P0', 'editor-teardown',
+            f'launched editor window remains after graceful close and process fallback; '
+            f'close_error={close_error!r}, observations={observations}, clients={windows}',
+            hygiene=True)
+        self.editor_cleanup_failure = failure
+        self.emit('editor-teardown-failed', reason=failure.reason)
+        return failure
 
     def _assert_geometry(self, window, which):
         spec = self.plan['preconditions']['editor_geometry' if which == 'editor' else 'dialog_geometry']
@@ -1036,8 +1195,9 @@ class Tc02Controller:
             if not self.session_finished:
                 self.metrics['session_deaths'] += 1
                 raise Escalate('S6', 'clean-finish', f'finish did not return finished/stopped/clean: {finish}')
+            self.run_completed_mono = time.monotonic()
         self.known_background.append(window_line(self.editor))
-        return self._summary('PASS')
+        return None
 
     def _cleanup_finish(self):
         if not self.session_started or self.session_finished:
@@ -1080,8 +1240,9 @@ class Tc02Controller:
         }
 
     def _summary(self, status, *, failure=None):
-        end_to_end = time.monotonic() - self.dispatch_mono
-        execution = (time.monotonic() - self.execution_start
+        completed_mono = self.run_completed_mono or time.monotonic()
+        end_to_end = completed_mono - self.dispatch_mono
+        execution = (completed_mono - self.execution_start
                      if hasattr(self, 'execution_start') else None)
         summary = {
             'status': status,
@@ -1213,13 +1374,21 @@ def main(argv=None):
         controller = Tc02Controller(plan, run_id, args.output_root, live=True)
         try:
             controller.run_live()
+            cleanup_failure = controller._cleanup_editor()
+            if cleanup_failure:
+                return controller.escalate(cleanup_failure)
+            controller._summary('PASS')
             return 0
         except Escalate as failure:
-            return controller.escalate(failure)
+            cleanup_failure = controller._cleanup_editor()
+            extra = {'editor_teardown_failure': cleanup_failure.reason} if cleanup_failure else None
+            return controller.escalate(failure, extra=extra)
         except Exception as exc:
             failure = Escalate(controller.step, controller.current_checkpoint,
                                f'unexpected controller failure: {type(exc).__name__}: {exc}')
-            return controller.escalate(failure)
+            cleanup_failure = controller._cleanup_editor()
+            extra = {'editor_teardown_failure': cleanup_failure.reason} if cleanup_failure else None
+            return controller.escalate(failure, extra=extra)
     except (OSError, ValueError) as exc:
         print(f'PLAN-ERROR: {exc}', file=sys.stderr)
         return 2

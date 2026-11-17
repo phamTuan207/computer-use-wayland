@@ -273,5 +273,140 @@ class Tc02SampleTests(unittest.TestCase):
             self.assertEqual(summary['s2_samples'], [sample])
 
 
+class Tc02EditorLifecycleTests(unittest.TestCase):
+    def make_controller(self, temporary):
+        plan = tc02_controller.load_json(tc02_controller.DEFAULT_PLAN)
+        controller = tc02_controller.Tc02Controller(
+            plan, 'tc02-editor-lifecycle-unit-test', temporary)
+        controller.gui_env = {'WAYLAND_DISPLAY': 'wayland-test'}
+        controller.emit = Mock()
+        controller.editor = {
+            'address': '0xeditor', 'class': 'com.microsoft.VSCode',
+            'title': 'blank.txt - Visual Studio Code', 'at': [0, 0],
+            'size': [933, 1180], 'workspace': '1',
+        }
+        return controller
+
+    def test_dispatch_hyprland_uses_lua_argv_and_controller_environment(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            controller = self.make_controller(temporary)
+            lua = 'hl.dsp.window.close({ window = "address:0xeditor" })'
+            completed = tc02_controller.subprocess.CompletedProcess(
+                ['hyprctl', 'dispatch', lua], 0, 'ok\n', '')
+
+            with patch.object(tc02_controller.subprocess, 'run', return_value=completed) as run:
+                self.assertEqual(controller._dispatch_hyprland(lua), 'ok')
+
+            run.assert_called_once_with(
+                ['hyprctl', 'dispatch', lua], env=controller.gui_env,
+                capture_output=True, text=True, timeout=5)
+
+    def test_dispatch_hyprland_escalates_with_stderr(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            controller = self.make_controller(temporary)
+            completed = tc02_controller.subprocess.CompletedProcess(
+                ['hyprctl', 'dispatch', 'bad lua'], 7, '', 'parser rejected address')
+
+            with patch.object(tc02_controller.subprocess, 'run', return_value=completed):
+                with self.assertRaises(tc02_controller.Escalate) as raised:
+                    controller._dispatch_hyprland('bad lua')
+
+            self.assertIn('parser rejected address', raised.exception.reason)
+
+    def test_editor_geometry_dispatches_then_waits_through_transitional_size(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            controller = self.make_controller(temporary)
+            controller._dispatch_hyprland = Mock(return_value='ok')
+            transitional = dict(controller.editor, size=[933, 1180])
+            settled = dict(controller.editor, size=[901, 1176])
+            controller.current_clients = Mock(side_effect=[[transitional], [settled]])
+            with patch.object(tc02_controller.time, 'sleep') as sleep:
+                controller._set_editor_geometry()
+
+            address = 'address:0xeditor'
+            self.assertEqual(controller._dispatch_hyprland.call_args_list, [
+                unittest.mock.call(
+                    f'hl.dsp.window.float({{ window = "{address}", action = "set" }})'),
+                unittest.mock.call(
+                    f'hl.dsp.window.resize({{ window = "{address}", x = 901, y = 1176 }})'),
+                unittest.mock.call(
+                    f'hl.dsp.window.center({{ window = "{address}" }})'),
+            ])
+            self.assertEqual(controller.current_clients.call_count, 2)
+            sleep.assert_called_once_with(.25)
+            self.assertEqual(controller.editor['size'], [901, 1176])
+            settled_event = next(call.kwargs for call in controller.emit.call_args_list
+                                 if call.args[0] == 'editor-geometry-settled')
+            self.assertEqual(settled_event['observed_sizes'], [[933, 1180], [901, 1176]])
+
+    def test_editor_teardown_escalates_sigterm_to_sigkill(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            controller = self.make_controller(temporary)
+            process = Mock()
+            process.pid = 4321
+            process.poll.side_effect = [None, None]
+            process.wait.side_effect = [
+                tc02_controller.subprocess.TimeoutExpired('code', 5), 0]
+            controller.process = process
+            editor = dict(controller.editor)
+            controller._wait_for_editor_gone = Mock(side_effect=[
+                (False, [{'editor_size': [901, 1176], 'dialog_windows': [
+                    {'address': '0xdialog', 'class': 'code', 'title': 'Save Workspace'}]}],
+                 [editor]),
+                (True, [{'editor_size': None, 'dialog_windows': []}], []),
+            ])
+            controller._dispatch_hyprland = Mock(return_value='ok')
+
+            failure = controller._cleanup_editor()
+
+            self.assertIsNone(failure)
+            controller._dispatch_hyprland.assert_called_once_with(
+                'hl.dsp.window.close({ window = "address:0xeditor" })')
+            process.terminate.assert_called_once_with()
+            process.kill.assert_called_once_with()
+            self.assertEqual(process.wait.call_args_list, [
+                unittest.mock.call(timeout=5), unittest.mock.call(timeout=5)])
+            self.assertEqual(controller._wait_for_editor_gone.call_args_list, [
+                unittest.mock.call(5), unittest.mock.call(5)])
+            controller.emit.assert_any_call('editor-process-sigterm', pid=4321)
+            controller.emit.assert_any_call('editor-process-sigkill', pid=4321)
+            controller.emit.assert_any_call(
+                'editor-close-wait-expired', address='0xeditor',
+                observations=[{'editor_size': [901, 1176], 'dialog_windows': [
+                    {'address': '0xdialog', 'class': 'code', 'title': 'Save Workspace'}]}],
+                save_dialog_seen=True)
+
+    def test_teardown_keeps_failure_when_editor_survives_process_fallback(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            controller = self.make_controller(temporary)
+            process = Mock()
+            process.pid = 4321
+            process.poll.return_value = 0
+            controller.process = process
+            editor = dict(controller.editor)
+            controller._wait_for_editor_gone = Mock(return_value=(False, [], [editor]))
+            controller._dispatch_hyprland = Mock(return_value='ok')
+
+            failure = controller._cleanup_editor()
+
+            self.assertIsInstance(failure, tc02_controller.Escalate)
+            self.assertIn('window remains', failure.reason)
+            process.terminate.assert_not_called()
+            process.kill.assert_not_called()
+
+    def test_success_summary_timing_excludes_post_run_editor_teardown(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            controller = self.make_controller(temporary)
+            controller.dispatch_mono = 90.0
+            controller.execution_start = 100.0
+            controller.run_completed_mono = 123.0
+
+            controller._summary('PASS')
+
+            summary = tc02_controller.load_json(controller.summary_path)
+            self.assertEqual(summary['execution_s'], 23.0)
+            self.assertEqual(summary['end_to_end_s'], 33.0)
+
+
 if __name__ == '__main__':
     unittest.main()
