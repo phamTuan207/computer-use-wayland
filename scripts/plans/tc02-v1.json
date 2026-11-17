@@ -72,6 +72,12 @@
       "bounds_assertion": "inside_current_image_and_window"
     }
   },
+  "layout": {
+    "menu_bar_ocr_crop": {"rect": [0, 0, 500, 40], "window": "editor", "tokens": ["File", "Edit"], "provenance": "gate3-A2 TSV: File (7,9,24,11), Edit (45,9,26,11); crop OCR 0.24s vs full-frame 0.98s"},
+    "typed_line_ocr_crop": {"rect": [0, 110, 901, 60], "window": "editor", "fragment": "20:30", "provenance": "gate3-A2 TSV: 20:30 at (393,123,46,10); editor line 1 y 118-135; crop OCR 0.26s vs full-frame 0.79s"},
+    "dialog_top_crop": {"rect": [0, 0, 875, 60], "window": "save_dialog", "covers": ["name_field", "save_button"], "provenance": "both dialog click points sit at y 22 in the 875x600 Save As dialog"},
+    "editor_top_crop": {"rect": [0, 0, 901, 60], "window": "editor", "covers": ["successor geometry check"], "provenance": "S6 needs only a fresh observation with matching window bounds; menu plus tab strip suffices"}
+  },
   "steps": [
     {
       "id": "P0",
@@ -132,6 +138,7 @@
       "kind": "observe",
       "window": "save_dialog",
       "max_width": 1200,
+      "crop": [0, 0, 875, 60],
       "request_sequence": ["observe"],
       "preconditions": ["dialog address came from S2 windows result", "dialog is active"],
       "checkpoint": "Save As dialog geometry is within tolerance and Name and Save targets pass bounds assertions",
@@ -168,6 +175,7 @@
       "kind": "verify",
       "window": "editor",
       "max_width": 1600,
+      "crop": [0, 0, 901, 60],
       "request_sequence": ["observe", "finish"],
       "preconditions": ["S5 close transaction completed", "successor is freshly observed"],
       "checkpoint": "editor title is on-tap.txt, output is exactly 50 bytes with the expected SHA-256, and finish is clean",

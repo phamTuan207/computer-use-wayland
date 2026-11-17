@@ -731,5 +731,147 @@ class Tc02MenuBarTests(unittest.TestCase):
         ])
 
 
+class Tc02LayoutTests(unittest.TestCase):
+    def load_plan(self):
+        return tc02_controller.load_json(tc02_controller.DEFAULT_PLAN)
+
+    def load_schema(self):
+        return tc02_controller.load_json(tc02_controller.DEFAULT_SCHEMA)
+
+    def test_layout_table_covers_dialog_points_and_steps_use_it(self):
+        plan = self.load_plan()
+        tc02_controller.validate_plan(plan, self.load_schema())
+        layout = plan['layout']
+        self.assertEqual(layout['menu_bar_ocr_crop']['rect'], [0, 0, 500, 40])
+        self.assertEqual(layout['typed_line_ocr_crop']['rect'], [0, 110, 901, 60])
+        self.assertEqual(layout['dialog_top_crop']['rect'], [0, 0, 875, 60])
+        self.assertEqual(layout['editor_top_crop']['rect'], [0, 0, 901, 60])
+        self.assertEqual(plan['steps'][5]['crop'], [0, 0, 875, 60])
+        self.assertEqual(plan['steps'][8]['crop'], [0, 0, 901, 60])
+
+    def test_layout_rect_outside_window_fails_validation(self):
+        plan = self.load_plan()
+        plan['layout']['menu_bar_ocr_crop']['rect'] = [0, 0, 901, 2000]
+        with self.assertRaises(ValueError):
+            tc02_controller.validate_plan(plan, self.load_schema())
+
+    def test_dialog_crop_must_cover_save_button(self):
+        plan = self.load_plan()
+        plan['layout']['dialog_top_crop']['rect'] = [0, 0, 400, 60]
+        with self.assertRaises(ValueError):
+            tc02_controller.validate_plan(plan, self.load_schema())
+
+    def test_s3_crop_must_equal_layout_dialog_crop(self):
+        plan = self.load_plan()
+        plan['steps'][5]['crop'] = [0, 0, 875, 120]
+        with self.assertRaises(ValueError):
+            tc02_controller.validate_plan(plan, self.load_schema())
+
+
+class Tc02CropCoordinateTests(unittest.TestCase):
+    def make_controller(self, temporary):
+        plan = tc02_controller.load_json(tc02_controller.DEFAULT_PLAN)
+        controller = tc02_controller.Tc02Controller(
+            plan, 'tc02-crop-unit-test', temporary)
+        controller.emit = Mock()
+        controller.step = 'G0'
+        return controller
+
+    @staticmethod
+    def full_frame_observation():
+        return {'image_size': [901, 1176], 'window_bounds': [2990, 914, 901, 1176],
+                'region': [2990, 914, 901, 1176]}
+
+    @staticmethod
+    def dialog_crop_observation():
+        return {'image_size': [875, 60], 'window_bounds': [3003, 1202, 875, 600],
+                'region': [3003, 1202, 875, 60]}
+
+    def test_full_frame_mapping_is_unchanged(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            controller = self.make_controller(temporary)
+            resolved = controller._resolve_action(
+                {'type': 'click', 'point': 'file_menu'}, self.full_frame_observation())
+            self.assertEqual((resolved['x'], resolved['y']), (19, 14))
+
+    def test_dialog_crop_mapping_uses_region_origin(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            controller = self.make_controller(temporary)
+            observation = self.dialog_crop_observation()
+            name = controller._resolve_action(
+                {'type': 'click', 'point': 'name_field'}, observation)
+            save = controller._resolve_action(
+                {'type': 'click', 'point': 'save_button'}, observation)
+            self.assertEqual((name['x'], name['y']), (430, 22))
+            self.assertEqual((save['x'], save['y']), (825, 22))
+
+    def test_point_outside_crop_escalates(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            controller = self.make_controller(temporary)
+            with self.assertRaises(tc02_controller.Escalate):
+                controller._resolve_action(
+                    {'type': 'click', 'point': 'editor_body'},
+                    self.dialog_crop_observation())
+
+
+class Tc02OcrCropTests(unittest.TestCase):
+    def make_controller(self, temporary):
+        plan = tc02_controller.load_json(tc02_controller.DEFAULT_PLAN)
+        controller = tc02_controller.Tc02Controller(
+            plan, 'tc02-ocr-crop-unit-test', temporary)
+        controller.emit = Mock()
+        return controller
+
+    @staticmethod
+    def write_image(temporary, name='frame.png', size=(901, 1176)):
+        from PIL import Image
+        path = Path(temporary) / name
+        Image.new('RGB', size, 'white').save(path)
+        return str(path)
+
+    def test_crop_hit_returns_crop_text_without_full_frame_call(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            controller = self.make_controller(temporary)
+            image = self.write_image(temporary)
+            completed = tc02_controller.subprocess.CompletedProcess(
+                ['tesseract', image, 'stdout', '--psm', '6'], 0, 'File Edit\n', '')
+            with (patch.object(tc02_controller.shutil, 'which',
+                               return_value='/usr/bin/tesseract'),
+                  patch.object(tc02_controller.subprocess, 'run',
+                               return_value=completed) as run):
+                text, used_crop = controller._ocr_text(
+                    image, step='G0', checkpoint='menu-bar-presence', label='menu-bar',
+                    crop=[0, 0, 500, 40],
+                    found=lambda value: 'File' in value and 'Edit' in value)
+            self.assertEqual(text, 'File Edit\n')
+            self.assertTrue(used_crop)
+            run.assert_called_once()
+
+    def test_crop_miss_falls_back_to_full_frame(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            controller = self.make_controller(temporary)
+            image = self.write_image(temporary)
+            calls = []
+
+            def fake_run(args, **kwargs):
+                calls.append(args[1])
+                if 'crop' in args[1]:
+                    return tc02_controller.subprocess.CompletedProcess(
+                        args, 0, 'blank\n', '')
+                return tc02_controller.subprocess.CompletedProcess(
+                    args, 0, 'File Edit\n', '')
+
+            with (patch.object(tc02_controller.shutil, 'which',
+                               return_value='/usr/bin/tesseract'),
+                  patch.object(tc02_controller.subprocess, 'run', side_effect=fake_run)):
+                text, used_crop = controller._ocr_text(
+                    image, step='G0', checkpoint='menu-bar-presence', label='menu-bar',
+                    crop=[0, 0, 500, 40],
+                    found=lambda value: 'File' in value)
+            self.assertEqual(text, 'File Edit\n')
+            self.assertFalse(used_crop)
+            self.assertEqual(len(calls), 2)
+
+
 if __name__ == '__main__':
     unittest.main()

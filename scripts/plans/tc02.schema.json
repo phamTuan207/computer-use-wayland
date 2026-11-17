@@ -11,6 +11,7 @@
     "preconditions",
     "wait_tuning",
     "coordinates",
+    "layout",
     "steps",
     "branches"
   ],
@@ -135,6 +136,17 @@
       "minProperties": 1,
       "additionalProperties": {"$ref": "#/$defs/coordinate"}
     },
+    "layout": {
+      "type": "object",
+      "required": ["menu_bar_ocr_crop", "typed_line_ocr_crop", "dialog_top_crop", "editor_top_crop"],
+      "properties": {
+        "menu_bar_ocr_crop": {"$ref": "#/$defs/layout_crop"},
+        "typed_line_ocr_crop": {"$ref": "#/$defs/layout_crop"},
+        "dialog_top_crop": {"$ref": "#/$defs/layout_crop"},
+        "editor_top_crop": {"$ref": "#/$defs/layout_crop"}
+      },
+      "additionalProperties": false
+    },
     "steps": {
       "type": "array",
       "minItems": 8,
@@ -155,6 +167,30 @@
       ],
       "minItems": 2,
       "maxItems": 2
+    },
+    "layout_crop": {
+      "type": "object",
+      "required": ["rect", "window", "provenance"],
+      "properties": {
+        "rect": {"$ref": "#/$defs/rect"},
+        "window": {"enum": ["editor", "save_dialog"]},
+        "tokens": {"type": "array", "items": {"type": "string"}},
+        "fragment": {"type": "string"},
+        "covers": {"type": "array", "items": {"type": "string"}},
+        "provenance": {"type": "string", "minLength": 1}
+      },
+      "additionalProperties": false
+    },
+    "rect": {
+      "type": "array",
+      "prefixItems": [
+        {"type": "integer", "minimum": 0},
+        {"type": "integer", "minimum": 0},
+        {"type": "integer", "minimum": 1},
+        {"type": "integer", "minimum": 1}
+      ],
+      "minItems": 4,
+      "maxItems": 4
     },
     "coordinate": {
       "type": "object",
@@ -202,6 +238,7 @@
         "expected_terminal_window": {"enum": ["same", "none", "unbound", "saved_editor"]},
         "window": {"enum": ["editor", "save_dialog"]},
         "max_width": {"type": "integer", "minimum": 320, "maximum": 3840},
+        "crop": {"$ref": "#/$defs/rect"},
         "wait_ms": {"type": "integer", "minimum": 0, "maximum": 2000}
       },
       "additionalProperties": false

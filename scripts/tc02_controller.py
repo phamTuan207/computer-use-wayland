@@ -140,6 +140,33 @@ def validate_plan(plan, schema):
     }
     if {name: item.get('offset') for name, item in coords.items()} != required_coordinates:
         raise ValueError('plan coordinates differ from the reviewed tc02-v1 anchors')
+    layout = plan.get('layout')
+    if not isinstance(layout, dict):
+        raise ValueError('plan must declare a predict-then-verify layout table')
+    editor_size = [901, 1176]
+    dialog_size = [875, 600]
+    for name in ('menu_bar_ocr_crop', 'typed_line_ocr_crop', 'dialog_top_crop', 'editor_top_crop'):
+        entry = layout.get(name)
+        if not isinstance(entry, dict):
+            raise ValueError(f'layout {name} is missing')
+        if entry.get('window') not in ('editor', 'save_dialog'):
+            raise ValueError(f'layout {name}: window must be editor or save_dialog')
+        rect = entry.get('rect')
+        if (not isinstance(rect, list) or len(rect) != 4 or
+                any(type(value) is not int for value in rect) or rect[2] <= 0 or rect[3] <= 0):
+            raise ValueError(f'layout {name}: rect must be four integers with positive size')
+        window_size = dialog_size if entry['window'] == 'save_dialog' else editor_size
+        if (rect[0] < 0 or rect[1] < 0 or rect[0] + rect[2] > window_size[0] or
+                rect[1] + rect[3] > window_size[1]):
+            raise ValueError(f'layout {name}: rect lies outside its window')
+        if not isinstance(entry.get('provenance'), str) or not entry['provenance'].strip():
+            raise ValueError(f'layout {name}: provenance is required')
+    dialog_top = layout['dialog_top_crop']['rect']
+    for point in ('name_field', 'save_button'):
+        ox, oy = coords[point]['offset']
+        if not (dialog_top[0] <= ox < dialog_top[0] + dialog_top[2] and
+                dialog_top[1] <= oy < dialog_top[1] + dialog_top[3]):
+            raise ValueError(f'layout dialog_top_crop does not cover {point}')
     steps = plan.get('steps')
     ids = [step.get('id') for step in steps] if isinstance(steps, list) else []
     if ids != ['P0', 'P1', 'G0', 'S1', 'S2', 'S3', 'S4', 'S5', 'S6']:
@@ -189,6 +216,10 @@ def validate_plan(plan, schema):
         raise ValueError('S2 must declare an unbound successor and skip its after-capture')
     if steps[7].get('expected_terminal_window') != 'saved_editor' or not steps[7].get('no_after'):
         raise ValueError('S5 must bind the expected editor and skip the dialog after-capture')
+    if steps[5].get('crop') != layout['dialog_top_crop']['rect']:
+        raise ValueError('S3 crop must equal the layout dialog_top_crop rect')
+    if steps[8].get('crop') != layout['editor_top_crop']['rect']:
+        raise ValueError('S6 crop must equal the layout editor_top_crop rect')
     if not isinstance(plan.get('branches'), dict) or not plan['branches']:
         raise ValueError('plan must declare named recovery branches')
     return True
@@ -930,9 +961,16 @@ class Tc02Controller:
                   readiness_s=round(time.monotonic() - self.execution_start, 4),
                   next_sequence=self.sequence)
 
-    def _observe(self, name, address, max_width):
-        body, _ = self.broker_driver(name, ['observe', '--window', address,
-                                            '--max-width', str(max_width)])
+    def _observe(self, name, address, max_width, *, crop=None):
+        args = ['observe', '--window', address, '--max-width', str(max_width)]
+        if crop is not None:
+            if (not isinstance(crop, (list, tuple)) or len(crop) != 4 or
+                    any(type(value) is not int for value in crop)):
+                raise Escalate(self.step, self.current_checkpoint,
+                               f'{name}: crop must be four integers: {crop!r}')
+            args.extend(['--crop', *[str(value) for value in crop]])
+            self.emit('observe-crop', name=name, crop=[int(value) for value in crop])
+        body, _ = self.broker_driver(name, args)
         valid_observation = (
             isinstance(body, dict) and body.get('ok') is not False and
             isinstance(body.get('id'), str) and bool(body['id']) and
@@ -1020,40 +1058,87 @@ class Tc02Controller:
             coordinate = self.plan['coordinates'][point]
             if coordinate['anchor'] != 'window_top_left':
                 raise Escalate(self.step, self.current_checkpoint, f'{point}: unsupported anchor')
-            x, y = coordinate['offset']
+            ox, oy = coordinate['offset']
             image_width, image_height = observation.get('image_size', [0, 0])
             wx, wy, ww, wh = observation.get('window_bounds', [0, 0, 0, 0])
             rx, ry, rw, rh = observation.get('region', [0, 0, 0, 0])
-            sx = rw / image_width if image_width else 0
-            sy = rh / image_height if image_height else 0
-            gx, gy = rx + x * sx, ry + y * sy
-            if (not image_width or not image_height or x < 0 or y < 0 or
-                    x >= image_width or y >= image_height or
+            gx, gy = wx + ox, wy + oy
+            if (not image_width or not image_height or not rw or not rh or
                     gx < wx or gy < wy or gx >= wx + ww or gy >= wy + wh):
                 raise Escalate(self.step, f'bounds:{point}',
-                               f'{point}={x},{y} is outside the current image or window')
-            result['x'], result['y'] = x, y
+                               f'{point}={ox},{oy} is outside the current window')
+            ix = int(round((gx - rx) * image_width / rw))
+            iy = int(round((gy - ry) * image_height / rh))
+            if not (0 <= ix < image_width and 0 <= iy < image_height):
+                raise Escalate(self.step, f'bounds:{point}',
+                               f'{point}={ox},{oy} is outside the current image crop')
+            result['x'], result['y'] = ix, iy
         text = result.get('text')
         if isinstance(text, str) and text == '${output_path}':
             result['text'] = str(self.output_path())
         return result
 
-    def _menu_bar_visible(self, observation):
-        image = observation.get('image')
-        if not isinstance(image, str) or not Path(image).is_file():
-            raise Escalate('G0', 'menu-bar-presence', 'grounding image file is unavailable')
+    def _ocr_text(self, image, *, step, checkpoint, label, crop=None, found=None):
+        """OCR a predicted crop of a fresh image, falling back to the full frame.
+
+        The crop is a prediction from the plan layout table, never a fact: when
+        the expected text is absent from the crop, the full frame is OCRed once
+        before anything escalates, so a layout shift costs time, never a false
+        failure. Returns (text, used_crop).
+        """
+        from PIL import Image
+        image_path = Path(image) if isinstance(image, str) else None
+        if image_path is None or not image_path.is_file():
+            raise Escalate(step, checkpoint, f'{label}: grounding image file is unavailable')
         tesseract = shutil.which('tesseract')
         if not tesseract:
-            raise Escalate('G0', 'menu-bar-presence', 'tesseract is unavailable; refusing to assume a menu bar')
-        proc = subprocess.run([tesseract, image, 'stdout', '--psm', '6'],
-                              capture_output=True, text=True, timeout=10)
-        text = proc.stdout.casefold()
-        missing = [token for token in self.plan['preconditions']['menu_bar_ocr_tokens']
-                   if token.casefold() not in text]
-        self.emit('menu-bar-presence', engine='tesseract-full-frame',
-                  tokens=self.plan['preconditions']['menu_bar_ocr_tokens'],
-                  missing=missing, text_excerpt=' '.join(proc.stdout.split())[:300])
-        if proc.returncode or missing:
+            raise Escalate(step, checkpoint,
+                           'tesseract is unavailable; refusing to assume text presence')
+        candidates = []
+        if crop is not None:
+            try:
+                self.run_dir.mkdir(parents=True, exist_ok=True)
+                with Image.open(image_path) as source:
+                    width, height = source.size
+                    x, y = max(0, int(crop[0])), max(0, int(crop[1]))
+                    x2 = min(width, x + int(crop[2]))
+                    y2 = min(height, y + int(crop[3]))
+                    if x2 > x and y2 > y:
+                        crop_path = self.run_dir / f'ocr-{label}-crop.png'
+                        source.crop((x, y, x2, y2)).save(crop_path)
+                        candidates.append((str(crop_path), True, [x, y, x2 - x, y2 - y]))
+            except Exception as exc:
+                self.emit('ocr-crop-error', label=label, crop=list(crop), error=str(exc))
+        candidates.append((str(image_path), False, None))
+        last_text = ''
+        for candidate_path, used_crop, used_rect in candidates:
+            start = time.monotonic()
+            proc = subprocess.run([tesseract, candidate_path, 'stdout', '--psm', '6'],
+                                  capture_output=True, text=True, timeout=10)
+            duration = time.monotonic() - start
+            self.emit('ocr-text', label=label, used_crop=used_crop,
+                      crop=used_rect, duration_s=round(duration, 4),
+                      returncode=proc.returncode)
+            last_text = proc.stdout
+            if proc.returncode == 0 and (found is None or found(proc.stdout)):
+                return proc.stdout, used_crop
+        return last_text, False
+
+    def _menu_bar_visible(self, observation):
+        image = observation.get('image')
+        tokens = self.plan['preconditions']['menu_bar_ocr_tokens']
+        crop = self.plan.get('layout', {}).get('menu_bar_ocr_crop', {}).get('rect')
+        text, used_crop = self._ocr_text(
+            image, step='G0', checkpoint='menu-bar-presence', label='menu-bar',
+            crop=crop,
+            found=lambda value: all(token.casefold() in value.casefold() for token in tokens))
+        folded = text.casefold()
+        missing = [token for token in tokens if token.casefold() not in folded]
+        self.emit('menu-bar-presence', engine='tesseract-crop' if used_crop else 'tesseract-full-frame',
+                  used_crop=used_crop, crop=list(crop) if crop else None,
+                  tokens=tokens, missing=missing,
+                  text_excerpt=' '.join(text.split())[:300])
+        if missing:
             raise Escalate('G0', 'menu-bar-presence',
                            f'menu bar OCR check failed; missing labels: {missing}')
 
@@ -1072,16 +1157,13 @@ class Tc02Controller:
             return
         fragment = match.group(0)
         image = observation.get('image')
-        if not isinstance(image, str) or not Path(image).is_file():
-            raise Escalate('S1', step['checkpoint'],
-                           'S1 after-image is unavailable for typed-text verification')
-        tesseract = shutil.which('tesseract')
-        if not tesseract:
-            raise Escalate('S1', step['checkpoint'],
-                           'tesseract is unavailable; refusing to assume typed text landed')
-        proc = subprocess.run([tesseract, image, 'stdout', '--psm', '6'],
-                              capture_output=True, text=True, timeout=10)
-        if proc.returncode or fragment not in proc.stdout:
+        crop = self.plan.get('layout', {}).get('typed_line_ocr_crop', {}).get('rect')
+        text, used_crop = self._ocr_text(
+            image, step='S1', checkpoint=step['checkpoint'], label='typed-line',
+            crop=crop, found=lambda value: fragment in value)
+        self.emit('typed-text-presence', fragment=fragment, used_crop=used_crop,
+                  found=fragment in text)
+        if fragment not in text:
             raise Escalate('S1', step['checkpoint'],
                            f'typed text fragment {fragment!r} is absent from the S1 '
                            f'after-image; the keystrokes did not land in the editor')
@@ -1128,6 +1210,10 @@ class Tc02Controller:
                       after_capture_ms=body.get('after_capture_ms'),
                       after_skipped=body.get('after_skipped'),
                       completed=body.get('completed'), ok=body.get('ok'))
+        self.emit('act-timing', step=step['id'], execution_ms=body.get('execution_ms'),
+                  after_capture_ms=body.get('after_capture_ms'),
+                  after_skipped=body.get('after_skipped'),
+                  completed=body.get('completed'), ok=body.get('ok'))
         if body.get('ok') is True:
             if body.get('completed') != len(resolved):
                 evidence = self._partial_reobserve(target_window)
@@ -1256,7 +1342,7 @@ class Tc02Controller:
             step = self.plan['steps'][5]
             self.current_checkpoint = step['checkpoint']
             self.dialog_observation = self._observe('S3-observe-dialog', self.dialog['address'],
-                                                    step['max_width'])
+                                                    step['max_width'], crop=step.get('crop'))
             if not self._geometry_matches_observation(self.dialog_observation, self.dialog):
                 raise Escalate('S3', step['checkpoint'], 'dialog observation bounds do not match the live window')
             for coordinate in ('name_field', 'save_button'):
@@ -1292,7 +1378,7 @@ class Tc02Controller:
             step = self.plan['steps'][8]
             self.current_checkpoint = step['checkpoint']
             final_observation = self._observe('S6-final-editor', self.editor['address'],
-                                              step['max_width'])
+                                              step['max_width'], crop=step.get('crop'))
             self._assert_window(self.last_windows, self.editor['address'], cls='com.microsoft.VSCode')
             if not self._geometry_matches_observation(final_observation, self.editor):
                 raise Escalate('S6', step['checkpoint'], 'successor observation does not match editor geometry')
