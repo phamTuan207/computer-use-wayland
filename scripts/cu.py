@@ -1818,6 +1818,99 @@ def settled_observation(capture,settle_ms,max_width):
         previous=fingerprint
         wait_cancelable(min(.06,max(0,deadline-now)))
 
+def load_cli_registry():
+    path=ROOT/'skill'/'cli-anything'/'registry.json'
+    try:data=json.loads(path.read_text())
+    except FileNotFoundError:raise RuntimeError('registry snapshot not found: '+str(path))
+    except json.JSONDecodeError as exc:raise RuntimeError('registry snapshot is not valid JSON: '+str(exc))
+    if isinstance(data,dict) and isinstance(data.get('clis'),list):entries=data['clis']
+    elif isinstance(data,dict) and data and all(isinstance(value,dict) for value in data.values()):entries=data.values()
+    else:raise RuntimeError('registry snapshot has an unexpected shape: '+str(path))
+    registry={}
+    for entry in entries:
+        name=entry.get('name') if isinstance(entry,dict) else None
+        if not name:raise RuntimeError('registry entry without a name: '+repr(entry))
+        for key in ('entry_point','install_cmd','requires','skill_md'):
+            if key not in entry:raise RuntimeError('registry entry %r is missing %r'%(name,key))
+        registry[name]=entry
+    return registry
+
+def cli_skill_description(name):
+    path=ROOT/'skill'/'cli-anything'/(name+'.md')
+    try:lines=path.read_text().splitlines()
+    except OSError:return ''
+    for index,line in enumerate(lines):
+        key,separator,value=line.partition(':')
+        if key!='description' or not separator:continue
+        value=value.strip()
+        if value.startswith(('>','|')):
+            parts=[]
+            for part in lines[index+1:]:
+                if not part or not part[0].isspace():break
+                parts.append(part.strip())
+            return ' '.join(parts)
+        return value.strip('"\'')
+    return ''
+
+def cli_app_record(name,entry):
+    record={'name':name,'display_name':entry.get('display_name',name),
+            'category':entry.get('category',''),'entry':entry['entry_point'],
+            'skill_path':str(ROOT/'skill'/'cli-anything'/(name+'.md')),
+            'requires':entry['requires']}
+    description=entry.get('description') or cli_skill_description(name)
+    if description:record['description']=description
+    return record
+
+def cli_run(app,command_args):
+    envelope={'app':app,'args':list(command_args),'returncode':None,
+              'stdout_truncated':'','stderr_truncated':''}
+    runner=ROOT/'scripts'/'cli-anything.py'
+    try:
+        # The runner probes --json for up to 10s, then enforces its 60s command timeout.
+        result=subprocess.run([sys.executable,str(runner),'run',app,'--',*command_args],
+                              capture_output=True,text=True,timeout=75)
+    except subprocess.TimeoutExpired:
+        envelope.update(timeout=True,error='cli-anything runner timed out')
+        return {'ok':False,**envelope}
+    except OSError as exc:
+        envelope['error']='failed to run cli-anything runner: '+str(exc)
+        return {'ok':False,**envelope}
+    try:envelope=json.loads(result.stdout)
+    except json.JSONDecodeError:
+        envelope.update(returncode=result.returncode,
+                        stdout_truncated=result.stdout[:4096],
+                        stderr_truncated=result.stderr[:4096],
+                        error='cli-anything runner returned invalid JSON')
+        return {'ok':False,**envelope}
+    if not isinstance(envelope,dict):
+        envelope={'app':app,'args':list(command_args),'returncode':result.returncode,
+                  'stdout_truncated':'','stderr_truncated':'',
+                  'error':'cli-anything runner returned an unexpected result'}
+        return {'ok':False,**envelope}
+    envelope['ok']=envelope.get('returncode')==0 and 'error' not in envelope
+    return envelope
+
+def cli_command(args):
+    registry=load_cli_registry()
+    if args.cli_operation=='list':
+        return {'ok':True,'apps':[cli_app_record(name,registry[name]) for name in sorted(registry)]}
+    if args.cli_operation=='search':
+        query=args.text.strip().casefold()
+        if not query:return {'ok':False,'error':'search text must not be empty'}
+        apps=[]
+        for name in sorted(registry):
+            record=cli_app_record(name,registry[name])
+            searchable=(record.get(key,'') for key in ('name','display_name','description','category'))
+            if any(query in str(value).casefold() for value in searchable):apps.append(record)
+        return {'ok':True,'apps':apps}
+    if args.cli_operation=='info':
+        entry=registry.get(args.app)
+        if entry is None:return {'ok':False,'error':'unknown app: '+args.app}
+        return {'ok':True,'app':args.app,
+                'skill_path':str(ROOT/'skill'/'cli-anything'/(args.app+'.md')),
+                'install':entry['install_cmd'],'requires':entry['requires']}
+    return cli_run(args.app,args.command_args)
+
 def main():
     global BROWSER_ENDPOINT
     parser=argparse.ArgumentParser(description=__doc__)
@@ -1842,6 +1935,12 @@ def main():
     b.add_argument('--scope',help='observe only: one CSS selector to enumerate; one read, not sticky, not an input boundary')
     b.add_argument('--after-scope',help='act only: scope the successful after-snapshot to one CSS selector; not sticky, not an input boundary')
     a=sub.add_parser('a11y');a.add_argument('operation',choices=['apps','observe','drill','act']);a.add_argument('ref',nargs='?');a.add_argument('--pid',type=int);a.add_argument('--snapshot');a.add_argument('--actions');a.add_argument('--skeleton',action='store_true')
+    cli=sub.add_parser('cli',help='list and run vendored CLI-Anything harnesses')
+    cli_sub=cli.add_subparsers(dest='cli_operation',required=True)
+    cli_sub.add_parser('list',help='list apps from the vendored registry')
+    search=cli_sub.add_parser('search',help='search app names, descriptions, and categories');search.add_argument('text')
+    info=cli_sub.add_parser('info',help='show install and skill details');info.add_argument('app')
+    run=cli_sub.add_parser('run',help='run one allowlisted harness command');run.add_argument('app');run.add_argument('command_args',nargs=argparse.REMAINDER,help='harness arguments after --')
     args=parser.parse_args()
     if args.command=='browser' and args.scope is not None:
         if args.operation!='observe':raise ValueError('--scope is only valid for browser observe')
@@ -1855,6 +1954,11 @@ def main():
     if args.command=='browser' and args.image and args.operation not in ('observe','act'):
         raise ValueError('--image is only valid for browser observe or act')
     if args.command=='observe' and args.focus and not args.window:parser.error('--focus requires --window')
+    if args.command=='cli':
+        try:result=cli_command(args)
+        except Exception as exc:result={'ok':False,'error':str(exc)}
+        print(json.dumps(result,ensure_ascii=False,separators=(',',':')),flush=True)
+        return 0 if result.get('ok') is not False else 1
     if args.command=='session-driver':
         require_session()
         import session_driver
