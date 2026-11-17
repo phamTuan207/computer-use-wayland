@@ -602,6 +602,33 @@ class Tc02EditorLifecycleTests(unittest.TestCase):
             self.assertIn('teardown-dialog-verification', failure.checkpoint)
 
 
+    def test_dirty_editor_title_is_still_the_same_editor(self):
+        # tc02-gate3-A1: S1 typing dirties the document, the editor title
+        # gains the "● " marker, and the stale stored record then fails
+        # the unexpected-window check. Refreshing from the live list
+        # must keep the same editor expected.
+        with tempfile.TemporaryDirectory() as temporary:
+            controller = self.make_controller(temporary)
+            controller.editor = {
+                'address': '0xeditor', 'class': 'com.microsoft.VSCode',
+                'title': 'blank.txt - Visual Studio Code',
+                'at': [2990, 914], 'size': [901, 1176], 'workspace': '2'}
+            dialog = {'address': '0xdialog', 'class': 'xdg-desktop-portal-gtk',
+                      'title': 'Save As', 'at': [3003, 1202],
+                      'size': [875, 600], 'workspace': '2'}
+            windows = [dict(controller.editor,
+                            title='● blank.txt - Visual Studio Code'), dialog]
+            with self.assertRaises(tc02_controller.Escalate):
+                controller._assert_no_unexpected_windows(
+                    windows, [controller.editor,
+                              tc02_controller.window_line(dialog)])
+            controller.editor = controller._assert_window(
+                windows, '0xeditor', cls='com.microsoft.VSCode')
+            controller._assert_no_unexpected_windows(
+                windows, [controller.editor,
+                          tc02_controller.window_line(dialog)])
+
+
 class Tc02MenuBarTests(unittest.TestCase):
     def make_controller(self, temporary):
         plan = tc02_controller.load_json(tc02_controller.DEFAULT_PLAN)

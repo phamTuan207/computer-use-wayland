@@ -1242,6 +1242,12 @@ class Tc02Controller:
             self.record_s2_sample(act_done_mono=t_act_done,
                                   windows_done_mono=t_windows_done,
                                   dialog=self.dialog)
+            # S1 typing dirties the document, so the editor title gains the
+            # "● " marker. Refresh the stored record from the live list
+            # before comparing identities, or the same editor reads as an
+            # unexpected window (tc02-gate3-A1).
+            self.editor = self._assert_window(
+                windows, self.editor['address'], cls='com.microsoft.VSCode')
             self._assert_no_unexpected_windows(windows, [self.editor, self.dialog])
             self._assert_geometry(self.dialog, 'dialog')
             if self.last_active_window != self.dialog['address']:
