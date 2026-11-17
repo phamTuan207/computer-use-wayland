@@ -1,13 +1,14 @@
 -- Upstream optical formula; transparent material scoped to the indicator.
 if hl.plugin.hyprglass then
+  -- plus-sharp (2026-11-18): apple-plus with less blur and more refraction
   local material = {
-    refraction_strength = 0.75, refraction_flow = 1.0,
+    refraction_strength = 0.55, refraction_flow = 1.0,
     -- cylindrical bottle profile (step 0, 2026-11-17): the falloff is 0 at the
     -- centre line by construction, so no rim windowing; spread kept at 1.0
-    refraction_spread = 1.0, edge_thickness = 0.12,
-    lens_distortion = 0.6, blur_strength = 0.18,
-    chromatic_aberration = 0.04, fresnel_strength = 0.20,
-    specular_strength = 0.50, bevel_strength = 0.70, bevel_size = 3.0,
+    refraction_spread = 1.0, edge_thickness = 0.05,
+    lens_distortion = 0.6, blur_strength = 0.25,
+    chromatic_aberration = 0.04, fresnel_strength = 0.10,
+    specular_strength = 0.50, bevel_strength = 0.45, bevel_size = 3.0,
     bevel_tint = 0.0, bevel_shadow = 0.0, bevel_angle = 315.0,
     noise_strength = 0.0, glass_opacity = 1.0, tint_color = 0xffffff00,
     brightness = 1.0, contrast = 1.0, saturation = 1.0,
