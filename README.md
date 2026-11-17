@@ -17,6 +17,12 @@ owns the desktop for one task and cleans up afterwards.
   acknowledgements before copying pixels.
 - **Chromium DOM** over CDP with element refs instead of coordinates.
 - **Native accessibility** over AT-SPI.
+- **CLI backend** over vendored CLI-Anything harnesses: where an app ships an
+  agent-native CLI (Obsidian, LibreOffice, GIMP, and the rest of the
+  first-wave list), the agent drives the real application backend with
+  `--json` one-shot commands instead of screenshots, verifying the backend
+  first and confirming any visible result with one `observe --window`. See
+  [skill/references/cli-anything.md](skill/references/cli-anything.md).
 
 Desktop input is GUI-exclusive: only one automation session may hold the desktop.
 The pointer is shared with the user; simultaneous human input is not blocked.
