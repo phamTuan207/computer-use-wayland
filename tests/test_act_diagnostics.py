@@ -65,6 +65,8 @@ class ActDiagnostics(unittest.TestCase):
         image_pair: the image PIL.Image.open returns (the saved observation).
         """
         from PIL import Image
+        if pre_fresh is None:
+            pre_fresh = dict(meta)
         image = Image.new('RGB', (20, 20))
         stack = ExitStack()
         stack.enter_context(patch.object(cu, 'STATE', self.tmp))

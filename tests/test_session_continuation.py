@@ -6,10 +6,9 @@ state: only compositor/capture/input (OS/GUI) seams are mocked. Envelope
 contract under test:
 
 - every command response carries top-level `session_continues` (boolean);
-- recoverability comes ONLY from the typed cu.PreflightRefusal exception
-  (internal provenance on the CompletedProcess) or the exact transient
-  matcher (returncode 1, command `act`, desktop refusal envelope, co-error
-  exclusions) — never from any `recoverable` flag inside a backend payload;
+- recoverability comes ONLY from the typed cu.PreflightRefusal exception,
+  the exact transient matcher, or a fully completed action batch whose final
+  capture failed; never from a backend `recoverable` flag;
 - fatal failures additionally carry `session_ended` with a bounded `reason`
   and the failing command's `exit_code`;
 - missing/invalid metadata on a failed command is fail-closed.
@@ -101,10 +100,14 @@ def live(tmp, token, *, active, pre_calls, post, close_error=None):
         act_open = {'pre_focus': False}
         real_desktop_act = cu.desktop_act
 
-        def act_boundary(env, meta, actions, after_capture=True, observation_path=None):
+        def act_boundary(env, meta, actions, after_capture=True, observation_path=None,
+                         expected_terminal_window=None):
             act_open['pre_focus'] = True
-            return real_desktop_act(env, meta, actions, after_capture=after_capture,
-                                    observation_path=observation_path)
+            kwargs = {'after_capture': after_capture,
+                      'observation_path': observation_path}
+            if expected_terminal_window is not None:
+                kwargs['expected_terminal_window'] = expected_terminal_window
+            return real_desktop_act(env, meta, actions, **kwargs)
 
         stack.enter_context(patch.object(cu, 'desktop_act', side_effect=act_boundary))
 
@@ -335,7 +338,7 @@ class TransientRefusalGate(unittest.TestCase):
 
 
 class FatalEnvelope(unittest.TestCase):
-    def test_capture_failure_remains_fatal_with_envelope(self):
+    def test_completed_capture_failure_keeps_session_for_fresh_evidence(self):
         from PIL import Image
         token = 'a7' * 16
         same = Image.new('RGB', (20, 20))
@@ -347,17 +350,17 @@ class FatalEnvelope(unittest.TestCase):
                     {'args': act_args(obs), 'stdin': WAIT},
                     {'args': ['status']},
                 ])
-        self.assertEqual(code, 1, 'capture failure is never recoverable')
-        self.assertEqual(len(body), 2, 'ready plus exactly one response')
+        self.assertEqual(code, 0, 'completed actions keep the session alive for fresh evidence')
+        self.assertEqual(len(body), 3, 'ready, recoverable action result, then status')
         response = body[1]
         self.assertIn('capture_error', response['result'])
         self.assertFalse(cu.is_transient_refusal(response['result']))
-        self.assertIs(response['session_continues'], False)
-        self.assertIn('final capture failed', response['session_ended']['reason'])
-        self.assertEqual(response['session_ended']['exit_code'], 1)
+        self.assertIs(response['session_continues'], True)
+        self.assertNotIn('session_ended', response)
         self.assertEqual(response['result']['completed'], 1,
                          'acknowledged input stays counted')
-        stop.assert_called_once()
+        self.assertTrue(body[2]['session_continues'])
+        stop.assert_not_called()
 
     def test_pointer_cleanup_failure_remains_fatal_with_envelope(self):
         from PIL import Image

@@ -1,0 +1,183 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "tc02.schema.json",
+  "title": "Checked plan for tc02",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "procedure",
+    "task",
+    "parameters",
+    "preconditions",
+    "wait_tuning",
+    "coordinates",
+    "steps",
+    "branches"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "procedure": {"const": "tc02-v1"},
+    "task": {
+      "type": "object",
+      "required": ["text", "filename", "expected_bytes", "expected_sha256"],
+      "properties": {
+        "text": {"type": "string", "minLength": 1},
+        "filename": {"type": "string", "pattern": "^[A-Za-z0-9._-]+$"},
+        "expected_bytes": {"type": "integer", "minimum": 1},
+        "expected_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      },
+      "additionalProperties": false
+    },
+    "parameters": {
+      "type": "object",
+      "required": ["image_policy", "request_timeout_s", "result_timeout_s"],
+      "properties": {
+        "image_policy": {"const": "always"},
+        "request_timeout_s": {"type": "number", "minimum": 1},
+        "result_timeout_s": {"type": "number", "minimum": 120}
+      },
+      "additionalProperties": false
+    },
+    "preconditions": {
+      "type": "object",
+      "required": [
+        "broker_clean",
+        "exactly_one_target_window",
+        "menu_bar_ocr_tokens",
+        "no_unexpected_surfaces",
+        "editor_geometry",
+        "dialog_geometry",
+        "observation_max_age_s"
+      ],
+      "properties": {
+        "broker_clean": {"type": "boolean"},
+        "exactly_one_target_window": {"type": "boolean"},
+        "menu_bar_ocr_tokens": {"type": "array", "minItems": 2, "items": {"type": "string"}},
+        "no_unexpected_surfaces": {"type": "boolean"},
+        "editor_geometry": {
+          "type": "object",
+          "required": ["size", "tolerance_px"],
+          "properties": {
+            "size": {"$ref": "#/$defs/size"},
+            "tolerance_px": {"type": "integer", "minimum": 0}
+          },
+          "additionalProperties": false
+        },
+        "dialog_geometry": {
+          "type": "object",
+          "required": ["size", "tolerance_px"],
+          "properties": {
+            "size": {"$ref": "#/$defs/size"},
+            "tolerance_px": {"type": "integer", "minimum": 0}
+          },
+          "additionalProperties": false
+        },
+        "observation_max_age_s": {"const": 90}
+      },
+      "additionalProperties": false
+    },
+    "wait_tuning": {
+      "type": "object",
+      "required": [
+        "method",
+        "target_samples",
+        "minimum_samples",
+        "historical_valid_samples",
+        "historical_p95_upper_bound_ms",
+        "margin_ms",
+        "cap_ms",
+        "selected_wait_ms",
+        "status"
+      ],
+      "properties": {
+        "method": {"type": "string", "minLength": 1},
+        "target_samples": {"type": "integer", "minimum": 10},
+        "minimum_samples": {"type": "integer", "minimum": 10},
+        "historical_valid_samples": {"type": "integer", "minimum": 0},
+        "historical_p95_upper_bound_ms": {"type": "integer", "minimum": 0},
+        "margin_ms": {"type": "integer", "minimum": 0},
+        "cap_ms": {"type": "integer", "minimum": 1, "maximum": 2000},
+        "selected_wait_ms": {"type": "integer", "minimum": 0, "maximum": 2000},
+        "status": {"type": "string", "minLength": 1}
+      },
+      "additionalProperties": false
+    },
+    "coordinates": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {"$ref": "#/$defs/coordinate"}
+    },
+    "steps": {
+      "type": "array",
+      "minItems": 8,
+      "items": {"$ref": "#/$defs/step"}
+    },
+    "branches": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {"type": "string", "minLength": 1}
+    }
+  },
+  "$defs": {
+    "size": {
+      "type": "array",
+      "prefixItems": [
+        {"type": "integer", "minimum": 1},
+        {"type": "integer", "minimum": 1}
+      ],
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "coordinate": {
+      "type": "object",
+      "required": ["anchor", "offset", "bounds_assertion"],
+      "properties": {
+        "anchor": {"enum": ["window_top_left"]},
+        "offset": {
+          "type": "array",
+          "prefixItems": [{"type": "integer"}, {"type": "integer"}],
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "bounds_assertion": {"const": "inside_current_image_and_window"}
+      },
+      "additionalProperties": false
+    },
+    "action": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": {"enum": ["click", "key", "type", "wait"]},
+        "point": {"type": "string"},
+        "keys": {"type": "array", "items": {"type": "string"}},
+        "text": {"type": "string"},
+        "ms": {"type": "integer", "minimum": 0, "maximum": 2000}
+      },
+      "additionalProperties": false
+    },
+    "step": {
+      "type": "object",
+      "required": ["id", "kind", "preconditions", "checkpoint", "branches"],
+      "properties": {
+        "id": {"type": "string"},
+        "kind": {"enum": ["prep", "start", "ground", "act", "observe", "verify", "finish"]},
+        "preconditions": {"type": "array", "items": {"type": "string"}},
+        "checkpoint": {"type": "string", "minLength": 1},
+        "branches": {"type": "array", "items": {"type": "string"}},
+        "request_sequence": {"type": "array", "items": {"type": "string"}},
+        "batch": {
+          "type": "array",
+          "maxItems": 8,
+          "items": {"$ref": "#/$defs/action"}
+        },
+        "no_after": {"type": "boolean"},
+        "expected_terminal_window": {"enum": ["same", "none", "unbound", "saved_editor"]},
+        "window": {"enum": ["editor", "save_dialog"]},
+        "max_width": {"type": "integer", "minimum": 320, "maximum": 3840},
+        "wait_ms": {"type": "integer", "minimum": 0, "maximum": 2000}
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

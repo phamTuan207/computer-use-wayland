@@ -1410,7 +1410,7 @@ def desktop_act(env,meta,actions,after_capture=True,observation_path=None,
     terminal_bounds=None
     if expected_terminal_window is None:
         terminal_address=address
-    elif expected_terminal_window=='none':
+    elif expected_terminal_window in ('none','unbound'):
         terminal_address=None
     elif isinstance(expected_terminal_window,str):
         terminal_address=expected_terminal_window
@@ -1419,7 +1419,10 @@ def desktop_act(env,meta,actions,after_capture=True,observation_path=None,
         terminal_bounds=expected_terminal_window.get('bounds')
     else:
         raise ValueError('expected_terminal_window must be an address, bounds object, or none')
-    if terminal_address is not None and not re.fullmatch(r'0x[0-9a-fA-F]+',terminal_address):
+    explicit_terminal_address=(expected_terminal_window is not None and
+                               expected_terminal_window not in ('none','unbound') and
+                               terminal_address!=address)
+    if explicit_terminal_address and terminal_address is not None and not re.fullmatch(r'0x[0-9a-fA-F]+',terminal_address):
         raise ValueError('expected terminal window address is invalid')
     if terminal_bounds is not None:
         if (not isinstance(terminal_bounds,(list,tuple)) or len(terminal_bounds)!=4 or
@@ -1643,11 +1646,13 @@ def desktop_act(env,meta,actions,after_capture=True,observation_path=None,
             evidence_error=(' '.join(str(exc).split()))[:400]
         else:
             evidence_error=None
+        expected_terminal=('not-yet-bound' if expected_terminal_window=='unbound' else
+                           terminal_address or 'none')
         record={'expected':{'old_surface':address,
-                            'terminal_window':terminal_address or 'none'},
+                            'terminal_window':expected_terminal},
                 'old_surface_gone':old_gone,
                 'successor':(terminal_address if successor_bound else
-                             'not-yet-bound' if terminal_address else None),
+                             'not-yet-bound' if terminal_address or expected_terminal_window=='unbound' else None),
                 'successor_bound':successor_bound,
                 'successor_verified':bool(terminal_guard_verified and successor_bound)}
         if evidence_error:
@@ -1813,7 +1818,7 @@ def main():
     obs.add_argument('--settle-ms',type=int,default=0,help='wait up to 2000 ms for 120 ms of unchanged crop pixels; not semantic readiness')
     act=sub.add_parser('act',help='execute one batch of known actions, then capture its final result');act.add_argument('--observation',required=True);act.add_argument('--actions',required=True,help='JSON path or - for stdin; batch up to 32 predictable actions from one inspected observation')
     act.add_argument('--no-after',action='store_true',help='skip successful final capture; preflight safety and error captures stay enabled')
-    act.add_argument('--expected-terminal-window',default='same',help='final guard/capture target: same, none, or an exact Hyprland address')
+    act.add_argument('--expected-terminal-window',default='same',help='final guard/capture target: same, none, unbound, or an exact Hyprland address')
     act.add_argument('--expected-terminal-bounds',nargs=4,type=int,help='optional expected x y width height for the terminal window')
     obs.add_argument('--verbose',action='store_true');act.add_argument('--verbose',action='store_true')
     b=sub.add_parser('browser');b.add_argument('operation',choices=['start','tabs','observe','act']);b.add_argument('--endpoint',default=None);b.add_argument('--target');b.add_argument('--snapshot');b.add_argument('--actions');b.add_argument('--image',action='store_true')
@@ -1919,10 +1924,10 @@ def main():
     elif args.command=='act':
         require_session()
         actions=read_json(sys.stdin) if args.actions=='-' else read_json_file(args.actions)
-        if args.expected_terminal_bounds is not None and args.expected_terminal_window in ('same','none'):
+        if args.expected_terminal_bounds is not None and args.expected_terminal_window in ('same','none','unbound'):
             raise ValueError('--expected-terminal-bounds requires a terminal window address')
         expected_terminal=(None if args.expected_terminal_window=='same' else
-                           'none' if args.expected_terminal_window=='none' else
+                           args.expected_terminal_window if args.expected_terminal_window in ('none','unbound') else
                            {'address':args.expected_terminal_window,
                             **({'bounds':args.expected_terminal_bounds}
                                if args.expected_terminal_bounds is not None else {})})
@@ -1930,9 +1935,11 @@ def main():
         with locked():
             import session_policy
             session_policy.require_observation(STATE,os.environ.get('CU_SESSION_TOKEN'),args.observation)
-            result=desktop_act(env,read_json_file(args.observation),actions,
-                               after_capture=not args.no_after,observation_path=args.observation,
-                               expected_terminal_window=expected_terminal)
+            act_kwargs={'after_capture':not args.no_after,
+                        'observation_path':args.observation}
+            if expected_terminal is not None:
+                act_kwargs['expected_terminal_window']=expected_terminal
+            result=desktop_act(env,read_json_file(args.observation),actions,**act_kwargs)
             if is_transient_refusal(result):
                 check_cancel()
                 session_policy.record_refusal(STATE,os.environ.get('CU_SESSION_TOKEN'))

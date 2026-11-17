@@ -1200,12 +1200,14 @@ class UnixSocketServer:
                 if self.stop_event.is_set():
                     break
                 raise
+            # Observe cancellation, guardian loss, and child exits before a
+            # concurrent status/result client can read the previous snapshot.
+            self.broker.tick()
             thread = threading.Thread(target=self._serve_client, args=(client,),
                                      name='cu-relay-client', daemon=True)
             with self.client_threads_lock:
                 self.client_threads.add(thread)
             thread.start()
-            self.broker.tick()
         self.broker.begin_shutdown()
         self._cleanup_loop()
 

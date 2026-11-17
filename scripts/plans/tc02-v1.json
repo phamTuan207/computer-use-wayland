@@ -1,0 +1,181 @@
+{
+  "$schema": "./tc02.schema.json",
+  "schema_version": 1,
+  "procedure": "tc02-v1",
+  "task": {
+    "text": "Tối nay ôn cấu trúc dữ liệu lúc 20:30.\n",
+    "filename": "on-tap.txt",
+    "expected_bytes": 50,
+    "expected_sha256": "8da1f5624c1b482bcdfae9d7c6883fdc52313dbe4120c2d1df2623ec5bcb9772"
+  },
+  "parameters": {
+    "image_policy": "always",
+    "request_timeout_s": 30,
+    "result_timeout_s": 130
+  },
+  "preconditions": {
+    "broker_clean": true,
+    "exactly_one_target_window": true,
+    "menu_bar_ocr_tokens": ["File", "Edit"],
+    "no_unexpected_surfaces": true,
+    "editor_geometry": {"size": [901, 1176], "tolerance_px": 8},
+    "dialog_geometry": {"size": [875, 600], "tolerance_px": 30},
+    "observation_max_age_s": 90
+  },
+  "wait_tuning": {
+    "method": "time from the File-menu click to the first after-image showing the menu",
+    "target_samples": 50,
+    "minimum_samples": 10,
+    "historical_valid_samples": 6,
+    "historical_p95_upper_bound_ms": 80,
+    "margin_ms": 100,
+    "cap_ms": 2000,
+    "selected_wait_ms": 500,
+    "status": "provisional, historical sample count is below the 10-sample minimum"
+  },
+  "coordinates": {
+    "banner_close": {
+      "anchor": "window_top_left",
+      "offset": [888, 45],
+      "bounds_assertion": "inside_current_image_and_window"
+    },
+    "editor_body": {
+      "anchor": "window_top_left",
+      "offset": [200, 100],
+      "bounds_assertion": "inside_current_image_and_window"
+    },
+    "file_menu": {
+      "anchor": "window_top_left",
+      "offset": [57, 14],
+      "bounds_assertion": "inside_current_image_and_window"
+    },
+    "save_as_row": {
+      "anchor": "window_top_left",
+      "offset": [95, 365],
+      "bounds_assertion": "inside_current_image_and_window"
+    },
+    "name_field": {
+      "anchor": "window_top_left",
+      "offset": [430, 22],
+      "bounds_assertion": "inside_current_image_and_window"
+    },
+    "save_button": {
+      "anchor": "window_top_left",
+      "offset": [825, 22],
+      "bounds_assertion": "inside_current_image_and_window"
+    }
+  },
+  "steps": [
+    {
+      "id": "P0",
+      "kind": "prep",
+      "preconditions": ["broker clean", "desktop hygiene passed", "output path absent"],
+      "checkpoint": "one new test-owned VS Code blank.txt window is mapped and its address came from the hyprctl clients diff",
+      "branches": ["stop-and-report"]
+    },
+    {
+      "id": "P1",
+      "kind": "start",
+      "request_sequence": ["start"],
+      "preconditions": ["plan loaded", "first windows request file already built", "fresh owner and private lease path"],
+      "checkpoint": "authenticated status is running, driver ready, guardian active, and generation matches start",
+      "branches": ["stop-and-report"]
+    },
+    {
+      "id": "G0",
+      "kind": "ground",
+      "window": "editor",
+      "max_width": 1600,
+      "request_sequence": ["windows", "observe"],
+      "preconditions": ["session ready", "target address is known", "target is active"],
+      "checkpoint": "901x1176 editor window, menu bar OCR contains File and Edit, all plan points pass image and window bounds assertions",
+      "branches": ["rederive-layout-and-stop", "stop-and-report"]
+    },
+    {
+      "id": "S1",
+      "kind": "act",
+      "window": "editor",
+      "request_sequence": ["act"],
+      "batch": [
+        {"type": "click", "point": "banner_close"},
+        {"type": "click", "point": "editor_body"},
+        {"type": "type", "text": "Tối nay ôn cấu trúc dữ liệu lúc 20:30.\n"}
+      ],
+      "preconditions": ["G0 is fresh", "editor remains active", "no dialog is present"],
+      "checkpoint": "completed is 3, after-image has the same window and capture geometry, and its full-frame pixel hash changed",
+      "branches": ["reobserve-and-resume-only-uncompleted-suffix", "stop-and-report"]
+    },
+    {
+      "id": "S2",
+      "kind": "act",
+      "window": "editor",
+      "batch": [
+        {"type": "click", "point": "file_menu"},
+        {"type": "wait", "ms": 500},
+        {"type": "click", "point": "save_as_row"}
+      ],
+      "no_after": true,
+      "expected_terminal_window": "unbound",
+      "request_sequence": ["act", "windows"],
+      "preconditions": ["S1 checkpoint passed", "S1 after-image is fresh", "menu row geometry is validated for 901x1176"],
+      "checkpoint": "windows contains the expected xdg-desktop-portal-gtk Save As dialog",
+      "branches": ["reground-menu-and-retry-once", "stop-and-report"]
+    },
+    {
+      "id": "S3",
+      "kind": "observe",
+      "window": "save_dialog",
+      "max_width": 1200,
+      "request_sequence": ["observe"],
+      "preconditions": ["dialog address came from S2 windows result", "dialog is active"],
+      "checkpoint": "Save As dialog geometry is within tolerance and Name and Save targets pass bounds assertions",
+      "branches": ["stop-and-report"]
+    },
+    {
+      "id": "S4",
+      "kind": "act",
+      "window": "save_dialog",
+      "request_sequence": ["act"],
+      "batch": [
+        {"type": "click", "point": "name_field"},
+        {"type": "key", "keys": ["CTRL", "A"]},
+        {"type": "type", "text": "${output_path}"}
+      ],
+      "preconditions": ["S3 is fresh", "dialog remains active"],
+      "checkpoint": "completed is 3, dialog remains the same window, and the after-image is fresh",
+      "branches": ["reobserve-and-stop", "stop-and-report"]
+    },
+    {
+      "id": "S5",
+      "kind": "act",
+      "window": "save_dialog",
+      "batch": [{"type": "click", "point": "save_button"}],
+      "no_after": true,
+      "expected_terminal_window": "saved_editor",
+      "request_sequence": ["act", "windows"],
+      "preconditions": ["S4 checkpoint passed", "Save As dialog is active"],
+      "checkpoint": "action completed, Save As address is absent, and the editor successor address remains present",
+      "branches": ["bind-successor-and-stop-on-uncertainty", "stop-and-report"]
+    },
+    {
+      "id": "S6",
+      "kind": "verify",
+      "window": "editor",
+      "max_width": 1600,
+      "request_sequence": ["observe", "finish"],
+      "preconditions": ["S5 close transaction completed", "successor is freshly observed"],
+      "checkpoint": "editor title is on-tap.txt, output is exactly 50 bytes with the expected SHA-256, and finish is clean",
+      "branches": ["stop-and-report"]
+    }
+  ],
+  "branches": {
+    "stop-and-report": "Stop without further input and write the fixed L2 packet for the VM supervisor.",
+    "rederive-layout-and-stop": "Do not use these coordinates. Ask the VM supervisor to derive a new named plan from a fresh observation.",
+    "reobserve-and-resume-only-uncompleted-suffix": "Take a fresh observation and resume only an explicitly safe, uncompleted suffix if every precondition is proved; otherwise stop.",
+    "reground-menu-and-retry-once": "Freshly inspect the menu state; one named retry is allowed, and a second failure at S2 goes to L3.",
+    "reobserve-and-stop": "Reobserve the current dialog and stop for L2; never retype a completed path prefix.",
+    "bind-successor-and-stop-on-uncertainty": "Use windows and a fresh observe to bind the expected editor. Never repeat Save.",
+    "editor_geometry": "901x1176 with an 8px tolerance; each live coordinate still needs its own bounds assertion.",
+    "save_dialog_geometry": "875x600 with a 30px tolerance; observe it fresh for every run."
+  }
+}

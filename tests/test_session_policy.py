@@ -94,10 +94,14 @@ def live(tmp, token, *, active, pre_calls, post, close_error=None):
         act_open = {'pre_focus': False}
         real_desktop_act = cu.desktop_act
 
-        def act_boundary(env, meta, actions, after_capture=True, observation_path=None):
+        def act_boundary(env, meta, actions, after_capture=True, observation_path=None,
+                         expected_terminal_window=None):
             act_open['pre_focus'] = True
-            return real_desktop_act(env, meta, actions, after_capture=after_capture,
-                                    observation_path=observation_path)
+            kwargs = {'after_capture': after_capture,
+                      'observation_path': observation_path}
+            if expected_terminal_window is not None:
+                kwargs['expected_terminal_window'] = expected_terminal_window
+            return real_desktop_act(env, meta, actions, **kwargs)
 
         stack.enter_context(patch.object(cu, 'desktop_act', side_effect=act_boundary))
 
@@ -339,7 +343,7 @@ class KillEnvelope(unittest.TestCase):
                 run.assert_called_once()
                 self.assertEqual(len(body), 2, 'ready plus one response only')
 
-    def test_capture_error_kills_session_real(self):
+    def test_completed_capture_error_keeps_session_real(self):
         from PIL import Image
         token = 'b2' * 16
         same = Image.new('RGB', (20, 20))
@@ -349,12 +353,13 @@ class KillEnvelope(unittest.TestCase):
                        post=RuntimeError('after capture down')) as stop:
                 result = session_driver.execute(self.act_args(obs), WAIT)
         body = json.loads(result.stdout)
-        self.assertEqual(result.returncode, 1)
+        self.assertEqual(result.returncode, 0)
         self.assertIn('capture_error', body)
         self.assertIn('final capture failed', body['error'])
         self.assertFalse(body['ok'])
+        self.assertEqual(body['completed'], 1)
         self.assertFalse(cu.is_transient_refusal(body))
-        stop.assert_called_once()
+        stop.assert_not_called()
 
     def test_pointer_cleanup_error_kills_session_real(self):
         from PIL import Image
