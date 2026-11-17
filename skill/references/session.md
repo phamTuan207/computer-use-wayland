@@ -30,6 +30,32 @@ response and keeps the relay alive.
 EOF, finish, physical Esc, or a crash lets the guardian remove the overlay.
 Do not automatically resume or repeat input after cancellation/failure.
 
+## Shutdown after use (mandatory)
+
+When your task is done, shut computer-use down. Every agent, every time.
+Do not leave a session running, do not leave the overlay on, and do not
+leave the relay holding a session. The user is not the one using it, so
+there is no reason for it to stay on.
+
+1. Send `{"args":["finish"]}` (or close stdin / EOF) and wait for cleanup.
+   Cleanup stops the driver group, drains input, releases the cursor lease,
+   and removes the overlay.
+2. Confirm nothing is left running: no `cu.py session`, no
+   `cu.py session-driver`, no `cursor_session.py guard`, no
+   `native/indicator`. If any remain, finish or kill them by PID.
+3. Confirm the overlay is gone: observe the screen (or take a screenshot)
+   and check the top-centre pill location. No pill, no
+   "Computer use active", no green dot.
+4. Confirm the desktop is restored: only the user's own windows remain.
+   No test window, no test app, no dialog left behind.
+5. If the session cannot finish cleanly, use `computer-use stop` (it waits
+   for owner cleanup and desktop restoration) and re-verify steps 2-4.
+
+Killing the process that launched a session does not kill the session
+itself (separate process tree), and closing a coordinator does not kill
+the processes it spawned on the machine. A "clean" report is not proof
+the machine is clean: verify on the machine directly.
+
 Browser commands in this relay lazily start one private Node worker for the task.
 It reuses the runtime and a validated CDP connection, never a cached snapshot or
 page state: every command still fetches the tab list and checks the exact loopback

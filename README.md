@@ -326,6 +326,9 @@ installed, a warning is logged and explicit cancellation still works. `computer-
 Esc cancels; it is never an instruction to retry input. Physical keyboards relayed
 through keyd are included; agent-created virtual keyboards are excluded.
 `computer-use stop` waits for owner cleanup and desktop restoration.
+Shutdown after use is mandatory for every agent: finish the session,
+confirm the overlay is gone and no session processes remain, and leave
+the desktop restored. See [Shutdown after use](skill/references/session.md#shutdown-after-use-mandatory).
 `computer-use session --replace -- computer-use session-driver` replaces an old CLI
 session before launching its driver. Replacement preserves the cancellation latch;
 resume after user cancellation only when the user asks to continue.
