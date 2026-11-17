@@ -1853,9 +1853,10 @@ def cli_skill_description(name):
     return ''
 
 def cli_app_record(name,entry):
+    skill_path=ROOT/'skill'/'cli-anything'/(name+'.md')
     record={'name':name,'display_name':entry.get('display_name',name),
             'category':entry.get('category',''),'entry':entry['entry_point'],
-            'skill_path':str(ROOT/'skill'/'cli-anything'/(name+'.md')),
+            'skill_path':str(skill_path),'skill_vendored':skill_path.is_file(),
             'requires':entry['requires']}
     description=entry.get('description') or cli_skill_description(name)
     if description:record['description']=description
@@ -1906,8 +1907,9 @@ def cli_command(args):
     if args.cli_operation=='info':
         entry=registry.get(args.app)
         if entry is None:return {'ok':False,'error':'unknown app: '+args.app}
+        skill_path=ROOT/'skill'/'cli-anything'/(args.app+'.md')
         return {'ok':True,'app':args.app,
-                'skill_path':str(ROOT/'skill'/'cli-anything'/(args.app+'.md')),
+                'skill_path':str(skill_path),'skill_vendored':skill_path.is_file(),
                 'install':entry['install_cmd'],'requires':entry['requires']}
     return cli_run(args.app,args.command_args)
 
