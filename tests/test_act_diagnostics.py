@@ -43,11 +43,13 @@ class ActDiagnostics(unittest.TestCase):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
         self.tmp = pathlib.Path(tmp.name)
+        self.capture_addresses = []
 
     def desktop_act(self, meta, actions, after_capture=True, *,
                     active=None, cursor=(10, 10), after=None,
                     pre_fresh=None, new_image=None, image_pair=None,
-                    probe_error=None):
+                    probe_error=None, expected_terminal_window=None,
+                    window_side_effect=None):
         """Run the real desktop_act with every GUI seam mocked.
 
         active: answers for successive activewindow queries (the pre-batch
@@ -69,7 +71,9 @@ class ActDiagnostics(unittest.TestCase):
         stack.enter_context(patch.object(cu, 'check_cancel'))
         stack.enter_context(patch.object(cu, 'focus'))
         stack.enter_context(patch.object(cu, 'window',
-                                         return_value={'at': [0, 0], 'size': [20, 20]}))
+                                         side_effect=window_side_effect,
+                                         **({} if window_side_effect else
+                                            {'return_value': {'at': [0, 0], 'size': [20, 20]}})))
         queue = list(active) if active is not None else [ADDR] * 8
         probe_failures = [probe_error] if probe_error is not None else []
 
@@ -92,6 +96,7 @@ class ActDiagnostics(unittest.TestCase):
 
         def obs(*args, **kwargs):
             if kwargs.get('persist', True):
+                self.capture_addresses.append(args[1])
                 if isinstance(after, Exception):
                     raise after
                 return dict(after)
@@ -106,7 +111,8 @@ class ActDiagnostics(unittest.TestCase):
                                   return_value=image_pair[0] if image_pair else image))
         stack.enter_context(patch('time.sleep'))
         try:
-            return cu.desktop_act({}, meta, actions, after_capture=after_capture)
+            return cu.desktop_act({}, meta, actions, after_capture=after_capture,
+                                  expected_terminal_window=expected_terminal_window)
         finally:
             stack.close()
 
@@ -151,6 +157,41 @@ class ActDiagnostics(unittest.TestCase):
         self.assertEqual(result['input_diagnostics']['target_was_focused'], True)
         for absent in ('after', 'changed', 'frame_bytes_changed', 'change_meaning'):
             self.assertNotIn(absent, result)
+
+    def test_expected_successor_allows_dialog_close_without_after_capture(self):
+        successor = '0x5678'
+        old_checks = {'count': 0}
+
+        def current_window(_env, address):
+            if address == ADDR:
+                old_checks['count'] += 1
+                if old_checks['count'] > 3:
+                    raise ValueError('window no longer exists')
+            return {'at': [0, 0], 'size': [20, 20]}
+
+        result = self.desktop_act(
+            base_meta(), [{'type': 'wait', 'ms': 0}], after_capture=False,
+            expected_terminal_window=successor, window_side_effect=current_window,
+            active=[ADDR, ADDR, ADDR, ADDR, successor])
+
+        self.assertTrue(result['ok'], result)
+        self.assertEqual(result['completed'], 1)
+        self.assertTrue(result['after_skipped'])
+        self.assertEqual(result['transition']['expected']['old_surface'], ADDR)
+        self.assertTrue(result['transition']['old_surface_gone'])
+        self.assertEqual(result['transition']['successor'], successor)
+        self.assertTrue(result['transition']['successor_bound'])
+        self.assertTrue(result['transition']['successor_verified'])
+        self.assertEqual(self.capture_addresses, [])
+
+    def test_expected_successor_is_used_for_final_after_capture(self):
+        successor = '0x5678'
+        self.desktop_act(base_meta(), [{'type': 'wait', 'ms': 0}],
+                         after_capture=True,
+                         expected_terminal_window=successor,
+                         active=[ADDR, ADDR, ADDR, ADDR, successor],
+                         after=base_meta(window=successor))
+        self.assertEqual(self.capture_addresses, [successor])
 
     def test_capture_error_reports_diagnostics_and_stays_failed(self):
         meta = base_meta()

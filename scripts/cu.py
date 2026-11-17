@@ -1334,6 +1334,12 @@ def is_transient_refusal(result):
                                       'focus changed':'focus_changed'}[result['error']] and
             'capture_error' not in result and 'ime_restore_failed' not in result)
 
+def is_completed_capture_error(result,action_count):
+    return (isinstance(result,dict) and result.get('ok') is False and
+            isinstance(result.get('capture_error'),str) and
+            type(result.get('completed')) is int and action_count>0 and
+            result['completed']==action_count)
+
 DESKTOP_REOBSERVE = ('List windows and observe the new focused window, or observe the screen, before '
                      'further input. The after image is not a new observe. Do not replay completed or uncertain actions.')
 
@@ -1375,7 +1381,8 @@ def _diagnostic_event(event,meta,env,*,action_index=None,action_type=None,intend
         if os.write(fd,raw)!=len(raw):raise RuntimeError('diagnostic log write was incomplete')
     finally:os.close(fd)
 
-def desktop_act(env,meta,actions,after_capture=True,observation_path=None):
+def desktop_act(env,meta,actions,after_capture=True,observation_path=None,
+                expected_terminal_window=None):
     preflight_start=time.monotonic()
     try:
         if not isinstance(after_capture,bool): raise ValueError('after_capture must be boolean')
@@ -1399,18 +1406,41 @@ def desktop_act(env,meta,actions,after_capture=True,observation_path=None):
     except ValueError as exc:
         raise PreflightRefusal(str(exc)) from exc
     address=None if screen_scope else meta['window']
+    transition_requested=expected_terminal_window is not None
+    terminal_bounds=None
+    if expected_terminal_window is None:
+        terminal_address=address
+    elif expected_terminal_window=='none':
+        terminal_address=None
+    elif isinstance(expected_terminal_window,str):
+        terminal_address=expected_terminal_window
+    elif isinstance(expected_terminal_window,dict):
+        terminal_address=expected_terminal_window.get('address')
+        terminal_bounds=expected_terminal_window.get('bounds')
+    else:
+        raise ValueError('expected_terminal_window must be an address, bounds object, or none')
+    if terminal_address is not None and not re.fullmatch(r'0x[0-9a-fA-F]+',terminal_address):
+        raise ValueError('expected terminal window address is invalid')
+    if terminal_bounds is not None:
+        if (not isinstance(terminal_bounds,(list,tuple)) or len(terminal_bounds)!=4 or
+                any(type(value) is not int for value in terminal_bounds)):
+            raise ValueError('expected terminal bounds must be four integers')
     active_window=None
-    def guard():
+    terminal_guard_verified=False
+    def guard(target=address):
         nonlocal active_window
         check_cancel()
-        if not screen_scope:
-            c=window(env,address)
-            if bounds(c)!=meta['window_bounds']: raise RuntimeError('window geometry changed; observe again')
+        if not screen_scope and target is not None:
+            c=window(env,target)
+            expected_bounds=(meta['window_bounds'] if same_window_address(target,address)
+                             else terminal_bounds)
+            if expected_bounds is not None and bounds(c)!=expected_bounds:
+                raise RuntimeError('expected window geometry changed; observe again')
         m=next((m for m in hypr(env,'monitors') if m['name']==meta['monitor']),None)
         if not m or monitor_box(m)!=meta['monitor_box'] or m['scale']!=meta['monitor_scale'] or m.get('transform',0)!=meta['monitor_transform']: raise RuntimeError('monitor layout changed; observe again')
-        if not screen_scope:
+        if not screen_scope and target is not None:
             active_window=hypr(env,'activewindow').get('address')
-            if not same_window_address(active_window,address):raise TransientRefusal('focus changed')
+            if not same_window_address(active_window,target):raise TransientRefusal('focus changed')
     # OPTIONAL diagnostic probe, run before the batch touches anything. A
     # failure here loses a diagnostic, not the action: ordinary exceptions
     # degrade to focus_before:null plus a bounded warning and the REQUIRED
@@ -1570,7 +1600,15 @@ def desktop_act(env,meta,actions,after_capture=True,observation_path=None):
             guard()
             with mouse_modifiers(env,a.get('modifiers',[]) if isinstance(a,dict) else []):
                 execute_group(a,index)
-            guard()
+            final_group=index==len(groups)-1
+            if final_group and terminal_address is not None and not same_window_address(terminal_address,address):
+                guard(terminal_address)
+                terminal_guard_verified=True
+            elif final_group and terminal_address is None:
+                guard(None)
+                terminal_guard_verified=True
+            else:
+                guard()
     except Exception as exc:
         error=str(exc);transient_error=isinstance(exc,TransientRefusal)
         _diagnostic_event('operation_stopped',meta,env,completed=completed,error=error,
@@ -1583,10 +1621,45 @@ def desktop_act(env,meta,actions,after_capture=True,observation_path=None):
                 error=error or 'pointer cleanup failed: '+str(exc)
                 transient_error=False
     execution_ms=round((time.monotonic()-start)*1000,3)
+    def transition_outcome():
+        if not transition_requested or screen_scope:
+            return None
+        def present(target):
+            if target is None:
+                return False
+            try:
+                window(env,target)
+                return True
+            except ValueError as exc:
+                if str(exc)=='window no longer exists':
+                    return False
+                raise
+        try:
+            old_gone=not present(address)
+            successor_bound=present(terminal_address)
+        except Exception as exc:
+            old_gone=None
+            successor_bound=False
+            evidence_error=(' '.join(str(exc).split()))[:400]
+        else:
+            evidence_error=None
+        record={'expected':{'old_surface':address,
+                            'terminal_window':terminal_address or 'none'},
+                'old_surface_gone':old_gone,
+                'successor':(terminal_address if successor_bound else
+                             'not-yet-bound' if terminal_address else None),
+                'successor_bound':successor_bound,
+                'successor_verified':bool(terminal_guard_verified and successor_bound)}
+        if evidence_error:
+            record['evidence_error']=evidence_error
+        return record
+
     if not after_capture and error is None:
         result={'ok':True,'completed':completed,'preflight_ms':preflight_ms,
                 'execution_ms':execution_ms,'after_skipped':True,
                 'input_diagnostics':diagnostics}
+        transition=transition_outcome()
+        if transition is not None:result['transition']=transition
         result.update(ime_result)
         _diagnostic_event('operation_completed',meta,env,completed=completed,
                           active_window=active_window)
@@ -1598,17 +1671,23 @@ def desktop_act(env,meta,actions,after_capture=True,observation_path=None):
     if transient_error:result['error_code']='focus_changed'
     if error: result['error']=error
     if outcome_uncertain:result['outcome_uncertain']=True
-    try:
-        after_capture_start=time.monotonic()
-        result['after']=(observe_screen(env,meta['monitor'],meta.get('crop'),meta['max_width']) if screen_scope else
-                         observe(env,address,meta.get('crop'),meta['max_width'],activate=False))
-        result['frame_bytes_changed']=result['after']['pixel_sha256']!=meta['pixel_sha256']
-        result['changed']=result['frame_bytes_changed']  # Compatibility alias, not semantic success.
-        result['change_meaning']='Exact captured pixel hash differs; animations count. Does not confirm app action succeeded.'
-        result['after_capture_ms']=round((time.monotonic()-after_capture_start)*1000,3)
-    except Exception as exc:
-        result['ok']=False;result['capture_error']=str(exc)
-        result.setdefault('error','final capture failed: '+str(exc))
+    if terminal_address is None and not screen_scope:
+        result['after_skipped']=True
+        result['after_skip_reason']='no expected terminal window to capture'
+    else:
+        try:
+            after_capture_start=time.monotonic()
+            result['after']=(observe_screen(env,meta['monitor'],meta.get('crop'),meta['max_width']) if screen_scope else
+                             observe(env,terminal_address,meta.get('crop'),meta['max_width'],activate=False))
+            result['frame_bytes_changed']=result['after']['pixel_sha256']!=meta['pixel_sha256']
+            result['changed']=result['frame_bytes_changed']  # Compatibility alias, not semantic success.
+            result['change_meaning']='Exact captured pixel hash differs; animations count. Does not confirm app action succeeded.'
+            result['after_capture_ms']=round((time.monotonic()-after_capture_start)*1000,3)
+        except Exception as exc:
+            result['ok']=False;result['capture_error']=str(exc)
+            result.setdefault('error','final capture failed: '+str(exc))
+    transition=transition_outcome()
+    if transition is not None:result['transition']=transition
     if is_transient_refusal(result):result['next_step']=DESKTOP_REOBSERVE
     _diagnostic_event('operation_completed',meta,env,completed=completed,
                       error=error if error else None,active_window=active_window)
@@ -1734,6 +1813,8 @@ def main():
     obs.add_argument('--settle-ms',type=int,default=0,help='wait up to 2000 ms for 120 ms of unchanged crop pixels; not semantic readiness')
     act=sub.add_parser('act',help='execute one batch of known actions, then capture its final result');act.add_argument('--observation',required=True);act.add_argument('--actions',required=True,help='JSON path or - for stdin; batch up to 32 predictable actions from one inspected observation')
     act.add_argument('--no-after',action='store_true',help='skip successful final capture; preflight safety and error captures stay enabled')
+    act.add_argument('--expected-terminal-window',default='same',help='final guard/capture target: same, none, or an exact Hyprland address')
+    act.add_argument('--expected-terminal-bounds',nargs=4,type=int,help='optional expected x y width height for the terminal window')
     obs.add_argument('--verbose',action='store_true');act.add_argument('--verbose',action='store_true')
     b=sub.add_parser('browser');b.add_argument('operation',choices=['start','tabs','observe','act']);b.add_argument('--endpoint',default=None);b.add_argument('--target');b.add_argument('--snapshot');b.add_argument('--actions');b.add_argument('--image',action='store_true')
     b.add_argument('--no-after',action='store_true',help='skip the successful after-snapshot; the final action must be a meaningful assert')
@@ -1838,17 +1919,25 @@ def main():
     elif args.command=='act':
         require_session()
         actions=read_json(sys.stdin) if args.actions=='-' else read_json_file(args.actions)
+        if args.expected_terminal_bounds is not None and args.expected_terminal_window in ('same','none'):
+            raise ValueError('--expected-terminal-bounds requires a terminal window address')
+        expected_terminal=(None if args.expected_terminal_window=='same' else
+                           'none' if args.expected_terminal_window=='none' else
+                           {'address':args.expected_terminal_window,
+                            **({'bounds':args.expected_terminal_bounds}
+                               if args.expected_terminal_bounds is not None else {})})
         check_cancel()
         with locked():
             import session_policy
             session_policy.require_observation(STATE,os.environ.get('CU_SESSION_TOKEN'),args.observation)
             result=desktop_act(env,read_json_file(args.observation),actions,
-                               after_capture=not args.no_after,observation_path=args.observation)
+                               after_capture=not args.no_after,observation_path=args.observation,
+                               expected_terminal_window=expected_terminal)
             if is_transient_refusal(result):
                 check_cancel()
                 session_policy.record_refusal(STATE,os.environ.get('CU_SESSION_TOKEN'))
                 print('session refusal: error='+result['error']+' action=require_reobserve',file=sys.stderr)
-            elif result.get('ok') is True:
+            elif result.get('ok') is True or is_completed_capture_error(result,len(actions)):
                 session_policy.complete_requirement(STATE,os.environ.get('CU_SESSION_TOKEN'))
     elif args.command=='a11y':
         check_cancel()
@@ -1911,7 +2000,11 @@ def main():
     if args.command in ('observe','act') and not args.verbose:result=compact_result(result)
     print(json.dumps(result,ensure_ascii=False,separators=(',',':')),flush=True)
     if isinstance(result,dict) and result.get('ok') is False:
-        if args.command!='act' or not is_transient_refusal(result):stop_session_on_error()
+        capture_recoverable=(args.command=='act' and
+                             is_completed_capture_error(result,len(actions)))
+        if args.command!='act' or not (is_transient_refusal(result) or capture_recoverable):
+            stop_session_on_error()
+        if capture_recoverable:return 0  # Full batch ran; caller must bind fresh evidence.
         return 1
     return 0
 
