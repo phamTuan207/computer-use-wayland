@@ -313,6 +313,18 @@ class Tc02EditorLifecycleTests(unittest.TestCase):
 
             self.assertIn('parser rejected address', raised.exception.reason)
 
+    def test_lease_directory_is_private_and_under_computer_use_cache(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            controller = self.make_controller(temporary)
+            with patch.object(tc02_controller.Path, 'home', return_value=tc02_controller.Path(temporary)):
+                lease_path = controller._create_lease_path()
+
+            self.assertEqual(lease_path, tc02_controller.Path(temporary) /
+                             '.cache/agent-computer-use/leases' /
+                             'tc02-editor-lifecycle-unit-test/session.lease')
+            self.assertEqual(lease_path.parent.stat().st_mode & 0o777, 0o700)
+            self.assertFalse(lease_path.exists())
+
     def test_editor_geometry_dispatches_then_waits_through_transitional_size(self):
         with tempfile.TemporaryDirectory() as temporary:
             controller = self.make_controller(temporary)

@@ -502,6 +502,15 @@ class Tc02Controller:
     def output_path(self):
         return self.run_dir / 'output' / self.plan['task']['filename']
 
+    def _create_lease_path(self):
+        lease_root = Path.home() / '.cache' / 'agent-computer-use' / 'leases'
+        lease_root.mkdir(parents=True, exist_ok=True, mode=0o700)
+        os.chmod(lease_root, 0o700)
+        lease_dir = lease_root / self.run_id
+        lease_dir.mkdir(mode=0o700)
+        os.chmod(lease_dir, 0o700)
+        return lease_dir / 'session.lease'
+
     def _ensure_clean_broker(self):
         status, _ = self.run_remote('status', timeout=5, check=False)
         if not isinstance(status, dict) or status.get('ok') is not True:
@@ -822,7 +831,7 @@ class Tc02Controller:
         req_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
         self.first_request_path = req_dir / '001-G0-windows.json'
         self._write_private_json(self.first_request_path, self.first_request)
-        self.lease_path = self.run_dir / 'session.lease'
+        self.lease_path = self._create_lease_path()
         owner = f'tc02-v1-{self.run_id}'[:80]
         self.execution_start = time.monotonic()
         response, _ = self.run_remote('start', '--owner', owner, '--lease-file', self.lease_path,
