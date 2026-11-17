@@ -5,16 +5,14 @@ description: Operate local Linux apps and Chromium with reliable mouse/keyboard 
 
 # Computer use
 
-Read [session protocol](references/session.md) before first input, then only the selected backend:
-[Chromium DOM](references/browser.md), [native accessibility](references/accessibility.md),
-or [desktop pixels](references/desktop.md). Read [troubleshooting](references/troubleshooting.md)
+Read [session protocol](references/session.md) before first input, then only the selected backend: [CLI/API](references/cli-anything.md), [Chromium DOM](references/browser.md), [native accessibility](references/accessibility.md), or [desktop pixels](references/desktop.md). Read [troubleshooting](references/troubleshooting.md)
 only on a matching failure. Setup/appearance problems: [session setup](references/usage.md#automation-sessions)
 and [installation](../README.md#install). Preserve the configured agent cursor and overlay;
 never hot-swap a running native plugin or infer Hyprland restore values from GTK.
 
 ## Select the backend
 
-Prefer an existing CLI/API, then Chromium DOM or verified accessibility, then screenshots.
+Prefer an existing CLI/API, then Chromium DOM or verified accessibility, then screenshots. See references/cli-anything.md for the vendored registry and per-app skills.
 Respect the user's chosen browser. CDP requires an enabled loopback endpoint; other browsers
 need accessibility or desktop input. Check `a11y apps` before relying on AT-SPI; do not
 reconfigure accessibility to force it. Select exact addresses/targets, including when several
