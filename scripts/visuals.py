@@ -21,6 +21,30 @@ import tempfile
 import time
 
 
+def _capture_spawn_stderr():
+    try:
+        if Path(sys.argv[0]).resolve() != Path(__file__).resolve():
+            return
+        directory = Path.home()/'.cache/agent-computer-use/logs'
+        directory.mkdir(parents=True, exist_ok=True, mode=0o700)
+        if directory.is_symlink():
+            return
+        directory.chmod(0o700)
+        path = directory/'visuals-stderr.log'
+        flags = os.O_WRONLY | os.O_APPEND | os.O_CREAT | getattr(os, 'O_NOFOLLOW', 0)
+        fd = os.open(path, flags, 0o600)
+        try:
+            info = os.fstat(fd)
+            if not stat.S_ISREG(info.st_mode) or info.st_uid != os.getuid():
+                return
+            os.fchmod(fd, 0o600)
+            os.dup2(fd, sys.stderr.fileno())
+        finally:
+            os.close(fd)
+    except (OSError, ValueError, TypeError, AttributeError):
+        pass
+
+
 def _write_spawn_log():
     try:
         if Path(sys.argv[0]).resolve() != Path(__file__).resolve():
@@ -35,6 +59,7 @@ def _write_spawn_log():
         pass
 
 
+_capture_spawn_stderr()
 _write_spawn_log()
 
 import cursor_theme
