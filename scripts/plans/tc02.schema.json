@@ -80,6 +80,8 @@
       "type": "object",
       "required": [
         "method",
+        "checkpoint_sample",
+        "menu_open_latency",
         "target_samples",
         "minimum_samples",
         "historical_valid_samples",
@@ -92,6 +94,27 @@
       ],
       "properties": {
         "method": {"type": "string", "minLength": 1},
+        "checkpoint_sample": {
+          "type": "object",
+          "required": ["definition", "measures", "not_for", "target_samples", "minimum_samples"],
+          "properties": {
+            "definition": {"type": "string", "minLength": 1},
+            "measures": {"type": "string", "minLength": 1},
+            "not_for": {"type": "string", "minLength": 1},
+            "target_samples": {"type": "integer", "minimum": 10},
+            "minimum_samples": {"type": "integer", "minimum": 10}
+          },
+          "additionalProperties": false
+        },
+        "menu_open_latency": {
+          "type": "object",
+          "required": ["happy_path", "point_sample_source"],
+          "properties": {
+            "happy_path": {"type": "string", "minLength": 1},
+            "point_sample_source": {"type": "string", "minLength": 1}
+          },
+          "additionalProperties": false
+        },
         "target_samples": {"type": "integer", "minimum": 10},
         "minimum_samples": {"type": "integer", "minimum": 10},
         "historical_valid_samples": {"type": "integer", "minimum": 0},

@@ -23,7 +23,18 @@
     "observation_max_age_s": 90
   },
   "wait_tuning": {
-    "method": "conservative File-menu click-to-first-after-image upper bound: act execution_ms + retained 80 ms pre-capture sleep + after_capture_ms; full-frame OCR confirmed File and Save As",
+    "method": "Historical menu-point p95 plus margin is provenance for 474 ms only; going forward, collect S2 checkpoint latency and the censored menu bound, with menu point samples only from the dedicated probe outside gate runs.",
+    "checkpoint_sample": {
+      "definition": "Monotonic milliseconds from the return of the S2 act result to the return of the S2 windows result that first lists the Save As dialog.",
+      "measures": "residual Save As dialog appearance latency plus one windows verification round trip; an upper bound on the residual dialog-spawn time",
+      "not_for": "tuning the S2 menu wait; the sample is independent of the wait by construction and measures dialog appearance, not menu rendering",
+      "target_samples": 50,
+      "minimum_samples": 10
+    },
+    "menu_open_latency": {
+      "happy_path": "censored only: a successful S2 proves menu-open latency is at most the selected wait; a failed S2 records no point sample",
+      "point_sample_source": "dedicated menu-open probe (click File menu, poll after-image until the menu region changes), outside gate runs; defined in improvements/opt-s2-samples-report.md"
+    },
     "target_samples": 50,
     "minimum_samples": 10,
     "historical_valid_samples": 6,

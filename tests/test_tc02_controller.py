@@ -1,3 +1,4 @@
+import copy
 import tempfile
 import unittest
 from unittest.mock import Mock, patch
@@ -155,6 +156,97 @@ class Tc02DesktopHygieneTests(unittest.TestCase):
         self.assertEqual(raised.exception.step, 'P0')
         self.assertTrue(raised.exception.hygiene)
         self.assertIn(blank, self.hygiene_evidence(controller)['unexpected_windows'])
+
+
+class Tc02SampleTests(unittest.TestCase):
+    def make_controller(self, temporary):
+        plan = tc02_controller.load_json(tc02_controller.DEFAULT_PLAN)
+        controller = tc02_controller.Tc02Controller(
+            plan, 'tc02-s2-sample-unit-test', temporary)
+        controller.emit = Mock()
+        return controller
+
+    def test_record_s2_sample_emits_censored_bound_and_appends_summary_entry(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            controller = self.make_controller(temporary)
+            dialog = {
+                'address': '0xdialog', 'class': 'xdg-desktop-portal-gtk',
+                'title': 'Save As', 'at': [0, 0], 'size': [875, 600],
+                'workspace': '1',
+            }
+
+            controller.record_s2_sample(
+                act_done_mono=100.0, windows_done_mono=100.25, dialog=dialog)
+
+            self.assertEqual(controller.emit.call_count, 1)
+            call = controller.emit.call_args
+            self.assertEqual(call.args, ('s2-sample',))
+            self.assertEqual(call.kwargs, {
+                'sample_ms': 250.0,
+                'definition': 'Monotonic milliseconds from the return of the S2 act result to the return of the S2 windows result that first lists the Save As dialog.',
+                'wait_ms': 474,
+                'menu_open_latency_ms': {
+                    'censored': True,
+                    'upper_bound_ms': 474,
+                    'evidence': 'Save As dialog appeared after the row click, so the menu was open when the row was clicked',
+                },
+                'dialog_address': '0xdialog',
+                'dialog': dialog,
+            })
+            self.assertEqual(controller.s2_samples, [{
+                'sample_ms': 250.0,
+                'wait_ms': 474,
+                'menu_open_latency_censored_upper_bound_ms': 474,
+                'dialog_address': '0xdialog',
+            }])
+
+    def test_record_s2_sample_rejects_negative_span_without_recording(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            controller = self.make_controller(temporary)
+
+            with self.assertRaises(ValueError):
+                controller.record_s2_sample(
+                    act_done_mono=100.25, windows_done_mono=100.0,
+                    dialog={'address': '0xdialog'})
+
+            controller.emit.assert_not_called()
+            self.assertEqual(controller.s2_samples, [])
+
+    def test_validate_plan_requires_both_sample_definitions(self):
+        plan = tc02_controller.load_json(tc02_controller.DEFAULT_PLAN)
+        schema = tc02_controller.load_json(tc02_controller.DEFAULT_SCHEMA)
+
+        self.assertTrue(tc02_controller.validate_plan(plan, schema))
+        for key in ('checkpoint_sample', 'menu_open_latency'):
+            with self.subTest(missing=key):
+                invalid = copy.deepcopy(plan)
+                del invalid['wait_tuning'][key]
+                with self.assertRaises(ValueError):
+                    tc02_controller.validate_plan(invalid, schema)
+
+    def test_checkpoint_sample_target_does_not_change_historical_wait(self):
+        plan = tc02_controller.load_json(tc02_controller.DEFAULT_PLAN)
+        schema = tc02_controller.load_json(tc02_controller.DEFAULT_SCHEMA)
+        plan['wait_tuning']['checkpoint_sample']['target_samples'] = 25
+
+        self.assertTrue(tc02_controller.validate_plan(plan, schema))
+        self.assertEqual(plan['wait_tuning']['selected_wait_ms'], 474)
+
+    def test_summary_includes_s2_samples(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            controller = self.make_controller(temporary)
+            sample = {
+                'sample_ms': 250.0,
+                'wait_ms': 474,
+                'menu_open_latency_censored_upper_bound_ms': 474,
+                'dialog_address': '0xdialog',
+            }
+            controller.s2_samples.append(sample)
+
+            controller._summary('PASS')
+
+            summary = tc02_controller.load_json(controller.summary_path)
+            self.assertEqual(summary['s2_samples'], [sample])
 
 
 if __name__ == '__main__':

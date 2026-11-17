@@ -90,6 +90,20 @@ def validate_plan(plan, schema):
     tuning = plan.get('wait_tuning', {})
     if not 0 <= tuning.get('selected_wait_ms', -1) <= 2000:
         raise ValueError('S2 wait must be between 0 and 2000 ms')
+    checkpoint_sample = tuning.get('checkpoint_sample')
+    checkpoint_strings = ('definition', 'measures', 'not_for')
+    if (not isinstance(checkpoint_sample, dict) or
+            any(not isinstance(checkpoint_sample.get(key), str) or
+                not checkpoint_sample[key].strip() for key in checkpoint_strings) or
+            any(type(checkpoint_sample.get(key)) is not int or checkpoint_sample[key] < 10
+                for key in ('target_samples', 'minimum_samples'))):
+        raise ValueError('S2 checkpoint sample definition and minimum counts are required')
+    menu_open_latency = tuning.get('menu_open_latency')
+    if (not isinstance(menu_open_latency, dict) or
+            any(not isinstance(menu_open_latency.get(key), str) or
+                not menu_open_latency[key].strip()
+                for key in ('happy_path', 'point_sample_source'))):
+        raise ValueError('S2 menu-open latency source and happy-path evidence are required')
     samples = tuning.get('historical_samples_ms')
     if (not isinstance(samples, list) or
             any(type(value) is not int or value < 0 for value in samples) or
@@ -273,6 +287,7 @@ class Tc02Controller:
         self.summary_path = self.run_dir / 'run-summary.json'
         self.packet_path = self.run_dir / 'L2-packet.json'
         self.history = []
+        self.s2_samples = []
         self.last_windows = []
         self.last_active_window = None
         self.last_observation = None
@@ -858,6 +873,31 @@ class Tc02Controller:
         raise Escalate(step['id'], step['checkpoint'],
                        f'act returned ok:false without the completed capture-error recovery case: {body}')
 
+    def record_s2_sample(self, *, act_done_mono, windows_done_mono, dialog):
+        # Act timing ratchets with the wait; checkpoint latency measures dialog appearance, not menu rendering.
+        span_s = windows_done_mono - act_done_mono
+        if span_s < 0:
+            raise ValueError('S2 checkpoint sample span cannot be negative')
+        sample_ms = round(span_s * 1000, 3)
+        wait_ms = self.plan['wait_tuning']['selected_wait_ms']
+        dialog_address = dialog['address']
+        self.emit(
+            's2-sample', sample_ms=sample_ms,
+            definition='Monotonic milliseconds from the return of the S2 act result to the return of the S2 windows result that first lists the Save As dialog.',
+            wait_ms=wait_ms,
+            menu_open_latency_ms={
+                'censored': True,
+                'upper_bound_ms': wait_ms,
+                'evidence': 'Save As dialog appeared after the row click, so the menu was open when the row was clicked',
+            },
+            dialog_address=dialog_address, dialog=dialog)
+        self.s2_samples.append({
+            'sample_ms': sample_ms,
+            'wait_ms': wait_ms,
+            'menu_open_latency_censored_upper_bound_ms': wait_ms,
+            'dialog_address': dialog_address,
+        })
+
     def _geometry_matches_observation(self, observation, window):
         bounds = observation.get('window_bounds')
         size = window.get('size')
@@ -899,15 +939,20 @@ class Tc02Controller:
         with self.span('S2'):
             step = self.plan['steps'][4]
             body = self._act(step, self.editor_observation, self.editor['address'])
+            t_act_done = time.monotonic()
             if body.get('completed') != len(step['batch']):
                 raise Escalate('S2', step['checkpoint'], 'S2 action count is incomplete')
             windows = self._windows('S2-windows')
+            t_windows_done = time.monotonic()
             dialogs = [row for row in windows if row.get('class') == 'xdg-desktop-portal-gtk' and
                        row.get('title') == 'Save As']
             if len(dialogs) != 1:
                 raise Escalate('S2', step['checkpoint'],
                                f'expected one Save As dialog, found {len(dialogs)}')
             self.dialog = window_line(dialogs[0])
+            self.record_s2_sample(act_done_mono=t_act_done,
+                                  windows_done_mono=t_windows_done,
+                                  dialog=self.dialog)
             self._assert_no_unexpected_windows(windows, [self.editor, self.dialog])
             self._assert_geometry(self.dialog, 'dialog')
             if self.last_active_window != self.dialog['address']:
@@ -1041,6 +1086,7 @@ class Tc02Controller:
             'execution_s': round(execution, 4) if execution is not None else None,
             'end_to_end_s': round(end_to_end, 4),
             'metrics': self.metrics,
+            's2_samples': list(self.s2_samples),
             'generation': self.generation,
             'broker_generation': self.broker_generation,
             'output_path': str(self.output_path()),
