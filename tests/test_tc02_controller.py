@@ -1,7 +1,9 @@
 import copy
 import hashlib
+import shutil
 import tempfile
 import unittest
+from pathlib import Path
 from unittest.mock import Mock, patch
 
 from scripts import tc02_controller
@@ -444,6 +446,27 @@ class Tc02EditorLifecycleTests(unittest.TestCase):
                                  if call.args[0] == 'editor-geometry-settled')
             self.assertEqual(settled_event['observed_sizes'], [[933, 1180], [901, 1176]])
 
+    def test_launch_writes_native_titlebar_to_owned_profile(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            controller = self.make_controller(temporary)
+            window = {
+                'address': '0xnew-editor', 'class': 'com.microsoft.VSCode',
+                'title': 'blank.txt - Visual Studio Code', 'at': [0, 0],
+                'size': [901, 1176], 'workspace': '1',
+            }
+            with patch.object(tc02_controller.shutil, 'which', return_value='/usr/bin/code'), \
+                    patch.object(tc02_controller.subprocess, 'Popen') as popen, \
+                    patch.object(controller, 'current_clients', side_effect=[[], [window]]), \
+                    patch.object(controller, '_set_editor_geometry'):
+                popen.return_value.pid = 1234
+
+                controller._launch_test_window()
+
+            settings = tc02_controller.load_json(
+                controller.run_dir / 'vscode-profile' / 'User' / 'settings.json')
+            self.assertEqual(settings['window.menuBarVisibility'], 'classic')
+            self.assertEqual(settings['window.titleBarStyle'], 'native')
+
     def test_editor_teardown_escalates_sigterm_to_sigkill(self):
         with tempfile.TemporaryDirectory() as temporary:
             controller = self.make_controller(temporary)
@@ -511,6 +534,67 @@ class Tc02EditorLifecycleTests(unittest.TestCase):
             summary = tc02_controller.load_json(controller.summary_path)
             self.assertEqual(summary['execution_s'], 23.0)
             self.assertEqual(summary['end_to_end_s'], 33.0)
+
+
+class Tc02MenuBarTests(unittest.TestCase):
+    def make_controller(self, temporary):
+        plan = tc02_controller.load_json(tc02_controller.DEFAULT_PLAN)
+        controller = tc02_controller.Tc02Controller(
+            plan, 'tc02-menu-bar-unit-test', temporary)
+        controller.emit = Mock()
+        return controller
+
+    @unittest.skipUnless(shutil.which('tesseract'), 'tesseract is required by the menu-bar check')
+    def test_menu_bar_ocr_requires_file_and_edit_on_fixture_images(self):
+        fixtures = Path(__file__).resolve().parent / 'fixtures'
+        with tempfile.TemporaryDirectory() as temporary:
+            controller = self.make_controller(temporary)
+            controller._menu_bar_visible({
+                'image': str(fixtures / 'tc02-menu-bar-file-edit.png')})
+            passed = controller.emit.call_args.kwargs
+            self.assertEqual(passed['missing'], [])
+            self.assertEqual(passed['tokens'], ['File', 'Edit'])
+
+            controller.emit.reset_mock()
+            with self.assertRaises(tc02_controller.Escalate) as raised:
+                controller._menu_bar_visible({
+                    'image': str(fixtures / 'tc02-menu-bar-no-file-edit.png')})
+            failed = controller.emit.call_args.kwargs
+            self.assertEqual(failed['missing'], ['File', 'Edit'])
+            self.assertIn("missing labels: ['File', 'Edit']", raised.exception.reason)
+
+    def test_native_menu_coordinates_match_v_native_ocr_probe(self):
+        """Source: /tmp/opt-menubar-probe/V-native/file-menu-settled.tsv.
+
+        File [7,9,24,11] centers at [19,14]. Save [21,485,36,12] plus
+        As [62,485,33,12] gives the Save As row center [58,491].
+        """
+        plan = tc02_controller.load_json(tc02_controller.DEFAULT_PLAN)
+        self.assertEqual(plan['coordinates']['file_menu']['offset'], [19, 14])
+        self.assertEqual(plan['coordinates']['save_as_row']['offset'], [58, 491])
+
+    def test_t3_rebases_only_the_two_reobserved_menu_clicks(self):
+        trace_actions = [
+            {'type': 'click', 'x': 888, 'y': 45},
+            {'type': 'click', 'x': 200, 'y': 100},
+            {'type': 'type', 'text': 'Tối nay ôn cấu trúc dữ liệu lúc 20:30.\n'},
+            {'type': 'click', 'x': 57, 'y': 14},
+            {'type': 'click', 'x': 95, 'y': 365},
+            {'type': 'click', 'x': 430, 'y': 22},
+        ]
+
+        rebased, evidence = tc02_controller.rebase_t3_menu_coordinates(trace_actions)
+
+        self.assertEqual(rebased[3:5], [
+            {'type': 'click', 'x': 19, 'y': 14},
+            {'type': 'click', 'x': 58, 'y': 491},
+        ])
+        self.assertEqual(rebased[:3], trace_actions[:3])
+        self.assertEqual(rebased[5], trace_actions[5])
+        self.assertEqual(evidence, [
+            {'action_index': 3, 'from': [57, 14], 'to': [19, 14]},
+            {'action_index': 4, 'from': [95, 365], 'to': [58, 491]},
+        ])
 
 
 if __name__ == '__main__':

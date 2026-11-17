@@ -135,7 +135,7 @@ def validate_plan(plan, schema):
             raise ValueError(f'{name}: coordinate offset must be two integers')
     required_coordinates = {
         'banner_close': [888, 45], 'editor_body': [200, 100],
-        'file_menu': [57, 14], 'save_as_row': [95, 365],
+        'file_menu': [19, 14], 'save_as_row': [58, 491],
         'name_field': [430, 22], 'save_button': [825, 22],
     }
     if {name: item.get('offset') for name, item in coords.items()} != required_coordinates:
@@ -638,6 +638,7 @@ class Tc02Controller:
         settings = profile / 'User' / 'settings.json'
         self._write_private_json(settings, {
             'window.menuBarVisibility': 'classic',
+            'window.titleBarStyle': 'native',
             'window.restoreWindows': 'none',
             'workbench.startupEditor': 'none',
             'security.workspace.trust.enabled': False,
@@ -1311,6 +1312,21 @@ def canonical_action(action):
     return value
 
 
+def rebase_t3_menu_coordinates(actions):
+    # V-native probe TSV re-grounded only the historical File and Save As points.
+    rebases = ((3, (57, 14), (19, 14)), (4, (95, 365), (58, 491)))
+    result = [dict(action) for action in actions]
+    applied = []
+    for index, old, new in rebases:
+        if index >= len(result):
+            continue
+        action = result[index]
+        if action == {'type': 'click', 'x': old[0], 'y': old[1]}:
+            result[index] = {'type': 'click', 'x': new[0], 'y': new[1]}
+            applied.append({'action_index': index, 'from': list(old), 'to': list(new)})
+    return result, applied
+
+
 def dry_run(plan, trace_dir):
     expected_requests = ['start', 'windows', 'observe', 'act', 'act', 'windows',
                          'observe', 'act', 'act', 'windows', 'observe', 'finish']
@@ -1329,6 +1345,7 @@ def dry_run(plan, trace_dir):
                     resolved['x'], resolved['y'] = plan['coordinates'][point]['offset']
                 plan_actions.append(canonical_action(resolved))
     trace_actions = []
+    coordinate_rebases = []
     trace_act_requests = 0
     if trace_dir and Path(trace_dir).is_dir():
         records = []
@@ -1350,6 +1367,7 @@ def dry_run(plan, trace_dir):
                 continue
             trace_act_requests += 1
             trace_actions.extend(canonical_action(action) for action in actions)
+        trace_actions, coordinate_rebases = rebase_t3_menu_coordinates(trace_actions)
         verification = load_json(Path(trace_dir) / 'byte-exact-read-back.json')
         expected_hash = plan['task']['expected_sha256']
         if (not verification.get('exact') or verification.get('actual_bytes') != 50 or
@@ -1373,6 +1391,7 @@ def dry_run(plan, trace_dir):
         'optimized_act_requests': sum(1 for step in plan['steps'] if step.get('kind') == 'act'),
         'baseline_t3_act_requests': trace_act_requests,
         'semantic_action_order_matches_t3': bool(trace_actions) and plan_actions == trace_actions,
+        't3_coordinate_rebases': coordinate_rebases,
         'model_round_trips': 0,
         'live_desktop_touched': False,
     }

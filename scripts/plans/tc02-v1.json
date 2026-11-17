@@ -58,12 +58,12 @@
     },
     "file_menu": {
       "anchor": "window_top_left",
-      "offset": [57, 14],
+      "offset": [19, 14],
       "bounds_assertion": "inside_current_image_and_window"
     },
     "save_as_row": {
       "anchor": "window_top_left",
-      "offset": [95, 365],
+      "offset": [58, 491],
       "bounds_assertion": "inside_current_image_and_window"
     },
     "name_field": {
