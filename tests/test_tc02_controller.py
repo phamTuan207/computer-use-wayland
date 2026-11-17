@@ -237,6 +237,44 @@ class Tc02BrokerPreflightTests(unittest.TestCase):
         self.assertIn('broker code stale, restart the relay', raised.exception.reason)
 
 
+class Tc02ObservePayloadTests(unittest.TestCase):
+    def make_controller(self, temporary):
+        plan = tc02_controller.load_json(tc02_controller.DEFAULT_PLAN)
+        controller = tc02_controller.Tc02Controller(
+            plan, 'tc02-observe-payload-unit-test', temporary)
+        controller.emit = Mock()
+        return controller
+
+    def test_flat_observation_metadata_is_accepted_without_ok_wrapper(self):
+        observation = {
+            'id': 'observe-unit-test',
+            'image': '/tmp/observe-unit-test.png',
+            'observation': '/tmp/observe-unit-test.json',
+            'observation_schema': 2,
+            'image_role': 'clean-observation',
+            'image_bytes': 1,
+            'image_sha256': 'a' * 64,
+        }
+        with tempfile.TemporaryDirectory() as temporary:
+            controller = self.make_controller(temporary)
+            controller.broker_driver = Mock(return_value=(observation, {}))
+
+            result = controller._observe('G0-observe', '0xeditor', 1600)
+
+        self.assertIs(result, observation)
+        self.assertEqual(controller.last_observation, observation)
+
+    def test_explicit_observe_error_still_escalates(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            controller = self.make_controller(temporary)
+            controller.broker_driver = Mock(return_value=({'ok': False, 'error': 'capture failed'}, {}))
+
+            with self.assertRaises(tc02_controller.Escalate) as raised:
+                controller._observe('G0-observe', '0xeditor', 1600)
+
+        self.assertIn('observe failed', raised.exception.reason)
+
+
 class Tc02SampleTests(unittest.TestCase):
     def make_controller(self, temporary):
         plan = tc02_controller.load_json(tc02_controller.DEFAULT_PLAN)

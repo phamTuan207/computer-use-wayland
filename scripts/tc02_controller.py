@@ -879,7 +879,13 @@ class Tc02Controller:
     def _observe(self, name, address, max_width):
         body, _ = self.broker_driver(name, ['observe', '--window', address,
                                             '--max-width', str(max_width)])
-        if not isinstance(body, dict) or body.get('ok') is not True:
+        valid_observation = (
+            isinstance(body, dict) and body.get('ok') is not False and
+            isinstance(body.get('id'), str) and bool(body['id']) and
+            isinstance(body.get('image'), str) and bool(body['image']) and
+            isinstance(body.get('observation'), str) and bool(body['observation'])
+        )
+        if not valid_observation:
             raise Escalate(self.step, self.current_checkpoint, f'{name}: observe failed: {body}')
         self.note_image(body, name)
         self._remember_observation(body)
