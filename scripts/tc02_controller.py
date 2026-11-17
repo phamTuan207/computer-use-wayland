@@ -831,6 +831,11 @@ class Tc02Controller:
                                             action_count=len(resolved))
         if not isinstance(body, dict):
             raise Escalate(step['id'], step['checkpoint'], 'act response is not an object')
+        if step['id'] == 'S2':
+            self.emit('s2-act-timing', execution_ms=body.get('execution_ms'),
+                      after_capture_ms=body.get('after_capture_ms'),
+                      after_skipped=body.get('after_skipped'),
+                      completed=body.get('completed'), ok=body.get('ok'))
         if body.get('ok') is True:
             if body.get('completed') != len(resolved):
                 evidence = self._partial_reobserve(target_window)

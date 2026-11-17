@@ -86,6 +86,29 @@ class Tc02DesktopHygieneTests(unittest.TestCase):
         self.assertEqual(moved_line['workspace'], 'special:test')
         self.assertTrue(tc02_controller.same_window_identity(first_line, moved_line))
 
+    def test_s2_timing_log_records_response_fields_without_inventing_capture_time(self):
+        plan = tc02_controller.load_json(tc02_controller.DEFAULT_PLAN)
+        controller = tc02_controller.Tc02Controller(plan, 'tc02-s2-timing-unit-test', '/tmp')
+        controller.emit = Mock()
+        controller._assert_fresh = Mock()
+        controller._resolve_action = lambda action, observation: action
+        response = {'ok': True, 'completed': 3, 'execution_ms': 123.5,
+                    'after_skipped': True}
+        controller.broker_driver = Mock(return_value=(response, {}))
+
+        controller._act(plan['steps'][4], {
+            'id': 'observation', 'observation': '/tmp/unused-observation.json'}, '0xeditor')
+
+        event = next(call.kwargs for call in controller.emit.call_args_list
+                     if call.args[0] == 's2-act-timing')
+        self.assertEqual(event, {
+            'execution_ms': 123.5,
+            'after_capture_ms': None,
+            'after_skipped': True,
+            'completed': 3,
+            'ok': True,
+        })
+
     def test_non_listed_window_still_fails_p0(self):
         ordinary = self.window('0xother', 'org.mozilla.firefox', 'Other app')
         controller = self.make_controller([ordinary])
