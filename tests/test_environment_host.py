@@ -237,6 +237,16 @@ class HostEnvironment(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, 'no verified Hyprland GUI environment found'):
             self.run_environment(base)
 
+    def test_socket_discovery_does_not_require_a_donor_process(self):
+        self.make_instance('socket-only-instance', pid=230)
+        self.write_process(230)
+        found = self.run_environment(self.base(XDG_RUNTIME_DIR=str(self.runtime)))
+        self.assertEqual(cu.compositor_identity(found), {
+            'runtime_dir': str(self.runtime),
+            'wayland_display': 'wayland-1',
+            'instance': 'socket-only-instance',
+        })
+
     def test_invalid_donor_socket_json_and_hyprctl_timeout_all_raise(self):
         donor = self.session_environ()
         self.add_donor(160, 'waybar', donor)

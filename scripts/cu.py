@@ -368,8 +368,6 @@ def _recovered_instances(base, donors):
                 if (raw.get('XDG_RUNTIME_DIR')==runtime and
                         raw.get('WAYLAND_DISPLAY')==display):
                     associated.append(raw)
-            if not associated:
-                continue
             metadata={}
             seat=None
             for source in associated:
