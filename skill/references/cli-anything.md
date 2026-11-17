@@ -25,6 +25,13 @@ then desktop pixels, exactly as `skill/SKILL.md` orders them. No harness
 exists for VS Code, Zen, Chromium, Firefox, or Pinta: those tasks always use
 the GUI backends.
 
+Backend order (QC clarification): CLI/API is the FIRST preference, not the
+fourth. It is first because it is the fastest path (no session, no GUI);
+the four backend targets in the skill's read list are CLI/API, Chromium
+DOM, native accessibility, and desktop pixels, in that preference order.
+"Fourth target" in the acceptance criterion meant CLI/API is one of the
+four available backend targets, not that it ranks fourth.
+
 ## Install
 
 ```bash
@@ -92,6 +99,12 @@ From the vendored registry snapshot (upstream `registry.json`,
 `meta.updated` 2026-06-19). Only LibreOffice is installed on this VM today,
 so it is the only first-wave app with a live test; the rest need the app
 installed on the machine that runs the task.
+
+Version labels (QC clarification): the Version column below is the
+registry/package version (the harness release). A vendored skill file's
+own `## Version` is the skill-content version, and the two can differ:
+LibreOffice is 1.0.1 in the registry but 1.0.0 in the skill file. They
+are different fields from different sources, not a contradiction.
 
 | App | Entry point | Version | Requires |
 |---|---|---|---|
