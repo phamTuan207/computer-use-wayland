@@ -32,6 +32,8 @@ GUI_ENV_KEYS = {
     'GDK_BACKEND', 'QT_QPA_PLATFORM', 'ELECTRON_OZONE_PLATFORM_HINT',
     'MOZ_ENABLE_WAYLAND',
 }
+ALLOWED_BACKGROUND_CLASSES = frozenset({'zen'})
+SPECIAL_WORKSPACE_PREFIX = 'special:'
 
 
 class Escalate(RuntimeError):
@@ -238,9 +240,15 @@ def process_inventory():
 
 
 def window_line(window):
-    return {'address': window.get('address'), 'class': window.get('class'),
+    line = {'address': window.get('address'), 'class': window.get('class'),
             'title': window.get('title'), 'at': window.get('at'),
             'size': window.get('size')}
+    workspace = window.get('workspace')
+    if isinstance(workspace, dict) and 'name' in workspace:
+        line['workspace'] = workspace['name']
+    elif 'workspace' in window:
+        line['workspace'] = workspace
+    return line
 
 
 def same_window_identity(actual, expected):
@@ -499,11 +507,24 @@ class Tc02Controller:
         self.last_active_window = active
         anr = [row for row in windows if re.search(r'application not responding|not responding',
                                                    str(row.get('title', '')), re.I)]
+        allow_listed = []
+        for row in windows:
+            reasons = []
+            if str(row.get('class') or '').lower() in ALLOWED_BACKGROUND_CLASSES:
+                reasons.append('zen-class')
+            workspace = row.get('workspace')
+            if isinstance(workspace, str) and workspace.startswith(SPECIAL_WORKSPACE_PREFIX):
+                reasons.append('special-workspace')
+            if reasons:
+                if not any(same_window_identity(row, known) for known in self.known_background):
+                    self.known_background.append(row)
+                allow_listed.append({'window': row, 'reasons': reasons})
         allowed = list(self.known_background)
         unexpected = [row for row in windows
                       if not any(same_window_identity(row, known) for known in allowed)]
         evidence = {'windows': windows, 'active_window': active,
                     'processes': processes, 'anr_windows': anr,
+                    'allow_listed_windows': allow_listed,
                     'unexpected_windows': unexpected}
         self.emit('desktop-hygiene', **evidence)
         if processes['imv_processes'] or anr or unexpected:
