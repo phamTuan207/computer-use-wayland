@@ -407,6 +407,7 @@ class RequestRecord:
     status: str = 'running'
     response: object = None
     error: str = ''
+    done: object = field(default_factory=threading.Event, repr=False)
 
 
 @dataclass
@@ -727,6 +728,8 @@ class Broker:
                 task.stop_reason = record.error
                 task.finish_requested = True
                 task.last_activity = time.monotonic()
+        finally:
+            record.done.set()
 
     def _authorize(self, value):
         task = self.task
@@ -810,6 +813,14 @@ class Broker:
                     raise BrokerError('expired', 'request result has expired')
                 raise BrokerError('not_found', 'request sequence is not known')
             task.last_activity = time.monotonic()
+            wait_for = record.status == 'running'
+        if wait_for:
+            record.done.wait(self.request_timeout)
+        with self.lock:
+            task = self._authorize(value)
+            current = task.active or task.previous
+            if current is not record:
+                raise BrokerError('expired', 'request result has expired')
             return self._record_response(record)
 
     def _status(self, value):
@@ -932,6 +943,7 @@ class Broker:
                     task.active.status = 'unknown'
                     task.active.error = 'driver_eof'
                     task.previous = task.active
+                    task.active.done.set()
                     task.active = None
                     task.state = 'failed'
                     task.driver = 'failed'
@@ -1034,6 +1046,8 @@ class UnixSocketServer:
         self.lock_file = None
         self.socket_identity = None
         self.stop_event = threading.Event()
+        self.client_threads = set()
+        self.client_threads_lock = threading.Lock()
 
     def _directory(self):
         if not self.path.is_absolute():
@@ -1164,6 +1178,15 @@ class UnixSocketServer:
             response = {'ok': False, 'error': 'invalid_request'}
         self._send(client, response)
 
+    def _serve_client(self, client):
+        thread = threading.current_thread()
+        try:
+            with client:
+                self.handle_client(client)
+        finally:
+            with self.client_threads_lock:
+                self.client_threads.discard(thread)
+
     def serve(self):
         if self.listener is None:
             self.bind()
@@ -1177,8 +1200,11 @@ class UnixSocketServer:
                 if self.stop_event.is_set():
                     break
                 raise
-            with client:
-                self.handle_client(client)
+            thread = threading.Thread(target=self._serve_client, args=(client,),
+                                     name='cu-relay-client', daemon=True)
+            with self.client_threads_lock:
+                self.client_threads.add(thread)
+            thread.start()
             self.broker.tick()
         self.broker.begin_shutdown()
         self._cleanup_loop()
@@ -1396,7 +1422,7 @@ def _client_with_lease(command, lease_path, **extra):
         request = _lease_request('status', lease, lease_file=True)
     else:
         request = _lease_request(command, lease, **extra)
-    return _exchange(request)
+    return _exchange(request, timeout=REQUEST_TIMEOUT + 5 if command == 'result' else 60)
 
 
 def _client_finish(lease_path, *, timeout=120.0):

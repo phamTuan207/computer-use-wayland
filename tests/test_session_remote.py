@@ -795,6 +795,28 @@ class SessionRemoteIntegration(BrokerHarness):
         self.assertEqual(duplicate['status'], 'completed')
         self.assertEqual(len(self.input_events()), 1)
 
+    def test_result_long_poll_waits_for_completion_without_blocking_status(self):
+        lease = self.start_task()
+        self.assertEqual(self.request(lease, 1, ['doctor', 'slow'])['status'], 'accepted')
+        started = threading.Event()
+        result_box = []
+
+        def long_poll():
+            started.set()
+            result_box.append(self.result(lease, 1))
+
+        waiter = threading.Thread(target=long_poll)
+        began = time.monotonic()
+        waiter.start()
+        self.assertTrue(started.wait(1))
+        self.wait_for(lambda: len(self.server.client_threads) >= 1, timeout=1)
+        status = self.exchange({'command': 'status'}, timeout=1)
+        self.assertEqual(status['state'], 'running')
+        waiter.join(timeout=2)
+        self.assertFalse(waiter.is_alive(), 'long-poll did not return after request completion')
+        self.assertEqual(result_box[0]['status'], 'completed')
+        self.assertGreaterEqual(time.monotonic() - began, .15)
+
     def test_sequence_conflict_and_expired_older_result(self):
         lease = self.start_task()
         self.assertEqual(self.request(lease, 1, ['doctor', 'one'])['status'], 'accepted')
