@@ -34,12 +34,14 @@ import os
 import shutil
 import subprocess
 import sys
+import threading
 from pathlib import Path
 
 TIMEOUT_SECONDS = 60
 JSON_PROBE_TIMEOUT_SECONDS = 10
 MAX_OUTPUT_CHARS = 4096
 TRUNCATION_MARKER = "\n...[truncated]"
+MAX_RETAINED_BYTES = 1_048_576
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_REGISTRY = ROOT / "skill" / "cli-anything" / "registry.json"
@@ -91,11 +93,80 @@ def skill_path(app):
     return SKILL_DIR / ("%s.md" % app)
 
 
+def to_text(value):
+    """Decode bytes (or None) to str safely; str passes through."""
+    if value is None:
+        return ""
+    if isinstance(value, bytes):
+        return value.decode("utf-8", errors="replace")
+    return str(value)
+
+
 def truncate(text):
-    """Bound text to MAX_OUTPUT_CHARS, marking the cut."""
+    """Bound text to MAX_OUTPUT_CHARS, marker included in the limit."""
+    text = to_text(text)
     if len(text) > MAX_OUTPUT_CHARS:
-        return text[:MAX_OUTPUT_CHARS] + TRUNCATION_MARKER
+        cut = MAX_OUTPUT_CHARS - len(TRUNCATION_MARKER)
+        return text[:cut] + TRUNCATION_MARKER
     return text
+
+
+def _drain_capped(stream, cap):
+    """Read stream to EOF, keeping only the first cap bytes.
+
+    Excess is drained and discarded, so the child never blocks on a
+    full pipe while this side keeps only a bounded amount in RAM.
+    """
+    chunks = []
+    kept = 0
+    while True:
+        data = stream.read(65536)
+        if not data:
+            break
+        if kept < cap:
+            take = data[:cap - kept]
+            chunks.append(take)
+            kept += len(take)
+    return b"".join(chunks)
+
+
+def run_bounded(argv, timeout):
+    """Run argv; return (returncode, stdout_text, stderr_text, timed_out).
+
+    Retained output per stream is capped at MAX_RETAINED_BYTES (drained
+    and discarded beyond that), so a flooding harness cannot exhaust
+    RAM. Text is decoded with errors="replace", so a timeout never
+    leaves bytes in the envelope (QC-1, QC-2).
+    """
+    proc = subprocess.Popen(argv, stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE)
+    results = {}
+
+    def _reader(stream, key):
+        results[key] = _drain_capped(stream, MAX_RETAINED_BYTES)
+
+    t_out = threading.Thread(target=_reader, args=(proc.stdout, "out"),
+                             daemon=True)
+    t_err = threading.Thread(target=_reader, args=(proc.stderr, "err"),
+                             daemon=True)
+    t_out.start()
+    t_err.start()
+    try:
+        returncode = proc.wait(timeout=timeout)
+        timed_out = False
+    except subprocess.TimeoutExpired:
+        proc.kill()
+        returncode = None
+        timed_out = True
+        try:
+            proc.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            pass
+    t_out.join(timeout=5)
+    t_err.join(timeout=5)
+    stdout = to_text(results.get("out", b""))
+    stderr = to_text(results.get("err", b""))
+    return returncode, stdout, stderr, timed_out
 
 
 def print_envelope(envelope):
@@ -117,7 +188,12 @@ def cmd_list(registry):
 
 
 def cmd_info(registry, app):
-    """Print the vendored skill path and install command for app."""
+    """Print the vendored skill path and install command for app.
+
+    install is the safe PyPI command (pip install <entry_point>); the
+    registry's install_cmd is an unpinned git URL and is returned only
+    as install_upstream, never as the command to run (QC-3).
+    """
     entry = registry.get(app)
     if entry is None:
         print("unknown app: %s" % app, file=sys.stderr)
@@ -125,7 +201,8 @@ def cmd_info(registry, app):
     print_envelope({
         "app": app,
         "skill_path": str(skill_path(app)),
-        "install": entry["install_cmd"],
+        "install": "pip install %s" % entry["entry_point"],
+        "install_upstream": entry["install_cmd"],
     })
     return 0
 
@@ -133,12 +210,13 @@ def cmd_info(registry, app):
 def supports_json(binary):
     """True if `<binary> --help` advertises a --json flag. Never fatal."""
     try:
-        result = subprocess.run(
-            [binary, "--help"], capture_output=True, text=True,
-            timeout=JSON_PROBE_TIMEOUT_SECONDS)
-    except (OSError, subprocess.TimeoutExpired):
+        _, stdout, _, timed_out = run_bounded(
+            [binary, "--help"], JSON_PROBE_TIMEOUT_SECONDS)
+    except OSError:
         return False
-    return "--json" in result.stdout
+    if timed_out:
+        return False
+    return "--json" in stdout
 
 
 def cmd_run(registry, app, args):
@@ -168,26 +246,26 @@ def cmd_run(registry, app, args):
         argv.append("--json")
     argv.extend(args)
     try:
-        result = subprocess.run(
-            argv, capture_output=True, text=True, timeout=TIMEOUT_SECONDS)
-    except subprocess.TimeoutExpired as exc:
-        envelope["timeout"] = True
-        envelope["error"] = "timed out after %ds" % TIMEOUT_SECONDS
-        envelope["stdout_truncated"] = truncate(exc.stdout or "")
-        envelope["stderr_truncated"] = truncate(exc.stderr or "")
-        print_envelope(envelope)
-        print(envelope["error"], file=sys.stderr)
-        return 124
+        returncode, stdout, stderr, timed_out = run_bounded(
+            argv, TIMEOUT_SECONDS)
     except OSError as exc:
         envelope["error"] = "failed to run %s: %s" % (binary, exc)
         print_envelope(envelope)
         print(envelope["error"], file=sys.stderr)
         return 1
-    envelope["returncode"] = result.returncode
-    envelope["stdout_truncated"] = truncate(result.stdout)
-    envelope["stderr_truncated"] = truncate(result.stderr)
+    if timed_out:
+        envelope["timeout"] = True
+        envelope["error"] = "timed out after %ds" % TIMEOUT_SECONDS
+        envelope["stdout_truncated"] = truncate(stdout)
+        envelope["stderr_truncated"] = truncate(stderr)
+        print_envelope(envelope)
+        print(envelope["error"], file=sys.stderr)
+        return 124
+    envelope["returncode"] = returncode
+    envelope["stdout_truncated"] = truncate(stdout)
+    envelope["stderr_truncated"] = truncate(stderr)
     print_envelope(envelope)
-    return 0 if result.returncode == 0 else 1
+    return 0 if returncode == 0 else 1
 
 
 def main(argv):

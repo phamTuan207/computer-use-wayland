@@ -1910,7 +1910,9 @@ def cli_command(args):
         skill_path=ROOT/'skill'/'cli-anything'/(args.app+'.md')
         return {'ok':True,'app':args.app,
                 'skill_path':str(skill_path),'skill_vendored':skill_path.is_file(),
-                'install':entry['install_cmd'],'requires':entry['requires']}
+                'install':'pip install '+entry['entry_point'],
+                'install_upstream':entry['install_cmd'],
+                'requires':entry['requires']}
     return cli_run(args.app,args.command_args)
 
 def main():
