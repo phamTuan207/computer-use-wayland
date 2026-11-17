@@ -46,14 +46,9 @@
     "status": "provisional, p95 plus 100 ms is 474 ms; 6 historical samples are below the 10-sample minimum"
   },
   "coordinates": {
-    "banner_close": {
-      "anchor": "window_top_left",
-      "offset": [888, 45],
-      "bounds_assertion": "inside_current_image_and_window"
-    },
     "editor_body": {
       "anchor": "window_top_left",
-      "offset": [200, 100],
+      "offset": [300, 300],
       "bounds_assertion": "inside_current_image_and_window"
     },
     "file_menu": {
@@ -109,12 +104,11 @@
       "window": "editor",
       "request_sequence": ["act"],
       "batch": [
-        {"type": "click", "point": "banner_close"},
         {"type": "click", "point": "editor_body"},
         {"type": "type", "text": "Tối nay ôn cấu trúc dữ liệu lúc 20:30.\n"}
       ],
       "preconditions": ["G0 is fresh", "editor remains active", "no dialog is present"],
-      "checkpoint": "completed is 3, after-image has the same window and capture geometry, and its full-frame pixel hash changed",
+      "checkpoint": "completed is 2, after-image has the same window and capture geometry, its full-frame pixel hash changed, and the typed text is visible",
       "branches": ["reobserve-and-resume-only-uncompleted-suffix", "stop-and-report"]
     },
     {

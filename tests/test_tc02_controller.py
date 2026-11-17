@@ -610,6 +610,47 @@ class Tc02MenuBarTests(unittest.TestCase):
         controller.emit = Mock()
         return controller
 
+    def test_typed_text_check_passes_when_fragment_is_visible(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            controller = self.make_controller(temporary)
+            observation = {'image': str(Path(temporary) / 'after.png')}
+            Path(observation['image']).write_bytes(b'fake')
+            step = {'checkpoint': 's1-check',
+                    'batch': [{'type': 'click', 'point': 'editor_body'},
+                              {'type': 'type', 'text': 'note at 20:30.\n'}]}
+            completed = tc02_controller.subprocess.CompletedProcess(
+                ['tesseract', observation['image'], 'stdout', '--psm', '6'],
+                0, 'note at 20:30.\n', '')
+            with patch.object(tc02_controller.subprocess, 'run',
+                              return_value=completed):
+                controller._assert_typed_text_visible(observation, step)
+
+    def test_typed_text_check_fails_when_fragment_is_absent(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            controller = self.make_controller(temporary)
+            observation = {'image': str(Path(temporary) / 'after.png')}
+            Path(observation['image']).write_bytes(b'fake')
+            step = {'checkpoint': 's1-check',
+                    'batch': [{'type': 'click', 'point': 'editor_body'},
+                              {'type': 'type', 'text': 'note at 20:30.\n'}]}
+            completed = tc02_controller.subprocess.CompletedProcess(
+                ['tesseract', observation['image'], 'stdout', '--psm', '6'],
+                0, 'empty document\n', '')
+            with patch.object(tc02_controller.subprocess, 'run',
+                              return_value=completed):
+                with self.assertRaises(tc02_controller.Escalate) as caught:
+                    controller._assert_typed_text_visible(observation, step)
+            self.assertIn('20:30', caught.exception.reason)
+
+    def test_typed_text_check_skips_plans_without_a_time_fragment(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            controller = self.make_controller(temporary)
+            step = {'checkpoint': 's1-check',
+                    'batch': [{'type': 'type', 'text': 'no time here'}]}
+            with patch.object(tc02_controller.subprocess, 'run') as run:
+                controller._assert_typed_text_visible({'image': 'missing.png'}, step)
+            run.assert_not_called()
+
     @unittest.skipUnless(shutil.which('tesseract'), 'tesseract is required by the menu-bar check')
     def test_menu_bar_ocr_requires_file_and_edit_on_fixture_images(self):
         fixtures = Path(__file__).resolve().parent / 'fixtures'

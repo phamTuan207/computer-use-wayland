@@ -134,7 +134,7 @@ def validate_plan(plan, schema):
                 any(type(value) is not int for value in offset)):
             raise ValueError(f'{name}: coordinate offset must be two integers')
     required_coordinates = {
-        'banner_close': [888, 45], 'editor_body': [200, 100],
+        'editor_body': [300, 300],
         'file_menu': [19, 14], 'save_as_row': [58, 491],
         'name_field': [430, 22], 'save_button': [825, 22],
     }
@@ -164,7 +164,6 @@ def validate_plan(plan, schema):
                 raise ValueError(f"{step['id']}: wait exceeds the broker limit")
     expected_batches = {
         'S1': [
-            {'type': 'click', 'point': 'banner_close'},
             {'type': 'click', 'point': 'editor_body'},
             {'type': 'type', 'text': expected},
         ],
@@ -1058,6 +1057,35 @@ class Tc02Controller:
             raise Escalate('G0', 'menu-bar-presence',
                            f'menu bar OCR check failed; missing labels: {missing}')
 
+    def _assert_typed_text_visible(self, observation, step):
+        """Fail S1 fast when the keystrokes never reached the editor.
+
+        The pixel-hash checkpoint alone cannot tell typed text apart from a
+        layout shift: a breadcrumb dropdown opening changes pixels too, as
+        tc02-gate2-A1 proved (S1 passed, S6 found an empty file). OCR the
+        after-image for the ASCII time fragment of the typed text.
+        """
+        typed = next((action.get('text', '') for action in step.get('batch', [])
+                      if action.get('type') == 'type'), '')
+        match = re.search(r'\d{2}:\d{2}', typed)
+        if not match:
+            return
+        fragment = match.group(0)
+        image = observation.get('image')
+        if not isinstance(image, str) or not Path(image).is_file():
+            raise Escalate('S1', step['checkpoint'],
+                           'S1 after-image is unavailable for typed-text verification')
+        tesseract = shutil.which('tesseract')
+        if not tesseract:
+            raise Escalate('S1', step['checkpoint'],
+                           'tesseract is unavailable; refusing to assume typed text landed')
+        proc = subprocess.run([tesseract, image, 'stdout', '--psm', '6'],
+                              capture_output=True, text=True, timeout=10)
+        if proc.returncode or fragment not in proc.stdout:
+            raise Escalate('S1', step['checkpoint'],
+                           f'typed text fragment {fragment!r} is absent from the S1 '
+                           f'after-image; the keystrokes did not land in the editor')
+
     def _partial_reobserve(self, target_address):
         packet_evidence = {'partial_batch': {'completed': self.current_batch_completed,
                                              'batch_size': self.current_batch_size}}
@@ -1185,6 +1213,7 @@ class Tc02Controller:
             if body.get('completed') != len(step['batch']) or not body.get('after'):
                 raise Escalate('S1', step['checkpoint'], 'S1 did not produce its required full-batch after-image')
             self.editor_observation = body['after']
+            self._assert_typed_text_visible(body['after'], step)
         with self.span('S2'):
             step = self.plan['steps'][4]
             body = self._act(step, self.editor_observation, self.editor['address'])
@@ -1433,6 +1462,14 @@ def dry_run(plan, trace_dir):
             trace_act_requests += 1
             trace_actions.extend(canonical_action(action) for action in actions)
         trace_actions, coordinate_rebases = rebase_t3_menu_coordinates(trace_actions)
+        # The t3 trace still carries the banner_close click (888, 45). That
+        # banner no longer exists in current VS Code: the "Generate code"
+        # text is placeholder ghost text that dismisses on typing, and the
+        # click only toggled a layout control. The plan dropped the click;
+        # filter it from the trace side so the remaining eight actions
+        # still compare against t3.
+        trace_actions = [action for action in trace_actions
+                         if action != {'type': 'click', 'x': 888, 'y': 45}]
         verification = load_json(Path(trace_dir) / 'byte-exact-read-back.json')
         expected_hash = plan['task']['expected_sha256']
         if (not verification.get('exact') or verification.get('actual_bytes') != 50 or
@@ -1445,8 +1482,8 @@ def dry_run(plan, trace_dir):
         source = str(trace_dir)
     else:
         source = 'opt-batch-research.md tc02 procedure (trace directory unavailable)'
-        if len(plan_actions) != 9:
-            raise ValueError('plan does not contain the nine grounded non-wait tc02 actions')
+        if len(plan_actions) != 8:
+            raise ValueError('plan does not contain the eight grounded non-wait tc02 actions')
     result = {
         'status': 'PASS',
         'procedure': plan['procedure'],
