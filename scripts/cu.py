@@ -1605,7 +1605,22 @@ def desktop_act(env,meta,actions,after_capture=True,observation_path=None,
                 execute_group(a,index)
             final_group=index==len(groups)-1
             if final_group and terminal_address is not None and not same_window_address(terminal_address,address):
-                guard(terminal_address)
+                # The expected terminal transition (e.g. Save closes the dialog
+                # and focus moves to the editor) settles asynchronously; the
+                # dialog may still hold focus right after the click. Poll for
+                # the terminal window to gain focus, same 1.5s bound as
+                # focus(), instead of refusing on the first sample. Only a
+                # focus refusal retries; geometry/layout errors still fail fast.
+                deadline=time.monotonic()+1.5
+                while True:
+                    try:
+                        guard(terminal_address)
+                        break
+                    except TransientRefusal:
+                        remaining=deadline-time.monotonic()
+                        if remaining<=0:
+                            raise
+                        wait_cancelable(min(.04,remaining))
                 terminal_guard_verified=True
             elif final_group and terminal_address is None:
                 guard(None)

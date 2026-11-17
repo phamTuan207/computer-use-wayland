@@ -186,6 +186,20 @@ class ActDiagnostics(unittest.TestCase):
         self.assertTrue(result['transition']['successor_verified'])
         self.assertEqual(self.capture_addresses, [])
 
+    def test_terminal_focus_settles_after_dialog_close(self):
+        # The Save click closes the dialog asynchronously: the first
+        # terminal-guard sample still sees the dialog focused, the next
+        # sees the editor. The act must verify the transition, not refuse.
+        successor = '0x5678'
+        result = self.desktop_act(
+            base_meta(), [{'type': 'wait', 'ms': 0}], after_capture=False,
+            expected_terminal_window=successor,
+            active=[ADDR, ADDR, ADDR, ADDR, ADDR, successor])
+
+        self.assertTrue(result['ok'], result)
+        self.assertEqual(result['completed'], 1)
+        self.assertTrue(result['transition']['successor_verified'])
+
     def test_expected_successor_is_used_for_final_after_capture(self):
         successor = '0x5678'
         self.desktop_act(base_meta(), [{'type': 'wait', 'ms': 0}],
