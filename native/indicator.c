@@ -215,7 +215,7 @@ static void draw(GtkDrawingArea *area, cairo_t *cr, int width, int height, gpoin
   }
   cairo_restore(cr);
   entrance_shape(cr,px+.5,py+.5,pw-1,ph-1,entrance_progress,entrance_mode);
-  cairo_set_source_rgba(cr,.93,.95,.97,liquid?0:.74);cairo_fill_preserve(cr);
+  cairo_set_source_rgba(cr,.93,.95,.97,liquid?.02:.74);cairo_fill_preserve(cr);
   cairo_pattern_t *wash=cairo_pattern_create_linear(px,py,px,py+ph);
   cairo_pattern_add_color_stop_rgba(wash,0,1,1,1,liquid?.18:.16);
   cairo_pattern_add_color_stop_rgba(wash,.16,1,1,1,liquid?.05:.08);
@@ -232,7 +232,7 @@ static void draw(GtkDrawingArea *area, cairo_t *cr, int width, int height, gpoin
   cairo_pattern_destroy(rim);
   if (liquid) {
     // Neutral light-only reflection: never paint a dark inner rim.
-    // Keep the middle fully transparent: this is a rim, not a tinted plate.
+    // Keep a contour-visible alpha floor across the capsule interior.
     // Separate the transmitted lower-edge reflection from the outside highlight.
     // Leave a transparent gap, instead of stacking strokes into a frosted border.
     rounded(cr,px+2.1,py+2.1,pw-4.2,ph-4.2,(ph-4.2)/2);

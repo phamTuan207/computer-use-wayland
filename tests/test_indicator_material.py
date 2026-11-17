@@ -5,7 +5,9 @@ wash stops, liquid body alpha) so the test cannot go stale, then renders the *
 copied* geometry in a tiny offscreen Cairo harness (no GUI) and samples alpha:
 the pill interior (including the text position) must stay 0 from the shadow, the
 ring band outside the pill must be non-zero, and the wash midband must be 0 while
-its top band is non-zero.
+its top band is non-zero. The liquid body fill itself carries a 0.02 alpha floor
+(F1, pill refraction fix) so the contour mask sees the capsule interior; the wash
+midband stays 0 and the floor is 20x the 0.001 contour threshold.
 """
 import re
 import shutil
@@ -77,9 +79,11 @@ def parse_source():
     rings = re.search(r'ring=entrance_progress<1\.0\?0:(\d+);ring>=1', text)
     liquid = re.findall(r'liquid\?([0-9.]+):', text)
     zero_stops = re.findall(r'wash,\.(?:36|66),1,1,1,0\)', text)
+    fill = re.search(r'cairo_set_source_rgba\(cr,.93,.95,.97,liquid\?([0-9.]+):\.74\);cairo_fill_preserve', text)
     return {'alpha': float(alpha.group(1)) if alpha else None,
             'rings': int(rings.group(1)) if rings else None,
             'liquid_stops': [float(v) for v in liquid],
+            'fill_alpha': float(fill.group(1)) if fill else None,
             'zero_stop_count': len(zero_stops)}
 
 
@@ -134,7 +138,10 @@ class IndicatorMaterial(unittest.TestCase):
         self.assertEqual(self.src['rings'], 4, 'shadow ring count changed upstream')
         self.assertAlmostEqual(self.src['alpha'], 0.018, places=6)
         self.assertEqual(self.src['zero_stop_count'], 2, 'wash midband must have two zero stops')
-        self.assertIn(0.0, self.src['liquid_stops'], 'liquid body alpha 0 expected')
+        self.assertAlmostEqual(self.src['fill_alpha'], 0.02, places=6,
+                             msg='liquid body alpha floor 0.02 expected (F1)')
+        self.assertGreater(self.src['fill_alpha'], 0.001,
+                           'floor must exceed the 0.001 contour threshold')
         self.assertIn(0.18, self.src['liquid_stops'])
 
     def test_cairo_geometry_is_outside_only_and_midband_clear(self):
