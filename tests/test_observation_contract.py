@@ -135,14 +135,18 @@ class EnvironmentSelection(unittest.TestCase):
             scan.assert_called_once()
             self.assertEqual(cu._session_tuple(found),chosen)
 
-    def test_stale_explicit_tuple_refuses_without_falling_back(self):
+    def test_stale_explicit_tuple_falls_back_and_keeps_discovery_failure(self):
         with tempfile.TemporaryDirectory() as folder:
             stale={'XDG_RUNTIME_DIR':folder,'WAYLAND_DISPLAY':'wayland-1',
                    'HYPRLAND_INSTANCE_SIGNATURE':'stale'}
-            with patch.dict(os.environ,stale,clear=True),patch.object(cu.subprocess,'run') as run:
-                with self.assertRaisesRegex(RuntimeError,'refusing to switch compositor'):
+            with patch.dict(os.environ,stale,clear=True),\
+                    patch.object(cu,'_process_donors',return_value=[]) as donors,\
+                    patch.object(cu,'_discovery_result',
+                                 side_effect=RuntimeError('no verified Hyprland GUI environment found')) as discovery:
+                with self.assertRaisesRegex(RuntimeError,'no verified Hyprland GUI environment found'):
                     cu.environment()
-            run.assert_not_called()
+            donors.assert_called_once()
+            discovery.assert_called_once()
 
     def test_live_task_without_explicit_tuple_does_not_scan_other_processes(self):
         with patch.dict(os.environ,{'CU_SESSION_TOKEN':'a'*32},clear=True),\
@@ -151,15 +155,18 @@ class EnvironmentSelection(unittest.TestCase):
                 cu.environment()
         run.assert_not_called()
 
-    def test_live_task_with_invalid_tuple_refuses_even_when_refreshing(self):
+    def test_live_task_with_invalid_complete_tuple_falls_back_when_discovery_is_empty(self):
         with patch.dict(os.environ,{'CU_SESSION_TOKEN':'a'*32,
                                     'XDG_RUNTIME_DIR':'/missing/runtime',
                                     'WAYLAND_DISPLAY':'wayland-1',
                                     'HYPRLAND_INSTANCE_SIGNATURE':'stale'},clear=True),\
-                patch.object(cu.subprocess,'run') as run:
-            with self.assertRaisesRegex(RuntimeError,'explicit Wayland socket is unavailable'):
+                patch.object(cu,'_process_donors',return_value=[]) as donors,\
+                patch.object(cu,'_discovery_result',
+                             side_effect=RuntimeError('no verified Hyprland GUI environment found')) as discovery:
+            with self.assertRaisesRegex(RuntimeError,'no verified Hyprland GUI environment found'):
                 cu.environment(refresh=True)
-        run.assert_not_called()
+        donors.assert_called_once()
+        discovery.assert_called_once()
 
     def test_valid_pinned_task_tuple_is_returned_without_discovery_and_strips_gtk(self):
         with tempfile.TemporaryDirectory() as folder:

@@ -450,8 +450,7 @@ def environment(base=None, *, refresh=False):
         try:
             _validate_session_tuple(env)
         except (OSError,RuntimeError,TypeError,ValueError):
-            if token or not refresh:
-                raise
+            pass
         else:
             env.pop('GTK_IM_MODULE',None)
             if token:
@@ -461,7 +460,7 @@ def environment(base=None, *, refresh=False):
             selected.pop('GTK_IM_MODULE',None)
             _guard_state_home(env,selected)
             return selected
-    if token:
+    if token and not complete:
         raise RuntimeError('automation session has no pinned compositor tuple; refusing environment discovery')
     donors=_process_donors()
     return _discovery_result(env,donors)

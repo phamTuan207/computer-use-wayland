@@ -232,8 +232,9 @@ class HostEnvironment(unittest.TestCase):
         self.assert_selected(found, 'host22222222')
 
     def test_no_verified_candidate_raises_instead_of_returning_ssh_base(self):
-        base = self.base(DISPLAY=':stale', WAYLAND_DISPLAY='stale',
-                         HYPRLAND_INSTANCE_SIGNATURE='stale')
+        stale = self.make_instance('supplied-stale')
+        self.rows = []
+        base = self.base(**stale, DISPLAY=':stale')
         with self.assertRaisesRegex(RuntimeError, 'no verified Hyprland GUI environment found'):
             self.run_environment(base)
 
@@ -279,15 +280,18 @@ class HostEnvironment(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, 'no verified Hyprland GUI environment found'):
             self.run_environment()
 
-    def test_stale_signature_recovers_current_instance_and_associated_metadata(self):
+    def test_mismatched_complete_tuple_discovers_current_instance_and_metadata(self):
         stale = self.session_environ('obsolete-signature')
         current = self.session_environ('current-signature', DISPLAY=':current', PATH='/current/bin')
+        self.make_instance('obsolete-signature')
+        self.rows = []
         self.make_instance('current-signature', pid=990)
         self.rows[0]['pid'] = 990
         self.add_donor(170, 'waybar', stale)
         self.write_process(990, current)
-        found = self.run_environment(self.base(HYPRLAND_INSTANCE_SIGNATURE='obsolete-signature',
-                                               WAYLAND_DISPLAY='wayland-1'), refresh=True)
+        supplied = self.base(XDG_RUNTIME_DIR=str(self.runtime), WAYLAND_DISPLAY='wayland-1',
+                             HYPRLAND_INSTANCE_SIGNATURE='obsolete-signature')
+        found = self.run_environment(supplied)
         self.assertEqual(found['HYPRLAND_INSTANCE_SIGNATURE'], 'current-signature')
         self.assertEqual(found['WAYLAND_DISPLAY'], 'wayland-1')
         self.assertEqual(found['DISPLAY'], ':current')
@@ -328,12 +332,14 @@ class HostEnvironment(unittest.TestCase):
     def test_multiple_live_instances_refuse_automatic_selection(self):
         one = self.session_environ('instance-one')
         two = self.session_environ('instance-two', display='wayland-2')
+        supplied = self.make_instance('supplied-stale')
+        self.rows = []
         self.make_instance('instance-one', 'wayland-1')
         self.make_instance('instance-two', 'wayland-2')
         self.add_donor(180, 'waybar', one)
         self.add_donor(181, 'kitty', two)
         with self.assertRaisesRegex(RuntimeError, 'multiple verified compositor instances'):
-            self.run_environment()
+            self.run_environment(self.base(**supplied))
 
     def test_leftover_directory_symlink_invalid_name_and_dead_pid_do_not_win(self):
         leftover = self.runtime / 'hypr' / 'leftover999'
