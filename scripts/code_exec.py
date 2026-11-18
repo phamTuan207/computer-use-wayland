@@ -62,6 +62,10 @@ State: user variables that are JSON-serializable (str, number, bool, None,
 list, dict) persist across code-exec calls in the same session, in a mode
 0600 file under STATE named code-exec-<token>.json. Observation bindings
 are kept in the same file but expire after 90s, like any observation.
+
+Template rule: see improvements/pick1-program-template.md. Observe after
+act() and before file asserts. For shell printf text, use one single-quoted
+argument and write \\n between output lines in the Python source.
 """
 import ast
 import json
@@ -79,6 +83,8 @@ MAX_TRACE_STEPS = 20000
 PROGRAM_FILENAME = '<code-exec>'
 MAX_READ_BYTES = 65536
 OBSERVATION_MAX_AGE = 90
+ASSERT_POLL_SECONDS = 2.0
+ASSERT_POLL_INTERVAL = 0.1
 READ_ROOT = Path('/tmp')
 
 SAFE_BUILTINS = {
@@ -438,17 +444,34 @@ class CodeExecSession:
             raise AssertionError(str(message) if isinstance(message, str) else 'assert failed')
         return True
 
+    def _poll_file(self, check):
+        deadline = time.monotonic() + ASSERT_POLL_SECONDS
+        while True:
+            self._check_budgets()
+            try:
+                if check():
+                    return True
+            except CodeExecError as exc:
+                if not isinstance(exc.__cause__, FileNotFoundError):
+                    raise
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                return False
+            time.sleep(min(ASSERT_POLL_INTERVAL, remaining))
+
     def api_assert_file_contains(self, path, text):
         if not isinstance(text, str):
             raise CodeExecError('assert_file_contains text must be a string')
-        content = self.api_read_file(path)
-        if text not in content:
+        resolved = _resolve_read_path(path)
+        if not self._poll_file(lambda: text in self.api_read_file(path)):
+            if not resolved.is_file():
+                raise AssertionError('file does not exist: ' + path)
             raise AssertionError('file %s does not contain %r' % (path, text[:80]))
         return True
 
     def api_assert_file_exists(self, path):
         resolved = _resolve_read_path(path)
-        if not resolved.is_file():
+        if not self._poll_file(lambda: resolved.exists()):
             raise AssertionError('file does not exist: ' + path)
         return True
 

@@ -1,7 +1,9 @@
 import importlib.util
 import os
 import pathlib
+import re
 import tempfile
+import threading
 import time
 import unittest
 from unittest import mock
@@ -28,7 +30,7 @@ class FakeBackend:
 
     def windows(self):
         self.calls.append(('windows',))
-        return [{'address': '0xabc', 'class': 'kitty', 'title': 'term',
+        return [{'address': '0xabc', 'class': 'kitty', 'title': 'speed-pick1-term',
                  'at': [0, 0], 'size': [800, 600], 'workspace': {'id': 1}}]
 
     def observe_window(self, address, crop, max_width):
@@ -47,6 +49,137 @@ class FakeBackend:
 def run(source, backend=None, **kwargs):
     backend = backend if backend is not None else FakeBackend()
     return code_exec.run_program(source, backend, **kwargs)
+
+
+def template_program(label):
+    doc = (ROOT / 'improvements' / 'pick1-program-template.md').read_text()
+    marker = '## %s program\n\n%s\n' % (label, chr(96) * 3 + 'python')
+    return doc.split(marker, 1)[1].split('\n' + chr(96) * 3, 1)[0] + '\n'
+
+
+EXPECTED_P4_LINES = (
+    'Ý tưởng 1: app nhắc uống nước.',
+    'Ý tưởng 2: bot tóm tắt bài giảng.',
+    'Ý tưởng 3: web bán đồ secondhand.',
+)
+EXPECTED_P4_RUNTIME = (
+    "printf 'Ý tưởng 1: app nhắc uống nước.\\n"
+    "Ý tưởng 2: bot tóm tắt bài giảng.\\n"
+    "Ý tưởng 3: web bán đồ secondhand.\\n"
+    "' > /tmp/y-tuong.txt && cat /tmp/y-tuong.txt\n"
+)
+
+
+class FakeShellBackend(FakeBackend):
+    """Simulate delayed shell command completion for the P3 race."""
+
+    def __init__(self):
+        super().__init__()
+        self.threads = []
+
+    def observe_window(self, address, crop, max_width):
+        time.sleep(0.15)
+        return super().observe_window(address, crop, max_width)
+
+    def act(self, meta, actions, observation_path):
+        result = super().act(meta, actions, observation_path)
+        command = actions[0]['text']
+        thread = threading.Thread(target=self._create_directories,
+                                  args=(command,))
+        self.threads.append(thread)
+        thread.start()
+        return result
+
+    def _create_directories(self, command):
+        time.sleep(0.3)
+        paths = command.split('mkdir -p ', 1)[1].split(' && ', 1)[0].split()
+        for path in paths:
+            pathlib.Path(path).mkdir(parents=True, exist_ok=True)
+
+    def join_shell(self):
+        for thread in self.threads:
+            thread.join()
+
+
+class FakeTerminalBackend(FakeBackend):
+    """Small shell simulator for the fixed P3 and P4 terminal programs."""
+
+    def __init__(self):
+        super().__init__()
+        self.actions = []
+        self.terminal_output = []
+        self.shell_errors = []
+        self.observe_count = 0
+
+    def observe_window(self, address, crop, max_width):
+        time.sleep(0.15)
+        self.observe_count += 1
+        meta = super().observe_window(address, crop, max_width)
+        meta['id'] = 'fake-observe-%d' % self.observe_count
+        meta['created'] = time.time()
+        return meta
+
+    def act(self, meta, actions, observation_path):
+        result = super().act(meta, actions, observation_path)
+        self.actions.extend(actions)
+        for action in actions:
+            if action.get('type') == 'type':
+                self._run_typed_text(action['text'])
+        return result
+
+    def _run_typed_text(self, text):
+        for raw_line in text.splitlines():
+            line = raw_line.strip()
+            if not line:
+                continue
+            if line.startswith('mkdir -p ') and ' && find ' in line:
+                mkdir_part, find_part = line.split(' && find ', 1)
+                paths = mkdir_part[len('mkdir -p '):].split()
+                for path in paths:
+                    pathlib.Path(path).mkdir(parents=True, exist_ok=True)
+                root = pathlib.Path(find_part.rsplit(' -type d', 1)[0])
+                self.terminal_output.extend(
+                    str(path) for path in [root] + sorted(root.rglob('*'))
+                    if path.is_dir())
+                continue
+            match = re.fullmatch(r"printf '(.*)' > (\S+) && cat (\S+)", line)
+            if match:
+                content = match.group(1).replace(r'\n', '\n')
+                target = pathlib.Path(match.group(2))
+                target.write_bytes(content.encode('utf-8'))
+                self.terminal_output.append(
+                    pathlib.Path(match.group(3)).read_text(encoding='utf-8'))
+                continue
+            redirect = re.fullmatch(r'>\s*(\S+)\s*&&\s*cat\s+(\S+)', line)
+            if redirect:
+                pathlib.Path(redirect.group(1)).write_bytes(b'')
+                self.terminal_output.append('')
+                continue
+            self.shell_errors.append('bash: command not found: ' + line[:80])
+
+
+class DelayedFileBackend(FakeBackend):
+    def __init__(self, path, contents, delay=0.5):
+        super().__init__()
+        self.path = pathlib.Path(path)
+        self.contents = contents
+        self.delay = delay
+        self.thread = None
+
+    def act(self, meta, actions, observation_path):
+        result = super().act(meta, actions, observation_path)
+        self.thread = threading.Thread(target=self._write_later)
+        self.thread.start()
+        return result
+
+    def _write_later(self):
+        time.sleep(self.delay)
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        self.path.write_text(self.contents, encoding='utf-8')
+
+    def join_writer(self):
+        if self.thread is not None:
+            self.thread.join()
 
 
 class FlagTests(unittest.TestCase):
@@ -248,6 +381,190 @@ class TraceBudgetTests(unittest.TestCase):
         result = run('total = 0\nfor i in range(5000):\n    total += i')
         self.assertTrue(result['ok'], result)
         self.assertEqual(result['variables']['total'], 12497500)
+
+
+class TestP3TemplateRace(unittest.TestCase):
+    def test_old_direct_assert_fails_and_template_observe_passes(self):
+        template = template_program('P3')
+        old_source = template.replace(
+            'verify = observe(window=term["address"])\n', '', 1)
+        old_source = old_source.replace(
+            'verify_image = verify["image"]\n', '', 1)
+        with tempfile.TemporaryDirectory(prefix='code-exec-test-p3-race-') as folder:
+            old_root = pathlib.Path(folder) / 'old' / 'hoc-ky-2'
+            new_root = pathlib.Path(folder) / 'new' / 'hoc-ky-2'
+            old_source = old_source.replace('/tmp/hoc-ky-2', str(old_root))
+            new_source = template.replace('/tmp/hoc-ky-2', str(new_root))
+            old_backend = FakeShellBackend()
+            new_backend = FakeShellBackend()
+
+            def immediate_assert_file_exists(session, path):
+                resolved = code_exec._resolve_read_path(path)
+                if not resolved.exists():
+                    raise AssertionError('file does not exist: ' + path)
+                return True
+
+            # Isolate the old template race from the separate new poll guard.
+            with mock.patch.object(code_exec.CodeExecSession,
+                                   'api_assert_file_exists',
+                                   immediate_assert_file_exists):
+                old_result = run(old_source, old_backend)
+            old_backend.join_shell()
+            self.assertFalse(old_result['ok'], old_result)
+            self.assertEqual(old_result['error_type'], 'assert_failed')
+            self.assertIn('file does not exist:', old_result['error'])
+
+            new_result = run(new_source, new_backend)
+            new_backend.join_shell()
+            self.assertTrue(new_result['ok'], new_result)
+            self.assertEqual(new_result['api_calls'], 4)
+            self.assertEqual(new_result['variables']['verify_image'], '/tmp/x.png')
+            for name in ('dsa', 'ktvm', 'oop'):
+                self.assertTrue((new_root / name).is_dir())
+
+
+class TestP4VietnameseBytes(unittest.TestCase):
+    def test_old_command_fails_and_fixed_template_writes_exact_bytes(self):
+        template = template_program('P4')
+        old_source = template.replace("printf '", 'printf ', 1)
+        old_source = old_source.replace('\\\\n', '\\n')
+        old_source = old_source.replace("\\n' > /tmp/y-tuong.txt",
+                                        '\\n > /tmp/y-tuong.txt', 1)
+        with tempfile.TemporaryDirectory(prefix='code-exec-test-p4-bytes-') as folder:
+            target = pathlib.Path(folder) / 'y-tuong.txt'
+            old_program = old_source.replace('/tmp/y-tuong.txt', str(target))
+            new_program = template.replace('/tmp/y-tuong.txt', str(target))
+
+            old_result = run(old_program, FakeTerminalBackend())
+            self.assertFalse(old_result['ok'], old_result)
+            self.assertEqual(old_result['error_type'], 'assert_failed')
+            self.assertIn('does not contain', old_result['error'])
+
+            backend = FakeTerminalBackend()
+            result = run(new_program, backend)
+            self.assertTrue(result['ok'], result)
+            self.assertEqual(result['api_calls'], 4)
+            expected = ('\n'.join(EXPECTED_P4_LINES) + '\n').encode('utf-8')
+            self.assertEqual(target.read_bytes(), expected)
+            self.assertEqual(backend.terminal_output[-1].encode('utf-8'), expected)
+
+    def test_act_passes_fixed_runtime_text_codepoint_for_codepoint(self):
+        class CapturingBackend(FakeBackend):
+            def __init__(self):
+                super().__init__()
+                self.captured = None
+
+            def act(self, meta, actions, observation_path):
+                result = super().act(meta, actions, observation_path)
+                self.captured = actions[0]['text']
+                return result
+
+        source = '\n'.join(template_program('P4').splitlines()[:4]) + '\n'
+        backend = CapturingBackend()
+        result = run(source, backend)
+        self.assertTrue(result['ok'], result)
+        self.assertEqual(backend.captured, EXPECTED_P4_RUNTIME)
+        self.assertEqual(backend.captured.count(r'\n'), 3)
+        self.assertEqual(backend.captured.count('\n'), 1)
+        self.assertTrue(backend.captured.endswith('\n'))
+        self.assertFalse(backend.captured.endswith('\n\n'))
+
+
+class TestAssertPoll(unittest.TestCase):
+    def test_exists_retries_until_late_file_appears(self):
+        with tempfile.TemporaryDirectory(prefix='code-exec-test-assert-late-') as folder:
+            path = pathlib.Path(folder) / 'late.txt'
+            backend = DelayedFileBackend(path, 'ready\n')
+            source = (
+                'obs = observe(window="0xabc")\n'
+                'result = act([{"type": "wait", "ms": 0}], obs)\n'
+                'assert_file_exists(%r)\n' % str(path)
+            )
+            result = run(source, backend)
+            backend.join_writer()
+            self.assertTrue(result['ok'], result)
+
+    def test_contains_retries_missing_file_until_late_content_appears(self):
+        with tempfile.TemporaryDirectory(prefix='code-exec-test-assert-text-') as folder:
+            path = pathlib.Path(folder) / 'late.txt'
+            backend = DelayedFileBackend(path, 'needle is ready\n')
+            source = (
+                'obs = observe(window="0xabc")\n'
+                'result = act([{"type": "wait", "ms": 0}], obs)\n'
+                'assert_file_contains(%r, "needle")\n' % str(path)
+            )
+            result = run(source, backend)
+            backend.join_writer()
+            self.assertTrue(result['ok'], result)
+
+    def test_missing_file_times_out_promptly_with_original_message(self):
+        with tempfile.TemporaryDirectory(prefix='code-exec-test-assert-missing-') as folder:
+            path = pathlib.Path(folder) / 'never.txt'
+            started = time.monotonic()
+            result = run('assert_file_exists(%r)' % str(path))
+            elapsed = time.monotonic() - started
+            self.assertFalse(result['ok'], result)
+            self.assertEqual(result['error_type'], 'assert_failed')
+            self.assertEqual(result['error'],
+                             'assert failed: file does not exist: ' + str(path))
+            self.assertLess(elapsed, 5.0)
+
+    def test_missing_content_times_out_with_original_message(self):
+        with tempfile.TemporaryDirectory(prefix='code-exec-test-assert-content-') as folder:
+            path = pathlib.Path(folder) / 'wrong.txt'
+            path.write_text('not the requested text', encoding='utf-8')
+            started = time.monotonic()
+            result = run('assert_file_contains(%r, "needle")' % str(path))
+            elapsed = time.monotonic() - started
+            self.assertFalse(result['ok'], result)
+            self.assertEqual(result['error_type'], 'assert_failed')
+            self.assertEqual(
+                result['error'],
+                "assert failed: file %s does not contain 'needle'" % str(path))
+            self.assertLess(elapsed, 5.0)
+
+    def test_poll_respects_program_wall_budget(self):
+        with tempfile.TemporaryDirectory(prefix='code-exec-test-assert-budget-') as folder:
+            path = pathlib.Path(folder) / 'never.txt'
+            started = time.monotonic()
+            result = run('assert_file_exists(%r)' % str(path), wall_seconds=1)
+            elapsed = time.monotonic() - started
+            self.assertFalse(result['ok'], result)
+            self.assertEqual(result['error_type'], 'sandbox')
+            self.assertIn('wall-clock budget exceeded', result['error'])
+            self.assertLess(elapsed, 1.5)
+
+    def test_already_present_file_does_not_sleep(self):
+        with tempfile.TemporaryDirectory(prefix='code-exec-test-assert-ready-') as folder:
+            path = pathlib.Path(folder) / 'ready.txt'
+            path.write_text('ready', encoding='utf-8')
+            with mock.patch.object(code_exec.time, 'sleep',
+                                   side_effect=AssertionError('unexpected poll sleep')):
+                result = run('assert_file_exists(%r)' % str(path))
+            self.assertTrue(result['ok'], result)
+
+
+class TestTemplateDryRun(unittest.TestCase):
+    def test_fixed_p3_and_p4_programs_run_with_mock_terminal(self):
+        with tempfile.TemporaryDirectory(prefix='code-exec-test-dry-run-') as folder:
+            p3_root = pathlib.Path(folder) / 'p3' / 'hoc-ky-2'
+            p3_source = template_program('P3').replace(
+                '/tmp/hoc-ky-2', str(p3_root))
+            p3 = run(p3_source, FakeTerminalBackend())
+            self.assertTrue(p3['ok'], p3)
+
+            p4_path = pathlib.Path(folder) / 'p4' / 'y-tuong.txt'
+            p4_path.parent.mkdir(parents=True)
+            p4_source = template_program('P4').replace(
+                '/tmp/y-tuong.txt', str(p4_path))
+            p4 = run(p4_source, FakeTerminalBackend())
+            self.assertTrue(p4['ok'], p4)
+            expected = ('\n'.join(EXPECTED_P4_LINES) + '\n').encode('utf-8')
+            self.assertEqual(p4_path.read_bytes(), expected)
+            self.dry_run_envelopes = [
+                {key: p3[key] for key in ('ok', 'api_calls', 'elapsed_ms')},
+                {key: p4[key] for key in ('ok', 'api_calls', 'elapsed_ms')},
+            ]
 
 
 if __name__ == '__main__':
