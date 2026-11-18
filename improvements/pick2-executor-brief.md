@@ -190,7 +190,7 @@ bypasses the loop being measured).
 
 ## Setup (plain shell, not broker input; do this once before any task)
 
-- Pull the branch: `cd /home/james/computer-use-wayland && git fetch origin && git checkout speed-swarm && git pull --ff-only` and record the HEAD in the summary.
+- Pull the branch: `cd /home/james/computer-use-wayland && git fetch origin && git checkout speed-swarm && git -c pull.rebase=false pull --ff-only origin speed-swarm` and record the HEAD in the summary. The tree may have uncommitted files from other workers: LEAVE THEM UNTOUCHED, never stash, never commit, never ask about them. If the pull still fails, CONTINUE measuring on the local HEAD and record both HEADs in the summary. NEVER stop before P1 for a git reason, and NEVER end your turn with a question: there is no one to answer it. If you are blocked, record BLOCKED with the cause in the summary and move to the next task.
 - Export the Pick 2 flag for your own shell only on the pick2 arm:
   `export CU_PICK2_SUBGOAL_ONLY=1`. Baseline arm: make sure it is unset.
 - Source the env file: `source /home/james/backups/cu-final-0.57.2-20261114-225131/env.sh`
