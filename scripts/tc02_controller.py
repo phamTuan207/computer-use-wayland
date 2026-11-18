@@ -16,6 +16,18 @@ import time
 
 
 ROOT = Path(__file__).resolve().parents[1]
+try:
+    sys.path.insert(0, str(ROOT / 'scripts'))
+    import subgoal_policy as _pick2
+except Exception:
+    _pick2 = None
+
+
+def pick2_enabled():
+    """True only when the Pick 2 opt-in flag is set (default OFF)."""
+    if _pick2 is None:
+        return False
+    return _pick2.pick2_enabled()
 DEFAULT_PLAN = ROOT / 'scripts' / 'plans' / 'tc02-v1.json'
 DEFAULT_SCHEMA = ROOT / 'scripts' / 'plans' / 'tc02.schema.json'
 DEFAULT_RUNS = Path('/tmp/opt-impl-step1-runs')
@@ -342,6 +354,10 @@ class Tc02Controller:
         self.editor_cleanup_failure = None
         self.known_background = []
         self.metrics = {
+            'pick2_mode': pick2_enabled(),
+            'pick2_subgoal_verifications': 0,
+            'pick2_l2_calls': 0,
+            'pick2_l3_escalations': 0,
             'task_requests': 0,
             'driver_requests': 0,
             'windows_requests': 0,
@@ -626,6 +642,12 @@ class Tc02Controller:
         return windows
 
     def preflight(self):
+        if pick2_enabled():
+            if _pick2 is not None:
+                _pick2.validate_plan_has_no_mid_step_judge(self.plan)
+            self.emit('pick2-mode', enabled=True,
+                      rules='subgoal-only verification, no per-step judge/reflect, '
+                            'text history, reasoning dial L1 none / L2 low / L3 max')
         self.run_dir.mkdir(parents=True, exist_ok=False, mode=0o700)
         os.chmod(self.run_dir, 0o700)
         self._ensure_clean_broker()
@@ -1456,6 +1478,24 @@ class Tc02Controller:
             'extra': extra or {},
         }
 
+    def pick2_subgoal_verification(self, subgoal, checks):
+        """Pick 2 subgoal-boundary verification: deterministic checks only.
+
+        Runs the local postcondition checks for one subgoal, counts the
+        verification, and returns True when every check passes. A failed
+        subgoal escalates (level 3) instead of retrying silently. When
+        Pick 2 is OFF this still runs the same checks; the flag only
+        controls the mode logging and the plan validation in preflight.
+        """
+        if _pick2 is None:
+            raise Escalate(self.step, self.current_checkpoint,
+                           'pick2 subgoal verification needs subgoal_policy')
+        passed, failed, details = _pick2.verify_subgoal(checks)
+        self.metrics['pick2_subgoal_verifications'] += 1
+        self.emit('pick2-subgoal-verification', subgoal=subgoal,
+                  passed=passed, failed=failed, details=details)
+        return passed
+
     def _summary(self, status, *, failure=None):
         completed_mono = self.run_completed_mono or time.monotonic()
         end_to_end = completed_mono - self.dispatch_mono
@@ -1463,6 +1503,7 @@ class Tc02Controller:
                      if hasattr(self, 'execution_start') else None)
         summary = {
             'status': status,
+            'pick2_mode': pick2_enabled(),
             'procedure': self.plan['procedure'],
             'run_id': self.run_id,
             'repo_head': self.git_head(),
@@ -1609,6 +1650,8 @@ def main(argv=None):
         plan = load_json(args.plan)
         schema = load_json(args.schema)
         validate_plan(plan, schema)
+        if pick2_enabled() and _pick2 is not None:
+            _pick2.validate_plan_has_no_mid_step_judge(plan)
         if args.dry_run:
             return dry_run(plan, args.trace_dir)
         run_id = args.run_id or wall_now().strftime('tc02-%Y%m%d-%H%M%S')
