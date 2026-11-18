@@ -1,3 +1,4 @@
+import json
 import os
 from pathlib import Path
 import subprocess
@@ -29,12 +30,23 @@ class VisualsStderrTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as home:
             env = os.environ.copy()
             env['HOME'] = home
+            env.update({'XDG_RUNTIME_DIR': '/fixture/runtime',
+                        'WAYLAND_DISPLAY': 'wayland-fixture',
+                        'HYPRLAND_INSTANCE_SIGNATURE': 'fixture-instance'})
             result = subprocess.run([sys.executable, '-c', bootstrap], env=env,
                                     capture_output=True, text=True, timeout=5)
             log = Path(home) / '.cache/agent-computer-use/logs/visuals-stderr.log'
             self.assertNotEqual(result.returncode, 0)
             self.assertTrue(log.is_file())
-            self.assertIn('stderr capture sentinel', log.read_text())
+            text = log.read_text()
+            prefix = 'visuals: supplied compositor tuple: '
+            tuple_line = next(line for line in text.splitlines() if line.startswith(prefix))
+            self.assertEqual(json.loads(tuple_line[len(prefix):]), {
+                'XDG_RUNTIME_DIR': '/fixture/runtime',
+                'WAYLAND_DISPLAY': 'wayland-fixture',
+                'HYPRLAND_INSTANCE_SIGNATURE': 'fixture-instance',
+            })
+            self.assertLess(text.index(tuple_line), text.index('stderr capture sentinel'))
             self.assertEqual(result.stderr, '')
 
 

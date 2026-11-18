@@ -59,8 +59,21 @@ def _write_spawn_log():
         pass
 
 
+def _log_supplied_compositor_tuple():
+    try:
+        if Path(sys.argv[0]).resolve() != Path(__file__).resolve():
+            return
+        keys = ('XDG_RUNTIME_DIR', 'WAYLAND_DISPLAY', 'HYPRLAND_INSTANCE_SIGNATURE')
+        supplied = {key: os.environ.get(key) for key in keys}
+        print('visuals: supplied compositor tuple: ' +
+              json.dumps(supplied, sort_keys=True, separators=(',', ':')), file=sys.stderr)
+    except Exception:
+        pass
+
+
 _capture_spawn_stderr()
 _write_spawn_log()
+_log_supplied_compositor_tuple()
 
 import cursor_theme
 import cursor_session
