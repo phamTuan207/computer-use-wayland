@@ -57,6 +57,14 @@ class StubCdpHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def _send_empty(self, code=200):
+        # Real Chromium answers /json/activate and /json/close with an
+        # empty 200 body, not JSON. The stub does the same, so the
+        # wrapper must treat an empty 2xx as success.
+        self.send_response(code)
+        self.send_header("Content-Length", "0")
+        self.end_headers()
+
     def do_GET(self):
         if self.path == "/json/version":
             self._send_json({"Browser": "Chromium/157.0.8103.38",
@@ -78,7 +86,7 @@ class StubCdpHandler(BaseHTTPRequestHandler):
             if parts[1] == "close":
                 type(self).tabs = [t for t in type(self).tabs
                                    if t["id"] != tab_id]
-            self._send_json({})
+            self._send_empty()
             return
         self._send_json({"error": "not found"}, code=404)
 

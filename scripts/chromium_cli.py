@@ -125,17 +125,36 @@ def validate_url(raw):
     return raw
 
 
-def http_json(endpoint, path, method="GET"):
-    """One CDP HTTP call; returns parsed JSON, raises on failure."""
+def http_json(endpoint, path, method="GET", expect_json=True):
+    """One CDP HTTP call; returns parsed JSON, raises on failure.
+
+    With expect_json False (activate, close), a 2xx with an empty or
+    plain-text body is a success: real Chromium answers /json/close
+    and /json/activate with an empty body, not JSON (found by the
+    laptop live test 2026-11-18: close removed the tab but the wrapper
+    reported invalid JSON). A JSON body is still parsed when present.
+    """
     request = urllib.request.Request(endpoint + path, method=method)
     try:
         with urllib.request.urlopen(request, timeout=HTTP_TIMEOUT_SECONDS) as resp:
-            return json.loads(resp.read().decode("utf-8"))
+            text = resp.read().decode("utf-8")
     except urllib.error.HTTPError as exc:
         raise RuntimeError("CDP %s %s: HTTP %s" % (method, path, exc.code)) from exc
     except urllib.error.URLError as exc:
         raise RuntimeError("CDP %s %s unreachable: %s" % (method, path, exc.reason)) from exc
-    except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+    except UnicodeDecodeError as exc:
+        raise RuntimeError("CDP %s %s returned invalid text" % (method, path)) from exc
+    if not expect_json:
+        if not text.strip():
+            return {}
+        try:
+            parsed = json.loads(text)
+        except json.JSONDecodeError:
+            return {"message": text}
+        return parsed if isinstance(parsed, dict) else {"message": text}
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError as exc:
         raise RuntimeError("CDP %s %s returned invalid JSON" % (method, path)) from exc
 
 
@@ -308,7 +327,7 @@ def cmd_activate(endpoint, args):
     if not args.tab_id.strip():
         raise ValueError("activate needs a non-empty tab id")
     http_json(endpoint, "/json/activate/" + urllib.parse.quote(
-        args.tab_id, safe=""))
+        args.tab_id, safe=""), expect_json=False)
     tabs = {tab["id"]: tab for tab in list_page_tabs(endpoint)}
     tab = tabs.get(args.tab_id)
     if tab is None:
@@ -322,7 +341,7 @@ def cmd_close(endpoint, args):
     if not args.tab_id.strip():
         raise ValueError("close needs a non-empty tab id")
     http_json(endpoint, "/json/close/" + urllib.parse.quote(
-        args.tab_id, safe=""))
+        args.tab_id, safe=""), expect_json=False)
     clear_state_if(args.tab_id)
     return {"ok": True, "command": "close", "endpoint": endpoint,
             "tab_id": args.tab_id}
