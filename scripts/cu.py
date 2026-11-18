@@ -1859,7 +1859,45 @@ def cli_app_record(name,entry):
     if description:record['description']=description
     return record
 
+def cli_run_chromium(command_args):
+    """Run the repo-owned Chromium wrapper (scripts/chromium_cli.py).
+
+    Chromium has no upstream CLI-Anything harness binary, so it does not
+    go through scripts/cli-anything.py: the wrapper is a repo script run
+    with the current interpreter, argv only, same 75 s outer timeout as
+    the harness path. The envelope keeps the harness shape (app, args,
+    returncode, stdout/stderr truncated) and adds the wrapper's parsed
+    JSON output as `result`.
+    """
+    envelope={'app':'chromium','args':list(command_args),'returncode':None,
+              'stdout_truncated':'','stderr_truncated':''}
+    script=ROOT/'scripts'/'chromium_cli.py'
+    try:
+        result=subprocess.run([sys.executable,str(script),*command_args],
+                              capture_output=True,text=True,timeout=75)
+    except subprocess.TimeoutExpired:
+        envelope.update(timeout=True,error='chromium wrapper timed out')
+        return {'ok':False,**envelope}
+    except OSError as exc:
+        envelope['error']='failed to run chromium wrapper: '+str(exc)
+        return {'ok':False,**envelope}
+    envelope['returncode']=result.returncode
+    envelope['stdout_truncated']=result.stdout[:4096]
+    envelope['stderr_truncated']=result.stderr[:4096]
+    try:parsed=json.loads(result.stdout)
+    except json.JSONDecodeError:
+        envelope['error']='chromium wrapper returned invalid JSON'
+        return {'ok':False,**envelope}
+    if not isinstance(parsed,dict):
+        envelope['error']='chromium wrapper returned an unexpected result'
+        return {'ok':False,**envelope}
+    envelope['result']=parsed
+    envelope['ok']=result.returncode==0 and parsed.get('ok') is True
+    return envelope
+
 def cli_run(app,command_args):
+    if app=='chromium':
+        return cli_run_chromium(command_args)
     envelope={'app':app,'args':list(command_args),'returncode':None,
               'stdout_truncated':'','stderr_truncated':''}
     runner=ROOT/'scripts'/'cli-anything.py'
@@ -1905,9 +1943,13 @@ def cli_command(args):
         entry=registry.get(args.app)
         if entry is None:return {'ok':False,'error':'unknown app: '+args.app}
         skill_path=ROOT/'skill'/'cli-anything'/(args.app+'.md')
+        if entry.get('repo_owned'):
+            install='ships in this repo: '+entry['entry_point']
+        else:
+            install='pip install '+entry['entry_point']
         return {'ok':True,'app':args.app,
                 'skill_path':str(skill_path),'skill_vendored':skill_path.is_file(),
-                'install':'pip install '+entry['entry_point'],
+                'install':install,
                 'install_upstream':entry['install_cmd'],
                 'requires':entry['requires']}
     return cli_run(args.app,args.command_args)
