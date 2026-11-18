@@ -37,9 +37,9 @@ UPSTREAM_HEAD = "34f5195"
 
 # Wave one: only these three have vendored upstream skill files.
 VENDORED_SKILLS = {"obsidian", "libreoffice", "gimp"}
-# Repo-owned skill files (not upstream-vendored): the Chromium and
-# Zen wrappers.
-REPO_OWNED_SKILLS = {"chromium", "zen"}
+# Repo-owned skill files (not upstream-vendored): the Chromium,
+# Zen and VS Code wrappers.
+REPO_OWNED_SKILLS = {"chromium", "zen", "vscode"}
 # Registry entries but no vendored skill file yet.
 SNAPSHOT_ONLY = {"inkscape", "krita", "blender", "audacity", "kdenlive",
                  "shotcut", "zotero", "joplin", "calibre"}
@@ -86,16 +86,12 @@ class CliAnythingDocs(unittest.TestCase):
         header = data.get("header", {})
         self.assertEqual(header.get("upstream_head"), UPSTREAM_HEAD)
 
-    def test_vendored_skills_are_exactly_the_wave_one_three_plus_chromium(self):
+    def test_vendored_skills_are_exactly_the_wave_one_three_plus_repo_owned(self):
         registry = load_registry()
         vendored_files = {path.name for path in SKILL_DIR.glob("*.md")}
-        # vscode.md landed in 59a2b37 (vscode worker) without its registry
-        # entry yet; that entry is the vscode worker's pending work, not
-        # this test's. Allow the file here, but do not require it in the
-        # registry the way the four covered skills are required below.
         self.assertEqual(vendored_files,
                          {app + ".md" for app in
-                          VENDORED_SKILLS | REPO_OWNED_SKILLS} | {"vscode.md"})
+                          VENDORED_SKILLS | REPO_OWNED_SKILLS})
         for app in VENDORED_SKILLS | REPO_OWNED_SKILLS:
             self.assertIn(app, registry,
                           "%s has a vendored skill but no registry entry" % app)
@@ -142,6 +138,25 @@ class CliAnythingDocs(unittest.TestCase):
             r"^## Version\s*\n+\s*(\d+\.\d+(?:\.\d+)?)\s*$",
             text, re.MULTILINE)
         self.assertIsNotNone(body_match, "zen.md has no ## Version section")
+        self.assertEqual(body_match.group(1), "1.0.0")
+
+    def test_vscode_entry_is_repo_owned_and_versioned(self):
+        registry = load_registry()
+        entry = registry["vscode"]
+        self.assertTrue(entry.get("repo_owned"),
+                        "vscode registry entry must be marked repo_owned")
+        self.assertEqual(entry.get("version"), "1.0.0")
+        self.assertEqual(entry.get("entry_point"), "scripts/vscode_cli.py")
+        text = (SKILL_DIR / "vscode.md").read_text()
+        header = "\n".join(text.splitlines()[:HEADER_LINES])
+        match = re.search(r"Skill version:\s*(\d+\.\d+(?:\.\d+)?)", header)
+        self.assertIsNotNone(
+            match, "vscode.md header states no repo skill version")
+        self.assertEqual(match.group(1), "1.0.0")
+        body_match = re.search(
+            r"^## Version\s*\n+\s*(\d+\.\d+(?:\.\d+)?)\s*$",
+            text, re.MULTILINE)
+        self.assertIsNotNone(body_match, "vscode.md has no ## Version section")
         self.assertEqual(body_match.group(1), "1.0.0")
 
     def test_vendored_skills_state_upstream_version(self):

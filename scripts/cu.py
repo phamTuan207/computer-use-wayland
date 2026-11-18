@@ -1895,9 +1895,47 @@ def cli_run_chromium(command_args):
     envelope['ok']=result.returncode==0 and parsed.get('ok') is True
     return envelope
 
+def cli_run_vscode(command_args):
+    """Run the repo-owned VS Code wrapper (scripts/vscode_cli.py).
+
+    VS Code has no upstream CLI-Anything harness binary, so it does not
+    go through scripts/cli-anything.py: the wrapper is a repo script run
+    with the current interpreter, argv only, same 75 s outer timeout as
+    the harness path. The envelope keeps the harness shape (app, args,
+    returncode, stdout/stderr truncated) and adds the wrapper's parsed
+    JSON output as `result`.
+    """
+    envelope={'app':'vscode','args':list(command_args),'returncode':None,
+              'stdout_truncated':'','stderr_truncated':''}
+    script=ROOT/'scripts'/'vscode_cli.py'
+    try:
+        result=subprocess.run([sys.executable,str(script),*command_args],
+                              capture_output=True,text=True,timeout=75)
+    except subprocess.TimeoutExpired:
+        envelope.update(timeout=True,error='vscode wrapper timed out')
+        return {'ok':False,**envelope}
+    except OSError as exc:
+        envelope['error']='failed to run vscode wrapper: '+str(exc)
+        return {'ok':False,**envelope}
+    envelope['returncode']=result.returncode
+    envelope['stdout_truncated']=result.stdout[:4096]
+    envelope['stderr_truncated']=result.stderr[:4096]
+    try:parsed=json.loads(result.stdout)
+    except json.JSONDecodeError:
+        envelope['error']='vscode wrapper returned invalid JSON'
+        return {'ok':False,**envelope}
+    if not isinstance(parsed,dict):
+        envelope['error']='vscode wrapper returned an unexpected result'
+        return {'ok':False,**envelope}
+    envelope['result']=parsed
+    envelope['ok']=result.returncode==0 and parsed.get('ok') is True
+    return envelope
+
 def cli_run(app,command_args):
     if app=='chromium':
         return cli_run_chromium(command_args)
+    if app=='vscode':
+        return cli_run_vscode(command_args)
     envelope={'app':app,'args':list(command_args),'returncode':None,
               'stdout_truncated':'','stderr_truncated':''}
     runner=ROOT/'scripts'/'cli-anything.py'

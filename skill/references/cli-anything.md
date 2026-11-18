@@ -32,7 +32,12 @@ repo-owned wrapper (`computer-use cli run zen -- ...`, skill
 `skill/cli-anything/zen.md`) that covers tabs and page reads over
 loopback WebDriver BiDi on a dedicated session, plus read-only
 history from the real profile; it can never attach to his running
-Zen, which has no debug port.
+Zen, which has no debug port. VS Code is the third exception: it has
+a repo-owned wrapper (`computer-use cli run vscode -- ...`, skill
+`skill/cli-anything/vscode.md`) that covers open, goto, diff,
+extensions, workspaces, open tabs and saved-file reads over the
+`code` CLI and read-only workspaceStorage; it cannot read unsaved
+or dirty buffer text.
 
 Backend order (QC clarification): CLI/API is the FIRST preference, not the
 fourth. It is first because it is the fastest path (no session, no GUI);
@@ -151,3 +156,4 @@ are different fields from different sources, not a contradiction.
 | Calibre | `cli-anything-calibre` | 1.0.0 | Calibre (apt install calibre, brew install --cask calibre) |
 | Chromium | `scripts/chromium_cli.py` (repo-owned, no upstream harness) | 1.0.0 | Chromium with a loopback CDP endpoint for tab commands; a Chromium profile dir for history, bookmarks and downloads |
 | Zen | `scripts/zen_cli.py` via `cli-anything-zen` on PATH (repo-owned, no upstream harness) | 1.0.0 | Zen with a loopback BiDi endpoint on a dedicated session for tab commands; read-only history from the real profile |
+| VS Code | `scripts/vscode_cli.py` (repo-owned, no upstream harness) | 1.0.0 | VS Code with the `code` CLI for open, goto, diff and extensions; read-only workspaceStorage for workspaces and open tabs; no unsaved or dirty buffer reads |

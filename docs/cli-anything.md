@@ -38,14 +38,19 @@ Obsidian, LibreOffice, GIMP, Inkscape, Krita, Blender, Audacity, Kdenlive,
 Shotcut, Zotero, Joplin, Calibre. The registry snapshot carries the
 `name`, `entry_point`, `skill_md`, `install_cmd`, and `requires` of each.
 Only LibreOffice is installed on this VM, so it is the only first-wave app
-with a live test. No harness exists for VS Code, Zen, Firefox,
+with a live test. No harness exists for Firefox,
 or Pinta, so the GUI backends stay mandatory for those apps. Chromium
 is the exception: it has no upstream harness, but the registry also
 carries a repo-owned Chromium wrapper entry (`chromium`, version
 1.0.0, skill `skill/cli-anything/chromium.md`, code
 `scripts/chromium_cli.py`), which is repo code, not vendored upstream
 docs, and is covered by `tests/test_chromium_cli.py` instead of the
-LibreOffice live test.
+LibreOffice live test. Zen is the second exception: a repo-owned
+wrapper entry (`zen`, version 1.0.0, skill `skill/cli-anything/zen.md`,
+code `scripts/zen_cli.py`) with the same shape. VS Code is the third
+exception: a repo-owned wrapper entry (`vscode`, version 1.0.0, skill
+`skill/cli-anything/vscode.md`, code `scripts/vscode_cli.py`),
+covered by `tests/test_vscode_cli.py` and verified live on the laptop.
 
 ## Update procedure
 
