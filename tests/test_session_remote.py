@@ -1126,5 +1126,21 @@ def _process_alive(process):
     return process is not None and process.poll() is None
 
 
+class CodeExecEnvelopeTests(unittest.TestCase):
+    """Pick 1: code-exec is on the broker allowlist; unknown commands are not."""
+
+    def test_code_exec_envelope_validates(self):
+        envelope, _, _ = session_remote._validate_envelope(
+            {'args': ['code-exec', '--program', '-'], 'stdin': 'x = 1',
+             'image_policy': 'always'})
+        self.assertEqual(envelope['args'][0], 'code-exec')
+
+    def test_unknown_command_still_rejected(self):
+        with self.assertRaises(session_remote.BrokerError):
+            session_remote._validate_envelope(
+                {'args': ['shell', 'id'], 'stdin': '',
+                 'image_policy': 'always'})
+
+
 if __name__ == '__main__':
     unittest.main()
