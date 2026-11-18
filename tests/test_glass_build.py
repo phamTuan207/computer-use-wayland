@@ -26,12 +26,15 @@ class Fake:
     """Answers the gate commands; `apply_ok` decides whether the patch lands."""
 
     def __init__(self, source, apply_ok, initial='', final=None, reverse_rc=1, status_rc=0,
-                 second_status_rc=0):
+                 second_status_rc=0, apply_rcs=None):
         self.source = str(source)
         self.apply_ok = apply_ok
         self.initial = initial
         self.final = initial if final is None else final
         self.reverse_rc = reverse_rc
+        self.reverse_calls = 0
+        self.apply_rcs = list(apply_rcs) if apply_rcs is not None else None
+        self.apply_calls = []
         self.status_rc = status_rc
         self.second_status_rc = second_status_rc
         self.calls = []
@@ -47,7 +50,12 @@ class Fake:
         if joined.startswith('pkg-config'):
             return Done(0, build_glass.REQUIRED_HYPRLAND + '\n')
         if '--reverse' in joined:
-            return Done(self.reverse_rc, '', '' if self.reverse_rc == 0 else 'not applied')
+            if isinstance(self.reverse_rc, (list, tuple)):
+                rc = self.reverse_rc[self.reverse_calls]
+            else:
+                rc = self.reverse_rc
+            self.reverse_calls += 1
+            return Done(rc, '', '' if rc == 0 else 'not applied')
         if 'status' in joined:
             assert '--untracked-files=all' in joined, 'status without flag: ' + joined
             self.status_calls += 1
@@ -57,7 +65,12 @@ class Fake:
             body = self.initial if self.status_calls == 1 else self.final
             return Done(0, body + '\n' if body else '')
         if joined.startswith('git apply') and '--check' not in joined:
-            return Done(0 if self.apply_ok else 1, '', '' if self.apply_ok else 'patch does not apply')
+            self.apply_calls.append(args[-1])
+            if self.apply_rcs is not None:
+                rc = self.apply_rcs[len(self.apply_calls) - 1]
+            else:
+                rc = 0 if self.apply_ok else 1
+            return Done(rc, '', '' if rc == 0 else 'patch application failed')
         return Done(0)
 
     def made(self):
@@ -69,12 +82,21 @@ class GlassBuild(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
         self.source = Path(self.tmp.name)
-        patch_file = self.source.parent / (self.source.name + '.patch')
-        patch_file.write_text('--- a\n+++ b\n')
-        self.addCleanup(patch_file.unlink)
-        patcher = patch.object(build_glass, 'PATCH', patch_file)
-        patcher.start()
-        self.addCleanup(patcher.stop)
+        local_patch = self.source.parent / (self.source.name + '-local.patch')
+        shayxo_patch = self.source.parent / (self.source.name + '-shayxo.patch')
+        local_patch.write_text('--- a\n+++ b\n')
+        shayxo_patch.write_text('--- a\n+++ b\n')
+        self.addCleanup(local_patch.unlink)
+        self.addCleanup(shayxo_patch.unlink)
+        patchers = (
+            patch.object(build_glass, 'PATCH', local_patch),
+            patch.object(build_glass, 'SHAYXO_PATCH', shayxo_patch),
+            patch.object(build_glass, 'PATCHES', (('local-optics', local_patch),
+                                                  ('shayxo Legacy', shayxo_patch))),
+        )
+        for patcher in patchers:
+            patcher.start()
+            self.addCleanup(patcher.stop)
 
     def test_apply_failure_stops_before_make(self):
         fake = Fake(self.source, apply_ok=False)
@@ -90,8 +112,17 @@ class GlassBuild(unittest.TestCase):
                 patch('builtins.print'):
             self.assertEqual(build_glass.main([str(self.source), '--local-optics']), 0)
         self.assertTrue([c for c in fake.calls if c[0] == 'make'])
+        self.assertEqual(fake.apply_calls, [str(build_glass.PATCH), str(build_glass.SHAYXO_PATCH)])
         self.assertIn('HYPRGLASS_VERSION=' + build_glass.VERSION,
                       [a for c in fake.calls if c[0] == 'make' for a in c])
+
+    def test_second_patch_failure_stops_before_make(self):
+        fake = Fake(self.source, apply_ok=True, apply_rcs=[0, 1])
+        _, code, _, err = self.drive(fake, [str(self.source)])
+        self.assertEqual(code, 2)
+        self.assertIn('shayxo Legacy patch application failed', err)
+        self.assertEqual(fake.apply_calls, [str(build_glass.PATCH), str(build_glass.SHAYXO_PATCH)])
+        self.assertEqual(fake.made(), [])
 
 
     def drive(self, fake, argv):
