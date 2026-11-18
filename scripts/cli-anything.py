@@ -198,10 +198,14 @@ def cmd_info(registry, app):
     if entry is None:
         print("unknown app: %s" % app, file=sys.stderr)
         return 2
+    if entry.get("repo_owned"):
+        install = "ships in this repo: %s" % entry["entry_point"]
+    else:
+        install = "pip install %s" % entry["entry_point"]
     print_envelope({
         "app": app,
         "skill_path": str(skill_path(app)),
-        "install": "pip install %s" % entry["entry_point"],
+        "install": install,
         "install_upstream": entry["install_cmd"],
     })
     return 0

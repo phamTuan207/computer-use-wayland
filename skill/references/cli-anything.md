@@ -22,12 +22,17 @@ Pick it only when both are true: the app has a harness in the table below,
 and the task maps to a documented command group in that app's vendored skill.
 If either fails, fall back in order to Chromium DOM, native accessibility,
 then desktop pixels, exactly as `skill/SKILL.md` orders them. No harness
-exists for VS Code, Zen, Firefox, or Pinta: those tasks always use
+exists for Firefox or Pinta: those tasks always use
 the GUI backends. Chromium is the exception: it has no upstream
 harness, but it has a repo-owned wrapper (`computer-use cli run
 chromium -- ...`, skill `skill/cli-anything/chromium.md`) that covers
 tabs, history, bookmarks and downloads; DOM work on a tab still uses
-the Chromium DOM backend.
+the Chromium DOM backend. Zen is the second exception: it has a
+repo-owned wrapper (`computer-use cli run zen -- ...`, skill
+`skill/cli-anything/zen.md`) that covers tabs and page reads over
+loopback WebDriver BiDi on a dedicated session, plus read-only
+history from the real profile; it can never attach to his running
+Zen, which has no debug port.
 
 Backend order (QC clarification): CLI/API is the FIRST preference, not the
 fourth. It is first because it is the fastest path (no session, no GUI);
@@ -145,3 +150,4 @@ are different fields from different sources, not a contradiction.
 | Joplin | `cli-anything-joplin` | 1.0.0 | Joplin terminal CLI in PATH as `joplin` (npm install -g joplin) |
 | Calibre | `cli-anything-calibre` | 1.0.0 | Calibre (apt install calibre, brew install --cask calibre) |
 | Chromium | `scripts/chromium_cli.py` (repo-owned, no upstream harness) | 1.0.0 | Chromium with a loopback CDP endpoint for tab commands; a Chromium profile dir for history, bookmarks and downloads |
+| Zen | `scripts/zen_cli.py` via `cli-anything-zen` on PATH (repo-owned, no upstream harness) | 1.0.0 | Zen with a loopback BiDi endpoint on a dedicated session for tab commands; read-only history from the real profile |

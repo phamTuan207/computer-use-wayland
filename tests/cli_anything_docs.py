@@ -37,8 +37,9 @@ UPSTREAM_HEAD = "34f5195"
 
 # Wave one: only these three have vendored upstream skill files.
 VENDORED_SKILLS = {"obsidian", "libreoffice", "gimp"}
-# Repo-owned skill file (not upstream-vendored): the Chromium wrapper.
-REPO_OWNED_SKILLS = {"chromium"}
+# Repo-owned skill files (not upstream-vendored): the Chromium and
+# Zen wrappers.
+REPO_OWNED_SKILLS = {"chromium", "zen"}
 # Registry entries but no vendored skill file yet.
 SNAPSHOT_ONLY = {"inkscape", "krita", "blender", "audacity", "kdenlive",
                  "shotcut", "zotero", "joplin", "calibre"}
@@ -122,6 +123,25 @@ class CliAnythingDocs(unittest.TestCase):
             r"^## Version\s*\n+\s*(\d+\.\d+(?:\.\d+)?)\s*$",
             text, re.MULTILINE)
         self.assertIsNotNone(body_match, "chromium.md has no ## Version section")
+        self.assertEqual(body_match.group(1), "1.0.0")
+
+    def test_zen_entry_is_repo_owned_and_versioned(self):
+        registry = load_registry()
+        entry = registry["zen"]
+        self.assertTrue(entry.get("repo_owned"),
+                        "zen registry entry must be marked repo_owned")
+        self.assertEqual(entry.get("version"), "1.0.0")
+        self.assertEqual(entry.get("entry_point"), "cli-anything-zen")
+        text = (SKILL_DIR / "zen.md").read_text()
+        header = "\n".join(text.splitlines()[:HEADER_LINES])
+        match = re.search(r"Skill version:\s*(\d+\.\d+(?:\.\d+)?)", header)
+        self.assertIsNotNone(
+            match, "zen.md header states no repo skill version")
+        self.assertEqual(match.group(1), "1.0.0")
+        body_match = re.search(
+            r"^## Version\s*\n+\s*(\d+\.\d+(?:\.\d+)?)\s*$",
+            text, re.MULTILINE)
+        self.assertIsNotNone(body_match, "zen.md has no ## Version section")
         self.assertEqual(body_match.group(1), "1.0.0")
 
     def test_vendored_skills_state_upstream_version(self):
