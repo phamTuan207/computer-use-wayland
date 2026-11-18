@@ -166,6 +166,15 @@ function pageState(snapshot,action) {
   return e;
 }
 const elementExpression=(a,body)=>`(()=>{const e=(${pageState.toString()})(${JSON.stringify(request.snapshot)},${JSON.stringify({ref:a.ref,selector:a.selector})});${body}})()`;
+// Pick 4 DOM-first fast path (speed-swarm prototype): with
+// CU_PICK4_FASTPATH=1 the snapshot also carries each element's viewport
+// rect and center, so the executor can ground from the DOM alone and skip
+// the screenshot. Read on the Node side, never in-page: the snapshot
+// expression runs in the page context, where process does not exist.
+// Rects are viewport-relative; clicks still go through the in-page ref
+// path with its hit test. Default off: the snapshot shape is exactly
+// the baseline shape.
+const pick4Rects=process.env?.CU_PICK4_FASTPATH==='1';
 const INTERACTIVE='button,a[href],input,textarea,select,summary,[role="button"],[role="checkbox"],[role="tab"],[role="menuitem"],[contenteditable="true"]';
 async function snapshot(explicitScope) {
   const id=crypto.randomUUID().slice(0,12);
@@ -193,6 +202,9 @@ async function snapshot(explicitScope) {
       const field=/^(INPUT|TEXTAREA|SELECT)$/.test(e.tagName)||e.isContentEditable;
       const label=e.getAttribute('aria-label')||e.labels?.[0]?.innerText||(!field&&e.innerText)||e.getAttribute('placeholder')||e.getAttribute('title')||e.name||'';
       const item={ref,role:e.getAttribute('role')||e.tagName.toLowerCase(),name:label.trim().slice(0,120)};
+      ${pick4Rects?`const __r=e.getBoundingClientRect();
+      item.rect={x:Math.round(__r.left),y:Math.round(__r.top),width:Math.round(__r.width),height:Math.round(__r.height)};
+      item.center={x:Math.round(__r.left+__r.width/2),y:Math.round(__r.top+__r.height/2)};`:''}
       if(e.disabled)item.disabled=true;
       if('value'in e||e.isContentEditable)item.value='[redacted]';
       if('checked'in e&&(e.type==='checkbox'||e.type==='radio'))item.checked=e.checked;

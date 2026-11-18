@@ -1977,7 +1977,11 @@ def main():
     b.add_argument('--max-elements',type=int,default=80,help='DOM output budget, 1..80 (default 80)')
     b.add_argument('--scope',help='observe only: one CSS selector to enumerate; one read, not sticky, not an input boundary')
     b.add_argument('--after-scope',help='act only: scope the successful after-snapshot to one CSS selector; not sticky, not an input boundary')
-    a=sub.add_parser('a11y');a.add_argument('operation',choices=['apps','observe','drill','act']);a.add_argument('ref',nargs='?');a.add_argument('--pid',type=int);a.add_argument('--snapshot');a.add_argument('--actions');a.add_argument('--skeleton',action='store_true')
+    a=sub.add_parser('a11y');a.add_argument('operation',choices=['apps','observe','drill','act','query','ground']);a.add_argument('ref',nargs='?');a.add_argument('--pid',type=int);a.add_argument('--snapshot');a.add_argument('--actions');a.add_argument('--skeleton',action='store_true')
+    a.add_argument('--name',help='query only: case-insensitive name substring')
+    a.add_argument('--role',help='query only: case-insensitive role substring')
+    a.add_argument('--limit',type=int,default=20,help='query only: max items returned, 1..20')
+    a.add_argument('--address',help='ground only: Hyprland window address the snapshot belongs to')
     cli=sub.add_parser('cli',help='list and run vendored CLI-Anything harnesses')
     cli_sub=cli.add_subparsers(dest='cli_operation',required=True)
     cli_sub.add_parser('list',help='list apps from the vendored registry')
@@ -2114,9 +2118,26 @@ def main():
         if args.skeleton:
             if args.operation!='observe':raise ValueError('--skeleton requires a11y observe')
             request['skeleton']=True
-        if args.ref is not None and args.operation!='drill':raise ValueError('ref requires a11y drill')
+        if args.ref is not None and args.operation not in ('drill','ground'):raise ValueError('ref requires a11y drill or ground')
         if args.operation=='drill':
             if not args.ref or not args.snapshot:raise ValueError('a11y drill requires ref and --snapshot')
+            request['ref']=args.ref
+        if args.operation=='query':
+            if args.pid is None:raise ValueError('a11y query requires --pid')
+            if args.name is None and args.role is None:raise ValueError('a11y query requires --name or --role')
+            if args.name is not None:request['name']=args.name
+            if args.role is not None:request['role']=args.role
+            request['limit']=args.limit
+        if args.operation=='ground':
+            # Pick 4 fast path, flag-gated: resolve one a11y ref to global
+            # desktop coordinates plus the crop that verifies it. Read-only:
+            # no pointer movement, no click, no typing happens here. The
+            # caller must observe the crop and confirm the target before
+            # any click; a click from an unverified coordinate is refused.
+            import fastpath
+            if not fastpath.enabled():raise ValueError('pick4 fast path is off; set CU_PICK4_FASTPATH=1')
+            if not args.ref or not args.snapshot or not args.address:
+                raise ValueError('a11y ground requires ref, --snapshot and --address')
             request['ref']=args.ref
         if args.operation=='act':
             require_session()
@@ -2129,6 +2150,22 @@ def main():
                 session_policy.require_observation(STATE,os.environ.get('CU_SESSION_TOKEN'))
             out=run_cancelable(['python3',str(ROOT/'scripts/a11y.py')],env=env,input=json.dumps(request),timeout=15)
             result=json.loads(out) if out.strip() else {'ok':False,'error':'accessibility adapter returned no data'}
+            if args.operation=='ground' and isinstance(result,dict) and result.get('ok') is True:
+                import fastpath
+                clients=hypr(env,'clients')
+                window=next((c for c in clients if c.get('address')==args.address),None)
+                if window is None:raise ValueError('no window with that address; run windows again')
+                bounds=[window['at'][0],window['at'][1],window['size'][0],window['size'][1]]
+                frame=fastpath.detect_coord_frame(result.get('root_extents'),bounds) if result.get('root_extents') is not None else 'unknown'
+                box=fastpath.to_global_box(result['extents'],bounds[:2],frame)
+                center=fastpath.box_center(box)
+                crop=fastpath.crop_for_box(box,bounds)
+                result={'ok':True,'backend':'pick4-ground','ref':result['ref'],
+                        'role':result['role'],'name':result['name'],
+                        'extents':result['extents'],'extents_coord':result['extents_coord'],
+                        'coord_frame':frame,'window':{'address':args.address,'bounds':bounds},
+                        'box':box,'center':center,'crop':crop,
+                        'verify':'observe --window '+args.address+' --crop '+' '.join(str(v) for v in crop)+' and confirm the target is visible at the box center before any click'}
             if args.operation=='act' and isinstance(result,dict) and result.get('ok') is True:
                 session_policy.complete_requirement(STATE,os.environ.get('CU_SESSION_TOKEN'))
     else:
