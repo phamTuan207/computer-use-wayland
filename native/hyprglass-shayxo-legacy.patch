@@ -1,0 +1,511 @@
+diff --git i/src/Shaders.hpp w/src/Shaders.hpp
+index 5f4a0ab..77e1f49 100644
+--- i/src/Shaders.hpp
++++ w/src/Shaders.hpp
+@@ -8,26 +8,29 @@ inline const std::unordered_map<std::string, const char*> SHADERS = {
+ #version 300 es
+ precision highp float;
+ 
++// Shayxo Legacy Chrome geometry and task-selected material values.
++const float SHAYXO_REFRACT_BAND_DP = 14.0;
++const float SHAYXO_REFRACT_DEPTH_DP = 9.0;
++const float SHAYXO_IOR = 1.5;
++const float SHAYXO_BEVEL_POWER = 2.0;
++const float SHAYXO_CORNER_POWER = 2.0;
++const float SHAYXO_SPECULAR_POWER = 6.0;
++const float SHAYXO_COUNTER_LIGHT = 0.35;
++const float SHAYXO_EDGE_LIGHT = 1.0;
++const float SHAYXO_INNER_SHADOW = 0.07;
++const float SHAYXO_BEVEL_PEAK = 0.0;
++const float SHAYXO_LEGIBILITY = 0.6;
++const float SHAYXO_HI_CHROMA = 0.7;
++const float SHAYXO_DETAIL_SHARE = 0.34;
++const float SHAYXO_DETAIL_LIFT = 0.0;
++const float SHAYXO_TINT_ADAPTIVITY = 0.90;
++const float SHAYXO_TINT_FLIP = 0.0;
++const vec2 SHAYXO_LIGHT = vec2(-0.35, -0.94);
++
+ /*
+- * Apple-style Liquid Glass Fragment Shader — Thick-glass refraction model
+- *
+- * The window is modeled as a thick convex glass slab:
+- *   - Center: flat surface → clean frosted blur, no distortion
+- *   - Edges: curved surface → refraction pulls in content from beyond
+- *     the window boundary, creating natural color bleeding
+- *
+- * Rendering layers:
+- * 1. Edge refraction via smooth outward direction (optionally along the edges,
+- *    optionally rim-only) + exponential proximity
+- * 2. Chromatic aberration (per-channel refraction scale)
+- * 3. Edge raw-texture blend for vivid color pickup
+- * 4. Subtle center dome lens magnification
+- * 5. Frosted tint (brightness boost + desaturation)
+- * 6. Configurable color tint overlay, then frosted grain
+- * 7. Bevel (thin lit line at the edge)
+- * 8. Fresnel edge glow (white or tinted by the background)
+- * 9. Specular highlight (top)
+- * 10. Inner shadow (bottom rim)
++ * Shayxo Legacy liquid-glass port for the Hyprglass contour path.
++ * Refraction uses an outward Snell bevel, sharp RGB samples, and the Legacy
++ * Fresnel, directional-light, and inner-line model.
+  */
+ 
+ uniform sampler2D tex;
+@@ -174,6 +177,11 @@ vec4 sampleBlurred(vec2 wuv) {
+ #endif
+ }
+ 
++vec3 sampleSharp(vec2 wuv) {
++    vec2 tuv = toTexUV(toSampleBoxUV(wuv));
++    return texture(tex, clamp(tuv, 0.001, 0.999)).rgb;
++}
++
+ // hash12 from "Hash without Sine" (Dave Hoskins), tuned for integer pixel coordinates
+ float pixelHash(vec2 p) {
+     vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+@@ -286,6 +294,74 @@ vec2 lightDir(float angleDeg) {
+     return vec2(sin(a), -cos(a));
+ }
+ 
++float bevelSlope(float e, float p) {
++    float u = 1.0 - clamp(e, 0.002, 0.998);
++    float up = pow(u, p);
++    return pow(u, p - 1.0) / pow(max(1.0 - up, 1e-4), 1.0 - 1.0 / p);
++}
++
++float snellShift(float slope, float ior) {
++    float inv = inversesqrt(1.0 + slope * slope);
++    float si = slope * inv;
++    float ci = inv;
++    float st = si / max(ior, 1.0001);
++    float ct = sqrt(max(1.0 - st * st, 0.0));
++    return (si * ct - ci * st) / max(ci * ct + si * st, 1e-4);
++}
++
++float luma(vec3 c) {
++    return dot(c, vec3(0.2126, 0.7152, 0.0722));
++}
++
++vec3 toLinearApprox(vec3 c) { return c * c; }
++vec3 fromLinearApprox(vec3 c) { return sqrt(max(c, vec3(0.0))); }
++
++vec3 linearToOklab(vec3 c) {
++    float l = 0.4122214708 * c.r + 0.5363325363 * c.g + 0.0514459929 * c.b;
++    float m = 0.2119034982 * c.r + 0.6806995451 * c.g + 0.1073969566 * c.b;
++    float s = 0.0883024619 * c.r + 0.2817188376 * c.g + 0.6299787005 * c.b;
++    float l_ = pow(max(l, 0.0), 0.3333333333);
++    float m_ = pow(max(m, 0.0), 0.3333333333);
++    float s_ = pow(max(s, 0.0), 0.3333333333);
++    return vec3(
++        0.2104542553 * l_ + 0.7936177850 * m_ - 0.0040720468 * s_,
++        1.9779984951 * l_ - 2.4285922050 * m_ + 0.4505937099 * s_,
++        0.0259040371 * l_ + 0.7827717662 * m_ - 0.8086757660 * s_);
++}
++
++vec3 oklabToLinear(vec3 lab) {
++    float l_ = lab.x + 0.3963377774 * lab.y + 0.2158037573 * lab.z;
++    float m_ = lab.x - 0.1055613458 * lab.y - 0.0638541728 * lab.z;
++    float s_ = lab.x - 0.0894841775 * lab.y - 1.2914855480 * lab.z;
++    float l = l_ * l_ * l_;
++    float m = m_ * m_ * m_;
++    float s = s_ * s_ * s_;
++    return vec3(
++         4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
++        -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
++        -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s);
++}
++
++vec3 applyHighlight(vec3 col, float amount, float chroma) {
++    if (amount <= 0.0) return col;
++    vec3 additive = col + vec3(amount);
++    if (chroma <= 0.0) return additive;
++    vec3 lab = linearToOklab(toLinearApprox(col));
++    lab.x = lab.x + amount * 0.90;
++    lab.yz = lab.yz * (1.0 + amount * 1.20);
++    vec3 lifted = fromLinearApprox(clamp(oklabToLinear(lab), vec3(0.0), vec3(1.0)));
++    return mix(additive, lifted, clamp(chroma, 0.0, 1.0));
++}
++
++vec3 toneMappedTint(vec3 tint, float bgLuma, float adapt) {
++    float g = clamp(bgLuma, 0.0, 1.0);
++    float value = mix(1.0, mix(1.10, 0.88, g), adapt);
++    float sat = mix(1.0, mix(0.88, 1.06, g), adapt);
++    float mean = dot(tint, vec3(1.0 / 3.0));
++    vec3 shifted = vec3(mean) + (tint - vec3(mean)) * sat;
++    return clamp(shifted * value, vec3(0.0), vec3(1.0));
++}
++
+ // exact outward normal from the SDF gradient; only meaningful right at the edge
+ vec2 sdfOutwardNormal(vec2 uv) {
+     vec2 h = vec2(1.0) / fullSize;
+@@ -417,31 +493,48 @@ void main() {
+ #else
+     float minDim = min(glassBoxSizePx.x, glassBoxSizePx.y);
+ #endif
+-    float bezelWidthPx = max(edgeThickness * minDim, 1e-4); // same floor as invBezelWidthPx
+-
+-    // ========================================
+-    // EDGE PROXIMITY + DIRECTION
+-    // edgeProximity: 1.0 at boundary, exponential decay inward
+-    // inwardDir: pixel-space direction toward center (smooth everywhere)
+-    // Clamped to 1.0: cornerSdf can be positive here (a layer or item glass box
+-    // can be smaller than fullSize, so fragments just outside it still reach
+-    // this code with cornerAlpha > 0.001), and exp() of a positive value would
+-    // otherwise overshoot every effect that scales off edgeProximity.
+-    // ========================================
+-    // crease-free bevel distance, so the edge has no seam along the corner diagonals;
+-    // it assumes circular corners, so a superellipse outline keeps the exact SDF
++    // Retained for the optional lens-edge feature; Legacy uses its absolute band below.
++    float bezelWidthPx = max(edgeThickness * minDim, 1e-4);
+ #ifdef HYPRGLASS_FEATURE_CONTOUR
+-    // The field is smoothed, so it has no corner seam to avoid. Its reach is the end of the
+-    // data: the window takes the effects to zero before it, rather than cutting them off.
+     float bevelSdf = cornerSdf;
+-    float edgeProximity = min(exp(bevelSdf * invBezelWidthPx), 1.0) *
+-                          (1.0 - smoothstep(0.5 * contourReachPx, contourReachPx, -bevelSdf));
++#else
++    float bevelSdf = roundingPower == SHAYXO_CORNER_POWER ? getBevelSDF(uv) : cornerSdf;
++#endif
++    float depth = max(-bevelSdf, 0.0);
++    float bandPx = SHAYXO_REFRACT_BAND_DP * monitorScale;
++    float e = clamp(depth / max(bandPx, 0.001), 0.0, 1.0);
++    float pw = max(SHAYXO_BEVEL_POWER, 1.5);
++    float slope = bevelSlope(e, pw);
++
++    float eps = clamp(bandPx * 0.3, 1.0, 16.0);
++    vec2 ex = vec2(eps * invFullSize.x, 0.0);
++    vec2 ey = vec2(0.0, eps * invFullSize.y);
++    vec2 g;
++#ifdef HYPRGLASS_FEATURE_CONTOUR
++    vec2 fieldUv = uv * contourUVScale;
++    g = vec2(
++        texture(contourTex, fieldUv + ex * contourUVScale).r
++            - texture(contourTex, fieldUv - ex * contourUVScale).r,
++        texture(contourTex, fieldUv + ey * contourUVScale).r
++            - texture(contourTex, fieldUv - ey * contourUVScale).r);
++#else
++    float sdfRight = roundingPower == SHAYXO_CORNER_POWER
++        ? getBevelSDF(uv + ex) : getCornerSDF(uv + ex);
++    float sdfLeft = roundingPower == SHAYXO_CORNER_POWER
++        ? getBevelSDF(uv - ex) : getCornerSDF(uv - ex);
++    float sdfDown = roundingPower == SHAYXO_CORNER_POWER
++        ? getBevelSDF(uv + ey) : getCornerSDF(uv + ey);
++    float sdfUp = roundingPower == SHAYXO_CORNER_POWER
++        ? getBevelSDF(uv - ey) : getCornerSDF(uv - ey);
++    g = vec2(sdfRight - sdfLeft, sdfDown - sdfUp);
++#endif
++    float gLen = length(g);
++    vec2 n = g / max(gLen, 1e-5);
++    float axisFade = smoothstep(0.15, 0.80, gLen / (2.0 * eps));
++#ifdef HYPRGLASS_FEATURE_CONTOUR
+     vec2 inwardDir = -contourOutward;
+ #else
+-    float bevelSdf = roundingPower == 2.0 ? getBevelSDF(uv) : cornerSdf;
+-    float edgeProximity = min(exp(bevelSdf * invBezelWidthPx), 1.0);
+     vec2 inwardDir = refractionDir(glassUV);
+-    vec2 posPx = (glassUV - 0.5) * glassBoxSizePx; // pixel-space position for the edge-flow direction below
+ #endif
+ 
+ #ifdef HYPRGLASS_FEATURE_LENS_EDGE
+@@ -487,239 +580,86 @@ void main() {
+         }
+     }
+ #else
+-    // ========================================
+-    // EDGE REFRACTION
+-    // Offset sampling UV inward (toward center) at edges — like looking
+-    // through the curved thick edge of a glass slab. This compresses
+-    // and distorts what's already behind the window, without reaching
+-    // beyond the window boundary.
+-    // ========================================
+-    float refractionPx = refractionStrength * 50.0;
+-    float lensFalloff = edgeProximity;
+-    if (refractionSpread < 0.999) {
+-        // rim-only lens: window the exponential tail so the centre stays flat
+-        float depth = -bevelSdf;
+-        float tailWindow = 1.0 - smoothstep(1.5 * bezelWidthPx, 3.0 * bezelWidthPx, depth);
+-        lensFalloff = mix(edgeProximity * tailWindow, edgeProximity, refractionSpread);
+-    }
+-    float refractionMag = lensFalloff * refractionPx;
+-    vec2 dir = inwardDir;
+-#ifndef HYPRGLASS_FEATURE_CONTOUR
+-    // (a traced outline already pulls along each edge's own normal)
+-    if (refractionFlow > 0.001) {
+-        // pull along the edges instead of toward the centre
+-        vec2 mixedDir = mix(inwardDir, edgeDir(posPx), refractionFlow);
+-        float mixedLen = length(mixedDir);
+-        dir = mixedLen > 0.0001 ? mixedDir / mixedLen : inwardDir;
+-    }
+-#endif
+-    vec2 baseOffset = dir * refractionMag * invFullSize;
++    float bend = snellShift(slope, SHAYXO_IOR)
++        / max(snellShift(bevelSlope(0.0, pw), SHAYXO_IOR), 1e-4);
++    bend *= (1.0 - smoothstep(0.75, 1.0, e))
++        * axisFade
++        * smoothstep(0.0, 1.5, depth);
++    bend = clamp(bend, 0.0, 1.0);
++
++    float scale = 0.0;
++    float mat = 1.0;
++    float lens = SHAYXO_REFRACT_DEPTH_DP * monitorScale * mix(0.85, 1.25, scale) * mat;
++    vec2 push = n * bend * lens;
++    float split = chromaticAberration * bend;
++    vec2 pushR = push * (1.0 - split);
++    vec2 pushB = push * (1.0 + split);
++    vec2 offsetR = pushR * invFullSize;
++    vec2 offsetG = push * invFullSize;
++    vec2 offsetB = pushB * invFullSize;
+ 
+-    // ========================================
+-    // CHROMATIC ABERRATION — per-channel refraction scale
+-    // Blue refracts more than red → natural spectral fringing at edges.
+-    // ========================================
+-    float chromaSpread = chromaticAberration * 0.35;
+-    vec2 offsetR = baseOffset * (1.0 - chromaSpread);
+-    vec2 offsetG = baseOffset;
+-    vec2 offsetB = baseOffset * (1.0 + chromaSpread);
+ #endif
+ 
+-    // ========================================
+-    // CENTER DOME LENS (subtle magnification in the flat interior)
+-    // Fades near edges so it doesn't interfere with edge refraction.
+-    // ========================================
+-    vec2 domeUV = vec2(0.0);
+-#ifndef HYPRGLASS_FEATURE_CONTOUR   // a dome needs one centre: a traced outline has one per card
+-    if (lensDistortion > 0.001) {
+-        vec2 c = (glassUV - 0.5) * 2.0;
+-        vec2 dGrad = vec2(
+-            -4.0 * c.x * (1.0 - c.y * c.y),
+-            -4.0 * c.y * (1.0 - c.x * c.x)
+-        );
+-        float lensFade = 1.0 - edgeProximity;
+-        domeUV = dGrad * lensMaxPx * lensFade * invFullSize;
+-    }
+-#endif
+-
+-    // ========================================
+-    // BACKGROUND SAMPLING (frosted blur only)
+-    // Nearby color influence comes naturally from the Gaussian blur
+-    // kernel crossing the window boundary — no explicit raw sampling.
+-    // ========================================
+     vec3 color;
+-    vec2 uvR = uv + offsetR + domeUV;
+-    vec2 uvG = uv + offsetG + domeUV;
+-    vec2 uvB = uv + offsetB + domeUV;
+-
+ #ifdef HYPRGLASS_FEATURE_LENS_EDGE
++    vec2 uvR = uv + offsetR;
++    vec2 uvG = uv + offsetG;
++    vec2 uvB = uv + offsetB;
+     if (chromaticAberration > 0.001 && inRim) {
+-#else
+-    if (chromaticAberration > 0.001 && edgeProximity > 0.01) {
+-#endif
+         color.r = sampleBlurred(uvR).r;
+         color.g = sampleBlurred(uvG).g;
+         color.b = sampleBlurred(uvB).b;
+     } else {
+         color = sampleBlurred(uvG).rgb;
+     }
+-
+-#ifdef HYPRGLASS_FEATURE_FROST
+-    // Frosted glass (frost): the backdrop was blurred further above; it also gets
+-    // a little more colour and depth, before the theme's tone mapping below.
+-    {
+-        float frostLum = dot(color, vec3(0.2126, 0.7152, 0.0722));
+-        color = max(mix(vec3(frostLum), color, 1.0 + FROST_SATURATION_LIFT * frostAmount), 0.0) * (1.0 - FROST_DIM * frostAmount);
+-    }
+-#endif
+-
+-    // ========================================
+-    // FROSTED TINT (per-theme tone mapping)
+-    // ========================================
+-    float blurredLum = dot(color, vec3(0.2126, 0.7152, 0.0722));
+-
+-    // Frosted desaturation
+-    color = mix(vec3(blurredLum), color, saturation);
+-
+-    // Tight smoothstep range maps the blur-compressed luminance (~0.3-0.7)
+-    // to the full [0,1] adaptive range, creating visible per-region differentiation
+-    float lumCurve = smoothstep(0.25, 0.55, blurredLum);
+-
+-    // Dim: multiplicative — effective at darkening bright areas
+-    color *= brightness * (1.0 - adaptiveDim * lumCurve);
+-
+-    // Boost: additive lift — multiplicative can't brighten near-black content
+-    color += vec3(adaptiveBoost * (1.0 - lumCurve) * 0.5);
+-
+-    // Contrast (pivot around midpoint)
+-    color = mix(vec3(0.5), color, contrast);
+-
+-    // Vibrancy (selective saturation boost scaled by existing saturation)
+-    float currentLum = dot(color, vec3(0.2126, 0.7152, 0.0722));
+-    float sat = max(color.r, max(color.g, color.b)) - min(color.r, min(color.g, color.b));
+-    float darkFactor = 1.0 - vibrancyDarkness * (1.0 - blurredLum);
+-    color = mix(vec3(currentLum), color, 1.0 + vibrancy * sat * darkFactor);
+-
+-    // ========================================
+-    // COLOR TINT OVERLAY
+-    // ========================================
+-    color = mix(color, tintColor, tintAlpha);
+-
+-#ifdef HYPRGLASS_FEATURE_LENS_EDGE
+-    // ========================================
+-    // RIM REFLECTION — the rim mirrors what is around the glass, as much as
+-    // Schlick's Fresnel term gives for its slope: strongest where it is steepest.
+-    // ========================================
+-    if (lensReflection > 0.001 && inRim) {
+-        vec2 mirrored = reflect(vec2(0.0, -1.0), lensNormal); // (inward, up)
+-        // mirrored downward it lands on the backdrop just outside the edge; mirrored
+-        // upward it sees the surroundings, read as far out as the sample reaches
+-        // (one formula for both, so the reach has no seam where the slope crosses 45 degrees)
+-        float runPx   = lensSurfacePx * -mirrored.x / max(-mirrored.y, 1e-3);
+-        float reachPx = lensReflectionReachPx * tanh(min((rimDepthPx + runPx) / lensReflectionReachPx, 8.0));
+-        vec4  seen    = sampleBlurred(uv - lensInward * reachPx * invFullSize);
+-        // Schlick with lensReflection as the reflectance straight on (real glass: 0.04,
+-        // a thin line only), fading out across the rim so the flat centre gets no seam
+-        float u        = 1.0 - rimDepthPx / bezelWidthPx;
+-        float straight = lensReflection * u;
+-        float fresnel  = straight + (1.0 - straight) * pow(1.0 - clamp(lensNormal.y, 0.0, 1.0), 5.0);
+-        // padding past the screen edge is cleared to transparent: mirror only what was sampled
+-        float amount   = clamp(lensReflection * fresnel * seen.a * lensCornerWeight, 0.0, 1.0);
+-        color = mix(color, seen.rgb / max(seen.a, 0.001), amount);
+-    }
+-#endif
+-
+-    // grain-free copy for the rim tints, so the grain does not speckle their hue
+-    vec3 tintSource = color;
+-
+-    // ========================================
+-    // FROSTED GRAIN
+-    // Hashed on box-local pixels so the grain moves with the glass and keeps
+-    // its size on any window; after the tint so the tint does not fade it.
+-    // ========================================
+-    if (noiseStrength > 0.001)
+-        color += (pixelHash(floor(uv * fullSize)) - 0.5) * noiseStrength * 0.1;
+-
+-    // ========================================
+-    // BEVEL — thin lit line hugging the edge, brightest on the side facing the light
+-    // ========================================
+-    if (bevelStrength > 0.001) {
+-        float sizePx = max(bevelSize * monitorScale, 1.0);   // logical px, uniform across monitor scales
+-        float core = 0.25 * sizePx;
+-        float tail = sizePx;
+-        float ring = (1.0 - smoothstep(-core, 0.0, cornerSdf)) * smoothstep(-tail, -core, cornerSdf);
+-
+-        // lit side faces the light, the far side fades out and can be shadowed
+-#ifdef HYPRGLASS_FEATURE_CONTOUR
+-        float facing = clamp(dot(contourOutward, lightDir(bevelAngle)) * 0.5 + 0.5, 0.0, 1.0);
+ #else
+-        float facing = clamp(dot(sdfOutwardNormal(uv), lightDir(bevelAngle)) * 0.5 + 0.5, 0.0, 1.0);
++    vec2 uvR = uv + offsetR;
++    vec2 uvG = uv + offsetG;
++    vec2 uvB = uv + offsetB;
++    vec3 sharp = vec3(sampleSharp(uvR).r, sampleSharp(uvG).g, sampleSharp(uvB).b);
++    vec3 detailCopy = sampleSharp(uvG);
++    float detailWeight = smoothstep(0.02, 0.10, max(SHAYXO_DETAIL_SHARE, abs(SHAYXO_DETAIL_LIFT)));
++    float localContrast = detailWeight * clamp(abs(luma(sharp) - luma(detailCopy)) * 4.0, 0.0, 1.0);
++
++    // No quarter-scale wide texture is bound for contour layers: B falls back to sharp.
++    color = sharp;
++    float strength = clamp(
++        tintAlpha * 1.0 * mix(0.9, 1.25, 0.0)
++            + localContrast * SHAYXO_LEGIBILITY * 0.25,
++        0.0, 0.95);
++    vec3 tinted = toneMappedTint(tintColor, luma(color), SHAYXO_TINT_ADAPTIVITY);
++    tinted = mix(tinted, vec3(1.0) - tinted, SHAYXO_TINT_FLIP);
++    color = mix(color, tinted, strength);
+ #endif
+ 
+-        vec3 bevelLight = vec3(1.0);
+-        if (bevelColorAlpha > 0.001) bevelLight = mix(vec3(1.0), bevelColor, bevelColorAlpha);   // a dark colour gives a dark line
+-        if (bevelTint > 0.001) {
+-            float maxC = max(max(tintSource.r, tintSource.g), tintSource.b);
+-            bevelLight = mix(bevelLight, maxC > 0.001 ? tintSource / maxC : vec3(1.0), bevelTint);
+-        }
++    float bevelPx = max(bevelSize * monitorScale, 1e-3);
++    float bevelBand = 1.0 - smoothstep(SHAYXO_BEVEL_PEAK, bevelPx, depth);
++    float innerLine = max(
++        1.0 - smoothstep(0.0, 2.2 * bevelPx, depth) - bevelBand,
++        0.0);
++    color -= vec3(innerLine * SHAYXO_INNER_SHADOW * mix(0.9, 1.15, 0.0) * 1.0);
+ 
+-        // the fresnel tint below reads the bevelled colour, so bevel the copy too
+-        float bevelLit = ring * facing * bevelStrength;
+-        float bevelDark = bevelShadow > 0.001 ? ring * (1.0 - facing) * bevelShadow : 0.0;
+-        color = mix(mix(color, bevelLight, bevelLit), vec3(0.0), bevelDark);
+-        tintSource = mix(mix(tintSource, bevelLight, bevelLit), vec3(0.0), bevelDark);
+-    }
++    vec2 uLight = SHAYXO_LIGHT;
++    float facing = dot(n, uLight);
++    float cosI = inversesqrt(1.0 + slope * slope);
++    float f0 = (SHAYXO_IOR - 1.0) / (SHAYXO_IOR + 1.0);
++    f0 = f0 * f0;
++    float fresnel = f0 + (1.0 - f0) * pow(max(1.0 - cosI, 0.0), 5.0);
+ 
+-    // ========================================
+-    // FRESNEL RIM GLOW (edge zone)
+-    // ========================================
+-    if (fresnelStrength > 0.001) {
+-        float fresnel = edgeProximity * edgeProximity * fresnelStrength * 0.15;
+-        vec3 fresnelLight = vec3(1.0);
+-        if (fresnelColorAlpha > 0.001) fresnelLight = mix(vec3(1.0), fresnelColor, fresnelColorAlpha);   // chosen colour, then the tint below
+-        if (fresnelTint > 0.001) {
+-            // rim light in the background's own hue, at full brightness so the gain matches white
+-            float maxC = max(max(tintSource.r, tintSource.g), tintSource.b);
+-            fresnelLight = mix(fresnelLight, maxC > 0.001 ? tintSource / maxC : vec3(1.0), fresnelTint);
+-        }
+-        color += fresnelLight * fresnel;
+-    }
++    float counterLight = SHAYXO_COUNTER_LIGHT;
++    float counterPow = SHAYXO_SPECULAR_POWER * mix(1.6, 1.0,
++        smoothstep(0.35, 1.0, counterLight));
++    float key = pow(max(facing, 0.0), SHAYXO_SPECULAR_POWER) * bevelBand;
++    float counter = pow(max(-facing, 0.0), counterPow)
++        * bevelBand * counterLight;
++    float edge = 1.0 - smoothstep(0.0, 2.0, depth);
++    float edgeLine = edge * 0.5
++        * (max(facing, 0.0) + counterLight * max(-facing, 0.0));
+ 
+-    // ========================================
+-    // SPECULAR — subtle top highlight (edge zone)
+-    // ========================================
+-    if (specularStrength > 0.001) {
+-#ifdef HYPRGLASS_FEATURE_CONTOUR
+-        // the edge facing the light, like the top of a box at angle 0
+-        float specT = clamp(0.5 + 0.5 * dot(contourOutward, lightDir(specularAngle)), 0.0, 1.0);
+-#else
+-        float specT = max(1.0 - glassUV.y, 0.0);
+-        if (abs(specularAngle) > 0.001) {
+-            // rotate the highlight gradient toward the light: at angle 0, lightDir gives
+-            // (0,-1) and dot(glassUV-0.5, L) = 0.5-glassUV.y, so 0.5+dot(...) reduces to 1-glassUV.y exactly
+-            vec2 L = lightDir(specularAngle);
+-            specT = clamp(0.5 + dot(glassUV - 0.5, L), 0.0, 1.0);
+-        }
+-#endif
+-        float topBias = pow(specT, 2.0);
+-        float spec = topBias * edgeProximity * edgeProximity * specularStrength * 0.08;
+-        color += vec3(1.0, 0.99, 0.97) * spec;
+-    }
+-
+-    // ========================================
+-    // INNER SHADOW (bottom rim)
+-    // ========================================
+-    {
+-#ifdef HYPRGLASS_FEATURE_CONTOUR
+-        // the edge facing away from the light: 1 at the bottom, a quarter at the sides, like a box
+-        float bottomBias = pow(0.5 + 0.5 * contourOutward.y, 2.0);
+-#else
+-        // max(): item fragments just above the glass box have glassUV.y < 0, where pow() is undefined
+-        float bottomBias = pow(max(glassUV.y, 0.0), 2.0);
+-#endif
+-        float shadow = bottomBias * edgeProximity * edgeProximity * 0.06;
+-        color *= 1.0 - shadow;
+-    }
++    float highlight = (key + counter) * specularStrength
++        + edgeLine * specularStrength * SHAYXO_EDGE_LIGHT
++        + fresnel * fresnelStrength * bevelBand;
++    color = applyHighlight(color, highlight, SHAYXO_HI_CHROMA);
+ 
+ #ifdef HYPRGLASS_FEATURE_FOCUS_LIGHT
+     // ========================================
