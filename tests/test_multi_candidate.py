@@ -68,6 +68,15 @@ class ParseTests(unittest.TestCase):
             1920, 1176)
         self.assertEqual((cands[0].x, cands[0].y), (960, 588))
 
+    def test_image_to_global_adds_origin_once(self):
+        # A window observation: the frame point (52, 575) in a window
+        # at (2509, 1509) is global (2561, 2084). The old code treated
+        # the frame point as global already, which double-counts the
+        # origin and puts the crop at the wrong corner.
+        self.assertEqual(mc.image_to_global(52, 575, [2509, 1509]),
+                         (2561, 2084))
+        self.assertEqual(mc.image_to_global(0, 0, [0, 0]), (0, 0))
+
     def test_out_of_range_dropped(self):
         reply = json.dumps({"candidates": [
             {"x": 1200, "y": 500, "confidence": 0.9},
@@ -253,6 +262,24 @@ class CliTests(unittest.TestCase):
         self.assertEqual(data["candidates"][0]["crop"], [430, 430, 140, 140])
         self.assertEqual(data["candidates"][0]["crop_window"],
                          [430, 430, 140, 140])
+        self.assertEqual(data["candidates"][0]["global"], [500, 500])
+
+    def test_ground_with_origin_converts_once(self):
+        reply = json.dumps({"candidates": [
+            {"x": 47, "y": 990, "confidence": 0.95, "label": "prompt"},
+        ]})
+        proc = self.run_cli("ground", "--image-w", "1096", "--image-h",
+                            "581", "--window", "2509", "1509", "1096",
+                            "581", "--origin", "2509", "1509",
+                            "--reply", reply,
+                            env_extra={mc.FLAG_ENV: "1"})
+        self.assertEqual(proc.returncode, 0)
+        data = json.loads(proc.stdout)
+        cand = data["candidates"][0]
+        self.assertEqual(cand["global"], [2561, 2084])
+        self.assertEqual(cand["crop"], [2509, 1950, 140, 140])
+        self.assertEqual(cand["crop_window"], [0, 441, 140, 140])
+        self.assertEqual(cand["point_in_crop"], [52, 134])
 
     def test_prompt_prints_discipline(self):
         proc = self.run_cli("prompt")

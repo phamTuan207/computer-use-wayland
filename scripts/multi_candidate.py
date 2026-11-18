@@ -68,7 +68,11 @@ def enabled():
 
 @dataclass
 class Candidate:
-    """One grounding guess in global desktop pixels."""
+    """One grounding guess, in image-frame pixels.
+
+    Convert to global desktop pixels with image_to_global before any
+    global use. See parse_candidates for the frame rule.
+    """
 
     x: int
     y: int
@@ -116,9 +120,15 @@ def parse_candidates(text, image_width, image_height):
       {"x":..,"y":..,"confidence":..}  (legacy single candidate)
     Returns (candidates, errors): candidates sorted by confidence
     descending, capped at 3, near-duplicates merged, out-of-range
-    points dropped with an error note each. Image size converts the
-    0-1000 scale to global pixels. Never raises on model garbage: a
-    reply with no usable point returns ([], [reason]).
+    points dropped with an error note each. Coordinates are returned
+    in IMAGE pixels: the 0-1000 scale is a fraction of the shown
+    frame, so for a full-window observation image_width/height are
+    the TRUE window size and the returned points are window-relative;
+    add the window origin (see image_to_global) to get global desktop
+    pixels. For a full-screen observation pass the monitor size and
+    the points are already global up to the monitor origin. Never
+    raises on model garbage: a reply with no usable point returns
+    ([], [reason]).
     """
     errors = []
     candidates = []
@@ -175,6 +185,19 @@ def parse_candidates(text, image_width, image_height):
         if len(merged) >= MAX_CANDIDATES:
             break
     return merged, errors
+
+
+def image_to_global(x, y, origin):
+    """Map an image-frame point to global desktop pixels.
+
+    origin is [ox, oy], the global position of the shown frame's top
+    left corner: the window origin for a window observation, the
+    monitor origin for a screen observation. The 0-1000 vision scale
+    is a fraction of the frame, so the parsed point is frame-relative
+    and MUST go through here before any global use (crop math, click
+    coordinates). Skipping this step double-counts the origin.
+    """
+    return int(x) + int(origin[0]), int(y) + int(origin[1])
 
 
 def zoom_needed(target_size_px, confidence):
@@ -329,8 +352,13 @@ def main(argv=None):
     """Small CLI so the executor loop can use this module directly.
 
     ground: parse a model reply, print crop rects for each candidate.
-      multi_candidate.py ground --image-w 1920 --image-h 1176 \
-        --window 0 0 1920 1176 --reply '{"candidates": [...]}'
+      multi_candidate.py ground --image-w 1096 --image-h 581 \
+        --window 2509 1509 1096 581 --origin 2509 1509 \
+        --reply '{"candidates": [...]}'
+      --image-w/--image-h are the TRUE size of the shown frame (the
+      window size for a window observation); --origin is the frame's
+      global top-left corner (the window origin). The CLI converts
+      frame points to global pixels before cropping.
     stamp: stamp failed points onto an observation copy.
       multi_candidate.py stamp --image in.png --out out.png \
         --points '100,200 300,400'
@@ -346,6 +374,7 @@ def main(argv=None):
     ground.add_argument("--image-w", type=int, required=True)
     ground.add_argument("--image-h", type=int, required=True)
     ground.add_argument("--window", nargs=4, type=int, required=True)
+    ground.add_argument("--origin", nargs=2, type=int, default=[0, 0])
     ground.add_argument("--reply", required=True)
     ground.add_argument("--target-size", type=int, default=None)
     stamp = sub.add_parser("stamp")
@@ -366,11 +395,14 @@ def main(argv=None):
         candidates, errors = parse_candidates(ns.reply, ns.image_w, ns.image_h)
         out = {"ok": True, "candidates": [], "errors": errors}
         for cand in candidates:
+            gx, gy = image_to_global(cand.x, cand.y, ns.origin)
             crop, in_crop = crop_for_candidate(
-                cand.x, cand.y, ns.window,
+                gx, gy, ns.window,
                 target_size_px=ns.target_size, confidence=cand.confidence)
             out["candidates"].append({
-                "candidate": cand.as_dict(), "crop": crop,
+                "candidate": cand.as_dict(),
+                "global": [gx, gy],
+                "crop": crop,
                 "crop_window": to_window_relative(crop, ns.window),
                 "point_in_crop": list(in_crop),
                 "zoom": zoom_needed(ns.target_size, cand.confidence)})
