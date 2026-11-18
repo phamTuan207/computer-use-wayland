@@ -219,12 +219,29 @@ def crop_for_candidate(x, y, window_bounds, target_size_px=None,
     return [cx, cy, side, side], (px, py)
 
 
+def to_window_relative(crop, window_bounds):
+    """Convert a global crop rect to window-relative --crop coords.
+
+    crop_for_candidate returns GLOBAL desktop pixels, but cu.py
+    observe --crop takes offsets from the WINDOW origin (it adds the
+    window origin itself: region = [wb[0]+x, wb[1]+y, w, h]). Pass
+    the output of this helper, not the global rect, to
+    crop_observe_args. window_bounds is [x, y, width, height].
+    """
+    wx, wy = int(window_bounds[0]), int(window_bounds[1])
+    return [int(crop[0]) - wx, int(crop[1]) - wy,
+            int(crop[2]), int(crop[3])]
+
+
 def crop_observe_args(address, crop, max_width=960):
     """Broker observe envelope args for one verification crop.
 
-    Matches cu.py observe --window --crop (nargs=4 ints) --max-width.
-    max_width defaults to 960, the profile default; a crop is never
-    wider than 200 px, so no downscale ever applies to it.
+    crop MUST be window-relative (see to_window_relative): cu.py
+    observe --crop takes (x, y, w, h) as offsets from the window
+    origin, not global pixels. Matches cu.py observe --window --crop
+    (nargs=4 ints) --max-width. max_width defaults to 960, the
+    profile default; a crop is never wider than 200 px, so no
+    downscale ever applies to it.
     """
     return ["observe", "--window", address, "--crop",
             str(crop[0]), str(crop[1]), str(crop[2]), str(crop[3]),
@@ -354,6 +371,7 @@ def main(argv=None):
                 target_size_px=ns.target_size, confidence=cand.confidence)
             out["candidates"].append({
                 "candidate": cand.as_dict(), "crop": crop,
+                "crop_window": to_window_relative(crop, ns.window),
                 "point_in_crop": list(in_crop),
                 "zoom": zoom_needed(ns.target_size, cand.confidence)})
         print(json.dumps(out))

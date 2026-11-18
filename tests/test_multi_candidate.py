@@ -158,10 +158,20 @@ class CropTests(unittest.TestCase):
             self.assertTrue(90 <= crop[3] <= 200)
 
     def test_observe_args_shape(self):
-        args = mc.crop_observe_args("0xabc", [430, 430, 140, 140])
+        args = mc.crop_observe_args("0xabc", [30, 30, 140, 140])
         self.assertEqual(args, ["observe", "--window", "0xabc", "--crop",
-                                "430", "430", "140", "140",
+                                "30", "30", "140", "140",
                                 "--max-width", "960"])
+
+    def test_window_relative_conversion(self):
+        # Global crop [440, 440, 140, 140] in a window at (100, 100)
+        # becomes window-relative [340, 340, 140, 140] for --crop.
+        self.assertEqual(
+            mc.to_window_relative([440, 440, 140, 140], [100, 100, 800, 600]),
+            [340, 340, 140, 140])
+        self.assertEqual(
+            mc.to_window_relative([0, 0, 140, 140], [0, 0, 1920, 1176]),
+            [0, 0, 140, 140])
 
 
 class StampTests(unittest.TestCase):
@@ -241,6 +251,8 @@ class CliTests(unittest.TestCase):
         self.assertTrue(data["ok"])
         self.assertEqual(len(data["candidates"]), 2)
         self.assertEqual(data["candidates"][0]["crop"], [430, 430, 140, 140])
+        self.assertEqual(data["candidates"][0]["crop_window"],
+                         [430, 430, 140, 140])
 
     def test_prompt_prints_discipline(self):
         proc = self.run_cli("prompt")
