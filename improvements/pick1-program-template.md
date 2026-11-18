@@ -27,6 +27,8 @@ assert_file_exists("/tmp/hoc-ky-2/oop")
 verify_image = verify["image"]
 ```
 
+The three P3 targets are directories. assert_file_exists checks path existence, including directories.
+
 ## P4 program
 
 ```python
