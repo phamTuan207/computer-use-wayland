@@ -28,9 +28,12 @@ Documented deviation from true GlassStyle.Chrome at f5e1fb56:
 Band 14 dp, depth 9 dp, fine blur 0, and lit bevel 3 dp agree. The task set
 selects default lighting values with Chrome geometry, so those task values win.
 
-Formula note: the normalized Snell ratio still varies across the outer band;
-only the inner-fade smoothstep factor is 1 for e <= 0.75. Tests mirror the full
-reported equation and preserve the distinction.
+Formula resolution: the normalized Snell ratio still varies across the outer
+band; only the inner-fade smoothstep factor is 1 for e <= 0.75. At depths
+0/0.5/0.75/1 times the 14 px band, the formula yields 0/0.188/0.086/0.
+The 1.5 px checkpoint is 0.508922 (the earlier approximately 0.509 figure);
+a 0.0001 px scan puts the actual local maximum near 0.515247 at 1.3983 px.
+Tests mirror the full equation, not a bend=1 plateau.
 """
 import math
 from pathlib import Path

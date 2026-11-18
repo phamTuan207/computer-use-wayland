@@ -9,7 +9,7 @@
 
 ## Decision note: exact-source conflicts
 
-The port formulas below are source-driven. The values table preserves both the task-supplied values and the pinned source’s actual named Chrome values. They cannot both be called an exact Chrome copy. A clarification was requested while this document was being prepared; until it is answered, do not freeze the conflicting Lua values or claim that the requested list is the pinned Chrome preset.
+The coordinator resolved the value conflict: implement the task-supplied value set. The table preserves the pinned source’s actual named Chrome values for comparison. The resulting port is the Shayxo Legacy task-value set, not an exact copy of the named Chrome preset.
 
 At the pinned shayxo commit, GlassStyle.Chrome is Legacy, fine blur 0 dp, band 14 dp, depth 9 dp, and bevel 3 dp. It also sets backdropBlur 14 dp, dispersion 0.010, mirror 0.08, white tint alpha 0.11, adaptivity 0.90, legibility 0.90, specular 0.50, Fresnel 0.08, and innerShadow 0.06. The task-supplied list instead says no pre-blur, dispersion 0.07, no mirror, transparent tint, legibility 0.6, specular 0.55, Fresnel 0.10, and innerShadow 0.07. The source-wins instruction makes these source facts authoritative when describing source Chrome.
 
@@ -419,8 +419,8 @@ Hyprglass already maps sample UVs through uvPadding and sampleUVOffset/sampleUVS
 - foldSource: measured-profile interaction fold; selected profile is Legacy.
 - heldSource, held magnification, held glow: finger-held interaction family; the indicator is a resting Legacy pill.
 - Measured rest map: selected profile is Legacy; the Legacy bend branch does not call the measured source map.
-- Legacy mirror echo: excluded by the task’s explicit non-copy list, but pinned GlassStyle.Chrome sets mirror = 0.08. This exclusion is a documented deviation from exact source Chrome and must be resolved before implementation.
-- Wide tone kernel: NOT omitted. Section 3h ports it because source strength has an additive legibility term and tone mapping runs before tint; alpha zero does not disable either formula.
+- Legacy mirror echo: excluded by the task’s explicit non-copy list. Pinned GlassStyle.Chrome sets mirror = 0.08; the selected zero-mirror value is a documented deviation from true Chrome.
+- Wide tone kernel: omitted because this Hyprglass path has no `wideTex` binding or quarter-scale Gaussian copy. The port retains the additive legibility strength and `toneMappedTint`, but samples sharp content in place of the source wide copy, so the source three-term tone `B + k(D-B) + c|D-B|` is not reproduced.
 
 ## 6. Risks and checkable open questions
 
