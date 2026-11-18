@@ -47,7 +47,8 @@ Sandbox guard: AST scan before execution rejects imports, dunder access,
 eval/exec/open/__import__, attribute access outside a small safe whitelist,
 and any name outside the allowlist plus safe builtins. Execution runs with
 restricted builtins, a wall-clock budget (default 30s, max 60s), an API-call
-budget (default 32), and a trace step budget (20000 executed lines).
+budget (default 32), and a trace step budget (20000 executed program
+lines; lines inside API implementations do not count).
 A program that tries any banned construct fails closed with no side effect
 beyond API calls already made, and the failure is returned as a result
 envelope so the supervisor can replan from the partial result.
@@ -75,6 +76,7 @@ MAX_WALL_SECONDS = 60
 DEFAULT_WALL_SECONDS = 30
 MAX_API_CALLS = 32
 MAX_TRACE_STEPS = 20000
+PROGRAM_FILENAME = '<code-exec>'
 MAX_READ_BYTES = 65536
 OBSERVATION_MAX_AGE = 90
 READ_ROOT = Path('/tmp')
@@ -251,6 +253,7 @@ class CodeExecSession:
         self.log_lines = []
         self._deadline = None
         self._trace_steps = 0
+        self._trace_events = 0
         self._load_state()
 
     def _state_path(self):
@@ -318,11 +321,22 @@ class CodeExecSession:
     def _trace(self, frame, event, arg):
         if event != 'line':
             return self._trace
-        self._trace_steps += 1
-        if self._trace_steps > MAX_TRACE_STEPS:
-            raise CodeExecError('trace step budget exceeded (%d)' % MAX_TRACE_STEPS)
-        if self._trace_steps % 200 == 0:
+        # Periodic cancel/wall-clock checks still run on every line event,
+        # including lines inside API implementations, so a long API call
+        # stays cancellable. Only the step *budget* is program-only.
+        self._trace_events += 1
+        if self._trace_events % 200 == 0:
             self._check_budgets()
+        # Only the program's own lines count toward the step budget. A
+        # single observe() executes ~190000 lines on a cold interpreter
+        # (PIL first import) and ~7000-10000 warm (grim subprocess, PIL
+        # decode/resize), so counting implementation lines blows the 20000
+        # budget before act() ever runs. The API-call budget (32) and the
+        # wall-clock budget already bound runaway API implementations.
+        if frame.f_code.co_filename == PROGRAM_FILENAME:
+            self._trace_steps += 1
+            if self._trace_steps > MAX_TRACE_STEPS:
+                raise CodeExecError('trace step budget exceeded (%d)' % MAX_TRACE_STEPS)
         return self._trace
 
     def _api(self, name, fn, *args, **kwargs):
@@ -447,6 +461,7 @@ class CodeExecSession:
         self.api_calls = 0
         self.log_lines = []
         self._trace_steps = 0
+        self._trace_events = 0
         self._deadline = started + self.wall_seconds
         envelope = {
             'ok': False, 'intent': intent, 'api_calls': 0,
@@ -469,7 +484,7 @@ class CodeExecSession:
             })
             sys.settrace(self._trace)
             try:
-                code = compile(tree, '<code-exec>', 'exec')
+                code = compile(tree, PROGRAM_FILENAME, 'exec')
                 exec(code, namespace)  # noqa: S102 - AST-validated, restricted builtins
             finally:
                 sys.settrace(None)
