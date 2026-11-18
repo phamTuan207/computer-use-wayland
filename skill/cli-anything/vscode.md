@@ -39,6 +39,15 @@ computer-use cli run vscode -- <command>
 - Open-tab reads need `~/.config/Code/User/workspaceStorage/` to exist;
   they work even when no VS Code instance is running, because they read
   persisted state, not a live process.
+- Opening a window needs the desktop session env (`WAYLAND_DISPLAY`,
+  `XDG_SESSION_TYPE=wayland`, `HYPRLAND_INSTANCE_SIGNATURE`,
+  `ELECTRON_OZONE_PLATFORM_HINT=wayland`). From a bare shell the
+  wrapper discovers it from a GUI donor process (kitty, quickshell,
+  waybar, Hyprland via `/proc` environ); without it `code` exits 0
+  while the app dies on an Electron X11 error, so `open` and `diff`
+  verify afterwards that a `code` process is running and report
+  `process_running: false` instead of a bare ok when the launch did
+  not stick. Always check that field after an open.
 
 ## Usage
 
@@ -94,7 +103,7 @@ Opening commands. All pass through to `code` with argv only.
 
 | Command | Description |
 |---------|-------------|
-| `open <path> [--new-window\|--reuse-window] [--goto LINE[:COL]]` | Open an existing file or folder; refuses a nonexistent path because `code` would create a missing file |
+| `open <path> [--new-window\|--reuse-window] [--goto LINE[:COL]]` | Open an existing file or folder; refuses a nonexistent path because `code` would create a missing file; reports `process_running` so a launch that died silently is visible |
 | `diff <left-file> <right-file>` | Open a two-file diff; both files must exist |
 
 ### Extensions
@@ -109,7 +118,7 @@ Extension inventory commands.
 
 | Command | Description |
 |---------|-------------|
-| `status` | `code --status` diagnostics; empty output when VS Code is not running |
+| `status` | `code --status` diagnostics; empty output when VS Code is not running, or when the call cannot reach the instance (missing session env); `running` means diagnostics were reachable, not that a process exists |
 | `version` | `code --version`, first line only |
 
 ## Examples
@@ -179,6 +188,10 @@ When using this wrapper programmatically:
 2. **Use absolute paths** for all file operations.
 3. **Never open a path you have not checked exists.** A misspelled path
    is refused on purpose; fix the path, do not force it.
+4. **Check `process_running` after every open or diff.** `code` exits 0
+   even when the app fails to start. If `process_running` is false, the
+   window did not open; re-run with the desktop session env exported
+   (the wrapper normally discovers it itself) and do not claim success.
 4. **Writes go to scratch only.** Never write into his real workspaces
    (iac-eval, Reasearch-IaC, Legacy-link, LTHDT) for a test; use a
    scratch folder under `/tmp` and open that.
@@ -206,8 +219,17 @@ When using this wrapper programmatically:
   is a 94-byte metadata blob for an untitled editor (no text content
   observed). `backups` lists backup files only; their content is never
   parsed as buffer text.
-- **`code --status` is empty when VS Code is not running.** It reports
-  process diagnostics for a running instance only.
+- **`code --status` is empty when VS Code is not running, and also when
+  the call cannot reach a running instance.** Diagnostics need the
+  desktop session env; from a bare shell `status` prints nothing with
+  exit 0 either way. The wrapper's `running` field means "diagnostics
+  were reachable".
+- **Opening from a bare shell used to fail silently.** Without the
+  session env `code` exits 0 while the app dies on an Electron X11
+  ozone error. The wrapper now discovers the session env from a donor
+  process and verifies a `code` process is running after every open
+  and diff; if the process check ever reports false, treat the open
+  as failed.
 - **No `--json` flag on `code`.** The wrapper emits JSON itself; do not
   pass `--json` to `code`.
 

@@ -9,9 +9,23 @@ and passes the rest through to `code` with argv only.
 
 What is verified (laptop, VS Code 1.146.0, 2026-11-18):
 - `code --version`, `code --help`, `code --list-extensions
-  --show-versions` (51 extensions) all run read-only.
+  --show-versions` (53 extensions) all run read-only.
 - `code --status` exits 0 with empty output when no VS Code instance
-  is running; it only reports diagnostics for a running instance.
+  is running, and prints full diagnostics when an instance is running
+  AND the call carries the desktop session env (WAYLAND_DISPLAY,
+  XDG_SESSION_TYPE=wayland, HYPRLAND_INSTANCE_SIGNATURE,
+  ELECTRON_OZONE_PLATFORM_HINT=wayland). Without that env it prints
+  empty output even while an instance runs, so `status` reports
+  "reachable", not "a process exists".
+- `code` opens a window only with the desktop session env. From a bare
+  SSH shell (WAYLAND_DISPLAY unset, XDG_SESSION_TYPE=tty) it exits 0
+  and prints nothing while the app dies with an Electron X11 ozone
+  error ("Missing X server or $DISPLAY"), a silent false positive.
+  This wrapper therefore discovers the session env from a GUI donor
+  process (kitty, quickshell, waybar, Hyprland via /proc environ) when
+  WAYLAND_DISPLAY is missing, and `open`/`diff` verify afterwards that
+  a `code` process is running, reporting `process_running: false`
+  instead of a bare ok when the launch did not stick.
 - Open tabs ARE readable without a running instance: every workspace
   under ~/.config/Code/User/workspaceStorage/<hash>/ has a
   state.vscdb sqlite DB, and the key `memento/workbench.parts.editor`
@@ -73,6 +87,12 @@ DEFAULT_MAX_CHARS = 20000
 DEFAULT_MAX_FILES = 200
 SKIP_DIRS = {".git", "node_modules", "__pycache__"}
 EDITOR_STATE_KEY = "memento/workbench.parts.editor"
+SESSION_KEYS = ("XDG_RUNTIME_DIR", "WAYLAND_DISPLAY",
+                "HYPRLAND_INSTANCE_SIGNATURE",
+                "ELECTRON_OZONE_PLATFORM_HINT",
+                "DBUS_SESSION_BUS_ADDRESS", "XDG_SESSION_TYPE",
+                "DESKTOP_SESSION", "XDG_CURRENT_DESKTOP")
+DONOR_NAMES = ("quickshell", "waybar", "kitty", "Hyprland")
 
 USAGE = (
     "usage: vscode_cli.py [--config-dir DIR] "
@@ -217,19 +237,99 @@ def read_open_tabs(config_dir, workspace_hash):
     return parse_editor_grid(state), None
 
 
+def discover_session_env(proc_root=Path("/proc")):
+    """Desktop session env from a GUI donor process, or {}.
+
+    A bare SSH shell has no WAYLAND_DISPLAY, and `code` then exits 0
+    while the app dies on an X11 ozone error. The compositor session
+    env lives in donor processes (kitty, quickshell, waybar, Hyprland);
+    read the session keys from the first donor owned by this user whose
+    env has both WAYLAND_DISPLAY and XDG_RUNTIME_DIR. proc_root exists
+    only so tests can point at a fake /proc tree.
+    """
+    try:
+        entries = list(proc_root.iterdir())
+    except OSError:
+        return {}
+    for pid_dir in entries:
+        if not pid_dir.name.isdigit():
+            continue
+        try:
+            if pid_dir.lstat().st_uid != os.geteuid():
+                continue
+            status = (pid_dir / "status").read_text(errors="replace")
+            name = status.splitlines()[0].split(":", 1)[1].strip()
+        except (OSError, IndexError):
+            continue
+        if name not in DONOR_NAMES:
+            continue
+        try:
+            raw = (pid_dir / "environ").read_bytes()
+        except OSError:
+            continue
+        env = {}
+        for item in raw.split(b"\0"):
+            key, sep, value = item.partition(b"=")
+            if sep:
+                decoded = key.decode("utf-8", "replace")
+                if decoded in SESSION_KEYS:
+                    env[decoded] = value.decode("utf-8", "replace")
+        if env.get("WAYLAND_DISPLAY") and env.get("XDG_RUNTIME_DIR"):
+            return env
+    return {}
+
+
+def code_process_running():
+    """True when a `code` process exists, False when pgrep says none,
+    None when pgrep itself is unavailable (check skipped)."""
+    try:
+        result = subprocess.run(["pgrep", "-x", "code"],
+                                capture_output=True, timeout=5)
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    return result.returncode == 0
+
+
 def run_code(argv, timeout=CODE_TIMEOUT_SECONDS):
-    """Run `code` with argv only; return (returncode, stdout, stderr)."""
+    """Run `code` with argv only; return (returncode, stdout, stderr).
+
+    When the caller's env has no WAYLAND_DISPLAY, fill the desktop
+    session env from a donor process first, so a GUI launch from a bare
+    shell reaches the compositor instead of dying on an X11 error.
+    """
     binary = shutil.which("code")
     if binary is None:
         return None, "", "code binary not on PATH"
+    run_env = dict(os.environ)
+    if not run_env.get("WAYLAND_DISPLAY"):
+        run_env.update(discover_session_env())
     try:
         result = subprocess.run([binary, *argv], capture_output=True,
-                                text=True, timeout=timeout)
+                                text=True, timeout=timeout, env=run_env)
     except subprocess.TimeoutExpired:
         return None, "", "code timed out after %ds" % timeout
     except OSError as exc:
         return None, "", "failed to run code: %s" % exc
     return result.returncode, result.stdout, result.stderr
+
+
+def gui_launch_result(ok, path, returncode, stdout, stderr):
+    """Envelope for open/diff: verify a code process stuck around.
+
+    `code` exits 0 even when the app fails to start (missing session
+    env), so a bare ok would lie. Report process_running, and fail the
+    envelope when no code process exists after a supposedly good open.
+    """
+    running = code_process_running()
+    result = {"ok": ok and returncode == 0 and running is not False,
+              "path": path, "returncode": returncode,
+              "process_running": running,
+              "stdout": stdout[:4096], "stderr": stderr[:4096]}
+    if running is False:
+        result["note"] = ("no code process running after open; the "
+                          "window did not open, usually because the "
+                          "desktop session env is missing")
+    return result
 
 
 def cmd_workspaces(args):
@@ -356,10 +456,9 @@ def cmd_open(args):
     returncode, stdout, stderr = run_code(argv)
     if returncode is None:
         return fail(stderr)
-    print_result({"ok": returncode == 0, "path": args.path,
-                  "returncode": returncode,
-                  "stdout": stdout[:4096], "stderr": stderr[:4096]})
-    return 0 if returncode == 0 else 1
+    result = gui_launch_result(True, args.path, returncode, stdout, stderr)
+    print_result(result)
+    return 0 if result["ok"] else 1
 
 
 def cmd_diff(args):
@@ -371,10 +470,12 @@ def cmd_diff(args):
         ["--diff", args.left, args.right])
     if returncode is None:
         return fail(stderr)
-    print_result({"ok": returncode == 0, "left": args.left,
-                  "right": args.right, "returncode": returncode,
-                  "stdout": stdout[:4096], "stderr": stderr[:4096]})
-    return 0 if returncode == 0 else 1
+    result = gui_launch_result(True, "%s <> %s" % (args.left, args.right),
+                               returncode, stdout, stderr)
+    result["left"] = args.left
+    result["right"] = args.right
+    print_result(result)
+    return 0 if result["ok"] else 1
 
 
 def cmd_status(args):

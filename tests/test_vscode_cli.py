@@ -45,6 +45,24 @@ echo "stub-ok"
 exit 0
 """
 
+PGREP_STUB = """#!/bin/bash
+if [ "$1" = "-x" ] && [ "$2" = "code" ]; then
+  if [ "$PGREP_CODE_RC" = "1" ]; then exit 1; fi
+  echo 999999
+  exit 0
+fi
+exec /usr/bin/pgrep "$@"
+"""
+
+
+def load_wrapper_module():
+    """Import scripts/vscode_cli.py as a module for unit tests."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("vscode_cli", SCRIPT)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
 
 def editor_state(editors, active_index=0):
     """One serialized editor grid leaf with the given file paths."""
@@ -118,6 +136,9 @@ class VscodeCli(unittest.TestCase):
         stub = bindir / "code"
         stub.write_text(CODE_STUB)
         stub.chmod(0o755)
+        pgrep_stub = bindir / "pgrep"
+        pgrep_stub.write_text(PGREP_STUB)
+        pgrep_stub.chmod(0o755)
         self.stub_log = self.base / "code-argv.log"
         self.env = dict(os.environ)
         self.env["VSCODE_CONFIG_DIR"] = str(self.config)
@@ -221,10 +242,55 @@ class VscodeCli(unittest.TestCase):
                                  "--goto", "1")
         self.assertEqual(code, 0)
         self.assertTrue(out["ok"])
+        self.assertTrue(out["process_running"])
         logged = self.stub_log.read_text()
         self.assertIn("--new-window", logged)
         self.assertIn("--goto", logged)
         self.assertIn("%s:1" % target, logged)
+
+    def test_open_fails_when_no_code_process_sticks(self):
+        env = dict(self.env, PGREP_CODE_RC="1")
+        result = subprocess.run(
+            [sys.executable, str(SCRIPT), "open",
+             str(self.ws_a / "demo.rego")],
+            capture_output=True, text=True, env=env, timeout=30)
+        out = json.loads(result.stdout)
+        self.assertEqual(result.returncode, 1)
+        self.assertFalse(out["ok"])
+        self.assertFalse(out["process_running"])
+        self.assertIn("did not open", out["note"])
+
+    def test_diff_opens_when_code_process_runs(self):
+        code, out = self.run_cli(
+            "diff", str(self.ws_a / "demo.rego"),
+            str(self.ws_b / "README.md"))
+        self.assertEqual(code, 0)
+        self.assertTrue(out["ok"])
+        self.assertTrue(out["process_running"])
+
+    def test_discover_session_env_from_fake_proc(self):
+        module = load_wrapper_module()
+        fake_proc = self.base / "proc"
+        donor = fake_proc / "1234"
+        donor.mkdir(parents=True)
+        (donor / "status").write_text("Name:\tkitty\nState:\tS\n")
+        (donor / "environ").write_bytes(
+            b"WAYLAND_DISPLAY=wayland-1\0"
+            b"XDG_RUNTIME_DIR=/run/user/1000\0"
+            b"HYPRLAND_INSTANCE_SIGNATURE=abc\0"
+            b"HOME=/home/james\0")
+        other = fake_proc / "5678"
+        other.mkdir()
+        (other / "status").write_text("Name:\tbash\n")
+        (other / "environ").write_bytes(b"WAYLAND_DISPLAY=wayland-9\0")
+        env = module.discover_session_env(fake_proc)
+        self.assertEqual(env.get("WAYLAND_DISPLAY"), "wayland-1")
+        self.assertEqual(env.get("XDG_RUNTIME_DIR"), "/run/user/1000")
+        self.assertEqual(env.get("HYPRLAND_INSTANCE_SIGNATURE"), "abc")
+        self.assertNotIn("HOME", env)
+        empty = fake_proc / "empty"
+        empty.mkdir()
+        self.assertEqual(module.discover_session_env(empty), {})
 
     def test_open_refuses_missing_path(self):
         code, out = self.run_cli("open", str(self.base / "nope.txt"))
