@@ -204,5 +204,51 @@ class ApiTests(unittest.TestCase):
             run('windows()', check_cancel=cancel)
 
 
+class TraceBudgetTests(unittest.TestCase):
+    def test_api_implementation_lines_do_not_count(self):
+        # One real observe() executes ~190000 lines on a cold interpreter
+        # (PIL first import) and ~7000-10000 warm; counting those lines
+        # blew the 20000 budget before act() ever ran (Pick 1 round 1).
+        # Only the program's own lines may count now.
+        class HeavyBackend(FakeBackend):
+            def observe_window(self, address, crop, max_width):
+                total = 0
+                for i in range(50000):
+                    total += i * i
+                assert total > 0
+                return super().observe_window(address, crop, max_width)
+        source = (
+            'wins = windows()\n'
+            'obs = observe(window="0xabc")\n'
+            'result = act([{"type": "wait", "ms": 0}], obs)\n'
+            'obs2 = observe(window="0xabc")\n'
+            'assert_state(result["ok"], "act failed")\n'
+        )
+        result = run(source, HeavyBackend())
+        self.assertTrue(result['ok'], result)
+        self.assertEqual(result['api_calls'], 4)
+
+    def test_trace_budget_still_catches_runaway_loop(self):
+        result = run('while True:\n    x = 1')
+        self.assertFalse(result['ok'])
+        self.assertEqual(result['error_type'], 'sandbox')
+        self.assertIn('trace step budget exceeded', result['error'])
+
+    def test_trace_budget_counts_program_function_lines(self):
+        source = ('def spin():\n'
+                  '    n = 0\n'
+                  '    while True:\n'
+                  '        n += 1\n'
+                  'spin()\n')
+        result = run(source)
+        self.assertFalse(result['ok'])
+        self.assertIn('trace step budget exceeded', result['error'])
+
+    def test_large_finite_program_loop_passes_under_budget(self):
+        result = run('total = 0\nfor i in range(5000):\n    total += i')
+        self.assertTrue(result['ok'], result)
+        self.assertEqual(result['variables']['total'], 12497500)
+
+
 if __name__ == '__main__':
     unittest.main()
