@@ -18,12 +18,15 @@ import contextlib
 import datetime
 import io
 import json
+import socket
 import sqlite3
+import struct
 import subprocess
 import sys
 import tempfile
 import threading
 import unittest
+from unittest import mock
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
@@ -199,12 +202,24 @@ class ChromiumCliTests(unittest.TestCase):
         self.assertEqual([t["id"] for t in out["tabs"]], ["AAA", "BBB"])
 
     def test_open_activate_current_close_roundtrip(self):
-        code, opened = self.run_cli(
-            ["--endpoint", self.endpoint, "open", "https://example.com"])
+        # The stub HTTP server speaks no WebSocket, so the navigate step
+        # is faked here; the real WebSocket client is covered by
+        # WsClientTests below, and by the laptop live test.
+        calls = []
+
+        def fake_navigate(tab, url):
+            calls.append((tab["id"], url))
+            return None
+
+        with mock.patch.object(chromium_cli, "navigate_tab_via_ws",
+                               side_effect=fake_navigate):
+            code, opened = self.run_cli(
+                ["--endpoint", self.endpoint, "open", "https://example.com"])
         self.assertEqual(code, 0)
         self.assertTrue(opened["ok"])
         self.assertEqual(opened["tab"]["id"], "NEW1")
         self.assertEqual(opened["tab"]["url"], "https://example.com")
+        self.assertEqual(calls, [("NEW1", "https://example.com")])
         code, current = self.run_cli(["--endpoint", self.endpoint, "current"])
         self.assertEqual(code, 0)
         self.assertEqual(current["tab"]["id"], "NEW1")
@@ -230,6 +245,19 @@ class ChromiumCliTests(unittest.TestCase):
         code, out = self.run_cli(["--endpoint", self.endpoint, "current"])
         self.assertEqual(code, 1)
         self.assertIn("no tab tracked", out["error"])
+
+    def test_open_fails_loudly_when_navigation_fails(self):
+        def boom(tab, url):
+            raise RuntimeError("CDP WebSocket closed")
+
+        with mock.patch.object(chromium_cli, "navigate_tab_via_ws",
+                               side_effect=boom):
+            code, out = self.run_cli(
+                ["--endpoint", self.endpoint, "open", "https://example.com"])
+        self.assertEqual(code, 1)
+        self.assertFalse(out["ok"])
+        self.assertIn("navigation failed", out["error"])
+        self.assertIn("NEW1", out["error"])
 
     def test_open_rejects_non_http_url(self):
         code, out = self.run_cli(
@@ -313,6 +341,134 @@ class ChromiumCliTests(unittest.TestCase):
             ["--profile", str(profile), "history", "--limit", "0"])
         self.assertEqual(code, 1)
         self.assertIn("limit", out["error"])
+
+
+class FakeCdpWsServer:
+    """One-connection CDP WebSocket server for the WS client tests.
+
+    Answers Page.enable with {}, Page.navigate with a frame result and
+    then a Page.loadEventFired event. Records every method seen.
+    """
+
+    def __init__(self):
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self.sock.bind(("127.0.0.1", 0))
+        self.sock.listen(1)
+        self.port = self.sock.getsockname()[1]
+        self.methods = []
+        self.thread = threading.Thread(target=self._serve, daemon=True)
+
+    def start(self):
+        self.thread.start()
+
+    def stop(self):
+        try:
+            self.sock.close()
+        except OSError:
+            pass
+
+    def _recv_exact(self, conn, count):
+        chunks = []
+        while sum(len(c) for c in chunks) < count:
+            chunk = conn.recv(count - sum(len(c) for c in chunks))
+            if not chunk:
+                raise RuntimeError("client closed")
+            chunks.append(chunk)
+        return b"".join(chunks)
+
+    def _send_text(self, conn, text):
+        data = text.encode()
+        header = bytearray([0x81])
+        if len(data) < 126:
+            header.append(len(data))
+        elif len(data) < 65536:
+            header.append(126)
+            header.extend(struct.pack(">H", len(data)))
+        else:
+            header.append(127)
+            header.extend(struct.pack(">Q", len(data)))
+        conn.sendall(bytes(header) + data)
+
+    def _serve(self):
+        import base64
+        import hashlib
+        try:
+            conn, _ = self.sock.accept()
+        except OSError:
+            return
+        with conn:
+            conn.settimeout(10)
+            buf = b""
+            while b"\r\n\r\n" not in buf:
+                chunk = conn.recv(4096)
+                if not chunk:
+                    return
+                buf += chunk
+            head = buf.split(b"\r\n\r\n", 1)[0].decode()
+            key = [line.split(": ", 1)[1] for line in head.split("\r\n")
+                   if line.lower().startswith("sec-websocket-key:")][0]
+            accept = base64.b64encode(hashlib.sha1(
+                (key + chromium_cli.WS_GUID).encode()).digest()).decode()
+            conn.sendall(("HTTP/1.1 101 Switching Protocols\r\n"
+                          "Upgrade: websocket\r\nConnection: Upgrade\r\n"
+                          "Sec-WebSocket-Accept: %s\r\n\r\n" % accept).encode())
+            while True:
+                try:
+                    first, second = self._recv_exact(conn, 2)
+                except (RuntimeError, OSError):
+                    return
+                opcode = first & 0x0F
+                if opcode == 0x8:
+                    return
+                length = second & 0x7F
+                if length == 126:
+                    length = struct.unpack(
+                        ">H", self._recv_exact(conn, 2))[0]
+                elif length == 127:
+                    length = struct.unpack(
+                        ">Q", self._recv_exact(conn, 8))[0]
+                mask = self._recv_exact(conn, 4)
+                payload = bytes(b ^ mask[i % 4] for i, b in
+                                enumerate(self._recv_exact(conn, length)))
+                frame = json.loads(payload.decode())
+                method = frame.get("method", "")
+                self.methods.append(method)
+                if method == "Page.enable":
+                    self._send_text(conn, json.dumps(
+                        {"id": frame["id"], "result": {}}))
+                elif method == "Page.navigate":
+                    self._send_text(conn, json.dumps(
+                        {"id": frame["id"], "result": {
+                            "frameId": "F1", "loaderId": "L1"}}))
+                    self._send_text(conn, json.dumps(
+                        {"method": "Page.loadEventFired",
+                         "params": {"timestamp": 1}}))
+                else:
+                    self._send_text(conn, json.dumps(
+                        {"id": frame.get("id"), "result": {}}))
+
+
+class WsClientTests(unittest.TestCase):
+    def test_navigate_waits_for_load_event(self):
+        server = FakeCdpWsServer()
+        server.start()
+        try:
+            chromium_cli.navigate_tab_via_ws(
+                {"webSocketDebuggerUrl":
+                 "ws://127.0.0.1:%d/devtools/page/NEW1" % server.port},
+                "https://example.com")
+        finally:
+            server.stop()
+        self.assertEqual(server.methods, ["Page.enable", "Page.navigate"])
+
+    def test_ws_connect_rejects_non_loopback(self):
+        with self.assertRaises(ValueError):
+            chromium_cli.ws_connect("ws://example.com:9222/devtools/page/X")
+
+    def test_ws_connect_refuses_closed_port(self):
+        with self.assertRaises((RuntimeError, OSError)):
+            chromium_cli.ws_connect("ws://127.0.0.1:1/devtools/page/X")
 
 
 class CuCliWiringTests(unittest.TestCase):

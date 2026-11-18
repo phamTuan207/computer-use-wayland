@@ -1,16 +1,15 @@
 #!/usr/bin/env python3
 """Repo-owned Chromium CLI wrapper. Stdlib only.
 
-Talks to Chromium over its loopback DevTools HTTP endpoints (no
-WebSocket needed) and reads the Chromium profile read-only for history,
-bookmarks and downloads. This is the Chromium counterpart to the
-vendored CLI-Anything harnesses, but it is repo-owned: there is no
-upstream harness for Chromium, so nothing here is vendored.
-
-Why HTTP only: /json/list, /json/new, /json/activate and /json/close
-cover every tab command the wrapper needs. Reading a page's DOM still
-goes through `computer-use browser observe/act` (scripts/cdp.mjs),
-which owns the WebSocket side.
+Talks to Chromium over its loopback DevTools HTTP endpoints, plus one
+minimal stdlib WebSocket client used only by `open`: Chromium 157
+ignores the `url` parameter of PUT /json/new (verified live 2026-11-18
+with raw curl: the new tab stays about:blank even after activate and
+4 s), so `open` creates the tab over HTTP and then navigates it with
+CDP Page.navigate over its WebSocket, waiting for the load event.
+Reading a page's DOM still goes through
+`computer-use browser observe/act` (scripts/cdp.mjs), which owns the
+full WebSocket side; this file's client does one call only.
 
 Endpoint rule (same as `computer-use browser start`): the default
 endpoint is http://127.0.0.1:9222, the agent-managed Chromium. Pham
@@ -59,13 +58,18 @@ Exit 0 on success, 1 on error. No REPL mode, no shell, argv only.
 """
 
 import argparse
+import base64
 import datetime
+import hashlib
 import json
 import os
 import shutil
+import socket
 import sqlite3
+import struct
 import sys
 import tempfile
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -156,6 +160,177 @@ def http_json(endpoint, path, method="GET", expect_json=True):
         return json.loads(text)
     except json.JSONDecodeError as exc:
         raise RuntimeError("CDP %s %s returned invalid JSON" % (method, path)) from exc
+
+
+WS_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
+WS_CONNECT_TIMEOUT_SECONDS = 5
+WS_LOAD_TIMEOUT_SECONDS = 10
+
+
+def _ws_recv_exact(sock, count, deadline):
+    """Read exactly count bytes, or raise on close/timeout."""
+    chunks = []
+    while sum(len(c) for c in chunks) < count:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise RuntimeError("CDP WebSocket timed out")
+        sock.settimeout(remaining)
+        chunk = sock.recv(count - sum(len(c) for c in chunks))
+        if not chunk:
+            raise RuntimeError("CDP WebSocket closed")
+        chunks.append(chunk)
+    return b"".join(chunks)
+
+
+def _ws_recv_message(sock, deadline):
+    """One complete text message; answers ping, ignores pong, skips binary.
+
+    Returns the message string, or None when the peer sent close.
+    """
+    fragments = []
+    while True:
+        first, second = _ws_recv_exact(sock, 2, deadline)
+        fin = bool(first & 0x80)
+        opcode = first & 0x0F
+        length = second & 0x7F
+        if length == 126:
+            length = struct.unpack(">H", _ws_recv_exact(sock, 2, deadline))[0]
+        elif length == 127:
+            length = struct.unpack(">Q", _ws_recv_exact(sock, 8, deadline))[0]
+        if second & 0x80:
+            mask = _ws_recv_exact(sock, 4, deadline)
+            payload = bytes(b ^ mask[i % 4] for i, b in
+                            enumerate(_ws_recv_exact(sock, length, deadline)))
+        else:
+            payload = _ws_recv_exact(sock, length, deadline)
+        if opcode == 0x9:
+            sock.sendall(bytes([0x8A, 0x80]) + os.urandom(4))
+            continue
+        if opcode == 0xA:
+            continue
+        if opcode == 0x8:
+            return None
+        if opcode in (0x1, 0x0):
+            fragments.append(payload)
+            if fin:
+                return b"".join(fragments).decode("utf-8")
+            continue
+        raise RuntimeError("CDP WebSocket sent an unexpected opcode")
+
+
+def _ws_send_text(sock, text):
+    """One masked client text frame."""
+    data = text.encode("utf-8")
+    header = bytearray([0x81])
+    if len(data) < 126:
+        header.append(0x80 | len(data))
+    elif len(data) < 65536:
+        header.append(0x80 | 126)
+        header.extend(struct.pack(">H", len(data)))
+    else:
+        header.append(0x80 | 127)
+        header.extend(struct.pack(">Q", len(data)))
+    mask = os.urandom(4)
+    header.extend(mask)
+    masked = bytes(b ^ mask[i % 4] for i, b in enumerate(data))
+    sock.sendall(bytes(header) + masked)
+
+
+def ws_connect(ws_url):
+    """Handshake a loopback ws:// URL; returns the connected socket."""
+    url = urllib.parse.urlparse(ws_url)
+    if url.scheme != "ws" or url.hostname not in LOOPBACK_HOSTS:
+        raise ValueError("CDP debugger must be a loopback WebSocket: " + ws_url)
+    try:
+        port = url.port or 80
+    except ValueError:
+        raise ValueError("debugger port is not a number: " + ws_url) from None
+    if not 1 <= port <= 65535:
+        raise ValueError("debugger port out of range: " + ws_url)
+    key = base64.b64encode(os.urandom(16)).decode()
+    sock = socket.create_connection((url.hostname, port),
+                                    timeout=WS_CONNECT_TIMEOUT_SECONDS)
+    try:
+        sock.sendall(("GET %s HTTP/1.1\r\nHost: %s:%d\r\n"
+                      "Upgrade: websocket\r\nConnection: Upgrade\r\n"
+                      "Sec-WebSocket-Key: %s\r\nSec-WebSocket-Version: 13\r\n\r\n"
+                      % (url.path or "/", url.hostname, port, key)).encode())
+        sock.settimeout(WS_CONNECT_TIMEOUT_SECONDS)
+        buf = b""
+        while b"\r\n\r\n" not in buf:
+            chunk = sock.recv(4096)
+            if not chunk:
+                raise RuntimeError("CDP WebSocket handshake closed")
+            buf += chunk
+        head = buf.split(b"\r\n\r\n", 1)[0]
+        if b"101" not in head.split(b"\r\n")[0]:
+            raise RuntimeError("CDP WebSocket handshake failed")
+        accept = base64.b64encode(hashlib.sha1(
+            (key + WS_GUID).encode()).digest()).decode()
+        if ("Sec-WebSocket-Accept: " + accept).encode() not in head:
+            raise RuntimeError("CDP WebSocket handshake accept mismatch")
+    except BaseException:
+        sock.close()
+        raise
+    return sock
+
+
+def navigate_tab_via_ws(tab, url):
+    """Navigate one tab to url over its CDP WebSocket; wait for load.
+
+    Sends Page.enable then Page.navigate and waits up to
+    WS_LOAD_TIMEOUT_SECONDS for Page.loadEventFired. Returns None on
+    success. Raises on handshake failure, a navigation error, or a
+    load timeout; a timeout means the tab may still be loading, so the
+    caller reports it instead of claiming the URL opened.
+    """
+    ws_url = tab.get("webSocketDebuggerUrl", "")
+    if not ws_url:
+        raise RuntimeError("new tab has no debugger URL to navigate")
+    sock = ws_connect(ws_url)
+    try:
+        deadline = time.monotonic() + WS_LOAD_TIMEOUT_SECONDS
+        next_id = [0]
+        pending = {}
+
+        def call(method, params=None):
+            call_id = next_id[0] + 1
+            next_id[0] = call_id
+            _ws_send_text(sock, json.dumps(
+                {"id": call_id, "method": method, "params": params or {}}))
+            while True:
+                message = _ws_recv_message(sock, deadline)
+                if message is None:
+                    raise RuntimeError("CDP WebSocket closed during " + method)
+                frame = json.loads(message)
+                if frame.get("id") == call_id:
+                    if "error" in frame:
+                        raise RuntimeError("CDP %s failed: %s" % (
+                            method, frame["error"].get("message", "unknown")))
+                    return frame.get("result", {})
+                if frame.get("method") == "Page.loadEventFired":
+                    pending["loaded"] = True
+
+        call("Page.enable")
+        call("Page.navigate", {"url": url})
+        while not pending.get("loaded"):
+            if time.monotonic() >= deadline:
+                raise RuntimeError(
+                    "navigation to %s did not finish loading within %ds; "
+                    "the tab may still be loading, check tabs again" % (
+                        url, WS_LOAD_TIMEOUT_SECONDS))
+            message = _ws_recv_message(sock, deadline)
+            if message is None:
+                raise RuntimeError("CDP WebSocket closed while loading " + url)
+            frame = json.loads(message)
+            if frame.get("method") == "Page.loadEventFired":
+                pending["loaded"] = True
+        return None
+    finally:
+        try:
+            sock.close()
+        except OSError:
+            pass
 
 
 def list_page_tabs(endpoint):
@@ -317,8 +492,23 @@ def cmd_open(endpoint, args):
         {"url": url}), method="PUT")
     if not isinstance(target, dict) or not target.get("id"):
         raise RuntimeError("CDP /json/new returned an unexpected shape")
-    tab = {"id": target["id"], "title": target.get("title", ""),
-           "url": target.get("url", url)}
+    tab_id = target["id"]
+    # PUT /json/new alone does not navigate (Chromium 157 ignores the
+    # url parameter); drive Page.navigate over the tab's WebSocket and
+    # fail loudly when it does not settle, instead of returning an
+    # about:blank tab as if the URL had opened.
+    try:
+        navigate_tab_via_ws(target, url)
+    except (ValueError, RuntimeError, OSError) as exc:
+        raise RuntimeError("open created tab %s but navigation failed: %s"
+                           % (tab_id, exc)) from exc
+    tabs = {tab["id"]: tab for tab in list_page_tabs(endpoint)}
+    tab = tabs.get(tab_id)
+    if tab is None:
+        raise RuntimeError("new tab %s vanished after navigation" % tab_id)
+    if tab.get("url", "") in ("", "about:blank"):
+        raise RuntimeError("open created tab %s but it is still about:blank; "
+                           "navigation did not happen" % tab_id)
     write_state(tab)
     return {"ok": True, "command": "open", "endpoint": endpoint, "tab": tab}
 

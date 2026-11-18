@@ -87,7 +87,7 @@ user-data dir (with Default/History inside).
 | Command | Description |
 |---|---|
 | `tabs` | List page tabs: id, title, url |
-| `open <url>` | Open an http(s) URL in a NEW tab; records it as current |
+| `open <url>` | Open an http(s) URL in a NEW tab; navigates it and waits for load (max 10 s); records it as current |
 | `activate <tab-id>` | Bring a tab to front; records it as current |
 | `close <tab-id>` | Close one tab by id |
 | `current` | Title and URL of the tracked current tab |
@@ -152,8 +152,15 @@ usual envelope (`app`, `args`, `returncode`, `stdout_truncated`,
    it has no debug port, and there is no flag that attaches to it.
 2. List tabs before acting on a tab id. Tab ids come from `tabs` or
    from `open`, never from memory.
-3. `open` always opens a NEW tab. Never reuse a tab id for navigation;
-   there is no navigate command on purpose.
+3. `open` always opens a NEW tab and navigates it. Chromium 157
+   ignores the `url` parameter of PUT /json/new (verified live
+   2026-11-18: the new tab stays about:blank), so `open` creates the
+   tab over HTTP and then drives CDP Page.navigate over the tab's
+   WebSocket, waiting up to 10 s for the load event, and returns the
+   tab with its settled title and URL. If `open` reports a navigation
+   failure or timeout, the tab exists but is about:blank: close it by
+   the tab id in the error, or list tabs and retry. Never treat an
+   about:blank result as the URL having opened.
 4. `close` closes exactly the tab id the task names. Never close a
    tab you did not list first, and never close all tabs.
 5. `current` only knows tabs this wrapper opened or activated. After
