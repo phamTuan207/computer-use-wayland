@@ -1,0 +1,483 @@
+# Track 2 speed report: cutting model think time in computer-use-wayland
+
+- Date: 19/11/2026
+- Owner: Pham Tuan
+- Status: FINAL, PROVISIONAL verdicts (non-Astra, Astra 6 out of credit)
+- Draft: this report was assembled from speed-swarm-report-DRAFT.md (335 lines, 12 sections). The draft file is kept as-is; this file is the final report.
+- Sources: improvements/speed-swarm-profile.md (2026-11-18), improvements/speed-proto-pick1.md, improvements/speed-proto-pick2.md, improvements/speed-proto-pick3.md, improvements/speed-proto-pick4.md, improvements/speed-prior-art.md (merged survey, 2026-11-18), improvements/speed-proto-pick2-rerun.md (Pick 2 solo rerun, 19/11), laptop /tmp/speed-profile-20261118/pick1/summary-pick1.md (Pick 1 rerun, 19/11), improvements/speed-proto-pick4-summary.md (Pick 4 combined summary, 19/11), laptop /tmp/speed-mask/mask-before-after.md (masking, Phase C, 19/11), improvements/live-test-log.md (timeline to 05:18 on 19/11).
+
+## 1. Executive summary
+
+The bottleneck is model think time, not the harness. On clean held-out tasks the loop spends 34.2s of a 36.4s wall thinking (94 percent), and only 1.4s on broker service (4 percent). Think before act alone is 14.9s mean (41 percent). The scripted zero-thinking harness floor is 2.116s, so even a perfect harness saves at most about 2s per task. The 10x lever is therefore think time: fewer model calls, shorter model calls, or work moved off the big model.
+
+What was measured in the reruns (19/11, all PROVISIONAL, non-Astra):
+
+- Pick 1 (code execution as the action) is MEASURED on a clean flag-OFF baseline. On the two clean tasks it is a large win: wall -62 percent mean, think -64 percent mean, model calls 5 to 2 per task. P3 and P4 BLOCKED on template and typing defects, not on think time. Verdict: CONDITIONAL, fix first, then re-measure P3/P4 only.
+- Pick 2 (subgoal-only verification plus the reasoning dial) is MEASURED in a solo rerun, both arms 5/5 SUCCESS. Mean wall 76.9s baseline vs 106.0s pick2, delta +29.1s. The P1 to P3 wins used ZERO L2 calls, so they cannot be attributed to the mechanism; the only routine-L2 task (P5) was +102s and confounded. L2 was exercised exactly twice, and one of the two was wrong with confidence 1.0. Verdict: DO NOT LAND as a think-time win.
+- Pick 3 (multi-candidate grounding) is DONE and measured. On the 4 held-out terminal tasks it is pure overhead: no accuracy gain was available, and it costs one extra crop plus one extra vision turn per task. On small targets (16 to 20 px) it recovered 1 of 2 single-candidate misses (2 of 3 vs 1 of 3) for 4 extra crop observes costing about 0.49s of broker service. Verdict: keep as a gated tool for small or uncertain targets only, not as a default.
+- Pick 4 (AT-SPI extents plus DOM-first browser fast path) is MEASURED. On the clean terminal pair P2/P3 the fast-path arm is 41.7s vs 43.7s baseline, delta -2.0s (-5 percent), which is no systematic change, as predicted. G1 Nautilus is BLOCKED at two layers (broker rejects a11y commands, direct ground fails its coord-frame check). D1 Chromium is SUCCESS with 0 browser screenshots and a passing DOM assert, but with no baseline browser task, so the speedup is unproven. Verdict: CONDITIONAL, DOM-first as a capability only after a baseline browser task; hold the a11y half until broker and ground are fixed.
+- Observation masking (Pick 5 prep) is MEASURED. It is slower on every task: clean mean P1-P4 baseline wall 105.4s to masked 179.6s (+74.2s); clean P2-P3 41.8s to 72.7s (+30.9s). Discipline PASS (exactly 2 images per prompt). Verdict: NO WIN at this task length, do not land as a think-time win.
+
+Landing recommendation: FINAL, PROVISIONAL (non-Astra), in section 8. In short: land Pick 1 only after the P3/P4 template plus non-ASCII typing fix and a P3/P4 re-measure; land Pick 3 as a gated opt-in only; land Pick 4 DOM-first only after a baseline browser task, and do not land its a11y half; do not land Pick 2 or masking as think-time wins. Land nothing as a default on prior art alone, and land nothing on a table whose winning tasks used zero calls of the mechanism being tested.
+
+## 2. Baseline: the profile numbers
+
+Source: improvements/speed-swarm-profile.md, run 2026-11-18 evening, Codex gpt-6-luna at max reasoning, full access, on the laptop. 4 held-out tasks, all SUCCESS, combined wall 289.9s. P1 (df, with one screen-changed refusal) took 180.7s; the clean mean below excludes it.
+
+| Component | Mean (clean tasks P2, P3, P4) | Share of 36.4s wall |
+| --- | --- | --- |
+| Wall per clean task | 36.4s | 100 percent |
+| Model think total | 34.2s | 94 percent |
+| Broker service, all requests | 1.4s | 4 percent |
+| Think before act | 14.9s (range 10.3 to 18.1) | 41 percent |
+| Think before first observe | 7.7s (range 6.6 to 9.1) | 21 percent |
+| Think before verify observe | 6.7s (range 6.5 to 6.8) | 18 percent |
+| Think before windows | 4.9s (range 4.6 to 5.3) | 13 percent |
+| Session startup (submit to ready) | 0.9s | 2 percent |
+| Prep (DECIDE to submit) | 0.0s | 0 percent |
+| Scripted zero-thinking harness floor | 2.116s per loop | n/a |
+
+Two structural findings from the profile:
+
+- Prep is 0.0s on every v3 request. Once the model decides, it submits instantly. All gap time is model-side, before the DECIDE line.
+- After the P1 refusal, the retry act think was 0.0s: the model did its retry-act composition during the 64.5s gap before the retry observe, then fired observe and act back to back. The model CAN batch thinking across steps when it plans ahead. In the clean tasks it did not.
+- One screen-changed refusal (P1) cost about 90s of recovery think, more than two whole clean tasks. Refusal avoidance is the second lever after think time.
+
+Held-out tasks used for every pick (same 4, same kitty terminal, same timed.py wrapper): P1 C-03 df -h /, P2 E-04 144/150 as a percent, P3 B-01 mkdir hoc-ky-2 with 3 subdirs, P4 A-01 y-tuong.txt with 3 exact Vietnamese lines. Pick 2 adds one cold task P5 (largest entry in /tmp, no procedure exists). Pick 4 adds G1 Nautilus ground plus click and D1 Chromium snapshot-only.
+
+## 3. Pick 1: code execution as the action
+
+### What it is
+
+A persistent local Python interpreter on the laptop that runs one short program per model call. The model writes the program at runtime, with loops, conditions, and asserts. One program replaces the 4 to 5 think calls of the baseline loop (windows, observe, act, verify observe) with one program-writing think call plus a finish confirmation.
+
+Built: scripts/code_exec.py (460 lines, allowlisted API only: windows, observe, act, read_file, assert_state, assert_file_contains, assert_file_exists, plus safe builtins), scripts/cu.py narrow seam (code-exec subcommand), scripts/session_driver.py and scripts/session_remote.py allowlist entries. AST scan rejects imports, dunder access, eval/exec/open, getattr/setattr, lambdas, async, and any attribute outside a small safe whitelist. Program size cap 8192 chars, wall-clock budget default 30s max 60s, API-call budget 32, trace step budget 20000 lines. Behind flag CU_CODE_EXEC=1, default OFF. Safety invariants unchanged: ownership, lease, generation, cancellation, explicit finish, verification from exact sources (file bytes via read_file plus a final observation image inside the same program), brokered keyboard input through the existing wtype path, pointer miss check (over 3 px refuses the click) and screen-changed refusal still apply. Commits 93798ed, 8ce88b9, ffa7acc on branch speed-swarm. Offline: tests/test_code_exec.py 18 tests, all pass; full suite 1082 tests with the change vs 1076 clean, 9 failures and 68 errors in both runs, zero new failures.
+
+### Prior-art evidence
+
+- CodeAct (Wang et al., arXiv 2402.01030, Feb 2024, survey section 8.1): executable Python code as the action outperforms text and JSON actions by up to 20 percent higher success rate across 17 LLMs; one code action composes many tool calls, so a task that needed 40 to 50 sequential round trips needs one program instead.
+- CoAct-1 (Song et al., arXiv 2508.03923, Aug 2025, survey section 8.2): orchestrator delegates to a Programmer or a GUI Operator; average steps 10.15 on OSWorld vs 15 for leading GUI agents (about one third fewer steps); OSWorld 60.76 percent success.
+- OpenGCUA (arXiv 2610.22200, Oct 2026, survey section 8.3): code-alone ablation vs GUI plus CLI baseline is plus 6.1 points and minus 14.8 percent steps. The full-configuration 53 percent step reduction mixes batching and code, so the conservative bound is the code-alone number, NOT 53 percent.
+- CLI beats GUI (Gu et al., arXiv 2606.19388, Jun 2026, survey section 8.5): a CLI oracle solves 88.8 percent of AndroidWorld in 10.7 steps vs 18.6 for GUI agents.
+- Survey rank: 2 of 17, expected 10s to 17s per task on code-able subtasks.
+
+### Method
+
+Same 4 held-out tasks, baseline arm (flag OFF, normal loop) then Pick 1 arm (flag ON, one code-exec program per task), same timed.py wrapper, records in /tmp/speed-profile-20261118/pick1/ on the laptop. Measurement was paused 18/11 23:50 by user order (disk cleanup) with no task completed in either arm, then resumed 19/11 00:35. Relay env note: the driver inherits the relay environment, not the caller shell, so the flag is set by a systemd drop-in on the relay (Environment=CU_CODE_EXEC=1), with daemon-reload plus relay restart, and removed again at restore.
+
+Rerun (19/11 04:00 to 04:17, laptop /tmp/speed-profile-20261118/pick1/summary-pick1.md, repo HEAD e50da19 with the trace-budget fix live): the round-1 trace bug is fixed (cold real observe no longer burns the 20000-step budget; full programs complete in about 500 to 1100 ms in-program). The baseline this time is a CLEAN flag-OFF baseline: the shared drop-in speed-swarm.conf was removed before the baseline arm, and the disabled envelope was verified. The Pick 1 arm ran with pick1.conf only (CU_CODE_EXEC=1, no PICK4 fastpath), then the drop-in was removed and the relay restarted to a clean env. Smoke test passed ok:true (windows() returned 4 windows, api_calls 1, elapsed 2.39 ms). Records.jsonl 398 lines, parses OK. Round 1 archived to pick1-run1/.
+
+### Before/after think-time table (FILLED, Pick 1 rerun 19/11)
+
+Baseline arm, flag OFF, 4/4 SUCCESS. Think method: sum of gaps between each DECIDE timestamp and the previous timed result; finish-confirmation think excluded; model calls count timed requests plus finish, start and status polls excluded. Baseline floor reused from the profile: 2.116s.
+
+| Task | Arm | Wall (s) | Think total (s) | Think before act / code-exec (s) | Service (s) | Model calls | Refusals | Misclicks | Deaths |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| P1 C-03 | baseline | 48.65 | 46.81 | 6.67 | 0.86 | 5 | 1 (act JSON error, executor bug) | 0 | 1 (attempt 1 died, pass 2 completed) |
+| P1 C-03 | pick1 | 18.89 | 17.38 | 17.38 | 0.63 | 2 | 0 | 0 | 0 |
+| P2 E-04 | baseline | 28.16 | 26.21 | 7.04 | 0.96 | 5 | 0 | 0 | 0 |
+| P2 E-04 | pick1 | 10.18 | 8.59 | 8.59 | 0.72 | 2 | 0 | 0 | 0 |
+| P3 B-01 | baseline | 27.67 | 25.43 | 6.48 | 1.27 | 5 | 0 | 0 | 0 |
+| P3 B-01 | pick1 | BLOCKED | n/a (10.26 to 1st error; 27.67 to retry error) | 8.46 / 25.85 | 0.92 / 0.95 | 3 | 0 | 0 | 0 |
+| P4 A-01 | baseline | 45.68 | 43.21 | 21.49 | 1.50 | 5 | 0 | 0 | 0 |
+| P4 A-01 | pick1 | BLOCKED | n/a (10.10 to 1st error; 18.90 to retry error) | 8.03 / 16.82 | 1.17 / 1.18 | 4 (incl. diagnostic observe) | 0 | 0 | 0 |
+
+Baseline means: clean P2-P4 wall 33.84s, think 31.62s; mean P1-P4 wall 37.54s, think 35.41s. (Round-1 clean mean P2-P4 wall was 46.1s, think 43.8s; this rerun baseline is faster, mostly shorter think gaps, no broker contention.) Baseline P1 caveats: attempt 1 died on the executor's own act-JSON escaping bug (a literal newline in the actions file; act returned Invalid control character, driver failed driver_command_failed, next request task_stopped); fresh session pass 2 completed. P1 wall 48.65s is measured from the direct-start lease mtime to the verify result. P4 think-before-act 21.49s is the time composing the long Vietnamese printf command.
+
+Pick 1 arm, flag ON, 2/4 SUCCESS, 2/4 BLOCKED. P1/P2 in-program elapsed: 557.6 ms / 652.1 ms for the full windows plus observe plus act plus observe program (4 API calls each). No broker refusals, no session deaths, no misclicks in the pick1 arm. Pick 1 floor (live, throwaway session): one code-exec program doing windows plus observe plus act wait 0 ms plus observe again. Start submit to code result wall 8.86s (think-before-code 7.42s, in-program elapsed 493.4 ms, broker service 0.56s, 4 API calls, 3 images / 1,438,779 B, ok:true).
+
+Before/after deltas, clean tasks P1 and P2 only:
+
+| Task | Baseline wall | Pick 1 wall | Delta wall | Baseline think | Pick 1 think | Delta think | Model calls |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| P1 | 48.65 | 18.89 | -29.76 (-61 percent) | 46.81 | 17.38 | -29.43 (-63 percent) | 5 to 2 |
+| P2 | 28.16 | 10.18 | -17.97 (-64 percent) | 26.21 | 8.59 | -17.62 (-67 percent) | 5 to 2 |
+| Mean P1-P2 | 38.41 | 14.54 | -23.87 (-62 percent) | 36.51 | 12.99 | -23.52 (-64 percent) | 5 to 2 |
+
+Why P3 and P4 blocked (verbatim errors from the rerun summary):
+
+- P3 attempt 1 (template as written: act, then immediate asserts): `assert failed: file does not exist: /tmp/hoc-ky-2/dsa` (api_calls 3: windows, observe, act). Root cause: race. The type act returns as soon as the text is typed; the shell had not executed mkdir yet when assert_file_exists ran microseconds later. The baseline loop never hits this because the human-speed verify observe happens seconds after the act. P3 retry (one fix: a wait act before the asserts): `assert failed: wait failed` (api_calls 4). The wait act reusing the pre-act observation was refused (same observation cannot be reused after the screen changed; round-1 baseline P1 hit the same screen changed guard). Per the brief two-failure rule, P3 is BLOCKED. The mkdir commands were typed twice (idempotent), so the directories very likely exist, but no program ever passed its asserts and there is no verify image, so per the end-state rule this is BLOCKED, not SUCCESS.
+- P4 attempt 1 (template as written): `read_file failed: [Errno 2] No such file or directory: /tmp/y-tuong.txt` (api_calls 3). Same assert-before-settle race as P3. P4 retry (one fix, learned from P3: observe after act, then asserts): `assert failed: file /tmp/y-tuong.txt does not contain Ý tưởng 1: app nhắc uống nước.` (api_calls 4). Root cause is deeper than the race. A diagnostic broker observe of the pick1 terminal shows the typed printf command ARRIVED MANGLED: `printf ng 1: app nc ng c.` (Vietnamese syllables with diacritics dropped), the \n sequences became real line breaks splitting the command across prompts, and the shell replied `bash: command not found: Y` twice. The program file itself was verified byte-correct (Python \n escapes and diacritics intact in prog-pick1-p4.py and in the request JSON), and the IDENTICAL printf command typed through a direct baseline act request produced the exact 3 lines. So the code-exec act() typing path corrupts long non-ASCII type text (drops diacritic syllables, turns \n into Enters) while the direct act path does not. This needs a fix in the code-exec act path (or a different text-entry method) before P4-class tasks can pass. Per the brief two-failure rule, P4 is BLOCKED.
+
+Broker notes worth keeping: a session_remote.py start FAILS with `broker_changed` when the lease file was written under a previous broker generation (stale lease dir from round 1, or a lease written before a relay restart), and with `lease_file_unavailable` when the lease parent dir does not exist. Fix: remove the lease dir, mkdir -p it, then start. A relay restart clears a broker stuck in state failed. Also: pkill -f with a pattern that appears in the SSH command line kills your own SSH session; kill test windows by PID instead.
+
+Verdict: CONDITIONAL (PROVISIONAL, non-Astra). Pick 1 BEAT baseline decisively on the two clean tasks: wall -62 percent mean, think -64 percent mean, model calls 5 to 2 per task, with no rise in refusals, misclicks, or session deaths (pick1 arm: 0 of each). It did NOT beat baseline overall: P3 and P4 blocked (2/4), so there is no valid 4-task wall delta. The blocks are template and harness defects, not think-time problems: (1) the as-written template asserts on files immediately after act, racing shell execution; (2) the code-exec act() typing path mangles long Vietnamese text. Recommendation: do not land Pick 1 as a blanket win yet. The mechanism is proven fast for read and compute tasks (P1, P2). Before landing: fix the template (observe between act and file asserts, the P4-retry shape) and investigate and fix the code-exec act() typing path for non-ASCII text, then re-measure P3 and P4 only (P1 and P2 need no re-run). If the typing path cannot be fixed, restrict Pick 1 to ASCII-safe programs.
+
+## 4. Pick 2: subgoal-only verification plus the reasoning dial
+
+### What it is
+
+Two linked changes. First, the reasoning-effort dial per step type: low or medium effort for windows, observe, and verify steps; medium or high only for act composition, and only if low fails. Second, subgoal-only verification: verify at subgoal boundaries with deterministic postcondition checks (file bytes and SHA, window/dialog class, AT-SPI validation), never per step; no judge or reflect call inside a subgoal; escalate to Luna max only on a failed postcondition, ambiguity, or a new procedure.
+
+Built: scripts/subgoal_policy.py (259 lines, levels L1 deterministic procedure with no model call, L2 bounded routine decision with Luna low plus strict JSON max 512 output tokens plus a deterministic postcondition check, L3 genuine ambiguity or recovery with Luna max), scripts/pick2-l2-schema.json (strict JSON schema, mode 600), scripts/tc02_controller.py hook (43 lines, flag check, no mid-step judge validation, pick2-mode logging). Behind flag CU_PICK2_SUBGOAL_ONLY, default OFF; with the flag unset the loop is byte-identical to baseline. Irreversible actions (delete, send, shutdown, push, submit, and others) are never level 2. History masking: only the last 2 screenshots stay in full; older observations become one compact text line each. Commits 2c5d5a0, 1d781b6, 96fb092, c1b7034, 8f0e002 on branch speed-swarm. Offline: tests/test_subgoal_policy.py 40 tests, all passing; isolated worktree full suite 1131 tests after vs 1093 baseline, 9 failures and 68 errors in both runs, zero new failures.
+
+Gate check, verified live on the laptop (Codex CLI 0.169.0, gpt-6-luna): per-call reasoning-effort override is POSSIBLE. Per invocation, codex exec -c model_reasoning_effort="low" and "max" both work; same multi-step arithmetic question at each effort gave the same correct answer (210000), low in 6.0s with 0 reasoning tokens and 6 output tokens, max in 7.6s with 118 reasoning tokens and 126 output tokens. Per resumed turn, codex exec resume also accepts -c model_reasoning_effort. Usage records carry input_tokens, cached_input_tokens, cache_write_input_tokens, output_tokens, reasoning_output_tokens. Prompt caching is real on the Codex route: cached_input_tokens was 10752 on a repeat invocation and on the resumed turn, 0 on first turns. That answers the prompt-caching open check YES as a side effect (see section 9).
+
+### Prior-art evidence
+
+- Reasoning-effort dial (OpenAI o3-mini launch Jan 2025; SeedRouter GPT-6.1 Sol measurements Oct 2026, survey section 1.1): on short tasks every effort level gave the right answer, but max took about 10x as long to show its first word as low and used 2.5x to 5x the tokens of low. One streamed test: first text after 3.0s at low, 13.6s at medium, 30.6s at max; total time 20.5s (low), 24.7s (medium), 43.5s (max); reasoning tokens 56 (low), 824 (medium), 2517 (max).
+- When More Thinking Hurts (Zhou et al., arXiv 2604.10739, Apr 2026, survey section 1.4): accuracy peaks around 1024 tokens, then flattens or reverses; past about 7000 tokens the model flips more previously correct answers to wrong than wrong to right (flip ratio 1.09 at 7000, 1.42 at 8000, 3.29 at 12000, 7.55 at 16000).
+- Overthinking measured at scale (Guan et al., Oct 2026, survey section 1.5, SECONDARY): on average 64.3 percent of thinking tokens appear AFTER accuracy has already peaked; thinking to the end is on average 9.03 percentage points LESS accurate than stopping at the right moment.
+- Milestone-only verification (survey sections 9.3, 9.1, 9.2 and rank 8): planning plus reflection is 75 to 94 percent of total task latency (OSWorld-Human, section 3.4); reflection is 25 to 30 percent of reasoning tokens (ReflCtrl, arXiv 2512.13979). Removing one verification think call per task saves one think gap, roughly 5s to 15s, unmeasured until the prototype runs.
+- Survey rank: 1 of 17 for the dial (expected 10s to 20s per task) and 8 of 17 for milestone-only verification (expected roughly 5s to 15s per task). Not additive: both attack the same think calls.
+
+### Method
+
+Same 4 held-out tasks plus one cold task P5 (largest entry in /tmp, no procedure exists), baseline arm then Pick 2 arm, same timed.py wrapper, records in /tmp/speed-profile-20261118/pick2-base2/ and /tmp/speed-profile-20261118-pick2-2/ on the laptop. Measurement was paused 18/11 23:50 by user order with the Pick 2 arm never launched and the baseline arm producing only a partial P1 failure log (not a baseline measurement), then resumed 19/11 00:44 (baseline attempt 3 waiter). Known resume risks: the desktop is shared with other workers measuring at the same time, so focus steals and broker races can recur; the brief now says to re-observe the terminal window itself first and stop only if the terminal itself is gone or shows non-terminal content.
+
+Solo rerun (19/11 02:52 to 03:52, improvements/speed-proto-pick2-rerun.md, repo HEAD c1b7034): round 1 was discarded as a measurement. The rerun fixed the round-1 killer (setup cleanup before EACH arm and end-of-arm cleanup in BOTH briefs; round 1 had a dirt STOP rule but no setup cleanup, so the baseline created the dirt and the pick2 arm was guaranteed to trip on P3), ran solo (broker plus desktop to itself for both arms), and launched both executors directly via codex exec with no waiter scripts. One brief patch applied mid-rerun, before the pick2 arm launched: the shell safety layer rejected the rm -rf cleanup form in the baseline arm, so the pick2 brief's two cleanup lines were changed to a Python one-liner restricted to the three exact /tmp paths. Think method: /tmp/pick2-think.py v3, per-task wall window is [submit of the SUCCESSFUL (ok=True) start record, result of the LAST request record before the task finish record]; think is the sum of DECIDE gaps strictly inside the window, minus logged sleeps; broker service is summed from records. Think plus broker service reproduces each wall within about 1s on clean tasks. The executor-written summary walls are NOT used for deltas (they include dead-start waits and post-verify writeup gaps of 17 to 28s per task in baseline, up to about 150s in pick2 P4). Both floor probes INVALID (see below); use the profile floor 2.1s as reference.
+
+### Before/after think-time table (FILLED, Pick 2 solo rerun 19/11)
+
+Baseline arm, solo rerun, 02:53 to 03:10. 5/5 SUCCESS. No refusals, no session deaths, 0 sleeps, 0 L2 calls (control arm, no supervisor.log).
+
+| Task | Arm | Wall (s) | Think total (s) | Think before act (s) | Service (s) | Reasoning tokens | Cached tokens | L2 calls | L3 escalations | Refusals | Misclicks | Deaths |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| P1 C-03 | baseline | 122.0 | 119.9 | not split in rerun file | 1.5 | not reported | not reported | n/a | n/a | 0 | 0 | 0 |
+| P1 C-03 | pick2 | 100.8 | 98.8 | not split in rerun file | 1.9 | not reported | not reported | 0 | 4 | 0 | 0 | 1 (session death, recovered) |
+| P2 E-04 | baseline | 42.9 | 40.8 | not split in rerun file | 1.4 | not reported | not reported | n/a | n/a | 0 | 0 | 0 |
+| P2 E-04 | pick2 | 34.6 | 32.7 | not split in rerun file | 1.3 | not reported | not reported | 0 | 0 | 0 | 0 | 0 |
+| P3 B-01 | baseline | 65.9 | 62.8 | not split in rerun file | 2.3 | not reported | not reported | n/a | n/a | 0 | 0 | 0 |
+| P3 B-01 | pick2 | 58.8 | 55.8 | not split in rerun file | 2.3 | not reported | not reported | 0 | 0 | 0 | 0 | 0 |
+| P4 A-01 | baseline | 63.7 | 60.4 | not split in rerun file | 2.8 | not reported | not reported | n/a | n/a | 0 | 0 | 0 |
+| P4 A-01 | pick2 | 143.7 | 139.9 | not split in rerun file | 7.5 (includes dead-start polls outside the window) | not reported | not reported | 0 | 2 | 0 | 0 | 1 (dead start, fresh lease recovered) |
+| P5 cold | baseline | 90.2 | 86.4 | not split in rerun file | 3.1 | not reported | not reported | n/a | n/a | 0 | 0 | 0 |
+| P5 cold | pick2 | 192.1 | 188.6 | not split in rerun file | 7.2 (includes dead-start polls outside the window) | not reported | not reported | 2 | 3 | 0 | 0 | 1 (dead start, fresh lease recovered) |
+| Mean | baseline | 76.9 | 74.1 | n/a | 2.2 | n/a | n/a | n/a | n/a | 0 | 0 | 0 |
+| Mean | pick2 | 106.0 | 103.1 | n/a | 5.2 (inflated, see note) | n/a | n/a | 2 total | 9 total | 0 | 0 | 3 incidents |
+
+Before/after deltas (pick2 minus baseline, think.py walls): P1 -21.2s wall (-21.1s think), P2 -8.3s (-8.1s), P3 -7.1s (-7.0s), P4 +80.0s (+79.5s), P5 +101.9s (+102.2s), mean +29.1s wall (+29.0s think). Baseline total wall 384.7s, think 370.4s, service 11.1s. Pick2 total wall 530.1s, think 515.7s, service 26.2s (inflated by dead-start status polls outside the window; P4 and P5 each had 86 startup polls, almost all ok=false).
+
+Supervisor calls (pick2 arm): L2 2, L3 9, L2 schema validation failures 0, detection lags 0. Per task: P1 L2 0, L3 4 (terminal launch, vanished window, session recovery, terminal persistence, all recovery); P2 L2 0, L3 0; P3 L2 0, L3 0; P4 L2 0, L3 2 (dead-start recovery, OCR ambiguity recovery via SHA-256); P5 L2 2, L3 3 (new procedure, dead-start recovery, bad L2 choice escalated).
+
+L2 detail (the only routine-decision L2 calls in either round):
+
+- L2-1, p5-window-target, 03:41:29: `{"action":"observe","target":"0x55fafee38e50","confidence":1}`. CORRECT routine decision (pick the terminal window). Usage: input_tokens 18167, cached 0, reasoning_output_tokens 0, output_tokens 30. Wall about 22s.
+- L2-2, p5-largest-basename, 03:43:15: `{"action":"write","target":"pick3-gate","confidence":1}`. WRONG with confidence 1.0 (correct answer was pill-video, the first row of the descending du output). The deterministic postcondition check caught it and escalated to L3 at 03:43:46 before any write. No bad action ran, lag 0. Usage: input_tokens 18176, cached 0, reasoning_output_tokens 0, output_tokens 26.
+
+Blockers and incidents in the rerun:
+
+- Window loss recurred SOLO in P1 (pick2 arm): the prescribed background Kitty launch created no pick2-term window; an isolated Kitty appeared then disappeared when the launch shell exited; broker observe returned `window no longer exists`; the next request was refused with `request_error=task_stopped`; broker status showed state=failed, driver=failed. A fresh lease plus a Kitty process held in a live shell recovered the task. No other broker user was running, so this proves the cause is in the broker/driver (or the Kitty launch form), not contention. Per the task stop rule, a total window-loss failure would have ended the rerun; this run was NOT stopped because P1 recovered and kept producing measurements. The recurrence is reported here as the finding: the broker/driver window-loss path needs a fix before any Pick 2 verdict.
+- Dead starts (broker start never reaches ready, status polls return ok=false with null state/driver/sequence): P4 first start (86 polls, logged 60s wait, fresh lease recovered), P5 first start (86 polls, logged 30s wait, fresh lease recovered), floor first start (75s, fresh lease recovered). Same symptom as round-1 attempt 2, also solo. Failed start records carry no error or cause field.
+- Baseline deviation: CU_PICK2_SUBGOAL_ONLY=1 was mistakenly exported during setup and inherited by Kitty; the P1 shell had it set, and it was explicitly unset before P2. No L2 calls and no supervisor.log exist in the baseline run, and the flag is read by the relay (whose env never had it), so there is no mechanism contamination; the P1 command itself is unaffected.
+- Pick2 deviations: Kitty held in a live shell instead of the brief's background launch (forced by the P1 window loss). P4 verified by brokered SHA-256 instead of OCR because English Tesseract cannot distinguish Vietnamese diacritics; this is a deterministic postcondition, within the pick's rules. P1 free-space "196G" in the summary is an OCR artifact (G read as 6); the true value is 19G, matching baseline.
+- Floor probes INVALID in both arms. Baseline floor: wall 74.4s, think 72.1s; the executor deliberated between floor requests instead of running the scripted zero-think shape. Pick2 floor: first start stayed pending 75s, then a retry lease ran the probe in 87.1s with 0.0s think and 5.6s service, leaving 81s unaccounted (no DECIDE lines, no logged sleep); end to end from first start 187.2s. No harness-floor number comes out of this rerun; use the profile floor 2.1s as reference.
+- Round-1 comparison: the solo rerun baseline mean wall 76.9s vs round-1 baseline mean 107.7s confirms round 1 was contention-inflated. The rerun baseline P1 122.0s also beats the profile P1 180.7s (which had a refusal cascade).
+
+Verdict: DO NOT LAND Pick 2 as a think-time win (PROVISIONAL, non-Astra).
+
+1. The only tasks where pick2 beat baseline (P1 to P3, -7 to -21s) used ZERO L2 calls. The saving cannot be attributed to the mechanism; it is executor variance. Both arms' executors deliberated 16 to 31s per step, and the baseline P1 executor was slow on its own kitty launch.
+2. The only task with routine L2 calls (P5, 2 calls) was +102s, but that is confounded by a dead start, a fresh-lease recovery, and the L3 escalation after the bad L2 choice. It is not clean evidence against L2 either.
+3. L2 was exercised on routine decisions exactly twice in the whole rerun (n=2), and one of the two was wrong with confidence 1.0. The mechanism remains effectively unmeasured, and the single error is a warning: low effort failed to pick the first row of a 3-row descending-sorted list, and only the deterministic postcondition saved it.
+4. Broker flakiness dominated the pick2 arm (P1 session death, P4/P5 dead starts, floor dead start) while the baseline arm had none. Any before/after delta from this rerun is swamped by that variance.
+5. Cost note: each L2 sub-invocation carried about 18k input tokens with 0 cached, and took about 22 to 30s of wall, comparable to an in-session think gap. As built, the L2 route does not obviously save wall time per decision.
+
+What would make Pick 2 measurable: fix the broker-side window-loss and dead-start paths first (both recurred solo), then re-measure with an executor brief that REQUIRES an L2 call on every routine decision (P1 to P4 included, not just P5), so the L2 count is non-zero by construction and the delta can be attributed.
+
+## 5. Pick 3: multi-candidate grounding with tiny-crop verification (MEASURED)
+
+### What it is
+
+One vision call asks for the top 3 ranked candidate points with confidences (0 to 1000 scale JSON), instead of one point. Each candidate is verified against a tiny crop (140 px, or 200 px when the zoom gate fires: target smaller than 32 px, or confidence below 0.7) before any click. Click only from a verified fresh crop. Failed points are stamped on the next observation (red ring, cross, and index, RegionFocus image-as-map style). Also includes a tesseract check that a crop contains expected text.
+
+Built: scripts/multi_candidate.py, behind flag CU_MULTI_CANDIDATE=1, default OFF. It does not touch scripts/cu.py, scripts/a11y.py, or any other file. CLI: ground, stamp, verify, prompt. Commits 0c58e0d, f55aded, ec6912a on branch speed-swarm, HEAD ec6912a at push time (verified by git ls-remote). Offline: tests/test_multi_candidate.py 33 tests, all passing. Whole suite in the dirty shared tree: 1198 tests, 16 failures, 68 errors, vs clean baseline worktree at 9183568: 1093 tests, 9 failures, 68 errors. The extra 7 in the dirty run are explained (3 Pick 3 CLI tests from a mid-run file wipe by another worker git clean, 1 Pick 2 test, 3 chromium CLI tests). Conclusion: Pick 3 adds zero failures.
+
+Two bugs the measurement caught, both found by running the real pipeline, not by reading code:
+
+1. Window-relative crops. cu.py observe --crop takes offsets from the window origin (it adds the origin itself). The first version fed it global pixels, so the crop landed at the wrong corner. Fix: to_window_relative, plus a crop_window field in the CLI output.
+2. Frame confusion. parse_candidates treated 0 to 1000 fractions as global pixels. For a window observation the shown frame IS the window, so the parsed point is window-relative; using it as global double-counts the window origin. Fix: parse returns image-frame pixels, image_to_global adds the frame origin once, ground takes --origin. Regression test covers the exact prompt case (global 2561,2084; crop 2509,1950,140,140; window-relative 0,441,140,140).
+
+### Prior-art evidence
+
+- RegionFocus (Luo et al., arXiv 2505.00684, May 2025, survey section 4.13): dynamic zoom on relevant regions plus an image-as-map mechanism (markers at prior attempt locations to prevent revisiting). UI-TARS-72B Pro 38.1 to 50.2 percent; Qwen2.5-VL-72B Pro 47.8 to 61.6 percent. Ablation: image-as-map history 43.2 vs text history 37.2.
+- ScreenSeeker (Zhang et al. 2025, survey section 4.13): cascaded recursive cropping; OS-Atlas-7B Pro 18.9 to 48.1 percent, a 154 percent relative gain, no training.
+- ZoomClick (Zheng et al. 2025, survey section 4.13): training-free 3-stage zoom cascade; UI-Venus-72B Pro 61.4 to 73.1 percent.
+- MEGA-GUI (Samsung, 2025, survey section 4.13): multi-stage bidirectional adaptive zoom; ScreenSpot-Pro 73.18 percent, OSWorld-G 68.63 percent, the current zoom-crop ceiling.
+- Cropping, local probe (survey section 3.7): crop 200x400 is 9.5x fewer bytes than full frame, 300x200 is 14.0x fewer, 90x90 is 31.9x fewer; encode time 18.3ms full vs 0.8 to 2.9ms crop; total local per frame about 84ms full vs 57 to 60ms crop (1.4x). A crop also narrows the screen_changed preflight to the crop region, so changes outside the crop can no longer refuse an act.
+- Survey rank: 10 of 17, expected medium, fewer recovery loops (each about 90s in P1), not cheaper calls. Gate on predicted element size and on first-guess uncertainty; never crop out discriminating context; stamp the failed point on the next observation.
+
+### Local grounder gate (done first, per plan)
+
+| Candidate | Result | VRAM | Per-call latency |
+| --- | --- | --- | --- |
+| Ferret-UI Lite 3B | Weights were never released (paper review confirms). Cannot load at all. | n/a | n/a |
+| UI-TARS-1.5-2B | Does not exist. 1.5 is 7B only (ByteDance-Seed/UI-TARS-1.5-7B, about 15 GB). | n/a | n/a |
+| UI-TARS-2B-SFT (1.0, substituted, reported as such) | Loads 4-bit on the laptop RTX 4050 6GB. Load 16.79s / 13.87s. | 5766 of 6141 MiB used after load, 88 MiB free, alongside voxtype (1552 MiB) and ComfyUI (1800 MiB), which were never touched | About 2.8s steady state (first call 4.16s, then 2.80, 2.65, 2.82, 2.81, 2.82) |
+
+Accuracy of the 2B grounder on fair targets (all present in the frame): 2 of 3. Share button correct, Zen new-tab plus correct, PDF page number missed by about 50 px. Verdict: a local 2B grounder loads and runs, but fits with only 88 MiB to spare next to his running services and costs about 2.8s a call. Pick 3 is therefore built on the model-call path (top 3 from the Luna vision call), not on a local grounder. No local grounder is faked. Gate scripts and logs are on the laptop at /tmp/pick3-gate/ (the 9.2 GB model snapshot and the 147 MB packages were removed at cleanup).
+
+CORRECTION carried into this report: the survey local-grounder ranking (rank 9, Ferret-UI Lite 3B first, UI-TARS-1.5-2B second) is STALE. Both candidates are dead as named: Ferret-UI Lite 3B weights were never released, and UI-TARS-1.5-2B does not exist. Do not repeat that ranking as fact. The substituted 2B-SFT result above is the measured replacement, and it does not support building Pick 3 on a local grounder.
+
+### Method
+
+Same 4 held-out tasks, baseline arm (flag OFF, labels d-p1 to d-p4) then Pick 3 arm (flag ON, labels x-p1 to x-p4, one crop verify of the prompt line before each act, act grounded on the crop observation), same kitty terminal (speed-profile-term), same timed.py wrapper, fresh broker session and fresh lease per task, records in /tmp/speed-profile-20261118/pick3-20261118/ on the laptop (records.jsonl, decisions.log, pick3-attempts.jsonl, pick3-ab.jsonl, pick3-ab-results.jsonl). Think gaps are executor gaps between broker calls and include the VM-to-laptop hop (about 1.3s per call, multiplexed SSH) and the executor image-view time; both arms use the identical path, so arm deltas are valid. Broker service is machine-measured and directly comparable.
+
+### Before/after think-time table (FILLED, from speed-proto-pick3.md)
+
+Broker service per request (machine numbers, non-poll requests):
+
+| Request | n | Mean | Min | Max |
+| --- | --- | --- | --- | --- |
+| windows | 12 | 0.116s | 0.112s | 0.120s |
+| full observe | 14 | 0.179s | 0.146s | 0.230s |
+| crop observe (140 or 200 px) | 12 | 0.126s | 0.118s | 0.145s |
+| act | 12 | 0.461s | 0.059s | 1.019s |
+| start ready | 10 | 0.911s | 0.869s | 1.122s |
+
+A crop costs about the same as a full observe in broker service (0.126s vs 0.179s) while carrying 2 to 8 KB of image instead of about 460 KB.
+
+Clean per-task wall (first request to finish, start polls excluded):
+
+| Task | Baseline wall | Baseline service | Pick 3 wall | Pick 3 service | Pick 3 crops |
+| --- | --- | --- | --- | --- | --- |
+| P1 | 31.72s | 0.79s | 149.45s | 0.89s | 1 |
+| P2 | 18.59s | 0.91s | 51.09s | 0.97s | 1 |
+| P3 | 21.44s | 1.18s | 40.85s | 1.28s | 1 |
+| P4 | 58.79s | 1.46s | 240.17s | 2.19s | 2 |
+| Mean | 32.64s | 1.09s | 120.39s | 1.33s | 1.25 |
+
+Read the walls honestly. The baseline mean is inflated by d-p4 (58.79s, of which 18s is the executor slow Vietnamese-text preparation, not task work). The Pick 3 mean is inflated by one-off diagnosis work inside the runs: x-p1 (149.45s) includes finding and fixing the frame-confusion bug (commit ec6912a) mid-run, and x-p4 (240.17s) includes the screen-changed refusal and the slide anomaly investigation below. The clean Pick 3 pair (x-p2, x-p3: 51.09s, 40.85s, mean 46.0s) versus the clean baseline pair (d-p2, d-p3: 18.59s, 21.44s, mean 20.0s) is the fair comparison. Broker service is nearly identical (x-p2 0.97s vs d-p2 0.91s; x-p3 1.28s vs d-p3 1.18s). The extra Pick 3 wall is one extra crop observe (0.13s broker) plus one extra vision turn of executor viewing time (about 10 to 15s per task in this harness: scp plus image read).
+
+Grounding accuracy on the 4 tasks: 8 of 8 tasks succeeded in both arms, 0 misclicks in either arm (type actions into a focused terminal cannot misclick), 0 session deaths in the 8 clean runs. One refusal: x-p4 attempt 1, screen changed, recovered. Every Pick 3 crop verified its candidate on the first try (5 of 5 attempts, 1 crop each).
+
+Conclusion on the 4 tasks: on terminal tasks with no small target and nothing to misclick, Pick 3 buys nothing and costs one extra crop plus one extra vision turn. That is the expected result. The value, if any, is on small targets, which is what the A/B below measures.
+
+Small-target grounding A/B (the decisive test): one broker session, one Zen window frame (Claude page with a macro slide PDF), 3 small targets (16 to 20 px true size), plan pre-committed to pick3-ab.jsonl before any crop, judgement rule fixed in advance: a crop verifies a candidate only if the target control is visible in the crop AND the predicted point falls on that control. No clicks anywhere, read-only.
+
+| Target | Baseline (1 candidate) | Pick 3 (up to 3) |
+| --- | --- | --- |
+| T1 new-tab plus | MISS. Point lands right of the plus glyph, in the gap before the speech icon. True plus is about 30 px left of the first guess. | HIT at candidate 3. Candidate 2 lands on the speech icon; candidate 3 lands exactly on the plus glyph. |
+| T2 back arrow | HIT at candidate 1. | HIT at candidate 1, no extra crops. |
+| T3 Claude input attach plus | MISS. Point lands in the empty input text area above-right of the plus. | MISS all 3. Candidate 2 crop shows no plus at all (too far right). Candidate 3 shows the plus but the point is still 85 px right of it. All three guesses were placed too far right; the true plus sits at 0 to 1000 x about 510, guesses were 588, 613, 640. |
+
+Result: baseline 1 of 3, Pick 3 2 of 3. Pick 3 recovered 1 of 2 baseline misses, at a cost of 4 extra crop observes (about 0.49s broker service total). T3 shows the limit: when all three ranked guesses share the same systematic placement error, the extra candidates do not help. The fix for that is better first-pass placement (a bigger frame, or a zoomed overview), not more candidates.
+
+Incidents found while measuring (worth more than the table):
+
+1. A full-window observe can transiently return another window pixels. The x-p4 first observe of the kitty returned a macro slide from the Zen window, with correct kitty metadata. Root cause, found later: Zen had grown taller (718 px) and overlaps the kitty top 123 px; the tiler then pushed the kitty down (1509 to 1646) and shrank it (581 to 444 tall). A capture during a reflow can catch the overlapping window. A re-observe returns the correct frame. Lesson: on a live, reflowing desktop, never trust a single anomalous frame; re-observe before acting on it.
+2. A crop-observation act can trip screen_changed on a stale crop. x-p4 attempt 1 was refused after a long gap between the crop observe and the act. The after-image looks identical to the verified crop; pixel diff shows a widespread low-amplitude change (1110 of 19600 pixels differ by more than 10 levels, no 1 to 4 px shift explains it), consistent with a focus-dim or compositor transient, not a content change. Recovery that worked: fresh windows plus observe, fresh crop, OCR-verify on the laptop (fast, about 1s), act immediately in the same call. The slow scp-plus-view verification between crop and act is what let the crop go stale. Lesson: verify crops fast and act promptly; the crop guard is pixel-sensitive.
+3. The desktop reflows while you work. The kitty moved and resized between x-p4 finish and the A/B session with no input from the executor. Grounding must re-read window bounds per session, never cache them across tasks.
+
+Also flagged by the Pick 3 worker: root disk is at 100 percent and still shrinking (517 MiB free at the d-p1 verify, 512 MiB at the x-p1 verify). Pre-existing critical state, not caused by this work (gate writes went to /tmp tmpfs, not root).
+
+Verdict (measured): Pick 3 works as designed: one vision call, up to 3 ranked candidates, tiny crops (140 to 200 px, 2 to 8 KB, 0.13s broker service), click only from a verified fresh crop, flag-gated and default OFF, safety invariants untouched. On the 4 held-out terminal tasks it is pure overhead (about 0.13s broker plus one vision turn per task, no accuracy gain available). On small targets it recovered 1 of 2 single-candidate misses (2 of 3 vs 1 of 3) for 4 extra crops. It does not fix a systematic placement error shared by all 3 guesses. Recommendation: keep the module and the flag; use it where the target is small or uncertain (the zoom gate already encodes this), and keep the observe-to-act gap short with fast on-laptop crop verification.
+
+## 6. Pick 4: grounding fast path, AT-SPI extents plus DOM-first browser
+
+### What it is
+
+Two fast paths, both behind one explicit opt-in flag (CU_PICK4_FASTPATH=1, default OFF), both keeping vision as the fallback and verifier. A click never happens from an unverified coordinate: every AT-SPI or DOM coordinate is crop-verified (a11y) or hit-tested in-page (DOM) before any click. Ownership, cancellation, verification, and brokered keyboard input are untouched.
+
+A11y fast path: scripts/a11y.py describe() gains Component extents when the flag is on (Atspi.Component.get_extents, CoordType SCREEN, plus the coordinate frame tag). New operation query: one bounded observe (same 500-node, 2s wall, 80-item bounds), then an in-memory name or role substring filter, max 20 items returned (the pruned read at roughly 50 to 200 tokens, never a full tree dump). New operation ground: re-resolves one snapshot ref against the live tree (same resolve and 90s staleness rule as act/drill) and returns the fresh element box plus the app root box. scripts/cu.py a11y ground resolves one ref to global desktop coordinates, reads the Hyprland window origin from hyprctl clients, detects the coordinate frame from the root box (screen origin means screen coords, (0,0) means window relative, anything else fails closed to vision), then returns the global box, its center, the frame, and the crop region that verifies it, with a verbatim verify instruction. scripts/fastpath.py (new, 153 lines) holds the pure coordinate math: flag check, frame detection with tolerance, screen/window to global conversion (unknown fails closed), box center, crop computation with context pad, min side 90, max side 400, clamped to the window, DOM center, pruned-query matching.
+
+DOM-first browser fast path: scripts/cdp.mjs, with the flag on, each snapshot element also carries its viewport rect and center from getBoundingClientRect, so the executor can ground from the DOM alone and skip the screenshot. Rects are viewport-relative; clicks still go through the in-page ref path with its elementFromPoint hit test. Default off: the snapshot shape is exactly the baseline shape. Policy (controller side, no code): for Chromium, browser observe without --image returns the DOM snapshot only, and browser act clicks by ref with an assert verifying DOM text. A screenshot happens only when the task requires reading rendered text or confirming a visual state. Zen is EXCLUDED from DOM-first: Zen is Firefox-based, no CDP. Zen tasks still need screenshots or a11y. A11y-only operation stays REJECTED. Vision is the fallback and the verifier, never removed. The a11y bounds (500 nodes, 2s wall, 80 items) stay. Typing goes through the existing wtype path, never through an AT-SPI setter or browser fill that skips the broker for the measured typing steps.
+
+Built: commit 5d4d512 on branch speed-swarm (6 files, +685 -5). Offline: new Pick 4 tests 19/19 pass; CDP snapshot suite passes including the new rect assertions; full offline suite at pick4 commit 1142 tests vs parent 1123 tests, failures 9 and errors 68 in both runs, the failing and erroring lists IDENTICAL, zero new failures.
+
+### Prior-art evidence
+
+- Accessibility-tree grounding, AT-SPI extents (survey section 3.11): WindowsAgentArena (Bonatti et al. 2024): GPT-4V-1106 plus OmniParser scores 12.5 percent without the UIA tree and 19.5 percent with it, a 57 percent relative boost; human 74.5 percent. UIA gives near-zero latency and deterministic boxes for well-behaved native apps, but fails entirely on custom-rendered UI, Electron apps with broken a11y, and games. Locally, the harness a11y.py (136 lines) had NO coordinate path at all before this pick: zero matches for component, position, extents. describe() returned ref, role, name, actions, editable, pressed/checked/selected/expanded/disabled, but never a position.
+- Text, DOM, and OCR instead of images (survey section 3.10): DirectShell (Gehrken, Feb 2026): Windows UI Automation tree as SQLite, 50 to 200 tokens per perception vs 1200 to 5000 for a screenshot and 5000 to 15000 for a full tree dump; claims 85 percent task success using only a11y text (vendor/self-reported, no independent benchmark found). Agent-desktop (Vercel Labs, v1.0.2, Oct 2026): skeleton traversal cuts tokens 78 to 96 percent self-reported. Peer-reviewed counterweight: VisualWebArena (Koh et al. 2024): GPT-4V text-only (a11y tree) 7.3 percent, plus screenshot 15.1 percent, plus Set-of-Marks 16.4 percent. Text alone is weak; screenshot doubles it. OSWorld-Human (section 3.4): screenshot-only history does NOT improve performance; only text-based action history helps. Adding a11y data to the GUI-plus-coding harness made the teacher take MORE steps (Mage-VL: 35.33 vs 25.0).
+- Survey rank: 15 of 17, expected small to medium, only where the tree is complete (native GTK dialogs, Nautilus); zero where it is not (popups, VS Code editor). Needs new code (get_extents) plus a per-app coverage matrix before trusting it.
+
+### Method
+
+Same 4 held-out tasks, arm 1 (baseline, flag OFF) then arm 2 (fast path, flag ON), briefed as separate Codex executors on the laptop (/tmp/speed-pick4-20261118/brief-pick4-arm1-baseline.md and brief-pick4-arm2-fastpath.md), records to records-arm1.jsonl and records-arm2.jsonl, same timed.py wrapper and analyze.py as the profile run. Then the G1 Nautilus and D1 Chromium tasks in arm 2. Per-app extents probe first (kitty terminal, Nautilus, Omacalc, Omawrite, VS Code read-only if running, Zen read-only if running; DOM-first excluded for Zen regardless). Measurement was paused 18/11 23:50 by user order with neither arm run, then resumed 19/11. Expectation stated upfront: the 4 terminal tasks need screenshot text reads, so the a11y path does not apply to them and no difference is a valid result there; the fast-path win is measured on the GUI task (G1) and the DOM task (D1), reported as vision turns saved and tokens per observation (a11y/DOM vs screenshot).
+
+Combined summary (19/11 00:35 to 02:39, improvements/speed-proto-pick4-summary.md, repo HEAD c1b7034, relay serving c1b7034 generation ff23539371b76bbe9e993d380d322a94, shared drop-in speed-swarm.conf carrying CU_CODE_EXEC=1 and CU_PICK4_FASTPATH=1, no drop-in created, no relay restart, no git touch, no Track 1 restore): arm 1 run 1 went 0/4 BLOCKED on broker contention and was rerun once after Pick 1 and Pick 2 finished, with the broker idle; run 2 went 4/4. Arm 2 ran 02:09 to 02:36. Run-1 arm1 files preserved in /tmp/speed-pick4-20261118/run1-blocked/. Desktop verified clean at 02:39 (Jarvis, foot, Zen only). Broker idle (finished pick4-fp-d1, stopped, cancelled false). /tmp/y-tuong.txt remains as the P4 end-state artifact; /tmp/hoc-ky-2 is gone.
+
+Interim probe note (19/11 00:40, from live-test-log.md, NOT a final result): scripted a11y/DOM latency probe, flag on, about 10s. Nautilus flag-ON: 3 elements all with extents, query Home matched 1, but a11y ground FAILS twice: cannot tell whether extents are screen or window relative; use vision. Flag-OFF observe: 3 elements, 0 extents. kitty, omacalc, omawrite, zen observe failed: exact app PID required (probe PID lookup artifact). The coordinator must confirm whether this probe finding changes the Pick 4 ground frame detection before finalizing.
+
+### Before/after think-time table (FILLED, Pick 4 combined summary 19/11)
+
+Arm 1 run 1 (00:51 to 01:09) went 0/4, all BLOCKED, and is NOT a baseline: P1 session started then died (observe returned driver error `window no longer exists`, windows retry rejected `task_stopped`, restarts 1 and 2 failed, 83 status polls ok:false, state null); P2, P3, P4 one start attempt each, all failed the same way (83 polls, ok:false). Cause: Pick 1 and Pick 2 workers held the single-owner broker through the whole window (owners speed-base-p3, speed-pick1-smoke, pick2-p1, pick2-p2, pick2-p4 seen). Evidence preserved in run1-blocked/. Arm 1 run 2 below, rerun 01:36 to 02:07 with the broker idle, is the valid baseline.
+
+Arm 1 run 2, baseline (flag OFF in executor shell), 4/4 SUCCESS. Wall is task-start (session start submit) to verified end state. Gap is the think-gap total from the analyzer, which includes incidentals (waits, retries), so it is not a clean think split; per-step think splits are not reported in the Pick 4 summary.
+
+| Task | Arm | Wall (s) | Gap / think total (s) | Think before act (s) | Service (s) | Requests | Images | Bytes | Refusals | Misclicks | Deaths |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| P1 C-03 | baseline | 281.49 | 320.65 | not split in summary | 1.50 | not split in summary | not split in summary | not split in summary | 1 (first act stale-refused) | 0 | 1 (first kitty launch failed) |
+| P1 C-03 | pick4 | 114.22 | 113.31 | not split in summary | 0.89 | 3 (1 windows, 1 observe, 1 act) | 1 observe image | not split in summary | 0 | 0 | 0 |
+| P2 E-04 | baseline | 43.61 | 60.62 | not split in summary | 1.10 | not split in summary | not split in summary | not split in summary | 0 | 0 | 0 |
+| P2 E-04 | pick4 | 42.32 | 41.42 | not split in summary | 0.93 | 2 (1 observe, 1 act; no windows) | 1 observe image | not split in summary | 0 | 0 | 0 |
+| P3 B-01 | baseline | 43.86 | 472.76 (includes failed first start, 120s wait, restart lifecycle) | not split in summary | 1.91 | not split in summary | not split in summary | not split in summary | 0 | 0 | 0 |
+| P3 B-01 | pick4 | 41.16 | 40.04 | not split in summary | 1.10 | 2 (1 observe, 1 act) | 1 observe image | not split in summary | 0 | 0 | 0 |
+| P4 A-01 | baseline | 312.51 | 354.92 | not split in summary | 7.10 | not split in summary | 5 observes | not split in summary | 0 | 0 | 0 |
+| P4 A-01 | pick4 | 121.94 | 120.49 | not split in summary | 1.40 | 2 (1 observe, 1 act) | 1 observe image | not split in summary | 0 | 0 | 0 |
+| Mean P1-P4 | baseline | 170.37 | 302.24 | n/a | 2.90 | n/a | n/a | n/a | 1 | 0 | 1 |
+| Mean P1-P4 | pick4 | 79.91 | 78.82 | n/a | 1.08 | n/a | n/a | n/a | 0 | 0 | 0 |
+| Clean pair P2+P3 mean | baseline | 43.73 | n/a | n/a | n/a | n/a | n/a | n/a | 0 | 0 | 0 |
+| Clean pair P2+P3 mean | pick4 | 41.74 | n/a | n/a | n/a | n/a | n/a | n/a | 0 | 0 | 0 |
+
+Before/after deltas (arm2 minus arm1): P1 -167.28s (-59 percent), P2 -1.29s (-3 percent), P3 -2.69s (-6 percent), P4 -190.57s (-61 percent), mean -90.46s (-53 percent), clean pair P2+P3 -1.99s (-5 percent). Read the mean delta honestly: it is incidental executor variance, not a Pick 4 effect. Arm1 P1 had a stale-act retry and a 110.7s windows-retry think; arm1 P4 did extra byte-verification rounds (think 112.7s before od-verify, 69.7s before byte-check); arm2 P1 and P4 did the minimal 1 observe plus 1 act. The clean pair, the only honest comparison, shows about 2s saved. Pick 4 does not apply to these terminal screenshot tasks, exactly as predicted, and the numbers confirm no systematic change. Arm1 run-2 totals: 6 windows, 12 observes, 8 act requests, 98 status polls (89 on P3); 2 act requests stale with completed 0.
+
+G1 Nautilus grounding, pick4 arm only, BLOCKED, 281.25s (02:18:31 to 02:23:12):
+
+| Task | Arm | Wall (s) | Think total (s) | Service (s) | Vision turns saved | Result |
+| --- | --- | --- | --- | --- | --- | --- |
+| G1 Nautilus | pick4 | 281.25 | not split in summary | not split in summary | 0 | BLOCKED, no Home click occurred |
+
+- a11y query --pid 764773 --name Home through the broker returns request_error: unsupported_command. Retry after a fresh Nautilus observe returns the same error. a11y observe refresh also returns unsupported_command. One later observe refused with sequence_gap.
+- Counts: a11y calls 3, all refused; ground calls 0; crop observes 0; full-window observes 2 accepted, none used for grounding; vision turns for grounding 0; fallbacks 0.
+- The broker does not implement a11y commands at all. Separately, direct cu.py a11y ground fails on the coord-frame check (see probe). Both layers block the G1 fast path. No before/after is possible; the a11y path never reached the model through the broker.
+
+D1 Chromium DOM-first, pick4 arm only, SUCCESS, 293.40s (02:24:50 to 02:29:44):
+
+| Task | Arm | Wall (s) | Think total (s) | Service (s) | Browser screenshots | Result |
+| --- | --- | --- | --- | --- | --- | --- |
+| D1 Chromium | pick4 | 293.40 | not split in summary | not split in summary | 0 browser screenshots | SUCCESS, assert passes |
+
+- Browser requests: 4 (start, tabs, DOM observe, DOM act). Browser observes with image: 0. Browser observes without image: 1. Browser acts: 1. Asserts: 1.
+- DOM observe confirmed URL file:///tmp/speed-pick4-20261118/pick4-fixture.html and ref e2 as the "Show result" button. Browser act clicked e2 by ref. Assert #result contains pick4-ok returned ok true, completed 2.
+- Screenshots: 2 desktop images, both needed to confirm the right window and focus before the desktop act on the address bar and before Alt+F4 close. The browser observe and browser act took no image.
+- Think splits: browser-start 5.9s, windows 16.4s, tabs 6.9s, desktop-observe 7.8s, navigate-act 21.5s, browser-observe 7.5s, browser-act 13.2s, close-observe 45.8s, close-act 14.7s, windows-after-close 11.2s, finish 139.2s. Core DOM loop (observe plus act) is about 21s of think. The 139.2s finish think is executor overhead, not Pick 4.
+- No arm1 baseline exists (D1 is arm2-only), so no before/after. It proves DOM-first works with 0 browser screenshots; it does not prove a think-time saving.
+
+Per-app extents accuracy (probe, scripted, flag ON, 00:35:18 to 00:35:28, about 10s wall, direct cu.py calls, not broker):
+
+| App | Coord frame | Elements with extents | Ground success | Notes |
+| --- | --- | --- | --- | --- |
+| Nautilus, flag ON | screen (extents_coord screen) | 3 of 3 | FAIL, twice | a11y ground: "cannot tell whether extents are screen or window relative; use vision", even though observe returns extents_coord screen. Ground never returns a box or center. |
+| Nautilus, flag OFF | n/a | 0 of 3 | n/a | Extents are correctly gated by the flag. Query name Home matched none. |
+| kitty, omacalc, omawrite, Zen | unknown | n/a | n/a | a11y observe fails: "exact app PID required; use a11y apps". Probe PID-lookup artifact (hyprctl window PID is not the AT-SPI app PID), not a verdict on those apps. a11y apps lists only 6 registered apps. |
+| Nautilus query | n/a | n/a | n/a | Query name Home matched 1, returned 1. Query role push button matched 0. |
+
+No per-call latencies: the probe script records none. All a11y calls complete in well under a second each; the whole supplement (4 calls plus a Nautilus launch) took under 4s. Latency is not the story here; availability is. Browser snapshot latencies were not probed by the script; D1 above covers the browser path live instead. The 00:40 probe ground frame-detection failure is therefore CONFIRMED as a real two-layer block (broker unsupported_command plus direct ground coord-frame check), not a probe artifact, and must be fixed before the a11y half can be measured at all.
+
+Verdict: CONDITIONAL (PROVISIONAL, non-Astra). Terminal tasks: no change, as predicted. Pick 4 is not a terminal-task win. G1 a11y half: BLOCKED at two layers. The broker rejects a11y commands (unsupported_command), and direct a11y ground fails its coord-frame check despite extents_coord screen in the observe output. Landable only after broker a11y support plus a ground fix. D1 DOM half: WORKS. DOM snapshot carries rects and centers, click by ref plus DOM assert succeeds with 0 browser screenshots. Feasibility proven, speedup unproven (no baseline, wall dominated by executor think overhead). Overall: do not land Pick 4 as a think-time win on this evidence. Land the DOM-first browser path as a capability only if a baseline browser task is measured first; hold the a11y half until the broker and ground are fixed.
+
+## 6A. Observation masking (Pick 5 prep, MEASURED)
+
+### What it is
+
+History masking plus text history, cap image history at the last 1 to 3 frames: keep only the latest 1 to 2 screenshots in full, mask older observations to one compact text line each, keep reasoning and actions. Pick 2 already includes the narrow form (mask all but the last 2 screenshots). Survey rank 4, expected 5s to 15s per task. Built in a separate worktree (speed-swarm-masking, HEAD bfdbfb0), executor-side only, flag CU_MASK_HISTORY=1 in the executor shell only, no relay restart for either arm.
+
+### Method
+
+Same 4 held-out tasks, baseline arm (flag unset) then masked arm (flag on), same timed.py wrapper, broker solo for both arms, run dirs /tmp/speed-mask/mask-base (04:21 to 04:31) and /tmp/speed-mask/mask-pick (04:46 to 05:02). Think split: think before a timed.py call is its DECIDE timestamp minus the previous record's result_wall; think plus service reproduces every task wall within 0.1 to 0.5s. analyze.py V3 section is INCOMPLETE in both arms (it looks for p1c-p4c labels); the manual tables below are the source of truth. Clean-task means are shown both P1-P4 and P2-P3 (P2/P3 are the uncontaminated pair in both arms).
+
+### Before/after think-time table (FILLED, masking Phase C 19/11)
+
+| Step | Baseline think (s) | Masked think (s) | Delta |
+| --- | --- | --- | --- |
+| think before windows | 5.2 | 6.8 | +1.6 |
+| think before first observe | 6.7 | 7.8 | +1.1 |
+| think before act | 22.6 | 47.5 | +24.9 |
+| think before verify observe | 8.7 | 8.1 | -0.6 |
+| think total (clean-task mean, P1-P4) | 101.9 | 176.1 | +74.2 |
+| think total (clean-task mean, P2-P3) | 39.3 | 70.2 | +30.9 |
+| wall (clean-task mean, P1-P4) | 105.4 | 179.6 | +74.2 |
+| wall (clean-task mean, P2-P3) | 41.8 | 72.7 | +30.9 |
+| broker service (clean-task mean, P1-P4) | 3.5 | 3.3 | -0.2 |
+| broker service (clean-task mean, P2-P3) | 2.3 | 2.3 | 0.0 |
+| SUCCESS (tasks / 4) | 4/4 | 4/4 | 0 |
+
+Notes on the table: "think before act" masked 47.5 is the mean of the main act think per task (P1 72.6, P2 30.8, P3 31.9, P4 54.7). Excluding the contaminated P1 it is 39.1, delta +16.5. "Think before first observe" masked 7.8 excludes P1's contaminated 38.0s (the kitty incident delayed its first observe); P2/P3/P4 values are 8.1, 8.6, 6.6.
+
+Per-task table, both arms:
+
+| Task | Baseline wall | Baseline think | Baseline service | Masked wall | Masked think | Masked service | Wall delta |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| P1 C-03 df | 49.6 | 47.7 | 1.8 | 273.4 | 271.1 | 2.0 | +223.8 |
+| P2 E-04 96.0 | 31.7 | 29.7 | 1.8 | 53.1 | 51.1 | 1.9 | +21.4 |
+| P3 B-01 mkdir | 51.8 | 48.8 | 2.8 | 92.3 | 89.3 | 2.8 | +40.5 |
+| P4 A-01 y-tuong | 288.6 | 281.4 | 6.8 | 299.8 | 293.0 | 6.4 | +11.2 |
+| Floor probe | 42.6 | n/a (scripted) | 2.1 | 49.2 | n/a (scripted) | 3.1 | +6.6 |
+
+Baseline evidence: P1 free space 19G (the summary quotes 196G, an OCR misread of 19G, G read as 6; both arms' OCR lines are the same df row, Size about 385G, Used about 364 to 365G, Avail about 19G, 96 percent); P2 96.0; P3 all 4 dirs in find output; P4 BYTE_EXACT_MATCH from a terminal byte check (tesseract mangles Vietnamese diacritics). One stale-observation refusal in baseline P4 (`observation older than 90s or from a future clock; observe again`), retried once after a fresh observe, succeeded. No session deaths in the baseline arm.
+
+Masked evidence: P1 free space 19G; P2 96.0; P3 all 4 dirs; P4 cat showed the exact 3 lines and the byte check printed BYTE_EXACT_MATCH.
+
+Mask discipline verification (independent check by the coordinator): PASS. Every generated prompt JSON carries exactly 2 image_paths, none more: prompt-p1-1.json 2 images, masked 0; prompt-p1-2.json 2, masked 1; prompt-p2-1.json 2, masked 0; prompt-p2-2.json 2, masked 1; prompt-p3-1.json 2, masked 0; prompt-p3-2.json 2, masked 1; prompt-p3-3.json 2, masked 2; prompt-p4-1.json 2, masked 0; prompt-p4-2.json 2, masked 1; prompt-p4-3.json 2, masked 2; prompt-p4-4.json 2, masked 3; prompt-p4-5.json 2, masked 4. mask.log has 13 entries, all images=2. History files exist with 2/2/3/5 turns (P1/P2/P3/P4). The current screenshot was never masked. No BLOCKED-mask-cap. The discipline was followed, so the measurement is valid as a measurement of the masking discipline as implemented, even though the result is not a win.
+
+Per-step-index think growth (the history-growth curve): baseline mean think by step: windows 5.2s (n=4), first observe 6.7s (n=4), first act 19.6s, dirt-check act 9.0s, dirt-check observe 6.4s, verify observe 6.6 to 10.8s. P4 verification deliberation dominates the tail (hex act 74.5s, byte-check act 91.1s), not history growth. Masked mean think by step: windows 6.8s (n=4), first observe 7.8s (n=3, P1 excluded), act 30.8s (P2), dirt-check act 29.2s (n=2), act-create-verify 31.9s, act-write-verify 54.7s, restart acts 33.0 to 34.4s, verify observe 6.4 to 7.0s (n=4, mean 8.1 with P1 12.6). The curve is FLAT in both arms: observe thinks stay about 6.5 to 7s at every step index in both arms, and masked act thinks are 29 to 35s from step 3 through step 13 with no rise. The predicted "later steps take 3x longer" history effect does not appear in the baseline at this task length (2 to 6 observations per task), so there was no growth for masking to cut. What masking changed is the LEVEL of act think, not its slope: act thinks are uniformly about +16 to 19s longer in the masked arm at every comparable step, while observe thinks are unchanged.
+
+Blockers and incidents: baseline arm, none blocking. Masked arm: P1 kitty incident (background kitty launches did not produce a broker-visible mask-pick-term window; an isolated foreground kitty launch with --single-instance=no produced it; P1 needed 4 windows requests; cost inside P1 think: windows-isolated 97.1s, windows-final 30.0s, observe-initial 38.0s, act 72.6s; P1 masked is NOT comparable to baseline P1, the P2-P3 pair is the clean comparison). P4 session death (the first write act failed with `window no longer exists`; the following windows request returned accepted:false with request_error `task_stopped`; timed status showed state=failed, driver=failed; the executor used a fresh lease and broker session, relaunched the test terminal, re-checked the path through the broker, and P4 then succeeded; recovery think inside P4: windows-after-error 17.2s, status-after-error 18.6s, restart-start 28.8s, restart-windows-after-launch 23.2s). Teardown: the kitty window disappeared before a valid close dispatch could be issued; a JSON-argument close attempt caused a Lua parse error (`'}' expected near ':'`). No close was issued against Zen. Final hyprctl clients check lists only Jarvis and Zen, no test window. Desktop clean. Broker state finished, driver stopped, free. P2 had one mistyped current-file path on the first verify-prompt build; the corrected CLI call succeeded (mask.log retry entry). No prompt ever exceeded 2 images.
+
+Verdict: NO WIN demonstrated (PROVISIONAL, non-Astra). Masking did NOT cut think time in this run. The masked arm was slower on every task, including the clean P2-P3 pair (wall +30.9s, think +30.9s, service unchanged). Broker service is identical (2.3s both arms, P2-P3), so the whole delta is think. Confounders, stated plainly: (1) P1 masked is unusable as a comparison (kitty launch incident, +223.8s); (2) P4 masked includes a session death and full restart; (3) even the clean pair is slower, but with n=1 executor run per arm the +16 to 19s uniform act-think inflation cannot be separated into (a) the masking discipline's own per-think bookkeeping (history-turn write plus mask CLI plus prompt read, all done inside the think call that follows an observe) vs (b) executor-run variance. Evidence for (b): the masked-run executor's post-verify finish thinks were 29 to 50s vs 9 to 14s baseline, 3 to 5x longer on work unrelated to masking, so that executor deliberated longer overall this run. (4) No history-growth curve existed to cut in the first place at this task length, in either arm. The masking prototype works as built (2-image cap verified independently, all tasks 4/4 SUCCESS, no solve-rate loss), but as implemented it costs think time in this measurement rather than saving it, and the measurement is confounded enough that the cost cannot be attributed cleanly to masking. Do NOT land masking as a think-time win on this evidence. A rerun would need the kitty launch fixed, and ideally a second executor run per arm, to separate discipline cost from executor variance. Dirt left in place for the coordinator: /tmp/hoc-ky-2 and /tmp/y-tuong.txt (masked arm P3/P4 end states).
+
+## 7. Prior-art grounding: ranked shortlist (top 8, condensed)
+
+Source: improvements/speed-prior-art.md, section 17, merged from three surveys (latency, grounding, planning), re-ranked by expected think-time saving per clean task (36.4s wall, 34.2s think, think-before-act 14.9s). Savings are estimates from the cited measurements, not promises; each needs a held-out run. NOT ADDITIVE: several items attack the same think calls; prototype and measure each one alone first.
+
+1. Reasoning-effort dial per step type (survey 1.1, 1.4, 1.5). Low or medium for windows, observe, and verify; medium or high only for act composition. Basis: max took 30.6s to first text vs 3.0s at low on one streamed test, 2517 vs 56 reasoning tokens; accuracy peaks near 1024 thinking tokens and then reverses. Expected: 10s to 20s per task. Maps to: Pick 2.
+2. Code execution as the action (survey 8.1, 8.2, 8.3, 8.5). One program per call, loops, conditions, asserts; code first, GUI only when visual. Basis: OpenGCUA code-alone minus 14.8 percent steps (conservative bound), CoAct-1 10.15 vs 15 steps, CLI 10.7 vs 18.6 steps. Expected: 10s to 17s per task on code-able subtasks. Maps to: Pick 1.
+3. Compiled routine library, executed deterministically (survey 6.1, 6.3, 6.4). A retrieved routine runs with 0 think calls. Basis: local precedent 823s to about 100s (8.23x); Voyager zero-shot transfer 100 percent vs 0 percent baselines. Expected: on a repeat task shape, think falls from 34.2s to near 0s for the routine part. Maps to: already adopted locally (local checked plans, deterministic execution), not a new pick in this run.
+4. Observation masking plus text history, cap image history at last 1 to 3 frames (survey 3.1, 3.4, 2.12). Keep only the latest 1 to 2 screenshots in full, mask older observations to one text line, keep reasoning and actions. Basis: masking halves cost and matches summarization on solve rate; observations are about 84 percent of turn tokens; long context raises per-token cost 3.6x to 7x; later steps take up to 3x longer as history grows. Expected: 5s to 15s per task. Maps to: Pick 5 prep, masking prototype, MEASURED in section 6A: NO WIN at this task length, do not land. Pick 2 already includes the narrow form (mask all but the last 2 screenshots).
+5. Rule router by step type (survey 5.2, 5.4). Cheap tier for windows, observe, and verify (together 19.3s of think); strong model only for act composition. Basis: RouteLLM proved one-call pre-generation routing beats cascades on latency; 65 to 80 percent of queries do not need frontier reasoning. Expected: 8s to 13s per task if the cheap tier answers each easy step in about 2s. Maps to: Pick 2 in shape (L2 low-effort tier), not a separate pick.
+6. Speculative multi-action with local validation (survey 7.1, 10). One think call predicts 2 to 4 actions; each is validated against live UI state before execution; stop at first failure. Basis: UFO2 51 percent fewer LLM calls, steps down up to 50 percent on Windows with UIA validation. Expected: 20 to 30 percent fewer think calls on predictable sequences on Wayland, lower than 51 percent because AT-SPI plus OCR validation is weaker than Windows UIA. Maps to: not prototyped in this run; candidate for a later pick.
+7. Plan once per subgoal, execute without re-thinking (survey 7.7, 7.8, 7.6). One planner call per subgoal, deterministic workers, solver only at the end. Basis: ReWOO 5x fewer tokens, plus 4 percent HotpotQA; SteP 2.3x fewer tokens per trajectory. Maps to: Pick 2 in shape (plan once per subgoal, L1/L2/L3).
+8. Milestone-only verification (survey 9.3, 9.1, 9.2). Verify at subgoal boundaries with local checks (file bytes plus SHA, window state, OCR tokens); escalate to Luna only on stuck or milestone failure. Basis: planning plus reflection 75 to 94 percent of latency; reflection is 25 to 30 percent of reasoning tokens. Expected: removing one verification think call per task saves one think gap, roughly 5s to 15s, unmeasured until the prototype runs. Maps to: Pick 2.
+
+Items 9 to 17 in the survey, for the record: 9 local small grounder (STALE, see below), 10 predict-then-verify-crop (Pick 3), 11 read-mode observation (OCR or a11y text for verification steps), 12 prompt-caching check (free, do it first; Pick 2 gate check already answered YES, cached_input_tokens 10752 on repeat), 13 structured output for the action envelope only (about 100ms per call, kills the occasional full retry cycle), 14 SoM numbered overlay from a local detector, 15 AT-SPI extents plus DOM-first browser (Pick 4), 16 diff-based where-to-look, 17 prompt scoping per call (a multiplier on items 1 to 8, not a standalone prototype).
+
+Two dead grounder candidates, flagged (do not repeat as fact):
+
+- Ferret-UI Lite 3B: the survey rank 9 basis (Pro 53.3, v2 91.6, OSWorld-G 61.2/55.3) is a paper number only. The weights were never released. It cannot be loaded at all. Pick 3 gate verified this.
+- UI-TARS-1.5-2B: does not exist. 1.5 is 7B only (ByteDance-Seed/UI-TARS-1.5-7B, about 15 GB). The survey section 16 item 8 already warned its ScreenSpot-Pro score was UNMEASURED and only the 7B (49.6 Pro) and largest (61.6 Pro) sizes have reported Pro numbers. Pick 3 gate verified the non-existence and substituted UI-TARS-2B-SFT (1.0) for the load test, reported as such, with the result 2 of 3 fair targets, about 2.8s a call, 88 MiB VRAM free. The survey section 16 item 9 warning also stands: no local model was loaded in any survey; every fits-in-6GB claim was a size-based judgment, not a measured load test. Pick 3 is the first measured load test in this program.
+
+## 8. Landing recommendation: PROVISIONAL (non-Astra, Astra 6 out of credit)
+
+Status: FINAL report, PROVISIONAL verdicts. Every verdict below rests on its own measured table in sections 3 to 6A, not on prior art. Astra 6 is out of credit and has not reviewed this report. Pham Tuan decides.
+
+- Pick 1 (code execution): CONDITIONAL LAND, after fixes, then re-measure P3/P4 only. Evidence: clean tasks P1 and P2, wall -62 percent mean (38.41s to 14.54s), think -64 percent mean (36.51s to 12.99s), model calls 5 to 2 per task, 0 refusals, 0 misclicks, 0 session deaths in the pick1 arm, full programs 557 to 652 ms in-program, smoke test ok:true, trace-budget fix verified live. This is the only pick in this run with a large measured think-time win. Blockers before landing: (1) the as-written template asserts on files immediately after act, racing shell execution (P3); fix the template to observe between act and file asserts (the P4-retry shape); (2) the code-exec act() typing path corrupts long non-ASCII text (P4: diacritic syllables dropped, \n turned into Enters, bash command not found), while the direct act path types the identical command correctly; investigate and fix the code-exec act path, or use a different text-entry method. Then re-measure P3 and P4 only (P1 and P2 need no re-run). If the typing path cannot be fixed, restrict Pick 1 to ASCII-safe programs. Do not land Pick 1 as a blanket win until P3 and P4 pass.
+- Pick 2 (reasoning dial plus subgoal-only verification): DO NOT LAND as a think-time win. Evidence: solo rerun, both arms 5/5 SUCCESS, mean wall 76.9s baseline vs 106.0s pick2, delta +29.1s; the P1 to P3 wins (-7 to -21s) used ZERO L2 calls, so they are executor variance, not the mechanism; the only routine-L2 task (P5) was +102s and confounded by a dead start plus a fresh-lease recovery plus an L3 escalation; L2 was exercised on routine decisions exactly twice in the whole rerun, and L2-2 was WRONG with confidence 1.0 (chose pick3-gate instead of pill-video, caught only by the deterministic postcondition); each L2 sub-invocation carried about 18k input tokens with 0 cached and took about 22 to 30s of wall, comparable to an in-session think gap. The mechanism is effectively unmeasured (n=2). The survey rank-1 expectation (10s to 20s per task) is NOT confirmed by this measurement. What would change this: fix the broker-side window-loss and dead-start paths first (both recurred solo), then re-measure with a brief that REQUIRES an L2 call on every routine decision (P1 to P4 included, not just P5), so the L2 count is non-zero by construction. Until then, do not land the L2 tier; the reasoning-dial half alone was never isolated in this run either, so it has no measured saving to land on.
+- Pick 3 (multi-candidate grounding): LAND AS GATED OPT-IN ONLY, not as a default. Evidence: on the 4 held-out terminal tasks it is pure overhead (about 0.13s broker plus one vision turn per task, no accuracy gain available, 8 of 8 tasks succeeded in both arms, 0 misclicks); on small targets it recovered 1 of 2 baseline misses (2 of 3 vs 1 of 3) for 4 extra crops (about 0.49s broker service). It does not fix a systematic placement error shared by all 3 guesses (T3). Keep the module and the CU_MULTI_CANDIDATE=1 flag; use it where the target is small or uncertain (the zoom gate already encodes this); keep the observe-to-act gap short with fast on-laptop crop verification, because a slow gap lets the crop go stale and trips screen_changed.
+- Pick 4 (AT-SPI extents plus DOM-first): CONDITIONAL, split by half. Evidence: terminal tasks show no systematic change (clean pair P2/P3 43.7s baseline vs 41.7s fast path, -2.0s, -5 percent), as predicted. D1 DOM half WORKS: DOM snapshot carries rects and centers, click by ref plus DOM assert succeeds with 0 browser screenshots, but with no baseline browser task the speedup is unproven; land DOM-first as a capability only after a baseline browser task is measured. G1 a11y half is BLOCKED at two layers: the broker rejects a11y commands (unsupported_command, 3 of 3 calls refused, 0 ground calls), and direct a11y ground fails its coord-frame check despite extents_coord screen in the observe output; hold the a11y half until broker a11y support plus a ground fix exist. Do not land the a11y path as a default for grounding: the tree is incomplete where it matters most (GTK popups not exposed, VS Code editor surface uninformative).
+- Observation masking (Pick 5 prep): DO NOT LAND as a think-time win. Evidence: slower on every task (clean mean P1-P4 wall 105.4s to 179.6s, +74.2s; clean P2-P3 41.8s to 72.7s, +30.9s; service unchanged, the whole delta is think), discipline PASS (exactly 2 images per prompt, verified independently), 4/4 SUCCESS in both arms, no solve-rate loss. The predicted history-growth curve does not exist at this task length (think is flat across step index in both arms), so there was nothing for masking to cut, and the +16 to 19s uniform act-think inflation cannot be separated from executor variance at n=1. The survey rank-4 expectation (5s to 15s per task) is NOT confirmed. A rerun would need the kitty launch fixed and ideally a second executor run per arm; do not rerun on longer tasks until that separation is designed in.
+- Prompt caching and structured output: the Pick 2 gate check already answered the caching check YES (cached_input_tokens 10752 on repeat invocations), so there is nothing to build for caching unless the prefix order is found unstable. The structured-output check was still pending at draft time; no result is claimed here. Do not land either on this report.
+
+Overall position: land nothing as a default on prior art alone. The program goal is a 10x cut in think time, and no single pick in this run promises that alone; the picks are additive only where they attack different think calls, and the survey warns explicitly that the ranked savings are NOT ADDITIVE. The one large measured win is Pick 1 on read and compute tasks, and it is gated by two concrete fixes. The most valuable next work is not a new pick: it is the broker-side window-loss and dead-start fixes (they recurred solo in Pick 2 and Pick 4 and in masking, and they swamp every before/after delta they touch), plus the Pick 1 template and typing fixes, plus a baseline browser task for Pick 4 DOM-first.
+
+## 9. What NOT to do next
+
+Condensed from survey section 15 (35 items). These are the highest-risk items for this setup. Do not redo them.
+
+- Rust rewrite of the harness. Track 1 verdict 2026-11-18, STAY PYTHON. Pure Python CPU is only 1.0 to 1.5s of a 101s task; the Rust observation-store port is measurably SLOWER than Python. The profile confirms it: broker service is 1.4s, floor 2.116s. Do not redo.
+- Prompt compression on short prompts. Standalone compression loses to its own overhead below about 5k tokens (Kummer et al., Apr 2026, survey 2.5); up to 18 percent end-to-end speedup only above about 5k tokens with matched hardware. Our per-step prompts are short (system prompt plus one screenshot plus a short history). Measure prompt token counts first; do not build a compressor first.
+- Per-step judge or reflection. VeriCUA: agentic verification is 10x the tokens, 97s per episode, worse OSWorld recall. Reflexion worst case about 7x a single attempt; reflection without a grounded test scores worse than nothing (0.52 vs 0.60). Reflection is a failure response, not a habit. Verify at subgoal boundaries only (Pick 2), never per step.
+- Tree of Thoughts, MCTS, K-way sampling. Tree of Thoughts: 5x to 100x tokens; at equal budget, CoT plus self-consistency frequently wins. Agent Q needs a resettable env; R-MCTS costs 7.3x to 10.1x tokens; live desktop actions are irreversible and there is no rollout environment. GTA1 K-way sampling: token cost scales linearly with K, buys success not speed, and the judge adds a call per step. BJudge parallel rollouts: 891s average per task.
+- Speculative decoding through the API. Not available through the Codex API (no draft model, no logits, no inference control), and it can run slower than baseline on the wrong model and settings (EAGLE-3 at 0.44x on Qwen3-8B MATH500). Measure acceptance rate first on a local model; do not assume it.
+- Semantic cache as correctness. Similarity is not proof; filename, number, or negation changes flip the answer. A fast wrong answer is worse than a slow right answer.
+- Faster screenshots without a redraw guard. cua-speedrun (Sep 2026): environment time down 8.72s, agent time up 18.20s, task time up 9.48s, because screenshots came back before the interface had redrawn. Any observation speedup needs a settle or redraw check. Our P1 refusal cascade is the same failure shape.
+- LLM summarization of history before testing masking. Summarization costs an extra model call and is no better than masking on solve rate (Lindenbauer, Aug 2025). Masking halves cost and matches or beats summarization. Test masking first (Pick 5 prep).
+- Full a11y-tree dumps as observation, and a11y-only grounding with no images. Full dumps cost 5000 to 15000 tokens per perception vs 1200 to 5000 for a screenshot, and OSWorld-Human says adding a11y trees increases per-task latency. Text-only grounding is 7.3 percent vs 15.1 percent with a screenshot (VisualWebArena). Only skeleton or query-scoped reads are admissible (Pick 4 query, max 20 items).
+- Observation and pixel caching as ground truth. Rejected in the 10x synthesis and by GROUND rank 7; no counter-evidence found. Diff-based WHERE-to-look is fine; reused pixels as ground truth is not.
+- Unverified vendor claims treated as results. DirectShell 85 percent, MAI-UI 76.7 percent, InnvoLabs 94.8 percent, Mobilerun 100 percent AndroidWorld, BiGrounder 72.4/42.8 end-to-end numbers: all single-source, self-reported, or very recent without independent reproduction. Use them as leads, never as ranking evidence. The SpecExec agent 2.8x claim is worse: its cited arXiv ID 2406.02100 is a math paper, not SpecExec. Do not cite it.
+
+## 10. Bai hoc
+
+(Danh cho Pham Tuan, viet bang tieng Viet don gian.)
+
+- Chia mot drop-in cho ca ba worker chay song song la duoc, nhung chi khi da doc code gate cua flag truoc. Ba flag CU_CODE_EXEC=1 va CU_PICK4_FASTPATH=1 (va flag cua Pick 2) chi them lenh opt-in, khong doi vong lap mac dinh. Nho vay ma ba worker moi chay song song duoc sau mot drop-in. Bai hoc: truoc khi cho chay song song, phai doc code de chung minh flag khong anh huong lan nhau, khong doan.
+- Broker chi co mot chu, nen chay song song van phai xep hang o broker. Pick 1 doi broker 30 phut, Pick 2 doi, Pick 4 doi, roi Pick 4 arm1 chay 0/4 vi broker bi chiem. Song song o code khong co nghia la song song o broker. Lan sau: mot worker giu broker thi worker khac lam viec khong can broker (doc code, viet bao cao, chuan bi brief), dung ngoi cho.
+- Pull bi ket vi cay lam viec ban. Repo laptop dung o c1b7034 trong khi origin da len 8f0e002, vi 4 file chua commit cua VS Code va Zen CLI-Anything chan pull --ff-only. Dung bao gio stash file cua worker khac, dung bao gio reset cay chung. Bai hoc: moi worker lam trong worktree rieng, cay chung khong duoc stash -u. Pick 2 va Pick 4 deu mat file vi mot lenh stash -u cua worker khac, roi phai khoi phuc tu stash commit.
+- Relay doc bien moi truong cua chinh no, khong doc bien cua shell goi. Dat CU_CODE_EXEC=1 trong shell do thi driver van bao disabled. Phai dat bang drop-in systemd tren relay roi restart relay luc roi. Nho ky cho moi pick doc flag tu relay.
+- Ten terminal trung nhau cung gay tai nan. Pick 1 baseline P1 chet vi kitty speed-profile-term bien mat trong luc doi broker, nghi la do trung ten voi worker khac. Dat ten rieng cho moi worker (speed-p1base-term, speed-pick1-term, pick2-term) truoc khi chay.
+- Watchdog phai co, va phai bao cao. Watchdog poll 5 phut mot lan da bat duoc tien do that cua ba worker dem 19/11 (Pick 1, Pick 2, Pick 4 deu chay), va bat duoc ca viec Pick 4 arm1 0/4. Khong co watchdog thi bao cao cuoi se thieu mat doan nay.
+- Do truoc roi moi tin. Ferret-UI Lite 3B va UI-TARS-1.5-2B nghe rat hay trong survey, nhung mot cai chua tung release weight, mot cai khong ton tai. Pick 3 nap thu that tren laptop moi biet: chi co UI-TARS-2B-SFT nap duoc, ton 5766 tren 6141 MiB, chay 2.8s mot lan. Bai hoc: survey viet gi cung phai nap thu tren may that roi moi dua vao ke hoach.
+- Doi voi task terminal, them buoc chi them ton thoi gian. Pick 3 chung minh ro: them mot crop verify khong cuu duoc gi khi khong co muc tieu nho de click sai, ma con them mot luot nhin anh 10 den 15s. Chi bat Pick 3 khi muc tieu nho hoac khong chac chan.
+- Thang ma khong dung co che do thi khong phai thang cua co che. Pick 2 thang P1 den P3 nhung ca ba task deu 0 lan goi L2, nen khong duoc ghi cong cho L2. Bai hoc: brief do phai BAT BUOC goi co che tren moi task, khong thi so lieu dep ma vo nghia.
+- Do dai task quyet dinh masking co tac dung hay khong. Task chi 2 den 6 observation thi think phang o moi buoc, khong co duong tang de cat. Bai hoc: truoc khi do mot pick cat lich su, do duong tang truoc; khong co duong tang thi dung do.
+- Template viet san cung co the sai, va sai o cho khong ngo nhat. Pick 1 P3 assert ngay sau khi go lenh, shell chua kip chay mkdir; P4 go tieng Viet dai qua code-exec act() thi mat dau, con go truc tiep thi dung. Bai hoc: do template tren task that truoc khi tin no, va so sanh duong go truc tiep voi duong go qua code-exec.
+- Broker mat cua so va chet khoi dong xay ra ca khi chay mot minh, khong chi khi chen nhau. Pick 2 P1 mat cua so solo, Pick 2 P4/P5 va masking P4 chet khoi dong solo. Bai hoc: dung do loi cho contention nua; sua phia broker/driver truoc khi do lai bat cu pick nao.
+- Do wall kieu nao cung phai noi ro. Pick 2 va Pick 4 deu co hai loai wall: wall cua executor (gom ca cho khoi dong chet va viet bao cao sau verify, toi 150s) va wall vong lap that (think-split). Bai hoc: chi so sanh wall cung dinh nghia, va ghi dinh nghia vao bao cao.
+- Tin vao so lieu, khong tin vao thu hang survey. Survey xep Pick 2 hang 1 (10-20s) va masking hang 4 (5-15s), nhung do that cho thay Pick 2 cham hon 29.1s trung binh va masking cham hon 30.9s o cap sach. Bai hoc: thu hang chi de chon thu do truoc, khong phai bang chung de land.
+
+## 11. Methodology and repo/relay state note
+
+Method: same 4 held-out tasks for every pick, same timed.py wrapper, fresh broker session and fresh lease per task, think measured as the gap to the DECIDE line (model reasoning plus reading the observation image plus tool-call latency, not split further), broker service machine-measured, success judged from the verify observation (file bytes or exact output), with refusals, misclicks, and session deaths counted separately. Baseline is the 2026-11-18 profile run (speed-swarm-profile.md). Each pick is flag-gated, default OFF, and measured alone, one arm at a time, because the survey savings are not additive.
+
+Repo and relay state at final-report time (19/11 05:18 +07, from the rerun summaries and live-test-log.md): laptop repo /home/james/computer-use-wayland, branch speed-swarm, HEAD e50da19 (Pick 1 trace fix merged; the pull to origin 8f0e002 was unblocked in Phase B, then fast-forwarded to e50da19). Relay serves e50da19, clean env, no drop-in left, broker free, desktop clean (Jarvis and Zen only). The masking worktree is /home/james/computer-use-wayland-masking, branch speed-swarm-masking, HEAD bfdbfb0. The stash from the Pick 1 resume (Phase-B pre-merge stash, Pick 2 and VS Code local mods) is still present and untouched; the coordinator resolves it in Phase D. The broker is single-owner, so workers measured one at a time in the reruns; contention during the night blocked one Pick 4 arm1 run (0/4, starts never reached ready) and inflated the round-1 Pick 2 baseline (107.7s vs 76.9s solo). The final report assembler did NOT touch the laptop repo, relay, or broker, and did NOT do the Track 1 restore.
+
+## 12. Open items
+
+- Pick 1 table: FILLED, section 3 (rerun 19/11). Verdict CONDITIONAL. Open: fix the template (observe between act and file asserts) and the code-exec act() non-ASCII typing path, then re-measure P3 and P4 only.
+- Pick 2 table: FILLED, section 4 (solo rerun 19/11). Verdict DO NOT LAND. Open: fix the broker-side window-loss and dead-start paths first, then re-measure with a brief that REQUIRES an L2 call on every routine decision.
+- Pick 4 table: FILLED, section 6 (combined summary 19/11). Verdict CONDITIONAL, split by half. Open: the 00:40 probe ground frame-detection failure is CONFIRMED as a real two-layer block (broker unsupported_command plus direct ground coord-frame check); fix both before measuring the a11y half again. Also open: measure a baseline browser task before landing DOM-first.
+- Masking table: FILLED, section 6A (Phase C 19/11). Verdict NO WIN. Open: none, unless a rerun is designed with the kitty launch fixed and a second executor run per arm.
+- Track 1 restore: PENDING, coordinator does it (restore the laptop repo and relay from speed-swarm back to the Track 1 state, including the stashed rust-rewrite-eval work and the 5 untracked files backed up at /tmp/pick1-untracked-backup/, per the Pick 1 resume checklist). The stash was verified still present and untouched by the Pick 1 rerun worker.
+- Prompt-caching plus structured-output checks: the caching check is already answered YES by the Pick 2 gate check (cached_input_tokens 10752 on repeat); the structured-output check was still pending at draft time and no result is claimed in this report.
+- Final landing recommendation: FINAL, PROVISIONAL (non-Astra), in section 8.
+- Astra 6 verdict: BLOCKED (out of credit). Every verdict in this report is PROVISIONAL (non-Astra) until Astra 6 can review or Pham Tuan decides.
+- Cross-check note (assembler, 19/11 05:19): every coordinator headline number was checked against its source file and matched exactly (Pick 1 P1/P2 deltas and model calls, Pick 2 means and delta, Pick 4 clean-pair means and delta, masking means and deltas, Pick 3 small-target A/B). No mismatches found. Two OCR artifacts corrected in the sources and carried here as 19G, not 196G (Pick 2 P1, masking baseline P1).
