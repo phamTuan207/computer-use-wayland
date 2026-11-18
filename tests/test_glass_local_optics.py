@@ -31,6 +31,10 @@ class LocalOptics(unittest.TestCase):
                 self.assertAlmostEqual(height*.5-v*height,(.5-v)*height)
 
     def test_rim_fades_inside(self):
+        """SUPERSEDED by test_glass_shayxo_contract: the old exponential fade
+        is not the Shayxo Snell bend; the new test checks its rim/inner fades.
+        Keep this geometry-era check for the separate local-optics profile.
+        """
         width = .12*38
         self.assertGreater(math.exp(-2/width), .6)
         self.assertLess(math.exp(-19/width), .02)

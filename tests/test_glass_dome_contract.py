@@ -1,100 +1,65 @@
-"""Numeric dome contract for the inspected pinned 4edf shader, not GPU proof.
-
-Models Shaders.hpp:410-425 and GlassRenderer.cpp:490 in the handoff backend.
-On the straight capsule centreline, edgeProximity = exp(-19 / rim_depth).
-Displacements are in pixels, after cancelling invFullSize from domeUV.
-The public capsule patch does not contain this dome implementation: these
-tests do not assert shader-string coverage, loaded binary identity, actual
-rendered pixels, blur, or a visual improvement over an earlier preset.
-Comparing with the analytic rim maximum is not a comparison with every rim
-point (some rim displacements are zero).
-"""
-import math
+"""Legacy dome gate for the 288 x 38 pill; the port's dome weight is zero here."""
 from pathlib import Path
-import re
+import math
 import unittest
 
-
-PRESET = Path(__file__).resolve().parents[1] / 'native/hyprglass-indicator.lua'
+ROOT = Path(__file__).resolve().parents[1]
+PATCH = ROOT / 'native/hyprglass-shayxo-legacy.patch'
 PILL = (288.0, 38.0)
-POINTS = (72.0, 144.0, 216.0)
-IOR = 1.45
+BAND = 14.0
 
 
-def read_preset():
-    """Read actual Lua assignments; ignore commented-out settings."""
-    text = re.sub(r'--[^\n]*', '', PRESET.read_text())
-    values = {}
-    for name in ('edge_thickness', 'refraction_strength', 'lens_distortion'):
-        match = re.search(r'\b' + name + r'\s*=\s*([0-9.]+)', text)
-        if match is None:
-            raise RuntimeError(f'preset is missing {name}')
-        values[name] = float(match.group(1))
-    return values
+def smoothstep(edge0, edge1, value):
+    t = min(max((value - edge0) / (edge1 - edge0), 0.0), 1.0)
+    return t * t * (3.0 - 2.0 * t)
 
 
-def dome_shift(x, edge, lens):
-    """Pixel shift at y=19, restricted to the straight capsule centreline."""
-    if not PILL[1] / 2 <= x <= PILL[0] - PILL[1] / 2:
-        raise ValueError('point must lie on the straight capsule centreline')
-    if lens <= 0.001:
-        return 0.0, 0.0
-    cx = (x - PILL[0] * 0.5) / (PILL[0] * 0.5)
-    cy = 0.0
-    gradient = (-4.0 * cx * (1.0 - cy * cy),
-                -4.0 * cy * (1.0 - cx * cx))
-    lens_max_px = lens * min(PILL) * 0.006
-    edge_proximity = math.exp(-19.0 / (edge * min(PILL)))
-    return tuple(v * lens_max_px * (1.0 - edge_proximity) for v in gradient)
+def dome_weight(width, height, band):
+    aspect = max(width, height) / max(min(width, height), 1e-4)
+    inradius = min(width, height) / 2.0
+    return (smoothstep(1.5, 3.0, aspect)
+            * smoothstep(0.75, 1.0, band / max(inradius, 1e-4)))
 
 
-def rim_bound(edge, strength):
-    """Same analytic pixel bound as test_glass_optics_contract.analytic_bound."""
-    return edge * min(PILL) * strength * math.sqrt(IOR * IOR - 1.0)
-
-
-class GlassDomeContract(unittest.TestCase):
+class ShayxoLegacyDomeContract(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.params = read_preset()
+        cls.patch = PATCH.read_text()
+        cls.added = '\n'.join(line[1:] for line in cls.patch.splitlines()
+                              if line.startswith('+') and not line.startswith('+++'))
 
-    def shift(self, x):
-        return dome_shift(x, self.params['edge_thickness'],
-                          self.params['lens_distortion'])
+    def test_actual_pill_band_stops_below_dome_threshold(self):
+        self.assertEqual(PILL, (288.0, 38.0))
+        self.assertEqual(BAND, 14.0)
+        self.assertAlmostEqual(min(PILL) / 2.0, 19.0)
+        self.assertLess(BAND / 19.0, 0.75)
+        self.assertEqual(dome_weight(*PILL, BAND), 0.0)
 
-    def test_actual_preset_parameters_are_finite_and_positive(self):
-        self.assertEqual(self.params, read_preset())
-        for name, value in self.params.items():
-            with self.subTest(name=name):
-                self.assertTrue(math.isfinite(value))
-                self.assertGreater(value, 0.0)
-        self.assertGreater(self.params['lens_distortion'], 0.001)
+    def test_long_pill_aspect_alone_does_not_enable_dome(self):
+        aspect = PILL[0] / PILL[1]
+        self.assertGreater(aspect, 3.0)
+        self.assertEqual(smoothstep(1.5, 3.0, aspect), 1.0)
+        self.assertEqual(dome_weight(*PILL, BAND), 0.0)
 
-    def test_off_axis_shifts_are_finite_nonzero_and_point_inward(self):
-        for x in (POINTS[0], POINTS[2]):
-            with self.subTest(x=x):
-                dx, dy = self.shift(x)
-                self.assertTrue(math.isfinite(dx) and math.isfinite(dy))
-                self.assertGreater(abs(dx), 0.0)
-                self.assertEqual(dy, 0.0)
-                self.assertLess(dx * (x - PILL[0] / 2), 0.0)
+    def test_wide_epsilon_axis_fade_handles_the_medial_axis(self):
+        self.assertIn('float eps = clamp(bandPx * 0.3, 1.0, 16.0);', self.added)
+        self.assertIn('float axisFade = smoothstep(0.15, 0.80, gLen / (2.0 * eps));',
+                      self.added)
+        axis_fade = smoothstep(0.15, 0.80, 0.0)
+        rim_fade = smoothstep(0.15, 0.80, 1.0)
+        self.assertEqual(axis_fade, 0.0)
+        self.assertEqual(rim_fade, 1.0)
 
-    def test_exact_symmetry_axis_has_zero_shift(self):
-        self.assertEqual(self.shift(POINTS[1]), (0.0, 0.0))
+    def test_refraction_uses_sdf_depth_and_wide_epsilon_normal(self):
+        self.assertIn('float depth = max(-bevelSdf, 0.0);', self.added)
+        self.assertIn('float gLen = length(g);', self.added)
+        self.assertIn('vec2 n = g / max(gLen, 1e-5);', self.added)
+        self.assertIn('vec2 push = n * bend * lens;', self.added)
 
-    def test_mirrored_displacements(self):
-        left, right = self.shift(POINTS[0]), self.shift(POINTS[2])
-        self.assertEqual(left[0], -right[0])
-        self.assertEqual(left[1], right[1])
-
-    def test_central_model_shifts_are_weaker_than_analytic_rim_bound(self):
-        bound = rim_bound(self.params['edge_thickness'],
-                          self.params['refraction_strength'])
-        self.assertTrue(math.isfinite(bound))
-        self.assertGreater(bound, 0.0)
-        for x in POINTS:
-            with self.subTest(x=x):
-                self.assertLess(math.hypot(*self.shift(x)), bound)
+    def test_upstream_center_dome_is_removed_from_the_new_path(self):
+        self.assertNotIn('domeUV', self.added)
+        self.assertNotIn('lensMaxPx * lensFade', self.added)
+        self.assertNotIn('dGrad * lensMaxPx', self.added)
 
 
 if __name__ == '__main__':

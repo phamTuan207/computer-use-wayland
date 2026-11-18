@@ -1,41 +1,28 @@
-"""Analytic bounds for added capsule rim/ripple, not GPU visual proof."""
-import math
+"""The static Legacy port uses one Snell field and contains no ripple law."""
 from pathlib import Path
-import re
 import unittest
 
-PATCH = (Path(__file__).resolve().parents[1] / 'native/hyprglass-capsule.patch').read_text()
+PATCH = (Path(__file__).resolve().parents[1] /
+         'native/hyprglass-shayxo-legacy.patch').read_text()
+ADDED = '\n'.join(line[1:] for line in PATCH.splitlines()
+                  if line.startswith('+') and not line.startswith('+++'))
 
 
-def constant(name):
-    return float(re.search(r'const float ' + name + r' = ([0-9.]+);', PATCH)[1])
+class ShayxoLegacyNoRippleContract(unittest.TestCase):
+    def test_patch_does_not_add_a_ripple_field(self):
+        for token in ('capsuleRipple', 'capsuleRim', 'rimOffsetPx', 'tangent * ripple', 'sin('):
+            with self.subTest(token=token):
+                self.assertNotIn(token, ADDED)
 
+    def test_patch_uses_the_single_snell_displacement(self):
+        self.assertIn('float bend = snellShift(slope, SHAYXO_IOR)', ADDED)
+        self.assertIn('vec2 push = n * bend * lens;', ADDED)
+        self.assertNotIn('baseOffset +=', ADDED)
 
-class CapsuleRippleContract(unittest.TestCase):
-    def test_wider_exponential_rim(self):
-        decay = constant('capsuleRimDistance')
-        self.assertGreater(decay, 0)
-        self.assertLess(decay, 0.8)
-        self.assertGreater(math.exp(-5 * decay), math.exp(-5 * 0.8))
-
-    def test_added_displacement_is_bounded(self):
-        strength = constant('capsuleRimIntensityPx')
-        ripple = constant('capsuleRipplePx')
-        decay = constant('capsuleRimDistance')
-        bound = math.hypot(strength, ripple)
-        for i in range(1901):
-            distance = i / 100
-            normal = (19 - distance) / 19
-            envelope = math.exp(-distance * decay)
-            radial = normal * strength * envelope
-            tangential = math.sin(distance / 38 * 25) * ripple * envelope * normal
-            self.assertTrue(math.isfinite(radial + tangential))
-            self.assertLessEqual(math.hypot(radial, tangential), bound + 1e-9)
-
-    def test_axis_fades_without_normalization_jump(self):
-        self.assertIn('rimEnvelope * normalLength', PATCH)
-        self.assertIn('normalLength > 1e-5', PATCH)
-        self.assertIn('baseOffset += (rimOffsetPx + tangent * ripple) * invFullSize;', PATCH)
+    def test_old_capsule_ripple_patch_is_not_the_active_contract(self):
+        self.assertIn('native/hyprglass-shayxo-legacy.patch', str(
+            Path(__file__).resolve().parents[1] / 'native/hyprglass-shayxo-legacy.patch'))
+        self.assertNotIn('capsuleRimDistance', ADDED)
 
 
 if __name__ == '__main__':
