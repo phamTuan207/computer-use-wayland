@@ -44,7 +44,27 @@ cli-hub install <app>
 Never install from an unpinned git URL in a task. The registry's
 `install_cmd` values are unpinned git URLs; do not copy one out of upstream
 data and run it. Installs happen via PyPI (`pip install cli-anything-<app>`)
-or `cli-hub install <app>` only.
+or `cli-hub install <app>` only. On the laptop, plain `pip` is not
+installed (Python 3.14 has no pip module); `uv pip install` inside a venv
+is the working path there.
+
+## PyPI releases lag upstream HEAD
+
+Verified on the laptop 2026-11-18: the vendored skills match upstream HEAD
+`34f5195`, but the PyPI releases lag it. `pip install
+cli-anything-libreoffice` installs 1.0.0, which has no `document import`
+or `document import-formats` even though the vendored skill documents
+them; the same commands exist in 1.0.1 installed from the pinned upstream
+commit, where `document import` on a scratch docx returned rc 0 in
+1753 ms. The Obsidian PyPI release is 1.1.1 while the vendored skill says
+1.1.0; the full Obsidian end-to-end task still passed on 1.1.1. If a
+documented command is missing from the installed harness, check
+`<app> <group> --help` before assuming the skill is wrong: the command
+may exist only in the newer upstream code. Until the PyPI releases catch
+up, the working path for existing Office files is plain headless
+`libreoffice --convert-to` (verified on the laptop: docx to txt in
+1374 ms, docx to pdf in 1367 ms), and `document new` plus `export render`
+for new files.
 
 ## Verify first, then mutate
 
