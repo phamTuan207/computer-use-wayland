@@ -2,8 +2,9 @@
 """Build the optional liquid-glass backend from a pinned Hyprglass source tree.
 
 Separate from scripts/build.py on purpose: this is an opt-in backend with an exact
-ABI requirement. It applies one supplied patch and builds in the source tree.
-It never resets, cleans, stashes or deletes, and it never installs or loads anything.
+ABI requirement. It applies the C++ local-optics patch, then the Shayxo Legacy
+shader patch, and builds in the source tree. It never resets, cleans, stashes or
+deletes, and it never installs or loads anything.
 
 Usage:
     python3 scripts/build-glass.py SOURCE --local-optics [--allow-dirty]
@@ -17,6 +18,8 @@ REQUIRED_COMMIT = '03a57c4451b4abee38feda2ffb725f55ecc0f2fd'
 REQUIRED_HYPRLAND = '0.57.2'
 VERSION = '1.1.1-cu.1'
 PATCH = Path(__file__).resolve().parents[1] / 'native/hyprglass-local-optics.patch'
+SHAYXO_PATCH = Path(__file__).resolve().parents[1] / 'native/hyprglass-shayxo-legacy.patch'
+PATCHES = (('local-optics', PATCH), ('shayxo Legacy', SHAYXO_PATCH))
 
 
 def fail(message):
@@ -65,18 +68,20 @@ def main(argv=None):
         fail('hyprland {} required, found {}'.format(REQUIRED_HYPRLAND,
                                                      installed.stdout.strip() or 'none'))
 
-    if not PATCH.is_file():
-        fail('patch not supplied: ' + str(PATCH))
+    for name, patch in PATCHES:
+        if not patch.is_file():
+            fail('patch not supplied: ' + str(patch))
 
-    if run(['git', 'apply', '--reverse', '--check', str(PATCH)], cwd=source).returncode == 0:
-        print('local-optics patch already applied')
-    else:
-        if run(['git', 'apply', '--check', str(PATCH)], cwd=source).returncode != 0:
-            fail('patch does not apply cleanly to ' + REQUIRED_COMMIT)
-        applied = run(['git', 'apply', str(PATCH)], cwd=source)
+        if run(['git', 'apply', '--reverse', '--check', str(patch)], cwd=source).returncode == 0:
+            print(name + ' patch already applied')
+            continue
+
+        if run(['git', 'apply', '--check', str(patch)], cwd=source).returncode != 0:
+            fail(name + ' patch does not apply cleanly to ' + REQUIRED_COMMIT)
+        applied = run(['git', 'apply', str(patch)], cwd=source)
         if applied.returncode != 0:
-            fail('patch application failed: ' + applied.stderr.strip())
-        print('local-optics patch applied')
+            fail(name + ' patch application failed: ' + applied.stderr.strip())
+        print(name + ' patch applied')
 
     # Applying our patch dirties a clean checkout; only initial dirt needs opt-in.
     build_edits = output(['git', '-C', str(source), 'status', '--porcelain', '--untracked-files=all'])
