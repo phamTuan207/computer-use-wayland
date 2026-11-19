@@ -1991,6 +1991,7 @@ class CodeExecBackend:
 
     def __init__(self, env):
         self.env = env
+        self.browser_endpoint = BROWSER_ENDPOINT
 
     def windows(self):
         keys = ('address', 'class', 'title', 'at', 'size', 'workspace')
@@ -2015,6 +2016,45 @@ class CodeExecBackend:
             session_policy.record_refusal(STATE, os.environ.get('CU_SESSION_TOKEN'))
         elif result.get('ok') is True or is_completed_capture_error(result, len(actions)):
             session_policy.complete_requirement(STATE, os.environ.get('CU_SESSION_TOKEN'))
+        return result
+
+    def dom_start(self):
+        global BROWSER_ENDPOINT
+        endpoint = BROWSER_ENDPOINT
+        result = browser_start(self.env, endpoint)
+        if isinstance(result, dict) and result.get('ok') is True:
+            BROWSER_ENDPOINT = endpoint
+            self.browser_endpoint = endpoint
+        return result
+
+    def dom_tabs(self):
+        return browser({'operation': 'tabs', 'endpoint': self.browser_endpoint})
+
+    def dom_observe(self, target, scope, max_elements):
+        request = {
+            'operation': 'observe', 'endpoint': self.browser_endpoint,
+            'target': target, 'max_elements': max_elements,
+        }
+        if scope is not None:
+            request['scope'] = scope
+        return browser(request)
+
+    def dom_act(self, target, snapshot, actions, after_scope=None, no_after=False):
+        import session_policy
+        session_policy.require_observation(
+            STATE, os.environ.get('CU_SESSION_TOKEN'))
+        request = {
+            'operation': 'act', 'endpoint': self.browser_endpoint,
+            'target': target, 'snapshot': snapshot, 'actions': actions,
+        }
+        if after_scope is not None:
+            request['after_scope'] = after_scope
+        if no_after:
+            request['no_after'] = True
+        result = browser(request)
+        if isinstance(result, dict) and result.get('ok') is True:
+            session_policy.complete_requirement(
+                STATE, os.environ.get('CU_SESSION_TOKEN'))
         return result
 
 
