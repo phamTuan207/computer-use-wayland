@@ -23,6 +23,7 @@ import threading
 import time
 
 import cu
+import chromium_cli
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -455,6 +456,7 @@ class Task:
     stderr_thread: threading.Thread = None
     ready_thread: threading.Thread = None
     streams_closed: bool = False
+    prefetches_cleared: bool = False
 
 
 class Broker:
@@ -991,6 +993,13 @@ class Broker:
                 return
             now = time.monotonic()
             if task.process is not None and task.process.poll() is not None:
+                if task.session_token and not task.prefetches_cleared:
+                    try:
+                        chromium_cli.clear_session_prefetches(task.session_token)
+                    except Exception:
+                        pass
+                    else:
+                        task.prefetches_cleared = True
                 if task.active is not None:
                     task.active.status = 'unknown'
                     task.active.error = 'driver_eof'

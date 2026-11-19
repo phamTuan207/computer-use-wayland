@@ -639,6 +639,20 @@ class SessionRemoteIntegration(BrokerHarness):
                  'generation': started['generation']}
         self.finish_owned_task(lease)
 
+    def test_session_start_publishes_token_and_finish_invalidates_it(self):
+        lease=self.start_task()
+        snapshot=self.state/'session.json'
+        saved=json.loads(snapshot.read_text())
+        token=saved['token']
+        self.assertRegex(token,r'^[0-9a-f]{32}$')
+        self.assertEqual(self.broker.task.session_token,token)
+        self.assertEqual(stat.S_IMODE(snapshot.stat().st_mode),0o600)
+        self.assertEqual(stat.S_IMODE(self.state.stat().st_mode),0o700)
+        with patch.object(session_remote.chromium_cli,'clear_session_prefetches') as clear:
+            self.finish_owned_task(lease)
+        clear.assert_called_once_with(token)
+        self.assertFalse(snapshot.exists())
+
     def test_completed_tasks_after_relogin_resolve_distinct_frozen_environments(self):
         fixture = self.environment_fixture()
         self.make_shared_broker(fixture['base'], automatic=True)
