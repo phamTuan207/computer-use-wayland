@@ -74,7 +74,7 @@ D1 program (same fixture as the DOM-first baseline, `file:///tmp/speed-pick4-202
 wins = windows()
 chrome = [w for w in wins if w["class"] == "chromium"][0]
 obs = observe(window=chrome["address"])
-result = act([{"type": "type", "text": "file:///tmp/speed-pick4-20261118/pick4-fixture.html\n"}], obs)
+result = act([{"type": "key", "keys": ["ctrl", "l"]}, {"type": "type", "text": "file:///tmp/speed-pick4-20261118/pick4-fixture.html\n"}], obs)
 verify = observe(window=chrome["address"])
 assert_state(result["ok"], "navigate act failed")
 tabs = dom_tabs()
@@ -92,8 +92,11 @@ Notes on the shape:
 
 - Navigation has no CDP action (cdp.mjs offers click, fill, set_value, key, scroll,
   wait, assert only), so navigation stays a desktop act on the address bar inside the
-  program, exactly as the DOM-first arm 2 did. A `dom_navigate` via CDP Page.navigate is
-  a follow-up, out of scope for A1.
+  program, exactly as the DOM-first arm 2 did: Ctrl+L first to focus the address bar,
+  then type the URL plus Enter, in one act batch. (Correction 19/11 13:40: the first
+  draft typed the URL without Ctrl+L; the proven arm 2 sequence focuses the address
+  bar first.) A `dom_navigate` via CDP Page.navigate is a follow-up, out of scope
+  for A1.
 - The template rule adapts to DOM: assert on the `after` snapshot returned by `dom_act`,
   never on the pre-click snapshot. If an act used `no_after`, `dom_observe` again before
   asserting. The DOM assert polls in-page up to `timeout_ms`, so the settle interval the
