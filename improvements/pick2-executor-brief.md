@@ -68,7 +68,9 @@ Log DECIDE lines exactly as below. This arm is the control.
 ## Tasks (both arms, same order, same end states)
 
 Do the tasks in order P1 to P5. Fresh broker session per task. Same kitty
-terminal window reused across tasks (title `pick2-term`).
+terminal window reused across tasks (title `pick2-term-__ARM__-worker-42`).
+Replace `worker-42` with a unique safe ID for this executor and keep the title
+consistent for every task in the arm.
 
 - P1 C-03: "O dia con trong bao nhieu?" Run `df -h /` in the terminal and
   report the free space of `/` from what you OBSERVE on screen. End state:
@@ -204,18 +206,20 @@ bypasses the loop being measured).
   running, do NOT start yours; wait 2 minutes and re-check, up to 30
   minutes, then report blocked. If your start call itself returns a
   cancelled error, report BLOCKED and stop; do not touch the latch.
-- Launch one kitty terminal: `nohup kitty --title pick2-term >__RUN_DIR__/kitty.log 2>&1 &`
-  (with the GUI env exported). Then drive it only through the broker.
-  Find its window address from the broker windows list (title pick2-term).
+- Launch the unique terminal after exporting the GUI environment:
+  `setsid -f kitty --single-instance=no --title pick2-term-__ARM__-worker-42 >__RUN_DIR__/kitty.log 2>&1`.
+  Before the broker start command above, run `hyprctl clients -j` and verify
+  exactly one client has that title. Save its address, and do not start if the
+  window is missing or duplicated. Then drive it only through the broker.
 - Before every act, verify from your latest observation that the focused
-  target is the pick2-term window. If focus ever lands on any other
+  target is the unique pick2-term window. If focus ever lands on any other
   window, STOP driving, finish the session, and report what happened.
 
 ## Floor probe (scripted, zero model calls; run AFTER P5, BEFORE teardown)
 
 Same shape as the v3 floor probe, labels `floor-*`, owner `pick2-floor`,
 lease `~/.cache/agent-computer-use/leases/__ARM__-floor/floor.lease`:
-start, windows, observe screen, observe window (address of pick2-term
+start, windows, observe screen, observe window (address of the unique pick2-term
 parsed from the floor-windows record), act with one harmless type action
 `[{"type": "type", "text": "\n"}]`, observe window again, finish.
 Sequence numbers 1..6 in that session. All envelope/action files chmod

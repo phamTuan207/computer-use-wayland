@@ -50,6 +50,9 @@ fd = os.open(snapshot, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
 with os.fdopen(fd, 'w') as stream:
     json.dump({'version': 4, 'token': token}, stream)
     stream.flush(); os.fsync(stream.fileno())
+ready_gate = os.environ.get('FAKE_READY_GATE')
+while ready_gate and not Path(ready_gate).exists():
+    time.sleep(.01)
 mark('ready')
 print(json.dumps({'ok': True, 'driver': 'ready'}, separators=(',', ':')), flush=True)
 
@@ -715,6 +718,75 @@ class SessionRemoteIntegration(BrokerHarness):
     def test_lost_start_response_reconnects_to_same_generation(self):
         lease = self.start_task(drop_response=True)
         self.assertEqual(len(self.launches), 1)
+
+    def test_client_start_then_83_status_polls_are_ok_while_driver_is_starting(self):
+        self.broker.start_timeout = 15
+        ready_gate = self.root / 'allow-driver-ready'
+        self.broker.env['FAKE_READY_GATE'] = str(ready_gate)
+        lease_file = self.root / 'starting.lease'
+        code, started = self.run_cli(['start', '--owner', 'starting-test',
+                                      '--lease-file', str(lease_file)])
+        self.assertEqual(code, 0, started)
+        self.assertTrue(started['ok'])
+        self.assertEqual(started['status'], 'starting')
+
+        began = time.monotonic()
+        for _ in range(83):
+            code, status = self.run_cli(['status', '--lease-file', str(lease_file)])
+            self.assertEqual(code, 0, status)
+            self.assertTrue(status['ok'], status)
+            self.assertEqual(status['state'], 'starting')
+            self.assertEqual(status['driver'], 'starting')
+        self.assertLess(time.monotonic() - began, 10)
+
+        ready_gate.touch()
+        self.wait_for(lambda: (lambda result: result if result[1].get('state') == 'running' else None)(
+            self.run_cli(['status', '--lease-file', str(lease_file)])))
+        code, finished = self.run_cli(['finish', '--lease-file', str(lease_file)])
+        self.assertEqual(code, 0, finished)
+        self.assertEqual(finished['status'], 'finished')
+
+    def test_status_authorization_failure_is_exposed_by_broker_status(self):
+        lease_file = self.root / 'tamper.lease'
+        code, started = self.run_cli(['start', '--owner', 'tamper-test',
+                                      '--lease-file', str(lease_file)])
+        self.assertEqual(code, 0, started)
+        lease = json.loads(lease_file.read_text())
+        self.wait_for(lambda: (lambda result: result if result[1].get('state') == 'running' else None)(
+            self.run_cli(['status', '--lease-file', str(lease_file)])))
+        original_generation = lease['generation']
+        lease['generation'] = '0' * 32 if original_generation != '0' * 32 else '1' * 32
+        session_remote._replace_lease(lease_file, lease)
+
+        began = time.monotonic()
+        for _ in range(83):
+            code, refused = self.run_cli(['status', '--lease-file', str(lease_file)])
+            self.assertEqual(code, 1)
+            self.assertEqual(refused, {'ok': False, 'error': 'invalid_lease'})
+        self.assertLess(time.monotonic() - began, 10)
+        code, status = self.run_cli(['status'])
+        self.assertEqual(code, 0, status)
+        self.assertEqual(status['last_status_error'], 'invalid_lease')
+
+        lease['generation'] = original_generation
+        session_remote._replace_lease(lease_file, lease)
+        code, finished = self.run_cli(['finish', '--lease-file', str(lease_file)])
+        self.assertEqual(code, 0, finished)
+        self.assertEqual(finished['status'], 'finished')
+
+    def test_refused_start_error_is_exposed_by_broker_status(self):
+        def refuse_readiness():
+            raise session_remote.BrokerError('native_unavailable', 'fixture refusal')
+
+        self.broker.readiness = refuse_readiness
+        lease_file = self.root / 'refused.lease'
+        code, started = self.run_cli(['start', '--owner', 'refused-test',
+                                      '--lease-file', str(lease_file)])
+        self.assertEqual(code, 1)
+        self.assertEqual(started['error'], 'native_unavailable')
+        code, status = self.run_cli(['status'])
+        self.assertEqual(code, 0, status)
+        self.assertEqual(status['last_start_error'], 'native_unavailable')
 
     def test_public_cli_uses_private_lease_and_multiline_request_file(self):
         lease_file = self.root / 'task.lease'

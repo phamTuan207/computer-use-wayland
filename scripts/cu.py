@@ -983,12 +983,10 @@ def image_point(meta,x,y):
     if not (0<=x<iw and 0<=y<ih): raise ValueError('point outside observed image')
     return rx+x*rw/iw, ry+y*rh/ih
 
-def screen_changed(old,new,actions):
+def _action_points_changed(old,new,actions):
     from PIL import ImageChops,ImageStat
     if old.size!=new.size:return True
     diff=ImageChops.difference(old,new)
-    if sum(ImageStat.Stat(diff).mean)/3>3:return True
-    # A small button can move without changing the global average appreciably.
     for a in actions:
         points=[a.get('from'),a.get('to')] if a['type']=='drag' else [[a.get('x'),a.get('y')]]
         for point in points:
@@ -996,6 +994,17 @@ def screen_changed(old,new,actions):
             x,y=point;patch=diff.crop((max(0,int(x)-24),max(0,int(y)-24),min(old.width,int(x)+25),min(old.height,int(y)+25)))
             if sum(ImageStat.Stat(patch).mean)/3>6:return True
     return False
+
+def _mean_image_difference(old,new):
+    from PIL import ImageChops,ImageStat
+    if old.size!=new.size:return float('inf')
+    return sum(ImageStat.Stat(ImageChops.difference(old,new)).mean)/3
+
+def screen_changed(old,new,actions):
+    if old.size!=new.size:return True
+    if _mean_image_difference(old,new)>3:return True
+    # A small button can move without changing the global average appreciably.
+    return _action_points_changed(old,new,actions)
 
 def finite(value,name):
     # bool is a subclass of int, so True would otherwise reach a numeric command.
@@ -1474,11 +1483,18 @@ def desktop_act(env,meta,actions,after_capture=True,observation_path=None,
     from PIL import Image
     old=verified_image if hasattr(verified_image,'size') else Image.open(meta['image'])
     if screen_changed(old,new,actions):
-        fresh=save_observation(new,fresh,meta['max_width'])
-        _diagnostic_event('preflight_refused',meta,env,completed=0,error='screen changed',active_window=active_window)
-        return {'ok':False,'completed':0,'error':'screen changed','error_code':'screen_changed',
-                'preflight_ms':round((time.monotonic()-preflight_start)*1000,3),
-                'next_step':DESKTOP_REOBSERVE,'after':fresh}
+        time.sleep(.15)
+        settled,settled_meta=(observe_screen(env,meta['monitor'],meta.get('crop'),meta['max_width'],persist=False) if screen_scope else
+                              observe(env,address,meta.get('crop'),meta['max_width'],activate=False,persist=False))
+        if not screen_changed(new,settled,actions) and not _action_points_changed(old,settled,actions):
+            _diagnostic_event('preflight_retry',meta,env,completed=0,error='screen changed',active_window=active_window)
+            new,fresh=settled,settled_meta
+        else:
+            fresh=save_observation(settled,settled_meta,meta['max_width'])
+            _diagnostic_event('preflight_refused',meta,env,completed=0,error='screen changed',active_window=active_window)
+            return {'ok':False,'completed':0,'error':'screen changed','error_code':'screen_changed',
+                    'preflight_ms':round((time.monotonic()-preflight_start)*1000,3),
+                    'next_step':DESKTOP_REOBSERVE,'after':fresh}
     # A keyboard-only batch must not open the virtual pointer device at all, and an
     # ordinary startup failure belongs in the result envelope, not outside it.
     pointer=None;completed=0;error=None;ime_result={};transient_error=False;outcome_uncertain=False
