@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Shared local computer-use CLI. No model API calls or daemon required."""
 import argparse
+import atexit
 from contextlib import contextmanager
 import fcntl
 import hashlib
@@ -17,6 +18,7 @@ import socket
 import stat
 import subprocess
 import sys
+import threading
 import time
 import uuid
 
@@ -39,6 +41,13 @@ _PLATFORM_KEYS = {'GDK_BACKEND','QT_QPA_PLATFORM','ELECTRON_OZONE_PLATFORM_HINT'
 _ROUTING_KEYS = SESSION_KEYS - _IDENTITY_KEYS
 OBSERVATION_SCHEMA = 2
 OBSERVATION_MAX_AGE = 90
+# At 2 Hz, one missed refresh still fits inside this window. Older frames can
+# span a deliberate UI update, so those requests must capture a new frame.
+PRECACHE_INTERVAL_SECONDS = .5
+PRECACHE_MAX_AGE_SECONDS = 1.0
+_CAPTURE_LOCK = threading.Lock()
+_PRECACHE_LOCK = threading.Lock()
+_PRECACHE_MANAGER = None
 INSTANCE_RE = re.compile(r'[A-Za-z0-9_.-]{1,200}')
 
 MODIFIERS={'ctrl':'ctrl','control':'ctrl','alt':'alt','altgr':'altgr','shift':'shift','super':'logo','meta':'logo','win':'logo','logo':'logo'}
@@ -901,48 +910,259 @@ def _capture_identity(env):
             'capture_boot_id':boot_identity(),
             'capture_compositor':compositor_identity(env)}
 
-def observe(env, address, crop=None, max_width=960, activate=False, persist=True):
+class WindowPreCapture:
+    def __init__(self,env,address,capture=None):
+        self.env=dict(env)
+        self.address=address
+        self.key=(address.casefold(),tuple(compositor_identity(env).items()))
+        self.capture=capture or _capture_precapture_window
+        self.lock=threading.Lock()
+        self.stop_event=threading.Event()
+        self.thread=None
+        self.process=None
+        self.frame=None
+        self.paused=False
+
+    def start(self):
+        with self.lock:
+            if self.thread is None:
+                self.thread=threading.Thread(target=self._loop,name='cu-pre-capture',daemon=True)
+                self.thread.start()
+
+    def _loop(self):
+        while not self.stop_event.is_set():
+            started=time.monotonic()
+            try:
+                frame=None if self.paused else self.capture(self.env,self.address,self)
+            except Exception:
+                frame=None
+            with self.lock:
+                self.frame=frame if not self.stop_event.is_set() and not self.paused else None
+            self.stop_event.wait(max(0,PRECACHE_INTERVAL_SECONDS-(time.monotonic()-started)))
+
+    def _grim(self,geometry):
+        process=subprocess.Popen(['grim','-s','1','-g',geometry,'-t','ppm','-'],env=self.env,
+                                 stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+        with self.lock:
+            self.process=process
+            if self.stop_event.is_set():process.terminate()
+        try:
+            try:raw,error=process.communicate(timeout=2)
+            except subprocess.TimeoutExpired:
+                process.terminate()
+                try:raw,error=process.communicate(timeout=.25)
+                except subprocess.TimeoutExpired:
+                    process.kill();raw,error=process.communicate()
+                raise RuntimeError('grim precapture timed out')
+            if process.returncode:
+                detail=error.decode(errors='replace').strip()[:400]
+                raise RuntimeError('grim precapture failed'+(': '+detail if detail else ''))
+            return raw
+        finally:
+            with self.lock:
+                if self.process is process:self.process=None
+
+    def get_frame(self,address,window_bounds,monitor,monitor_box_,scale,transform,env):
+        with self.lock:
+            frame=self.frame
+            if frame is None:return None
+            age=time.monotonic()-frame['capture_started_monotonic']
+            valid=(age>=0 and age<=PRECACHE_MAX_AGE_SECONDS and
+                   same_window_address(frame['window'],address) and
+                   frame['window_bounds']==window_bounds and frame['monitor']==monitor and
+                   frame['monitor_box']==monitor_box_ and frame['monitor_scale']==scale and
+                   frame['monitor_transform']==transform and
+                   frame['capture_boot_id']==boot_identity() and
+                   frame['capture_compositor']==compositor_identity(env))
+            if valid:return frame
+            self.frame=None
+            return None
+
+    def discard(self,frame=None):
+        with self.lock:
+            if frame is None or self.frame is frame:self.frame=None
+
+    def pause(self):
+        with self.lock:
+            self.paused=True
+            self.frame=None
+
+    def resume(self):
+        with self.lock:self.paused=False
+
+    def stop(self):
+        self.stop_event.set()
+        with self.lock:process=self.process
+        if process is not None and process.poll() is None:
+            try:process.terminate()
+            except OSError:pass
+        if self.thread is not None and self.thread is not threading.current_thread():
+            self.thread.join(timeout=2.5)
+        if process is not None and process.poll() is None:
+            try:process.kill();process.wait(timeout=1)
+            except (OSError,subprocess.TimeoutExpired):pass
+            if self.thread is not None and self.thread is not threading.current_thread():
+                self.thread.join(timeout=.5)
+        with self.lock:self.frame=None
+
+
+def _capture_precapture_window(env,address,manager):
     from PIL import Image
-    if activate: focus(env,address)
     c=window(env,address)
     monitors=hypr(env,'monitors')
-    m=next((m for m in monitors if m['id']==c['monitor']),None)
-    if not m: raise RuntimeError('window monitor unavailable')
+    m=next((item for item in monitors if item['id']==c['monitor']),None)
+    if not m:raise RuntimeError('window monitor unavailable')
     require_visible_window(c,m)
-    wb=bounds(c);mb=monitor_box(m)
-    if crop is None:
-        region=wb
-    else:
-        # screen_region() raises on an out-of-bounds crop; do the same here.
-        # intersect() alone would silently return a smaller region, so a --crop
-        # that runs past the edge would capture something other than what was
-        # asked for, and the agent would read coordinates off the wrong area.
-        x,y,w,h=crop
-        if w<=0 or h<=0 or x<0 or y<0 or x+w>wb[2] or y+h>wb[3]:
-            raise ValueError('crop must be a positive rectangle inside the selected window')
-        region=[wb[0]+x,wb[1]+y,w,h]
-    region=intersect(intersect(region,wb),mb)
-    # grim -s 1 uses logical layout pixels; explicitly exclude the cursor (no -c).
+    wb=bounds(c);mb=monitor_box(m);region=intersect(wb,mb)
     geometry=f'{region[0]},{region[1]} {region[2]}x{region[3]}'
-    capture_identity=_capture_identity(env)
-    start=capture_identity['capture_started_monotonic']
     from indicator import capture_clean
-    with capture_clean(STATE):
-        raw=run(['grim','-s','1','-g',geometry,'-t','ppm','-'],env,text=False)
+    with _CAPTURE_LOCK:
+        identity=_capture_identity(env)
+        start=identity['capture_started_monotonic']
+        with capture_clean(STATE):raw=manager._grim(geometry)
     capture_ms=round((time.monotonic()-start)*1000,3)
     decode_start=time.monotonic()
-    image=Image.open(io.BytesIO(raw)).convert('RGB')
+    with Image.open(io.BytesIO(raw)) as decoded:image=decoded.convert('RGB')
     decode_ms=round((time.monotonic()-decode_start)*1000,3)
+    if image.size!=(region[2],region[3]):raise RuntimeError('grim precapture dimensions changed')
     current=window(env,address)
-    if bounds(current) != wb or current['monitor']!=c['monitor']: raise RuntimeError('window moved during capture; observe again')
+    if bounds(current)!=wb or current['monitor']!=c['monitor']:raise RuntimeError('window moved during precapture')
     current_monitor=next((item for item in hypr(env,'monitors') if item['id']==current['monitor']),None)
-    if not current_monitor or monitor_box(current_monitor)!=mb or current_monitor['scale']!=m['scale'] or current_monitor.get('transform',0)!=m.get('transform',0):
-        raise RuntimeError('monitor layout changed during capture; observe again')
+    if (not current_monitor or monitor_box(current_monitor)!=mb or
+            current_monitor['scale']!=m['scale'] or current_monitor.get('transform',0)!=m.get('transform',0)):
+        raise RuntimeError('monitor layout changed during precapture')
     require_visible_window(current,current_monitor)
+    return {'image':image,'region':region,'window':address,'window_bounds':wb,
+            'monitor':m['name'],'monitor_box':mb,'monitor_scale':m['scale'],
+            'monitor_transform':m.get('transform',0),'capture_ms':capture_ms,
+            'decode_ms':decode_ms,**identity}
+
+
+def _ensure_precapture(env,address):
+    global _PRECACHE_MANAGER
+    key=(address.casefold(),tuple(compositor_identity(env).items()))
+    old=None
+    with _PRECACHE_LOCK:
+        if _PRECACHE_MANAGER is not None and _PRECACHE_MANAGER.key==key:
+            manager=_PRECACHE_MANAGER
+        else:
+            old=_PRECACHE_MANAGER
+            manager=WindowPreCapture(env,address)
+            _PRECACHE_MANAGER=manager
+    if old is not None:old.stop()
+    manager.start()
+    return manager
+
+
+def stop_precapture():
+    global _PRECACHE_MANAGER
+    with _PRECACHE_LOCK:
+        manager=_PRECACHE_MANAGER
+        _PRECACHE_MANAGER=None
+    if manager is not None:manager.stop()
+
+
+def pause_precapture():
+    with _PRECACHE_LOCK:manager=_PRECACHE_MANAGER
+    if manager is not None:manager.pause()
+
+
+def resume_precapture():
+    with _PRECACHE_LOCK:manager=_PRECACHE_MANAGER
+    if manager is not None:manager.resume()
+
+
+atexit.register(stop_precapture)
+
+
+def observe(env, address, crop=None, max_width=960, activate=False, persist=True,
+            use_prefetch=True):
+    from PIL import Image
+    if activate: focus(env,address)
+    if os.environ.get('CU_PRECAPTURE','1')=='0':
+        stop_precapture()
+        use_prefetch=False
+    observe_start=time.monotonic()
+    while True:
+        c=window(env,address)
+        monitors=hypr(env,'monitors')
+        m=next((item for item in monitors if item['id']==c['monitor']),None)
+        if not m:raise RuntimeError('window monitor unavailable')
+        require_visible_window(c,m)
+        wb=bounds(c);mb=monitor_box(m)
+        if crop is None:region=wb
+        else:
+            # screen_region() raises on an out-of-bounds crop; do the same here.
+            # intersect() alone would silently return a smaller region, so a --crop
+            # that runs past the edge would capture something other than what was
+            # asked for, and the agent would read coordinates off the wrong area.
+            x,y,w,h=crop
+            if w<=0 or h<=0 or x<0 or y<0 or x+w>wb[2] or y+h>wb[3]:
+                raise ValueError('crop must be a positive rectangle inside the selected window')
+            region=[wb[0]+x,wb[1]+y,w,h]
+        region=intersect(intersect(region,wb),mb)
+        frame=None;manager=None
+        if use_prefetch:
+            manager=_ensure_precapture(env,address)
+            frame=manager.get_frame(address,wb,m['name'],mb,m['scale'],m.get('transform',0),env)
+        if frame is not None:
+            decode_start=time.monotonic()
+            fx,fy,fw,fh=frame['region']
+            left,top=region[0]-fx,region[1]-fy
+            if left<0 or top<0 or left+region[2]>fw or top+region[3]>fh:
+                manager.discard(frame);use_prefetch=False;continue
+            image=frame['image'].crop((left,top,left+region[2],top+region[3]))
+            decode_ms=round((time.monotonic()-decode_start)*1000,3)
+            try:
+                current=window(env,address)
+                if bounds(current)!=wb or current['monitor']!=c['monitor']:
+                    raise RuntimeError('window moved during prefetched observation')
+                current_monitor=next((item for item in hypr(env,'monitors') if item['id']==current['monitor']),None)
+                if (not current_monitor or current_monitor['name']!=m['name'] or
+                        monitor_box(current_monitor)!=mb or current_monitor['scale']!=m['scale'] or
+                        current_monitor.get('transform',0)!=m.get('transform',0)):
+                    raise RuntimeError('monitor layout changed during prefetched observation')
+                require_visible_window(current,current_monitor)
+            except Exception:
+                manager.discard(frame);use_prefetch=False;continue
+            prefetch_age_ms=round((time.monotonic()-frame['capture_started_monotonic'])*1000,3)
+            if prefetch_age_ms>PRECACHE_MAX_AGE_SECONDS*1000:
+                manager.discard(frame);use_prefetch=False;continue
+            capture_identity={key:frame[key] for key in ('capture_started_monotonic','capture_started_wall',
+                'capture_boot_id','capture_compositor')}
+            capture_ms=0.0
+            prefetch_capture_ms=frame['capture_ms'];prefetch_decode_ms=frame['decode_ms']
+            prefetched=True
+            break
+        geometry=f'{region[0]},{region[1]} {region[2]}x{region[3]}'
+        from indicator import capture_clean
+        with _CAPTURE_LOCK:
+            capture_identity=_capture_identity(env)
+            start=capture_identity['capture_started_monotonic']
+            with capture_clean(STATE):
+                raw=run(['grim','-s','1','-g',geometry,'-t','ppm','-'],env,text=False)
+        capture_ms=round((time.monotonic()-start)*1000,3)
+        decode_start=time.monotonic()
+        with Image.open(io.BytesIO(raw)) as decoded:image=decoded.convert('RGB')
+        decode_ms=round((time.monotonic()-decode_start)*1000,3)
+        current=window(env,address)
+        if bounds(current)!=wb or current['monitor']!=c['monitor']:
+            raise RuntimeError('window moved during capture; observe again')
+        current_monitor=next((item for item in hypr(env,'monitors') if item['id']==current['monitor']),None)
+        if (not current_monitor or monitor_box(current_monitor)!=mb or
+                current_monitor['scale']!=m['scale'] or current_monitor.get('transform',0)!=m.get('transform',0)):
+            raise RuntimeError('monitor layout changed during capture; observe again')
+        require_visible_window(current,current_monitor)
+        prefetched=False
+        break
     meta={'backend':'desktop','scope':'window','window':address,'window_bounds':wb,'monitor':m['name'],
           'monitor_box':mb,'monitor_scale':m['scale'],'monitor_transform':m.get('transform',0),
           'region':region,'crop':crop,'capture_ms':capture_ms,'decode_ms':decode_ms,
-          'capture_elapsed_ms':round((time.monotonic()-start)*1000,3),**capture_identity}
+          'capture_elapsed_ms':round((time.monotonic()-observe_start)*1000,3),
+          'prefetched':prefetched,**capture_identity}
+    if prefetched:
+        meta.update(prefetch_age_ms=prefetch_age_ms,prefetch_capture_ms=prefetch_capture_ms,
+                    prefetch_decode_ms=prefetch_decode_ms)
     return save_observation(image,meta,max_width,persist)
 
 def screen_region(monitor_box_,crop):
@@ -1257,6 +1477,7 @@ def compact_result(result):
               'monitor','monitor_box','monitor_scale','monitor_transform','capture_ms',
               'decode_ms','encode_ms','capture_elapsed_ms','capture_started_wall',
               'capture_started_monotonic','capture_boot_id','capture_compositor',
+              'prefetched','prefetch_age_ms','prefetch_capture_ms','prefetch_decode_ms',
               'settle_stable','settle_samples','settle_ms')
         out={k:result[k] for k in keys if k in result}
         if 'monitor_scale' in result:out['monitor_scale']=result['monitor_scale']
@@ -1387,8 +1608,8 @@ def _diagnostic_event(event,meta,env,*,action_index=None,action_type=None,intend
         if os.write(fd,raw)!=len(raw):raise RuntimeError('diagnostic log write was incomplete')
     finally:os.close(fd)
 
-def desktop_act(env,meta,actions,after_capture=True,observation_path=None,
-                expected_terminal_window=None):
+def _desktop_act(env,meta,actions,after_capture=True,observation_path=None,
+                 expected_terminal_window=None):
     preflight_start=time.monotonic()
     try:
         if not isinstance(after_capture,bool): raise ValueError('after_capture must be boolean')
@@ -1479,13 +1700,15 @@ def desktop_act(env,meta,actions,after_capture=True,observation_path=None,
                 'next_step':DESKTOP_REOBSERVE}
     # Refuse coordinates from an image superseded by a visible layout change.
     new,fresh=(observe_screen(env,meta['monitor'],meta.get('crop'),meta['max_width'],persist=False) if screen_scope else
-               observe(env,address,meta.get('crop'),meta['max_width'],activate=False,persist=False))
+               observe(env,address,meta.get('crop'),meta['max_width'],activate=False,persist=False,
+                       use_prefetch=False))
     from PIL import Image
     old=verified_image if hasattr(verified_image,'size') else Image.open(meta['image'])
     if screen_changed(old,new,actions):
         time.sleep(.15)
         settled,settled_meta=(observe_screen(env,meta['monitor'],meta.get('crop'),meta['max_width'],persist=False) if screen_scope else
-                              observe(env,address,meta.get('crop'),meta['max_width'],activate=False,persist=False))
+                              observe(env,address,meta.get('crop'),meta['max_width'],activate=False,persist=False,
+                                      use_prefetch=False))
         if not screen_changed(new,settled,actions) and not _action_points_changed(old,settled,actions):
             _diagnostic_event('preflight_retry',meta,env,completed=0,error='screen changed',active_window=active_window)
             new,fresh=settled,settled_meta
@@ -1711,7 +1934,8 @@ def desktop_act(env,meta,actions,after_capture=True,observation_path=None,
         try:
             after_capture_start=time.monotonic()
             result['after']=(observe_screen(env,meta['monitor'],meta.get('crop'),meta['max_width']) if screen_scope else
-                             observe(env,terminal_address,meta.get('crop'),meta['max_width'],activate=False))
+                             observe(env,terminal_address,meta.get('crop'),meta['max_width'],activate=False,
+                                     use_prefetch=False))
             result['frame_bytes_changed']=result['after']['pixel_sha256']!=meta['pixel_sha256']
             result['changed']=result['frame_bytes_changed']  # Compatibility alias, not semantic success.
             result['change_meaning']='Exact captured pixel hash differs; animations count. Does not confirm app action succeeded.'
@@ -1725,6 +1949,16 @@ def desktop_act(env,meta,actions,after_capture=True,observation_path=None,
     _diagnostic_event('operation_completed',meta,env,completed=completed,
                       error=error if error else None,active_window=active_window)
     return result
+
+def desktop_act(env,meta,actions,after_capture=True,observation_path=None,
+                expected_terminal_window=None):
+    pause_precapture()
+    try:
+        return _desktop_act(env,meta,actions,after_capture,observation_path,
+                            expected_terminal_window)
+    finally:
+        resume_precapture()
+
 
 def browser_timeout(request):
     # Keep setup/snapshot allowance; each guard can take 5s, and the final
@@ -2271,7 +2505,8 @@ def main():
             if args.settle_ms:
                 if args.focus:focus(env,args.window)
                 capture=lambda: (observe_screen(env,args.screen,args.crop,args.max_width,persist=False) if args.screen else
-                                 observe(env,args.window,args.crop,args.max_width,activate=False,persist=False))
+                                 observe(env,args.window,args.crop,args.max_width,activate=False,persist=False,
+                                         use_prefetch=False))
                 result=settled_observation(capture,args.settle_ms,args.max_width)
             else:
                 result=(observe_screen(env,args.screen,args.crop,args.max_width) if args.screen else

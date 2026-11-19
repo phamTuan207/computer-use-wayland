@@ -71,9 +71,11 @@ def relay(source, sink):
         cu.BROWSER_ENDPOINT='http://127.0.0.1:9222'
         return relay_commands(source,sink)
     finally:
-        cu.browser=browser
-        cu.BROWSER_ENDPOINT=endpoint
-        worker.close()
+        try:cu.stop_precapture()
+        finally:
+            cu.browser=browser
+            cu.BROWSER_ENDPOINT=endpoint
+            worker.close()
 
 
 REQUEST_LINE_LIMIT=8*1024*1024

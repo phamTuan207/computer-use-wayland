@@ -1,6 +1,7 @@
 """Focus/capture regressions with a fake compositor; never send desktop input."""
 import importlib.util
 import io
+import os
 from pathlib import Path
 import sys
 import unittest
@@ -22,6 +23,8 @@ class Observe(unittest.TestCase):
         self.client={'address':'0x1','monitor':0,'at':[0,0],'size':[20,10],'workspace':{'id':1}}
         raw=io.BytesIO();Image.new('RGB',(20,10)).save(raw,format='PPM')
         self.stack=ExitStack();self.addCleanup(self.stack.close)
+        self.stack.enter_context(patch.dict(os.environ,{'CU_PRECAPTURE':'0'}))
+        self.addCleanup(cu.stop_precapture)
         # Never touch a live session socket from a mock test.
         self.indicator=self.stack.enter_context(patch.object(indicator,'request',return_value=False))
         self.stack.enter_context(patch.object(indicator.socket,'socket',

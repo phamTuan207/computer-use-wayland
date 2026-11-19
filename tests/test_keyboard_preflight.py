@@ -54,7 +54,7 @@ class DesktopPreflight(unittest.TestCase):
         self.stack.enter_context(patch.object(cu,'fcitx5_running',return_value=False))
         self.stack.enter_context(patch.object(cu,'window',return_value={'at':[0,0],'size':[20,20]}))
         self.hypr_mock=self.stack.enter_context(patch.object(cu,'hypr',side_effect=self.hypr))
-        self.stack.enter_context(patch.object(cu,'observe',side_effect=self.observe))
+        self.observe_mock=self.stack.enter_context(patch.object(cu,'observe',side_effect=self.observe))
         self.stack.enter_context(patch('PIL.Image.open',return_value=self.image))
         self.pointer_cls=self.stack.enter_context(patch.object(cu,'Pointer'))
         self.pointer=self.pointer_cls.return_value
@@ -79,6 +79,13 @@ class DesktopPreflight(unittest.TestCase):
         self.pointer_cls.assert_not_called()
         self.assertEqual(self.typed.call_count,2)
         self.indicator.assert_not_called()
+
+    def test_preflight_and_after_observations_bypass_precapture(self):
+        result=cu.desktop_act({},self.meta,[{'type':'wait','ms':10}])
+        self.assertTrue(result['ok'],result)
+        self.assertEqual(self.observe_mock.call_count,2)
+        self.assertTrue(all(call.kwargs.get('use_prefetch') is False
+                            for call in self.observe_mock.call_args_list))
 
     def test_wait_never_opens_keyboard_or_pointer(self):
         with patch.object(cu,'wait_cancelable') as wait:
