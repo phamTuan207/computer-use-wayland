@@ -1,12 +1,13 @@
 -- Upstream optical formula; transparent material scoped to the indicator.
 if hl.plugin.hyprglass then
   -- plus-sharp (2026-11-18): apple-plus with less blur and more refraction
+  -- shayxo fix (2026-11-19, worker A): DEPTH_DP 9->14 (eff peak 3.9->6.1px); blur 0.10 (1.2px, after-refraction via shader mix, 0 at rim).
   local material = {
     -- Legacy uses a fixed 9 dp depth; keep this key for the optional lens-edge path.
     refraction_strength = 0.55, refraction_flow = 1.0,
     -- Legacy's refraction band is fixed at 14 dp; edge_thickness still sets contour-field reach.
     refraction_spread = 1.0, edge_thickness = 0.05,
-    lens_distortion = 0.6, blur_strength = 0.0,
+    lens_distortion = 0.6, blur_strength = 0.10,
     chromatic_aberration = 0.07, fresnel_strength = 0.10,
     specular_strength = 0.55, bevel_strength = 0.45, bevel_size = 3.0,
     bevel_tint = 0.0, bevel_shadow = 0.0, bevel_angle = 315.0,

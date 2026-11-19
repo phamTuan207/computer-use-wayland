@@ -8,7 +8,7 @@ index 5f4a0ab..77e1f49 100644
  
 +// Shayxo Legacy Chrome geometry and task-selected material values.
 +const float SHAYXO_REFRACT_BAND_DP = 14.0;
-+const float SHAYXO_REFRACT_DEPTH_DP = 9.0;
++const float SHAYXO_REFRACT_DEPTH_DP = 14.0;
 +const float SHAYXO_IOR = 1.5;
 +const float SHAYXO_BEVEL_POWER = 2.0;
 +const float SHAYXO_CORNER_POWER = 2.0;
