@@ -84,6 +84,8 @@ DEFAULT_ENDPOINT = "http://127.0.0.1:9222"
 DEFAULT_PROFILE = Path.home() / ".config" / "chromium" / "Default"
 STATE_PATH = (Path.home() / ".local" / "share" / "agent-computer-use"
               / "chromium-cli-state.json")
+SESSION_PATH = (Path(os.environ.get("XDG_CACHE_HOME", str(Path.home() / ".cache")))
+                / "agent-computer-use" / "session.json")
 HTTP_TIMEOUT_SECONDS = 5
 DEFAULT_LIMIT = 20
 MAX_LIMIT = 200
@@ -422,8 +424,45 @@ def read_prefetched_page(tab):
     return value
 
 
+def _active_session_token():
+    """Read the token published by the session guardian, matching the wrapper env if set."""
+    try:
+        directory=SESSION_PATH.parent.lstat()
+        if (not stat.S_ISDIR(directory.st_mode) or directory.st_uid!=os.geteuid() or
+                stat.S_IMODE(directory.st_mode)!=0o700):
+            return None
+        fd=os.open(SESSION_PATH,os.O_RDONLY|os.O_NOFOLLOW|os.O_CLOEXEC)
+        with os.fdopen(fd,"rb") as stream:
+            info=os.fstat(stream.fileno())
+            if (not stat.S_ISREG(info.st_mode) or info.st_uid!=os.geteuid() or
+                    stat.S_IMODE(info.st_mode)!=0o600 or info.st_size>65536):
+                return None
+            raw=stream.read(65537)
+    except (FileNotFoundError,OSError):
+        return None
+    try:
+        snapshot=json.loads(raw)
+    except (json.JSONDecodeError,UnicodeDecodeError):
+        return None
+    token=snapshot.get("token") if isinstance(snapshot,dict) else None
+    if (not isinstance(snapshot,dict) or snapshot.get("version") not in (2,3,4) or
+            not isinstance(token,str) or not PREFETCH_TOKEN_RE.fullmatch(token)):
+        return None
+    try:
+        (SESSION_PATH.parent/("stop-"+token)).lstat()
+    except FileNotFoundError:
+        pass
+    except OSError:
+        return None
+    else:
+        return None
+    supplied=os.environ.get("CU_SESSION_TOKEN")
+    if supplied is not None and supplied!=token:
+        return None
+    return token
+
+
 def _prefetch_path(token=None):
-    token=token or os.environ.get("CU_SESSION_TOKEN")
     if not isinstance(token,str) or not PREFETCH_TOKEN_RE.fullmatch(token):
         return None
     return STATE_PATH.parent / ("chromium-prefetch-" + token + ".json")
@@ -510,10 +549,10 @@ def _prune_prefetches(records,now=None):
 
 
 def clear_session_prefetches(token=None):
+    token=_active_session_token() if token is None else token
     path=_prefetch_path(token)
     if path is None:return
-    actual_token=token or os.environ.get("CU_SESSION_TOKEN")
-    try:records=_read_prefetches(actual_token)
+    try:records=_read_prefetches(token)
     except (OSError,RuntimeError,ValueError):records=[]
     for record in records:_close_prefetch_target(record)
     try:
@@ -524,7 +563,7 @@ def clear_session_prefetches(token=None):
 
 
 def clear_other_prefetch_sessions(token=None):
-    current=token or os.environ.get("CU_SESSION_TOKEN")
+    current=_active_session_token() if token is None else token
     if not isinstance(current,str) or not PREFETCH_TOKEN_RE.fullmatch(current):return
     prefix="chromium-prefetch-"
     for path in STATE_PATH.parent.glob(prefix+"*.json"):
@@ -685,7 +724,7 @@ def _prefetched_target(endpoint,record):
 
 def cmd_prefetch(endpoint,args):
     url=validate_url(args.url)
-    token=os.environ.get("CU_SESSION_TOKEN")
+    token=_active_session_token()
     if _prefetch_path(token) is None:
         raise ValueError("prefetch requires an active computer-use task")
     records=_prune_prefetches(_read_prefetches(token))
@@ -720,7 +759,7 @@ def cmd_prefetch(endpoint,args):
 def cmd_open(endpoint, args):
     started=time.monotonic()
     url = validate_url(args.url)
-    token=os.environ.get("CU_SESSION_TOKEN")
+    token=_active_session_token()
     records=_prune_prefetches(_read_prefetches(token))
     matching=[record for record in records
               if record["endpoint"]==endpoint and record["url"]==url]

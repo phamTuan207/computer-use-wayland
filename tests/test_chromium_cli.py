@@ -133,10 +133,14 @@ class ChromiumCliTests(unittest.TestCase):
         self.tmp = Path(tempfile.mkdtemp(prefix="chromium-cli-test-"))
         self.state_path = self.tmp / "state.json"
         self._orig_state = chromium_cli.STATE_PATH
+        self.session_path = self.tmp / "cache" / "agent-computer-use" / "session.json"
+        self._orig_session = chromium_cli.SESSION_PATH
         chromium_cli.STATE_PATH = self.state_path
+        chromium_cli.SESSION_PATH = self.session_path
 
     def tearDown(self):
         chromium_cli.STATE_PATH = self._orig_state
+        chromium_cli.SESSION_PATH = self._orig_session
         import shutil
         shutil.rmtree(self.tmp, ignore_errors=True)
 
@@ -152,6 +156,11 @@ class ChromiumCliTests(unittest.TestCase):
                 "webSocketDebuggerUrl":"ws://127.0.0.1/devtools/page/"+target_id}
         StubCdpHandler.tabs.append(target)
         return target
+
+    def write_session_token(self, token):
+        self.session_path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+        self.session_path.write_text(json.dumps({"version":4,"token":token}))
+        self.session_path.chmod(0o600)
 
     def make_profile(self, with_bookmarks=True, nested=False):
         """Synthetic profile dir with History and optional Bookmarks."""
@@ -268,6 +277,7 @@ class ChromiumCliTests(unittest.TestCase):
 
     def test_prefetch_returns_without_waiting_for_page_load(self):
         token="a"*32
+        self.write_session_token(token)
         target=self.add_prefetch_target("P1")
         def create(endpoint):return target
         def navigate(tab,url):tab["url"]=url
@@ -303,6 +313,7 @@ class ChromiumCliTests(unittest.TestCase):
 
     def test_open_adopts_loaded_prefetch_and_reports_near_zero_load(self):
         token="b"*32
+        self.write_session_token(token)
         url="https://example.com/warm"
         target=self.add_prefetch_target("P2")
         with mock.patch.dict(os.environ,{"CU_SESSION_TOKEN":token}), \
@@ -322,6 +333,7 @@ class ChromiumCliTests(unittest.TestCase):
 
     def test_prefetch_expires_after_thirty_seconds_then_open_navigates_fresh(self):
         token="c"*32
+        self.write_session_token(token)
         url="https://example.com/expired"
         target=self.add_prefetch_target("P3")
         with mock.patch.dict(os.environ,{"CU_SESSION_TOKEN":token}), \
@@ -340,6 +352,7 @@ class ChromiumCliTests(unittest.TestCase):
 
     def test_fourth_prefetch_evicts_and_closes_oldest(self):
         token="d"*32
+        self.write_session_token(token)
         counter=[0]
         def create(endpoint):
             counter[0]+=1
@@ -358,6 +371,7 @@ class ChromiumCliTests(unittest.TestCase):
 
     def test_wrong_url_prefetch_is_not_adopted(self):
         token="e"*32
+        self.write_session_token(token)
         target=self.add_prefetch_target("P5")
         with mock.patch.dict(os.environ,{"CU_SESSION_TOKEN":token}), \
              mock.patch.object(chromium_cli,"create_background_target",return_value=target), \
@@ -371,6 +385,7 @@ class ChromiumCliTests(unittest.TestCase):
 
     def test_errored_prefetch_is_closed_and_open_navigates_fresh(self):
         token="f"*32
+        self.write_session_token(token)
         url="https://example.com/error"
         target=self.add_prefetch_target("P6")
         with mock.patch.dict(os.environ,{"CU_SESSION_TOKEN":token}), \
@@ -388,6 +403,7 @@ class ChromiumCliTests(unittest.TestCase):
 
     def test_session_cleanup_closes_warm_target_and_removes_task_state(self):
         token="9"*32
+        self.write_session_token(token)
         target=self.add_prefetch_target("P9")
         with mock.patch.dict(os.environ,{"CU_SESSION_TOKEN":token}), \
              mock.patch.object(chromium_cli,"create_background_target",return_value=target), \
@@ -398,6 +414,44 @@ class ChromiumCliTests(unittest.TestCase):
             chromium_cli.clear_session_prefetches(token)
         self.assertFalse(state_path.exists())
         self.assertNotIn("P9",[tab["id"] for tab in StubCdpHandler.tabs])
+
+    def test_prefetch_finds_token_in_broker_session_snapshot_without_environment(self):
+        token="8"*32
+        self.write_session_token(token)
+        target=self.add_prefetch_target("P10")
+        with mock.patch.dict(os.environ):
+            os.environ.pop("CU_SESSION_TOKEN",None)
+            with mock.patch.object(chromium_cli,"create_background_target",return_value=target), \
+                 mock.patch.object(chromium_cli,"navigate_tab_background",
+                                   side_effect=lambda tab,url:tab.update(url=url)):
+                code,out=self.run_cli(["--endpoint",self.endpoint,"prefetch",
+                                       "https://example.com/from-snapshot"])
+        self.assertEqual(code,0,out)
+        self.assertTrue(out["prefetched"])
+        self.assertTrue(chromium_cli._prefetch_path(token).exists())
+
+    def test_finished_session_token_cannot_prefetch_or_adopt_old_target(self):
+        token="7"*32
+        self.write_session_token(token)
+        target=self.add_prefetch_target("P11")
+        url="https://example.com/old-session"
+        with mock.patch.dict(os.environ,{"CU_SESSION_TOKEN":token}), \
+             mock.patch.object(chromium_cli,"create_background_target",return_value=target), \
+             mock.patch.object(chromium_cli,"navigate_tab_background",
+                               side_effect=lambda tab,url:tab.update(url=url)):
+            code,_=self.run_cli(["--endpoint",self.endpoint,"prefetch",url])
+            self.assertEqual(code,0)
+            self.session_path.unlink()
+            code,out=self.run_cli(["--endpoint",self.endpoint,"prefetch",url])
+            self.assertEqual(code,1)
+            self.assertIn("active computer-use task",out["error"])
+            with mock.patch.object(chromium_cli,"read_prefetched_page",
+                                   side_effect=AssertionError("dead prefetch was inspected")), \
+                 mock.patch.object(chromium_cli,"navigate_tab_via_ws") as navigate:
+                code,opened=self.run_cli(["--endpoint",self.endpoint,"open",url])
+        self.assertEqual(code,0,opened)
+        self.assertFalse(opened["prefetched"])
+        navigate.assert_called_once_with(mock.ANY,url)
 
     def test_open_rejects_non_http_url(self):
         code, out = self.run_cli(
