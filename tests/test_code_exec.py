@@ -62,6 +62,12 @@ class FakeDomBackend(FakeBackend):
         return {'ok': True, 'endpoint': 'http://127.0.0.1:9222',
                 'reused': True}
 
+    def windows(self):
+        self.calls.append(('windows',))
+        return super().windows() + [
+            {'address': '0xdef', 'class': 'chromium', 'title': 'about:blank',
+             'at': [0, 0], 'size': [800, 600], 'workspace': {'id': 1}}]
+
     def dom_tabs(self):
         self.dom_calls.append(('tabs',))
         return [{'id': 'tab-1', 'title': 'fixture', 'url': 'file:///fixture'}]
@@ -102,6 +108,24 @@ class FakeDomBackend(FakeBackend):
         else:
             result['after'] = self._snapshot(target)
         return result
+
+
+class FakeSlowDomBackend(FakeDomBackend):
+    """Chromium window appears only after N windows() polls (startup race)."""
+
+    def __init__(self, chromium_after_calls=3, **kwargs):
+        super().__init__(**kwargs)
+        self.chromium_after_calls = chromium_after_calls
+        self.windows_calls = 0
+
+    def windows(self):
+        self.windows_calls += 1
+        if self.windows_calls < self.chromium_after_calls:
+            self.calls.append(('windows',))
+            return [{'address': '0xabc', 'class': 'kitty',
+                     'title': 'speed-pick1-term', 'at': [0, 0],
+                     'size': [800, 600], 'workspace': {'id': 1}}]
+        return super().windows()
 
 
 def run(source, backend=None, **kwargs):
@@ -403,6 +427,52 @@ class DomApiTests(unittest.TestCase):
         self.assertEqual(result['ok'], True)
         self.assertEqual(backend.dom_calls, [('start',)])
 
+    def test_dom_start_waits_for_chromium_window_to_appear(self):
+        backend = FakeSlowDomBackend(chromium_after_calls=3)
+        session = code_exec.CodeExecSession(backend)
+        result = session.api_dom_start()
+        self.assertEqual(result['ok'], True)
+        self.assertEqual(backend.windows_calls, 3)
+        self.assertEqual(session.api_calls, 1)
+
+    def test_dom_start_raises_when_chromium_window_never_appears(self):
+        backend = FakeSlowDomBackend(chromium_after_calls=10 ** 9)
+        session = code_exec.CodeExecSession(backend)
+        with mock.patch.object(
+                code_exec, 'DOM_WINDOW_WAIT_SECONDS', 0.4), mock.patch.object(
+                code_exec, 'DOM_WINDOW_POLL_INTERVAL', 0.05):
+            with self.assertRaisesRegex(code_exec.CodeExecError,
+                                        'did not appear'):
+                session.api_dom_start()
+
+    def test_d1_program_looks_up_chromium_right_after_dom_start(self):
+        source = (
+            'started = dom_start()\n'
+            'assert_state(started["ok"], "dom start failed")\n'
+            'wins = windows()\n'
+            'chrome = [w for w in wins if w["class"] == "chromium"][0]\n'
+            'obs = observe(window=chrome["address"])\n'
+            'result = act([{"type": "key", "keys": ["ctrl", "l"]}, '
+            '{"type": "type", "text": "file:///fixture\\n"}], obs)\n'
+            'verify = observe(window=chrome["address"])\n'
+            'assert_state(result["ok"], "navigate act failed")\n'
+            'tabs = dom_tabs()\n'
+            'tab = [t for t in tabs if t["url"] == "file:///fixture"][0]\n'
+            'snap = dom_observe(tab["id"])\n'
+            'btn = [e for e in snap["elements"] if e["name"] == "Show result"][0]\n'
+            'clicked = dom_act(snap, [{"type": "click", "ref": btn["ref"]}])\n'
+            'assert_state(clicked["ok"], "dom click failed")\n'
+            'after = clicked["after"]\n'
+            'dom_assert(after, selector="#result", text="pick4-ok")\n'
+            'verify_image = verify["image"]\n'
+        )
+        backend = FakeSlowDomBackend(chromium_after_calls=3)
+        result = run(source, backend)
+        self.assertTrue(result['ok'], result)
+        self.assertEqual(result['api_calls'], 9)
+        # 3 wait polls inside dom_start() plus the program's own windows().
+        self.assertEqual(backend.windows_calls, 4)
+
     def test_dom_observe_binds_snapshot_and_returns_elements(self):
         backend = FakeDomBackend()
         session = code_exec.CodeExecSession(backend)
@@ -520,7 +590,10 @@ class DomApiTests(unittest.TestCase):
         result = run(source, backend)
         self.assertTrue(result['ok'], result)
         self.assertEqual(result['api_calls'], 9)
-        self.assertEqual(backend.calls[-1][0], 'observe_window')
+        kinds = [call[0] for call in backend.calls]
+        self.assertEqual(kinds.count('observe_window'), 2)
+        # dom_start() waits on windows() after the verify observe.
+        self.assertEqual(kinds[-1], 'windows')
         self.assertEqual(backend.dom_calls[-1][0], 'act')
 
 
