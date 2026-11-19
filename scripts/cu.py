@@ -1888,6 +1888,67 @@ def cli_run(app,command_args):
     envelope['ok']=envelope.get('returncode')==0 and 'error' not in envelope
     return envelope
 
+class CodeExecBackend:
+    """Adapter from the code-exec allowlisted API to the brokered primitives.
+
+    Every call goes through the same code paths desktop_act and observe
+    already use, so pointer-miss, screen-changed, cancellation, and the
+    brokered wtype keyboard path all still apply. Observation recording
+    mirrors the observe/act branches in main().
+    """
+
+    def __init__(self, env):
+        self.env = env
+
+    def windows(self):
+        keys = ('address', 'class', 'title', 'at', 'size', 'workspace')
+        return [{k: c.get(k) for k in keys} for c in hypr(self.env, 'clients')]
+
+    def observe_window(self, address, crop, max_width):
+        import session_policy
+        meta = observe(self.env, address, crop, max_width)
+        session_policy.record_observation(STATE, os.environ.get('CU_SESSION_TOKEN'), meta)
+        return meta
+
+    def observe_screen(self, monitor, crop, max_width):
+        import session_policy
+        meta = observe_screen(self.env, monitor, crop, max_width)
+        session_policy.record_observation(STATE, os.environ.get('CU_SESSION_TOKEN'), meta)
+        return meta
+
+    def act(self, meta, actions, observation_path):
+        import session_policy
+        result = desktop_act(self.env, meta, actions, observation_path=observation_path)
+        if is_transient_refusal(result):
+            session_policy.record_refusal(STATE, os.environ.get('CU_SESSION_TOKEN'))
+        elif result.get('ok') is True or is_completed_capture_error(result, len(actions)):
+            session_policy.complete_requirement(STATE, os.environ.get('CU_SESSION_TOKEN'))
+        return result
+
+
+def read_code_exec_program(source):
+    """Read a code-exec program from '-' (stdin) or a private file path."""
+    import code_exec as _code_exec
+    if source == '-':
+        raw = sys.stdin.read(_code_exec.MAX_PROGRAM_CHARS + 1)
+        if len(raw) > _code_exec.MAX_PROGRAM_CHARS:
+            raise ValueError('program exceeds %d chars' % _code_exec.MAX_PROGRAM_CHARS)
+        return raw
+    path = Path(source)
+    try:
+        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC)
+        with os.fdopen(fd, 'rb') as stream:
+            st = os.fstat(stream.fileno())
+            if (not stat.S_ISREG(st.st_mode) or st.st_uid != os.geteuid() or
+                    stat.S_IMODE(st.st_mode) != 0o600 or
+                    st.st_size > _code_exec.MAX_PROGRAM_CHARS):
+                raise ValueError('program file must be a private regular file under %d chars'
+                                 % _code_exec.MAX_PROGRAM_CHARS)
+            return stream.read().decode('utf-8')
+    except OSError as exc:
+        raise ValueError('program file is unavailable: ' + str(exc)) from exc
+
+
 def cli_command(args):
     registry=load_cli_registry()
     if args.cli_operation=='list':
@@ -1936,6 +1997,11 @@ def main():
     b.add_argument('--scope',help='observe only: one CSS selector to enumerate; one read, not sticky, not an input boundary')
     b.add_argument('--after-scope',help='act only: scope the successful after-snapshot to one CSS selector; not sticky, not an input boundary')
     a=sub.add_parser('a11y');a.add_argument('operation',choices=['apps','observe','drill','act']);a.add_argument('ref',nargs='?');a.add_argument('--pid',type=int);a.add_argument('--snapshot');a.add_argument('--actions');a.add_argument('--skeleton',action='store_true')
+    ce=sub.add_parser('code-exec',help='run one allowlisted program as the action (Pick 1, opt-in flag CU_CODE_EXEC=1)')
+    ce.add_argument('--program',required=True,help='program source file (mode 600) or - for stdin')
+    ce.add_argument('--intent',default=None,help='one-line intent, at most 200 chars')
+    ce.add_argument('--target',default=None,help='task target path under /tmp, recorded only')
+    ce.add_argument('--wall-seconds',type=int,default=30,help='program wall-clock budget, 1..60')
     cli=sub.add_parser('cli',help='list and run vendored CLI-Anything harnesses')
     cli_sub=cli.add_subparsers(dest='cli_operation',required=True)
     cli_sub.add_parser('list',help='list apps from the vendored registry')
@@ -1968,6 +2034,7 @@ def main():
     # Doctor acquires its own environment inside its diagnostic branch so an
     # environment failure degrades instead of escaping before the branch.
     env=(environment() if args.command in ('session','stop','recover','windows','observe','act','a11y') or
+         (args.command=='code-exec' and os.environ.get('CU_CODE_EXEC','').strip().lower() in ('1','true','yes')) or
          (args.command=='browser' and args.operation=='start') else None)
     if args.command in ('session','stop','finish','recover','cancel'):
         import cursor_session
@@ -1982,6 +2049,36 @@ def main():
             cancel_hotkey_module().latch(CANCEL,'cli')
         cursor_session.request_stop()
         result={'ok':True}
+    elif args.command=='code-exec':
+        # Pick 1, opt-in flag default OFF. A program-level failure (assert,
+        # sandbox refusal, backend refusal) is a result envelope, not a
+        # session-ending error: print it and return 0 so the supervisor can
+        # replan. Only cancellation or an infrastructure exception escapes
+        # and stops the session, as with every other command.
+        import code_exec
+        if not code_exec.is_enabled():
+            print(json.dumps({'ok':False,'error':'code execution is disabled; set CU_CODE_EXEC=1',
+                              'error_type':'disabled'},ensure_ascii=False),flush=True)
+            return 0
+        if args.intent is not None and (not isinstance(args.intent,str) or len(args.intent)>200):
+            raise ValueError('--intent must be at most 200 chars')
+        if args.target is not None:
+            target=Path(args.target)
+            if not target.is_absolute() or Path('/tmp') not in target.resolve().parents and target.resolve()!=Path('/tmp'):
+                raise ValueError('--target must be a path under /tmp')
+        require_session()
+        check_cancel()
+        program=read_code_exec_program(args.program)
+        with locked():
+            result=code_exec.run_program(
+                program, CodeExecBackend(env), state_dir=STATE,
+                session_token=os.environ.get('CU_SESSION_TOKEN'),
+                intent=args.intent, check_cancel=check_cancel,
+                wall_seconds=args.wall_seconds)
+        if args.target is not None:
+            result['target']=args.target
+        print(json.dumps(result,ensure_ascii=False,separators=(',',':')),flush=True)
+        return 0
     elif args.command=='resume':
         CANCEL.unlink(missing_ok=True)
         result={'ok':True,'cancelled':False}
