@@ -115,7 +115,17 @@ python3 scripts/sync-installed.py --check
 
 Run setup first, then sync the installed package, then check it. Sync is the
 mandatory final deployment step after every code, native source, or cursor
-profile change. To restore the prior managed installation, use the absolute
+profile change. The repository CLI is authoritative: the installed
+`computer-use` is only a published copy of this repo, made by
+`scripts/sync-installed.py` (installed tree
+`~/.local/share/agent-computer-use`, command link `~/.local/bin/computer-use`).
+If `computer-use --help` lacks a command the repo lists
+(`python3 scripts/cu.py --help`, for example `code-exec`), the install is
+stale: re-run sync and `--check` (the relay must be idle; sync restarts it so
+the running broker loads the new code). There is no `verify` command in
+either CLI: `verify` appears only as a field in the `a11y ground` result,
+telling you which `observe` command to run to confirm the grounded target.
+To restore the prior managed installation, use the absolute
 snapshot path printed by sync:
 
 ```sh
@@ -357,7 +367,13 @@ the hook activates the backend at a fresh login.
 
 Desktop actions re-check window geometry, focus and screen state before
 input and **may refuse** rather than act on a stale observation. There is no
-automatic observation, retry or replay. Cleanup stops the driver group, drains
+automatic observation, retry or replay. If an action opens, closes, or
+re-tiles any window, the session ends with an error even when the action
+itself succeeded: the next guard finds the geometry changed and the driver
+reports `session_ended`. That is expected, not a failure of the action.
+Verify the result outside the session (`windows`, file bytes), then start a
+new session and observe there. The words `observe again` in that error do not
+mean you can continue in the same session. Cleanup stops the driver group, drains
 input, releases the cursor lease, and removes the overlay; failed cleanup retains a session record for
 `computer-use recover`.
 

@@ -86,7 +86,11 @@ python3 scripts/session_remote.py finish --lease-file PRIVATE_FILE
 ```
 
 `REQUEST_JSON` is the existing driver envelope, for example
-`{"args":["observe","--window","0xEXACT_ADDRESS"]}`. Keep the lease file
+`{"args":["observe","--window","0xEXACT_ADDRESS"]}`. `--request` takes a
+FILE PATH to a JSON file holding that envelope, never inline JSON. The file
+must be a regular file owned by you and private (mode `0600`); anything else
+is refused with `unsafe_file`. Write it with
+`printf '%s' '{...}' > file && chmod 600 file`. Keep the lease file
 private (mode `0600`) and reuse that same file after a lost `start` or `request`
 response. Request sequences begin at 1. The broker remembers only the active
 and most recently completed request; an older result expires and is never
@@ -95,8 +99,15 @@ different payload conflicts. A disconnected client does not cancel accepted
 work. A broker crash makes the old generation unknown; inspect cleanup state
 before creating a new lease. The broker never resumes or restarts a failed
 driver. A refused `start` is also a saved outcome: after the condition is
-resolved and cleanup is proven, make a new private lease file for a new explicit
-start attempt.
+resolved and cleanup is proven, pass a NEW lease path that does not exist yet
+for a new explicit start attempt. Do NOT create the lease file yourself:
+`start` creates it mode `0600`. If a file already exists at that path, `start`
+reads it as a lease instead of creating one, so a pre-created or empty file is
+rejected with `invalid_lease_file` (it is malformed as a lease). Before any
+`start`, check whether the broker is busy: run
+`python3 scripts/session_remote.py status` and read its `state` field. If
+`state` is `running`, WAIT. Do NOT start. `computer-use status` cannot tell
+you this: it reports only the Esc cancellation latch, never session busyness.
 
 `status --lease-file PRIVATE_FILE` is an owner status check and renews the
 300-second idle lease. An ordinary status check does not renew it. `finish`
