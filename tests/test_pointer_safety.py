@@ -189,8 +189,10 @@ class PointerSafety(unittest.TestCase):
                 return {'x':20,'y':20} if cursor_calls[0]==5 else {'x':10,'y':10}
             return self.hypr(env,what)
         self.hypr_mock.side_effect=query
+        # This deliberate two-click batch exercises executor stop-on-failure, not a model group.
         result=cu.desktop_act({},self.meta,[{'type':'click','x':10,'y':10},
-                                           {'type':'click','x':20,'y':20}])
+                                           {'type':'click','x':20,'y':20}],
+                              group_policy='plan')
         self.assertFalse(result['ok'])
         self.assertTrue(result['outcome_uncertain'])
         self.assertIn('outcome uncertain',result['error'])
