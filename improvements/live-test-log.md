@@ -4130,3 +4130,6 @@ Standing workflow (dang, 21:48): test → log every error → write a report for
 - FAIL/ERROR comparison correction: the first pre-change hash used a different tuple encoding and cannot be compared. The 08:05:54 pre-change capture and 08:17:12 post-change run use the same sorted string-list encoding and both have SHA-256 55a97610fc0c6e17a06de8cc32f66df8ab9b000445f8c13a80e2f956864fb70b. The sorted FAIL and ERROR diffs are both empty.
 - A preliminary Broker repro wrapper stopped in cleanup with `AttributeError: 'BrokerHarness' object has no attribute 'finish_owned_task'`. The tool reported 0.500s elapsed, but that wrapper raised before emitting its timestamp. It was rerun successfully at 2026-11-19 08:11:08.938 to 08:11:09.192 +07 with proper cleanup. No source edit or desktop action occurred between attempts.
 - The measured G1 rejection remains not reproduced. No live Nautilus or live broker re-probe was run.
+
+## 2026-11-19 08:25:01.078 +4958.0 min, Pick 4 a11y final desktop check
+- Read-only `hyprctl --instance ... -j clients` showed Jarvis and Zen only in the active instance. The expected worker kitty and Chromium clients were absent from this listing. No desktop window action was issued.

@@ -26,3 +26,5 @@ Pushed to `origin/speed-swarm-pick4a11y`:
 - `4c2118a` test: pin broker a11y command acceptance
 
 A live G1 Nautilus re-probe against this branch remains for the coordinator after the broker is free. No live Nautilus, broker session, relay restart, or desktop window action was used for this fix.
+
+Final read-only `hyprctl --instance ... -j clients` check found Jarvis and Zen only in the active instance. No kitty or Chromium client appeared in that listing. No window was launched, focused, or closed.
