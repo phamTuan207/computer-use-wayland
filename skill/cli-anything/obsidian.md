@@ -10,6 +10,7 @@ description: >-
 <!-- Vendoring date: 2026-11-18 -->
 <!-- Upstream file version: 1.1.0 -->
 <!-- Body below is verbatim upstream; do not edit except by re-vendoring. -->
+<!-- Credit: CLI-Anything by HKUDS (Data Intelligence Lab, University of Hong Kong, led by Prof. Chao Huang), https://github.com/HKUDS/CLI-Anything, Apache License 2.0. Used with the owner's permission. Obsidian harness PyPI package author: Doruk Ozgen. -->
 
 # cli-anything-obsidian
 
