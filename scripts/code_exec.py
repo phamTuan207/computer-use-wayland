@@ -38,6 +38,19 @@ Allowlisted API (the only names a program may call):
   defaults to the most recent observation in this program run. A refusal
   dict is returned to the program (it may re-observe and retry); it does
   not raise.
+- dom_start() -> browser start dict; dom_tabs() -> page target list.
+  dom_start() waits, bounded to DOM_WINDOW_WAIT_SECONDS, for the managed
+  Chromium window to appear in windows() before returning: browser_start
+  returns once CDP answers, but the Wayland window can map later, and a
+  program that looks the window up immediately after dom_start() would
+  IndexError. The wait polls windows() directly, costs no API-call
+  budget, and fails closed if the window never appears.
+- dom_observe(target, scope=None, max_elements=80) -> compact DOM snapshot
+  dict. The snapshot id binds its target and refs for 90 seconds.
+- dom_act(snapshot, actions, after_scope=None) -> CDP result dict. Refs must
+  come from the supplied snapshot; successful after snapshots are bound too.
+- dom_assert(snapshot, ref=None, selector=None, text=None, value=None,
+  checked=None, timeout_ms=1000) -> True or raises AssertionError.
 - read_file(path, max_bytes=65536) -> str, only under /tmp, regular file,
   no symlink escape. Used for exact-source verification.
 - assert_state(condition, message="assert failed") -> raises AssertionError
@@ -60,8 +73,8 @@ this flag and no other pick.
 
 State: user variables that are JSON-serializable (str, number, bool, None,
 list, dict) persist across code-exec calls in the same session, in a mode
-0600 file under STATE named code-exec-<token>.json. Observation bindings
-are kept in the same file but expire after 90s, like any observation.
+0600 file under STATE named code-exec-<token>.json. Desktop observation and
+DOM snapshot bindings are kept in the same file but expire after 90s.
 
 Template rule: see improvements/pick1-program-template.md. Observe after
 act() and before file asserts. For shell printf text, use one single-quoted
@@ -69,6 +82,7 @@ argument and write \\n between output lines in the Python source.
 """
 import ast
 import json
+import math
 import os
 import re
 import sys
@@ -83,6 +97,9 @@ MAX_TRACE_STEPS = 20000
 PROGRAM_FILENAME = '<code-exec>'
 MAX_READ_BYTES = 65536
 OBSERVATION_MAX_AGE = 90
+DOM_WINDOW_CLASS = 'chromium'
+DOM_WINDOW_WAIT_SECONDS = 10.0
+DOM_WINDOW_POLL_INTERVAL = 0.2
 ASSERT_POLL_SECONDS = 2.0
 ASSERT_POLL_INTERVAL = 0.1
 READ_ROOT = Path('/tmp')
@@ -137,6 +154,100 @@ def _jsonable_copy(value):
     return value if _is_jsonable(value) else None
 
 
+def _utf16_length(value):
+    return len(value.encode('utf-16-le', 'surrogatepass')) // 2
+
+
+def _finite_number(value):
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return False
+    try:
+        return math.isfinite(value)
+    except OverflowError:
+        return False
+
+
+def _dom_modifier(key):
+    return isinstance(key, str) and key.casefold() in {
+        'ctrl', 'alt', 'shift', 'meta', 'super',
+    }
+
+
+def _dom_key_supported(key):
+    if not isinstance(key, str):
+        return False
+    if re.fullmatch(
+            r'(?:ctrl|alt|shift|meta|super|Enter|Tab|Escape|Back[Ss]pace|Delete|'
+            r'Arrow(?:Left|Right|Up|Down)|Home|End|PageUp|PageDown|space)', key):
+        return True
+    return (_utf16_length(key) == 1
+            and key not in ('\n', '\r', '\u2028', '\u2029'))
+
+
+def _validate_dom_actions(actions, refs):
+    """Mirror cdp.mjs action preflight before any CDP request is made."""
+    allowed = {'click', 'fill', 'set_value', 'key', 'scroll', 'wait', 'assert'}
+    element_actions = {'click', 'fill', 'set_value', 'assert'}
+    if not isinstance(actions, list) or not 1 <= len(actions) <= 32:
+        raise CodeExecError('actions must contain 1..32 items')
+    for action in actions:
+        if not isinstance(action, dict):
+            raise CodeExecError('each action must be an object')
+        action_type = action.get('type')
+        if not isinstance(action_type, str):
+            raise CodeExecError('type must be a string')
+        if action_type not in allowed:
+            raise CodeExecError('unsupported action')
+        if action_type in element_actions:
+            if ('ref' in action) == ('selector' in action):
+                raise CodeExecError('exactly one ref or selector required')
+            for name in ('ref', 'selector'):
+                if name in action:
+                    value = action[name]
+                    if not isinstance(value, str) or not value.strip():
+                        raise CodeExecError(name + ' must be a non-empty string')
+            if 'ref' in action and action['ref'] not in refs:
+                raise CodeExecError('ref is not present in the bound snapshot; observe again')
+        if action_type in ('fill', 'set_value'):
+            value = action.get('text')
+            if not isinstance(value, str) or _utf16_length(value) > 10000:
+                raise CodeExecError('text must be string <=10000 chars')
+        if action_type == 'key':
+            keys = action.get('keys')
+            if (not isinstance(keys, list) or not keys
+                    or any(not isinstance(key, str) or _utf16_length(key) >= 40
+                           for key in keys)):
+                raise CodeExecError('keys must be an array of key names')
+            if all(_dom_modifier(key) for key in keys):
+                raise CodeExecError('key action needs a non-modifier key')
+            if any(not _dom_key_supported(key) for key in keys):
+                raise CodeExecError('unsupported key')
+        if action_type == 'scroll':
+            for name in ('dx', 'dy', 'x', 'y'):
+                if name in action and not _finite_number(action[name]):
+                    raise CodeExecError('scroll ' + name + ' must be a finite number')
+            if 'dy' not in action or not _finite_number(action['dy']):
+                raise CodeExecError('scroll dy required')
+        if action_type == 'wait':
+            ms = action.get('ms')
+            if ms is None:
+                ms = 100
+            if not _finite_number(ms) or ms < 0 or ms > 2000:
+                raise CodeExecError('wait ms must be 0..2000')
+        if action_type == 'assert':
+            if 'value' in action and not isinstance(action['value'], str):
+                raise CodeExecError('assert value must be a string')
+            if 'text' in action and not isinstance(action['text'], str):
+                raise CodeExecError('assert text must be a string')
+            if 'checked' in action and not isinstance(action['checked'], bool):
+                raise CodeExecError('assert checked must be a boolean')
+            if 'timeout_ms' in action:
+                timeout = action['timeout_ms']
+                if not _finite_number(timeout) or timeout < 0:
+                    raise CodeExecError(
+                        'assert timeout_ms must be a non-negative finite number')
+
+
 class CodeExecError(ValueError):
     """A program failed a sandbox, budget, or API guard. Fails closed."""
 
@@ -148,6 +259,7 @@ class _Validator(ast.NodeVisitor):
         self.allowed_names = set(SAFE_BUILTINS) | {
             'windows', 'observe', 'act', 'read_file', 'assert_state',
             'assert_file_contains', 'assert_file_exists', 'print',
+            'dom_start', 'dom_tabs', 'dom_observe', 'dom_act', 'dom_assert',
         }
 
     def visit_Import(self, node):
@@ -255,6 +367,7 @@ class CodeExecSession:
         self.max_api_calls = max_api_calls
         self.variables = {}
         self.observations = {}
+        self.dom_snapshots = {}
         self.api_calls = 0
         self.log_lines = []
         self._deadline = None
@@ -290,6 +403,19 @@ class CodeExecSession:
                 k: v for k, v in observations.items()
                 if isinstance(v, dict) and isinstance(v.get('created'), (int, float))
                 and now - v['created'] <= OBSERVATION_MAX_AGE}
+        dom_snapshots = raw.get('dom_snapshots')
+        if isinstance(dom_snapshots, dict):
+            now = time.time()
+            self.dom_snapshots = {
+                k: v for k, v in dom_snapshots.items()
+                if isinstance(k, str) and isinstance(v, dict)
+                and isinstance(v.get('target'), str)
+                and isinstance(v.get('created'), (int, float))
+                and now - v['created'] <= OBSERVATION_MAX_AGE
+                and isinstance(v.get('refs'), list)
+                and all(isinstance(ref, str) for ref in v['refs'])
+                and isinstance(v.get('snapshot'), dict)
+                and v['snapshot'].get('snapshot') == k}
 
     def _save_state(self):
         path = self._state_path()
@@ -300,6 +426,7 @@ class CodeExecSession:
             payload = {
                 'variables': _jsonable_copy(self.variables),
                 'observations': _jsonable_copy(self.observations),
+                'dom_snapshots': _jsonable_copy(self.dom_snapshots),
             }
             fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC | os.O_NOFOLLOW, 0o600)
             try:
@@ -421,6 +548,185 @@ class CodeExecSession:
             raise CodeExecError('backend act returned a non-dict result')
         return result
 
+    def _dom_call(self, name, fn, *args, check_failure=True):
+        try:
+            result = self._api(name, fn, *args)
+        except CodeExecError:
+            raise
+        except Exception as exc:
+            self.check_cancel()
+            raise CodeExecError(str(exc)[:400]) from exc
+        if (check_failure and isinstance(result, dict)
+                and result.get('ok') is False):
+            raise CodeExecError(str(result.get('error') or (name + ' failed'))[:400])
+        return result
+
+    def _bind_dom_snapshot(self, target, snapshot):
+        if not isinstance(snapshot, dict):
+            raise CodeExecError('DOM snapshot must be a dict')
+        snapshot_id = snapshot.get('snapshot')
+        if not isinstance(snapshot_id, str) or not snapshot_id:
+            raise CodeExecError('backend returned a DOM snapshot without an id')
+        elements = snapshot.get('elements')
+        if not isinstance(elements, list):
+            raise CodeExecError('backend returned a DOM snapshot without elements')
+        refs = [element['ref'] for element in elements
+                if isinstance(element, dict) and isinstance(element.get('ref'), str)]
+        self.dom_snapshots[snapshot_id] = {
+            'target': target, 'created': time.time(), 'refs': refs,
+            'snapshot': _jsonable_copy(snapshot),
+        }
+        return snapshot
+
+    def _bound_dom_snapshot(self, snapshot):
+        if not isinstance(snapshot, dict) or not isinstance(snapshot.get('snapshot'), str):
+            raise CodeExecError('snapshot must be a DOM snapshot dict from dom_observe()')
+        snapshot_id = snapshot['snapshot']
+        binding = self.dom_snapshots.get(snapshot_id)
+        if binding is None:
+            raise CodeExecError('DOM snapshot id is not bound to this session; observe again')
+        if snapshot != binding.get('snapshot'):
+            raise CodeExecError('snapshot is not the bound DOM snapshot; observe again')
+        if time.time() - binding.get('created', 0) > OBSERVATION_MAX_AGE:
+            raise CodeExecError('DOM snapshot is older than 90s; observe again')
+        if not isinstance(binding.get('target'), str) or not isinstance(binding.get('refs'), list):
+            raise CodeExecError('DOM snapshot binding is invalid; observe again')
+        return snapshot_id, binding
+
+    def api_dom_start(self):
+        result = self._dom_call('dom_start', self.backend.dom_start)
+        if not isinstance(result, dict):
+            raise CodeExecError('backend dom_start returned a non-dict result')
+        if result.get('ok') is not True:
+            raise CodeExecError(str(result.get('error') or 'browser start failed')[:400])
+        self._wait_for_dom_window()
+        return result
+
+    def _wait_for_dom_window(self):
+        """Wait for the managed Chromium window to appear in windows().
+
+        browser_start returns once CDP answers, but the Wayland window can
+        map later; without this wait the D1 program IndexErrors on the
+        immediate windows() lookup after dom_start(). Polls go straight to
+        backend.windows(), not through _api, so the wait costs no API-call
+        budget. Cancellation and the wall-clock budget are checked every
+        poll; a window that never appears fails closed with CodeExecError.
+        """
+        deadline = time.monotonic() + DOM_WINDOW_WAIT_SECONDS
+        while True:
+            self.check_cancel()
+            try:
+                wins = self.backend.windows()
+            except Exception as exc:
+                self.check_cancel()
+                raise CodeExecError(
+                    'windows() failed while waiting for Chromium: '
+                    + str(exc)[:200]) from exc
+            if isinstance(wins, list) and any(
+                    isinstance(w, dict) and w.get('class') == DOM_WINDOW_CLASS
+                    for w in wins):
+                return
+            if time.monotonic() >= deadline:
+                raise CodeExecError(
+                    'managed Chromium window did not appear within %.0fs; '
+                    'observe windows() again' % DOM_WINDOW_WAIT_SECONDS)
+            self._check_budgets()
+            time.sleep(DOM_WINDOW_POLL_INTERVAL)
+
+    def api_dom_tabs(self):
+        result = self._dom_call('dom_tabs', self.backend.dom_tabs)
+        if not isinstance(result, list):
+            raise CodeExecError('backend dom_tabs returned a non-list result')
+        return result
+
+    def api_dom_observe(self, target, scope=None, max_elements=80):
+        if not isinstance(target, str) or not target.strip():
+            raise CodeExecError('target must be a non-empty string')
+        if scope is not None:
+            if not isinstance(scope, str) or not scope.strip():
+                raise CodeExecError('scope must be a non-empty CSS selector')
+            if _utf16_length(scope) > 1024:
+                raise CodeExecError('scope must be at most 1024 UTF-16 code units')
+        if (isinstance(max_elements, bool) or not isinstance(max_elements, int)
+                or not 1 <= max_elements <= 80):
+            raise CodeExecError('max_elements must be 1..80')
+        result = self._dom_call('dom_observe', self.backend.dom_observe,
+                                target, scope, max_elements)
+        if not isinstance(result, dict):
+            raise CodeExecError('backend dom_observe returned a non-dict result')
+        return self._bind_dom_snapshot(target, result)
+
+    def _api_dom_act(self, snapshot, actions, after_scope=None, no_after=False):
+        snapshot_id, binding = self._bound_dom_snapshot(snapshot)
+        if after_scope is not None:
+            if not isinstance(after_scope, str) or not after_scope.strip():
+                raise CodeExecError('after_scope must be a non-empty CSS selector')
+            if _utf16_length(after_scope) > 1024:
+                raise CodeExecError(
+                    'after_scope must be at most 1024 UTF-16 code units')
+            if no_after:
+                raise CodeExecError('after_scope is incompatible with no_after')
+        refs = set(binding['refs'])
+        _validate_dom_actions(actions, refs)
+        if no_after:
+            if not actions or actions[-1].get('type') != 'assert':
+                raise CodeExecError('no_after requires a final assert action')
+            last = actions[-1]
+            if 'value' in last:
+                meaningful = isinstance(last['value'], str)
+            elif 'text' in last:
+                meaningful = isinstance(last['text'], str) and bool(last['text'])
+            elif 'checked' in last:
+                meaningful = isinstance(last['checked'], bool)
+            else:
+                meaningful = False
+            if not meaningful:
+                raise CodeExecError('no_after final assert needs text, value or checked')
+        result = self._dom_call('dom_act', self.backend.dom_act,
+                                binding['target'], snapshot_id, actions,
+                                after_scope, no_after, check_failure=False)
+        if not isinstance(result, dict):
+            raise CodeExecError('backend dom_act returned a non-dict result')
+        if result.get('ok') is True and isinstance(result.get('after'), dict):
+            self._bind_dom_snapshot(binding['target'], result['after'])
+        return result
+
+    def api_dom_act(self, snapshot, actions, after_scope=None):
+        return self._api_dom_act(snapshot, actions, after_scope=after_scope)
+
+    def api_dom_assert(self, snapshot, ref=None, selector=None, text=None,
+                       value=None, checked=None, timeout_ms=1000):
+        if ref is not None and not isinstance(ref, str):
+            raise CodeExecError('ref must be a non-empty string')
+        if selector is not None and not isinstance(selector, str):
+            raise CodeExecError('selector must be a non-empty string')
+        if text is not None and not isinstance(text, str):
+            raise CodeExecError('text must be a string')
+        if value is not None and not isinstance(value, str):
+            raise CodeExecError('value must be a string')
+        if checked is not None and not isinstance(checked, bool):
+            raise CodeExecError('checked must be a boolean')
+        if not _finite_number(timeout_ms) or timeout_ms < 0:
+            raise CodeExecError('timeout_ms must be a non-negative finite number')
+        if (ref is None) == (selector is None):
+            raise CodeExecError('exactly one ref or selector required')
+        predicates = [text is not None, value is not None, checked is not None]
+        if sum(predicates) != 1:
+            raise CodeExecError('exactly one of text, value or checked is required')
+        action = {'type': 'assert', 'timeout_ms': timeout_ms}
+        action['ref' if ref is not None else 'selector'] = (
+            ref if ref is not None else selector)
+        if text is not None:
+            action['text'] = text
+        if value is not None:
+            action['value'] = value
+        if checked is not None:
+            action['checked'] = checked
+        result = self._api_dom_act(snapshot, [action], no_after=True)
+        if result.get('ok') is not True:
+            raise AssertionError(str(result.get('error') or 'DOM assertion failed'))
+        return True
+
     def api_read_file(self, path, max_bytes=MAX_READ_BYTES):
         if not isinstance(max_bytes, int) or not 1 <= max_bytes <= MAX_READ_BYTES:
             raise CodeExecError('max_bytes must be 1..%d' % MAX_READ_BYTES)
@@ -503,6 +809,11 @@ class CodeExecSession:
                 'assert_state': self.api_assert_state,
                 'assert_file_contains': self.api_assert_file_contains,
                 'assert_file_exists': self.api_assert_file_exists,
+                'dom_start': self.api_dom_start,
+                'dom_tabs': self.api_dom_tabs,
+                'dom_observe': self.api_dom_observe,
+                'dom_act': self.api_dom_act,
+                'dom_assert': self.api_dom_assert,
                 'print': self._print,
             })
             sys.settrace(self._trace)
@@ -516,7 +827,8 @@ class CodeExecSession:
                     if k not in ('__builtins__',) and not callable(v)
                     and k not in ('windows', 'observe', 'act', 'read_file',
                                   'assert_state', 'assert_file_contains',
-                                  'assert_file_exists', 'print')
+                                  'assert_file_exists', 'dom_start', 'dom_tabs',
+                                  'dom_observe', 'dom_act', 'dom_assert', 'print')
                     and _is_jsonable(v)}
             self.variables = _jsonable_copy(kept)
             envelope['ok'] = True

@@ -46,6 +46,88 @@ class FakeBackend:
         return {'ok': True, 'completed': len(actions)}
 
 
+class FakeDomBackend(FakeBackend):
+    """Desktop and DOM stand-ins; never starts Chromium or a broker."""
+
+    def __init__(self, heavy_lines=0, dom_assert_ok=True, dom_act_ok=True):
+        super().__init__()
+        self.dom_calls = []
+        self.snapshot_count = 0
+        self.heavy_lines = heavy_lines
+        self.dom_assert_ok = dom_assert_ok
+        self.dom_act_ok = dom_act_ok
+
+    def dom_start(self):
+        self.dom_calls.append(('start',))
+        return {'ok': True, 'endpoint': 'http://127.0.0.1:9222',
+                'reused': True}
+
+    def windows(self):
+        self.calls.append(('windows',))
+        return super().windows() + [
+            {'address': '0xdef', 'class': 'chromium', 'title': 'about:blank',
+             'at': [0, 0], 'size': [800, 600], 'workspace': {'id': 1}}]
+
+    def dom_tabs(self):
+        self.dom_calls.append(('tabs',))
+        return [{'id': 'tab-1', 'title': 'fixture', 'url': 'file:///fixture'}]
+
+    def _snapshot(self, target):
+        self.snapshot_count += 1
+        number = self.snapshot_count
+        return {
+            'snapshot': 'dom-snapshot-%d' % number,
+            'title': 'fixture', 'url': 'file:///fixture',
+            'elements': [{
+                'ref': 'dom-ref-%d' % number,
+                'role': 'button', 'name': 'Show result',
+            }],
+            'truncated': False, 'iframes': 0,
+        }
+
+    def dom_observe(self, target, scope, max_elements):
+        self.dom_calls.append(('observe', target, scope, max_elements))
+        total = 0
+        for number in range(self.heavy_lines):
+            total += number
+        if self.heavy_lines:
+            assert total >= 0
+        return self._snapshot(target)
+
+    def dom_act(self, target, snapshot, actions, after_scope=None, no_after=False):
+        self.dom_calls.append(
+            ('act', target, snapshot, actions, after_scope, no_after))
+        if not self.dom_act_ok:
+            return {'ok': False, 'completed': 0, 'error': 'DOM action refused'}
+        if any(action.get('type') == 'assert' for action in actions):
+            if not self.dom_assert_ok:
+                return {'ok': False, 'completed': 0, 'error': 'DOM assertion mismatch'}
+        result = {'ok': True, 'completed': len(actions)}
+        if no_after:
+            result['after_skipped'] = True
+        else:
+            result['after'] = self._snapshot(target)
+        return result
+
+
+class FakeSlowDomBackend(FakeDomBackend):
+    """Chromium window appears only after N windows() polls (startup race)."""
+
+    def __init__(self, chromium_after_calls=3, **kwargs):
+        super().__init__(**kwargs)
+        self.chromium_after_calls = chromium_after_calls
+        self.windows_calls = 0
+
+    def windows(self):
+        self.windows_calls += 1
+        if self.windows_calls < self.chromium_after_calls:
+            self.calls.append(('windows',))
+            return [{'address': '0xabc', 'class': 'kitty',
+                     'title': 'speed-pick1-term', 'at': [0, 0],
+                     'size': [800, 600], 'workspace': {'id': 1}}]
+        return super().windows()
+
+
 def run(source, backend=None, **kwargs):
     backend = backend if backend is not None else FakeBackend()
     return code_exec.run_program(source, backend, **kwargs)
@@ -337,7 +419,198 @@ class ApiTests(unittest.TestCase):
             run('windows()', check_cancel=cancel)
 
 
+class DomApiTests(unittest.TestCase):
+    def test_dom_start_returns_browser_start_dict(self):
+        backend = FakeDomBackend()
+        session = code_exec.CodeExecSession(backend)
+        result = session.api_dom_start()
+        self.assertEqual(result['ok'], True)
+        self.assertEqual(backend.dom_calls, [('start',)])
+
+    def test_dom_start_waits_for_chromium_window_to_appear(self):
+        backend = FakeSlowDomBackend(chromium_after_calls=3)
+        session = code_exec.CodeExecSession(backend)
+        result = session.api_dom_start()
+        self.assertEqual(result['ok'], True)
+        self.assertEqual(backend.windows_calls, 3)
+        self.assertEqual(session.api_calls, 1)
+
+    def test_dom_start_raises_when_chromium_window_never_appears(self):
+        backend = FakeSlowDomBackend(chromium_after_calls=10 ** 9)
+        session = code_exec.CodeExecSession(backend)
+        with mock.patch.object(
+                code_exec, 'DOM_WINDOW_WAIT_SECONDS', 0.4), mock.patch.object(
+                code_exec, 'DOM_WINDOW_POLL_INTERVAL', 0.05):
+            with self.assertRaisesRegex(code_exec.CodeExecError,
+                                        'did not appear'):
+                session.api_dom_start()
+
+    def test_d1_program_looks_up_chromium_right_after_dom_start(self):
+        source = (
+            'started = dom_start()\n'
+            'assert_state(started["ok"], "dom start failed")\n'
+            'wins = windows()\n'
+            'chrome = [w for w in wins if w["class"] == "chromium"][0]\n'
+            'obs = observe(window=chrome["address"])\n'
+            'result = act([{"type": "key", "keys": ["ctrl", "l"]}, '
+            '{"type": "type", "text": "file:///fixture\\n"}], obs)\n'
+            'verify = observe(window=chrome["address"])\n'
+            'assert_state(result["ok"], "navigate act failed")\n'
+            'tabs = dom_tabs()\n'
+            'tab = [t for t in tabs if t["url"] == "file:///fixture"][0]\n'
+            'snap = dom_observe(tab["id"])\n'
+            'btn = [e for e in snap["elements"] if e["name"] == "Show result"][0]\n'
+            'clicked = dom_act(snap, [{"type": "click", "ref": btn["ref"]}])\n'
+            'assert_state(clicked["ok"], "dom click failed")\n'
+            'after = clicked["after"]\n'
+            'dom_assert(after, selector="#result", text="pick4-ok")\n'
+            'verify_image = verify["image"]\n'
+        )
+        backend = FakeSlowDomBackend(chromium_after_calls=3)
+        result = run(source, backend)
+        self.assertTrue(result['ok'], result)
+        self.assertEqual(result['api_calls'], 9)
+        # 3 wait polls inside dom_start() plus the program's own windows().
+        self.assertEqual(backend.windows_calls, 4)
+
+    def test_dom_observe_binds_snapshot_and_returns_elements(self):
+        backend = FakeDomBackend()
+        session = code_exec.CodeExecSession(backend)
+        snapshot = session.api_dom_observe('tab-1')
+        self.assertEqual(snapshot['elements'][0]['name'], 'Show result')
+        binding = session.dom_snapshots[snapshot['snapshot']]
+        self.assertEqual(binding['target'], 'tab-1')
+        self.assertIn('dom-ref-1', binding['refs'])
+
+    def test_dom_act_accepts_bound_ref_and_binds_after_snapshot(self):
+        backend = FakeDomBackend()
+        session = code_exec.CodeExecSession(backend)
+        snapshot = session.api_dom_observe('tab-1')
+        result = session.api_dom_act(
+            snapshot, [{'type': 'click', 'ref': snapshot['elements'][0]['ref']}])
+        self.assertEqual(result['ok'], True)
+        after_id = result['after']['snapshot']
+        self.assertIn(after_id, session.dom_snapshots)
+        self.assertEqual(session.dom_snapshots[after_id]['target'], 'tab-1')
+        self.assertEqual(backend.dom_calls[-1][2], snapshot['snapshot'])
+
+    def test_dom_act_returns_refusal_dict_without_raising(self):
+        backend = FakeDomBackend(dom_act_ok=False)
+        session = code_exec.CodeExecSession(backend)
+        snapshot = session.api_dom_observe('tab-1')
+        result = session.api_dom_act(
+            snapshot, [{'type': 'click', 'ref': snapshot['elements'][0]['ref']}])
+        self.assertEqual(result, {
+            'ok': False, 'completed': 0, 'error': 'DOM action refused',
+        })
+
+    def test_dom_act_rejects_forged_snapshot(self):
+        session = code_exec.CodeExecSession(FakeDomBackend())
+        forged = {'snapshot': 'not-bound', 'elements': [{'ref': 'dom-ref-1'}]}
+        with self.assertRaisesRegex(code_exec.CodeExecError, 'not bound'):
+            session.api_dom_act(forged, [{'type': 'click', 'ref': 'dom-ref-1'}])
+
+    def test_dom_act_rejects_ref_from_another_snapshot(self):
+        session = code_exec.CodeExecSession(FakeDomBackend())
+        first = session.api_dom_observe('tab-1')
+        second = session.api_dom_observe('tab-1')
+        other_ref = second['elements'][0]['ref']
+        with self.assertRaisesRegex(code_exec.CodeExecError, 'bound snapshot'):
+            session.api_dom_act(first, [{'type': 'click', 'ref': other_ref}])
+
+    def test_dom_act_rejects_non_string_ref(self):
+        session = code_exec.CodeExecSession(FakeDomBackend())
+        snapshot = session.api_dom_observe('tab-1')
+        with self.assertRaisesRegex(code_exec.CodeExecError, 'ref must be'):
+            session.api_dom_act(snapshot, [{'type': 'click', 'ref': 3}])
+
+    def test_dom_act_rejects_modified_copy_of_a_bound_snapshot(self):
+        session = code_exec.CodeExecSession(FakeDomBackend())
+        snapshot = session.api_dom_observe('tab-1')
+        forged = dict(snapshot)
+        forged['title'] = 'changed'
+        with self.assertRaisesRegex(code_exec.CodeExecError, 'not the bound'):
+            session.api_dom_act(forged, [{'type': 'click', 'ref': 'dom-ref-1'}])
+
+    def test_dom_assert_passes_and_raises_on_mismatch(self):
+        backend = FakeDomBackend()
+        session = code_exec.CodeExecSession(backend)
+        snapshot = session.api_dom_observe('tab-1')
+        self.assertTrue(session.api_dom_assert(
+            snapshot, selector='#result', text='ready'))
+        self.assertTrue(backend.dom_calls[-1][-1])
+        backend.dom_assert_ok = False
+        with self.assertRaisesRegex(AssertionError, 'DOM assertion mismatch'):
+            session.api_dom_assert(
+                snapshot, selector='#result', text='missing')
+
+    def test_dom_observe_rejects_bad_scope_and_max_elements(self):
+        session = code_exec.CodeExecSession(FakeDomBackend())
+        with self.assertRaisesRegex(code_exec.CodeExecError, 'scope'):
+            session.api_dom_observe('tab-1', scope=42)
+        with self.assertRaisesRegex(code_exec.CodeExecError, 'max_elements'):
+            session.api_dom_observe('tab-1', max_elements=81)
+
+    def test_dom_snapshot_older_than_90_seconds_is_rejected(self):
+        session = code_exec.CodeExecSession(FakeDomBackend())
+        snapshot = session.api_dom_observe('tab-1')
+        session.dom_snapshots[snapshot['snapshot']]['created'] = time.time() - 91
+        with self.assertRaisesRegex(code_exec.CodeExecError, 'older than 90s'):
+            session.api_dom_act(
+                snapshot, [{'type': 'click', 'ref': snapshot['elements'][0]['ref']}])
+
+    def test_dom_snapshot_binding_persists_across_runs(self):
+        backend = FakeDomBackend()
+        token = 'b' * 32
+        with tempfile.TemporaryDirectory() as folder:
+            first = run('snap = dom_observe("tab-1")', backend,
+                        state_dir=folder, session_token=token)
+            self.assertTrue(first['ok'], first)
+            second = run(
+                'result = dom_act(snap, [{"type": "click", "ref": snap["elements"][0]["ref"]}])\n'
+                'assert_state(result["ok"], "DOM act failed")',
+                backend, state_dir=folder, session_token=token)
+        self.assertTrue(second['ok'], second)
+
+    def test_multi_step_program_mixes_desktop_and_dom_actions(self):
+        source = (
+            'wins = windows()\n'
+            'obs = observe(window=wins[0]["address"])\n'
+            'desktop = act([{"type": "wait", "ms": 0}], obs)\n'
+            'verify = observe(window=wins[0]["address"])\n'
+            'assert_state(desktop["ok"], "desktop act failed")\n'
+            'started = dom_start()\n'
+            'tabs = dom_tabs()\n'
+            'snap = dom_observe(tabs[0]["id"])\n'
+            'clicked = dom_act(snap, [{"type": "click", "ref": snap["elements"][0]["ref"]}])\n'
+            'assert_state(clicked["ok"], "DOM act failed")\n'
+            'dom_assert(clicked["after"], selector="#result", text="ready")\n'
+        )
+        backend = FakeDomBackend()
+        result = run(source, backend)
+        self.assertTrue(result['ok'], result)
+        self.assertEqual(result['api_calls'], 9)
+        kinds = [call[0] for call in backend.calls]
+        self.assertEqual(kinds.count('observe_window'), 2)
+        # dom_start() waits on windows() after the verify observe.
+        self.assertEqual(kinds[-1], 'windows')
+        self.assertEqual(backend.dom_calls[-1][0], 'act')
+
+
 class TraceBudgetTests(unittest.TestCase):
+    def test_heavy_dom_backend_lines_do_not_blow_trace_budget(self):
+        result = run('snap = dom_observe("tab-1")',
+                     FakeDomBackend(heavy_lines=100000))
+        self.assertTrue(result['ok'], result)
+        self.assertEqual(result['api_calls'], 1)
+
+    def test_runaway_loop_calling_dom_ops_is_still_caught(self):
+        result = run('while True:\n    dom_tabs()',
+                     FakeDomBackend(), max_api_calls=5)
+        self.assertFalse(result['ok'])
+        self.assertEqual(result['error_type'], 'sandbox')
+        self.assertIn('API call budget exceeded', result['error'])
+
     def test_api_implementation_lines_do_not_count(self):
         # One real observe() executes ~190000 lines on a cold interpreter
         # (PIL first import) and ~7000-10000 warm; counting those lines
