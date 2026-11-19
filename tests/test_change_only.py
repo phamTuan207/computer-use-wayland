@@ -1,5 +1,7 @@
 """Synthetic image checks for opt-in change-only observation."""
+import json
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -117,6 +119,8 @@ class ChangeOnlyApiTests(unittest.TestCase):
         with patch.object(cu, 'validate_desktop_observation', return_value=fresh):
             result = session.api_observe_change_only(None, window='0x1')
         self.assertEqual(result['mode'], 'full')
+        self.assertEqual(result['image'], result['observation']['image'])
+        self.assertIsNone(result['thumbnail'])
         self.assertEqual(backend.calls, [('observe_window', '0x1', None, 960)])
 
     def test_invalid_previous_falls_back_to_full_observe(self):
@@ -153,11 +157,96 @@ class ChangeOnlyApiTests(unittest.TestCase):
         with patch.object(cu, 'validate_desktop_observation', side_effect=load):
             result = session.api_observe_change_only({'id': 'previous-id'})
         self.assertEqual(result['mode'], 'diff')
-        self.assertEqual(result['image'].tobytes(),
-                         fresh.crop((result['bbox'][0], result['bbox'][1],
-                                     result['bbox'][0] + result['bbox'][2],
-                                     result['bbox'][1] + result['bbox'][3])).tobytes())
+        with Image.open(result['image']) as saved:
+            saved.load()
+            expected = fresh.crop((result['bbox'][0], result['bbox'][1],
+                                   result['bbox'][0] + result['bbox'][2],
+                                   result['bbox'][1] + result['bbox'][3]))
+            self.assertEqual(saved.tobytes(), expected.tobytes())
         self.assertEqual(backend.calls, [('observe_window', '0x1', None, 960)])
+
+    def test_diff_returns_private_png_crop_and_thumbnail_paths(self):
+        with tempfile.TemporaryDirectory() as folder:
+            backend = self.Backend()
+            backend.meta['image'] = str(Path(folder) / 'fresh.png')
+            session = code_exec.CodeExecSession(backend)
+            previous_meta = dict(backend.meta, id='previous-id')
+            session.observations['previous-id'] = previous_meta
+            previous = Image.new('RGB', (120, 80), 'black')
+            fresh = previous.copy()
+            ImageDraw.Draw(fresh).rectangle((48, 32, 57, 41), fill='white')
+            expected = cu.diff_observation(previous, fresh)
+
+            def load(meta, env, load_image=False):
+                return previous if meta['id'] == 'previous-id' else fresh
+
+            with patch.object(cu, 'validate_desktop_observation', side_effect=load):
+                result = session.api_observe_change_only({'id': 'previous-id'})
+                repeated = session.api_observe_change_only({'id': 'previous-id'})
+
+            self.assertEqual(result['mode'], 'diff')
+            self.assertEqual(result['image'], result['image_path'])
+            self.assertEqual(result['thumbnail'], result['thumbnail_path'])
+            self.assertEqual(result['image'], repeated['image'])
+            self.assertEqual(result['thumbnail'], repeated['thumbnail'])
+            self.assertTrue(Path(result['image']).is_file())
+            self.assertTrue(Path(result['thumbnail']).is_file())
+            with Image.open(result['image']) as saved_crop:
+                saved_crop.load()
+                x, y, width, height = result['bbox']
+                expected_crop = fresh.crop((x, y, x + width, y + height))
+                self.assertEqual(saved_crop.format, 'PNG')
+                self.assertEqual(saved_crop.size, expected_crop.size)
+                self.assertEqual(saved_crop.tobytes(), expected_crop.tobytes())
+            with Image.open(result['thumbnail']) as saved_thumbnail:
+                saved_thumbnail.load()
+                self.assertEqual(saved_thumbnail.format, 'PNG')
+                self.assertEqual(saved_thumbnail.tobytes(),
+                                 expected['thumbnail'].tobytes())
+                self.assertLessEqual(saved_thumbnail.width,
+                                     cu.DIFF_THUMBNAIL_MAX_WIDTH)
+            self.assertEqual(Path(result['image']).stat().st_mode & 0o777, 0o600)
+            self.assertEqual(Path(result['thumbnail']).stat().st_mode & 0o777,
+                             0o600)
+
+    def test_change_only_file_paths_survive_program_envelope(self):
+        with tempfile.TemporaryDirectory() as folder:
+            backend = self.Backend()
+            backend.meta['image'] = str(Path(folder) / 'fresh.png')
+            session = code_exec.CodeExecSession(backend, state_dir=folder)
+            session.observations['previous-id'] = dict(
+                backend.meta, id='previous-id')
+            previous = Image.new('RGB', (120, 80), 'black')
+            fresh = previous.copy()
+            ImageDraw.Draw(fresh).rectangle((48, 32, 57, 41), fill='white')
+
+            def load(meta, env, load_image=False):
+                return previous if meta['id'] == 'previous-id' else fresh
+
+            with patch.object(cu, 'validate_desktop_observation', side_effect=load):
+                envelope = session.run(
+                    "change = observe_change_only({'id': 'previous-id'})")
+
+            self.assertTrue(envelope['ok'], envelope)
+            self.assertIn('change', envelope['variables'])
+            json.dumps(envelope['variables'])
+            change = envelope['variables']['change']
+            self.assertEqual(change['mode'], 'diff')
+            for key in ('image', 'thumbnail'):
+                self.assertIsInstance(change[key], str)
+                self.assertTrue(Path(change[key]).is_file())
+
+    def test_identical_frames_return_none_without_image_files(self):
+        backend = self.Backend()
+        session = code_exec.CodeExecSession(backend)
+        session.observations['previous-id'] = dict(
+            backend.meta, id='previous-id')
+        same = Image.new('RGB', (120, 80), 'black')
+        with patch.object(cu, 'validate_desktop_observation', return_value=same):
+            result = session.api_observe_change_only({'id': 'previous-id'})
+        self.assertEqual(result['mode'], 'none')
+        self.assertIsNone(result['image'])
+        self.assertIsNone(result['thumbnail'])
 
     def test_change_only_name_is_allowed_in_programs(self):
         code_exec.validate_program("observe_change_only(None, window='0x1')")

@@ -88,7 +88,9 @@ import json
 import math
 import os
 import re
+import stat
 import sys
+import tempfile
 import time
 from pathlib import Path
 
@@ -526,6 +528,36 @@ class CodeExecSession:
             raise CodeExecError('observe needs window or screen')
         return self._compact_observation(meta)
 
+    def _persist_change_image(self, image, path):
+        fd = None
+        try:
+            path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+            try:
+                fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL |
+                             os.O_NOFOLLOW | os.O_CLOEXEC, 0o600)
+            except FileExistsError:
+                fd = os.open(path, os.O_WRONLY | os.O_NOFOLLOW |
+                             os.O_CLOEXEC | os.O_NONBLOCK)
+                info = os.fstat(fd)
+                if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1:
+                    raise OSError('refusing to overwrite a non-private image file')
+            os.fchmod(fd, 0o600)
+            if os.fstat(fd).st_size:
+                os.ftruncate(fd, 0)
+            stream = os.fdopen(fd, 'wb')
+            fd = None
+            with stream:
+                image.save(stream, format='PNG')
+        except Exception as exc:
+            raise CodeExecError('could not persist change-only image: %s' % exc)
+        finally:
+            if fd is not None:
+                try:
+                    os.close(fd)
+                except OSError:
+                    pass
+        return str(path)
+
     def api_observe_change_only(self, previous_observation=None, window=None,
                                 screen=None, crop=None, max_width=960):
         """Capture a fresh frame and return its change-only diff.
@@ -590,6 +622,27 @@ class CodeExecSession:
         result = cu.diff_observation(previous_image, current_image,
                                      region=current_meta.get('region'))
         result['observation'] = current
+        if result['mode'] == 'diff':
+            observation_id = current.get('id')
+            if not isinstance(observation_id, str) or not re.fullmatch(
+                    r'[A-Za-z0-9_-]{1,128}', observation_id):
+                raise CodeExecError('could not persist change-only image: invalid observation id')
+            image_path = current.get('image')
+            directory = None
+            if isinstance(image_path, str) and Path(image_path).is_absolute():
+                candidate = Path(image_path).parent
+                if candidate.is_dir():
+                    directory = candidate
+            if directory is None:
+                directory = self.state_dir or Path(tempfile.gettempdir())
+            image_file = self._persist_change_image(
+                result['image'], directory / (observation_id + '-diff.png'))
+            thumbnail_file = self._persist_change_image(
+                result['thumbnail'], directory / (observation_id + '-thumb.png'))
+            result['image'] = result['image_path'] = image_file
+            result['thumbnail'] = result['thumbnail_path'] = thumbnail_file
+        elif result['mode'] == 'full':
+            result['image'] = current['image']
         return result
 
     def _bound_observation(self, observation):
