@@ -18,6 +18,7 @@ import contextlib
 import datetime
 import io
 import json
+import os
 import socket
 import sqlite3
 import struct
@@ -146,6 +147,12 @@ class ChromiumCliTests(unittest.TestCase):
             code = chromium_cli.main(argv)
         return code, json.loads(buf.getvalue())
 
+    def add_prefetch_target(self,target_id,url="about:blank"):
+        target={"id":target_id,"title":"Warm page","url":url,"type":"page",
+                "webSocketDebuggerUrl":"ws://127.0.0.1/devtools/page/"+target_id}
+        StubCdpHandler.tabs.append(target)
+        return target
+
     def make_profile(self, with_bookmarks=True, nested=False):
         """Synthetic profile dir with History and optional Bookmarks."""
         profile = self.tmp / "profile"
@@ -258,6 +265,139 @@ class ChromiumCliTests(unittest.TestCase):
         self.assertFalse(out["ok"])
         self.assertIn("navigation failed", out["error"])
         self.assertIn("NEW1", out["error"])
+
+    def test_prefetch_returns_without_waiting_for_page_load(self):
+        token="a"*32
+        target=self.add_prefetch_target("P1")
+        def create(endpoint):return target
+        def navigate(tab,url):tab["url"]=url
+        with mock.patch.dict(os.environ,{"CU_SESSION_TOKEN":token}), \
+             mock.patch.object(chromium_cli,"create_background_target",side_effect=create), \
+             mock.patch.object(chromium_cli,"navigate_tab_background",side_effect=navigate) as background, \
+             mock.patch.object(chromium_cli,"navigate_tab_via_ws",
+                               side_effect=AssertionError("prefetch waited for load")):
+            code,out=self.run_cli(["--endpoint",self.endpoint,"prefetch","https://example.com/warm"])
+        self.assertEqual(code,0)
+        self.assertTrue(out["prefetched"])
+        self.assertEqual(background.call_count,1)
+        self.assertEqual(out["tab_id"],"P1")
+
+    def test_prefetch_target_is_created_as_a_background_page(self):
+        target=self.add_prefetch_target("P7")
+        with mock.patch.object(chromium_cli,"cdp_call",return_value={"targetId":"P7"}) as call, \
+             mock.patch.object(chromium_cli,"list_page_targets",return_value=[target]):
+            created=chromium_cli.create_background_target(self.endpoint)
+        self.assertEqual(created["id"],"P7")
+        call.assert_called_once_with("ws://127.0.0.1/devtools/browser/stub",
+                                     "Target.createTarget",
+                                     {"url":"about:blank","background":True})
+
+    def test_background_navigation_sends_page_navigate_without_waiting_for_load(self):
+        target={"webSocketDebuggerUrl":"ws://127.0.0.1/devtools/page/P8"}
+        with mock.patch.object(chromium_cli,"cdp_call",side_effect=[{}, {"frameId":"main"}]) as call, \
+             mock.patch.object(chromium_cli,"navigate_tab_via_ws",
+                               side_effect=AssertionError("background navigation waited for load")):
+            chromium_cli.navigate_tab_background(target,"https://example.com/async")
+        self.assertEqual([item.args[1] for item in call.call_args_list],
+                         ["Page.enable","Page.navigate"])
+
+    def test_open_adopts_loaded_prefetch_and_reports_near_zero_load(self):
+        token="b"*32
+        url="https://example.com/warm"
+        target=self.add_prefetch_target("P2")
+        with mock.patch.dict(os.environ,{"CU_SESSION_TOKEN":token}), \
+             mock.patch.object(chromium_cli,"create_background_target",return_value=target), \
+             mock.patch.object(chromium_cli,"navigate_tab_background",side_effect=lambda tab,url:tab.update(url=url)):
+            code,prefetched=self.run_cli(["--endpoint",self.endpoint,"prefetch",url])
+            self.assertEqual(code,0)
+            with mock.patch.object(chromium_cli,"read_prefetched_page",return_value={
+                    "url":url,"ready":"complete","protocol":"https:","failed":False}), \
+                 mock.patch.object(chromium_cli,"navigate_tab_via_ws",
+                                   side_effect=AssertionError("warm page was navigated again")):
+                code,opened=self.run_cli(["--endpoint",self.endpoint,"open",url])
+        self.assertEqual(code,0)
+        self.assertTrue(opened["prefetched"])
+        self.assertEqual(opened["tab"]["id"],"P2")
+        self.assertLess(opened["load_ms"],100)
+
+    def test_prefetch_expires_after_thirty_seconds_then_open_navigates_fresh(self):
+        token="c"*32
+        url="https://example.com/expired"
+        target=self.add_prefetch_target("P3")
+        with mock.patch.dict(os.environ,{"CU_SESSION_TOKEN":token}), \
+             mock.patch.object(chromium_cli,"create_background_target",return_value=target), \
+             mock.patch.object(chromium_cli,"navigate_tab_background",side_effect=lambda tab,url:tab.update(url=url)):
+            self.run_cli(["--endpoint",self.endpoint,"prefetch",url])
+            records=chromium_cli._read_prefetches(token)
+            records[0]["created"]-=chromium_cli.PREFETCH_TTL_SECONDS+1
+            chromium_cli._write_prefetches(records,token)
+            with mock.patch.object(chromium_cli,"navigate_tab_via_ws") as navigate:
+                code,opened=self.run_cli(["--endpoint",self.endpoint,"open",url])
+        self.assertEqual(code,0)
+        self.assertFalse(opened["prefetched"])
+        navigate.assert_called_once_with(mock.ANY,url)
+        self.assertNotIn("P3",[tab["id"] for tab in StubCdpHandler.tabs])
+
+    def test_fourth_prefetch_evicts_and_closes_oldest(self):
+        token="d"*32
+        counter=[0]
+        def create(endpoint):
+            counter[0]+=1
+            return self.add_prefetch_target("P%d"%counter[0])
+        def navigate(tab,url):tab["url"]=url
+        with mock.patch.dict(os.environ,{"CU_SESSION_TOKEN":token}), \
+             mock.patch.object(chromium_cli,"create_background_target",side_effect=create), \
+             mock.patch.object(chromium_cli,"navigate_tab_background",side_effect=navigate):
+            for index in range(4):
+                code,out=self.run_cli(["--endpoint",self.endpoint,"prefetch",
+                                       "https://example.com/%d"%index])
+                self.assertEqual(code,0,out)
+        records=chromium_cli._read_prefetches(token)
+        self.assertEqual([record["tab_id"] for record in records],["P2","P3","P4"])
+        self.assertNotIn("P1",[tab["id"] for tab in StubCdpHandler.tabs])
+
+    def test_wrong_url_prefetch_is_not_adopted(self):
+        token="e"*32
+        target=self.add_prefetch_target("P5")
+        with mock.patch.dict(os.environ,{"CU_SESSION_TOKEN":token}), \
+             mock.patch.object(chromium_cli,"create_background_target",return_value=target), \
+             mock.patch.object(chromium_cli,"navigate_tab_background",side_effect=lambda tab,url:tab.update(url=url)):
+            self.run_cli(["--endpoint",self.endpoint,"prefetch","https://example.com/first"])
+            with mock.patch.object(chromium_cli,"navigate_tab_via_ws") as navigate:
+                code,opened=self.run_cli(["--endpoint",self.endpoint,"open","https://example.com/other"])
+        self.assertEqual(code,0)
+        self.assertFalse(opened["prefetched"])
+        navigate.assert_called_once_with(mock.ANY,"https://example.com/other")
+
+    def test_errored_prefetch_is_closed_and_open_navigates_fresh(self):
+        token="f"*32
+        url="https://example.com/error"
+        target=self.add_prefetch_target("P6")
+        with mock.patch.dict(os.environ,{"CU_SESSION_TOKEN":token}), \
+             mock.patch.object(chromium_cli,"create_background_target",return_value=target), \
+             mock.patch.object(chromium_cli,"navigate_tab_background",side_effect=lambda tab,url:tab.update(url=url)):
+            self.run_cli(["--endpoint",self.endpoint,"prefetch",url])
+            with mock.patch.object(chromium_cli,"read_prefetched_page",return_value={
+                    "url":url,"ready":"complete","protocol":"https:","failed":True}), \
+                 mock.patch.object(chromium_cli,"navigate_tab_via_ws") as navigate:
+                code,opened=self.run_cli(["--endpoint",self.endpoint,"open",url])
+        self.assertEqual(code,0)
+        self.assertFalse(opened["prefetched"])
+        navigate.assert_called_once_with(mock.ANY,url)
+        self.assertNotIn("P6",[tab["id"] for tab in StubCdpHandler.tabs])
+
+    def test_session_cleanup_closes_warm_target_and_removes_task_state(self):
+        token="9"*32
+        target=self.add_prefetch_target("P9")
+        with mock.patch.dict(os.environ,{"CU_SESSION_TOKEN":token}), \
+             mock.patch.object(chromium_cli,"create_background_target",return_value=target), \
+             mock.patch.object(chromium_cli,"navigate_tab_background",side_effect=lambda tab,url:tab.update(url=url)):
+            self.run_cli(["--endpoint",self.endpoint,"prefetch","https://example.com/task"])
+            state_path=chromium_cli._prefetch_path(token)
+            self.assertTrue(state_path.exists())
+            chromium_cli.clear_session_prefetches(token)
+        self.assertFalse(state_path.exists())
+        self.assertNotIn("P9",[tab["id"] for tab in StubCdpHandler.tabs])
 
     def test_open_rejects_non_http_url(self):
         code, out = self.run_cli(

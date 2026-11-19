@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
 """Repo-owned Chromium CLI wrapper. Stdlib only.
 
-Talks to Chromium over its loopback DevTools HTTP endpoints, plus one
-minimal stdlib WebSocket client used only by `open`: Chromium 157
+Talks to Chromium over its loopback DevTools HTTP endpoints and a
+minimal stdlib WebSocket client: Chromium 157
 ignores the `url` parameter of PUT /json/new (verified live 2026-11-18
 with raw curl: the new tab stays about:blank even after activate and
 4 s), so `open` creates the tab over HTTP and then navigates it with
 CDP Page.navigate over its WebSocket, waiting for the load event.
-Reading a page's DOM still goes through
-`computer-use browser observe/act` (scripts/cdp.mjs), which owns the
-full WebSocket side; this file's client does one call only.
+`prefetch` starts a background target without waiting for its load event;
+`open` adopts it only after URL, error state and readiness checks pass.
+Reading a page's DOM still goes through `computer-use browser observe/act`
+(scripts/cdp.mjs), which owns the full DOM snapshot and input path.
 
 Endpoint rule (same as `computer-use browser start`): the default
 endpoint is http://127.0.0.1:9222, the agent-managed Chromium. Pham
@@ -38,6 +39,7 @@ the agent to list tabs and activate one.
 
 Commands (each prints exactly one JSON object on stdout):
   tabs                        List page tabs: id, title, url.
+  prefetch <url>              Load a page in a background tab for this task.
   open <url>                  Open url in a NEW tab; records it as current.
   activate <tab-id>           Bring a tab to front; records it as current.
   close <tab-id>              Close a tab. Never closes a tab the agent
@@ -62,10 +64,13 @@ import base64
 import datetime
 import hashlib
 import json
+import math
 import os
+import re
 import shutil
 import socket
 import sqlite3
+import stat
 import struct
 import sys
 import tempfile
@@ -82,6 +87,9 @@ STATE_PATH = (Path.home() / ".local" / "share" / "agent-computer-use"
 HTTP_TIMEOUT_SECONDS = 5
 DEFAULT_LIMIT = 20
 MAX_LIMIT = 200
+PREFETCH_TTL_SECONDS = 30
+MAX_PREFETCHES = 3
+PREFETCH_TOKEN_RE = re.compile(r"[0-9a-f]{32}\Z")
 
 LOOPBACK_HOSTS = ("127.0.0.1", "localhost", "::1")
 
@@ -333,19 +341,197 @@ def navigate_tab_via_ws(tab, url):
             pass
 
 
-def list_page_tabs(endpoint):
-    """All targets of type page from /json/list."""
+def list_page_targets(endpoint):
+    """All page targets from /json/list, including their private CDP URLs."""
     targets = http_json(endpoint, "/json/list")
     if not isinstance(targets, list):
         raise RuntimeError("CDP /json/list returned an unexpected shape")
-    tabs = []
-    for target in targets:
-        if not isinstance(target, dict) or target.get("type") != "page":
+    return [target for target in targets
+            if isinstance(target,dict) and target.get("type")=="page"]
+
+
+def list_page_tabs(endpoint):
+    """All targets of type page from /json/list."""
+    return [{"id":target.get("id",""),"title":target.get("title",""),
+             "url":target.get("url","")} for target in list_page_targets(endpoint)]
+
+
+def cdp_call(ws_url,method,params=None):
+    """Send one bounded CDP command and return its response without waiting for events."""
+    sock=ws_connect(ws_url)
+    try:
+        deadline=time.monotonic()+WS_CONNECT_TIMEOUT_SECONDS
+        _ws_send_text(sock,json.dumps({"id":1,"method":method,"params":params or {}}))
+        while True:
+            message=_ws_recv_message(sock,deadline)
+            if message is None:raise RuntimeError("CDP WebSocket closed during "+method)
+            frame=json.loads(message)
+            if frame.get("id")!=1:continue
+            if "error" in frame:
+                raise RuntimeError("CDP %s failed: %s" %
+                                   (method,frame["error"].get("message","unknown")))
+            return frame.get("result",{})
+    finally:
+        try:sock.close()
+        except OSError:pass
+
+
+def create_background_target(endpoint):
+    version=http_json(endpoint,"/json/version")
+    if not isinstance(version,dict) or not any(
+            brand in str(version.get("Browser","")) for brand in ("Chromium/","Chrome/")):
+        raise ValueError("prefetch requires the managed Chromium CDP endpoint")
+    ws_url=version.get("webSocketDebuggerUrl","")
+    if not ws_url:raise RuntimeError("Chromium did not provide a browser debugger URL")
+    created=cdp_call(ws_url,"Target.createTarget",{"url":"about:blank","background":True})
+    target_id=created.get("targetId")
+    if not isinstance(target_id,str) or not target_id:
+        raise RuntimeError("Chromium did not create a background page target")
+    deadline=time.monotonic()+1
+    try:
+        while time.monotonic()<deadline:
+            target=next((item for item in list_page_targets(endpoint) if item.get("id")==target_id),None)
+            if target is not None:return target
+            time.sleep(.02)
+        raise RuntimeError("background page target did not appear in Chromium")
+    except BaseException:
+        try:http_json(endpoint,"/json/close/"+urllib.parse.quote(target_id,safe=""),expect_json=False)
+        except (OSError,RuntimeError,ValueError):pass
+        raise
+
+
+def navigate_tab_background(tab,url):
+    ws_url=tab.get("webSocketDebuggerUrl","")
+    if not ws_url:raise RuntimeError("background page has no debugger URL")
+    cdp_call(ws_url,"Page.enable")
+    result=cdp_call(ws_url,"Page.navigate",{"url":url})
+    if result.get("errorText"):
+        raise RuntimeError("background navigation failed: "+result["errorText"])
+
+
+def read_prefetched_page(tab):
+    ws_url=tab.get("webSocketDebuggerUrl","")
+    if not ws_url:raise RuntimeError("prefetched page has no debugger URL")
+    result=cdp_call(ws_url,"Runtime.evaluate",{
+        "expression":"({url:location.href,ready:document.readyState,protocol:location.protocol,failed:location.protocol==='chrome-error:'||!!document.querySelector('#main-frame-error')})",
+        "returnByValue":True})
+    if result.get("exceptionDetails"):
+        raise RuntimeError("prefetched page state could not be read")
+    value=result.get("result",{}).get("value")
+    if not isinstance(value,dict):raise RuntimeError("prefetched page state was invalid")
+    return value
+
+
+def _prefetch_path(token=None):
+    token=token or os.environ.get("CU_SESSION_TOKEN")
+    if not isinstance(token,str) or not PREFETCH_TOKEN_RE.fullmatch(token):
+        return None
+    return STATE_PATH.parent / ("chromium-prefetch-" + token + ".json")
+
+
+def _read_prefetches(token=None):
+    path=_prefetch_path(token)
+    if path is None:return []
+    try:
+        fd=os.open(path,os.O_RDONLY|os.O_NOFOLLOW|os.O_CLOEXEC)
+        with os.fdopen(fd,"r",encoding="utf-8") as stream:
+            info=os.fstat(stream.fileno())
+            if (not stat.S_ISREG(info.st_mode) or info.st_uid!=os.geteuid() or
+                    info.st_mode & 0o777 != 0o600):
+                raise RuntimeError("prefetch state is not a private regular file")
+            records=json.load(stream)
+    except FileNotFoundError:
+        return []
+    except json.JSONDecodeError:
+        return []
+    if not isinstance(records,list):return []
+    valid=[]
+    for item in records:
+        if not isinstance(item,dict):continue
+        try:
+            endpoint=validate_endpoint(item["endpoint"])
+            url=validate_url(item["url"])
+            tab_id=item["tab_id"]
+            created=item["created"]
+            if (not isinstance(tab_id,str) or not re.fullmatch(r"[A-Za-z0-9._-]{1,128}",tab_id) or
+                    isinstance(created,bool) or not isinstance(created,(int,float)) or
+                    not math.isfinite(created)):
+                continue
+            valid.append({"endpoint":endpoint,"url":url,"tab_id":tab_id,"created":created})
+        except (KeyError,TypeError,ValueError):
             continue
-        tabs.append({"id": target.get("id", ""),
-                     "title": target.get("title", ""),
-                     "url": target.get("url", "")})
-    return tabs
+    return valid[-MAX_PREFETCHES:]
+
+
+def _write_prefetches(records,token=None):
+    path=_prefetch_path(token)
+    if path is None:return
+    path.parent.mkdir(mode=0o700,parents=True,exist_ok=True)
+    directory=path.parent.lstat()
+    if not stat.S_ISDIR(directory.st_mode) or directory.st_uid!=os.geteuid():
+        raise RuntimeError("prefetch state directory is not owned by the current user")
+    os.chmod(path.parent,0o700)
+    fd=os.open(path,os.O_WRONLY|os.O_CREAT|os.O_TRUNC|os.O_NOFOLLOW|os.O_CLOEXEC,0o600)
+    try:
+        info=os.fstat(fd)
+        if not stat.S_ISREG(info.st_mode) or info.st_uid!=os.geteuid():
+            raise RuntimeError("prefetch state is not a private regular file")
+        os.fchmod(fd,0o600)
+        with os.fdopen(fd,"w",encoding="utf-8") as stream:
+            json.dump(records,stream,allow_nan=False)
+    except BaseException:
+        try:os.close(fd)
+        except OSError:pass
+        raise
+
+
+def _close_prefetch_target(record):
+    try:
+        endpoint=validate_endpoint(record["endpoint"])
+        version=http_json(endpoint,"/json/version")
+        if not isinstance(version,dict) or not any(
+                brand in str(version.get("Browser","")) for brand in ("Chromium/","Chrome/")):
+            return
+        if any(tab["id"]==record["tab_id"] for tab in list_page_tabs(endpoint)):
+            http_json(endpoint,"/json/close/"+urllib.parse.quote(record["tab_id"],safe=""),
+                      expect_json=False)
+    except (OSError,RuntimeError,ValueError,KeyError,TypeError):
+        pass
+
+
+def _prune_prefetches(records,now=None):
+    now=time.time() if now is None else now
+    kept=[]
+    for record in records:
+        age=now-record["created"]
+        if 0<=age<PREFETCH_TTL_SECONDS:kept.append(record)
+        else:_close_prefetch_target(record)
+    return kept
+
+
+def clear_session_prefetches(token=None):
+    path=_prefetch_path(token)
+    if path is None:return
+    actual_token=token or os.environ.get("CU_SESSION_TOKEN")
+    try:records=_read_prefetches(actual_token)
+    except (OSError,RuntimeError,ValueError):records=[]
+    for record in records:_close_prefetch_target(record)
+    try:
+        info=path.lstat()
+        if stat.S_ISREG(info.st_mode) and info.st_uid==os.geteuid():path.unlink()
+    except OSError:
+        pass
+
+
+def clear_other_prefetch_sessions(token=None):
+    current=token or os.environ.get("CU_SESSION_TOKEN")
+    if not isinstance(current,str) or not PREFETCH_TOKEN_RE.fullmatch(current):return
+    prefix="chromium-prefetch-"
+    for path in STATE_PATH.parent.glob(prefix+"*.json"):
+        old=path.name[len(prefix):-5]
+        if old!=current and PREFETCH_TOKEN_RE.fullmatch(old):
+            try:clear_session_prefetches(old)
+            except (OSError,RuntimeError,ValueError):pass
 
 
 def read_state():
@@ -486,8 +672,78 @@ def cmd_tabs(endpoint, args):
             "tabs": list_page_tabs(endpoint)}
 
 
+def _prefetched_target(endpoint,record):
+    target=next((item for item in list_page_targets(endpoint)
+                 if item.get("id")==record["tab_id"]),None)
+    if target is None or target.get("url")!=record["url"]:return None
+    state=read_prefetched_page(target)
+    if (state.get("url")!=record["url"] or state.get("ready")!="complete" or
+            state.get("failed") is True or state.get("protocol") not in ("http:","https:")):
+        return None
+    return target
+
+
+def cmd_prefetch(endpoint,args):
+    url=validate_url(args.url)
+    token=os.environ.get("CU_SESSION_TOKEN")
+    if _prefetch_path(token) is None:
+        raise ValueError("prefetch requires an active computer-use task")
+    records=_prune_prefetches(_read_prefetches(token))
+    duplicate=[record for record in records
+               if record["endpoint"]==endpoint and record["url"]==url]
+    records=[record for record in records if record not in duplicate]
+    for record in duplicate:_close_prefetch_target(record)
+    # URL navigation already belongs to this wrapper; the session token keeps
+    # warm tabs out of later broker tasks without adding a broker command.
+    target=None
+    try:
+        target=create_background_target(endpoint)
+        navigate_tab_background(target,url)
+    except (OSError,RuntimeError,ValueError) as exc:
+        if target is not None:
+            _close_prefetch_target({"endpoint":endpoint,"tab_id":target.get("id","")})
+        _write_prefetches(records,token)
+        return {"ok":False,"command":"prefetch","endpoint":endpoint,
+                "url":url,"error":str(exc)}
+    record={"endpoint":endpoint,"url":url,"tab_id":target["id"],"created":time.time()}
+    records.append(record)
+    while len(records)>MAX_PREFETCHES:
+        _close_prefetch_target(records.pop(0))
+    try:_write_prefetches(records,token)
+    except BaseException:
+        _close_prefetch_target(record)
+        raise
+    return {"ok":True,"command":"prefetch","endpoint":endpoint,
+            "url":url,"tab_id":target["id"],"prefetched":True}
+
+
 def cmd_open(endpoint, args):
+    started=time.monotonic()
     url = validate_url(args.url)
+    token=os.environ.get("CU_SESSION_TOKEN")
+    records=_prune_prefetches(_read_prefetches(token))
+    matching=[record for record in records
+              if record["endpoint"]==endpoint and record["url"]==url]
+    adopted=matching[-1] if matching else None
+    if matching:
+        records=[record for record in records if record not in matching]
+        for record in matching[:-1]:_close_prefetch_target(record)
+    _write_prefetches(records,token)
+    if adopted is not None:
+        try:
+            target=_prefetched_target(endpoint,adopted)
+            if target is not None:
+                http_json(endpoint,"/json/activate/"+urllib.parse.quote(adopted["tab_id"],safe=""),
+                          expect_json=False)
+                target=_prefetched_target(endpoint,adopted)
+                if target is not None:
+                    tab={"id":target["id"],"title":target.get("title",""),"url":target["url"]}
+                    write_state(tab)
+                    return {"ok":True,"command":"open","endpoint":endpoint,"tab":tab,
+                            "prefetched":True,"load_ms":round((time.monotonic()-started)*1000,3)}
+        except (OSError,RuntimeError,ValueError):
+            pass
+        _close_prefetch_target(adopted)
     target = http_json(endpoint, "/json/new?" + urllib.parse.urlencode(
         {"url": url}), method="PUT")
     if not isinstance(target, dict) or not target.get("id"):
@@ -500,17 +756,22 @@ def cmd_open(endpoint, args):
     try:
         navigate_tab_via_ws(target, url)
     except (ValueError, RuntimeError, OSError) as exc:
-        raise RuntimeError("open created tab %s but navigation failed: %s"
-                           % (tab_id, exc)) from exc
+        return {"ok":False,"command":"open","endpoint":endpoint,"url":url,
+                "error":"open created tab %s but navigation failed: %s" % (tab_id,exc),
+                "prefetched":False,"load_ms":round((time.monotonic()-started)*1000,3)}
     tabs = {tab["id"]: tab for tab in list_page_tabs(endpoint)}
     tab = tabs.get(tab_id)
     if tab is None:
-        raise RuntimeError("new tab %s vanished after navigation" % tab_id)
+        return {"ok":False,"command":"open","endpoint":endpoint,"url":url,
+                "error":"new tab %s vanished after navigation" % tab_id,
+                "prefetched":False,"load_ms":round((time.monotonic()-started)*1000,3)}
     if tab.get("url", "") in ("", "about:blank"):
-        raise RuntimeError("open created tab %s but it is still about:blank; "
-                           "navigation did not happen" % tab_id)
+        return {"ok":False,"command":"open","endpoint":endpoint,"url":url,
+                "error":"open created tab %s but it is still about:blank; navigation did not happen" % tab_id,
+                "prefetched":False,"load_ms":round((time.monotonic()-started)*1000,3)}
     write_state(tab)
-    return {"ok": True, "command": "open", "endpoint": endpoint, "tab": tab}
+    return {"ok":True,"command":"open","endpoint":endpoint,"tab":tab,
+            "prefetched":False,"load_ms":round((time.monotonic()-started)*1000,3)}
 
 
 def cmd_activate(endpoint, args):
@@ -613,6 +874,7 @@ def cmd_status(endpoint, args):
 
 COMMANDS = {
     "tabs": (cmd_tabs, "list page tabs"),
+    "prefetch": (cmd_prefetch, "load a URL in a background tab for this task"),
     "open": (cmd_open, "open a URL in a new tab"),
     "activate": (cmd_activate, "bring a tab to front"),
     "close": (cmd_close, "close one tab by id"),
@@ -633,6 +895,8 @@ def build_parser():
                         help="Chromium profile dir (default %(default)s)")
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("tabs", help=COMMANDS["tabs"][1])
+    prefetch_parser = sub.add_parser("prefetch", help=COMMANDS["prefetch"][1])
+    prefetch_parser.add_argument("url")
     open_parser = sub.add_parser("open", help=COMMANDS["open"][1])
     open_parser.add_argument("url")
     activate_parser = sub.add_parser("activate", help=COMMANDS["activate"][1])
@@ -665,7 +929,7 @@ def main(argv):
                           "error": str(exc)}, ensure_ascii=False))
         return 1
     print(json.dumps(result, ensure_ascii=False))
-    return 0
+    return 0 if not isinstance(result,dict) or result.get("ok") is not False else 1
 
 
 if __name__ == "__main__":

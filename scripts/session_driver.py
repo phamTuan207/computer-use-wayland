@@ -59,6 +59,7 @@ def continuation_reason(result, body):
 def relay(source, sink):
     import cu
     from browser_worker import BrowserWorker
+    import chromium_cli
     browser=cu.browser;worker=BrowserWorker()
     # The browser endpoint default is session state, scoped exactly like the
     # browser executor above: one serial relay session starts from the
@@ -67,11 +68,14 @@ def relay(source, sink):
     # finally block even when a command raises. No concurrent relay support.
     endpoint=cu.BROWSER_ENDPOINT
     try:
+        chromium_cli.clear_other_prefetch_sessions()
         cu.browser=worker.request
         cu.BROWSER_ENDPOINT='http://127.0.0.1:9222'
         return relay_commands(source,sink)
     finally:
-        try:cu.stop_precapture()
+        try:
+            cu.stop_precapture()
+            chromium_cli.clear_session_prefetches()
         finally:
             cu.browser=browser
             cu.BROWSER_ENDPOINT=endpoint
