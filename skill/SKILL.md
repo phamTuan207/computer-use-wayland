@@ -53,6 +53,20 @@ is deliberate and may change workspace/stacking. Re-ground after layout/geometry
 Screen observations support pointer actions only. After two failed targeting attempts, change
 backend or ask. Split batches before unseen targets or consequential submissions.
 
+For desktop action groups, use the canonical group when it fits: click a field, type its value,
+then press Enter. A group may contain at most one committing action: click, double-click, drag,
+or scroll. Put that action before every type or key action. A move may precede the commit; after a
+click or double-click, only typing, keys, and waits may follow. After a scroll or drag, only waits
+may follow. Keyboard-only groups and repeated typing can be grouped. Wait may appear anywhere.
+Ctrl+A is an ordinary field editing key, so click, Ctrl+A, then type is groupable.
+
+Split before a second click at a new target revealed by a menu or dialog, before a click after
+typing, and before any input after Enter, Return, Tab, Escape, Ctrl+T, Ctrl+W, Ctrl+N, Ctrl+Tab,
+Ctrl+Shift+Tab, Alt+F4, or typing text with a newline. If strict preflight rejects a group, the
+refusal is recoverable: completed is 0 and no input was sent. Split after the named action, then
+observe again before the remaining actions. `--group-policy plan` is only for pre-validated plan
+batches and must never be used for model actions.
+
 DOM/accessibility: batch known refs and verify actual application state. Native
 `pressed`/`checked`/`selected`/`expanded` flags can avoid screenshots when exposed; missing flags
 prove nothing. An acknowledgment may precede callbacks: read state again rather than click again.
