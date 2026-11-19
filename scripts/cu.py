@@ -1388,7 +1388,7 @@ def _diagnostic_event(event,meta,env,*,action_index=None,action_type=None,intend
     finally:os.close(fd)
 
 def desktop_act(env,meta,actions,after_capture=True,observation_path=None,
-                expected_terminal_window=None):
+                expected_terminal_window=None,_absorb_screen_retry=True):
     preflight_start=time.monotonic()
     try:
         if not isinstance(after_capture,bool): raise ValueError('after_capture must be boolean')
@@ -1491,6 +1491,27 @@ def desktop_act(env,meta,actions,after_capture=True,observation_path=None,
             new,fresh=settled,settled_meta
         else:
             fresh=save_observation(settled,settled_meta,meta['max_width'])
+            # A2 (2026-11-19): absorb ONE transient screen-changed preflight
+            # flake inside act() instead of returning it to the model. Retry
+            # the identical act once against the settled frame, only when the
+            # action-point patches are unchanged vs the original observation
+            # (so the model coordinates still point at the same UI element)
+            # and only when completed is 0 (no input was sent yet: this site
+            # runs before any pointer/keyboard action). Any failure in the
+            # absorb path falls back to this refusal, unchanged.
+            if _absorb_screen_retry and not _action_points_changed(old,settled,actions):
+                _diagnostic_event('preflight_absorb_retry',meta,env,completed=0,error='screen changed',active_window=active_window)
+                try:
+                    retried=desktop_act(env,fresh,actions,after_capture=after_capture,
+                                        expected_terminal_window=expected_terminal_window,
+                                        _absorb_screen_retry=False)
+                except Exception:
+                    retried=None
+                if isinstance(retried,dict):
+                    retried['preflight_retries']=1
+                    if retried.get('ok'):
+                        retried['preflight_absorbed']=True
+                    return retried
             _diagnostic_event('preflight_refused',meta,env,completed=0,error='screen changed',active_window=active_window)
             return {'ok':False,'completed':0,'error':'screen changed','error_code':'screen_changed',
                     'preflight_ms':round((time.monotonic()-preflight_start)*1000,3),

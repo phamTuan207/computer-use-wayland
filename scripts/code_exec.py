@@ -25,7 +25,10 @@ Safety invariants, unchanged from the normal loop:
   desktop_act with the same validation as the normal act command.
 - The pointer miss check (over 3px refuses the click) and the screen-changed
   refusal stay: act() is desktop_act, so both still apply. A program may
-  not disable them.
+  not disable them. A transient screen-changed flake is absorbed inside
+  desktop_act (one automatic retry against a fresh observation, only when
+  the action points are unchanged); a refusal reaches the program only if
+  absorption fails.
 
 Allowlisted API (the only names a program may call):
 - windows() -> list of {address, class, title, at, size, workspace}

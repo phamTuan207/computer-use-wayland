@@ -49,7 +49,7 @@ class ActDiagnostics(unittest.TestCase):
     def desktop_act(self, meta, actions, after_capture=True, *,
                     active=None, cursor=(10, 10), after=None,
                     pre_fresh=None, new_image=None, image_pair=None,
-                    fresh_images=None,
+                    fresh_images=None, file_image=None,
                     probe_error=None, expected_terminal_window=None,
                     window_side_effect=None):
         """Run the real desktop_act with every GUI seam mocked.
@@ -118,8 +118,15 @@ class ActDiagnostics(unittest.TestCase):
         stack.enter_context(patch.object(cu, 'Pointer', return_value=Mock()))
         stack.enter_context(patch.object(cu, 'run_cancelable', return_value=''))
         stack.enter_context(patch.object(cu.shutil, 'which', return_value=None))
-        stack.enter_context(patch('PIL.Image.open',
-                                  return_value=image_pair[0] if image_pair else image))
+        def fake_image_open(fp, *args, **kwargs):
+            # BytesIO opens are observation-file reads inside validation
+            # (the persisted fresh frame); path opens are the displayed
+            # observation image. A2 absorb tests pass file_image for the
+            # former so the retry meta validates against real pixels.
+            if file_image is not None and isinstance(fp, io.BytesIO):
+                return file_image
+            return image_pair[0] if image_pair else image
+        stack.enter_context(patch('PIL.Image.open', side_effect=fake_image_open))
         self.sleep_mock = stack.enter_context(patch('time.sleep'))
         try:
             return cu.desktop_act({}, meta, actions, after_capture=after_capture,
@@ -256,6 +263,8 @@ class ActDiagnostics(unittest.TestCase):
                                   image_pair=(old,), active=(ADDR, ADDR))
         self.assertIs(result['ok'], False)
         self.assertEqual(result['error_code'], 'screen_changed')
+        self.assertNotIn('preflight_retries', result,
+                         'whole-image change at the action point is not absorbed')
         self.assertIn('after', result)
         self.assertNotIn('input_diagnostics', result,
                          'the pre-input refusal envelope stays unchanged')
@@ -295,6 +304,8 @@ class ActDiagnostics(unittest.TestCase):
                                   active=[ADDR] * 8)
         self.assertFalse(result['ok'])
         self.assertEqual(result['error_code'], 'screen_changed')
+        self.assertNotIn('preflight_retries', result,
+                         'a moved action point is not absorbed')
         self.assertEqual(len(self.fresh_reads), 2)
         self.sleep_mock.assert_called_once_with(.15)
 
@@ -314,9 +325,78 @@ class ActDiagnostics(unittest.TestCase):
                                   active=[ADDR] * 8)
         self.assertFalse(result['ok'])
         self.assertEqual(result['error_code'], 'screen_changed')
+        self.assertNotIn('preflight_retries', result,
+                         'a still-drifting action point is not absorbed')
         self.assertEqual(len(self.fresh_reads), 2,
                          'one second capture maximum, no recursive retries')
         self.sleep_mock.assert_called_once_with(.15)
+
+    def test_absorbed_brightness_drift_succeeds_with_flag(self):
+        # A2: a screen-changed refusal whose action-point patches are
+        # unchanged vs the original observation is absorbed inside act():
+        # one retry against the settled frame, no model round trip.
+        from PIL import Image, ImageDraw
+        old = Image.new('RGB', (100, 100), (100, 100, 100))
+        shifted = Image.new('RGB', old.size)
+        shifted.putdata([(96 if x % 2 == 0 else 97,) * 3
+                         for y in range(old.height) for x in range(old.width)])
+        settled = Image.new('RGB', old.size)
+        settled.putdata([(90 if x % 2 == 0 else 91,) * 3
+                         for y in range(old.height) for x in range(old.width)])
+        ImageDraw.Draw(settled).rectangle((26, 26, 74, 74), fill=(96, 96, 96))
+        settled.format = 'PNG'
+        meta = base_meta(image_size=[100, 100], window_bounds=[0, 0, 100, 100],
+                         monitor_box=[0, 0, 100, 100], region=[0, 0, 100, 100])
+        with patch.dict(os.environ, {'CU_SESSION_TOKEN': 'c' * 32}):
+            result = self.desktop_act(meta, [{'type': 'move', 'x': 50, 'y': 50}],
+                                      image_pair=(old,), file_image=settled,
+                                      fresh_images=[shifted, settled, settled.copy()],
+                                      after=dict(meta, pixel_sha256='after-hash',
+                                                 image='after.png'),
+                                      cursor=(50, 50), active=[ADDR] * 16)
+        self.assertTrue(result['ok'], result)
+        self.assertEqual(result['completed'], 1)
+        self.assertTrue(result['preflight_absorbed'])
+        self.assertEqual(result['preflight_retries'], 1)
+        self.assertEqual(len(self.fresh_reads), 3)
+        self.assertEqual(sum(args == (.15,) for args, _ in self.sleep_mock.call_args_list), 1)
+        rows = [json.loads(line) for path in self.tmp.glob('diagnostics-*.jsonl')
+                for line in path.read_text().splitlines()]
+        self.assertIn('preflight_absorb_retry', [row['event'] for row in rows])
+
+    def test_absorb_retry_still_refuses_after_second_drift(self):
+        # A2: absorption is max ONE retry. If the retried act still sees a
+        # drifting screen, the refusal is returned, marked preflight_retries.
+        from PIL import Image, ImageDraw
+        old = Image.new('RGB', (100, 100), (100, 100, 100))
+        shifted = Image.new('RGB', old.size)
+        shifted.putdata([(96 if x % 2 == 0 else 97,) * 3
+                         for y in range(old.height) for x in range(old.width)])
+        settled = Image.new('RGB', old.size)
+        settled.putdata([(90 if x % 2 == 0 else 91,) * 3
+                         for y in range(old.height) for x in range(old.width)])
+        ImageDraw.Draw(settled).rectangle((26, 26, 74, 74), fill=(96, 96, 96))
+        settled.format = 'PNG'
+        drift_a = Image.new('RGB', old.size)
+        drift_a.putdata([(84 if x % 2 == 0 else 85,) * 3
+                         for y in range(old.height) for x in range(old.width)])
+        drift_b = Image.new('RGB', old.size)
+        drift_b.putdata([(78 if x % 2 == 0 else 79,) * 3
+                         for y in range(old.height) for x in range(old.width)])
+        meta = base_meta(image_size=[100, 100], window_bounds=[0, 0, 100, 100],
+                         monitor_box=[0, 0, 100, 100], region=[0, 0, 100, 100])
+        with patch.dict(os.environ, {'CU_SESSION_TOKEN': 'c' * 32}):
+            result = self.desktop_act(meta, [{'type': 'move', 'x': 50, 'y': 50}],
+                                      image_pair=(old,), file_image=settled,
+                                      fresh_images=[shifted, settled, drift_a, drift_b],
+                                      cursor=(50, 50), active=[ADDR] * 16)
+        self.assertFalse(result['ok'])
+        self.assertEqual(result['error_code'], 'screen_changed')
+        self.assertEqual(result['preflight_retries'], 1)
+        self.assertNotIn('preflight_absorbed', result)
+        self.assertIn('after', result)
+        self.assertEqual(len(self.fresh_reads), 4)
+        self.assertEqual(sum(args == (.15,) for args, _ in self.sleep_mock.call_args_list), 2)
 
     def test_focus_changed_refusal_envelope_has_no_input_diagnostics(self):
         meta = base_meta()
