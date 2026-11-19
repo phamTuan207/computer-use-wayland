@@ -416,6 +416,7 @@ class CuGroundCliTests(unittest.TestCase):
         self.assertGreaterEqual(crop[1], 0)
         self.assertLessEqual(crop[0] + crop[2], 924)
         self.assertLessEqual(crop[1] + crop[3], 581)
+        self.assertEqual(crop, [0, 67, 208, 400])
 
     def test_ground_unknown_frame_fails_closed(self):
         adapter = {'ok': True, 'ref': 'e1', 'role': 'push button',
