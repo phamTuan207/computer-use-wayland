@@ -1006,6 +1006,187 @@ def screen_changed(old,new,actions):
     # A small button can move without changing the global average appreciably.
     return _action_points_changed(old,new,actions)
 
+
+# A changed region is expanded by eight source-image pixels to include nearby UI.
+DIFF_PADDING_PIXELS = 8
+# The default grid uses 12 columns and 8 rows to keep hashing inexpensive.
+DIFF_TILE_COLUMNS = 12
+DIFF_TILE_ROWS = 8
+# Send the whole frame when at least 35 percent of the tiles changed.
+FULL_FRAME_FRACTION = 0.35
+# Average-hash Hamming distance must be nonzero to mark a tile changed.
+TILE_HAMMING_THRESHOLD = 0
+# The thumbnail keeps global context while limiting its largest dimension.
+DIFF_THUMBNAIL_MAX_WIDTH = 320
+
+
+def _validate_rgb_image(image):
+    from PIL import Image
+    if not isinstance(image, Image.Image) or image.mode != 'RGB':
+        raise ValueError('image must be a PIL RGB image')
+
+
+def _validate_tile_grid(cols, rows):
+    if (isinstance(cols, bool) or not isinstance(cols, int) or cols <= 0 or
+            isinstance(rows, bool) or not isinstance(rows, int) or rows <= 0):
+        raise ValueError('tile grid dimensions must be positive integers')
+
+
+def tile_hashes(image, cols, rows):
+    """Return row-major 8x8 grayscale average hashes for each image tile."""
+    from PIL import Image
+    _validate_rgb_image(image)
+    _validate_tile_grid(cols, rows)
+    hashes = []
+    for row in range(rows):
+        y0, y1 = row * image.height // rows, (row + 1) * image.height // rows
+        for col in range(cols):
+            x0, x1 = col * image.width // cols, (col + 1) * image.width // cols
+            if x0 == x1 or y0 == y1:
+                hashes.append(0)
+                continue
+            # Tiles are sampled to 8x8 pixels; four extra bits preserve coarse
+            # brightness changes that a contrast-only average hash would miss.
+            tile = image.crop((x0, y0, x1, y1)).convert('L').resize(
+                (8, 8), Image.Resampling.LANCZOS)
+            pixels = tile.tobytes()
+            mean = sum(pixels) / len(pixels)
+            value = sum((1 << index) for index, pixel in enumerate(pixels)
+                        if pixel >= mean)
+            brightness = min(15, int(mean * 16 / 256))
+            hashes.append((brightness << 64) | value)
+    return hashes
+
+
+def _frame_diff_result(changed_tiles, changed_fraction, bbox, distances,
+                       *, no_change, size_mismatch=False):
+    return {
+        'changed_tiles': changed_tiles,
+        'changed_tile_count': len(changed_tiles),
+        'changed_fraction': changed_fraction,
+        'bbox': bbox,
+        'tile_distances': distances,
+        'no_change': no_change,
+        'size_mismatch': size_mismatch,
+    }
+
+
+def frame_diff(prev_image, cur_image, cols=DIFF_TILE_COLUMNS,
+               rows=DIFF_TILE_ROWS,
+               hamming_threshold=TILE_HAMMING_THRESHOLD):
+    """Compare RGB frames by tile hashes and return the padded changed bounds."""
+    _validate_rgb_image(prev_image)
+    _validate_rgb_image(cur_image)
+    _validate_tile_grid(cols, rows)
+    if (isinstance(hamming_threshold, bool) or
+            not isinstance(hamming_threshold, int) or hamming_threshold < 0):
+        raise ValueError('hamming_threshold must be a non-negative integer')
+    tile_count = cols * rows
+    if prev_image.size != cur_image.size:
+        return _frame_diff_result(
+            list(range(tile_count)), 1.0,
+            [0, 0, cur_image.width, cur_image.height],
+            [None] * tile_count, no_change=False, size_mismatch=True)
+
+    old_hashes = tile_hashes(prev_image, cols, rows)
+    new_hashes = tile_hashes(cur_image, cols, rows)
+    distances = [(old ^ new).bit_count()
+                 for old, new in zip(old_hashes, new_hashes)]
+    changed = [index for index, distance in enumerate(distances)
+               if distance > hamming_threshold]
+    if not changed:
+        return _frame_diff_result([], 0.0, None, distances, no_change=True)
+
+    left, top = cur_image.width, cur_image.height
+    right = bottom = 0
+    for index in changed:
+        row, col = divmod(index, cols)
+        x0, x1 = col * cur_image.width // cols, (col + 1) * cur_image.width // cols
+        y0, y1 = row * cur_image.height // rows, (row + 1) * cur_image.height // rows
+        left, top = min(left, x0), min(top, y0)
+        right, bottom = max(right, x1), max(bottom, y1)
+    bbox = [max(0, left - DIFF_PADDING_PIXELS),
+            max(0, top - DIFF_PADDING_PIXELS),
+            min(cur_image.width, right + DIFF_PADDING_PIXELS),
+            min(cur_image.height, bottom + DIFF_PADDING_PIXELS)]
+    bbox[2] -= bbox[0]
+    bbox[3] -= bbox[1]
+    return _frame_diff_result(changed, len(changed) / tile_count, bbox,
+                              distances, no_change=False)
+
+
+def _diff_region_metadata(image, bbox, region):
+    image_width, image_height = image.size
+    if region is None:
+        base_x, base_y, base_width, base_height = 0, 0, image_width, image_height
+    else:
+        if (not isinstance(region, (list, tuple)) or len(region) != 4 or
+                any(isinstance(value, bool) or not isinstance(value, int)
+                    for value in region) or region[2] <= 0 or region[3] <= 0):
+            raise ValueError('region must be four integers with positive dimensions')
+        base_x, base_y, base_width, base_height = region
+    x, y, width, height = bbox
+    left = round(base_x + x * base_width / image_width)
+    top = round(base_y + y * base_height / image_height)
+    right = round(base_x + (x + width) * base_width / image_width)
+    bottom = round(base_y + (y + height) * base_height / image_height)
+    return {'image_size': [width, height],
+            'region': [left, top, max(1, right - left), max(1, bottom - top)]}
+
+
+def diff_observation(prev_image, cur_image, cols=DIFF_TILE_COLUMNS,
+                     rows=DIFF_TILE_ROWS,
+                     hamming_threshold=TILE_HAMMING_THRESHOLD, region=None):
+    """Choose a fresh full frame, fresh changed crop, or no-change marker."""
+    _validate_rgb_image(cur_image)
+    if prev_image is not None:
+        _validate_rgb_image(prev_image)
+    _validate_tile_grid(cols, rows)
+    if (isinstance(hamming_threshold, bool) or
+            not isinstance(hamming_threshold, int) or hamming_threshold < 0):
+        raise ValueError('hamming_threshold must be a non-negative integer')
+    if region is not None:
+        _diff_region_metadata(cur_image, [0, 0, cur_image.width, cur_image.height], region)
+    if prev_image is None:
+        tile_count = cols * rows
+        diff = _frame_diff_result(
+            list(range(tile_count)), 1.0,
+            [0, 0, cur_image.width, cur_image.height],
+            [None] * tile_count, no_change=False)
+        mode = 'full'
+    else:
+        diff = frame_diff(prev_image, cur_image, cols, rows, hamming_threshold)
+        mode = ('full' if diff['size_mismatch'] or
+                diff['changed_fraction'] >= FULL_FRAME_FRACTION else
+                'none' if diff['no_change'] else 'diff')
+    result = dict(diff, mode=mode, image=None, thumbnail=None,
+                  metadata=None, summary='')
+    if mode == 'none':
+        result.pop('tile_distances')
+    if mode == 'full':
+        result['image'] = cur_image.copy()
+        result['metadata'] = _diff_region_metadata(
+            cur_image, [0, 0, cur_image.width, cur_image.height], region)
+    elif mode == 'diff':
+        x, y, width, height = diff['bbox']
+        # Always crop the current capture, so the delivered pixels cannot be stale.
+        result['image'] = cur_image.crop((x, y, x + width, y + height)).copy()
+        result['metadata'] = _diff_region_metadata(cur_image, diff['bbox'], region)
+        thumbnail = cur_image
+        if cur_image.width > DIFF_THUMBNAIL_MAX_WIDTH:
+            from PIL import Image
+            thumbnail = cur_image.resize(
+                (DIFF_THUMBNAIL_MAX_WIDTH,
+                 max(1, round(cur_image.height * DIFF_THUMBNAIL_MAX_WIDTH /
+                              cur_image.width))), Image.Resampling.LANCZOS)
+        result['thumbnail'] = thumbnail.copy()
+    result['summary'] = (
+        f"mode={mode}, changed tiles={diff['changed_tile_count']}/"
+        f"{cols * rows}, fraction={diff['changed_fraction']:.3f}, "
+        f"bbox={diff['bbox']}"
+    )
+    return result
+
 def finite(value,name):
     # bool is a subclass of int, so True would otherwise reach a numeric command.
     try:valid=not isinstance(value,bool) and isinstance(value,(int,float)) and math.isfinite(value)

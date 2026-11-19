@@ -33,6 +33,9 @@ Allowlisted API (the only names a program may call):
   observation dict {id, image, observation, window, window_bounds,
   image_size, region, monitor}. The id binds the observation; act() only
   accepts an observation dict this interpreter delivered in this session.
+- observe_change_only(previous_observation=None, window=None, screen=None,
+  crop=None, max_width=960) -> a full, changed-crop, or no-change result.
+  Pass a target on the first call; later calls can reuse an observation id.
 - act(actions, observation=None) -> desktop_act result dict. actions use
   the same schema validate_actions enforces (1..32 items). observation
   defaults to the most recent observation in this program run. A refusal
@@ -257,7 +260,7 @@ class _Validator(ast.NodeVisitor):
 
     def __init__(self):
         self.allowed_names = set(SAFE_BUILTINS) | {
-            'windows', 'observe', 'act', 'read_file', 'assert_state',
+            'windows', 'observe', 'observe_change_only', 'act', 'read_file', 'assert_state',
             'assert_file_contains', 'assert_file_exists', 'print',
             'dom_start', 'dom_tabs', 'dom_observe', 'dom_act', 'dom_assert',
         }
@@ -522,6 +525,72 @@ class CodeExecSession:
         else:
             raise CodeExecError('observe needs window or screen')
         return self._compact_observation(meta)
+
+    def api_observe_change_only(self, previous_observation=None, window=None,
+                                screen=None, crop=None, max_width=960):
+        """Capture a fresh frame and return its change-only diff.
+
+        This is NOT pixel caching and never returns a cached image as the
+        observation. Any crop in the result is cut from fresh pixels.
+        Pass window or screen on the first call, when no previous observation
+        identifies the target.
+        """
+        import cu
+
+        previous_meta = None
+        previous_image = None
+        if isinstance(previous_observation, dict):
+            observation_id = previous_observation.get('id')
+            if isinstance(observation_id, str):
+                previous_meta = self.observations.get(observation_id)
+        if previous_meta is not None:
+            scope = previous_meta.get('scope')
+            previous_matches = True
+            if scope == 'window':
+                if window is not None and window != previous_meta.get('window'):
+                    previous_matches = False
+                elif screen is not None:
+                    previous_matches = False
+                else:
+                    window = previous_meta.get('window')
+            elif scope == 'screen':
+                if screen is not None and screen != previous_meta.get('monitor'):
+                    previous_matches = False
+                elif window is not None:
+                    previous_matches = False
+                else:
+                    screen = previous_meta.get('monitor')
+            if crop is not None and crop != previous_meta.get('crop'):
+                previous_matches = False
+            crop = previous_meta.get('crop') if crop is None else crop
+            max_width = previous_meta.get('max_width', max_width)
+            try:
+                if previous_matches and scope in ('window', 'screen'):
+                    previous_image = cu.validate_desktop_observation(
+                        previous_meta, getattr(self.backend, 'env', {}), load_image=True)
+            except Exception:
+                # Invalid or stale previous frames take the normal full-observe path.
+                previous_image = None
+            if window is None and isinstance(previous_observation, dict):
+                window = previous_observation.get('window')
+            if screen is None and isinstance(previous_observation, dict):
+                screen = previous_observation.get('screen')
+        elif isinstance(previous_observation, dict):
+            window = window or previous_observation.get('window')
+            screen = screen or previous_observation.get('screen')
+            if screen is None and window is None:
+                screen = previous_observation.get('monitor')
+
+        if window is None and screen is None:
+            raise CodeExecError('observe_change_only needs a previous observation or window/screen')
+        current = self.api_observe(window, screen, crop, max_width)
+        current_meta = self.observations[current['id']]
+        current_image = cu.validate_desktop_observation(
+            current_meta, getattr(self.backend, 'env', {}), load_image=True)
+        result = cu.diff_observation(previous_image, current_image,
+                                     region=current_meta.get('region'))
+        result['observation'] = current
+        return result
 
     def _bound_observation(self, observation):
         if observation is None:
@@ -804,6 +873,7 @@ class CodeExecSession:
                 '__builtins__': dict(SAFE_BUILTINS),
                 'windows': self.api_windows,
                 'observe': self.api_observe,
+                'observe_change_only': self.api_observe_change_only,
                 'act': self.api_act,
                 'read_file': self.api_read_file,
                 'assert_state': self.api_assert_state,
@@ -825,7 +895,7 @@ class CodeExecSession:
             self.check_cancel()
             kept = {k: v for k, v in namespace.items()
                     if k not in ('__builtins__',) and not callable(v)
-                    and k not in ('windows', 'observe', 'act', 'read_file',
+                    and k not in ('windows', 'observe', 'observe_change_only', 'act', 'read_file',
                                   'assert_state', 'assert_file_contains',
                                   'assert_file_exists', 'dom_start', 'dom_tabs',
                                   'dom_observe', 'dom_act', 'dom_assert', 'print')
