@@ -54,6 +54,35 @@ exception: a repo-owned wrapper entry (`vscode`, version 1.0.0, skill
 `skill/cli-anything/vscode.md`, code `scripts/vscode_cli.py`),
 covered by `tests/test_vscode_cli.py` and verified live on the laptop.
 
+## Repo-owned extensions
+
+### Obsidian `vault move`
+
+Upstream cli-anything-obsidian 1.1.1 has no move/rename command (its
+vault group offers append, create, delete, list, read, update only),
+so the briefed command `computer-use cli run obsidian -- vault move
+<source> <destination>` failed with "No such command 'move'". The
+runner (`scripts/cli-anything.py`) now intercepts that command and
+performs the move itself through the same Local REST API the harness
+wraps: HTTP MOVE on /vault/<url-encoded source path> with a
+Destination header and Bearer auth from OBSIDIAN_API_KEY. The plugin
+answers 204 and renames through app.fileManager.renameFile, the
+link-updating rename. This is the one vault operation that qualifies
+under the last-resort rule: only the API updates backlinks, plain mv
+leaves them broken (proven 19/11, see
+improvements/summary-vault-move-proof.md). The vendored skill doc
+(`skill/cli-anything/obsidian.md`) is upstream-verbatim and is NOT
+edited to document this; the extension lives here and in
+`skill/references/cli-anything.md`. Covered by
+`tests/test_obsidian_vault_move.py` (10 tests against a fake API
+server, non-live). Base URL defaults to https://127.0.0.1:27124,
+overridable with OBSIDIAN_API_URL. The live backlink check on a
+scratch vault is still open for the live-measure worker (the broker
+was busy with the R3 run when this landed); the request the
+subcommand issues is the same MOVE request (method, encoded path,
+Destination header, Bearer auth) the 19/11 proof ran live against
+the real plugin.
+
 ## Update procedure
 
 1. Check out upstream at a new HEAD and record it.

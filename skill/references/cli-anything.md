@@ -93,6 +93,26 @@ cli-anything-obsidian --json server status
 cli-anything-libreoffice --json project info -p project.json
 ```
 
+## `vault move` (repo-owned Obsidian extension)
+
+Upstream cli-anything-obsidian 1.1.1 has no move/rename command, so the
+harness cannot move a note. The repo runner adds it:
+
+```bash
+computer-use cli run obsidian -- vault move <source> <destination>
+```
+
+Both paths are vault-relative. The move goes straight to the Local REST
+API (HTTP MOVE, same server and auth as the harness). It is the one
+vault operation that needs the API: the plugin renames through
+app.fileManager.renameFile, which updates backlinks, while a plain shell
+mv leaves them pointing at the old path (proven 19/11,
+improvements/summary-vault-move-proof.md). Verify first with `server
+status`, then move, then confirm the destination with a fresh `vault
+list` or `vault read`. Same pre-verification rule as other destructive
+commands: confirm the exact source path first, and never replay a move
+whose result was uncertain without inspecting state.
+
 ## One-shot JSON calls only
 
 ```bash

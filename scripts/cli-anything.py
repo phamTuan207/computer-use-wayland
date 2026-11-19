@@ -32,14 +32,33 @@ dict of name -> entry is also accepted, for forward compatibility.
 
 Environment (tests only): CLI_ANYTHING_REGISTRY overrides the snapshot
 path. Nothing else is configurable.
+
+Repo-owned extension: `run obsidian -- vault move <source> <destination>`
+moves a note inside the vault through the Obsidian Local REST API
+(HTTP MOVE on /vault/<path> with a Destination header). Upstream
+cli-anything-obsidian 1.1.1 has no move/rename command, so without this
+the briefed command fails with "No such command 'move'". The move is
+the one vault operation that needs the API: the plugin's move calls
+app.fileManager.renameFile, the link-updating rename, while a plain
+shell mv leaves backlinks pointing at the old path (proven 19/11, see
+improvements/summary-vault-move-proof.md). Auth is the same as the
+upstream harness: OBSIDIAN_API_KEY in the environment, never on the
+command line. Base URL defaults to https://127.0.0.1:27124 (the plugin's
+default port on loopback) and can be overridden with OBSIDIAN_API_URL.
+The plugin serves a self-signed certificate, so TLS verification is
+off for this loopback call, same as the upstream harness (verify=False).
 """
 
 import json
 import os
 import shutil
+import ssl
 import subprocess
 import sys
 import threading
+import urllib.error
+import urllib.parse
+import urllib.request
 from pathlib import Path
 
 TIMEOUT_SECONDS = 60
@@ -47,6 +66,14 @@ JSON_PROBE_TIMEOUT_SECONDS = 10
 MAX_OUTPUT_CHARS = 4096
 TRUNCATION_MARKER = "\n...[truncated]"
 MAX_RETAINED_BYTES = 1_048_576
+
+# Repo-owned Obsidian extension: `vault move` (see obsidian_vault_move).
+# Upstream cli-anything-obsidian 1.1.1 has no move/rename command, so the
+# harness cannot move a note. The move goes straight to the same Local
+# REST API the harness wraps, with the same auth and the same server.
+# Timeout matches the upstream per-call default (30 s).
+OBSIDIAN_API_URL_DEFAULT = "https://127.0.0.1:27124"
+OBSIDIAN_MOVE_TIMEOUT_SECONDS = 30
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_REGISTRY = ROOT / "skill" / "cli-anything" / "registry.json"
@@ -56,6 +83,8 @@ USAGE = (
     "usage: cli-anything.py list\n"
     "       cli-anything.py info <app>\n"
     "       cli-anything.py run <app> -- <args...>\n"
+    "       cli-anything.py run obsidian -- vault move <source> <destination>\n"
+    "           (repo-owned extension; upstream has no move command)\n"
 )
 
 
@@ -228,6 +257,98 @@ def supports_json(binary):
     return "--json" in stdout
 
 
+def obsidian_api_url():
+    """Local REST API base URL (tests override it with OBSIDIAN_API_URL)."""
+    return os.environ.get("OBSIDIAN_API_URL") or OBSIDIAN_API_URL_DEFAULT
+
+
+def obsidian_vault_move(source, destination):
+    """Move a note via the Obsidian Local REST API; return a result dict.
+
+    Issues exactly the call the installed plugin exposes: HTTP MOVE on
+    /vault/<url-encoded source path> with the destination in a
+    Destination header and Bearer auth. The plugin answers 204 with an
+    empty body on success and performs the move through
+    app.fileManager.renameFile, so Obsidian updates backlinks. Raises
+    RuntimeError with the upstream-style message on any failure.
+    """
+    api_key = os.environ.get("OBSIDIAN_API_KEY") or ""
+    if not api_key:
+        raise RuntimeError(
+            "API key required. Set OBSIDIAN_API_KEY env var.")
+    base_url = obsidian_api_url().rstrip("/")
+    encoded = "/".join(urllib.parse.quote(part, safe="")
+                       for part in source.split("/"))
+    url = "%s/vault/%s" % (base_url, encoded)
+    request = urllib.request.Request(
+        url, method="MOVE",
+        headers={"Authorization": "Bearer %s" % api_key,
+                 "Destination": destination})
+    context = None
+    if url.lower().startswith("https://"):
+        context = ssl._create_unverified_context()
+    try:
+        with urllib.request.urlopen(
+                request, timeout=OBSIDIAN_MOVE_TIMEOUT_SECONDS,
+                context=context) as response:
+            status = response.status
+    except urllib.error.HTTPError as exc:
+        try:
+            body = exc.read().decode("utf-8", errors="replace")
+        except OSError:
+            body = ""
+        raise RuntimeError(
+            "Obsidian API error %s on MOVE /vault/%s: %s"
+            % (exc.code, encoded, body[:512])) from exc
+    except urllib.error.URLError as exc:
+        raise RuntimeError(
+            "Cannot connect to Obsidian REST API at %s. "
+            "Is Obsidian running with the Local REST API plugin enabled?"
+            % base_url) from exc
+    except TimeoutError as exc:
+        raise RuntimeError(
+            "Request to Obsidian timed out: MOVE /vault/%s"
+            % encoded) from exc
+    return {"source": source, "destination": destination,
+            "status": status, "method": "MOVE",
+            "note": "rename via Local REST API MOVE "
+                    "(app.fileManager.renameFile); Obsidian updates "
+                    "backlinks"}
+
+
+def cmd_run_obsidian_move(envelope, args):
+    """Run the repo-owned `vault move`; one JSON envelope out, like cmd_run."""
+    rest = args[2:]
+    if len(rest) != 2 or not rest[0] or not rest[1]:
+        envelope["error"] = (
+            "usage: vault move <source> <destination> "
+            "(vault-relative paths)")
+        print_envelope(envelope)
+        print(envelope["error"], file=sys.stderr)
+        return 2
+    source, destination = rest
+    if source == destination:
+        envelope["error"] = (
+            "vault move: source and destination are the same: %s"
+            % source)
+        print_envelope(envelope)
+        print(envelope["error"], file=sys.stderr)
+        return 2
+    try:
+        result = obsidian_vault_move(source, destination)
+    except RuntimeError as exc:
+        envelope["error"] = str(exc)
+        envelope["returncode"] = 1
+        print_envelope(envelope)
+        print(envelope["error"], file=sys.stderr)
+        return 1
+    envelope["returncode"] = 0
+    envelope["result"] = result
+    envelope["stdout_truncated"] = truncate(json.dumps(result))
+    print_envelope(envelope)
+    return 0
+
+
 def cmd_run(registry, app, args):
     """Run the allowlisted harness with argv only; one JSON envelope out."""
     envelope = {"app": app, "args": list(args), "returncode": None,
@@ -244,6 +365,11 @@ def cmd_run(registry, app, args):
         print_envelope(envelope)
         print(envelope["error"], file=sys.stderr)
         return 2
+    if app == "obsidian" and len(args) >= 2 and args[0] == "vault" \
+            and args[1] == "move":
+        # Repo-owned extension: the upstream harness has no move command,
+        # so this never reaches the binary. Same envelope shape as cmd_run.
+        return cmd_run_obsidian_move(envelope, args)
     binary = entry["entry_point"]
     if shutil.which(binary) is None:
         envelope["error"] = "harness binary not on PATH: %s" % binary
