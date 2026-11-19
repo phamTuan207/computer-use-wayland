@@ -14,6 +14,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
 
+import det_finish
+
 DET_FINISH = Path(__file__).resolve().parents[1] / 'scripts' / 'det_finish.py'
 
 CLEAN_FINISH = {'ok': True, 'status': 'finished', 'driver': 'stopped',
@@ -54,6 +56,39 @@ def _records():
     ]
 
 
+def _records_two_tasks():
+    """Two tasks sharing one records.jsonl, mirroring the live A/B run.
+
+    P1 (task C-03) finished first, including its own det-finish record;
+    P2 (task E-04) is the current task. Per-task truth for P2:
+    loop 33.386s, 4 requests, service 0.9s, image bytes 5678.
+    Whole-file (cumulative) values would be loop 1033.386s, 7 requests,
+    service 2.0s, image bytes 6912.
+    """
+    return _records() + [
+        {'cmd': 'det-finish', 'label': 'p1-det-finish', 'task_id': 'C-03',
+         'submit_wall': 1040.0, 'result_wall': 1040.2,
+         'service_s': 0.2, 'ok': True, 'status': 'finished',
+         'driver': 'stopped', 'guardian': 'clean',
+         'loop_wall_s': 36.5, 'verify_to_finish_s': 3.5},
+        {'cmd': 'start', 'label': 'p2-start', 'submit_mono': 20.0,
+         'submit_wall': 2000.0, 'result_wall': 2000.2,
+         'start_call_s': 0.178, 'ok': True},
+        {'cmd': 'request', 'label': 'p2-windows', 'kind': 'windows',
+         'submit_wall': 2001.0, 'result_wall': 2001.2, 'service_s': 0.2,
+         'ok': True},
+        {'cmd': 'request', 'label': 'p2-observe-initial', 'kind': 'observe',
+         'submit_wall': 2010.0, 'result_wall': 2010.4, 'service_s': 0.3,
+         'ok': True, 'image_bytes_total': 1000},
+        {'cmd': 'request', 'label': 'p2-act', 'kind': 'act',
+         'submit_wall': 2020.0, 'result_wall': 2020.3, 'service_s': 0.2,
+         'ok': True},
+        {'cmd': 'request', 'label': 'p2-verify', 'kind': 'observe',
+         'submit_wall': 2030.0, 'result_wall': 2033.386, 'service_s': 0.2,
+         'ok': True, 'image_bytes_total': 4678},
+    ]
+
+
 class DetFinishTest(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
@@ -83,13 +118,15 @@ class DetFinishTest(unittest.TestCase):
                 handle.write(json.dumps(record) + '\n')
         return path
 
-    def _run(self, *extra, finish=None):
+    def _run(self, *extra, finish=None, task_id='P1', label=None):
         cmd = [sys.executable, str(DET_FINISH),
                '--lease-file', str(self.lease),
-               '--task-id', 'P1', '--run-dir', str(self.run_dir),
+               '--task-id', task_id, '--run-dir', str(self.run_dir),
                '--verify-evidence', 'obs-1234',
                '--session-remote', str(self.stub),
                '--skip-hyprctl', *extra]
+        if label is not None:
+            cmd += ['--label', label]
         return subprocess.run(cmd, capture_output=True, text=True,
                               env=self._env(finish), timeout=60)
 
@@ -250,6 +287,97 @@ class DetFinishTest(unittest.TestCase):
         self.assertEqual(summary['blocked_reason'], 'broker-busy')
         md = (self.run_dir / 'summary.md').read_text(encoding='utf-8')
         self.assertIn('BLOCKED', md)
+
+
+    def test_second_task_scopes_to_its_own_records(self):
+        """Live A/B case: task E-04, labels p2-*, must not count P1."""
+        self._write_records(_records_two_tasks())
+        proc = self._run(task_id='E-04', label='p2-det-finish')
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+        summary = json.loads(
+            (self.run_dir / 'det-finish-E-04.json').read_text(
+                encoding='utf-8'))
+        self.assertEqual(summary['task_id'], 'E-04')
+        self.assertEqual(summary['label'], 'p2-det-finish')
+        timing = summary['timing']
+        self.assertEqual(timing['loop_wall_s'], 33.386)
+        self.assertEqual(timing['service_s_total'], 0.9)
+        self.assertEqual(timing['startup_s'], 0.178)
+        self.assertEqual(timing['requests'], 4)
+        self.assertEqual(timing['requests_by_kind'],
+                         {'windows': 1, 'observe': 2, 'act': 1})
+        self.assertEqual(timing['image_bytes_total'], 5678)
+        self.assertTrue(timing['scoped_to_task'])
+        self.assertEqual(timing['task_label_prefix'], 'p2')
+        self.assertEqual(summary['records_lines'], 5)
+        self.assertEqual(summary['records_total_lines'], 10)
+        md = (self.run_dir / 'summary.md').read_text(encoding='utf-8')
+        self.assertIn('33.386 s', md)
+
+    def test_default_label_keeps_whole_file_aggregation(self):
+        """Bare --label det-finish carries no prefix: old behaviour."""
+        self._write_records(_records_two_tasks())
+        proc = self._run(task_id='E-04')
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+        summary = json.loads(
+            (self.run_dir / 'det-finish-E-04.json').read_text(
+                encoding='utf-8'))
+        timing = summary['timing']
+        self.assertEqual(timing['loop_wall_s'], 1033.386)
+        self.assertEqual(timing['requests'], 7)
+        self.assertEqual(timing['service_s_total'], 2.0)
+        self.assertEqual(timing['image_bytes_total'], 6912)
+        self.assertFalse(timing['scoped_to_task'])
+        self.assertIsNone(timing['task_label_prefix'])
+        self.assertEqual(summary['records_lines'], 10)
+
+    def test_unmatched_prefix_falls_back_to_whole_file(self):
+        """Label-less legacy runs keep numbers instead of empty ones."""
+        self._write_records(_records_two_tasks())
+        proc = self._run(task_id='E-04', label='q9-det-finish')
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+        summary = json.loads(
+            (self.run_dir / 'det-finish-E-04.json').read_text(
+                encoding='utf-8'))
+        timing = summary['timing']
+        self.assertEqual(timing['loop_wall_s'], 1033.386)
+        self.assertEqual(timing['requests'], 7)
+        self.assertFalse(timing['scoped_to_task'])
+        self.assertEqual(timing['task_label_prefix'], 'q9')
+
+    def test_scoped_run_ignores_other_tasks_det_finish_record(self):
+        """A prior task's det-finish record must not shift the loop."""
+        self._write_records(_records_two_tasks())
+        proc = self._run(task_id='E-04', label='p2-det-finish')
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+        parsed = self._parse_records()
+        self.assertEqual(parsed[-1]['cmd'], 'det-finish')
+        self.assertEqual(parsed[-1]['loop_wall_s'], 33.386)
+
+
+class TaskPrefixTest(unittest.TestCase):
+    def test_prefix_from_label(self):
+        cases = {
+            'p2-det-finish': 'p2',
+            'floor-det-finish': 'floor',
+            'det-finish': None,
+            '': None,
+            'myrun': 'myrun',
+        }
+        for label, want in cases.items():
+            self.assertEqual(
+                det_finish._task_prefix_from_label(label), want, label)
+
+    def test_scope_records(self):
+        records = _records_two_tasks()
+        scoped, used = det_finish._scope_records(records, 'p2')
+        self.assertTrue(used)
+        self.assertEqual(len(scoped), 5)
+        self.assertTrue(all(r['label'].startswith('p2-') for r in scoped))
+        _, used_none = det_finish._scope_records(records, None)
+        self.assertFalse(used_none)
+        _, used_miss = det_finish._scope_records(records, 'q9')
+        self.assertFalse(used_miss)
 
 
 if __name__ == '__main__':

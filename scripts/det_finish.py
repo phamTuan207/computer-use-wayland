@@ -17,6 +17,13 @@ One shell call does, with no model call:
      det-finish-<task-id>.json plus a fixed block in summary.md,
   4. one JSON line on stdout; exit 0 only on finished/stopped/clean.
 
+records.jsonl is shared across every task in one run dir, so the
+summary aggregates ONLY the current task's records: the --label value
+carries the task prefix (<prefix>-det-finish, e.g. p2-det-finish) and
+the task's records carry labels <prefix>-<step> (p2-start, p2-verify).
+Aggregating the whole file would count every earlier task too (the
+bug this scoping fixes: E-04 reported loop 127.644s, true 33.386s).
+
 Usage:
   det_finish.py --lease-file L --task-id P1 --run-dir DIR \
       --verify-evidence <observation id/path or sha> [--label det-finish]
@@ -82,6 +89,40 @@ def _read_records(path):
             except json.JSONDecodeError:
                 bad_lines += 1
     return records, bad_lines
+
+
+def _task_prefix_from_label(label):
+    """Task label prefix carried by --label, or None when unscoped.
+
+    Live runs pass --label <prefix>-det-finish (e.g. p2-det-finish)
+    while the task's own records carry labels <prefix>-<step>
+    (p2-start, p2-verify). The bare default label 'det-finish' carries
+    no prefix, so it keeps the old whole-file behaviour.
+    """
+    if not label or label == 'det-finish':
+        return None
+    if label.endswith('-det-finish'):
+        prefix = label[:-len('-det-finish')]
+        return prefix or None
+    return label
+
+
+def _scope_records(records, prefix):
+    """Records belonging to one task, by label prefix.
+
+    Returns (scoped, used_scope). When the prefix matches at least one
+    record, only those records are used; otherwise the whole file is
+    used (label-less legacy runs keep the old behaviour) and used_scope
+    is False, so a caller can tell the numbers are run-wide.
+    """
+    if not prefix:
+        return records, False
+    scoped = [record for record in records
+              if isinstance(record, dict)
+              and str(record.get('label') or '').startswith(prefix + '-')]
+    if scoped:
+        return scoped, True
+    return records, False
 
 
 def _derive_summary(records):
@@ -243,7 +284,11 @@ def main(argv=None):
     records_path = args.run_dir / 'records.jsonl'
 
     records, bad_lines = _read_records(records_path)
-    timing = _derive_summary(records)
+    prefix = _task_prefix_from_label(args.label)
+    task_records, used_scope = _scope_records(records, prefix)
+    timing = _derive_summary(task_records)
+    timing['task_label_prefix'] = prefix
+    timing['scoped_to_task'] = used_scope
     verify_wall = timing['verify_result_wall']
     timing['verify_to_finish_s'] = (
         round(submit_w - verify_wall, 3)
@@ -304,7 +349,8 @@ def main(argv=None):
         },
         'timing': timing,
         'closeout': closeout,
-        'records_lines': len(records),
+        'records_lines': len(task_records),
+        'records_total_lines': len(records),
         'records_bad_lines': bad_lines,
         'generated_wall': time.time(),
     }
