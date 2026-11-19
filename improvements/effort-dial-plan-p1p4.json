@@ -1,0 +1,260 @@
+{
+ "tasks": [
+  {
+   "id": "P1",
+   "steps": [
+    {
+     "kind": "start",
+     "label": "p1-start",
+     "level": 2,
+     "postcondition": {
+      "type": "broker_ok"
+     },
+     "prompt": "STEP p1-start (task P1). Start a fresh broker session: mkdir -p ~/.cache/agent-computer-use/leases/__ARM__-p1, chmod 700 that dir, then run: python3 __RUN_DIR__/timed.py --log __RUN_DIR__/records.jsonl start --owner __ARM__-p1 --lease-file ~/.cache/agent-computer-use/leases/__ARM__-p1/p1.lease --label p1-start. Log DECIDE p1-start first. Do nothing else this turn. End with exactly this JSON: {\"action\": \"start\", \"target\": \"p1 session ready\", \"confidence\": 1.0}."
+    },
+    {
+     "kind": "windows",
+     "label": "p1-windows",
+     "level": 2,
+     "postcondition": {
+      "type": "broker_ok"
+     },
+     "prompt": "STEP p1-windows (task P1). List windows: write the envelope {\"args\": [\"windows\"]} to __RUN_DIR__/p1-req1.json with Python json.dump, chmod 600 it, then run: python3 __RUN_DIR__/timed.py --log __RUN_DIR__/records.jsonl req --lease-file ~/.cache/agent-computer-use/leases/__ARM__-p1/p1.lease --seq 1 --request __RUN_DIR__/p1-req1.json --label p1-windows. Log DECIDE p1-windows first. Pick the terminal window titled __ARM__-term from the list. Do nothing else this turn. End with exactly this JSON: {\"action\": \"pick_terminal\", \"target\": \"<window address>\", \"confidence\": <0.0-1.0>}."
+    },
+    {
+     "kind": "observe",
+     "label": "p1-observe",
+     "level": 2,
+     "postcondition": {
+      "type": "broker_ok"
+     },
+     "prompt": "STEP p1-observe (task P1). Observe the terminal window you picked (address from the previous turn): envelope {\"args\": [\"observe\", \"--window\", \"<address>\", \"--max-width\", \"960\"], \"image_policy\": \"always\"} to __RUN_DIR__/p1-req2.json, chmod 600, then timed.py req --seq 2 --label p1-observe. Log DECIDE p1-observe first. Confirm the terminal is focused and empty. Do nothing else this turn. End with exactly this JSON: {\"action\": \"observe\", \"target\": \"<window address>\", \"confidence\": <0.0-1.0>}."
+    },
+    {
+     "kind": "act",
+     "label": "p1-act",
+     "level": 3,
+     "postcondition": {
+      "min_completed": 1,
+      "type": "broker_ok"
+     },
+     "prompt": "STEP p1-act (task P1, max effort). Type the command into the terminal: build the act envelope with the observation JSON path from the p1-observe result and one action [{\"type\": \"type\", \"text\": \"df -h /\\n\"}], image_policy auto, to __RUN_DIR__/p1-req3.json, chmod 600, then timed.py req --seq 3 --label p1-act. Log DECIDE p1-act first. If the type action fails, retry once with a key Return action. End with a short status line stating what the broker returned."
+    },
+    {
+     "kind": "verify",
+     "label": "p1-verify",
+     "level": 2,
+     "postcondition": {
+      "type": "broker_ok"
+     },
+     "prompt": "STEP p1-verify (task P1). Re-observe the terminal window (envelope observe --window <address> --max-width 960, image_policy always, __RUN_DIR__/p1-req4.json, timed.py req --seq 4 --label p1-verify). Log DECIDE p1-verify first. Read the terminal output with tesseract from record image_path and find the free space of /. Do nothing else this turn. End with exactly this JSON: {\"action\": \"report\", \"target\": \"<free space of /, e.g. 42G>\", \"confidence\": <0.0-1.0>}."
+    },
+    {
+     "kind": "finish",
+     "label": "p1-finish",
+     "level": 2,
+     "postcondition": {
+      "type": "broker_ok"
+     },
+     "prompt": "STEP p1-finish (task P1). Finish the broker session: python3 __RUN_DIR__/timed.py --log __RUN_DIR__/records.jsonl finish --lease-file ~/.cache/agent-computer-use/leases/__ARM__-p1/p1.lease --label p1-finish. Log DECIDE p1-finish first. Do nothing else this turn. End with exactly this JSON: {\"action\": \"finish\", \"target\": \"p1 done\", \"confidence\": 1.0}."
+    }
+   ],
+   "title": "C-03: free space of / via df -h /"
+  },
+  {
+   "id": "P2",
+   "steps": [
+    {
+     "kind": "start",
+     "label": "p2-start",
+     "level": 2,
+     "postcondition": {
+      "type": "broker_ok"
+     },
+     "prompt": "STEP p2-start (task P2). Start a fresh broker session: mkdir -p ~/.cache/agent-computer-use/leases/__ARM__-p2, chmod 700 that dir, then run: python3 __RUN_DIR__/timed.py --log __RUN_DIR__/records.jsonl start --owner __ARM__-p2 --lease-file ~/.cache/agent-computer-use/leases/__ARM__-p2/p2.lease --label p2-start. Log DECIDE p2-start first. Do nothing else this turn. End with exactly this JSON: {\"action\": \"start\", \"target\": \"p2 session ready\", \"confidence\": 1.0}."
+    },
+    {
+     "kind": "windows",
+     "label": "p2-windows",
+     "level": 2,
+     "postcondition": {
+      "type": "broker_ok"
+     },
+     "prompt": "STEP p2-windows (task P2). List windows: envelope {\"args\": [\"windows\"]} to __RUN_DIR__/p2-req1.json with Python json.dump, chmod 600, then timed.py req --lease-file ~/.cache/agent-computer-use/leases/__ARM__-p2/p2.lease --seq 1 --request __RUN_DIR__/p2-req1.json --label p2-windows. Log DECIDE p2-windows first. Pick the terminal window titled __ARM__-term. Do nothing else this turn. End with exactly this JSON: {\"action\": \"pick_terminal\", \"target\": \"<window address>\", \"confidence\": <0.0-1.0>}."
+    },
+    {
+     "kind": "observe",
+     "label": "p2-observe",
+     "level": 2,
+     "postcondition": {
+      "type": "broker_ok"
+     },
+     "prompt": "STEP p2-observe (task P2). Observe the terminal window you picked (address from the previous turn): envelope {\"args\": [\"observe\", \"--window\", \"<address>\", \"--max-width\", \"960\"], \"image_policy\": \"always\"} to __RUN_DIR__/p2-req2.json, chmod 600, then timed.py req --seq 2 --label p2-observe. Log DECIDE p2-observe first. Confirm the terminal is focused. Do nothing else this turn. End with exactly this JSON: {\"action\": \"observe\", \"target\": \"<window address>\", \"confidence\": <0.0-1.0>}."
+    },
+    {
+     "kind": "act",
+     "label": "p2-act",
+     "level": 3,
+     "postcondition": {
+      "min_completed": 1,
+      "type": "broker_ok"
+     },
+     "prompt": "STEP p2-act (task P2, max effort). Type the command into the terminal: build the act envelope with the observation JSON path from the p2-observe result and one action [{\"type\": \"type\", \"text\": \"python3 -c \\\"print(144/150*100)\\\"\\n\"}], image_policy auto, to __RUN_DIR__/p2-req3.json, chmod 600, then timed.py req --seq 3 --label p2-act. Log DECIDE p2-act first. If the type action fails, retry once with a key Return action. End with a short status line stating what the broker returned."
+    },
+    {
+     "kind": "verify",
+     "label": "p2-verify",
+     "level": 2,
+     "postcondition": {
+      "text": "96",
+      "type": "reply_contains"
+     },
+     "prompt": "STEP p2-verify (task P2). Re-observe the terminal window (envelope observe --window <address> --max-width 960, image_policy always, __RUN_DIR__/p2-req4.json, timed.py req --seq 4 --label p2-verify). Log DECIDE p2-verify first. Read the terminal output with tesseract from record image_path and find the printed percent value. Do nothing else this turn. End with exactly this JSON: {\"action\": \"report\", \"target\": \"<the printed number, e.g. 96.0>\", \"confidence\": <0.0-1.0>}."
+    },
+    {
+     "kind": "finish",
+     "label": "p2-finish",
+     "level": 2,
+     "postcondition": {
+      "type": "broker_ok"
+     },
+     "prompt": "STEP p2-finish (task P2). Finish the broker session: python3 __RUN_DIR__/timed.py --log __RUN_DIR__/records.jsonl finish --lease-file ~/.cache/agent-computer-use/leases/__ARM__-p2/p2.lease --label p2-finish. Log DECIDE p2-finish first. Do nothing else this turn. End with exactly this JSON: {\"action\": \"finish\", \"target\": \"p2 done\", \"confidence\": 1.0}."
+    }
+   ],
+   "title": "E-04: 144/150 as percent"
+  },
+  {
+   "id": "P3",
+   "steps": [
+    {
+     "kind": "start",
+     "label": "p3-start",
+     "level": 2,
+     "postcondition": {
+      "type": "broker_ok"
+     },
+     "prompt": "STEP p3-start (task P3). Start a fresh broker session: mkdir -p ~/.cache/agent-computer-use/leases/__ARM__-p3, chmod 700 that dir, then run: python3 __RUN_DIR__/timed.py --log __RUN_DIR__/records.jsonl start --owner __ARM__-p3 --lease-file ~/.cache/agent-computer-use/leases/__ARM__-p3/p3.lease --label p3-start. Log DECIDE p3-start first. Do nothing else this turn. End with exactly this JSON: {\"action\": \"start\", \"target\": \"p3 session ready\", \"confidence\": 1.0}."
+    },
+    {
+     "kind": "windows",
+     "label": "p3-windows",
+     "level": 2,
+     "postcondition": {
+      "type": "broker_ok"
+     },
+     "prompt": "STEP p3-windows (task P3). List windows: envelope {\"args\": [\"windows\"]} to __RUN_DIR__/p3-req1.json with Python json.dump, chmod 600, then timed.py req --lease-file ~/.cache/agent-computer-use/leases/__ARM__-p3/p3.lease --seq 1 --request __RUN_DIR__/p3-req1.json --label p3-windows. Log DECIDE p3-windows first. Pick the terminal window titled __ARM__-term. Do nothing else this turn. End with exactly this JSON: {\"action\": \"pick_terminal\", \"target\": \"<window address>\", \"confidence\": <0.0-1.0>}."
+    },
+    {
+     "kind": "observe",
+     "label": "p3-observe",
+     "level": 2,
+     "postcondition": {
+      "type": "broker_ok"
+     },
+     "prompt": "STEP p3-observe (task P3). Observe the terminal window you picked (address from the previous turn): envelope {\"args\": [\"observe\", \"--window\", \"<address>\", \"--max-width\", \"960\"], \"image_policy\": \"always\"} to __RUN_DIR__/p3-req2.json, chmod 600, then timed.py req --seq 2 --label p3-observe. Log DECIDE p3-observe first. Confirm the terminal is focused. Do nothing else this turn. End with exactly this JSON: {\"action\": \"observe\", \"target\": \"<window address>\", \"confidence\": <0.0-1.0>}."
+    },
+    {
+     "kind": "act",
+     "label": "p3-act",
+     "level": 3,
+     "postcondition": {
+      "min_completed": 1,
+      "type": "broker_ok"
+     },
+     "prompt": "STEP p3-act (task P3, max effort). Type the command into the terminal: build the act envelope with the observation JSON path from the p3-observe result and one action [{\"type\": \"type\", \"text\": \"mkdir -p /tmp/hoc-ky-2/dsa /tmp/hoc-ky-2/ktvm /tmp/hoc-ky-2/oop && find /tmp/hoc-ky-2 -type d\\n\"}], image_policy auto, to __RUN_DIR__/p3-req3.json, chmod 600, then timed.py req --seq 3 --label p3-act. Log DECIDE p3-act first. If the type action fails, retry once with a key Return action. End with a short status line stating what the broker returned."
+    },
+    {
+     "kind": "verify",
+     "label": "p3-verify",
+     "level": 2,
+     "postcondition": {
+      "argv": [
+       "bash",
+       "-c",
+       "test -d /tmp/hoc-ky-2/dsa && test -d /tmp/hoc-ky-2/ktvm && test -d /tmp/hoc-ky-2/oop"
+      ],
+      "type": "command_ok"
+     },
+     "prompt": "STEP p3-verify (task P3). Re-observe the terminal window (envelope observe --window <address> --max-width 960, image_policy always, __RUN_DIR__/p3-req4.json, timed.py req --seq 4 --label p3-verify). Log DECIDE p3-verify first. Read the terminal output with tesseract from record image_path and confirm all 4 directories (hoc-ky-2, dsa, ktvm, oop) are listed. Do nothing else this turn. End with exactly this JSON: {\"action\": \"report\", \"target\": \"4 dirs found\", \"confidence\": <0.0-1.0>}."
+    },
+    {
+     "kind": "finish",
+     "label": "p3-finish",
+     "level": 2,
+     "postcondition": {
+      "type": "broker_ok"
+     },
+     "prompt": "STEP p3-finish (task P3). Finish the broker session: python3 __RUN_DIR__/timed.py --log __RUN_DIR__/records.jsonl finish --lease-file ~/.cache/agent-computer-use/leases/__ARM__-p3/p3.lease --label p3-finish. Log DECIDE p3-finish first. Do nothing else this turn. End with exactly this JSON: {\"action\": \"finish\", \"target\": \"p3 done\", \"confidence\": 1.0}."
+    }
+   ],
+   "title": "B-01: mkdir hoc-ky-2 with 3 subdirs"
+  },
+  {
+   "id": "P4",
+   "steps": [
+    {
+     "kind": "start",
+     "label": "p4-start",
+     "level": 2,
+     "postcondition": {
+      "type": "broker_ok"
+     },
+     "prompt": "STEP p4-start (task P4). Start a fresh broker session: mkdir -p ~/.cache/agent-computer-use/leases/__ARM__-p4, chmod 700 that dir, then run: python3 __RUN_DIR__/timed.py --log __RUN_DIR__/records.jsonl start --owner __ARM__-p4 --lease-file ~/.cache/agent-computer-use/leases/__ARM__-p4/p4.lease --label p4-start. Log DECIDE p4-start first. Do nothing else this turn. End with exactly this JSON: {\"action\": \"start\", \"target\": \"p4 session ready\", \"confidence\": 1.0}."
+    },
+    {
+     "kind": "windows",
+     "label": "p4-windows",
+     "level": 2,
+     "postcondition": {
+      "type": "broker_ok"
+     },
+     "prompt": "STEP p4-windows (task P4). List windows: envelope {\"args\": [\"windows\"]} to __RUN_DIR__/p4-req1.json with Python json.dump, chmod 600, then timed.py req --lease-file ~/.cache/agent-computer-use/leases/__ARM__-p4/p4.lease --seq 1 --request __RUN_DIR__/p4-req1.json --label p4-windows. Log DECIDE p4-windows first. Pick the terminal window titled __ARM__-term. Do nothing else this turn. End with exactly this JSON: {\"action\": \"pick_terminal\", \"target\": \"<window address>\", \"confidence\": <0.0-1.0>}."
+    },
+    {
+     "kind": "observe",
+     "label": "p4-observe",
+     "level": 2,
+     "postcondition": {
+      "type": "broker_ok"
+     },
+     "prompt": "STEP p4-observe (task P4). Observe the terminal window you picked (address from the previous turn): envelope {\"args\": [\"observe\", \"--window\", \"<address>\", \"--max-width\", \"960\"], \"image_policy\": \"always\"} to __RUN_DIR__/p4-req2.json, chmod 600, then timed.py req --seq 2 --label p4-observe. Log DECIDE p4-observe first. Confirm the terminal is focused. Do nothing else this turn. End with exactly this JSON: {\"action\": \"observe\", \"target\": \"<window address>\", \"confidence\": <0.0-1.0>}."
+    },
+    {
+     "kind": "act",
+     "label": "p4-act",
+     "level": 3,
+     "postcondition": {
+      "min_completed": 1,
+      "type": "broker_ok"
+     },
+     "prompt": "STEP p4-act (task P4, max effort). Type the command into the terminal: build the act envelope with the observation JSON path from the p4-observe result and one action that types this printf command followed by newline: printf 'Ý tưởng 1: app nhắc uống nước.\\nÝ tưởng 2: bot tóm tắt bài giảng.\\nÝ tưởng 3: web bán đồ secondhand.\\n' > /tmp/y-tuong.txt && cat /tmp/y-tuong.txt. Use image_policy auto, file __RUN_DIR__/p4-req3.json, chmod 600, then timed.py req --seq 3 --label p4-act. Log DECIDE p4-act first. The 3 lines must be byte-exact Vietnamese with diacritics. If the type action fails, retry once with a key Return action. End with a short status line stating what the broker returned."
+    },
+    {
+     "kind": "verify",
+     "label": "p4-verify",
+     "level": 2,
+     "postcondition": {
+      "lines": [
+       "Ý tưởng 1: app nhắc uống nước.",
+       "Ý tưởng 2: bot tóm tắt bài giảng.",
+       "Ý tưởng 3: web bán đồ secondhand."
+      ],
+      "path": "/tmp/y-tuong.txt",
+      "type": "file_exact_lines"
+     },
+     "prompt": "STEP p4-verify (task P4). Re-observe the terminal window (envelope observe --window <address> --max-width 960, image_policy always, __RUN_DIR__/p4-req4.json, timed.py req --seq 4 --label p4-verify). Log DECIDE p4-verify first. Read the terminal output with tesseract from record image_path and confirm the exact 3 lines are shown. Do nothing else this turn. End with exactly this JSON: {\"action\": \"report\", \"target\": \"3 lines exact\", \"confidence\": <0.0-1.0>}."
+    },
+    {
+     "kind": "finish",
+     "label": "p4-finish",
+     "level": 2,
+     "postcondition": {
+      "type": "broker_ok"
+     },
+     "prompt": "STEP p4-finish (task P4). Finish the broker session: python3 __RUN_DIR__/timed.py --log __RUN_DIR__/records.jsonl finish --lease-file ~/.cache/agent-computer-use/leases/__ARM__-p4/p4.lease --label p4-finish. Log DECIDE p4-finish first. Do nothing else this turn. End with exactly this JSON: {\"action\": \"finish\", \"target\": \"p4 done\", \"confidence\": 1.0}."
+    }
+   ],
+   "title": "A-01: write y-tuong.txt, 3 exact lines"
+  }
+ ]
+}

@@ -1,0 +1,32 @@
+[
+  {
+    "call": "fork-max-F2-on-low-session",
+    "rc": 0,
+    "wall_s": 9.2,
+    "session": "01a1f3e8-b789-7fb3-92ef-bd99dff60a3a",
+    "new_session": "01a1f3eb-16c7-7613-aaa6-e7e97fb72d1d",
+    "usage": {
+      "input_tokens": 91756,
+      "cached_input_tokens": 28672,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 735,
+      "reasoning_output_tokens": 345
+    },
+    "reply": "**24 ph\u00fat.** L\u1ecbch: A 0\u20138, C 8\u201319, E 19\u201324; B 0\u201315; D 0\u20136.\n\nB ch\u1ed3ng l\u1ea5p v\u1edbi A v\u00e0 C; D ch\u1ed3ng l\u1ea5p v\u1edbi A. B v\u00e0 D c\u0169ng ch\u1ed3ng l\u1ea5p v\u1edbi nhau."
+  },
+  {
+    "call": "fork-low-F2-on-max-session",
+    "rc": 0,
+    "wall_s": 12.2,
+    "session": "01a1f3e8-d06c-7063-9dba-9dd41263df30",
+    "new_session": "01a1f3eb-3ace-7b31-b9fd-28343e4d8441",
+    "usage": {
+      "input_tokens": 56613,
+      "cached_input_tokens": 45056,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 726,
+      "reasoning_output_tokens": 430
+    },
+    "reply": "**24 ph\u00fat.**\n\nM\u1ed9t l\u1ecbch t\u1ed1i \u01b0u:\n\n- A: ph\u00fat 0\u20138\n- C: ph\u00fat 8\u201319\n- E: ph\u00fat 19\u201324\n- B: ph\u00fat 0\u201315\n- D: ph\u00fat 0\u20136\n\nB ch\u1ed3ng l\u1ea5p v\u1edbi A v\u00e0 C; D ch\u1ed3ng l\u1ea5p v\u1edbi A; B v\u00e0 D ch\u1ed3ng l\u1ea5p nhau."
+  }
+]
