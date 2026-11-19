@@ -8,7 +8,7 @@ This template copies the D1 program from the design and a multi-step GUI sketch.
 wins = windows()
 chrome = [w for w in wins if w["class"] == "chromium"][0]
 obs = observe(window=chrome["address"])
-result = act([{"type": "type", "text": "file:///tmp/speed-pick4-20261118/pick4-fixture.html\n"}], obs)
+result = act([{"type": "key", "keys": ["ctrl", "l"]}, {"type": "type", "text": "file:///tmp/speed-pick4-20261118/pick4-fixture.html\n"}], obs)
 verify = observe(window=chrome["address"])
 assert_state(result["ok"], "navigate act failed")
 tabs = dom_tabs()
