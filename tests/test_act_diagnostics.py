@@ -56,7 +56,8 @@ class ActDiagnostics(unittest.TestCase):
 
         active: answers for successive activewindow queries (the pre-batch
         diagnostics query and every guard pop one; the default simulates the
-        target staying focused for the whole batch);
+        target staying focused for the whole batch; the last answer repeats
+        once the list is exhausted, like a real compositor);
         probe_error: when set, the FIRST activewindow query (the optional
         focus_before diagnostic probe) raises RuntimeError with this text;
         the queue is not consumed by the failed probe;
@@ -95,7 +96,9 @@ class ActDiagnostics(unittest.TestCase):
                     if isinstance(failure, BaseException):
                         raise failure
                     raise RuntimeError(failure)
-                return {'address': queue.pop(0)}
+                # The last answer repeats: a real compositor returns its
+                # current state on every query, it never runs dry.
+                return {'address': queue.pop(0) if len(queue) > 1 else queue[0]}
             if query == 'cursorpos':
                 return {'x': cursor[0], 'y': cursor[1]}
             raise AssertionError('unexpected query ' + query)

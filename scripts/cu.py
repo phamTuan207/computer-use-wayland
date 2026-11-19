@@ -1019,7 +1019,7 @@ def integer(value,name):
 
 def validate_actions(actions,backend):
     if not isinstance(actions,list) or not 1<=len(actions)<=32: raise ValueError('actions must contain 1..32 items')
-    allowed=({'click','double_click','move','drag','scroll','type','key','wait'} if backend=='desktop' else
+    allowed=({'click','double_click','move','drag','scroll','type','key','wait','wait_for'} if backend=='desktop' else
              {'click','set_text'} if backend=='a11y' else
              {'click','fill','set_value','key','scroll','wait','assert'})
     for a in actions:
@@ -1031,6 +1031,8 @@ def validate_actions(actions,backend):
             if a['type']=='move' and modifiers:raise ValueError('modifiers require click, drag or scroll')
         if a['type']=='wait':
             if not 0<=integer(a.get('ms',100),'wait ms')<=2000: raise ValueError('wait ms must be 0..2000')
+        if a['type']=='wait_for':
+            validate_wait_for(a)
         if a['type'] in ('type','fill','set_value') and (not isinstance(a.get('text'),str) or len(a['text'])>10000): raise ValueError('text must be string <=10000 chars')
         if a['type']=='key' and (not isinstance(a.get('keys'),list) or not a['keys'] or not all(isinstance(k,str) and len(k)<40 for k in a['keys'])): raise ValueError('keys must be an array of key names')
         if backend=='desktop' and a['type']=='type' and any(ord(c)>0xffff for c in a['text']):
@@ -1269,7 +1271,7 @@ def compact_result(result):
             # Retain the original x-ratio alias for existing consumers.
             out['scale']=out['scale_x']
         return out
-    return {k:compact_result(v) if k=='after' else v for k,v in result.items()}
+    return {k:compact_result(v) if k in ('after','then') else v for k,v in result.items()}
 
 class Pointer:
     def __init__(self,env,monitor,binary='pointer'):
@@ -1324,6 +1326,246 @@ def mouse_modifiers(env,names):
     finally:
         try:keyboard.command('mods 0')
         finally:keyboard.close()
+
+
+WAIT_FOR_EVENTS = {'openwindow', 'closewindow', 'activewindow', 'workspace', 'windowtitle', 'movewindow'}
+WAIT_FOR_TIMEOUT_MAX_MS = 30000
+
+class WaitForTimeoutError(RuntimeError):
+    """A wait_for sequence step timed out; the caller falls back to a full observe."""
+
+def validate_wait_for(step):
+    """Validate one wait_for step (or match dict with a 'type' key)."""
+    if not isinstance(step, dict):
+        raise ValueError('wait_for step must be an object')
+    allowed = {'type', 'event', 'timeout_ms', 'address', 'class', 'title', 'workspace', 'expect_focus'}
+    if set(step) - allowed:
+        raise ValueError('wait_for step has an unsupported key')
+    if step.get('event') not in WAIT_FOR_EVENTS:
+        raise ValueError('wait_for event must be one of ' + ', '.join(sorted(WAIT_FOR_EVENTS)))
+    if 'expect_focus' in step:
+        want = step['expect_focus']
+        if want not in ('same', 'any') and not (isinstance(want, str) and re.fullmatch(r'0x[0-9a-fA-F]+', want or '')):
+            raise ValueError("wait_for expect_focus must be 'same', 'any', or a window address")
+    if 'timeout_ms' in step:
+        timeout = step['timeout_ms']
+        if isinstance(timeout, bool) or not isinstance(timeout, int) or not 0 <= timeout <= WAIT_FOR_TIMEOUT_MAX_MS:
+            raise ValueError('wait_for timeout_ms must be 0..30000')
+    if 'address' in step and not re.fullmatch(r'0x[0-9a-fA-F]+', step['address'] or ''):
+        raise ValueError('wait_for address must be a Hyprland window address')
+    for key in ('class', 'title'):
+        if key in step and (not isinstance(step[key], str) or not step[key].strip()):
+            raise ValueError('wait_for ' + key + ' must be a non-empty string')
+    if 'workspace' in step:
+        want = step['workspace']
+        if isinstance(want, bool) or not (isinstance(want, int) or (isinstance(want, str) and want.strip())):
+            raise ValueError('wait_for workspace must be an id or a name')
+    return step
+
+def _wait_for_client_matches(client, step):
+    if step.get('address') and not same_window_address(client.get('address'), step['address']):
+        return False
+    if step.get('class') and client.get('class') != step['class']:
+        return False
+    if step.get('title') and step['title'].casefold() not in (client.get('title') or '').casefold():
+        return False
+    if 'workspace' in step:
+        ws = client.get('workspace') or {}
+        want = step['workspace']
+        if isinstance(want, int):
+            if ws.get('id') != want:
+                return False
+        elif ws.get('name') != want:
+            return False
+    return True
+
+def _wait_for_already(env, step):
+    """hypruse already:true: answer instantly when the condition already holds."""
+    event = step['event']
+    if event in ('openwindow', 'windowtitle'):
+        return next(({'address': c.get('address'), 'class': c.get('class'), 'title': c.get('title'),
+                      'workspace': (c.get('workspace') or {}).get('id')}
+                     for c in hypr(env, 'clients') if _wait_for_client_matches(c, step)), None)
+    if event == 'closewindow':
+        if step.get('address') or step.get('class') or step.get('title'):
+            if not any(_wait_for_client_matches(c, step) for c in hypr(env, 'clients')):
+                return {'gone': True}
+        return None
+    if event == 'activewindow':
+        active = hypr(env, 'activewindow')
+        if not isinstance(active, dict) or not active.get('address'):
+            return None
+        if _wait_for_client_matches(active, step):
+            return {'address': active.get('address'), 'class': active.get('class'), 'title': active.get('title')}
+        return None
+    if event == 'workspace':
+        want = step.get('workspace')
+        if want is None:
+            return None
+        monitors = hypr(env, 'monitors')
+        active = next((m.get('activeWorkspace') or {} for m in monitors if m.get('activeWorkspace')), {})
+        if (isinstance(want, int) and active.get('id') == want) or (isinstance(want, str) and active.get('name') == want):
+            return {'id': active.get('id'), 'name': active.get('name')}
+        return None
+    return None
+
+def _wait_for_parse_event(line):
+    """Parse one Hyprland event-socket line into (name, data dict)."""
+    if '>>' not in line:
+        return None, None
+    name, data = line.split('>>', 1)
+    fields = data.split(',')
+    if name == 'openwindow':
+        if len(fields) < 4:
+            return None, None
+        return name, {'address': fields[0], 'workspace': fields[1], 'class': fields[2], 'title': ','.join(fields[3:])}
+    if name == 'closewindow':
+        return name, {'address': fields[0] if fields else ''}
+    if name == 'activewindowv2':
+        return 'activewindow', {'address': fields[0] if fields else ''}
+    if name == 'activewindow':
+        return name, {'class': fields[0] if fields else '', 'title': ','.join(fields[1:])}
+    if name == 'workspace':
+        return name, {'name': fields[0] if fields else ''}
+    if name == 'windowtitle':
+        if len(fields) < 2:
+            return None, None
+        return name, {'address': fields[0], 'title': ','.join(fields[1:])}
+    if name == 'movewindow':
+        if len(fields) < 2:
+            return None, None
+        return name, {'address': fields[0], 'workspace': fields[1]}
+    return None, None
+
+def _wait_for_event_matches(name, data, step):
+    """Cheap field match of one parsed event against the step filters."""
+    event = step['event']
+    if name != event:
+        return None
+    if event == 'openwindow':
+        workspace = data.get('workspace', '')
+        candidate = {'address': data.get('address'), 'class': data.get('class'), 'title': data.get('title'),
+                     'workspace': {'id': int(workspace) if str(workspace).isdigit() else None, 'name': workspace}}
+        return data if _wait_for_client_matches(candidate, step) else None
+    if event == 'closewindow':
+        if step.get('address') and not same_window_address(data.get('address'), step['address']):
+            return None
+        return data
+    if event == 'activewindow':
+        candidate = {'address': data.get('address'), 'class': data.get('class'), 'title': data.get('title')}
+        return data if _wait_for_client_matches(candidate, step) else None
+    if event == 'workspace':
+        want = step.get('workspace')
+        if want is None:
+            return data
+        if isinstance(want, int):
+            return data  # id is resolved against live monitors by the caller
+        return data if data.get('name') == want else None
+    if event == 'windowtitle':
+        if step.get('address') and not same_window_address(data.get('address'), step['address']):
+            return None
+        if step.get('title') and step['title'].casefold() not in (data.get('title') or '').casefold():
+            return None
+        return data
+    if event == 'movewindow':
+        if step.get('address') and not same_window_address(data.get('address'), step['address']):
+            return None
+        if isinstance(step.get('workspace'), str) and data.get('workspace') != step['workspace']:
+            return None
+        return data
+    return None
+
+def wait_for_event(env, match, timeout_ms=5000):
+    """Block on a real Hyprland compositor event instead of a fixed sleep.
+
+    match: {'event': one of WAIT_FOR_EVENTS, optional 'address'/'class'/
+    'title'/'workspace' filters}. Answers instantly with already:true when
+    the condition already holds (hypruse semantics). Returns {'ok': True,
+    'already': bool, 'event': ..., 'matched': {...}, 'elapsed_ms': ...} on a
+    match, or {'ok': False, 'timed_out': True, ...} when the deadline
+    passes; the caller falls back to a full observe on a timeout. A missing
+    event socket raises RuntimeError (same fallback, never a hang).
+    """
+    if not isinstance(match, dict):
+        raise ValueError('wait_for match must be an object')
+    if isinstance(timeout_ms, bool) or not isinstance(timeout_ms, int) or not 0 <= timeout_ms <= WAIT_FOR_TIMEOUT_MAX_MS:
+        raise ValueError('wait_for timeout_ms must be 0..30000')
+    step = dict(match)
+    step['type'] = 'wait_for'
+    step.setdefault('timeout_ms', timeout_ms)
+    validate_wait_for(step)
+    start = time.monotonic()
+    def elapsed():
+        return round((time.monotonic() - start) * 1000, 3)
+    event = step['event']
+    # A closewindow class/title filter resolves to the live address first;
+    # the event itself carries only the address.
+    if event == 'closewindow' and not step.get('address') and (step.get('class') or step.get('title')):
+        target = next((c for c in hypr(env, 'clients') if _wait_for_client_matches(c, step)), None)
+        if target is None:
+            return {'ok': True, 'already': True, 'event': event, 'matched': {'gone': True}, 'elapsed_ms': elapsed()}
+        step = dict(step)
+        step['address'] = target.get('address')
+    already = _wait_for_already(env, step)
+    if already is not None:
+        return {'ok': True, 'already': True, 'event': event, 'matched': already, 'elapsed_ms': elapsed()}
+    if timeout_ms <= 0:
+        return {'ok': False, 'timed_out': True, 'error': 'wait_for timed out: ' + event,
+                'event': event, 'elapsed_ms': elapsed()}
+    if not env or not env.get('XDG_RUNTIME_DIR') or not env.get('HYPRLAND_INSTANCE_SIGNATURE'):
+        raise RuntimeError('compositor event socket unavailable: incomplete socket tuple')
+    path = Path(env['XDG_RUNTIME_DIR']) / 'hypr' / env['HYPRLAND_INSTANCE_SIGNATURE'] / '.socket2.sock'
+    try:
+        info = path.lstat()
+        if not stat.S_ISSOCK(info.st_mode) or info.st_uid != os.geteuid():
+            raise RuntimeError('compositor event socket unavailable')
+    except OSError as exc:
+        raise RuntimeError('compositor event socket unavailable: ' + type(exc).__name__) from exc
+    deadline = start + timeout_ms / 1000
+    buffer = b''
+    try:
+        with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as connection:
+            connection.settimeout(0.5)
+            connection.connect(str(path))
+            while True:
+                check_cancel()
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    return {'ok': False, 'timed_out': True, 'error': 'wait_for timed out: ' + event,
+                            'event': event, 'elapsed_ms': elapsed()}
+                ready, _, _ = select.select([connection], [], [], min(0.5, remaining))
+                if not ready:
+                    continue
+                try:
+                    chunk = connection.recv(65536)
+                except socket.timeout:
+                    continue
+                if not chunk:
+                    raise RuntimeError('compositor event socket closed')
+                buffer += chunk
+                while b'\n' in buffer:
+                    line, buffer = buffer.split(b'\n', 1)
+                    name, data = _wait_for_parse_event(line.decode('utf-8', 'replace').strip())
+                    if name is None:
+                        continue
+                    matched = _wait_for_event_matches(name, data, step)
+                    if matched is None:
+                        continue
+                    if event == 'workspace' and isinstance(step.get('workspace'), int):
+                        resolved = _wait_for_already(env, step)
+                        if resolved is None:
+                            continue
+                        matched = resolved
+                    if event == 'movewindow' and isinstance(step.get('workspace'), int):
+                        moved = next((c for c in hypr(env, 'clients')
+                                      if same_window_address(c.get('address'), data.get('address'))), None)
+                        if moved is None or (moved.get('workspace') or {}).get('id') != step['workspace']:
+                            continue
+                        matched = data
+                    return {'ok': True, 'already': False, 'event': event, 'matched': matched,
+                            'elapsed_ms': elapsed()}
+    except socket.timeout:
+        raise RuntimeError('compositor event socket timed out') from None
 
 class TransientRefusal(RuntimeError):
     """A desktop guard refused input; never classify arbitrary exception text."""
@@ -1498,6 +1740,7 @@ def desktop_act(env,meta,actions,after_capture=True,observation_path=None,
     # A keyboard-only batch must not open the virtual pointer device at all, and an
     # ordinary startup failure belongs in the result envelope, not outside it.
     pointer=None;completed=0;error=None;ime_result={};transient_error=False;outcome_uncertain=False
+    wait_for_results=[];wait_for_timed_out=False
     preflight_ms=round((time.monotonic()-preflight_start)*1000,3)
     def move(x,y,index,action_type):
         gx,gy=image_point(meta,x,y);mx,my,mw,mh=meta['monitor_box']
@@ -1521,6 +1764,23 @@ def desktop_act(env,meta,actions,after_capture=True,observation_path=None,
     def execute_group(a,index):
         nonlocal completed,outcome_uncertain
         guard()
+        if isinstance(a,dict) and a.get('type')=='wait_for':
+            outcome=wait_for_event(env,a,a.get('timeout_ms',5000))
+            expect=a.get('expect_focus','same')
+            if expect=='any':
+                guard(None)
+            elif expect!='same':
+                guard(expect)
+            else:
+                guard()
+            wait_for_results.append({'index':index,'event':a.get('event'),'already':outcome.get('already',False),
+                                     'elapsed_ms':outcome.get('elapsed_ms'),'timed_out':outcome.get('timed_out',False)})
+            if outcome.get('timed_out'):
+                raise WaitForTimeoutError('wait_for timed out: '+str(a.get('event')))
+            _diagnostic_event('wait_for_matched',meta,env,action_index=index,action_type='wait_for',
+                              completed=completed,active_window=active_window)
+            completed+=1
+            return
         if isinstance(a,list):
             exact=any(x['type']=='type' and x.get('ime','literal')=='literal' for x in a)
             if not any(x['type']=='type' and x.get('ime')=='compose' for x in a):
@@ -1620,21 +1880,39 @@ def desktop_act(env,meta,actions,after_capture=True,observation_path=None,
             if final_group and terminal_address is not None and not same_window_address(terminal_address,address):
                 # The expected terminal transition (e.g. Save closes the dialog
                 # and focus moves to the editor) settles asynchronously; the
-                # dialog may still hold focus right after the click. Poll for
-                # the terminal window to gain focus, same 1.5s bound as
-                # focus(), instead of refusing on the first sample. Only a
-                # focus refusal retries; geometry/layout errors still fail fast.
-                deadline=time.monotonic()+1.5
-                while True:
+                # dialog may still hold focus right after the click. Guard
+                # first: when focus is already on the terminal window this
+                # costs the same single query as before. Only when focus has
+                # not moved yet, wait on the compositor activewindow event
+                # (1.5s bound, same as focus()) instead of polling; a missing
+                # event socket falls back to the poll below. Only a focus
+                # refusal retries; geometry/layout errors still fail fast.
+                try:
+                    guard(terminal_address)
+                    terminal_guard_verified=True
+                except TransientRefusal:
                     try:
+                        waited=wait_for_event(env,{'event':'activewindow','address':terminal_address},1500)
+                    except RuntimeError:
+                        waited=None
+                    if waited is not None:
+                        # Event wait done (matched, already focused, or timed
+                        # out): one guard decides. A timeout here is not
+                        # retried with a second 1.5s poll.
                         guard(terminal_address)
-                        break
-                    except TransientRefusal:
-                        remaining=deadline-time.monotonic()
-                        if remaining<=0:
-                            raise
-                        wait_cancelable(min(.04,remaining))
-                terminal_guard_verified=True
+                        terminal_guard_verified=True
+                    else:
+                        deadline=time.monotonic()+1.5
+                        while True:
+                            try:
+                                guard(terminal_address)
+                                break
+                            except TransientRefusal:
+                                remaining=deadline-time.monotonic()
+                                if remaining<=0:
+                                    raise
+                                wait_cancelable(min(.04,remaining))
+                        terminal_guard_verified=True
             elif final_group and terminal_address is None:
                 guard(None)
                 terminal_guard_verified=True
@@ -1642,6 +1920,7 @@ def desktop_act(env,meta,actions,after_capture=True,observation_path=None,
                 guard()
     except Exception as exc:
         error=str(exc);transient_error=isinstance(exc,TransientRefusal)
+        if isinstance(exc,WaitForTimeoutError):wait_for_timed_out=True
         _diagnostic_event('operation_stopped',meta,env,completed=completed,error=error,
                           active_window=active_window)
     finally:
@@ -1694,6 +1973,7 @@ def desktop_act(env,meta,actions,after_capture=True,observation_path=None,
         transition=transition_outcome()
         if transition is not None:result['transition']=transition
         result.update(ime_result)
+        if wait_for_results:result['wait_for']=wait_for_results
         _diagnostic_event('operation_completed',meta,env,completed=completed,
                           active_window=active_window)
         return result
@@ -1703,6 +1983,10 @@ def desktop_act(env,meta,actions,after_capture=True,observation_path=None,
     result.update(ime_result)
     if transient_error:result['error_code']='focus_changed'
     if error: result['error']=error
+    if wait_for_timed_out:
+        result['error_code']='wait_for_timeout'
+        result['next_step']=DESKTOP_REOBSERVE
+    if wait_for_results:result['wait_for']=wait_for_results
     if outcome_uncertain:result['outcome_uncertain']=True
     if terminal_address is None and not screen_scope:
         result['after_skipped']=True
@@ -2126,6 +2410,7 @@ def main():
     act.add_argument('--no-after',action='store_true',help='skip successful final capture; preflight safety and error captures stay enabled')
     act.add_argument('--expected-terminal-window',default='same',help='final guard/capture target: same, none, unbound, or an exact Hyprland address')
     act.add_argument('--expected-terminal-bounds',nargs=4,type=int,help='optional expected x y width height for the terminal window')
+    act.add_argument('--then',action='store_true',help='return the post-action observation in the same result (default capture; conflicts with --no-after)')
     obs.add_argument('--verbose',action='store_true');act.add_argument('--verbose',action='store_true')
     b=sub.add_parser('browser');b.add_argument('operation',choices=['start','tabs','observe','act']);b.add_argument('--endpoint',default=None);b.add_argument('--target');b.add_argument('--snapshot');b.add_argument('--actions');b.add_argument('--image',action='store_true')
     b.add_argument('--no-after',action='store_true',help='skip the successful after-snapshot; the final action must be a meaningful assert')
@@ -2280,6 +2565,8 @@ def main():
             session_policy.record_observation(STATE,os.environ.get('CU_SESSION_TOKEN'),result)
     elif args.command=='act':
         require_session()
+        if args.then and args.no_after:
+            raise ValueError('--then requires the post-action capture; it conflicts with --no-after')
         try:actions=read_json(sys.stdin) if args.actions=='-' else read_json_file(args.actions)
         except ValueError as exc:raise PreflightRefusal(str(exc)) from exc
         if args.expected_terminal_bounds is not None and args.expected_terminal_window in ('same','none','unbound'):
@@ -2304,6 +2591,9 @@ def main():
                 print('session refusal: error='+result['error']+' action=require_reobserve',file=sys.stderr)
             elif result.get('ok') is True or is_completed_capture_error(result,len(actions)):
                 session_policy.complete_requirement(STATE,os.environ.get('CU_SESSION_TOKEN'))
+            if args.then and isinstance(result,dict) and result.get('after'):
+                result['then']=result['after']
+                result['then_included']=True
     elif args.command=='a11y':
         check_cancel()
         request={'operation':args.operation,'pid':args.pid,'snapshot':args.snapshot}
