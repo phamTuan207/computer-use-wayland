@@ -1254,5 +1254,39 @@ class CodeExecEnvelopeTests(unittest.TestCase):
                  'image_policy': 'always'})
 
 
+class ValidateEnvelopeArgTypeTests(unittest.TestCase):
+    """Non-string envelope args get a distinct error, not unsupported_command."""
+
+    def test_integer_arg_returns_invalid_arg_type(self):
+        with self.assertRaises(session_remote.BrokerError) as caught:
+            session_remote._validate_envelope(
+                {'args': ['a11y', 'query', '--pid', 1234], 'stdin': '',
+                 'image_policy': 'always'})
+        self.assertEqual(caught.exception.error, 'invalid_arg_type')
+        self.assertIn('1234', str(caught.exception))
+        self.assertIn('int', str(caught.exception))
+
+    def test_string_pid_arg_is_accepted(self):
+        envelope, _, _ = session_remote._validate_envelope(
+            {'args': ['a11y', 'query', '--pid', '1234'], 'stdin': '',
+             'image_policy': 'always'})
+        self.assertEqual(envelope['args'], ['a11y', 'query', '--pid', '1234'])
+
+    def test_a11y_string_args_are_accepted(self):
+        for args in (['a11y', 'query', '--pid', '764773', '--name', 'Home'],
+                     ['a11y', 'observe', '--pid', '764773'],
+                     ['a11y', 'ground', 'e1', '--snapshot', '/tmp/g1-snapshot.json',
+                      '--address', '0xabc']):
+            envelope, _, _ = session_remote._validate_envelope(
+                {'args': args, 'stdin': '', 'image_policy': 'always'})
+            self.assertEqual(envelope['args'], args)
+
+    def test_unknown_string_command_still_unsupported_command(self):
+        with self.assertRaises(session_remote.BrokerError) as caught:
+            session_remote._validate_envelope(
+                {'args': ['rm', '-rf', '/'], 'stdin': '', 'image_policy': 'always'})
+        self.assertEqual(caught.exception.error, 'unsupported_command')
+
+
 if __name__ == '__main__':
     unittest.main()

@@ -351,9 +351,17 @@ def _validate_envelope(value):
     args = value.get('args')
     data = value.get('stdin', '')
     policy = value.get('image_policy', 'always')
-    if (not isinstance(args, list) or not args or
-            not all(isinstance(arg, str) for arg in args) or
-            args[0] not in COMMANDS | {'finish'}):
+    if not isinstance(args, list) or not args:
+        raise BrokerError('unsupported_command', 'driver command is not on the session-driver allowlist')
+    for index, arg in enumerate(args):
+        if not isinstance(arg, str):
+            detail = repr(arg)
+            if len(detail) > 80:
+                detail = detail[:77] + '...'
+            raise BrokerError(
+                'invalid_arg_type',
+                f'driver arg {index} must be a string, got {type(arg).__name__}: {detail}')
+    if args[0] not in COMMANDS | {'finish'}:
         raise BrokerError('unsupported_command', 'driver command is not on the session-driver allowlist')
     if not isinstance(data, str) or policy not in ('auto', 'always'):
         raise BrokerError('invalid_request', 'driver stdin or image policy is invalid')
