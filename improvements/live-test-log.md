@@ -4089,3 +4089,44 @@ Standing workflow (dang, 21:48): test → log every error → write a report for
 - Code-exec API suite, 2026-11-19 07:10:40.070 to 07:10:50.348 (+07), elapsed 10.278 s. Ran `python3 -m unittest discover -s tests -p 'test_code_exec.py'`: all 32 tests passed. Code inspection confirms `scripts/code_exec.py` dispatches API act to `CodeExecBackend.act` at line 418, and `CodeExecBackend.act` calls shared `desktop_act` at `scripts/cu.py:2014`, so the preflight retry covers code-exec as well. Post-run desktop check showed only Jarvis, Zen, and the same unattributed Nautilus PID 965058; left untouched.
 - Broker remote regression suite with repeated authorization candidate, 2026-11-19 07:11:37.603 to 07:11:53.717 (+07), elapsed 16.114 s. Re-ran `python3 -m unittest discover -s tests -p 'test_session_remote.py'`: all 48 tests passed. The injected generation-mismatch case now drives 83 consecutive real `_exchange`/`_client_with_lease` status calls after a successful start; each returns fast `ok:false,error=invalid_lease`, and broker diagnostics expose `last_status_error=invalid_lease`. This proves one candidate condition can produce the observed shape, but does not identify the missing measured run's cause. Desktop check was clean: only Jarvis and Zen Browser remained.
 - Clarification for the 07:10 `test_session_driver.py` run: source inspection pinned the five DoctorCliTests failures to the pre-existing `scripts/cu.py` local parser named `run` at line 2110 shadowing the `run()` helper later called in the doctor branch at lines 2216-2217. The two FullRestoreEnvelope failures come from the absent `native/wtype` file in this isolated worktree. These are unrelated baseline issues and were left unchanged; the broker window-loss fail-closed behavior is covered and passing in `test_session_continuation.py`.
+
+## 2026-11-19 08:03:33.768 +4936.6 min, Pick 4 a11y baseline suite before edits
+- Command: `python3 -m unittest discover -s tests -p 'test_*.py'`.
+- Start: 2026-11-19T08:03:33.768+07:00; end: 2026-11-19T08:05:15.336+07:00; elapsed wall: 101.569s.
+- Result: exit 1, 1287 tests, 9 failures, 66 errors, 2 skipped.
+- Sorted FAIL/ERROR signature SHA-256: 753c60232cb69d71d0e7072db90b41199065670fad29d261f723a9bb69095771. Full names retained in the current run context for after-suite comparison.
+
+## 2026-11-19 08:05:54.223 +4938.9 min, Pick 4 a11y baseline signature capture
+- Command: `python3 -m unittest discover -s tests -p 'test_*.py'`.
+- Start: 2026-11-19T08:05:54.223+07:00; end: 2026-11-19T08:07:35.669+07:00; elapsed wall: 101.446s.
+- Result: exit 1, 1287 tests, 9 failures, 66 errors, 2 skipped.
+- Sorted FAIL/ERROR signature SHA-256: 55a97610fc0c6e17a06de8cc32f66df8ab9b000445f8c13a80e2f956864fb70b; compared to the first baseline capture: DIFFERENT.
+
+## 2026-11-19 08:11:08.938 +4944.1 min, Pick 4 a11y isolated reproductions before edits
+- Start: 2026-11-19T08:11:08.938+07:00; end: 2026-11-19T08:11:09.192+07:00; elapsed wall: 0.253s.
+- Layer 1: in-process Broker.handle status/start/request/result accepted all three a11y envelopes: query PID 764773 Home, observe PID 764773, and ground e1. Mock driver completed each; `rm` raised unsupported_command; next_sequence remained 4.
+- Layer 2 before fix: fake app root had no Component extents and direct frame child had [0,0,924,581]. ground returned root_extents null; mocked cu.py ground raised exactly `cannot tell whether extents are screen or window relative; use vision` for element [0,0,184,535] and window [3448,1509,924,581].
+
+## 2026-11-19 08:13:02.743 +4946.0 min, Pick 4 a11y frame regression tests before fix
+- Command: `python3 -m unittest discover -s tests -p 'test_pick4_fastpath.py'`. Start: 2026-11-19T08:13:02.743+07:00; end: 2026-11-19T08:13:02.839+07:00; elapsed wall: 0.095s.
+- Result: exit 1, 23 tests, 2 failures, 0 errors. Expected red state: app-root fallback and no-frame fail-closed tests fail before the code fix.
+- Failure names: test_ground_fails_closed_without_app_or_frame_extents (test_pick4_fastpath.A11yQueryGroundTests.test_ground_fails_closed_without_app_or_frame_extents), test_ground_uses_first_top_level_frame_extents (test_pick4_fastpath.A11yQueryGroundTests.test_ground_uses_first_top_level_frame_extents). Errors: none.
+
+## 2026-11-19 08:14:49.021 +4947.8 min, Pick 4 a11y targeted suite after frame fix
+- Command: `python3 -m unittest discover -s tests -p 'test_pick4_fastpath.py'`. Start: 2026-11-19T08:14:49.021+07:00; end: 2026-11-19T08:14:49.123+07:00; elapsed wall: 0.102s.
+- Result: exit 0, 23 tests, 0 failures, 0 errors.
+- The fallback, fail-closed no-frame, app-root path, flag-off, and mocked Nautilus cu.py crop assertions passed.
+
+## 2026-11-19 08:16:08.429 +4949.1 min, Pick 4 broker a11y regression suite
+- Command: `python3 -m unittest discover -s tests -p 'test_session_remote.py'`. Start: 2026-11-19T08:16:08.429+07:00; end: 2026-11-19T08:16:24.907+07:00; elapsed wall: 16.478s.
+- Result: exit 0, 49 tests, 0 failures, 0 errors. The direct Broker.handle status/start/request/result regression accepted query, observe, and ground, then rejected `rm` with unsupported_command and did not consume sequence 4.
+
+## 2026-11-19 08:17:12.878 +4950.2 min, Pick 4 a11y full suite after changes
+- Command: `python3 -m unittest discover -s tests -p 'test_*.py'`. Start: 2026-11-19T08:17:12.878+07:00; end: 2026-11-19T08:18:54.677+07:00; elapsed wall: 101.799s.
+- Result: exit 1, 1292 tests, 9 failures, 66 errors, 2 skipped.
+- Sorted FAIL/ERROR signature SHA-256: 55a97610fc0c6e17a06de8cc32f66df8ab9b000445f8c13a80e2f956864fb70b. Baseline list comparison is recorded in the fix report.
+
+## 2026-11-19 08:23:04.333 +4956.1 min, Pick 4 a11y audit corrections
+- FAIL/ERROR comparison correction: the first pre-change hash used a different tuple encoding and cannot be compared. The 08:05:54 pre-change capture and 08:17:12 post-change run use the same sorted string-list encoding and both have SHA-256 55a97610fc0c6e17a06de8cc32f66df8ab9b000445f8c13a80e2f956864fb70b. The sorted FAIL and ERROR diffs are both empty.
+- A preliminary Broker repro wrapper stopped in cleanup with `AttributeError: 'BrokerHarness' object has no attribute 'finish_owned_task'`. The tool reported 0.500s elapsed, but that wrapper raised before emitting its timestamp. It was rerun successfully at 2026-11-19 08:11:08.938 to 08:11:09.192 +07 with proper cleanup. No source edit or desktop action occurred between attempts.
+- The measured G1 rejection remains not reproduced. No live Nautilus or live broker re-probe was run.
