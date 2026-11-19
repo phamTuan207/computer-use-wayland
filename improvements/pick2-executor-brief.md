@@ -134,6 +134,8 @@ the broker), never by reading files in your own shell.
 - Request: write the envelope JSON to a file first, e.g.
   `__RUN_DIR__/p1-req1.json`, chmod 600 the file, then `timed.py req
   --lease-file <lease> --seq 1 --request <file> --label p1-windows`.
+  Write every JSON file with Python `json.dump`; never use `printf` or shell
+  `echo` for JSON.
   Sequence numbers start at 1 and increase by 1 per request in the same
   session. Never reuse a sequence number. Never call session_remote.py
   directly (except the one idle check in SETUP below).
