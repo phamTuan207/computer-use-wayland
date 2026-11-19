@@ -140,7 +140,15 @@ the broker), never by reading files in your own shell.
   session. Never reuse a sequence number. Never call session_remote.py
   directly (except the one idle check in SETUP below).
 - Status: `timed.py status --lease-file <lease> --label <label>`.
-- Finish: `timed.py finish --lease-file <lease> --label <label>`.
+- Finish (DETERMINISTIC, no exceptions): after the verify request returns
+  success, the NEXT shell command is the deterministic finish, with no
+  deliberation in between:
+  `echo "$(date '+%H:%M:%S.%3N') DECIDE <label>-det-finish" >> __RUN_DIR__/decisions.log && python3 /home/james/computer-use-wayland/scripts/det_finish.py --lease-file <lease> --task-id <task> --run-dir __RUN_DIR__ --verify-evidence <observation id or image path from the verify result> --label <label>-det-finish`
+  Do NOT call `timed.py finish` directly. Do NOT compose a summary, a writeup,
+  or any closing text in-session: det_finish.py finishes the session and
+  writes the per-task summary block into `summary.md` from records.jsonl.
+  The 30-40s you used to spend thinking about how to close the task is the
+  overhead this removes; the finish call itself is one scripted step.
 - Envelope shapes (args are the cu.py driver commands):
   - windows: `{"args": ["windows"]}`
   - observe screen: `{"args": ["observe", "--screen", "eDP-2", "--max-width", "960"], "image_policy": "always"}`
@@ -176,6 +184,24 @@ the broker), never by reading files in your own shell.
   worker owns the lease, DO NOT fight it: sleep 60 to 120 seconds and
   retry, up to 10 retries, then record BLOCKED-lease and stop. Keep live
   sessions short: finish each task session before starting the next.
+
+## Deterministic finish (every task, no exceptions)
+
+The verify result is already in hand when you finish, so there is nothing
+left to deliberate about. The rule is mechanical:
+
+1. The verify request returns success (OCR text shows the end state).
+2. Your NEXT shell command is the det_finish.py call above. No thinking
+   about how to close, no close-observe, no draft summary, no re-checking
+   the desktop by hand. The script runs the scripted close-out checklist
+   (broker status, desktop client list) itself.
+3. The script prints one JSON line. If `ok` is true, the task session is
+   finished (finished/stopped/clean) and the summary block is written.
+   Move to the next task. If `ok` is false, record the error verbatim in
+   decisions.log and move on; do NOT deliberate a recovery unless the
+   session is still alive and the task itself is unverified.
+4. The floor probe finishes the same way (task id `floor`), with its own
+   det_finish.py call instead of `timed.py finish`.
 
 ## Reading terminal output (verification)
 
@@ -232,16 +258,20 @@ Sequence numbers 1..6 in that session. All envelope/action files chmod
 - Verify each end state ONLY from a broker observe of the terminal output
   (OCR of the observation image). Never verify by reading the files or
   running commands in your own shell.
-- Per task, record wall start (session start submit) and wall finish
-  (verified end state) times in `__RUN_DIR__/summary.md` as you go.
-- If a task exceeds 30 minutes wall, finish its session, record it as
-  BLOCKED with the cause, and move to the next task.
+- Per task, det_finish.py records wall start (session start submit) and
+  wall finish (verified end state) in `__RUN_DIR__/summary.md` from
+  records.jsonl. Do NOT write per-task summaries yourself.
+- If a task exceeds 30 minutes wall, finish its session with
+  det_finish.py and `--verify-evidence BLOCKED:<cause>`, and move to
+  the next task. Same single finish path; never a deliberated close.
 - Teardown after P5 and the floor probe: close the test terminal gracefully
   with hyprctl dispatch `hl.dsp.window.close()` on its window (the object
   form; string dispatcher names are broken in Hyprland 0.57.2). Confirm no
   test window remains. Finish session P5 cleanly (and the floor session, if
   not already finished).
-- When all 5 tasks are done, write `__RUN_DIR__/summary.md` FRESH with:
+- When all 5 tasks are done, APPEND a run-level section to
+`__RUN_DIR__/summary.md` (do NOT rewrite it: the det-finish blocks already
+in it are the per-task record) with:
   repo HEAD, per-task wall start/finish, total seconds, request counts by
   type (windows/observe/act/status), observations count, act requests,
   actions, SUCCESS/FAIL with the observed evidence (quote the OCR text you
