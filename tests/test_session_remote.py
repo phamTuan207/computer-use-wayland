@@ -758,9 +758,12 @@ class SessionRemoteIntegration(BrokerHarness):
         lease['generation'] = '0' * 32 if original_generation != '0' * 32 else '1' * 32
         session_remote._replace_lease(lease_file, lease)
 
-        code, refused = self.run_cli(['status', '--lease-file', str(lease_file)])
-        self.assertEqual(code, 1)
-        self.assertEqual(refused, {'ok': False, 'error': 'invalid_lease'})
+        began = time.monotonic()
+        for _ in range(83):
+            code, refused = self.run_cli(['status', '--lease-file', str(lease_file)])
+            self.assertEqual(code, 1)
+            self.assertEqual(refused, {'ok': False, 'error': 'invalid_lease'})
+        self.assertLess(time.monotonic() - began, 10)
         code, status = self.run_cli(['status'])
         self.assertEqual(code, 0, status)
         self.assertEqual(status['last_status_error'], 'invalid_lease')
