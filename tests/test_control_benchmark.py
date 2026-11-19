@@ -66,12 +66,17 @@ class TimingSummaryTests(unittest.TestCase):
         for raw in (False,True):
             encoding=benchmark.encoding_benchmark(image,3,raw)
             processing=benchmark.browser_image_benchmark(output.getvalue(),3,raw)
-            for report in (encoding,processing):
-                self.assert_summaries(report,raw)
-                for summary in report.values():
-                    self.assertTrue(summary['lossless_verified'])
-                    self.assertGreater(summary['bytes'],0)
-            self.assertTrue(processing['reuse']['original_bytes_preserved'])
+            self.assert_summaries(encoding,raw)
+            for summary in encoding.values():
+                self.assertTrue(summary['lossless_verified'])
+                self.assertGreater(summary['bytes'],0)
+            self.assert_summaries(processing,raw)
+            for summary in processing.values():
+                # Stored observations are JPEG q90: lossy, re-encoded, never
+                # byte-identical to the PNG input.
+                self.assertFalse(summary['lossless_verified'])
+                self.assertGreater(summary['bytes'],0)
+            self.assertFalse(processing['reuse']['original_bytes_preserved'])
 
     def test_cli_invalid_arguments_before_benchmark(self):
         for args,message in ((['--samples','2'],'samples must be 3..30'),

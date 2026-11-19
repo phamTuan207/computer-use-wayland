@@ -537,7 +537,7 @@ def tool_call(arguments):
 def image_paths(value):
     if isinstance(value, dict):
         for key, child in value.items():
-            if key == "image" and isinstance(child, str) and child.endswith(".png"):
+            if key == "image" and isinstance(child, str) and child.endswith((".png", ".jpg")):
                 yield child
             yield from image_paths(child)
     elif isinstance(value, list):
@@ -578,8 +578,9 @@ def main():
                 for path in dict.fromkeys(image_paths(value)):
                     if path == suppressed:
                         continue
+                    mime = "image/jpeg" if path.endswith(".jpg") else "image/png"
                     with open(path, "rb") as image:
-                        content.append({"type": "image", "data": base64.b64encode(image.read()).decode("ascii"), "mimeType": "image/png"})
+                        content.append({"type": "image", "data": base64.b64encode(image.read()).decode("ascii"), "mimeType": mime})
                 result = {"content": content}
                 # A failure must never be framed as a successful tool call:
                 # a nonzero returncode, a tool result whose own ok is False,

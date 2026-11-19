@@ -648,30 +648,6 @@ def run_cancelable(argv, env=None, input=None, timeout=12, capture_stderr=None):
         if not stderr_captured:save_stderr(getattr(error,'stderr',None))
         raise
 
-def plain_rgb_png(data):
-    # Check passthrough structure only; Pillow remains the pixel decoder.
-    if data[:8]!=b'\x89PNG\r\n\x1a\n':return False
-    offset=8;seen_header=False;seen_data=False
-    while offset+12<=len(data):
-        length=int.from_bytes(data[offset:offset+4],'big')
-        kind=data[offset+4:offset+8];end=offset+12+length
-        if length>0x7fffffff or end>len(data):return False
-        if kind==b'IHDR':
-            if seen_header or offset!=8 or length!=13:return False
-            header=data[offset+8:offset+21]
-            width=int.from_bytes(header[:4],'big');height=int.from_bytes(header[4:8],'big')
-            if not (0<width<=0x7fffffff and 0<height<=0x7fffffff):return False
-            if header[8:12]!=b'\x08\x02\x00\x00' or header[12] not in (0,1):return False
-            seen_header=True
-        elif kind==b'IDAT':
-            if not seen_header:return False
-            seen_data=True
-        elif kind==b'IEND':
-            return seen_header and seen_data and length==0 and end==len(data)
-        else:return False
-        offset=end
-    return False
-
 def _sequence(value,length,name,positive_indices=()):
     if not isinstance(value,(list,tuple)) or len(value)!=length:
         raise ValueError(name+' must contain '+str(length)+' values')
@@ -795,7 +771,7 @@ def validate_desktop_observation(meta,env,observation_path=None,load_image=False
         if not isinstance(token,str) or not re.fullmatch(r'[0-9a-f]{12}',token):
             raise ValueError('observation identity is invalid; observe again')
         image=Path(meta.get('image',''))
-        if (path.name!=token+'.json' or image.name!=token+'.png' or
+        if (path.name!=token+'.json' or image.name!=token+'.jpg' or
                 path.parent.resolve()!=STATE.resolve() or image.parent.resolve()!=STATE.resolve()):
             raise ValueError('observation paths do not match their identity; observe again')
         try:
@@ -804,20 +780,20 @@ def validate_desktop_observation(meta,env,observation_path=None,load_image=False
                 st=os.fstat(stream.fileno())
                 if (not stat.S_ISREG(st.st_mode) or st.st_uid!=os.geteuid() or
                         stat.S_IMODE(st.st_mode)!=0o600 or st.st_size>256*1024*1024):
-                    raise ValueError('observation PNG is not a private regular file')
+                    raise ValueError('observation image is not a private regular file')
                 raw=stream.read()
-            if (meta.get('image_format')!='PNG' or len(raw)!=meta.get('image_bytes') or
+            if (meta.get('image_format')!='JPEG' or len(raw)!=meta.get('image_bytes') or
                     hashlib.sha256(raw).hexdigest()!=meta.get('image_sha256')):
-                raise ValueError('observation PNG changed after delivery; observe again')
+                raise ValueError('observation image changed after delivery; observe again')
             from PIL import Image
             with Image.open(io.BytesIO(raw)) as decoded:
                 decoded.load()
-                if decoded.format!='PNG' or decoded.mode!='RGB' or list(decoded.size)!=meta.get('image_size'):
-                    raise ValueError('observation PNG dimensions or format changed; observe again')
+                if decoded.format!='JPEG' or decoded.mode!='RGB' or list(decoded.size)!=meta.get('image_size'):
+                    raise ValueError('observation image dimensions or format changed; observe again')
                 if hashlib.sha256(decoded.tobytes()).hexdigest()!=meta.get('pixel_sha256'):
                     raise ValueError('observation pixels changed after delivery; observe again')
                 verified_image=decoded.copy()
-        except OSError as exc:raise ValueError('observation PNG is unavailable; observe again') from exc
+        except OSError as exc:raise ValueError('observation image is unavailable; observe again') from exc
         return verified_image if load_image else True
     return True
 
@@ -825,16 +801,15 @@ def save_observation(image, meta, max_width, persist=True, encoded_png=None):
     from PIL import Image
     if isinstance(max_width,bool) or not isinstance(max_width,int) or max_width<320 or max_width>3840: raise ValueError('max-width must be 320..3840')
     if encoded_png is not None:
+        # Pixel source only (browser PNG): decode to fresh RGB, strip metadata.
+        # Always re-encoded as JPEG below; no byte passthrough, so the stored
+        # form is always JPEG and validate can hash stored pixels exactly.
         with Image.open(io.BytesIO(encoded_png)) as decoded:
             decoded.load()
-            # Preserve only plain single-frame RGB PNG; strip metadata on fallback.
-            reusable=decoded.format=='PNG' and decoded.mode=='RGB' and not decoded.info and getattr(decoded,'n_frames',1)==1 and plain_rgb_png(encoded_png)
             image=decoded.convert('RGB')
             image.info.clear()
-        if not reusable:encoded_png=None
     if image.width>max_width:
         image=image.resize((max_width,round(image.height*max_width/image.width)),Image.Resampling.LANCZOS)
-        encoded_png=None
     if image.width<=0 or image.height<=0:raise ValueError('observation image dimensions must be positive')
     meta.update(image_size=list(image.size),max_width=max_width)
     if meta.get('backend')=='desktop':
@@ -844,17 +819,24 @@ def save_observation(image, meta, max_width, persist=True, encoded_png=None):
         if not all(key in meta for key in ('capture_started_monotonic','capture_started_wall','capture_boot_id','capture_compositor')):
             raise ValueError('desktop capture identity is incomplete')
     if not persist:
-        meta.update(image_format='PNG',image_bytes=None,image_sha256=None,encode_ms=0)
+        meta.update(image_format='JPEG',image_bytes=None,image_sha256=None,encode_ms=0)
         meta.pop('_environment',None)
         return image,meta
     prepare_state()
     token=uuid.uuid4().hex[:12]
-    path=STATE/(token+'.png')
+    path=STATE/(token+'.jpg')
     encode_start=time.monotonic()
-    if encoded_png is None:
-        buffer=io.BytesIO();image.save(buffer,format='PNG',compress_level=1);png=buffer.getvalue()
-    else:png=encoded_png
+    # JPEG q90, no chroma subsampling (4:4:4). Pillow defaults to 4:2:0 at q90,
+    # which smears colored small-text edges (measured max pixel error 80 vs 39
+    # on a real 960-wide frame). Never below q85: blocking artifacts blur text.
+    buffer=io.BytesIO();image.save(buffer,format='JPEG',quality=90,subsampling=0);encoded=buffer.getvalue()
     encode_ms=round((time.monotonic()-encode_start)*1000,3)
+    # pixel_sha256 must hash the STORED pixels. JPEG is lossy, so the decoded
+    # file differs slightly from the pre-encode image; hash the JPEG decode so
+    # validate_desktop_observation still compares exactly.
+    with Image.open(io.BytesIO(encoded)) as stored:
+        stored.load()
+        pixel_sha256=hashlib.sha256(stored.convert('RGB').tobytes()).hexdigest()
     # Exclusive creation at 0600 before the first byte: a colliding name or a
     # symlink refuses instead of overwriting a foreign file. fchmod fixes the
     # exact mode regardless of umask; no pathname chmod follows the write.
@@ -867,10 +849,10 @@ def save_observation(image, meta, max_width, persist=True, encoded_png=None):
         except OSError:pass
         raise
     # Ownership transferred: the stream alone closes the descriptor now.
-    with stream:stream.write(png)
+    with stream:stream.write(encoded)
     meta.update(id=token,created=time.time(),image=str(path),image_size=list(image.size),
-                pixel_sha256=hashlib.sha256(image.tobytes()).hexdigest(),max_width=max_width,
-                image_format='PNG',image_bytes=len(png),image_sha256=hashlib.sha256(png).hexdigest(),encode_ms=encode_ms)
+                pixel_sha256=pixel_sha256,max_width=max_width,
+                image_format='JPEG',image_bytes=len(encoded),image_sha256=hashlib.sha256(encoded).hexdigest(),encode_ms=encode_ms)
     meta.pop('_environment',None)
     out=STATE/(token+'.json');meta['observation']=str(out)
     fd=os.open(out,os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600)
@@ -885,7 +867,7 @@ def save_observation(image, meta, max_width, persist=True, encoded_png=None):
         stream.write(json.dumps(meta,allow_nan=False))
     # Only observation filenames are disposable; session.json is recovery state.
     for old in STATE.iterdir():
-        if re.fullmatch(r'[0-9a-f]{12}\.(?:png|json)',old.name) and time.time()-old.stat().st_mtime>86400:
+        if re.fullmatch(r'[0-9a-f]{12}\.(?:png|jpg|json)',old.name) and time.time()-old.stat().st_mtime>86400:
             old.unlink()
     return meta
 

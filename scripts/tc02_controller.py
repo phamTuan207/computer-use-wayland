@@ -456,7 +456,7 @@ class Tc02Controller:
             byte_count = image_path.stat().st_size
             evidence = self.run_dir / 'evidence'
             evidence.mkdir(parents=True, exist_ok=True, mode=0o700)
-            shutil.copy2(image_path, evidence / f'{label}-{observation["id"]}.png')
+            shutil.copy2(image_path, evidence / f'{label}-{observation["id"]}.jpg')
         self.metrics['delivered_image_bytes'] += int(byte_count or 0)
         self.emit('image-delivered', step=self.step, label=label,
                   observation_id=observation.get('id'), bytes=int(byte_count or 0),

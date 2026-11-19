@@ -19,17 +19,17 @@ class DeliveryTests(unittest.TestCase):
         self.folder = Path(self.enterContext(tempfile.TemporaryDirectory()))
         self.gate = VisualCheckpoint()
 
-    def response(self, name, pixels=b'owned-png-bytes', **changes):
-        image = self.folder / (name + '.png')
+    def response(self, name, pixels=b'owned-jpeg-bytes', **changes):
+        image = self.folder / (name + '.jpg')
         color=tuple(hashlib.sha256(pixels).digest()[:3])
-        output=io.BytesIO();Image.new('RGB',(100,80),color).save(output,format='PNG')
-        png=output.getvalue();image.write_bytes(png)
+        output=io.BytesIO();Image.new('RGB',(100,80),color).save(output,format='JPEG',quality=90,subsampling=0)
+        jpg=output.getvalue();image.write_bytes(jpg)
         observation = self.folder / (name + '.json')
         meta = dict(backend='desktop', image=str(image), scope='window', window='0x1',
                     monitor='owned', region=[0,0,100,80], image_size=[100,80],
                     monitor_box=[0,0,1920,1080], monitor_scale=1, monitor_transform=0,
-                    window_bounds=[0,0,100,80],image_format='PNG',image_bytes=len(png),
-                    image_sha256=hashlib.sha256(png).hexdigest())
+                    window_bounds=[0,0,100,80],image_format='JPEG',image_bytes=len(jpg),
+                    image_sha256=hashlib.sha256(jpg).hexdigest())
         meta.update(changes);observation.write_text(json.dumps(meta))
         return {'returncode':0, 'result':{'image':str(image), 'observation':str(observation)}}
 
@@ -72,7 +72,7 @@ class DeliveryTests(unittest.TestCase):
         self.assertEqual(self.gate.assess(response)['status'],'required')
         self.assertEqual(self.gate.assess(self.response('c'))['status'],'unchanged')
 
-    def test_removed_referenced_png_promotes_next_identical_frame(self):
+    def test_removed_referenced_jpg_promotes_next_identical_frame(self):
         first = self.response('a')
         self.assertEqual(self.gate.assess(first)['status'], 'required')
         Path(first['result']['image']).unlink()
@@ -83,16 +83,16 @@ class DeliveryTests(unittest.TestCase):
         self.assertEqual(repeat['same_as'], second['result']['image'])
 
     def test_screen_scope_without_window_key_is_tracked(self):
-        def screen_response(name, pixels=b'owned-png-bytes'):
-            image = self.folder / (name + '.png')
+        def screen_response(name, pixels=b'owned-jpeg-bytes'):
+            image = self.folder / (name + '.jpg')
             color=tuple(hashlib.sha256(pixels).digest()[:3])
-            output=io.BytesIO();Image.new('RGB',(100,80),color).save(output,format='PNG')
-            png=output.getvalue();image.write_bytes(png)
+            output=io.BytesIO();Image.new('RGB',(100,80),color).save(output,format='JPEG',quality=90,subsampling=0)
+            jpg=output.getvalue();image.write_bytes(jpg)
             observation = self.folder / (name + '.json')
             meta = dict(backend='desktop', image=str(image), scope='screen', monitor='owned',
                         region=[0,0,100,80], image_size=[100,80], monitor_box=[0,0,1920,1080],
-                        monitor_scale=1, monitor_transform=0,image_format='PNG',image_bytes=len(png),
-                        image_sha256=hashlib.sha256(png).hexdigest())
+                        monitor_scale=1, monitor_transform=0,image_format='JPEG',image_bytes=len(jpg),
+                        image_sha256=hashlib.sha256(jpg).hexdigest())
             observation.write_text(json.dumps(meta))
             return {'returncode':0, 'result':{'image':str(image), 'observation':str(observation)}}
         a,b = screen_response('a'), screen_response('b')
