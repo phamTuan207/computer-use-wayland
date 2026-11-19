@@ -39,6 +39,12 @@ Allowlisted API (the only names a program may call):
   dict is returned to the program (it may re-observe and retry); it does
   not raise.
 - dom_start() -> browser start dict; dom_tabs() -> page target list.
+  dom_start() waits, bounded to DOM_WINDOW_WAIT_SECONDS, for the managed
+  Chromium window to appear in windows() before returning: browser_start
+  returns once CDP answers, but the Wayland window can map later, and a
+  program that looks the window up immediately after dom_start() would
+  IndexError. The wait polls windows() directly, costs no API-call
+  budget, and fails closed if the window never appears.
 - dom_observe(target, scope=None, max_elements=80) -> compact DOM snapshot
   dict. The snapshot id binds its target and refs for 90 seconds.
 - dom_act(snapshot, actions, after_scope=None) -> CDP result dict. Refs must
@@ -91,6 +97,9 @@ MAX_TRACE_STEPS = 20000
 PROGRAM_FILENAME = '<code-exec>'
 MAX_READ_BYTES = 65536
 OBSERVATION_MAX_AGE = 90
+DOM_WINDOW_CLASS = 'chromium'
+DOM_WINDOW_WAIT_SECONDS = 10.0
+DOM_WINDOW_POLL_INTERVAL = 0.2
 ASSERT_POLL_SECONDS = 2.0
 ASSERT_POLL_INTERVAL = 0.1
 READ_ROOT = Path('/tmp')
@@ -590,7 +599,39 @@ class CodeExecSession:
             raise CodeExecError('backend dom_start returned a non-dict result')
         if result.get('ok') is not True:
             raise CodeExecError(str(result.get('error') or 'browser start failed')[:400])
+        self._wait_for_dom_window()
         return result
+
+    def _wait_for_dom_window(self):
+        """Wait for the managed Chromium window to appear in windows().
+
+        browser_start returns once CDP answers, but the Wayland window can
+        map later; without this wait the D1 program IndexErrors on the
+        immediate windows() lookup after dom_start(). Polls go straight to
+        backend.windows(), not through _api, so the wait costs no API-call
+        budget. Cancellation and the wall-clock budget are checked every
+        poll; a window that never appears fails closed with CodeExecError.
+        """
+        deadline = time.monotonic() + DOM_WINDOW_WAIT_SECONDS
+        while True:
+            self.check_cancel()
+            try:
+                wins = self.backend.windows()
+            except Exception as exc:
+                self.check_cancel()
+                raise CodeExecError(
+                    'windows() failed while waiting for Chromium: '
+                    + str(exc)[:200]) from exc
+            if isinstance(wins, list) and any(
+                    isinstance(w, dict) and w.get('class') == DOM_WINDOW_CLASS
+                    for w in wins):
+                return
+            if time.monotonic() >= deadline:
+                raise CodeExecError(
+                    'managed Chromium window did not appear within %.0fs; '
+                    'observe windows() again' % DOM_WINDOW_WAIT_SECONDS)
+            self._check_budgets()
+            time.sleep(DOM_WINDOW_POLL_INTERVAL)
 
     def api_dom_tabs(self):
         result = self._dom_call('dom_tabs', self.backend.dom_tabs)
