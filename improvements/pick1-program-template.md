@@ -73,6 +73,47 @@ The three lines above were copied from task P4 A-01 in `/tmp/speed-profile-20261
 ```text
 "printf 'Ý tưởng 1: app nhắc uống nước.\\nÝ tưởng 2: bot tóm tắt bài giảng.\\nÝ tưởng 3: web bán đồ secondhand.\\n' > /tmp/y-tuong.txt && cat /tmp/y-tuong.txt\n"
 ```
+## A4 deterministic verify shape
+
+When the end state has an exact local proof, verify with code and
+skip the verify observe plus its think call (about 6.7s mean, 18%
+of a clean task). `verify_postcondition(checks)` re-reads file
+bytes, the window list, or a DOM snapshot at verify time and
+returns a verdict: `verified` (finish without a verify observe),
+`failed` (replan, do not finish), `inconclusive` (a vision verify
+observe is still required). A lone `file_exists`, a lone
+`file_sha256`, or a lone class-only `window_present` is
+inconclusive by the pairing rule, never verified. The verdict is
+also on the run envelope as `postcondition` /
+`postcondition_verified`.
+
+A4 shape for a file-provable task (P4 shown; P3 uses
+`file_exists` with `"directory": true` for its three dirs, which
+verifies because three independent directory checks are three
+independent signals):
+
+```python
+wins = windows()
+term = [w for w in wins if w["title"] == "speed-pick1-term"][0]
+obs = observe(window=term["address"])
+result = act([{"type": "type", "text": "printf 'Ý tưởng 1: app nhắc uống nước.\\nÝ tưởng 2: bot tóm tắt bài giảng.\\nÝ tưởng 3: web bán đồ secondhand.\\n' > /tmp/y-tuong.txt && cat /tmp/y-tuong.txt\n"}], obs)
+assert_state(result["ok"], "act failed")
+verdict = verify_postcondition([
+    {"kind": "file_contains", "path": "/tmp/y-tuong.txt", "text": "Ý tưởng 1: app nhắc uống nước."},
+    {"kind": "file_contains", "path": "/tmp/y-tuong.txt", "text": "Ý tưởng 2: bot tóm tắt bài giảng."},
+    {"kind": "file_contains", "path": "/tmp/y-tuong.txt", "text": "Ý tưởng 3: web bán đồ secondhand."},
+])
+assert_state(verdict["status"] == "verified", "postcondition failed")
+```
+
+Rules: observe after `act()` before file asserts stays (the
+settle interval); the verify observe is skipped ONLY when the
+verdict is `verified`. When it is `inconclusive`, do the verify
+observe and assign `verify_image` exactly as in the shape rule
+above. When it is `failed`, do not finish. P1 and P2 have no file
+proof, so they keep the verify observe; their A4 removable call
+is 0.
+
 ## Root causes and evidence
 
 - P3 was a template ordering race. The request at `records.jsonl` label `pick1-p3-code` returned `assert failed: file does not exist: /tmp/hoc-ky-2/dsa` after only windows, observe, and act. The shell may still be executing the typed command when `act()` returns. The retry label `pick1-p3-code-retry` then returned `assert failed: wait failed`: it sent a wait act with the pre-act observation. `scripts/code_exec.py` binds observations to ids, and `scripts/cu.py` screen-change preflight at lines 1476-1479 refuses an act when the screen changed. The post-act observe in this template gives the shell time to finish and binds a fresh image before assertions.

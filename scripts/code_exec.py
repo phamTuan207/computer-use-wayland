@@ -15,10 +15,14 @@ Safety invariants, unchanged from the normal loop:
   interpreter never bypasses them: check_cancel runs before every API call
   and inside the execution trace, and a cancelled run raises.
 - Verification stays: the final state is verified from an exact source
-  (file bytes, DOM text, a11y flags) plus a final observation image, never
-  from the program asserting its own success alone. assert_state checks a
-  value the program read back through read_file or observe, it does not
-  prove anything by itself.
+  (file bytes, DOM text, a11y flags), never from the program asserting its
+  own success alone. assert_state checks a value the program read back
+  through read_file or observe, it does not prove anything by itself.
+  A4: when verify_postcondition() reports status verified, that exact
+  source IS the verification and the final observation image is skipped;
+  when it reports inconclusive, the program must still take a verify
+  observe before finishing. The pairing rule in postcondition.py decides
+  which case applies, not the program.
 - Brokered keyboard input stays: typing goes through the existing wtype
   path in desktop_act, never through a direct write, AT-SPI setter,
   clipboard injection, or browser fill that skips the broker. act() calls
@@ -53,6 +57,13 @@ Allowlisted API (the only names a program may call):
   checked=None, timeout_ms=1000) -> True or raises AssertionError.
 - read_file(path, max_bytes=65536) -> str, only under /tmp, regular file,
   no symlink escape. Used for exact-source verification.
+- verify_postcondition(checks) -> verdict dict {ok, status, passed, failed,
+  checks, needs_vision, elapsed_ms}. A4 deterministic verify: re-reads
+  file bytes, the window list, or a DOM snapshot at verify time and
+  reports verified / failed / inconclusive. status verified means the
+  supervisor may finish WITHOUT a verify observe; failed means replan;
+  inconclusive means a vision verify observe is still required. The
+  verdict is also recorded on the run envelope as 'postcondition'.
 - assert_state(condition, message="assert failed") -> raises AssertionError
 - assert_file_contains(path, text) / assert_file_exists(path)
 
@@ -260,6 +271,7 @@ class _Validator(ast.NodeVisitor):
             'windows', 'observe', 'act', 'read_file', 'assert_state',
             'assert_file_contains', 'assert_file_exists', 'print',
             'dom_start', 'dom_tabs', 'dom_observe', 'dom_act', 'dom_assert',
+            'verify_postcondition',
         }
 
     def visit_Import(self, node):
@@ -370,6 +382,7 @@ class CodeExecSession:
         self.dom_snapshots = {}
         self.api_calls = 0
         self.log_lines = []
+        self.last_postcondition = None
         self._deadline = None
         self._trace_steps = 0
         self._trace_events = 0
@@ -781,6 +794,54 @@ class CodeExecSession:
             raise AssertionError('file does not exist: ' + path)
         return True
 
+    def api_verify_postcondition(self, checks):
+        """A4 deterministic verify inside a program. Counts as 1 API call.
+
+        File reads stay under /tmp (the code-exec sandbox); window and
+        DOM checks go through the same backend the other API calls use.
+        Returns the postcondition verdict dict; it never raises on a
+        check outcome (a failed or inconclusive verdict is data the
+        program branches on, e.g. assert_state on verdict['ok'] or a
+        fallback verify observe when verdict['needs_vision'] is True).
+        """
+        import postcondition as _postcondition
+        if not isinstance(checks, list):
+            raise CodeExecError('verify_postcondition checks must be a list')
+
+        def read_bytes(path):
+            resolved = _resolve_read_path(path)
+            try:
+                fd = os.open(resolved, os.O_RDONLY | os.O_NOFOLLOW
+                             | os.O_CLOEXEC)
+            except OSError as exc:
+                raise CodeExecError(
+                    'read_file failed: ' + str(exc)) from exc
+            with os.fdopen(fd, 'rb') as stream:
+                import stat as _stat
+                st = os.fstat(stream.fileno())
+                if not _stat.S_ISREG(st.st_mode):
+                    raise CodeExecError('read_file needs a regular file')
+                return stream.read(MAX_READ_BYTES + 1)
+
+        def dir_exists(path):
+            return _resolve_read_path(path).is_dir()
+
+        dom_observe = None
+        if hasattr(self.backend, 'dom_observe'):
+            def dom_observe(target, scope, max_elements):
+                return self.backend.dom_observe(target, scope, max_elements)
+
+        def _run():
+            return _postcondition.verify_postconditions(
+                checks, read_bytes=read_bytes,
+                list_windows=self.backend.windows,
+                dom_observe=dom_observe, dir_exists=dir_exists,
+                max_bytes=MAX_READ_BYTES)
+
+        verdict = self._api('verify_postcondition', _run)
+        self.last_postcondition = verdict
+        return verdict
+
     def _print(self, *args):
         self.log_lines.append(' '.join(str(a) for a in args))
 
@@ -814,6 +875,7 @@ class CodeExecSession:
                 'dom_observe': self.api_dom_observe,
                 'dom_act': self.api_dom_act,
                 'dom_assert': self.api_dom_assert,
+                'verify_postcondition': self.api_verify_postcondition,
                 'print': self._print,
             })
             sys.settrace(self._trace)
@@ -828,7 +890,8 @@ class CodeExecSession:
                     and k not in ('windows', 'observe', 'act', 'read_file',
                                   'assert_state', 'assert_file_contains',
                                   'assert_file_exists', 'dom_start', 'dom_tabs',
-                                  'dom_observe', 'dom_act', 'dom_assert', 'print')
+                                  'dom_observe', 'dom_act', 'dom_assert',
+                                  'verify_postcondition', 'print')
                     and _is_jsonable(v)}
             self.variables = _jsonable_copy(kept)
             envelope['ok'] = True
@@ -849,6 +912,10 @@ class CodeExecSession:
         finally:
             self._save_state()
         envelope['api_calls'] = self.api_calls
+        if self.last_postcondition is not None:
+            envelope['postcondition'] = self.last_postcondition
+            envelope['postcondition_verified'] = (
+                self.last_postcondition.get('status') == 'verified')
         envelope['elapsed_ms'] = round((time.monotonic() - started) * 1000, 3)
         envelope['log'] = list(self.log_lines)
         if 'variables' not in envelope or not envelope.get('variables'):

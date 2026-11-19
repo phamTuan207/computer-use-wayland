@@ -1,5 +1,6 @@
 import importlib.util
 import os
+import sys
 import pathlib
 import re
 import tempfile
@@ -9,6 +10,7 @@ import unittest
 from unittest import mock
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / 'scripts'))  # A4: postcondition
 SPEC = importlib.util.spec_from_file_location(
     'code_exec', ROOT / 'scripts' / 'code_exec.py')
 code_exec = importlib.util.module_from_spec(SPEC)
@@ -838,6 +840,87 @@ class TestTemplateDryRun(unittest.TestCase):
                 {key: p3[key] for key in ('ok', 'api_calls', 'elapsed_ms')},
                 {key: p4[key] for key in ('ok', 'api_calls', 'elapsed_ms')},
             ]
+
+
+
+class VerifyPostconditionTests(unittest.TestCase):
+    """A4: verify_postcondition() inside a code-exec program."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.path = str(pathlib.Path(self.tmp.name) / 'y-tuong.txt')
+        pathlib.Path(self.path).write_text(
+            'Ý tưởng 1: app nhắc uống nước.\n', encoding='utf-8')
+
+    def _program(self, checks_expr):
+        return ('verdict = verify_postcondition(%s)\n'
+                'assert_state(verdict["status"] == "verified", '
+                '"not verified")\n' % checks_expr)
+
+    def test_file_contains_verifies_and_envelope_reports_it(self):
+        source = self._program(
+            '[{"kind": "file_contains", "path": "%s", '
+            '"text": "Ý tưởng 1"}]' % self.path)
+        envelope = run(source)
+        self.assertTrue(envelope['ok'], envelope)
+        self.assertTrue(envelope['postcondition_verified'])
+        self.assertEqual(envelope['postcondition']['status'], 'verified')
+        self.assertFalse(envelope['postcondition']['needs_vision'])
+
+    def test_failed_verdict_is_data_not_a_crash(self):
+        source = (
+            'verdict = verify_postcondition([{"kind": "file_contains", '
+            '"path": "%s", "text": "no such line"}])\n'
+            'assert_state(verdict["status"] == "failed", "wrong status")\n'
+            'assert_state(verdict["needs_vision"] == False, '
+            '"failed must not need vision")\n' % self.path)
+        envelope = run(source)
+        self.assertTrue(envelope['ok'], envelope)
+        self.assertFalse(envelope['postcondition_verified'])
+        self.assertEqual(envelope['postcondition']['failed'],
+                         ['file_contains'])
+
+    def test_single_signal_is_inconclusive(self):
+        source = (
+            'verdict = verify_postcondition([{"kind": "file_exists", '
+            '"path": "%s"}])\n'
+            'assert_state(verdict["status"] == "inconclusive", '
+            '"single signal must be inconclusive")\n'
+            'assert_state(verdict["needs_vision"] == True, '
+            '"inconclusive needs vision")\n' % self.path)
+        envelope = run(source)
+        self.assertTrue(envelope['ok'], envelope)
+        self.assertFalse(envelope['postcondition_verified'])
+
+    def test_window_class_plus_title_verifies(self):
+        source = (
+            'verdict = verify_postcondition([{"kind": "window_present", '
+            '"class": "kitty", "title": "speed-pick1-term"}])\n'
+            'assert_state(verdict["status"] == "verified", '
+            '"window check must verify")\n')
+        envelope = run(source)
+        self.assertTrue(envelope['ok'], envelope)
+        self.assertTrue(envelope['postcondition_verified'])
+
+    def test_unknown_kind_is_inconclusive_not_a_crash(self):
+        source = (
+            'verdict = verify_postcondition([{"kind": "vibes"}])\n'
+            'assert_state(verdict["status"] == "inconclusive", '
+            '"unknown kind must be inconclusive")\n')
+        envelope = run(source)
+        self.assertTrue(envelope['ok'], envelope)
+
+    def test_non_list_checks_is_a_sandbox_error(self):
+        envelope = run('verify_postcondition("not a list")\n')
+        self.assertFalse(envelope['ok'])
+        self.assertEqual(envelope['error_type'], 'sandbox')
+
+    def test_no_verify_call_leaves_envelope_clean(self):
+        envelope = run('x = 1\n')
+        self.assertTrue(envelope['ok'])
+        self.assertNotIn('postcondition', envelope)
+        self.assertNotIn('postcondition_verified', envelope)
 
 
 if __name__ == '__main__':

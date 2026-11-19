@@ -114,7 +114,7 @@ def relay_commands(source, sink):
         if args == ['finish']:
             print(json.dumps({'ok': True, 'driver': 'finished'}), file=sink, flush=True)
             return 0
-        if args[0] not in ('observe', 'act', 'windows', 'doctor', 'status', 'browser', 'a11y', 'code-exec'):
+        if args[0] not in ('observe', 'act', 'windows', 'doctor', 'status', 'browser', 'a11y', 'code-exec', 'verify'):
             raise ValueError('unsupported driver command')
         result = execute(args,data)
         response={'returncode':result.returncode}

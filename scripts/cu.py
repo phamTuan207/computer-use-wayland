@@ -2138,6 +2138,8 @@ def main():
     a.add_argument('--limit',type=int,default=20,help='query only: max items returned, 1..20')
     a.add_argument('--address',help='ground only: Hyprland window address the snapshot belongs to')
     ce=sub.add_parser('code-exec',help='run one allowlisted program as the action (Pick 1, opt-in flag CU_CODE_EXEC=1)')
+    vf=sub.add_parser('verify',help='A4 deterministic postcondition verify: check an end state from file bytes, window list or DOM text, no screenshot, no model call (opt-in flag CU_CODE_EXEC=1)')
+    vf.add_argument('--spec',required=True,help='JSON spec file or - for stdin: a checks list, or an object with a checks list')
     ce.add_argument('--program',required=True,help='program source file (mode 600) or - for stdin')
     ce.add_argument('--intent',default=None,help='one-line intent, at most 200 chars')
     ce.add_argument('--target',default=None,help='task target path under /tmp, recorded only')
@@ -2175,6 +2177,7 @@ def main():
     # environment failure degrades instead of escaping before the branch.
     env=(environment() if args.command in ('session','stop','recover','windows','observe','act','a11y') or
          (args.command=='code-exec' and os.environ.get('CU_CODE_EXEC','').strip().lower() in ('1','true','yes')) or
+         (args.command=='verify' and os.environ.get('CU_CODE_EXEC','').strip().lower() in ('1','true','yes')) or
          (args.command=='browser' and args.operation=='start') else None)
     if args.command in ('session','stop','finish','recover','cancel'):
         import cursor_session
@@ -2218,6 +2221,83 @@ def main():
         if args.target is not None:
             result['target']=args.target
         print(json.dumps(result,ensure_ascii=False,separators=(',',':')),flush=True)
+        return 0
+    elif args.command=='verify':
+        # A4, opt-in flag default OFF like code-exec. A verdict (verified,
+        # failed, inconclusive) is a result envelope, not a session-ending
+        # error: print it and return 0 so the supervisor can finish on
+        # verified, replan on failed, or fall back to a vision verify
+        # observe on inconclusive. Only cancellation or an infrastructure
+        # exception escapes and stops the session.
+        import code_exec as _code_exec
+        import postcondition as _postcondition
+        if not _code_exec.is_enabled():
+            print(json.dumps({'ok': False, 'status': 'inconclusive',
+                              'needs_vision': True, 'checks': [],
+                              'error': 'deterministic verify is disabled; '
+                                       'set CU_CODE_EXEC=1'},
+                             ensure_ascii=False), flush=True)
+            return 0
+        try:
+            spec = read_json(sys.stdin) if args.spec == '-' else read_json_file(args.spec)
+        except ValueError as exc:
+            print(json.dumps({'ok': False, 'status': 'inconclusive',
+                              'needs_vision': True, 'checks': [],
+                              'error': 'spec is not valid JSON: ' + str(exc)},
+                             ensure_ascii=False), flush=True)
+            return 0
+        checks = spec.get('checks') if isinstance(spec, dict) else spec
+        if not isinstance(checks, list):
+            print(json.dumps({'ok': False, 'status': 'inconclusive',
+                              'needs_vision': True, 'checks': [],
+                              'error': 'spec must be a checks list or an '
+                                       'object with a checks list'},
+                             ensure_ascii=False), flush=True)
+            return 0
+        kinds = {c.get('kind') for c in checks if isinstance(c, dict)}
+        needs_session = bool(kinds & {'window_present', 'window_absent',
+                                      'dom_text'})
+        if needs_session:
+            require_session()
+            check_cancel()
+            backend = CodeExecBackend(env)
+            list_windows = backend.windows
+            dom_observe = backend.dom_observe
+        else:
+            list_windows = None
+            dom_observe = None
+
+        def _verify_read_bytes(path):
+            candidate = Path(path)
+            if not candidate.is_absolute():
+                raise ValueError('path must be absolute')
+            resolved = candidate.resolve()
+            fd = os.open(resolved, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC)
+            with os.fdopen(fd, 'rb') as stream:
+                st = os.fstat(stream.fileno())
+                if not stat.S_ISREG(st.st_mode):
+                    raise ValueError('not a regular file')
+                return stream.read(1048577)
+
+        def _verify_dir_exists(path):
+            candidate = Path(path)
+            if not candidate.is_absolute():
+                raise ValueError('path must be absolute')
+            return candidate.resolve().is_dir()
+
+        def _run_verify():
+            return _postcondition.verify_postconditions(
+                checks, read_bytes=_verify_read_bytes,
+                list_windows=list_windows, dom_observe=dom_observe,
+                dir_exists=_verify_dir_exists, max_bytes=1048576)
+
+        if needs_session:
+            with locked():
+                result = _run_verify()
+        else:
+            result = _run_verify()
+        print(json.dumps(result, ensure_ascii=False, separators=(',', ':')),
+              flush=True)
         return 0
     elif args.command=='resume':
         CANCEL.unlink(missing_ok=True)
