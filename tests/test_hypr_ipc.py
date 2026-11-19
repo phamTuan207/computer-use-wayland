@@ -119,6 +119,89 @@ class HyprIPC(unittest.TestCase):
         self.assertFalse(cu.same_window_address(None, '0xab'))
         self.assertFalse(cu.same_window_address(42, '0xab'))
 
+class HyprSnapshot(unittest.TestCase):
+    """hypr_snapshot(): one [[BATCH]] round trip, with fallback to singles."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.runtime = Path(self.tmp.name)
+        folder = self.runtime / 'hypr' / 'sig'
+        folder.mkdir(parents=True)
+        self.path = folder / '.socket.sock'
+        self.server = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        self.server.bind(str(self.path))
+        self.server.listen(8)
+        self.server.settimeout(5)
+        self.addCleanup(self.server.close)
+        self.env = {'XDG_RUNTIME_DIR': str(self.runtime),
+                    'HYPRLAND_INSTANCE_SIGNATURE': 'sig'}
+        self.clients = [{'address': '0x1', 'monitor': 0}]
+        self.monitors = [{'id': 0, 'name': 'test'}]
+        self.seen = []
+
+    def serve(self, replies):
+        """Answer each connection with the next reply in order."""
+        def run():
+            for payload in replies:
+                conn, _ = self.server.accept()
+                try:
+                    self.seen.append(conn.recv(4096))
+                    conn.sendall(payload)
+                finally:
+                    conn.close()
+        thread = threading.Thread(target=run, daemon=True)
+        thread.start()
+        self.addCleanup(thread.join, 5)
+        return thread
+
+    def batch_reply(self):
+        return (json.dumps(self.clients) + '\n\n\n' + json.dumps(self.monitors)).encode()
+
+    def test_socket_batch_returns_both_in_one_request(self):
+        self.serve([self.batch_reply()])
+        clients, monitors = cu.hypr_snapshot(self.env)
+        self.assertEqual(clients, self.clients)
+        self.assertEqual(monitors, self.monitors)
+        self.assertEqual(self.seen, [b'[[BATCH]]j/clients;j/monitors'])
+
+    def test_socket_batch_failure_falls_back_to_single_queries(self):
+        self.serve([b'not json',
+                    json.dumps(self.clients).encode(),
+                    json.dumps(self.monitors).encode()])
+        clients, monitors = cu.hypr_snapshot(self.env)
+        self.assertEqual(clients, self.clients)
+        self.assertEqual(monitors, self.monitors)
+        self.assertEqual(self.seen, [b'[[BATCH]]j/clients;j/monitors',
+                                     b'j/clients', b'j/monitors'])
+
+    def test_socket_batch_trailing_junk_falls_back(self):
+        self.serve([self.batch_reply() + b'\n{"junk": true}',
+                    json.dumps(self.clients).encode(),
+                    json.dumps(self.monitors).encode()])
+        clients, monitors = cu.hypr_snapshot(self.env)
+        self.assertEqual(clients, self.clients)
+        self.assertEqual(monitors, self.monitors)
+        self.assertEqual(self.seen[0], b'[[BATCH]]j/clients;j/monitors')
+
+    def test_cli_batch_without_session_environment(self):
+        reply = json.dumps(self.clients) + '\n\n\n' + json.dumps(self.monitors)
+        with patch.object(cu, 'run', return_value=reply) as run:
+            clients, monitors = cu.hypr_snapshot({})
+        self.assertEqual(clients, self.clients)
+        self.assertEqual(monitors, self.monitors)
+        run.assert_called_once_with(['hyprctl', '--batch', 'j/clients;j/monitors'], {})
+
+    def test_cli_batch_failure_falls_back_to_single_queries(self):
+        def hypr(env, what):
+            return self.clients if what == 'clients' else self.monitors
+        with patch.object(cu, 'run', side_effect=RuntimeError('hyprctl gone')), \
+             patch.object(cu, 'hypr', side_effect=hypr):
+            clients, monitors = cu.hypr_snapshot({})
+        self.assertEqual(clients, self.clients)
+        self.assertEqual(monitors, self.monitors)
+
+
 
 if __name__ == '__main__':
     unittest.main()

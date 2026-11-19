@@ -27,15 +27,30 @@ class Observe(unittest.TestCase):
         self.stack.enter_context(patch.object(indicator.socket,'socket',
                                               side_effect=AssertionError('indicator real connection attempted')))
         self.focus=self.stack.enter_context(patch.object(cu,'focus'))
-        self.window=self.stack.enter_context(patch.object(cu,'window',return_value=self.client))
-        self.hypr=self.stack.enter_context(patch.object(cu,'hypr',return_value=[self.monitor]))
-        self.capture=self.stack.enter_context(patch.object(cu,'run',return_value=raw.getvalue()))
+        self.base_client=dict(self.client)
+        def hypr(env,what):
+            if what=='clients':return [dict(self.client)]
+            if what=='monitors':return [dict(self.monitor)]
+            raise AssertionError('unexpected compositor query '+what)
+        self.hypr=self.stack.enter_context(patch.object(cu,'hypr',side_effect=hypr))
+        def run(argv,env=None,text=True,input=None,timeout=12):
+            if argv and argv[0]=='grim':return raw.getvalue()
+            raise RuntimeError('unexpected subprocess in test: '+str(argv))
+        self.capture=self.stack.enter_context(patch.object(cu,'run',side_effect=run))
 
     def test_default_capture_never_focuses(self):
         cu.observe({},'0x1',persist=False)
         self.focus.assert_not_called()
-        self.capture.assert_called_once()
+        grim=[c for c in self.capture.call_args_list if c.args[0][0]=='grim']
+        self.assertEqual(len(grim),1)
         self.indicator.assert_called_once_with(cu.STATE,'hide')
+
+    def test_invalid_address_rejected_before_compositor(self):
+        with self.assertRaisesRegex(ValueError,'exact window address required'):
+            cu.observe({},'bogus',persist=False)
+        self.focus.assert_not_called()
+        self.hypr.assert_not_called()
+        self.capture.assert_not_called()
 
     def test_capture_hides_and_restores_badge(self):
         self.indicator.side_effect=lambda state,command:True
@@ -49,20 +64,23 @@ class Observe(unittest.TestCase):
     def test_invisible_target_refused_before_capture(self):
         for changes in ({'workspace':{'id':2}},{'hidden':True},{'mapped':False}):
             with self.subTest(changes=changes):
-                self.window.return_value=dict(self.client,**changes)
+                self.client=dict(self.base_client,**changes)
                 with self.assertRaisesRegex(RuntimeError,'window is not visible'):cu.observe({},'0x1',persist=False)
-        self.focus.assert_not_called();self.capture.assert_not_called()
+        self.focus.assert_not_called()
+        grim=[c for c in self.capture.call_args_list if c.args[0][0]=='grim']
+        self.assertFalse(grim)
 
     def test_visible_special_workspace_and_pinned_window(self):
-        self.window.return_value=dict(self.client,workspace={'id':-99})
+        self.client=dict(self.base_client,workspace={'id':-99})
         self.monitor['specialWorkspace']={'id':-99}
         cu.observe({},'0x1',persist=False)
-        self.window.return_value=dict(self.client,workspace={'id':2},pinned=True)
+        self.client=dict(self.base_client,workspace={'id':2},pinned=True)
         cu.observe({},'0x1',persist=False)
         self.focus.assert_not_called()
 
     def test_workspace_switch_during_capture_refuses_image(self):
-        self.hypr.side_effect=[[self.monitor],[dict(self.monitor,activeWorkspace={'id':2})]]
+        self.hypr.side_effect=[[self.client],[self.monitor],
+                               [self.client],[dict(self.monitor,activeWorkspace={'id':2})]]
         with self.assertRaisesRegex(RuntimeError,'window is not visible'):cu.observe({},'0x1',persist=False)
 
     def test_cli_defaults_and_focus_flag(self):

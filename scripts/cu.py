@@ -483,6 +483,29 @@ def run(argv, env=None, text=True, input=None, timeout=12):
         raise RuntimeError(f'{Path(argv[0]).name}: {err.strip()[:400]}')
     return p.stdout
 
+def _hypr_socket_request(env, payload):
+    # One request on one socket connection; the compositor closes it after
+    # the reply, so each request is its own connection. Same 1s deadline
+    # and 4 MiB guard hypr() always had.
+    path=Path(env['XDG_RUNTIME_DIR'])/'hypr'/env['HYPRLAND_INSTANCE_SIGNATURE']/'.socket.sock'
+    with socket.socket(socket.AF_UNIX,socket.SOCK_STREAM) as connection:
+        deadline=time.monotonic()+1
+        try:
+            connection.settimeout(1);connection.connect(str(path))
+            connection.sendall(payload if isinstance(payload,bytes) else payload.encode())
+            data=bytearray()
+            while True:
+                remaining=deadline-time.monotonic()
+                if remaining<=0:raise RuntimeError('compositor query timed out')
+                connection.settimeout(remaining)
+                part=connection.recv(65536)
+                if not part:break
+                data.extend(part)
+                if len(data)>4*1024*1024:raise RuntimeError('compositor response exceeds 4 MiB')
+        except socket.timeout:
+            raise RuntimeError('compositor query timed out') from None
+    return bytes(data)
+
 def hypr(env, what):
     # The documented read-only IPC avoids a fork/exec for every safety check.
     # Keep CLI compatibility for callers without an explicit session environment.
@@ -492,25 +515,45 @@ def hypr(env, what):
         detail=''.join(ch for ch in detail if ch==' ' or 32<=ord(ch)<=126)[:120]
         raise ValueError(('unsupported read-only compositor query: '+detail)[:200])
     if env and env.get('XDG_RUNTIME_DIR') and env.get('HYPRLAND_INSTANCE_SIGNATURE'):
-        path=Path(env['XDG_RUNTIME_DIR'])/'hypr'/env['HYPRLAND_INSTANCE_SIGNATURE']/'.socket.sock'
-        with socket.socket(socket.AF_UNIX,socket.SOCK_STREAM) as connection:
-            deadline=time.monotonic()+1
-            try:
-                connection.settimeout(1);connection.connect(str(path))
-                connection.sendall(('j/'+what).encode())
-                data=bytearray()
-                while True:
-                    remaining=deadline-time.monotonic()
-                    if remaining<=0:raise RuntimeError('compositor query timed out')
-                    connection.settimeout(remaining)
-                    part=connection.recv(65536)
-                    if not part:break
-                    data.extend(part)
-                    if len(data)>4*1024*1024:raise RuntimeError('compositor response exceeds 4 MiB')
-            except socket.timeout:
-                raise RuntimeError('compositor query timed out') from None
-        return json.loads(data)
+        return json.loads(_hypr_socket_request(env,'j/'+what))
     return json.loads(run(['hyprctl','-j',what],env))
+
+def _parse_batch_json(raw):
+    # A batch reply is two JSON documents back to back, separated by blank
+    # lines (clients, then monitors). raw_decode does not skip leading
+    # whitespace, so strip it before the second document.
+    text=raw.decode() if isinstance(raw,(bytes,bytearray)) else raw
+    decoder=json.JSONDecoder()
+    first,end=decoder.raw_decode(text)
+    rest=text[end:].lstrip()
+    second,end2=decoder.raw_decode(rest)
+    if rest[end2:].strip():raise ValueError('unexpected trailing data in compositor batch reply')
+    return first,second
+
+def hypr_snapshot(env):
+    """Return (clients, monitors) from one compositor round trip.
+
+    observe() needs both before and after the capture (the moved-window
+    guard). One [[BATCH]] request over the session socket, or one
+    hyprctl --batch call without a session socket, instead of two
+    separate queries. Any batch failure falls back to two hypr() calls,
+    so a batch regression can never break observe(); it only costs the
+    failed attempt. Measured on this machine 2026-11-19: a socket query
+    is about 0.1ms, so the saving in the session path is a fraction of
+    a millisecond per snapshot; the CLI path (no session socket) saves
+    a whole fork per snapshot.
+    """
+    if env and env.get('XDG_RUNTIME_DIR') and env.get('HYPRLAND_INSTANCE_SIGNATURE'):
+        try:
+            return _parse_batch_json(_hypr_socket_request(env,'[[BATCH]]j/clients;j/monitors'))
+        except (OSError,RuntimeError,ValueError,UnicodeDecodeError):
+            pass
+    else:
+        try:
+            return _parse_batch_json(run(['hyprctl','--batch','j/clients;j/monitors'],env))
+        except (OSError,RuntimeError,ValueError,UnicodeDecodeError):
+            pass
+    return hypr(env,'clients'),hypr(env,'monitors')
 
 def monitor_box(m):
     w,h = m['width'],m['height']
@@ -904,8 +947,11 @@ def _capture_identity(env):
 def observe(env, address, crop=None, max_width=960, activate=False, persist=True):
     from PIL import Image
     if activate: focus(env,address)
-    c=window(env,address)
-    monitors=hypr(env,'monitors')
+    if not re.fullmatch(r'0x[0-9a-fA-F]+',address or ''): raise ValueError('exact window address required')
+    clients,monitors=hypr_snapshot(env)
+    matches=[c for c in clients if same_window_address(c.get('address'),address)]
+    if len(matches)!=1: raise ValueError('window no longer exists')
+    c=matches[0]
     m=next((m for m in monitors if m['id']==c['monitor']),None)
     if not m: raise RuntimeError('window monitor unavailable')
     require_visible_window(c,m)
@@ -933,9 +979,12 @@ def observe(env, address, crop=None, max_width=960, activate=False, persist=True
     decode_start=time.monotonic()
     image=Image.open(io.BytesIO(raw)).convert('RGB')
     decode_ms=round((time.monotonic()-decode_start)*1000,3)
-    current=window(env,address)
+    current_clients,current_monitors=hypr_snapshot(env)
+    current_matches=[c for c in current_clients if same_window_address(c.get('address'),address)]
+    if len(current_matches)!=1: raise ValueError('window no longer exists')
+    current=current_matches[0]
     if bounds(current) != wb or current['monitor']!=c['monitor']: raise RuntimeError('window moved during capture; observe again')
-    current_monitor=next((item for item in hypr(env,'monitors') if item['id']==current['monitor']),None)
+    current_monitor=next((item for item in current_monitors if item['id']==current['monitor']),None)
     if not current_monitor or monitor_box(current_monitor)!=mb or current_monitor['scale']!=m['scale'] or current_monitor.get('transform',0)!=m.get('transform',0):
         raise RuntimeError('monitor layout changed during capture; observe again')
     require_visible_window(current,current_monitor)
