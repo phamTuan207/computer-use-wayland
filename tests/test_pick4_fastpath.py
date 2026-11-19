@@ -250,6 +250,79 @@ class A11yQueryGroundTests(unittest.TestCase):
         self.assertEqual(result['name'], 'Save')
         ns['resolve'].assert_called_once()
 
+    def test_ground_uses_first_top_level_frame_extents(self):
+        import types
+        ns = self._extract('ground', '_pick4', '_component_extents', '_ints4')
+        ns['_pick4'] = lambda: True
+        ns['Atspi'] = types.SimpleNamespace(
+            CoordType=types.SimpleNamespace(SCREEN=0))
+        snapshot = {'backend': 'a11y', 'created': time.time(), 'pid': 4242,
+                    'elements': [{'ref': 'e1', 'path': [0], 'name': 'Sidebar',
+                                  'role': 'list'}]}
+        root = mock.Mock()
+        no_extents = mock.Mock()
+        no_extents.get_component_iface.return_value = None
+        frame = mock.Mock()
+        frame_component = mock.Mock()
+        frame_component.get_extents.return_value = [0, 0, 924, 581]
+        frame.get_component_iface.return_value = frame_component
+        later_frame = mock.Mock()
+        later_component = mock.Mock()
+        later_component.get_extents.return_value = [0, 0, 800, 600]
+        later_frame.get_component_iface.return_value = later_component
+        root.get_component_iface.return_value = None
+        root.get_child_count.return_value = 3
+        root.get_child_at_index.side_effect = [no_extents, frame, later_frame]
+        element = mock.Mock()
+        element_component = mock.Mock()
+        element_component.get_extents.return_value = [0, 0, 184, 535]
+        element.get_component_iface.return_value = element_component
+        ns['read_json_file'] = mock.Mock(return_value=snapshot)
+        ns['app'] = mock.Mock(return_value=root)
+        ns['resolve'] = mock.Mock(return_value=element)
+
+        result = ns['ground']('/tmp/s.json', 'e1')
+
+        self.assertEqual(result['extents'], [0, 0, 184, 535])
+        self.assertEqual(result['root_extents'], [0, 0, 924, 581])
+        root.get_child_at_index.assert_has_calls([mock.call(0), mock.call(1)])
+        self.assertEqual(root.get_child_at_index.call_count, 2)
+
+    def test_ground_fails_closed_without_app_or_frame_extents(self):
+        import types
+        ns = self._extract('ground', '_pick4', '_component_extents', '_ints4')
+        ns['_pick4'] = lambda: True
+        ns['Atspi'] = types.SimpleNamespace(
+            CoordType=types.SimpleNamespace(SCREEN=0))
+        snapshot = {'backend': 'a11y', 'created': time.time(), 'pid': 4242,
+                    'elements': [{'ref': 'e1', 'path': [], 'name': 'Sidebar',
+                                  'role': 'list'}]}
+        root = mock.Mock()
+        root.get_component_iface.return_value = None
+        root.get_child_count.return_value = 2
+        children = [mock.Mock(), mock.Mock()]
+        for child in children:
+            child.get_component_iface.return_value = None
+        root.get_child_at_index.side_effect = children
+        element = mock.Mock()
+        element_component = mock.Mock()
+        element_component.get_extents.return_value = [0, 0, 184, 535]
+        element.get_component_iface.return_value = element_component
+        ns['read_json_file'] = mock.Mock(return_value=snapshot)
+        ns['app'] = mock.Mock(return_value=root)
+        ns['resolve'] = mock.Mock(return_value=element)
+
+        with self.assertRaisesRegex(ValueError, 'no window frame extents; use vision'):
+            ns['ground']('/tmp/s.json', 'e1')
+
+    def test_ground_refuses_with_flag_off(self):
+        ns = self._extract('ground', '_pick4')
+        ns['_pick4'] = lambda: False
+        ns['read_json_file'] = mock.Mock()
+        with self.assertRaisesRegex(ValueError, 'pick4 fast path is off'):
+            ns['ground']('/tmp/s.json', 'e1')
+        ns['read_json_file'].assert_not_called()
+
     def test_ground_fails_closed(self):
         ns = self._extract('ground', '_pick4', '_component_extents')
         ns['_pick4'] = lambda: True
@@ -323,6 +396,26 @@ class CuGroundCliTests(unittest.TestCase):
         self.assertEqual(result['coord_frame'], 'window')
         self.assertEqual(result['box'], [300, 400, 120, 30])
         self.assertEqual(result['center'], [360, 415])
+
+    def test_ground_nautilus_frame_child_box_and_crop(self):
+        adapter = {'ok': True, 'ref': 'e1', 'role': 'list',
+                   'name': 'Sidebar', 'extents': [0, 0, 184, 535],
+                   'extents_coord': 'screen',
+                   'root_extents': [0, 0, 924, 581]}
+        clients = [{'address': '0xabc', 'at': [3448, 1509],
+                    'size': [924, 581]}]
+
+        code, result = self.run_ground(adapter, clients)
+
+        self.assertEqual(code, 0)
+        self.assertEqual(result['coord_frame'], 'window')
+        self.assertEqual(result['box'], [3448, 1509, 184, 535])
+        self.assertEqual(result['center'], [3540, 1776])
+        crop = result['crop']
+        self.assertGreaterEqual(crop[0], 0)
+        self.assertGreaterEqual(crop[1], 0)
+        self.assertLessEqual(crop[0] + crop[2], 924)
+        self.assertLessEqual(crop[1] + crop[3], 581)
 
     def test_ground_unknown_frame_fails_closed(self):
         adapter = {'ok': True, 'ref': 'e1', 'role': 'push button',
