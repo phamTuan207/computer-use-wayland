@@ -44,10 +44,12 @@ class ActDiagnostics(unittest.TestCase):
         self.addCleanup(tmp.cleanup)
         self.tmp = pathlib.Path(tmp.name)
         self.capture_addresses = []
+        self.fresh_reads = []
 
     def desktop_act(self, meta, actions, after_capture=True, *,
                     active=None, cursor=(10, 10), after=None,
                     pre_fresh=None, new_image=None, image_pair=None,
+                    fresh_images=None,
                     probe_error=None, expected_terminal_window=None,
                     window_side_effect=None):
         """Run the real desktop_act with every GUI seam mocked.
@@ -67,6 +69,7 @@ class ActDiagnostics(unittest.TestCase):
         from PIL import Image
         if pre_fresh is None:
             pre_fresh = dict(meta)
+        fresh_images = list(fresh_images or [])
         image = Image.new('RGB', (20, 20))
         stack = ExitStack()
         stack.enter_context(patch.object(cu, 'STATE', self.tmp))
@@ -75,14 +78,17 @@ class ActDiagnostics(unittest.TestCase):
         stack.enter_context(patch.object(cu, 'window',
                                          side_effect=window_side_effect,
                                          **({} if window_side_effect else
-                                            {'return_value': {'at': [0, 0], 'size': [20, 20]}})))
+                                            {'return_value': {'at': meta['window_bounds'][:2],
+                                                              'size': meta['window_bounds'][2:]}})))
         queue = list(active) if active is not None else [ADDR] * 8
         probe_failures = [probe_error] if probe_error is not None else []
 
         def hypr(env, query):
             if query == 'monitors':
-                return [{'name': 'test', 'x': 0, 'y': 0, 'width': 20,
-                         'height': 20, 'scale': 1}]
+                x, y, width, height = meta['monitor_box']
+                return [{'name': 'test', 'x': x, 'y': y, 'width': width,
+                         'height': height, 'scale': meta['monitor_scale'],
+                         'transform': meta['monitor_transform']}]
             if query == 'activewindow':
                 if probe_failures:
                     failure = probe_failures.pop(0)
@@ -102,7 +108,10 @@ class ActDiagnostics(unittest.TestCase):
                 if isinstance(after, Exception):
                     raise after
                 return dict(after)
-            return (new_image if new_image is not None else image, dict(pre_fresh))
+            self.fresh_reads.append(True)
+            fresh_image = (fresh_images.pop(0) if fresh_images else
+                           new_image if new_image is not None else image)
+            return fresh_image, dict(pre_fresh)
 
         stack.enter_context(patch.object(cu, 'observe', side_effect=obs))
         stack.enter_context(patch.object(cu, 'observe_screen', side_effect=obs))
@@ -111,7 +120,7 @@ class ActDiagnostics(unittest.TestCase):
         stack.enter_context(patch.object(cu.shutil, 'which', return_value=None))
         stack.enter_context(patch('PIL.Image.open',
                                   return_value=image_pair[0] if image_pair else image))
-        stack.enter_context(patch('time.sleep'))
+        self.sleep_mock = stack.enter_context(patch('time.sleep'))
         try:
             return cu.desktop_act({}, meta, actions, after_capture=after_capture,
                                   expected_terminal_window=expected_terminal_window)
@@ -250,6 +259,64 @@ class ActDiagnostics(unittest.TestCase):
         self.assertIn('after', result)
         self.assertNotIn('input_diagnostics', result,
                          'the pre-input refusal envelope stays unchanged')
+
+    def test_stable_uniform_brightness_shift_retries_once_and_proceeds(self):
+        from PIL import Image, ImageChops, ImageStat
+        old = Image.new('RGB', (100, 100), (100, 100, 100))
+        shifted = Image.new('RGB', old.size)
+        shifted.putdata([(96 if x % 2 == 0 else 97,) * 3
+                         for y in range(old.height) for x in range(old.width)])
+        self.assertAlmostEqual(sum(ImageStat.Stat(ImageChops.difference(old, shifted)).mean) / 3,
+                               3.5, places=1)
+        meta = base_meta(image_size=[100, 100], window_bounds=[0, 0, 100, 100],
+                         monitor_box=[0, 0, 100, 100], region=[0, 0, 100, 100])
+        with patch.dict(os.environ, {'CU_SESSION_TOKEN': 'c' * 32}):
+            result = self.desktop_act(meta, [{'type': 'move', 'x': 50, 'y': 50}],
+                                      image_pair=(old,), fresh_images=[shifted, shifted.copy()],
+                                      after=base_meta(image='after.png'), cursor=(50, 50))
+        self.assertTrue(result['ok'], result)
+        self.assertEqual(result['completed'], 1)
+        self.assertEqual(len(self.fresh_reads), 2)
+        self.assertEqual(sum(args == (.15,) for args, _ in self.sleep_mock.call_args_list), 1)
+        rows = [json.loads(line) for path in self.tmp.glob('diagnostics-*.jsonl')
+                for line in path.read_text().splitlines()]
+        self.assertIn('preflight_retry', [row['event'] for row in rows])
+
+    def test_moved_action_point_still_refuses_after_stable_retry(self):
+        from PIL import Image, ImageDraw
+        old = Image.new('RGB', (100, 100), (100, 100, 100))
+        ImageDraw.Draw(old).rectangle((35, 35, 55, 55), fill=(240, 240, 240))
+        moved = Image.new('RGB', (100, 100), (100, 100, 100))
+        ImageDraw.Draw(moved).rectangle((50, 35, 70, 55), fill=(240, 240, 240))
+        meta = base_meta(image_size=[100, 100], window_bounds=[0, 0, 100, 100],
+                         monitor_box=[0, 0, 100, 100], region=[0, 0, 100, 100])
+        result = self.desktop_act(meta, [{'type': 'move', 'x': 45, 'y': 45}],
+                                  image_pair=(old,), fresh_images=[moved, moved.copy()],
+                                  active=[ADDR] * 8)
+        self.assertFalse(result['ok'])
+        self.assertEqual(result['error_code'], 'screen_changed')
+        self.assertEqual(len(self.fresh_reads), 2)
+        self.sleep_mock.assert_called_once_with(.15)
+
+    def test_unstable_fresh_frames_refuse_after_only_one_retry(self):
+        from PIL import Image
+        old = Image.new('RGB', (100, 100), (100, 100, 100))
+        first = Image.new('RGB', old.size)
+        second = Image.new('RGB', old.size)
+        first.putdata([(96 if x % 2 == 0 else 97,) * 3
+                       for y in range(old.height) for x in range(old.width)])
+        second.putdata([(92 if x % 2 == 0 else 93,) * 3
+                        for y in range(old.height) for x in range(old.width)])
+        meta = base_meta(image_size=[100, 100], window_bounds=[0, 0, 100, 100],
+                         monitor_box=[0, 0, 100, 100], region=[0, 0, 100, 100])
+        result = self.desktop_act(meta, [{'type': 'move', 'x': 50, 'y': 50}],
+                                  image_pair=(old,), fresh_images=[first, second],
+                                  active=[ADDR] * 8)
+        self.assertFalse(result['ok'])
+        self.assertEqual(result['error_code'], 'screen_changed')
+        self.assertEqual(len(self.fresh_reads), 2,
+                         'one second capture maximum, no recursive retries')
+        self.sleep_mock.assert_called_once_with(.15)
 
     def test_focus_changed_refusal_envelope_has_no_input_diagnostics(self):
         meta = base_meta()

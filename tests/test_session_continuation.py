@@ -84,6 +84,10 @@ def live(tmp, token, *, active, pre_calls, post, close_error=None):
     stack = contextlib.ExitStack()
     with stack:
         stack.enter_context(patch.object(cu, 'STATE', Path(tmp)))
+        fixture_root = Path(tmp)
+        (fixture_root / 'native').mkdir(exist_ok=True)
+        (fixture_root / 'native' / 'wtype').write_bytes(b'')
+        stack.enter_context(patch.object(cu, 'ROOT', fixture_root))
         stack.enter_context(patch.dict(os.environ, {'CU_SESSION_TOKEN': token}))
         stack.enter_context(patch.object(cu, 'check_cancel'))
         stack.enter_context(patch.object(cu, 'environment', return_value={}))
@@ -142,6 +146,7 @@ def live(tmp, token, *, active, pre_calls, post, close_error=None):
         stack.enter_context(patch.object(cu, 'Pointer', return_value=pointer))
         typed = stack.enter_context(patch.object(cu, 'run_cancelable',
                                                  return_value=''))
+        # run_cancelable is mocked below, so the fixture binary is never run.
         stack.enter_context(patch.object(cu.shutil, 'which', return_value=None))
         stack.enter_context(patch.object(cu, 'fcitx5_running', return_value=False))
         stack.enter_context(patch('time.sleep'))
@@ -161,6 +166,33 @@ def relay_lines(lines):
 
 
 class TypedRefusalRecovery(unittest.TestCase):
+    def test_stable_brightness_shift_retries_inside_driver_act(self):
+        from PIL import Image
+        token = 'b1' * 16
+        old = Image.new('RGB', (20, 20), (100, 100, 100))
+        shifted = Image.new('RGB', old.size)
+        shifted.putdata([(96 if x % 2 == 0 else 97,) * 3
+                         for y in range(old.height) for x in range(old.width)])
+        with tempfile.TemporaryDirectory() as tmp:
+            obs, _ = write_observation(tmp, '00000000010d', image=old)
+            with live(tmp, token, active=[ADDR] * 12,
+                      pre_calls=[(shifted, {}), (shifted.copy(), {})],
+                      post=dict(base_meta(pixel_sha256='1111'))) as (typed, stop):
+                code, body = relay_lines([
+                    {'args': act_args(obs), 'stdin': WAIT},
+                    {'args': ['status']},
+                ])
+            diagnostic_rows = [json.loads(line)
+                               for path in Path(tmp).glob('diagnostics-*.jsonl')
+                               for line in path.read_text().splitlines()]
+        self.assertEqual(code, 0)
+        self.assertTrue(body[1]['result']['ok'], body[1])
+        self.assertIs(body[1]['session_continues'], True)
+        self.assertTrue(body[2]['session_continues'])
+        self.assertIn('preflight_retry', [row['event'] for row in diagnostic_rows])
+        typed.assert_not_called()
+        stop.assert_not_called()
+
     def test_invalid_wait_typed_refusal_continues_then_corrected_type_succeeds(self):
         from PIL import Image
         token = 'b2' * 16
@@ -314,7 +346,7 @@ class TransientRefusalGate(unittest.TestCase):
             obs2, after = write_observation(tmp, '000000000109', image=same, scope='screen')
             post = dict(after)
             with live(tmp, token, active=[ADDR] * 12,
-                      pre_calls=[(big, {}), (same, {})], post=post) as (typed, stop):
+                      pre_calls=[(big, {}), (same, {}), (same, {})], post=post) as (typed, stop):
                 code, body = relay_lines([
                     {'args': act_args(obs1), 'stdin': WAIT},
                     {'args': ['observe', '--screen', 'test', '--verbose']},
@@ -338,6 +370,26 @@ class TransientRefusalGate(unittest.TestCase):
 
 
 class FatalEnvelope(unittest.TestCase):
+    def test_vanished_target_window_remains_fatal_without_typed_provenance(self):
+        from PIL import Image
+        token = 'd1' * 16
+        same = Image.new('RGB', (20, 20))
+        with tempfile.TemporaryDirectory() as tmp:
+            obs, _ = write_observation(tmp, '00000000010c', image=same)
+            with live(tmp, token, active=[ADDR], pre_calls=[(same, {})],
+                      post=dict(base_meta(pixel_sha256='1111'))) as (typed, stop):
+                with patch.object(cu, 'window', side_effect=ValueError('window no longer exists')):
+                    code, body = relay_lines([
+                        {'args': act_args(obs), 'stdin': WAIT},
+                        {'args': ['status']},
+                    ])
+        self.assertEqual(code, 1)
+        self.assertEqual(body[1]['session_ended']['reason'], 'window no longer exists')
+        self.assertIs(body[1]['session_continues'], False)
+        self.assertNotIn('recoverable', body[1]['result'])
+        self.assertEqual(typed.call_count, 0)
+        stop.assert_called_once()
+
     def test_completed_capture_failure_keeps_session_for_fresh_evidence(self):
         from PIL import Image
         token = 'a7' * 16

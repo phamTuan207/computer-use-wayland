@@ -50,6 +50,9 @@ fd = os.open(snapshot, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
 with os.fdopen(fd, 'w') as stream:
     json.dump({'version': 4, 'token': token}, stream)
     stream.flush(); os.fsync(stream.fileno())
+ready_gate = os.environ.get('FAKE_READY_GATE')
+while ready_gate and not Path(ready_gate).exists():
+    time.sleep(.01)
 mark('ready')
 print(json.dumps({'ok': True, 'driver': 'ready'}, separators=(',', ':')), flush=True)
 
@@ -377,6 +380,46 @@ class SessionRemoteIntegration(BrokerHarness):
         self.assertEqual(final['guardian'], 'clean')
         self.assertFalse((self.state / 'session.json').exists())
         return final
+
+    def test_broker_handle_accepts_a11y_and_rejects_unlisted_command(self):
+        initial = self.broker.handle({'command': 'status'})
+        start = {'command': 'start', 'owner': 'pick4a11y-regression',
+                 'start_id': session_remote._new_start_id(),
+                 'lease_secret': secrets.token_hex(32),
+                 'broker_generation': initial['broker_generation']}
+        started = self.broker.handle(start)
+        self.assertTrue(started['ok'], started)
+        lease = {'owner': start['owner'], 'generation': started['generation'],
+                 'lease_secret': start['lease_secret']}
+        ready = self.wait_for(lambda: (lambda value: value if value['driver'] == 'ready' else None)(
+            self.broker.handle({'command': 'status'})))
+        self.assertEqual(ready['state'], 'running')
+
+        envelopes = [
+            ['a11y', 'query', '--pid', '764773', '--name', 'Home'],
+            ['a11y', 'observe', '--pid', '764773'],
+            ['a11y', 'ground', 'e1', '--snapshot', '/tmp/g1-snapshot.json',
+             '--address', '0xabc'],
+        ]
+        for sequence, args in enumerate(envelopes, 1):
+            accepted = self.broker.handle({
+                'command': 'request', **lease, 'sequence': sequence,
+                'request': {'args': args, 'stdin': '', 'image_policy': 'always'}})
+            self.assertEqual(accepted, {'ok': True, 'status': 'accepted',
+                                        'sequence': sequence})
+            result = self.broker.handle({
+                'command': 'result', **lease, 'sequence': sequence})
+            self.assertEqual(result['status'], 'completed')
+            self.assertEqual(result['response']['result']['args'], args)
+
+        with self.assertRaises(session_remote.BrokerError) as caught:
+            self.broker.handle({
+                'command': 'request', **lease, 'sequence': 4,
+                'request': {'args': ['rm', '-rf', '/'], 'stdin': '',
+                            'image_policy': 'always'}})
+        self.assertEqual(caught.exception.error, 'unsupported_command')
+        self.assertEqual(self.broker.handle({'command': 'status'})['next_sequence'], 4)
+        self.finish_owned_task(lease)
 
     def start_command(self, owner='environment-test'):
         status = self.exchange({'command': 'status'})
@@ -715,6 +758,75 @@ class SessionRemoteIntegration(BrokerHarness):
     def test_lost_start_response_reconnects_to_same_generation(self):
         lease = self.start_task(drop_response=True)
         self.assertEqual(len(self.launches), 1)
+
+    def test_client_start_then_83_status_polls_are_ok_while_driver_is_starting(self):
+        self.broker.start_timeout = 15
+        ready_gate = self.root / 'allow-driver-ready'
+        self.broker.env['FAKE_READY_GATE'] = str(ready_gate)
+        lease_file = self.root / 'starting.lease'
+        code, started = self.run_cli(['start', '--owner', 'starting-test',
+                                      '--lease-file', str(lease_file)])
+        self.assertEqual(code, 0, started)
+        self.assertTrue(started['ok'])
+        self.assertEqual(started['status'], 'starting')
+
+        began = time.monotonic()
+        for _ in range(83):
+            code, status = self.run_cli(['status', '--lease-file', str(lease_file)])
+            self.assertEqual(code, 0, status)
+            self.assertTrue(status['ok'], status)
+            self.assertEqual(status['state'], 'starting')
+            self.assertEqual(status['driver'], 'starting')
+        self.assertLess(time.monotonic() - began, 10)
+
+        ready_gate.touch()
+        self.wait_for(lambda: (lambda result: result if result[1].get('state') == 'running' else None)(
+            self.run_cli(['status', '--lease-file', str(lease_file)])))
+        code, finished = self.run_cli(['finish', '--lease-file', str(lease_file)])
+        self.assertEqual(code, 0, finished)
+        self.assertEqual(finished['status'], 'finished')
+
+    def test_status_authorization_failure_is_exposed_by_broker_status(self):
+        lease_file = self.root / 'tamper.lease'
+        code, started = self.run_cli(['start', '--owner', 'tamper-test',
+                                      '--lease-file', str(lease_file)])
+        self.assertEqual(code, 0, started)
+        lease = json.loads(lease_file.read_text())
+        self.wait_for(lambda: (lambda result: result if result[1].get('state') == 'running' else None)(
+            self.run_cli(['status', '--lease-file', str(lease_file)])))
+        original_generation = lease['generation']
+        lease['generation'] = '0' * 32 if original_generation != '0' * 32 else '1' * 32
+        session_remote._replace_lease(lease_file, lease)
+
+        began = time.monotonic()
+        for _ in range(83):
+            code, refused = self.run_cli(['status', '--lease-file', str(lease_file)])
+            self.assertEqual(code, 1)
+            self.assertEqual(refused, {'ok': False, 'error': 'invalid_lease'})
+        self.assertLess(time.monotonic() - began, 10)
+        code, status = self.run_cli(['status'])
+        self.assertEqual(code, 0, status)
+        self.assertEqual(status['last_status_error'], 'invalid_lease')
+
+        lease['generation'] = original_generation
+        session_remote._replace_lease(lease_file, lease)
+        code, finished = self.run_cli(['finish', '--lease-file', str(lease_file)])
+        self.assertEqual(code, 0, finished)
+        self.assertEqual(finished['status'], 'finished')
+
+    def test_refused_start_error_is_exposed_by_broker_status(self):
+        def refuse_readiness():
+            raise session_remote.BrokerError('native_unavailable', 'fixture refusal')
+
+        self.broker.readiness = refuse_readiness
+        lease_file = self.root / 'refused.lease'
+        code, started = self.run_cli(['start', '--owner', 'refused-test',
+                                      '--lease-file', str(lease_file)])
+        self.assertEqual(code, 1)
+        self.assertEqual(started['error'], 'native_unavailable')
+        code, status = self.run_cli(['status'])
+        self.assertEqual(code, 0, status)
+        self.assertEqual(status['last_start_error'], 'native_unavailable')
 
     def test_public_cli_uses_private_lease_and_multiline_request_file(self):
         lease_file = self.root / 'task.lease'
@@ -1140,6 +1252,41 @@ class CodeExecEnvelopeTests(unittest.TestCase):
             session_remote._validate_envelope(
                 {'args': ['shell', 'id'], 'stdin': '',
                  'image_policy': 'always'})
+
+
+
+class ValidateEnvelopeArgTypeTests(unittest.TestCase):
+    """Non-string envelope args get a distinct error, not unsupported_command."""
+
+    def test_integer_arg_returns_invalid_arg_type(self):
+        with self.assertRaises(session_remote.BrokerError) as caught:
+            session_remote._validate_envelope(
+                {'args': ['a11y', 'query', '--pid', 1234], 'stdin': '',
+                 'image_policy': 'always'})
+        self.assertEqual(caught.exception.error, 'invalid_arg_type')
+        self.assertIn('1234', str(caught.exception))
+        self.assertIn('int', str(caught.exception))
+
+    def test_string_pid_arg_is_accepted(self):
+        envelope, _, _ = session_remote._validate_envelope(
+            {'args': ['a11y', 'query', '--pid', '1234'], 'stdin': '',
+             'image_policy': 'always'})
+        self.assertEqual(envelope['args'], ['a11y', 'query', '--pid', '1234'])
+
+    def test_a11y_string_args_are_accepted(self):
+        for args in (['a11y', 'query', '--pid', '764773', '--name', 'Home'],
+                     ['a11y', 'observe', '--pid', '764773'],
+                     ['a11y', 'ground', 'e1', '--snapshot', '/tmp/g1-snapshot.json',
+                      '--address', '0xabc']):
+            envelope, _, _ = session_remote._validate_envelope(
+                {'args': args, 'stdin': '', 'image_policy': 'always'})
+            self.assertEqual(envelope['args'], args)
+
+    def test_unknown_string_command_still_unsupported_command(self):
+        with self.assertRaises(session_remote.BrokerError) as caught:
+            session_remote._validate_envelope(
+                {'args': ['rm', '-rf', '/'], 'stdin': '', 'image_policy': 'always'})
+        self.assertEqual(caught.exception.error, 'unsupported_command')
 
 
 if __name__ == '__main__':

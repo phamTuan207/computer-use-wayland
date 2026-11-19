@@ -983,12 +983,10 @@ def image_point(meta,x,y):
     if not (0<=x<iw and 0<=y<ih): raise ValueError('point outside observed image')
     return rx+x*rw/iw, ry+y*rh/ih
 
-def screen_changed(old,new,actions):
+def _action_points_changed(old,new,actions):
     from PIL import ImageChops,ImageStat
     if old.size!=new.size:return True
     diff=ImageChops.difference(old,new)
-    if sum(ImageStat.Stat(diff).mean)/3>3:return True
-    # A small button can move without changing the global average appreciably.
     for a in actions:
         points=[a.get('from'),a.get('to')] if a['type']=='drag' else [[a.get('x'),a.get('y')]]
         for point in points:
@@ -996,6 +994,17 @@ def screen_changed(old,new,actions):
             x,y=point;patch=diff.crop((max(0,int(x)-24),max(0,int(y)-24),min(old.width,int(x)+25),min(old.height,int(y)+25)))
             if sum(ImageStat.Stat(patch).mean)/3>6:return True
     return False
+
+def _mean_image_difference(old,new):
+    from PIL import ImageChops,ImageStat
+    if old.size!=new.size:return float('inf')
+    return sum(ImageStat.Stat(ImageChops.difference(old,new)).mean)/3
+
+def screen_changed(old,new,actions):
+    if old.size!=new.size:return True
+    if _mean_image_difference(old,new)>3:return True
+    # A small button can move without changing the global average appreciably.
+    return _action_points_changed(old,new,actions)
 
 def finite(value,name):
     # bool is a subclass of int, so True would otherwise reach a numeric command.
@@ -1474,11 +1483,18 @@ def desktop_act(env,meta,actions,after_capture=True,observation_path=None,
     from PIL import Image
     old=verified_image if hasattr(verified_image,'size') else Image.open(meta['image'])
     if screen_changed(old,new,actions):
-        fresh=save_observation(new,fresh,meta['max_width'])
-        _diagnostic_event('preflight_refused',meta,env,completed=0,error='screen changed',active_window=active_window)
-        return {'ok':False,'completed':0,'error':'screen changed','error_code':'screen_changed',
-                'preflight_ms':round((time.monotonic()-preflight_start)*1000,3),
-                'next_step':DESKTOP_REOBSERVE,'after':fresh}
+        time.sleep(.15)
+        settled,settled_meta=(observe_screen(env,meta['monitor'],meta.get('crop'),meta['max_width'],persist=False) if screen_scope else
+                              observe(env,address,meta.get('crop'),meta['max_width'],activate=False,persist=False))
+        if not screen_changed(new,settled,actions) and not _action_points_changed(old,settled,actions):
+            _diagnostic_event('preflight_retry',meta,env,completed=0,error='screen changed',active_window=active_window)
+            new,fresh=settled,settled_meta
+        else:
+            fresh=save_observation(settled,settled_meta,meta['max_width'])
+            _diagnostic_event('preflight_refused',meta,env,completed=0,error='screen changed',active_window=active_window)
+            return {'ok':False,'completed':0,'error':'screen changed','error_code':'screen_changed',
+                    'preflight_ms':round((time.monotonic()-preflight_start)*1000,3),
+                    'next_step':DESKTOP_REOBSERVE,'after':fresh}
     # A keyboard-only batch must not open the virtual pointer device at all, and an
     # ordinary startup failure belongs in the result envelope, not outside it.
     pointer=None;completed=0;error=None;ime_result={};transient_error=False;outcome_uncertain=False
@@ -1859,7 +1875,83 @@ def cli_app_record(name,entry):
     if description:record['description']=description
     return record
 
+def cli_run_chromium(command_args):
+    """Run the repo-owned Chromium wrapper (scripts/chromium_cli.py).
+
+    Chromium has no upstream CLI-Anything harness binary, so it does not
+    go through scripts/cli-anything.py: the wrapper is a repo script run
+    with the current interpreter, argv only, same 75 s outer timeout as
+    the harness path. The envelope keeps the harness shape (app, args,
+    returncode, stdout/stderr truncated) and adds the wrapper's parsed
+    JSON output as `result`.
+    """
+    envelope={'app':'chromium','args':list(command_args),'returncode':None,
+              'stdout_truncated':'','stderr_truncated':''}
+    script=ROOT/'scripts'/'chromium_cli.py'
+    try:
+        result=subprocess.run([sys.executable,str(script),*command_args],
+                              capture_output=True,text=True,timeout=75)
+    except subprocess.TimeoutExpired:
+        envelope.update(timeout=True,error='chromium wrapper timed out')
+        return {'ok':False,**envelope}
+    except OSError as exc:
+        envelope['error']='failed to run chromium wrapper: '+str(exc)
+        return {'ok':False,**envelope}
+    envelope['returncode']=result.returncode
+    envelope['stdout_truncated']=result.stdout[:4096]
+    envelope['stderr_truncated']=result.stderr[:4096]
+    try:parsed=json.loads(result.stdout)
+    except json.JSONDecodeError:
+        envelope['error']='chromium wrapper returned invalid JSON'
+        return {'ok':False,**envelope}
+    if not isinstance(parsed,dict):
+        envelope['error']='chromium wrapper returned an unexpected result'
+        return {'ok':False,**envelope}
+    envelope['result']=parsed
+    envelope['ok']=result.returncode==0 and parsed.get('ok') is True
+    return envelope
+
+def cli_run_vscode(command_args):
+    """Run the repo-owned VS Code wrapper (scripts/vscode_cli.py).
+
+    VS Code has no upstream CLI-Anything harness binary, so it does not
+    go through scripts/cli-anything.py: the wrapper is a repo script run
+    with the current interpreter, argv only, same 75 s outer timeout as
+    the harness path. The envelope keeps the harness shape (app, args,
+    returncode, stdout/stderr truncated) and adds the wrapper's parsed
+    JSON output as `result`.
+    """
+    envelope={'app':'vscode','args':list(command_args),'returncode':None,
+              'stdout_truncated':'','stderr_truncated':''}
+    script=ROOT/'scripts'/'vscode_cli.py'
+    try:
+        result=subprocess.run([sys.executable,str(script),*command_args],
+                              capture_output=True,text=True,timeout=75)
+    except subprocess.TimeoutExpired:
+        envelope.update(timeout=True,error='vscode wrapper timed out')
+        return {'ok':False,**envelope}
+    except OSError as exc:
+        envelope['error']='failed to run vscode wrapper: '+str(exc)
+        return {'ok':False,**envelope}
+    envelope['returncode']=result.returncode
+    envelope['stdout_truncated']=result.stdout[:4096]
+    envelope['stderr_truncated']=result.stderr[:4096]
+    try:parsed=json.loads(result.stdout)
+    except json.JSONDecodeError:
+        envelope['error']='vscode wrapper returned invalid JSON'
+        return {'ok':False,**envelope}
+    if not isinstance(parsed,dict):
+        envelope['error']='vscode wrapper returned an unexpected result'
+        return {'ok':False,**envelope}
+    envelope['result']=parsed
+    envelope['ok']=result.returncode==0 and parsed.get('ok') is True
+    return envelope
+
 def cli_run(app,command_args):
+    if app=='chromium':
+        return cli_run_chromium(command_args)
+    if app=='vscode':
+        return cli_run_vscode(command_args)
     envelope={'app':app,'args':list(command_args),'returncode':None,
               'stdout_truncated':'','stderr_truncated':''}
     runner=ROOT/'scripts'/'cli-anything.py'
@@ -2006,9 +2098,13 @@ def cli_command(args):
         entry=registry.get(args.app)
         if entry is None:return {'ok':False,'error':'unknown app: '+args.app}
         skill_path=ROOT/'skill'/'cli-anything'/(args.app+'.md')
+        if entry.get('repo_owned'):
+            install='ships in this repo: '+entry['entry_point']
+        else:
+            install='pip install '+entry['entry_point']
         return {'ok':True,'app':args.app,
                 'skill_path':str(skill_path),'skill_vendored':skill_path.is_file(),
-                'install':'pip install '+entry['entry_point'],
+                'install':install,
                 'install_upstream':entry['install_cmd'],
                 'requires':entry['requires']}
     return cli_run(args.app,args.command_args)
@@ -2036,7 +2132,11 @@ def main():
     b.add_argument('--max-elements',type=int,default=80,help='DOM output budget, 1..80 (default 80)')
     b.add_argument('--scope',help='observe only: one CSS selector to enumerate; one read, not sticky, not an input boundary')
     b.add_argument('--after-scope',help='act only: scope the successful after-snapshot to one CSS selector; not sticky, not an input boundary')
-    a=sub.add_parser('a11y');a.add_argument('operation',choices=['apps','observe','drill','act']);a.add_argument('ref',nargs='?');a.add_argument('--pid',type=int);a.add_argument('--snapshot');a.add_argument('--actions');a.add_argument('--skeleton',action='store_true')
+    a=sub.add_parser('a11y');a.add_argument('operation',choices=['apps','observe','drill','act','query','ground']);a.add_argument('ref',nargs='?');a.add_argument('--pid',type=int);a.add_argument('--snapshot');a.add_argument('--actions');a.add_argument('--skeleton',action='store_true')
+    a.add_argument('--name',help='query only: case-insensitive name substring')
+    a.add_argument('--role',help='query only: case-insensitive role substring')
+    a.add_argument('--limit',type=int,default=20,help='query only: max items returned, 1..20')
+    a.add_argument('--address',help='ground only: Hyprland window address the snapshot belongs to')
     ce=sub.add_parser('code-exec',help='run one allowlisted program as the action (Pick 1, opt-in flag CU_CODE_EXEC=1)')
     ce.add_argument('--program',required=True,help='program source file (mode 600) or - for stdin')
     ce.add_argument('--intent',default=None,help='one-line intent, at most 200 chars')
@@ -2180,7 +2280,8 @@ def main():
             session_policy.record_observation(STATE,os.environ.get('CU_SESSION_TOKEN'),result)
     elif args.command=='act':
         require_session()
-        actions=read_json(sys.stdin) if args.actions=='-' else read_json_file(args.actions)
+        try:actions=read_json(sys.stdin) if args.actions=='-' else read_json_file(args.actions)
+        except ValueError as exc:raise PreflightRefusal(str(exc)) from exc
         if args.expected_terminal_bounds is not None and args.expected_terminal_window in ('same','none','unbound'):
             raise ValueError('--expected-terminal-bounds requires a terminal window address')
         expected_terminal=(None if args.expected_terminal_window=='same' else
@@ -2209,14 +2310,32 @@ def main():
         if args.skeleton:
             if args.operation!='observe':raise ValueError('--skeleton requires a11y observe')
             request['skeleton']=True
-        if args.ref is not None and args.operation!='drill':raise ValueError('ref requires a11y drill')
+        if args.ref is not None and args.operation not in ('drill','ground'):raise ValueError('ref requires a11y drill or ground')
         if args.operation=='drill':
             if not args.ref or not args.snapshot:raise ValueError('a11y drill requires ref and --snapshot')
+            request['ref']=args.ref
+        if args.operation=='query':
+            if args.pid is None:raise ValueError('a11y query requires --pid')
+            if args.name is None and args.role is None:raise ValueError('a11y query requires --name or --role')
+            if args.name is not None:request['name']=args.name
+            if args.role is not None:request['role']=args.role
+            request['limit']=args.limit
+        if args.operation=='ground':
+            # Pick 4 fast path, flag-gated: resolve one a11y ref to global
+            # desktop coordinates plus the crop that verifies it. Read-only:
+            # no pointer movement, no click, no typing happens here. The
+            # caller must observe the crop and confirm the target before
+            # any click; a click from an unverified coordinate is refused.
+            import fastpath
+            if not fastpath.enabled():raise ValueError('pick4 fast path is off; set CU_PICK4_FASTPATH=1')
+            if not args.ref or not args.snapshot or not args.address:
+                raise ValueError('a11y ground requires ref, --snapshot and --address')
             request['ref']=args.ref
         if args.operation=='act':
             require_session()
             if not args.actions: raise ValueError('--actions required')
-            request['actions']=read_json(sys.stdin) if args.actions=='-' else read_json_file(args.actions)
+            try:request['actions']=read_json(sys.stdin) if args.actions=='-' else read_json_file(args.actions)
+            except ValueError as exc:raise PreflightRefusal(str(exc)) from exc
             validate_actions(request['actions'],'a11y')
         with locked():
             if args.operation=='act':
@@ -2224,6 +2343,22 @@ def main():
                 session_policy.require_observation(STATE,os.environ.get('CU_SESSION_TOKEN'))
             out=run_cancelable(['python3',str(ROOT/'scripts/a11y.py')],env=env,input=json.dumps(request),timeout=15)
             result=json.loads(out) if out.strip() else {'ok':False,'error':'accessibility adapter returned no data'}
+            if args.operation=='ground' and isinstance(result,dict) and result.get('ok') is True:
+                import fastpath
+                clients=hypr(env,'clients')
+                window=next((c for c in clients if c.get('address')==args.address),None)
+                if window is None:raise ValueError('no window with that address; run windows again')
+                bounds=[window['at'][0],window['at'][1],window['size'][0],window['size'][1]]
+                frame=fastpath.detect_coord_frame(result.get('root_extents'),bounds) if result.get('root_extents') is not None else 'unknown'
+                box=fastpath.to_global_box(result['extents'],bounds[:2],frame)
+                center=fastpath.box_center(box)
+                crop=fastpath.crop_for_box(box,bounds)
+                result={'ok':True,'backend':'pick4-ground','ref':result['ref'],
+                        'role':result['role'],'name':result['name'],
+                        'extents':result['extents'],'extents_coord':result['extents_coord'],
+                        'coord_frame':frame,'window':{'address':args.address,'bounds':bounds},
+                        'box':box,'center':center,'crop':crop,
+                        'verify':'observe --window '+args.address+' --crop '+' '.join(str(v) for v in crop)+' and confirm the target is visible at the box center before any click'}
             if args.operation=='act' and isinstance(result,dict) and result.get('ok') is True:
                 session_policy.complete_requirement(STATE,os.environ.get('CU_SESSION_TOKEN'))
     else:
@@ -2246,7 +2381,9 @@ def main():
         if args.operation=='act':
             require_session()
             if not args.actions: raise ValueError('--actions required')
-            request['actions']=read_json(sys.stdin) if args.actions=='-' else read_json_file(args.actions);validate_actions(request['actions'],'browser')
+            try:request['actions']=read_json(sys.stdin) if args.actions=='-' else read_json_file(args.actions)
+            except ValueError as exc:raise PreflightRefusal(str(exc)) from exc
+            validate_actions(request['actions'],'browser')
             if args.no_after:
                 validate_terminal_assert(request['actions'])
                 request['no_after']=True

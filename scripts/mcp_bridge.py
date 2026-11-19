@@ -564,7 +564,7 @@ def main():
             elif method == "tools/list":
                 result = {"tools": [{
                     "name": "computer_use_session",
-                    "description": "Start and control one persistent computer-use session. Start once, send commands through request, and finish at task end. For predictable UI, inspect once, batch all known actions in one request, then inspect the final result. Extra observations must resolve a specific unknown or failure. Auto delivery omits exact duplicate desktop images; use image_policy always to force a repeated image. Native pressed/checked/selected/expanded flags can verify supported controls without images.",
+                    "description": "Start and control one persistent computer-use session. Start once, send commands through request, and finish at task end. After a verified end state, call finish immediately with no further deliberation or summary composition; the summary is written offline from the session records. For predictable UI, inspect once, batch all known actions in one request, then inspect the final result. Extra observations must resolve a specific unknown or failure. Auto delivery omits exact duplicate desktop images; use image_policy always to force a repeated image. Native pressed/checked/selected/expanded flags can verify supported controls without images.",
                     "inputSchema": {"type": "object", "properties": {
                         "operation": {"type": "string", "enum": ["start", "request", "finish", "status"]},
                         "args": {"type": "array", "items": {"type": "string"}},

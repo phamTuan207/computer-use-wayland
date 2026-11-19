@@ -20,6 +20,11 @@ A bare invocation with no subcommand is refused (exit 2). REPL mode is
 forbidden for agents: `run` with no args after `--` is refused, because
 a bare harness invocation drops into an interactive REPL.
 
+Credit: the harnesses this runner invokes are CLI-Anything by HKUDS (Data Intelligence Lab, University of Hong Kong, led by Prof. Chao Huang), https://github.com/HKUDS/CLI-Anything, Apache License 2.0, vendored
+from upstream HEAD 34f5195 on 2026-11-18 and used with the owner's
+permission (granted 2026-11-19). This runner itself is repo-owned;
+only the harness binaries and skill docs are upstream work.
+
 Registry layout (vendored snapshot): a JSON object with a "clis" list.
 Each entry has name, entry_point (harness binary on PATH), install_cmd,
 requires (free-text string) and skill_md (upstream skill path). A plain
@@ -198,10 +203,14 @@ def cmd_info(registry, app):
     if entry is None:
         print("unknown app: %s" % app, file=sys.stderr)
         return 2
+    if entry.get("repo_owned"):
+        install = "ships in this repo: %s" % entry["entry_point"]
+    else:
+        install = "pip install %s" % entry["entry_point"]
     print_envelope({
         "app": app,
         "skill_path": str(skill_path(app)),
-        "install": "pip install %s" % entry["entry_point"],
+        "install": install,
         "install_upstream": entry["install_cmd"],
     })
     return 0

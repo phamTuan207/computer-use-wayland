@@ -12,6 +12,44 @@ from cu import STATE,prepare_state,read_json_file,read_json,validate_actions
 
 Atspi.set_timeout(1000,1000)
 
+# Pick 4 fast path (speed-swarm prototype): opt-in via CU_PICK4_FASTPATH=1,
+# default off. With the flag off this file behaves exactly like baseline.
+FASTPATH_ENV='CU_PICK4_FASTPATH'
+
+def _pick4():
+    return os.environ.get(FASTPATH_ENV)=='1'
+
+def _ints4(value):
+    """Four ints from an AT-SPI extents tuple or an object with x/y/w/h."""
+    if value is None:
+        return None
+    if isinstance(value,(list,tuple)) and len(value)==4:
+        parts=list(value)
+    else:
+        try:
+            parts=[value.x,value.y,value.width,value.height]
+        except Exception:
+            return None
+    if any(isinstance(v,bool) or not isinstance(v,int) for v in parts):
+        return None
+    if parts[2]<=0 or parts[3]<=0:
+        return None
+    return parts
+
+def _component_extents(e):
+    """Exact AT-SPI Component box, or None when the element exposes none.
+
+    Any failure omits the box; the caller falls back to vision. Mock
+    objects in tests return non-int values and are filtered the same way.
+    """
+    try:
+        interface=e.get_component_iface()
+        if interface is None:
+            return None
+        return _ints4(interface.get_extents(Atspi.CoordType.SCREEN))
+    except Exception:
+        return None
+
 def applications():
     d=Atspi.get_desktop(0)
     return [d.get_child_at_index(i) for i in range(d.get_child_count())]
@@ -30,6 +68,11 @@ def describe(e,path,ref):
     states=e.get_state_set();editable=states.contains(Atspi.StateType.EDITABLE)
     result={'ref':ref,'role':role,'name':name[:120],'path':path,'actions':actions}
     if editable:result['editable']=True
+    if _pick4():
+        extents=_component_extents(e)
+        if extents is not None:
+            result['extents']=extents
+            result['extents_coord']='screen'
     for key in ('pressed', 'checked', 'selected', 'expanded'):
         if states.contains(getattr(Atspi.StateType, key.upper())):
             result[key] = True
@@ -71,6 +114,63 @@ def observe(pid,skeleton=False,subtree=None):
     with stream:
         stream.write(json.dumps(snapshot))
     return {**snapshot,'elements':[{k:v for k,v in item.items() if skeleton or k!='path'} for item in items]}
+
+def query(pid,name=None,role=None,limit=20):
+    """Pruned a11y read: only elements matching a name or role filter.
+
+    One observe (same 500-node, 2s, 80-item bounds), then filter in memory,
+    so the returned text stays at roughly 50-200 tokens instead of a full
+    tree dump. The snapshot file from observe() is returned so a later
+    ground() can re-resolve a ref against the live tree.
+    """
+    if not _pick4():raise ValueError('pick4 fast path is off; set CU_PICK4_FASTPATH=1')
+    if name is None and role is None:raise ValueError('a11y query needs a name or role filter')
+    if isinstance(limit,bool) or not isinstance(limit,int) or not 1<=limit<=20:
+        raise ValueError('query limit must be 1..20')
+    snapshot=observe(pid)
+    matched=[]
+    for item in snapshot['elements']:
+        if name is not None and name.casefold() not in (item.get('name') or '').casefold():continue
+        if role is not None and role.casefold() not in (item.get('role') or '').casefold():continue
+        matched.append(item)
+    return {'backend':'a11y-query','pid':pid,'app_name':snapshot['app_name'],
+            'created':snapshot['created'],'snapshot':snapshot['snapshot'],
+            'elements':matched[:limit],'matched':len(matched),
+            'truncated':bool(snapshot.get('truncated')) or len(matched)>limit}
+
+def ground(snapshot_path,ref):
+    """Re-resolve one snapshot ref against the live tree and return its box.
+
+    The box is fresh (read now, not from the snapshot), and the app root or
+    first top-level frame box is returned alongside so the caller can tell
+    whether the extents are screen or window relative. No pointer movement,
+    no click: the caller must crop-verify the box before any click.
+    """
+    if not _pick4():raise ValueError('pick4 fast path is off; set CU_PICK4_FASTPATH=1')
+    snapshot=read_json_file(snapshot_path)
+    if snapshot.get('backend') not in ('a11y','a11y-query') or time.time()-snapshot['created']>90:
+        raise ValueError('stale accessibility snapshot')
+    item=next((e for e in snapshot['elements'] if e['ref']==ref),None)
+    if item is None:raise ValueError('valid accessibility ref required')
+    root=app(snapshot['pid']);element=resolve(root,item)
+    extents=_component_extents(element)
+    if extents is None:raise ValueError('element exposes no extents; use vision')
+    root_extents=_component_extents(root)
+    if root_extents is None:
+        try:
+            count=root.get_child_count()
+            if isinstance(count,bool) or not isinstance(count,int):count=0
+            count=max(0,min(count,100))
+        except Exception:
+            count=0
+        for index in range(count):
+            try:root_extents=_component_extents(root.get_child_at_index(index))
+            except Exception:continue
+            if root_extents is not None:break
+        if root_extents is None:raise ValueError('no window frame extents; use vision')
+    return {'ok':True,'ref':ref,'role':item['role'],'name':item['name'],
+            'extents':extents,'extents_coord':'screen',
+            'root_extents':root_extents}
 
 def resolve(root,item):
     e=root
@@ -126,9 +226,11 @@ try:
     request=read_json(sys.stdin.buffer if hasattr(sys.stdin,'buffer') else sys.stdin)
     # An unknown operation must never reach act and mutate the desktop.
     operation=request.get('operation') if isinstance(request,dict) else None
-    if operation not in ('apps','observe','drill','act'):raise ValueError('unknown operation')
+    if operation not in ('apps','observe','drill','act','query','ground'):raise ValueError('unknown operation')
     if operation=='apps':result=[{'pid':a.get_process_id(),'name':a.get_name()} for a in applications()]
     elif operation=='observe':result=observe(request['pid'],skeleton=request.get('skeleton',False))
+    elif operation=='query':result=query(request['pid'],request.get('name'),request.get('role'),request.get('limit',20))
+    elif operation=='ground':result=ground(request['snapshot'],request['ref'])
     elif operation=='drill':result=drill(request['snapshot'],request['ref'])
     else:result=act(request['snapshot'],request['actions'])
     print(json.dumps(result,ensure_ascii=False,separators=(',',':')))

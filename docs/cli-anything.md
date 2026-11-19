@@ -20,6 +20,7 @@ live test and a real task has used a harness end to end. See
 - Repo: https://github.com/HKUDS/CLI-Anything.git
 - Upstream HEAD: `34f5195` ("Merge pull request #481 from HKUDS/chaohuang-ai-patch-6")
 - Vendoring date: 2026-11-18
+- Credit: HKUDS, the Data Intelligence Lab at the University of Hong Kong, led by Prof. Chao Huang.
 - Upstream registry `meta.updated`: 2026-06-19
 
 ## License
@@ -27,10 +28,11 @@ live test and a real task has used a harness end to end. See
 Upstream root `LICENSE` is Apache License 2.0 (verified in the checkout).
 Vendored files are docs only, each carrying the upstream URL and HEAD in
 its header, with the Apache 2.0 notice preserved. Harness code is not
-vendored, so no code-license decision is needed yet. Open flag: individual
-harness `setup.py` classifiers claim MIT while the repo root is Apache 2.0;
-resolve that contradiction with the maintainer before vendoring any harness
-code.
+vendored, so no code-license decision is needed yet. Resolved 2026-11-19:
+Pham Tuan got permission from the repo owner to use CLI-Anything freely,
+so the MIT vs Apache 2.0 flag is cleared. Credit: CLI-Anything is by HKUDS,
+the Data Intelligence Lab at the University of Hong Kong, led by Prof. Chao
+Huang (https://github.com/HKUDS/CLI-Anything, Apache License 2.0).
 
 ## First-wave apps
 
@@ -38,8 +40,19 @@ Obsidian, LibreOffice, GIMP, Inkscape, Krita, Blender, Audacity, Kdenlive,
 Shotcut, Zotero, Joplin, Calibre. The registry snapshot carries the
 `name`, `entry_point`, `skill_md`, `install_cmd`, and `requires` of each.
 Only LibreOffice is installed on this VM, so it is the only first-wave app
-with a live test. No harness exists for VS Code, Zen, Chromium, Firefox,
-or Pinta, so the GUI backends stay mandatory for those apps.
+with a live test. No harness exists for Firefox,
+or Pinta, so the GUI backends stay mandatory for those apps. Chromium
+is the exception: it has no upstream harness, but the registry also
+carries a repo-owned Chromium wrapper entry (`chromium`, version
+1.0.0, skill `skill/cli-anything/chromium.md`, code
+`scripts/chromium_cli.py`), which is repo code, not vendored upstream
+docs, and is covered by `tests/test_chromium_cli.py` instead of the
+LibreOffice live test. Zen is the second exception: a repo-owned
+wrapper entry (`zen`, version 1.0.0, skill `skill/cli-anything/zen.md`,
+code `scripts/zen_cli.py`) with the same shape. VS Code is the third
+exception: a repo-owned wrapper entry (`vscode`, version 1.0.0, skill
+`skill/cli-anything/vscode.md`, code `scripts/vscode_cli.py`),
+covered by `tests/test_vscode_cli.py` and verified live on the laptop.
 
 ## Update procedure
 

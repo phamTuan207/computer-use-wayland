@@ -120,3 +120,46 @@ There is no automatic observation, retry or replay. If the layout or the page
 changes after the assert, the previous snapshot is spent: run `observe` again
 before any further input. Split at unknown layout changes and navigation as
 usual. This reduces response size; it is not a claim about billed model tokens.
+
+### Chromium CLI wrapper: tabs, history, bookmarks, downloads
+
+DOM work above is for acting on a page. For browser *state* (which tabs
+exist, what was visited, what was downloaded) use the repo-owned
+Chromium wrapper instead of screenshots. Full skill:
+`skill/cli-anything/chromium.md`; wrapper: `scripts/chromium_cli.py`.
+
+```bash
+computer-use cli run chromium -- status
+computer-use cli run chromium -- tabs
+computer-use cli run chromium -- open https://example.com
+computer-use cli run chromium -- current
+computer-use cli run chromium -- activate <tab-id>
+computer-use cli run chromium -- close <tab-id>
+computer-use cli run chromium -- history --limit 20
+computer-use cli run chromium -- bookmarks
+computer-use cli run chromium -- downloads --limit 20
+```
+
+Rules that matter:
+
+- `status` first. It reports `reachable` for the CDP endpoint
+  (default `http://127.0.0.1:9222`, the agent-managed Chromium from
+  `browser start`) and whether the profile and its History file exist.
+  If `reachable` is false, run `browser start` first.
+- His own Chromium has no debug port (verified 2026-11-18), so the
+  wrapper can never attach to his session. Tab commands only ever
+  touch the agent-managed endpoint, or a test Chromium passed with
+  `--endpoint` after the `--` separator.
+- `open` always opens a NEW tab. There is no navigate command; to
+  load a URL, open a new tab and close it when done.
+- `close` takes exactly one tab id from `tabs` or `open`. Never close
+  a tab you did not list first, never close all tabs.
+- `current` returns the tab this wrapper last opened or activated
+  (CDP HTTP does not report the active tab). After anyone else
+  switches tabs, run `activate` first.
+- `history`, `bookmarks` and `downloads` read his Default profile
+  read-only (History is copied to a temp file first) and need no
+  endpoint. His profile has no Bookmarks file, so `bookmarks` returns
+  an empty list with a note.
+- For DOM work on a tab, take its id from `tabs` and use
+  `browser observe/act` as above. The wrapper does not do DOM.

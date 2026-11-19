@@ -22,8 +22,22 @@ Pick it only when both are true: the app has a harness in the table below,
 and the task maps to a documented command group in that app's vendored skill.
 If either fails, fall back in order to Chromium DOM, native accessibility,
 then desktop pixels, exactly as `skill/SKILL.md` orders them. No harness
-exists for VS Code, Zen, Chromium, Firefox, or Pinta: those tasks always use
-the GUI backends.
+exists for Firefox or Pinta: those tasks always use
+the GUI backends. Chromium is the exception: it has no upstream
+harness, but it has a repo-owned wrapper (`computer-use cli run
+chromium -- ...`, skill `skill/cli-anything/chromium.md`) that covers
+tabs, history, bookmarks and downloads; DOM work on a tab still uses
+the Chromium DOM backend. Zen is the second exception: it has a
+repo-owned wrapper (`computer-use cli run zen -- ...`, skill
+`skill/cli-anything/zen.md`) that covers tabs and page reads over
+loopback WebDriver BiDi on a dedicated session, plus read-only
+history from the real profile; it can never attach to his running
+Zen, which has no debug port. VS Code is the third exception: it has
+a repo-owned wrapper (`computer-use cli run vscode -- ...`, skill
+`skill/cli-anything/vscode.md`) that covers open, goto, diff,
+extensions, workspaces, open tabs and saved-file reads over the
+`code` CLI and read-only workspaceStorage; it cannot read unsaved
+or dirty buffer text.
 
 Backend order (QC clarification): CLI/API is the FIRST preference, not the
 fourth. It is first because it is the fastest path (no session, no GUI);
@@ -44,7 +58,27 @@ cli-hub install <app>
 Never install from an unpinned git URL in a task. The registry's
 `install_cmd` values are unpinned git URLs; do not copy one out of upstream
 data and run it. Installs happen via PyPI (`pip install cli-anything-<app>`)
-or `cli-hub install <app>` only.
+or `cli-hub install <app>` only. On the laptop, plain `pip` is not
+installed (Python 3.14 has no pip module); `uv pip install` inside a venv
+is the working path there.
+
+## PyPI releases lag upstream HEAD
+
+Verified on the laptop 2026-11-18: the vendored skills match upstream HEAD
+`34f5195`, but the PyPI releases lag it. `pip install
+cli-anything-libreoffice` installs 1.0.0, which has no `document import`
+or `document import-formats` even though the vendored skill documents
+them; the same commands exist in 1.0.1 installed from the pinned upstream
+commit, where `document import` on a scratch docx returned rc 0 in
+1753 ms. The Obsidian PyPI release is 1.1.1 while the vendored skill says
+1.1.0; the full Obsidian end-to-end task still passed on 1.1.1. If a
+documented command is missing from the installed harness, check
+`<app> <group> --help` before assuming the skill is wrong: the command
+may exist only in the newer upstream code. Until the PyPI releases catch
+up, the working path for existing Office files is plain headless
+`libreoffice --convert-to` (verified on the laptop: docx to txt in
+1374 ms, docx to pdf in 1367 ms), and `document new` plus `export render`
+for new files.
 
 ## Verify first, then mutate
 
@@ -120,3 +154,6 @@ are different fields from different sources, not a contradiction.
 | Zotero | `cli-anything-zotero` | 0.4.1 | Zotero 7/8 desktop app (running), Python 3.10+ |
 | Joplin | `cli-anything-joplin` | 1.0.0 | Joplin terminal CLI in PATH as `joplin` (npm install -g joplin) |
 | Calibre | `cli-anything-calibre` | 1.0.0 | Calibre (apt install calibre, brew install --cask calibre) |
+| Chromium | `scripts/chromium_cli.py` (repo-owned, no upstream harness) | 1.0.0 | Chromium with a loopback CDP endpoint for tab commands; a Chromium profile dir for history, bookmarks and downloads |
+| Zen | `scripts/zen_cli.py` via `cli-anything-zen` on PATH (repo-owned, no upstream harness) | 1.0.0 | Zen with a loopback BiDi endpoint on a dedicated session for tab commands; read-only history from the real profile |
+| VS Code | `scripts/vscode_cli.py` (repo-owned, no upstream harness) | 1.0.0 | VS Code with the `code` CLI for open, goto, diff and extensions; read-only workspaceStorage for workspaces and open tabs; no unsaved or dirty buffer reads |

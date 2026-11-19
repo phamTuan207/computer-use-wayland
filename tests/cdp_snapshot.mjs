@@ -46,7 +46,7 @@ function element(name,options={}) {
   return node;
 }
 async function run(elements,actions,{mutate=text=>text,maxElements,debuggerUrl='ws://127.0.0.1:9222/test',
-  noAfter,operation,image,allowNoSocket=false,scope,afterScope,seed,followup}={}) {
+  noAfter,operation,image,allowNoSocket=false,scope,afterScope,seed,followup,env}={}) {
   const expressions=[],replies=[],output=[],calls=[],measured=new Set();
   const document={title:'fixture',activeElement:null,
     querySelectorAll:selector=>{
@@ -107,7 +107,7 @@ async function run(elements,actions,{mutate=text=>text,maxElements,debuggerUrl='
   }
   // The adapter reads single-shot stdin as a bounded stream, not one fs call.
   // A getter yields a fresh bounded stdin each run, mirroring one process per request.
-  const process={exitCode:0,destroy(){},
+  const process={exitCode:0,destroy(){},env:env??{},
                  get stdin(){return (async function*(){yield sandboxRead();})();}};
   const sandbox={fs:{readFileSync:()=>JSON.stringify(queue.shift()??request)},
     crypto:{randomUUID:()=> 'snapshot-test'},
@@ -567,3 +567,14 @@ for(const debuggerUrl of ['ws://outside.example/test','wss://outside.example/tes
   assert.equal(rejected.result.error,'CDP debugger must be loopback WebSocket',debuggerUrl);
   assert.equal(rejected.fetches,1,debuggerUrl);
 }
+
+// Pick 4 DOM-first fast path: rects and centers appear only with the flag on,
+// and they match getBoundingClientRect exactly (viewport-relative).
+const rectTarget=element('rect target',{left:10,top:20,width:31,height:41});
+const rectOff=await run([rectTarget]);
+assert.equal('rect' in rectOff.result.elements[0],false,'baseline snapshot has no rect');
+assert.equal('center' in rectOff.result.elements[0],false,'baseline snapshot has no center');
+const rectOn=await run([rectTarget],undefined,{env:{CU_PICK4_FASTPATH:'1'}});
+assert.deepEqual(rectOn.result.elements[0].rect,{x:10,y:20,width:31,height:41});
+assert.deepEqual(rectOn.result.elements[0].center,{x:26,y:41});
+assert.equal(rectOn.result.elements[0].name,'rect target');

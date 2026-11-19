@@ -7,11 +7,15 @@ convention instead.)
 
 Asserts, against the vendored snapshot at skill/cli-anything/registry.json
 and the vendored skill files at skill/cli-anything/<app>.md:
-- the snapshot parses as JSON and lists exactly the twelve first-wave apps;
-- exactly three apps have vendored skill files (obsidian, libreoffice,
-  gimp); the other nine snapshot apps are snapshot-only, with registry
-  entries but no vendored skill file yet;
-- every vendored skill file states its upstream version in its header;
+- the snapshot parses as JSON and lists exactly the twelve first-wave
+  apps plus the repo-owned chromium wrapper (13 entries);
+- exactly three upstream apps have vendored skill files (obsidian,
+  libreoffice, gimp); the other nine snapshot apps are snapshot-only,
+  with registry entries but no vendored skill file yet; chromium is the
+  fourth skill file but repo-owned, not upstream-vendored, and states a
+  repo version instead of an upstream version;
+- every vendored upstream skill file states its upstream version in its
+  header;
 - skill/SKILL.md links to references/cli-anything.md.
 
 NOTE: the registry's `version` for libreoffice (1.0.1) disagrees with the
@@ -31,12 +35,15 @@ SKILL_DIR = ROOT / "skill" / "cli-anything"
 SKILL_MD = ROOT / "skill" / "SKILL.md"
 UPSTREAM_HEAD = "34f5195"
 
-# Wave one: only these three have vendored skill files.
+# Wave one: only these three have vendored upstream skill files.
 VENDORED_SKILLS = {"obsidian", "libreoffice", "gimp"}
+# Repo-owned skill files (not upstream-vendored): the Chromium,
+# Zen and VS Code wrappers.
+REPO_OWNED_SKILLS = {"chromium", "zen", "vscode"}
 # Registry entries but no vendored skill file yet.
 SNAPSHOT_ONLY = {"inkscape", "krita", "blender", "audacity", "kdenlive",
                  "shotcut", "zotero", "joplin", "calibre"}
-EXPECTED_APPS = VENDORED_SKILLS | SNAPSHOT_ONLY
+EXPECTED_APPS = VENDORED_SKILLS | SNAPSHOT_ONLY | REPO_OWNED_SKILLS
 
 REQUIRED_ENTRY_KEYS = ("name", "entry_point", "install_cmd", "requires",
                        "skill_md", "version")
@@ -79,12 +86,13 @@ class CliAnythingDocs(unittest.TestCase):
         header = data.get("header", {})
         self.assertEqual(header.get("upstream_head"), UPSTREAM_HEAD)
 
-    def test_vendored_skills_are_exactly_the_wave_one_three(self):
+    def test_vendored_skills_are_exactly_the_wave_one_three_plus_repo_owned(self):
         registry = load_registry()
         vendored_files = {path.name for path in SKILL_DIR.glob("*.md")}
         self.assertEqual(vendored_files,
-                         {app + ".md" for app in VENDORED_SKILLS})
-        for app in VENDORED_SKILLS:
+                         {app + ".md" for app in
+                          VENDORED_SKILLS | REPO_OWNED_SKILLS})
+        for app in VENDORED_SKILLS | REPO_OWNED_SKILLS:
             self.assertIn(app, registry,
                           "%s has a vendored skill but no registry entry" % app)
             self.assertTrue((SKILL_DIR / (app + ".md")).is_file())
@@ -93,6 +101,63 @@ class CliAnythingDocs(unittest.TestCase):
                           "%s is missing from the registry" % app)
             self.assertFalse((SKILL_DIR / (app + ".md")).exists(),
                              "%s must be snapshot-only in wave one" % app)
+
+    def test_chromium_entry_is_repo_owned_and_versioned(self):
+        registry = load_registry()
+        entry = registry["chromium"]
+        self.assertTrue(entry.get("repo_owned"),
+                        "chromium registry entry must be marked repo_owned")
+        self.assertEqual(entry.get("version"), "1.0.0")
+        self.assertEqual(entry.get("entry_point"), "scripts/chromium_cli.py")
+        text = (SKILL_DIR / "chromium.md").read_text()
+        header = "\n".join(text.splitlines()[:HEADER_LINES])
+        match = re.search(r"Skill version:\s*(\d+\.\d+(?:\.\d+)?)", header)
+        self.assertIsNotNone(
+            match, "chromium.md header states no repo skill version")
+        self.assertEqual(match.group(1), "1.0.0")
+        body_match = re.search(
+            r"^## Version\s*\n+\s*(\d+\.\d+(?:\.\d+)?)\s*$",
+            text, re.MULTILINE)
+        self.assertIsNotNone(body_match, "chromium.md has no ## Version section")
+        self.assertEqual(body_match.group(1), "1.0.0")
+
+    def test_zen_entry_is_repo_owned_and_versioned(self):
+        registry = load_registry()
+        entry = registry["zen"]
+        self.assertTrue(entry.get("repo_owned"),
+                        "zen registry entry must be marked repo_owned")
+        self.assertEqual(entry.get("version"), "1.0.0")
+        self.assertEqual(entry.get("entry_point"), "cli-anything-zen")
+        text = (SKILL_DIR / "zen.md").read_text()
+        header = "\n".join(text.splitlines()[:HEADER_LINES])
+        match = re.search(r"Skill version:\s*(\d+\.\d+(?:\.\d+)?)", header)
+        self.assertIsNotNone(
+            match, "zen.md header states no repo skill version")
+        self.assertEqual(match.group(1), "1.0.0")
+        body_match = re.search(
+            r"^## Version\s*\n+\s*(\d+\.\d+(?:\.\d+)?)\s*$",
+            text, re.MULTILINE)
+        self.assertIsNotNone(body_match, "zen.md has no ## Version section")
+        self.assertEqual(body_match.group(1), "1.0.0")
+
+    def test_vscode_entry_is_repo_owned_and_versioned(self):
+        registry = load_registry()
+        entry = registry["vscode"]
+        self.assertTrue(entry.get("repo_owned"),
+                        "vscode registry entry must be marked repo_owned")
+        self.assertEqual(entry.get("version"), "1.0.0")
+        self.assertEqual(entry.get("entry_point"), "scripts/vscode_cli.py")
+        text = (SKILL_DIR / "vscode.md").read_text()
+        header = "\n".join(text.splitlines()[:HEADER_LINES])
+        match = re.search(r"Skill version:\s*(\d+\.\d+(?:\.\d+)?)", header)
+        self.assertIsNotNone(
+            match, "vscode.md header states no repo skill version")
+        self.assertEqual(match.group(1), "1.0.0")
+        body_match = re.search(
+            r"^## Version\s*\n+\s*(\d+\.\d+(?:\.\d+)?)\s*$",
+            text, re.MULTILINE)
+        self.assertIsNotNone(body_match, "vscode.md has no ## Version section")
+        self.assertEqual(body_match.group(1), "1.0.0")
 
     def test_vendored_skills_state_upstream_version(self):
         for app in sorted(VENDORED_SKILLS):
