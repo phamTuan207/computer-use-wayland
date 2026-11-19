@@ -1210,7 +1210,12 @@ class Tc02Controller:
         self.current_batch_size = len(resolved)
         self.current_batch_completed = 0
         self.current_checkpoint = step['checkpoint']
-        args = ['act', '--observation', observation['observation'], '--actions', '-']
+        # Plan batches are pre-validated by the layout table and checkpoint
+        # verification. S2's File menu click, wait, and Save As row click are
+        # the known exception: the second click depends on the menu opening,
+        # and the S2 checkpoint verifies that the dialog appeared.
+        args = ['act', '--group-policy', 'plan', '--observation',
+                observation['observation'], '--actions', '-']
         if step.get('no_after'):
             args.append('--no-after')
         expected = step.get('expected_terminal_window', 'same')

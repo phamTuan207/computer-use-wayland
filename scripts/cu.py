@@ -1077,6 +1077,60 @@ def validate_actions(actions,backend):
                 # Non-negative finite only; the adapter clamps the wait to 3000 ms.
                 if finite(a['timeout_ms'],'assert timeout_ms')<0:raise ValueError('assert timeout_ms must not be negative')
 
+def validate_action_group(actions):
+    """Reject desktop action batches that cross a layout or focus change.
+
+    Call after validate_actions(actions, 'desktop'). This check only reads the
+    already validated actions. Error action numbers are one-based split points.
+    """
+    if len(actions)<=1:return
+    commits={'click','double_click','drag','scroll'}
+    coordinates={'move','click','double_click','drag','scroll'}
+    commit_index=None
+    terminal_index=None
+    restricted_index=None
+    keyboard_before_commit=False
+
+    def terminal_key(action):
+        modifiers,keys=key_names(action['keys'])
+        if len(keys)!=1:return False
+        key=keys[0].casefold()
+        modifiers=frozenset(modifiers)
+        if not modifiers and key in ('return','tab','escape'):return True
+        shortcuts={(frozenset(('ctrl',)),'t'),
+                   (frozenset(('ctrl',)),'w'),
+                   (frozenset(('ctrl',)),'n'),
+                   (frozenset(('ctrl',)),'tab'),
+                   (frozenset(('ctrl','shift')),'iso_left_tab'),
+                   (frozenset(('alt',)),'f4')}
+        return (modifiers,key) in shortcuts
+
+    for index,action in enumerate(actions):
+        kind=action['type']
+        if kind=='wait':continue
+        reason=None
+        if terminal_index is not None:
+            reason='a terminal key or newline typing cannot be followed by another input action'
+        elif restricted_index is not None:
+            reason='only wait may follow a scroll or drag'
+        elif commit_index is not None and kind in coordinates:
+            reason='a coordinate action cannot follow a committing action'
+        elif kind in commits and keyboard_before_commit:
+            reason='a committing action cannot follow typing or a key action'
+        if reason:
+            split_after=index
+            raise ValueError(f'action {split_after} is the first unsafe boundary before action {index+1}; '
+                             f'split the group after action {split_after} and observe again before '
+                             f'the remaining actions: {reason}')
+        if kind in commits and commit_index is None:commit_index=index
+        if kind in ('type','key'):
+            if commit_index is None:keyboard_before_commit=True
+            if kind=='type' and ('\n' in action['text'] or '\r' in action['text']):
+                terminal_index=index
+            elif kind=='key' and terminal_key(action):
+                terminal_index=index
+        if kind in ('scroll','drag'):restricted_index=index
+
 def validate_terminal_assert(actions):
     """Validate the effective final predicate using adapter precedence."""
     last=actions[-1] if actions else {}
@@ -1388,13 +1442,16 @@ def _diagnostic_event(event,meta,env,*,action_index=None,action_type=None,intend
     finally:os.close(fd)
 
 def desktop_act(env,meta,actions,after_capture=True,observation_path=None,
-                expected_terminal_window=None):
+                expected_terminal_window=None,*,group_policy='strict'):
+    if group_policy not in ('strict','plan'):
+        raise ValueError("group_policy must be 'strict' or 'plan'")
     preflight_start=time.monotonic()
     try:
         if not isinstance(after_capture,bool): raise ValueError('after_capture must be boolean')
         check_cancel()
         verified_image=validate_desktop_observation(meta,env,observation_path,load_image=True)
         validate_actions(actions,'desktop')
+        if group_policy=='strict':validate_action_group(actions)
         screen_scope=meta.get('scope')=='screen'
         if screen_scope and any(a['type'] in ('key','type') for a in actions):
             raise ValueError('screen observations support pointer actions only; use a window or accessibility target for typing')
@@ -2123,6 +2180,8 @@ def main():
     obs.add_argument('--focus',action='store_true',help='explicitly focus the target window before capture (may switch workspace)')
     obs.add_argument('--settle-ms',type=int,default=0,help='wait up to 2000 ms for 120 ms of unchanged crop pixels; not semantic readiness')
     act=sub.add_parser('act',help='execute one batch of known actions, then capture its final result');act.add_argument('--observation',required=True);act.add_argument('--actions',required=True,help='JSON path or - for stdin; batch up to 32 predictable actions from one inspected observation')
+    act.add_argument('--group-policy',choices=('strict','plan'),default='strict',
+                     help='plan is for pre-validated plan batches only, never for model use')
     act.add_argument('--no-after',action='store_true',help='skip successful final capture; preflight safety and error captures stay enabled')
     act.add_argument('--expected-terminal-window',default='same',help='final guard/capture target: same, none, unbound, or an exact Hyprland address')
     act.add_argument('--expected-terminal-bounds',nargs=4,type=int,help='optional expected x y width height for the terminal window')
@@ -2295,6 +2354,7 @@ def main():
             session_policy.require_observation(STATE,os.environ.get('CU_SESSION_TOKEN'),args.observation)
             act_kwargs={'after_capture':not args.no_after,
                         'observation_path':args.observation}
+            if args.group_policy=='plan':act_kwargs['group_policy']='plan'
             if expected_terminal is not None:
                 act_kwargs['expected_terminal_window']=expected_terminal
             result=desktop_act(env,read_json_file(args.observation),actions,**act_kwargs)
