@@ -331,6 +331,74 @@ class ChromiumCliTests(unittest.TestCase):
         self.assertEqual(opened["tab"]["id"],"P2")
         self.assertLess(opened["load_ms"],100)
 
+    def _assert_root_slash_prefetch_adoption(
+            self,token,prefetch_url,open_url,tab_id,tab_url,state_url):
+        self.write_session_token(token)
+        target=self.add_prefetch_target(tab_id)
+        with mock.patch.dict(os.environ,{"CU_SESSION_TOKEN":token}), \
+             mock.patch.object(chromium_cli,"create_background_target",return_value=target), \
+             mock.patch.object(chromium_cli,"navigate_tab_background",
+                               side_effect=lambda tab,url:tab.update(url=tab_url)):
+            code,prefetched=self.run_cli([
+                "--endpoint",self.endpoint,"prefetch",prefetch_url])
+            self.assertEqual(code,0,prefetched)
+            self.assertTrue(prefetched["prefetched"])
+            self.assertEqual(chromium_cli._read_prefetches(token)[0]["url"],prefetch_url)
+            with mock.patch.object(chromium_cli,"read_prefetched_page",return_value={
+                    "url":state_url,"ready":"complete","protocol":"https:",
+                    "failed":False}), \
+                 mock.patch.object(chromium_cli,"navigate_tab_via_ws") as navigate:
+                code,opened=self.run_cli([
+                    "--endpoint",self.endpoint,"open",open_url])
+        self.assertEqual(code,0,opened)
+        self.assertTrue(opened["prefetched"])
+        self.assertEqual(opened["tab"]["id"],tab_id)
+        navigate.assert_not_called()
+
+    def test_prefetch_adopts_urls_with_only_root_slash_difference(self):
+        cases=[
+            ("a"*32,"https://example.com","https://example.com/",
+             "P20","https://example.com/","https://example.com/"),
+            ("b"*32,"https://example.com/","https://example.com",
+             "P21","https://example.com","https://example.com"),
+        ]
+        for case in cases:
+            with self.subTest(prefetch_url=case[1],open_url=case[2]):
+                self._assert_root_slash_prefetch_adoption(*case)
+
+    def test_normalize_prefetch_url_only_adds_an_empty_root_path(self):
+        normalize=chromium_cli._normalize_prefetch_url
+        self.assertEqual(normalize("https://example.com"),"https://example.com/")
+        self.assertEqual(normalize("https://example.com/"),"https://example.com/")
+        self.assertEqual(normalize("https://example.com/a/b"),
+                         "https://example.com/a/b")
+        self.assertEqual(
+            normalize("HTTPS://Example.COM:8443?x=1#frag"),
+            "HTTPS://Example.COM:8443/?x=1#frag")
+        self.assertEqual(normalize("https://[invalid"),"https://[invalid")
+
+    def test_prefetch_deduplicates_root_slash_variants(self):
+        token="c"*32
+        self.write_session_token(token)
+        first=self.add_prefetch_target("P22")
+        second=self.add_prefetch_target("P23")
+        with mock.patch.dict(os.environ,{"CU_SESSION_TOKEN":token}), \
+             mock.patch.object(chromium_cli,"create_background_target",
+                               side_effect=[first,second]), \
+             mock.patch.object(chromium_cli,"navigate_tab_background",
+                               side_effect=lambda tab,url:tab.update(url=url)):
+            code,one=self.run_cli([
+                "--endpoint",self.endpoint,"prefetch","https://example.com"])
+            self.assertEqual(code,0,one)
+            code,two=self.run_cli([
+                "--endpoint",self.endpoint,"prefetch","https://example.com/"])
+        self.assertEqual(code,0,two)
+        records=chromium_cli._read_prefetches(token)
+        self.assertEqual(len(records),1)
+        self.assertEqual(records[0]["url"],"https://example.com/")
+        self.assertNotIn("P22",[tab["id"] for tab in StubCdpHandler.tabs])
+        self.assertIn("P23",[tab["id"] for tab in StubCdpHandler.tabs])
+
     def test_prefetch_expires_after_thirty_seconds_then_open_navigates_fresh(self):
         token="c"*32
         self.write_session_token(token)
@@ -376,12 +444,29 @@ class ChromiumCliTests(unittest.TestCase):
         with mock.patch.dict(os.environ,{"CU_SESSION_TOKEN":token}), \
              mock.patch.object(chromium_cli,"create_background_target",return_value=target), \
              mock.patch.object(chromium_cli,"navigate_tab_background",side_effect=lambda tab,url:tab.update(url=url)):
-            self.run_cli(["--endpoint",self.endpoint,"prefetch","https://example.com/first"])
+            self.run_cli(["--endpoint",self.endpoint,"prefetch","https://example.com"])
             with mock.patch.object(chromium_cli,"navigate_tab_via_ws") as navigate:
                 code,opened=self.run_cli(["--endpoint",self.endpoint,"open","https://example.com/other"])
         self.assertEqual(code,0)
         self.assertFalse(opened["prefetched"])
         navigate.assert_called_once_with(mock.ANY,"https://example.com/other")
+
+    def test_prefetch_from_a_different_host_is_not_adopted(self):
+        token="d"*32
+        self.write_session_token(token)
+        target=self.add_prefetch_target("P24")
+        with mock.patch.dict(os.environ,{"CU_SESSION_TOKEN":token}), \
+             mock.patch.object(chromium_cli,"create_background_target",return_value=target), \
+             mock.patch.object(chromium_cli,"navigate_tab_background",
+                               side_effect=lambda tab,url:tab.update(url=url)):
+            self.run_cli(["--endpoint",self.endpoint,"prefetch","https://example.com"])
+            with mock.patch.object(chromium_cli,"navigate_tab_via_ws") as navigate:
+                code,opened=self.run_cli([
+                    "--endpoint",self.endpoint,"open","https://example.org/"])
+        self.assertEqual(code,0,opened)
+        self.assertFalse(opened["prefetched"])
+        self.assertNotEqual(opened["tab"]["id"],"P24")
+        navigate.assert_called_once_with(mock.ANY,"https://example.org/")
 
     def test_errored_prefetch_is_closed_and_open_navigates_fresh(self):
         token="f"*32

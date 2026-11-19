@@ -139,6 +139,18 @@ def validate_url(raw):
     return raw
 
 
+def _normalize_prefetch_url(raw):
+    try:
+        parts=urllib.parse.urlsplit(raw)
+        if parts.path or not parts.netloc:return raw
+        authority_start=raw.find("//",raw.find(":")+1)
+        if authority_start<0:return raw
+        authority_end=authority_start+2+len(parts.netloc)
+        return raw[:authority_end]+"/"+raw[authority_end:]
+    except (TypeError,ValueError):
+        return raw
+
+
 def http_json(endpoint, path, method="GET", expect_json=True):
     """One CDP HTTP call; returns parsed JSON, raises on failure.
 
@@ -714,9 +726,11 @@ def cmd_tabs(endpoint, args):
 def _prefetched_target(endpoint,record):
     target=next((item for item in list_page_targets(endpoint)
                  if item.get("id")==record["tab_id"]),None)
-    if target is None or target.get("url")!=record["url"]:return None
+    if (target is None or
+            _normalize_prefetch_url(target.get("url"))!=_normalize_prefetch_url(record["url"])):return None
     state=read_prefetched_page(target)
-    if (state.get("url")!=record["url"] or state.get("ready")!="complete" or
+    if (_normalize_prefetch_url(state.get("url"))!=_normalize_prefetch_url(record["url"]) or
+            state.get("ready")!="complete" or
             state.get("failed") is True or state.get("protocol") not in ("http:","https:")):
         return None
     return target
@@ -729,7 +743,8 @@ def cmd_prefetch(endpoint,args):
         raise ValueError("prefetch requires an active computer-use task")
     records=_prune_prefetches(_read_prefetches(token))
     duplicate=[record for record in records
-               if record["endpoint"]==endpoint and record["url"]==url]
+               if record["endpoint"]==endpoint and
+               _normalize_prefetch_url(record["url"])==_normalize_prefetch_url(url)]
     records=[record for record in records if record not in duplicate]
     for record in duplicate:_close_prefetch_target(record)
     # URL navigation already belongs to this wrapper; the session token keeps
@@ -762,7 +777,8 @@ def cmd_open(endpoint, args):
     token=_active_session_token()
     records=_prune_prefetches(_read_prefetches(token))
     matching=[record for record in records
-              if record["endpoint"]==endpoint and record["url"]==url]
+              if record["endpoint"]==endpoint and
+              _normalize_prefetch_url(record["url"])==_normalize_prefetch_url(url)]
     adopted=matching[-1] if matching else None
     if matching:
         records=[record for record in records if record not in matching]
