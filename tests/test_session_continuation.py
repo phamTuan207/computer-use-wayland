@@ -338,6 +338,26 @@ class TransientRefusalGate(unittest.TestCase):
 
 
 class FatalEnvelope(unittest.TestCase):
+    def test_vanished_target_window_remains_fatal_without_typed_provenance(self):
+        from PIL import Image
+        token = 'd1' * 16
+        same = Image.new('RGB', (20, 20))
+        with tempfile.TemporaryDirectory() as tmp:
+            obs, _ = write_observation(tmp, '00000000010c', image=same)
+            with live(tmp, token, active=[ADDR], pre_calls=[(same, {})],
+                      post=dict(base_meta(pixel_sha256='1111'))) as (typed, stop):
+                with patch.object(cu, 'window', side_effect=ValueError('window no longer exists')):
+                    code, body = relay_lines([
+                        {'args': act_args(obs), 'stdin': WAIT},
+                        {'args': ['status']},
+                    ])
+        self.assertEqual(code, 1)
+        self.assertEqual(body[1]['session_ended']['reason'], 'window no longer exists')
+        self.assertIs(body[1]['session_continues'], False)
+        self.assertNotIn('recoverable', body[1]['result'])
+        self.assertEqual(typed.call_count, 0)
+        stop.assert_called_once()
+
     def test_completed_capture_failure_keeps_session_for_fresh_evidence(self):
         from PIL import Image
         token = 'a7' * 16
