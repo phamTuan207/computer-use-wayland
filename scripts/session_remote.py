@@ -484,8 +484,25 @@ class Broker:
         self.last_start = None
         self.start_order = deque()
         self.start_history = {}
+        self.last_status_error = None
+        self.reported_failures = set()
         self.shutting_down = False
         self.stderr_tail = deque()
+
+    def report_failure(self, command, error):
+        if command not in ('start', 'status'):
+            return
+        code = (error if isinstance(error, str) and
+                re.fullmatch(r'[a-z][a-z0-9_]{0,63}', error) else 'request_failed')
+        with self.lock:
+            if command == 'status':
+                self.last_status_error = code
+            key = (command, code)
+            log_failure = key not in self.reported_failures
+            self.reported_failures.add(key)
+        if log_failure:
+            print('session_remote: ' + command + ' failed: ' + code,
+                  file=sys.stderr, flush=True)
 
     @staticmethod
     def _launch(env):
@@ -845,6 +862,13 @@ class Broker:
             if value.get('lease_file'):
                 task = self._authorize(value)
                 task.last_activity = time.monotonic()
+            last_start_error = None
+            if self.last_start is not None:
+                response = self.last_start.get('response') or {}
+                last_start_error = response.get('error')
+                if (response.get('ok') is True and task is not None and
+                        task.start_id == self.last_start.get('start_id')):
+                    last_start_error = task.error or None
             try:
                 cancelled = bool(self.cancelled())
                 cancellation_state = 'latched' if cancelled else 'clear'
@@ -868,7 +892,9 @@ class Broker:
                     else ('active' if task is not None and task.guardian == 'active' else 'none'),
                     'next_sequence': 1 if task is None else task.next_sequence,
                     'active_sequence': None if task is None or task.active is None
-                    else task.active.sequence}
+                    else task.active.sequence,
+                    'last_start_error': last_start_error,
+                    'last_status_error': self.last_status_error}
             if task is not None:
                 body['error'] = task.error or None
                 body['stop_reason'] = task.stop_reason or None
@@ -1185,14 +1211,22 @@ class UnixSocketServer:
             pass
 
     def handle_client(self, client):
+        value = None
         try:
             if self._peer_uid(client) != os.geteuid():
                 raise BrokerError('peer_refused', 'socket peer must have the broker user id')
             value = self._receive(client)
             response = self.broker.handle(value)
+            if (isinstance(value, dict) and value.get('command') == 'start' and
+                    response.get('ok') is not True):
+                self.broker.report_failure('start', response.get('error'))
         except BrokerError as error:
+            if isinstance(value, dict) and value.get('command') == 'status':
+                self.broker.report_failure('status', error.error)
             response = {'ok': False, 'error': error.error}
         except (OSError, ValueError, TypeError):
+            if isinstance(value, dict) and value.get('command') == 'status':
+                self.broker.report_failure('status', 'invalid_request')
             response = {'ok': False, 'error': 'invalid_request'}
         self._send(client, response)
 
