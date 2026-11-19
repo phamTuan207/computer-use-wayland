@@ -207,7 +207,7 @@ index 5f4a0ab..77e1f49 100644
  #endif
  
  #ifdef HYPRGLASS_FEATURE_LENS_EDGE
-@@ -487,239 +580,86 @@ void main() {
+@@ -487,239 +580,100 @@ void main() {
          }
      }
  #else
@@ -238,11 +238,25 @@ index 5f4a0ab..77e1f49 100644
 -    }
 -#endif
 -    vec2 baseOffset = dir * refractionMag * invFullSize;
-+    float bend = snellShift(slope, SHAYXO_IOR)
-+        / max(snellShift(bevelSlope(0.0, pw), SHAYXO_IOR), 1e-4);
-+    bend *= (1.0 - smoothstep(0.75, 1.0, e))
-+        * axisFade
-+        * smoothstep(0.0, 1.5, depth);
++    // CYLINDRICAL BOTTLE PROFILE (2026-11-19): the Shayxo bevel is flat in
++    // the interior (bend -> 0 past the 14dp band), so the pill centre reads
++    // as transparent. Displacement is 0 ONLY at the centre line, rising
++    // smoothly toward the rim, across the full 19px half-height.
++    // Ray-traced displacement law (Sohum / quickLiquid), index n = 1.5:
++    //   w = distance from the centre line, 0 at the line, 1 at the rim
++    //   theta_s = asin(w), theta_r = asin(w / n)
++    //   d(w) = sqrt(1 - w*w) * tan(theta_s - theta_r), peak-normalised (4.33)
++    // The profile scale is the distance from rim to centre line:
++    // PILL_HEIGHT/2 = 19px (38px pill in a 66px layer, monitor scale 1);
++    // under CONTOUR the field measures distance to the pill outline itself.
++    float cylHalfPx = 19.0 * monitorScale;
++    float wCyl = 1.0 - clamp(depth / cylHalfPx, 0.0, 1.0);
++    float sinS = clamp(wCyl, 0.0, 0.999);
++    float thetaS = asin(sinS);
++    float thetaR = asin(sinS / 1.5);
++    float thick = sqrt(max(1.0 - wCyl * wCyl, 0.0));
++    float bend = clamp(thick * tan(thetaS - thetaR) * 4.33, 0.0, 1.0);
++    bend *= axisFade * smoothstep(0.0, 1.5, depth);
 +    bend = clamp(bend, 0.0, 1.0);
 +
 +    float scale = 0.0;
