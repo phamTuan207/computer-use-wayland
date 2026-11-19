@@ -1,10 +1,12 @@
 # A1 DOM and multi-step code-exec program template
 
-This template copies the D1 program from the design and a multi-step GUI sketch. DOM actions use snapshots returned by `dom_observe()` or the `after` snapshot returned by `dom_act()`. Terminal navigation remains a desktop action.
+This template copies the D1 program from the design and a multi-step GUI sketch. DOM actions use snapshots returned by `dom_observe()` or the `after` snapshot returned by `dom_act()`. Terminal navigation remains a desktop action. The D1 program starts the managed browser with `dom_start()`, which waits (bounded, 10s) for the Chromium window to appear before returning, so the immediate `windows()` lookup after it is safe; do not add a sleep or retry in the program.
 
 ## D1 program
 
 ```python
+started = dom_start()
+assert_state(started["ok"], "dom start failed")
 wins = windows()
 chrome = [w for w in wins if w["class"] == "chromium"][0]
 obs = observe(window=chrome["address"])
