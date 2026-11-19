@@ -1444,7 +1444,7 @@ def desktop_act(env,meta,actions,after_capture=True,observation_path=None,
             expected_bounds=(meta['window_bounds'] if same_window_address(target,address)
                              else terminal_bounds)
             if expected_bounds is not None and bounds(c)!=expected_bounds:
-                raise RuntimeError('expected window geometry changed; observe again')
+                raise RuntimeError('expected window geometry changed; session ended, start a new session and observe there')
         m=next((m for m in hypr(env,'monitors') if m['name']==meta['monitor']),None)
         if not m or monitor_box(m)!=meta['monitor_box'] or m['scale']!=meta['monitor_scale'] or m.get('transform',0)!=meta['monitor_transform']: raise RuntimeError('monitor layout changed; observe again')
         if not screen_scope and target is not None:

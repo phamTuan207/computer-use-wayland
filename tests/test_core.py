@@ -217,6 +217,8 @@ class Coordinates(IsolatedCuState):
                 self.assertFalse(result['ok'])
                 self.assertEqual(result['completed'],0)
                 self.assertIn(error,result['error'])
+                if defect=='window':
+                    self.assertIn('new session',result['error'])
                 pointer.command.assert_not_called()
                 pointer.close.assert_called_once()
     def test_reject_invalid_points(self):
