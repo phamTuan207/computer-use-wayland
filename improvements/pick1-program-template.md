@@ -1,6 +1,6 @@
 # Pick 1 program template
 
-This is the durable template for the Phase B Pick 1 programs. Copy P3 and P4 from this file.
+This is the durable template for the Phase B Pick 1 programs. Copy P1, P2, P3 and P4 from this file.
 
 ## Shape rule
 
@@ -10,7 +10,31 @@ Use this order for every task with a terminal action:
 
 The observe after `act()` is both the settle interval and the verify image. Put file assertions after that fresh observe, then assign `verify_image = verify["image"]`. Never call an assert directly after `act()`. Never use a wait act with an observation made before the previous act. A fresh observe is the settle step and gives the verification image.
 
-For P1 and P2, keep the unchanged shape: `windows()`, `observe()`, `act()`, verify `observe()`, then `verify_image = verify["image"]`. They have no file asserts.
+For P1 and P2, keep the unchanged shape: `windows()`, `observe()`, `act()`, verify `observe()`, then `verify_image = verify["image"]`. They have no file asserts. The P1 and P2 programs below are the exact programs measured in the A1 live run, with the terminal title kept as speed-pick1-term to match P3 and P4 (the A1 live run copied them with the title changed to speed-a1-term).
+
+## P1 program
+
+```python
+wins = windows()
+term = [w for w in wins if w["title"] == "speed-pick1-term"][0]
+obs = observe(window=term["address"])
+result = act([{"type": "type", "text": "df -h /\n"}], obs)
+verify = observe(window=term["address"])
+assert_state(result["ok"], "act failed")
+verify_image = verify["image"]
+```
+
+## P2 program
+
+```python
+wins = windows()
+term = [w for w in wins if w["title"] == "speed-pick1-term"][0]
+obs = observe(window=term["address"])
+result = act([{"type": "type", "text": "python3 -c \"print(144/150*100)\"\n"}], obs)
+verify = observe(window=term["address"])
+assert_state(result["ok"], "act failed")
+verify_image = verify["image"]
+```
 
 ## P3 program
 
