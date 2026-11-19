@@ -26,7 +26,13 @@ response text: a typed preflight refusal (raised before focus/input, surfaced
 as `recoverable: true, completed: 0`) or an exact transient guard refusal
 (`screen changed`/`screen_changed` or `focus changed`/`focus_changed`, with no
 `capture_error` or `ime_restore_failed` in the result) returns its JSON
-response and keeps the relay alive.
+response and keeps the relay alive. Every other failed command ends the
+session: the response carries `session_continues: false` and `session_ended`
+with a reason. That includes the expected window-change case: a click that
+opens, closes, or re-tiles a window ends the session even when the click
+worked (the guard finds `expected window geometry changed`). Verify the result
+outside the session, then start a NEW session; the words `observe again` in
+that error do not mean the old session continues.
 EOF, finish, physical Esc, or a crash lets the guardian remove the overlay.
 Do not automatically resume or repeat input after cancellation/failure.
 
@@ -95,6 +101,15 @@ response before sending the next request; wait again only while that response is
 - Use DOM/accessibility refs where supported. For screenshots, choose the center of a visible
   control, not its edge, and keep coordinates in the returned image's space. The executor applies
   crop offsets, resize factors and monitor origins.
+- Coordinates are only as precise as the image they were measured from. The default
+  `--max-width` is 960, so a full-monitor screen observation is downscaled (a 1920 px wide
+  monitor becomes a 960 px image, factor 0.5): a 5-image-pixel error is a 10-monitor-pixel
+  miss. NEVER click a control smaller than about 20 px or sitting on a window edge using
+  coordinates measured from a downscaled screen image. Measure edge and small controls from
+  a full-resolution window observation (`--max-width` high enough that the image is not
+  downscaled, or a `--crop` around the control), and prefer keyboard navigation (Down/Enter)
+  for menus. A click that reports success with `frame_bytes_changed: false` changed no
+  pixels; treat it as a likely miss and re-check.
 - If small controls would be lost at 1280 px, choose a reliable crop or `--max-width 3840` on the
   initial observation to preserve available detail; this never creates detail absent at capture.
   With an image-viewing tool that supports it, request original detail. Avoid a second image just

@@ -18,6 +18,8 @@ need accessibility or desktop input. Check `a11y apps` before relying on AT-SPI;
 reconfigure accessibility to force it. Select exact addresses/targets, including when several
 windows match a class. For a known class, `windows --class CLASS --no-titles` reduces output.
 Models without image support must use DOM/accessibility or report that limitation.
+There is no launch-application command; open apps through the desktop launcher
+(see [desktop pixels](references/desktop.md#opening-apps)).
 
 ## Keep one session
 
@@ -32,7 +34,10 @@ including thinking time; use short output waits and consume one response per req
 Physical Esc latches cancellation. Run `computer-use resume` only after the user asks to
 continue; do not restore focus/workspace after cancellation. Retained cleanup records require
 `computer-use recover`, never deletion. This is one shared seat: do not compete with user input.
-`computer-use status` reports the latch; MCP `status` reports session liveness and logs.
+`computer-use status` reports only the latch; it NEVER tells you whether a session is running.
+MCP `status` reports session liveness and logs. Before starting a session through the broker,
+check busyness with `python3 scripts/session_remote.py status` and read its `state` field: if
+`state` is `running`, WAIT. Do NOT start. Do NOT trust `computer-use status` for this.
 To replace a stuck or obsolete CLI session, run `computer-use stop` from a separate shell,
 then start a fresh driver, or use `computer-use session --replace -- computer-use session-driver`.
 Agents may do this when needed without asking again. Replacement waits for owner cleanup;
@@ -71,6 +76,22 @@ session alive but requires a fresh explicit `observe` before any further input (
 a11y); the failed action's `after` image is evidence, not that observe. Other errors end the session (the
 MCP bridge returns `session_ended` details); inspect current state in a new session. Never
 automatically replay uncertain input. `finish` is idempotent.
+
+A click that opens, closes, or re-tiles any window ends the session even when the click
+itself succeeded: the guard before the next action finds the window geometry changed
+(`expected window geometry changed`), and the driver reports `session_ended`. That is
+expected. Do not treat it as a failure of the action: verify the result outside the
+session (`windows`, file bytes), then start a NEW session and observe there. The words
+`observe again` in that error do NOT mean you can continue in this session. Only the
+exact transient refusal above keeps the session alive.
+
+Read an `act` result by its shape, not by `ok` alone. `ok: false` with `completed`
+equal to the number of actions you sent and an error naming the AFTER-capture
+(for example `final capture failed: window no longer exists`) means the INPUT
+SUCCEEDED and only the verification screenshot failed.
+Verify the application state independently and NEVER replay the input. A click
+that reports success with `frame_bytes_changed: false` changed no pixels at all;
+treat it as a likely miss, not a confirmed click, and re-check before moving on.
 
 ## Text and smaller results
 

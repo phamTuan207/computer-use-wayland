@@ -12,7 +12,16 @@ case-sensitive matches; no match returns `[]`. Add `--no-titles` to omit the tit
 field. Both options are independent, read-only and apply to one request. Every
 matching address remains in the result; verify the target before input.
 
-`doctor`: dependencies and monitor names. `windows`: exact address, title, bounds, workspace. `observe --window ADDRESS [--crop X Y W H]` captures visible screen pixels without changing focus or workspace; hidden windows and inactive workspaces are refused. Add `--focus` to explicitly activate the window before capture (may switch workspace); this flag requires `--window`. A window on an inactive workspace is refused without it. When `act` will focus the window anyway, run `observe --window ADDRESS --focus` first: a plain observe leaves focus unchanged, so the later act focus can restack windows and change the view you captured. Overlapping windows can cover the capture. `observe --screen MONITOR [--crop X Y W H]` captures the whole monitor or a monitor-relative region, including layer-shell and popups; use pointer actions only with this scope. Both accept `--max-width 320..3840` and return image + observation paths; full metadata stays in the JSON file. Add `--verbose` to print it. Captures use `grim -s 1` without cursor; a live session's badge is hidden for the capture and restored after, for both window and screen scopes; hiding also clears its blur region. Actions recheck monitor geometry and the target region before input. Cache is user-private; files older than 24 hours are pruned on the next capture.
+## Opening apps
+
+The tool has NO launch-application command. Open apps through the desktop
+launcher: press the machine's actual launcher chord, type the app name, press
+Enter, then confirm the new window with `windows` before typing into it.
+NEVER assume bare Super opens anything. Check the Hyprland bindings first
+(`~/.config/hypr/bindings.lua` on this machine). On this machine Super+Space
+opens the Omarchy menu.
+
+`doctor`: dependencies and monitor names. `windows`: exact address, title, bounds, workspace. `observe --window ADDRESS [--crop X Y W H]` captures visible screen pixels without changing focus or workspace; hidden windows and inactive workspaces are refused. Add `--focus` to explicitly activate the window before capture (may switch workspace); this flag requires `--window`. A window on an inactive workspace is refused without it. When `act` will focus the window anyway, run `observe --window ADDRESS --focus` first: a plain observe leaves focus unchanged, so the later act focus can restack windows and change the view you captured. Overlapping windows can cover the capture. `observe --screen MONITOR [--crop X Y W H]` captures the whole monitor or a monitor-relative region, including layer-shell and popups; use pointer actions only with this scope. Keyboard and typing REQUIRE a window observation: a screen observation accepts POINTER actions only, and any key/type batch against it is refused with `screen observations support pointer actions only; use a window or accessibility target for typing`. If your target is a menu or popup, observe the underlying window for typing and use the screen only to LOOK. Both accept `--max-width 320..3840` and return image + observation paths; full metadata stays in the JSON file. Add `--verbose` to print it. Captures use `grim -s 1` without cursor; a live session's badge is hidden for the capture and restored after, for both window and screen scopes; hiding also clears its blur region. Actions recheck monitor geometry and the target region before input. Cache is user-private; files older than 24 hours are pruned on the next capture.
 
 Desktop actions:
 
@@ -30,15 +39,22 @@ Desktop actions:
 - `move`, `click`, `double_click`: image `x`,`y`; click button left/right/middle. `click`, `double_click`, `drag` and `scroll` accept `modifiers`, an array of up to 5 names from `Ctrl`, `Shift`, `Alt`, `Super`, `AltGr` (aliases `Control`, `Meta`, `Win`, `Logo`); the modifiers are held for that one action and released after. `move` rejects `modifiers`.
 - `drag`: image `from:[x,y]`, `to:[x,y]`, `button` left/right/middle (default left), duration `ms` 50..2000 (default 300). Held pointer survives the whole drag; release attempted on failure.
 - `scroll`: image `x`,`y`, `dx`,`dy` in Wayland axis units; positive dy down. Wheel output includes discrete steps (one per 15 axis units, minimum one for nonzero input) and a 30 ms pointer-enter settling gap. These are not necessarily browser CSS pixels.
-- `key`: array of modifiers and XKB/alias key names. Modifier entries are held for the whole action while the non-modifier keys are pressed and released one at a time in array order, so `["Ctrl","a"]` is the Ctrl+a chord but `["a","b"]` types `a` then `b`, not held together. `repeat` 1..30, `hold_ms` 0..2000 (default 12); modifiers released in the same process. Shift+Tab maps to `ISO_Left_Tab` with Shift; editing-key-only groups also bypass composition temporarily. A one-character key is a keysym, not a physical US scancode. Prefer lowercase letters with Shift explicitly for shortcuts.
+- `key`: array of modifiers and XKB/alias key names. A `key` action MUST contain at least one
+  non-modifier key: a lone Super, Ctrl, Alt, or Shift press is refused with
+  `key action needs a non-modifier key`. Modifier entries are held for the whole action while the non-modifier keys are pressed and released one at a time in array order, so `["Ctrl","a"]` is the Ctrl+a chord but `["a","b"]` types `a` then `b`, not held together. `repeat` 1..30, `hold_ms` 0..2000 (default 12); modifiers released in the same process. Shift+Tab maps to `ISO_Left_Tab` with Shift; editing-key-only groups also bypass composition temporarily. A one-character key is a keysym, not a physical US scancode. Prefer lowercase letters with Shift explicitly for shortcuts.
 - `type`: exact text by default (`ime:"literal"`), temporarily disables and restores fcitx5 composition. Use `ime:"compose"` for intentional Telex input. `delay_ms` 0..100 (default 0). Leading-dash text uses a standalone literal invocation. Enter/newlines typed as content may trigger app behavior; choose keys explicitly when needed.
+- In a GTK/xdg-desktop-portal Save dialog, Ctrl+L does NOT open a location bar; it selects
+  the filename. The file-type filter APPENDS its extension to any name not already ending
+  in it: under `Markdown files`, `name.txt` saves as `name.txt.md`. Switch the filter to
+  `All files` BEFORE typing the name, or the file will be misnamed.
 - `wait`: `ms` 0..2000, cancellation-aware timer without keyboard input. Adjacent key/type actions are combined with a 12 ms settling gap; waits, Tab/Enter/Escape, delay reset and IME-mode changes split groups to preserve the correct input context. A keyboard group may last at most 5 seconds.
 
 Max 32 actions per batch. Stop at layout-changing or consequential steps. Desktop `completed` counts completed actions/groups, not confirmed application outcomes.
 The result reports `frame_bytes_changed` — the final capture's pixel hash differs from the input
 observation's, so animations also count — and keeps `changed` as a compatibility alias with the
 same value; neither proves the application applied the action, so verify application state
-separately. `input_diagnostics` records the pre-batch focus state (`focus_before`,
+separately. A click that reports success with `frame_bytes_changed: false` changed no pixels
+at all; treat it as a likely miss, not a confirmed click, and re-check before moving on. `input_diagnostics` records the pre-batch focus state (`focus_before`,
 `target_was_focused`) and reports pointer verification as cursor position only: the desktop
 backend cannot identify the UI element receiving the event, so use DOM/accessibility targeting
 when element identity is needed. A pre-input guard refuses with `focus changed` when
