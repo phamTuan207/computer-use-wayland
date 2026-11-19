@@ -381,6 +381,46 @@ class SessionRemoteIntegration(BrokerHarness):
         self.assertFalse((self.state / 'session.json').exists())
         return final
 
+    def test_broker_handle_accepts_a11y_and_rejects_unlisted_command(self):
+        initial = self.broker.handle({'command': 'status'})
+        start = {'command': 'start', 'owner': 'pick4a11y-regression',
+                 'start_id': session_remote._new_start_id(),
+                 'lease_secret': secrets.token_hex(32),
+                 'broker_generation': initial['broker_generation']}
+        started = self.broker.handle(start)
+        self.assertTrue(started['ok'], started)
+        lease = {'owner': start['owner'], 'generation': started['generation'],
+                 'lease_secret': start['lease_secret']}
+        ready = self.wait_for(lambda: (lambda value: value if value['driver'] == 'ready' else None)(
+            self.broker.handle({'command': 'status'})))
+        self.assertEqual(ready['state'], 'running')
+
+        envelopes = [
+            ['a11y', 'query', '--pid', '764773', '--name', 'Home'],
+            ['a11y', 'observe', '--pid', '764773'],
+            ['a11y', 'ground', 'e1', '--snapshot', '/tmp/g1-snapshot.json',
+             '--address', '0xabc'],
+        ]
+        for sequence, args in enumerate(envelopes, 1):
+            accepted = self.broker.handle({
+                'command': 'request', **lease, 'sequence': sequence,
+                'request': {'args': args, 'stdin': '', 'image_policy': 'always'}})
+            self.assertEqual(accepted, {'ok': True, 'status': 'accepted',
+                                        'sequence': sequence})
+            result = self.broker.handle({
+                'command': 'result', **lease, 'sequence': sequence})
+            self.assertEqual(result['status'], 'completed')
+            self.assertEqual(result['response']['result']['args'], args)
+
+        with self.assertRaises(session_remote.BrokerError) as caught:
+            self.broker.handle({
+                'command': 'request', **lease, 'sequence': 4,
+                'request': {'args': ['rm', '-rf', '/'], 'stdin': '',
+                            'image_policy': 'always'}})
+        self.assertEqual(caught.exception.error, 'unsupported_command')
+        self.assertEqual(self.broker.handle({'command': 'status'})['next_sequence'], 4)
+        self.finish_owned_task(lease)
+
     def start_command(self, owner='environment-test'):
         status = self.exchange({'command': 'status'})
         return {'command': 'start', 'owner': owner,

@@ -141,10 +141,10 @@ def query(pid,name=None,role=None,limit=20):
 def ground(snapshot_path,ref):
     """Re-resolve one snapshot ref against the live tree and return its box.
 
-    The box is fresh (read now, not from the snapshot), and the app root
-    box is returned alongside so the caller can tell whether the extents
-    are screen or window relative. No pointer movement, no click: the
-    caller must crop-verify the box before any click.
+    The box is fresh (read now, not from the snapshot), and the app root or
+    first top-level frame box is returned alongside so the caller can tell
+    whether the extents are screen or window relative. No pointer movement,
+    no click: the caller must crop-verify the box before any click.
     """
     if not _pick4():raise ValueError('pick4 fast path is off; set CU_PICK4_FASTPATH=1')
     snapshot=read_json_file(snapshot_path)
@@ -155,9 +155,22 @@ def ground(snapshot_path,ref):
     root=app(snapshot['pid']);element=resolve(root,item)
     extents=_component_extents(element)
     if extents is None:raise ValueError('element exposes no extents; use vision')
+    root_extents=_component_extents(root)
+    if root_extents is None:
+        try:
+            count=root.get_child_count()
+            if isinstance(count,bool) or not isinstance(count,int):count=0
+            count=max(0,min(count,100))
+        except Exception:
+            count=0
+        for index in range(count):
+            try:root_extents=_component_extents(root.get_child_at_index(index))
+            except Exception:continue
+            if root_extents is not None:break
+        if root_extents is None:raise ValueError('no window frame extents; use vision')
     return {'ok':True,'ref':ref,'role':item['role'],'name':item['name'],
             'extents':extents,'extents_coord':'screen',
-            'root_extents':_component_extents(root)}
+            'root_extents':root_extents}
 
 def resolve(root,item):
     e=root
