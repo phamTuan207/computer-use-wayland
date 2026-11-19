@@ -1254,6 +1254,54 @@ class CodeExecEnvelopeTests(unittest.TestCase):
                  'image_policy': 'always'})
 
 
+class VerifyAllowlistTests(unittest.TestCase):
+    EXPECTED_COMMANDS = {
+        'observe', 'act', 'windows', 'doctor', 'status', 'browser', 'a11y',
+        'code-exec', 'verify',
+    }
+
+    def test_verify_is_the_only_added_allowlist_command(self):
+        self.assertIn('verify', session_remote.COMMANDS)
+        self.assertEqual(session_remote.COMMANDS, self.EXPECTED_COMMANDS)
+
+    def test_verify_request_passes_validation_with_mocked_exchange(self):
+        with tempfile.TemporaryDirectory(prefix='cu-verify-allowlist-') as temp_dir:
+            root = Path(temp_dir)
+            lease = {
+                'version': 1, 'owner': 'allowlist-test', 'start_id': 'a' * 32,
+                'lease_secret': 'b' * 64, 'broker_generation': 'c' * 32,
+                'generation': 'd' * 32,
+            }
+            lease_file = root / 'task.lease'
+            lease_file.write_text(json.dumps(lease))
+            lease_file.chmod(0o600)
+            request_file = root / 'request.json'
+            request_file.write_text(json.dumps({
+                'args': ['verify'], 'stdin': '', 'image_policy': 'always',
+            }))
+            request_file.chmod(0o600)
+
+            def mock_exchange(value, **kwargs):
+                if value['command'] == 'status':
+                    return {'ok': True, 'broker_generation': lease['broker_generation']}
+                if value['command'] == 'request':
+                    envelope, _, _ = session_remote._validate_envelope(value['request'])
+                    self.assertEqual(envelope['args'], ['verify'])
+                    return {'ok': True, 'status': 'accepted'}
+                self.fail(f"unexpected mocked exchange command: {value['command']}")
+
+            output = io.StringIO()
+            with patch.object(session_remote, '_exchange', side_effect=mock_exchange), \
+                    redirect_stdout(output):
+                result = session_remote.main([
+                    'request', '--lease-file', str(lease_file), '--sequence', '1',
+                    '--request', str(request_file),
+                ])
+
+        self.assertEqual(result, 0)
+        self.assertEqual(json.loads(output.getvalue()), {'ok': True, 'status': 'accepted'})
+
+
 class ValidateEnvelopeArgTypeTests(unittest.TestCase):
     """Non-string envelope args get a distinct error, not unsupported_command."""
 

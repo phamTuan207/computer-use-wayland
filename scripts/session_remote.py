@@ -38,7 +38,7 @@ IDLE_TIMEOUT = 300.0
 START_TIMEOUT = 25.0
 REQUEST_TIMEOUT = 120.0
 HYPRLAND_PIN = '11cbc6c577b84ffb1edf4df3fc5b6128c3ae6947'
-COMMANDS = {'observe', 'act', 'windows', 'doctor', 'status', 'browser', 'a11y', 'code-exec'}
+COMMANDS = {'observe', 'act', 'windows', 'doctor', 'status', 'browser', 'a11y', 'code-exec', 'verify'}
 TOKEN = re.compile(r'[0-9a-f]{32}\Z')
 SECRET = re.compile(r'[0-9a-f]{64}\Z')
 
