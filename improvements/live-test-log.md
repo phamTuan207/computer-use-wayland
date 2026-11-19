@@ -4439,3 +4439,45 @@ Standing workflow (dang, 21:48): test → log every error → write a report for
 - Two driver_command_failed session failures, both from the executor's extra H1 check (not prefetch): H1 check 1 "stale snapshot" (02:06:36, 117.6s deliberation); the executor restarted (b1-restart1, generation 4781a414..., 02:07:46), re-verified the heading (restart1 observe 02:08:05), then H1 check 2 "selector must match exactly one element". Coordinator killed the method codex (PID 1108435) at about 02:09:15 to stop a third restart loop; the method summary was written by the coordinator from codex.log + records.jsonl. No measurement lost.
 - Task 4 verdict: BLOCKED-by-mechanism. The page prefetch never ran, so no prefetch benefit could be measured. Do not re-run the method arm until the token plumbing is fixed harness-side.
 - Cleanup: closed the Chromium window and the pf2-method-term kitty; desktop verified clean (herdrdrop, Zen Pill fixture only).
+
+## 2026-11-20 02:39 +07 A4 postcondition live measure, BLOCKED
+
+- Checkout `algo-a4`, HEAD `7f3da57a76382dd2a73e3da896c5aaf773f0acfd`; relay started at the same HEAD.
+- Flag-on code-exec smoke passed with `api_calls=1`, `elapsed_ms=1.408`. Flag-off `cu.py verify` exited 0 and returned inconclusive with `needs_vision=true`, as expected.
+- Broker `verify` control was rejected twice with `unsupported_command`, including the one retry after a fresh `windows` observation. `session_remote.py:41` omits `verify` from `COMMANDS`; `session_driver.py:117` includes it. No source code was changed.
+- P3 B-01 and P4 A-01 baseline and A4 arms were not run. Per-arm wall, think, calls, broker service, postcondition, and independent shell checks are N/A; arm requests 0. False accepts observed 0, with no arm verdict to score. Verdict: BLOCKED.
+- Teardown verified: relay active, broker idle and owner null, started git HEAD unchanged, no `CU_CODE_EXEC` environment, speed terminal closed, fixture files removed, checkout remains `algo-a4`.
+- Full details and analyzer output: `/tmp/speed-a4-20261120/a4-measure/summary.md`. This log entry is intentionally uncommitted for coordinator review.
+
+
+## 2026-11-20 02:55 +07 A4 postcondition live measure, ROUND 2, LOSS
+
+- Checkout `algo-a4`, HEAD `7f3da57a76382dd2a73e3da896c5aaf773f0acfd`; relay started and ended at that HEAD.
+- Smoke: code-exec passed (`api_calls=1`, `elapsed_ms=1.471`). The one broker `verify` reproduction returned `unsupported_command`, matching `session_remote.py:41` where `COMMANDS` omits `verify`. Direct CLI flag-off returned inconclusive as expected. CLI flag-on verified, failed, and lone-file-exists inconclusive controls all matched expected statuses.
+- P3 B-01 baseline: MATCH, wall 34.760 s, think 3.040 s, 2 model calls, broker service 1.245 s, 3 images / 1,343,266 bytes, `api_calls=4`.
+- P3 B-01 A4: FAIL after one identical retry. Wall 37.657 s excluding 19.181 s dwell, 56.838 s strict; think 2.913 s excluding dwell, 22.094 s strict; 3 model calls, broker service 2.080 s, no images, 3 `api_calls` per run. Both attempts errored `name 'true' is not defined`, with no postcondition verdict. Independent `find` matched the expected four directories.
+- P4 A-01 baseline: MATCH, wall 23.752 s, think 3.789 s, 2 model calls, broker service 1.519 s, 3 images / 1,357,091 bytes, `api_calls=4`.
+- P4 A-01 A4: verified and shell MATCH, wall 15.084 s, think 2.893 s, 2 model calls, broker service 1.502 s, 2 images / 934,923 bytes, `postcondition_verified=true`, `api_calls=4`; shell SHA-256 matched `a6e58cb9f73ad08a588ed6668f72bcdc29b91af575860b35848c041d1ca7b170`, 128 bytes.
+- A4 minus baseline: P3 wall +2.897 s excluding dwell and +22.078 s strict, model calls +1. P4 wall -8.668 s, model calls unchanged. Mean wall excluding dwell -2.886 s, mean strict wall +6.705 s, mean model calls +0.5. False accepts: 0. Verdict: LOSS, the success bar required fewer calls and lower wall, and P3 A4 failed twice.
+- Teardown: test artifacts removed; `a4.conf` removed; relay active, broker idle with owner null and no `CU_CODE_EXEC`; `speed-a4b-term` absent. Existing `a4b-exec` Codex helper left untouched. Summary and full analyzer output: `/tmp/speed-a4-20261120/a4-measure2/summary.md`.
+- This entry is intentionally uncommitted for coordinator review.
+
+
+## 2026-11-20 03:18 +07 A4 postcondition live measure, ROUND 3, P3 A4 corrected, WIN
+
+- Checkout `algo-a4`, HEAD `7f3da57a76382dd2a73e3da896c5aaf773f0acfd`; relay started and ended at that HEAD. Only P3 A4 was rerun, with Python `True` after round 2's brief `true` NameError. Baselines and P4 were not rerun.
+- Build-time gate cited, not rerun: 63 new tests pass; full suite 1402 tests, 7 failures, 2 skipped, zero new failures versus clean baseline 1339 tests, 7 failures, 0 errors, 2 skipped.
+- P3 B-01 A4 corrected: verified, envelope `postcondition_verified=true`, independent `find` MATCH with exactly four directories, `api_calls=4`. Wall 7.627 s excluding dwell and 7.627 s strict, dwell 0 s; think 5.728 s excluding dwell and 5.728 s strict; 2 model calls; code-exec request service 1.007 s, including finish 1.162 s; 1 code-exec request; 2 images / 895615 bytes; refusals 0, misclicks 0, session deaths 0, retries 0; false accepts 0.
+- Delta versus round 2 P3 baseline: wall -27.133 s, think +2.688 s, model calls 0, request service -0.084 s, images -1 / -447651 bytes. Smoke passed with `api_calls=1`, `elapsed_ms=1.505`.
+- Teardown verified: relay active without `CU_CODE_EXEC`, broker idle and owner null, target terminal absent, `/tmp/hoc-ky-2` removed. Standalone relay `verify` limitation was not retested; the in-program verifier succeeded.
+- This entry is intentionally uncommitted for coordinator review. Main stays frozen.
+
+## 2026-11-20 03:51 +07 A2 preflight-absorb live measure, INCONCLUSIVE (no flake fired)
+
+- Checkout `a2-preflight`, HEAD `296ce45715cc16d39e6fca63060cce70910d5019`; relay started and ended at that HEAD. Build-time gate cited, not rerun: full suite 1341 tests, 7 failures, 2 skipped, zero new failures versus clean baseline 1339 tests, 7 failures, 0 errors, 2 skipped; `tests/test_act_diagnostics.py` 22/22.
+- First launch BLOCKED at setup (03:23): `git checkout --detach a2-preflight` refused because the laptop log carried the three uncommitted A4 entries. Coordinator stashed them (`stash@{0}` on the laptop, "a4-live-measure-20261120-log") and relaunched; second launch ran clean.
+- P3 B-01 attempt 1: SUCCESS first try, wall 12.026 s (start submit to program result), think before code-exec 9.9 s, 2 model calls, broker service 1.032 s, `api_calls=4`, 3 images / 1,342,929 bytes, shell MATCH (4 dirs). P3 attempt 2: SUCCESS, wall 10.332 s, think 8.3 s, 2 calls, service 1.024 s, `api_calls=4`, 3 images / 1,356,827 bytes, shell MATCH.
+- P4 A-01 attempt 1: SUCCESS first try, wall 9.958 s, think 7.6 s, 2 calls, service 1.293 s, `api_calls=4`, 3 images / 1,382,448 bytes, shell MATCH (sha256 `a6e58cb9f73ad08a588ed6668f72bcdc29b91af575860b35848c041d1ca7b170`, 128 bytes). P4 attempt 2: SUCCESS, wall 9.460 s, think 7.5 s, 2 calls, service 1.279 s, `api_calls=4`, 3 images / 1,414,766 bytes, shell MATCH.
+- `preflight_absorbed`: 0 events in all 4 attempts. `preflight_retries`: absent on every act result. Diagnostics event `preflight_absorb_retry`: absent in all 4 diagnostics files. Escaped refusals: 0, there were no refusals at all. The natural first-act brightness-shift flake did not fire in any of the 4 A2 attempts, nor in any of the 8 A4 task runs earlier the same night (12 task runs, 0 flakes; it had fired 2/2 in the 19/11 Pick 1 re-measure).
+- Verdict: INCONCLUSIVE on absorption. The absorb path is unproven live (0 events observed); the unit tests (22/22) still stand, and no run needed a retry. Note: the A2 wall endpoint is start submit to program result, while the A4 walls run to the shell-check finish, so the A2 walls (9.5-12.0 s) are not directly comparable to the A4 baseline walls (23.8-34.8 s).
+- Teardown: the executor exited after the desktop check without writing the final summary sections or this log entry; the coordinator wrote this entry from the run evidence (`/tmp/speed-a2-20261120/a2-measure/summary.md`, `records.jsonl` 29 lines, `analyzer-output.txt`). Teardown verified by the coordinator: test artifacts removed, `a2.conf` removed, relay active with no `CU_CODE_EXEC`, broker idle owner null, main checkout restored to detached `56f5af4`, relay `started_git_head` `56f5af4e521e1c20b26b56dc31d662e34f1c2668`, desktop clean (herdrdrop + Zen Pill fixture only), no codex processes remain. Main stays FROZEN.

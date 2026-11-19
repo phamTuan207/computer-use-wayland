@@ -1,0 +1,44 @@
+== overall ==
+records (excluding status polls): 15
+status polls: 14
+total logged sleeps: 0.0 s in 0 entries
+
+== task a2 ==
+  code-exec  n=5 service=5.117 s
+  finish     n=5 service=1.273 s
+  start      n=5 service=0.000 s
+  service total: 6.390 s
+  image bytes total: 5496970
+  start call: 0.225 s, ready: 0.943 s, polls: 3
+  first request after ready: 8.496 s
+  between-request gaps: n=14 total=362.472 s max=131.539 s
+    gap a2-smoke-start -> a2-smoke-code-exec : 9.214 s
+    gap a2-smoke-code-exec -> a2-smoke-finish : 5.291 s
+    gap a2-smoke-finish -> a2-p3-start : 76.633 s
+    gap a2-p3-start -> a2-p3-code-exec : 10.690 s
+    gap a2-p3-code-exec -> a2-p3-finish : 131.539 s
+    gap a2-p3-finish -> a2-p3-r2-start : 11.663 s
+    gap a2-p3-r2-start -> a2-p3-r2-code-exec : 9.010 s
+    gap a2-p3-r2-code-exec -> a2-p3-r2-finish : 22.032 s
+    gap a2-p3-r2-finish -> a2-p4-start : 11.040 s
+    gap a2-p4-start -> a2-p4-code-exec : 8.366 s
+    gap a2-p4-code-exec -> a2-p4-finish : 29.592 s
+    gap a2-p4-finish -> a2-p4-r2-start : 10.499 s
+    gap a2-p4-r2-start -> a2-p4-r2-code-exec : 7.921 s
+    gap a2-p4-r2-code-exec -> a2-p4-r2-finish : 18.982 s
+  task span (first submit to last result): 369.905 s
+  gap share of span: 98.0%, service share: 1.7%
+  think/prep split (DECIDE lines):
+    a2-smoke-code-exec     think=8.5 s prep=0.0 s
+    a2-smoke-finish        think=5.3 s prep=0.0 s
+    a2-p3-code-exec        think=9.9 s prep=0.0 s
+    a2-p3-finish           think=131.5 s prep=0.0 s
+    a2-p3-r2-code-exec     think=8.3 s prep=0.0 s
+    a2-p3-r2-finish        think=22.0 s prep=0.0 s
+    a2-p4-code-exec        think=7.6 s prep=0.0 s
+    a2-p4-finish           think=29.6 s prep=0.0 s
+    a2-p4-r2-code-exec     think=7.5 s prep=0.0 s
+    a2-p4-r2-finish        think=19.0 s prep=0.0 s
+
+== grand totals (all tasks) ==
+service total: 6.390 s, gap total: 362.472 s
