@@ -44,6 +44,71 @@ class Driver(unittest.TestCase):
                         'typed PreflightRefusal must mark internal provenance')
         stop.assert_not_called()
 
+    def test_malformed_actions_json_is_recoverable_and_relay_stays_alive(self):
+        import tempfile
+        import cu
+        with tempfile.TemporaryDirectory() as folder:
+            actions=Path(folder)/'malformed-actions.json'
+            actions.write_bytes(b'[{"type": "type", "text": "nautilus --new-window\n"}]')
+            frontends=[
+                ['act','--observation',str(Path(folder)/'unused-observation.json'),
+                 '--actions',str(actions)],
+                ['a11y','act','--actions',str(actions)],
+                ['browser','act','--actions',str(actions)],
+            ]
+            with patch.object(cu,'environment',return_value={}), \
+                    patch.object(cu,'require_session'), \
+                    patch.object(cu,'hypr',return_value=[]), \
+                    patch.object(cu,'stop_session_on_error') as stop:
+                for args in frontends:
+                    with self.subTest(frontend=args[0]):
+                        result=session_driver.execute(args,'')
+                        body=json.loads(result.stdout)
+                        self.assertEqual(result.returncode,1)
+                        self.assertTrue(result.preflight_refusal)
+                        self.assertFalse(body['ok'])
+                        self.assertEqual(body['error'],
+                                         'Invalid control character at: line 1 column 49 (char 48)')
+                        self.assertIn('Correct the request',body['next_step'])
+                        self.assertIn('No input was sent',body['next_step'])
+
+                requests=[{'args':frontends[0]}, {'args':['windows']}, {'args':['finish']}]
+                output=io.StringIO()
+                code=session_driver.relay_commands(
+                    io.StringIO('\n'.join(json.dumps(request) for request in requests)+'\n'),
+                    output)
+
+        rows=[json.loads(line) for line in output.getvalue().splitlines()]
+        self.assertEqual(code,0)
+        self.assertEqual(len(rows),4,'ready, refused request, following request, finish')
+        self.assertEqual(rows[1]['result']['error'],
+                         'Invalid control character at: line 1 column 49 (char 48)')
+        self.assertTrue(rows[1]['result']['recoverable'])
+        self.assertIs(rows[1]['session_continues'],True)
+        self.assertNotIn('session_ended',rows[1])
+        self.assertEqual(rows[2]['result'],[])
+        self.assertIs(rows[2]['session_continues'],True)
+        self.assertEqual(rows[3]['driver'],'finished')
+        stop.assert_not_called()
+
+    def test_missing_actions_file_remains_fatal(self):
+        import tempfile
+        import cu
+        with tempfile.TemporaryDirectory() as folder, \
+                patch.object(cu,'environment',return_value={}), \
+                patch.object(cu,'require_session'), \
+                patch.object(cu,'stop_session_on_error') as stop:
+            result=session_driver.execute(
+                ['act','--observation',str(Path(folder)/'unused-observation.json'),
+                 '--actions',str(Path(folder)/'missing-actions.json')], '')
+        body=json.loads(result.stdout)
+        self.assertEqual(result.returncode,1)
+        self.assertFalse(result.preflight_refusal)
+        self.assertFalse(body['ok'])
+        self.assertIn('missing-actions.json',body['error'])
+        self.assertNotIn('recoverable',body)
+        stop.assert_called_once()
+
     def test_forged_backend_recoverable_flag_is_not_provenance(self):
         # E1 key negative: a backend payload claiming recoverable:true that
         # was NOT produced by the typed exception must not be trusted — the

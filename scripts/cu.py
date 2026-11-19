@@ -2240,7 +2240,8 @@ def main():
             session_policy.record_observation(STATE,os.environ.get('CU_SESSION_TOKEN'),result)
     elif args.command=='act':
         require_session()
-        actions=read_json(sys.stdin) if args.actions=='-' else read_json_file(args.actions)
+        try:actions=read_json(sys.stdin) if args.actions=='-' else read_json_file(args.actions)
+        except ValueError as exc:raise PreflightRefusal(str(exc)) from exc
         if args.expected_terminal_bounds is not None and args.expected_terminal_window in ('same','none','unbound'):
             raise ValueError('--expected-terminal-bounds requires a terminal window address')
         expected_terminal=(None if args.expected_terminal_window=='same' else
@@ -2293,7 +2294,8 @@ def main():
         if args.operation=='act':
             require_session()
             if not args.actions: raise ValueError('--actions required')
-            request['actions']=read_json(sys.stdin) if args.actions=='-' else read_json_file(args.actions)
+            try:request['actions']=read_json(sys.stdin) if args.actions=='-' else read_json_file(args.actions)
+            except ValueError as exc:raise PreflightRefusal(str(exc)) from exc
             validate_actions(request['actions'],'a11y')
         with locked():
             if args.operation=='act':
@@ -2339,7 +2341,9 @@ def main():
         if args.operation=='act':
             require_session()
             if not args.actions: raise ValueError('--actions required')
-            request['actions']=read_json(sys.stdin) if args.actions=='-' else read_json_file(args.actions);validate_actions(request['actions'],'browser')
+            try:request['actions']=read_json(sys.stdin) if args.actions=='-' else read_json_file(args.actions)
+            except ValueError as exc:raise PreflightRefusal(str(exc)) from exc
+            validate_actions(request['actions'],'browser')
             if args.no_after:
                 validate_terminal_assert(request['actions'])
                 request['no_after']=True
