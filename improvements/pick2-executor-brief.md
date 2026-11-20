@@ -120,6 +120,12 @@ the broker), never by reading files in your own shell.
   requests use image_policy "auto" (the broker then only delivers the
   after-image when the frame actually changed). Never request an
   observation that proves nothing new.
+- Low-res framing: routine FRAMING observes (the observe that finds the
+  terminal / frames the screen before you act) use --low-res (cap 640 px
+  wide). VERIFY observes (the observe after an act that reads the terminal
+  output to confirm the end state) stay at full resolution 960 (no
+  --low-res). If unsure whether an observe is framing or verify, use full
+  960. Small-target grounding stays at 960.
 - Local execution: you run on this laptop; there is no VM SSH hop inside
   the loop. Do not add any remote hop.
 
