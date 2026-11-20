@@ -124,6 +124,29 @@ Never write a brief from memory when a source exists.
 - Pill (liquid glass): copy the upstream shader exactly, only reduce the
   blur. Never invent a new displacement law. The user is the taste judge.
 
+## 9. Channels, process, and live driving (D1-D5, C7)
+
+- Channel separation (D1): a follow-up belongs to its own thread.
+  Never raise one thread's task in another channel. The main chat is
+  the schedule channel. (Already in section 5 as I39; repeated here
+  because it is a process rule, not just a brief rule.)
+- Messenger (D2): check the user's messages through Muse's own
+  connectors only. Never open Messenger in the laptop browser.
+- Push to GitHub as you go (D3): every small piece of work is its
+  own commit, pushed immediately. Never hold a push to batch it.
+- Record lessons in both places (D4): a generic version in the repo,
+  a detailed version on the laptop. Never put personal information
+  in the repo.
+- Calendar edits (D5): before ANY add/edit/delete/move, read the
+  WHOLE day on ALL calendars plus adjacent days, account for travel
+  time on location changes; after the change, run the overlap audit
+  and confirm 0 overlaps. Never run parallel calendar writes.
+- Narrate before acting (C7): when driving computer-use live while
+  the user watches, say each step out loud BEFORE doing it. A static
+  screen reads as doing nothing. Acquire the overlay first
+  (`scripts/overlay.py acquire --agent <name> --method <method>`)
+  so the user sees who is driving, and release it when done.
+
 ## Ban list (in EVERY brief, no exceptions)
 
 - NEVER use ydotool.
