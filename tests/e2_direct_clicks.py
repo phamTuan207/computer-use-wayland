@@ -42,7 +42,7 @@ def log(msg):
 def hypr(*args):
     env = dict(os.environ)
     env.update(ENV)
-    out = subprocess.run(["hyprctl", *args], capture_output=True, text=True,
+    out = subprocess.run(["hyprctl", "-j", *args], capture_output=True, text=True,
                          env=env, timeout=15)
     return json.loads(out.stdout)
 
