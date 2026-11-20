@@ -7,16 +7,16 @@
 
 ## 0. Bottom line
 
-No code in the repo can produce a 10 Hz pill flicker during idle driving. That is the main finding, and it is a strong negative result, not a gap in the search. Every in-repo path that touches the pill was traced. The only visibility toggles are hide/show around screenshots (1 observe per 10-30 s, so 2 toggles per 10-30 s). Every in-repo timer near 100 ms is I/O polling that sends no pill traffic. The entrance animation (16 ms timer) is disabled in the final liquid mode that was running. Therefore the 10 Hz driver is either inside the compositor or the hyprglass plugin, or in a second pill instance, or in client behavior outside this repo (the Muse harness request pattern, which I cannot inspect from here). The most likely cause is a compositor/plugin level repaint loop, with the pill's own after-paint handler as an accomplice. Ranked verdicts and the experiments that would prove each one are in sections 5 and 6.
+The repo audit did not identify a normal 10 Hz pill command source. This is a static finding, not proof of the live cause. The capture path sends hide/show around an observation, so it can create visibility transitions during a capture. At the reported cadence of one observation per 10-30 seconds, that path alone does not account for a continuing 10 Hz flicker during the reported idle interval with no captures. The user report and cadence were not independently measured in this audit. Other client requests, GTK/frame activity, the compositor, the plugin, or multiple instances remain to be checked with runtime evidence. The after-paint behavior was a code-level candidate, not a verified cause. The experiments in sections 5 and 6 are proposed tests, not proof already obtained.
 
-Two corrections to the record, already noted by the fix run, confirmed here. First, Part H (H1) says the flicker happened while Codex drove, but I9 says the opposite, Codex was normal and direct Muse driving flickered. I9 is the primary source (chat transcript 18:53-19:02 20/11) and H1 is wrong. Second, Muse's screenshot explanation (I20) is not just admitted wrong, it is provably wrong from the code, see section 2.
+Two corrections to the record, already noted by the fix run, confirmed here. First, Part H (H1) says the flicker happened while Codex drove, but I9 says the opposite, Codex was normal and direct Muse driving flickered. I9 is the primary source and H1 is wrong. Second, the screenshot-volume explanation in I20 was retracted. The code cadence is consistent with that retraction for the reported idle interval, but it does not prove the live flicker cause or exclude an unobserved capture/request loop.
 
 ## 1. What was read and verified
 
 ### 1.1 The incident, from H1 and I9-I12
 
-- I9 (18:53-19:02 20/11): pill "Computer use active" flickers continuously while Muse drives directly. User asks why Codex driving is normal but Muse driving flickers. Muse first blames screenshots, then retracts at 19:02, admitting screenshots at 1 per 10-30 s cannot cause 10x/sec flicker, and admits the true cause is unverified.
-- I10 (18:56-18:58 20/11): user reports the flicker continues while Muse visibly does nothing, about 10 times per second. This is the most important constraint. During the flicker window Muse made no mouse moves and took no screenshots, so the cause must be active during an idle driver.
+- I9 (18:53-19:02 20/11): pill "Computer use active" flickers continuously while Muse drives directly. User asks why Codex driving is normal but Muse driving flickers. Muse first blames screenshots, then retracts that explanation at 19:02 and acknowledges the true cause is unverified. The source report gives an observe cadence of 10-30 seconds, but this audit has no live request or frame trace.
+- I10 (18:56-18:58 20/11): user reports the flicker continues while Muse visibly does nothing, about 10 times per second. This is the most important constraint. The source report says no mouse moves or screenshots occurred during the flicker window. If accurate, that makes ordinary capture activity insufficient to explain that interval; this was not independently measured here.
 - I11 (19:13 20/11): user orders computer-use off because the flicker hurts his eyes. Muse turns it off.
 - I12 (15:28 20/11): overlay vanished entirely while the worker was still alive and screenshotting. A second, distinct failure mode of the same pill, disappearance rather than flicker.
 - True cause unverified as of 02:30 21/11.
@@ -47,13 +47,14 @@ Verified by SSH to the laptop (short read-only commands, 03:37-03:38 +07):
 
 A web search for Hyprland layer-shell flicker returns documented compositor-side layer-surface render quirks, not driver-side causes: Hyprland issue 875 (blur breaks layer surface fadeOut animation, surface flickers out on close), and Hyprland issue 15738 (gtk-layer-shell overlay surfaces not rendered for the first several invocation cycles, described as compositor-side, Hyprland 0.56.1). These do not prove our cause, but they establish that layer surfaces in Hyprland can fail to present intermittently for compositor-side reasons, which is the category my top hypothesis falls in.
 
-## 2. Why screenshots cannot be the cause (code proof, not just rate arithmetic)
+## 2. What the capture cadence does and does not explain
 
-Muse's retraction in I20 rests on rate arithmetic (1 per 10-30 s vs 10 per s). The code makes it airtight:
+The earlier claim blaming too many screenshots was unsupported and was retracted. Static code inspection provides a limited cadence check:
 
-- The pill has exactly two visibility transitions per observe (hide before grim, show after), gated by presentation-feedback acknowledgements (`redraw()` waits for `wp_presentation_feedback` presented events, 2 s timeout in C, 3 s in Python).
-- No other code path sends hide or show. I grepped all of `scripts/*.py`, `skill/`, and `native/`. The `move` command only replies "ok" and never redraws, and nothing calls it.
-- During I10 Muse was idle (no observes), so even the 2-toggles-per-observe path was silent. A cause that fires while the driver is idle cannot be the capture fence.
+- The normal capture path hides before a clean screenshot and shows afterward. That can cause a transition around each capture. Nested captures are now coalesced into one outer hide/show pair.
+- At the reported rate of one observe every 10-30 seconds, normal captures do not produce 10 transitions per second. The report also says no screenshot was taken during the idle flicker interval. Those are source-reported conditions, not measurements from this audit.
+- This does not rule out an unobserved retry loop, another caller, or behavior outside this repo. The capture explanation is not supported as the cause of the reported continuous idle flicker, but the live cause remains unknown.
+
 
 ## 3. What could cause ~10x/sec flicker
 
@@ -61,7 +62,7 @@ Muse's retraction in I20 rests on rate arithmetic (1 per 10-30 s vs 10 per s). T
 
 | Path | Trigger | Rate | Can it do 10 Hz idle? |
 |---|---|---|---|
-| hide/show via socket | observe/observe_screen only | 2 per 10-30 s | No |
+| hide/show via socket | capture fence, normally one per observe | 2 transitions per 10-30 s if report cadence holds | Does not explain reported 10 Hz idle flicker by itself |
 | `enter_frame` 16 ms timer | entrance animation, first 1 s only, disabled in liquid mode | 60 Hz for 1 s | No, not running on 20/11 |
 | `painted` after-paint handler | every GTK paint of the indicator window | paints only when something queues a draw | Only if something keeps painting, see H-A |
 | `redraw()` ack timeout | presentation feedback missing for 2 s | one-shot, then process exits | No, it kills the pill |
@@ -75,15 +76,15 @@ Muse's retraction in I20 rests on rate arithmetic (1 per 10-30 s vs 10 per s). T
 
 Note the trap: there ARE 10 Hz (0.1 s) and 20 Hz (0.05 s) and 25 Hz (0.04 s) timers in the repo, but all of them are local I/O waits. None of them emits a pill command. A careless reading could blame the 0.1 s select in `session_remote.py` line 397 or the 0.1 s sleep in `activation_checks.py` line 27. Both are innocent by construction: one waits for bytes that never arrive while idle, the other runs only at startup.
 
-### 3.2 H-A. Compositor/plugin repaint loop, pill re-presented continuously (MOST LIKELY)
+### 3.2 H-A. Compositor/plugin repaint loop, pill re-presented continuously (UNVERIFIED CANDIDATE)
 
-Mechanism: `painted()` in indicator.c is connected to the GTK frame clock `after-paint` signal, and on EVERY paint it calls `wl_surface_damage(full surface)` plus `wl_surface_commit` plus flush, even when no redraw is pending. In steady state GTK should go idle (no paints, no commits), but if anything keeps the frame clock ticking, every paint forces the compositor to re-render the layer surface, and re-rendering the liquid glass means re-sampling the backdrop and re-tracing the contour mask. The visible blink is then the glass alternating between two render states from frame to frame: for example, the contour mask traced from the previous frame's content flips between "pill outline found" and "no outline", toggling blur on and off, or the backdrop sample alternates between pre- and post-damage frames, or the manual double commit (GTK's own commit during paint, then the manual commit in `painted`) presents alternating buffers, one of them stale or transparent.
+Hypothetical mechanism, not verified: if GTK continues painting, the old `painted()` handler could issue damage and commit work on each paint. Whether that makes the compositor re-render the liquid effect, and whether any resulting rendering difference is visible as flicker, has not been measured. Candidate render differences include contour-mask or backdrop changes, but there is no frame trace to support those examples.
 
 What keeps the frame clock ticking during an idle driver? Candidates, all outside the repo: an animation in the page behind the pill (loading spinner, GIF, progress bar, blinking caret), the browser tab strip repainting, the cursor sitting over the pill region, or a Hyprland damage bug that re-damages the layer on every frame. The pill sits at top-left (16,16), directly over Zen's tab strip, where a loading tab spinner animates during page loads. During 18:53-19:02 Muse was stuck on Polygon commit/save flows, pages loading and reloading, which fits.
 
 Why Muse and not Codex, under this hypothesis: not the driver at all, but what was on screen at the time. Different page state, different backdrop animation, different cursor position. The 18/11 single-frame dropouts under Luna support this: same mechanism, lower rate, different backdrop.
 
-Evidence for: 18/11 dropouts; known Hyprland layer-surface quirks; no in-repo 10 Hz driver found; flicker persists while the driver is idle (I10), which is exactly what a compositor-side loop predicts. Evidence against: none found, but the loop's trigger (what keeps GTK painting) is unidentified, which is why this is ranked first and not proven.
+Consistency only: the source report describes idle flicker, and the earlier video report describes isolated dropouts. Neither shows that this mechanism caused them. No live frame or command trace supports H-A, and the trigger for continued GTK painting is unidentified. Lack of a disproving observation is not evidence for this hypothesis.
 
 ### 3.3 H-B. Two pill instances fighting (PLAUSIBLE, cheap to check)
 
@@ -97,9 +98,9 @@ Mechanism: some client calls observe (or another capture path) in a tight retry 
 
 Mechanism: the indicator dies (discarded feedback, ack timeout, monitor change), and the broker, described as "Reconnectable, single-owner", restarts the session, which spawns a fresh indicator, which dies again. Each cycle re-shows the pill, producing blinking. Counter-evidence: a restart cycle involves guardian startup, indicator spawn, GTK init, and liquid ready checks, plausibly 0.5-2 s per cycle, far slower than 10 Hz. Also the user would see other symptoms (cursor theme flipping, session errors, driver complaints). I12 (overlay gone while the worker lived) is better explained as the session having ended on indicator death while the worker kept issuing standalone observe commands, since `capture_clean` silently proceeds without hiding when no session exists. H-D is not the flicker, but I12 shows the indicator death path is real and worth hardening.
 
-### 3.6 H-E. Animated backdrop behind the pill (TRIGGER for H-A, not a separate cause)
+### 3.6 H-E. Animated backdrop behind the pill (UNVERIFIED CANDIDATE)
 
-Mechanism: the page behind the pill animates at about 10 Hz (a spinner, a GIF, a progress bar), forcing the compositor to re-render the glass at that rate, and each re-render briefly shows the pill without glass or with a stale mask. This is the most concrete trigger candidate for H-A, and it neatly explains Muse vs Codex as different page states. Testable by freezing the backdrop (experiment E2). I list it separately because its experiment differs from H-A's.
+Hypothesis only: an animation behind the pill could coincide with repaint activity. No backdrop frames or matched static-versus-animated comparison were captured, so this does not yet explain the reported flicker or client difference. Experiment E2 could test for a relationship.
 
 ### 3.7 H-F. Shader recompilation loop (UNLIKELY)
 
@@ -111,53 +112,48 @@ Mechanism: 10 Hz as a beat between two rates, for example a 60 Hz repaint agains
 
 ## 4. Why Muse and not Codex? The honest answer
 
-I could not find any code difference in the driver path. Both clients drive through the same session, guardian, indicator, broker, and relay code, byte-identical on the laptop for every flicker-relevant file. The session contract in `skill/references/session.md` is client-agnostic. So the difference must be one of these, in order of likelihood:
+I could not find any code difference in the driver path. Both clients drive through the same session, guardian, indicator, broker, and relay code, byte-identical on the laptop for every flicker-relevant file. The session contract in `skill/references/session.md` is client-agnostic. Possible explanations include:
 
-1. What was on screen. Different page state, different backdrop animation behind the pill, different cursor position. Muse was stuck on Polygon commit and delete-dialog flows with pages loading; Codex had been on different pages. Under H-A/H-E this alone explains the difference.
-2. Session overlap at the 18:32 handover. Whether Codex's session was cleanly finished before Muse started is not recorded in the files I read. Under H-B this explains it.
-3. Client request pattern outside this repo. Muse's harness (VM, over SSH, via the broker) and Codex's client (on the laptop, via fcc-claude) may poll status, re-issue observes, or hold the session differently. I cannot verify this from the repo, and no in-repo path turns a client pattern into 10 Hz pill traffic.
-4. Coincidence. The flicker mechanism is intermittent (18/11 dropouts under Luna prove it fires under Codex driving too, at a low rate), and it happened to manifest at high rate during Muse's window. The user's "Codex normal, Muse flickers" observation is real, but a rate difference is not proof of a driver difference.
+1. What was on screen. Different page state, different backdrop animation behind the pill, different cursor position. This could interact with H-A/H-E, but no matching-screen comparison was made.
+2. Session overlap at the 18:32 handover. Whether Codex's session was cleanly finished before Muse started is not recorded in the files I read. This is one possible explanation under H-B, not an established cause.
+3. Client request pattern outside this repo. Different clients may poll status, re-issue observes, or hold the session differently. I cannot verify this from the repo, and no runtime command trace was collected.
+4. Coincidence. The 18/11 source report of isolated dropouts is suggestive but not a controlled comparison. The reported difference between clients does not by itself prove a driver difference.
 
 ## 5. Is the flicker a symptom of a deeper bug?
 
-Yes, plausibly, and the pattern across three incidents points the same way: 18/11 single-frame dropouts, 20/11 15:28 total disappearance (I12), 20/11 18:53-19:13 continuous 10 Hz flicker (I9-I11). Three failure modes of one presentation path. The deeper bug candidates, all in or around `native/indicator.c`:
+Possibly. The three reports are consistent with presentation-path failures but do not prove one shared cause. The code-level candidates in or around `native/indicator.c` included:
 
-- The `painted` after-paint handler unconditionally damages the full surface and commits on every paint. This defeats damage tracking and forces a full liquid-glass re-render per paint. It should only commit when a redraw is actually pending.
+- At report time, `painted` unconditionally damaged and committed on every paint. Phase 2.2.3 has since made commits conditional on a pending presentation; no live comparison verifies whether this affected flicker.
 - The presentation-feedback handshake is fail-deadly: a discarded feedback or a 2 s ack timeout quits the whole indicator process, which tears down the session. A transient compositor hiccup becomes a dead session. I12 is consistent with this having fired.
-- The indicator logs nothing about its own redraw rate. There is no counter, no timestamped log of hide/show/painted/framed/discarded. A 10 Hz repaint loop is therefore invisible to every existing log, which is why the cause stayed unverified for a day. This observability gap is itself a bug worth fixing first, because it blocks every other diagnosis.
-- The contour mask depends on the pill's own rendered pixels, a feedback loop by construction: rendered content determines the mask, the mask determines the next render. Any per-frame variation in the rendered content can oscillate the mask.
+- At report time, the indicator had no redraw-rate counters. Phase 2.2.2 has since added timestamped paint, commit, visibility, and capture counters. They have not been collected during a live flicker reproduction, so the rate and cause remain unknown.
+- The contour mask uses the pill's rendered pixels. This is a possible feedback path, but there is no evidence it oscillated during the reported incident.
 
-None of these is proven as the root cause. The flicker could still be entirely inside the closed-source hyprglass plugin (Hyprnux), which I cannot inspect. But the indicator side has three concrete fragilities that should be fixed regardless, after the cause is proven by experiment.
+None of these is proven as the root cause. The after-paint commit change is in place, but its effect is unverified. The plugin internals and the live presentation path still need measurement.
 
 ## 6. Experiments to find the true cause (ordered by value)
 
-E1. Instrument the pill, then A/B the drivers. Add timestamped logging to indicator.c (or a socket tap): every stdin command, every `redraw()`, every `framed`, every `discarded`, every `painted`, every ack timeout, with monotonic timestamps. Run a 5 minute Muse drive and a 5 minute Codex drive on the SAME Polygon page, same cursor position. Decides: H-C if hide/show arrive at 10 Hz (storm proven), H-A if `painted` fires at 10 Hz with no commands (compositor-side repaint proven), H-B if two indicator PIDs appear. This is the single highest-value experiment and should be done first.
+E1. Collect the timestamped counters added in Phase 2.2.2, together with presentation acknowledgements and visible-frame measurements. A high hide/show rate would support a command-path investigation; repeated paints without commands would narrow attention to the render path; multiple indicator PIDs would establish duplication. None alone proves the visible flicker cause. Compare clients only with the same page and conditions.
 
-E2. Idle isolation. Start a session, then send no observes and no input for 60 s. Record the screen with wf-recorder at 60 fps, or grim in a loop, and count pill-present vs pill-absent frames. Repeat with (a) a static desktop and no browser window under the pill, (b) a loading or animating page under the pill, (c) cursor parked far from the pill vs resting on the pill. If flicker continues with zero driver traffic, the driver is exonerated and H-A is proven. If it follows the animated backdrop, H-E is proven. If it follows cursor position, the cursor or software-cursor path is implicated.
+E2. During a no-input interval, measure visible pill frames without using capture activity as the assumed cause. Compare a static backdrop, an animated backdrop, and cursor positions under otherwise matched conditions. Flicker without driver traffic would make the capture path insufficient as the sole explanation, but would not prove H-A. A correlation with backdrop or cursor changes would support further tests, not establish causation.
 
-E3. Glass kill-switch. With the user's go-ahead, unload the hyprglass plugin (`hyprctl plugin unload`) or disable the layer glass while the indicator keeps running. If the flicker stops, the plugin is in the loop. If it continues with a plain (non-glass) pill, the cause is the indicator, GTK, or the compositor alone, and the plugin is exonerated.
+E3. Glass comparison. In a later authorized live test, compare the same indicator with glass enabled and disabled. A change in measured flicker would support plugin involvement, but repeated matched runs are needed to rule out timing or backdrop differences.
 
-E4. Duplicate-instance check during flicker. While it is flickering, run `pgrep -af 'native/indicator'`, `hyprctl -j layers`, and `hyprctl -j clients`. Two indicator PIDs, or two layer surfaces with namespace `computer-use-indicator`, proves H-B on the spot. Also reconstruct the 18:32 handover from the chat log: was Codex's session finished before Muse started?
+E4. During a measured flicker, inspect indicator PIDs and layer namespaces. Multiple instances would establish duplication, but a controlled stop of one instance is still needed to show whether duplication causes the visible effect.
 
-E5. Measure the rate precisely and sample CPU. Film the flicker (wf-recorder at 60 fps) and count on/off transitions per second, rather than trusting "about 10". Simultaneously sample indicator CPU and Hyprland CPU (`pidstat` or `top -p`). An exact 10.0 Hz points to a 100 ms timer somewhere (H-C or a client poll). An irregular rate points to damage-driven repaints (H-A). High Hyprland or indicator CPU points to shader cost (H-F).
+E5. Measure visible on/off transitions and sample indicator/Hyprland CPU. A stable 10 Hz rate is consistent with a periodic source but does not identify one. Irregular timing or high CPU may guide follow-up tests but does not prove repaint or shader causation.
 
-E6. Capture indicator stderr during a drive. Look for "indicator buffer was not presented" (discarded feedback) or "indicator frame acknowledgement timed out". Any occurrence proves the presentation handshake is failing under load, which supports H-A/H-D and justifies hardening the fail-deadly paths.
+E6. Capture indicator stderr during a measured flicker. A discarded-frame or acknowledgement-timeout message proves that presentation failure occurred, but does not by itself show that it caused the visible flicker.
 
-E7. A/B the driver properly. Same page, same time of day, Muse drives 5 minutes, then Codex drives 5 minutes, with E1 instrumentation and screen recording running throughout. If flicker follows the driver, it is client behavior. If it follows the page or cursor, it is H-A/H-E. This controls for the coincidence possibility in section 4 point 4.
+E7. Compare clients with matched page, cursor, and capture cadence while collecting the same counters and visible-frame measurements. A difference would motivate tracing the client path; it would not alone establish why that path differs.
 
-E8. Patch test, only after diagnosis. Remove the unconditional damage plus commit from `painted` when no redraw is pending (commit only when pending), rebuild the indicator, re-run E2. If dropouts and flicker vanish, H-A is proven and fixed at the root. Do not ship this blind: without E1/E2 it would be guessing at the fix the same way the screenshot explanation guessed at the cause.
+E8. The conditional after-paint commit change is already implemented and built. Its effect on flicker still needs a matched live before/after measurement; code change and offline build alone do not prove a fix.
 
-## 7. Verdict (ranked)
+## 7. Hypotheses (not findings)
 
-1. H-A, compositor/plugin repaint loop, with the pill's after-paint handler re-committing full-surface damage on every paint. Most likely. Explains idle flicker (I10), the 18/11 dropouts, and why no driver code runs at 10 Hz.
-2. H-E, animated backdrop behind the pill as the trigger for H-A. Most likely trigger. Explains Muse vs Codex as different page states.
-3. H-B, two pill instances from the 18:32 handover. Plausible, cheapest to check, would be decisive if true.
-4. H-C, client retry storm. Possible in principle, but no such loop exists in the repo, and a storm should have killed the indicator quickly rather than running for 20 minutes.
-5. H-D, crash/restart oscillation. Unlikely, cycle time too slow for 10 Hz.
-6. H-F, shader recompilation loop. Unlikely, wrong symptom shape.
-7. H-G, refresh-rate beat. Speculative, last resort.
+The available evidence does not justify ranking a root cause. H-A through H-G are candidates only. The static audit and source report do not distinguish among GTK/frame activity, compositor/plugin behavior, multiple instances, or external client requests.
 
-The experiment that matters most is E1 plus E2 together: instrument the pill, then watch it while doing nothing. If the pill repaints at 10 Hz with zero driver traffic, the driver is innocent and the bug lives in indicator.c, GTK, Hyprland, or hyprglass. If hide/show commands arrive at 10 Hz, the client is guilty. Either outcome is decisive, and neither requires guessing.
+The highest-value next evidence is E1 plus E2: record indicator command and frame counters while measuring the visible flicker during a no-input interval. A high hide/show rate would locate traffic at the indicator boundary and require tracing its caller. Paint activity without commands would narrow the search to the render/presentation path, but would not by itself identify whether GTK, Hyprland, or the plugin is responsible.
+
 
 ## 8. What I could not verify (limits)
 
