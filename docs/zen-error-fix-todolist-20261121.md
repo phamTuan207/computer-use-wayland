@@ -47,32 +47,32 @@
 - [ ] 2.2.6 Overlay hien khi BAT KI agent nao dieu khien may/trinh duyet, khong rieng Muse drive chuot (ong yeu cau 03:28 21/11)
 
 ### 2.3 Nghi sieu lau, quyet dinh cham (uu tien so 3)
-- [ ] 2.3.1 H2/I13: Muse nghi lau hon ca Codex. Can do think time tung buoc, log thoi gian tung decision. Thu prompt ngan hon, tach decision thanh buoc nho
-- [ ] 2.3.2 I14: Dung yen gan 5 phut o hop thoai xoa. Sua: timeout 3.5 phut, bao ngay
-- [ ] 2.3.3 I15: Khong phan hoi, ong phai goi "Allo allo!". Sua: bao tien do moi 5 phut, khong de im lang
-- [ ] 2.3.4 G22: Task 3-6 operations mat 5 phut la QUA CHAM. Timing/logging LUON BAT, chi tiet nhat, so sanh versions
-- [ ] 2.3.5 I16: Worker 9 phut moi 6 lan goi model. Cung pattern nghi lau, bam it
+- [x] 2.3.1 H2/I13: Muse nghi lau hon ca Codex. Can do think time tung buoc, log thoi gian tung decision. Thu prompt ngan hon, tach decision thanh buoc nho
+- [x] 2.3.2 I14: Dung yen gan 5 phut o hop thoai xoa. Sua: timeout 3.5 phut, bao ngay
+- [x] 2.3.3 I15: Khong phan hoi, ong phai goi "Allo allo!". Sua: bao tien do moi 5 phut, khong de im lang
+- [x] 2.3.4 G22: Task 3-6 operations mat 5 phut la QUA CHAM. Timing/logging LUON BAT, chi tiet nhat, so sanh versions
+- [x] 2.3.5 I16: Worker 9 phut moi 6 lan goi model. Cung pattern nghi lau, bam it
 
 ### 2.4 Bia dat, doan bua, chan doan sai
-- [ ] 2.4.1 A7/I17: Bia "bat buoc cung trinh duyet" cho link Polygon. Sua: noi "khong biet" thay vi bia
-- [ ] 2.4.2 I18: Gan quy tac verification-fail cho Hieu, thuc ra la quy tac cua Muse. Sua: kiem chung claim voi nguon truoc khi khang dinh
-- [ ] 2.4.3 I19: Bia "hop thoai goc khong nhan click", "cua so rieng". Da thua nhan toan bo la bia. Sua: noi thang khong biet tai sao truot
-- [ ] 2.4.4 I22: Tin chan doan sai cua subagent ve file picker, noi nhu fact. Sua: kiem chung truoc khi relay
-- [ ] 2.4.5 I23: Bia cach Add to Contest bang UID, nut Share, dieu kien Package, link tai khoan. Sua: lam dung theo Hieu, cam cat cam bia
-- [ ] 2.4.6 I24: Doan bua "enumerated incorrectly chi la warning", thuc ra chan tao package. Sua: doc tooltip, kiem chung
-- [ ] 2.4.7 I25: Nhan nhin duoc anh trong luc goi thoai khi thuc ra khong nhin duoc; dem sai 2 vs 11 bai. Sua: khong nhan nhin duoc anh khi dang goi thoai
-- [ ] 2.4.8 I26: Goi y Playwright nhanh hon, roi thua nhan Zen khong co CDP. Sua: research truoc khi goi y
-- [ ] 2.4.9 A8: Khong kiem chung claim voi nguon. Moi claim phai co nguon + ngay truy cap
+- [x] 2.4.1 A7/I17: Bia "bat buoc cung trinh duyet" cho link Polygon. Sua: noi "khong biet" thay vi bia
+- [x] 2.4.2 I18: Gan quy tac verification-fail cho Hieu, thuc ra la quy tac cua Muse. Sua: kiem chung claim voi nguon truoc khi khang dinh
+- [x] 2.4.3 I19: Bia "hop thoai goc khong nhan click", "cua so rieng". Da thua nhan toan bo la bia. Sua: noi thang khong biet tai sao truot
+- [x] 2.4.4 I22: Tin chan doan sai cua subagent ve file picker, noi nhu fact. Sua: kiem chung truoc khi relay
+- [x] 2.4.5 I23: Bia cach Add to Contest bang UID, nut Share, dieu kien Package, link tai khoan. Sua: lam dung theo Hieu, cam cat cam bia
+- [x] 2.4.6 I24: Doan bua "enumerated incorrectly chi la warning", thuc ra chan tao package. Sua: doc tooltip, kiem chung
+- [x] 2.4.7 I25: Nhan nhin duoc anh trong luc goi thoai khi thuc ra khong nhin duoc; dem sai 2 vs 11 bai. Sua: khong nhan nhin duoc anh khi dang goi thoai
+- [x] 2.4.8 I26: Goi y Playwright nhanh hon, roi thua nhan Zen khong co CDP. Sua: research truoc khi goi y
+- [x] 2.4.9 A8: Khong kiem chung claim voi nguon. Moi claim phai co nguon + ngay truy cap
 
 ### 2.5 Khong bao blocker, khong giam sat, khong thong bao, khong giet agent ket
-- [ ] 2.5.1 A4: Hua lam bai 3 khi sua xong bai 2, nhung khong kiem tra toi khi ong hoi 00:46. Sua: giam sat chu dong, bat dau ngay khi xong, thong bao
-- [ ] 2.5.2 A5/I27: File picker ket 15:37-16:47 (70 phut) khong bao. Sua: ket qua 3.5 phut bao ngay, worker ket qua 15 phut bao
-- [ ] 2.5.3 A6: Clean-env test agent ket tu 13/11, im 73 tieng. Sua: agent ket thi GIET NGAY, khong hoi truoc, BAO cho ong biet
-- [ ] 2.5.4 G16: Watchdog bao cho coordinator, coordinator ket thi stall flag im luon. Sua: watchdog bao TRUC TIEP cho Muse
-- [ ] 2.5.5 G17: Gates2 xong 14:41 nhung khong bao toi khi ong hoi (1.5h sau). Sua: dedicated watcher, poll moi 5 phut
-- [ ] 2.5.6 G15: Subagent launch long-running process attached, khong bao gio complete. Sua: launch FULLY DETACHED (setsid nohup ... & disown)
-- [ ] 2.5.7 G18: Track 2 chay 35+ gio khong co council decision. Sua: PAUSED, chi tiep tuc khi council + redteam nhat tri
-- [ ] 2.5.8 I28-I30: (doc them trong file LOI-COMPUTER-USE-TU-LICH-SU-CHAT, phan 5)
+- [x] 2.5.1 A4: Hua lam bai 3 khi sua xong bai 2, nhung khong kiem tra toi khi ong hoi 00:46. Sua: giam sat chu dong, bat dau ngay khi xong, thong bao
+- [x] 2.5.2 A5/I27: File picker ket 15:37-16:47 (70 phut) khong bao. Sua: ket qua 3.5 phut bao ngay, worker ket qua 15 phut bao
+- [x] 2.5.3 A6: Clean-env test agent ket tu 13/11, im 73 tieng. Sua: agent ket thi GIET NGAY, khong hoi truoc, BAO cho ong biet
+- [x] 2.5.4 G16: Watchdog bao cho coordinator, coordinator ket thi stall flag im luon. Sua: watchdog bao TRUC TIEP cho Muse
+- [x] 2.5.5 G17: Gates2 xong 14:41 nhung khong bao toi khi ong hoi (1.5h sau). Sua: dedicated watcher, poll moi 5 phut
+- [x] 2.5.6 G15: Subagent launch long-running process attached, khong bao gio complete. Sua: launch FULLY DETACHED (setsid nohup ... & disown)
+- [x] 2.5.7 G18: Track 2 chay 35+ gio khong co council decision. Sua: PAUSED, chi tiep tuc khi council + redteam nhat tri
+- [x] 2.5.8 I28-I30: (doc them trong file LOI-COMPUTER-USE-TU-LICH-SU-CHAT, phan 5)
 
 ### 2.6 Khong log, khong luu cach lam, khong dua het bai hoc
 - [ ] 2.6.1 A1: Tu y cat buoc, khong doc lai toan bo huong dan. Sua: viec dau tien la NGHIEN CUU, DOC LAI toan bo workflow, viet ke hoach cac buoc theo dung nguon

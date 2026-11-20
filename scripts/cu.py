@@ -6,6 +6,7 @@ import fcntl
 import hashlib
 import io
 import json
+import jsonlutil
 import math
 import os
 import pathlib
@@ -1371,6 +1372,7 @@ def _diagnostic_event(event,meta,env,*,action_index=None,action_type=None,intend
         if st.st_size+len(raw)>4*1024*1024:
             raise RuntimeError('diagnostic log reached its 4 MiB task limit')
         os.fchmod(fd,0o600)
+        jsonlutil.ensure_trailing_newline_fd(fd, STATE / name)
         if os.write(fd,raw)!=len(raw):raise RuntimeError('diagnostic log write was incomplete')
     finally:os.close(fd)
 

@@ -1,5 +1,11 @@
 # Desktop
 
+The image viewer binary is `imv-wayland`, not `imv`. After viewing any photo,
+kill it before the next step: `pkill -x imv-wayland` (or
+`python3 scripts/image_viewer.py kill`). `pkill -x imv` misses it, instances
+pile up, one hangs, and the desktop-hygiene gate fails the run while a viewer
+is still alive.
+
 Desktop `act --no-after` skips the successful final screenshot while keeping the
 fresh pre-input capture and all focus, geometry and cancellation guards. Use it
 only when an independent application result check will confirm the outcome and

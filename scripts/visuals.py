@@ -10,6 +10,7 @@ This loader never unloads or reloads plugins itself.
 import argparse
 import hashlib
 import json
+import jsonlutil
 import os
 from pathlib import Path
 import re
@@ -53,8 +54,7 @@ def _write_spawn_log():
         directory.mkdir(parents=True, exist_ok=True, mode=0o700)
         record = {'timestamp': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
                   'pid': os.getpid(), 'argv': sys.argv}
-        with (directory/'visuals-spawn.jsonl').open('a', encoding='utf-8') as stream:
-            stream.write(json.dumps(record, ensure_ascii=False, separators=(',', ':')) + '\n')
+        jsonlutil.append_jsonl(directory / 'visuals-spawn.jsonl', record)
     except Exception:
         pass
 

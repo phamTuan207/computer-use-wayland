@@ -46,7 +46,7 @@ Allowlisted API (the only names a program may call):
   IndexError. The wait polls windows() directly, costs no API-call
   budget, and fails closed if the window never appears.
 - dom_observe(target, scope=None, max_elements=80) -> compact DOM snapshot
-  dict. The snapshot id binds its target and refs for 90 seconds.
+  dict. The snapshot id binds its target and refs for 120 seconds.
 - dom_act(snapshot, actions, after_scope=None) -> CDP result dict. Refs must
   come from the supplied snapshot; successful after snapshots are bound too.
 - dom_assert(snapshot, ref=None, selector=None, text=None, value=None,
@@ -74,7 +74,7 @@ this flag and no other pick.
 State: user variables that are JSON-serializable (str, number, bool, None,
 list, dict) persist across code-exec calls in the same session, in a mode
 0600 file under STATE named code-exec-<token>.json. Desktop observation and
-DOM snapshot bindings are kept in the same file but expire after 90s.
+DOM snapshot bindings are kept in the same file but expire after 120s.
 
 Template rule: see improvements/pick1-program-template.md. Observe after
 act() and before file asserts. For shell printf text, use one single-quoted
@@ -96,7 +96,7 @@ MAX_API_CALLS = 32
 MAX_TRACE_STEPS = 20000
 PROGRAM_FILENAME = '<code-exec>'
 MAX_READ_BYTES = 65536
-OBSERVATION_MAX_AGE = 90
+OBSERVATION_MAX_AGE = 120
 DOM_WINDOW_CLASS = 'chromium'
 DOM_WINDOW_WAIT_SECONDS = 10.0
 DOM_WINDOW_POLL_INTERVAL = 0.2
@@ -535,7 +535,7 @@ class CodeExecSession:
         if meta is None:
             raise CodeExecError('observation id is not bound to this session; observe again')
         if time.time() - meta.get('created', 0) > OBSERVATION_MAX_AGE:
-            raise CodeExecError('observation is older than 90s; observe again')
+            raise CodeExecError('observation is older than 120s; observe again')
         return meta
 
     def api_act(self, actions, observation=None):
@@ -588,7 +588,7 @@ class CodeExecSession:
         if snapshot != binding.get('snapshot'):
             raise CodeExecError('snapshot is not the bound DOM snapshot; observe again')
         if time.time() - binding.get('created', 0) > OBSERVATION_MAX_AGE:
-            raise CodeExecError('DOM snapshot is older than 90s; observe again')
+            raise CodeExecError('DOM snapshot is older than 120s; observe again')
         if not isinstance(binding.get('target'), str) or not isinstance(binding.get('refs'), list):
             raise CodeExecError('DOM snapshot binding is invalid; observe again')
         return snapshot_id, binding
