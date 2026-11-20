@@ -95,6 +95,23 @@ class RequestState(unittest.TestCase):
 
 
 class NativeStartup(IsolatedNativeTree):
+    def test_status_command_returns_native_visibility(self):
+        for visibility in ('hidden', 'visible'):
+            with self.subTest(visibility=visibility):
+                read_fd, write_fd = os.pipe()
+                os.write(write_fd, (visibility + '\n').encode())
+                stdout = os.fdopen(read_fd, 'rb', 0)
+                self.addCleanup(stdout.close)
+                process = Mock(stdin=io.BytesIO(), stdout=stdout)
+                native = indicator.Native.__new__(indicator.Native)
+                native.process = process
+                native.ready_timeout = 0.1
+                with patch.object(indicator.select, 'select',
+                                  return_value=([stdout], [], [])):
+                    self.assertEqual(native.command('status'), visibility)
+                self.assertEqual(process.stdin.getvalue(), b'status\n')
+                os.close(write_fd)
+
     def test_final_profile_ignores_path_override_and_entrance(self):
         with patch.object(indicator.Path, 'exists', return_value=True), \
                 patch.object(indicator, '_status', return_value={}), \

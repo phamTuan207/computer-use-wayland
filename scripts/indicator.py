@@ -90,17 +90,25 @@ class Native:
             if not byte:
                 raise RuntimeError('indicator disconnected')
             if byte == b'\n':
-                if value.decode() != expected:
+                received = value.decode()
+                if expected is None:
+                    if received not in ('hidden', 'visible'):
+                        raise RuntimeError('unexpected indicator status')
+                    return received
+                if received != expected:
                     raise RuntimeError('unexpected indicator acknowledgement')
                 return
             value.extend(byte)
         raise RuntimeError('invalid indicator acknowledgement')
 
     def command(self, command):
-        expected = {'hide': 'hidden', 'show': 'visible'}.get(command, 'ok')
+        expected = {'hide': 'hidden', 'show': 'visible'}.get(command,
+                    None if command == 'status' else 'ok')
         self.process.stdin.write((command + '\n').encode())
         self.process.stdin.flush()
-        self.reply(expected)
+        result = self.reply(expected)
+        if command == 'status':
+            return result
         return expected
 
     def close(self):

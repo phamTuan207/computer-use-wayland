@@ -312,10 +312,15 @@ static gboolean input(GIOChannel *channel, GIOCondition condition, gpointer data
   gchar *line=NULL;gsize length=0;
   GIOStatus status=g_io_channel_read_line(channel,&line,&length,NULL,NULL);
   if (status==G_IO_STATUS_AGAIN) return G_SOURCE_CONTINUE;
-  if (status!=G_IO_STATUS_NORMAL || !line || length>256 || busy) {
+  if (status!=G_IO_STATUS_NORMAL || !line || length>256) {
     g_free(line);g_main_loop_quit(loop);return G_SOURCE_REMOVE;
   }
   g_strstrip(line);
+  if (!strcmp(line,"status")) {
+    puts(hidden?"hidden":"visible");fflush(stdout);
+    g_free(line);return G_SOURCE_CONTINUE;
+  }
+  if (busy) { g_free(line);g_main_loop_quit(loop);return G_SOURCE_REMOVE; }
   double x,y;char name[128],extra;
   if (!strcmp(line,"hide")) {
     metrics.hide_commands++;
