@@ -5,6 +5,7 @@ from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 import hashlib
 import json
+import jsonlutil
 import os
 from pathlib import Path
 import re
@@ -382,6 +383,7 @@ class Tc02Controller:
         self.run_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
         fd = os.open(self.log_path, os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o600)
         try:
+            jsonlutil.ensure_trailing_newline_fd(fd, self.log_path)
             os.write(fd, (json.dumps(row, ensure_ascii=False, separators=(',', ':')) + '\n').encode())
         finally:
             os.close(fd)
