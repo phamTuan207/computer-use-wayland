@@ -1735,6 +1735,62 @@ def browser_start(env,endpoint):
     except ValueError:raise ValueError('endpoint port is not a number') from None
     if not 1<=port<=65535:raise ValueError('endpoint port must be 1..65535')
     try:
+        import warm_browser
+    except ImportError:
+        return _browser_start_cold(env,endpoint,url,port)
+    # The warm browser owns the process now: ensure_warm() reuses a healthy
+    # warm browser or cold-launches one (health check + launch, never
+    # killing a foreign endpoint). A fresh browser context per start keeps
+    # this task's cookies/localStorage isolated from the previous task.
+    # new_task_context() retries once after a forced relaunch when the
+    # warm browser is stale, and stop() only ever kills our recorded pid.
+    warm=warm_browser.ensure_warm(endpoint=endpoint,state_dir=STATE,env=env)
+    if warm.get('pid') is None:
+        # A foreign endpoint answers here (someone else's browser, or a
+        # test stub): reuse it exactly as before, with no fresh context
+        # and no claim on its process.
+        return {'ok':True,'endpoint':endpoint,'reused':True}
+    _close_prior_browser_start_contexts(warm_browser,endpoint)
+    task_id='browser-start-'+uuid.uuid4().hex[:12]
+    ctx=warm_browser.new_task_context(task_id,endpoint=endpoint,state_dir=STATE,env=env)
+    return {'ok':True,'endpoint':endpoint,'reused':bool(warm.get('reused')),
+            'warm':True,'pid':warm.get('pid'),
+            'profile':str(STATE/warm_browser.PROFILE_DIRNAME),
+            'task_id':task_id,'target_id':ctx.get('target_id'),
+            'browser_context_id':ctx.get('browser_context_id'),
+            'context_ms':ctx.get('context_ms'),'ensure_ms':ctx.get('ensure_ms'),
+            'total_ms':ctx.get('total_ms')}
+
+def _close_prior_browser_start_contexts(warm_browser,endpoint):
+    """Best-effort close of task contexts from earlier browser_start calls.
+
+    Each start creates a fresh context; the previous start's context is
+    dead to the caller, so close it instead of leaking a tab per start.
+    Only contexts this function created (task ids starting with
+    'browser-start-') are touched. Failures are ignored: a stale record
+    must never fail a start.
+    """
+    try:
+        current=warm_browser.status(endpoint=endpoint,state_dir=STATE)
+    except Exception:
+        return
+    for record in current.get('contexts',[]) or []:
+        task_id=record.get('task_id') if isinstance(record,dict) else None
+        if isinstance(task_id,str) and task_id.startswith('browser-start-'):
+            try:
+                warm_browser.close_task_context(task_id=task_id,endpoint=endpoint,state_dir=STATE)
+            except Exception:
+                pass
+
+def _browser_start_cold(env,endpoint,url,port):
+    """Legacy cold launch, used only when scripts/warm_browser.py is missing.
+
+    Kept verbatim so a checkout without the warm module still starts a
+    browser exactly as before.
+    """
+    import urllib.request
+    import urllib.parse
+    try:
         json.load(urllib.request.urlopen(urllib.parse.urljoin(endpoint,'/json/version'),timeout=1))
         return {'ok':True,'endpoint':endpoint,'reused':True}
     except Exception:pass
