@@ -629,3 +629,16 @@ assert.equal(generalInfoFlow.outputs[1].ok,true,generalInfoFlow.outputs[1].error
 assert.equal(generalInfoFlow.outputs[1].completed,1);
 assert.deepEqual(generalInfoFlow.calls.find(c=>c.method==='Input.dispatchMouseEvent'&&
   c.params.type==='mousePressed')?.params,{type:'mousePressed',x:58,y:33,button:'left',clickCount:1});
+
+// I5: locate Commit Changes semantically, then use only its observed ref.
+const commitChanges=element('Commit Changes',{left:27,top:31,width:92,height:24});
+const commitFlow=await run([commitChanges],undefined,{operation:'observe',followup:observed=>{
+  const matches=observed.elements.filter(e=>e.role==='button'&&e.name==='Commit Changes');
+  assert.equal(matches.length,1,'the exact role/name must identify the commit control');
+  return {operation:'act',snapshot:observed.snapshot,
+    actions:[{type:'click',ref:matches[0].ref}]};
+}});
+assert.equal(commitFlow.outputs[1].ok,true,commitFlow.outputs[1].error);
+assert.deepEqual(commitFlow.calls.find(c=>c.method==='Input.dispatchMouseEvent'&&
+  c.params.type==='mousePressed')?.params,{type:'mousePressed',x:73,y:43,button:'left',clickCount:1});
+assert.equal(commitFlow.calls.some(c=>c.method==='Page.captureScreenshot'),false);
