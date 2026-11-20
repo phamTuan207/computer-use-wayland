@@ -55,6 +55,36 @@ and whether anything needs to be built ourselves.
 
 (pending - filled in as workers report back)
 
+## Worker C - Playwright moz-firefox (fcc)
+
+Tested 03:19-03:25 +07, 21/11/2026. Method note: ran directly via SSH exec as james on the laptop (not via fcc), same commands, same account. Playwright 1.65.1, Node v26.13.1, npm 11.20.0. Test dir on laptop: /tmp/pw-moz-c (scripts test-attach.js, test-launch.js, test-launch2.js, test-juggler.js, test-final.js plus logs). Zen binary /opt/zen-browser-bin/zen-bin, running Zen main PID 28990 with --remote-debugging-port=9222 --marionette, BiDi endpoint ws://127.0.0.1:9222/session. No existing Zen tab was ever touched: every test instance used a fresh temp profile, and main Zen PID 28990 was alive with BiDi still up (HTTP 404 on /json/version, expected) before and after every test.
+
+### 1. Attach to the RUNNING Zen: FAILED on all three Playwright paths
+
+- 1a, 03:21:29 +07, chromium.connectOverCDP("http://127.0.0.1:9222"): FAILED in 13 ms. Exact error: "browserType.connectOverCDP: Unexpected status 404 when connecting to http://127.0.0.1:9222/json/version/. This does not look like a DevTools server, try connecting via ws://."
+- 1b, 03:21:29 +07, firefox.connect({ wsEndpoint: "ws://127.0.0.1:9222/session", timeout: 15000 }): FAILED, timeout after 15,022 ms. Exact error: "browserType.connect: Timeout 15000ms exceeded". Playwright speaks its own server protocol, not BiDi, so the websocket never completes a handshake.
+- 1c, 03:24:25 +07, firefox.connectOverCDP("http://127.0.0.1:9222"): FAILED in 0 ms. Exact error: "Connecting over CDP is only supported in Chromium and WebKit." (Note: the method exists on the firefox type in 1.65.1, it just refuses immediately.)
+
+### 2. Launch a NEW instance via moz-firefox channel: launches, but CANNOT drive Zen
+
+- 2a, 03:21:57 +07, firefox.launch({ channel: "moz-firefox" }) with no executablePath: FAILED in 7 ms. Exact error: "browserType.launch: Cannot find Firefox installation for channel 'moz-firefox' at the standard system paths. Tried paths: /snap/bin/firefox ..." (no system Firefox installed; /usr/lib/firefox holds only a distribution dir).
+- 2b, 03:21:57 +07, firefox.launch({ channel: "moz-firefox", executablePath: "/opt/zen-browser-bin/zen-bin" }): LAUNCHED in 1,086 ms, browser.version() reports 1.24.2b. BiDi handshake works. But browser.newContext().newPage() FAILED at 1,112 ms. Exact error: "browserContext.newPage: Protocol error (browsingContext.create): unsupported operation | Message: openWindow() not supported in Zen". Side effect: the launched headless Zen (PID 52469, temp profile /tmp/playwright_firefoxdev_profile-ND9YjS) stayed alive because newPage threw before browser.close(). Killed it afterwards; main Zen untouched.
+- 2b2, 03:23:29 +07, same launch, probed for a default page first: contexts: 0, no default page. browser.newPage() FAILED with the same "openWindow() not supported in Zen" error; newContext().newPage() FAILED identically. Browser closed cleanly this time.
+- 2d, 03:24:25 +07, firefox.launchPersistentContext("/tmp/pw-moz-c/persist-profile", { channel: "moz-firefox", executablePath: "/opt/zen-browser-bin/zen-bin" }): FAILED after 31,105 ms. Exact error: "browserType.launchPersistentContext: Protocol error (browsingContext.create): unsupported operation | Message: openWindow() not supported in Zen". The launched Zen did start its own BiDi server ("WebDriver BiDi listening on ws://127.0.0.1:39795" in its log), so the BiDi connection itself works; Zen refuses the window/tab creation Playwright needs for its very first page.
+- 2c, 03:24:01 +07, firefox.launch({ executablePath: "/opt/zen-browser-bin/zen-bin" }) (default Juggler, no channel): FAILED in 310 ms. Exact error: "browserType.launch: Failed to launch the browser process." Zen was launched with "-juggler-pipe" and exited with exitCode=0 almost immediately (only headless-mode notice and glib dbus warnings in its log), never speaking Juggler. Stock Zen cannot be driven by Playwright's patched-Firefox protocol.
+
+### Verdict: CONFIRMED CANNOT ATTACH, and launch-only ALSO CANNOT DRIVE Zen
+
+- Attach to the running Zen via Playwright: impossible, confirmed with three distinct exact errors (CDP 404, connect timeout, CDP Chromium/WebKit-only). Matches the research.
+- Launch-only via moz-firefox: STRONGER negative than the research predicted. Research said launch works; the launch handshake does work (Zen 1.24.2b starts, BiDi listens), but Playwright can never open a page in it because Zen's BiDi rejects browsingContext.create with "openWindow() not supported in Zen". Every page-creation path (browser.newPage, newContext + newPage, launchPersistentContext) fails the same way. So Playwright moz-firefox is unusable for Zen, not just unusable for attach.
+- Juggler: unusable for stock Zen (process exits immediately).
+- No page was ever opened, no navigation, no evaluate, no click was ever executed through Playwright against any Zen instance. All drive attempts died at page creation.
+- Cleanup verified 03:25:23 +07: no stray --remote-debugging-port=0 or playwright-profile Zen processes remain; main Zen PID 28990 alive; BiDi still up.
+
+### Implication
+
+Playwright is out for Zen entirely. The BiDi endpoint itself is healthy (Zen's own BiDi server starts and listens, and the running Zen answers on 9222), so clients that speak raw BiDi (Puppeteer connect, zenpilot, firefox-mcp) are unaffected by this result. The blocker is specific to how Playwright creates pages (openWindow via browsingContext.create), which Zen rejects.
+
 ## Worker B - zenpilot/zen-mcp (opencode)
 
 Worker: B (zenpilot / zen-mcp). Ran 03:19-03:25 +07, 21/11/2026.
