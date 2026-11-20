@@ -147,6 +147,13 @@ def session_live():
     """True when a computer-use session indicator answers. Probing with a
     duplicate show is idempotent: no redraw, no visual change."""
     try:
+        saved = json.loads(SESSION_FILE.read_text())
+        token = saved.get('token')
+    except (OSError, ValueError, AttributeError):
+        return False
+    if saved.get('version') not in (3, 4) or not isinstance(token, str):
+        return False
+    try:
         import indicator
         return bool(indicator.request(BASE, 'show'))
     except (RuntimeError, OSError, ValueError):
