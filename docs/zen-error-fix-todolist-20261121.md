@@ -44,7 +44,7 @@
 - [ ] 2.2.3 I11: Ong bat tat computer-use vi nhay ngua mat (19:13). Sua xong moi bat lai
 - [ ] 2.2.4 I12: Overlay mat han (15:28). Phien computer-use rot hoac pill tat ma worker khong hay. Sua: watchdog phat hien overlay mat, khoi dong lai
 - [ ] 2.2.5 I20: Da bia "chup man hinh qua nhieu gay nhay overlay", da thua nhan sai. Khong bia nua, dieu tra that
-- [ ] 2.2.6 Overlay hien khi BAT KI agent nao dieu khien may/trinh duyet, khong rieng Muse drive chuot (ong yeu cau 03:28 21/11)
+- [x] 2.2.6 Overlay hien khi BAT KI agent nao dieu khien may/trinh duyet, khong rieng Muse drive chuot (ong yeu cau 03:28 21/11). DONE 05:00 21/11: scripts/overlay.py (daemon + CLI, refcount, session-aware) + label command in native/indicator.c + docs/overlay.md. Live tested on laptop: pill shows "Muse via BiDi", refcount 2->1->0, idle surface_commits=0. PENDING: sync-installed (relay down, broker_unavailable) so installed copy lacks overlay.py + new binary.
 
 ### 2.3 Nghi sieu lau, quyet dinh cham (uu tien so 3)
 - [x] 2.3.1 H2/I13: Muse nghi lau hon ca Codex. Can do think time tung buoc, log thoi gian tung decision. Thu prompt ngan hon, tach decision thanh buoc nho
