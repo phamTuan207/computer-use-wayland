@@ -97,7 +97,8 @@ class Native:
         raise RuntimeError('invalid indicator acknowledgement')
 
     def command(self, command):
-        expected = {'hide': 'hidden', 'show': 'visible'}.get(command, 'ok')        self.process.stdin.write((command + '\n').encode())
+        expected = {'hide': 'hidden', 'show': 'visible'}.get(command, 'ok')
+        self.process.stdin.write((command + '\n').encode())
         self.process.stdin.flush()
         self.reply(expected)
         return expected
