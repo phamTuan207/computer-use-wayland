@@ -1,0 +1,7 @@
+
+## 2026-11-20 12:13 +07 H2 JPEG-Q90 LIVE A/B START
+- H3 DONE (WIN, 3/3, committed 81a88a8). H2 baseline executor launching now. Run dirs /tmp/speed-jpegq90-20261120/h2-baseline and h2-method.
+- Design: P1 C-03 (df), P2 E-04 (96%), P3 B-01 (mkdir), P4 A-01 (y-tuong.txt) + T1-T3 small-target grounding (Zen new-tab plus, back arrow, baseline-picked third target, read-only, one session). Baseline: main checkout to 8727135 (JPEG build true baseline) + relay restart; method: 8de3601 + relay restart. Each arm restores 56f5af4 + relay restart + pops its own log stash at teardown (stash names h2base-log / h2method-log; pre-existing stashes a4-live-measure, rust-rewrite-eval, Phase-B untouched).
+- Why not baseline at 56f5af4: 56f5af4 carries H6 prefetch + precapture code (cu.py +268/-33 vs 8727135), which would confound the JPEG comparison. Dirt check clean (/tmp/hoc-ky-2, /tmp/y-tuong.txt absent).
+- Metrics: wall, think, image bytes, encode_ms, grounding hit rate (T1-T3), terminal OCR accuracy (tesseract reads vs executor reads vs ground truth per P1-P4). Honest build caveat: 2x bytes bar NOT met on flat/UI frames (1.15-1.2x); realistic expected saving ~0.1-0.3s/task.
+- Briefs: improvements/live-h3-20261120/brief-h2-baseline.md + brief-h2-method.md (md5-verified on laptop).
