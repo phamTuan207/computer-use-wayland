@@ -209,11 +209,46 @@ class Daemon:
             self.native = None
         self.owner = 'none'
 
+    def _ensure_native(self):
+        """Respawn the native indicator when it died while holders remain.
+        This is the recovery for I12 (overlay vanished while the worker
+        lived): a discarded buffer or an ack timeout quits the native
+        process, and the daemon must bring the pill back instead of
+        leaving holders with no visible indicator. Returns True when a
+        live native process is available afterwards."""
+        if self.owner != 'daemon':
+            return self.native is not None
+        if self.native is not None:
+            try:
+                if self.native.process.poll() is None:
+                    return True
+            except (OSError, AttributeError):
+                pass
+            _log('native_dead')
+            self._close_native()
+        try:
+            self._spawn_native(wayland_env())
+            _log('native_respawned')
+            return True
+        except (OSError, RuntimeError) as error:
+            _log('native_spawn_failed', error=str(error))
+            return False
+
     def _show_label(self, label):
         """Show the pill with the given label, via whoever owns it."""
         if self.owner == 'daemon' and self.native is not None:
-            self.native.command('label ' + label)
-            self.native.command('show')
+            if not self._ensure_native():
+                return
+            try:
+                self.native.command('label ' + label)
+                self.native.command('show')
+            except (OSError, RuntimeError):
+                if self._ensure_native():
+                    try:
+                        self.native.command('label ' + label)
+                        self.native.command('show')
+                    except (OSError, RuntimeError):
+                        _log('native_command_failed')
         elif self.owner == 'session':
             session_label(label)
             session_live()

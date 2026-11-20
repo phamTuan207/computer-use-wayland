@@ -14,5 +14,9 @@ int main(void) {
   assert(indicator_needs_present(0,0)==0);
   assert(indicator_needs_present(1,0)==1);
   assert(indicator_needs_present(1,1)==0);
+
+  assert(indicator_should_retry_present(0)==1);
+  assert(indicator_should_retry_present(1)==0);
+  assert(indicator_should_retry_present(2)==0);
   return 0;
 }
