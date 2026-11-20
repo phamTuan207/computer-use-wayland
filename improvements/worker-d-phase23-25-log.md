@@ -6,3 +6,4 @@
 - 04:05 +07 (T+34m): all 4 modules + 4 unittest files written. First run: 27 tests, 4 failures, all real bugs (STUCK measured from step start not last progress; chain test needed set_status; zombie children answer kill(pid,0) so dead-check must reap via waitpid). Fixed all three in code, added TaskChainMonitor.set_status.
 - 04:10 +07 (T+39m): 27/27 tests pass in 0.6s. Live smoke outside unittest: timing summary, watchdog fresh check, claim refusal, Track2 gate PAUSED, detached sleep alive, JSONL parses (3 rows). All OK.
 - 04:15 +07 (T+44m): docs/phase23-24-25-fixes.md + docs/track2-gate.json (PAUSED) + SKILL.md section written. Committing in small pieces, pushing as I go.
+- 04:25 +07 (T+54m): DONE. 6 commits on origin/todolist-push (dc5d0a7, 033e88d, d4a132e, d310a9d, 537a81a, 7f70771). 22 todo items marked done in both todo copies. Final test run after pulls: 27/27 OK in 0.6s. No stuck time, no blocker.
