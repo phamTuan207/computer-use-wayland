@@ -26,6 +26,8 @@ class ScopeCli(unittest.TestCase):
         self.locked = mock.patch.object(cu, 'locked', new=self.locked_cm).start()
         self.addCleanup(mock.patch.stopall)
         self.environment = mock.patch.object(cu, 'environment', new=mock.Mock()).start()
+        mock.patch.object(cu, 'browser_automation_call',
+                          side_effect=lambda env, operation, method='DOM/BiDi': operation()).start()
 
     def browser(self, request):
         self.dispatched.append(request)

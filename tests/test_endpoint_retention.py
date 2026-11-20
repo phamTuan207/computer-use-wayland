@@ -128,6 +128,8 @@ class EndpointRetention(unittest.TestCase):
             patch.object(cu, 'STATE', self.tmp),
             patch.object(cu, 'ROOT', self.tmp),
             patch.object(cu, 'environment', return_value={}),
+            patch.object(cu, 'browser_automation_call',
+                         side_effect=lambda env, operation, method='DOM/BiDi': operation()),
             patch.object(cu, 'check_cancel'),
         ]
         if browser is not None:
@@ -218,12 +220,14 @@ class EndpointRetention(unittest.TestCase):
             child = f'''
 import importlib.util, io, json, pathlib, sys
 from unittest.mock import patch
+sys.path.insert(0, {str(CU_PATH.parent)!r})
 spec = importlib.util.spec_from_file_location("cu", {str(CU_PATH)!r})
 cu = importlib.util.module_from_spec(spec); spec.loader.exec_module(cu)
 captured = []
 def browser(request):
     captured.append(request); return {{"ok": True}}
 with patch.object(cu, "browser", browser), \\
+     patch.object(cu, "browser_automation_call", lambda env, operation, method="DOM/BiDi": operation()), \\
      patch.object(cu, "check_cancel"), \\
      patch.object(cu, "STATE", pathlib.Path({str(folder)!r})):
     with patch.object(cu.sys, "argv", ["cu", "browser", "tabs"]), \\

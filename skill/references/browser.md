@@ -179,3 +179,25 @@ Rules that matter:
   an empty list with a note.
 - For DOM work on a tab, take its id from `tabs` and use
   `browser observe/act` as above. The wrapper does not do DOM.
+
+### Overlay ownership during browser automation
+
+`computer-use browser` commands, browser/DOM requests made through a broker,
+and active Chromium control commands through `computer-use cli run chromium`
+acquire an overlay lease while they run. A broker-owned indicator is reused
+and labeled for the browser operation. Read-only profile commands such as
+`history`, `bookmarks`, and `downloads` do not acquire a lease.
+
+An external DOM driver should make the repository's `scripts/` directory
+importable, then keep the shared helper open for the full automation session:
+
+```python
+import overlay
+
+with overlay.hold("Agent", "DOM/BiDi"):
+    drive_browser()
+```
+
+Each helper call has its own lease, so overlapping browser and broker sessions
+keep the indicator visible until all active owners finish. The daemon removes a
+lease if its recorded process exits unexpectedly.

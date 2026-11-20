@@ -1733,6 +1733,11 @@ def browser(request):
     if out.strip(): return json.loads(out)
     raise RuntimeError('CDP adapter failed')
 
+def browser_automation_call(env, operation, method='DOM/BiDi'):
+    import overlay
+    with overlay.hold('Browser automation', method, env=env):
+        return operation()
+
 def browser_start(env,endpoint):
     import urllib.request
     import urllib.parse
@@ -1973,8 +1978,14 @@ def cli_run_chromium(command_args):
               'stdout_truncated':'','stderr_truncated':''}
     script=ROOT/'scripts'/'chromium_cli.py'
     try:
-        result=subprocess.run([sys.executable,str(script),*command_args],
-                              capture_output=True,text=True,timeout=75)
+        def run():
+            return subprocess.run([sys.executable,str(script),*command_args],
+                                  capture_output=True,text=True,timeout=75)
+        if command_args and command_args[0] in {
+                'tabs', 'open', 'activate', 'close', 'current', 'status'}:
+            result=browser_automation_call(None, run, 'CDP CLI')
+        else:
+            result=run()
     except subprocess.TimeoutExpired:
         envelope.update(timeout=True,error='chromium wrapper timed out')
         return {'ok':False,**envelope}
@@ -2105,14 +2116,17 @@ class CodeExecBackend:
     def dom_start(self):
         global BROWSER_ENDPOINT
         endpoint = BROWSER_ENDPOINT
-        result = browser_start(self.env, endpoint)
+        result = browser_automation_call(
+            self.env, lambda: browser_start(self.env, endpoint))
         if isinstance(result, dict) and result.get('ok') is True:
             BROWSER_ENDPOINT = endpoint
             self.browser_endpoint = endpoint
         return result
 
     def dom_tabs(self):
-        return browser({'operation': 'tabs', 'endpoint': self.browser_endpoint})
+        return browser_automation_call(
+            self.env, lambda: browser({'operation': 'tabs',
+                                       'endpoint': self.browser_endpoint}))
 
     def dom_observe(self, target, scope, max_elements):
         request = {
@@ -2121,7 +2135,7 @@ class CodeExecBackend:
         }
         if scope is not None:
             request['scope'] = scope
-        return browser(request)
+        return browser_automation_call(self.env, lambda: browser(request))
 
     def dom_act(self, target, snapshot, actions, after_scope=None, no_after=False):
         import session_policy
@@ -2135,7 +2149,7 @@ class CodeExecBackend:
             request['after_scope'] = after_scope
         if no_after:
             request['no_after'] = True
-        result = browser(request)
+        result = browser_automation_call(self.env, lambda: browser(request))
         if isinstance(result, dict) and result.get('ok') is True:
             session_policy.complete_requirement(
                 STATE, os.environ.get('CU_SESSION_TOKEN'))
@@ -2456,7 +2470,7 @@ def main():
             # Only a successful start moves the process default; a failed start
             # leaves the previous endpoint untouched for the next command.
             endpoint=args.endpoint or BROWSER_ENDPOINT
-            started=browser_start(env,endpoint)
+            started=browser_automation_call(env,lambda:browser_start(env,endpoint))
             if started.get('ok'):BROWSER_ENDPOINT=endpoint
             print(json.dumps(started));return 0
         # Endpoint selection stays inside the browser branch: non-browser
@@ -2477,7 +2491,7 @@ def main():
             if args.operation=='act':
                 import session_policy
                 session_policy.require_observation(STATE,os.environ.get('CU_SESSION_TOKEN'))
-            result=browser(request)
+            result=browser_automation_call(env,lambda:browser(request))
             if args.operation=='act' and isinstance(result,dict) and result.get('ok') is True:
                 session_policy.complete_requirement(STATE,os.environ.get('CU_SESSION_TOKEN'))
         raw=result.pop('image_base64',None) if isinstance(result,dict) else None

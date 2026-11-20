@@ -169,6 +169,8 @@ class BrowserImage(unittest.TestCase):
         with patch.object(cu.sys, 'argv', ['cu', 'browser', 'observe', '--target', 'fixture', '--image']), \
              patch.object(cu.sys, 'stdout', stdout), patch.object(cu, 'check_cancel'), \
              patch.object(cu, 'locked'), patch.object(cu, 'environment') as environment, \
+             patch.object(cu, 'browser_automation_call',
+                          side_effect=lambda env, operation, method='DOM/BiDi': operation()), \
              patch.object(cu, 'browser', return_value={'snapshot': 'test',
                  'image_base64': base64.b64encode(raw).decode()}) as browser:
             self.assertEqual(cu.main(), 0)
