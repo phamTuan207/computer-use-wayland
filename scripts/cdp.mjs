@@ -201,7 +201,7 @@ async function snapshot(explicitScope) {
       const ref='e'+(++index);s.refs.set(ref,e);
       const field=/^(INPUT|TEXTAREA|SELECT)$/.test(e.tagName)||e.isContentEditable;
       const label=e.getAttribute('aria-label')||e.labels?.[0]?.innerText||(!field&&e.innerText)||e.getAttribute('placeholder')||e.getAttribute('title')||e.name||'';
-      const item={ref,role:e.getAttribute('role')||e.tagName.toLowerCase(),name:label.trim().slice(0,120)};
+      const item={ref,role:e.getAttribute('role')||(e.tagName==='A'?'link':e.tagName.toLowerCase()),name:label.trim().slice(0,120)};
       ${pick4Rects?`const __r=e.getBoundingClientRect();
       item.rect={x:Math.round(__r.left),y:Math.round(__r.top),width:Math.round(__r.width),height:Math.round(__r.height)};
       item.center={x:Math.round(__r.left+__r.width/2),y:Math.round(__r.top+__r.height/2)};`:''}
@@ -223,7 +223,7 @@ async function click(a) {
     ${a.type==='confirm_click'?`
     if(e.getAttribute('aria-disabled')==='true'||e.closest('[inert]'))
       throw new Error('element disabled');
-    const role=(e.getAttribute('role')||e.tagName.toLowerCase()).toLowerCase();
+    const role=(e.getAttribute('role')||(e.tagName==='A'?'link':e.tagName.toLowerCase())).toLowerCase();
     const field=/^(INPUT|TEXTAREA|SELECT)$/.test(e.tagName)||e.isContentEditable;
     const name=(e.getAttribute('aria-label')||e.labels?.[0]?.innerText||(!field&&e.innerText)||
       e.getAttribute('placeholder')||e.getAttribute('title')||e.name||'').trim().slice(0,120);

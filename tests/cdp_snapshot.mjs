@@ -616,3 +616,16 @@ assert.deepEqual(contestFlow.calls.find(c=>c.method==='Input.dispatchMouseEvent'
   c.params.type==='mousePressed')?.params,{type:'mousePressed',x:63,y:28,button:'left',clickCount:1});
 assert.equal(contestFlow.calls.some(c=>c.method==='Page.captureScreenshot'),false,
   'DOM target selection does not need an image capture');
+
+// I4: anchors are exposed with their semantic link role, then clicked by ref.
+const generalInfo=element('General info',{tagName:'A',href:'#general-info',left:21,top:25,width:74,height:16});
+const generalInfoFlow=await run([generalInfo],undefined,{operation:'observe',followup:observed=>{
+  const matches=observed.elements.filter(e=>e.role==='link'&&e.name==='General info');
+  assert.equal(matches.length,1,'the exact link role/name must identify one control');
+  return {operation:'act',snapshot:observed.snapshot,
+    actions:[{type:'click',ref:matches[0].ref}]};
+}});
+assert.equal(generalInfoFlow.outputs[1].ok,true,generalInfoFlow.outputs[1].error);
+assert.equal(generalInfoFlow.outputs[1].completed,1);
+assert.deepEqual(generalInfoFlow.calls.find(c=>c.method==='Input.dispatchMouseEvent'&&
+  c.params.type==='mousePressed')?.params,{type:'mousePressed',x:58,y:33,button:'left',clickCount:1});

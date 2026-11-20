@@ -12,6 +12,8 @@ CU=computer-use
 
 `observe` returns up to 80 interactive elements with short names and refs, visible controls first. All form values and editable contents are redacted; checked state remains available. Screenshots and page labels may still contain private data. Use `--max-elements 16` on observe/act when a smaller output is sufficient (range 1..80, default 80); increase it if the target is absent, never guess a ref. Long page contents and base64 screenshots are not printed. Add `--image` when needed; an image file path is returned. DOM operation is top-document only, excludes canvas internals and does not enumerate shadow roots.
 
+Native anchors with `href` are reported with the `link` role; buttons use the `button` role unless the page supplies an explicit role.
+
 Browser actions:
 
 ```json
