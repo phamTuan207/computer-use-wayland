@@ -1,0 +1,7 @@
+## 2026-11-20 14:24 +07 EVENT-WAIT-SEQ METHOD ARM DONE
+
+Status: BLOCKED at setup step 3. Broker was initially busy (`running`, owner `h3land2-d1`), then free on recheck (`finished`, driver stopped, guardian clean, `explicit_finish`, relay HEAD `56f5af4e521e1c20b26b56dc31d662e34f1c2668`). The recorded `git status --short` matched the expected dirty list. Backup MD5 for `improvements/live-test-log.md`: `0fee1435cfb43d554404caf487ed80f2`.
+
+Checkout to `3113fb1` was refused because it would overwrite the modified log. A `skip-worktree` preservation attempt also did not allow checkout; the flag was cleared. The log MD5 and expected dirty list remained unchanged, HEAD remained `56f5af4`. Relay was not restarted. No suite gate, grep proof, sessions, leases, requests, observations, tasks, or live probe ran.
+
+P1-P4 and probe: wall/think/service N/A; calls 0; observes 0; re-observes 0; wait_for steps 0; timeouts 0; missed events 0; waits absorbed 0; OCR unavailable. Verdict against speed success bar: not measurable. Retry after resolving safe checkout with the synced log preserved.
