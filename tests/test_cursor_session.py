@@ -107,7 +107,7 @@ FAKE_INDICATOR = '''#!/usr/bin/env python3
 import sys
 print('ready',flush=True)
 for line in sys.stdin:
-    print({'hide':'hidden','show':'visible'}.get(line.strip(),'ok'),flush=True)
+    print({'hide':'hidden','show':'visible','status':'visible'}.get(line.strip(),'ok'),flush=True)
 '''
 
 FAKE_GRIM = '''#!/usr/bin/env python3
@@ -139,7 +139,7 @@ try:
         if sys.stdin in ready:
             line=sys.stdin.readline()
             if not line:break
-            print({'hide':'hidden','show':'visible'}.get(line.strip(),'ok'),flush=True)
+            print({'hide':'hidden','show':'visible','status':'visible'}.get(line.strip(),'ok'),flush=True)
 finally:
     if active:
         try:os.unlink(active)
@@ -565,8 +565,10 @@ class Lifecycle(unittest.TestCase):
             with self.subTest(failing=failing),patch.object(session.signal,'signal'),patch.object(session,'STATE',self.folder),patch.object(session,'SNAPSHOT',self.folder/'snapshot'),patch.object(session,'CANCEL',self.folder/'cancel'),patch.object(session,'owner_lock'),patch.object(cancel_hotkey,'hotkey_on'),patch.object(cancel_hotkey,'hotkey_off'),patch.object(session,'request_stop'),patch.object(session,'stop_group'),patch.object(session,'drain_input'),patch.object(session,'restore',return_value=True) as restore,patch.object(session.select,'select',return_value=([1],[],[])),patch.object(session.os,'read',side_effect=[b'123',b'']),patch.object(session,failing,side_effect=RuntimeError('cleanup injected')),patch.object(cursor_theme,'snapshot',return_value={'agent_theme':'cu-agent-test','agent_size':32}),patch.object(cursor_theme,'check_guard'),patch.object(cursor_theme,'apply'):
                 with patch.object(indicator,'Native') as native,patch.object(indicator,'listen'):
                     native.return_value.process.poll.return_value=None
-                    self.assertEqual(session.guardian(self.env,1,'a'*32),1)
-                    restore.assert_called_once_with(self.env)
+                    native.return_value.command.return_value='visible'
+                    no_hyprctl={**self.env,'PATH':''}
+                    self.assertEqual(session.guardian(no_hyprctl,1,'a'*32),1)
+                    restore.assert_called_once_with(no_hyprctl)
                     (self.folder/'snapshot').unlink(missing_ok=True)
                 (self.folder/'snapshot').unlink(missing_ok=True)
 

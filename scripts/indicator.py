@@ -17,6 +17,124 @@ _METRICS_STARTED = time.monotonic()
 _CAPTURE_LOCK = threading.RLock()
 _CAPTURE_DEPTHS = {}
 _CAPTURE_ACTIVE = {}
+_INDICATOR_NAMESPACE = 'computer-use-indicator'
+
+
+def layer_surface_present(env):
+    """Return True/False only when hyprctl exposes a recognizable layer list."""
+    binary = shutil.which('hyprctl', path=env.get('PATH'))
+    if binary is None:
+        return None
+    try:
+        result = subprocess.run([binary, '-j', 'layers'], env=dict(env), check=True,
+                                capture_output=True, text=True, timeout=1)
+        payload = json.loads(result.stdout)
+    except (OSError, subprocess.SubprocessError, ValueError, TypeError):
+        return None
+
+    namespaces = []
+    recognized = False
+    def collect(value):
+        nonlocal recognized
+        if isinstance(value, dict):
+            if isinstance(value.get('layers'), list) or 'levels' in value:
+                recognized = True
+            namespace = value.get('namespace')
+            if isinstance(namespace, str):
+                namespaces.append(namespace)
+            for child in value.values():
+                collect(child)
+        elif isinstance(value, list):
+            for child in value:
+                collect(child)
+
+    collect(payload)
+    if _INDICATOR_NAMESPACE in namespaces:
+        return True
+    return False if recognized or namespaces else None
+
+
+class IndicatorWatchdog:
+    """Restart a lost layer and repair an unrequested hidden state."""
+    POLL_INTERVAL = 1.0
+    LAYER_INTERVAL = 2.0
+    MISSING_LAYER_LIMIT = 2
+    RESTART_LIMIT = 3
+    RESTART_WINDOW = 60.0
+
+    def __init__(self, env, visuals, *, escape_available=False, layer_probe=None,
+                 native_factory=None, monotonic=None, metric=None):
+        from collections import deque
+        self.env = dict(env)
+        self.visuals = visuals
+        self.escape_available = escape_available
+        self.layer_probe = layer_probe or layer_surface_present
+        self.native_factory = native_factory or Native
+        self.monotonic = monotonic or time.monotonic
+        self.metric = metric or _metric
+        self.next_poll = 0.0
+        self.next_layer_probe = 0.0
+        self.missing_layer_count = 0
+        self.restarts = deque()
+
+    def check(self):
+        now = self.monotonic()
+        if now < self.next_poll:
+            return
+        self.next_poll = now + self.POLL_INTERVAL
+        native = self.visuals.native
+        if native.process.poll() is not None:
+            self._restart('child-exited', now)
+            return
+        try:
+            status = native.command('status')
+        except (OSError, RuntimeError, subprocess.SubprocessError):
+            self._restart('status-failed', now)
+            return
+        if status not in ('hidden', 'visible'):
+            self._restart('invalid-status', now)
+            return
+        if status == 'hidden' and not self.visuals.expected_hidden:
+            try:
+                self.visuals.command('show')
+            except (OSError, RuntimeError, subprocess.SubprocessError):
+                self._restart('show-repair-failed', now)
+                return
+            self.metric('watchdog_visibility_repaired')
+
+        if now < self.next_layer_probe:
+            return
+        self.next_layer_probe = now + self.LAYER_INTERVAL
+        present = self.layer_probe(self.env)
+        if present is True:
+            self.missing_layer_count = 0
+        elif present is False:
+            self.missing_layer_count += 1
+            if self.missing_layer_count >= self.MISSING_LAYER_LIMIT:
+                self._restart('layer-missing', now)
+        else:
+            self.missing_layer_count = 0
+
+    def _restart(self, reason, now):
+        while self.restarts and now - self.restarts[0] >= self.RESTART_WINDOW:
+            self.restarts.popleft()
+        if len(self.restarts) >= self.RESTART_LIMIT:
+            self.metric('watchdog_restart_limit', reason=reason,
+                        restarts=len(self.restarts))
+            raise RuntimeError('indicator repeatedly lost')
+        self.restarts.append(now)
+        old = self.visuals.native
+        old.close()
+        native = self.native_factory({
+            **self.env,
+            'CU_ESCAPE_AVAILABLE': '1' if self.escape_available else '0',
+        })
+        self.visuals.native = native
+        self.visuals.expected_hidden = False
+        self.visuals.cursor.command('show')
+        self.missing_layer_count = 0
+        self.next_layer_probe = now + self.LAYER_INTERVAL
+        self.metric('watchdog_restart', reason=reason, attempt=len(self.restarts))
 
 
 def _metric(event, **fields):
