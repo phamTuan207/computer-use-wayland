@@ -601,3 +601,18 @@ assert.equal(incomplete.result.ok,false);
 assert.equal(incomplete.result.error,
   'confirm_click requires expected_role, expected_name and expected_text');
 assert.equal(incomplete.calls.some(c=>c.method==='Input.dispatchMouseEvent'),false);
+
+// I3: resolve the Add to Contest control from a fresh DOM result, then click its ref.
+const addToContest=element('Add to Contest',{left:13,top:17,width:100,height:22});
+const contestFlow=await run([addToContest],undefined,{operation:'observe',followup:observed=>{
+  const matches=observed.elements.filter(e=>e.role==='button'&&e.name==='Add to Contest');
+  assert.equal(matches.length,1,'the exact role/name must identify one control');
+  return {operation:'act',snapshot:observed.snapshot,
+    actions:[{type:'click',ref:matches[0].ref}]};
+}});
+assert.equal(contestFlow.outputs[1].ok,true,contestFlow.outputs[1].error);
+assert.equal(contestFlow.outputs[1].completed,1);
+assert.deepEqual(contestFlow.calls.find(c=>c.method==='Input.dispatchMouseEvent'&&
+  c.params.type==='mousePressed')?.params,{type:'mousePressed',x:63,y:28,button:'left',clickCount:1});
+assert.equal(contestFlow.calls.some(c=>c.method==='Page.captureScreenshot'),false,
+  'DOM target selection does not need an image capture');
