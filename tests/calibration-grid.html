@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Calibration Grid E2</title>
+<style>
+  html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #ffffff; font-family: sans-serif; }
+  #status { position: fixed; top: 0; right: 0; padding: 4px 10px; font-size: 14px; background: #eeeeee; z-index: 10; }
+  .gridbtn { position: absolute; width: 120px; height: 48px; font-size: 18px; background: #dbeafe; border: 2px solid #2563eb; border-radius: 6px; cursor: pointer; }
+  .gridbtn.hit { background: #4ade80; border-color: #16a34a; }
+  .rlink { position: absolute; font-size: 14px; color: #1d4ed8; text-decoration: underline; cursor: pointer; background: none; border: none; padding: 2px 4px; }
+  .rlink.hit { background: #4ade80; color: #14532d; }
+  .grouplabel { position: absolute; font-size: 12px; color: #666666; }
+</style>
+</head>
+<body>
+<div id="status">Hits: 0 / 29</div>
+<script>
+  window.__hits = [];
+  var hitCount = 0;
+  function recordHit(id, ev) {
+    window.__hits.push({id: id, clientX: ev.clientX, clientY: ev.clientY, t: Date.now()});
+    hitCount += 1;
+    document.getElementById('status').textContent = 'Hits: ' + hitCount + ' / 29';
+  }
+  function makeBtn(id, leftPct, topPct) {
+    var b = document.createElement('button');
+    b.className = 'gridbtn';
+    b.dataset.tid = id;
+    b.textContent = id;
+    b.style.left = 'calc(' + leftPct + '% - 60px)';
+    b.style.top = 'calc(' + topPct + '% - 24px)';
+    b.addEventListener('click', function (ev) { b.classList.add('hit'); recordHit(id, ev); });
+    document.body.appendChild(b);
+  }
+  // Grid A: 5 cols x 4 rows of medium buttons, 120x48.
+  var cols = [10, 28, 46, 64, 82];
+  var rows = [14, 32, 50, 68];
+  var n = 0;
+  for (var r = 0; r < rows.length; r++) {
+    for (var c = 0; c < cols.length; c++) {
+      n += 1;
+      makeBtn('T' + String(n).padStart(2, '0'), cols[c], rows[r]);
+    }
+  }
+  // Grid B: 3 rows of small adjacent text links, mimicking Polygon invocations.
+  var linkRows = [78, 85, 92];
+  var linkNames = ['View', 'Remove', 'Rejudge'];
+  for (var g = 0; g < linkRows.length; g++) {
+    var label = document.createElement('div');
+    label.className = 'grouplabel';
+    label.textContent = 'Row R' + (g + 1);
+    label.style.left = '4%';
+    label.style.top = 'calc(' + linkRows[g] + '% - 8px)';
+    document.body.appendChild(label);
+    var x = 10;
+    for (var k = 0; k < linkNames.length; k++) {
+      (function (id, leftPct, topPct) {
+        var a = document.createElement('button');
+        a.className = 'rlink';
+        a.dataset.tid = id;
+        a.textContent = linkNames[k];
+        a.style.left = leftPct + '%';
+        a.style.top = 'calc(' + topPct + '% - 10px)';
+        a.addEventListener('click', function (ev) { a.classList.add('hit'); recordHit(id, ev); });
+        document.body.appendChild(a);
+      })('R' + (g + 1) + '-' + linkNames[k], x, linkRows[g]);
+      x += (linkNames[k].length * 1.1) + 3;
+    }
+  }
+</script>
+</body>
+</html>
