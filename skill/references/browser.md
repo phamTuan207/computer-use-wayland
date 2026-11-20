@@ -22,7 +22,7 @@ Browser actions:
 ]
 ```
 
-`click`, `fill`, `assert`: use a ref or an exact single-match CSS `selector`. `fill` uses trusted input and verifies the resulting value. `assert` accepts `text` (substring), `value` (exact), `checked` (boolean), or defaults to nonzero element width; timeout max 3000 ms. `key`: `keys` array (`Ctrl`, `Alt`, `Shift`, `Meta`, `Enter`, `Tab`, `Escape`, arrows, editing keys, one character). `scroll`: `dy`, optional `dx`,`x`,`y` in viewport CSS pixels. `wait`: `ms` max 2000. Navigation ends the old snapshot; snapshots also expire 90 seconds after capture, and further input is refused until you observe again. Result includes a fresh `after` snapshot.
+`click`, `fill`, `assert`: use a ref or an exact single-match CSS `selector`. `fill` uses trusted input and verifies the resulting value. `assert` accepts `text` (substring), `value` (exact), `checked` (boolean), or defaults to nonzero element width; timeout max 3000 ms. `key`: `keys` array (`Ctrl`, `Alt`, `Shift`, `Meta`, `Enter`, `Tab`, `Escape`, arrows, editing keys, one character). `scroll`: `dy`, optional `dx`,`x`,`y` in viewport CSS pixels. `wait`: `ms` max 2000. Navigation ends the old snapshot; snapshots also expire 120 seconds after capture, and further input is refused until you observe again. Result includes a fresh `after` snapshot.
 
 `set_value` also takes one `ref` or exact `selector` plus `text`. Prefer it for
 text-like inputs (`text`, `search`, `tel`, `url`, `email`) and textareas: it

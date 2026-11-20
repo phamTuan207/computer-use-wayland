@@ -551,13 +551,21 @@ class DomApiTests(unittest.TestCase):
         with self.assertRaisesRegex(code_exec.CodeExecError, 'max_elements'):
             session.api_dom_observe('tab-1', max_elements=81)
 
-    def test_dom_snapshot_older_than_90_seconds_is_rejected(self):
+    def test_dom_snapshot_older_than_120_seconds_is_rejected(self):
         session = code_exec.CodeExecSession(FakeDomBackend())
         snapshot = session.api_dom_observe('tab-1')
-        session.dom_snapshots[snapshot['snapshot']]['created'] = time.time() - 91
-        with self.assertRaisesRegex(code_exec.CodeExecError, 'older than 90s'):
+        session.dom_snapshots[snapshot['snapshot']]['created'] = time.time() - 121
+        with self.assertRaisesRegex(code_exec.CodeExecError, 'older than 120s'):
             session.api_dom_act(
                 snapshot, [{'type': 'click', 'ref': snapshot['elements'][0]['ref']}])
+
+    def test_dom_snapshot_at_100_seconds_is_still_valid(self):
+        # 2.8.1: the limit is 120s, not 90s; a snapshot aged 91-119s must work.
+        session = code_exec.CodeExecSession(FakeDomBackend())
+        snapshot = session.api_dom_observe('tab-1')
+        session.dom_snapshots[snapshot['snapshot']]['created'] = time.time() - 100
+        session.api_dom_act(
+            snapshot, [{'type': 'click', 'ref': snapshot['elements'][0]['ref']}])
 
     def test_dom_snapshot_binding_persists_across_runs(self):
         backend = FakeDomBackend()

@@ -31,7 +31,7 @@ Rules carried from the prior art and the landed Step 2 design:
   crop rectangles, stamps images, and verifies crop text. The act
   path (scripts/cu.py desktop_act) still enforces the fresh
   observation, the pointer miss check, the screen-changed refusal,
-  and the 90 s observation expiry. A stale candidate is re-grounded,
+  and the 120 s observation expiry. A stale candidate is re-grounded,
   never trusted.
 
 This module is standalone on purpose: it does not import cu.py or any

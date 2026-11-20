@@ -18,7 +18,7 @@ without replaying input. A missing flag is not a claim of support for that prope
 `--skeleton` lists structure, not only actionable nodes: each listed item carries its tree
 `path` and `children_count`, and `truncated` marks a subtree larger than the bounds. `drill`
 returns a skeleton observation of one element's subtree, using a ref from that snapshot.
-Snapshots expire 90 seconds after capture; `drill` and `act` refuse a stale one. Elements may
+Snapshots expire 120 seconds after capture; `drill` and `act` refuse a stale one. Elements may
 report `editable` and `disabled`.
 
 Actions: `{"type":"click","ref":"e2"}` or `{"type":"set_text","ref":"e1","text":"Tiếng Việt 🐱"}`. Setter verifies full text but does not log field contents. A native button must expose `click`, `press` or `toggle`; an entry's `activate` is never substituted for a click. Snapshot is bounded to 80 actionable elements, 500 visited nodes, depth 12 and roughly 2 seconds plus outstanding DBus calls. If app absent / tree empty / unsupported, use desktop. Do not change accessibility settings without task-specific need. A11y tree paths are rechecked by name and role; identical replacement widgets cannot be distinguished solely by that check.

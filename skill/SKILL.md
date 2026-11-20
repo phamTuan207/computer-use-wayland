@@ -64,7 +64,7 @@ animations flip it) and keep `changed` as a compatibility alias with the same va
 `completed` counts of acknowledged input, never prove the application applied the action.
 `input_diagnostics` records the pre-batch focus state and says the pointer check locates the
 cursor, not a receiving UI element. A typed desktop preflight refusal (`recoverable: true, completed: 0`) keeps the session alive:
-correct the request while the observation is valid (90 s); an expired one needs a new observe.
+correct the request while the observation is valid (120 s); an expired one needs a new observe.
 An exact transient guard refusal (`screen changed`/`screen_changed` or `focus changed`/
 `focus_changed`, with no `capture_error` or `ime_restore_failed` in the result) also keeps the
 session alive but requires a fresh explicit `observe` before any further input (desktop, browser,
