@@ -108,36 +108,38 @@
 ## PHASE 3 - FIX LOI CODEX VA LOI HE THONG (phan A, B, C, D)
 
 ### 3.1 Loi Codex computer-use (phan C)
-- [ ] 3.1.1 C1: Observation het han (90-120 giay). Sua: chup moi truoc khi hanh dong
-- [ ] 3.1.2 C2: Sau khi bam dieu huong, anh chup van hien trang cu. Sua: observe lai moi sau moi lan bam dieu huong
-- [ ] 3.1.3 C3: Zen Ctrl+N = new tab, Ctrl+T = new window (dao nguoc). Sua: khong bao gio bam Ctrl+T
-- [ ] 3.1.4 C4: Link Commit Changes o dau. Sua: link o cuoi cot PHAI, duoi ADDED changes, bam End de toi do
-- [ ] 3.1.5 C5: URL /problem/<id> bi 404. Sua: vao qua Dashboard > View Problems > Continue (link BEN TRAI)
-- [ ] 3.1.6 C6: Cam dung ydotool. Sua: nhac lai trong MOI brief
-- [ ] 3.1.7 C7: Man hinh tinh doc nhu "khong lam gi". Sua: noi truoc va bao log cu the, narrate tung buoc TRUOC khi lam
-- [ ] 3.1.8 C8: Khong don dep sau khi dung computer-use. Sua: ket thuc broker session, xac nhan khong con process, pill bien mat, desktop sach
+- [x] 3.1.1 C1: Observation het han (90-120 giay). Sua: chup moi truoc khi hanh dong (done: da enforced trong cu.py/code_exec.py, 120s expiry, test_phase3_c1.py, ceff51c)
+- [x] 3.1.2 C2: Sau khi bam dieu huong, anh chup van hien trang cu. Sua: observe lai moi sau moi lan bam dieu huong (done: cu.py _settle_after_capture, test_phase3_c2.py, 6be6784)
+- [x] 3.1.3 C3: Zen Ctrl+N = new tab, Ctrl+T = new window (dao nguoc). Sua: khong bao gio bam Ctrl+T (done: cu.py _refuse_zen_ctrl_t preflight, test_phase3_c3.py, 92944da; live-verified Zen Hyprland class = zen)
+- [x] 3.1.4 C4: Link Commit Changes o dau. Sua: link o cuoi cot PHAI, duoi ADDED changes, bam End de toi do (done: docs/polygon-upload-runbook.md section 6)
+- [x] 3.1.5 C5: URL /problem/<id> bi 404. Sua: vao qua Dashboard > View Problems > Continue (link BEN TRAI) (done: docs/polygon-upload-runbook.md, section "Navigation that fails")
+- [x] 3.1.6 C6: Cam dung ydotool. Sua: nhac lai trong MOI brief (done: docs/brief-template.md + scripts/brief_check.py + test_phase3_brief.py, aa114b2)
+- [x] 3.1.7 C7: Man hinh tinh doc nhu "khong lam gi". Sua: noi truoc va bao log cu the, narrate tung buoc TRUOC khi lam (done: narrate rule in brief-template.md section 5 + checklist section 9; tooling scripts/timing.py, drive_log.py, step_watchdog.py, overlay.py all exist and are referenced)
+- [x] 3.1.8 C8: Khong don dep sau khi dung computer-use. Sua: ket thuc broker session, xac nhan khong con process, pill bien mat, desktop sach (done: scripts/session_cleanup.py --check/--clean + test_phase3_cleanup.py, 8636f21)
 
 ### 3.2 Loi cu the task up de (phan B)
-- [ ] 3.2.1 B1: Solution sai extension .c thay vi .cpp. Sua: upload .cpp
-- [ ] 3.2.2 B2: Contest code A/B/C thay vi NB1/NB2/NB3. Sua: sua Problem short name
-- [ ] 3.2.3 B3: Test trung lap. Sua: xoa test trung, commit lai
-- [ ] 3.2.4 B4: Invalid numeration sau khi xoa test, chan tao package. Sua: RENUMBER 1-N sau khi xoa
-- [ ] 3.2.5 B5: Dung package cu cho revision moi. Sua: moi revision tao package Standard MOI, tick Verify
-- [ ] 3.2.6 B6: Link /p/ bi Codeforces tu choi. Sua: dung link hash-format tu nut copy sidebar
-- [ ] 3.2.7 B7: Statement tieng Viet thay vi English. Sua: doi English, xoa statement vietnamese neu co ca hai
-- [ ] 3.2.8 B8: Thieu dau $ dong trong Notes. Sua: them $ dong
-- [ ] 3.2.9 B10: Codex dung Chromium thay vi Zen. Sua: chi dung ZEN, tab da dang nhap san
-- [ ] 3.2.10 B11: Go URL bang phim (key events). Sua: khong go URL bang phim, dung tab da mo san
-- [ ] 3.2.11 B12: Test zip co ca answer import gap doi. Sua: dung zip chi co input
-- [ ] 3.2.12 B13: Thieu test sau khi import (29 thay vi 30). Sua: them test thieu thu cong
-- [ ] 3.2.13 B14: Verification failed khong phai luat dung. Sua: chi loi numeration moi chan package
+- [x] 3.2.1 B1: Solution sai extension .c thay vi .cpp. Sua: upload .cpp (done: runbook section 5 + polygon_checks.py B1, 2f0510d)
+- [x] 3.2.2 B2: Contest code A/B/C thay vi NB1/NB2/NB3. Sua: sua Problem short name (done: runbook section 11 + polygon_checks.py B2, 2f0510d)
+- [x] 3.2.3 B3: Test trung lap. Sua: xoa test trung, commit lai (done: runbook section 7 + polygon_checks.py B3, 2f0510d; validator found a real duplicate [21,28] in the P2 test set)
+- [x] 3.2.4 B4: Invalid numeration sau khi xoa test, chan tao package. Sua: RENUMBER 1-N sau khi xoa (done: runbook section 7 + polygon_checks.py B4, 2f0510d)
+- [x] 3.2.5 B5: Dung package cu cho revision moi. Sua: moi revision tao package Standard MOI, tick Verify (done: runbook section 8, procedural; no offline check exists for this)
+- [x] 3.2.6 B6: Link /p/ bi Codeforces tu choi. Sua: dung link hash-format tu nut copy sidebar (done: runbook section 11 + polygon_checks.py B6, 2f0510d)
+- [x] 3.2.7 B7: Statement tieng Viet thay vi English. Sua: doi English, xoa statement vietnamese neu co ca hai (done: runbook section 2 + polygon_checks.py B7, 2f0510d)
+- [x] 3.2.8 B8: Thieu dau $ dong trong Notes. Sua: them $ dong (done: runbook section 2 + polygon_checks.py B8, 2f0510d)
+- [x] 3.2.9 B10: Codex dung Chromium thay vi Zen. Sua: chi dung ZEN, tab da dang nhap san (done: runbook section 0 + brief-template.md section 7, 2f0510d)
+- [x] 3.2.10 B11: Go URL bang phim (key events). Sua: khong go URL bang phim, dung tab da mo san (done: runbook section 0 + brief-template.md section 7, 2f0510d)
+- [x] 3.2.11 B12: Test zip co ca answer import gap doi. Sua: dung zip chi co input (done: runbook section 4 + polygon_checks.py B12, 2f0510d; validator flags the original 3 zips: all contain .a files)
+- [x] 3.2.12 B13: Thieu test sau khi import (29 thay vi 30). Sua: them test thieu thu cong (done: runbook section 4 + polygon_checks.py B13, 2f0510d)
+- [x] 3.2.13 B14: Verification failed khong phai luat dung. Sua: chi loi numeration moi chan package (done: runbook section "Verification failed is NOT a stop rule" + claim_check.py tripwire already existed, 2f0510d)
+
+B9 (Browse off-center hover): no checkbox in this list; fix verified in code (hover_click, scripts/cdp.mjs lines 362-400) and runbook section 4.
 
 ### 3.3 Loi quy trinh / giao tiep (phan D)
-- [ ] 3.3.1 D1: Kenh chat lan lon. Sua: follow-up thuoc thread nao gui TRONG thread do
-- [ ] 3.3.2 D2: Khong doc Messenger qua connector. Sua: kiem tra qua connector, khong mo Messenger tren trinh duyet laptop
-- [ ] 3.3.3 D3: Khong push len GitHub ngay. Sua: push ngay khi lam/sua xong, khong giu lai
-- [ ] 3.3.4 D4: Khong ghi bai hoc vao ca hai noi. Sua: generic vao repo, chi tiet vao laptop, khong lo thong tin ca nhan
-- [ ] 3.3.5 D5: Khong kiem tra toan bo ngay truoc khi sua lich. Sua: doc TOAN BO ngay tren TAT CA calendar, chay audit overlaps, 0 overlap
+- [x] 3.3.1 D1: Kenh chat lan lon. Sua: follow-up thuoc thread nao gui TRONG thread do (done: brief-template.md section 8 + checklist section 9, aa114b2)
+- [x] 3.3.2 D2: Khong doc Messenger qua connector. Sua: kiem tra qua connector, khong mo Messenger tren trinh duyet laptop (done: brief-template.md section 8 + brief_check.py + checklist section 9, aa114b2)
+- [x] 3.3.3 D3: Khong push len GitHub ngay. Sua: push ngay khi lam/sua xong, khong giu lai (done: brief-template.md section 8 + brief_check.py + checklist section 9, aa114b2)
+- [x] 3.3.4 D4: Khong ghi bai hoc vao ca hai noi. Sua: generic vao repo, chi tiet vao laptop, khong lo thong tin ca nhan (done: brief-template.md section 8 + brief_check.py + checklist section 9, aa114b2)
+- [x] 3.3.5 D5: Khong kiem tra toan bo ngay truoc khi sua lich. Sua: doc TOAN BO ngay tren TAT CA calendar, chay audit overlaps, 0 overlap (done: brief-template.md section 8 + brief_check.py + checklist section 9, aa114b2)
 
 ### 3.4 Huong giai phap tong quat (phan E)
 - [ ] 3.4.1 E1: Tach ban bac (nhieu agent) khoi thuc thi (1 agent). Thu nghiem: co tang toc do, tang chinh xac khong?
