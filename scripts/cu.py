@@ -6,7 +6,6 @@ import fcntl
 import hashlib
 import io
 import json
-import jsonlutil
 import math
 import os
 import pathlib
@@ -20,6 +19,12 @@ import subprocess
 import sys
 import time
 import uuid
+
+try:
+    import jsonlutil
+except ImportError:  # loaded by file path without the scripts dir on sys.path
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import jsonlutil
 
 ROOT = Path(__file__).resolve().parents[1]
 STATE = Path(os.environ.get('XDG_CACHE_HOME', str(Path.home()/'.cache'))) / 'agent-computer-use'
@@ -1007,16 +1012,16 @@ def integer(value,name):
 
 def validate_actions(actions,backend):
     if not isinstance(actions,list) or not 1<=len(actions)<=32: raise ValueError('actions must contain 1..32 items')
-    allowed=({'click','double_click','move','drag','scroll','type','key','wait'} if backend=='desktop' else
+    allowed=({'click','double_click','move','hover','drag','scroll','type','key','wait'} if backend=='desktop' else
              {'click','set_text'} if backend=='a11y' else
              {'click','fill','set_value','key','scroll','wait','assert'})
     for a in actions:
         if not isinstance(a,dict) or not isinstance(a.get('type'),str) or a['type'] not in allowed: raise ValueError('unsupported action')
-        if backend=='desktop' and a['type'] in ('move','click','double_click','drag','scroll'):
+        if backend=='desktop' and a['type'] in ('move','hover','click','double_click','drag','scroll'):
             modifiers=a.get('modifiers',[])
             if not isinstance(modifiers,list) or len(modifiers)>5 or not all(isinstance(m,str) and m.lower() in MODIFIERS for m in modifiers):
                 raise ValueError('mouse modifiers must be an array of Ctrl/Shift/Alt/Super/AltGr')
-            if a['type']=='move' and modifiers:raise ValueError('modifiers require click, drag or scroll')
+            if a['type'] in ('move','hover') and modifiers:raise ValueError('modifiers require click, drag or scroll')
         if a['type']=='wait':
             if not 0<=integer(a.get('ms',100),'wait ms')<=2000: raise ValueError('wait ms must be 0..2000')
         if a['type'] in ('type','fill','set_value') and (not isinstance(a.get('text'),str) or len(a['text'])>10000): raise ValueError('text must be string <=10000 chars')
@@ -1034,7 +1039,7 @@ def validate_actions(actions,backend):
             if a['type']=='set_text' and (not isinstance(a.get('text'),str) or len(a['text'])>10000):raise ValueError('a11y set_text needs string text <=10000')
         if backend=='desktop' and a['type'] in ('click','double_click','drag'):
             if a.get('button','left') not in ('left','right','middle'):raise ValueError('invalid button')
-        if backend=='desktop' and a['type'] in ('move','click','double_click','scroll'):
+        if backend=='desktop' and a['type'] in ('move','hover','click','double_click','scroll'):
             for k in ('x','y'):
                 if k not in a:raise ValueError(a['type']+' needs numeric x and y')
                 finite(a[k],a['type']+' '+k)
@@ -1389,7 +1394,7 @@ def desktop_act(env,meta,actions,after_capture=True,observation_path=None,
             raise ValueError('screen observations support pointer actions only; use a window or accessibility target for typing')
         # Validate coordinates and payloads for the entire batch before any side effects.
         for a in actions:
-            if a['type'] in ('click','double_click','move','scroll'):
+            if a['type'] in ('click','double_click','move','hover','scroll'):
                 image_point(meta,a['x'],a['y'])
             if a['type']=='drag':
                 image_point(meta,*a['from']);image_point(meta,*a['to'])
@@ -1526,7 +1531,7 @@ def desktop_act(env,meta,actions,after_capture=True,observation_path=None,
                               action_type='keyboard_group',completed=completed,active_window=active_window)
             return
         typ=a['type']
-        if typ in ('move','click','double_click','scroll'):
+        if typ in ('move','hover','click','double_click','scroll'):
             intended=move(a['x'],a['y'],index,typ)
             if typ in ('click','double_click'):
                 b={'left':0,'right':1,'middle':2}[a.get('button','left')]
@@ -1549,6 +1554,12 @@ def desktop_act(env,meta,actions,after_capture=True,observation_path=None,
             elif typ=='scroll':
                 wait_cancelable(.03);guard()
                 pointer.command(f"scroll {a.get('dx',0)} {a.get('dy',0)}")
+            elif typ=='hover':
+                # G21: some buttons (file-picker Browse) only register a click
+                # after the pointer has hovered off-center long enough for the
+                # hover state to land (button darkens). Move, settle 30 ms for
+                # pointer-enter delivery, click in a later action. No click here.
+                wait_cancelable(.03)
         elif typ=='drag':
             sx,sy=a['from'];ex,ey=a['to'];move(sx,sy,index,typ);guard()
             b={'left':0,'right':1,'middle':2}[a.get('button','left')]
@@ -1586,12 +1597,12 @@ def desktop_act(env,meta,actions,after_capture=True,observation_path=None,
         # A new virtual device at an unchanged cursor position may not cause
         # Hyprland to deliver enter/motion to a newly mapped surface. Establish
         # real motion without clicking; the action still ends at its exact target.
-        if any(a['type'] in ('move','click','double_click','scroll','drag') for a in actions):
+        if any(a['type'] in ('move','hover','click','double_click','scroll','drag') for a in actions):
             pointer=Pointer(env,meta['monitor'])
             # Capture can outlast cancellation or a focus/layout change. The
             # preparatory motion is input too, so validate before sending it.
             guard()
-            first=next(a for a in actions if a['type'] in ('move','click','double_click','scroll','drag'))
+            first=next(a for a in actions if a['type'] in ('move','hover','click','double_click','scroll','drag'))
             point=first['from'] if first['type']=='drag' else [first['x'],first['y']]
             gx,gy=image_point(meta,*point);mx,my,mw,mh=meta['monitor_box'];rx,ry,rw,rh=meta['region']
             nx=gx+2 if gx<rx+rw-3 else max(rx,gx-2);ny=gy

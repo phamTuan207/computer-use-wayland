@@ -5,7 +5,6 @@ from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 import hashlib
 import json
-import jsonlutil
 import os
 from pathlib import Path
 import re
@@ -14,6 +13,12 @@ import subprocess
 import sys
 import tempfile
 import time
+
+try:
+    import jsonlutil
+except ImportError:  # loaded by file path without the scripts dir on sys.path
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import jsonlutil
 
 
 ROOT = Path(__file__).resolve().parents[1]
