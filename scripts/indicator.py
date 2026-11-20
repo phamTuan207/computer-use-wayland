@@ -273,7 +273,9 @@ def serve(server, native, token):
         command = request.get('command', '')
         if request.get('token') != token or not isinstance(command, str) or len(command) > 200:
             raise RuntimeError('invalid indicator request')
-        if command not in ('hide', 'show') and not re.fullmatch(r'move [\w.-]+ [0-9.]+ [0-9.]+', command):
+        if (command not in ('hide', 'show') and
+                not re.fullmatch(r'move [\w.-]+ [0-9.]+ [0-9.]+', command) and
+                not re.fullmatch(r'label [\x20-\x7e]{1,40}', command)):
             raise RuntimeError('invalid indicator command')
         reply = native.command(command)
         client.sendall((reply + '\n').encode())

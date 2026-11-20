@@ -462,6 +462,28 @@ class SocketProtocol(unittest.TestCase):
             self.assertIs(indicator.request(self.state, 'hide'), True)
         self.assertEqual(native.commands, ['hide'])
 
+    def test_bounded_ascii_label_command_is_forwarded(self):
+        self.session()
+        native = FakeNative()
+        self.serve(native)
+        with patch.dict(os.environ, {}, clear=True):
+            self.assertIs(indicator.request(self.state, 'label Browser automation via DOM'), True)
+        self.assertEqual(native.commands, ['label Browser automation via DOM'])
+
+    def test_label_command_rejects_non_ascii_and_overlong_values(self):
+        cases = (('b' * 32, 'label Browser 😀'), ('c' * 32, 'label ' + 'x' * 41))
+        for token, command in cases:
+            with self.subTest(command=command):
+                self.token = token
+                native = FakeNative()
+                thread, errors = self.serve(native)
+                client = self.connect()
+                self.send(client, {'token': self.token, 'command': command})
+                self.assertEqual(client.recv(128), b'')
+                thread.join(3)
+                self.assertIn('invalid indicator command', str(errors[0]))
+                self.assertEqual(native.commands, [])
+
     def test_wrong_acknowledgement_is_rejected(self):
         self.session()
         self.serve(FakeNative(reply='ok'))
