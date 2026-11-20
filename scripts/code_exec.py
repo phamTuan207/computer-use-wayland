@@ -186,8 +186,8 @@ def _dom_key_supported(key):
 
 def _validate_dom_actions(actions, refs):
     """Mirror cdp.mjs action preflight before any CDP request is made."""
-    allowed = {'click', 'confirm_click', 'fill', 'set_value', 'key', 'scroll', 'wait', 'assert'}
-    element_actions = {'click', 'confirm_click', 'fill', 'set_value', 'assert'}
+    allowed = {'click', 'confirm_click', 'hover_click', 'fill', 'set_value', 'key', 'scroll', 'wait', 'assert'}
+    element_actions = {'click', 'confirm_click', 'hover_click', 'fill', 'set_value', 'assert'}
     if not isinstance(actions, list) or not 1 <= len(actions) <= 32:
         raise CodeExecError('actions must contain 1..32 items')
     for action in actions:
@@ -216,6 +216,10 @@ def _validate_dom_actions(actions, refs):
                         or _utf16_length(value) > limit):
                     raise CodeExecError(
                         'confirm_click requires expected_role, expected_name and expected_text')
+        if action_type == 'hover_click' and 'hover_timeout_ms' in action:
+            timeout = action['hover_timeout_ms']
+            if not _finite_number(timeout) or timeout < 0 or timeout > 2000:
+                raise CodeExecError('hover_timeout_ms must be 0..2000')
         if action_type in ('fill', 'set_value'):
             value = action.get('text')
             if not isinstance(value, str) or _utf16_length(value) > 10000:

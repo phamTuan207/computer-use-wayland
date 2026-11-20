@@ -516,6 +516,15 @@ class DomApiTests(unittest.TestCase):
         self.assertTrue(session.api_dom_act(snapshot, [action])['ok'])
         self.assertEqual(backend.dom_calls[-1][3][0]['type'], 'confirm_click')
 
+    def test_dom_hover_click_accepts_bound_ref_and_bounded_timeout(self):
+        action = {'type': 'hover_click', 'ref': 'dom-ref-1'}
+        code_exec._validate_dom_actions([action], {'dom-ref-1'})
+        for timeout in (-1, 2001, True, '100'):
+            with self.subTest(timeout=timeout), self.assertRaisesRegex(
+                    code_exec.CodeExecError, 'hover_timeout_ms must be 0..2000'):
+                code_exec._validate_dom_actions(
+                    [dict(action, hover_timeout_ms=timeout)], {'dom-ref-1'})
+
     def test_dom_act_returns_refusal_dict_without_raising(self):
         backend = FakeDomBackend(dom_act_ok=False)
         session = code_exec.CodeExecSession(backend)

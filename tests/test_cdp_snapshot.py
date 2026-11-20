@@ -37,10 +37,10 @@ class Snapshot(unittest.TestCase):
             for attempt in metrics['click_attempts']:
                 hit_rate.append_attempt(path,**attempt)
             report=hit_rate.summarize(path)
-            self.assertEqual(report['attempts'],7)
-            self.assertEqual(report['hits'],6)
+            self.assertEqual(report['attempts'],8)
+            self.assertEqual(report['hits'],7)
             self.assertEqual(report['misses'],1)
-            self.assertAlmostEqual(report['hit_rate'],6/7)
+            self.assertAlmostEqual(report['hit_rate'],7/8)
             self.assertEqual(report['misses_by_issue'],{'wrong_target':1})
             self.assertTrue(path.read_bytes().endswith(b'\n'))
             self.assertEqual(jsonlutil.verify_jsonl(path),[])
