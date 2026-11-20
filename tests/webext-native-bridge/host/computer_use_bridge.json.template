@@ -1,0 +1,1 @@
+{"allowed_extensions":["cu-bridge@example.local"],"description":"Native messaging host for the computer-use WebExtension bridge","name":"computer_use_bridge","path":"REPLACE_WITH_ABSOLUTE_PATH_TO_cu_bridge_host.py","type":"stdio"}

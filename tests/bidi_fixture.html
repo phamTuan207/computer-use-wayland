@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>BiDi fixture</title>
+</head>
+<body>
+<h1>BiDi fixture</h1>
+<p>Counter: <span id="count">0</span></p>
+<button id="count-btn" type="button">Increment</button>
+<label>Name <input id="name" type="text" value=""></label>
+<script>
+document.querySelector('#count-btn').addEventListener('click', () => {
+  const el = document.querySelector('#count');
+  el.textContent = String(Number(el.textContent) + 1);
+});
+</script>
+</body>
+</html>
