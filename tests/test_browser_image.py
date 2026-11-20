@@ -40,13 +40,20 @@ class BrowserImage(unittest.TestCase):
         record = Path(result['observation'])
         with Image.open(path) as saved:
             saved.load()
-            self.assertEqual(saved.format, 'PNG')
+            self.assertEqual(saved.format, 'JPEG')
             self.assertEqual(saved.mode, 'RGB')
             self.assertEqual(saved.size, expected.size)
-            self.assertEqual(saved.tobytes(), expected.tobytes())
-            self.assertEqual(saved.info, {})
+            # JPEG is lossy: solid-color fixtures round-trip within a few levels.
+            diffs = [abs(a - b) for a, b in zip(saved.tobytes(), expected.tobytes())]
+            self.assertLessEqual(max(diffs), 5)
+            self.assertLessEqual(sum(diffs) / len(diffs), 2)
+            # Only the JFIF container keys Pillow writes; no private metadata.
+            self.assertEqual(set(saved.info),
+                             {'jfif', 'jfif_version', 'jfif_unit', 'jfif_density'})
         self.assertEqual(result['image_size'], list(expected.size))
-        self.assertEqual(result['pixel_sha256'], hashlib.sha256(expected.tobytes()).hexdigest())
+        # pixel_sha256 hashes the STORED (JPEG-decoded) pixels, not the source.
+        self.assertEqual(result['pixel_sha256'],
+                         hashlib.sha256(Image.open(path).convert('RGB').tobytes()).hexdigest())
         self.assertEqual(json.loads(record.read_text()), result)
         self.assertEqual(path.stat().st_mode & 0o777, 0o600)
         self.assertEqual(record.stat().st_mode & 0o777, 0o600)
@@ -54,12 +61,14 @@ class BrowserImage(unittest.TestCase):
         self.assertEqual(path.parent, self.state)
         self.assertEqual(record.parent, self.state)
 
-    def test_plain_png_preserves_bytes_pixels_hash_and_private_metadata(self):
+    def test_plain_png_is_reencoded_as_jpeg_with_same_pixels(self):
         image = Image.new('RGB', (16, 8), (19, 87, 203))
         raw = encode(image, compress_level=9)
         result = cu.save_observation(None, {'backend': 'browser', 'target': 'fixture'},
                                      320, encoded_png=raw)
-        self.assertEqual(Path(result['image']).read_bytes(), raw)
+        self.assertEqual(result['image_format'], 'JPEG')
+        self.assertEqual(Path(result['image']).suffix, '.jpg')
+        self.assertNotEqual(Path(result['image']).read_bytes(), raw)
         self.assert_saved(result, image)
         self.assertEqual(result['backend'], 'browser')
         self.assertEqual(result['target'], 'fixture')
@@ -74,9 +83,9 @@ class BrowserImage(unittest.TestCase):
         unrelated = Image.new('RGB', (2, 3), 'red')
         result = cu.save_observation(unrelated, {}, 320, encoded_png=raw)
         self.assert_saved(result, image)
-        self.assertEqual(Path(result['image']).read_bytes(), raw)
+        self.assertNotEqual(Path(result['image']).read_bytes(), raw)
 
-    def test_rgba_palette_and_other_format_fall_back_to_rgb_png(self):
+    def test_rgba_palette_and_other_format_fall_back_to_rgb_jpeg(self):
         palette = Image.new('P', (16, 8), 1)
         palette.putpalette([0, 0, 0, 10, 20, 30] + [0] * 762)
         cases = [(Image.new('RGBA', (16, 8), (10, 20, 30, 40)), 'PNG'),
@@ -118,24 +127,6 @@ class BrowserImage(unittest.TestCase):
                 self.assertNotIn(marker, saved)
                 self.assert_saved(result, image)
 
-    def test_plain_png_predicate_rejects_invalid_structure(self):
-        raw = encode(Image.new('RGB', (16, 8)))
-        signature, header, end = raw[:8], raw[8:33], raw[-12:]
-        data = raw[33:-12]
-        self.assertTrue(cu.plain_rgb_png(raw))
-        self.assertTrue(cu.plain_rgb_png(signature + header + data + data + end))
-        invalid = [b'', raw[:41], raw[:-1], raw + b'extra',
-                   signature + data + header + end,
-                   signature + header + header + data + end,
-                   signature + header + end,
-                   raw[:8] + (14).to_bytes(4, 'big') + raw[12:],
-                   raw[:24] + b'\x10' + raw[25:],
-                   raw[:25] + b'\x06' + raw[26:],
-                   raw[:-12] + b'\x00\x00\x00\x01IENDx' + b'\x00' * 4]
-        for encoded in invalid:
-            with self.subTest(encoded=encoded):
-                self.assertFalse(cu.plain_rgb_png(encoded))
-
     def test_resize_falls_back_with_final_pixel_hash(self):
         image = Image.new('RGB', (640, 16))
         image.paste((40, 80, 120), (0, 0, 320, 16))
@@ -166,7 +157,7 @@ class BrowserImage(unittest.TestCase):
                 self.assertEqual(result.size, expected.size)
                 self.assertEqual(result.tobytes(), expected.tobytes())
                 self.assertEqual(meta, {'backend': 'browser', 'image_size': list(expected.size),
-                                        'max_width': 320, 'image_format': 'PNG',
+                                        'max_width': 320, 'image_format': 'JPEG',
                                         'image_bytes': None, 'image_sha256': None,
                                         'encode_ms': 0})
                 self.assertFalse(self.state.exists())
@@ -189,7 +180,7 @@ class BrowserImage(unittest.TestCase):
         result = json.loads(stdout.getvalue())
         self.assertNotIn('image_base64', result)
         self.assertEqual(result['snapshot'], 'test')
-        self.assertEqual(Path(result['image']).read_bytes(), raw)
+        self.assertNotEqual(Path(result['image']).read_bytes(), raw)
         record = json.loads(Path(result['image']).with_suffix('.json').read_text())
         self.assertEqual(record['backend'], 'browser')
         self.assertEqual(record['target'], 'fixture')

@@ -169,16 +169,16 @@ def _observation(client,window,width,crop=None,clock=time.monotonic):
     except (OSError,ValueError,RuntimeError) as exc:
         raise CalibrationError('observation is stale or failed its identity checks') from exc
     try:
-        png=Path(result['image']).read_bytes()
-        if (result['image_format']!='PNG' or len(png)!=result['image_bytes'] or
-                hashlib.sha256(png).hexdigest()!=result['image_sha256']):
-            raise CalibrationError('returned PNG does not match its metadata')
+        image_bytes=Path(result['image']).read_bytes()
+        if (result['image_format']!='JPEG' or len(image_bytes)!=result['image_bytes'] or
+                hashlib.sha256(image_bytes).hexdigest()!=result['image_sha256']):
+            raise CalibrationError('returned image does not match its metadata')
         from PIL import Image
-        with Image.open(io.BytesIO(png)) as image:
+        with Image.open(io.BytesIO(image_bytes)) as image:
             image.load()
-            if image.format!='PNG' or image.mode!='RGB' or list(image.size)!=result['image_size']:
-                raise CalibrationError('returned PNG dimensions or format do not match')
-    except OSError as exc:raise CalibrationError('returned PNG is unavailable') from exc
+            if image.format!='JPEG' or image.mode!='RGB' or list(image.size)!=result['image_size']:
+                raise CalibrationError('returned image dimensions or format do not match')
+    except OSError as exc:raise CalibrationError('returned image is unavailable') from exc
     return result,meta,image_received
 
 
@@ -377,9 +377,9 @@ def run_calibration(args,client=None,cursor_capture=grim_capture,clock=time.mono
                                 clean_result['observation'])
                         except (KeyError,OSError,ValueError,RuntimeError) as exc:
                             raise CalibrationError('clean paired observation failed identity checks') from exc
-                        clean=evidence_dir/f'{width}-{profile}-{index+1}-clean.png'
+                        clean=evidence_dir/f'{width}-{profile}-{index+1}-clean.jpg'
                         clean_bytes=Path(clean_result['image']).read_bytes()
-                        if (clean_result.get('image_format')!='PNG' or
+                        if (clean_result.get('image_format')!='JPEG' or
                                 len(clean_bytes)!=clean_result.get('image_bytes') or
                                 hashlib.sha256(clean_bytes).hexdigest()!=clean_result.get('image_sha256')):
                             raise CalibrationError('clean paired observation failed image identity checks')

@@ -57,13 +57,17 @@ def write_observation(folder,token,*,image=None,**over):
         color=tuple(hashlib.sha256(str(meta.get('pixel_sha256','default')).encode()).digest()[:3])
         image=Image.new('RGB',(20,20),color)
     else:image=image.convert('RGB')
-    raw=io.BytesIO();image.save(raw,format='PNG')
+    raw=io.BytesIO();image.save(raw,format='JPEG',quality=90,subsampling=0)
     meta['image_size']=list(image.size)
-    png=raw.getvalue();meta.update(id=token,image=str(Path(folder)/(token+'.png')),
-        image_format='PNG',image_bytes=len(png),image_sha256=hashlib.sha256(png).hexdigest(),
-        pixel_sha256=hashlib.sha256(image.tobytes()).hexdigest(),
+    jpg=raw.getvalue()
+    with Image.open(io.BytesIO(jpg)) as stored:
+        stored.load()
+        stored_pixels=stored.convert('RGB').tobytes()
+    meta.update(id=token,image=str(Path(folder)/(token+'.jpg')),
+        image_format='JPEG',image_bytes=len(jpg),image_sha256=hashlib.sha256(jpg).hexdigest(),
+        pixel_sha256=hashlib.sha256(stored_pixels).hexdigest(),
         observation=str(Path(folder)/(token+'.json')))
-    Path(meta['image']).write_bytes(png)
+    Path(meta['image']).write_bytes(jpg)
     Path(meta['observation']).write_text(json.dumps(meta))
     Path(meta['image']).chmod(0o600);Path(meta['observation']).chmod(0o600)
     return Path(meta['observation'])

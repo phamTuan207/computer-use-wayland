@@ -14,15 +14,19 @@ import session_driver
 
 def save_desktop_observation(folder,meta,image,token):
     import cu
-    png_buffer=io.BytesIO();image.save(png_buffer,format='PNG');png=png_buffer.getvalue()
-    path=Path(folder)/(token+'.json');image_path=Path(folder)/(token+'.png')
+    from PIL import Image
+    jpg_buffer=io.BytesIO();image.save(jpg_buffer,format='JPEG',quality=90,subsampling=0);jpg=jpg_buffer.getvalue()
+    with Image.open(io.BytesIO(jpg)) as stored:
+        stored.load()
+        stored_pixels=stored.convert('RGB').tobytes()
+    path=Path(folder)/(token+'.json');image_path=Path(folder)/(token+'.jpg')
     meta.update({'scope':'window','observation_schema':cu.OBSERVATION_SCHEMA,'image_role':'clean-observation',
                  **cu._capture_identity({}),'created':time.time(),'id':token,
-                 'image':str(image_path),'observation':str(path),'image_format':'PNG',
-                 'image_bytes':len(png),'image_sha256':hashlib.sha256(png).hexdigest(),
-                 'pixel_sha256':hashlib.sha256(image.tobytes()).hexdigest(),
+                 'image':str(image_path),'observation':str(path),'image_format':'JPEG',
+                 'image_bytes':len(jpg),'image_sha256':hashlib.sha256(jpg).hexdigest(),
+                 'pixel_sha256':hashlib.sha256(stored_pixels).hexdigest(),
                  'image_size':list(image.size),'max_width':1280})
-    image_path.write_bytes(png);path.write_text(json.dumps(meta))
+    image_path.write_bytes(jpg);path.write_text(json.dumps(meta))
     image_path.chmod(0o600);path.chmod(0o600)
     return path
 

@@ -1,5 +1,6 @@
 """Session-local delivery hints; exact visual duplicates never imply app success."""
 import hashlib
+import io
 import json
 from pathlib import Path
 
@@ -31,13 +32,15 @@ class VisualCheckpoint:
             if meta['backend'] != 'desktop' or meta['scope'] not in ('window', 'screen') or meta['image'] != path:
                 raise ValueError('not a matching desktop observation')
             # Same pixels in another window/crop/monitor are not the same coordinate frame.
-            png = Path(path).read_bytes()
-            if (meta.get('image_format')!='PNG' or meta.get('image_bytes')!=len(png) or
-                    meta.get('image_sha256')!=hashlib.sha256(png).hexdigest()):
-                raise ValueError('returned PNG does not match its observation identity')
-            if (png[:8]!=b'\x89PNG\r\n\x1a\n' or len(png)<24 or png[12:16]!=b'IHDR' or
-                    list((int.from_bytes(png[16:20],'big'),int.from_bytes(png[20:24],'big')))!=meta['image_size']):
-                raise ValueError('returned PNG dimensions do not match its observation identity')
+            image_bytes = Path(path).read_bytes()
+            if (meta.get('image_format')!='JPEG' or meta.get('image_bytes')!=len(image_bytes) or
+                    meta.get('image_sha256')!=hashlib.sha256(image_bytes).hexdigest()):
+                raise ValueError('returned image does not match its observation identity')
+            from PIL import Image
+            with Image.open(io.BytesIO(image_bytes)) as decoded:
+                decoded.load()
+                if decoded.format!='JPEG' or list(decoded.size)!=meta['image_size']:
+                    raise ValueError('returned image dimensions do not match its observation identity')
             frame = [meta[k] for k in ('scope', 'window', 'monitor', 'region', 'image_size',
                                       'monitor_box', 'monitor_scale', 'monitor_transform')
                      if k != 'window' or meta['scope'] == 'window']
@@ -49,6 +52,6 @@ class VisualCheckpoint:
         old = self.previous
         if old and old[0] == key and Path(old[1]).exists():
             return {'status': 'unchanged', 'path': path, 'same_as': old[1],
-                    'reason': 'exact PNG and coordinate frame match; not proof of app success'}
+                    'reason': 'exact JPEG and coordinate frame match; not proof of app success'}
         self.previous = (key, path)
         return {**required, 'reason': 'first or changed visual frame'}

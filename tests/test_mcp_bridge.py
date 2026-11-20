@@ -513,13 +513,13 @@ class StartAndValidationTests(BridgeTestCase):
             with self.assertRaises(ValueError):
                 self.bridge.tool_call(arguments)
 
-    def test_image_paths_finds_png_only(self):
+    def test_image_paths_finds_png_and_jpg(self):
         value = {"result": {"image": "/tmp/a.png",
                             "screens": [{"image": "/tmp/b.png"},
                                         {"image": "/tmp/c.jpg"}]},
                  "session_ended": {"log": "/tmp/log.txt"}}
         self.assertEqual(sorted(self.bridge.image_paths(value)),
-                         ["/tmp/a.png", "/tmp/b.png"])
+                         ["/tmp/a.png", "/tmp/b.png", "/tmp/c.jpg"])
 
 
 # --- Child programs (real `python3 -c` sources) -----------------------------

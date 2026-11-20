@@ -30,10 +30,11 @@ def observation_meta(scope='window'):
 
 
 class ObservationContract(unittest.TestCase):
-    def test_saved_png_identity_and_two_axis_scale_survive_compaction(self):
+    def test_saved_jpeg_identity_and_two_axis_scale_survive_compaction(self):
         with tempfile.TemporaryDirectory() as folder,patch.object(cu,'STATE',Path(folder)):
             image=Image.new('RGB',(1000,333),(5,10,15))
             saved=cu.save_observation(image,observation_meta(),320)
+            self.assertEqual(saved['image_format'],'JPEG')
             compact=cu.compact_result(saved)
             self.assertEqual(compact['image_size'],[320,107])
             self.assertEqual(compact['scale_x'],320/1000)
@@ -46,11 +47,11 @@ class ObservationContract(unittest.TestCase):
                              (100+160*1000/320,200+53*333/107))
             self.assertTrue(cu.validate_desktop_observation(saved,{}))
 
-    def test_saved_observation_refuses_changed_png_and_metadata(self):
+    def test_saved_observation_refuses_changed_jpeg_and_metadata(self):
         with tempfile.TemporaryDirectory() as folder,patch.object(cu,'STATE',Path(folder)):
             saved=cu.save_observation(Image.new('RGB',(1000,333)),observation_meta(),320)
             Path(saved['image']).write_bytes(b'changed')
-            with self.assertRaisesRegex(ValueError,'PNG changed'):
+            with self.assertRaisesRegex(ValueError,'image changed'):
                 cu.validate_desktop_observation(saved,{},saved['observation'])
             second=cu.save_observation(Image.new('RGB',(1000,333)),observation_meta(),320)
             disk=json.loads(Path(second['observation']).read_text())

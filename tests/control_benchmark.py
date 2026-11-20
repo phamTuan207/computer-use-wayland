@@ -81,7 +81,7 @@ def browser_image_benchmark(raw,samples,raw_samples=False):
     if expected.width>1280:
         expected=expected.resize((1280,round(expected.height*1280/expected.width)),Image.Resampling.LANCZOS)
     timings={'reencode':[],'reuse':[]};sizes={};preserved={}
-    with tempfile.TemporaryDirectory(prefix='cu-png-benchmark-') as folder,patch.object(cu,'STATE',Path(folder)):
+    with tempfile.TemporaryDirectory(prefix='cu-image-benchmark-') as folder,patch.object(cu,'STATE',Path(folder)):
         for i in range(samples):
             for mode in (('reencode','reuse') if i%2==0 else ('reuse','reencode')):
                 started=time.perf_counter()
@@ -91,10 +91,17 @@ def browser_image_benchmark(raw,samples,raw_samples=False):
                 sizes[mode]=Path(meta['image']).stat().st_size
                 preserved[mode]=Path(meta['image']).read_bytes()==raw
                 with Image.open(meta['image']) as decoded:
-                    assert decoded.size==expected.size and decoded.tobytes()==expected.tobytes()
+                    assert decoded.size==expected.size
+                    stored=decoded.tobytes()
+                # Stored observations are JPEG q90: lossy, pixels close not identical
+                # (measured on real frames at q90 4:4:4: mean under 2, max under 40).
+                diffs=[abs(a-b) for a,b in zip(stored,expected.tobytes())]
+                assert sum(diffs)/len(diffs)<=10 and max(diffs)<=64
+    # Stored observations are JPEG q90 now: lossy by construction, never
+    # byte-identical to the PNG input.
     return {k:{**timing_summary(v,raw_samples),
                'bytes':sizes[k],'original_bytes_preserved':preserved[k],
-               'lossless_verified':True} for k,v in timings.items()}
+               'lossless_verified':False} for k,v in timings.items()}
 
 
 if __name__=='__main__':

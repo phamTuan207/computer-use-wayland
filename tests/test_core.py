@@ -89,7 +89,7 @@ class Coordinates(IsolatedCuState):
                 cu.desktop_act({},meta,[{'type':'wait','ms':0}])
         focus.assert_not_called()
         pointer.assert_not_called()
-    def test_saved_png_preserves_pixels_metadata_and_permissions(self):
+    def test_saved_jpeg_preserves_dimensions_metadata_and_permissions(self):
         import hashlib
         import json
         import stat
@@ -103,11 +103,17 @@ class Coordinates(IsolatedCuState):
                         expected=image.resize((320,80),Image.Resampling.LANCZOS) if width==320 else image
                         meta=cu.save_observation(image,{},width)
                         with Image.open(meta['image']) as decoded:
+                            self.assertEqual(decoded.format,'JPEG')
                             self.assertEqual(decoded.mode,'RGB')
                             self.assertEqual(decoded.size,expected.size)
-                            self.assertEqual(decoded.tobytes(),expected.tobytes())
+                            stored=decoded.tobytes()
+                        # JPEG is lossy: pixels are close, not identical.
+                        # Measured on these fixtures at q90 4:4:4: mean 0.33/6.05, max 1/39.
+                        diffs=[abs(a-b) for a,b in zip(stored,expected.tobytes())]
+                        self.assertLessEqual(sum(diffs)/len(diffs),10)
+                        self.assertLessEqual(max(diffs),64)
                         self.assertEqual(meta['image_size'],list(expected.size))
-                        self.assertEqual(meta['pixel_sha256'],hashlib.sha256(expected.tobytes()).hexdigest())
+                        self.assertEqual(meta['pixel_sha256'],hashlib.sha256(stored).hexdigest())
                         self.assertEqual(json.loads(pathlib.Path(meta['observation']).read_text()),meta)
                         for key in ('image','observation'):
                             self.assertEqual(stat.S_IMODE(pathlib.Path(meta[key]).stat().st_mode),0o600)
@@ -337,7 +343,7 @@ class SecureObservationFiles(IsolatedCuState):
         self.assertEqual(seen.get('mode'), 0o600)
         self.assertGreater(seen.get('bytes', 0), 0)
 
-    def test_encoded_png_passes_through_byte_exact(self):
+    def test_encoded_png_is_reencoded_as_jpeg(self):
         import io
         from PIL import Image
         with tempfile.TemporaryDirectory() as folder, \
@@ -347,7 +353,13 @@ class SecureObservationFiles(IsolatedCuState):
             raw = buffer.getvalue()
             meta = cu.save_observation(Image.new('RGB', (4, 4)), {}, 1280,
                                        encoded_png=raw)
-            self.assertEqual(pathlib.Path(meta['image']).read_bytes(), raw)
+            saved = pathlib.Path(meta['image'])
+            self.assertEqual(saved.suffix, '.jpg')
+            self.assertEqual(meta['image_format'], 'JPEG')
+            self.assertNotEqual(saved.read_bytes(), raw)
+            with Image.open(saved) as decoded:
+                self.assertEqual(decoded.format, 'JPEG')
+                self.assertEqual(decoded.size, (32, 16))
 
     def test_token_collision_and_symlink_refuse_without_touching_target(self):
         import io
@@ -361,7 +373,7 @@ class SecureObservationFiles(IsolatedCuState):
                 token = 'abc123def456'
                 target = pathlib.Path(folder) / 'target.png'
                 target.write_bytes(b'foreign')
-                link = cu.STATE / (token + '.png')
+                link = cu.STATE / (token + '.jpg')
                 if setup == 'file':
                     link.write_bytes(b'existing')
                 else:
