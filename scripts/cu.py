@@ -1738,28 +1738,58 @@ def browser_start(env,endpoint):
         import warm_browser
     except ImportError:
         return _browser_start_cold(env,endpoint,url,port)
-    # The warm browser owns the process now: ensure_warm() reuses a healthy
-    # warm browser or cold-launches one (health check + launch, never
-    # killing a foreign endpoint). A fresh browser context per start keeps
-    # this task's cookies/localStorage isolated from the previous task.
-    # new_task_context() retries once after a forced relaunch when the
-    # warm browser is stale, and stop() only ever kills our recorded pid.
-    warm=warm_browser.ensure_warm(endpoint=endpoint,state_dir=STATE,env=env)
-    if warm.get('pid') is None:
-        # A foreign endpoint answers here (someone else's browser, or a
-        # test stub): reuse it exactly as before, with no fresh context
-        # and no claim on its process.
-        return {'ok':True,'endpoint':endpoint,'reused':True}
-    _close_prior_browser_start_contexts(warm_browser,endpoint)
-    task_id='browser-start-'+uuid.uuid4().hex[:12]
-    ctx=warm_browser.new_task_context(task_id,endpoint=endpoint,state_dir=STATE,env=env)
-    return {'ok':True,'endpoint':endpoint,'reused':bool(warm.get('reused')),
-            'warm':True,'pid':warm.get('pid'),
-            'profile':str(STATE/warm_browser.PROFILE_DIRNAME),
-            'task_id':task_id,'target_id':ctx.get('target_id'),
-            'browser_context_id':ctx.get('browser_context_id'),
-            'context_ms':ctx.get('context_ms'),'ensure_ms':ctx.get('ensure_ms'),
-            'total_ms':ctx.get('total_ms')}
+    try:
+        json.load(urllib.request.urlopen(urllib.parse.urljoin(endpoint,'/json/version'),timeout=1))
+        alive=True
+    except Exception:
+        alive=False
+    if alive:
+        # A live endpoint: reuse it, but only our own warm browser gets
+        # a fresh context. ensure_warm() reports a pid only when the
+        # recorded process is verified ours; anything else (someone
+        # else's browser, a test stub) is reused exactly as before.
+        warm=warm_browser.ensure_warm(endpoint=endpoint,state_dir=STATE,env=env)
+        if warm.get('pid') is None:
+            return {'ok':True,'endpoint':endpoint,'reused':True}
+        profile=warm_browser.status(endpoint=endpoint,state_dir=STATE).get('recorded_profile')
+        return _browser_start_warm_context(
+            warm_browser,endpoint,env,warm.get('pid'),profile,True,
+            {'ok':True,'endpoint':endpoint,'reused':True})
+    # No live endpoint: cold-launch through the hardened legacy path
+    # (profile inode checks, private log, cancel reaping), then record
+    # the process we just launched with the warm module so later starts
+    # reuse it, new contexts land in it, and stop() can terminate it.
+    cold=_browser_start_cold(env,endpoint,url,port,probe_alive=False)
+    try:
+        warm_browser.register(endpoint,cold['pid'],cold['profile'],state_dir=STATE)
+        return _browser_start_warm_context(
+            warm_browser,endpoint,env,cold['pid'],cold['profile'],False,cold)
+    except Exception:
+        # The warm enhancement failed after a successful cold launch
+        # (e.g. CDP broke after /json/version answered): hand back the
+        # working browser exactly as before the adoption, never fail a
+        # start the old code would have returned.
+        return cold
+
+def _browser_start_warm_context(warm_browser,endpoint,env,pid,profile,reused,fallback):
+    """Fresh isolated context for this start in our warm browser.
+
+    On failure returns `fallback`, the pre-adoption result for this
+    branch, instead of failing the start: the caller still has a
+    working browser, exactly as before.
+    """
+    try:
+        _close_prior_browser_start_contexts(warm_browser,endpoint)
+        task_id='browser-start-'+uuid.uuid4().hex[:12]
+        ctx=warm_browser.new_task_context(task_id,endpoint=endpoint,state_dir=STATE,env=env)
+        return {'ok':True,'endpoint':endpoint,'reused':bool(reused),
+                'warm':True,'pid':pid,'profile':str(profile) if profile else None,
+                'task_id':task_id,'target_id':ctx.get('target_id'),
+                'browser_context_id':ctx.get('browser_context_id'),
+                'context_ms':ctx.get('context_ms'),'ensure_ms':ctx.get('ensure_ms'),
+                'total_ms':ctx.get('total_ms')}
+    except Exception:
+        return fallback
 
 def _close_prior_browser_start_contexts(warm_browser,endpoint):
     """Best-effort close of task contexts from earlier browser_start calls.
@@ -1782,18 +1812,22 @@ def _close_prior_browser_start_contexts(warm_browser,endpoint):
             except Exception:
                 pass
 
-def _browser_start_cold(env,endpoint,url,port):
-    """Legacy cold launch, used only when scripts/warm_browser.py is missing.
+def _browser_start_cold(env,endpoint,url,port,probe_alive=True):
+    """Legacy cold launch: the hardened spawn path.
 
-    Kept verbatim so a checkout without the warm module still starts a
-    browser exactly as before.
+    Used when scripts/warm_browser.py is missing, and as the spawn step
+    of the warm adoption when no browser answers. Kept verbatim so a
+    checkout without the warm module still starts a browser exactly as
+    before. probe_alive=False skips the reuse probe when the caller
+    already probed (one probe per start, never two).
     """
     import urllib.request
     import urllib.parse
-    try:
-        json.load(urllib.request.urlopen(urllib.parse.urljoin(endpoint,'/json/version'),timeout=1))
-        return {'ok':True,'endpoint':endpoint,'reused':True}
-    except Exception:pass
+    if probe_alive:
+        try:
+            json.load(urllib.request.urlopen(urllib.parse.urljoin(endpoint,'/json/version'),timeout=1))
+            return {'ok':True,'endpoint':endpoint,'reused':True}
+        except Exception:pass
     prepare_state();profile=ROOT/'browser-profile';profile.mkdir(mode=0o700,exist_ok=True)
     # Harden the directory's own inode before trusting it: a symlink, a file or
     # a foreign owner refuses here, never at spawn time. Reuse never reaches this.

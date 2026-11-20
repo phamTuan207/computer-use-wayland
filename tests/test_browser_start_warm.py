@@ -1,24 +1,29 @@
 """browser_start warm-browser adoption tests; no real browser, no network.
 
-browser_start() now warms through scripts/warm_browser.py: ensure_warm()
-reuses or cold-launches the warm process, then new_task_context() creates
-one fresh browser context per start, so a task's cookies/localStorage
-cannot leak into the next task. The module's own stub-CDP tests prove the
-isolation primitive; these tests prove the adoption seam in cu.py:
+browser_start() now warms through scripts/warm_browser.py: a live
+endpoint owned by us (recorded pid verified) gets a fresh browser
+context per start, so a task's cookies/localStorage cannot leak into
+the next task; a foreign endpoint is reused exactly as before; a dead
+endpoint cold-launches through the hardened legacy path and the new
+process is registered with the warm module. The module's own stub-CDP
+tests prove the isolation primitive; these tests prove the adoption
+seam in cu.py:
 
   (a) the warm path is used when the warm browser is healthy;
   (b) each start gets a fresh context, the previous start's context is
       closed, and a marker set in one start's context is absent in the
       next start's context (end to end through the real warm_browser
       module against the stub CDP servers from test_warm_browser);
-  (c) cold fallback engages when warm is unavailable (cold launch,
-      foreign endpoint reuse, warm-module import failure).
+  (c) cold fallback engages when warm is unavailable (cold launch with
+      register, foreign endpoint reuse, warm-module import failure,
+      warm-context failure degrading to the pre-adoption result).
 
 The stub CDP servers are reused from test_warm_browser; the "our pid"
 for the end-to-end test is a sleep process whose argv[0] is faked to a
 Chromium command line, which is exactly what warm_browser._pid_is_ours
 checks in /proc.
 """
+import io
 import json
 import pathlib
 import socket
@@ -85,16 +90,17 @@ def free_port():
 class FakeWarm:
     """Stand-in warm_browser module with canned, recorded behaviour."""
 
-    def __init__(self, ensure=None, contexts=None):
+    def __init__(self, ensure=None, contexts=None, profile="/tmp/warm-profile"):
         self.calls = []
         self.ensure_result = ensure if ensure is not None else {
             "ok": True, "endpoint": "http://127.0.0.1:9222",
             "reused": True, "pid": 1234, "launch_ms": None, "health": {}}
         self.contexts = list(contexts) if contexts is not None else []
+        self.profile = profile
         self.next_target = 0
         self.closed = []
+        self.registered = []
         self.raise_on_context = None
-        self.PROFILE_DIRNAME = "warm-browser-profile"
 
     def ensure_warm(self, endpoint=None, state_dir=None, env=None):
         self.calls.append(("ensure_warm", endpoint, state_dir))
@@ -123,7 +129,15 @@ class FakeWarm:
     def status(self, endpoint=None, state_dir=None):
         self.calls.append(("status", endpoint, state_dir))
         return {"ok": True, "endpoint": endpoint, "health": {"ok": True},
+                "recorded_pid": self.ensure_result.get("pid"),
+                "recorded_profile": self.profile,
                 "contexts": list(self.contexts)}
+
+    def register(self, endpoint, pid, profile, state_dir=None):
+        self.calls.append(("register", endpoint, pid, profile, state_dir))
+        self.registered.append((endpoint, pid, profile))
+        return {"ok": True, "endpoint": endpoint, "pid": pid,
+                "profile": profile}
 
 
 def make_fake_module(fake):
@@ -132,7 +146,8 @@ def make_fake_module(fake):
     module.new_task_context = fake.new_task_context
     module.close_task_context = fake.close_task_context
     module.status = fake.status
-    module.PROFILE_DIRNAME = fake.PROFILE_DIRNAME
+    module.register = fake.register
+    module.PROFILE_DIRNAME = "warm-browser-profile"
     module.WarmBrowserError = warm_browser.WarmBrowserError
     return module
 
@@ -147,14 +162,17 @@ class BrowserStartWarmTests(unittest.TestCase):
         self.addCleanup(self._state_patch.stop)
 
     def start_with_fake(self, fake, endpoint="http://127.0.0.1:9222"):
+        """browser_start with the fake warm module and a live probe."""
         module = make_fake_module(fake)
-        with mock.patch.dict(sys.modules, {"warm_browser": module}):
+        with mock.patch.dict(sys.modules, {"warm_browser": module}), \
+                mock.patch("urllib.request.urlopen",
+                           return_value=io.StringIO("{}")):
             return cu.browser_start({}, endpoint)
 
     def test_warm_path_used_when_warm_browser_healthy(self):
         """(a) Healthy warm browser: start reuses it and returns a fresh
         context target; no cold launch is ever attempted."""
-        fake = FakeWarm()
+        fake = FakeWarm(profile=str(self.tmp / "warm-browser-profile"))
         with mock.patch.object(cu.subprocess, "Popen",
                                side_effect=AssertionError("must not launch")):
             result = self.start_with_fake(fake)
@@ -170,6 +188,7 @@ class BrowserStartWarmTests(unittest.TestCase):
         kinds = [c[0] for c in fake.calls]
         self.assertIn("ensure_warm", kinds)
         self.assertIn("new_task_context", kinds)
+        self.assertNotIn("register", kinds)
         self.assertNotIn("close_task_context", kinds,
                          "no prior context exists on the first start")
         _, _, state_dir = fake.calls[0]
@@ -190,17 +209,33 @@ class BrowserStartWarmTests(unittest.TestCase):
                             second["browser_context_id"])
         self.assertIn(first["task_id"], fake.closed)
 
-    def test_cold_launch_when_warm_browser_unhealthy(self):
-        """(c) Nothing healthy on the endpoint: ensure_warm cold-launches
-        (reused False, pid set) and the start still returns a fresh
-        context from the newly launched process."""
-        fake = FakeWarm(ensure={"ok": True, "reused": False, "pid": 777,
-                                "launch_ms": 12.5, "health": {}})
-        result = self.start_with_fake(fake)
+    def test_cold_launch_registers_then_creates_fresh_context(self):
+        """(c) Dead endpoint: the hardened legacy launch runs, the new
+        process is registered with the warm module, and the start still
+        returns a fresh context from it."""
+        fake = FakeWarm()
+        cold = {"ok": True, "endpoint": "http://127.0.0.1:9222",
+                "reused": False, "pid": 4242,
+                "profile": str(self.tmp / "browser-profile")}
+        module = make_fake_module(fake)
+        with mock.patch.dict(sys.modules, {"warm_browser": module}), \
+                mock.patch("urllib.request.urlopen",
+                           side_effect=OSError("offline")), \
+                mock.patch.object(cu, "_browser_start_cold",
+                                  return_value=cold) as launch:
+            result = cu.browser_start({}, "http://127.0.0.1:9222")
+        launch.assert_called_once()
+        self.assertEqual(launch.call_args.args[3], 9222)
+        self.assertFalse(launch.call_args.kwargs.get("probe_alive", True),
+                         "the caller already probed; no second probe")
+        self.assertEqual(fake.registered,
+                         [("http://127.0.0.1:9222", 4242,
+                           str(self.tmp / "browser-profile"))])
         self.assertTrue(result["ok"])
         self.assertTrue(result["warm"])
         self.assertFalse(result["reused"])
-        self.assertEqual(result["pid"], 777)
+        self.assertEqual(result["pid"], 4242)
+        self.assertEqual(result["profile"], str(self.tmp / "browser-profile"))
         self.assertEqual(result["target_id"], "target-1")
 
     def test_foreign_endpoint_reused_exactly_as_before(self):
@@ -216,25 +251,30 @@ class BrowserStartWarmTests(unittest.TestCase):
         kinds = [c[0] for c in fake.calls]
         self.assertNotIn("new_task_context", kinds)
         self.assertNotIn("close_task_context", kinds)
+        self.assertNotIn("register", kinds)
 
-    def test_ours_but_context_creation_fails_raises(self):
-        """(c) When the browser IS ours and context creation fails even
-        after the module's own cold retry, the start fails loudly: a
-        silent loss of isolation is worse than a failed start."""
+    def test_context_failure_degrades_to_pre_adoption_result(self):
+        """(c) When the browser IS ours but context creation fails, the
+        start hands back the working browser exactly as before the
+        adoption instead of failing a start the old code returned."""
         fake = FakeWarm()
         fake.raise_on_context = warm_browser.WarmBrowserError(
             "warm browser cold-start fallback failed after retry: boom")
-        with self.assertRaises(warm_browser.WarmBrowserError):
-            self.start_with_fake(fake)
-
-    def test_ensure_failure_propagates(self):
-        """(c) A launch failure inside ensure_warm (e.g. no Chromium
-        binary) propagates, as the old cold path's Popen failure did."""
-        fake = FakeWarm()
-        fake.ensure_warm = mock.Mock(
-            side_effect=OSError("no browser in tests"))
-        with self.assertRaisesRegex(OSError, "no browser in tests"):
-            self.start_with_fake(fake)
+        result = self.start_with_fake(fake)
+        self.assertEqual(result, {"ok": True,
+                                  "endpoint": "http://127.0.0.1:9222",
+                                  "reused": True})
+        cold = {"ok": True, "endpoint": "http://127.0.0.1:9222",
+                "reused": False, "pid": 4242,
+                "profile": str(self.tmp / "browser-profile")}
+        module = make_fake_module(fake)
+        with mock.patch.dict(sys.modules, {"warm_browser": module}), \
+                mock.patch("urllib.request.urlopen",
+                           side_effect=OSError("offline")), \
+                mock.patch.object(cu, "_browser_start_cold",
+                                  return_value=cold):
+            result = cu.browser_start({}, "http://127.0.0.1:9222")
+        self.assertEqual(result, cold)
 
     def test_missing_warm_module_falls_back_to_legacy_cold_path(self):
         """(c) A checkout without scripts/warm_browser.py still starts a
@@ -251,6 +291,50 @@ class BrowserStartWarmTests(unittest.TestCase):
                     cu.browser_start({}, "http://127.0.0.1:%d" % dead)
             argv = spawn.call_args.args[0]
             self.assertIn("--remote-debugging-port=%d" % dead, argv)
+
+
+class WarmRegisterTests(unittest.TestCase):
+    """register() records a foreign-launched process for later reuse."""
+
+    def setUp(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.state_dir = pathlib.Path(tmp.name)
+
+    def test_register_records_pid_and_profile(self):
+        result = warm_browser.register(
+            "http://127.0.0.1:9222", 4242, "/tmp/warm-profile",
+            state_dir=self.state_dir)
+        self.assertTrue(result["ok"])
+        state = warm_browser._read_state(self.state_dir)
+        self.assertEqual(state["pid"], 4242)
+        self.assertEqual(state["profile"], "/tmp/warm-profile")
+        self.assertEqual(state["endpoint"], "http://127.0.0.1:9222")
+        self.assertEqual(oct((self.state_dir / "warm-browser.json")
+                             .stat().st_mode & 0o777), "0o600")
+
+    def test_register_preserves_recorded_contexts(self):
+        warm_browser._write_state(self.state_dir, {
+            "endpoint": "http://127.0.0.1:9222", "pid": 111,
+            "profile": "/tmp/old",
+            "contexts": [{"task_id": "browser-start-abc"}]})
+        warm_browser.register("http://127.0.0.1:9222", 4242, "/tmp/new",
+                              state_dir=self.state_dir)
+        state = warm_browser._read_state(self.state_dir)
+        self.assertEqual(state["pid"], 4242)
+        self.assertEqual(state["contexts"],
+                         [{"task_id": "browser-start-abc"}])
+
+    def test_register_rejects_bad_input(self):
+        with self.assertRaises(warm_browser.WarmBrowserError):
+            warm_browser.register("http://127.0.0.1:9222", 0, "/tmp/p",
+                                  state_dir=self.state_dir)
+        with self.assertRaises(warm_browser.WarmBrowserError):
+            warm_browser.register("http://example.com:9222", 4242, "/tmp/p",
+                                  state_dir=self.state_dir)
+        with self.assertRaises(warm_browser.WarmBrowserError):
+            warm_browser.register("http://127.0.0.1:9222", 4242, "",
+                                  state_dir=self.state_dir)
 
 
 class BrowserStartWarmEndToEndTests(unittest.TestCase):

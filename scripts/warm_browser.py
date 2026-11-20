@@ -98,14 +98,15 @@ def _http_json(endpoint, path, method="GET", timeout=HTTP_TIMEOUT_SECONDS):
     request = urllib.request.Request(endpoint + path, method=method)
     try:
         with urllib.request.urlopen(request, timeout=timeout) as resp:
-            text = resp.read().decode("utf-8")
+            raw = resp.read()
+            text = raw.decode("utf-8") if isinstance(raw, bytes) else raw
     except urllib.error.HTTPError as exc:
         raise WarmBrowserError(
             "CDP %s %s: HTTP %s" % (method, path, exc.code)) from exc
     except urllib.error.URLError as exc:
         raise WarmBrowserError(
             "CDP %s %s unreachable: %s" % (method, path, exc.reason)) from exc
-    except (UnicodeDecodeError, TimeoutError) as exc:
+    except (UnicodeDecodeError, TimeoutError, ValueError) as exc:
         raise WarmBrowserError(
             "CDP %s %s failed: %s" % (method, path, exc)) from exc
     if not text.strip():
@@ -121,19 +122,27 @@ def health(endpoint):
     """Reachability probe. Never raises for an unreachable browser.
 
     Returns {'ok': bool, 'endpoint': str, 'version': str|None,
-    'target_count': int|None, 'error': str|None}.
+    'target_count': int|None, 'error': str|None}. A /json/version
+    answer proves a CDP browser is alive, so ok is True even when
+    /json/list fails (target_count is then None); launching a second
+    browser on the same port would fail to bind, so a version answer
+    alone must count as healthy.
     """
     endpoint = validate_endpoint(endpoint)
     try:
         version = _http_json(endpoint, "/json/version", timeout=2)
-        tabs = _http_json(endpoint, "/json/list", timeout=2)
     except WarmBrowserError as exc:
         return {"ok": False, "endpoint": endpoint, "version": None,
                 "target_count": None, "error": str(exc)}
-    pages = [t for t in tabs if isinstance(t, dict) and t.get("type") == "page"]
+    try:
+        tabs = _http_json(endpoint, "/json/list", timeout=2)
+        pages = [t for t in tabs if isinstance(t, dict) and t.get("type") == "page"]
+        target_count = len(pages)
+    except WarmBrowserError:
+        target_count = None
     return {"ok": True, "endpoint": endpoint,
             "version": version.get("Browser") if isinstance(version, dict) else None,
-            "target_count": len(pages), "error": None}
+            "target_count": target_count, "error": None}
 
 
 def _state_path(state_dir):
@@ -279,6 +288,30 @@ def ensure_warm(endpoint=None, profile=None, state_dir=None, env=None):
     _write_state(state_dir, state)
     return {"ok": True, "endpoint": endpoint, "reused": False,
             "pid": pid, "launch_ms": launch_ms, "health": health(endpoint)}
+
+
+def register(endpoint, pid, profile, state_dir=None):
+    """Record a browser process launched outside ensure_warm().
+
+    browser_start() cold-launches through its own hardened path; this
+    records that process in the warm state so later starts reuse it,
+    new_task_context() can create fresh contexts in it, and stop()
+    can terminate it (pid-verified). Already recorded contexts are
+    preserved. Raises WarmBrowserError on bad input.
+    """
+    endpoint = validate_endpoint(endpoint)
+    if not isinstance(pid, int) or pid <= 0:
+        raise WarmBrowserError("register needs a live process id")
+    if not profile:
+        raise WarmBrowserError("register needs a profile path")
+    state_dir = Path(state_dir) if state_dir else _env_state_dir()
+    state = _read_state(state_dir)
+    state.update({"endpoint": endpoint, "pid": pid, "profile": str(profile),
+                  "started_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
+                  "contexts": state.get("contexts", [])})
+    _write_state(state_dir, state)
+    return {"ok": True, "endpoint": endpoint, "pid": pid,
+            "profile": str(profile)}
 
 
 # ---------------------------------------------------------------------------
