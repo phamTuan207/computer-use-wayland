@@ -53,8 +53,10 @@ static double entrance_duration_ms=1000.0;
 typedef struct {
   guint64 paint_callbacks,surface_commits,idle_paint_callbacks,pending_frame_callbacks,redraw_requests;
   guint64 hide_commands,show_commands,duplicate_hides,duplicate_shows,entrance_ticks;
+  guint64 label_commands;
 } Metrics;
 static Metrics metrics;
+static char label_text[41]="Computer use active";
 static gint64 metrics_started,metrics_window_started;
 static guint metrics_timer;
 
@@ -77,12 +79,13 @@ static gboolean report_metrics(gpointer data) {
     ",\"pending_frame_callbacks\":%" G_GUINT64_FORMAT ",\"redraw_requests\":%" G_GUINT64_FORMAT
     ",\"hide_commands\":%" G_GUINT64_FORMAT ",\"show_commands\":%" G_GUINT64_FORMAT
     ",\"duplicate_hides\":%" G_GUINT64_FORMAT ",\"duplicate_shows\":%" G_GUINT64_FORMAT
-    ",\"entrance_ticks\":%" G_GUINT64_FORMAT
+    ",\"label_commands\":%" G_GUINT64_FORMAT ",\"entrance_ticks\":%" G_GUINT64_FORMAT
     ",\"hidden\":%d,\"entrance_mode\":%d}\n",
     wall?wall:"unknown",(now-metrics_started)/1000,
     (now-metrics_window_started)/1000,metrics.paint_callbacks,metrics.surface_commits,
     metrics.idle_paint_callbacks,metrics.pending_frame_callbacks,metrics.redraw_requests,
     metrics.hide_commands,metrics.show_commands,metrics.duplicate_hides,metrics.duplicate_shows,
+    metrics.label_commands,
     metrics.entrance_ticks,hidden,entrance_mode);
   fflush(stderr);
   g_free(wall);g_date_time_unref(date);
@@ -288,11 +291,11 @@ static void draw(GtkDrawingArea *area, cairo_t *cr, int width, int height, gpoin
   cairo_set_source_rgb(cr,.98,.99,1);
   cairo_select_font_face(cr,"Inter",CAIRO_FONT_SLANT_NORMAL,CAIRO_FONT_WEIGHT_NORMAL);
   cairo_set_font_size(cr,14);
-  cairo_text_extents_t text;cairo_text_extents(cr,"Computer use active",&text);
+  cairo_text_extents_t text;cairo_text_extents(cr,label_text,&text);
   double available=fmax(1,pw-50-(escape?45:0));
   if (text.width>available) cairo_set_font_size(cr,14*available/text.width);
   cairo_move_to(cr,px+31,py+ph/2-text.y_bearing-text.height/2);
-  cairo_show_text(cr,"Computer use active");
+  cairo_show_text(cr,label_text);
   if (escape) {
     cairo_set_source_rgb(cr,.98,.99,1);
     cairo_set_font_size(cr,11);
@@ -328,6 +331,21 @@ static gboolean input(GIOChannel *channel, GIOCondition condition, gpointer data
     if (!indicator_set_hidden(&hidden,0)) {
       metrics.duplicate_shows++;puts("visible");fflush(stdout);
     } else redraw("visible");
+  }
+  else if (!strncmp(line,"label ",6)) {
+    metrics.label_commands++;
+    const char *text=line+6;
+    size_t len=strlen(text);
+    if (len<1 || len>40) { g_free(line);g_main_loop_quit(loop);return G_SOURCE_REMOVE; }
+    for (size_t i=0;i<len;i++) if ((unsigned char)text[i]<32 || (unsigned char)text[i]>126) {
+      g_free(line);g_main_loop_quit(loop);return G_SOURCE_REMOVE;
+    }
+    if (!strcmp(text,label_text)) { puts("ok");fflush(stdout); }
+    else {
+      snprintf(label_text,sizeof label_text,"%s",text);
+      if (!hidden) redraw("ok");
+      else { puts("ok");fflush(stdout); }
+    }
   }
   else if (sscanf(line,"move %127s %lf %lf %c",name,&x,&y,&extra)==3 &&
            isfinite(x) && isfinite(y) && x>=0 && y>=0) {
