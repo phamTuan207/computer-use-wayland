@@ -1386,6 +1386,48 @@ def _diagnostic_event(event,meta,env,*,action_index=None,action_type=None,intend
         if os.write(fd,raw)!=len(raw):raise RuntimeError('diagnostic log write was incomplete')
     finally:os.close(fd)
 
+def _is_navigation_candidate(actions):
+    """True when a batch may navigate (C2): a click, double-click, or Enter.
+
+    After such a batch the page is still loading 80ms later, so the
+    single after-capture usually still shows the old page.
+    """
+    for action in actions or []:
+        if not isinstance(action, dict):
+            continue
+        if action.get('type') in ('click', 'double_click'):
+            return True
+        if action.get('type') == 'key':
+            keys = action.get('keys') or []
+            if any(str(k).lower() in ('return', 'enter') for k in keys):
+                return True
+    return False
+
+
+def _settle_after_capture(capture, first_after, nav_candidate, settle_ms=400):
+    """Re-capture once after a navigation-candidate batch (C2).
+
+    ``capture`` is a zero-arg callable returning an observation meta dict.
+    If the batch could not navigate, the first frame stands. Otherwise
+    wait ``settle_ms`` and capture again; when the frame hash changed the
+    first frame was stale (old page still on screen) and the second frame
+    is the after image. Returns (after_meta, recaptured_bool). A failed
+    or hash-less second capture keeps the first frame.
+    """
+    if not nav_candidate:
+        return first_after, False
+    time.sleep(settle_ms / 1000.0)
+    try:
+        second = capture()
+    except Exception:
+        return first_after, False
+    if not isinstance(second, dict) or second.get('pixel_sha256') is None:
+        return first_after, False
+    if second.get('pixel_sha256') != first_after.get('pixel_sha256'):
+        return second, True
+    return first_after, False
+
+
 def desktop_act(env,meta,actions,after_capture=True,observation_path=None,
                 expected_terminal_window=None):
     preflight_start=time.monotonic()
@@ -1715,8 +1757,15 @@ def desktop_act(env,meta,actions,after_capture=True,observation_path=None,
     else:
         try:
             after_capture_start=time.monotonic()
-            result['after']=(observe_screen(env,meta['monitor'],meta.get('crop'),meta['max_width']) if screen_scope else
-                             observe(env,terminal_address,meta.get('crop'),meta['max_width'],activate=False))
+            def _after_capture():
+                return (observe_screen(env,meta['monitor'],meta.get('crop'),meta['max_width']) if screen_scope else
+                        observe(env,terminal_address,meta.get('crop'),meta['max_width'],activate=False))
+            first_after = _after_capture()
+            # C2: 80ms after a navigation click the old page is still on
+            # screen. Settle once and keep the newer frame when it changed.
+            result['after'], recaptured = _settle_after_capture(
+                _after_capture, first_after, _is_navigation_candidate(actions))
+            result['after_recaptured'] = recaptured
             result['frame_bytes_changed']=result['after']['pixel_sha256']!=meta['pixel_sha256']
             result['changed']=result['frame_bytes_changed']  # Compatibility alias, not semantic success.
             result['change_meaning']='Exact captured pixel hash differs; animations count. Does not confirm app action succeeded.'
