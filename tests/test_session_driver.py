@@ -246,6 +246,46 @@ class Driver(unittest.TestCase):
         self.assertEqual(result.returncode,0)
         self.assertIn('cancelled',json.loads(result.stdout))
 
+    def _fake_execute(self, args, data):
+        result = subprocess.CompletedProcess(args, 0, '{"ok": true}', '')
+        result.preflight_refusal = False
+        return result
+
+    def test_png_path_request_line_does_not_drop_session(self):
+        # I43 (2.8.2): the driver once received a PNG path where an
+        # observation JSON line was expected, UTF-8/JSON decode failed, and
+        # the session ended. A bad line now gets an error envelope and the
+        # relay stays alive for the next request.
+        source = io.StringIO(
+            '/tmp/obs-abc123.png\n'
+            + json.dumps({'args': ['status']}) + '\n'
+            + json.dumps({'args': ['finish']}) + '\n')
+        output = io.StringIO()
+        with patch.object(session_driver, 'execute', side_effect=self._fake_execute):
+            code = session_driver.relay_commands(source, output)
+        rows = [json.loads(line) for line in output.getvalue().splitlines()]
+        self.assertEqual(code, 0)
+        self.assertEqual(len(rows), 4, 'ready, bad-line envelope, status, finish')
+        self.assertFalse(rows[1]['ok'])
+        self.assertIn('not a JSON object', rows[1]['error'])
+        self.assertIs(rows[1]['session_continues'], True)
+        self.assertNotIn('session_ended', rows[1])
+        self.assertEqual(rows[2]['result'], {'ok': True})
+        self.assertEqual(rows[3]['driver'], 'finished')
+
+    def test_non_utf8_request_line_does_not_drop_session(self):
+        source = io.BytesIO(
+            b'\xff\xfe\x00not-utf8\n'
+            + (json.dumps({'args': ['status']}) + '\n').encode()
+            + (json.dumps({'args': ['finish']}) + '\n').encode())
+        output = io.StringIO()
+        with patch.object(session_driver, 'execute', side_effect=self._fake_execute):
+            code = session_driver.relay_commands(source, output)
+        rows = [json.loads(line) for line in output.getvalue().splitlines()]
+        self.assertEqual(code, 0)
+        self.assertEqual(len(rows), 4, 'ready, bad-line envelope, status, finish')
+        self.assertFalse(rows[1]['ok'])
+        self.assertIs(rows[1]['session_continues'], True)
 
 class DoctorCliTests(unittest.TestCase):
     """N3: optional fcitx probes degrade to ime_error; doctor still succeeds."""
