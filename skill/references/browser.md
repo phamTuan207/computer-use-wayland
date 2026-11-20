@@ -121,6 +121,18 @@ changes after the assert, the previous snapshot is spent: run `observe` again
 before any further input. Split at unknown layout changes and navigation as
 usual. This reduces response size; it is not a claim about billed model tokens.
 
+### Zen rules (the user's browser)
+
+- Always drive Zen, the already-logged-in tab, through the session driver.
+  Never Chromium for a task assigned to Zen, and never a fresh login.
+- Zen swaps the shortcuts: Ctrl+N is a new tab, Ctrl+T is a new window.
+  Never use Ctrl+T.
+- Never Ctrl+L in a file picker (it opens the browser URL bar). Click the
+  picker to focus, then type the path directly.
+- Never type a URL key by key. Use the tab that is already open.
+- File-picker Browse buttons need a hover first: `hover` slightly
+  off-center until the button darkens, then `click`. See desktop.md.
+
 ### Chromium CLI wrapper: tabs, history, bookmarks, downloads
 
 DOM work above is for acting on a page. For browser *state* (which tabs

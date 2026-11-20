@@ -6,7 +6,7 @@ description: Operate local Linux apps and Chromium with reliable mouse/keyboard 
 # Computer use
 
 Read [session protocol](references/session.md) before first input, then only the selected backend: [CLI/API](references/cli-anything.md), [Chromium DOM](references/browser.md), [native accessibility](references/accessibility.md), or [desktop pixels](references/desktop.md). Read [troubleshooting](references/troubleshooting.md)
-only on a matching failure. Setup/appearance problems: [session setup](references/usage.md#automation-sessions)
+only on a matching failure. Writing a worker brief: read [worker brief checklist](../docs/worker-brief-checklist.md) first; a brief that omits a known lesson repeats the mistake. Setup/appearance problems: [session setup](references/usage.md#automation-sessions)
 and [installation](../README.md#install). Preserve the configured agent cursor and overlay;
 never hot-swap a running native plugin or infer Hyprland restore values from GTK.
 
