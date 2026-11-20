@@ -38,6 +38,7 @@ _PLATFORM_KEYS = {'GDK_BACKEND','QT_QPA_PLATFORM','ELECTRON_OZONE_PLATFORM_HINT'
                   'MOZ_ENABLE_WAYLAND'}
 _ROUTING_KEYS = SESSION_KEYS - _IDENTITY_KEYS
 OBSERVATION_SCHEMA = 2
+LOW_RES_MAX_WIDTH = 640
 OBSERVATION_MAX_AGE = 90
 INSTANCE_RE = re.compile(r'[A-Za-z0-9_.-]{1,200}')
 
@@ -901,7 +902,9 @@ def _capture_identity(env):
             'capture_boot_id':boot_identity(),
             'capture_compositor':compositor_identity(env)}
 
-def observe(env, address, crop=None, max_width=960, activate=False, persist=True):
+def observe(env, address, crop=None, max_width=960, activate=False, persist=True, low_res=False):
+    low_res=bool(low_res)
+    if low_res:max_width=min(max_width,LOW_RES_MAX_WIDTH)
     from PIL import Image
     if activate: focus(env,address)
     c=window(env,address)
@@ -941,7 +944,7 @@ def observe(env, address, crop=None, max_width=960, activate=False, persist=True
     require_visible_window(current,current_monitor)
     meta={'backend':'desktop','scope':'window','window':address,'window_bounds':wb,'monitor':m['name'],
           'monitor_box':mb,'monitor_scale':m['scale'],'monitor_transform':m.get('transform',0),
-          'region':region,'crop':crop,'capture_ms':capture_ms,'decode_ms':decode_ms,
+          'region':region,'crop':crop,'low_res':low_res,'capture_ms':capture_ms,'decode_ms':decode_ms,
           'capture_elapsed_ms':round((time.monotonic()-start)*1000,3),**capture_identity}
     return save_observation(image,meta,max_width,persist)
 
@@ -953,7 +956,9 @@ def screen_region(monitor_box_,crop):
         raise ValueError('crop must be a positive rectangle inside the selected monitor')
     return [mx+x,my+y,w,h]
 
-def observe_screen(env,monitor,crop=None,max_width=960,persist=True):
+def observe_screen(env,monitor,crop=None,max_width=960,persist=True,low_res=False):
+    low_res=bool(low_res)
+    if low_res:max_width=min(max_width,LOW_RES_MAX_WIDTH)
     from PIL import Image
     m=next((m for m in hypr(env,'monitors') if m['name']==monitor),None)
     if not m:raise ValueError('monitor no longer exists; use doctor to list monitors')
@@ -973,7 +978,7 @@ def observe_screen(env,monitor,crop=None,max_width=960,persist=True):
         raise RuntimeError('monitor layout changed during capture; observe again')
     meta={'backend':'desktop','scope':'screen','monitor':monitor,'monitor_box':mb,
           'monitor_scale':m['scale'],'monitor_transform':m.get('transform',0),
-          'region':region,'crop':crop,'capture_ms':capture_ms,'decode_ms':decode_ms,
+          'region':region,'crop':crop,'low_res':low_res,'capture_ms':capture_ms,'decode_ms':decode_ms,
           'capture_elapsed_ms':round((time.monotonic()-start)*1000,3),**capture_identity}
     return save_observation(image,meta,max_width,persist)
 
@@ -1997,15 +2002,15 @@ class CodeExecBackend:
         keys = ('address', 'class', 'title', 'at', 'size', 'workspace')
         return [{k: c.get(k) for k in keys} for c in hypr(self.env, 'clients')]
 
-    def observe_window(self, address, crop, max_width):
+    def observe_window(self, address, crop, max_width, low_res=False):
         import session_policy
-        meta = observe(self.env, address, crop, max_width)
+        meta = observe(self.env, address, crop, max_width, low_res=low_res)
         session_policy.record_observation(STATE, os.environ.get('CU_SESSION_TOKEN'), meta)
         return meta
 
-    def observe_screen(self, monitor, crop, max_width):
+    def observe_screen(self, monitor, crop, max_width, low_res=False):
         import session_policy
-        meta = observe_screen(self.env, monitor, crop, max_width)
+        meta = observe_screen(self.env, monitor, crop, max_width, low_res=low_res)
         session_policy.record_observation(STATE, os.environ.get('CU_SESSION_TOKEN'), meta)
         return meta
 
@@ -2120,6 +2125,7 @@ def main():
     win=sub.add_parser('windows');win.add_argument('--class',dest='class_',help='exact class match only; no regex, no substring')
     win.add_argument('--no-titles',action='store_true',help='omit the title key from each window')
     obs=sub.add_parser('observe');target=obs.add_mutually_exclusive_group(required=True);target.add_argument('--window');target.add_argument('--screen');obs.add_argument('--crop',nargs=4,type=int);obs.add_argument('--max-width',type=int,default=960)
+    obs.add_argument('--low-res',action='store_true',help='routine framing observe at 640 px wide; verify observes and small-target grounding stay at full resolution')
     obs.add_argument('--focus',action='store_true',help='explicitly focus the target window before capture (may switch workspace)')
     obs.add_argument('--settle-ms',type=int,default=0,help='wait up to 2000 ms for 120 ms of unchanged crop pixels; not semantic readiness')
     act=sub.add_parser('act',help='execute one batch of known actions, then capture its final result');act.add_argument('--observation',required=True);act.add_argument('--actions',required=True,help='JSON path or - for stdin; batch up to 32 predictable actions from one inspected observation')
@@ -2268,14 +2274,15 @@ def main():
         check_cancel()
         if not 0<=args.settle_ms<=2000: raise ValueError('settle-ms must be 0..2000')
         with locked():
+            effective_width=min(args.max_width,LOW_RES_MAX_WIDTH) if args.low_res else args.max_width
             if args.settle_ms:
                 if args.focus:focus(env,args.window)
-                capture=lambda: (observe_screen(env,args.screen,args.crop,args.max_width,persist=False) if args.screen else
-                                 observe(env,args.window,args.crop,args.max_width,activate=False,persist=False))
-                result=settled_observation(capture,args.settle_ms,args.max_width)
+                capture=lambda: (observe_screen(env,args.screen,args.crop,effective_width,low_res=args.low_res,persist=False) if args.screen else
+                                 observe(env,args.window,args.crop,effective_width,activate=False,low_res=args.low_res,persist=False))
+                result=settled_observation(capture,args.settle_ms,effective_width)
             else:
-                result=(observe_screen(env,args.screen,args.crop,args.max_width) if args.screen else
-                        observe(env,args.window,args.crop,args.max_width,activate=args.focus))
+                result=(observe_screen(env,args.screen,args.crop,effective_width,low_res=args.low_res) if args.screen else
+                        observe(env,args.window,args.crop,effective_width,activate=args.focus,low_res=args.low_res))
             import session_policy
             session_policy.record_observation(STATE,os.environ.get('CU_SESSION_TOKEN'),result)
     elif args.command=='act':

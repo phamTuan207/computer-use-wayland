@@ -71,7 +71,61 @@ class Observe(unittest.TestCase):
                  patch.object(cu.sys,'stdout',io.StringIO()),patch.object(cu,'environment',return_value={}),\
                  patch.object(cu,'check_cancel'),patch.object(cu,'locked'),patch.object(cu,'observe',return_value={}) as observe:
                 self.assertEqual(cu.main(),0)
-                observe.assert_called_once_with({},'0x1',None,960,activate=expected)
+                observe.assert_called_once_with({},'0x1',None,960,activate=expected,low_res=False)
+
+    def _wide_setup(self):
+        from PIL import Image
+        raw=io.BytesIO();Image.new('RGB',(800,500)).save(raw,format='PPM')
+        self.capture.return_value=raw.getvalue()
+        self.window.return_value=dict(self.client,at=[0,0],size=[800,500])
+        self.monitor.update(width=800,height=500)
+        self.hypr.return_value=[self.monitor]
+
+    def test_low_res_downscales_routine_observe(self):
+        self._wide_setup()
+        image,meta=cu.observe({},'0x1',low_res=True,persist=False)
+        self.assertEqual(meta['image_size'],[640,400])
+        self.assertEqual(meta['max_width'],640)
+        self.assertTrue(meta['low_res'])
+        self.assertEqual(list(image.size),[640,400])
+
+    def test_default_observe_stays_full_width(self):
+        self._wide_setup()
+        image,meta=cu.observe({},'0x1',persist=False)
+        self.assertEqual(meta['image_size'],[800,500])
+        self.assertEqual(meta['max_width'],960)
+        self.assertFalse(meta['low_res'])
+
+    def test_low_res_keeps_smaller_explicit_max_width(self):
+        self._wide_setup()
+        image,meta=cu.observe({},'0x1',max_width=320,low_res=True,persist=False)
+        self.assertEqual(meta['image_size'],[320,200])
+        self.assertEqual(meta['max_width'],320)
+        self.assertTrue(meta['low_res'])
+
+    def test_low_res_screen_observe(self):
+        self._wide_setup()
+        image,meta=cu.observe_screen({},'test',low_res=True,persist=False)
+        self.assertEqual(meta['image_size'],[640,400])
+        self.assertEqual(meta['max_width'],640)
+        self.assertTrue(meta['low_res'])
+
+    def test_cli_low_res_flag(self):
+        with patch.object(cu.sys,'argv',['cu','observe','--window','0x1','--low-res']),\
+             patch.object(cu.sys,'stdout',io.StringIO()),patch.object(cu,'environment',return_value={}),\
+             patch.object(cu,'check_cancel'),patch.object(cu,'locked'),patch.object(cu,'observe',return_value={}) as observe:
+            self.assertEqual(cu.main(),0)
+            observe.assert_called_once_with({},'0x1',None,640,activate=False,low_res=True)
+
+    def test_cli_low_res_settle_uses_capped_width(self):
+        with patch.object(cu.sys,'argv',['cu','observe','--window','0x1','--low-res','--settle-ms','200']),\
+             patch.object(cu.sys,'stdout',io.StringIO()),patch.object(cu,'environment',return_value={}),\
+             patch.object(cu,'check_cancel'),patch.object(cu,'locked'),\
+             patch.object(cu,'settled_observation',return_value={}) as settled:
+            self.assertEqual(cu.main(),0)
+            settled.assert_called_once()
+            self.assertEqual(settled.call_args.args[1],200)
+            self.assertEqual(settled.call_args.args[2],640)
 
     def test_screen_focus_flag_rejected_before_environment_discovery(self):
         with patch.object(cu.sys,'argv',['cu','observe','--screen','test','--focus']),\
