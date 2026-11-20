@@ -52,8 +52,17 @@ centers. Keep the returned observation path. `observe --window` leaves focus alo
 is deliberate and may change workspace/stacking. Re-ground after layout/geometry/focus changes.
 Screen observations support pointer actions only. After two failed targeting attempts, change
 backend or ask. Split batches before unseen targets or consequential submissions.
+Click tests must count each attempt separately, preserve every miss, and group misses by cause;
+report hit rate in addition to task completion. Summarize a JSONL log with
+`python3 scripts/hit_rate.py RESULTS.jsonl`.
 
-DOM/accessibility: batch known refs and verify actual application state. Native
+DOM/accessibility: batch known refs and verify actual application state. For browser
+controls, choose a unique ref by its observed role and name; destructive clicks use
+`confirm_click` with the expected role, name, and exact visible text. File-picker Browse
+controls that need hover feedback use `hover_click`: it first moves off the control,
+then moves to an off-center point, waits for a computed hover-style change, and clicks
+that same point. If the style does not change, it refuses the click. Afterward, take a
+fresh observation and confirm the picker opened. Native
 `pressed`/`checked`/`selected`/`expanded` flags can avoid screenshots when exposed; missing flags
 prove nothing. An acknowledgment may precede callbacks: read state again rather than click again.
 `visual.status: unchanged` means exact image/frame identity, never semantic success; reuse the

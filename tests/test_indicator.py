@@ -2,6 +2,8 @@
 import io
 import json
 import os
+from contextlib import redirect_stderr
+from datetime import datetime
 from pathlib import Path
 import shutil
 import socket
@@ -151,6 +153,41 @@ class NativeStartup(IsolatedNativeTree):
 
 
 class CaptureClean(unittest.TestCase):
+    def test_metric_event_has_wall_time_and_elapsed_time(self):
+        output = io.StringIO()
+        with patch.object(indicator, '_METRICS_STARTED', 0), \
+                patch.object(indicator.time, 'monotonic', return_value=1.25), \
+                redirect_stderr(output):
+            indicator._metric('command', command_kind='hide', round_trip_ms=4)
+        prefix = '[indicator-metrics] '
+        self.assertTrue(output.getvalue().startswith(prefix))
+        record = json.loads(output.getvalue()[len(prefix):])
+        self.assertEqual(record['event'], 'command')
+        self.assertEqual(record['command_kind'], 'hide')
+        self.assertEqual(record['round_trip_ms'], 4)
+        self.assertEqual(record['elapsed_ms'], 1250)
+        self.assertIsNotNone(datetime.fromisoformat(record['wall_time']))
+
+    def test_capture_logs_trigger_and_duration(self):
+        events = []
+        with patch.object(indicator, 'request', return_value=True), \
+                patch.object(indicator, '_metric', side_effect=lambda name, **fields:
+                             events.append((name, fields))):
+            with indicator.capture_clean(Path('/tmp')):
+                pass
+        self.assertEqual([name for name, _ in events], ['capture_begin', 'capture_end'])
+        self.assertTrue(events[1][1]['indicator_active'])
+        self.assertGreaterEqual(events[1][1]['duration_ms'], 0)
+
+    def test_nested_capture_coalesces_hide_and_show(self):
+        calls = []
+        with patch.object(indicator, 'request',
+                          side_effect=lambda state, command: calls.append(command) or True):
+            with indicator.capture_clean(Path('/tmp/nested-indicator-capture')):
+                with indicator.capture_clean(Path('/tmp/nested-indicator-capture')):
+                    pass
+        self.assertEqual(calls, ['hide', 'show'])
+
     def test_hide_failure_runs_no_capture_and_no_show(self):
         calls = []
         ran = []

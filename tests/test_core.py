@@ -249,6 +249,18 @@ class Coordinates(IsolatedCuState):
         for text in (None,'x'*10001):
             with self.subTest(length=len(text) if isinstance(text,str) else None),self.assertRaises(ValueError):
                 cu.validate_actions([{'type':'set_value','text':text}],'browser')
+
+    def test_browser_confirm_click_requires_role_name_and_exact_text(self):
+        action={'type':'confirm_click','ref':'e1','expected_role':'button',
+                'expected_name':'Discard','expected_text':'Discard'}
+        cu.validate_actions([action],'browser')
+        for field in ('expected_role','expected_name','expected_text'):
+            invalid=dict(action)
+            invalid.pop(field)
+            with self.subTest(field=field),self.assertRaisesRegex(ValueError,'requires expected_role'):
+                cu.validate_actions([invalid],'browser')
+        with self.assertRaisesRegex(ValueError,'requires expected_role'):
+            cu.validate_actions([dict(action,expected_text='x'*257)],'browser')
     def test_key_aliases(self):
         self.assertEqual(cu.key_names(['CTRL','Enter']),(['ctrl'],['Return']))
         self.assertEqual(cu.key_names(['Shift','ArrowLeft','PageUp','f12']),(['shift'],['Left','Prior','F12']))
