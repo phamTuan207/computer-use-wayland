@@ -49,6 +49,13 @@ static double entrance_progress=1.0;
 static gint64 entrance_started;
 static guint entrance_timer;
 static double entrance_duration_ms=1000.0;
+typedef struct {
+  guint64 paint_callbacks,surface_commits,idle_commits,pending_frame_commits,redraw_requests;
+  guint64 hide_commands,show_commands,entrance_ticks;
+} Metrics;
+static Metrics metrics;
+static gint64 metrics_started,metrics_window_started;
+static guint metrics_timer;
 
 static void reply(void) {
   if (remaining) return;
@@ -56,6 +63,29 @@ static void reply(void) {
   if (timeout_id) { g_source_remove(timeout_id); timeout_id=0; }
   puts(acknowledgement); fflush(stdout);
   if (closing) g_main_loop_quit(loop);
+}
+static gboolean report_metrics(gpointer data) {
+  (void)data;
+  gint64 now=g_get_monotonic_time();
+  GDateTime *date=g_date_time_new_now_local();
+  char *wall=g_date_time_format(date,"%Y-%m-%dT%H:%M:%S%z");
+  fprintf(stderr,
+    "[indicator-metrics] {\"wall_time\":\"%s\",\"elapsed_ms\":%" G_GINT64_FORMAT
+    ",\"window_ms\":%" G_GINT64_FORMAT ",\"paint_callbacks\":%" G_GUINT64_FORMAT
+    ",\"surface_commits\":%" G_GUINT64_FORMAT ",\"idle_commits\":%" G_GUINT64_FORMAT
+    ",\"pending_frame_commits\":%" G_GUINT64_FORMAT ",\"redraw_requests\":%" G_GUINT64_FORMAT
+    ",\"hide_commands\":%" G_GUINT64_FORMAT
+    ",\"show_commands\":%" G_GUINT64_FORMAT ",\"entrance_ticks\":%" G_GUINT64_FORMAT
+    ",\"hidden\":%d,\"entrance_mode\":%d}\n",
+    wall?wall:"unknown",(now-metrics_started)/1000,
+    (now-metrics_window_started)/1000,metrics.paint_callbacks,metrics.surface_commits,
+    metrics.idle_commits,metrics.pending_frame_commits,metrics.redraw_requests,
+    metrics.hide_commands,metrics.show_commands,
+    metrics.entrance_ticks,hidden,entrance_mode);
+  fflush(stderr);
+  g_free(wall);g_date_time_unref(date);
+  metrics=(Metrics){0};metrics_window_started=now;
+  return G_SOURCE_CONTINUE;
 }
 static void framed(void *data, struct wp_presentation_feedback *callback,
                    uint32_t hi,uint32_t lo,uint32_t ns,uint32_t refresh,
@@ -127,12 +157,16 @@ static void glass_region(Output *output) {
 }
 static void painted(GdkFrameClock *clock, gpointer data) {
   (void)clock;
+  metrics.paint_callbacks++;
   Output *output=data;
   GdkSurface *surface=gtk_native_get_surface(GTK_NATIVE(output->window));
   struct wl_surface *wl=gdk_wayland_surface_get_wl_surface(surface);
   glass_region(output);
   if (failed) return;
   if (!output->pending || output->frame) {
+    if (!output->pending) metrics.idle_commits++;
+    else metrics.pending_frame_commits++;
+    metrics.surface_commits++;
     wl_surface_commit(wl);
     gdk_display_flush(gdk_surface_get_display(surface));return;
   }
@@ -141,6 +175,7 @@ static void painted(GdkFrameClock *clock, gpointer data) {
   output->frame=wp_presentation_feedback(presentation,wl);
   wp_presentation_feedback_add_listener(output->frame,&frame_listener,output);
   wl_surface_damage(wl,0,0,G_MAXINT,G_MAXINT);
+  metrics.surface_commits++;
   wl_surface_commit(wl);
   gdk_display_flush(gdk_surface_get_display(surface));
 }
@@ -154,6 +189,7 @@ static gboolean expired(gpointer data) {
 }
 static void redraw(const char *ack) {
   if (busy) { fputs("overlapping indicator command\n",stderr);g_main_loop_quit(loop);return; }
+  metrics.redraw_requests++;
   busy=1;remaining=(int)outputs->len;
   snprintf(acknowledgement,sizeof acknowledgement,"%s",ack);
   timeout_id=g_timeout_add(2000,expired,NULL);
@@ -169,6 +205,7 @@ static void settle_entrance(void) {
 }
 static gboolean enter_frame(gpointer data) {
   (void)data;
+  metrics.entrance_ticks++;
   double elapsed=(g_get_monotonic_time()-entrance_started)/1000.0;
   entrance_progress=entrance_ease(elapsed/entrance_duration_ms);
   if (elapsed>=entrance_duration_ms) {
@@ -280,8 +317,8 @@ static gboolean input(GIOChannel *channel, GIOCondition condition, gpointer data
   }
   g_strstrip(line);
   double x,y;char name[128],extra;
-  if (!strcmp(line,"hide")) { settle_entrance();hidden=1;redraw("hidden"); }
-  else if (!strcmp(line,"show")) { hidden=0;redraw("visible"); }
+  if (!strcmp(line,"hide")) { metrics.hide_commands++;settle_entrance();hidden=1;redraw("hidden"); }
+  else if (!strcmp(line,"show")) { metrics.show_commands++;hidden=0;redraw("visible"); }
   else if (sscanf(line,"move %127s %lf %lf %c",name,&x,&y,&extra)==3 &&
            isfinite(x) && isfinite(y) && x>=0 && y>=0) {
     int found=0;
@@ -414,6 +451,8 @@ int main(void) {
     gtk_widget_set_visible(GTK_WIDGET(output->window),TRUE);
   }
   if (!outputs->len) return 2;
+  metrics_started=metrics_window_started=g_get_monotonic_time();
+  metrics_timer=g_timeout_add(1000,report_metrics,NULL);
   GIOChannel *channel=g_io_channel_unix_new(STDIN_FILENO);
   g_io_channel_set_flags(channel,G_IO_FLAG_NONBLOCK,NULL);
   g_io_add_watch(channel,G_IO_IN|G_IO_HUP|G_IO_ERR,input,NULL);
@@ -434,6 +473,7 @@ int main(void) {
     output->pending=0;
   }
   busy=0;redraw("closed");g_main_loop_run(loop);
+  if (metrics_timer) {g_source_remove(metrics_timer);metrics_timer=0;report_metrics(NULL);}
   for (guint i=0;i<outputs->len;i++) {
     Output *output=g_ptr_array_index(outputs,i);
     if (output->frame) wp_presentation_feedback_destroy(output->frame);

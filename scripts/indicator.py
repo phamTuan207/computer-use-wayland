@@ -1,5 +1,6 @@
 """Session-owned layer surface control; all capture paths use the same fence."""
 from contextlib import contextmanager
+from datetime import datetime
 import json
 import os
 from pathlib import Path
@@ -8,7 +9,24 @@ import select
 import shutil
 import socket
 import subprocess
+import sys
 import time
+
+_METRICS_STARTED = time.monotonic()
+
+
+def _metric(event, **fields):
+    record = {
+        'event': event,
+        'wall_time': datetime.now().astimezone().isoformat(timespec='milliseconds'),
+        'elapsed_ms': max(0, round((time.monotonic() - _METRICS_STARTED) * 1000)),
+    }
+    record.update(fields)
+    try:
+        print('[indicator-metrics] ' + json.dumps(
+            record, sort_keys=True, separators=(',', ':')), file=sys.stderr, flush=True)
+    except OSError:
+        pass
 
 
 def endpoint(state, token):
@@ -132,11 +150,14 @@ def serve(server, native, token):
 
 
 def request(state, command):
+    started = time.monotonic()
     try:
         saved = json.loads((state / 'session.json').read_text())
     except FileNotFoundError:
         if os.environ.get('CU_SESSION_TOKEN'):
             raise RuntimeError('indicator session ended')
+        _metric('command_skipped', command_kind=command.split(' ', 1)[0],
+                reason='no_active_session')
         return False
     if saved.get('version') not in (3,4):
         raise RuntimeError('indicator recovery required before capture/input')
@@ -156,6 +177,9 @@ def request(state, command):
         expected = {'hide': b'hidden\n', 'show': b'visible\n'}.get(command, b'ok\n')
         if reply != expected:
             raise RuntimeError('indicator visibility acknowledgement failed')
+    _metric('command', command_kind=command.split(' ', 1)[0],
+            result=expected.decode('ascii').strip(),
+            round_trip_ms=max(0, round((time.monotonic() - started) * 1000)))
     return True
 
 
@@ -227,10 +251,16 @@ def liquid_available(env, *, ready=False):
 
 @contextmanager
 def capture_clean(state):
-    active = request(state, 'hide')
+    started = time.monotonic()
+    active = False
+    _metric('capture_begin')
     try:
+        active = request(state, 'hide')
         yield
     finally:
-        if active:
-            if not request(state, 'show'):
+        try:
+            if active and not request(state, 'show'):
                 raise RuntimeError('indicator session ended during capture')
+        finally:
+            _metric('capture_end', indicator_active=bool(active),
+                    duration_ms=max(0, round((time.monotonic() - started) * 1000)))
