@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { generateHeldoutCases } from './heldout_dom_cases.mjs';
 const source=fs.readFileSync(new URL('../scripts/cdp.mjs',import.meta.url),'utf8');
 const token='fake-api-token-NEVER-EXPOSE';
 class FakeInput {get value(){return this._value??'';} set value(value){this._value=value;}}
@@ -703,3 +704,74 @@ assert.equal(hits,6);
 assert.equal(misses,1);
 console.log(JSON.stringify({click_attempts:clickAttempts,click_hit_rate:{attempts:clickAttempts.length,hits,misses,
   rate:hits/clickAttempts.length,misses_by_issue:missesByIssue}}));
+
+// G14: generated cases vary app label, content, geometry, DOM order, and action sequence.
+// The target plan contains role/name only; coordinates exist solely in the fake DOM.
+const rawHeldoutSeed=process.env.CU_HELDOUT_SEED??'20261121';
+assert.match(rawHeldoutSeed,/^\d+$/,'CU_HELDOUT_SEED must be numeric');
+const heldoutSeed=Number(rawHeldoutSeed);
+const heldoutCases=generateHeldoutCases(heldoutSeed,12);
+assert.deepEqual(heldoutCases,generateHeldoutCases(heldoutSeed,12),
+  'the same seed must reproduce the same cases');
+const alternateSeed=(heldoutSeed+1)>>>0;
+assert.notDeepEqual(heldoutCases,generateHeldoutCases(alternateSeed,12),
+  'a different seed must produce fresh held-out cases');
+assert.ok(new Set(heldoutCases.map(item=>item.application)).size>1,
+  'generated cases must vary the synthetic application');
+assert.ok(new Set(heldoutCases.flatMap(item=>item.controls.map(control=>control.name))).size>5,
+  'generated cases must vary content');
+assert.ok(new Set(heldoutCases.flatMap(item=>item.controls.map(control=>JSON.stringify(control.rect)))).size>5,
+  'generated cases must vary geometry');
+assert.ok(new Set(heldoutCases.map(item=>item.sequence.join(','))).size>1,
+  'generated cases must vary action order');
+const heldoutAttempts=[],heldoutActionTimes=[],heldoutCaseTimes=[];
+for(const heldout of heldoutCases){
+  const controls=heldout.controls.map(control=>
+    element(control.name,{left:control.rect.x,top:control.rect.y,
+      width:control.rect.width,height:control.rect.height,heldoutId:control.id}));
+  const status=element(heldout.statusText,{tagName:'DIV',id:'heldout-result',left:0,top:0,width:1,height:1});
+  const start=performance.now();
+  const flow=await run([...controls,status],undefined,{operation:'observe',followup:observed=>{
+    const actions=heldout.sequence.map(id=>{
+      const target=heldout.controls.find(control=>control.id===id);
+      assert.ok(target,`case ${heldout.id} contains the planned target`);
+      const matches=observed.elements.filter(item=>item.role==='button'&&item.name===target.name);
+      assert.equal(matches.length,1,`case ${heldout.id} must ground a unique role/name`);
+      return {type:'click',ref:matches[0].ref};
+    });
+    actions.push({type:'assert',selector:'#heldout-result',text:heldout.statusText});
+    return {operation:'act',snapshot:observed.snapshot,actions};
+  }});
+  const elapsed=performance.now()-start;
+  assert.equal(flow.outputs.length,2,'each case uses one observe and one batched act');
+  assert.equal(flow.outputs[1].ok,true,`${heldout.id}: ${flow.outputs[1].error}`);
+  assert.equal(flow.outputs[1].completed,heldout.sequence.length+1);
+  assert.equal(flow.pressed.length,heldout.sequence.length);
+  const executionMs=flow.outputs[1].execution_ms;
+  heldoutActionTimes.push(executionMs/heldout.sequence.length);
+  heldoutCaseTimes.push(elapsed/heldout.sequence.length);
+  for(let index=0;index<heldout.sequence.length;index++){
+    const intended=heldout.sequence[index];
+    const actual=flow.pressed[index]?.heldoutId??'no-target';
+    heldoutAttempts.push({
+      case_id:heldout.id,attempt:index+1,backend:'dom',
+      intended_target:intended,actual_target:actual,
+      ...(actual===intended?{}:{issue_group:'unknown'}),
+    });
+  }
+}
+const heldoutHits=heldoutAttempts.filter(row=>row.actual_target===row.intended_target).length;
+const percentile=(values,p)=>{
+  const sorted=[...values].sort((a,b)=>a-b);
+  return sorted[Math.max(0,Math.ceil(sorted.length*p)-1)];
+};
+console.log(JSON.stringify({heldout_click_attempts:heldoutAttempts,heldout_result:{
+  seed:heldoutSeed,cases:heldoutCases.length,observations:heldoutCases.length,
+  clicks:heldoutAttempts.length,hits:heldoutHits,misses:heldoutAttempts.length-heldoutHits,
+  hit_rate:heldoutHits/heldoutAttempts.length,
+  adapter_batch_execution_ms_per_click_p50:percentile(heldoutActionTimes,.5),
+  adapter_batch_execution_ms_per_click_p95:percentile(heldoutActionTimes,.95),
+  harness_ms_per_click_p50:percentile(heldoutCaseTimes,.5),
+  harness_ms_per_click_p95:percentile(heldoutCaseTimes,.95),
+  timing_note:'synthetic fake-CDP timing; act batch including final assertion divided by clicks, not live browser or desktop latency',
+}}));

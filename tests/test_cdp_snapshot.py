@@ -1,6 +1,7 @@
 """Production CDP adapter against a fake DOM/transport; no accounts or GUI."""
 from pathlib import Path
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -42,4 +43,30 @@ class Snapshot(unittest.TestCase):
             self.assertAlmostEqual(report['hit_rate'],6/7)
             self.assertEqual(report['misses_by_issue'],{'wrong_target':1})
             self.assertTrue(path.read_bytes().endswith(b'\n'))
+            self.assertEqual(jsonlutil.verify_jsonl(path),[])
+        heldout=next(payload for payload in payloads if 'heldout_result' in payload)
+        heldout_result=heldout['heldout_result']
+        self.assertEqual(heldout_result['seed'],int(os.environ.get('CU_HELDOUT_SEED','20261121')))
+        self.assertEqual(heldout_result['cases'],12)
+        self.assertEqual(heldout_result['observations'],heldout_result['cases'])
+        self.assertEqual(heldout_result['hits'],heldout_result['clicks'])
+        self.assertEqual(heldout_result['misses'],0)
+        self.assertEqual(heldout_result['hit_rate'],1.0)
+        self.assertGreaterEqual(heldout_result['adapter_batch_execution_ms_per_click_p50'],0)
+        self.assertGreaterEqual(heldout_result['adapter_batch_execution_ms_per_click_p95'],
+                                heldout_result['adapter_batch_execution_ms_per_click_p50'])
+        self.assertGreaterEqual(heldout_result['harness_ms_per_click_p50'],0)
+        self.assertGreaterEqual(heldout_result['harness_ms_per_click_p95'],
+                                heldout_result['harness_ms_per_click_p50'])
+        self.assertIn('synthetic',heldout_result['timing_note'])
+        with tempfile.TemporaryDirectory() as folder:
+            path=Path(folder)/'heldout-clicks.jsonl'
+            for attempt in heldout['heldout_click_attempts']:
+                hit_rate.append_attempt(path,**attempt)
+            report=hit_rate.summarize(path)
+            self.assertEqual(report['attempts'],heldout_result['clicks'])
+            self.assertEqual(report['hits'],heldout_result['hits'])
+            self.assertEqual(report['misses'],heldout_result['misses'])
+            self.assertEqual(report['hit_rate'],heldout_result['hit_rate'])
+            self.assertEqual(report['misses_by_issue'],{})
             self.assertEqual(jsonlutil.verify_jsonl(path),[])
