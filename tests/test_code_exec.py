@@ -494,6 +494,28 @@ class DomApiTests(unittest.TestCase):
         self.assertEqual(session.dom_snapshots[after_id]['target'], 'tab-1')
         self.assertEqual(backend.dom_calls[-1][2], snapshot['snapshot'])
 
+    def test_dom_confirm_click_requires_exact_confirmation_fields(self):
+        action = {'type': 'confirm_click', 'ref': 'dom-ref-1',
+                  'expected_role': 'button', 'expected_name': 'Discard',
+                  'expected_text': 'Discard'}
+        code_exec._validate_dom_actions([action], {'dom-ref-1'})
+        for field in ('expected_role', 'expected_name', 'expected_text'):
+            incomplete = dict(action)
+            incomplete.pop(field)
+            with self.subTest(field=field), self.assertRaisesRegex(
+                    code_exec.CodeExecError, 'requires expected_role'):
+                code_exec._validate_dom_actions([incomplete], {'dom-ref-1'})
+        with self.assertRaisesRegex(code_exec.CodeExecError, 'requires expected_role'):
+            code_exec._validate_dom_actions(
+                [dict(action, expected_text='x' * 257)], {'dom-ref-1'})
+
+        backend = FakeDomBackend()
+        session = code_exec.CodeExecSession(backend)
+        snapshot = session.api_dom_observe('tab-1')
+        action['ref'] = snapshot['elements'][0]['ref']
+        self.assertTrue(session.api_dom_act(snapshot, [action])['ok'])
+        self.assertEqual(backend.dom_calls[-1][3][0]['type'], 'confirm_click')
+
     def test_dom_act_returns_refusal_dict_without_raising(self):
         backend = FakeDomBackend(dom_act_ok=False)
         session = code_exec.CodeExecSession(backend)

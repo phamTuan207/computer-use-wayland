@@ -220,6 +220,17 @@ async function snapshot(explicitScope) {
 async function click(a) {
   const point=await evaluate(elementExpression(a,`
     if(e.disabled)throw new Error('element disabled');
+    ${a.type==='confirm_click'?`
+    if(e.getAttribute('aria-disabled')==='true'||e.closest('[inert]'))
+      throw new Error('element disabled');
+    const role=(e.getAttribute('role')||e.tagName.toLowerCase()).toLowerCase();
+    const field=/^(INPUT|TEXTAREA|SELECT)$/.test(e.tagName)||e.isContentEditable;
+    const name=(e.getAttribute('aria-label')||e.labels?.[0]?.innerText||(!field&&e.innerText)||
+      e.getAttribute('placeholder')||e.getAttribute('title')||e.name||'').trim().slice(0,120);
+    const text=(e.innerText||'').trim().replace(/\\s+/g,' ');
+    if(role!==${JSON.stringify(a.expected_role.toLowerCase())}||
+       name!==${JSON.stringify(a.expected_name)}||text!==${JSON.stringify(a.expected_text)})
+      throw new Error('confirmation text or role/name mismatch');` : ''}
     e.scrollIntoView({block:'center',inline:'center',behavior:'instant'});
     const r=e.getBoundingClientRect(),x=r.left+r.width/2,y=r.top+r.height/2;
     const hit=document.elementFromPoint(x,y);
@@ -273,11 +284,14 @@ async function assertAction(a) {
     const finite=v=>typeof v==='number'&&Number.isFinite(v);
     for(const a of request.actions){
       if(!a||typeof a!=='object'||Array.isArray(a))throw new Error('each action must be an object');
-      if(!['click','fill','set_value','key','scroll','wait','assert'].includes(a.type))throw new Error('unsupported action');
-      if(['click','fill','set_value','assert'].includes(a.type)){
+      if(!['click','confirm_click','fill','set_value','key','scroll','wait','assert'].includes(a.type))throw new Error('unsupported action');
+      if(['click','confirm_click','fill','set_value','assert'].includes(a.type)){
         if(('ref' in a)===('selector' in a))throw new Error('exactly one ref or selector required');
         for(const k of ['ref','selector'])if(k in a&&(typeof a[k]!=='string'||!a[k].trim()))throw new Error(k+' must be a non-empty string');
       }
+      if(a.type==='confirm_click')for(const [field,limit] of [['expected_role',64],['expected_name',120],['expected_text',256]])
+        if(typeof a[field]!=='string'||!a[field].trim()||a[field].length>limit)
+          throw new Error('confirm_click requires expected_role, expected_name and expected_text');
       if(a.type==='fill'||a.type==='set_value')
         if(typeof a.text!=='string'||a.text.length>10000)throw new Error('text must be string <=10000 chars');
       if(a.type==='key'){
@@ -304,7 +318,7 @@ async function assertAction(a) {
         if(connection.error)throw connection.error;
         // Protect key/scroll operations as well as ref-based operations after navigation.
         await evaluate(`(()=>{const s=globalThis.__agentCu;if(!s||s.id!==${JSON.stringify(request.snapshot)}||s.url!==location.href||Date.now()-s.created>90000)throw new Error('stale snapshot');})()`);
-        if(a.type==='click')await click(a);
+        if(a.type==='click'||a.type==='confirm_click')await click(a);
         else if(a.type==='set_value'){
           const text=JSON.stringify(a.text),locator=JSON.stringify({ref:a.ref,selector:a.selector});
           const source=`(()=>{let attempted=false;try{

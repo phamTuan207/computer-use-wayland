@@ -578,3 +578,26 @@ const rectOn=await run([rectTarget],undefined,{env:{CU_PICK4_FASTPATH:'1'}});
 assert.deepEqual(rectOn.result.elements[0].rect,{x:10,y:20,width:31,height:41});
 assert.deepEqual(rectOn.result.elements[0].center,{x:26,y:41});
 assert.equal(rectOn.result.elements[0].name,'rect target');
+
+// Destructive browser actions need a fresh explicit role, name and visible-text check.
+const discard=element('Discard',{left:11,top:13,width:34,height:18});
+const continueButton=element('Continue',{left:55,top:13,width:48,height:18});
+const confirm={type:'confirm_click',ref:'e1',expected_role:'button',
+  expected_name:'Discard',expected_text:'Discard'};
+const confirmed=await run([discard,continueButton],[confirm]);
+assert.equal(confirmed.result.ok,true,confirmed.result.error);
+assert.deepEqual(confirmed.calls.find(c=>c.method==='Input.dispatchMouseEvent'&&
+  c.params.type==='mousePressed')?.params,{type:'mousePressed',x:28,y:22,button:'left',clickCount:1});
+
+const changedLabel=element('Discard',{attributes:{'aria-label':'Discard'},innerText:'Continue'});
+const refused=await run([changedLabel,continueButton],[confirm]);
+assert.equal(refused.result.ok,false);
+assert.match(refused.result.error,/confirmation text or role\/name mismatch/);
+assert.equal(refused.calls.some(c=>c.method==='Input.dispatchMouseEvent'),false,
+  'a mismatched confirmation must be refused before mouse input');
+
+const incomplete=await run([discard],[{type:'confirm_click',ref:'e1',expected_name:'Discard'}]);
+assert.equal(incomplete.result.ok,false);
+assert.equal(incomplete.result.error,
+  'confirm_click requires expected_role, expected_name and expected_text');
+assert.equal(incomplete.calls.some(c=>c.method==='Input.dispatchMouseEvent'),false);

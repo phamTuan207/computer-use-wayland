@@ -53,7 +53,9 @@ is deliberate and may change workspace/stacking. Re-ground after layout/geometry
 Screen observations support pointer actions only. After two failed targeting attempts, change
 backend or ask. Split batches before unseen targets or consequential submissions.
 
-DOM/accessibility: batch known refs and verify actual application state. Native
+DOM/accessibility: batch known refs and verify actual application state. For browser
+controls, choose a unique ref by its observed role and name; destructive clicks use
+`confirm_click` with the expected role, name, and exact visible text. Native
 `pressed`/`checked`/`selected`/`expanded` flags can avoid screenshots when exposed; missing flags
 prove nothing. An acknowledgment may precede callbacks: read state again rather than click again.
 `visual.status: unchanged` means exact image/frame identity, never semantic success; reuse the

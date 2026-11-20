@@ -1009,7 +1009,7 @@ def validate_actions(actions,backend):
     if not isinstance(actions,list) or not 1<=len(actions)<=32: raise ValueError('actions must contain 1..32 items')
     allowed=({'click','double_click','move','drag','scroll','type','key','wait'} if backend=='desktop' else
              {'click','set_text'} if backend=='a11y' else
-             {'click','fill','set_value','key','scroll','wait','assert'})
+             {'click','confirm_click','fill','set_value','key','scroll','wait','assert'})
     for a in actions:
         if not isinstance(a,dict) or not isinstance(a.get('type'),str) or a['type'] not in allowed: raise ValueError('unsupported action')
         if backend=='desktop' and a['type'] in ('move','click','double_click','drag','scroll'):
@@ -1051,12 +1051,17 @@ def validate_actions(actions,backend):
                 if 'dy' not in a:raise ValueError('browser scroll needs dy')
                 for k in ('x','y'):
                     if k in a:finite(a[k],'scroll '+k)
-        if backend=='browser' and a['type'] in ('click','fill','set_value','assert'):
+        if backend=='browser' and a['type'] in ('click','confirm_click','fill','set_value','assert'):
             # Locator presence is optional here by existing contract; the adapter
             # requires exactly one. Types and mutual exclusion are checked early.
             if 'ref' in a and 'selector' in a:raise ValueError('ref and selector are mutually exclusive')
             for k in ('ref','selector'):
                 if k in a and (not isinstance(a[k],str) or not a[k].strip()):raise ValueError(k+' must be a non-empty string')
+        if backend=='browser' and a['type']=='confirm_click':
+            for k,limit in (('expected_role',64),('expected_name',120),('expected_text',256)):
+                if (not isinstance(a.get(k),str) or not a[k].strip() or
+                        len(a[k].encode('utf-16-le','surrogatepass'))>limit*2):
+                    raise ValueError('confirm_click requires expected_role, expected_name and expected_text')
         if backend=='browser' and a['type']=='assert':
             if 'value' in a and not isinstance(a['value'],str):raise ValueError('assert value must be a string')
             if 'text' in a and not isinstance(a['text'],str):raise ValueError('assert text must be a string')
