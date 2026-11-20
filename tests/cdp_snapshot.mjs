@@ -659,6 +659,24 @@ const wrongRefFlow=await run([view,remove],undefined,{operation:'observe',follow
 assert.equal(wrongRefFlow.outputs[1].ok,true);
 assert.strictEqual(wrongRefFlow.pressed[0],remove);
 
+// G13: one DOM observation supplies refs for a multi-action batch and one after-snapshot.
+const openPanel=element('Open panel',{left:10,top:12,width:50,height:18});
+const saveChanges=element('Save changes',{left:65,top:12,width:70,height:18});
+const status=element('Saved',{tagName:'DIV',id:'status',left:10,top:70,width:40,height:12});
+const batchFlow=await run([openPanel,saveChanges,status],undefined,{operation:'observe',followup:observed=>{
+  const open=observed.elements.find(e=>e.role==='button'&&e.name==='Open panel');
+  const save=observed.elements.find(e=>e.role==='button'&&e.name==='Save changes');
+  assert.ok(open&&save,'both known controls must be grounded by one observation');
+  return {operation:'act',snapshot:observed.snapshot,actions:[
+    {type:'click',ref:open.ref},{type:'click',ref:save.ref},
+    {type:'assert',selector:'#status',text:'Saved'}]};
+}});
+assert.equal(batchFlow.outputs.length,2,'one observe plus one act response');
+assert.equal(batchFlow.fetches,2,'no extra observe between known actions');
+assert.equal(batchFlow.outputs[1].ok,true,batchFlow.outputs[1].error);
+assert.equal(batchFlow.outputs[1].completed,3);
+assert.deepEqual(batchFlow.pressed,[openPanel,saveChanges]);
+
 const clickAttempts=[
   {case_id:'confirm-discard',attempt:1,backend:'dom',intended_target:'discard',
     actual_target:confirmed.pressed[0]===discard?'discard':'no-target'},
@@ -670,14 +688,18 @@ const clickAttempts=[
     actual_target:commitFlow.pressed[0]===commitChanges?'commit-changes':'no-target'},
   {case_id:'adjacent-view-remove',attempt:1,backend:'dom',intended_target:'view',
     actual_target:wrongRefFlow.pressed[0]===remove?'remove':'no-target',issue_group:'wrong_target'},
+  {case_id:'batch-open',attempt:1,backend:'dom',intended_target:'open-panel',
+    actual_target:batchFlow.pressed[0]===openPanel?'open-panel':'no-target'},
+  {case_id:'batch-save',attempt:1,backend:'dom',intended_target:'save-changes',
+    actual_target:batchFlow.pressed[1]===saveChanges?'save-changes':'no-target'},
 ];
 const hits=clickAttempts.filter(row=>row.actual_target===row.intended_target).length;
 const misses=clickAttempts.length-hits;
 const missesByIssue={};
 for(const row of clickAttempts)if(row.actual_target!==row.intended_target)
   missesByIssue[row.issue_group??'unknown']=(missesByIssue[row.issue_group??'unknown']??0)+1;
-assert.equal(clickAttempts.length,5);
-assert.equal(hits,4);
+assert.equal(clickAttempts.length,7);
+assert.equal(hits,6);
 assert.equal(misses,1);
-console.log(JSON.stringify({click_attempts:clickAttempts,click_hit_rate:{attempts:5,hits,misses,
+console.log(JSON.stringify({click_attempts:clickAttempts,click_hit_rate:{attempts:clickAttempts.length,hits,misses,
   rate:hits/clickAttempts.length,misses_by_issue:missesByIssue}}));
