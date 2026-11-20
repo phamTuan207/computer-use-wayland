@@ -7,6 +7,7 @@
 #include <wayland-client.h>
 #include "presentation-protocol.h"
 #include "background-effect-protocol.h"
+#include "indicator_state.h"
 #include <math.h>
 #include <signal.h>
 #include <stdio.h>
@@ -50,8 +51,8 @@ static gint64 entrance_started;
 static guint entrance_timer;
 static double entrance_duration_ms=1000.0;
 typedef struct {
-  guint64 paint_callbacks,surface_commits,idle_commits,pending_frame_commits,redraw_requests;
-  guint64 hide_commands,show_commands,entrance_ticks;
+  guint64 paint_callbacks,surface_commits,idle_paint_callbacks,pending_frame_callbacks,redraw_requests;
+  guint64 hide_commands,show_commands,duplicate_hides,duplicate_shows,entrance_ticks;
 } Metrics;
 static Metrics metrics;
 static gint64 metrics_started,metrics_window_started;
@@ -72,15 +73,16 @@ static gboolean report_metrics(gpointer data) {
   fprintf(stderr,
     "[indicator-metrics] {\"wall_time\":\"%s\",\"elapsed_ms\":%" G_GINT64_FORMAT
     ",\"window_ms\":%" G_GINT64_FORMAT ",\"paint_callbacks\":%" G_GUINT64_FORMAT
-    ",\"surface_commits\":%" G_GUINT64_FORMAT ",\"idle_commits\":%" G_GUINT64_FORMAT
-    ",\"pending_frame_commits\":%" G_GUINT64_FORMAT ",\"redraw_requests\":%" G_GUINT64_FORMAT
-    ",\"hide_commands\":%" G_GUINT64_FORMAT
-    ",\"show_commands\":%" G_GUINT64_FORMAT ",\"entrance_ticks\":%" G_GUINT64_FORMAT
+    ",\"surface_commits\":%" G_GUINT64_FORMAT ",\"idle_paint_callbacks\":%" G_GUINT64_FORMAT
+    ",\"pending_frame_callbacks\":%" G_GUINT64_FORMAT ",\"redraw_requests\":%" G_GUINT64_FORMAT
+    ",\"hide_commands\":%" G_GUINT64_FORMAT ",\"show_commands\":%" G_GUINT64_FORMAT
+    ",\"duplicate_hides\":%" G_GUINT64_FORMAT ",\"duplicate_shows\":%" G_GUINT64_FORMAT
+    ",\"entrance_ticks\":%" G_GUINT64_FORMAT
     ",\"hidden\":%d,\"entrance_mode\":%d}\n",
     wall?wall:"unknown",(now-metrics_started)/1000,
     (now-metrics_window_started)/1000,metrics.paint_callbacks,metrics.surface_commits,
-    metrics.idle_commits,metrics.pending_frame_commits,metrics.redraw_requests,
-    metrics.hide_commands,metrics.show_commands,
+    metrics.idle_paint_callbacks,metrics.pending_frame_callbacks,metrics.redraw_requests,
+    metrics.hide_commands,metrics.show_commands,metrics.duplicate_hides,metrics.duplicate_shows,
     metrics.entrance_ticks,hidden,entrance_mode);
   fflush(stderr);
   g_free(wall);g_date_time_unref(date);
@@ -161,15 +163,13 @@ static void painted(GdkFrameClock *clock, gpointer data) {
   Output *output=data;
   GdkSurface *surface=gtk_native_get_surface(GTK_NATIVE(output->window));
   struct wl_surface *wl=gdk_wayland_surface_get_wl_surface(surface);
+  if (!indicator_needs_present(output->pending,output->frame!=NULL)) {
+    if (!output->pending) metrics.idle_paint_callbacks++;
+    else metrics.pending_frame_callbacks++;
+    return;
+  }
   glass_region(output);
   if (failed) return;
-  if (!output->pending || output->frame) {
-    if (!output->pending) metrics.idle_commits++;
-    else metrics.pending_frame_commits++;
-    metrics.surface_commits++;
-    wl_surface_commit(wl);
-    gdk_display_flush(gdk_surface_get_display(surface));return;
-  }
   // Recommit GTK's fresh buffer with damage and require actual presentation,
   // not merely a frame-scheduling callback or a server queue sync.
   output->frame=wp_presentation_feedback(presentation,wl);
@@ -317,8 +317,18 @@ static gboolean input(GIOChannel *channel, GIOCondition condition, gpointer data
   }
   g_strstrip(line);
   double x,y;char name[128],extra;
-  if (!strcmp(line,"hide")) { metrics.hide_commands++;settle_entrance();hidden=1;redraw("hidden"); }
-  else if (!strcmp(line,"show")) { metrics.show_commands++;hidden=0;redraw("visible"); }
+  if (!strcmp(line,"hide")) {
+    metrics.hide_commands++;
+    if (!indicator_set_hidden(&hidden,1)) {
+      metrics.duplicate_hides++;puts("hidden");fflush(stdout);
+    } else { settle_entrance();redraw("hidden"); }
+  }
+  else if (!strcmp(line,"show")) {
+    metrics.show_commands++;
+    if (!indicator_set_hidden(&hidden,0)) {
+      metrics.duplicate_shows++;puts("visible");fflush(stdout);
+    } else redraw("visible");
+  }
   else if (sscanf(line,"move %127s %lf %lf %c",name,&x,&y,&extra)==3 &&
            isfinite(x) && isfinite(y) && x>=0 && y>=0) {
     int found=0;

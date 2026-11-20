@@ -10,9 +10,13 @@ import shutil
 import socket
 import subprocess
 import sys
+import threading
 import time
 
 _METRICS_STARTED = time.monotonic()
+_CAPTURE_LOCK = threading.RLock()
+_CAPTURE_DEPTHS = {}
+_CAPTURE_ACTIVE = {}
 
 
 def _metric(event, **fields):
@@ -252,15 +256,28 @@ def liquid_available(env, *, ready=False):
 @contextmanager
 def capture_clean(state):
     started = time.monotonic()
+    key = str(Path(state).resolve())
     active = False
     _metric('capture_begin')
     try:
-        active = request(state, 'hide')
-        yield
-    finally:
+        with _CAPTURE_LOCK:
+            depth = _CAPTURE_DEPTHS.get(key, 0)
+            if depth == 0:
+                _CAPTURE_ACTIVE[key] = request(state, 'hide')
+            active = _CAPTURE_ACTIVE[key]
+            _CAPTURE_DEPTHS[key] = depth + 1
         try:
-            if active and not request(state, 'show'):
-                raise RuntimeError('indicator session ended during capture')
+            yield
         finally:
-            _metric('capture_end', indicator_active=bool(active),
-                    duration_ms=max(0, round((time.monotonic() - started) * 1000)))
+            with _CAPTURE_LOCK:
+                depth = _CAPTURE_DEPTHS[key] - 1
+                if depth:
+                    _CAPTURE_DEPTHS[key] = depth
+                else:
+                    _CAPTURE_DEPTHS.pop(key, None)
+                    active = _CAPTURE_ACTIVE.pop(key, False)
+                    if active and not request(state, 'show'):
+                        raise RuntimeError('indicator session ended during capture')
+    finally:
+        _metric('capture_end', indicator_active=bool(active),
+                duration_ms=max(0, round((time.monotonic() - started) * 1000)))

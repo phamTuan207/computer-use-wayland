@@ -179,6 +179,15 @@ class CaptureClean(unittest.TestCase):
         self.assertTrue(events[1][1]['indicator_active'])
         self.assertGreaterEqual(events[1][1]['duration_ms'], 0)
 
+    def test_nested_capture_coalesces_hide_and_show(self):
+        calls = []
+        with patch.object(indicator, 'request',
+                          side_effect=lambda state, command: calls.append(command) or True):
+            with indicator.capture_clean(Path('/tmp/nested-indicator-capture')):
+                with indicator.capture_clean(Path('/tmp/nested-indicator-capture')):
+                    pass
+        self.assertEqual(calls, ['hide', 'show'])
+
     def test_hide_failure_runs_no_capture_and_no_show(self):
         calls = []
         ran = []
