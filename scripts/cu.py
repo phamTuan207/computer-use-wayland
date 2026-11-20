@@ -39,7 +39,7 @@ _PLATFORM_KEYS = {'GDK_BACKEND','QT_QPA_PLATFORM','ELECTRON_OZONE_PLATFORM_HINT'
 _ROUTING_KEYS = SESSION_KEYS - _IDENTITY_KEYS
 OBSERVATION_SCHEMA = 2
 LOW_RES_MAX_WIDTH = 640
-OBSERVATION_MAX_AGE = 90
+OBSERVATION_MAX_AGE = 120
 INSTANCE_RE = re.compile(r'[A-Za-z0-9_.-]{1,200}')
 
 MODIFIERS={'ctrl':'ctrl','control':'ctrl','alt':'alt','altgr':'altgr','shift':'shift','super':'logo','meta':'logo','win':'logo','logo':'logo'}
@@ -737,7 +737,7 @@ def _valid_capture_identity(meta,env):
         raise ValueError('observation belongs to another system boot; observe again')
     age=time.monotonic()-mono
     if not 0<=age<=OBSERVATION_MAX_AGE:
-        raise ValueError('observation older than 90s or from a future clock; observe again')
+        raise ValueError('observation older than 120s or from a future clock; observe again')
     if created<wall:
         raise ValueError('observation creation time predates capture; observe again')
     if meta.get('capture_compositor')!=compositor_identity(env):

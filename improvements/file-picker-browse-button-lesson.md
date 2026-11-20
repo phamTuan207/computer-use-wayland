@@ -31,12 +31,12 @@ after 2-3 failures. Do not keep repeating the identical failed action.
 
 ## 3. Proactive blocker reporting
 
-When a step is stuck on the same error for more than 15 minutes, report
+When a step is stuck on the same error for more than 3.5 minutes, report
 it as a blocker immediately to the coordinator or user. Do not wait to
-be asked.
+be asked, and do not wait for a longer threshold.
 
 - A step that keeps failing is a blocker, not a retryable error, once
-  it passes the 15-minute mark.
+  it passes the 3.5-minute mark.
 - The report must name the step, the error, how long it has been stuck,
   and what approaches were already tried.
 - Silence while stuck is the worst outcome: it burns time the user
