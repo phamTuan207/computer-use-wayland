@@ -11,3 +11,13 @@
 - C8 (no cleanup after use): guardian cleans up, but nothing VERIFIES clean after finish/stop. Fix = session_cleanup.py --check.
 - B1-B14: no Polygon code in repo at all. Fix = runbook doc (source: QUY-TRINH-UP-DE-POLYGON-CODEFORCES-2026-11-20.md, read in full 06:45) + polygon_checks.py validator. B9 hover_click already exists in cdp.mjs (verify + reference). B14 "verification fail means stop" already a tripwire in claim_check.py (verify + reference).
 - D1: already in checklist (I39). D2/D3/D4/D5: missing from checklist. Fix = add to checklist + brief template.
+
+## 3.1.1 C1 (06:47-06:52 +07, elapsed 00:05)
+- Wrote tests/test_phase3_c1.py (4 tests). All pass. No code change needed: the guard already exists. Commit ceff51c, pushed.
+
+## 3.1.2 C2 (06:52-07:00 +07, elapsed 00:08)
+- Added `_is_navigation_candidate` + `_settle_after_capture` to scripts/cu.py; wired into desktop_act after-capture (one 400ms settle re-capture when the batch may navigate; keeps the newer frame when the hash changed). Tests tests/test_phase3_c2.py (5 tests). All 9 Phase 3 tests pass. Commit 6be6784, pushed.
+
+## 3.1.3 C3 (07:00-07:08 +07, elapsed 00:08)
+- Added `_is_zen_ctrl_t` + `_refuse_zen_ctrl_t` to scripts/cu.py; wired into desktop_act preflight (raises PreflightRefusal before any focus/input). Tests tests/test_phase3_c3.py (6 tests). All pass. Commit 92944da, pushed.
+- Live verified 07:08 +07: Zen Hyprland class is exactly `zen` (hyprctl clients on the laptop), so the guard matches the real window.
