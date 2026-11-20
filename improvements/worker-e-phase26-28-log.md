@@ -41,43 +41,43 @@
 #   approach in native/hyprglass-local-optics.lua comments; no code change,
 #   record in checklist doc.
 #
-## 03:50 (+19m) COMMIT 3b0d904 pushed (2.8.1): code_exec 90s to 120s + all
+## COMMIT 3b0d904 pushed (2.8.1): code_exec 90s to 120s + all
 # skill docs to 120s + boundary test (100s-old DOM snapshot still valid).
 # test_code_exec 51 tests OK.
 # Note: branch switched under me (harness-warm-browser -> todolist-push);
 # checkout is shared with workers C/D. Push raced once; verified via fetch.
 # Only ever `git add` my own paths; other workers' uncommitted files exist.
-## 04:0x (+~30m) COMMIT 904ec85 pushed (2.7.16 G24): scripts/jsonlutil.py
+## COMMIT 904ec85 pushed (2.7.16 G24): scripts/jsonlutil.py
 # (append_jsonl, ensure_trailing_newline_fd, verify_jsonl) wired into
 # visuals.py, cu.py diagnostics, tc02_controller emit. 8 new tests pass.
 # Caught by test: os.pread needs a readable fd; writers open write-only,
 # so the helper reads the last byte via a separate read-only fd.
 # 7 test_session_driver doctor failures are PRE-EXISTING on the clean tree
 # (verified via git stash; fcitx5-remote probes, VM environment).
-## 04:0x (+~40m) COMMIT e3d75c4 pushed (2.8.2 I43): relay_commands answers
+## COMMIT e3d75c4 pushed (2.8.2 I43): relay_commands answers
 # an unparseable request line (PNG path, non-UTF-8 bytes) with an error
 # envelope and stays alive; parsed JSON of wrong shape still raises
 # ValueError fail-closed per test_invalid_requests_never_execute. 3 new
 # tests; Driver + SessionDriverLimit 20 tests OK.
-## 04:0x COMMIT 8ca3494 pushed (2.6.5 I31): scripts/drive_log.py, file log
+## COMMIT 8ca3494 pushed (2.6.5 I31): scripts/drive_log.py, file log
 # for direct driving with wall-clock Asia/Ho_Chi_Minh + elapsed, monotonic
 # in-process, wall-based across processes (CLI reopens and keeps T0).
 # 6 tests pass.
-## 04:0x COMMIT a6d2f2b pushed (2.7.5 G5): scripts/image_viewer.py kills
+## COMMIT a6d2f2b pushed (2.7.5 G5): scripts/image_viewer.py kills
 # and lists by exact comm imv-wayland; desktop.md states the rule. 6 tests.
-## 04:0x COMMIT b2afcd1 pushed (2.7.11 G11 + Phase 4.1): pill
+## COMMIT b2afcd1 pushed (2.7.11 G11 + Phase 4.1): pill
 # blur_strength 0.0 to 0.15 in native/hyprglass-local-optics.lua, refraction
 # stays copied exactly from upstream (0.55). No visuals.json in checkout,
 # pin regenerates at install. Live look still needs user's eyes post-reboot.
 # Glass tests pass.
-## 04:0x COMMIT 6a118f6 pushed (2.7.9 G9): scripts/vm_proxy.py, local
+## COMMIT 6a118f6 pushed (2.7.9 G9): scripts/vm_proxy.py, local
 # forward proxy on 127.0.0.1 adding preemptive Proxy-Authorization from
 # VM_EGRESS_PROXY_AUTH (env only). LIVE VERIFIED: curl https://example.com
 # through it returns 200 via hatch-egress-proxy:3128. 4 unit tests pass.
 # Two test bugs caught by running them: status-line check looked for a
 # trailing ' 200' (line ends 'Established'); urlparse mishandles plain
 # host:port (treats host as scheme).
-## 04:0x COMMIT f1f2806 pushed (2.7.14 G21): first-class desktop 'hover'
+## COMMIT f1f2806 pushed (2.7.14 G21): first-class desktop 'hover'
 # action in cu.py (move + 30 ms settle, never clicks) + desktop.md recipe
 # (hover off-center until Browse darkens, then click; 'blocked' was the
 # wrong diagnosis). Also fixed G24 wiring fallout: jsonlutil imports in
@@ -85,7 +85,7 @@
 # loaded by file path (test_core loads cu that way). test_core shows only
 # the PRE-EXISTING hyprctl-missing failure on this VM (verified on clean
 # tree via git stash).
-## 04:0x COMMIT (2.6.1-2.6.4, 2.6.6 + runbook): docs/worker-brief-checklist.md
+## COMMIT (2.6.1-2.6.4, 2.6.6 + runbook): docs/worker-brief-checklist.md
 # (research-first, save method verbatim, give ALL lessons, tell user
 # first, I32-I40 brief rules, stuck/reporting rules, verify-don't-invent,
 # operator runbook, ban list incl. ydotool/OpenRouter/gpt-reserve);
@@ -99,6 +99,9 @@
 # sync_installed). Known pre-existing failures NOT mine: 7
 # test_session_driver doctor tests (fcitx5-remote probes, VM env) and 1
 # test_core test (hyprctl binary absent on VM); both fail on clean tree.
+# CORRECTION (03:46): the "+Nm / 04:0x" elapsed annotations in earlier
+# versions of this log were guesses, not measured times. True window:
+# task start 03:31:49, finish 03:46, about 14 minutes total.
 ## NOT done / needs the laptop or the user:
 # - Pill blur 0.15: needs install on the laptop + the user's eyes after
 #   reboot (taste judge). The value is one small step, easy to adjust.

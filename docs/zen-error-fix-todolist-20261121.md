@@ -75,35 +75,35 @@
 - [x] 2.5.8 I28-I30: (doc them trong file LOI-COMPUTER-USE-TU-LICH-SU-CHAT, phan 5)
 
 ### 2.6 Khong log, khong luu cach lam, khong dua het bai hoc
-- [ ] 2.6.1 A1: Tu y cat buoc, khong doc lai toan bo huong dan. Sua: viec dau tien la NGHIEN CUU, DOC LAI toan bo workflow, viet ke hoach cac buoc theo dung nguon
-- [ ] 2.6.2 A2: Khong luu phuong phap da thanh cong, de agent bia cach khac. Sua: luu lai va dung y nguyen cho lan sau (Zen + tab da dang nhap + driver)
-- [ ] 2.6.3 A3: Khong dua du bai hoc cho agent. Sua: dua HET, liet ke toan bo loi + cach khac phuc vao prompt
-- [ ] 2.6.4 A9: Tu viet solution ma khong bao truoc. Sua: khi solution thieu, bao ong truoc khi tu viet
-- [ ] 2.6.5 I31: Khong log khi Muse drive truc tiep. Sua: log day du voi thoi gian vao FILE, khong chi trong chat (luat cung 21/11)
-- [ ] 2.6.6 I32-I40: Chi thi sai cho worker, hanh dong truoc GO (doc them trong file chat)
+- [x] 2.6.1 A1: Tu y cat buoc, khong doc lai toan bo huong dan. Sua: viec dau tien la NGHIEN CUU, DOC LAI toan bo workflow, viet ke hoach cac buoc theo dung nguon
+- [x] 2.6.2 A2: Khong luu phuong phap da thanh cong, de agent bia cach khac. Sua: luu lai va dung y nguyen cho lan sau (Zen + tab da dang nhap + driver)
+- [x] 2.6.3 A3: Khong dua du bai hoc cho agent. Sua: dua HET, liet ke toan bo loi + cach khac phuc vao prompt
+- [x] 2.6.4 A9: Tu viet solution ma khong bao truoc. Sua: khi solution thieu, bao ong truoc khi tu viet
+- [x] 2.6.5 I31: Khong log khi Muse drive truc tiep. Sua: log day du voi thoi gian vao FILE, khong chi trong chat (luat cung 21/11)
+- [x] 2.6.6 I32-I40: Chi thi sai cho worker, hanh dong truoc GO (doc them trong file chat)
 
 ### 2.7 Loi ky thuat Muse (phan G)
-- [ ] 2.7.1 G1: G0-observe chet vi relay chay code cu (stale code). Sua: restart relay khi idle sau moi thay doi code broker, hoac fail-closed stale-code guard
-- [ ] 2.7.2 G2: Geometry editor sai 924x1176 thay vi 901x1176, Hyprland tile sai. Sua: floating + resize chinh xac 901x1176 tai [2990,914]
-- [ ] 2.7.3 G3: Lease de o /tmp, bi xoa khi reboot. Sua: chuyen sang ~/.cache/agent-computer-use/leases/ dir 0700
-- [ ] 2.7.4 G4: Hyprland Lua dispatch string BROKEN. Sua: dung hl.dsp object form
-- [ ] 2.7.5 G5: Image viewer la imv-wayland, khong phai imv. Sua: kill bang pkill -x imv-wayland, luon kill sau moi anh
-- [ ] 2.7.6 G6: SSH chet sau ~30 giay. Sua: viec dai chay detached, kiem tra bang lenh ngan
-- [ ] 2.7.7 G7: SSH tran khong -i/IdentitiesOnly bao Permission denied. Sua: dung ~/workspace/ssh-laptop.sh
-- [ ] 2.7.8 G8: agy CLI khong chay non-interactive qua SSH. Sua: dung fcc-claude
-- [ ] 2.7.9 G9: Live-site browsing tu VM Chromium khong hoat dong (proxy). Sua: local forward proxy + --ignore-certificate-errors
-- [ ] 2.7.10 G10: Pill hinh dang sai, khong bend o giua. Sua: copy y het Kyant0/shayxo/Haze/MacShell, chi giam blur
-- [ ] 2.7.11 G11: Pill gan nhu trong suot, blur va refraction gan nhu khong co. Sua: tang blur them 1 chut (ong dan sau reboot 21/11), ben trong phai co refraction
-- [ ] 2.7.12 G19: Workers "not found" khong dang tin. Sua: tu kiem tra lai, Google truoc
-- [ ] 2.7.13 G20: Google sign-in password bi reject, chooser chi work khi co live session. Sua: dung chooser, khong bao ong nhap password, password step la dung provider
-- [ ] 2.7.14 G21: Nut Browse khong bi block, chi can hover lech tam. Da co fix, own diagnosis sai thang
-- [ ] 2.7.15 G23: Khong route sang gpt-reserve. Dung Luna cho moi thu
-- [ ] 2.7.16 G24: JSONL append khong trailing newline lam hong ca file. Sua: kiem tra file ket thuc bang \n truoc moi append, parse-verify sau push
-- [ ] 2.7.17 G27: Khong rep ngay trong nhom khi duoc @. Sua: rep luon trong nhom ngay
+- [x] 2.7.1 G1: G0-observe chet vi relay chay code cu (stale code). Sua: restart relay khi idle sau moi thay doi code broker, hoac fail-closed stale-code guard
+- [x] 2.7.2 G2: Geometry editor sai 924x1176 thay vi 901x1176, Hyprland tile sai. Sua: floating + resize chinh xac 901x1176 tai [2990,914]
+- [x] 2.7.3 G3: Lease de o /tmp, bi xoa khi reboot. Sua: chuyen sang ~/.cache/agent-computer-use/leases/ dir 0700
+- [x] 2.7.4 G4: Hyprland Lua dispatch string BROKEN. Sua: dung hl.dsp object form
+- [x] 2.7.5 G5: Image viewer la imv-wayland, khong phai imv. Sua: kill bang pkill -x imv-wayland, luon kill sau moi anh
+- [x] 2.7.6 G6: SSH chet sau ~30 giay. Sua: viec dai chay detached, kiem tra bang lenh ngan
+- [x] 2.7.7 G7: SSH tran khong -i/IdentitiesOnly bao Permission denied. Sua: dung ~/workspace/ssh-laptop.sh
+- [x] 2.7.8 G8: agy CLI khong chay non-interactive qua SSH. Sua: dung fcc-claude
+- [x] 2.7.9 G9: Live-site browsing tu VM Chromium khong hoat dong (proxy). Sua: local forward proxy + --ignore-certificate-errors
+- [x] 2.7.10 G10: Pill hinh dang sai, khong bend o giua. Sua: copy y het Kyant0/shayxo/Haze/MacShell, chi giam blur
+- [x] 2.7.11 G11: Pill gan nhu trong suot, blur va refraction gan nhu khong co. Sua: tang blur them 1 chut (ong dan sau reboot 21/11), ben trong phai co refraction
+- [x] 2.7.12 G19: Workers "not found" khong dang tin. Sua: tu kiem tra lai, Google truoc
+- [x] 2.7.13 G20: Google sign-in password bi reject, chooser chi work khi co live session. Sua: dung chooser, khong bao ong nhap password, password step la dung provider
+- [x] 2.7.14 G21: Nut Browse khong bi block, chi can hover lech tam. Da co fix, own diagnosis sai thang
+- [x] 2.7.15 G23: Khong route sang gpt-reserve. Dung Luna cho moi thu
+- [x] 2.7.16 G24: JSONL append khong trailing newline lam hong ca file. Sua: kiem tra file ket thuc bang \n truoc moi append, parse-verify sau push
+- [x] 2.7.17 G27: Khong rep ngay trong nhom khi duoc @. Sua: rep luon trong nhom ngay
 
 ### 2.8 Observation het han, session rot (I41-I43)
-- [ ] 2.8.1 Observation het han 16:19, 17:53, 18:02. Sua: chup observation moi truoc khi hanh dong, limit tang 90s len 120s (da lam 18:03-18:04)
-- [ ] 2.8.2 Driver bug rot session 15:47 (PNG path thay vi observation JSON). Sua: fix driver
+- [x] 2.8.1 Observation het han 16:19, 17:53, 18:02. Sua: chup observation moi truoc khi hanh dong, limit tang 90s len 120s (da lam 18:03-18:04)
+- [x] 2.8.2 Driver bug rot session 15:47 (PNG path thay vi observation JSON). Sua: fix driver
 
 ## PHASE 3 - FIX LOI CODEX VA LOI HE THONG (phan A, B, C, D)
 
