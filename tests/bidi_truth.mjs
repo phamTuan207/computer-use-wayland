@@ -84,6 +84,7 @@ async function main() {
     walk(tree.contexts);
     if (args.list) {
       console.log(JSON.stringify(contexts, null, 2));
+      try { await send(ws, 'session.end', {}); } catch { /* already gone */ }
       ws.close();
       return;
     }
@@ -102,6 +103,9 @@ async function main() {
     const out = JSON.stringify({ context: target.id, url: target.url, value }, null, 2);
     if (args.outPath) writeFileSync(args.outPath, out + '\n');
     console.log(out);
+    // End the session explicitly: Firefox caps active BiDi sessions and
+    // leaked sessions block later runs with "Maximum number of active sessions".
+    try { await send(ws, 'session.end', {}); } catch { /* already gone */ }
   } finally {
     ws.close();
   }
