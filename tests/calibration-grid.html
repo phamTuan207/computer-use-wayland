@@ -90,7 +90,7 @@
         var sy = Math.round(window.mozInnerScreenY + r.y + r.height / 2);
         var lab = document.createElement('div');
         lab.className = 'truthlabel';
-        lab.textContent = el.dataset.tid + ':' + sx + ',' + sy;
+        lab.textContent = el.dataset.tid + ':' + sx + ',' + sy + ',' + Math.round(r.width) + 'x' + Math.round(r.height);
         lab.style.left = r.x + 'px';
         lab.style.top = (r.bottom + 2) + 'px';
         document.body.appendChild(lab);
