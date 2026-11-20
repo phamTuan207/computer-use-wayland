@@ -48,12 +48,15 @@ function element(name,options={}) {
 async function run(elements,actions,{mutate=text=>text,maxElements,debuggerUrl='ws://127.0.0.1:9222/test',
   noAfter,operation,image,allowNoSocket=false,scope,afterScope,seed,followup,env}={}) {
   const expressions=[],replies=[],output=[],calls=[],measured=new Set();
+  const allNodes=flatten(elements),pressed=[];
   const document={title:'fixture',activeElement:null,
     querySelectorAll:selector=>{
       if(/[[]{2}|\]\]/.test(selector))throw new SyntaxError('not a valid selector');
       if(selector.startsWith('#'))return flatten(elements).filter(e=>e.id===selector.slice(1));
       return flatten(elements).filter(e=>matchesSelector(e,selector));},
-    elementFromPoint:()=>elements[0]};
+    elementFromPoint:(x,y)=>allNodes.find(e=>{
+      const r=e.getBoundingClientRect();return x>=r.left&&x<r.right&&y>=r.top&&y<r.bottom;
+    })};
   const page=vm.createContext({document,location:{href:'http://fixture/'},innerWidth:100,innerHeight:100,
     HTMLInputElement:FakeInput,HTMLTextAreaElement:FakeTextarea,
     InputEvent:class {constructor(type,options){this.type=type;this.isTrusted=false;Object.assign(this,options);}},
@@ -72,7 +75,6 @@ async function run(elements,actions,{mutate=text=>text,maxElements,debuggerUrl='
   // observe can be followed by a real act using the snapshot and refs it returned.
   const runs=followup?2:1;
   const queue=[request];
-  const allNodes=flatten(elements);
   for(const node of allNodes){
     node.querySelectorAll=selector=>descendants(node,selector);
     const box=node.getBoundingClientRect.bind(node);
@@ -95,7 +97,9 @@ async function run(elements,actions,{mutate=text=>text,maxElements,debuggerUrl='
           result={result:{value}};
         } catch(error){result={exceptionDetails:{text:error.message}};}
       }else if(method==='Input.dispatchMouseEvent'&&params.type==='mousePressed'){
-        document.activeElement=elements[0];
+        const target=document.elementFromPoint(params.x,params.y);
+        pressed.push(target);
+        document.activeElement=target??elements[0];
       }else if(method==='Input.dispatchKeyEvent'&&params.type==='keyDown'&&elements[0]?.stealFocus){document.activeElement=elements[1];
       }else if(method==='Input.insertText'){
         const e=document.activeElement;
@@ -129,7 +133,7 @@ async function run(elements,actions,{mutate=text=>text,maxElements,debuggerUrl='
   // count themselves, since some checks legitimately run after the tab list.
   assert.equal(closed,!allowNoSocket);
   assert.equal(output.length,runs);
-  return {result:output[0],expressions,replies,page,fetches,calls,measured,outputs:output};
+  return {result:output[0],expressions,replies,page,fetches,calls,measured,pressed,outputs:output};
 }
 
 // `fill` can misroute across CDP key requests. It may falsely succeed when the
@@ -642,3 +646,38 @@ assert.equal(commitFlow.outputs[1].ok,true,commitFlow.outputs[1].error);
 assert.deepEqual(commitFlow.calls.find(c=>c.method==='Input.dispatchMouseEvent'&&
   c.params.type==='mousePressed')?.params,{type:'mousePressed',x:73,y:43,button:'left',clickCount:1});
 assert.equal(commitFlow.calls.some(c=>c.method==='Page.captureScreenshot'),false);
+
+// A deliberately wrong role/name choice is one miss even though the click itself completes.
+const view=element('View',{left:10,top:10,width:26,height:16});
+const remove=element('Remove',{left:50,top:10,width:34,height:16});
+const wrongRefFlow=await run([view,remove],undefined,{operation:'observe',followup:observed=>{
+  const wrong=observed.elements.find(e=>e.role==='button'&&e.name==='Remove');
+  assert.ok(wrong,'fixture must expose the adjacent destructive control');
+  return {operation:'act',snapshot:observed.snapshot,
+    actions:[{type:'click',ref:wrong.ref}]};
+}});
+assert.equal(wrongRefFlow.outputs[1].ok,true);
+assert.strictEqual(wrongRefFlow.pressed[0],remove);
+
+const clickAttempts=[
+  {case_id:'confirm-discard',attempt:1,backend:'dom',intended_target:'discard',
+    actual_target:confirmed.pressed[0]===discard?'discard':'no-target'},
+  {case_id:'add-contest',attempt:1,backend:'dom',intended_target:'add-contest',
+    actual_target:contestFlow.pressed[0]===addToContest?'add-contest':'no-target'},
+  {case_id:'general-info',attempt:1,backend:'dom',intended_target:'general-info',
+    actual_target:generalInfoFlow.pressed[0]===generalInfo?'general-info':'no-target'},
+  {case_id:'commit-changes',attempt:1,backend:'dom',intended_target:'commit-changes',
+    actual_target:commitFlow.pressed[0]===commitChanges?'commit-changes':'no-target'},
+  {case_id:'adjacent-view-remove',attempt:1,backend:'dom',intended_target:'view',
+    actual_target:wrongRefFlow.pressed[0]===remove?'remove':'no-target',issue_group:'wrong_target'},
+];
+const hits=clickAttempts.filter(row=>row.actual_target===row.intended_target).length;
+const misses=clickAttempts.length-hits;
+const missesByIssue={};
+for(const row of clickAttempts)if(row.actual_target!==row.intended_target)
+  missesByIssue[row.issue_group??'unknown']=(missesByIssue[row.issue_group??'unknown']??0)+1;
+assert.equal(clickAttempts.length,5);
+assert.equal(hits,4);
+assert.equal(misses,1);
+console.log(JSON.stringify({click_attempts:clickAttempts,click_hit_rate:{attempts:5,hits,misses,
+  rate:hits/clickAttempts.length,misses_by_issue:missesByIssue}}));

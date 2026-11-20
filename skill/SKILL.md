@@ -52,6 +52,9 @@ centers. Keep the returned observation path. `observe --window` leaves focus alo
 is deliberate and may change workspace/stacking. Re-ground after layout/geometry/focus changes.
 Screen observations support pointer actions only. After two failed targeting attempts, change
 backend or ask. Split batches before unseen targets or consequential submissions.
+Click tests must count each attempt separately, preserve every miss, and group misses by cause;
+report hit rate in addition to task completion. Summarize a JSONL log with
+`python3 scripts/hit_rate.py RESULTS.jsonl`.
 
 DOM/accessibility: batch known refs and verify actual application state. For browser
 controls, choose a unique ref by its observed role and name; destructive clicks use
