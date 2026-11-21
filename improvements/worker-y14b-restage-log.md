@@ -1944,3 +1944,14 @@ C2-9/C2-10 INFO parts (covered by item 14).
   Fix-pass-6 adjudication + verification appended. Committing
   fix pass 6 now (run_batch3.py + plan + log, stage ONLY my
   files).
+
+### Fix pass 6 hash record
+
+- Fix pass 6 commit: d552f4d366b5bd6301b2b9a19ed6822d400014b5
+  (todolist-push, ls-remote verified, ANCESTOR_OK).
+- run_batch3.py at d552f4d: git blob
+  261f09aed1b52c7b80b0b2fc260f13f70fafd142, md5
+  fac96935988b9c327dcbe9b3cfa1342e.
+- Plan md5 line pins these fix-pass-6 values IN the fix commit
+  (per C5-4). Parent fix-pass-5 bytes: blob ff4a5358, md5
+  9e99d9aa, commit 46e0909.
