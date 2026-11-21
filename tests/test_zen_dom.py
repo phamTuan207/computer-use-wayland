@@ -568,6 +568,14 @@ class TestDomHelpers(unittest.TestCase):
         point = session.locate_point(self._meta(), '#msg-input')
         self.assertEqual(point, [306.0, 1132.5])
 
+    def test_locate_point_refuses_screen_region_without_window_bounds(self):
+        session = self._session()
+        meta = {'scope': 'screen', 'image_size': [1920, 1080],
+                'region': [0, 0, 3840, 2160],
+                'monitor_box': [0, 0, 3840, 2160]}
+        with self.assertRaisesRegex(ZenDomError, 'needs window_bounds'):
+            session.locate_point(meta, '#msg-input')
+
     def test_locate_point_missing_element_raises(self):
         session = self._session()
         with self.assertRaises(ZenDomError):

@@ -211,6 +211,15 @@ G30_FIELD = {'rect': {'x': 86, 'y': 1101, 'width': 440, 'height': 63},
 
 
 class GroundInputTests(unittest.TestCase):
+    def test_ground_input_refuses_screen_region_without_window_bounds(self):
+        session = FakeDomSession({'#msg-input': G30_FIELD})
+        meta = {'scope': 'screen', 'image_size': [1920, 1080],
+                'region': [0, 0, 3840, 2160],
+                'monitor_box': [0, 0, 3840, 2160]}
+        with self.assertRaisesRegex(dom_act.DomActError,
+                                    'requires window_bounds'):
+            dom_act.ground_input(session, meta, '#msg-input')
+
     def test_ground_input_returns_rect_center_point(self):
         session = FakeDomSession({'#msg-input': G30_FIELD})
         ground = dom_act.ground_input(session, G30_META, '#msg-input')

@@ -32,8 +32,8 @@ Conversion (live C12 probe 2026-11-22 03:36): mozInnerScreenX/Y are
 WINDOW-relative in this Zen build, so the absolute viewport origin is
 the Hyprland window origin + mozInnerScreenX/Y, times the
 CSS-to-screen factor (zen_dom.viewport_origin computes and verifies
-it). The window origin comes from the observation meta's
-window_bounds, else its region. AT-SPI cannot see Zen, so the
+it). Grounding requires window_bounds; a monitor region is not a
+window origin and cannot stand in for one. AT-SPI cannot see Zen, so the
 geometry check that replaces it is the monitor-bounds +
 dimension-closure check in zen_dom.check_viewport_geometry.
 
@@ -57,11 +57,19 @@ def _window_origin(meta):
     bounds = meta.get('window_bounds')
     if (isinstance(bounds, (list, tuple)) and len(bounds) == 4):
         return [bounds[0], bounds[1]]
+    if (meta.get('scope') in ('window', 'screen') or
+            meta.get('monitor_box') is not None):
+        raise DomActError('window-scoped DOM grounding requires '
+                          'window_bounds; region is not a window origin')
     region = meta.get('region')
     if (isinstance(region, (list, tuple)) and len(region) == 4):
+        # Only unscoped legacy metadata can reach this compatibility
+        # path. Current window and screen observations identify their
+        # scope, so a monitor region is never accepted as a live window
+        # origin.
         return [region[0], region[1]]
-    raise DomActError('meta needs window_bounds or region for the '
-                      'window origin (mozInnerScreen is window-relative)')
+    raise DomActError('meta needs window_bounds for the window origin '
+                      '(mozInnerScreen is window-relative)')
 
 
 def _scale_factor(session):

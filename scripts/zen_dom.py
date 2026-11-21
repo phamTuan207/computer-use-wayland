@@ -639,8 +639,10 @@ class ZenSession:
         rect center into the observation image (same linear map as
         cu.image_point, inverted), times the CSS-to-screen factor
         recorded with the origin read. The window origin comes from
-        the meta's window_bounds, else its region. No screenshot is
-        read to locate the element: the DOM rect is ground truth.
+        the meta's window_bounds. A monitor region is never a window
+        origin, so screen observations without window_bounds are
+        refused. No screenshot is read to locate the element: the DOM
+        rect is ground truth.
         Raises ZenDomError when the element is missing or the point
         falls outside the observed image.
         """
@@ -652,12 +654,17 @@ class ZenSession:
         if (isinstance(bounds, (list, tuple)) and len(bounds) == 4):
             window_origin = [bounds[0], bounds[1]]
             window_size = [bounds[2], bounds[3]]
+        elif (isinstance(meta, dict) and
+              (meta.get('scope') in ('window', 'screen') or
+               meta.get('monitor_box') is not None)):
+            raise ZenDomError('meta needs window_bounds; region is not a '
+                              'window origin')
         elif isinstance(meta, dict) and isinstance(meta.get('region'),
                                                   (list, tuple)):
             window_origin = [meta['region'][0], meta['region'][1]]
             window_size = [meta['region'][2], meta['region'][3]]
         else:
-            raise ZenDomError('meta needs window_bounds or region')
+            raise ZenDomError('meta needs window_bounds')
         monitor_box = meta.get('monitor_box') if isinstance(meta, dict) \
             else None
         origin = self.viewport_origin(window_origin, window_size,
