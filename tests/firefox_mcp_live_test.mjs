@@ -80,9 +80,11 @@ async function main() {
   const names = (tools.result?.tools ?? []).map((t) => t.name);
   log('tools_list', 'ok', { count: names.length, names });
 
-  const need = ['list_pages', 'new_page', 'take_snapshot', 'click_by_uid', 'fill_by_uid', 'evaluate_script', 'screenshot_page', 'list_console_messages', 'close_page', 'close_firefox_session'];
+  const need = ['list_pages', 'new_page', 'take_snapshot', 'click_by_uid', 'fill_by_uid', 'evaluate_script', 'screenshot_page', 'close_page', 'close_firefox_session'];
   const missing = need.filter((n) => !names.includes(n));
   if (missing.length) { log('tools_missing', 'failed', { missing }); throw new Error('missing tools: ' + missing.join(',')); }
+  const hasConsole = names.includes('list_console_messages');
+  log('optional_tools', 'ok', { list_console_messages: hasConsole });
 
   const pages0 = await callTool('list_pages');
   log('list_pages', 'ok', { ms: pages0.ms, bytes: pages0.text.length, preview: pages0.text.slice(0, 300) });
@@ -119,8 +121,12 @@ async function main() {
   const shot = await callTool('screenshot_page', { saveTo: '/tmp/firefox-mcp-test/screenshot.png' });
   log('screenshot_page', 'ok', { ms: shot.ms, bytes: shot.text.length, preview: shot.text.slice(0, 200) });
 
-  const consoleMsgs = await callTool('list_console_messages');
-  log('list_console_messages', 'ok', { ms: consoleMsgs.ms, bytes: consoleMsgs.text.length });
+  if (hasConsole) {
+    const consoleMsgs = await callTool('list_console_messages');
+    log('list_console_messages', 'ok', { ms: consoleMsgs.ms, bytes: consoleMsgs.text.length });
+  } else {
+    log('list_console_messages', 'skipped', { reason: 'not in basic preset, needs developer preset' });
+  }
 
   const close = await callTool('close_page', {});
   log('close_page', 'ok', { ms: close.ms, bytes: close.text.length, preview: close.text.slice(0, 200) });
