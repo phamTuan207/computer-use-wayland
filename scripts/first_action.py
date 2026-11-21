@@ -43,9 +43,9 @@ timing split):
   decision and observation time, so the under-30 s rule from a user
   order is not yet demonstrated end to end. order_to_session_attempt_ms
   is the session-attempt start, not the first pointer move. The 30 s
-  target is measured post-hoc from the envelope, not code-enforced
-  (FIRST_VISIBLE_ACTION_TARGET_MS is defined but the envelope carries
-  no pass/fail verdict against it yet).
+  target is measured post-hoc from the envelope, not code-enforced:
+  the envelope records target_breached when the whole run exceeds
+  30 s (redteam A2).
 
 Usage (one command, the agent's default for a live action batch):
   computer-use act-now --actions <file> [--observation <path>]
@@ -125,7 +125,7 @@ def acquire_overlay(agent, method, label=None, overlay_mod=None):
             label = overlay_mod._label_for(agent, method)
     except Exception:
         try:
-            overlay_mod.remove_holder(agent)
+            overlay_mod.remove_holder(agent, pid)
         except Exception:
             pass
         raise
@@ -135,14 +135,15 @@ def acquire_overlay(agent, method, label=None, overlay_mod=None):
 def overlay_visible(agent, overlay_mod=None):
     """True only when the overlay daemon reports the pill visible.
 
-    Used as a re-check immediately before the fallback acts (council 1,
-    A5). A dead daemon (socket error) or an empty holder set reports
-    False, never raises.
+    Uses a 'sync' round trip, which runs apply_holders and therefore
+    requires a live show ack (redteam A3): a 'status' reply only says
+    holders exist, not that the pill rendered. A dead daemon (socket
+    error) or a failed show reports False, never raises.
     """
     try:
         if overlay_mod is None:
             import overlay as overlay_mod
-        reply = overlay_mod._send_socket({'command': 'status'})
+        reply = overlay_mod._send_socket({'command': 'sync'})
         return isinstance(reply, dict) and reply.get('visible') is True
     except Exception:
         return False
@@ -151,14 +152,18 @@ def overlay_visible(agent, overlay_mod=None):
 def release_overlay(agent, overlay_mod=None):
     """Release the overlay holder. Returns None on success, else an
     error string. Never raises; the caller records a failure in the
-    envelope instead of swallowing it silently (council 1, A5)."""
+    envelope instead of swallowing it silently (council 1, A5). Only
+    this run's entry is removed (redteam A4): the pid is sent with
+    the release so a concurrent same-agent run keeps its pill."""
     try:
         if overlay_mod is None:
             import overlay as overlay_mod
+        pid = os.getpid()
         try:
-            overlay_mod._send_socket({'command': 'release', 'agent': agent})
+            overlay_mod._send_socket({'command': 'release', 'agent': agent,
+                                      'pid': pid})
         except (OSError, ValueError):
-            overlay_mod.remove_holder(agent)
+            overlay_mod.remove_holder(agent, pid)
         return None
     except Exception as exc:
         return str(exc)
@@ -281,12 +286,17 @@ def append_log(path, record):
         os.close(fd)
 
 
-def _fresh_observation(cu, env, screen, observation_path):
+def _fresh_observation(cu, env, screen, observation_path,
+                       deadline_s=DEFAULT_SESSION_DEADLINE_S):
     """Load a given observation when fresh, else capture a new one.
 
     Returns (meta, observation_path, source). A stale, missing, or
     unreadable given observation is replaced by a fresh screen capture;
-    the replacement is recorded in the envelope, never hidden.
+    the replacement is recorded in the envelope, never hidden. Fresh
+    means the observation is still within the 120 s window when the
+    session attempt ends: age plus the session deadline must stay
+    under OBSERVATION_MAX_AGE_S (redteam A6), or the act would be
+    refused for a stale observation after a wasted session attempt.
     """
     if observation_path:
         try:
@@ -295,7 +305,7 @@ def _fresh_observation(cu, env, screen, observation_path):
                     and meta.get('image')
                     and meta.get('monitor_box')
                     and isinstance(meta.get('created'), (int, float))
-                    and time.time() - meta['created']
+                    and time.time() - meta['created'] + deadline_s
                     < OBSERVATION_MAX_AGE_S):
                 return meta, str(observation_path), 'given'
         except (OSError, ValueError, KeyError):
@@ -350,6 +360,7 @@ def run(args):
         'error': None,
         'release_error': None,
         'log_error': None,
+        'target_breached': None,
     }
     overlay_acquired = False
     try:
@@ -364,9 +375,13 @@ def run(args):
             envelope['path'] = 'bad_actions'
             return 1
         deadline = float(args.session_deadline_s)
-        if not math.isfinite(deadline) or deadline <= 0:
-            envelope['error'] = ('invalid session deadline: %r'
-                                 % (args.session_deadline_s,))
+        if (not math.isfinite(deadline) or deadline <= 0
+                or deadline > OBSERVATION_MAX_AGE_S):
+            envelope['error'] = ('invalid session deadline: %r (must be '
+                                 'positive, finite, and at most %d s, the '
+                                 'observation freshness window)'
+                                 % (args.session_deadline_s,
+                                    OBSERVATION_MAX_AGE_S))
             envelope['path'] = 'refused'
             return 1
         env = cu.environment()
@@ -380,7 +395,7 @@ def run(args):
         envelope['order_to_overlay_ms'] = _ms(t0)
         envelope['overlay_owner'] = reply.get('owner')
         meta, obs_path, obs_source = _fresh_observation(
-            cu, env, args.screen, args.observation)
+            cu, env, args.screen, args.observation, deadline)
         envelope['observation'] = {'id': meta.get('id'), 'source': obs_source}
         envelope['order_to_session_attempt_ms'] = _ms(t0)
         child_env = dict(env)
@@ -438,13 +453,23 @@ def run(args):
                     envelope['error'] = ('overlay lost before fallback; '
                                          'refused')
                 else:
-                    with cu.locked():
-                        result = cu.desktop_act(
-                            env, meta, actions, observation_path=obs_path)
-                    envelope['ok'] = result.get('ok') is True
-                    envelope['completed'] = result.get('completed', 0)
-                    if not envelope['ok']:
-                        envelope['error'] = str(result.get('error', ''))
+                    try:
+                        with cu.locked():
+                            result = cu.desktop_act(
+                                env, meta, actions,
+                                observation_path=obs_path)
+                    except (ValueError, RuntimeError) as exc:
+                        # Redteam A5: a preflight refusal (screen obs
+                        # with typing, stale observation, window moved)
+                        # lands in the envelope, not as a traceback,
+                        # and the after-capture below still runs.
+                        envelope['ok'] = False
+                        envelope['error'] = str(exc)[:400]
+                    else:
+                        envelope['ok'] = result.get('ok') is True
+                        envelope['completed'] = result.get('completed', 0)
+                        if not envelope['ok']:
+                            envelope['error'] = str(result.get('error', ''))
             else:
                 envelope['path'] = 'session'
                 envelope['ok'] = False
@@ -469,6 +494,8 @@ def run(args):
         return 1
     finally:
         envelope['total_ms'] = _ms(t0)
+        envelope['target_breached'] = bool(
+            envelope['total_ms'] > FIRST_VISIBLE_ACTION_TARGET_MS)
         if overlay_acquired:
             release_error = release_overlay(agent, overlay_mod=overlay_mod)
             if release_error is not None:
