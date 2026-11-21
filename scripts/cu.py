@@ -1021,16 +1021,15 @@ def _mean_image_difference(old,new):
     return sum(ImageStat.Stat(ImageChops.difference(old,new)).mean)/3
 
 def _input_line_changed(old,new,anchor_y,half=12,min_pixels=4,threshold=50,
-                        x_range=None):
+                        x_range=None,y_range=None):
     """True when the input line band changed between two frames.
 
     The band is the target field's x-range when x_range is given
     (image px, from the grounded rect: the band then reads only the
-    field the text was typed into), else the full image width,
-    anchor_y plus/minus half pixels: typed text lands on the caret
-    line, which is the clicked line, even when the click point itself
-    is far from where the text starts (an empty field takes text at
-    its left edge, not at the click). The count uses per-channel
+    field the text was typed into), else the full image width. When a
+    y_range is given, it comes from the grounded field rect; without
+    one, the band uses the portion above the click as a conservative
+    fallback. The count uses per-channel
     histogram bins above threshold, so a few fully changed pixels
     decide it, not a diluted band mean. JPEG q90 4:4:4 re-encodes of
     identical pixels are byte identical, and the measured max pixel
@@ -1052,8 +1051,15 @@ def _input_line_changed(old,new,anchor_y,half=12,min_pixels=4,threshold=50,
         return None
     if old.size!=new.size:
         return None
-    y0=max(0,int(anchor_y)-half)
-    y1=min(old.height,int(anchor_y)+half+1)
+    if y_range is not None:
+        try:
+            y0=max(0,math.floor(y_range[0]))
+            y1=min(old.height,math.ceil(y_range[1]))
+        except Exception:
+            return None
+    else:
+        y0=max(0,int(anchor_y)-half)
+        y1=min(old.height,int(anchor_y)+1)
     if y1<=y0:
         return None
     if x_range is not None:
@@ -1618,7 +1624,7 @@ def _settle_after_capture(capture, first_after, nav_candidate, settle_ms=400):
 
 def desktop_act(env,meta,actions,after_capture=True,observation_path=None,
                 expected_terminal_window=None,focus_check=None,type_check=None,
-                type_x_ranges=None):
+                type_x_ranges=None,type_y_ranges=None):
     """Run a desktop action batch against a validated observation.
 
     focus_check and type_check are optional cheap zero-arg callables
@@ -1631,12 +1637,11 @@ def desktop_act(env,meta,actions,after_capture=True,observation_path=None,
     to the input line band between the pre-batch frame and the
     after-capture (both already in memory), one band per type group,
     or to the whole-frame hash when a group has no pointer target
-    before the type. type_x_ranges is an optional list parallel to
-    the type groups, one (x0, x1) image-px pair per group from the
-    grounded field rect (supplied by dom_act/first_action): the band
-    then reads only that field's x-range on the anchor line, so text
-    landing in a different field on the same line no longer verifies
-    (RT R3a). A group with no range keeps the full-width band.
+    before the type. type_x_ranges and type_y_ranges are optional
+    lists parallel to the type groups, one image-px range per group
+    from the grounded field rect (supplied by dom_act/first_action).
+    A group with both ranges reads only its field rect, so text in a
+    neighboring field cannot verify it.
     """
     preflight_start=time.monotonic()
     try:
@@ -2103,11 +2108,11 @@ def desktop_act(env,meta,actions,after_capture=True,observation_path=None,
     # in the same batch set the bit and a click+type batch with zero
     # text delivered still reported type_verified True. The check here
     # reads one input line band per type group (the grounded field's
-    # x-range when type_x_ranges is given, else the full width,
-    # around that group's own click point) between the pre-batch frame
-    # and the after-capture, both already in memory: no new observe is
-    # taken. A click into dead space changes nothing on that line, so
-    # the incident shape (click 64px above the field, type into
+    # x-range when type_x_ranges is given and y-range from the grounded
+    # field rect when type_y_ranges is given) between the pre-batch
+    # frame and after-capture, both already in memory: no new observe
+    # is taken. A click into dead space changes nothing in that rect,
+    # so the incident shape (click 64px above the field, type into
     # nothing) now fails instead of verifying. Limits, stated plainly:
     # a caret or focus ring alone also changes a band, so the band is
     # necessary, not sufficient, proof the text landed; the DOM value
@@ -2118,13 +2123,10 @@ def desktop_act(env,meta,actions,after_capture=True,observation_path=None,
     # a type group there is no input region to read, so the whole-frame
     # hash stays the check for that group, where the batch has no click
     # to confound it. Runs only when the after-capture succeeded; a
-    # failed capture already fails the batch above. The off-line-click
-    # false-fail is documented: when the text lands in a field whose
-    # line is NOT the click line (the click focused a field, the text
-    # went to another field on a different line), the band reads the
-    # click line, finds nothing, and fails a batch whose text did
-    # land somewhere; only the DOM value check distinguishes that
-    # shape from a real miss.
+    # failed capture already fails the batch above. When a grounded
+    # field rect is missing, later wiring must mark this band-only
+    # result unverified instead of treating the click-based fallback
+    # as proof.
     if has_type and error is None and 'after' in result:
         if type_dom_verified is True:
             verified=True
@@ -2132,26 +2134,31 @@ def desktop_act(env,meta,actions,after_capture=True,observation_path=None,
             note=('DOM check: the typed text is present in the target '
                   'field (value read, no screenshot used)')
         elif type_anchors:
-            # One band per type group: each group's band reads the input
-            # line around that group's own click point, so text landing
-            # in the second input cannot be verified by the first
+            # One band per type group: each group's band reads the
+            # grounded field rect when available, so text landing in a
+            # second input cannot verify the first
             # group's line, and a stubbed second type fails even when
             # the first type landed. Groups with no preceding click have
             # no input region; the whole-frame hash stays their check.
             # A band that cannot be compared (size mismatch) falls back
             # to the hash for the whole batch, the same as before.
             after_image=_load_after_image(result)
-            ranges=(list(type_x_ranges) if type_x_ranges is not None
-                    else [None]*len(type_anchors))
-            if len(ranges)<len(type_anchors):
-                ranges=ranges+[None]*(len(type_anchors)-len(ranges))
-            paired=[(a,r) for a,r in zip(type_anchors,ranges)
+            x_ranges=(list(type_x_ranges) if type_x_ranges is not None
+                      else [None]*len(type_anchors))
+            y_ranges=(list(type_y_ranges) if type_y_ranges is not None
+                      else [None]*len(type_anchors))
+            if len(x_ranges)<len(type_anchors):
+                x_ranges += [None]*(len(type_anchors)-len(x_ranges))
+            if len(y_ranges)<len(type_anchors):
+                y_ranges += [None]*(len(type_anchors)-len(y_ranges))
+            paired=[(a,xr,yr) for a,xr,yr in
+                    zip(type_anchors,x_ranges,y_ranges)
                     if a is not None]
-            anchored=[a for a,_r in paired]
+            anchored=[a for a,_xr,_yr in paired]
             unanchored=len(type_anchors)-len(anchored)
             bands=([_input_line_changed(old,after_image,anchor[1],
-                                        x_range=x_range)
-                    for anchor,x_range in paired]
+                                        x_range=x_range,y_range=y_range)
+                    for anchor,x_range,y_range in paired]
                    if after_image is not None else [None])
             if any(band is None for band in bands):
                 verified=result.get('frame_bytes_changed') is True

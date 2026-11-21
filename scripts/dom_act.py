@@ -205,6 +205,20 @@ def grounded_x_range(ground, meta):
         return None
 
 
+def grounded_y_range(ground, meta):
+    """Image-px y-range of the grounded field, for the band check."""
+    try:
+        rect = ground['rect']
+        point = ground['point']
+        factor = ground.get('scale_factor', 1)
+        size = meta.get('image_size')
+        region = meta.get('region')
+        half = rect['height'] * factor * size[1] / region[3] / 2
+        return [point[1] - half, point[1] + half]
+    except Exception:
+        return None
+
+
 class GroundPoints(dict):
     """Grounding evidence that re-validates on every read (R7).
 
@@ -479,7 +493,9 @@ def focus_type(session, act_fn, meta, selector, text, enter=False):
     # that wraps desktop_act must forward it (the test fakes accept
     # and ignore it).
     x_range = grounded_x_range(ground, meta)
+    y_range = grounded_y_range(ground, meta)
     type_ranges = [x_range] if x_range is not None else None
+    type_y_ranges = [y_range] if y_range is not None else None
     actions = [{'type': 'click', 'x': ground['point'][0],
                 'y': ground['point'][1]},
                {'type': 'type', 'text': text}]
@@ -494,7 +510,8 @@ def focus_type(session, act_fn, meta, selector, text, enter=False):
 
     result = act_fn(meta, actions, focus_check=_counted_focus_check,
                     type_check=_counted_type_check,
-                    type_x_ranges=type_ranges)
+                    type_x_ranges=type_ranges,
+                    type_y_ranges=type_y_ranges)
     if not isinstance(result, dict):
         raise DomActError('act_fn must return a result dict')
     completed = result.get('completed', 0)
