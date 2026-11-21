@@ -162,3 +162,15 @@ outside the staged ship copies.
   `python3 -P run_codex_y5.py` (launch_y13.py line 1135); every
   other "-m" hit is a comment or the tokenizer's own -m
   detection. Dash sweep on my files: 0 em/en dashes.
+
+- 00:30-00:31 +07 (T+25m to T+26m): redteam paper written to
+  improvements/worker-y13g-redteam.md (472 lines, 23,795 bytes).
+  Verdict AMEND. All 4 blockers' specified re-tests pass
+  except B1's literal -m criterion (adjudicated: unfixable
+  in-process, launcher control proven); all 5 amends verify.
+  Findings: F1 -m/import forge executes (documented residual);
+  F2 _check_entry_pyc unreachable in the live flow; F3 11 fresh
+  tokenizer evasions (all proven real); F4 run_live/py_compile
+  brick; F5 tampered run_live.py executes on the direct path;
+  F6 marker case 1 passes by design. Dash sweep on the paper +
+  log + all harness files: 0 em/en dashes. Committing now.
