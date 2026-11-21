@@ -14,7 +14,8 @@ Merged fixed suite, commit ed78e83 on main (Y10 reconciled best of both):
 - t09: clone1 checker (clickAndClose with 5 s verify polling) + Y10 cancel
   dwell 500 ms, no verify for Cancel.
 - t10: clone1 checker (500 ms in-page position sampler, take the minimum) +
-  Y10 advance assert (position must advance past 0 after the sample window).
+  Y10 advance assert (position must be at least 2 after a 350 ms sleep
+  following the sample window, check.mjs L93-95).
 - t01-t04, t06-t08: unchanged from clone1 batch 3 (Y3 passed them 7/10
   overall; these 7 passed then).
 - Headless evidence (Y10): 9/9 mutation probes v2 matched, 10/10 x7 runs
@@ -39,28 +40,68 @@ Reuses the proven driver, never reinvents it:
 - `clear_search` pattern from run_fcck.py is NOT needed: type_text clears
   before typing, and every search step types a full new value or empty.
 
-New helpers, all on WD via the existing `_wd`/`_s` plumbing:
+New helpers, all on WD via the existing `_wd`/`_s` plumbing. Exact JSON
+payloads (Council 1 A1), always explicit, never relying on defaults:
 - `press_keys(d, keys)`: WebDriver Actions API, POST /session/:id/actions,
-  one key action source, keyDown+keyUp per key, batched max 10 pairs per
-  call, then DELETE /session/:id/actions to release. Key values are the
-  WebDriver PUA codes: Enter U+E007, Home U+E011, ArrowLeft U+E012,
-  ArrowUp U+E013, ArrowDown U+E014, ArrowRight U+E015. Used for: t01 Enter
-  after each command and ArrowUp recall; t08 Home + ArrowRight x70 on
-  #volume; t10 Home + ArrowRight x30 on #volume.
-- `pointer_click_at(d, x, y)`: Actions API pointer source, move to
-  viewport coords + button down/up. Used for: t10 seek click at 50% of
-  #progress rect (fixture computes frac from clientX vs rect, so a real
-  pointer click at x + w*0.5 is the exact Playwright mouse.click
-  equivalent).
-- `dblclick_el(d, js_expr)`: rect of the element from eval, then one
-  Actions call with two down/up pairs at the rect center. Used for:
+  one key source:
+  `{"actions": [{"type": "key", "id": "keyboard", "actions": [{"type": "keyDown", "value": "\uE007"}, {"type": "keyUp", "value": "\uE007"}]}]}`.
+  Batched max 10 pairs per call, then DELETE /session/:id/actions to
+  release. Key values are the WebDriver PUA codes: Enter U+E007, Home
+  U+E011, ArrowLeft U+E012, ArrowUp U+E013, ArrowDown U+E014, ArrowRight
+  U+E015. Note: the legacy Firefox Marionette Keys doc maps ENTER to
+  0xE006, not E007; that is the old mapping, not the W3C Actions
+  mapping, which is why preflight asserts the recorded `e.key` string
+  is exactly `Enter`, not just that a keydown fired. DELETE is best
+  effort (Council 1 A2): wrap in try/except, never raise; try
+  `_wd("DELETE", _s("/actions"), {})` first, if geckodriver rejects
+  the `{}` body retry with body None, and log which form worked.
+  A POST /actions that hits the 30 s `_wd` timeout is INFRA (Council 1
+  A7): close the session, record the test INFRA, start the next test
+  on a fresh session, never retry inside the same session.
+  Used for: t01 Enter after each command and ArrowUp recall; t08 Home
+  + ArrowRight x70 on #volume; t10 Home + ArrowRight x30 on #volume.
+- `pointer_click_at(d, x, y)`: Actions API pointer source, explicit
+  origin and parameters:
+  `{"actions": [{"type": "pointer", "id": "mouse", "parameters": {"pointerType": "mouse"}, "actions": [{"type": "pointerMove", "duration": 0, "x": 100, "y": 200, "origin": "viewport"}, {"type": "pointerDown", "button": 0}, {"type": "pointerUp", "button": 0}]}]}`.
+  Coords are `int(round(...))` (W3C x/y are integers; getBoundingClientRect
+  returns floats). Used for: t10 seek click at 50% of #progress rect
+  (fixture computes frac from clientX vs rect, so a real pointer click
+  at x + w*0.5 is the exact Playwright mouse.click equivalent).
+- `dblclick_el(d, js_expr)`: scroll_into_view first, re-read the rect
+  after scrolling, elementFromPoint check at the center (reuse the
+  `_probe_click` pattern), then one Actions call: move, down, up,
+  pause 50 ms, down, up (Council 1 A4). The pause is closer to human
+  input and still far inside the double-click interval. Used for:
   t05 dblclick on folder items (fixture has separate click and dblclick
   handlers; two separate Marionette clicks could straddle the OS
-  double-click interval, one Actions call cannot).
-- `click_nth(d, js_expr)`: rect of the element located by JS index, then
-  pointer_click_at at its center. Used for: t04 `#list .msg` nth(0/1/2)
-  and the nested `.star`; t06 `.day[data-day="12"] .chip` nth(0/1).
-  All other clicks use the proven `d.click(css)` Marionette element click.
+  double-click interval, one Actions call cannot). Sharpest hole, named
+  by Council 1: the t05 fixture rebuilds the list on every click
+  (refresh() does list.innerHTML = '' and recreates all item divs), so
+  the second down/up in the same Actions call lands on a NEW div at
+  the same coords; whether Gecko still fires dblclick when the target
+  node was replaced between the two clicks is UNVERIFIED, so preflight
+  must use a re-rendering list mirroring t05.
+- `click_nth(d, js_expr)`: scroll_into_view first, re-read the rect
+  after scrolling, elementFromPoint check at the center, then
+  pointer_click_at at its center (Council 1 A4, Council 2 A7). The JS
+  expression must use the nested form where check.mjs nests locators:
+  t04 star is `querySelectorAll('#list .msg')[1].querySelector('.star')`,
+  not `querySelectorAll('.star')[1]`. Used for: t04 `#list .msg`
+  nth(0/1/2) and the nested `.star`; t06 `.day[data-day="12"] .chip`
+  nth(0/1). All other clicks use the proven `d.click(css)` Marionette
+  element click.
+- Fallback, specified exactly (Council 1 A5): keys fall back to no-clear
+  raw element/value with PUA codes, the `append_text` pattern
+  (`run_fcck.py` lines 61-70: find, then POST /element/{id}/value with
+  no clear), never `type_text` (which clears first and would erase the
+  typed command). Pointer fallback: `d.click('#progress')` for the t10
+  seek (clicks the bar center, which is exactly 50 percent), `d.click`
+  where a selector exists, and for dblclick two `d.click()` calls back
+  to back. Record any fallback use as a deviation in the log. Note
+  (Council 2 A9): two Marionette element clicks are not a proven
+  dblclick; if the fixture's dblclick handler does not fire under the
+  fallback, the test fails and the failure is recorded as input-path
+  degradation, never as a fixture failure and never as a pass.
 - `poll_effect(d, js_cond, timeout=5.0)`: mirror of clone1 t09 verify
   polling. Polls a JS condition every 50 ms up to 5 s after a popup
   closes; returns True when seen. Used for every t09 save/apply that
@@ -70,52 +111,118 @@ New helpers, all on WD via the existing `_wd`/`_s` plumbing:
 ## Per-test translation (Playwright op to Marionette op)
 
 - t01 terminal: click #cmd, type_text, press_keys Enter per command.
-  ArrowUp recall: click #cmd, press_keys ArrowUp, read value #cmd.
-  Fixture keydown handler checks e.key Enter/ArrowUp/ArrowDown.
+  ArrowUp recall: click #cmd, press_keys ArrowUp, assert the recalled
+  value is `history`, then press_keys Enter again and assert the output
+  includes `history` (Council 2 A3; check.mjs L72-76). Fixture keydown
+  handler checks e.key Enter/ArrowUp/ArrowDown. Before the Enter and
+  ArrowUp presses, assert `document.activeElement.id` is `cmd` (Council
+  1: focus is assumed, never verified; a metrics read-back or eval
+  between type and key press could in principle move focus).
 - t02 spreadsheet: type_text per cell (#cell-A1 etc. are plain inputs;
   fixture recomputes on the input event, which Marionette sendKeys
   fires per keystroke). Read back via value. Status text via text().
 - t03 video call: clicks + type_text (#chat-input). Plain CSS clicks.
+  Name the existence and class asserts in the runner (Council 2 A10):
+  camera-off class on #tile-you after cam off (check.mjs L54), screen
+  tile present while sharing (L72) and absent after stop (L76, via
+  `page.$` so translate as an eval null check, not visible()), Cara tile
+  present after invite and absent after remove (L82). These are
+  existence or class asserts, not visible() asserts.
 - t04 email: type_text search, click_nth for .msg rows and .star,
   type_text compose fields, clicks. Counts via eval querySelectorAll.
-- t05 file manager: select_option #sort; type_text #search; clicks;
-  dblclick_el for Archive / Old Files 2026 list items; rename dialog
-  via type_text #rename-input + clicks on #rename-save / #rename-cancel;
-  dialog-open asserts via visible() + value() prefill; empty rename:
-  type_text empty, click Save, assert error visible + dialog open, then
-  Cancel; move via select_option #move-target + #move-ok; tree clicks
-  via d.click on #tree-home / #tree-archive / #tree-old-files-2026.
+- t05 file manager: sort sequence exactly as check.mjs L54-60:
+  select_option #sort size-desc, name, size-asc, name, asserting the
+  first item after each. type_text #search; clicks; dblclick_el for
+  Archive / Old Files 2026 list items; rename dialog via type_text
+  #rename-input + clicks on #rename-save / #rename-cancel; dialog-open
+  asserts via visible() + value() prefill. Typed cancel (check.mjs
+  L79-80): fill `budget2.csv`, click Cancel, assert budget.csv present
+  and budget2.csv absent and the dialog closed. Empty rename: type_text
+  empty, click Save, assert error visible + dialog open, then Cancel.
+  Real file rename: fill `field-notes-7.txt`, Save, assert the new name
+  appears and notes.txt is gone. Delete flow (check.mjs L108-117, omitted
+  from the first draft of this plan): select photo.jpg, click Delete,
+  assert the confirm dialog is visible and its text includes
+  `Delete photo.jpg?`, click confirm-no, assert the list length is still
+  5, re-select photo.jpg, Delete, click confirm-yes, assert items are
+  [Archive, budget.csv, field-notes-7.txt, video.mp4]. Move via
+  select_option #move-target + #move-ok. Folder rename: fill
+  `  Old Files 2026  ` with leading and trailing spaces (tests trim),
+  Save, assert the trimmed name appears, Archive is gone, and the tree
+  button reads `Old Files 2026`. Second move: select video.mp4, move to
+  Home, assert Old Files 2026 has length 0. Final search `2026`, assert
+  only Old Files 2026 shows, clear, dblclick it, assert crumbs and the
+  empty state. Tree clicks via d.click on #tree-home / #tree-archive /
+  #tree-old-files-2026.
 - t06 calendar: clicks on .day[data-day="N"] .day-num; type_text
   #event-title / #event-time / #edit-time; click_nth for chips;
-  select-free month nav via #next-btn / #prev-btn / #today-btn.
+  select-free month nav via #next-btn / #prev-btn / #today-btn. Assert
+  the event form is visible after clicking a day (check.mjs L49).
 - t07 code editor: type_text #editor (textarea; fixture marks dirty on
   input), clicks, d.refresh() for reload steps (refresh diagnoses and
   raises on hidden body, same as goto). Tab switches via clicks on
   #tabs button[data-file="..."]. Find/replace via type_text + clicks.
+  Name the dirty asserts in the runner (Council 2 A10): the tab's dirty
+  class after edit and its absence after save (check.mjs L50-51, L55-56,
+  L65-66). That class is the only proof type_text fired the input event
+  in fixture t07 L83; if the runner omits the dirty checks, a JS set
+  fallback could pass silently.
 - t08 settings: select_option #theme; d.click on radio
   input[name="accent"][value="blue"] and on the three toggles (native
   inputs, change event fires on real click); type_text #display-name;
   click #volume then press_keys Home + ArrowRight x70; d.refresh() for
   reload steps; isChecked via eval el.checked; search via type_text.
+  Live volume asserts (Council 1 A6): value is 50 after clicking
+  #volume, 0 after Home, 70 after the ArrowRight batch, checked
+  immediately, not only via the final #volume-value text. If Home does
+  not reset, fail fast: ArrowRight x70 from a click-changed value (say
+  51) clamps at 100 instead of landing on 70. Final toggle guard
+  (Council 2 A6): the last step (check.mjs L98) is page.check on
+  #notif-toggle after reset + reload, when notif is already On, so
+  Playwright check is a no-op; guard with isChecked and click only if
+  unchecked, or a plain click would turn notif Off. Also assert: swatch
+  background blue (L49-50), section visibility (L33, L76-85), no-match
+  message (L84-85), and the reset + second reload asserts (L88-98).
 - t09 multi-window: openPopup = click detail/prefs button, wait for a
   new handle, switch, settle, require_visible. Interact in the popup
   (type_text #title-input, select_option #theme-select), then
   clickAndClose = click the popup close button, wait for the close
   (handle disappears), switch back to main, poll_effect up to 5 s for
-  the expected main-window effect. Cancel: click #cancel-btn, dwell
-  500 ms, read title immediately, no verify. Two-popups step: open
-  detail popup, switch back to main WITHOUT closing it, open prefs
-  popup, assert handles count is 3, close prefs, verify dark, switch
-  to the still-open detail popup, rename, close, verify.
+  the expected main-window effect. Close race tolerance (Council 2 A4):
+  if the Marionette element click raises when window.close runs during
+  dispatch, tolerate it exactly as check.mjs L60-72 does (tolerate a
+  `has been closed` error only when the popup really closed within
+  2 s), then await the close, then poll verify 5 s every 50 ms; the
+  verify poll is the arbiter. Prefill asserts: detail window prefills
+  Alpha, then Alpha v2 on reopen (check.mjs L99, L109). Status assert
+  after the first rename: status includes `Renamed alpha to Alpha v2.`
+  (L104). Cancel: clickAndClose on #cancel-btn (await the close first),
+  then dwell 500 ms, then read the title immediately, no verify
+  (L128-133). Two-popups step: open detail popup, switch back to main
+  WITHOUT closing it, open prefs popup, assert handles count is 3,
+  close prefs, verify dark, switch to the still-open detail popup,
+  rename, close, verify. Final assert: handles count is 1 after all
+  popups closed (L149-150).
 - t10 music player: clicks; sleeps as in check.mjs (700 ms after play,
   400 ms paused, 500 ms after resume, 350 ms after sampler); sampler:
   eval with top-level `return new Promise(...)` sampling
   #position data-seconds every 10 ms for 500 ms, taking the minimum
   (Y4d lesson: top-level return is required, Marionette runs the script
   as a function body; /execute/sync awaits a returned promise).
-  Advance assert after the sampler. Volume: click #volume, Home,
-  ArrowRight x30. Seek: pointer_click_at at 50% of #progress rect.
-  Shuffle/repeat/search/track clicks as in check.mjs.
+  Sampler ordering and thresholds (Council 2 A5): capture posBeforeNext,
+  START the sampler promise BEFORE the now-playing assert (a
+  now-playing assert first costs round trips, the timer advances 1 per
+  100 ms, and a late sampler can read min above 2 and fail a correct
+  reset), then check now-playing, then await the min; fail if min is
+  greater than 2 or min is greater than or equal to posBeforeNext.
+  Advance assert: after sleep 350, position must be at least 2, not
+  just past 0 (check.mjs L93-95). Volume: click #volume, Home,
+  ArrowRight x30, with the same live asserts as t08 (50 after click,
+  0 after Home, 30 after the batch, checked immediately). Seek:
+  pointer_click_at at 50% of #progress rect, then read the position
+  IMMEDIATELY and require 85 to 100 (check.mjs L103-106; the timer
+  keeps running, so a delayed read can exceed 100). Shuffle/repeat/
+  search/track clicks as in check.mjs.
 
 ## Fresh-profile equivalence
 
@@ -175,17 +282,38 @@ hidden body; removal was never measured live.
 
 ## Preflight step 0 (inside my slot, before t01)
 
-The /actions helper has never run against live Zen. Before t01, open a
-scratch tab with a probe page served from the same loopback server
-(an input + a div that records keydown keys, click clientX/Y, and
-dblclick count). Prove live: type into the input, press_keys Enter and
-ArrowUp, read the recorded keys; pointer_click_at a known point, read
-the recorded coords; dblclick_el, read the dblclick count. Close the
-scratch tab. If /actions fails, fall back to element/value with PUA key
-codes for keys (test that path in the same preflight), use Marionette
-element click where a selector exists, and record the fallback as a
-deviation in the log. Do not start t01 until the input path is proven
-one way or the other.
+The /actions helpers have never run against live Zen. Before t01, open a
+scratch tab with a probe page served from the same loopback server. The
+probe page carries: a text input recording keydown `e.key` strings; a
+range input (min 0, max 100, value 50); a div recording pointer click
+clientX/Y; a re-rendering list that rebuilds its nodes on click,
+mirroring t05 fixture lines 103-117; and a filterable list for the empty
+clear probe. Prove live, and FAIL the preflight (blocking t01) on any
+miss (Council 1 A3, Council 2 A1/A9):
+- (i) Type into the text input, press_keys Enter and ArrowUp, assert the
+  recorded `e.key` strings are exactly `Enter` and `ArrowUp`, and assert
+  `document.activeElement.id` is the input before each press.
+- (ii) On the range input: click leaves value 50, Home sets 0,
+  ArrowRight x70 in 10-pair batches sets 70. This proves the full 70-key
+  batch and that focus survives across batches.
+- (iii) Pointer click at a known point AFTER scrolling the probe page,
+  reading back clientX/Y.
+- (iv) dblclick_el on the re-rendering list: assert the dblclick count
+  is 1. A static-div dblclick proves nothing about t05, where the
+  target node is replaced between the two clicks.
+- (v) Empty clear probe: type a value into the filter input, type_text
+  empty, assert the filtered list updates. This proves Marionette
+  /clear fires the input event; if it does not, use clear_search (JS
+  set + input event, run_fcck.py lines 48-53) for ALL empty steps
+  (t02 B1 '', t04/t05/t08/t10 search '').
+- (vi) Test the key fallback in the same preflight: no-clear raw
+  element/value with PUA codes (append_text pattern) on both a text
+  input (Enter, ArrowUp) and a range input (Home, ArrowRight).
+If /actions fails, fall back exactly as specified in the helpers section
+(no-clear raw element/value for keys, d.click where a selector exists,
+two d.click() for dblclick) and record the fallback as a deviation in
+the log. Do not start t01 until the input path is proven one way or
+the other.
 
 ## Run mechanics
 
@@ -254,5 +382,30 @@ laptop, syntax check) all happens before the slot.
   in force); A5 circuit breaker (abort after 2 consecutive INFRA);
   A6 LiveMetrics constructed as run_live.main() does; A7 corrected
   the WD port claim and the "Y4d measured removal" claim.
-- Council 1, Council 2, Redteam: verdicts pending at the time of this
-  edit; fold them in when they arrive.
+- Council 1 (AMEND, 19:33 21/11): A1 exact Actions JSON payloads in plan
+  + code (origin viewport, pointerType mouse, button 0, duration 0,
+  int-rounded coords); A2 DELETE /actions best effort ({} body first,
+  retry body None, log which worked); A3 strengthened preflight
+  (exact e.key asserts, range input 50/0/70, full 70-key batch,
+  re-rendering dblclick probe, scrolled pointer probe); A4 scroll +
+  re-read rect + elementFromPoint in pointer helpers, dblclick sequence
+  move/down/up/pause 50 ms/down/up in one call; A5 exact fallback
+  (no-clear raw element/value, never type_text; d.click('#progress')
+  for the seek; two d.click() for dblclick); A6 live volume asserts
+  (50/0/70/30 checked immediately); A7 hung-Actions rule (30 s timeout
+  is INFRA, close session, fresh session for the next test).
+- Council 2 (AMEND, 19:33 21/11): A1 empty clears (prove /clear fires
+  input in preflight or use clear_search for all empty steps); A2 t05
+  delete flow + exact typed strings + sort sequence; A3 t01 Enter after
+  ArrowUp recall; A4 t09 close race tolerance + cancel ordering
+  (await close, dwell 500, read) + prefill/status/final-count asserts;
+  A5 t10 sampler starts before the now-playing assert + thresholds
+  (min > 2 or min >= posBeforeNext fails; advance >= 2) + immediate
+  seek read 85-100; A6 t08 final toggle guard (isChecked, click only
+  if unchecked) + omitted asserts (swatch, sections, no-match, reset);
+  A7 click_nth nested star locator + scroll before measuring; A8 clear
+  order (already covered by Council 3 A3); A9 preflight extensions
+  (range probe, re-render dblclick probe, empty clear probe); A10 t07
+  dirty asserts + t03/t06 existence/class asserts named in the runner.
+- Redteam: verdict pending at the time of this edit; fold it in when
+  it arrives.
