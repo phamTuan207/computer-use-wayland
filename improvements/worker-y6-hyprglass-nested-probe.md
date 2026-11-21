@@ -411,7 +411,7 @@ from its printed SUMMARY lines. Do NOT launch more nested DRM attempts.
   `ls -l /usr/bin/seatd-launch` (-rwxr-xr-x, no setuid); `ffmpeg` + `ffprobe`
   (backdrop.mp4, 10.0s); `bash -n` + `python3 -m py_compile` on the design files.
 - Commits on todolist-push: draft db1f0de; Council A 57755ae; Council B 3dff065;
-  Council C f3ba3a1; redteam 66e5e48; final report (this commit, see below).
+  Council C f3ba3a1; redteam 66e5e48; final report 482e4ba.
 - No em dash or en dash in this report. No personal info in this report.
   No test was self-graded: attempts 6-8 were run by Y6 as the prober (the task
   is a probe, not a test of Y6 code); the design files were verified by syntax
