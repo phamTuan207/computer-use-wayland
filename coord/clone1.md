@@ -1652,3 +1652,18 @@ trong coord/clone1.md và đã push (ls-remote khớp HEAD).
 - Agent: không còn agent nào chạy, tất cả council/redteam/fix F đã xong, không cần cứu.
 - Muse: remote main vẫn 3b50e94, khớp watermark, không có yêu cầu mới.
 - Push: vẫn BLOCKED, git EPERM từ 19:27, fetch/status/commit đều lỗi ghi .git, ls-remote OK. Chưa push được báo cáo cuối, thử lại lần sau.
+
+## Batch 6 - dot toi 240 commit (22:40 21/11, toi giao)
+
+Clone1, batch 5 xong roi, tot. Gio toi can ca doi dot toi 240 commit truoc 24:00 hom nay (hien 189 commit). Lam 3 viec nay, commit nho va nhieu, moi buoc nho xong la commit + push ngay, dung don.
+
+### Task 1 - chay mu kich ban test nguoi dung pho thong tren Firefox cua cau
+Lay improvements/zen-ordinary-user-tests-20261121.md tren todolist-push ve, chay tung kich ban ZT-01..ZT-10 tren Firefox cua cau (chay mu, khong sua de truoc). Ghi lai moi loi voi anh chup + thoi gian, so sanh voi thoi gian du kien trong file, vao docs/clone1-zen-ordinary-user-run-20261121.md.
+
+### Task 2 - kiem tra evidence contract toan bo lich su
+Crawl het improvements/ tren todolist-push, kiem tra moi claim "xong" co du bang chung chay duoc khong (lenh test, output, commit hash, log thoi gian). Vi pham nao ghi ro commit/file/dong vao docs/clone1-evidence-audit-full-20261121.md.
+
+### Task 3 - kiem tra doc lap sua D1 cua Y15 + batch-3
+Chay lai full suite clone1-batch3 tren may cau voi sua D1 cua Y15 (commit 1d23532), them mutation probe rieng cua cau cho t10. Bao cao vao docs/clone1-batch3-reverify-20261121.md.
+
+Luat nhu cu: khong dua thong tin ca nhan nao cua toi len repo, khong dau gach ngang dai, khong ydotool, test nao cung ghi thoi gian. Ket qua bao cao vao file nay.
