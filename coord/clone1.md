@@ -3343,3 +3343,65 @@ Không kiểm: không chạy lại suite nào (số pass/thời gian, gồm G30 
 là của council 1); số fail-before là của council 3; commit không phải
 amend trong dải không kiểm; chứng minh live trên browser do worker
 benchmark 2-vision làm.
+
+## ĐỢT 8, REDTEAM VIỆC 2 XONG, 05:11 ngày 22/11 - GO VẪN ĐỨNG, 3 SỐ SAI Ở CHI TIẾT PHỤ
+
+Báo cáo docs/batch8-redteam-amend-20261122.md (261 dòng theo wc -l),
+đã push (7569f8d). Redteam tự chạy lại suite ở cả 2 worktree để kiểm:
+mọi trụ của kết luận GO đều kiểm lại đúng trực tiếp: cả 12 mục đều
+trong code đúng dòng đã nêu, cả 6 suite pass trên code amend với số
+khớp đúng từng cái (61/47/25/10/28/10 = 181), fail-before tái hiện đúng
+trên code base (mọi số fail/error và mọi tên lỗi chính đều xác nhận),
+bộ 12 module lân cận không hồi quy (đúng 2 lỗi umask test_core đã có
+từ trước trên cả 2 cây), C12 khớp đúng từng chữ công thức truth của
+calibration_e2 đã chứng minh live. 3 số sai đều ở chi tiết phụ, không
+chạm cơ sở của GO.
+
+Số sai (3): W1 tổng 6 suite "1.385 s" sai; các thời gian từng suite cộng
+lại là 1.375 s (0.629+0.424+0.005+0.001+0.074+0.242). Kể cả làm tròn thì
+tổng thật cũng không quá 1.378 s. Lần chạy lại của redteam ra tổng 1.316 s,
+nên thời gian từng suite là đo thật hợp lý; chỉ dòng tổng là không nhất
+quán số học. Tôi tự cộng lại: 1.375, đúng W1. W2 mục 5, "_fresh_observation
+có đúng 1 caller trong repo" sai. Có 9 chỗ gọi: 1 production caller
+(run() ở scripts/first_action.py:470) cộng 8 lần gọi test trực tiếp ở
+tests/test_first_action.py:809, 823, 843, 856, 868, 878, 892, 904. Kết
+luận subsumption R2 vẫn đứng nhờ code từ chối 478-498, đã kiểm. W3 đoạn
+bonus R10 nêu sai bullet 1 và 2 thành "(session creation failure type,
+200-char error truncation)". R10 thật (improvements/worker-click-rt-log.md:94-100):
+(1) bỏ qua verification khi after_capture False / terminal_address None;
+(2) age check dùng deadline tối đa của session, không phải thời gian
+attempt thật. Bullet 3 (kiểm range trước current_handle()) nêu đúng và
+sửa đúng ở zen_dom.py:288-294.
+
+Claim chưa kiểm nêu như đã xong (2): U1 thời gian chạy "21:44 UTC và
+chạy lại 22:01 UTC" không có artifact trích; khớp với agent xong lúc
+22:03:18 UTC nhưng không xác nhận được từ ổ. U2 "scripts/build.py lỗi ở
+đây do thiếu gói gtk4 dev" không có log build. Redteam xác nhận nguyên
+nhân (pkg-config --exists gtk4 lỗi), nhưng không xác nhận chính lỗi
+build.
+
+Vấn đề nhỏ (6): M1 agent việc 2 nói 255 dòng trong handoff; wc -l nói
+254. Bản thân báo cáo không nêu số dòng. Cùng mẫu lỗi +1 như các đợt
+trước, lần này ở handoff, không ở doc. M2 liệt kê commit không phải
+amend chưa đủ: dải có 41 commit (8 amend + 33 khác); báo cáo nêu tên 14
+và gom 8 cái thành "coord logs", còn 11 chưa liệt (7b85472, 96f49ac,
+7437384, 0b92542, 646cf71, 238b528, 9350db7, f2999c7, 88d3d0a, ab0b62c,
+167a2e9). M3 thời gian suite phụ thuộc tải, đo 1 lần; lần chạy lại của
+redteam lệch tới 0.04 s mỗi suite (bộ 13 suite: 2.708 s so với 2.239 s).
+Số lượng khớp đúng hết. M4 câu phạm vi đúng với định nghĩa nhưng dễ đọc
+nhầm: 15 dòng thay đổi CÓ nhắc image_point (call mới, hàm mới
+dom_rect_to_image_point, docstring); chỉ định nghĩa và thân là không đụng.
+M5 worktree base còn bẩn với các file copy fail-before (6 file test đã
+sửa, 2 file mới chưa track); cần dọn trước khi dùng lại. M6 mục 7 khai
+thật những gì chưa kiểm (browser live, full discover, commit không phải
+amend); 2 giới hạn C12 nêu đúng là việc live còn nợ, không phải lỗi code.
+
+Sửa còn nợ (trong báo cáo): 1. tổng 6 suite 1.385 s thành 1.375 s. 2. số
+caller mục 5 thành 9 (1 production + 8 test). 3. bullet 1 và 2 của R10
+thành mô tả thật. 4. liệt kê đủ commit không phải amend hoặc viết lại
+thành ví dụ. 5. làm rõ câu phạm vi (M4). 6. trích artifact thời gian
+chạy/build hoặc ghi U1/U2 là chưa log. Không sửa nào nợ cho chính kết
+luận GO. Cộng thêm 5 sửa trích dẫn của council 2 (dải từ chối 474-498,
+copy session 543-545, def _try_restore 226, test 195 assert chuỗi call
+chứ không phải counter, và mục 5 "1 production caller"), agent sửa sẽ
+áp dụng cả 2 bộ, gộp trùng.
