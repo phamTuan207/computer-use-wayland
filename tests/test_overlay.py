@@ -196,6 +196,17 @@ def test_cmd_acquire_failure_leaks_nothing():
                 pass
             assert overlay.load_holders() == {}, 'socket failure must not leak a holder'
             assert overlay.prune_dead_holders() == []
+
+            # D1 re-check hardening: a non-dict reply (unreachable
+            # through the real daemon) must not leak either.
+            overlay._ensure_daemon = lambda: True
+            overlay._send_socket = lambda *a, **k: ['not', 'a', 'dict']
+            try:
+                overlay.cmd_acquire(args)
+                raise AssertionError('cmd_acquire must raise on a non-dict reply')
+            except TypeError:
+                pass
+            assert overlay.load_holders() == {}, 'non-dict reply must not leak a holder'
         finally:
             overlay._ensure_daemon = orig_ensure
             overlay._send_socket = orig_send
