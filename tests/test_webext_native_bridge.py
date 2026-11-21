@@ -14,10 +14,12 @@ laptop with a real browser (see README.md in this folder, section
 
 import json
 import os
+import shutil
 import socket
 import struct
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 import unittest
@@ -202,6 +204,43 @@ class BridgeTestCase(unittest.TestCase):
         reply, _elapsed = tcp_request(self.port, {"op": "host.ping"})
         self.assertFalse(reply["ok"], reply)
 
+    def test_new_ops_forwarded_to_extension(self):
+        for op, request in [
+            ("scroll", {"id": 20, "op": "scroll", "tabId": 1, "y": 400}),
+            ("hover", {"id": 21, "op": "hover", "tabId": 1, "selector": "#save"}),
+            ("select", {"id": 22, "op": "select", "tabId": 1, "selector": "#choice", "value": "b"}),
+            ("upload", {"id": 23, "op": "upload", "tabId": 1, "selector": "#file",
+                        "filename": "hello.txt", "mime": "text/plain", "data": "aGVsbG8="}),
+            ("waitFor", {"id": 24, "op": "waitFor", "tabId": 1, "selector": "#save", "timeoutMs": 1000}),
+        ]:
+            reply, _elapsed = tcp_request(self.port, request)
+            self.assertTrue(reply["ok"], reply)
+            self.assertEqual(reply["result"]["echo_op"], op, reply)
+            forwarded = [m for m in self.fake.received if m.get("id") == request["id"]]
+            self.assertEqual(len(forwarded), 1, request)
+            self.assertEqual(forwarded[0]["op"], op)
+
+    def test_host_status_reports_counters(self):
+        reply, _elapsed = tcp_request(self.port, {"id": 25, "op": "host.status"})
+        self.assertTrue(reply["ok"], reply)
+        self.assertIn("timeouts", reply["result"])
+        self.assertIn("errors", reply["result"])
+        self.assertEqual(reply["result"]["timeouts"], 0)
+        self.assertEqual(reply["result"]["errors"], 0)
+
+    def test_node_harness_exercises_content_ops(self):
+        started_wall = time.time()
+        started = time.monotonic()
+        result = subprocess.run(
+            ["node", str(BRIDGE / "content_node_test.mjs")],
+            capture_output=True, text=True, timeout=60,
+        )
+        elapsed_ms = (time.monotonic() - started) * 1000
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn('"op":"summary","ok":true,"failures":0', result.stdout)
+        wall = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(started_wall))
+        print(f"\ncontent harness wall-clock: {wall} elapsed_ms: {elapsed_ms:.1f}")
+
     def test_manifests_valid(self):
         ext_manifest = json.loads((BRIDGE / "extension" / "manifest.json").read_text())
         self.assertEqual(ext_manifest["manifest_version"], 2)
@@ -249,6 +288,75 @@ class BridgeTestCase(unittest.TestCase):
                     stream.close()
                 except (OSError, ValueError):
                     pass
+
+
+class InstallTestCase(unittest.TestCase):
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp(prefix="cu-bridge-home-"))
+        self.install = BRIDGE / "install.py"
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def run_install(self, *args, home=None):
+        env = dict(os.environ)
+        env["HOME"] = str(home if home is not None else self.tmp)
+        return subprocess.run(
+            [sys.executable, str(self.install), *args],
+            capture_output=True, text=True, timeout=30, env=env,
+        )
+
+    def test_install_then_check_then_uninstall(self):
+        started_wall = time.time()
+        result = self.run_install()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        manifest = self.tmp / ".mozilla" / "native-messaging-hosts" / "computer_use_bridge.json"
+        self.assertTrue(manifest.exists())
+        data = json.loads(manifest.read_text())
+        self.assertEqual(data["name"], "computer_use_bridge")
+        self.assertEqual(data["allowed_extensions"], ["cu-bridge@example.local"])
+        self.assertTrue(Path(data["path"]).exists())
+        result = self.run_install("--check")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("CHECK OK", result.stdout)
+        result = self.run_install("--uninstall")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertFalse(manifest.exists())
+        result = self.run_install("--check")
+        self.assertNotEqual(result.returncode, 0)
+        wall = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(started_wall))
+        print(f"\ninstall round trip wall-clock: {wall}")
+
+    def test_check_fails_when_host_path_missing(self):
+        self.run_install()
+        manifest = self.tmp / ".mozilla" / "native-messaging-hosts" / "computer_use_bridge.json"
+        data = json.loads(manifest.read_text())
+        data["path"] = str(self.tmp / "no-such-host.py")
+        manifest.write_text(json.dumps(data))
+        result = self.run_install("--check")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("CHECK FAIL", result.stdout + result.stderr)
+
+    def test_policies_writes_force_install(self):
+        browser_dir = self.tmp / "zen-install"
+        xpi = self.tmp / "bridge-0.2.0.xpi"
+        xpi.write_bytes(b"PK\x03\x04fake-xpi")
+        result = self.run_install("--policies", str(browser_dir), "--xpi", str(xpi))
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        policies = json.loads((browser_dir / "distribution" / "policies.json").read_text())
+        entry = policies["policies"]["ExtensionSettings"]["cu-bridge@example.local"]
+        self.assertEqual(entry["installation_mode"], "force_installed")
+        self.assertTrue(entry["install_url"].endswith("bridge-0.2.0.xpi"))
+
+    def test_sign_without_web_ext_explains(self):
+        env = dict(os.environ)
+        env["PATH"] = "/usr/bin:/bin"
+        result = subprocess.run(
+            [sys.executable, str(self.install), "--sign"],
+            capture_output=True, text=True, timeout=30, env=env,
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("web-ext", result.stdout + result.stderr)
 
 
 if __name__ == "__main__":

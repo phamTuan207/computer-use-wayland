@@ -104,6 +104,8 @@ class Bridge:
         self.pending_lock = threading.Lock()
         self.stop = threading.Event()
         self.started_at = time.monotonic()
+        self.timeouts = 0
+        self.errors = 0
         self.server_socket = None
 
     def answer_locally(self, message):
@@ -117,6 +119,8 @@ class Bridge:
                     "host": HOST_NAME,
                     "pending": len(self.pending),
                     "uptime_s": round(time.monotonic() - self.started_at, 3),
+                    "timeouts": self.timeouts,
+                    "errors": self.errors,
                 },
             }
         return None
@@ -127,6 +131,7 @@ class Bridge:
                 try:
                     message = read_message(self.in_stream)
                 except (ValueError, json.JSONDecodeError) as error:
+                    self.errors += 1
                     log(f"bad native message, skipping: {error}")
                     continue
                 if message is None:
@@ -189,6 +194,8 @@ class Bridge:
         except ValueError as error:
             with self.pending_lock:
                 self.pending.pop(request["id"], None)
+            self.errors += 1
+            log(f"cannot forward request id={request['id']}: {error}")
             return {
                 "id": request["id"],
                 "ok": False,
@@ -198,6 +205,8 @@ class Bridge:
         except OSError as error:
             with self.pending_lock:
                 self.pending.pop(request["id"], None)
+            self.errors += 1
+            log(f"cannot write to browser, id={request['id']}: {error}")
             return {
                 "id": request["id"],
                 "ok": False,
@@ -207,6 +216,11 @@ class Bridge:
         if not event.wait(timeout=self.timeout_s):
             with self.pending_lock:
                 self.pending.pop(request["id"], None)
+            self.timeouts += 1
+            log(
+                f"timed out after {self.timeout_s}s waiting for browser "
+                f"reply, id={request['id']} op={request.get('op')}"
+            )
             return {
                 "id": request["id"],
                 "ok": False,

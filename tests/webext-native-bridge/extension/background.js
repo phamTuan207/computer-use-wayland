@@ -17,14 +17,16 @@
 const HOST_NAME = "computer_use_bridge";
 const RECONNECT_DELAYS_MS = [1000, 2000, 5000, 10000, 30000];
 const REQUEST_TIMEOUT_MS = 20000;
+const TAB_TIMEOUT_MS = 25000;
 
 let nativePort = null;
 let reconnectAttempt = 0;
 let reconnectTimer = null;
+let nativeDeaths = 0;
 const pending = new Map();
 
 function log(...args) {
-  console.log("[cu-bridge]", ...args);
+  console.log("[cu-bridge]", new Date().toISOString(), ...args);
 }
 
 function connectNative() {
@@ -51,7 +53,12 @@ function connectNative() {
 
 function onNativeDisconnect() {
   const error = browser.runtime.lastError;
-  log("native port disconnected:", error ? error.message : "no error");
+  nativeDeaths += 1;
+  log(
+    "native port disconnected, death count:",
+    nativeDeaths,
+    error ? error.message : "no error"
+  );
   nativePort = null;
   for (const [id, entry] of pending) {
     entry.reject(new Error("native port disconnected"));
@@ -143,7 +150,23 @@ async function ensureContentScript(tabId) {
 
 async function runInTab(tabId, message) {
   await ensureContentScript(tabId);
-  return browser.tabs.sendMessage(tabId, message);
+  // A content script that never replies must not hang the agent: the
+  // host gives up after its own timeout, but this shorter timeout lets
+  // the extension report the failure with the tab id attached.
+  return Promise.race([
+    browser.tabs.sendMessage(tabId, message),
+    new Promise((_resolve, reject) =>
+      setTimeout(
+        () =>
+          reject(
+            new Error(
+              "tab reply timed out after " + TAB_TIMEOUT_MS + " ms, op: " + message.op
+            )
+          ),
+        TAB_TIMEOUT_MS
+      )
+    ),
+  ]);
 }
 
 async function handleCommand(message) {
@@ -157,7 +180,7 @@ async function handleCommand(message) {
   try {
     switch (message.op) {
       case "ping": {
-        return finish({ pong: true });
+        return finish({ pong: true, native_deaths: nativeDeaths });
       }
       case "listTabs": {
         const tabs = await browser.tabs.query({});
@@ -182,7 +205,12 @@ async function handleCommand(message) {
       case "snapshot":
       case "click":
       case "type":
-      case "evaluate": {
+      case "evaluate":
+      case "scroll":
+      case "hover":
+      case "select":
+      case "upload":
+      case "waitFor": {
         const result = await runInTab(message.tabId, message);
         return finish(result);
       }

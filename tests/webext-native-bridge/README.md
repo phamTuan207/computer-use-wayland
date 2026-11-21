@@ -35,8 +35,8 @@ Agent to host, one JSON object per line over TCP:
 | op | fields | result |
 | --- | --- | --- |
 | host.ping | id | {pong: true}, answered by the host, no browser needed |
-| host.status | id | {host, pending, uptime_s} |
-| ping | id | {pong: true}, answered in the background script |
+| host.status | id | {host, pending, uptime_s, timeouts, errors} |
+| ping | id | {pong: true, native_deaths}, answered in the background script |
 | listTabs | id | [{id, index, url, title, active}] |
 | activate | id, tabId | {activated: tabId} |
 | navigate | id, tabId, url | {navigated: url} |
@@ -44,11 +44,25 @@ Agent to host, one JSON object per line over TCP:
 | click | id, tabId, selector | {clicked, tag, text} |
 | type | id, tabId, selector, text | {typed, tag, length} |
 | evaluate | id, tabId, expression | {value, type} |
+| scroll | id, tabId, selector?, x?, y?, behavior? | {scrolled, scrollX, scrollY, rect?} |
+| hover | id, tabId, selector | {hovered, tag, text, rect} |
+| select | id, tabId, selector, value | {selected, value, text} |
+| upload | id, tabId, selector, filename, mime, data | {uploaded, filename, size, type} |
+| waitFor | id, tabId, selector, timeoutMs | {found, tag, text, waited_ms, rect} |
 
 Every reply carries the same `id`, `ok`, `elapsed_ms` measured inside
 the extension, and `host_elapsed_ms` measured in the host. Request ids
 are positive integers; id -1 is reserved for the background script's
 own host.ping smoke check at connect time.
+
+Error handling: the background script gives up on a tab that does not
+reply within 25 s and reports the tab id and op in the error; the host
+gives up after `CU_BRIDGE_TIMEOUT_S` (default 30 s), logs the timeout
+with a timestamp, and counts it in `host.status`. If the native host
+dies, the browser closes the port, the background script counts the
+death, logs it with a timestamp, and reconnects with backoff
+(1s, 2s, 5s, 10s, 30s), which relaunches the host. Every host log
+line carries a UTC timestamp.
 
 Native messaging framing, per MDN: each message is JSON, UTF-8
 encoded, prefixed with a 32-bit unsigned length in native byte order.
@@ -73,24 +87,32 @@ to the server open.
 - `extension/manifest.json`: MV2, permissions `nativeMessaging`,
   `tabs`, `<all_urls>`, explicit id `cu-bridge@example.local`.
 - `extension/background.js`: holds the native port, reconnects with
-  backoff (1s, 2s, 5s, 10s, 30s), routes commands to tabs.
-- `extension/content.js`: snapshot, click, type, evaluate in pages.
+  backoff (1s, 2s, 5s, 10s, 30s), counts native host deaths, routes
+  commands to tabs, gives up on a silent tab after 25 s.
+- `extension/content.js`: snapshot, click, type, evaluate, scroll,
+  hover, select, upload (base64 file data rebuilt as a File object),
+  waitFor (MutationObserver plus timeout).
+- `content_node_test.mjs`: Node harness that runs the real content.js
+  against a fake DOM and checks all 15 content ops, no browser needed.
 - `host/cu_bridge_host.py`: framing plus loopback TCP relay, stdlib
   only. Port from `CU_BRIDGE_PORT` (default 18711), per-request
-  timeout from `CU_BRIDGE_TIMEOUT_S` (default 30).
+  timeout from `CU_BRIDGE_TIMEOUT_S` (default 30). Logs every error
+  and timeout with a UTC timestamp, counts them in `host.status`.
 - `host/cu_bridge_client.py`: minimal manual client with wall-clock
   and elapsed timing on stderr.
 - `host/computer_use_bridge.json.template`: host manifest template.
-- `install.py`: writes the real host manifest to
+- `install.py`: writes the host manifest to
   `~/.mozilla/native-messaging-hosts/computer_use_bridge.json` and
-  makes the host executable.
-- `../test_webext_native_bridge.py`: 9 unit tests, no browser needed.
+  makes the host executable. Also `--check`, `--uninstall`, `--sign`
+  (web-ext build), and `--policies` (force-install via policies.json).
+- `../test_webext_native_bridge.py`: 16 unit tests, no browser needed.
 
 ## Setup on the laptop
 
 1. From this folder, install the host manifest:
    `python3 install.py`
    This writes `~/.mozilla/native-messaging-hosts/`.
+   Verify it with `python3 install.py --check`.
    Zen reads the same `~/.mozilla` registration as Firefox. Do not
    write a copy under `~/.zen`: other projects tried that and it did
    not work, and the fix was to move the manifest back to `.mozilla`.
@@ -100,6 +122,10 @@ to the server open.
    `about:debugging#/runtime/this-firefox`, choose Load Temporary
    Add-on, pick `extension/manifest.json`. Temporary add-ons last
    until Firefox restarts.
+   For a permanent install, sign the extension (`python3 install.py
+   --sign`, then the printed sign step with AMO keys) and force-install
+   it with `python3 install.py --policies <browser-dir> --xpi
+   <signed.xpi>`. Full steps are in `docs/webext-bridge-install.md`.
 3. Open the background console and confirm
    `[cu-bridge] connected to native host computer_use_bridge`.
 4. From a terminal, list tabs:
@@ -119,6 +145,10 @@ Can:
   value, href) without screenshots.
 - Click and type through DOM APIs, and evaluate expressions in the
   page's isolated content-script world.
+- Scroll to an element or a window position, hover an element, pick a
+  select option by value or visible text, upload a file (bytes sent
+  as base64, rebuilt as a File object), and wait for an element to
+  appear with a timeout.
 
 Cannot:
 - Send trusted input. `element.click()` and dispatched input events
@@ -164,23 +194,36 @@ while the browser holds the port.
 
 Verified on this machine (no Firefox or Zen binary, no `~/.mozilla`
 profile here):
-- `python3 tests/test_webext_native_bridge.py`: 9 tests, all pass,
-  5.5 seconds wall-clock. A fake extension stands in for the
-  browser and proves framing, full relay, the 1 MB outbound limit,
-  bad-frame survival, and clean shutdown on stdin EOF.
-- Relay timing with the fake extension: 1.1 ms elapsed for a
+- `python3 tests/test_webext_native_bridge.py`: 16 tests, all pass,
+  8.390 seconds wall-clock (run 2026-11-21T08:24:52Z to 08:25:00Z).
+  A fake extension stands in for the browser and proves framing,
+  full relay, the 1 MB outbound limit, bad-frame survival, clean
+  shutdown on stdin EOF, forwarding of all 5 new ops, and the
+  install check, uninstall, and policies round trips against a
+  temporary home directory.
+- `node tests/webext-native-bridge/content_node_test.mjs`: 16 checks,
+  all pass, 0.570 seconds wall-clock. Runs the real content.js
+  against a fake DOM and proves snapshot, click, type (input and
+  textarea), scroll (element and window), hover, select, upload
+  (10 byte file rebuilt from base64), waitFor (immediate, on
+  mutation, and timeout), evaluate, and the missing-element and
+  bad-option error paths.
+- Relay timing with the fake extension: 1.1-1.2 ms elapsed for a
   snapshot round trip on loopback. That is host-only timing; real
   browser timing will be larger and must be measured on the laptop.
-- `node --check` passes for both extension scripts; `py_compile`
-  passes for all Python files; both manifests parse as JSON.
+- `node --check` passes for both extension scripts and the harness;
+  `py_compile` passes for all Python files; both manifests parse as
+  JSON.
 
 NOT verified, needs the laptop with a real Zen:
 - Extension loads and connects to the host (step 3 above).
-- listTabs, snapshot, click, type, evaluate against a real tab,
-  with wall-clock and elapsed timing per op.
+- listTabs, snapshot, click, type, evaluate, scroll, hover, select,
+  upload, waitFor against a real tab, with wall-clock and elapsed
+  timing per op.
 - Host manifest install on the laptop, including the Zen
-  `~/.mozilla` registration.
-- Permanent install path (signed unlisted build or Nightly).
+  `~/.mozilla` registration, and `install.py --check`.
+- Permanent install path (signed unlisted build or Nightly), and the
+  policies.json force-install path.
 
 Sources checked 2026-11-21: MDN Native messaging and Native
 manifests pages; Mozilla Add-ons blog on MV2 support; firefox-mcp
