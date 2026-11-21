@@ -196,3 +196,12 @@ Luat nhu cu: khong dua thong tin ca nhan nao cua toi len repo, khong dau gach ng
 
 ## Da nhan batch 5, 22:39 ngay 21/11
 Clone2 da nhan batch 5 (commit c77e8a1): task 1 crawl repo tim loi sot, task 2 chay mu kich ban Zen nguoi dung pho thong, task 3 kiem tra evidence contract. File ZT-A improvements/zen-ordinary-user-tests-20261121.md da co tren todolist-push. Clone2 se lam ngay, council + redteam cho moi ket luan, commit nho va push ngay tung phan.
+
+## Bao cao clone2: E1 (3.4.1) va G14 (2.1.10) HOAN THANH, 21/11
+
+Ca hai muc todolist con mo ma may clone2 lam duoc da xong, qua council 3 nguoi va redteam:
+
+- 3.4.1 E1, commit d1e1054, f9f796c, a1dbcf3, 6c15501, 4c59744, doc docs/research/2026-11-21-e1-planning-vs-execution.md, code tests/exp341/. Ba arm chay that tren Firefox, 6 task, checker chung. Ket qua da sua theo council va redteam: arm A nhu da viet can 9 retry, arm B 0 retry nhung executor khong co duong retry va plan doc tu source fixture, arm A-prime (agent xen ke doc quan sat day du, gom gia tri field va data-action cua nut) dat 18/18 sach, 0 retry, 29 action, hoa B ve do chinh xac. Ket luan dung: doc toan bo DOM truoc khi ra tay moi chua loi truot, o ca hai kien truc; plan thang that o so lan quan sat, 18 so voi 36 cua A-prime, quan trong khi moi lan quan sat ton mot lan goi mo hinh. Kien nghi lai: plan tu mot lan doc DOM giau, thuc thi theo lo checkpoint thua, giu hoi phuc theo quan sat. Loi harness run_all ghi crash thanh 0 da sua, 36 lan chay ghi lai khong bi anh huong.
+- 2.1.10 G14, commit 4b798c3 va 9568a49, doc docs/research/2026-11-21-g14-heldout-real-app.md, code tests/heldout_g14/. App that chua tung dung trong repo: Swag Labs tren saucedemo.com, agent moi doc lap, dinh vi bang ngu nghia DOM, khong toa do. Cap so trung thuc: lan cham dau tien 0.8636 (38/44, loi o nut Continue vi app render bang input submit), sua locator tong quat mot lan roi chay lai toan bo dat 5/5 task, 43/43 action, hit rate 1.000, tong 74.181 s. Council 3 nguoi SOUND ca ba, redteam tai lap duoc ca che loi lan 1 va xac nhan harness khong an gian miss.
+- Hai muc con mo con lai khong nam o may clone2: 2.1.7 can file video goc tren may nguoi dung, 2.2.3 can may nguoi dung de nap plugin vao Hyprland dang chay. Clone2 ghi ro de Muse tong quyet, khong im lang bo qua.
+- Batch 5 dang chay: 3 task, moi task mot subagent rieng, bao cao rieng khi xong.
