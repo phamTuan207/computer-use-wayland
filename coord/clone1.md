@@ -3287,3 +3287,59 @@ chạy lại ở đây.
 
 ## Watchdog đợt 8, 05:07 ngày 22/11
 Việc 1: sweep vẫn chặn, chờ chủ xác nhận chạy clone, câu hỏi vẫn mở. Việc 2: xong, kết luận GO, council 1 và 3 xong đã push, council 2 và redteam đang chạy khỏe, hoạt động cách đây vài giây, chưa có file báo cáo. Muse: không có yêu cầu mới từ watermark f8317f7 (chỉ commit của clone1 và clone2, không commit coord: nào của Muse). Hành động: chỉ kiểm tra, không cứu agent, không spawn mới. Watchdog tiếp tục.
+
+## ĐỢT 8, COUNCIL 2 XONG, 05:08 ngày 22/11 - 12 MỤC + C12 XÁC NHẬN, 5 SỬA TRÍCH DẪN CÒN NỢ
+
+Báo cáo docs/batch8-council2-amend-20261122.md (289 dòng theo wc -l),
+đã push (ce65da7). Đọc code trực tiếp trong worktree
+~/workspace/b8t2/amend, HEAD 4b7d6ac đã kiểm trên ổ, mọi dòng đều đọc
+từ file, không copy từ báo cáo việc 2. Worktree không sửa.
+
+Kết luận: cả 12 mục XÁC NHẬN, C12 XÁC NHẬN, phạm vi XÁC NHẬN. Không
+tìm thấy lỗi code nào. Kết luận GO vẫn đứng.
+
+Đã kiểm trực tiếp: mục 1, 3, 4, 7, 10, 11 đúng đúng dòng đã trích
+(test session :252; type_verified=None ở cu.py:2005;
+_input_line_changed 1018 với half=12/threshold=50, type_anchor 1711,
+focus gate 1848-1849, type_check hook 1913, basis dom-value 2050, sửa
+Stage A ở fix-log:33 và :35; loud_substitution_refusal 357 với
+`if not has_keyboard:` 378; wedge 317-332; _verify_selected 240 với
+docstring handle-LIST ở 257-258). Mục 2 đúng về nội dung (từ chối
+vô điều kiện, has_keyboard chỉ chọn text thông báo), mục 12 đúng về
+nội dung (cả 9 dòng def đúng; rect-center, covered-refusal,
+miss-never-types, assert observes, test 7 trường hợp đều đúng dòng),
+bonus R10 đúng (kiểm range 288-292 trước current_handle() ở 293).
+
+C12 đúng: viewport_origin trả [mozInnerScreenX, mozInnerScreenY] kèm
+validate; dom_rect_to_screen_point trả origin + center;
+dom_rect_to_image_point tính ix = (sx - rx)*iw/rw, là nghịch đảo đại số
+đúng của cu.image_point (cu.py:995, rx + x*rw/iw);
+calibration_e2.py:15-17 nêu công thức truth đúng từng chữ.
+
+Phạm vi đúng: diff stat 12 file / 1632 thêm / 116 xóa khớp; 0 dòng
+thêm/xóa trong scripts+tests chạm định nghĩa image_point, move, hay
+_check_entry_pyc; 20 lần nhắc _check_entry_pyc thêm trong diff chưa lọc
+đều là văn bản log trong improvements/, 0 trong code; 0 dấu gạch trong
+diff code + test.
+
+5 sửa mức trích dẫn còn nợ, không sửa code:
+1. Mục 5: "đúng 1 caller trong repo" sai như đã viết;
+tests/test_first_action.py gọi _fresh_observation trực tiếp ở 8 chỗ
+(809, 823, 843, 856, 868, 878, 892, 904). Sửa thành "đúng 1 production
+caller". Subsumption R2 vẫn đứng.
+2. Mục 2: dải từ chối là 474-498, không phải 478-498 (`if rejected is
+not None:` ở 474).
+3. Mục 6: copy từ session trải 543-545, không phải 543-544 (gán error_code
+ở 545).
+4. Mục 9: def _try_restore ở 226, không phải 227 (227 là dòng đầu
+docstring).
+5. Mục 12: chỉ tests/test_dom_act.py:227-228 assert observes_added 0 và
+act_observes 0; tests/test_type_verification.py:195 assert chuỗi call
+observe ['fresh', 'persist', 'persist'] thay vì vậy (file đó có 0 lần
+xuất hiện các counter đó). Claim "không observe thừa" vẫn đứng; phần
+ngoặc không được gán assert counter cho test 195.
+
+Không kiểm: không chạy lại suite nào (số pass/thời gian, gồm G30 7/7,
+là của council 1); số fail-before là của council 3; commit không phải
+amend trong dải không kiểm; chứng minh live trên browser do worker
+benchmark 2-vision làm.
