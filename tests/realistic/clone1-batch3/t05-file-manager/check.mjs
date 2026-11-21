@@ -1,7 +1,9 @@
 // t05-file-manager check. Drives a demo file manager with real UI
-// actions: sort, search, create folder, navigate, rename, delete with
-// confirm, move between folders, and rename a folder. Asserts the real
-// DOM list, crumbs, and status after each step.
+// actions: sort, search, create folder, navigate, rename through a
+// dialog (type a check-chosen name, Save; Cancel leaves the name;
+// an empty name is rejected), delete with confirm, move between
+// folders, and rename a folder through the same dialog. Asserts the
+// real DOM list, crumbs, and status after each step.
 // Prints one JSON result line. Exit 0 on pass, 1 on fail.
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -62,6 +64,18 @@ try {
   if ((await text('#crumbs')).trim() !== 'Home') failures.push('crumbs wrong back in Home');
   await page.click('#list .item[data-name="notes.txt"]');
   await page.click('#rename-btn');
+  if (!(await page.isVisible('#rename-dialog'))) failures.push('rename dialog not shown');
+  await page.click('#rename-cancel');
+  if (!(await items()).includes('notes.txt')) failures.push('cancelled rename removed notes.txt');
+  await page.click('#rename-btn');
+  if (!(await page.isVisible('#rename-dialog'))) failures.push('rename dialog not shown on reopen');
+  await page.fill('#rename-input', '');
+  await page.click('#rename-save');
+  if (!(await items()).includes('notes.txt')) failures.push('empty rename removed notes.txt');
+  if (!(await page.isVisible('#rename-dialog'))) failures.push('rename dialog closed on empty name');
+  if (!(await page.isVisible('#rename-error'))) failures.push('empty rename error not shown');
+  await page.fill('#rename-input', 'meeting-notes.txt');
+  await page.click('#rename-save');
   if ((await items()).includes('notes.txt')) failures.push('notes.txt still present after rename');
   if (!(await items()).includes('meeting-notes.txt')) failures.push('meeting-notes.txt missing after rename');
   await page.click('#list .item[data-name="photo.jpg"]');
@@ -90,6 +104,9 @@ try {
   await expectItems(['Archive', 'budget.csv', 'meeting-notes.txt', 'video.mp4'], 'Home after moving video back');
   await page.click('#list .item[data-name="Archive"]');
   await page.click('#rename-btn');
+  if (!(await page.isVisible('#rename-dialog'))) failures.push('folder rename dialog not shown');
+  await page.fill('#rename-input', 'Old files');
+  await page.click('#rename-save');
   if (!(await items()).includes('Old files')) failures.push('Old files missing after folder rename');
   if ((await items()).includes('Archive')) failures.push('Archive still present after folder rename');
   await page.fill('#search', 'old');

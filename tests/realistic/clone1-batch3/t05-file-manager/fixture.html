@@ -13,6 +13,8 @@
   #empty { display: none; color: #666; }
   #confirm { display: none; border: 1px solid red; padding: 10px; margin-top: 10px; }
   #move-dialog { display: none; border: 1px solid #999; padding: 10px; margin-top: 10px; }
+  #rename-dialog { display: none; border: 1px solid #999; padding: 10px; margin-top: 10px; }
+  #rename-error { display: none; color: red; }
   button { margin: 4px; }
 </style>
 </head>
@@ -42,6 +44,14 @@
     <span id="confirm-text"></span>
     <button id="confirm-yes">Delete</button>
     <button id="confirm-no">Cancel</button>
+  </div>
+  <div id="rename-dialog">
+    <label>Rename to:
+      <input id="rename-input">
+    </label>
+    <button id="rename-save">Save</button>
+    <button id="rename-cancel">Cancel</button>
+    <span id="rename-error">Name cannot be empty.</span>
   </div>
   <div id="move-dialog">
     <label>Move to:
@@ -152,8 +162,22 @@
     if (!selected) return;
     const item = store[current].find((i) => i.name === selected);
     if (!item) return;
-    const next = selected === 'notes.txt' ? 'meeting-notes.txt'
-      : selected === 'Archive' ? 'Old files' : selected + '.renamed';
+    document.getElementById('rename-input').value = selected;
+    document.getElementById('rename-error').style.display = 'none';
+    document.getElementById('rename-dialog').style.display = 'block';
+  });
+  document.getElementById('rename-cancel').addEventListener('click', () => {
+    document.getElementById('rename-dialog').style.display = 'none';
+  });
+  document.getElementById('rename-save').addEventListener('click', () => {
+    if (!selected) return;
+    const item = store[current].find((i) => i.name === selected);
+    if (!item) return;
+    const next = document.getElementById('rename-input').value.trim();
+    if (!next) {
+      document.getElementById('rename-error').style.display = 'inline';
+      return;
+    }
     if (item.type === 'folder') {
       store[next] = store[selected];
       delete store[selected];
@@ -166,6 +190,7 @@
     }
     item.name = next;
     selected = next;
+    document.getElementById('rename-dialog').style.display = 'none';
     refresh();
   });
   document.getElementById('delete-btn').addEventListener('click', () => {

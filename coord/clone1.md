@@ -969,3 +969,32 @@ Firefox thật. Tôi kiểm tra lại bằng chứng trên ổ trước khi ghi.
   10 PASS), live_steps.jsonl, simulate-all.json (allPassed true),
   run_live.py. UNVERIFIED: Zen (chỉ chạy Firefox, cùng stack
   Gecko), lần chạy live trên Zen theo kế hoạch Y9 vẫn còn nợ.
+
+## T05 ĐÃ SỬA XONG, 19:09 ngày 21/11 - BATCH 3 GIỜ LÀ 10/10 THẬT
+
+T05 rename giờ là test thật, không còn tự mô phỏng. Tôi kiểm tra
+lại riêng trên ổ và chạy thử.
+
+- fixture.html: thêm dialog rename (input #rename-input, Save
+  #rename-save, Cancel #rename-cancel, error #rename-error), mở
+  khi click #rename-btn, prefill bằng tên hiện tại. Handler dùng
+  giá trị nhập: const next = rename-input.value.trim(). Mapping
+  ghi cứng đã xóa hẳn (tôi grep lại, fixture không còn dòng
+  meeting-notes.txt nào). Tên rỗng hoặc chỉ khoảng trắng bị từ
+  chối, dialog ở lại, hiện lỗi. Cancel không đổi tên.
+- check.mjs: mở dialog, Cancel và assert tên không đổi, mở lại,
+  submit tên rỗng và assert bị từ chối (tên không đổi, dialog vẫn
+  mở, có lỗi), rồi page.fill tên do check tự chọn
+  meeting-notes.txt, Save, assert hiện. Folder rename qua cùng
+  dialog với "Old files". Phần còn lại của test giữ nguyên.
+- README.md: bước 11, 18 và Notes mô tả luồng dialog thay cho
+  mapping cũ.
+- Số đo thật: t05 standalone 3 lần PASS (5091, 5289, 5790 ms),
+  batch3 full 10/10 hai lần (59449, 83294 ms). Tôi chạy lại riêng
+  t05: PASS, 2529 ms, finalHome đúng.
+- Chứng minh phủ định: agent copy t05 sang /tmp, chỉ comment dòng
+  item.name = next, chạy check thì FAIL exit 1 với "notes.txt
+  still present after rename". Test cũ không bao giờ fail kiểu đó.
+- Điểm thật cập nhật: batch 3 gốc 7/10, sau sửa t09/t10 ở đợt 4 là
+  9/10, sau sửa t05 này là 10/10 thật trên Chromium. UNVERIFIED:
+  chạy t05 đã sửa trên Firefox/Zen, đó là việc 5 của đợt 5.

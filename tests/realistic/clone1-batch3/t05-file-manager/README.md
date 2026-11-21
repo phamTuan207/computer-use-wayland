@@ -27,7 +27,10 @@ delete a file with confirm and cancel.
 9. Double-click Archive, check the crumbs read `Archive` and the
    empty state shows.
 10. Go back to Home via the tree.
-11. Select notes.txt, click Rename, check it becomes meeting-notes.txt.
+11. Select notes.txt, click Rename, check the rename dialog opens.
+    Cancel and check the name is unchanged. Open it again, submit an
+    empty name and check it is rejected with the dialog still open.
+    Type meeting-notes.txt, click Save, check the rename applies.
 12. Select photo.jpg, click Delete, check the confirm dialog asks
     about photo.jpg, then Cancel and check the list is unchanged.
 13. Select photo.jpg again, click Delete, confirm, check it is gone.
@@ -36,7 +39,8 @@ delete a file with confirm and cancel.
 15. Open Archive, check video.mp4 is there.
 16. Move video.mp4 back to Home, check Archive is empty again.
 17. Go back to Home, check all 4 items are there.
-18. Select Archive, click Rename, check it becomes Old files.
+18. Select Archive, click Rename, type Old files in the dialog,
+    click Save, check it becomes Old files.
 19. Search `old`, check only Old files shows.
 20. Clear the search, double-click Old files, check the crumbs read
     `Old files` and the empty state shows.
@@ -56,7 +60,7 @@ delete a file with confirm and cancel.
 
 ## Notes
 
-Rename in this demo applies a fixed mapping (notes.txt becomes
-meeting-notes.txt, Archive becomes Old files) so the flow is fully
-deterministic. All state lives in the page. The browser run is
-Playwright Chromium; the same flow on Firefox or Zen is UNVERIFIED.
+Rename opens a dialog with a text input, Save, and Cancel. The new
+name comes from what the user types; an empty name is rejected and
+the dialog stays open. All state lives in the page. The browser run
+is Playwright Chromium; the same flow on Firefox or Zen is UNVERIFIED.
