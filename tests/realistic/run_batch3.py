@@ -1560,6 +1560,18 @@ def run_b3_t10(r, d):
                 "now playing after clicking Night Drive")
     r.step("click pause final", "click", lambda: d.click("#pause-btn"))
     expect_text("#status", "Paused", "status after final pause")
+    # Supplementary D1 diagnostic (Y12 defect, does NOT affect the
+    # suite verdict): Next while paused, read the position immediately.
+    # The clock is frozen while paused, so a correct reset reads
+    # exactly 0; the D1 mutant (reset to 1) reads 1. Recorded in
+    # details only, never as a pass/fail check on this test.
+    r.step("D1 probe: next while paused", "click",
+           lambda: d.click("#next-btn"))
+    pos0 = r.step("D1 probe: read position after paused next", "eval",
+                  lambda: position())
+    r.details["D1_exact_zero_probe"] = pos0
+    print(f"[D1] exact-zero probe: position after paused Next = {pos0} "
+          f"(want 0)", flush=True)
 
 # ---------------- preflight step 0 ----------------
 

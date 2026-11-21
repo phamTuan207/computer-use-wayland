@@ -371,6 +371,45 @@ Y12 headless verdict on the merged suite. Do not drive Zen before the
 slot opens. Prep (this plan, council, redteam, runner code, ship to
 laptop, syntax check) all happens before the slot.
 
+## Y12 headless verdict (19:40 21/11, commits 897ca17 + ccebbf4)
+
+Y12 independently verified the merged suite (ed78e83): 6/6 full suites
+10/10 PASS (sequential x3 about 23-27 s, load x3 about 65-66 s), 11/12
+mutation probes matched. Overall: SOUND WITH NOTED DEFECTS.
+- t05 SOUND (4/4 probes). t09 SOUND (4/4 probes).
+- t10 DEFECT D1 (minor, narrow, EXECUTED): the sampler accepts min
+  <= 2, so a nextTrack that resets position to 1 (or 2) passes; probe
+  t10-P2 (reset to 1) exited 0 with no failures. The sampler never
+  asserts the reset value its own README states ("plays from position
+  0"). Remedy (Y12 council t10): exact-zero assert on a clock-frozen
+  path (pause before Next, require exactly 0, resume, keep advancing
+  check). D1 does not block the suite's use; it blocks a clean SOUND
+  label only.
+- Consequence for this live run: a live PASS on t10 does NOT prove an
+  exact-zero reset, because my runner translates the merged checker
+  (min <= 2) faithfully. The live run therefore carries a supplementary
+  diagnostic probe at the end of t10 (after the suite steps, recorded
+  in r.details, NOT affecting the suite PASS/FAIL): click Next while
+  paused, read #position immediately, record the value (want exactly
+  0). That probe answers live whether the fixture resets to exactly 0
+  or to 1, which is the datum D1 leaves open. If the probe reads 1,
+  the live fixture carries the D1 defect and the t10 live PASS is
+  reported with that qualification.
+- UPDATE (19:40 21/11, from MEMORY.md): Y15 has been spawned to FIX D1
+  per the council t10 remedy (exact-zero on a clock-frozen path, P2
+  must FAIL + 3x 10/10), landing on main BEFORE Y14 runs live. So the
+  suite under test will CHANGE: I must re-stage the suite from the new
+  main HEAD (not ed78e83) when Y15 lands, re-verify md5s, and update
+  my t10 translation to match Y15's new checker (the supplementary D1
+  probe above is then superseded by the real suite step, and comes out
+  or stays only as a duplicate diagnostic if Y15's step differs). Do
+  NOT run live on the ed78e83 copy once Y15's fix has landed.
+- Other Y12 notes (static, not gates): H1 novel names could be
+  hardcoded by a future fixture; H3 t09 6 s delivery would false-fail
+  on the 5 s poll cap (fixture posts synchronously and locally, so no
+  realistic 6 s delivery exists here); H4 t10 position never read
+  after Prev / playlist / shuffle / wrap Next.
+
 ## Runner status (19:40 21/11)
 
 - `tests/realistic/run_batch3.py` written (1908 lines): all 10 tests
