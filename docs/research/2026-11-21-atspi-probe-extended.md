@@ -108,6 +108,17 @@ processes left running, the X socket directory is empty again.
 
 ## What would unblock live AT-SPI control
 
+- Correction added after redteam verification on 2026-11-21: the
+  "no installation candidate" result above reflects this machine's
+  empty local apt lists, not the mirror. A sandboxed apt-get update
+  fetched most of the Ubuntu noble lists from the configured
+  mirror (azure.archive.ubuntu.com) before being OOM killed, and
+  those lists show live candidates for every needed package:
+  at-spi2-core 2.52.0-1build1, python3-pyatspi 2.46.1-1,
+  python3-gi 3.48.2-1, gir1.2-atspi-2.0 2.52.0-1build1. So the
+  unblock path is concrete: complete an apt-get update (needs an
+  approval that timed out twice during this work), install the
+  packages, then rerun the session mode.
 - Install at-spi2-core (provides at-spi-bus-launcher and
   at-spi2-registryd) and python3-pyatspi (or python3-gi plus the
   Atspi typelib) from a working apt mirror, then rerun the session
