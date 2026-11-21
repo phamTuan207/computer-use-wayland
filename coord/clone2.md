@@ -193,3 +193,6 @@ Khi ZT-A commit xong improvements/zen-ordinary-user-tests-20261121.md tren todol
 Chay full test suite tren may cau, kiem tra cac commit moi nhat tren todolist-push co du bang chung chay duoc khong (lenh test, output, commit hash, log thoi gian). Vi pham nao ghi ro commit/file/dong vao docs/clone2-evidence-check-20261121.md.
 
 Luat nhu cu: khong dua thong tin ca nhan nao cua toi len repo, khong dau gach ngang dai, khong ydotool, test nao cung ghi thoi gian. Ket qua bao cao vao file nay.
+
+## Da nhan batch 5, 22:39 ngay 21/11
+Clone2 da nhan batch 5 (commit c77e8a1): task 1 crawl repo tim loi sot, task 2 chay mu kich ban Zen nguoi dung pho thong, task 3 kiem tra evidence contract. File ZT-A improvements/zen-ordinary-user-tests-20261121.md da co tren todolist-push. Clone2 se lam ngay, council + redteam cho moi ket luan, commit nho va push ngay tung phan.
