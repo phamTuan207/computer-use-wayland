@@ -314,3 +314,89 @@ improvements/worker-opt-council-order-log.md, follows it.)
 - Before ANY calendar change, read the whole day across all calendars
   (owner standing rule); before ANY live run, re-verify G-VMFIX. These
   checks are themselves logged events, not silent preconditions.
+
+## Section 4. COMMIT METHOD (first-class part of the optimal method)
+
+### 4.1 The discipline (owner 22:49)
+- Every small step is its OWN commit. Push immediately when done, never
+  batch. One paper = one commit, one verdict section = one commit, one fix
+  step = one commit, one log append batch = one commit. (Owner 22:49:
+  "COMMIT MORE AND SMALLER"; parent follow-up: "every small step is its OWN
+  commit, push immediately when done, never batch".)
+- Verify each push via git ls-remote. A commit that is not verified on the
+  remote is not landed. After every push, check `git log --oneline
+  origin/todolist-push -1` and confirm the remote head is your commit or a
+  descendant of it. (This council verified every one of its own pushes this
+  way; one push raced with Y14b and was confirmed as an ancestor of the
+  remote head.)
+- Quality still first. Council + redteam complete, no shortcuts (owner 22:48
+  Lauren Tan, NO skipped steps). Small commits are not small standards: a
+  one-section commit still carries its evidence contract, and a fix commit
+  still carries council + redteam. The discipline changes the SIZE of the
+  commit, never the rigor inside it.
+
+### 4.2 How the graph counts (the correction that changes the arithmetic)
+- The GitHub contribution graph counts ONLY commits on the DEFAULT branch
+  (main). Working-branch commits do NOT move the graph. (Correction 22:51,
+  parent; MEMORY.md entry 22:49-22:51.)
+- Evidence: todolist-push has 290 commits on UTC day 21/11 but they do NOT
+  count toward the graph. The graph tooltip showed 136 contributions on
+  21/11 at 22:49-22:51, while OPT verified via GraphQL at 22:52 that the UTC
+  day holds 144 commits + 1 PR = 145, and the local +07 day holds 201
+  commits + 1 PR = 202. (OPT log commit 26366a9; task follow-up 22:53.)
+  The tooltip (136) and the GraphQL count (145) differ because they were
+  read at different times and the graph caches; the GraphQL UTC-day query
+  is the counting authority, the tooltip is the owner's view. Both agree on
+  the direction: the count the owner sees is far below the work done, and
+  the cause is branch, not effort.
+- Consequence: MERGE TO MAIN EARLY AND OFTEN is what counts. Work stays on
+  todolist-push (do NOT switch branches); Worker MERGE merges todolist-push
+  into main (spawned 22:51). Every merge is verified via ls-remote on main,
+  the same way every push is verified on todolist-push. A merge that is not
+  verified on main did not move the graph.
+- Counting method (prescribed): run the GraphQL UTC-day query before
+  reporting any graph number. Never report the local +07 day count as the
+  graph count: commits made 00:00-07:00 +07 sit on yesterday's graph cell,
+  because the graph counts the UTC day. The owner's 22:40 estimate (190,
+  about 51 to go) was the +07-day count; the graph gap is larger (see 4.3).
+  Any future "commits to go" number must name its day basis (UTC vs +07)
+  and its branch (main vs todolist-push), or it is not a number.
+
+### 4.3 Deadline arithmetic (22:52 baseline, deadline 24:00 +07)
+- Target: 240 contributions before midnight +07 on 21/11 (owner 22:40).
+- Baseline at 22:52 (OPT GraphQL): UTC day 144 commits + 1 PR = 145.
+  Gap to 240 is ~95, not ~51. (The ~51 figure was the +07-day count:
+  201 commits + 1 PR = 202 at 22:51, gap ~38 by that count; the graph gap
+  is ~95.) Time left at 22:52: 68 minutes.
+- What closes a ~95 gap in ~68 minutes: the gap cannot be closed by
+  todolist-push commits alone, because those do not count. It closes by
+  MERGING the already-landed todolist-push work into main (290 UTC-day
+  commits waiting on the branch) plus continuing small commits on
+  todolist-push merged early and often. The merge is therefore not cleanup
+  after the work; it is the work that moves the number. Worker MERGE owns
+  it; every other worker's duty is to keep landing small verified commits
+  on todolist-push so there is always fresh work to merge.
+- If the deadline passes with the graph short: report the GraphQL UTC-day
+  number, the main-branch number, and the todolist-push number separately,
+  with their times. Never report one number as if it were another. Never
+  inflate the count with empty commits: quality first (section 4.1).
+
+### 4.4 Commit hygiene (correction 22:51, first-class rule)
+- Check `git status` BEFORE every commit. Other workers' files are always
+  in the tree (modified logs, untracked papers). Never sweep another
+  worker's files into your commit.
+- Use `git commit --only <your files>` for your own files, so no other
+  worker's staged files ride along. For a NEW file, `--only` fails
+  (pathspec not known to git: this council hit that exact error on its
+  verdict file); the correct form is `git add <only your file>` then
+  `git commit`. The add is scoped to your file alone, never `git add -A`
+  or `git add .`.
+- One logical step per commit, with a message naming the worker, the
+  section or step, and the content in one line (example: "OPT-ORDER
+  verdict s2: test-design rules (composite, blind, generator never tests
+  own work)"). A commit message that does not say what it contains cannot
+  be verified from the log.
+- Never force-push. Never rewrite a pushed commit. Never commit another
+  worker's log as your own. If a push races (another worker pushed first),
+  fetch, confirm your commit is an ancestor of the remote head, and
+  continue; do not re-push blindly.
