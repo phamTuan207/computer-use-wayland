@@ -8,7 +8,8 @@ happens, wall-clock Asia/Ho_Chi_Minh + elapsed since T0, nothing
 omitted, never batched at the end. No clicks performed by this worker
 (review only, no Zen driving), so no click coordinates apply.
 
-Status: IN PROGRESS. Redteam still running. Final verdict PENDING.
+Status: COMPLETE. Final verdict: BLOCK. All four voices delivered;
+log + all papers committed (see section 7).
 
 ## 1. Live event log
 
@@ -403,11 +404,139 @@ first-run 8/9 failure is unattributed (probe truncated the detail),
 so it is not evidence of a runner defect. All three council voices
 agree.
 
-## 6. Pending
+- 22:50:28 +07 (T+1h18m42s): Redteam formally completed. Verdict
+  BLOCK. Handoff delivered to me ~22:54 +07. Paper
+  improvements/worker-y13r2-redteam.md (33,442 bytes, work 22:02 to
+  22:45 +07). Recorded execution results in the handoff show 3 failed
+  execs (exit 2, exit 2, SIGTERM 15); those are expected probe
+  outcomes (refusals return exit 2; the SIGTERM is a killed dummy),
+  not a worker failure. The paper is complete and was read in full
+  by me before this synthesis.
+- 22:54:07 +07 (T+1h22m21s): committed the redteam paper as be88321
+  (1 file, 203 insertions). Push rejected again with "cannot lock
+  ref ... is at be88321 but expected 8336ab3" (same race pattern as
+  b45f3b8, concurrent OPT pushes). Verified landed: be88321 is an
+  ancestor of remote HEAD e016cde (merge-base check + remote log).
+  No rebase needed.
+- 22:54 +07 (T+~1h22m): synthesis written below (section 7). Final
+  verdict BLOCK.
 
-- Redteam completion (running, ~46 min, last activity ~6.5 min ago).
-- Synthesis of all four voices + my own findings into the final
-  verdict (GO/AMEND/BLOCK) with the exact fix list.
-- Commit this log + the redteam paper as separate small commits,
-  each pushed + ls-remote verified immediately.
-- Report the final verdict to the parent (main Muse).
+## 6. Completed
+
+- All four voices delivered and committed: Council 1 AMEND (08014a0),
+  Council 2 BLOCK (ea5af7f), Council 3 AMEND (da13ad0), Redteam BLOCK
+  (be88321). This log committed in parts: b45f3b8 (part 1), a230ac3
+  (part 2), plus the final part with this synthesis (next commit).
+- My probe totals: A 8/8, B 36/38, C 10/10 twice, D 16/16, E 24/24,
+  F 23/23, G 11/11. Council 1: 208/208 cases, 9 fresh probes.
+  Council 3: L3 4/4, L4 2/2, F9 8/8, L6 2/2. Redteam: A1 PASS, A2
+  FAIL, A3 CONFIRMED, A4 FAIL (14/39 evade, 12 real, 7 live), A5
+  MIXED, A6 MIXED (A6d FAIL, 9/15), A7 PASS, A8 PASS.
+- Follow-ups (not Y13r2 work; for the parent to assign): a new fix
+  worker addresses B1-B4 + the 5 amends using the precise fixes and
+  re-tests in the redteam paper; then a fresh re-review of that fix
+  diff only (same scope rule as Y13r). Do not drive live before that
+  re-review lands. The H3 gate direction (section 4) is for Muse.
+  The 240-commit target: Y13r2 contributed 7 commits total, all real
+  finished work, no filler: 08014a0, ea5af7f, da13ad0, b45f3b8,
+  a230ac3, be88321, plus this final log commit (hash follows the
+  push below).
+
+## 7. Final synthesis and verdict: BLOCK
+
+### What the fix diff got right
+
+Every Y13r finding (H1, H2, H3, M1, M2, F1, F8, F9, H4, L1, L3, L4,
+L6, L7, codex processes) is fixed and mechanically verified, by my
+own probes and independently by Council 1 (208/208) and Council 3
+(main() stub harness). The fix diff does what it was asked to do:
+the exact H1 forge is closed (A1 passes on all three forms), the
+manifest and symlink layers hold (A6a/b/c, A7 pass), the wall-cap and
+_proven_no_body fixes hold (A8 passes), the marker gate holds
+against its specified false-accepts, the regen reproduces the
+manifest byte-identical, the launcher dry runs all pass.
+
+### Why the verdict is BLOCK anyway
+
+The re-review found new, higher-severity holes that the fix itself
+introduces or leaves open. Each is independently confirmed by more
+than one voice, with live reproduction (marker printed, exit codes,
+live dummies):
+
+- BLOCKER 1 (A2, C2-1, Council 1 F1X): a forged ENTRY .pyc executes
+  via -m and import, and a fake-OK forge makes --verify-manifest
+  print manifest_ok true, exit 0. The integrity gate itself can be
+  made to lie. The exemption's comment claims the two entry .pyc
+  files "cannot execute in production", which is false: `python3 -m
+  run_codex_y5` loads __main__ from the cache, and any import loads
+  the module from the cache. The scan exempts exactly the path the
+  loader trusts. Three independent confirmations (Council 1,
+  Council 2, Redteam) plus my Finding 1 (the directory half).
+- BLOCKER 2 (A6d, C2-2): planted stdlib .py files execute at import,
+  before the pre-import scan, on the production launch path (9 of 15
+  names: enum, re, json, socket, subprocess, hashlib, datetime,
+  pathlib, copyreg). The runner's own top-level imports run before
+  the scan code, and sys.path[0] is the ship dir from process start.
+  The refusal comes too late (code already ran). The launcher entry
+  point is equally exposed. Structural.
+- BLOCKER 3 (A4, Finding 2, C2-3/C2-4/C2-5): the tokenizer misses
+  -m forms plus flag-with-value forms (-W, -X, --check-hash-based-pycs),
+  renamed/extensionless/symlinked copies, and -c exec forms (14 of
+  39 unit cases evade, 12 real; 7 live evasions). A rival launched
+  in any of these forms evades the process check. Requires real argv
+  parsing plus md5-based name-independent matching.
+- BLOCKER 4 (A3, Finding 1): -m on a clean ship bricks verify and
+  the live run until manual deletion; no auto-unbrick. Denial of
+  service on the ship, triggered by the team's own probe habits.
+
+The 5 amends ride along: remote-URL pinning (A5, attacker-controlled
+--repo passes both git gates), -c mention false positive + "codex"
+substring warning noise (A4 FP), scan JSON key mislabels symlink
+refusals (A7 nit), SHIP_DIR hardcoded (A6b), eval_error "" edge
+(informational, unreachable today).
+
+Why BLOCK and not AMEND: the fixes are structural, not small patches.
+Removing the entry exemption, enforcing script-form-only invocation
+with an out-of-process .pyc content check, running entry points with
+PYTHONSAFEPATH=1 with the scan moved to the very top before any
+import except sys and os, real argv parsing with md5 matching for
+renamed copies, remote-URL pinning, and launcher planted-file refusal
+change the security architecture of the ship. The re-verification set
+is the full attack suite (A2 forge set, A6d stdlib map, A4 unit table
+plus live probe, A3 brick sequence, A5 suite with the remote-URL pin).
+That is a fresh full re-review by definition, not a re-run of
+affected probes. Council 2 and Redteam both say BLOCK; Council 1
+and 3 say AMEND, but their AMEND lists do not cover B2 or the
+fake-OK form of B1, and they do not refute the new holes (their job
+was to verify the specified fixes, which hold). The BLOCK verdict is
+carried by the two voices whose job was to attack, and their findings
+are mechanically proven. Do not drive live until the four blockers
+are fixed and re-verified mechanically, and a fresh re-review of
+that fix diff lands.
+
+### H3 gate direction (final)
+
+The gate as written blocks the Y13 live run (all four voices agree:
+no Y6c-pattern marker will ever land; Y6c is done; Y6d/Y6e subjects
+do not match). Recommendation: Muse directs that the 5a2b69d NO
+VERDICT record plus fresh runner-quiet/ports verification satisfies
+the marker leg for this run only, gate text unchanged, Y6 retry
+sequenced after Y13; do not accept the Y6e load test as a completion
+signal (Council 3; Council 1's alternatives of a fresh Y6c-pattern
+marker, explicit widening, or a recorded waiver are also viable, the
+5a2b69d route is the most conservative). The launch-time process
+check must still pass at launch, and the live queue ordering (Y13
+before Y6 retry) must be enforced by Muse. Separate from the gate:
+Zen is wedged tonight (Marionette browserElement-null slot, F3
+restoring it), so the live slot is unhealthy regardless. Flagged for
+the parent (not verdict items): the owner's 22:23 composite-test
+rule and 22:45 CLI-first rule affect live-run design; the 22:46 OPT
+optimal-method work runs in parallel.
+
+### Substitutions (final)
+
+(a) Y13f not running Y13r's exact forge script: ADEQUATE (all four
+voices agree; three independent fresh forges agree). (b) Transient
+flakes: TRANSIENT, not a race (all four voices agree; my Probe C
+10/10 twice, Council 1 208 cases zero flakes, Council 3 10/10
+across 5 reps per set).
