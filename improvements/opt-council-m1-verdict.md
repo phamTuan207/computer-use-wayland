@@ -219,3 +219,84 @@ at once.
 Each sub-step above is its own commit, pushed at once (see the COMMIT METHOD
 section below). The rehearsal log entry is its own commit, pushed immediately
 after the run, never batched at the end of the day.
+
+## CLASS C: overlay never shows / flicker
+## Verdict: two phenomena, two methods. C1 (never shows) is fixed by the class A
+## spine plus a hyprglass gate plus a watchdog proof. C2 (flicker) is measured
+## ONLY in the nested Hyprland, never on the live compositor. Exactly one method
+## per phenomenon, 5 steps for C1, 4 steps for C2.
+
+### C1 step 1. Fix the session spine first (class A steps 1-5)
+Most C1 cases are class A: the session is dead, so the pill is never created
+(I12: worker alive, broker and relay running, overlay gone). No separate C1 fix
+is attempted until class A step 5 passes. A C1 report after class A is green
+points at the second mechanism below, not at the guardian.
+
+### C1 step 2. Gate the session on hyprglass active (class A step 6, repeated here
+### because it is the C1 fix)
+A paused or crashed glass plus a loaded guard starts a session with no pill
+(redteam R3). Implement the gate in scripts/cursor_session.py (or publish the
+require-liquid marker in the installed tree), with the warm-up distinction from
+class A step 6, under its own council + redteam before landing.
+Falsifier: a session completes actions with no pill in a fresh observe.
+
+### C1 step 3. Live-proof the watchdog respawn (todolist 2.2.4, proof still owed)
+Unit tests pass (test_daemon_respawns_dead_native,
+test_daemon_keeps_live_native). The live proof: kill the indicator ONCE during
+a hold, show the pill returns in a fresh observe, with timestamps. If it
+respawns more than once or spawns a duplicate pill, stop and log; never let a
+respawn loop run unattended overnight. File: scripts/overlay.py
+Daemon._ensure_native(). This proof runs after class A step 5, in the same live
+window if F3 sign-off still holds, otherwise in its own window.
+Falsifier: killing the indicator during a hold and the pill does NOT return, or
+returns only after the holder releases and re-acquires.
+
+### C1 step 4. E1 per-event logging stays on
+E1 logging (added for the flicker work) records every indicator event with
+timestamps, so any future overlay loss is captured instead of estimated. The
+logs are checked, not just collected: after every live run, the log is read for
+indicator events during the run. A run with an overlay loss and no E1 record is
+an incomplete run.
+
+### C1 step 5. Commit discipline for C1
+Each sub-step above is its own commit, pushed at once. The watchdog live proof
+is its own commit with timestamps, pushed immediately after the run.
+
+### C2 step 1. Never load hyprglass live to chase the flicker (safety veto V1)
+Todolist 2.2.3 is BLOCKED for the live compositor for exactly this reason:
+loading a backup plugin risks crashing Hyprland while the owner works. This
+veto is permanent for tonight and is not negotiable by any worker. Any proposal
+to "just try loading it live" is rejected without debate.
+
+### C2 step 2. Measure only in the nested Hyprland (owner choice C, 18:24)
+Preconditions (Y6r AMEND): fix A1-A10 plus a fresh re-review before any retry.
+Then, in the nested compositor only: load hyprglass (Y6e nested LOAD TEST PASS
+21:57 is the loader proof, not the flicker proof), animated backdrop ON, LIQUID
+mode, E1 per-event logging running, same optics profile 9a151634. Count
+repaints/commits per second over at least 60s idle and 60s driving-equivalent.
+Repeat with animated backdrop OFF and with LIQUID OFF, same counts. The
+hypothesis predicts a high repaint rate only in the animated + LIQUID cell.
+Before the measurement, verify isolation: live Hyprland 1515 untouched, no live
+windows moved, no input grabbed; check `hyprctl clients` before and after, and
+abort if any live window changes.
+Falsifier: 0 repaints in the animated + LIQUID cell, or equal repaint rates
+across all four cells. Either kills the compositor-loop hypothesis and the
+investigation restarts from the E1 logs, with the indicator re-opened as a
+suspect only if the E1 logs show indicator events during a flicker.
+Transfer gap, stated plainly: the nested compositor has no owner windows, no
+real backdrop, and no real workload. A nested 0 does not prove the live desktop
+is clean; it only falsifies the hypothesis under those conditions.
+
+### C2 step 3. Do not re-litigate settled candidates
+Two candidates are DEAD and must not be revived without new E1 log evidence:
+(1) the indicator repaints at idle: 0 idle paints in 122 one-second windows,
+32/32 frames pill pixel-identical, 60s idle with no events (todolist 2.2.1);
+(2) screenshots cause the flicker: Muse observed every 10-30s, which cannot
+cause ~10Hz flicker (todolist 2.2.5, I20 retraction). The flicker rate itself
+(~10Hz, I10) was only a user estimate, never measured; the C2 measurement is
+the first real frequency count. The pill blur increase (0.0 to 0.15, todolist
+4.1) is a taste change, not a flicker fix, and must never be cited as one.
+
+### C2 step 4. Commit discipline for C2
+Each sub-step above is its own commit, pushed at once. The measurement result
+is its own commit with the four-cell counts, pushed immediately after the run.
