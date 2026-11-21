@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Markdown Live Studio</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background: #f8fafc; color: #1e293b; padding: 20px; height: 100vh; display: flex; flex-direction: column; }
+    .container { max-width: 1200px; width: 100%; margin: 0 auto; background: #fff; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); padding: 20px; display: flex; flex-direction: column; flex: 1; }
+    header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 14px; margin-bottom: 14px; }
+    h1 { font-size: 18px; color: #0f172a; }
+    .status-banner { padding: 10px 14px; border-radius: 6px; font-size: 13px; font-weight: 500; display: none; margin-bottom: 14px; }
+    .status-banner.success { display: block; background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
+    .status-banner.error { display: block; background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+    .toolbar-bar { display: flex; justify-content: space-between; align-items: center; background: #f1f5f9; padding: 8px 12px; border-radius: 6px; border: 1px solid #cbd5e1; margin-bottom: 14px; }
+    .tool-btn-group { display: flex; gap: 6px; }
+    .btn { padding: 6px 12px; border-radius: 4px; font-size: 12px; font-weight: 600; cursor: pointer; border: 1px solid #cbd5e1; background: #fff; color: #334155; }
+    .btn:hover { background: #e2e8f0; }
+    .btn-primary { background: #2563eb; color: #fff; border-color: #2563eb; }
+    .btn-primary:hover { background: #1d4ed8; }
+    .btn-success { background: #059669; color: #fff; border-color: #059669; }
+    .btn-success:hover { background: #047857; }
+    .editor-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; flex: 1; min-height: 400px; }
+    .editor-pane { display: flex; flex-direction: column; border: 1px solid #cbd5e1; border-radius: 6px; overflow: hidden; }
+    .pane-header { background: #f8fafc; padding: 8px 12px; font-size: 12px; font-weight: 600; color: #64748b; border-bottom: 1px solid #cbd5e1; display: flex; justify-content: space-between; }
+    textarea { width: 100%; height: 100%; padding: 14px; font-family: "JetBrains Mono", "Courier New", monospace; font-size: 13px; line-height: 1.6; border: none; resize: none; outline: none; background: #fff; }
+    .preview-box { padding: 16px; height: 100%; overflow-y: auto; line-height: 1.6; font-size: 14px; }
+    .preview-box h1 { font-size: 22px; font-weight: 800; margin-bottom: 12px; color: #0f172a; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; }
+    .preview-box h2 { font-size: 18px; font-weight: 700; margin-top: 14px; margin-bottom: 8px; color: #1e293b; }
+    .preview-box p { margin-bottom: 10px; }
+    .preview-box ul { margin-left: 20px; margin-bottom: 10px; }
+    .preview-box li { margin-bottom: 4px; }
+    .preview-box strong { font-weight: 700; color: #0f172a; }
+    .preview-box em { font-style: italic; }
+    .footer-bar { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; font-size: 12px; color: #64748b; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <h1>Markdown Live Studio</h1>
+      <input type="text" id="input-doc-title" placeholder="Document Title..." value="Untitled Document" style="padding: 4px 8px; font-size: 13px; border: 1px solid #cbd5e1; border-radius: 4px; width: 220px;">
+    </div>
+    <div style="display: flex; gap: 8px;">
+      <button id="btn-export-html" class="btn btn-secondary">Export HTML</button>
+      <button id="btn-save-doc" class="btn btn-primary">Save Document</button>
+    </div>
+  </header>
+
+  <div id="editor-status-banner" class="status-banner"></div>
+
+  <div class="toolbar-bar">
+    <div class="tool-btn-group">
+      <button id="btn-tool-bold" class="btn">Bold</button>
+      <button id="btn-tool-italic" class="btn">Italic</button>
+      <button id="btn-tool-h2" class="btn">H2</button>
+      <button id="btn-tool-list" class="btn">List Item</button>
+      <button id="btn-tool-clear" class="btn">Clear</button>
+    </div>
+    <div style="display: flex; gap: 14px; font-size: 12px; color: #64748b;">
+      <span>Words: <strong id="stat-word-count">0</strong></span>
+      <span>Characters: <strong id="stat-char-count">0</strong></span>
+      <span id="export-status-tag" style="display: none; color: #059669; font-weight: 600;">HTML Exported</span>
+    </div>
+  </div>
+
+  <div class="editor-layout">
+    <div class="editor-pane">
+      <div class="pane-header">
+        <span>MARKDOWN SOURCE</span>
+      </div>
+      <textarea id="markdown-source" placeholder="Write markdown here..."></textarea>
+    </div>
+
+    <div class="editor-pane">
+      <div class="pane-header">
+        <span>LIVE PREVIEW</span>
+      </div>
+      <div id="markdown-preview" class="preview-box"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  const source = document.getElementById('markdown-source');
+  const preview = document.getElementById('markdown-preview');
+  let htmlExported = false;
+  let docSaved = false;
+
+  function parseMarkdown(md) {
+    if (!md.trim()) return '<p style="color: #94a3b8; font-style: italic;">Live preview will appear here...</p>';
+
+    const lines = md.split('\n');
+    let html = '';
+    let inList = false;
+
+    lines.forEach(line => {
+      let trimmed = line.trim();
+
+      // Heading 1
+      if (trimmed.startsWith('# ')) {
+        if (inList) { html += '</ul>'; inList = false; }
+        html += `<h1>${escapeHtml(trimmed.substring(2))}</h1>`;
+        return;
+      }
+
+      // Heading 2
+      if (trimmed.startsWith('## ')) {
+        if (inList) { html += '</ul>'; inList = false; }
+        html += `<h2>${escapeHtml(trimmed.substring(3))}</h2>`;
+        return;
+      }
+
+      // List item
+      if (trimmed.startsWith('- ')) {
+        if (!inList) {
+          html += '<ul>';
+          inList = true;
+        }
+        let content = formatInlines(escapeHtml(trimmed.substring(2)));
+        html += `<li>${content}</li>`;
+        return;
+      }
+
+      if (inList && !trimmed.startsWith('- ')) {
+        html += '</ul>';
+        inList = false;
+      }
+
+      if (trimmed === '') return;
+
+      // Regular paragraph
+      let content = formatInlines(escapeHtml(trimmed));
+      html += `<p>${content}</p>`;
+    });
+
+    if (inList) html += '</ul>';
+    return html;
+  }
+
+  function escapeHtml(text) {
+    return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function formatInlines(text) {
+    // Bold: **text**
+    text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    // Italic: *text*
+    text = text.replace(/\*(.*?)\*/g, '<em>$1</em>');
+    return text;
+  }
+
+  function updatePreview() {
+    const text = source.value;
+    preview.innerHTML = parseMarkdown(text);
+
+    // Update stats
+    const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+    document.getElementById('stat-word-count').textContent = words;
+    document.getElementById('stat-char-count').textContent = text.length;
+  }
+
+  source.addEventListener('input', updatePreview);
+
+  document.getElementById('btn-tool-bold').addEventListener('click', () => {
+    source.value += '**Bold Text**';
+    updatePreview();
+  });
+
+  document.getElementById('btn-tool-italic').addEventListener('click', () => {
+    source.value += '*Italic Text*';
+    updatePreview();
+  });
+
+  document.getElementById('btn-tool-h2').addEventListener('click', () => {
+    source.value += '\n## Section Title\n';
+    updatePreview();
+  });
+
+  document.getElementById('btn-tool-list').addEventListener('click', () => {
+    source.value += '\n- Item description\n';
+    updatePreview();
+  });
+
+  document.getElementById('btn-tool-clear').addEventListener('click', () => {
+    source.value = '';
+    updatePreview();
+  });
+
+  document.getElementById('btn-export-html').addEventListener('click', () => {
+    htmlExported = true;
+    document.getElementById('export-status-tag').style.display = 'inline';
+  });
+
+  document.getElementById('btn-save-doc').addEventListener('click', () => {
+    docSaved = true;
+    const title = document.getElementById('input-doc-title').value.trim() || 'Untitled';
+    const banner = document.getElementById('editor-status-banner');
+    banner.className = 'status-banner success';
+    banner.textContent = `Document saved: '${title}' (HTML exported, 0 errors)`;
+  });
+
+  // Initial render
+  updatePreview();
+
+  // Verification hook (REAL DOM only - no self-simulation)
+  window.__agyVerify = function() {
+    const failures = [];
+    const bannerText = document.getElementById('editor-status-banner').textContent.trim();
+    const title = document.getElementById('input-doc-title').value.trim();
+
+    if (!docSaved) {
+      failures.push('Document was not saved via btn-save-doc');
+    }
+    if (!htmlExported) {
+      failures.push('HTML was not exported via btn-export-html');
+    }
+    if (title !== 'Release Notes v2.3.0') {
+      failures.push(`Expected title 'Release Notes v2.3.0', got '${title}'`);
+    }
+
+    const h1 = preview.querySelector('h1');
+    if (!h1 || h1.textContent.trim() !== 'Architecture Overview') {
+      failures.push(`Expected <h1> Architecture Overview, got '${h1 ? h1.textContent.trim() : 'missing'}'`);
+    }
+
+    const h2 = preview.querySelector('h2');
+    if (!h2 || h2.textContent.trim() !== 'Core Changes') {
+      failures.push(`Expected <h2> Core Changes, got '${h2 ? h2.textContent.trim() : 'missing'}'`);
+    }
+
+    const listItems = preview.querySelectorAll('ul li');
+    if (listItems.length !== 2) {
+      failures.push(`Expected exactly 2 <li> items, got ${listItems.length}`);
+    }
+
+    const strongEl = preview.querySelector('strong');
+    if (!strongEl || !strongEl.textContent.includes('Zero regressions')) {
+      failures.push('Expected <strong> with Zero regressions');
+    }
+
+    const textContent = preview.textContent;
+    if (textContent.includes('Broken experimental feature')) {
+      failures.push('Accidental broken feature was not removed');
+    }
+
+    if (!bannerText.includes("Document saved: 'Release Notes v2.3.0' (HTML exported, 0 errors)")) {
+      failures.push(`Banner text mismatch, got '${bannerText}'`);
+    }
+
+    return {
+      passed: failures.length === 0,
+      failures,
+      score: failures.length === 0 ? 1 : 0,
+      state: {
+        docSaved,
+        htmlExported,
+        title,
+        listCount: listItems.length,
+        banner: bannerText
+      }
+    };
+  };
+})();
+</script>
+</body>
+</html>

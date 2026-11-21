@@ -270,6 +270,21 @@ const testSimulators = {
     await page.click('#btn-complete-cycle');
     // 6. Save session
     await page.click('#btn-save-session');
+  },
+  '10': async (page) => {
+    // 1. Title
+    await page.$eval('#input-doc-title', el => el.value = '');
+    await page.type('#input-doc-title', 'Release Notes v2.3.0');
+    // 2. Markdown source
+    const mdText = `# Architecture Overview\n## Core Changes\n- Replaced X11 with native Wayland compositor\n- Added offline test validation suite\n**Zero regressions** observed in test suite.`;
+    await page.$eval('#markdown-source', (el, text) => {
+      el.value = text;
+      el.dispatchEvent(new Event('input'));
+    }, mdText);
+    // 3. Export HTML
+    await page.click('#btn-export-html');
+    // 4. Save Doc
+    await page.click('#btn-save-doc');
   }
 };
 
