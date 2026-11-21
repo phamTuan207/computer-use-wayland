@@ -149,13 +149,21 @@ def _rect_center_float(rect):
     return [values[0] + values[2] / 2, values[1] + values[3] / 2]
 
 
-def dom_rect_to_screen_point(rect, viewport_origin):
+def dom_rect_to_screen_point(rect, viewport_origin, scale_factor=1):
     """Screen point of a DOM rect center (viewport CSS px + origin).
 
-    The calibration_e2 proven chain: screen = viewport origin +
-    rect center, where the origin is mozInnerScreenX/Y (Firefox) or
-    the equivalent viewport origin. No screenshot is read: the DOM
-    rect is ground truth, so the point is right the first time.
+    The calibration_e2 proven chain, corrected by the live C12 probe
+    (2026-11-22 03:36, four runs, one real click): mozInnerScreenX/Y
+    in this Zen build are WINDOW-relative, so the viewport origin
+    passed here must be the ABSOLUTE origin, Hyprland window origin
+    + mozInnerScreenX/Y (zen_dom.viewport_origin computes it and
+    verifies it with the monitor-bounds + dimension-closure checks).
+    Rect centers are viewport-relative CSS px; scale_factor maps CSS
+    px to screen px (screenPixelsPerCSSPixel, falling back to
+    devicePixelRatio; 1 at the measured scale-1 setup, 2 at monitor
+    scale 2, where the unscaled map lands about 306 screen px off).
+    No screenshot is read: the DOM rect is ground truth, so the point
+    is right the first time.
     """
     center = _rect_center_float(rect)
     if (not isinstance(viewport_origin, (list, tuple))
@@ -163,19 +171,53 @@ def dom_rect_to_screen_point(rect, viewport_origin):
             or any(isinstance(v, bool) or not isinstance(v, (int, float))
                    for v in viewport_origin)):
         raise ValueError('viewport_origin must be two numbers [x, y]')
-    return [viewport_origin[0] + center[0], viewport_origin[1] + center[1]]
+    if (isinstance(scale_factor, bool)
+            or not isinstance(scale_factor, (int, float))
+            or scale_factor <= 0):
+        raise ValueError('scale_factor must be a positive number')
+    return [viewport_origin[0] + center[0] * scale_factor,
+            viewport_origin[1] + center[1] * scale_factor]
 
 
-def dom_rect_to_image_point(meta, rect, viewport_origin):
+def _image_point_for_screen(meta, sx, sy):
+    """Image point for a screen point, or None when outside the image."""
+    size = meta.get('image_size')
+    region = meta.get('region')
+    iw, ih = size
+    rx, ry, rw, rh = region
+    ix = (sx - rx) * iw / rw
+    iy = (sy - ry) * ih / rh
+    if not (0 <= ix < iw and 0 <= iy < ih):
+        return None
+    return [ix, iy]
+
+
+def dom_rect_to_image_point(meta, rect, viewport_origin, scale_factor=1):
     """Image point of a DOM rect center for one observation meta.
 
     Inverse of cu.image_point (same linear map, region origin and
-    image size from the meta): screen = origin + rect center, then
-    image = (screen - region origin) * image size / region size.
-    Raises ValueError when the meta lacks image_size/region, when the
-    region is degenerate, or when the point falls outside the
-    observed image (stale observation or moved window): fail closed,
-    never guess a point off the image.
+    image size from the meta): screen = absolute origin + rect center
+    times the CSS-to-screen factor, then image = (screen - region
+    origin) * image size / region size. Raises ValueError when the
+    meta lacks image_size/region, when the region is degenerate, or
+    when the point falls outside the observed image (stale observation
+    or moved window): fail closed, never guess a point off the image.
+
+    Origin semantics (live probe 03:36): mozInnerScreenX/Y are
+    window-relative in this Zen build, so a caller that passes the raw
+    pair as the origin is wrong by the window origin (the old bug:
+    (240, 8) as absolute maps off-monitor). The origin argument is
+    therefore the ABSOLUTE origin from zen_dom.viewport_origin(). As a
+    safety net, when the absolute reading maps outside the observed
+    image, the function retries with the window-relative reading
+    (window origin from the meta's window_bounds, else its region,
+    plus the passed origin times the factor); when that lands inside,
+    it is used. When neither reading lands inside, it fails closed.
+    The net only triggers when the absolute reading is impossible, so
+    a correct absolute origin is never overridden; the residual case
+    (both readings land inside, e.g. a window near the screen origin)
+    is decided by the caller passing the probe-verified absolute
+    origin, not by this function.
     """
     if not isinstance(meta, dict):
         raise ValueError('meta must be an object')
@@ -190,17 +232,30 @@ def dom_rect_to_image_point(meta, rect, viewport_origin):
                    for v in region)
             or region[2] <= 0 or region[3] <= 0):
         raise ValueError('meta needs a region [x, y, w, h] with positive size')
-    sx, sy = dom_rect_to_screen_point(rect, viewport_origin)
-    iw, ih = size
-    rx, ry, rw, rh = region
-    ix = (sx - rx) * iw / rw
-    iy = (sy - ry) * ih / rh
-    if not (0 <= ix < iw and 0 <= iy < ih):
-        raise ValueError(
-            'DOM rect center maps outside the observed image: '
-            'screen (%s, %s) maps to image (%s, %s) of %sx%s'
-            % (sx, sy, ix, iy, iw, ih))
-    return [ix, iy]
+    sx, sy = dom_rect_to_screen_point(rect, viewport_origin, scale_factor)
+    point = _image_point_for_screen(meta, sx, sy)
+    if point is not None:
+        return point
+    bounds = meta.get('window_bounds')
+    if (isinstance(bounds, (list, tuple)) and len(bounds) == 4
+            and all(isinstance(v, (int, float))
+                    and not isinstance(v, bool) for v in bounds)):
+        window_origin = [bounds[0], bounds[1]]
+    else:
+        window_origin = [region[0], region[1]]
+    center = _rect_center_float(rect)
+    absolute = [window_origin[0] + viewport_origin[0] * scale_factor,
+                window_origin[1] + viewport_origin[1] * scale_factor]
+    sx, sy = [absolute[0] + center[0] * scale_factor,
+              absolute[1] + center[1] * scale_factor]
+    point = _image_point_for_screen(meta, sx, sy)
+    if point is not None:
+        return point
+    raise ValueError(
+        'DOM rect center maps outside the observed image: '
+        'screen (%s, %s) maps to image (%s, %s) of %sx%s'
+        % (sx, sy, (sx - region[0]) * size[0] / region[2],
+           (sy - region[1]) * size[1] / region[3], size[0], size[1]))
 
 
 def point_in_rect(rect, x, y):
