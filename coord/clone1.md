@@ -2503,6 +2503,123 @@ hồ sơ đã sửa ở các chỗ trích và vật liệu gốc vẫn thiếu c
 hoặc chạy lại; V3, file hoặc chạy lại judge. Không còn gì sửa
 được từ máy này.
 
+## ĐỢT 7, COUNCIL 1 XONG, 04:19 ngày 22/11 - G29 VÀ H2 ĐỀU XÁC NHẬN
+
+Báo cáo docs/batch7-council1-tests-20261122.md (240 dòng theo
+wc -l), đã push (d55fe0c). Kết luận: việc 1 (G29) XÁC NHẬN, việc
+2 (H2) XÁC NHẬN.
+
+G29, mọi claim vật chất đã kiểm: suite MCP chạy lại 20 test OK,
+1 skip, 1.727 s (báo cáo: 20 OK, 1 skip, 1.764 s). Sửa xác nhận ở
+scripts/mcp_server.py dòng 308-309 (button 0); grep toàn repo chỉ
+còn 1 chỗ `button 1` hardcode là tests/pointer_benchmark.py:53,
+benchmark độ trễ cố ý. cu.py map trái thành 0 (dòng 1621, 1649).
+Control âm tự chạy: RealClickButtonTest FAIL trên bản copy /tmp
+quay về `button 1 1` / `button 1 0`, PASS trên code đã sửa. Mapping
+evdev từ kernel header (BTN_LEFT 0x110, BTN_RIGHT 0x111, BTN_MIDDLE
+0x112) và native/pointer.c dòng 188 (0x110+button); test pointer
+native chạy lại: 12 OK trong 2.201 s. Bug có từ lúc tạo: git show
+98edc39 có `button 1 1` / `button 1 0` ở dòng 248-249. g29-log.jsonl
+(26 dòng) khớp báo cáo đúng từng cái: E1 trái PASS (104.5 ms,
+"g29t" vào được), E2 phải FAIL (104.6 ms, menu ngữ cảnh [621, 66,
+81, 204], "" đọc lại, STATE_FOCUSED true dù fail, xác nhận đúng
+điểm tinh tế), E3 AT-SPI PASS (click_ms 0.3, chuột ở 600, 400,
+"g29i" vào được), E4 Ctrl+L PASS (29.3 ms); lần chạy 2 giống hệt
+với marker riêng g29a-d. Extent [268, 48, 652, 32] rồi [294, 48,
+650, 32] rồi lần 2 [294, 48, 626, 32] đều khớp. Thứ tự XDG xác
+nhận: b7t1/start_session.sh export XDG_RUNTIME_DIR (dòng 36) trước
+dbus-launch (dòng 37); wrapper của repo run_atspi_session.sh làm
+dbus-launch (dòng 133) trước export (dòng 141). Chỉ ghi chú nhỏ:
+wall lần 2 7646 ms so với probe_done 7516.5 ms trong log (chênh
+130 ms, ranh giới chưa giải thích).
+
+H2, mọi số tái hiện từ bằng chứng đã lưu: results-run2.json và
+results-run3.json khớp bảng của báo cáo đúng từng trường (setup
+4229/3883 ms, DOM 3.7/3.45, compact 6.85/7.8, rect 1 lần 5.8/4.8,
+rect từng phần tử 219.8/239.5, screenshot 25.9/24.2 ở 41625 byte,
+verify 2.9/4.2, think 0/0.001, click 34.4/26.6 với counter "10",
+type 18.9/12.1, vòng 27.9/29.6 và 39.1/34.7, counter cuối 18 cả 2
+lần). Mọi "khoảng qua các lần chạy" đều khớp đúng, số học giữ
+đúng (cắt 1 tiết kiệm 214-235 ms, 38-50x, setup gấp 13-16x vòng,
+task 10 bước khoảng 0.3 s so với 6.4-7.0 s ngây thơ). Council tự
+chạy lại (bản copy /tmp, 21:15 UTC): setup 3170 ms, DOM 6.55,
+compact 11.75, rect 1 lần 8, rect từng phần tử 247.7, screenshot
+21.5, think 0, vòng one-vision 34.1, vòng ngây thơ 49.1, counter
+18. Cùng hình dạng, giá trị tuyệt đối lệch 10-40% (do tải); tỉ lệ
+rect của council là 31x, hơi dưới dải 38-50x đã nêu, nên dải đúng
+là phụ thuộc tải. Lần chạy không để lại Firefox. last30days CHƯA
+cài, đã xác nhận: không match ngoài repo; ~/.config/skills,
+~/.local/share/skills, ~/.skills đều không tồn tại. Nguồn research:
+agentpatterns.ai và frowse PyPI nội dung kiểm đúng nguyên văn,
+nhưng tuổi "updated X ngày" lệch 1 (18 so với 19, 2 so với 3; tuổi
+tính theo 21/11 trong khi ngày truy cập ghi 22/11). guibai.dev nội
+dung kiểm đúng nguyên văn, nhưng không thấy ngày trong text đã
+fetch, nên "7 ngày" không kiểm được từ fetch. surfs.dev fetch trực
+tiếp trả "Post Not Found"; search index xác nhận bài ở đúng URL
+với "Last Updated: 29 days ago" và nội dung khớp, nên tuổi và nội
+dung chỉ được corroborate qua search index. Ghi chú nhỏ: báo cáo
+thinktime 197 dòng theo wc -l, không phải 198 (lỗi +1 lại); think
+"max 0.157 ms" không có trong file đã lưu nào (lần 2 max 0.133,
+lần 3 max 0.174); số lần chạy sơ bộ dựa trên file đã bị ghi đè
+(đã khai); mục 4 không nói "safety check" là gì; các lần thử AT-SPI
+không có log lưu; tuổi các nguồn loại trừ chưa kiểm lại.
+
+Không chạy lại được: `_real_click` đã sửa live trên Wayland và
+mọi thứ trên Zen (không có Wayland, không có binary Zen); thí
+nghiệm AT-SPI live của G29, vì một phiên kiểm chứng khác (Xvfb :97,
+profile b7t1, bắt đầu 21:15:11 UTC) đang chạy và council 1 không
+làm phiền nó, bằng chứng log đứng thay.
+
+## ĐỢT 7, COUNCIL 3 XONG, 04:20 ngày 22/11 - G29 LIVE XÁC NHẬN LẦN 2, H2 MỘT PHẦN
+
+Báo cáo docs/batch7-council3-live-20261122.md (206 dòng theo
+wc -l), đã push (d547b92). Kết luận: G29 XÁC NHẬN, H2 XÁC NHẬN
+MỘT PHẦN. Cả 2 phiên đã dừng, 0 tiến trình thừa.
+
+G29: council tự tái hiện live và khớp mọi thí nghiệm: E1 click
+trái PASS (tool 104.6 ms, marker "g29a" vào được), E2 click phải
+FAIL tái hiện đúng G29 (tool 105.7 ms, menu ngữ cảnh role "menu"
+extents [621, 66, 81, 204] đúng như báo cáo, marker "g29b" đọc lại
+""), E3 AT-SPI PASS (1.3 ms), E4 Ctrl+L PASS (45.3 ms), tổng
+7706.3 ms. Điểm STATE_FOCUSED xác nhận bằng lần chạy của council:
+focused true ngay cả sau click phải, nên chỉ test gõ mới quyết
+định. Chuỗi code kiểm từng dòng: kernel header BTN_LEFT 0x110 /
+BTN_RIGHT 0x111, pointer.c:188 0x110+button, cu.py:1621,1649 trái
+thành 0, không còn sender button 1 nào khác, code cũ ở 98edc39
+dòng 248-249 gửi button 1 1 / button 1 0. Suite chạy lại: pointer
+native 12 OK trong 2.289 s, MCP 20 OK (1 skip) trong 1.615 s.
+
+H2: số hình dạng vòng lặp tái hiện trong lần chạy lại
+measure_loop.mjs của council (~/workspace/b7c3/results.json,
+bằng chứng của agent không đụng): rect từng phần tử 216.8 ms so
+với 1 lần 4.55 ms, chênh 47.6x trong dải 38-50x của báo cáo; vòng
+one-vision 20.1 ms, vòng ngây thơ 39.2 ms, think 0.0 ms, counter
+18 đúng. Tổng setup KHÔNG tái hiện: 6308 ms trong lần chạy của
+council (port lên 2575 + connect 3733) so với dải 3883-4229 ms của
+báo cáo, lúc bắt đầu chỉ còn 409 MB free so với 944-1412 MB của
+lần 2/3. Setup nhạy tải; dải nên trình bày là phụ thuộc tải, không
+phải ổn định.
+
+Sai lệch và claim chưa kiểm: claim chi phí observe AT-SPI (H2):
+CHƯA KIỂM. Không log hay artifact nào của 2 lần thử dump lỗi
+(32244 / 32376 ms) tồn tại trên ổ; tìm toàn workspace chỉ thấy
+file không liên quan. Claim chỉ dựa vào lời báo cáo. Thứ tự
+XDG_RUNTIME_DIR (phát hiện phụ G29): XÁC NHẬN MỘT PHẦN. Thứ tự sai
+đúng là đặt socket dưới ~/.cache/at-spi/ (bus_98) thay vì
+$XDG_RUNTIME_DIR (bus_97), nhưng claim tranh chấp KHÔNG tái hiện:
+socket có hậu tố theo display, nên phiên thứ 2 đăng ký bình thường
+(find_app 9.8 ms khi Firefox đang chạy). Cách viết "at-spi/bus"
+chung chung trong báo cáo là không chính xác (tên thật bus_97/bus_98).
+Nhỏ: báo cáo thinktime 197 dòng theo wc -l, không phải 198 như
+handoff của agent nói (lỗi +1 lại). Báo cáo G29 185 dòng, đúng như
+nói.
+
+Không tái hiện được: không có Wayland/Hyprland ở đây (`_real_click`
+đã sửa không chạy live; chứng minh là cùng chuỗi như báo cáo),
+không có binary Zen (mọi việc live đều Firefox 160.0.1), không có
+LLM think time, không có scale trang thật. Council không kết luận
+gì về câu hỏi cài last30days-skill.
+
 ## Watchdog đợt 6 đã dừng, 03:56 ngày 22/11
 Báo cáo cuối đợt 6 đã ở trong coord và đã push (7f9c699, khớp
 ls-remote). Watchdog đợt 6 đã tắt (enabled false, next run null).
