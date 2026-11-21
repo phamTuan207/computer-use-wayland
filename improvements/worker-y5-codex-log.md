@@ -13,3 +13,4 @@
 - 2026-11-21 19:02:47 +07 | elapsed 00:41:46 | Test 09: 24 steps; simulator 228 ms; checker pass; fresh fixture failed as expected.
 - 2026-11-21 19:02:47 +07 | elapsed 00:41:46 | Test 10: 27 steps; simulator 297 ms; checker pass; fresh fixture failed as expected.
 - 2026-11-21 19:04:11 +07 | elapsed 00:43:10 | Pushed the suite harness commit and 10 isolated spec plus fixture commits to origin/y5-tests. Council reports and this running log are ready for their own commit.
+- 2026-11-21 19:08:22 +07 | Test 07 follow-up: verified the spec's existing unfiltered count of 3 matches against the fixture; Design Bot, Build Bot, and Build Bot with date 2026-10-12 return 1, 2, and 1. Proof results: `node tests/realistic/codex-y5/check.mjs --all` passed (10/10); `node tests/realistic/codex-y5/simulate.mjs --all` passed (10/10); `python3 tests/realistic/codex-y5/check-dashes.py` passed.
