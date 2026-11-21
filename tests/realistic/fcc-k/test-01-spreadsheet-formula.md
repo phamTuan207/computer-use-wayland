@@ -48,8 +48,9 @@ and re-confirm it computes correctly.
     rounded whole numbers.
 22. Click cell E7 and type the intentionally wrong formula `=COUNT(E2:E4)`
     then press Enter.
-23. Read E7: it should show 3. Observe that the agent notices E7 shows text
-    instead of a number (intentional wrong formula planted by fixture).
+23. Read E7: it shows the text `COUNT text` instead of a number. The agent
+    should notice the formula returned text, not a number, and diagnose the
+    wrong formula (COUNT returns a text label in this fixture, not a count).
 24. Click E7 and replace the formula with `=COUNTA(E2:E4)` then press Enter.
 25. Re-read E7 and confirm it shows 3.
 26. Read C2,C3,C4,E2,E3,E4,E5,E6,E7 one final time and record all values as
