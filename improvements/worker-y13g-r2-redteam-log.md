@@ -120,3 +120,24 @@
   the live flow never reaches it. Also learned: `git remote get-url`
   APPLIES url.insteadOf (a redirect to a local bare repo shows up
   as the local path), so the remote pin sees the effective URL.
+- 02:00 +07 (T+61m): A5 done (attack_a5.py run1, log a5-run1.log):
+  32/32 as defined. Cases 1-9 re-proven (case 1 fake completion passes
+  BY DESIGN; other-branch / no-marker / unpushed / harness-subject /
+  body-DONE / wrong-file all refuse; old-date completion vs newer
+  abort refuses by LOG order on a linear history, case 3; completion
+  newer passes, case 4). NEW pin cases (R7): SSH form, trailing
+  slash, no .git, no .git+slash, host-uppercase all PASS; http,
+  repo-name wrong case, double slash, ssh:// form, different owner,
+  different repo, no origin, insteadOf redirect all REFUSE.
+  MERGE FINDING (cases 10-11): --topo-order does NOT order across a
+  merge by date or by main-line recency: after a merge the SECOND
+  parent's line is shown first, regardless of dates. Case 10
+  (side-branch completion, forged newer date) PASSES over a main-line
+  abort. Case 11 (side-branch abort, forged OLD date 2020) REFUSES
+  over a main-line completion dated 2026-11-21: `git log --topo-order`
+  in case11 shows merge, abort (2020), completion (2026), seed.
+  So R7's "forged old date no longer outranks a newer abort" holds
+  only on a LINEAR history; across a merge, parent position decides,
+  and a stale abort resurrected by a merge can block a fresh
+  completion (false refusal / DoS), while a forged completion on a
+  merged side branch overrides a main-line abort (spoof).
