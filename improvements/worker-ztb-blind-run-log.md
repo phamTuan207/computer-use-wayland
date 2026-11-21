@@ -99,3 +99,13 @@
 - Step 7 PASS: HCMC row selected (blue highlight), verified title "Ho Chi Minh City - Wikipedia" and URL "https://en.wikipedia.org/wiki/Ho_Chi_Mi..." before deleting. Pressed Delete. Row count 2 to 1, only Lich Google remains (Name "Lich Google - Tuan 15 thang 9, 2025", URL calendar.google.com). No other bookmark touched. Star check: Ctrl+D after delete showed "Add bookmark" (star empty, bookmark gone). Closed the dialog with Escape (no re-save) and closed the Library with Ctrl+W (act reported "window no longer exists" because the Library closed; hyprctl confirmed only Zen remains, Zen restored to full width 1863).
 - Step 8 PASS: pre-close HCMC; Ctrl+W; count 19 to 18; set = step 0; ps zen-bin 496121 alive.
 - Overall: PASS. Bookmark created, found in library, opened the page, deleted, no other bookmark touched.
+
+## ZT-05 VERDICT: PASS (with deviations) - 01:39, elapsed ~76m (scenario ~7m)
+- Step 0: pre-scenario list (18).
+- Step 1 PASS: N=1 (activeworkspace), Zen ws=1, active title was ModelArk-Coding-Plan (no HCMC tab open, so opened one for this scenario). Working tab via window.open, Ctrl+L + HCMC URL + Enter, title HCMC poll 1 (01:33:32), count 19. Note: act went via fallback path (session guardian startup failed: another automation session active) but completed 5/5.
+- Step 2 PASS: Super+2 via act switched active workspace to 2, Zen stayed on ws=1. Note: act reported "focus changed", completed 1/2 (fallback path), but the key was delivered. Confound: clone2-watch cron was flipping to ws2 and holding it (ws stuck on 2 for 2+ min at 01:34-01:36, and re-flipped within 20s of a manual return); I manually switched to ws1 with hyprctl before sending Super+2.
+- Step 3 PASS with deviation: Super+1 via act FAILED because I used a screen observation, which supports pointer actions only, not keys (completed 0). Returned via hyprctl dispatch (CLI) instead. After return: ws=1, Zen ws=1, title HCMC, URL correct, article visible. Window-manager goal met (Zen survives the round trip). F-002 does NOT reproduce.
+- Step 4 PASS: h1 locate center DOM (671,110), image (911,126). T1=328192, clicked h1, T2=346395, T2 greater than T1, title and URL identical, no reload. (Act via fallback, completed 2/2.)
+- Step 5 PASS with deviation: Super+2 sent (ws=2; act reported "focus changed", completed 0, but the key was delivered). Return via hyprctl (Super+1 blocked by the screen-observation key limitation). After return: ws=1, Zen ws=1, title HCMC.
+- Step 6 PASS: pre-close HCMC; Ctrl+W; count 19 to 18; set = step 0; ps zen-bin 496121 alive.
+- Overall: PASS. Both round trips returned to the same tab with the same content, no window lost or stranded. F-002 does NOT reproduce.
