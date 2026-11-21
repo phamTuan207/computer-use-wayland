@@ -379,3 +379,96 @@ in the repo worktree and /tmp test copies.
   stash dropped, tree clean. LESSON: always
   `git commit --only <my files>` in this shared worktree, never a
   bare `git commit`.
+
+- 01:05 +07 (T+2h09m): ALL 5 REVIEWERS DONE. Verifier PASS
+  132/132, report improvements/worker-y13g-verify-report.md,
+  final commit 138d08e (on origin; 5 verify commits d76daba,
+  4651ef8, c45e1ad, cbddfca, 138d08e). Batteries: A2 11/11,
+  A6d 18/18, A4 unit 39/39, A4 live 6/6, A3 7/7, A5 10/10,
+  A7 10/10, A8 12/12, AST 13/13, clean ship 6/6. Pins hold
+  (runner db3e357f, launcher eec63492, run_live 84fa106c,
+  manifest 0ca16ddd). Known limits documented: -m/import hole
+  (unfixable in-process, launcher-controlled), marker case 1
+  passes by design, md5 leg fails open on unresolvable paths.
+  Harnesses committed under improvements/y13g-verify/
+  (reusable by the re-verifier). NOTE: A8 table records
+  eval_error None returns True under the current is-not-None
+  code; R9 below flips that row to False (key-presence check),
+  the re-verifier must expect False.
+  Council 2 formal handoff also arrived (paper cb499a8 + log
+  follow-up fd0cb7d, remote HEAD fd0cb7d); substance already
+  logged 00:56. Tally: C1 AMEND, C3 AMEND, Redteam AMEND,
+  C2 BLOCK (C2-1 HIGH), Verifier PASS. The verifier's PASS is
+  on the SPECIFIED batteries; C2 + redteam found NEW holes
+  beyond that set (.so plants, tokenizer residuals, dead
+  _check_entry_pyc, guard symlink delete, tampered run_live.py
+  on direct path). So round 2 fixes those, then a fresh review
+  round over the new diff.
+
+  ADJUDICATION, ROUND 2 FIX LIST (all findings, one pass):
+  R1 (C2-1 HIGH): full-allowlist module-top scan in BOTH entry
+  points, os-only. Hardcode _SHIP_FILES = the 27 manifest rel
+  paths (identical in both files). Refuse any file not in the
+  set, any dir not a parent of a manifest path (except the
+  narrow top-level __pycache__ dir exemption), any symlink.
+  Kind labels kept (pyc/symlink/planted-py + new
+  unexpected-file/unexpected-dir). Enforce sys.flags.safe_path
+  at module top AFTER the guard, BEFORE the scan (refuse exit
+  2 without -P; -m probes still get the script-form message
+  because the guard fires first). Pre-import shlex at the top
+  (deferred imports, before the sys.path insert) in both files.
+  R2 (C2-2/F2/redteam-F2/C1-F1): _check_entry_pyc operative.
+  Exempt the 3 entry stems (any tag, top-level __pycache__
+  only) from the LAUNCHER top scan AND check_manifest .pyc
+  refusal, so _check_entry_pyc adjudicates; runner scan stays
+  strict. Docs updated to the new flow. Add run_live to the
+  runner guard stems + _ENTRY_PYC_NAMES (3 stems, "two" to
+  "three" everywhere). R3 (C1-F3/C2-3/redteam-F3): tokenizer
+  rewrite in both copies, AST-identity: unified short-flag
+  branch (c/m/W/X value flags, no-value bundles, unknown-flag
+  skip); -m pdb inspects following args for a script
+  candidate; python3 - returns True (fail-closed stdin);
+  timeout accepts unit suffixes/decimals; _shlex_tokens splits
+  on ; & | mid-token; -c sinks extended (os.system,
+  subprocess.*, runpy.run_path) + quoted .py path md5 check
+  (split-concat fully-split form documented as residual);
+  pypy3/pypy in _PYTHON_TOKENS; wrappers nice/stdbuf/taskset/
+  sudo/uv with flag skipping; exec -a/-l/-c flag skipping;
+  md5 size cap 10MB + documented FIFO/unreadable/.sh limits.
+  R4 (C2-4/C2-7): guard symlink safety + recursive + any-tag:
+  _entry_pyc_paths requires realpath(cache) inside the ship
+  dir (symlinked __pycache__ returns [], scan refuses it);
+  recursive walk, any implementation tag. R5 (redteam F5):
+  runner verifies entry .py md5s against the ship manifest
+  BEFORE importing run_live (refuse exit 2 on mismatch;
+  self-consistent manifest tamper documented as needing the
+  launcher git comparison). R6 (C2-5/C1-F8): _is_codex_process
+  matches only argv[0] basename codex or a token ending in
+  /codex; runner preflight comment reworded (warning lives in
+  launcher). R7 (C2-6): remote URL normalization (strip
+  trailing /, optional .git, case-fold host, accept
+  git@github.com: SSH form) + --topo-order on the marker git
+  log. R8 (C2-8): wrap launcher subprocess.run calls
+  (OSError, TimeoutExpired) into _fail exit 2. R9 (C2-11/
+  C1-F5): _proven_no_body uses "eval_error" in diag + docstring
+  fix (proof needs the key ABSENT). R10 docs (C3-1..C3-11,
+  C1-F6/F7/F9/F10, C2-9): runner docstring -P; plan B2 scope;
+  Amend 3 runner-only; CODEX comment sync; launcher repo-tree
+  ship guard; manifest-md5 message (commit + push first, then
+  re-stage); "How to verify" note in SHIPPED.md/plan + remove
+  stale PYTHONDONTWRITEBYTECODE sentence; recovery hints in
+  refusals; single --repo path (verify on laptop:
+  /home/james/workspace/computer-use-wayland); plan B1 wording
+  (EMPTY __pycache__ only); --ship-dir in SHIPPED.md + value
+  validation + name in not-found message + space-form only;
+  handover-token writer correction (find the real writer);
+  regen docstring + SHIPPED cwd note; B1/B4 launcher-verify
+  wording per R2; launcher-only vs direct form (direct WITH
+  -P supported for verify/staging, launcher required for live
+  runs). R11 = R3 md5 cap/limits (folded in). BEHAVIOR CHANGE
+  NOTE for the re-verifier: bare (no -P) invocations now refuse
+  at the safe_path gate (exit 2, no marker), so A6d no-P spot
+  checks expect the safe_path refusal, not the scan JSON; the
+  -P form still expects kind planted-py. Next: implement R1-R10
+  in small commits, regen manifest, then spawn a fresh review
+  round (council x3 + redteam + verifier) over the new diff.
