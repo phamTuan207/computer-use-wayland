@@ -135,7 +135,6 @@ in the repo worktree and /tmp test copies.
   unstaged changes (other workers' files + my runner edits), but
   the parent was still origin HEAD so a fast-forward push worked.
   Continuing: _verify_manifest fix next.
-
 - 23:33 +07 (T+37m): KB DONE noted in MEMORY (not my lane; no
   action). caa4a7c CONFIRMED in history (ancestor of HEAD
   e7913d5, ls-remote = e7913d5). A4 unit table re-read
@@ -148,3 +147,24 @@ in the repo worktree and /tmp test copies.
   (needs the real file staged; unresolvable path is NOT a
   copy, fail-open on identity only), echo/grep/md5sum mentions
   NOT caught. Writing the runner tokenizer rewrite now.
+- 23:44 +07 (T+48m): RUNNER TOKENIZER COMMIT LANDED: 0cf43f8,
+  verified via ls-remote (1c08f8a..0cf43f8). Fleet notes from
+  MEMORY (not my lane): F1+F2 DONE, F3b slot HEALED (Zen PID
+  479395, Arms A/B/C PASS), OA imported the Omarchy skill to
+  custom-skills. Live slot healing matters for the eventual Y13
+  live run (after my re-review), not for this fix diff.
+- 23:47 +07 (T+51m): BUG FOUND in my own caa4a7c scan (by
+  re-reading _refuse_tampered_ship against the manifest): _SHIP_PY
+  lists only the 3 entry .py files, but the ship holds a 4th
+  .py, codex-y5/check-dashes.py (manifest entry). The scan walks
+  the whole ship, so it refuses the LEGITIMATE check-dashes.py
+  as planted-py and a clean staged ship would fail at module
+  top. Fix: add "codex-y5/check-dashes.py" to _SHIP_PY (the set
+  is exactly the manifest's .py paths). A3 sequence re-read
+  (attack_a123.py): -m is ONLY `python3 -m run_codex_y5`; direct
+  verify after must be rc 0; empty __pycache__ rc 0; env-guarded
+  -m writes nothing. A2 controls: wrong-tag (cpython-311) .pyc
+  is ignored by the interpreter but still bricks a later direct
+  run (scan refuses ANY .pyc), so the guard must delete ALL
+  cache-tag variants of the two entry stems, not just the
+  current tag. Fixing both in the runner now, then the launcher.

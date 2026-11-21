@@ -136,16 +136,33 @@ _ENTRY_PYC_NAMES = (
 
 
 def _entry_pyc_paths():
+    # All cache-tag variants of the two entry .pyc files, via
+    # os.listdir only (no imports: the guard runs before the
+    # scan, so a planted glob.py must not be loadable here). A
+    # stale tag (cpython-311) from another interpreter is ignored
+    # by this interpreter but still bricks a later direct run
+    # (the scan refuses ANY .pyc), so the guard removes every
+    # tag, not just the current one.
     cache = os.path.join(_SHIP_DIR, "__pycache__")
-    return [os.path.join(cache, n) for n in _ENTRY_PYC_NAMES]
+    out = []
+    try:
+        _names = os.listdir(cache)
+    except OSError:
+        return out
+    for _name in _names:
+        for _stem in ("run_codex_y5", "launch_y13"):
+            if (_name.startswith(_stem + ".cpython-")
+                    and _name.endswith(".pyc")):
+                out.append(os.path.join(cache, _name))
+    return out
 
 
 # Script-form-only (Y13g B1 item 3): refuse at the very top when
 # loaded as a module or via -m (__spec__ is not None). A -m/import
 # writes the entry .pyc during get_code, before this module
-# executes; the guard deletes the two entry .pyc paths (best
-# effort) so a -m probe does not brick the ship, then exits 2 with
-# a clear message. NOTE: this guard cannot protect a FORGED entry
+# executes; the guard deletes the two entry .pyc files, every
+# cache-tag variant (best effort) so a -m probe does not brick
+# the ship, then exits 2 with a clear message. NOTE: this guard cannot protect a FORGED entry
 # .pyc invoked via -m/import (the forged bytecode IS the running
 # code); the control for that lives in the launcher, which verifies
 # the entry .pyc out-of-process before exec and never invokes
@@ -185,13 +202,21 @@ def _json_str(s):
     return '"' + "".join(out) + '"'
 
 
-_SHIP_PY = {"run_codex_y5.py", "launch_y13.py", "run_live.py"}
+_SHIP_PY = {"run_codex_y5.py", "launch_y13.py", "run_live.py",
+            "codex-y5/check-dashes.py"}
+# Y13g: the ship holds a FOURTH .py file, the manifest entry
+# codex-y5/check-dashes.py. The scan walks the whole ship, so
+# omitting it refused a legitimate manifest file as planted-py
+# (bug in caa4a7c, found by re-reading the scan against the
+# manifest). This set is exactly the manifest's .py paths; a
+# planted re.py / json.py / functools.py is still refused.
 
 
 def _refuse_tampered_ship():
     # Y13g B2: pre-import scan using ONLY os.path (never pathlib,
     # never json). Refuses any .pyc, any symlink, and any .py file
-    # that is not one of the three ship entry points: a planted
+    # that is not one of the ship's own .py files (the three entry
+    # points + codex-y5/check-dashes.py, see _SHIP_PY): a planted
     # re.py / json.py / functools.py would otherwise execute at
     # import time, before main() can run _verify_manifest (B2,
     # 9/15 stdlib names proven). The scan runs at module top,
