@@ -141,3 +141,72 @@
   or unsaved state; click center of the active tab only; verify via
   cursorpos + fresh observe). Stdout and stderr recorded separately
   for the whole run.
+
+## 23:58 session 1: STARTED, pill up, stopped CLEANLY
+- Launched 23:58:30 (sleep 25, detached). Indicator up at 23:58:32:
+  redraw ready, buffer presented, hidden:0. Ended 23:58:57 (elapsed
+  25076ms): final redraw closed, hidden:1. After: no session procs,
+  no indicator procs, no session.json, cu-cursor back to
+  {"active":false,"ok":true,"schema":1,"token":""}. CLEAN STOP.
+- Observe ea455ca57d89 during S1 (23:58:35-40) shows workspace 2
+  (clone1 Idle + clone2 Connected chats), NO pill. Two facts: the
+  screen had switched ws1 to ws2 (clone2-watch run 23:56:56, by
+  command; cursor unmoved at (1437,598), same as 23:53), AND the
+  observe HIDES the pill during capture by design.
+- PROOF of the hide: session1.err has exactly 1 hide_commands:1 and
+  1 show_commands:1 (25 windows with 0). cu.py:942-943 and 979-980
+  wrap captures in indicator.capture_clean (hide, capture, show).
+  F2's after-captures show the pill because act-now holds its OWN
+  overlay, not the session guardian's. Consequence: a computer-use
+  observe can NEVER show the session pill; the pill proof needs a
+  RAW grim (bypasses capture_clean). Lesson recorded: use grim for
+  pill visuals, observe for everything else.
+- The ws2 screenshot also shows the owner is NOT visibly active:
+  static chats, cursor unmoved, messages timestamped 22:28 (old).
+  The clone chats are context only, not my task.
+
+## 00:01-00:04 sessions 2/2b/2c: SSH latency vs short sessions
+- S2 (sleep 30, launched 00:01:37) ended before my grim landed: SSH
+  round trips take ~30s (connect + broken pipe), comparable to the
+  session windows. S2b (sleep 45, launched 00:02:28) also ended
+  before the grim. Lesson: use LONG sessions (120s) for proof
+  windows; short sleeps race the SSH latency.
+- S2c (sleep 120, launched 00:03:18) gave a comfortable window.
+- NOTE on tokens: one cu-cursor status output printed a full token
+  value to my tool output (00:04:01 check). That value is NOT
+  recorded anywhere in this log, the repo, or my report. All token
+  checks below print booleans only (R11).
+
+## 00:04 pill VISIBLE in raw grim (session 2c) + token proof
+- Raw grim 00:04:01 (/tmp/f1a-grim-2c.png, 1,869,950 B), ws1/Zen:
+  pill at top center, "Computer use active" + green dot + "Esc".
+  THE SESSION PILL, VISIBLE. Screen back on ws1 (watch run returned).
+- Token proof (tokcheck, booleans only, during S2c): snapshot token
+  32hex True; cu-cursor active True, ok True; cursor token matches
+  snapshot True; indicator endpoint socket exists True.
+- Cursor moved (1437,598) to (985,598) between 23:58 and 00:04,
+  same y, cause unidentified; static since 00:04 (same spot in the
+  00:05:30 observe). No typing, no window change. Re-check owner
+  activity before the click; if active, wait.
+
+## 00:05 pill GONE after session 2c stops
+- S2c ended ~00:05:18. Fresh observe 753ac7a9c974 (~00:05:30), ws1/Zen:
+  NO pill at top center. Pill gone after stop, confirmed visually.
+  No session procs, no snapshot. The omasnap crash notification
+  (15m) is still on screen; cause known per MEMORY (OA ran
+  `omasnap --help` via SSH without DISPLAY, Qt xcb fail, not a
+  system fault; OA told to stop running Qt GUI commands via SSH).
+
+## 00:06-00:07 indicator PID (session 2d)
+- S2d (sleep 60, launched ~00:06:25) for the pid. pgrep for
+  "computer-use-indicator" finds NOTHING: the binary is the installed
+  native/indicator (fallback path), not the PATH name. PID 513273,
+  /home/james/.local/share/agent-computer-use/native/indicator,
+  alive during S2d; cu-cursor active True, token present True.
+  (The Omarchy input-method indicator.py PID 165692 is a different
+  process; ignore it.) Pill proof is now complete: plugin list +
+  cu-cursor JSON active + token match + endpoint + visible pill +
+  pid 513273 + pill gone after stop + pill returns on restart.
+- Next: session 3, the click. Wait for S2d to end (~00:07:25),
+  confirm no stray session/indicator, fresh observe + activewindow
+  title to re-check the active tab, then the click session.
