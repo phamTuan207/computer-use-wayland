@@ -140,3 +140,10 @@ Tien do dot 4, cap nhat 18:55 ngay 21/11: xong 5/6 task, da commit len main tung
 - Task 6 evidence batch actions: 10 nguon moi, commit eb090c3, docs/research/2026-11-21-batch-actions-evidence.md.
 - Task 1 chua xong: subagent bi co an toan cua he thong chan o ban clone phu dung de sua nhanh PR 1, chua dung gi vao code. Clone2 da hoi nguoi dung chon cach di tiep ngay trong chat, dang cho tra loi. Chan doan 2 loi da xong tu code doc duoc.
 
+Bao cao dot 4, phan da xong, 21/11: task 2 den 6 da qua council 3 nguoi va redteam, task 1 con cho nguoi dung chon cach di tiep.
+- Council nguoi 1: task 2 va 3 VERIFIED, moi con so trong hai bao cao khop chinh xac voi file ket qua tho, chay lai diem test03 agy-y2 va test08 fcc-k deu tai lap dung ket qua, negative control co that trong code.
+- Council nguoi 2: task 4 va 5 VERIFIED, chay lai script Marionette tai lap ca 11 ket qua, chay lai probe AT-SPI tai lap tung stage voi thoi gian gan nhu trung khop.
+- Council nguoi 3: task 6 VERIFIED, doi chieu truc tiep 7 tren 10 nguon, moi con so khop voi nguon goc, quet ve sinh sach, khong dau gach dai, khong thong tin ca nhan. Mot luu y nho: bai Beyond Browsing ghim so lieu ban v1, ban moi nhat v3 co so khac, doc dung cho ban da ghim.
+- Redteam: khang dinh task 2, 3 va 4 dung nguyen. Task 5 co mot sua chua quan trong da ghi vao doc: cau "apt khong co candidate" chi dung voi apt lists rong cua may nay, mirror azure.archive.ubuntu.com that ra co day du at-spi2-core 2.52.0, python3-pyatspi 2.46.1, python3-gi va gir1.2-atspi. Cho chan duy nhat la hoan tat apt-get update, can phe duyet ma hai lan het thoi gian cho, va cai dat. Duong mo khoa da co bang chung, ghi o commit sua chua cua doc AT-SPI.
+- Task 1 van cho: can nguoi dung chon cho phep xu ly ban clone phu bi co an toan, hoac lam ngay trong repo chinh. Chan doan 2 loi da xong. Khi co lua chon, clone2 lam not task 1 va bao cao rieng.
+
