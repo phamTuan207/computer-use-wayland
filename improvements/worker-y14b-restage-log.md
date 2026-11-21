@@ -672,6 +672,10 @@ on its merits; nothing accepted or declined silently.
   counted the summary line; the redteam's 70 for fix3 was right.
 - No em/en dash in the fix diff (grep 0), no ydotool, no personal
   info.
-- Fix commit: (hash filled below after commit).
+- Fix commit: bf3c939 (todolist-push, pushed, ls-remote verified
+  bf3c939741f86c6c639c730882f8a4f721265a74). run_batch3.py at this
+  commit: git blob 585fb8016b0618ab02b3e97afa362dbcce7342c9, md5
+  2920f1697edb3b33711b83b8a874d88b (ship-time expected values for
+  the plan's md5 procedure; supersedes the fix-pass-3 values).
 - Redteam re-review over the fix-pass-4 diff: spawned after this
   commit. Ship waits for it unless it BLOCKs.
