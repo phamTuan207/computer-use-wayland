@@ -226,6 +226,30 @@ const testSimulators = {
     await page.click('#btn-unit-f');
     // 7. Save weather dashboard
     await page.click('#btn-save-weather');
+  },
+  '08': async (page) => {
+    // Q1: 201 Created
+    await page.click('#opt-q1-201');
+    await page.click('#btn-next-question');
+    // Q2: Compositor
+    await page.click('#opt-q2-compositor');
+    await page.click('#btn-next-question');
+    // Q3: mistake linked-list then hash-table
+    await page.click('#opt-q3-linked-list');
+    await page.click('#opt-q3-hash-table');
+    await page.click('#btn-next-question');
+    // Q4: will-change
+    await page.click('#opt-q4-will-change');
+    await page.click('#btn-next-question');
+    // Q5: sigkill
+    await page.click('#opt-q5-sigkill');
+    // Prev then Next
+    await page.click('#btn-prev-question');
+    await page.click('#btn-next-question');
+    // Submit
+    await page.click('#btn-submit-quiz');
+    // Save
+    await page.click('#btn-save-quiz');
   }
 };
 
