@@ -2126,6 +2126,44 @@ follow-up 2, vẫn chạy), U8 suy luận "t10 flaky trên Chromium
 cũng vậy", và U1-U6 (log /tmp đã mất, output probe chưa lưu,
 triage 39 claim không có artifact).
 
+## VIỆC 1 XONG, 03:39 ngày 22/11 - BÁO CÁO ĐẦY ĐỦ ZT-00..ZT-10
+
+Follow-up 2 đã cập nhật báo cáo docs/clone1-zen-ordinary-user-run-20261121.md
+(470 dòng theo wc -l, 0 dấu gạch ngang dài), đã push (a3324d9).
+Tôi tự kiểm chứng trên ổ: file sửa lúc 03:38:47 +07, ZT-00..ZT-10
+đều có JSON, số liệu khớp báo cáo.
+
+Tổng ZT-00..ZT-10 (11 lần chạy): PASS 0, FAIL 3 (ZT-00, 06, 07),
+ERROR 6 (ZT-01, 02, 03, 08, 09, 10), NOT APPLICABLE 2 (ZT-04, 05).
+ZT-00 FAIL 11437 ms (gate: Ctrl+W không đóng tab, F-B6-31).
+ZT-01/02/03 ERROR 35572/35411/36047 ms (Wikipedia goto timeout 30
+s, F-B6-03 lần 3, 4, 5). ZT-04 NOT APPLICABLE 32959 ms (bài viết
+tải trong 24305 ms, title PASS; star bookmark, hộp Ctrl+D, library
+đều là chrome, không áp dụng; cleanup FAIL vì đóng tab cuối,
+F-B6-31). ZT-05 NOT APPLICABLE 5425 ms (không Hyprland, không
+hyprctl, không workspace). ZT-06 FAIL 11557 ms (PDF render PASS,
+title "Form W-9 (Rev. March 2024) - fw9.pdf"; nút download #download
+của viewer không thấy, F-B6-14; bước 5-8 chưa tới). ZT-07 FAIL 8480
+ms (form PASS, custname/custtel PASS, comments PASS; select size
+đứng ở "small" sau ArrowDown, F-B6-18; bước submit chưa tới). ZT-08
+ERROR 48126 ms, ZT-09 ERROR 47917 ms, ZT-10 ERROR 47592 ms (tab
+đầu tải được, goto thứ hai (Vietnam) ném NS_ERROR_NET_RESET,
+F-B6-32). Phát hiện mới: F-B6-29, F-B6-30, F-B6-31 (đóng tab cuối),
+F-B6-32 (NS_ERROR_NET_RESET ở goto thứ hai).
+
+Còn mở: kiểm lại F-B6-03 với timeout dài hơn hoặc waitUntil
+domcontentloaded. Lần thử trước (diag_wiki2.mjs) bị timeout lúc
+03:37 không có output. Đã giao agent sửa runner: B1 đóng tab cuối,
+ERROR JSON lưu bước trước khi throw, M4 sửa comment giờ sai, M6
+prepProfileCerts fail fast, kèm kiểm lại F-B6-03 (timeout 60 s và
+domcontentloaded), chỉ chạy lại ZT-00 làm bằng chứng, không chạy
+lại cả bộ.
+
+2 thẻ duyệt web-read còn chờ (65bffbea, 6a468c14: tải PDF W-9 của
+IRS và lấy trang chính Wikipedia, từ các lần chạy watchdog 02:40
+và 03:16) nay đã cũ, vì các kịch bản chúng phục vụ đã chạy xong
+bằng đường khác; để chúng hết hạn, không chặn việc gì.
+
 Tiến triển việc 1 (tôi tự kiểm chứng trên ổ lúc 03:17): follow-up
 2 đã chạy hết ZT-00..ZT-10. ZT-06 FAIL, ZT-07 FAIL, ZT-08 ERROR
 (Protocol error browsingContext.navigate, NS_ERROR_NET_RESET),
