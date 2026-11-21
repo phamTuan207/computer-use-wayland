@@ -29,7 +29,15 @@ runs this session, read back from the saved result files.
 ## Chromium (Playwright, cache build 1254): 10/10 twice
 
 playwright-core 1.55.0 installed once into
-~/workspace/b6t3-scratch (2 s). Runs 18:39:56Z and 18:41:01Z.
+~/workspace/b6t3-scratch (2 s). Run 1 started 18:39:56Z (stated; its
+file /tmp/b6t3-run1-results.json is gone after a /tmp wipe, so the
+start time cannot be checked). Run 2 started 18:40:35.594Z and
+finished 18:41:11.716Z (per the saved results.json in the four suite
+copies, see Evidence).
+(CORRECTION after redteam, 03:20 22/11: the report first wrote the
+runs as "18:39:56Z and 18:41:01Z". 18:41:01Z is neither run 2's start
+nor its end; the saved file says started 18:40:35.594Z, finished
+18:41:11.716Z, wall 36,122 ms.)
 
 | Run | Passed | Wall ms |
 |-----|--------|---------|
@@ -40,9 +48,13 @@ Run 1 per-test ms: t01 5965, t02 1939, t03 1927, t04 1749,
 t05 2526, t06 2066, t07 2705, t08 1946, t09 4032, t10 11445.
 Run 2 per-test ms: t01 2836, t02 2977, t03 1834, t04 2376,
 t05 5008, t06 3239, t07 2305, t08 2010, t09 3052, t10 10461.
-Run 1 results saved to /tmp/b6t3-run1-results.json; run 2 is the
-results.json that was in the tree before my Firefox runs (restored
-afterwards, tree clean).
+Run 1 results saved to /tmp/b6t3-run1-results.json (file since wiped
+with /tmp); run 2 is the results.json that was in the tree before my
+Firefox runs (restored afterwards, tree clean), and its output also
+survives in the four suite copies (see Evidence).
+(CORRECTION after redteam, 03:20 22/11: the Evidence section used to
+say no file was saved for run 2; that was wrong. The body sentence
+above was right, and the Evidence section is corrected to match it.)
 
 t10 run 2 details (all D1 reads correct): exact-zero reads 0 on
 every Next path (playing, paused, shuffle playing, shuffle paused,
@@ -142,9 +154,13 @@ Run 4 per-test ms: t01 4802, t02 4805, t03 5182, t04 4999,
 t05 5371, t06 5391, t07 5672, t08 4581, t09 8064, t10 13212.
 Run 5 per-test ms: t01 4666, t02 4238, t03 4765, t04 4525,
 t05 4892, t06 4957, t07 4925, t08 4568, t09 7679, t10 13166.
-Firefox is about 1.7x slower than Chromium wall clock (58-62 s
+Firefox is about 1.6x slower than Chromium wall clock (58-62 s
 vs 36 s), mostly one fresh Firefox launch per check plus slower
 BiDi round trips.
+(CORRECTION after redteam, 03:20 22/11: the report first wrote
+"about 1.7x". The five full Firefox runs against the two Chromium
+runs give ratios 1.54-1.71, mean about 1.64, so "about 1.6x" is
+accurate; 1.7x is the top of the range, not the middle.)
 
 Evidence: ~/workspace/b6t3-results/batch3-firefox-run1.json
 through run5.json (one per run).
@@ -318,11 +334,21 @@ Chromium.
 
 - This report: docs/clone1-batch3-reverify-20261121.md
 - Chromium run 1: /tmp/b6t3-run1-results.json (10/10, 36,367 ms)
-- Chromium run 2: 10/10, 36,122 ms, numbers from the live run
-  output recorded in this report; no separate file was saved for
-  run 2 (only run 1's file exists). results.json in the tree was
-  restored to the committed content after the Firefox runs, so
-  the tree holds no run output from this task.
+- Chromium run 2: 10/10, 36,122 ms. Its output survives in four
+  identical copies: ~/workspace/b6t3-scratch/control-suite,
+  m1-suite, m2-suite and m3-suite results.json (md5
+  0a15bbd23e5696ab2641cfc757a07509, started 18:40:35.594Z,
+  finished 18:41:11.716Z, wall 36,122 ms, per-test ms matching
+  the run 2 table in this report). Run 1's file
+  /tmp/b6t3-run1-results.json is gone after a /tmp wipe.
+  results.json in the tree was restored to the committed content
+  after the Firefox runs, so the tree holds no run output from
+  this task.
+  (CORRECTION after redteam, 03:20 22/11: the Evidence section
+  first said no separate file was saved for run 2 and only run 1's
+  file existed. That was false; the run 2 output exists in the
+  four suite copies listed above, which also makes the run 2
+  numbers verifiable from disk.)
 - Firefox full runs 1-5:
   ~/workspace/b6t3-results/batch3-firefox-run1.json (6/10),
   run2.json (10/10), run3.json (8/10), run4.json (10/10),
@@ -355,18 +381,35 @@ Chromium run 1 file /tmp/b6t3-run1-results.json matches (10/10,
 as reported; run3 FAIL only on the Night Drive race, all D1 reads
 correct. All four check hashes match; t10 check last change is
 1d23532, which is an ancestor of HEAD. The m1/m2/m3 fixtures contain
-exactly the described nextTrack mutations; the control suite is
-byte-identical to the committed tree; the shim is gone and the
+exactly the described nextTrack mutations; the control suite's code
+and fixture files are identical to the committed tree, but its
+results.json is not: the suite copy is the Chromium run 2 output
+(started 18:40:35.594Z, wall 36,122 ms, per-test t01 2836 through
+t10 10461), while the committed file is the Y10 run (started
+2026-11-21T12:18:46.280Z, wall 25,024 ms, per-test t01 2218 through
+t10 4990). The shim is gone and the
 batch3 tree is clean. Re-ran the M1 probe once as a single check:
 exit 1, 6 failures with the exact messages in this report, sampler
-mins 1, wall 13,909 ms, saved to
-~/workspace/b6t3-results/m1-probe-recheck.json. ff-stderr.log holds
+mins 1, wall 13,648 ms (elapsed_ms in the saved file), saved to
+~/workspace/b6t3-results/m1-probe-recheck.json.
+(CORRECTION after redteam, 03:20 22/11: the completion-check section
+first wrote "byte-identical to the committed tree" without
+qualification and "wall 13,909 ms". The results.json files differ
+as detailed above, and the saved recheck file says elapsed_ms
+13,648, not 13,909.) ff-stderr.log holds
 the "No space left on device" evidence; the Firefox install at
 ~/workspace/firefox-160.0.1 exists, but the /tmp/firefox symlink is
 gone after a later /tmp wipe (environment, not a report error).
-Not verifiable from files: Chromium run 2, t10 standalone run 1,
-and the M2/M3 probe outputs were never saved (the report discloses
-this); their numbers rest on the report record only.
+Not verifiable from files: t10 standalone run 1 and the M2/M3
+probe outputs were never saved; their numbers rest on the report
+record only. (Chromium run 2 IS verifiable from files: its output
+survives in the four suite copies, see the corrected Evidence
+section.)
+(CORRECTION after redteam, 03:20 22/11: the section first listed
+Chromium run 2 as not verifiable and claimed "the report discloses
+this" for the unsaved M2/M3 outputs. Run 2 is verifiable (see above),
+and the report never stated the M2/M3 outputs were unsaved in so
+many words; it is stated plainly here instead.)
 
 Final verdict: DONE. D1 t10 checker SOUND, suite 10/10 Chromium
 twice and 10/10 Firefox 3 of 5 runs, 3/3 mutation probes caught.

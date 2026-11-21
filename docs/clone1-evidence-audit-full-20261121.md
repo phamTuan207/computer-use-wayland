@@ -1,7 +1,10 @@
 # Full evidence audit of improvements/ on origin/todolist-push
 
 - Branch: origin/todolist-push, tip e4082ff1d1c82dc8a46907d7939f6b098ae57502
-- Date of audit: 2026-11-22 (work 01:40 to 02:30 +07)
+- Date of audit: 2026-11-22 (work 01:40 to 01:45 +07)
+  (CORRECTION after redteam, 03:20 22/11: the header first wrote the
+  end time as 02:30, wrong by 45 minutes. The agent completed at
+  01:45:21 +07 and its commit 581736e landed 01:45:30 +07.)
 - Auditor: batch 6 task 2, independent subagent (did not write any of the audited files)
 - Method: read-only. Files read with `git show origin/todolist-push:path`,
   `git ls-tree`, `git grep`, `git cat-file -t`, `git log`, `git diff --numstat`.
@@ -16,9 +19,16 @@
 
 - Files under improvements/: 484. Total bytes: 10,287,241.
 - Largest: improvements/live-test-log.md 1,058,871 bytes, 4229 lines.
-- Claim-ish lines in improvements/*.md (git grep -c, per pattern):
-  PASS 1428, "done" 603, "complet" 1146, "verified" 2479, "passed" 420,
+- Claim-ish lines in improvements/*.md (git grep -c, per pattern,
+  case-sensitive, at e4082ff):
+  PASS 1428, "done" 582, "complet" 1120, "verified" 2237, "passed" 403,
   "10/10" 172 lines, "ALL PASS" 25, "all tests" 2.
+  (CORRECTION after redteam, 03:20 22/11: the audit first wrote done
+  603, complet 1146, verified 2479, passed 420. Those four counts do
+  not reproduce under any grep variant tried; the corrected counts
+  above are my own recomputation with case-sensitive git grep -c on
+  improvements/*.md at e4082ff. The other census numbers in this line
+  are exact as written.)
 - Strong-claim lines extracted (10/10, ALL PASS, gate green, APPROVE,
   BLOCK): 1011 lines, saved during the audit and triaged.
 - Lines citing /tmp/ paths: 1664, in 227 files. Lines mentioning
@@ -26,6 +36,11 @@
 - Cited commit hashes (patterns `commit|HEAD|pushed|at|tip|merge` +
   hex 7-40): 390 unique. 363 resolve as commits in the local object
   store after fetching all branches. 27 do not resolve; classified below.
+  (CORRECTION after redteam, 03:20 22/11: the classification below
+  names only 25 of the 27 non-resolving hashes; see the correction
+  note in that section. The 390/363/27 totals could not be reproduced
+  by re-extraction with the stated method, so they rest on the audit
+  record only.)
 
 ## Result summary
 
@@ -41,14 +56,31 @@
 
 ## V1 (HIGH): H3 gate acceptance rests on a file that is not in the repo
 
-- Tip e4082ff, files:
-  improvements/opt-council-m2-verdict.md:90 and :107,
-  improvements/opt-crawl-src-20261121.md:148,
-  improvements/optimal-fix-method-20261121.md:198,
-  improvements/worker-f1-guardian-fix-log.md:862.
-- Claim, repeated in all five places: the H3 gate question is resolved
-  because the Y13r2 proposal (5a2b69d NO VERDICT plus runner-quiet/ports
-  check counts as the marker leg) was "accepted per MEMORY.md 22:57".
+- Tip e4082ff. The acceptance is cited in 13 lines containing the exact
+  string "MEMORY.md 22:57" (git grep -c at e4082ff):
+  opt-council-m2-verdict.md:71, :90, :107, :108;
+  opt-redteam-m-attack.md:85, :108; opt-redteam-m-skeptic.md:58;
+  opt-redteam-m-verdict.md:33, :54, :81;
+  optimal-fix-method-20261121.md:131, :198;
+  worker-y14b-restage-log.md:1164. Of these, 8 cite the H3 acceptance
+  (:90, :107, opt-redteam-m-attack.md:108, opt-redteam-m-skeptic.md:58,
+  opt-redteam-m-verdict.md:33, :81, optimal-fix-method-20261121.md:131,
+  :198) and 5 cite the VMFIX cause (:71, :108, opt-redteam-m-attack.md:85,
+  opt-redteam-m-verdict.md:54, worker-y14b-restage-log.md:1164). One
+  more line cites the same acceptance in reversed wording,
+  opt-crawl-src-20261121.md:148 ("update 22:57, MEMORY.md"), making 14
+  citing lines in total.
+  (CORRECTION after redteam, 03:20 22/11: the audit first listed 5
+  places. That understated the count, and one of the five was wrong:
+  worker-f1-guardian-fix-log.md:862 states the H3 acceptance but cites
+  no MEMORY.md entry at all; that file mentions MEMORY.md only at lines
+  52 and 317. It is removed from the citing list. The violation stands:
+  every citation of the acceptance traces to MEMORY.md 22:57, a file
+  that does not exist on the branch.)
+- Claim, repeated in the citing lines above: the H3 gate question is
+  resolved because the Y13r2 proposal (5a2b69d NO VERDICT plus
+  runner-quiet/ports check counts as the marker leg) was "accepted per
+  MEMORY.md 22:57".
 - Check: MEMORY.md does not exist in origin/todolist-push
   (`git cat-file -t origin/todolist-push:MEMORY.md` fails; the branch
   root listing has no MEMORY.md). No council paper, log entry, or owner
@@ -126,9 +158,13 @@
   "/tmp/det-finish-worktree2-tests.log on the laptop",
   "/tmp/det-finish-final-tests.log". None of these logs is in the repo.
 - Check: the cited commit e01399d exists. The arithmetic in the text
-  (1359 baseline, +20 from 10 det_finish + 10 from another worker's
-  file, 1350 final) is internally consistent, but the raw logs cannot
-  be re-checked from the repo.
+  is internally consistent once the baseline is read right: baseline
+  1339, after-changes 1359 = 1339 + 20 (10 det_finish + 10 from another
+  worker's file), final 1350 = 1339 + 11. (CORRECTION after redteam,
+  03:20 22/11: the audit first wrote "1359 baseline", mislabelling
+  1359 as the baseline. The doc itself states "Test count 1350 vs
+  baseline 1339: +11 new det_finish tests".) The raw logs cannot be
+  re-checked from the repo.
 
 ## V5 (MEDIUM): run_matrix.py still hardcodes total 17 with only 16 case dirs
 
@@ -277,22 +313,32 @@
 - 363 resolve as commits in the local object store after fetching all
   branches. Two of those (84b88bb, 87cd34f) resolved only after the full
   fetch; they live on other branches.
-- 27 do not resolve. Classification by reading each citation in context:
+- 27 do not resolve, per the audit record. Classification by reading each citation in context:
   - 1 genuine this-repo unresolvable commit: 700144a (V12).
-  - About 20 external-repo commits, unverifiable from this repo but
+  - 16 external-repo commits, unverifiable from this repo but
     expected: hyprglass-1.1.1 03a57c4, CLI-Anything 34f5195 and 784fee3,
     Haze 30528aa and 355c03b35c2f94006c567a1e4f52f180218de148, aquamarine
     4c72cd4, Kyant0 eb4a0ea, samasante 4e7b769, ziuus 5841c24, MacShell
     a05e0dc and a4144b3, rust-anything a827562, liquidglass f5e1fb56 and
     88f681a, atx/wtype d71be3a7b3f93b534a2823fd68cabd7ac2a02359 and
     99e8e15. These are upstream citations, not this repo's evidence.
-  - 6 false positives, not commit citations at all: Wayland socket
+  - 8 false positives, not commit citations at all: Wayland socket
     signature 11cbc6c577b84ffb1edf4df3fc5b6128c3ae6947, Unix timestamp
     1794947807, chat IDs 750c8dae and 8fb75ccd, filename components
     99f30ca (diff-99f30ca-03a57c4.txt), file-content SHA 5cb507b6
     (cu.py sha256 prefix) and pin hash 674441ea (profile_sha256, itself
     questioned in the council doc it appears in), placeholder c1a2b3c
     in a steps list.
+  (CORRECTION after redteam, 03:20 22/11: the named lists total 25
+  (1 + 16 + 8), not 27, and the prose counts "about 20" and "6" did
+  not match the named items (16 and 8); both are fixed above. Two of
+  the claimed 27 non-resolving hashes are unaccounted for in the
+  named lists and cannot be identified: the audit saved no extraction
+  list, and re-extraction with the stated method (hex 7-40 on lines
+  matching commit|HEAD|pushed|at|tip|merge) gives 1596 unique tokens,
+  not 390, so the 390/363/27 totals rest on the audit record only and
+  are not independently reproduced. The 25 named items above were each
+  re-checked and do not resolve.)
 
 ## Claims that check out (sample, all verified by me)
 

@@ -2067,6 +2067,65 @@ từ các file kết quả ZT-00..ZT-08 trên ổ, gồm phát hiện Ctrl+W
 (B1). Thứ hai: ngừng trích số dòng từ trí nhớ, mọi số trong review
 này đều lấy từ wc -l, và lỗi +1 nay đã cắn 3 đợt liên tiếp.
 
+## SỬA SAU REDTEAM, 03:22 ngày 22/11 - 11 PHÁT HIỆN ĐÃ SỬA, 2 HASH CHƯA TÌM RA
+
+Agent sửa xong cả 11 phát hiện trong brief, 12 ghi chú CORRECTION
+(6 mỗi doc), 0 dấu gạch ngang dài, không động gì khác. Đã push
+(87ac1f0 audit, d490fde việc 3).
+
+Audit (431 dòng theo wc -l): W2 kiểm kê sửa thành done 582 (cũ
+603), complet 1120 (cũ 1146), verified 2237 (cũ 2479), passed 403
+(cũ 420), khớp redteam đúng từng số. W3: số trong văn bản sửa
+thành 16 external (cũ "khoảng 20") và 8 false positive (cũ "6");
+danh sách nêu tổng 25 (1+16+8), không phải 27. W4 header: 01:40
+tới 01:45 +07 (cũ 02:30); agent xong 01:45:21 +07, commit 581736e
+lên 01:45:30 +07. M2 V4: "1359 baseline" sửa thành baseline 1339
+(sau đổi 1359 = 1339 + 20, cuối 1350 = 1339 + 11, theo chính dòng
+"Test count 1350 vs baseline 1339" trong doc). M3 V1: "5 chỗ" sửa
+thành 13 dòng chứa đúng chuỗi "MEMORY.md 22:57" (liệt kê theo
+file:dòng, chia 8 H3 + 5 VMFIX), cộng opt-crawl-src-20261121.md:148
+viết ngược ("update 22:57, MEMORY.md"), tổng 14 dòng trích. Agent
+sửa còn tìm ra lỗi redteam không nêu: worker-f1-guardian-fix-log.md:862,
+audit liệt là chỗ trích, nhưng thực ra không trích mục MEMORY.md
+nào (file đó nhắc MEMORY.md chỉ ở dòng 52 và 317); đã gỡ khỏi danh
+sách trích. Vi phạm V1 đứng nguyên.
+
+Việc 3 (415 dòng theo wc -l): W7 lần chạy 2 bắt đầu 18:40:35.594Z,
+kết thúc 18:41:11.716Z (cũ "18:41:01Z", không phải bắt đầu cũng
+không phải kết thúc); mốc bắt đầu lần chạy 1 nay ghi là không kiểm
+chứng được (file đã mất). W9/W11: "không lưu file riêng cho lần
+chạy 2" đã sửa. Output tồn tại trong 4 bản giống hệt
+(control/m1/m2/m3-suite/results.json, md5
+0a15bbd23e5696ab2641cfc757a07509, wall 36122 ms, ms từng test khớp
+bảng lần chạy 2 trong báo cáo đúng từng số). Phần bằng chứng và câu
+trong thân nay đồng ý nhau. W8: wall kiểm lại M1 sửa thành 13648
+ms (elapsed_ms trong m1-probe-recheck.json, cũ 13909). W10:
+"control suite byte-identical" đã giới hạn: code và fixture giống
+hệt; results.json khác: bản trong suite là output lần chạy 2 (bắt
+đầu 18:40:35.594Z, wall 36122 ms, t01 2836 tới t10 10461), file đã
+commit là lần chạy Y10 (bắt đầu 2026-11-21T12:18:46.280Z, wall
+25024 ms, t01 2218 tới t10 4990). M1: "chậm khoảng 1.7x" sửa thành
+"khoảng 1.6x" (tỉ lệ 1.54-1.71, trung bình khoảng 1.64). M5: danh
+sách "Not verifiable" trong phần kiểm chứng hoàn thiện không còn
+gồm Chromium lần chạy 2 (kiểm chứng được qua các bản trong suite)
+và không còn nói "báo cáo đã khai" về output M2/M3 chưa lưu; nói
+thẳng thay vào đó.
+
+Không sửa được: 2 hash chưa rõ trong W3, không xác định được.
+Audit không lưu danh sách trích xuất, và trích xuất lại theo cách
+đã nói không tái hiện 390/27: hex 7-40 trên các dòng khớp
+commit|HEAD|pushed|at|tip|merge cho 1596 token riêng (827 token
+đúng 7 hoặc 40 ký tự). Ghi chú CORRECTION trong doc nói thẳng:
+tổng 390/363/27 chỉ dựa vào hồ sơ audit, không tái hiện độc lập
+được; 25 mục đã nêu đều kiểm lại từng cái và không resolve.
+
+Chưa làm (ngoài brief): B1 sửa runner closeActiveTab (động vào
+runner, đã dặn không động), B2 a1_unblind.py dòng 226 (code trên
+todolist-push, không phải main), U7 báo cáo việc 1 cũ (việc của
+follow-up 2, vẫn chạy), U8 suy luận "t10 flaky trên Chromium
+cũng vậy", và U1-U6 (log /tmp đã mất, output probe chưa lưu,
+triage 39 claim không có artifact).
+
 Tiến triển việc 1 (tôi tự kiểm chứng trên ổ lúc 03:17): follow-up
 2 đã chạy hết ZT-00..ZT-10. ZT-06 FAIL, ZT-07 FAIL, ZT-08 ERROR
 (Protocol error browsingContext.navigate, NS_ERROR_NET_RESET),
