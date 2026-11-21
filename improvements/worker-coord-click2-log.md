@@ -58,7 +58,7 @@ All five crawls, independently, rank the same shape first. The convergence is th
 - Programmatic executor (multiaction rank 7): CDP/Marionette scripts run at machine speed, fail loudly with assertions. Zero-vision middle for the benchmark.
 
 ### Verification: cheap, non-vision, independent
-- Minimal bundle (verify rank 1-6, all in ONE evaluate call per step, zero extra observes): V1 DOM input value readback (exact compare, the required fix for the e4082ff false pass), V2 contenteditable innerText + caret offset (the incident shape), V4 caret position check, V3 activeElement focus check (shadow-root walk), V11 MutationObserver / input-event flag armed before typing, V5 elementFromPoint hit test before clicking.
+- Minimal bundle (verify rank 1-6, all in ONE evaluate call per step, zero extra observes): V1 DOM input value readback (exact compare, the required fix for the e4082ff false pass), V2 contenteditable innerText (the incident shape), V3 activeElement focus check (shadow-root walk), V11 MutationObserver / input-event flag armed before typing, V5 elementFromPoint hit test before clicking. V4 caret position is out of scope per B18.
 - Task level: V12 state-grounded finish gate (verify the sent bubble / artifact, the cheap VISION 2) + V17 expectation-first (name the expected effect BEFORE acting, arXiv 2604.05477).
 - Governing rule V16: never trust an action's own return code; every ok must be corroborated by an independent channel the action cannot set. Strengthened by fresh numbers V18 (arXiv 2610.29609, Oct 2026: withholding the self-report improves dangerous-misreport recall by 43.4pp) and doctrine V20 (three-proof model, Sep 2026: fresh observation, exact grounding, authoritative record).
 - Visual fallback only: V8 input-region hash via grim -g (must pair with V1/V2; a focus ring alone changes the region), V15 crop-only OCR tesseract PSM 7, V9 phash/dhash.
@@ -82,7 +82,7 @@ One design, assembled from the converged rank-1 items (NOT yet reviewed, NOT yet
 1. VISION 1 builds the inventory: one-shot bulk DOM harvest (Zen: Marionette evaluate; Brave/Chrome: CDP DOM + AX tree) returning ref, role, name, rect, center, visibility, focused for every input + button of both clones, formatted as numbered compact text (Mantis pattern), converted to screen coordinates via the C12 layer with an AT-SPI cross-check where available. Vision is the fallback only where no DOM/a11y path exists.
 2. Plan-once program: the whole send sequence (click clone1 input, type, Enter, click clone2 input, type, Enter) emitted as one script from the inventory, with the grouping policy deciding what shares the observation.
 3. Guarded execution: HCU-style live guard re-checks each target's live geometry + focus right before input; stop at first failure, rest not-executed; exactly-once intent per send (no double-send on retry).
-4. Cheap verification inside the run: V1+V2+V3+V4+V11 in one evaluate call per step, V5 hit test before each click, V12 finish gate after each send (sent bubble in thread DOM). No vision between VISION 1 and VISION 2.
+4. Cheap verification inside the run: V1+V2+V3+V11 in one evaluate call per step, V5 hit test before each click, V12 finish gate after each send (sent bubble in thread DOM). No vision between VISION 1 and VISION 2. V4 caret position is out of scope per B18.
 5. VISION 2 checks both messages landed (outcome scoring per M1). Total: exactly 2 visions.
 6. Loop hygiene: prompt caching (history before fresh screenshot), diff-gated re-observation, downscale to token tier, context editing, low effort, adaptive waiting.
 
@@ -234,11 +234,10 @@ Clone1: batch 7 already queued in coord/clone1.md (b31b881, 02:08), starts when 
   tests/test_dom_act.py). The map is proven; live conversion is proven only
   by the probe's real click, not by these tests, and no 7/7 is quoted as
   live accuracy anywhere.
-- Tab-switch protocol (item O, D1): one Zen instance, two tabs for the two
-  clone windows. Marionette only while a ZenSession is held, BiDi only after
-  it exits, never parallel; the session slot is held by ZEN_DOM_LOCK
-  (scripts/zen_cli.py BidiSession, scripts/zen_dom.py LOCK_PATH). Cold
-  session.new costs 1.5-2.8s and must be budgeted in the benchmark.
+- Benchmark target (owner definition 02:05): clone1 Brave and clone2 Chrome
+  windows on ws2. The benchmark switches to ws2 and drives those Chromium
+  windows, not two Zen tabs. Zen's Marionette/BiDi session exclusivity and
+  cold session.new cost apply to Zen work outside this benchmark.
 - D2 HCU guard is now code, not design text: ground_input re-locates after
   hit_check and re-grounds on move; GroundPoints re-reads the live rect on
   every [] access and refuses when the element is gone.
