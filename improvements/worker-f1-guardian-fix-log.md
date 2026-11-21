@@ -863,3 +863,31 @@ council 3 (5 steps, stdout and stderr recorded separately).
   proposal (5a2b69d NO VERDICT + runner-quiet/ports check is enough as the
   done marker leg, keep the gate text, Y6 retry after Y13). No effect on
   F1's code fixes; the live queue is further backed up.
+
+## 22:58-23:01 - Round 2 commit B3: mid-session guard death names the cause, tail redacted (R8 + R11)
+- 22:58: edited scripts/cursor_session.py supervise. Added _tail(): the
+  drained tail passed through cursor_theme.redact_text (32-hex tokens become
+  [redacted], control characters stripped) and truncated to 4000 chars, used
+  by both failure gates (R11, uniform instead of the raw detail). Split the
+  mid-session loop: a guard death (guard.poll() is not None) now settles the
+  drain, prints 'session guardian died mid-session: <tail>' to stderr, and
+  terminates the driver; the cancel latch and stop file keep their old
+  silent path (R8 part 2). The import is the existing lazy pattern
+  (import cursor_theme inside supervise); cursor_theme does not import
+  cursor_session, so there is no cycle.
+- 22:58: laptop evidence. scp OK, md5 edee3bc45f7e07a5c8d943bfadcf4bef.
+  The scp+launch command exited 255 with 'client_loop: send disconnect:
+  Broken pipe' (the known SSH-die-after-~30s), but the LAUNCHED marker was
+  printed, so the detached test started. Session tests: 34 tests OK in
+  30.337s (/tmp/f1-test/b3.log), no unittest process left. py_compile on the
+  VM OK before that.
+- 22:58: the mid-session death message path itself has no unit test (it
+  needs a guardian that dies mid-session, which the FAKE does not do); it is
+  covered by the 34-test no-regression run and by code review. The live
+  positive proof will exercise the session lifecycle end to end.
+- 23:01: owner note (fleet, applies all night): he is going to sleep, but
+  any error or anything that really needs him should still be reported at
+  once, not held until morning. Big errors, blockers, and things needing
+  his decision get reported immediately; routine work runs silently and is
+  reported in the morning. F1 has no blocker right now; if the live
+  activation hits one, it goes to the parent at once.

@@ -253,11 +253,16 @@ def supervise(env, argv):
             try:guard.wait(timeout=0.5)
             except subprocess.TimeoutExpired:pass
             drain_thread.join(timeout=0.5)
+        import cursor_theme
+        def _tail():
+            # Redact any 32-hex token and strip control characters before the
+            # tail reaches an error envelope, the same as guard_reply does.
+            return cursor_theme.redact_text(''.join(guard_errors).strip())[-4000:]
         ready,_,_=select.select([guard.stdout],[],[],15)
         if not ready or guard.stdout.readline().strip()!='ready':
             _settle_drain()
-            detail=''.join(guard_errors).strip()
-            raise RuntimeError('session guardian startup failed' + (': '+detail[-4000:] if detail else ''))
+            detail=_tail()
+            raise RuntimeError('session guardian startup failed' + (': '+detail if detail else ''))
         driver_env=env.copy();driver_env['CU_SESSION_TOKEN']=token
         # Child cannot execute input before the guardian owns its process group.
         gate_read,gate_write=os.pipe()
@@ -268,12 +273,18 @@ def supervise(env, argv):
         ready,_,_=select.select([guard.stdout],[],[],2)
         if not ready or guard.stdout.readline().strip()!='registered':
             _settle_drain()
-            detail=''.join(guard_errors).strip()
-            raise RuntimeError('driver registration failed' + (': '+detail[-4000:] if detail else ''))
+            detail=_tail()
+            raise RuntimeError('driver registration failed' + (': '+detail if detail else ''))
         os.write(gate_write,b'go')
         os.close(gate_write);gate_write=None
         while driver.poll() is None:
-            if guard.poll() is not None or cancel_hotkey.latch_present(CANCEL) or (STATE/('stop-'+token)).exists():
+            if guard.poll() is not None:
+                _settle_drain()
+                detail=_tail()
+                print('session guardian died mid-session' + (': '+detail if detail else ''),file=sys.stderr)
+                terminate_driver(driver)
+                break
+            if cancel_hotkey.latch_present(CANCEL) or (STATE/('stop-'+token)).exists():
                 terminate_driver(driver)
                 break
             time.sleep(.05)
