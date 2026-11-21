@@ -99,10 +99,15 @@ def live(tmp, token, *, active, pre_calls, post, close_error=None):
         real_desktop_act = cu.desktop_act
 
         def act_boundary(env, meta, actions, after_capture=True, observation_path=None,
-                         expected_terminal_window=None):
+                         expected_terminal_window=None, **extra):
+            # AMEND4 item 4: the CLI act path now forwards
+            # type_x_ranges / type_y_ranges (and any future desktop_act
+            # kwargs) to desktop_act. The boundary forwards them instead
+            # of rejecting them with a fixed signature; the assertions
+            # below are unchanged.
             act_open['pre_focus'] = True
             kwargs = {'after_capture': after_capture,
-                      'observation_path': observation_path}
+                      'observation_path': observation_path, **extra}
             if expected_terminal_window is not None:
                 kwargs['expected_terminal_window'] = expected_terminal_window
             return real_desktop_act(env, meta, actions, **kwargs)
