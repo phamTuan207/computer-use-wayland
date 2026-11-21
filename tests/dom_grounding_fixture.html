@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>DOM grounding fixture</title>
+<style>
+  body { font-family: sans-serif; margin: 20px; }
+  .grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; max-width: 900px; }
+  button, input, select, a { padding: 6px 10px; }
+  #log { margin-top: 16px; border: 1px solid #888; padding: 8px; min-height: 40px; }
+  #tall { height: 1200px; }
+  #scroller { height: 120px; overflow-y: scroll; border: 1px solid #888; }
+  #hidden-btn { display: none; }
+  #moved { transform: translate(30px, 12px); }
+</style>
+</head>
+<body>
+<h1 id="title">Grounding fixture</h1>
+<p id="counter">clicks: 0</p>
+<p id="last-click">last: none</p>
+<div class="grid" id="grid"></div>
+<div id="tall"></div>
+<div id="scroller"><button id="scroll-btn" data-name="scroll-btn">Inside scroller</button><p>spacer</p><p>spacer</p><p>spacer</p><p>spacer</p><p>spacer</p></div>
+<button id="hidden-btn" data-name="hidden-btn">Hidden</button>
+<button id="moved" data-name="moved">Translated</button>
+<input id="name-input" type="text" value="" placeholder="type here">
+<select id="pick"><option value="a">Alpha</option><option value="b">Beta</option></select>
+<a id="plain-link" href="#title">A link</a>
+<div id="log"></div>
+<script>
+  const grid = document.getElementById('grid');
+  for (let i = 0; i < 60; i++) {
+    const b = document.createElement('button');
+    b.id = 'btn-' + i;
+    b.dataset.name = 'btn-' + i;
+    b.textContent = 'Button ' + i;
+    grid.appendChild(b);
+  }
+  let n = 0;
+  document.addEventListener('click', (e) => {
+    if (e.target && e.target.id) {
+      n++;
+      document.getElementById('counter').textContent = 'clicks: ' + n;
+      document.getElementById('last-click').textContent = 'last: ' + e.target.id;
+      document.getElementById('log').textContent += e.target.id + ';';
+    }
+  });
+  window.__clickedIds = () => document.getElementById('log').textContent;
+</script>
+</body>
+</html>
