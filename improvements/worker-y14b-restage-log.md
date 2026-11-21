@@ -2954,4 +2954,75 @@ further review round per the stopping rule):
   to /tmp/y14-server on the laptop, md5-verified with the
   corrected ship procedure, live_metrics import verified
   before any slot run.
+- 00:47 +07: doc-only fix COMMITTED 7c013cd on todolist-push,
+  ls-remote verified (remote head 7c013cd, ANCESTOR_OK).
+  Runner bytes unchanged (blob eec33fd5, md5 0527b55e).
+  Only the plan + log were staged.
+
+## SHIP (00:47-00:52 +07 22/11): runner + suite to /tmp/y14-server on the laptop
+
+Staged on the VM at /tmp/y14-ship: suite extracted from git
+at 1d23532 via `git archive 1d23532 tests/realistic/clone1-batch3`
+(strip 2 components), plus run_batch3.py (fix8 bytes),
+run_live.py, run_agyq2.py, and scripts/live_metrics.py (copied
+both to /tmp/y14-ship/live_metrics.py AND /tmp/y14-ship/scripts/
+live_metrics.py). Note: run_live.py / run_agyq2.py are identical
+between 1d23532 and the working tree (git diff empty);
+scripts/live_metrics.py does NOT exist at 1d23532 (new file on
+todolist-push, added after Y11), shipped from the working tree.
+VM md5 check before shipping: the pinned 25-file procedure
+returns exactly 25 files, all matching the plan's expected
+md5s; run_batch3.py 0527b55e48ec3a406ca1b100c2c1cd04;
+live_metrics.py ccf30b19e39b21643c7fada0946f9a82 (both copies);
+run_live.py d8e2b14d7456b2866790f4a87ec1919e; run_agyq2.py
+5ce8672cd7089ec8f6be427fe9b8e2b3.
+Tarball /tmp/y14-ship.tar.gz (136,406 bytes, md5
+e68cef483abd667c8ff11551aa343c56) shipped to the laptop via
+ssh-laptop.sh `cat > /tmp/y14-ship.tar.gz` (scp via proxy is
+broken); laptop md5 matches the VM md5, transfer intact.
+Untarred on the laptop to /tmp/y14-server
+(--strip-components=1). Laptop layout: clone1-batch3,
+live_metrics.py, run_agyq2.py, run_batch3.py, run_live.py,
+scripts. Laptop md5 procedure (pinned, from /tmp/y14-server):
+25 files, ALL 25 md5s match the plan's expected values
+(run_all.mjs 526e4181, lib/browser.mjs 6068b115,
+lib/server.mjs 7ddd6b6a, t01 caa89e9d/b320cf07, t02
+bf004428/9cd51959, t03 2ff259c4/33cafeca, t04 4f6a15d5/
+16d10cf31, t05 c8d8bad8/72d0265a, t06 19dd3728/9f590523,
+t07 a7181b4a/abc6d861, t08 f25fa0ce/d588dc93, t09 860a6cfe/
+7da064f7/detail 40dfc0db/prefs 1169a1d5, t10 c55ef3c7/
+eb814c94). run_batch3.py on the laptop: md5 0527b55e (fix8).
+LIVE_METRICS IMPORT: first attempt FAILED, exactly the
+failure mode the shipping note warns about: `No module named
+'jsonlutil'` (live_metrics.py line 47), then after shipping
+jsonlutil.py, `No module named 'hit_rate'` (line 48).
+live_metrics.py needs three local modules from its own parent
+dir (line 45 inserts its parent into sys.path): jsonlutil,
+hit_rate, timing. Shipped scripts/jsonlutil.py (md5 3a2ed1af),
+scripts/hit_rate.py (md5 5fb5a960), scripts/timing.py (md5
+48e7b95b) to BOTH /tmp/y14-server/ AND /tmp/y14-server/scripts/
+(all md5s match the laptop repo copies at
+/home/james/workspace/computer-use-wayland/scripts/). Re-test
+on the laptop, all PASS: `import run_live` shows
+`live_metrics: <module 'live_metrics' from
+'/tmp/y14-server/live_metrics.py'>` (NOT None); `import
+run_batch3` OK; `import live_metrics` direct OK;
+`import run_agyq2` OK. Metrics will NOT silently degrade to
+off. Lesson for the next ship: live_metrics.py is not
+self-contained, its three sibling modules must ship with it;
+the shipping note should name them (jsonlutil, hit_rate,
+timing). HIDEHID: /proc on the laptop is mounted WITHOUT
+hidepid (mount line: `proc on /proc type proc
+(rw,nosuid,nodev,noexec,relatime)`, no hidepid option), so the
+scanner sees all processes; the redteam M2 follow-up is
+answered, no hidepid restriction. Laptop Python 3.14.10,
+/tmp 16G, 4% used. The server is NOT started (slot not open;
+ZT-B is running live; Y13 live has not cleared). The live run
+itself is a separate step Muse spawns after Y13 clears; I do
+NOT drive Zen live. Ship notes recorded here; the plan's ship
+section does not need an update (the md5 procedure already
+pins the right values), but the live_metrics sibling-module
+lesson is recorded here for the next ship.
+- 00:52 +07: ship DONE and verified. Reporting to Muse:
+  fix pass 8 ALL 4 GO + doc-only fix + ship complete.
 
