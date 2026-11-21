@@ -30,15 +30,36 @@ Method: git clone, no installer run, no npx.
   commit past it: ef01dab, "feat(tiktok): free top comments for every
   kept TikTok from the public comment endpoint (#1555)". Diff
   f5d0e44..ef01dab: 7 files, 238 insertions, 7 deletions
-  (CONFIGURATION.md, one changelog.d entry, lib/env.py +9 lines,
-  lib/pipeline.py, lib/tiktok.py, and two test files). It is a TikTok
-  comments feature inside the already reviewed source surface; no new
-  outbound host class, no installer change. The sweep ran from this
-  clone.
-- The skill is used from the clone only. Nothing was copied into
-  home, config, PATH or tools directories beyond the clone itself,
-  and no file from the repo was executed except the research engine
-  entry point skills/last30days/scripts/last30days.py.
+  (CONFIGURATION.md, one changelog.d entry,
+  skills/last30days/scripts/lib/env.py +9 lines,
+  skills/last30days/scripts/lib/pipeline.py,
+  skills/last30days/scripts/lib/tiktok.py, and two test files). It is
+  a TikTok comments feature inside the already reviewed source
+  surface, with one transport change stated plainly below. No
+  installer change. The sweep ran from this clone.
+- The transport change: the diff adds a direct call to
+  https://www.tiktok.com/api/comment/list/ (literal constant
+  _PUBLIC_COMMENTS_URL in skills/last30days/scripts/lib/tiktok.py),
+  fetched with a browser User-Agent and a tiktok.com Referer, and it
+  is ON by default (is_tiktok_public_comments_on in
+  skills/last30days/scripts/lib/env.py defaults to 'on' unless
+  LAST30DAYS_TIKTOK_PUBLIC_COMMENTS is off, 0, false or no). At
+  f5d0e44 TikTok comments went only through ScrapeCreators with a
+  key, and the string "tiktok.com" appeared in the reviewed code
+  only in domain lists and in a constructed post URL, never as a
+  fetched endpoint. The provider is the same as the existing TikTok
+  source and no host outside the reviewed source surface is added,
+  but a direct call to www.tiktok.com is new, and the earlier
+  "no new outbound host class" wording hid that. The URL is a
+  literal in the added code, verified in the diff itself.
+- The skill is used from the clone only. No skill files were
+  installed or copied into home, config, PATH or tools directories
+  beyond the clone itself, and no file from the repo was executed
+  except the research engine entry point
+  skills/last30days/scripts/last30days.py. One qualification: the
+  engine writes its own run state to ~/.config/last30days during a
+  run (last-report.json 43 KB, last-run.json, last-report.lock).
+  That is engine runtime state, not a skill install.
 
 ## 2. Sweep runs
 
@@ -49,18 +70,33 @@ output is preserved in those save dirs as the *-raw.json files.
 
 | Run | Topic | Wall (UTC) | Elapsed | Results |
 |---|---|---|---|---|
-| 1 | DOM grounding for computer use GUI agents | 2026-11-21T20:54:47Z to 20:55:05Z | 17.1 s | 11 |
-| 2 | accessibility tree grounding for GUI agents | 2026-11-21T20:55:15Z to about 20:55:29Z | about 14 s | 4 |
-| 3 | DOM snapshot element grounding browser agents | 2026-11-21T20:55:15Z to about 20:55:29Z | about 14 s | 2 |
+| 1 | DOM grounding for computer use GUI agents | 2026-11-21T20:54:47Z to 20:55:05Z, agent-reported, end anchored at generated_at 20:55:04.96Z | 17.1 s, agent-reported (no stdout log preserved for run 1; the stated window spans 18 s, not 17.1 s) | 11 |
+| 2 | accessibility tree grounding for GUI agents | 2026-11-21T20:55:15Z to 20:55:29Z, start agent-reported | 12.8 s, engine-reported ("Research complete (12.8s)" in the stdout log) | 4 |
+| 3 | DOM snapshot element grounding browser agents | 2026-11-21T20:55:15Z to 20:55:29Z, start agent-reported | 12.8 s, engine-reported ("Research complete (12.8s)" in the stdout log) | 2 |
 
-Source status, identical in all three runs: github ok, hackernews
-ok, reddit unreachable, grounding (the web search backend)
-unreachable. No API keys are configured on this machine, so the
-keyed sources (X, YouTube, TikTok, ScrapeCreators-backed sources)
-returned nothing, and browser cookies stayed off. Effective recall
-is Hacker News plus GitHub only. Every date below is the item's own
-published date as recorded by the engine, inside the window
-2026-10-22 to 2026-11-21.
+Runs 2 and 3 ran in parallel: their generated_at values are 0.02 s
+apart (run 2 20:55:29.18Z, run 3 20:55:29.16Z), and both printed
+"Research complete (12.8s)". The elapsed column above uses the
+engine-reported figure where the stdout log preserves it; run 1 has
+no stdout log in its save dir (only the raw JSON and the library
+database), so its start time and elapsed are agent-reported only,
+with only the end anchored by generated_at.
+
+Source status: runs 1 and 2, github ok, hackernews ok, reddit
+unreachable, grounding (the web search backend) unreachable. Run 3
+differs: github "no-results", hackernews ok, reddit unreachable,
+grounding unreachable. In run 3 GitHub found 30 issues/PRs and
+dropped 30 of 30 as off-topic (twice, per the stdout log), and the
+"Research complete" line records Github: 0 results. Both run-3
+items (Turbo-Browser-MCP and Pomerado) came from Hacker News only.
+No API keys are configured on this machine, so the keyed sources (X,
+YouTube, TikTok, ScrapeCreators-backed sources) returned nothing,
+and browser cookies stayed off. Effective recall is Hacker News
+plus GitHub for runs 1 and 2, and Hacker News only for run 3. This
+matters for the Turbo-Browser-MCP finding: it rests on Hacker News
+alone. Every date below is the item's own published date as
+recorded by the engine, inside the window 2026-10-22 to
+2026-11-21.
 
 ## 3. Findings
 
@@ -88,7 +124,20 @@ published date as recorded by the engine, inside the window
     "Allow the final click, check for a receipt, refuse a repeat".
     This is an exactly-once send mechanism with a named key, which
     is the benchmark design's open gap D4 (exactly-once asserted but
-    not mechanized), shipped with a concrete mechanism.
+    not mechanized), shipped with a concrete mechanism. Qualified:
+    exactly-once only when the call returns. The README's Safety
+    section states: "The ledger is written only when the call
+    returns. If the call throws after the page already sent the
+    submission (for example a navigation timeout), nothing is
+    recorded. Check the site before re-running." A throw after send
+    leaves the ledger empty and a re-run double-sends, which is
+    exactly the failure mode the team's own task 1 redteam proved
+    in the 2-vision benchmark (a retry after a failed gate
+    double-sends). The ledger is also a per-machine file
+    (~/.turbo-browser-mcp/submissions.jsonl by default), so it does
+    not cover two clones on two machines or a wiped home directory.
+    The actionable conclusion survives: read the implementation,
+    port the mechanism, not the driver.
   - A submit guard is on by default: buttons that look like a final
     commit (Submit, Send, Publish, Pay, Confirm, and equivalents in
     several languages) are blocked unless allowSubmit is passed.
@@ -147,7 +196,10 @@ not dress it up as findings:
   a voice input product, not grounding. The rest of run 1 was agent
   infrastructure news (Simantic 2026-10-29, Zeus 2026-11-20,
   Aisync 2026-11-10, Airlock 2026-11-09, Beolis 2026-10-30, a
-  transitive-policies essay 2026-11-14), none of it about grounding
+  transitive-policies essay 2026-11-14, "Ask HN: Is anyone running
+  multi/always-on agents that don't cost a fortune?" 2026-11-06,
+  "Show HN: Botel" 2026-11-06, and "Don't Yell at Your Agents"
+  2026-10-22, a YouTube link), none of it about grounding
   methods.
 - Run 2 (accessibility tree) returned only general accessibility
   news: Bolt scooters as accessibility sensors (2026-11-17), Apple
@@ -172,8 +224,11 @@ New in this 30-day window:
    (Turbo-Browser-MCP, created 2026-11-14, Show HN 2026-11-15),
    with three concrete mechanisms the team's design does not yet
    have: onlyChanged delta snapshots as a tool parameter,
-   submissionKey as the exactly-once mechanism for a send, and an
-   expect outcome check plus a default-on submit guard. Each maps
+   submissionKey as the exactly-once mechanism for a send
+   (exactly-once only when the call returns; a throw after send
+   leaves the ledger empty and a re-run double-sends, per the
+   README Safety section quoted in 3.1), and an expect outcome
+   check plus a default-on submit guard. Each maps
    onto a named open item in the benchmark design (D4, the V12
    gate, step-6 loop hygiene).
 2. Independent field evidence (BotCircle issue 8, 2026-10-22, and
@@ -190,12 +245,13 @@ are built, and to port the mechanisms, not the Chromium driver.
 
 ## 5. Limits
 
-- Recall is Hacker News plus GitHub only: reddit and the web
-  grounding backend were unreachable from this machine in all three
-  runs, and no API keys are configured, so X, YouTube and TikTok
-  contributed nothing. A sweep with keys set would widen recall and
-  could change section 3. This limit is the engine's own source
-  status output, not an inference.
+- Recall is Hacker News plus GitHub only for runs 1 and 2, and
+  Hacker News only for run 3 (GitHub returned no results there):
+  reddit and the web grounding backend were unreachable from this
+  machine in all three runs, and no API keys are configured, so X,
+  YouTube and TikTok contributed nothing. A sweep with keys set
+  would widen recall and could change section 3. This limit is the
+  engine's own source status output, not an inference.
 - The skill ran keyless with browser cookies off, matching the
   review's conditions (cookies off by default, official APIs
   preferred).
