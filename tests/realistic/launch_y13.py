@@ -10,6 +10,13 @@ under `flock -w 60`.
 
 Checks, in order (any failure refuses with exit 2, never waits
 silently):
+  0. Module-top bootstrap (before ANY other import): script-form
+     only (a -m/import exits 2 after deleting the entry .pyc
+     files) and a pre-import scan that refuses any .pyc, any
+     symlink, and any .py that is not one of the ship's own
+     (B2: a planted stdlib .py would otherwise execute at
+     import time). Run as `python3 -P launch_y13.py` so the
+     ship dir is never added to sys.path from the environment.
   1. Y13_GO=1 in the environment. The operator (Y13) sets this
      only after (a) the exact Y6c completion marker is confirmed
      on todolist-push and (b) Muse's fresh go order at run time.
@@ -19,56 +26,212 @@ silently):
      Wayland).*(run.*(DONE|complete)|verdict.*(REPRODUCED|NOT
      REPRODUCED|DONE|complete)), no "harness" in the subject,
      touching an improvements/worker-y6c-*.md file), NEWER than
-     the newest abort marker (^Y6c.*(ABORT|abort)); an abort newer
-     than the newest completion refuses. No repo path refuses:
-     the operator's Y13_GO assertion alone is not a marker check.
+     the newest abort marker (^Y6c.*(ABORT|abort)) BY GIT LOG
+     ORDER (branch position, not committer date: a forged old
+     date no longer outranks a newer abort). The origin remote
+     must be the known repo remote (an attacker fork refuses).
+     The marker is a COORDINATION SIGNAL among pushers, not
+     authentication: it orders completions vs aborts, it does
+     not prove who pushed. No repo path refuses: the operator's
+     Y13_GO assertion alone is not a marker check.
   3. Ship-manifest check: the ship manifest md5 must equal the
      committed manifest md5 from origin/todolist-push (a stale
      but self-consistent ship refuses; the in-runner pin is
-     self-referential, so this git comparison is the gate).
-  4. Handover token /tmp/worker-y13-handover.json exists, is
+     self-referential, so this git comparison is the gate). It
+     also refuses any planted file in the ship dir (a top-level
+     .py not in the manifest, any .pyc, any symlink).
+  4. Entry-.pyc out-of-process check: for each entry .py
+     (run_codex_y5.py, run_live.py, launch_y13.py), if a cached
+     .pyc exists, compile the .py fresh in a separate
+     `python3 -P` subprocess and compare the marshalled code
+     objects; refuse on mismatch (a forged entry .pyc), and
+     delete ONLY the entry .pyc files that match (a legitimate
+     self-cache from a -m/import probe is removed so it cannot
+     brick the run). A forged entry .pyc invoked via -m/import
+     executes (the forged bytecode IS the running code), so no
+     legitimate flow ever invokes -m/import on an unverified
+     ship; this check is the control.
+  5. Full-allowlist ship scan: every file must be a manifest
+     path with a matching md5 (plus the manifest itself and
+     SHIPPED.md); refuse any symlink, any .pyc at any depth
+     (including the entry .pyc, which check 4 already deleted
+     if legitimate), any planted .py, and any non-prefix
+     directory. An EMPTY __pycache__ dir is allowed (leftover
+     from a probe whose .pyc files check 4 deleted).
+  6. Handover token /tmp/worker-y13-handover.json exists, is
      fresh (< 4 h) and names its basis. (The runner's preflight
      re-checks it.)
-  5. Runner-quiet process check: no python process executing a
+  7. Runner-quiet process check: no python process executing a
      run_*.py / run-nested* / hand_drive_e1.py script, other than
-     this launcher's own ancestry. The check tokenizes argv, so
-     bare-relative, flock -c, and shell -c launches are caught,
-     and a mere path mention (md5sum /abs/run_foo.py) is not.
+     this launcher's own ancestry. The check parses argv for
+     real (wrappers, python flags and their values, -m by last
+     dotted segment, -c by first-word semantics plus exec(,
+     renamed/extensionless/symlinked copies by md5 against the
+     manifest), so bare-relative, -m, flag-with-value,
+     flock -c, and shell -c launches are caught, and a mere path
+     mention (md5sum /abs/run_foo.py, echo/grep of a runner
+     name, python -c 'import run_codex_y5') is not.
      A "codex" process whose cmdline mentions the E1 driver, a
      geckodriver, a browser profile path, or Marionette REFUSES;
-     a plain codex process is a WARNING only.
-  6. Predecessor ports free by TCP connect: Y9 8769/4449,
+     a plain codex process is a WARNING only (the warning
+     matches the codex executable basename, not a raw
+     substring).
+  8. Predecessor ports free by TCP connect: Y9 8769/4449,
      Y8b 8767/4451, Y4d 8768/4448, and the 8770/4450 pair from
      Y14's gate range. Own ports 8771/4452 free too (a second Y13
      instance would hold them).
-  7. No live geckodriver with a live parent (read
+  9. No live geckodriver with a live parent (read
      /tmp/geckodriver-*.pid; a live geckodriver whose parent is
      alive means another driver session is running). Orphans
      (parent == 1) are warned only; the runner's preflight
      sweeps them.
-  8. flock -w 60 on ~/.cache/agent-computer-use/zen_dom.lock,
-     then exec `python3 run_codex_y5.py <args>` with the ship env
+  10. flock -w 60 on ~/.cache/agent-computer-use/zen_dom.lock,
+     then exec `python3 -P run_codex_y5.py <args>` with the ship env
      set (server 8771, WD 4452, JSONL /tmp/worker-y13-live.jsonl,
      LIVE_OWNER_AWAY=1, PYTHONDONTWRITEBYTECODE=1 so the ship
-     never writes .pyc). The launcher exits with the runner's
-     exit code.
+     never writes .pyc, PYTHONSAFEPATH=1 so the ship dir is never
+     added to sys.path from the environment). The launcher exits
+     with the runner's exit code.
 
-Usage (on the laptop, from /tmp/worker-y13-server):
-  Y13_GO=1 python3 launch_y13.py --repo ~/computer-use-wayland all
-  Y13_GO=1 python3 launch_y13.py --repo ~/computer-use-wayland 01 02
-  Default runner arg: all.
+Usage (on the laptop, from /tmp/worker-y13-server). Run with -P:
+  Y13_GO=1 python3 -P launch_y13.py --repo ~/computer-use-wayland all
+  Y13_GO=1 python3 -P launch_y13.py --repo ~/computer-use-wayland 01 02
+  Default runner arg: all. --ship-dir DIR (or Y13_SHIP_DIR) points
+  the launcher at a different ship dir; the default is the dir
+  holding this file when it holds run_codex_y5.py + the manifest,
+  else /tmp/worker-y13-server.
 """
+
+import os
+import sys
+
+# Y13g B1/B2: script-form-only guard + pre-import scan, before ANY
+# other import. Only sys and os are imported here: sys is builtin
+# and os is pre-loaded at interpreter startup, so neither can be
+# shadowed by a planted file in the ship dir. Everything else
+# (hashlib, json, re, socket, subprocess, time) is imported AFTER
+# the scan passes. Same bootstrap as run_codex_y5.py.
+
+
+def _derive_ship_dir():
+    """Y13g Amend 4: the ship dir comes from --ship-dir, then
+    Y13_SHIP_DIR, then the dir holding this file if it holds
+    run_codex_y5.py + the manifest, else the hardcoded fallback
+    (the probes' ship dir, /tmp/worker-y13-server). The launcher
+    only ever checks the ship dir it derived; probes stage a
+    tampered ship at a temp path and point --ship-dir at it."""
+    _args = sys.argv[1:]
+    if "--ship-dir" in _args:
+        _i = _args.index("--ship-dir")
+        if _i + 1 < len(_args):
+            return _args[_i + 1]
+    _env = os.environ.get("Y13_SHIP_DIR")
+    if _env:
+        return _env
+    _here = os.path.dirname(os.path.abspath(__file__))
+    if (os.path.isfile(os.path.join(_here, "run_codex_y5.py"))
+            and os.path.isfile(os.path.join(
+                _here, "codex-y5-manifest.json"))):
+        return _here
+    return "/tmp/worker-y13-server"
+
+
+SHIP_DIR = _derive_ship_dir()
+_SHIP_DIR = SHIP_DIR
+_ENTRY_STEMS = ("run_codex_y5", "launch_y13", "run_live")
+
+
+def _entry_pyc_paths():
+    # All cache-tag variants of the entry .pyc files, via
+    # os.listdir only (no imports: the guard runs before the
+    # scan, so a planted glob.py must not be loadable here).
+    cache = os.path.join(_SHIP_DIR, "__pycache__")
+    out = []
+    try:
+        _names = os.listdir(cache)
+    except OSError:
+        return out
+    for _name in _names:
+        for _stem in _ENTRY_STEMS:
+            if (_name.startswith(_stem + ".cpython-")
+                    and _name.endswith(".pyc")):
+                out.append(os.path.join(cache, _name))
+    return out
+
+
+# Script-form-only (Y13g B1 item 3, same guard as the runner):
+# refuse at the very top when loaded as a module or via -m
+# (__spec__ is not None). A -m/import writes the entry .pyc
+# during get_code; the guard deletes the entry .pyc files (best
+# effort) so a -m probe does not brick the ship, then exits 2.
+# A forged entry .pyc invoked via -m/import still executes (the
+# forged bytecode IS the running code); the control for that is
+# _check_entry_pyc below, which verifies the entry .pyc
+# out-of-process before exec. -m and bare imports are unsupported
+# invocation forms; the live launch path is always this file run
+# as a script, which execs the runner as a script.
+if globals().get("__spec__") is not None:
+    for _p in _entry_pyc_paths():
+        try:
+            os.unlink(_p)
+        except OSError:
+            pass
+    print("run as a script (python3 launch_y13.py), not with -m "
+          "and not via import", file=sys.stderr, flush=True)
+    sys.exit(2)
+
+
+_SHIP_PY = {"run_codex_y5.py", "launch_y13.py", "run_live.py",
+            "codex-y5/check-dashes.py"}
+
+
+def _refuse_tampered_ship():
+    # Y13g B2: pre-import scan using ONLY os.path. Refuses any
+    # .pyc, any symlink, and any .py file that is not one of the
+    # ship's own .py files (see _SHIP_PY): a planted re.py /
+    # json.py / functools.py would otherwise execute at import
+    # time, before any check runs (B2, 9/15 stdlib names proven).
+    # No exemptions: the scan runs at module top, before ANY
+    # other import. sys.dont_write_bytecode stops this process
+    # writing .pyc itself.
+    found = []
+    for _root, _dirs, _files in os.walk(_SHIP_DIR, followlinks=False):
+        _rel_root = os.path.relpath(_root, _SHIP_DIR)
+        if _rel_root == ".":
+            _rel_root = ""
+        for _name in _dirs:
+            _rel = (_rel_root + "/" + _name) if _rel_root else _name
+            if os.path.islink(os.path.join(_root, _name)):
+                found.append((_rel, "symlink"))
+        for _name in _files:
+            _rel = (_rel_root + "/" + _name) if _rel_root else _name
+            _full = os.path.join(_root, _name)
+            if os.path.islink(_full):
+                found.append((_rel, "symlink"))
+            elif _name.endswith(".pyc"):
+                found.append((_rel, "pyc"))
+            elif _name.endswith(".py") and _rel not in _SHIP_PY:
+                found.append((_rel, "planted-py"))
+    if found:
+        _kinds = sorted({k for _, k in found})
+        _kind = _kinds[0] if len(_kinds) == 1 else "mixed"
+        _files = ", ".join(sorted(p for p, _ in found))
+        print(f"[launch_y13] REFUSED: tampered ship dir {_SHIP_DIR}: "
+              f"{_kind}: {_files}", file=sys.stderr, flush=True)
+        sys.exit(2)
+
+
+_refuse_tampered_ship()
+
+sys.dont_write_bytecode = True
 
 import hashlib
 import json
-import os
 import re
 import socket
 import subprocess
-import sys
 import time
 
-SHIP_DIR = "/tmp/worker-y13-server"
 TOKEN_PATH = "/tmp/worker-y13-handover.json"
 LOCK_PATH = os.path.expanduser(
     "~/.cache/agent-computer-use/zen_dom.lock")
@@ -83,14 +246,21 @@ MARKER_RE = re.compile(
     r"^Y6c.*(nested|Wayland).*(run.*(DONE|complete)"
     r"|verdict.*(REPRODUCED|NOT REPRODUCED|DONE|complete))")
 ABORT_RE = re.compile(r"^Y6c.*(ABORT|abort)")
+# Y13g Amend 1: the git remote the marker check trusts. Read from
+# the real checkout at fix time (git remote get-url origin).
+KNOWN_REMOTE_URL = "https://github.com/phamTuan207/computer-use-wayland.git"
 
 
 def _script_basename_is_runner(name):
     """True if a cmdline token's basename is a test-runner script
-    (Y13f H2/H3). run_*.py covers Y9/Y13/Y14/Y4d; run-nested*
-    covers Y6c's nested run (run-nested-pill.py, run-nested-wayland
-    [.sh]: a hyphen, not run_); hand_drive_e1.py is E1's driver.
-    Keep in sync with run_codex_y5.py (identical logic)."""
+    (Y13f H2/H3, kept by Y13g B3). run_*.py covers Y9/Y13/Y14/Y4d;
+    run-nested* covers Y6c's nested run (run-nested-pill.py,
+    run-nested-wayland[.sh]: a hyphen, not run_, so the old run_
+    pattern was blind to it); hand_drive_e1.py is E1's driver.
+    Generic on purpose: in this project every run_*.py is a
+    runner, and the check is fail-closed. A renamed copy is NOT
+    caught here; it is caught by the md5 leg in
+    _token_is_runner_script."""
     if name == "hand_drive_e1.py":
         return True
     if name.startswith("run-nested"):
@@ -104,50 +274,330 @@ def _is_python_token(tok):
             or base.startswith("python3.") or base.startswith("python2."))
 
 
-def _argv_tokens(cmdline):
-    """Split a /proc cmdline (NUL-separated) into argv tokens, and
-    split any shell -c / flock -c argument on whitespace, so a
-    bare-relative or wrapped launch is visible (Y13f H2)."""
-    parts = [t for t in cmdline.split("\x00") if t]
-    tokens = []
+# Y13g B3 (C2 AMEND 3/4, redteam B3): the Y13f tokenizer used a
+# prev-token heuristic and missed -m forms, flag-with-value forms,
+# renamed/extensionless/symlinked copies, and -c exec forms. This
+# block parses the command the way a shell + python would: wrappers
+# first (env/nohup/setsid/timeout/flock/bash -c), then a real
+# python argv parse (flags and their values skipped, first
+# positional is the script candidate), then identity by name OR by
+# md5 against the manifest. A mere path mention (md5sum, cat, git)
+# never matches: only a token in an execution position is
+# examined. Keep in sync with run_codex_y5.py (identical block,
+# AST-verified); _SHIP_DIR is the ship dir in both files.
+_RUNNER_MODULE_NAMES = (
+    "run_codex_y5", "run_live", "run_agyq2", "run_batch3",
+    "run_agy_y2", "run-nested-pill", "hand_drive_e1",
+)
+_RUNNER_MANIFEST_PATHS = ("run_codex_y5.py", "launch_y13.py", "run_live.py")
+_RUNNER_MD5S = None
+
+
+def _shlex_tokens(s):
+    """Split a -c command string on shell words (shlex, whitespace
+    fallback), stripping trailing ;, &, | from each token (C2 AMEND
+    3: 'python3 run_codex_y5.py;' is the same command as without
+    the semicolon)."""
+    import shlex
+    try:
+        parts = shlex.split(s)
+    except Exception:
+        parts = s.split()
+    out = []
+    for p in parts:
+        p = p.rstrip(";&|")
+        if p:
+            out.append(p)
+    return out
+
+
+def _runner_md5s():
+    """md5s of the known runner .py files, from the ship manifest
+    (cached). An unreadable manifest yields an empty set: the md5
+    leg is then off, but the name leg still catches every named
+    form, and the launcher's check_manifest refuses a bad
+    manifest before exec."""
+    global _RUNNER_MD5S
+    if _RUNNER_MD5S is not None:
+        return _RUNNER_MD5S
+    md5s = set()
+    try:
+        import json
+        with open(os.path.join(_SHIP_DIR,
+                               "codex-y5-manifest.json"),
+                  "rb") as f:
+            man = json.load(f)
+        for entry in man.get("files", []):
+            if (isinstance(entry, dict)
+                    and entry.get("path") in _RUNNER_MANIFEST_PATHS
+                    and entry.get("md5")):
+                md5s.add(entry["md5"])
+    except Exception:
+        pass
+    _RUNNER_MD5S = md5s
+    return md5s
+
+
+def _path_is_runner_copy(tok, cwd=None):
+    """True if the token resolves (symlinks followed, relative
+    against cwd) to a file whose md5 is a known runner md5
+    (redteam B3(4)). A renamed, extensionless, or symlinked copy
+    of a runner is caught here, name-independently. An
+    unresolvable or unreadable path is NOT a copy: the file being
+    executed exists on disk in every real case, so an unresolvable
+    path is a race or a namespace we cannot read, not a runner.
+    The ports + flock backstop still applies."""
+    import hashlib
+    path = tok
+    if not os.path.isabs(path):
+        path = os.path.join(cwd or os.getcwd(), path)
+    try:
+        real = os.path.realpath(path)
+        if not os.path.isfile(real):
+            return False
+        with open(real, "rb") as f:
+            digest = hashlib.md5(f.read()).hexdigest()
+    except OSError:
+        return False
+    return digest in _runner_md5s()
+
+
+def _token_is_runner_script(tok, cwd=None):
+    """True if a script-candidate token executes a runner: by
+    generic runner name, by bare module name (extensionless form:
+    python3 run_codex_y5), or by md5 (renamed/extensionless/
+    symlinked copy)."""
+    base = tok.rsplit("/", 1)[-1]
+    if _script_basename_is_runner(base):
+        return True
+    stem = base[:-3] if base.endswith(".py") else base
+    if stem in _RUNNER_MODULE_NAMES:
+        return True
+    return _path_is_runner_copy(tok, cwd)
+
+
+def _c_code_executes_runner(code, cwd=None):
+    """True if a python -c code string executes a runner. First
+    the code is parsed as a shell command (a nested 'python3
+    run_codex_y5.py', e.g. via os.system or a -c inside -c, is
+    caught by the same recursive parse). Then the exec(/eval(
+    special case: exec(open('run_codex_y5.py').read()) IS an
+    execution, while a bare 'import run_codex_y5' is NOT (an
+    import runs the script-form guard and exits 2, never the
+    suite) and neither is a mere mention such as
+    print('run_codex_y5.py'). LIMIT (documented): a nested
+    os.system/exec inside -c code beyond exec(/eval( is not
+    caught; the ports + flock backstop applies."""
+    inner = _shlex_tokens(code)
+    if inner and _command_executes_runner(inner, cwd):
+        return True
+    if "exec(" in code or "eval(" in code:
+        import re
+        for m in re.finditer(r"run_[A-Za-z0-9_.\-]*\.py|"
+                             r"run-nested[A-Za-z0-9_.\-]*|"
+                             r"hand_drive_e1\.py", code):
+            if _script_basename_is_runner(m.group(0)):
+                return True
+    return False
+
+
+_PY_NO_VALUE = frozenset("bBdeEhiIOqSsuv")
+
+
+def _python_executes_runner(args, cwd=None):
+    """Real python argv parse (C2 AMEND 3). Skips interpreter
+    flags and their values (-u -B -E -s -v -W <val> -X <val> -O
+    -c <code> -m <mod>, -- separator, bundled short flags, and
+    attached values such as -Wignore, -Xdev, -c..., -m...); the
+    first positional is the script candidate. A -m module is a
+    runner when its LAST dotted segment is a known runner module
+    (pkg.run_codex_y5 counts; run_codex_y5.py as a -m argument
+    is an invalid form and cannot execute)."""
     i = 0
-    while i < len(parts):
-        if parts[i] == "-c" and i + 1 < len(parts):
-            tokens.append("-c")
-            tokens.extend(parts[i + 1].split())
-            i += 2
-        else:
-            tokens.append(parts[i])
+    n = len(args)
+    while i < n:
+        tok = args[i]
+        if tok == "--":
             i += 1
-    return tokens
-
-
-def _is_runner_cmdline(cmdline):
-    """True if the cmdline EXECUTES a runner script (Y13f H2).
-    The script token must be argv[0] (shebang exec), follow a python
-    interpreter token, be the first word of a -c string, follow a
-    python flag (-u) with a python token earlier, or (for non-.py
-    run-nested scripts only) follow bash/sh. A mere path mention
-    (md5sum /abs/run_foo.py) never matches. Keep in sync with
-    run_codex_y5.py."""
-    tokens = _argv_tokens(cmdline)
-    for i, tok in enumerate(tokens):
-        base = tok.rsplit("/", 1)[-1]
-        if not _script_basename_is_runner(base):
+            break
+        if tok == "-c":
+            if i + 1 >= n:
+                return False
+            return _c_code_executes_runner(args[i + 1], cwd)
+        if tok == "-m":
+            if i + 1 >= n:
+                return False
+            mod = args[i + 1]
+            if mod.endswith(".py"):
+                return False
+            return mod.rsplit(".", 1)[-1] in _RUNNER_MODULE_NAMES
+        if tok in ("-W", "-X"):
+            i += 2
             continue
-        if i == 0:
-            return True
-        prev = tokens[i - 1]
-        prev_base = prev.rsplit("/", 1)[-1]
-        if _is_python_token(prev):
-            return True
-        if prev == "-c":
-            return True
-        if prev.startswith("-") and any(
-                _is_python_token(t) for t in tokens[:i]):
-            return True
-        if not base.endswith(".py") and prev_base in ("bash", "sh"):
-            return True
+        if tok.startswith("--check-hash-based-pycs"):
+            i += 1 if "=" in tok else 2
+            continue
+        if tok.startswith("--"):
+            i += 1
+            continue
+        if tok.startswith("-c") and len(tok) > 2:
+            return _c_code_executes_runner(tok[2:], cwd)
+        if tok.startswith("-m") and len(tok) > 2:
+            mod = tok[2:]
+            if mod.endswith(".py"):
+                return False
+            return mod.rsplit(".", 1)[-1] in _RUNNER_MODULE_NAMES
+        if tok.startswith(("-W", "-X")) and len(tok) > 2:
+            i += 1
+            continue
+        if len(tok) > 1 and tok.startswith("-") and all(
+                ch in _PY_NO_VALUE for ch in tok[1:]):
+            i += 1
+            continue
+        if tok == "-":
+            return False
+        if tok.startswith("-"):
+            i += 1
+            continue
+        return _token_is_runner_script(tok, cwd)
+    if i < n:
+        return _token_is_runner_script(args[i], cwd)
+    return False
+
+
+def _command_executes_runner(tokens, cwd=None):
+    """Recursive shell-ish parse: strips wrappers (env VAR=1,
+    nohup, setsid, exec, command, timeout <dur>, flock <flags>
+    <lock> [-c <cmd>], bash/sh -c <cmd> or <script>), then a
+    python token hands off to _python_executes_runner, and any
+    other token reaching this point is argv[0] of the command
+    and is checked as a shebang exec (./run_codex_y5.py).
+    Only a token in an execution position is ever examined, so
+    'echo python3 run_codex_y5.py' and 'grep python3 ...' do
+    NOT match, while 'exec python3 run_codex_y5.py' does."""
+    i = 0
+    n = len(tokens)
+    while i < n:
+        tok = tokens[i]
+        base = tok.rsplit("/", 1)[-1]
+        if base == "env":
+            i += 1
+            while i < n:
+                t = tokens[i]
+                if t.startswith("-"):
+                    if t == "-u" and i + 1 < n:
+                        i += 2
+                        continue
+                    i += 1
+                    continue
+                if "=" in t:
+                    i += 1
+                    continue
+                break
+            continue
+        if base in ("nohup", "setsid", "exec", "command"):
+            i += 1
+            continue
+        if base == "timeout":
+            i += 1
+            while i < n:
+                t = tokens[i]
+                if t in ("-k", "--kill-after", "-s", "--signal"):
+                    i += 2
+                    continue
+                if t.startswith("-") or t.replace(".", "", 1).isdigit():
+                    i += 1
+                    continue
+                break
+            continue
+        if base == "flock":
+            i += 1
+            while i < n:
+                t = tokens[i]
+                if t == "-c":
+                    if i + 1 >= n:
+                        return False
+                    return _command_executes_runner(
+                        _shlex_tokens(tokens[i + 1]), cwd)
+                if t in ("-w", "--timeout", "-E",
+                         "--conflict-exit-code"):
+                    i += 2
+                    continue
+                if t.startswith("-"):
+                    i += 1
+                    continue
+                break
+            if i >= n:
+                return False
+            i += 1
+            if i >= n:
+                return False
+            if tokens[i] == "-c":
+                if i + 1 >= n:
+                    return False
+                return _command_executes_runner(
+                    _shlex_tokens(tokens[i + 1]), cwd)
+            return _command_executes_runner(tokens[i:], cwd)
+        if base in ("bash", "sh", "zsh", "dash"):
+            j = i + 1
+            while j < n:
+                if tokens[j] == "-c" and j + 1 < n:
+                    return _command_executes_runner(
+                        _shlex_tokens(tokens[j + 1]), cwd)
+                if tokens[j].startswith("-"):
+                    j += 1
+                    continue
+                return _token_is_runner_script(tokens[j], cwd)
+            return False
+        if _is_python_token(tok):
+            return _python_executes_runner(tokens[i + 1:], cwd)
+        return _token_is_runner_script(tok, cwd)
+    return False
+
+
+def _argv_tokens(cmdline):
+    """Split a /proc cmdline (NUL-separated) into argv tokens.
+    (Y13g B3: the Y13f version expanded -c arguments inline,
+    which conflated 'echo python3 run_codex_y5.py' with a real
+    execution; -c strings are now parsed recursively by
+    _command_executes_runner instead.)"""
+    return [t for t in cmdline.split("\x00") if t]
+
+
+def _is_runner_cmdline(cmdline, cwd=None):
+    """True if the cmdline EXECUTES a runner script (Y13g B3).
+
+    Parses the command like a shell + python would (see
+    _command_executes_runner): wrappers, real python argv parse,
+    -m by last dotted segment, -c by first-word semantics plus
+    the exec(/eval( special case, renamed/extensionless/
+    symlinked copies by md5 against the manifest. A mere path
+    mention (md5sum /abs/run_foo.py, echo/grep of a runner
+    name, python -c 'import run_codex_y5') never matches.
+    cwd (the process's /proc/<pid>/cwd) resolves relative
+    script paths for the md5 leg; without it, relative paths
+    resolve against this process's cwd. Keep in sync with
+    run_codex_y5.py (identical block)."""
+    return _command_executes_runner(_argv_tokens(cmdline), cwd)
+
+
+def _is_codex_process(cmdline):
+    """True if the cmdline names a codex executable: some argv
+    token has a path component 'codex', or argv[0]'s basename
+    is 'codex' (Y13g Amend 2). A raw substring match ('mycodex',
+    'codex-backup') is noise and does NOT count. Used by the
+    launcher's WARNING branch only; the refuse branch keeps the
+    fail-closed substring rule (C2 AMEND 6). Kept in both files
+    so the shared block stays identical."""
+    parts = _argv_tokens(cmdline)
+    if not parts:
+        return False
+    if parts[0].rsplit("/", 1)[-1].lower() == "codex":
+        return True
+    for tok in parts:
+        for comp in tok.split("/"):
+            if comp.lower() == "codex":
+                return True
     return False
 
 
@@ -243,15 +693,23 @@ def check_runner_quiet():
         if not cmd:
             continue
         flat = cmd.replace("\x00", " ").strip()
-        if _is_runner_cmdline(cmd):
+        try:
+            cwd = os.readlink(f"/proc/{pid}/cwd")
+        except OSError:
+            cwd = None
+        if _is_runner_cmdline(cmd, cwd):
             offenders.append((pid, flat))
         elif "codex" in cmd.lower() and any(
                 m in cmd.lower() for m in CODEX_REFUSE_MARKERS):
             # Y13f codex rule: a codex executor driving a browser
             # refuses (the between-arms E1 case is exactly what
-            # this check exists for).
+            # this check exists for). The refuse branch keeps the
+            # fail-closed substring rule (C2 AMEND 6).
             offenders.append((pid, flat))
-        elif "codex" in cmd.lower():
+        elif _is_codex_process(cmd):
+            # Y13g Amend 2: the warning matches the codex
+            # executable basename (a path component or argv[0]
+            # basename of "codex"), not a raw substring.
             codex_hits.append((pid, flat))
     for pid, cmd in codex_hits:
         print(f"[launch_y13] WARNING: codex process running "
@@ -261,25 +719,50 @@ def check_runner_quiet():
         _fail(f"live slot busy, runner process running: {detail}")
 
 
+def _check_remote(repo):
+    """Y13g Amend 1: pin the git remote. The marker check fetches
+    from origin; a repo whose origin points at an attacker fork
+    would let a forged marker pass (A5 case 6). Refuse unless
+    origin is the known repo remote. The marker is a
+    coordination signal among pushers, not authentication: it
+    orders completions vs aborts, it does not prove who pushed."""
+    remote = subprocess.run(
+        ["git", "-C", repo, "remote", "get-url", "origin"],
+        capture_output=True, text=True, timeout=30)
+    if remote.returncode != 0:
+        _fail(f"git remote get-url origin failed in {repo}: "
+              f"{remote.stderr.strip()[:200]}")
+    url = remote.stdout.strip()
+    if url != KNOWN_REMOTE_URL:
+        _fail(f"git remote origin is {url}, not the known repo "
+              f"{KNOWN_REMOTE_URL}; refusing (attacker fork?)")
+
+
 def check_marker(repo):
     """Y13f H3: verify the exact Y6c completion (or abort) marker
     on todolist-push. --repo is REQUIRED (main() refuses without
     one): the old operator-assertion fallback let the documented
     launch path skip the marker check entirely.
 
-    Matching is against SUBJECTS only: git log --format=%H%x09%ct
-    %x09%s, regex applied in Python. The old --grep form matched
-    body lines too (a body line "Y6c nested run DONE" under subject
+    Matching is against SUBJECTS only: git log --format=%H%x09%s,
+    regex applied in Python. The old --grep form matched body
+    lines too (a body line "Y6c nested run DONE" under subject
     "Fix flake" passed). Subjects containing "harness" are prep,
-    never completion. Freshness/ordering: the newest completion
-    must be NEWER than the newest abort; an abort newer than the
-    newest completion refuses (a stale completion from an earlier
-    finished Y6c run must not satisfy the gate forever)."""
+    never completion. Freshness/ordering (Y13g C2 AMEND 5(a)):
+    completions and aborts are ordered by BRANCH POSITION in
+    `git log origin/todolist-push` order (newest first), NOT by
+    committer date: a forged old date no longer outranks a newer
+    abort (A5 case 3). The newest completion must appear BEFORE
+    (newer than) the newest abort in that order; an abort newer
+    than the newest completion refuses (a stale completion from
+    an earlier finished Y6c run must not satisfy the gate
+    forever)."""
     if not repo:
         _fail("--repo is required: the Y6c marker check cannot run "
               "without a repo (set --repo or Y13_REPO)")
     if not os.path.isdir(os.path.join(repo, ".git")):
         _fail(f"--repo {repo} is not a git checkout")
+    _check_remote(repo)
     fetch = subprocess.run(
         ["git", "-C", repo, "fetch", "origin", "todolist-push"],
         capture_output=True, text=True, timeout=120)
@@ -288,7 +771,7 @@ def check_marker(repo):
               f"{fetch.stderr.strip()[:200]}")
     log = subprocess.run(
         ["git", "-C", repo, "log", "origin/todolist-push",
-         "--format=%H%x09%ct%x09%s", "--",
+         "--format=%H%x09%s", "--",
          "improvements/worker-y6c-*.md"],
         capture_output=True, text=True, timeout=60)
     if log.returncode != 0:
@@ -296,31 +779,27 @@ def check_marker(repo):
               f"{log.stderr.strip()[:200]}")
     newest_completion = None
     newest_abort = None
-    for line in log.stdout.splitlines():
-        parts = line.split("\x09", 2)
-        if len(parts) != 3:
+    for idx, line in enumerate(log.stdout.splitlines()):
+        parts = line.split("\x09", 1)
+        if len(parts) != 2:
             continue
-        commit, ctime, subject = parts
-        try:
-            ctime = int(ctime)
-        except ValueError:
-            continue
+        commit, subject = parts
         if ABORT_RE.search(subject):
-            if newest_abort is None or ctime > newest_abort[1]:
-                newest_abort = (commit, ctime, subject)
+            if newest_abort is None:
+                newest_abort = (idx, commit, subject)
         elif ("harness" not in subject.lower()
                 and MARKER_RE.search(subject)):
-            if newest_completion is None or ctime > newest_completion[1]:
-                newest_completion = (commit, ctime, subject)
+            if newest_completion is None:
+                newest_completion = (idx, commit, subject)
     if newest_completion is None:
         _fail("no Y6c completion marker on todolist-push "
               "(checked subjects on the exact marker pattern)")
-    if newest_abort is not None and newest_abort[1] >= newest_completion[1]:
-        _fail(f"Y6c abort {newest_abort[0][:7]} "
+    if newest_abort is not None and newest_abort[0] < newest_completion[0]:
+        _fail(f"Y6c abort {newest_abort[1][:7]} "
               f"({newest_abort[2]}) is newer than the newest "
-              f"completion {newest_completion[0][:7]}; refusing")
+              f"completion {newest_completion[1][:7]}; refusing")
     print(f"[launch_y13] Y6c completion marker found: "
-          f"{newest_completion[0]} ({newest_completion[2]})",
+          f"{newest_completion[1]} ({newest_completion[2]})",
           flush=True)
 
 
@@ -331,13 +810,41 @@ def check_manifest(repo):
     ship, against git -- is the launch-time gate that refuses a
     stale but self-consistent ship (older runner + older manifest
     + older fixtures, which --verify-manifest alone accepts).
-    Runs after check_marker, so origin/todolist-push is fresh."""
+    Runs after check_marker, so origin/todolist-push is fresh.
+    Y13g B2(3): also refuses any planted file in the ship dir (a
+    top-level .py not in the manifest, any .pyc, any symlink).
+    Y13g Amend 1: the remote is pinned (see _check_remote)."""
+    _check_remote(repo)
     ship_manifest = os.path.join(SHIP_DIR, "codex-y5-manifest.json")
     try:
         with open(ship_manifest, "rb") as f:
-            ship_md5 = hashlib.md5(f.read()).hexdigest()
+            ship_bytes = f.read()
     except OSError as exc:
         _fail(f"ship manifest unreadable: {exc}")
+    try:
+        ship_man = json.loads(ship_bytes.decode("utf-8"))
+        manifest_paths = {e["path"] for e in ship_man["files"]}
+    except Exception as exc:
+        _fail(f"ship manifest unparsable: {exc}")
+    for root, dirs, files in os.walk(SHIP_DIR, followlinks=False):
+        rel_root = os.path.relpath(root, SHIP_DIR)
+        if rel_root == ".":
+            rel_root = ""
+        for name in list(dirs):
+            if os.path.islink(os.path.join(root, name)):
+                rel = f"{rel_root}/{name}" if rel_root else name
+                _fail(f"planted symlink dir in ship: {rel}")
+        for name in files:
+            rel = f"{rel_root}/{name}" if rel_root else name
+            full = os.path.join(root, name)
+            if os.path.islink(full):
+                _fail(f"planted symlink in ship: {rel}")
+            if name.endswith(".pyc"):
+                _fail(f"planted bytecode in ship: {rel}")
+            if (not rel_root and name.endswith(".py")
+                    and rel not in manifest_paths):
+                _fail(f"planted top-level .py in ship: {rel}")
+    ship_md5 = hashlib.md5(ship_bytes).hexdigest()
     show = subprocess.run(
         ["git", "-C", repo, "show",
          "origin/todolist-push:tests/realistic/codex-y5-manifest.json"],
@@ -352,6 +859,156 @@ def check_manifest(repo):
               f"committed bytes with the regen script --stage)")
     print(f"[launch_y13] ship manifest md5 matches committed "
           f"({ship_md5})", flush=True)
+
+
+def _ship_manifest_entries():
+    """{path: md5} from the ship manifest, or None if unreadable.
+    Used by _scan_ship; the launcher refuses a bad manifest in
+    check_manifest first, so None here means the manifest broke
+    after that check (fail closed in the caller)."""
+    try:
+        with open(os.path.join(SHIP_DIR, "codex-y5-manifest.json"),
+                  "rb") as f:
+            man = json.load(f)
+        return {e["path"]: e["md5"] for e in man["files"]
+                if isinstance(e, dict) and e.get("path")
+                and e.get("md5")}
+    except Exception:
+        return None
+
+
+def _check_entry_pyc():
+    """Y13g B1(4)/B4(2): out-of-process entry-.pyc check. For each
+    entry .py (run_codex_y5.py, run_live.py, launch_y13.py), if a
+    cached .pyc exists in __pycache__ (any cache tag), compile the
+    .py fresh in a separate `python3 -P` subprocess and compare
+    the marshalled code objects against the cached .pyc; refuse
+    on mismatch (a forged entry .pyc), and delete ONLY the entry
+    .pyc files that match. A legitimate self-cache from a
+    -m/import probe is removed so it cannot brick the run; a
+    forged one refuses before exec, so the forged bytecode never
+    runs. Runs BEFORE _scan_ship, so a legitimate entry .pyc is
+    already gone when the scan refuses any remaining .pyc."""
+    import marshal
+    for name in ("run_codex_y5.py", "run_live.py", "launch_y13.py"):
+        src = os.path.join(SHIP_DIR, name)
+        if not os.path.isfile(src):
+            continue
+        stem = name[:-3]
+        cache_dir = os.path.join(SHIP_DIR, "__pycache__")
+        try:
+            cached_names = [n for n in os.listdir(cache_dir)
+                            if n.startswith(stem + ".cpython-")
+                            and n.endswith(".pyc")]
+        except OSError:
+            continue
+        for cached_name in sorted(cached_names):
+            cached_path = os.path.join(cache_dir, cached_name)
+            try:
+                with open(cached_path, "rb") as f:
+                    cached = f.read()
+            except OSError as exc:
+                _fail(f"entry .pyc unreadable: {cached_path}: {exc}")
+            if len(cached) <= 16:
+                _fail(f"entry .pyc truncated: {cached_path}")
+            try:
+                cached_code = marshal.loads(cached[16:])
+            except Exception as exc:
+                _fail(f"entry .pyc unmarshallable: {cached_path}: {exc}")
+            # Fresh compile in a separate python3 -P subprocess:
+            # -P keeps the ship dir off sys.path, and compile()
+            # writes no .pyc. The code object is marshalled to
+            # stdout as hex; the marshalled forms are compared (a
+            # re-dump normalizes any header difference).
+            code = ("import marshal, sys; src = open(sys.argv[1], "
+                    "'rb').read(); sys.stdout.write(marshal.dumps("
+                    "compile(src, sys.argv[1], 'exec')).hex())")
+            proc = subprocess.run(
+                ["python3", "-P", "-c", code, src],
+                capture_output=True, text=True, timeout=60)
+            if proc.returncode != 0:
+                _fail(f"fresh compile of {src} failed: "
+                      f"{proc.stderr.strip()[:200]}")
+            try:
+                fresh_code = marshal.loads(
+                    bytes.fromhex(proc.stdout.strip()))
+            except Exception as exc:
+                _fail(f"fresh compile output unparsable for {src}: {exc}")
+            if marshal.dumps(cached_code) != marshal.dumps(fresh_code):
+                _fail(f"entry .pyc mismatch (forged?): {cached_path} "
+                      f"does not match a fresh compile of {src}; "
+                      f"re-stage the ship")
+            try:
+                os.unlink(cached_path)
+            except OSError as exc:
+                _fail(f"cannot delete verified entry .pyc "
+                      f"{cached_path}: {exc}")
+            print(f"[launch_y13] verified + removed entry .pyc "
+                  f"{cached_name}", flush=True)
+
+
+def _scan_ship():
+    """Y13g C2 AMEND 1(a): full-allowlist scan of the ship dir
+    before exec. Every file must be a manifest path with a
+    matching md5 (plus the manifest itself and SHIPPED.md, which
+    are not manifest entries); refuse any symlink (file or dir),
+    any .pyc at any depth, any planted .py, and any directory
+    that is not a prefix of a manifest path. An EMPTY __pycache__
+    dir is allowed (leftover from a -m/import probe whose .pyc
+    files _check_entry_pyc just deleted); a __pycache__ holding
+    any file refuses. Runs after _check_entry_pyc, so a
+    legitimate entry .pyc is already gone and any remaining .pyc
+    is forged or foreign."""
+    entries = _ship_manifest_entries()
+    if entries is None:
+        _fail("ship manifest unreadable for the allowlist scan")
+    allowed = set(entries)
+    allowed.add("codex-y5-manifest.json")
+    allowed.add("codex-y5/SHIPPED.md")
+    prefixes = {""}
+    for rel in entries:
+        parts = rel.split("/")
+        for i in range(1, len(parts)):
+            prefixes.add("/".join(parts[:i]))
+    for root, dirs, files in os.walk(SHIP_DIR, followlinks=False):
+        rel_root = os.path.relpath(root, SHIP_DIR)
+        if rel_root == ".":
+            rel_root = ""
+        for name in list(dirs):
+            rel = f"{rel_root}/{name}" if rel_root else name
+            full = os.path.join(root, name)
+            if os.path.islink(full):
+                _fail(f"symlink dir in ship: {rel}")
+            if rel == "__pycache__" and not rel_root:
+                try:
+                    contents = os.listdir(full)
+                except OSError:
+                    contents = None
+                if contents == []:
+                    continue
+                _fail(f"__pycache__ in ship holds files: {contents}")
+            if rel not in prefixes:
+                _fail(f"unexpected directory in ship: {rel}")
+        for name in files:
+            rel = f"{rel_root}/{name}" if rel_root else name
+            full = os.path.join(root, name)
+            if os.path.islink(full):
+                _fail(f"symlink in ship: {rel}")
+            if name.endswith(".pyc"):
+                _fail(f"bytecode in ship: {rel}")
+            if rel not in allowed:
+                _fail(f"unexpected file in ship: {rel}")
+            if rel in entries:
+                try:
+                    with open(full, "rb") as f:
+                        digest = hashlib.md5(f.read()).hexdigest()
+                except OSError as exc:
+                    _fail(f"ship file unreadable: {rel}: {exc}")
+                if digest != entries[rel]:
+                    _fail(f"ship file md5 mismatch: {rel} "
+                          f"(stale or edited ship; re-stage)")
+    print("[launch_y13] ship allowlist scan passed "
+          f"({len(entries)} manifest files)", flush=True)
 
 
 def check_ports():
@@ -438,9 +1095,19 @@ def main(argv):
             _fail("--repo needs a path argument")
         repo = args[i + 1]
         del args[i:i + 2]
+    if "--ship-dir" in args:
+        # SHIP_DIR was already derived from this flag at module
+        # top; strip it here so the runner never sees it as a
+        # test selector.
+        i = args.index("--ship-dir")
+        if i + 1 >= len(args):
+            _fail("--ship-dir needs a path argument")
+        del args[i:i + 2]
     check_go()
     check_marker(repo)
     check_manifest(repo)
+    _check_entry_pyc()
+    _scan_ship()
     check_token()
     check_runner_quiet()
     check_ports()
@@ -458,10 +1125,14 @@ def main(argv):
         # importing run_live; this env var is the same guard for
         # any other python this exec chain spawns.
         "PYTHONDONTWRITEBYTECODE": "1",
+        # Y13g B2: PYTHONSAFEPATH=1 (-P) keeps the ship dir off
+        # sys.path, so a planted stdlib .py cannot execute at
+        # import time in the runner.
+        "PYTHONSAFEPATH": "1",
     })
     args = args or ["all"]
     cmd = ["flock", "-w", "60", LOCK_PATH,
-           "python3", "run_codex_y5.py"] + args
+           "python3", "-P", "run_codex_y5.py"] + args
     proc = subprocess.run(cmd, cwd=SHIP_DIR, env=env)
     return proc.returncode
 

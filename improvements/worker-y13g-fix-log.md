@@ -168,3 +168,44 @@ in the repo worktree and /tmp test copies.
   run (scan refuses ANY .pyc), so the guard must delete ALL
   cache-tag variants of the two entry stems, not just the
   current tag. Fixing both in the runner now, then the launcher.
+
+- 23:52 +07 (T+56m): LAUNCHER REWRITE STARTS. Design (from log
+  adjudication): module top = guard + narrow os.path-only scan
+  (mirror of runner, _SHIP_PY incl. check-dashes.py) + SHIP_DIR
+  derivation (Amend 4: --ship-dir > Y13_SHIP_DIR > file dir >
+  /tmp/worker-y13-server fallback) + _SHIP_DIR alias so the
+  shared tokenizer block stays byte-identical; remote pin
+  https://github.com/phamTuan207/computer-use-wayland.git
+  (verified via git remote get-url origin just now); marker
+  ordering by git log position, not %ct; _check_entry_pyc
+  (out-of-process compile + marshal compare, 3 stems incl.
+  run_live, all tags, delete matches / refuse mismatches) runs
+  BEFORE _scan_ship (full allowlist; empty __pycache__ allowed,
+  any remaining .pyc refuses); exec `python3 -P` +
+  PYTHONSAFEPATH=1; codex warning via _is_codex_process.
+
+- 23:58 +07 (T+1h02m): HARNESS LOSS. /tmp/y13r2/ and
+  /tmp/y13r2-redteam/ are GONE (existed 23:45 when I read
+  attack_a123.py; gone by 23:56; full-disk find confirms no
+  copies of forge_pyc.py / attack_a4_unit.py /
+  probe_b_tokenizer.py anywhere; repo only mentions them in
+  .md). Cause UNKNOWN (no rm by me; /tmp is tmpfs, y14b files
+  survive, so not a reboot; possibly another worker's cleanup
+  or a tmp reaper). IMPACT: the verifier CANNOT reuse the
+  attack harnesses as-is; it must REBUILD them from the specs
+  (redteam paper + this log, which preserves the full A4
+  39-case table, the A3 sequence, and the A2/A1 shapes).
+  LESSON: future harnesses stage under ~/workspace (persistent),
+  never /tmp-only. Verifier brief will carry the full tables.
+
+- 00:01 +07 (T+1h05m): LAUNCHER REWRITE DONE. py_compile OK.
+  Tokenizer block AST-identical between runner and launcher
+  (12 functions, docstrings stripped; text diff shows ONLY the
+  2 sync-direction notes, each file naming its counterpart).
+  Launcher now: module-top guard + narrow scan (same _SHIP_PY
+  incl. check-dashes.py), SHIP_DIR derivation, _check_remote
+  pin, check_marker log-order, check_manifest planted refusal,
+  _check_entry_pyc (3 stems, all tags, marshal compare in a
+  separate python3 -P subprocess), _scan_ship full allowlist,
+  codex warning via _is_codex_process, exec python3 -P +
+  PYTHONSAFEPATH=1. Committing now.
