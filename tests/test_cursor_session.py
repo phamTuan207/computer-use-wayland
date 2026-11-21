@@ -562,18 +562,21 @@ class Lifecycle(unittest.TestCase):
                               stdout=subprocess.PIPE,stderr=subprocess.PIPE,check=True)
         self.assertEqual(result.stdout,value.encode('utf-8'))
 
+    def _guardian_case_with_native_indicator(self, restore):
+        import indicator
+        with patch.object(indicator,'Native') as native,patch.object(indicator,'listen'):
+            native.return_value.process.poll.return_value=None
+            native.return_value.command.return_value='visible'
+            no_hyprctl={**self.env,'PATH':''}
+            self.assertEqual(session.guardian(no_hyprctl,1,'a'*32),1)
+            restore.assert_called_once_with(no_hyprctl)
+            (self.folder/'snapshot').unlink(missing_ok=True)
+
     def test_cleanup_exceptions_cannot_skip_restore(self):
         import cancel_hotkey
-        import indicator
         for failing in ('request_stop','stop_group','drain_input'):
             with self.subTest(failing=failing),patch.object(session.signal,'signal'),patch.object(session,'STATE',self.folder),patch.object(session,'SNAPSHOT',self.folder/'snapshot'),patch.object(session,'CANCEL',self.folder/'cancel'),patch.object(session,'owner_lock'),patch.object(cancel_hotkey,'hotkey_on'),patch.object(cancel_hotkey,'hotkey_off'),patch.object(session,'request_stop'),patch.object(session,'stop_group'),patch.object(session,'drain_input'),patch.object(session,'restore',return_value=True) as restore,patch.object(session.select,'select',return_value=([1],[],[])),patch.object(session.os,'read',side_effect=[b'123',b'']),patch.object(session,failing,side_effect=RuntimeError('cleanup injected')),patch.object(cursor_theme,'snapshot',return_value={'agent_theme':'cu-agent-test','agent_size':32}),patch.object(cursor_theme,'check_guard'),patch.object(cursor_theme,'apply'):
-                with patch.object(indicator,'Native') as native,patch.object(indicator,'listen'):
-                    native.return_value.process.poll.return_value=None
-                    native.return_value.command.return_value='visible'
-                    no_hyprctl={**self.env,'PATH':''}
-                    self.assertEqual(session.guardian(no_hyprctl,1,'a'*32),1)
-                    restore.assert_called_once_with(no_hyprctl)
-                    (self.folder/'snapshot').unlink(missing_ok=True)
+                self._guardian_case_with_native_indicator(restore)
                 (self.folder/'snapshot').unlink(missing_ok=True)
 
     def test_startup_does_not_query_cursor_position_or_capture(self):
