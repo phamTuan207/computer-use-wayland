@@ -796,17 +796,24 @@ class ZenSession:
         result = self.evaluate(
             "(function(){" + _FIND_JS +
             "const found=find(%s)[0];if(!found)return null;"
-            "const e=found.element;/* verify_typed */ return {value:"
-            "e.isContentEditable?e.textContent:('value' in e?e.value:null),"
-            "editable:!!e.isContentEditable};})()" % json.dumps(selector))
+            "const e=found.element;/* verify_typed */"
+            "const value=e.isContentEditable?e.textContent:"
+            "('value' in e?e.value:null);"
+            "const r=e.__agentCuTypedRecorder;"
+            "const trusted=r&&r.read?r.read():null;"
+            "if(!trusted||trusted.value!==value)return null;"
+            "return {value:value,editable:!!e.isContentEditable,"
+            "trusted:trusted};})()" % json.dumps(selector))
         if result is None:
             return False
         if isinstance(result, dict):
             value = result.get('value')
             editable = bool(result.get('editable'))
+            trusted = result.get('trusted')
         else:
             value = result
             editable = False
+            trusted = None
         if not isinstance(value, str) or not isinstance(expected, str):
             return False
         norm_value = value.rstrip() if editable else value
@@ -822,33 +829,48 @@ class ZenSession:
             # R10). dom_act's type_check is a typed-input check, so
             # requiring the flag there is correct; cdp.mjs set_value
             # is the programmatic path and is unaffected.
-            if not self.typed_flag(selector):
+            if not isinstance(trusted, dict) or 'value' not in trusted:
+                return False
+            trusted_value = trusted.get('value')
+            norm_trusted = (trusted_value.rstrip()
+                            if editable and isinstance(trusted_value, str)
+                            else trusted_value)
+            if norm_trusted != norm_value:
                 return False
         return True
 
     def arm_typed_flag(self, selector):
         """Arm the V11 typed-event flag on the target, before typing.
 
-        Installs a trusted-input-event listener (real keystrokes
-        dispatch trusted input events; a page script setting el.value
-        and dispatching synthetic input events produces UNTRUSTED
-        events, so the flag stays clear) plus a MutationObserver that
-        records any DOM mutation of the field for diagnostics. The
-        flag lives on window.__agentCuTyped keyed by selector.
-        typed_flag() reads it after the type step. A value that
-        appears with no trusted input event must fail verification.
+        Installs a trusted-input-event listener whose closure records
+        the value at each trusted event. verify_typed requires the
+        recorded value to equal the current value, so a later page
+        script change cannot reuse an earlier keystroke. The closure
+        is held by a frozen, non-writable recorder on the element;
+        the legacy window property is retained only for compatibility
+        and is never trusted. A MutationObserver records DOM changes
+        for diagnostics.
         """
         return bool(self.evaluate(
             "(function(){" + _FIND_JS + "const sel=%s;"
             "window.__agentCuTyped = window.__agentCuTyped || {};"
-            "window.__agentCuTyped[sel] = false;"
             "window.__agentCuMutated = window.__agentCuMutated || {};"
             "window.__agentCuMutated[sel] = false;"
             "const found=find(sel)[0];if(!found)return false;"
-            "const e=found.element;"
-            "e.addEventListener('input', function(ev){"
-            "if(ev.isTrusted) window.__agentCuTyped[sel]=true;"
-            "});"
+            "const e=found.element;const key='__agentCuTypedRecorder';"
+            "let recorder=e[key];"
+            "if(recorder){if(!Object.isFrozen(recorder)||"
+            "typeof recorder.reset!=='function')return false;"
+            "recorder.reset();}"
+            "else{let trustedValue=null,seen=false;"
+            "recorder=Object.freeze({"
+            "read:function(){return seen?{value:trustedValue}:null;},"
+            "reset:function(){seen=false;trustedValue=null;return true;}});"
+            "try{Object.defineProperty(e,key,{value:recorder,"
+            "writable:false,configurable:false});}catch(_){return false;}"
+            "e.addEventListener('input',function(ev){if(ev.isTrusted){"
+            "seen=true;trustedValue=e.isContentEditable?e.textContent:"
+            "('value' in e?e.value:null);}},true);}"
             "try{"
             "const obs=new MutationObserver(function(){"
             "window.__agentCuMutated[sel]=true;"
@@ -862,12 +884,12 @@ class ZenSession:
             % json.dumps(selector)))
 
     def typed_flag(self, selector):
-        """True when a trusted input event fired on the target since
-        arm_typed_flag(). A synthetic JS-set value dispatches no
-        trusted input event, so the flag stays False for it."""
+        """True when the element recorder saw a trusted input event."""
         return bool(self.evaluate(
-            "/* zen_typed_flag */ return !!(window.__agentCuTyped"
-            " && window.__agentCuTyped[%s]);" % json.dumps(selector)))
+            "/* zen_typed_flag */ (function(){" + _FIND_JS +
+            "const found=find(%s)[0];if(!found)return false;"
+            "const r=found.element.__agentCuTypedRecorder;"
+            "return !!(r&&r.read&&r.read());})()" % json.dumps(selector)))
 
     def sent_bubble_contains(self, text):
         """V12 finish gate: True when the thread DOM holds a sent

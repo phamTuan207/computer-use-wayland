@@ -32,6 +32,23 @@ ZenSession = zen_dom.ZenSession
 ZenDomError = zen_dom.ZenDomError
 
 
+class _TypedEvents(dict):
+    """Test recorder: assigning True snapshots the value at that event."""
+
+    def __init__(self, owner):
+        super().__init__()
+        self.owner = owner
+
+    def __setitem__(self, selector, trusted):
+        super().__setitem__(selector, trusted)
+        if trusted:
+            field = self.owner.dom_fields.get(selector)
+            self.owner._typed_values[selector] = (
+                None if field is None else field.get('value'))
+        else:
+            self.owner._typed_values.pop(selector, None)
+
+
 class FakeWdSession(ZenSession):
     """A ZenSession whose WebDriver transport is a scripted fake.
 
@@ -70,7 +87,8 @@ class FakeWdSession(ZenSession):
         self.dom_fields = {}
         self.sent_bubbles = []
         self._armed = {}
-        self._typed = {}
+        self._typed_values = {}
+        self._typed = _TypedEvents(self)
         self._MISSING = object()
 
     def _typed_flag(self, selector):
@@ -160,8 +178,11 @@ class FakeWdSession(ZenSession):
             field = self.dom_fields.get(selector) if selector else None
             if field is None:
                 return None
+            trusted = (None if not self._typed.get(selector) else
+                       {'value': self._typed_values.get(selector)})
             return {'value': field.get('value'),
-                    'editable': bool(field.get('contenteditable', False))}
+                    'editable': bool(field.get('contenteditable', False)),
+                    'trusted': trusted}
         field = self.dom_fields.get(selector) if selector else None
         if 'mozInnerScreenX' in script:
             return list(self.dom_origin)
