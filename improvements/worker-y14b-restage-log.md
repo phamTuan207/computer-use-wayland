@@ -399,6 +399,10 @@ on its merits; nothing accepted or declined silently.
   held just the t10 fixture, which the new check rightly refuses).
 - No em/en dash in the fix diff (grep 0), no ydotool, no personal
   info.
-- Fix commit: (hash filled below after commit).
+- Fix commit: ad085d9 (todolist-push, pushed, ls-remote verified
+  ad085d9ef809e8c37f7a2edfd218c40f5a3f41f7). run_batch3.py at this
+  commit: git blob e604c01229933194d40a4a3f75c54a8b13a46f78, md5
+  5d52ac65e8fe1d666d26c7f3ece4d7ba (ship-time expected values for
+  the plan's md5 procedure; supersedes the fix-pass-1 values).
 - Redteam re-review over the fix-pass-2 diff: spawned after this
   commit. Ship waits for it unless it BLOCKs.
