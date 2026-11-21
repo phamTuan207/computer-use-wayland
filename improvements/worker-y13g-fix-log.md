@@ -322,3 +322,60 @@ in the repo worktree and /tmp test copies.
   marker case 1 passes by design (keep documented). Redteam says
   fix F2-F5, re-run probes, then live may proceed. Still waiting:
   Council 2, Verifier (2/5 running).
+
+- 00:56 +07 (T+2h00m): COUNCIL 2 DONE, verdict BLOCK, paper
+  cb499a8 (improvements/worker-y13g-council-2.md + log; probes
+  under ~/workspace/y13g-council-2/probes/, persistent). One HIGH
+  hole C2-1: planted stdlib-stem .so executes before any refusal
+  (glob.so bare form marker PRESENT rc 2; http.so marker PRESENT
+  rc 1; hashlib.so via LAUNCHER bare form marker PRESENT; shlex.so
+  under -P via _is_runner_cmdline marker PRESENT, the -P bypass:
+  -P protects only imports before the sys.path insert, and shlex
+  is lazily imported after it). Root: runner scan is a denylist
+  (.pyc/symlink/planted-.py only), never the full allowlist +
+  md5s AMEND 1(b) required; sys.flags.safe_path never checked,
+  so -P is documentary only. Proposed fix: full allowlist scan
+  in BOTH files (os-only, refuse any path not in the manifest set
+  + any unexpected dir), enforce safe_path (refuse without -P),
+  pre-import shlex at top. 3 MEDIUM: C2-2 _check_entry_pyc dead
+  on launcher path (same as C1-F1/redteam-F2; legit entry .pyc
+  bricks LAUNCHER path via check_manifest first; run_live .pyc
+  never cleaned by runner guard); C2-3 tokenizer residuals 20/79
+  miss (-m pdb + script runs, __spec__ None; python3 - stdin;
+  -uc/-Bc bundled -c; timeout 60s/1m units; bash -c glued ;
+  separators; -c runpy.run_path / os.system / split-concat exec;
+  pypy3; wrappers nice/sudo/stdbuf/uv run; exec -a; FIFO /
+  unreadable md5 fail-open; 2 FPs fail-closed, harmless;
+  corrected: -m runpy / -m cProfile correctly NOT caught, guard
+  fires); C2-4 guard deletes through a symlinked __pycache__
+  (outside file deleted before scan runs). 7 LOW: C2-5 codex
+  warning bare token still warns (grep codex, echo codex,
+  /path/codex/run_codex_y5.py); C2-6 remote pin strict-string
+  (SSH/trailing-slash/no-.git refuse) + no --topo-order +
+  content-free marker (documented limit); C2-7 guard gaps
+  (nested .pyc, non-cpython tag, dir-named-.pyc, __pycache__ as
+  file); C2-8 uncaught subprocess exceptions exit 1 not 2;
+  C2-9 doc overclaims (plan B1/B4 launcher-verify, B2
+  check_manifest scope, B3 bundled, stale PYTHONDONTWRITEBYTECODE
+  line, launcher-only vs direct form); C2-10 md5 leg edges
+  (FIFO/unreadable fail-open, renamed .sh not in set, no size
+  cap); C2-11 _proven_no_body eval_error None treated as absent.
+  Positive side: B1 exemption gone, B4 happy path works, B2 .py
+  plants refused, B3 common forms catch (79 cases agree), AMEND
+  2/5 done in substance, eval_error "" False, tokenizer
+  AST-identical. Still waiting: Verifier (1/5 running).
+
+  PUSH INCIDENT 00:33-00:40 (logged 00:56): my commit e05bbc9
+  accidentally swept Y14b's staged file
+  improvements/worker-y14b-fix8-redteam.md (plain `git commit`
+  commits everything staged in the shared worktree). The file is
+  Y14b's legitimate content, already on origin now under my
+  message; attribution wrinkle only, no loss (Y14b noted it in
+  b69f1cf). The fallback chain then stashed others' work
+  (y13g-wip10) and the push raced (remote moved ea8369cb to
+  3f62d67 mid-push); rebase replayed e05bbc9 onto origin, stash
+  pop conflicted on Y14b's fix8-council-1.md (already committed
+  at HEAD, stale copy in stash), resolved to HEAD's version,
+  stash dropped, tree clean. LESSON: always
+  `git commit --only <my files>` in this shared worktree, never a
+  bare `git commit`.
