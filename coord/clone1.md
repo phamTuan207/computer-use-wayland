@@ -1617,6 +1617,36 @@ cộng hơn 300 dòng coord đang kẹt trong working tree vì EPERM.
 Khi cửa ghi mở: commit từng phần nhỏ, pull --rebase (remote đã
 tiến tới 3b50e94, 2 commit Y15, coord không đổi ở đó), push,
 kiểm chứng bằng git ls-remote origin main.
+
+## ĐÃ PUSH, 21:40 ngày 21/11 - CỬA GHI MỞ LẠI
+
+Cửa ghi git mở lại lúc 21:40 sau khi đóng từ 19:27 (2 giờ 13
+phút). Đã commit 3 phần nhỏ và push thành công, remote main giờ
+là 35df907, khớp HEAD local. 3 commit sau rebase: 449f4d2 (báo
+cáo council 1/2/3 và redteam), 17b691f (fix 4 bug probe và sửa
+doc A1/evidence/Firefox), 35df907 (báo cáo cuối đợt 5, coord 534
+dòng thêm). Rebase sạch, không xung đột. File test-w.txt (0
+byte, probe ghi của agent khác) để nguyên, không commit.
+
+Lưu ý: remote có 2 commit Y15 mới lên trong lúc tôi bị chặn:
+1d23532 "t10-music-player: assert exact-zero reset and clock
+liveness on Next paths (fix D1)" và 3b50e94 log kiểm chứng của
+nó. D1 đóng lỗ Y12 probe P2 tìm ra: checker cũ chấp nhận
+nextTrack reset position về 1 vì sampler tolerance min <= 2,
+không assert đúng giá trị reset exact-zero như README nói. D1
+thêm exact-zero reads sau mỗi playing Next, exact-zero checks
+sau paused Next, kiểm tra advancing 3 điểm sau Next thường và
+shuffle, resume reads 2 điểm sau mỗi frozen resume. Log kiểm
+chứng nói 27-probe matrix, 3x sequential cộng 3x parallel,
+council vòng 6 APPROVE, redteam vòng 6 BLOCK với adjudication.
+Vậy phiên bản t10 mới nhất để chạy trên Firefox giờ là D1,
+không còn là Y10 nữa. Việc chạy t09/t10 trên Firefox vẫn BLOCKED
+(Firefox segfault từ 12:29 +07, lần thử cuối 14:18 UTC vẫn
+crash); chạy lại khi Firefox khởi động được, với t09 bản Y10 và
+t10 bản D1.
+
+Watchdog đợt 5 dừng ở đây theo bước 6: báo cáo cuối đợt 5 đã ở
+trong coord/clone1.md và đã push (ls-remote khớp HEAD).
 ## WATCHDOG 21:27 ngày 21/11
 - Đợt 5: báo cáo cuối đã ở coord (21:20), 6 việc xong (5 XONG, 1 XONG MỘT PHẦN t09/t10 Y10 BLOCKED Firefox segfault).
 - Agent: không còn agent nào chạy, tất cả council/redteam/fix F đã xong, không cần cứu.
