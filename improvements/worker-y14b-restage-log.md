@@ -809,3 +809,56 @@ coordinates go here too.
   own `python3 -c "import run_batch3"` self-flags via the
   documented import over-approx). Councils 1 and 3 still running.
   Still NOT editing run_batch3.py until they finish.
+- 22:50:14 +07 (elapsed ~30 min, exact from runtime): Council 3
+  completed. Verdict AMEND, paper 3c6b6c2
+  (improvements/worker-y14b-fix4-council-3.md, 457 insertions,
+  only file committed), ls-remote verified
+  3c6b6c2a94b53eebbc99132ea060cfff70899819. What verified clean
+  (all reproduced by Council 3): F10 H4 wording (half/half stated
+  verbatim, "bracket" gone from the H4 note; numbers recomputed
+  with Decimal match the redteam V6 exactly: ticks (8,9)/(9,10)/
+  (10,11) at N=3.5, 1.835 half-up to 1.84, first-fail 71.4 ms,
+  sure-fail 100.0 ms); hashes exact (md5 2920f169, blob 585fb801,
+  commit bf3c939, matching the plan md5 line and the log entry at
+  40c4e48; old fix-pass-3 values appear nowhere as live values);
+  probes re-run (fix4 64/64, transcription 82, H2 45, fix2 31,
+  fix3 70, gate dry 4/4, M1 3/3, fix2-M1 4/4, fix2-rt-M1 9
+  scenario PASS, 0 FAIL); py_compile and import OK; live checks
+  (`python3 -m/-mrun/-um run_foo.py` all execute, exit 124;
+  `python3 -crun_foo.py` NameError exit 1;
+  `--check-hash-based-pycs=always` rejected exit 2, spaced form
+  accepted exit 0); docstrings (sync note -1 to -4 accurate,
+  siblings lack fix-4 markers, grep 0; residual `python3
+  run-nested-pill` True / `python3 run_other` False verified; F9
+  = note accurate); hygiene (0 em/en dash in both commits,
+  ydotool only in "no ydotool" lines, no PII, no live Zen
+  driving). Findings: C3-1 (required): plan line 738 and log
+  lines 601-602 say `python3 run_other -W ignore run_batch3.py`
+  is "now True via run_other itself"; the code returns False
+  (direct test + fix4 probe expects False), and False is the
+  correct outcome (the FP is fixed); the code's own docstring
+  agrees ("misses"); both sentences must be corrected to False.
+  C3-2 (required): F5 only half fixed, `python3 other -W ignore
+  run_batch3.py` (redteam 2h) still returns True; the barrier
+  covers run_* only; record it as a residual (U6 only half met).
+  C3-3 (required): import-branch guard's nearest-`-c` scan
+  crosses `;`, `python3 -c 'import os'; echo import run_batch3`
+  returns True; the -m branch is boundary-aware, the import
+  branch is not; fix the scan or record it (same as redteam R4).
+  C3-4 (minor): F3 attribution wrong, redteam's -m example was
+  `other.py`, not `run_other.py`. C3-5 (minor): fix4 probe
+  breakdown sums to 66, probe has 64: F3 is 9 not 8, regressions
+  14 not 17 (AST count). C3-6 (minor): "72 counted the summary
+  line" is off by one (70+1=71, not 72). C3-7 (minor): log verdict
+  section labels F3's unblock "U3"; it is U4 in the paper. C3-8
+  (minor): env incident note is now stale, the proper repair is
+  done (`re/__init__.py` 16315 bytes restored, `dpkg -V` clean,
+  `import re` OK, the `.pyc` stopgap no longer exists). C3-9
+  (observation, optional): U11's literal clause (leg-precise 3.0,
+  4 overcounts by 1) is nowhere stated; the half/half fix is
+  correct on the N=3.5 model; optional parenthetical to close
+  U11 fully. Cross-reference: Council 2's paper landed after
+  Council 3's (505f3e5, AMEND, C2-1/C2-2); Council 3 did not
+  independently verify C2-1/C2-2 (its F7 checks were codex-gate
+  only). Council 1 still running. Still NOT editing
+  run_batch3.py until it finishes.
