@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Demo File Manager</title>
+<style>
+  body { font-family: sans-serif; margin: 16px; display: flex; gap: 16px; }
+  #tree { width: 160px; }
+  #tree button { display: block; width: 100%; margin: 4px 0; text-align: left; }
+  #main { flex: 1; }
+  .item { border: 1px solid #999; padding: 8px; margin: 6px 0; cursor: pointer; }
+  .item.selected { background: #ddeeff; }
+  #empty { display: none; color: #666; }
+  #confirm { display: none; border: 1px solid red; padding: 10px; margin-top: 10px; }
+  #move-dialog { display: none; border: 1px solid #999; padding: 10px; margin-top: 10px; }
+  button { margin: 4px; }
+</style>
+</head>
+<body>
+<div id="tree">
+  <h2>Folders</h2>
+  <button id="tree-home">Home</button>
+  <button id="tree-documents">Documents</button>
+  <button id="tree-pictures">Pictures</button>
+</div>
+<div id="main">
+  <h1>File Manager</h1>
+  <div id="crumbs">Home</div>
+  <input id="search" placeholder="Search files">
+  <select id="sort">
+    <option value="name">Sort by name</option>
+    <option value="size-desc">Sort by size (largest first)</option>
+    <option value="size-asc">Sort by size (smallest first)</option>
+  </select>
+  <button id="new-folder-btn">New folder</button>
+  <button id="rename-btn">Rename selected</button>
+  <button id="move-btn">Move selected</button>
+  <button id="delete-btn">Delete selected</button>
+  <div id="empty">This folder is empty.</div>
+  <div id="list"></div>
+  <div id="confirm">
+    <span id="confirm-text"></span>
+    <button id="confirm-yes">Delete</button>
+    <button id="confirm-no">Cancel</button>
+  </div>
+  <div id="move-dialog">
+    <label>Move to:
+      <select id="move-target">
+        <option value="Home">Home</option>
+        <option value="Documents">Documents</option>
+        <option value="Pictures">Pictures</option>
+      </select>
+    </label>
+    <button id="move-ok">Move</button>
+    <button id="move-cancel">Cancel</button>
+  </div>
+  <div id="status"></div>
+</div>
+<script>
+  const store = {
+    Home: [
+      { name: 'budget.csv', type: 'file', size: 12 },
+      { name: 'notes.txt', type: 'file', size: 3 },
+      { name: 'photo.jpg', type: 'file', size: 2400 },
+      { name: 'video.mp4', type: 'file', size: 120000 },
+    ],
+    Documents: [
+      { name: 'report.docx', type: 'file', size: 88 },
+    ],
+    Pictures: [
+      { name: 'sunset.png', type: 'file', size: 1500 },
+    ],
+  };
+  let current = 'Home';
+  let selected = null;
+  const list = document.getElementById('list');
+
+  function folderNames() {
+    return Object.keys(store);
+  }
+  function visibleItems() {
+    let items = [...store[current]];
+    const q = document.getElementById('search').value.trim().toLowerCase();
+    if (q) items = items.filter((i) => i.name.toLowerCase().includes(q));
+    const sort = document.getElementById('sort').value;
+    if (sort === 'name') items.sort((a, b) => a.name.localeCompare(b.name));
+    if (sort === 'size-desc') items.sort((a, b) => b.size - a.size);
+    if (sort === 'size-asc') items.sort((a, b) => a.size - b.size);
+    return items;
+  }
+  function refresh() {
+    document.getElementById('crumbs').textContent = current;
+    list.innerHTML = '';
+    const items = visibleItems();
+    document.getElementById('empty').style.display = items.length === 0 ? 'block' : 'none';
+    items.forEach((item) => {
+      const div = document.createElement('div');
+      div.className = 'item' + (selected === item.name ? ' selected' : '');
+      div.dataset.name = item.name;
+      div.textContent = item.name + ' (' + item.type + ', ' + item.size + ' KB)';
+      div.addEventListener('click', () => {
+        selected = item.name;
+        refresh();
+      });
+      div.addEventListener('dblclick', () => {
+        if (item.type === 'folder') openFolder(item.name);
+      });
+      list.appendChild(div);
+    });
+    const target = document.getElementById('move-target');
+    target.innerHTML = '';
+    folderNames().forEach((name) => {
+      const opt = document.createElement('option');
+      opt.value = name;
+      opt.textContent = name;
+      target.appendChild(opt);
+    });
+    document.getElementById('status').textContent =
+      current + ': ' + store[current].length + ' items';
+  }
+  function openFolder(name) {
+    if (!store[name]) return;
+    current = name;
+    selected = null;
+    document.getElementById('search').value = '';
+    refresh();
+  }
+  function nav(name) {
+    current = name;
+    selected = null;
+    document.getElementById('search').value = '';
+    refresh();
+  }
+  document.getElementById('tree-home').addEventListener('click', () => nav('Home'));
+  document.getElementById('tree-documents').addEventListener('click', () => nav('Documents'));
+  document.getElementById('tree-pictures').addEventListener('click', () => nav('Pictures'));
+  document.getElementById('search').addEventListener('input', refresh);
+  document.getElementById('sort').addEventListener('change', refresh);
+  document.getElementById('new-folder-btn').addEventListener('click', () => {
+    const name = 'Archive';
+    if (store[name]) return;
+    store[name] = [];
+    store[current].push({ name, type: 'folder', size: 0 });
+    const btn = document.createElement('button');
+    btn.id = 'tree-' + name.toLowerCase();
+    btn.textContent = name;
+    btn.onclick = () => nav(name);
+    document.getElementById('tree').appendChild(btn);
+    refresh();
+  });
+  document.getElementById('rename-btn').addEventListener('click', () => {
+    if (!selected) return;
+    const item = store[current].find((i) => i.name === selected);
+    if (!item) return;
+    const next = selected === 'notes.txt' ? 'meeting-notes.txt'
+      : selected === 'Archive' ? 'Old files' : selected + '.renamed';
+    if (item.type === 'folder') {
+      store[next] = store[selected];
+      delete store[selected];
+      const btn = document.getElementById('tree-' + selected.toLowerCase());
+      if (btn) {
+        btn.textContent = next;
+        btn.id = 'tree-' + next.toLowerCase().replace(/\s+/g, '-');
+        btn.onclick = () => nav(next);
+      }
+    }
+    item.name = next;
+    selected = next;
+    refresh();
+  });
+  document.getElementById('delete-btn').addEventListener('click', () => {
+    if (!selected) return;
+    document.getElementById('confirm-text').textContent = 'Delete ' + selected + '?';
+    document.getElementById('confirm').style.display = 'block';
+  });
+  document.getElementById('confirm-no').addEventListener('click', () => {
+    document.getElementById('confirm').style.display = 'none';
+  });
+  document.getElementById('confirm-yes').addEventListener('click', () => {
+    store[current] = store[current].filter((i) => i.name !== selected);
+    selected = null;
+    document.getElementById('confirm').style.display = 'none';
+    refresh();
+  });
+  document.getElementById('move-btn').addEventListener('click', () => {
+    if (!selected) return;
+    document.getElementById('move-dialog').style.display = 'block';
+  });
+  document.getElementById('move-cancel').addEventListener('click', () => {
+    document.getElementById('move-dialog').style.display = 'none';
+  });
+  document.getElementById('move-ok').addEventListener('click', () => {
+    const target = document.getElementById('move-target').value;
+    const item = store[current].find((i) => i.name === selected);
+    if (!item || target === current) {
+      document.getElementById('move-dialog').style.display = 'none';
+      return;
+    }
+    store[current] = store[current].filter((i) => i.name !== selected);
+    store[target].push(item);
+    selected = null;
+    document.getElementById('move-dialog').style.display = 'none';
+    refresh();
+  });
+  refresh();
+</script>
+</body>
+</html>

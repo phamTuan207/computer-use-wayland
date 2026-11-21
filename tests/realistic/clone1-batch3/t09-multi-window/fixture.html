@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Demo Dashboard</title>
+<style>
+  body { font-family: sans-serif; margin: 16px; }
+  body.dark { background: #222; color: #eee; }
+  .project { border: 1px solid #999; padding: 10px; margin: 8px 0; max-width: 500px; }
+  button { margin: 4px; }
+  #status { margin-top: 10px; color: #333; }
+</style>
+</head>
+<body>
+<h1>Project Dashboard</h1>
+<div id="projects">
+  <div class="project" data-id="alpha">
+    <span class="title">Alpha</span>
+    <button class="detail-btn">Open detail</button>
+  </div>
+  <div class="project" data-id="beta">
+    <span class="title">Beta</span>
+    <button class="detail-btn">Open detail</button>
+  </div>
+  <div class="project" data-id="gamma">
+    <span class="title">Gamma</span>
+    <button class="detail-btn">Open detail</button>
+  </div>
+</div>
+<button id="prefs-btn">Open preferences</button>
+<div id="status">Ready.</div>
+<script>
+  const DEFAULTS = { alpha: 'Alpha', beta: 'Beta', gamma: 'Gamma' };
+  function currentTitle(id) {
+    return localStorage.getItem('project:' + id) || DEFAULTS[id];
+  }
+  document.querySelectorAll('.project').forEach((el) => {
+    el.querySelector('.title').textContent = currentTitle(el.dataset.id);
+  });
+  const savedTheme = localStorage.getItem('theme');
+  if (savedTheme === 'dark') document.body.classList.add('dark');
+  document.querySelectorAll('.detail-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const project = btn.closest('.project');
+      const id = project.dataset.id;
+      const title = project.querySelector('.title').textContent;
+      window.open(
+        'detail.html?project=' + encodeURIComponent(id) +
+        '&title=' + encodeURIComponent(title),
+        '_blank', 'width=500,height=400');
+    });
+  });
+  document.getElementById('prefs-btn').addEventListener('click', () => {
+    window.open('prefs.html', '_blank', 'width=500,height=400');
+  });
+  window.addEventListener('message', (e) => {
+    const d = e.data;
+    if (!d || typeof d !== 'object') return;
+    if (d.type === 'project-renamed') {
+      const el = document.querySelector('.project[data-id="' + d.id + '"] .title');
+      if (el) el.textContent = d.title;
+      localStorage.setItem('project:' + d.id, d.title);
+      document.getElementById('status').textContent = 'Renamed ' + d.id + ' to ' + d.title + '.';
+    }
+    if (d.type === 'theme') {
+      document.body.classList.toggle('dark', d.theme === 'dark');
+      localStorage.setItem('theme', d.theme);
+      document.getElementById('status').textContent = 'Theme set to ' + d.theme + '.';
+    }
+  });
+</script>
+</body>
+</html>

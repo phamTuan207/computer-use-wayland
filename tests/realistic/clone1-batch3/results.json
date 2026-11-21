@@ -1,0 +1,89 @@
+{
+  "started_at": "2026-11-21T09:41:30.543Z",
+  "finished_at": "2026-11-21T09:42:03.511Z",
+  "wall_clock_ms": 32968,
+  "passed": 8,
+  "failed": 2,
+  "results": [
+    {
+      "test": "t01-terminal",
+      "exitCode": 0,
+      "pass": true,
+      "elapsed_ms": 3261,
+      "stdout": "{\"test\":\"t01-terminal\",\"pass\":true,\"failures\":[],\"details\":{\"historyLines\":0,\"finalOutputLines\":4},\"started_at\":\"2026-11-21T09:41:30.956Z\",\"finished_at\":\"2026-11-21T09:41:33.873Z\",\"elapsed_ms\":2916}",
+      "stderr": ""
+    },
+    {
+      "test": "t02-spreadsheet",
+      "exitCode": 0,
+      "pass": true,
+      "elapsed_ms": 3283,
+      "stdout": "{\"test\":\"t02-spreadsheet\",\"pass\":true,\"failures\":[],\"details\":{\"C1\":\"70\",\"C2\":\"30\",\"D1\":\"0\",\"B2\":\"60\",\"D4\":\"45\",\"D2\":\"#ERR\",\"D3\":\"#ERR\",\"C3\":\"95\",\"C4\":\"5\",\"D5\":\"0.5\",\"D6\":\"#ERR\"},\"started_at\":\"2026-11-21T09:41:34.035Z\",\"finished_at\":\"2026-11-21T09:41:37.157Z\",\"elapsed_ms\":3122}",
+      "stderr": ""
+    },
+    {
+      "test": "t03-video-call",
+      "exitCode": 0,
+      "pass": true,
+      "elapsed_ms": 2062,
+      "stdout": "{\"test\":\"t03-video-call\",\"pass\":true,\"failures\":[],\"details\":{\"chatMessages\":2},\"started_at\":\"2026-11-21T09:41:37.263Z\",\"finished_at\":\"2026-11-21T09:41:39.219Z\",\"elapsed_ms\":1956}",
+      "stderr": ""
+    },
+    {
+      "test": "t04-email-client",
+      "exitCode": 0,
+      "pass": true,
+      "elapsed_ms": 3019,
+      "stdout": "{\"test\":\"t04-email-client\",\"pass\":true,\"failures\":[],\"details\":{\"finalInbox\":\"2\"},\"started_at\":\"2026-11-21T09:41:39.309Z\",\"finished_at\":\"2026-11-21T09:41:42.239Z\",\"elapsed_ms\":2929}",
+      "stderr": ""
+    },
+    {
+      "test": "t05-file-manager",
+      "exitCode": 0,
+      "pass": true,
+      "elapsed_ms": 4397,
+      "stdout": "{\"test\":\"t05-file-manager\",\"pass\":true,\"failures\":[],\"details\":{\"finalHome\":[\"budget.csv\",\"meeting-notes.txt\",\"Old files\",\"video.mp4\"]},\"started_at\":\"2026-11-21T09:41:42.367Z\",\"finished_at\":\"2026-11-21T09:41:46.635Z\",\"elapsed_ms\":4268}",
+      "stderr": ""
+    },
+    {
+      "test": "t06-calendar",
+      "exitCode": 0,
+      "pass": true,
+      "elapsed_ms": 3628,
+      "stdout": "{\"test\":\"t06-calendar\",\"pass\":true,\"failures\":[],\"details\":{\"chips\":[\"11:00 Team sync\",\"14:00 Demo\",\"09:00 Deadline\"]},\"started_at\":\"2026-11-21T09:41:46.829Z\",\"finished_at\":\"2026-11-21T09:41:50.262Z\",\"elapsed_ms\":3433}",
+      "stderr": ""
+    },
+    {
+      "test": "t07-code-editor",
+      "exitCode": 0,
+      "pass": true,
+      "elapsed_ms": 4091,
+      "stdout": "{\"test\":\"t07-code-editor\",\"pass\":true,\"failures\":[],\"details\":{\"lines\":\"1\"},\"started_at\":\"2026-11-21T09:41:50.414Z\",\"finished_at\":\"2026-11-21T09:41:54.353Z\",\"elapsed_ms\":3939}",
+      "stderr": ""
+    },
+    {
+      "test": "t08-settings-panel",
+      "exitCode": 0,
+      "pass": true,
+      "elapsed_ms": 2394,
+      "stdout": "{\"test\":\"t08-settings-panel\",\"pass\":true,\"failures\":[],\"details\":{\"finalTheme\":\"Light\"},\"started_at\":\"2026-11-21T09:41:54.552Z\",\"finished_at\":\"2026-11-21T09:41:56.747Z\",\"elapsed_ms\":2195}",
+      "stderr": ""
+    },
+    {
+      "test": "t09-multi-window",
+      "exitCode": 1,
+      "pass": false,
+      "elapsed_ms": 2389,
+      "stdout": "{\"test\":\"t09-multi-window\",\"pass\":false,\"failures\":[\"main window missing dark class after prefs dark\"],\"details\":{\"finalTitles\":{\"alpha\":\"Alpha Final\",\"beta\":\"Beta\",\"gamma\":\"Gamma v2\"}},\"started_at\":\"2026-11-21T09:41:56.848Z\",\"finished_at\":\"2026-11-21T09:41:59.138Z\",\"elapsed_ms\":2290}",
+      "stderr": ""
+    },
+    {
+      "test": "t10-music-player",
+      "exitCode": 1,
+      "pass": false,
+      "elapsed_ms": 4363,
+      "stdout": "{\"test\":\"t10-music-player\",\"pass\":false,\"failures\":[\"position not reset after next\"],\"details\":{\"positionAfter700ms\":7,\"positionAfterSeek\":90},\"started_at\":\"2026-11-21T09:41:59.223Z\",\"finished_at\":\"2026-11-21T09:42:03.488Z\",\"elapsed_ms\":4265}",
+      "stderr": ""
+    }
+  ]
+}

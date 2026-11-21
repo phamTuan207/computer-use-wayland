@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Demo Music Player</title>
+<style>
+  body { font-family: sans-serif; margin: 16px; }
+  #now-playing { font-size: 20px; font-weight: bold; }
+  #status { margin: 6px 0; }
+  #progress { width: 300px; height: 14px; border: 1px solid #999; cursor: pointer; margin: 8px 0; }
+  #progress-bar { height: 100%; background: #4a90d9; width: 0%; }
+  .track { border: 1px solid #999; padding: 8px; margin: 6px 0; cursor: pointer; max-width: 500px; }
+  .track.playing { background: #ddeeff; }
+  button { margin: 4px; }
+</style>
+</head>
+<body>
+<h1>Demo Music Player</h1>
+<div id="now-playing">Nothing playing</div>
+<div id="status">Stopped</div>
+<div id="position" data-seconds="0">0:00 / 0:00</div>
+<div id="progress"><div id="progress-bar"></div></div>
+<div>
+  <button id="prev-btn">Previous</button>
+  <button id="play-btn">Play</button>
+  <button id="pause-btn">Pause</button>
+  <button id="next-btn">Next</button>
+</div>
+<div>
+  <label>Volume: <input type="range" id="volume" min="0" max="100" value="50"></label>
+  <span id="volume-value">50</span>
+  <button id="shuffle-btn">Shuffle: Off</button>
+  <button id="repeat-btn">Repeat: Off</button>
+</div>
+<input id="search" placeholder="Search tracks">
+<div id="playlist"></div>
+<script>
+  const TRACKS = [
+    { name: 'Morning Light', artist: 'The Demos', duration: 180 },
+    { name: 'River Road', artist: 'The Demos', duration: 210 },
+    { name: 'Night Drive', artist: 'The Demos', duration: 195 },
+    { name: 'City Rain', artist: 'The Demos', duration: 165 },
+    { name: 'Mountain Air', artist: 'The Demos', duration: 240 },
+  ];
+  // One simulated second passes every 100 ms of real time while playing.
+  let queue = [0, 1, 2, 3, 4];
+  let queuePos = 0;
+  let position = 0;
+  let playing = false;
+  let started = false;
+  let shuffle = false;
+  let repeat = 'off';
+  let timer = null;
+  const nowPlaying = document.getElementById('now-playing');
+  const status = document.getElementById('status');
+  const positionEl = document.getElementById('position');
+  const bar = document.getElementById('progress-bar');
+
+  function fmt(s) {
+    return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+  }
+  function currentTrack() {
+    return TRACKS[queue[queuePos]];
+  }
+  function render() {
+    const t = currentTrack();
+    nowPlaying.textContent = t.name + ' - ' + t.artist;
+    positionEl.textContent = fmt(position) + ' / ' + fmt(t.duration);
+    positionEl.dataset.seconds = String(position);
+    bar.style.width = (position / t.duration * 100) + '%';
+    status.textContent = playing ? 'Playing' : (started ? 'Paused' : 'Stopped');
+    const q = document.getElementById('search').value.trim().toLowerCase();
+    const list = document.getElementById('playlist');
+    list.innerHTML = '';
+    queue.forEach((idx) => {
+      const tr = TRACKS[idx];
+      if (q && !tr.name.toLowerCase().includes(q)) return;
+      const div = document.createElement('div');
+      div.className = 'track' + (idx === queue[queuePos] ? ' playing' : '');
+      div.dataset.track = idx;
+      div.textContent = tr.name + ' - ' + tr.artist + ' (' + fmt(tr.duration) + ')';
+      div.addEventListener('click', () => playTrack(idx));
+      list.appendChild(div);
+    });
+  }
+  function startTimer() {
+    stopTimer();
+    timer = setInterval(() => {
+      position += 1;
+      if (position >= currentTrack().duration) {
+        if (repeat === 'one') {
+          position = 0;
+        } else {
+          nextTrack();
+          return;
+        }
+      }
+      render();
+    }, 100);
+  }
+  function stopTimer() {
+    if (timer) clearInterval(timer);
+    timer = null;
+  }
+  function playTrack(idx) {
+    queuePos = queue.indexOf(idx);
+    position = 0;
+    playing = true;
+    started = true;
+    startTimer();
+    render();
+  }
+  function nextTrack() {
+    if (queuePos < queue.length - 1) {
+      queuePos += 1;
+      position = 0;
+      render();
+    } else if (repeat === 'all') {
+      queuePos = 0;
+      position = 0;
+      render();
+    } else {
+      playing = false;
+      started = false;
+      position = 0;
+      stopTimer();
+      render();
+    }
+  }
+  function prevTrack() {
+    if (queuePos > 0) {
+      queuePos -= 1;
+      position = 0;
+      render();
+    } else {
+      position = 0;
+      render();
+    }
+  }
+  document.getElementById('play-btn').addEventListener('click', () => {
+    playing = true;
+    started = true;
+    startTimer();
+    render();
+  });
+  document.getElementById('pause-btn').addEventListener('click', () => {
+    playing = false;
+    stopTimer();
+    render();
+  });
+  document.getElementById('next-btn').addEventListener('click', nextTrack);
+  document.getElementById('prev-btn').addEventListener('click', prevTrack);
+  document.getElementById('volume').addEventListener('input', (e) => {
+    document.getElementById('volume-value').textContent = e.target.value;
+  });
+  document.getElementById('shuffle-btn').addEventListener('click', (e) => {
+    shuffle = !shuffle;
+    e.target.textContent = 'Shuffle: ' + (shuffle ? 'On' : 'Off');
+    const current = queue[queuePos];
+    if (shuffle) {
+      // Fixed deterministic order so the test can assert it: the current
+      // track first, then the remaining tracks in reverse order.
+      const rest = [0, 1, 2, 3, 4].filter((i) => i !== current).reverse();
+      queue = [current, ...rest];
+    } else {
+      queue = [0, 1, 2, 3, 4];
+    }
+    queuePos = queue.indexOf(current);
+    render();
+  });
+  document.getElementById('repeat-btn').addEventListener('click', (e) => {
+    repeat = repeat === 'off' ? 'all' : repeat === 'all' ? 'one' : 'off';
+    e.target.textContent = 'Repeat: ' + (repeat === 'off' ? 'Off' : repeat === 'all' ? 'All' : 'One');
+  });
+  document.getElementById('progress').addEventListener('click', (e) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const frac = (e.clientX - rect.left) / rect.width;
+    position = Math.round(frac * currentTrack().duration);
+    render();
+  });
+  document.getElementById('search').addEventListener('input', render);
+  render();
+</script>
+</body>
+</html>

@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Demo Video Call</title>
+<style>
+  body { font-family: sans-serif; margin: 16px; }
+  #lobby, #call { border: 1px solid #999; padding: 12px; margin-top: 10px; }
+  #call { display: none; }
+  .tile { display: inline-block; width: 160px; height: 100px; border: 1px solid #666;
+    margin: 6px; padding: 8px; vertical-align: top; position: relative; }
+  .tile.camera-off { background: #222; color: #ccc; }
+  .hand { position: absolute; top: 4px; right: 6px; display: none; }
+  .tile.hand-up .hand { display: block; }
+  button { margin: 4px; }
+  #chat-log { border: 1px solid #999; height: 120px; overflow: auto; padding: 6px; margin-top: 10px; }
+  #status { font-weight: bold; }
+</style>
+</head>
+<body>
+<h1>Demo Video Call</h1>
+<div id="status">Not in a call.</div>
+<div id="lobby">
+  <p>Meeting: Weekly sync</p>
+  <button id="join-btn">Join call</button>
+</div>
+<div id="call">
+  <div id="tiles">
+    <div class="tile" id="tile-you" data-name="You">
+      <span class="name">You</span>
+      <span class="hand">HAND</span>
+      <div class="mic-state">Live</div>
+      <div class="cam-state">Camera on</div>
+    </div>
+    <div class="tile" id="tile-ana" data-name="Ana">
+      <span class="name">Ana</span>
+      <div class="mic-state">Live</div>
+    </div>
+    <div class="tile" id="tile-ben" data-name="Ben">
+      <span class="name">Ben</span>
+      <div class="mic-state">Muted</div>
+    </div>
+  </div>
+  <div>
+    <button id="mute-btn">Mute</button>
+    <button id="cam-btn">Turn camera off</button>
+    <button id="hand-btn">Raise hand</button>
+    <button id="share-btn">Share screen</button>
+    <button id="invite-btn">Invite Cara</button>
+    <button id="leave-btn">Leave</button>
+  </div>
+  <div id="share-state">Not sharing.</div>
+  <div id="hand-count">Hands raised: 0</div>
+  <div id="participant-count">Participants: 3</div>
+  <div id="chat-log"></div>
+  <input id="chat-input" placeholder="Type a message">
+  <button id="chat-send">Send</button>
+</div>
+<script>
+  const status = document.getElementById('status');
+  const lobby = document.getElementById('lobby');
+  const call = document.getElementById('call');
+  const tiles = document.getElementById('tiles');
+  let inCall = false;
+  let muted = false;
+  let camOff = false;
+  let handUp = false;
+  let sharing = false;
+
+  function countParticipants() {
+    return tiles.querySelectorAll('.tile').length;
+  }
+  function refreshCounts() {
+    document.getElementById('participant-count').textContent =
+      'Participants: ' + countParticipants();
+    document.getElementById('hand-count').textContent =
+      'Hands raised: ' + tiles.querySelectorAll('.tile.hand-up').length;
+  }
+  document.getElementById('join-btn').addEventListener('click', () => {
+    inCall = true;
+    lobby.style.display = 'none';
+    call.style.display = 'block';
+    status.textContent = 'In call: Weekly sync';
+  });
+  document.getElementById('leave-btn').addEventListener('click', () => {
+    inCall = false;
+    call.style.display = 'none';
+    lobby.style.display = 'block';
+    status.textContent = 'Left the call.';
+    document.getElementById('join-btn').textContent = 'Rejoin call';
+  });
+  document.getElementById('mute-btn').addEventListener('click', (e) => {
+    muted = !muted;
+    e.target.textContent = muted ? 'Unmute' : 'Mute';
+    document.querySelector('#tile-you .mic-state').textContent = muted ? 'Muted' : 'Live';
+  });
+  document.getElementById('cam-btn').addEventListener('click', (e) => {
+    camOff = !camOff;
+    e.target.textContent = camOff ? 'Turn camera on' : 'Turn camera off';
+    const tile = document.getElementById('tile-you');
+    tile.classList.toggle('camera-off', camOff);
+    tile.querySelector('.cam-state').textContent = camOff ? 'Camera off' : 'Camera on';
+  });
+  document.getElementById('hand-btn').addEventListener('click', (e) => {
+    handUp = !handUp;
+    e.target.textContent = handUp ? 'Lower hand' : 'Raise hand';
+    document.getElementById('tile-you').classList.toggle('hand-up', handUp);
+    refreshCounts();
+  });
+  document.getElementById('share-btn').addEventListener('click', (e) => {
+    sharing = !sharing;
+    e.target.textContent = sharing ? 'Stop sharing' : 'Share screen';
+    document.getElementById('share-state').textContent =
+      sharing ? 'Sharing screen.' : 'Not sharing.';
+    let screenTile = document.getElementById('tile-screen');
+    if (sharing && !screenTile) {
+      screenTile = document.createElement('div');
+      screenTile.className = 'tile';
+      screenTile.id = 'tile-screen';
+      screenTile.innerHTML = '<span class="name">Screen: Slides</span>';
+      tiles.appendChild(screenTile);
+    } else if (!sharing && screenTile) {
+      screenTile.remove();
+    }
+    refreshCounts();
+  });
+  document.getElementById('invite-btn').addEventListener('click', (e) => {
+    if (document.getElementById('tile-cara')) return;
+    const tile = document.createElement('div');
+    tile.className = 'tile';
+    tile.id = 'tile-cara';
+    tile.innerHTML = '<span class="name">Cara</span><div class="mic-state">Live</div>' +
+      '<button class="remove-btn">Remove</button>';
+    tile.querySelector('.remove-btn').addEventListener('click', () => {
+      tile.remove();
+      refreshCounts();
+    });
+    tiles.appendChild(tile);
+    refreshCounts();
+  });
+  document.getElementById('chat-send').addEventListener('click', () => {
+    const input = document.getElementById('chat-input');
+    const text = input.value.trim();
+    if (!text) return;
+    const div = document.createElement('div');
+    div.className = 'chat-msg';
+    div.textContent = 'You: ' + text;
+    document.getElementById('chat-log').appendChild(div);
+    input.value = '';
+  });
+</script>
+</body>
+</html>

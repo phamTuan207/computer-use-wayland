@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Demo Settings</title>
+<style>
+  body { font-family: sans-serif; margin: 16px; }
+  body.dark { background: #222; color: #eee; }
+  section { border: 1px solid #999; padding: 10px; margin: 10px 0; max-width: 500px; }
+  body.dark section { border-color: #666; }
+  .row { margin: 8px 0; }
+  #preview { border: 1px dashed #999; padding: 10px; margin: 10px 0; max-width: 500px; }
+  #swatch { display: inline-block; width: 20px; height: 20px; background: gray; vertical-align: middle; }
+  #toast { color: green; font-weight: bold; }
+  #no-match { display: none; color: #666; }
+</style>
+</head>
+<body>
+<h1>Settings</h1>
+<input id="search" placeholder="Search settings">
+<div id="no-match">No settings match.</div>
+<div id="preview">Preview: <span id="preview-theme">Light</span> theme, accent <span id="swatch"></span></div>
+<section id="section-appearance" data-keywords="theme appearance accent color dark light">
+  <h2>Appearance</h2>
+  <div class="row">
+    <label>Theme:
+      <select id="theme">
+        <option value="light">Light</option>
+        <option value="dark">Dark</option>
+      </select>
+    </label>
+  </div>
+  <div class="row">Accent color:
+    <label><input type="radio" name="accent" value="gray" checked> Gray</label>
+    <label><input type="radio" name="accent" value="blue"> Blue</label>
+    <label><input type="radio" name="accent" value="green"> Green</label>
+  </div>
+</section>
+<section id="section-notifications" data-keywords="notifications alerts email digest sound">
+  <h2>Notifications</h2>
+  <div class="row">
+    <label><input type="checkbox" id="notif-toggle" checked> Enable notifications</label>
+    <span id="notif-state">On</span>
+  </div>
+  <div class="row">
+    <label><input type="checkbox" id="digest-toggle"> Weekly email digest</label>
+    <span id="digest-state">Off</span>
+  </div>
+</section>
+<section id="section-privacy" data-keywords="privacy usage data share tracking">
+  <h2>Privacy</h2>
+  <div class="row">
+    <label><input type="checkbox" id="privacy-toggle" checked> Share usage data</label>
+    <span id="privacy-state">On</span>
+  </div>
+</section>
+<section id="section-account" data-keywords="account name profile display">
+  <h2>Account</h2>
+  <div class="row">
+    <label>Display name: <input id="display-name" placeholder="Display name"></label>
+  </div>
+  <div class="row">
+    <label>Volume: <input type="range" id="volume" min="0" max="100" value="50"></label>
+    <span id="volume-value">50</span>
+  </div>
+</section>
+<div>
+  <button id="save-btn">Save settings</button>
+  <button id="reset-btn">Reset to defaults</button>
+</div>
+<div id="toast"></div>
+<script>
+  const DEFAULTS = {
+    theme: 'light', accent: 'gray', notif: true, digest: false,
+    privacy: true, name: '', volume: 50,
+  };
+  function load() {
+    try {
+      return { ...DEFAULTS, ...(JSON.parse(localStorage.getItem('demo-settings')) || {}) };
+    } catch {
+      return { ...DEFAULTS };
+    }
+  }
+  let settings = load();
+  function apply() {
+    document.getElementById('theme').value = settings.theme;
+    document.body.classList.toggle('dark', settings.theme === 'dark');
+    document.getElementById('preview-theme').textContent =
+      settings.theme === 'dark' ? 'Dark' : 'Light';
+    document.querySelectorAll('input[name="accent"]').forEach((r) => {
+      r.checked = r.value === settings.accent;
+    });
+    document.getElementById('swatch').style.background = settings.accent;
+    document.getElementById('notif-toggle').checked = settings.notif;
+    document.getElementById('notif-state').textContent = settings.notif ? 'On' : 'Off';
+    document.getElementById('digest-toggle').checked = settings.digest;
+    document.getElementById('digest-state').textContent = settings.digest ? 'On' : 'Off';
+    document.getElementById('privacy-toggle').checked = settings.privacy;
+    document.getElementById('privacy-state').textContent = settings.privacy ? 'On' : 'Off';
+    document.getElementById('display-name').value = settings.name;
+    document.getElementById('volume').value = settings.volume;
+    document.getElementById('volume-value').textContent = String(settings.volume);
+  }
+  document.getElementById('theme').addEventListener('change', (e) => {
+    settings.theme = e.target.value;
+    apply();
+  });
+  document.querySelectorAll('input[name="accent"]').forEach((r) => {
+    r.addEventListener('change', () => {
+      settings.accent = r.value;
+      apply();
+    });
+  });
+  document.getElementById('notif-toggle').addEventListener('change', (e) => {
+    settings.notif = e.target.checked;
+    apply();
+  });
+  document.getElementById('digest-toggle').addEventListener('change', (e) => {
+    settings.digest = e.target.checked;
+    apply();
+  });
+  document.getElementById('privacy-toggle').addEventListener('change', (e) => {
+    settings.privacy = e.target.checked;
+    apply();
+  });
+  document.getElementById('display-name').addEventListener('input', (e) => {
+    settings.name = e.target.value;
+  });
+  document.getElementById('volume').addEventListener('input', (e) => {
+    settings.volume = Number(e.target.value);
+    document.getElementById('volume-value').textContent = e.target.value;
+  });
+  document.getElementById('save-btn').addEventListener('click', () => {
+    localStorage.setItem('demo-settings', JSON.stringify(settings));
+    document.getElementById('toast').textContent = 'Settings saved.';
+  });
+  document.getElementById('reset-btn').addEventListener('click', () => {
+    settings = { ...DEFAULTS };
+    localStorage.setItem('demo-settings', JSON.stringify(settings));
+    apply();
+    document.getElementById('toast').textContent = 'Settings reset.';
+  });
+  document.getElementById('search').addEventListener('input', (e) => {
+    const q = e.target.value.trim().toLowerCase();
+    let shown = 0;
+    document.querySelectorAll('section').forEach((s) => {
+      const match = !q || s.dataset.keywords.includes(q) ||
+        s.querySelector('h2').textContent.toLowerCase().includes(q);
+      s.style.display = match ? 'block' : 'none';
+      if (match) shown += 1;
+    });
+    document.getElementById('no-match').style.display = shown === 0 ? 'block' : 'none';
+  });
+  apply();
+</script>
+</body>
+</html>

@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Demo Code Editor</title>
+<style>
+  body { font-family: sans-serif; margin: 16px; }
+  #tabs button { margin-right: 4px; padding: 6px 10px; }
+  #tabs button.active { background: #ddeeff; }
+  #tabs button .dot { color: red; display: none; }
+  #tabs button.dirty .dot { display: inline; }
+  #editor-wrap { display: flex; margin-top: 10px; }
+  #lines { background: #eee; padding: 8px 6px; text-align: right; color: #666;
+    font-family: monospace; line-height: 1.5; white-space: pre; user-select: none; }
+  #editor { flex: 1; height: 200px; font-family: monospace; line-height: 1.5; padding: 8px; }
+  #output { border: 1px solid #999; padding: 8px; margin-top: 10px; min-height: 20px;
+    font-family: monospace; white-space: pre-wrap; }
+  #status { margin-top: 8px; color: #333; }
+  #find-bar { margin-top: 10px; }
+</style>
+</head>
+<body>
+<h1>Demo Code Editor</h1>
+<div id="tabs">
+  <button data-file="main.js" class="active">main.js <span class="dot">*</span></button>
+  <button data-file="utils.js">utils.js <span class="dot">*</span></button>
+  <button data-file="notes.md">notes.md <span class="dot">*</span></button>
+</div>
+<div id="editor-wrap">
+  <div id="lines">1</div>
+  <textarea id="editor" spellcheck="false"></textarea>
+</div>
+<div>
+  <button id="save-btn">Save</button>
+  <button id="run-btn">Run</button>
+  <span id="status">Ready.</span>
+</div>
+<div id="find-bar">
+  <input id="find-input" placeholder="Find">
+  <button id="find-btn">Find</button>
+  <input id="replace-input" placeholder="Replace with">
+  <button id="replace-btn">Replace</button>
+  <span id="find-result"></span>
+</div>
+<div id="output"></div>
+<script>
+  const DEFAULTS = {
+    'main.js': '2 + 3',
+    'utils.js': '7 - 2',
+    'notes.md': '# Notes\nRemember to ship the demo.',
+  };
+  const store = {};
+  Object.keys(DEFAULTS).forEach((f) => {
+    const saved = localStorage.getItem('editor:' + f);
+    store[f] = saved !== null ? saved : DEFAULTS[f];
+  });
+  let current = 'main.js';
+  const editor = document.getElementById('editor');
+  const lines = document.getElementById('lines');
+  const output = document.getElementById('output');
+  const status = document.getElementById('status');
+
+  function refreshLines() {
+    const n = editor.value.split('\n').length;
+    lines.textContent = Array.from({ length: n }, (_, i) => i + 1).join('\n');
+  }
+  function show(file) {
+    current = file;
+    editor.value = store[file];
+    document.querySelectorAll('#tabs button').forEach((b) => {
+      b.classList.toggle('active', b.dataset.file === file);
+    });
+    refreshLines();
+  }
+  function markDirty(file) {
+    const btn = document.querySelector('#tabs button[data-file="' + file + '"]');
+    if (btn) btn.classList.add('dirty');
+  }
+  function clearDirty(file) {
+    const btn = document.querySelector('#tabs button[data-file="' + file + '"]');
+    if (btn) btn.classList.remove('dirty');
+  }
+  editor.addEventListener('input', () => {
+    store[current] = editor.value;
+    markDirty(current);
+    refreshLines();
+  });
+  document.querySelectorAll('#tabs button').forEach((b) => {
+    b.addEventListener('click', () => show(b.dataset.file));
+  });
+  document.getElementById('save-btn').addEventListener('click', () => {
+    localStorage.setItem('editor:' + current, editor.value);
+    clearDirty(current);
+    status.textContent = 'Saved ' + current + '.';
+  });
+  document.getElementById('run-btn').addEventListener('click', () => {
+    if (current.endsWith('.md')) {
+      output.textContent = 'Error: cannot run a markdown file.';
+      return;
+    }
+    try {
+      const value = Function('"use strict"; return (' + editor.value + ')')();
+      output.textContent = 'Result: ' + String(value);
+    } catch (e) {
+      output.textContent = 'Error: ' + e.message;
+    }
+  });
+  document.getElementById('find-btn').addEventListener('click', () => {
+    const q = document.getElementById('find-input').value;
+    if (!q) {
+      document.getElementById('find-result').textContent = '0 matches';
+      return;
+    }
+    const count = editor.value.split(q).length - 1;
+    document.getElementById('find-result').textContent =
+      count + (count === 1 ? ' match' : ' matches');
+  });
+  document.getElementById('replace-btn').addEventListener('click', () => {
+    const q = document.getElementById('find-input').value;
+    const rep = document.getElementById('replace-input').value;
+    if (!q) return;
+    editor.value = editor.value.split(q).join(rep);
+    store[current] = editor.value;
+    markDirty(current);
+    refreshLines();
+    document.getElementById('find-result').textContent = 'Replaced.';
+  });
+  show('main.js');
+</script>
+</body>
+</html>
