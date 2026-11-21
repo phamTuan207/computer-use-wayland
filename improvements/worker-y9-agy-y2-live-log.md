@@ -149,3 +149,38 @@ Checked against the v2 exact marker after git fetch:
    -w 60, stdout to /tmp/worker-y9-stdout.log), run all 10 tests,
    report per-test PASS/FAIL with ms, total wall time, hidden-body
    encounters, and whether Y7's surviving doubts showed up live.
+
+## Addendum 2 (18:54, step mapping done, re-review launched, slot is Y8b)
+
+- Step mapping DELIVERED by the mapping worker (completed 18:47
+  UTC 11:47, reported at 18:54):
+  improvements/worker-y9-step-mapping.md, 670 lines, 343 numbered
+  table rows matching the spec step totals exactly (01: 35, 02: 35,
+  03: 33, 04: 33, 05: 35, 06: 35, 07: 35, 08: 35, 09: 35, 10: 32)
+  plus one unnumbered required row in test-02. 0 em dashes, 0 en
+  dashes (script-checked). Correction to the worker handoff: the
+  file was already COMMITTED in a82bb41 (git ls-files confirms,
+  git log shows a82bb41), not uncommitted as the handoff claimed.
+  No commit needed.
+- Mapping contents: step tables for all 10 tests, modal-wait
+  inventory (33 modals/panels/panes/drawers/views with exact
+  open-proof selector and opening step), fixture-fact notes with
+  file+line citations, check.mjs assertion inventory (93 checks,
+  two READ-NOT-ASSERTED values flagged), 16 mismatches M1-M16.
+  Load-bearing: M1 (test-02 missing apply click, added as required
+  unnumbered action), M7/M8/M9 (intermediate checks are the only
+  coverage for test-07 delete/restore, test-09 Device A buffer,
+  and the two read-not-asserted values), M12 (test-05 chart-title
+  input hidden until render), M16 (Y7 doubts 1-4 carried forward
+  with closures). Runner already implements M11 and M12.
+- RE-REVIEW GATE LAUNCHED 18:54: fresh second pass on the runner
+  as committed in a82bb41, 4 agents (council 1 harness, council 2
+  test fidelity, council 3 evidence/accounting, redteam attack).
+  Each reads the committed runner (git show a82bb41) plus the step
+  mapping, writes its verdict file uncommitted. No live driving
+  before the re-review passes.
+- SLOT UPDATE: parent spawned Worker Y8b at about 18:53 as the LIVE
+  E1 runner (Y8 prep completed, design v2 frozen 4a78f7f). Y8b is
+  running now. The live-driving slot belongs to Y8b (E1 A then B).
+  Y9 still waits. Y6b also spawned by the parent for the nested
+  Hyprland probe; it does not drive Zen, no slot conflict.
