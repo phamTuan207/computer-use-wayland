@@ -158,3 +158,34 @@ thoroughly, council + redteam, best quality not speed.
 - Codex still running: PID 209222, 37:03 elapsed, log 5.5 MB, no commits
   yet on y5-tests. Log tail shows spec text being written. Next: poll for
   exit, then fix-pass run for test-07, then final report with evidence.
+
+## 19:06 +07 | 00:47 | Main Codex run DONE, council/redteam caught test-07 themselves
+- Codex exited 19:06 +07 (47 min, log 7.26 MB, 358,114 tokens). 12 commits
+  on y5-tests, HEAD f051784, pushed to origin/y5-tests: harness 3edd90f,
+  one commit per test (42babfb, d0edfbd, 75bc05d, 7919b13, 8d8267c,
+  2c63312, 8284f68, ed42856, 496679d, 0499785), docs f051784 (council 1-3,
+  redteam, log). Worktree clean. No topic swaps, all 10 topics delivered.
+- Council/redteam DID catch test-07 independently: council-2 ("Test 07
+  search initially expected two results, but three fixture messages
+  match. The spec now expects three.") and redteam ("Initially failed
+  because the query matches three messages, not two. The spec now expects
+  three.") both found the same miscount my verifier found. The committed
+  spec (8284f68, the only commit touching the file) already has step 4
+  "3" and step 5 "3 matching messages" plus an m2 check. My 19:00
+  verification failed only because my pull caught the pre-fix working
+  tree. No fabrication: the council process worked and the fix landed
+  before commit. Council-1 also fixed a test-01 fixed-command-map, a
+  test-03 hidden clipboard, and test-04 direct location select; council-2
+  fixed test-01 mode=preview and test-05 Nov 30 occurrence; council-3
+  fixed the same checker mismatches and confirmed fresh fixtures fail.
+  Council/redteam files are short (15-22 lines each) but the fixes are
+  real and present in the committed files.
+- Process note: Codex committed everything in one batch at 19:02-19:04,
+  not as-you-go as the brief asked. No harm done (12 clean commits), but
+  worth noting.
+- Fix-pass Codex launched 19:06 +07 (PID 271464, brief /tmp/y5-fix-brief.md,
+  log /tmp/y5-codex-fix.log) with the test-07 defect. It will find the spec
+  already fixed; it serves as confirmation and re-runs the proof commands.
+  Waiting for it to exit, then: re-pull final suite, re-verify 10/10,
+  run Codex's check.mjs --all + simulate.mjs --all myself on the laptop,
+  merge y5-tests to todolist-push, final report.
