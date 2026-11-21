@@ -209,3 +209,14 @@ in the repo worktree and /tmp test copies.
   separate python3 -P subprocess), _scan_ship full allowlist,
   codex warning via _is_codex_process, exec python3 -P +
   PYTHONSAFEPATH=1. Committing now.
+
+- 00:03 +07 (T+1h07m): REGEN + STAGE OK (build step, not a test
+  verdict): manifest md5 0ca16ddd743acc9e28294fecd07a9c70 (27
+  files); staged ship /tmp/y13g-ship-stage; staged
+  --verify-manifest exit 0, manifest_ok true, 27 checked, 0
+  mismatches. This proves the check-dashes.py scan fix: the
+  staged ship passes the module-top scan with the new runner
+  bytes. New file md5s: runner db3e357f, launcher eec63492,
+  run_live 84fa106c (pin holds). SHIPPED.md + plan doc updated
+  (Y13g amendments section). Committing now, then spawning
+  council (3) + redteam + independent verifier in parallel.

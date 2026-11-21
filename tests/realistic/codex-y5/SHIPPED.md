@@ -7,15 +7,24 @@ NOT HEAD: HEAD's run_live.py changed in 91d3cd2 (Y11 live-metrics, +415/-66),
 unit-verified only. live_metrics.py must be ABSENT from the ship dir.
 
 Launcher: tests/realistic/launch_y13.py (council A F4 + redteam H5,
-Y13f H3 re-review fix). It performs the launch-time checks (go order
-asserted, Y6c marker check with --repo REQUIRED, ship manifest md5
-vs the committed manifest, handover token fresh, runner-quiet
-process check, predecessor + own ports free, no live geckodriver
-with a live parent) and then execs the runner under flock -w 60.
-Launch ONLY via the launcher, never directly. The marker check
-matches subjects only (never --grep), rejects "harness" subjects,
-and requires the newest completion to be newer than the newest
-abort. The ship is re-staged from the committed bytes with:
+Y13f H3 re-review fix, Y13g B1-B4 + 5 amends). It performs the
+launch-time checks (go order asserted, Y6c marker check with --repo
+REQUIRED, ship manifest md5 vs the committed manifest, entry-.pyc
+out-of-process check, full-allowlist ship scan, handover token
+fresh, runner-quiet process check, predecessor + own ports free, no
+live geckodriver with a live parent) and then execs the runner under
+flock -w 60 with `python3 -P` (PYTHONSAFEPATH=1). Launch ONLY via
+the launcher, never directly. The marker check matches subjects
+only (never --grep), rejects "harness" subjects, requires the newest
+completion to be newer than the newest abort BY GIT LOG ORDER
+(branch position, not committer date), and refuses unless the git
+remote is the known repo remote. The marker is a COORDINATION
+SIGNAL among pushers, not authentication. Script form only:
+`python3 -P launch_y13.py` and `python3 -P run_codex_y5.py`; -m and
+bare imports are UNSUPPORTED (both entry points refuse them at the
+module top, exit 2) and a forged entry .pyc invoked via -m/import
+executes, so no legitimate flow ever invokes -m/import on an
+unverified ship. The ship is re-staged from the committed bytes with:
   python3 tests/realistic/regen_codex_y5_manifest.py --stage /tmp/worker-y13-server
 (Regenerate the manifest LAST, after every runner edit; the
 launcher refuses a ship whose manifest md5 differs from the
@@ -29,15 +38,15 @@ Gecko log: /tmp/geckodriver-4452.log (copied per test).
 
 Launch (on the laptop, from /tmp/worker-y13-server, ONLY after the
 Y6c completion marker + Muse's go order + the launch-time checks pass):
-  cd /tmp/worker-y13-server && Y13_GO=1 python3 launch_y13.py \
+  cd /tmp/worker-y13-server && Y13_GO=1 python3 -P launch_y13.py \
     --repo /home/james/workspace/computer-use-wayland all \
   > /tmp/worker-y13-stdout.log 2>&1
 
-Manifest: codex-y5-manifest.json, md5 f27c03020c9866cfa0dcd637df6f8647, 27 files.
+Manifest: codex-y5-manifest.json, md5 0ca16ddd743acc9e28294fecd07a9c70, 27 files.
 Files (path, md5):
 
-- run_codex_y5.py 3cc5fa11a4be533c1bb49941008bfa75
-- launch_y13.py 2b02c5ec85ef474bfcddf4b59dcacc0f
+- run_codex_y5.py db3e357f616d21e1d6b2a573682019fd
+- launch_y13.py eec63492ae581b3046f2cc3baea97473
 - run_live.py 84fa106c253d5e7f16daccf2ce3f14a5
 - codex-y5/test-01-git-workflow.md 0f347247c21b2f1375596c1ee51449b4
 - codex-y5/test-02-music-player.md 15925f6709c62908dfd5cd88f1fc8c91

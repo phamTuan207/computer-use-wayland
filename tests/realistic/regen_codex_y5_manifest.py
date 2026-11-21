@@ -30,8 +30,12 @@ manifest md5 against the COMMITTED manifest from git).
 
 Deletes tests/realistic/__pycache__ first: stale .pyc files there
 would otherwise trip the runner's pre-import tamper scan on the
-next module import (the scan refuses any .pyc except the two
-__main__ entry-point caches).
+next module import (the scan refuses any .pyc, no exemptions).
+
+Script form only (Y13g B1/B4): the staged verify runs as
+`python3 -P run_codex_y5.py --verify-manifest` (PYTHONSAFEPATH=1).
+-m and bare imports are unsupported invocation forms; the runner
+and the launcher both refuse them at the module top (exit 2).
 """
 
 import hashlib
@@ -171,7 +175,7 @@ def stage(dest):
         print(f"removed staged {cache}")
     print(f"staged ship at {dest}")
     proc = subprocess.run(
-        ["python3", "run_codex_y5.py", "--verify-manifest"],
+        ["python3", "-P", "run_codex_y5.py", "--verify-manifest"],
         cwd=str(dest), capture_output=True, text=True, timeout=120)
     print(proc.stdout.strip())
     print(proc.stderr.strip(), file=sys.stderr)

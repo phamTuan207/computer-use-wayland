@@ -565,12 +565,13 @@ autonomy per the Lauren Tan direction. Work directly with Muse.
   check in main() runs after the import, so it alone cannot stop a
   forged .pyc from executing). (3) _verify_manifest refuses any
   .pyc / __pycache__ dir and any symlink or non-manifest-prefix
-  directory. Exemption, narrow: the .pyc files of the two __main__
-  entry points (run_codex_y5.py, launch_y13.py) only -- CPython
-  writes them during get_code before dont_write_bytecode is set, so
-  a plain module import would otherwise refuse its own cache file;
-  they cannot execute in production (both run as __main__).
-  run_live.py's .pyc is NEVER exempt. Probes importing the runner
+  directory. SUPERSEDED by Y13g (see Y13g amendments below): the
+  entry-.pyc exemption is REMOVED (a forged entry .pyc executes
+  via -m/import, proven by Y13r2). The -m guard deletes a
+  legitimate self-cache (every cache-tag variant) before it can
+  brick a later run, and the launcher verifies the entry .pyc
+  out-of-process and deletes it before exec. run_live.py's .pyc
+  is NEVER exempt. Probes importing the runner
   must use PYTHONDONTWRITEBYTECODE=1 or a clean extraction, and
   must never run `python3 -m py_compile` on the ship files (it
   writes .pyc into the repo dir).
@@ -578,17 +579,20 @@ autonomy per the Lauren Tan direction. Work directly with Muse.
   runner): the old regex r"(^|/)run_[^/\s]*\.py" misses every
   bare-relative launch (/proc cmdlines are NUL-separated) and every
   flock -c / shell -c form, and false-positives on a mere path
-  mention. The fix, identical in run_codex_y5.py (preflight) and
-  launch_y13.py: tokenize argv on NUL, split -c arguments on
-  whitespace, and require the script token to be argv[0], follow a
-  python interpreter token, be the first word of a -c string, follow
-  a python flag with a python token earlier, or (non-.py run-nested
-  scripts only) follow bash/sh. Script basenames: run_*.py,
-  run-nested*, hand_drive_e1.py. Y14 MUST apply this same fix to
-  run_batch3.py when it re-stages (Y14 files were NOT edited here);
-  Y9's run_agy_y2.py and run_live.py's preflight carry the same old
-  pattern. See improvements/worker-y13f-fix-log.md for the exact
-  code and the probe matrix.
+  mention. SUPERSEDED by Y13g (see Y13g amendments below): the
+  Y13f prev-token heuristic also missed -m forms, flag-with-value
+  forms, renamed/extensionless/symlinked copies, and -c exec
+  forms. The Y13g fix, identical in run_codex_y5.py (preflight)
+  and launch_y13.py (AST-verified): a real python argv parse
+  (flags and their values skipped, first positional is the script
+  candidate), -m by last dotted segment, -c by first-word
+  semantics plus the exec(/eval( special case, renamed/
+  extensionless/symlinked copies by md5 against the manifest.
+  Script basenames: run_*.py, run-nested*, hand_drive_e1.py.
+  Y14 MUST apply this same fix to run_batch3.py when it
+  re-stages (Y14 files were NOT edited here); Y9's run_agy_y2.py
+  and run_live.py's preflight carry the same old pattern. See
+  improvements/worker-y13g-fix-log.md for the exact code.
 - Y6c gate (H3): see the tightened marker + freshness rule in the
   Slot/queue section above. NOTE (21/11 ~20:55 +07): Y6c ended NO
   VERDICT (commit 5a2b69d, BLOCKED at launch: F0 --socket, F1
@@ -600,6 +604,90 @@ autonomy per the Lauren Tan direction. Work directly with Muse.
   as a live failure BEFORE the diagnose block, never INFRA, never a
   re-run. WD timeouts match on f"{type(exc).__name__}: {exc}" (F8),
   so bare TimeoutError/URLError raises match too.
+
+## Y13g amendments (Y13r2 re-review BLOCK fix, 2026-11-21 ~23:00 +07)
+
+Y13r2 re-reviewed the Y13f fix diff and landed BLOCK (B1-B4 + 5
+amends; redteam paper improvements/worker-y13r2-redteam.md, log
+improvements/worker-y13r2-rereview-log.md). Worker Y13g fixed all
+of them (log improvements/worker-y13g-fix-log.md). Rules, all
+enforced in code:
+
+- B1 forged entry .pyc (Y13r2 A2): NO per-file entry-.pyc
+  exemption anywhere (scan, _verify_manifest). Script-form-only:
+  both entry points refuse at the module top when loaded as a
+  module or via -m (__spec__ is not None, exit 2, clear message)
+  and delete the entry .pyc files (every cache-tag variant) so a
+  -m/import probe never bricks the ship. _verify_manifest exempts
+  a __pycache__ dir ONLY when it holds only entry .pyc files
+  (0-2); the files inside are still refused as bytecode, so the
+  exemption exists only to keep an empty __pycache__ left by a
+  probe from bricking verify. The launcher verifies each entry
+  .pyc OUT-OF-PROCESS before exec (fresh compile in a separate
+  `python3 -P` subprocess, marshalled code objects compared),
+  refuses on mismatch, and deletes ONLY the matching entry .pyc
+  files. LIMIT (documented, unfixable in-process): a forged entry
+  .pyc invoked DIRECTLY via -m/import executes (the forged
+  bytecode IS the running code). The control is the launcher
+  check + never invoking -m/import on an unverified ship. -m and
+  bare imports are UNSUPPORTED invocation forms.
+- B2 planted stdlib .py (Y13r2 A6d, 9/15 names): both entry points
+  run with PYTHONSAFEPATH=1 (`python3 -P`); the launcher execs
+  `python3 -P run_codex_y5.py` and sets PYTHONSAFEPATH=1 in the
+  exec env. The pre-import scan sits at the very top of BOTH
+  entry points, before any import except sys/os, using only
+  os.path; it refuses any .pyc, any symlink, and any .py that is
+  not one of the ship's own (the 3 entry points +
+  codex-y5/check-dashes.py). check_manifest refuses any planted
+  file; the launcher's full-allowlist scan (_scan_ship) refuses
+  any file that is not a manifest path with a matching md5.
+- B3 tokenizer (Y13r2 A4, Finding 2): real python argv parse in
+  both copies (AST-verified identical): wrappers first
+  (env/nohup/setsid/timeout/flock/bash -c), flags and their values
+  skipped (-u -B -E -s -v -W <val> -X <val> -O -c <code> -m <mod>,
+  -- separator, bundled/attached forms), first positional is the
+  script candidate; -m matches by last dotted segment against the
+  known runner modules (run_codex_y5, run_live, run_agyq2,
+  run_batch3, run_agy_y2, run-nested-pill, hand_drive_e1); -c by
+  first-word semantics plus the exec(/eval( special case
+  (exec(open('run_codex_y5.py').read()) is caught, bare
+  `import run_codex_y5` is not); renamed/extensionless/symlinked
+  copies by md5 against the manifest (resolved via the
+  process's /proc/<pid>/cwd for relative paths). A mere path
+  mention (md5sum, echo/grep of a runner name) never matches.
+  LIMIT (documented): a nested os.system/exec inside -c code
+  beyond exec(/eval( is not caught; ports + flock backstop.
+- B4 -m brick (Y13r2 A3): same __pycache__ exemption as B1, the
+  launcher deletes only the entry .pyc files before exec, the -m
+  guard is in both entry points, -m/bare imports are documented
+  as unsupported (SHIPPED.md + docstrings).
+- Amend 1 remote pin: the launcher refuses unless `git remote
+  get-url origin` equals
+  https://github.com/phamTuan207/computer-use-wayland.git
+  (checked in check_marker AND check_manifest). The marker is a
+  COORDINATION SIGNAL among pushers, not authentication. Marker
+  ordering is by GIT LOG POSITION (branch position, newest
+  first), not committer date: a forged old date no longer
+  outranks a newer abort.
+- Amend 2: the codex WARNING matches the codex executable
+  basename (a path component or argv[0] basename of "codex"),
+  not a raw substring; the REFUSE branch keeps the fail-closed
+  substring rule.
+- Amend 3: the scan JSON reports {"refused": true, "kind": ...,
+  "files": [...]} (kind pyc/symlink/planted-py/mixed); symlink
+  refusals are no longer mislabeled as pyc_refused.
+- Amend 4: SHIP_DIR is derived (--ship-dir flag, then
+  Y13_SHIP_DIR, then the dir holding the launcher file if it
+  holds run_codex_y5.py + the manifest, else the hardcoded
+  /tmp/worker-y13-server fallback).
+- Amend 5: _proven_no_body uses `diag.get("eval_error") is not
+  None` (an empty-string eval_error now reads as a transport
+  error, not proof; unreachable today, hardened).
+- Harness loss (22/11 ~00:00 +07): /tmp/y13r2/ and
+  /tmp/y13r2-redteam/ vanished (cause unknown); the attack
+  harnesses must be REBUILT from the specs in the redteam paper
+  and the Y13g log. Future harnesses stage under ~/workspace
+  (persistent), never /tmp-only.
 
 ## Deliverables
 - improvements/worker-y13-codex-y5-live-plan.md (this file, v2) +
