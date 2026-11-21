@@ -19,7 +19,11 @@ token = secrets.token_hex(16)
 server = indicator.listen(STATE_DIR, token)
 env = dict(os.environ)
 env["XDG_RUNTIME_DIR"] = "/tmp/y6-nested/run"
-env["WAYLAND_DISPLAY"] = "wayland-y6"
+# v3 (Y6d): the socket name is discovered by the launcher and passed in the
+# environment (was hardcoded wayland-y6); fail loudly if it is missing or empty.
+_disp = os.environ["WAYLAND_DISPLAY"]
+if not _disp: raise SystemExit("Y6-NEST-PILL: WAYLAND_DISPLAY empty, launcher did not pass a socket name")
+env["WAYLAND_DISPLAY"] = _disp
 env["HYPRLAND_INSTANCE_SIGNATURE"] = os.environ["Y6_NEST_SIG"]
 native = indicator.Native(env)
 try:

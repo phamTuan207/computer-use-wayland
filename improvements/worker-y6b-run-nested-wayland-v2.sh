@@ -1,6 +1,13 @@
 #!/bin/bash
-# Y6b Wayland-nested reproduction run, v2.
-# Fixes U1-U21 from improvements/worker-y6b-adjudication.md (council 1/2/3 + redteam).
+# Y6b Wayland-nested reproduction run, v2 + Y6d v3 fixes.
+# v2 fixes U1-U21 from improvements/worker-y6b-adjudication.md (council 1/2/3 + redteam).
+# v3 (Y6d): F0 socket discovery (no --socket; the nest auto-names its socket,
+# discovered after launch); U5b Wayland-backend gate greps the per-instance
+# log, not the stdout log. The plugin load still points at backup 1 (see the
+# conf): the rebuilt plugin path is wired up only after the rebuild lands.
+# v3 adjudication fixes (council 1/2/3 + redteam, 21:02-21:08 +07): backend
+# gate retry loop, ldd pre-flight ABI check, socket connect probe, nest()
+# guard pre-check, pill liveness re-check, dangling-symlink cleanup.
 # Runs a nested Hyprland as a Wayland client of the live compositor, loads backup 1
 # hyprglass, and tests the 20/11 idle-pill flicker (hypothesis H-E, animated backdrop).
 #
@@ -50,6 +57,7 @@ LIVE_SIG=""
 LIVE_PID=""
 NEST_STARTED=0
 NEST_OUTPUT="WAYLAND-1"
+NEST_DISPLAY=""
 
 # Tee stdout to the run log (U20). The tee process is created before the flock
 # fd exists, so it cannot inherit the lock.
@@ -79,7 +87,9 @@ check_idle() {
 
 # Nested-env helper: every nested hyprctl/grim/mpv call goes through nest().
 # The trailing 9>&- keeps the flock fd out of every child (U7d).
-nest() { env XDG_RUNTIME_DIR="$RUN_DIR" WAYLAND_DISPLAY=wayland-y6 HYPRLAND_INSTANCE_SIGNATURE="$SIG" "$@" 9>&-; }
+# NEST_DISPLAY is the socket name discovered after launch (F0, v3); calling
+# nest() before discovery is a fail-closed error, never a silent empty display.
+nest() { [ -n "$NEST_DISPLAY" ] || fail "nest() called before socket discovery"; env XDG_RUNTIME_DIR="$RUN_DIR" WAYLAND_DISPLAY="$NEST_DISPLAY" HYPRLAND_INSTANCE_SIGNATURE="$SIG" "$@" 9>&-; }
 live() { env XDG_RUNTIME_DIR=/run/user/1000 WAYLAND_DISPLAY=wayland-1 HYPRLAND_INSTANCE_SIGNATURE="$LIVE_SIG" "$@" 9>&-; }
 
 # Randomized inter-frame delay, 0.6-1.4s (U13): a periodic about 10 Hz flicker
@@ -136,6 +146,21 @@ command -v grim >/dev/null || fail "grim not found"
 command -v mpv >/dev/null || fail "mpv not found"
 command -v ffmpeg >/dev/null || fail "ffmpeg not found"
 
+# Pre-flight ABI check (redteam A3): the conf's plugin .so must be loadable
+# on this machine, or the run fails here in under a second with the cause
+# instead of launching a nest and failing at the plugin-list gate with a
+# misleading message. The config-time hl.plugin.load() logs nothing on a
+# dead ABI, so ldd is the only diagnosis. The path is extracted from the
+# conf, so it follows the rebuilt plugin once the conf is switched.
+command -v ldd >/dev/null || fail "ldd not found, cannot verify plugin ABI"
+GLASS_SO=$(grep -o '/[^"]*hyprglass[^"]*\.so' "$CONF" | head -1)
+[ -n "$GLASS_SO" ] || fail "no hyprglass.so path in conf $CONF"
+[ -f "$GLASS_SO" ] || fail "hyprglass path in conf missing on disk: $GLASS_SO"
+LDD_OUT=$(ldd "$GLASS_SO" 2>&1) || fail "ldd failed on $GLASS_SO: $LDD_OUT"
+MISSING_LIBS=$(printf '%s\n' "$LDD_OUT" | grep "not found" || true)
+[ -z "$MISSING_LIBS" ] || fail "hyprglass $GLASS_SO cannot load (dead ABI): $MISSING_LIBS"
+echo "Y6-WAYLAND: plugin ABI OK: $GLASS_SO"
+
 # Resolve live identity at runtime (U15).
 LIVE_SIG=$(ls -t /run/user/1000/hypr/ 2>/dev/null | head -1)
 [ -n "$LIVE_SIG" ] || fail "no live Hyprland signature found"
@@ -167,18 +192,23 @@ exec 9>"$LOCK" || fail "cannot open lock $LOCK"
 flock -n 9 || fail "zen_dom.lock held by a runner; abort, do not run"
 echo "Y6-WAYLAND: flock held, runner-quiet window open"
 
-rm -rf "$RUN_DIR/hypr" "$RUN_DIR/wayland-y6" "$RUN_DIR/wayland-y6.lock" "$RUN_DIR/wayland-1" "$RUN_DIR/wayland-1.lock"
+# Clear stale nest runtime state (F0, v3): the socket name is discovered at
+# launch, so remove any wayland-* socket/lock left by a previous run.
+rm -rf "$RUN_DIR/hypr"
+for stale in "$RUN_DIR"/wayland-*; do if [ -e "$stale" ] || [ -L "$stale" ]; then rm -rf "$stale"; fi; done
 mkdir -p "$RUN_DIR" "$FRAMES" "$NEST/cache"
 
 # Parent connection: absolute live socket path, so XDG_RUNTIME_DIR is irrelevant
-# for the parent connection (Council C change 1). Nest socket pinned by --socket.
+# for the parent connection (Council C change 1). No --socket flag (F0, v3):
+# in 0.57.2 passing --socket without --wayland-fd is a hard startup error, so
+# the nest auto-names its socket and the launcher discovers it below.
 # setsid may fork (it is a process group leader when run under job control), so
 # the timeout PID is captured via a pidfile, not via $! (a dead parent's PID).
 export XDG_RUNTIME_DIR="$RUN_DIR"
 export WAYLAND_DISPLAY="$LIVE_SOCK"
 unset HYPRLAND_INSTANCE_SIGNATURE
 rm -f "$NEST/nest-timeout.pid"
-setsid bash -c "echo \$\$ > \"$NEST/nest-timeout.pid\"; exec timeout 600 Hyprland --config \"$CONF\" --socket wayland-y6" > "$LOG" 2>&1 < /dev/null 9>&- &
+setsid bash -c "echo \$\$ > \"$NEST/nest-timeout.pid\"; exec timeout 600 Hyprland --config \"$CONF\"" > "$LOG" 2>&1 < /dev/null 9>&- &
 for i in $(seq 1 10); do sleep 1; [ -s "$NEST/nest-timeout.pid" ] && break; done
 NESTED_PID=$(cat "$NEST/nest-timeout.pid" 2>/dev/null || echo "")
 [ -n "$NESTED_PID" ] || fail "nested launcher did not write its pidfile"
@@ -189,24 +219,66 @@ for i in $(seq 1 15); do sleep 1; SIG=$(ls -t "$RUN_DIR/hypr/" 2>/dev/null | hea
 [ -n "$SIG" ] || fail "no nested instance signature after 15s"
 echo "Y6-WAYLAND: nested sig $SIG"
 export Y6_NEST_SIG="$SIG"
+# Per-instance log path (U5b, v3): defined here, used by the backend gate below
+# and the hook-marker check later. The stdout log alone is NOT enough: after
+# postConfigReload disables stdout logging, the backend line lands only here.
+NEST_LOG="$RUN_DIR/hypr/$SIG/hyprland.log"
 
 # Record the real nested Hyprland PID (child of the timeout wrapper).
 NEST_HYPRLAND_PID=$(pgrep -P "$NESTED_PID" -x Hyprland | head -1)
 echo "Y6-WAYLAND: nested Hyprland pid ${NEST_HYPRLAND_PID:-unknown}"
 
 # Post-launch: the nested log must show the Wayland backend started (U5).
-# The grep is now gating, not display-only.
+# The grep is now gating, not display-only. It greps the PER-INSTANCE log
+# (U5b, v3): on a healthy start the line goes only there, never to stdout.
 sleep 5
-grep -a "Wayland backend" "$LOG" | head -3
-grep -a -q "Wayland backend" "$LOG" || fail "Wayland backend did not start in nested log"
-test -S "$RUN_DIR/wayland-y6" || fail "nested socket $RUN_DIR/wayland-y6 missing"
+[ -f "$NEST_LOG" ] || fail "nested per-instance log $NEST_LOG missing"
+# Retry the gate for up to 10s (redteam A1): the backend line can lag the
+# signature on a loaded machine, and a single-shot grep false-fails a
+# healthy slow start. Exact line: no failure line contains it.
+BACKEND_OK=""
+for i in $(seq 1 10); do
+  if grep -a -q "Starting the Wayland backend!" "$NEST_LOG" 2>/dev/null; then BACKEND_OK=1; break; fi
+  sleep 1
+done
+if [ -n "$BACKEND_OK" ]; then grep -a "Starting the Wayland backend!" "$NEST_LOG" | head -3;
+else tail -20 "$LOG"; fail "Wayland backend did not start in nested log $NEST_LOG (stdout tail above)"; fi
+# The nest must still be alive after the gate (redteam B3): a nest that
+# logs the line then dies would otherwise fail later with a misleading message.
+[ -n "$NEST_HYPRLAND_PID" ] && kill -0 "$NEST_HYPRLAND_PID" 2>/dev/null || fail "nested Hyprland died after backend start (pid ${NEST_HYPRLAND_PID:-unknown})"
+
+# Discover the nested Wayland socket name (F0, v3): without --socket the nest
+# auto-names its socket (probe-proven: wayland-1). Exactly one non-lock
+# wayland-* socket must exist; zero is missing, two or more is ambiguous.
+# The scan re-runs for up to 10s because the socket may lag the signature.
+for i in $(seq 1 10); do
+  NEST_DISPLAY=""
+  for s in "$RUN_DIR"/wayland-*; do
+    case "$s" in *.lock) continue;; esac
+    [ -S "$s" ] || continue
+    # Skip a dead socket (redteam B1): a socket file survives its process,
+    # so a nest that dies after binding would otherwise be picked and fail
+    # later at hyprctl with a misleading message. A refused candidate is
+    # skipped, not fatal: the retry loop keeps waiting for the live socket.
+    python3 -c "import socket,sys; s=socket.socket(socket.AF_UNIX,socket.SOCK_STREAM); sys.exit(0 if s.connect_ex(sys.argv[1])==0 else 1)" "$s" 2>/dev/null || continue
+    if [ -n "$NEST_DISPLAY" ]; then fail "ambiguous nested Wayland sockets in $RUN_DIR"; fi
+    NEST_DISPLAY=$(basename "$s")
+  done
+  [ -n "$NEST_DISPLAY" ] && break
+  sleep 1
+done
+[ -n "$NEST_DISPLAY" ] || fail "no nested Wayland socket in $RUN_DIR after 10s"
+echo "Y6-WAYLAND: nested socket $NEST_DISPLAY"
 
 # Record the actual nest output name (U16) and use it for the control frames.
+# Fail-closed pre-check (council 1 A1): the nest() guard cannot kill the
+# parent from inside this command substitution, so check directly here.
+[ -n "$NEST_DISPLAY" ] || fail "nest() called before socket discovery"
 NEST_OUTPUT=$(nest hyprctl -j monitors 2>/dev/null | python3 -c "import json,sys; d=json.load(sys.stdin); print(d[0]['name'])" 2>/dev/null || echo "WAYLAND-1")
 echo "Y6-WAYLAND: nest output $NEST_OUTPUT"
 
 nest hyprctl -j plugin list > "$NEST/nest-plugin-list.json" 2> "$NEST/nest-plugin-list.err" || fail "nested hyprctl plugin list failed"
-grep -q hyprglass "$NEST/nest-plugin-list.json" || fail "hyprglass not in nested plugin list"
+grep -q hyprglass "$NEST/nest-plugin-list.json" || { grep -a -h "Y6-NEST-HOOK" "$LOG" "$NEST_LOG" 2>/dev/null; fail "hyprglass not in nested plugin list (hook marker above, if any)"; }
 nest hyprctl -j hyprglass status > "$NEST/nest-glass-status.json" 2> "$NEST/nest-glass-status.err" || fail "nested hyprglass status failed"
 cat "$NEST/nest-glass-status.json"
 
@@ -226,7 +298,7 @@ PYEOF
 # Hook marker check (U6): if the hook ran before the plugin loaded, the
 # profile was never applied. Fail fast with that diagnosis. The marker can
 # land in the nested stdout log or the per-instance log; check both.
-NEST_LOG="$RUN_DIR/hypr/$SIG/hyprland.log"
+# (NEST_LOG was defined right after the signature discovery, above.)
 if grep -a -q "Y6-NEST-HOOK: hyprglass not ready" "$LOG" "$NEST_LOG" 2>/dev/null; then
   fail "hook ran before plugin load (profile not applied); see nested log"
 fi
@@ -260,9 +332,9 @@ grep -a -i -E "renderer|gles|opengl|egl" "$NEST_LOG" 2>/dev/null | head -10 || e
 
 # Backdrop client, launched from the launcher with explicit nest env (U3).
 # No autostart mpv/foot in the nest config: config-time exec children may
-# inherit the parent display instead of wayland-y6 (unverified), and foot
+# inherit the parent display instead of the nest socket (unverified), and foot
 # serves no measurement purpose. mpv is tracked by PID, never by pkill -x.
-env XDG_RUNTIME_DIR="$RUN_DIR" WAYLAND_DISPLAY=wayland-y6 HYPRLAND_INSTANCE_SIGNATURE="$SIG" mpv --loop=inf --no-audio --fullscreen "$BACKDROP" > "$NEST/nest-mpv.log" 2>&1 < /dev/null 9>&- &
+env XDG_RUNTIME_DIR="$RUN_DIR" WAYLAND_DISPLAY="$NEST_DISPLAY" HYPRLAND_INSTANCE_SIGNATURE="$SIG" mpv --loop=inf --no-audio --fullscreen "$BACKDROP" > "$NEST/nest-mpv.log" 2>&1 < /dev/null 9>&- &
 MPV_PID=$!
 sleep 2
 kill -0 "$MPV_PID" 2>/dev/null || fail "mpv backdrop client did not start"
@@ -285,12 +357,12 @@ check_idle "before pill"
 
 # Start the pill (separate state dir; see run-nested-pill.py). Wait for ready.
 # The pill prints ready only after show succeeds (U9), so ready means visible.
-env XDG_RUNTIME_DIR="$RUN_DIR" WAYLAND_DISPLAY=wayland-y6 HYPRLAND_INSTANCE_SIGNATURE="$SIG" Y6_NEST_SIG="$SIG" python3 "$PILL" > "$NEST/nest-pill.log" 2>&1 < /dev/null 9>&- &
+env XDG_RUNTIME_DIR="$RUN_DIR" WAYLAND_DISPLAY="$NEST_DISPLAY" HYPRLAND_INSTANCE_SIGNATURE="$SIG" Y6_NEST_SIG="$SIG" python3 "$PILL" > "$NEST/nest-pill.log" 2>&1 < /dev/null 9>&- &
 PILL_PID=$!
 sleep 1
 kill -0 "$PILL_PID" 2>/dev/null || fail "pill process died immediately (see $NEST/nest-pill.log)"
 READY=""
-for i in $(seq 1 45); do sleep 1; grep -q "Y6-NEST-PILL: ready" "$NEST/nest-pill.log" 2>/dev/null && READY=1 && break; done
+for i in $(seq 1 45); do sleep 1; kill -0 "$PILL_PID" 2>/dev/null || fail "pill died during ready wait (see $NEST/nest-pill.log)"; grep -q "Y6-NEST-PILL: ready" "$NEST/nest-pill.log" 2>/dev/null && READY=1 && break; done
 [ -n "$READY" ] || fail "pill did not become ready in 45s (see $NEST/nest-pill.log)"
 echo "Y6-WAYLAND: pill ready, pid $PILL_PID"
 sleep 2
@@ -357,7 +429,7 @@ kill_mpv() {
 # Start an mpv instance with explicit nest env and record its PID.
 # Args: FILE LOGFILE. The caller checks the PID with kill -0 afterwards.
 start_mpv() {
-  env XDG_RUNTIME_DIR="$RUN_DIR" WAYLAND_DISPLAY=wayland-y6 HYPRLAND_INSTANCE_SIGNATURE="$SIG" mpv --loop=inf --no-audio --fullscreen "$1" > "$2" 2>&1 < /dev/null 9>&- &
+  env XDG_RUNTIME_DIR="$RUN_DIR" WAYLAND_DISPLAY="$NEST_DISPLAY" HYPRLAND_INSTANCE_SIGNATURE="$SIG" mpv --loop=inf --no-audio --fullscreen "$1" > "$2" 2>&1 < /dev/null 9>&- &
   MPV_PID=$!
   sleep 2
   kill -0 "$MPV_PID" 2>/dev/null || fail "mpv did not start for $1"
