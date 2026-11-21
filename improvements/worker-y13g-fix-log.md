@@ -129,3 +129,9 @@ in the repo worktree and /tmp test copies.
   scan/-P/--ship-dir/codex warning), _proven_no_body, regen +
   SHIPPED.md + plan updates, manifest regen, then council (3) +
   redteam + independent verifier in parallel.
+
+- 23:20 +07 (T+24m): log commit LANDED: 4ad7b88 on todolist-push,
+  verified via ls-remote (bbbdf73..4ad7b88). Rebase was blocked by
+  unstaged changes (other workers' files + my runner edits), but
+  the parent was still origin HEAD so a fast-forward push worked.
+  Continuing: _verify_manifest fix next.

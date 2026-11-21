@@ -108,79 +108,131 @@ Output: one JSON summary line per test on stdout, a suite JSON line,
 per-step JSONL at LIVE_LOG (with attempt fields), per-test
 screenshots in /tmp/worker-y13-shots/.
 """
-import base64
-import glob
-import hashlib
-import json
 import os
-import re
-import socket
-import subprocess
 import sys
-import time
-import urllib.request
-from datetime import datetime, timezone
-from pathlib import Path
 
-# Y13f H1: refuse a tampered ship BEFORE importing run_live. A
-# forged __pycache__/run_live.cpython-312.pyc executes at import
-# time, before main() can run _verify_manifest, so the manifest
-# check alone cannot stop it (the marker prints first). This scan
-# runs at module top, before ANY ship import: any .pyc file or any
-# symlink anywhere under the ship dir refuses with exit 2.
-# sys.dont_write_bytecode stops this process writing .pyc itself,
-# so a clean ship stays clean through the run. The launcher sets
-# PYTHONDONTWRITEBYTECODE=1 as well. Ship-time __pycache__ deletion
-# lives in the regen script (--stage), not here: the launcher must
-# never silently delete a tampered file at launch.
-# Exemption, narrow and load-bearing for probes: the .pyc files of
-# the two __main__ entry points (run_codex_y5.py, launch_y13.py)
-# are exempt. CPython writes them during get_code, BEFORE this
-# module executes and sets dont_write_bytecode, so a plain import
-# of the runner would otherwise refuse its own cache file (proven
-# 21/11: import after rm -rf __pycache__ recreated exactly the
-# self .pyc and refused). They cannot execute in production: both
-# entry points run as __main__, never from .pyc. run_live.py's
-# .pyc is NOT exempt -- that is the H1 attack, and run_live is
-# imported as a module. Probes should still prefer
-# PYTHONDONTWRITEBYTECODE=1 when importing.
-sys.dont_write_bytecode = True
+# Y13g B1/B2: script-form-only guard + pre-import scan, before ANY
+# other import. Only sys and os are imported here: sys is builtin
+# and os is pre-loaded at interpreter startup, so neither can be
+# shadowed by a planted file in the ship dir. Everything else
+# (json, re, pathlib, ...) is imported AFTER the scan passes.
+_SHIP_DIR = os.path.dirname(os.path.abspath(__file__))
+_ENTRY_PYC_NAMES = (
+    "run_codex_y5." + sys.implementation.cache_tag + ".pyc",
+    "launch_y13." + sys.implementation.cache_tag + ".pyc",
+)
 
-_ENTRY_PYC = {
-    Path(__file__).resolve().parent / "__pycache__"
-    / (Path(__file__).stem + "." + sys.implementation.cache_tag + ".pyc"),
-    Path(__file__).resolve().parent / "__pycache__"
-    / ("launch_y13." + sys.implementation.cache_tag + ".pyc"),
-}
+
+def _entry_pyc_paths():
+    cache = os.path.join(_SHIP_DIR, "__pycache__")
+    return [os.path.join(cache, n) for n in _ENTRY_PYC_NAMES]
+
+
+# Script-form-only (Y13g B1 item 3): refuse at the very top when
+# loaded as a module or via -m (__spec__ is not None). A -m/import
+# writes the entry .pyc during get_code, before this module
+# executes; the guard deletes the two entry .pyc paths (best
+# effort) so a -m probe does not brick the ship, then exits 2 with
+# a clear message. NOTE: this guard cannot protect a FORGED entry
+# .pyc invoked via -m/import (the forged bytecode IS the running
+# code); the control for that lives in the launcher, which verifies
+# the entry .pyc out-of-process before exec and never invokes
+# -m/import on an unverified ship. -m and bare imports are
+# unsupported invocation forms; the live launch path is always the
+# launcher execing this file as a script.
+if globals().get("__spec__") is not None:
+    for _p in _entry_pyc_paths():
+        try:
+            os.unlink(_p)
+        except OSError:
+            pass
+    print("run as a script (python3 run_codex_y5.py), not with -m "
+          "and not via import", file=sys.stderr, flush=True)
+    sys.exit(2)
+
+
+def _json_str(s):
+    # Minimal JSON string escaper: the scan runs before `json` is
+    # imported, so it cannot use json.dumps (B2).
+    out = []
+    for ch in s:
+        if ch == '"':
+            out.append('\\"')
+        elif ch == "\\":
+            out.append("\\\\")
+        elif ch == "\n":
+            out.append("\\n")
+        elif ch == "\r":
+            out.append("\\r")
+        elif ch == "\t":
+            out.append("\\t")
+        elif ord(ch) < 0x20:
+            out.append("\\u%04x" % ord(ch))
+        else:
+            out.append(ch)
+    return '"' + "".join(out) + '"'
+
+
+_SHIP_PY = {"run_codex_y5.py", "launch_y13.py", "run_live.py"}
 
 
 def _refuse_tampered_ship():
-    ship = Path(__file__).resolve().parent
-    found = []
-    for _root, _dirs, _files in os.walk(ship, followlinks=False):
+    # Y13g B2: pre-import scan using ONLY os.path (never pathlib,
+    # never json). Refuses any .pyc, any symlink, and any .py file
+    # that is not one of the three ship entry points: a planted
+    # re.py / json.py / functools.py would otherwise execute at
+    # import time, before main() can run _verify_manifest (B2,
+    # 9/15 stdlib names proven). The scan runs at module top,
+    # before ANY ship import. No exemptions: the blind _ENTRY_PYC
+    # exemption is removed (B1 item 1); the -m guard above deletes
+    # a legitimate self-cache before it can brick a later run.
+    # sys.dont_write_bytecode stops this process writing .pyc
+    # itself, so a clean ship stays clean through the run.
+    found = []  # (relative path, kind)
+    for _root, _dirs, _files in os.walk(_SHIP_DIR, followlinks=False):
+        _rel_root = os.path.relpath(_root, _SHIP_DIR)
+        if _rel_root == ".":
+            _rel_root = ""
         for _name in _dirs:
+            _rel = (_rel_root + "/" + _name) if _rel_root else _name
             if os.path.islink(os.path.join(_root, _name)):
-                found.append(str(Path(_root, _name).relative_to(ship))
-                             + " (symlink)")
+                found.append((_rel, "symlink"))
         for _name in _files:
-            _p = Path(_root, _name)
-            # Compare the path itself, NOT the resolved target: a
-            # symlink pointing at the entry .pyc must still refuse
-            # (it would load as whatever path names it).
-            if _p in _ENTRY_PYC:
-                continue
-            if _p.suffix == ".pyc" or os.path.islink(_p):
-                found.append(str(_p.relative_to(ship)))
+            _rel = (_rel_root + "/" + _name) if _rel_root else _name
+            _full = os.path.join(_root, _name)
+            if os.path.islink(_full):
+                found.append((_rel, "symlink"))
+            elif _name.endswith(".pyc"):
+                found.append((_rel, "pyc"))
+            elif _name.endswith(".py") and _rel not in _SHIP_PY:
+                found.append((_rel, "planted-py"))
     if found:
-        print(json.dumps({"pyc_refused": True, "files": sorted(found),
-                          "manifest_ok": False}, ensure_ascii=False),
+        _kinds = sorted({k for _, k in found})
+        _kind = _kinds[0] if len(_kinds) == 1 else "mixed"
+        _files = ", ".join(_json_str(p) for p, _ in sorted(found))
+        print('{"refused": true, "kind": ' + _json_str(_kind)
+              + ', "files": [' + _files + '], "manifest_ok": false}',
               flush=True)
         sys.exit(2)
 
 
 _refuse_tampered_ship()
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.dont_write_bytecode = True
+
+import base64
+import glob
+import hashlib
+import json
+import re
+import socket
+import subprocess
+import time
+import urllib.request
+from datetime import datetime, timezone
+from pathlib import Path
+
+sys.path.insert(0, _SHIP_DIR)
 
 from run_live import (  # noqa: E402
     EL_KEY, WD, Runner, diagnose_body,
@@ -482,14 +534,16 @@ def _verify_manifest():
     # sys.path[0], so a planted functools.py shadows the stdlib
     # for both this file and run_live.py). Allowlist: manifest
     # paths + the manifest itself + SHIPPED.md.
-    # Y13f H1: there is NO __pycache__ exemption anymore. Any .pyc
-    # file, at any depth, is a mismatch: a forged
+    # Y13g B1/B4: NO per-file entry-.pyc exemption anywhere. Any
+    # .pyc file, at any depth, is a mismatch: a forged
     # __pycache__/run_live.cpython-312.pyc executes attacker
-    # bytecode while the manifest check passes (proven by Y13r).
-    # This ship never writes .pyc (sys.dont_write_bytecode is set
-    # before the run_live import), so a .pyc present at verify
-    # time is planted, never self-created. The pre-import scan at
-    # module top refuses it even earlier, before run_live loads.
+    # bytecode while the manifest check passes (proven by Y13r),
+    # and a forged entry .pyc is no different. The pre-import scan
+    # at module top refuses it even earlier, before run_live loads.
+    # A legitimate entry .pyc CAN be self-created (a -m/import
+    # probe writes it during get_code); the -m guard deletes it
+    # before it can brick a later run, and the launcher verifies
+    # it out-of-process and deletes it before exec.
     # Y13f M1: walk with os.walk (followlinks=False) and refuse any
     # symlink (file or dir) and any directory that is not a prefix
     # of a manifest path. The old rglob loop skipped every dir and
@@ -504,11 +558,12 @@ def _verify_manifest():
     allowed = {rel for rel, _ in entries}
     allowed.add(MANIFEST_NAME)
     allowed.add(f"{SUITE_DIR}/SHIPPED.md")
-    # Y13f H1: the two entry-point .pyc files are exempt here too
-    # (see _ENTRY_PYC above: CPython writes them on import, before
-    # dont_write_bytecode is set; they cannot execute in production,
-    # where both entry points run as __main__).
-    entry_pyc_rel = {str(p.relative_to(base_dir)) for p in _ENTRY_PYC}
+    # Y13g B1/B4: a __pycache__ directory is exempt from the
+    # "unexpected directory" refusal ONLY when it holds nothing but
+    # the two entry .pyc files (0, 1, or 2). The files inside are
+    # still refused as bytecode below (no per-file exemption), so
+    # this exemption exists only to keep an empty __pycache__ left
+    # by a probe from bricking verify.
     prefixes = {""}
     for rel, _ in entries:
         parts = rel.split("/")
@@ -524,6 +579,17 @@ def _verify_manifest():
             if os.path.islink(full):
                 bad.append(f"symlink in ship dir: {rel}")
                 continue
+            if rel == "__pycache__" and not rel_root:
+                try:
+                    _entries = os.listdir(full)
+                except OSError:
+                    _entries = None
+                if (_entries is not None and all(
+                        e in _ENTRY_PYC_NAMES
+                        and os.path.isfile(os.path.join(full, e))
+                        and not os.path.islink(os.path.join(full, e))
+                        for e in _entries)):
+                    continue
             if rel not in prefixes:
                 bad.append(f"unexpected directory in ship dir: {rel}")
         for name in files:
@@ -531,8 +597,6 @@ def _verify_manifest():
             full = os.path.join(root, name)
             if os.path.islink(full):
                 bad.append(f"symlink in ship dir: {rel}")
-                continue
-            if rel in entry_pyc_rel:
                 continue
             if name.endswith(".pyc") or "__pycache__" in rel.split("/"):
                 bad.append(f"bytecode in ship dir: {rel}")
