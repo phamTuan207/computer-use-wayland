@@ -471,37 +471,46 @@ class CuGroundCliTests(unittest.TestCase):
 class DomRectMappingTests(unittest.TestCase):
     """Item 12: DOM rect to image point, first-time-right.
 
-    Grounding accuracy is measured, not asserted case by case only:
-    every positive case maps its rect center to an image point whose
-    round trip through cu.image_point lands inside the truth screen
-    rect. Accuracy is hits / cases and must be >= 90%.
+    MAP accuracy is measured here, not grounding accuracy: every
+    case feeds TRUE viewport-relative inputs (a DOM rect, the
+    window-relative mozInner pair, and the window origin from the
+    meta) and checks the linear map lands the screen point inside
+    the element's screen rect. The map is hits / cases, bar >= 90%.
+    These fixtures prove the map, NOT the live conversion: the
+    conversion itself (mozInner is window-relative) is proven by the
+    live C12 probe, never by these fixtures, so the 7/7 here is never
+    quoted as live accuracy.
     """
 
-    def _hit(self, rect, origin, meta):
+    def _hit(self, rect, moz_inner, meta):
         """Map rect center to image point, round trip to screen, hit?"""
-        point = fastpath.dom_rect_to_image_point(meta, rect, origin)
+        absolute = [meta['region'][0] + moz_inner[0],
+                    meta['region'][1] + moz_inner[1]]
+        point = fastpath.dom_rect_to_image_point(meta, rect, absolute)
         sx, sy = cu.image_point(meta, point[0], point[1])
-        truth = {'x': origin[0] + rect['x'], 'y': origin[1] + rect['y'],
+        truth = {'x': absolute[0] + rect['x'],
+                 'y': absolute[1] + rect['y'],
                  'width': rect['width'], 'height': rect['height']}
         return fastpath.point_in_rect(truth, sx, sy), point, (sx, sy)
 
-    def test_grounding_accuracy_across_cases(self):
-        # (rect, viewport origin, meta)
+    def test_map_accuracy_across_cases(self):
+        # (rect, window-relative mozInner, meta). Case 1 is the live
+        # C12 probe geometry: window (2509, 914), mozInner (240, 8).
         cases = [
-            # 1. G30 exact: Brave window [2533,914,901,1176], field
-            # x 86..526, y 1101..1164, center (306,1132.5).
+            # 1. Probe geometry: Zen window [2509,914,1863,1176],
+            # field x 86..526, y 1101..1164, center (306,1132.5).
             ({'x': 86, 'y': 1101, 'width': 440, 'height': 63},
-             [2533, 914],
-             {'image_size': [901, 1176],
-              'region': [2533, 914, 901, 1176]}),
-            # 2. Same window, image downscaled to half (max_width).
+             [240, 8],
+             {'image_size': [1200, 757],
+              'region': [2509, 914, 1863, 1176]}),
+            # 2. Same window, image downscaled (max_width).
             ({'x': 86, 'y': 1101, 'width': 440, 'height': 63},
-             [2533, 914],
+             [240, 8],
              {'image_size': [450, 588],
-              'region': [2533, 914, 901, 1176]}),
+              'region': [2509, 914, 1863, 1176]}),
             # 3. Scrolled page: field near the viewport top edge.
             ({'x': 100, 'y': 5, 'width': 200, 'height': 30},
-             [100, 200],
+             [0, 0],
              {'image_size': [800, 600],
               'region': [100, 200, 800, 600]}),
             # 4. Small field: 8x8 target, center must still land inside.
@@ -512,30 +521,30 @@ class DomRectMappingTests(unittest.TestCase):
             # 5. Wide field: center far from the text start at the
             # left edge; the rect center is the click, not the text.
             ({'x': 0, 'y': 500, 'width': 800, 'height': 40},
-             [50, 60],
+             [0, 0],
              {'image_size': [900, 700],
               'region': [50, 60, 900, 700]}),
             # 6. Chrome offset: 100px tab bar + address bar above the
-            # viewport, so the viewport origin is below the window
-            # origin and the rect is viewport relative.
+            # viewport, so mozInner is (0, 100) and the absolute
+            # origin is 100px below the window origin.
             ({'x': 86, 'y': 1001, 'width': 440, 'height': 63},
-             [2533, 1014],
+             [0, 100],
              {'image_size': [901, 1176],
               'region': [2533, 914, 901, 1176]}),
             # 7. Scale 2 capture: device pixels double the region.
             ({'x': 86, 'y': 1101, 'width': 440, 'height': 63},
-             [2533, 914],
+             [240, 8],
              {'image_size': [1802, 2352],
-              'region': [2533, 914, 901, 1176]}),
+              'region': [2509, 914, 1863, 1176]}),
         ]
         hits = 0
-        for rect, origin, meta in cases:
-            hit, _point, _screen = self._hit(rect, origin, meta)
+        for rect, moz_inner, meta in cases:
+            hit, _point, _screen = self._hit(rect, moz_inner, meta)
             hits += 1 if hit else 0
         accuracy = hits / len(cases)
         self.assertGreaterEqual(
             accuracy, 0.9,
-            'grounding accuracy %s (%d/%d) is below the 90%% bar'
+            'map accuracy %s (%d/%d) is below the 90%% bar'
             % (accuracy, hits, len(cases)))
         self.assertEqual(hits, len(cases),
                          'every synthetic case must hit; a miss is a bug')
@@ -543,15 +552,15 @@ class DomRectMappingTests(unittest.TestCase):
     def test_g30_dom_point_hits_and_old_eye_point_misses(self):
         # The incident as a test: the DOM rect center (306,1132.5)
         # lands inside the field; the eye-read point (250,1037) sits
-        # 64px above the field top edge and misses it.
+        # 64px above the field top edge and misses it. mozInner is
+        # (0, 0) here, so the absolute origin is the window origin.
         rect = {'x': 86, 'y': 1101, 'width': 440, 'height': 63}
-        origin = [2533, 914]
         meta = {'image_size': [901, 1176],
                 'region': [2533, 914, 901, 1176]}
-        hit, point, _screen = self._hit(rect, origin, meta)
+        hit, point, _screen = self._hit(rect, [0, 0], meta)
         self.assertTrue(hit)
         self.assertEqual(point, [306.0, 1132.5])
-        truth = {'x': origin[0] + rect['x'], 'y': origin[1] + rect['y'],
+        truth = {'x': 2533 + rect['x'], 'y': 914 + rect['y'],
                  'width': rect['width'], 'height': rect['height']}
         self.assertFalse(fastpath.point_in_rect(truth, 2533 + 250, 914 + 1037),
                          'the eye-read point misses the field by 64px')

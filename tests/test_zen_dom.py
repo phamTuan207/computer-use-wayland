@@ -62,28 +62,105 @@ class FakeWdSession(ZenSession):
                            'https://example.com/' + h)
                        for h in handles}
         self.dom_origin = [100, 200]
+        self.dom_inner = [901, 1176]
+        self.dom_outer = [901, 1176]
         self.dom_fields = {}
+        self.sent_bubbles = []
+        self._armed = {}
+        self._typed = {}
+        self._MISSING = object()
+
+    def _typed_flag(self, selector):
+        if self._typed.get(selector):
+            return True
+        field = self.dom_fields.get(selector)
+        if field is None:
+            return False
+        armed = self._armed.get(selector, self._MISSING)
+        if armed is self._MISSING:
+            return False
+        return field.get('value') != armed
+
+    def _harvest(self):
+        items = {}
+        for sel, field in self.dom_fields.items():
+            rect = field['rect']
+            items[sel] = {
+                'rect': {'x': rect['x'], 'y': rect['y'],
+                         'width': rect['width'], 'height': rect['height'],
+                         'center_x': rect['x'] + rect['width'] / 2,
+                         'center_y': rect['y'] + rect['height'] / 2},
+                'hit': not field.get('covered', False),
+                'focused': bool(field.get('focused', False))}
+        return {'moz_inner': list(self.dom_origin),
+                'device_pixel_ratio': 1,
+                'screen_pixels_per_css_pixel': 1,
+                'zoom': 1,
+                'inner_size': list(self.dom_inner),
+                'outer_size': list(self.dom_outer),
+                'items': items}
 
     def _eval(self, body):
         """Scripted JS evaluation for the DOM helpers.
 
         Dispatches on the script text (the fake knows the helper
-        shapes): viewport origin, elementFromPoint hit, activeElement
-        focus, field value, and locate rects. The selector comes from
-        the evaluate args (locate) or from the querySelector literal
-        embedded in the helper scripts.
+        shapes). Marker comments first (the new helpers carry one),
+        then the legacy shape checks. The selector comes from the
+        evaluate args, or from the pierce/querySelector literal
+        embedded in the helper scripts (the new scripts pass the
+        selector as a pierce() argument, not a querySelector one).
         """
         import re
         script = (body or {}).get('script', '')
         args = (body or {}).get('args') or []
         selector = args[0] if args else None
         if selector is None:
-            m = re.search(r'querySelector\(("(?:[^"\\]|\\.)*")\)', script)
-            if m:
-                selector = json.loads(m.group(1))
+            for pattern in (
+                    r'querySelector\(("(?:[^"\\]|\\.)*")\)',
+                    r'pierce\(("(?:[^"\\]|\\.)*")\s*,',
+                    r'const sel=("(?:[^"\\]|\\.)*")',
+                    r'__agentCuTyped\[("(?:[^"\\]|\\.)*")\]'):
+                m = re.search(pattern, script)
+                if m:
+                    selector = json.loads(m.group(1))
+                    break
+        if 'zen_viewport_origin' in script:
+            return [self.dom_origin[0], self.dom_origin[1], 1, 1, 1,
+                    self.dom_inner[0], self.dom_inner[1],
+                    self.dom_outer[0], self.dom_outer[1]]
+        if 'zen_display_metrics' in script:
+            return {'mozInnerScreenX': self.dom_origin[0],
+                    'mozInnerScreenY': self.dom_origin[1],
+                    'devicePixelRatio': 1,
+                    'screenPixelsPerCSSPixel': 1,
+                    'zoom': 1,
+                    'innerWidth': self.dom_inner[0],
+                    'innerHeight': self.dom_inner[1],
+                    'outerWidth': self.dom_outer[0],
+                    'outerHeight': self.dom_outer[1]}
+        if 'zen_harvest' in script:
+            return self._harvest()
+        if 'zen_arm_typed_flag' in script:
+            field = self.dom_fields.get(selector) if selector else None
+            self._armed[selector] = None if field is None \
+                else field.get('value')
+            self._typed[selector] = False
+            return field is not None
+        if 'zen_typed_flag' in script:
+            return self._typed_flag(selector)
+        if 'zen_sent_bubble' in script:
+            m = re.search(r'const want=("(?:[^"\\]|\\.)*")', script)
+            want = json.loads(m.group(1)) if m else None
+            return want in self.sent_bubbles
+        if 'verify_typed' in script:
+            field = self.dom_fields.get(selector) if selector else None
+            if field is None:
+                return None
+            return {'value': field.get('value'),
+                    'editable': bool(field.get('contenteditable', False))}
+        field = self.dom_fields.get(selector) if selector else None
         if 'mozInnerScreenX' in script:
             return list(self.dom_origin)
-        field = self.dom_fields.get(selector) if selector else None
         if 'elementFromPoint' in script:
             return bool(field) and not field.get('covered', False)
         if 'activeElement' in script:
@@ -396,7 +473,10 @@ class TestDomHelpers(unittest.TestCase):
 
     def _session(self):
         session = FakeWdSession(['aaa11111'])
-        session.dom_origin = [2533, 914]
+        # dom_origin is the WINDOW-relative mozInner pair (live C12
+        # probe 03:36): [0, 0] here, so the absolute viewport origin
+        # is the window origin itself.
+        session.dom_origin = [0, 0]
         session.dom_fields = {
             '#msg-input': {'rect': {'x': 86, 'y': 1101, 'width': 440,
                                     'height': 63},
@@ -415,9 +495,41 @@ class TestDomHelpers(unittest.TestCase):
         return {'image_size': [901, 1176],
                 'region': [2533, 914, 901, 1176]}
 
-    def test_viewport_origin_returns_moz_inner_screen(self):
+    def test_viewport_origin_adds_window_origin_to_moz_inner(self):
+        # mozInnerScreen is WINDOW-relative (live C12 probe 03:36):
+        # the absolute origin is the Hyprland window origin plus the
+        # pair. The fake's mozInner is [0, 0] here, so the absolute
+        # origin is the window origin itself.
         session = self._session()
-        self.assertEqual(session.viewport_origin(), [2533, 914])
+        self.assertEqual(session.viewport_origin([2533, 914]), [2533, 914])
+
+    def test_viewport_origin_probe_geometry(self):
+        # The live C12 probe geometry: window origin (2509, 914),
+        # mozInner (240, 8), viewport 1615x1160 -> absolute (2749, 922).
+        session = self._session()
+        session.dom_origin = [240, 8]
+        session.dom_inner = [1615, 1160]
+        session.dom_outer = [1863, 1176]
+        self.assertEqual(session.viewport_origin([2509, 914], [1863, 1176]),
+                         [2749, 922])
+
+    def test_viewport_origin_requires_window_origin(self):
+        # Without the Hyprland window origin the raw pair cannot be
+        # placed on screen; returning it as-is was the old bug.
+        session = self._session()
+        with self.assertRaises(ZenDomError):
+            session.viewport_origin()
+
+    def test_viewport_origin_rejects_off_window_geometry(self):
+        # Dimension closure: mozInner plus inner size must fit inside
+        # the window, or the geometry is impossible and the call
+        # fails closed instead of returning a wrong origin.
+        session = self._session()
+        session.dom_origin = [240, 8]
+        session.dom_inner = [1863, 1176]
+        session.dom_outer = [1863, 1176]
+        with self.assertRaises(ZenDomError):
+            session.viewport_origin([2509, 914], [1863, 1176])
 
     def test_locate_point_is_rect_center_in_image(self):
         # The G30 field: rect x 86..526, y 1101..1164, center
@@ -449,6 +561,102 @@ class TestDomHelpers(unittest.TestCase):
         self.assertTrue(session.verify_typed('#msg-input', 'hello'))
         self.assertFalse(session.verify_typed('#msg-input', 'goodbye'))
         self.assertIsNone(session.field_value('#nope'))
+
+    def test_verify_typed_normalizes_trailing_whitespace(self):
+        # Contenteditable textContent carries a trailing newline the
+        # typed text does not; the comparison normalizes it. A plain
+        # input is compared exactly: a trailing space is a real
+        # difference there.
+        session = self._session()
+        session.dom_fields['#ce-input'] = {
+            'rect': {'x': 86, 'y': 1101, 'width': 440, 'height': 63},
+            'focused': True, 'value': 'hello\n', 'covered': False,
+            'contenteditable': True}
+        self.assertTrue(session.verify_typed('#ce-input', 'hello'))
+        session.dom_fields['#msg-input']['value'] = 'hello '
+        self.assertFalse(session.verify_typed('#msg-input', 'hello'))
+
+    def test_verify_typed_prefill_needs_typed_flag(self):
+        # The field already holds the expected text before typing:
+        # without a recorded typed event the check fails (a prefilled
+        # value proves no typing happened). After a trusted input
+        # event is recorded, the same value verifies.
+        session = self._session()
+        session.arm_typed_flag('#msg-input')
+        self.assertFalse(session.verify_typed('#msg-input', 'hello',
+                                              before='hello'))
+        session._typed['#msg-input'] = True
+        self.assertTrue(session.verify_typed('#msg-input', 'hello',
+                                             before='hello'))
+
+    def test_display_metrics_records_dpr_and_zoom(self):
+        session = self._session()
+        metrics = session.display_metrics()
+        self.assertEqual(metrics['device_pixel_ratio'], 1)
+        self.assertEqual(metrics['screen_pixels_per_css_pixel'], 1)
+        self.assertEqual(metrics['zoom'], 1)
+        self.assertEqual(metrics['moz_inner'], [0, 0])
+        self.assertEqual(metrics['inner_size'], [901, 1176])
+
+    def test_harvest_returns_one_shot_inventory(self):
+        session = self._session()
+        result = session.harvest(['#msg-input', '#covered-btn'])
+        self.assertEqual(result['moz_inner'], [0, 0])
+        self.assertEqual(result['device_pixel_ratio'], 1)
+        self.assertEqual(result['screen_pixels_per_css_pixel'], 1)
+        self.assertEqual(result['zoom'], 1)
+        item = result['items']['#msg-input']
+        self.assertEqual(item['rect']['x'], 86)
+        self.assertTrue(item['hit'])
+        self.assertTrue(item['focused'])
+        self.assertFalse(result['items']['#covered-btn']['hit'])
+        self.assertIsNone(result['items'].get('#nope')
+                          if '#nope' in result['items'] else None)
+
+    def test_sent_bubble_contains(self):
+        session = self._session()
+        session.sent_bubbles = ['hello']
+        self.assertTrue(session.sent_bubble_contains('hello'))
+        self.assertFalse(session.sent_bubble_contains('goodbye'))
+
+    def test_arm_and_typed_flag(self):
+        session = self._session()
+        self.assertTrue(session.arm_typed_flag('#msg-input'))
+        self.assertFalse(session.typed_flag('#msg-input'))
+        session._typed['#msg-input'] = True
+        self.assertTrue(session.typed_flag('#msg-input'))
+        self.assertFalse(session.arm_typed_flag('#nope'))
+
+    def test_main_list_fails_cleanly_on_wedged_session(self):
+        # Item D: a wedged session used to die with a traceback; the
+        # CLI must fail cleanly with one JSON error object and exit 1.
+        class WedgedSession:
+            def __init__(self, *args, **kwargs):
+                pass
+
+            def __enter__(self):
+                raise ZenDomError('session wedged: hang on switch')
+
+            def __exit__(self, *exc):
+                return False
+
+        import io
+        from contextlib import redirect_stdout
+        saved_argv = sys.argv
+        saved_session = zen_dom.ZenSession
+        try:
+            sys.argv = ['zen_dom.py', 'list']
+            zen_dom.ZenSession = WedgedSession
+            out = io.StringIO()
+            with redirect_stdout(out):
+                code = zen_dom.main()
+        finally:
+            sys.argv = saved_argv
+            zen_dom.ZenSession = saved_session
+        self.assertEqual(code, 1)
+        payload = json.loads(out.getvalue())
+        self.assertFalse(payload['ok'])
+        self.assertIn('wedged', payload['error'])
 
     def test_dom_helpers_take_no_observe(self):
         # The whole grounding + verification flow is JS evals: the
