@@ -28,7 +28,32 @@ class TestSearch(unittest.TestCase):
 
     def test_search_empty_query_lists_all(self):
         out = codemode.search_ops("")
-        self.assertEqual(out["total"], len(codemode.OPS))
+        self.assertEqual(sum(item["kind"] == "op"
+                             for item in out["results"]), len(codemode.OPS))
+        self.assertEqual(sum(item["kind"] == "snippet"
+                             for item in out["results"]), 4)
+        self.assertEqual(out["total"], len(codemode.OPS) + 4)
+
+    def test_snippets_rank_below_ops_and_search_tags_only(self):
+        out = codemode.search_ops("repo terminal")
+        kinds = [item["kind"] for item in out["results"]]
+        self.assertIn("op", kinds)
+        self.assertIn("snippet", kinds)
+        self.assertEqual(kinds, sorted(kinds, key=lambda kind: kind != "op"))
+        snippet = next(item for item in out["results"]
+                       if item["kind"] == "snippet")
+        self.assertIn("params_summary", snippet)
+        self.assertIn("last_verified", snippet)
+        self.assertIn("stale", snippet)
+        self.assertNotIn("file", snippet)
+
+    def test_describe_snippet_returns_metadata_only(self):
+        out = codemode.describe_snippet("p1-disk-free")
+        self.assertEqual(out["name"], "p1-disk-free")
+        self.assertIn("sha256", out)
+        self.assertIn("expected_result", out)
+        self.assertNotIn("code", out)
+        self.assertNotIn("source_code", out)
 
     def test_search_no_match(self):
         out = codemode.search_ops("qqqzzz-no-such-thing")

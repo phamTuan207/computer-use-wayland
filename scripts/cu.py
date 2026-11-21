@@ -2319,8 +2319,12 @@ def main():
     a.add_argument('--role',help='query only: case-insensitive role substring')
     a.add_argument('--limit',type=int,default=20,help='query only: max items returned, 1..20')
     a.add_argument('--address',help='ground only: Hyprland window address the snapshot belongs to')
-    ce=sub.add_parser('code-exec',help='run one allowlisted program as the action (Pick 1, opt-in flag CU_CODE_EXEC=1)')
-    ce.add_argument('--program',required=True,help='program source file (mode 600) or - for stdin')
+    ce=sub.add_parser('code-exec',help='run one allowlisted program or snippet as the action (Pick 1, opt-in flag CU_CODE_EXEC=1)')
+    ce_source=ce.add_mutually_exclusive_group(required=True)
+    ce_source.add_argument('--program',help='program source file (mode 600) or - for stdin')
+    ce_source.add_argument('--snippet',help='run a verified snippet by manifest name')
+    ce.add_argument('--allow-stale',action='store_true',help='diagnostic override for an age-stale snippet')
+    ce.add_argument('--approve-snippet',action='store_true',help='approve this one snippet invocation when its manifest requires approval')
     ce.add_argument('--intent',default=None,help='one-line intent, at most 200 chars')
     ce.add_argument('--target',default=None,help='task target path under /tmp, recorded only')
     ce.add_argument('--wall-seconds',type=int,default=30,help='program wall-clock budget, 1..60')
@@ -2384,19 +2388,32 @@ def main():
             return 0
         if args.intent is not None and (not isinstance(args.intent,str) or len(args.intent)>200):
             raise ValueError('--intent must be at most 200 chars')
+        if args.allow_stale and not args.snippet:
+            raise ValueError('--allow-stale requires --snippet')
+        if args.approve_snippet and not args.snippet:
+            raise ValueError('--approve-snippet requires --snippet')
         if args.target is not None:
             target=Path(args.target)
             if not target.is_absolute() or Path('/tmp') not in target.resolve().parents and target.resolve()!=Path('/tmp'):
                 raise ValueError('--target must be a path under /tmp')
         require_session()
         check_cancel()
-        program=read_code_exec_program(args.program)
         with locked():
-            result=code_exec.run_program(
-                program, CodeExecBackend(env), state_dir=STATE,
-                session_token=os.environ.get('CU_SESSION_TOKEN'),
-                intent=args.intent, check_cancel=check_cancel,
-                wall_seconds=args.wall_seconds)
+            if args.snippet:
+                result=code_exec.run_snippet_program(
+                    args.snippet, CodeExecBackend(env), state_dir=STATE,
+                    session_token=os.environ.get('CU_SESSION_TOKEN'),
+                    intent=args.intent, check_cancel=check_cancel,
+                    wall_seconds=args.wall_seconds,
+                    allow_stale=args.allow_stale,
+                    approved=args.approve_snippet)
+            else:
+                program=read_code_exec_program(args.program)
+                result=code_exec.run_program(
+                    program, CodeExecBackend(env), state_dir=STATE,
+                    session_token=os.environ.get('CU_SESSION_TOKEN'),
+                    intent=args.intent, check_cancel=check_cancel,
+                    wall_seconds=args.wall_seconds)
         if args.target is not None:
             result['target']=args.target
         print(json.dumps(result,ensure_ascii=False,separators=(',',':')),flush=True)

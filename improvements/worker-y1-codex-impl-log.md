@@ -43,3 +43,29 @@ Test runs:
 | 2026-11-21 18:12:16 to 18:14:19 | `python3 -m unittest discover -s tests -p 'test_*.py'` | 1530 tests, OK, 2 skipped, 123.611s. Exit 0. This is the required Phase A full-suite result. |
 
 Phase A verdict: PASS. Full suite succeeded, so Phase B may proceed. Phase A implementation and this log entry are committed and pushed in the next recorded commit.
+
+## Phase B progress: runner and CLI integration
+
+Started about 2026-11-21 18:15:33 Asia/Ho_Chi_Minh, elapsed about +13:50. Progress checkpoint 2026-11-21 18:39:26 Asia/Ho_Chi_Minh, elapsed +37:43. The registry program files, manifest, and end-to-end registry tests are still being completed; Phase B is not yet complete.
+
+Implemented in this checkpoint:
+
+- Added metadata-only manifest parsing with a 1MB cap, 128-entry cap, duplicate JSON key and duplicate name rejection, per-entry warnings, kebab-case names, path containment, API/op collision checks, parameter schema checks, and text-only source validation.
+- Added one-read SHA-256 verification, AST and API-name pre-checks, inline snippet execution, shared API/deadline/trace budgets, call depth 1, frame-local params, one declared output, per-session retry ledger, stale age checks, stale override logging, and observation/DOM binding cleanup.
+- Added `--snippet`, `--allow-stale`, and `--approve-snippet` under the existing code-exec gate. The approval flag is required for entries marked `requires_approval`.
+- Added `search_snippets` and `describe_snippet`; codemode search places snippets after ops and scores snippet tags only.
+- Extended existing fake shell backends to isolate the P3/P4 target paths under test-owned temporary directories.
+
+Verification runs at this checkpoint:
+
+| Approx local time | Command | Result |
+| --- | --- | --- |
+| 2026-11-21 about 18:38 | `python3 -m py_compile scripts/code_exec.py scripts/codemode.py scripts/cu.py tests/test_snippets.py tests/test_code_exec.py tests/test_codemode.py` | Compile check passed, exit 0. |
+| 2026-11-21 about 18:38 | Four targeted registry tests: loop budgets, binding scope, nested-call refusal, approval and applied ledger | 4 tests, OK, 1.078s. Exit 0. |
+
+Phase B pre-change full-suite reference: Phase A result was 1530 tests, OK, 2 skipped, 123.611s, exit 0.
+
+Decisions and deviations under review:
+
+- The API-name pre-check allows names assigned locally in the snippet in addition to safe builtins, API names, and declared params. P1-P4 need local names such as `wins`, `term`, and `verify`; rejecting those `Store` and matching `Load` names would make the required snippets impossible to execute. Unbound loaded names still fail closed.
+- The existing code-exec API has no non-raising file-state predicate for checking a target before an action. P3/P4 therefore require approval, clear their fixed task targets first, and assert the resulting state. The session ledger blocks a same-parameter retry. Adding a new file-state API is deferred and recorded as a spec limitation.

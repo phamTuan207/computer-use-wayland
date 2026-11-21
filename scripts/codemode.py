@@ -172,7 +172,7 @@ _OP_BY_PATH = {op["path"]: op for op in OPS}
 
 # ---------------------------------------------------------------- search
 def search_ops(query):
-    """Rank op paths by keyword match. Returns paths + one-liners, no schemas."""
+    """Rank ops and snippets. Snippets are indexed by tags and stay below ops."""
     words = [w for w in query.lower().split() if w]
     scored = []
     for op in OPS:
@@ -180,10 +180,44 @@ def search_ops(query):
         score = sum(1 for w in words if w in hay)
         if words and score == 0:
             continue
-        scored.append({"path": op["path"], "description": op["description"],
+        scored.append({"kind": "op", "path": op["path"],
+                       "description": op["description"],
                        "laptop_only": op["laptop_only"], "score": score})
-    scored.sort(key=lambda item: (-item["score"], item["path"]))
-    return {"total": len(scored), "results": scored}
+    registry_error = None
+    try:
+        import code_exec
+        snippets = code_exec.search_snippets()
+    except Exception as exc:
+        snippets = []
+        registry_error = str(exc)
+    for snippet in snippets:
+        tags = [tag.lower() for tag in snippet["tags"]]
+        score = min(5, sum(1 for word in words
+                           if any(word in tag for tag in tags)))
+        if words and score == 0:
+            continue
+        params = snippet["params"]
+        summary = ", ".join(
+            "%s: %s%s" % (param["name"], param["type"],
+                           " (default %r)" % param["default"]
+                           if not param["required"] else "")
+            for param in params) or "none"
+        scored.append({
+            "kind": "snippet", "name": snippet["name"],
+            "description": snippet["description"],
+            "params_summary": summary,
+            "last_verified": snippet["last_verified"],
+            "stale": snippet["stale"],
+            "requires_approval": snippet["requires_approval"],
+            "score": score,
+        })
+    scored.sort(key=lambda item: (0 if item["kind"] == "op" else 1,
+                                  -item["score"],
+                                  item.get("path", item.get("name", ""))))
+    result = {"total": len(scored), "results": scored}
+    if registry_error:
+        result["snippet_registry_error"] = registry_error
+    return result
 
 
 def describe_op(path):
@@ -195,6 +229,15 @@ def describe_op(path):
             "params": op["params"], "returns": op["returns"],
             "laptop_only": op["laptop_only"],
             "requires_approval": op["requires_approval"]}
+
+
+def describe_snippet(name):
+    """Describe one snippet without returning its code body."""
+    try:
+        import code_exec
+        return code_exec.describe_snippet(name)
+    except Exception as exc:
+        raise CodemodeError(str(exc)) from exc
 
 
 # ---------------------------------------------------------------- execute

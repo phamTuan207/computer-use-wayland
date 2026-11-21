@@ -3,6 +3,7 @@ import json
 import os
 import pathlib
 import re
+import shutil
 import tempfile
 import threading
 import time
@@ -156,9 +157,20 @@ EXPECTED_P4_RUNTIME = (
 class FakeShellBackend(FakeBackend):
     """Simulate delayed shell command completion for the P3 race."""
 
-    def __init__(self):
+    def __init__(self, path_root=None):
         super().__init__()
         self.threads = []
+        self.path_root = pathlib.Path(path_root) if path_root is not None else None
+
+    def _mapped_path(self, path):
+        value = pathlib.Path(path)
+        if self.path_root is None:
+            return value
+        try:
+            relative = value.relative_to('/tmp')
+        except ValueError:
+            return value
+        return self.path_root / relative
 
     def observe_window(self, address, crop, max_width):
         time.sleep(0.15)
@@ -177,7 +189,7 @@ class FakeShellBackend(FakeBackend):
         time.sleep(0.3)
         paths = command.split('mkdir -p ', 1)[1].split(' && ', 1)[0].split()
         for path in paths:
-            pathlib.Path(path).mkdir(parents=True, exist_ok=True)
+            self._mapped_path(path).mkdir(parents=True, exist_ok=True)
 
     def join_shell(self):
         for thread in self.threads:
@@ -187,12 +199,23 @@ class FakeShellBackend(FakeBackend):
 class FakeTerminalBackend(FakeBackend):
     """Small shell simulator for the fixed P3 and P4 terminal programs."""
 
-    def __init__(self):
+    def __init__(self, path_root=None):
         super().__init__()
         self.actions = []
         self.terminal_output = []
         self.shell_errors = []
         self.observe_count = 0
+        self.path_root = pathlib.Path(path_root) if path_root is not None else None
+
+    def _mapped_path(self, path):
+        value = pathlib.Path(path)
+        if self.path_root is None:
+            return value
+        try:
+            relative = value.relative_to('/tmp')
+        except ValueError:
+            return value
+        return self.path_root / relative
 
     def observe_window(self, address, crop, max_width):
         time.sleep(0.15)
@@ -215,12 +238,23 @@ class FakeTerminalBackend(FakeBackend):
             line = raw_line.strip()
             if not line:
                 continue
+            if line.startswith('rm -rf ') and ' && mkdir -p ' in line:
+                remove_part, line = line.split(' && ', 1)
+                remove_path = self._mapped_path(remove_part[len('rm -rf '):])
+                if remove_path.is_dir():
+                    shutil.rmtree(remove_path)
+                else:
+                    remove_path.unlink(missing_ok=True)
+            if line.startswith('rm -f ') and " && printf '" in line:
+                remove_part, line = line.split(' && ', 1)
+                self._mapped_path(remove_part[len('rm -f '):]).unlink(missing_ok=True)
             if line.startswith('mkdir -p ') and ' && find ' in line:
                 mkdir_part, find_part = line.split(' && find ', 1)
-                paths = mkdir_part[len('mkdir -p '):].split()
+                paths = [self._mapped_path(path)
+                         for path in mkdir_part[len('mkdir -p '):].split()]
                 for path in paths:
                     pathlib.Path(path).mkdir(parents=True, exist_ok=True)
-                root = pathlib.Path(find_part.rsplit(' -type d', 1)[0])
+                root = self._mapped_path(find_part.rsplit(' -type d', 1)[0])
                 self.terminal_output.extend(
                     str(path) for path in [root] + sorted(root.rglob('*'))
                     if path.is_dir())
@@ -228,14 +262,14 @@ class FakeTerminalBackend(FakeBackend):
             match = re.fullmatch(r"printf '(.*)' > (\S+) && cat (\S+)", line)
             if match:
                 content = match.group(1).replace(r'\n', '\n')
-                target = pathlib.Path(match.group(2))
+                target = self._mapped_path(match.group(2))
                 target.write_bytes(content.encode('utf-8'))
                 self.terminal_output.append(
-                    pathlib.Path(match.group(3)).read_text(encoding='utf-8'))
+                    self._mapped_path(match.group(3)).read_text(encoding='utf-8'))
                 continue
             redirect = re.fullmatch(r'>\s*(\S+)\s*&&\s*cat\s+(\S+)', line)
             if redirect:
-                pathlib.Path(redirect.group(1)).write_bytes(b'')
+                self._mapped_path(redirect.group(1)).write_bytes(b'')
                 self.terminal_output.append('')
                 continue
             self.shell_errors.append('bash: command not found: ' + line[:80])
