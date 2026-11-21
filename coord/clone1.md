@@ -2732,6 +2732,201 @@ W11 KHÔNG được áp dụng. Agent sửa đợt 7 đã được dặn thêm
 CORRECTION note vào chính báo cáo redteam ghi W11 sai kèm bằng
 chứng git này.
 
+## ĐỢT 7 - BÁO CÁO CUỐI, 04:40 ngày 22/11
+
+Đợt 7 XONG và đã báo cáo đầy đủ: cả 3 việc, council 1+2+3, redteam,
+sửa sau redteam, tất cả đã push. Remote main khớp HEAD sau mỗi lần
+push (xem cuối mục).
+
+### Việc 1 - G29: NGUYÊN NHÂN TÌM RA, ĐÃ SỬA, ĐÃ KIỂM LIVE 2 LẦN
+
+Báo cáo docs/clone1-g29-urlbar-focus-20261122.md (219 dòng sau
+sửa). Sửa scripts/mcp_server.py dòng 308-309 (`button 0 1` /
+`button 0 0`) + test RealClickButtonTest mới. Suite MCP tôi tự
+chạy lại: 20 test OK (1 skip). Council 1 chạy lại: 20 OK, 1 skip,
+1.727 s. Council 3 chạy lại: 20 OK, 1 skip, 1.615 s; pointer native
+12 OK, 2.289 s.
+
+Nguyên nhân: `_real_click` gửi `button 1` cho click trái; binary
+pointer gửi mã evdev 0x110 + index, nên index 1 là BTN_RIGHT
+(0x111), không phải BTN_LEFT (0x110). Click hybrid của MCP vì vậy
+click phải mọi thứ. Có từ lúc file tạo (commit 98edc39, dòng
+248-249). Chứng minh live (Firefox 160.0.1, Xvfb, AT-SPI): E1 click
+trái PASS, marker vào được bar; E2 click phải FAIL, tái hiện đúng
+G29, menu ngữ cảnh [621, 66, 81, 204], marker đọc lại ""; E3
+doAction AT-SPI PASS; E4 Ctrl+L PASS. Council 3 tự tái hiện live
+và khớp mọi thí nghiệm (E1 104.6 ms, E2 105.7 ms, E3 1.3 ms, E4
+45.3 ms, tổng 7706.3 ms). Điểm quyết định: click phải VẪN đặt
+AT-SPI STATE_FOCUSED, nên chỉ test gõ mới kết luận được. Mapping
+chứng minh 3 cách (kernel header, pointer.c:188, cu.py trái thành
+0); repo không còn sender `button 1` production nào khác (chỉ
+tests/pointer_benchmark.py:53, benchmark cố ý). Control âm:
+RealClickButtonTest FAIL trên code cũ, PASS trên code sửa (council
+1 tự chạy).
+
+Số đã sửa sau redteam: wall lần 2 là 7,516.5 ms, không phải 7,646
+ms (W6). Parenthetical dismiss "(AT-SPI dismiss, 'Continue', 0.2
+ms)" đã gỡ hẳn: không có bước nào như vậy trong code probe,
+session starter hay log; "0.2" duy nhất là time.sleep(0.2) = 0.2
+giây trong clear_urlbar (U1). Cách viết XDG đã sửa theo đúng thứ
+đã test: socket có hậu tố theo display (bus_97/bus_98), phiên thứ
+2 đăng ký bình thường, claim "chỉ chạy khi 1 phiên" chưa test nên
+đã bỏ (U6, council 3).
+
+Còn mở: `_real_click` đã sửa không chạy live được ở đây (không có
+Wayland/Hyprland); chạy end-to-end trên phiên Wayland của laptop
+còn nợ. Zen chưa kiểm (không có binary Zen). Tool `click` của MCP
+nhận DOM selector và `locate()` chỉ làm DOM, nên thanh địa chỉ
+không nhắm được qua `mcp_server.click`; caller chính xác tạo ra
+click G29 trên laptop chưa xác định được từ máy này.
+
+### Việc 2 - H2: SỐ ĐO ĐÃ XÁC NHẬN, CÓ LƯU Ý TẢI
+
+Báo cáo docs/clone1-thinktime-20261122.md (273 dòng sau sửa).
+Bằng chứng ~/workspace/b7t2/results-run2.json và results-run3.json.
+Council 1 kiểm đúng từng trường với file đã lưu; council 3 chạy
+lại measure_loop.mjs và tái hiện hình dạng vòng lặp (rect từng
+phần tử 216.8 ms so với 1 lần 4.55 ms, chênh 47.6x trong dải
+38-50x; vòng one-vision 20.1 ms, vòng ngây thơ 39.2 ms, think 0.0
+ms, counter 18 đúng).
+
+Số đo (median 2 lần chạy đã lưu, fixture 60 phần tử, 4,620 ký tự):
+dựng phiên mới (port lên 1,081-1,092 ms + connect 2,791-3,148 ms)
+= 3,883-4,229 ms, trả 1 lần mỗi browser mới; vòng 10 bước chỉ
+260-300 ms. Observe: DOM đầy 3.5-3.7 ms; snapshot gọn 1 lần 6.9-7.8
+ms; rect 1 lần 4.8-5.8 ms; rect từng phần tử 219.8-239.5 ms (gấp
+38-50 lần 1 lần); screenshot PNG 24.2-25.9 ms, 41,625 byte; verify
+rẻ 2.9-4.2 ms. Think (policy cục bộ): 0.0 ms, max thật 0.174 ms.
+Act: click + verify 26.6-34.4 ms; gõ 8 ký tự 12.1-18.9 ms. Vòng
+đầy: một-vision 27.9-29.6 ms/lần; ngây thơ 34.7-39.1 ms/lần.
+Counter đúng (18 sau 18 click). Đề xuất cắt: (1) quét rect 1 lần,
+không từng phần tử: tiết kiệm 214-235 ms mỗi vòng, khoảng 2.1-2.3
+s mỗi task 10 bước; (2) 1 observation gọn mỗi vòng; (3) verify rẻ
+thay observe lại đầy; (4) 1 phiên browser bền mỗi task: tiết kiệm
+3,883-4,229 ms; (5) bỏ screenshot khỏi vòng mặc định: tiết kiệm
+24.2-25.9 ms + 41 KB mỗi bước, cộng 2,000-5,000 token mỗi ảnh ở
+model; (6) không tối ưu policy cục bộ (0.0 ms). Chi phí cơ học
+task 10 bước, chưa tính LLM think: khoảng 0.3 s sau cắt. Tổng
+ngây thơ trên cơ sở cộng đủ (setup + vòng ngây thơ + rect từng
+phần tử, số exact 6,428-7,015 ms): khoảng 6.4-7.0 s; baseline
+setup + vòng ngây thơ là 4.2-4.6 s (exact 4,230-4,620 ms). Cắt
+tiết kiệm 6.1-6.7 s cơ học mỗi task 10 bước trên fixture này.
+
+Lưu ý tải (council 3): tổng setup KHÔNG tái hiện ổn định: lần
+chạy của council tốn 6,308 ms (port lên 2,575 + connect 3,733)
+khi máy chỉ còn 409 MB free, so với 944-1,412 MB của lần 2/3. Dải
+setup phải trình bày là phụ thuộc tải. Council 1 chạy lại cũng
+thấy giá trị tuyệt đối lệch 10-40% (tỉ lệ rect 31x, dưới dải
+38-50x), nên dải đúng là phụ thuộc tải.
+
+Số đã sửa sau redteam (tính lại từ file đã lưu): setup verdict
+3,883-4,229 ms, không phải 3,900-4,700 ms (W1); screenshot median
+24.2-25.9 ms, không phải 24-29 ms (W2); rect từng call 3.7-4.0 ms,
+không phải 3.6-3.9 ms (W3); think max 0.174 ms, không phải 0.157
+ms (W4); tổng ngây thơ 6.4-7.0 s trên cơ sở cộng đủ, không phải
+cách cộng sai cũ (W5; con số trùng cũ nhưng cách tính cũ sai);
+agentpatterns 19 ngày, không phải 18 (W9, trang Updated
+2026-11-03); frowse 3 ngày, không phải 2 (W10, release 0.1.2
+upload 19/11/2026). Guibai "7 ngày" không kiểm được từ fetch (không
+thấy ngày trong text), đã ghi rõ là chưa kiểm (U4). Surfs.dev đã
+chết (Post Not Found lúc review), chỉ còn corroborate qua search
+index (U5). Số lần chạy 1 và "không còn Firefox" không có artifact
+lưu, đã ghi rõ là không lưu (U2, U3).
+
+last30days-skill: CHƯA CÀI trong đợt 7. Agent việc 2 đọc commit
+33fbbdd và vật liệu coord/clone2.md, nói không qua kiểm tra an toàn,
+không cài gì, và không ghi lại check đó là gì (U7). Câu hỏi này đã
+được Muse quyết trong đợt 8: verdict CLEAN (đọc source ở f5d0e44,
+Critical Risk 3 scanner là false positive), và giao cài bằng git
+clone rồi sweep. Việc cài thuộc đợt 8, không còn mở ở đợt 7.
+
+Còn mở: LLM think time chưa đo; scale trang thật chưa đo; chi phí
+observe AT-SPI chưa đo và claim 2 lần thử lỗi (32,244 / 32,376 ms)
+không có log nào trên ổ, chưa kiểm được (council 3); Zen chưa đo.
+
+### Việc 3 - HIGH: CẢ 3 SỬA MỘT PHẦN, ĐÃ XÁC NHẬN
+
+Báo cáo docs/clone1-batch7-high-fixes-verify-20261122.md (86 dòng
+sau sửa). Phụ lục audit 431 lên 458 dòng. Council 2 xác nhận cả 3
+SỬA MỘT PHẦN. Clone2 đã sửa trước (748cc35, 219720c, 05ee34d,
+16c4196 trên todolist-push); agent việc 3 không làm trùng mà kiểm
+độc lập ở tip da60024, 0 sai lệch trong các sửa của clone2.
+
+V1 (H3): sửa đã thêm vào worker-f1-guardian-fix-log.md (05ee34d) +
+doc tổng hợp batch7-high-corrections-20261122.md (16c4196), cả 2 có
+ở da60024. `git log --all -- MEMORY.md` trả rỗng (chưa từng tồn
+tại). Cả 5 chỗ trích vẫn giữ claim ở đúng dòng (:90, :107, :148,
+:198, :862-863). V2 (log arm F3): sửa đã thêm vào
+worker-f3b-restart-log.md (748cc35). Cả 14 log vẫn vắng ở da60024;
+f3-evidence/ giữ đúng 14 file đã liệt; 0 hit cho cả 4 session ID
+trong full.log và result_full.json. Số đúng là 14, không phải 9.
+V3 (130/130): sửa đã thêm vào live-test-log.md (219720c). Phán
+quyết vẫn ở dòng 991 đúng text; mọi file bằng chứng trích vẫn
+vắng; SHA 8da1f562 giữ đúng. Cả 4 commit sửa đều thêm thuần
+(5/5/4/78, 0 xóa), 0 dấu gạch trong dòng thêm.
+
+Số đã sửa sau redteam/council 2: tip tiến 36 commit từ c19c227,
+không phải "2 lần" (W7); dòng :148 dài 766 ký tự, không phải 767
+(W8, lỗi +1 lần thứ 4 liên tiếp); trích :862 trải 862-863,
+"proposal" ở 863 (M4). Phát hiện mới D2 (council 2): chấp nhận H3
+còn nêu như fact ở 2 chỗ nữa mà danh sách "5 chỗ" không gồm:
+improvements/worker-f2-silence-fix-log.md:598 và
+improvements/worker-opt-method-log.md:81 (chỗ sau dưới heading
+"Parent MEMORY.md updated 22:57"). Đếm 5 chỗ đúng với chuỗi trích
+chính xác "MEMORY.md 22:57", nhưng claim vẫn chưa sửa ở 2 log đó;
+cần thêm entry sửa ở đó nữa.
+
+Còn mở, chờ Muse quyết: V1 điều phối ghi lại chấp nhận (AM-13);
+V2 14 log trên laptop hoặc chạy lại arm A-E kèm log; V3 file trên
+laptop/VM hoặc chạy lại judge kèm bằng chứng. Không còn gì sửa
+được từ máy này cho các HIGH.
+
+### Council + redteam
+
+Council 1 (docs/batch7-council1-tests-20261122.md, 240 dòng):
+G29 XÁC NHẬN, H2 XÁC NHẬN. Tự chạy lại suite MCP 20 OK 1 skip,
+control âm FAIL/PASS đúng, test pointer native 12 OK, g29-log.jsonl
+khớp đúng từng cái, H2 khớp đúng từng trường với 2 file JSON.
+Council 2 (docs/batch7-council2-audits-20261122.md, 86 dòng): cả 3
+HIGH SỬA MỘT PHẦN, ĐÃ XÁC NHẬN; 4 commit sửa đúng số thêm thuần;
+phụ lục audit ĐÚNG mọi câu. Council 3
+(docs/batch7-council3-live-20261122.md, 206 dòng): G29 XÁC NHẬN
+(tự tái hiện live khớp mọi thí nghiệm), H2 XÁC NHẬN MỘT PHẦN
+(setup phụ thuộc tải; claim AT-SPI chưa kiểm, không có log; XDG
+chỉ xác nhận một phần, socket có hậu tố display nên phiên thứ 2
+đăng ký bình thường).
+
+Redteam (docs/batch7-redteam-20261122.md, 251 dòng sau sửa): 12
+số sai, 8 claim chưa kiểm nêu như đã xong, 0 bug thật trong các
+báo cáo, 7 vấn đề nhỏ. Cả 3 verdict đều đứng. Sửa đã áp dụng hết
+trừ W11 (sai, đã rút, xem mục redteam): báo cáo sửa
+docs/batch7-fix-20261122.md (222 dòng). Một điểm sửa lệch brief:
+W5, tổng ngây thơ đúng là 6.4-7.0 s theo median exact (6,428-7,015
+ms), không phải 6.5-7.0 s của redteam (6.5 là artifact làm tròn kép
+từ 4.3 + 2.2); báo cáo cuối này dùng 6.4-7.0 s.
+
+Đính chính ghi chú coord của chính tôi: mục việc 3 ở trên lặp
+lại "767 ký tự" và "tip tiến 2 lần", cả 2 đều sai, số đúng là 766
+ký tự và 36 commit (W7, W8). Cách gom doc sửa của clone2 với các
+commit todolist-push trong ghi chú đó là ĐÚNG (doc có trên
+todolist-push ở da60024), redteam W11 nhầm 2 doc mới là sai.
+
+### Còn nợ (ghi lại để đợt sau)
+
+Từ đợt 7: chạy G29 end-to-end trên Wayland laptop; test Zen
+end-to-end; xác định caller tạo ra click G29; LLM think time; scale
+trang thật; chi phí observe AT-SPI có log; V1 ghi lại (AM-13); V2
+14 log hoặc chạy lại; V3 file hoặc chạy lại judge; D2 thêm 2 entry
+sửa H3. Từ đợt 6 chưa xong: diag F-B6-14/F-B6-18, nguyên nhân
+F-B6-32, B2 a1_unblind.py dòng 226, 2 hash audit chưa rõ, test
+Ctrl+T headless, chứng minh live cho ERROR-steps. Đợt 8 đã xếp sẵn
+(03:06 22/11, commit e04a16a giao cả clone1 đợt 8 và clone2 đợt 9):
+việc 1 cài last30days bằng git clone rồi sweep 30 ngày cho one-vision,
+báo cáo docs/clone1-last30days-sweep-20261122.md; việc 2 kiểm độc
+lập diff CLICK-AMEND (todolist-push e4082ff tới 4b7d6ac), báo cáo
+docs/clone1-amend-verify-20261122.md. Đợt 8 bắt đầu ngay sau khi
+báo cáo cuối này đã push.
+
 ## Watchdog đợt 6 đã dừng, 03:56 ngày 22/11
 Báo cáo cuối đợt 6 đã ở trong coord và đã push (7f9c699, khớp
 ls-remote). Watchdog đợt 6 đã tắt (enabled false, next run null).
@@ -2887,3 +3082,6 @@ Dùng skill last30days đã cài trên máy cậu (ưu tiên git clone rồi dù
 Rà 5 commit mới nhất trên todolist-push, claim "xong" nào không kèm bằng chứng chạy được (lệnh test, output, commit hash, log thời gian) thì ghi vào danh sách vi phạm, báo vào coord này. Chỉ audit, không sửa code của người khác.
 
 Luat nhu cu: khong dua thong tin ca nhan nao cua toi len repo, khong dau gach ngang dai, khong ydotool, test nao cung ghi thoi gian. Ket qua bao cao vao file nay.
+
+## Watchdog đợt 7 đã dừng, 04:42 ngày 22/11
+Báo cáo cuối đợt 7 đã ở trong coord và đã push (0b5619c, khớp ls-remote). Watchdog đợt 7 đã tắt (enabled false, next run null). Đợt 8 bắt đầu ngay, watchdog đợt 8 chạy thay.
