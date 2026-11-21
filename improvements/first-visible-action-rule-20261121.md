@@ -64,16 +64,17 @@ improvements/worker-f2-silence-fix-log.md):
 - CLI FIRST (22:45). Open the Omarchy menu and switch workspaces by
   COMMAND, never by clicking the bar. Fastest-path-first: CLI before
   mouse, mouse last. The menu command is `omarchy-menu toggle root`
-  (from the Omarchy config). Working form for focusing a window (and
-  switching to its workspace): `hyprctl dispatch 'hl.dsp.focus({ window
-  = "address:0x..." })'` (repo pattern, cu.py:541; proven 22:51,
-  activeWs 1). Switching workspaces by command is STILL UNSOLVED
-  except via that focus side effect (focusing a window pulls its
-  workspace): `hl.dsp.workspace` is a table with methods swap_monitors,
-  rename, move, change_id, toggle_special and no goto or switch, and
-  `hl.dispatch("workspace", "1")` also fails (J23, 22:58). Never use
-  the plain string form `hyprctl dispatch workspace 1` (broken in
-  Hyprland 0.57.2 Lua).
+  (from the Omarchy config). Switching workspaces by command: SOLVED
+  23:19 (AGENTS.md): `hyprctl dispatch "hl.dsp.focus({ workspace = 2 })"`
+  switches workspaces in ~1 s (ws1 to ws2 and ws2 to ws1 both verified).
+  The older J23 note (hl.dsp.workspace is a table, no goto/switch) is
+  superseded: `hl.dsp.workspace.goto` FAILS because goto is a Lua
+  reserved word (rc 7); the working form is hl.dsp.focus with a
+  workspace argument. Focusing a window also works and switches to its
+  workspace: `hyprctl dispatch 'hl.dsp.focus({ window =
+  "address:0x..." })'` (repo pattern, cu.py:541; proven 22:51,
+  activeWs 1). Never use the plain string form `hyprctl dispatch
+  workspace 1` (broken in Hyprland 0.57.2 Lua).
 - LOG EVERY EVENT (22:47). Append every action to the worker log AS IT
   HAPPENS (wall-clock Asia/Ho_Chi_Minh + elapsed, what, target,
   outcome, coordinates for clicks). Never batch the log at the end.
@@ -106,18 +107,31 @@ envelope instead of a traceback. Follow-up (not implemented here):
 when the batch types and the given observation is a screen observation;
 until then, the caller must pass the window observation.
 
-## Zen urlbar click does not focus (proven 22:55-23:00, 2/2)
+## Zen urlbar click does not focus (HYPOTHESIS, 2/2, not proven)
 
 In this Zen layout, a mouse click on the sidebar-top urlbar/search field
-lands exactly (cursorpos verified 0 px error) but does NOT focus the
-field for URL entry. Typing after the click goes nowhere and Enter does
-nothing. The keyboard path works: Ctrl+L focuses the urlbar, then type +
-Enter navigates (proven: Example Domain loaded). So a step that needs a
-URL must focus the urlbar with Ctrl+L, not with a mouse click on the
-field, until the click behavior is understood. This is a Zen UI finding,
-not an act-now defect (act-now delivered the click exactly). ZT-00 step
-4 as written (mouse click the address bar) is blocked by it; ZT-A must
-fix the scenario.
+lands exactly (cursorpos verified 0 px error on run 2) but did NOT focus
+the field for URL entry in 2/2 attempts, and typing after the click went
+nowhere. The keyboard path works: Ctrl+L focuses the urlbar, then type +
+Enter navigates (Example Domain loaded). This is a HYPOTHESIS, not a
+proven Zen UI finding (redteam A7): the 2 attempts used an identical
+target, identical coords (120,60), and an identical sequence shape
+(Ctrl+N, then click, then type, then Enter). No variation separates
+click delivery from Zen behavior: no hover dwell before the click
+(desktop_act moves then clicks immediately, zero dwell; run 4 waited
+500 ms after Ctrl+N but the click itself still had zero dwell), no
+control click on a known-focusable field, no double-click, no click
+without the preceding Ctrl+N (new-tab settle race), and the field
+identity was read off a screenshot, not from DOM or a11y. The blind
+type after a click that does not focus goes wherever focus happens to
+be; desktop_act verifies cursor position, not focus. So a step that
+needs a URL must focus the urlbar with Ctrl+L for now, and ZT-00 step
+4 as written (mouse click the address bar) stays blocked (the mouse
+path did not navigate 2/2). Discriminating probes before calling it
+proven: hover 100 ms then click; click a control text field; click
+the urlbar without a preceding Ctrl+N; double-click. Record which
+probe changes the outcome. Act-now delivery itself is exonerated
+(coordinate conversion and press/release are correct).
 
 ## The mechanism (code, not a reminder)
 
