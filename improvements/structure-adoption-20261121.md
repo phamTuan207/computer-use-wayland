@@ -16,6 +16,9 @@ Evidence contract + two-lane cap (above). After the pilot: DOM-first as opt-in p
 ## What NOT to change
 Coordinator model (one coordinator, repo-mediated, no peer-to-peer). Clone channel (repo only). Generators never run their own tests. Watchdog (15-min cron; 5-min poll refinement noted, not yet applied). Quality over speed. Realistic complex tests, timed and logged. Final test plan (independent contest, run LAST). No personal info on GitHub, no em/en dashes, never ydotool, small commits push as you go, full access.
 
+## Lane-count ruling (21/11 18:29, from watchdog step-10 sweep)
+The cap is per workstream, not global: each independent workstream (disjoint files, own test slot, named deliverable file) may run its own lanes. The current fleet (Y1b, Y3, Y5, Y6, Y4d, Y8, A1 + clones) satisfies the third-lane conditions per workstream, so it is compliant. A NEW lane on the SAME workstream still needs the 3 conditions. Future sweeps: do not flag lane count as ambiguous when workstreams are disjoint; flag only same-workstream overlaps.
+
 ## Killed (do not revive quietly)
 Coordinate cache. Register/tools/skills apparatus. Exp3 as designed. Hard timeouts 60/30/20. JSON-schema validations on handoffs. Blanket one-batch ban on clones.
 
