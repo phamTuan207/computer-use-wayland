@@ -7,28 +7,47 @@ NOT HEAD: HEAD's run_live.py changed in 91d3cd2 (Y11 live-metrics, +415/-66),
 unit-verified only. live_metrics.py must be ABSENT from the ship dir.
 
 Launcher: tests/realistic/launch_y13.py (council A F4 + redteam H5,
-Y13f H3 re-review fix, Y13g B1-B4 + 5 amends). It performs the
+Y13f H3 re-review fix, Y13g B1-B4 + 5 amends, Y13g round 2). It performs the
 launch-time checks (go order asserted, Y6c marker check with --repo
 REQUIRED, ship manifest md5 vs the committed manifest, entry-.pyc
 out-of-process check, full-allowlist ship scan, handover token
-fresh, runner-quiet process check, predecessor + own ports free, no
-live geckodriver with a live parent) and then execs the runner under
-flock -w 60 with `python3 -P` (PYTHONSAFEPATH=1). Launch ONLY via
-the launcher, never directly. The marker check matches subjects
-only (never --grep), rejects "harness" subjects, requires the newest
+written fresh at run start then checked, runner-quiet process check,
+predecessor + own ports free, no live geckodriver with a live
+parent) and then execs the runner under flock -w 60 with
+`python3 -P` (PYTHONSAFEPATH=1). LIVE RUNS go ONLY via the launcher;
+the direct form (`python3 -P run_codex_y5.py --verify-manifest`,
+`python3 -P run_codex_y5.py <tests>`) is supported WITH -P for
+verify / staging / probes, never for a live run. --ship-dir DIR (or
+Y13_SHIP_DIR) points the launcher at a different ship dir (value
+space-separated only, must be an existing directory); a repo-tree
+path refuses. The marker check matches subjects only (never
+--grep), rejects "harness" subjects, requires the newest
 completion to be newer than the newest abort BY GIT LOG ORDER
-(branch position, not committer date), and refuses unless the git
-remote is the known repo remote. The marker is a COORDINATION
-SIGNAL among pushers, not authentication. Script form only:
-`python3 -P launch_y13.py` and `python3 -P run_codex_y5.py`; -m and
-bare imports are UNSUPPORTED (both entry points refuse them at the
-module top, exit 2) and a forged entry .pyc invoked via -m/import
-executes, so no legitimate flow ever invokes -m/import on an
-unverified ship. The ship is re-staged from the committed bytes with:
+(branch position, --topo-order, not committer date), and refuses
+unless the git remote, normalized (SSH form, trailing slash,
+optional .git, host case), is the known repo remote. The marker is
+a COORDINATION SIGNAL among pushers, not authentication. Script form
+only: `python3 -P launch_y13.py` and `python3 -P run_codex_y5.py`;
+-m and bare imports are UNSUPPORTED (both entry points refuse them
+at the module top, exit 2) and a forged entry .pyc invoked via
+-m/import executes, so no legitimate flow ever invokes -m/import on
+an unverified ship. A bare invocation (no -P) refuses at the
+module top (sys.flags.safe_path). The ship is re-staged from the
+committed bytes with (from the repo root):
   python3 tests/realistic/regen_codex_y5_manifest.py --stage /tmp/worker-y13-server
 (Regenerate the manifest LAST, after every runner edit; the
 launcher refuses a ship whose manifest md5 differs from the
-committed manifest.)
+committed manifest. If the manifest md5 mismatches, commit + push
+the manifest first, then re-stage.)
+
+How to verify (C3-3): importing either entry point exits 2 (the
+script-form-only guard), so the tokenizer and the checks are
+verified by AST-extraction (parse the file, take the named
+FunctionDef nodes, exec in a fresh namespace with os/json/hashlib/
+re/shlex/subprocess/time/marshal and _SHIP_DIR set to the staged
+ship), never by importing the module. The md5 leg disables itself
+silently when the manifest is unreadable or the extracted copy runs
+outside a ship dir (the name leg still catches every named form).
 
 Ship dir (laptop): /tmp/worker-y13-server
 Ports: server 8771, WD 4452, Marionette 2828 (shared, connect-existing).
@@ -42,11 +61,11 @@ Y6c completion marker + Muse's go order + the launch-time checks pass):
     --repo /home/james/workspace/computer-use-wayland all \
   > /tmp/worker-y13-stdout.log 2>&1
 
-Manifest: codex-y5-manifest.json, md5 0ca16ddd743acc9e28294fecd07a9c70, 27 files.
+Manifest: codex-y5-manifest.json, md5 7c76383402e4c50b28adab6b25a22e09, 27 files.
 Files (path, md5):
 
-- run_codex_y5.py db3e357f616d21e1d6b2a573682019fd
-- launch_y13.py eec63492ae581b3046f2cc3baea97473
+- run_codex_y5.py d5047ff573820491263a2eb3805105f4
+- launch_y13.py 8e72a5ce85cbaf8382f998987e8890e5
 - run_live.py 84fa106c253d5e7f16daccf2ce3f14a5
 - codex-y5/test-01-git-workflow.md 0f347247c21b2f1375596c1ee51449b4
 - codex-y5/test-02-music-player.md 15925f6709c62908dfd5cd88f1fc8c91

@@ -559,22 +559,27 @@ autonomy per the Lauren Tan direction. Work directly with Muse.
   manifest md5 against the COMMITTED manifest from git).
 - Ship integrity (H1): three layers. (1) sys.dont_write_bytecode
   before the run_live import + PYTHONDONTWRITEBYTECODE=1 in the
-  launcher env, so the ship never writes .pyc. (2) A pre-import scan
-  at the top of run_codex_y5.py refuses any .pyc or symlink under
-  the ship dir with exit 2 BEFORE run_live loads (the manifest
-  check in main() runs after the import, so it alone cannot stop a
-  forged .pyc from executing). (3) _verify_manifest refuses any
-  .pyc / __pycache__ dir and any symlink or non-manifest-prefix
+  launcher env, so the ship never writes .pyc. (2) A full-allowlist
+  pre-import scan at the top of run_codex_y5.py (R1: any file not
+  a manifest path, any symlink, any unexpected dir refuses, exit
+  2, BEFORE run_live loads; the manifest check in main() runs
+  after the import, so it alone cannot stop a forged .pyc or a
+  planted .so from executing) + a PYTHONSAFEPATH enforcement
+  (refuse without -P). (3) _verify_manifest refuses any .pyc /
+  __pycache__ dir and any symlink or non-manifest-prefix
   directory. SUPERSEDED by Y13g (see Y13g amendments below): the
   entry-.pyc exemption is REMOVED (a forged entry .pyc executes
   via -m/import, proven by Y13r2). The -m guard deletes a
-  legitimate self-cache (every cache-tag variant) before it can
-  brick a later run, and the launcher verifies the entry .pyc
-  out-of-process and deletes it before exec. run_live.py's .pyc
-  is NEVER exempt. Probes importing the runner
-  must use PYTHONDONTWRITEBYTECODE=1 or a clean extraction, and
-  must never run `python3 -m py_compile` on the ship files (it
-  writes .pyc into the repo dir).
+  legitimate self-cache (every cache-tag variant, recursive,
+  all three entry stems) before it can brick a later run, and the
+  launcher verifies the entry .pyc out-of-process and deletes it
+  before exec (the scan + check_manifest exempt entry .pyc so
+  they reach that check). run_live.py's .pyc is NEVER exempt
+  from the runner's scan. Probes CANNOT import the runner at all
+  (the guard exits 2 on any import); verify the tokenizer by
+  AST-extraction (see SHIPPED.md "How to verify"), and never run
+  `python3 -m py_compile` on the ship files (it writes .pyc into
+  the repo dir).
 - Process check (H2, SHARED PATTERN -- read this if you own another
   runner): the old regex r"(^|/)run_[^/\s]*\.py" misses every
   bare-relative launch (/proc cmdlines are NUL-separated) and every
@@ -584,15 +589,18 @@ autonomy per the Lauren Tan direction. Work directly with Muse.
   forms, renamed/extensionless/symlinked copies, and -c exec
   forms. The Y13g fix, identical in run_codex_y5.py (preflight)
   and launch_y13.py (AST-verified): a real python argv parse
-  (flags and their values skipped, first positional is the script
-  candidate), -m by last dotted segment, -c by first-word
-  semantics plus the exec(/eval( special case, renamed/
-  extensionless/symlinked copies by md5 against the manifest.
-  Script basenames: run_*.py, run-nested*, hand_drive_e1.py.
-  Y14 MUST apply this same fix to run_batch3.py when it
-  re-stages (Y14 files were NOT edited here); Y9's run_agy_y2.py
-  and run_live.py's preflight carry the same old pattern. See
-  improvements/worker-y13g-fix-log.md for the exact code.
+  (flags and their values skipped, bundled short flags, first
+  positional is the script candidate), -m by last dotted segment
+  (plus pdb, which runs its script with __spec__ None), -c by
+  first-word semantics plus the exec-sink check (exec(, eval(,
+  os.system(, subprocess.*, runpy.run_path() + a .py path md5
+  check), renamed/extensionless/symlinked copies by md5 against
+  the manifest. Script basenames: run_*.py, run-nested*,
+  hand_drive_e1.py. Y14 MUST apply this same fix to run_batch3.py
+  when it re-stages (Y14 files were NOT edited here); Y9's
+  run_agy_y2.py and run_live.py's preflight carry the same old
+  pattern. See improvements/worker-y13g-fix-log.md for the exact
+  code.
 - Y6c gate (H3): see the tightened marker + freshness rule in the
   Slot/queue section above. NOTE (21/11 ~20:55 +07): Y6c ended NO
   VERDICT (commit 5a2b69d, BLOCKED at launch: F0 --socket, F1
@@ -617,72 +625,129 @@ enforced in code:
   exemption anywhere (scan, _verify_manifest). Script-form-only:
   both entry points refuse at the module top when loaded as a
   module or via -m (__spec__ is not None, exit 2, clear message)
-  and delete the entry .pyc files (every cache-tag variant) so a
-  -m/import probe never bricks the ship. _verify_manifest exempts
-  a __pycache__ dir ONLY when it holds only entry .pyc files
-  (0-2); the files inside are still refused as bytecode, so the
-  exemption exists only to keep an empty __pycache__ left by a
-  probe from bricking verify. The launcher verifies each entry
-  .pyc OUT-OF-PROCESS before exec (fresh compile in a separate
-  `python3 -P` subprocess, marshalled code objects compared),
-  refuses on mismatch, and deletes ONLY the matching entry .pyc
-  files. LIMIT (documented, unfixable in-process): a forged entry
-  .pyc invoked DIRECTLY via -m/import executes (the forged
-  bytecode IS the running code). The control is the launcher
-  check + never invoking -m/import on an unverified ship. -m and
-  bare imports are UNSUPPORTED invocation forms.
+  and delete the entry .pyc files (every cache-tag variant,
+  recursive, all three entry stems) so a -m/import probe never
+  bricks the ship. _verify_manifest exempts a __pycache__ dir
+  ONLY when it holds only entry .pyc files (0-3); the files
+  inside are still refused as bytecode, so the exemption exists
+  only to keep an EMPTY __pycache__ left by a probe from bricking
+  verify. The launcher verifies each entry .pyc OUT-OF-PROCESS
+  before exec (fresh compile in a separate `python3 -P`
+  subprocess, marshalled code objects compared), refuses on
+  mismatch, and deletes ONLY the matching entry .pyc files; the
+  launcher scan + check_manifest exempt entry .pyc so they reach
+  that check (R2). LIMIT (documented, unfixable in-process): a
+  forged entry .pyc invoked DIRECTLY via -m/import executes (the
+  forged bytecode IS the running code). The control is the
+  launcher check + never invoking -m/import on an unverified
+  ship. -m and bare imports are UNSUPPORTED invocation forms.
 - B2 planted stdlib .py (Y13r2 A6d, 9/15 names): both entry points
-  run with PYTHONSAFEPATH=1 (`python3 -P`); the launcher execs
-  `python3 -P run_codex_y5.py` and sets PYTHONSAFEPATH=1 in the
-  exec env. The pre-import scan sits at the very top of BOTH
-  entry points, before any import except sys/os, using only
-  os.path; it refuses any .pyc, any symlink, and any .py that is
-  not one of the ship's own (the 3 entry points +
-  codex-y5/check-dashes.py). check_manifest refuses any planted
-  file; the launcher's full-allowlist scan (_scan_ship) refuses
-  any file that is not a manifest path with a matching md5.
+  run with PYTHONSAFEPATH=1 (`python3 -P`) AND refuse a bare
+  invocation at the module top (sys.flags.safe_path, R1); the
+  launcher execs `python3 -P run_codex_y5.py` and sets
+  PYTHONSAFEPATH=1 in the exec env. The pre-import scan sits at
+  the very top of BOTH entry points, before any import except
+  sys/os, using only os.path; it is a FULL ALLOWLIST (R1): any
+  file not a manifest path (29 files incl. the manifest itself
+  and SHIPPED.md), any symlink, any unexpected dir refuses, so
+  a planted .so/.py/.txt cannot execute at import (a planted
+  glob.so proved it under the old denylist). shlex is pre-imported
+  at the module top (before the sys.path insert), never lazily.
+  check_manifest refuses planted top-level .py, non-entry .pyc,
+  and symlinks (nested planted files are caught by the launcher's
+  full-allowlist scan, _scan_ship); _scan_ship refuses any file
+  that is not a manifest path with a matching md5.
 - B3 tokenizer (Y13r2 A4, Finding 2): real python argv parse in
   both copies (AST-verified identical): wrappers first
-  (env/nohup/setsid/timeout/flock/bash -c), flags and their values
-  skipped (-u -B -E -s -v -W <val> -X <val> -O -c <code> -m <mod>,
-  -- separator, bundled/attached forms), first positional is the
-  script candidate; -m matches by last dotted segment against the
-  known runner modules (run_codex_y5, run_live, run_agyq2,
-  run_batch3, run_agy_y2, run-nested-pill, hand_drive_e1); -c by
-  first-word semantics plus the exec(/eval( special case
-  (exec(open('run_codex_y5.py').read()) is caught, bare
-  `import run_codex_y5` is not); renamed/extensionless/symlinked
-  copies by md5 against the manifest (resolved via the
-  process's /proc/<pid>/cwd for relative paths). A mere path
-  mention (md5sum, echo/grep of a runner name) never matches.
-  LIMIT (documented): a nested os.system/exec inside -c code
-  beyond exec(/eval( is not caught; ports + flock backstop.
-- B4 -m brick (Y13r2 A3): same __pycache__ exemption as B1, the
-  launcher deletes only the entry .pyc files before exec, the -m
-  guard is in both entry points, -m/bare imports are documented
-  as unsupported (SHIPPED.md + docstrings).
+  (env/nohup/setsid/timeout/flock/bash -c, plus nice/stdbuf/
+  taskset/sudo/uv run, exec -a), flags and their values skipped
+  (-u -B -E -s -v -W <val> -X <val> -O -c <code> -m <mod>,
+  -- separator, bundled/attached forms via one unified short-flag
+  branch), first positional is the script candidate; -m matches
+  by last dotted segment against the known runner modules
+  (run_codex_y5, run_live, run_agyq2, run_batch3, run_agy_y2,
+  run-nested-pill, hand_drive_e1), plus pdb with a runner script
+  following; `python3 -` (stdin) counts as a possible runner
+  (fail-closed); timeout accepts unit suffixes/decimals; -c by
+  first-word semantics plus the exec-sink check (exec(, eval(,
+  os.system(, subprocess.*, runpy.run_path() + a quoted .py path
+  md5 check; bare `import run_codex_y5` and runpy.run_module are
+  NOT executions, the guard kills them); renamed/extensionless/
+  symlinked copies by md5 against the manifest (resolved via the
+  process's /proc/<pid>/cwd for relative paths; 10 MB size cap;
+  FIFO/unreadable fail open, documented). A mere path mention
+  (md5sum, echo/grep of a runner name) never matches. LIMIT
+  (documented): a -c string that builds the runner name by string
+  concatenation so no single literal is a full runner path is not
+  caught; ports + flock backstop.
+- B4 -m brick (Y13r2 A3): the __pycache__ dir exemption is EMPTY
+  only (see B1), the launcher deletes only the entry .pyc files
+  before exec (via _check_entry_pyc), the -m guard is in both
+  entry points (3 stems, recursive, any tag, symlink-safe), -m/
+  bare imports are documented as unsupported (SHIPPED.md +
+  docstrings).
 - Amend 1 remote pin: the launcher refuses unless `git remote
-  get-url origin` equals
+  get-url origin`, NORMALIZED (trailing slash stripped, optional
+  .git stripped, scheme + host case-folded, SSH form
+  git@github.com:owner/repo accepted as the same repo), equals
   https://github.com/phamTuan207/computer-use-wayland.git
   (checked in check_marker AND check_manifest). The marker is a
   COORDINATION SIGNAL among pushers, not authentication. Marker
   ordering is by GIT LOG POSITION (branch position, newest
-  first), not committer date: a forged old date no longer
-  outranks a newer abort.
+  first, --topo-order), not committer date: a forged old date no
+  longer outranks a newer abort.
 - Amend 2: the codex WARNING matches the codex executable
-  basename (a path component or argv[0] basename of "codex"),
-  not a raw substring; the REFUSE branch keeps the fail-closed
+  basename ONLY (argv[0]'s basename is "codex", or a token that
+  is a path ending in "/codex"); a bare "codex" token elsewhere
+  (grep codex, echo codex) and a path merely containing a codex
+  directory do NOT warn. The REFUSE branch keeps the fail-closed
   substring rule.
-- Amend 3: the scan JSON reports {"refused": true, "kind": ...,
-  "files": [...]} (kind pyc/symlink/planted-py/mixed); symlink
-  refusals are no longer mislabeled as pyc_refused.
+- Amend 3: the RUNNER's scan JSON reports {"refused": true,
+  "kind": ..., "files": [...], "fix": "..."} (kind pyc/symlink/
+  planted-py/unexpected-file/unexpected-dir/mixed); symlink
+  refusals are no longer mislabeled as pyc_refused. (The
+  launcher's scan prints plain text, not JSON.)
 - Amend 4: SHIP_DIR is derived (--ship-dir flag, then
   Y13_SHIP_DIR, then the dir holding the launcher file if it
   holds run_codex_y5.py + the manifest, else the hardcoded
-  /tmp/worker-y13-server fallback).
-- Amend 5: _proven_no_body uses `diag.get("eval_error") is not
-  None` (an empty-string eval_error now reads as a transport
-  error, not proof; unreachable today, hardened).
+  /tmp/worker-y13-server fallback). --ship-dir takes its value
+  space-separated only and it must be an existing directory; a
+  repo-tree path refuses with "this looks like the repo tree,
+  not a staged ship; cd to the ship dir or pass --ship-dir".
+- Amend 5: _proven_no_body uses `"eval_error" in diag` (key
+  presence: an empty-string OR an explicitly-None eval_error now
+  reads as a transport error, not proof; unreachable today,
+  hardened).
+
+## Y13g round 2 (review of the round-1 fix diff, 2026-11-22 ~01:00 +07)
+
+Council 1 AMEND (F1-F10), Council 3 AMEND (C3-1..C3-11), Council 2
+BLOCK (C2-1 HIGH: a planted stdlib .so executes before any refusal;
+C2-2..C2-4 MEDIUM, C2-5..C2-11 LOW), Redteam AMEND (F1-F6),
+Verifier PASS 132/132 on the specified batteries. The verifier's
+PASS is on the specified set only; the new holes came from Council
+2 + redteam probing beyond it. Round-2 fixes (R1-R10, log
+improvements/worker-y13g-fix-log.md): R1 full-allowlist module-top
+scan (29 paths) + safe_path enforcement + shlex pre-import (closes
+C2-1: .so plants, incl. the lazy-shlex -P bypass); R2
+_check_entry_pyc made operative (launcher scan + check_manifest
+exempt entry .pyc so they reach it); R3 tokenizer rewrite (unified
+short-flag branch, pdb, stdin, timeout units, glued separators,
+-c sinks, wrappers nice/stdbuf/taskset/sudo/uv, exec -a, pypy3,
+md5 size cap); R4 guard symlink-safe + recursive + any-tag +
+run_live stem; R5 entry .py hash check before importing run_live;
+R6 codex warning basename-only; R7 remote URL normalization +
+--topo-order; R8 subprocess exceptions exit 2; R9 _proven_no_body
+key presence; R10 docs (this section, SHIPPED.md, regen docstring).
+BEHAVIOR CHANGES for the re-verifier: (a) a bare (no -P)
+invocation now refuses at the safe_path gate (exit 2, no marker),
+so A6d no-P spot checks expect the safe_path refusal, not the scan
+JSON; the -P form still expects kind planted-py. (b) A8 eval_error
+None now returns False (was True under is-not-None). (c) The shared
+tokenizer block now has 14 functions (12 + _m_module_is_runner +
+_is_timeout_dur); the AST comparison must cover all 14. (d) The
+launcher WRITES a fresh handover token at run start (after the go
+order + marker pass); the operator no longer hand-writes it.
 - Harness loss (22/11 ~00:00 +07): /tmp/y13r2/ and
   /tmp/y13r2-redteam/ vanished (cause unknown); the attack
   harnesses must be REBUILT from the specs in the redteam paper

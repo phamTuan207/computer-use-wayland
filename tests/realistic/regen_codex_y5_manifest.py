@@ -28,9 +28,10 @@ manifest must be committed + pushed before the launcher will
 accept a ship staged from it (the launcher compares the ship
 manifest md5 against the COMMITTED manifest from git).
 
-Deletes tests/realistic/__pycache__ first: stale .pyc files there
-would otherwise trip the runner's pre-import tamper scan on the
-next module import (the scan refuses any .pyc, no exemptions).
+Deletes tests/realistic/__pycache__ first: a stale .pyc there is
+dead weight (no import of the runner works anymore: the
+script-form-only guard exits 2 on any import, so the deletion is
+hygiene for probes and staging, not for "the next module import").
 
 Script form only (Y13g B1/B4): the staged verify runs as
 `python3 -P run_codex_y5.py --verify-manifest` (PYTHONSAFEPATH=1).
