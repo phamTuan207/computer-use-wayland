@@ -97,6 +97,26 @@ thoroughly, council + redteam, best quality not speed.
   continuously. Y5 drives no GUI (Codex generates, I verify headless),
   so nothing changes for this task.
 
+## 18:43 +07 | 00:28 | Codex progress poll 2 + fixture smoke test
+- PID 209222 alive, 18:55 elapsed, log 939,368 bytes (was 147KB at 00:17).
+- All 10 fixtures written (test-01..10, 988 lines total). No specs yet,
+  no commits yet on y5-tests. Log tail shows test-10 fixture just
+  finished (extension settings handlers).
+- Pulled fixtures + check.mjs to /tmp/y5-stage/ via tar over SSH stdout.
+- INDEPENDENT SMOKE TEST (mine, not Codex's): node /tmp/y5-verify/smoke.mjs
+  /tmp/y5-stage/fixtures -> overall:true. All 10 load with 0 script
+  errors, 0 duplicate ids, no self-verify hooks, no confirm/alert,
+  no Math.random/Date.now. Id counts 17-49, buttons 2-11, inputs 1-10.
+  Thinness watch: test-08 has only 2 buttons, test-05 only 3; the specs
+  will show whether that supports 15-40 steps each.
+- Next: wait for specs, then run the full jsdom step verification.
+
+## 18:44 +07 | 00:29 | Standing rules noted (no impact on Y5)
+- Owner: fully automatic from now on, he is busy, no asking, decide by
+  council + redteam. Watchdog step 10 added (Lauren Tan sweep). Y5
+  already follows the evidence contract (independent verification +
+  runnable evidence in the final report).
+
 ## 18:20 +07 | 00:05 | Adoption notice received (W proposal APPROVED)
 - Owner approved Worker W's redesign (fb00973). Three rules now apply to Y5:
   1. EVIDENCE CONTRACT: my done report must attach runnable evidence
