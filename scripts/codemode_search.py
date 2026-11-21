@@ -170,10 +170,13 @@ _OP_BY_NAME = {op["name"]: op for op in REGISTRY}
 
 
 def search_ops(query, limit=MAX_SEARCH_RESULTS):
-    """Rank ops by keyword match. Returns short descriptions, never files.
+    """Rank ops by whole-word match. Returns short descriptions, never files.
 
-    Empty query returns every op sorted by name. Each result has name,
-    file, description, tags and score only.
+    Empty query returns ops sorted by name, up to limit. Each result has
+    name, file, description, tags and score only. A query word scores 3
+    for an exact op name, 2 for a whole word in the op name, and 1 for
+    a whole tag or a whole word in the description. Partial substrings
+    never match.
     """
     if not isinstance(query, str):
         raise CodemodeSearchError("query must be a string")
@@ -185,15 +188,18 @@ def search_ops(query, limit=MAX_SEARCH_RESULTS):
                            "description": op["description"],
                            "tags": op["tags"], "score": 0})
             continue
-        hay_name = op["name"].lower()
-        hay = " ".join([hay_name, op["description"]] + op["tags"]).lower()
+        name = op["name"].lower()
+        name_parts = set(re.split(r"[-_]", name)) - {""}
+        tags = set(op["tags"])
+        desc_words = set(re.split(r"[^a-z0-9_]+",
+                                  op["description"].lower())) - {""}
         score = 0
         for word in words:
-            if word == hay_name:
+            if word == name:
                 score += 3
-            elif word in hay_name:
+            elif word in name_parts:
                 score += 2
-            elif word in hay:
+            elif word in tags or word in desc_words:
                 score += 1
         if score == 0:
             continue
@@ -207,11 +213,41 @@ def search_ops(query, limit=MAX_SEARCH_RESULTS):
     return {"total": len(scored), "results": scored[:limit]}
 
 
+def _cap_describe(result):
+    """Trim a describe result until its JSON form fits the cap.
+
+    Sheds head lines, then entry points, then tags, then description
+    text, in that order. Always terminates: each description cut
+    strictly shortens it. The only way the result could still exceed
+    the cap after everything is shed is a script name or file name
+    near 2000 chars long, which cannot exist (filesystem names are
+    capped at 255 bytes).
+    """
+    def size():
+        return len(json.dumps(result, ensure_ascii=False))
+    while size() > MAX_DESCRIBE_CHARS and result["head"]:
+        result["head"] = result["head"][:-1]
+    while size() > MAX_DESCRIBE_CHARS and result["entry_points"]:
+        result["entry_points"] = result["entry_points"][:-1]
+    while size() > MAX_DESCRIBE_CHARS and result["tags"]:
+        result["tags"] = result["tags"][:-1]
+    while size() > MAX_DESCRIBE_CHARS:
+        desc = result["description"]
+        if len(desc) <= 3:
+            break
+        over = size() - MAX_DESCRIBE_CHARS
+        keep = max(0, len(desc) - over - 3)
+        result["description"] = desc[:keep] + "..."
+    return result
+
+
 def describe_op(name):
     """Short typed info for one op. Never returns a whole file.
 
     Returns name, file, size, description, top-level entry point names
-    and the first 6 non-empty lines, total output under 2000 chars.
+    and the first 6 non-empty lines. Total output never exceeds 2000
+    chars: _cap_describe enforces it by trimming head, entry points,
+    tags, then description.
     """
     op = _OP_BY_NAME.get(name)
     if op is None:
@@ -226,11 +262,7 @@ def describe_op(name):
         "entry_points": _entry_points(path),
         "head": _head_lines(path),
     }
-    text = json.dumps(result, ensure_ascii=False)
-    if len(text) > MAX_DESCRIBE_CHARS:
-        result["head"] = result["head"][:2]
-        text = json.dumps(result, ensure_ascii=False)
-    return result
+    return _cap_describe(result)
 
 
 def catalog_before_text():
@@ -262,18 +294,37 @@ def measure_tokens(query, limit=5):
     }
 
 
+def _load_snippets():
+    """Read snippets/registry.json.
+
+    A corrupt file (bad JSON, or valid JSON with the wrong shape)
+    raises CodemodeSearchError with a clear message instead of a raw
+    JSONDecodeError or KeyError. The CLI catches CodemodeSearchError
+    and prints it as a JSON error with exit 1.
+    """
+    try:
+        data = json.loads(SNIPPETS_FILE.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise CodemodeSearchError(
+            "snippets registry is corrupt: %s: %s" % (SNIPPETS_FILE, exc))
+    if not isinstance(data, dict) or not isinstance(data.get("snippets"),
+                                                    list):
+        raise CodemodeSearchError(
+            "snippets registry is corrupt: %s: expected "
+            "{\"snippets\": [...]}" % SNIPPETS_FILE)
+    return data["snippets"]
+
+
 def list_snippets():
     """Short list of the snippets registry: name, title, description."""
-    data = json.loads(SNIPPETS_FILE.read_text(encoding="utf-8"))
     return [{"name": item["name"], "title": item["title"],
              "description": item["description"]}
-            for item in data["snippets"]]
+            for item in _load_snippets()]
 
 
 def get_snippet(name):
     """One snippet: description, program, input, sample output."""
-    data = json.loads(SNIPPETS_FILE.read_text(encoding="utf-8"))
-    for item in data["snippets"]:
+    for item in _load_snippets():
         if item["name"] == name:
             return item
     raise CodemodeSearchError("unknown snippet: %s" % name)

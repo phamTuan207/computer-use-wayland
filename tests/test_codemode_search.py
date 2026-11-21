@@ -6,7 +6,9 @@ estimates. Timings are measured wall-clock on this machine.
 """
 
 import json
+import shutil
 import sys
+import tempfile
 import time
 import unittest
 from pathlib import Path
@@ -47,6 +49,30 @@ class SearchTest(unittest.TestCase):
         result = cs.search_ops("", limit=1000)
         self.assertEqual(result["total"], len(cs.REGISTRY))
 
+    def test_search_empty_query_respects_limit(self):
+        # Docstring says an empty query returns ops sorted by name, up
+        # to limit. total counts every op, results is capped at limit.
+        result = cs.search_ops("")
+        self.assertEqual(result["total"], len(cs.REGISTRY))
+        self.assertEqual(len(result["results"]), cs.MAX_SEARCH_RESULTS)
+        names = [item["name"] for item in result["results"]]
+        self.assertEqual(names, sorted(names))
+        limited = cs.search_ops("", limit=3)
+        self.assertEqual(len(limited["results"]), 3)
+
+    def test_search_whole_tag_matching(self):
+        # Substrings of tags must not match: "est" is inside the "test"
+        # tag, "sess" inside "session", "bid" inside "bidi". None of
+        # them is a whole tag, name word, or description word, so all
+        # three return nothing. The whole tag "test" still matches.
+        self.assertEqual(cs.search_ops("est")["total"], 0)
+        self.assertEqual(cs.search_ops("sess")["total"], 0)
+        self.assertEqual(cs.search_ops("bid")["total"], 0)
+        result = cs.search_ops("test")
+        self.assertGreater(result["total"], 0)
+        names = [item["name"] for item in result["results"]]
+        self.assertIn("hit_rate", names)
+
     def test_search_results_are_short(self):
         result = cs.search_ops("zen", limit=10)
         for item in result["results"]:
@@ -79,6 +105,35 @@ class DescribeTest(unittest.TestCase):
         info = cs.describe_op("cdp")
         self.assertEqual(info["file"], "cdp.mjs")
         self.assertIn("CDP", info["description"])
+
+    def test_describe_never_exceeds_2000_chars_with_long_input(self):
+        # A script with a 400-char docstring, 20 entry points with
+        # ~120-char names, and 6 long head lines would produce about
+        # 3400 chars uncapped, and about 2800 chars with the old
+        # one-shot head cut. The cap must hold anyway.
+        tmp = Path(tempfile.mkdtemp())
+        try:
+            lines = ['"""' + "x" * 400 + '."""']
+            for i in range(20):
+                lines.append("def func_%s():\n    pass"
+                             % ("x" * 110 + str(i)))
+            (tmp / "long_op.py").write_text("\n".join(lines),
+                                            encoding="utf-8")
+            old_registry, old_by_name, old_dir = (
+                cs.REGISTRY, cs._OP_BY_NAME, cs.SCRIPTS_DIR)
+            try:
+                cs.REGISTRY = cs.build_registry(tmp)
+                cs._OP_BY_NAME = {op["name"]: op for op in cs.REGISTRY}
+                cs.SCRIPTS_DIR = tmp
+                info = cs.describe_op("long_op")
+            finally:
+                cs.REGISTRY, cs._OP_BY_NAME, cs.SCRIPTS_DIR = (
+                    old_registry, old_by_name, old_dir)
+            text = json.dumps(info, ensure_ascii=False)
+            self.assertLessEqual(len(text), 2000)
+            self.assertEqual(info["name"], "long_op")
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
 
     def test_describe_unknown(self):
         with self.assertRaises(cs.CodemodeSearchError):
@@ -123,6 +178,44 @@ class SnippetTest(unittest.TestCase):
     def test_snippet_unknown(self):
         with self.assertRaises(cs.CodemodeSearchError):
             cs.get_snippet("no_such_snippet")
+
+    def _corrupt_registry(self, content):
+        tmp = Path(tempfile.mkdtemp())
+        bad = tmp / "registry.json"
+        bad.write_text(content, encoding="utf-8")
+        old = cs.SNIPPETS_FILE
+        cs.SNIPPETS_FILE = bad
+        self.addCleanup(setattr, cs, "SNIPPETS_FILE", old)
+        self.addCleanup(shutil.rmtree, tmp, True)
+
+    def test_corrupt_registry_list_snippets(self):
+        self._corrupt_registry("{not json")
+        with self.assertRaises(cs.CodemodeSearchError) as ctx:
+            cs.list_snippets()
+        self.assertIn("corrupt", str(ctx.exception))
+
+    def test_corrupt_registry_get_snippet(self):
+        self._corrupt_registry("{not json")
+        with self.assertRaises(cs.CodemodeSearchError) as ctx:
+            cs.get_snippet("p1-terminal-df")
+        self.assertIn("corrupt", str(ctx.exception))
+
+    def test_wrong_shape_registry(self):
+        self._corrupt_registry('{"snippets": "nope"}')
+        with self.assertRaises(cs.CodemodeSearchError) as ctx:
+            cs.list_snippets()
+        self.assertIn("corrupt", str(ctx.exception))
+
+    def test_corrupt_registry_cli(self):
+        import io
+        from contextlib import redirect_stdout
+        self._corrupt_registry("{not json")
+        out = io.StringIO()
+        with redirect_stdout(out):
+            with self.assertRaises(SystemExit) as ctx:
+                cs.main(["snippet", "p1-terminal-df"])
+        self.assertEqual(ctx.exception.code, 1)
+        self.assertIn("corrupt", out.getvalue())
 
 
 class TokenTest(unittest.TestCase):
