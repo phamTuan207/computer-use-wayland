@@ -1828,6 +1828,50 @@ dừng exec ở đó và viết báo cáo thay vì ngồi im. Đã giao agent
 follow-up làm tiếp 5 bước nợ trên, ghi rõ nếu duyệt hết hạn thì
 ghi vào báo cáo và làm bước khác, không im lặng.
 
+## ĐỢT 6 VIỆC 1 FOLLOW-UP, 02:12 ngày 22/11 - VẪN PARTIAL, KẸT DUYỆT
+
+Báo cáo cập nhật ở docs/clone1-zen-ordinary-user-run-20261121.md
+(244 dòng), commit 0d142b7, chưa push (cây vẫn bẩn do việc 3).
+
+Bước 1 XONG: certutil đã vào runner ~/workspace/b6t1/zt_run.mjs
+(prepProfileCerts: certutil -N DB rỗng, rồi -A import
+/usr/local/share/ca-certificates/hatch-egress-ca.crt với trust
+CT,C,c), gọi trong main() sau writeUserJs, trước launchFirefox.
+Profile bị xóa trước để mỗi lần chạy là profile thật mới; nếu
+chuẩn bị cert lỗi, runner ghi BLOCKED và thoát 2, không chạy
+Firefox. Kết quả certPrep (nCode, aCode, ok) ghi vào mỗi JSON
+kịch bản. Syntax OK. ZT-00.json cũ giữ lại thành
+ZT-00-pre-fix.json trước khi chạy lại.
+
+Bước 2 XONG, kết quả âm: test lại goto Wikipedia một lần nữa,
+02:01:44 +07, node diag_tls.mjs, wall 36 s: certutil -N: 0, -A:
+0, BiDi lên, example.com load được title "Example Domain", rồi
+vẫn goto https://en.wikipedia.org/wiki/Ho_Chi_Minh_City lỗi
+"Navigation timeout of 30000 ms exceeded". F-B6-03 nay tái hiện
+2 lần (02:03 và 02:01 +07), cả 2 lần example.com đều load tốt
+vài giây trước trong cùng session. Curl tới cùng bài 200 trong
+1.18 s lúc 01:41 +07, nên proxy tới Wikipedia nhanh; phần kẹt là
+BiDi goto với waitUntil: load. Còn nợ test lại với timeout dài
+hơn hoặc waitUntil: domcontentloaded. Log ở /tmp/diag-followup.log.
+Lúc đó có 2 process Firefox headless khác chạy (việc 3 pid 18967
+port 19794, ls-preinit pid 19604 port 19108); không động vào.
+Bộ nhớ 02:01 +07: free 142M, available 1157M.
+
+Bước 3 CHƯA XONG: Ctrl+T / Ctrl+W vẫn chưa test (diag dừng ở
+timeout Wikipedia trước khi tới các dòng đó).
+Bước 4 CHƯA XONG: ZT-00 (gate đã đổi) và ZT-01..ZT-10 chưa chạy.
+Verdict từng kịch bản không đổi so với agent đầu.
+Bước 5 XONG: báo cáo đã cập nhật từ kết quả follow-up.
+
+KẸT: lệnh node diag_tls.mjs bị yêu cầu duyệt và hết hạn lúc 02:01
++07, lần thứ 2 cho đúng lệnh này (lần đầu 02:04 +07). Theo hướng
+dẫn runtime, phần chưa duyệt không được làm và không được thử lại
+trừ khi chủ yêu cầu lại, nên agent KHÔNG thử lại diag và KHÔNG
+bắt đầu chạy ZT-00..ZT-10 (cùng loại hành động: node chạy
+Firefox). Chạy kịch bản đang kẹt cho tới khi chủ duyệt. Tôi đã
+báo việc này cho chủ trong chat và chờ chủ nói thử lại + duyệt
+thẻ khi nó hiện.
+
 ## Watchdog đợt 6, 01:47 ngày 22/11
 - Việc 1: agent đang chạy, hoạt động 39 giây trước, chưa có file báo cáo.
 - Việc 2: xong, đã push (581736e, ee5891b), 13 vi phạm, 3 cao.
@@ -1864,3 +1908,17 @@ Do chi phi vong lap think-observe-think tren may cau, de xuat cach cat bot buoc 
 Doc ket qua kiem tra cua clone2 o batch 7 Task 1 (coord/clone2.md), sua cac vi pham HIGH ma clone2 xac nhan la dung. Bao cao + commit sua, council + redteam.
 
 Luat nhu cu: khong dua thong tin ca nhan nao cua toi len repo, khong dau gach ngang dai, khong ydotool, test nao cung ghi thoi gian. Ket qua bao cao vao file nay.
+
+## Watchdog đợt 6, 02:19 ngày 22/11
+- Việc 1: follow-up xong PARTIAL 02:12, ket duyet exec timeout, chua chay scenario nao, file sua lan cuoi 02:12, chua toi 15 phut nen chua spawn lai.
+- Việc 2: xong, da push, 13 vi pham, 3 cao.
+- Việc 3: bao cao tren o du 344 dong, verdict SOUND, agent goc im 18 phut, khong nudge duoc (khac phien), da spawn agent kiem tra hoan thien.
+- Muse: MOI, batch 7 xep san (b31b881, 02:08), chi bat dau khi batch 6 xong het va da bao cao, G29, H2 + last30days-skill, sua HIGH sau khi clone2 xac nhan, chua lam.
+- Hanh dong: pull --rebase xong (HEAD c95fcf2), ghi khoi nay, commit chi coord/clone1.md, push.
+
+## Watchdog đợt 6, 02:21 ngày 22/11 (bo sung)
+- Việc 3: XONG, agent kiem tra hoan thien xac minh xong 02:21, verdict SOUND, 3/3 mutation bi bat, 5 file Firefox + Chromium run 1 khop so lieu, M1 chay lai 1 lan dung nhu bao cao, chi M2/M3 va Chromium run 2 khong co file luu (bao cao da khai).
+- Việc 1: van ket, chua chay scenario nao, cho lan chay sau.
+- Việc 2: xong.
+- Muse: khong co yeu cau moi them, batch 7 van xep san.
+- Hanh dong: ghi khoi nay, commit chi coord/clone1.md, push.
