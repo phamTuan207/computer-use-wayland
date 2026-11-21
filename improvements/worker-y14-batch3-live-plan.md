@@ -371,6 +371,28 @@ Y12 headless verdict on the merged suite. Do not drive Zen before the
 slot opens. Prep (this plan, council, redteam, runner code, ship to
 laptop, syntax check) all happens before the slot.
 
+## Runner status (19:40 21/11)
+
+- `tests/realistic/run_batch3.py` written (1908 lines): all 10 tests
+  (b3-t01..b3-t10), the /actions helpers with exact Council 1 payloads,
+  the fallback routing (raw element/value keys, d.click('#progress')
+  for the seek, two d.click() for dblclick, JS el.click() for
+  click_nth), ensure_visible reuse, the launch gate (LIVE_SLOT_OK=1,
+  Zen alive, Marionette 2828, ports 8771/4452 free, no geckodriver or
+  other runner live), the circuit breaker, one INFRA-only retry, and
+  LiveMetrics constructed as run_live.main() does. Compiles
+  (py_compile OK), imports cleanly on the VM, all 10 tests registered.
+- `tests/realistic/run_batch3_probe.html` written (probe page for
+  preflight step 0: text input, range input, scrolled pad, re-rendering
+  list, filter list).
+- Not yet shipped to the laptop, not yet run. Ship + syntax check on
+  the laptop happen before the slot. The t10 sampler stays in the
+  Promise form pending the Redteam verdict on whether Marionette
+  /execute/sync awaits a returned Promise; the sampler is one function
+  (sample_position_min), so swapping to a two-eval form is a small
+  change if the verdict says the Promise form is unsound.
+- Redteam verdict still pending at the time of this edit.
+
 ## Amendments applied
 
 - Council 3 (AMEND, 19:28 21/11): A1 WD_PORT 4449 to 4452 + LIVE_RUN_ID
