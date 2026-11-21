@@ -182,3 +182,15 @@ thoroughly, council + redteam on decisions.
   origin/todolist-push on branch y1-snippets, pushes there; Y1 verifies
   on the VM, then merges to todolist-push. No direct todolist-push pushes
   until verified.
+
+## 18:01 +07 | 00:14 | Codex LAUNCHED on the laptop (PID 184702)
+- Brief: /tmp/y1-codex-brief.md (11,741 bytes, copied to laptop).
+- CLI lesson (recorded, the task brief's form was wrong for this version):
+  codex 0.169.0 has NO --prompt flag ("error: unexpected argument
+  '--prompt' found"); prompt is a positional arg or stdin "-".
+  Also "Not inside a trusted directory" without --skip-git-repo-check.
+  WORKING form: codex exec -s danger-full-access --skip-git-repo-check
+  -m gpt-6-luna -c model_reasoning_effort="max" - < brief, stdin redirect.
+  Two failed launches before the working one (usage error, trust error).
+- Log: /tmp/y1-codex.log on the laptop. Y1 polls it via short SSH calls;
+  kill rule: no log growth for 15 min means stall, kill and report.
