@@ -195,6 +195,12 @@ class Ledger:
     the thread. A fresh page load with an empty thread re-sends a
     recorded intent once, by design: the bubble is genuinely absent.
 
+    TODO (pre-send reservation, batch 9 fix pass): write the intent
+    as "sending" before the keypress, then reconcile to "sent" or
+    "failed-unverified" after the V12 gate. Covers the process-death
+    case: a crash between Enter and the ledger mark leaves the ledger
+    empty today and a retry re-sends. Open work, not built.
+
     A JSON file keyed by intent id (run_id + window label). An intent
     is marked sent only after its V12 gate passed. Before any send the
     chain runs the V12 gate first, regardless of ledger status: a
