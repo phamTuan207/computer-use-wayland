@@ -27,3 +27,21 @@
 
 ## ZT-07 VERDICT: PASS (with deviations) - 02:05, elapsed ~17m (scenario ~14m, investigation ~10m)
 - Steps 1-4, 6-8 PASS as written (after J37 fix). Step 5 PASS with deviation (radios, not select). New errors: J37 (park move trips preflight), J38 (size is radios), J39 (submit button has no type attribute). No new Zen defect: the browser filled, selected, submitted, and echoed correctly; the failures were the preflight (J37) and the scenario file (J38, J39).
+
+## ZT-08 run - 02:05 to 02:12, elapsed ~7m
+- Step 0 (02:05): 18 tabs. Working tab via window.open ("opened", count 18 to 19). Deviation as before.
+- Step 1 PASS (02:05:53): Ctrl+L + HCMC URL + Enter, 4/4, title "Ho Chi Minh City - Wikipedia".
+- Step 2 PASS (02:06:07): Ctrl+L + Vietnam URL + Enter, 4/4, title "Vietnam - Wikipedia".
+- Step 3 PASS (02:06:21): Ctrl+L + Southeast_Asia URL + Enter, 4/4, title "Southeast Asia - Wikipedia", curl 200.
+- Step 4 grounding: fresh observe e55e568c4e39 (02:06:30), image copied to ~/workspace/ztc-obs-zt08-s4.jpg, visual grounding gave Back (86,18) normalized = image (160,21), Forward (101,18) = image (188,21).
+- Step 4 attempt 1 FAILED (02:09:51): click (160,21), ok true, 2/2, but title stayed "Southeast Asia - Wikipedia". Envelope shows observation source "captured", NOT "given": the 3-minute gap (grounding took ~3 min) made act-now silently fall back to a captured SCREEN observation, and the window-space point (160,21) executed in screen space, missing the button by the window origin offset (J35). Same class as CL1-MSG batch 2 and ZT-B 00:44:51. Recorded as J40.
+- Step 4 retry PASS (02:10:14): fresh observe + act in the SAME SSH call, same point (160,21), observation source "given", title "Vietnam - Wikipedia". The click point was correct; the fallback was the fault.
+- Step 5 attempt 1 refused "screen changed" (02:10:28), completed 0, title stayed Vietnam. Cause: the cursor sat exactly on the Back button (160,21) from step 4's click, and this batch's click point was the same (J36). Fix per J36: park move (900,600) in a SEPARATE batch (ok true, 1/1, 02:10:51), then fresh observe + Back click (ok true, 2/2, 02:10:53), title "Ho Chi Minh City - Wikipedia". Step 5 PASS.
+- Step 6 PASS (02:11:15): park (900,600) first (cursor was 28px from the Forward point, too close to the ~24px threshold to risk), then Forward click (188,21), title "Vietnam - Wikipedia".
+- Step 7 PASS (02:11:28): T1 12137, Ctrl+R (keys-only, 2/2), T2 3988, T2 < T1, title "Vietnam - Wikipedia", heading "Vietnam".
+- Step 8 PASS (02:11:47-02:11:51): Alt+Left (2/2) title "Ho Chi Minh City - Wikipedia"; Alt+Right (2/2) title "Vietnam - Wikipedia".
+- Step 9 PASS (02:12:02): pre-close title "Vietnam - Wikipedia"; Ctrl+W (1/1) closed the working tab; count 19 to 18; title set equals step 0 (Chat now "(5) Chat - Muse", live badge fluctuation, not a set change); zen-bin PID 496121 alive.
+- Evidence: ~/workspace/ztc-obs-zt08-s4.jpg (fresh observe for Back/Forward grounding).
+
+## ZT-08 VERDICT: PASS (with deviations) - 02:12, elapsed ~7m
+- Steps 1-3, 7-9 PASS as written. Step 4 PASS after retry (fallback, not the point). Step 5 PASS after park (J36). Step 6 PASS with park. New error: J40 (stale given observation falls back to captured screen observation; window-space point then misses by the window origin offset). No new Zen defect: Back, Forward, reload, Alt+Left/Right all navigated correctly once the click actually landed on the button.
