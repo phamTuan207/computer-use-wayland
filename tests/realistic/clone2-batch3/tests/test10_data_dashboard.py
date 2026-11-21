@@ -229,6 +229,13 @@ def main():
     case.check("export_first_row_matches_table_first_row",
                export["lines"][1] == expected_first,
                f"csv={export['lines'][1]} expected={expected_first}")
+    csv_rows = [line.split(",") for line in export["lines"][1:]]
+    view_rows = [[r["date"], r["channel"], str(r["visitors"]),
+                  str(r["orders"]), str(r["revenue"])]
+                 for r in range_rows]
+    case.check("export_all_rows_match_current_view",
+               csv_rows == view_rows,
+               f"csv={csv_rows} view={view_rows}")
 
     def clear_filters():
         Select(by_id("rangeSelect")).select_by_value("all")

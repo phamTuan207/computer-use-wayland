@@ -246,6 +246,8 @@ def main():
                    f"summary={summary}")
     except Exception as exc:
         print(f"  test aborted: {type(exc).__name__}: {exc}", flush=True)
+        case.check("test_completed_without_abort", False,
+                   f"aborted: {type(exc).__name__}: {exc}")
 
     return case.finish()
 

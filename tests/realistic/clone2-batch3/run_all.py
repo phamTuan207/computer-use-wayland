@@ -4,8 +4,10 @@
 Each test drives a real browser against its offline fixture and
 prints a RESULT json line. This runner executes every test file in
 tests/ in order, times the suite, prints a summary, and exits 0
-only when every test passes. Run it with a Python that has
-selenium installed.
+only when every test passes. A test counts as passed only when its
+RESULT line says ok and its process exit code is 0. A test that
+times out is recorded as failed and the suite continues with the
+remaining tests. Run it with a Python that has selenium installed.
 
 Usage:
   python3 tests/realistic/clone2-batch3/run_all.py
@@ -38,8 +40,21 @@ def main():
     suite_t0 = time.perf_counter()
     for path in test_files:
         print(f"=== {path.name} ===", flush=True)
-        proc = subprocess.run([sys.executable, str(path)],
-                              capture_output=True, text=True, timeout=600)
+        try:
+            proc = subprocess.run([sys.executable, str(path)],
+                                  capture_output=True, text=True,
+                                  timeout=600)
+        except subprocess.TimeoutExpired as exc:
+            partial = exc.stdout or ""
+            if isinstance(partial, bytes):
+                partial = partial.decode("utf-8", "replace")
+            sys.stdout.write(partial)
+            results.append({"id": path.stem, "title": "timeout",
+                            "ok": False, "elapsed_s": None,
+                            "step_count": 0,
+                            "error": "subprocess timeout after 600 s",
+                            "exit": None})
+            continue
         sys.stdout.write(proc.stdout)
         if proc.stderr:
             sys.stdout.write(proc.stderr[-2000:])
@@ -51,6 +66,9 @@ def main():
             parsed = {"id": path.stem, "title": "unparsed", "ok": False,
                       "elapsed_s": None, "step_count": 0,
                       "error": f"no RESULT line, exit {proc.returncode}"}
+        elif parsed.get("ok") and proc.returncode != 0:
+            parsed["ok"] = False
+            parsed["error"] = f"RESULT ok but exit {proc.returncode}"
         parsed["exit"] = proc.returncode
         results.append(parsed)
 
