@@ -309,3 +309,93 @@ Checked against the v2 exact marker after git fetch:
   ends 18:57:43 (fresh pre-flight A due after 19:05:40); the single
   "E1 EXECUTION COMPLETE" grep hit in the Y8 log is the 18:53 line
   NAMING the marker Y9 polls for, not the marker itself. Y9 waits.
+
+## Addendum 6 (19:26 +07, 21/11): diff re-review verdicts in, merged fix list applied
+
+- DIFF RE-REVIEW COUNCIL IN (completed 19:17 +07): GO WITH FIXES
+  (2 fixes), improvements/worker-y9-diffreview-council.md.
+  Independently re-verified: manifest 26/26 md5s recomputed from
+  git show; B3 tamper refusal reproduced in its own /tmp ship dir;
+  B1 logic-identical to Y4d's version; B2 park correct on all
+  normal paths; base pin correct; every other section-7 fix PASS;
+  port verify still 88/88; exit rule exact; re-run rule still
+  infra-only. Fix 1 (paperwork): runner line count is 2865 at
+  9564304, not 2853 as plan section 7 and the log said; the
+  "counts corrected" line was itself off by 12. Fix 2 (harden the
+  two best-effort B2 fallbacks): (a) skip the end-state screenshot
+  if the pre-screenshot switch fails, instead of screenshotting an
+  uncontrolled current window; (b) if sacrificial-tab creation in
+  _park_before_exit fails, park on a registered test tab from
+  _TEST_TABS before returning. Observations, no fix demanded:
+  manifest check runs after argv validation rather than literally
+  first in main(); bootstrap/manifest/rotation failure JSON lines
+  lack the full common-field set the preflight path now has; stall
+  excludes bootstrap ladder time; the park mechanism is
+  code-reviewed only, never live-proven, but degrades gracefully
+  via rebootstrap.
+- DIFF RE-REVIEW REDTEAM IN (completed 19:20 +07): NO BLOCK,
+  improvements/worker-y9-diffreview-redteam.md. Park happy path
+  holds; manifest 26/26 mechanically verified, missing files
+  refuse; check() override no semantic change; classification
+  elif chain complete over the real diagnose enum; no double
+  count; handover fingerprint defeats same-second rewrites; new
+  driver lines match simulate.mjs and the fixture handlers are
+  benign. 8 non-blocking findings F1-F8, with hardening
+  recommended before the live run for F1, F2, F4.
+- FIXES APPLIED, commit 9d95f74 (pushed, ls-remote verified):
+  council fix 1 (line count corrected to 2865 at 9564304 in plan
+  section 7 and log lines 56, 218); council fix 2a (screenshot
+  skipped on failed pre-screenshot switch); council fix 2b /
+  redteam F1 (park fallback to a registered test tab; if no park
+  is possible at all, DELETE /session is skipped and the session
+  reference dropped, geckodriver proc still terminated by
+  cleanup); redteam F2 (manifest pinned to 26 files, non-hex/null
+  expected md5 refuses, entry loop guarded); redteam F3 (served
+  bytes verified over HTTP against the manifest after
+  start_server); redteam F4 (fixture-unavailable counted
+  separately in the suite JSON, still in failed, still exits 1;
+  infra streak deliberately not reset, fail-safe, consistent
+  with guard-defect); redteam F5 (check() JSONL write wrapped);
+  redteam F7 (bootstrap ladder time folded into suite stall_ms,
+  screenshot fallback tab registered in _TEST_TABS); redteam F8
+  (Hyprland socket via context manager, run_02 paired check
+  single eval, run_live.py md5 via Path.with_name). Redteam F6
+  accepted as a note (fingerprint is not a content hash; threat
+  is accidental swap). Runner 2982 lines after these fixes.
+- VERIFICATION (VM, after 9d95f74): py_compile OK, import OK
+  (10 tests), dashes 0, check.mjs still 88 assertions, run_02
+  paired check single eval with the same condition, diff is
+  exactly the 11 intended hunks (153 insertions, 36 deletions).
+  Manifest negative tests: count 25 refuses (exit 2, "manifest
+  lists 25 files, want 26"); null-md5 entry plus a missing file
+  refuses ("malformed manifest entry", the old None == None hole
+  is closed). Served-files proof in an exact ship layout:
+  CLEAN SERVED True, 26 files, 0 mismatches; TAMPERED SERVED
+  False, exactly one mismatch naming
+  agy-y2/fixtures/test-03-photo-editor.html with served vs want
+  md5. (First served attempt 404d on all files: my test served
+  the wrong root; the real server root is tests/realistic, per
+  run_live SERVER_ROOT, and the check fetches manifest-relative
+  paths against it. Test error, not code error.)
+- MANIFEST REGENERATED from committed bytes: runner from 9d95f74
+  (md5 7d1abf2b2f995f748915be3641b8ed87), run_live.py from 1e3901c
+  (84fa106c, unchanged), suite from 30a72e5 (unchanged). Only the
+  runner md5 changed. Manifest md5 e1f4fe20d75d33ac507895dfb06a51f3.
+  SHIPPED.md regenerated next to the runner (ship commit
+  9d95f74). Ship-layout dry run in /tmp/y9-ship-check2 (exact
+  shippable combination): compile OK, import OK,
+  --verify-manifest OK (26 files, 0 mismatches, exit 0), md5s
+  match (runner 7d1abf2b, run_live.py 84fa106c, manifest
+  e1f4fe20).
+- LIGHT DIFF RE-REVIEW LAUNCHED 19:26 (council + redteam, scoped
+  to the 9d95f74 diff only, verdict files
+  improvements/worker-y9-diff2-council.md and
+  worker-y9-diff2-redteam.md, uncommitted). No live driving
+  before it passes. Re-ship to the laptop follows the light
+  re-review, only if the runner bytes change again.
+- SLOT POLL 19:26: Y8b still owns the slot. Arm A launched
+  19:17:04 (commit f50a536), then a driver death (transient eval
+  500s, commit bab8d8a "A1 FAIL DRIVER DEAD, arm A retry"). No Y8
+  completion commit; the single "E1 EXECUTION COMPLETE" grep hit
+  in the Y8 log is still the 18:53 line naming the marker, not
+  the marker itself. Y9 waits.

@@ -1,1 +1,135 @@
-{"files":[{"md5":"4de5c577cb0126169dd4c3f9bb70818c","path":"run_agy_y2.py","source_commit":"95643041238e1db0e884684dad6a608a2d0acbfe"},{"md5":"84fa106c253d5e7f16daccf2ce3f14a5","path":"run_live.py","source_commit":"1e3901c793c6446bf68dfeb6a5bc19c89eb7e5af"},{"md5":"1ffef261c0b126ac36c50f2c782756f3","path":"agy-y2/test-01-tmux-session.md","source_commit":"30a72e538c4e8b5fddc2bc1fbfe4bf1b1915012b"},{"md5":"55d669ef8e6eebbeddba3634c350b36b","path":"agy-y2/test-02-network-settings.md","source_commit":"30a72e538c4e8b5fddc2bc1fbfe4bf1b1915012b"},{"md5":"8f901137e49ee3887277aba8b9919f42","path":"agy-y2/test-03-photo-editor.md","source_commit":"30a72e538c4e8b5fddc2bc1fbfe4bf1b1915012b"},{"md5":"aae817fc492693cf6ffb3bdd3f669d7a","path":"agy-y2/test-04-email-compose.md","source_commit":"30a72e538c4e8b5fddc2bc1fbfe4bf1b1915012b"},{"md5":"e366d4f601a2e01b145877c6076f41c7","path":"agy-y2/test-05-spreadsheet-chart.md","source_commit":"30a72e538c4e8b5fddc2bc1fbfe4bf1b1915012b"},{"md5":"c2e5b1f3735a148bf604de682b8e6c0e","path":"agy-y2/test-06-video-call.md","source_commit":"30a72e538c4e8b5fddc2bc1fbfe4bf1b1915012b"},{"md5":"9f63ac6cd289fabb279b411ab1896faf","path":"agy-y2/test-07-file-manager.md","source_commit":"30a72e538c4e8b5fddc2bc1fbfe4bf1b1915012b"},{"md5":"bdf0bf8f08cf0f8e43005a2ec68fa3c7","path":"agy-y2/test-08-devtools.md","source_commit":"30a72e538c4e8b5fddc2bc1fbfe4bf1b1915012b"},{"md5":"ec2faabd507e612646bfff551f68143c","path":"agy-y2/test-09-notes-sync.md","source_commit":"30a72e538c4e8b5fddc2bc1fbfe4bf1b1915012b"},{"md5":"f9b3be84606468007862f2c19d72d23b","path":"agy-y2/test-10-ide-debug.md","source_commit":"30a72e538c4e8b5fddc2bc1fbfe4bf1b1915012b"},{"md5":"0643d9a5babcc5b2e3d284bb16e10b33","path":"agy-y2/simulate.mjs","source_commit":"30a72e538c4e8b5fddc2bc1fbfe4bf1b1915012b"},{"md5":"abb75b01807758933becd999871f2fbb","path":"agy-y2/check.mjs","source_commit":"30a72e538c4e8b5fddc2bc1fbfe4bf1b1915012b"},{"md5":"6e6677e80acf4185b9fc4edc00075958","path":"agy-y2/README.md","source_commit":"30a72e538c4e8b5fddc2bc1fbfe4bf1b1915012b"},{"md5":"a70faed01522b9be5070f4cc543b98a7","path":"agy-y2/check-dashes.py","source_commit":"30a72e538c4e8b5fddc2bc1fbfe4bf1b1915012b"},{"md5":"d7a7b296b236057227df891a3262bc87","path":"agy-y2/fixtures/test-01-tmux-session.html","source_commit":"30a72e538c4e8b5fddc2bc1fbfe4bf1b1915012b"},{"md5":"c167f6523ecfc31eb9278943468b9f89","path":"agy-y2/fixtures/test-02-network-settings.html","source_commit":"30a72e538c4e8b5fddc2bc1fbfe4bf1b1915012b"},{"md5":"e9ac042c657cf66eb37a857a43f9fb7f","path":"agy-y2/fixtures/test-03-photo-editor.html","source_commit":"30a72e538c4e8b5fddc2bc1fbfe4bf1b1915012b"},{"md5":"7dbee8181518b9747f38cb8008aae53c","path":"agy-y2/fixtures/test-04-email-compose.html","source_commit":"30a72e538c4e8b5fddc2bc1fbfe4bf1b1915012b"},{"md5":"486508fd359f2d47079c7722a703043d","path":"agy-y2/fixtures/test-05-spreadsheet-chart.html","source_commit":"30a72e538c4e8b5fddc2bc1fbfe4bf1b1915012b"},{"md5":"1f02764f86e8c8545d38c0e8387759d6","path":"agy-y2/fixtures/test-06-video-call.html","source_commit":"30a72e538c4e8b5fddc2bc1fbfe4bf1b1915012b"},{"md5":"8fb5b686e27050e36d79bdf7a4493cf0","path":"agy-y2/fixtures/test-07-file-manager.html","source_commit":"30a72e538c4e8b5fddc2bc1fbfe4bf1b1915012b"},{"md5":"991d85aa560524b5d927567d23ba14d4","path":"agy-y2/fixtures/test-08-devtools.html","source_commit":"30a72e538c4e8b5fddc2bc1fbfe4bf1b1915012b"},{"md5":"c96f2c308252736990e60803367e6343","path":"agy-y2/fixtures/test-09-notes-sync.html","source_commit":"30a72e538c4e8b5fddc2bc1fbfe4bf1b1915012b"},{"md5":"08d9cabcad50853d04e026b4f42468a1","path":"agy-y2/fixtures/test-10-ide-debug.html","source_commit":"30a72e538c4e8b5fddc2bc1fbfe4bf1b1915012b"}],"generated":"2026-11-21T19:10:00+07:00","generated_from_commit":"95643041238e1db0e884684dad6a608a2d0acbfe","note":"Expected md5s for every shipped file, generated mechanically from committed bytes (git show). Paths are relative to tests/realistic/. run_live.py is shipped from 1e3901c, NOT from HEAD: HEAD's run_live.py changed in 91d3cd2 (Y11 live-metrics wiring), which is not live-proven. The runner verifies this manifest at launch and refuses on any mismatch.","suite":"agy-y2"}
+{
+  "generated_from": "committed bytes, see source_commit per file",
+  "files": [
+    {
+      "path": "run_agy_y2.py",
+      "md5": "7d1abf2b2f995f748915be3641b8ed87",
+      "source_commit": "9d95f7481c473532b07dffed69c750fcc6ab9477"
+    },
+    {
+      "path": "run_live.py",
+      "md5": "84fa106c253d5e7f16daccf2ce3f14a5",
+      "source_commit": "1e3901c793c6446bf68dfeb6a5bc19c89eb7e5af"
+    },
+    {
+      "path": "agy-y2/test-01-tmux-session.md",
+      "md5": "1ffef261c0b126ac36c50f2c782756f3",
+      "source_commit": "30a72e538c4e8b5fddc2bc1fbfe4bf1b1915012b"
+    },
+    {
+      "path": "agy-y2/test-02-network-settings.md",
+      "md5": "55d669ef8e6eebbeddba3634c350b36b",
+      "source_commit": "30a72e538c4e8b5fddc2bc1fbfe4bf1b1915012b"
+    },
+    {
+      "path": "agy-y2/test-03-photo-editor.md",
+      "md5": "8f901137e49ee3887277aba8b9919f42",
+      "source_commit": "30a72e538c4e8b5fddc2bc1fbfe4bf1b1915012b"
+    },
+    {
+      "path": "agy-y2/test-04-email-compose.md",
+      "md5": "aae817fc492693cf6ffb3bdd3f669d7a",
+      "source_commit": "30a72e538c4e8b5fddc2bc1fbfe4bf1b1915012b"
+    },
+    {
+      "path": "agy-y2/test-05-spreadsheet-chart.md",
+      "md5": "e366d4f601a2e01b145877c6076f41c7",
+      "source_commit": "30a72e538c4e8b5fddc2bc1fbfe4bf1b1915012b"
+    },
+    {
+      "path": "agy-y2/test-06-video-call.md",
+      "md5": "c2e5b1f3735a148bf604de682b8e6c0e",
+      "source_commit": "30a72e538c4e8b5fddc2bc1fbfe4bf1b1915012b"
+    },
+    {
+      "path": "agy-y2/test-07-file-manager.md",
+      "md5": "9f63ac6cd289fabb279b411ab1896faf",
+      "source_commit": "30a72e538c4e8b5fddc2bc1fbfe4bf1b1915012b"
+    },
+    {
+      "path": "agy-y2/test-08-devtools.md",
+      "md5": "bdf0bf8f08cf0f8e43005a2ec68fa3c7",
+      "source_commit": "30a72e538c4e8b5fddc2bc1fbfe4bf1b1915012b"
+    },
+    {
+      "path": "agy-y2/test-09-notes-sync.md",
+      "md5": "ec2faabd507e612646bfff551f68143c",
+      "source_commit": "30a72e538c4e8b5fddc2bc1fbfe4bf1b1915012b"
+    },
+    {
+      "path": "agy-y2/test-10-ide-debug.md",
+      "md5": "f9b3be84606468007862f2c19d72d23b",
+      "source_commit": "30a72e538c4e8b5fddc2bc1fbfe4bf1b1915012b"
+    },
+    {
+      "path": "agy-y2/simulate.mjs",
+      "md5": "0643d9a5babcc5b2e3d284bb16e10b33",
+      "source_commit": "30a72e538c4e8b5fddc2bc1fbfe4bf1b1915012b"
+    },
+    {
+      "path": "agy-y2/check.mjs",
+      "md5": "abb75b01807758933becd999871f2fbb",
+      "source_commit": "30a72e538c4e8b5fddc2bc1fbfe4bf1b1915012b"
+    },
+    {
+      "path": "agy-y2/README.md",
+      "md5": "6e6677e80acf4185b9fc4edc00075958",
+      "source_commit": "30a72e538c4e8b5fddc2bc1fbfe4bf1b1915012b"
+    },
+    {
+      "path": "agy-y2/check-dashes.py",
+      "md5": "a70faed01522b9be5070f4cc543b98a7",
+      "source_commit": "30a72e538c4e8b5fddc2bc1fbfe4bf1b1915012b"
+    },
+    {
+      "path": "agy-y2/fixtures/test-01-tmux-session.html",
+      "md5": "d7a7b296b236057227df891a3262bc87",
+      "source_commit": "30a72e538c4e8b5fddc2bc1fbfe4bf1b1915012b"
+    },
+    {
+      "path": "agy-y2/fixtures/test-02-network-settings.html",
+      "md5": "c167f6523ecfc31eb9278943468b9f89",
+      "source_commit": "30a72e538c4e8b5fddc2bc1fbfe4bf1b1915012b"
+    },
+    {
+      "path": "agy-y2/fixtures/test-03-photo-editor.html",
+      "md5": "e9ac042c657cf66eb37a857a43f9fb7f",
+      "source_commit": "30a72e538c4e8b5fddc2bc1fbfe4bf1b1915012b"
+    },
+    {
+      "path": "agy-y2/fixtures/test-04-email-compose.html",
+      "md5": "7dbee8181518b9747f38cb8008aae53c",
+      "source_commit": "30a72e538c4e8b5fddc2bc1fbfe4bf1b1915012b"
+    },
+    {
+      "path": "agy-y2/fixtures/test-05-spreadsheet-chart.html",
+      "md5": "486508fd359f2d47079c7722a703043d",
+      "source_commit": "30a72e538c4e8b5fddc2bc1fbfe4bf1b1915012b"
+    },
+    {
+      "path": "agy-y2/fixtures/test-06-video-call.html",
+      "md5": "1f02764f86e8c8545d38c0e8387759d6",
+      "source_commit": "30a72e538c4e8b5fddc2bc1fbfe4bf1b1915012b"
+    },
+    {
+      "path": "agy-y2/fixtures/test-07-file-manager.html",
+      "md5": "8fb5b686e27050e36d79bdf7a4493cf0",
+      "source_commit": "30a72e538c4e8b5fddc2bc1fbfe4bf1b1915012b"
+    },
+    {
+      "path": "agy-y2/fixtures/test-08-devtools.html",
+      "md5": "991d85aa560524b5d927567d23ba14d4",
+      "source_commit": "30a72e538c4e8b5fddc2bc1fbfe4bf1b1915012b"
+    },
+    {
+      "path": "agy-y2/fixtures/test-09-notes-sync.html",
+      "md5": "c96f2c308252736990e60803367e6343",
+      "source_commit": "30a72e538c4e8b5fddc2bc1fbfe4bf1b1915012b"
+    },
+    {
+      "path": "agy-y2/fixtures/test-10-ide-debug.html",
+      "md5": "08d9cabcad50853d04e026b4f42468a1",
+      "source_commit": "30a72e538c4e8b5fddc2bc1fbfe4bf1b1915012b"
+    }
+  ]
+}

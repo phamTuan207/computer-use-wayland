@@ -1,6 +1,6 @@
 # Y9 ship manifest (frozen at ship time, regenerated 2026-11-21)
 
-- Ship commit (todolist-push): 95643041238e1db0e884684dad6a608a2d0acbfe
+- Ship commit (todolist-push): 9d95f7481c473532b07dffed69c750fcc6ab9477
 - Shipped from: /home/hatch/workspace/computer-use-wayland
 - Note: run_live.py is shipped from commit 1e3901c, NOT from HEAD.
   HEAD's run_live.py changed in 91d3cd2 (Y11 live-metrics wiring),
@@ -15,7 +15,7 @@
 
 ## Files (path in /tmp/worker-y9-server, md5, source commit)
 
-- run_agy_y2.py, 4de5c577cb0126169dd4c3f9bb70818c, 95643041238e1db0e884684dad6a608a2d0acbfe
+- run_agy_y2.py, 7d1abf2b2f995f748915be3641b8ed87, 9d95f7481c473532b07dffed69c750fcc6ab9477
 - run_live.py, 84fa106c253d5e7f16daccf2ce3f14a5, 1e3901c793c6446bf68dfeb6a5bc19c89eb7e5af
 - agy-y2/test-01-tmux-session.md, 1ffef261c0b126ac36c50f2c782756f3, 30a72e538c4e8b5fddc2bc1fbfe4bf1b1915012b
 - agy-y2/test-02-network-settings.md, 55d669ef8e6eebbeddba3634c350b36b, 30a72e538c4e8b5fddc2bc1fbfe4bf1b1915012b
