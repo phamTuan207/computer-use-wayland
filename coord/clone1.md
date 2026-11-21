@@ -1872,6 +1872,55 @@ Firefox). Chạy kịch bản đang kẹt cho tới khi chủ duyệt. Tôi đã
 báo việc này cho chủ trong chat và chờ chủ nói thử lại + duyệt
 thẻ khi nó hiện.
 
+## COUNCIL 3 XONG, 03:10 ngày 22/11 - BÁO CÁO VIỆC 1 ĐÃ CŨ, CÓ CHẠY MỚI
+
+Báo cáo ở docs/batch6-council3-task1-20261122.md (181 dòng), đã
+push (9083049).
+
+Council 3 đồng ý hầu hết claim, bằng số tự đo: Firefox 160.0.1
+tồn tại, --version in 160.0.1, screenshot headless tự chạy exit
+0, shot.png 5763 byte, 0 minidump, bộ nhớ free 218M / available
+1599M, tarball 90943956 byte đúng, file CA tồn tại. ZT-05 không áp
+dụng: which hyprctl exit 1, không tìm thấy. ZT-10 không áp dụng:
+không có ~/.zen, không cài Zen. Code certutil: đã đọc
+prepProfileCerts() và main() tự tay, làm đúng như báo cáo nói
+(-N DB rỗng, -A import hatch-egress-ca.crt trust CT,C,c, gọi sau
+writeUserJs trước launch, lỗi thì BLOCKED + exit 2, certPrep ghi
+vào mỗi JSON). File ZT có trên todolist-push (blob 60f5c38),
+heading ZT-00..ZT-10 khớp hết. ZT-00 pre-fix khớp báo cáo đúng
+(01:43:58, BLOCKED, 17960 ms). F-B6-01 (Ctrl+L vô dụng headless):
+đồng ý, đối chiếu từ record bước ZT-00 02:40 (hrefAfterCtrlL
+about:blank), không phải tự chạy live; log diag gốc đã mất.
+F-B6-02 (sửa TLS): đồng ý, đối chiếu từ JSON 02:40-02:42 (certPrep
+ok, example.com title PASS). Claim con là pref enterprise_roots
+một mình không sửa được thì báo cáo có nhưng council chưa kiểm
+chứng được (log đã mất). F-B6-03 (timeout Wikipedia): đồng ý,
+nhưng số lần nay là 5, không phải 2 (ZT-01/02/03 đều ERROR vì nó
+lúc 02:41-02:42, mỗi lần khoảng 35.5 s).
+
+Phát hiện chính: báo cáo việc 1 ĐÃ CŨ. Có người chạy runner đã sửa
+lúc 02:40:13-02:42:36, sau lần cập nhật báo cáo cuối (02:12).
+ZT-00 gate đã đổi chạy và FAIL (11437 ms); ZT-01/02/03 chạy và
+ERROR (báo cáo vẫn nói NOT RUN). Phát hiện mới C3-01: Ctrl+W
+không đóng tab khi headless (ZT-00 bước 7-ctrl-w-close FAIL,
+closedBy none, 1 tab trước và sau). Câu "Ctrl+T/W CHƯA TEST" trong
+báo cáo sai với Ctrl+W; Ctrl+T vẫn chưa test.
+
+Tiến triển sau council 3 (tôi tự kiểm chứng trên ổ lúc 03:10):
+follow-up 2 do watchdog 02:40 spawn (vì việc 1 im 19 phút) vẫn
+đang chạy. ZT-04 NOT APPLICABLE (bookmark chỉ có trên chrome:
+star, hộp Ctrl+D, library, không quan sát hay điều khiển được
+headless qua BiDi; tự đi tới bài viết thì chạy được). ZT-05 NOT
+APPLICABLE (Hyprland, F-002, máy này không có). Như vậy tới 03:11
+đã có kết quả ZT-00..ZT-05: FAIL 1, ERROR 3, NOT APPLICABLE 2.
+Chưa có ZT-06..ZT-10. Việc duyệt exec: follow-up 2 chạy lệnh node
++ Firefox từ 02:40 tới 03:11 không bị timeout duyệt, nên kẹt duyệt
+thực tế đã hết, không cần chủ duyệt thêm cho các lần chạy này.
+
+Lưu ý: /tmp bị xóa lại giữa 02:42 và 03:09 (mọi log diag và
+/tmp/firefox mất; chỉ JSON ở ~/workspace còn, log diag sau này
+nên để vào ~/workspace).
+
 ## Watchdog đợt 6, 01:47 ngày 22/11
 - Việc 1: agent đang chạy, hoạt động 39 giây trước, chưa có file báo cáo.
 - Việc 2: xong, đã push (581736e, ee5891b), 13 vi phạm, 3 cao.
