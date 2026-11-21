@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Offline Universal File Converter</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background: #f3f4f6; color: #1f2937; padding: 24px; }
+    .container { max-width: 1000px; margin: 0 auto; background: #fff; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); padding: 24px; }
+    header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e5e7eb; padding-bottom: 16px; margin-bottom: 20px; }
+    h1 { font-size: 22px; color: #111827; }
+    .status-banner { padding: 10px 14px; border-radius: 4px; font-size: 13px; font-weight: 500; display: none; margin-bottom: 16px; }
+    .status-banner.success { display: block; background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
+    .status-banner.error { display: block; background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+    .converter-card { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 18px; margin-bottom: 20px; }
+    .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; align-items: end; }
+    label { display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 6px; }
+    select, input[type="text"] { width: 100%; padding: 7px 10px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 13px; background: #fff; }
+    .btn { padding: 8px 16px; border-radius: 4px; font-size: 13px; font-weight: 600; cursor: pointer; border: none; }
+    .btn-primary { background: #2563eb; color: #fff; }
+    .btn-secondary { background: #e5e7eb; color: #374151; }
+    .btn-success { background: #059669; color: #fff; }
+    .btn-danger { background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; }
+    .btn-download { background: #0284c7; color: #fff; padding: 4px 10px; font-size: 12px; }
+    .table-wrap { margin-top: 20px; border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden; }
+    table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; }
+    th { background: #f3f4f6; padding: 10px 14px; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb; }
+    td { padding: 10px 14px; border-bottom: 1px solid #f3f4f6; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+    .badge-pending { background: #fef3c7; color: #92400e; }
+    .badge-error { background: #fee2e2; color: #991b1b; }
+    .badge-done { background: #dcfce7; color: #166534; }
+    .badge-downloaded { background: #e0f2fe; color: #0369a1; }
+    .checkbox-wrap { display: flex; align-items: center; gap: 8px; font-size: 13px; margin-top: 10px; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>Universal File Converter</h1>
+    <div style="display: flex; gap: 12px;">
+      <button id="btn-convert-all" class="btn btn-success">Convert All Files</button>
+      <button id="btn-save-session" class="btn btn-primary">Save Conversion Session</button>
+    </div>
+  </header>
+
+  <div id="converter-status-banner" class="status-banner"></div>
+
+  <div class="converter-card">
+    <div class="form-grid">
+      <div>
+        <label for="select-source-file">Source File:</label>
+        <select id="select-source-file">
+          <option value="">Select a file...</option>
+          <option value="sample-data.csv" data-type="csv">sample-data.csv (45 KB)</option>
+          <option value="photo.png" data-type="png">photo.png (1.2 MB)</option>
+          <option value="project-notes.docx" data-type="docx">project-notes.docx (18 KB)</option>
+          <option value="corrupted.bin" data-type="bin">corrupted.bin (0 KB)</option>
+        </select>
+      </div>
+
+      <div>
+        <label for="select-target-format">Target Format:</label>
+        <select id="select-target-format">
+          <option value="">Select format...</option>
+          <option value="JSON">JSON (.json)</option>
+          <option value="WEBP">WEBP (.webp)</option>
+          <option value="PDF">PDF (.pdf)</option>
+          <option value="TXT">Plain Text (.txt)</option>
+        </select>
+      </div>
+
+      <div>
+        <label for="select-compression">Compression Quality:</label>
+        <select id="select-compression">
+          <option value="Normal">Normal</option>
+          <option value="High">High</option>
+          <option value="Maximum">Maximum</option>
+        </select>
+      </div>
+
+      <div>
+        <button id="btn-add-queue" class="btn btn-secondary" style="width: 100%;">+ Add to Queue</button>
+      </div>
+    </div>
+
+    <div class="checkbox-wrap">
+      <input type="checkbox" id="check-preserve-meta">
+      <label for="check-preserve-meta" style="margin-bottom: 0; cursor: pointer;">Preserve document metadata and tags</label>
+    </div>
+  </div>
+
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
+    <h2 style="font-size: 16px;">Conversion Queue (<span id="queue-count">0</span> items)</h2>
+    <div id="queue-status-text" style="font-size: 13px; color: #6b7280;">Ready for conversion</div>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Source Name</th>
+          <th>Target Format</th>
+          <th>Quality</th>
+          <th>Status</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody id="queue-table-body">
+        <tr id="row-queue-empty">
+          <td colspan="5" style="text-align: center; color: #9ca3af; padding: 24px;">Queue is empty. Select a source file above to add.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div style="margin-top: 30px;">
+    <h2 style="font-size: 16px; margin-bottom: 12px;">Completed Downloads (<span id="output-count">0</span>)</h2>
+    <div id="output-list" style="display: flex; flex-direction: column; gap: 8px;">
+      <div id="output-empty-note" style="color: #9ca3af; font-size: 13px;">No converted files available yet. Run conversion above.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  let queue = [];
+  let converted = [];
+  let downloadedCount = 0;
+  let sessionSaved = false;
+
+  function slugify(text) {
+    return text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+  }
+
+  function renderQueue() {
+    const tbody = document.getElementById('queue-table-body');
+    const emptyRow = document.getElementById('row-queue-empty');
+    document.getElementById('queue-count').textContent = queue.length;
+
+    if (queue.length === 0) {
+      tbody.innerHTML = '<tr id="row-queue-empty"><td colspan="5" style="text-align: center; color: #9ca3af; padding: 24px;">Queue is empty. Select a source file above to add.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = '';
+    queue.forEach(item => {
+      const tr = document.createElement('tr');
+      tr.id = 'queue-row-' + item.id;
+      let badgeClass = 'badge-pending';
+      let statusLabel = item.status;
+      if (item.status === 'Invalid format') badgeClass = 'badge-error';
+      if (item.status === 'Converted') badgeClass = 'badge-done';
+
+      tr.innerHTML = `
+        <td><strong>${item.source}</strong></td>
+        <td>${item.target}</td>
+        <td>${item.quality}</td>
+        <td><span id="status-${item.id}" class="badge ${badgeClass}">${statusLabel}</span></td>
+        <td>
+          <button id="btn-remove-queue-${item.id}" class="btn btn-danger" style="padding: 2px 8px; font-size: 11px;">Remove</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+
+      tr.querySelector(`#btn-remove-queue-${item.id}`).addEventListener('click', () => {
+        queue = queue.filter(q => q.id !== item.id);
+        renderQueue();
+      });
+    });
+  }
+
+  function renderOutputs() {
+    const list = document.getElementById('output-list');
+    document.getElementById('output-count').textContent = converted.length;
+    if (converted.length === 0) {
+      list.innerHTML = '<div id="output-empty-note" style="color: #9ca3af; font-size: 13px;">No converted files available yet. Run conversion above.</div>';
+      return;
+    }
+
+    list.innerHTML = '';
+    converted.forEach(item => {
+      const div = document.createElement('div');
+      div.id = 'output-item-' + item.id;
+      div.style.cssText = 'display: flex; justify-content: space-between; align-items: center; background: #f9fafb; padding: 10px 14px; border: 1px solid #e5e7eb; border-radius: 4px;';
+      div.innerHTML = `
+        <div>
+          <strong>${item.outputName}</strong>
+          <span style="font-size: 11px; color: #6b7280; margin-left: 8px;">(Original: ${item.source}, Quality: ${item.quality})</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span id="badge-download-${item.id}" class="badge ${item.downloaded ? 'badge-downloaded' : 'badge-pending'}">
+            ${item.downloaded ? 'Downloaded' : 'Ready'}
+          </span>
+          <button id="btn-download-${item.id}" class="btn btn-download">Download</button>
+        </div>
+      `;
+      list.appendChild(div);
+
+      div.querySelector(`#btn-download-${item.id}`).addEventListener('click', () => {
+        if (!item.downloaded) {
+          item.downloaded = true;
+          downloadedCount++;
+          renderOutputs();
+        }
+      });
+    });
+  }
+
+  document.getElementById('btn-add-queue').addEventListener('click', () => {
+    const sourceSelect = document.getElementById('select-source-file');
+    const targetSelect = document.getElementById('select-target-format');
+    const compSelect = document.getElementById('select-compression');
+
+    const source = sourceSelect.value;
+    const target = targetSelect.value;
+    const quality = compSelect.value;
+
+    if (!source) return;
+
+    const id = slugify(source);
+    let status = 'Pending';
+    if (source.endsWith('.bin')) {
+      status = 'Invalid format';
+    }
+
+    queue.push({
+      id,
+      source,
+      target: target || 'AUTO',
+      quality,
+      status
+    });
+
+    renderQueue();
+  });
+
+  document.getElementById('btn-convert-all').addEventListener('click', () => {
+    if (queue.length === 0) return;
+    const hasInvalid = queue.some(q => q.status === 'Invalid format');
+    if (hasInvalid) {
+      const banner = document.getElementById('converter-status-banner');
+      banner.className = 'status-banner error';
+      banner.textContent = 'Cannot convert: queue contains invalid or unsupported formats. Please remove them.';
+      return;
+    }
+
+    queue.forEach(q => {
+      q.status = 'Converted';
+      const ext = q.target.toLowerCase();
+      const base = q.source.substring(0, q.source.lastIndexOf('.'));
+      converted.push({
+        id: q.id,
+        source: q.source,
+        outputName: base + '.' + ext,
+        quality: q.quality,
+        downloaded: false
+      });
+    });
+
+    document.getElementById('queue-status-text').textContent = 'Conversion complete';
+    renderQueue();
+    renderOutputs();
+  });
+
+  document.getElementById('btn-save-session').addEventListener('click', () => {
+    const metaPreserved = document.getElementById('check-preserve-meta').checked;
+    const compQuality = document.getElementById('select-compression').value;
+    sessionSaved = true;
+
+    const banner = document.getElementById('converter-status-banner');
+    banner.className = 'status-banner success';
+    banner.textContent = `Batch complete: ${converted.length} files converted and ${downloadedCount} downloaded`;
+  });
+
+  // Real DOM verification hook (NO self-simulation)
+  window.__agyVerify = function() {
+    const failures = [];
+    const bannerText = document.getElementById('converter-status-banner').textContent.trim();
+    const metaChecked = document.getElementById('check-preserve-meta').checked;
+    const compVal = document.getElementById('select-compression').value;
+
+    if (!sessionSaved) {
+      failures.push('Session was not saved via btn-save-session');
+    }
+    if (!metaChecked) {
+      failures.push('Preserve metadata checkbox must be checked');
+    }
+    if (compVal !== 'High') {
+      failures.push(`Compression quality expected 'High', got '${compVal}'`);
+    }
+    if (converted.length !== 2) {
+      failures.push(`Expected exactly 2 converted files, got ${converted.length}`);
+    }
+    if (downloadedCount !== 2) {
+      failures.push(`Expected 2 downloaded files, got ${downloadedCount}`);
+    }
+    if (!bannerText.includes('Batch complete: 2 files converted and 2 downloaded')) {
+      failures.push(`Banner text mismatch, got '${bannerText}'`);
+    }
+
+    const hasJson = converted.some(c => c.outputName === 'sample-data.json' && c.downloaded);
+    const hasWebp = converted.some(c => c.outputName === 'photo.webp' && c.downloaded);
+    if (!hasJson) {
+      failures.push('sample-data.json missing or not downloaded');
+    }
+    if (!hasWebp) {
+      failures.push('photo.webp missing or not downloaded');
+    }
+
+    return {
+      passed: failures.length === 0,
+      failures,
+      score: failures.length === 0 ? 1 : 0,
+      state: {
+        sessionSaved,
+        convertedCount: converted.length,
+        downloadedCount,
+        metaChecked,
+        compVal,
+        banner: bannerText
+      }
+    };
+  };
+})();
+</script>
+</body>
+</html>

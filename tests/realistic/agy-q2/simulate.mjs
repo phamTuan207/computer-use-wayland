@@ -183,6 +183,30 @@ const testSimulators = {
     await page.select('#filter-contact-group', 'all');
     // 6. Save directory
     await page.click('#btn-save-directory');
+  },
+  '06': async (page) => {
+    // 1. Select sample-data.csv -> JSON, High, preserve metadata
+    await page.select('#select-source-file', 'sample-data.csv');
+    await page.select('#select-target-format', 'JSON');
+    await page.select('#select-compression', 'High');
+    await page.click('#check-preserve-meta');
+    await page.click('#btn-add-queue');
+    // 2. Select photo.png -> WEBP
+    await page.select('#select-source-file', 'photo.png');
+    await page.select('#select-target-format', 'WEBP');
+    await page.click('#btn-add-queue');
+    // 3. Mistaken corrupted.bin
+    await page.select('#select-source-file', 'corrupted.bin');
+    await page.click('#btn-add-queue');
+    // 4. Remove corrupted.bin
+    await page.click('#btn-remove-queue-corrupted-bin');
+    // 5. Convert all
+    await page.click('#btn-convert-all');
+    // 6. Download both
+    await page.click('#btn-download-sample-data-csv');
+    await page.click('#btn-download-photo-png');
+    // 7. Save session
+    await page.click('#btn-save-session');
   }
 };
 
