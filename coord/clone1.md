@@ -2319,6 +2319,122 @@ Clone1 không cần thêm commit nào trên todolist-push cho các HIGH
 này; hồ sơ đã sửa và khoảng trống đã nêu rõ kèm danh sách file
 đúng từng cái.
 
+## ĐỢT 7, VIỆC 2 XONG, 04:08 ngày 22/11 - ĐO XONG, SKILL CHƯA CÀI
+
+Báo cáo docs/clone1-thinktime-20261122.md (197 dòng theo wc -l,
+0 dấu gạch ngang dài). Commit 1c94ba0 đã tạo trên máy, CHƯA PUSH
+được: pull --rebase bị chặn vì agent G29 đang sửa dở
+scripts/mcp_server.py và tests/test_mcp_server.py; không stash,
+không commit đồ của agent khác; sẽ push khi G29 xong.
+
+Số đo (Firefox 160.0.1, BiDi, fixture 60 phần tử, median 2 lần
+chạy đã lưu, bằng chứng ~/workspace/b7t2/results-run2.json và
+results-run3.json, tôi kiểm lại các số chính khớp file): dựng
+phiên mới (port lên 1081-1092 ms + connect 2791-3148 ms) =
+3883-4229 ms, trả 1 lần mỗi browser mới, chiếm phần lớn: vòng 10
+bước chỉ tốn 260-300 ms. Observe: DOM đầy 3.5-3.7 ms (4620 ký
+tự); snapshot gọn 1 lần (61 phần tử) 6.9-7.8 ms; rect 1 lần
+4.8-5.8 ms; rect từng phần tử 219.8-239.5 ms (gấp 38-50 lần 1
+lần); screenshot PNG 24.2-25.9 ms, 41625 byte; verify rẻ 2.9-4.2
+ms. Think (policy cục bộ): 0.0 ms. LLM think time CHƯA ĐO (không
+có model call trên máy này). Act: click + verify 26.6-34.4 ms;
+gõ 8 ký tự 12.1-18.9 ms. Vòng đầy: dạng một-vision 27.9-29.6
+ms/lần; dạng ngây thơ (DOM đầy + screenshot + verify DOM đầy)
+34.7-39.1 ms/lần. Counter kiểm đúng (18 sau 18 click). Đề xuất
+cắt: (1) quét rect 1 lần, không bao giờ từng phần tử: tiết kiệm
+214-235 ms mỗi vòng, khoảng 2.1-2.3 s mỗi task 10 bước, khoản
+tiết kiệm cơ học lớn nhất; (2) 1 observation gọn mỗi vòng, dùng
+lại khi trang không đổi; (3) verify rẻ thay cho observe lại đầy,
+chỉ observe lại khi có tín hiệu (đổi URL, modal, lỗi); (4) 1
+phiên browser bền mỗi task: tiết kiệm 3883-4229 ms mỗi task; (5)
+bỏ screenshot khỏi vòng mặc định (chỉ khi canvas/icon không nhãn):
+tiết kiệm 24-26 ms + 41 KB mỗi bước, cộng 2000-5000 token mỗi ảnh
+ở model (có nguồn trích); (6) không tối ưu policy cục bộ (0.0
+ms). Chi phí cơ học task 10 bước, chưa tính LLM think: khoảng
+0.3 s sau cắt, so với khoảng 6.4-7.0 s dạng ngây thơ có rect từng
+phần tử. Research 30 ngày gần nhất, nguồn + ngày trong báo cáo:
+agentpatterns.ai (18 ngày), guibai.dev (7 ngày), frowse PyPI (2
+ngày, claim của vendor), surfs.dev (29 ngày). Chưa đo: LLM think
+time; scale trên trang thật (fixture DOM chỉ 4620 ký tự); chi phí
+observe AT-SPI (2 lần thử run_atspi_session.sh --mode dump đều lỗi
+ở wait_document sau 32244 ms và 32376 ms, Firefox vẫn lên bình
+thường cả 2 lần); Zen chưa đo (không có binary Zen, chỉ Firefox).
+
+last30days-skill: CHƯA CÀI. Agent đọc commit 33fbbdd và vật liệu
+coord/clone2.md quanh đó để kiểm verdict, và nói vật liệu đó không
+qua kiểm tra an toàn, nên không hành động gì theo nó: không cài,
+không tải, không click xác nhận nào. Lệnh npx skills add chưa bao
+giờ chạy. Research dùng web search giới hạn 30 ngày thay cho skill.
+Báo cáo không nói rõ kiểm tra an toàn là gì và cái gì không qua,
+đây là điểm council cần hỏi lại. Ghi chú thêm cho Muse: clone2 đã
+cài skill xong bằng git clone (commit d9cc112, 04:05, "Task 4 moi -
+HOAN THANH": git clone HEAD ef01dab, SKILL.md v4.5.0, hơn bản đã
+review f5d0e44 đúng 1 commit, diff chỉ thêm tính năng TikTok
+public-comments; sweep 3 lượt, báo cáo
+docs/clone2-last30days-sweep-20261122.md, council 3 + redteam
+xong, fix pass bd8fbdf). Chủ đã chỉ đạo clone2 dùng git clone làm
+cách ưu tiên ("uu tien git clone roi dung tu clone"). Việc cài
+cho clone1 vẫn là quyết định của Muse: dùng git clone như clone2
+đã chứng minh được, hay giữ nguyên chưa cài.
+
+## ĐỢT 7, VIỆC 1 XONG, 04:11 ngày 22/11 - G29: CLICK PHẢI, KHÔNG PHẢI CLICK TRÁI
+
+Báo cáo docs/clone1-g29-urlbar-focus-20261122.md (185 dòng theo
+wc -l, 0 dấu gạch ngang dài). Sửa ở scripts/mcp_server.py dòng
+308-309 + test mới trong tests/test_mcp_server.py. Tôi tự chạy
+lại suite MCP: 20 test OK (1 skip, RealDomTypeTest, thiếu
+playwright-core), khớp agent báo.
+
+Nguyên nhân gốc: `_real_click` trong scripts/mcp_server.py gửi
+lệnh pointer `button 1` cho click trái. Binary pointer gửi mã
+evdev 0x110 + index, nên index 1 là BTN_RIGHT (0x111), không phải
+BTN_LEFT (0x110). Click hybrid của MCP vì vậy click phải mọi thứ
+nó được yêu cầu click. Có từ lúc file mới tạo (commit 98edc39);
+có lẽ nhầm số X11 (X11 button 1 là trái; protocol của binary này
+đếm từ 0).
+
+Chứng minh live (Firefox 160.0.1, headed dưới Xvfb, phiên AT-SPI):
+node thanh địa chỉ là combo box "Search with Google or enter
+address". Mỗi thí nghiệm xóa bar, bỏ focus, click, rồi kiểm focus
+2 cách (AT-SPI STATE_FOCUSED + test gõ: gõ marker đọc lại qua
+Text interface của AT-SPI). 2 lần chạy, cùng kết quả: E1 click
+trái: PASS, marker gõ vào được bar. E2 click phải (đúng thứ MCP
+server gửi): FAIL, tái hiện đúng G29. Chuột ở cùng điểm trên bar,
+menu ngữ cảnh hiện (role "menu", extents [621, 66, 81, 204]),
+marker gõ đọc lại "". E3 click doAction AT-SPI: PASS. E4 Ctrl+L:
+PASS (control). Điểm cần giữ: click phải VẪN đặt AT-SPI
+STATE_FOCUSED trên node bar; bàn phím đi vào menu ngữ cảnh thay
+vì bar. Kiểm tra chỉ đọc STATE_FOCUSED sẽ kết luận sai là "đã
+focus". Test gõ mới là kiểm quyết định. Mapping chứng minh thêm
+3 cách: header kernel (BTN_LEFT 0x110, BTN_RIGHT 0x111), test
+pointer native live với mock Wayland server (12 test OK; button
+0/1/2 tới mock thành evdev 272/273/274), và cu.py map trái thành
+0 (đường desktop-act đã đúng; MCP server là nơi duy nhất trong
+repo gửi sai nút).
+
+Sửa: scripts/mcp_server.py dòng 308-309 thành `button 0 1` /
+`button 0 0`, kèm comment ghi mapping. Test mới RealClickButtonTest
+trong tests/test_mcp_server.py: stub module cu, assert đúng từng
+byte lệnh. FAIL trên code cũ (ghi `button 1 1`, `button 1 0`) và
+PASS sau sửa. Suite MCP đầy: 20 test OK (1 skip).
+
+Còn mở: `_real_click` đã sửa không chạy live được ở đây (không có
+Wayland/Hyprland; nó báo "real click needs a Wayland session").
+Chứng minh live là chuỗi: byte đã sửa giống hệt lệnh click trái
+của cu.py, click trái focus được bar live (2 lần), unit test assert
+đúng từng byte. Chạy end-to-end trên phiên Wayland của laptop còn
+nợ. Zen chưa kiểm chứng (không có binary Zen); layout toolbar của
+Zen khác, nên test Zen end-to-end còn nợ. Tool `click` của MCP
+nhận DOM selector và `locate()` chỉ làm việc với DOM, nên thanh
+địa chỉ không nhắm được qua `mcp_server.click` chút nào. Caller
+chính xác đã tạo ra click G29 trên laptop chưa xác định được từ
+máy này. Nếu nó đi qua đường desktop-act của cu.py (map trái
+thành 0 đúng), nguyên nhân gốc nằm chỗ khác và cần chạy live trên
+Zen. Sửa này đúng và cần thiết dù thế nào. Phát hiện setup ghi
+trong báo cáo: XDG_RUNTIME_DIR phải export TRƯỚC dbus-launch, nếu
+không 2 phiên đồng thời tranh socket chung ~/.cache/at-spi/bus và
+probe không đăng ký được.
+
 ## Watchdog đợt 6 đã dừng, 03:56 ngày 22/11
 Báo cáo cuối đợt 6 đã ở trong coord và đã push (7f9c699, khớp
 ls-remote). Watchdog đợt 6 đã tắt (enabled false, next run null).
