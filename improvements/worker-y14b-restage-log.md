@@ -259,7 +259,11 @@ on its merits; nothing accepted or declined silently.
   the probe, not the runner.
 - No em/en dash in the fix diff (grep 0), no ydotool, no personal
   info.
-- Fix commit: (hash filled below after commit).
+- Fix commit: 8bee524 (todolist-push, pushed, ls-remote verified
+  8bee5249f6e86fce2763bc807cc9b2b1e40d9de1). run_batch3.py at this
+  commit: git blob ed4de81d914f3a75df31554c0b2369110f7e27b0, md5
+  65818867865ad4772e78cc2bcac015d6 (ship-time expected values for
+  the plan's md5 procedure).
 - Fresh council (3) + redteam over the FIX DIFF only: spawned after
   this commit (per the Y13r pattern). Ship to the laptop waits for
   their verdicts.
