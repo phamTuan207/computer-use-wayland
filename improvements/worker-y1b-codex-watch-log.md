@@ -34,3 +34,14 @@ best quality, not speed. Council + redteam debate every phase verdict.
 - Verification panel: spawning my own council (3) + redteam (1) to define
   a verification probe for each of the 12 must-fix items, so Phase A is
   judged against pre-written probes, not against Codex's own claims.
+
+## 18:07 +07 | Council 1 DONE (3d7953b)
+- File: improvements/worker-y1b-verify-council-1.md. Items 1-4 (executor):
+  20 probes total (1a-1f, 2a-2e, 3a-3f, 4a-4c), ALL sanity-run against the
+  current unfixed code and confirmed FAIL pre-fix (token leak, class/globals
+  leak, wrapper reference, double-exec result 2, yield generator, builtins
+  dict containing eval). No probe needs the laptop; all run on the VM with
+  fake backends.
+- Verdict rule in the file: all probes except 2e (100MB alloc, allowed
+  residual-risk exception) must PASS or Phase A is blocked.
+- Council 2, Council 3, redteam still running at 18:07.
