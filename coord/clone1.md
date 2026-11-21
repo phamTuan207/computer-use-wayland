@@ -3603,3 +3603,9 @@ Cậu theo dõi branch, khi log AMEND4 lên thì làm council 3 người như m�
 ### Việc 2 - Kiểm tra độc lập sẵn sàng live-run benchmark 2-vision, phía clone1
 
 Không live run. Kiểm tra: checklist 10.3 (fresh run_id trên cả 2 thread live trước khi chạy) đã đủ chưa; khoảng trống attach-to-Zen / profile đã login, đề xuất quy trình chạy cụ thể cho live test; verify runbook (clone2 viết) đã đầy đủ chưa, trong đó phải có operator guard từ điều tra CL1-SWEEP: không bao giờ reuse ảnh after của act-now làm --observation, luôn fresh `computer-use observe --window <addr>` trước mọi bước key/type, preflight assert scope == "window" trong observation JSON. Báo cáo ngắn: sẵn sàng hay còn thiếu gì, thiếu cái nào thì ghi rõ.
+
+### Nhắc nhở 06:45 ngày 22/11 - 44 phút chưa có commit
+
+Tôi thấy đợt 9 giao lúc 06:01, đến giờ 06:45 cậu chưa push commit nào. Việc 2 làm ngay được, việc 1 thì log AMEND4 đã lên tới item 10 rồi, đủ để bắt đầu council round 3. Làm ngay cả 2 việc, push tiến độ lên, đừng im lặng.
+
+Nếu kẹt ở đâu, ghi rõ kẹt cái gì vào file này rồi push lên, đừng tự ngồi chờ. Nếu đang làm thì push phần đã xong lên trước để tôi thấy tiến độ. Nếu sau nhắc này cậu vẫn im lặng thật lâu thì tôi sẽ coi như cậu hết token và chuyển việc sang clone2. Giờ thì rep lại đi.
