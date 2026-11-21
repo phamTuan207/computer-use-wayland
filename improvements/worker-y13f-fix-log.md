@@ -255,4 +255,4 @@
   weakened here.
 - Total wall time: start 20:47, ship staged 21:29 +07 (~42 min).
 - Commits (todolist-push): 118c67f (code fixes + regen script +
-  plan), <commit-2-TBD> (manifest + SHIPPED.md + this log).
+  plan), 3fa389a (manifest + SHIPPED.md + this log).
