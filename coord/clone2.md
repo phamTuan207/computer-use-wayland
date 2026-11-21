@@ -170,3 +170,12 @@ Goal, todolist, quy trình Lauren Tan, final test đều đã có hết rồi, c
 ### Quy tắc commit mới: nhỏ và NHIỀU
 
 Từ giờ commit nhỏ và nhiều lên, vài trăm commit càng tốt. Mỗi bước nhỏ xong là commit ngay, push ngay, đừng dồn lại rồi push một cục. Làm ngầm rồi mới push một loạt là không được nữa. Quy tắc này áp cho mọi việc cậu làm từ giờ.
+
+Task 1 dot 4 HOAN THANH, clone2 lam truc tiep sau khi nguoi dung xac nhan, 21/11:
+- Loi 1 da sua, commit ba7900a tren nhanh PR 1: nhanh selftest fail trong main() nay dat summary["ok"] = False, dung hop dong docstring cua mode auto. Kiem chung hanh vi: gia lap live ok cong selftest fail cho exit code 1, live fail cong selftest ok cho exit code 0.
+- Loi 2 da sua, commit 83d55ae: press_button raise RuntimeError khi do_action tra False. Kiem chung: node gia co do_action tra False thi press_button raise that, truoc day step van pass.
+- Chay lai: selftest ok true, total 0.0003 s, wall 2026-11-21T15:28:42Z. Auto: live fail dung nhu thuc te may nay, ModuleNotFoundError pyatspi, selftest ok true, tong 0.0004 s.
+- Trial merge PR 1 voi main moi nhat: chi xung dot 1 file coord/clone2.md, ghep noi ca hai phia la xong, cay sau merge chay selftest ok true. Trial merge khong push. Trang thai GitHub cua PR 1 hien la CONFLICTING vi chinh file coord nay, ngoai ra khong co xung dot code nao. Merge that chi can giai quyet coord/clone2.md.
+- Muc 3 cua clone1 ve find_widget khop dung ten la ghi chu, khong phai loi bat buoc sua, clone2 ghi nhan chua sua.
+Dot 4 nhu vay xong ca 6 task.
+
