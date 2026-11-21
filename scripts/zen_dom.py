@@ -731,6 +731,51 @@ class ZenSession:
             moz_inner, absolute, window_origin, size,
             [raw[5], raw[6]], monitor_box, factor=factor)
 
+    def live_window_origin(self, address=None):
+        """[x, y] live Hyprland origin of a window, re-read now.
+
+        F3 (AMEND4 item 6): the grounding chain must not trust the
+        observation meta's window origin without a live check. Reads
+        hyprctl clients -j and returns the [at] origin of the window
+        with the given address; with no address, the active window
+        (hyprctl activewindow -j). Returns None when hyprctl is
+        unavailable, the window is not found, or the output cannot
+        be parsed: the caller then skips the staleness check (it
+        cannot prove a mismatch) instead of failing a batch it
+        cannot judge. Never raises for a missing hyprctl: the VM has
+        none, and a grounding refusal there would be a false
+        refusal, not a stale-origin catch.
+        """
+        try:
+            if address is not None:
+                out = subprocess.run(
+                    ['hyprctl', '-j', 'clients'], capture_output=True,
+                    text=True, timeout=3)
+                clients = json.loads(out.stdout)
+                for client in clients:
+                    if (isinstance(client, dict)
+                            and str(client.get('address')) == str(address)):
+                        at = client.get('at')
+                        if (isinstance(at, (list, tuple)) and len(at) == 2
+                                and all(isinstance(v, (int, float))
+                                        and not isinstance(v, bool)
+                                        for v in at)):
+                            return [at[0], at[1]]
+                return None
+            out = subprocess.run(
+                ['hyprctl', '-j', 'activewindow'], capture_output=True,
+                text=True, timeout=3)
+            active = json.loads(out.stdout)
+            if isinstance(active, dict):
+                at = active.get('at')
+                if (isinstance(at, (list, tuple)) and len(at) == 2
+                        and all(isinstance(v, (int, float))
+                                and not isinstance(v, bool) for v in at)):
+                    return [at[0], at[1]]
+            return None
+        except Exception:
+            return None
+
     def locate_point(self, meta, selector):
         """Image point of one element's rect center, first-time-right.
 
@@ -753,12 +798,14 @@ class ZenSession:
         if (isinstance(bounds, (list, tuple)) and len(bounds) == 4):
             window_origin = [bounds[0], bounds[1]]
             window_size = [bounds[2], bounds[3]]
-        elif isinstance(meta, dict) and isinstance(meta.get('region'),
-                                                  (list, tuple)):
-            window_origin = [meta['region'][0], meta['region'][1]]
-            window_size = [meta['region'][2], meta['region'][3]]
         else:
-            raise ZenDomError('meta needs window_bounds or region')
+            # AMEND4 item 5: no region fallback. A screen-scope meta
+            # carries no window_bounds, and its region origin is the
+            # monitor origin, not the window origin; falling back to
+            # it re-admits the raw mozInner pair (F2).
+            raise ZenDomError('meta needs window_bounds for the '
+                              'window origin (mozInnerScreen is '
+                              'window-relative)')
         monitor_box = meta.get('monitor_box') if isinstance(meta, dict) \
             else None
         origin = self.viewport_origin(window_origin, window_size,

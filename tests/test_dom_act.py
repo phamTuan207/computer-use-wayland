@@ -33,13 +33,21 @@ class FakeDomSession:
 
     _MISSING = object()
 
-    def __init__(self, fields, origin=None):
+    def __init__(self, fields, origin=None, live_origin=None):
         self.fields = fields
         self.origin = origin or [0, 0]
+        # live_origin is the Hyprland origin a live re-read would
+        # return (AMEND4 item 6): None means the session cannot
+        # re-read (a VM without hyprctl), so the staleness check is
+        # skipped; a list means it can, and a mismatch refuses.
+        self.live_origin = live_origin
         self.dom_calls = 0
         self.sent_intents = set()
         self._armed = {}
         self._typed = {}
+
+    def live_window_origin(self, address=None):
+        return self.live_origin
 
     def locate(self, selector):
         self.dom_calls += 1
@@ -205,7 +213,8 @@ class FakeAct:
 
 
 G30_META = {'image_size': [901, 1176],
-            'region': [2533, 914, 901, 1176]}
+            'region': [2533, 914, 901, 1176],
+            'window_bounds': [2533, 914, 901, 1176]}
 G30_FIELD = {'rect': {'x': 86, 'y': 1101, 'width': 440, 'height': 63},
              'focused': True, 'value': 'hello', 'covered': False}
 
@@ -232,6 +241,37 @@ class GroundInputTests(unittest.TestCase):
         # A meta that cannot map the rect keeps the click-anchored
         # band instead of a bogus range.
         self.assertIsNone(dom_act.grounded_y_range(ground, {}))
+
+    def test_ground_input_refuses_meta_without_window_bounds(self):
+        # AMEND4 item 5 (F2): a screen-scope meta carries no
+        # window_bounds, and falling back to the region origin
+        # re-admits the raw mozInner pair. Grounding refuses instead.
+        session = FakeDomSession({'#msg-input': G30_FIELD})
+        screen_meta = {'image_size': [1920, 1080],
+                       'region': [0, 0, 3840, 2160],
+                       'monitor_box': [0, 0, 3840, 2160]}
+        with self.assertRaises(dom_act.DomActError) as caught:
+            dom_act.ground_input(session, screen_meta, '#msg-input')
+        self.assertIn('window_bounds', str(caught.exception))
+
+    def test_ground_input_refuses_stale_window_origin(self):
+        # AMEND4 item 6 (F3): the live origin moved since the
+        # observation, so the meta's origin is stale and grounding
+        # refuses instead of clicking where the window was.
+        session = FakeDomSession({'#msg-input': G30_FIELD},
+                                 live_origin=[2600, 914])
+        with self.assertRaises(dom_act.DomActError) as caught:
+            dom_act.ground_input(session, G30_META, '#msg-input')
+        self.assertIn('moved', str(caught.exception))
+
+    def test_ground_input_accepts_matching_live_origin(self):
+        # The live re-read agrees with the meta: grounding proceeds
+        # exactly as before, same point, same origin.
+        session = FakeDomSession({'#msg-input': G30_FIELD},
+                                 live_origin=[2533, 914])
+        ground = dom_act.ground_input(session, G30_META, '#msg-input')
+        self.assertEqual(ground['point'], [306.0, 1132.5])
+        self.assertEqual(ground['viewport_origin'], [2533, 914])
 
     def test_ground_input_covered_refuses_before_any_click(self):
         covered = dict(G30_FIELD, covered=True)
@@ -282,25 +322,32 @@ class GroundInputTests(unittest.TestCase):
         cases = [
             ({'x': 86, 'y': 1101, 'width': 440, 'height': 63},
              [240, 8],
-             {'image_size': [1200, 757], 'region': [2509, 914, 1863, 1176]}),
+             {'image_size': [1200, 757], 'region': [2509, 914, 1863, 1176],
+              'window_bounds': [2509, 914, 1863, 1176]}),
             ({'x': 86, 'y': 1101, 'width': 440, 'height': 63},
              [240, 8],
-             {'image_size': [450, 588], 'region': [2509, 914, 1863, 1176]}),
+             {'image_size': [450, 588], 'region': [2509, 914, 1863, 1176],
+              'window_bounds': [2509, 914, 1863, 1176]}),
             ({'x': 100, 'y': 5, 'width': 200, 'height': 30},
              [0, 0],
-             {'image_size': [800, 600], 'region': [100, 200, 800, 600]}),
+             {'image_size': [800, 600], 'region': [100, 200, 800, 600],
+              'window_bounds': [100, 200, 800, 600]}),
             ({'x': 400, 'y': 300, 'width': 8, 'height': 8},
              [0, 0],
-             {'image_size': [800, 600], 'region': [0, 0, 800, 600]}),
+             {'image_size': [800, 600], 'region': [0, 0, 800, 600],
+              'window_bounds': [0, 0, 800, 600]}),
             ({'x': 0, 'y': 500, 'width': 800, 'height': 40},
              [0, 0],
-             {'image_size': [900, 700], 'region': [50, 60, 900, 700]}),
+             {'image_size': [900, 700], 'region': [50, 60, 900, 700],
+              'window_bounds': [50, 60, 900, 700]}),
             ({'x': 86, 'y': 1001, 'width': 440, 'height': 63},
              [0, 100],
-             {'image_size': [901, 1176], 'region': [2533, 914, 901, 1176]}),
+             {'image_size': [901, 1176], 'region': [2533, 914, 901, 1176],
+              'window_bounds': [2533, 914, 901, 1176]}),
             ({'x': 86, 'y': 1101, 'width': 440, 'height': 63},
              [240, 8],
-             {'image_size': [1802, 2352], 'region': [2509, 914, 1863, 1176]}),
+             {'image_size': [1802, 2352], 'region': [2509, 914, 1863, 1176],
+              'window_bounds': [2509, 914, 1863, 1176]}),
         ]
         hits = 0
         for rect, moz_inner, meta in cases:

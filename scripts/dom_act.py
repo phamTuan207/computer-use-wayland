@@ -51,17 +51,65 @@ class DomActError(RuntimeError):
 
 
 def _window_origin(meta):
-    """[x, y] Hyprland window origin from an observation meta."""
+    """[x, y] Hyprland window origin from an observation meta.
+
+    window_bounds is REQUIRED (AMEND4 item 5): a screen-scope meta
+    carries no window_bounds, and falling back to the region origin
+    re-admits the raw mozInner pair as the absolute origin (F2).
+    Production window observes always carry window_bounds
+    (cu.observe); screen observes never do (cu.observe_screen).
+    """
     if not isinstance(meta, dict):
         raise DomActError('meta must be an object')
     bounds = meta.get('window_bounds')
     if (isinstance(bounds, (list, tuple)) and len(bounds) == 4):
         return [bounds[0], bounds[1]]
-    region = meta.get('region')
-    if (isinstance(region, (list, tuple)) and len(region) == 4):
-        return [region[0], region[1]]
-    raise DomActError('meta needs window_bounds or region for the '
-                      'window origin (mozInnerScreen is window-relative)')
+    raise DomActError('meta needs window_bounds for the window origin '
+                      '(mozInnerScreen is window-relative); a '
+                      'screen-scope observation has no window to ground '
+                      'against, re-observe the window')
+
+
+def _live_window_origin(session, meta):
+    """Live Hyprland origin re-read at ground time, or None.
+
+    F3 (AMEND4 item 6): the session's live_window_origin (a real
+    ZenSession with hyprctl) is asked for the meta's window address,
+    or the active window when the meta carries none. Returns the
+    live [x, y], or None when the session cannot provide one (a
+    fake, a VM without hyprctl, a failed read): the caller then
+    skips the staleness check instead of failing a batch it cannot
+    judge. Never raises.
+    """
+    live = getattr(session, 'live_window_origin', None)
+    if not callable(live):
+        return None
+    try:
+        address = meta.get('window') if isinstance(meta, dict) else None
+        origin = live(address)
+    except Exception:
+        return None
+    if (not isinstance(origin, (list, tuple)) or len(origin) != 2
+            or any(isinstance(v, bool)
+                   or not isinstance(v, (int, float)) for v in origin)):
+        return None
+    return [origin[0], origin[1]]
+
+
+def _check_window_not_moved(session, meta, window_origin):
+    """Refuse when the live window origin differs from the meta's.
+
+    F3: the window moved between the observation and the grounding,
+    so the meta's origin is stale and the click would go to where
+    the window WAS. A session that cannot re-read live (None) skips
+    the check: no evidence of a move, no refusal.
+    """
+    live_origin = _live_window_origin(session, meta)
+    if live_origin is not None and live_origin != window_origin:
+        raise DomActError(
+            'window moved since the observation: live origin %r != '
+            'observed origin %r; re-observe before grounding'
+            % (live_origin, window_origin))
 
 
 def _scale_factor(session):
@@ -132,6 +180,7 @@ def ground_input(session, meta, selector):
     if rect is None:
         raise DomActError(f"no element matches {selector!r}")
     window_origin = _window_origin(meta)
+    _check_window_not_moved(session, meta, window_origin)
     window_size = None
     bounds = meta.get('window_bounds')
     if isinstance(bounds, (list, tuple)) and len(bounds) == 4:
@@ -275,6 +324,7 @@ def ground_many_one_shot(session, meta, selectors):
                           'grounding needs a session that returns all '
                           'rects in one evaluate')
     window_origin = _window_origin(meta)
+    _check_window_not_moved(session, meta, window_origin)
     window_size = None
     bounds = meta.get('window_bounds')
     if isinstance(bounds, (list, tuple)) and len(bounds) == 4:

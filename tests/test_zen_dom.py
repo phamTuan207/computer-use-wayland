@@ -495,9 +495,12 @@ class TestDomHelpers(unittest.TestCase):
 
     def _meta(self):
         # The G30 Brave window: region [2533,914,901,1176], image
-        # 901x1176, so image and region map 1:1.
+        # 901x1176, so image and region map 1:1. window_bounds is
+        # the production shape (AMEND4 item 5): a region-only meta
+        # is refused for grounding, so the fixture carries it.
         return {'image_size': [901, 1176],
-                'region': [2533, 914, 901, 1176]}
+                'region': [2533, 914, 901, 1176],
+                'window_bounds': [2533, 914, 901, 1176]}
 
     def test_viewport_origin_adds_window_origin_to_moz_inner(self):
         # mozInnerScreen is WINDOW-relative (live C12 probe 03:36):
