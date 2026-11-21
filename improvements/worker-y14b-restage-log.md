@@ -862,3 +862,12 @@ coordinates go here too.
   independently verify C2-1/C2-2 (its F7 checks were codex-gate
   only). Council 1 still running. Still NOT editing
   run_batch3.py until it finishes.
+- 22:51:08 +07 (elapsed ~31 min): Council 3 log commit f39843e
+  pushed; the push reported a remote lock rejection ("cannot lock
+  ref, is at f39843e but expected 218b223"), but ls-remote and
+  `git merge-base --is-ancestor` both confirm f39843e IS on the
+  remote (ancestor of remote head a851c75, OPT-M1). The rejection
+  was a transient concurrent-push race, not a lost commit. The
+  local HEAD has since moved to c8ef590 (OPT-M2, another worker's
+  commit, not yet pushed, not mine); I do not touch it. Council 1
+  still running.
