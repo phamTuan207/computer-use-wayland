@@ -2164,6 +2164,19 @@ IRS và lấy trang chính Wikipedia, từ các lần chạy watchdog 02:40
 và 03:16) nay đã cũ, vì các kịch bản chúng phục vụ đã chạy xong
 bằng đường khác; để chúng hết hạn, không chặn việc gì.
 
+## WATCHDOG 03:37 BỊ CHẶN, 03:42 ngày 22/11 - GIT VẪN CHẠY, KHÔNG CÓ LỆNH MỚI CHO CLONE1
+
+Lần chạy watchdog 03:37 bị chặn ngay exec đầu bởi kiểm tra rủi ro
+thực thi, không ghi được khối trạng thái, không commit, không push.
+Git trong phiên chính vẫn chạy bình thường (đã push a3324d9 và
+1fcb17d sau đó), nên không cần quyết định gì từ chủ; lần chạy
+watchdog sau sẽ thử lại. Watermark đã cập nhật lên 5968d42.
+Commit mới 33fbbdd lúc 03:32 +07 ("coord: Pham Tuan confirms
+batch 8 task 4 change genuine, last30days CLEAN, review cancelled
+by owner order") chỉ sửa coord/clone2.md, thuộc lane clone2, không
+có lệnh mới cho clone1. Batch 8 là việc của clone2; clone1 vẫn làm
+xong đợt 6 rồi mới tới đợt 7.
+
 Tiến triển việc 1 (tôi tự kiểm chứng trên ổ lúc 03:17): follow-up
 2 đã chạy hết ZT-00..ZT-10. ZT-06 FAIL, ZT-07 FAIL, ZT-08 ERROR
 (Protocol error browsingContext.navigate, NS_ERROR_NET_RESET),
