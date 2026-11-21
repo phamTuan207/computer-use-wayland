@@ -807,3 +807,46 @@ Luat nhu cu: khong dua thong tin ca nhan nao cua toi len repo, khong dau gach ng
 
 ## Da nhan batch 9, 04:38 ngay 22/11
 Clone2 da nhan batch 9 (giao 04:35, commit e04a16a): 4 viec, moi viec council 3 nguoi + redteam, commit nho push ngay tung phan. Viec 1 thiet ke one-vision tu sweep (docs/clone2-one-vision-design-20261122.md), viec 2 kiem tra san sang live cho benchmark 2-vision, KHONG chay live, viec 3 viet nhap muc loi G31 (docs/g31-nearmiss-draft-20261122.md), viec 4 crawl 30 ngay ve kiem chung click khong can vision thu hai (docs/clone2-ground-verify-sweep-20261122.md). Dang cho Muse tong dieu lai, se lam ngay khi co lenh.
+
+## Batch 9 hoan thanh, 05:05 ngay 22/11
+
+Ca 4 viec xong, moi viec council 3 nguoi + redteam + fix pass, commit nho push ngay tung phan.
+
+### Viec 1 - Thiet ke one-vision (docs/clone2-one-vision-design-20261122.md)
+
+Ban dau 289b219 (588 dong). Council 1 ISSUES, 2 ISSUES, 3 ISSUES nho; redteam BROKEN (2 critical). Fix pass c267411 (merge 9b9d060), gio 731 dong, ap dung het 16 sua.
+
+- Ngan sach vision: 1 vision moi task, VISION 2 bo di, NHUNG fix pass doi thanh co dieu kien: gate V12 chi la kiem tra su hien dien, khong co anh truoc, bong bong cu trong thread cung qua gate; giu VISION 2 cho den khi textNew duoc xay va chung minh chi dem bong bong moi, cong them kiem tra cheo 2 cua so (moi thread chi chua tin cua chinh no).
+- Chuoi toa do Case B duoc chap nhan nhung bi chan boi probe C12, chua chay live click nao bang chuoi nay. Cong thuc goc (nhan dpr * monitor_scale cho ca tong) SAI don vi, fix pass sua thanh screen = window_origin + (mozInnerScreen + rect_center) * dpr / monitor_scale, don vi logical px, goc cua so khong bao gio duoc nhan ti le; cong thuc cu cho 4x tren man hinh scale 2. Cong thuc sua chua duoc thu o scale nao khac 1, C12 khong duoc dong tren cong thuc nay. Vi tri DPR van UNRESOLVED.
+- textNew them vao thiet ke gate V12. SubmitGuard noi thang la vacuous trong kien truc nay (script chi chay plan, khong co duong nao lam hanh dong ngoai plan), doi thanh kiem tra plan, dieu khien that la URL gate va chuoi co dinh. Pre-send reservation la viec mo (muc 7 + TODO trong script).
+- Sua khac: lenh hyprctl dung la `hyprctl -j clients` (khong phai monitors), BotCircle (710,110) truot Home chu khong roi xuong dock (y=747 moi roi dock), attach 2.76-2.79 s cho 2 lan chay happy-path, trich dan calibration :22.
+
+### Viec 2 - Kiem tra san sang live benchmark 2-vision (docs/two-vision-benchmark-workflow-20261122.md)
+
+Ban dau e6ecdea (547 dong), khong drift: script 783 dong, khong doi code. Chay lai 12 lan fixture headless: happy PASS 8.9403 s, harvest 6.9131 s, contenteditable PASS 6.5993 s, id-less PASS 6.4843 s, below-fold PASS 6.1782 s, stop FAIL 9.7904 s dung nhu thiet ke, wrong-selector run 1 FAIL 8.2872 s / run 2 FAIL 4.2119 s (retry-blocked-unverified 0.0083 s, khong gui gi), exactly-once PASS 4.8139 s, 3 lan tu choi exit 2. Checklist section 10 moi. Council 1 ISSUES, 2 ISSUES, 3 ISSUES; redteam BROKEN (10 finding).
+
+- Redteam tim ra 4 lo false-PASS trong script, da sua va kiem chung live tren fixture: plan rong PASS (0==0), plan 1 cua so PASS, 2 cua so cung URL PASS (ca 2 tin vao 1 thread), gate URL bi ".." vuot qua. Fix pass 9a15647 (script 783 len 862 dong): validate_plan truoc khi mo trinh duyet, bat buoc dung 2 cua so, 2 URL khac nhau, chuan hoa URL truoc gate, luat PASS doi thanh dung 2 sent va dung 2 cua so. Hoi quy: happy PASS 8.0933 s, stop FAIL 10.1698 s, harvest 5.1561 s, once PASS 5.8881 s.
+- Fix pass 7c363b8 (doc 547 len 658 dong): tien de checklist sai da sua, script luon tu mo Firefox headless moi voi profile moi, khong dung duoc login Zen tren laptop, live run can che do attach-to-Zen (chua co) hoac profile da login; C12 khong ap dung cho click cua script nay nen khong phai dieu kien tien quyet; them buoc harvest-first truoc khi gui; sua loi "wrong selector fail-closed" (gate chi bao to sau khi tin da go, co the da gui).
+- Con mo: dung lai run_id tren thread live cho PASS gia voi 0 lan gui moi (code-proven, khong tai hien duoc tren fixture vi thread fixture khong luu); checklist 10.3 gio yeu cau kiem tra run_id moi tren ca 2 thread live truoc khi chay.
+- Pin update 1c76783 (merge 3018eb3): pin 10.1 doi 9a15647 sang c267411, script 868 dong, vi fix pass viec 1 them TODO 6 dong vao script.
+
+### Viec 3 - Nhap muc loi G31 (docs/g31-nearmiss-draft-20261122.md)
+
+Ban dau a2937e4 (44 dong). Council 1 ISSUES nho, 2 ISSUES nho, 3 SOUND; redteam BROKEN (3 critical). Fix pass e7b4713, gio 60 dong, ap dung het.
+
+- Muc 2 viet lai tu log CL1-MSG that tren todolist-push (improvements/worker-cl1msg-log.md, worker-cl1msg2-log.md): lech khoang 50px la artifact doc mui ten chuot tren anh JPEG, khong phai loi grounding that, 3 lan gui loi do nguyen nhan khac (click-focus, type target, Enter/send). So sanh "cung kieu loi nhu CL1-MSG" la BI BAC BOI bang chung, khong chi la chua kiem chung.
+- Ket luan ha cap xuong gia thuyet, bo quy tac pho quat "must replace the eye guess before every click". Canh bao 982px dua vao ca phan ke chuyen va bang Numbers: con tro cach diem click 982px chu khong phai 2px, nghia la hoac click khong dap xuong (306,1130), hoac con tro bi doi sau do (khong ghi), hoac 1 trong 2 toa do sai; neu diem click sai thi chuyen "tool dung" sup do, va claim click dap dung cung chua duoc kiem chung.
+- "1/1" ghi la khong dinh nghia o moi nguon. 2 mau thuan van mo: khoang cach con tro khoang 982px doi voi "2px" cua assignment, va so sanh CL1-MSG khong dung duoc.
+
+### Viec 4 - Crawl 30 ngay ve kiem chung click khong can vision thu hai (docs/clone2-ground-verify-sweep-20261122.md)
+
+Ban dau fe69a43 (94 dong). Chay last30days v4.5.0 keyless, --no-browser-cookies, 2026-11-21T21:41:31Z den 21:43:21Z, 110 s, 57 item (Reddit 15, HN 24, dev.to 12, Web 3 partial, GitHub 3). Council 1 ISSUES, 2 ISSUES, 3 SOUND; redteam BROKEN (7 finding). Fix pass b80acae, gio 101 dong, ap dung het 13 sua.
+
+- Ket qua chinh 1: mo hinh 3-fact verification, maptosite tren dev.to, 2026-11-14 (input den duoc element, trang thay doi, hieu ung ton tai o ban ghi trang khong kiem soat; optimistic UI, handle het han, cung ten khac item, overlay chan, man hinh che bang tin hieu khong bi mat, retry tu ban ghi). Ap thang vao gate V12 (fact 2) va doc ban ghi (fact 3), nhung gate V12 chi la 1 lan doc DOM lam ca 2 fact, doc fact 3 doc lap that su (phia nguoi nhan) khong co trong benchmark.
+- Ket qua chinh 2: agent-desktop observe-act-observe qua accessibility tree, thang 11/2026, SAU fix pass la 6 bai doc lap (them Raghu Juluri, Medium, 2026-11-17, bai duy nhat chay that v1.3.1 live tren Windows Server 2022 Notepad: doc 280-330 ms, action lease 2,167-2,387 ms, STALE_REF that, chi not_delivered moi an toan retry). Bai Dobhal truoc do bi gan nham 3 con so (v1.3.1, 24.6k sao, 51 release) cua Raghu, da sua.
+- Sua khac: engine co 26 cluster xep hang, khong phai 8 (4 adjacent, 2 corroboration, 20 generic); oh-bug.com co ngay 2026-07-05 (ngoai window, corroboration vi ly do do); lite.ego.app la review bao tri 2026-11-12 (trong window); dev.to lane 11 generic tren 12 (bai PR-gate la adjacent); so funnel Reddit 105/75/30/20 khong cong duoc (30-20=10, khong phai 15) va ghi la agent-log-only; "all verified without a screenshot" da gioi han lai (dialog cap trinh duyet can "stop and look at the pixels once"); host web search thua nhan bo sot bai trong window (heatdrop.ai, span.observer, awesomeopensource.dev).
+- Gioi han recall: engine chi chay 2 tren 4 subquery (a11y-verify va focus-caret bi bo); duong Reddit chinh loi, 15 thread chi tu ArcticShift supplement; X, YouTube, TikTok, Instagram khong toi duoc khi khong co key; khong co nguon trong window so sanh thoi gian DOM re-read verify voi screenshot verify; khong co nguon nao lay caret/focus check lam xac nhan chinh cho click tren web input (tim am nay chi dua tren host web search vi engine bo subquery focus-caret).
+
+Ghi nhan them: clone1 batch 8 task 2 verify vua len 09bfedb, verdict GO (lane clone1).
+
+Batch 9 xong het. Cho batch 10 hoac lenh tiep tu Muse tong.
