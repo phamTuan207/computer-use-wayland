@@ -60,3 +60,55 @@
   from the 22:48 pass.
 - Next: read sibling M2 mechanism paper, then write the verdict in sections,
   one commit per section.
+
+## 22:54:xx +07 (elapsed ~04m) - Sibling M2 mechanism paper read
+- Action: read improvements/opt-council-m2-mechanism.md (written 22:56-23:05
+  +07, read after voice 1-3 were done; voices recorded M2 as not existing
+  yet at their write time, which was true then).
+- Outcome: M2 proves D root cause at code level (#registerBrowser line 4616,
+  null linkedBrowser, no null check; fix D-1 client avoidance + restart
+  ladder; D-2/D-3 rejected with reasons); E wedge mechanism UNKNOWN, exact
+  hl.dsp workspace command NOT in any primary source; F adopts Y6r A1-A10
+  whole + precision limit (config() proven, layer() unproven); G kills V2
+  and stale-geckodriver, wounds V1, requires third mechanism; adopts
+  diagnose_body + flagged-pass accounting + 6-phase decisive experiment
+  (do NOT run now). All adopted into verdict amendments O-2, O-4, O-6 and
+  section 5.2. M1 evidence/safety papers also landed (afd7766, d5e2dc4);
+  M1 agreed with on all points, section 5.1.
+
+## 22:54-22:58 +07 (elapsed ~04-08m) - Verdict written in 6 sections, one commit each
+- s1 ordered queue (reuse PRIO + amendments O-1..O-7): commit 71b862d, push
+  OK, ls-remote verified. Note: git commit --only failed on the untracked
+  verdict file (pathspec not known to git); used git add of only that file
+  then commit. This became verdict section 4.4 hygiene rule.
+- s2 test-design rules: commit bd99e7b, push OK, verified.
+- s3 logging standard: commit 841ae2b, push OK, verified.
+- s4 commit method (main-only graph counting, merge early and often,
+  hygiene): commit 16d7579, push OK, verified. Time 22:55:32 at push.
+- s5 sibling agreement (M1 agree, M2 agree, state changes): commit e4ef479,
+  push OK, verified.
+- s6 redteam attack surface (8 claims) + 6 open questions: commit 20969e0.
+  Push first returned a lock error (remote moved); fetch showed origin head
+  IS 20969e0, ancestor check passed, so the push had landed in the race.
+  Verified, not re-pushed blindly.
+- Sign-off hash fix: commit 3fd3741, push OK, verified.
+- Addendum (owner 22:55 clone2-watch cron, MEMORY.md update): J16 partly
+  closed by the cron; P-A item becomes "verify cron running + first check
+  logged". Commit 22c3b35, push OK, verified.
+- No em/en dashes in any file (grep 0/0 on all papers before each commit).
+- No live tests run, no laptop driven, per brief. No worker stopped or
+  redirected. Never ydotool. No stuck period over 15 min at any point.
+
+## 22:58:xx +07 (elapsed ~08m) - Council complete, report to Worker OPT
+- Action: commit this log, push, verify, report to Worker OPT.
+- Deliverables: improvements/opt-council-order-attitude.md,
+  improvements/opt-council-order-dependency.md,
+  improvements/opt-council-order-risk.md,
+  improvements/opt-council-order-verdict.md (6 sections + addendum),
+  improvements/worker-opt-council-order-log.md (this file).
+- Council commits total: 12 (0a4f3d6, de7ea25, 2698fa0, 2157f74, 0d383e6,
+  71b862d, bd99e7b, 841ae2b, 16d7579, e4ef479, 20969e0, 3fd3741, 22c3b35).
+  Count is 13 commits; list above has 13 hashes. All verified via
+  git ls-remote or ancestor check after each push.
+- Verdict goes to a redteam next. Open questions Q-1..Q-6 in verdict
+  section 6.2 are for Worker OPT.
