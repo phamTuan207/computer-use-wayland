@@ -68,6 +68,16 @@ Test: tests/test06_chat_app.py
   the full history unchanged.
 - Every check in the test passes.
 
+## Method notes
+
+- Clearing the search box uses a script dispatched input event
+  after clearing, so the filter handler runs the same way it
+  does for typed input.
+- The typing indicator is verified through the fixture counter
+  attribute data-typing-shown, which increments every time the
+  indicator is shown, rather than by observing the visible
+  indicator element itself.
+
 ## Timing
 
 Filled after the verification runs on the clone2 machine,

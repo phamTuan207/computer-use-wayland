@@ -30,7 +30,11 @@ Test: tests/test01_pdf_form_fill.py
 7. Clear the email and type the valid vanan@example.com. The
    email error clears and the preview shows the corrected value.
 8. Set the date of birth to 1990-05-15. The field value and the
-   preview both read 1990-05-15.
+   preview both read 1990-05-15. Note: the test sets this field
+   by script value assignment plus input and change events, not
+   by typing, because typing into a headless Firefox date input
+   is locale dependent. The value and the live preview are read
+   back and verified as 1990-05-15.
 9. Select the country Japan. The preview mirrors Japan.
 10. Choose the Business account type radio. It is selected and
     the preview mirrors Business.
@@ -51,6 +55,14 @@ Test: tests/test01_pdf_form_fill.py
 18. Read the download link: its href is a data URI, and the
     decoded content contains the submitted name, email, and
     reference code.
+
+## Method note
+
+- The date of birth field is set by script value assignment
+  plus input and change events, because typing into a headless
+  Firefox date input is locale dependent. Its value and live
+  preview are read back and verified as 1990-05-15. All other
+  fields are filled by typing, selecting, and clicking.
 
 ## Expected results
 

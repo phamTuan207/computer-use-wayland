@@ -73,4 +73,4 @@ Firefox 160.0.1, geckodriver 0.37.1, Selenium venv:
   ratio 1, no scaling correction was needed. The saved PNG data
   URL decoded back to 3656 non-blank pixels, against a blank
   canvas data URL length of 2846 characters and a saved length
-  of 3478 characters.
+  of 3474 characters.
