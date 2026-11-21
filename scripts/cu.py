@@ -2612,6 +2612,8 @@ class CodeExecBackend:
             dom_selector=None):
         import session_policy
         focus_check = type_check = None
+        type_ranges = None
+        type_y_ranges = None
         if dom_session is not None and dom_selector is not None:
             # Item A: the DOM value hooks reach this production path.
             # The session is owned by the caller (one-session rule);
@@ -2623,10 +2625,29 @@ class CodeExecBackend:
             if text is not None:
                 focus_check, type_check = dom_act.dom_hooks(
                     dom_session, dom_selector, text)
+                # R3a wiring (AMEND4 item 4, mirroring
+                # first_action.py): ground the field and thread its
+                # ranges to desktop_act, so the band reads only that
+                # field instead of the full width. Best-effort: when
+                # no rect grounds, the batch keeps the full-width /
+                # click-anchored band, exactly as before.
+                try:
+                    ground = dom_act.ground_input(
+                        dom_session, meta, dom_selector)
+                    x_range = dom_act.grounded_x_range(ground, meta)
+                    if x_range is not None:
+                        type_ranges = [x_range]
+                    y_range = dom_act.grounded_y_range(ground, meta)
+                    if y_range is not None:
+                        type_y_ranges = [y_range]
+                except Exception:
+                    pass
         result = desktop_act(self.env, meta, actions,
                              observation_path=observation_path,
                              focus_check=focus_check,
-                             type_check=type_check)
+                             type_check=type_check,
+                             type_x_ranges=type_ranges,
+                             type_y_ranges=type_y_ranges)
         if is_transient_refusal(result):
             session_policy.record_refusal(STATE, os.environ.get('CU_SESSION_TOKEN'))
         elif result.get('ok') is True or is_completed_capture_error(result, len(actions)):
@@ -2921,6 +2942,8 @@ def main():
             # pixel band, and the reason is recorded on the result.
             dom_session = None
             result_dom_error = None
+            type_ranges = None
+            type_y_ranges = None
             if getattr(args, 'dom_selector', None):
                 import dom_act
                 text = dom_act.typed_text_of(actions)
@@ -2930,6 +2953,27 @@ def main():
                             dom_act.open_dom_hooks(args.dom_selector, text)
                         act_kwargs['focus_check'] = focus_check
                         act_kwargs['type_check'] = type_check
+                        # R3a wiring (AMEND4 item 4, mirroring
+                        # first_action.py): ground the field and
+                        # thread its ranges to desktop_act, so the
+                        # band reads only that field. Best-effort:
+                        # when no rect grounds, the batch keeps the
+                        # full-width / click-anchored band, and the
+                        # hooks above still stand.
+                        try:
+                            obs_meta = read_json_file(args.observation)
+                            ground = dom_act.ground_input(
+                                dom_session, obs_meta, args.dom_selector)
+                            x_range = dom_act.grounded_x_range(
+                                ground, obs_meta)
+                            if x_range is not None:
+                                type_ranges = [x_range]
+                            y_range = dom_act.grounded_y_range(
+                                ground, obs_meta)
+                            if y_range is not None:
+                                type_y_ranges = [y_range]
+                        except Exception:
+                            pass
                     except Exception as exc:
                         result_dom_error = ('dom hooks unavailable: '
                                             + str(exc)[:200])
@@ -2939,7 +2983,7 @@ def main():
             else:
                 result_dom_error = None
             try:
-                result=desktop_act(env,read_json_file(args.observation),actions,**act_kwargs)
+                result=desktop_act(env,read_json_file(args.observation),actions,type_x_ranges=type_ranges,type_y_ranges=type_y_ranges,**act_kwargs)
             finally:
                 if dom_session is not None:
                     try:

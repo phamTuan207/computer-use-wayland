@@ -417,7 +417,7 @@ def dom_hooks(session, selector, text):
     """(focus_check, type_check) closures for a production desktop_act.
 
     The wiring point for item A: a production caller that owns a DOM
-    session (first_action fallback, cu CLI act, BrowserAdapter.act)
+    session (first_action fallback, cu CLI act, CodeExecBackend.act)
     builds these closures and passes them to desktop_act, so the
     sufficient DOM value check runs on the live path instead of living
     only in this module's tests. The before-value is captured here

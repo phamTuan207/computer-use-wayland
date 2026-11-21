@@ -607,6 +607,11 @@ def run(args):
                                     if x_range is not None:
                                         dom_kwargs['type_x_ranges'] = \
                                             [x_range]
+                                    y_range = dom_act.grounded_y_range(
+                                        ground, meta)
+                                    if y_range is not None:
+                                        dom_kwargs['type_y_ranges'] = \
+                                            [y_range]
                                 except Exception:
                                     # No grounded rect: the batch keeps
                                     # the full-width band, exactly as
