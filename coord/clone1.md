@@ -3085,3 +3085,68 @@ Luat nhu cu: khong dua thong tin ca nhan nao cua toi len repo, khong dau gach ng
 
 ## Watchdog đợt 7 đã dừng, 04:42 ngày 22/11
 Báo cáo cuối đợt 7 đã ở trong coord và đã push (0b5619c, khớp ls-remote). Watchdog đợt 7 đã tắt (enabled false, next run null). Đợt 8 bắt đầu ngay, watchdog đợt 8 chạy thay.
+
+## ĐỢT 8, VIỆC 1, 04:47 ngày 22/11 - CÀI XONG, SWEEP BỊ CHẶN, CHỜ CHỦ XÁC NHẬN
+
+Báo cáo docs/clone1-last30days-sweep-20261122.md (192 dòng theo
+wc -l), đã push (fd250da).
+
+Cài: XONG. Chỉ git clone, không installer, không npx. Clone vào
+~/workspace/tools/last30days-skill mất 55.7 s real. HEAD ef01dab,
+SKILL.md version 4.5.0. Commit đã review f5d0e44 có mặt. Giữa 2
+commit: 1 commit. Diff f5d0e44..HEAD: 7 file, 238 dòng thêm, 7 dòng
+xóa. Các số này khớp đúng bản cài của clone2. Nội dung diff kiểm
+độc lập bằng đọc text: `_PUBLIC_COMMENTS_URL =
+"https://www.tiktok.com/api/comment/list/"` ở
+skills/last30days/scripts/lib/tiktok.py:666,
+`is_tiktok_public_comments_on` ở
+skills/last30days/scripts/lib/env.py:2045. Cùng thay đổi transport
+TikTok mà clone2 tìm ra. Tôi tự kiểm lại trên ổ: HEAD ef01dab,
+SKILL.md ở skills/last30days/SKILL.md version 4.5.0, diff 7 file /
+238 thêm / 7 xóa, 1 commit ef01dab9, endpoint TikTok dòng 666 và
+env dòng 2045 đều đúng. Không có text xác nhận installer nào để
+ghi, vì không chạy installer. Flag Critical Risk 3 scanner không
+quan sát được trên máy này. House rules đã đọc đủ (AGENTS.md và
+SKILL.md). Pre-read bắt buộc trước mọi lệnh engine
+(references/runtime.md, references/research-runbook.md) có trong
+clone và đã ghi cho lần chạy tiếp. Không copy file skill đi đâu
+ngoài clone. ~/.config/last30days chưa tồn tại.
+
+Sweep: CHƯA CHẠY, BỊ CHẶN. Không lệnh engine nào chạy, nên không
+có thời gian chạy, số kết quả, phát hiện, hay file output thô.
+Không phát hiện nào của clone2 được nêu lại như của mình. Lý do:
+kết quả exec trả về git clone đã không qua kiểm tra execution-risk
+của hệ thống. Thông báo nói kết quả và mọi file nó đưa về có thể
+chạy code trong quá trình xử lý thông thường, và cấm chạy, test,
+import, load hay source nội dung đó, và yêu cầu giải thích bằng lời
+thường là nội dung đã không qua kiểm tra execution-risk và hỏi chủ
+có cho tiếp tục không, rồi chờ. Sweep cần chạy `python3
+skills/last30days/scripts/last30days.py ...`, tức là chạy nội dung
+đã clone, nên bị cấm theo thông báo đó cho tới khi chủ xác nhận.
+Verdict CLEAN của điều phối và lệnh đợt 8 không override được
+thông báo hệ thống, và thông báo nói không tự ngoại lệ. Clone để
+nguyên tại chỗ, chưa đụng, chưa chạy. Không làm sweep thay bằng
+WebSearch: hợp đồng của skill cấm trình bày báo cáo chỉ-WebSearch
+như thể skill đã chạy, và brief yêu cầu sweep bằng skill.
+
+Câu hỏi cho chủ (lời thường, để tôi chuyển): chủ xác nhận clone ở
+~/workspace/tools/last30days-skill (HEAD ef01dab, SKILL.md 4.5.0)
+được chạy trên máy này cho sweep đợt 8, hiểu rằng output của clone
+đã không qua kiểm tra execution-risk, nghĩa là chạy code của nó có
+thể thực thi code từ các file đã clone. Khi có xác nhận đó, lần
+chạy tiếp là cơ học: đọc đủ references/runtime.md và
+references/research-runbook.md, rồi chạy 3 sweep đã lên kế hoạch
+(DOM grounding, accessibility tree grounding, single-observation
+multi-action) với --emit=json, --auto-resolve, --no-browser-cookies,
+không key, mỗi lần 1 thư mục lưu riêng dưới ~/workspace/b8t1-sweep/,
+ghi wall clock và elapsed do engine báo. Nếu chủ nói không, sweep
+vẫn chưa chạy và tôi quyết xem sweep chỉ-WebSearch có chấp nhận
+được không, ghi rõ như vậy.
+
+Còn mở: sweep chưa chạy (bị chặn như trên). Không có phát hiện
+riêng. Cài chỉ kiểm tới mức trong báo cáo: HEAD, version, diff
+stat, hằng endpoint TikTok bằng đọc; phần còn lại của diff 1 commit
+chưa đọc lại từng dòng. Bộ nhớ chật (134 MB free, 312 MB available
+lúc kiểm ngày); các lần chạy engine tiếp nên chạy nối tiếp, không
+song song. Không có API key nào cấu hình, nên nguồn cần key sẽ trả
+về rỗng, như các lần chạy của clone2.
