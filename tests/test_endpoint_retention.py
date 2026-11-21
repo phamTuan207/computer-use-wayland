@@ -212,7 +212,8 @@ class EndpointRetention(unittest.TestCase):
             adapter.assert_called_once()
 
     def test_standalone_cli_uses_standalone_default(self):
-        # A fresh process without a relay starts at 9222 (the module default).
+        # A fresh process without a relay starts at 9223 (the module
+        # default; 9222 is Zen's BiDi port).
         with tempfile.TemporaryDirectory() as folder:
             capture = pathlib.Path(folder) / 'captured.json'
             child = f'''
@@ -234,7 +235,7 @@ pathlib.Path({str(capture)!r}).write_text(json.dumps(captured))
             subprocess.run([sys.executable, '-B', '-c', child],
                            check=True, timeout=60, capture_output=True, text=True)
             request = json.loads(capture.read_text())[0]
-        self.assertEqual(request['endpoint'], 'http://127.0.0.1:9222')
+        self.assertEqual(request['endpoint'], 'http://127.0.0.1:9223')
 
 
 class RelayEndpointScoping(unittest.TestCase):
@@ -277,7 +278,7 @@ class RelayEndpointScoping(unittest.TestCase):
                 self.request('browser', 'tabs')), output2)
             self.assertEqual(code2, 0)
             second = FakeWorker.instances[-1]
-            self.assertEqual(second.requests[0]['endpoint'], 'http://127.0.0.1:9222',
+            self.assertEqual(second.requests[0]['endpoint'], 'http://127.0.0.1:9223',
                              'a fresh relay starts from the standalone default again')
             self.assertEqual(cu.BROWSER_ENDPOINT, outer)
 

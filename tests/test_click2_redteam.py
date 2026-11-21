@@ -428,9 +428,16 @@ class R7ShadowTests(unittest.TestCase):
         # focus_check JS returns False and the batch refuses to type
         # into a focused field.
         script = _capture_js('focus_check')
+        # Shim fix (AMEND2): the host MUST carry shadowRoot with the
+        # inner input as its activeElement, or the fixture does not
+        # model what its own docstring describes (an input focused
+        # inside its shadow root). The old strict-equality code still
+        # fails this corrected fixture; only a real shadow walk
+        # passes it.
         shim = ("var __inner = {tagName: 'INPUT', isContentEditable:"
                 " false, readOnly: false};\n"
-                "var __host = {tagName: 'DIV'};\n"
+                "var __host = {tagName: 'DIV', shadowRoot:"
+                " {activeElement: __inner}};\n"
                 "var document = {querySelector: function(){ return"
                 " __inner; }, activeElement: __host};\n")
         out = _run_node(shim + 'console.log(JSON.stringify(' + script

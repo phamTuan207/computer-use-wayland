@@ -33,6 +33,7 @@ import tempfile
 import threading
 import types
 import unittest
+import urllib.error
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from unittest import mock
@@ -291,6 +292,26 @@ class BrowserStartWarmTests(unittest.TestCase):
                     cu.browser_start({}, "http://127.0.0.1:%d" % dead)
             argv = spawn.call_args.args[0]
             self.assertIn("--remote-debugging-port=%d" % dead, argv)
+
+    def test_non_cdp_http_response_refuses_cold_launch(self):
+        """(c) A listener that answers HTTP on /json/version but is
+        not CDP (Zen's BiDi port answers 404 there) is NOT a dead
+        endpoint: browser_start refuses to cold-launch Chromium onto
+        a port another service holds, instead of misreading the 404
+        as "no live endpoint"."""
+        fake = FakeWarm()
+        module = make_fake_module(fake)
+        error = urllib.error.HTTPError(
+            "http://127.0.0.1:9222/json/version", 404, "Not Found", {}, None)
+        with mock.patch.dict(sys.modules, {"warm_browser": module}), \
+                mock.patch("urllib.request.urlopen", side_effect=error), \
+                mock.patch.object(cu.subprocess, "Popen",
+                                  side_effect=AssertionError(
+                                      "must not launch onto a held port")):
+            result = cu.browser_start({}, "http://127.0.0.1:9222")
+        self.assertFalse(result["ok"])
+        self.assertIn("non-CDP", result["error"])
+        self.assertIn("9223", result["error"])
 
 
 class WarmRegisterTests(unittest.TestCase):
