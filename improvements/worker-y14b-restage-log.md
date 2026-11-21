@@ -2315,3 +2315,13 @@ C2-9/C2-10 INFO parts (covered by item 14).
   (confirm with the user, then add/commit/push that one file
   only). It is NOT in 65d669b and must not be swept into
   another worker's commit by `git add -A`.
+
+- 00:16 +07: fix pass 7 committed (65d669b, ls-remote verified,
+  ANCESTOR_OK) + hash-record follow-up committed (d3e0a76,
+  ls-remote verified). 4 re-reviewers spawned over the
+  fix-pass-7 diff only (d76daba..65d669b): redteam, Council 1,
+  Council 2, Council 3. Each brief is self-contained (diff
+  range, blob/md5, claim list, probe paths, verdict + paper
+  deliverable, stage-only-their-paper rule, do-NOT-touch the
+  uncommitted fix-pass-6 redteam paper, do-NOT-run git fetch).
+  Ship waits for them unless one BLOCKs.
