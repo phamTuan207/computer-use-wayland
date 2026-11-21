@@ -1042,3 +1042,59 @@ council 3 (5 steps, stdout and stderr recorded separately).
 - VM evidence 23:32: theme tests 35 OK in 0.181s; py_compile OK for
   session_remote.py, cursor_session.py, cursor_theme.py,
   test_cursor_session.py, test_cursor_theme.py, test_sync_installed.py.
+
+## 23:33-23:36 - Re-verification of round 2 (D1/D2/E1/E2/E3 + C): all green
+- VM theme tests: 10 runs in a row, all OK (C3-6 requirement met).
+  Each run 35 tests. Before the 10x, one run showed 35 OK in 0.181s.
+- Laptop: deployed the 5 changed files to /tmp/f1-test (scp, md5s
+  9208afee cursor_session.py, 3bf3d391 cursor_theme.py, ea1da781
+  session_remote.py, 7611a2b6 test_cursor_session.py, 8449e774
+  test_cursor_theme.py) and ran the session + theme suites together:
+  71 tests in 34.575s, OK (e-verify.log). That is 36 session tests
+  (35 + the new E2 missing-socket test) + 35 theme tests. The E1
+  envelope assertion, the E2 missing-socket naming + test, and the E3
+  BrokenPipeError acceptance are all proven live on the laptop.
+- Fleet note 23:33 (KB DONE): Worker KB finished. No Omarchy skill
+  exists (independent search 0 results). The cause of the workspace
+  fumbling: fastest-paths.md on the machine had the WRONG workspace
+  command (string dispatcher `hyprctl dispatch workspace N`, proven
+  broken live 23:32 rc=7); the correct command is hl.dsp.focus, proven
+  23:19. KB integrated 250 Omarchy/Hyprland binds + 85 Zen into the
+  on-machine computer-use build (keybinds.md + keybinds.json,
+  local-only); fastest-paths fixed 6 broken lines; the repo gained
+  scripts/hypr_cmd.py + tests 13/13 OK (commit 9e9b811). Still unproven:
+  move-to-workspace, absolute resize, {omarchy/panel/ipc/menu} table
+  forms (keypress-only), Zen has no CLI. Not F1 work, but the
+  hl.dsp.focus command is now the proven workspace move for the live
+  activation (council-2 precondition 6).
+
+## 23:35-23:36 - Live negative test, round 2 (PROVES the new message live)
+- Fresh observe 23:35:21 id 50cf368e61ea (capture 30.184ms, Zen window
+  0x557052b62dd0, title "Example Domain - Zen Browser", region
+  [2509,914,1863,1176], monitor eDP-2). Ran the exact original failing
+  command: `computer-use session -- computer-use act --observation
+  50cf368e61ea --actions '[{"type":"click","x":135,"y":272}]'`.
+  Result RC=1 in 0.220s.
+- stdout (JSON envelope): {"ok": false, "error": "session guardian
+  startup failed: cursor backend may not be loaded (guard reply is not
+  valid JSON, got: unknown request); load glass first, then the guard:
+  scripts/activate-glass.py <library> --abi <abi> --profile-sha256
+  <profile-sha256> and scripts/activate-cursor-guard.py <library> --abi
+  <abi>, with the pinned values from native/visuals.json (library, abi,
+  profile_sha256); see improvements/worker-f1-guardian-fix-log.md plan B
+  for the exact commands. The fresh-login loader scripts/visuals.py only
+  runs at the next login, it cannot fix a running session."}
+- stderr: the same message, via the guardian stderr tee (as designed).
+  C3-7 is settled: the tee DOES write to stderr. The 22:39 run's empty
+  neg.err was a capture artifact of that run's harness, not the tee
+  failing. This run recorded stdout and stderr separately
+  (/tmp/f1-neg2.out, /tmp/f1-neg2.err on the laptop).
+- The message now leads with the cause (C3-8), names runnable commands
+  with required arguments and where the pinned values live (C3-2), states
+  the order (glass first, then guard), and says plainly the loader only
+  runs at the next login. The failure is at check_guard (the guard reply),
+  which runs before the R3 gate, so the gate is not reached until the
+  guard plugin is loaded. That ordering is correct.
+- Round-2 scripts are deployed to the installed tree (md5-verified):
+  cursor_session.py 9208afee, cursor_theme.py 3bf3d391,
+  session_remote.py ea1da781, matching the VM repo exactly.
