@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Code Review Fixture</title>
+<style>
+  body { font-family: sans-serif; margin: 20px; color: #222; }
+  header { border-bottom: 2px solid #ccc; padding-bottom: 10px; }
+  #pr-title { margin: 0 0 4px 0; }
+  #pr-author { color: #555; margin: 0 0 8px 0; }
+  .badge { display: inline-block; padding: 3px 10px; border-radius: 10px;
+           color: #fff; font-weight: bold; font-size: 14px; }
+  .badge-open { background: #2e7d32; }
+  .badge-changes { background: #c62828; }
+  .badge-approved { background: #1565c0; }
+  #comment-stats { margin-top: 8px; font-size: 14px; }
+  .file-tabs { margin: 14px 0; }
+  .file-tab { padding: 6px 12px; margin-right: 6px; cursor: pointer; }
+  .file-tab.active { background: #ddd; font-weight: bold; }
+  .diff-file { border: 1px solid #bbb; margin-bottom: 16px; }
+  .diff-file.hidden { display: none; }
+  .file-name { background: #f0f0f0; margin: 0; padding: 8px 10px;
+               font-size: 16px; }
+  .diff-line { display: flex; flex-wrap: wrap; align-items: baseline;
+               padding: 2px 8px; font-family: monospace; font-size: 14px; }
+  .diff-line.add { background: #e6f4ea; }
+  .diff-line.remove { background: #fce8e6; }
+  .diff-line.context { background: #fff; }
+  .line-no { width: 30px; color: #888; text-align: right;
+             margin-right: 10px; }
+  .sign { width: 14px; }
+  .code { flex: 1; white-space: pre; }
+  .line-comment-btn { margin-left: 10px; cursor: pointer; }
+  .line-comments { flex-basis: 100%; margin-left: 54px; }
+  .comment { background: #fff8e1; border-left: 3px solid #f9a825;
+             padding: 4px 8px; margin: 4px 0; font-family: sans-serif; }
+  #composer { flex-basis: 100%; margin: 6px 0 6px 54px; }
+  #composer.hidden { display: none; }
+  #composer-text { width: 420px; height: 50px; display: block; }
+  .hide-context .diff-line.context { display: none; }
+  #review-box { border: 1px solid #bbb; padding: 12px; margin-top: 18px; }
+  #review-summary { width: 520px; height: 70px; display: block; }
+  #review-error { color: #c62828; font-weight: bold; min-height: 18px; }
+  #review-history { margin-top: 10px; }
+  .review-entry { margin: 4px 0; }
+</style>
+</head>
+<body>
+<header>
+  <h1 id="pr-title">Add retry logic to the payment client</h1>
+  <p id="pr-author">Opened by alex-dev</p>
+  <span id="status-badge" class="badge badge-open" data-status="open">Open</span>
+  <p id="comment-stats">Comments: <span id="comment-count">0</span></p>
+  <label>
+    <input type="checkbox" id="toggle-context" checked>
+    Show unchanged context lines
+  </label>
+</header>
+
+<nav class="file-tabs">
+  <button class="file-tab active" data-target="file1">src/retry.py</button>
+  <button class="file-tab" data-target="file2">src/client.py</button>
+  <button class="file-tab" data-target="file3">tests/test_retry.py</button>
+</nav>
+
+<section class="diff-file" id="file1">
+  <h2 class="file-name">src/retry.py</h2>
+  <div class="diff-line context" id="f1-l1"><span class="line-no">1</span><span class="sign"> </span><code class="code">import time</code><button class="line-comment-btn" data-line-id="f1-l1">Comment</button><div class="line-comments"></div></div>
+  <div class="diff-line context" id="f1-l2"><span class="line-no">2</span><span class="sign"> </span><code class="code">from client import PaymentClient</code><button class="line-comment-btn" data-line-id="f1-l2">Comment</button><div class="line-comments"></div></div>
+  <div class="diff-line remove" id="f1-l3"><span class="line-no">3</span><span class="sign">-</span><code class="code">TIMEOUT = 5</code><button class="line-comment-btn" data-line-id="f1-l3">Comment</button><div class="line-comments"></div></div>
+  <div class="diff-line add" id="f1-l4"><span class="line-no">4</span><span class="sign">+</span><code class="code">TIMEOUT = 10</code><button class="line-comment-btn" data-line-id="f1-l4">Comment</button><div class="line-comments"></div></div>
+  <div class="diff-line add" id="f1-l5"><span class="line-no">5</span><span class="sign">+</span><code class="code">MAX_ATTEMPTS = 3</code><button class="line-comment-btn" data-line-id="f1-l5">Comment</button><div class="line-comments"></div></div>
+  <div class="diff-line context" id="f1-l6"><span class="line-no">6</span><span class="sign"> </span><code class="code">def charge(card, amount):</code><button class="line-comment-btn" data-line-id="f1-l6">Comment</button><div class="line-comments"></div></div>
+  <div class="diff-line remove" id="f1-l7"><span class="line-no">7</span><span class="sign">-</span><code class="code">    return client.post('/charge', timeout=TIMEOUT)</code><button class="line-comment-btn" data-line-id="f1-l7">Comment</button><div class="line-comments"></div></div>
+  <div class="diff-line add" id="f1-l8"><span class="line-no">8</span><span class="sign">+</span><code class="code">    for attempt in range(MAX_ATTEMPTS):</code><button class="line-comment-btn" data-line-id="f1-l8">Comment</button><div class="line-comments"></div></div>
+  <div class="diff-line add" id="f1-l9"><span class="line-no">9</span><span class="sign">+</span><code class="code">        return client.post('/charge', timeout=TIMEOUT)</code><button class="line-comment-btn" data-line-id="f1-l9">Comment</button><div class="line-comments"></div></div>
+  <div class="diff-line context" id="f1-l10"><span class="line-no">10</span><span class="sign"> </span><code class="code">    raise PaymentError('unreachable')</code><button class="line-comment-btn" data-line-id="f1-l10">Comment</button><div class="line-comments"></div></div>
+</section>
+
+<section class="diff-file hidden" id="file2">
+  <h2 class="file-name">src/client.py</h2>
+  <div class="diff-line context" id="f2-l1"><span class="line-no">1</span><span class="sign"> </span><code class="code">class PaymentClient:</code><button class="line-comment-btn" data-line-id="f2-l1">Comment</button><div class="line-comments"></div></div>
+  <div class="diff-line context" id="f2-l2"><span class="line-no">2</span><span class="sign"> </span><code class="code">    def __init__(self, base_url):</code><button class="line-comment-btn" data-line-id="f2-l2">Comment</button><div class="line-comments"></div></div>
+  <div class="diff-line remove" id="f2-l3"><span class="line-no">3</span><span class="sign">-</span><code class="code">        self.session = Session()</code><button class="line-comment-btn" data-line-id="f2-l3">Comment</button><div class="line-comments"></div></div>
+  <div class="diff-line add" id="f2-l4"><span class="line-no">4</span><span class="sign">+</span><code class="code">        self.session = Session(timeout=10)</code><button class="line-comment-btn" data-line-id="f2-l4">Comment</button><div class="line-comments"></div></div>
+  <div class="diff-line context" id="f2-l5"><span class="line-no">5</span><span class="sign"> </span><code class="code">        self.base_url = base_url</code><button class="line-comment-btn" data-line-id="f2-l5">Comment</button><div class="line-comments"></div></div>
+  <div class="diff-line add" id="f2-l6"><span class="line-no">6</span><span class="sign">+</span><code class="code">        self.retries = 3</code><button class="line-comment-btn" data-line-id="f2-l6">Comment</button><div class="line-comments"></div></div>
+  <div class="diff-line context" id="f2-l7"><span class="line-no">7</span><span class="sign"> </span><code class="code">    def post(self, path, **kw):</code><button class="line-comment-btn" data-line-id="f2-l7">Comment</button><div class="line-comments"></div></div>
+  <div class="diff-line remove" id="f2-l8"><span class="line-no">8</span><span class="sign">-</span><code class="code">        return self.session.post(path)</code><button class="line-comment-btn" data-line-id="f2-l8">Comment</button><div class="line-comments"></div></div>
+  <div class="diff-line add" id="f2-l9"><span class="line-no">9</span><span class="sign">+</span><code class="code">        return self.session.post(self.base_url + path, **kw)</code><button class="line-comment-btn" data-line-id="f2-l9">Comment</button><div class="line-comments"></div></div>
+  <div class="diff-line context" id="f2-l10"><span class="line-no">10</span><span class="sign"> </span><code class="code">    def close(self):</code><button class="line-comment-btn" data-line-id="f2-l10">Comment</button><div class="line-comments"></div></div>
+</section>
+
+<section class="diff-file hidden" id="file3">
+  <h2 class="file-name">tests/test_retry.py</h2>
+  <div class="diff-line context" id="f3-l1"><span class="line-no">1</span><span class="sign"> </span><code class="code">from retry import charge</code><button class="line-comment-btn" data-line-id="f3-l1">Comment</button><div class="line-comments"></div></div>
+  <div class="diff-line add" id="f3-l2"><span class="line-no">2</span><span class="sign">+</span><code class="code">def test_retries_on_timeout():</code><button class="line-comment-btn" data-line-id="f3-l2">Comment</button><div class="line-comments"></div></div>
+  <div class="diff-line add" id="f3-l3"><span class="line-no">3</span><span class="sign">+</span><code class="code">    client = FakeClient(fail_times=2)</code><button class="line-comment-btn" data-line-id="f3-l3">Comment</button><div class="line-comments"></div></div>
+  <div class="diff-line add" id="f3-l4"><span class="line-no">4</span><span class="sign">+</span><code class="code">    assert charge(client, 100) == 'ok'</code><button class="line-comment-btn" data-line-id="f3-l4">Comment</button><div class="line-comments"></div></div>
+  <div class="diff-line context" id="f3-l5"><span class="line-no">5</span><span class="sign"> </span><code class="code">def test_charge_ok():</code><button class="line-comment-btn" data-line-id="f3-l5">Comment</button><div class="line-comments"></div></div>
+  <div class="diff-line context" id="f3-l6"><span class="line-no">6</span><span class="sign"> </span><code class="code">    assert charge(FakeClient(), 50) == 'ok'</code><button class="line-comment-btn" data-line-id="f3-l6">Comment</button><div class="line-comments"></div></div>
+  <div class="diff-line remove" id="f3-l7"><span class="line-no">7</span><span class="sign">-</span><code class="code">def test_old_behaviour():</code><button class="line-comment-btn" data-line-id="f3-l7">Comment</button><div class="line-comments"></div></div>
+  <div class="diff-line remove" id="f3-l8"><span class="line-no">8</span><span class="sign">-</span><code class="code">    assert charge(None, 0) is None</code><button class="line-comment-btn" data-line-id="f3-l8">Comment</button><div class="line-comments"></div></div>
+</section>
+
+<div id="composer" class="hidden">
+  <textarea id="composer-text" placeholder="Write a comment"></textarea>
+  <button id="composer-post">Post comment</button>
+  <button id="composer-cancel">Cancel</button>
+  <span id="composer-error"></span>
+</div>
+
+<div id="review-box">
+  <h2>Submit a review</h2>
+  <textarea id="review-summary" placeholder="Review summary"></textarea>
+  <label><input type="radio" name="review-decision" id="decision-approve" value="approve"> Approve</label>
+  <label><input type="radio" name="review-decision" id="decision-request" value="request"> Request changes</label>
+  <button id="submit-review">Submit review</button>
+  <p id="review-error"></p>
+  <h3>Review history</h3>
+  <ul id="review-history"></ul>
+</div>
+
+<script>
+(function () {
+  var commentCount = 0;
+  var composer = document.getElementById('composer');
+  var composerText = document.getElementById('composer-text');
+  var composerError = document.getElementById('composer-error');
+  var currentLineId = null;
+
+  document.querySelectorAll('.file-tab').forEach(function (tab) {
+    tab.addEventListener('click', function () {
+      document.querySelectorAll('.file-tab').forEach(function (t) {
+        t.classList.remove('active');
+      });
+      tab.classList.add('active');
+      document.querySelectorAll('.diff-file').forEach(function (sec) {
+        sec.classList.add('hidden');
+      });
+      document.getElementById(tab.getAttribute('data-target'))
+        .classList.remove('hidden');
+      composer.classList.add('hidden');
+      currentLineId = null;
+    });
+  });
+
+  document.querySelectorAll('.line-comment-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      currentLineId = btn.getAttribute('data-line-id');
+      var line = document.getElementById(currentLineId);
+      line.appendChild(composer);
+      composer.classList.remove('hidden');
+      composerError.textContent = '';
+      composerText.value = '';
+      composerText.focus();
+    });
+  });
+
+  document.getElementById('composer-cancel').addEventListener('click',
+    function () {
+      composer.classList.add('hidden');
+      currentLineId = null;
+    });
+
+  document.getElementById('composer-post').addEventListener('click',
+    function () {
+      var text = composerText.value.trim();
+      if (!text) {
+        composerError.textContent = 'Comment text is required.';
+        return;
+      }
+      if (!currentLineId) { return; }
+      var line = document.getElementById(currentLineId);
+      var box = line.querySelector('.line-comments');
+      var div = document.createElement('div');
+      div.className = 'comment';
+      div.textContent = text;
+      box.appendChild(div);
+      commentCount += 1;
+      document.getElementById('comment-count').textContent =
+        String(commentCount);
+      composer.classList.add('hidden');
+      currentLineId = null;
+    });
+
+  document.getElementById('toggle-context').addEventListener('change',
+    function (ev) {
+      document.body.classList.toggle('hide-context', !ev.target.checked);
+    });
+
+  function setBadge(status, text, cls) {
+    var badge = document.getElementById('status-badge');
+    badge.setAttribute('data-status', status);
+    badge.textContent = text;
+    badge.className = 'badge ' + cls;
+  }
+
+  document.getElementById('submit-review').addEventListener('click',
+    function () {
+      var error = document.getElementById('review-error');
+      var chosen = document.querySelector(
+        'input[name="review-decision"]:checked');
+      var summary = document.getElementById('review-summary').value.trim();
+      if (!chosen) {
+        error.textContent =
+          'Choose Approve or Request changes before submitting.';
+        return;
+      }
+      if (chosen.value === 'request' && commentCount === 0 && !summary) {
+        error.textContent =
+          'Request changes needs at least one comment or summary text.';
+        return;
+      }
+      error.textContent = '';
+      var entry = document.createElement('li');
+      entry.className = 'review-entry';
+      var label = chosen.value === 'approve'
+        ? 'Approved' : 'Changes requested';
+      entry.setAttribute('data-decision', chosen.value);
+      entry.textContent = label + ': ' + (summary || '(no summary)');
+      document.getElementById('review-history').appendChild(entry);
+      if (chosen.value === 'approve') {
+        setBadge('approved', 'Approved', 'badge-approved');
+      } else {
+        setBadge('changes_requested', 'Changes requested', 'badge-changes');
+      }
+      document.getElementById('review-summary').value = '';
+      chosen.checked = false;
+    });
+})();
+</script>
+</body>
+</html>
