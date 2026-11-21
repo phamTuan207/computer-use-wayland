@@ -61,5 +61,10 @@ track from the list.
 ## Notes
 
 No audio is played; timing is simulated in the page. All state
-lives in the page. The browser run is Playwright Chromium; the same
-flow on Firefox or Zen is UNVERIFIED.
+lives in the page. After Next the checker samples the position
+inside the page for 500 ms and takes the minimum: a real reset
+passes through 0, while a missed reset leaves the position at its
+pre-click value. It then checks the position advances, proving
+the playback clock kept running after the change.
+The browser run is Playwright Chromium; the same flow on Firefox
+or Zen is UNVERIFIED.

@@ -75,8 +75,46 @@ MAX_SELECTOR_CHARS = 1000
 MAX_TEXT_CHARS = 10000
 MAX_AGENT_CHARS = 80
 PROTOCOL_VERSION = "2024-11-05"
+# Protocol versions this server accepts at initialize. Anything else
+# is rejected with a JSON-RPC error. These are the real published
+# MCP protocol versions; the server answers with the negotiated one.
+SUPPORTED_PROTOCOL_VERSIONS = ("2024-11-05", "2025-03-26", "2025-06-18")
 SERVER_NAME = "computer-use-mcp"
 SERVER_VERSION = "0.1.0"
+
+# JS used by ZenBackend.type. Branch on the element kind: the native
+# value setter of HTMLInputElement throws "Illegal invocation" when
+# called on a textarea or a contenteditable element, so each kind
+# gets its own setter, and contenteditable gets textContent.
+# Runs through ZenSession.evaluate with arguments [selector, text].
+TYPE_JS = (
+    "const el = document.querySelector(arguments[0]);"
+    " if (!el) return {found: false};"
+    " const isInput = el instanceof window.HTMLInputElement;"
+    " const isTextarea = el instanceof window.HTMLTextAreaElement;"
+    " const read = () => el.isContentEditable ? el.textContent : el.value;"
+    " const before = read();"
+    " el.focus();"
+    " if (isInput) {"
+    " const setter = Object.getOwnPropertyDescriptor("
+    " window.HTMLInputElement.prototype, 'value');"
+    " if (setter) setter.set.call(el, arguments[1]);"
+    " else el.value = arguments[1];"
+    " } else if (isTextarea) {"
+    " const setter = Object.getOwnPropertyDescriptor("
+    " window.HTMLTextAreaElement.prototype, 'value');"
+    " if (setter) setter.set.call(el, arguments[1]);"
+    " else el.value = arguments[1];"
+    " } else if (el.isContentEditable) {"
+    " el.textContent = arguments[1];"
+    " } else if ('value' in el) {"
+    " el.value = arguments[1];"
+    " } else {"
+    " el.textContent = arguments[1];"
+    " }"
+    " el.dispatchEvent(new Event('input', {bubbles: true}));"
+    " el.dispatchEvent(new Event('change', {bubbles: true}));"
+    " return {found: true, before: before, after: read()};")
 
 # 1x1 transparent PNG, used only by the fake backend screenshot.
 _FAKE_PNG_B64 = (
@@ -149,8 +187,24 @@ class ZenBackend:
             raise ToolError("could not start Zen session: %s" % exc) from exc
         self.zen = zen
         self.session_id = zen.session
-        self.manager.record_open(self.session_id, kind="mcp-zen",
-                                 port=wd_port)
+        try:
+            self.manager.record_open(self.session_id, kind="mcp-zen",
+                                     port=wd_port)
+        except Exception as exc:
+            # record_open failed after the Zen session was created.
+            # Without a rollback the live session and the lock stay
+            # held while the caller was told the start failed, so
+            # nobody ever calls session_finish: the single remote
+            # session slot leaks until Zen restarts. Close the Zen
+            # session, release the lock, clear our state, then fail.
+            try:
+                zen.__exit__(None, None, None)
+            finally:
+                self.zen = None
+                self.session_id = None
+                self.manager.release()
+            raise ToolError("could not record Zen session: %s"
+                            % exc) from exc
         return {"ok": True, "session": "active",
                 "session_id": self.session_id,
                 "marionette_port": marionette_port, "wd_port": wd_port}
@@ -254,23 +308,8 @@ class ZenBackend:
         selector = _require_str(args, "selector", MAX_SELECTOR_CHARS)
         text = _require_str(args, "text", MAX_TEXT_CHARS)
         zen = self._need_session()
-        js = (
-            "const el = document.querySelector(arguments[0]);"
-            " if (!el) return {found: false};"
-            " const before = el.value === undefined ? el.textContent : el.value;"
-            " el.focus();"
-            " const setter = Object.getOwnPropertyDescriptor("
-            " window.HTMLInputElement.prototype, 'value') ||"
-            " Object.getOwnPropertyDescriptor("
-            " window.HTMLTextAreaElement.prototype, 'value');"
-            " if (setter) setter.set.call(el, arguments[1]);"
-            " else el.value = arguments[1];"
-            " el.dispatchEvent(new Event('input', {bubbles: true}));"
-            " el.dispatchEvent(new Event('change', {bubbles: true}));"
-            " return {found: true, before: before,"
-            " after: el.value === undefined ? el.textContent : el.value};")
         try:
-            result = zen.evaluate(js, [selector, text])
+            result = zen.evaluate(TYPE_JS, [selector, text])
         except Exception as exc:
             raise ToolError("type failed: %s" % exc) from exc
         if not result.get("found"):
@@ -345,6 +384,12 @@ class FakeBackend:
                            "center_x": 140, "center_y": 65},
             "#name": {"x": 100, "y": 100, "width": 200, "height": 24,
                       "center_x": 200, "center_y": 112, "value": ""},
+            "#notes": {"x": 100, "y": 140, "width": 200, "height": 60,
+                       "center_x": 200, "center_y": 170, "value": "",
+                       "kind": "textarea"},
+            "#editor": {"x": 100, "y": 220, "width": 200, "height": 60,
+                        "center_x": 200, "center_y": 250, "text": "",
+                        "kind": "contenteditable"},
         }
         self.last_click = None
         self.holders = {}
@@ -406,8 +451,14 @@ class FakeBackend:
         element = self.elements.get(selector)
         if element is None:
             raise ToolError("no element matches selector")
-        before = element.get("value", "")
-        element["value"] = text
+        # Mirror the live TYPE_JS read path: a contenteditable
+        # element has no value, its text lives in textContent.
+        if element.get("kind") == "contenteditable":
+            before = element.get("text", "")
+            element["text"] = text
+        else:
+            before = element.get("value", "")
+            element["value"] = text
         return {"ok": True, "selector": selector,
                 "before": before, "after": text}
 
@@ -526,13 +577,21 @@ class Server:
                     "text": json.dumps(value, ensure_ascii=False)}]
         image = value.get("image_base64")
         if isinstance(image, str) and image:
+            try:
+                image_bytes = len(base64.b64decode(image, validate=True))
+            except Exception as exc:
+                # A bad payload used to raise here, outside the tool
+                # error handler, and surface as a JSON-RPC protocol
+                # error. Report it as a tool error result instead.
+                raise ToolError("tool returned invalid base64 image: %s"
+                                % exc) from exc
             content.append({"type": "image", "data": image,
                             "mimeType": value.get("mime_type",
                                                   "image/png")})
             content[0]["text"] = json.dumps(
                 {"ok": value.get("ok", True),
                  "mime_type": value.get("mime_type", "image/png"),
-                 "image_bytes": len(base64.b64decode(image))},
+                 "image_bytes": image_bytes},
                 ensure_ascii=False)
         return {"content": content}
 
@@ -549,8 +608,11 @@ class Server:
             params = message.get("params", {})
             if not isinstance(params, dict):
                 raise ValueError("initialize params must be an object")
-            return {"protocolVersion": params.get(
-                        "protocolVersion", PROTOCOL_VERSION),
+            version = params.get("protocolVersion", PROTOCOL_VERSION)
+            if version not in SUPPORTED_PROTOCOL_VERSIONS:
+                raise ValueError(
+                    "unsupported protocol version: %s" % (version,))
+            return {"protocolVersion": version,
                     "capabilities": {"tools": {}},
                     "serverInfo": {"name": SERVER_NAME,
                                    "version": SERVER_VERSION}}
@@ -572,22 +634,41 @@ class Server:
             return None
         raise ValueError("unknown method: %s" % (method,))
 
+    @staticmethod
+    def _write_error(ident, code, message):
+        sys.stdout.buffer.write(json.dumps(
+            {"jsonrpc": "2.0", "id": ident,
+             "error": {"code": code, "message": message}}).encode()
+            + b"\n")
+        sys.stdout.buffer.flush()
+
+    def _drain_line(self, line):
+        """Consume the rest of an overlong input line, so the next
+        read starts at a message boundary."""
+        while not line.endswith(b"\n"):
+            chunk = sys.stdin.buffer.readline(MAX_LINE_BYTES + 1)
+            if not chunk:
+                break
+            line = chunk
+
     def serve(self):
         while True:
             line = sys.stdin.buffer.readline(MAX_LINE_BYTES + 1)
             if not line:
                 break
-            if len(line) > MAX_LINE_BYTES or not line.endswith(b"\n"):
-                raise ValueError("invalid MCP message size or framing")
+            if len(line) > MAX_LINE_BYTES:
+                # A single input line over the limit used to raise
+                # ValueError and kill the server with exit 1. Drain
+                # the rest, answer with a JSON-RPC error, keep serving.
+                self._drain_line(line)
+                self._write_error(None, -32700,
+                                  "message exceeds maximum size")
+                continue
             try:
                 message = json.loads(line)
             except ValueError as exc:
-                sys.stdout.buffer.write(
-                    json.dumps({"jsonrpc": "2.0", "id": None,
-                                "error": {"code": -32700,
-                                          "message": "parse error: %s"
-                                          % exc}}).encode() + b"\n")
-                sys.stdout.buffer.flush()
+                self._write_error(None, -32700,
+                                  "parse error: %s" % exc)
                 continue
             ident = message.get("id") if isinstance(message, dict) else None
             try:
@@ -595,12 +676,14 @@ class Server:
             except Exception as exc:
                 if ident is None:
                     continue
-                code = -32601 if "unknown method" in str(exc) else -32000
-                sys.stdout.buffer.write(json.dumps(
-                    {"jsonrpc": "2.0", "id": ident,
-                     "error": {"code": code,
-                               "message": str(exc)}}).encode() + b"\n")
-                sys.stdout.buffer.flush()
+                text = str(exc)
+                if "unknown method" in text:
+                    code = -32601
+                elif "unsupported protocol version" in text:
+                    code = -32602
+                else:
+                    code = -32000
+                self._write_error(ident, code, text)
                 continue
             if result is None or ident is None:
                 continue

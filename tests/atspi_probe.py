@@ -11,6 +11,7 @@ Usage:
   python3 tests/atspi_probe.py --mode dump [--max-nodes N] [--max-depth N]
   python3 tests/atspi_probe.py --mode click --name Increment
   python3 tests/atspi_probe.py --mode type --name Name --text hello
+  python3 tests/atspi_probe.py --mode dismiss
   python3 tests/atspi_probe.py --mode session [--app-path PATH]
 
 Every step logs one JSON line with wall_clock and elapsed_ms.
@@ -62,8 +63,7 @@ def find_app(name_sub, timeout_s=30.0):
     while time.time() < deadline:
         try:
             desktop = pyatspi.Registry.getDesktop(0)
-        except Exception as exc:
-            log("desktop", False, error=str(exc))
+        except Exception:
             time.sleep(1.0)
             continue
         for i in range(desktop.childCount):
@@ -147,6 +147,57 @@ def node_text(acc):
         return text.getText(0, text.characterCount)
     except Exception:
         return None
+
+
+def find_documents(app):
+    """All web document nodes under the app, depth-first.
+
+    Firefox exposes one document web node per tab, plus empty ones
+    for about:blank or not-yet-loaded tabs. The first document in
+    tree order is often an empty one, so callers must not assume
+    the first document is the page they want.
+    """
+    out = []
+
+    def collect(acc, depth=0):
+        if acc is None or depth > 14:
+            return
+        try:
+            if acc.getRoleName() == "document web":
+                out.append(acc)
+            count = acc.childCount
+        except Exception:
+            return
+        for i in range(count):
+            try:
+                collect(acc.getChildAtIndex(i), depth + 1)
+            except Exception:
+                continue
+
+    collect(app)
+    return out
+
+
+def find_document(app):
+    """The first web document node, or None if the tree has none yet."""
+    docs = find_documents(app)
+    return docs[0] if docs else None
+
+
+def find_in_document(app, role=None, name=None):
+    """First node matching role/name inside any web document.
+
+    Chrome UI (toolbars, address bar) lives outside the documents,
+    so searching here cannot return a browser entry or button
+    by mistake. Every document is searched, because the first
+    document in tree order is often an empty about:blank one and
+    the wanted page is a later document.
+    """
+    for doc in find_documents(app):
+        hit = find(doc, role=role, name=name)
+        if hit is not None:
+            return hit
+    return None
 
 
 def do_click(acc):
@@ -485,7 +536,8 @@ def run_session_mode(app_path, app_timeout_s=25.0):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--mode",
-                        choices=["dump", "click", "type", "full", "session"],
+                        choices=["dump", "click", "type", "full", "dismiss",
+                                 "session"],
                         default="full")
     parser.add_argument("--app-path",
                         default=os.path.expanduser(
@@ -510,6 +562,23 @@ def main():
     if app is None:
         return 2
 
+    if args.mode == "dismiss":
+        # Only dismiss the first-run dialog, nothing else. Used by
+        # the session wrapper while waiting for the page: click and
+        # type modes have side effects (they press the fixture
+        # button), so they must not be used as a readiness poll.
+        for label in ("Continue", "Not now", "Skip"):
+            dlg = find(app, role="push button", name=label)
+            if dlg is not None:
+                t0 = time.time()
+                clicked, detail = do_click(dlg)
+                log("dismiss_onboarding", clicked, label=label,
+                    detail=detail,
+                    click_ms=round((time.time() - t0) * 1000, 1))
+                return 0 if clicked else 2
+        log("dismiss_onboarding", False, detail="no dialog button found")
+        return 2
+
     if args.mode == "dump":
         nodes = []
         t0 = time.time()
@@ -522,6 +591,7 @@ def main():
         return 0
 
     ok = True
+    field = None
     if args.mode in ("click", "full"):
         for label in ("Continue", "Not now", "Skip"):
             dlg = find(app, role="push button", name=label)
@@ -533,16 +603,12 @@ def main():
                     click_ms=round((time.time() - t0) * 1000, 1))
                 time.sleep(2.0)
                 break
-        btn = find(app, role="push button", name="Increment")
+        btn = find_in_document(app, role="push button", name="Increment")
         if btn is None:
             log("find_button", False, wanted="Increment")
             ok = False
         else:
             log("find_button", True)
-            counter_before = None
-            counter = find(app, role="text", name="0")
-            if counter is not None:
-                counter_before = node_text(counter)
             t0 = time.time()
             clicked, detail = do_click(btn)
             log("click", clicked, detail=detail,
@@ -550,9 +616,12 @@ def main():
             ok = ok and clicked
 
     if args.mode in ("type", "full"):
-        field = find(app, role="entry")
+        field = find_in_document(app, role="entry", name="Name")
         if field is None:
-            field = find(app, role="text")
+            # Fallback: the only entry inside the document. Never fall
+            # back to the first entry in the whole tree: that can be
+            # the browser address bar, not the fixture field.
+            field = find_in_document(app, role="entry")
         if field is None:
             log("find_field", False)
             ok = False
@@ -571,10 +640,17 @@ def main():
             ok = ok and typed
 
     if args.mode == "full":
-        log("final_readback", True,
-            paragraph=paragraph_text(app),
-            entry=node_text(field) if 'field' in dir() else None,
-            counter_seen=paragraph_text(app) == "Counter: 1")
+        entry_back = node_text(field) if field is not None else None
+        para = paragraph_text(app)
+        entry_ok = entry_back == args.text
+        counter_ok = para == "Counter: 1"
+        readback_ok = entry_ok and counter_ok
+        log("final_readback", readback_ok,
+            paragraph=para,
+            entry=entry_back,
+            expected_entry=args.text,
+            counter_seen=counter_ok)
+        ok = ok and readback_ok
     return 0 if ok else 2
 
 

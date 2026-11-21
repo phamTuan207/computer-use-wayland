@@ -56,5 +56,11 @@ open at the same time.
 
 Popups are real browser pages opened with window.open and closed
 with window.close. All state lives in the pages and localStorage.
+After a popup closes, the checker polls the expected effect on the
+main window for up to 5 s, because the popup posts its result with
+postMessage and closes synchronously, so the opener applies the
+effect on a later task. A cancelled rename is checked with a 500 ms
+dwell and then an immediate read, because waiting for the unchanged
+title would return instantly and prove nothing.
 The browser run is Playwright Chromium; the same flow on Firefox
 or Zen is UNVERIFIED.

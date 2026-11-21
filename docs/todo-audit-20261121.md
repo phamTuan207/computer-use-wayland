@@ -10,10 +10,16 @@ measured log. I did not untick anything and did not edit the todolist.
 ## Summary
 
 - Ticked items checked: 111.
-- With evidence: 92.
-- Weak evidence: 15.
-- No evidence found: 4.
+- With evidence: 95.
+- Weak evidence: 16.
+- No evidence found: 0.
 - Unticked items (not audited): 4.
+
+Correction note, batch 4: the first version of this audit reported
+92 E, 15 W, 4 N. Council review found evidence the auditor missed
+for all 4 N items, so the verdicts were corrected below. The new
+totals 95 E, 16 W, 0 N come from a full recount of the 111-row
+table after the corrections, done 2026-11-21.
 
 ## Runs done by the auditor on this machine, 2026-11-21
 
@@ -32,36 +38,58 @@ measured log. I did not untick anything and did not edit the todolist.
   are implemented except B5 and B14, which the file itself notes as
   not decidable offline.
 
-## No evidence found, 4 items
+## Items first marked no evidence, corrected after council review
 
-### 2.4.5 I23
+The first version of this audit marked 4 items N. Council review
+found evidence the auditor missed, so all 4 verdicts were corrected.
+No item in this audit is N anymore.
+
+### 2.4.5 I23, corrected to E
 
 Tick says the fix is to follow the named person's instructions
 exactly and never invent an Add to Contest method, a Share button, a
-Package condition, or an account link. No rule, checklist line, code,
-or test in the repo states this specific fix. Only the generic
-verify-before-assert rule in docs/brief-template.md section 6 exists,
-and it does not mention this case.
+Package condition, or an account link. The auditor first found no
+rule stating this. Council pointed to docs/phase23-24-25-fixes.md
+lines 47-48, rule I23: "follow the tutorial exactly. No invented
+step, no cut step, no reordered step. A step with no source in the
+tutorial is not a step." That is the rule the tick asks for, written
+in the canonical fixes file.
 
-### 2.4.6 I24
+### 2.4.6 I24, corrected to E
 
 Tick says the fix is to read the tooltip and verify before claiming a
-warning is harmless. No rule, checklist line, code, or test in the
-repo states a tooltip-check step.
+warning is harmless. The auditor first found no tooltip-check rule.
+Council pointed to docs/phase23-24-25-fixes.md lines 49-51, rule
+I24: "read the tooltip before characterising an error.
+'Enumerated incorrectly' says 'Package can not be built': a blocker,
+not a warning. Guessing severity is fabrication." That is the
+tooltip-check rule the tick asks for.
 
-### 2.4.7 I25
+### 2.4.7 I25, corrected to E
 
 Tick says the fix is to not claim to see images during a phone call,
-and the count error (2 vs 11) is part of it. No rule, checklist line,
-code, or test in the repo covers phone-call visibility or the count
-correction.
+and the count error (2 vs 11) is part of it. The auditor first found
+no rule on phone-call visibility or the count. Council pointed to
+docs/phase23-24-25-fixes.md lines 52-56, rule I25: "never claim to
+see an image the current channel cannot show. During a voice call
+there is no new image; only images already received exist, named
+explicitly. Counts are re-counted from the image actually in front
+of you." That is the rule the tick asks for.
 
-### 2.7.7 G7
+### 2.7.7 G7, corrected to W
 
-Tick says the fix is to use a laptop SSH helper script. That script
-name appears nowhere in the repo except in the todolist itself, and
-the file is absent from the repo and from this machine. This is a
-laptop-side path, so it cannot be verified here. UNVERIFIED.
+Tick says the fix is to use a laptop SSH helper script,
+~/workspace/ssh-laptop.sh. The auditor first found the name nowhere
+except the todolist and the file absent. Council pointed out the name
+appears in 6 repo files, and improvements/live-test-log.md line 341
+documents the script contract from the file itself (the full ssh
+command with BatchMode, ConnectTimeout 25, StrictHostKeyChecking
+accept-new, IdentitiesOnly, and ProxyCommand) together with a
+recorded live measurement: all laptop checks about 4 s each, well
+inside the about 30 s SSH limit. Verdict is W, not E, because the
+file itself is absent from the repo and from this machine, so the
+contract cannot be re-checked against the file here. The laptop path
+remains UNVERIFIED for live re-testing.
 
 ## Weak evidence, 15 items
 
@@ -134,7 +162,7 @@ docs/polygon-upload-runbook.md section 8 documents the procedure, but
 the tick itself admits no offline check exists for it. It is a
 written procedure only.
 
-### 3.2.12 B12 (input-only test zip)
+### 3.2.11 B12 (input-only test zip)
 
 The runbook section 4 and the B12 check in scripts/polygon_checks.py
 exist. But the tick's own note says the validator flags the original
@@ -217,9 +245,9 @@ Evidence refs are short; details for W and N are in the sections above.
 | 2.4.2 I18 wrong attribution | E | brief-template section 6: every claim needs source plus access date |
 | 2.4.3 I19 invented dialogs | E | brief-template section 6: verify before asserting |
 | 2.4.4 I22 relayed diagnosis | E | brief-template section 6: never relay a subagent diagnosis as fact |
-| 2.4.5 I23 invented method | N | no specific rule, code, or test found |
-| 2.4.6 I24 warning guess | N | no tooltip-check rule found |
-| 2.4.7 I25 phone call claim | N | no rule found on call visibility or the count |
+| 2.4.5 I23 invented method | E | phase23-24-25-fixes.md lines 47-48, rule I23: follow the tutorial exactly, no invented step |
+| 2.4.6 I24 warning guess | E | phase23-24-25-fixes.md lines 49-51, rule I24: read the tooltip before characterising an error |
+| 2.4.7 I25 phone call claim | E | phase23-24-25-fixes.md lines 52-56, rule I25: never claim to see an image the channel cannot show, recount from the image in front of you |
 | 2.4.8 I26 Playwright tip | E | brief-template section 6: research first, Google first when stuck |
 | 2.4.9 A8 unverified claims | E | brief-template section 6 line 1: source plus access date |
 
@@ -257,7 +285,7 @@ Evidence refs are short; details for W and N are in the sections above.
 | 2.7.4 G4 Lua dispatch | E | worker-brief-checklist line 108 hl.dsp object form; improvements/live-test-log.md line 760 |
 | 2.7.5 G5 image viewer | E | scripts/image_viewer.py kills with pkill -x imv-wayland |
 | 2.7.6 G6 SSH dies 30 s | E | worker-brief-checklist line 93: long jobs run detached |
-| 2.7.7 G7 SSH helper script | N | no reference anywhere except the todolist; file absent |
+| 2.7.7 G7 SSH helper script | W | name in 6 repo files; live-test-log.md:341 documents the contract and a live measurement (about 4 s per check); file itself absent from repo and this machine |
 | 2.7.8 G8 agy non-interactive | E | worker-brief-checklist line 98: use fcc-claude |
 | 2.7.9 G9 live-site proxy | E | scripts/vm_proxy.py docstring, local forward proxy plus ignore-certificate-errors |
 | 2.7.10 G10 pill shape | W | contract test file exists but 6 of 17 fail on blur 0.15; see weak section |
@@ -361,8 +389,10 @@ Evidence refs are short; details for W and N are in the sections above.
 
 ## UNVERIFIED
 
-- Item 2.7.7: the laptop SSH helper script path cannot be checked
-  from this machine or from the repo.
+- Item 2.7.7: the laptop SSH helper script file itself is absent
+  from the repo and from this machine, so the contract documented
+  in live-test-log.md:341 cannot be re-checked against the file
+  here, and live re-testing on the laptop path remains UNVERIFIED.
 - Items 2.1.3 to 2.1.6: live proof on the real site is still pending,
   as the ticks themselves state.
 - Items 1.1.4, 1.3.2, and 5.1: single-source numbers with no raw log
