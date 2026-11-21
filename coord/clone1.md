@@ -40,7 +40,22 @@ gạch ngang dài trong toàn bộ file thay đổi và tạo mới.
   t08 shopping cart checkout, t09 code review diff, t10 data
   dashboard filter/export. Mỗi test 15-40 bước, fixture offline,
   checker tự động.
-- Chạy của agent: 10 passed, 0 failed. Kiểm tra lại của tôi:
+- Chạy của agent: 10 passed, 0 failed, 2 lần chạy full, wall clock
+  35265 ms lần 1 và 32079 ms lần 2. Per-test lần cuối: t01 1877,
+  t02 7839, t03 1400, t04 3938, t05 3010, t06 4221, t07 1977,
+  t08 2133, t09 2588, t10 1976 ms. Số bước mỗi README khớp checker
+  (36, 35, 35, 36, 36, 40, 27, 40, 24, 40), đều trong 15-40.
+  t02 có clip mp4 thật 10 s (120176 byte, ffmpeg tạo) cộng
+  captions.vtt; lib/server.mjs bản batch2 thêm hỗ trợ HTTP Range
+  và MIME mp4/vtt cho test video.
+- Bug đã sửa trong lúc làm: t01 trường id 9 chữ số ghi đè application
+  ID khi spread, sửa thành appId; t02 seek không chạy vì server
+  loopback thiếu Range, đã thêm Range 206 và preload auto; t06 flake
+  thật, reply mô phỏng tới giữa bước edit và delete làm số đếm cũ,
+  sửa bằng cách chờ reply thứ hai trước khi edit; t10 kỳ vọng
+  date-range tính tay sai (quên đơn paid ngày 9/11), sửa thành
+  3 đơn, 187.97.
+- Kiểm tra lại của tôi:
   chạy full 1 lần được 9 passed, 1 failed ở t10-dashboard, lỗi
   "download.path: canceled" ở bước export CSV. Chạy riêng t10 thì
   pass, 1947 ms, 40 bước đầy đủ. Kết luận: t10 flaky khi chạy full
