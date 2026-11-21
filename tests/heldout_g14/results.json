@@ -1,0 +1,104 @@
+{
+  "app": "Swag Labs (saucedemo.com)",
+  "tasks": [
+    {
+      "task": "task1_checkout_happy_path",
+      "status": "PASS",
+      "wall_start": "2026-11-21T15:44:23.988621+00:00",
+      "wall_end": "2026-11-21T15:44:34.692681+00:00",
+      "elapsed_s": 10.704,
+      "actions_attempted": 12,
+      "misses": 0,
+      "retries": 0,
+      "miss_log": [],
+      "detail": {
+        "prices_read_live": {
+          "Sauce Labs Backpack": 29.99,
+          "Sauce Labs Bike Light": 9.99
+        },
+        "subtotal": 39.98,
+        "tax": 3.2,
+        "total": 43.18,
+        "header": "Thank you for your order!"
+      },
+      "failure": null
+    },
+    {
+      "task": "task2_sort_find_detail",
+      "status": "PASS",
+      "wall_start": "2026-11-21T15:44:34.692745+00:00",
+      "wall_end": "2026-11-21T15:44:49.555884+00:00",
+      "elapsed_s": 14.863,
+      "actions_attempted": 7,
+      "misses": 0,
+      "retries": 0,
+      "miss_log": [],
+      "detail": {
+        "cheapest_item": "Sauce Labs Onesie",
+        "price": 7.99,
+        "detail_price": 7.99
+      },
+      "failure": null
+    },
+    {
+      "task": "task3_sort_subset_cart_edit",
+      "status": "PASS",
+      "wall_start": "2026-11-21T15:44:49.555980+00:00",
+      "wall_end": "2026-11-21T15:45:06.168811+00:00",
+      "elapsed_s": 16.613,
+      "actions_attempted": 8,
+      "misses": 0,
+      "retries": 0,
+      "miss_log": [],
+      "detail": {
+        "sorted_first_two": [
+          "Test.allTheThings() T-Shirt (Red)",
+          "Sauce Labs Onesie"
+        ],
+        "cart_after_remove": [
+          "Sauce Labs Onesie"
+        ]
+      },
+      "failure": null
+    },
+    {
+      "task": "task4_login_error_recovery",
+      "status": "PASS",
+      "wall_start": "2026-11-21T15:45:06.168870+00:00",
+      "wall_end": "2026-11-21T15:45:19.447750+00:00",
+      "elapsed_s": 13.279,
+      "actions_attempted": 5,
+      "misses": 0,
+      "retries": 0,
+      "miss_log": [],
+      "detail": {
+        "locked_out_error": "Epic sadface: Sorry, this user has been locked out.",
+        "items_after_recovery": 6
+      },
+      "failure": null
+    },
+    {
+      "task": "task5_checkout_error_and_cross_view_value",
+      "status": "PASS",
+      "wall_start": "2026-11-21T15:45:19.447816+00:00",
+      "wall_end": "2026-11-21T15:45:38.169392+00:00",
+      "elapsed_s": 18.722,
+      "actions_attempted": 11,
+      "misses": 0,
+      "retries": 0,
+      "miss_log": [],
+      "detail": {
+        "inventory_price": 49.99,
+        "validation_error": "Error: Postal Code is required",
+        "subtotal": 49.99,
+        "tax": 4.0,
+        "total": 53.99
+      },
+      "failure": null
+    }
+  ],
+  "total_actions_attempted": 43,
+  "total_misses": 0,
+  "hit_rate": 1.0,
+  "tasks_passed": 5
+}
