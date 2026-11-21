@@ -275,3 +275,143 @@ During this run MEMORY.md gained a standing instruction (2026-11-22 02:09) to us
 ## End
 
 End: 2026-11-22 02:11 +07 (t+6m). Total wall time about 6 minutes. 13 candidates, 24 Scrapling fetches (22 with usable content, 2 recovered via search), 4 browser.search calls, 0 StealthyFetcher uses, 0 live drives, 0 implementations. Next step belongs to council + redteam review, then live testing of the ranked candidates, then the 2-vision benchmark.
+
+## Appendix A - last30days follow-up (owner order 02:09, run 2026-11-22 02:12-02:24 +07)
+
+Owner order: the whole team uses last30days-skill (https://github.com/mvanhorn/last30days-skill) to crawl REAL data for the improvement research. Install with `npx skills add mvanhorn/last30days-skill -g`. HARD RULE: do NOT use old stale datasets. Only fresh real data from the last 30 days. Every crawled claim must carry its source and date. This appendix records the install, the engine run, the fresh findings, the new candidate they add, and the recency audit for every source in this log.
+
+### A1. Install record (02:12-02:19 +07, t+7-14m)
+
+- 02:12:29 +07: ran `npx skills add mvanhorn/last30days-skill -g`. The command produced zero output for over 5 minutes and was backgrounded by the runtime (session proc_c78dabc2e9ea).
+- 02:18 +07: process inspection showed THREE concurrent `npx skills add mvanhorn/last30days-skill -g` processes (started 19:10, 19:12, 19:13 UTC), one with `-y`. These are almost certainly sibling workers installing the same skill at the same time; the npx cache path was shared (~/.npm/_npx/ac0ed6aa23b37c1e). I did not touch the other two.
+- 02:19 +07: killed my own npx session only (process.kill, SIGTERM, exitSignal 15; my 19:12 process gone after, the 19:10 wrapper still listed). The npx install itself never confirmed complete in this run; record it as NOT VERIFIED, not as done.
+- Working path used instead: the skill repo was already present as a git clone at ~/workspace/last30days-skill (v4.4.0, commit bb2f1ed2, "chore(release): bump version to 4.4.0 (#1539)"), with skills/last30days/SKILL.md and scripts/last30days.py in place, and ~/.config/last30days/.env already contained SETUP_COMPLETE=true. I bound SKILL_DIR to ~/workspace/last30days-skill/skills/last30days and ran the engine from the clone. The SKILL.md fetched live from main during this run is v4.5.0, so the clone is one minor version behind main; no behavior difference was observed for this run.
+- Preflight: /usr/bin/python3 is 3.12.3, satisfying the 3.12+ gate. Diagnose (`--diagnose --include-research-backend`, 02:19 +07) reported available sources: reddit, hackernews, polymarket, github, grounding; local_mode true; gh available; has_scrapecreators false; bird (X) not authenticated; yt-dlp missing; no API keys present except GitHub via gh auth.
+- Doctor (`doctor --cached --json`, 02:19 +07) ran a live probe instead of serving cache (from_cache false, mode probe, generated 2026-11-21T19:18:36Z). Per-source probe statuses were not fully extracted in this run; the engine run below reports the per-source outcomes that matter.
+
+### A2. Engine run (02:20 +07, t+15m, 39.8s, exit 0)
+
+Command: LAST30DAYS_NATIVE_SEARCH=1 python3 scripts/last30days.py "DOM accessibility tree grounding for browser and desktop agents" --emit=compact --save-dir=/tmp/crawl-doma11y/last30days --save-suffix=v3 --plan - (plan JSON via quoted heredoc, 4 subqueries: primary browser-agent a11y grounding; Playwright ariaSnapshot bounding box; AT-SPI pyatspi desktop grounding; BiDi locateNodes accessibility locator). Intent how_to; I set freshness_mode strict_recent in the plan to honor the owner 30-day rule, and the engine normalized it to evergreen_ok in its planner line ([Planner] Plan: intent=how_to, freshness=evergreen_ok, cluster_mode=workflow). That override is recorded, not hidden: the date window still enforced was Oct 22 to Nov 21, 2026, and every item below carries its date.
+
+Engine output: badge "last30days - DOM accessibility tree grounding for browser and desktop... - Oct 22 to Nov 21, 2026 - v4.4.0". Sources: 1 active (Hacker News). Total evidence: 23 items across 1 source. Freshness warning: only 6 of 23 dated items are from the last 7 days. Warning: top evidence highly concentrated in one source. Follow-up cache ID: 3c4d04a4f2404acfa3ea6907c008d833. Raw output saved to /tmp/crawl-doma11y/last30days/dom-accessibility-tree-grounding-for-browser-and-desktop-agents-raw-v3.md.
+
+Partial coverage (engine's own words): "Reddit unreachable: no path served; search skipped-cached; brave down; ddg throttled; startpage throttled (run doctor for fixes)." GitHub: 0 items (all found results dropped as not about the topic). X/Twitter not enabled; YouTube missing (yt-dlp not installed). A failed source is not evidence of no discussion. The Reddit and YouTube gaps mean this sweep is HN-led; the browser.search supplements in A3 partly cover the gap (they found the Playwright, BiDi, Tarsier, and browser-use material the engine missed).
+
+### A3. Fresh findings (all dated, all within the 30-day window Oct 23 to Nov 22, 2026 unless marked otherwise)
+
+F1. Playwright 1.60 ariaSnapshot with boxes (fresh, docs last crawled 1 day before 2026-11-22). Source: https://playwright.dev/docs/api/class-locator (Playwright docs, "Locator", accessed via browser.search 2026-11-22). locator.ariaSnapshot({ boxes: true }) "appends each element's bounding box as [box=x,y,width,height] to the snapshot. Coordinates are relative to the viewport, in CSS pixels, as returned by Element.getBoundingClientRect()." Added in v1.60. ariaSnapshotJSON added in v1.63, same box option. page.ariaSnapshot() gives the full-page version. This is the ideal single-call representation for our goal: role + name + state + rect in one snapshot, no separate rect call per element. It upgrades C7 from "design to copy" to "exact API shape to copy" and gives C1 a concrete output format to mimic in our own harvest.
+
+F2. Mantis, numbered-text grounding with measured wins over the full accessibility tree (fresh: Show HN 2026-11-06, 4pts; README fetched 2026-11-22). Sources: https://github.com/perzianhq/mantis (Mantis repo, README, accessed 2026-11-22) and the engine cluster 5. "Lets AI agents browse the web as short, numbered text instead of screenshots." Mechanism: "Agent sends open/click to Mantis; Mantis reads the page in Chromium, numbers each control and returns only what changed." Measured results (vendor-run benchmark, medians, disclosed in README): long tasks, Luna model, Mantis 35/42 correct vs a11y tree 34/42, input tokens 244k vs 345k, tool calls 17 vs 24, time 42s vs 66s; Haiku 40/42 both, tokens 268k vs 506k, calls 19 vs 30, time 54s vs 85s. Versus the tree: "accuracy within one run, 29-47% fewer input tokens, 29-37% fewer calls, about a third less time." Versus screenshots: Luna screenshots score 2 runs higher but use more tokens and time. Caveats disclosed in the README: short-task times compare a newer Mantis build with the earlier tree/screenshot run; screenshot baseline is the project's own tool; a few tasks swapped after results; two long iframe/tab tasks left out of long-task counts. Becomes candidate C14 below.
+
+F3. Browser-use 1.0 ultrafast mode + Playwright MCP + Stagehand v4 (fresh: 2026-11-11 to 2026-11-20). Source: https://changegamer.ai/articles/agentic-browsing-in-production (published 2026-11-11, updated 2026-11-20, accessed via browser.search 2026-11-22): "As of 13 November 2026 Playwright MCP works from accessibility snapshots with no vision model, browser-use 1.0 has the model write Python against raw CDP (its ultrafast mode acts on accessibility-tree ids), and Stagehand v4 exposes act, observe and extract primitives." Companion, context only (72 days old, outside window): https://thegeocommunity.com/blogs/generative-engine-optimization/browser-use-pi-agent-browser-architecture/ (Browser Use Pi): the model "might locate a button in an accessibility snapshot, scroll its node into view, retrieve its box model, calculate coordinates, dispatch CDP mouse input, and inspect the result", and page.snapshot() "calls Chrome's Accessibility.getFullAXTree". This is independent confirmation that the C2 + C3 combination (AX tree for identity, box model for geometry, CDP input for action) is the pattern real agent browsers use now.
+
+F4. BiDi locateNodes locator types RESOLVED (closes open item 1 from the main log). Sources: https://www.irurueta.com/web/e2e-testing/selenium/webdriver-bidi.html (Selenium WebDriver BiDi guide, written against Selenium 4.51.0 released 9 Oct 2026, checked 25 Oct 2026, accessed via browser.search 2026-11-22): "browsingContext.locateNodes - Find nodes by CSS, XPath, inner text or accessibility locator without a classic element reference", and "Chrome and Firefox are the browsers with a complete BiDi implementation." Companion: https://mdn.hxlab.ir/en-US/docs/Web/WebDriver/Reference/BiDi/Modules/browsingContext/locateNodes (MDN mirror, crawled 6 days before 2026-11-22): locateNodes takes a locator with "one of five criteria" and "turns a locator, such as a CSS selector or XPath expression, into node references (with sharedId and optionally handle)". Companion, context only (Firefox 146 newsletter page last updated 347 days ago, outside window): https://fxdx.dev/firefox-webdriver-newsletter-146/ - Firefox 146 "added support for the context locator to the browsingContext.locateNodes command, which allows to retrieve the container of non-top-level browsing contexts, such as iframe elements." Companion, context only (June 2026 review, outside window): https://github.com/kalebteccom/browxai/blob/HEAD/docs/rfcs/references/01-webdriver-bidi-standards.md - "WebDriver BiDi is now the only cross-engine bidirectional automation protocol with real momentum", Firefox CDP "completely removed in Firefox 141 (released 22 July 2025)", "--remote-debugging-port now serves only a WebDriver BiDi WebSocket", and the CDP to BiDi gap still missing "accessibility tree, coverage/profiling, screencast" as of June 2026. Consequence for us: C6's locator question is answered (accessibility locator exists), but BiDi has no a11y-tree module, so C6 cannot replace C3; and the Firefox CDP removal confirms Zen must be driven via Marionette/BiDi, never CDP.
+
+F5. AT-SPI-first grounding, fresh corroboration (fresh part: Tarsier listing updated Nov 2, 2026, within window). Sources: https://pypi.org/project/tarsier-ai/ (Tarsier-AI on PyPI, accessed via browser.search 2026-11-22): Linux via "Assistive Technology Service Provider Interface (AT-SPI) via pyatspi", "extracts the exact semantic structure", serializes to "highly token-efficient YAML ARIA-Snapshot", vendor claims "69.6% Token Reduction" and "100% Deterministic: No hallucinated XY coordinates or missed clicks". Vendor claims, not independent benchmarks; treat the numbers as the vendor's, not as proven. Companion: https://bestmcp.it/app-automation/tarsier/ (last updated November 2, 2026): Tarsier MCP server, 21 tools, "reads native accessibility trees instead of screenshots". Companion, context only (Aug 22, 2026, 91 days old, outside window): https://www.jocheojeda.com/2026/08/22/at-spi-first-grounding/ ("Stop Guessing Pixels: AT-SPI-First Grounding for Desktop Agents"): walk the tree, filter to actionable + visible (states showing, enabled, sensitive), build a labeled list of name + role + exact bbox via Component get_extents() in real pixels, "click the exact center of that widget's box", "verify by re-reading states". That flow is the same shape as C9 + C5 and is now corroborated by two independent authors plus a shipping tool. Companion, context only (41 days old, outside window): https://tessl.io/registry/testland/at-spi-linux/1.2.11 - for Chromium/Electron, set "--force-renderer-accessibility" on launch, or "--enable-blink-features=AccessibilityAriaVirtualContent" for newer surfaces; for Qt, QT_ACCESSIBILITY=1. The Chromium flag is a concrete Brave launch flag to test for C3/C9.
+
+F6. Accessibility-tree grounding is now the consensus direction, with a Nov 2026 explainer (fresh). Source: https://kindatechnical.com/advanced-llm-topics/lesson-55-browser-automation-and-computer-use-agents.html ("Computer Use and Browser Agents", updated Nov 2026, last updated 5 days before 2026-11-22): "the accessibility tree reduces the page to roles (button, link, textbox, checkbox, heading), accessible names and states... Actions then target elements semantically rather than by coordinates. This is usually far cheaper in tokens than a screenshot, robust to layout and styling changes, and lets the harness verify that a target exists and is unique before acting." Grounding failures named: coordinate drift, scaling mismatches (model sees downscaled screenshot, harness applies native coordinates), stale state. Its recommended pattern: Playwright ARIA snapshot, get_by_role with exact name. This independently describes our C1 + C5 shape and names the scaling-mismatch failure that C12 exists to prevent.
+
+F7. Engine clusters with no grounding mechanism (recorded, not used as candidates). Agweb: https://github.com/paul-nameless/agweb (Show HN 2026-11-14, 109pts, 37cmt; README fetched 2026-11-22): "A browser for coding agents on macOS, built on WebKit... agents drive it from the shell with agweb... one window that never takes focus", idle tabs suspended, five idle pages 590 MB vs Playwright Chrome 1.6 GB. macOS-only, WebKit, no rect/grounding method shown; becomes candidate C15 with a skip verdict. Other clusters off-topic for this crawl: Emacs Is My Browser (2026-11-15, 241pts), Cloudflare Turnstile solver (2026-10-28, 317pts), StarSling CI (2026-11-17, 89pts), AgentMall groceries (2026-11-19, 21pts), easi.run secure sessions (2026-11-09, 4pts). GoogleChrome/modern-web-guidance (2026-11-10, 449pts, 146cmt) is about agent-facing web guidance, not grounding; noted, not a candidate.
+
+### A4. New candidates from the 30-day sweep
+
+#### C14. Numbered compact text + diff-only updates (Mantis pattern)
+
+What it is: render the page (or app) as short numbered text lines, one per control (role + name + ref number), and let the agent act by number. After each action, return ONLY what changed, not a fresh full snapshot. Numbers replace coordinates in the agent's view; the harness maps number to exact rect at action time. This is the representation optimization on top of C1/C3: the snapshot the model reads is smaller and the re-read after each action is a diff.
+
+Source: https://github.com/perzianhq/mantis (Mantis README, accessed 2026-11-22; Show HN 2026-11-06 via last30days engine run 2026-11-22, window Oct 22 to Nov 21, 2026). Numbers in F2 above; all vendor-run with disclosed caveats.
+
+Goal-bar mapping: total time and token cost, directly. Same accuracy as the full a11y tree (within one run on long tasks), 29-47% fewer input tokens, 29-37% fewer calls, about a third less time. One snapshot still drives many actions, and the diff-only update keeps re-verification cheap instead of re-reading the whole tree.
+
+Applicability to our stack: apply to the C1 harvest output format and to the C9 AT-SPI harvest: assign stable ref numbers to each harvested element, emit one compact line per element (ref, role, name, center), and after each real-mouse click re-harvest and emit only added/removed/changed lines plus a focused-state line (C5). No new transport needed; it is a formatting + diffing layer over harvests we already plan to build. Watch the caveat: Mantis numbers come from its own benchmark on public sites with two models; our Messenger web app and Zen must be measured live, not assumed equal.
+
+Measured numbers: yes, vendor-run, see F2 (long tasks Luna 35/42 vs tree 34/42, tokens 244k vs 345k, calls 17 vs 24, time 42s vs 66s; Haiku 40/42 both, tokens 268k vs 506k, time 54s vs 85s). Treat as vendor evidence, not independent proof.
+
+Verdict: promising. Rank 3 in the updated list below, right after C1 and C12.
+
+#### C15. Agweb agent browser (macOS WebKit, never takes focus)
+
+What it is: a macOS-only browser built on WebKit for coding agents; one window that never takes focus, agents drive it from the shell, idle tabs suspended.
+
+Source: https://github.com/paul-nameless/agweb (README fetched 2026-11-22; Show HN 2026-11-14, 109pts, 37cmt, via last30days engine run 2026-11-22).
+
+Goal-bar mapping: none for our stack. It solves focus theft and idle CPU, not grounding; no rect or a11y method is shown.
+
+Applicability to our stack: none. macOS-only, WebKit (our browsers are Zen/Brave on Linux), and our live-driving lane already handles focus by rule. The "never takes focus" idea is a design note for any future agent-browser work, not a candidate now.
+
+Measured numbers: memory only (five idle pages 590 MB vs Playwright Chrome 1.6 GB); no grounding numbers.
+
+Verdict: skip. Wrong platform, no grounding method.
+
+### A5. Recency audit (every source in this log)
+
+Window: last 30 days = Oct 23 to Nov 22, 2026. "Fresh" means dated inside the window or a living doc fetched live on 2026-11-22 with current content. "Mechanism only" means the source is cited for how a protocol or API works, not for a recent event; protocol definitions do not go stale in 30 days, but they must still be verified against the installed browser at test time.
+
+Fresh, inside the window:
+- last30days engine run 2026-11-22 (window Oct 22 to Nov 21, 2026), HN clusters F7 + Mantis + Agweb.
+- Mantis README, fetched 2026-11-22; Show HN 2026-11-06.
+- Agweb README, fetched 2026-11-22; Show HN 2026-11-14.
+- Playwright docs ariaSnapshot boxes (v1.60), docs crawled 1 day before 2026-11-22.
+- kindatechnical.com grounding lesson, updated Nov 2026 (5 days before 2026-11-22).
+- changegamer.ai agentic browsing guide, published 2026-11-11, updated 2026-11-20.
+- Selenium BiDi guide, checked 25 Oct 2026 (Selenium 4.51.0 released 9 Oct 2026).
+- MDN locateNodes mirror, crawled 6 days before 2026-11-22.
+- Tarsier bestmcp.it listing, updated Nov 2, 2026; PyPI tarsier-ai, crawled 1-2 days before 2026-11-22.
+- GoogleChrome/modern-web-guidance HN 2026-11-10 (449pts).
+- All other HN clusters in F7, dated 2026-10-28 to 2026-11-19.
+
+Older than 30 days, still cited, mechanism or context only:
+- CDP browser_protocol.json v1.3 (undated living spec): mechanism only, verified by direct grep.
+- MDN getBoundingClientRect (undated reference): mechanism only.
+- W3C WebDriver spec and W3C BiDi spec (living standards): mechanism only.
+- Playwright boundingBox + locators docs (living docs): mechanism only; fresh F1 supplements them.
+- Selenium elements/information docs (versioned v4.0 page): mechanism only.
+- AT-SPI docs.gtk.org, pyatspi2 GitLab, Dogtail docs/PyPI, LDTP tutorial 2014-03-29: mechanism only (LDTP already verdict skip).
+- Hyprland IPC wiki, Chrome DevTools a11y reference, Firefox Marionette docs, Firefox remote docs (living docs): mechanism only.
+- Praman 1.3 release notes, May 2026 (179 days): context only, shows Playwright 1.60 ARIA grounding adoption.
+- browxai BiDi standards review, June 2026: context only, BiDi momentum + missing a11y tree module.
+- Firefox 146 newsletter page, last updated 347 days ago: context only, locateNodes context locator.
+- jocheojeda AT-SPI-first post, Aug 22, 2026 (91 days): context only, corroborates C9 + C5 shape.
+- tessl at-spi-linux 1.2.11, 41 days: context only, Chromium --force-renderer-accessibility flag.
+- searchenginejournal.com (223 days), dev.to (220 days), theagentecosystem.com (90 days), thegeocommunity.com Browser Use Pi (72 days): context only, consensus direction + rtrvr.ai numbers as article-reported, not verified.
+- Repo-internal sources (zen_dom.py, a11y.py, cdp.mjs, hypr_cmd.py, docs/zen-dom-control-comparison.md, worker3 redteam note): current in-repo facts as of Nov 2026, not external claims.
+
+Not usable as sources (recorded, not cited for claims):
+- MDN GetElementRect page: 404 on 2026-11-22 (W3C spec used instead).
+- Brave support page and GNOME AT-SPI wiki: 403 on 2026-11-22 (content recovered from other sources).
+- GitLab dogtail page: sign-in wall in stripped text (content recovered via PyPI + docs search).
+- Hyprland hyprctl wiki page: 404 on 2026-11-22 (IPC wiki page used instead).
+- Reddit (engine): unreachable, 0 items. X/Twitter: not enabled. YouTube: missing (yt-dlp not installed). GitHub (engine): 0 items after relevance filtering.
+
+### A6. Updated ranked list (15 candidates)
+
+1. C1 - One-shot bulk DOM rect harvest. Unchanged at the top.
+2. C12 - Coordinate conversion layer + AT-SPI cross-check. Unchanged; required by every DOM candidate.
+3. C14 - Numbered compact text + diff-only updates (Mantis pattern). NEW, from the 30-day sweep. Representation layer over C1/C9.
+4. C9 - Raw AT-SPI via pyatspi. Unchanged; fresh F5 corroboration strengthens it.
+5. C2 - Native CDP DOM domain. Unchanged; fresh F3 confirms the pattern is what agent browsers use now.
+6. C3 - CDP Accessibility tree. Unchanged; F1 gives it a concrete output format to mimic (aria snapshot with boxes).
+7. C5 - Focus-then-verify loop (Zen side). Unchanged.
+8. C4 - W3C Get Element Rect + Computed Role/Label. Unchanged.
+9. C7 - Playwright boundingBox design (copy the API shape). Strengthened by F1: ariaSnapshot({ boxes: true }) is the exact single-call shape to copy.
+10. C13 - Accerciser (dev-time inspection). Unchanged.
+11. C10 - Dogtail idiom (copy, do not adopt). Unchanged.
+12. C6 - BiDi locateNodes. Locator types now RESOLVED (accessibility locator exists, F4); verdict stays maybe because BiDi has no a11y-tree module and Marionette paths cover the same ground with less risk. Open item 1 from the main log is CLOSED.
+13. C8 - Selenium get_rect (fallback only). Unchanged.
+14. C11 - LDTP2 (skip; take only wait-for-object polling). Unchanged.
+15. C15 - Agweb agent browser (skip; macOS-only, no grounding method). NEW, considered and skipped.
+
+Suggested build order is unchanged: C12 first (with the AT-SPI cross-check), then C1 + C5 on the Zen side and C2 + C3 on the Brave side, with C9 bulk harvest as the parallel screen-truth path, and C14 as the output-format layer over the harvests. The 2-vision benchmark then proves the combination.
+
+### A7. Appendix files and evidence
+
+- Engine raw output: /tmp/crawl-doma11y/last30days/dom-accessibility-tree-grounding-for-browser-and-desktop-agents-raw-v3.md (31,555 bytes, saved by the engine).
+- Engine follow-up cache ID: 3c4d04a4f2404acfa3ea6907c008d833.
+- Skill spec + references fetched live: /tmp/crawl-doma11y/last30days-SKILL.md (v4.5.0), /tmp/crawl-doma11y/references_research-runbook.md, /tmp/crawl-doma11y/references_runtime.md, /tmp/crawl-doma11y/references_synthesis.md.
+- Fresh source texts: /tmp/crawl-doma11y/mantis-readme.txt, /tmp/crawl-doma11y/agweb-master.txt.
+- Skill install: npx path NOT VERIFIED (stalled, see A1); engine run from the git clone at ~/workspace/last30days-skill (v4.4.0, commit bb2f1ed2).
+- No implementation, no live tests, no browser tasks in this follow-up either.
+
+## Appendix end
+
+Appendix written: 2026-11-22 02:24 +07 (t+19m from the original 02:05:29 start). Total for both runs: first crawl about 6 minutes, follow-up about 12 minutes. 15 candidates total, 24 Scrapling fetches in run 1 plus 6 more in run 2, 1 last30days engine run (39.8s, exit 0, HN-led with Reddit/GitHub/X/YouTube gaps honestly reported), 9 browser.search calls total. Next step belongs to council + redteam review, then live testing of the ranked candidates, then the 2-vision benchmark.
