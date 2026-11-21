@@ -373,6 +373,10 @@ def main():
             summary["selftest"] = {"ok": False,
                                    "failure": f"{type(exc).__name__}: {exc}",
                                    "steps": self_log.steps}
+            # In auto mode the docstring contract is that exit 0
+            # means the selftest passed, so a failed selftest must
+            # reset the ok flag even when live succeeded before it.
+            summary["ok"] = False
 
     summary["total_elapsed_s"] = round(time.perf_counter() - total_start, 4)
     summary["wall_end"] = wall_now()
