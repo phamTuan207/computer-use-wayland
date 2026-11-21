@@ -2,7 +2,7 @@
 
 Role: Council Member 3 for the E1 re-scope decision. Debate on paper only. No Zen driving, no executor launches, no live browser use. Independent of Council Members 1 and 2; this conclusion is my own. I did not read any other re-scope council verdict (none existed in the repo when I wrote this). I read the judge ruling, the v2.1 design, the reconciliation of the earlier round, and the working-tree v2.2 files, and I ran my own checks on the fix.
 
-Timing: task received 2026-11-21 19:54:36 +07. Evidence gathered 19:54-20:02. Verdict written 20:02-20:12. No ydotool used. No em dash or en dash in this file.
+Timing: task received 2026-11-21 19:54:36 +07. Evidence gathered 19:54-19:58. Verdict written 19:57-19:58. No ydotool used. No em dash or en dash in this file.
 
 ## 1. What is settled and not re-debated
 
@@ -122,7 +122,7 @@ Under option (a), Y9 is released by the closure marker with B's status "single-a
 
 - 19:54:36: task received.
 - 19:54-19:57: located the repo (~/workspace/computer-use-wayland, branch todolist-push), read the judge ruling in full and the reconciliation.
-- 19:57-19:59: read the design v2.1 (frozen 695efea md5 verified), the Y9 marker lines in the design and execution log, and the earlier council 1/2 files (prior Q1-Q5 round, not this re-scope round).
-- 19:59-20:01: independent fix verification on the working tree: md5s, command census (64 plan cmd objects, 26 js-bearing, 0 single quotes, 0 node failures; 15 more across briefs and reference, 79 total), STOPPED (DRIVER SUSPECT) wording, A3 artifact bans.
-- 20:01-20:02: laptop read-only checks via ssh-laptop.sh: /tmp/e1/v22-proof.log (all six probes passed), /tmp/e1/preflight-a3.json (VISIBLE, countText 6), laptop plan md5 matches repo.
-- 20:02-20:12: verdict written.
+- 19:57: read the design v2.1 (frozen 695efea md5 verified), the Y9 marker lines in the design and execution log, and the earlier council 1/2 files (prior Q1-Q5 round, not this re-scope round).
+- 19:57: independent fix verification on the working tree: md5s, command census (64 plan cmd objects, 26 js-bearing, 0 single quotes, 0 node failures; 15 more across briefs and reference, 79 total), STOPPED (DRIVER SUSPECT) wording, A3 artifact bans.
+- 19:57-19:58: laptop read-only checks via ssh-laptop.sh: /tmp/e1/v22-proof.log (all six probes passed), /tmp/e1/preflight-a3.json (VISIBLE, countText 6), laptop plan md5 matches repo.
+- 19:57-19:58: verdict written.
