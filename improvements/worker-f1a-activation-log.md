@@ -210,3 +210,78 @@
 - Next: session 3, the click. Wait for S2d to end (~00:07:25),
   confirm no stray session/indicator, fresh observe + activewindow
   title to re-check the active tab, then the click session.
+
+## 00:08 session 3 attempt 1: FAILED, act CLI takes file paths (not the session)
+- Fresh observe f6edf8b1c426 (region [2464,902,1920,1200]): Zen ws1,
+  active tab is the New Tab wallpaper (NOT whiteboard, no unsaved
+  state), cursor static at (985,598) since 00:04, owner not active.
+  Click point: center of the content area, image (1105,645), global
+  (3569,1547). S2d had ended cleanly (no session.json, no indicator,
+  cu-cursor inactive). Window title is just "Zen Browser".
+- Launched 00:08:30: computer-use session -- computer-use act
+  --observation f6edf8b1c426 --actions '[{"type":"click",...}]'.
+  Result: {"ok": false, "error": "[Errno 2] No such file or directory:
+  '[{\"type\":\"click\",\"x\":1105,\"y\":645}]'"}. The SESSION started
+  fine (indicator up 00:08:30, redraw ready, buffer presented, closed
+  141ms, clean stop, no session procs after). The failure is the act
+  CLI usage, NOT the session/guardian.
+- Root cause (read from source): cu.py:2329 --actions is "JSON path
+  or - for stdin"; line 2489 read_json_file(args.actions). --observation
+  is also read via read_json_file (line 2506). BOTH need FILE PATHS,
+  not inline JSON or bare ids. F1's negative test passed inline JSON
+  + a bare id too, but the guardian died first, so the act parsing
+  was never exercised; the masked misuse is recorded here, not blamed.
+- cursorpos after attempt 1: (3440,1502) vs pre-session (3449,1500):
+  9px shift, NO click happened (act errored before any action). The
+  shift is the cursor theme/hotspot change on session start, not a
+  click landing.
+- Fix: write /tmp/f1a-click.json with the action, pass
+  --actions /tmp/f1a-click.json --observation
+  /home/james/.cache/agent-computer-use/f6edf8b1c426.json. The screen
+  is unchanged since f6edf8b1c426, so the observation stays valid.
+  require_observation only constrains after a transient refusal
+  (no marker here), so the pre-session observe is accepted.
+
+## 00:09 session 3b: CLICK SUCCEEDED, 0px error
+- Launched 00:09:47 with the corrected file paths. Result:
+  {"ok":true,"completed":1,"preflight_ms":107.188,
+  "execution_ms":32.632}. focus_before 0x557052b62dd0 (the Zen
+  window). After-capture observation 0efbc71e453b (clean-observation).
+  Session ran ~1s, indicator closed at 950ms, 3 hide + 3 show
+  (capture_clean cycles), no stray procs after.
+- cursorpos after: (3569,1547). Expected global from image
+  (1105,645) + region [2464,902]: (3569,1547). EXACT, 0px error.
+- Fresh observe f88074c35f5a after the click: same Zen ws1, same
+  New Tab wallpaper, NO pill (session stopped), no navigation, no
+  damage; cursor visible at the click point (1105,645) in the image.
+  The click was harmless, as designed.
+
+## 00:11 teardown: CLEAN
+- No session procs, no indicator procs, no session.json, cu-cursor
+  {"active":false,"ok":true,"schema":1,"token":""}. Hyprland PID 1515
+  alive, Zen alive (window 0x557052b62dd0 unchanged, tabs intact).
+  Desktop clean. (pgrep -f zen-ai shows PID 516844 vs F3b's 496121;
+  window address and tabs unchanged, so this is the wrapper/child
+  PID, not a Zen restart; no action needed.)
+- NOTE for the parent: the OI (Omarchy adoption) worker finished
+  00:08 (todolist-push d8a2ee2, 0 regression, +40 tests pass) and
+  modified cu.environment() (OMARCHY_PATH) in the REPO; the installed
+  tree I used was F1's md5-verified deploy, unaffected. The omasnap
+  crash notification is explained (OA probe, not a system fault).
+
+## VERDICT: F1 LIVE ACTIVATION PASS
+- Backend: activate-session-backend.py works live; guard + glass
+  load; shaders ready after the login-loader warm-up; cu-cursor
+  active with the session token; socket dir + cursor-guard.sock
+  present. 5-step proof: fresh observe, one click center of the
+  active New Tab only, 0px error, verified by cursorpos + fresh
+  observe, clean stop, second start returns the pill. Session pill
+  PROVEN: visible in raw grim during the session, token matches
+  snapshot, indicator endpoint exists, indicator PID 513273,
+  gone after stop. New findings: (1) computer-use observe hides the
+  pill during capture by design, so pill visuals need raw grim;
+  (2) act --actions/--observation take FILE PATHS, not inline JSON
+  or bare ids (F1's negative test never exercised this; the guardian
+  died first); (3) SSH round trips take ~30s, so proof sessions
+  need long sleeps (120s) to survive the latency. F1 phase DONE;
+  F2 phase (act-now end-to-end with a live session) is next.
