@@ -12,13 +12,21 @@ Ong da noi mai day reboot sau. Sau khi reboot, chay duoc ngay:
 - Deploy pill blur tang len 0.15 va overlay luon bat vao ban cai dat (relay can khoi dong lai, chay sync-installed.py)
 - Test nhap nhay overlay voi backdrop dong trong che do LIQUID (E2 phase B)
 
-## 2. Bat lai computer-use (2.2.3)
+## 2. Bat lai computer-use + test animated backdrop (2.2.3)
 
 Ong tat computer-use luc 19:13 ngay 20/11 vi overlay nhap nhay ngua mat. Ket qua do that
 ngay 21/11: indicator da sua khong ve lai khi idle (0 lan ve trong 122 cua so 1 giay, 32/32
 khung hinh pill giong het nhau). Can ong bat lai khi ong san sang. Luu y: nguyen nhan nhap
 nhay ngay 20/11 o che do LIQUID van chua xac minh chac chan, chi moi loai tru duoc phia
 indicator. Neu no tai phat, log E1 moi them se ghi lai duoc.
+
+Rieng viec test backdrop dong (hyprglass): chi tiet 4 phuong an A/B/C/D kem rui ro tung
+phuong an o docs/decision-2-2-3-hyprglass-test-20261121.md (Worker X, 21/11). Tom tat:
+A = giao may 30 phut, load plugin vao compositor dang chay (biet chac chan, rui ro crash
+phien); B = them vao hyprland.conf roi reboot (te nhat, co the khoa dang nhap); C = chay
+Hyprland long nhau cach ly (0 rui ro, chua biet co chay duoc khong); D = bo qua tai hien,
+giam sat bang log (0 rui ro, khong co ket luan chac chan). De xuat: thu C truoc, neu khong
+duoc thi chon A hoac D. Ong chi can noi chu cai.
 
 ## 3. Chon pill candidate (4.5)
 
