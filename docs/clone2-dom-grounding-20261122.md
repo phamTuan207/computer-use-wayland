@@ -6,35 +6,50 @@ measured by clone2 on this machine, with the machine, browser, date
 and raw log named. Every web claim carries its source and date.
 Anything not run here is labelled UNVERIFIED.
 
+Correction note, fix pass 2026-11-22: council and redteam found
+several figures in the first version of this report wrong against
+the preserved logs. The BiDi session.new cost, the run accounting,
+the table medians, the a11y numbers, the screenshot size and the
+agent-desktop release date are all corrected below from the
+preserved logs and a fresh full bench run (run 4). No design
+conclusion changed, but the numbers it rests on did.
+
 ## 0. Verdict first
 
 Stop reading screenshots to find buttons. The DOM already knows where
-every element is, to the sub-pixel, in about 0.01 to 0.02 seconds for
-a whole page. One `getBoundingClientRect` sweep over all interactive
-elements gives 66 rects in a median 0.019 s (Marionette) or about
-0.006 to 0.011 s (BiDi), and the two protocols agree to within
-floating point noise (max delta 5.7e-14 px). That one snapshot can
-drive 5 real pointer clicks, all 5 landing, verified by one cheap
-DOM read in about 0.01 s, with no second screenshot and no second
-observation of the page.
+every element is, to the sub-pixel, in about 0.03 s median for a
+whole page. One `getBoundingClientRect` sweep over all interactive
+elements gives 66 rects in a pooled median 0.030 s (Marionette, 9
+samples across 3 runs) or 0.006 to 0.054 s per run median (BiDi),
+and the two protocols agree to within floating point noise (max
+delta 5.7e-14 px). That one snapshot can drive 5 real pointer
+clicks, all 5 landing, verified by one cheap DOM read in 0.002
+to 0.015 s, with no second screenshot and no second observation
+of the page.
 
 The design that follows from the measurements:
 
 - BiDi primary for grounding and DOM actions: fastest rect read,
-  fastest DOM clicks, single digit millisecond session start.
+  fastest DOM clicks. Session start is NOT nearly free: on a
+  fresh browser session.new costs about 1.5 to 2.8 s, about
+  0.014 s only on a warm browser. The BiDi advantage is in rect
+  reads and DOM clicks, not in session start.
 - Marionette only where real input events are needed: real pointer
   clicks cost about 0.30 s each through W3C actions, DOM clicks cost
   about 0.001 s each but skip the input pipeline.
-- Selenium 4.53 accessibility snapshots, new 2026-11-17, give the
-  a11y tree (role, name, states) in about 0.02 s on the same page,
-  in both Classic and BiDi sessions. Semantics from the a11y tree,
-  geometry from the DOM rect, in one design.
+- Selenium 4.53 accessibility snapshots, new 2026-11-17, give a
+  computed accessibility tree (role, name, states) in 0.02 to
+  0.15 s on the same page, in both Classic and BiDi
+  sessions. The snapshot is computed from the DOM following
+  WAI-ARIA, html-aam and accname; it is not the browser's own
+  accessibility tree. Semantics from the snapshot, geometry from
+  the DOM rect, in one design.
 - CDP is dead on Firefox and Zen: removed in Firefox 141, the
   /json endpoints return 404. Do not build on it.
 - AT-SPI stays the native desktop path, not the browser path. It was
   not runnable on this VM (no daemons, no pyatspi), so its numbers
   here are other people's, labelled as such.
-- One hard constraint the bench proved three times: Firefox 160
+- One hard constraint the bench proved in all four runs: Firefox 160
   allows exactly one active remote session per browser instance,
   across protocols. A Marionette session blocks a BiDi session with
   "Maximum number of active sessions". Never design a flow that
@@ -53,16 +68,33 @@ click log the page itself keeps. Bench: tests/dom_grounding_bench.py.
 Window: 1280x900 set, viewport 1280x814 in the Marionette runs
 (headless chrome takes the rest), BiDi viewport set to 1280x900.
 
-Three full runs, walls (UTC) 2026-11-21T19:31:59Z to 19:32:12Z
-(14.35 s) and 2026-11-21T19:32:33Z to 19:32:45Z (12.74 s), plus
-four partial runs that crashed on bench bugs before the BiDi phase
-and still produced valid Marionette numbers. Raw JSONL logs:
- /tmp/dom_grounding_run1.log, /tmp/dom_grounding_run2.log,
- /tmp/dom_grounding_run3.log (kept on this machine, outside the
-repo). Every step in the bench prints wall clock and elapsed seconds
-from a monotonic clock.
+Two full runs (run 2 and run 3) plus one partial run (run 1),
+walls (UTC): run 1, 2026-11-21T19:29:50Z to 19:29:58Z, 16 steps,
+crashed at the BiDi rect-agreement step with KeyError 'id'
+(bench line 300, a BiDi rect item without an "id" key; flaky,
+not reproduced since, and the bench now skips such items
+defensively and counts them instead of crashing); run 2,
+2026-11-21T19:31:59Z to 19:32:12Z, 19 steps, run_total 14.35 s;
+run 3, 2026-11-21T19:32:33Z to 19:32:45Z, 19 steps, run_total
+12.74 s. The first version of this report wrongly called these
+"three full runs" and cited four additional partial runs whose
+logs were never preserved; that claim is withdrawn. The click
+step completed in all three runs (two full, one partial), so
+the "all 5 landed" claim below is 3 runs of the click step.
+Raw JSONL logs: /tmp/dom_grounding_run1.log,
+/tmp/dom_grounding_run2.log, /tmp/dom_grounding_run3.log (kept
+on this machine, outside the repo). Every step in the bench
+prints wall clock and elapsed seconds from a monotonic clock.
 
-Two bench bugs found and fixed during the runs, both recorded
+Fix-pass runs 4 and 5, 2026-11-21T19:45:20Z to 19:45:36Z and
+19:47:57Z to 19:48:12Z, 22 steps each, run_total 16.15 s and
+15.57 s, logs /tmp/dom_grounding_run4.log and
+/tmp/dom_grounding_run5.log, run with the corrected bench (a11y
+measurement step, warm session.new probe, defensive BiDi rect
+handling). Their numbers are cited below as confirmation where
+noted.
+
+Four bench issues found and fixed during the runs, all recorded
 because they are real findings, not hidden:
 
 - websocket-client sends an Origin header by default and the
@@ -75,22 +107,32 @@ because they are real findings, not hidden:
 - BiDi RemoteValue serializes objects as [key, value] pairs, not
   plain objects. The bench returns JSON.stringify from evaluate
   and parses the string in Python instead.
+- Run 1 crashed with KeyError 'id' at bench line 300 while
+  building the BiDi rect map: one rect item had no "id" key.
+  Flaky, not reproduced in runs 2, 3 or 4. The bench now skips
+  items without an id, logs how many were skipped
+  (bidi_rects_without_id, 0 skipped of 66 in run 4), and
+  continues.
 
 ## 2. Measured results
 
-All times are per call unless stated. Medians across the runs.
+All times are per call unless stated. Pooled medians across the
+three preserved logs (runs 1 to 3, 9 samples per 3-run step),
+with run 4 cited as confirmation where noted. Ranges are the
+spread across the preserved runs, not a single cherry-picked
+figure.
 
 | Step | Marionette | BiDi | Notes |
 | --- | --- | --- | --- |
-| One shot, all 66 rects | 0.019 s median (range 0.009 to 0.071) | 0.006 to 0.011 s | one evaluate, whole page |
-| Per element rect, 66 calls | 1.05 s total, about 16 ms each | not measured, same shape | 66 round trips, 55x slower than one shot |
-| Screenshot PNG 1280x900 | 0.039 s median, 62,400 bytes | not applicable | capture only, no locate step |
-| Session start | 2.65 to 3.49 s attach (warm browser) | 0.002 to 0.005 s session.new alone | BiDi session is nearly free |
-| 5 pointer clicks from one snapshot | 1.49 s total, about 0.30 s each | not measured | all 5 landed, 3 of 3 runs |
-| 5 DOM clicks (.click() in one evaluate) | 0.0047 s total | 0.0034 to 0.050 s for 3 clicks plus verify | DOM clicks skip the input pipeline |
-| Verify by one DOM read | 0.005 to 0.015 s | included above | reads the page's own click log |
-| a11y snapshot, whole page | 0.018 to 0.025 s repeat (0.051 s first) | not measured here | 83 nodes, 5,065 chars JSON |
-| a11y snapshot, one element | 0.0166 s | not measured here | role button, name Button 42 |
+| One shot, all 66 rects | 0.030 s pooled median (9 samples, range 0.0085 to 0.096; run medians 0.013, 0.071, 0.030) | run medians 0.006 to 0.054 s (pooled median 0.016 s, 9 samples, range 0.0048 to 0.124) | one evaluate, whole page; BiDi first evaluate runs warm, 0.023 to 0.124 s |
+| Per element rect, 66 calls | 1.63 s median total (range 0.70 to 1.79 s), 10.5 to 27.1 ms each (median 24.7 ms) | not measured, same shape | 66 round trips, 54x slower than one shot (1.63 / 0.030) |
+| Screenshot PNG 1280x814 | 0.037 s pooled median (9 samples, range 0.0245 to 0.085), 62,400 bytes | not applicable | capture only, no locate step |
+| Session start | 2.65 to 4.12 s attach (2.65, 3.49, 4.12) | 1.51 to 2.77 s session.new alone on a fresh browser; 0.014 s warm | BiDi session is nearly free only on a warm browser |
+| 5 pointer clicks from one snapshot | 1.49 s total median (1.448, 1.512, 1.489), about 0.30 s each | not measured | all 5 landed, 3 runs of the click step (two full, one partial) |
+| 5 DOM clicks (.click() in one evaluate) | 0.0022 to 0.0053 s total | 0.0034 to 0.050 s for 3 clicks plus verify | DOM clicks skip the input pipeline |
+| Verify by one DOM read | 0.002 to 0.015 s | included above | reads the page's own click log |
+| a11y snapshot, whole page | first 0.045 to 0.147 s, repeats 0.019 to 0.070 s | not measured here | 83 nodes, 4,641 chars compact JSON {role, name, children}, to_text 1,851 chars |
+| a11y snapshot, one element | 0.013 to 0.023 s | not measured here | role button, name Button 42 |
 
 Rect agreement, measured twice: BiDi rects against Marionette
 rects on the same fixture, max delta 5.7e-14 px (floating point
@@ -104,11 +146,12 @@ What the numbers mean for a task of, say, 20 actions on one page:
   round trip to locate the target (seconds, from the repo's own
   architecture notes) plus the click, plus a verification capture.
   The locate step dominates and it is a model call every time.
-- DOM path per action: one snapshot for the whole page (0.01 to
-  0.02 s), then each action is a DOM click (0.001 s) or a pointer
-  click at a known coordinate (0.30 s), verified by one DOM read
-  (0.01 s). The observation cost is paid once per page, not once
-  per action. This is the same structural win the E1 experiment
+- DOM path per action: one snapshot for the whole page (about
+  0.03 s pooled median), then each action is a DOM click
+  (0.001 s) or a pointer click at a known coordinate (0.30 s),
+  verified by one DOM read (0.002 to 0.015 s). The observation
+  cost is paid once per page, not once per action. This is the
+  same structural win the E1 experiment
   (docs/research/2026-11-21-e1-planning-vs-execution.md) measured
   for planning: observations are the expensive unit, so batch them.
 
@@ -120,16 +163,18 @@ Firefox's only bidirectional protocol since CDP was removed.
 Connect to ws://127.0.0.1:PORT/session with no Origin header,
 session.new with integer ids, script.evaluate for rects and DOM
 clicks, browsingContext.navigate, browsingContext.getTree.
-Measured here: session.new 0.002 to 0.005 s, one shot rects
-0.006 to 0.011 s for 66 elements, DOM clicks plus verify 0.0034
-to 0.050 s. The repo's own scripts/zen_cli.py already speaks this
-protocol to Zen 1.24.2b (verified 2026-11-18 on the laptop).
-Firefox 160 BiDi changes (MDN release notes, 2026-11-10):
-machine-readable CDDL for the moz: vendor extensions, a
-script.message context fix, and script.evaluate no longer clearing
-a pre-existing user activation flag when called with
-userActivation false. Nothing in the 160 notes breaks the rect
-or evaluate flows used here.
+Measured here: session.new 1.51 to 2.77 s on a fresh browser,
+0.014 s warm (run 4: 0.0144 s, run 5: 0.0143 s, redteam warm
+probe: 0.0137 s),
+one shot rects 0.006 to 0.054 s per run median for 66 elements,
+DOM clicks plus verify 0.0034 to 0.050 s. The repo's own
+scripts/zen_cli.py already speaks this protocol to Zen 1.24.2b
+(verified 2026-11-18 on the laptop). Firefox 160 BiDi changes
+(MDN release notes, 2026-11-10): machine-readable CDDL for the
+moz: vendor extensions, a script.message context fix, and
+script.evaluate no longer clearing a pre-existing user
+activation flag when called with userActivation false. Nothing
+in the 160 notes breaks the rect or evaluate flows used here.
 
 Limits, measured: BiDi DOM clicks are not real input. Some apps
 ignore DOM set values and synthetic clicks, exactly as the speed
@@ -140,12 +185,13 @@ that is what Marionette is for.
 ### 3.2 Marionette / Selenium Classic (real input fallback)
 
 Attach with geckodriver --connect-existing to a browser started
-with -marionette. Measured here: session attach 2.65 to 3.49 s
-on a warm browser, one shot rects 0.019 s median, per-element
-rects 16 ms each, pointer clicks 0.30 s each, screenshot PNG
-0.039 s median. The per-element cost is the trap: a naive loop
-over find_element plus .rect pays 66 round trips for what one
-evaluate does in 0.019 s. Always read rects in one shot.
+with -marionette. Measured here: session attach 2.65 to 4.12 s,
+one shot rects 0.030 s pooled median, per-element rects median
+24.7 ms each (range 10.5 to 27.1 ms), pointer clicks 0.30 s
+each, screenshot PNG 0.037 s pooled median. The per-element
+cost is the trap: a naive loop over find_element plus .rect
+pays 66 round trips for what one evaluate does in about
+0.03 s. Always read rects in one shot.
 
 Two Firefox command line facts the bench tripped over, both
 measured: --remote-debugging-port cannot be set through Selenium
@@ -170,31 +216,47 @@ Juggler. Any plan that assumes a CDP endpoint on Zen is wrong.
 
 Selenium 4.53, released 2026-11-17 (selenium.dev blog), adds
 accessibility snapshots: driver.accessibility_snapshot() and
-element.accessibility_snapshot() return the accessibility tree of
-a page or element, in both Classic and BiDi sessions. Measured
-here, Classic session on the same fixture: whole page snapshot
-0.018 to 0.025 s on repeat runs (0.051 s first), 83 nodes, 5,065
-chars of JSON; one element snapshot 0.0166 s. A button node
+element.accessibility_snapshot() return a computed accessibility
+tree of a page or element, in both Classic and BiDi sessions.
+Per the selenium.dev docs for the module, the snapshot "is
+computed in the page from the DOM, following WAI-ARIA, html-aam
+and accname; it is not the browser's own accessibility tree".
+Measured here, Classic session on the same fixture, bench steps
+a11y_snapshot_page and a11y_snapshot_one_element (fix-pass runs
+4 and 5, logs /tmp/dom_grounding_run4.log and
+/tmp/dom_grounding_run5.log): whole page snapshot first 0.147 s
+and 0.045 s, repeats 0.039 and 0.070 s (run 4) and 0.019 and
+0.020 s (run 5), 83 nodes, 4,641 chars of compact JSON
+(json.dumps of a recursive {role, name, children} projection),
+to_text 1,851 chars, in both runs. One element snapshot
+0.023 s (run 4) and 0.013 s (run 5). A button node
 carries role button, name Button 42, states, and a handle back to
 its WebElement, so the agent can pick by meaning and act by
 element. The node carries no coordinates in the Python binding
 (the AccessibilityNode attributes are children, description,
 element, name, role, states, to_text, url, value), so geometry
-still comes from the DOM rect. The pair is the design: a11y tree
-for what the element is, DOM rect for where it is. This matches
-the Playwright MCP approach (Glama comparison, November 2026):
-drive the browser from accessibility snapshots instead of
-screenshots.
+still comes from the DOM rect. The pair is the design: computed
+a11y snapshot for what the element is, DOM rect for where it
+is. This matches the Playwright MCP approach (Glama comparison,
+November 2026): drive the browser from accessibility snapshots
+instead of screenshots. The first version of this report gave
+a11y figures (0.018 to 0.025 s repeat, 0.051 s first, 5,065
+chars) from an unlogged interactive session with no code path
+in the bench; those figures are withdrawn and replaced by the
+measured ones above.
 
 AT-SPI is the same idea one level down, for native desktop apps
 rather than web pages. Every GTK or Qt app publishes its UI tree
 over D-Bus: role, name, states, and exact bounding boxes via the
 Component interface get_extents(). Recent work in the last 30
-days: Vercel Labs released agent-desktop on 2026-11-04
-(mlllm.io, 2026-11-04), a Rust tool that reads the OS
-accessibility tree (AT-SPI on Linux) and returns a JSON snapshot
-with refs, with STALE_REF and AMBIGUOUS_TARGET errors when the UI
-moves; and linux-use (techbytes.app, 2026-11-07) walks the AT-SPI
+days: Vercel Labs agent-desktop v1.0.0 shipped October 27/28,
+2026 (GitHub release page says October 28, changelog says
+October 27), publicly announced October 31, v1.1.0 landed
+November 3 (mlllm.io article dated 2026-11-04 is not the
+release date), a Rust tool that reads the OS accessibility
+tree (AT-SPI on Linux) and returns a JSON snapshot with refs,
+with STALE_REF and AMBIGUOUS_TARGET errors when the UI moves;
+and linux-use (techbytes.app, 2026-11-07) walks the AT-SPI
 tree and reports 28 interactive elements in 48 ms in the
 author's benchmark. On this VM AT-SPI is UNVERIFIED: no
 at-spi2-registryd, no at-spi-bus-launcher, pyatspi not
@@ -204,10 +266,13 @@ author reported, not measured here.
 
 ## 5. One observation, many actions, and verify without re-observing
 
-The pattern the bench proves end to end, 3 of 3 runs:
+The pattern the bench proves end to end, 3 runs of the click
+step (two full runs plus partial run 1, which completed the
+click step before crashing):
 
 1. One evaluate returns rects, tags, labels and visibility for
-   every interactive element on the page (0.01 to 0.02 s).
+   every interactive element on the page (about 0.03 s pooled
+   median).
 2. The agent picks targets by label and role from that snapshot,
    never by pixels in an image.
 3. Each action uses the snapshot coordinates: real pointer clicks
@@ -219,7 +284,7 @@ The pattern the bench proves end to end, 3 of 3 runs:
    button (CSS transform) and the button inside a scroller both
    landed, which is the point of using getBoundingClientRect: it
    already accounts for transforms and scroll.
-5. Verification is one cheap DOM read (0.005 to 0.015 s): read
+5. Verification is one cheap DOM read (0.002 to 0.015 s): read
    the page's own state (the fixture's click log and counter)
    instead of taking another screenshot. A stale snapshot is
    detected when the verify read disagrees with the expected
@@ -250,8 +315,9 @@ All web claims in this report come from sources dated in the last
 - Selenium 4.53 released 2026-11-17, accessibility snapshots
   for Python and JavaScript (selenium.dev blog, 2026-11-17).
   Docker Selenium 4.53.0 ships Firefox 160.0.1.
-- Vercel Labs agent-desktop released 2026-11-04, AT-SPI on
-  Linux, JSON snapshots with refs (mlllm.io, 2026-11-04).
+- Vercel Labs agent-desktop v1.0.0 shipped October 27/28, 2026,
+  announced October 31, v1.1.0 November 3 (GitHub release pages
+  and changelog; mlllm.io article dated 2026-11-04).
 - linux-use, AT-SPI tree walk, 28 elements in 48 ms, author
   benchmark (techbytes.app, 2026-11-07).
 - Foxbridge CDP to Firefox proxy, BiDi backend 62/62 tests on
@@ -289,15 +355,19 @@ mvanhorn/last30days-skill -g.
    role, rect, center and visibility for every interactive
    element. Never loop per-element .rect calls.
 2. Pair it with the Selenium 4.53 accessibility snapshot for
-   semantics: role and accessible name from the a11y tree,
+   semantics: role and accessible name from the computed snapshot,
    geometry from the DOM rect.
 3. Keep two drivers behind one interface: BiDi for grounding and
    DOM actions, Marionette for real pointer and key input. Never
    open both sessions on one browser instance; Firefox 160
    refuses the second with "Maximum number of active sessions",
-   reproduced three times here. Sequence them instead: ground
+   reproduced in all four bench runs. Sequence them instead: ground
    and plan on BiDi, hand over to a fresh Marionette session
    for real input, or stay on one protocol per browser instance.
+   Budget session start honestly: BiDi session.new costs about
+   1.5 to 2.8 s on a fresh browser (about 0.014 s warm),
+   Marionette attach 2.65 to 4.12 s, so the BiDi win is in rect
+   reads and DOM clicks, not in session start.
 4. Verify by DOM read, not by re-screenshot: after each action,
    one cheap evaluate reads the resulting state, and a fresh
    snapshot is taken only when the verify read disagrees.
@@ -326,3 +396,6 @@ mvanhorn/last30days-skill -g.
 - BiDi accessibility module (accessibility.getComputedLabel and
   friends): not measured here. The Selenium snapshot path in
   section 4 covers the same need for this repo.
+- Warm BiDi session.new (about 0.014 s) rests on three probes:
+  runs 4 and 5 of this bench (0.0144 s and 0.0143 s) and the
+  redteam warm probe (0.0137 s).
