@@ -103,15 +103,36 @@ class FakeCu:
                 'observation': str(self.state / 'a1b2c3d4e5f6.json'),
                 'image': str(self.state / 'a1b2c3d4e5f6.jpg'),
                 'monitor_box': [0, 0, 1920, 1200],
+                'scope': 'screen',
                 'created': time.time()}
         return meta
+
+    def observe(self, env, address, crop=None, max_width=960,
+                activate=False, persist=True, low_res=False):
+        # Window-scope capture (AMEND4 item 12): the fresh
+        # scope-matching after for a window observation.
+        self.observe_calls.append(('window', address))
+        return {'id': 'win-after-1',
+                'observation': str(self.state / 'win-after-1.json'),
+                'image': str(self.state / 'win-after-1.jpg'),
+                'monitor_box': [0, 0, 1920, 1200],
+                'scope': 'window',
+                'window': address,
+                'window_bounds': [2533, 914, 901, 1176],
+                'image_size': [901, 1176],
+                'region': [2533, 914, 901, 1176],
+                'created': time.time()}
 
     def desktop_act(self, env, meta, actions, observation_path=None,
                     **kwargs):
         self.desktop_calls.append((meta.get('id'), len(actions)))
         self.desktop_kwargs.append(kwargs)
+        # Production-faithful: desktop_act's after-capture matches
+        # the input observation's scope (AMEND4 item 12).
         return {'ok': True, 'completed': len(actions),
-                'after': str(self.state / 'after.json')}
+                'after': {'id': 'after-1',
+                          'observation': str(self.state / 'after.json'),
+                          'scope': meta.get('scope', 'screen')}}
 
     @contextlib.contextmanager
     def locked(self):
@@ -757,6 +778,21 @@ class TestRun(unittest.TestCase):
              'created': time.time() - age_s}))
         return str(path)
 
+    def _write_window_obs(self, obs_id, age_s=10, scope='window'):
+        # A production-shaped window (or screen) observation: fresh,
+        # with scope, image size, region, and window bounds.
+        path = Path(self.tmp.name) / ('obs-' + obs_id + '.json')
+        path.write_text(json.dumps(
+            {'id': obs_id, 'image': '/x.jpg',
+             'monitor_box': [0, 0, 1920, 1200],
+             'scope': scope,
+             'window': '0x55705383d420',
+             'window_bounds': [2533, 914, 901, 1176],
+             'image_size': [901, 1176],
+             'region': [2533, 914, 901, 1176],
+             'created': time.time() - age_s}))
+        return str(path)
+
     def test_stale_given_observation_refused_loudly_typing_batch(self):
         # G28 regression (CL1-MSG batch 2): a stale given window
         # observation must be refused LOUDLY before any session
@@ -929,6 +965,92 @@ class TestRun(unittest.TestCase):
         self.assertEqual(env['observation']['source'], 'given')
         self.assertNotIn('given_observation_rejected',
                          env['observation'])
+
+    def test_session_after_is_scope_matching_not_screen(self):
+        # AMEND4 item 12 (CL1-SWEEP regression): the envelope 'after'
+        # must be the scope-matching capture, not the screen capture.
+        # The session result carries desktop_act's window-scope after;
+        # the envelope must copy it, and 'after_screen' carries the
+        # full-monitor capture separately, for verification only.
+        obs = self._write_window_obs('win-obs-1')
+        code, env, _ = self._run(
+            [{'type': 'click', 'x': 250, 'y': 1037},
+             {'type': 'type', 'text': 'hi'}],
+            (0, json.dumps({'ok': True, 'completed': 2,
+                            'after': {'id': 'sess-after-1',
+                                      'observation': '/tmp/sess-after.json',
+                                      'scope': 'window'}}),
+             '', False, 0.5),
+            observation=obs)
+        self.assertEqual(code, 0)
+        self.assertTrue(env['ok'])
+        self.assertEqual(env['path'], 'session')
+        self.assertEqual(env['after']['id'], 'sess-after-1')
+        self.assertEqual(env['after']['observation'],
+                         '/tmp/sess-after.json')
+        self.assertEqual(env['after_screen']['id'], 'a1b2c3d4e5f6')
+        self.assertNotEqual(env['after']['id'],
+                            env['after_screen']['id'])
+
+    def test_fallback_after_is_scope_matching_not_screen(self):
+        # AMEND4 item 12: the same contract on the fallback path,
+        # where the direct desktop_act result carries the window-scope
+        # after. Reusing the screen capture as 'after' is the trap
+        # that made the CL1-SWEEP Enter step fail its preflight.
+        obs = self._write_window_obs('win-obs-2')
+        code, env, _ = self._run(
+            [{'type': 'click', 'x': 250, 'y': 1037},
+             {'type': 'type', 'text': 'hi'}],
+            (1, '{"ok": false, "error": "session guardian startup failed"}',
+             '', False, 0.4),
+            observation=obs)
+        self.assertEqual(code, 0)
+        self.assertTrue(env['ok'])
+        self.assertEqual(env['path'], 'fallback')
+        self.assertEqual(env['after']['id'], 'after-1')
+        self.assertEqual(env['after_screen']['id'], 'a1b2c3d4e5f6')
+        self.assertNotEqual(env['after']['id'],
+                            env['after_screen']['id'])
+
+    def test_after_without_result_after_captures_fresh_window(self):
+        # AMEND4 item 12: when neither path carries an after (the
+        # action result has none), the envelope 'after' is captured
+        # fresh in the input observation's scope, not from the screen.
+        obs = self._write_window_obs('win-obs-3')
+        self.fake_cu.desktop_act = mock.Mock(
+            return_value={'ok': True, 'completed': 2})
+        code, env, _ = self._run(
+            [{'type': 'click', 'x': 250, 'y': 1037},
+             {'type': 'type', 'text': 'hi'}],
+            (1, '{"ok": false, "error": "session guardian startup failed"}',
+             '', False, 0.4),
+            observation=obs)
+        self.assertEqual(code, 0)
+        self.assertTrue(env['ok'])
+        self.assertEqual(env['after']['id'], 'win-after-1')
+        self.assertEqual(env['after_screen']['id'], 'a1b2c3d4e5f6')
+
+    def test_screen_observation_key_batch_refused_before_overlay(self):
+        # AMEND4 item 12: a key batch given a screen-scope observation
+        # is refused BEFORE the overlay is acquired (and before any
+        # session attempt), instead of spending both and then failing
+        # the desktop_act scope preflight (the CL1-SWEEP Enter waste).
+        obs = self._write_window_obs('scr-obs-1', scope='screen')
+        path = _write_actions(self.tmp.name,
+                              [{'type': 'key', 'keys': ['Return']}])
+        with mock.patch.object(first_action, 'attempt_session') as sess:
+            buf = io.StringIO()
+            with contextlib.redirect_stdout(buf):
+                code = first_action.run(
+                    _args(path, observation=obs))
+        env = json.loads(buf.getvalue())
+        sess.assert_not_called()
+        self.assertEqual(code, 1)
+        self.assertFalse(env['ok'])
+        self.assertEqual(env['path'], 'refused')
+        self.assertIn('screen observations support pointer actions',
+                      env['error'])
+        self.assertEqual(self.fake_overlay.holders, {})
 
     def test_session_ime_state_trace_surfaced_in_envelope(self):
         # CLICK-PROBE Stage A: ime_state_trace was absent from act-now

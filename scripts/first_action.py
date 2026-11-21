@@ -325,6 +325,34 @@ def _read_given_observation(cu, observation_path, deadline_s):
     return meta, None
 
 
+def _scope_after(cu, env, meta, result_after, screen_meta):
+    """The scope-matching after-capture for the envelope.
+
+    AMEND4 item 12 (CL1-SWEEP): act-now used to capture its envelope
+    after-image with observe_screen regardless of the input scope,
+    overwriting desktop_act's scope-matching after-capture, so EVERY
+    act-now after-image was screen-scoped by construction and reusing
+    one for a key/type step always failed. This helper returns the
+    scope-matching capture: the action result's after when it is a
+    dict whose scope matches the input observation's scope
+    (desktop_act already captures in the input scope, so this costs
+    no extra capture); otherwise a fresh capture in the input scope
+    (a window observation re-observes its window). A screen-scope
+    input, or one with no scope field, reuses the screen capture,
+    which IS its scope-matching after. Returns a meta dict, or None
+    when no scope-matching capture is available.
+    """
+    if (isinstance(result_after, dict)
+            and result_after.get('scope') is not None
+            and result_after.get('scope') == meta.get('scope')):
+        return result_after
+    if meta.get('scope') == 'window' and meta.get('window'):
+        return cu.observe(env, meta['window'], crop=meta.get('crop'),
+                          max_width=meta.get('max_width') or 960,
+                          activate=False)
+    return screen_meta
+
+
 def _fresh_observation(cu, env, screen, observation_path,
                        deadline_s=DEFAULT_SESSION_DEADLINE_S):
     """Load a given observation when fresh, else capture a new one.
@@ -431,6 +459,7 @@ def run(args):
         'completed': 0,
         'observation': None,
         'after': None,
+        'after_screen': None,
         'after_error': None,
         'error': None,
         'release_error': None,
@@ -438,6 +467,7 @@ def run(args):
         'target_breached': None,
     }
     overlay_acquired = False
+    result_after = None
     try:
         try:
             actions = cu.read_json_file(args.actions)
@@ -459,6 +489,34 @@ def run(args):
                                     OBSERVATION_MAX_AGE_S))
             envelope['path'] = 'refused'
             return 1
+        # AMEND4 item 12: the scope check runs BEFORE the overlay.
+        # A key/type batch given a screen-scope observation can never
+        # run (desktop_act refuses it), so refuse now instead of
+        # spending the overlay acquire and the session attempt first
+        # (the CL1-SWEEP Enter failure wasted 998ms there). A
+        # rejected given observation is left to the G28 flow below,
+        # which names the substitute capture; a meta with no scope
+        # field is not refused here (older observations predate the
+        # scope field, and the session preflight still guards them).
+        has_keyboard = any(
+            isinstance(a, dict) and a.get('type') in ('key', 'type')
+            for a in actions)
+        if has_keyboard and args.observation:
+            given_meta, _given_rejected = _read_given_observation(
+                cu, args.observation, deadline)
+            if (isinstance(given_meta, dict)
+                    and given_meta.get('scope') == 'screen'):
+                message = ('screen observations support pointer '
+                           'actions only; use a window or accessibility '
+                           'target for typing (given observation %s is '
+                           'screen-scope)'
+                           % given_meta.get('id'))
+                envelope['observation'] = {
+                    'id': given_meta.get('id'), 'source': 'given'}
+                envelope['fallback_reason'] = message
+                envelope['error'] = message
+                envelope['path'] = 'refused'
+                return 1
         env = cu.environment()
         try:
             reply = acquire_overlay(agent, method, label=args.label,
@@ -544,6 +602,8 @@ def run(args):
         if isinstance(session_result, dict):
             envelope['type_verified'] = session_result.get('type_verified')
             envelope['error_code'] = session_result.get('error_code')
+            if isinstance(session_result.get('after'), dict):
+                result_after = session_result['after']
         if rc == 0 and not timed_out:
             # Council 1, A3: the exit code alone never proves success.
             # Require the stdout envelope to say ok, or to be the
@@ -642,6 +702,8 @@ def run(args):
                         envelope['type_verified'] = result.get(
                             'type_verified')
                         envelope['error_code'] = result.get('error_code')
+                        if isinstance(result.get('after'), dict):
+                            result_after = result['after']
                         if not envelope['ok']:
                             envelope['error'] = str(result.get('error', ''))
                     finally:
@@ -657,14 +719,36 @@ def run(args):
                     session_error or ('session timed out; not replayed'
                                       if timed_out else
                                       'session act failed; not replayed'))
+        # AMEND4 item 12: the envelope carries BOTH after captures.
+        # 'after' is the scope-matching capture (chainable: the next
+        # act-now may reuse it as its observation). It prefers the
+        # action result's after (desktop_act already captures in the
+        # input scope); when that is absent, a non-dict, or scoped
+        # differently, a fresh capture is taken in the input
+        # observation's scope. A screen-scope input needs no extra
+        # capture: the screen capture IS its scope-matching after.
+        # 'after_screen' is the full-monitor capture, for verification
+        # only, documented non-chainable: reusing a screen-scope
+        # after-image for a key/type step always fails (CL1-SWEEP).
+        screen_meta = None
         try:
-            after_meta = cu.observe_screen(env, args.screen, max_width=1920,
-                                           persist=True)
-            envelope['after'] = {'id': after_meta.get('id'),
-                                 'observation': str(
-                                     after_meta.get('observation'))}
+            screen_meta = cu.observe_screen(env, args.screen,
+                                            max_width=1920, persist=True)
+            envelope['after_screen'] = {
+                'id': screen_meta.get('id'),
+                'observation': str(screen_meta.get('observation'))}
         except Exception as exc:
             envelope['after_error'] = str(exc)[:400]
+        try:
+            after_meta = _scope_after(cu, env, meta, result_after,
+                                      screen_meta)
+            if after_meta is not None:
+                envelope['after'] = {
+                    'id': after_meta.get('id'),
+                    'observation': str(after_meta.get('observation'))}
+        except Exception as exc:
+            if envelope.get('after_error') is None:
+                envelope['after_error'] = str(exc)[:400]
         return 0 if envelope['ok'] else 1
     except Exception as exc:
         # Council 1, A2: never let an exception escape run(), or cu.py
