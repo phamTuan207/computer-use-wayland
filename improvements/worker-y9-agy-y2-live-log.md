@@ -251,3 +251,35 @@ Checked against the v2 exact marker after git fetch:
   still Y8b's: pre-flight A failed 18:55 on the diagnose-JS return
   bug, design v2.1 re-frozen 695efea, fresh pre-flight A after
   19:05:40).
+
+## Addendum 4 (19:1x, base-pin correction caught live, manifest built, ship verified in /tmp)
+
+- CORRECTION CAUGHT DURING THE FIX: C3's "HEAD's run_live.py is
+  byte-identical to 1e3901c" went stale after its check. Y11's
+  commit 91d3cd2 (wire live think-time + hit-rate metrics, +415/-66
+  on run_live.py) landed in HEAD's history, so HEAD's run_live.py
+  md5 is d8e2b14d..., not 84fa106c.... The runner still imports
+  against HEAD's version (IMPORT_OK on the VM), but Y11's base is
+  NOT live-proven, while 1e3901c ran 10/10 twice under Y4d. Decision:
+  ship run_live.py from 1e3901c ONLY (md5 84fa106c...), deliberately
+  NOT from HEAD. The three "byte-identical to 1e3901c" sentences
+  (runner docstring, plan section 7, this log) were corrected to
+  say so (commit 9564304). The re-review diff brief must state this
+  explicitly: the shipped base is 1e3901c, not HEAD.
+- Manifest built: tests/realistic/agy-y2-manifest.json, 26 files,
+  md5s computed mechanically from committed bytes (git show):
+  runner from 9564304, run_live.py from 1e3901c, all 24 suite files
+  from 30a72e5. SHIPPED.md regenerated next to the runner
+  (tests/realistic/SHIPPED.md) from the same data; the old root
+  SHIPPED-y9.md (b913d7d, "working tree (dirty)") stays as history.
+  Manifest md5 a051e77fc72897dbe1b2768b3935108f.
+- Ship-layout dry run in /tmp/y9-ship-check (exact shippable
+  combination, run_live.py from 1e3901c): py_compile OK, import OK
+  (10 tests), --verify-manifest OK (26 files, 0 mismatches, exit
+  0). Negative test: tampering one fixture byte makes the manifest
+  check refuse with the file named (exit 2); restoring passes
+  again. B3 enforcement is proven, not just present.
+- Laptop ship gate still to run: re-ship to /tmp/worker-y9-server
+  (1e3901c run_live.py + fixed runner + manifest + SHIPPED.md +
+  agy-y2/), then py_compile + import + --verify-manifest +
+  _hyprland_signature probe on the laptop.
