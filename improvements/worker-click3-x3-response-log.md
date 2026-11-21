@@ -281,7 +281,7 @@ Legend: ADOPT means do it as proposed. MODIFY means do it with the stated change
 |----|----------|---------|------------------------|
 | CB | All proposals | PENDING | Unchanged. Report not landed. Arrival is not a tie-breaker by default (RTD C1 caution agreed). |
 
-Verdict count in this response: ADOPT 15 rows (A2, A6, A7, A9, P1, P3, P4, P6, P8, P9, S0, D1, D2, D4, plus A3/A4 counted under MODIFY), MODIFY 13 rows (A1, A3, A4, A5, A8, A10, P2, P5, P7, S1, S2, S3, D3, D5, D6), REJECT 0, PENDING 1 track (CODEX-BREAKTHROUGH).
+Verdict count in this response: ADOPT 14 rows (A2, A6, A7, A9, P1, P3, P4, P6, P8, P9, S0, D1, D2, D4), MODIFY 15 rows (A1, A3, A4, A5, A8, A10, P2, P5, P7, S1, S2, S3, D3, D5, D6), REJECT 0, PENDING 1 track (CODEX-BREAKTHROUGH). Total 30 rows counted.
 
 ## 5. Revised order of work
 
