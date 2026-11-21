@@ -761,3 +761,49 @@ council 3 (5 steps, stdout and stderr recorded separately).
       re-run the live negative test, log the evidence.
 - Council-3.md still uncommitted (handoff not arrived yet); commit it the
   moment its handoff confirms delivery.
+
+## 22:49-22:51 - Owner correction: graph counts main branch, UTC day, not todolist-push
+- 22:49-22:51: owner correction: the GitHub graph only has 136 contributions
+  on 21/11 (tooltip), not 190 as counted. The 190 count used the wrong time
+  window: 190 was the +07 day (re-counted 22:51 as 201 commits + 1 PR), the
+  graph counts by UTC day (144 commits + 1 PR = 145 at 22:51). The graph only
+  counts commits on the DEFAULT branch (main); todolist-push has 290 commits
+  on UTC 21/11 but they do NOT count. Worker MERGE spawned to merge
+  todolist-push into main to push the graph count past 240.
+- F1 correction to my 22:49 log entry: the "190 was the todolist-push commit
+  count" line was wrong. 190 was the +07-day count. My todolist-push commits
+  do not count toward the graph until MERGE merges them into main. I keep
+  committing small on todolist-push (that is what MERGE will merge); I do NOT
+  merge to main myself, MERGE owns that.
+- 22:50-22:51: tab state changed again. Restarting Zen restored the 39
+  fixture tabs (owner's 22:50 screenshot); F3 is re-running the FULL cleanup
+  with the same keep-list (28 real tabs). The live slot is busy with F3's
+  cleanup. F1 does NO live driving in this round; round 2 is code fixes plus
+  VM and laptop tests only. The live activation and positive proof wait for
+  F3 to finish the cleanup and sign off, and the proof click coordinates must
+  be re-read from a fresh observe at that time.
+
+## 22:53 - Round 2 commit A: guard_reply rewrite (A3 + R4 + C3-2 + C3-8 + R11)
+- 22:53: rewrote scripts/cursor_theme.py guard_reply. Catches
+  (json.JSONDecodeError, UnicodeDecodeError) (A3, council 1 verified the
+  non-UTF8 socket bypass live). Distinguishes truncated or corrupt JSON
+  (reply starts with { or [, decoder position included when available) from
+  a missing backend (R4); the truncated case says the backend may still be
+  loaded and prescribes no activation. The message now leads with the cause
+  (C3-8) and the remedy names runnable commands with required arguments and
+  where the pinned values live (native/visuals.json library/abi/
+  profile_sha256), points at this log plan B for the exact commands, states
+  the order (glass first, then guard), and says plainly the fresh-login
+  loader only runs at the next login and cannot fix a running session (C3-2).
+  Added redact_text (R11): 32-hex tokens become [redacted], control
+  characters stripped, applied to the shown reply.
+- 22:53: updated tests/test_cursor_theme.py. The existing missing-backend
+  test regex now matches the new word order ('may not be loaded' before
+  'not valid JSON'). Added
+  test_guard_reply_distinguishes_truncated_json_non_utf8_and_redacts_tokens:
+  truncated JSON says 'truncated or corrupt JSON' and never 'may not be
+  loaded'; non-UTF8 bytes get the named error, not a raw UnicodeDecodeError;
+  a 32-hex token in the reply is redacted, never echoed.
+- 22:53: VM test evidence: python3 -m unittest tests.test_cursor_theme,
+  35 tests OK in 0.245s (34 + 1 new). Run once; the 10x green re-run per
+  C3-6 comes after the drop-case flake fix.

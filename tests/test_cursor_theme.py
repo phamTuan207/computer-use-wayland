@@ -217,11 +217,32 @@ class GuardProtocol(unittest.TestCase):
         # decoder, on both the str (hyprctl) and bytes (guard socket) paths.
         for raw in ('unknown request', b'unknown request\n', bytearray(b'not json\n')):
             with self.subTest(raw=repr(raw)[:30]):
-                with self.assertRaisesRegex(RuntimeError,'not valid JSON.*may not be loaded'):
+                with self.assertRaisesRegex(RuntimeError,'may not be loaded.*not valid JSON'):
                     cursor_theme.guard_reply(raw,token='a'*32)
         with patch.object(cursor_theme,'command',return_value='unknown request'):
             with self.assertRaisesRegex(RuntimeError,'may not be loaded'):
                 cursor_theme.check_guard({})
+
+    def test_guard_reply_distinguishes_truncated_json_non_utf8_and_redacts_tokens(self):
+        # A reply that starts with { or [ is a truncated or corrupt JSON
+        # reply from a loaded backend, not a missing one: it must say so
+        # and must not prescribe activation. Non-UTF8 socket bytes must get
+        # the named error, not a raw UnicodeDecodeError. A 32-hex token in
+        # the reply must be redacted, never echoed.
+        for raw in ('{"ok": true, "schema": 1,', '{"ok": true', '[1, 2,'):
+            with self.subTest(raw=raw):
+                with self.assertRaises(RuntimeError) as ctx:
+                    cursor_theme.guard_reply(raw,token='a'*32)
+                self.assertIn('truncated or corrupt JSON',str(ctx.exception))
+                self.assertNotIn('may not be loaded',str(ctx.exception))
+        for raw in (bytearray(b'\xff\xfe\n'), b'\xff\n'):
+            with self.subTest(raw=repr(raw)):
+                with self.assertRaisesRegex(RuntimeError,'may not be loaded'):
+                    cursor_theme.guard_reply(raw,token='a'*32)
+        with self.assertRaises(RuntimeError) as ctx:
+            cursor_theme.guard_reply('busy ' + 'a'*32,token='a'*32)
+        self.assertNotIn('a'*32,str(ctx.exception))
+        self.assertIn('[redacted]',str(ctx.exception))
 
     def test_check_guard_requires_idle_backend(self):
         with patch.object(cursor_theme,'command',return_value='{"ok":true,"schema":1,"active":false,"token":""}'):

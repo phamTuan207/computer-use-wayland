@@ -94,24 +94,43 @@ def snapshot(env):
             'hypr_size':profile['restore_size'],'agent_theme':profile['theme'],'agent_size':profile['size']}
 
 
+def redact_text(text):
+    # A truncated busy reply can carry a partial session token; never echo
+    # one, and never let control characters spoof terminal output.
+    text = re.sub(r'\b[0-9a-f]{32}\b', '[redacted]', text)
+    return re.sub(r'[\x00-\x1f\x7f]', '', text)
+
+
 def guard_reply(raw, **expected):
     if len(raw) > 4096:raise RuntimeError('cursor guard reply exceeds 4096 bytes')
     try:
         reply = json.loads(raw)
-    except json.JSONDecodeError as error:
+    except (json.JSONDecodeError, UnicodeDecodeError) as error:
         # Hyprland answers an unloaded plugin's custom command with
         # 'unknown request' and exit code 0, so the reply is plain text, not
         # JSON. Say so plainly instead of surfacing a bare JSON error. The
-        # reply is str from hyprctl and bytearray from the guard socket.
+        # reply is str from hyprctl and bytearray from the guard socket, and
+        # the socket path can carry non-UTF8 bytes, so UnicodeDecodeError is
+        # caught here too. A reply that starts with { or [ is a truncated or
+        # corrupt JSON reply from a loaded backend, not a missing one, so it
+        # gets a different message and no activation remedy.
         if isinstance(raw,(bytes,bytearray)):
             shown = bytes(raw).decode('utf-8','replace')
         else:
             shown = raw
+        shown = redact_text(shown.strip()[:120])
+        if shown.startswith(('{','[')):
+            position = getattr(error,'pos',None)
+            raise RuntimeError(
+                'cursor guard reply is truncated or corrupt JSON (got: ' + shown + ')' +
+                (' (decoder stopped at character ' + str(position) + ')' if position is not None else '') + '; '
+                'the backend may still be loaded, retry the session before reloading any plugin') from error
         raise RuntimeError(
-            'cursor guard reply is not valid JSON (got: ' + shown.strip()[:120] + '); '
-            'the cursor backend may not be loaded, load it with '
-            'scripts/activate-glass.py and scripts/activate-cursor-guard.py or '
-            're-run the fresh-login loader scripts/visuals.py') from error
+            'cursor backend may not be loaded (guard reply is not valid JSON, got: ' + shown + '); '
+            'load glass first, then the guard: scripts/activate-glass.py <library> --abi <abi> --profile-sha256 <profile-sha256> '
+            'and scripts/activate-cursor-guard.py <library> --abi <abi>, with the pinned values from native/visuals.json '
+            '(library, abi, profile_sha256); see improvements/worker-f1-guardian-fix-log.md plan B for the exact commands. '
+            'The fresh-login loader scripts/visuals.py only runs at the next login, it cannot fix a running session.') from error
     if (not isinstance(reply,dict) or reply.get('ok') is not True or
         type(reply.get('schema')) is not int or reply['schema'] != 1 or
         any(type(reply.get(key)) is not type(value) or reply[key] != value for key,value in expected.items())):
