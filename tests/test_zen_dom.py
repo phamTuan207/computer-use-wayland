@@ -516,25 +516,29 @@ class TestDomHelpers(unittest.TestCase):
                          [2749, 922])
 
     def test_viewport_origin_factor_two_geometry(self):
-        # Unit mixing (amend3 step 5): at monitor scale 2 the
-        # Hyprland window size is screen px (3726x2352) while
-        # mozInner and inner size are CSS px. viewport_origin
-        # converts the window size to CSS px before the geometry
-        # check, so the closure holds exactly and the absolute
-        # origin is window origin + mozInner * 2.
+        # Hyprland logical window size and the browser's outer size
+        # are both CSS-px sized. At factor 2 the origin offset is
+        # still scaled, while the dimensions pass through unchanged.
         session = self._session()
         session.dom_origin = [240, 8]
         session.dom_inner = [1615, 1160]
         session.dom_outer = [1863, 1176]
         session.dom_factor = 2
-        self.assertEqual(session.viewport_origin([2509, 914], [3726, 2352]),
+        self.assertEqual(session.viewport_origin([2509, 914], [1863, 1176]),
                          [2989, 930])
-        # And impossible CSS geometry is refused at factor 2: the
-        # window is only 1500x1000 CSS px, so mozInner + inner size
-        # cannot close inside it. Before the fix the check compared
-        # against the screen-px size and let this through.
+        self.assertEqual(session.viewport_origin([2509, 914]), [2989, 930])
+        # This window genuinely cannot contain mozInner + inner size.
         with self.assertRaises(ZenDomError):
-            session.viewport_origin([2509, 914], [3000, 2000])
+            session.viewport_origin([2509, 914], [1500, 1000])
+
+    def test_viewport_geometry_rejects_factor_forgotten_origin(self):
+        # The validator must verify the origin formula as well as
+        # containment. The unscaled origin lies inside the window but
+        # is not window origin + mozInner * factor.
+        with self.assertRaises(ZenDomError):
+            zen_dom.check_viewport_geometry(
+                [240, 8], [2749, 922], [2509, 914], [1863, 1176],
+                [1615, 1160], scale_factor=2)
 
     def test_viewport_origin_requires_window_origin(self):
         # Without the Hyprland window origin the raw pair cannot be

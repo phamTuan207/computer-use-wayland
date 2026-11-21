@@ -100,7 +100,8 @@ def _wait_http(url, timeout_s=30):
 
 
 def check_viewport_geometry(moz_inner, absolute_origin, window_origin,
-                            window_size, inner_size, monitor_box=None):
+                            window_size, inner_size, monitor_box=None,
+                            scale_factor=1):
     """Probe checks that replace the AT-SPI cross-check (C12).
 
     Returns the absolute viewport origin, or raises ZenDomError when
@@ -118,14 +119,11 @@ def check_viewport_geometry(moz_inner, absolute_origin, window_origin,
     - containment: the absolute origin lies inside the window rect,
       and inside the monitor box when one is given (this is the check
       that catches the old bug: raw mozInner treated as absolute).
-    All sizes are CSS px except the window origin and monitor box,
-    which are screen px; at the measured setup the factor between them
-    is 1. The caller applies the CSS-to-screen factor to mozInner
-    before computing the absolute origin, and converts the Hyprland
-    screen-px window size to CSS px (divide by the factor) before
-    calling this check: passing a screen-px size would make the
-    closure check loose and mis-scaled at factors other than 1
-    (amend3 step 5).
+    Window size and inner size are CSS/logical px. The caller applies
+    the CSS-to-screen factor to mozInner before computing the absolute
+    origin. Containment converts the absolute origin's offset from the
+    screen-px window origin back to CSS px before comparing it with the
+    window size.
     """
     def _pair(value, name):
         if (not isinstance(value, (list, tuple)) or len(value) != 2
@@ -139,6 +137,12 @@ def check_viewport_geometry(moz_inner, absolute_origin, window_origin,
     window = _pair(window_origin, 'window origin')
     size = _pair(window_size, 'window size')
     inner = _pair(inner_size, 'inner size')
+    if (isinstance(scale_factor, bool)
+            or not isinstance(scale_factor, (int, float))
+            or scale_factor <= 0):
+        raise ZenDomError('CSS-to-screen factor must be positive')
+    if any(not float(v).is_integer() for v in size):
+        raise ZenDomError('window size must use integer logical/CSS px')
     if any(v < 0 for v in moz):
         raise ZenDomError('mozInnerScreen is negative: %r' % (moz,))
     if size[0] <= 0 or size[1] <= 0 or inner[0] <= 0 or inner[1] <= 0:
@@ -152,12 +156,21 @@ def check_viewport_geometry(moz_inner, absolute_origin, window_origin,
             'window size %r (gaps %r, %r); the viewport origin cannot '
             'be window-relative with these numbers'
             % (moz, inner, size, right_gap, bottom_gap))
-    if not (window[0] <= absolute[0] < window[0] + size[0]
-            and window[1] <= absolute[1] < window[1] + size[1]):
+    expected = [window[0] + moz[0] * scale_factor,
+                window[1] + moz[1] * scale_factor]
+    if any(abs(absolute[i] - expected[i]) > 1e-6 for i in range(2)):
+        raise ZenDomError(
+            'absolute viewport origin %r does not match window origin %r '
+            '+ mozInner %r at factor %r'
+            % (absolute, window, moz, scale_factor))
+    relative_css = [(absolute[i] - window[i]) / scale_factor
+                    for i in range(2)]
+    if not (0 <= relative_css[0] < size[0]
+            and 0 <= relative_css[1] < size[1]):
         raise ZenDomError(
             'absolute viewport origin %r falls outside the window rect '
-            '%r size %r; the origin is not absolute screen coordinates'
-            % (absolute, window, size))
+            '%r size %r after CSS-to-screen conversion; the origin is '
+            'not absolute screen coordinates' % (absolute, window, size))
     if monitor_box is not None:
         if (not isinstance(monitor_box, (list, tuple))
                 or len(monitor_box) != 4
@@ -601,22 +614,11 @@ class ZenSession:
         self.last_scale_factor = factor
         absolute = [window_origin[0] + moz_inner[0] * factor,
                     window_origin[1] + moz_inner[1] * factor]
-        size = window_size if window_size is not None else [raw[7], raw[8]]
-        # Unit mixing (amend3 step 5): window_size arrives in screen
-        # px from Hyprland, while mozInner and inner size are CSS px.
-        # check_viewport_geometry takes the window size in CSS px
-        # (its dimension-closure check is a CSS-px check), so divide
-        # by the factor here; at factor 1 this is exact and changes
-        # nothing. Note the containment check then compares a screen
-        # absolute origin against a CSS-px window rect, which is
-        # conservative at factor > 1 (it can only refuse, never
-        # accept a wrong origin); the viewport origin sits
-        # mozInner * factor from the window origin, well inside that
-        # rect for any real sidebar geometry.
-        size_css = [size[0] / factor, size[1] / factor]
+        size_css = window_size if window_size is not None \
+            else [raw[7], raw[8]]
         return check_viewport_geometry(
             moz_inner, absolute, window_origin, size_css,
-            [raw[5], raw[6]], monitor_box)
+            [raw[5], raw[6]], monitor_box, scale_factor=factor)
 
     def locate_point(self, meta, selector):
         """Image point of one element's rect center, first-time-right.
