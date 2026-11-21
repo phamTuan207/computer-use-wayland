@@ -1224,11 +1224,12 @@ def _proven_no_body(diag):
     behind, but the fail-safe direction is INFRA, which earns a
     re-run, over fixture-unavailable, which loses it. The frozen
     base cannot be changed, so the split lives here in the caller,
-    not in diagnose_body. Y13g Amend 5: the check is `is not
-    None`, so an empty-string eval_error also reads as a transport
-    error, not proof; run_live only ever sets non-empty strings
-    or omits the key, so this is hardening only.)"""
-    if diag.get("eval_error") is not None:
+    not in diagnose_body. Y13g R9 (C2-11): the check is key
+    presence (`"eval_error" in diag`), so an empty-string OR an
+    explicitly-None eval_error also reads as a transport error,
+    not proof; run_live only ever sets non-empty strings or omits
+    the key, so this is hardening only.)"""
+    if "eval_error" in diag:
         return False
     snaps = diag.get("snapshots") or []
     if not snaps:
@@ -4440,9 +4441,10 @@ def preflight(base):
                 f"PREFLIGHT: live slot busy, runner process running: "
                 f"pid {_rpid}: {_flat}")
         # Y13f codex rule: a codex process driving a browser
-        # refuses; a plain codex process only warns (see the
-        # launcher, same rule). hand_drive_e1.py is already caught
-        # above as a runner script.
+        # refuses; a plain codex process is NOT refused here (the
+        # launcher warns on it; this runner has no warning branch).
+        # hand_drive_e1.py is already caught above as a runner
+        # script.
         if "codex" in _cmd.lower() and any(
                 m in _cmd.lower() for m in CODEX_REFUSE_MARKERS):
             raise RuntimeError(

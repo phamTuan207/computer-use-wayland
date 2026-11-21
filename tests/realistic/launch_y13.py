@@ -66,9 +66,11 @@ silently):
      any planted .py, and any non-prefix directory. An EMPTY
      __pycache__ dir is allowed (leftover from a probe whose
      .pyc files check 4 deleted).
-  6. Handover token /tmp/worker-y13-handover.json exists, is
-     fresh (< 4 h) and names its basis. (The runner's preflight
-     re-checks it.)
+  6. Handover token /tmp/worker-y13-handover.json: the launcher
+     WRITES a fresh per-run token at run start (after the go
+     order + marker pass, never at prep time) and then checks it
+     exists, is fresh (< 4 h) and names its basis. (The runner's
+     preflight re-checks it.)
   7. Runner-quiet process check: no python process executing a
      run_*.py / run-nested* / hand_drive_e1.py script, other than
      this launcher's own ancestry. The check parses argv for
@@ -941,6 +943,27 @@ def check_go():
               "order at run time.")
 
 
+def write_token():
+    """Write a fresh per-run handover token (C3-10). The plan and
+    the runner's comment both say the launcher writes it at run
+    start; no code did (the launcher only read it, so the token
+    was a hand-written file). Written AFTER check_go + check_marker
+    pass, so the token names a real go order, never a prep-time
+    stale one. Shape: {"asserted_at_unix": <unix seconds>,
+    "basis": "Y13 go order (Y13_GO=1) + Y6c marker confirmed"}.
+    The runner fingerprints it at first sight and refuses if it
+    changes mid-run."""
+    tok = {"asserted_at_unix": time.time(),
+           "basis": "Y13 go order (Y13_GO=1) + Y6c marker confirmed"}
+    try:
+        with open(TOKEN_PATH, "w", encoding="utf-8") as f:
+            json.dump(tok, f)
+    except OSError as exc:
+        _fail(f"cannot write handover token {TOKEN_PATH}: {exc}")
+    print(f"[launch_y13] handover token written "
+          f"(basis: {tok['basis']})", flush=True)
+
+
 def check_token():
     try:
         with open(TOKEN_PATH, "r", encoding="utf-8") as f:
@@ -1007,21 +1030,53 @@ def check_runner_quiet():
         _fail(f"live slot busy, runner process running: {detail}")
 
 
+def _normalize_remote_url(url):
+    """Normalize a git remote URL for the pin comparison (C2-6):
+    strip a trailing "/", strip an optional trailing ".git",
+    case-fold the scheme and host, and accept the SSH form
+    git@github.com:owner/repo(.git)? as the same repo as the
+    pinned https URL. A different host, owner, or repo name
+    still refuses; http (not https) still refuses."""
+    u = url.strip()
+    if u.endswith("/"):
+        u = u[:-1]
+    if u.endswith(".git"):
+        u = u[:-4]
+    if u.startswith("git@"):
+        try:
+            _host, _path = u[4:].split(":", 1)
+        except ValueError:
+            return u
+        return "https://" + _host.lower() + "/" + _path
+    if "://" in u:
+        _scheme, _rest = u.split("://", 1)
+        _host, _, _path = _rest.partition("/")
+        return _scheme.lower() + "://" + _host.lower() + "/" + _path
+    return u
+
+
 def _check_remote(repo):
     """Y13g Amend 1: pin the git remote. The marker check fetches
     from origin; a repo whose origin points at an attacker fork
     would let a forged marker pass (A5 case 6). Refuse unless
-    origin is the known repo remote. The marker is a
-    coordination signal among pushers, not authentication: it
-    orders completions vs aborts, it does not prove who pushed."""
-    remote = subprocess.run(
-        ["git", "-C", repo, "remote", "get-url", "origin"],
-        capture_output=True, text=True, timeout=30)
+    origin is the known repo remote (equivalent spellings of the
+    same repo accepted: SSH form, trailing slash, optional .git,
+    host case). The marker is a coordination signal among
+    pushers, not authentication: it orders completions vs aborts,
+    it does not prove who pushed."""
+    try:
+        remote = subprocess.run(
+            ["git", "-C", repo, "remote", "get-url", "origin"],
+            capture_output=True, text=True, timeout=30)
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        _fail(f"git remote get-url origin failed to run in {repo}: "
+              f"{exc}")
     if remote.returncode != 0:
         _fail(f"git remote get-url origin failed in {repo}: "
               f"{remote.stderr.strip()[:200]}")
     url = remote.stdout.strip()
-    if url != KNOWN_REMOTE_URL:
+    if _normalize_remote_url(url) != _normalize_remote_url(
+            KNOWN_REMOTE_URL):
         _fail(f"git remote origin is {url}, not the known repo "
               f"{KNOWN_REMOTE_URL}; refusing (attacker fork?)")
 
@@ -1051,17 +1106,24 @@ def check_marker(repo):
     if not os.path.isdir(os.path.join(repo, ".git")):
         _fail(f"--repo {repo} is not a git checkout")
     _check_remote(repo)
-    fetch = subprocess.run(
-        ["git", "-C", repo, "fetch", "origin", "todolist-push"],
-        capture_output=True, text=True, timeout=120)
+    try:
+        fetch = subprocess.run(
+            ["git", "-C", repo, "fetch", "origin", "todolist-push"],
+            capture_output=True, text=True, timeout=120)
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        _fail(f"git fetch failed to run in {repo}: {exc}")
     if fetch.returncode != 0:
         _fail(f"git fetch failed in {repo}: "
               f"{fetch.stderr.strip()[:200]}")
-    log = subprocess.run(
-        ["git", "-C", repo, "log", "origin/todolist-push",
-         "--format=%H%x09%s", "--",
-         "improvements/worker-y6c-*.md"],
-        capture_output=True, text=True, timeout=60)
+    try:
+        log = subprocess.run(
+            ["git", "-C", repo, "log", "origin/todolist-push",
+             "--topo-order",
+             "--format=%H%x09%s", "--",
+             "improvements/worker-y6c-*.md"],
+            capture_output=True, text=True, timeout=60)
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        _fail(f"git log failed to run in {repo}: {exc}")
     if log.returncode != 0:
         _fail(f"git log failed in {repo}: "
               f"{log.stderr.strip()[:200]}")
@@ -1100,8 +1162,10 @@ def check_manifest(repo):
     + older fixtures, which --verify-manifest alone accepts).
     Runs after check_marker, so origin/todolist-push is fresh.
     Y13g B2(3): also refuses any planted file in the ship dir (a
-    top-level .py not in the manifest, any .pyc, any symlink).
-    Y13g Amend 1: the remote is pinned (see _check_remote)."""
+    top-level .py not in the manifest, any non-entry .pyc, any
+    symlink). Entry .pyc files are exempt here: _check_entry_pyc
+    adjudicates them (R2). Y13g Amend 1: the remote is pinned
+    (see _check_remote)."""
     _check_remote(repo)
     ship_manifest = os.path.join(SHIP_DIR, "codex-y5-manifest.json")
     try:
@@ -1128,23 +1192,33 @@ def check_manifest(repo):
             if os.path.islink(full):
                 _fail(f"planted symlink in ship: {rel}")
             if name.endswith(".pyc"):
-                _fail(f"planted bytecode in ship: {rel}")
+                # Entry .pyc files go to _check_entry_pyc (R2);
+                # any other .pyc refuses here.
+                if (not rel_root and _is_entry_pyc_rel(rel)):
+                    continue
+                _fail(f"planted bytecode in ship: {rel}. Fix: "
+                      "delete the file, or re-stage the ship")
             if (not rel_root and name.endswith(".py")
                     and rel not in manifest_paths):
                 _fail(f"planted top-level .py in ship: {rel}")
     ship_md5 = hashlib.md5(ship_bytes).hexdigest()
-    show = subprocess.run(
-        ["git", "-C", repo, "show",
-         "origin/todolist-push:tests/realistic/codex-y5-manifest.json"],
-        capture_output=True, timeout=60)
+    try:
+        show = subprocess.run(
+            ["git", "-C", repo, "show",
+             "origin/todolist-push:tests/realistic/codex-y5-manifest.json"],
+            capture_output=True, timeout=60)
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        _fail(f"git show of the committed manifest failed to run: "
+              f"{exc}")
     if show.returncode != 0:
         _fail("git show of the committed manifest failed: "
               f"{show.stderr.decode('utf-8', 'replace').strip()[:200]}")
     committed_md5 = hashlib.md5(show.stdout).hexdigest()
     if ship_md5 != committed_md5:
         _fail(f"ship manifest md5 {ship_md5} != committed manifest "
-              f"md5 {committed_md5} (stale ship; re-stage from the "
-              f"committed bytes with the regen script --stage)")
+              f"md5 {committed_md5} (stale ship: commit + push the "
+              f"manifest first, then re-stage from the committed "
+              f"bytes with the regen script --stage)")
     print(f"[launch_y13] ship manifest md5 matches committed "
           f"({ship_md5})", flush=True)
 
@@ -1186,7 +1260,7 @@ def _check_entry_pyc():
         cache_dir = os.path.join(SHIP_DIR, "__pycache__")
         try:
             cached_names = [n for n in os.listdir(cache_dir)
-                            if n.startswith(stem + ".cpython-")
+                            if n.startswith(stem + ".")
                             and n.endswith(".pyc")]
         except OSError:
             continue
@@ -1211,9 +1285,12 @@ def _check_entry_pyc():
             code = ("import marshal, sys; src = open(sys.argv[1], "
                     "'rb').read(); sys.stdout.write(marshal.dumps("
                     "compile(src, sys.argv[1], 'exec')).hex())")
-            proc = subprocess.run(
-                ["python3", "-P", "-c", code, src],
-                capture_output=True, text=True, timeout=60)
+            try:
+                proc = subprocess.run(
+                    ["python3", "-P", "-c", code, src],
+                    capture_output=True, text=True, timeout=60)
+            except (OSError, subprocess.TimeoutExpired) as exc:
+                _fail(f"fresh compile of {src} failed to run: {exc}")
             if proc.returncode != 0:
                 _fail(f"fresh compile of {src} failed: "
                       f"{proc.stderr.strip()[:200]}")
@@ -1374,7 +1451,8 @@ def main(argv):
     if not os.path.isfile(os.path.join(SHIP_DIR,
                                        "run_codex_y5.py")):
         _fail(f"run_codex_y5.py not found in {SHIP_DIR}; run this "
-              f"launcher from the ship dir")
+              f"launcher from the ship dir, or point --ship-dir "
+              f"(or Y13_SHIP_DIR) at the ship dir")
     args = list(argv[1:])
     repo = os.environ.get("Y13_REPO")
     if "--repo" in args:
@@ -1393,6 +1471,7 @@ def main(argv):
         del args[i:i + 2]
     check_go()
     check_marker(repo)
+    write_token()
     check_manifest(repo)
     _check_entry_pyc()
     _scan_ship()
