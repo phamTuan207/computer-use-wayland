@@ -138,6 +138,87 @@ def dom_center(rect):
             round(values[1] + values[3] / 2)]
 
 
+def _rect_center_float(rect):
+    """Rect center as floats (no rounding: the image map keeps them)."""
+    values = [rect.get(key) for key in ('x', 'y', 'width', 'height')]
+    if any(isinstance(v, bool) or not isinstance(v, (int, float))
+           for v in values):
+        raise ValueError('rect needs numeric x, y, width, height')
+    if values[2] <= 0 or values[3] <= 0:
+        raise ValueError('rect must have positive width and height')
+    return [values[0] + values[2] / 2, values[1] + values[3] / 2]
+
+
+def dom_rect_to_screen_point(rect, viewport_origin):
+    """Screen point of a DOM rect center (viewport CSS px + origin).
+
+    The calibration_e2 proven chain: screen = viewport origin +
+    rect center, where the origin is mozInnerScreenX/Y (Firefox) or
+    the equivalent viewport origin. No screenshot is read: the DOM
+    rect is ground truth, so the point is right the first time.
+    """
+    center = _rect_center_float(rect)
+    if (not isinstance(viewport_origin, (list, tuple))
+            or len(viewport_origin) != 2
+            or any(isinstance(v, bool) or not isinstance(v, (int, float))
+                   for v in viewport_origin)):
+        raise ValueError('viewport_origin must be two numbers [x, y]')
+    return [viewport_origin[0] + center[0], viewport_origin[1] + center[1]]
+
+
+def dom_rect_to_image_point(meta, rect, viewport_origin):
+    """Image point of a DOM rect center for one observation meta.
+
+    Inverse of cu.image_point (same linear map, region origin and
+    image size from the meta): screen = origin + rect center, then
+    image = (screen - region origin) * image size / region size.
+    Raises ValueError when the meta lacks image_size/region, when the
+    region is degenerate, or when the point falls outside the
+    observed image (stale observation or moved window): fail closed,
+    never guess a point off the image.
+    """
+    if not isinstance(meta, dict):
+        raise ValueError('meta must be an object')
+    size = meta.get('image_size')
+    region = meta.get('region')
+    if (not isinstance(size, (list, tuple)) or len(size) != 2
+            or any(isinstance(v, bool) or not isinstance(v, (int, float))
+                   or v <= 0 for v in size)):
+        raise ValueError('meta needs a positive image_size [w, h]')
+    if (not isinstance(region, (list, tuple)) or len(region) != 4
+            or any(isinstance(v, bool) or not isinstance(v, (int, float))
+                   for v in region)
+            or region[2] <= 0 or region[3] <= 0):
+        raise ValueError('meta needs a region [x, y, w, h] with positive size')
+    sx, sy = dom_rect_to_screen_point(rect, viewport_origin)
+    iw, ih = size
+    rx, ry, rw, rh = region
+    ix = (sx - rx) * iw / rw
+    iy = (sy - ry) * ih / rh
+    if not (0 <= ix < iw and 0 <= iy < ih):
+        raise ValueError(
+            'DOM rect center maps outside the observed image: '
+            'screen (%s, %s) maps to image (%s, %s) of %sx%s'
+            % (sx, sy, ix, iy, iw, ih))
+    return [ix, iy]
+
+
+def point_in_rect(rect, x, y):
+    """True when the point lies inside a screen rect {x, y, w, h}.
+
+    The hit test for grounding accuracy: a rect-center click lands
+    inside the target element exactly when this is True.
+    """
+    if not isinstance(rect, dict):
+        raise ValueError('rect must be an object')
+    values = [rect.get(key) for key in ('x', 'y', 'width', 'height')]
+    if any(isinstance(v, bool) or not isinstance(v, (int, float))
+           for v in values):
+        raise ValueError('rect needs numeric x, y, width, height')
+    return (values[0] <= x <= values[0] + values[2]
+            and values[1] <= y <= values[1] + values[3])
+
+
 def matches_query(item_name, item_role, name=None, role=None):
     """Pruned-query match: name substring (case-insensitive), role substring."""
     if name is not None:
