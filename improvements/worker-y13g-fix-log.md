@@ -784,3 +784,90 @@ in the repo worktree and /tmp test copies.
   mouse (clone1 message actually entering the thread).
   CL1-MSG2 still running probe + retry in parallel.
   Still waiting: Redteam round-2 only (1/5 running).
+
+01:40 +07 22/11 (T+2h44m) REDTEAM ROUND-2 DONE, verdict BLOCK.
+  Paper + log commit 167a2e9
+  (improvements/worker-y13g-r2-redteam.md,
+  improvements/worker-y13g-r2-redteam-log.md), verified via
+  ls-remote (origin = 167a2e9 = local HEAD, shared worktree, no
+  rebase needed). Harnesses + logs under ~/workspace/y13g-r2-redteam/
+  (attack_a*.py, logs/). 510 probe cases total, every finding
+  live-proved. Findings F1-F7:
+  F1 (HIGH) the R2 launcher exemption is dead code.
+  check_manifest reads `if (not rel_root and
+  _is_entry_pyc_rel(rel))`, but an entry .pyc lives under
+  __pycache__/ so rel_root is truthy and the conjunction can
+  never be True. _check_entry_pyc is still unreachable on the
+  launcher path (C2-2/F2 NOT fixed); a legit entry .pyc (abspath,
+  relpath, or `import run_live`) is refused as "planted
+  bytecode" and bricks the launcher. A2L 7/7. THIRD independent
+  confirmation of the same root cause (Council 2 C2-1, redteam
+  commit 87a37aa "check_manifest exemption dead", now redteam
+  paper F1). My bug from 87eec47.
+  F2 (HIGH) PYTHONPATH plants execute in both entry points under
+  -P. 13 stdlib .py names + shlex.so fire in the runner, most
+  with rc 0 and `manifest_ok: true`; the plant also executes in
+  the real launcher before any gate, and passes through the
+  launcher exec into the runner; a delegating shlex shim runs
+  inside _is_runner_cmdline with correct verdicts. A6: 117
+  cases, 16 FAIL, all this channel. Ship-dir plants are all
+  clean, so the R1 defense holds only for the channel it
+  mentions. (Overlaps Council 2 C2-3, which proved the runner
+  channel with glob.py; redteam proves the launcher channel
+  and the exec passthrough too.)
+  F3 (MEDIUM) 20+ live-proved tokenizer evasions (`-m trace`,
+  `-m pdb -c continue`, `-c` sink aliases, `bash -c` sequences
+  with the runner second, wrappers xargs/setsid/watch/
+  systemd-run/su/unshare/chrt/ionice, renamed python3/bash,
+  unknown wrappers, `timeout 0x10`). A4 unit SPEC 80/80, EXTRA
+  48/49, FRESH 2/29; live dummy 59/59; live forms 28/31 + 5/6.
+  (Overlaps Council 2 C2-2; redteam adds -m pdb -c, bash -c
+  runner-second, more wrappers, timeout 0x10, renamed
+  python3/bash, unknown wrappers.)
+  F4 (MEDIUM) --topo-order does not order across merges; the
+  second parent's line sorts first regardless of dates. A forged
+  completion on a merged side branch beats a main-line abort; a
+  2020-dated abort on a merged side branch blocks a 2026
+  completion. A5 32/32. (NEW: no other round-2 reviewer caught
+  this; R7's --topo-order fix is insufficient across merges.)
+  F5 (MEDIUM) _check_entry_pyc refuses a legit relative-path
+  py_compile .pyc (co_filename mismatch). (Same root cause as
+  Verifier A3h + Council 1 F8.)
+  F6 (LOW-MEDIUM) the -m guard deletes a nested .pyc but not the
+  empty dir, which still bricks direct verify. (Same class as
+  Council 2 C2-5 + Council 3 C3-4.)
+  F7 (LOW) check_manifest does not flag a file named
+  __pycache__, a dir named like a .pyc, or nested .py; all
+  backstopped by _scan_ship.
+  Verified fixed in round 2: ship-dir .so/.py plants, all
+  symlink shapes (A7 36/36, C2-4 holds), R5 hash check (A9 7/7),
+  R9 _proven_no_body (A8 14/14), linear marker ordering,
+  remote-URL pin, _SHIP_FILES identical (29 files).
+  Caveats: an exec result displaying `plant_so.c` was flagged by
+  a runtime security notice; the redteam followed no instruction
+  in that output and built the .so plants only from the
+  pre-existing `plant_so.c` it authored earlier in this task,
+  per the task direction. Two harness bugs found and fixed
+  mid-run (missing `shlex` in the PYTHONPATH loop making three
+  controls vacuous in run1; wrong WANTED set + list cmdline in
+  the shlex-cmdline probe); run3/run4 are the clean records. No
+  other workers' files touched; no live Zen driven; no em/en
+  dashes in the paper or log.
+  ROUND-2 REVIEW ROUND COMPLETE: 5/5 done. Council 3 AMEND
+  (C3-1..C3-8), Council 1 AMEND (F1-F8), Council 2 AMEND
+  (C2-1..C2-10), Verifier FAIL 277/280 (A3h + A7-6b), Redteam
+  BLOCK (F1-F7). NEXT: round-3 adjudication over ALL findings
+  together, then the round-3 fix pass, then independent
+  re-verification. No live run until the round-3 fixes land and
+  re-verify.
+  FLEET NOTE (MEMORY.md 01:26, not my task): CL1-MSG2 DONE -
+  MESSAGE NOT SENT, offset REFUTED (3-point Brave/ws2 probe:
+  click accurate 0-1px; the ~50px down-left offset hypothesis
+  was wrong, JPEG cursor reading error +-30-50px). Send retry 2
+  ran 9/9 clean, session path, cursor on the input point
+  (250,1037), but text did not enter the input. New suspicion:
+  TYPE action has no effect on the Brave/Muse web app input
+  (contenteditable/composition), while typing works in
+  Zen/Firefox. COORD-CLICK has the evidence; CODEX-DEMO
+  comparing. Clone2 batch 6 DONE all 3 tasks, report ac989bf,
+  waiting for a new batch.
