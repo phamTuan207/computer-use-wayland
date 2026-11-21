@@ -954,6 +954,66 @@ omitted; append as it happens, never batch at the end)
   validation, whole-run budget recorded not enforced): recorded
   as follow-ups, none blocks the fix.
 
+## D1 re-check GO + error-file update (23:38-23:40)
+
+- D1 RE-CHECK LANDED 23:38 (improvements/worker-f2-rereview-d1.md,
+  commit 44baabf): GO, D1 fixed. Tests measured: test_overlay.py
+  12 tests pass, test_first_action.py 46 tests OK (0.580 s).
+  Both D1 repros re-run against the fixed code (isolated BASE,
+  /tmp/d1_rereview_repro.py): daemon failure and socket failure
+  each leave holders {} and prune []. Success path intact
+  (returns 0, visible true, label 'Muse via act-now', holder
+  present). hold() (overlay.py:572-585) shells out to
+  `overlay.py acquire`, i.e. the fixed cmd_acquire, so it is
+  covered. cmd_release no-daemon branch verified by run (removes
+  the holder, returns 0, holders {}). Daemon 'acquire' handler
+  has no try around add_holder + apply_holders, but a raise
+  there kills the daemon reply, the client sees EOF, and
+  cmd_acquire's except path removes the holder from the same
+  holders.json: no leak left by that path.
+- HARDENING NOTE (not a BLOCK, applied anyway): if _send_socket
+  returned a non-dict JSON value, `reply['label'] = label`
+  (outside the try) raises TypeError and the holder leaks
+  (demonstrated with a mocked socket; prune removes []). It is
+  unreachable through the real daemon (every reply is a dict
+  literal). Applied the re-checker's one-line follow-up:
+  moved the label assignment INSIDE the try (commit 4c32fc4)
+  + test (non-dict reply leaks nothing, commit 1c08f8a).
+  Suites: test_overlay.py 12 pass, test_first_action.py 46 OK.
+  Deployed: overlay.py md5 c7e815b544f07350effbd2d84e75c185 on
+  both sides; overlay status clean. Two observations recorded
+  as follow-ups, not fixed: pid-None remove_holder in the fix
+  over-removes a concurrent same-agent holder (pre-existing
+  remove_holder behavior on the pid-None CLI path); cmd_acquire
+  returns 0 on a visible False daemon reply (pre-existing).
+- ERROR FILE UPDATED 23:40 (~/workspace/cf26-upload/LOI-VA-GIAI-
+  PHAP-TOAN-BO-20261121.md, NOT in the repo, NOT committed):
+  H2 fix line replaced with council 3's exact wording (SỬA MỘT
+  PHẦN: the visible-silence slice fixed by act-now, think time
+  still open, cites J10; the old CHƯA XÁC ĐỊNH line kept marked
+  as replaced, H1 convention); G28 added (screen observation
+  cannot type, cu.py:1475, council 3 exact text); G29 added
+  (urlbar click, ZT-A owns the scenario fix, cross-referenced
+  to H3) WITH the redteam A7 downgrade (GIẢ THUYẾT, CHƯA CHỨNG
+  MINH, with the caveats and the 4 discriminating probes),
+  not council 3's original "hành vi UI của Zen" wording.
+  R6/J7 needed NO edit: the file already records the root
+  cause as solved (Y13r2 self-deleting shim, VMFIX c16dd4e).
+  Verified: 0 em dashes, 0 en dashes in the file, 756 lines.
+- FINAL STATE: council 1 BLOCK fixed + re-reviewed, council 2
+  AMEND fixed, council 3 AMEND fixed, redteam BLOCK fixed +
+  re-reviewed (BLOCK on D1 only, D1 fixed + re-checked GO +
+  hardening applied). act-now is the proven fallback path
+  (overlay 314-346 ms, batches 0.87-2.0 s, pill visually
+  confirmed runs 2-5); the session path is still untested live
+  (guardian fails every time, F1 owns it). ZT-00 as a scenario
+  is INCONCLUSIVE (urlbar-click hypothesis, step-7 set check
+  unverifiable, tab identities confounded by F3's concurrent
+  cleanup). The final test (independent Codeforces contest, 5
+  problems) runs LAST, after all other work; not started.
+  The deferred Zen-keybinds item is owned by Worker KB (done,
+  9e9b811).
+
 ### Raw rehearsal envelopes (council 2, Finding 3)
 Fetched from the laptop STATE/first-action-20261121.jsonl
 (/home/james/.cache/agent-computer-use/first-action-20261121.jsonl,
