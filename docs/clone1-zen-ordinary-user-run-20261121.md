@@ -1,4 +1,4 @@
-# Batch 6 task 1: ZT-01..ZT-10 blind run on local Firefox (COMPLETE, runs 02:40 to 03:14 +07)
+# Batch 6 task 1: ZT-01..ZT-10 blind run on local Firefox (COMPLETE, runs 02:40 to 03:14 +07; ZT-00 re-run 03:48 +07 after a runner fix, see the Runner fix note at the end)
 
 Report by batch 6 task 1 agent. Source file:
 improvements/zen-ordinary-user-tests-20261121.md at origin/todolist-push
@@ -27,7 +27,7 @@ no evidence and was not retried.
 
 | Scenario | Verdict | Evidence |
 |---|---|---|
-| ZT-00 gate | FAIL (adapted gate ran 02:40, 11,437 ms) | BiDi goto example.com PASS, title "Example Domain"; Ctrl+L NOT APPLICABLE headless (proved again); Ctrl+W on the last tab FAIL, tab count stayed 1 (F-B6-31) |
+| ZT-00 gate | PASS (re-run 03:48, 11,786 ms, after the runner fix below; first run 02:40 FAIL, 11,437 ms, preserved as ZT-00-0240-fail.json) | BiDi goto example.com PASS, title "Example Domain"; Ctrl+L NOT APPLICABLE headless (proved again); last-tab close now ends the browser session cleanly, closedBy "browser-closed", before 1, after 0 (F-B6-31, fixed) |
 | ZT-01 | ERROR, 35,572 ms | Wikipedia goto timed out at 30 s, F-B6-03 third occurrence |
 | ZT-02 | ERROR, 35,411 ms | Wikipedia goto timed out at 30 s, F-B6-03 fourth occurrence |
 | ZT-03 | ERROR, 36,047 ms | Wikipedia goto timed out at 30 s, F-B6-03 fifth occurrence |
@@ -39,9 +39,11 @@ no evidence and was not retried.
 | ZT-09 | ERROR, 47,917 ms | First tab loaded, second tab goto (Vietnam) threw NS_ERROR_NET_RESET, F-B6-32 |
 | ZT-10 | ERROR, 47,592 ms | First tab loaded, second tab goto (Vietnam) threw NS_ERROR_NET_RESET, F-B6-32 |
 
-Counts over ZT-00..ZT-10 (11 runs): PASS 0, FAIL 3 (ZT-00, ZT-06, ZT-07),
+Counts over ZT-00..ZT-10 (11 runs): PASS 1 (ZT-00, after the runner
+fix re-run), FAIL 2 (ZT-06, ZT-07),
 ERROR 6 (ZT-01, ZT-02, ZT-03, ZT-08, ZT-09, ZT-10), NOT APPLICABLE 2
-(ZT-04, ZT-05). No scenario passed as written. Nothing below claims a
+(ZT-04, ZT-05). No scenario passed as written except ZT-00 on its
+re-run after the runner fix. Nothing below claims a
 run that did not happen.
 
 ## Environment facts (verified this session)
@@ -352,6 +354,15 @@ identical first step. The scenarios were run as written and the
 verdicts above stand; whether to re-run them with a longer timeout
 or domcontentloaded is a decision for Muse, not a fix made here.
 
+Update 03:49 to 03:51 +07 (diag_wiki3.mjs, full log in
+~/workspace/b6t1-results/diag-wiki3.log, JSON in
+diag-wiki3.json): the first article reached domcontentloaded in
+22,764 ms with title "Ho Chi Minh City - Wikipedia" and readyState
+complete, and the load event followed 38 ms later. The 30 s load
+timeout did NOT reproduce on this run, but 22.8 s is inside the same
+24 to 31 s band, so the straddle stands: a 30 s limit passes or fails
+by luck.
+
 ### Finding F-B6-30: Ctrl+T does nothing in headless Firefox (proved)
 
 In diag_wiki.mjs at 03:09:52 +07, with one tab open, Ctrl+T left the
@@ -380,6 +391,17 @@ tabs) never reached their close steps because their navigations
 failed first. The ZT-00 FAIL verdict is driven by this artifact plus
 nothing else; the gate navigation itself passed.
 
+Update 03:48 +07 (runner fix, batch 6 redteam B1): closeActiveTab
+now closes the browser itself when the last tab cannot be closed by
+Ctrl+W or BiDi, returning closedBy "browser-closed", and the
+cleanup steps treat a cleanly ended session (0 tabs left) as
+restored. ZT-00 re-ran PASS in 11,786 ms with step 7-ctrl-w-close
+PASS (closedBy "browser-closed", before 1, after 0) and step
+7-title-set-restored PASS (before [""], after [], note recorded).
+The old FAIL run is preserved as ZT-00-0240-fail.json. The same fix
+applies to the other scenarios' cleanup steps, but no other scenario
+was re-run, so their verdicts stand.
+
 ### Finding F-B6-32: second Wikipedia navigation in one session fails with NS_ERROR_NET_RESET (proved three times)
 
 ZT-08, ZT-09 and ZT-10 each loaded the first Wikipedia article and
@@ -396,6 +418,21 @@ isolated: a diagnostic to repeat the two-navigation sequence
 execution timeout at 03:37 +07 with no output captured, so the
 repeat test produced no evidence. This finding stays open until that
 repeat test runs.
+
+Update 03:49 to 03:51 +07 (diag_wiki3.mjs, full log in
+~/workspace/b6t1-results/diag-wiki3.log, JSON in
+diag-wiki3.json, elapsed 119,923 ms): the repeat test REPRODUCED
+this finding. After the first article loaded, a second navigation
+to the same article with waitUntil load failed with the identical
+NS_ERROR_NET_RESET at 03:50:03 +07; a second navigation to Vietnam
+with domcontentloaded returned in 20,404 ms but landed on
+"Problem loading page" with readyState stuck at interactive for
+30 s; a third navigation to Southeast Asia failed again with
+NS_ERROR_NET_RESET at 03:51:14 +07. So the second navigation in a
+session is broken in two ways: BiDi throws NS_ERROR_NET_RESET, or
+it returns without throwing and the tab shows the error page. The
+cause is still not isolated (proxy connection reset is the working
+hypothesis, not a proof).
 
 ### Finding F-B6-14 (ZT-06): PDF viewer download button #download not found
 
@@ -431,6 +468,14 @@ ZT-10 had completed their first navigation. The failing URL in each
 error field is the evidence used above. This is a runner logging gap
 worth fixing before any re-run, so a re-run records partial steps.
 
+Update 03:48 +07 (runner fix): fixed in ~/workspace/b6t1/zt_run.mjs.
+The runner now keeps the live scenario context in a module variable
+and the main() catch handler copies its steps and findings into the
+ERROR result file with partialSteps true. Code-only: no scenario has
+thrown since the fix, so a live ERROR file with partial steps has not
+been produced yet; the fix is proven only by code reading, not by a
+run.
+
 ### What is still owed for this task
 
 1. Repeat diagnostic diag_wiki2.mjs (file exists at
@@ -438,14 +483,18 @@ worth fixing before any re-run, so a re-run records partial steps.
    third Wikipedia navigations in one session, PDF viewer button ids
    after a 5 s wait, httpbin select ArrowDown plus Enter. It was
    aborted at 03:37 +07 by the cron execution timeout with no output.
-   NOT RUN. It needs a fresh session and a run window longer than its
-   worst case (about 4 minutes).
+   PARTLY DONE by diag_wiki3.mjs at 03:49 to 03:51 +07: the second
+   and third Wikipedia navigations were repeated and F-B6-32 was
+   reproduced (see the F-B6-32 update above). Still NOT RUN: the PDF
+   viewer button ids after a 5 s wait and the httpbin select ArrowDown
+   plus Enter checks from diag_wiki2.
 2. Decision for Muse: re-run ZT-01, ZT-02, ZT-03, ZT-08, ZT-09, ZT-10
    with a longer goto timeout (the page takes 24 to 31 s) or with
-   waitUntil domcontentloaded, and fix the runner so ERROR result
-   files keep the steps recorded before the throw. No re-run was done
-   here, because changing the timeout would change the blind verdicts
-   and that call belongs to Muse.
+   waitUntil domcontentloaded. The runner fix so ERROR result files
+   keep the steps recorded before the throw is DONE (code-only, see
+   the note above). No scenario re-run was done here, because
+   changing the timeout would change the blind verdicts and that call
+   belongs to Muse.
 3. ZT-10 as written (Zen sidebar, owner-reported F-001) remains
    untested: its run failed on the Vietnam navigation before reaching
    any sidebar step, and stock Firefox has no Zen sidebar in any case.
@@ -465,6 +514,13 @@ worth fixing before any re-run, so a re-run records partial steps.
 - Diagnostics: ~/workspace/b6t1/diag_wiki.mjs (ran 03:09, full output
   in F-B6-29 and F-B6-30 above), ~/workspace/b6t1/diag_wiki2.mjs
   (syntax OK, started 03:15, aborted 03:37 by the cron timeout, no
-  output captured)
+  output captured), ~/workspace/b6t1/diag_wiki3.mjs (ran 03:49 to
+  03:51, log and JSON in ~/workspace/b6t1-results/diag-wiki3.log and
+  diag-wiki3.json, F-B6-32 reproduced)
+- Runner fix 03:48 +07 (batch 6 redteam B1, M4, M6): ~/workspace/b6t1/zt_run.mjs
+  (closeActiveTab browser-close fallback, titlesAfterClose helper,
+  ERROR steps kept via activeCtx, prepProfileCerts fail-fast, M4
+  comment corrected); ZT-00 re-run PASS, old FAIL run preserved as
+  ~/workspace/b6t1-results/ZT-00-0240-fail.json
 - Profiles: ~/workspace/b6t1-results/profiles/ZT-00..ZT-10,
   diag-wiki, diag-wiki2
