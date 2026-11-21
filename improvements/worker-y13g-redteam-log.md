@@ -94,3 +94,71 @@ outside the staged ship copies.
   correct; the live flow never reaches it. The SHIPPED.md/plan
   claim that the launcher "verifies the entry .pyc out-of-process
   and deletes it before exec" is not what happens on that path.
+- 00:21 +07 (T+16m): log commit cda2b66 pushed, ls-remote matches.
+- 00:21-00:23 +07 (T+16m to T+18m): A8 + A6. A8: _proven_no_body
+  12/12 (extracted from the new runner bytes), including
+  eval_error "" returning False (Amend 5 holds). A6: planted
+  stdlib .py, all 15 names, BOTH forms (-P and plain), 38/38,
+  marker NEVER prints. Every plant refuses rc 2 with kind
+  "planted-py". Nested codex-y5/re.py refuses both forms.
+  Launcher form for re/os/json refuses both forms, no marker.
+  My startup-shadowing hypothesis (planted os.py executes before
+  the scan in the plain form) was WRONG: CPython loads os from
+  stdlib before the script dir joins sys.path, so even the plain
+  form is safe. B2 is fixed more strongly than specified.
+  Harness: attack_a6.py + attack_a8.py (a6-run1.log).
+- 00:23-00:24 +07 (T+18m to T+19m): A9 (extra). Tampered run_live.py
+  (marker print prepended, manifest untouched) on the DIRECT path:
+  MARKER PRINTS, then _verify_manifest refuses rc 2 on the md5
+  mismatch (direct rc=2, confirmed without a pipe). The runner
+  imports run_live BEFORE verifying it, so any tampered manifest
+  .py executes on the direct path. Launcher layers (extracted
+  check_manifest + _check_entry_pyc + _scan_ship, real repo):
+  check_manifest PASSES (ship manifest md5 unchanged),
+  _check_entry_pyc passes (no .pyc), _scan_ship REFUSES rc 2 on
+  the run_live.py md5 mismatch, no marker. Production path safe;
+  direct path residual. _SHIP_PY path confusion
+  (codex-y5/run_live.py) refuses as planted-py, no marker.
+  Harness: attack_a9.py.
+- 00:24-00:25 +07 (T+19m to T+20m): A7. All 5 symlink shapes refuse
+  at ALL layers, 22/22 (control stripped-clean rc 0; layer 1
+  scan kind "symlink" on every shape; layer 2 stripped
+  _verify_manifest rc 2; layer 3 _scan_ship + check_manifest
+  refuse; mixed symlink + .pyc kind "mixed"). The corrected kind
+  label holds (Amend 3). Harness: attack_a7.py (a7-run1.log).
+- 00:25-00:26 +07 (T+20m to T+21m): A5. Synthetic bare remotes +
+  clones under ~/workspace/y13g-redteam/a5/ (own test remotes,
+  never the real branch). 13/13. Case 1 fake completion PASSES
+  BY DESIGN (exact subject + junk body/diff; documented
+  limitation, not a pass). Case 2 other-branch refuses. Case 3
+  forged old-date completion vs newer abort REFUSES by log order
+  (abort is the child with committer date 2020-01-01; old %ct
+  code would have PASSED). Case 4 completion-newer passes.
+  Cases 5-9 refuse (no marker, unpushed, harness, body-DONE,
+  non-git repo). A5-pin (real _check_remote, unpatched): attacker
+  fork remote (origin = local path) refuses; KNOWN URL passes;
+  KNOWN URL + trailing slash refuses (exact match); no origin
+  refuses. Amend 1 holds. Harness: attack_a5.py (a5-run1.log).
+  Two harness bugs of mine fixed during the run: MARKER_RE /
+  ABORT_RE missing from the extraction set (NameError), and the
+  case-2 setup (branch does not exist before its first commit).
+- 00:26-00:28 +07 (T+21m to T+23m): A4 LIVE. Sleeper binary
+  (cc-compiled) exec'd with fake argv vectors; real
+  check_runner_quiet extracted from the new launcher bytes.
+  24/24 in 1m51s, baseline CHECK-PASS (no fleet noise). All 14
+  CAUGHT cases refused naming exactly the dummy pid (-m forms,
+  -W/-X, renamed/symlink/extensionless md5 copies, flock -c,
+  sh -c, bash run-nested-wayland.sh, codex+geckodriver). All 6
+  fresh evasions passed the check entirely (refused=False,
+  empty output): -c os.system, -c runpy.run_path, -c exec
+  renamed, nice wrapper, -uW, -uX. Pass cases correct: plain
+  codex warns only, mycodex-backup silent (no warning), md5sum
+  mention passes. Harness: attack_a4_live.py (a4live-run1.log).
+- 00:28 +07 (T+23m): --ship-dir test. Launcher with --ship-dir
+  at a tampered ship (planted re.py) refuses rc 2 naming the
+  tampered dir, no marker; Y13_SHIP_DIR env form identical.
+  Real ship still verifies rc 0 afterwards (untouched). Amend 4
+  holds. Launcher never invokes -m: the only exec line is
+  `python3 -P run_codex_y5.py` (launch_y13.py line 1135); every
+  other "-m" hit is a comment or the tokenizer's own -m
+  detection. Dash sweep on my files: 0 em/en dashes.
