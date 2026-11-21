@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Canvas Drawing App</title>
+<style>
+body { font-family: sans-serif; margin: 20px; }
+#toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; }
+#toolbar button { padding: 8px 12px; }
+#toolbar button.active { outline: 3px solid #1565c0; }
+.swatch { width: 28px; height: 28px; border: 2px solid #333; padding: 0; cursor: pointer; }
+#board { border: 2px solid #333; background: #fff; touch-action: none; cursor: crosshair; display: block; }
+#info { margin-top: 8px; }
+#preview { margin-top: 8px; max-width: 320px; border: 1px solid #999; display: none; }
+</style>
+</head>
+<body>
+<h1>Canvas Drawing App</h1>
+<div id="toolbar">
+  <button class="swatch" data-color="#ff0000" style="background:#ff0000" title="red"></button>
+  <button class="swatch" data-color="#0000ff" style="background:#0000ff" title="blue"></button>
+  <button class="swatch" data-color="#008000" style="background:#008000" title="green"></button>
+  <button class="swatch" data-color="#000000" style="background:#000000" title="black"></button>
+  <label>Size <select id="brushSize">
+    <option value="4">4</option>
+    <option value="8" selected>8</option>
+    <option value="20">20</option>
+  </select></label>
+  <button id="penBtn" class="active">Pen</button>
+  <button id="eraserBtn">Eraser</button>
+  <button id="fillBtn">Fill background</button>
+  <button id="undoBtn">Undo</button>
+  <button id="redoBtn">Redo</button>
+  <button id="clearBtn">Clear</button>
+  <button id="saveBtn">Save PNG</button>
+  <a id="downloadLink" href="#" download="drawing.png">Download</a>
+</div>
+<canvas id="board" width="640" height="400"></canvas>
+<div id="info">Strokes: <span id="strokeCount">0</span></div>
+<img id="preview" alt="saved drawing preview">
+<script>
+const canvas = document.getElementById('board');
+const ctx = canvas.getContext('2d');
+let color = '#ff0000';
+let size = 8;
+let tool = 'pen';
+let strokes = [];
+let undone = [];
+let bg = '#ffffff';
+let drawing = false;
+let current = null;
+
+function redraw() {
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  for (const s of strokes) {
+    ctx.strokeStyle = s.color;
+    ctx.lineWidth = s.size;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ctx.moveTo(s.points[0][0], s.points[0][1]);
+    for (const p of s.points.slice(1)) ctx.lineTo(p[0], p[1]);
+    ctx.stroke();
+  }
+  document.getElementById('strokeCount').textContent = String(strokes.length);
+}
+function pos(e) {
+  const r = canvas.getBoundingClientRect();
+  return [e.clientX - r.left, e.clientY - r.top];
+}
+canvas.addEventListener('pointerdown', (e) => {
+  drawing = true;
+  current = { color: tool === 'eraser' ? bg : color, size: tool === 'eraser' ? 24 : size, points: [pos(e)] };
+  strokes.push(current);
+  undone = [];
+});
+canvas.addEventListener('pointermove', (e) => {
+  if (!drawing || !current) return;
+  current.points.push(pos(e));
+  redraw();
+});
+window.addEventListener('pointerup', () => { drawing = false; current = null; });
+
+document.querySelectorAll('.swatch').forEach((b) => b.addEventListener('click', () => {
+  color = b.dataset.color;
+  tool = 'pen';
+  document.getElementById('penBtn').classList.add('active');
+  document.getElementById('eraserBtn').classList.remove('active');
+}));
+document.getElementById('brushSize').addEventListener('change', (e) => { size = Number(e.target.value); });
+document.getElementById('penBtn').addEventListener('click', (e) => {
+  tool = 'pen';
+  e.target.classList.add('active');
+  document.getElementById('eraserBtn').classList.remove('active');
+});
+document.getElementById('eraserBtn').addEventListener('click', (e) => {
+  tool = 'eraser';
+  e.target.classList.add('active');
+  document.getElementById('penBtn').classList.remove('active');
+});
+document.getElementById('fillBtn').addEventListener('click', () => {
+  bg = color;
+  redraw();
+});
+document.getElementById('undoBtn').addEventListener('click', () => {
+  const s = strokes.pop();
+  if (s) undone.push(s);
+  redraw();
+});
+document.getElementById('redoBtn').addEventListener('click', () => {
+  const s = undone.pop();
+  if (s) strokes.push(s);
+  redraw();
+});
+document.getElementById('clearBtn').addEventListener('click', () => {
+  strokes = [];
+  undone = [];
+  bg = '#ffffff';
+  redraw();
+});
+document.getElementById('saveBtn').addEventListener('click', () => {
+  const url = canvas.toDataURL('image/png');
+  const img = document.getElementById('preview');
+  img.src = url;
+  img.style.display = 'block';
+  document.getElementById('downloadLink').href = url;
+});
+window.__pixel = (x, y) => {
+  const d = ctx.getImageData(x, y, 1, 1).data;
+  return [d[0], d[1], d[2], d[3]];
+};
+redraw();
+</script>
+</body>
+</html>

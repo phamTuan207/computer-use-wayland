@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Relief Application, PDF Form</title>
+<style>
+body { font-family: sans-serif; margin: 20px; background: #eee; }
+.page { background: #fff; border: 1px solid #999; max-width: 640px; margin: 0 auto 16px; padding: 24px; display: none; }
+.page.active { display: block; }
+h1 { font-size: 20px; } h2 { font-size: 16px; border-bottom: 1px solid #ccc; }
+label { display: block; margin: 10px 0 4px; }
+input, select { width: 100%; padding: 8px; box-sizing: border-box; }
+.error { color: #b00; font-size: 13px; min-height: 16px; }
+#errors { color: #b00; margin: 8px 0; }
+button { padding: 10px 18px; margin: 12px 8px 0 0; }
+#sig { border: 1px solid #333; background: #fff; touch-action: none; }
+#confirmation { display: none; background: #e8f5e9; border: 1px solid #4caf50; padding: 16px; max-width: 640px; margin: 0 auto; }
+</style>
+</head>
+<body>
+<h1 style="text-align:center">Community Relief Application (Form RF-1042)</h1>
+
+<div class="page active" id="page1">
+  <h2>Page 1 of 3: Applicant</h2>
+  <div id="errors1" class="error"></div>
+  <label>Full name <input id="fullName" type="text"></label>
+  <label>Date of birth <input id="dob" type="date" value="1990-05-14"></label>
+  <label>ID number, 9 digits <input id="idNum" type="text"></label>
+  <label>Email <input id="email" type="text"></label>
+  <button id="next1">Next page</button>
+</div>
+
+<div class="page" id="page2">
+  <h2>Page 2 of 3: Household</h2>
+  <div id="errors2" class="error"></div>
+  <label>Street address <input id="address" type="text"></label>
+  <label>City <input id="city" type="text"></label>
+  <label>Postcode <input id="postcode" type="text"></label>
+  <label>Monthly income <input id="income" type="text"></label>
+  <label>Dependents <input id="dependents" type="number" value="0" min="0"></label>
+  <label>Employment type
+    <select id="employment">
+      <option value="">Choose</option>
+      <option value="employed">Employed</option>
+      <option value="self-employed">Self-employed</option>
+      <option value="unemployed">Unemployed</option>
+    </select>
+  </label>
+  <label><input id="decl1" type="checkbox"> I confirm the details above are true.</label>
+  <label><input id="decl2" type="checkbox"> I agree to a follow-up contact.</label>
+  <button id="back2">Back</button>
+  <button id="next2">Next page</button>
+</div>
+
+<div class="page" id="page3">
+  <h2>Page 3 of 3: Signature</h2>
+  <div id="errors3" class="error"></div>
+  <p>Sign in the box below with the mouse.</p>
+  <canvas id="sig" width="560" height="140"></canvas>
+  <label>Date signed <input id="signedDate" type="date" value="2026-11-21"></label>
+  <button id="back3">Back</button>
+  <button id="submit">Submit application</button>
+</div>
+
+<div id="confirmation">
+  <h2>Application submitted</h2>
+  <p id="appId"></p>
+  <pre id="summary"></pre>
+  <button id="newApp">Start a new application</button>
+</div>
+
+<script>
+const pages = ['page1', 'page2', 'page3'];
+function show(i) {
+  pages.forEach((p, idx) => document.getElementById(p).classList.toggle('active', idx === i));
+}
+function appChecksum(s) {
+  let h = 0;
+  for (const c of s) h = ((h * 31) + c.charCodeAt(0)) >>> 0;
+  return h.toString(16).padStart(8, '0');
+}
+document.getElementById('next1').addEventListener('click', () => {
+  const errs = [];
+  if (!document.getElementById('fullName').value.trim()) errs.push('full name is required');
+  if (!/^\d{9}$/.test(document.getElementById('idNum').value.trim())) errs.push('ID number must be 9 digits');
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(document.getElementById('email').value.trim())) errs.push('email is not valid');
+  document.getElementById('errors1').textContent = errs.join('; ');
+  if (!errs.length) show(1);
+});
+document.getElementById('back2').addEventListener('click', () => show(0));
+document.getElementById('next2').addEventListener('click', () => {
+  const errs = [];
+  if (!document.getElementById('address').value.trim()) errs.push('address is required');
+  if (!document.getElementById('city').value.trim()) errs.push('city is required');
+  const income = Number(document.getElementById('income').value);
+  if (!Number.isFinite(income) || income <= 0) errs.push('income must be a number above 0');
+  if (!document.getElementById('employment').value) errs.push('employment type is required');
+  if (!document.getElementById('decl1').checked) errs.push('declaration 1 is required');
+  if (!document.getElementById('decl2').checked) errs.push('declaration 2 is required');
+  document.getElementById('errors2').textContent = errs.join('; ');
+  if (!errs.length) show(2);
+});
+document.getElementById('back3').addEventListener('click', () => show(1));
+
+const canvas = document.getElementById('sig');
+const ctx = canvas.getContext('2d');
+let drawing = false, signed = false;
+ctx.lineWidth = 2; ctx.strokeStyle = '#111';
+canvas.addEventListener('pointerdown', (e) => {
+  drawing = true;
+  ctx.beginPath();
+  const r = canvas.getBoundingClientRect();
+  ctx.moveTo(e.clientX - r.left, e.clientY - r.top);
+});
+canvas.addEventListener('pointermove', (e) => {
+  if (!drawing) return;
+  const r = canvas.getBoundingClientRect();
+  ctx.lineTo(e.clientX - r.left, e.clientY - r.top);
+  ctx.stroke();
+  signed = true;
+});
+window.addEventListener('pointerup', () => { drawing = false; });
+
+document.getElementById('submit').addEventListener('click', () => {
+  const errs = [];
+  if (!signed) errs.push('signature is required');
+  if (!document.getElementById('signedDate').value) errs.push('date signed is required');
+  document.getElementById('errors3').textContent = errs.join('; ');
+  if (errs.length) return;
+  const data = {
+    name: document.getElementById('fullName').value.trim(),
+    dob: document.getElementById('dob').value,
+    id: document.getElementById('idNum').value.trim(),
+    email: document.getElementById('email').value.trim(),
+    address: document.getElementById('address').value.trim(),
+    city: document.getElementById('city').value.trim(),
+    postcode: document.getElementById('postcode').value.trim(),
+    income: document.getElementById('income').value.trim(),
+    dependents: document.getElementById('dependents').value,
+    employment: document.getElementById('employment').value,
+  };
+  const id = 'RF-' + appChecksum(data.name + data.id).slice(0, 6).toUpperCase();
+  document.getElementById('appId').textContent = 'Application ID: ' + id;
+  document.getElementById('summary').textContent = JSON.stringify(data, null, 2);
+  document.getElementById('confirmation').style.display = 'block';
+  pages.forEach((p) => document.getElementById(p).classList.remove('active'));
+  localStorage.setItem('rf1042', JSON.stringify({ appId: id, ...data }));
+});
+document.getElementById('newApp').addEventListener('click', () => {
+  localStorage.removeItem('rf1042');
+  document.getElementById('confirmation').style.display = 'none';
+  document.querySelectorAll('input[type=text], input[type=date]').forEach((i) => { i.value = ''; });
+  document.getElementById('dependents').value = '0';
+  document.getElementById('employment').value = '';
+  document.getElementById('decl1').checked = false;
+  document.getElementById('decl2').checked = false;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  signed = false;
+  show(0);
+});
+const saved = localStorage.getItem('rf1042');
+if (saved) {
+  const d = JSON.parse(saved);
+  document.getElementById('appId').textContent = 'Application ID: ' + d.appId;
+  document.getElementById('summary').textContent = JSON.stringify(d, null, 2);
+  document.getElementById('confirmation').style.display = 'block';
+  pages.forEach((p) => document.getElementById(p).classList.remove('active'));
+}
+</script>
+</body>
+</html>

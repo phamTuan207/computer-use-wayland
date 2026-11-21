@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Corner Shop Checkout</title>
+<style>
+body { font-family: sans-serif; margin: 20px; }
+#app { display: flex; gap: 16px; max-width: 900px; margin: 0 auto; }
+#catalog { flex: 1; }
+#cart { width: 340px; border: 1px solid #999; padding: 12px; height: fit-content; }
+.product { border: 1px solid #ccc; padding: 10px; margin: 6px 0; display: flex; justify-content: space-between; align-items: center; }
+.product .price { font-weight: bold; }
+button { padding: 8px 12px; }
+#cartItems li { margin: 6px 0; }
+#cartItems button { padding: 2px 8px; margin-left: 4px; }
+#checkoutForm { display: none; border: 1px solid #999; padding: 12px; margin-top: 12px; }
+#checkoutForm label { display: block; margin: 8px 0 4px; }
+#checkoutForm input { width: 100%; padding: 8px; box-sizing: border-box; }
+#formErrors { color: #b00; }
+#confirmation { display: none; background: #e8f5e9; border: 1px solid #4caf50; padding: 12px; margin-top: 12px; }
+#orders li { margin: 4px 0; }
+</style>
+</head>
+<body>
+<h1>Corner Shop</h1>
+<div id="app">
+  <div id="catalog">
+    <label>Search <input id="search" type="text" placeholder="search products"></label>
+    <label>Category
+      <select id="category">
+        <option value="">All</option>
+        <option value="electronics">Electronics</option>
+        <option value="home">Home</option>
+        <option value="office">Office</option>
+      </select>
+    </label>
+    <div id="products"></div>
+  </div>
+  <div id="cart">
+    <h2>Cart (<span id="cartCount">0</span>)</h2>
+    <ul id="cartItems"></ul>
+    <p>Subtotal: $<span id="subtotal">0.00</span></p>
+    <p>Discount: -$<span id="discount">0.00</span></p>
+    <p>Shipping: $<span id="shipping">0.00</span></p>
+    <p><strong>Total: $<span id="total">0.00</span></strong></p>
+    <label>Coupon <input id="coupon" type="text"></label>
+    <button id="applyCoupon">Apply coupon</button>
+    <span id="couponMsg"></span>
+    <br><br>
+    <button id="checkoutBtn">Checkout</button>
+    <button id="clearCartBtn">Clear cart</button>
+    <div id="checkoutForm">
+      <h3>Checkout</h3>
+      <div id="formErrors"></div>
+      <label>Name <input id="coName" type="text"></label>
+      <label>Address <input id="coAddress" type="text"></label>
+      <label>City <input id="coCity" type="text"></label>
+      <label>Postcode <input id="coPostcode" type="text"></label>
+      <label>Card number, 16 digits <input id="coCard" type="text"></label>
+      <label>Expiry (MM/YY) <input id="coExpiry" type="text"></label>
+      <label>CVC, 3 digits <input id="coCvc" type="text"></label>
+      <button id="placeOrderBtn">Place order</button>
+    </div>
+    <div id="confirmation">
+      <h3>Order placed</h3>
+      <p id="orderNumber"></p>
+      <p id="orderTotal"></p>
+    </div>
+    <h3>Order history</h3>
+    <ul id="orders"></ul>
+  </div>
+</div>
+<script>
+const PRODUCTS = [
+  { id: 'p1', name: 'Desk Lamp', price: 24.99, cat: 'home' },
+  { id: 'p2', name: 'Headphones', price: 59.99, cat: 'electronics' },
+  { id: 'p3', name: 'Keyboard', price: 49.99, cat: 'electronics' },
+  { id: 'p4', name: 'Notebook', price: 9.99, cat: 'office' },
+  { id: 'p5', name: 'Coffee Mug', price: 12.50, cat: 'home' },
+  { id: 'p6', name: 'Monitor', price: 129.99, cat: 'electronics' },
+  { id: 'p7', name: 'Pen Set', price: 7.99, cat: 'office' },
+  { id: 'p8', name: 'Office Chair', price: 89.99, cat: 'home' },
+];
+let cart = {};
+try { cart = JSON.parse(localStorage.getItem('cart') || '{}'); } catch { cart = {}; }
+let coupon = localStorage.getItem('coupon') || '';
+let orders = [];
+try { orders = JSON.parse(localStorage.getItem('orders') || '[]'); } catch { orders = []; }
+
+function money(n) { return n.toFixed(2); }
+function renderProducts() {
+  const q = (document.getElementById('search').value || '').toLowerCase();
+  const cat = document.getElementById('category').value;
+  const box = document.getElementById('products');
+  box.innerHTML = '';
+  for (const p of PRODUCTS) {
+    if (q && !p.name.toLowerCase().includes(q)) continue;
+    if (cat && p.cat !== cat) continue;
+    const d = document.createElement('div');
+    d.className = 'product';
+    d.dataset.id = p.id;
+    d.innerHTML = '<span><strong></strong> <span class="cat"></span></span><span class="price"></span> ';
+    d.querySelector('strong').textContent = p.name;
+    d.querySelector('.cat').textContent = '(' + p.cat + ')';
+    d.querySelector('.price').textContent = '$' + money(p.price);
+    const b = document.createElement('button');
+    b.textContent = 'Add to cart';
+    b.className = 'addBtn';
+    b.addEventListener('click', () => {
+      cart[p.id] = (cart[p.id] || 0) + 1;
+      saveCart(); renderCart();
+    });
+    d.appendChild(b);
+    box.appendChild(d);
+  }
+}
+function totals() {
+  let sub = 0;
+  for (const [id, qty] of Object.entries(cart)) {
+    sub += PRODUCTS.find((p) => p.id === id).price * qty;
+  }
+  sub = Math.round(sub * 100) / 100;
+  let disc = 0;
+  if (coupon === 'SAVE10') disc = Math.round(sub * 0.10 * 100) / 100;
+  let ship = 0;
+  if (sub > 0) ship = (sub - disc >= 150 || coupon === 'FREESHIP') ? 0 : 5;
+  const total = Math.round((sub - disc + ship) * 100) / 100;
+  return { sub, disc, ship, total };
+}
+function renderCart() {
+  const ul = document.getElementById('cartItems');
+  ul.innerHTML = '';
+  let count = 0;
+  for (const [id, qty] of Object.entries(cart)) {
+    const p = PRODUCTS.find((x) => x.id === id);
+    count += qty;
+    const li = document.createElement('li');
+    li.dataset.id = id;
+    li.innerHTML = '<strong></strong> x <span class="qty"></span> = $<span class="line"></span> ';
+    li.querySelector('strong').textContent = p.name;
+    li.querySelector('.qty').textContent = qty;
+    li.querySelector('.line').textContent = money(p.price * qty);
+    const minus = document.createElement('button');
+    minus.textContent = '-';
+    minus.className = 'minusBtn';
+    minus.addEventListener('click', () => {
+      cart[id] -= 1;
+      if (cart[id] <= 0) delete cart[id];
+      saveCart(); renderCart();
+    });
+    const plus = document.createElement('button');
+    plus.textContent = '+';
+    plus.className = 'plusBtn';
+    plus.addEventListener('click', () => { cart[id] += 1; saveCart(); renderCart(); });
+    const rem = document.createElement('button');
+    rem.textContent = 'Remove';
+    rem.className = 'removeBtn';
+    rem.addEventListener('click', () => { delete cart[id]; saveCart(); renderCart(); });
+    li.appendChild(minus);
+    li.appendChild(plus);
+    li.appendChild(rem);
+    ul.appendChild(li);
+  }
+  const t = totals();
+  document.getElementById('cartCount').textContent = String(count);
+  document.getElementById('subtotal').textContent = money(t.sub);
+  document.getElementById('discount').textContent = money(t.disc);
+  document.getElementById('shipping').textContent = money(t.ship);
+  document.getElementById('total').textContent = money(t.total);
+}
+function saveCart() {
+  localStorage.setItem('cart', JSON.stringify(cart));
+  localStorage.setItem('coupon', coupon);
+  localStorage.setItem('orders', JSON.stringify(orders));
+}
+function renderOrders() {
+  const ul = document.getElementById('orders');
+  ul.innerHTML = '';
+  for (const o of orders) {
+    const li = document.createElement('li');
+    li.textContent = o.num + ' - $' + money(o.total) + ' - ' + o.items + ' items';
+    ul.appendChild(li);
+  }
+}
+document.getElementById('search').addEventListener('input', renderProducts);
+document.getElementById('category').addEventListener('change', renderProducts);
+document.getElementById('applyCoupon').addEventListener('click', () => {
+  const code = document.getElementById('coupon').value.trim().toUpperCase();
+  const msg = document.getElementById('couponMsg');
+  if (code === 'SAVE10' || code === 'FREESHIP') {
+    coupon = code;
+    msg.textContent = 'Coupon applied: ' + code;
+  } else {
+    msg.textContent = 'Invalid coupon code';
+  }
+  saveCart(); renderCart();
+});
+document.getElementById('checkoutBtn').addEventListener('click', () => {
+  document.getElementById('checkoutForm').style.display = 'block';
+});
+document.getElementById('clearCartBtn').addEventListener('click', () => {
+  cart = {};
+  coupon = '';
+  saveCart(); renderCart();
+});
+document.getElementById('placeOrderBtn').addEventListener('click', () => {
+  const errs = [];
+  if (!document.getElementById('coName').value.trim()) errs.push('name is required');
+  if (!document.getElementById('coAddress').value.trim()) errs.push('address is required');
+  if (!document.getElementById('coCity').value.trim()) errs.push('city is required');
+  if (!document.getElementById('coPostcode').value.trim()) errs.push('postcode is required');
+  if (!/^\d{16}$/.test(document.getElementById('coCard').value.replace(/\s/g, ''))) errs.push('card number must be 16 digits');
+  if (!/^\d{2}\/\d{2}$/.test(document.getElementById('coExpiry').value.trim())) errs.push('expiry must be MM/YY');
+  if (!/^\d{3}$/.test(document.getElementById('coCvc').value.trim())) errs.push('CVC must be 3 digits');
+  const t = totals();
+  if (t.total <= 0 || Object.keys(cart).length === 0) errs.push('cart is empty');
+  document.getElementById('formErrors').textContent = errs.join('; ');
+  if (errs.length) return;
+  const itemCount = Object.values(cart).reduce((a, b) => a + b, 0);
+  const num = 'ORD-' + String(100000 + Math.round(t.total * 100));
+  orders.push({ num, total: t.total, items: itemCount });
+  document.getElementById('orderNumber').textContent = 'Order number: ' + num;
+  document.getElementById('orderTotal').textContent = 'Charged: $' + money(t.total);
+  document.getElementById('confirmation').style.display = 'block';
+  cart = {};
+  coupon = '';
+  saveCart(); renderCart(); renderOrders();
+});
+if (coupon) document.getElementById('coupon').value = coupon;
+renderProducts();
+renderCart();
+renderOrders();
+</script>
+</body>
+</html>

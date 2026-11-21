@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>City Directions</title>
+<style>
+body { font-family: sans-serif; margin: 20px; }
+#app { display: flex; gap: 16px; max-width: 900px; margin: 0 auto; }
+#mapWrap { flex: 1; }
+svg { border: 1px solid #999; background: #e8f5e9; width: 100%; height: auto; }
+#panel { width: 340px; }
+label { display: block; margin: 8px 0 4px; }
+select, button { padding: 8px; }
+button { margin: 8px 4px 0 0; }
+#summary { background: #e3f2fd; padding: 10px; margin-top: 10px; }
+#summary:empty { display: none; }
+#error { color: #b00; min-height: 18px; }
+#savedList li { margin: 4px 0; }
+.mode label { display: inline; margin-right: 10px; }
+</style>
+</head>
+<body>
+<h1>City Directions</h1>
+<div id="app">
+  <div id="mapWrap">
+    <svg id="map" viewBox="0 0 400 320">
+      <g id="grid"></g>
+      <g id="places"></g>
+      <path id="routeLine" d="" stroke="#1565c0" stroke-width="4" fill="none"></path>
+    </svg>
+  </div>
+  <div id="panel">
+    <label>From <select id="origin"></select></label>
+    <label>To <select id="dest"></select></label>
+    <button id="swapBtn">Swap</button>
+    <div class="mode">
+      <label><input type="radio" name="mode" value="walk" checked> Walk</label>
+      <label><input type="radio" name="mode" value="bike"> Bike</label>
+      <label><input type="radio" name="mode" value="drive"> Drive</label>
+    </div>
+    <label><input type="checkbox" id="avoidTolls"> Avoid tolls</label>
+    <label><input type="checkbox" id="altRoute"> Alternate route (vertical first)</label>
+    <button id="goBtn">Get directions</button>
+    <div id="error"></div>
+    <div id="summary"></div>
+    <ol id="steps"></ol>
+    <button id="saveBtn">Save route</button>
+    <h3>Saved routes</h3>
+    <ul id="savedList"></ul>
+  </div>
+</div>
+<script>
+const PLACES = [
+  { id: 'home', name: 'Home', x: 0, y: 0 },
+  { id: 'office', name: 'Office', x: 6, y: 4 },
+  { id: 'station', name: 'Station', x: 2, y: 6 },
+  { id: 'market', name: 'Market', x: 5, y: 1 },
+  { id: 'park', name: 'Park', x: 1, y: 3 },
+  { id: 'library', name: 'Library', x: 4, y: 5 },
+];
+const STREETS = ['First St', 'Second St', 'Third St', 'Fourth St', 'Fifth St', 'Sixth St', 'Seventh St'];
+const AVENUES = ['1st Ave', '2nd Ave', '3rd Ave', '4th Ave', '5th Ave', '6th Ave', '7th Ave'];
+const SPEEDS = { walk: 5, bike: 15, drive: 40 };
+const CELL = 50;
+
+const grid = document.getElementById('grid');
+for (let i = 0; i <= 7; i++) {
+  const h = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+  h.setAttribute('x1', 10); h.setAttribute('y1', 10 + i * CELL);
+  h.setAttribute('x2', 390); h.setAttribute('y2', 10 + i * CELL);
+  h.setAttribute('stroke', '#bbb');
+  grid.appendChild(h);
+  const v = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+  v.setAttribute('x1', 10 + i * CELL); v.setAttribute('y1', 10);
+  v.setAttribute('x2', 10 + i * CELL); v.setAttribute('y2', 310);
+  v.setAttribute('stroke', '#bbb');
+  grid.appendChild(v);
+}
+const placesG = document.getElementById('places');
+for (const p of PLACES) {
+  const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+  c.setAttribute('cx', 10 + p.x * CELL);
+  c.setAttribute('cy', 10 + p.y * CELL);
+  c.setAttribute('r', 7);
+  c.setAttribute('fill', '#d32f2f');
+  placesG.appendChild(c);
+  const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+  t.setAttribute('x', 10 + p.x * CELL + 10);
+  t.setAttribute('y', 10 + p.y * CELL + 4);
+  t.setAttribute('font-size', '12');
+  t.textContent = p.name;
+  placesG.appendChild(t);
+}
+
+const originSel = document.getElementById('origin');
+const destSel = document.getElementById('dest');
+for (const p of PLACES) {
+  originSel.add(new Option(p.name, p.id));
+  destSel.add(new Option(p.name, p.id));
+}
+originSel.value = 'home';
+destSel.value = 'office';
+
+let saved = [];
+let lastRoute = null;
+
+function crossesRiver(a, b) {
+  return (a.x < 4 && b.x >= 4) || (a.x >= 4 && b.x < 4);
+}
+function computeRoute() {
+  const a = PLACES.find((p) => p.id === originSel.value);
+  const b = PLACES.find((p) => p.id === destSel.value);
+  const err = document.getElementById('error');
+  err.textContent = '';
+  if (a.id === b.id) {
+    err.textContent = 'Choose two different places.';
+    document.getElementById('summary').textContent = '';
+    document.getElementById('steps').innerHTML = '';
+    document.getElementById('routeLine').setAttribute('d', '');
+    lastRoute = null;
+    return;
+  }
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const avoid = document.getElementById('avoidTolls').checked;
+  const alt = document.getElementById('altRoute').checked;
+  const river = crossesRiver(a, b) && b.y >= 3;
+  let blocks = Math.abs(dx) + Math.abs(dy);
+  let toll = river && !avoid;
+  if (river && avoid) blocks += 2;
+  const km = blocks * 0.4;
+  const mode = document.querySelector('input[name="mode"]:checked').value;
+  const mins = Math.max(1, Math.round((km / SPEEDS[mode]) * 60));
+  const steps = [];
+  steps.push('Start at ' + a.name + '.');
+  const hDir = dx >= 0 ? 'east' : 'west';
+  const vDir = dy >= 0 ? 'south' : 'north';
+  const hStep = 'Head ' + hDir + ' on ' + STREETS[a.y] + ' for ' + Math.abs(dx) + ' blocks.';
+  const vStep = 'Head ' + vDir + ' on ' + AVENUES[alt ? a.x : b.x] + ' for ' + Math.abs(dy) + ' blocks.';
+  if (Math.abs(dx) === 0) steps.push(vStep);
+  else if (Math.abs(dy) === 0) steps.push(hStep);
+  else if (alt) { steps.push(vStep); steps.push(hStep.replace(STREETS[a.y], STREETS[b.y])); }
+  else { steps.push(hStep); steps.push(vStep); }
+  if (toll) steps.push('Cross the toll bridge (toll applies).');
+  if (river && avoid) steps.push('Take the North Bridge detour to avoid the toll.');
+  steps.push('Arrive at ' + b.name + '.');
+  const x1 = 10 + a.x * CELL, y1 = 10 + a.y * CELL;
+  const x2 = 10 + b.x * CELL, y2 = 10 + b.y * CELL;
+  const midX = alt ? x1 : x2;
+  const midY = alt ? y2 : y1;
+  document.getElementById('routeLine').setAttribute(
+    'd', 'M ' + x1 + ' ' + y1 + ' L ' + midX + ' ' + midY + ' L ' + x2 + ' ' + y2);
+  document.getElementById('summary').innerHTML =
+    '<strong>' + a.name + ' to ' + b.name + '</strong><br>' +
+    'Distance: ' + km.toFixed(1) + ' km<br>Time by ' + mode + ': ' + mins + ' min' +
+    (toll ? '<br>Toll: yes' : '<br>Toll: no');
+  const ol = document.getElementById('steps');
+  ol.innerHTML = '';
+  steps.forEach((s) => {
+    const li = document.createElement('li');
+    li.textContent = s;
+    ol.appendChild(li);
+  });
+  lastRoute = { from: a.id, to: b.id, mode, km, mins, toll };
+}
+document.getElementById('goBtn').addEventListener('click', computeRoute);
+document.getElementById('swapBtn').addEventListener('click', () => {
+  const tmp = originSel.value;
+  originSel.value = destSel.value;
+  destSel.value = tmp;
+});
+document.getElementById('saveBtn').addEventListener('click', () => {
+  if (!lastRoute) return;
+  saved.push(lastRoute);
+  renderSaved();
+});
+function renderSaved() {
+  const ul = document.getElementById('savedList');
+  ul.innerHTML = '';
+  saved.forEach((r, i) => {
+    const li = document.createElement('li');
+    const name = (PLACES.find((p) => p.id === r.from).name + ' to ' +
+      PLACES.find((p) => p.id === r.to).name + ' (' + r.mode + ', ' + r.km.toFixed(1) + ' km)');
+    li.textContent = name + ' ';
+    const load = document.createElement('button');
+    load.textContent = 'Load';
+    load.className = 'loadBtn';
+    load.addEventListener('click', () => {
+      originSel.value = r.from;
+      destSel.value = r.to;
+      document.querySelector('input[name="mode"][value="' + r.mode + '"]').checked = true;
+      computeRoute();
+    });
+    const del = document.createElement('button');
+    del.textContent = 'Delete';
+    del.className = 'delBtn';
+    del.addEventListener('click', () => { saved.splice(i, 1); renderSaved(); });
+    li.appendChild(load);
+    li.appendChild(del);
+    ul.appendChild(li);
+  });
+}
+computeRoute();
+</script>
+</body>
+</html>

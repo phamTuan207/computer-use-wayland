@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Keyboard Navigation Demo</title>
+<style>
+body { font-family: sans-serif; margin: 20px; }
+:focus { outline: 3px solid #1565c0; outline-offset: 2px; }
+#skip { position: absolute; left: -9999px; top: 0; background: #fff; padding: 8px; }
+#skip:focus { left: 0; }
+#menu { display: none; border: 1px solid #999; padding: 4px; width: 200px; }
+#menu.open { display: block; }
+#menu button { display: block; width: 100%; text-align: left; padding: 6px; }
+#listbox { border: 1px solid #999; width: 300px; padding: 0; list-style: none; }
+#listbox li { padding: 8px; }
+#listbox li.active { background: #bbdefb; }
+#dlg, #searchOverlay { display: none; border: 2px solid #333; padding: 16px; background: #fff; max-width: 400px; margin-top: 12px; }
+#dlg.open, #searchOverlay.open { display: block; }
+.result { color: #1b5e20; margin: 6px 0; }
+label { display: block; margin: 8px 0 4px; }
+input, select { padding: 8px; width: 300px; box-sizing: border-box; }
+button { padding: 8px 14px; }
+</style>
+</head>
+<body>
+<a id="skip" href="#main">Skip to main content</a>
+<header>
+  <nav>
+    <button id="menuBtn" aria-haspopup="true" aria-expanded="false">Sections</button>
+    <div id="menu" role="menu">
+      <button role="menuitem" data-section="Guide">Guide</button>
+      <button role="menuitem" data-section="Reference">Reference</button>
+      <button role="menuitem" data-section="Examples">Examples</button>
+    </div>
+  </nav>
+</header>
+<main id="main" tabindex="-1">
+  <h1>Keyboard Navigation Demo</h1>
+  <p id="navResult" class="result"></p>
+
+  <h2>Choose a topic (arrow keys, Enter to pick)</h2>
+  <ul id="listbox" role="listbox" tabindex="0" aria-activedescendant="topic-0">
+    <li id="topic-0" role="option">Getting started</li>
+    <li id="topic-1" role="option">Shortcuts</li>
+    <li id="topic-2" role="option">Forms</li>
+    <li id="topic-3" role="option">Dialogs</li>
+    <li id="topic-4" role="option">Search</li>
+  </ul>
+  <p id="listResult" class="result"></p>
+
+  <h2>Contact form</h2>
+  <label>Name <input id="name" type="text"></label>
+  <label>Email <input id="email" type="text"></label>
+  <label>Country
+    <select id="country">
+      <option value="">Choose</option>
+      <option value="vn">Vietnam</option>
+      <option value="uk">United Kingdom</option>
+      <option value="us">United States</option>
+    </select>
+  </label>
+  <button id="submitBtn">Send</button>
+  <p id="formResult" class="result"></p>
+
+  <h2>Dialog</h2>
+  <button id="openDlg">Open feedback dialog</button>
+  <div id="dlg" role="dialog" aria-label="Feedback">
+    <label>Feedback <input id="dlgInput" type="text"></label>
+    <button id="dlgClose">Close</button>
+    <p id="dlgResult" class="result"></p>
+  </div>
+
+  <h2>Search (Ctrl+K)</h2>
+  <p>Press Ctrl+K anywhere to open search.</p>
+  <div id="searchOverlay">
+    <label>Search <input id="searchInput" type="text"></label>
+    <ul id="searchList">
+      <li data-name="apple pie">apple pie</li>
+      <li data-name="banana bread">banana bread</li>
+      <li data-name="carrot cake">carrot cake</li>
+      <li data-name="apple crumble">apple crumble</li>
+      <li data-name="berry tart">berry tart</li>
+    </ul>
+    <p id="searchResult" class="result"></p>
+  </div>
+</main>
+<script>
+const menuBtn = document.getElementById('menuBtn');
+const menu = document.getElementById('menu');
+const menuItems = [...menu.querySelectorAll('button')];
+menuBtn.addEventListener('click', () => {
+  const open = !menu.classList.contains('open');
+  menu.classList.toggle('open', open);
+  menuBtn.setAttribute('aria-expanded', String(open));
+  if (open) menuItems[0].focus();
+});
+menu.addEventListener('keydown', (e) => {
+  const i = menuItems.indexOf(document.activeElement);
+  if (e.key === 'ArrowDown') { e.preventDefault(); menuItems[(i + 1) % menuItems.length].focus(); }
+  if (e.key === 'ArrowUp') { e.preventDefault(); menuItems[(i - 1 + menuItems.length) % menuItems.length].focus(); }
+  if (e.key === 'Escape') { menu.classList.remove('open'); menuBtn.focus(); }
+});
+menuItems.forEach((b) => b.addEventListener('click', () => {
+  document.getElementById('navResult').textContent = 'Section: ' + b.dataset.section;
+  menu.classList.remove('open');
+  menuBtn.focus();
+}));
+
+const listbox = document.getElementById('listbox');
+const topics = [...listbox.querySelectorAll('li')];
+let active = 0;
+function markActive() {
+  topics.forEach((t, i) => t.classList.toggle('active', i === active));
+  listbox.setAttribute('aria-activedescendant', topics[active].id);
+}
+markActive();
+listbox.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowDown') { e.preventDefault(); active = Math.min(active + 1, topics.length - 1); markActive(); }
+  if (e.key === 'ArrowUp') { e.preventDefault(); active = Math.max(active - 1, 0); markActive(); }
+  if (e.key === 'Enter') {
+    document.getElementById('listResult').textContent = 'Topic: ' + topics[active].textContent;
+  }
+});
+
+document.getElementById('submitBtn').addEventListener('click', () => {
+  const name = document.getElementById('name').value.trim();
+  const email = document.getElementById('email').value.trim();
+  const country = document.getElementById('country').value;
+  const el = document.getElementById('formResult');
+  if (!name || !email.includes('@') || !country) { el.textContent = 'Form incomplete'; return; }
+  el.textContent = 'Sent: ' + name + ' (' + email + ') from ' + country;
+});
+
+const dlg = document.getElementById('dlg');
+const openDlg = document.getElementById('openDlg');
+openDlg.addEventListener('click', () => {
+  dlg.classList.add('open');
+  document.getElementById('dlgInput').focus();
+});
+function closeDlg() {
+  dlg.classList.remove('open');
+  document.getElementById('dlgResult').textContent =
+    'Feedback: ' + document.getElementById('dlgInput').value;
+  openDlg.focus();
+}
+document.getElementById('dlgClose').addEventListener('click', closeDlg);
+dlg.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeDlg();
+  if (e.key === 'Tab') {
+    e.preventDefault();
+    const f = document.activeElement.id === 'dlgInput'
+      ? document.getElementById('dlgClose') : document.getElementById('dlgInput');
+    f.focus();
+  }
+});
+
+const overlay = document.getElementById('searchOverlay');
+const searchInput = document.getElementById('searchInput');
+const searchItems = [...document.querySelectorAll('#searchList li')];
+document.addEventListener('keydown', (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+    e.preventDefault();
+    overlay.classList.add('open');
+    searchInput.focus();
+  }
+  if (e.key === 'Escape' && overlay.classList.contains('open')) {
+    overlay.classList.remove('open');
+  }
+});
+searchInput.addEventListener('input', () => {
+  const q = searchInput.value.toLowerCase();
+  searchItems.forEach((li) => {
+    li.style.display = li.dataset.name.includes(q) ? '' : 'none';
+  });
+});
+searchInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    const first = searchItems.find((li) => li.style.display !== 'none');
+    document.getElementById('searchResult').textContent =
+      first ? 'Picked: ' + first.dataset.name : 'No match';
+    overlay.classList.remove('open');
+  }
+});
+</script>
+</body>
+</html>

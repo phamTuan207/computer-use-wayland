@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Sales Dashboard</title>
+<style>
+body { font-family: sans-serif; margin: 20px; }
+#kpis { display: flex; gap: 12px; margin: 12px 0; }
+.kpi { border: 1px solid #999; padding: 12px; flex: 1; }
+.kpi strong { font-size: 22px; display: block; }
+#filters { display: flex; gap: 10px; flex-wrap: wrap; align-items: end; margin-bottom: 12px; }
+#filters label { display: block; font-size: 13px; }
+#filters input, #filters select { padding: 8px; }
+button { padding: 8px 12px; }
+table { border-collapse: collapse; width: 100%; margin-top: 8px; }
+th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+th { cursor: pointer; background: #eee; }
+th.sorted-asc::after { content: " ▲"; }
+th.sorted-desc::after { content: " ▼"; }
+#pager { margin-top: 8px; }
+#emptyMsg { display: none; color: #b00; margin-top: 8px; }
+#chart { border: 1px solid #999; margin-top: 12px; }
+</style>
+</head>
+<body>
+<h1>Sales Dashboard</h1>
+<div id="kpis">
+  <div class="kpi">Revenue<strong id="kpiRevenue">$0.00</strong></div>
+  <div class="kpi">Orders<strong id="kpiOrders">0</strong></div>
+  <div class="kpi">Average order<strong id="kpiAvg">$0.00</strong></div>
+</div>
+<div id="filters">
+  <div><label>Status</label>
+    <select id="statusFilter">
+      <option value="">All</option>
+      <option value="paid">Paid</option>
+      <option value="pending">Pending</option>
+      <option value="refunded">Refunded</option>
+    </select>
+  </div>
+  <div><label>Category</label>
+    <select id="catFilter">
+      <option value="">All</option>
+      <option value="electronics">Electronics</option>
+      <option value="home">Home</option>
+      <option value="office">Office</option>
+    </select>
+  </div>
+  <div><label>From</label><input id="fromDate" type="date" value="2026-11-01"></div>
+  <div><label>To</label><input id="toDate" type="date" value="2026-11-30"></div>
+  <div><label>Search</label><input id="search" type="text" placeholder="customer or product"></div>
+  <button id="resetBtn">Reset filters</button>
+  <button id="exportBtn">Export CSV</button>
+</div>
+<canvas id="chart" width="640" height="180"></canvas>
+<table>
+  <thead>
+    <tr>
+      <th><input type="checkbox" id="selectAll" title="Select all on page"></th>
+      <th data-sort="id">Order</th>
+      <th data-sort="date">Date</th>
+      <th data-sort="customer">Customer</th>
+      <th data-sort="product">Product</th>
+      <th data-sort="category">Category</th>
+      <th data-sort="status">Status</th>
+      <th data-sort="amount">Amount</th>
+    </tr>
+  </thead>
+  <tbody id="rows"></tbody>
+</table>
+<div id="pager">
+  <button id="prevPage">Previous</button>
+  <span id="pageInfo"></span>
+  <button id="nextPage">Next</button>
+</div>
+<div id="emptyMsg">No orders match the current filters.</div>
+<p>Selected: <span id="selectedCount">0</span></p>
+<script>
+const ORDERS = [
+  { id: 'A1001', date: '2026-11-02', customer: 'Alice', product: 'Headphones', category: 'electronics', status: 'paid', amount: 59.99 },
+  { id: 'A1002', date: '2026-11-03', customer: 'Bob', product: 'Desk Lamp', category: 'home', status: 'paid', amount: 24.99 },
+  { id: 'A1003', date: '2026-11-04', customer: 'Carol', product: 'Notebook', category: 'office', status: 'pending', amount: 9.99 },
+  { id: 'A1004', date: '2026-11-05', customer: 'Dan', product: 'Monitor', category: 'electronics', status: 'paid', amount: 129.99 },
+  { id: 'A1005', date: '2026-11-06', customer: 'Eve', product: 'Coffee Mug', category: 'home', status: 'refunded', amount: 12.50 },
+  { id: 'A1006', date: '2026-11-08', customer: 'Frank', product: 'Keyboard', category: 'electronics', status: 'paid', amount: 49.99 },
+  { id: 'A1007', date: '2026-11-09', customer: 'Grace', product: 'Pen Set', category: 'office', status: 'paid', amount: 7.99 },
+  { id: 'A1008', date: '2026-11-10', customer: 'Henry', product: 'Office Chair', category: 'home', status: 'pending', amount: 89.99 },
+  { id: 'A1009', date: '2026-11-12', customer: 'Ivy', product: 'Headphones', category: 'electronics', status: 'refunded', amount: 59.99 },
+  { id: 'A1010', date: '2026-11-14', customer: 'Jack', product: 'Desk Lamp', category: 'home', status: 'paid', amount: 24.99 },
+  { id: 'A1011', date: '2026-11-16', customer: 'Kara', product: 'Notebook', category: 'office', status: 'paid', amount: 9.99 },
+  { id: 'A1012', date: '2026-11-18', customer: 'Leo', product: 'Monitor', category: 'electronics', status: 'paid', amount: 129.99 },
+];
+const PAGE_SIZE = 5;
+let sortKey = 'date';
+let sortDir = 1;
+let page = 1;
+let selected = new Set();
+
+function filtered() {
+  const status = document.getElementById('statusFilter').value;
+  const cat = document.getElementById('catFilter').value;
+  const from = document.getElementById('fromDate').value;
+  const to = document.getElementById('toDate').value;
+  const q = (document.getElementById('search').value || '').toLowerCase();
+  let rows = ORDERS.filter((o) => {
+    if (status && o.status !== status) return false;
+    if (cat && o.category !== cat) return false;
+    if (from && o.date < from) return false;
+    if (to && o.date > to) return false;
+    if (q && !(o.customer + ' ' + o.product).toLowerCase().includes(q)) return false;
+    return true;
+  });
+  rows.sort((a, b) => {
+    const av = a[sortKey], bv = b[sortKey];
+    if (av < bv) return -1 * sortDir;
+    if (av > bv) return 1 * sortDir;
+    return 0;
+  });
+  return rows;
+}
+function money(n) { return '$' + n.toFixed(2); }
+function drawChart(rows) {
+  const canvas = document.getElementById('chart');
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  const totals = { electronics: 0, home: 0, office: 0 };
+  rows.forEach((o) => { totals[o.category] += o.amount; });
+  const max = Math.max(1, ...Object.values(totals));
+  const cats = Object.keys(totals);
+  cats.forEach((c, i) => {
+    const h = (totals[c] / max) * 140;
+    ctx.fillStyle = ['#1565c0', '#2e7d32', '#ef6c00'][i];
+    ctx.fillRect(60 + i * 180, 160 - h, 120, h);
+    ctx.fillStyle = '#111';
+    ctx.font = '13px sans-serif';
+    ctx.fillText(c + ' $' + totals[c].toFixed(2), 60 + i * 180, 178);
+  });
+  window.__chart = () => ({ ...totals });
+}
+function render() {
+  const rows = filtered();
+  const pages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
+  if (page > pages) page = pages;
+  const slice = rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const tbody = document.getElementById('rows');
+  tbody.innerHTML = '';
+  slice.forEach((o) => {
+    const tr = document.createElement('tr');
+    tr.dataset.id = o.id;
+    const tdSel = document.createElement('td');
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.className = 'rowSel';
+    cb.checked = selected.has(o.id);
+    cb.addEventListener('change', () => {
+      if (cb.checked) selected.add(o.id);
+      else selected.delete(o.id);
+      document.getElementById('selectedCount').textContent = String(selected.size);
+    });
+    tdSel.appendChild(cb);
+    tr.appendChild(tdSel);
+    for (const k of ['id', 'date', 'customer', 'product', 'category', 'status']) {
+      const td = document.createElement('td');
+      td.textContent = o[k];
+      tr.appendChild(td);
+    }
+    const tdAmt = document.createElement('td');
+    tdAmt.textContent = money(o.amount);
+    tr.appendChild(tdAmt);
+    tbody.appendChild(tr);
+  });
+  const revenue = rows.reduce((s, o) => s + o.amount, 0);
+  document.getElementById('kpiRevenue').textContent = money(revenue);
+  document.getElementById('kpiOrders').textContent = String(rows.length);
+  document.getElementById('kpiAvg').textContent = money(rows.length ? revenue / rows.length : 0);
+  document.getElementById('pageInfo').textContent = 'Page ' + page + ' of ' + pages;
+  document.getElementById('emptyMsg').style.display = rows.length ? 'none' : 'block';
+  document.getElementById('selectedCount').textContent = String(selected.size);
+  document.getElementById('selectAll').checked = slice.length > 0 && slice.every((o) => selected.has(o.id));
+  drawChart(rows);
+}
+document.querySelectorAll('th[data-sort]').forEach((th) => th.addEventListener('click', () => {
+  const key = th.dataset.sort;
+  if (sortKey === key) sortDir = -sortDir;
+  else { sortKey = key; sortDir = 1; }
+  document.querySelectorAll('th[data-sort]').forEach((x) => x.classList.remove('sorted-asc', 'sorted-desc'));
+  th.classList.add(sortDir === 1 ? 'sorted-asc' : 'sorted-desc');
+  page = 1;
+  render();
+}));
+document.getElementById('prevPage').addEventListener('click', () => { if (page > 1) { page -= 1; render(); } });
+document.getElementById('nextPage').addEventListener('click', () => { page += 1; render(); });
+['statusFilter', 'catFilter', 'fromDate', 'toDate', 'search'].forEach((id) => {
+  document.getElementById(id).addEventListener('input', () => { page = 1; render(); });
+  document.getElementById(id).addEventListener('change', () => { page = 1; render(); });
+});
+document.getElementById('selectAll').addEventListener('change', (e) => {
+  const rows = filtered();
+  const slice = rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  slice.forEach((o) => {
+    if (e.target.checked) selected.add(o.id);
+    else selected.delete(o.id);
+  });
+  render();
+});
+document.getElementById('resetBtn').addEventListener('click', () => {
+  document.getElementById('statusFilter').value = '';
+  document.getElementById('catFilter').value = '';
+  document.getElementById('fromDate').value = '2026-11-01';
+  document.getElementById('toDate').value = '2026-11-30';
+  document.getElementById('search').value = '';
+  sortKey = 'date';
+  sortDir = 1;
+  page = 1;
+  selected.clear();
+  document.querySelectorAll('th[data-sort]').forEach((x) => x.classList.remove('sorted-asc', 'sorted-desc'));
+  render();
+});
+document.getElementById('exportBtn').addEventListener('click', () => {
+  const rows = filtered();
+  const lines = ['id,date,customer,product,category,status,amount'];
+  rows.forEach((o) => lines.push([o.id, o.date, o.customer, o.product, o.category, o.status, o.amount.toFixed(2)].join(',')));
+  const blob = new Blob([lines.join('\n')], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'orders.csv';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+});
+render();
+</script>
+</body>
+</html>
