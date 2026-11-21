@@ -293,3 +293,88 @@ failed"}`. The guardian's cause now reaches the error envelope; stderr empty
   is restoring Zen; do not drive the screen concurrently).
 - Commit + push in small increments now (owner 240 target): code + tests,
   then this log.
+
+## 22:42-22:48 - Council 2 (live safety) verdict: AMEND
+
+Verdict file: improvements/worker-f1-council-2.md (280 lines, 0 em/en dashes,
+not yet committed at verdict time). Council 2 verified the root cause chain
+and the code fix independently, live and read only. The code fix is sound.
+The drift repair was the right repair and is proven on disk and in the loader
+log. The live activation is the risky step, because a plugin load crash kills
+the whole compositor with the owner asleep. Verdict AMEND: the activation may
+proceed only after all 8 numbered preconditions are met, in order.
+
+New facts from council 2's live checks:
+- Zen was restarted by F3 (old PID 27958 dead, new PID 426338), with remote
+  debugging and marionette up. Live clients are 4 windows, including a Zen
+  window titled Offline Whiteboard App. All prior tab coordinates are stale.
+- Owner order 22:45 (MEMORY.md): open the Omarchy menu and switch workspaces
+  by COMMAND (hyprctl dispatch, hl.dsp form; find the exact launcher command
+  from config), NEVER by clicking workspace/menu buttons on the bar.
+  Fastest-path-first: CLI first, mouse last. Source: the owner saw a stray
+  click open the Omarchy menu around 22:44; the 22:44:32 photo shows no menu
+  open anymore; F2/F3 logs do not record the click; unidentified which worker.
+  The proof must contain at most the one planned click and no bar clicks.
+- The reload step re-applies optics from the LAPTOP REPO copy (hyprland.lua:54
+  dofiles visuals-login.lua), not the installed copy. Both are 9a151634 now,
+  so it is safe tonight, and it is a second reason the drift repair had to
+  cover the laptop repo copy.
+- Installed scripts/indicator.py is newer than the laptop repo copy (metrics,
+  label command, capture nesting); the liquid gate logic is identical, so the
+  activation gates are unaffected. A future repo-to-installed sync would
+  regress it. Follow up, not a precondition.
+- The laptop manifest pin 674441ea matched no known optics version and was
+  never explained. It suggests a manual edit or a partial re-pin. Worth one
+  line in the follow up, not a blocker tonight.
+
+Findings F1-F10 (full text in the verdict file):
+- F1. Plugin load dlopens in-process; a segfault kills Hyprland PID 1515
+  outright with every window and unsaved work. No sandbox, no snapshot, no
+  auto recovery. Mitigated by exact ABI, clean ldd, and the prior successful
+  load of these exact binaries on instance 1795086072. Residual risk low but
+  nonzero while the owner sleeps.
+- F2. activate-glass.py takes no owner_lock and no session/token check, unlike
+  the guard script and visuals.py. Concurrent runs can both pass the pre-load
+  check. A retry after partial success fails closed at setup_baseline with a
+  misleading message.
+- F3. TOCTOU on the .so files: digest computed, then loaded by path with no
+  re-hash; post-load asserts check only name/author/version, not the loaded sha.
+- F4. Half-loaded rollback gap: glass ok but reload refused or wait_for_profile
+  timeout leaves glass loaded with no rollback and no documented recovery.
+- F5. Hyprctl timeouts (5s glass, 10s guard) leave load state unknown; a blind
+  retry could double load.
+- F6. Reload applies laptop repo optics, not installed optics (see above).
+- F7. Indicator drift (see above).
+- F8. Proof click coordinates stale, target unknown (Zen restarted, whiteboard
+  live, F3 may still be restoring, owner order 22:45).
+- F9. Shader warm-up can exceed the 8s wait; a first guard refusal may mean
+  slow shaders only.
+- F10. No written crash contingency for a dead compositor while the owner sleeps.
+
+Preconditions 1-8 (all required, in order, before the live activation):
+1. Sequence after F3 sign-off, Zen PID stable, single operator, no parallel driving.
+2. Same-minute pre-flight: ABI match, plugin list exactly hyprbars 1.0,
+   configerrors empty, no session/token/socket dir, .so shas match filenames
+   and manifest, ldd 0 not found on both.
+3. Run the installed-tree activation scripts, glass then guard, abi from the
+   manifest, profile-sha256 9a151634, no other step between them.
+4. Hold owner_lock across the whole glass plus guard sequence; no concurrent
+   writers to the plugins dir, no sync-installed during it. NOTE: this needs
+   implementation, activate-glass.py takes no lock today. F1 must build the
+   lock-holding wrapper before the activation.
+5. Half-state recovery agreed in advance: never re-run activate-glass after a
+   partial success, guard-only retry, longer wait for slow shaders, re-query
+   the plugin list before any retry, never blind retry a load.
+6. Corrected proof: fresh observe first, one click at the center of the
+   already-active tab only, skip the click if the active tab is the whiteboard
+   or has unsaved state, workspace/menu moves by command only, verify via
+   cursorpos plus a second fresh observe, clean stop and clean desktop check.
+7. Crash contingency: if the compositor dies or the desktop freezes, stop,
+   report to the parent at once, relaunch nothing blindly.
+8. Durability follow-up (tracked, not a precondition): re-pin check in
+   sync-installed/setup, reconcile indicator.py, make the silent loader
+   failure visible. The root cause is not durably fixed until that lands.
+
+Status: waiting on council 1, council 3 and redteam verdicts. The live
+activation stays gated until all four verdicts are adjudicated and the
+preconditions are met.
