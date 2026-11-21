@@ -170,5 +170,8 @@ No ydotool. All runs timed and logged above.
 
 ## Commit
 
-Commit hash: (filled after push; see the Y10 final report to Muse
-for the pushed hash on main).
+ed78e83d80f7132c427a2b5599200aded0528956 on main ("Y10: reconcile
+clone1-batch3 t05/t09/t10 fixes into one set (Y3 FAILs), 9/9
+mutation probes, 10/10 x7 runs"). Y10's unlanded first attempt
+0b61bd1 is preserved on local branch y10-original-0b61bd1 only,
+never pushed.
