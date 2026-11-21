@@ -157,6 +157,19 @@ def guardian(env, pipe, token):
                 print(f'warning: temporary Escape binding unavailable: {exc}',file=sys.stderr)
             if stopping[0] or cancel_hotkey.latch_present(CANCEL):raise RuntimeError('session cancelled during startup')
             cursor_guard=cursor_theme.apply(env,cursor['agent_theme'],cursor['agent_size'],token)
+            # A session that starts without hyprglass has no pill, which is
+            # the original symptom returning silently with a successful
+            # session. Gate on the liquid backend BEFORE creating the
+            # indicator: Native's wait_for_profile polls for up to 30s when
+            # the backend is not ready, so gating after it would hang a
+            # down or warming-up backend instead of failing fast with a
+            # named cause. ready=False accepts shaders still compiling;
+            # ready=True does not, so a pending shader gets its own message,
+            # not a false "glass is not active".
+            if not indicator.liquid_available(env, ready=False):
+                raise RuntimeError('hyprglass is not active, the pill cannot appear; load glass first with scripts/activate-glass.py, then start the session')
+            if not indicator.liquid_available(env, ready=True):
+                raise RuntimeError('hyprglass shaders are still warming up, the pill cannot appear yet; retry the session in a few seconds')
             server=indicator.listen(STATE,token)
             native=indicator.Native({**env,'CU_ESCAPE_AVAILABLE':'1' if escape_available else '0'})
             visuals=SessionVisuals(native,cursor_guard)
