@@ -1,6 +1,6 @@
 # REDTEAM-M, Voice 2: THE SKEPTIC
 
-Every unproven premise in the three verdicts and the four evidence bases, each with its file:line or its absence. Status scale: PROVEN (verified by this redteam by direct read), STATED (in the verdicts with a citation this redteam confirmed exists), UNPROVEN (asserted without a citation, or cited to a source that does not show it), STALE (true when written, overtaken by a later commit or log), CONTRADICTED (a newer fact says otherwise), ABSENT (the file or record does not exist). Branch todolist-push. Written 23:14-23:25 +07 Sat 2026-11-21. No live tests, no laptop driving. No em dashes or en dashes anywhere.
+Every unproven premise in the three verdicts and the four evidence bases, each with its file:line or its absence. Status scale: PROVEN (verified by this redteam by direct read), STATED (in the verdicts with a citation this redteam confirmed exists), UNPROVEN (asserted without a citation, or cited to a source that does not show it), STALE (true when written, overtaken by a later commit or log), CONTRADICTED (a newer fact says otherwise), ABSENT (the file or record does not exist). Branch todolist-push. Written 23:08-23:10 +07 Sat 2026-11-21. No live tests, no laptop driving. No em dashes or en dashes anywhere.
 
 ## 0. Premises this redteam PROVED by direct read (the skeptic concedes these)
 

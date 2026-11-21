@@ -1,6 +1,6 @@
 # REDTEAM-M, Voice 3: THE COST ACCOUNTANT
 
-Wall time, token cost, and live-machine risk per method, from the numbers in the logs and the code. Wall times that come from a log are cited; token costs are ESTIMATES and are marked as such, because no verdict or log in the evidence read publishes a token count for any of these methods. Do not quote the token bands as measurements. Branch todolist-push. Written 23:20-23:30 +07 Sat 2026-11-21. No live tests, no laptop driving. No em dashes or en dashes anywhere.
+Wall time, token cost, and live-machine risk per method, from the numbers in the logs and the code. Wall times that come from a log are cited; token costs are ESTIMATES and are marked as such, because no verdict or log in the evidence read publishes a token count for any of these methods. Do not quote the token bands as measurements. Branch todolist-push. Written 23:09-23:10 +07 Sat 2026-11-21. No live tests, no laptop driving. No em dashes or en dashes anywhere.
 
 ## 0. Measured wall times available as anchors (all cited, all reused below)
 

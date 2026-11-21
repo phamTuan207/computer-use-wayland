@@ -1,6 +1,6 @@
 # REDTEAM-M, Voice 1: THE ATTACKER
 
-Attacker paper against opt-council-m1-verdict.md, opt-council-m2-verdict.md, opt-council-order-verdict.md, and the evidence bases opt-crawl-src/web/zen-20261121.md. Branch todolist-push. Written 23:06-23:20 +07 Sat 2026-11-21. No live tests, no laptop driving, no session starts, no mouse clicks. Every claim carries file:line, a commit hash, or a log line, or it is marked UNPROVEN. No em dashes or en dashes anywhere.
+Attacker paper against opt-council-m1-verdict.md, opt-council-m2-verdict.md, opt-council-order-verdict.md, and the evidence bases opt-crawl-src/web/zen-20261121.md. Branch todolist-push. Written 23:06-23:10 +07 Sat 2026-11-21. No live tests, no laptop driving, no session starts, no mouse clicks. Every claim carries file:line, a commit hash, or a log line, or it is marked UNPROVEN. No em dashes or en dashes anywhere.
 
 ## 0. Method and new evidence this attack rests on
 
