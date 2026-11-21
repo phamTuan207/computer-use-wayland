@@ -157,3 +157,12 @@ dom_act tests. Note: local HEAD had moved under me (shared branch;
 origin/todolist-push c19c227 vs local 2080a6f, same messages, different
 hashes, common ancestor 7b85472). Rebase onto origin follows after
 this log entry is committed.
+
+## 2026-11-22 02:36 +07 (t+28m)
+Pushed: 16c4196..96a9e46 todolist-push, ls-remote confirms origin at
+96a9e46. The rebase onto origin skipped two local duplicate commits
+(2080a6f, 6e77357) whose content origin already holds under different
+hashes (c19c227, 50343fe). The first push attempt failed because the
+rebase left a detached HEAD and pushed the stale branch pointer; the
+branch was moved to HEAD and the push then succeeded fast-forward.
+Post-rebase verification: 315 tests OK in 4.503s.
