@@ -46,3 +46,62 @@ Every unproven premise in the three verdicts and the four evidence bases, each w
 - P-24. STALE. ZEN crawl P2 note that Y13r2's log is "IN PROGRESS, final verdict PENDING". Y13r2 final landed (2fee242, BLOCK, redteam be88321). ZEN G-04 is closed.
 - P-25. STALE. "F1 adjudication deferred" (ZEN G-09). F1 council 3 landed with verdict AMEND (improvements/worker-f1-council-3.md:3). Closed.
 - P-26. STALE. M1 verdict line citations for the diagnostic path. M1 cites guard_reply lines 99-113 and supervise lines 210-260; current code has guard_reply at line 104 and supervise at line 212, with the function bodies extended by the round-2 commits. The citations drifted by about 5 lines. Minor, but the evidence contract demands file:line accuracy at fix time, and the verdict's lines no longer point at the code it describes.
+
+## 3. Records that are ABSENT (the file, log, or artifact does not exist)
+
+- P-27. ABSENT. The flicker work log file. improvements/overlay-flicker-work-log-20261121.md does not exist in the VM repo (S-0.10). The 2.2.1 numbers (0 idle paints in 122 windows, 32/32 frames identical) are cited as todolist-recorded, not re-verified. M1 mechanism C2 and M1 verdict C2 step 3 both carry this honestly; the numbers still rest on a missing file.
+- P-28. ABSENT. The pre-restart tab-list snapshot for the 22:36 restart. ZEN G-08: F3 verified 67 contexts and 13 real tabs present after restart, but the pre-restart list was never saved as a file. The LMS login tab loss (opened about 22:26, never flushed) is recorded only in prose. M2 D-4 prescribes a snapshot FIRST for future restarts; the 22:36 instance cannot be retroactively verified.
+- P-29. ABSENT. Any wedge signature capture. ZEN G-03, M2 E-4: no hyprctl clients/workspaces/activewindow dump, no BiDi getTree, no Marionette POST attempt against the wedged state exists for the 22:25 wedge or for the 22:56 recurrence. E-4's capture rule has never been executed. The wedge mechanism is unknown because the evidence was never taken, twice.
+- P-30. ABSENT. Any saved probe output from a hidden tab. M2 G: probe_q05e was built to capture htmlClass, but the output was never saved; zero positive sightings of tz-hidden on a hidden tab; zero saved htmlClass outputs; zero opacity readings; zero screenshots of the logo pulse markers. The V1 burden (two concordant "no class" records, output unsaved) is correctly placed by M2, but the underlying absence means V1 is neither proven nor falsified, and will stay so until the decisive experiment runs.
+- P-31. ABSENT. The new-conf ldd output. ZEN G-10: Y6e's run has no saved ldd log for the rebuilt conf. M2 F-1 requires saving it. The ldd proof (rc=0) is asserted in the Y6r log, not saved as a file.
+- P-32. ABSENT. The Y13g fix output. No log file, no commits matching Y13g, only a spawn note (worker-opt-method-log.md:79). Y13r2 BLOCK (2fee242, B1-B4 + 5 amend) names the fix worker; the worker has produced nothing observable by 23:14. ORDER rank 5 and M2 G-10 gate the Y13 live run on Y13g + fresh re-review; the gate's first leg has no artifact.
+- P-33. ABSENT. The H3 acceptance record. M2 G-10 and U-1 resolve H3 per MEMORY.md 22:57 ("accepted Y13r2 proposal: 5a2b69d NO VERDICT + runner-quiet/ports check counts as the marker leg for this run, gate text unchanged, Y6 retry after Y13"). No council paper, log entry, or owner message is cited as the acceptance. The resolution rests on a MEMORY.md entry alone.
+- P-34. ABSENT. The ZT-B run report. ZEN G-07: no ZT-B report file exists. ZT-00 steps 0-3 PASS as run by F2 at 22:44, but steps 4-7 and ZT-01..ZT-10 are unrun. The F2 ZT-00 run was INCONCLUSIVE (F2 log tail). No blind composite suite has ever run to completion.
+- P-35. ABSENT. A live proof of the workspace-switch command. See P-2. The command exists in test code; no live run record exists.
+- P-36. ABSENT. A measured session-start distribution. See P-3. No timing log of session starts exists in the evidence read.
+- P-37. ABSENT. A saved BiDi getTree + tab list before any slot failure. M2 D-3 prescribes it; F3's 22:56 recurrence produced no getTree file. D-3 was not executed at the recurrence, the first failure after the method was written.
+- P-38. ABSENT. The re-pin check (M1 A step 3). No check exists in sync-installed.py or setup that compares installed manifest profile_sha256 and library pins against the repo optics sha256 and fails loudly. The durability step is a prescription, not a fact; nothing in the repo implements it yet.
+
+## 4. What would close each premise (the proof step, in one line each)
+
+- P-1: cite a source for Zen's behavior on a repacked omni.ja, or strike the signature premise and restate the veto on the two cited grounds.
+- P-2: one live run of `hl.dsp.focus({ workspace = "N" })` with activeworkspace + clients + screenshot before and after, saved to a file.
+- P-3: a timing log of at least 10 session starts (cold and warm) with the distribution published, then set the deadline from it.
+- P-4: a cold-start order-to-overlay measurement (daemon + liquid warm-up) published before the 30s target is enforced as a gate.
+- P-5: a measured shader warm-up window in seconds, published in the gate design.
+- P-6: the lock-holding wrapper as a file with a path, or a record that activate-cursor-guard.py:63 already holds the lock and no wrapper is needed.
+- P-7: add the act-now pointer to the require_session refusal text, or strike the gate.
+- P-8: a unit test per classifier branch against post-392bc09 error strings, run by an independent checker.
+- P-9: a test where the session socket fails transiently while a session is live, showing the fallback is refused.
+- P-10: a registration read-back after layer() returns, or downgrade O-2 to "proves the calls returned".
+- P-11: a second nested load run showing parse-2 application again, or run the F-8 load-only trial and record it.
+- P-12: a false-positive measurement of diagnose_body on healthy tabs, published before O-6 becomes a gate.
+- P-13: cite the sweep that produced the 71/45 count, with its file and date.
+- P-14: resolve the 136-vs-145 gap with a second GraphQL read at a stated time, or drop the cache explanation.
+- P-15: one wedge capture with a BiDi click attempt recorded; until then, carry no common-cause prior.
+- P-16: strike A1-A6 from M1 A step 2, keep A7, re-pin the line numbers.
+- P-17: update ORDER P0 and Q-6 to record the solved cause and narrow the G-VMFIX watch.
+- P-18: replace the D-7 target with the 22:56 baseline (14 real + 1 sacrificial, blanks closed).
+- P-19: re-verify G-RESTORE after the last tab-close, and record the 22:56 recurrence in D and ORDER.
+- P-20: record `omarchy-menu toggle root` as the launcher command in E-1.
+- P-21: reconcile ORDER 5.2 with the M2 correction and the F3 introspection.
+- P-22: archive ORDER 4.3; the target is exceeded (456 at 23:05).
+- P-23: withdrawn by this redteam; the merge landed (0ac4311, 313 commits).
+- P-24, P-25: record G-04 and G-09 as closed in the verdicts.
+- P-26: re-pin M1's line citations to current code at fix time.
+- P-27: recover or re-derive the 2.2.1 numbers from the todolist, or mark them unreproducible.
+- P-28: no retroactive fix; enforce D-4's snapshot-first rule on the next restart and log compliance.
+- P-29: execute E-4 at the next wedge or recurrence; a restart without a signature is a safety violation, enforce it.
+- P-30: run the G-7 decisive experiment with every probe output saved, or stop citing V1 as wounded by unsaved records.
+- P-31: run ldd on the staged conf path and save the output (M2 F-1).
+- P-32: Y13g must land a log file and a fix diff, or Worker OPT must record that Y13g is stalled and reassign.
+- P-33: cite the H3 acceptance in a council paper or log entry, not only MEMORY.md.
+- P-34: run ZT-B and publish the report, or stop citing ZT-A as the test design.
+- P-35: same as P-2.
+- P-36: same as P-3.
+- P-37: execute D-3 at the next slot failure; log the getTree file path.
+- P-38: implement the re-pin check with a test on a deliberately drifted fixture (M1 A step 3 gate).
+
+## 5. Count
+
+Proven by this redteam: 10 (S-0.1 to S-0.10). Unproven: 15 (P-1 to P-15). Stale: 11 (P-16 to P-26). Absent records: 12 (P-27 to P-38). The verdicts are strongest where they cite code (D throw site, F1 fix, act-now code) and weakest where they prescribe gates, deadlines, and counts without measurements (P-3, P-4, P-5, P-12, P-13) and where later events overtook them (P-16 to P-23). No verdict relies on a premise this paper shows to be false, except ORDER 5.2 (contradicted by the M2 correction) and M2 D-7's 28-tab target (contradicted by the executed cleanup). Those two are the only premises that are wrong, not merely unproven.
