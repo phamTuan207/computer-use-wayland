@@ -54,7 +54,10 @@ def unit(name, cmdline, want, codex=False):
 
 def live(name, argv, want, codex=False):
     """Live check: spawn the argv (stub sleeps), read its real
-    /proc cmdline, run the predicate on it, kill it."""
+    /proc cmdline, run the predicate on it, kill children first
+    then the wrapper by exact PID (fix pass 8, Council 2 C7-3:
+    the old helper killed only the wrapper, orphaning the
+    python3 child; the fix7 probe's helper already did this)."""
     import subprocess, time, os
     p = subprocess.Popen(argv, stdout=subprocess.DEVNULL,
                          stderr=subprocess.DEVNULL)
@@ -64,7 +67,27 @@ def live(name, argv, want, codex=False):
         cmdline = raw.decode("utf-8", "replace")
     except Exception:
         cmdline = ""
-    p.kill()
+    children = []
+    for entry in os.listdir("/proc"):
+        if not entry.isdigit():
+            continue
+        try:
+            with open(f"/proc/{entry}/stat") as f:
+                stat = f.read()
+            rest = stat[stat.rfind(")") + 2:].split()
+            if int(rest[1]) == p.pid:
+                children.append(int(entry))
+        except Exception:
+            pass
+    for pid in children:
+        try:
+            os.kill(pid, 9)
+        except Exception:
+            pass
+    try:
+        p.kill()
+    except Exception:
+        pass
     p.wait()
     if codex:
         got = run_batch3._is_codex_executor(cmdline)

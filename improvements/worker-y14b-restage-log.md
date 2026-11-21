@@ -2274,7 +2274,14 @@ C2-9/C2-10 INFO parts (covered by item 14).
   paren glue ) True to False, backslash import False to True,
   C15b paren wrapped True to False, dont shell idiom False to
   True, backslash esc dq False to True). Zero wrong-direction
-  moves. Helper checks: _runner_basename_head paren is the
+  moves ACROSS THE REDTEAM'S 98 CASES. CORRECTION (fix pass 8,
+  Council 2 C7-1): the unqualified "zero wrong-direction moves"
+  claim is refuted. The 98 cases did not include mid-name paren
+  forms, and `run_foo(a).py` / `run_(foo).py` are fix5 True,
+  fix6 False, fix7 True, a wrong-direction move (fix6 False to
+  fix7 True) that the differential could not see. The claim
+  holds only as scoped to the 98 cases; the C7-1 regression is
+  fixed in fix pass 8. Helper checks: _runner_basename_head paren is the
   intended change; _top_level_sep_index a=1; is 3 in both
   (C6-2, unchanged). Orphan note: the fix6-probe live cases
   left 2 orphan run_foo.py children (PIDs 16901, 16908); the
@@ -2415,7 +2422,12 @@ C2-9/C2-10 INFO parts (covered by item 14).
   direction, zero wrong-direction moves, no true case lost.
   (The redteam's differential counted 6 case diffs; Council
   3 counts 7 moves, the extra one is the run_foo.py)x form.
-  Same direction, no contradiction.) Real bash exits 2 on the
+  Same direction, no contradiction.) NOTE (fix pass 8,
+  Council 2 C7-1): Council 3's "zero wrong-direction moves"
+  is scoped to its own differential, which did not include
+  mid-name paren forms; `run_foo(a).py` / `run_(foo).py`
+  (fix5 True, fix6 False, fix7 True) are a wrong-direction
+  move outside that scope, fixed in fix pass 8. Real bash exits 2 on the
   paren form. (5) Docs CLOSED: log line 1006 corrected
   rstrip set ";,()&|"; _top_level_sep_index("a=1;", False,
   False) measured = 3 in both blobs; B12 no-separator example
@@ -2512,3 +2524,155 @@ C2-9/C2-10 INFO parts (covered by item 14).
 - 00:24 +07: only Council 2 still running. Fix pass 8 (if
   needed) waits for it. Current tally: redteam GO, Council 3
   GO, Council 1 GO, Council 2 pending.
+- 00:26 +07: fix-pass-7 Council 2 DONE: AMEND (paper
+  75274f6, todolist-push, ls-remote verified, ANCESTOR_OK;
+  agent 8d6e86ed, completed 00:23:34 UTC). Own probe
+  /tmp/y14b-fix7-c2-probe.py, 118 unit + 5 live checks, 118
+  PASS, 2 FAIL (both the intentional C7-1 cases, see below).
+  All fix6 findings closed: C6-1 (log line 1006 now states
+  base.rstrip(";,()&|") with annotation), C6-2 (docstring
+  states the helper DOES return 3 for "a=1;", measured in
+  both blobs), C6-3 (b14, b19, run_foo.py() False in fix7;
+  b1-b7 True; b8-b13 False; grep -r form added), C6-4 (B12
+  example corrected at both sites), C6-5 (both probes
+  committed; re-ran them: fix7 probe 86/86, fix6 probe
+  71/71), C6-6 (no pkill -f used; final orphan sweep clean).
+  R6-1 fixed, all three escape forms, unit and live on real
+  /proc cmdlines (including (b) live, which the author probe
+  does not live-test); escape rule breaks no existing quote
+  case, plus its own new edges hold. R6-4 bounding sentence,
+  U-C3-1/INFO-1 synthetic-only wording in both sites, all
+  verified verbatim. Hygiene: 0 em/en dash in the diff and
+  the paper, 0 ydotool in the code diff (the word occurs
+  once, inside the log's hygiene sentence), 0 emails, no
+  PII, no live Zen driving. New finding C7-1 (LOW, code,
+  the reason for AMEND): the paren drop re-exposes the fix5
+  false positive for mid-name parens, python3 run_foo(a).py
+  and python3 run_(foo).py are fix5 True, fix6 False, fix7
+  True (the matcher is startswith("run_") and
+  endswith(".py"), and the fix6 cut was accidentally
+  suppressing them). This refutes the log's "zero
+  wrong-direction moves" claim (corrected at both sites in
+  this pass, see the CORRECTION notes above). Fix is one
+  line (reject parens in _script_basename_is_runner, only
+  call site line 2724) or record it; the log claim must also
+  be corrected. Not BLOCK: fail-closed, contrived literal
+  filenames, and fix7 is still strictly better than fix5 on
+  parens (3 of 4 shapes fixed). C7-2 (INFO): the brief's
+  C6-4 parenthetical ("True in fix6 blob, False in fix7
+  blob") is wrong. Measured: no-separator B12 form is True
+  in fix5, False in fix6, False in fix7. The code and the
+  log are right; only the brief was wrong. NOTE: the brief I
+  sent to Council 2 stated "True in fix5, False in fix6",
+  which matches the measured values; Council 2's quote of
+  the brief does not match the brief text, but the substance
+  (the measured values) is confirmed correct. No author
+  action. C7-3 (INFO, process): the committed fix6 probe
+  still orphans 2 sleep-60 children per run; killed its
+  runs' orphans by exact PID (18400, 18546, 18554).
+  Recommend patching its live helper like the fix7 probe's.
+  Fix pass 8 has one required code item (C7-1) plus the
+  optional C7-3 process patch. Fix-pass-7 final tally: 3 GO
+  (redteam cdd59a3, Council 3 a9c33ad, Council 1 d122518 +
+  6fc7cda) + 1 AMEND (Council 2 75274f6), none BLOCK.
+  Fleet note (MEMORY.md 00:23): F2b DONE, F1+F2 cluster
+  CLOSED (act-now end-to-end with live session, session path
+  proven, order-to-overlay 12.262s <30s PASS, continuous ops
+  5/5, overlay always visible, click 0px error). ZT-B spawned
+  00:23 to run the 10 ZT scenarios (serial lane).
+
+## Fix pass 8 (Council 2 C7-1 + C7-3), 00:26-00:35 +07 22/11
+
+Scope: the fix-pass-7 Council 2 AMEND (75274f6). 3 GO + 1
+AMEND, none BLOCK. One required code item (C7-1), one
+optional process patch (C7-3), two doc corrections (the log
+claim + the _runner_basename_head docstring sentence).
+C7-2 needs no author action.
+
+Adjudication:
+- C7-1 (code, REQUIRED): FIXED. _script_basename_is_runner
+  now returns False when the name contains "(" or ")", since
+  no real runner name contains parens. Only call site is
+  line 2724 (via _runner_basename_head), so the change is
+  contained. The fix is Council 2's preferred one-line fix,
+  applied exactly as specified.
+- C7-1 doc: FIXED. The _runner_basename_head docstring
+  sentence "dropping it is the same correction, not a new
+  regression" is reworded: the paren drop re-exposed the
+  fix5 false positive for MID-NAME parens, and those are now
+  rejected in _script_basename_is_runner, so the drop plus
+  that rejection together close all four paren shapes.
+- Log claim: FIXED at both sites (the fix-pass-7
+  verification "Zero wrong-direction moves" and the Council
+  3 verdict summary "zero wrong-direction moves, no true
+  case lost"), each now scoped to its own differential with
+  an explicit CORRECTION note naming C7-1 as the
+  wrong-direction move outside that scope.
+- C7-3 (process, INFO): FIXED. The committed fix6 probe's
+  live helper now kills children first then the wrapper by
+  exact PID (same as the fix7 probe's helper), closing the
+  2-orphan-per-run leak Council 2 reported.
+- C7-2 (INFO): no action. The measured B12 values (True
+  fix5, False fix6, False fix7) match the code and the log.
+  The brief I sent stated "True in fix5, False in fix6",
+  which matches; Council 2's quote of the brief does not
+  match the brief text, but the substance is confirmed.
+- No action: the redteam/Council 1/Council 3 GO verdicts
+  need no fix. The C7-1 fix touches only the basename
+  matcher, so no R6-1/C5-1/C2-3/F2/R3/R4 behaviour changes.
+
+Verification (VM, all green):
+- py_compile OK; import OK (10 tests).
+- Fix8 probe tests/realistic/y14b-fix8-probe.py 103/103 PASS,
+  exit 0 (86 fix7 cases unchanged + 17 new C7-1 cases: 14
+  unit + 3 live). The live checks use real stub copies
+  run_foo(a).py / run_(foo).py in /tmp/y14b-dummies (real
+  files, real /proc cmdlines, the basename is the literal
+  paren name): both False, control run_foo.py True.
+- Regressions: fix7 probe 86/86 PASS (0 FAIL lines); fix6
+  probe 71/71 PASS (0 FAIL lines, and the C7-3 patch does
+  not break it); redteam fix7 probe /tmp/y14b-fix7-rt-probe.py
+  56/56 PASS, 0 failures; Council 2 fix7 probe
+  /tmp/y14b-fix7-c2-probe.py 118 PASS + 2 FAIL, both FAILs
+  are the intentional C7-1 cases (M7 = fix7 blob returns
+  True, the probe expects False, the correct value), which
+  reproduces the C7-1 finding and proves the fix7 blob
+  behaviour my fix8 probe corrects.
+- Differential /tmp/y14b-fix8-diff.py (redteam's 98 cases,
+  fix7 blob vs fix8 working tree): 98 same, 0 diff (no case
+  in that set moves, as expected, it has no mid-name paren
+  forms). Helper: _script_basename_is_runner("run_foo(a).py")
+  is True in fix7, False in fix8; _top_level_sep_index("a=1;",
+  False, False) is 3 in both (C6-2, unchanged).
+- Fix7 blob verified by direct git: git show
+  65d669b:tests/realistic/run_batch3.py md5 0d98342e (matches
+  the fix7 record).
+- Orphan sweep before the runs: 0 run_foo.py / run_batch3
+  processes alive. No orphans left after the fix8 probe
+  (its live helper kills children first, then the wrapper).
+- Gap, stated plainly: the author H2 probe, fix2/fix3/fix4/
+  fix5 probes, transcription script, gate-dry and M1 probes
+  are still lost (C6-5), so they were not re-run in this
+  pass. The regression evidence is the committed fix6 +
+  fix7 probes (which subsume the accumulated scanner scope),
+  the reviewers' fix7 probes, and the new fix8 probe. The
+  fix8 diff touches only the basename matcher (2 hunks in
+  run_batch3.py) plus probe docstrings, so the H2 launch
+  gate, t10 transcription, and served-fixture paths are
+  untouched by the diff (0 t10 mentions in the diff).
+- No em/en dash in the fix diff (grep 0), no ydotool lines
+  in the fix diff (grep 0), no personal info. `import re` OK.
+  New run_batch3.py: git blob
+  eec33fd589a6da5803fd0488745020c579ecd9db, md5
+  0527b55e48ec3a406ca1b100c2c1cd04. Parent fix-pass-7 bytes:
+  blob 8df578c7, md5 0d98342e, commit 65d669b. The plan md5
+  line pins the fix-pass-8 values IN this fix commit (per
+  C5-4); the fix-pass-8 commit hash itself goes in the log's
+  hash-record follow-up, since it cannot be known before
+  committing.
+- 00:35 +07: fix pass 8 code + plan + log + fix8 probe done,
+  ready to commit. Staging only my four files
+  (run_batch3.py, plan, log, fix8 probe) plus the fix6 probe
+  live-helper patch. The uncommitted fix-pass-6 redteam paper
+  is NOT touched. No git fetch.
+

@@ -611,12 +611,13 @@ header/imports, run_b3_t10, run_preflight, H2 helpers, launch_gate):
   fixture.html eb814c944dab6279417c6182e1950876.
   Also md5sum run_batch3.py (from /tmp/y14-server, where the runner
   is shipped) and compare against the md5 recorded in the re-stage
-  log's fix-pass-7 entry: 0d98342e57c44464752cf08715ac3861 (git blob
-  8df578c7013fc096a30470667ae57bf994884280).
-  (Supersedes the fix-pass-6 values: md5 fac96935, blob 261f09ae,
+  log's fix-pass-8 entry: 0527b55e48ec3a406ca1b100c2c1cd04 (git blob
+  eec33fd589a6da5803fd0488745020c579ecd9db).
+  (Supersedes the fix-pass-7 values: md5 0d98342e, blob 8df578c7,
+  commit 65d669b; and the fix-pass-6 values: md5 fac96935, blob 261f09ae,
   commit d552f4d; and the fix-pass-5 values: md5 9e99d9aa, blob
   ff4a5358, commit 46e0909; and the fix-pass-4 values: md5 2920f169,
-  blob 585fb801, commit bf3c939. The fix-pass-7 commit hash is in
+  blob 585fb801, commit bf3c939. The fix-pass-8 commit hash is in
   the log's fix-pass-7 entry.) Paste the actual command output into
   the live log at ship time. Any mismatch refuses the slot.
 - Council (3) + redteam over the re-stage diff f732d6a: Council 1 GO

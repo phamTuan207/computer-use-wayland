@@ -2219,7 +2219,15 @@ def _script_basename_is_runner(name):
     (Y13f H2/H3). run_*.py covers Y9/Y13/Y14/Y4d; run-nested*
     covers Y6c's nested run (run-nested-pill.py, run-nested-wayland
     [.sh]: a hyphen, not run_, so the old run_ pattern was blind
-    to it); hand_drive_e1.py is E1's driver."""
+    to it); hand_drive_e1.py is E1's driver. No real runner name
+    contains "(" or ")", so a basename carrying one is a literal
+    filename, never a runner (fix pass 8, Council 2 C7-1: the
+    fix7 paren drop re-exposed the fix5 false positive for
+    mid-name parens, `run_foo(a).py` and `run_(foo).py`, which
+    the fix6 cut was accidentally suppressing; the rejection
+    here closes them without touching the separator cut)."""
+    if "(" in name or ")" in name:
+        return False
     if name == "hand_drive_e1.py":
         return True
     if name.startswith("run-nested"):
@@ -2543,8 +2551,11 @@ def _runner_basename_head(base):
     run_foo.py), and in a shell -c string it is a syntax error,
     so cutting at them only adds a literal-filename false
     positive. The ")" cut was pre-existing fix5 behaviour (the
-    rstrip stripped a trailing ")"); dropping it is the same
-    correction, not a new regression."""
+    rstrip stripped a trailing ")"). The paren drop re-exposed
+    the fix5 false positive for MID-NAME parens (`run_foo(a).py`,
+    `run_(foo).py`, fix pass 8, Council 2 C7-1); those are now
+    rejected in _script_basename_is_runner, so the drop plus
+    that rejection together close all four paren shapes."""
     cut = len(base)
     for sep in (";", "&", "|"):
         idx = base.find(sep)
