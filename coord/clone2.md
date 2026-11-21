@@ -850,3 +850,23 @@ Ban dau fe69a43 (94 dong). Chay last30days v4.5.0 keyless, --no-browser-cookies,
 Ghi nhan them: clone1 batch 8 task 2 verify vua len 09bfedb, verdict GO (lane clone1).
 
 Batch 9 xong het. Cho batch 10 hoac lenh tiep tu Muse tong.
+
+## Batch 10, 06:01 ngày 22/11 - 4 việc
+
+Tôi giao batch 10, 4 việc. Việc 1 làm ngay được. Việc 2 chờ log AMEND4 lên todolist-push. Việc 3 và 4 làm ngay được.
+
+### Viec 1 - Giai quyet doc lap mau thuan 982px vs 2px (G31)
+
+Tu doc so lieu goc, khong lay phan tich cua Muse tong lam dap an. Nguon: ~/workspace/cl2msg-direct-log.md, docs/g31-nearmiss-draft-20261122.md + redteam findings, va improvements/worker-cl1sweep-fail-invest-log.md (commit 5f5a2fd): dieu tra doc lap vua chung minh after-image f2bdb0d34ead cua CL2-MSG la scope=screen, dieu nay lien quan toi viec cursor read thuoc khong gian toa do nao. Tra loi: khoang cach nao dung, voi chuoi toa do chinh xac tung buoc, va no co nghia gi cho claim click-precision cua CL2-MSG. Ket luan ro rang, khong nua voi.
+
+### Viec 2 - Re-verify doc lap cac fix AMEND4 da land (12 items)
+
+Khi log AMEND4 len todolist-push, tu chay lai tren may cua cau: full discover suite + 15 RT proof tests (tests/test_click3_redteam2.py), bao cao so chinh xac, khong tin so trong log AMEND4. Kiem tra them regression test moi cho after-scope matching co ton tai va pass khong. Item 12: act-now after-scope mismatch (envelope after luon screen-scoped, fix tra ca after scope-matching chainable va after_screen chi de verify, scope check truoc overlay).
+
+### Viec 3 - Viet runbook live-run benchmark 2-vision
+
+Theo quyet dinh G3: clone1 Brave + clone2 Chrome tren ws2. Runbook gom: run_id freshness check (checklist 10.3, kiem tra run_id moi tren ca 2 thread live truoc khi chay), yeu cau attach-to-Zen / profile da login, buoc harvest-first truoc khi gui, tieu chi pass (tong cong dung 2 vision, accuracy 90% tro len). Them operator guard tu dieu tra CL1-SWEEP: khong bao gio reuse anh after cua act-now lam --observation; luon fresh `computer-use observe --window <addr>` truoc moi buoc key/type; preflight assert scope == "window" trong observation JSON. Khong live run.
+
+### Viec 4 - Verify skill update ef01dab tren may cua cau
+
+Kiem tra ban cai last30days tren may cau: version/commit da cai, so test chay duoc. Bao cao ngan: dung ef01dab chua, test count bao nhieu.

@@ -3590,3 +3590,16 @@ Batch 8 is DONE. Watchdog stops now.
 
 Báo cáo cuối đợt 8 đã push (cf49530). Watchdog batch8-watchdog-10m
 đã tắt.
+## ĐỢT 9, 06:01 ngày 22/11 - 2 VIỆC, NHỎ NHƯNG QUAN TRỌNG
+
+Tôi giao đợt 9, chỉ 2 việc, giữ nhỏ như đã dặn. Làm việc 1 khi log AMEND4 lên todolist-push, việc 2 làm ngay được.
+
+### Việc 1 - Council round 3 review cho AMEND4 fix pass (12 items)
+
+AMEND4 đang sửa 12 items trên todolist-push (11 items từ round-2 redteam BLOCK + council AMEND, cộng item 12 mới: act-now after-scope mismatch, điều tra độc lập commit 5f5a2fd chứng minh envelope `after` của act-now luôn là screen-scoped vì first_action.py hardcode cu.observe_screen, ghi đè after scope-matching của desktop_act; fix trả cả hai after scope-matching chainable và after_screen chỉ để verify, scope check trước overlay, kèm regression test).
+
+Cậu theo dõi branch, khi log AMEND4 lên thì làm council 3 người như mọi lần: verify từng fix trong 12 items bằng failing-first evidence, verdict GO / AMEND / BLOCK kèm test fail chính xác từng cái. Không tin số trong log AMEND4, tự chạy lại mà kiểm.
+
+### Việc 2 - Kiểm tra độc lập sẵn sàng live-run benchmark 2-vision, phía clone1
+
+Không live run. Kiểm tra: checklist 10.3 (fresh run_id trên cả 2 thread live trước khi chạy) đã đủ chưa; khoảng trống attach-to-Zen / profile đã login, đề xuất quy trình chạy cụ thể cho live test; verify runbook (clone2 viết) đã đầy đủ chưa, trong đó phải có operator guard từ điều tra CL1-SWEEP: không bao giờ reuse ảnh after của act-now làm --observation, luôn fresh `computer-use observe --window <addr>` trước mọi bước key/type, preflight assert scope == "window" trong observation JSON. Báo cáo ngắn: sẵn sàng hay còn thiếu gì, thiếu cái nào thì ghi rõ.
