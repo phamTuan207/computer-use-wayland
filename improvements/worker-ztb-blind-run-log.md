@@ -64,3 +64,14 @@
 - Step 7 PASS: Alt+Left (built-in) back to "Ho Chi Minh City - Wikipedia" poll 1 (00:57:39).
 - Step 8 PASS: pre-close check title HCMC; Ctrl+W closed working tab; count 19->18; set = step 0 (Chat badge "(2)" is live fluctuation, not a set change).
 - Findings carried forward: built-ins work (Ctrl+L, Ctrl+W, Alt+Left); custom keys do not (Ctrl+N). Offset (240,16) validated. activeElement is NOT a reliable focus check (use the outcome/title instead).
+
+## ZT-02 VERDICT: FAIL (step 6) — 01:00, elapsed ~36m (scenario ~2m)
+- Step 0: pre-scenario list (18). Working tab via window.open.
+- Step 1 PASS: Ctrl+L + type HCMC URL + Enter, 5/5. (ws2 flip by clone2-watch run 8 mid-call; ws returned to 1 on poll 3 at 00:58:55.)
+- Step 2 PASS: title "Ho Chi Minh City - Wikipedia" poll 1 (00:58:59). Curl control: 200 (direct article URL). This CONFIRMS the ZT-01 curl 301 was just the bare-domain redirect.
+- Step 3 PASS: Ctrl+F (built-in), find bar visible at BOTTOM (screenshot 68924cdda6e9: "Find in page" input bottom-left, Highlight All / Match Case / Match Diacritics / Whole Words, X at far right). Position: bottom.
+- Step 4 PASS: type "population" + Enter, 3/3.
+- Step 5 PASS: find bar reads "2 of 27 matches" (N=2, M=27, N>=1); match "population" highlighted in lead paragraph (screenshot d95d404702a2); DOM body.innerText.includes('population') = true.
+- Step 6 FAIL: Escape (keys-only, completed 2/2) did NOT close the find bar. After-image b7233fc3a366 (taken ~500ms after Escape) still shows the find bar open with "population" and "2 of 27 matches". ps: zen-bin PID 496121 alive (etime 01:15:47). Hypothesis: after Enter, focus is on the page match (not the find input), so Escape goes to the page content and does nothing to the find bar (a chrome widget). A real user would click into the find bar first or click the X. The scenario as written ("Press Escape") does not include a focus step, so it FAILS as written. This is a J-series candidate (find-bar Escape / focus).
+- Step 7 PASS: pre-close title HCMC; Ctrl+W closed working tab; count 19->18; set = step 0.
+- Overall: FAIL (step 6 only). Steps 1-5 and cleanup all pass.
