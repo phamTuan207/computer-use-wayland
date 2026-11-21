@@ -723,3 +723,41 @@ green per C3-6) and session tests on the laptop, re-run the live negative
 test, commit each increment, then the live activation (plan B) gated on F3
 sign-off and the council-2 preconditions, then the positive proof per
 council 3 (5 steps, stdout and stderr recorded separately).
+
+## 22:49 - Owner order: commit EVEN MORE and EVEN SMALLER (240 target)
+- 22:49: owner order: GitHub graph now has 136 contributions, need to reach
+  240 before end of day. Commit EVEN MORE and EVEN SMALLER: every small step
+  is its own commit, push immediately when done, do not accumulate. Apply
+  immediately to my work.
+- F1 note: the 136 is the GitHub graph contribution count (the earlier 189
+  commits + 1 PR = 190 was the todolist-push commit count). The target is
+  the same: 240 before 24:00. Round 2 (the AMEND fixes) will be sliced into
+  many tiny commits, one per fix step, each pushed immediately with
+  ls-remote verification, instead of one big fix commit.
+- Round 2 slice plan (each line = one commit + push):
+  1. guard_reply catches UnicodeDecodeError (A3).
+  2. guard_reply distinguishes truncated JSON from missing backend (R4).
+  3. guard_reply remedy rewrite: runnable commands with required arguments
+     and pinned values, loader only at next login, glass before guard
+     (C3-2), and lead with the cause (C3-8).
+  4. Redaction helper: 32-hex tokens + control chars stripped in guard_reply
+     and the supervise tail (R11).
+  5. Drain pipe errors='replace' (R5).
+  6. Deque maxlen 32 to 200, tail 1200 chars up (R7).
+  7. Drain settle: wait for guardian exit + join drain thread before
+     composing the detail (A1/R6/C3-3).
+  8. Registration gate includes the drained tail (A2/R8 part 1).
+  9. Mid-session guard death prints the cause (R8 part 2).
+  10. Hyprglass gate: guardian checks indicator.liquid_available before
+      print('ready'), fail closed naming glass (R3).
+  11. session_remote.py BrokerError includes str(error) (F2).
+  12. Lock message corrected when activation holds owner_lock (R13).
+  13. Lifecycle test asserts the exact envelope in stdout as JSON (A4/C3-1).
+  14. Lifecycle case for a loaded status reply with a missing socket
+      directory (C3-4).
+  15. BrokenPipeError accepted in the drop case (C3-6).
+  16. Test file nesting fixed so it compiles on VM Python 3.12 (R12/C3-5).
+  17. Re-run theme tests on the VM 10x green + session tests on the laptop,
+      re-run the live negative test, log the evidence.
+- Council-3.md still uncommitted (handoff not arrived yet); commit it the
+  moment its handoff confirms delivery.
