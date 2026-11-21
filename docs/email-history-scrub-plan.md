@@ -14,11 +14,16 @@ history until the owner says go in the coord file.
   HEAD has 0 matches for the address domain. The address is still in
   history: only 2 commits in all fetched history touch the string,
   a46b3c68 (added it) and 1c7d252 (removed it).
-- Main has 432 commits, 0 tags, .git is 6.0M. Main is NOT branch
-  protected, so a force push is technically allowed.
-- Two other refs still carry the leaked line at their tips:
-  origin/todolist-push and origin/coord-clone2-setup (the head of
-  open PR #1). Both branched from main before 1c7d252.
+- Main has 445 commits at HEAD 2757ff1, checked 2026-11-21, 0 tags,
+  .git is 6.0M. Main is NOT branch protected, so a force push is
+  technically allowed. Re-check the commit count at run time; main
+  keeps moving, and the expected rewritten count in section 7 is
+  always the current count minus 1.
+- One other ref still carries the leaked line at its tip:
+  origin/todolist-push. origin/coord-clone2-setup (the head of open
+  PR #1) has a clean tip now, checked 2026-11-21, but its history
+  still contains commit a46b3c68, so it still needs the rewrite.
+  Both branched from main before 1c7d252.
 - There are 31 remote branches. A mirror clone fetches all of them,
   so the rewrite below covers them.
 - git filter-repo is NOT installed on this machine. It must be
@@ -34,7 +39,8 @@ history until the owner says go in the coord file.
    orphan it. Check `git status` on every machine before proceeding.
 3. Keep one pre-rewrite backup clone of origin/main on the laptop,
    offline, until section 7 verification passes. That backup is the
-   rollback. Delete it only after verification.
+   rollback. Make it at /tmp/computer-use-wayland-backup, so section 7
+   can read the old history from it. Delete it only after verification.
 
 ## 3. Install the tool
 
@@ -101,9 +107,10 @@ What this does, and what to expect:
   branches, and drops the address from file contents.
 - Commit 1c7d252 becomes empty in the rewritten history, because the
   line it deleted never existed there. filter-repo prunes empty
-  commits by default, so rewritten main should have 431 commits,
-  one fewer than the current 432. Verify that exact count in
-  section 7.
+  commits by default, so rewritten main should have 444 commits,
+  one fewer than the current 445 at HEAD 2757ff1. Re-check the
+  current count at run time; the expected rewritten count is always
+  the current count minus 1. Verify that exact count in section 7.
 - filter-repo runs `git reflog expire --expire=now --all` and
   `git gc --prune=now` at the end, so the old objects are purged from
   the scrub clone.
@@ -123,32 +130,52 @@ rm /tmp/replacements.txt /tmp/email.txt
 
 ## 7. Verify the rewritten history before any push
 
-Run all of these in the scrub clone. Every check must pass. If any
-check fails, stop, do not push, and keep the backup clone from
-section 2.
+Run all of these in the scrub clone, in one shell session. Every
+check must pass. If any check fails, stop, do not push, and keep the
+backup clone from section 2.
+
+First, get the full address string into a shell variable, extracted
+mechanically from the backup clone (section 2), which still has the
+old history. Never type the address by hand, and never write it into
+this plan. The scrub clone itself cannot provide it, because its
+history is already rewritten. Do NOT use the domain alone for these
+checks: the domain string also appears in doc commits 6599706,
+6e57183, aeaa006, and 2757ff1, so a domain check can never return
+empty after the rewrite. Only the full address string is unique to
+the leaked line.
+
+```
+EMAIL=$(git -C /tmp/computer-use-wayland-backup show a46b3c68:improvements/live-test-log.md | sed -n '3288p' | grep -o '[^ ]*@[^ ]*')
+echo "$EMAIL" | wc -w
+```
+
+The word count must be exactly 1. If it is not 1, stop and inspect
+the extraction, because it picked up the wrong text.
 
 ```
 git rev-list --count HEAD
 ```
 
-Expected output: 431.
+Expected output: 444, one fewer than the 445 commits on main at
+HEAD 2757ff1. Re-check the current main count at run time; the
+expected rewritten count is always the current count minus 1.
 
 ```
-git log --all --oneline -S "gmail.com"
+git log --all --oneline -S "$EMAIL"
 ```
 
 Expected output: empty. No commit in the rewritten history may touch
-the string.
+the full address string.
 
 ```
-git grep "gmail.com" $(git rev-list --all)
+git grep "$EMAIL" $(git rev-list --all)
 ```
 
 Expected output: empty. This greps the file contents of every commit
 in every branch, not just the log.
 
 ```
-git show HEAD:improvements/live-test-log.md | grep -c "gmail.com"
+git show HEAD:improvements/live-test-log.md | grep -c "$EMAIL"
 ```
 
 Expected output: 0.
@@ -161,7 +188,7 @@ Record the commit count per branch, and confirm every branch tip has
 0 matches:
 
 ```
-git branch -a | while read b; do git show "$b:improvements/live-test-log.md" 2>/dev/null | grep -c "gmail.com"; done
+git branch -a | while read b; do git show "$b:improvements/live-test-log.md" 2>/dev/null | grep -c "$EMAIL"; done
 ```
 
 Every line of output must be 0, or the file is absent at that tip.
@@ -201,9 +228,19 @@ an old clone would restore the leaked commits to origin. Order:
 1. Laptop (owner): the rewrite machine. After the push, make a fresh
    normal clone for daily work, or keep working from a fresh clone
    made from the rewritten origin. Delete the old working clone.
-2. Clone1: delete the old clone, make a fresh clone, confirm
-   `git log --all --oneline -S "gmail.com"` is empty in the new clone
-   before doing any work.
+2. Clone1: delete the old clone, make a fresh clone, confirm the
+   full address string is gone before doing any work. The fresh clone
+   cannot provide the address string itself, so extract it first
+   from the OLD clone, before deleting it:
+   `git -C <old-clone> show a46b3c68:improvements/live-test-log.md |
+   sed -n '3288p' | grep -o '[^ ]*@[^ ]*' > /tmp/email.txt`,
+   then in the fresh clone run
+   `git log --all --oneline -S "$(cat /tmp/email.txt)"` and confirm
+   it is empty, then delete /tmp/email.txt. Do NOT check the domain
+   alone here either: the fresh clone contains doc commits that
+   mention the domain, so a domain check would return matches even
+   after a clean scrub. Only the full address string proves the
+   leak is gone.
 3. Clone2: same as clone1, fresh clone, same check, before any work.
 4. VM: same as clone1, fresh clone, same check.
 
@@ -214,9 +251,9 @@ re-clone at once, it must not push anything until it does.
 ## 10. Open PR #1 and the todolist-push branch
 
 PR #1 is OPEN, head branch coord-clone2-setup, base main, state
-MERGEABLE at the time this plan was written. Its head tip still
-carries the leaked line, and its history descends from main before
-1c7d252.
+MERGEABLE at the time this plan was written. Its head tip is clean
+now, checked 2026-11-21, but its history still contains the leaked
+commit a46b3c68, because it descends from main before 1c7d252.
 
 - The `git push --force --all origin` in section 8 rewrites the PR
   head branch too, because the mirror clone contains it and
@@ -270,8 +307,11 @@ back would reintroduce the leaked commits.
 - Installing git filter-repo was not tested on this machine. The tool
   is not installed here, and this plan was written, not run.
 - The exact rewritten commit hashes cannot be known until the run.
-  The expected count of 431 commits on main is a prediction from the
-  empty-commit pruning rule, not a measurement.
+  The expected count of 444 commits on main is a prediction from the
+  empty-commit pruning rule, not a measurement. It was computed from
+  445 commits at HEAD 2757ff1, checked 2026-11-21. Re-check the
+  current main count at run time; the expected rewritten count is
+  always the current count minus 1.
 - Whether any fork of the repo exists was not checked.
 - Whether clone2 or the VM hold unpushed work was not checked here.
   That must be confirmed in the coord files during the freeze in
