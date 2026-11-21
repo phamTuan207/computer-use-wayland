@@ -48,3 +48,42 @@ Dựa vào báo cáo Worker N:
 - Xong mỗi việc thì cập nhật coord/clone1.md với những gì đã làm, commit nào, kết quả đo được.
 
 Làm hết đống này đi, đừng chờ. Khi nào xong hết thì báo vào coord/clone1.md, tôi giao tiếp việc khác.
+
+## Trả lời câu hỏi email của cậu - quyết định của tôi, qua Muse
+
+Muse đã kiểm chứng: đúng là file improvements/live-test-log.md dòng 3288 trên main đang lộ email thật của tôi, từ commit a46b3c68 ngày 18/11. Tôi chọn làm cả hai bước, theo thứ tự này:
+- Bước 1, làm NGAY: xóa dòng đó khỏi main hiện tại, commit, push. Dừng lộ trên trang chính trước.
+- Bước 2, làm SAU, không tự ý force push: viết sẵn quy trình xóa sạch email khỏi toàn bộ lịch sử git (lệnh filter-repo cụ thể, thứ tự re-clone cho từng agent, cách xử lý PR đang mở), ghi vào docs/email-history-scrub-plan.md. Muse sẽ chạy bước này khi cả đội rảnh, vì force push làm hỏng mọi repo đang làm việc dở.
+- Từ nay mọi câu hỏi cậu có thì ghi vào file này cho Muse trả lời, đừng hỏi trực tiếp tôi nữa. Tôi không trả lời clone qua chat.
+
+## Đợt 2 cậu chưa làm, bắt đầu NGAY
+
+Đợt 2 tôi giao từ 15:15 mà tới giờ chưa thấy commit nào. Làm hết 5 việc đợt 2 trước, rồi làm tiếp đợt 3 dưới đây. Đừng ngồi chờ.
+
+## ĐỢT 3 - 5 việc mới
+
+### Việc 1: Quét toàn repo tìm thông tin cá nhân bị lộ
+- Grep toàn bộ file trên main, todolist-push và mọi branch còn lại: email thật, tên thật, số điện thoại, địa chỉ, token, mật khẩu, lịch cá nhân.
+- Báo cáo đầy đủ vào docs/personal-info-audit-20261121.md: file nào, dòng nào, loại thông tin gì, đã lộ từ commit nào.
+- Sửa ngay bước 1 ở trên (xóa dòng email khỏi live-test-log.md) trong việc này luôn.
+- Không sửa lịch sử git, chỉ sửa file hiện tại và báo cáo.
+
+### Việc 2: Kiểm chứng độc lập 111 mục todo đã tick
+- Đọc docs/zen-error-fix-todolist-20261121.md trên main (111/115 đã tick).
+- Với từng mục đã tick, kiểm chứng có bằng chứng thật không: commit, test pass, log đo. Liệt kê mục nào tick mà không có bằng chứng, mục nào bằng chứng yếu.
+- Báo cáo vào docs/todo-audit-20261121.md. Không tự ý bỏ tick, chỉ báo cáo.
+
+### Việc 3: Sinh thêm 10 test thực tế khó, đợt 3
+- Thư mục tests/realistic/clone1-batch3/, 10 test mới, chủ đề chưa ai làm: terminal emulator, spreadsheet công thức, video call UI, email client, file manager, calendar, code editor, settings panel, multi-window workflow, trình phát nhạc.
+- Mỗi test 15-40 bước, fixture offline hoàn toàn, checker kiểm chứng DOM thật, không tự mô phỏng.
+- Viết README cách chạy từng test.
+
+### Việc 4: Nghiên cứu và prototype điều khiển Zen qua AT-SPI
+- Linux có AT-SPI accessibility tree. Nghiên cứu xem có đọc cây accessibility của Zen và click/type qua đó được không.
+- Viết prototype nhỏ trên máy cậu với Firefox thật (không có Zen thì dùng Firefox), đo thời gian từng thao tác, ghi rõ làm được và không làm được gì.
+- Báo cáo vào docs/research/2026-11-21-atspi-zen-control.md. Nếu không làm được thì ghi UNVERIFIED và lý do, không bịa.
+
+### Việc 5: Viết quy trình xóa email khỏi toàn bộ lịch sử git
+- Như bước 2 ở trên: docs/email-history-scrub-plan.md.
+- Lệnh filter-repo cụ thể, cách kiểm chứng email đã sạch khỏi mọi commit, thứ tự re-clone cho clone1, clone2, VM, laptop, cách xử lý PR #1 đang mở và branch todolist-push.
+- Chỉ viết quy trình, KHÔNG chạy force push.
