@@ -50,17 +50,28 @@ Each spawns a probe subprocess that does a real localhost UDP sendto or
 sendmsg, and each gets PermissionError: [Errno 1] Operation not permitted
 from tests/network_guard.py:125 (sendto) or :130 (sendmsg). The sandbox on
 this VM blocks UDP socket operations, so the real UDP send is refused by
-the environment. The guard code under test is not at fault.
+the environment. The guard code under test is not at fault. But the 4
+guard tests could not run to completion here: each probe subprocess exits
+1 at the first real UDP send, so the outer returncode == 0 assertion
+fails before any post-send check runs. The guard's pass-through behavior
+is therefore unproven on this machine, not verified; a defect that only
+manifests after a successful send would be masked behind the sandbox
+error. The confirming re-run is the open check below. One partial
+positive: the probe output prints restored-13-socket-functions, so the
+restore check inside the probe ran and passed before the probe failed on
+the later UDP send in test_owned_transport.
 
 The fifth is tests/test_setup_wizard.py::TestWriteApiKey::
 test_unwritable_target_returns_false. It creates a directory with chmod
 0o500 and expects write_api_key to return False. This VM runs as root
 (uid=0, verified with id), and root bypasses file permission bits, so the
 write succeeds and returns True. Environment artifact, not a skill defect.
+As root the test also cannot distinguish "correctly handles unwritable"
+from "never checks"; the same open check covers it.
 
 ## Warnings
 
-93 warnings, mostly one DeprecationWarning in
+93 warnings, all the same DeprecationWarning in
 skills/last30days/scripts/store.py:1175 (sqlite3 named parameter binding
 supplied as a sequence; becomes a ProgrammingError in Python 3.14).
 
