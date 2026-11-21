@@ -12,11 +12,14 @@ driving in this task.
 - Old staged suite: ed78e83 on main (Y10 reconciled best of both).
 - New suite HEAD: 1d23532 on main (Y15 D1 fix, log 3b50e94). Diff
   ed78e83..1d23532 touches ONLY t10-music-player/check.mjs (+240/-37,
-  167 -> 353 lines) and t10-music-player/README.md (+97). t01-t09
-  check.mjs files are byte-identical between the two commits (verified
-  by git diff --stat). Fixture untouched.
-- Runner before re-stage: tests/realistic/run_batch3.py at 70061e2
-  (Y14 redteam-2 AMEND fixes H1-H5 + M1). No manifest mechanism exists
+  167 -> 353 lines) and t10-music-player/README.md (+97) within
+  tests/realistic/clone1-batch3/ (the range overall touches 7 files;
+  the other 5 are outside the suite and irrelevant to the runner).
+  t01-t09 check.mjs files are byte-identical between the two commits
+  (verified by git blob hash comparison per file, re-verified by
+  Council 3). Fixture untouched.
+- Runner before re-stage: tests/realistic/run_batch3.py as at commit
+  70061e2 (blob 72d8eb6) (Y14 redteam-2 AMEND fixes H1-H5 + M1). No manifest mechanism exists
   in this runner (grep: no _manifest_entries, no --verify-manifest, no
   MANIFEST constant). The suite is therefore verified by md5 against
   the git HEAD at ship time (the Y14 approach), not by a manifest.
@@ -56,7 +59,7 @@ driving in this task.
   re-checks at the top before any tab opens.
 - 21:09 +07: py_compile OK; import OK, 10 tests registered
   (b3-t01..b3-t10); exact_zero_next present. H2 helper diff vs
-  Y13f: all 5 functions IDENTICAL (docstring tail of
+  Y13f: all 5 functions identical in logic (docstring tail of
   _is_runner_cmdline differs by design: it records this Y14
   application instead of the "must apply" note).
 - 21:10 +07: H2 probe /tmp/y14b-h2-probe.py. First run 20/21: the
@@ -75,9 +78,11 @@ driving in this task.
   failures, all script-order bugs (now-playing assert precedes the
   min check in the runner, as in check.mjs; exact_zero_next count
   included the def line). Fixed the script, second run ALL PASS,
-  exit 0: 68 ordered assert alignments, D1 probe gone, 3
+  exit 0: 72 ordered assert alignments (69 checker asserts + 3 volume
+  extras, independently re-derived by Council 1), D1 probe gone, 3
   exact-zero call sites, sleep counts 0.7x3 / 0.5x1 / 0.4x1 /
-  0.35x10, sampler fail-closed.
+  0.35x10, sampler fail-closed. (An earlier log draft said 68; the
+  correct count is 72.)
 - 21:11 +07: launch-gate dry run /tmp/y14b-gate-dry.py (faked
   Zen/Marionette/ports, REAL /proc scan + REAL dummies). 4/4 PASS:
   quiet slot passes; bare-relative dummy refuses (pid printed);
@@ -98,7 +103,8 @@ driving in this task.
   defs only: header/imports, run_b3_t10, run_preflight (re-check),
   H2 helpers (inserted before launch_gate), launch_gate (sweep).
   No other test function touched; t01-t09 check.mjs files are
-  byte-identical between ed78e83 and 1d23532 (git diff --stat).
+  byte-identical between ed78e83 and 1d23532 (git blob hash
+  comparison, re-verified by Council 3).
 - 21:12 +07: committed f732d6a on todolist-push (3 files: runner,
   plan, this log), pushed, ls-remote verified. Only my 3 files
   staged; Y13f's uncommitted working-tree changes untouched.
@@ -111,3 +117,149 @@ driving in this task.
   false-positives, gate/preflight window, stale references). Ship
   to the laptop waits for their verdicts (ship must be from final
   bytes after any fixes).
+
+## Review verdicts (21:13-21:25 +07)
+
+- Council 1 (paper 18b150b): GO. t10 translation 69/69 checker
+  asserts, same order, same thresholds; 72 = 69 + 3 volume extras.
+  Watch item: middle advancing read margin (runner serializes the
+  sampler + now-playing assert, so the advancing read lands near
+  8-10 ticks vs bound 11; watch details.positionAdvancingAfterNext
+  and details.positionAdvancingAfterShuffleNext; if either reads 11
+  repeatedly, read after_sampler before the now-playing text check).
+  Honest notes: log count "68" stale (correct 72); step-abort
+  semantics pre-existing.
+- Council 2 (paper b445257): AMEND. Fix 1 (required, code):
+  python3 -m run_batch3 returns False, bypasses the single-runner
+  guard; four-line fix specified (accept bare run_* / hand_drive_e1
+  token after -m); same fix should go to sibling copies
+  run_codex_y5.py / launch_y13.py or the "identical logic" claim
+  breaks. Fix 2 (cosmetic): stale comment "pgrep sweep below" at
+  line 2364. Known residuals: double-nested flock -c quoting,
+  runpy.run_path in -c.
+- Council 3 (paper 41fa919): AMEND. F1 (load-bearing, plan L413):
+  still says suite "copied from main ed78e83", must be 1d23532.
+  F2 (L36-37): Y12 present tense, reword to past tense with pointer.
+  F3 (L427-428): launch gate still describes old pgrep sweep. F4
+  (L520): "all byte-identical" overstates the docstring difference.
+  F5 (L479-487): Y12 Consequence paragraph mark SUPERSEDED. F6
+  (L269 + L534): seek citation L103-106 is old (new L169) + pin the
+  ship-time md5 procedure. F7 (log wording): qualify "touches ONLY
+  t10..." with "within tests/realistic/clone1-batch3/", fix
+  "IDENTICAL (docstring differs)" self-contradiction, clarify
+  "run_batch3.py at 70061e2" as commit 70061e2 (blob 72d8eb6).
+  Judgment on missing manifest: AMEND-level, not BLOCK (adding a
+  manifest is new design work scoped out by redteam-2; staging
+  verified at git blob level; required fix is F6).
+- Redteam (paper 5e6b385): BLOCK. H1 HIGH: gate bypass x5
+  (python3 -m, python3 -c import, renamed copy, shebang renamed
+  copy, spoofed argv[0]; all live-confirmed). H2 HIGH: playing wrap
+  that stops the timer passes everything (no advancing check after
+  the wrap; next playlist click restarts the timer and masks it).
+  H3 MEDIUM: later advancing reads unbounded, late jump passes.
+  H4 MEDIUM: 2..11 bounds miscalibrated for the runner's transport
+  (correct fixture reads 11 at 50 ms/round trip, zero margin; fails
+  at 75 ms). M1 MEDIUM: start_server() reuses a foreign server on
+  8771 and serves FOREIGN bytes while the gate disk check passes
+  (reproduced live). M2 MEDIUM: no re-scan after preflight; scan is
+  same-pid-namespace only. M3 LOW: codex false-positive (substring
+  match on whole cmdline; sleep process argv[0] "codex marionette
+  notes" flagged). M4 LOW: plan L413 ed78e83; no md5 list, SHIPPED
+  entry, or manifest; clone1-batch3 absent from todolist-push.
+  L1 LOW: int() truncation in position reads. L2 LOW: ancestry
+  exclusion could hide a runner descendant (latent only).
+
+## Adjudication (Y14b fix pass, 21:25-21:35 +07)
+
+Redteam BLOCK downgraded to AMEND with fixes. Each finding decided
+on its merits; nothing accepted or declined silently.
+
+- H1: FIXED in part. The -m form (Council 2 Fix 1, exact four-line
+  spec) and the -c import form (a bare runner module name after
+  "import"/"from" in -c words) are covered in _is_runner_cmdline.
+  DECLINED: renamed copy, shebang renamed copy, spoofed argv[0],
+  extensionless script, direct .pyc (adversarial forms, outside
+  this gate's accidental-collision threat model; no fleet workflow
+  uses them; recorded as residual limitations in the docstring).
+  DECLINED: flock lock held for the whole run (redteam's primary
+  fix). A lock taken by only this runner gives no guarantee: the
+  other runners (run_live.py, run_agyq2.py, run_fcck.py) do not take
+  it, so a second runner of any shape still runs. The lock only
+  works fleet-wide, which is a Muse-level fleet decision, not a
+  change for this runner. FLAGGED to Muse.
+- H2: plan claim CORRECTED (redteam's own alternative (b)): the
+  playing wrap is reset-only tested, liveness untested, and the
+  "live run is the real test" claim for R1/R2/R3b is withdrawn.
+  DECLINED: adding a post-wrap advancing check to the runner (spec
+  divergence from the checker; the gap is Y15's documented R2
+  escape, landed per a pre-set stopping rule). Checker follow-up
+  proposed for a future suite revision, FLAGGED to Muse.
+- H3: DECLINED (checker deliberately gain-only on the later reads;
+  documented limit, inherited by the runner). Recorded in the plan
+  as an inherited limit, not a gate.
+- H4: now-playing assert moved after the advancing-later read at
+  the playing and shuffle Nexts (redteam's (c) alternative): its 2
+  round trips no longer sit in the sampler-to-advancing path. Assert
+  SET identical to check.mjs; only the order of two independent
+  asserts is swapped. DECLINED: re-deriving the caps in the runner
+  (divergence from the checker). Margin analysis recorded in the
+  plan: at measured laptop rates (Y11b proof: eval median ~2 ms,
+  click steps ~56 ms for ~3 POSTs, round trip ~2-19 ms) the correct
+  fixture reads about 8-9, margin ~2 ticks, ~2.4 after the move.
+  Council 1's suggested reorder (read after_sampler before the
+  now-playing check) is subsumed by this move.
+- M1: FIXED. _verify_served_fixture() fetches the t10 fixture over
+  HTTP after start_server() and compares its md5 to the on-disk
+  root; main() refuses (exit 2) on mismatch or fetch failure.
+  run_live.py's reuse probe NOT changed (shared driver, owned by
+  Worker P).
+- M2: FIXED in part. run_one() re-scans at the top of each test; a
+  hit returns an INFRA summary before any tab is driven (one retry
+  + breaker count). DECLINED: flock-lock part (same as H1, flagged
+  to Muse).
+- M3: FIXED. "codex" anchored to the executable token
+  (_is_codex_executor: argv[0] basename, or a token exactly "codex";
+  marker required in a different token). Plain-codex warning
+  restored in launch_gate() (warning-only, never a refusal).
+- M4: FIXED (same as Council 3 F1/F6): L413 updated to 1d23532;
+  suite md5 list + pinned ship procedure in the plan. No manifest
+  (Council 3 judgment stands).
+- L1: FIXED. position() and exact_zero_next() return the raw Number,
+  no int() truncation.
+- L2: DECLINED (latent only; no runner-descendant topology exists
+  in this fleet; the fix would weaken the -c ancestry exclusion).
+  Recorded.
+- Council 2 Fix 1 + Fix 2: FIXED (see H1; stale comment at 2364
+  updated). Sibling copies run_codex_y5.py / launch_y13.py need
+  the same -m fix; Y14b does not edit Y13f's in-progress files.
+  FLAGGED to Muse/Y13f.
+- Council 3 F1-F7: FIXED (all plan/log wording + pinned ship md5
+  procedure, suite md5s computed from git blobs at 1d23532).
+- Council 1 watch item: addressed by the H4 move + margin analysis
+  + watch keys in the plan. Log count fixed 68 -> 72.
+
+## Fix-pass verification (21:31-21:35 +07, all on the VM)
+
+- py_compile OK; import OK, 10 tests (b3-t01..b3-t10).
+- H2 probe /tmp/y14b-h2-probe.py: 45/45 PASS, exit 0 (27 unit
+  synthetic cmdlines incl. -m x3, -c import x2, -c string-mention
+  False, codex anchor x7, residuals x6; 7 live /proc cases incl.
+  -m dummy caught, codex executor caught, codex false-positive NOT
+  caught; M2 run_one returns INFRA in 1 ms with a runner live, no
+  WD session opened). No strays left.
+- Transcription /tmp/y14b-transcribe.py (updated for the new
+  now-playing order): 82 PASS lines (72 order + 10 structural),
+  0 failures, exit 0.
+- Launch-gate dry run /tmp/y14b-gate-dry.py: 4/4 PASS, exit 0.
+- M1 probe /tmp/y14b-m1-probe.py: 3/3 PASS, exit 0 (matching bytes
+  accepted, md5 eb814c944dab6279417c6182e1950876; foreign bytes
+  refused; 404 refused). First run failed on a probe-harness bug
+  (httpd.shutdown() without server_close(), port still bound;
+  then a sed that rewrote stop() into a self-call); both fixed in
+  the probe, not the runner.
+- No em/en dash in the fix diff (grep 0), no ydotool, no personal
+  info.
+- Fix commit: (hash filled below after commit).
+- Fresh council (3) + redteam over the FIX DIFF only: spawned after
+  this commit (per the Y13r pattern). Ship to the laptop waits for
+  their verdicts.

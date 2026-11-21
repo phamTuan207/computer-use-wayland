@@ -1470,9 +1470,13 @@ def run_b3_t10(r, d):
         r.check(what, got == wanted, f"got {got!r}, want {wanted!r}")
 
     def position():
-        return int(d.eval(
+        # Raw Number, no int() truncation (redteam L1): a
+        # fractional read must not truncate to 0 and false-pass
+        # exact-zero. The fixture position is always an integer,
+        # so this changes no live value, only the failure mode.
+        return d.eval(
             "return Number(document.getElementById('position')"
-            ".dataset.seconds)"))
+            ".dataset.seconds)")
 
     def tracks():
         return d.eval(
@@ -1518,7 +1522,9 @@ def run_b3_t10(r, d):
         if not isinstance(result, (int, float)):
             raise RuntimeError(
                 f"exact-zero read returned non-numeric: {result!r}")
-        return int(result)
+        # Raw Number, no int() truncation (redteam L1): a
+        # fractional read must not truncate to 0 and false-pass.
+        return result
 
     listed = r.step("read playlist", "eval", lambda: tracks())
     r.check("playlist lists 5 tracks", len(listed) == 5, str(listed))
@@ -1563,8 +1569,6 @@ def run_b3_t10(r, d):
     pos_before = resumed
     min_after = r.step("sample position min after next", "eval",
                        lambda: sample_position_min())
-    expect_text("#now-playing", "River Road - The Demos",
-                "now playing after next")
     r.check("position reset after next",
             min_after <= 2 and min_after < pos_before,
             f"min observed {min_after} after {pos_before}")
@@ -1594,6 +1598,17 @@ def run_b3_t10(r, d):
     r.check("position gained again after next while playing",
             advancing_later - advancing >= 2,
             f"{advancing} to {advancing_later}")
+    # Now-playing assert moved here (redteam H4 alternative (c)):
+    # it used to sit between the sampler and the min check, so its
+    # 2 Marionette round trips (find + text) sat in the
+    # sampler-to-advancing path and ate the 2..11 bound's margin.
+    # The track name is stable across the advancing window, so the
+    # assert proves the same thing here; the assert SET is
+    # identical to check.mjs, only the order of these two
+    # independent asserts is swapped. The frozen Nexts keep their
+    # now-playing asserts in place (no timing bound there).
+    expect_text("#now-playing", "River Road - The Demos",
+                "now playing after next")
     # Exact-zero check on a clock-frozen path. Pause first (the
     # timer stops, so no tick can land between the click and the
     # read) and require exactly 0 after Next. This runs as a second
@@ -1694,8 +1709,6 @@ def run_b3_t10(r, d):
     min_after_shuffle = r.step(
         "sample position min after shuffle next", "eval",
         lambda: sample_position_min())
-    expect_text("#now-playing", "Mountain Air - The Demos",
-                "now playing after next in shuffle order")
     r.check("position reset after shuffle next",
             min_after_shuffle <= 2
             and min_after_shuffle < pos_before_shuffle,
@@ -1729,6 +1742,12 @@ def run_b3_t10(r, d):
     r.check("position gained again after shuffle next while playing",
             advancing_shuffle_later - advancing_shuffle >= 2,
             f"{advancing_shuffle} to {advancing_shuffle_later}")
+    # Now-playing assert moved here, same reason as the plain Next
+    # (redteam H4 alternative (c)): its 2 round trips no longer sit
+    # in the sampler-to-advancing path. Assert set identical to
+    # check.mjs, order of independent asserts swapped.
+    expect_text("#now-playing", "Mountain Air - The Demos",
+                "now playing after next in shuffle order")
     # Paused shuffle Next, mirroring step 7: the sampler above
     # proves the reset happens, this exact-zero read proves the
     # reset value in shuffle order. Previous returns to Mountain
@@ -2155,6 +2174,18 @@ def _is_infra(summary):
 def run_one(test_id, base_url, metrics=None):
     fn = TESTS[test_id]
     r = Runner(test_id, base_url, metrics=metrics)
+    # Redteam M2: re-scan at the top of each test, so a runner that
+    # starts after the preflight is caught before this test drives
+    # Zen. A hit is recorded as INFRA (one retry + breaker count),
+    # not as a fixture failure; the test is not driven at all.
+    hits = _scan_other_runners()
+    if hits:
+        r.failures.append(
+            "INFRA: live slot busy, runner process running: " +
+            "; ".join(f"pid {p}: {c}" for p, c in hits))
+        s = r.summary()
+        print("RESULT " + json.dumps(s, ensure_ascii=False), flush=True)
+        return s
     try:
         with WD() as d:
             d.metrics = metrics
@@ -2230,26 +2261,49 @@ def _is_runner_cmdline(cmdline):
     -u/-m flags, flock -c, shell -c), to be the first word of a -c
     string, or (for non-.py run-nested scripts only) to follow
     bash/sh. A path mention after md5sum/cat/git never matches.
+    Module form (Council 2 Fix 1, redteam H1): "python3 -m
+    run_batch3" has no .py suffix, so it is accepted as a bare
+    run_* / hand_drive_e1 token after -m. -c import form (redteam
+    H1): "python3 -c 'import run_batch3; ...'" is accepted when a
+    bare runner module name follows "import" or "from" in the -c
+    words. Known residual limitations, recorded not hidden:
+    double-nested -c quoting (flock -c "bash -c 'python3
+    run_foo.py'"), runpy.run_path inside -c, extensionless script
+    tokens ("python3 run_batch3"), direct .pyc execution, renamed
+    copies, shebang renamed copies, and spoofed argv[0] all miss;
+    none is a launch form in use, and the renamed/spoofed forms
+    are adversarial, outside this gate's accidental-collision
+    threat model. A flock lock held for the whole run would close
+    those shapes too, but only fleet-wide (every runner must take
+    the same lock; run_live.py does not today), so that is a
+    Muse-level fleet decision, not a change for this runner.
     Keep in sync with launch_y13.py and run_codex_y5.py (identical
     logic). This copy IS the Y14 application of the fix (Y14b
     re-stage from suite HEAD 1d23532)."""
     tokens = _argv_tokens(cmdline)
     for i, tok in enumerate(tokens):
         base = tok.rsplit("/", 1)[-1]
-        if not _script_basename_is_runner(base):
+        if _script_basename_is_runner(base):
+            if i == 0:
+                return True
+            prev = tokens[i - 1]
+            prev_base = prev.rsplit("/", 1)[-1]
+            if _is_python_token(prev):
+                return True
+            if prev == "-c":
+                return True
+            if prev.startswith("-") and any(
+                    _is_python_token(t) for t in tokens[:i]):
+                return True
+            if not base.endswith(".py") and prev_base in ("bash", "sh"):
+                return True
             continue
-        if i == 0:
+        if i > 0 and tokens[i - 1] == "-m" and (
+                base.startswith("run_") or base == "hand_drive_e1"):
             return True
-        prev = tokens[i - 1]
-        prev_base = prev.rsplit("/", 1)[-1]
-        if _is_python_token(prev):
-            return True
-        if prev == "-c":
-            return True
-        if prev.startswith("-") and any(
-                _is_python_token(t) for t in tokens[:i]):
-            return True
-        if not base.endswith(".py") and prev_base in ("bash", "sh"):
+        if i > 0 and tokens[i - 1] in ("import", "from") and (
+                base.rstrip(";,()").startswith("run_")
+                or base.rstrip(";,()") == "hand_drive_e1"):
             return True
     return False
 
@@ -2276,6 +2330,24 @@ def _ppid_of(pid):
         return int(rest.split()[1])
     except Exception:
         return None
+
+
+def _is_codex_executor(cmdline):
+    """True if the cmdline is a codex CLI driving (or about to
+    drive) a browser (redteam M3). The old predicate matched
+    "codex" as a substring of the whole flat cmdline, so a sleep
+    process whose argv mentioned codex + marionette was flagged.
+    Anchor "codex" to the executable token (argv[0] basename, or
+    a token exactly "codex" as in a shell -c string) and require a
+    refuse marker in a DIFFERENT token than the codex token."""
+    tokens = _argv_tokens(cmdline)
+    for i, tok in enumerate(tokens):
+        if tok.rsplit("/", 1)[-1] != "codex":
+            continue
+        rest = " ".join(tokens[:i] + tokens[i + 1:]).lower()
+        if any(m in rest for m in CODEX_REFUSE_MARKERS):
+            return True
+    return False
 
 
 def _scan_other_runners():
@@ -2310,10 +2382,30 @@ def _scan_other_runners():
         flat = cmd.replace(chr(0), " ").strip()
         if _is_runner_cmdline(cmd):
             hits.append((rpid, flat))
-        elif "codex" in cmd.lower() and any(
-                m in cmd.lower() for m in CODEX_REFUSE_MARKERS):
+        elif _is_codex_executor(cmd):
             hits.append((rpid, flat))
     return hits
+
+
+def _plain_codex_processes():
+    """Processes whose executable token is a codex CLI, with no
+    refuse marker (warning-only, redteam M3): a plain codex CLI
+    may be doing unrelated work, so it never refuses the gate,
+    but launch_gate() prints a warning for it."""
+    found = []
+    for name in os.listdir("/proc"):
+        if not name.isdigit():
+            continue
+        rpid = int(name)
+        try:
+            with open(f"/proc/{rpid}/cmdline", "rb") as f:
+                cmd = f.read().decode("utf-8", "replace")
+        except OSError:
+            continue
+        tokens = _argv_tokens(cmd)
+        if tokens and tokens[0].rsplit("/", 1)[-1] == "codex":
+            found.append((rpid, cmd.replace(chr(0), " ").strip()))
+    return found
 
 
 def launch_gate():
@@ -2361,8 +2453,8 @@ def launch_gate():
             s.close()
     print("LAUNCH GATE: ports 8771/4452 free", flush=True)
     # Redteam 2 H5: predecessor ports must be free (a live runner on
-    # another port would also trip the pgrep sweep below, but the port
-    # check fails closed directly).
+    # another port would also trip the /proc tokenizer scan below,
+    # but the port check fails closed directly).
     for port in (8767, 8768, 8769, 8770, 4448, 4449, 4450, 4451):
         s = socket.socket()
         try:
@@ -2411,6 +2503,44 @@ def launch_gate():
                   f"pid {rpid}: {flat}", flush=True)
         return False
     print("LAUNCH GATE: no other runner live", flush=True)
+    # Redteam M3: a plain codex CLI (no refuse marker) is
+    # warning-only, never a refusal, but it is not silently
+    # ignored either.
+    for rpid, flat in _plain_codex_processes():
+        print(f"LAUNCH GATE: warning: plain codex process live: "
+              f"pid {rpid}: {flat}", flush=True)
+    return True
+
+
+def _verify_served_fixture(base_url):
+    """Fetch the t10 fixture over HTTP and compare its md5 to the
+    on-disk file under LIVE_SERVER_ROOT (redteam M1). start_server()
+    reuses any listening server on port 8771, so the gate's disk
+    check alone cannot prove the served bytes are the staged suite.
+    Returns True on match, False on mismatch or fetch failure
+    (a foreign server without the path 404s, which also refuses)."""
+    import hashlib
+    import urllib.request
+    root = os.environ.get("LIVE_SERVER_ROOT", "")
+    disk = os.path.join(root, "clone1-batch3", "t10-music-player",
+                        "fixture.html")
+    try:
+        with open(disk, "rb") as f:
+            want = hashlib.md5(f.read()).hexdigest()
+        with urllib.request.urlopen(
+                base_url + "/clone1-batch3/t10-music-player/fixture.html",
+                timeout=5) as resp:
+            got = hashlib.md5(resp.read()).hexdigest()
+    except Exception as exc:
+        print(f"SERVED FIXTURE CHECK: fetch failed: {exc}", flush=True)
+        return False
+    if got != want:
+        print(f"SERVED FIXTURE CHECK: served md5 {got} != on-disk "
+              f"md5 {want} (foreign root reuse), refusing",
+              flush=True)
+        return False
+    print(f"SERVED FIXTURE CHECK: t10 fixture md5 {got} matches "
+          "on-disk root", flush=True)
     return True
 
 
@@ -2446,6 +2576,11 @@ def main():
     httpd, base_url = start_server()
     print(f"serving {os.environ.get('LIVE_SERVER_ROOT', '')} at {base_url}",
           flush=True)
+    # Redteam M1: verify the SERVED bytes match the on-disk suite
+    # root before driving anything (start_server() reuses any
+    # listening server on the port). Refuse (exit 2) on mismatch.
+    if not _verify_served_fixture(base_url):
+        return 2
     results = []
     infra_streak = 0
     try:

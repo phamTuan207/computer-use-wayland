@@ -26,17 +26,27 @@ below):
   0.6x-1.0x not distinguished, later advancing read gain-only with no
   upper bound, no advancing check after the playing wrap (redteam
   round-6 escapes R1/R2/R3b, landed over the BLOCK per a pre-set
-  stopping rule; they are documented limits, not gates; the live run
-  is the real test).
+  stopping rule; they are documented limits, not gates). CORRECTION
+  (Y14b fix pass, redteam H2/H3): the live run inherits these blind
+  spots, it does not test them. The playing wrap is reset-only tested
+  (liveness after the wrap is untested: a wrap that stops the timer
+  passes exact-zero + sampler and is masked by the next playlist
+  click), and the two later advancing reads are gain-only with no
+  upper bound (a late position jump passes). The earlier claim that
+  "the live run is the real test" for R1/R2/R3b was wrong and is
+  withdrawn. The runner must translate the checker faithfully, so
+  these checks cannot be added to the runner alone; a post-wrap
+  advancing check and a later-read upper bound belong in a future
+  checker revision (proposed follow-up, flagged to Muse).
 - t01-t04, t06-t08: unchanged from clone1 batch 3 (Y3 passed them 7/10
   overall; these 7 passed then). Byte-identical between ed78e83 and
   1d23532 (git diff --stat: only t10 check.mjs + README changed).
 - Headless evidence (Y10): 9/9 mutation probes v2 matched, 10/10 x7 runs
   (sequential about 24-27 s, load run 3 concurrent suites about 74 s each).
-- Y12 is independently verifying the merged suite headless. If Y12 reports
-  a defect before my slot opens, I re-read its verdict and adjust; a Y12
-  FAIL on a test I already ran live means that live result is provisional
-  until the fix lands and the test is re-run live.
+- Y12 verified the merged suite headless (see 'Y12 headless verdict'
+  below); its D1 defect is fixed by Y15 in 1d23532, which this re-stage
+  adopts. A Y12 FAIL on a test already run live means that live result
+  is provisional until the fix lands and the test is re-run live.
 
 ## Runner design: tests/realistic/run_batch3.py (new file)
 
@@ -266,7 +276,7 @@ payloads (Council 1 A1), always explicit, never relying on defaults:
   #volume, Home, ArrowRight x30, with the same live asserts as t08 (50
   after click, 0 after Home, 30 after the batch, checked immediately).
   Seek: pointer_click_at at 50% of #progress rect, then read the
-  position IMMEDIATELY and require 85 to 100 (check.mjs L103-106; the
+  position IMMEDIATELY and require 85 to 100 (check.mjs L169; the
   timer keeps running, so a delayed read can exceed 100). Shuffle/repeat/
   search/track clicks as in check.mjs. The wrap Nexts: play 700 ms
   first so the pre-click position is >= 2 (a wrap that fails to reset
@@ -410,7 +420,8 @@ the other.
 
 - Server: the runner's own loopback server on port 8771 (fresh port, no
   collision with Y8b/Y9 servers), serving the suite copy from the laptop
-  at /tmp/y14-server (suite copied from main ed78e83, md5-verified).
+  at /tmp/y14-server (suite copied from main 1d23532, md5-verified; see
+  the pinned ship procedure in the re-stage section below).
 - One WebDriver session per test (WD context manager, always deleted in
   finally). One new tab per test. Test tabs closed at the end of each
   test; user tabs never navigated, typed into, or clicked.
@@ -424,18 +435,26 @@ the other.
   files read; the launch gate below verifies 4452 is actually free.
   Pid/log files are keyed by WD_PORT, so a collision would also
   collide there.
-- Launch gate (A4), all fail-closed before any Zen driving: sweep for
-  stale geckodriver processes by PID (pgrep, parent PID, cmdline; kill
-  orphans by PID only, never by port alone or pkill -x geckodriver);
-  Zen alive; Marionette 2828 responsive; server port 8771 free, or
-  proven to serve /tmp/y14-server (probe a Y14 fixture, fail closed
-  on foreign-root reuse; start_server() silently reuses any listening
-  server on the port); WD port 4452 free and predecessor ports
-  8767/8768/8769/8770 and 4448/4449/4450/4451 free or owned by no live
-  runner; no other runner process live; the live slot is mine (Y13
-  DONE posted) and the Muse go-order is in force. Note: run_live.py
-  enforces no flock/zen_dom.lock; the queue is coordinated by Muse,
-  so the gate checks for a live runner process instead of a lock file.
+- Launch gate (A4), all fail-closed before any Zen driving: the /proc
+  tokenizer scan (_scan_other_runners) for a live runner process or a
+  codex executor driving a browser (replaces the old pgrep -f sweep,
+  which missed bare-relative launches and false-positived on path
+  mentions); Zen alive; Marionette 2828 responsive; server port 8771
+  free, or proven to serve /tmp/y14-server (the runner fetches the t10
+  fixture over HTTP after start_server() and compares its md5 to the
+  on-disk root, refusing on mismatch or fetch failure; start_server()
+  silently reuses any listening server on the port); WD port 4452 free
+  and predecessor ports 8767/8768/8769/8770 and 4448/4449/4450/4451
+  free or owned by no live runner; no other runner process live; the
+  live slot is mine (Y13 DONE posted) and the Muse go-order is in
+  force. Note: run_live.py enforces no flock/zen_dom.lock; the queue
+  is coordinated by Muse, so the gate checks for a live runner process
+  instead of a lock file. A flock lock held for the whole run would
+  close the remaining gate shapes (renamed copies, spoofed argv[0]),
+  but only fleet-wide, so that is a Muse-level fleet decision, not a
+  change for this runner. run_one re-scans at the top of each test
+  (redteam M2): a runner starting mid-suite aborts that test as INFRA
+  before any tab is driven.
 - In run_batch3.py, construct LiveMetrics exactly as run_live.main()
   does (A6) and verify the -metrics.jsonl sibling exists after
   preflight.
@@ -476,16 +495,20 @@ mutation probes matched. Overall: SOUND WITH NOTED DEFECTS.
   path (pause before Next, require exactly 0, resume, keep advancing
   check). D1 does not block the suite's use; it blocks a clean SOUND
   label only.
-- Consequence for this live run: a live PASS on t10 does NOT prove an
-  exact-zero reset, because my runner translates the merged checker
-  (min <= 2) faithfully. The live run therefore carries a supplementary
+- Consequence for this live run: SUPERSEDED by the re-stage (Y14b,
+  1d23532). The paragraph below described the min <= 2 runner plus
+  the supplementary D1 probe as the current state; both are gone.
+  The Y15 checker plus the re-stage section govern now. (Original
+  text kept for the record: a live PASS on t10 did NOT prove an
+  exact-zero reset, because my runner translated the merged checker
+  (min <= 2) faithfully. The live run therefore carried a supplementary
   diagnostic probe at the end of t10 (after the suite steps, recorded
   in r.details, NOT affecting the suite PASS/FAIL): click Next while
   paused, read #position immediately, record the value (want exactly
-  0). That probe answers live whether the fixture resets to exactly 0
-  or to 1, which is the datum D1 leaves open. If the probe reads 1,
-  the live fixture carries the D1 defect and the t10 live PASS is
-  reported with that qualification.
+  0). That probe answered live whether the fixture resets to exactly 0
+  or to 1, which is the datum D1 leaves open. If the probe read 1,
+  the live fixture carried the D1 defect and the t10 live PASS was
+  reported with that qualification.)
 - UPDATE (19:40 21/11, from MEMORY.md): Y15 has been spawned to FIX D1
   per the council t10 remedy (exact-zero on a clock-frozen path, P2
   must FAIL + 3x 10/10), landing on main BEFORE Y14 runs live. So the
@@ -517,24 +540,92 @@ header/imports, run_b3_t10, run_preflight, H2 helpers, launch_gate):
 - H2 fix (Y13r f48b54c, Y13f's tokenizer copied verbatim from its
   working tree): _script_basename_is_runner, _is_python_token,
   _argv_tokens, _is_runner_cmdline, CODEX_REFUSE_MARKERS, _ppid_of
-  all byte-identical to run_codex_y5.py; new _scan_other_runners()
+  all byte-identical to run_codex_y5.py except the _is_runner_cmdline
+  docstring tail, which records this Y14 application instead of the
+  "must apply" note (logic identical); new _scan_other_runners()
   helper; launch_gate() pgrep -f sweep replaced by the scan;
   run_preflight() re-checks at the top before any tab opens.
 - Verification (all in improvements/worker-y14b-restage-log.md):
   py_compile OK, import OK (10 tests); H2 probe 21/21 PASS (14 unit
   synthetic cmdlines + 7 live /proc cases; wrappers themselves are
-  hits by design); transcription 68 ordered assert alignments PASS
-  + D1 probe gone + 3 exact-zero call sites + sleep counts
-  0.7x3/0.5x1/0.4x1/0.35x10 + sampler fail-closed; launch-gate dry
-  run 4/4 PASS (quiet passes, bare-relative refuses, mention-only
-  passes, no slot token refuses).
+  hits by design); transcription 72 ordered assert alignments PASS
+  (69 checker asserts + 3 volume extras) + D1 probe gone + 3
+  exact-zero call sites + sleep counts 0.7x3/0.5x1/0.4x1/0.35x10 +
+  sampler fail-closed; launch-gate dry run 4/4 PASS (quiet passes,
+  bare-relative refuses, mention-only passes, no slot token refuses).
 - Applicability notes (honest, not skipped): this runner has NO
   manifest mechanism and NO STEP_COUNTS audit mechanism, so the
   --verify-manifest cases and audit simulation do not apply here;
   the suite is verified by md5 against the git HEAD at ship time.
   Adding a manifest would be new design work beyond a re-stage.
-- Council (3) + redteam over the re-stage diff only: pending at
-  the time of this edit (verdicts land in the log).
+- Ship-time md5 procedure (Council 3 F6, pinned): after copying the
+  suite to /tmp/y14-server on the laptop, run from that dir:
+  find tests/realistic/clone1-batch3 -type f \( -name 'check.mjs'
+  -o -name 'fixture.html' -o -path '*/lib/*' -o -name 'run_all.mjs'
+  \) -exec md5sum {} + | sort -k2
+  and compare against these expected md5s (suite HEAD 1d23532,
+  computed from git blobs on the VM):
+  run_all.mjs 526e418175c47f214004653402a63cc0;
+  lib/browser.mjs 6068b11577e32bd2d299b00ae20a097f;
+  lib/server.mjs 7ddd6b6a906292a6ed73e5d29c4d7ec4;
+  t01 check.mjs caa89e9db0474f7ca1aa3e62e2a3a0c3,
+  fixture.html b320cf07f567c05fc6fc9eff2c5f9e59;
+  t02 check.mjs bf00442896b3c9dae0dd21abe983dfa7,
+  fixture.html 9cd51959f33b086896635e3ff77a57cb;
+  t03 check.mjs 2ff259c4b1c3f95e01ebe55bd4f626f1,
+  fixture.html 33cafeca62226c24bc3031f856bf79b2;
+  t04 check.mjs 4f6a15d566d26d094c749164f653681f,
+  fixture.html 16d10cf31d141508a2315e8ed77ac705;
+  t05 check.mjs c8d8bad8dd0bb5a8b8b137e7a9f98bce,
+  fixture.html 72d0265a7097e1a322a6e7c861c1e9d8;
+  t06 check.mjs 19dd37283be377a0654536952e50eb57,
+  fixture.html 9f590523901d995757602184c4d55d98;
+  t07 check.mjs a7181b4aa7b702cd9f91a475190696b4,
+  fixture.html abc6d86195965f2ae2d64206d48dc1ac;
+  t08 check.mjs f25fa0ce937059244d13f0b0fb93b128,
+  fixture.html d588dc93c2a2e61dbe79ff025a9b7ede;
+  t09 check.mjs 860a6cfef8002a94ef8d656361f5a233,
+  fixture.html 7da064f7dcd94bcc3cad941e1f75e137;
+  t10 check.mjs c55ef3c792b2faaea7c829818eb6420b,
+  fixture.html eb814c944dab6279417c6182e1950876.
+  Also md5sum tests/realistic/run_batch3.py and compare against the
+  fix commit's blob hash, recorded in the re-stage log's fix-pass
+  entry. Paste the actual command output into the live log at ship
+  time. Any mismatch refuses the slot.
+- Council (3) + redteam over the re-stage diff f732d6a: Council 1 GO
+  (t10 translation 69/69, watch item: middle advancing read margin);
+  Council 2 AMEND (Fix 1: -m module form bypasses the gate, four-line
+  fix; Fix 2: stale "pgrep sweep" comment); Council 3 AMEND (F1-F7
+  plan/log wording + this pinned ship procedure); redteam BLOCK
+  (H1 gate bypass x5, H2 wrap false-pass, H3 late jump, H4
+  miscalibrated 2..11 bounds, M1 foreign server reuse, M2 no re-scan,
+  M3 codex false-positive, M4 L413, L1/L2). Adjudication (Y14b fix
+  pass, recorded in the log): BLOCK downgraded to AMEND with fixes.
+  Fixed: -m + -c import coverage, codex anchor + plain-codex warning,
+  served-fixture md5 check, per-test re-scan, now-playing assert moved
+  out of the sampler-to-advancing path, int() truncation removed,
+  F1-F7. Declined with reasons: flock lock (fleet-wide design
+  decision, flagged to Muse; a lock taken by only this runner gives
+  no guarantee), renamed-copy/shebang/spoofed-argv[0] forms
+  (adversarial, outside the accidental-collision threat model),
+  post-wrap advancing check and later-read bound in the runner
+  (spec divergence from the checker; checker follow-up proposed for
+  a future suite revision), caps re-derived in the runner
+  (divergence; margin analysis recorded instead). Fresh council +
+  redteam over the fix diff only, then ship.
+- H4 margin note (redteam + Council 1 watch item): the 2..11 bound
+  on the middle advancing read was copied verbatim from check.mjs,
+  whose timing is Playwright (~10 ms round trips, correct value near
+  8). The runner's path is 850 ms + 5 Marionette round trips; at the
+  measured laptop rates (Y11b proof: eval median ~2 ms, click steps
+  ~56 ms for ~3 POSTs, so a round trip is ~2-19 ms) the correct
+  fixture reads about 8-9, margin ~2 ticks. The fix pass moves the
+  now-playing assert (2 round trips) out of the sampler-to-advancing
+  path at the playing and shuffle Nexts, buying ~0.4 ticks. The live
+  run must watch details.positionAdvancingAfterNext and
+  details.positionAdvancingAfterShuffleNext: if either reads 11
+  repeatedly, report the thin margin explicitly instead of calling
+  it a fixture failure outright.
 
 ## Runner status (21/11, after Y14b re-stage)
 
