@@ -47,8 +47,9 @@
   pending reboot. Recorded exact blocker in todo 5.4 + final report section 6.
 
 ## Result
-- Todo list: 97 checked / 18 unchecked (was 86/28). Remaining unchecked are all either
-  BLOCKED until reboot (1.1.1, 1.1.2, 1.3.2, 1.3.3, 2.2.3, 5.1, 5.2, 5.4), PARTIAL/
-  UNMEASURABLE (2.1.7, 2.1.10), or general directions (3.4.1, 3.4.2).
+- Todo list: 103 checked / 12 unchecked of 115 total (was 86/28 of 114; +1 item added: 5.4 merge).
+  Ticked 17 items in this run (2.1 x9, 3.4.3, 4.1-4.6, 5.3). Remaining unchecked are all
+  either BLOCKED until reboot (1.1.1, 1.1.2, 1.3.2, 1.3.3, 2.2.3, 5.1, 5.2, 5.4),
+  PARTIAL/UNMEASURABLE (2.1.7, 2.1.10), or general directions (3.4.1, 3.4.2).
 - Files: docs/cookie-session-summary.md, docs/pending-user-decisions.md,
   docs/final-report-20261121.md, improvements/worker-h-phase4-5-log.md, todo list ticks.
