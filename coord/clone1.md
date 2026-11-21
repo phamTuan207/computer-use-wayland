@@ -3244,3 +3244,43 @@ lại độc lập. Không có lỗi nào cần sửa trong mục suite của b�
 Không kiểm: chứng minh live trên browser; fail-before ở base và bộ hồi
 quy 12 module (lane của council 3); 12 mục sửa và đánh giá C12 (lane
 của council 2).
+
+## ĐỢT 8, COUNCIL 3 XONG, 05:07 ngày 22/11 - FAIL-BEFORE TÁI HIỆN, KHÔNG HỒI QUY
+
+Báo cáo docs/batch8-council3-amend-20261122.md (122 dòng theo wc -l),
+đã push (4e9e385). Làm read-only trong 2 worktree, không sửa worktree
+nào: base git status giữ nguyên như trước khi chạy (6 file test đã sửa,
+2 file mới chưa track do agent việc 2 để lại), amend sạch.
+
+Fail-before: TÁI HIỆN. Mọi số fail/error trong báo cáo việc 2 khớp đúng
+lần chạy lại độc lập ở base (e4082ff): first_action 3 fail + 2 error
+(61 test, 0.610 s), type_verification 1 + 7 (47 test, 0.281 s), zen_dom
+6 + 9 (25 test, 0.023 s), dom_act 9 error trên 10 (0.008 s),
+pick4_fastpath 5 error (28 test, 0.089 s), session_continuation và
+keyboard_preflight OK. Mọi tên lỗi chính đều khớp: R1 demo, item 2 flip,
+item 7 window-only, item 6 envelope ERROR, item 8 non-JSON/without-value,
+item 9 restore-raised, item 10 wedge/scan, item 11 switch, item 12 DOM
+helpers (viewport_origin, locate_point, hit_check, focus_check, field_value,
+grounding accuracy, G30). Test mới đúng là bắt được bug nó canh.
+
+Hồi quy lân cận: KHÔNG HỒI QUY. Bộ 12 module chạy 209 test trên cả 2 cây
+với đúng 2 lỗi giống nhau, cả 2 đều
+test_core.SecureObservationFiles.test_private_mode_under_any_umask_in_isolated_child
+(umask 0 và 0o777): base 7.683 s, amend 7.651 s. Diff không thêm lỗi mới.
+
+Pass ở amend: XÁC NHẬN. Cả 6 suite pass ở 4b7d6ac: 181 test OK trong
+1.308 s (first_action 61 OK 0.587 s, type_verification 47 OK 0.413 s,
+zen_dom 25 OK 0.008 s, dom_act 10 OK 0.001 s, pick4_fastpath 28 OK 0.073 s,
+session_continuation 10 OK 0.226 s).
+
+Ghi chú phương pháp: worktree base đã chứa sẵn file test do agent việc 2
+copy sang. Trước khi chạy, council kiểm cả 8 file copy đều giống hệt bản
+amend theo byte (diff -q MATCH trên scripts/dom_act.py và cả 7 file test),
+nên việc tái hiện fail-before là trung thực. Log đầy đủ ở
+~/workspace/b8t2/c3-logs/ (base-*.log, amend-*.log, base-neighbor.log,
+amend-neighbor.log).
+
+Không kiểm: chứng minh live trên browser (suite dùng fake, không có Zen hay
+Brave trên VM này; chứng minh độ chính xác live do worker benchmark 2-vision
+trên laptop làm, như báo cáo việc 2 đã nói). Full test discover cũng không
+chạy lại ở đây.
