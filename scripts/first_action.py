@@ -56,8 +56,8 @@ The actions file is the same JSON batch `act` takes (up to 32 actions).
 The observation, when given, must be fresh (under 120 s); a given
 observation that is stale, missing, or unreadable is NEVER silently
 replaced by a screen capture that the batch then acts on (G28): the
-run refuses loudly instead, naming the given observation, why it was
-rejected, and what to pass. The overlay is acquired
+run refuses loudly instead, for any batch, naming the given
+observation, why it was rejected, and what to pass. The overlay is acquired
 before anything else, so the pill is visible within about a second of
 the command starting. The run appends a JSON timing record to
 STATE/first-action-YYYYMMDD.jsonl. Every invocation prints exactly one
@@ -354,14 +354,18 @@ def _fresh_observation(cu, env, screen, observation_path,
     return meta, str(meta['observation']), 'captured', rejected
 
 
-def loud_substitution_refusal(rejected):
+def loud_substitution_refusal(rejected, has_keyboard=True):
     """The G28 loud-refusal message for a rejected given observation.
 
     Names the given observation id when known, its age, and why it was
     rejected, states that a screen capture was substituted and will
     NOT be acted on, and says what to pass instead: a fresh window
-    observation captured in the same call as act-now, or no
-    observation at all (with coordinates written for the screen).
+    observation captured in the same call as act-now. On the key/type
+    path only that remedy is offered: a type batch with no observation
+    ends at desktop_act on a screen observation, which refuses key/type,
+    so the screen-coordinates remedy would fail with the same scope
+    refusal this message replaces. On a pointer-only batch the screen
+    remedy is valid and is offered too.
     """
     given = rejected.get('given_id') or 'unknown id'
     reason = rejected.get('reason', 'unknown reason')
@@ -369,12 +373,15 @@ def loud_substitution_refusal(rejected):
     age_txt = ''
     if isinstance(age, (int, float)) and 'age' not in reason:
         age_txt = '; age %.1fs' % age
+    remedy = ('re-observe the target window in the same call as act-now '
+              'and pass the fresh window observation')
+    if not has_keyboard:
+        remedy += (', or omit --observation and write coordinates for '
+                   'the screen')
     return ('given observation %s rejected (%s%s); act-now captured a '
             'fresh screen observation instead and refuses rather than '
-            'acting on it: re-observe the target window in the same '
-            'call as act-now and pass the fresh window observation, or '
-            'omit --observation and write coordinates for the screen'
-            % (given, reason, age_txt))
+            'acting on it: %s'
+            % (given, reason, age_txt, remedy))
 
 
 def _load_cu():
@@ -417,6 +424,8 @@ def run(args):
         'session_timed_out': False,
         'fallback_reason': None,
         'ime_state_trace': None,
+        'type_verified': None,
+        'error_code': None,
         'completed': 0,
         'observation': None,
         'after': None,
@@ -465,28 +474,28 @@ def run(args):
         if rejected is not None:
             # G28: a given observation was rejected and a screen
             # capture was substituted. The substitution is recorded
-            # explicitly in the envelope, never silent. When the batch
-            # has key/type actions, refuse LOUDLY before any session
-            # attempt and before any action runs, naming the given
-            # observation, its age, and why it was rejected (SRC spec:
-            # staleness-only trigger, age + 20 s deadline over 120 s).
-            # The substitute is never acted on for typing: window-image
-            # coordinates against a screen region land off by the
-            # window offset, and typing on a screen observation is
-            # refused with a misleading scope error. A pointer-only
-            # batch proceeds on the substituted capture (per the SRC
-            # spec), with the rejection recorded here for the agent to
-            # see. fallback_reason is set on this path, as specified.
+            # explicitly in the envelope, never silent, and the run
+            # refuses LOUDLY before any session attempt and before any
+            # action runs, naming the given observation, its age, and
+            # why it was rejected. The refusal covers EVERY batch,
+            # not only key/type batches: a pointer-only batch on the
+            # substitute would run window-image coordinates against a
+            # screen region, off by the window offset inside the
+            # monitor, and cursorpos verification cannot catch it
+            # (it verifies the pointer reached the computed point,
+            # which is the wrong point). The no-observation default
+            # is unaffected (rejected is None there); blanket refusal
+            # costs one re-observe. fallback_reason is set on this
+            # path, as specified.
             envelope['observation']['given_observation_rejected'] = rejected
             has_keyboard = any(
                 isinstance(a, dict) and a.get('type') in ('key', 'type')
                 for a in actions)
-            if has_keyboard:
-                message = loud_substitution_refusal(rejected)
-                envelope['fallback_reason'] = message
-                envelope['error'] = message
-                envelope['path'] = 'refused'
-                return 1
+            message = loud_substitution_refusal(rejected, has_keyboard)
+            envelope['fallback_reason'] = message
+            envelope['error'] = message
+            envelope['path'] = 'refused'
+            return 1
         envelope['order_to_session_attempt_ms'] = _ms(t0)
         child_env = dict(env)
         child_env.pop('CU_SESSION_TOKEN', None)
@@ -524,6 +533,15 @@ def run(args):
                 and isinstance(session_result.get('ime_state_trace'),
                                list)):
             envelope['ime_state_trace'] = session_result['ime_state_trace']
+        # RT R3: the act-now envelope used to drop type_verified and
+        # error_code on both paths, so a live agent could not read
+        # them from the envelope. Copy both whenever the session
+        # result carries them (None when absent, so the fields are
+        # always present); the fallback path below overwrites them
+        # with the direct desktop_act result.
+        if isinstance(session_result, dict):
+            envelope['type_verified'] = session_result.get('type_verified')
+            envelope['error_code'] = session_result.get('error_code')
         if rc == 0 and not timed_out:
             # Council 1, A3: the exit code alone never proves success.
             # Require the stdout envelope to say ok, or to be the
@@ -576,6 +594,9 @@ def run(args):
                         if isinstance(result.get('ime_state_trace'), list):
                             envelope['ime_state_trace'] = result[
                                 'ime_state_trace']
+                        envelope['type_verified'] = result.get(
+                            'type_verified')
+                        envelope['error_code'] = result.get('error_code')
                         if not envelope['ok']:
                             envelope['error'] = str(result.get('error', ''))
             else:
