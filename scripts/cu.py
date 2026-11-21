@@ -1015,6 +1015,88 @@ def _mean_image_difference(old,new):
     if old.size!=new.size:return float('inf')
     return sum(ImageStat.Stat(ImageChops.difference(old,new)).mean)/3
 
+def _input_line_changed(old,new,anchor_y,half=12,min_pixels=3,threshold=50):
+    """True when the input line band changed between two frames.
+
+    The band is the full image width, anchor_y plus/minus half pixels:
+    typed text lands on the caret line, which is the clicked line, even
+    when the click point itself is far from where the text starts (an
+    empty field takes text at its left edge, not at the click). The
+    count uses per-channel histogram bins above threshold, so a few
+    fully changed pixels decide it, not a diluted band mean. JPEG q90
+    4:4:4 re-encodes of identical pixels are byte identical, and the
+    measured max pixel error of that encoding is 39, so threshold 50
+    sits above encoding noise. Returns None when the images cannot be
+    compared. A caret or focus ring alone also changes the band, so a
+    True here is necessary, not sufficient, proof the text landed; the
+    DOM value check is the sufficient check. No observe is taken: both
+    frames are already in memory (pre-batch image, after-capture).
+    """
+    from PIL import ImageChops
+    if old is None or new is None:
+        return None
+    if old.size!=new.size:
+        return True
+    y0=max(0,int(anchor_y)-half)
+    y1=min(old.height,int(anchor_y)+half+1)
+    if y1<=y0:
+        return None
+    diff=ImageChops.difference(old,new).crop((0,y0,old.width,y1))
+    hist=diff.histogram()
+    changed=0
+    for base in (0,256,512):
+        changed+=sum(hist[base+threshold+1:base+256])
+    return changed>=min_pixels*3
+
+def _load_after_image(result):
+    """The after-capture image as a PIL image, or None.
+
+    Cheap disk read of the file the after-capture already saved; never
+    a new observe. None when the after meta carries no image or the
+    file cannot be read.
+    """
+    after=result.get('after')
+    if not isinstance(after,dict) or not after.get('image'):
+        return None
+    from PIL import Image
+    try:
+        with Image.open(after['image']) as img:
+            img.load()
+            return img.copy()
+    except Exception:
+        return None
+
+def _run_check(check,label):
+    """Run a cheap verification callable; returns (ok, reason).
+
+    The callable takes no arguments and must not observe (no
+    screenshot): it reads DOM state or another cheap signal. A False
+    return or an exception fails closed with a bounded reason; the
+    batch must not type blind when its focus or typed-text check
+    cannot pass.
+    """
+    try:
+        value=check()
+    except Exception as exc:
+        return False,('%s check failed: %s'
+                      % (label,' '.join(str(exc).split())[:200]))
+    if isinstance(value,tuple) and len(value)==2:
+        ok,reason=value
+        return bool(ok),(str(reason)[:200] if isinstance(reason,str) else None)
+    if value:
+        return True,None
+    return False,'%s check failed' % label
+
+class _FocusUnverified(RuntimeError):
+    """The pre-type focus check failed: the click did not focus the target."""
+
+def _group_has_type(group):
+    if isinstance(group,dict):
+        return group.get('type')=='type'
+    if isinstance(group,list):
+        return any(isinstance(x,dict) and x.get('type')=='type' for x in group)
+    return False
+
 def screen_changed(old,new,actions):
     if old.size!=new.size:return True
     if _mean_image_difference(old,new)>3:return True
@@ -1485,7 +1567,20 @@ def _settle_after_capture(capture, first_after, nav_candidate, settle_ms=400):
 
 
 def desktop_act(env,meta,actions,after_capture=True,observation_path=None,
-                expected_terminal_window=None):
+                expected_terminal_window=None,focus_check=None,type_check=None):
+    """Run a desktop action batch against a validated observation.
+
+    focus_check and type_check are optional cheap zero-arg callables
+    (DOM state reads, never a screenshot observe). focus_check runs
+    before the first type group: when it fails the batch stops before
+    any typing, with error_code focus_unverified, instead of typing
+    blind after a click that missed the input. type_check runs after
+    the batch executed: when it fails the batch reports
+    type_unverified. With neither hook, type verification falls back
+    to the input line band between the pre-batch frame and the
+    after-capture (both already in memory), or to the whole-frame hash
+    when the batch has no pointer target before the type.
+    """
     preflight_start=time.monotonic()
     try:
         if not isinstance(after_capture,bool): raise ValueError('after_capture must be boolean')
@@ -1603,13 +1698,28 @@ def desktop_act(env,meta,actions,after_capture=True,observation_path=None,
     # as done on wtype exit alone, so a batch could report ok while the
     # text never landed (CL1-MSG batch 3, CL1-MSG2 retry: 9/9 clean,
     # input still empty). has_type marks batches whose typed text must
-    # be verified against a fresh frame below; key-only batches are
-    # not verified, since a shortcut may legitimately change nothing
-    # visible.
+    # be verified below; key-only batches are not verified, since a
+    # shortcut may legitimately change nothing visible. type_anchor is
+    # the last pointer target before the first type action: the input
+    # line band around its y is the region the verification reads.
+    # focus_click is the last click before the first type, when the
+    # batch clicked to focus an input at all.
     has_type=any((isinstance(g,dict) and g.get('type')=='type') or
                  (isinstance(g,list) and any(isinstance(x,dict) and
                                              x.get('type')=='type' for x in g))
                  for g in groups)
+    type_anchor=None
+    focus_click=None
+    for _act in actions:
+        if _act.get('type')=='type':
+            break
+        if _act.get('type') in ('click','double_click'):
+            type_anchor=(_act['x'],_act['y'])
+            focus_click=type_anchor
+        elif _act.get('type') in ('move','hover'):
+            type_anchor=(_act['x'],_act['y'])
+        elif _act.get('type')=='drag':
+            type_anchor=tuple(_act['to'])
     preflight_ms=round((time.monotonic()-preflight_start)*1000,3)
     def move(x,y,index,action_type):
         gx,gy=image_point(meta,x,y);mx,my,mw,mh=meta['monitor_box']
@@ -1711,6 +1821,10 @@ def desktop_act(env,meta,actions,after_capture=True,observation_path=None,
         _diagnostic_event('action_completed',meta,env,action_index=index,action_type=typ,
                           completed=completed,active_window=active_window)
     start=time.monotonic()
+    focus_verified=None
+    focus_note=None
+    focus_checked=False
+    error_code_override=None
     try:
         # A new virtual device at an unchanged cursor position may not cause
         # Hyprland to deliver enter/motion to a newly mapped surface. Establish
@@ -1732,6 +1846,23 @@ def desktop_act(env,meta,actions,after_capture=True,observation_path=None,
                               completed=completed,active_window=active_window)
         for index,a in enumerate(groups):
             guard()
+            if has_type and focus_check is not None and not focus_checked and _group_has_type(a):
+                # Cheap pre-type focus gate (G30): the click already ran;
+                # before any keystroke, ask the cheap check (DOM
+                # activeElement, no screenshot) whether the target took
+                # focus. A miss stops the batch here, with the type
+                # never sent, instead of typing blind into dead space.
+                # No hook means no gate; the after-capture band check
+                # below stays the loud backstop.
+                focus_checked=True
+                _ok,_reason=_run_check(focus_check,'focus')
+                focus_verified=bool(_ok)
+                focus_note=_reason
+                if not _ok:
+                    raise _FocusUnverified(
+                        _reason or 'focus check failed: the click did not '
+                        'focus the target input; re-ground the click point '
+                        'from the element rect and retry')
             with mouse_modifiers(env,a.get('modifiers',[]) if isinstance(a,dict) else []):
                 execute_group(a,index)
             final_group=index==len(groups)-1
@@ -1760,6 +1891,9 @@ def desktop_act(env,meta,actions,after_capture=True,observation_path=None,
                 guard()
     except Exception as exc:
         error=str(exc);transient_error=isinstance(exc,TransientRefusal)
+        if isinstance(exc,_FocusUnverified):
+            error_code_override='focus_unverified'
+            focus_verified=False
         _diagnostic_event('operation_stopped',meta,env,completed=completed,error=error,
                           active_window=active_window)
     finally:
@@ -1770,6 +1904,20 @@ def desktop_act(env,meta,actions,after_capture=True,observation_path=None,
                 error=error or 'pointer cleanup failed: '+str(exc)
                 transient_error=False
     execution_ms=round((time.monotonic()-start)*1000,3)
+    # Cheap post-type DOM check (G30, item 12): when the caller can read
+    # the field value directly, that read is the verification. It runs
+    # after execution and before any result is built, so a DOM failure
+    # fails the batch the same way the pixel check below does, and no
+    # fresh frame is needed for it.
+    type_dom_verified=None
+    if has_type and error is None and type_check is not None:
+        _ok,_reason=_run_check(type_check,'type value')
+        type_dom_verified=bool(_ok)
+        if not _ok:
+            error=(_reason or 'DOM type verification failed: the typed '
+                   'text is not in the target field; re-observe and check '
+                   'focus before retrying')
+            error_code_override='type_unverified'
     def transition_outcome():
         if not transition_requested or screen_scope:
             return None
@@ -1810,12 +1958,25 @@ def desktop_act(env,meta,actions,after_capture=True,observation_path=None,
                 'execution_ms':execution_ms,'after_skipped':True,
                 'input_diagnostics':diagnostics}
         if has_type:
-            # No fresh frame was requested, so there is nothing to
-            # verify the typed text against: say so explicitly instead
-            # of letting ok rest on process exit alone.
-            result['type_verified']=None
-            result['type_verification']=('skipped: after_capture is False, '
-                                         'no fresh frame to compare')
+            if type_dom_verified is True:
+                # The DOM value check already verified the text; no
+                # fresh frame is needed for it.
+                result['type_verified']=True
+                result['type_verified_basis']='dom-value'
+                result['type_verification']=(
+                    'DOM check: the typed text is present in the target '
+                    'field (value read, no screenshot used)')
+            else:
+                # No fresh frame was requested, so there is nothing to
+                # verify the typed text against: say so explicitly instead
+                # of letting ok rest on process exit alone.
+                result['type_verified']=None
+                result['type_verification']=('skipped: after_capture is False, '
+                                             'no fresh frame to compare')
+        if focus_verified is not None:
+            result['focus_verified']=focus_verified
+            if focus_note:
+                result['focus_verification']=focus_note
         transition=transition_outcome()
         if transition is not None:result['transition']=transition
         result.update(ime_result)
@@ -1827,11 +1988,24 @@ def desktop_act(env,meta,actions,after_capture=True,observation_path=None,
             'execution_ms':execution_ms,'input_diagnostics':diagnostics}
     result.update(ime_result)
     if transient_error:result['error_code']='focus_changed'
+    if error_code_override:result['error_code']=error_code_override
     if error: result['error']=error
+    if focus_verified is not None:
+        result['focus_verified']=focus_verified
+        if focus_note:
+            result['focus_verification']=focus_note
     if outcome_uncertain:result['outcome_uncertain']=True
     if terminal_address is None and not screen_scope:
         result['after_skipped']=True
         result['after_skip_reason']='no expected terminal window to capture'
+        if has_type:
+            # Same skip shape as after_capture=False: record the
+            # missing marker instead of reporting ok on process exit
+            # alone with no verification field at all.
+            result['type_verified']=None
+            result['type_verification']=(
+                'skipped: no expected terminal window to capture, '
+                'no fresh frame to compare')
     else:
         try:
             after_capture_start=time.monotonic()
@@ -1851,20 +2025,62 @@ def desktop_act(env,meta,actions,after_capture=True,observation_path=None,
         except Exception as exc:
             result['ok']=False;result['capture_error']=str(exc)
             result.setdefault('error','final capture failed: '+str(exc))
-    # Type verification: after a batch containing a type action, the
-    # after-capture frame must differ from the pre-action observation;
-    # an unchanged frame fails the batch instead of reporting ok on
-    # process exit alone. A changed frame is necessary, not sufficient,
-    # proof the text landed: animations also change the frame, so this
-    # catches the static no-effect case (typed text nowhere on screen),
-    # not every misdelivery. Runs only when the after-capture
-    # succeeded; a failed capture already fails the batch above.
+    # Type verification (RT R1): verify the typed text or the input
+    # region, not the whole-frame hash. The e4082ff check compared the
+    # after-capture hash with the PRE-BATCH observation, so any click
+    # in the same batch set the bit and a click+type batch with zero
+    # text delivered still reported type_verified True. The check here
+    # reads the input line band (full width, around the last pointer
+    # target before the type) between the pre-batch frame and the
+    # after-capture, both already in memory: no new observe is taken.
+    # A click into dead space changes nothing on that line, so the
+    # incident shape (click 64px above the field, type into nothing)
+    # now fails instead of verifying. Limits, stated plainly: a caret
+    # or focus ring alone also changes the band, so the band is
+    # necessary, not sufficient, proof the text landed; the DOM value
+    # check (type_check hook) is the sufficient check. With no pointer
+    # target before the type there is no input region to read, so the
+    # whole-frame hash stays the check for type-only batches, where
+    # the batch has no click to confound it. Runs only when the
+    # after-capture succeeded; a failed capture already fails the
+    # batch above.
     if has_type and error is None and 'after' in result:
-        verified=result.get('frame_bytes_changed') is True
+        if type_dom_verified is True:
+            verified=True
+            basis='dom-value'
+            note=('DOM check: the typed text is present in the target '
+                  'field (value read, no screenshot used)')
+        elif type_anchor is not None:
+            after_image=_load_after_image(result)
+            band=_input_line_changed(old,after_image,type_anchor[1]) \
+                if after_image is not None else None
+            if band is None:
+                verified=result.get('frame_bytes_changed') is True
+                basis='frame-hash'
+                note=('input-region image unavailable; fell back to the '
+                      'whole-frame hash, which a click or an animation '
+                      'can also change')
+            else:
+                verified=band
+                basis='input-line-band'
+                note=('input line band around the click point changed '
+                      'between the pre-batch frame and the after-capture; '
+                      'a caret or focus ring alone also changes the band, '
+                      'so this is necessary, not sufficient, proof the '
+                      'text landed; the DOM value check is the sufficient '
+                      'check')
+        else:
+            verified=result.get('frame_bytes_changed') is True
+            basis='frame-hash'
+            note=('no pointer target before the type, so no input region '
+                  'to check; the whole-frame hash is the check, which an '
+                  'animation can also change')
         result['type_verified']=verified
+        result['type_verified_basis']=basis
+        result['type_verification']=note
         if not verified:
             result['ok']=False
-            result['error']=('type verification failed: screen unchanged '
+            result['error']=('type verification failed: input line unchanged '
                              'after typing; text may not have landed; '
                              're-observe and check focus before retrying')
             result['error_code']='type_unverified'
