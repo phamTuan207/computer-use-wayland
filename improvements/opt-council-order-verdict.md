@@ -549,4 +549,4 @@ improvements/worker-opt-council-order-log.md, follows it.)
 - Commits by this council (todolist-push, each push verified via
   git ls-remote): log start 0a4f3d6, voice 1 de7ea25, voice 2 2698fa0,
   voice 3 2157f74, log follow-up 0d383e6, verdict s1 71b862d, s2 bd99e7b,
-  s3 841ae2b, s4 16d7579, s5 e4ef479, s6 (this section, commit on landing).
+  s3 841ae2b, s4 16d7579, s5 e4ef479, s6 20969e0.
