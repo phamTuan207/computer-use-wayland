@@ -71,6 +71,35 @@ LOCK_PATH = Path(os.environ.get("ZEN_DOM_LOCK",
                                    / "zen_dom.lock")))
 ELEMENT_KEY = "element-6066-11e4-a52e-4f735466cecf"
 
+_FIND_JS = (
+    "/* pierces open shadow roots and same-origin frames */"
+    "function find(sel,root=document,depth=0,seen=new Set(),out=[],"
+    "offsetX=0,offsetY=0,scaleX=1,scaleY=1){"
+    "if(!root||depth>32||seen.has(root))return out;seen.add(root);"
+    "const doc=root.nodeType===9?root:(root.ownerDocument||"
+    "(root.host&&root.host.ownerDocument)||root);"
+    "const add=e=>{if(e&&!out.some(x=>x.element===e))out.push({"
+    "element:e,doc:doc,offsetX:offsetX,offsetY:offsetY,"
+    "scaleX:scaleX,scaleY:scaleY});};"
+    "if(root.querySelector)add(root.querySelector(sel));"
+    "if(root.querySelectorAll){"
+    "if(sel==='*')for(const e of root.querySelectorAll('*'))add(e);"
+    "for(const f of root.querySelectorAll('iframe')){"
+    "try{if(f.contentWindow&&f.contentWindow.document){"
+    "let x=0,y=0,sx=1,sy=1;"
+    "if(f.getBoundingClientRect){const r=f.getBoundingClientRect();"
+    "x=r.left+(f.clientLeft||0);y=r.top+(f.clientTop||0);"
+    "if(f.clientWidth>0)sx=r.width/f.clientWidth;"
+    "if(f.clientHeight>0)sy=r.height/f.clientHeight;}"
+    "find(sel,f.contentWindow.document,depth+1,seen,out,"
+    "offsetX+x*scaleX,offsetY+y*scaleY,scaleX*sx,scaleY*sy);"
+    "}}catch(_){}}"
+    "for(const e of root.querySelectorAll('*')){"
+    "if(e.shadowRoot)find(sel,e.shadowRoot,depth+1,seen,out,"
+    "offsetX,offsetY,scaleX,scaleY);}}"
+    "return out;}"
+)
+
 
 class ZenDomError(RuntimeError):
     pass
@@ -456,34 +485,15 @@ class ZenSession:
         browsing-context call, never silently drop the target from an
         "every input" harvest.
         """
-        js = ("(function(){"
-              "function pierce(sel, root){"
-              "let e = root.querySelector(sel);"
-              "if (e) return e;"
-              "const all = root.querySelectorAll('*');"
-              "for (const el of all){"
-              "if (el.shadowRoot){"
-              "e = pierce(sel, el.shadowRoot);"
-              "if (e) return e;"
-              "}}"
-              "return null;"
-              "}"
-              "let e = pierce(%s, document);"
-              "if (!e){"
-              "const frames = document.querySelectorAll('iframe');"
-              "for (const f of frames){"
-              "try{"
-              "if (f.contentWindow && f.contentWindow.document){"
-              "e = pierce(%s, f.contentWindow.document);"
-              "if (e) break;"
-              "}}catch(_){"
-              "}}"
-              "}"
-              "if (!e) return null;"
-              " const r = e.getBoundingClientRect();"
-              " return {x: r.x, y: r.y, width: r.width, height: r.height,"
-              " center_x: r.x + r.width / 2, center_y: r.y + r.height / 2};})()"
-              % (json.dumps(selector), json.dumps(selector)))
+        js = ("(function(){" + _FIND_JS +
+              "const found=find(%s)[0];if(!found)return null;"
+              "const e=found.element,r=e.getBoundingClientRect();"
+              "const x=found.offsetX+r.x*found.scaleX;"
+              "const y=found.offsetY+r.y*found.scaleY;"
+              "return {x:x,y:y,width:r.width*found.scaleX,"
+              "height:r.height*found.scaleY,center_x:x+"
+              "r.width*found.scaleX/2,center_y:y+"
+              "r.height*found.scaleY/2};})()" % json.dumps(selector))
         rect = self.evaluate(js, [selector])
         return rect
 
@@ -672,12 +682,18 @@ class ZenSession:
         the field. A plain text SPAN inside the field still passes.
         """
         return bool(self.evaluate(
-            "(function(){const e=document.querySelector(%s);"
-            "if(!e) return false;"
+            "(function(){" + _FIND_JS +
+            "const found=find(%s)[0];if(!found)return false;"
+            "const e=found.element;"
             "const r=e.getBoundingClientRect();"
             "if(!r.width||!r.height) return false;"
-            "const x=r.left+r.width/2, y=r.top+r.height/2;"
-            "const hit=document.elementFromPoint(x,y);"
+            "const root=e.getRootNode?e.getRootNode():found.doc;"
+            "const hitRoot=root&&typeof root.elementFromPoint==='function'"
+            "?root:found.doc;"
+            "if(!hitRoot||typeof hitRoot.elementFromPoint!=='function')"
+            "return false;"
+            "const hit=hitRoot.elementFromPoint(r.left+r.width/2,"
+            "r.top+r.height/2);"
             "if(!hit) return false;"
             "if(e===hit) return true;"
             "if(!e.contains(hit)) return false;"
@@ -705,13 +721,13 @@ class ZenSession:
         false-negatived that shape.
         """
         return bool(self.evaluate(
-            "(function(){const e=document.querySelector(%s);"
-            "if(!e) return false;"
-            "let a=document.activeElement;"
-            "while(a && a.shadowRoot && a.shadowRoot.activeElement)"
+            "(function(){" + _FIND_JS +
+            "const found=find(%s)[0];if(!found)return false;"
+            "const e=found.element;let a=found.doc.activeElement;"
+            "while(a&&a.shadowRoot&&a.shadowRoot.activeElement)"
             "a=a.shadowRoot.activeElement;"
-            "return a===e && !e.readOnly && "
-            "(e.isContentEditable || /^(INPUT|TEXTAREA)$/.test(e.tagName));})()"
+            "return a===e&&!e.readOnly&&(e.isContentEditable||"
+            "/^(INPUT|TEXTAREA)$/.test(e.tagName));})()"
             % json.dumps(selector)))
 
     def field_value(self, selector):
@@ -726,35 +742,10 @@ class ZenSession:
         the target.
         """
         return self.evaluate(
-            "(function(){"
-            "function pierce(sel, root){"
-            "let e=root.querySelector(sel);"
-            "if(e) return e;"
-            "const all=root.querySelectorAll('*');"
-            "for(const el of all){"
-            "if(el.shadowRoot){"
-            "e=pierce(sel, el.shadowRoot);"
-            "if(e) return e;"
-            "}}"
-            "return null;"
-            "}"
-            "function find(sel){"
-            "let e=pierce(sel, document);"
-            "if(e) return e;"
-            "const frames=document.querySelectorAll('iframe');"
-            "for(const f of frames){"
-            "try{"
-            "if(f.contentWindow && f.contentWindow.document){"
-            "e=pierce(sel, f.contentWindow.document);"
-            "if(e) return e;"
-            "}}catch(_){"
-            "}}"
-            "return null;"
-            "}"
-            "const e=find(%s);"
-            "if(!e) return null;"
-            "return e.isContentEditable ? e.textContent : "
-            "('value' in e ? e.value : null);})()" % json.dumps(selector))
+            "(function(){" + _FIND_JS +
+            "const found=find(%s)[0];if(!found)return null;"
+            "const e=found.element;return e.isContentEditable?e.textContent:"
+            "('value' in e?e.value:null);})()" % json.dumps(selector))
 
     def verify_typed(self, selector, expected, before=None):
         """True when the field holds exactly the expected text.
@@ -774,37 +765,11 @@ class ZenSession:
         callers that never type.
         """
         result = self.evaluate(
-            "(function(){"
-            "function pierce(sel, root){"
-            "let e=root.querySelector(sel);"
-            "if(e) return e;"
-            "const all=root.querySelectorAll('*');"
-            "for(const el of all){"
-            "if(el.shadowRoot){"
-            "e=pierce(sel, el.shadowRoot);"
-            "if(e) return e;"
-            "}}"
-            "return null;"
-            "}"
-            "function find(sel){"
-            "let e=pierce(sel, document);"
-            "if(e) return e;"
-            "const frames=document.querySelectorAll('iframe');"
-            "for(const f of frames){"
-            "try{"
-            "if(f.contentWindow && f.contentWindow.document){"
-            "e=pierce(sel, f.contentWindow.document);"
-            "if(e) return e;"
-            "}}catch(_){"
-            "}}"
-            "return null;"
-            "}"
-            "const e=find(%s);"
-            "if(!e) return null;"
-            "/* verify_typed */ return {value: e.isContentEditable"
-            " ? e.textContent : ('value' in e ? e.value : null),"
-            " editable: !!e.isContentEditable};})()"
-            % json.dumps(selector))
+            "(function(){" + _FIND_JS +
+            "const found=find(%s)[0];if(!found)return null;"
+            "const e=found.element;/* verify_typed */ return {value:"
+            "e.isContentEditable?e.textContent:('value' in e?e.value:null),"
+            "editable:!!e.isContentEditable};})()" % json.dumps(selector))
         if result is None:
             return False
         if isinstance(result, dict):
@@ -845,25 +810,13 @@ class ZenSession:
         appears with no trusted input event must fail verification.
         """
         return bool(self.evaluate(
-            "(function(){"
-            "function pierce(sel, root){"
-            "let e=root.querySelector(sel);"
-            "if(e) return e;"
-            "const all=root.querySelectorAll('*');"
-            "for(const el of all){"
-            "if(el.shadowRoot){"
-            "e=pierce(sel, el.shadowRoot);"
-            "if(e) return e;"
-            "}}"
-            "return null;"
-            "}"
-            "const sel=%s;"
+            "(function(){" + _FIND_JS + "const sel=%s;"
             "window.__agentCuTyped = window.__agentCuTyped || {};"
             "window.__agentCuTyped[sel] = false;"
             "window.__agentCuMutated = window.__agentCuMutated || {};"
             "window.__agentCuMutated[sel] = false;"
-            "const e=pierce(sel, document);"
-            "if(!e) return false;"
+            "const found=find(sel)[0];if(!found)return false;"
+            "const e=found.element;"
             "e.addEventListener('input', function(ev){"
             "if(ev.isTrusted) window.__agentCuTyped[sel]=true;"
             "});"
@@ -895,13 +848,11 @@ class ZenSession:
         plus the app can put the bubble there. Returns False when no
         bubble holds the text."""
         return bool(self.evaluate(
-            "/* zen_sent_bubble */ return (function(){"
+            "/* zen_sent_bubble */ return (function(){" + _FIND_JS +
             "const want=%s;"
-            "const els=document.querySelectorAll('*');"
-            "for(const el of els){"
-            "if(el.children.length) continue;"
-            "if((el.textContent||'').trim()===want) return true;"
-            "}"
+            "for(const match of find('*')){const el=match.element;"
+            "if(el.children&&el.children.length)continue;"
+            "if((el.textContent||'').trim()===want)return true;}"
             "return false;})()" % json.dumps(text)))
 
     def harvest(self, selectors):
@@ -924,7 +875,7 @@ class ZenSession:
                     'screen_pixels_per_css_pixel': 1, 'zoom': 1,
                     'inner_size': [0, 0], 'outer_size': [0, 0], 'items': {}}
         raw = self.evaluate(
-            "/* zen_harvest */ return (function(){"
+            "/* zen_harvest */ return (function(){" + _FIND_JS +
             "const out={moz_inner:[window.mozInnerScreenX,"
             "window.mozInnerScreenY],"
             "device_pixel_ratio:window.devicePixelRatio,"
@@ -935,17 +886,6 @@ class ZenSession:
             "inner_size:[window.innerWidth,window.innerHeight],"
             "outer_size:[window.outerWidth,window.outerHeight],"
             "items:{}};"
-            "function pierce(sel, root){"
-            "let e=root.querySelector(sel);"
-            "if(e) return e;"
-            "const all=root.querySelectorAll('*');"
-            "for(const el of all){"
-            "if(el.shadowRoot){"
-            "e=pierce(sel, el.shadowRoot);"
-            "if(e) return e;"
-            "}}"
-            "return null;"
-            "}"
             "function interactive(el){"
             "if(!el) return false;"
             "const tag=(el.tagName||'').toUpperCase();"
@@ -956,19 +896,29 @@ class ZenSession:
             "[role=\"tab\"]')) return true;"
             "return false;"
             "}"
-            "let a=document.activeElement;"
-            "while(a && a.shadowRoot && a.shadowRoot.activeElement)"
-            "a=a.shadowRoot.activeElement;"
+            "function deepActive(doc){let a=doc&&doc.activeElement;"
+            "while(a&&a.shadowRoot&&a.shadowRoot.activeElement)"
+            "a=a.shadowRoot.activeElement;return a;}"
             "for(const sel of %s){"
-            "const e=pierce(sel, document);"
-            "if(!e){out.items[sel]=null;continue;}"
+            "const found=find(sel)[0];"
+            "if(!found){out.items[sel]=null;continue;}"
+            "const e=found.element;"
             "const r=e.getBoundingClientRect();"
-            "const x=r.left+r.width/2, y=r.top+r.height/2;"
-            "const hit=document.elementFromPoint(x,y);"
-            "out.items[sel]={rect:{x:r.x,y:r.y,width:r.width,"
-            "height:r.height,center_x:x,center_y:y},"
+            "const x=found.offsetX+r.left*found.scaleX;"
+            "const y=found.offsetY+r.top*found.scaleY;"
+            "const root=e.getRootNode?e.getRootNode():found.doc;"
+            "const hitRoot=root&&typeof root.elementFromPoint==='function'"
+            "?root:found.doc;"
+            "const hit=hitRoot&&hitRoot.elementFromPoint?"
+            "hitRoot.elementFromPoint(r.left+r.width/2,"
+            "r.top+r.height/2):null;"
+            "const active=deepActive(found.doc);"
+            "out.items[sel]={rect:{x:x,y:y,width:r.width*found.scaleX,"
+            "height:r.height*found.scaleY,center_x:x+"
+            "r.width*found.scaleX/2,center_y:y+"
+            "r.height*found.scaleY/2},"
             "hit:!!hit&&(e===hit||(e.contains(hit)&&!interactive(hit))),"
-            "focused:(a===e)};"
+            "focused:(active===e)};"
             "}"
             "return out;})()" % json.dumps(list(selectors)))
         if not isinstance(raw, dict) or 'items' not in raw:

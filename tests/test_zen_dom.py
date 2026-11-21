@@ -14,7 +14,9 @@ faked below; _wd conversion is tested by mocking urlopen.
 """
 import importlib.util
 import json
+import shutil
 import sys
+import subprocess
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -615,6 +617,58 @@ class TestDomHelpers(unittest.TestCase):
         self.assertIn('contentWindow.document', captured['script'],
                       'verify_typed does not traverse iframes')
         self.assertIn('pierce', captured['script'])
+
+    @unittest.skipUnless(shutil.which('node'), 'node is required')
+    def test_focus_and_hit_checks_find_shadow_and_iframe_targets(self):
+        # The top-document querySelector must honestly return null for
+        # a shadow-hidden target. This checks lookup and the focus walk.
+        scripts = {}
+        for name in ('focus_check', 'hit_check'):
+            session = ZenSession()
+            session.evaluate = lambda script, args=None, n=name: \
+                scripts.__setitem__(n, script)
+            getattr(session, name)('#target')
+        shadow = (
+            "var __si={tagName:'INPUT',readOnly:false,isContentEditable:false,"
+            "getBoundingClientRect:()=>({left:5,top:5,width:20,height:10}),"
+            "getRootNode:()=>__sr,contains:e=>e===__si};"
+            "var __sr={activeElement:__si,ownerDocument:null,"
+            "querySelector:s=>s==='#target'?__si:null,querySelectorAll:()=>[],"
+            "elementFromPoint:()=>__si};"
+            "var __host={tagName:'DIV',shadowRoot:__sr,ownerDocument:null};"
+            "var document={nodeType:9,activeElement:__host,"
+            "querySelector:s=>null,querySelectorAll:s=>s==='*'?[__host]:[],"
+            "elementFromPoint:()=>__host};"
+            "__host.ownerDocument=document;__sr.ownerDocument=document;"
+            "__si.ownerDocument=document;"
+            "var shadowFocus=eval(%s),shadowHit=eval(%s);" % (
+                json.dumps(scripts['focus_check']),
+                json.dumps(scripts['hit_check'])))
+        iframe = (
+            "var __fi={tagName:'INPUT',readOnly:false,isContentEditable:false,"
+            "getBoundingClientRect:()=>({left:5,top:5,width:20,height:10}),"
+            "getRootNode:()=>__fd,contains:e=>e===__fi};"
+            "var __fd={nodeType:9,activeElement:__fi,ownerDocument:null,"
+            "querySelector:s=>s==='#target'?__fi:null,querySelectorAll:()=>[],"
+            "elementFromPoint:()=>__fi};"
+            "var __frame={contentWindow:{document:__fd}};"
+            "var document={nodeType:9,activeElement:__frame,"
+            "querySelector:s=>null,querySelectorAll:s=>"
+            "s==='iframe'?[__frame]:[],elementFromPoint:()=>__frame};"
+            "var frameFocus=eval(%s),frameHit=eval(%s);" % (
+                json.dumps(scripts['focus_check']),
+                json.dumps(scripts['hit_check'])))
+        code = ("var out={};" + shadow +
+                "out.shadowFocus=shadowFocus;out.shadowHit=shadowHit;" +
+                iframe +
+                "out.frameFocus=frameFocus;out.frameHit=frameHit;"
+                "console.log(JSON.stringify(out));")
+        proc = subprocess.run(['node', '-e', code], capture_output=True,
+                              text=True, timeout=10)
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        result = json.loads(proc.stdout)
+        self.assertEqual(result, {'shadowFocus': True, 'shadowHit': True,
+                                  'frameFocus': True, 'frameHit': True})
 
     def test_verify_typed_normalizes_trailing_whitespace(self):
         # Contenteditable textContent carries a trailing newline the
