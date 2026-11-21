@@ -454,3 +454,163 @@ omitted; append as it happens, never batch at the end)
   closed tab must be run-opened, so a new tab is opened first. The
   active tab is a blank baseline tab; navigating and closing it would
   drop the count 67 -> 66.
+
+- 22:55:31.641 (T+931s) act-now run 2 (ZT-00 step 4, window obs
+  cdd81db8e871): batch [Ctrl+N, click urlbar (120,60), type
+  "example.com", Enter]. RESULT: OK, path fallback, completed 4/4,
+  total 1477 ms. order_to_overlay_ms 333 ms, order_to_action_start_ms
+  333 ms. Session guardian failed as expected (same clear error,
+  logged as fallback_reason). After-capture 594806e130f1. Pill
+  "Muse via act-now" VISIBLE in the after-capture (top center).
+  THE CORE PROOF: overlay in 333 ms, first action in 333 ms, whole
+  batch in 1.48 s, vs tonight's ~5.5 min of silent diagnosis.
+- 22:56:33 (T+993s) verification: hyprctl cursorpos = (2629, 974)
+  GLOBAL, which is exactly window (120,60) = screen (165,72). The
+  CLICK LANDED exactly on target (0 px error). BUT the navigation
+  did NOT happen: the active tab was still "New Tab" (after-capture
+  + obs4 22:57:10 both show the blank new-tab wallpaper, urlbar
+  shows "Search..." empty). The click landed but did not focus the
+  urlbar for typing (or the typing went elsewhere). DOM check
+  BLOCKED: zen_dom.py list FAILED, Marionette slot broken AGAIN
+  (see below). DOM evals right after run 2 returned null for
+  document.title and location.href (the eval ran but the document
+  was null/blank, or the slot was already failing).
+- 22:56:33 (T+993s) MARIONETTE SLOT BROKE AGAIN (F3 owns it):
+  zen_dom.py list raises ZenDomError "could not create a remote
+  session ... HTTP 500 on POST /session: TypeError: can't access
+  property \"namespaceURI\", browserElement is null" (same as
+  22:06-22:19, #registerBrowser/#registerWindow/newSession). The slot
+  worked at 22:44 (gate) and 22:55 (evals), broke between 22:55 and
+  22:56:33. Suspect: the act-now Ctrl+N / new-tab navigation, or the
+  eval session DELETE while focused on a new/blank tab (the 22:10
+  lesson: DELETE /session when current is a closed/discarded tab
+  leaves Zen in a dead-tab state). F3 must fix it (likely another
+  Zen restart or a live-tab click). This BLOCKS Y13/Y14 live runs
+  (they need Marionette). FLAG TO PARENT as a blocker (owner 23:01
+  rule: report blockers immediately).
+- 22:58:05 (T+1085s) fresh window observe e76537a263e6 (capture
+  37 ms, 1863x1176) for the diagnostic.
+- 22:58:17.762 (T+1097s) act-now run 3 (diagnostic, keyboard only):
+  batch [Ctrl+L, type "example.com", Enter], window obs e76537a263e6.
+  RESULT: OK, path fallback, completed 3/3, total 1592 ms,
+  order_to_overlay_ms 314 ms. After-capture de010258f1fd.
+- 22:58:53 (T+1133s) obs5 (screen ad4c19f94946) VERIFIES the
+  diagnostic: urlbar shows "example.com", active tab is "Example
+  Domain", main area shows the Example Domain page ("This domain is
+  for use in documentation examples..."). So Ctrl+L DOES focus the
+  urlbar and typing + Enter navigates. The keyboard path works; the
+  MOUSE CLICK on the urlbar does not focus it. The navigation
+  happened on MY run-opened tab (run 2's Ctrl+N tab), not a baseline
+  tab. Tab count now 68 (67 baseline + 1 run tab, sessionstore
+  22:55 confirms 68 with Example Domain at index 50).
+- 22:59:31 (T+1171s) fresh window observe 70cd5cc023ea (capture
+  33 ms) for the mouse-click retest.
+- 22:59:40.680 (T+1180s) act-now run 4 (mouse-click retest): batch
+  [Ctrl+N, wait 500 ms, click urlbar (120,60), type "example.org",
+  Enter], window obs 70cd5cc023ea. RESULT: OK, path fallback,
+  completed 5/5, total 1998 ms, order_to_overlay_ms 346 ms.
+  After-capture c35ef9025e45.
+- 23:00:08 (T+1208s) obs6 (screen 0f0efdb160bd) VERIFIES run 4
+  FAILED to navigate: urlbar still shows "example.com", active tab
+  still "Example Domain", main area still the Example Domain page.
+  No example.org tab. So the mouse click on the urlbar does NOT
+  focus it, 2/2 attempts (run 2 without wait, run 4 with 500 ms
+  wait after Ctrl+N). CONFIRMED FINDING: in this Zen layout, a mouse
+  click on the sidebar-top urlbar/search field lands (cursorpos
+  exact) but does NOT focus it for URL entry; Ctrl+L is required.
+  ZT-00 step 4 as written (mouse click the address bar) cannot be
+  completed via this field. ZT-A must fix the scenario (different
+  click target, double-click, or Ctrl+L as the focus method). This
+  is a Zen UI behavior, NOT an act-now bug (act-now delivered the
+  click exactly; the browser did not focus the field). Record in
+  the error file as a new finding (H3 family: click lands but does
+  not take effect).
+- 23:00:55 (T+1255s) sessionstore read: recovery.jsonlz4 still
+  dated 22:55 (NOT updated since), 68 tabs, Example Domain at index
+  50. The sessionstore is stale and NOT a reliable live tab counter
+  right now. Do not use it to verify the close; use a visual
+  observe instead.
+- 23:01:21.625 (T+1281s) act-now run 5 (ZT-00 step 7, close):
+  batch [Ctrl+W], window obs e656ed429720 (fresh, 1863x1176).
+  Pre-close check: active tab was "Example Domain" (obs6). RESULT:
+  OK, path fallback, completed 1/1, total 865 ms,
+  order_to_overlay_ms 330 ms. After-capture 2155674040fa.
+- 23:01:36 (T+1296s) obs7 (screen 8bf0f6b1ade5) VERIFIES the close:
+  active tab is now "Welcome!" (zen-browser.app, "Welcome to Zen!"
+  page). The sidebar still shows an "Example Domain" row: that is
+  F3's BASELINE tab (index 10, part of the 67), NOT mine. My
+  run-opened Example Domain tab is gone. The "New Tab" row is not
+  visible in this scroll position. Final count: 67 or 68 vs baseline
+  67 (at most 1 extra blank tab from run 4's Ctrl+N, unverifiable
+  right now because Marionette is broken and the sessionstore is
+  stale). Bounded, minor, known deviation; F3's full cleanup (which
+  closes blank tabs) will resolve it. The ZT-00 step-7 set check
+  therefore cannot be fully verified tonight; recorded honestly.
+- 23:01 (T+1260s) owner (MEMORY.md): going to sleep, but if there
+  is an error or something that really needs him, report it (do not
+  wait until morning). Big errors, blockers, things needing his
+  decision: report immediately. Routine work: do quietly, report
+  results in the morning. The Marionette slot re-break is a
+  blocker; flag it to the parent in the final report.
+- 22:57 (MEMORY.md): Y13r2 DONE, verdict BLOCK (4 new blockers B1-B4
+  + 5 amend); Y13g spawned to fix per the redteam paper, then a new
+  re-review. R6 ROOT CAUSE SOLVED: the re/__init__.py deletion was
+  a self-deleting shim from Redteam Y13r2 (A6e) that deleted the
+  file by accident (globals().update overwrote __file__ before
+  os.remove), NOT a foreign process; VMFIX restored durably
+  (c16dd4e). Update R6 in this log (cause now KNOWN, not unknown).
+  H3 gate: accept Y13r2's proposal (5a2b69d NO VERDICT + a
+  runner-quiet/ports check counts as a done-marker for this run,
+  keep the gate text, Y6 retry after Y13). So the live queue is Y13
+  next, then Y14, then Y6 retry. My rehearsal is the F2 proof; Y13
+  runs after the H3 gate is satisfied.
+- 22:49-22:51 (MEMORY.md): owner correction on the graph: it shows
+  136 contributions (UTC day), not 190 (+07 day; recount 22:51 is
+  201 commits + 1 PR). The graph only counts the default branch
+  (main); todolist-push has 290 commits on UTC 21/11 but they do
+  NOT count. Worker MERGE spawned to merge todolist-push into main
+  to push the graph past 240. My commits stay on todolist-push (the
+  merge carries them); I keep committing small there.
+- 22:55 (MEMORY.md): clone2-watch cron (15 min) set up: Muse
+  switches to workspace 2 (clone2's tab) to check it; if silent
+  >15 min, look at what it needs approval for and approve it, or
+  prompt it to keep working; switch back to workspace 1 after.
+  This explains some workspace switching. Not my task; noted.
+
+### Rehearsal verdict (ZT-00 via act-now)
+- Gate steps 0-3: PASS (67 tabs, zen-bin alive, curl 200,
+  Marionette session created at 22:44).
+- Step 4 (mouse click urlbar + type + Enter): NOT SATISFIED as
+  written. The click landed exactly (cursorpos 2629,974 = target),
+  the overlay showed, the batch completed, but the navigation did
+  NOT happen via mouse click (2/2 attempts). Navigation WAS
+  achieved via keyboard (Ctrl+L + type + Enter, run 3). So the
+  composite step-4 action did not achieve its end via the specified
+  mouse path. Root cause: Zen urlbar click does not focus (finding
+  above). ZT-A must fix the scenario.
+- Step 5 (title "Example Domain" within 10 s): CONDITION MET, but
+  via the keyboard diagnostic (run 3), not via the step-4 mouse
+  click. The title was "Example Domain" (obs5).
+- Step 6 (hyprctl activewindow diagnostic): done in equivalent form
+  (hyprctl clients/monitors used throughout; activeWs tracked).
+- Step 7 (pre-close check + Ctrl+W + set check): pre-close check
+  PASSED (active tab was Example Domain). Ctrl+W CLOSED my tab
+  (active tab now Welcome!). Set check: CANNOT FULLY VERIFY
+  (Marionette broken, sessionstore stale); count is 67 or 68 vs
+  baseline 67 (at most 1 extra blank tab from run 4).
+- Overall: ZT-00 as a scenario is INCONCLUSIVE (step 4 mouse path
+  blocked by the Zen urlbar behavior; step-7 set check unverifiable
+  tonight). The F2 FIX (act-now) is PROVEN on its own claims:
+  overlay in 314-346 ms (4 runs), fallback works (4/4 runs, session
+  guardian fails -> desktop_act completes), full batches in
+  0.87-2.0 s (vs ~5.5 min silent diagnosis tonight), click lands
+  exactly (0 px error), keyboard navigation works. The urlbar-click
+  finding is a Zen UI issue for ZT-A / the error file, not an
+  act-now defect.
+
+### R6 update (root cause SOLVED, 22:57)
+- The re/__init__.py deletion cause is now KNOWN: a self-deleting
+  shim from Redteam Y13r2 (A6e) accidentally deleted the file
+  (globals().update overwrote __file__ before os.remove). NOT a
+  foreign process. VMFIX restored it durably (commit c16dd4e,
+  dpkg -V clean). This log's R6 "cause UNKNOWN" is superseded.
