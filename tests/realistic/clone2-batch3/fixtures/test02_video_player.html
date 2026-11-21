@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Simulated Video Player Fixture</title>
+<style>
+  body { font-family: sans-serif; margin: 24px; }
+  #player { border: 2px solid #333; padding: 16px; max-width: 640px; }
+  #player.fullscreen-sim { background: #111; color: #eee; }
+  #video-title { font-size: 20px; font-weight: bold; margin-bottom: 8px; }
+  #screen { background: #222; color: #ddd; height: 120px; display: flex;
+            align-items: center; justify-content: center; font-size: 28px; }
+  #caption-line { min-height: 24px; text-align: center; color: #ffeb3b;
+                  background: #222; padding: 4px; }
+  #progress-track { background: #ccc; height: 10px; margin: 10px 0; }
+  #progress-fill { background: #1976d2; height: 10px; width: 0%; }
+  .row { margin: 8px 0; }
+  .playlist-item { cursor: pointer; padding: 4px 8px; }
+  .playlist-item.active { background: #1976d2; color: #fff; }
+</style>
+</head>
+<body>
+<h1>Simulated Video Player</h1>
+<div id="player" data-state="paused" data-video-id="v1" data-speed="1"
+     data-muted="false" data-current-seconds="0" data-fullscreen="false">
+  <div id="video-title">Intro to Wayland</div>
+  <div id="screen">VIDEO</div>
+  <div id="caption-line"></div>
+  <div id="progress-track"><div id="progress-fill"></div></div>
+  <div class="row">
+    <button id="toggle-btn" type="button">Play</button>
+    <span id="current-time">0:00</span> / <span id="duration">4:00</span>
+    <label for="seek">Seek</label>
+    <input id="seek" type="range" min="0" max="240" step="1" value="0">
+  </div>
+  <div class="row">
+    <label for="volume">Volume</label>
+    <input id="volume" type="range" min="0" max="100" step="1" value="80">
+    <span id="volume-label">80</span>
+    <button id="mute-btn" type="button">Mute</button>
+  </div>
+  <div class="row">
+    <label for="speed">Speed</label>
+    <select id="speed">
+      <option value="0.5">0.5x</option>
+      <option value="1" selected>1x</option>
+      <option value="1.5">1.5x</option>
+      <option value="2">2x</option>
+    </select>
+    <label for="subtitles">Subtitles</label>
+    <select id="subtitles">
+      <option value="off" selected>Off</option>
+      <option value="en">English</option>
+      <option value="vi">Vietnamese</option>
+    </select>
+    <button id="fs-btn" type="button">Fullscreen</button>
+  </div>
+  <div class="row">
+    <div>Playlist</div>
+    <div class="playlist-item active" data-index="0">1. Intro to Wayland (4:00)</div>
+    <div class="playlist-item" data-index="1">2. Hyprland Tour (3:00)</div>
+    <div class="playlist-item" data-index="2">3. DOM Control Deep Dive (5:00)</div>
+  </div>
+</div>
+<script>
+var VIDEOS = [
+  { id: "v1", title: "Intro to Wayland", duration: 240 },
+  { id: "v2", title: "Hyprland Tour", duration: 180 },
+  { id: "v3", title: "DOM Control Deep Dive", duration: 300 }
+];
+var CAPTIONS = [
+  { from: 0,   to: 10,  en: "Welcome to the video.",
+    vi: "Chao mung den voi video." },
+  { from: 10,  to: 30,  en: "This segment explains the basics.",
+    vi: "Phan nay giai thich cac kien thuc co ban." },
+  { from: 30,  to: 60,  en: "Now we look at the details.",
+    vi: "Bay gio chung ta xem chi tiet." },
+  { from: 60,  to: 120, en: "A longer middle section.",
+    vi: "Phan giua dai hon." },
+  { from: 120, to: 180, en: "Approaching the second half.",
+    vi: "Tien den nua sau." },
+  { from: 180, to: 100000, en: "Final segment, thanks for watching.",
+    vi: "Phan cuoi, cam on da xem." }
+];
+var player = document.getElementById("player");
+var current = 0;
+var playing = false;
+var duration = VIDEOS[0].duration;
+var speed = 1;
+var volume = 80;
+var prevVolume = 80;
+var muted = false;
+var track = "off";
+
+function fmt(sec) {
+  sec = Math.floor(sec);
+  var m = Math.floor(sec / 60);
+  var s = sec % 60;
+  return m + ":" + (s < 10 ? "0" : "") + s;
+}
+function captionFor(t) {
+  if (track === "off") return "";
+  for (var i = 0; i < CAPTIONS.length; i++) {
+    if (t >= CAPTIONS[i].from && t < CAPTIONS[i].to) return CAPTIONS[i][track];
+  }
+  return "";
+}
+function render() {
+  document.getElementById("current-time").textContent = fmt(current);
+  document.getElementById("duration").textContent = fmt(duration);
+  document.getElementById("progress-fill").style.width =
+    (duration > 0 ? (current / duration * 100) : 0) + "%";
+  var seek = document.getElementById("seek");
+  seek.max = duration;
+  seek.value = Math.floor(current);
+  player.setAttribute("data-current-seconds", current.toFixed(2));
+  player.setAttribute("data-state", playing ? "playing" : "paused");
+  document.getElementById("toggle-btn").textContent = playing ? "Pause" : "Play";
+  document.getElementById("caption-line").textContent = captionFor(current);
+  document.getElementById("volume-label").textContent =
+    muted ? "Muted" : String(volume);
+  player.setAttribute("data-muted", muted ? "true" : "false");
+}
+function setPlaying(on) {
+  playing = on;
+  render();
+}
+document.getElementById("toggle-btn").addEventListener("click", function () {
+  if (!playing && current >= duration) current = 0;
+  setPlaying(!playing);
+});
+document.getElementById("seek").addEventListener("input", function (e) {
+  current = parseFloat(e.target.value);
+  render();
+});
+document.getElementById("volume").addEventListener("input", function (e) {
+  volume = parseInt(e.target.value, 10);
+  if (volume > 0) muted = false;
+  render();
+});
+document.getElementById("mute-btn").addEventListener("click", function () {
+  if (muted) {
+    muted = false;
+    volume = prevVolume > 0 ? prevVolume : 80;
+  } else {
+    prevVolume = volume;
+    muted = true;
+    volume = 0;
+  }
+  document.getElementById("volume").value = volume;
+  document.getElementById("mute-btn").textContent = muted ? "Unmute" : "Mute";
+  render();
+});
+document.getElementById("speed").addEventListener("change", function (e) {
+  speed = parseFloat(e.target.value);
+  player.setAttribute("data-speed", e.target.value);
+});
+document.getElementById("subtitles").addEventListener("change", function (e) {
+  track = e.target.value;
+  render();
+});
+document.getElementById("fs-btn").addEventListener("click", function () {
+  var on = player.getAttribute("data-fullscreen") !== "true";
+  player.setAttribute("data-fullscreen", on ? "true" : "false");
+  player.classList.toggle("fullscreen-sim", on);
+});
+function loadVideo(index) {
+  var v = VIDEOS[index];
+  duration = v.duration;
+  current = 0;
+  playing = false;
+  player.setAttribute("data-video-id", v.id);
+  document.getElementById("video-title").textContent = v.title;
+  var items = document.querySelectorAll(".playlist-item");
+  for (var i = 0; i < items.length; i++) {
+    items[i].classList.toggle("active", i === index);
+  }
+  render();
+}
+var items = document.querySelectorAll(".playlist-item");
+for (var i = 0; i < items.length; i++) {
+  items[i].addEventListener("click", function (e) {
+    loadVideo(parseInt(e.currentTarget.getAttribute("data-index"), 10));
+  });
+}
+setInterval(function () {
+  if (playing) {
+    current += 0.1 * speed;
+    if (current >= duration) {
+      current = duration;
+      playing = false;
+    }
+    render();
+  }
+}, 100);
+render();
+</script>
+</body>
+</html>
