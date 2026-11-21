@@ -123,24 +123,55 @@ t07, t08, t09 fixtures persist state in localStorage (editor files,
 demo-settings, project titles + theme). A Playwright check gets a fresh
 browser profile per run, so the live run must clear that state or a
 re-run starts from stale values and fails its initial checks. Every
-test starts with: new_tab, localStorage.clear(), refresh(). This is
-harness setup, not part of the spec flow. It is the same step Worker P
-used (run_t05) and Worker U used (q04).
+test starts with, in this exact order (A3): `new_tab(url)`, then
+`localStorage.clear()` plus `sessionStorage.clear()` (parity with
+`run_agyq2.py` open_fixture), then `refresh()`, only at test start and
+on retry re-entry, never mid-test. The order matters: clearing before
+navigation would clear the wrong origin (all fixtures share one origin
+on 127.0.0.1:8771, so the clear must run on the fixture origin). This
+is the proven precedent in `run_live.py` run_t05 and `run_fcck.py`
+q04. This is harness setup, not part of the spec flow. It does not
+break intra-test persistence: t07/t08/t09 save then reload within one
+test, and the plan's per-test sections do no mid-test clear, so those
+writes survive.
 
-## Hidden-body handling (Y4d ladder)
+## Hidden-body handling (Y4d ladder, reused verbatim)
 
-- goto and refresh already diagnose and raise INFRA on a hidden body.
-- Every popup tab goes through require_visible after settle.
-- After switching back to the main tab from a popup, run diagnose_body
-  explicitly and record the classification.
-- If a tab diagnoses non-VISIBLE: poll diagnose_body every 500 ms for up
-  to 8 s for tz-hidden removal (the extension removes the class async;
-  Y4d measured removal, it is not instant). If it clears, continue and
-  record the encounter (classification + snapshots) in the test record.
-  If it does not clear in 8 s, fail that test as INFRA, close its tab,
-  and continue with the next test. Never hang the suite on one tab.
-- A test that passes but had a hidden-body encounter is reported as
-  PASS (flagged), counted separately from clean passes, per the Y4d rule.
+Do NOT write a new ladder. Import and reuse `ensure_visible` from
+`run_agyq2.py` verbatim (Council 3 amendment A2). Its design: 8.0 s total
+budget enforced by deadline; poll up to 2.0 s for the extension's own
+removal; verified tz-hidden removal only for TZ_STUCK_V1 (the removal
+flag is set ONLY when the post-remove snapshot proves the class is gone);
+rebootstrap in the remainder; FIXTURE_FAILURE raises
+FIXTURE-UNAVAILABLE immediately without burning tabs. Correction to the
+first draft of this plan: the 2 s poll and 8 s budget are design numbers,
+not measured removal times. Y4d's rerun had 0 hidden-body encounters in
+20 tests, so the poll/removal/rebootstrap paths never fired for a real
+hidden body; removal was never measured live.
+- Every navigation wraps `goto`/`refresh` with `allow_hidden=True`
+  followed by `ensure_visible` (the wrapping Y4d uses in
+  `run_agyq2.py` open_fixture). The bare `goto`/`refresh` choke point
+  raises INFRA immediately on non-VISIBLE, so the plan's first-draft
+  poll-only rule could not run at those points.
+- Every popup tab goes through `ensure_visible` at its
+  `require_visible` point, and after every `switch` (including both
+  switches in the t09 two-popup step, not only switch-back to main).
+- If `ensure_visible` swaps tabs, reload the fixture on the new tab
+  exactly as `open_fixture` does (goto + clear + refresh +
+  `ensure_visible` again, one final fresh tab before finalising INFRA).
+  The swapped tab handle is appended to `d.opened_tabs` so the session
+  cleanup closes it (rebootstrap keeps it out of opened_tabs by design,
+  and this runner uses one session per test, so an unappended swap
+  would leak a test tab in Zen).
+- A test that passes after a verified removal is a FLAGGED pass, counted
+  separately from clean passes. The flag is recorded in `r.details`
+  under Y4d's field name `tz_hidden_removed`.
+- If a tab diagnoses non-VISIBLE and the ladder returns not-ok, fail
+  that test as INFRA, close its tab, and continue with the next test.
+  Never hang the suite on one tab.
+- Circuit breaker (A5): abort the suite after 2 consecutive INFRA
+  failures and report, instead of grinding through the remaining tests
+  on a wedged Zen.
 
 ## Preflight step 0 (inside my slot, before t01)
 
@@ -167,8 +198,28 @@ one way or the other.
 - Logs: per-step JSONL at /tmp/worker-y14-live.jsonl (Runner.step),
   Y11 metrics sibling file (LIVE_METRICS default, run id y14-batch3).
 - Env: LIVE_SERVER_ROOT=/tmp/y14-server LIVE_SERVER_PORT=8771
-  LIVE_LOG=/tmp/worker-y14-live.jsonl WD_PORT=4449 (fresh port per
-  runner, no collision with Y8b/Y9 geckodrivers).
+  LIVE_LOG=/tmp/worker-y14-live.jsonl LIVE_RUN_ID=y14-batch3
+  WD_PORT=4452. Correction to the first draft of this plan (A1): 4449
+  is Y9's port (run_agy_y2.py), 4450 is Y13's, 4451 is Y8b's, so 4452
+  is the next free WD port. Y11b/Y6c ports are UNVERIFIED from the
+  files read; the launch gate below verifies 4452 is actually free.
+  Pid/log files are keyed by WD_PORT, so a collision would also
+  collide there.
+- Launch gate (A4), all fail-closed before any Zen driving: sweep for
+  stale geckodriver processes by PID (pgrep, parent PID, cmdline; kill
+  orphans by PID only, never by port alone or pkill -x geckodriver);
+  Zen alive; Marionette 2828 responsive; server port 8771 free, or
+  proven to serve /tmp/y14-server (probe a Y14 fixture, fail closed
+  on foreign-root reuse; start_server() silently reuses any listening
+  server on the port); WD port 4452 free and predecessor ports
+  8767/8768/8769/8770 and 4448/4449/4450/4451 free or owned by no live
+  runner; no other runner process live; the live slot is mine (Y13
+  DONE posted) and the Muse go-order is in force. Note: run_live.py
+  enforces no flock/zen_dom.lock; the queue is coordinated by Muse,
+  so the gate checks for a live runner process instead of a lock file.
+- In run_batch3.py, construct LiveMetrics exactly as run_live.main()
+  does (A6) and verify the -metrics.jsonl sibling exists after
+  preflight.
 - Order: b3-t01 through b3-t10 in suite order. On a test failure, record
   and continue with the next test (a failure in one test must not kill
   the other nine). One retry per failed test at most, only if the failure
@@ -191,3 +242,17 @@ Poll origin/todolist-push about every 15 min for Y13 DONE and for the
 Y12 headless verdict on the merged suite. Do not drive Zen before the
 slot opens. Prep (this plan, council, redteam, runner code, ship to
 laptop, syntax check) all happens before the slot.
+
+## Amendments applied
+
+- Council 3 (AMEND, 19:28 21/11): A1 WD_PORT 4449 to 4452 + LIVE_RUN_ID
+  + launch-time port verification; A2 reuse ensure_visible verbatim
+  instead of the invented poll-only ladder; A3 pinned clear order
+  (new_tab, clear local+session storage, refresh); A4 launch gate
+  (stale-geckodriver sweep by PID, Zen alive, Marionette responsive,
+  port-free or proven-root server, no other runner live, slot + go
+  in force); A5 circuit breaker (abort after 2 consecutive INFRA);
+  A6 LiveMetrics constructed as run_live.main() does; A7 corrected
+  the WD port claim and the "Y4d measured removal" claim.
+- Council 1, Council 2, Redteam: verdicts pending at the time of this
+  edit; fold them in when they arrive.
