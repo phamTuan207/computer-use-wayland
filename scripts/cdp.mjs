@@ -489,8 +489,20 @@ async function assertAction(a) {
             const proto=e.tagName==='INPUT'?HTMLInputElement.prototype:HTMLTextAreaElement.prototype;
             const setter=Object.getOwnPropertyDescriptor(proto,'value')?.set;if(!setter)return {ok:false,error:'field setter unavailable'};
             const oldValue=e.value;
+            // The engine sanitizes on assignment (HTML Standard
+            // value sanitization algorithm): a single-line input
+            // strips carriage returns and line feeds, a textarea
+            // normalizes CRLF and CR to LF. The read-back must
+            // compare against the SANITIZED form, or a set that
+            // landed (normalized) still reports 'value
+            // verification failed'. Char codes are used instead
+            // of regex escapes so this template needs no
+            // backslash doubling when it is re-evaluated.
+            const sanitized=e.tagName==='INPUT'
+              ?${text}.split(String.fromCharCode(13)).join('').split(String.fromCharCode(10)).join('')
+              :${text}.split(String.fromCharCode(13,10)).join(String.fromCharCode(10)).split(String.fromCharCode(13)).join(String.fromCharCode(10));
             attempted=true;setter.call(e,${text});
-            if(!e.isConnected||e.value!==${text})return {ok:false,error:'value verification failed',mutation_may_have_occurred:true};
+            if(!e.isConnected||e.value!==sanitized)return {ok:false,error:'value verification failed',mutation_may_have_occurred:true};
             // Snapshot contract (tests/cdp_snapshot.mjs): unchanged
             // text fires no synthetic notifications. The setter write
             // and the read-back above stay unconditional (the R2
@@ -500,7 +512,7 @@ async function assertAction(a) {
               e.dispatchEvent(new InputEvent('input',{bubbles:true,composed:true,inputType:'insertReplacementText',data:null}));
               e.dispatchEvent(new Event('change',{bubbles:true}));
             }
-            if(!e.isConnected||e.value!==${text})return {ok:false,error:'value verification failed',mutation_may_have_occurred:true};
+            if(!e.isConnected||e.value!==sanitized)return {ok:false,error:'value verification failed',mutation_may_have_occurred:true};
             return {ok:true};
           }catch(_){return {ok:false,error:'value update failed',mutation_may_have_occurred:attempted};}})()`;
           const updated=await evaluate(source);
