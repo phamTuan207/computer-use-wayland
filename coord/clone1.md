@@ -64,9 +64,11 @@ for the coordinator to run on the laptop with a real Zen.
   the install, the execution environment flagged the install output and
   forbade running, testing, importing, loading, or sourcing the
   delivered package content. The package was not executed in any form.
-  Its speed numbers, Zen compatibility, and the fix status of reported
-  CVE-2026-7064 are all UNVERIFIED. Re-check the CVE against the
-  upstream changelog before adopting it.
+  Its speed numbers and Zen compatibility are all UNVERIFIED.
+  Correction, checked 2026-11-21: CVE-2026-7064 does not apply to
+  firefox-mcp. It belongs to AgentDeskAI/browser-tools-mcp, a different,
+  now discontinued project, so it is not a blocker for adopting
+  firefox-mcp.
 - WebExtension bridge browser side: extension load and native connect,
   listTabs, snapshot, click, type, evaluate against a real tab with
   per-op timing, the `~/.mozilla` host manifest install, and the

@@ -62,10 +62,11 @@ claimed anywhere in this repo. The cells above are the only timings.
   forbade running, testing, importing, loading, or sourcing the delivered
   package content. The package was not executed in any form, so no
   `--help`, no MCP handshake, no Inspector run, no browser launch.
-  All speed numbers for it are UNVERIFIED, Zen compatibility is
-  UNVERIFIED, and the fix status of reported CVE-2026-7064 is
-  UNVERIFIED and must be re-checked against the upstream changelog
-  before adoption.
+  All speed numbers for it are UNVERIFIED, and Zen compatibility is
+  UNVERIFIED. Correction, checked 2026-11-21: CVE-2026-7064 does not
+  apply to firefox-mcp. It belongs to AgentDeskAI/browser-tools-mcp,
+  a different, now discontinued project, so it is not a blocker for
+  adopting firefox-mcp.
 - WebExtension bridge browser side: extension load and native connect,
   `listTabs`, `snapshot`, `click`, `type`, `evaluate` against a real
   tab with per-op timing, the `~/.mozilla` host manifest install, and
@@ -87,8 +88,8 @@ No single path covers the goal. Use two paths together:
   keystrokes and pointer input.
 - Mozilla firefox-mcp when an agent already speaks MCP and needs a
   maintained, safe-by-default way to browse and debug with Firefox.
-  Accept the extra latency and the gated protocol surface, and re-check
-  the CVE status before adopting it.
+  Accept the extra latency and the gated protocol surface. CVE-2026-7064
+  does not apply to this project, see the correction above.
 
 ## Next steps on a machine with Zen
 

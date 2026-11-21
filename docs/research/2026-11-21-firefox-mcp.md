@@ -369,11 +369,15 @@ agent context small: save the full snapshot, read only the needed part.
   (`developer`, `mozilla`) expand what the agent can do further.
 - Do not leave Marionette enabled during normal browsing (see section 3.8).
 - Android mode wipes all app data before every session (see section 3.7).
-- A CVE was reported against this project in April 2026 (CVE-2026-7064, OS
-  command injection, CWE-78) according to a third-party review; the upstream
-  fix status was not verified in this task. Treat the version pinned here
-  (0.11.0) as the version to re-check against the upstream changelog before
-  adopting.
+- Correction, checked 2026-11-21: CVE-2026-7064 does not apply to this
+  project. It was reported in April 2026 against AgentDeskAI/browser-tools-mcp,
+  a different project that is now discontinued. The flaw allows
+  attacker-controlled path data to be interpolated into a shell command via
+  osascript without escaping, enabling arbitrary OS command execution on
+  macOS deployments where autoPaste is enabled. It was not patched before
+  that project was discontinued. The v0.11.0 changelog lists no CVE-2026-7064
+  fix, because the CVE is not a firefox-mcp issue. Do not block adoption of
+  firefox-mcp on this CVE.
 
 ## 6. Zen notes
 
