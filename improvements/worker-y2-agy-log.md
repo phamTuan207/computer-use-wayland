@@ -39,6 +39,7 @@
 - Final integrity check: check.mjs --all on fresh fixtures = 10/10 FAIL score 0 (assertions real, not vacuous). check-dashes.py = PASSED, zero em/en dashes.
 - README fix (Y2): it still said "5 tests" after batch 2; corrected to 10 tests with 06-10 listed.
 - Committed + pushed to todolist-push: (commit hash below).
+- Commit: 30a72e5 (30a72e538c4e8b5fddc2bc1fbfe4bf1b1915012b), verified on origin via ls-remote. 25 files, 4961 insertions.
 
 ## Final state
 - COMPLETE: 10/10 tests. Each has a spec (32-35 steps), a self-contained HTML fixture, checker coverage in check.mjs, simulator coverage in simulate.mjs. simulate.mjs --all 10/10 PASS. No test swapped; all 10 assigned topics delivered as specified.
