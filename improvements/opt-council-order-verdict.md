@@ -251,3 +251,66 @@ hidden. A pre-flight that does not capture htmlClass is not a pre-flight.
   orphans), single-session lock check, Zen liveness, fixture server
   loopback check, owner-away check (explicit `LIVE_OWNER_AWAY=1`, never
   inferred from silence) (M2 section G).
+
+## Section 3. LOGGING STANDARD (owner 22:47, continuous event logging)
+
+### 3.1 The rule in one sentence
+Every agent appends EVERY event to its log AS IT HAPPENS, with wall-clock
+time (Asia/Ho_Chi_Minh) + elapsed time, so that any owner question is
+answerable from the log, never "I don't know" (owner 22:47; task brief).
+Append continuously while working, never batch at the end. (PRIO crawl log
+entries 22:47:47 and 22:48:xx adopt this rule; this council's own log,
+improvements/worker-opt-council-order-log.md, follows it.)
+
+### 3.2 Required fields per event
+- Wall-clock time, Asia/Ho_Chi_Minh, to the second (example format:
+  22:53:20 +07). Elapsed time since the worker started (example: elapsed
+  ~03m). Step or action taken. Target (file, command, tab, session, URL).
+  Outcome (what happened, with the exact result, error string, or number).
+  Coordinates for every click (x, y, and the miss in px where measured).
+  Commit hash for every landed step, plus push verification
+  (git ls-remote result).
+- No event is too small to log. A retry, a miss, a slow decision, a
+  flickering overlay, a wrong guess, a corrected diagnosis: all logged with
+  timestamps. (SOUL.md / IDENTITY.md standing rule: when Muse runs
+  computer-use directly, log fully with wall-clock + elapsed into a file,
+  not only in chat history.)
+- Log files live in improvements/ (worker-*-log.md) on the todolist-push
+  branch, committed small and often (see section 4). A log that exists only
+  in chat history does not exist: chat is not searchable evidence, the log
+  file is.
+
+### 3.3 What the log must prove after the fact
+- For every fix: the failing point (file + function + line), the root cause
+  (with the source or crawl that proves it), the change made, the test that
+  proves it, the commit hash, and the time log. (Lauren Tan evidence
+  contract: every claim carries file:line or quote citations.)
+- For every live run: the pre-flight result, the health-gate result, every
+  action with coordinates, every observation with its timestamp, every
+  intervention (flagged separately, section 2.4), and the final verdict
+  with its evidence. The M2 hidden-body lesson is the negative example:
+  the original sin was UNSAVED probe output (probe_q05e was built to
+  capture htmlClass, but the output was never saved, so V1 could not be
+  falsified) (OPT-M2 mechanism, section G). The decisive experiment exists
+  to never repeat it. Every probe output is saved, or the probe did not run.
+- For every blocked or stuck worker: the time the stall started, what was
+  tried, when it was killed, and who was told. (Owner standing rule:
+  kill stuck subagents at once, report proactively, never wait silently.)
+- For every click: the target, the coordinates, the result (hit/miss, miss
+  distance in px), and the session/tab it landed in. The J21 attribution
+  gap (which worker clicked workspace 1 at ~22:44, logs F2/F3 do not record
+  the click) must never recur: an unlogged click is an unattributable
+  incident.
+
+### 3.4 Log hygiene
+- One log file per worker, named improvements/worker-<name>-log.md. Append
+  only; never rewrite history in a log. If a log entry is wrong, append a
+  correction entry with a new timestamp; do not edit the old line.
+- No em/en dashes in any log file (owner standing rule, 2026-11-16).
+  No personal info in any log file (owner standing rule, NO PII ON GITHUB):
+  no real name, email, address, phone, schedule, photo, account, password,
+  or token. The scrub (serial rank 11) exists because this rule was broken
+  in live-test-log.md line 3288 and 71 lines / 45 files of real name.
+- Before ANY calendar change, read the whole day across all calendars
+  (owner standing rule); before ANY live run, re-verify G-VMFIX. These
+  checks are themselves logged events, not silent preconditions.
