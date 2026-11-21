@@ -447,7 +447,10 @@ the other.
   silently reuses any listening server on the port; known limits: a
   server that redirects or serves different bytes per User-Agent
   could still fool the check, adversarial behavior outside the
-  threat model); WD port 4452 free
+  threat model; the check is point-in-time, verified once before
+  driving with no re-check during the run, so a server swapped
+  after the check would serve foreign bytes unchecked); WD port
+  4452 free
   and predecessor ports 8767/8768/8769/8770 and 4448/4449/4450/4451
   free or owned by no live runner; no other runner process live; the
   live slot is mine (Y13 DONE posted) and the Muse go-order is in
@@ -642,10 +645,14 @@ header/imports, run_b3_t10, run_preflight, H2 helpers, launch_gate):
   about half a round trip, so the two counts bracket the true value
   and differ by at most 0.19 ticks). At the measured laptop rates
   (Y11b proof: eval median ~2 ms, click steps ~56 ms for ~3 POSTs,
-  so a round trip is ~2-19 ms) the correct fixture reads about 8-9
-  (8 at ~2 ms/round trip, 9 at ~19 ms), margin 2 discrete ticks
-  (1.93-2.44 continuous). At 50 ms/round trip it reads 10 (margin
-  1); the bound first fails when round trips exceed roughly 70-85 ms
+  so a round trip is ~2-19 ms) the correct fixture reads about 8-10
+  (8 at ~2 ms/round trip in good phase, 10 at ~19 ms in adverse
+  phase), margin 1-3 discrete ticks (1 in adverse phase at 19 ms,
+  2-3 in good phase; 1.84-2.43 continuous at the stated N=3.5; the
+  earlier "margin 2 discrete, 1.93-2.44 continuous" quoted floor
+  values and the N=3 range, corrected by the fix-pass-2 redteam
+  F6). At 50 ms/round trip it reads 10-11 (margin 0-1); the bound
+  first fails when round trips exceed roughly 70-85 ms
   (tick-phase dependent) and fails surely at ~100-117 ms. The fix
   pass moves the now-playing assert (2 round trips) out of the
   sampler-to-advancing path at the playing and shuffle Nexts, raising
@@ -678,6 +685,34 @@ header/imports, run_b3_t10, run_preflight, H2 helpers, launch_gate):
   re-review over the fix-pass-2 diff is spawned after this commit;
   ship waits for it unless it BLOCKs, in which case one more fix
   pass follows.
+- Fix pass 3 (over the fix-pass-2 redteam verdict AMEND 4b589c7,
+  22:04-22:20 +07): F1 combined short flags FIXED by bundle
+  expansion in _argv_tokens ("-umrun_batch3", "-uc import ...",
+  "-Wignore" all expanded after a python token; grep "-rn" not
+  rewritten); F2 long option FIXED (two-back rule extended to
+  --check-hash-based-pycs, the only CPython long option taking a
+  value); F3 python-executes guard FIXED (flag branch and two-back
+  rule require the token to be executed BY python, so pytest/echo
+  and "python3 other.py -W ignore run_batch3.py" no longer
+  false-positive; note the redteam's example used run_other.py,
+  which IS a run_* script, so that cmdline is still a true
+  positive via run_other.py itself; the guard is verified with a
+  non-runner script name); F4 codex wrappers PARTLY FIXED (env
+  chain with flags/assignments and /usr/bin/env now caught;
+  nohup/setsid/timeout/flock-direct/time/nice recorded as gaps,
+  each needs its own argument parser, no fleet launcher uses them
+  for codex); F5 codex semicolon FIXED (marker scope limited to
+  the same shell command, but only inside a shell -c string; a
+  codex/python -c snippet's ";" does not truncate, which the H2
+  live case "codex -c 'import time; ... # marionette'" requires;
+  the first fix-pass-3 build broke that case and it was caught by
+  the H2 regression probe, then fixed); F6 H4 margin FIXED by
+  restatement (read 8-10, discrete margin 1-3, continuous
+  1.84-2.43 at N=3.5); F7 served-check TOCTOU RECORDED (point-in-
+  time, no re-check; redirect/UA limits already recorded;
+  12-file set confirmed complete). Verification in the log. A
+  redteam re-review over the fix-pass-3 diff is spawned after this
+  commit; ship waits for it unless it BLOCKs.
 
 ## Runner status (21/11, after Y14b re-stage)
 

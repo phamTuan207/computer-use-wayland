@@ -404,5 +404,93 @@ on its merits; nothing accepted or declined silently.
   commit: git blob e604c01229933194d40a4a3f75c54a8b13a46f78, md5
   5d52ac65e8fe1d666d26c7f3ece4d7ba (ship-time expected values for
   the plan's md5 procedure; supersedes the fix-pass-1 values).
-- Redteam re-review over the fix-pass-2 diff: spawned after this
+- Redteam re-review over the fix-pass-2 diff: verdict AMEND
+  (paper 4b589c7, 21:48-22:04 +07, probe 125 pass / 0 fail). What
+  held: joined/dotted -m and spaced -W/-X caught live; codex
+  grep/cat/echo FPs stay fixed; mixed t01/t09-detail servers
+  refuse; missing prefs 404 refuses; plan R1-R4 md5 procedure runs
+  exactly as written from a faithful /tmp/y14-server layout (find
+  returns exactly 25 files, all 25 md5s match; old find path fails
+  as stated); docstring residuals verified accurate; H4 threshold
+  ranges bracket N=3 to 3.5 correctly. New findings F1-F7:
+  F1 MEDIUM combined short flags ("-umrun_batch3", "-um
+  run_batch3", "-uc import ...") execute and escape; F2 LOW
+  "--check-hash-based-pycs always" executes and misses; F3 LOW the
+  -W/-X two-back rule has no python-token guard (pytest/echo/
+  "python3 run_other.py -W ignore" false-positive); F4 LOW codex
+  wrapper escapes wider than the recorded gap (nohup, setsid,
+  timeout, flock-direct, env -i, env FOO=bar, /usr/bin/env, time,
+  nice); F5 LOW codex anchor FPs ("echo env codex marionette",
+  "codex --help; echo marionette" flags via the later command);
+  F6 LOW H4 restatement quotes floor values (at 19 ms the phase
+  range is 9-10, discrete margin 1 in adverse phase; 1.93-2.44 is
+  the N=3 range, N=3.5 gives 1.84-2.43); F7 INFO served-check
+  limits bounded (redirect/UA-split still pass, text/plain passes
+  on bytes, TOCTOU point-in-time, slow server refuses fail-closed
+  after 5.0 s; 12-file set complete).
+
+## Adjudication, fix pass 3 (22:04-22:20 +07)
+
+- F1: FIXED by bundle expansion in _argv_tokens. _expand_bundle
+  expands only known CPython short options, only after a python
+  token (grep "-rn" untouched). "-umrun_batch3" becomes "-u" "-m"
+  "run_batch3"; "-uc" becomes "-u" "-c" (value is the next token);
+  "-Wignore" becomes "-W" "ignore". The fix-pass-2 joined -m
+  check in the loop is now dead code and was removed.
+- F2: FIXED. Two-back rule extended to --check-hash-based-pycs
+  (the only CPython long option taking a value); the joined
+  "--check-hash-based-pycs=always" form was already caught by the
+  flag branch.
+- F3: FIXED by _python_executes (nearest python token before i,
+  no script token between it and i), applied to the flag branch
+  AND the two-back rule AND the -c branch (a -c after a script
+  token is that script's argument). Correction to the redteam's
+  example: "python3 run_other.py -W ignore run_batch3.py" is a
+  TRUE positive via run_other.py itself (it is a run_* script);
+  the guard is verified with a non-runner script name
+  ("python3 other.py -W ignore run_batch3.py" returns False).
+- F4: PARTLY FIXED. env wrapper chain caught (env, env -i, env
+  FOO=bar, env -u FOO, /usr/bin/env, inside a shell -c string
+  too). nohup/setsid/timeout/flock-direct/time/nice RECORDED as
+  gaps (each needs its own argument parser; no fleet launcher
+  uses them for codex).
+- F5: FIXED. Marker scope limited to the same shell command, but
+  ONLY inside a shell -c string (_in_shell_c_string): a
+  codex/python -c snippet's ";" does not truncate. The first
+  fix-pass-3 build applied truncation everywhere and broke the H2
+  live case "codex -c 'import time; ... # marionette'"; the H2
+  regression probe caught it (2 failures), and the fix was applied
+  before committing.
+- F6: FIXED by restatement in the plan (read 8-10, discrete margin
+  1-3 with 1 in adverse phase at 19 ms, continuous 1.84-2.43 at
+  N=3.5; at 50 ms reads 10-11, margin 0-1).
+- F7: RECORDED, no code change (TOCTOU point-in-time note added to
+  the served-check docstring and the plan; redirect/UA limits
+  already recorded; 12-file set confirmed complete).
+
+## Fix-pass-3 verification (22:09-22:20 +07, all on the VM)
+
+- py_compile OK; import OK, 10 tests.
+- Fix3 probe /tmp/y14b-fix3-probe.py: 72/72 PASS, exit 0
+  (combined -m/-c x12, long option x4, F3 guard x9, codex
+  positions x28 incl. env chain and semicolon FPs, live x6).
+  First run 64/70: my probe expectations were wrong in 3 unit
+  cases (run_other.py IS a runner, so True is correct; verified
+  with other.py instead) and 3 live cases (bash execs the last
+  -c command, so the launcher must have a trailing command;
+  "env -i" clears PATH, so the stub needs an absolute path;
+  "python3 -um run_foo.py" is invalid Python, exits instantly).
+  The probe was corrected, not the code, except for one real bug
+  found by the H2 regression probe (see F5 above): the
+  same-command truncation dropped the marker in a codex -c
+  snippet. Fixed by _in_shell_c_string; second run 72/72.
+- Regressions, all green: H2 probe 45/45 PASS (incl. live codex
+  executor caught, live hits exactly the dummies + wrappers);
+  fix2 probe 31/31 PASS; transcription 82 PASS lines, 0 failures;
+  gate dry run 4/4 PASS; M1 probe 3/3 PASS; M1 all-12 probe 4/4
+  PASS.
+- No em/en dash in the fix diff (grep 0), no ydotool, no personal
+  info.
+- Fix commit: (hash filled below after commit).
+- Redteam re-review over the fix-pass-3 diff: spawned after this
   commit. Ship waits for it unless it BLOCKs.

@@ -2233,24 +2233,102 @@ def _is_python_token(tok):
             or base.startswith("python3.") or base.startswith("python2."))
 
 
+# CPython short options, for bundle expansion (fix pass 3,
+# redteam F1). No-value options can be bundled ("-u" "-s"); a
+# value-taking option (c, m, W, X) takes the rest of the token as
+# its value, or the next argv element when it ends the token.
+_PY_NO_VALUE_OPTS = frozenset("bBdEhiIOqsSuv")
+_PY_VALUE_OPTS = frozenset("cmWX")
+
+
+def _expand_bundle(tok):
+    """Expand one bundled short-option token, or return None when
+    it is not a bundle of known CPython options. "-umrun_batch3"
+    becomes ["-u", "-m", "run_batch3"]; "-uc" becomes ["-u", "-c"]
+    (the value is the next argv element); "-Wignore" becomes
+    ["-W", "ignore"]. A token whose first unknown letter appears
+    before any value option is not a bundle (e.g. grep "-rn")."""
+    if len(tok) < 3 or not tok.startswith("-") or tok.startswith("--"):
+        return None
+    out = []
+    j = 1
+    while j < len(tok):
+        ch = tok[j]
+        if ch in _PY_NO_VALUE_OPTS:
+            out.append("-" + ch)
+            j += 1
+            continue
+        if ch in _PY_VALUE_OPTS:
+            out.append("-" + ch)
+            if j + 1 < len(tok):
+                out.append(tok[j + 1:])
+            return out
+        return None
+    return out
+
+
+def _expand_bundles(tokens):
+    """Expand bundled short flags in a token list, but only after
+    the first python interpreter token (a non-python command's own
+    bundled flags, e.g. grep "-rn", must not be rewritten). Tokens
+    before any python token pass through untouched."""
+    out = []
+    seen_python = False
+    for tok in tokens:
+        if _is_python_token(tok):
+            seen_python = True
+        if seen_python:
+            expanded = _expand_bundle(tok)
+            if expanded is not None:
+                out.extend(expanded)
+                continue
+        out.append(tok)
+    return out
+
+
 def _argv_tokens(cmdline):
     """Split a /proc cmdline (NUL-separated) into argv tokens, and
     split any shell -c / flock -c argument on whitespace, so a
     bare-relative or wrapped launch is visible (Y13f H2). The -c
     argument itself is replaced by its words: the first word of a
-    -c string is the command being run."""
-    parts = [t for t in cmdline.split("\x00") if t]
+    -c string is the command being run. Bundled short flags after
+    a python token are expanded first ("-umrun_batch3" becomes
+    "-u" "-m" "run_batch3"), so a bundled -m/-c is visible to the
+    matcher (fix pass 3, redteam F1)."""
+    parts = _expand_bundles([t for t in cmdline.split("\x00") if t])
     tokens = []
     i = 0
     while i < len(parts):
         if parts[i] == "-c" and i + 1 < len(parts):
             tokens.append("-c")
-            tokens.extend(parts[i + 1].split())
+            tokens.extend(_expand_bundles(parts[i + 1].split()))
             i += 2
         else:
             tokens.append(parts[i])
             i += 1
     return tokens
+
+
+def _python_executes(tokens, i):
+    """True if the token at i is executed BY a python interpreter,
+    not merely mentioned after one (fix pass 3, redteam F3). Finds
+    the nearest python token before i; returns False when there is
+    none, or when a script token (.py basename, -m, -c) sits between
+    it and i, because then the token at i is an argument to that
+    script, not to python (e.g. "python3 run_other.py -W ignore
+    run_batch3.py" and "pytest -W ignore run_batch3.py" both miss).
+    Used by the flag branch and the two-back rule."""
+    py_idx = -1
+    for j in range(i):
+        if _is_python_token(tokens[j]):
+            py_idx = j
+    if py_idx < 0:
+        return False
+    for k in range(py_idx + 1, i):
+        if tokens[k].rsplit("/", 1)[-1].endswith(".py") or \
+                tokens[k] in ("-m", "-c"):
+            return False
+    return True
 
 
 def _is_runner_cmdline(cmdline):
@@ -2271,20 +2349,29 @@ def _is_runner_cmdline(cmdline):
     run_* / hand_drive_e1 token after -m; the joined form
     "python3 -mrun_batch3" and dotted paths "python3 -m
     foo.run_batch3" are also accepted (dotted only for exact runner
-    module names, so foo.run_tests does not flag). A spaced -W/-X
-    value ("python3 -W ignore run_batch3.py") is accepted via the
-    token two back. -c import form (redteam H1): "python3 -c
-    'import run_batch3; ...'" is accepted when a bare runner module
-    name follows "import" or "from" in the -c words. Known residual
-    limitations, recorded not hidden: runpy.run_path inside -c;
-    "import os, run_foo" (runner second in a comma list) misses;
-    dynamic imports (__import__, importlib.import_module,
-    exec(open(...).read())) evade the static check; a -c string
-    that only imports the runner module (no main() call) is
-    flagged although it does not execute it (fail-closed
-    over-approximation); extensionless script tokens and direct
-    .pyc execution miss for run_*/hand_drive_e1 names only
-    ("python3 run-nested-pill" returns True via the run-nested
+    module names, so foo.run_tests does not flag). Combined short
+    flags (fix pass 3, redteam F1) are expanded by _argv_tokens
+    ("-umrun_batch3" becomes "-u" "-m" "run_batch3", "-uc" becomes
+    "-u" "-c"), so they are caught by the same branches. A spaced
+    -W/-X value ("python3 -W ignore run_batch3.py") is accepted
+    via the token two back, as is the long option
+    "--check-hash-based-pycs always" (fix pass 3, redteam F2; the
+    only CPython long option that takes a value). The flag branch
+    and the two-back rule both require the token to be executed BY
+    python (_python_executes), so "pytest -W ignore run_batch3.py"
+    and "python3 run_other.py -W ignore run_batch3.py" no longer
+    false-positive (fix pass 3, redteam F3). -c import form
+    (redteam H1): "python3 -c 'import run_batch3; ...'" is accepted
+    when a bare runner module name follows "import" or "from" in
+    the -c words. Known residual limitations, recorded not hidden:
+    runpy.run_path inside -c; "import os, run_foo" (runner second
+    in a comma list) misses; dynamic imports (__import__,
+    importlib.import_module, exec(open(...).read())) evade the
+    static check; a -c string that only imports the runner module
+    (no main() call) is flagged although it does not execute it
+    (fail-closed over-approximation); extensionless script tokens
+    and direct .pyc execution miss for run_*/hand_drive_e1 names
+    only ("python3 run-nested-pill" returns True via the run-nested
     prefix rule); renamed copies, shebang renamed copies, and
     spoofed argv[0] all miss. None is a launch form in use, and
     the renamed/spoofed forms are adversarial, outside this gate's
@@ -2294,18 +2381,14 @@ def _is_runner_cmdline(cmdline):
     the whole run would close those shapes too, but only fleet-wide
     (every runner must take the same lock; run_live.py does not
     today), so that is a Muse-level fleet decision, not a change
-    for this runner. Sync note: this copy has the fix-pass-1 and
-    fix-pass-2 additions; the sibling copies in launch_y13.py and
+    for this runner. Sync note: this copy has the fix-pass-1, -2
+    and -3 additions; the sibling copies in launch_y13.py and
     run_codex_y5.py do NOT yet have them, so the "identical logic"
     claim is currently FALSE. Re-diff the copies before treating
     them as in sync; the sync itself belongs to Y13f's fix pass."""
     tokens = _argv_tokens(cmdline)
     for i, tok in enumerate(tokens):
         base = tok.rsplit("/", 1)[-1]
-        # Joined -m form (redteam F2): "python3 -mrun_batch3".
-        if tok.startswith("-m") and len(tok) > 2 and \
-                _is_runner_module(tok[2:]):
-            return True
         if _script_basename_is_runner(base):
             if i == 0:
                 return True
@@ -2313,15 +2396,26 @@ def _is_runner_cmdline(cmdline):
             prev_base = prev.rsplit("/", 1)[-1]
             if _is_python_token(prev):
                 return True
-            if prev == "-c":
+            # First word of a -c string (bash -c "run_batch3.py").
+            # Only when no script token precedes the -c itself:
+            # "python3 run_other.py -c 'run_batch3.py'" passes the
+            # runner name as an argument to run_other.py, it does
+            # not execute it (fix pass 3, redteam F3 class).
+            if prev == "-c" and not any(
+                    tokens[k].rsplit("/", 1)[-1].endswith(".py")
+                    or tokens[k] in ("-m", "-c")
+                    for k in range(i - 1)):
                 return True
-            if prev.startswith("-") and any(
-                    _is_python_token(t) for t in tokens[:i]):
+            if prev.startswith("-") and _python_executes(tokens, i):
                 return True
-            # Spaced -W/-X value form (redteam F2): "python3 -W
-            # ignore run_batch3.py" (the flag's value sits between
-            # the python token and the script).
-            if i >= 2 and tokens[i - 2] in ("-W", "-X"):
+            # Spaced flag-with-value form (redteam F2, fix pass 3):
+            # "python3 -W ignore run_batch3.py" (the flag's value
+            # sits between the python token and the script). The
+            # long option --check-hash-based-pycs is the only
+            # CPython long option that takes a value.
+            if i >= 2 and tokens[i - 2] in (
+                    "-W", "-X", "--check-hash-based-pycs") and \
+                    _python_executes(tokens, i):
                 return True
             if not base.endswith(".py") and prev_base in ("bash", "sh"):
                 return True
@@ -2378,30 +2472,117 @@ def _ppid_of(pid):
         return None
 
 
+def _codex_at_command(tokens, i):
+    """True if the "codex" token at i is the command of its command
+    (fix pass 3, redteam F4/F5). The command starts at argv[0] or
+    right after a "-c" token. From there, only an env wrapper chain
+    may precede codex: "env" (basename, so /usr/bin/env counts),
+    then flags ("-i", "-u VAR") and VAR=value assignments, then
+    codex. Anything else before codex (echo, grep, cat, another
+    command) means codex is an argument or a printed word, not the
+    command, so "echo env codex marionette" no longer flags. Known
+    gaps, recorded: nohup, setsid, timeout, flock-direct, time and
+    nice wrappers each need their own argument parser (flock takes
+    a lockfile, timeout a duration); no fleet launcher uses them
+    for codex, so they are recorded, not parsed."""
+    s = i
+    while s > 0 and tokens[s - 1] != "-c" and \
+            tokens[s - 1] not in (";", "&&", "||", "|") and \
+            not tokens[s - 1].endswith(";"):
+        s -= 1
+    if s == i:
+        return True
+    if tokens[s].rsplit("/", 1)[-1] != "env":
+        return False
+    j = s + 1
+    while j < i:
+        if tokens[j].startswith("-"):
+            if tokens[j] in ("-u", "--unset"):
+                j += 2
+            else:
+                j += 1
+            continue
+        if "=" in tokens[j]:
+            j += 1
+            continue
+        return False
+    return j == i
+
+
+def _in_shell_c_string(tokens, i):
+    """True if the token at i sits inside a SHELL -c string (fix
+    pass 3). Only there does ";" separate shell commands. A codex
+    or python -c argument is a prompt/snippet, not a shell command,
+    so its ";" must not truncate the marker scope (the H2 live
+    case is "codex -c 'import time; ... # marionette'"). Finds the
+    nearest "-c" before i and checks whether the command owning it
+    starts with bash, sh or flock."""
+    c = -1
+    for j in range(i - 1, -1, -1):
+        if tokens[j] == "-c":
+            c = j
+            break
+    if c < 0:
+        return False
+    s = c
+    while s > 0 and tokens[s - 1] != "-c" and \
+            tokens[s - 1] not in (";", "&&", "||", "|") and \
+            not tokens[s - 1].endswith(";"):
+        s -= 1
+    return tokens[s].rsplit("/", 1)[-1] in ("bash", "sh", "flock")
+
+
+def _same_command_tokens(tokens, i):
+    """Tokens of the same shell command as the token at i (fix pass
+    3, redteam F5). Stops at command separators (";", "&&", "||",
+    "|"), so "codex --help; echo marionette" does not let the
+    marker from the later command count against codex. Returns the
+    tokens before and after i within that command, lowercased
+    joined text is the caller's job."""
+    lo = i
+    while lo > 0 and tokens[lo - 1] not in (";", "&&", "||", "|") \
+            and not tokens[lo - 1].endswith(";"):
+        lo -= 1
+    hi = i
+    while hi < len(tokens) - 1:
+        nxt = tokens[hi + 1]
+        if nxt in (";", "&&", "||", "|"):
+            break
+        hi += 1
+        # A token ending in ";" is the last word of this command
+        # (e.g. "marionette;"): include it, then stop.
+        if nxt.endswith(";"):
+            break
+    return tokens[lo:i] + tokens[i + 1:hi + 1]
+
+
 def _is_codex_executor(cmdline):
     """True if the cmdline is a codex CLI driving (or about to
-    drive) a browser (redteam M3, fix pass 2). "codex" must sit in
+    drive) a browser (redteam M3, fix pass 3). "codex" must sit in
     an executable position: argv[0] (direct launch, possibly a
     full path), the first word after a -c (shell/flock -c string),
-    or the word after env. A bare "codex" elsewhere (a grep
-    pattern, a cat file argument, an echo string) is not an
-    executor and no longer flags. A refuse marker is required in
-    a DIFFERENT token than the codex token. Known gap: a
-    sudo-prefixed codex ("sudo codex ...", "sudo -u x codex ...")
-    misses; no fleet launcher uses sudo for codex."""
+    or the command after an env wrapper chain (env, env -i, env
+    FOO=bar, /usr/bin/env). A bare "codex" elsewhere (a grep
+    pattern, a cat file argument, an echo string, a word after
+    "env" that echo prints) is not an executor and no longer
+    flags. A refuse marker is required in a DIFFERENT token than
+    the codex token, and only within the same shell command (a
+    ";" separates commands). Known gaps: nohup, setsid, timeout,
+    flock-direct, time and nice wrappers miss (see
+    _codex_at_command); no fleet launcher uses them for codex."""
     tokens = _argv_tokens(cmdline)
     for i, tok in enumerate(tokens):
         if tok.rsplit("/", 1)[-1] != "codex":
             continue
-        if i == 0:
-            executable = True
-        elif tokens[i - 1] in ("-c", "env"):
-            executable = True
-        else:
-            executable = False
-        if not executable:
+        if not _codex_at_command(tokens, i):
             continue
-        rest = " ".join(tokens[:i] + tokens[i + 1:]).lower()
+        # ";" separates shell commands only inside a shell -c
+        # string; a codex/python -c argument is a prompt/snippet,
+        # so its ";" does not bound the marker scope.
+        if _in_shell_c_string(tokens, i):
+            rest = " ".join(_same_command_tokens(tokens, i)).lower()
+        else:
+            rest = " ".join(tokens[:i] + tokens[i + 1:]).lower()
         if any(m in rest for m in CODEX_REFUSE_MARKERS):
             return True
     return False
@@ -2584,7 +2765,12 @@ def _verify_served_fixture(base_url):
     check (the md5 is the check, not the URL or headers); that is
     adversarial server behavior, outside this gate's threat model
     (the server is started by this runner or reused from a
-    previous Y14 run on the same loopback)."""
+    previous Y14 run on the same loopback). The check is
+    point-in-time (fix pass 3, redteam F7): it verifies the bytes
+    once before driving, with no re-check during the run, so a
+    server swapped after the check would serve foreign bytes
+    unchecked. A slow server refuses fail-closed after the 5 s
+    timeout. Content-Type is not checked (bytes only)."""
     import hashlib
     import urllib.request
     root = os.environ.get("LIVE_SERVER_ROOT", "")
