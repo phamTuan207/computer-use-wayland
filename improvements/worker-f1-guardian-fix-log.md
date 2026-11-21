@@ -1000,3 +1000,45 @@ council 3 (5 steps, stdout and stderr recorded separately).
 - 23:16: re-ran the full suite (c3d.log): 35 tests in 32.212s, OK. All
   green. The R3 gate, the FAKE branches, the R3 test, and the cleanup
   test refactor are all proven on the laptop (Python 3.14.10).
+
+## 23:24-23:32 - Round 2 D1/D2/E1/E2/E3: remaining review fixes, each its own commit
+- D1 (F2, session_remote.py:323-326): the BrokerError message 'cursor
+  backend is not idle and ready' swallowed the check_guard detail, which
+  now names the missing backend. The message now carries str(error):
+  f'cursor backend is not idle and ready: {error}'. No test asserted the
+  exact old message (only a stale .pyc matched the grep).
+- D2 (R13, cursor_session.py:80 + test_sync_installed.py:229): the lock
+  message now reads 'another automation session or plugin activation is
+  active', because the lock is also held by plugin activation (the
+  lock-holding wrapper), not only by a running session. The sync-installed
+  test assertion was updated to the new string; test_visuals.py uses the
+  regex 'another automation', which still matches.
+- E1 (A4/C3-1, test_unloaded_backend): the Lifecycle test now parses
+  stdout as JSON and asserts the error field contains 'not valid JSON'
+  and 'may not be loaded', and is not the bare 'session guardian startup
+  failed'. The old combined out+err assertion would pass even if
+  supervise raised the old bare error, because the text also arrives via
+  the guardian stderr tee.
+- E2 (C3-4, cursor_theme.py Guard.__init__ + new Lifecycle test): the
+  missing-socket layer is now PROVEN, not recorded as unproven. Guard
+  now catches FileNotFoundError from directory.lstat() and path.lstat()
+  and raises a named RuntimeError ('cursor guard socket directory is
+  missing' / 'cursor guard socket is missing', with the reload remedy),
+  instead of surfacing a raw ENOENT. New test
+  test_missing_guard_socket_fails_closed_and_names_the_cause removes the
+  socket directory after setUp (check_guard still passes, the FAKE
+  reports the backend idle and ready), launches, and asserts fail closed
+  with 'cursor guard socket' in the envelope. The GuardServer keeps its
+  bound socket on the unlinked inode; tearDown tolerates the unlink.
+- E3 (C3-6, test_cursor_theme.py): the drop case now accepts
+  BrokenPipeError alongside RuntimeError and ConnectionResetError (the
+  pre-existing flake, about 5/95 runs, a write racing the close). The
+  missing-socket case in test_private_directory_and_socket_are_required
+  now asserts the named RuntimeError ('cursor guard socket is missing')
+  instead of OSError, matching the E2 code fix.
+- E4 (R12/C3-5): DONE in commit a152f31 (ExitStack refactor). The test
+  file compiles on VM Python 3.12.3, where it previously failed at line
+  566/570.
+- VM evidence 23:32: theme tests 35 OK in 0.181s; py_compile OK for
+  session_remote.py, cursor_session.py, cursor_theme.py,
+  test_cursor_session.py, test_cursor_theme.py, test_sync_installed.py.

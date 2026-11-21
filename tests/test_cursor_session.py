@@ -834,9 +834,13 @@ class Lifecycle(unittest.TestCase):
         self.assertFalse(marker.exists(),'driver ran without a loaded backend')
         self.assertFalse((self.state/'session.json').exists())
         self.assertEqual(self.released(),[])
-        combined=out+err
-        self.assertIn('not valid JSON',combined)
-        self.assertIn('may not be loaded',combined)
+        # Assert on stdout as JSON, not on combined out+err: the same text
+        # also arrives via the guardian stderr tee, so a combined assertion
+        # would pass even if supervise raised the old bare error (A4/C3-1).
+        envelope=json.loads(out)
+        self.assertIn('not valid JSON',envelope['error'])
+        self.assertIn('may not be loaded',envelope['error'])
+        self.assertNotEqual(envelope['error'],'session guardian startup failed')
         self.configure(status_garbage=False)
 
     def test_hyprglass_gate_fails_closed_and_names_the_cause(self):
@@ -866,6 +870,24 @@ class Lifecycle(unittest.TestCase):
                     self.configure(**{flag:False})
         finally:
             self.configure(glass_down=False,glass_pending=False)
+
+    def test_missing_guard_socket_fails_closed_and_names_the_cause(self):
+        # C3-4: check_guard passes (the FAKE reports the backend idle and
+        # ready) but the guard socket directory is gone, so Guard.__init__
+        # must fail closed with the cause named in the envelope, not a raw
+        # FileNotFoundError and not a bare startup failure. The directory
+        # is removed after setUp built it; the GuardServer keeps its bound
+        # socket on the unlinked inode, and tearDown tolerates the unlink.
+        shutil.rmtree(self.compositor_runtime/'agent-computer-use')
+        marker=self.folder/'must-not-run'
+        p=self.launch(f"from pathlib import Path;Path({str(marker)!r}).touch()")
+        out,err=p.communicate(timeout=8)
+        self.assertNotEqual(p.returncode,0,(out,err))
+        self.assertFalse(marker.exists(),'driver ran without a guard socket')
+        self.assertFalse((self.state/'session.json').exists())
+        envelope=json.loads(out)
+        self.assertIn('cursor guard socket',envelope['error'])
+        self.assertNotEqual(envelope['error'],'session guardian startup failed')
 
     def test_lost_lease_stops_driver_and_restores(self):
         heart=self.folder/'heartbeat';ready=self.folder/'driver-ready'

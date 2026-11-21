@@ -150,11 +150,20 @@ class Guard:
         runtime = env.get('XDG_RUNTIME_DIR','')
         if not os.path.isabs(runtime):raise RuntimeError('cursor guard requires XDG_RUNTIME_DIR')
         directory = Path(runtime)/'agent-computer-use'
-        info = directory.lstat()
+        try:
+            info = directory.lstat()
+        except FileNotFoundError:
+            # A loaded backend with a missing endpoint: the status reply
+            # passes check_guard, so this is the only place the missing
+            # socket is caught. Name it, do not surface a raw ENOENT.
+            raise RuntimeError('cursor guard socket directory is missing, the guard backend may be loaded but its endpoint is gone; reload the cursor guard plugin or restart the compositor') from None
         if not stat.S_ISDIR(info.st_mode) or info.st_uid != os.geteuid() or stat.S_IMODE(info.st_mode) != 0o700:
             raise RuntimeError('cursor guard directory is not private')
         path = directory/'cursor-guard.sock'
-        info = path.lstat()
+        try:
+            info = path.lstat()
+        except FileNotFoundError:
+            raise RuntimeError('cursor guard socket is missing, the guard backend may be loaded but its endpoint is gone; reload the cursor guard plugin or restart the compositor') from None
         if not stat.S_ISSOCK(info.st_mode) or info.st_uid != os.geteuid():
             raise RuntimeError('cursor guard endpoint is not a private socket')
         self.socket = socket.socket(socket.AF_UNIX,socket.SOCK_STREAM)
