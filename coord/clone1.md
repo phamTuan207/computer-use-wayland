@@ -1999,6 +1999,84 @@ Giới hạn: không chạy lại gì trên Firefox (shim đã xóa; chỉ kiể
 file, theo brief) và không chạy lại t09/t10 riêng trên Firefox.
 Zen thật vẫn chưa kiểm chứng, như báo cáo nói.
 
+## REDTEAM XONG, 03:17 ngày 22/11 - 28 PHÁT HIỆN, PHÁN QUYẾT ĐỨNG
+
+Báo cáo ở docs/batch6-redteam-20261122.md (403 dòng theo wc -l),
+đã push (9a8b093).
+
+Tổng: 12 sai thực tế, 8 claim chưa kiểm chứng nhưng nói như đã
+xong, 2 bug thật, 6 nhỏ. Phán quyết tự nó hầu hết đứng: 13 vi
+phạm là thật, D1 SOUND, các lần chạy Firefox khớp đúng từng số.
+Hỏng ở kế toán bằng chứng, timestamp, và một báo cáo đã cũ.
+
+Nặng nhất:
+- W9: báo cáo việc 3 nói "không lưu file riêng cho Chromium run
+  2" là SAI và tự mâu thuẫn. Output lần chạy 2 tồn tại trong 4 bản
+  giống hệt (control/m1/m2/m3-suite/results.json, bắt đầu
+  18:40:35.594Z, wall 36122 ms, 10/10, ms từng test khớp lần chạy 2
+  đúng từng số). Thân báo cáo còn nói lần chạy 2 "là results.json
+  đã ở trong cây", trong khi phần bằng chứng nói không lưu file;
+  phần kiểm chứng hoàn thiện lặp lại lỗi này vào coord. Lần chạy tự
+  nó ổn và kiểm chứng được; kế toán bằng chứng sai.
+- W5: timestamp của báo cáo việc 1 sau 02:00 là không thể. Agent
+  đầu xong lúc 01:57:52 +07 (hồ sơ runtime, mtime file và commit
+  3323170 lúc 01:58:07 khớp nhau), nhưng báo cáo nói sửa TLS
+  "kiểm chứng 02:03", timeout "02:04", phiên "tới 02:05". Sự kiện
+  timeout là thật (hồ sơ runtime xác nhận), nhưng mốc 02:04 không
+  thể đúng, và thứ tự đảo ngược: timeout "thứ hai" của follow-up
+  lúc 02:01:44 sớm hơn timeout "đầu" được nói là 02:04. Cùng kiểu
+  ở header việc 2 ("làm tới 02:30" so với xong 01:45:21).
+- U7: báo cáo việc 1 đã cũ. Agent follow-up (watchdog 02:40 spawn)
+  đã chạy lại ZT-00 (02:40:13) và tạo ZT-01.json tới ZT-08.json.
+  ZT-00.json trên ổ không còn giữ lần chạy báo cáo mô tả (lần cũ
+  giữ trong ZT-00-pre-fix.json), và lần chạy ZT-00 mới chứng minh
+  Ctrl+W không làm gì khi headless, cả Ctrl+W lẫn fallback
+  page.close() đều thất bại trên phiên 1 tab (closedBy "none"),
+  một giới hạn thật của runner (bug B1) mà báo cáo không nêu.
+
+Các phát hiện khác: số kiểm kê done/complet/verified/passed
+(603/1146/2479/420) không tái hiện dưới biến thể grep nào (đo
+được 582/1120/2237/403 phân biệt hoa thường); phân loại hash nêu
+25 mục (1+16+8) so với nói 27, số trong văn bản ("khoảng 20", "6")
+không khớp danh sách nêu (16, 8); wall kiểm lại M1 là 13648 ms
+trong file, không phải 13909 ms như phần kiểm chứng hoàn thiện
+nói; claim "control suite byte-identical" sai (results.json khác);
+ZT-00 "01:43:58 tới 01:44:08, 17960 ms" ghép khoảng 10 s với thời
+lượng 17960 ms; lỗi đếm dòng +1 lần thứ 3 (377/243/372 thực tế so
+với 378/244/373 được trích). Số dòng đúng theo wc -l: audit 377,
+báo cáo ZT 243, re-verify 372; báo cáo việc 1 gốc ở 3323170 là 189
+dòng, không phải 190 như coord nói trước đây. Các số cũ ở các mục
+trên trong file này giữ nguyên để thấy lịch sử, số đúng ghi ở đây.
+
+Bug thật: B1, runner closeActiveTab trả "none" trên phiên 1 tab
+(Ctrl+W không làm gì, page.close() trên tab duy nhất không giảm
+số tab; mọi kịch bản kết thúc bằng đóng tab duy nhất đều dính);
+B2, a1_unblind.py dòng 226 median không guard vẫn crash đúng kịch
+bản B3a (đã xác nhận bằng đọc code, việc 2 tìm ra đúng, thuộc code
+trên todolist-push, không phải main).
+
+Còn sống sau soi: cả 13 vi phạm (V1-V6, V9, V10, V12 kiểm lại
+đủ, gồm crash median dòng 226), phán quyết D1 SOUND, cả 5 JSON lần
+chạy Firefox khớp đúng từng số, các lần chạy riêng, lần kiểm lại
+M1, và mutation đúng như mô tả (M1 3x position=1, M2 stopTimer đầu
+tiên, M3 3x if (!playing)); checker cũ có 0 kiểm exact-zero và chỉ
+lỗi khi min > 2, nên M1 đã qua được nó.
+
+Bước tiếp hữu ích nhất (theo redteam): cập nhật báo cáo việc 1
+từ các file kết quả ZT-00..ZT-08 trên ổ, gồm phát hiện Ctrl+W
+(B1). Thứ hai: ngừng trích số dòng từ trí nhớ, mọi số trong review
+này đều lấy từ wc -l, và lỗi +1 nay đã cắn 3 đợt liên tiếp.
+
+Tiến triển việc 1 (tôi tự kiểm chứng trên ổ lúc 03:17): follow-up
+2 đã chạy hết ZT-00..ZT-10. ZT-06 FAIL, ZT-07 FAIL, ZT-08 ERROR
+(Protocol error browsingContext.navigate, NS_ERROR_NET_RESET),
+ZT-09 ERROR (cùng lỗi NS_ERROR_NET_RESET), ZT-10 ERROR (cùng lỗi).
+Tổng ZT-00..ZT-10: FAIL 3 (ZT-00, 06, 07), ERROR 6 (ZT-01, 02, 03
+timeout Wikipedia; ZT-08, 09, 10 NS_ERROR_NET_RESET), NOT
+APPLICABLE 2 (ZT-04 bookmark, ZT-05 Hyprland). Chờ follow-up 2 báo
+xong và cập nhật báo cáo việc 1, rồi giao agent sửa các phát hiện
+redteam.
+
 ## Watchdog đợt 6, 01:47 ngày 22/11
 - Việc 1: agent đang chạy, hoạt động 39 giây trước, chưa có file báo cáo.
 - Việc 2: xong, đã push (581736e, ee5891b), 13 vi phạm, 3 cao.
