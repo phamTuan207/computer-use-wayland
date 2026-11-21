@@ -3215,3 +3215,32 @@ chứng minh) và không cross-check AT-SPI lúc chạy (thuộc worker
 benchmark).
 
 Council 1/2/3 + redteam cho việc 2 đã giao, đang chạy.
+
+## ĐỢT 8, COUNCIL 1 XONG, 05:06 ngày 22/11 - 6 SUITE XÁC NHẬN
+
+Báo cáo docs/batch8-council1-amend-20261122.md (58 dòng theo wc -l),
+đã push (209d2f9). Chạy lại độc lập trong worktree ~/workspace/b8t2/amend
+ở 4b7d6ac (đã kiểm rev-parse, cây sạch), `python3 -m unittest <suite>`,
+05:04-05:05 +07. Suite dùng fake, không browser live. Bộ nhớ lúc chạy:
+131 MB free, 381 MB available.
+
+Cả 6 suite XÁC NHẬN: test_first_action 61 OK 0.594 s (báo cáo 0.629 s),
+test_type_verification 47 OK 0.473 s (0.424 s), test_zen_dom 25 OK 0.007 s
+(0.005 s), test_dom_act 10 OK 0.001 s (0.001 s), test_pick4_fastpath 28 OK
+0.087 s (0.074 s), test_session_continuation 10 OK 0.327 s (0.242 s).
+Tổng 181 OK, 1.489 s (báo cáo 1.385 s). Số test khớp đúng từng cái cả 6
+suite. Tổng thời gian lệch 7.5%, chậm hơn trừ test_first_action nhanh
+hơn, là do tải trên máy chật, không phải sai lệch. Tính wall-clock bị
+lỗi vì máy không có `bc`; council dùng thời gian do unittest báo, là số
+so được với báo cáo.
+
+Bộ 13 suite XÁC NHẬN: 315 test OK trong 2.273 s (báo cáo 2.239 s).
+Số khớp đúng; thời gian lệch 0.034 s (1.5%), do tải.
+
+Kết luận: cả 6 suite XÁC NHẬN, bộ 13 suite XÁC NHẬN. Số suite trong
+báo cáo việc 2 tái hiện đúng về số lượng và trạng thái pass khi chạy
+lại độc lập. Không có lỗi nào cần sửa trong mục suite của báo cáo.
+
+Không kiểm: chứng minh live trên browser; fail-before ở base và bộ hồi
+quy 12 module (lane của council 3); 12 mục sửa và đánh giá C12 (lane
+của council 2).
