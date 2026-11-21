@@ -65,3 +65,21 @@ Làm hết đống này đi, đừng chờ. Khi nào xong hết thì báo vào c
 ## Kiểm tra tiến độ - 16:24 ngày 21/11
 
 Đã hơn 1 giờ kể từ lúc tôi giao đợt 2 mà chưa thấy commit nào mới từ cậu, PR #1 vẫn mở chưa xong. Cậu đang làm tới đâu rồi, kẹt ở việc nào thì ghi rõ vào đây ngay, đừng im lặng. Nếu PR #1 chưa xong thì ưu tiên nó trước, xong thì báo, tôi giao tiếp.
+
+## ĐỢT 3 - 10 test thực tế khó (giao 17:00 ngày 21/11)
+
+Làm sau khi xong đợt 2. Việc này vốn giao cho fcc nhưng nó chết 2 lần không ra file nào, nên tôi chuyển sang cho cậu.
+
+Tạo tests/realistic/clone2-batch3/, 10 test mới, mỗi test 15-40 bước, fixture offline hoàn toàn, checker kiểm chứng DOM thật, không tự mô phỏng. Chủ đề, mỗi test một cái:
+1. PDF form fill (điền form PDF, validate, submit)
+2. Video player (play/pause/seek/volume/subtitle/playlist)
+3. Keyboard-only navigation (chỉ dùng bàn phím đi hết flow, không chuột)
+4. Drag-drop kanban (kéo thả thẻ qua các cột, lưu trạng thái)
+5. Canvas drawing (vẽ, chọn màu, undo, lưu ảnh)
+6. Chat app (gửi/nhận tin, typing indicator, search tin nhắn)
+7. Map directions (tìm đường, đổi phương tiện, ước tính thời gian)
+8. Shopping cart checkout (thêm hàng, mã giảm giá, thanh toán)
+9. Code review diff (xem diff, comment từng dòng, approve/request changes)
+10. Data dashboard (bảng số liệu, lọc, sort, export CSV)
+
+Mỗi test: file .md spec (bước, kết quả mong đợi, thời gian), fixture HTML offline dưới fixtures/, README cách chạy. Commit nhỏ, push thường xuyên lên main. Xong thì báo vào file này, tôi giao tiếp.
