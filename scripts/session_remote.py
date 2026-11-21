@@ -322,7 +322,10 @@ def native_readiness(env=None):
     try:
         cursor_theme.check_guard(env)
     except Exception as error:
-        raise BrokerError('native_unavailable', 'cursor backend is not idle and ready',
+        # Carry the cause (check_guard now names the missing backend) into
+        # the BrokerError message instead of swallowing it behind a generic
+        # 'not idle and ready'.
+        raise BrokerError('native_unavailable', f'cursor backend is not idle and ready: {error}',
                           stage='guard', diagnostic='cursor_guard_busy_or_unavailable') from error
     return {**identity, 'commit': version['commit'], 'abi_hash': version['abiHash']}
 
