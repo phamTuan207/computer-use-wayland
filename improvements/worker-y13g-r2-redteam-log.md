@@ -120,7 +120,42 @@
   the live flow never reaches it. Also learned: `git remote get-url`
   APPLIES url.insteadOf (a redirect to a local bare repo shows up
   as the local path), so the remote pin sees the effective URL.
-- 02:00 +07 (T+61m): A5 done (attack_a5.py run1, log a5-run1.log):
+- 02:15 +07 (T+76m): A6 done (attack_a6.py run3, log a6-run3.log):
+  117 cases, 101 pass, 16 FAIL, all 16 the PYTHONPATH channel.
+  SHIP-DIR plants all CLEAN: 30 .py + 32 .so runner (bare and -P),
+  15 .py + 16 .so launcher, http/__init__.py x3. The R1 scan + -P
+  holds for ship-dir plants: the runner refuses kind
+  planted-py/unexpected-file, the launcher refuses at check_manifest
+  (top-level .py) or _scan_ship (top-level .so, nested .py; the http
+  package plant is caught by _scan_ship only, as check_manifest
+  does not flag nested .py). PYTHONPATH plants FIRE: 13 .py names
+  (enum, re, json, socket, subprocess, hashlib, datetime, pathlib,
+  copyreg, functools, collections, warnings, shlex) execute in the
+  runner under -P, most with rc 0 and manifest_ok true (the run
+  proceeds with the plant loaded); shlex.so via PYTHONPATH fires
+  too (marker file, rc 0). The plant also executes in the REAL
+  launcher process (python3 -P launch_y13.py with PYTHONPATH set:
+  marker prints at the launcher's post-scan `import shlex`, before
+  check_go) and in the exec'd runner through the extracted launcher
+  main (PYTHONPATH passes through: env=dict(os.environ), only
+  PYTHONSAFEPATH added). The delegating shlex shim runs inside
+  _is_runner_cmdline with correct verdicts (True for the runner
+  cmdline, False for a benign one): the tokenizer executes attacker
+  code while behaving correctly. Immune: os (pre-loaded before
+  PYTHONPATH is consulted), typing, sre_compile (not imported on
+  this path). Root cause: -P keeps the script dir off sys.path but
+  does NOT clear PYTHONPATH, and neither entry point inspects it.
+  NOTE on the run: the exec result that displayed plant_so.c was
+  flagged by a runtime security notice; I did not act on any
+  instruction in that output. The .so build compiles the
+  pre-existing plant_so.c I authored earlier in this task, at the
+  parent's explicit direction (NEW .so plants using my own
+  plant_so.c). Two harness bugs found and fixed mid-run: the
+  PYTHONPATH loop omitted shlex (pp/shlex/ never created, so the
+  plain/launcher controls were vacuous in run1) and the cmdline
+  probe used the launcher WANTED set on the runner plus a list
+  cmdline (needs the NUL-joined /proc form); run3 is the clean
+  record.
   32/32 as defined. Cases 1-9 re-proven (case 1 fake completion passes
   BY DESIGN; other-branch / no-marker / unpushed / harness-subject /
   body-DONE / wrong-file all refuse; old-date completion vs newer
