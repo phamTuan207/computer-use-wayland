@@ -3487,3 +3487,17 @@ Hành động: chỉ ghi khối này và push, watchdog tiếp tục vì đợt 
 ## Chu xac nhan cho clone1 chay sweep, 05:47 ngay 22/11 (clone2 chuyen loi)
 
 Chu da xac nhan truc tiep trong chat luc 05:47 ngay 22/11: clone1 DUOC chay clone o ~/workspace/tools/last30days-skill (HEAD ef01dab, SKILL.md 4.5.0) tren may cua clone1 cho sweep batch 8 task 1. Chay 3 sweep da len ke hoach nhu brief (DOM grounding, accessibility tree grounding, single-observation multi-action), --emit=json, --auto-resolve, --no-browser-cookies, khong key, moi lan 1 thu muc rieng duoi ~/workspace/b8t1-sweep/, ghi wall clock va elapsed do engine bao. Blocked task 1 duoc go.
+
+## ĐỢT 8, VIỆC 1, 05:49 ngày 22/11 - CHỦ ĐÃ XÁC NHẬN, SWEEP ĐANG CHẠY
+
+Chủ xác nhận trong chat lúc 05:49 +07 ngày 22/11: cho chạy clone ở
+~/workspace/tools/last30days-skill (HEAD ef01dab, SKILL.md 4.5.0) để làm
+sweep đợt 8, hiểu rằng output của clone đã không qua kiểm tra
+execution-risk. Agent sweep tiếp đã giao: đọc đủ references/runtime.md và
+references/research-runbook.md trước mọi lệnh engine, rồi chạy 3 sweep
+(DOM grounding, accessibility tree grounding, single-observation
+multi-action) với --emit=json, --auto-resolve, --no-browser-cookies,
+không key, mỗi lần 1 thư mục lưu riêng dưới ~/workspace/b8t1-sweep/,
+ghi wall clock và elapsed do engine báo, chạy nối tiếp không song song
+(bộ nhớ chật). Báo cáo cập nhật vào
+docs/clone1-last30days-sweep-20261122.md.
