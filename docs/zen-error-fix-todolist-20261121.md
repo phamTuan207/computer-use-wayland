@@ -117,7 +117,7 @@
 - [x] 3.1.7 C7: Man hinh tinh doc nhu "khong lam gi". Sua: noi truoc va bao log cu the, narrate tung buoc TRUOC khi lam (done: narrate rule in brief-template.md section 5 + checklist section 9; tooling scripts/timing.py, drive_log.py, step_watchdog.py, overlay.py all exist and are referenced)
 - [x] 3.1.8 C8: Khong don dep sau khi dung computer-use. Sua: ket thuc broker session, xac nhan khong con process, pill bien mat, desktop sach (done: scripts/session_cleanup.py --check/--clean + test_phase3_cleanup.py, 8636f21)
 
-Worker L follow-up (21/11): Phase 3 function-based tests were not collected by `unittest discover`; added `load_tests` adapters and a loader self-test. The stale 90s assertions in C1 coverage now follow `cu.OBSERVATION_MAX_AGE` (120s).
+Worker L follow-up (21/11): Phase 3 function-based tests were not collected by `unittest discover`; added `load_tests` adapters and a loader self-test. Stale 90s assertions in C1 coverage (including act diagnostics) now follow `cu.OBSERVATION_MAX_AGE` (120s).
 
 ### 3.2 Loi cu the task up de (phan B)
 - [x] 3.2.1 B1: Solution sai extension .c thay vi .cpp. Sua: upload .cpp (done: runbook section 5 + polygon_checks.py B1, 2f0510d)
