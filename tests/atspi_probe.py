@@ -11,18 +11,35 @@ Usage:
   python3 tests/atspi_probe.py --mode dump [--max-nodes N] [--max-depth N]
   python3 tests/atspi_probe.py --mode click --name Increment
   python3 tests/atspi_probe.py --mode type --name Name --text hello
+  python3 tests/atspi_probe.py --mode session [--app-path PATH]
 
 Every step logs one JSON line with wall_clock and elapsed_ms.
 Exit 0 when every requested op is verified, 2 otherwise.
 Requires a running AT-SPI bus (at-spi2-core) and a desktop session.
+
+The session mode is a staged bring-up diagnostic. It audits the
+environment, tries the raw desktop first, then tries to build a
+virtual session from whatever binaries exist on the machine (Xvfb,
+dbus-daemon, at-spi-bus-launcher), launches a real GUI app inside
+it, and only then attempts the tree read and the button press.
+Every stage is timed and every failure is logged with its exact
+error, so the output states precisely where this machine stops.
 """
 
 import argparse
 import json
+import os
+import shutil
+import subprocess
 import sys
 import time
 
-import pyatspi
+try:
+    import pyatspi
+    PYATSPI_ERROR = None
+except Exception as exc:  # ImportError or missing system libraries
+    pyatspi = None
+    PYATSPI_ERROR = "%s: %s" % (type(exc).__name__, exc)
 
 START = time.time()
 
@@ -200,10 +217,280 @@ def paragraph_text(app):
     return node_text(para)
 
 
+def stage_log(stage, ok, t0, **extra):
+    """One JSON line per bring-up stage, with per-stage elapsed_ms."""
+    now = time.time()
+    rec = {
+        "wall_clock": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(now)),
+        "stage": stage,
+        "ok": ok,
+        "stage_elapsed_ms": round((now - t0) * 1000, 1),
+        "elapsed_ms": round((now - START) * 1000, 1),
+    }
+    rec.update(extra)
+    print(json.dumps(rec), flush=True)
+    return ok
+
+
+def run_session_mode(app_path, app_timeout_s=25.0):
+    """Staged AT-SPI bring-up. Returns 0 only if a real tree was read
+    and a real button press was verified, 2 otherwise. Never raises:
+    each stage records its own failure and the run continues so the
+    log shows every limit this machine hits, in order."""
+    all_ok = True
+    spawned = []  # Popen objects to clean up at the end
+
+    # Stage 1: audit the environment as it is.
+    t0 = time.time()
+    binaries = {}
+    for name in ("Xvfb", "dbus-run-session", "dbus-daemon", "gdbus",
+                 "at-spi-bus-launcher", "at-spi2-registryd"):
+        binaries[name] = shutil.which(name)
+    stage_log("audit_environment", True, t0,
+              display=os.environ.get("DISPLAY"),
+              wayland_display=os.environ.get("WAYLAND_DISPLAY"),
+              dbus_session_bus_address=os.environ.get(
+                  "DBUS_SESSION_BUS_ADDRESS"),
+              xdg_runtime_dir=os.environ.get("XDG_RUNTIME_DIR"),
+              x11_socket_dir_exists=os.path.isdir("/tmp/.X11-unix"),
+              binaries=binaries,
+              pyatspi_importable=pyatspi is not None,
+              pyatspi_error=PYATSPI_ERROR)
+
+    # Stage 2: raw desktop, no virtual session. Import first.
+    t0 = time.time()
+    if pyatspi is None:
+        stage_log("raw_desktop_registry", False, t0,
+                  error="pyatspi not importable: %s" % PYATSPI_ERROR)
+        all_ok = False
+    else:
+        try:
+            desktop = pyatspi.Registry.getDesktop(0)
+            stage_log("raw_desktop_registry", True, t0,
+                      applications=desktop.childCount)
+        except Exception as exc:
+            stage_log("raw_desktop_registry", False, t0,
+                      error="%s: %s" % (type(exc).__name__, exc))
+            all_ok = False
+
+    # Stage 3: start Xvfb on a free display number.
+    display = None
+    t0 = time.time()
+    if binaries["Xvfb"] is None:
+        stage_log("start_xvfb", False, t0, error="Xvfb binary missing")
+        all_ok = False
+    else:
+        for num in (97, 98, 99):
+            if not os.path.exists("/tmp/.X11-unix/X%d" % num):
+                display = ":%d" % num
+                break
+        if display is None:
+            stage_log("start_xvfb", False, t0,
+                      error="no free display number in 97..99")
+            all_ok = False
+        else:
+            try:
+                proc = subprocess.Popen(
+                    ["Xvfb", display, "-screen", "0", "1280x800x24"],
+                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                spawned.append(proc)
+                sock = "/tmp/.X11-unix/X%s" % display[1:]
+                deadline = time.time() + 10.0
+                while time.time() < deadline and not os.path.exists(sock):
+                    if proc.poll() is not None:
+                        break
+                    time.sleep(0.1)
+                if os.path.exists(sock) and proc.poll() is None:
+                    stage_log("start_xvfb", True, t0, display=display,
+                              pid=proc.pid)
+                else:
+                    stage_log("start_xvfb", False, t0, display=display,
+                              error="X socket %s never appeared, "
+                                    "xvfb exit=%s" % (sock, proc.poll()))
+                    all_ok = False
+                    display = None
+            except Exception as exc:
+                stage_log("start_xvfb", False, t0,
+                          error="%s: %s" % (type(exc).__name__, exc))
+                all_ok = False
+                display = None
+
+    # Stage 4: start a private session bus with dbus-daemon.
+    bus_address = None
+    bus_pid = None
+    t0 = time.time()
+    if binaries["dbus-daemon"] is None:
+        stage_log("start_session_bus", False, t0,
+                  error="dbus-daemon binary missing")
+        all_ok = False
+    else:
+        try:
+            out = subprocess.run(
+                ["dbus-daemon", "--session", "--fork",
+                 "--print-address=1", "--print-pid=1"],
+                capture_output=True, text=True, timeout=10)
+            lines = [ln.strip() for ln in out.stdout.splitlines()
+                     if ln.strip()]
+            if out.returncode == 0 and len(lines) >= 2:
+                bus_address, bus_pid = lines[0], int(lines[1])
+                stage_log("start_session_bus", True, t0,
+                          address=bus_address, pid=bus_pid)
+            else:
+                stage_log("start_session_bus", False, t0,
+                          error="rc=%s stdout=%r stderr=%r"
+                                % (out.returncode, out.stdout[:200],
+                                   out.stderr[:200]))
+                all_ok = False
+        except Exception as exc:
+            stage_log("start_session_bus", False, t0,
+                      error="%s: %s" % (type(exc).__name__, exc))
+            all_ok = False
+
+    # Session environment for the stages below and for child apps.
+    session_env = dict(os.environ)
+    if display:
+        session_env["DISPLAY"] = display
+    if bus_address:
+        session_env["DBUS_SESSION_BUS_ADDRESS"] = bus_address
+
+    # Stage 5: can anything own org.a11y.Bus on this session bus?
+    # Without at-spi-bus-launcher there is no a11y bus at all.
+    t0 = time.time()
+    if bus_address is None:
+        stage_log("check_a11y_bus", False, t0,
+                  error="no session bus to check")
+        all_ok = False
+    elif binaries["at-spi-bus-launcher"] is None:
+        detail = None
+        if binaries["gdbus"]:
+            try:
+                out = subprocess.run(
+                    ["gdbus", "call", "--address", bus_address,
+                     "--dest", "org.a11y.Bus",
+                     "--object-path", "/org/a11y/bus",
+                     "--method", "org.a11y.Bus.GetAddress"],
+                    capture_output=True, text=True, timeout=10)
+                detail = "gdbus rc=%s stderr=%r" % (
+                    out.returncode, out.stderr.strip()[:300])
+            except Exception as exc:
+                detail = "gdbus failed: %s: %s" % (type(exc).__name__, exc)
+        stage_log("check_a11y_bus", False, t0,
+                  error="at-spi-bus-launcher binary missing, nothing can "
+                        "own org.a11y.Bus", gdbus_probe=detail)
+        all_ok = False
+    else:
+        stage_log("check_a11y_bus", False, t0,
+                  error="launcher present but this staged probe does not "
+                        "start it; UNVERIFIED")
+        all_ok = False
+
+    # Stage 6: launch a real GUI app inside the virtual session.
+    app_proc = None
+    t0 = time.time()
+    if display is None or bus_address is None:
+        stage_log("launch_gui_app", False, t0,
+                  error="virtual session incomplete (display=%s bus=%s)"
+                        % (display, bool(bus_address)))
+        all_ok = False
+    elif not app_path or not os.path.exists(app_path):
+        stage_log("launch_gui_app", False, t0,
+                  error="app path missing: %r" % app_path)
+        all_ok = False
+    else:
+        try:
+            profile = "/tmp/atspi-probe-profile"
+            app_proc = subprocess.Popen(
+                [app_path, "-profile", profile, "-no-remote",
+                 "about:blank"],
+                env=session_env,
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            spawned.append(app_proc)
+            deadline = time.time() + app_timeout_s
+            alive = False
+            while time.time() < deadline:
+                if app_proc.poll() is not None:
+                    break
+                time.sleep(0.5)
+                alive = app_proc.poll() is None
+                if alive and time.time() > deadline - app_timeout_s + 5:
+                    break
+            if app_proc.poll() is None:
+                stage_log("launch_gui_app", True, t0, app=app_path,
+                          pid=app_proc.pid,
+                          note="process alive under Xvfb; window-level "
+                               "proof unavailable, no X query tools and "
+                               "no accessible tree to read")
+            else:
+                stage_log("launch_gui_app", False, t0, app=app_path,
+                          error="app exited early, rc=%s"
+                                % app_proc.poll())
+                all_ok = False
+        except Exception as exc:
+            stage_log("launch_gui_app", False, t0,
+                      error="%s: %s" % (type(exc).__name__, exc))
+            all_ok = False
+
+    # Stage 7: read the accessible tree inside the virtual session.
+    t0 = time.time()
+    if pyatspi is None:
+        stage_log("read_accessible_tree", False, t0,
+                  error="pyatspi not importable: %s" % PYATSPI_ERROR)
+        all_ok = False
+    elif bus_address is None:
+        stage_log("read_accessible_tree", False, t0,
+                  error="no session bus, and pyatspi in this process is "
+                        "bound to the bus of the environment it started "
+                        "in; a tree read needs pyatspi running under "
+                        "the session bus, UNVERIFIED")
+        all_ok = False
+    else:
+        stage_log("read_accessible_tree", False, t0,
+                  error="pyatspi in this process cannot rebind to the "
+                        "new session bus, and no at-spi registry daemon "
+                        "exists on this machine to serve a tree; "
+                        "UNVERIFIED")
+        all_ok = False
+
+    # Stage 8: a real button press through do_action.
+    t0 = time.time()
+    stage_log("press_button_do_action", False, t0,
+              error="not attempted: no accessible tree was read "
+                    "(stage read_accessible_tree failed), so there is "
+                    "no button object to press; FAILED, not faked")
+    all_ok = False
+
+    # Cleanup: app, Xvfb, session bus.
+    for proc in reversed(spawned):
+        try:
+            proc.terminate()
+            proc.wait(timeout=5)
+        except Exception:
+            try:
+                proc.kill()
+            except Exception:
+                pass
+    if bus_pid:
+        try:
+            os.kill(bus_pid, 15)
+        except Exception:
+            pass
+    stage_log("session_summary", all_ok, START,
+              total_elapsed_ms=round((time.time() - START) * 1000, 1),
+              verdict="full live AT-SPI control verified"
+                      if all_ok else
+                      "stopped at the limits recorded above")
+    return 0 if all_ok else 2
+
+
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--mode", choices=["dump", "click", "type", "full"],
+    parser.add_argument("--mode",
+                        choices=["dump", "click", "type", "full", "session"],
                         default="full")
+    parser.add_argument("--app-path",
+                        default=os.path.expanduser(
+                            "~/workspace/tools/firefox/firefox"),
+                        help="GUI app binary for session mode")
     parser.add_argument("--app", default="Firefox")
     parser.add_argument("--name", default="Increment")
     parser.add_argument("--text", default="hello atspi")
@@ -211,6 +498,13 @@ def main():
     parser.add_argument("--max-depth", type=int, default=12)
     parser.add_argument("--timeout-s", type=float, default=30.0)
     args = parser.parse_args()
+
+    if args.mode == "session":
+        return run_session_mode(args.app_path)
+
+    if pyatspi is None:
+        log("import_pyatspi", False, error=PYATSPI_ERROR)
+        return 2
 
     app = find_app(args.app, args.timeout_s)
     if app is None:
