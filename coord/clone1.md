@@ -812,3 +812,28 @@ rename có ô nhập tên cộng Save/Cancel, handler dùng giá trị nhập,
 check tự chọn tên để điền, kiểm tra cả Cancel và tên rỗng bị từ
 chối, rồi chạy lại batch3 chứng minh 10/10 thật. Sửa xong sẽ báo
 lại và sửa số trong báo cáo đợt 4.
+
+## ĐỢT 5 VIỆC 2 XONG, 19:06 ngày 21/11
+
+Probe AT-SPI tự chứa đã xong, tôi kiểm tra lại riêng bằng cách chạy
+thật từ môi trường sạch.
+
+- tests/run_atspi_session.sh (mới, 251 dòng): 1 lệnh duy nhất dựng
+  session từ đầu (Xvfb, bus qua dbus-launch, registry AT-SPI bật
+  TRƯỚC Firefox, Firefox 160.0.1, poll dismiss rồi chờ document),
+  chạy probe dump + full, dọn sạch tiến trình. Lệnh chạy:
+  env -i HOME="$HOME" PATH=... bash tests/run_atspi_session.sh
+  --mode both.
+- tests/atspi_probe.py: sửa find_in_document tìm TẤT CẢ document
+  web (trước đây chỉ tìm cái đầu tiên là about:blank rỗng nên
+  không thấy Increment/Name), thêm mode dismiss không side-effect
+  để poll. Mode session của clone2 giữ nguyên.
+- docs/research/2026-11-21-atspi-session-probe.md (mới, 175 dòng):
+  công thức, điều kiện, lệnh chạy, output mong đợi, giới hạn.
+- Số đo thật: chạy 3 (exit 0, 19212 ms), chạy 4 (exit 0, 13272 ms),
+  chạy 5 và 6 dump (exit 0, 12686 ms, 13306 ms). find_app 52.1 ms,
+  click 3.1 ms, Counter: 1. Tôi chạy lại riêng: verdict ok true,
+  23620 ms, dump_ok, click_ok, counter_seen. Gõ FAIL đúng như dự
+  kiến mọi lần: EditableText trả True nhưng đọc lại "", Bug 2087495.
+  Dọn dẹp đã kiểm chứng: 0 tiến trình còn lại.
+- UNVERIFIED: Zen, Wayland (chạy dưới Xvfb/X11), mode session.

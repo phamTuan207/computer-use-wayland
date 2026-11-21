@@ -11,6 +11,7 @@ Usage:
   python3 tests/atspi_probe.py --mode dump [--max-nodes N] [--max-depth N]
   python3 tests/atspi_probe.py --mode click --name Increment
   python3 tests/atspi_probe.py --mode type --name Name --text hello
+  python3 tests/atspi_probe.py --mode dismiss
   python3 tests/atspi_probe.py --mode session [--app-path PATH]
 
 Every step logs one JSON line with wall_clock and elapsed_ms.
@@ -148,22 +149,55 @@ def node_text(acc):
         return None
 
 
+def find_documents(app):
+    """All web document nodes under the app, depth-first.
+
+    Firefox exposes one document web node per tab, plus empty ones
+    for about:blank or not-yet-loaded tabs. The first document in
+    tree order is often an empty one, so callers must not assume
+    the first document is the page they want.
+    """
+    out = []
+
+    def collect(acc, depth=0):
+        if acc is None or depth > 14:
+            return
+        try:
+            if acc.getRoleName() == "document web":
+                out.append(acc)
+            count = acc.childCount
+        except Exception:
+            return
+        for i in range(count):
+            try:
+                collect(acc.getChildAtIndex(i), depth + 1)
+            except Exception:
+                continue
+
+    collect(app)
+    return out
+
+
 def find_document(app):
-    """The web document node, or None if the tree has none yet."""
-    return find(app, role="document web")
+    """The first web document node, or None if the tree has none yet."""
+    docs = find_documents(app)
+    return docs[0] if docs else None
 
 
 def find_in_document(app, role=None, name=None):
-    """First node matching role/name inside the web document.
+    """First node matching role/name inside any web document.
 
-    Chrome UI (toolbars, address bar) lives outside the document,
+    Chrome UI (toolbars, address bar) lives outside the documents,
     so searching here cannot return a browser entry or button
-    by mistake.
+    by mistake. Every document is searched, because the first
+    document in tree order is often an empty about:blank one and
+    the wanted page is a later document.
     """
-    doc = find_document(app)
-    if doc is None:
-        return None
-    return find(doc, role=role, name=name)
+    for doc in find_documents(app):
+        hit = find(doc, role=role, name=name)
+        if hit is not None:
+            return hit
+    return None
 
 
 def do_click(acc):
@@ -502,7 +536,8 @@ def run_session_mode(app_path, app_timeout_s=25.0):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--mode",
-                        choices=["dump", "click", "type", "full", "session"],
+                        choices=["dump", "click", "type", "full", "dismiss",
+                                 "session"],
                         default="full")
     parser.add_argument("--app-path",
                         default=os.path.expanduser(
@@ -525,6 +560,23 @@ def main():
 
     app = find_app(args.app, args.timeout_s)
     if app is None:
+        return 2
+
+    if args.mode == "dismiss":
+        # Only dismiss the first-run dialog, nothing else. Used by
+        # the session wrapper while waiting for the page: click and
+        # type modes have side effects (they press the fixture
+        # button), so they must not be used as a readiness poll.
+        for label in ("Continue", "Not now", "Skip"):
+            dlg = find(app, role="push button", name=label)
+            if dlg is not None:
+                t0 = time.time()
+                clicked, detail = do_click(dlg)
+                log("dismiss_onboarding", clicked, label=label,
+                    detail=detail,
+                    click_ms=round((time.time() - t0) * 1000, 1))
+                return 0 if clicked else 2
+        log("dismiss_onboarding", False, detail="no dialog button found")
         return 2
 
     if args.mode == "dump":
