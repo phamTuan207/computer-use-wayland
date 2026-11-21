@@ -587,6 +587,7 @@ def run(args):
                     dom_kwargs = {}
                     selector = getattr(args, 'dom_selector', None)
                     if selector:
+                        dom_kwargs['require_type_ranges'] = True
                         try:
                             import dom_act
                             text = dom_act.typed_text_of(actions)
@@ -613,10 +614,9 @@ def run(args):
                                         dom_kwargs['type_y_ranges'] = \
                                             [y_range]
                                 except Exception:
-                                    # No grounded rect: the batch keeps
-                                    # the full-width band, exactly as
-                                    # before. Grounding never fails the
-                                    # batch here.
+                                    # Without a grounded range, the
+                                    # batch may run but its pixel band
+                                    # cannot verify the typed field.
                                     pass
                         except Exception as exc:
                             envelope['dom_hooks_error'] = (

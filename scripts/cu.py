@@ -1021,12 +1021,13 @@ def _mean_image_difference(old,new):
     return sum(ImageStat.Stat(ImageChops.difference(old,new)).mean)/3
 
 def _input_line_changed(old,new,anchor_y,half=12,min_pixels=4,threshold=50,
-                        x_range=None,y_range=None):
+                        x_range=None,y_range=None,anchor_x=None):
     """True when the input line band changed between two frames.
 
     The band is the target field's x-range when x_range is given
     (image px, from the grounded rect: the band then reads only the
-    field the text was typed into), else the full image width. When a
+    field the text was typed into), else a small region around
+    anchor_x, or the full image width when no x anchor is known. When a
     y_range is given, it comes from the grounded field rect; without
     one, the band uses the portion above the click as a conservative
     fallback. The count uses per-channel
@@ -1038,9 +1039,10 @@ def _input_line_changed(old,new,anchor_y,half=12,min_pixels=4,threshold=50,
     including a size mismatch: incomparable frames are unverifiable,
     never a pass. A caret blink or focus tick changes at most 3
     pixels on the line, so min_pixels 4 is the caret-scale baseline:
-    fewer changed pixels do not verify. Limits, stated plainly: with
-    no x_range the band is full width, so multi-pixel text landing
-    in a DIFFERENT field on the same line still passes it, and a
+    fewer changed pixels do not verify. Limits, stated plainly: without
+    x_range, a pointer-anchored call checks only a small neighborhood
+    around the click, so text outside that region can false-fail.
+    Production adapters require a grounded range, and a
     caret or focus ring alone also changes the band, so a True here
     is necessary, not sufficient, proof the text landed; the DOM
     value check is the sufficient check. No observe is taken: both
@@ -1071,8 +1073,12 @@ def _input_line_changed(old,new,anchor_y,half=12,min_pixels=4,threshold=50,
         if x1<=x0:
             return False
     else:
-        x0=0
-        x1=old.width
+        if anchor_x is None:
+            x0=0
+            x1=old.width
+        else:
+            x0=max(0,math.floor(anchor_x-6))
+            x1=min(old.width,math.ceil(anchor_x+7))
     diff=ImageChops.difference(old,new).crop((x0,y0,x1,y1))
     hist=diff.histogram()
     changed=0
@@ -1624,7 +1630,8 @@ def _settle_after_capture(capture, first_after, nav_candidate, settle_ms=400):
 
 def desktop_act(env,meta,actions,after_capture=True,observation_path=None,
                 expected_terminal_window=None,focus_check=None,type_check=None,
-                type_x_ranges=None,type_y_ranges=None):
+                type_x_ranges=None,type_y_ranges=None,
+                require_type_ranges=False):
     """Run a desktop action batch against a validated observation.
 
     focus_check and type_check are optional cheap zero-arg callables
@@ -1641,7 +1648,9 @@ def desktop_act(env,meta,actions,after_capture=True,observation_path=None,
     lists parallel to the type groups, one image-px range per group
     from the grounded field rect (supplied by dom_act/first_action).
     A group with both ranges reads only its field rect, so text in a
-    neighboring field cannot verify it.
+    neighboring field cannot verify it. Production adapters set
+    require_type_ranges so a click-anchored band without a grounded x
+    range cannot verify.
     """
     preflight_start=time.monotonic()
     try:
@@ -2136,12 +2145,12 @@ def desktop_act(env,meta,actions,after_capture=True,observation_path=None,
         elif type_anchors:
             # One band per type group: each group's band reads the
             # grounded field rect when available, so text landing in a
-            # second input cannot verify the first
-            # group's line, and a stubbed second type fails even when
+            # second input cannot verify the first group's line, and a
+            # stubbed second type fails even when
             # the first type landed. Groups with no preceding click have
             # no input region; the whole-frame hash stays their check.
-            # A band that cannot be compared (size mismatch) falls back
-            # to the hash for the whole batch, the same as before.
+            # Production adapters require a grounded x-range for every
+            # click-anchored type group.
             after_image=_load_after_image(result)
             x_ranges=(list(type_x_ranges) if type_x_ranges is not None
                       else [None]*len(type_anchors))
@@ -2157,10 +2166,19 @@ def desktop_act(env,meta,actions,after_capture=True,observation_path=None,
             anchored=[a for a,_xr,_yr in paired]
             unanchored=len(type_anchors)-len(anchored)
             bands=([_input_line_changed(old,after_image,anchor[1],
-                                        x_range=x_range,y_range=y_range)
+                                        x_range=x_range,y_range=y_range,
+                                        anchor_x=anchor[0])
                     for anchor,x_range,y_range in paired]
                    if after_image is not None else [None])
-            if any(band is None for band in bands):
+            if (require_type_ranges and
+                    any(x_range is None or y_range is None
+                        for _anchor,x_range,y_range in paired)):
+                verified=False
+                basis='unscoped-input-band'
+                note=('no complete grounded target-field rect was supplied; the '
+                      'changed pixels cannot be attributed to the target '
+                      'field')
+            elif any(band is None for band in bands):
                 verified=result.get('frame_bytes_changed') is True
                 basis='frame-hash'
                 note=('input-region image unavailable; fell back to the '
@@ -2171,9 +2189,8 @@ def desktop_act(env,meta,actions,after_capture=True,observation_path=None,
                                          result.get('frame_bytes_changed') is True)
                 basis=('input-line-band' if unanchored==0
                        else 'input-line-band+frame-hash')
-                note=('input line band around each type group\'s click '
-                      'point changed between the pre-batch frame and the '
-                      'after-capture; a caret or focus ring alone also '
+                note=('input band changed between the pre-batch frame '
+                      'and after-capture; a caret or focus ring alone also '
                       'changes a band, so this is necessary, not '
                       'sufficient, proof the text landed; the DOM value '
                       'check is the sufficient check'
@@ -2595,6 +2612,7 @@ class CodeExecBackend:
             dom_selector=None):
         import session_policy
         focus_check = type_check = None
+        type_x_ranges = type_y_ranges = None
         if dom_session is not None and dom_selector is not None:
             # Item A: the DOM value hooks reach this production path.
             # The session is owned by the caller (one-session rule);
@@ -2606,10 +2624,19 @@ class CodeExecBackend:
             if text is not None:
                 focus_check, type_check = dom_act.dom_hooks(
                     dom_session, dom_selector, text)
+                try:
+                    type_x_ranges, type_y_ranges = \
+                        dom_act.grounded_type_ranges(
+                            dom_session, meta, dom_selector)
+                except Exception:
+                    pass
         result = desktop_act(self.env, meta, actions,
                              observation_path=observation_path,
                              focus_check=focus_check,
-                             type_check=type_check)
+                             type_check=type_check,
+                             type_x_ranges=type_x_ranges,
+                             type_y_ranges=type_y_ranges,
+                             require_type_ranges=True)
         if is_transient_refusal(result):
             session_policy.record_refusal(STATE, os.environ.get('CU_SESSION_TOKEN'))
         elif result.get('ok') is True or is_completed_capture_error(result, len(actions)):
@@ -2896,6 +2923,7 @@ def main():
             session_policy.require_observation(STATE,os.environ.get('CU_SESSION_TOKEN'),args.observation)
             act_kwargs={'after_capture':not args.no_after,
                         'observation_path':args.observation}
+            type_x_ranges = type_y_ranges = None
             if expected_terminal is not None:
                 act_kwargs['expected_terminal_window']=expected_terminal
             # Item A: --dom-selector wires the DOM value hooks into
@@ -2913,6 +2941,14 @@ def main():
                             dom_act.open_dom_hooks(args.dom_selector, text)
                         act_kwargs['focus_check'] = focus_check
                         act_kwargs['type_check'] = type_check
+                        try:
+                            type_x_ranges, type_y_ranges = \
+                                dom_act.grounded_type_ranges(
+                                    dom_session,
+                                    read_json_file(args.observation),
+                                    args.dom_selector)
+                        except Exception:
+                            pass
                     except Exception as exc:
                         result_dom_error = ('dom hooks unavailable: '
                                             + str(exc)[:200])
@@ -2922,7 +2958,7 @@ def main():
             else:
                 result_dom_error = None
             try:
-                result=desktop_act(env,read_json_file(args.observation),actions,**act_kwargs)
+                result=desktop_act(env,read_json_file(args.observation),actions,type_x_ranges=type_x_ranges,type_y_ranges=type_y_ranges,require_type_ranges=True,**act_kwargs)
             finally:
                 if dom_session is not None:
                     try:

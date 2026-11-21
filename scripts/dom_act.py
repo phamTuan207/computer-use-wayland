@@ -219,6 +219,15 @@ def grounded_y_range(ground, meta):
         return None
 
 
+def grounded_type_ranges(session, meta, selector):
+    """Return desktop image ranges for one selector, or two None values."""
+    ground = ground_input(session, meta, selector)
+    x_range = grounded_x_range(ground, meta)
+    y_range = grounded_y_range(ground, meta)
+    return ([x_range] if x_range is not None else None,
+            [y_range] if y_range is not None else None)
+
+
 class GroundPoints(dict):
     """Grounding evidence that re-validates on every read (R7).
 
@@ -376,8 +385,9 @@ def open_dom_hooks(selector, text):
     session after the batch. The session MUST stay open while the
     batch runs: the closures read document.activeElement / field value
     through it. Raises DomActError when the session cannot open or
-    the selector cannot be grounded; the caller then falls back to
-    the pixel band instead of failing the batch. The session is
+    the selector cannot be grounded; the caller may still run the
+    batch, but a band without a grounded range cannot verify its
+    target field. The session is
     closed again on any failure inside this helper, so a failed open
     never leaks the single-session slot.
     """
@@ -436,10 +446,10 @@ def focus_type(session, act_fn, meta, selector, text, enter=False):
     """Click an input, type, and verify, from one observation.
 
     act_fn is a callable (meta, actions, focus_check, type_check,
-    type_x_ranges) returning a result dict, normally a closure over
-    cu.desktop_act; it must forward type_x_ranges to desktop_act
-    (the grounded field's x-range, so the band reads only that
-    field). It runs the batch against the given meta. The focus_check
+    type_x_ranges, type_y_ranges) returning a result dict, normally a
+    closure over cu.desktop_act; it must forward both grounded ranges
+    to desktop_act so the band reads only that field rect. It runs the
+    batch against the given meta. The focus_check
     closure runs inside the batch before the first type group: when
     the click missed, the batch stops before any keystroke. The
     type_check closure runs after the type step, BEFORE Enter when a
@@ -489,9 +499,9 @@ def focus_type(session, act_fn, meta, selector, text, enter=False):
     calls['dom'] += 2
     # R3a: the band reads only the grounded field's x-range, so text
     # in another field on the same line cannot verify this type. The
-    # range rides to desktop_act through the act_fn kwargs; an act_fn
-    # that wraps desktop_act must forward it (the test fakes accept
-    # and ignore it).
+    # field ranges ride to desktop_act through the act_fn kwargs; an
+    # act_fn that wraps desktop_act must forward them (test fakes can
+    # accept and ignore them).
     x_range = grounded_x_range(ground, meta)
     y_range = grounded_y_range(ground, meta)
     type_ranges = [x_range] if x_range is not None else None
@@ -511,7 +521,8 @@ def focus_type(session, act_fn, meta, selector, text, enter=False):
     result = act_fn(meta, actions, focus_check=_counted_focus_check,
                     type_check=_counted_type_check,
                     type_x_ranges=type_ranges,
-                    type_y_ranges=type_y_ranges)
+                    type_y_ranges=type_y_ranges,
+                    require_type_ranges=True)
     if not isinstance(result, dict):
         raise DomActError('act_fn must return a result dict')
     completed = result.get('completed', 0)
