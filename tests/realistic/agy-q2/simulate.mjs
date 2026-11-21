@@ -126,6 +126,36 @@ const testSimulators = {
     await page.select('#filter-category', 'all');
     // 7. Save log
     await page.click('#btn-save-habits');
+  },
+  '04': async (page) => {
+    // 1. Set budget 3000
+    await page.$eval('#input-monthly-budget', el => el.value = '3000');
+    await page.click('#btn-set-budget');
+    // 2. Add Cloud Server Hosting 85.00 Tech
+    await page.type('#input-expense-desc', 'Cloud Server Hosting');
+    await page.type('#input-expense-amount', '85.00');
+    await page.select('#select-expense-category', 'Tech');
+    await page.$eval('#input-expense-date', el => el.value = '2026-11-12');
+    await page.click('#btn-add-expense');
+    // 3. Add Weekly Groceries 112.50 Groceries
+    await page.type('#input-expense-desc', 'Weekly Groceries');
+    await page.type('#input-expense-amount', '112.50');
+    await page.select('#select-expense-category', 'Groceries');
+    await page.$eval('#input-expense-date', el => el.value = '2026-11-15');
+    await page.click('#btn-add-expense');
+    // 4. Add Luxury Watch 1500.00 Tech (mistake)
+    await page.type('#input-expense-desc', 'Luxury Watch');
+    await page.type('#input-expense-amount', '1500.00');
+    await page.select('#select-expense-category', 'Tech');
+    await page.$eval('#input-expense-date', el => el.value = '2026-11-16');
+    await page.click('#btn-add-expense');
+    // 5. Delete Luxury Watch
+    await page.click('#btn-del-expense-luxury-watch');
+    // 6. Filter test
+    await page.select('#filter-expense-category', 'Groceries');
+    await page.select('#filter-expense-category', 'all');
+    // 7. Save report
+    await page.click('#btn-save-budget');
   }
 };
 
