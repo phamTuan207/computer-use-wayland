@@ -419,20 +419,26 @@ def _script_basename_is_runner(name):
 
 def _is_python_token(tok):
     base = tok.rsplit("/", 1)[-1]
-    return (base in ("python", "python3")
-            or base.startswith("python3.") or base.startswith("python2."))
+    return (base in ("python", "python3", "pypy", "pypy3")
+            or base.startswith("python3.") or base.startswith("python2.")
+            or base.startswith("pypy3."))
 
 
-# Y13g B3 (C2 AMEND 3/4, redteam B3): the Y13f tokenizer used a
-# prev-token heuristic and missed -m forms, flag-with-value forms,
-# renamed/extensionless/symlinked copies, and -c exec forms. This
-# block parses the command the way a shell + python would: wrappers
-# first (env/nohup/setsid/timeout/flock/bash -c), then a real
-# python argv parse (flags and their values skipped, first
-# positional is the script candidate), then identity by name OR by
-# md5 against the manifest. A mere path mention (md5sum, cat, git)
-# never matches: only a token in an execution position is
-# examined. Keep in sync with run_codex_y5.py (identical block,
+# Y13g B3 (C2 AMEND 3/4, redteam B3; R3 round 2): the Y13f
+# tokenizer used a prev-token heuristic and missed -m forms,
+# flag-with-value forms, renamed/extensionless/symlinked copies,
+# and -c exec forms. This block parses the command the way a
+# shell + python would: wrappers first (env/nohup/setsid/timeout/
+# flock/bash -c, plus nice/stdbuf/taskset/sudo/uv run, exec -a),
+# then a real python argv parse (flags and their values skipped,
+# bundled short flags, -m by last dotted segment with a pdb
+# special case, python3 - as stdin, first positional is the
+# script candidate), then identity by name OR by md5 against the
+# manifest. -c strings go through the exec-sink check (exec(,
+# eval(, os.system(, subprocess.*, runpy.run_path() plus a .py
+# path md5 check). A mere path mention (md5sum, cat, git) never
+# matches: only a token in an execution position is examined.
+# Keep in sync with run_codex_y5.py (identical block,
 # AST-verified); _SHIP_DIR is the ship dir in both files.
 _RUNNER_MODULE_NAMES = (
     "run_codex_y5", "run_live", "run_agyq2", "run_batch3",
@@ -444,19 +450,23 @@ _RUNNER_MD5S = None
 
 def _shlex_tokens(s):
     """Split a -c command string on shell words (shlex, whitespace
-    fallback), stripping trailing ;, &, | from each token (C2 AMEND
-    3: 'python3 run_codex_y5.py;' is the same command as without
-    the semicolon)."""
-    import shlex
+    fallback), then split each token on ;, &, | (C2-3: a separator
+    glued mid-token, 'python3 run_codex_y5.py;echo done', is the
+    same command as a spaced one; shlex keeps it glued). A ';'
+    inside a QUOTED string is split too (fail-closed: a quoted
+    separator is rare, and the name leg still needs a runner
+    token to match). shlex is imported at the module top (before
+    the sys.path insert), never lazily here, so a planted shlex
+    cannot load (C2-1)."""
     try:
         parts = shlex.split(s)
     except Exception:
         parts = s.split()
     out = []
     for p in parts:
-        p = p.rstrip(";&|")
-        if p:
-            out.append(p)
+        for _piece in re.split(r"[;&|]", p):
+            if _piece:
+                out.append(_piece)
     return out
 
 
@@ -495,7 +505,13 @@ def _path_is_runner_copy(tok, cwd=None):
     unresolvable or unreadable path is NOT a copy: the file being
     executed exists on disk in every real case, so an unresolvable
     path is a race or a namespace we cannot read, not a runner.
-    The ports + flock backstop still applies."""
+    A FIFO is NOT a copy either (isfile False; a FIFO streaming
+    runner bytes cannot be md5'd without blocking). Files over
+    10 MB are not read (the runners are ~200 KB; a bigger file
+    is not a runner copy). The ports + flock backstop still
+    applies. A renamed .sh copy is NOT in the md5 set (the set
+    holds only the 3 .py runner md5s from this ship's manifest);
+    that gap is documented, not closed (C2-10)."""
     import hashlib
     path = tok
     if not os.path.isabs(path):
@@ -503,6 +519,8 @@ def _path_is_runner_copy(tok, cwd=None):
     try:
         real = os.path.realpath(path)
         if not os.path.isfile(real):
+            return False
+        if os.path.getsize(real) > 10 * 1024 * 1024:
             return False
         with open(real, "rb") as f:
             digest = hashlib.md5(f.read()).hexdigest()
@@ -528,25 +546,69 @@ def _token_is_runner_script(tok, cwd=None):
 def _c_code_executes_runner(code, cwd=None):
     """True if a python -c code string executes a runner. First
     the code is parsed as a shell command (a nested 'python3
-    run_codex_y5.py', e.g. via os.system or a -c inside -c, is
-    caught by the same recursive parse). Then the exec(/eval(
-    special case: exec(open('run_codex_y5.py').read()) IS an
-    execution, while a bare 'import run_codex_y5' is NOT (an
-    import runs the script-form guard and exits 2, never the
-    suite) and neither is a mere mention such as
-    print('run_codex_y5.py'). LIMIT (documented): a nested
-    os.system/exec inside -c code beyond exec(/eval( is not
-    caught; the ports + flock backstop applies."""
+    run_codex_y5.py', e.g. via a -c inside -c, is caught by the
+    same recursive parse). Then the exec-sink case: a -c string
+    that hands code to exec(, eval(, os.system(, a subprocess.*
+    call, or runpy.run_path( executes whatever it names, so a
+    runner script basename in the code, or a quoted .py path
+    that resolves to a runner copy (md5), counts. A bare
+    'import run_codex_y5' is NOT an execution (an import runs
+    the script-form guard and exits 2, never the suite), and
+    neither is runpy.run_module (same guard) nor a mere mention
+    such as print('run_codex_y5.py') (no sink). LIMIT
+    (documented): a -c string that builds the runner name by
+    string concatenation so NO single literal is a full runner
+    path (exec(open('run_codex_'+'y5.py').read())) is not caught
+    unless one literal is the full name; the ports + flock
+    backstop applies."""
     inner = _shlex_tokens(code)
     if inner and _command_executes_runner(inner, cwd):
         return True
-    if "exec(" in code or "eval(" in code:
-        import re
-        for m in re.finditer(r"run_[A-Za-z0-9_.\-]*\.py|"
-                             r"run-nested[A-Za-z0-9_.\-]*|"
-                             r"hand_drive_e1\.py", code):
-            if _script_basename_is_runner(m.group(0)):
+    _SINKS = ("exec(", "eval(", "os.system(",
+              "subprocess.call(", "subprocess.run(",
+              "subprocess.Popen(", "subprocess.check_output(",
+              "subprocess.check_call(", "runpy.run_path(")
+    if not any(_s in code for _s in _SINKS):
+        return False
+    for m in re.finditer(r"run_[A-Za-z0-9_.\-]*\.py|"
+                         r"run-nested[A-Za-z0-9_.\-]*|"
+                         r"hand_drive_e1\.py", code):
+        if _script_basename_is_runner(m.group(0)):
+            return True
+    for m in re.finditer(r"['\"]([^'\"]+\.py)['\"]", code):
+        if _path_is_runner_copy(m.group(1), cwd):
+            return True
+    return False
+
+
+def _m_module_is_runner(mod, args, start, cwd=None):
+    """True if a -m module argument executes a runner. A known
+    runner module (by last dotted segment) counts. `pdb` counts
+    when a following arg is a runner script: pdb runs its script
+    with __spec__ None, so the -m guard does NOT fire (C2-3,
+    proved live). runpy/cProfile are NOT counted: both set
+    __spec__, so the guard kills those forms before the suite
+    runs (C2-3 corrected rows). A .py -m argument is an invalid
+    form and cannot execute."""
+    if mod.endswith(".py"):
+        return False
+    last = mod.rsplit(".", 1)[-1]
+    if last in _RUNNER_MODULE_NAMES:
+        return True
+    if last == "pdb":
+        _skip = False
+        for _t in args[start:]:
+            if _skip:
+                _skip = False
+                continue
+            if _t == "-c":
+                _skip = True
+                continue
+            if _t.startswith("-"):
+                continue
+            if _token_is_runner_script(_t, cwd):
                 return True
+        return False
     return False
 
 
@@ -554,14 +616,17 @@ _PY_NO_VALUE = frozenset("bBdeEhiIOqSsuv")
 
 
 def _python_executes_runner(args, cwd=None):
-    """Real python argv parse (C2 AMEND 3). Skips interpreter
+    """Real python argv parse (C2 AMEND 3, R3). Skips interpreter
     flags and their values (-u -B -E -s -v -W <val> -X <val> -O
-    -c <code> -m <mod>, -- separator, bundled short flags, and
-    attached values such as -Wignore, -Xdev, -c..., -m...); the
-    first positional is the script candidate. A -m module is a
-    runner when its LAST dotted segment is a known runner module
-    (pkg.run_codex_y5 counts; run_codex_y5.py as a -m argument
-    is an invalid form and cannot execute)."""
+    -c <code> -m <mod>, -- separator, bundled short flags such as
+    -uW, -Bc, -um, -Bum, and attached values such as -Wignore,
+    -Xdev, -c..., -m...); the first positional is the script
+    candidate. A -m module is a runner when its LAST dotted
+    segment is a known runner module (pkg.run_codex_y5 counts;
+    run_codex_y5.py as a -m argument is an invalid form and
+    cannot execute), or when it is pdb with a runner script
+    following. `python3 -` (stdin) is treated as a possible
+    runner (fail-closed: piped runner bytes execute)."""
     i = 0
     n = len(args)
     while i < n:
@@ -576,10 +641,7 @@ def _python_executes_runner(args, cwd=None):
         if tok == "-m":
             if i + 1 >= n:
                 return False
-            mod = args[i + 1]
-            if mod.endswith(".py"):
-                return False
-            return mod.rsplit(".", 1)[-1] in _RUNNER_MODULE_NAMES
+            return _m_module_is_runner(args[i + 1], args, i + 2, cwd)
         if tok in ("-W", "-X"):
             i += 2
             continue
@@ -589,36 +651,63 @@ def _python_executes_runner(args, cwd=None):
         if tok.startswith("--"):
             i += 1
             continue
-        if tok.startswith("-c") and len(tok) > 2:
-            return _c_code_executes_runner(tok[2:], cwd)
-        if tok.startswith("-m") and len(tok) > 2:
-            mod = tok[2:]
-            if mod.endswith(".py"):
-                return False
-            return mod.rsplit(".", 1)[-1] in _RUNNER_MODULE_NAMES
-        if tok.startswith(("-W", "-X")) and len(tok) > 2:
-            i += 1
-            continue
-        if len(tok) > 1 and tok.startswith("-") and all(
-                ch in _PY_NO_VALUE for ch in tok[1:]):
+        if tok.startswith("-") and len(tok) > 1:
+            # Short-flag token: a run of no-value flags, then
+            # optionally ONE value flag (c/m/W/X) whose value is
+            # the rest of this token or the next token (C1-F3,
+            # C2-3: -uc, -Bc, -um, -Bum, -uW, -uX, -iuW). A pure
+            # no-value bundle (-uB) or an unknown flag (-Z, -P)
+            # is the whole token as flags, never a script.
+            chars = tok[1:]
+            j = 0
+            while j < len(chars) and chars[j] in _PY_NO_VALUE:
+                j += 1
+            if j < len(chars) and chars[j] in "WXcm":
+                flag = chars[j]
+                rest = chars[j + 1:]
+                if flag == "c":
+                    if rest:
+                        return _c_code_executes_runner(rest, cwd)
+                    if i + 1 >= n:
+                        return False
+                    return _c_code_executes_runner(args[i + 1], cwd)
+                if flag == "m":
+                    mod = rest if rest else (
+                        args[i + 1] if i + 1 < n else None)
+                    if mod is None:
+                        return False
+                    _start = i + 1 if rest else i + 2
+                    return _m_module_is_runner(mod, args, _start, cwd)
+                # W/X: the value is the rest, or the next token;
+                # skip it and keep parsing for the script.
+                i += 1 if rest else 2
+                continue
             i += 1
             continue
         if tok == "-":
-            return False
-        if tok.startswith("-"):
-            i += 1
-            continue
+            return True
         return _token_is_runner_script(tok, cwd)
     if i < n:
         return _token_is_runner_script(args[i], cwd)
     return False
 
 
+def _is_timeout_dur(t):
+    # timeout durations accept a unit suffix and decimals: 60,
+    # 60s, 1m, 1.5m, 90. (C2-3: "60s"/"1m" were misread as the
+    # command.)
+    if t and t[-1] in "smhd":
+        t = t[:-1]
+    return bool(t) and t.replace(".", "", 1).isdigit()
+
+
 def _command_executes_runner(tokens, cwd=None):
     """Recursive shell-ish parse: strips wrappers (env VAR=1,
-    nohup, setsid, exec, command, timeout <dur>, flock <flags>
-    <lock> [-c <cmd>], bash/sh -c <cmd> or <script>), then a
-    python token hands off to _python_executes_runner, and any
+    nohup, setsid, exec [-a name] [-l] [-c], command, timeout
+    <dur>, flock <flags> <lock> [-c <cmd>], bash/sh -c <cmd> or
+    <script>, and the command wrappers nice, stdbuf, taskset,
+    sudo, uv run, each with its flags and values skipped), then
+    a python token hands off to _python_executes_runner, and any
     other token reaching this point is argv[0] of the command
     and is checked as a shebang exec (./run_codex_y5.py).
     Only a token in an execution position is ever examined, so
@@ -644,8 +733,56 @@ def _command_executes_runner(tokens, cwd=None):
                     continue
                 break
             continue
-        if base in ("nohup", "setsid", "exec", "command"):
+        if base in ("nohup", "setsid", "command"):
             i += 1
+            continue
+        if base == "exec":
+            # exec [-cl] [-a name] [command]: -a takes a value,
+            # -l/-c are bare flags (C2-3: `exec -a` misread the
+            # name as the command).
+            i += 1
+            while i < n:
+                t = tokens[i]
+                if t == "-a" and i + 1 < n:
+                    i += 2
+                    continue
+                if t.startswith("-"):
+                    i += 1
+                    continue
+                break
+            continue
+        if base in ("nice", "stdbuf", "taskset", "sudo", "uv"):
+            # Command wrappers (C2-3/redteam F3): each executes
+            # the command that follows its flags and values.
+            i += 1
+            _value_flags = {
+                "nice": ("-n", "--adjustment"),
+                "stdbuf": ("-o", "-e", "-i", "--output",
+                           "--error", "--input"),
+                "taskset": ("-c", "--cpu-list"),
+                "sudo": ("-u", "--user", "-g", "--group"),
+                "uv": ("-p", "--python", "--with", "--group",
+                       "--extra"),
+            }[base]
+            while i < n:
+                t = tokens[i]
+                if base == "uv" and t == "run":
+                    i += 1
+                    continue
+                if t in _value_flags and i + 1 < n:
+                    i += 2
+                    continue
+                if t.startswith("-"):
+                    i += 1
+                    continue
+                break
+            # taskset takes a bare CPU mask (hex/number) before
+            # the command; it is not the command.
+            if base == "taskset" and i < n:
+                _t = tokens[i]
+                _m = _t[2:] if _t.startswith("0x") else _t
+                if _m.replace(",", "").replace("-", "").isdigit():
+                    i += 1
             continue
         if base == "timeout":
             i += 1
@@ -654,7 +791,7 @@ def _command_executes_runner(tokens, cwd=None):
                 if t in ("-k", "--kill-after", "-s", "--signal"):
                     i += 2
                     continue
-                if t.startswith("-") or t.replace(".", "", 1).isdigit():
+                if t.startswith("-") or _is_timeout_dur(t):
                     i += 1
                     continue
                 break
@@ -718,8 +855,8 @@ def _is_runner_cmdline(cmdline, cwd=None):
 
     Parses the command like a shell + python would (see
     _command_executes_runner): wrappers, real python argv parse,
-    -m by last dotted segment, -c by first-word semantics plus
-    the exec(/eval( special case, renamed/extensionless/
+    -m by last dotted segment (plus pdb), -c by first-word
+    semantics plus the exec-sink check, renamed/extensionless/
     symlinked copies by md5 against the manifest. A mere path
     mention (md5sum /abs/run_foo.py, echo/grep of a runner
     name, python -c 'import run_codex_y5') never matches.
@@ -731,30 +868,32 @@ def _is_runner_cmdline(cmdline, cwd=None):
 
 
 def _is_codex_process(cmdline):
-    """True if the cmdline names a codex executable: some argv
-    token has a path component 'codex', or argv[0]'s basename
-    is 'codex' (Y13g Amend 2). A raw substring match ('mycodex',
-    'codex-backup') is noise and does NOT count. Used by the
-    launcher's WARNING branch only; the refuse branch keeps the
-    fail-closed substring rule (C2 AMEND 6). Kept in both files
-    so the shared block stays identical."""
+    """True if the cmdline names a codex executable: argv[0]'s
+    basename is 'codex', or some token is a path ENDING in
+    '/codex' (an execution position, C2-5). A bare 'codex' token
+    elsewhere (grep codex, echo codex) and a path merely
+    containing a codex directory (/path/codex/run_codex_y5.py)
+    do NOT count. Used by the launcher's WARNING branch only;
+    the refuse branch keeps the fail-closed substring rule
+    (C2 AMEND 6). Kept in both files so the shared block stays
+    identical."""
     parts = _argv_tokens(cmdline)
     if not parts:
         return False
     if parts[0].rsplit("/", 1)[-1].lower() == "codex":
         return True
-    for tok in parts:
-        for comp in tok.split("/"):
-            if comp.lower() == "codex":
-                return True
+    for tok in parts[1:]:
+        if tok.lower().endswith("/codex"):
+            return True
     return False
 
 
 # Codex executor processes that must REFUSE, not just warn (Y13f,
 # council 3 fix 2): a codex CLI whose cmdline mentions the E1
 # driver, a geckodriver, a browser profile path, or Marionette is
-# driving (or about to drive) a browser. Keep in sync with
-# run_codex_y5.py.
+# driving (or about to drive) a browser. A plain "codex" match with
+# none of these is warning-only (a Codex CLI may be doing
+# unrelated work). Keep in sync with run_codex_y5.py.
 CODEX_REFUSE_MARKERS = ("hand_drive_e1", "geckodriver", ".config/zen",
                         "zen-bin", ".mozilla", "remote-debugging",
                         "marionette")
