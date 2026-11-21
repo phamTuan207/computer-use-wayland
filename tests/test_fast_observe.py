@@ -6,8 +6,12 @@ from test_keyboard_preflight import cu, DesktopPreflight
 
 class FastAct(DesktopPreflight):
     def test_skip_after_keeps_preflight(self):
+        # R4 contract: a type batch with no passing DOM check reports
+        # ok False, so pass a passing type_check and keep this test
+        # about the after-capture skip, not about verification.
         with patch.object(cu,'observe',wraps=self.observe) as capture:
-            result=cu.desktop_act({},self.meta,[{'type':'type','text':'hello'}],after_capture=False)
+            result=cu.desktop_act({},self.meta,[{'type':'type','text':'hello'}],
+                                  after_capture=False,type_check=lambda: True)
         self.assertTrue(result['ok'])
         self.assertTrue(result['after_skipped'])
         self.assertNotIn('after',result)

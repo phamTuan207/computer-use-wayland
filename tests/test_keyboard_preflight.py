@@ -391,7 +391,8 @@ class DesktopPreflight(unittest.TestCase):
                  patch.object(cu, 'fcitx5_running', return_value=False):
                 self.typed.reset_mock()
                 result = cu.desktop_act({}, self.meta, [{'type': 'type', 'text': 'hello'}],
-                                        after_capture=False)
+                                        after_capture=False,
+                                        type_check=lambda: True)
             self.assertTrue(result['ok'], result)
             self.assertEqual(result['completed'], 1)
             self.assertNotIn('ime_restore_failed', result)
@@ -463,8 +464,12 @@ class DesktopPreflight(unittest.TestCase):
         for actions, count, groups, after_capture, stderr_len in cases:
             with self.subTest(actions=actions, after_capture=after_capture):
                 with patch.object(cu, 'run_cancelable', side_effect=fake_typed):
+                    # The no-after case is unverified without a DOM
+                    # check (RT R4: ok False); the trace assertions
+                    # below need a passing batch, so verify by DOM.
                     result = cu.desktop_act({}, self.meta, actions,
-                                            after_capture=after_capture)
+                                            after_capture=after_capture,
+                                            type_check=lambda: True)
                 self.assertTrue(result['ok'], result)
                 self.assertEqual(result['completed'], count)
                 self.assertEqual(result.get('after_skipped', False), not after_capture)

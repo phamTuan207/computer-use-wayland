@@ -274,6 +274,49 @@ class TypedRefusalRecovery(unittest.TestCase):
         stop.assert_not_called()
 
 
+class RelayBandVerification(unittest.TestCase):
+    def test_click_type_verifies_through_input_line_band(self):
+        # Item F: the relay-level click+type batch verifies through
+        # the INPUT LINE BAND, not the whole-frame hash. The
+        # after-capture image carries text pixels on the click line
+        # (y=5, the anchor), so the band is the check that passes and
+        # the basis names it. The sibling TYPE_AFTER_REFRESH test is
+        # type-only and passes via the frame-hash fallback; this one
+        # proves the band runs at the relay level. The click lands at
+        # (5,5) because the harness cursorpos sits at (5,5); the
+        # pointer-miss check needs the click point to match it.
+        from PIL import Image
+        token = 'f6' * 16
+        black = Image.new('RGB', (20, 20))
+        after = black.copy()
+        for x in range(6, 12):
+            after.putpixel((x, 5), (255, 255, 255))
+        actions = json.dumps([{'type': 'click', 'x': 5, 'y': 5},
+                              {'type': 'type', 'text': 'hello'}])
+        with tempfile.TemporaryDirectory() as tmp:
+            obs, _ = write_observation(tmp, '00000000010e', image=black)
+            _, after_meta = write_observation(tmp, '00000000010f',
+                                              image=after)
+            with live(tmp, token, active=[ADDR] * 12,
+                      pre_calls=[(black, {}), (black.copy(), {})],
+                      post=dict(after_meta)) as (typed, stop):
+                code, body = relay_lines([
+                    {'args': act_args(obs), 'stdin': actions},
+                    {'args': ['status']},
+                ])
+        self.assertEqual(code, 0)
+        acted = body[1]
+        self.assertEqual(acted['returncode'], 0, acted)
+        self.assertTrue(acted['result']['ok'], acted)
+        self.assertEqual(acted['result']['completed'], 2)
+        self.assertTrue(acted['result']['type_verified'], acted)
+        self.assertEqual(acted['result']['type_verified_basis'],
+                         'input-line-band', acted)
+        self.assertIs(acted['session_continues'], True)
+        self.assertEqual(typed.call_count, 1, 'exactly one keyboard event')
+        stop.assert_not_called()
+
+
 class TransientRefusalGate(unittest.TestCase):
     def test_focus_refusal_continues_then_a11y_bypass_is_fatal_until_observe(self):
         from PIL import Image

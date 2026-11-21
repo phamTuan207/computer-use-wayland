@@ -86,6 +86,7 @@ class FakeCu:
         self.state.mkdir(parents=True, exist_ok=True)
         self.STATE = self.state
         self.desktop_calls = []
+        self.desktop_kwargs = []
         self.observe_calls = []
 
     def environment(self):
@@ -108,6 +109,7 @@ class FakeCu:
     def desktop_act(self, env, meta, actions, observation_path=None,
                     **kwargs):
         self.desktop_calls.append((meta.get('id'), len(actions)))
+        self.desktop_kwargs.append(kwargs)
         return {'ok': True, 'completed': len(actions),
                 'after': str(self.state / 'after.json')}
 
@@ -125,9 +127,59 @@ def _write_actions(tmp, actions):
 def _args(actions_path, **overrides):
     base = {'actions': actions_path, 'observation': None,
             'screen': 'eDP-2', 'agent': 'Muse', 'method': 'act-now',
-            'label': None, 'session_deadline_s': 20.0}
+            'label': None, 'session_deadline_s': 20.0, 'dom_selector': None}
     base.update(overrides)
     return mock.Mock(**base)
+
+
+class FakeZenSession:
+    """Stand-in for zen_dom.ZenSession: one scripted field, no Zen."""
+
+    def __init__(self, fields):
+        self.fields = fields
+        self._armed = {}
+        self._typed = {}
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return False
+
+    def field_value(self, selector):
+        field = self.fields.get(selector)
+        return None if field is None else field.get('value')
+
+    def arm_typed_flag(self, selector):
+        field = self.fields.get(selector)
+        self._armed[selector] = None if field is None \
+            else field.get('value')
+        self._typed[selector] = False
+        return field is not None
+
+    def focus_check(self, selector):
+        field = self.fields.get(selector)
+        return bool(field) and bool(field.get('focused', False))
+
+    def typed_flag(self, selector):
+        if self._typed.get(selector):
+            return True
+        field = self.fields.get(selector)
+        if field is None:
+            return False
+        armed = self._armed.get(selector)
+        return field.get('value') != armed
+
+    def verify_typed(self, selector, expected, before=None):
+        field = self.fields.get(selector)
+        if not field:
+            return False
+        if field.get('value') != expected:
+            return False
+        if (before is not None and before == expected
+                and not self.typed_flag(selector)):
+            return False
+        return True
 
 
 class TestSessionStartFailure(unittest.TestCase):
@@ -393,6 +445,63 @@ class TestRun(unittest.TestCase):
         self.assertTrue(env['ok'])
         self.assertEqual(env['path'], 'fallback')
         self.assertEqual(len(self.fake_cu.desktop_calls), 1)
+
+    def test_fallback_with_dom_selector_passes_dom_hooks(self):
+        # Item A: --dom-selector wires the DOM value hooks into the
+        # fallback desktop_act. The hooks are the real dom_act
+        # closures over a fake Zen session: focus_check reads the
+        # live field, and type_check fails before the text lands and
+        # passes after it, proving the hook reads the DOM value
+        # instead of stubbing a pass.
+        import dom_act
+        fields = {'#msg-input': {'value': None, 'focused': True}}
+        fake_session = FakeZenSession(fields)
+        fake_zen_dom = mock.Mock()
+        fake_zen_dom.ZenSession = lambda *a, **k: fake_session
+        saved_zen_dom = sys.modules.get('zen_dom')
+        saved_dom_act = sys.modules.get('dom_act')
+        sys.modules['zen_dom'] = fake_zen_dom
+        sys.modules['dom_act'] = dom_act
+        try:
+            code, env, _ = self._run(
+                [{'type': 'click', 'x': 10, 'y': 10},
+                 {'type': 'type', 'text': 'hello'}],
+                (1, '{"ok": false, "error": "session guardian startup failed"}',
+                 '', False, 0.4),
+                dom_selector='#msg-input')
+        finally:
+            if saved_zen_dom is None:
+                sys.modules.pop('zen_dom', None)
+            else:
+                sys.modules['zen_dom'] = saved_zen_dom
+            if saved_dom_act is None:
+                sys.modules.pop('dom_act', None)
+            else:
+                sys.modules['dom_act'] = saved_dom_act
+        self.assertEqual(code, 0)
+        self.assertEqual(env['path'], 'fallback')
+        self.assertEqual(env['dom_hooks'], 'dom-value')
+        self.assertEqual(len(self.fake_cu.desktop_calls), 1)
+        kwargs = self.fake_cu.desktop_kwargs[0]
+        self.assertIsNotNone(kwargs.get('focus_check'))
+        self.assertIsNotNone(kwargs.get('type_check'))
+        self.assertEqual(kwargs['focus_check'](), (True, None))
+        self.assertFalse(kwargs['type_check']()[0])
+        fields['#msg-input']['value'] = 'hello'
+        self.assertEqual(kwargs['type_check'](), (True, None))
+
+    def test_fallback_without_dom_selector_passes_no_hooks(self):
+        # No --dom-selector: the fallback batch runs exactly as
+        # before, with no hook kwargs and no dom_hooks claim.
+        code, env, _ = self._run(
+            [{'type': 'click', 'x': 100, 'y': 100},
+             {'type': 'type', 'text': 'hello'}],
+            (1, '{"ok": false, "error": "session guardian startup failed"}',
+             '', False, 0.4))
+        self.assertEqual(code, 0)
+        self.assertEqual(env['path'], 'fallback')
+        self.assertIsNone(env['dom_hooks'])
+        self.assertEqual(self.fake_cu.desktop_kwargs[0], {})
 
     def test_timeout_never_replays(self):
         # Council 1, B1.
