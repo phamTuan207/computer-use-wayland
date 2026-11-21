@@ -1,0 +1,58 @@
+// Embeds the built, standalone hyprglass-item-helper.so inside hyprglass.so,
+// so a plugin manager that only installs this single output file still ships
+// the protocol helper (see ItemHints.cpp: it is written to a memfd and
+// dlopen'd from there at PLUGIN_INIT). GNU as, works with both gcc and clang
+// as the driver.
+
+.section .rodata
+.global hyprglassItemHelperBlobStart
+.balign 8
+hyprglassItemHelperBlobStart:
+.incbin "src/item-helper/hyprglass-item-helper.so"
+.global hyprglassItemHelperBlobEnd
+hyprglassItemHelperBlobEnd:
+
+// Assembly gets no GNU-stack note on its own, which some linkers read as needing an
+// executable stack. %progbits, not @progbits: @ starts a comment on 32-bit ARM.
+.section .note.GNU-stack,"",%progbits
+--- helper.c head ---
+// Persistent hyprglass_item_v1 protocol helper.
+//
+// Built as its own shared library and never dlclose'd (see ItemHelperBlob.S
+// and ItemHints.cpp), so every wl_global/wl_resource/wl_interface this file
+// owns stays valid memory across a hyprglass.so unload+reload. That is what
+// lets an object become permanently inert instead of being destroyed out
+// from under a client that is still mid-request — destroying resources
+// before dlclose would disconnect a client that raced the removal (see
+// feasibility study §1.2).
+//
+// Depends only on libwayland-server: no Hyprland headers, no C++.
+
+#include "hyprglass-item-v1-server-protocol.h"
+#include "hyprglass_item_helper_api.h"
+
+#include <wayland-server.h>
+
+#include <stdlib.h>
+#include <string.h>
+
+struct manager_object {
+    struct wl_resource* resource;
+    int                 inert;
+    struct wl_list      link; // in g_managers
+};
+
+struct item_object {
+    struct wl_resource* resource;
+    struct wl_resource* surface; // borrowed; NULL once the surface has died
+    struct wl_listener  surface_destroy_listener;
+    int                 listening; // surface_destroy_listener is linked into the surface's destroy signal
+    int                 inert;
+
+    struct hyprglass_item_state pending;
+    struct hyprglass_item_state cached;
+    struct hyprglass_item_state current;
+
+    struct wl_list link; // in g_items
+};
+

@@ -1,0 +1,1897 @@
+Config();
+     const bool timersReady = timerExtensionAvailable();
+ 
+-    if (format == eHyprCtlOutputFormat::FORMAT_JSON) {
++    if (format == IPC::Socket1::eOutputFormat::FORMAT_JSON) {
+         std::string json = "{\n  \"monitors\": [\n";
+         bool        first = true;
+         for (const auto& [id, counters] : s_counters) {
+@@ -293,13 +294,15 @@ std::string formatStats(eHyprCtlOutputFormat format) {
+                 "\"windowCacheHits\": {}, \"windowCacheMisses\": {}, \"windowDeferredResamples\": {}, \"windowPassDiscarded\": {}, "
+                 "\"layerGlassDraws\": {}, \"layerCacheHits\": {}, \"layerCacheMisses\": {}, \"layerDeferredResamples\": {}, "
+                 "\"subsurfaceGlassDraws\": {}, \"subsurfaceCacheHits\": {}, \"subsurfaceCacheMisses\": {}, \"subsurfaceDeferredResamples\": {}, "
+-                "\"blurPasses\": {}, "
++                "\"xrayCopies\": {}, \"xrayDeferredResamples\": {}, \"xrayEvictions\": {}, "
++                "\"frostRebuilds\": {}, \"contourRebuilds\": {}, \"blurPasses\": {}, "
+                 "\"sampledMegapixels\": {:.3f}, \"glassMegapixels\": {:.3f}, \"stageTimersAvgMicroseconds\": {{",
+                 escapeJSONStrings(monitorLabel(id)), counters.frames, counters.windowGlassDraws, counters.windowOpaqueSkipped,
+                 counters.windowCacheHits, counters.windowCacheMisses, counters.windowDeferredResamples, counters.windowPassDiscarded,
+                 counters.layerGlassDraws, counters.layerCacheHits, counters.layerCacheMisses, counters.layerDeferredResamples,
+                 counters.subsurfaceGlassDraws, counters.subsurfaceCacheHits, counters.subsurfaceCacheMisses, counters.subsurfaceDeferredResamples,
+-                counters.blurPasses, counters.sampledMegapixels, counters.glassMegapixels);
++                counters.xrayCopies, counters.xrayDeferredResamples, counters.xrayEvictions,
++                counters.frostRebuilds, counters.contourRebuilds, counters.blurPasses, counters.sampledMegapixels, counters.glassMegapixels);
+ 
+             const auto& stageNanoseconds = stageNanosecondsFor(id);
+             for (size_t i = 0; i < STAGE_COUNT; i++) {
+@@ -321,7 +324,7 @@ std::string formatStats(eHyprCtlOutputFormat format) {
+     std::string out = "hyprglass stats\n";
+ 
+     if (!timersOn)
+-        out += "  stage timers: off (plugin:hyprglass:debug:timers = 0)\n";
++        out += "  stage timers: off (hg.config({ debug = { timers = true } }))\n";
+     else if (!timersReady)
+         out += "  stage timers: unavailable (GL_EXT_disjoint_timer_query not supported by this driver)\n";
+ 
+@@ -329,18 +332,20 @@ std::string formatStats(eHyprCtlOutputFormat format) {
+         out += "  (no frames recorded yet)\n";
+ 
+     out += std::format(
+-        "\n  {:<14} {:>8} {:>10} {:>12} {:>9} {:>9} {:>10} {:>9} {:>12} {:>10} {:>10} {:>11} {:>10} {:>12} {:>11} {:>11} {:>10} {:>12} {:>11}\n",
++        "\n  {:<14} {:>8} {:>10} {:>12} {:>9} {:>9} {:>10} {:>9} {:>12} {:>10} {:>10} {:>11} {:>10} {:>12} {:>11} {:>11} {:>10} {:>11} {:>11} {:>10} {:>12} {:>11} {:>11} {:>13}\n",
+         "monitor", "frames", "win_draws", "opaque_skip", "win_hit", "win_miss", "win_defer", "win_disc", "layer_draws", "layer_hit",
+-        "layer_miss", "layer_defer", "sub_draws", "sub_hit", "sub_miss", "sub_defer", "blur_pass", "sampled_mpx", "glass_mpx");
++        "layer_miss", "layer_defer", "sub_draws", "sub_hit", "sub_miss", "sub_defer", "xray_copy", "xray_defer", "xray_evict", "blur_pass",
++        "sampled_mpx", "glass_mpx", "frost_build", "contour_build");
+ 
+     for (const auto& [id, counters] : s_counters) {
+         out += std::format(
+-            "  {:<14} {:>8} {:>10} {:>12} {:>9} {:>9} {:>10} {:>9} {:>12} {:>10} {:>10} {:>11} {:>10} {:>12} {:>11} {:>11} {:>10} {:>12.2f} {:>11.2f}\n",
++            "  {:<14} {:>8} {:>10} {:>12} {:>9} {:>9} {:>10} {:>9} {:>12} {:>10} {:>10} {:>11} {:>10} {:>12} {:>11} {:>11} {:>10} {:>11} {:>11} {:>10} {:>12.2f} {:>11.2f} {:>11} {:>13}\n",
+             monitorLabel(id), counters.frames, counters.windowGlassDraws, counters.windowOpaqueSkipped, counters.windowCacheHits,
+             counters.windowCacheMisses, counters.windowDeferredResamples, counters.windowPassDiscarded, counters.layerGlassDraws,
+             counters.layerCacheHits, counters.layerCacheMisses, counters.layerDeferredResamples,
+             counters.subsurfaceGlassDraws, counters.subsurfaceCacheHits, counters.subsurfaceCacheMisses, counters.subsurfaceDeferredResamples,
+-            counters.blurPasses, counters.sampledMegapixels, counters.glassMegapixels);
++            counters.xrayCopies, counters.xrayDeferredResamples, counters.xrayEvictions,
++            counters.blurPasses, counters.sampledMegapixels, counters.glassMegapixels, counters.frostRebuilds, counters.contourRebuilds);
+ 
+         if (counters.frames > 0) {
+             const double frames = static_cast<double>(counters.frames);
+@@ -376,7 +381,7 @@ struct SFeatureStatus {
+     [[nodiscard]] bool active() const noexcept { return reason.empty(); }
+ };
+ 
+-std::string formatStatus(eHyprCtlOutputFormat format) {
++std::string formatStatus(IPC::Socket1::eOutputFormat format) {
+     // Registered after g_pGlobalState is created and unregistered before it is reset.
+     const auto& config = g_pGlobalState->config;
+ 
+@@ -385,7 +390,7 @@ std::string formatStatus(eHyprCtlOutputFormat format) {
+     const bool        protocolActive = ItemHints::active();
+ 
+     // Same order as the render path: the setting, then the hook, then the shaders.
+-    auto featureStatus = [&](Hyprlang::INT* const* enabledValue, bool hooked) {
++    auto featureStatus = [&](Config::BOOL* const* enabledValue, bool hooked) {
+         SFeatureStatus status;
+         status.enabled = enabledValue && **enabledValue;
+         if (!status.enabled)
+@@ -414,14 +419,14 @@ std::string formatStatus(eHyprCtlOutputFormat format) {
+ 
+     const bool active = windows.active() || layers.active() || subsurfaces.active();
+ 
+-    if (format == eHyprCtlOutputFormat::FORMAT_JSON) {
++    if (format == IPC::Socket1::eOutputFormat::FORMAT_JSON) {
+         auto featureJson = [](const SFeatureStatus& status) {
+             return std::format("{{\"enabled\": {}, \"active\": {}, \"reason\": {}}}", status.enabled ? "true" : "false", status.active() ? "true" : "false",
+                                status.active() ? std::string("null") : std::format("\"{}\"", status.reason));
+         };
+-        return std::format("{{\n  \"schema\": {}, \"version\": \"{}\", \"active\": {}, \"shaders\": \"{}\", \"itemProtocol\": {},\n"
++        return std::format("{{\n  \"schema\": {}, \"version\": \"{}\", \"versionCheck\": \"{}\", \"active\": {}, \"shaders\": \"{}\", \"itemProtocol\": {},\n"
+                            "  \"features\": {{\n    \"windows\": {},\n    \"layers\": {},\n    \"subsurfaces\": {}\n  }}\n}}\n",
+-                           STATUS_SCHEMA, escapeJSONStrings(std::string(PLUGIN_VERSION)), active ? "true" : "false", shaders,
++                           STATUS_SCHEMA, escapeJSONStrings(std::string(PLUGIN_VERSION)), g_pGlobalState->versionCheck, active ? "true" : "false", shaders,
+                            protocolActive ? "true" : "false", featureJson(windows), featureJson(layers), featureJson(subsurfaces));
+     }
+ 
+@@ -436,13 +441,14 @@ std::string formatStatus(eHyprCtlOutputFormat format) {
+     };
+ 
+     std::string out = std::format("hyprglass {}: {}\n", PLUGIN_VERSION, active ? "active" : "inactive");
++    out += std::format("  version check: {}\n", g_pGlobalState->versionCheck);
+     out += std::format("  shaders: {}\n", shaders);
+     out += std::format("  windows: {}   layers: {}   subsurfaces: {}\n", featureText(windows), featureText(layers), featureText(subsurfaces));
+     out += std::format("  hyprglass_item_v1 protocol: {}\n", protocolActive ? "active" : "inactive");
+     return out;
+ }
+ 
+-SP<SHyprCtlCommand> s_command;
++SP<IPC::Socket1::SCommand> s_command;
+ 
+ } // namespace
+ 
+@@ -506,6 +512,26 @@ void recordSubsurfaceDeferredResample(MONITORID monitor) {
+     countersFor(monitor).subsurfaceDeferredResamples++;
+ }
+ 
++void recordXrayCopy(MONITORID monitor) {
++    countersFor(monitor).xrayCopies++;
++}
++
++void recordXrayDeferredResample(MONITORID monitor) {
++    countersFor(monitor).xrayDeferredResamples++;
++}
++
++void recordXrayEvict(MONITORID monitor) {
++    countersFor(monitor).xrayEvictions++;
++}
++
++void recordFrostRebuild(MONITORID monitor) {
++    countersFor(monitor).frostRebuilds++;
++}
++
++void recordContourRebuild(MONITORID monitor) {
++    countersFor(monitor).contourRebuilds++;
++}
++
+ void recordBlurPasses(MONITORID monitor, uint64_t passes) {
+     countersFor(monitor).blurPasses += passes;
+ }
+@@ -533,10 +559,12 @@ void resetCounters() {
+ }
+ 
+ void registerHyprCtlCommand(HANDLE handle) {
+-    s_command = HyprlandAPI::registerHyprCtlCommand(handle, SHyprCtlCommand{
+-        .name  = "hyprglass",
+-        .exact = false,
+-        .fn    = [](eHyprCtlOutputFormat format, std::string request) -> std::string {
++    s_command = HyprlandAPI::registerHyprCtlCommand(handle, IPC::Socket1::SCommand{
++        .name    = "hyprglass",
++        .match   = IPC::Socket1::COMMAND_MATCH_PREFIX,
++        .handler = [](const IPC::Socket1::SRequest& hyprCtlRequest) -> IPC::Socket1::SResponse {
++            const auto format = hyprCtlRequest.format;
++            const auto& request = hyprCtlRequest.command;
+             std::string_view rest{request};
+             constexpr std::string_view PREFIX = "hyprglass";
+             if (rest.starts_with(PREFIX))
+@@ -549,7 +577,7 @@ void registerHyprCtlCommand(HANDLE handle) {
+ 
+             if (rest == "stats reset") {
+                 resetCounters();
+-                return format == eHyprCtlOutputFormat::FORMAT_JSON ? "{\"ok\": true}\n" : "hyprglass: counters reset\n";
++                return format == IPC::Socket1::eOutputFormat::FORMAT_JSON ? "{\"ok\": true}\n" : "hyprglass: counters reset\n";
+             }
+ 
+             if (rest == "items")
+@@ -587,7 +615,7 @@ void shutdown() {
+     }
+ }
+ 
+-CScopedStageTimer::CScopedStageTimer(EStage stage) : m_stage(stage) {
++CScopedStageTimer::CScopedStageTimer(Render::CRenderContext& ctx, EStage stage) : m_stage(stage) {
+     if (!timersEnabledByConfig() || !timerExtensionAvailable() || s_queryActive)
+         return;
+ 
+@@ -614,7 +642,7 @@ CScopedStageTimer::CScopedStageTimer(EStage stage) : m_stage(stage) {
+     // bracket always wraps GL work for whichever monitor is currently being
+     // rendered.
+     MONITORID monitorId = -1; // -1 mirrors Hyprland's own MONITOR_INVALID
+-    if (const auto monitor = g_pHyprRenderer->m_renderData.pMonitor.lock())
++    if (const auto monitor = ctx.m_data.pMonitor.lock())
+         monitorId = monitor->m_id;
+     ring.monitor[slot] = monitorId;
+ 
+diff --git a/src/Diagnostics.hpp b/src/Diagnostics.hpp
+index b9ec593..e0c8b5e 100644
+--- a/src/Diagnostics.hpp
++++ b/src/Diagnostics.hpp
+@@ -33,6 +33,15 @@ struct SMonitorCounters {
+     uint64_t subsurfaceCacheHits         = 0;
+     uint64_t subsurfaceCacheMisses       = 0;
+     uint64_t subsurfaceDeferredResamples = 0;
++    // X-ray: snapshot copies, x-ray samplers waiting for the snapshot to
++    // cover them, and snapshots dropped after going unused.
++    uint64_t xrayCopies            = 0;
++    uint64_t xrayDeferredResamples = 0;
++    uint64_t xrayEvictions         = 0;
++    // Frost: frosted copies rebuilt (one blit and a few blur passes each).
++    uint64_t frostRebuilds          = 0;
++    // Contour: layer outline fields rebuilt (six passes at a fraction of the layer's size each).
++    uint64_t contourRebuilds        = 0;
+     uint64_t blurPasses             = 0;
+     double   sampledMegapixels      = 0.0;
+     double   glassMegapixels        = 0.0;
+@@ -57,6 +66,12 @@ void recordSubsurfaceGlassDraw(MONITORID monitor);
+ void recordSubsurfaceCacheHit(MONITORID monitor);
+ void recordSubsurfaceCacheMiss(MONITORID monitor);
+ void recordSubsurfaceDeferredResample(MONITORID monitor);
++// X-ray snapshot — see GlassSnapshotElement.
++void recordXrayCopy(MONITORID monitor);
++void recordXrayDeferredResample(MONITORID monitor);
++void recordXrayEvict(MONITORID monitor);
++void recordFrostRebuild(MONITORID monitor);
++void recordContourRebuild(MONITORID monitor);
+ void recordBlurPasses(MONITORID monitor, uint64_t passes);
+ // GL state found different from what Hyprland's tracker reports; rate-limited notification.
+ void recordStateDesync(const char* what);
+@@ -102,7 +117,7 @@ enum class EStage : int {
+ // already open — never blocks, never nests.
+ class CScopedStageTimer {
+   public:
+-    explicit CScopedStageTimer(EStage stage);
++    explicit CScopedStageTimer(Render::CRenderContext& ctx, EStage stage);
+     ~CScopedStageTimer();
+ 
+     CScopedStageTimer(const CScopedStageTimer&)            = delete;
+diff --git a/src/Frost.cpp b/src/Frost.cpp
+new file mode 100644
+index 0000000..5d19961
+--- /dev/null
++++ b/src/Frost.cpp
+@@ -0,0 +1,77 @@
++#include "Frost.hpp"
++#include "WindowGeometry.hpp"
++
++#include <hyprland/src/desktop/state/ViewState.hpp>
++#include <hyprland/src/desktop/view/window/Window.hpp>
++#include <hyprland/src/desktop/view/window/WindowPresentation.hpp>
++#include <hyprland/src/managers/fullscreen/FullscreenController.hpp>
++#include <hyprland/src/render/Renderer.hpp>
++#include <hyprutils/math/Region.hpp>
++
++namespace Frost {
++
++namespace {
++
++// Hyprland draws tiled windows, then floating ones, then pinned ones, each group in
++// list order (later is above), with a visible special workspace over the regular ones.
++int drawTier(const PHLWINDOW& window) {
++    const int layer = (window->m_state & Desktop::View::WINDOW_STATE_PINNED) ? 2 : (window->isFloating() ? 1 : 0);
++    return window->onSpecialWorkspace() ? layer + 3 : layer;
++}
++
++} // namespace
++
++float coveredFraction(const PHLWINDOW& window, const PHLMONITOR& monitor, const CBox& glassBox) {
++    const double glassArea = glassBox.w * glassBox.h;
++    if (!window || !monitor || !(glassArea > 0.0))
++        return 0.0f;
++
++    // Under a fullscreen window only it, and the floating windows allowed over it, are drawn.
++    PHLWINDOW fullscreenWindow;
++    if (window->m_workspace) {
++        fullscreenWindow = Fullscreen::controller()->getFullscreenWindow(window->m_workspace);
++        if (fullscreenWindow && fullscreenWindow->m_workspace != window->m_workspace)
++            fullscreenWindow = nullptr;
++    }
++
++    const int ownTier = drawTier(window);
++    bool      seenOwn = false;
++    CRegion   covered;
++
++    for (const auto& other : Desktop::viewState()->windows()) {
++        if (!other)
++            continue;
++        if (other == window) {
++            seenOwn = true;
++            continue;
++        }
++
++        const int  tier  = drawTier(other);
++        const bool below = tier < ownTier || (tier == ownTier && !seenOwn);
++        if (!below)
++            continue;
++
++        if (!other->mapped() || other->isHidden() || other->presentation().alphaTotal() == 0.f)
++            continue;
++        if (fullscreenWindow && other != fullscreenWindow && !(other->isFloating() && other->shouldRenderOverFullscreen()))
++            continue;
++        if (!g_pHyprRenderer->shouldRenderWindow(other, monitor))
++            continue;
++
++        const auto box = WindowGeometry::computeWindowBox(other, monitor);
++        if (!box)
++            continue;
++
++        const CBox overlap = box->intersection(glassBox);
++        if (overlap.w > 0.0 && overlap.h > 0.0)
++            covered.add(overlap);
++    }
++
++    double coveredArea = 0.0;
++    for (const auto& rectangle : covered.getRects())
++        coveredArea += static_cast<double>(rectangle.x2 - rectangle.x1) * static_cast<double>(rectangle.y2 - rectangle.y1);
++
++    return static_cast<float>(std::clamp(coveredArea / glassArea, 0.0, 1.0));
++}
++
++} // namespace Frost
+diff --git a/src/Frost.hpp b/src/Frost.hpp
+new file mode 100644
+index 0000000..7b81c64
+--- /dev/null
++++ b/src/Frost.hpp
+@@ -0,0 +1,139 @@
++#pragma once
++
++#include <algorithm>
++#include <chrono>
++#include <cmath>
++#include <hyprland/src/desktop/DesktopTypes.hpp>
++#include <hyprland/src/helpers/memory/Memory.hpp>
++#include <hyprland/src/render/Framebuffer.hpp>
++#include <hyprutils/math/Box.hpp>
++
++// Frost: a window's glass blurs further where other windows are behind it, and stays
++// clear over the wallpaper. The glass draws the sample (the backdrop, already blurred)
++// mixed toward a frosted copy of it, by an amount that follows how much of the glass
++// the windows below cover, eased over time.
++namespace Frost {
++
++// Coverage below the dead zone is a window grazing the glass: no frost. From the full
++// mark up, the glass is frosted entirely.
++inline constexpr float COVERAGE_DEAD_ZONE = 0.04f;
++inline constexpr float COVERAGE_FULL      = 0.45f;
++
++// Time constant of the ease toward the target amount.
++inline constexpr float EASE_SECONDS = 0.09f;
++
++// Within this of its target the amount snaps there, so the ease ends and frames stop.
++inline constexpr float SETTLE_EPSILON = 0.002f;
++
++// Below this the frosted copy is not drawn at all (and not kept).
++inline constexpr float MINIMUM_AMOUNT = 0.001f;
++
++// The frosted copy: the sample at half its size, blurred with this many passes.
++inline constexpr int BLUR_ITERATIONS = 2;
++
++// frost_blur, in blur_strength units. Far past any useful frost: it only keeps the blur
++// radius finite.
++inline constexpr float BLUR_MAX = 10.0f;
++
++// Smoothstep between the dead zone and the full mark.
++[[nodiscard]] constexpr float amountForCoverage(float coverage) noexcept {
++    const float t = std::clamp((coverage - COVERAGE_DEAD_ZONE) / (COVERAGE_FULL - COVERAGE_DEAD_ZONE), 0.0f, 1.0f);
++    return t * t * (3.0f - 2.0f * t);
++}
++
++static_assert(amountForCoverage(0.0f) == 0.0f);
++static_assert(amountForCoverage(COVERAGE_DEAD_ZONE) == 0.0f);
++static_assert(amountForCoverage(COVERAGE_FULL) == 1.0f);
++static_assert(amountForCoverage(1.0f) == 1.0f);
++static_assert(amountForCoverage(0.5f * (COVERAGE_DEAD_ZONE + COVERAGE_FULL)) > 0.49f &&
++              amountForCoverage(0.5f * (COVERAGE_DEAD_ZONE + COVERAGE_FULL)) < 0.51f);
++
++// The fraction of `glassBox` that the windows drawn below `window` cover, 0..1: the
++// union of their boxes, so windows behind each other count once. `glassBox` is
++// monitor-local physical pixels, as WindowGeometry::computeWindowBox() gives. Only an
++// estimate: boxes are rectangles, translucency is ignored, and the drawing order
++// follows Hyprland's tiled, floating, pinned layering.
++[[nodiscard]] float coveredFraction(const PHLWINDOW& window, const PHLMONITOR& monitor, const CBox& glassBox);
++
++// One window's frost: the eased amount and the frosted copy of its sample.
++class CFrostState {
++  public:
++    // Moves the shown amount toward `target` (0..1), eased unless `animated` is off or
++    // this is the first call, which snaps. True while it is still moving: the caller
++    // keeps frames coming until it is not.
++    [[nodiscard]] bool step(float target, bool animated, std::chrono::steady_clock::time_point now) noexcept {
++        target = target > 0.0f ? std::min(target, 1.0f) : 0.0f;
++
++        if (!m_seen || !animated) {
++            m_seen   = true;
++            m_amount = target;
++            m_moving = false;
++            return false;
++        }
++
++        if (m_amount != target) {
++            // the first step of a move has no previous frame to measure from
++            const float seconds = m_moving ? std::chrono::duration<float>(now - m_lastStep).count() : 0.0f;
++            m_amount += (target - m_amount) * (1.0f - std::exp(-std::max(seconds, 0.0f) / EASE_SECONDS));
++            if (std::abs(target - m_amount) < SETTLE_EPSILON)
++                m_amount = target;
++        }
++
++        m_moving   = m_amount != target;
++        m_lastStep = now;
++        return m_moving;
++    }
++
++    [[nodiscard]] float amount() const noexcept { return m_amount; }
++    [[nodiscard]] bool  moving() const noexcept { return m_moving; }
++
++    // A shown amount, or a copy still held.
++    [[nodiscard]] bool active() const noexcept { return m_amount > 0.0f || m_copy; }
++
++    // The sample was refreshed: the copy no longer matches it.
++    void sampleChanged() noexcept { m_copyStale = true; }
++
++    // True when the copy is missing, stale, built with another radius, or not half the
++    // size of `sample`.
++    [[nodiscard]] bool needsBuild(const SP<Render::IFramebuffer>& sample, float radius) const {
++        if (!m_copy || m_copyStale || radius != m_builtRadius || !sample)
++            return true;
++        return m_copy->m_size.x != std::max(1, static_cast<int>(sample->m_size.x) / 2) ||
++               m_copy->m_size.y != std::max(1, static_cast<int>(sample->m_size.y) / 2);
++    }
++
++    void built(float radius) noexcept {
++        m_copyStale   = false;
++        m_builtRadius = radius;
++    }
++
++    // Frees the copy and its blur target; the shown amount stays.
++    void releaseCopy() noexcept {
++        m_copy.reset();
++        m_temporary.reset();
++        m_copyStale = true;
++    }
++
++    // Frost is off for this window (glass disabled): nothing shown, nothing held.
++    void reset() noexcept {
++        releaseCopy();
++        m_amount = 0.0f;
++        m_moving = false;
++    }
++
++    // The framebuffers buildFrostCopy() fills.
++    [[nodiscard]] SP<Render::IFramebuffer>& copy() noexcept { return m_copy; }
++    [[nodiscard]] SP<Render::IFramebuffer>& temporary() noexcept { return m_temporary; }
++
++  private:
++    SP<Render::IFramebuffer>              m_copy;
++    SP<Render::IFramebuffer>              m_temporary;
++    bool                                  m_copyStale   = true;
++    float                                 m_builtRadius = 0.0f;
++    float                                 m_amount      = 0.0f;
++    bool                                  m_seen        = false;
++    bool                                  m_moving      = false;
++    std::chrono::steady_clock::time_point m_lastStep{};
++};
++
++} // namespace Frost
+diff --git a/src/GlassDecoration.cpp b/src/GlassDecoration.cpp
+index 0e9a6c5..d80b5ea 100644
+--- a/src/GlassDecoration.cpp
++++ b/src/GlassDecoration.cpp
+@@ -4,6 +4,7 @@
+ #include "Diagnostics.hpp"
+ #include "GlassPassElement.hpp"
+ #include "GlassRenderer.hpp"
++#include "GlassSnapshotElement.hpp"
+ #include "Globals.hpp"
+ #include "Hash.hpp"
+ #include "RenderGuards.hpp"
+@@ -12,8 +13,10 @@
+ 
+ #include <algorithm>
+ #include <GLES3/gl32.h>
+-#include <hyprland/src/desktop/view/Window.hpp>
++#include <hyprland/src/desktop/view/window/Window.hpp>
++#include <hyprland/src/desktop/view/window/WindowPresentation.hpp>
+ #include <hyprland/src/desktop/rule/windowRule/WindowRuleApplicator.hpp>
++#include <hyprland/src/desktop/state/FocusState.hpp>
+ #include <hyprland/src/managers/fullscreen/FullscreenController.hpp>
+ #include <hyprland/src/render/OpenGL.hpp>
+ #include <hyprland/src/render/Renderer.hpp>
+@@ -77,6 +80,81 @@ static float selfSampleFor(const SResolveContext& ctx) {
+     return std::clamp(resolvePresetFloat(ctx, &SPresetValues::selfSample, &SOverridableConfig::selfSample), 0.0f, 1.0f);
+ }
+ 
++// Not std::clamp: a NaN must read as off, not reach the shader.
++static float focusLightFor(const SResolveContext& ctx) {
++    const float value = resolvePresetFloat(ctx, &SPresetValues::focusLight, &SOverridableConfig::focusLight);
++    return value > 0.0f ? std::min(value, 1.0f) : 0.0f;
++}
++
++// Not std::clamp: a NaN must read as off, not reach the shader.
++static float frostFor(const SResolveContext& ctx) {
++    const float value = resolvePresetFloat(ctx, &SPresetValues::frost, &SOverridableConfig::frost, GlobalDefaults::FROST);
++    return value > 0.0f ? std::min(value, 1.0f) : 0.0f;
++}
++
++static float frostBlurFor(const SResolveContext& ctx) {
++    const float value = resolvePresetFloat(ctx, &SPresetValues::frostBlur, &SOverridableConfig::frostBlur, GlobalDefaults::FROST_BLUR);
++    return value > 0.0f ? std::min(value, Frost::BLUR_MAX) : 0.0f;
++}
++
++static constexpr std::chrono::milliseconds FOCUS_LIGHT_FADE{200};
++
++// Hyprland's animations:enabled; a key that cannot be read counts as on.
++static bool hyprlandAnimationsEnabled() {
++    const auto& pointer = g_pGlobalState->config.animationsEnabled;
++    return !pointer.dataptr || readBoolConfig(pointer);
++}
++
++bool CGlassDecoration::focusLightFading(std::chrono::steady_clock::time_point now) const {
++    return now - m_focusLightChangedAt < FOCUS_LIGHT_FADE && hyprlandAnimationsEnabled();
++}
++
++float CGlassDecoration::focusLightLevel(std::chrono::steady_clock::time_point now) const {
++    const float target = m_focusLightTarget ? 1.0f : 0.0f;
++    if (!focusLightFading(now))
++        return target;
++
++    const float progress = std::clamp(std::chrono::duration<float>(now - m_focusLightChangedAt) / FOCUS_LIGHT_FADE, 0.0f, 1.0f);
++    const float eased    = progress * progress * (3.0f - 2.0f * progress);
++    return m_focusLightFrom + (target - m_focusLightFrom) * eased;
++}
++
++// The light lies inside the glass box: damaging the window box is enough, and
++// unlike damageEntire() leaves the sampling margin around it alone.
++static void damageGlassBox(const PHLWINDOW& window) {
++    if (!window)
++        return;
++
++    if (const auto box = WindowGeometry::computePaddedGlobalBox(window, 0.0f))
++        g_pHyprRenderer->damageBox(*box);
++}
++
++void CGlassDecoration::damageFocusLight() {
++    damageGlassBox(m_window.lock());
++}
++
++void CGlassDecoration::damageFrost() {
++    damageGlassBox(m_window.lock());
++}
++
++void CGlassDecoration::onActiveWindowChanged(const PHLWINDOW& activeWindow) {
++    // A closing last window is announced as active with focus already cleared.
++    const auto focus  = Desktop::focusState();
++    const bool active = activeWindow && ownsWindow(activeWindow) && focus && focus->window() == activeWindow;
++    if (active == m_focusLightTarget)
++        return;
++
++    const auto now        = std::chrono::steady_clock::now();
++    m_focusLightFrom      = focusLightLevel(now);
++    m_focusLightTarget    = active;
++    m_focusLightChangedAt = now;
++
++    // a hidden workspace keeps its last strength; renderPass() damages it once shown
++    const auto window = m_window.lock();
++    if (m_lastFocusLightStrength > 0.0f && window && window->m_workspace && window->m_workspace->visible())
++        damageFocusLight();
++}
++
+ CGlassDecoration::EEnabledResolution CGlassDecoration::resolveEnabled() const {
+     const auto& config = g_pGlobalState->config;
+     const bool globalEnabled = config.enabled && **config.enabled;
+@@ -103,7 +181,7 @@ CGlassDecoration::EEnabledResolution CGlassDecoration::resolveEnabled() const {
+         // Nothing behind an opaque window is visible, unless the window
+         // self-samples: then the glass shows the window's own content, which
+         // does change, so the opaque-skip must yield to it.
+-        if (skipOpaque && window && window->opaque()) {
++        if (skipOpaque && window && window->presentation().opaque()) {
+             const bool         isDark = resolveThemeIsDark();
+             const std::string  preset = resolvePresetName();
+             const SResolveContext ctx = {preset, isDark, config, g_pGlobalState->customPresets};
+@@ -136,6 +214,16 @@ bool CGlassDecoration::resolveThemeIsDark() const {
+     return true;
+ }
+ 
++bool CGlassDecoration::resolveXray() const {
++    if (!xrayHasBackground())
++        return false;
++
++    const bool            isDark = resolveThemeIsDark();
++    const std::string     preset = resolvePresetName();
++    const SResolveContext ctx    = {preset, isDark, g_pGlobalState->config, g_pGlobalState->customPresets};
++    return resolvePresetInt(ctx, &SPresetValues::xray, &SOverridableConfig::xray, GlobalDefaults::XRAY) > 0;
++}
++
+ std::string CGlassDecoration::resolvePresetName() const {
+     try {
+         const auto window = m_window.lock();
+@@ -165,18 +253,19 @@ SDecorationPositioningInfo CGlassDecoration::getPositioningInfo() {
+ 
+ void CGlassDecoration::onPositioningReply(const SDecorationPositioningReply& reply) {}
+ 
+-void CGlassDecoration::queueGlassPass(float alpha) {
++void CGlassDecoration::queueGlassPass(Render::CRenderContext& ctx, float alpha, bool xray) {
+     // A duplicate copy is redirected into the dedupe sink and dropped whole: it
+     // needs no glass, and stamping it would leave the surviving element stale.
+     if (g_pGlobalState->dedupe.guard)
+         return;
+ 
+     CGlassPassElement::SGlassPassData data{m_self, alpha};
++    data.xray = xray;
+ 
+     // Only the real monitor pass is de-duplicated: snapshots, screencopy and
+     // overview framebuffers render the window once, out of frame order.
+-    const bool managed = g_pGlobalState->frameSerial != 0 && !g_pHyprRenderer->m_bRenderingSnapshot &&
+-        g_pHyprRenderer->m_renderData.projectionType == Render::RPT_MONITOR;
++    const bool managed = g_pGlobalState->frameSerial != 0 && !ctx.m_renderingSnapshot &&
++        ctx.m_data.projectionType == Render::RPT_MONITOR;
+ 
+     if (managed) {
+         if (m_glassFrameSerial != g_pGlobalState->frameSerial) {
+@@ -189,44 +278,70 @@ void CGlassDecoration::queueGlassPass(float alpha) {
+         data.queueIndex  = m_glassQueueIndex;
+     }
+ 
+-    // m_renderPass, never addPassElement: draw() runs inside Hyprland's own
+-    // per-window redirect for transformed windows (motion blur), whose pass
+-    // renders into a work buffer cleared to transparent — nothing to sample.
+-    g_pHyprRenderer->m_renderPass.add(makeUnique<CGlassPassElement>(data));
++    // The pass current at RENDER_PRE_WINDOW, not the one current now: draw() runs inside
++    // Hyprland's redirect for transformed windows (wobble, motion blur), whose nested
++    // pass renders into a work buffer cleared to transparent, so there is nothing to
++    // sample. A plugin's own redirect around renderWindow still receives it.
++    const auto windowPass = g_pGlobalState->dedupe.windowPass;
++    (windowPass ? *windowPass : g_pHyprRenderer->currentPass(ctx)).add(makeUnique<CGlassPassElement>(data));
+ }
+ 
+-void CGlassDecoration::draw(PHLMONITOR monitor, float const& alpha) {
++// Render-order fingerprint: fold this window's identity/geometry/alpha into
++// the monitor's running hash in z-order, before resolveEnabled() so background
++// windows still count. Guarded by isForeignRender(), not a bare mainFB check,
++// since a foreign replay's z-order isn't this frame's real one. Folded at most
++// once per frameSerial: draw() itself runs 2-3x per monitor frame for a floating
++// window over fullscreen, and folding every copy would make the hash depend on
++// how many of those copies happened to render this frame rather than on the scene.
++void CGlassDecoration::foldRenderFingerprint(Render::CRenderContext& ctx, const PHLMONITOR& monitor, float alpha) {
++    if (!g_pGlobalState || !monitor || RenderGuards::isForeignRender(ctx))
++        return;
++
++    if (g_pGlobalState->frameSerial != 0 && m_lastFoldedFrameSerial == g_pGlobalState->frameSerial)
++        return;
++
++    const auto window = m_window.lock();
++    if (!window)
++        return;
++
++    const auto workspace = window->m_workspace;
++    const Vector2D workspaceRenderOffset =
++        (workspace && !(window->m_state & Desktop::View::WINDOW_STATE_PINNED)) ? workspace->m_renderOffset->value() : Vector2D();
++    const auto fullscreenMode = Fullscreen::controller()->getFullscreenModes(window).internal;
++
++    auto& fingerprint = g_pGlobalState->renderFingerprints[monitor->m_id];
++    Hash::hashCombine(fingerprint.runningHash, window.get(), window->positionAnimation()->value(),
++                       window->sizeAnimation()->value(), alpha, fullscreenMode, workspaceRenderOffset);
++
++    // The fade itself is not folded, only its start and its end: glass
++    // stacked above resamples the settled light, not every fade step.
++    m_focusLightFadingAtDraw = m_lastFocusLightStrength > 0.0f && focusLightFading(std::chrono::steady_clock::now());
++    if (m_lastFocusLightStrength > 0.0f)
++        Hash::hashCombine(fingerprint.runningHash, m_focusLightFadingAtDraw ? 2 : static_cast<int>(m_focusLightTarget));
++
++    // Same for frost: glass stacked above resamples where the ease starts and where it ends.
++    if (m_frost.moving() || m_frost.amount() > 0.0f)
++        Hash::hashCombine(fingerprint.runningHash, m_frost.moving() ? 2 : 1);
++
++    m_lastFoldedFrameSerial = g_pGlobalState->frameSerial;
++}
++
++void CGlassDecoration::draw(Render::CRenderContext& ctx, PHLMONITOR monitor, float const& alpha, const Render::SWindowRenderPresentation&) {
+     if (!g_pGlobalState)
+         return;
+ 
+-    // Render-order fingerprint: fold this window's identity/geometry/alpha into
+-    // the monitor's running hash in z-order, before resolveEnabled() so background
+-    // windows still count. Guarded by isForeignRender(), not a bare mainFB check,
+-    // since a foreign replay's z-order isn't this frame's real one. Folded at most
+-    // once per frameSerial: draw() itself runs 2-3x per monitor frame for a floating
+-    // window over fullscreen, and folding every copy would make the hash depend on
+-    // how many of those copies happened to render this frame rather than on the scene.
+-    if (monitor && !RenderGuards::isForeignRender() &&
+-        (g_pGlobalState->frameSerial == 0 || m_lastFoldedFrameSerial != g_pGlobalState->frameSerial)) {
+-        if (const auto window = m_window.lock()) {
+-            const auto workspace = window->m_workspace;
+-            const Vector2D workspaceRenderOffset =
+-                (workspace && !window->m_pinned) ? workspace->m_renderOffset->value() : Vector2D();
+-            const auto fullscreenMode = Fullscreen::controller()->getFullscreenModes(window).internal;
+-
+-            auto& fingerprint = g_pGlobalState->renderFingerprints[monitor->m_id];
+-            Hash::hashCombine(fingerprint.runningHash, window.get(), window->positionAnimation()->value(),
+-                               window->sizeAnimation()->value(), alpha, fullscreenMode, workspaceRenderOffset);
+-
+-            m_lastFoldedFrameSerial = g_pGlobalState->frameSerial;
+-        }
+-    }
++    foldRenderFingerprint(ctx, monitor, alpha);
+ 
+     const auto enabledResolution = resolveEnabled();
+     const bool enabled = enabledResolution == EEnabledResolution::Enabled;
+     updateNoBlurProp(enabled);
++    if (enabled && !m_glassWasEnabled)
++        scheduleShadowsForWindowGlass();
++    m_glassWasEnabled = enabled;
+     if (!enabled) {
+-        m_lastSelfSample = 0.0f;
++        m_lastSelfSample         = 0.0f;
++        m_lastFocusLightStrength = 0.0f;
++        m_frost.reset();
+ 
+         // Only count a skip that resolveEnabled() itself attributes to
+         // skip_opaque_windows — a tag or global-disable skip doesn't have a
+@@ -238,16 +353,20 @@ void CGlassDecoration::draw(PHLMONITOR monitor, float const& alpha) {
+ 
+     // A foreign render must not queue a pass element at all: it would sample its own
+     // framebuffer into this window's real, persistent background cache.
+-    if (RenderGuards::isForeignRender())
++    if (RenderGuards::isForeignRender(ctx))
+         return;
+ 
+-    queueGlassPass(alpha);
++    const bool xray = resolveXray();
++    if (xray)
++        requestXraySnapshot(monitor);
++
++    queueGlassPass(ctx, alpha, xray);
+ 
+     // A slide translates the scene under us without any geometry change, and
+     // Hyprland's per-tick window damage carries none of our sampling padding.
+     // Damage only: no cache state may be touched from a render.
+     const auto window = m_window.lock();
+-    if (window && !window->m_pinned) {
++    if (window && !(window->m_state & Desktop::View::WINDOW_STATE_PINNED)) {
+         const auto workspace = window->m_workspace;
+         if (workspace && workspace->m_renderOffset->isBeingAnimated())
+             damageEntire();
+@@ -265,8 +384,15 @@ void CGlassDecoration::markBackgroundDirty() {
+     const auto& config = g_pGlobalState->config;
+     const int64_t fps = config.windowsLiveResampleFps ? **config.windowsLiveResampleFps : 0;
+     const auto now = std::chrono::steady_clock::now();
+-    if (fps > 0 && now - m_lastDirtyMark < std::chrono::nanoseconds(1'000'000'000 / fps))
+-        return;
++    if (fps > 0) {
++        const auto interval = std::chrono::nanoseconds(1'000'000'000 / fps);
++        if (now - m_lastDirtyMark < interval) {
++            m_deferredResampleAt = m_lastDirtyMark + interval;
++            BackgroundDamageObserver::deferResample(*m_deferredResampleAt);
++            return;
++        }
++    }
++    m_deferredResampleAt.reset();
+     m_lastDirtyMark = now;
+ 
+     m_backgroundDirty = true;
+@@ -275,7 +401,20 @@ void CGlassDecoration::markBackgroundDirty() {
+     damageEntire();
+ }
+ 
+-bool CGlassDecoration::wantsBackgroundResample(PHLMONITOR monitor, const CBox& transformBox) const {
++void CGlassDecoration::flushDeferredResample(std::chrono::steady_clock::time_point now) {
++    if (!m_deferredResampleAt)
++        return;
++
++    if (now < *m_deferredResampleAt) {
++        BackgroundDamageObserver::deferResample(*m_deferredResampleAt);
++        return;
++    }
++
++    m_deferredResampleAt.reset();
++    markBackgroundDirty();
++}
++
++bool CGlassDecoration::wantsBackgroundResample(Render::CRenderContext& ctx, PHLMONITOR monitor, const CBox& windowBox, bool xray) const {
+     const auto& config = g_pGlobalState->config;
+     if (!config.windowsBackgroundCache || !**config.windowsBackgroundCache)
+         return true; // kill switch off: exact pre-cache behavior, no other state consulted
+@@ -294,6 +433,9 @@ bool CGlassDecoration::wantsBackgroundResample(PHLMONITOR monitor, const CBox& t
+     if (m_backgroundDirty)
+         return true; // markBackgroundDirty() mark not yet escalated into a scene-generation bump
+ 
++    if (m_cachedFromSnapshot != xray)
++        return true; // x-ray switched on or off
++
+     const auto window = m_window.lock();
+     if (!window)
+         return true;
+@@ -311,21 +453,21 @@ bool CGlassDecoration::wantsBackgroundResample(PHLMONITOR monitor, const CBox& t
+     if (WorkspaceAnimation::anyWorkspaceAnimating(monitor))
+         return true;
+ 
+-    const auto source = g_pHyprRenderer->m_renderData.currentFB;
++    const auto source = ctx.m_data.currentFB;
+     if (!m_sampleFramebuffer || !source)
+         return true;
+ 
+     // Monitor/scale/DPI/HDR change: recompute the size sampleBackground()
+     // would allocate this frame (never cached) and compare against the FBO's
+     // actual size/format from the last real sample.
+-    const bool isDark          = resolveThemeIsDark();
+-    const std::string preset   = resolvePresetName();
+-    const SResolveContext ctx  = {preset, isDark, config, g_pGlobalState->customPresets};
+-    const float blurStrength   = resolvePresetFloat(ctx, &SPresetValues::blurStrength, &SOverridableConfig::blurStrength);
+-    const int   downscale     = blurStrength >= GlassRenderer::BLUR_DOWNSCALE_THRESHOLD ? GlassRenderer::BLUR_DOWNSCALE_MAX : 1;
++    const bool isDark                     = resolveThemeIsDark();
++    const std::string preset              = resolvePresetName();
++    const SResolveContext resolveContext  = {preset, isDark, config, g_pGlobalState->customPresets};
++    const float blurStrength              = resolvePresetFloat(resolveContext, &SPresetValues::blurStrength, &SOverridableConfig::blurStrength);
++    const int   downscale                 = blurStrength >= GlassRenderer::BLUR_DOWNSCALE_THRESHOLD ? GlassRenderer::BLUR_DOWNSCALE_MAX : 1;
+ 
+-    const int fullWidth  = static_cast<int>(transformBox.w) + 2 * GlassRenderer::SAMPLE_PADDING_PX;
+-    const int fullHeight = static_cast<int>(transformBox.h) + 2 * GlassRenderer::SAMPLE_PADDING_PX;
++    const int fullWidth  = static_cast<int>(windowBox.w) + 2 * GlassRenderer::SAMPLE_PADDING_PX;
++    const int fullHeight = static_cast<int>(windowBox.h) + 2 * GlassRenderer::SAMPLE_PADDING_PX;
+     const int requiredWidth  = std::max(1, fullWidth / downscale);
+     const int requiredHeight = std::max(1, fullHeight / downscale);
+ 
+@@ -336,11 +478,11 @@ bool CGlassDecoration::wantsBackgroundResample(PHLMONITOR monitor, const CBox& t
+     return false;
+ }
+ 
+-void CGlassDecoration::renderPass(PHLMONITOR monitor, const float& alpha) {
++void CGlassDecoration::renderPass(Render::CRenderContext& ctx, PHLMONITOR monitor, const float& alpha, bool xray) {
+     // Belt and braces: draw() already refuses to queue a pass element for a foreign
+     // render, but a caller that reaches renderPass() during one anyway must not sample
+     // the foreign framebuffer into this decoration's persistent background cache.
+-    if (RenderGuards::isForeignRender())
++    if (RenderGuards::isForeignRender(ctx))
+         return;
+ 
+     auto& shaderManager = g_pGlobalState->shaderManager;
+@@ -353,7 +495,7 @@ void CGlassDecoration::renderPass(PHLMONITOR monitor, const float& alpha) {
+     if (!window)
+         return;
+ 
+-    const auto source = g_pHyprRenderer->m_renderData.currentFB;
++    const auto source = ctx.m_data.currentFB;
+     if (!source)
+         return;
+ 
+@@ -364,8 +506,7 @@ void CGlassDecoration::renderPass(PHLMONITOR monitor, const float& alpha) {
+     if (monitor)
+         Diagnostics::recordWindowGlassDraw(monitor->m_id);
+ 
+-    CBox windowBox    = *optBox;
+-    CBox transformBox = WindowGeometry::applyMonitorTransform(windowBox, monitor);
++    const CBox windowBox = *optBox;
+ 
+     // Every non-discarded frame needs this regardless of cache hit/miss: a
+     // cache-hit frame has no sampleBackground()/blurBackground() call for it
+@@ -374,21 +515,21 @@ void CGlassDecoration::renderPass(PHLMONITOR monitor, const float& alpha) {
+     // mis-render the composite even though the cached sample itself is fine.
+     const bool isDark          = resolveThemeIsDark();
+     const std::string preset   = resolvePresetName();
+-    const SResolveContext ctx  = {preset, isDark, g_pGlobalState->config, g_pGlobalState->customPresets};
++    const SResolveContext resolveContext  = {preset, isDark, g_pGlobalState->config, g_pGlobalState->customPresets};
+ 
+     float monitorScale = monitor->m_scale;
+ 
+     // Hyprland renders internal-fullscreen windows unrounded (dontRound), we need to
+     // match, or the glass would show rounded gaps at the screen corners
+     const bool fsUnrounded = Fullscreen::controller()->getFullscreenModes(window).internal == Fullscreen::FSMODE_FULLSCREEN;
+-    float cornerRadius  = fsUnrounded ? 0.0f : window->rounding() * monitorScale;
+-    float roundingPower = window->roundingPower();
++    float cornerRadius  = fsUnrounded ? 0.0f : window->presentation().rounding() * monitorScale;
++    float roundingPower = window->presentation().roundingPower();
+ 
+     // Resolved here, not inside the cache branch below, so it stays fresh on a
+     // cache-hit frame too, when neither sampleBackground() nor blendOwnContent() run.
+-    m_lastSelfSample = selfSampleFor(ctx);
++    m_lastSelfSample = selfSampleFor(resolveContext);
+     if (m_lastSelfSample > 0.0f && !g_pGlobalState->selfSampleConfigured) {
+-        // hyprctl keyword emits no config.reloaded, and a setup without layer
++        // hyprctl eval emits no config.reloaded, and a setup without layer
+         // surfaces has no other place that would notice self_sample turning on
+         g_pGlobalState->selfSampleConfigured = true;
+         BackgroundDamageObserver::refreshEnabled();
+@@ -399,66 +540,144 @@ void CGlassDecoration::renderPass(PHLMONITOR monitor, const float& alpha) {
+     // not the active/inactive dimming or opacity rules: those make the surface
+     // more translucent — revealing more glass — and shouldn't wash out the
+     // glass pane itself. Rebuild the fade-only alpha from its components.
+-    float glassAlpha = window->alphaTotalWithout(Desktop::View::WINDOW_ALPHA_ACTIVE);
+-    if (const auto workspace = window->m_workspace; workspace && !window->m_pinned)
++    float glassAlpha = window->presentation().alpha().getTotalWithout(Desktop::View::WINDOW_ALPHA_ACTIVE);
++    if (const auto workspace = window->m_workspace; workspace && !(window->m_state & Desktop::View::WINDOW_STATE_PINNED))
+         glassAlpha *= workspace->m_alpha->value();
+ 
++    // A fullscreen window shows no edge, like Hyprland draws it no border.
++    m_lastFocusLightStrength = fsUnrounded ? 0.0f : focusLightFor(resolveContext);
++    float focusLight         = 0.0f;
++    if (m_lastFocusLightStrength > 0.0f) {
++        const auto now = std::chrono::steady_clock::now();
++        // window.active normally got here first; this catches the window's first
++        // frame (and any missed change) without a fade
++        const auto focus  = Desktop::focusState();
++        const bool active = focus && focus->window() == window;
++        if (active != m_focusLightTarget) {
++            m_focusLightTarget    = active;
++            m_focusLightFrom      = active ? 1.0f : 0.0f;
++            m_focusLightChangedAt = {};
++        }
++        focusLight = m_lastFocusLightStrength * focusLightLevel(now);
++        // damage, not a loop: it stops once draw() has seen the fade settle
++        if (focusLightFading(now) || m_focusLightFadingAtDraw)
++            damageFocusLight();
++    }
++
+     const MONITORID monitorId = monitor ? monitor->m_id : -1; // -1 mirrors Hyprland's own MONITOR_INVALID
+ 
+-    if (!wantsBackgroundResample(monitor, transformBox)) {
++    if (!wantsBackgroundResample(ctx, monitor, windowBox, xray)) {
+         // Background unchanged since the last real sample — reuse it, skip
+         // the most expensive GPU work (blit + blur passes) entirely.
+         Diagnostics::recordWindowCacheHit(monitorId);
+     } else {
+-        const bool covered = GlassRenderer::sampleRegionCovered(transformBox, source, g_pHyprRenderer->m_renderData.damage);
++        // X-ray never samples the live frame: it holds the windows it hides.
++        const auto snapshot = xray ? xraySnapshotCovering(monitor, source, windowBox) : nullptr;
++        const bool covered  = xray ? static_cast<bool>(snapshot) :
++                                     GlassRenderer::sampleRegionCovered(windowBox, source, ctx.m_data.damage);
+ 
+         if (covered) {
+-            float blurStrength   = resolvePresetFloat(ctx, &SPresetValues::blurStrength, &SOverridableConfig::blurStrength);
++            float blurStrength   = resolvePresetFloat(resolveContext, &SPresetValues::blurStrength, &SOverridableConfig::blurStrength);
+             int downscale        = blurStrength >= GlassRenderer::BLUR_DOWNSCALE_THRESHOLD ? GlassRenderer::BLUR_DOWNSCALE_MAX : 1;
+ 
+-            GlassRenderer::sampleBackground(m_sampleFramebuffer, source, transformBox, m_samplePaddingRatio, downscale);
++            GlassRenderer::sampleBackground(ctx, m_sampleFramebuffer, xray ? snapshot : source, windowBox, m_samplePaddingRatio, downscale);
+ 
+             // Only here, on a real (non-cached) sample: blending onto a cache-hit
+             // frame would double-composite our own content over an already-blurred FBO.
+             if (m_lastSelfSample > 0.0f)
+-                GlassRenderer::blendOwnContent(m_sampleFramebuffer, window, monitor, transformBox, downscale,
+-                                               m_lastSelfSample, cornerRadius, roundingPower);
++                GlassRenderer::blendOwnContent(ctx, m_sampleFramebuffer, window, monitor, windowBox,
++                                               downscale, m_lastSelfSample, cornerRadius, roundingPower);
+ 
+             float blurRadius     = blurStrength * 12.0f / downscale;
+-            int blurIterations   = std::clamp(static_cast<int>(resolvePresetInt(ctx, &SPresetValues::blurIterations, &SOverridableConfig::blurIterations)), 1, 5);
++            int blurIterations   = std::clamp(static_cast<int>(resolvePresetInt(resolveContext, &SPresetValues::blurIterations, &SOverridableConfig::blurIterations)), 1, 5);
+ 
+-            if (ctx.config.blurFold && **ctx.config.blurFold) {
++            if (resolveContext.config.blurFold && **resolveContext.config.blurFold) {
+                 const GlassRenderer::SFoldedBlur folded = GlassRenderer::foldBlurPasses(blurRadius, blurIterations);
+                 blurRadius     = folded.radius;
+                 blurIterations = folded.iterations;
+             }
+ 
+-            GlassRenderer::blurBackground(m_sampleFramebuffer, blurRadius, blurIterations, source);
++            GlassRenderer::blurBackground(ctx, m_sampleFramebuffer, blurRadius, blurIterations, source);
++
++            m_frost.sampleChanged();
+ 
+             m_hasCachedSample       = true;
++            m_cachedFromSnapshot    = xray;
+             m_lastSceneGeneration   = g_pGlobalState->getSceneGeneration(monitor);
+             m_lastGenerationMonitor = monitorId;
+             m_backgroundDirty       = false;
+             Diagnostics::recordWindowCacheMiss(monitorId);
+-        } else if (m_hasCachedSample) {
++        } else if (m_hasCachedSample && (!xray || m_cachedFromSnapshot)) {
+             // Not enough of the padded box is damaged yet to safely re-sample
+-            // (would pick up stale pixels outside this frame's damage).
+-            // Force it into next frame's damage and draw the stale cache for
+-            // now — a future pass scissors the draw to what's actually damaged.
++            // (would pick up stale pixels outside this frame's damage), or not
++            // yet in the x-ray snapshot. Force it into next frame's damage and
++            // draw the stale cache for now — a future pass scissors the draw
++            // to what's actually damaged.
+             damageEntire();
+             Diagnostics::recordWindowDeferredResample(monitorId);
++            if (xray)
++                Diagnostics::recordXrayDeferredResample(monitorId);
+         } else {
+-            // No cache yet and not enough damage to sample cleanly: nothing
+-            // valid to draw this frame.
++            // No cache yet (or only a live one under x-ray) and not enough
++            // damage to sample cleanly: nothing valid to draw this frame.
+             damageEntire();
++            if (xray)
++                Diagnostics::recordXrayDeferredResample(monitorId);
+             return;
+         }
+     }
+ 
+-    GlassRenderer::applyGlassEffect(m_sampleFramebuffer, source,
+-                                     windowBox, transformBox, glassAlpha,
++    // Frost: blurred further where windows lie behind, clear over the wallpaper. X-ray
++    // shows no window behind the glass, and a fullscreen window has nothing behind it.
++    GlassRenderer::SFrostInput frostInput;
++    const float                frostSetting = (xray || fsUnrounded) ? 0.0f : frostFor(resolveContext);
++    if (frostSetting > 0.0f || m_frost.active()) {
++        const float target =
++            frostSetting > 0.0f ? frostSetting * Frost::amountForCoverage(Frost::coveredFraction(window, monitor, windowBox)) : 0.0f;
++
++        // A window spanning two monitors gets a different target on each: it snaps on a
++        // monitor change, or it would ease between them and never settle.
++        const bool sameMonitor = m_frostMonitor == monitorId;
++        m_frostMonitor         = monitorId;
++
++        // damage, not a loop: it stops once the amount settles. The sample is unchanged,
++        // so no resample is owed and the cache stays valid.
++        if (m_frost.step(target, sameMonitor && hyprlandAnimationsEnabled(), std::chrono::steady_clock::now()))
++            damageFrost();
++
++        if (m_frost.amount() > Frost::MINIMUM_AMOUNT) {
++            const float blurStrength = resolvePresetFloat(resolveContext, &SPresetValues::blurStrength, &SOverridableConfig::blurStrength);
++            const int   downscale    = blurStrength >= GlassRenderer::BLUR_DOWNSCALE_THRESHOLD ? GlassRenderer::BLUR_DOWNSCALE_MAX : 1;
++            // the copy is half the sample's size on top of the sample's own downscale
++            const float radius = frostBlurFor(resolveContext) * 12.0f / (2.0f * downscale);
++
++            if (m_frost.needsBuild(m_sampleFramebuffer, radius)) {
++                float frostRadius     = radius;
++                int   frostIterations = Frost::BLUR_ITERATIONS;
++                if (resolveContext.config.blurFold && **resolveContext.config.blurFold) {
++                    const GlassRenderer::SFoldedBlur folded = GlassRenderer::foldBlurPasses(frostRadius, frostIterations);
++                    frostRadius     = folded.radius;
++                    frostIterations = folded.iterations;
++                }
++
++                if (GlassRenderer::buildFrostCopy(ctx, m_sampleFramebuffer, m_frost.copy(), m_frost.temporary(), frostRadius, frostIterations, source)) {
++                    m_frost.built(radius);
++                    Diagnostics::recordFrostRebuild(monitorId);
++                }
++            }
++
++            if (!m_frost.needsBuild(m_sampleFramebuffer, radius))
++                frostInput = {m_frost.copy(), m_frost.amount()};
++        } else {
++            m_frost.releaseCopy();
++        }
++    }
++
++    GlassRenderer::applyGlassEffect(ctx, m_sampleFramebuffer, source,
++                                     windowBox, glassAlpha,
+                                      std::array<float, 4>{cornerRadius, cornerRadius, cornerRadius, cornerRadius},
+-                                     roundingPower, m_samplePaddingRatio, ctx);
++                                     roundingPower, m_samplePaddingRatio, resolveContext, nullptr, focusLight,
++                                     frostInput.copy ? &frostInput : nullptr);
+ }
+ 
+ eDecorationType CGlassDecoration::getDecorationType() {
+@@ -470,10 +689,10 @@ eDecorationType CGlassDecoration::getDecorationType() {
+ // PHLWINDOW argument is ignored on purpose: a third-party replay passes its own
+ // handle, while our state is keyed on the owner we were constructed with.
+ void CGlassDecoration::updateWindow(PHLWINDOW) {
+-    // A plugin may replay this mid-render under substituted geometry. mainFB is
+-    // set exactly between begin() and end(); currentFB also follows binds taken
+-    // outside a pass. Above the m_last* store, so the next real update bumps.
+-    if (g_pHyprRenderer->m_renderData.mainFB)
++    // A plugin may replay this mid-render under substituted geometry. The render
++    // context is active exactly between begin() and finishRender(). Above the
++    // m_last* store, so the next real update bumps.
++    if (g_pHyprRenderer->context().active())
+         return;
+ 
+     damageEntire();
+@@ -501,8 +720,8 @@ void CGlassDecoration::updateWindow(PHLWINDOW) {
+     // layer; switching to it bumps on its own. Same predicate Hyprland renders
+     // by: a slide or fade keeps drawing an already-invisible workspace.
+     const auto workspace = ownWindow->m_workspace;
+-    if (workspace && !workspace->m_visible && !workspace->m_forceRendering && !workspace->m_renderOffset->isBeingAnimated() &&
+-        !workspace->m_alpha->isBeingAnimated() && !ownWindow->m_pinned)
++    if (workspace && !workspace->visible() && !workspace->m_forceRendering && !workspace->m_renderOffset->isBeingAnimated() &&
++        !workspace->m_alpha->isBeingAnimated() && !(ownWindow->m_state & Desktop::View::WINDOW_STATE_PINNED))
+         return;
+ 
+     g_pGlobalState->bumpSceneGeneration(monitor);
+diff --git a/src/GlassDecoration.hpp b/src/GlassDecoration.hpp
+index 6835d33..4ffddd5 100644
+--- a/src/GlassDecoration.hpp
++++ b/src/GlassDecoration.hpp
+@@ -1,10 +1,12 @@
+ #pragma once
+ 
++#include "Frost.hpp"
+ #include "GlassRenderer.hpp"
+ #include "PluginConfig.hpp"
+ 
+ #include <chrono>
+-#include <hyprland/src/desktop/view/Window.hpp>
++#include <optional>
++#include <hyprland/src/desktop/view/window/Window.hpp>
+ #include <hyprland/src/render/decorations/IHyprWindowDecoration.hpp>
+ #include <hyprland/src/render/Framebuffer.hpp>
+ #include <hyprland/src/SharedDefs.hpp>
+@@ -16,7 +18,7 @@ class CGlassDecoration : public IHyprWindowDecoration {
+ 
+     [[nodiscard]] SDecorationPositioningInfo getPositioningInfo() override;
+     void                                     onPositioningReply(const SDecorationPositioningReply& reply) override;
+-    void                                     draw(PHLMONITOR monitor, float const& alpha) override;
++    void                                     draw(Render::CRenderContext& ctx, PHLMONITOR monitor, float const& alpha, const Render::SWindowRenderPresentation&) override;
+     [[nodiscard]] eDecorationType            getDecorationType() override;
+     void                                     updateWindow(PHLWINDOW window) override;
+     void                                     damageEntire() override;
+@@ -25,7 +27,7 @@ class CGlassDecoration : public IHyprWindowDecoration {
+     [[nodiscard]] std::string                getDisplayName() override;
+ 
+     [[nodiscard]] PHLWINDOW getOwner();
+-    void                    renderPass(PHLMONITOR monitor, const float& alpha);
++    void                    renderPass(Render::CRenderContext& ctx, PHLMONITOR monitor, const float& alpha, bool xray);
+     void                    onFullscreenStateChanged();
+ 
+     // Content below committed damage in our sample region — resample next frame.
+@@ -34,11 +36,24 @@ class CGlassDecoration : public IHyprWindowDecoration {
+     // window's own surface tree.
+     void markBackgroundDirty();
+ 
++    // Folds this window into the monitor's render-order fingerprint. Public because
++    // Hyprland draws some windows without decorations (X11 menus, tooltips), so
++    // draw() never runs for them and main.cpp folds them from the window stage.
++    void foldRenderFingerprint(Render::CRenderContext& ctx, const PHLMONITOR& monitor, float alpha);
++
++    // Applies a mark markBackgroundDirty() owed under the rate limit once its
++    // deadline passed, or re-arms the shared timer for it.
++    void flushDeferredResample(std::chrono::steady_clock::time_point now);
++
++    // Hyprland's active window changed (window.active, every decoration): starts
++    // the focus light's fade and damages the glass if it is lit.
++    void onActiveWindowChanged(const PHLWINDOW& activeWindow);
++
+     // Pure predicate: true when the cached sample must not be reused as-is
+     // this frame. Called identically from CGlassPassElement::needsLiveBlur()
+     // (draw()-time) and from renderPass() itself — safe to call twice, no GL
+-    // calls. transformBox is monitor-local physical pixels (see callers).
+-    [[nodiscard]] bool wantsBackgroundResample(PHLMONITOR monitor, const CBox& transformBox) const;
++    // calls. windowBox is monitor-local physical pixels (see callers).
++    [[nodiscard]] bool wantsBackgroundResample(Render::CRenderContext& ctx, PHLMONITOR monitor, const CBox& windowBox, bool xray) const;
+ 
+     // Owner test without the shared_ptr copy getOwner() hands out.
+     [[nodiscard]] bool  ownsWindow(const PHLWINDOW& window) const { return m_window == window; }
+@@ -69,7 +84,12 @@ class CGlassDecoration : public IHyprWindowDecoration {
+     // Window background cache state.
+     bool m_hasCachedSample = false;
+     bool m_backgroundDirty = false;
++    // The cached sample came from the x-ray snapshot: switching x-ray on or off
++    // must not reuse a sample of the other.
++    bool m_cachedFromSnapshot = false;
+     std::chrono::steady_clock::time_point m_lastDirtyMark{};
++    // A mark the rate limit held back: the last change of a burst must still land.
++    std::optional<std::chrono::steady_clock::time_point> m_deferredResampleAt;
+ 
+     // Scene generation at the last real sample, plus the monitor it was
+     // captured against. SGlobalState::sceneGeneration is deliberately keyed
+@@ -88,8 +108,36 @@ class CGlassDecoration : public IHyprWindowDecoration {
+     // glass is invisible on static windows (#46).
+     bool m_noBlurApplied = false;
+ 
++    // Glass can start without a config reload (tags, hyprctl eval), and
++    // each start rechecks that Hyprland shadows are on.
++    bool m_glassWasEnabled = false;
++
+     float m_lastSelfSample = 0.0f;
+ 
++    // Focus light: whether this is the active window, and the fade the last
++    // change started (from its level then, at that time).
++    bool                                  m_focusLightTarget = false;
++    float                                 m_focusLightFrom   = 0.0f;
++    std::chrono::steady_clock::time_point m_focusLightChangedAt{};
++    // focus_light as of the last rendered frame, 0 when it, or the glass, is off.
++    float m_lastFocusLightStrength = 0.0f;
++    // What draw() folded into the render-order fingerprint this frame said the
++    // fade was still running: renderPass() keeps frames coming until draw()
++    // sees it settled, so the settled light bumps the scene once and glass
++    // stacked above resamples it.
++    bool m_focusLightFadingAtDraw = false;
++
++    [[nodiscard]] bool  focusLightFading(std::chrono::steady_clock::time_point now) const;
++    [[nodiscard]] float focusLightLevel(std::chrono::steady_clock::time_point now) const;
++    void                damageFocusLight();
++
++    // Frost: the eased amount and the frosted copy of the sample (see Frost.hpp).
++    Frost::CFrostState m_frost;
++    MONITORID          m_frostMonitor = -1; // the monitor the amount was last stepped for
++
++    // Damages the glass box only: frost changes how the cached sample is drawn, not the sample.
++    void damageFrost();
++
+     // Frame serial the last glass element was queued for, and its index in that
+     // frame. Hyprland renders a floating window over fullscreen more than once
+     // per frame, and only the last glass may sample and blur.
+@@ -103,7 +151,7 @@ class CGlassDecoration : public IHyprWindowDecoration {
+     // many duplicate copies happened to render, not on the scene.
+     uint64_t m_lastFoldedFrameSerial = 0;
+ 
+-    void               queueGlassPass(float alpha);
++    void               queueGlassPass(Render::CRenderContext& ctx, float alpha, bool xray);
+     [[nodiscard]] bool isCurrentGlassPass(uint64_t serial, uint32_t index) const {
+         return serial == 0 || (serial == m_glassFrameSerial && index == m_glassQueueIndex);
+     }
+@@ -118,11 +166,12 @@ class CGlassDecoration : public IHyprWindowDecoration {
+     // precedence, and re-deriving would mis-attribute those to opaque-skip.
+     enum class EEnabledResolution {
+         Enabled,
+-        Disabled,              // hyprglass_disabled tag, or plugin:hyprglass:enabled = 0
++        Disabled,              // hyprglass_disabled tag, or enabled = false
+         DisabledBecauseOpaque, // skip_opaque_windows and the window is opaque
+     };
+ 
+     [[nodiscard]] EEnabledResolution resolveEnabled() const;
++    [[nodiscard]] bool               resolveXray() const;
+     [[nodiscard]] bool               resolveThemeIsDark() const;
+     [[nodiscard]] std::string        resolvePresetName() const;
+ 
+diff --git a/src/GlassLayerCompositeElement.cpp b/src/GlassLayerCompositeElement.cpp
+index b885f8e..869d805 100644
+--- a/src/GlassLayerCompositeElement.cpp
++++ b/src/GlassLayerCompositeElement.cpp
+@@ -7,14 +7,14 @@
+ CGlassLayerCompositeElement::CGlassLayerCompositeElement(const SGlassLayerCompositeData& data)
+     : m_data(data) {}
+ 
+-std::vector<UP<IPassElement>> CGlassLayerCompositeElement::draw() {
++std::vector<UP<IPassElement>> CGlassLayerCompositeElement::draw(Render::CRenderContext& ctx) {
+     if (m_data.layerState && m_data.layerState->getLayerSurface())
+-        m_data.layerState->compositeAndRestore(g_pHyprRenderer->m_renderData.pMonitor.lock(), m_data.alpha, m_data.maskSource);
++        m_data.layerState->compositeAndRestore(ctx, ctx.m_data.pMonitor.lock(), m_data.alpha, m_data.maskSource);
+ 
+     return {};
+ }
+ 
+-std::optional<CBox> CGlassLayerCompositeElement::boundingBox() {
++std::optional<CBox> CGlassLayerCompositeElement::boundingBox(Render::CRenderContext& ctx) {
+     if (!m_data.layerState)
+         return std::nullopt;
+ 
+@@ -24,11 +24,11 @@ std::optional<CBox> CGlassLayerCompositeElement::boundingBox() {
+ 
+     // Same helper as CGlassLayerPassElement::boundingBox(), so the pre- and
+     // post-surface elements never disagree about the layer's box.
+-    const auto monitor = g_pHyprRenderer->m_renderData.pMonitor.lock();
++    const auto monitor = ctx.m_data.pMonitor.lock();
+     return LayerGeometry::computePaddedLogicalLayerBox(layerSurface, monitor, GlassRenderer::SAMPLE_PADDING_PX);
+ }
+ 
+-bool CGlassLayerCompositeElement::needsLiveBlur() {
++bool CGlassLayerCompositeElement::needsLiveBlur(Render::CRenderContext&) {
+     // Always false: Hyprland's CRenderPass::render() asserts a bounding box
+     // for any element reporting live blur ("No bounding box for an element
+     // with live blur is illegal", Pass.cpp), and this element's boundingBox()
+@@ -36,6 +36,6 @@ bool CGlassLayerCompositeElement::needsLiveBlur() {
+     return false;
+ }
+ 
+-bool CGlassLayerCompositeElement::needsPrecomputeBlur() {
++bool CGlassLayerCompositeElement::needsPrecomputeBlur(Render::CRenderContext&) {
+     return false;
+ }
+diff --git a/src/GlassLayerCompositeElement.hpp b/src/GlassLayerCompositeElement.hpp
+index c381ceb..af249ae 100644
+--- a/src/GlassLayerCompositeElement.hpp
++++ b/src/GlassLayerCompositeElement.hpp
+@@ -18,10 +18,10 @@ class CGlassLayerCompositeElement : public IPassElement {
+     explicit CGlassLayerCompositeElement(const SGlassLayerCompositeData& data);
+     ~CGlassLayerCompositeElement() override = default;
+ 
+-    std::vector<UP<IPassElement>> draw() override;
+-    [[nodiscard]] bool                needsLiveBlur() override;
+-    [[nodiscard]] bool                needsPrecomputeBlur() override;
+-    [[nodiscard]] std::optional<CBox> boundingBox() override;
++    std::vector<UP<IPassElement>> draw(Render::CRenderContext& ctx) override;
++    [[nodiscard]] bool                needsLiveBlur(Render::CRenderContext&) override;
++    [[nodiscard]] bool                needsPrecomputeBlur(Render::CRenderContext&) override;
++    [[nodiscard]] std::optional<CBox> boundingBox(Render::CRenderContext& ctx) override;
+ 
+     [[nodiscard]] const char* passName() override { return "CGlassLayerCompositeElement"; }
+     [[nodiscard]] ePassElementType type() override { return EK_CUSTOM; }
+diff --git a/src/GlassLayerPassElement.cpp b/src/GlassLayerPassElement.cpp
+index b36f8b0..cb603cc 100644
+--- a/src/GlassLayerPassElement.cpp
++++ b/src/GlassLayerPassElement.cpp
+@@ -8,19 +8,19 @@
+ CGlassLayerPassElement::CGlassLayerPassElement(const SGlassLayerPassData& data)
+     : m_data(data) {}
+ 
+-std::vector<UP<IPassElement>> CGlassLayerPassElement::draw() {
++std::vector<UP<IPassElement>> CGlassLayerPassElement::draw(Render::CRenderContext& ctx) {
+     // debug:mode = hints_only: keep every hint below but do none of the GL
+     // work, to isolate the render pass's own cost from the glass pipeline's.
+     if (currentDebugMode() == EDebugMode::HINTS_ONLY)
+         return {};
+ 
+     if (m_data.layerState && m_data.layerState->getLayerSurface())
+-        m_data.layerState->sampleAndRedirect(g_pHyprRenderer->m_renderData.pMonitor.lock(), m_data.alpha);
++        m_data.layerState->sampleAndRedirect(ctx, ctx.m_data.pMonitor.lock(), m_data.alpha, m_data.xray);
+ 
+     return {};
+ }
+ 
+-std::optional<CBox> CGlassLayerPassElement::paddedLogicalBox() const {
++std::optional<CBox> CGlassLayerPassElement::paddedLogicalBox(Render::CRenderContext& ctx) const {
+     if (!m_data.layerState)
+         return std::nullopt;
+ 
+@@ -28,15 +28,15 @@ std::optional<CBox> CGlassLayerPassElement::paddedLogicalBox() const {
+     if (!layerSurface)
+         return std::nullopt;
+ 
+-    const auto monitor = g_pHyprRenderer->m_renderData.pMonitor.lock();
++    const auto monitor = ctx.m_data.pMonitor.lock();
+     return LayerGeometry::computePaddedLogicalLayerBox(layerSurface, monitor, GlassRenderer::SAMPLE_PADDING_PX);
+ }
+ 
+-std::optional<CBox> CGlassLayerPassElement::boundingBox() {
+-    return paddedLogicalBox();
++std::optional<CBox> CGlassLayerPassElement::boundingBox(Render::CRenderContext& ctx) {
++    return paddedLogicalBox(ctx);
+ }
+ 
+-bool CGlassLayerPassElement::needsLiveBlur() {
++bool CGlassLayerPassElement::needsLiveBlur(Render::CRenderContext& ctx) {
+     // debug:mode = gl_work_only: run the GL pipeline but withhold these
+     // hints, isolating their render-pass cost from the pipeline's own GL cost.
+     if (currentDebugMode() == EDebugMode::GL_WORK_ONLY)
+@@ -45,21 +45,42 @@ bool CGlassLayerPassElement::needsLiveBlur() {
+     // Ensure the render pass fully re-renders the background behind this
+     // element before we sample it. Without this, partial damage causes the
+     // glass to sample a mix of fresh wallpaper and its own stale output.
+-    // Per-monitor sceneGeneration prevents non-focused monitors from
+-    // re-sampling, so the continuous damage cost is limited.
+     //
+     // Must agree with boundingBox() on whether a box exists: Hyprland's
+     // CRenderPass::render() asserts a bounding box for any element reporting
+     // live blur ("No bounding box for an element with live blur is illegal",
+     // Pass.cpp) and aborts the compositor if it's absent.
+-    return paddedLogicalBox().has_value();
++    if (!paddedLogicalBox(ctx).has_value())
++        return false;
++
++    const auto monitor  = ctx.m_data.pMonitor.lock();
++    const auto layerBox = LayerGeometry::computeLayerBox(m_data.layerState->getLayerSurface(), monitor);
++    if (!layerBox)
++        return false;
++
++    // A contour field waiting to be built needs the hint too: the build wants
++    // every pixel of the layer redrawn, and nothing may occlude part of it.
++    if (m_data.layerState->needsContourBuild(ctx, monitor, *layerBox, m_data.alpha))
++        return true;
++
++    // Only a frame that takes a new sample needs the background redrawn. A cache
++    // hit composites our own texture, and the hint would keep an animated blur
++    // variant redrawing this monitor for nothing: same gate as the window B1.
++    // sampleAndRedirect() decides from the same predicate, so the two agree.
++    if (!m_data.layerState->wantsBackgroundResample(monitor, *layerBox, m_data.xray))
++        return false;
++
++    // An x-ray snapshot that already covers the layer is sampled instead of the
++    // frame. One that does not needs this hint: it un-occludes the background
++    // under opaque windows so the snapshot copy picks it up this frame.
++    return !(m_data.xray && m_data.layerState->xraySnapshotCovers(ctx, monitor));
+ }
+ 
+-bool CGlassLayerPassElement::needsPrecomputeBlur() {
++bool CGlassLayerPassElement::needsPrecomputeBlur(Render::CRenderContext&) {
+     return false;
+ }
+ 
+-bool CGlassLayerPassElement::disableSimplification() {
++bool CGlassLayerPassElement::disableSimplification(Render::CRenderContext&) {
+     // Left enabled, including under debug:mode = gl_work_only: an element whose
+     // padded box misses the render pass's damage is safely discarded here — no
+     // partial-box artifact, same reasoning as CGlassPassElement. The post-surface
+diff --git a/src/GlassLayerPassElement.hpp b/src/GlassLayerPassElement.hpp
+index a256e1a..bea0c88 100644
+--- a/src/GlassLayerPassElement.hpp
++++ b/src/GlassLayerPassElement.hpp
+@@ -12,16 +12,18 @@ class CGlassLayerPassElement : public IPassElement {
+     struct SGlassLayerPassData {
+         std::shared_ptr<CGlassLayerSurface> layerState;
+         float                               alpha = 1.0f;
++        // Resolved once where the element is queued: needsLiveBlur() and draw() must agree on it.
++        bool                                xray  = false;
+     };
+ 
+     explicit CGlassLayerPassElement(const SGlassLayerPassData& data);
+     ~CGlassLayerPassElement() override = default;
+ 
+-    std::vector<UP<IPassElement>> draw() override;
+-    [[nodiscard]] bool                needsLiveBlur() override;
+-    [[nodiscard]] bool                needsPrecomputeBlur() override;
+-    [[nodiscard]] std::optional<CBox> boundingBox() override;
+-    [[nodiscard]] bool                disableSimplification() override;
++    std::vector<UP<IPassElement>> draw(Render::CRenderContext& ctx) override;
++    [[nodiscard]] bool                needsLiveBlur(Render::CRenderContext& ctx) override;
++    [[nodiscard]] bool                needsPrecomputeBlur(Render::CRenderContext&) override;
++    [[nodiscard]] std::optional<CBox> boundingBox(Render::CRenderContext& ctx) override;
++    [[nodiscard]] bool                disableSimplification(Render::CRenderContext&) override;
+ 
+     [[nodiscard]] const char* passName() override { return "CGlassLayerPassElement"; }
+     [[nodiscard]] ePassElementType type() override { return EK_CUSTOM; }
+@@ -29,7 +31,7 @@ class CGlassLayerPassElement : public IPassElement {
+   private:
+     // Shared by boundingBox() and needsLiveBlur() so they can never disagree
+     // about whether a box exists — see needsLiveBlur()'s comment.
+-    [[nodiscard]] std::optional<CBox> paddedLogicalBox() const;
++    [[nodiscard]] std::optional<CBox> paddedLogicalBox(Render::CRenderContext& ctx) const;
+ 
+     SGlassLayerPassData m_data;
+ };
+diff --git a/src/GlassLayerSurface.cpp b/src/GlassLayerSurface.cpp
+index 73bc9aa..7733408 100644
+--- a/src/GlassLayerSurface.cpp
++++ b/src/GlassLayerSurface.cpp
+@@ -1,7 +1,9 @@
+ #include "GlassLayerSurface.hpp"
++#include "BackgroundDamageObserver.hpp"
+ #include "BuiltInPresets.hpp"
+ #include "Diagnostics.hpp"
+ #include "GlassRenderer.hpp"
++#include "GlassSnapshotElement.hpp"
+ #include "Globals.hpp"
+ #include "LayerGeometry.hpp"
+ #include "WorkspaceAnimation.hpp"
+@@ -9,16 +11,12 @@
+ #include <algorithm>
+ #include <cmath>
+ #include <GLES3/gl32.h>
++#include <hyprland/src/managers/SessionLockManager.hpp>
++#include <hyprland/src/protocols/LayerShell.hpp>
+ #include <hyprland/src/render/OpenGL.hpp>
+ #include <hyprland/src/render/Renderer.hpp>
+ #include <hyprutils/math/Misc.hpp>
+ 
+-static CBox transformedLayerBox(CBox pixelBox, PHLMONITOR monitor) {
+-    const auto transform = Math::wlTransformToHyprutils(Math::invertTransform(monitor->m_transform));
+-    pixelBox.transform(transform, monitor->m_transformedSize.x, monitor->m_transformedSize.y).noNegativeSize().round();
+-    return pixelBox;
+-}
+-
+ CGlassLayerSurface::CGlassLayerSurface(PHLLS layerSurface)
+     : m_layerSurface(layerSurface) {
+ }
+@@ -47,6 +45,43 @@ bool CGlassLayerSurface::resolveThemeIsDark() const {
+     return true;
+ }
+ 
++bool CGlassLayerSurface::resolveXray() const {
++    // A background or bottom layer would sample its own previous output from
++    // the snapshot, and live sampling already shows nothing but what is under it.
++    const auto layerSurface = m_layerSurface.lock();
++    if (!layerSurface || layerSurface->m_layer <= ZWLR_LAYER_SHELL_V1_LAYER_BOTTOM || !xrayHasBackground())
++        return false;
++
++    // Without a workspace no window is drawn and no snapshot is ever taken.
++    const auto monitor = layerSurface->m_monitor.lock();
++    if (!monitor || !monitor->m_activeWorkspace)
++        return false;
++
++    // The lockscreen pass renders layers with no snapshot copy before them, so a
++    // resample there would defer every frame until unlock.
++    if (g_pSessionLockManager && g_pSessionLockManager->isSessionLocked())
++        return false;
++
++    const bool            isDark = resolveThemeIsDark();
++    const std::string     preset = resolvePresetName();
++    const SResolveContext ctx    = {preset, isDark, g_pGlobalState->config, g_pGlobalState->customPresets};
++    return resolvePresetInt(ctx, &SPresetValues::xray, &SOverridableConfig::xray, GlobalDefaults::XRAY) > 0;
++}
++
++bool CGlassLayerSurface::xraySnapshotCovers(Render::CRenderContext& ctx, PHLMONITOR monitor) const {
++    const auto layerSurface = m_layerSurface.lock();
++    if (!layerSurface || !monitor)
++        return false;
++
++    const auto layerBox = LayerGeometry::computeLayerBox(layerSurface, monitor);
++    if (!layerBox)
++        return false;
++
++    // The full layer box: sampleAndRedirect() samples it or the blur region
++    // inside it, so covering it covers both.
++    return static_cast<bool>(xraySnapshotCovering(monitor, ctx.m_data.currentFB, *layerBox));
++}
++
+ std::string CGlassLayerSurface::resolvePresetName() const {
+     try {
+         // Per-namespace preset override (highest priority)
+@@ -86,6 +121,17 @@ ELayerMaskMode CGlassLayerSurface::resolveMaskMode() const {
+     return ELayerMaskMode::AUTO;
+ }
+ 
++std::optional<SLayerShape> CGlassLayerSurface::resolveShape() const {
++    const auto layerSurface = m_layerSurface.lock();
++    if (!layerSurface)
++        return std::nullopt;
++
++    const auto& shapes = g_pGlobalState->layerNamespaceShapes;
++    if (auto it = shapes.find(layerSurface->m_namespace); it != shapes.end())
++        return it->second;
++    return std::nullopt;
++}
++
+ CGlassLayerSurface::EMaskSource CGlassLayerSurface::resolveMaskSource() const {
+     const auto layerSurface = m_layerSurface.lock();
+     const auto wlSurface    = layerSurface ? layerSurface->wlSurface() : nullptr; // root surface only
+@@ -97,6 +143,8 @@ CGlassLayerSurface::EMaskSource CGlassLayerSurface::resolveMaskSource() const {
+             return EMaskSource::ALPHA_THRESHOLD;
+         case ELayerMaskMode::REGION:
+             return (hasEffect && !regionEmpty) ? EMaskSource::PROTOCOL_REGION : EMaskSource::NONE;
++        case ELayerMaskMode::CONTOUR:
++            return g_pGlobalState->contourUnavailable ? EMaskSource::ALPHA_THRESHOLD : EMaskSource::CONTOUR;
+         case ELayerMaskMode::AUTO:
+         default:
+             if (hasEffect)
+@@ -120,7 +168,7 @@ PHLLS CGlassLayerSurface::getLayerSurface() const {
+     return m_layerSurface.lock();
+ }
+ 
+-CRegion CGlassLayerSurface::transformedBlurRegion(PHLMONITOR monitor, const CBox& rawBox) const {
++CRegion CGlassLayerSurface::transformedBlurRegion(PHLMONITOR monitor, const CBox& layerBox) const {
+     const auto layerSurface = m_layerSurface.lock();
+     const auto wlSurface    = layerSurface ? layerSurface->wlSurface() : nullptr;
+     if (!layerSurface || !wlSurface || !monitor)
+@@ -128,15 +176,12 @@ CRegion CGlassLayerSurface::transformedBlurRegion(PHLMONITOR monitor, const CBox
+ 
+     const auto logicalSize = layerSurface->size(Desktop::View::IGeometric::GEOMETRIC_CURRENT);
+ 
+-    // surface-local logical region -> box-local pixels, same
+-    // scale/translate/transform sequence as transformedLayerBox()
++    // surface-local logical region -> monitor-local pixels, the space layerBox is in
+     CRegion region = wlSurface->m_blurRegion.copy();
+     region.intersect(0, 0, logicalSize.x, logicalSize.y); // spec: clipped to surface size
+     region.scale(static_cast<float>(monitor->m_scale));
+-    region.translate(rawBox.pos());
+-    region.intersect(rawBox.x, rawBox.y, rawBox.w, rawBox.h); // defensive
+-    region.transform(Math::wlTransformToHyprutils(Math::invertTransform(monitor->m_transform)),
+-                      monitor->m_transformedSize.x, monitor->m_transformedSize.y);
++    region.translate(layerBox.pos());
++    region.intersect(layerBox.x, layerBox.y, layerBox.w, layerBox.h); // defensive
+     return region;
+ }
+ 
+@@ -187,7 +232,7 @@ void CGlassLayerSurface::damageIfMoved() {
+     const bool isAnimating = layerSurface->positionAnimation()->isBeingAnimated() ||
+                              layerSurface->sizeAnimation()->isBeingAnimated() ||
+                              layerSurface->alpha()[Desktop::View::LS_ALPHA_FADE]->isBeingAnimated() ||
+-                             !layerSurface->m_mapped;
++                             !layerSurface->mapped();
+ 
+     const bool moved = currentPosition != m_lastPosition || currentSize != m_lastSize;
+ 
+@@ -228,8 +273,15 @@ void CGlassLayerSurface::markBackgroundDirty() {
+     const auto& config = g_pGlobalState->config;
+     const int64_t fps = config.layersLiveResampleFps ? **config.layersLiveResampleFps : 0;
+     const auto now = std::chrono::steady_clock::now();
+-    if (fps > 0 && now - m_lastDirtyMark < std::chrono::nanoseconds(1'000'000'000 / fps))
+-        return;
++    if (fps > 0) {
++        const auto interval = std::chrono::nanoseconds(1'000'000'000 / fps);
++        if (now - m_lastDirtyMark < interval) {
++            m_deferredResampleAt = m_lastDirtyMark + interval;
++            BackgroundDamageObserver::deferResample(*m_deferredResampleAt);
++            return;
++        }
++    }
++    m_deferredResampleAt.reset();
+     m_lastDirtyMark = now;
+ 
+     m_backgroundDirty = true;
+@@ -238,7 +290,78 @@ void CGlassLayerSurface::markBackgroundDirty() {
+     damageSampleRegion();
+ }
+ 
+-void CGlassLayerSurface::sampleAndRedirect(PHLMONITOR monitor, float alpha) {
++void CGlassLayerSurface::markContourContentChanged() {
++    switch (m_contour.invalidate(std::chrono::steady_clock::now())) {
++        case Contour::CField::EInvalidation::Now:
++            // the field is rebuilt from a frame that redraws the whole layer
++            damageSampleRegion();
++            break;
++        case Contour::CField::EInvalidation::Deferred:
++            BackgroundDamageObserver::deferResample(*m_contour.deferredAt());
++            break;
++        case Contour::CField::EInvalidation::None:
++            break;
++    }
++}
++
++void CGlassLayerSurface::flushDeferredResample(std::chrono::steady_clock::time_point now) {
++    switch (m_contour.flushDeferred(now)) {
++        case Contour::CField::EInvalidation::Now:
++            damageSampleRegion();
++            break;
++        case Contour::CField::EInvalidation::Deferred:
++            BackgroundDamageObserver::deferResample(*m_contour.deferredAt());
++            break;
++        case Contour::CField::EInvalidation::None:
++            break;
++    }
++
++    if (!m_deferredResampleAt)
++        return;
++
++    if (now < *m_deferredResampleAt) {
++        BackgroundDamageObserver::deferResample(*m_deferredResampleAt);
++        return;
++    }
++
++    m_deferredResampleAt.reset();
++    markBackgroundDirty();
++}
++
++std::optional<CBox> CGlassLayerSurface::sampleRegionBox(PHLMONITOR monitor, const CBox& layerBox) const {
++    if (resolveMaskSource() != EMaskSource::PROTOCOL_REGION)
++        return std::nullopt;
++
++    return regionBoundingBoxAbsolute(monitor, layerBox);
++}
++
++bool CGlassLayerSurface::wantsBackgroundResample(PHLMONITOR monitor, const CBox& layerBox, bool xray) const {
++    const auto layerSurface = m_layerSurface.lock();
++    if (!layerSurface)
++        return true;
++
++    // A workspace slide or fade moves the whole scene behind us without changing
++    // any window's own geometry, so no window decoration update reports it.
++    const bool isAnimating = layerSurface->positionAnimation()->isBeingAnimated() ||
++                             layerSurface->sizeAnimation()->isBeingAnimated() ||
++                             layerSurface->alpha()[Desktop::View::LS_ALPHA_FADE]->isBeingAnimated() ||
++                             WorkspaceAnimation::anyWorkspaceAnimating(monitor);
++    const auto& config    = g_pGlobalState->config;
++    const bool  forceLive = config.layersForceLiveResample && **config.layersForceLiveResample;
++
++    // A region resize/move is otherwise invisible here (a layer's own commit
++    // doesn't mark itself dirty) — without this the mask shape would update
++    // immediately while the sample stays from the old box. Also true leaving
++    // region mode: the cached texture is still region-shrunk.
++    const bool regionBoxChanged = sampleRegionBox(monitor, layerBox) != m_cachedRegionSampleBox;
++
++    return !m_hasCachedSample ||
++           g_pGlobalState->getSceneGeneration(monitor) != m_lastSceneGeneration ||
++           isAnimating || m_backgroundDirty || forceLive || regionBoxChanged ||
++           xray != m_cachedFromSnapshot;
++}
++
++void CGlassLayerSurface::sampleAndRedirect(Render::CRenderContext& ctx, PHLMONITOR monitor, float alpha, bool xray) {
+     auto& shaderManager = g_pGlobalState->shaderManager;
+     shaderManager.initializeIfNeeded();
+ 
+@@ -249,7 +372,7 @@ void CGlassLayerSurface::sampleAndRedirect(PHLMONITOR monitor, float alpha) {
+     if (!layerSurface)
+         return;
+ 
+-    auto source = g_pHyprRenderer->m_renderData.currentFB;
++    auto source = ctx.m_data.currentFB;
+     if (!source)
+         return;
+ 
+@@ -257,31 +380,21 @@ void CGlassLayerSurface::sampleAndRedirect(PHLMONITOR monitor, float alpha) {
+     if (!layerBox)
+         return;
+ 
+-    CBox transformBox = transformedLayerBox(*layerBox, monitor);
+-
+     // PROTOCOL_REGION: glass only ever shows inside the blur region, so blurred
+     // data outside it is provably never sampled. m_cachedTransformedRegion is
+     // computed once here and reused by compositeAndRestore()'s regionRects
+     // upload later this same frame — never widens boundingBox() or the
+     // composite draw, which stay full-layer (see their own resolveMaskSource()
+-    // call sites elsewhere in this file). m_cachedRegionSampleBox is likewise
+-    // reused by compositeAndRestore() to build the sampleUVOffset/uvScale
+-    // uniforms that reconcile the (region-shrunk) sample box against the
+-    // full-layer quad UV — see toSampleBoxUV() in Shaders.hpp.
+-    const bool isRegionMode = resolveMaskSource() == EMaskSource::PROTOCOL_REGION;
+-    m_cachedTransformedRegion = isRegionMode ? transformedBlurRegion(monitor, *layerBox) : CRegion{};
+-    const std::optional<CBox> regionSampleBox = isRegionMode ? regionBoundingBoxAbsolute(monitor, *layerBox) : std::nullopt;
+-    // A region resize/move is otherwise invisible to backgroundChanged below (a
+-    // layer's own commit doesn't mark itself dirty) — without this the mask
+-    // shape would update immediately while the sample stays from the old box.
+-    const bool regionBoxChanged = isRegionMode && regionSampleBox != m_cachedRegionSampleBox;
+-    m_cachedRegionSampleBox = regionSampleBox;
++    // call sites elsewhere in this file). regionSampleBox becomes
++    // m_cachedRegionSampleBox only when the sample is actually taken below.
++    const std::optional<CBox> regionSampleBox = sampleRegionBox(monitor, *layerBox);
++    m_cachedTransformedRegion = regionSampleBox ? transformedBlurRegion(monitor, *layerBox) : CRegion{};
+ 
+     // Brackets everything below, including the conditional resample and the
+     // temp-FBO redirect/clear that always runs: GL forbids a concurrent
+     // GL_TIME_ELAPSED query, so on a cache miss the SampleBackground/
+     // BlurBackground brackets those calls open underneath this one just no-op.
+-    Diagnostics::CScopedStageTimer stageTimer(Diagnostics::EStage::LayerSample);
++    Diagnostics::CScopedStageTimer stageTimer(ctx, Diagnostics::EStage::LayerSample);
+     const MONITORID monitorId = monitor ? monitor->m_id : -1; // -1 mirrors Hyprland's own MONITOR_INVALID
+ 
+     // Decide whether we need to re-sample and re-blur the background.
+@@ -289,23 +402,16 @@ void CGlassLayerSurface::sampleAndRedirect(PHLMONITOR monitor, float alpha) {
+     // but no window moved behind us, we reuse the cached blurred background.
+     // This skips the most expensive GPU work (blit + 6 blur passes).
+     const uint64_t currentGeneration = g_pGlobalState->getSceneGeneration(monitor);
+-    // A workspace slide or fade moves the whole scene behind us without changing
+-    // any window's own geometry, so no window decoration update reports it.
+-    const bool isAnimating = layerSurface->positionAnimation()->isBeingAnimated() ||
+-                             layerSurface->sizeAnimation()->isBeingAnimated() ||
+-                             layerSurface->alpha()[Desktop::View::LS_ALPHA_FADE]->isBeingAnimated() ||
+-                             WorkspaceAnimation::anyWorkspaceAnimating(monitor);
+-    const auto& config = g_pGlobalState->config;
+-    const bool forceLive = config.layersForceLiveResample && **config.layersForceLiveResample;
+-    const bool backgroundChanged = !m_hasCachedSample ||
+-                                   currentGeneration != m_lastSceneGeneration ||
+-                                   isAnimating || m_backgroundDirty || forceLive || regionBoxChanged;
++    const bool     backgroundChanged = wantsBackgroundResample(monitor, *layerBox, xray);
+ 
+-    const CBox sampleBox     = regionSampleBox.value_or(transformBox);
++    // X-ray never samples the live frame: it holds the windows it hides.
++    const CBox sampleBox     = regionSampleBox.value_or(*layerBox);
++    const auto snapshot      = (xray && backgroundChanged) ? xraySnapshotCovering(monitor, source, sampleBox) : nullptr;
+     const bool sampleCovered = !backgroundChanged ||
+-                               GlassRenderer::sampleRegionCovered(sampleBox, source, g_pHyprRenderer->m_renderData.damage);
++                               (xray ? static_cast<bool>(snapshot) :
++                                       GlassRenderer::sampleRegionCovered(sampleBox, source, ctx.m_data.damage));
+ 
+-    if (!layerSurface->m_mapped) {
++    if (!layerSurface->mapped()) {
+         // During fade-out, re-sampling captures stale pixels. Reuse cached sample.
+         if (!m_hasCachedSample)
+             return;
+@@ -316,32 +422,37 @@ void CGlassLayerSurface::sampleAndRedirect(PHLMONITOR monitor, float alpha) {
+         m_backgroundDirty = true;
+         damageSampleRegion();
+         Diagnostics::recordLayerDeferredResample(monitorId);
+-        if (!m_hasCachedSample)
++        if (xray)
++            Diagnostics::recordXrayDeferredResample(monitorId);
++        if (!m_hasCachedSample || (xray && !m_cachedFromSnapshot))
+             return;
+     } else if (backgroundChanged) {
+         Diagnostics::recordLayerCacheMiss(monitorId);
+ 
+-        const bool isDark          = resolveThemeIsDark();
+-        const std::string preset   = resolvePresetName();
+-        const SResolveContext ctx  = {preset, isDark, g_pGlobalState->config, g_pGlobalState->customPresets};
++        const bool isDark                     = resolveThemeIsDark();
++        const std::string preset              = resolvePresetName();
++        const SResolveContext resolveContext  = {preset, isDark, g_pGlobalState->config, g_pGlobalState->customPresets};
+ 
+-        float blurStrength   = resolvePresetFloat(ctx, &SPresetValues::blurStrength, &SOverridableConfig::blurStrength);
++        float blurStrength   = resolvePresetFloat(resolveContext, &SPresetValues::blurStrength, &SOverridableConfig::blurStrength);
+         int downscale        = blurStrength >= GlassRenderer::BLUR_DOWNSCALE_THRESHOLD ? GlassRenderer::BLUR_DOWNSCALE_MAX : 1;
+ 
+-        GlassRenderer::sampleBackground(m_sampleFramebuffer, source, regionSampleBox.value_or(transformBox), m_samplePaddingRatio, downscale);
++        GlassRenderer::sampleBackground(ctx, m_sampleFramebuffer, xray ? snapshot : source, sampleBox, m_samplePaddingRatio, downscale);
++        // only here: a deferred or cached frame keeps compositing the old texture
++        m_cachedRegionSampleBox = regionSampleBox;
+ 
+         float blurRadius     = blurStrength * 12.0f / downscale;
+-        int blurIterations   = std::clamp(static_cast<int>(resolvePresetInt(ctx, &SPresetValues::blurIterations, &SOverridableConfig::blurIterations)), 1, 5);
++        int blurIterations   = std::clamp(static_cast<int>(resolvePresetInt(resolveContext, &SPresetValues::blurIterations, &SOverridableConfig::blurIterations)), 1, 5);
+ 
+-        if (ctx.config.blurFold && **ctx.config.blurFold) {
++        if (resolveContext.config.blurFold && **resolveContext.config.blurFold) {
+             const GlassRenderer::SFoldedBlur folded = GlassRenderer::foldBlurPasses(blurRadius, blurIterations);
+             blurRadius     = folded.radius;
+             blurIterations = folded.iterations;
+         }
+ 
+-        GlassRenderer::blurBackground(m_sampleFramebuffer, blurRadius, blurIterations, source);
++        GlassRenderer::blurBackground(ctx, m_sampleFramebuffer, blurRadius, blurIterations, source);
+ 
+         m_hasCachedSample      = true;
++        m_cachedFromSnapshot   = xray;
+         m_lastSceneGeneration  = currentGeneration;
+         m_backgroundDirty      = false;
+     } else {
+@@ -352,8 +463,7 @@ void CGlassLayerSurface::sampleAndRedirect(PHLMONITOR monitor, float alpha) {
+     // Redirect surface rendering to a temp FBO cleared to transparent.
+     // The original renderLayer (called between pre/post elements) will render
+     // the surface into this FBO. compositeAndRestore uses its alpha as a mask.
+-    // Size from the source FB, not the monitor: m_transformedSize is swapped
+-    // relative to the framebuffer's native orientation on 90°/270° monitors (#41).
++    // Size from the source FB, which is what the surface is drawn into.
+     int monitorWidth  = static_cast<int>(source->m_size.x);
+     int monitorHeight = static_cast<int>(source->m_size.y);
+ 
+@@ -372,32 +482,134 @@ void CGlassLayerSurface::sampleAndRedirect(PHLMONITOR monitor, float alpha) {
+ 
+     m_savedCurrentFB = source;
+ 
+-    g_pHyprRenderer->m_renderData.currentFB = m_surfaceTempFramebuffer;
+-    glBindFramebuffer(GL_FRAMEBUFFER, dynamic_cast<Render::GL::CGLFramebuffer*>(m_surfaceTempFramebuffer.get())->getFBID());
++    ctx.m_data.currentFB = m_surfaceTempFramebuffer;
++    g_pHyprOpenGL->bindFramebuffer(GL_FRAMEBUFFER, dynamic_cast<Render::GL::CGLFramebuffer*>(m_surfaceTempFramebuffer.get())->getFBID());
+ 
+-    // Unpadded: the composite quad only ever reads transformBox (rawBox, never
++    // Unpadded: the composite quad only ever reads the layer box (never
+     // padded), so the SAMPLE_PADDING_PX-expanded part of a padded clear is never
+     // sampled — true regardless of mask mode, not the region-sized clear a
+     // literal reading of "region-aware" would suggest (that would under-clear
+     // real surface area outside the region that the composite quad does read).
+-    CBox clearBox = transformBox.intersection(CBox{0.0, 0.0, static_cast<double>(monitorWidth), static_cast<double>(monitorHeight)}).noNegativeSize().round();
++    CBox clearBox = layerBox->intersection(CBox{0.0, 0.0, static_cast<double>(monitorWidth), static_cast<double>(monitorHeight)}).noNegativeSize().round();
+ 
+     if (std::isfinite(clearBox.x) && std::isfinite(clearBox.y) && std::isfinite(clearBox.w) && std::isfinite(clearBox.h) &&
+         clearBox.w > 0.0 && clearBox.h > 0.0) {
+-        g_pHyprOpenGL->scissor(clearBox, false);
++        g_pHyprOpenGL->scissor(ctx, clearBox, false);
+         glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+         glClear(GL_COLOR_BUFFER_BIT);
+-        g_pHyprOpenGL->scissor(nullptr);
++        g_pHyprOpenGL->scissor(ctx, nullptr);
+     }
+ 
+     m_redirectedThisFrame = true;
+ }
+ 
+-void CGlassLayerSurface::compositeAndRestore(PHLMONITOR monitor, float alpha, EMaskSource maskSource) {
++float CGlassLayerSurface::resolveMaskThreshold() const {
++    const auto& cfg = g_pGlobalState->config;
++    float threshold = cfg.layersMaskThreshold ? static_cast<float>(**cfg.layersMaskThreshold) : 0.001f;
++    if (const auto layerSurface = m_layerSurface.lock()) {
++        const auto thresholdIt = g_pGlobalState->layerNamespaceMaskThresholds.find(layerSurface->m_namespace);
++        if (thresholdIt != g_pGlobalState->layerNamespaceMaskThresholds.end())
++            threshold = thresholdIt->second;
++    }
++    return threshold;
++}
++
++std::optional<Contour::SBuildKey> CGlassLayerSurface::contourBuildKey(PHLMONITOR monitor, const CBox& layerBox, const Vector2D& targetSize, float alpha,
++                                                                      const SResolveContext& resolveContext) const {
++    if (!monitor)
++        return std::nullopt;
++
++    const int   boxWidth  = static_cast<int>(layerBox.w);
++    const int   boxHeight = static_cast<int>(layerBox.h);
++    const float scale     = monitor->m_scale > 0.0f ? monitor->m_scale : 1.0f;
++
++    // The shader's own bezel and bevel widths, in the same units: they set how far the field reaches.
++    const float reference = Contour::referencePx(boxWidth, boxHeight, scale);
++    const float bezelPx   = GlassRenderer::effectiveEdgeThickness(
++                              resolvePresetFloat(resolveContext, &SPresetValues::edgeThickness, &SOverridableConfig::edgeThickness),
++                              resolvePresetFloat(resolveContext, &SPresetValues::edgeThicknessPx, &SOverridableConfig::edgeThicknessPx), scale, reference) *
++                          reference;
++    const float rimPx = std::max(resolvePresetFloat(resolveContext, &SPresetValues::bevelSize, &SOverridableConfig::bevelSize) * scale, 1.0f);
++
++    const auto plan = Contour::makePlan(boxWidth, boxHeight, bezelPx, rimPx, scale);
++    if (!plan)
++        return std::nullopt;
++
++    // Part of the box off the screen was never drawn: what the field saw there depends on where the box sits.
++    const bool onScreen = layerBox.x >= 0.0 && layerBox.y >= 0.0 && layerBox.x + layerBox.w <= targetSize.x &&
++                          layerBox.y + layerBox.h <= targetSize.y;
++
++    // a NaN would never equal itself in the field's build key and rebuild it every frame
++    const float maskThreshold = resolveMaskThreshold();
++
++    return Contour::SBuildKey{
++        .plan        = *plan,
++        .threshold   = std::isfinite(maskThreshold) ? maskThreshold : 0.001f,
++        .provisional = alpha < Contour::COMPLETE_ALPHA,
++        .boxX        = onScreen ? 0 : static_cast<int>(layerBox.x),
++        .boxY        = onScreen ? 0 : static_cast<int>(layerBox.y),
++    };
++}
++
++bool CGlassLayerSurface::needsContourBuild(Render::CRenderContext& ctx, PHLMONITOR monitor, const CBox& layerBox, float alpha) const {
++    if (m_contour.pending())
++        return true;
++
++    // A held field is rebuilt when what it depends on changed too: the fade finished, the box
++    // moved on or off the screen, the threshold or the geometry changed.
++    const auto target = ctx.m_data.currentFB;
++    if (!m_contour.held() || !target || g_pGlobalState->contourUnavailable || resolveMaskSource() != EMaskSource::CONTOUR)
++        return false;
++
++    const bool            isDark         = resolveThemeIsDark();
++    const std::string     preset         = resolvePresetName();
++    const SResolveContext resolveContext = {preset, isDark, g_pGlobalState->config, g_pGlobalState->customPresets};
++    const auto            key            = contourBuildKey(monitor, layerBox, target->m_size, alpha, resolveContext);
++    return key && m_contour.wantsBuild(*key);
++}
++
++bool CGlassLayerSurface::attachContour(Render::CRenderContext& ctx, PHLMONITOR monitor, const CBox& layerBox, float alpha,
++                                       const SResolveContext& resolveContext, GlassRenderer::SMaskInfo& maskInfo) {
++    if (g_pGlobalState->contourUnavailable)
++        return false;
++
++    const auto target = ctx.m_data.currentFB;
++    if (!target || !m_surfaceTempFramebuffer || !monitor)
++        return false;
++
++    const auto key = contourBuildKey(monitor, layerBox, target->m_size, alpha, resolveContext);
++    if (!key)
++        return false;
++
++    const auto& plan = key->plan;
++    m_contour.request();
++
++    if (m_contour.wantsBuild(*key)) {
++        // The temp FBO only holds what this frame redrew: a field needs all of the layer in it.
++        if (GlassRenderer::damageCoversBox(layerBox, target, ctx.m_data.damage)) {
++            if (!m_contour.build(ctx, *key, m_surfaceTempFramebuffer, layerBox, alpha, target) && g_pGlobalState->contourUnavailable)
++                return false;
++        } else if (m_contour.noteUncoveredFrame())
++            damageSampleRegion();
++    }
++
++    // A stale field of the same geometry still beats the rectangle for the frame or two before the next build.
++    if (!m_contour.usableFor(plan))
++        return false;
++
++    maskInfo.contourTextureId   = m_contour.framebuffer()->getTexture()->m_texID;
++    maskInfo.contourUVScale     = {layerBox.w / (static_cast<double>(plan.fieldWidth) * plan.divisor),
++                                   layerBox.h / (static_cast<double>(plan.fieldHeight) * plan.divisor)};
++    maskInfo.contourReferencePx = plan.referencePx;
++    ma

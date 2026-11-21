@@ -1,0 +1,1747 @@
+Framebuffer*>(sharedFB.get())->getFBID());
++    ctx.m_data.currentFB = sharedFB;
++    g_pHyprOpenGL->bindFramebuffer(GL_FRAMEBUFFER, dynamic_cast<Render::GL::CGLFramebuffer*>(sharedFB.get())->getFBID());
+ 
+-    CBox clearBox = transformBox.intersection(CBox{0.0, 0.0, static_cast<double>(monitorWidth), static_cast<double>(monitorHeight)}).noNegativeSize().round();
++    CBox clearBox = pixelBox.intersection(CBox{0.0, 0.0, static_cast<double>(monitorWidth), static_cast<double>(monitorHeight)}).noNegativeSize().round();
+ 
+     if (std::isfinite(clearBox.x) && std::isfinite(clearBox.y) && std::isfinite(clearBox.w) && std::isfinite(clearBox.h) &&
+         clearBox.w > 0.0 && clearBox.h > 0.0) {
+-        g_pHyprOpenGL->scissor(clearBox, false);
++        g_pHyprOpenGL->scissor(ctx, clearBox, false);
+         glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+         glClear(GL_COLOR_BUFFER_BIT);
+-        g_pHyprOpenGL->scissor(nullptr);
++        g_pHyprOpenGL->scissor(ctx, nullptr);
+     }
+ 
+     m_redirectedThisFrame = true;
+ }
+ 
+-void CGlassSubsurfaceState::compositeAndRestore(PHLMONITOR monitor, const CBox& rawBox, const CBox& transformBox,
++void CGlassSubsurfaceState::compositeAndRestore(Render::CRenderContext& ctx, PHLMONITOR monitor, const CBox& pixelBox,
+                                                  CRegion& transformedRegion, float alpha) {
+     if (m_savedCurrentFB) {
+-        g_pHyprRenderer->m_renderData.currentFB = m_savedCurrentFB;
+-        glBindFramebuffer(GL_FRAMEBUFFER, dynamic_cast<Render::GL::CGLFramebuffer*>(m_savedCurrentFB.get())->getFBID());
++        ctx.m_data.currentFB = m_savedCurrentFB;
++        g_pHyprOpenGL->bindFramebuffer(GL_FRAMEBUFFER, dynamic_cast<Render::GL::CGLFramebuffer*>(m_savedCurrentFB.get())->getFBID());
+         m_savedCurrentFB.reset();
+     }
+ 
+@@ -222,7 +228,7 @@ void CGlassSubsurfaceState::compositeAndRestore(PHLMONITOR monitor, const CBox&
+     if (!shaderManager.isInitialized() || !m_hasCachedSample || !monitor)
+         return;
+ 
+-    auto target = g_pHyprRenderer->m_renderData.currentFB;
++    auto target = ctx.m_data.currentFB;
+     if (!target)
+         return;
+ 
+@@ -230,13 +236,13 @@ void CGlassSubsurfaceState::compositeAndRestore(PHLMONITOR monitor, const CBox&
+     // ApplyGlassEffect bracket sees this one already open and no-ops instead
+     // of nesting (GL forbids concurrent GL_TIME_ELAPSED queries) — mirrors
+     // CGlassLayerSurface::compositeAndRestore().
+-    Diagnostics::CScopedStageTimer stageTimer(Diagnostics::EStage::SubsurfaceComposite);
++    Diagnostics::CScopedStageTimer stageTimer(ctx, Diagnostics::EStage::SubsurfaceComposite);
+     Diagnostics::recordSubsurfaceGlassDraw(monitor->m_id);
+ 
+-    const bool            isDark = resolveThemeIsDark();
++    const bool            isDark          = resolveThemeIsDark();
+     SPresetHintOutcome    presetHint;
+-    const std::string     preset = resolvePresetName(&presetHint);
+-    const SResolveContext ctx    = {preset, isDark, g_pGlobalState->config, g_pGlobalState->customPresets};
++    const std::string     preset          = resolvePresetName(&presetHint);
++    const SResolveContext resolveContext  = {preset, isDark, g_pGlobalState->config, g_pGlobalState->customPresets};
+ 
+     float roundingPower = 2.0f;
+ 
+@@ -247,8 +253,8 @@ void CGlassSubsurfaceState::compositeAndRestore(PHLMONITOR monitor, const CBox&
+     GlassRenderer::SMaskInfo maskInfo{
+         .textureId = sharedFB->getTexture()->m_texID,
+         .target    = GL_TEXTURE_2D,
+-        .uvOffset  = {transformBox.x / monitorWidth, transformBox.y / monitorHeight},
+-        .uvScale   = {transformBox.w / monitorWidth, transformBox.h / monitorHeight},
++        .uvOffset  = {pixelBox.x / monitorWidth, pixelBox.y / monitorHeight},
++        .uvScale   = {pixelBox.w / monitorWidth, pixelBox.h / monitorHeight},
+     };
+ 
+     maskInfo.maskMode       = 1; // ext-background-effect-v1 protocol region — always, for subsurface items
+@@ -270,39 +276,34 @@ void CGlassSubsurfaceState::compositeAndRestore(PHLMONITOR monitor, const CBox&
+     const auto hints    = surface ? ItemHints::forSurface(surface.get()) : std::nullopt;
+ 
+     if (hints && hints->shapeMode == eItemShapeMode::EXPLICIT && hints->width > 0.0 && hints->height > 0.0) {
+-        // Surface-local logical -> monitor-local pixel: rawBox's own origin
++        // Surface-local logical -> monitor-local pixel: pixelBox's own origin
+         // already carries the item's on-monitor placement scaled the same
+         // way (see SubsurfaceGeometry::toPixelBox), so the hint only needs
+         // the same scale applied to its own offset/size.
+         const float scale = static_cast<float>(monitor->m_scale);
+-        CBox        hintPixelBox{rawBox.x + hints->x * scale, rawBox.y + hints->y * scale, hints->width * scale, hints->height * scale};
++        CBox        hintPixelBox{pixelBox.x + hints->x * scale, pixelBox.y + hints->y * scale, hints->width * scale, hints->height * scale};
+ 
+         if (std::isfinite(hintPixelBox.x) && std::isfinite(hintPixelBox.y) && std::isfinite(hintPixelBox.w) && std::isfinite(hintPixelBox.h) &&
+             hintPixelBox.w > 0.0 && hintPixelBox.h > 0.0) {
+             radii = {static_cast<float>(hints->radii[0]) * scale, static_cast<float>(hints->radii[1]) * scale,
+                      static_cast<float>(hints->radii[2]) * scale, static_cast<float>(hints->radii[3]) * scale};
+-            // Clamped against the hint's own (pre-transform) box — the pairing
+-            // radii[0]+radii[1] means "top edge" in the client's own frame,
+-            // regardless of how the monitor transform later permutes the array.
+             clampRadiiToBox(radii, static_cast<float>(hintPixelBox.w), static_cast<float>(hintPixelBox.h));
+ 
+-            CBox transformedHintBox = WindowGeometry::applyMonitorTransform(hintPixelBox, monitor);
+-            transformedHintBox.noNegativeSize().round();
+-            maskInfo.glassBoxOffsetPx = Vector2D(transformedHintBox.x - transformBox.x, transformedHintBox.y - transformBox.y);
+-            maskInfo.glassBoxSizePx   = Vector2D(transformedHintBox.w, transformedHintBox.h);
++            hintPixelBox.round();
++            maskInfo.glassBoxOffsetPx = Vector2D(hintPixelBox.x - pixelBox.x, hintPixelBox.y - pixelBox.y);
++            maskInfo.glassBoxSizePx   = Vector2D(hintPixelBox.w, hintPixelBox.h);
+             haveGlassBox              = true;
+         }
+     } else if (hints && hints->shapeMode == eItemShapeMode::INHERIT_WINDOW) {
+         if (const auto window = m_window.lock()) {
+             if (const auto windowBox = WindowGeometry::computeWindowBox(window, monitor)) {
+-                CBox transformedWindowBox = WindowGeometry::applyMonitorTransform(*windowBox, monitor);
+-                maskInfo.glassBoxOffsetPx = Vector2D(transformedWindowBox.x - transformBox.x, transformedWindowBox.y - transformBox.y);
+-                maskInfo.glassBoxSizePx   = Vector2D(transformedWindowBox.w, transformedWindowBox.h);
++                maskInfo.glassBoxOffsetPx = Vector2D(windowBox->x - pixelBox.x, windowBox->y - pixelBox.y);
++                maskInfo.glassBoxSizePx   = Vector2D(windowBox->w, windowBox->h);
+                 haveGlassBox              = true;
+ 
+-                const float windowRadius = window->rounding() * static_cast<float>(monitor->m_scale);
++                const float windowRadius = window->presentation().rounding() * static_cast<float>(monitor->m_scale);
+                 radii                    = {windowRadius, windowRadius, windowRadius, windowRadius};
+-                roundingPower            = window->roundingPower();
++                roundingPower            = window->presentation().roundingPower();
+             }
+         }
+         // else: no parent window (e.g. a layer-shell or standalone surface) —
+@@ -311,10 +312,10 @@ void CGlassSubsurfaceState::compositeAndRestore(PHLMONITOR monitor, const CBox&
+     }
+ 
+     if (!haveGlassBox) {
+-        CBox glassExtents = transformedRegion.getExtents().intersection(transformBox);
++        CBox glassExtents = transformedRegion.getExtents().intersection(pixelBox);
+         if (std::isfinite(glassExtents.x) && std::isfinite(glassExtents.y) && std::isfinite(glassExtents.w) &&
+             std::isfinite(glassExtents.h) && glassExtents.w > 0.0 && glassExtents.h > 0.0) {
+-            maskInfo.glassBoxOffsetPx = Vector2D(glassExtents.x - transformBox.x, glassExtents.y - transformBox.y);
++            maskInfo.glassBoxOffsetPx = Vector2D(glassExtents.x - pixelBox.x, glassExtents.y - pixelBox.y);
+             maskInfo.glassBoxSizePx   = Vector2D(glassExtents.w, glassExtents.h);
+ 
+             const auto& config           = g_pGlobalState->config;
+@@ -328,22 +329,18 @@ void CGlassSubsurfaceState::compositeAndRestore(PHLMONITOR monitor, const CBox&
+         // applyGlassEffect falls back to the whole box with every radius 0.
+     }
+ 
+-    // Monitor rotation/mirroring permutes which physical corner each array
+-    // slot refers to. A no-op whenever all four radii are equal (NONE, INHERIT_WINDOW).
+-    radii = SubsurfaceGeometry::permuteRadiiForMonitorTransform(radii, monitor);
+-
+     const auto rects = transformedRegion.getRects();
+     if (rects.size() <= static_cast<size_t>(GlassRenderer::MAX_REGION_RECTS)) {
+         maskInfo.regionRectCount = static_cast<int>(rects.size());
+         for (size_t i = 0; i < rects.size(); i++) {
+             const auto& r           = rects[i];
+-            maskInfo.regionRects[i] = {static_cast<float>(r.x1 - transformBox.x), static_cast<float>(r.y1 - transformBox.y),
++            maskInfo.regionRects[i] = {static_cast<float>(r.x1 - pixelBox.x), static_cast<float>(r.y1 - pixelBox.y),
+                                         static_cast<float>(r.x2 - r.x1), static_cast<float>(r.y2 - r.y1)};
+         }
+     } else {
+         const auto extents       = transformedRegion.getExtents();
+         maskInfo.regionRectCount = 1;
+-        maskInfo.regionRects[0]  = {static_cast<float>(extents.x - transformBox.x), static_cast<float>(extents.y - transformBox.y),
++        maskInfo.regionRects[0]  = {static_cast<float>(extents.x - pixelBox.x), static_cast<float>(extents.y - pixelBox.y),
+                                      static_cast<float>(extents.w), static_cast<float>(extents.h)};
+     }
+ 
+@@ -353,11 +350,10 @@ void CGlassSubsurfaceState::compositeAndRestore(PHLMONITOR monitor, const CBox&
+     maskInfo.sampleUVOffset = Vector2D(0.0, 0.0);
+     maskInfo.sampleUVScale  = Vector2D(1.0, 1.0);
+ 
+-    CBox mutableRawBox       = rawBox;
+-    CBox mutableTransformBox = transformBox;
+-    GlassRenderer::applyGlassEffect(m_sampleFramebuffer, target,
+-                                     mutableRawBox, mutableTransformBox, alpha,
+-                                     radii, roundingPower, m_samplePaddingRatio, ctx,
++    GlassRenderer::applyGlassEffect(ctx,
++                                     m_sampleFramebuffer, target,
++                                     pixelBox, alpha,
++                                     radii, roundingPower, m_samplePaddingRatio, resolveContext,
+                                      &maskInfo);
+ 
+     // Record the box/radii/roundingPower/preset already computed above for
+@@ -365,9 +361,9 @@ void CGlassSubsurfaceState::compositeAndRestore(PHLMONITOR monitor, const CBox&
+     // is the sentinel meaning "whole box" (see SMaskInfo), same fallback the
+     // shader itself applies.
+     m_lastGlassBox = maskInfo.glassBoxSizePx.x >= 0.0 && maskInfo.glassBoxSizePx.y >= 0.0 ?
+-        CBox{transformBox.x + maskInfo.glassBoxOffsetPx.x, transformBox.y + maskInfo.glassBoxOffsetPx.y,
++        CBox{pixelBox.x + maskInfo.glassBoxOffsetPx.x, pixelBox.y + maskInfo.glassBoxOffsetPx.y,
+              maskInfo.glassBoxSizePx.x, maskInfo.glassBoxSizePx.y} :
+-        transformBox;
++        pixelBox;
+     m_lastRadii          = radii;
+     m_lastRoundingPower  = roundingPower;
+     m_lastResolvedPreset = preset;
+diff --git a/src/GlassSubsurfaceState.hpp b/src/GlassSubsurfaceState.hpp
+index 9101aeb..bde7c11 100644
+--- a/src/GlassSubsurfaceState.hpp
++++ b/src/GlassSubsurfaceState.hpp
+@@ -16,7 +16,7 @@
+ //     main.cpp's CRenderPass::add hook), never alpha-threshold;
+ //   - the sample box always equals the full item box (no region-shrink
+ //     optimization), so the mask's sample UV mapping is always identity;
+-//   - geometry (the item's box, in every coordinate family) is handed in by
++//   - geometry (the item's box) is handed in by
+ //     the caller every frame rather than recomputed from a long-lived
+ //     surface object: CSurfacePassElement is transient and owned by the
+ //     render pass once enqueued, so the box is captured once at
+@@ -39,18 +39,26 @@ class CGlassSubsurfaceState {
+     explicit CGlassSubsurfaceState(WP<CWLSurfaceResource> surface, PHLWINDOWREF window);
+     ~CGlassSubsurfaceState();
+ 
+-    // Phase 1 (pre-surface): sample+blur background under transformBox, redirect
++    // Phase 1 (pre-surface): sample+blur background under pixelBox, redirect
+     // currentFB → temp FBO so the original CSurfacePassElement draw (called by
+     // main.cpp's hook between this and compositeAndRestore) lands there instead.
+-    void sampleAndRedirect(PHLMONITOR monitor, const CBox& transformBox, float alpha);
++    void sampleAndRedirect(Render::CRenderContext& ctx, PHLMONITOR monitor, const CBox& pixelBox, float alpha);
++
++    // The cached sample is missing or stale, so sampleAndRedirect() takes a new one.
++    // CGlassSubsurfacePassElement::needsLiveBlur() asks the same question before
++    // the draw: both must get the same answer, so neither keeps a copy of the
++    // conditions. Compares against the box the cached sample was taken at, which only
++    // sample taken in sampleAndRedirect() advances.
++    [[nodiscard]] bool wantsBackgroundResample(PHLMONITOR monitor, const CBox& pixelBox) const;
+ 
+     // Phase 2 (post-surface): restore currentFB, composite glass masked by the
+     // protocol region with the temp FBO's content (the item's own foreground) on top.
+     // transformedRegion is non-const: CRegion::getExtents() is a non-const method.
+-    void compositeAndRestore(PHLMONITOR monitor, const CBox& rawBox, const CBox& transformBox,
++    void compositeAndRestore(Render::CRenderContext& ctx, PHLMONITOR monitor, const CBox& pixelBox,
+                               CRegion& transformedRegion, float alpha);
+ 
+     [[nodiscard]] bool alive() const { return !m_surface.expired(); }
++    [[nodiscard]] bool redirectedThisFrame() const { return m_redirectedThisFrame; }
+ 
+     // Diagnostic accessors for `hyprctl hyprglass items` (Diagnostics.cpp). All
+     // reflect values already computed by the most recent compositeAndRestore()
+@@ -72,11 +80,11 @@ class CGlassSubsurfaceState {
+     Vector2D                 m_samplePaddingRatio;
+     bool                     m_hasCachedSample = false;
+ 
+-    // Last transformBox seen, to force a resample when the item itself moves
++    // The pixelBox the cached sample was taken at, to force a resample when the item itself moves
+     // or resizes with no other invalidation trigger (mirrors
+     // CGlassLayerSurface::damageIfMoved(), inlined here since we have no
+     // standing surface object to hang a separate call off of).
+-    CBox m_lastTransformBox;
++    CBox m_lastPixelBox;
+ 
+     uint64_t m_lastSceneGeneration = 0;
+ 
+diff --git a/src/Globals.hpp b/src/Globals.hpp
+index 8080e88..ac15652 100644
+--- a/src/Globals.hpp
++++ b/src/Globals.hpp
+@@ -1,9 +1,11 @@
+ #pragma once
+ 
++#include "Contour.hpp"
+ #include "GlassLayerSurface.hpp"
+ #include "PluginConfig.hpp"
+ #include "ShaderManager.hpp"
+ 
++#include <hyprland/src/managers/eventLoop/EventLoopManager.hpp>
+ #include <hyprland/src/plugins/PluginAPI.hpp>
+ #include <hyprland/src/protocols/core/Compositor.hpp>
+ #include <hyprland/src/render/Framebuffer.hpp>
+@@ -12,6 +14,7 @@
+ #include <hyprland/src/SharedDefs.hpp>
+ #include <hyprutils/signal/Listener.hpp>
+ #include <memory>
++#include <optional>
+ #include <string>
+ #include <string_view>
+ #include <unordered_set>
+@@ -31,7 +34,7 @@ struct SGlobalState {
+     CShaderManager                    shaderManager;
+     SPluginConfig                     config;
+ 
+-    // User-defined presets (populated from config keyword, swapped in on configReloaded)
++    // User-defined presets (populated by hyprglass.preset() calls, swapped in on config.reloaded)
+     std::unordered_map<std::string, SCustomPreset> customPresets;
+ 
+     // Shared blur temp framebuffer (reused across all decorations since they render sequentially)
+@@ -61,26 +64,36 @@ struct SGlobalState {
+     // watchedSurfaces below. Pruned lazily wherever it's walked (see main.cpp).
+     std::unordered_map<WP<CWLSurfaceResource>, std::shared_ptr<CGlassSubsurfaceState>> subsurfaceGlass;
+ 
+-    // Parsed namespace whitelist (empty = match all when layers enabled)
++    // hg.layer() whitelist (empty or containing LAYER_NAMESPACE_WILDCARD = match all when layers enabled)
+     std::unordered_set<std::string> layerNamespaceFilter;
+-    // Parsed namespace blacklist (always excluded, takes priority over whitelist)
++    // hg.layer(..., { exclude = true }) blacklist (always excluded, takes priority over whitelist)
+     std::unordered_set<std::string> layerNamespaceExclude;
+     // Per-namespace preset overrides (namespace → preset name)
+     std::unordered_map<std::string, std::string> layerNamespacePresets;
+-    // Per-namespace mask alpha threshold (namespace → threshold, default 0.001)
++    // Per-namespace mask alpha threshold (namespace → threshold, overrides layers.mask_threshold)
+     std::unordered_map<std::string, float> layerNamespaceMaskThresholds;
+     // Per-namespace live resample override (namespace → enabled)
+     std::unordered_map<std::string, bool> layerNamespaceLiveResample;
+     // Per-namespace mask mode override (namespace → mode)
+     std::unordered_map<std::string, ELayerMaskMode> layerNamespaceMaskModes;
++    // Per-namespace mask_feather override (namespace → feather)
++    std::unordered_map<std::string, float> layerNamespaceMaskFeathers;
++    // Per-namespace fixed glass shape (namespace → shape); absent = the whole layer box
++    std::unordered_map<std::string, SLayerShape> layerNamespaceShapes;
++
++    // Contour (layers.mask_mode = "contour"): the render targets every layer's field build
++    // shares, and whether the GPU can do it at all. Once the GPU or the shaders turn out not
++    // to be up to it, every layer draws as with mask_mode = "alpha" until the plugin is reloaded.
++    Contour::SScratch   contourScratch;
++    std::optional<bool> contourGpuSupported;
++    bool                contourUnavailable = false;
+ 
+     // Per-monitor generation counter, incremented when the scene behind layers
+     // changes on that monitor. Layer surfaces compare to their cached value to
+     // skip redundant blur work. Per-monitor avoids cross-monitor feedback loops
+     // where re-sampling on an idle monitor captures its own stale glass output.
+-    // Keyed by MONITORID rather than CMonitor* so the code builds on both
+-    // Hyprland <= 0.55.x (global CMonitor) and git (Monitor::CMonitor), and a
+-    // stale entry can never alias a reallocated monitor object.
++    // Keyed by MONITORID rather than CMonitor* so a stale entry can never alias a
++    // reallocated monitor object.
+     std::unordered_map<MONITORID, uint64_t> sceneGeneration;
+ 
+     uint64_t getSceneGeneration(const PHLMONITOR& mon) const {
+@@ -94,10 +107,11 @@ struct SGlobalState {
+             sceneGeneration[mon->m_id]++;
+     }
+ 
+-    // Render-order fingerprint: a per-monitor running hash folded from every
+-    // glass-eligible window's identity/geometry/alpha in z-order, compared frame
+-    // to frame to catch stacking/membership changes (e.g. a window closing behind
+-    // a cached glass window) that no other event bumps scene generation for.
++    // Render-order fingerprint: a per-monitor running hash folded from the
++    // monitor's fade-outs and every glass-eligible window's identity/geometry/alpha
++    // in z-order, compared frame to frame to catch stacking/membership changes
++    // (e.g. a window closing behind a cached glass surface) that no other event
++    // bumps scene generation for.
+     struct SRenderFingerprint {
+         size_t runningHash = 0;
+         size_t lastHash    = 0;
+@@ -132,6 +146,9 @@ struct SGlobalState {
+         Render::CRenderPass                  sink;
+         UP<Hyprutils::Utils::CScopeGuard>    guard;
+         std::vector<Desktop::View::CWindow*> dropped; // identity only, never dereferenced
++        // currentPass() at RENDER_PRE_WINDOW, before Hyprland redirects a transformed
++        // window into its own pass: window glass goes here (see queueGlassPass)
++        Render::CRenderPass*                 windowPass    = nullptr;
+         bool                                 sawFullscreen = false;
+ 
+         // one workspace pass
+@@ -146,9 +163,31 @@ struct SGlobalState {
+         void reset() {
+             resetEpoch();
+             dropped.clear();
++            windowPass = nullptr;
+         }
+     } dedupe;
+ 
++    // Pending re-enable of Hyprland shadows after a config reload (see main.cpp)
++    UP<SEventLoopDoLaterLock> shadowFixLock;
++    // One timer for every resample the live_resample_fps limit deferred (see
++    // BackgroundDamageObserver). Hyprland's timer list holds its own reference,
++    // so it must be removed from it, not just dropped, before the plugin unloads.
++    SP<CEventLoopTimer> deferredResampleTimer;
++    // X-ray: per-monitor copy of the frame as it stood before any window was
++    // drawn, kept by CGlassSnapshotElement (see GlassSnapshotElement.hpp).
++    struct SBackgroundSnapshot {
++        SP<Render::IFramebuffer> framebuffer;
++        // Framebuffer pixels that still hold this monitor's current background:
++        // cut by each frame's damage at RENDER_BEGIN, refilled by each copy.
++        CRegion valid;
++        // Counted per monitor, so frames rendered on another monitor never age
++        // this one's snapshot.
++        uint64_t monitorFrames    = 0;
++        uint64_t lastRequestFrame = 0;
++        uint64_t queuedFrame      = 0;
++    };
++    std::unordered_map<MONITORID, SBackgroundSnapshot> backgroundSnapshots;
++
+     // renderLayer hook
+     CFunctionHook* renderLayerHook = nullptr;
+ 
+@@ -156,6 +195,9 @@ struct SGlobalState {
+     CFunctionHook* renderPassAddHook             = nullptr;
+     bool           renderPassAddSymbolFound      = false; // for the failure notification text
+     bool           subsurfaceHookFailureNotified = false;
++
++    // `versionCheck` in `hyprctl hyprglass status`: match, unknown or skipped
++    std::string_view versionCheck = "unknown";
+ };
+ 
+ using Render::GL::g_pHyprOpenGL;
+@@ -166,6 +208,9 @@ inline std::unique_ptr<SGlobalState> g_pGlobalState;
+ // Decoration registered for this window, or nullptr. Borrowed, never owned.
+ CGlassDecoration* glassDecorationFor(const PHLWINDOW& window);
+ 
++// Turns Hyprland shadows back on if window glass is in use and they are off.
++void scheduleShadowsForWindowGlass();
++
+ inline constexpr std::string_view PLUGIN_NAME        = "hyprglass";
+ inline constexpr std::string_view PLUGIN_DESCRIPTION = "Apple-style Liquid Glass effect";
+ inline constexpr std::string_view PLUGIN_AUTHOR      = "Hyprnux";
+diff --git a/src/Hash.hpp b/src/Hash.hpp
+index 3fd389c..952864c 100644
+--- a/src/Hash.hpp
++++ b/src/Hash.hpp
+@@ -18,9 +18,9 @@ struct std::hash<Hyprutils::Math::Vector2D> {
+ namespace Hash {
+ 
+ // Boost-style variadic hash fold: mixes each argument into seed in turn via
+-// std::hash<T>, in the order given. Used by CGlassDecoration's render-order
+-// fingerprint to fold window identity/geometry/alpha into a per-monitor
+-// running hash without allocating.
++// std::hash<T>, in the order given. Used by the render-order fingerprint to
++// fold window and fade-out identity/geometry/alpha into a per-monitor running
++// hash without allocating.
+ template <typename T, typename... Rest>
+ inline void hashCombine(size_t& seed, const T& value, const Rest&... rest) {
+     seed ^= std::hash<T>{}(value) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+diff --git a/src/HyprlandIdentity.hpp b/src/HyprlandIdentity.hpp
+new file mode 100644
+index 0000000..73a76b5
+--- /dev/null
++++ b/src/HyprlandIdentity.hpp
+@@ -0,0 +1,121 @@
++#pragma once
++
++#include <array>
++#include <charconv>
++#include <optional>
++#include <string>
++#include <string_view>
++#include <format>
++#include <utility>
++
++// Whether the Hyprland headers hyprglass was built against describe the
++// running Hyprland. No Hyprland include, so it builds and tests standalone.
++namespace HyprlandIdentity {
++
++struct SReleaseLine {
++    int major = 0;
++    int minor = 0;
++
++    bool operator==(const SReleaseLine&) const = default;
++};
++
++// "v0.56.2" -> 0.56. git describe output ("v0.56.0-175-g4bb6844"), "" and
++// "unknown" are not releases.
++[[nodiscard]] constexpr std::optional<SReleaseLine> releaseLine(std::string_view tag) noexcept {
++    if (!tag.starts_with('v'))
++        return std::nullopt;
++    tag.remove_prefix(1);
++    int parts[3] = {};
++    for (int index = 0; index < 3; ++index) {
++        const auto [end, error] = std::from_chars(tag.data(), tag.data() + tag.size(), parts[index]);
++        if (error != std::errc{} || end == tag.data())
++            return std::nullopt;
++        tag.remove_prefix(static_cast<size_t>(end - tag.data()));
++        if (index < 2) {
++            if (!tag.starts_with('.'))
++                return std::nullopt;
++            tag.remove_prefix(1);
++        }
++    }
++    if (!tag.empty())
++        return std::nullopt;
++    return SReleaseLine{parts[0], parts[1]};
++}
++
++[[nodiscard]] constexpr bool isCommitHash(std::string_view hash) noexcept {
++    if (hash.size() != 40)
++        return false;
++    for (const char character : hash)
++        if (!((character >= '0' && character <= '9') || (character >= 'a' && character <= 'f')))
++            return false;
++    return true;
++}
++
++enum class EVerdict {
++    Match,
++    Mismatch,
++    Unknown, // no usable tag or commit on one side
++};
++
++// Same commit, else same release line when both are releases, else
++// different commits. Nix builds of hyprland-git report "v" + VERSION as
++// their tag, so they look like releases here: commitOnly skips the release
++// line for a build whose Hyprland API changes between commits, and a running
++// Hyprland without a commit is then never the one built against.
++[[nodiscard]] constexpr EVerdict compare(std::string_view builtTag, std::string_view builtHash, std::string_view runningTag, std::string_view runningHash,
++                                         bool commitOnly = false) noexcept {
++    if (isCommitHash(builtHash) && builtHash == runningHash)
++        return EVerdict::Match;
++    const auto builtLine   = releaseLine(builtTag);
++    const auto runningLine = releaseLine(runningTag);
++    if (!commitOnly && builtLine && runningLine)
++        return *builtLine == *runningLine ? EVerdict::Match : EVerdict::Mismatch;
++    if (isCommitHash(builtHash) && (commitOnly || isCommitHash(runningHash)))
++        return EVerdict::Mismatch;
++    return EVerdict::Unknown;
++}
++
++// "0.56" for a release, else the commit's first 12 characters.
++[[nodiscard]] inline std::string describe(std::string_view tag, std::string_view hash, bool commitOnly = false) {
++    if (commitOnly && isCommitHash(hash))
++        return std::string(hash.substr(0, 12));
++    if (const auto line = releaseLine(tag))
++        return std::to_string(line->major) + "." + std::to_string(line->minor);
++    return hash.empty() ? std::string("unknown") : std::string(hash.substr(0, 12));
++}
++
++// "<commit>_aq_0.15_hu_0.14_hg_0.5_hc_0.1_hlg_0.6" -> "_aq_0.15_…": the
++// library versions, without the commit.
++[[nodiscard]] constexpr std::string_view dependencySuffix(std::string_view apiHash) noexcept {
++    const auto at = apiHash.find("_aq_");
++    return at == std::string_view::npos ? apiHash : apiHash.substr(at);
++}
++
++// Keys carry both underscores, so "_hg_" never matches inside "_hlg_".
++[[nodiscard]] constexpr std::string_view dependencyVersion(std::string_view suffix, std::string_view key) noexcept {
++    const auto at = suffix.find(key);
++    if (at == std::string_view::npos)
++        return {};
++    const auto value = suffix.substr(at + key.size());
++    return value.substr(0, value.find('_'));
++}
++
++// "aquamarine 0.15 -> 0.16, hyprlang 0.6 -> 0.7"
++[[nodiscard]] inline std::string dependencyDifferences(std::string_view builtSuffix, std::string_view runningSuffix) {
++    constexpr std::array<std::pair<std::string_view, std::string_view>, 5> LIBRARIES = {{
++        {"_aq_", "aquamarine"}, {"_hu_", "hyprutils"}, {"_hg_", "hyprgraphics"}, {"_hc_", "hyprcursor"}, {"_hlg_", "hyprlang"},
++    }};
++    std::string out;
++    for (const auto& [key, name] : LIBRARIES) {
++        const auto built   = dependencyVersion(builtSuffix, key);
++        const auto running = dependencyVersion(runningSuffix, key);
++        if (built == running)
++            continue;
++        if (!out.empty())
++            out += ", ";
++        out += std::format("{} {} -> {}", name, built, running);
++    }
++    return out;
++}
++
++} // namespace HyprlandIdentity
+diff --git a/src/LoadGuard.cpp b/src/LoadGuard.cpp
+new file mode 100644
+index 0000000..0d42180
+--- /dev/null
++++ b/src/LoadGuard.cpp
+@@ -0,0 +1,73 @@
++#include "LoadGuard.hpp"
++#include "BuildChannel.hpp"
++#include "Globals.hpp"
++
++#include <hyprland/src/plugins/PluginSystem.hpp>
++
++#include <cstdlib>
++#include <dlfcn.h>
++#include <format>
++
++namespace LoadGuard {
++
++SVerdict checkCompatibility(HANDLE handle) {
++    const SVersionInfo running = HyprlandAPI::getHyprlandVersion(handle);
++
++    SVerdict verdict;
++    verdict.identity = HyprlandIdentity::compare(GIT_TAG, GIT_COMMIT_HASH, running.tag, running.hash, BUILT_FOR_HYPRLAND_GIT);
++    if (verdict.identity == HyprlandIdentity::EVerdict::Mismatch) {
++        verdict.reason  = EPauseReason::HyprlandVersion;
++        verdict.message = std::format("built for Hyprland {}, running {}", HyprlandIdentity::describe(GIT_TAG, GIT_COMMIT_HASH, BUILT_FOR_HYPRLAND_GIT),
++                                      HyprlandIdentity::describe(running.tag, running.hash, BUILT_FOR_HYPRLAND_GIT));
++        return verdict;
++    }
++
++    // _get_hash() is Hyprland's, _get_client_hash() the one compiled into this plugin.
++    const auto runningLibraries = HyprlandIdentity::dependencySuffix(__hyprland_api_get_hash());
++    const auto builtLibraries   = HyprlandIdentity::dependencySuffix(__hyprland_api_get_client_hash());
++    if (runningLibraries != builtLibraries) {
++        verdict.reason        = EPauseReason::Dependencies;
++        const auto difference = HyprlandIdentity::dependencyDifferences(builtLibraries, runningLibraries);
++        verdict.message       = std::format("built with {}", difference.empty() ? std::string("other Hyprland libraries") : difference);
++    }
++    return verdict;
++}
++
++std::optional<std::string> otherActiveCopyPath() {
++    for (const auto* plugin : g_pPluginSystem->getAllPlugins()) {
++        // The copy being initialised has no name yet; a same-handle entry is
++        // this file loaded through another path (symlink, hardlink).
++        if (plugin->m_name != PLUGIN_NAME)
++            continue;
++        // A paused copy must not keep a working one from loading. Copies older
++        // than this check have no such symbol and are always active.
++        using FInstanceActive     = bool (*)();
++        const auto instanceActive = reinterpret_cast<FInstanceActive>(dlsym(plugin->m_handle, "hyprglass_instance_active"));
++        if (!instanceActive || instanceActive())
++            return plugin->m_path;
++    }
++    return std::nullopt;
++}
++
++bool skipRequested() {
++    const char* skip = std::getenv("HYPRGLASS_SKIP_VERSION_CHECK");
++    return skip && *skip && std::string_view{skip} != "0";
++}
++
++std::string_view reasonCode(EPauseReason reason) noexcept {
++    switch (reason) {
++        case EPauseReason::HyprlandVersion: return "hyprland_version";
++        case EPauseReason::Dependencies: return "dependencies";
++        case EPauseReason::Duplicate: return "duplicate";
++        case EPauseReason::None: break;
++    }
++    return "";
++}
++
++std::string_view checkResult(const SVerdict& verdict) noexcept {
++    if (verdict.reason != EPauseReason::None)
++        return "skipped";
++    return verdict.identity == HyprlandIdentity::EVerdict::Match ? "match" : "unknown";
++}
++
++} // namespace LoadGuard
+diff --git a/src/LoadGuard.hpp b/src/LoadGuard.hpp
+new file mode 100644
+index 0000000..2e6a6a5
+--- /dev/null
++++ b/src/LoadGuard.hpp
+@@ -0,0 +1,46 @@
++#pragma once
++
++#include "HyprlandIdentity.hpp"
++
++#include <hyprland/src/plugins/PluginAPI.hpp>
++
++#include <optional>
++#include <string>
++#include <string_view>
++
++// Decides, before PLUGIN_INIT touches anything else, whether this copy may run.
++// A paused copy registers nothing: no hook, decoration, listener, config value,
++// hyprctl command, protocol global or GL object.
++namespace LoadGuard {
++
++enum class EPauseReason {
++    None,
++    HyprlandVersion, // built for another Hyprland release line or commit
++    Dependencies,    // same Hyprland, other aquamarine/hyprutils/... versions
++    Duplicate,       // another hyprglass copy is already active
++};
++
++struct SVerdict {
++    EPauseReason               reason   = EPauseReason::None;
++    HyprlandIdentity::EVerdict identity = HyprlandIdentity::EVerdict::Unknown;
++    std::string                message; // "built for Hyprland 0.56, running 0.57"
++};
++
++// Calls only getHyprlandVersion() and __hyprland_api_get_hash(): both
++// extern "C" and unchanged across Hyprland versions, so they are safe to call
++// from a build made for another Hyprland.
++[[nodiscard]] SVerdict checkCompatibility(HANDLE handle);
++
++// Reads Hyprland's plugin list, whose layout comes from our headers: call it
++// only once checkCompatibility() passed. Empty when no other copy is active.
++[[nodiscard]] std::optional<std::string> otherActiveCopyPath();
++
++// HYPRGLASS_SKIP_VERSION_CHECK, read from Hyprland's own environment.
++[[nodiscard]] bool skipRequested();
++
++[[nodiscard]] std::string_view reasonCode(EPauseReason reason) noexcept;
++
++// `versionCheck` in `hyprctl hyprglass status`, for a copy that went on to load.
++[[nodiscard]] std::string_view checkResult(const SVerdict& verdict) noexcept;
++
++} // namespace LoadGuard
+diff --git a/src/PluginConfig.cpp b/src/PluginConfig.cpp
+index b9b2b73..75c8388 100644
+--- a/src/PluginConfig.cpp
++++ b/src/PluginConfig.cpp
+@@ -3,8 +3,8 @@
+ #include "Globals.hpp"
+ 
+ #include <algorithm>
+-#include <charconv>
+-#include <cstring>
++#include <array>
++#include <cmath>
+ #include <hyprland/src/config/ConfigManager.hpp>
+ #include <hyprland/src/config/lua/ConfigManager.hpp>
+ #include <hyprland/src/config/values/ConfigValues.hpp>
+@@ -37,9 +37,23 @@ std::optional<ELayerMaskMode> parseLayerMaskMode(std::string_view value) {
+     if (value == "auto")   return ELayerMaskMode::AUTO;
+     if (value == "alpha")  return ELayerMaskMode::ALPHA;
+     if (value == "region") return ELayerMaskMode::REGION;
++    if (value == "contour") return ELayerMaskMode::CONTOUR;
+     return std::nullopt;
+ }
+ 
++// Far beyond any monitor, but small enough that scaled sums and squares in the
++// shader and the box maths stay finite.
++constexpr double SHAPE_LIMIT_PX = 16384.0;
++
++static float clampShapeInset(double value) {
++    return static_cast<float>(std::clamp(value, -SHAPE_LIMIT_PX, SHAPE_LIMIT_PX));
++}
++
++// Any negative radius means a capsule.
++static float clampShapeRadius(double value) {
++    return value < 0.0 ? -1.0f : static_cast<float>(std::min(value, SHAPE_LIMIT_PX));
++}
++
+ std::optional<EDebugMode> parseDebugMode(std::string_view value) {
+     if (value == "off")          return EDebugMode::OFF;
+     if (value == "hints_only")   return EDebugMode::HINTS_ONLY;
+@@ -54,46 +68,43 @@ EDebugMode currentDebugMode() {
+ }
+ 
+ void registerConfig(HANDLE handle) {
+-    addConfigValue<Config::Values::Int>(handle, ConfigKeys::ENABLED, Config::INTEGER{1});
+-    addConfigValue<Config::Values::Int>(handle, ConfigKeys::MANAGE_WINDOW_BLUR, Config::INTEGER{1});
+-    addConfigValue<Config::Values::Int>(handle, ConfigKeys::SKIP_OPAQUE_WINDOWS, Config::INTEGER{1});
+-    addConfigValue<Config::Values::Int>(handle, ConfigKeys::BLUR_FOLD, Config::INTEGER{1});
++    addConfigValue<Config::Values::Bool>(handle, ConfigKeys::ENABLED, true);
++    addConfigValue<Config::Values::Bool>(handle, ConfigKeys::MANAGE_WINDOW_BLUR, true);
++    addConfigValue<Config::Values::Bool>(handle, ConfigKeys::SKIP_OPAQUE_WINDOWS, true);
++    addConfigValue<Config::Values::Bool>(handle, ConfigKeys::BLUR_FOLD, true);
+     addConfigValue<Config::Values::String>(handle, ConfigKeys::DEFAULT_THEME, Config::STRING{"dark"});
+     addConfigValue<Config::Values::String>(handle, ConfigKeys::DEFAULT_PRESET, Config::STRING{"default"});
+ 
+     // Performance diagnostics
+     addConfigValue<Config::Values::String>(handle, ConfigKeys::DEBUG_MODE, Config::STRING{"off"});
+-    addConfigValue<Config::Values::Int>(handle, ConfigKeys::DEBUG_TIMERS, Config::INTEGER{0});
++    addConfigValue<Config::Values::Bool>(handle, ConfigKeys::DEBUG_TIMERS, false);
+ 
+     // Layer surface support
+-    addConfigValue<Config::Values::Int>(handle, ConfigKeys::LAYERS_ENABLED, Config::INTEGER{0});
+-    addConfigValue<Config::Values::String>(handle, ConfigKeys::LAYERS_NAMESPACES, Config::STRING{});
+-    addConfigValue<Config::Values::String>(handle, ConfigKeys::LAYERS_EXCLUDE_NAMESPACES, Config::STRING{});
++    addConfigValue<Config::Values::Bool>(handle, ConfigKeys::LAYERS_ENABLED, false);
+     addConfigValue<Config::Values::String>(handle, ConfigKeys::LAYERS_PRESET, Config::STRING{});
+-    addConfigValue<Config::Values::String>(handle, ConfigKeys::LAYERS_NAMESPACE_PRESETS, Config::STRING{});
+-    addConfigValue<Config::Values::String>(handle, ConfigKeys::LAYERS_NAMESPACE_MASK_THRESHOLDS, Config::STRING{});
+-    addConfigValue<Config::Values::String>(handle, ConfigKeys::LAYERS_NAMESPACE_LIVE_RESAMPLE, Config::STRING{});
+-    addConfigValue<Config::Values::Int>(handle, ConfigKeys::LAYERS_LIVE_RESAMPLE, Config::INTEGER{1});
++    addConfigValue<Config::Values::Float>(handle, ConfigKeys::LAYERS_MASK_THRESHOLD, Config::FLOAT{0.001});
++    addConfigValue<Config::Values::Bool>(handle, ConfigKeys::LAYERS_LIVE_RESAMPLE, true);
+     addConfigValue<Config::Values::Int>(handle, ConfigKeys::LAYERS_LIVE_RESAMPLE_FPS, Config::INTEGER{30});
+-    addConfigValue<Config::Values::Int>(handle, ConfigKeys::LAYERS_FORCE_LIVE_RESAMPLE, Config::INTEGER{0});
++    addConfigValue<Config::Values::Bool>(handle, ConfigKeys::LAYERS_FORCE_LIVE_RESAMPLE, false);
+     addConfigValue<Config::Values::String>(handle, ConfigKeys::LAYERS_MASK_MODE, Config::STRING{"auto"});
+-    addConfigValue<Config::Values::String>(handle, ConfigKeys::LAYERS_NAMESPACE_MASK_MODES, Config::STRING{});
+-    addConfigValue<Config::Values::Int>(handle, ConfigKeys::LAYERS_MANAGE_BLUR, Config::INTEGER{1});
++    addConfigValue<Config::Values::Float>(handle, ConfigKeys::LAYERS_MASK_FEATHER, Config::FLOAT{0.0});
++    addConfigValue<Config::Values::Bool>(handle, ConfigKeys::LAYERS_MANAGE_BLUR, true);
+ 
+     // Subsurface item glass
+-    addConfigValue<Config::Values::Int>(handle, ConfigKeys::SUBSURFACES_ENABLED, Config::INTEGER{0});
++    addConfigValue<Config::Values::Bool>(handle, ConfigKeys::SUBSURFACES_ENABLED, false);
+     addConfigValue<Config::Values::String>(handle, ConfigKeys::SUBSURFACES_PRESET, Config::STRING{});
+     addConfigValue<Config::Values::Float>(handle, ConfigKeys::SUBSURFACES_RADIUS, Config::FLOAT{-1.0});
+ 
+     // Window background cache
+-    addConfigValue<Config::Values::Int>(handle, ConfigKeys::WINDOWS_BACKGROUND_CACHE, Config::INTEGER{1});
+-    addConfigValue<Config::Values::Int>(handle, ConfigKeys::WINDOWS_LIVE_RESAMPLE, Config::INTEGER{1});
++    addConfigValue<Config::Values::Bool>(handle, ConfigKeys::WINDOWS_BACKGROUND_CACHE, true);
++    addConfigValue<Config::Values::Bool>(handle, ConfigKeys::WINDOWS_LIVE_RESAMPLE, true);
+     addConfigValue<Config::Values::Int>(handle, ConfigKeys::WINDOWS_LIVE_RESAMPLE_FPS, Config::INTEGER{30});
+ 
+     // Global level — real defaults for effect settings,
+     // sentinel for theme-sensitive settings (fallback to hardcoded theme defaults)
+     addConfigValue<Config::Values::Float>(handle, ConfigKeys::BLUR_STRENGTH, Config::FLOAT{GlobalDefaults::BLUR_STRENGTH});
+     addConfigValue<Config::Values::Int>(handle, ConfigKeys::BLUR_ITERATIONS, Config::INTEGER{GlobalDefaults::BLUR_ITERATIONS});
++    addConfigValue<Config::Values::Float>(handle, ConfigKeys::NOISE_STRENGTH, Config::FLOAT{GlobalDefaults::NOISE_STRENGTH});
+     addConfigValue<Config::Values::Float>(handle, ConfigKeys::REFRACTION_STRENGTH, Config::FLOAT{GlobalDefaults::REFRACTION_STRENGTH});
+     addConfigValue<Config::Values::Float>(handle, ConfigKeys::CHROMATIC_ABERRATION, Config::FLOAT{GlobalDefaults::CHROMATIC_ABERRATION});
+     addConfigValue<Config::Values::Float>(handle, ConfigKeys::FRESNEL_STRENGTH, Config::FLOAT{GlobalDefaults::FRESNEL_STRENGTH});
+@@ -101,6 +112,9 @@ void registerConfig(HANDLE handle) {
+     addConfigValue<Config::Values::Float>(handle, ConfigKeys::SPECULAR_ANGLE, Config::FLOAT{GlobalDefaults::SPECULAR_ANGLE});
+     addConfigValue<Config::Values::Float>(handle, ConfigKeys::GLASS_OPACITY, Config::FLOAT{GlobalDefaults::GLASS_OPACITY});
+     addConfigValue<Config::Values::Float>(handle, ConfigKeys::EDGE_THICKNESS, Config::FLOAT{GlobalDefaults::EDGE_THICKNESS});
++    addConfigValue<Config::Values::Float>(handle, ConfigKeys::EDGE_THICKNESS_PX, Config::FLOAT{GlobalDefaults::EDGE_THICKNESS_PX});
++    addConfigValue<Config::Values::Float>(handle, ConfigKeys::EDGE_HEIGHT, Config::FLOAT{GlobalDefaults::EDGE_HEIGHT});
++    addConfigValue<Config::Values::Float>(handle, ConfigKeys::FRESNEL_REFLECTION, Config::FLOAT{GlobalDefaults::FRESNEL_REFLECTION});
+     addConfigValue<Config::Values::Int>(handle, ConfigKeys::TINT_COLOR, Config::INTEGER{GlobalDefaults::TINT_COLOR});
+     addConfigValue<Config::Values::Float>(handle, ConfigKeys::LENS_DISTORTION, Config::FLOAT{GlobalDefaults::LENS_DISTORTION});
+     addConfigValue<Config::Values::Float>(handle, ConfigKeys::BRIGHTNESS, Config::FLOAT{SENTINEL_FLOAT});
+@@ -121,10 +135,16 @@ void registerConfig(HANDLE handle) {
+     addConfigValue<Config::Values::Float>(handle, ConfigKeys::BEVEL_ANGLE, Config::FLOAT{GlobalDefaults::BEVEL_ANGLE});
+     addConfigValue<Config::Values::Float>(handle, ConfigKeys::BEVEL_SHADOW, Config::FLOAT{GlobalDefaults::BEVEL_SHADOW});
+     addConfigValue<Config::Values::Float>(handle, ConfigKeys::SELF_SAMPLE, Config::FLOAT{GlobalDefaults::SELF_SAMPLE});
++    addConfigValue<Config::Values::Int>(handle, ConfigKeys::XRAY, Config::INTEGER{GlobalDefaults::XRAY});
++    addConfigValue<Config::Values::Float>(handle, ConfigKeys::FOCUS_LIGHT, Config::FLOAT{GlobalDefaults::FOCUS_LIGHT});
++    addConfigValue<Config::Values::Int>(handle, ConfigKeys::FOCUS_LIGHT_COLOR, Config::INTEGER{GlobalDefaults::FOCUS_LIGHT_COLOR});
++    addConfigValue<Config::Values::Float>(handle, ConfigKeys::FROST, Config::FLOAT{GlobalDefaults::FROST});
++    addConfigValue<Config::Values::Float>(handle, ConfigKeys::FROST_BLUR, Config::FLOAT{GlobalDefaults::FROST_BLUR});
+ 
+     // Dark theme overrides — all sentinel (inherit from global)
+     addConfigValue<Config::Values::Float>(handle, ConfigKeys::DARK_BLUR_STRENGTH, Config::FLOAT{SENTINEL_FLOAT});
+     addConfigValue<Config::Values::Int>(handle, ConfigKeys::DARK_BLUR_ITERATIONS, Config::INTEGER{SENTINEL_INT});
++    addConfigValue<Config::Values::Float>(handle, ConfigKeys::DARK_NOISE_STRENGTH, Config::FLOAT{SENTINEL_FLOAT});
+     addConfigValue<Config::Values::Float>(handle, ConfigKeys::DARK_REFRACTION_STRENGTH, Config::FLOAT{SENTINEL_FLOAT});
+     addConfigValue<Config::Values::Float>(handle, ConfigKeys::DARK_CHROMATIC_ABERRATION, Config::FLOAT{SENTINEL_FLOAT});
+     addConfigValue<Config::Values::Float>(handle, ConfigKeys::DARK_FRESNEL_STRENGTH, Config::FLOAT{SENTINEL_FLOAT});
+@@ -132,6 +152,9 @@ void registerConfig(HANDLE handle) {
+     addConfigValue<Config::Values::Float>(handle, ConfigKeys::DARK_SPECULAR_ANGLE, Config::FLOAT{SENTINEL_FLOAT});
+     addConfigValue<Config::Values::Float>(handle, ConfigKeys::DARK_GLASS_OPACITY, Config::FLOAT{SENTINEL_FLOAT});
+     addConfigValue<Config::Values::Float>(handle, ConfigKeys::DARK_EDGE_THICKNESS, Config::FLOAT{SENTINEL_FLOAT});
++    addConfigValue<Config::Values::Float>(handle, ConfigKeys::DARK_EDGE_THICKNESS_PX, Config::FLOAT{SENTINEL_FLOAT});
++    addConfigValue<Config::Values::Float>(handle, ConfigKeys::DARK_EDGE_HEIGHT, Config::FLOAT{SENTINEL_FLOAT});
++    addConfigValue<Config::Values::Float>(handle, ConfigKeys::DARK_FRESNEL_REFLECTION, Config::FLOAT{SENTINEL_FLOAT});
+     addConfigValue<Config::Values::Int>(handle, ConfigKeys::DARK_TINT_COLOR, Config::INTEGER{SENTINEL_INT});
+     addConfigValue<Config::Values::Float>(handle, ConfigKeys::DARK_LENS_DISTORTION, Config::FLOAT{SENTINEL_FLOAT});
+     addConfigValue<Config::Values::Float>(handle, ConfigKeys::DARK_BRIGHTNESS, Config::FLOAT{SENTINEL_FLOAT});
+@@ -152,10 +175,16 @@ void registerConfig(HANDLE handle) {
+     addConfigValue<Config::Values::Float>(handle, ConfigKeys::DARK_BEVEL_ANGLE, Config::FLOAT{SENTINEL_FLOAT});
+     addConfigValue<Config::Values::Float>(handle, ConfigKeys::DARK_BEVEL_SHADOW, Config::FLOAT{SENTINEL_FLOAT});
+     addConfigValue<Config::Values::Float>(handle, ConfigKeys::DARK_SELF_SAMPLE, Config::FLOAT{SENTINEL_FLOAT});
++    addConfigValue<Config::Values::Int>(handle, ConfigKeys::DARK_XRAY, Config::INTEGER{SENTINEL_INT});
++    addConfigValue<Config::Values::Float>(handle, ConfigKeys::DARK_FOCUS_LIGHT, Config::FLOAT{SENTINEL_FLOAT});
++    addConfigValue<Config::Values::Int>(handle, ConfigKeys::DARK_FOCUS_LIGHT_COLOR, Config::INTEGER{SENTINEL_INT});
++    addConfigValue<Config::Values::Float>(handle, ConfigKeys::DARK_FROST, Config::FLOAT{SENTINEL_FLOAT});
++    addConfigValue<Config::Values::Float>(handle, ConfigKeys::DARK_FROST_BLUR, Config::FLOAT{SENTINEL_FLOAT});
+ 
+     // Light theme overrides — all sentinel (inherit from global)
+     addConfigValue<Config::Values::Float>(handle, ConfigKeys::LIGHT_BLUR_STRENGTH, Config::FLOAT{SENTINEL_FLOAT});
+     addConfigValue<Config::Values::Int>(handle, ConfigKeys::LIGHT_BLUR_ITERATIONS, Config::INTEGER{SENTINEL_INT});
++    addConfigValue<Config::Values::Float>(handle, ConfigKeys::LIGHT_NOISE_STRENGTH, Config::FLOAT{SENTINEL_FLOAT});
+     addConfigValue<Config::Values::Float>(handle, ConfigKeys::LIGHT_REFRACTION_STRENGTH, Config::FLOAT{SENTINEL_FLOAT});
+     addConfigValue<Config::Values::Float>(handle, ConfigKeys::LIGHT_CHROMATIC_ABERRATION, Config::FLOAT{SENTINEL_FLOAT});
+     addConfigValue<Config::Values::Float>(handle, ConfigKeys::LIGHT_FRESNEL_STRENGTH, Config::FLOAT{SENTINEL_FLOAT});
+@@ -163,6 +192,9 @@ void registerConfig(HANDLE handle) {
+     addConfigValue<Config::Values::Float>(handle, ConfigKeys::LIGHT_SPECULAR_ANGLE, Config::FLOAT{SENTINEL_FLOAT});
+     addConfigValue<Config::Values::Float>(handle, ConfigKeys::LIGHT_GLASS_OPACITY, Config::FLOAT{SENTINEL_FLOAT});
+     addConfigValue<Config::Values::Float>(handle, ConfigKeys::LIGHT_EDGE_THICKNESS, Config::FLOAT{SENTINEL_FLOAT});
++    addConfigValue<Config::Values::Float>(handle, ConfigKeys::LIGHT_EDGE_THICKNESS_PX, Config::FLOAT{SENTINEL_FLOAT});
++    addConfigValue<Config::Values::Float>(handle, ConfigKeys::LIGHT_EDGE_HEIGHT, Config::FLOAT{SENTINEL_FLOAT});
++    addConfigValue<Config::Values::Float>(handle, ConfigKeys::LIGHT_FRESNEL_REFLECTION, Config::FLOAT{SENTINEL_FLOAT});
+     addConfigValue<Config::Values::Int>(handle, ConfigKeys::LIGHT_TINT_COLOR, Config::INTEGER{SENTINEL_INT});
+     addConfigValue<Config::Values::Float>(handle, ConfigKeys::LIGHT_LENS_DISTORTION, Config::FLOAT{SENTINEL_FLOAT});
+     addConfigValue<Config::Values::Float>(handle, ConfigKeys::LIGHT_BRIGHTNESS, Config::FLOAT{SENTINEL_FLOAT});
+@@ -183,9 +215,13 @@ void registerConfig(HANDLE handle) {
+     addConfigValue<Config::Values::Float>(handle, ConfigKeys::LIGHT_BEVEL_ANGLE, Config::FLOAT{SENTINEL_FLOAT});
+     addConfigValue<Config::Values::Float>(handle, ConfigKeys::LIGHT_BEVEL_SHADOW, Config::FLOAT{SENTINEL_FLOAT});
+     addConfigValue<Config::Values::Float>(handle, ConfigKeys::LIGHT_SELF_SAMPLE, Config::FLOAT{SENTINEL_FLOAT});
++    addConfigValue<Config::Values::Int>(handle, ConfigKeys::LIGHT_XRAY, Config::INTEGER{SENTINEL_INT});
++    addConfigValue<Config::Values::Float>(handle, ConfigKeys::LIGHT_FOCUS_LIGHT, Config::FLOAT{SENTINEL_FLOAT});
++    addConfigValue<Config::Values::Int>(handle, ConfigKeys::LIGHT_FOCUS_LIGHT_COLOR, Config::INTEGER{SENTINEL_INT});
++    addConfigValue<Config::Values::Float>(handle, ConfigKeys::LIGHT_FROST, Config::FLOAT{SENTINEL_FLOAT});
++    addConfigValue<Config::Values::Float>(handle, ConfigKeys::LIGHT_FROST_BLUR, Config::FLOAT{SENTINEL_FLOAT});
+ 
+-    // Legacy config keyword plus Lua-config callbacks for custom presets and layers.
+-    HyprlandAPI::addConfigKeyword(handle, ConfigKeys::PRESET_KEYWORD, handlePresetKeyword, Hyprlang::SHandlerOptions{});
++    // Lua callbacks for custom presets, layers and config.
+     HyprlandAPI::addLuaFunction(handle, "hyprglass", "preset", handleLuaPreset);
+     HyprlandAPI::addLuaFunction(handle, "hyprglass", "layer", handleLuaLayer);
+     HyprlandAPI::addLuaFunction(handle, "hyprglass", "config", handleLuaConfig);
+@@ -203,12 +239,20 @@ static StringConfigPtr getStringPtr(HANDLE /*handle*/, const char* key) {
+     return {.dataptr = value.dataptr, .type = value.type};
+ }
+ 
++static BoolConfigPtr getBoolPtr(HANDLE /*handle*/, const char* key) {
++    const auto value = Config::mgr()->getConfigValue(key);
++    return {.dataptr = value.dataptr, .type = value.type};
++}
++
+ static void initOverridablePointers(HANDLE handle, SOverridableConfig& layer,
+                                     const char* blurStrength, const char* blurIterations,
++                                    const char* noiseStrength,
+                                     const char* refractionStrength, const char* chromaticAberration,
+                                     const char* fresnelStrength, const char* specularStrength,
+                                     const char* specularAngle,
+                                     const char* glassOpacity, const char* edgeThickness,
++                                    const char* edgeThicknessPx,
++                                    const char* edgeHeight, const char* fresnelReflection,
+                                     const char* tintColor, const char* lensDistortion,
+                                     const char* brightness, const char* contrast,
+                                     const char* saturation, const char* vibrancy,
+@@ -219,77 +263,88 @@ static void initOverridablePointers(HANDLE handle, SOverridableConfig& layer,
+                                     const char* bevelSize, const char* fresnelColor,
+                                     const char* bevelColor, const char* bevelTint,
+                                     const char* bevelAngle, const char* bevelShadow,
+-                                    const char* selfSample) {
+-    layer.blurStrength        = getStaticPtr<Hyprlang::FLOAT>(handle, blurStrength);
+-    layer.blurIterations      = getStaticPtr<Hyprlang::INT>(handle, blurIterations);
+-    layer.refractionStrength  = getStaticPtr<Hyprlang::FLOAT>(handle, refractionStrength);
+-    layer.chromaticAberration = getStaticPtr<Hyprlang::FLOAT>(handle, chromaticAberration);
+-    layer.fresnelStrength     = getStaticPtr<Hyprlang::FLOAT>(handle, fresnelStrength);
+-    layer.specularStrength    = getStaticPtr<Hyprlang::FLOAT>(handle, specularStrength);
+-    layer.specularAngle       = getStaticPtr<Hyprlang::FLOAT>(handle, specularAngle);
+-    layer.glassOpacity        = getStaticPtr<Hyprlang::FLOAT>(handle, glassOpacity);
+-    layer.edgeThickness       = getStaticPtr<Hyprlang::FLOAT>(handle, edgeThickness);
+-    layer.tintColor           = getStaticPtr<Hyprlang::INT>(handle, tintColor);
+-    layer.lensDistortion      = getStaticPtr<Hyprlang::FLOAT>(handle, lensDistortion);
+-    layer.brightness          = getStaticPtr<Hyprlang::FLOAT>(handle, brightness);
+-    layer.contrast            = getStaticPtr<Hyprlang::FLOAT>(handle, contrast);
+-    layer.saturation          = getStaticPtr<Hyprlang::FLOAT>(handle, saturation);
+-    layer.vibrancy            = getStaticPtr<Hyprlang::FLOAT>(handle, vibrancy);
+-    layer.vibrancyDarkness    = getStaticPtr<Hyprlang::FLOAT>(handle, vibrancyDarkness);
+-    layer.adaptiveDim         = getStaticPtr<Hyprlang::FLOAT>(handle, adaptiveDim);
+-    layer.adaptiveBoost       = getStaticPtr<Hyprlang::FLOAT>(handle, adaptiveBoost);
+-    layer.refractionFlow      = getStaticPtr<Hyprlang::FLOAT>(handle, refractionFlow);
+-    layer.refractionSpread    = getStaticPtr<Hyprlang::FLOAT>(handle, refractionSpread);
+-    layer.fresnelTint         = getStaticPtr<Hyprlang::FLOAT>(handle, fresnelTint);
+-    layer.bevelStrength       = getStaticPtr<Hyprlang::FLOAT>(handle, bevelStrength);
+-    layer.bevelSize           = getStaticPtr<Hyprlang::FLOAT>(handle, bevelSize);
+-    layer.fresnelColor        = getStaticPtr<Hyprlang::INT>(handle, fresnelColor);
+-    layer.bevelColor          = getStaticPtr<Hyprlang::INT>(handle, bevelColor);
+-    layer.bevelTint           = getStaticPtr<Hyprlang::FLOAT>(handle, bevelTint);
+-    layer.bevelAngle          = getStaticPtr<Hyprlang::FLOAT>(handle, bevelAngle);
+-    layer.bevelShadow         = getStaticPtr<Hyprlang::FLOAT>(handle, bevelShadow);
+-    layer.selfSample          = getStaticPtr<Hyprlang::FLOAT>(handle, selfSample);
++                                    const char* selfSample, const char* xray,
++                                    const char* focusLight, const char* focusLightColor,
++                                    const char* frost, const char* frostBlur) {
++    layer.blurStrength        = getStaticPtr<Config::FLOAT>(handle, blurStrength);
++    layer.blurIterations      = getStaticPtr<Config::INTEGER>(handle, blurIterations);
++    layer.noiseStrength       = getStaticPtr<Config::FLOAT>(handle, noiseStrength);
++    layer.refractionStrength  = getStaticPtr<Config::FLOAT>(handle, refractionStrength);
++    layer.chromaticAberration = getStaticPtr<Config::FLOAT>(handle, chromaticAberration);
++    layer.fresnelStrength     = getStaticPtr<Config::FLOAT>(handle, fresnelStrength);
++    layer.specularStrength    = getStaticPtr<Config::FLOAT>(handle, specularStrength);
++    layer.specularAngle       = getStaticPtr<Config::FLOAT>(handle, specularAngle);
++    layer.glassOpacity        = getStaticPtr<Config::FLOAT>(handle, glassOpacity);
++    layer.edgeThickness       = getStaticPtr<Config::FLOAT>(handle, edgeThickness);
++    layer.edgeThicknessPx     = getStaticPtr<Config::FLOAT>(handle, edgeThicknessPx);
++    layer.edgeHeight          = getStaticPtr<Config::FLOAT>(handle, edgeHeight);
++    layer.fresnelReflection   = getStaticPtr<Config::FLOAT>(handle, fresnelReflection);
++    layer.tintColor           = getStaticPtr<Config::INTEGER>(handle, tintColor);
++    layer.lensDistortion      = getStaticPtr<Config::FLOAT>(handle, lensDistortion);
++    layer.brightness          = getStaticPtr<Config::FLOAT>(handle, brightness);
++    layer.contrast            = getStaticPtr<Config::FLOAT>(handle, contrast);
++    layer.saturation          = getStaticPtr<Config::FLOAT>(handle, saturation);
++    layer.vibrancy            = getStaticPtr<Config::FLOAT>(handle, vibrancy);
++    layer.vibrancyDarkness    = getStaticPtr<Config::FLOAT>(handle, vibrancyDarkness);
++    layer.adaptiveDim         = getStaticPtr<Config::FLOAT>(handle, adaptiveDim);
++    layer.adaptiveBoost       = getStaticPtr<Config::FLOAT>(handle, adaptiveBoost);
++    layer.refractionFlow      = getStaticPtr<Config::FLOAT>(handle, refractionFlow);
++    layer.refractionSpread    = getStaticPtr<Config::FLOAT>(handle, refractionSpread);
++    layer.fresnelTint         = getStaticPtr<Config::FLOAT>(handle, fresnelTint);
++    layer.bevelStrength       = getStaticPtr<Config::FLOAT>(handle, bevelStrength);
++    layer.bevelSize           = getStaticPtr<Config::FLOAT>(handle, bevelSize);
++    layer.fresnelColor        = getStaticPtr<Config::INTEGER>(handle, fresnelColor);
++    layer.bevelColor          = getStaticPtr<Config::INTEGER>(handle, bevelColor);
++    layer.bevelTint           = getStaticPtr<Config::FLOAT>(handle, bevelTint);
++    layer.bevelAngle          = getStaticPtr<Config::FLOAT>(handle, bevelAngle);
++    layer.bevelShadow         = getStaticPtr<Config::FLOAT>(handle, bevelShadow);
++    layer.selfSample          = getStaticPtr<Config::FLOAT>(handle, selfSample);
++    layer.xray                = getStaticPtr<Config::INTEGER>(handle, xray);
++    layer.focusLight          = getStaticPtr<Config::FLOAT>(handle, focusLight);
++    layer.focusLightColor     = getStaticPtr<Config::INTEGER>(handle, focusLightColor);
++    layer.frost               = getStaticPtr<Config::FLOAT>(handle, frost);
++    layer.frostBlur           = getStaticPtr<Config::FLOAT>(handle, frostBlur);
+ }
+ 
+ void initConfigPointers(HANDLE handle, SPluginConfig& config) {
+-    config.enabled           = getStaticPtr<Hyprlang::INT>(handle, ConfigKeys::ENABLED);
+-    config.manageWindowBlur  = getStaticPtr<Hyprlang::INT>(handle, ConfigKeys::MANAGE_WINDOW_BLUR);
+-    config.skipOpaqueWindows = getStaticPtr<Hyprlang::INT>(handle, ConfigKeys::SKIP_OPAQUE_WINDOWS);
+-    config.blurFold          = getStaticPtr<Hyprlang::INT>(handle, ConfigKeys::BLUR_FOLD);
++    config.enabled           = getStaticPtr<Config::BOOL>(handle, ConfigKeys::ENABLED);
++    config.manageWindowBlur  = getStaticPtr<Config::BOOL>(handle, ConfigKeys::MANAGE_WINDOW_BLUR);
++    config.skipOpaqueWindows = getStaticPtr<Config::BOOL>(handle, ConfigKeys::SKIP_OPAQUE_WINDOWS);
++    config.blurFold          = getStaticPtr<Config::BOOL>(handle, ConfigKeys::BLUR_FOLD);
++    config.xpMode            = getBoolPtr(handle, "render:xp_mode");
++    config.animationsEnabled = getBoolPtr(handle, "animations:enabled");
+     config.defaultTheme  = getStringPtr(handle, ConfigKeys::DEFAULT_THEME);
+     config.defaultPreset = getStringPtr(handle, ConfigKeys::DEFAULT_PRESET);
+ 
+     config.debugMode   = getStringPtr(handle, ConfigKeys::DEBUG_MODE);
+-    config.debugTimers = getStaticPtr<Hyprlang::INT>(handle, ConfigKeys::DEBUG_TIMERS);
++    config.debugTimers = getStaticPtr<Config::BOOL>(handle, ConfigKeys::DEBUG_TIMERS);
+ 
+-    config.layersEnabled           = getStaticPtr<Hyprlang::INT>(handle, ConfigKeys::LAYERS_ENABLED);
+-    config.layersNamespaces        = getStringPtr(handle, ConfigKeys::LAYERS_NAMESPACES);
+-    config.layersExcludeNamespaces = getStringPtr(handle, ConfigKeys::LAYERS_EXCLUDE_NAMESPACES);
++    config.layersEnabled           = getStaticPtr<Config::BOOL>(handle, ConfigKeys::LAYERS_ENABLED);
+     config.layersPreset            = getStringPtr(handle, ConfigKeys::LAYERS_PRESET);
+-    config.layersNamespacePresets         = getStringPtr(handle, ConfigKeys::LAYERS_NAMESPACE_PRESETS);
+-    config.layersNamespaceMaskThresholds = getStringPtr(handle, ConfigKeys::LAYERS_NAMESPACE_MASK_THRESHOLDS);
+-    config.layersNamespaceLiveResample = getStringPtr(handle, ConfigKeys::LAYERS_NAMESPACE_LIVE_RESAMPLE);
+-    config.layersLiveResample      = getStaticPtr<Hyprlang::INT>(handle, ConfigKeys::LAYERS_LIVE_RESAMPLE);
+-    config.layersLiveResampleFps   = getStaticPtr<Hyprlang::INT>(handle, ConfigKeys::LAYERS_LIVE_RESAMPLE_FPS);
+-    config.layersForceLiveResample = getStaticPtr<Hyprlang::INT>(handle, ConfigKeys::LAYERS_FORCE_LIVE_RESAMPLE);
+-    config.layersMaskMode           = getStringPtr(handle, ConfigKeys::LAYERS_MASK_MODE);
+-    config.layersNamespaceMaskModes = getStringPtr(handle, ConfigKeys::LAYERS_NAMESPACE_MASK_MODES);
+-    config.layersManageBlur         = getStaticPtr<Hyprlang::INT>(handle, ConfigKeys::LAYERS_MANAGE_BLUR);
++    config.layersMaskThreshold     = getStaticPtr<Config::FLOAT>(handle, ConfigKeys::LAYERS_MASK_THRESHOLD);
++    config.layersLiveResample      = getStaticPtr<Config::BOOL>(handle, ConfigKeys::LAYERS_LIVE_RESAMPLE);
++    config.layersLiveResampleFps   = getStaticPtr<Config::INTEGER>(handle, ConfigKeys::LAYERS_LIVE_RESAMPLE_FPS);
++    config.layersForceLiveResample = getStaticPtr<Config::BOOL>(handle, ConfigKeys::LAYERS_FORCE_LIVE_RESAMPLE);
++    config.layersMaskMode          = getStringPtr(handle, ConfigKeys::LAYERS_MASK_MODE);
++    config.layersMaskFeather       = getStaticPtr<Config::FLOAT>(handle, ConfigKeys::LAYERS_MASK_FEATHER);
++    config.layersManageBlur        = getStaticPtr<Config::BOOL>(handle, ConfigKeys::LAYERS_MANAGE_BLUR);
+ 
+-    config.subsurfacesEnabled = getStaticPtr<Hyprlang::INT>(handle, ConfigKeys::SUBSURFACES_ENABLED);
++    config.subsurfacesEnabled = getStaticPtr<Config::BOOL>(handle, ConfigKeys::SUBSURFACES_ENABLED);
+     config.subsurfacesPreset  = getStringPtr(handle, ConfigKeys::SUBSURFACES_PRESET);
+-    config.subsurfacesRadius  = getStaticPtr<Hyprlang::FLOAT>(handle, ConfigKeys::SUBSURFACES_RADIUS);
++    config.subsurfacesRadius  = getStaticPtr<Config::FLOAT>(handle, ConfigKeys::SUBSURFACES_RADIUS);
+ 
+-    config.windowsBackgroundCache = getStaticPtr<Hyprlang::INT>(handle, ConfigKeys::WINDOWS_BACKGROUND_CACHE);
+-    config.windowsLiveResample    = getStaticPtr<Hyprlang::INT>(handle, ConfigKeys::WINDOWS_LIVE_RESAMPLE);
+-    config.windowsLiveResampleFps = getStaticPtr<Hyprlang::INT>(handle, ConfigKeys::WINDOWS_LIVE_RESAMPLE_FPS);
++    config.windowsBackgroundCache = getStaticPtr<Config::BOOL>(handle, ConfigKeys::WINDOWS_BACKGROUND_CACHE);
++    config.windowsLiveResample    = getStaticPtr<Config::BOOL>(handle, ConfigKeys::WINDOWS_LIVE_RESAMPLE);
++    config.windowsLiveResampleFps = getStaticPtr<Config::INTEGER>(handle, ConfigKeys::WINDOWS_LIVE_RESAMPLE_FPS);
+ 
+     initOverridablePointers(handle, config.global,
+-        ConfigKeys::BLUR_STRENGTH, ConfigKeys::BLUR_ITERATIONS,
++        ConfigKeys::BLUR_STRENGTH, ConfigKeys::BLUR_ITERATIONS, ConfigKeys::NOISE_STRENGTH,
+         ConfigKeys::REFRACTION_STRENGTH, ConfigKeys::CHROMATIC_ABERRATION,
+         ConfigKeys::FRESNEL_STRENGTH, ConfigKeys::SPECULAR_STRENGTH,
+         ConfigKeys::SPECULAR_ANGLE,
+         ConfigKeys::GLASS_OPACITY, ConfigKeys::EDGE_THICKNESS,
++        ConfigKeys::EDGE_THICKNESS_PX,
++        ConfigKeys::EDGE_HEIGHT, ConfigKeys::FRESNEL_REFLECTION,
+         ConfigKeys::TINT_COLOR, ConfigKeys::LENS_DISTORTION,
+         ConfigKeys::BRIGHTNESS, ConfigKeys::CONTRAST,
+         ConfigKeys::SATURATION, ConfigKeys::VIBRANCY,
+@@ -300,14 +355,18 @@ void initConfigPointers(HANDLE handle, SPluginConfig& config) {
+         ConfigKeys::BEVEL_SIZE, ConfigKeys::FRESNEL_COLOR,
+         ConfigKeys::BEVEL_COLOR, ConfigKeys::BEVEL_TINT,
+         ConfigKeys::BEVEL_ANGLE, ConfigKeys::BEVEL_SHADOW,
+-        ConfigKeys::SELF_SAMPLE);
++        ConfigKeys::SELF_SAMPLE, ConfigKeys::XRAY,
++        ConfigKeys::FOCUS_LIGHT, ConfigKeys::FOCUS_LIGHT_COLOR,
++        ConfigKeys::FROST, ConfigKeys::FROST_BLUR);
+ 
+     initOverridablePointers(handle, config.dark,
+-        ConfigKeys::DARK_BLUR_STRENGTH, ConfigKeys::DARK_BLUR_ITERATIONS,
++        ConfigKeys::DARK_BLUR_STRENGTH, ConfigKeys::DARK_BLUR_ITERATIONS, ConfigKeys::DARK_NOISE_STRENGTH,
+         ConfigKeys::DARK_REFRACTION_STRENGTH, ConfigKeys::DARK_CHROMATIC_ABERRATION,
+         ConfigKeys::DARK_FRESNEL_STRENGTH, ConfigKeys::DARK_SPECULAR_STRENGTH,
+         ConfigKeys::DARK_SPECULAR_ANGLE,
+         ConfigKeys::DARK_GLASS_OPACITY, ConfigKeys::DARK_EDGE_THICKNESS,
++        ConfigKeys::DARK_EDGE_THICKNESS_PX,
++        ConfigKeys::DARK_EDGE_HEIGHT, ConfigKeys::DARK_FRESNEL_REFLECTION,
+         ConfigKeys::DARK_TINT_COLOR, ConfigKeys::DARK_LENS_DISTORTION,
+         ConfigKeys::DARK_BRIGHTNESS, ConfigKeys::DARK_CONTRAST,
+         ConfigKeys::DARK_SATURATION, ConfigKeys::DARK_VIBRANCY,
+@@ -318,14 +377,18 @@ void initConfigPointers(HANDLE handle, SPluginConfig& config) {
+         ConfigKeys::DARK_BEVEL_SIZE, ConfigKeys::DARK_FRESNEL_COLOR,
+         ConfigKeys::DARK_BEVEL_COLOR, ConfigKeys::DARK_BEVEL_TINT,
+         ConfigKeys::DARK_BEVEL_ANGLE, ConfigKeys::DARK_BEVEL_SHADOW,
+-        ConfigKeys::DARK_SELF_SAMPLE);
++        ConfigKeys::DARK_SELF_SAMPLE, ConfigKeys::DARK_XRAY,
++        ConfigKeys::DARK_FOCUS_LIGHT, ConfigKeys::DARK_FOCUS_LIGHT_COLOR,
++        ConfigKeys::DARK_FROST, ConfigKeys::DARK_FROST_BLUR);
+ 
+     initOverridablePointers(handle, config.light,
+-        ConfigKeys::LIGHT_BLUR_STRENGTH, ConfigKeys::LIGHT_BLUR_ITERATIONS,
++        ConfigKeys::LIGHT_BLUR_STRENGTH, ConfigKeys::LIGHT_BLUR_ITERATIONS, ConfigKeys::LIGHT_NOISE_STRENGTH,
+         ConfigKeys::LIGHT_REFRACTION_STRENGTH, ConfigKeys::LIGHT_CHROMATIC_ABERRATION,
+         ConfigKeys::LIGHT_FRESNEL_STRENGTH, ConfigKeys::LIGHT_SPECULAR_STRENGTH,
+         ConfigKeys::LIGHT_SPECULAR_ANGLE,
+         ConfigKeys::LIGHT_GLASS_OPACITY, ConfigKeys::LIGHT_EDGE_THICKNESS,
++        ConfigKeys::LIGHT_EDGE_THICKNESS_PX,
++        ConfigKeys::LIGHT_EDGE_HEIGHT, ConfigKeys::LIGHT_FRESNEL_REFLECTION,
+         ConfigKeys::LIGHT_TINT_COLOR, ConfigKeys::LIGHT_LENS_DISTORTION,
+         ConfigKeys::LIGHT_BRIGHTNESS, ConfigKeys::LIGHT_CONTRAST,
+         ConfigKeys::LIGHT_SATURATION, ConfigKeys::LIGHT_VIBRANCY,
+@@ -336,76 +399,60 @@ void initConfigPointers(HANDLE handle, SPluginConfig& config) {
+         ConfigKeys::LIGHT_BEVEL_SIZE, ConfigKeys::LIGHT_FRESNEL_COLOR,
+         ConfigKeys::LIGHT_BEVEL_COLOR, ConfigKeys::LIGHT_BEVEL_TINT,
+         ConfigKeys::LIGHT_BEVEL_ANGLE, ConfigKeys::LIGHT_BEVEL_SHADOW,
+-        ConfigKeys::LIGHT_SELF_SAMPLE);
++        ConfigKeys::LIGHT_SELF_SAMPLE, ConfigKeys::LIGHT_XRAY,
++        ConfigKeys::LIGHT_FOCUS_LIGHT, ConfigKeys::LIGHT_FOCUS_LIGHT_COLOR,
++        ConfigKeys::LIGHT_FROST, ConfigKeys::LIGHT_FROST_BLUR);
+ }
+ 
+-// ── Preset keyword parsing ───────────────────────────────────────────────────
++// ── Preset values ────────────────────────────────────────────────────────────
+ 
+ // Presets built during config parse, swapped into g_pGlobalState on configReloaded
+ static std::unordered_map<std::string, SCustomPreset> s_pendingPresets;
+ 
+-static std::string_view trim(std::string_view str) {
+-    while (!str.empty() && std::isspace(static_cast<unsigned char>(str.front()))) str.remove_prefix(1);
+-    while (!str.empty() && std::isspace(static_cast<unsigned char>(str.back())))  str.remove_suffix(1);
+-    return str;
++static float* presetFloatField(SPresetValues& values, std::string_view key) {
++    if (key == "blur_strength")        return &values.blurStrength;
++    if (key == "noise_strength")       return &values.noiseStrength;
++    if (key == "refraction_strength")  return &values.refractionStrength;
++    if (key == "chromatic_aberration") return &values.chromaticAberration;
++    if (key == "fresnel_strength")     return &values.fresnelStrength;
++    if (key == "specular_strength")    return &values.specularStrength;
++    if (key == "specular_angle")       return &values.specularAngle;
++    if (key == "glass_opacity")        return &values.glassOpacity;
++    if (key == "edge_thickness")       return &values.edgeThickness;
++    if (key == "edge_thickness_px")    return &values.edgeThicknessPx;
++    if (key == "edge_height")          return &values.edgeHeight;
++    if (key == "fresnel_reflection")   return &values.fresnelReflection;
++    if (key == "lens_distortion")      return &values.lensDistortion;
++    if (key == "brightness")           return &values.brightness;
++    if (key == "contrast")             return &values.contrast;
++    if (key == "saturation")           return &values.saturation;
++    if (key == "vibrancy")             return &values.vibrancy;
++    if (key == "vibrancy_darkness")    return &values.vibrancyDarkness;
++    if (key == "adaptive_dim")         return &values.adaptiveDim;
++    if (key == "adaptive_boost")       return &values.adaptiveBoost;
++    if (key == "refraction_flow")      return &values.refractionFlow;
++    if (key == "refraction_spread")    return &values.refractionSpread;
++    if (key == "fresnel_tint")         return &values.fresnelTint;
++    if (key == "bevel_strength")       return &values.bevelStrength;
++    if (key == "bevel_size")           return &values.bevelSize;
++    if (key == "bevel_tint")           return &values.bevelTint;
++    if (key == "bevel_angle")          return &values.bevelAngle;
++    if (key == "bevel_shadow")         return &values.bevelShadow;
++    if (key == "self_sample")          return &values.selfSample;
++    if (key == "focus_light")          return &values.focusLight;
++    if (key == "frost")                return &values.frost;
++    if (key == "frost_blur")           return &values.frostBlur;
++    return nullptr;
+ }
+ 
+-static bool setPresetFloatField(SPresetValues& values, std::string_view key, std::string_view valueStr) {
+-    float parsed = 0.0f;
+-    auto [ptr, ec] = std::from_chars(valueStr.data(), valueStr.data() + valueStr.size(), parsed);
+-    if (ec != std::errc{}) return false;
+-
+-    if (key == "blur_strength")        { values.blurStrength = parsed; return true; }
+-    if (key == "refraction_strength")  { values.refractionStrength = parsed; return true; }
+-    if (key == "chromatic_aberration") { values.chromaticAberration = parsed; return true; }
+-    if (key == "fresnel_strength")     { values.fresnelStrength = parsed; return true; }
+-    if (key == "specular_strength")    { values.specularStrength = parsed; return true; }
+-    if (key == "specular_angle")       { values.specularAngle = parsed; return true; }
+-    if (key == "glass_opacity")        { values.glassOpacity = parsed; return true; }
+-    if (key == "edge_thickness")       { values.edgeThickness = parsed; return true; }
+-    if (key == "lens_distortion")      { values.lensDistortion = parsed; return true; }
+-    if (key == "brightness")           { values.brightness = parsed; return true; }
+-    if (key == "contrast")             { values.contrast = parsed; return true; }
+-    if (key == "saturation")           { values.saturation = parsed; return true; }
+-    if (key == "vibrancy")             { values.vibrancy = parsed; return true; }
+-    if (key == "vibrancy_darkness")    { values.vibrancyDarkness = parsed; return true; }
+-    if (key == "adaptive_dim")         { values.adaptiveDim = parsed; return true; }
+-    if (key == "adaptive_boost")       { values.adaptiveBoost = parsed; return true; }
+-    if (key == "refraction_flow")      { values.refractionFlow = parsed; return true; }
+-    if (key == "refraction_spread")    { values.refractionSpread = parsed; return true; }
+-    if (key == "fresnel_tint")         { values.fresnelTint = parsed; return true; }
+-    if (key == "bevel_strength")       { values.bevelStrength = parsed; return true; }
+-    if (key == "bevel_size")           { values.bevelSize = parsed; return true; }
+-    if (key == "bevel_tint")           { values.bevelTint = parsed; return true; }
+-    if (key == "bevel_angle")          { values.bevelAngle = parsed; return true; }
+-    if (key == "bevel_shadow")         { values.bevelShadow = parsed; return true; }
+-    if (key == "self_sample")          { values.selfSample = parsed; return true; }
+-    return false;
+-}
+-
+-static bool setPresetIntField(SPresetValues& values, std::string_view key, std::string_view valueStr) {
+-    // Handle hex (0x...) and decimal
+-    int64_t parsed = 0;
+-    int base = 10;
+-    auto data = valueStr.data();
+-    auto size = valueStr.size();
+-    if (size > 2 && data[0] == '0' && (data[1] == 'x' || data[1] == 'X')) {
+-        data += 2;
+-        size -= 2;
+-        base = 16;
+-    }
+-    auto [ptr, ec] = std::from_chars(data, data + size, parsed, base);
+-    if (ec != std::errc{}) return false;
+-
+-    if (key == "blur_iterations") { values.blurIterations = parsed; return true; }
+-    if (key == "tint_color")      { values.tintColor = parsed; return true; }
+-    if (key == "fresnel_color")   { values.fresnelColor = parsed; return true; }
+-    if (key == "bevel_color")     { values.bevelColor = parsed; return true; }
+-    return false;
+-}
+-
+-static bool setPresetField(SPresetValues& values, std::string_view key, std::string_view valueStr) {
+-    return setPresetIntField(values, key, valueStr) || setPresetFloatField(values, key, valueStr);
++static int64_t* presetIntField(SPresetValues& values, std::string_view key) {
++    if (key == "blur_iterations") return &values.blurIterations;
++    if (key == "tint_color")      return &values.tintColor;
++    if (key == "fresnel_color")   return &values.fresnelColor;
++    if (key == "bevel_color")     return &values.bevelColor;
++    if (key == "xray")            return &values.xray;
++    if (key == "focus_light_color") return &values.focusLightColor;
++    return nullptr;
+ }
+ 
+ static void mergePresetValues(SPresetValues& target, const SPresetValues& overrides) {
+@@ -414,6 +461,7 @@ static void mergePresetValues(SPresetValues& target, const SPresetValues& overri
+ 
+     mergeFloat(target.blurStrength, overrides.blurStrength);
+     mergeInt(target.blurIterations, overrides.blurIterations);
++    mergeFloat(target.noiseStrength, overrides.noiseStrength);
+     mergeFloat(target.refractionStrength, overrides.refractionStrength);
+     mergeFloat(target.chromaticAberration, overrides.chromaticAberration);
+     mergeFloat(target.fresnelStrength, overrides.fresnelStrength);
+@@ -421,6 +469,9 @@ static void mergePresetValues(SPresetValues& target, const SPresetValues& overri
+     mergeFloat(target.specularAngle, overrides.specularAngle);
+     mergeFloat(target.glassOpacity, overrides.glassOpacity);
+     mergeFloat(target.edgeThickness, overrides.edgeThickness);
++    mergeFloat(target.edgeThicknessPx, overrides.edgeThicknessPx);
++    mergeFloat(target.edgeHeight, overrides.edgeHeight);
++    mergeFloat(target.fresnelReflection, overrides.fresnelReflection);
+     mergeInt(target.tintColor, overrides.tintColor);
+     mergeFloat(target.lensDistortion, overrides.lensDistortion);
+     mergeFloat(target.brightness, overrides.brightness);
+@@ -441,92 +492,35 @@ static void mergePresetValues(SPresetValues& target, const SPresetValues& overri
+     mergeFloat(target.bevelAngle, overrides.bevelAngle);
+     mergeFloat(target.bevelShadow, overrides.bevelShadow);
+     mergeFloat(target.selfSample, overrides.selfSample);
++    mergeInt(target.xray, overrides.xray);
++    mergeFloat(target.focusLight, overrides.focusLight);
++    mergeInt(target.focusLightColor, overrides.focusLightColor);
++    mergeFloat(target.frost, overrides.frost);
++    mergeFloat(target.frostBlur, overrides.frostBlur);
+ }
+ 
+-Hyprlang::CParseResult handlePresetKeyword(const char* /*command*/, const char* value) {
+-    Hyprlang::CParseResult result;
+-    std::string_view       input(value);
++// Set by every hyprglass.* call, cleared before each reload.
++static bool s_hyprglassCalledThisReload = false;
+ 
+-    std::string presetName;
+-    std::string variant;     // "", "dark", or "light"
+-    std::string inherits;
+-    SPresetValues parsedValues;
+-
+-    // Split on ',' and parse key:value tokens
+-    while (!input.empty()) {
+-        auto commaPos = input.find(',');
+-        auto token = trim(input.substr(0, commaPos));
+-        input = (commaPos == std::string_view::npos) ? std::string_view{} : input.substr(commaPos + 1);
+-
+-        if (token.empty()) continue;
+-
+-        auto colonPos = token.find(':');
+-        if (colonPos == std::string_view::npos) {
+-            result.setError(std::format("preset: invalid token '{}' (expected key:value)", token).c_str());
+-            return result;
+-        }
+-
+-        auto key = trim(token.substr(0, colonPos));
+-        auto val = trim(token.substr(colonPos + 1));
+-
+-        if (key == "name") {
+-            // val is "presetname" or "presetname:dark" or "presetname:light"
+-            auto variantSep = val.find(':');
+-            if (variantSep != std::string_view::npos) {
+-                presetName = std::string(val.substr(0, variantSep));
+-                variant = std::string(val.substr(variantSep + 1));
+-                if (variant != "dark" && variant != "light") {
+-                    result.setError(std::format("preset: invalid variant '{}' (expected dark or light)", variant).c_str());
+-                    return result;
+-                }
+-            } else {
+-                presetName = std::string(val);
+-            }
+-        } else if (key == "inherits") {
+-            inherits = std::string(val);
+-        } else {
+-            if (!setPresetField(parsedValues, key, val)) {
+-                result.setError(std::format("preset: unknown or invalid setting '{}:{}'", key, val).c_str());
+-                return result;
+-            }
+-        }
+-    }
+-
+-    if (presetName.empty()) {
+-        result.setError("preset: missing required 'name' field");
+-        return result;
+-    }
+-
+-    // Normalize names so presets defined as "firefox*" (old workaround for
+-    // dynamic tags) and "firefox" register under the same key.
+-    presetName = stripDynamicTagMarker(presetName);
+-    inherits   = stripDynamicTagMarker(inherits);
+-
+-    // Get or create the preset entry
+-    auto& preset = s_pendingPresets[presetName];
+-    preset.name = presetName;
+-
+-    if (!inherits.empty())
+-        preset.inherits = inherits;
+-
+-    // Merge parsed values into the correct layer (additive across multiple lines)
+-    if (variant == "dark")
+-        mergePresetValues(preset.dark, parsedValues);
+-    else if (variant == "light")
+-        mergePresetValues(preset.light, parsedValues);
+-    else
+-        mergePresetValues(preset.shared, parsedValues);
+-
+-    return result;
++// A reload that fails its syntax check emits config.reloaded without resetting the config values
++// or running any hyprglass.* call: committing the empty pending lists would wipe what the last good
++// reload set. A reload that ran the user's calls commits them even if it ended in an error, as
++// the values it applied stay applied.
++static bool keepCommittedState() {
++    return !s_hyprglassCalledThisReload && !Config::mgr()->configVerifPassed();
+ }
+ 
+-void clearPendingPresets() {
++static void clearPendingPresets() {
+     s_pendingPresets.clear();
+ }
+ 
+ void commitPendingPresets() {
+     if (!g_pGlobalState) return;
+ 
++    // customPresets always holds the built-ins once committed; empty means nothing to keep yet
++    if (!g_pGlobalState->customPresets.empty() && keepCommittedState())
++        return;
++
+     // Start with built-in presets, then merge user-defined overrides (non-sentinel fields win)
+     auto merged = BuiltInPresets::getAll();
+     for (auto& [name, userPreset] : s_pendingPresets) {
+@@ -550,19 +544,37 @@ void commitPendingPresets() {
+ // Keys are validated first so unknown options are reported with the user's file and line instead of '[C]'.
+ // Lua errors longjmp, so they are raised only while no C++ object lives in our frames.
+ 
+-static WP<Config::Lua::CConfigManager> luaConfigManager() {
+-    return dynamicPointerCast<Config::Lua::CConfigManager>(WP<Config::IConfigManager>(Config::mgr()));
++// The Lua manager is the only config manager, and these callbacks run from its Lua state.
++static Config::Lua::CConfigManager& luaConfigManager() {
++    return static_cast<Config::Lua::CConfigManager&>(*Config::mgr());
++}
++
++// "file:line" of the user's code calling the running hyprglass.* function (stack level 1), empty when unknown.
++static std::string callerLocation(lua_State* L) {
++    lua_Debug ar{};
++    if (!lua_getstack(L, 1, &ar) || !lua_getinfo(L, "Sl", &ar) || ar.currentline <= 0)
++        return {};
++
++    // A file chunk is named "@path"; a hyprctl eval chunk is named by its whole code, which short_src truncates
++    const char* source = ar.source && *ar.source == '@' ? ar.source + 1 : ar.short_src;
++    return std::format("{}:{}", source, ar.currentline);
++}
++
++// For hyprglass.preset and hyprglass.layer, whose C++ objects a Lua error would unwind past:
++// the message goes to the error list `hyprctl configerrors` shows and the call carries on.
++static void reportLuaError(lua_State* L, std::string_view function, const std::string& message) {
++    const std::string where = callerLocation(L);
++    luaConfigManager().addError(std::format("{}{}hyprglass.{}: {}", where, where.empty() ? "" : ": ", function, message));
+ }
+ 
+ struct SLuaConfigContext {
+     lua_State*                                       L;
+-    WP<Config::Lua::CConfigManager>                  luaMgr;
++    Config::Lua::CConfigManager&                     luaMgr;
+     std::string                                      where;
+     std::vector<std::pair<std::string, std::string>> applied; // {option path, dotted key}
+ 
+     void report(const std::string& msg) const {
+-        if (!luaMgr) return;
+-        luaMgr->addError(where.empty() ? "hyprglass.config: " + msg : where + ": hyprglass.config: " + msg);
++        luaMgr.addError(where.empty() ? "hyprglass.config: " + msg : where + ": hyprglass.config: " + msg);
+     }
+ };
+ 
+@@ -616,15 +628,7 @@ static void copyValidatedTable(SLuaConfigContext& ctx, int srcIdx, int dstIdx, c
+ 
+ // Stack on entry: [T, ..., hl, config]. Returns true with [T, ..., hl], or false with the error message on top.
+ static bool forwardLuaConfig(lua_State* L) {
+-    SLuaConfigContext ctx{.L = L, .luaMgr = luaConfigManager()};
+-
+-    lua_Debug ar{};
+-    if (lua_getstack(L, 1, &ar) && lua_getinfo(L, "Sl", &ar) && ar.currentline > 0) {
+-        const char* src = ar.source;
+-        if (src && *src == '@')
+-            ++src;
+-        ctx.where = std::format("{}:{}", src ? src : "?", ar.currentline);
+-    }
++    SLuaConfigContext ctx{.L = L, .luaMgr = luaConfigManager(), .where = callerLocation(L), .applied = {}};
+ 
+     lua_newtable(L); // root
+     lua_newtable(L); // plugin
+@@ -633,12 +637,12 @@ static bool forwardLuaConfig(lua_State* L) {
+     lua_setfield(L, -2, "hyprglass");
+     lua_setfield(L, -2, "plugin");
+ 
+-    const std::string errorsBefore = ctx.luaMgr ? ctx.luaMgr->getErrors() : std::string{};
++    const std::string errorsBefore = ctx.luaMgr.getErrors();
+     if (lua_pcall(L, 1, 0, 0) != LUA_OK)
+         return false;
+ 
+     // hl.config reports type and range errors itself; only look for silent no-ops while the config file is parsed.
+-    if (ctx.luaMgr && !ctx.luaMgr->isDynamicParse() && ctx.luaMgr->getErrors() == errorsBefore) {
++    if (!ctx.luaMgr.isDynamicParse() && ctx.luaMgr.getErrors() == errorsBefore) {
+         for (const auto& [optionPath, dotted] : ctx.applied) {
+             if (!Config::mgr()->getConfigValue(optionPath).setByUser)
+                 ctx.report(std::format("option '{}' was not applied", dotted));
+@@ -648,6 +652,8 @@ static bool forwardLuaConfig(lua_State* L) {
+ }
+ 
+ static int handleLuaConfig(lua_State* L) {
++    s_hyprglassCalledThisReload = true;
++
+     if (lua_gettop(L) < 1 || !lua_istable(L, 1))
+         return luaL_error(L, "hyprglass.config: expected a table");
+ 
+@@ -664,58 +670,96 @@ static int handleLuaConfig(lua_State* L) {
+     return 0;
+ }
+ 
+-// ── Lua preset handler (table + string) ─────────────────────────────────────
++// ── Lua preset handler ──────────────────────────────────────────────────────
+ 
+-static void readPresetValuesFromTable(lua_State* L, int tableIdx, SPresetValues& values) {
++static std::optional<double> luaFiniteNumber(lua_State* L, int index) {
++    if (lua_isnumber(L, index)) {
++        const double value = lua_tonumber(L, index);
++        if (std::isfinite(value))
++            return value;
++    }
++    return std::nullopt;
++}
++
++// Booleans read as 0/1, so a flag like xray takes `true` as hyprglass.config() does.
++static std::optional<double> luaPresetValue(lua_State* L, int index) {
++    if (lua_isboolean(L, index))
++        return lua_toboolean(L, index) ? 1.0 : 0.0;
++    return luaFiniteNumber(L, index);
++}
++
++// Stack: the key (a string) at -2 and its value at -1. scope names the table in the messages.
++static void readPresetField(lua_State* L, SPresetValues& values, const std::string& scope) {
++    const std::string_view key = lua_tostring(L, -2);
++
++    float*   floatField = presetFloatField(values, key);
++    int64_t* intField   = floatField ? nullptr : presetIntField(values, key);
++    if (!floatField && !intField) {
++        reportLuaError(L, "preset", std::format("unknown setting '{}' in '{}'", key, scope));
++        return;
++    }
++
++    const auto value = luaPresetValue(L, -1);
++    if (!value) {
++        reportLuaError(L, "preset", std::format("'{}' in '{}' expects a number or true/false", key, scope));
++        return;
++    }
++
++    if (floatField)
++        *floatField = static_cast<float>(*value);
++    else
++        *intField = static_cast<int64_t>(std::clamp(*value, -9.0e18, 9.0e18)); // keeps the cast defined
++}
++
++static void readPresetValuesFromTable(lua_State* L, int tableIdx, SPresetValues& values, const std::string& scope) {
+     lua_pushnil(L);
+     while (lua_next(L, tableIdx) != 0) {
+-        if (lua_isstring(L, -2) && lua_isnumber(L, -1)) {
+-            const char* key = lua_tostring(L, -2);
+-            std::string valStr = std::to_string(lua_tonumber(L, -1));
+-            setPresetField(values, key, valStr);
+-        }
++        if (lua_type(L, -2) == LUA_TSTRING)
++            readPresetField(L, values, scope);
++        else
++            reportLuaError(L, "preset", std::format("ignoring non-string key in '{}'", scope));
+         lua_pop(L, 1);
+     }
+ }
+ 
++// preset("clear", { glass_opacity = 0.8, dark = { brightness = 0.7 }, ... })
+ static int handleLuaPreset(lua_State* L) {
+-    int nargs = lua_gettop(L);
++    s_hyprglassCalledThisReload = true;
+ 
+-    // Legacy: preset("name:clear, glass_opacity:0.8, ...")
+-    if (nargs == 1 && lua_isstring(L, 1)) {
+-        const auto result = handlePresetKeyword(ConfigKeys::PRESET_KEYWORD, lua_tostring(L, 1));
+-        if (result.error)
+-            return luaL_error(L, "%s", result.getError());
++    // reported, not raised: a Lua error here would abort the rest of the user's config
++    if (lua_gettop(L) != 2 || !lua_isstring(L, 1) || !lua_istable(L, 2)) {
++        reportLuaError(L, "preset", "expected a name and a table of settings: hg.preset(\"name\", { glass_opacity = 0.8 })");
+         return 0;
+     }
+ 
+-    // Table: preset("clear", { glass_opacity = 0.8, dark = { brightness = 0.7 }, ... })
+-    if (nargs == 2 && lua_isstring(L, 1) && lua_istable(L, 2)) {
+-        std::string baseName = stripDynamicTagMarker(lua_tostring(L, 1));
+-        auto& preset = s_pendingPresets[baseName];
+-        preset.name = baseName;
++    const std::string baseName = stripDynamicTagMarker(lua_tostring(L, 1));
++    auto&             preset   = s_pendingPresets[baseName];
++    preset.name                = baseName;
+ 
+-        lua_pushnil(L);
+-        while (lua_next(L, 2) != 0) {
+-            if (!lua_isstring(L, -2)) { lua_pop(L, 1); continue; }
+-            const char* key = lua_tostring(L, -2);
++    lua_pushnil(L);
++    while (lua_next(L, 2) != 0) {
++        if (lua_type(L, -2) != LUA_TSTRING) {
++            reportLuaError(L, "preset", std::format("ignoring non-string key in '{}'", baseName));
++        } else {
++            const std::string_view key = lua_tostring(L, -2);
+ 
+-            if (strcmp(key, "inherits") == 0 && lua_isstring(L, -1)) {
+-                preset.inherits = stripDynamicTagMarker(lua_tostring(L, -1));
+-            } else if (strcmp(key, "dark") == 0 && lua_istable(L, -1)) {
+-                readPresetValuesFromTable(L, lua_gettop(L), preset.dark);
+-            } else if (strcmp(key, "light") == 0 && lua_istable(L, -1)) {
+-                readPresetValuesFromTable(L, lua_gettop(L), preset.light);
+-            } else if (lua_isnumber(L, -1)) {
+-                std::string valStr = std::to_string(lua_tonumber(L, -1));
+-                setPresetField(preset.shared, key, valStr);
++            if (key == "inherits") {
++                if (lua_type(L, -1) == LUA_TSTRING)
++                    preset.inherits = stripDynamicTagMarker(lua_tostring(L, -1));
++                else
++                    reportLuaError(L, "preset", std::format("'inherits' in '{}' expects a preset name", baseName));
++            } else if (key == "dark" || key == "light") {
++                if (lua_istable(L, -1))
++                    readPresetValuesFromTable(L, lua_gettop(L), key == "dark" ? preset.dark : preset.light, std::format("{}.{}", baseName, key));
++                else
++                    reportLuaError(L, "preset", std::format("'{}' in '{}' expects a table", key, baseName));
++            } else {
++                readPresetField(L, preset.shared, baseName);
+             }
+-            lua_pop(L, 1);
+         }
+-        return 0;
++        lua_pop(L, 1);
+     }
+-
+-    return luaL_error(L, "hyprglass.preset: expected (string) or (name, table)");
++    return 0;
+ }
+ 
+ // ── Lua layer handler ───────────────────────────────────────────────────────
+@@ -724,44 +768,147 @@ struct SPendingLayer {
+     std::string                   ns;
+     std::string                   preset;
+     float                         maskThreshold = -1.0f;
++    float                         maskFeather   = -1.0f;
+     bool                          exclude       = false;
+     int                           liveResample  = -1; // -1 = not set
+     std::optional<ELayerMaskMode> maskMode;
++    std::optional<SLayerShape>    shape;
+ };
+ 
+ static std::vector<SPendingLayer> s_pendingLayers;
+ 
++// shape = { inset = px or {top, right, bottom, left}, radius = px }, both optional (0).
++static std::optional<SLayerShape> readLuaLayerShape(lua_State* L, int tableIdx) {
++    SLayerShape shape;
++    bool        valid = true;
++
++    lua_getfield(L, tableIdx, "inset");
++    if (lua_isnumber(L, -1)) {
++        const double inset = lua_tonumber(L, -1);
++        valid = valid && std::isfinite(inset);
++        shape.insetTop = shape.insetRight = shape.insetBottom = shape.insetLeft = clampShapeInset(inset);
++    } else if (lua_istable(L, -1)) {
++        const int                   insetIdx = lua_gettop(L);
++        const std::array<float*, 4> sides    = {&shape.insetTop, &shape.insetRight, &shape.insetBottom, &shape.insetLeft};
++        for (size_t i = 0; i < sides.size(); i++) {
++            lua_rawgeti(L, insetIdx, static_cast<lua_Integer>(i + 1));
++            const double side = lua_isnumber(L, -1) ? lua_tonumber(L, -1) : std::nan("");
++            valid             = valid && std::isfinite(side);
++            *sides[i]         = clampShapeInset(side);
++            lua_pop(L, 1);
++        }
++    } else if (!lua_isnil(L, -1)) {
++        valid = false;
++    }
++    lua_pop(L, 1);
++
++    lua_getfield(L, tableIdx, "radius");
++    if (lua_isnumber(L, -1)) {
++        const double radius = lua_tonumber(L, -1);
++        valid               = valid && std::isfinite(radius);
++        shape.radius        = clampShapeRadius(radius);
++    } else if (!lua_isnil(L, -1)) {
++        valid = false;
++    }
++    lua_pop(L, 1);
++
++    if (!valid)
++        return std::nullopt;
++    return shape;
++}
++
++// What hyprglass.layer takes in its table; anything else is reported.
++static constexpr std::array<std::string_view, 7> LAYER_SETTINGS = {"exclude", "preset", "mask_threshold", "mask_feather", "live_resample", "mask_mode", "shape"};
++
+ static int handleLuaLayer(lua_State* L) {
+-    if (lua_gettop(L) < 1 || !lua_isstring(L, 1))
+-        return luaL_error(L, "hyprglass.layer: first argument must be a namespace string");
++    s_hyprglassCalledThisReload = true;
++
++    if (lua_gettop(L) < 1 || !lua_isstring(L, 1)) {
++        reportLuaError(L, "layer", "first argument must be a namespace string: hg.layer(\"waybar\", { preset = \"subtle\" })");
++        return 0;
++    }
+ 
+     SPendingLayer entry;
+     entry.ns = lua_tostring(L, 1);
+ 
+-    if (lua_gettop(L) >= 2 && lua_istable(L, 2)) {
++    // from here on problems go to reportLuaError: a Lua error would unwind past entry's strings
++    const auto typeError = [L, &entry](std::string_view setting, std::string_view expected) {
++        reportLuaError(L, "layer", std::format("'{}' for '{}' expects {}", setting, entry.ns, expected));
++    };
++
++    const bool hasTable = lua_gettop(L) >= 2 && lua_istable(L, 2);
++    if (lua_gettop(L) >= 2 && !lua_isnil(L, 2) && !hasTable)
++        reportLuaError(L, "layer", std::format("settings for '{}' must be a table", entry.ns));
++
++    if (hasTable) {
++        lua_pushnil(L);
++        while (lua_next(L, 2) != 0) {
++            if (entry.ns == LAYER_NAMESPACE_WILDCARD) {
++                lua_pop(L, 2);
++                reportLuaError(L, "layer", "'*' takes no settings, put the settings for every layer in the layers table of hyprglass.config");
++                return 0;
++            }
++            if (lua_type(L, -2) != LUA_TSTRING)
++                reportLuaError(L, "layer", std::format("ignoring non-string key for '{}'", entry.ns));
++            else if (std::ranges::find(LAYER_SETTINGS, std::string_view(lua_tostring(L, -2))) == LAYER_SETTINGS.end())
++                reportLuaError(L, "layer", std::format("unknown setting '{}' for '{}'", lua_tostring(L, -2), entry.ns));
++            lua_pop(L, 1);
++        }
++
+         lua_getfield(L, 2, "exclude");
+-        if (lua_isboolean(L, -1) && lua_toboolean(L, -1))
+-            entry.exclude = true;
++        if (lua_isboolean(L, -1)) {
++            entry.exclude = lua_toboolean(L, -1);
++        } else if (!lua_isnil(L, -1)) {
++            // keeping the entry would turn the exclusion into a whitelist entry
++            typeError("exclude", "true or false");
++            return 0;
++        }
+         lua_pop(L, 1);
+ 
+         lua_getfield(L, 2, "preset");
+-        if (lua_isstring(L, -1))
++        if (lua_type(L, -1) == LUA_TSTRING)
+             entry.preset = lua_tostring(L, -1);
++        else if (!lua_isnil(L, -1))
++            typeError("preset", "a preset name");
+         lua_pop(L, 1);
+ 
+         lua_getfield(L, 2, "mask_threshold");
+-        if (lua_isnumber(L, -1))
+-            entry.maskThreshold = static_cast<float>(lua_tonumber(L, -1));
++        if (const auto value = luaFiniteNumber(L, -1); value && *value >= 0.0)
++            entry.maskThreshold = static_cast<float>(*value);
++        else if (!lua_isnil(L, -1))
++            typeError("mask_threshold", "a finite number, 0 or more");
++        lua_pop(L, 1);
++
++        lua_getfield(L, 2, "mask_feather");
++        if (const auto value = luaFiniteNumber(L, -1); value && *value >= 0.0)
++            entry.maskFeather = static_cast<float>(*value);
++        else if (!lua_isnil(L, -1))
++            typeError("mask_feather", "a finite number, 0 or more");
+         lua_pop(L, 1);
+ 
+         lua_getfield(L, 2, "live_resample");
+         if (lua_isboolean(L, -1))
+             entry.liveResample = lua_toboolean(L, -1) ? 1 : 0;
++        else if (!lua_isnil(L, -1))
++            typeError("live_resample", "true or false");
+         lua_pop(L, 1);
+ 
+         lua_getfield(L, 2, "mask_mode");
+-        if (lua_isstring(L, -1))
++        if (lua_type(L, -1) == LUA_TSTRING) {
+             entry.maskMode = parseLayerMaskMode(lua_tostring(L, -1));
++            if (!entry.maskMode)
++                typeError("mask_mode", "\"auto\", \"alpha\", \"region\" or \"contour\"");
++        } else if (!lua_isnil(L, -1)) {
++            typeError("mask_mode", "\"auto\", \"alpha\", \"region\" or \"contour\"");
++        }
++        lua_pop(L, 1);
++
++        lua_getfield(L, 2, "shape");
++        if (!lua_isnil(L, -1)) {
++            entry.shape = lua_istable(L, -1) ? readLuaLayerShape(L, lua_gettop(L)) : std::nullopt;
++            if (!entry.shape)
++                reportLuaError(L, "layer", std::format("invalid shape for '{}', expected {{ inset = px or {{top, right, bottom, left}}, radius = px }}", entry.ns));
++        }
+         lua_pop(L, 1);
+     }
+ 
+@@ -769,12 +916,31 @@ static int handleLuaLayer(lua_State* L) {
+     return 0;
+ }
+ 
+-void clearPendingLayers() {
++static void clearPendingLayers() {
+     s_pendingLayers.clear();
+ }
+ 
++void beginConfigReload() {
++    clearPendingPresets();
++    clearPendingLayers();
++    s_hyprglassCalledThisReload = false;
++}
++
++// A hg.layer() line removed from the config must stop applying on the next reload.
++static void resetLayerNamespaces() {
++    g_pGlobalState->layerNamespaceFilter.clear();
++    g_pGlobalState->layerNamespaceExclude.clear();
++    g_pGlobalState->layerNamespacePresets.clear();
++    g_pGlobalState->layerNamespaceMaskThresholds.clear();
++    g_pGlobalState->layerNamespaceLiveResample.clear();
++    g_pGlobalState->layerNamespaceMaskModes.clear();
++    g_pGlobalState->layerNamespaceMaskFeathers.clear();
++    g_pGlobalState->layerNamespaceShapes.clear();
++}
++
+ void commitPendingLayers() {
+-    if (!g_pGlobalState) return;
++    if (!g_pGlobalState || keepCommittedState()) return;
++    resetLayerNamespaces();
+     for (const auto& entry : s_pendingLayers) {
+         if (entry.exclude) {
+             g_pGlobalState->layerNamespaceExclude.insert(entry.ns);
+@@ -784,10 +950,14 @@ void commitPendingLayers() {
+                 g_pGlobalState->layerNamespacePresets[entry.ns] = entry.preset;
+             if (entry.maskThreshold >= 0.0f)
+                 g_pGlobalState->layerNamespaceMaskThresholds[entry.ns] = entry.maskThreshold;
++            if (entry.maskFeather >= 0.0f)
++                g_pGlobalState->layerNamespaceMaskFeathers[entry.ns] = entry.maskFeather;
+             if (entry.liveResample >= 0)
+                 g_pGlobalState->layerNamespaceLiveResample[entry.ns] = entry.liveResample != 0;
+             if (entry.maskMode)
+                 g_pGlobalState->layerNamespaceMaskModes[entry.ns] = *entry.maskMode;
++            if (entry.shape)
++                g_pGlobalState->layerNamespaceShapes[entry.ns] = *entry.shape;
+         }
+     }
+     s_pendingLayers.clear();
+@@ -810,7 +980,7 @@ void validateConfig() {
+     const auto maskMode = readStringConfig(config.layersMaskMode);
+     if (!parseLayerMaskMode(maskMode)) {
+         HyprlandAPI::addNotificationV2(PHANDLE, {
+-            {"text", std::string("[hyprglass] Invalid layers:mask_mode '") + std::string(maskMode) + "', expected 'auto', 'alpha', or 'region'. Falling back to 'auto'."},
++            {"text", std::string("[hyprglass] Invalid layers.mask_mode '") + std::string(maskMode) + "', expected 'auto', 'alpha', 'region' or 'contour'. Falling back to 'auto'."},
+             {"time", (uint64_t)5000},
+             {"color", CHyprColor{1.0, 0.8, 0.2, 1.0}},
+         });
+@@ -819,7 +989,7 @@ void validateConfig() {
+     const auto debugMode = readStringConfig(config.debugMode);
+     if (!parseDebugMode(debugMode)) {
+         HyprlandAPI::addNotificationV2(PHANDLE, {
+-            {"text", std::string("[hyprglass] Invalid debug:mode '") + std::string(debugMode) + "', expected 'off', 'hints_only', or 'gl_work_only'. Falling back to 'off'."},
++            {"text", std::string("[hyprglass] Invalid debug.mode '") + std::string(debugMode) + "', expected 'off', 'hints_only', or 'gl_work_only'. Falling back to 'off'."},
+             {"time", (uint64_t)5000},
+            

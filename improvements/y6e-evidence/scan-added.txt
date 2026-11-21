@@ -1,0 +1,73 @@
+93:+## [v1.1.1](https://github.com/Hyprnux/hyprglass/compare/v1.1.0...v1.1.1) - 2026-11-03
+97:+* glass refreshes over video and other GPU-rendered backgrounds ([#102](https://github.com/Hyprnux/hyprglass/issues/102))
+100:+## [v1.1.0](https://github.com/Hyprnux/hyprglass/compare/v1.0.0...v1.1.0) - 2026-10-30
+104:+* glass no longer keeps a stale backdrop after a window behind it opens or closes ([#98](https://github.com/Hyprnux/hyprglass/issues/98))
+108:+* glass lands in the right place on rotated and flipped monitors under Hyprland 0.57 ([#99](https://github.com/Hyprnux/hyprglass/issues/99))
+128:+## [v1.0.0](https://github.com/Hyprnux/hyprglass/compare/v0.11.0...v1.0.0) - 2026-10-30
+132:+* hyprglass works on Hyprland 0.57 ([#100](https://github.com/Hyprnux/hyprglass/issues/100))
+139:+* hyprglass targets Hyprland 0.57 and its Lua-only config ([#100](https://github.com/Hyprnux/hyprglass/issues/100))
+143:+* support hyprland-git (view, workspace and hyprctl API refactors)
+155:+* the README documents Hyprland 0.57's Lua-only config ([#100](https://github.com/Hyprnux/hyprglass/issues/100))
+158:+## [v0.11.0](https://github.com/Hyprnux/hyprglass/compare/v0.10.0...v0.11.0) - 2026-10-19
+163:+* a glass shader that fails to compile no longer stalls every frame (spotted by [@Eddie175](https://github.com/Eddie175))
+164:+* layer glass no longer shifts for a frame when its blur region changes (spotted by [@Eddie175](https://github.com/Eddie175))
+165:+* glass no longer stays stale after a quick burst of changes (spotted by [@Eddie175](https://github.com/Eddie175))
+166:+* no stray glass from bars or glass layers over the lock screen (spotted by [@Eddie175](https://github.com/Eddie175))
+178:+* layer glass can follow each shape an app draws (idea from [@Eddie175](https://github.com/Eddie175)'s True Glass)
+179:+* glass frosts only where other windows are behind it (idea from [@Eddie175](https://github.com/Eddie175)'s True Glass)
+180:+* bars and panels can have their own rounded glass shape (idea from [@Eddie175](https://github.com/Eddie175)'s True Glass)
+181:+* optional light along the active window's glass edge (idea from [@Eddie175](https://github.com/Eddie175)'s True Glass)
+182:+* lens-like glass edges that can mirror their surroundings (idea from [@Eddie175](https://github.com/Eddie175)'s True Glass)
+183:+* set the glass edge thickness in pixels ([#92](https://github.com/Hyprnux/hyprglass/issues/92))
+190:+## [v0.10.0](https://github.com/Hyprnux/hyprglass/compare/v0.9.1...v0.10.0) - 2026-10-09
+195:+* steady, even grain on every window and theme ([#67](https://github.com/Hyprnux/hyprglass/issues/67))
+197:+* faster Hyprland startup with hyprglass loaded ([#88](https://github.com/Hyprnux/hyprglass/issues/88))
+211:+* what to do when Hyprland hangs at startup ([#88](https://github.com/Hyprnux/hyprglass/issues/88))
+215:+* set the layer mask threshold once for all layers ([#52](https://github.com/Hyprnux/hyprglass/issues/52))
+216:+* optional grain on the glass for a frosted look ([#67](https://github.com/Hyprnux/hyprglass/issues/67))
+217:+* soft glass edges can be set per layer ([#58](https://github.com/Hyprnux/hyprglass/issues/58))
+219:+* layer glass follows the soft edges of rounded panels ([#58](https://github.com/Hyprnux/hyprglass/issues/58))
+220:+* x-ray can be set per preset and hides every window behind the glass ([#68](https://github.com/Hyprnux/hyprglass/issues/68))
+221:+* add xray option to hide windows under the glass ([#68](https://github.com/Hyprnux/hyprglass/issues/68))
+280:+Grab `hyprglass.so` from [Releases](https://github.com/hyprnux/hyprglass/releases/latest). Each release targets a specific Hyprland API version — check the release notes to confirm it matches yours. If it doesn't match, hyprglass stays paused instead of crashing Hyprland (see [Troubleshooting](#troubleshooting)).
+316:+hyprctl configerrors                                # unknown options and wrong values in hg.config, hg.preset and hg.layer
+424:+hyprctl eval 'hl.plugin.hyprglass.config({ self_sample = 1.0 })'
+443:+hyprctl eval 'hl.plugin.hyprglass.config({ xray = true })'
+467:+hyprctl eval 'hl.plugin.hyprglass.config({ noise_strength = 0.3 })'
+483:+hyprctl eval 'hl.plugin.hyprglass.config({ edge_thickness_px = 12 })'
+502:+hyprctl eval 'hl.plugin.hyprglass.config({ edge_height = 30, fresnel_reflection = 0.4 })'
+524:+hyprctl eval 'hl.plugin.hyprglass.config({ focus_light = 0.8, focus_light_color = 0x66b3ffff })'
+547:+hyprctl eval 'hl.plugin.hyprglass.config({ frost = 1.0, frost_blur = 2.0 })'
+596:+**Cost:** none for layers that do not use it. For a layer that does, one extra texture read per glass pixel, and a few short GPU passes and a few MB of memory while a contour layer exists (shared work buffers included), freed when the last one closes or stops using `contour`. `hyprctl hyprglass stats` counts the rebuilds (`contour_build`).
+608:+Every layer gets glass until you list one. `hg.layer(namespace, { ... })` whitelists a layer namespace (`hyprctl layers` shows them) and sets what differs for it; once a namespace is listed, only the listed layers get glass.
+768:+hyprctl dispatch 'hl.dsp.window.tag({ tag = "+hyprglass_disabled" })'
+769:+hyprctl dispatch 'hl.dsp.window.tag({ tag = "+hyprglass_theme_dark" })'
+770:+hyprctl dispatch 'hl.dsp.window.tag({ tag = "+hyprglass_preset_subtle" })'
+850:+A paused hyprglass (see [Troubleshooting](#troubleshooting)) draws nothing and has no `hyprctl hyprglass` command: `hyprctl hyprglass status` answers `unknown request`. `hyprctl plugin list` (or `hyprctl -j plugin list`) gives the reason as its description, `Paused (<reason>): <message>`, where `<reason>` is `hyprland_version`, `dependencies` or `duplicate`:
+868:+| `timers` | bool | `false` | Time each pipeline stage on the GPU (`GL_EXT_disjoint_timer_query`) and report per-stage averages in `hyprctl hyprglass stats`. No effect if the driver doesn't support the extension. |
+916:+hyprctl plugin unload /path/to/hyprglass.so    # manual build: unload, make, load
+917:+hyprctl plugin load /path/to/hyprglass.so
+932:+Two copies of hyprglass are loaded, e.g. a distribution package and your own build or hyprpm's, or one file through two paths (a symlink). The first keeps working and this one does nothing. Load only one: remove the extra `hl.plugin.load(...)` line, or `hyprpm disable hyprglass`. After removing the other copy, reload this one (`hyprctl plugin unload <path>` then `hyprctl plugin load <path>`) or restart Hyprland.
+940:+When `hyprland.lua` loads a plugin, Hyprland runs the whole file once more during startup, before it is ready. A top-level `hyprctl` call, or any `io.popen`/`os.execute` that waits on a command, blocks there: nothing answers `hyprctl` yet. Under uwsm the start then times out and `WAYLAND_DISPLAY` is never exported.
+1989:+    s_command = HyprlandAPI::registerHyprCtlCommand(handle, IPC::Socket1::SCommand{
+1992:+        .handler = [](const IPC::Socket1::SRequest& hyprCtlRequest) -> IPC::Socket1::SResponse {
+1993:+            const auto format = hyprCtlRequest.format;
+1994:+            const auto& request = hyprCtlRequest.command;
+2709:+        // hyprctl eval emits no config.reloaded, and a setup without layer
+2984:+    // Glass can start without a config reload (tags, hyprctl eval), and
+5917:+    // `versionCheck` in `hyprctl hyprglass status`: match, unknown or skipped
+6126:+        const auto instanceActive = reinterpret_cast<FInstanceActive>(dlsym(plugin->m_handle, "hyprglass_instance_active"));
+6134:+    const char* skip = std::getenv("HYPRGLASS_SKIP_VERSION_CHECK");
+6173:+// hyprctl command, protocol global or GL object.
+6203:+// `versionCheck` in `hyprctl hyprglass status`, for a copy that went on to load.
+6862:+    // A file chunk is named "@path"; a hyprctl eval chunk is named by its whole code, which short_src truncates
+6868:+// the message goes to the error list `hyprctl configerrors` shows and the call carries on.
+7088:+            lua_rawgeti(L, insetIdx, static_cast<lua_Integer>(i + 1));
+8378:+// few pixels, so every ray there bends toward one point (a dark curl) and the
+9543:+    // layers:enabled can flip without a config reload (hyprctl eval), so follow it
+9577:+    // layers:enabled can be turned off by hyprctl eval without a config reload: the fields go with it
+9720:+    // Set the value the way hl.config() does at runtime. hyprctl eval would do
+9721:+    // the same but also clears the list hyprctl configerrors shows.
+9750:+// dlsym first: findFunctionsByName() runs nm on the Hyprland binary, a fork from
+9757:+    void*   address = dlsym(RTLD_DEFAULT, mangledName);
+9775:+// Read by a later copy's LoadGuard::otherActiveCopyPath() through dlsym.
