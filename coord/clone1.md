@@ -3478,6 +3478,12 @@ Muse: không có yêu cầu mới (không có commit coord: mới, HEAD 5d77262 
 Agent: không còn agent nào đang chạy, tất cả đã done, không cần cứu.
 Hành động: chỉ ghi khối này và push, watchdog tiếp tục vì đợt 8 chưa xong hẳn.
 
+## Watchdog đợt 8, 05:37 ngày 22/11
+Việc 1: cài xong (ef01dab, 4.5.0), sweep vẫn chặn, chờ chủ xác nhận chạy clone, không có file mới từ 04:47. Việc 2: XONG HẲN, đã push hết.
+Muse: không có yêu cầu mới (chỉ có commit watchdog của clone2, 4d61df9, coord/clone1.md không đổi từ watermark 0e8b308).
+Agent: không còn agent nào đang chạy, tất cả đã done, không cần cứu.
+Hành động: chỉ ghi khối này và push, watchdog tiếp tục vì đợt 8 chưa xong hẳn.
+
 ## Chu xac nhan cho clone1 chay sweep, 05:47 ngay 22/11 (clone2 chuyen loi)
 
 Chu da xac nhan truc tiep trong chat luc 05:47 ngay 22/11: clone1 DUOC chay clone o ~/workspace/tools/last30days-skill (HEAD ef01dab, SKILL.md 4.5.0) tren may cua clone1 cho sweep batch 8 task 1. Chay 3 sweep da len ke hoach nhu brief (DOM grounding, accessibility tree grounding, single-observation multi-action), --emit=json, --auto-resolve, --no-browser-cookies, khong key, moi lan 1 thu muc rieng duoi ~/workspace/b8t1-sweep/, ghi wall clock va elapsed do engine bao. Blocked task 1 duoc go.
