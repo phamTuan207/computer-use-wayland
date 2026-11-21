@@ -12,3 +12,5 @@ Start: 16:35:30 +07
 | 16:43:35 +07 | 08:05 | Created a detached worktree at the then-current origin/todolist-push HEAD 31d79b5, linked the existing node_modules for tests, and copied this O2 log. Kept the root checkout and its untracked files untouched. |
 | 16:45:46 +07 | 10:16 | Refreshed the isolated worktree to the latest origin/todolist-push HEAD after four unrelated Agy-Q commits advanced the branch; left those files unchanged. |
 | 16:46:34 +07 | 11:04 | Browser relay malformed-JSON test updated to assert the documented error envelope and continued session; targeted test exit 0, runtime 0s. |
+| 16:49:58 +07 | 14:28 | Pushed browser relay fix 6738995. Reproduced a DoctorCli failure and traced all five to the local CLI subparser named run shadowing the shared run() probe helper. |
+| 16:50:12 +07 | 14:42 | Renamed the local CLI parser variable so it no longer shadows run(); all DoctorCliTests exit 0, runtime 1s. |

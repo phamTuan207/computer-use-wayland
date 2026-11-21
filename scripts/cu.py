@@ -2329,7 +2329,7 @@ def main():
     cli_sub.add_parser('list',help='list apps from the vendored registry')
     search=cli_sub.add_parser('search',help='search app names, descriptions, and categories');search.add_argument('text')
     info=cli_sub.add_parser('info',help='show install and skill details');info.add_argument('app')
-    run=cli_sub.add_parser('run',help='run one allowlisted harness command');run.add_argument('app');run.add_argument('command_args',nargs=argparse.REMAINDER,help='harness arguments after --')
+    cli_run_parser=cli_sub.add_parser('run',help='run one allowlisted harness command');cli_run_parser.add_argument('app');cli_run_parser.add_argument('command_args',nargs=argparse.REMAINDER,help='harness arguments after --')
     args=parser.parse_args()
     if args.command=='browser' and args.scope is not None:
         if args.operation!='observe':raise ValueError('--scope is only valid for browser observe')
