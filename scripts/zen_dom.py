@@ -716,8 +716,12 @@ class ZenSession:
         """Current value/text of one field, or None when it has none.
 
         The query pierces open shadow roots (same helper shape as
-        locate); a field inside a shadow tree reads the same as one
-        in the top document.
+        locate) and traverses same-origin iframes, so a field inside
+        an iframe reads the same as one in the top document. A
+        cross-origin iframe is unreachable from parent JS, so a
+        field there returns None and the caller must fall back to
+        vision or a BiDi browsing-context call, never silently drop
+        the target.
         """
         return self.evaluate(
             "(function(){"
@@ -732,7 +736,20 @@ class ZenSession:
             "}}"
             "return null;"
             "}"
-            "const e=pierce(%s, document);"
+            "function find(sel){"
+            "let e=pierce(sel, document);"
+            "if(e) return e;"
+            "const frames=document.querySelectorAll('iframe');"
+            "for(const f of frames){"
+            "try{"
+            "if(f.contentWindow && f.contentWindow.document){"
+            "e=pierce(sel, f.contentWindow.document);"
+            "if(e) return e;"
+            "}}catch(_){"
+            "}}"
+            "return null;"
+            "}"
+            "const e=find(%s);"
             "if(!e) return null;"
             "return e.isContentEditable ? e.textContent : "
             "('value' in e ? e.value : null);})()" % json.dumps(selector))
@@ -742,14 +759,17 @@ class ZenSession:
 
         Cheap JS eval, no screenshot. The sufficient type check: the
         pixel band can only show that the input line changed, while
-        this reads what the field actually holds. For contenteditable
-        fields the comparison normalizes trailing whitespace
-        (textContent carries a trailing newline the typed text does
-        not). When before is given, the check also requires a
-        recorded typed event (V11 flag): a pre-filled value and a
-        JS-set value on an empty field both prove no typing happened
-        without one (RT R2/R10). before None keeps the old
-        equality-only shape for callers that never type.
+        this reads what the field actually holds. The lookup pierces
+        open shadow roots and traverses same-origin iframes, the same
+        as locate(); a cross-origin iframe target fails closed
+        (False), never a wrong pass. For contenteditable fields the
+        comparison normalizes trailing whitespace (textContent
+        carries a trailing newline the typed text does not). When
+        before is given, the check also requires a recorded typed
+        event (V11 flag): a pre-filled value and a JS-set value on an
+        empty field both prove no typing happened without one (RT
+        R2/R10). before None keeps the old equality-only shape for
+        callers that never type.
         """
         result = self.evaluate(
             "(function(){"
@@ -764,7 +784,20 @@ class ZenSession:
             "}}"
             "return null;"
             "}"
-            "const e=pierce(%s, document);"
+            "function find(sel){"
+            "let e=pierce(sel, document);"
+            "if(e) return e;"
+            "const frames=document.querySelectorAll('iframe');"
+            "for(const f of frames){"
+            "try{"
+            "if(f.contentWindow && f.contentWindow.document){"
+            "e=pierce(sel, f.contentWindow.document);"
+            "if(e) return e;"
+            "}}catch(_){"
+            "}}"
+            "return null;"
+            "}"
+            "const e=find(%s);"
             "if(!e) return null;"
             "/* verify_typed */ return {value: e.isContentEditable"
             " ? e.textContent : ('value' in e ? e.value : null),"

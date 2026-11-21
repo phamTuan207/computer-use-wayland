@@ -118,6 +118,7 @@ class FakeWdSession(ZenSession):
             for pattern in (
                     r'querySelector\(("(?:[^"\\]|\\.)*")\)',
                     r'pierce\(("(?:[^"\\]|\\.)*")\s*,',
+                    r'find\(("(?:[^"\\]|\\.)*")\)',
                     r'const sel=("(?:[^"\\]|\\.)*")',
                     r'__agentCuTyped\[("(?:[^"\\]|\\.)*")\]'):
                 m = re.search(pattern, script)
@@ -583,6 +584,33 @@ class TestDomHelpers(unittest.TestCase):
         self.assertTrue(session.verify_typed('#msg-input', 'hello'))
         self.assertFalse(session.verify_typed('#msg-input', 'goodbye'))
         self.assertIsNone(session.field_value('#nope'))
+
+    def test_field_value_and_verify_typed_traverse_iframes(self):
+        # R9, amend3 step 6: locate() already traverses same-origin
+        # iframes, but field_value() and verify_typed() only pierced
+        # shadow roots in the top document, so a target inside an
+        # iframe grounded but never verified. Both now send the same
+        # iframe traversal as locate(). A cross-origin frame throws
+        # on contentWindow.document access inside the try, so the
+        # read fails closed (None / False), never a wrong pass.
+        session = ZenSession()
+        captured = {}
+
+        def _eval(script, args=None):
+            captured['script'] = script
+            if 'verify_typed' in script:
+                return {'value': 'hello', 'editable': False}
+            return 'hello'
+
+        session.evaluate = _eval
+        self.assertEqual(session.field_value('#msg-input'), 'hello')
+        self.assertIn('contentWindow.document', captured['script'],
+                      'field_value does not traverse iframes')
+        self.assertIn('pierce', captured['script'])
+        self.assertTrue(session.verify_typed('#msg-input', 'hello'))
+        self.assertIn('contentWindow.document', captured['script'],
+                      'verify_typed does not traverse iframes')
+        self.assertIn('pierce', captured['script'])
 
     def test_verify_typed_normalizes_trailing_whitespace(self):
         # Contenteditable textContent carries a trailing newline the
