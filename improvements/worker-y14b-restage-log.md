@@ -1143,8 +1143,16 @@ and their disposition:
   label corrected to "now False (was True in fix3)".
 - No em/en dash in the fix diff (grep 0), no ydotool, no personal
   info. `import re` OK (verified 23:02 +07).
-- Fix commit: (pending, this section is written before the
-  commit; hash recorded in the follow-up entry).
+- Fix commit: 46e0909 (todolist-push, pushed, ls-remote verified
+  46e0909058af1419c0ef6534394a68019ec8ebd8, ancestor of remote head).
+  run_batch3.py at this commit: git blob
+  ff4a5358ac7f621a1fd649c36cec94da2031399d, md5
+  9e99d9aa1bcdbb525407adfb31e0692b (ship-time expected values for
+  the plan's md5 procedure; supersedes the fix-pass-4 values).
+  Only my three files were staged (run_batch3.py, plan, log);
+  the F3 log change and scripts/cursor_session.py (other workers'
+  files in the shared checkout) and the untracked files were NOT
+  staged or committed.
 
 ### Event log (continued, 23:00-23:03 +07)
 
@@ -1185,3 +1193,18 @@ and their disposition:
 - 23:03 +07: committing fix pass 5 (run_batch3.py + plan + log
   only; the F3 log change and other workers' untracked files in
   the shared checkout are NOT staged).
+- 23:04 +07: fix pass 5 committed 46e0909 (3 files only: run_batch3.py,
+  plan, log). Push OK (62ad028..46e0909). ls-remote verified
+  46e0909058af1419c0ef6534394a68019ec8ebd8; blob ff4a5358, md5
+  9e99d9aa. ANCESTOR_OK. Outcome: landed.
+- 23:04 +07: MEMORY.md updated by the parent (23:03 owner order,
+  DEFERRED LOW: Zen keybinds). Record Zen's keybinds from Settings
+  to Shortcuts into the computer-use doc ON THE MACHINE
+  (machine-specific layer, local-only), never to the repo; do it
+  last, not important. Noted as a deferred fleet item, not Y14b's
+  (Y14b is code-only, no live driving). Not acted on.
+- 23:05 +07: hash-record follow-up: plan md5 line updated from
+  fix-pass-4 values (md5 2920f169, blob 585fb801, commit bf3c939)
+  to fix-pass-5 values (md5 9e99d9aa, blob ff4a5358, commit
+  46e0909); log fix-pass-5 verification section records the commit.
+  Committing the hash record now.

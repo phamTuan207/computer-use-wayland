@@ -611,10 +611,11 @@ header/imports, run_b3_t10, run_preflight, H2 helpers, launch_gate):
   fixture.html eb814c944dab6279417c6182e1950876.
   Also md5sum run_batch3.py (from /tmp/y14-server, where the runner
   is shipped) and compare against the md5 recorded in the re-stage
-  log's fix-pass-4 entry: 2920f1697edb3b33711b83b8a874d88b (git blob
-  585fb8016b0618ab02b3e97afa362dbcce7342c9, commit bf3c939). Paste the
-  actual command output into the live log at ship time. Any mismatch
-  refuses the slot.
+  log's fix-pass-5 entry: 9e99d9aa1bcdbb525407adfb31e0692b (git blob
+  ff4a5358ac7f621a1fd649c36cec94da2031399d, commit 46e0909).
+  (Supersedes the fix-pass-4 values: md5 2920f169, blob 585fb801,
+  commit bf3c939.) Paste the actual command output into the live
+  log at ship time. Any mismatch refuses the slot.
 - Council (3) + redteam over the re-stage diff f732d6a: Council 1 GO
   (t10 translation 69/69, watch item: middle advancing read margin);
   Council 2 AMEND (Fix 1: -m module form bypasses the gate, four-line
