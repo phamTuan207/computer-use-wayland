@@ -194,3 +194,35 @@ deferred); 2.1.7 I7 video (needs owner re-send); pending user decisions
 CORRECTIONS: rewrite todolist 2.2.3 (J11) and 3.4.1 (J11) - both stale.
 VMFIX: parent already spawned VMFIX on the SSH/Python hardening; PRIO does
 not duplicate it; queue tracks VMFIX's confirmation before assuming SSH stable.
+
+## 22:47:47 +07 (elapsed ~13m) - Nhan luat log moi cua ong (22:47) + lenh OPT (22:46-22:47)
+- Hanh dong: nhan follow-up tu Muse: luat cua ong 22:47, log MOI su kien kem thoi gian, khong sot cai gi; append lien tuc khi lam, khong don cuoi; khi ong hoi, cau tra loi phai co trong log, khong bao gio "khong biet".
+- Boi canh moi tu MEMORY.md 22:46-22:47: ong: nhieu loi lam, dung lam mo mai (mat thoi gian); hop TAT CA agent, moi agent spawn nhieu crawler + council + redteam de cai nhau, tim 1 PHUONG PHAP SUA TOI UU NHAT cho ca dong loi. Muse da spawn Worker OPT (coordinator) + bao 6 worker dang chay log lien tuc.
+- Ap dung ngay: tu gio moi hanh dong cua PRIO duoc append vao log nay ngay khi lam, kem wall-clock + elapsed + muc tieu + ket qua.
+- Trang thai luc nhan luat: priority section commit 1ccded1 (verify ls-remote ok), items 4.13-4.28 + rewrite 2.2.3/3.4.1 commit 94666f6 (verify ok). Con lai: append J7-J21 vao error file, viet synthesis vao log, commit log, bao cao Muse. PRIO KHONG lam phan OPT (Worker OPT phu trach phuong phap toi uu).
+
+## 22:48:xx +07 (elapsed ~14m) - Error file section 13 xong + nhan lenh Lauren Tan 22:48
+- Hanh dong: append section 13 (J7-J21) vao ~/workspace/cf26-upload/LOI-VA-GIAI-PHAP-TOAN-BO-20261121.md.
+- Muc tieu: error file, section 13 moi, 15 muc J7-J21 (J7-J16 crawl, J17-J20 redteam M2-M5, J21 lenh ong 22:45).
+- Ket qua: append OK, 5193 bytes. File khong phai git repo nen khong commit.
+- Su kien moi vua nhan (MEMORY.md 22:48, OWNER - LAUREN TAN, KHONG CAT BUOC): ong: tiep tuc, lam theo cau truc Lauren Tan, bam chat che, CAM cat buoc neu khong se ra code rac. Ong di ngu; lam viec qua dem, khong dung, khong lam phien; sang mai bao ket qua. Muse da bao OPT: phuong phap toi uu phai theo dung cau truc Lauren Tan (evidence contract, council + redteam, commit nho va nhieu, generator khong tu chay test cua minh, kill rules, log lien tuc), khong shortcut.
+- Anh huong toi PRIO: hang doi cua PRIO da tuan thu Lauren Tan (evidence contract qua gates, council + redteam 4 y kien, commit nho va nhieu, PRIO khong tu chay test vi PRIO khong fix, kill rules 15 phut, log lien tuc tu 22:47). Ghi ro su tuan thu nay trong synthesis ben duoi. PRIO khong lam phan OPT.
+
+## TONG HOP CUOI - THU TU UU TIEN DA PHAN QUYET (22:48, elapsed ~14m)
+- 4 y kien da du: Council 1 (1bf739d5), Council 2 (62ff09a8), Council 3 (d04d6a61), redteam (7211dd36). Tat ca da commit (019bdf3).
+- Phan quyet 8 diem (chi tiet trong muc THU TU UU TIEN o dau todolist, commit 1ccded1):
+  1. F1 vs F2: cum gop mot, hang serial 2, F1 truoc F2 trong cum, mot bang chung end-to-end.
+  2. Clone2: lane song song + tach nhe (P-A ngay) / nang (hang serial 9).
+  3. Y6: fix giay lane song song P-C ngay, retry hang serial 4.
+  4. H2: gap vao hang 5-7 (G-H2), khong run rieng.
+  5. Duoi: E1 ve PARKED, scrub bao tri G-SCRUB, final test muc viec cuoi cung.
+  6. M5: option C 18:24 (da sua o 2.2.3).
+  7. M3: va cham re/__init__.py da dong (VMFIX DONE 22:40).
+  8. A7: hang 1 bat dau bang verify click 22:17 da tu chua slot chua.
+- Hang serial cuoi: 1 F3, 2 F1+F2, 3 ZT-B, 4 Y6 retry, 5 Y13, 6 Y14, 7 A1, 8 hidden-body, 9 clone2 nang, 10 Y1b, 11 scrub, 12 final test. Lane song song P-A..P-H. PARKED: Track 2/speed loop, Super I, I7 video, pending decisions, E1, J15.
+- Gates: G-VMFIX, G-RESTORE, G-TAB, G-F1-BEFORE-F2, G-PILL, G-SINGLE-LIVE, G-HIDDEN, G-H2, G-SCRUB, G-Y1B.
+- Loi moi: J7-J16 (crawl) + J17-J20 (redteam M2-M5) + J21 (ong 22:45, click truot workspace 1 mo Omarchy menu).
+- Todolist: priority section (1ccded1) + items 4.13-4.28 + rewrite 2.2.3/3.4.1 (94666f6). Error file: section 13 J7-J21 (khong commit, khong phai git repo).
+- Tuan thu Lauren Tan (ong 22:48, cam cat buoc): evidence contract (moi hang co gate + bang chung cu the), council + redteam day du (4 y kien), commit nho va nhieu (PRIO: c0d1b0e, 019bdf3, 1ccded1, 94666f6 + commit log nay), generator khong tu chay test cua minh (PRIO chi xep hang, khong fix), kill rules (15 phut khong tien trien), log lien tuc (luat 22:47, ap dung tu entry 22:47:47).
+- Ghi chu cho Muse: Worker OPT (coordinator, spawn 22:46-22:47) dang tim PHUONG PHAP SUA TOI UU NHAT cho ca dong loi theo dung cau truc Lauren Tan; hang doi cua PRIO la dau vao cho OPT, khong chong cheo. PRIO xong nhiem vu sau commit log nay.
+- Commit cua PRIO tong cong: 5 (c0d1b0e, 019bdf3, 1ccded1, 94666f6 + commit log nay). Muc tieu 240: ong dem 190 luc 22:40, can ~51 truoc 24:00; PRIO dong gop 5.
