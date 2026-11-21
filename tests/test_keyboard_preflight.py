@@ -43,8 +43,17 @@ class DesktopPreflight(unittest.TestCase):
         # The after-capture (persist=True) simulates typed text landing:
         # its pixels differ from the pre-action observation, so a type
         # batch verifies by default. Tests set after_pixel_sha256 back
-        # to 'fixture' to simulate typed text landing nowhere.
+        # to 'fixture' to simulate typed text landing nowhere. The
+        # after IMAGE is separate from its hash: after_image carries
+        # text pixels on the anchor line (y=10), so the input line
+        # band check reads real pixels, not the hash. Tests replace
+        # after_image with the pre-batch image to simulate a frame
+        # whose hash changed but whose input line did not (RT R1).
         self.after_pixel_sha256='after-frame-changed'
+        self.after_image=Image.new('RGB',(20,20))
+        for _x in range(12,18):
+            self.after_image.putpixel((_x,10),(255,255,255))
+        self.observe_calls=[]
         self.stack=ExitStack();self.addCleanup(self.stack.close)
         # A mock test must never reach the live session socket.
         self.indicator=self.stack.enter_context(patch.object(indicator,'request',return_value=False))
@@ -60,7 +69,13 @@ class DesktopPreflight(unittest.TestCase):
         self.stack.enter_context(patch.object(cu,'window',return_value={'at':[0,0],'size':[20,20]}))
         self.hypr_mock=self.stack.enter_context(patch.object(cu,'hypr',side_effect=self.hypr))
         self.stack.enter_context(patch.object(cu,'observe',side_effect=self.observe))
-        self.stack.enter_context(patch('PIL.Image.open',return_value=self.image))
+        def _image_open(path,*args,**kwargs):
+            # The after-capture file maps to after_image (text pixels);
+            # every other image maps to the blank pre-batch image.
+            if str(path).endswith('after.png'):
+                return self.after_image
+            return self.image
+        self.stack.enter_context(patch('PIL.Image.open',side_effect=_image_open))
         self.pointer_cls=self.stack.enter_context(patch.object(cu,'Pointer'))
         self.pointer=self.pointer_cls.return_value
         self.typed=self.stack.enter_context(patch.object(cu,'run_cancelable',return_value=''))
@@ -72,8 +87,10 @@ class DesktopPreflight(unittest.TestCase):
         raise AssertionError('unexpected compositor query '+query)
 
     def observe(self,env,address,crop,max_width,**kwargs):
+        self.observe_calls.append('persist' if kwargs.get('persist',True) else 'fresh')
         if kwargs.get('persist',True):
-            return dict(self.meta,pixel_sha256=self.after_pixel_sha256)
+            return dict(self.meta,pixel_sha256=self.after_pixel_sha256,
+                        image='after.png')
         return self.image,self.meta.copy()
 
     def test_keyboard_only_batch_does_not_open_pointer(self):

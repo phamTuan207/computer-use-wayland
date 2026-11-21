@@ -243,7 +243,13 @@ class TypedRefusalRecovery(unittest.TestCase):
                 capture_started_monotonic=time.monotonic()-stale_age,
                 capture_started_wall=time.time()-stale_age-1)
             fresh, after = write_observation(tmp, '000000000103', image=same)
-            post = dict(after)
+            # The after-capture must simulate landed text: its pixel
+            # hash differs from the fresh observation, the same
+            # pattern as the sibling test's base_meta(pixel_sha256=
+            # '1111') and the test_keyboard_preflight harness
+            # after_pixel_sha256='after-frame-changed'. Without it
+            # the type verification fails a correctly executed type.
+            post = dict(after, pixel_sha256='1111')
             with live(tmp, token, active=[ADDR] * 12,
                       pre_calls=[(same, {})], post=post) as (typed, stop):
                 code, body = relay_lines([

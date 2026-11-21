@@ -92,6 +92,138 @@ class TypeVerification(DesktopPreflight):
         self.assertIn('injected input error', result['error'])
         self.assertNotIn('type_verified', result)
 
+    def test_click_type_frame_changed_by_click_only_fails(self):
+        # RT R1: the e4082ff check compared the after hash with the
+        # PRE-BATCH observation, so any click in the same batch set
+        # the bit and a click+type batch with zero text delivered
+        # reported type_verified True. Here the after hash differs
+        # (the fixture claims the frame changed) but the after IMAGE
+        # is pixel identical to the pre-batch image in the input
+        # line band: the click changed nothing the pixels can see
+        # and no text landed. The band check, not the hash, decides.
+        self.after_pixel_sha256 = 'after-frame-changed'
+        self.after_image = self.image
+        result = cu.desktop_act({}, self.meta,
+                                [{'type': 'click', 'x': 10, 'y': 10},
+                                 {'type': 'type', 'text': 'hello'}])
+        self.assertFalse(result['ok'], result)
+        self.assertEqual(result['completed'], 2)
+        self.assertIs(result['type_verified'], False)
+        self.assertEqual(result['type_verified_basis'], 'input-line-band')
+        self.assertEqual(result['error_code'], 'type_unverified')
+        self.assertIn('type verification failed', result['error'])
+
+    def test_click_type_text_in_input_line_verifies(self):
+        # The normal click+type shape: the after image carries text
+        # pixels on the clicked line, so the band check verifies.
+        # The text sits at the left of the line (x 12..17), away
+        # from the click point (10,10): the band, not a patch around
+        # the click, is what catches it.
+        result = cu.desktop_act({}, self.meta,
+                                [{'type': 'click', 'x': 10, 'y': 10},
+                                 {'type': 'type', 'text': 'hello'}])
+        self.assertTrue(result['ok'], result)
+        self.assertEqual(result['completed'], 2)
+        self.assertIs(result['type_verified'], True)
+        self.assertEqual(result['type_verified_basis'], 'input-line-band')
+
+    def test_focus_check_failure_stops_before_typing(self):
+        # G30, cheap focus gate: the click ran, the DOM focus check
+        # says the target did not take focus, so the type action is
+        # never sent. No new observe is taken for the check.
+        result = cu.desktop_act(
+            {}, self.meta,
+            [{'type': 'click', 'x': 10, 'y': 10},
+             {'type': 'type', 'text': 'hello'}],
+            focus_check=lambda: (False, 'activeElement is body, not the input'))
+        self.assertFalse(result['ok'], result)
+        self.assertEqual(result['error_code'], 'focus_unverified')
+        self.assertIs(result['focus_verified'], False)
+        self.assertEqual(result['completed'], 1,
+                         'only the click ran; the type never ran')
+        self.assertEqual(self.typed.call_count, 0,
+                         'no keystroke was sent after the missed click')
+        self.assertNotIn('type_verified', result,
+                         'typing never ran, so nothing is verified')
+
+    def test_focus_check_passes_then_dom_type_check_verifies(self):
+        # The DOM-first shape: focus check passes before typing, the
+        # DOM value check passes after typing, the batch verifies
+        # with basis dom-value and no pixel check is needed.
+        result = cu.desktop_act(
+            {}, self.meta,
+            [{'type': 'click', 'x': 10, 'y': 10},
+             {'type': 'type', 'text': 'hello'},
+             {'type': 'key', 'keys': ['Enter']}],
+            focus_check=lambda: True,
+            type_check=lambda: True)
+        self.assertTrue(result['ok'], result)
+        self.assertEqual(result['completed'], 3)
+        self.assertIs(result['focus_verified'], True)
+        self.assertIs(result['type_verified'], True)
+        self.assertEqual(result['type_verified_basis'], 'dom-value')
+
+    def test_dom_type_check_failure_fails_batch_after_typing(self):
+        # The DOM value check is the sufficient check: the keystrokes
+        # ran, but the field value does not hold the text, so the
+        # batch fails with type_unverified instead of reporting ok.
+        result = cu.desktop_act(
+            {}, self.meta,
+            [{'type': 'click', 'x': 10, 'y': 10},
+             {'type': 'type', 'text': 'hello'}],
+            focus_check=lambda: True,
+            type_check=lambda: (False, 'field value is empty'))
+        self.assertFalse(result['ok'], result)
+        self.assertEqual(result['error_code'], 'type_unverified')
+        self.assertEqual(self.typed.call_count, 1,
+                         'the keystrokes ran; the DOM check caught the miss')
+
+    def test_focus_check_exception_fails_closed(self):
+        # A focus check that raises (dead DOM session) must fail the
+        # batch, never let it type blind on the assumption of focus.
+        def _boom():
+            raise RuntimeError('DOM session gone')
+        result = cu.desktop_act(
+            {}, self.meta,
+            [{'type': 'click', 'x': 10, 'y': 10},
+             {'type': 'type', 'text': 'hello'}],
+            focus_check=_boom)
+        self.assertFalse(result['ok'], result)
+        self.assertEqual(result['error_code'], 'focus_unverified')
+        self.assertEqual(self.typed.call_count, 0)
+
+    def test_click_type_enter_uses_no_extra_observes(self):
+        # Acceptance bar: one observation drives the whole
+        # click+type+Enter sequence. The amend adds no observe: the
+        # batch uses exactly the pre-fix count, 1 preflight fresh
+        # capture plus 1 after-capture plus 1 settle re-capture for
+        # the nav candidate click, and the focus/type checks are DOM
+        # closures that observe nothing.
+        result = cu.desktop_act(
+            {}, self.meta,
+            [{'type': 'click', 'x': 10, 'y': 10},
+             {'type': 'type', 'text': 'hello'},
+             {'type': 'key', 'keys': ['Enter']}],
+            focus_check=lambda: True,
+            type_check=lambda: True)
+        self.assertTrue(result['ok'], result)
+        self.assertEqual(self.observe_calls, ['fresh', 'persist', 'persist'],
+                         '1 preflight + 1 after + 1 settle, same as pre-fix')
+        self.assertEqual(result['completed'], 3)
+        self.assertEqual(result['completed'] / 1, 3,
+                         '3 actions driven by 1 observation')
+
+    def test_type_batch_after_capture_false_with_dom_check_verifies(self):
+        # With after_capture False there is no frame to compare, but
+        # a DOM value check that passed IS the verification.
+        result = cu.desktop_act(
+            {}, self.meta, [{'type': 'type', 'text': 'hello'}],
+            after_capture=False, type_check=lambda: True)
+        self.assertTrue(result['ok'], result)
+        self.assertTrue(result.get('after_skipped'))
+        self.assertIs(result['type_verified'], True)
+        self.assertEqual(result['type_verified_basis'], 'dom-value')
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
