@@ -123,3 +123,6 @@ Start: 23:14 21/11/2026 (+07). Owner asleep; do not disturb.
   not equal BiDi order; never infer a tab's row from its BiDi index.
 - F1 SIGN-OFF: the slot is healed and stable (probe_r3 PASS, 17 live tabs).
   F1's live activation test is unblocked.
+- FINAL CHECK 23:51:12: probe_session.py again, PROBE1 CREATE OK 3d32d968,
+  PROBE2 CREATE OK b79465cd, exit 0. Zen PID 496121 (6:57 old). Slot healed
+  and stable at handover.
