@@ -39,11 +39,13 @@ import json
 import os
 import sys
 import time
+import urllib.error
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from run_live import WD, Runner, start_server  # noqa: E402
-from run_agyq2 import ensure_visible  # noqa: E402  (Y4d ladder, verbatim)
+from run_agyq2 import ensure_visible, rebootstrap_tab  # noqa: E402
+# (Y4d ladder, verbatim; rebootstrap_tab for the final fresh tab, H3)
 
 # --- select_option / clear_search / append_text, copied verbatim from
 # run_fcck.py (Worker U), attributed here. select_option sets a <select>
@@ -104,9 +106,15 @@ ACTIONS_OK = True
 
 
 def _actions_post(d, payload):
-    """POST /session/:id/actions. A 30 s _wd timeout raises RuntimeError
-    and the caller treats it as INFRA (hung Actions call)."""
-    return d._wd("POST", d._s("/actions"), payload)
+    """POST /session/:id/actions. A 30 s _wd timeout raises
+    RuntimeError("INFRA: ...") so run_one records it as INFRA with one
+    retry and a breaker count (redteam 2 H2). WD._wd raises
+    TimeoutError/URLError on a urlopen timeout (run_live.py L570-581).
+    """
+    try:
+        return d._wd("POST", d._s("/actions"), payload)
+    except (TimeoutError, urllib.error.URLError) as exc:
+        raise RuntimeError(f"INFRA: /actions POST timed out: {exc}")
 
 
 def _actions_release(d):
@@ -342,21 +350,52 @@ def open_test(r, d, url):
                               "diagnose",
                               lambda: ensure_visible(d, r))
         if swapped2 or not ok:
-            raise RuntimeError(
-                "INFRA: hidden-body after rebootstrap; cannot drive")
+            # One more fresh tab before finalising INFRA (open_fixture
+            # pattern, run_agyq2.py L525-551): a stall that hides the
+            # rebootstrap fixture load is not a final verdict until one
+            # more fresh tab has been tried (redteam 2 H3).
+            try:
+                r.tab = rebootstrap_tab(
+                    d, r.base, deadline=time.perf_counter() + 8.0)
+            except Exception as exc:
+                raise RuntimeError(
+                    f"INFRA: hidden-body, final fresh tab failed: {exc}")
+            if r.tab not in d.opened_tabs:
+                d.opened_tabs.append(r.tab)
+            d.switch(r.tab)
+            r.step("open fixture on final tab", "goto",
+                   lambda: d.goto(url, allow_hidden=True))
+            r.step("clear storage + reload on final tab", "eval",
+                   lambda: (d.eval("localStorage.clear(); "
+                                   "sessionStorage.clear();"
+                                   "return 'cleared';"),
+                            d.refresh(allow_hidden=True)))
+            ok, _swapped3 = r.step("ensure visible on final tab",
+                                   "diagnose",
+                                   lambda: ensure_visible(d, r,
+                                                          allow_swap=False))
+            if not ok:
+                raise RuntimeError(
+                    "INFRA: hidden-body after final fresh tab; cannot "
+                    "drive")
     if not ok:
         raise RuntimeError(
             "INFRA: hidden-body on test tab after recovery ladder")
     vis = r.step("check body visible", "eval", lambda: d.visible("body"))
     r.check("body renders visible", vis is True, str(vis))
-    return tab
+    # Redteam 2 H1: on a swap ensure_visible sets r.tab to the new tab;
+    # returning the old handle would send every later switch in t09 to
+    # the old hidden tab. Return the live handle.
+    return r.tab if swapped else tab
 
 
 def reload_visible(r, d, url):
     """Reload the fixture mid-test (t07/t08 reload steps) with the
     ladder. On a swap, the fixture is reloaded on the new tab; all
     state at a reload step is persisted in localStorage, so the
-    reloaded fixture is equivalent."""
+    reloaded fixture is equivalent. Returns no handle (redteam 2 H1
+    audit): the current tab is always r.tab after ensure_visible, and
+    no caller holds a handle across this call."""
     r.step("reload", "eval", lambda: d.refresh(allow_hidden=True))
     ok, swapped = r.step("ensure visible after reload", "diagnose",
                          lambda: ensure_visible(d, r))
@@ -1287,6 +1326,11 @@ def run_b3_t09(r, d):
                     raise exc
         _wait_handles_gone(d, popup, 10)
         d.switch(main_tab)
+        ok, _ = ensure_visible(d, r, "main after popup close",
+                               allow_swap=False)
+        if not ok:
+            raise RuntimeError(
+                "INFRA: hidden-body on main tab after popup close")
         if verify_js:
             seen = poll_effect(d, verify_js, 5.0)
             r.check(what + " effect seen after popup closed", seen is True,
@@ -1368,6 +1412,11 @@ def run_b3_t09(r, d):
         "open Gamma detail", "click",
         lambda: open_popup('.project[data-id="gamma"] .detail-btn'))
     d.switch(main_tab)
+    ok, _ = ensure_visible(d, r, "main before second prefs",
+                           allow_swap=False)
+    if not ok:
+        raise RuntimeError(
+            "INFRA: hidden-body on main tab at two-popups step")
     prefs_popup = r.step(
         "open prefs while detail open", "click",
         lambda: open_popup("#prefs-btn"))
@@ -1385,6 +1434,11 @@ def run_b3_t09(r, d):
                   lambda: d.eval("return " + body_is_dark()))
     r.check("main window dark after second prefs", dark is True, str(dark))
     d.switch(detail_popup)
+    ok, _ = ensure_visible(d, r, "detail popup after switch",
+                           allow_swap=False)
+    if not ok:
+        raise RuntimeError(
+            "INFRA: hidden-body on detail popup after switch")
     r.step("fill Gamma v2", "type",
            lambda: d.type_text("#title-input", "Gamma v2"))
     r.step("save Gamma v2", "click",
@@ -1718,6 +1772,8 @@ def run_preflight(r, d):
     # (vi) Fallback path proof: raw element/value keys on a text input
     # and on a range input. Required when /actions is down; recorded
     # when /actions works.
+    r.step("preflight click probe input for raw", "click",
+           lambda: d.click("#probe-input"))
     r.step("preflight raw Enter on text", "key",
            lambda: send_key_raw(d, "#probe-input", KEY_ENTER))
     keys = r.step("preflight read keys after raw", "eval",
@@ -1781,6 +1837,14 @@ def run_preflight(r, d):
     r.step("preflight close popup", "close", lambda: d.close_tab())
     r.step("preflight switch back", "switch",
            lambda: d.switch(tab))
+    ok, _ = r.step("preflight ensure probe visible after popup",
+                   "diagnose",
+                   lambda: ensure_visible(d, r, "probe after popup",
+                                          allow_swap=False))
+    if not ok:
+        raise RuntimeError(
+            "PREFLIGHT FAIL: hidden-body on probe tab after popup "
+            "close")
     n = r.step("preflight count handles after popup", "eval",
                lambda: len(d.handles()))
     r.check("preflight handles back to baseline",
@@ -1817,7 +1881,18 @@ def run_one(test_id, base_url, metrics=None):
             d.metrics = metrics
             fn(r, d)
     except Exception as exc:
-        r.failures.append(f"RUNNER ERROR: {type(exc).__name__}: {exc}")
+        msg = f"RUNNER ERROR: {type(exc).__name__}: {exc}"
+        # Redteam 2 H2: classify transport/session errors as INFRA so
+        # the one retry and the breaker count apply. A hung session
+        # cannot wedge the suite (each test gets a fresh session), but
+        # without this a transient infra event costs the test its pass
+        # instead of a retry.
+        infra_markers = ("TimeoutError", "URLError",
+                         "invalid session id", "no such window",
+                         "FIXTURE-UNAVAILABLE")
+        if any(m in msg for m in infra_markers):
+            msg = "INFRA: " + msg
+        r.failures.append(msg)
         print(f"[{test_id}] RUNNER ERROR {exc}", flush=True)
     s = r.summary()
     print("RESULT " + json.dumps(s, ensure_ascii=False), flush=True)
@@ -1868,6 +1943,31 @@ def launch_gate():
         finally:
             s.close()
     print("LAUNCH GATE: ports 8771/4452 free", flush=True)
+    # Redteam 2 H5: predecessor ports must be free (a live runner on
+    # another port would also trip the pgrep sweep below, but the port
+    # check fails closed directly).
+    for port in (8767, 8768, 8769, 8770, 4448, 4449, 4450, 4451):
+        s = socket.socket()
+        try:
+            s.bind(("127.0.0.1", port))
+        except Exception as exc:
+            print(f"LAUNCH GATE: predecessor port {port} not free: "
+                  f"{exc}", flush=True)
+            return False
+        finally:
+            s.close()
+    print("LAUNCH GATE: predecessor ports 8767-8770/4448-4451 free",
+          flush=True)
+    root = os.environ.get("LIVE_SERVER_ROOT", "")
+    fixture = os.path.join(root, "clone1-batch3", "t01-terminal",
+                           "fixture.html")
+    if not root or not os.path.isdir(root) or \
+            not os.path.isfile(fixture):
+        print(f"LAUNCH GATE: LIVE_SERVER_ROOT {root!r} missing or does "
+              "not hold the suite", flush=True)
+        return False
+    print(f"LAUNCH GATE: server root holds the suite ({root})",
+          flush=True)
     try:
         gecko = subprocess.run(["pgrep", "-x", "geckodriver"],
                                capture_output=True, text=True,

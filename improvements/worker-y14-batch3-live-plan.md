@@ -552,3 +552,32 @@ mutation probes matched. Overall: SOUND WITH NOTED DEFECTS.
   it assumed the wrong URL, and the failure was caught by the
   verification inspect, not by the run). A second redteam pass on
   run_batch3.py itself is required before the slot opens.
+- Redteam 2 (AMEND, 19:52 21/11, verdict file
+  improvements/worker-y14-redteam2-verdict.md, commit 6f93469): reviewed
+  run_batch3.py itself end to end against the plan and all 10 check.mjs
+  files. Verified D1-D5 real in the code, all 10 translations faithful,
+  probe pages complete, helpers byte-identical to run_fcck.py. No
+  false-pass path found. Holes, all fixed in the runner before the slot:
+  H1 open_test returned a stale tab handle on the swap path (now returns
+  r.tab if swapped, reload_visible audited, returns no handle); H2 hung
+  /actions and session death never classified INFRA (now _actions_post
+  raises RuntimeError INFRA on TimeoutError/URLError, run_one prefixes
+  TimeoutError, URLError, invalid session id, no such window,
+  FIXTURE-UNAVAILABLE with INFRA so the retry and breaker count apply);
+  H3 open_test skipped the final fresh tab (now mirrors open_fixture's
+  final-tab block with rebootstrap_tab + goto + clear + refresh +
+  ensure_visible allow_swap=False); H4 no ensure_visible after
+  switch-backs (now added in click_and_close, both two-popup switches,
+  and preflight viii, all allow_swap=False, raising INFRA or PREFLIGHT
+  FAIL); H5 launch gate omitted predecessor-port checks and never
+  verified LIVE_SERVER_ROOT (now binds 8767-8770/4448-4451 and checks
+  the root exists and holds clone1-batch3/t01-terminal/fixture.html).
+  M1 preflight (vi) now clicks #probe-input before the raw Enter send.
+  M2 t10 min-3-5 gap rule is analysis-only, not code: if t10 fails with
+  min 3-5, check the step-log gap before calling it a fixture failure.
+  Shipping note from the verdict: ship live_metrics.py alongside the
+  runner (run_live.py + run_agyq2.py + scripts/live_metrics.py) and
+  verify the import on the laptop before the slot; if the import fails,
+  metrics silently degrade to off. The AMEND verdict is conditional on
+  the staged suite still being ed78e83 at slot time; if Y15's D1 fix
+  has landed, re-stage from the new HEAD and update the t10 translation.

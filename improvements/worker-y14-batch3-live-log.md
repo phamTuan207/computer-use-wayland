@@ -53,3 +53,49 @@ in the branch (ancestor of todolist-push, head 8888f22 is Y8b council 3).
   Y11 proof, Y6b, Y13, then Y14. Y9 READY per MEMORY.md 19:34
   (diff2 fixes in 7e7996d, ship frozen 4e7a414, laptop re-ship green).
   Y15 D1 fix not yet landed on main at last check.
+
+## 19:52-20:00 21/11: redteam 2 verdict AMEND, H1-H5 + M1 applied
+
+Redteam 2 (code review of run_batch3.py itself, commit 6f93469):
+AMEND, no false-pass path, no hole that will certainly fire live.
+All fixes applied in the runner, py_compile + import check pass, each
+fix verified in the source by inspect (not just the edit print).
+
+- H1: open_test returned a stale tab handle on the swap path (tab from
+  new_tab, but ensure_visible sets r.tab on swap). Fixed: return r.tab
+  if swapped else tab. reload_visible audited: returns no handle,
+  comment added.
+- H2: hung /actions and session death never classified INFRA.
+  _actions_post now catches TimeoutError/URLError (what WD._wd raises
+  on a 30 s urlopen timeout, run_live.py L570-581) and raises
+  RuntimeError INFRA. run_one prefixes TimeoutError, URLError, invalid
+  session id, no such window, FIXTURE-UNAVAILABLE with INFRA so the
+  one retry and the breaker count apply.
+- H3: open_test skipped the final fresh tab the plan requires. Now
+  mirrors open_fixture's final-tab block (rebootstrap_tab with 8 s
+  deadline, goto, clear + refresh, ensure_visible allow_swap=False).
+  Import updated: from run_agyq2 import ensure_visible, rebootstrap_tab.
+- H4: ensure_visible after switch-backs added in click_and_close, both
+  two-popup bare switches (main before second prefs, detail popup after
+  switch), and preflight (viii) after the switch-back. All
+  allow_swap=False, raising INFRA or PREFLIGHT FAIL. No fixture reload
+  there, the target already holds the fixture.
+- H5: launch gate now binds the 8 predecessor ports (8767-8770,
+  4448-4451) fail-closed and checks LIVE_SERVER_ROOT exists and holds
+  clone1-batch3/t01-terminal/fixture.html.
+- M1: preflight (vi) clicks #probe-input before the raw Enter send.
+- M2: t10 min-3-5 gap rule is analysis-only, no code change; if t10
+  fails with min 3-5, check the step-log gap before calling it a
+  fixture failure. Recorded in the plan.
+- Shipping note (verdict): ship live_metrics.py alongside the runner
+  (run_live.py + run_agyq2.py + scripts/live_metrics.py) and verify the
+  import on the laptop before the slot; a failed import degrades metrics
+  to off silently.
+- Verification note: one inspect check initially FAILED on the string
+  'does not hold the suite' because the source splits it across two
+  string literals; the code was present (grep lines 1966-1967), the
+  check string was wrong, re-verified with the correct substrings.
+- Slot still closed: Y8b holds it (E1 arm A failed twice), then Y9
+  (READY), Y11 proof, Y6b, Y13, then Y14. Y15 D1 fix not yet landed.
+  The AMEND verdict is conditional on the staged suite still being
+  ed78e83 at slot time.
