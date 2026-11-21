@@ -16,3 +16,5 @@ Start: 16:35:30 +07
 | 16:50:12 +07 | 14:42 | Renamed the local CLI parser variable so it no longer shadows run(); all DoctorCliTests exit 0, runtime 1s. |
 | 16:50:41 +07 | 15:11 | Pushed Doctor root-cause fix 22b0fa3 after rebasing over a concurrent remote update. Its 13 DoctorCliTests passed. Confirmed the static CLI registry contains 15 names; updating the stale count assertion. |
 | 16:50:53 +07 | 15:23 | Updated the CLI registry count assertion to 15; targeted Chromium list test exit 0, runtime 0s. |
+| 16:52:01 +07 | 16:31 | Zen no-session tests now use a freshly allocated closed loopback port instead of default port 9222; both targeted tests exit 0, runtime 0s. |
+| 16:52:15 +07 | 16:45 | Pushed Chromium registry test fix 0b25b4f. The Zen no-session tests passed using closed ephemeral ports and no longer probe a live default endpoint. |

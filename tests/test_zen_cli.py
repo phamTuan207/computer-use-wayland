@@ -221,6 +221,11 @@ class ZenCliTest(unittest.TestCase):
         self.env["HOME"] = str(self.home)
         self.env["PATH"] = os.environ.get("PATH", "")
 
+    def unused_loopback_port(self):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+            sock.bind(("127.0.0.1", 0))
+            return sock.getsockname()[1]
+
     def tearDown(self):
         self.tmp.cleanup()
 
@@ -275,11 +280,12 @@ class ZenCliTest(unittest.TestCase):
         self.assertIn("--json", out)
 
     def test_status_no_session(self):
-        code, _, parsed = self.run_wrapper("status")
+        port = self.unused_loopback_port()
+        code, _, parsed = self.run_wrapper("--port", str(port), "status")
         self.assertEqual(code, 0)
         self.assertTrue(parsed["ok"])
         self.assertFalse(parsed["session_up"])
-        self.assertEqual(parsed["port"], 9222)
+        self.assertEqual(parsed["port"], port)
 
     def test_session_stop_no_state(self):
         code, _, parsed = self.run_wrapper("session", "stop")
@@ -288,7 +294,8 @@ class ZenCliTest(unittest.TestCase):
         self.assertFalse(parsed["running"])
 
     def test_tabs_no_session(self):
-        code, _, parsed = self.run_wrapper("tabs")
+        port = self.unused_loopback_port()
+        code, _, parsed = self.run_wrapper("--port", str(port), "tabs")
         self.assertEqual(code, 1)
         self.assertFalse(parsed["ok"])
         self.assertIn("session start", parsed["error"])
