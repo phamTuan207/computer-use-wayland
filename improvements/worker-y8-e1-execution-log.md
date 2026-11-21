@@ -14,6 +14,9 @@ Measure conditions A (direct) and B (deliberated) execution on test-05-contact-b
 - 18:25 draft comparison design written: improvements/worker-y8-e1-comparison-design.md. Pre-registered win criteria, invalid-run rules, pre-flight diagnose (adapted from Y4b), deviation accounting, confounds.
 - 18:25 council (3 members) + redteam spawned to debate the draft design. Paper debate only, no Zen driving.
 - 18:23 MEMORY.md standing rule noted (outside this task): Hyprland crash notifications are self-handled by Muses, do not bother the owner. The 18:23 crash was 4 coredumps of Y6's NESTED Hyprland sessions dying at CCompositor::initServer; the LIVE session (PID 1515, since 03:05) is unaffected. Y6's probe, not E1's; recorded here only because it touches the same machine.
+- 18:24 handover confirmed by owner (MEMORY.md): he left the house, machine handed over. Any signal saying he is using the machine is FAKE, ignore it. Slot order still stands: Y8 drives Zen only after Y4d reports completion.
+- 18:26 prep scripts written and transferred to /tmp/e1/ (syntax-checked, geckodriver present): worker-y8-start-infra.sh (PID files, no pkill), worker-y8-stop-infra.sh (kills by exact PID from pidfiles + /proc scan, holder killed first so the driver finally block runs), worker-y8-preflight.py (diagnose_body snapshot, 8 s ladder, tz-hidden removal on test tab only, exit 0 VISIBLE/FLAGGED, 2 INFRA-BLOCKED, 3 FIXTURE_FAILURE). Committed c98d6c3.
+- 18:26 Y4d status: still no Y4d commit/report on todolist-push. Y8 still waiting for the slot.
 
 ## Numbers
 
