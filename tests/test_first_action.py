@@ -36,7 +36,8 @@ class FakeOverlay:
 
     def add_holder(self, agent, method, pid=None):
         self.calls.append(('add', agent, method, pid))
-        self.holders[agent] = {'method': method, 'pid': pid}
+        key = ('%s:%d' % (agent, pid)) if isinstance(pid, int) and pid > 0 else agent
+        self.holders[key] = {'agent': agent, 'method': method, 'pid': pid}
         return self.holders, True
 
     def _ensure_daemon(self):
@@ -48,10 +49,10 @@ class FakeOverlay:
             return {'visible': self.visible, 'owner': 'daemon',
                     'holders': self.holders, 'label': 'Muse via act-now'}
         if req.get('command') == 'release':
-            self.holders.pop(req.get('agent'), None)
+            self.remove_holder(req.get('agent'), req.get('pid'))
             return {'visible': bool(self.holders), 'owner': 'none',
                     'holders': self.holders}
-        if req.get('command') == 'status':
+        if req.get('command') in ('status', 'sync'):
             if self.fail_status:
                 raise OSError('daemon gone')
             return {'visible': bool(self.holders), 'owner': 'daemon',
@@ -61,9 +62,15 @@ class FakeOverlay:
     def _label_for(self, agent, method):
         return (agent + ' via ' + method)[:40]
 
-    def remove_holder(self, agent):
-        self.calls.append(('remove', agent))
-        self.holders.pop(agent, None)
+    def remove_holder(self, agent, pid=None):
+        self.calls.append(('remove', agent, pid))
+        if isinstance(pid, int) and pid > 0:
+            self.holders.pop('%s:%d' % (agent, pid), None)
+            self.holders.pop(agent, None)
+        else:
+            for key in list(self.holders):
+                if key == agent or (agent and key.startswith(agent + ':')):
+                    self.holders.pop(key, None)
         return self.holders, True
 
     def session_live(self):
@@ -372,8 +379,9 @@ class TestRun(unittest.TestCase):
         self.assertIn('guardian', env['fallback_reason'])
         self.assertEqual(len(self.fake_cu.desktop_calls), 1)
         self.assertEqual(self.fake_overlay.holders, {})
-        # A5: the overlay is re-checked (status) before the fallback acts.
-        self.assertIn(('send', 'status', None), self.fake_overlay.calls)
+        # A5: the overlay is re-checked (sync, live show ack) before the
+        # fallback acts.
+        self.assertIn(('send', 'sync', None), self.fake_overlay.calls)
 
     def test_fallback_path_on_driver_registration_failure(self):
         code, env, _ = self._run(
@@ -501,6 +509,26 @@ class TestRun(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertEqual(env['path'], 'refused')
 
+    def test_huge_deadline_refused(self):
+        # Redteam A2: the deadline is bounded by the observation
+        # freshness window (120 s).
+        code, env, _ = self._run(
+            [{'type': 'click', 'x': 100, 'y': 100}],
+            (0, '', '', False, 0.5), session_deadline_s=3600)
+        self.assertEqual(code, 1)
+        self.assertEqual(env['path'], 'refused')
+        self.assertIn('deadline', env['error'])
+
+    def test_target_breached_recorded(self):
+        # Redteam A2: the envelope records whether the whole run
+        # exceeded the 30 s target.
+        code, env, _ = self._run(
+            [{'type': 'click', 'x': 100, 'y': 100}],
+            (0, '{"ok": true, "completed": 1}', '', False, 0.5))
+        self.assertEqual(code, 0)
+        self.assertIs(env['target_breached'], False)
+        self.assertLess(env['total_ms'], 30000)
+
     def test_fallback_desktop_act_raises_single_json(self):
         # Council 1, A2: an exception in the fallback must not print a
         # second JSON object after the envelope.
@@ -514,6 +542,24 @@ class TestRun(unittest.TestCase):
         self.assertFalse(env['ok'])
         self.assertEqual(env['path'], 'fallback')
         self.assertIn('pointer gone', env['error'])
+        # Redteam A5: the after-capture is still attempted.
+        self.assertEqual(len(self.fake_cu.observe_calls), 2)
+
+    def test_fallback_desktop_act_raises_valueerror(self):
+        # Redteam A5: a preflight refusal (PreflightRefusal is a
+        # ValueError subclass) lands in the envelope, cleanly.
+        self.fake_cu.desktop_act = mock.Mock(
+            side_effect=ValueError(
+                'screen observations support pointer actions only'))
+        code, env, _ = self._run(
+            [{'type': 'click', 'x': 100, 'y': 100}],
+            (1, '{"ok": false, "error": "session guardian startup failed"}',
+             '', False, 0.4))
+        self.assertEqual(code, 1)
+        self.assertFalse(env['ok'])
+        self.assertEqual(env['path'], 'fallback')
+        self.assertIn('pointer actions only', env['error'])
+        self.assertEqual(len(self.fake_cu.observe_calls), 2)
 
     def test_stale_monitor_observation_raises_single_json(self):
         # Council 1, A2: an exception in the fresh observation must
@@ -554,6 +600,30 @@ class TestFreshObservation(unittest.TestCase):
             fake_cu, {}, 'eDP-2', str(path))
         self.assertEqual(source, 'captured')
         self.assertEqual(fake_cu.observe_calls, ['eDP-2'])
+
+    def test_age_plus_deadline_must_stay_under_120(self):
+        # Redteam A6: a 110 s old observation plus a 20 s deadline
+        # would be 130 s at act time, so it is replaced.
+        fake_cu = FakeCu(tempfile.mkdtemp())
+        meta = {'id': 'deadbeefcafe', 'image': '/x.jpg',
+                'monitor_box': [0, 0, 1920, 1200],
+                'created': time.time() - 110}
+        path = Path(fake_cu.tmp) / 'obs.json'
+        path.write_text(json.dumps(meta))
+        _out_meta, _out_path, source = first_action._fresh_observation(
+            fake_cu, {}, 'eDP-2', str(path), deadline_s=20.0)
+        self.assertEqual(source, 'captured')
+
+    def test_age_plus_deadline_within_120_is_used(self):
+        fake_cu = FakeCu(tempfile.mkdtemp())
+        meta = {'id': 'deadbeefcafe', 'image': '/x.jpg',
+                'monitor_box': [0, 0, 1920, 1200],
+                'created': time.time() - 90}
+        path = Path(fake_cu.tmp) / 'obs.json'
+        path.write_text(json.dumps(meta))
+        _out_meta, _out_path, source = first_action._fresh_observation(
+            fake_cu, {}, 'eDP-2', str(path), deadline_s=20.0)
+        self.assertEqual(source, 'given')
 
 
 if __name__ == '__main__':
