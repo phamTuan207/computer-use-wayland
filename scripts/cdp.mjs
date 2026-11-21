@@ -488,10 +488,18 @@ async function assertAction(a) {
             // Input.insertText) instead.
             const proto=e.tagName==='INPUT'?HTMLInputElement.prototype:HTMLTextAreaElement.prototype;
             const setter=Object.getOwnPropertyDescriptor(proto,'value')?.set;if(!setter)return {ok:false,error:'field setter unavailable'};
+            const oldValue=e.value;
             attempted=true;setter.call(e,${text});
             if(!e.isConnected||e.value!==${text})return {ok:false,error:'value verification failed',mutation_may_have_occurred:true};
-            e.dispatchEvent(new InputEvent('input',{bubbles:true,composed:true,inputType:'insertReplacementText',data:null}));
-            e.dispatchEvent(new Event('change',{bubbles:true}));
+            // Snapshot contract (tests/cdp_snapshot.mjs): unchanged
+            // text fires no synthetic notifications. The setter write
+            // and the read-back above stay unconditional (the R2
+            // fix), but the input/change events fire only when the
+            // value actually changed.
+            if(e.value!==oldValue){
+              e.dispatchEvent(new InputEvent('input',{bubbles:true,composed:true,inputType:'insertReplacementText',data:null}));
+              e.dispatchEvent(new Event('change',{bubbles:true}));
+            }
             if(!e.isConnected||e.value!==${text})return {ok:false,error:'value verification failed',mutation_may_have_occurred:true};
             return {ok:true};
           }catch(_){return {ok:false,error:'value update failed',mutation_may_have_occurred:attempted};}})()`;
