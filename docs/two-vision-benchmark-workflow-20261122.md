@@ -331,6 +331,63 @@ now have literal TODO comments in the script (D1, D2, D3, D4, D6,
 F5, step-6 loop hygiene; D5 is closed by statement, VISION 1 is a
 DOM harvest).
 
+Re-run (batch 9 task 2, 2026-11-21T21:41:28Z to 21:42:33Z, same
+machine, headless Firefox 160.0.1, repo venv python, one run per
+case, each with its own --workdir under /tmp/two_vision_b9t2; all
+logs, results.json, inventory.json, ledger.json and the six custom
+plans preserved in ~/workspace/tools/two_vision_b9t2/, 41 files):
+
+- Happy path (b9t2-happy): PASS, wall 8.9403 s. Launch 1.7713 s,
+  attach 4.2165 s (slower than the 2.65 to 2.79 s recorded before;
+  contended shared VM, same shape, not a defect), harvest 0.1055 s
+  and 0.0171 s for 4 elements each, sends 0.8528 s and 0.4741 s.
+  Both V12 gates passed.
+- Harvest-only (b9t2-harvest): HARVEST-ONLY, wall 6.9131 s, 4
+  elements per window.
+- Contenteditable (b9t2-ce): PASS, wall 6.5993 s, sends 0.7269 s
+  and 0.6163 s.
+- Id-less (b9t2-noid): PASS, wall 6.4843 s, sends 0.7028 s and
+  0.4735 s. The id-less input ref is the valid CSS path
+  "html:nth-of-type(1) > body:nth-of-type(1) > input:nth-of-type(1)".
+- Below-fold (b9t2-belowfold): PASS, wall 6.1782 s, sends 0.6145 s
+  and 0.6186 s.
+- Stop-at-first-failure (b9t2-stop, 3-window plan, wrong thread
+  selector for clone2): FAIL as designed, wall 9.7904 s. Clone1
+  sent, clone2 failed v12-timeout, clone3 not-executed.
+- Wrong-selector retry (b9t2-wrongsel1 and b9t2-wrongsel2, same
+  plan and ledger): run 1 FAIL, wall 8.2872 s, clone1 v12-timeout
+  after the 3 s gate, ledger marks the intent failed-unverified;
+  run 2 FAIL, wall 4.2119 s, clone1 retry-blocked-unverified in
+  0.0083 s, nothing typed or sent, clone2 not-executed. No second
+  bubble. Run 1's results.json was overwritten by run 2 (same
+  workdir is the point of the test); run 1's outcome and wall are
+  recorded in b9t2-wrongsel1.log and the ledger.
+- Exactly-once driver (b9t2-once): PASS, wall 4.8139 s. Call 1
+  sent in 0.6549 s, 1 bubble; call 2 skipped-already-sent in
+  0.0511 s, still 1 bubble. The second-call time is consistent
+  with council 1's independent 0.0549 s, not the withdrawn
+  0.0026 s figure.
+- Live refusal (b9t2-live-refusal): --live without --confirm-live
+  exits 2, no browser started.
+- --instances two refusal (b9t2-instances2): exit 2, nothing
+  recorded as "two".
+- Plan-bypass refusal (b9t2-bypass, custom plan with
+  https://example.com URLs, no --live flags): exit 2, sends
+  nothing, no browser started.
+
+No drift found in this re-check: the script on main is still 783
+lines, the doc's line counts (783 script, 379 doc), default
+workdir (/tmp/two_vision_bench), gate behavior, contenteditable
+check, id-less refs, scroll-first guard, v12-timeout retry block
+and --instances two refusal all match the code as read. The
+preserved fix-pass numbers in this section recompute exactly from
+~/workspace/tools/two_vision_fixpass/ (fix2 PASS 8.4457 s, fix2-ce
+PASS 6.6076 s, fix2-noid PASS 5.4565 s, fix2-belowfold PASS
+5.4953 s, fix2-stop FAIL 9.2775 s, fix2-harvest HARVEST-ONLY
+4.3510 s, once2 PASS 4.9248 s, wrongsel run 1 FAIL and run 2
+FAIL). No Firefox process was left running; profile dirs were
+deleted after each run, /tmp ended at 2 percent used.
+
 Incident during dry-testing: /tmp (512M tmpfs) filled to 100% from
 stale Firefox profiles and was cleared by deleting only this
 benchmark's own stale profiles plus stale .xpi files (no live
@@ -377,3 +434,114 @@ must not claim them done.
   getBoundingClientRect directly, the same shape as the batch 7
   bench. Live Zen clicks need the C12 adjudication (batch 8 task 3)
   before the coordinates can be trusted on the laptop.
+
+## 10. Live-run prerequisites checklist (added batch 9 task 2)
+
+This is a preparation checklist only. The live run is the
+coordinator's acceptance test; nobody runs it live until the
+coordinator says run, and this script has never run live.
+
+### 10.1 Workspace state (check before anything else)
+
+- [ ] Repo on main, script tests/two_vision_bench.py at the
+  reviewed commit (783 lines after the fix pass, commit 7e81213).
+  Run `git log --oneline -1 -- tests/two_vision_bench.py` and
+  confirm no unreviewed change sits on top of it.
+- [ ] The live lane is free: no BASELINE2 or other live run is
+  running, and no other agent holds the laptop browser. Confirm
+  with the coordinator; do not guess.
+- [ ] The installed laptop code is still the pre-amend code if a
+  baseline is still owed. Do not sync the amend over the laptop
+  before the baseline runs.
+- [ ] The C12 adjudication (batch 8 task 3) is settled for the
+  window the live run uses: viewport_origin is confirmed absolute
+  or window-relative, and the click coordinates are trusted on
+  that geometry. If C12 is still open, the live run measures the
+  wrong thing.
+- [ ] /tmp has room (512M tmpfs; check `df -h /tmp`) and ports
+  2828 and 9223 are free on the run machine. A stale browser
+  holding either port makes launch_browser refuse.
+- [ ] A fresh --workdir per run (for example
+  /tmp/two_vision_bench/live1). Never reuse a live run's workdir:
+  the ledger keys on run_id, and a reused run_id reuses intents.
+
+### 10.2 Both clones' chats
+
+- [ ] The coordinator supplies the two real thread URLs, one per
+  clone window, plus the thread selector and bubble selector for
+  each. The script cannot invent them; a wrong selector fails the
+  V12 gate loudly (fail-closed), and a wrong selector that cannot
+  see a landed bubble is exactly the case the retry block exists
+  for.
+- [ ] Both clones are logged in on the laptop Zen and both threads
+  open and reachable before the run starts. If either thread is
+  unreachable, abort before starting: do not start a live run
+  with a half-known target.
+- [ ] The message input in each thread is a contenteditable
+  textbox (the Messenger input type). The script's V1 check reads
+  innerText for contenteditable elements; if a thread's input is
+  a different control, say so in the plan and re-check the
+  fixture variant first.
+- [ ] Both windows live in ONE Zen instance with two windows
+  (the --instances one shape). Two instances are not implemented
+  and --instances two is refused.
+
+### 10.3 Exact message contents
+
+- [ ] The plan JSON carries a unique run_id (for example
+  bench-20261122-001) and the two messages in exactly this form:
+  "BENCH-TEST clone1 <run_id>" and "BENCH-TEST clone2 <run_id>".
+- [ ] Test messages are bench strings only. Never put real user
+  text, names, or personal information in a plan, inventory,
+  ledger, log, or result file.
+- [ ] bubble_selector is overridden for Messenger in the plan
+  (the default ".bubble, [data-sender]" is fixture-shaped and the
+  V12 gate requires exact textContent === text, so the default
+  would fail closed live). v12_gate_s is set in the plan
+  (5 s default; raise it only if the live thread is slow to
+  render, and record the value used).
+
+### 10.4 PASS/FAIL criteria
+
+- [ ] VISION 1 (harvest): PASS iff the one-shot harvest returns
+  both message inputs, each visible, with a ref, rect, center and
+  role textbox. If either input is missing, the run is FAIL
+  before anything is sent (no-message-input-in-inventory,
+  fail-closed).
+- [ ] VISION 2 (outcome check): PASS iff both BENCH-TEST
+  messages appear as bubbles in their threads. The script's V12
+  gates check this by DOM read after each send; the agent's
+  VISION 2 look at both threads once at the end is the
+  independent confirmation. Outcome scoring is by message in
+  thread (M1), never by point-in-box.
+- [ ] Overall: PASS iff both messages land. Any single failed
+  step makes the run FAIL; the chain stops at the first failure
+  and later steps are recorded not-executed.
+- [ ] Per-step failure meanings are in section 6. A
+  value-mismatch means nothing was sent (Enter was not pressed);
+  a v12-timeout means the message may have been typed and may
+  have landed unseen, so the thread must be checked by hand.
+
+### 10.5 Stop conditions (abort the live run, do not push on)
+
+- [ ] Stop at the first failed step. The script does this
+  itself; do not restart the chain mid-run.
+- [ ] If a send ends in v12-timeout, STOP. Check the thread by
+  hand. Never re-run with the same run_id: the ledger marks the
+  intent failed-unverified and refuses the retry. To retry, fix
+  the thread/bubble selectors first, then use a NEW run_id.
+- [ ] If either thread becomes unreachable, or the browser
+  crashes, or a click lands on the wrong window, STOP and report
+  the state (which intents are sent, which are failed-unverified)
+  before doing anything else. Do not re-send to "make up" for a
+  lost message: a re-send without a V12-visible bubble is exactly
+  how a duplicate happens.
+- [ ] If --confirm-live was not explicitly given by the
+  coordinator for this run, STOP. The script refuses without it,
+  and the URL gate refuses any non-fixture plan without both
+  --live and --confirm-live.
+- [ ] After the run, preserve the full log, results.json,
+  inventory.json and ledger.json out of /tmp immediately (the
+  fix-pass logs were once lost to a /tmp wipe), delete the
+  profile/ dir, and report the outcome with the run_id and wall
+  time. Never edit a result file after the run.
