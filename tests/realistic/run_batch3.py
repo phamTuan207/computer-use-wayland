@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Live Zen runner: clone1-batch3 FIXED suite, 10 tests (Worker Y14, 21/11/2026).
 
-Runs the merged fixed suite (main commit ed78e83, Y10 reconciled best of
-both: t05 clone1 fixture + Y10 checker, t09 clone1 polling checker + Y10
-cancel dwell, t10 clone1 sampler + Y10 advance assert) against the LIVE
+Runs the merged fixed suite (main commit 1d23532, Y15 D1 fix on top of
+Y10's reconciled best of both: t05 clone1 fixture + Y10 checker, t09
+clone1 polling checker + Y10 cancel dwell, t10 Y15 exact-zero + clock
+liveness checks + sampler as second witness) against the LIVE
 Zen on the laptop via geckodriver --connect-existing (Marionette 2828).
 Stdlib only. Reuses the proven driver from tests/realistic/run_live.py
 (Worker P: explicit tab switch after window/new, 1s settle after
@@ -40,6 +41,7 @@ import os
 import sys
 import time
 import urllib.error
+from pathlib import Path
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -1503,6 +1505,21 @@ def run_b3_t10(r, d):
                 f"sampler returned non-numeric: {result!r}")
         return result
 
+    def exact_zero_next():
+        # Same-task click+read (Y15, check.mjs 1d23532): the
+        # next-btn click and the position read run in one in-page
+        # task, so no timer tick can land between them. Fail-closed
+        # (redteam D3): a None or non-numeric result raises here,
+        # never defaults to 0 and never skips the assert.
+        result = d.eval(
+            "document.getElementById('next-btn').click();"
+            " return Number(document.getElementById('position')"
+            ".dataset.seconds)")
+        if not isinstance(result, (int, float)):
+            raise RuntimeError(
+                f"exact-zero read returned non-numeric: {result!r}")
+        return int(result)
+
     listed = r.step("read playlist", "eval", lambda: tracks())
     r.check("playlist lists 5 tracks", len(listed) == 5, str(listed))
     r.check("first track is Morning Light",
@@ -1527,7 +1544,22 @@ def run_b3_t10(r, d):
     resumed = r.step("read resumed position", "eval", lambda: position())
     r.check("position advanced after resume", resumed > frozen2,
             str(resumed))
-    r.step("click next", "click", lambda: d.click("#next-btn"))
+    # Exact-zero read on the playing path (Y15, check.mjs 1d23532).
+    # The click and the read run in the same in-page task, so no
+    # 100 ms timer tick can land between the reset and the read:
+    # page JavaScript is single-threaded, and the click handler runs
+    # synchronously inside the task. A plain d.click followed by a
+    # read cannot guarantee that.
+    pos_after_next = r.step(
+        "exact-zero read after next while playing", "eval",
+        lambda: exact_zero_next())
+    r.check("position exactly 0 after next while playing",
+            pos_after_next == 0, str(pos_after_next))
+    r.details["positionAfterPlayingNext"] = pos_after_next
+    # Second witness: sample the position for 500 ms right after the
+    # click and take the minimum. Start sampling before the
+    # now-playing assert so the first sample lands as close to the
+    # click as possible (plan Council 2 A5).
     pos_before = resumed
     min_after = r.step("sample position min after next", "eval",
                        lambda: sample_position_min())
@@ -1537,12 +1569,80 @@ def run_b3_t10(r, d):
             min_after <= 2 and min_after < pos_before,
             f"min observed {min_after} after {pos_before}")
     r.details["positionMinAfterNext"] = min_after
+    # Three-point advancing check: a Next that stops the timer
+    # part-way through would still pass an absolute read, so read
+    # when the sampler window ends and again after two 350 ms
+    # sleeps, requiring a gain of at least 2 ticks across each
+    # sleep. The absolute 2-11 bound on the middle read still
+    # catches a clock that runs fast.
+    after_sampler = r.step("read position at sampler end", "eval",
+                           lambda: position())
+    r.details["positionAtSamplerEnd"] = after_sampler
     time.sleep(0.35)
     advancing = r.step("read advancing position", "eval",
                        lambda: position())
-    r.check("position advanced after next while playing", advancing >= 2,
-            str(advancing))
+    r.details["positionAdvancingAfterNext"] = advancing
+    r.check("position gained after next while playing",
+            advancing - after_sampler >= 2,
+            f"{after_sampler} to {advancing}")
+    r.check("position after next while playing in range 2-11",
+            2 <= advancing <= 11, str(advancing))
+    time.sleep(0.35)
+    advancing_later = r.step("read advancing position again", "eval",
+                             lambda: position())
+    r.details["positionAdvancingLaterAfterNext"] = advancing_later
+    r.check("position gained again after next while playing",
+            advancing_later - advancing >= 2,
+            f"{advancing} to {advancing_later}")
+    # Exact-zero check on a clock-frozen path. Pause first (the
+    # timer stops, so no tick can land between the click and the
+    # read) and require exactly 0 after Next. This runs as a second
+    # Next on purpose: pausing before the first Next and resuming
+    # with Play would restart the timer and hide a nextTrack that
+    # stops the clock, and the advancing check above is the only
+    # witness for that defect.
+    r.step("click pause before frozen next", "click",
+           lambda: d.click("#pause-btn"))
+    expect_text("#status", "Paused", "status before frozen next")
+    r.step("click next while paused", "click",
+           lambda: d.click("#next-btn"))
+    frozen_after_next = r.step("read position after frozen next",
+                               "eval", lambda: position())
+    r.check("position exactly 0 after next while paused",
+            frozen_after_next == 0, str(frozen_after_next))
+    r.details["positionAfterFrozenNext"] = frozen_after_next
+    expect_text("#now-playing", "Night Drive - The Demos",
+                "now playing after frozen next")
+    r.step("click play resume from frozen next", "click",
+           lambda: d.click("#play-btn"))
+    expect_text("#status", "Playing",
+                "status after resume from frozen next")
+    # The frozen value was exactly 0, so this read is a gain check:
+    # a Play that does not restart the timer fails here, before the
+    # Previous clicks (which reset position themselves) can mask it.
+    time.sleep(0.35)
+    after_frozen_resume = r.step(
+        "read position after resume from frozen next", "eval",
+        lambda: position())
+    r.details["positionAfterFrozenNextResume"] = after_frozen_resume
+    r.check("position advanced after resume from frozen next",
+            2 <= after_frozen_resume <= 11, str(after_frozen_resume))
+    time.sleep(0.35)
+    after_frozen_resume_later = r.step(
+        "read position after resume from frozen next again", "eval",
+        lambda: position())
+    r.details["positionAfterFrozenNextResumeLater"] = \
+        after_frozen_resume_later
+    r.check("position gained again after resume from frozen next",
+            after_frozen_resume_later - after_frozen_resume >= 2,
+            f"{after_frozen_resume} to {after_frozen_resume_later}")
+    r.check("position after resume from frozen next in range 2-11",
+            2 <= after_frozen_resume_later <= 11,
+            str(after_frozen_resume_later))
     r.step("click prev", "click", lambda: d.click("#prev-btn"))
+    expect_text("#now-playing", "River Road - The Demos",
+                "now playing after prev from frozen next")
+    r.step("click prev again", "click", lambda: d.click("#prev-btn"))
     expect_text("#now-playing", "Morning Light - The Demos",
                 "now playing after prev")
     r.step("click volume", "click", lambda: d.click("#volume"))
@@ -1580,9 +1680,105 @@ def run_b3_t10(r, d):
             str(listed))
     expect_text("#now-playing", "Morning Light - The Demos",
                 "now playing unchanged by shuffle")
-    r.step("click next in shuffle", "click", lambda: d.click("#next-btn"))
+    # Same sampler read as the first Next: the shuffle Next must
+    # reset the position too, and the track-name assert alone cannot
+    # see a Next that skips the reset while shuffle is on.
+    pos_before_shuffle = r.step("read position before shuffle next",
+                                "eval", lambda: position())
+    pos_after_shuffle = r.step(
+        "exact-zero read after shuffle next while playing", "eval",
+        lambda: exact_zero_next())
+    r.check("position exactly 0 after shuffle next while playing",
+            pos_after_shuffle == 0, str(pos_after_shuffle))
+    r.details["positionAfterPlayingShuffleNext"] = pos_after_shuffle
+    min_after_shuffle = r.step(
+        "sample position min after shuffle next", "eval",
+        lambda: sample_position_min())
     expect_text("#now-playing", "Mountain Air - The Demos",
                 "now playing after next in shuffle order")
+    r.check("position reset after shuffle next",
+            min_after_shuffle <= 2
+            and min_after_shuffle < pos_before_shuffle,
+            f"min observed {min_after_shuffle} "
+            f"after {pos_before_shuffle}")
+    r.details["positionMinAfterShuffleNext"] = min_after_shuffle
+    # Three-point advancing check, as after the first Next: a
+    # shuffle Next that stops the timer would also show min 0, and
+    # the step 14 playlist click restarts the timer, so this is the
+    # only witness for it.
+    after_shuffle_sampler = r.step(
+        "read position at shuffle sampler end", "eval",
+        lambda: position())
+    r.details["positionAtShuffleSamplerEnd"] = after_shuffle_sampler
+    time.sleep(0.35)
+    advancing_shuffle = r.step(
+        "read advancing position after shuffle next", "eval",
+        lambda: position())
+    r.details["positionAdvancingAfterShuffleNext"] = advancing_shuffle
+    r.check("position gained after shuffle next while playing",
+            advancing_shuffle - after_shuffle_sampler >= 2,
+            f"{after_shuffle_sampler} to {advancing_shuffle}")
+    r.check("position after shuffle next while playing in range 2-11",
+            2 <= advancing_shuffle <= 11, str(advancing_shuffle))
+    time.sleep(0.35)
+    advancing_shuffle_later = r.step(
+        "read advancing position after shuffle next again", "eval",
+        lambda: position())
+    r.details["positionAdvancingLaterAfterShuffleNext"] = \
+        advancing_shuffle_later
+    r.check("position gained again after shuffle next while playing",
+            advancing_shuffle_later - advancing_shuffle >= 2,
+            f"{advancing_shuffle} to {advancing_shuffle_later}")
+    # Paused shuffle Next, mirroring step 7: the sampler above
+    # proves the reset happens, this exact-zero read proves the
+    # reset value in shuffle order. Previous returns to Mountain
+    # Air so the shuffle-off step still checks the track it started
+    # from.
+    r.step("click pause before frozen shuffle next", "click",
+           lambda: d.click("#pause-btn"))
+    expect_text("#status", "Paused",
+                "status before frozen shuffle next")
+    r.step("click next while paused in shuffle", "click",
+           lambda: d.click("#next-btn"))
+    frozen_after_shuffle = r.step(
+        "read position after frozen shuffle next", "eval",
+        lambda: position())
+    r.check("position exactly 0 after shuffle next while paused",
+            frozen_after_shuffle == 0, str(frozen_after_shuffle))
+    r.details["positionAfterFrozenShuffleNext"] = frozen_after_shuffle
+    expect_text("#now-playing", "City Rain - The Demos",
+                "now playing after frozen shuffle next")
+    r.step("click play resume from frozen shuffle next", "click",
+           lambda: d.click("#play-btn"))
+    expect_text("#status", "Playing",
+                "status after resume from frozen shuffle next")
+    time.sleep(0.35)
+    after_frozen_shuffle_resume = r.step(
+        "read position after resume from frozen shuffle next", "eval",
+        lambda: position())
+    r.details["positionAfterFrozenShuffleResume"] = \
+        after_frozen_shuffle_resume
+    r.check("position advanced after resume from frozen shuffle next",
+            2 <= after_frozen_shuffle_resume <= 11,
+            str(after_frozen_shuffle_resume))
+    time.sleep(0.35)
+    after_frozen_shuffle_resume_later = r.step(
+        "read position after resume from frozen shuffle next again",
+        "eval", lambda: position())
+    r.details["positionAfterFrozenShuffleResumeLater"] = \
+        after_frozen_shuffle_resume_later
+    r.check("position gained again after resume from frozen shuffle",
+            after_frozen_shuffle_resume_later
+            - after_frozen_shuffle_resume >= 2,
+            f"{after_frozen_shuffle_resume} to "
+            f"{after_frozen_shuffle_resume_later}")
+    r.check("position after resume from frozen shuffle in range 2-11",
+            2 <= after_frozen_shuffle_resume_later <= 11,
+            str(after_frozen_shuffle_resume_later))
+    r.step("click prev from frozen shuffle next", "click",
+           lambda: d.click("#prev-btn"))
+    expect_text("#now-playing", "Mountain Air - The Demos",
+                "now playing after prev from frozen shuffle next")
     r.step("click shuffle off", "click", lambda: d.click("#shuffle-btn"))
     expect_text("#shuffle-btn", "Shuffle: Off", "shuffle button after off")
     listed = r.step("read playlist after shuffle off", "eval",
@@ -1602,11 +1798,92 @@ def run_b3_t10(r, d):
            lambda: d.click('#playlist .track[data-track="4"]'))
     expect_text("#now-playing", "Mountain Air - The Demos",
                 "now playing after clicking Mountain Air")
+    # Let the track play so the position is clearly past 0 before
+    # the wrap Nexts: a wrap that fails to reset is only observable
+    # when the pre-click position is nonzero (a fresh playlist click
+    # leaves it at 0, which a broken wrap would also read as 0).
+    time.sleep(0.7)
+    pos_before_wrap = r.step("read position before playing wrap",
+                             "eval", lambda: position())
+    r.details["positionBeforePlayingWrap"] = pos_before_wrap
+    r.check("position advanced before playing wrap next",
+            pos_before_wrap >= 2, str(pos_before_wrap))
     r.step("click repeat All", "click", lambda: d.click("#repeat-btn"))
     expect_text("#repeat-btn", "Repeat: All", "repeat All before wrap")
-    r.step("click next for wrap", "click", lambda: d.click("#next-btn"))
+    # Playing wrap first: the wrap while playing must reset the
+    # position too. The sampler catches a wrap that resets only when
+    # paused (or never resets); the frozen check below catches a wrap
+    # that resets to the wrong value. Neither alone covers both.
+    pos_after_wrap = r.step(
+        "exact-zero read after playing wrap next", "eval",
+        lambda: exact_zero_next())
+    r.check("position exactly 0 after playing wrap next",
+            pos_after_wrap == 0, str(pos_after_wrap))
+    r.details["positionAfterPlayingWrap"] = pos_after_wrap
+    min_after_wrap = r.step("sample position min after playing wrap",
+                            "eval", lambda: sample_position_min())
     expect_text("#now-playing", "Morning Light - The Demos",
-                "repeat All wraps to first track")
+                "repeat All wraps to first track (playing)")
+    r.check("position reset after playing wrap next",
+            min_after_wrap <= 2 and min_after_wrap < pos_before_wrap,
+            f"min observed {min_after_wrap} after {pos_before_wrap}")
+    r.details["positionMinAfterPlayingWrap"] = min_after_wrap
+    # Frozen wrap second: go back to the last track and wrap again,
+    # this time paused, so the reset value can be read exactly.
+    r.step("click Mountain Air track again", "click",
+           lambda: d.click('#playlist .track[data-track="4"]'))
+    expect_text("#now-playing", "Mountain Air - The Demos",
+                "now playing after clicking Mountain Air again")
+    time.sleep(0.7)
+    pos_before_frozen_wrap = r.step(
+        "read position before frozen wrap", "eval", lambda: position())
+    r.details["positionBeforeFrozenWrap"] = pos_before_frozen_wrap
+    r.check("position advanced before frozen wrap next",
+            pos_before_frozen_wrap >= 2, str(pos_before_frozen_wrap))
+    # Same frozen exact-zero check as the mid-list Next above, for
+    # the repeat-All wrap branch: the wrap path resets position too,
+    # and the track-name assert alone cannot see a wrap that leaves
+    # the old position behind. Pausing here masks nothing: no
+    # advancing check follows the wrap Next.
+    r.step("click pause before frozen wrap next", "click",
+           lambda: d.click("#pause-btn"))
+    expect_text("#status", "Paused", "status before frozen wrap next")
+    r.step("click next for frozen wrap", "click",
+           lambda: d.click("#next-btn"))
+    frozen_after_wrap = r.step("read position after frozen wrap",
+                               "eval", lambda: position())
+    r.check("position exactly 0 after wrap next while paused",
+            frozen_after_wrap == 0, str(frozen_after_wrap))
+    r.details["positionAfterFrozenWrap"] = frozen_after_wrap
+    expect_text("#now-playing", "Morning Light - The Demos",
+                "repeat All wraps to first track (paused)")
+    r.step("click play resume from frozen wrap next", "click",
+           lambda: d.click("#play-btn"))
+    expect_text("#status", "Playing",
+                "status after resume from frozen wrap next")
+    time.sleep(0.35)
+    after_frozen_wrap_resume = r.step(
+        "read position after resume from frozen wrap next", "eval",
+        lambda: position())
+    r.details["positionAfterFrozenWrapResume"] = \
+        after_frozen_wrap_resume
+    r.check("position advanced after resume from frozen wrap next",
+            2 <= after_frozen_wrap_resume <= 11,
+            str(after_frozen_wrap_resume))
+    time.sleep(0.35)
+    after_frozen_wrap_resume_later = r.step(
+        "read position after resume from frozen wrap next again",
+        "eval", lambda: position())
+    r.details["positionAfterFrozenWrapResumeLater"] = \
+        after_frozen_wrap_resume_later
+    r.check("position gained again after resume from frozen wrap",
+            after_frozen_wrap_resume_later
+            - after_frozen_wrap_resume >= 2,
+            f"{after_frozen_wrap_resume} to "
+            f"{after_frozen_wrap_resume_later}")
+    r.check("position after resume from frozen wrap in range 2-11",
+            2 <= after_frozen_wrap_resume_later <= 11,
+            str(after_frozen_wrap_resume_later))
     r.step("click repeat One", "click", lambda: d.click("#repeat-btn"))
     expect_text("#repeat-btn", "Repeat: One", "repeat One after wrap")
     r.step("click repeat Off", "click", lambda: d.click("#repeat-btn"))
@@ -1629,18 +1906,12 @@ def run_b3_t10(r, d):
                 "now playing after clicking Night Drive")
     r.step("click pause final", "click", lambda: d.click("#pause-btn"))
     expect_text("#status", "Paused", "status after final pause")
-    # Supplementary D1 diagnostic (Y12 defect, does NOT affect the
-    # suite verdict): Next while paused, read the position immediately.
-    # The clock is frozen while paused, so a correct reset reads
-    # exactly 0; the D1 mutant (reset to 1) reads 1. Recorded in
-    # details only, never as a pass/fail check on this test.
-    r.step("D1 probe: next while paused", "click",
-           lambda: d.click("#next-btn"))
-    pos0 = r.step("D1 probe: read position after paused next", "eval",
-                  lambda: position())
-    r.details["D1_exact_zero_probe"] = pos0
-    print(f"[D1] exact-zero probe: position after paused Next = {pos0} "
-          f"(want 0)", flush=True)
+    # NOTE (Y14b re-stage): the old supplementary D1 diagnostic probe
+    # (Next while paused, details-only) is REMOVED. Y15's checker now
+    # carries the real frozen-Next exact-zero steps above, so the
+    # probe is superseded; keeping it would double-drive Next after
+    # the suite's final pause and could mask nothing but would add
+    # an un-speced step.
 
 # ---------------- preflight step 0 ----------------
 
@@ -1651,6 +1922,14 @@ def run_preflight(r, d):
     exists for every required case: /actions, or raw element/value on
     both a text input and a range input."""
     global CLEAR_FIRES_INPUT, ACTIONS_OK
+    # Runner-quiet re-check (Y13f H2, defense in depth behind the
+    # launch gate: a runner could have started between the gate and
+    # this preflight). Runs BEFORE any tab opens; a hit raises
+    # PREFLIGHT FAIL and blocks t01.
+    for _rpid, _flat in _scan_other_runners():
+        raise RuntimeError(
+            f"PREFLIGHT FAIL: live slot busy, runner process "
+            f"running: pid {_rpid}: {_flat}")
     url = r.base + "/run_batch3_probe.html"
     tab = open_test(r, d, url)
     probe = lambda: d.eval("return window.__probe")  # noqa: E731
@@ -1899,6 +2178,144 @@ def run_one(test_id, base_url, metrics=None):
     return s
 
 
+def _script_basename_is_runner(name):
+    """True if a cmdline token's basename is a test-runner script
+    (Y13f H2/H3). run_*.py covers Y9/Y13/Y14/Y4d; run-nested*
+    covers Y6c's nested run (run-nested-pill.py, run-nested-wayland
+    [.sh]: a hyphen, not run_, so the old run_ pattern was blind
+    to it); hand_drive_e1.py is E1's driver."""
+    if name == "hand_drive_e1.py":
+        return True
+    if name.startswith("run-nested"):
+        return True
+    return name.startswith("run_") and name.endswith(".py")
+
+
+def _is_python_token(tok):
+    base = tok.rsplit("/", 1)[-1]
+    return (base in ("python", "python3")
+            or base.startswith("python3.") or base.startswith("python2."))
+
+
+def _argv_tokens(cmdline):
+    """Split a /proc cmdline (NUL-separated) into argv tokens, and
+    split any shell -c / flock -c argument on whitespace, so a
+    bare-relative or wrapped launch is visible (Y13f H2). The -c
+    argument itself is replaced by its words: the first word of a
+    -c string is the command being run."""
+    parts = [t for t in cmdline.split("\x00") if t]
+    tokens = []
+    i = 0
+    while i < len(parts):
+        if parts[i] == "-c" and i + 1 < len(parts):
+            tokens.append("-c")
+            tokens.extend(parts[i + 1].split())
+            i += 2
+        else:
+            tokens.append(parts[i])
+            i += 1
+    return tokens
+
+
+def _is_runner_cmdline(cmdline):
+    """True if the cmdline EXECUTES a runner script (Y13f H2).
+
+    The old regex r"(^|/)run_[^/\\s]*\\.py" matched raw cmdline
+    text and missed every bare-relative launch (the token sits
+    after a NUL, not after "/" or string start) and every flock -c
+    / shell -c form. It also false-positived on a mere path
+    mention (md5sum /abs/run_foo.py). This version tokenizes argv
+    and requires the script token to be argv[0] (shebang exec), to
+    follow a python interpreter token (bare-relative, absolute,
+    -u/-m flags, flock -c, shell -c), to be the first word of a -c
+    string, or (for non-.py run-nested scripts only) to follow
+    bash/sh. A path mention after md5sum/cat/git never matches.
+    Keep in sync with launch_y13.py and run_codex_y5.py (identical
+    logic). This copy IS the Y14 application of the fix (Y14b
+    re-stage from suite HEAD 1d23532)."""
+    tokens = _argv_tokens(cmdline)
+    for i, tok in enumerate(tokens):
+        base = tok.rsplit("/", 1)[-1]
+        if not _script_basename_is_runner(base):
+            continue
+        if i == 0:
+            return True
+        prev = tokens[i - 1]
+        prev_base = prev.rsplit("/", 1)[-1]
+        if _is_python_token(prev):
+            return True
+        if prev == "-c":
+            return True
+        if prev.startswith("-") and any(
+                _is_python_token(t) for t in tokens[:i]):
+            return True
+        if not base.endswith(".py") and prev_base in ("bash", "sh"):
+            return True
+    return False
+
+
+# Codex executor processes that must REFUSE, not just warn (Y13f,
+# council 3 fix 2): a codex CLI whose cmdline mentions the E1
+# driver, a geckodriver, a browser profile path, or Marionette is
+# driving (or about to drive) a browser. A plain "codex" match with
+# none of these is warning-only (a Codex CLI may be doing
+# unrelated work). Keep in sync with launch_y13.py.
+CODEX_REFUSE_MARKERS = ("hand_drive_e1", "geckodriver", ".config/zen",
+                        "zen-bin", ".mozilla", "remote-debugging",
+                        "marionette")
+
+
+def _ppid_of(pid):
+    """Parent pid from /proc/<pid>/stat, parsed after the last ")",
+    because the comm field (in parentheses) may contain spaces and
+    shift every index of a blind split (C3 F7). Returns None when
+    unreadable."""
+    try:
+        stat = Path(f"/proc/{pid}/stat").read_text()
+        rest = stat[stat.rfind(")") + 2:]
+        return int(rest.split()[1])
+    except Exception:
+        return None
+
+
+def _scan_other_runners():
+    """Scan /proc for other live runner processes (Y13f H2 fix).
+    Returns a list of (pid, flat cmdline) for processes that EXECUTE
+    a runner script or are codex executors driving a browser,
+    excluding this process's own ancestry (the launching shell's -c
+    string names the runner, and flock -c names it too; without the
+    exclusion the gate would false-refuse its own launch). Empty
+    list means the slot is quiet. Used by launch_gate() and, as a
+    re-check, at the top of run_preflight()."""
+    own = {os.getpid()}
+    pid = os.getpid()
+    while pid > 1:
+        ppid = _ppid_of(pid)
+        if ppid is None or ppid in own:
+            break
+        pid = ppid
+        own.add(pid)
+    hits = []
+    for name in os.listdir("/proc"):
+        if not name.isdigit():
+            continue
+        rpid = int(name)
+        if rpid in own:
+            continue
+        try:
+            with open(f"/proc/{rpid}/cmdline", "rb") as f:
+                cmd = f.read().decode("utf-8", "replace")
+        except OSError:
+            continue
+        flat = cmd.replace(chr(0), " ").strip()
+        if _is_runner_cmdline(cmd):
+            hits.append((rpid, flat))
+        elif "codex" in cmd.lower() and any(
+                m in cmd.lower() for m in CODEX_REFUSE_MARKERS):
+            hits.append((rpid, flat))
+    return hits
+
+
 def launch_gate():
     """Fail-closed launch gate (plan A4). Runs on the laptop before any
     Zen driving. Checks: LIVE_SLOT_OK=1 is set (I set it only after Y13
@@ -1979,20 +2396,20 @@ def launch_gate():
               "(another runner live or a stale orphan; kill by PID "
               "only, then re-run)", flush=True)
         return False
-    me = os.getpid()
-    for pat in ("run_live.py", "run_agy_y2.py", "run_agyq2.py",
-                "run_agyq.py", "run_fcck.py", "run_batch3.py"):
-        try:
-            out = subprocess.run(["pgrep", "-f", pat],
-                                 capture_output=True, text=True,
-                                 timeout=10).stdout.strip()
-        except Exception:
-            continue
-        others = [p for p in out.split() if p and int(p) != me]
-        if others:
-            print(f"LAUNCH GATE: runner process live ({pat}): {others}",
-                  flush=True)
-            return False
+    # Y13f H2 (Y14b re-stage): the old pgrep -f sweep matched raw
+    # cmdline text, so it missed every bare-relative launch (the
+    # token sits after a NUL, not after "/" or string start) and
+    # every flock -c / shell -c form, and it false-positived on a
+    # mere path mention (md5sum /abs/run_foo.py) and on the
+    # launching shell's own -c string. The /proc tokenizer scan
+    # below replaces it; it matches only a cmdline that EXECUTES a
+    # runner script, and excludes this process's own ancestry.
+    hits = _scan_other_runners()
+    if hits:
+        for rpid, flat in hits:
+            print(f"LAUNCH GATE: runner process live: "
+                  f"pid {rpid}: {flat}", flush=True)
+        return False
     print("LAUNCH GATE: no other runner live", flush=True)
     return True
 

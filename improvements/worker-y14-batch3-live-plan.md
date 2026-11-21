@@ -7,17 +7,30 @@ Y6b nested, Y13 codex-y5, then Y14. One live runner at a time, no exceptions.
 
 ## Suite under test
 
-Merged fixed suite, commit ed78e83 on main (Y10 reconciled best of both):
+Merged fixed suite, commit 1d23532 on main (Y15 D1 fix on top of Y10's
+reconciled best of both; re-staged by Y14b 21/11, see "Re-stage (Y14b)"
+below):
 - t05: clone1 fixture (rename dialog Save/Cancel, empty shows error and
   stays open) + Y10 checker (novel names, typed cancel, dialog-open asserts,
   non-empty folder rename with trim, tree-button click).
 - t09: clone1 checker (clickAndClose with 5 s verify polling) + Y10 cancel
   dwell 500 ms, no verify for Cancel.
-- t10: clone1 checker (500 ms in-page position sampler, take the minimum) +
-  Y10 advance assert (position must be at least 2 after a 350 ms sleep
-  following the sample window, check.mjs L93-95).
+- t10: Y15 checker (1d23532, 353 lines): same-task exact-zero reads after
+  every playing Next (playing, shuffle, wrap), 500 ms sampler as second
+  witness (min > 2 or min >= posBefore fails), three-point advancing
+  checks (gain >= 2 per 350 ms sleep, 2..11 bound on the middle read),
+  frozen exact-zero checks after paused Nexts (playing, shuffle, wrap),
+  two-point resume reads after every frozen resume (2..11 + second
+  gain >= 2). Sampler kept as second witness. t05/t09 untouched,
+  fixture untouched. Documented limits (README): slow-side clock
+  0.6x-1.0x not distinguished, later advancing read gain-only with no
+  upper bound, no advancing check after the playing wrap (redteam
+  round-6 escapes R1/R2/R3b, landed over the BLOCK per a pre-set
+  stopping rule; they are documented limits, not gates; the live run
+  is the real test).
 - t01-t04, t06-t08: unchanged from clone1 batch 3 (Y3 passed them 7/10
-  overall; these 7 passed then).
+  overall; these 7 passed then). Byte-identical between ed78e83 and
+  1d23532 (git diff --stat: only t10 check.mjs + README changed).
 - Headless evidence (Y10): 9/9 mutation probes v2 matched, 10/10 x7 runs
   (sequential about 24-27 s, load run 3 concurrent suites about 74 s each).
 - Y12 is independently verifying the merged suite headless. If Y12 reports
@@ -219,11 +232,16 @@ payloads (Council 1 A1), always explicit, never relying on defaults:
   pass silently. Final assert: handles count is back to handles_before
   after all popups closed (L149-150).
 - t10 music player: clicks; sleeps as in check.mjs (700 ms after play,
-  400 ms paused, 500 ms after resume, 350 ms after sampler); sampler:
-  eval with top-level `return new Promise(...)` sampling
-  #position data-seconds every 10 ms for 500 ms, taking the minimum
-  (Y4d lesson: top-level return is required, Marionette runs the script
-  as a function body; /execute/sync awaits a returned promise).
+  400 ms paused, 500 ms after resume, 350 ms after sampler / advancing
+  reads); exact-zero reads run the Next click and the position read in
+  the SAME in-page task (eval click + return, Y15 comment: page JS is
+  single-threaded, the click handler runs synchronously, so no 100 ms
+  timer tick can land between reset and read; a plain d.click followed
+  by a read cannot guarantee that); sampler: eval with top-level
+  `return new Promise(...)` sampling #position data-seconds every 10 ms
+  for 500 ms, taking the minimum (Y4d lesson: top-level return is
+  required, Marionette runs the script as a function body; /execute/sync
+  awaits a returned promise).
   Sampler ordering and thresholds (Council 2 A5): capture posBeforeNext,
   START the sampler promise BEFORE the now-playing assert (a
   now-playing assert first costs round trips, the timer advances 1 per
@@ -237,14 +255,27 @@ payloads (Council 1 A1), always explicit, never relying on defaults:
   HTTP round trip) is derivable from the step log timestamps in
   /tmp/worker-y14-live.jsonl; on a min in 3-5 with a gap over 200 ms,
   treat as INFRA/timing and retry once rather than recording a fixture
-  failure. Advance assert: after sleep 350, position must be at least 2, not
-  just past 0 (check.mjs L93-95). Volume: click #volume, Home,
-  ArrowRight x30, with the same live asserts as t08 (50 after click,
-  0 after Home, 30 after the batch, checked immediately). Seek:
-  pointer_click_at at 50% of #progress rect, then read the position
-  IMMEDIATELY and require 85 to 100 (check.mjs L103-106; the timer
-  keeps running, so a delayed read can exceed 100). Shuffle/repeat/
-  search/track clicks as in check.mjs.
+  failure. Advancing checks (Y15): after the sampler ends, read,
+  sleep 350, read again (gain >= 2 AND 2..11), sleep 350, read again
+  (gain >= 2, no absolute bound). Frozen Nexts: pause, Next, read
+  exactly 0, resume with Play, sleep 350, read 2..11, sleep 350, read
+  again (gain >= 2 AND 2..11). The frozen value was exactly 0, so the
+  first resume read is itself a gain check. Prev sequence after the
+  frozen Next is two clicks (River Road, then Morning Light), because
+  the frozen Next left now-playing on Night Drive. Volume: click
+  #volume, Home, ArrowRight x30, with the same live asserts as t08 (50
+  after click, 0 after Home, 30 after the batch, checked immediately).
+  Seek: pointer_click_at at 50% of #progress rect, then read the
+  position IMMEDIATELY and require 85 to 100 (check.mjs L103-106; the
+  timer keeps running, so a delayed read can exceed 100). Shuffle/repeat/
+  search/track clicks as in check.mjs. The wrap Nexts: play 700 ms
+  first so the pre-click position is >= 2 (a wrap that fails to reset
+  is only observable when the pre-click position is nonzero), then the
+  playing wrap gets the same exact-zero + sampler treatment, and the
+  frozen wrap gets the frozen exact-zero + resume treatment. The old
+  supplementary D1 diagnostic probe (details-only Next while paused
+  at the end of t10) is REMOVED in the re-stage: Y15's checker now
+  carries the real frozen-Next steps, so the probe is superseded.
 
 ## Fresh-profile equivalence
 
@@ -470,23 +501,62 @@ mutation probes matched. Overall: SOUND WITH NOTED DEFECTS.
   realistic 6 s delivery exists here); H4 t10 position never read
   after Prev / playlist / shuffle / wrap Next.
 
-## Runner status (19:40 21/11)
+## Re-stage (Y14b, 21/11)
 
-- `tests/realistic/run_batch3.py` written (1908 lines): all 10 tests
+Y15 landed D1 on main as 1d23532 (log 3b50e94). Y14b re-staged the
+runner from the new HEAD (old staged suite ed78e83, new 1d23532;
+only t10 check.mjs + README changed, t01-t09 byte-identical).
+Changes to run_batch3.py (+452/-35 vs 70061e2, changed defs only:
+header/imports, run_b3_t10, run_preflight, H2 helpers, launch_gate):
+- t10 translation rewritten to the new checker (see the t10 section
+  above): exact_zero_next() same-task click+read helper, three
+  exact-zero reads (playing, shuffle, wrap), sampler as second
+  witness, three-point advancing checks, frozen Nexts with resume
+  reads, double Prev, wrap gates (700 ms play, posBefore >= 2).
+  Supplementary D1 probe REMOVED (superseded by the real steps).
+- H2 fix (Y13r f48b54c, Y13f's tokenizer copied verbatim from its
+  working tree): _script_basename_is_runner, _is_python_token,
+  _argv_tokens, _is_runner_cmdline, CODEX_REFUSE_MARKERS, _ppid_of
+  all byte-identical to run_codex_y5.py; new _scan_other_runners()
+  helper; launch_gate() pgrep -f sweep replaced by the scan;
+  run_preflight() re-checks at the top before any tab opens.
+- Verification (all in improvements/worker-y14b-restage-log.md):
+  py_compile OK, import OK (10 tests); H2 probe 21/21 PASS (14 unit
+  synthetic cmdlines + 7 live /proc cases; wrappers themselves are
+  hits by design); transcription 68 ordered assert alignments PASS
+  + D1 probe gone + 3 exact-zero call sites + sleep counts
+  0.7x3/0.5x1/0.4x1/0.35x10 + sampler fail-closed; launch-gate dry
+  run 4/4 PASS (quiet passes, bare-relative refuses, mention-only
+  passes, no slot token refuses).
+- Applicability notes (honest, not skipped): this runner has NO
+  manifest mechanism and NO STEP_COUNTS audit mechanism, so the
+  --verify-manifest cases and audit simulation do not apply here;
+  the suite is verified by md5 against the git HEAD at ship time.
+  Adding a manifest would be new design work beyond a re-stage.
+- Council (3) + redteam over the re-stage diff only: pending at
+  the time of this edit (verdicts land in the log).
+
+## Runner status (21/11, after Y14b re-stage)
+
+- `tests/realistic/run_batch3.py` re-staged (see above): all 10 tests
   (b3-t01..b3-t10), the /actions helpers with exact Council 1 payloads,
   the fallback routing (raw element/value keys, d.click('#progress')
   for the seek, two d.click() for dblclick, JS el.click() for
   click_nth), ensure_visible reuse, the launch gate (LIVE_SLOT_OK=1,
   Zen alive, Marionette 2828, ports 8771/4452 free, no geckodriver or
-  other runner live), the circuit breaker, one INFRA-only retry, and
-  LiveMetrics constructed as run_live.main() does. Compiles
-  (py_compile OK), imports cleanly on the VM, all 10 tests registered.
+  other runner live via the /proc tokenizer scan), the circuit breaker,
+  one INFRA-only retry, and LiveMetrics constructed as run_live.main()
+  does. Compiles (py_compile OK), imports cleanly on the VM, all 10
+  tests registered.
 - `tests/realistic/run_batch3_probe.html` written (probe page for
   preflight step 0: text input, range input, scrolled pad, re-rendering
   list, filter list).
 - Not yet shipped to the laptop, not yet run. Ship + syntax check on
-  the laptop happen before the slot. The t10 sampler stays in the
-  Promise form pending the Redteam verdict on whether Marionette
+  the laptop happen before the slot (ship includes live_metrics.py
+  alongside the runner, per the redteam-2 shipping note, and the
+  import is verified on the laptop before any slot run; a failed
+  import degrades metrics to off silently). The t10 sampler stays in
+  the Promise form pending the Redteam verdict on whether Marionette
   /execute/sync awaits a returned Promise; the sampler is one function
   (sample_position_min), so swapping to a two-eval form is a small
   change if the verdict says the Promise form is unsound.
