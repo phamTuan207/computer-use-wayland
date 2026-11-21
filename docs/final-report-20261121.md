@@ -9,7 +9,7 @@ chay cua ong). Moi so lieu trong bao cao nay la so do that, khong uoc luong, kho
 - Todo list: 115 muc. Da xong 103 muc truoc khi reboot, them 11 muc sau reboot, con lai
   1 muc BLOCKED (2.2.3), 2 muc PARTIAL/UNMEASURABLE (2.1.7, 2.1.10), 3 muc huong chung
   E1-E3 (E1 chua thu nghiem, E2 da tra loi, E3 PAUSED).
-- Branch `todolist-push` se merge vao main sau bao cao nay (muc 6).
+- Branch `todolist-push` DA MERGE vao main 21/11 15:47 (96438bb, sau do 7340bc3 tick 5.4).
 - Khong co thong tin ca nhan nao cua ong duoc push len GitHub. Tat ca commit dung mail
   phamTuan207 (GitHub noreply).
 
@@ -217,4 +217,4 @@ khi chua co cung mot task chay ca hai vong lap.
 3. 2.1.10: PARTIAL, validation tren app moi that va chay lai boi agent doc lap van no.
 4. Cac quyet dinh trong docs/pending-user-decisions.md chi ong moi tra loi duoc.
 5. E1 (tach ban bac khoi thuc thi) chua thu nghiem; E3 (10x) PAUSED.
-6. Merge todolist-push vao main (5.2, 5.4): thuc hien sau bao cao nay.
+6. Merge todolist-push vao main (5.2, 5.4): DONE 21/11 15:47 (Worker J). Merge 96438bb, push len main, verified qua ls-remote. 46/46 test pass tren cay merged (Phase 3 + overlay + indicator). Conflict: overlay.py/test_overlay.py lay ban main (cung hon, holder_id); native/indicator.c hop nhat E1 metrics + label routing + status command; fix-run log giu ca hai ben + note cap nhat E2. Trong luc merge, regex resolve lam hong ham report_metrics trong indicator.c (mat format string + args), phat hien khi doc lai file, da sua tay theo ban todolist-push va verify diff vs ca hai parent. Luu y: ban overlay.py tren main khac ban da deploy tren laptop (deploy 15:31 tu todolist-push); can redeploy bang sync-installed.py, NHUNG laptop repo hien o detached HEAD 56f5af4 (viec prefetch cua worker khac, co file sua chua commit) nen KHONG dong bo ep, de lai follow-up.
