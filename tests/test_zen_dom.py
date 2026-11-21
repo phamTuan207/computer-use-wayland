@@ -32,6 +32,33 @@ ZenSession = zen_dom.ZenSession
 ZenDomError = zen_dom.ZenDomError
 
 
+class _TypedFlagDict(dict):
+    """Models the locked-getter flag (AMEND4 item 7).
+
+    Setting True records the field's current value as the
+    last-trusted value (a trusted input event fired now); setting
+    False clears it (_MISSING). The flag reads True only when the
+    recorded value equals the field's current value, so a JS-set
+    value after one keystroke does not verify. The dict holds the
+    session so a replaced dom_fields still reads current.
+    """
+
+    _MISSING = object()
+
+    def __init__(self, session):
+        super().__init__()
+        self.session = session
+
+    def __setitem__(self, key, value):
+        if value:
+            field = self.session.dom_fields.get(key)
+            super().__setitem__(
+                key, self._MISSING if field is None
+                else field.get('value'))
+        else:
+            super().__setitem__(key, self._MISSING)
+
+
 class FakeWdSession(ZenSession):
     """A ZenSession whose WebDriver transport is a scripted fake.
 
@@ -70,18 +97,24 @@ class FakeWdSession(ZenSession):
         self.dom_fields = {}
         self.sent_bubbles = []
         self._armed = {}
-        self._typed = {}
+        self._typed = _TypedFlagDict(self)
         self._MISSING = object()
 
     def _typed_flag(self, selector):
-        # Faithful model of the real V11 flag: True only when a
-        # trusted input event was recorded (the test sets _typed
-        # directly). A bare value change with no trusted event (a
-        # page script setting el.value) leaves the flag clear,
-        # exactly like the real window.__agentCuTyped flag. An
-        # earlier shape treated any value change since arming as
-        # typed, which made the fake blind to the R10 JS-set attack.
-        return bool(self._typed.get(selector))
+        # Faithful model of the locked-getter flag (AMEND4 item 7):
+        # True only when a trusted input event was recorded AND the
+        # recorded value still equals the field's current value. A
+        # bare value change with no trusted event (a page script
+        # setting el.value) leaves the flag clear, and a JS-set
+        # value after one keystroke does not match the recorded
+        # value, so the flag stays clear for it too.
+        recorded = self._typed.get(selector, _TypedFlagDict._MISSING)
+        if recorded is _TypedFlagDict._MISSING:
+            return False
+        field = self.dom_fields.get(selector)
+        if field is None:
+            return False
+        return field.get('value') == recorded
 
     def _harvest(self):
         items = {}
@@ -669,6 +702,35 @@ class TestDomHelpers(unittest.TestCase):
         session._typed['#msg-input'] = True
         self.assertTrue(session.verify_typed('#msg-input', 'hello',
                                              before=''))
+
+    @unittest.skipUnless(shutil.which('node'),
+                         'node is required to run production JS')
+    def test_typed_flag_not_forgeable_via_window_property(self):
+        # R10 (AMEND4 item 7): the production arm/typed_flag JS runs
+        # under node against the redteam top-document shim. A page
+        # script forges the old window property (whole-property
+        # assignment; the arm creates no window property, so the
+        # subscript form would throw) and sets the value, with zero
+        # trusted input events. The flag must stay False: it reads
+        # the locked getter on the element, never the window
+        # property. The redteam F6 test's subscript forge line and
+        # its value assertion are defective as written (see the
+        # AMEND4 log); this test proves the substantive finding is
+        # closed in the form the new design admits.
+        from test_click3_redteam2 import (
+            _capture_js, _run_node, _TOP_DOC_SHIM, _wrap_bare_return)
+        arm = _capture_js('arm_typed_flag', '#msg-input')
+        flag = _capture_js('typed_flag', '#msg-input')
+        code = _TOP_DOC_SHIM + """
+var __armed = """ + _wrap_bare_return(arm) + """;
+window.__agentCuTyped = {'#msg-input': true};
+__el.value = 'hello';
+var __flag = """ + _wrap_bare_return(flag) + """;
+console.log(JSON.stringify({armed: __armed, flag: __flag}));
+"""
+        out = json.loads(_run_node(code))
+        self.assertTrue(out['armed'])
+        self.assertFalse(out['flag'])
 
     def test_display_metrics_records_dpr_and_zoom(self):
         session = self._session()

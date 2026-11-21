@@ -951,43 +951,77 @@ class ZenSession:
         Installs a trusted-input-event listener (real keystrokes
         dispatch trusted input events; a page script setting el.value
         and dispatching synthetic input events produces UNTRUSTED
-        events, so the flag stays clear) plus a MutationObserver that
-        records any DOM mutation of the field for diagnostics. The
-        flag lives on window.__agentCuTyped keyed by selector.
-        typed_flag() reads it after the type step. A value that
-        appears with no trusted input event must fail verification.
+        events, so the flag stays clear) plus a MutationObserver for
+        diagnostics. The listener records the field value at each
+        trusted input event in a closure variable, exposed through
+        a locked getter on the element itself
+        (Object.defineProperty, non-configurable, no setter), so a
+        page script cannot set it: there is no window property to
+        forge (R10). typed_flag() reads the getter after the type
+        step and requires it to equal the current value. A value
+        that appears with no trusted input event must fail
+        verification. Re-arming an already-armed element returns
+        true without re-installing: the earlier arm's listener and
+        getter are still live. When defineProperty throws (the page
+        pre-locked the name), the arm fails closed.
         """
         return bool(self.evaluate(
             "(function(){" + _FIND_JS +
             "const sel=%s;"
-            "window.__agentCuTyped = window.__agentCuTyped || {};"
-            "window.__agentCuTyped[sel] = false;"
-            "window.__agentCuMutated = window.__agentCuMutated || {};"
-            "window.__agentCuMutated[sel] = false;"
             "const e=find(sel);"
             "if(!e) return false;"
+            "function valOf(el){"
+            "return el.isContentEditable ? el.textContent : "
+            "('value' in el ? el.value : null);"
+            "}"
+            "const desc=Object.getOwnPropertyDescriptor("
+            "e, '__agentCuTypedValue');"
+            "if(desc && desc.get && desc.configurable===false)"
+            "return true;"
+            "let lastTrusted=null;"
             "e.addEventListener('input', function(ev){"
-            "if(ev.isTrusted) window.__agentCuTyped[sel]=true;"
+            "if(ev.isTrusted) lastTrusted=valOf(e);"
             "});"
             "try{"
-            "const obs=new MutationObserver(function(){"
-            "window.__agentCuMutated[sel]=true;"
-            "});"
+            "Object.defineProperty(e, '__agentCuTypedValue', {"
+            "get:function(){return lastTrusted;},"
+            "configurable:false, enumerable:false});"
+            "}catch(_){"
+            "return false;"
+            "}"
+            "try{"
+            "const obs=new MutationObserver(function(){});"
             "obs.observe(e, {childList:true, characterData:true,"
             "subtree:true, attributes:false});"
-            "(window.__agentCuObservers ="
-            " window.__agentCuObservers || {})[sel]=obs;"
+            "Object.defineProperty(e, '__agentCuObserver', {"
+            "value:obs, writable:false, configurable:false,"
+            "enumerable:false});"
             "}catch(_){}"
             "/* zen_arm_typed_flag */ return true;})()"
             % json.dumps(selector)))
 
     def typed_flag(self, selector):
-        """True when a trusted input event fired on the target since
-        arm_typed_flag(). A synthetic JS-set value dispatches no
-        trusted input event, so the flag stays False for it."""
+        """True when the last trusted input event's value equals the
+        target's current value. A forged flag cannot be set (there
+        is no window property; the value lives in the arm's closure
+        behind a locked getter), and a sticky flag cannot pass a
+        JS-set value: one keystroke recording 'h' does not equal a
+        current 'hello'. Contenteditable values normalize trailing
+        whitespace, the same as verify_typed."""
         return bool(self.evaluate(
-            "/* zen_typed_flag */ return !!(window.__agentCuTyped"
-            " && window.__agentCuTyped[%s]);" % json.dumps(selector)))
+            "(function(){/* zen_typed_flag */" + _FIND_JS +
+            "const e=find(%s);"
+            "if(!e) return false;"
+            "let last=null;"
+            "try{last=e['__agentCuTypedValue'];}catch(_){return false;}"
+            "if(last===null || last===undefined) return false;"
+            "const cur=e.isContentEditable ? e.textContent : "
+            "('value' in e ? e.value : null);"
+            "if(e.isContentEditable && typeof last==='string' "
+            "&& typeof cur==='string')"
+            "return last.replace(/\\s+$/,'')===cur.replace(/\\s+$/,'');"
+            "return last===cur;})()"
+            % json.dumps(selector)))
 
     def sent_bubble_contains(self, text):
         """V12 finish gate: True when the thread DOM holds a sent

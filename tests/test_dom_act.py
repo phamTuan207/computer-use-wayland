@@ -105,22 +105,34 @@ class FakeDomSession:
         field = self.fields.get(selector)
         self._armed[selector] = None if field is None \
             else field.get('value')
-        self._typed[selector] = False
+        self._typed[selector] = self._MISSING
         return field is not None
 
     def note_typed(self, selector):
-        self._typed[selector] = True
+        # Records the field's current value as the last-trusted
+        # value (AMEND4 item 7, locked-getter model): a later
+        # JS-set value does not match it, so the flag is not
+        # sticky. The act sets the value before calling this.
+        field = self.fields.get(selector)
+        self._typed[selector] = self._MISSING if field is None \
+            else field.get('value')
 
     def typed_flag(self, selector):
-        # Faithful model of the real V11 flag: True only when a
-        # trusted input event was recorded (note_typed from the act).
-        # A bare value change with no trusted event (a page script
-        # setting el.value) leaves the flag clear, exactly like the
-        # real window.__agentCuTyped flag. An earlier shape treated
-        # any value change since arming as typed, which made the fake
-        # blind to the R10 JS-set attack.
+        # Faithful model of the locked-getter flag (AMEND4 item 7):
+        # True only when a trusted input event was recorded AND the
+        # recorded value still equals the field's current value. A
+        # bare value change with no trusted event (a page script
+        # setting el.value) leaves the flag clear, and a JS-set
+        # value after one keystroke does not match the recorded
+        # value.
         self.dom_calls += 1
-        return bool(self._typed.get(selector))
+        recorded = self._typed.get(selector, self._MISSING)
+        if recorded is self._MISSING:
+            return False
+        field = self.fields.get(selector)
+        if field is None:
+            return False
+        return field.get('value') == recorded
 
     def harvest(self, selectors):
         self.dom_calls += 1
