@@ -495,3 +495,24 @@ in the repo worktree and /tmp test copies.
   false-fire on staged ships there. Next: R3 tokenizer rewrite
   (both copies), then R6/R7/R8 launcher checks, R9, R10 docs,
   regen, fresh review round.
+
+- 01:35 +07 (T+2h39m): ROUND 2 FIX DIFF COMPLETE. Commits
+  (todolist-push, all verified via ls-remote): 0639d04 runner
+  module top (R1/R2/R4/R5), 87eec47 launcher module top
+  (R1/R2/R4/C3-1/C3-9), 6ba43f2 R3 tokenizer rewrite + R6 codex
+  warning + F10 comment sync (both files, 14 tokenizer functions
+  AST-identical docstring-stripped, raw diff = the 2 sync notes +
+  the CODEX comment which is now synced), 8bdd5aa R7/R8/R9/C3-10
+  (remote normalization + topo-order, subprocess exit 2, proven_
+  no_body key-presence, launcher writes handover token), 5a9b9e8
+  R10 docs + regen manifest 7c763834 (runner d5047ff5, launcher
+  8e72a5ce, run_live 84fa106c pin holds). Regen --stage verify on
+  a fresh staged ship: exit 0, manifest_ok true, 27 checked, 0
+  mismatches (build step, not a test verdict). All files
+  py_compile OK. Spawning the fresh review round (council x3 +
+  redteam + verifier) over the round-2 diff now; each brief
+  carries the new pins, the behavior changes (bare no-P refuses
+  at safe_path, A8 None flips to False, 14 tokenizer functions,
+  launcher writes the token), and the harness locations
+  (~/workspace/y13g-redteam/, ~/workspace/y13g-council-2/probes/,
+  improvements/y13g-verify/).
