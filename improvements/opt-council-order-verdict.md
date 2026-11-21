@@ -550,3 +550,24 @@ improvements/worker-opt-council-order-log.md, follows it.)
   git ls-remote): log start 0a4f3d6, voice 1 de7ea25, voice 2 2698fa0,
   voice 3 2157f74, log follow-up 0d383e6, verdict s1 71b862d, s2 bd99e7b,
   s3 841ae2b, s4 16d7579, s5 e4ef479, s6 20969e0.
+
+## Addendum (post-verdict note, owner 22:55, recorded 22:58, NOT re-debated)
+- Owner order 22:55 (MEMORY.md): occasionally Muse switches to workspace 2
+  (where clone2's tabs are); if clone2 is stuck silent 15 min, check whether
+  it needs approval, approve it, and if it is lazy, prompt it to keep
+  working. Cron clone2-watch set up (15m): check GitHub first, switch
+  workspace only when silent >15m or >1h unchecked; approve/nudge only for
+  clone2's work, never money / deleting data / PII; switch back to workspace
+  1 after.
+- Effect on this verdict: it PARTLY closes J16 (clone2's watchdog duty,
+  zero logs since 19:09). The duty is now covered by a cron with stated
+  bounds, which is the "close or reassign" outcome demanded in lane P-A
+  (section 1.3) and voice 1 rank A6. The P-A light batch no longer needs to
+  carry "formally close or reassign J16" as an open item; it carries
+  "verify clone2-watch cron is running and its first check is logged".
+  It does NOT change the queue order, the gates, or any amendment O-1..O-7.
+  It adds one workspace rule to serial rank 1's J21 note: workspace 2 is
+  visited only on the cron's condition (silence >15m or >1h unchecked),
+  never casually, and always returns to workspace 1. This addendum is
+  recorded here for the redteam; the redteam may attack it as it attacks
+  the rest.
