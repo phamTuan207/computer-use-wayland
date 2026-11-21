@@ -164,3 +164,25 @@ best quality, not speed. Council + redteam debate every phase verdict.
 - Full suite run 3 on verify launched (protocol files now present).
   Expected clean comparison: Ran 1483, failures=1 (tc02 tesseract),
   errors=2-3 (known baseline + maybe the flaky cursor_theme).
+
+## 18:31 +07 | Full suite run 3: FAILED (failures=1, errors=3, skipped=16)
+- Ran 1490 tests in 124.029s. 1490 = 1483 (base) + 7 (Codex's new
+  tests, all passing). The ONLY failure is tc02 tesseract (pre-existing
+  environmental, identical on base). The 3 errors are the 2 known
+  baseline errors + the tc02 passes-visible test (tesseract). The flaky
+  cursor_theme test did NOT error in run 3. Diff vs base failure set:
+  ONLY the flaky cursor_theme line differs.
+- SUITE VERDICT: Codex's commit adds 7 passing tests, ZERO new
+  failures, ZERO new errors. No suite regressions.
+
+## 18:31 +07 | Codex poll 3: alive, Phase B in progress
+- PID 184702 alive, elapsed 30:14. Log /tmp/y1-codex.log 861,485 bytes
+  (from 327,489 at 18:17, still growing fast). No new commits on
+  y1-snippets (HEAD still 84b88bb), but the worktree has UNCOMMITTED
+  Phase B work: modified scripts/code_exec.py, scripts/codemode.py,
+  scripts/cu.py, and a NEW untracked snippets/ directory. Log tail
+  shows Codex writing test code. Phase B (snippets registry) underway.
+- Push note: log commit 786e38b is on the remote (verified via
+  ls-remote; the earlier rejection was a race, resolved by rebase).
+  The sibling worker's runner files (run_agyq2.py, run_live.py) are
+  still uncommitted in the VM worktree; Y1b does not touch them.
