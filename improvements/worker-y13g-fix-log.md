@@ -516,3 +516,44 @@ in the repo worktree and /tmp test copies.
   launcher writes the token), and the harness locations
   (~/workspace/y13g-redteam/, ~/workspace/y13g-council-2/probes/,
   improvements/y13g-verify/).
+
+- 01:41 +07 (T+2h45m): COUNCIL 3 ROUND-2 DONE, verdict AMEND,
+  paper 31c1126 (improvements/worker-y13g-r2-council-3.md + log;
+  probes ~/workspace/y13g-r2-council-3/). 13 probes, pins hold.
+  Findings C3-1..C3-8: C3-1 (moderate) --ship-dir=DIR and
+  --repo=DIR silently ignored, not refused (P3d: = form tests
+  the wrong ship and can false-PASS; P3b: from the repo tree it
+  yields the repo-tree refusal telling the operator to "pass
+  --ship-dir" when they did). Fix: refuse any --ship-dir=/--repo=
+  token in _derive_ship_dir. C3-2 (moderate) SHIPPED.md "How to
+  verify" fails literally at the first call (NameError:
+  _RUNNER_MODULE_NAMES not defined); the note omits the 4 module
+  constants, never names the 14 functions, never says cmdlines
+  are NUL-joined /proc form. Fix: correct the note. C3-3
+  (moderate-low) round-1 C3-7 NOT fixed: runner docstring lines
+  103,105 still `python3 launch_y13.py` without -P (and no
+  --repo); under R1 a bare invocation refuses, so these are
+  commands that cannot run as written. (My R10 missed the Usage
+  lines; only the SCRIPT FORM ONLY block was fixed.) C3-4
+  (moderate-low) scan "fix" hint misleads on nested dirs:
+  deleting only the named .pyc leaves the empty nested dir and
+  verify still refuses unexpected-dir; only rmdir recovers. C3-5
+  (low) round-1 C3-8 NOT fixed in substance: plan B1 still says
+  "(0-3)" while only the EMPTY dir passes; _verify_manifest
+  comment still says "two entry .pyc files (0, 1, or 2)" while
+  _ENTRY_PYC_NAMES has 3 stems. C3-6 (low) _scan_ship md5 message
+  lacks the commit+push-first branch. C3-7 (low) remaining
+  hint-less refusal legs (check_manifest planted .py/symlink,
+  _scan_ship symlink/bytecode/unexpected/unreadable). C3-8 (low)
+  write_token() runs before check_manifest/_scan_ship, so a
+  refused launch still leaves a fresh token asserting go+marker;
+  move it to just before check_token(). Holds verified: regen
+  clean ship rc 0 (7c763834, 29 files), _SHIP_FILES 29/29,
+  launcher dry run reaches go gate, --ship-dir validation,
+  repo-tree guard no false-fire, direct -P rc 0 / bare safe_path
+  refusal, launcher-written token accepted + fingerprint binding,
+  _check_entry_pyc operative in isolation, tokenizer
+  AST-identical, R7 8/8, R9/R8/R5 hold. Caveat: marker gate not
+  passable live (no Y6c marker), so check_manifest/_scan_ship/
+  _check_entry_pyc probed by AST-extraction only. Still waiting:
+  Council 1, Council 2, Redteam, Verifier (4/5 running).
