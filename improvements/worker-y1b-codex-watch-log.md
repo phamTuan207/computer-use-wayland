@@ -45,3 +45,16 @@ best quality, not speed. Council + redteam debate every phase verdict.
 - Verdict rule in the file: all probes except 2e (100MB alloc, allowed
   residual-risk exception) must PASS or Phase A is blocked.
 - Council 2, Council 3, redteam still running at 18:07.
+
+## 18:08 +07 | Council 3 DONE (7e3564f)
+- File: improvements/worker-y1b-verify-council-3.md (987 lines). Items 9-12
+  + Phase C: 35 probes (9a-9h manifest loading, 10a-10f inline execution
+  + depth cap 1, 11a-11h params/bindings, 12a-12h expiry, C1-C5 nesting
+  fix). Phase C probe: test_cursor_session.py imports + all 33 tests pass
+  on VM Python 3.12.3, diff review confirms behavior-identical refactor.
+- Probes open with a surface-discovery step (Codex's exact loader names
+  and cap constants not yet known); a missing surface is a FAIL.
+  Expected caps per redteam report: manifest 1 MB, snippet 8192 chars.
+  Laptop-only probes: L-1 (Python 3.14 parse check), L-2 (live-desktop
+  30-day live_only refusal), L-3 (live P1-P4 runs, out of scope).
+- Council 2 and redteam still running at 18:08.
