@@ -276,7 +276,7 @@ During this run MEMORY.md gained a standing instruction (2026-11-22 02:09) to us
 
 End: 2026-11-22 02:11 +07 (t+6m). Total wall time about 6 minutes. 13 candidates, 24 Scrapling fetches (22 with usable content, 2 recovered via search), 4 browser.search calls, 0 StealthyFetcher uses, 0 live drives, 0 implementations. Next step belongs to council + redteam review, then live testing of the ranked candidates, then the 2-vision benchmark.
 
-## Appendix A - last30days follow-up (owner order 02:09, run 2026-11-22 02:12-02:24 +07)
+## Appendix A - last30days follow-up (owner order 02:09, run 2026-11-22 02:12-02:21 +07)
 
 Owner order: the whole team uses last30days-skill (https://github.com/mvanhorn/last30days-skill) to crawl REAL data for the improvement research. Install with `npx skills add mvanhorn/last30days-skill -g`. HARD RULE: do NOT use old stale datasets. Only fresh real data from the last 30 days. Every crawled claim must carry its source and date. This appendix records the install, the engine run, the fresh findings, the new candidate they add, and the recency audit for every source in this log.
 
@@ -414,4 +414,4 @@ Suggested build order is unchanged: C12 first (with the AT-SPI cross-check), the
 
 ## Appendix end
 
-Appendix written: 2026-11-22 02:24 +07 (t+19m from the original 02:05:29 start). Total for both runs: first crawl about 6 minutes, follow-up about 12 minutes. 15 candidates total, 24 Scrapling fetches in run 1 plus 6 more in run 2, 1 last30days engine run (39.8s, exit 0, HN-led with Reddit/GitHub/X/YouTube gaps honestly reported), 9 browser.search calls total. Next step belongs to council + redteam review, then live testing of the ranked candidates, then the 2-vision benchmark.
+Appendix written: 2026-11-22 02:21 +07 (t+16m from the original 02:05:29 start). Total for both runs: first crawl about 6 minutes, follow-up about 9 minutes. 15 candidates total, 24 Scrapling fetches in run 1 plus 6 more in run 2, 1 last30days engine run (39.8s, exit 0, HN-led with Reddit/GitHub/X/YouTube gaps honestly reported), 9 browser.search calls total. Next step belongs to council + redteam review, then live testing of the ranked candidates, then the 2-vision benchmark.
