@@ -1,0 +1,397 @@
+{
+  "before": [
+    {
+      "title": "YouTube",
+      "url": "https://www.youtube.com/"
+    },
+    {
+      "title": "",
+      "url": "https://www.reddit.com/"
+    },
+    {
+      "title": "",
+      "url": "https://app.todoist.com/app/today"
+    },
+    {
+      "title": "",
+      "url": "https://mail.google.com/mail/u/1/#inbox"
+    },
+    {
+      "title": "",
+      "url": "https://calendar.google.com/calendar/u/1/r/week?pli=1"
+    },
+    {
+      "title": "",
+      "url": "https://muse.ai/thread/750c8dae-58fb-4a65-82ac-753e78d6ce93"
+    },
+    {
+      "title": "BiDi fixture",
+      "url": "http://127.0.0.1:40301/fixture"
+    },
+    {
+      "title": "PCCV CF26 - Google Trang tính",
+      "url": "https://docs.google.com/spreadsheets/d/1WzUJNuCQlYLAj59-gdIPFFQv2P_d3f2KhEYcGeWhRRY/edit?gid=0#gid=0"
+    },
+    {
+      "title": "Free Claude Code Admin",
+      "url": "http://127.0.0.1:8082/admin/model_config"
+    },
+    {
+      "title": "Welcome!",
+      "url": "https://zen-browser.app/welcome/"
+    },
+    {
+      "title": "Example Domain",
+      "url": "https://example.com/"
+    },
+    {
+      "title": "",
+      "url": "about:blank"
+    },
+    {
+      "title": "",
+      "url": "about:blank"
+    },
+    {
+      "title": "",
+      "url": "about:blank"
+    },
+    {
+      "title": "Browser IDE & Debugger",
+      "url": "http://127.0.0.1:8769/agy-y2/fixtures/test-10-ide-debug.html"
+    },
+    {
+      "title": "",
+      "url": "about:blank"
+    },
+    {
+      "title": "Cloud Notes Sync App",
+      "url": "http://127.0.0.1:8769/agy-y2/fixtures/test-09-notes-sync.html"
+    },
+    {
+      "title": "",
+      "url": "about:blank"
+    },
+    {
+      "title": "Browser DevTools Simulation",
+      "url": "http://127.0.0.1:8769/agy-y2/fixtures/test-08-devtools.html"
+    },
+    {
+      "title": "",
+      "url": "about:blank"
+    },
+    {
+      "title": "File Manager Web Portal",
+      "url": "http://127.0.0.1:8769/agy-y2/fixtures/test-07-file-manager.html"
+    },
+    {
+      "title": "",
+      "url": "about:blank"
+    },
+    {
+      "title": "Video Conference Client",
+      "url": "http://127.0.0.1:8769/agy-y2/fixtures/test-06-video-call.html"
+    },
+    {
+      "title": "",
+      "url": "about:blank"
+    },
+    {
+      "title": "Cloud Spreadsheet Studio",
+      "url": "http://127.0.0.1:8769/agy-y2/fixtures/test-05-spreadsheet-chart.html"
+    },
+    {
+      "title": "",
+      "url": "about:blank"
+    },
+    {
+      "title": "Corporate Webmail Client",
+      "url": "http://127.0.0.1:8769/agy-y2/fixtures/test-04-email-compose.html"
+    },
+    {
+      "title": "",
+      "url": "about:blank"
+    },
+    {
+      "title": "Photo Studio Pro",
+      "url": "http://127.0.0.1:8769/agy-y2/fixtures/test-03-photo-editor.html"
+    },
+    {
+      "title": "",
+      "url": "about:blank"
+    },
+    {
+      "title": "Network & Bluetooth Settings",
+      "url": "http://127.0.0.1:8769/agy-y2/fixtures/test-02-network-settings.html"
+    },
+    {
+      "title": "",
+      "url": "about:blank"
+    },
+    {
+      "title": "tmux Session Manager",
+      "url": "http://127.0.0.1:8769/agy-y2/fixtures/test-01-tmux-session.html"
+    },
+    {
+      "title": "",
+      "url": "about:blank"
+    },
+    {
+      "title": "tmux Session Manager",
+      "url": "http://127.0.0.1:8769/agy-y2/fixtures/test-01-tmux-session.html"
+    },
+    {
+      "title": "Markdown Live Studio",
+      "url": "http://127.0.0.1:8768/agy-q2/fixtures/test-10-markdown-editor.html"
+    },
+    {
+      "title": "Focus Engine Pomodoro Timer",
+      "url": "http://127.0.0.1:8768/agy-q2/fixtures/test-09-pomodoro-timer.html"
+    },
+    {
+      "title": "Systems Architecture & Web Standards Quiz",
+      "url": "http://127.0.0.1:8768/agy-q2/fixtures/test-08-quiz-app.html"
+    },
+    {
+      "title": "Global Weather Operations Dashboard",
+      "url": "http://127.0.0.1:8768/agy-q2/fixtures/test-07-weather-dashboard.html"
+    },
+    {
+      "title": "Offline Universal File Converter",
+      "url": "http://127.0.0.1:8768/agy-q2/fixtures/test-06-file-converter.html"
+    },
+    {
+      "title": "Offline Contact Directory",
+      "url": "http://127.0.0.1:8768/agy-q2/fixtures/test-05-contact-book.html"
+    },
+    {
+      "title": "Offline Budget & Expense Tracker",
+      "url": "http://127.0.0.1:8768/agy-q2/fixtures/test-04-budget-tracker.html"
+    },
+    {
+      "title": "Offline Habit Tracker",
+      "url": "http://127.0.0.1:8768/agy-q2/fixtures/test-03-habit-tracker.html"
+    },
+    {
+      "title": "Offline Recipe & Meal Planner",
+      "url": "http://127.0.0.1:8768/agy-q2/fixtures/test-02-recipe-app.html"
+    },
+    {
+      "title": "Offline Whiteboard App",
+      "url": "http://127.0.0.1:8768/agy-q2/fixtures/test-01-whiteboard.html"
+    },
+    {
+      "title": "Offline Whiteboard App",
+      "url": "http://127.0.0.1:8768/agy-q2/fixtures/test-01-whiteboard.html"
+    },
+    {
+      "title": "Markdown Live Studio",
+      "url": "http://127.0.0.1:8768/agy-q2/fixtures/test-10-markdown-editor.html"
+    },
+    {
+      "title": "Focus Engine Pomodoro Timer",
+      "url": "http://127.0.0.1:8768/agy-q2/fixtures/test-09-pomodoro-timer.html"
+    },
+    {
+      "title": "Systems Architecture & Web Standards Quiz",
+      "url": "http://127.0.0.1:8768/agy-q2/fixtures/test-08-quiz-app.html"
+    },
+    {
+      "title": "Global Weather Operations Dashboard",
+      "url": "http://127.0.0.1:8768/agy-q2/fixtures/test-07-weather-dashboard.html"
+    },
+    {
+      "title": "Offline Universal File Converter",
+      "url": "http://127.0.0.1:8768/agy-q2/fixtures/test-06-file-converter.html"
+    },
+    {
+      "title": "Offline Contact Directory",
+      "url": "http://127.0.0.1:8768/agy-q2/fixtures/test-05-contact-book.html"
+    },
+    {
+      "title": "Offline Budget & Expense Tracker",
+      "url": "http://127.0.0.1:8768/agy-q2/fixtures/test-04-budget-tracker.html"
+    },
+    {
+      "title": "Offline Habit Tracker",
+      "url": "http://127.0.0.1:8768/agy-q2/fixtures/test-03-habit-tracker.html"
+    },
+    {
+      "title": "Offline Recipe & Meal Planner",
+      "url": "http://127.0.0.1:8768/agy-q2/fixtures/test-02-recipe-app.html"
+    },
+    {
+      "title": "Offline Whiteboard App",
+      "url": "http://127.0.0.1:8768/agy-q2/fixtures/test-01-whiteboard.html"
+    },
+    {
+      "title": "Offline Whiteboard App",
+      "url": "http://127.0.0.1:8768/agy-q2/fixtures/test-01-whiteboard.html"
+    },
+    {
+      "title": "BiDi fixture",
+      "url": "file:///home/james/workspace/computer-use-wayland/tests/bidi_fixture.html"
+    },
+    {
+      "title": "Calibration Grid E2",
+      "url": "file:///home/james/workspace/computer-use-wayland/tests/calibration-grid.html?truth=1"
+    },
+    {
+      "title": "Calibration Grid E2",
+      "url": "file:///home/james/workspace/computer-use-wayland/tests/calibration-grid.html?truth=1"
+    },
+    {
+      "title": "Calibration Grid E2",
+      "url": "file:///home/james/workspace/computer-use-wayland/tests/calibration-grid.html?truth=1"
+    },
+    {
+      "title": "Calibration Grid E2",
+      "url": "file:///home/james/workspace/computer-use-wayland/tests/calibration-grid.html"
+    },
+    {
+      "title": "",
+      "url": "https://httpbin.org/forms/post"
+    },
+    {
+      "title": "Package problem - Polygon",
+      "url": "https://polygon.codeforces.com/package?session=a990539d869d87619249d0c813d8346ec027eda9&ccid=0fb1586e2ab7dcfca7b64c98606cec8f"
+    },
+    {
+      "title": "Just a moment...",
+      "url": "https://codeforces.com/"
+    },
+    {
+      "title": "Biome Finder - Minecraft App",
+      "url": "https://www.chunkbase.com/apps/biome-finder#seed=-4216250823719477953&platform=java_1_21_9&dimension=overworld&x=967&z=543&zoom=0.518"
+    },
+    {
+      "title": "Gamerule keepInventory",
+      "url": "https://duck.ai/chat?t=ffab&chatID=5cb263e5-9c80-4dcf-8477-8b990cb70343"
+    },
+    {
+      "title": "ModelArk-Coding-Plan",
+      "url": "https://www.byteplus.com/en/activity/codingplan?utm_source=google&utm_medium=pmax&utm_campaign=purchase_codingplan_sea_english_20260605_yuki&utm_term=20260605_deepseek-v4_white_new&utm_content=tecdo&gad_source=2&gad_campaignid=23906536929&gclid=CjwKCAjwqonVBhA4EiwA9wYJ3Xlt3CYq0n0RZg5HqXHeGMFcoLueRZE7Nmv4xOfOy74XBTxxf3dOOxoC4gUQAvD_BwE"
+    }
+  ],
+  "closed": [
+    "BiDi fixture | http://127.0.0.1:40301/fixture",
+    " | about:blank",
+    " | about:blank",
+    "Browser IDE & Debugger | http://127.0.0.1:8769/agy-y2/fixtures/test-10-ide-debug.html",
+    " | about:blank",
+    "Cloud Notes Sync App | http://127.0.0.1:8769/agy-y2/fixtures/test-09-notes-sync.html",
+    " | about:blank",
+    "Browser DevTools Simulation | http://127.0.0.1:8769/agy-y2/fixtures/test-08-devtools.html",
+    " | about:blank",
+    "File Manager Web Portal | http://127.0.0.1:8769/agy-y2/fixtures/test-07-file-manager.html",
+    " | about:blank",
+    "Video Conference Client | http://127.0.0.1:8769/agy-y2/fixtures/test-06-video-call.html",
+    " | about:blank",
+    "Cloud Spreadsheet Studio | http://127.0.0.1:8769/agy-y2/fixtures/test-05-spreadsheet-chart.html",
+    " | about:blank",
+    "Corporate Webmail Client | http://127.0.0.1:8769/agy-y2/fixtures/test-04-email-compose.html",
+    " | about:blank",
+    "Photo Studio Pro | http://127.0.0.1:8769/agy-y2/fixtures/test-03-photo-editor.html",
+    " | about:blank",
+    "Network & Bluetooth Settings | http://127.0.0.1:8769/agy-y2/fixtures/test-02-network-settings.html",
+    " | about:blank",
+    "tmux Session Manager | http://127.0.0.1:8769/agy-y2/fixtures/test-01-tmux-session.html",
+    " | about:blank",
+    "tmux Session Manager | http://127.0.0.1:8769/agy-y2/fixtures/test-01-tmux-session.html",
+    "Markdown Live Studio | http://127.0.0.1:8768/agy-q2/fixtures/test-10-markdown-editor.html",
+    "Focus Engine Pomodoro Timer | http://127.0.0.1:8768/agy-q2/fixtures/test-09-pomodoro-timer.html",
+    "Systems Architecture & Web Standards Quiz | http://127.0.0.1:8768/agy-q2/fixtures/test-08-quiz-app.html",
+    "Global Weather Operations Dashboard | http://127.0.0.1:8768/agy-q2/fixtures/test-07-weather-dashboard.html",
+    "Offline Universal File Converter | http://127.0.0.1:8768/agy-q2/fixtures/test-06-file-converter.html",
+    "Offline Contact Directory | http://127.0.0.1:8768/agy-q2/fixtures/test-05-contact-book.html",
+    "Offline Budget & Expense Tracker | http://127.0.0.1:8768/agy-q2/fixtures/test-04-budget-tracker.html",
+    "Offline Habit Tracker | http://127.0.0.1:8768/agy-q2/fixtures/test-03-habit-tracker.html",
+    "Offline Recipe & Meal Planner | http://127.0.0.1:8768/agy-q2/fixtures/test-02-recipe-app.html",
+    "Offline Whiteboard App | http://127.0.0.1:8768/agy-q2/fixtures/test-01-whiteboard.html",
+    "Offline Whiteboard App | http://127.0.0.1:8768/agy-q2/fixtures/test-01-whiteboard.html",
+    "Markdown Live Studio | http://127.0.0.1:8768/agy-q2/fixtures/test-10-markdown-editor.html",
+    "Focus Engine Pomodoro Timer | http://127.0.0.1:8768/agy-q2/fixtures/test-09-pomodoro-timer.html",
+    "Systems Architecture & Web Standards Quiz | http://127.0.0.1:8768/agy-q2/fixtures/test-08-quiz-app.html",
+    "Global Weather Operations Dashboard | http://127.0.0.1:8768/agy-q2/fixtures/test-07-weather-dashboard.html",
+    "Offline Universal File Converter | http://127.0.0.1:8768/agy-q2/fixtures/test-06-file-converter.html",
+    "Offline Contact Directory | http://127.0.0.1:8768/agy-q2/fixtures/test-05-contact-book.html",
+    "Offline Budget & Expense Tracker | http://127.0.0.1:8768/agy-q2/fixtures/test-04-budget-tracker.html",
+    "Offline Habit Tracker | http://127.0.0.1:8768/agy-q2/fixtures/test-03-habit-tracker.html",
+    "Offline Recipe & Meal Planner | http://127.0.0.1:8768/agy-q2/fixtures/test-02-recipe-app.html",
+    "Offline Whiteboard App | http://127.0.0.1:8768/agy-q2/fixtures/test-01-whiteboard.html",
+    "Offline Whiteboard App | http://127.0.0.1:8768/agy-q2/fixtures/test-01-whiteboard.html",
+    "BiDi fixture | file:///home/james/workspace/computer-use-wayland/tests/bidi_fixture.html",
+    "Calibration Grid E2 | file:///home/james/workspace/computer-use-wayland/tests/calibration-grid.html?truth=1",
+    "Calibration Grid E2 | file:///home/james/workspace/computer-use-wayland/tests/calibration-grid.html?truth=1",
+    "Calibration Grid E2 | file:///home/james/workspace/computer-use-wayland/tests/calibration-grid.html?truth=1",
+    "Calibration Grid E2 | file:///home/james/workspace/computer-use-wayland/tests/calibration-grid.html",
+    " | https://httpbin.org/forms/post"
+  ],
+  "after": [
+    {
+      "title": "YouTube",
+      "url": "https://www.youtube.com/"
+    },
+    {
+      "title": "Problem loading page",
+      "url": "https://www.reddit.com/"
+    },
+    {
+      "title": "Today – Todoist",
+      "url": "https://app.todoist.com/app/today"
+    },
+    {
+      "title": "Inbox (729) - phamtuanhuy1109@gmail.com - Gmail",
+      "url": "https://mail.google.com/mail/u/1/#inbox"
+    },
+    {
+      "title": "Lịch Google - Tuần 16 tháng 11, 2026",
+      "url": "https://calendar.google.com/calendar/u/1/r/week?pli=1"
+    },
+    {
+      "title": "Muse",
+      "url": "https://muse.ai/thread/750c8dae-58fb-4a65-82ac-753e78d6ce93"
+    },
+    {
+      "title": "PCCV CF26 - Google Trang tính",
+      "url": "https://docs.google.com/spreadsheets/d/1WzUJNuCQlYLAj59-gdIPFFQv2P_d3f2KhEYcGeWhRRY/edit?gid=0#gid=0"
+    },
+    {
+      "title": "Free Claude Code Admin",
+      "url": "http://127.0.0.1:8082/admin/model_config"
+    },
+    {
+      "title": "Welcome!",
+      "url": "https://zen-browser.app/welcome/"
+    },
+    {
+      "title": "Example Domain",
+      "url": "https://example.com/"
+    },
+    {
+      "title": "",
+      "url": "about:blank"
+    },
+    {
+      "title": "Package problem - Polygon",
+      "url": "https://polygon.codeforces.com/package?session=a990539d869d87619249d0c813d8346ec027eda9&ccid=0fb1586e2ab7dcfca7b64c98606cec8f"
+    },
+    {
+      "title": "Just a moment...",
+      "url": "https://codeforces.com/"
+    },
+    {
+      "title": "Biome Finder - Minecraft App",
+      "url": "https://www.chunkbase.com/apps/biome-finder#seed=-4216250823719477953&platform=java_1_21_9&dimension=overworld&x=967&z=543&zoom=0.518"
+    },
+    {
+      "title": "Gamerule keepInventory",
+      "url": "https://duck.ai/chat?t=ffab&chatID=5cb263e5-9c80-4dcf-8477-8b990cb70343"
+    },
+    {
+      "title": "ModelArk-Coding-Plan",
+      "url": "https://www.byteplus.com/en/activity/codingplan?utm_source=google&utm_medium=pmax&utm_campaign=purchase_codingplan_sea_english_20260605_yuki&utm_term=20260605_deepseek-v4_white_new&utm_content=tecdo&gad_source=2&gad_campaignid=23906536929&gclid=CjwKCAjwqonVBhA4EiwA9wYJ3Xlt3CYq0n0RZg5HqXHeGMFcoLueRZE7Nmv4xOfOy74XBTxxf3dOOxoC4gUQAvD_BwE"
+    }
+  ],
+  "errors": []
+}

@@ -1,0 +1,25 @@
+BiDi tab list, 22:58:05 21/11/2026 (+07), via scripts/zen_cli.py tabs (port 9222).
+Redacted for the repo: the Gmail title email replaced with [owner-gmail]; long
+query strings truncated to domain+path (tab identity preserved). No example.com
+tab is present in this list (15 contexts, indices 0-14). This is the evidence
+for redteam B1 (the unredacted output is in the F3 log event row 22:58:05 and
+in the agent transcript; the laptop-side zen_cli.py output was not saved to a
+file at the time, which is the gap this file closes going forward).
+
+{"ok": true, "command": "tabs", "port": 9222, "tabs": [
+{"index": 0, "url": "https://www.youtube.com/", "title": "YouTube"},
+{"index": 1, "url": "https://www.reddit.com/", "title": "Problem loading page"},
+{"index": 2, "url": "https://app.todoist.com/app/today", "title": "Today – Todoist"},
+{"index": 3, "url": "https://mail.google.com/mail/u/1/#inbox", "title": "Inbox (729) - [owner-gmail] - Gmail"},
+{"index": 4, "url": "https://calendar.google.com/calendar/u/1/r/week?pli=1", "title": "Lịch Google - Tuần 16 tháng 11, 2026"},
+{"index": 5, "url": "https://muse.ai/thread/[redacted]", "title": "(2) Chat — Muse"},
+{"index": 6, "url": "https://docs.google.com/spreadsheets/d/[redacted]/edit", "title": "PCCV CF26 - Google Trang tính"},
+{"index": 7, "url": "http://127.0.0.1:8082/admin/model_config", "title": "Free Claude Code Admin"},
+{"index": 8, "url": "https://zen-browser.app/welcome/", "title": "Welcome!"},
+{"index": 9, "url": "about:blank", "title": ""},
+{"index": 10, "url": "https://polygon.codeforces.com/package", "title": "Package problem - Polygon"},
+{"index": 11, "url": "https://codeforces.com/", "title": "Just a moment..."},
+{"index": 12, "url": "https://www.chunkbase.com/apps/biome-finder", "title": "Biome Finder - Minecraft App"},
+{"index": 13, "url": "https://duck.ai/chat", "title": "Gamerule keepInventory"},
+{"index": 14, "url": "https://www.byteplus.com/en/activity/codingplan", "title": "ModelArk-Coding-Plan"}
+]}
