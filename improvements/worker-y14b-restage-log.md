@@ -2325,3 +2325,59 @@ C2-9/C2-10 INFO parts (covered by item 14).
   deliverable, stage-only-their-paper rule, do-NOT-touch the
   uncommitted fix-pass-6 redteam paper, do-NOT-run git fetch).
   Ship waits for them unless one BLOCKs.
+
+### Fix-pass-7 reviews: redteam GO (1 of 4 in)
+
+- 00:20 +07: redteam verdict GO. Paper cdd59a3 (todolist-push,
+  ls-remote verified, ANCESTOR_OK; only its paper file
+  staged/committed; agent a13ae7c7, completed 00:20:25 UTC).
+  No push block occurred. The uncommitted fix-pass-6 redteam
+  paper was not touched (still ?? in the working tree).
+  Independent verification (00:16-00:20 +07): own 56-check
+  probe /tmp/y14b-fix7-rt-probe.py 56/56 PASS, built from
+  shell semantics, not the author's probe. R6-1: helper-level
+  (escaped " keeps in_double, escaped backslash still lets a
+  following quote toggle, backslash inside single quotes is
+  literal, a\"b; returns top-level index 4, a\;b returns -1,
+  trailing backslash doesn't crash) + all three proven forms
+  True at unit AND live /proc level. No regression on R5-1,
+  C5-1, C2-3, F2, R3/R4, B12, d4. Bare-dont returns True at
+  unit level but bash exits 2 live (unreachable, as claimed);
+  the author's 85/86-then-corrected probe expectation is
+  right. R6-2/C6-3: paren forms all False (unit + live),
+  separator forms all still True (unit + live), no true case
+  lost. Differential: re-ran the redteam's 98-case fix6-vs-
+  fix7 differential, 92 same, 6 diff, all FIXED direction;
+  cross-checked all 98 cases against fix7, 0 true regressions
+  (fix6 matched, fix7 broke). The 8 remaining mismatches vs
+  probe expectations are pre-existing fix6 gaps, unchanged by
+  fix7 (including the documented bare-dont and E1c/R6-4
+  forms). Doc fixes: C6-1 verified against the actual fix5
+  source (rstrip(";,()&|"), 46e0909 line 2539); C6-2 helper
+  returns 3; C6-4 history verified across fix5/fix6/fix7 blobs
+  (no-separator form True/False/False, glued form
+  False/False/False); U-C3-1/INFO-1 synthetic-only wording
+  present; R6-4 bounding sentence present and live-proven
+  with the EXACT docstring form (sleep 60), predicate True
+  though no codex exists; C6-3 grep -r note present; plan md5
+  line pins fix-pass-7 values in-commit. Hashes (direct git):
+  65d669b blob 8df578c7, md5 0d98342e; parent blob 261f09ae,
+  md5 fac96935; fix6 commit d552f4d carries blob 261f09ae. All
+  match the log. Author's probe re-derived: 86 PASS lines, 0
+  FAIL, exit 0; fix6 probe regression 71/71 PASS against the
+  fix7 tree. Hygiene: 0 em/en dash in the diff; the one
+  ydotool hit is the log's own sentence "no ydotool lines in
+  the fix diff"; no personal info; no Zen driving (local /proc
+  stubs only, all killed by exact PID, 0 processes left).
+  Minor observations (not findings): 3 run_foo.py sleepers
+  seen at a ps snapshot during its own runs, all self-expired
+  within their 60s sleep, and direct re-tests of the
+  live-helper kill logic leave 0 behind. The fix6 probe's 8
+  pre-existing expectation mismatches are informational, not a
+  fix7 issue.
+- 00:21 +07: Councils 1, 2, 3 still running. Fix pass 8 (if
+  needed) waits for them; adjudicate all 4 together. If the
+  remaining 3 are GO or AMEND with only doc items, fix the
+  docs and ship without another round (proposed stopping
+  rule, to put to Muse). The fix-pass-6 redteam paper landing
+  is still BLOCKED (parent action needed, see above).
