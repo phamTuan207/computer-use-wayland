@@ -25,3 +25,29 @@ Start. Task received. Repo at ~/workspace/computer-use-wayland, branch todolist-
 - Laptop state 02:11:31: active workspace 1, Zen 0x557052b62dd0 "Vietnam - Wikipedia", no active session process (ZT-C between batches), relay 1821 alive. Hyprland check now works with HYPRLAND_INSTANCE_SIGNATURE exported from /run/user/1000/hypr/.
 - Decision: DO NOT DRIVE. Keep polling every few minutes. ZT-08 is at step 6/7, then ZT-09 and ZT-10 remain. Also noted: VM working tree has uncommitted `M scripts/cu.py` (CLICK-AMEND editing live) plus new crawl logs; my commits use explicit pathspec on my log file only.
 - Run-plan prep (no driving): drive directly via SSH + act-now, following the CLICK-FIX discriminator procedure. Per run: grounding observe (viewed, vision 1) + one combined SSH call (fresh observe as given observation, then act-now at once so age stays under 100s) + verify observe (viewed, vision 2, ground truth for the X) + return to ws1. Batch mirrors Stage A: click title (450,13), click address bar (grounded from the fresh image), wait 2000, type single X, wait 800, NO Enter. Record per run: total wall time (order to verified X), observes executed, visions viewed, actions per observation, X landed or not, envelope ok/completed/type_verified/ime_state_trace. No park move in the batch (J37: the park move trips the screen-changed preflight).
+
+## 2026-11-22 02:17:57 +07 (t+13m) POLL 3: LANE STILL BUSY, ZT-08 DONE, ZT-09 AT STEP 5
+- ZT-08 VERDICT PASS at 02:12 (elapsed ~7m). ZT-09 is now running: ztc-obs-zt09-s5.jpg and ztc-obs-zt09-s5hover.jpg exist on the VM, so ZT-C is at ZT-09 step 5. New ZT-C error J40 recorded: stale given observation falls back to captured screen observation, window-space point then misses by the window origin offset (same G28 class, reinforces the same-call observe+act rule).
+- Decision: DO NOT DRIVE. Keep polling every few minutes. ZT-09 in progress, ZT-10 still to come after it.
+
+## 2026-11-22 02:23:12 +07 (t+18m) POLL 4: LANE STILL BUSY, ZT-09 AT STEP 9 + CLEANUP
+- Poll 4 glob was wrong (zt1* misses zt09 files) and the ZT-C log still ends at the ZT-08 verdict, so a direct check followed: laptop /tmp holds ztc-zt09-s9c/d/e.json + park2 + restore, and the VM holds ztc-obs-zt09-cleanup.jpg + cleanup2.jpg (newest). ZT-09 is at step 9 / cleanup, nearly done. No active session process at this instant, relay 1821 alive.
+- Decision: DO NOT DRIVE. ZT-10 still to come after ZT-09. Keep polling.
+
+## 2026-11-22 02:28:29 +07 (t+23m) POLL 5: LANE STILL BUSY, ZT-09 FAIL, ZT-10 AT STEP 6
+- ZT-09 VERDICT FAIL at 02:23 (elapsed ~11m). Steps 1-4 pass; steps 5-6 fail on activation (J42), steps 7-8 fail (J43 guard blocks Ctrl+Shift+T). Worker error J44 owned in the log: ZT-C closed the owner's pre-existing ModelArk-Coding-Plan tab with an unverified Ctrl+W, then restored it from the exact URL in places.sqlite (count back to 18, set equal by title/URL, tab at a different position with fresh history). Not my task, noted only as lane context.
+- ZT-10 is now running: ztc-obs-zt10-s6a.jpg, s6hover, s5, s3 exist, so ZT-C is at ZT-10 step 6. ZT-10 is the last scenario in ZT-C's batch (ZT-07..ZT-10); after it the lane should free unless ZT-C takes more work.
+- Decision: DO NOT DRIVE. Keep polling.
+
+## 2026-11-22 02:33:40 +07 (t+28m) POLL 6: LANE STILL BUSY, ZT-10 STILL AT STEP 6
+- ZT-10 still running: newest files zt10-menu.jpg, zt10-s6hover4.jpg, s6c, s6hover3/2. Step 6 is taking a while (repeated hovers). ZT-C log still ends at the ZT-09 verdict (chunked writes).
+- CLICK-AMEND is progressing on the VM (commits 96a9e46, 4b7d6ac). Caution for the baseline: if the amend lands and syncs to the laptop before I run, the installed code would no longer be pre-amend. I will re-verify the installed code markers (type_verified / ime_state_trace presence, md5) immediately before running, and report any change.
+- Decision: DO NOT DRIVE. Keep polling.
+
+## 2026-11-22 02:38:48 +07 (t+33m) POLL 7: LANE STILL BUSY, ZT-10 PAST STEP 6 INTO ABOUT:CONFIG
+- ZT-10 still running: newest files zt10-aboutconfig.jpg, s6e, dismiss, esc2, s6d. It has moved past step 6 into an about:config phase. ZT-C log still ends at the ZT-09 verdict (chunked writes).
+- Decision: DO NOT DRIVE. Keep polling.
+
+## 2026-11-22 02:44:08 +07 (t+39m) POLL 8: LANE STILL BUSY, ZT-10 STILL IN STEP 6 / SETTINGS
+- ZT-10 still running: newest files zt10-s6f.jpg, setsearch, lookfeel, prefs, rclick. Still working step 6 in the settings area, about 20 min into ZT-10. ZT-C log still ends at the ZT-09 verdict (chunked writes).
+- Decision: DO NOT DRIVE. Keep polling.
