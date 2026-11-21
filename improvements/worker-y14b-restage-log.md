@@ -757,5 +757,5 @@ coordinates go here too.
   land, then ship); the OPT coordination is a separate effort.
 - 22:48 +07 (elapsed ~28 min): this event-log section appended
   (first entry under the new rule) and committed as its own small
-  commit, pushed, ls-remote verified (hash filled below after
-  commit).
+  commit fa2100b, pushed, ls-remote verified
+  fa2100bb05bc4112024de5cb47a54dbed698bcc7.
