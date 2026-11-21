@@ -2675,4 +2675,17 @@ Verification (VM, all green):
   (run_batch3.py, plan, log, fix8 probe) plus the fix6 probe
   live-helper patch. The uncommitted fix-pass-6 redteam paper
   is NOT touched. No git fetch.
+- 00:37 +07: fix pass 8 COMMITTED 6f72fe3 on todolist-push,
+  ls-remote verified (remote head 6f72fe3, ANCESTOR_OK).
+  run_batch3.py at 6f72fe3: git blob
+  eec33fd589a6da5803fd0488745020c579ecd9db, md5
+  0527b55e48ec3a406ca1b100c2c1cd04. Parent fix-pass-7 bytes:
+  blob 8df578c7, md5 0d98342e, commit 65d669b. The diff range
+  is 0857d19..6f72fe3 (parent 0857d19 is a concurrent worker
+  commit; run_batch3.py at 0857d19 is blob 8df578c7, so the
+  run_batch3.py diff is exactly the fix-pass-8 change). Only
+  my five files were staged (run_batch3.py, plan, log, fix8
+  probe, fix6 probe). The uncommitted fix-pass-6 redteam
+  paper is still untracked in the working tree, untouched.
+  Spawning 4 re-reviewers over the fix diff only.
 
