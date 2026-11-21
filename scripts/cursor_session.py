@@ -89,10 +89,14 @@ class SessionVisuals:
     """One presentation fence hides the badge and the software cursor together."""
     def __init__(self, native, cursor):
         self.native,self.cursor=native,cursor
+        self.expected_hidden=False
 
     def command(self, command):
         if command in ('hide','show'):self.cursor.command(command)
-        return self.native.command(command)
+        result=self.native.command(command)
+        if command=='hide':self.expected_hidden=True
+        elif command=='show':self.expected_hidden=False
+        return result
 
 
 def recover(env, expected=None):
@@ -158,10 +162,12 @@ def guardian(env, pipe, token):
             server=indicator.listen(STATE,token)
             native=indicator.Native({**env,'CU_ESCAPE_AVAILABLE':'1' if escape_available else '0'})
             visuals=SessionVisuals(native,cursor_guard)
+            watchdog=indicator.IndicatorWatchdog(env,visuals,escape_available=escape_available)
             if stopping[0] or cancel_hotkey.latch_present(CANCEL):raise RuntimeError('session cancelled during indicator startup')
             print('ready',flush=True)
             while not stopping[0] and not cancel_hotkey.latch_present(CANCEL) and not (STATE/('stop-'+token)).exists():
-                if native.process.poll() is not None:raise RuntimeError('session indicator lost')
+                watchdog.check()
+                native=visuals.native
                 ready,_,_=select.select([pipe,server,cursor_guard.socket],[],[],.05)
                 if cursor_guard.socket in ready:raise RuntimeError('session cursor guard lost')
                 if server in ready:indicator.serve(server,visuals,token)

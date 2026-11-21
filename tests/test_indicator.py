@@ -2,6 +2,8 @@
 import io
 import json
 import os
+from contextlib import redirect_stderr
+from datetime import datetime
 from pathlib import Path
 import shutil
 import socket
@@ -93,6 +95,23 @@ class RequestState(unittest.TestCase):
 
 
 class NativeStartup(IsolatedNativeTree):
+    def test_status_command_returns_native_visibility(self):
+        for visibility in ('hidden', 'visible'):
+            with self.subTest(visibility=visibility):
+                read_fd, write_fd = os.pipe()
+                os.write(write_fd, (visibility + '\n').encode())
+                stdout = os.fdopen(read_fd, 'rb', 0)
+                self.addCleanup(stdout.close)
+                process = Mock(stdin=io.BytesIO(), stdout=stdout)
+                native = indicator.Native.__new__(indicator.Native)
+                native.process = process
+                native.ready_timeout = 0.1
+                with patch.object(indicator.select, 'select',
+                                  return_value=([stdout], [], [])):
+                    self.assertEqual(native.command('status'), visibility)
+                self.assertEqual(process.stdin.getvalue(), b'status\n')
+                os.close(write_fd)
+
     def test_final_profile_ignores_path_override_and_entrance(self):
         with patch.object(indicator.Path, 'exists', return_value=True), \
                 patch.object(indicator, '_status', return_value={}), \
@@ -151,6 +170,41 @@ class NativeStartup(IsolatedNativeTree):
 
 
 class CaptureClean(unittest.TestCase):
+    def test_metric_event_has_wall_time_and_elapsed_time(self):
+        output = io.StringIO()
+        with patch.object(indicator, '_METRICS_STARTED', 0), \
+                patch.object(indicator.time, 'monotonic', return_value=1.25), \
+                redirect_stderr(output):
+            indicator._metric('command', command_kind='hide', round_trip_ms=4)
+        prefix = '[indicator-metrics] '
+        self.assertTrue(output.getvalue().startswith(prefix))
+        record = json.loads(output.getvalue()[len(prefix):])
+        self.assertEqual(record['event'], 'command')
+        self.assertEqual(record['command_kind'], 'hide')
+        self.assertEqual(record['round_trip_ms'], 4)
+        self.assertEqual(record['elapsed_ms'], 1250)
+        self.assertIsNotNone(datetime.fromisoformat(record['wall_time']))
+
+    def test_capture_logs_trigger_and_duration(self):
+        events = []
+        with patch.object(indicator, 'request', return_value=True), \
+                patch.object(indicator, '_metric', side_effect=lambda name, **fields:
+                             events.append((name, fields))):
+            with indicator.capture_clean(Path('/tmp')):
+                pass
+        self.assertEqual([name for name, _ in events], ['capture_begin', 'capture_end'])
+        self.assertTrue(events[1][1]['indicator_active'])
+        self.assertGreaterEqual(events[1][1]['duration_ms'], 0)
+
+    def test_nested_capture_coalesces_hide_and_show(self):
+        calls = []
+        with patch.object(indicator, 'request',
+                          side_effect=lambda state, command: calls.append(command) or True):
+            with indicator.capture_clean(Path('/tmp/nested-indicator-capture')):
+                with indicator.capture_clean(Path('/tmp/nested-indicator-capture')):
+                    pass
+        self.assertEqual(calls, ['hide', 'show'])
+
     def test_hide_failure_runs_no_capture_and_no_show(self):
         calls = []
         ran = []
@@ -407,6 +461,28 @@ class SocketProtocol(unittest.TestCase):
         with patch.dict(os.environ, {}, clear=True):
             self.assertIs(indicator.request(self.state, 'hide'), True)
         self.assertEqual(native.commands, ['hide'])
+
+    def test_bounded_ascii_label_command_is_forwarded(self):
+        self.session()
+        native = FakeNative()
+        self.serve(native)
+        with patch.dict(os.environ, {}, clear=True):
+            self.assertIs(indicator.request(self.state, 'label Browser automation via DOM'), True)
+        self.assertEqual(native.commands, ['label Browser automation via DOM'])
+
+    def test_label_command_rejects_non_ascii_and_overlong_values(self):
+        cases = (('b' * 32, 'label Browser 😀'), ('c' * 32, 'label ' + 'x' * 41))
+        for token, command in cases:
+            with self.subTest(command=command):
+                self.token = token
+                native = FakeNative()
+                thread, errors = self.serve(native)
+                client = self.connect()
+                self.send(client, {'token': self.token, 'command': command})
+                self.assertEqual(client.recv(128), b'')
+                thread.join(3)
+                self.assertIn('invalid indicator command', str(errors[0]))
+                self.assertEqual(native.commands, [])
 
     def test_wrong_acknowledgement_is_rejected(self):
         self.session()

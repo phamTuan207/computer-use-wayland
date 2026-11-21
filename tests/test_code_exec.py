@@ -494,6 +494,37 @@ class DomApiTests(unittest.TestCase):
         self.assertEqual(session.dom_snapshots[after_id]['target'], 'tab-1')
         self.assertEqual(backend.dom_calls[-1][2], snapshot['snapshot'])
 
+    def test_dom_confirm_click_requires_exact_confirmation_fields(self):
+        action = {'type': 'confirm_click', 'ref': 'dom-ref-1',
+                  'expected_role': 'button', 'expected_name': 'Discard',
+                  'expected_text': 'Discard'}
+        code_exec._validate_dom_actions([action], {'dom-ref-1'})
+        for field in ('expected_role', 'expected_name', 'expected_text'):
+            incomplete = dict(action)
+            incomplete.pop(field)
+            with self.subTest(field=field), self.assertRaisesRegex(
+                    code_exec.CodeExecError, 'requires expected_role'):
+                code_exec._validate_dom_actions([incomplete], {'dom-ref-1'})
+        with self.assertRaisesRegex(code_exec.CodeExecError, 'requires expected_role'):
+            code_exec._validate_dom_actions(
+                [dict(action, expected_text='x' * 257)], {'dom-ref-1'})
+
+        backend = FakeDomBackend()
+        session = code_exec.CodeExecSession(backend)
+        snapshot = session.api_dom_observe('tab-1')
+        action['ref'] = snapshot['elements'][0]['ref']
+        self.assertTrue(session.api_dom_act(snapshot, [action])['ok'])
+        self.assertEqual(backend.dom_calls[-1][3][0]['type'], 'confirm_click')
+
+    def test_dom_hover_click_accepts_bound_ref_and_bounded_timeout(self):
+        action = {'type': 'hover_click', 'ref': 'dom-ref-1'}
+        code_exec._validate_dom_actions([action], {'dom-ref-1'})
+        for timeout in (-1, 2001, True, '100'):
+            with self.subTest(timeout=timeout), self.assertRaisesRegex(
+                    code_exec.CodeExecError, 'hover_timeout_ms must be 0..2000'):
+                code_exec._validate_dom_actions(
+                    [dict(action, hover_timeout_ms=timeout)], {'dom-ref-1'})
+
     def test_dom_act_returns_refusal_dict_without_raising(self):
         backend = FakeDomBackend(dom_act_ok=False)
         session = code_exec.CodeExecSession(backend)
@@ -551,13 +582,21 @@ class DomApiTests(unittest.TestCase):
         with self.assertRaisesRegex(code_exec.CodeExecError, 'max_elements'):
             session.api_dom_observe('tab-1', max_elements=81)
 
-    def test_dom_snapshot_older_than_90_seconds_is_rejected(self):
+    def test_dom_snapshot_older_than_120_seconds_is_rejected(self):
         session = code_exec.CodeExecSession(FakeDomBackend())
         snapshot = session.api_dom_observe('tab-1')
-        session.dom_snapshots[snapshot['snapshot']]['created'] = time.time() - 91
-        with self.assertRaisesRegex(code_exec.CodeExecError, 'older than 90s'):
+        session.dom_snapshots[snapshot['snapshot']]['created'] = time.time() - 121
+        with self.assertRaisesRegex(code_exec.CodeExecError, 'older than 120s'):
             session.api_dom_act(
                 snapshot, [{'type': 'click', 'ref': snapshot['elements'][0]['ref']}])
+
+    def test_dom_snapshot_at_100_seconds_is_still_valid(self):
+        # 2.8.1: the limit is 120s, not 90s; a snapshot aged 91-119s must work.
+        session = code_exec.CodeExecSession(FakeDomBackend())
+        snapshot = session.api_dom_observe('tab-1')
+        session.dom_snapshots[snapshot['snapshot']]['created'] = time.time() - 100
+        session.api_dom_act(
+            snapshot, [{'type': 'click', 'ref': snapshot['elements'][0]['ref']}])
 
     def test_dom_snapshot_binding_persists_across_runs(self):
         backend = FakeDomBackend()

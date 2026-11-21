@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>HCU batch fixture</title>
+<style>
+  body { font-family: sans-serif; margin: 24px; }
+  #items { height: 200px; overflow-y: scroll; border: 1px solid #888; }
+  #dialog { display: none; border: 1px solid #333; padding: 12px; margin-top: 12px; }
+  #dialog.open { display: block; }
+  label { display: block; margin: 8px 0; }
+</style>
+</head>
+<body>
+<h1>HCU batch fixture</h1>
+<label>Name <input id="name" type="text" value=""></label>
+<label>Email <input id="email" type="text" value=""></label>
+<label>Plan
+  <select id="plan">
+    <option value="free">free</option>
+    <option value="pro">pro</option>
+  </select>
+</label>
+<label><input id="agree" type="checkbox"> Agree to terms</label>
+<p><button id="counter">0</button> <span>counter clicks</span></p>
+<p><button id="open-dialog">Open dialog</button></p>
+<div id="dialog">
+  <p>Confirm your choices?</p>
+  <button id="confirm">Confirm</button>
+</div>
+<div id="items">
+  <p>item 1</p><p>item 2</p><p>item 3</p><p>item 4</p><p>item 5</p>
+  <p>item 6</p><p>item 7</p><p>item 8</p><p>item 9</p><p>item 10</p>
+  <p>item 11</p><p>item 12</p><p>item 13</p><p>item 14</p><p>item 15</p>
+  <p>item 16</p><p>item 17</p><p>item 18</p><p>item 19</p><p>item 20</p>
+  <p>item 21</p><p>item 22</p><p>item 23</p><p>item 24</p><p>item 25</p>
+  <p>item 26</p><p>item 27</p><p>item 28</p><p>item 29</p><p>item 30</p>
+  <p>item 31</p><p>item 32</p><p>item 33</p><p>item 34</p><p>item 35</p>
+  <p>item 36</p><p>item 37</p><p>item 38</p><p>item 39</p><p>item 40</p>
+</div>
+<p><button id="save">Save</button></p>
+<p>Status: <span id="status">unsaved</span></p>
+<p>Saved count: <span id="saved-count">0</span></p>
+<script>
+  let count = 0;
+  document.getElementById('counter').addEventListener('click', () => {
+    count += 1;
+    document.getElementById('counter').textContent = String(count);
+  });
+  document.getElementById('open-dialog').addEventListener('click', () => {
+    setTimeout(() => document.getElementById('dialog').classList.add('open'), 150);
+  });
+  document.getElementById('confirm').addEventListener('click', () => {
+    document.getElementById('dialog').classList.remove('open');
+    document.getElementById('status').textContent = 'confirmed';
+  });
+  document.getElementById('save').addEventListener('click', () => {
+    const saved = document.getElementById('saved-count');
+    saved.textContent = String(Number(saved.textContent) + 1);
+    document.getElementById('status').textContent = 'saved';
+  });
+</script>
+</body>
+</html>

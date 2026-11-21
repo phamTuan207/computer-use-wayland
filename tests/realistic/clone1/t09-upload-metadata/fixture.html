@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Create problem with statement</title>
+<style>
+body { font-family: sans-serif; max-width: 640px; margin: 2em auto; }
+label { display: block; margin: 0.6em 0 0.2em; }
+input, select { width: 100%; box-sizing: border-box; }
+#error { color: #b00; margin-top: 1em; }
+#result { color: #070; margin-top: 1em; }
+button { margin-top: 0.6em; }
+</style>
+</head>
+<body>
+<h1>Create problem with statement</h1>
+<form id="form">
+  <label for="title">Title *</label><input id="title" type="text">
+  <label for="difficulty">Difficulty</label>
+  <select id="difficulty"><option>easy</option><option>medium</option><option>hard</option></select>
+  <label for="file">Statement file (.txt only) *</label>
+  <input id="file" type="file" accept=".txt">
+  <div><button id="submit" type="submit">Create problem</button></div>
+</form>
+<div id="error" role="alert"></div>
+<div id="result" role="status"></div>
+<script>
+let nextId = 1042;
+document.getElementById('form').addEventListener('submit', (event) => {
+  event.preventDefault();
+  const title = document.getElementById('title').value.trim();
+  const file = document.getElementById('file').files[0];
+  const errorEl = document.getElementById('error');
+  const resultEl = document.getElementById('result');
+  errorEl.textContent = '';
+  resultEl.textContent = '';
+  const errors = [];
+  if (!title) errors.push('Title is required.');
+  if (!file) errors.push('Statement file is required.');
+  if (file && !file.name.toLowerCase().endsWith('.txt')) {
+    errors.push('Only .txt files are accepted.');
+  }
+  if (errors.length) {
+    errorEl.textContent = errors.join(' ');
+    return;
+  }
+  const id = 'P-' + nextId;
+  nextId += 1;
+  resultEl.textContent = 'Problem ' + id + ' created: "' + title + '" with ' +
+    file.name + ' (' + file.size + ' bytes).';
+});
+</script>
+</body>
+</html>

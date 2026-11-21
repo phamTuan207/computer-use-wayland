@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Download test data</title>
+<style>
+body { font-family: sans-serif; max-width: 640px; margin: 2em auto; }
+button { margin-top: 0.6em; }
+#info { margin-top: 1em; }
+</style>
+</head>
+<body>
+<h1>Download test data</h1>
+<p>Generated test data for problem "Shortest Path".</p>
+<button id="download">Download test data</button>
+<div id="info"></div>
+<script>
+function checksum(text) {
+  const bytes = new TextEncoder().encode(text);
+  let h = 0;
+  for (const b of bytes) {
+    h = ((h * 31) + b) >>> 0;
+  }
+  return h.toString(16).padStart(8, '0');
+}
+const rows = [
+  ['id', 'input', 'expected'],
+  ['1', '3 2', '2'],
+  ['2', '4 3', '3'],
+  ['3', '2 1', '1'],
+  ['4', '5 4', '4'],
+  ['5', '1 0', '0'],
+];
+const csv = rows.map((r) => r.join(',')).join('\n') + '\n';
+const sum = checksum(csv);
+document.getElementById('info').textContent =
+  'Expected: 5 data rows, 6 lines total, checksum ' + sum + '.';
+document.getElementById('download').addEventListener('click', () => {
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 't07-test-data.csv';
+  a.click();
+  URL.revokeObjectURL(a.href);
+});
+</script>
+</body>
+</html>

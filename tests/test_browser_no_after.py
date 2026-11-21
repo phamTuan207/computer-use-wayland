@@ -31,7 +31,9 @@ class NoAfterCli(unittest.TestCase):
         self.dispatched = []
         for name, value in (('browser', self.browser), ('require_session', None),
                             ('check_cancel', None), ('prepare_state', None),
-                            ('locked', self.locked)):
+                            ('locked', self.locked),
+                            ('browser_automation_call',
+                             lambda env, operation, method='DOM/BiDi': operation())):
             patcher = mock.patch.object(cu, name, new=value) if value is not None \
                 else mock.patch.object(cu, name)
             patcher.start()

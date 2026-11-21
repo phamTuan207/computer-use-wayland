@@ -1,5 +1,6 @@
 """Session-owned layer surface control; all capture paths use the same fence."""
 from contextlib import contextmanager
+from datetime import datetime
 import json
 import os
 from pathlib import Path
@@ -8,7 +9,146 @@ import select
 import shutil
 import socket
 import subprocess
+import sys
+import threading
 import time
+
+_METRICS_STARTED = time.monotonic()
+_CAPTURE_LOCK = threading.RLock()
+_CAPTURE_DEPTHS = {}
+_CAPTURE_ACTIVE = {}
+_INDICATOR_NAMESPACE = 'computer-use-indicator'
+
+
+def layer_surface_present(env):
+    """Return True/False only when hyprctl exposes a recognizable layer list."""
+    binary = shutil.which('hyprctl', path=env.get('PATH'))
+    if binary is None:
+        return None
+    try:
+        result = subprocess.run([binary, '-j', 'layers'], env=dict(env), check=True,
+                                capture_output=True, text=True, timeout=1)
+        payload = json.loads(result.stdout)
+    except (OSError, subprocess.SubprocessError, ValueError, TypeError):
+        return None
+
+    namespaces = []
+    recognized = False
+    def collect(value):
+        nonlocal recognized
+        if isinstance(value, dict):
+            if isinstance(value.get('layers'), list) or 'levels' in value:
+                recognized = True
+            namespace = value.get('namespace')
+            if isinstance(namespace, str):
+                namespaces.append(namespace)
+            for child in value.values():
+                collect(child)
+        elif isinstance(value, list):
+            for child in value:
+                collect(child)
+
+    collect(payload)
+    if _INDICATOR_NAMESPACE in namespaces:
+        return True
+    return False if recognized or namespaces else None
+
+
+class IndicatorWatchdog:
+    """Restart a lost layer and repair an unrequested hidden state."""
+    POLL_INTERVAL = 1.0
+    LAYER_INTERVAL = 2.0
+    MISSING_LAYER_LIMIT = 2
+    RESTART_LIMIT = 3
+    RESTART_WINDOW = 60.0
+
+    def __init__(self, env, visuals, *, escape_available=False, layer_probe=None,
+                 native_factory=None, monotonic=None, metric=None):
+        from collections import deque
+        self.env = dict(env)
+        self.visuals = visuals
+        self.escape_available = escape_available
+        self.layer_probe = layer_probe or layer_surface_present
+        self.native_factory = native_factory or Native
+        self.monotonic = monotonic or time.monotonic
+        self.metric = metric or _metric
+        self.next_poll = 0.0
+        self.next_layer_probe = 0.0
+        self.missing_layer_count = 0
+        self.restarts = deque()
+
+    def check(self):
+        now = self.monotonic()
+        if now < self.next_poll:
+            return
+        self.next_poll = now + self.POLL_INTERVAL
+        native = self.visuals.native
+        if native.process.poll() is not None:
+            self._restart('child-exited', now)
+            return
+        try:
+            status = native.command('status')
+        except (OSError, RuntimeError, subprocess.SubprocessError):
+            self._restart('status-failed', now)
+            return
+        if status not in ('hidden', 'visible'):
+            self._restart('invalid-status', now)
+            return
+        if status == 'hidden' and not self.visuals.expected_hidden:
+            try:
+                self.visuals.command('show')
+            except (OSError, RuntimeError, subprocess.SubprocessError):
+                self._restart('show-repair-failed', now)
+                return
+            self.metric('watchdog_visibility_repaired')
+
+        if now < self.next_layer_probe:
+            return
+        self.next_layer_probe = now + self.LAYER_INTERVAL
+        present = self.layer_probe(self.env)
+        if present is True:
+            self.missing_layer_count = 0
+        elif present is False:
+            self.missing_layer_count += 1
+            if self.missing_layer_count >= self.MISSING_LAYER_LIMIT:
+                self._restart('layer-missing', now)
+        else:
+            self.missing_layer_count = 0
+
+    def _restart(self, reason, now):
+        while self.restarts and now - self.restarts[0] >= self.RESTART_WINDOW:
+            self.restarts.popleft()
+        if len(self.restarts) >= self.RESTART_LIMIT:
+            self.metric('watchdog_restart_limit', reason=reason,
+                        restarts=len(self.restarts))
+            raise RuntimeError('indicator repeatedly lost')
+        self.restarts.append(now)
+        old = self.visuals.native
+        old.close()
+        native = self.native_factory({
+            **self.env,
+            'CU_ESCAPE_AVAILABLE': '1' if self.escape_available else '0',
+        })
+        self.visuals.native = native
+        self.visuals.expected_hidden = False
+        self.visuals.cursor.command('show')
+        self.missing_layer_count = 0
+        self.next_layer_probe = now + self.LAYER_INTERVAL
+        self.metric('watchdog_restart', reason=reason, attempt=len(self.restarts))
+
+
+def _metric(event, **fields):
+    record = {
+        'event': event,
+        'wall_time': datetime.now().astimezone().isoformat(timespec='milliseconds'),
+        'elapsed_ms': max(0, round((time.monotonic() - _METRICS_STARTED) * 1000)),
+    }
+    record.update(fields)
+    try:
+        print('[indicator-metrics] ' + json.dumps(
+            record, sort_keys=True, separators=(',', ':')), file=sys.stderr, flush=True)
+    except OSError:
+        pass
 
 
 def endpoint(state, token):
@@ -68,17 +208,25 @@ class Native:
             if not byte:
                 raise RuntimeError('indicator disconnected')
             if byte == b'\n':
-                if value.decode() != expected:
+                received = value.decode()
+                if expected is None:
+                    if received not in ('hidden', 'visible'):
+                        raise RuntimeError('unexpected indicator status')
+                    return received
+                if received != expected:
                     raise RuntimeError('unexpected indicator acknowledgement')
                 return
             value.extend(byte)
         raise RuntimeError('invalid indicator acknowledgement')
 
     def command(self, command):
-        expected = {'hide': 'hidden', 'show': 'visible'}.get(command, 'ok')
+        expected = {'hide': 'hidden', 'show': 'visible'}.get(command,
+                    None if command == 'status' else 'ok')
         self.process.stdin.write((command + '\n').encode())
         self.process.stdin.flush()
-        self.reply(expected)
+        result = self.reply(expected)
+        if command == 'status':
+            return result
         return expected
 
     def close(self):
@@ -125,18 +273,23 @@ def serve(server, native, token):
         command = request.get('command', '')
         if request.get('token') != token or not isinstance(command, str) or len(command) > 200:
             raise RuntimeError('invalid indicator request')
-        if command not in ('hide', 'show') and not re.fullmatch(r'move [\w.-]+ [0-9.]+ [0-9.]+', command):
+        if (command not in ('hide', 'show') and
+                not re.fullmatch(r'move [\w.-]+ [0-9.]+ [0-9.]+', command) and
+                not re.fullmatch(r'label [\x20-\x7e]{1,40}', command)):
             raise RuntimeError('invalid indicator command')
         reply = native.command(command)
         client.sendall((reply + '\n').encode())
 
 
 def request(state, command):
+    started = time.monotonic()
     try:
         saved = json.loads((state / 'session.json').read_text())
     except FileNotFoundError:
         if os.environ.get('CU_SESSION_TOKEN'):
             raise RuntimeError('indicator session ended')
+        _metric('command_skipped', command_kind=command.split(' ', 1)[0],
+                reason='no_active_session')
         return False
     if saved.get('version') not in (3,4):
         raise RuntimeError('indicator recovery required before capture/input')
@@ -156,6 +309,9 @@ def request(state, command):
         expected = {'hide': b'hidden\n', 'show': b'visible\n'}.get(command, b'ok\n')
         if reply != expected:
             raise RuntimeError('indicator visibility acknowledgement failed')
+    _metric('command', command_kind=command.split(' ', 1)[0],
+            result=expected.decode('ascii').strip(),
+            round_trip_ms=max(0, round((time.monotonic() - started) * 1000)))
     return True
 
 
@@ -227,10 +383,29 @@ def liquid_available(env, *, ready=False):
 
 @contextmanager
 def capture_clean(state):
-    active = request(state, 'hide')
+    started = time.monotonic()
+    key = str(Path(state).resolve())
+    active = False
+    _metric('capture_begin')
     try:
-        yield
+        with _CAPTURE_LOCK:
+            depth = _CAPTURE_DEPTHS.get(key, 0)
+            if depth == 0:
+                _CAPTURE_ACTIVE[key] = request(state, 'hide')
+            active = _CAPTURE_ACTIVE[key]
+            _CAPTURE_DEPTHS[key] = depth + 1
+        try:
+            yield
+        finally:
+            with _CAPTURE_LOCK:
+                depth = _CAPTURE_DEPTHS[key] - 1
+                if depth:
+                    _CAPTURE_DEPTHS[key] = depth
+                else:
+                    _CAPTURE_DEPTHS.pop(key, None)
+                    active = _CAPTURE_ACTIVE.pop(key, False)
+                    if active and not request(state, 'show'):
+                        raise RuntimeError('indicator session ended during capture')
     finally:
-        if active:
-            if not request(state, 'show'):
-                raise RuntimeError('indicator session ended during capture')
+        _metric('capture_end', indicator_active=bool(active),
+                duration_ms=max(0, round((time.monotonic() - started) * 1000)))

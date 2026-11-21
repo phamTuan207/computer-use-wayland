@@ -1,5 +1,11 @@
 # Desktop
 
+The image viewer binary is `imv-wayland`, not `imv`. After viewing any photo,
+kill it before the next step: `pkill -x imv-wayland` (or
+`python3 scripts/image_viewer.py kill`). `pkill -x imv` misses it, instances
+pile up, one hangs, and the desktop-hygiene gate fails the run while a viewer
+is still alive.
+
 Desktop `act --no-after` skips the successful final screenshot while keeping the
 fresh pre-input capture and all focus, geometry and cancellation guards. Use it
 only when an independent application result check will confirm the outcome and
@@ -28,6 +34,7 @@ Desktop actions:
 ```
 
 - `move`, `click`, `double_click`: image `x`,`y`; click button left/right/middle. `click`, `double_click`, `drag` and `scroll` accept `modifiers`, an array of up to 5 names from `Ctrl`, `Shift`, `Alt`, `Super`, `AltGr` (aliases `Control`, `Meta`, `Win`, `Logo`); the modifiers are held for that one action and released after. `move` rejects `modifiers`.
+- `hover`: image `x`,`y`, moves the pointer there and settles 30 ms without clicking. Use it before clicking a button that only registers after its hover state lands: hover slightly off-center until the button darkens, observe, then `click` the same spot. A dead-center click that does nothing is not proof the button is blocked; it is usually a hover that never landed. Own a wrong "blocked" diagnosis plainly instead of inventing one.
 - `drag`: image `from:[x,y]`, `to:[x,y]`, `button` left/right/middle (default left), duration `ms` 50..2000 (default 300). Held pointer survives the whole drag; release attempted on failure.
 - `scroll`: image `x`,`y`, `dx`,`dy` in Wayland axis units; positive dy down. Wheel output includes discrete steps (one per 15 axis units, minimum one for nonzero input) and a 30 ms pointer-enter settling gap. These are not necessarily browser CSS pixels.
 - `key`: array of modifiers and XKB/alias key names. Modifier entries are held for the whole action while the non-modifier keys are pressed and released one at a time in array order, so `["Ctrl","a"]` is the Ctrl+a chord but `["a","b"]` types `a` then `b`, not held together. `repeat` 1..30, `hold_ms` 0..2000 (default 12); modifiers released in the same process. Shift+Tab maps to `ISO_Left_Tab` with Shift; editing-key-only groups also bypass composition temporarily. A one-character key is a keysym, not a physical US scancode. Prefer lowercase letters with Shift explicitly for shortcuts.

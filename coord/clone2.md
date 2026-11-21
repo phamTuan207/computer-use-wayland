@@ -2,6 +2,19 @@ Agent clone2 setup complete.
 gh authenticated, repo cloned, branch main, working tree clean.
 Ready for tasks via GitHub.
 
+## Batch 2 status, 2026-11-21 afternoon
+
+Received from the coordinator through the user, 6 tasks. Status at the start of this batch:
+
+1. PR 1 handling: in progress. Latest main merged into this branch, the add/add conflict in this file was the only conflict and is resolved in the merge commit. PR summary updated on GitHub. Not merged by clone2, ready for the coordinator to review and merge.
+2. Desktop control research, Vercel agent-desktop, linux-use, kde-desktop-mcp, CUA Hyprland native: in progress.
+3. AT-SPI research and a button click prototype without screenshots: pending.
+4. Ten realistic tests, code editing, file management, terminal and editor, error handling, reading docs: pending.
+5. Selenium on real Zen, full preparation package: pending. All Selenium code is re-verified on Firefox on this machine as part of this batch.
+6. Speed comparison table for all Zen control methods: pending.
+
+Updates are appended to this section as each task finishes, with commit ids and measured results. No personal information in this file.
+
 # Report: controlling Firefox and Zen through the DOM
 
 Date of work: 2026-11-21, local time Asia/Saigon. All times in the test logs are UTC wall clock as printed by the test script, with elapsed seconds from a monotonic clock for every step.

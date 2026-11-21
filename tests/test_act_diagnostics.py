@@ -349,6 +349,9 @@ class ActDiagnostics(unittest.TestCase):
             stack.enter_context(patch.object(cu, 'STATE', pathlib.Path(folder)))
             stack.enter_context(patch.dict(os.environ, {'CU_SESSION_TOKEN': 'f' * 32}))
             stack.enter_context(patch.object(cu, 'check_cancel'))
+            stack.enter_context(patch.object(cu, 'browser_automation_call',
+                                             side_effect=lambda env, operation,
+                                             method='DOM/BiDi': operation()))
             stack.enter_context(patch.object(cu.sys, 'argv',
                                              ['cu', 'browser', 'act', '--actions', '-']))
             stack.enter_context(patch.object(cu.sys, 'stdout', out))

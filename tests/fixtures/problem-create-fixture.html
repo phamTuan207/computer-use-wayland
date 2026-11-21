@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Create Problem - Practice Contest (fixture)</title>
+<style>body{font-family:sans-serif;max-width:640px;margin:20px auto}label{display:block;margin:10px 0}input,select,textarea{width:100%;padding:6px}button{padding:8px 16px;margin-top:12px}.step{display:none}.step.active{display:block}#result{border:1px solid #090;padding:12px;margin-top:16px;display:none}</style>
+</head>
+<body>
+<h1>Create Problem</h1>
+<div class="step active" id="step1">
+  <h2>Step 1: General info</h2>
+  <label>Problem title <input id="title" type="text" value=""></label>
+  <label>Short name <input id="shortname" type="text" value=""></label>
+  <label>Time limit (ms) <input id="timelimit" type="number" value="1000"></label>
+  <label>Memory limit (MB) <input id="memlimit" type="number" value="256"></label>
+  <button id="to-step2" type="button">Next: Statement</button>
+</div>
+<div class="step" id="step2">
+  <h2>Step 2: Statement</h2>
+  <label>Statement (English) <textarea id="statement" rows="6"></textarea></label>
+  <label>Checker
+    <select id="checker">
+      <option value="">-- choose --</option>
+      <option value="lcmp">std::lcmp.cpp</option>
+      <option value="ncmp">std::ncmp.cpp</option>
+      <option value="rcmp">std::rcmp.cpp</option>
+    </select>
+  </label>
+  <button id="to-step3" type="button">Next: Tests</button>
+</div>
+<div class="step" id="step3">
+  <h2>Step 3: Tests</h2>
+  <label>Test archive (input-only zip) <input id="testzip" type="file" accept=".zip"></label>
+  <p>Uploaded: <span id="upload-status">none</span></p>
+  <label>Points per hidden test <input id="points" type="number" value="15"></label>
+  <button id="submit-problem" type="button">Submit problem</button>
+</div>
+<div id="result"></div>
+<script>
+const $ = (id) => document.querySelector('#' + id);
+$('to-step2').addEventListener('click', () => {
+  if (!$('title').value.trim() || !$('shortname').value.trim()) { alert('title and short name required'); return; }
+  $('step1').classList.remove('active'); $('step2').classList.add('active');
+});
+$('to-step3').addEventListener('click', () => {
+  if (!$('statement').value.trim() || !$('checker').value) { alert('statement and checker required'); return; }
+  $('step2').classList.remove('active'); $('step3').classList.add('active');
+});
+$('testzip').addEventListener('change', (e) => {
+  const f = e.target.files[0];
+  $('upload-status').textContent = f ? f.name + ' (' + f.size + ' bytes)' : 'none';
+});
+$('submit-problem').addEventListener('click', () => {
+  const f = $('testzip').files[0];
+  if (!f) { alert('upload a test archive first'); return; }
+  const r = $('result');
+  r.style.display = 'block';
+  r.innerHTML = '<h2>Problem created</h2>'
+    + '<p id="res-title">Title: ' + $('title').value + '</p>'
+    + '<p id="res-short">Short name: ' + $('shortname').value + '</p>'
+    + '<p id="res-checker">Checker: ' + $('checker').value + '</p>'
+    + '<p id="res-file">Archive: ' + f.name + ' (' + f.size + ' bytes)</p>'
+    + '<p id="res-points">Points: ' + $('points').value + '</p>';
+  $('step3').classList.remove('active');
+});
+</script>
+</body>
+</html>

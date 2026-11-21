@@ -20,6 +20,12 @@ import subprocess
 import tempfile
 import time
 
+try:
+    import jsonlutil
+except ImportError:  # loaded by file path without the scripts dir on sys.path
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import jsonlutil
+
 
 def _capture_spawn_stderr():
     try:
@@ -53,8 +59,7 @@ def _write_spawn_log():
         directory.mkdir(parents=True, exist_ok=True, mode=0o700)
         record = {'timestamp': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
                   'pid': os.getpid(), 'argv': sys.argv}
-        with (directory/'visuals-spawn.jsonl').open('a', encoding='utf-8') as stream:
-            stream.write(json.dumps(record, ensure_ascii=False, separators=(',', ':')) + '\n')
+        jsonlutil.append_jsonl(directory / 'visuals-spawn.jsonl', record)
     except Exception:
         pass
 

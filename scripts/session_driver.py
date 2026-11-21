@@ -78,6 +78,22 @@ def relay(source, sink):
 
 REQUEST_LINE_LIMIT=8*1024*1024
 
+def _decode_line(parts):
+    """Decode one buffered request line as UTF-8.
+
+    Bytes that are not valid UTF-8 (I43: a PNG path or binary bytes sent
+    where an observation JSON line was expected) decode to '' instead of
+    raising: '' is not a valid request, so relay_commands answers with an
+    error envelope and the session stays alive.
+    """
+    if not isinstance(parts[0], bytes):
+        return ''.join(parts)
+    try:
+        return b''.join(parts).decode('utf-8')
+    except UnicodeDecodeError:
+        return ''
+
+
 def request_lines(source):
     """Read each request in bounded chunks, counting UTF-8 bytes before parsing."""
     source=getattr(source,'buffer',source)
@@ -85,13 +101,13 @@ def request_lines(source):
     while True:
         chunk=source.readline(min(65536,REQUEST_LINE_LIMIT-total+1))
         if not chunk:
-            if parts:yield b''.join(parts).decode('utf-8') if isinstance(parts[0],bytes) else ''.join(parts)
+            if parts:yield _decode_line(parts)
             return
         total+=len(chunk.encode('utf-8')) if isinstance(chunk,str) else len(chunk)
         if total>REQUEST_LINE_LIMIT:raise ValueError('driver request line exceeds 8 MiB')
         parts.append(chunk)
         if chunk.endswith(b'\n' if isinstance(chunk,bytes) else '\n'):
-            yield b''.join(parts).decode('utf-8') if isinstance(parts[0],bytes) else ''.join(parts)
+            yield _decode_line(parts)
             parts=[];total=0
 
 def relay_commands(source, sink):
@@ -99,7 +115,18 @@ def relay_commands(source, sink):
     checkpoint = VisualCheckpoint()
     print(json.dumps({'ok': True, 'driver': 'ready'}), file=sink, flush=True)
     for line in request_lines(source):
-        request = json.loads(line)
+        # I43: one bad request line (a PNG path, binary bytes, or any other
+        # non-JSON line) used to raise out of json.loads and drop the whole
+        # session. Answer with an error envelope and stay alive instead; the
+        # caller observes again and continues. Only a fatal command ends it.
+        try:
+            request = json.loads(line)
+        except ValueError:
+            print(json.dumps({'ok': False, 'returncode': 1,
+                              'error': 'driver request is not a JSON object with args; '
+                                       'send one JSON line, not a file path',
+                              'session_continues': True}, ensure_ascii=False), file=sink, flush=True)
+            continue
         if not isinstance(request, dict):
             raise ValueError('request must be an object with args and optional stdin')
         args = request.get('args')

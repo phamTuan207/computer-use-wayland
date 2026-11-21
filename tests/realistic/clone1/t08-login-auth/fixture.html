@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Setter login</title>
+<style>
+body { font-family: sans-serif; max-width: 640px; margin: 2em auto; }
+label { display: block; margin: 0.6em 0 0.2em; }
+input { width: 100%; box-sizing: border-box; }
+#protected { display: none; }
+#error { color: #b00; margin-top: 1em; }
+#review-result { color: #070; margin-top: 1em; }
+button { margin-top: 0.6em; }
+</style>
+</head>
+<body>
+<h1>Setter login</h1>
+<div id="login">
+  <label for="code">Access code</label>
+  <input id="code" type="text" autocomplete="off">
+  <div><button id="login-btn">Log in</button></div>
+</div>
+<div id="protected">
+  <p id="welcome">Welcome, setter. You are logged in.</p>
+  <button id="review">Mark problem 42 as reviewed</button>
+  <button id="logout">Log out</button>
+  <div id="review-result" role="status"></div>
+</div>
+<div id="error" role="alert"></div>
+<script>
+const KEY = 't08-session';
+function showLoggedIn() {
+  document.getElementById('login').style.display = 'none';
+  document.getElementById('protected').style.display = 'block';
+}
+function showLoggedOut() {
+  document.getElementById('login').style.display = 'block';
+  document.getElementById('protected').style.display = 'none';
+}
+if (sessionStorage.getItem(KEY) === 'active') {
+  showLoggedIn();
+}
+document.getElementById('login-btn').addEventListener('click', () => {
+  const code = document.getElementById('code').value.trim();
+  const errorEl = document.getElementById('error');
+  errorEl.textContent = '';
+  if (code.length < 6) {
+    errorEl.textContent = 'Access code must be at least 6 characters.';
+    return;
+  }
+  sessionStorage.setItem(KEY, 'active');
+  showLoggedIn();
+});
+document.getElementById('review').addEventListener('click', () => {
+  document.getElementById('review-result').textContent = 'Problem 42 marked reviewed.';
+});
+document.getElementById('logout').addEventListener('click', () => {
+  sessionStorage.removeItem(KEY);
+  document.getElementById('review-result').textContent = '';
+  showLoggedOut();
+});
+</script>
+</body>
+</html>

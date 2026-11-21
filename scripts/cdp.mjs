@@ -201,7 +201,7 @@ async function snapshot(explicitScope) {
       const ref='e'+(++index);s.refs.set(ref,e);
       const field=/^(INPUT|TEXTAREA|SELECT)$/.test(e.tagName)||e.isContentEditable;
       const label=e.getAttribute('aria-label')||e.labels?.[0]?.innerText||(!field&&e.innerText)||e.getAttribute('placeholder')||e.getAttribute('title')||e.name||'';
-      const item={ref,role:e.getAttribute('role')||e.tagName.toLowerCase(),name:label.trim().slice(0,120)};
+      const item={ref,role:e.getAttribute('role')||(e.tagName==='A'?'link':e.tagName.toLowerCase()),name:label.trim().slice(0,120)};
       ${pick4Rects?`const __r=e.getBoundingClientRect();
       item.rect={x:Math.round(__r.left),y:Math.round(__r.top),width:Math.round(__r.width),height:Math.round(__r.height)};
       item.center={x:Math.round(__r.left+__r.width/2),y:Math.round(__r.top+__r.height/2)};`:''}
@@ -220,6 +220,17 @@ async function snapshot(explicitScope) {
 async function click(a) {
   const point=await evaluate(elementExpression(a,`
     if(e.disabled)throw new Error('element disabled');
+    ${a.type==='confirm_click'?`
+    if(e.getAttribute('aria-disabled')==='true'||e.closest('[inert]'))
+      throw new Error('element disabled');
+    const role=(e.getAttribute('role')||(e.tagName==='A'?'link':e.tagName.toLowerCase())).toLowerCase();
+    const field=/^(INPUT|TEXTAREA|SELECT)$/.test(e.tagName)||e.isContentEditable;
+    const name=(e.getAttribute('aria-label')||e.labels?.[0]?.innerText||(!field&&e.innerText)||
+      e.getAttribute('placeholder')||e.getAttribute('title')||e.name||'').trim().slice(0,120);
+    const text=(e.innerText||'').trim().replace(/\\s+/g,' ');
+    if(role!==${JSON.stringify(a.expected_role.toLowerCase())}||
+       name!==${JSON.stringify(a.expected_name)}||text!==${JSON.stringify(a.expected_text)})
+      throw new Error('confirmation text or role/name mismatch');` : ''}
     e.scrollIntoView({block:'center',inline:'center',behavior:'instant'});
     const r=e.getBoundingClientRect(),x=r.left+r.width/2,y=r.top+r.height/2;
     const hit=document.elementFromPoint(x,y);
@@ -228,6 +239,81 @@ async function click(a) {
   await call('Input.dispatchMouseEvent',{type:'mouseMoved',...point});
   await call('Input.dispatchMouseEvent',{type:'mousePressed',...point,button:'left',clickCount:1});
   await call('Input.dispatchMouseEvent',{type:'mouseReleased',...point,button:'left',clickCount:1});
+}
+const hoverStyleSignature=`e=>{const s=getComputedStyle(e);return JSON.stringify([
+  s.backgroundColor,s.backgroundImage,s.color,s.borderTopColor,s.borderRightColor,
+  s.borderBottomColor,s.borderLeftColor,s.boxShadow,s.outlineColor,s.outlineStyle,
+  s.filter,s.opacity,s.transform
+]);}`;
+async function hoverClick(a,timeoutMs){
+  const away=await evaluate(elementExpression(a,`
+    if(e.disabled||e.getAttribute('aria-disabled')==='true'||e.closest('[inert]'))
+      throw new Error('element disabled');
+    e.scrollIntoView({block:'center',inline:'center',behavior:'instant'});
+    const r=e.getBoundingClientRect(),style=getComputedStyle(e);
+    if(!r.width||!r.height||style.display==='none'||style.visibility==='hidden')
+      throw new Error('element is not visible');
+    if(r.width<8||r.height<8)throw new Error('element too small for off-center hover');
+    const x=r.left+r.width*0.25,y=r.top+r.height*0.5;
+    if(x<0||x>=innerWidth||y<0||y>=innerHeight)
+      throw new Error('off-center hover point is outside the viewport');
+    const candidates=[{x:r.left-1,y},{x:r.right+1,y},{x,y:r.top-1},{x,y:r.bottom+1}];
+    const point=candidates.find(p=>p.x>=0&&p.x<innerWidth&&p.y>=0&&p.y<innerHeight&&
+      !(p.x>=r.left&&p.x<r.right&&p.y>=r.top&&p.y<r.bottom));
+    if(!point)throw new Error('cannot establish a non-hover baseline');
+    return point;`));
+  const deadline=Date.now()+timeoutMs;
+  await call('Input.dispatchMouseEvent',{type:'mouseMoved',...away});
+  let previousSignature,stableSamples=0,baseline;
+  while(Date.now()<=deadline){
+    const state=await evaluate(elementExpression(a,`
+      const style=getComputedStyle(e),r=e.getBoundingClientRect();
+      if(!e.isConnected||!r.width||!r.height||style.display==='none'||style.visibility==='hidden')
+        return {visible:false};
+      return {visible:true,hovering:e.matches(':hover'),signature:(${hoverStyleSignature})(e)};`));
+    if(!state.visible)throw new Error('element became unavailable before hover');
+    if(!state.hovering&&state.signature===previousSignature)stableSamples++;
+    else stableSamples=0;
+    if(stableSamples>=1){baseline=state.signature;break;}
+    previousSignature=state.signature;
+    await new Promise(resolve=>setTimeout(resolve,16));
+  }
+  if(baseline===undefined)throw new Error('could not establish a stable non-hover state');
+  const point=await evaluate(elementExpression(a,`
+    const r=e.getBoundingClientRect(),style=getComputedStyle(e);
+    if(e.disabled||e.getAttribute('aria-disabled')==='true'||e.closest('[inert]'))
+      throw new Error('element disabled');
+    if(!r.width||!r.height||style.display==='none'||style.visibility==='hidden')
+      throw new Error('element is not visible');
+    const x=r.left+r.width*0.25,y=r.top+r.height*0.5,hit=document.elementFromPoint(x,y);
+    if(x<0||x>=innerWidth||y<0||y>=innerHeight||!hit||!(e===hit||e.contains(hit)))
+      throw new Error('element covered; observe again');
+    if(e.matches(':hover'))throw new Error('could not establish a non-hover baseline');
+    return {x,y,signature:(${hoverStyleSignature})(e)};`));
+  baseline=point.signature;
+  await call('Input.dispatchMouseEvent',{type:'mouseMoved',x:point.x,y:point.y});
+  let detected=false;
+  while(Date.now()<=deadline){
+    const state=await evaluate(elementExpression(a,`
+      const r=e.getBoundingClientRect(),hit=document.elementFromPoint(${point.x},${point.y});
+      if(!e.isConnected||!r.width||!r.height||!hit||!(e===hit||e.contains(hit)))
+        return {valid:false};
+      return {valid:true,hovering:e.matches(':hover'),signature:(${hoverStyleSignature})(e)};`));
+    if(!state.valid)throw new Error('element moved or became covered during hover');
+    if(state.hovering&&state.signature!==baseline){detected=true;break;}
+    await new Promise(resolve=>setTimeout(resolve,16));
+  }
+  if(!detected)throw new Error('hover state did not visibly change; click refused');
+  await new Promise(resolve=>setTimeout(resolve,16));
+  const confirmed=await evaluate(elementExpression(a,`
+    const r=e.getBoundingClientRect(),hit=document.elementFromPoint(${point.x},${point.y});
+    return Boolean(e.isConnected&&e.matches(':hover')&&
+      ${point.x}>=r.left&&${point.x}<r.right&&${point.y}>=r.top&&${point.y}<r.bottom&&
+      hit&&(e===hit||e.contains(hit))&&(${hoverStyleSignature})(e)!==${JSON.stringify(baseline)});`));
+  if(!confirmed)throw new Error('hover state changed before click; click refused');
+  const clickPoint={x:point.x,y:point.y};
+  await call('Input.dispatchMouseEvent',{type:'mousePressed',...clickPoint,button:'left',clickCount:1});
+  await call('Input.dispatchMouseEvent',{type:'mouseReleased',...clickPoint,button:'left',clickCount:1});
 }
 async function key(keys) {
   const mods={alt:1,ctrl:2,meta:4,super:4,shift:8};let modifiers=0;const regular=[];
@@ -273,11 +359,17 @@ async function assertAction(a) {
     const finite=v=>typeof v==='number'&&Number.isFinite(v);
     for(const a of request.actions){
       if(!a||typeof a!=='object'||Array.isArray(a))throw new Error('each action must be an object');
-      if(!['click','fill','set_value','key','scroll','wait','assert'].includes(a.type))throw new Error('unsupported action');
-      if(['click','fill','set_value','assert'].includes(a.type)){
+      if(!['click','confirm_click','hover_click','fill','set_value','key','scroll','wait','assert'].includes(a.type))throw new Error('unsupported action');
+      if(['click','confirm_click','hover_click','fill','set_value','assert'].includes(a.type)){
         if(('ref' in a)===('selector' in a))throw new Error('exactly one ref or selector required');
         for(const k of ['ref','selector'])if(k in a&&(typeof a[k]!=='string'||!a[k].trim()))throw new Error(k+' must be a non-empty string');
       }
+      if(a.type==='confirm_click')for(const [field,limit] of [['expected_role',64],['expected_name',120],['expected_text',256]])
+        if(typeof a[field]!=='string'||!a[field].trim()||a[field].length>limit)
+          throw new Error('confirm_click requires expected_role, expected_name and expected_text');
+      if(a.type==='hover_click'&&'hover_timeout_ms'in a&&
+         (!finite(a.hover_timeout_ms)||a.hover_timeout_ms<0||a.hover_timeout_ms>2000))
+        throw new Error('hover_timeout_ms must be 0..2000');
       if(a.type==='fill'||a.type==='set_value')
         if(typeof a.text!=='string'||a.text.length>10000)throw new Error('text must be string <=10000 chars');
       if(a.type==='key'){
@@ -304,7 +396,8 @@ async function assertAction(a) {
         if(connection.error)throw connection.error;
         // Protect key/scroll operations as well as ref-based operations after navigation.
         await evaluate(`(()=>{const s=globalThis.__agentCu;if(!s||s.id!==${JSON.stringify(request.snapshot)}||s.url!==location.href||Date.now()-s.created>90000)throw new Error('stale snapshot');})()`);
-        if(a.type==='click')await click(a);
+        if(a.type==='click'||a.type==='confirm_click')await click(a);
+        else if(a.type==='hover_click')await hoverClick(a,a.hover_timeout_ms??800);
         else if(a.type==='set_value'){
           const text=JSON.stringify(a.text),locator=JSON.stringify({ref:a.ref,selector:a.selector});
           const source=`(()=>{let attempted=false;try{

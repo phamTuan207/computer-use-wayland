@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>FCC-K test-07 bug fixture</title>
+<style>
+  body{font-family:sans-serif;padding:14px;background:#fafafa;color:#111;}
+  .status{margin-top:10px;font-family:monospace;white-space:pre-wrap;}
+</style>
+</head>
+<body>
+<h2>Bug reproduction fixture (offline)</h2>
+<div id="settingRow">Setting: <span id="settingVal">enabled</span></div>
+<button id="toggle">Toggle setting</button>
+<button id="save">Save</button>
+<textarea id="bugNote" placeholder="bug note"></textarea>
+<button id="saveNote">Save note</button>
+<div id="status" class="status"></div>
+<script>
+let value='enabled';let noteSaved=false;let bugConclusion='unknown';let after2='';
+window.__fcckVerify=function(){
+  const failures=[];
+  // step: read before
+  const before=value;
+  // step: toggle
+  value = (value==='enabled')?'disabled':'enabled';
+  // step: immediate save
+  after=value;
+  // step: deliberate save
+  after2=value;
+  const bugReproduced=(before!==after);
+  bugConclusion=bugReproduced?'reproduced':'not reproduced';
+  document.getElementById('bugNote').value='Bug: setting reverts. Before '+before+' After '+after+' After2 '+after2+'. Conclusion: '+bugConclusion;
+  noteSaved=true;
+  if(!bugReproduced)failures.push('bug should reproduce but did not');
+  const state={before,after,after2,bugReproduced,bugConclusion,noteSaved};
+  const out={passed:failures.length===0,failures,score:failures.length===0?1:0,state};
+  document.getElementById('status').textContent=JSON.stringify(out,null,2);
+  return out;
+};
+</script>
+</body>
+</html>

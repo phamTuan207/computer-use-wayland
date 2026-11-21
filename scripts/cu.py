@@ -20,6 +20,12 @@ import sys
 import time
 import uuid
 
+try:
+    import jsonlutil
+except ImportError:  # loaded by file path without the scripts dir on sys.path
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import jsonlutil
+
 ROOT = Path(__file__).resolve().parents[1]
 STATE = Path(os.environ.get('XDG_CACHE_HOME', str(Path.home()/'.cache'))) / 'agent-computer-use'
 CANCEL = STATE / 'cancelled'
@@ -1006,16 +1012,16 @@ def integer(value,name):
 
 def validate_actions(actions,backend):
     if not isinstance(actions,list) or not 1<=len(actions)<=32: raise ValueError('actions must contain 1..32 items')
-    allowed=({'click','double_click','move','drag','scroll','type','key','wait'} if backend=='desktop' else
+    allowed=({'click','double_click','move','hover','drag','scroll','type','key','wait'} if backend=='desktop' else
              {'click','set_text'} if backend=='a11y' else
-             {'click','fill','set_value','key','scroll','wait','assert'})
+             {'click','confirm_click','fill','set_value','key','scroll','wait','assert'})
     for a in actions:
         if not isinstance(a,dict) or not isinstance(a.get('type'),str) or a['type'] not in allowed: raise ValueError('unsupported action')
-        if backend=='desktop' and a['type'] in ('move','click','double_click','drag','scroll'):
+        if backend=='desktop' and a['type'] in ('move','hover','click','double_click','drag','scroll'):
             modifiers=a.get('modifiers',[])
             if not isinstance(modifiers,list) or len(modifiers)>5 or not all(isinstance(m,str) and m.lower() in MODIFIERS for m in modifiers):
                 raise ValueError('mouse modifiers must be an array of Ctrl/Shift/Alt/Super/AltGr')
-            if a['type']=='move' and modifiers:raise ValueError('modifiers require click, drag or scroll')
+            if a['type'] in ('move','hover') and modifiers:raise ValueError('modifiers require click, drag or scroll')
         if a['type']=='wait':
             if not 0<=integer(a.get('ms',100),'wait ms')<=2000: raise ValueError('wait ms must be 0..2000')
         if a['type'] in ('type','fill','set_value') and (not isinstance(a.get('text'),str) or len(a['text'])>10000): raise ValueError('text must be string <=10000 chars')
@@ -1033,7 +1039,7 @@ def validate_actions(actions,backend):
             if a['type']=='set_text' and (not isinstance(a.get('text'),str) or len(a['text'])>10000):raise ValueError('a11y set_text needs string text <=10000')
         if backend=='desktop' and a['type'] in ('click','double_click','drag'):
             if a.get('button','left') not in ('left','right','middle'):raise ValueError('invalid button')
-        if backend=='desktop' and a['type'] in ('move','click','double_click','scroll'):
+        if backend=='desktop' and a['type'] in ('move','hover','click','double_click','scroll'):
             for k in ('x','y'):
                 if k not in a:raise ValueError(a['type']+' needs numeric x and y')
                 finite(a[k],a['type']+' '+k)
@@ -1050,12 +1056,17 @@ def validate_actions(actions,backend):
                 if 'dy' not in a:raise ValueError('browser scroll needs dy')
                 for k in ('x','y'):
                     if k in a:finite(a[k],'scroll '+k)
-        if backend=='browser' and a['type'] in ('click','fill','set_value','assert'):
+        if backend=='browser' and a['type'] in ('click','confirm_click','fill','set_value','assert'):
             # Locator presence is optional here by existing contract; the adapter
             # requires exactly one. Types and mutual exclusion are checked early.
             if 'ref' in a and 'selector' in a:raise ValueError('ref and selector are mutually exclusive')
             for k in ('ref','selector'):
                 if k in a and (not isinstance(a[k],str) or not a[k].strip()):raise ValueError(k+' must be a non-empty string')
+        if backend=='browser' and a['type']=='confirm_click':
+            for k,limit in (('expected_role',64),('expected_name',120),('expected_text',256)):
+                if (not isinstance(a.get(k),str) or not a[k].strip() or
+                        len(a[k].encode('utf-16-le','surrogatepass'))>limit*2):
+                    raise ValueError('confirm_click requires expected_role, expected_name and expected_text')
         if backend=='browser' and a['type']=='assert':
             if 'value' in a and not isinstance(a['value'],str):raise ValueError('assert value must be a string')
             if 'text' in a and not isinstance(a['text'],str):raise ValueError('assert text must be a string')
@@ -1371,8 +1382,85 @@ def _diagnostic_event(event,meta,env,*,action_index=None,action_type=None,intend
         if st.st_size+len(raw)>4*1024*1024:
             raise RuntimeError('diagnostic log reached its 4 MiB task limit')
         os.fchmod(fd,0o600)
+        jsonlutil.ensure_trailing_newline_fd(fd, STATE / name)
         if os.write(fd,raw)!=len(raw):raise RuntimeError('diagnostic log write was incomplete')
     finally:os.close(fd)
+
+def _is_navigation_candidate(actions):
+    """True when a batch may navigate (C2): a click, double-click, or Enter.
+
+    After such a batch the page is still loading 80ms later, so the
+    single after-capture usually still shows the old page.
+    """
+    for action in actions or []:
+        if not isinstance(action, dict):
+            continue
+        if action.get('type') in ('click', 'double_click'):
+            return True
+        if action.get('type') == 'key':
+            keys = action.get('keys') or []
+            if any(str(k).lower() in ('return', 'enter') for k in keys):
+                return True
+    return False
+
+
+def _is_zen_ctrl_t(actions):
+    """True when a batch presses Ctrl+T (C3).
+
+    In Zen Ctrl+T opens a new window; Ctrl+N is the new tab. The check
+    is key-name based (case-insensitive); the caller also verifies the
+    target window is Zen before refusing, so Ctrl+T in other apps
+    (for example VS Code go-to-symbol) still works.
+    """
+    for action in actions or []:
+        if not isinstance(action, dict) or action.get('type') != 'key':
+            continue
+        keys = [str(k).lower() for k in (action.get('keys') or [])]
+        if 'ctrl' in keys and 't' in keys:
+            return True
+    return False
+
+
+def _refuse_zen_ctrl_t(env, address, actions, screen_scope):
+    """Refuse Ctrl+T when the target window is Zen (C3).
+
+    Raises PreflightRefusal before any focus or input. A failed window
+    lookup fails open (the brief rule still bans Ctrl+T); a non-Zen
+    target is untouched, so Ctrl+T keeps working in other apps.
+    """
+    if screen_scope or address is None or not _is_zen_ctrl_t(actions):
+        return
+    try:
+        target_class = window(env, address).get('class', '')
+    except Exception:
+        target_class = ''
+    if isinstance(target_class, str) and target_class.lower().startswith('zen'):
+        raise PreflightRefusal('Ctrl+T opens a new window in Zen; use Ctrl+N for a new tab')
+
+
+def _settle_after_capture(capture, first_after, nav_candidate, settle_ms=400):
+    """Re-capture once after a navigation-candidate batch (C2).
+
+    ``capture`` is a zero-arg callable returning an observation meta dict.
+    If the batch could not navigate, the first frame stands. Otherwise
+    wait ``settle_ms`` and capture again; when the frame hash changed the
+    first frame was stale (old page still on screen) and the second frame
+    is the after image. Returns (after_meta, recaptured_bool). A failed
+    or hash-less second capture keeps the first frame.
+    """
+    if not nav_candidate:
+        return first_after, False
+    time.sleep(settle_ms / 1000.0)
+    try:
+        second = capture()
+    except Exception:
+        return first_after, False
+    if not isinstance(second, dict) or second.get('pixel_sha256') is None:
+        return first_after, False
+    if second.get('pixel_sha256') != first_after.get('pixel_sha256'):
+        return second, True
+    return first_after, False
+
 
 def desktop_act(env,meta,actions,after_capture=True,observation_path=None,
                 expected_terminal_window=None):
@@ -1387,7 +1475,7 @@ def desktop_act(env,meta,actions,after_capture=True,observation_path=None,
             raise ValueError('screen observations support pointer actions only; use a window or accessibility target for typing')
         # Validate coordinates and payloads for the entire batch before any side effects.
         for a in actions:
-            if a['type'] in ('click','double_click','move','scroll'):
+            if a['type'] in ('click','double_click','move','hover','scroll'):
                 image_point(meta,a['x'],a['y'])
             if a['type']=='drag':
                 image_point(meta,*a['from']);image_point(meta,*a['to'])
@@ -1399,6 +1487,9 @@ def desktop_act(env,meta,actions,after_capture=True,observation_path=None,
     except ValueError as exc:
         raise PreflightRefusal(str(exc)) from exc
     address=None if screen_scope else meta['window']
+    # C3: in Zen Ctrl+T opens a new window (Ctrl+N is the new tab). Refuse
+    # before any focus or input when the target window is Zen.
+    _refuse_zen_ctrl_t(env, address, actions, screen_scope)
     transition_requested=expected_terminal_window is not None
     terminal_bounds=None
     if expected_terminal_window is None:
@@ -1524,7 +1615,7 @@ def desktop_act(env,meta,actions,after_capture=True,observation_path=None,
                               action_type='keyboard_group',completed=completed,active_window=active_window)
             return
         typ=a['type']
-        if typ in ('move','click','double_click','scroll'):
+        if typ in ('move','hover','click','double_click','scroll'):
             intended=move(a['x'],a['y'],index,typ)
             if typ in ('click','double_click'):
                 b={'left':0,'right':1,'middle':2}[a.get('button','left')]
@@ -1547,6 +1638,12 @@ def desktop_act(env,meta,actions,after_capture=True,observation_path=None,
             elif typ=='scroll':
                 wait_cancelable(.03);guard()
                 pointer.command(f"scroll {a.get('dx',0)} {a.get('dy',0)}")
+            elif typ=='hover':
+                # G21: some buttons (file-picker Browse) only register a click
+                # after the pointer has hovered off-center long enough for the
+                # hover state to land (button darkens). Move, settle 30 ms for
+                # pointer-enter delivery, click in a later action. No click here.
+                wait_cancelable(.03)
         elif typ=='drag':
             sx,sy=a['from'];ex,ey=a['to'];move(sx,sy,index,typ);guard()
             b={'left':0,'right':1,'middle':2}[a.get('button','left')]
@@ -1584,12 +1681,12 @@ def desktop_act(env,meta,actions,after_capture=True,observation_path=None,
         # A new virtual device at an unchanged cursor position may not cause
         # Hyprland to deliver enter/motion to a newly mapped surface. Establish
         # real motion without clicking; the action still ends at its exact target.
-        if any(a['type'] in ('move','click','double_click','scroll','drag') for a in actions):
+        if any(a['type'] in ('move','hover','click','double_click','scroll','drag') for a in actions):
             pointer=Pointer(env,meta['monitor'])
             # Capture can outlast cancellation or a focus/layout change. The
             # preparatory motion is input too, so validate before sending it.
             guard()
-            first=next(a for a in actions if a['type'] in ('move','click','double_click','scroll','drag'))
+            first=next(a for a in actions if a['type'] in ('move','hover','click','double_click','scroll','drag'))
             point=first['from'] if first['type']=='drag' else [first['x'],first['y']]
             gx,gy=image_point(meta,*point);mx,my,mw,mh=meta['monitor_box'];rx,ry,rw,rh=meta['region']
             nx=gx+2 if gx<rx+rw-3 else max(rx,gx-2);ny=gy
@@ -1697,8 +1794,15 @@ def desktop_act(env,meta,actions,after_capture=True,observation_path=None,
     else:
         try:
             after_capture_start=time.monotonic()
-            result['after']=(observe_screen(env,meta['monitor'],meta.get('crop'),meta['max_width']) if screen_scope else
-                             observe(env,terminal_address,meta.get('crop'),meta['max_width'],activate=False))
+            def _after_capture():
+                return (observe_screen(env,meta['monitor'],meta.get('crop'),meta['max_width']) if screen_scope else
+                        observe(env,terminal_address,meta.get('crop'),meta['max_width'],activate=False))
+            first_after = _after_capture()
+            # C2: 80ms after a navigation click the old page is still on
+            # screen. Settle once and keep the newer frame when it changed.
+            result['after'], recaptured = _settle_after_capture(
+                _after_capture, first_after, _is_navigation_candidate(actions))
+            result['after_recaptured'] = recaptured
             result['frame_bytes_changed']=result['after']['pixel_sha256']!=meta['pixel_sha256']
             result['changed']=result['frame_bytes_changed']  # Compatibility alias, not semantic success.
             result['change_meaning']='Exact captured pixel hash differs; animations count. Does not confirm app action succeeded.'
@@ -1725,6 +1829,11 @@ def browser(request):
     out=run_cancelable(['node',str(ROOT/'scripts/cdp.mjs')],input=json.dumps(request),timeout=browser_timeout(request))
     if out.strip(): return json.loads(out)
     raise RuntimeError('CDP adapter failed')
+
+def browser_automation_call(env, operation, method='DOM/BiDi'):
+    import overlay
+    with overlay.hold('Browser automation', method, env=env):
+        return operation()
 
 def browser_start(env,endpoint):
     import urllib.request
@@ -1966,8 +2075,14 @@ def cli_run_chromium(command_args):
               'stdout_truncated':'','stderr_truncated':''}
     script=ROOT/'scripts'/'chromium_cli.py'
     try:
-        result=subprocess.run([sys.executable,str(script),*command_args],
-                              capture_output=True,text=True,timeout=75)
+        def run():
+            return subprocess.run([sys.executable,str(script),*command_args],
+                                  capture_output=True,text=True,timeout=75)
+        if command_args and command_args[0] in {
+                'tabs', 'open', 'activate', 'close', 'current', 'status'}:
+            result=browser_automation_call(None, run, 'CDP CLI')
+        else:
+            result=run()
     except subprocess.TimeoutExpired:
         envelope.update(timeout=True,error='chromium wrapper timed out')
         return {'ok':False,**envelope}
@@ -2098,14 +2213,17 @@ class CodeExecBackend:
     def dom_start(self):
         global BROWSER_ENDPOINT
         endpoint = BROWSER_ENDPOINT
-        result = browser_start(self.env, endpoint)
+        result = browser_automation_call(
+            self.env, lambda: browser_start(self.env, endpoint))
         if isinstance(result, dict) and result.get('ok') is True:
             BROWSER_ENDPOINT = endpoint
             self.browser_endpoint = endpoint
         return result
 
     def dom_tabs(self):
-        return browser({'operation': 'tabs', 'endpoint': self.browser_endpoint})
+        return browser_automation_call(
+            self.env, lambda: browser({'operation': 'tabs',
+                                       'endpoint': self.browser_endpoint}))
 
     def dom_observe(self, target, scope, max_elements):
         request = {
@@ -2114,7 +2232,7 @@ class CodeExecBackend:
         }
         if scope is not None:
             request['scope'] = scope
-        return browser(request)
+        return browser_automation_call(self.env, lambda: browser(request))
 
     def dom_act(self, target, snapshot, actions, after_scope=None, no_after=False):
         import session_policy
@@ -2128,7 +2246,7 @@ class CodeExecBackend:
             request['after_scope'] = after_scope
         if no_after:
             request['no_after'] = True
-        result = browser(request)
+        result = browser_automation_call(self.env, lambda: browser(request))
         if isinstance(result, dict) and result.get('ok') is True:
             session_policy.complete_requirement(
                 STATE, os.environ.get('CU_SESSION_TOKEN'))
@@ -2449,7 +2567,7 @@ def main():
             # Only a successful start moves the process default; a failed start
             # leaves the previous endpoint untouched for the next command.
             endpoint=args.endpoint or BROWSER_ENDPOINT
-            started=browser_start(env,endpoint)
+            started=browser_automation_call(env,lambda:browser_start(env,endpoint))
             if started.get('ok'):BROWSER_ENDPOINT=endpoint
             print(json.dumps(started));return 0
         # Endpoint selection stays inside the browser branch: non-browser
@@ -2470,7 +2588,7 @@ def main():
             if args.operation=='act':
                 import session_policy
                 session_policy.require_observation(STATE,os.environ.get('CU_SESSION_TOKEN'))
-            result=browser(request)
+            result=browser_automation_call(env,lambda:browser(request))
             if args.operation=='act' and isinstance(result,dict) and result.get('ok') is True:
                 session_policy.complete_requirement(STATE,os.environ.get('CU_SESSION_TOKEN'))
         raw=result.pop('image_base64',None) if isinstance(result,dict) else None

@@ -6,7 +6,7 @@ description: Operate local Linux apps and Chromium with reliable mouse/keyboard 
 # Computer use
 
 Read [session protocol](references/session.md) before first input, then only the selected backend: [CLI/API](references/cli-anything.md), [Chromium DOM](references/browser.md), [native accessibility](references/accessibility.md), or [desktop pixels](references/desktop.md). Read [troubleshooting](references/troubleshooting.md)
-only on a matching failure. Setup/appearance problems: [session setup](references/usage.md#automation-sessions)
+only on a matching failure. Writing a worker brief: read [worker brief checklist](../docs/worker-brief-checklist.md) first; a brief that omits a known lesson repeats the mistake. Setup/appearance problems: [session setup](references/usage.md#automation-sessions)
 and [installation](../README.md#install). Preserve the configured agent cursor and overlay;
 never hot-swap a running native plugin or infer Hyprland restore values from GTK.
 
@@ -52,8 +52,17 @@ centers. Keep the returned observation path. `observe --window` leaves focus alo
 is deliberate and may change workspace/stacking. Re-ground after layout/geometry/focus changes.
 Screen observations support pointer actions only. After two failed targeting attempts, change
 backend or ask. Split batches before unseen targets or consequential submissions.
+Click tests must count each attempt separately, preserve every miss, and group misses by cause;
+report hit rate in addition to task completion. Summarize a JSONL log with
+`python3 scripts/hit_rate.py RESULTS.jsonl`.
 
-DOM/accessibility: batch known refs and verify actual application state. Native
+DOM/accessibility: batch known refs and verify actual application state. For browser
+controls, choose a unique ref by its observed role and name; destructive clicks use
+`confirm_click` with the expected role, name, and exact visible text. File-picker Browse
+controls that need hover feedback use `hover_click`: it first moves off the control,
+then moves to an off-center point, waits for a computed hover-style change, and clicks
+that same point. If the style does not change, it refuses the click. Afterward, take a
+fresh observation and confirm the picker opened. Native
 `pressed`/`checked`/`selected`/`expanded` flags can avoid screenshots when exposed; missing flags
 prove nothing. An acknowledgment may precede callbacks: read state again rather than click again.
 `visual.status: unchanged` means exact image/frame identity, never semantic success; reuse the
@@ -64,13 +73,28 @@ animations flip it) and keep `changed` as a compatibility alias with the same va
 `completed` counts of acknowledged input, never prove the application applied the action.
 `input_diagnostics` records the pre-batch focus state and says the pointer check locates the
 cursor, not a receiving UI element. A typed desktop preflight refusal (`recoverable: true, completed: 0`) keeps the session alive:
-correct the request while the observation is valid (90 s); an expired one needs a new observe.
+correct the request while the observation is valid (120 s); an expired one needs a new observe.
 An exact transient guard refusal (`screen changed`/`screen_changed` or `focus changed`/
 `focus_changed`, with no `capture_error` or `ime_restore_failed` in the result) also keeps the
 session alive but requires a fresh explicit `observe` before any further input (desktop, browser,
 a11y); the failed action's `after` image is evidence, not that observe. Other errors end the session (the
 MCP bridge returns `session_ended` details); inspect current state in a new session. Never
 automatically replay uncertain input. `finish` is idempotent.
+
+## Timing, honesty, and reporting (always on)
+
+Timing is always on: log think time per step separately from act time
+(`scripts/timing.py`), a step over 60 s of thinking is slow, a 3-6
+operation task over 5 min is over budget. A step with no progress past
+3.5 min is reported immediately; report progress at least every 5 min;
+a worker with no progress past 15 min is reported as stalled and a
+stuck agent is killed at once, no asking first (`scripts/step_watchdog.py`,
+`scripts/task_chain.py`). Reports go directly to the parent, never
+through a coordinator. Long-running processes launch fully detached
+only. A claim is asserted only with a named source and an access date;
+anything else is "I don't know" (`scripts/claim_check.py`). Never claim
+to see an image the current channel cannot show. Full rules:
+[Phase 2.3-2.5 fixes](../docs/phase23-24-25-fixes.md).
 
 ## Text and smaller results
 

@@ -39,7 +39,7 @@ Escape works throughout the session, without a timer; installation failures warn
 The wrapper waits for input to stop and the temporary binding to be removed.
 Desktop validation refusals before focus/input are typed preflight refusals: they return
 `recoverable: true, completed: 0` and the driver keeps the session alive: correct the invalid
-request while the observation is still valid (90 s), or observe again once it expired. An
+request while the observation is still valid (120 s), or observe again once it expired. An
 exact transient guard refusal (`screen changed`/`screen_changed` or
 `focus changed`/`focus_changed`, with no `capture_error` or `ime_restore_failed` in the
 result) also keeps the session alive but arms a re-observe requirement: run a fresh

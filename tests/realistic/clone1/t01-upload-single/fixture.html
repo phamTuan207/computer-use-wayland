@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Upload statement file</title>
+<style>
+body { font-family: sans-serif; max-width: 640px; margin: 2em auto; }
+label { display: block; margin: 0.6em 0 0.2em; }
+#progress { width: 100%; height: 18px; border: 1px solid #888; margin-top: 1em; }
+#bar { height: 100%; width: 0%; background: #2a7; }
+#error { color: #b00; margin-top: 1em; }
+#result { color: #070; margin-top: 1em; }
+</style>
+</head>
+<body>
+<h1>Upload statement file</h1>
+<form id="form">
+  <label for="title">Problem title</label>
+  <input id="title" name="title" type="text">
+  <label for="file">Statement file (.txt, .pdf, .md)</label>
+  <input id="file" name="file" type="file" accept=".txt,.pdf,.md">
+  <div><button id="upload" type="submit">Upload</button></div>
+</form>
+<div id="progress"><div id="bar"></div></div>
+<div id="error" role="alert"></div>
+<div id="result" role="status"></div>
+<script>
+function checksum(bytes) {
+  let h = 0;
+  for (const b of bytes) {
+    h = ((h * 31) + b) >>> 0;
+  }
+  return h.toString(16).padStart(8, '0');
+}
+document.getElementById('form').addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const title = document.getElementById('title').value.trim();
+  const file = document.getElementById('file').files[0];
+  const errorEl = document.getElementById('error');
+  const resultEl = document.getElementById('result');
+  const bar = document.getElementById('bar');
+  errorEl.textContent = '';
+  resultEl.textContent = '';
+  bar.style.width = '0%';
+  if (!title) {
+    errorEl.textContent = 'Title is required.';
+    return;
+  }
+  if (!file) {
+    errorEl.textContent = 'Choose a statement file first.';
+    return;
+  }
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const sum = checksum(bytes);
+  for (let p = 20; p <= 100; p += 20) {
+    bar.style.width = p + '%';
+    await new Promise((r) => setTimeout(r, 60));
+  }
+  resultEl.textContent = 'Uploaded ' + file.name + ' (' + file.size +
+    ' bytes, checksum ' + sum + ') for problem "' + title + '".';
+});
+</script>
+</body>
+</html>

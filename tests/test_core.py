@@ -236,11 +236,31 @@ class Coordinates(IsolatedCuState):
     def test_validate_bad_batches(self):
         for a in ([],[{'type':'shell'}],[{'type':'wait','ms':-1}],[{'type':'type','text':10}],[{'type':'key','keys':'Ctrl+A'}],[{'type':'wait'}]*33):
             with self.subTest(a=a),self.assertRaises(ValueError):cu.validate_actions(a,'desktop')
+    def test_hover_action_validation(self):
+        # G21: hover moves the pointer and settles without clicking, so a
+        # button that needs a hover state (file-picker Browse) can darken
+        # before the click lands. Same x/y rules as move; no modifiers.
+        cu.validate_actions([{'type':'hover','x':100,'y':200}],'desktop')
+        for a in ([{'type':'hover'}],[{'type':'hover','x':100}],
+                  [{'type':'hover','x':100,'y':200,'modifiers':['Ctrl']}]):
+            with self.subTest(a=a),self.assertRaises(ValueError):cu.validate_actions(a,'desktop')
     def test_browser_set_value_payload_validation(self):
         cu.validate_actions([{'type':'set_value','text':'Tạo 🐱'}],'browser')
         for text in (None,'x'*10001):
             with self.subTest(length=len(text) if isinstance(text,str) else None),self.assertRaises(ValueError):
                 cu.validate_actions([{'type':'set_value','text':text}],'browser')
+
+    def test_browser_confirm_click_requires_role_name_and_exact_text(self):
+        action={'type':'confirm_click','ref':'e1','expected_role':'button',
+                'expected_name':'Discard','expected_text':'Discard'}
+        cu.validate_actions([action],'browser')
+        for field in ('expected_role','expected_name','expected_text'):
+            invalid=dict(action)
+            invalid.pop(field)
+            with self.subTest(field=field),self.assertRaisesRegex(ValueError,'requires expected_role'):
+                cu.validate_actions([invalid],'browser')
+        with self.assertRaisesRegex(ValueError,'requires expected_role'):
+            cu.validate_actions([dict(action,expected_text='x'*257)],'browser')
     def test_key_aliases(self):
         self.assertEqual(cu.key_names(['CTRL','Enter']),(['ctrl'],['Return']))
         self.assertEqual(cu.key_names(['Shift','ArrowLeft','PageUp','f12']),(['shift'],['Left','Prior','F12']))

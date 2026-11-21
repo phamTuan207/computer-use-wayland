@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Popup form</title>
+<style>
+body { font-family: sans-serif; max-width: 360px; margin: 2em auto; }
+label { display: block; margin: 0.6em 0 0.2em; }
+input { width: 100%; box-sizing: border-box; }
+</style>
+</head>
+<body>
+<h1>Popup form</h1>
+<label for="pname">Your name</label>
+<input id="pname" type="text">
+<div><button id="send">Send to main page</button></div>
+<script>
+document.getElementById('send').addEventListener('click', () => {
+  const name = document.getElementById('pname').value;
+  if (window.opener) {
+    window.opener.postMessage({ popupName: name }, '*');
+  }
+  window.close();
+});
+</script>
+</body>
+</html>

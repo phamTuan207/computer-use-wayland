@@ -14,6 +14,12 @@ import sys
 import tempfile
 import time
 
+try:
+    import jsonlutil
+except ImportError:  # loaded by file path without the scripts dir on sys.path
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import jsonlutil
+
 
 ROOT = Path(__file__).resolve().parents[1]
 try:
@@ -382,6 +388,7 @@ class Tc02Controller:
         self.run_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
         fd = os.open(self.log_path, os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o600)
         try:
+            jsonlutil.ensure_trailing_newline_fd(fd, self.log_path)
             os.write(fd, (json.dumps(row, ensure_ascii=False, separators=(',', ':')) + '\n').encode())
         finally:
             os.close(fd)

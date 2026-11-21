@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Authenticated upload and report</title>
+<style>
+body { font-family: sans-serif; max-width: 640px; margin: 2em auto; }
+label { display: block; margin: 0.6em 0 0.2em; }
+input { width: 100%; box-sizing: border-box; }
+#work { display: none; }
+#error { color: #b00; margin-top: 1em; }
+#verdict { color: #070; margin-top: 1em; }
+button { margin-top: 0.6em; margin-right: 0.5em; }
+</style>
+</head>
+<body>
+<h1>Authenticated upload and report</h1>
+<div id="login">
+  <label for="code">Access code</label>
+  <input id="code" type="text" autocomplete="off">
+  <div><button id="login-btn">Log in</button></div>
+</div>
+<div id="work">
+  <p id="welcome">Welcome, setter.</p>
+  <label for="file">Test data file</label>
+  <input id="file" type="file">
+  <div><button id="judge">Upload and judge</button></div>
+  <div id="verdict" role="status"></div>
+  <div><button id="download" disabled>Download report</button></div>
+</div>
+<div id="error" role="alert"></div>
+<script>
+let lastFile = null;
+let lastCases = 0;
+document.getElementById('login-btn').addEventListener('click', () => {
+  const code = document.getElementById('code').value.trim();
+  const errorEl = document.getElementById('error');
+  errorEl.textContent = '';
+  if (code.length < 6) {
+    errorEl.textContent = 'Access code must be at least 6 characters.';
+    return;
+  }
+  document.getElementById('login').style.display = 'none';
+  document.getElementById('work').style.display = 'block';
+});
+document.getElementById('judge').addEventListener('click', async () => {
+  const file = document.getElementById('file').files[0];
+  const verdictEl = document.getElementById('verdict');
+  const errorEl = document.getElementById('error');
+  verdictEl.textContent = '';
+  errorEl.textContent = '';
+  if (!file) {
+    errorEl.textContent = 'Choose a test data file first.';
+    return;
+  }
+  const text = await file.text();
+  const cases = text.split('\n').filter((l) => l.trim().length > 0).length;
+  lastFile = file.name;
+  lastCases = cases;
+  if (cases < 3) {
+    verdictEl.textContent = 'Judged: ' + cases + ' cases, FAIL, need at least 3 cases.';
+    return;
+  }
+  verdictEl.textContent = 'Judged: ' + cases + ' cases, PASS.';
+  document.getElementById('download').disabled = false;
+});
+document.getElementById('download').addEventListener('click', () => {
+  const report = 'Report for ' + lastFile + '\nCases: ' + lastCases + '\nVerdict: PASS\n';
+  const blob = new Blob([report], { type: 'text/plain' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 't10-report.txt';
+  a.click();
+  URL.revokeObjectURL(a.href);
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Edit problem</title>
+<style>
+body { font-family: sans-serif; max-width: 640px; margin: 2em auto; }
+label { display: block; margin: 0.6em 0 0.2em; }
+input { width: 100%; box-sizing: border-box; }
+#saved { color: #070; margin-top: 1em; }
+</style>
+</head>
+<body>
+<h1>Edit problem</h1>
+<label for="title">Title</label>
+<input id="title" type="text">
+<div><button id="save">Save</button></div>
+<div id="saved" role="status"></div>
+<script>
+const DEFAULTS = {
+  1: 'Problem One',
+  2: 'Problem Two',
+  3: 'Problem Three',
+  4: 'Problem Four',
+  5: 'Problem Five',
+};
+const params = new URLSearchParams(location.search);
+const id = params.get('id') || '1';
+const stored = localStorage.getItem('t05-title-' + id);
+document.getElementById('title').value = stored || DEFAULTS[id] || '';
+document.getElementById('save').addEventListener('click', () => {
+  const title = document.getElementById('title').value;
+  localStorage.setItem('t05-title-' + id, title);
+  document.getElementById('saved').textContent = 'Saved: ' + title;
+});
+</script>
+</body>
+</html>

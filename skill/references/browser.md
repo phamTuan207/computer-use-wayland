@@ -12,6 +12,8 @@ CU=computer-use
 
 `observe` returns up to 80 interactive elements with short names and refs, visible controls first. All form values and editable contents are redacted; checked state remains available. Screenshots and page labels may still contain private data. Use `--max-elements 16` on observe/act when a smaller output is sufficient (range 1..80, default 80); increase it if the target is absent, never guess a ref. Long page contents and base64 screenshots are not printed. Add `--image` when needed; an image file path is returned. DOM operation is top-document only, excludes canvas internals and does not enumerate shadow roots.
 
+Native anchors with `href` are reported with the `link` role; buttons use the `button` role unless the page supplies an explicit role.
+
 Browser actions:
 
 ```json
@@ -22,7 +24,21 @@ Browser actions:
 ]
 ```
 
-`click`, `fill`, `assert`: use a ref or an exact single-match CSS `selector`. `fill` uses trusted input and verifies the resulting value. `assert` accepts `text` (substring), `value` (exact), `checked` (boolean), or defaults to nonzero element width; timeout max 3000 ms. `key`: `keys` array (`Ctrl`, `Alt`, `Shift`, `Meta`, `Enter`, `Tab`, `Escape`, arrows, editing keys, one character). `scroll`: `dy`, optional `dx`,`x`,`y` in viewport CSS pixels. `wait`: `ms` max 2000. Navigation ends the old snapshot; snapshots also expire 90 seconds after capture, and further input is refused until you observe again. Result includes a fresh `after` snapshot.
+`click`, `fill`, `assert`: use a ref or an exact single-match CSS `selector`. `fill` uses trusted input and verifies the resulting value. `assert` accepts `text` (substring), `value` (exact), `checked` (boolean), or defaults to nonzero element width; timeout max 3000 ms. `key`: `keys` array (`Ctrl`, `Alt`, `Shift`, `Meta`, `Enter`, `Tab`, `Escape`, arrows, editing keys, one character). `scroll`: `dy`, optional `dx`,`x`,`y` in viewport CSS pixels. `wait`: `ms` max 2000. Navigation ends the old snapshot; snapshots also expire 120 seconds after capture, and further input is refused until you observe again. Result includes a fresh `after` snapshot.
+
+For destructive controls, use `confirm_click` instead of `click`:
+
+```json
+{"type":"confirm_click","ref":"e4","expected_role":"button",
+ "expected_name":"Discard","expected_text":"Discard"}
+```
+
+The action checks the live DOM element's role, observed name, and exact visible text
+immediately before input. Whitespace in visible text is collapsed before comparison.
+Any mismatch is refused before mouse input. The element must still be in the bound,
+unexpired snapshot; the click then uses its live DOM rectangle and hit test. Choose
+the ref from a fresh observation after checking the role and name. Do not use an
+image-derived coordinate for a destructive control.
 
 `set_value` also takes one `ref` or exact `selector` plus `text`. Prefer it for
 text-like inputs (`text`, `search`, `tel`, `url`, `email`) and textareas: it
@@ -121,6 +137,18 @@ changes after the assert, the previous snapshot is spent: run `observe` again
 before any further input. Split at unknown layout changes and navigation as
 usual. This reduces response size; it is not a claim about billed model tokens.
 
+### Zen rules (the user's browser)
+
+- Always drive Zen, the already-logged-in tab, through the session driver.
+  Never Chromium for a task assigned to Zen, and never a fresh login.
+- Zen swaps the shortcuts: Ctrl+N is a new tab, Ctrl+T is a new window.
+  Never use Ctrl+T.
+- Never Ctrl+L in a file picker (it opens the browser URL bar). Click the
+  picker to focus, then type the path directly.
+- Never type a URL key by key. Use the tab that is already open.
+- File-picker Browse buttons need a hover first: `hover` slightly
+  off-center until the button darkens, then `click`. See desktop.md.
+
 ### Chromium CLI wrapper: tabs, history, bookmarks, downloads
 
 DOM work above is for acting on a page. For browser *state* (which tabs
@@ -163,3 +191,25 @@ Rules that matter:
   an empty list with a note.
 - For DOM work on a tab, take its id from `tabs` and use
   `browser observe/act` as above. The wrapper does not do DOM.
+
+### Overlay ownership during browser automation
+
+`computer-use browser` commands, browser/DOM requests made through a broker,
+and active Chromium control commands through `computer-use cli run chromium`
+acquire an overlay lease while they run. A broker-owned indicator is reused
+and labeled for the browser operation. Read-only profile commands such as
+`history`, `bookmarks`, and `downloads` do not acquire a lease.
+
+An external DOM driver should make the repository's `scripts/` directory
+importable, then keep the shared helper open for the full automation session:
+
+```python
+import overlay
+
+with overlay.hold("Agent", "DOM/BiDi"):
+    drive_browser()
+```
+
+Each helper call has its own lease, so overlapping browser and broker sessions
+keep the indicator visible until all active owners finish. The daemon removes a
+lease if its recorded process exits unexpectedly.
