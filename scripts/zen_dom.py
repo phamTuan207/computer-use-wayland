@@ -218,6 +218,27 @@ def check_viewport_geometry(moz_inner, absolute_origin, window_origin,
     return absolute
 
 
+def assert_window_origin_current(meta):
+    """Re-read Hyprland bounds and reject an observation for a moved window."""
+    if not isinstance(meta, dict) or meta.get('scope') != 'window':
+        return
+    address = meta.get('window')
+    expected = meta.get('window_bounds')
+    if (not isinstance(address, str) or not address or
+            not isinstance(expected, (list, tuple)) or len(expected) != 4):
+        raise ZenDomError('window observation needs an address and bounds')
+    try:
+        import cu
+        live = cu.window(dict(os.environ), address)
+        current = cu.bounds(live)
+    except Exception as exc:
+        raise ZenDomError('could not re-read the observed Hyprland window: '
+                          + str(exc)[:200]) from exc
+    if current != list(expected):
+        raise ZenDomError('Hyprland window bounds changed since observation; '
+                          'observe again before grounding')
+
+
 class ZenSession:
     """One WebDriver session against one Zen, with guaranteed cleanup."""
 
@@ -669,6 +690,7 @@ class ZenSession:
             else None
         origin = self.viewport_origin(window_origin, window_size,
                                       monitor_box)
+        assert_window_origin_current(meta)
         try:
             return dom_rect_to_image_point(
                 meta, rect, origin,

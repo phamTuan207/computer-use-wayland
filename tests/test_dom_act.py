@@ -9,6 +9,7 @@ flow; the DOM calls are cheap JS evals. No ydotool, no live desktop.
 import sys
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'scripts'))
@@ -219,6 +220,18 @@ class GroundInputTests(unittest.TestCase):
         with self.assertRaisesRegex(dom_act.DomActError,
                                     'requires window_bounds'):
             dom_act.ground_input(session, meta, '#msg-input')
+
+    def test_ground_input_refuses_when_live_window_moved(self):
+        session = FakeDomSession({'#msg-input': G30_FIELD})
+        meta = {'scope': 'window', 'window': '0x1',
+                'window_bounds': [100, 200, 901, 1176],
+                'image_size': [901, 1176],
+                'region': [100, 200, 901, 1176]}
+        with patch.object(cu, 'window', return_value={
+                'at': [101, 200], 'size': [901, 1176]}):
+            with self.assertRaisesRegex(dom_act.DomActError,
+                                        'bounds changed since observation'):
+                dom_act.ground_input(session, meta, '#msg-input')
 
     def test_ground_input_returns_rect_center_point(self):
         session = FakeDomSession({'#msg-input': G30_FIELD})

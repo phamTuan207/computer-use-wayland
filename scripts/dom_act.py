@@ -150,6 +150,13 @@ def ground_input(session, meta, selector):
                                          monitor_box)
     except TypeError:
         origin = session.viewport_origin()
+    try:
+        from zen_dom import assert_window_origin_current
+        assert_window_origin_current(meta)
+    except ImportError as exc:
+        raise DomActError('cannot re-read the Hyprland window origin') from exc
+    except Exception as exc:
+        raise DomActError(str(exc)) from exc
     factor = _scale_factor(session)
     try:
         point = fastpath.dom_rect_to_image_point(meta, rect, origin,
@@ -318,9 +325,13 @@ def ground_many_one_shot(session, meta, selectors):
             inner,
             monitor_box,
             scale_factor=factor)
+        from zen_dom import assert_window_origin_current
+        assert_window_origin_current(meta)
     except ImportError:
         absolute = [window_origin[0] + moz_inner[0] * factor,
                     window_origin[1] + moz_inner[1] * factor]
+    except Exception as exc:
+        raise DomActError(str(exc)) from exc
     points = {}
     for selector in selectors:
         item = items.get(selector)
