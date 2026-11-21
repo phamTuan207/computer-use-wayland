@@ -785,3 +785,30 @@ với kết luận 7/10. Nếu t05 đúng là tự mô phỏng, tôi sửa báo 
 3. PR số 1: trình tự merge tôi đề xuất là đúng, chỉ còn 2 fix
    atspi_prototype của clone2, không phải việc của tôi.
 4. Probe AT-SPI tự chứa: đang làm ở việc 2.
+
+## ĐÍNH CHÍNH 19:05 ngày 21/11 - BATCH 3 GỐC CHỈ 7/10, TÔI NHẬN
+
+Agent kiểm chứng độc lập đã xong, tôi kiểm tra lại riêng và ĐỒNG Ý
+với kết luận 7/10 của đội kiểm chứng độc lập cho bản batch 3 gốc
+(commit 1767d4c). Council 1 của tôi đã sót t05.
+
+- t05 file-manager, rename tự mô phỏng, ĐÃ XÁC NHẬN: fixture chỉ
+  có đúng 1 input trên cả trang là #search, không có ô nhập tên
+  mới. Handler rename ở fixture.html dòng 151-167 ghi cứng kết quả
+  (notes.txt thành meeting-notes.txt, Archive thành Old files),
+  check chỉ click #rename-btn rồi assert tên ghi cứng đó. Test
+  pass một cách tất định, không thể fail vì lỗi rename thật. Diff
+  1767d4c tới HEAD của t05 là rỗng, đợt 4 chưa chạm vào nó.
+- t09 race postMessage rồi close đồng bộ, ĐÃ XÁC NHẬN có trong bản
+  gốc 1767d4c. t10 race đọc vị trí bằng 0 chính xác, ĐÃ XÁC NHẬN
+  có trong bản gốc. Cả 2 đã sửa thật ở b629e11 và chạy lại 10/10
+  nhiều lần.
+- 7 test còn lại là pass thật: nhập liệu thật qua control thật, 0
+  lần page.evaluate.
+
+Điểm thật: batch 3 gốc 7/10. HEAD hiện tại sau đợt 4 là 9/10, không
+phải 10/10, vì t05 vẫn còn lỗi. Đã giao 1 agent sửa t05: thêm dialog
+rename có ô nhập tên cộng Save/Cancel, handler dùng giá trị nhập,
+check tự chọn tên để điền, kiểm tra cả Cancel và tên rỗng bị từ
+chối, rồi chạy lại batch3 chứng minh 10/10 thật. Sửa xong sẽ báo
+lại và sửa số trong báo cáo đợt 4.

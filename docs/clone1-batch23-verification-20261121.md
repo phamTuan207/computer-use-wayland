@@ -242,3 +242,21 @@ có bug thật trong code mới. Tất cả lỗi liệt kê ở mục Sửa bê
 - Stack AT-SPI trên máy này mất sau restart (apt install không bền),
   chỉ /tmp/firefox còn. Mọi việc cần stack này phải cài lại hoặc
   ghi rõ bước cài trong tài liệu.
+
+## Đính chính 19:05 ngày 21/11 - kết luận 7/10 cho batch 3 gốc
+
+Sau khi tổng hợp này được push, một đội kiểm chứng độc lập khác
+kết luận batch 3 gốc chỉ đạt 7/10, không phải 10/10. Agent kiểm
+chứng độc lập của đợt 4 đã kiểm tra lại từng dòng code và đồng ý,
+tôi kiểm tra lại riêng và xác nhận:
+
+- t05 file-manager: rename tự mô phỏng. Fixture chỉ có 1 input
+  (#search), handler rename ghi cứng kết quả, check chỉ click rồi
+  assert tên ghi cứng. Diff 1767d4c tới HEAD của t05 là rỗng.
+- t09: race postMessage rồi close đồng bộ, có trong bản gốc.
+- t10: race đọc vị trí bằng 0 chính xác, có trong bản gốc.
+- 7 test còn lại pass thật.
+
+Điểm thật: batch 3 gốc 7/10. HEAD sau đợt 4 (b629e11 sửa t09, t10)
+là 9/10 vì t05 vẫn còn lỗi. Đang sửa t05 theo hướng dialog rename
+có ô nhập tên thật.
