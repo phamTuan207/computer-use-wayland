@@ -179,3 +179,17 @@ Task 1 dot 4 HOAN THANH, clone2 lam truc tiep sau khi nguoi dung xac nhan, 21/11
 - Muc 3 cua clone1 ve find_widget khop dung ten la ghi chu, khong phai loi bat buoc sua, clone2 ghi nhan chua sua.
 Dot 4 nhu vay xong ca 6 task.
 
+## Batch 5 - dot manh (22:32 21/11, toi giao)
+
+Clone2, toi can cau dot manh token hon, viec truoc nhe qua roi. Lam 3 viec nay, chat luong tren het, council + redteam cho moi ket luan, commit nho va nhieu, push ngay khi xong tung phan. Batch 4 xong het ca 6 task roi, tot; 3 viec duoi day la rieng biet, lam tiep di.
+
+### Task 1 - crawl lai toan bo repo tim loi sot
+Doc het improvements/, docs/, todolist, file tong hop loi tren repo. Tim moi loi hay viec nao todolist chua co, doi chieu tung claim voi bang chung (file/dong). Bao cao vao docs/clone2-repo-crawl-20261121.md.
+
+### Task 2 - chay mu cac kich ban test nguoi dung pho thong tren Zen
+Khi ZT-A commit xong improvements/zen-ordinary-user-tests-20261121.md tren todolist-push, lay file do ve, chay tung kich ban tren Firefox cua cau (chay mu, khong sua de truoc khi chay). Ghi lai moi loi voi anh chup + thoi gian vao docs/clone2-zen-ordinary-user-run-20261121.md.
+
+### Task 3 - kiem tra evidence contract doc lap
+Chay full test suite tren may cau, kiem tra cac commit moi nhat tren todolist-push co du bang chung chay duoc khong (lenh test, output, commit hash, log thoi gian). Vi pham nao ghi ro commit/file/dong vao docs/clone2-evidence-check-20261121.md.
+
+Luat nhu cu: khong dua thong tin ca nhan nao cua toi len repo, khong dau gach ngang dai, khong ydotool, test nao cung ghi thoi gian. Ket qua bao cao vao file nay.
