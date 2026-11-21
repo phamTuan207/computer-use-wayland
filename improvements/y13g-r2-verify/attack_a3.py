@@ -217,7 +217,36 @@ def main(argv):
           proc.returncode == 0 and '"manifest_ok": true' in out,
           f"python3 -P run_codex_y5.py --verify-manifest rc={proc.returncode} "
           f"({dt:.1f}s)")
-    # --- R2 i: import run_live self-heal (third entry stem) ---
+    # --- R2 h control: ABSOLUTE-path py_compile (boundary probe) ---
+    # The relative form above fails because the .pyc's co_filename
+    # is "run_codex_y5.py" while the fresh compile uses the
+    # absolute path; the absolute form must pass, proving the
+    # only difference is the filename metadata.
+    ship_abs = fresh_ship("a3h-abs")
+    proc, dt = run([sys.executable, "-m", "py_compile",
+                    os.path.join(ship_abs, "run_codex_y5.py")],
+                   cwd=ship_abs)
+    pyc_abs = os.path.join(ship_abs, "__pycache__",
+                           "run_codex_y5.cpython-312.pyc")
+    check("A3h-abs absolute-path py_compile writes a legit .pyc",
+          proc.returncode == 0 and os.path.exists(pyc_abs),
+          f"python3 -m py_compile <abs>/run_codex_y5.py "
+          f"rc={proc.returncode}")
+    proc, dt = run([sys.executable,
+                    os.path.join(HERE, "launcher_check_driver.py"),
+                    "--ship-dir", ship_abs, "--check", "entry-pyc"])
+    out = proc.stdout + proc.stderr
+    check("A3h-abs launcher entry-pyc accepts absolute-path .pyc",
+          proc.returncode == 0 and not os.path.exists(pyc_abs),
+          f"launcher_check_driver.py --check entry-pyc rc={proc.returncode} "
+          f"({dt:.1f}s) pyc_gone={not os.path.exists(pyc_abs)}")
+    proc, dt = run([sys.executable, "-P", "run_codex_y5.py",
+                    "--verify-manifest"], cwd=ship_abs)
+    out = proc.stdout + proc.stderr
+    check("A3h-abs direct verify after heal is rc 0",
+          proc.returncode == 0 and '"manifest_ok": true' in out,
+          f"python3 -P run_codex_y5.py --verify-manifest rc={proc.returncode} "
+          f"({dt:.1f}s)")
     ship = fresh_ship("a3i-import-runlive")
     proc, dt = run([sys.executable, "-c", "import run_live"],
                    cwd=ship)

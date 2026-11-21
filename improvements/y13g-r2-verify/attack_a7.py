@@ -190,17 +190,48 @@ def main(argv):
             outside_pyc = os.path.join(
                 OUTSIDE, "a7-__pycache__", "pycache-real",
                 "run_codex_y5.cpython-312.pyc")
+            # (a) FORGED .pyc behind the symlink: _check_entry_pyc
+            # must refuse it (rc 2) WITHOUT deleting it. (It uses
+            # os.listdir, not the symlink-safe _entry_pyc_paths,
+            # so it SEES the outside file; the marshal comparison
+            # refuses it before any delete.)
             proc, dt = run([sys.executable,
                             os.path.join(HERE, "launcher_check_driver.py"),
                             "--ship-dir", ship, "--check", "entry-pyc"])
             out = proc.stdout + proc.stderr
-            check(f"A7 {label} entry-pyc finds nothing, outside "
-                  "file intact",
-                  proc.returncode == 0
+            check(f"A7 {label} entry-pyc refuses forged outside "
+                  ".pyc, file intact",
+                  proc.returncode == 2
+                  and "entry .pyc mismatch" in out
                   and os.path.exists(outside_pyc),
                   f"launcher_check_driver.py --check entry-pyc "
                   f"rc={proc.returncode} ({dt:.1f}s) "
                   f"outside_pyc_exists={os.path.exists(outside_pyc)}")
+            # (b) LEGIT .pyc behind the symlink: _check_entry_pyc
+            # must NOT delete a file OUTSIDE the ship (R4). Build
+            # a second ship with a legit outside .pyc.
+            ship_leg = fresh_ship("a7-__pycache__-legit")
+            real_leg = os.path.join(
+                OUTSIDE, "a7-__pycache__-legit", "pycache-real")
+            os.makedirs(real_leg, exist_ok=True)
+            forge_pyc.legit(
+                os.path.join(ship_leg, "run_codex_y5.py"),
+                os.path.join(real_leg, "run_codex_y5.cpython-312.pyc"))
+            os.symlink(real_leg,
+                       os.path.join(ship_leg, "__pycache__"))
+            outside_leg = os.path.join(
+                real_leg, "run_codex_y5.cpython-312.pyc")
+            proc, dt = run([sys.executable,
+                            os.path.join(HERE, "launcher_check_driver.py"),
+                            "--ship-dir", ship_leg, "--check", "entry-pyc"])
+            out = proc.stdout + proc.stderr
+            check(f"A7 {label} entry-pyc must NOT delete legit "
+                  "outside .pyc",
+                  os.path.exists(outside_leg),
+                  f"launcher_check_driver.py --check entry-pyc "
+                  f"rc={proc.returncode} ({dt:.1f}s) "
+                  f"outside_pyc_exists={os.path.exists(outside_leg)} "
+                  f"tail={out.strip().splitlines()[-1][:160] if out.strip() else ''}")
             proc, dt = run([sys.executable,
                             os.path.join(HERE, "launcher_check_driver.py"),
                             "--ship-dir", ship, "--check", "scan"])

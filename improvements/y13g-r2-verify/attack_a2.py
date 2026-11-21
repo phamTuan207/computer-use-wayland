@@ -33,8 +33,10 @@ Cases:
   R2 k  any-tag forged entry .pyc (pypy38 tag): refused by
      _check_entry_pyc (R4).
   R2 l  nested LEGIT entry .pyc: the -m guard deletes it
-     (recursive, R4) and the ship self-heals to direct verify
-     rc 0.
+     (recursive, R4); the EMPTY nested dir that remains is
+     refused by the scan (unexpected-dir, fail-closed tamper
+     evidence: a probe only ever writes top-level .pycs);
+     deleting the empty dir restores direct verify rc 0.
 
 Usage: python3 attack_a2.py [--workdir DIR]
 Prints one PASS/FAIL line per case with command + rc + output
@@ -317,9 +319,12 @@ def main(argv):
     out = proc.stdout + proc.stderr
     check("A2j nested forged entry .pyc refused by runner scan",
           proc.returncode == 2 and MARKER not in out
-          and '"kind": "pyc"' in out,
+          and '"refused": true' in out
+          and ('"kind": "pyc"' in out or '"kind": "mixed"' in out)
+          and "run_codex_y5.cpython-312.pyc" in out,
           f"python3 -P run_codex_y5.py --verify-manifest "
-          f"rc={proc.returncode} ({dt:.1f}s)")
+          f"rc={proc.returncode} ({dt:.1f}s) "
+          f"tail={out.strip().splitlines()[-1][:200] if out.strip() else ''}")
 
     # --- R2 case k: any-tag forged entry .pyc (pypy38 tag) ---
     ship = fresh_ship("a2k-pypy-tag")
@@ -358,7 +363,25 @@ def main(argv):
     proc, dt = run([sys.executable, "-P", "run_codex_y5.py",
                     "--verify-manifest"], cwd=ship)
     out = proc.stdout + proc.stderr
-    check("A2l direct verify after -m guard is rc 0",
+    # The guard deleted the nested .pyc, but the EMPTY nested dir
+    # __pycache__/sub remains, and the scan refuses it (kind
+    # unexpected-dir). That is fail-closed and correct: a nested
+    # cache dir can only appear by hand (a -m/import probe only
+    # ever writes top-level .pycs, where the empty dir IS exempt),
+    # so the residue is tamper evidence, not a probe artifact.
+    # Recovery is deleting the empty dir (the refusal names it).
+    check("A2l direct verify refuses the empty nested dir residue",
+          proc.returncode == 2 and MARKER not in out
+          and '"kind": "unexpected-dir"' in out
+          and "__pycache__/sub" in out,
+          f"python3 -P run_codex_y5.py --verify-manifest rc={proc.returncode} "
+          f"({dt:.1f}s) "
+          f"tail={out.strip().splitlines()[-1][:200] if out.strip() else ''}")
+    shutil.rmtree(os.path.join(ship, "__pycache__", "sub"))
+    proc, dt = run([sys.executable, "-P", "run_codex_y5.py",
+                    "--verify-manifest"], cwd=ship)
+    out = proc.stdout + proc.stderr
+    check("A2l direct verify rc 0 after deleting the empty dir",
           proc.returncode == 0 and '"manifest_ok": true' in out,
           f"python3 -P run_codex_y5.py --verify-manifest rc={proc.returncode} "
           f"({dt:.1f}s)")
