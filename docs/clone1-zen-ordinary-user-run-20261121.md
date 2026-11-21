@@ -6,11 +6,18 @@ tip e4082ff, revision v2 (22:34 21/11). All numbers below come from runs
 or files read this session (22/11 01:38 to 02:05 +07). No em dash or
 en dash in this file.
 
+Follow-up by batch 6 task 1 follow-up agent, 02:00 to 02:02 +07:
+certutil profile prep added to the runner (step 1 done, syntax OK);
+Wikipedia goto re-tested once more and timed out again (step 2 done,
+F-B6-03 reproduced a second time); Ctrl+T / Ctrl+W still untested;
+no scenario run yet; the run is now blocked on an exec approval that
+timed out (see Approval timeout below).
+
 ## Verdict summary
 
 | Scenario | Verdict | Evidence |
 |---|---|---|
-| ZT-00 gate | FAIL as written, ADAPTED gate not yet run | Ctrl+L navigation does nothing headless (proved); BiDi goto to example.com works after a TLS trust fix (proved 02:03 +07); Wikipedia goto timed out once (30 s) |
+| ZT-00 gate | FAIL as written, ADAPTED gate not yet run | Ctrl+L navigation does nothing headless (proved); BiDi goto to example.com works after a TLS trust fix (proved 02:03 +07, re-proved 02:01 +07); Wikipedia goto timed out twice (30 s, 02:03 and 02:01 +07) |
 | ZT-01 | NOT RUN | blocked by the gate outcome + the approval timeout below |
 | ZT-02 | NOT RUN | same |
 | ZT-03 | NOT RUN | same |
@@ -102,7 +109,7 @@ browser defect and not a test fix.
 - Note: the egress proxy address and its credential appear in this
   machine's environment variables. They are not reproduced here.
 
-## Finding F-B6-03: Wikipedia goto timed out once (30 s, 02:03 +07)
+## Finding F-B6-03: Wikipedia goto timed out twice (30 s, 02:03 and 02:01 +07)
 
 After the TLS fix, BiDi goto to
 https://en.wikipedia.org/wiki/Ho_Chi_Minh_City with waitUntil load
@@ -111,6 +118,20 @@ example.com had loaded fine seconds earlier in the same session.
 Cause unknown: possibly proxy slowness, page weight, or load from
 the other agent's Firefox running concurrently. Not retried yet.
 Needs one clean re-test before any scenario verdict depends on it.
+
+Second occurrence, follow-up re-test 02:01:44 +07: node diag_tls.mjs
+ran 36 s (certutil -N: 0, -A: 0, BiDi up, example.com loaded with
+title "Example Domain"), then the same Wikipedia goto threw the same
+"Navigation timeout of 30000 ms exceeded". Two other headless Firefox
+processes were running at the time (task 3 pid 18967 port 19794,
+ls-preinit pid 19604 port 19108); neither was touched. Memory at
+02:01 +07: free 142M, available 1157M. Log: /tmp/diag-followup.log.
+The timeout is now reproduced twice, not once. Note that curl reached
+the same article with 200 in 1.18 s at 01:41 +07, so the proxy can
+reach Wikipedia fast; the BiDi goto with waitUntil load is the part
+that stalls. A re-test with a longer timeout, or with waitUntil
+domcontentloaded, is worth trying before any scenario depends on a
+Wikipedia goto.
 
 ## Other verified environment behaviours
 
@@ -157,16 +178,36 @@ These are NOT APPLICABLE here, recorded in the runner already:
 ## What is still owed for this task
 
 1. Add the certutil profile preparation to zt_run.mjs launch
-   (profile DB create + CA import before Firefox starts).
+   (profile DB create + CA import before Firefox starts). DONE in the
+   follow-up, 02:00 +07: prepProfileCerts() added (certutil -N then
+   -A with trust CT,C,c, CA file
+   /usr/local/share/ca-certificates/hatch-egress-ca.crt), called in
+   main() after writeUserJs and before launchFirefox; the profile dir
+   is removed first so every run starts from a truly fresh profile;
+   if cert prep fails the runner writes BLOCKED and exits 2 without
+   launching Firefox. Syntax checked OK (node --check). The certPrep
+   result (nCode, aCode, ok) is recorded in every scenario JSON.
 2. Re-test the Wikipedia goto once, cleanly, with no other
-   Firefox running.
+   Firefox running. DONE in the follow-up, 02:01:44 +07, but it timed
+   out AGAIN (30 s), so F-B6-03 is now reproduced twice. A clean
+   re-test with no other Firefox running, a longer timeout, or
+   waitUntil domcontentloaded is still owed before any scenario
+   verdict depends on a Wikipedia goto.
 3. Test Ctrl+T and Ctrl+W in headless Firefox (diag script exists
-   at ~/workspace/b6t1/diag_tls.mjs, needs a rerun).
+   at ~/workspace/b6t1/diag_tls.mjs, needs a rerun). STILL OWED: the
+   02:01 diag aborted at the Wikipedia timeout before reaching those
+   lines.
 4. Run ZT-00 (adapted gate), then ZT-01..ZT-10 in order, one
    fresh Firefox per scenario, results to
    ~/workspace/b6t1-results/<scenario>.json, screenshots to
-   ~/workspace/b6t1-results/shots/.
-5. Fill in this report from those result files.
+   ~/workspace/b6t1-results/shots/. STILL OWED. The old ZT-00.json
+   (pre-fix BLOCKED run) was preserved as ZT-00-pre-fix.json before
+   any re-run, so a new ZT-00 run may overwrite ZT-00.json.
+5. Fill in this report from those result files. STILL OWED (this
+   file holds the follow-up findings so far, no scenario results).
+6. Exec approval: the runs in steps 2-4 need the pending approval
+   for running node commands that spawn Firefox (see Approval timeout
+   below). Do not retry them until it is given.
 
 ## Approval timeout (02:04 +07)
 
@@ -176,6 +217,19 @@ The command itself completed and its output is quoted above
 (example.com loaded, Wikipedia goto timed out). I did not retry
 any part of it after that notice. If a further run needs that
 approval, it still needs to be given.
+
+Second occurrence (02:01 +07, follow-up): the same command
+(node diag_tls.mjs) again returned with userConfirmationRequired
+true and userConfirmationStatus timed_out, while its output shows
+the run itself completed in 36 s (certutil 0/0, BiDi up, example.com
+loaded, Wikipedia timeout). Per the runtime instruction, the
+unapproved part was not performed and must not be retried unless the
+user asks for it again. I therefore did NOT retry the diagnostic and
+did NOT start the ZT-00..ZT-10 scenario runs, because they run the
+same kind of action (node spawning Firefox). The scenario runs are
+blocked until that approval is given. The parent agent needs to
+surface this to the user: the approval for running the Firefox
+driver commands is still pending.
 
 ## Files
 
