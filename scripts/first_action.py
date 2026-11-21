@@ -426,6 +426,8 @@ def run(args):
         'ime_state_trace': None,
         'type_verified': None,
         'error_code': None,
+        'dom_hooks': None,
+        'dom_hooks_error': None,
         'completed': 0,
         'observation': None,
         'after': None,
@@ -576,11 +578,35 @@ def run(args):
                     envelope['error'] = ('overlay lost before fallback; '
                                          'refused')
                 else:
+                    # Item A: --dom-selector wires the DOM value hooks
+                    # into the fallback batch. The hooks are
+                    # best-effort: when no DOM session can open, the
+                    # batch still runs with the pixel band, and the
+                    # reason is recorded in the envelope.
+                    dom_session = None
+                    dom_kwargs = {}
+                    selector = getattr(args, 'dom_selector', None)
+                    if selector:
+                        try:
+                            import dom_act
+                            text = dom_act.typed_text_of(actions)
+                            if text is None:
+                                envelope['dom_hooks_error'] = (
+                                    'no type action in the batch')
+                            else:
+                                dom_session, focus_check, type_check = \
+                                    dom_act.open_dom_hooks(selector, text)
+                                dom_kwargs = {'focus_check': focus_check,
+                                              'type_check': type_check}
+                                envelope['dom_hooks'] = 'dom-value'
+                        except Exception as exc:
+                            envelope['dom_hooks_error'] = (
+                                'dom hooks unavailable: ' + str(exc)[:200])
                     try:
                         with cu.locked():
                             result = cu.desktop_act(
                                 env, meta, actions,
-                                observation_path=obs_path)
+                                observation_path=obs_path, **dom_kwargs)
                     except (ValueError, RuntimeError) as exc:
                         # Redteam A5: a preflight refusal (screen obs
                         # with typing, stale observation, window moved)
@@ -599,6 +625,12 @@ def run(args):
                         envelope['error_code'] = result.get('error_code')
                         if not envelope['ok']:
                             envelope['error'] = str(result.get('error', ''))
+                    finally:
+                        if dom_session is not None:
+                            try:
+                                dom_session.__exit__()
+                            except Exception:
+                                pass
             else:
                 envelope['path'] = 'session'
                 envelope['ok'] = False
@@ -657,6 +689,11 @@ def build_parser():
     parser.add_argument('--session-deadline-s', type=float,
                         default=DEFAULT_SESSION_DEADLINE_S,
                         help='hard deadline for the session attempt')
+    parser.add_argument('--dom-selector', default=None,
+                        help='CSS selector of the input the type action '
+                             'targets; wires the DOM value hooks (focus + '
+                             'typed-value check) into the fallback batch '
+                             'instead of the pixel band')
     return parser
 
 

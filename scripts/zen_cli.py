@@ -92,6 +92,8 @@ import json
 import os
 import shutil
 import signal
+import fcntl
+import os
 import socket
 import sqlite3
 import struct
@@ -110,6 +112,14 @@ REAL_PROFILE_HOME = Path.home() / ".config" / "zen"
 STATE_PATH = (Path.home() / ".local" / "share" / "agent-computer-use"
               / "zen-cli-state.json")
 SESSION_LOG = Path.home() / ".cache" / "cli-anything-zen" / "session.log"
+# The single Zen remote-control slot, shared with zen_dom.ZenSession
+# (same path, same env var). Firefox allows one remote session per
+# instance; a BiDi session opened while a Marionette session holds the
+# slot wedges ("Maximum number of active sessions"). Taking the lock
+# here makes the two tools serialize instead of wedging.
+ZEN_DOM_LOCK_PATH = Path(os.environ.get(
+    "ZEN_DOM_LOCK",
+    str(Path.home() / ".cache" / "agent-computer-use" / "zen_dom.lock")))
 BIDI_TIMEOUT_SECONDS = 30
 SESSION_START_TIMEOUT_SECONDS = 30
 OPEN_POLL_SECONDS = 8
@@ -416,11 +426,30 @@ def bidi_recv_message(client):
 
 
 class BidiSession:
-    """One BiDi session over ws://127.0.0.1:<port>/session."""
+    """One BiDi session over ws://127.0.0.1:<port>/session.
+
+    Takes the single-session ZEN_DOM_LOCK on construction (the same
+    lock zen_dom.ZenSession takes): Firefox allows one remote session
+    per Zen instance, so a BiDi session opened while a Marionette
+    session holds the slot wedges. The lock is released in end(),
+    which never raises; a session that never ends keeps the slot
+    until the process exits.
+    """
 
     def __init__(self, port, timeout=BIDI_TIMEOUT_SECONDS):
         self.port = port
         self.timeout = timeout
+        ZEN_DOM_LOCK_PATH.parent.mkdir(parents=True, exist_ok=True)
+        self._lock_file = open(ZEN_DOM_LOCK_PATH, "w")
+        try:
+            fcntl.flock(self._lock_file, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            self._lock_file.close()
+            raise RuntimeError(
+                "another process already holds the Zen remote session "
+                "(ZEN_DOM_LOCK); only one remote session is allowed per "
+                "Zen instance, so this BiDi session refuses instead of "
+                "wedging the slot")
         self.client = WebSocketClient(LOOPBACK_HOST, port, "/session",
                                       timeout=timeout)
         self.next_id = 0
@@ -460,7 +489,8 @@ class BidiSession:
         return result
 
     def end(self):
-        """session.end, then close the socket. Never raises."""
+        """session.end, then close the socket, then release the slot
+        lock. Never raises."""
         try:
             self.call("session.end", {})
         except (RuntimeError, OSError):
@@ -469,6 +499,14 @@ class BidiSession:
             self.client.close()
         except OSError:
             pass
+        lock_file = getattr(self, "_lock_file", None)
+        if lock_file is not None:
+            try:
+                fcntl.flock(lock_file, fcntl.LOCK_UN)
+                lock_file.close()
+            except Exception:
+                pass
+            self._lock_file = None
 
     def __enter__(self):
         self.start()
