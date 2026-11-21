@@ -182,6 +182,29 @@ def ground_input(session, meta, selector):
     return evidence
 
 
+def grounded_x_range(ground, meta):
+    """Image-px x-range of the grounded field, for the band check.
+
+    ground is ground_input evidence (rect in viewport CSS px, point
+    in image px, scale_factor); meta carries image_size and region.
+    The rect's image width is its CSS width times the CSS-to-screen
+    factor times image px per screen px; the range is centered on
+    the image point (the rect center). Returns [x0, x1] floats, or
+    None when the meta cannot map the rect (the caller then keeps
+    the full-width band).
+    """
+    try:
+        rect = ground['rect']
+        point = ground['point']
+        factor = ground.get('scale_factor', 1)
+        size = meta.get('image_size')
+        region = meta.get('region')
+        half = rect['width'] * factor * size[0] / region[2] / 2
+        return [point[0] - half, point[0] + half]
+    except Exception:
+        return None
+
+
 class GroundPoints(dict):
     """Grounding evidence that re-validates on every read (R7).
 
@@ -394,20 +417,22 @@ def dom_hooks(session, selector, text):
 def focus_type(session, act_fn, meta, selector, text, enter=False):
     """Click an input, type, and verify, from one observation.
 
-    act_fn is a callable (meta, actions, focus_check, type_check)
-    returning a result dict, normally a closure over cu.desktop_act.
-    It runs the batch against the given meta. The focus_check closure
-    runs inside the batch before the first type group: when the click
-    missed, the batch stops before any keystroke. The type_check
-    closure runs after the type step, BEFORE Enter when a send is
-    asked: the field still holds the text then, so a successful send
-    is not failed by its own Enter clearing the field (RT R5). Enter
-    runs as its own batch afterwards, and the send is then verified
-    by the V12 sent-bubble check (sent_bubble_contains on the thread
-    DOM) when the session exposes it; when it does not, the Enter
-    batch result is accepted and the basis says so. The DOM flow
-    itself adds zero observes; the act batches use exactly the
-    observes a plain batch uses.
+    act_fn is a callable (meta, actions, focus_check, type_check,
+    type_x_ranges) returning a result dict, normally a closure over
+    cu.desktop_act; it must forward type_x_ranges to desktop_act
+    (the grounded field's x-range, so the band reads only that
+    field). It runs the batch against the given meta. The focus_check
+    closure runs inside the batch before the first type group: when
+    the click missed, the batch stops before any keystroke. The
+    type_check closure runs after the type step, BEFORE Enter when a
+    send is asked: the field still holds the text then, so a
+    successful send is not failed by its own Enter clearing the field
+    (RT R5). Enter runs as its own batch afterwards, and the send is
+    then verified by the V12 sent-bubble check
+    (sent_bubble_contains on the thread DOM) when the session exposes
+    it; when it does not, the Enter batch result is accepted and the
+    basis says so. The DOM flow itself adds zero observes; the act
+    batches use exactly the observes a plain batch uses.
 
     Exactly-once (RT R6): an intent ledger on the session records
     (selector, text) once a send succeeds, and a pre-send V12 read
@@ -444,6 +469,13 @@ def focus_type(session, act_fn, meta, selector, text, enter=False):
                     'already_sent': True, 'sent_verified': True}
     focus_check, type_check = dom_hooks(session, selector, text)
     calls['dom'] += 2
+    # R3a: the band reads only the grounded field's x-range, so text
+    # in another field on the same line cannot verify this type. The
+    # range rides to desktop_act through the act_fn kwargs; an act_fn
+    # that wraps desktop_act must forward it (the test fakes accept
+    # and ignore it).
+    x_range = grounded_x_range(ground, meta)
+    type_ranges = [x_range] if x_range is not None else None
     actions = [{'type': 'click', 'x': ground['point'][0],
                 'y': ground['point'][1]},
                {'type': 'type', 'text': text}]
@@ -457,7 +489,8 @@ def focus_type(session, act_fn, meta, selector, text, enter=False):
         return type_check()
 
     result = act_fn(meta, actions, focus_check=_counted_focus_check,
-                    type_check=_counted_type_check)
+                    type_check=_counted_type_check,
+                    type_x_ranges=type_ranges)
     if not isinstance(result, dict):
         raise DomActError('act_fn must return a result dict')
     completed = result.get('completed', 0)

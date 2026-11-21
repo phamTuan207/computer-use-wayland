@@ -285,6 +285,71 @@ class TypeVerification(DesktopPreflight):
         new = Image.new('RGB', (21, 20))
         self.assertIsNone(cu._input_line_changed(old, new, 10))
 
+    def test_band_wrong_field_with_rect_range_must_not_verify(self):
+        # R3a, substantive (amend3): 12 changed pixels in ANOTHER
+        # field on the same line, outside the target field's
+        # x-range, must not verify the band. The old full-width band
+        # verified this shape: 12 real text pixels on the anchor
+        # line. The range narrows the read to the grounded field.
+        from PIL import Image
+        old = Image.new('RGB', (20, 20))
+        new = old.copy()
+        for x in range(0, 12):
+            new.putpixel((x, 10), (255, 255, 255))
+        self.assertFalse(cu._input_line_changed(old, new, 10,
+                                                x_range=(12, 18)),
+                         '12 wrong-field pixels verified the band')
+        # The same pixels inside the range DO verify: the range
+        # narrows the band, it does not blind it.
+        inside = old.copy()
+        for x in range(12, 18):
+            inside.putpixel((x, 10), (255, 255, 255))
+        self.assertTrue(cu._input_line_changed(old, inside, 10,
+                                               x_range=(12, 18)))
+
+    def test_band_wrong_field_with_rect_range_reports_not_ok(self):
+        # R3a at the desktop_act level: click (15, 10), type hello,
+        # no type_check hook. The after image changes only at x 0..11
+        # on the anchor line (12 pixels in another field), outside
+        # the grounded rect's x-range (12, 18), so the batch must
+        # report ok False with error_code type_unverified. The
+        # positive control (default after image, text pixels at
+        # x 12..17 inside the range) still verifies.
+        def _hypr(env, query):
+            if query == 'monitors':
+                return [dict(self.monitor)]
+            if query == 'activewindow':
+                return {'address': 'fixture'}
+            if query == 'cursorpos':
+                return {'x': 15, 'y': 10}
+            raise AssertionError('unexpected compositor query ' + query)
+        self.hypr_mock.side_effect = _hypr
+        from PIL import Image
+        wrong = Image.new('RGB', (20, 20))
+        for x in range(0, 12):
+            wrong.putpixel((x, 10), (255, 255, 255))
+        self.after_image = wrong
+        result = cu.desktop_act(
+            {}, self.meta,
+            [{'type': 'click', 'x': 15, 'y': 10},
+             {'type': 'type', 'text': 'hello'}],
+            type_x_ranges=[(12, 18)])
+        self.assertFalse(result['ok'],
+                         'wrong-field pixels verified the type: %s'
+                         % (result,))
+        self.assertIs(result['type_verified'], False)
+        self.assertEqual(result['error_code'], 'type_unverified')
+        self.after_image = Image.new('RGB', (20, 20))
+        for x in range(12, 18):
+            self.after_image.putpixel((x, 10), (255, 255, 255))
+        result = cu.desktop_act(
+            {}, self.meta,
+            [{'type': 'click', 'x': 15, 'y': 10},
+             {'type': 'type', 'text': 'hello'}],
+            type_x_ranges=[(12, 18)])
+        self.assertTrue(result['ok'], result)
+        self.assertIs(result['type_verified'], True)
+
     def test_type_group_anchors_click_only(self):
         # AMEND2 C: only click/double_click set an anchor. A move,
         # hover, or drag before the type leaves the group anchorless,

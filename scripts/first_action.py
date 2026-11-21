@@ -599,6 +599,20 @@ def run(args):
                                 dom_kwargs = {'focus_check': focus_check,
                                               'type_check': type_check}
                                 envelope['dom_hooks'] = 'dom-value'
+                                try:
+                                    ground = dom_act.ground_input(
+                                        dom_session, meta, selector)
+                                    x_range = dom_act.grounded_x_range(
+                                        ground, meta)
+                                    if x_range is not None:
+                                        dom_kwargs['type_x_ranges'] = \
+                                            [x_range]
+                                except Exception:
+                                    # No grounded rect: the batch keeps
+                                    # the full-width band, exactly as
+                                    # before. Grounding never fails the
+                                    # batch here.
+                                    pass
                         except Exception as exc:
                             envelope['dom_hooks_error'] = (
                                 'dom hooks unavailable: ' + str(exc)[:200])

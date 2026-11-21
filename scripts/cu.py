@@ -1020,28 +1020,32 @@ def _mean_image_difference(old,new):
     if old.size!=new.size:return float('inf')
     return sum(ImageStat.Stat(ImageChops.difference(old,new)).mean)/3
 
-def _input_line_changed(old,new,anchor_y,half=12,min_pixels=4,threshold=50):
+def _input_line_changed(old,new,anchor_y,half=12,min_pixels=4,threshold=50,
+                        x_range=None):
     """True when the input line band changed between two frames.
 
-    The band is the full image width, anchor_y plus/minus half pixels:
-    typed text lands on the caret line, which is the clicked line, even
-    when the click point itself is far from where the text starts (an
-    empty field takes text at its left edge, not at the click). The
-    count uses per-channel histogram bins above threshold, so a few
-    fully changed pixels decide it, not a diluted band mean. JPEG q90
-    4:4:4 re-encodes of identical pixels are byte identical, and the
-    measured max pixel error of that encoding is 39, so threshold 50
-    sits above encoding noise. Returns None when the images cannot be
-    compared, including a size mismatch: incomparable frames are
-    unverifiable, never a pass. A caret blink or focus tick changes at
-    most 3 pixels on the line, so min_pixels 4 is the caret-scale
-    baseline: fewer changed pixels do not verify. Limits, stated
-    plainly: the band is full width, so multi-pixel text landing in a
-    DIFFERENT field on the same line still passes it, and a caret or
-    focus ring alone also changes the band, so a True here is
-    necessary, not sufficient, proof the text landed; the DOM value
-    check is the sufficient check. No observe is taken: both frames
-    are already in memory (pre-batch image, after-capture).
+    The band is the target field's x-range when x_range is given
+    (image px, from the grounded rect: the band then reads only the
+    field the text was typed into), else the full image width,
+    anchor_y plus/minus half pixels: typed text lands on the caret
+    line, which is the clicked line, even when the click point itself
+    is far from where the text starts (an empty field takes text at
+    its left edge, not at the click). The count uses per-channel
+    histogram bins above threshold, so a few fully changed pixels
+    decide it, not a diluted band mean. JPEG q90 4:4:4 re-encodes of
+    identical pixels are byte identical, and the measured max pixel
+    error of that encoding is 39, so threshold 50 sits above
+    encoding noise. Returns None when the images cannot be compared,
+    including a size mismatch: incomparable frames are unverifiable,
+    never a pass. A caret blink or focus tick changes at most 3
+    pixels on the line, so min_pixels 4 is the caret-scale baseline:
+    fewer changed pixels do not verify. Limits, stated plainly: with
+    no x_range the band is full width, so multi-pixel text landing
+    in a DIFFERENT field on the same line still passes it, and a
+    caret or focus ring alone also changes the band, so a True here
+    is necessary, not sufficient, proof the text landed; the DOM
+    value check is the sufficient check. No observe is taken: both
+    frames are already in memory (pre-batch image, after-capture).
     """
     from PIL import ImageChops
     if old is None or new is None:
@@ -1052,7 +1056,18 @@ def _input_line_changed(old,new,anchor_y,half=12,min_pixels=4,threshold=50):
     y1=min(old.height,int(anchor_y)+half+1)
     if y1<=y0:
         return None
-    diff=ImageChops.difference(old,new).crop((0,y0,old.width,y1))
+    if x_range is not None:
+        try:
+            x0=max(0,int(x_range[0]))
+            x1=min(old.width,int(x_range[1]))
+        except Exception:
+            return None
+        if x1<=x0:
+            return False
+    else:
+        x0=0
+        x1=old.width
+    diff=ImageChops.difference(old,new).crop((x0,y0,x1,y1))
     hist=diff.histogram()
     changed=0
     for base in (0,256,512):
@@ -1602,7 +1617,8 @@ def _settle_after_capture(capture, first_after, nav_candidate, settle_ms=400):
 
 
 def desktop_act(env,meta,actions,after_capture=True,observation_path=None,
-                expected_terminal_window=None,focus_check=None,type_check=None):
+                expected_terminal_window=None,focus_check=None,type_check=None,
+                type_x_ranges=None):
     """Run a desktop action batch against a validated observation.
 
     focus_check and type_check are optional cheap zero-arg callables
@@ -1615,7 +1631,12 @@ def desktop_act(env,meta,actions,after_capture=True,observation_path=None,
     to the input line band between the pre-batch frame and the
     after-capture (both already in memory), one band per type group,
     or to the whole-frame hash when a group has no pointer target
-    before the type.
+    before the type. type_x_ranges is an optional list parallel to
+    the type groups, one (x0, x1) image-px pair per group from the
+    grounded field rect (supplied by dom_act/first_action): the band
+    then reads only that field's x-range on the anchor line, so text
+    landing in a different field on the same line no longer verifies
+    (RT R3a). A group with no range keeps the full-width band.
     """
     preflight_start=time.monotonic()
     try:
@@ -2081,9 +2102,10 @@ def desktop_act(env,meta,actions,after_capture=True,observation_path=None,
     # after-capture hash with the PRE-BATCH observation, so any click
     # in the same batch set the bit and a click+type batch with zero
     # text delivered still reported type_verified True. The check here
-    # reads one input line band per type group (full width, around
-    # that group's own click point) between the pre-batch frame and
-    # the after-capture, both already in memory: no new observe is
+    # reads one input line band per type group (the grounded field's
+    # x-range when type_x_ranges is given, else the full width,
+    # around that group's own click point) between the pre-batch frame
+    # and the after-capture, both already in memory: no new observe is
     # taken. A click into dead space changes nothing on that line, so
     # the incident shape (click 64px above the field, type into
     # nothing) now fails instead of verifying. Limits, stated plainly:
@@ -2119,10 +2141,17 @@ def desktop_act(env,meta,actions,after_capture=True,observation_path=None,
             # A band that cannot be compared (size mismatch) falls back
             # to the hash for the whole batch, the same as before.
             after_image=_load_after_image(result)
-            anchored=[a for a in type_anchors if a is not None]
+            ranges=(list(type_x_ranges) if type_x_ranges is not None
+                    else [None]*len(type_anchors))
+            if len(ranges)<len(type_anchors):
+                ranges=ranges+[None]*(len(type_anchors)-len(ranges))
+            paired=[(a,r) for a,r in zip(type_anchors,ranges)
+                    if a is not None]
+            anchored=[a for a,_r in paired]
             unanchored=len(type_anchors)-len(anchored)
-            bands=([_input_line_changed(old,after_image,anchor[1])
-                    for anchor in anchored]
+            bands=([_input_line_changed(old,after_image,anchor[1],
+                                        x_range=x_range)
+                    for anchor,x_range in paired]
                    if after_image is not None else [None])
             if any(band is None for band in bands):
                 verified=result.get('frame_bytes_changed') is True
