@@ -689,3 +689,98 @@ in the repo worktree and /tmp test copies.
   residue (fail-closed). Verifier touched no fix file, no live
   Zen, no other worker's files.
   Still waiting: Council 2, Redteam (2/5 running).
+
+01:26 +07 22/11 (T+2h30m) COUNCIL 2 ROUND-2 DONE, verdict AMEND.
+  Paper commit 6d83401 (improvements/worker-y13g-r2-council-2.md),
+  log daff7a0, both verified on origin via merge-base (origin now
+  12b6da7; my local HEAD already 12b6da7, shared worktree, no
+  rebase needed). Probes fresh under
+  ~/workspace/y13g-r2-council-2/probes/ (probe1_r1, probe2_r2,
+  probe2x, probe2y_f1, probe3_unit, probe3live, probe3live_fix,
+  probe3wrap2, probe4_r4, probe5_r5, probe6_7_8_9), clean ship at
+  ~/workspace/y13g-r2-council-2/ship. Pins verified live: runner
+  d5047ff5, launcher 8e72a5ce, run_live 84fa106c (1e3901c holds),
+  manifest 7c763834, 27 files, staged ship 29 files, verify rc 0.
+  Findings C2-1..C2-10:
+  C2-1 (MEDIUM) R2 NOT fixed: check_manifest's entry-.pyc
+  exemption at launch_y13.py:1197,
+  `if (not rel_root and _is_entry_pyc_rel(rel))`, is
+  UNSATISFIABLE: an entry .pyc lives in __pycache__/, so rel_root
+  is "__pycache__" (truthy); the only way `not rel_root` holds,
+  rel cannot start with `__pycache__/`. A legit entry .pyc is
+  refused as "planted bytecode" for all 3 stems before
+  _check_entry_pyc runs, so the marshal check still never runs on
+  the live flow and redteam F4's re-test fails on the launcher
+  flow too. The function itself works when called directly
+  (legit verified+deleted, forged refused on marshal mismatch).
+  Fix: drop `not rel_root and` at line 1197. (MY OWN BUG: I wrote
+  that condition in 87eec47. The R2 design said "exempt the 3
+  entry stems from check_manifest", and I gated it on rel_root
+  being empty, which can never hold for a file under
+  __pycache__/.) INDEPENDENT CORROBORATION: redteam commit
+  87a37aa is titled "check_manifest exemption dead", same root
+  cause found independently (redteam still running; its paper
+  not yet in).
+  C2-2 (MEDIUM) new tokenizer evasions, all proven live
+  (manifest_ok true, tokenizer False): `python3 -- -` stdin
+  after `--`; -c argv/env smuggling (exec/runpy.run_path/
+  os.system with the path from sys.argv[1] or os.environ); -c
+  sink gaps (os.execv/execve/execl/spawnl/spawnv/popen,
+  subprocess.getoutput/getstatusoutput, `__import__`-obfuscated
+  sinks, pty.spawn); `-m trace --count` executes (guard does not
+  fire). Mitigated by the ports backstop, hence MEDIUM not HIGH.
+  C2-3 (LOW) PYTHONPATH survives -P: a glob.py plant in a
+  PYTHONPATH dir executes at the runner's post-scan import
+  (marker present, rc 0). Same class hits the launcher and the
+  _check_entry_pyc compile subprocess (inherits env).
+  C2-4 (LOW) a ship missing SHIPPED.md passes every gate (direct
+  verify rc 0); the scan never refuses a missing file.
+  C2-5 (LOW) leftover empty nested dir still bricks after the
+  guard deletes a nested .pyc (empty __pycache__/sub refuses as
+  unexpected-dir). (Same class as C3-4 round-2.)
+  C2-6 (LOW) codex warning still fires on path mentions
+  (`grep /usr/bin/codex`, `echo /codex`, `ls /usr/bin/codex`).
+  C2-7 (LOW) main()'s flock exec subprocess.run
+  (launch_y13.py:1503) is the one launcher call NOT wrapped
+  (OSError traceback exit 1). Code-reading only. (Same as
+  Council 1 F7.)
+  C2-8 (LOW) ssh:// remote form refuses (fail-closed false
+  refusal for an ssh://-remote checkout).
+  C2-9 (LOW) docs overclaim: plan B1/round-2 section claim the
+  launcher verifies+deletes entry .pyc (false until C2-1 is
+  fixed); B3 sink list and LIMIT paragraph omit the C2-2
+  classes; B2 "non-entry .pyc" qualifier is wrong in the other
+  direction.
+  C2-10 (LOW) wrapper unit gaps (12 new wrappers + 6 flag gaps:
+  sudo VAR=1, setsid -w/--wait, command -p, nohup --, env -S).
+  Live impact nil: every wrapper's child python is separately
+  visible in /proc and IS caught.
+  Verified as fixed: R1 (.so plants refuse, no marker, bare and
+  -P, both files); R3 round-1 residuals (14/14 fix cases,
+  renamed-copy exec caught by the md5 leg); R4 guard symlink-safe
+  (nothing outside deleted in 3 shapes); R5 tampered run_live
+  refuses pre-import on the direct path, self-consistent tamper
+  refused by the launcher git comparison; R6 bare-token warning;
+  R7 normalization 20/20 + --topo-order; R8 listed subprocess
+  calls; R9 eval_error None returns False (12/12); AST-identity
+  of the 14-function tokenizer block; _SHIP_FILES identical
+  (29 = manifest 27 + 2). F1 documented residual re-confirmed
+  (re-headed forged entry .pyc via -m prints its marker).
+  Caveats: full launcher main() NOT run end to end (check_marker
+  needs a network fetch and write_token would clobber the live
+  handover token); flow proven via the real binary to check_go
+  plus AST-extracted check_manifest + _check_entry_pyc +
+  _scan_ship in main() order. Shared-worktree push race during
+  its push (rebase refused on another worker's unstaged changes,
+  push interleaved with the redteam's); end state verified
+  correct, both commits ancestors of origin, paper intact.
+  Council 2 did NOT read or use the verifier's round-2 result;
+  its verdict stands on its own probes.
+  FLEET NOTE (MEMORY.md 01:18, owner order, not my task): owner
+  ordered a root-cause fix for wrong click coordinates
+  ("lenh click sai toa do, fix goc, tha dan"), COORD-CLICK
+  spawned 01:18 (source reader + live probe + fix +
+  council/redteam); final proof must be live by computer-use
+  mouse (clone1 message actually entering the thread).
+  CL1-MSG2 still running probe + retry in parallel.
+  Still waiting: Redteam round-2 only (1/5 running).
