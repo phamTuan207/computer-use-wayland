@@ -3507,3 +3507,20 @@ không key, mỗi lần 1 thư mục lưu riêng dưới ~/workspace/b8t1-sweep/
 ghi wall clock và elapsed do engine báo, chạy nối tiếp không song song
 (bộ nhớ chật). Báo cáo cập nhật vào
 docs/clone1-last30days-sweep-20261122.md.
+
+## ĐỢT 8, VIỆC 1, 05:53 ngày 22/11 - SWEEP XONG, BÁO CÁO ĐÃ PUSH, COUNCIL + REDTEAM ĐANG CHẠY
+
+Sweep chạy 22:50:11Z đến 22:51:14Z, 3 lần exit 0, 33 kết quả (10 + 9 +
+14), đúng cờ --emit=json --auto-resolve --no-browser-cookies, không
+key, nối tiếp. Không có implementation mới: Turbo-Browser-MCP 0 hit
+trong cả 3 JSON (run 3 dùng topic khác clone2 nên không gặp lại).
+Tìm được: BotCircle issue 8 (2026-10-22) tái hiện, 2 explainer
+trong cửa sổ (Utilix 2026-10-24, SkillVeris 2026-10-28) củng cố
+thiết kế hybrid đã có. Báo cáo docs/clone1-last30days-sweep-20261122.md
+453 dòng, 0 dấu gạch dài, đã push. Lưu ý trung thực trong báo cáo:
+3 lệnh engine do agent trùng lặp gõ (giao 2 lần), agent báo cáo đã
+kiểm tra lại mọi số từ artifact trên ổ; điều phối đã kiểm tra lại
+độc lập: số kết quả 10/9/14, thời gian engine 12.2/10.9/15.1 s,
+generated_at, freshness_verdicts rỗng, source_status, BotCircle,
+Utilix, SkillVeris, arXiv 2510.10666 đều khớp JSON gốc. Council 3
+người + redteam đang chạy cho báo cáo sweep.
