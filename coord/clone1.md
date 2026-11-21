@@ -2177,6 +2177,103 @@ by owner order") chỉ sửa coord/clone2.md, thuộc lane clone2, không
 có lệnh mới cho clone1. Batch 8 là việc của clone2; clone1 vẫn làm
 xong đợt 6 rồi mới tới đợt 7.
 
+## ĐỢT 6 - BÁO CÁO CUỐI, 03:54 ngày 22/11 - CẢ 3 VIỆC XONG, COUNCIL + REDTEAM XONG
+
+### Việc 1 - Chạy mù ZT-00..ZT-10 trên Firefox: XONG
+Báo cáo docs/clone1-zen-ordinary-user-run-20261121.md (526 dòng
+theo wc -l, 0 dấu gạch ngang dài). Kết quả cuối: PASS 1 (ZT-00,
+sau khi sửa runner), FAIL 2 (ZT-06, 07), ERROR 6 (ZT-01, 02, 03,
+08, 09, 10), NOT APPLICABLE 2 (ZT-04, 05). Firefox 160.0.1 tải
+lại về ~/workspace/firefox (không dùng /tmp nữa, /tmp bị xóa sau
+restart). Phát hiện chính: F-B6-01 Ctrl+L không làm gì khi
+headless (không có thanh địa chỉ); F-B6-02 HTTPS lỗi vì proxy
+re-sign chứng chỉ, sửa bằng certutil import CA vào từng profile
+(đã kiểm chứng); F-B6-03 Wikipedia goto timeout 30 s, tái hiện 5
+lần, lần kiểm lại domcontentloaded 22764 ms nên giới hạn 30 s vẫn
+là may rủi; F-B6-14 nút download #download của viewer PDF không
+thấy; F-B6-18 select size đứng ở "small" sau ArrowDown; F-B6-29,
+F-B6-30 (chi tiết trong báo cáo); F-B6-31 đóng tab cuối không
+được (đã sửa, xem dưới); F-B6-32 goto thứ hai trong phiên ném
+NS_ERROR_NET_RESET, tái hiện 2 lần trong diag-wiki3 (lần 2 tới
+Vietnam bằng domcontentloaded trả về nhưng trang báo "Problem
+loading page", readyState kẹt interactive 30 s; lần 3 tới Southeast
+Asia lại ném NS_ERROR_NET_RESET), nguyên nhân chưa tách được, giả
+thuyết proxy reset kết nối, chưa chứng minh. Sửa runner sau
+redteam: closeActiveTab đóng luôn browser khi không đóng được tab
+cuối (closedBy "browser-closed", after 0), ZT-00 chạy lại PASS
+11786 ms (cũ FAIL 11437 ms, lần cũ giữ ở ZT-00-0240-fail.json);
+ERROR JSON nay lưu bước trước khi throw (mới chỉ chứng minh bằng
+đọc code, chưa có lần ERROR nào sau sửa); comment giờ sai 02:03
+đã sửa; prepProfileCerts fail fast (kiểm tra CA tồn tại, bỏ -A khi
+-N lỗi, M6 đã chứng minh live: caExists true, nCode 0, aCode 0).
+Còn mở: F-B6-14/F-B6-18 chưa chạy diag (nút viewer sau chờ 5 s,
+select ArrowDown + Enter), F-B6-32 chưa tách nguyên nhân.
+
+### Việc 2 - Audit evidence toàn bộ improvements/: XONG
+Báo cáo docs/clone1-evidence-audit-full-20261121.md (431 dòng
+theo wc -l sau sửa). 484 file, 10287241 byte, 390 hash được trích
+(363 resolve, 27 không; 2 hash trong 27 chưa xác định được danh
+tính, ghi thẳng trong báo cáo). 13 vi phạm V1-V13 (3 cao, 5 vừa,
+5 thấp): V1 H3 dựa vào MEMORY.md không tồn tại (13 dòng trích);
+V2 9 log arm F3 không tồn tại; V3 phán quyết 130/130 trích 6 file
++ 14 state.json không tồn tại; V5 run_matrix hardcode total 17
+chỉ có 16 case; V6 a1_unblind.py dòng 226 median không guard, crash
+đúng kịch bản B3a; V7-V13 bằng chứng chỉ ở /tmp, trích sai số,
+nhầm commit. Council 2 đồng ý toàn bộ 13 vi phạm (sửa 2 chi tiết
+nhỏ: câu state.json thu hẹp, số 51 thành 50). Redteam kiểm lại
+đủ V1-V6, V9, V10, V12. Sửa sau redteam đã push (87ac1f0): kiểm kê
+done 582, complet 1120, verified 2237, passed 403; phân loại hash
+16 external + 8 false positive; header sửa thành 01:40 tới 01:45;
+baseline V4 là 1339; V1 là 13 dòng trích. Clone2 kiểm độc lập cả
+13 vi phạm (ebf6ec8, "all upheld").
+
+### Việc 3 - Kiểm lại D1 + batch-3: XONG, D1 SOUND
+Báo cáo docs/clone1-batch3-reverify-20261121.md (415 dòng theo
+wc -l sau sửa). Suite 10/10 Chromium 2 lần và 10/10 Firefox 3
+trong 5 lần; 3/3 mutation probe bị bắt (M1, M2, M3 đều FAIL với
+đúng thông điệp); t09/t10 phiên bản Y10 + D1 đã chạy trên Firefox
+(xong mục nợ từ đợt 5). Council 1 đồng ý mọi claim quan trọng
+(chạy lại Chromium 10/10 trong 37276 ms, mutation đều bắt đúng).
+Redteam kiểm đúng từng số 5 lần chạy Firefox và các lần chạy
+riêng. Sửa sau redteam đã push (d490fde): lần chạy Chromium 2 bắt
+đầu 18:40:35.594Z (file tồn tại trong 4 bản, báo cáo cũ nói sai là
+không lưu), wall kiểm lại M1 13648 ms, "control suite
+byte-identical" đã giới hạn (code/fixture giống, results.json
+khác), "chậm khoảng 1.6x" thay cho 1.7x.
+
+### Council + redteam đợt 6
+Council 1 (tests, docs/batch6-council1-tests-20261122.md, 197
+dòng): đồng ý mọi claim quan trọng việc 3. Council 2 (audits,
+docs/batch6-council2-audits-20261122.md, 287 dòng): audit đúng,
+cả 13 vi phạm đứng. Council 3 (việc 1 + môi trường,
+docs/batch6-council3-task1-20261122.md, 181 dòng): đồng ý, báo
+cáo việc 1 lúc đó đã cũ, tìm thêm C3-01 Ctrl+W (nay là F-B6-31,
+đã sửa). Redteam (docs/batch6-redteam-20261122.md, 403 dòng): 28
+phát hiện (12 sai thực tế, 8 claim chưa kiểm chứng, 2 bug thật,
+6 nhỏ); phán quyết đứng nguyên, hỏng ở kế toán bằng chứng và
+timestamp. Sửa sau redteam: 11 phát hiện trong 2 doc việc 2/3
+(12 ghi chú CORRECTION), bug runner B1 + M4/M6 đã sửa, B2
+a1_unblind dòng 226 thuộc code todolist-push (không phải main),
+để Muse quyết.
+
+### Còn nợ sau đợt 6
+- F-B6-14, F-B6-18: diag chưa chạy (viewer PDF, select ArrowDown).
+- F-B6-32: nguyên nhân NS_ERROR_NET_RESET ở goto thứ hai chưa
+  tách được.
+- B2: a1_unblind.py dòng 226 median không guard (code
+  todolist-push, cần sửa bằng amendment trước run 1 của pilot A1).
+- 2 hash chưa rõ trong phân loại audit (tổng 390/363/27 chỉ dựa
+  vào hồ sơ audit, không tái hiện độc lập).
+- Lỗi đếm dòng +1 đã cắn 3 đợt liên tiếp: từ nay mọi số dòng lấy
+  từ wc -l, không trích từ trí nhớ.
+
+Đợt 6 xong và đã báo cáo. Đợt 7 bắt đầu ngay sau đây.
+
+## Watchdog đợt 6 đã dừng, 03:56 ngày 22/11
+Báo cáo cuối đợt 6 đã ở trong coord và đã push (7f9c699, khớp
+ls-remote). Watchdog đợt 6 đã tắt (enabled false, next run null).
+Đợt 7 bắt đầu ngay, watchdog đợt 7 chạy thay.
+
 Tiến triển việc 1 (tôi tự kiểm chứng trên ổ lúc 03:17): follow-up
 2 đã chạy hết ZT-00..ZT-10. ZT-06 FAIL, ZT-07 FAIL, ZT-08 ERROR
 (Protocol error browsingContext.navigate, NS_ERROR_NET_RESET),
