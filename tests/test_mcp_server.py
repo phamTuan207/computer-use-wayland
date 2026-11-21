@@ -299,6 +299,67 @@ class FakeBackendTest(unittest.TestCase):
         log_line("unknown_method", self.started)
 
 
+class RealClickButtonTest(unittest.TestCase):
+    """_real_click must send a LEFT click (button 0) to the pointer.
+
+    Regression test for G29: the MCP hybrid click moved the mouse to
+    the address bar but never focused it, because _real_click sent
+    pointer command "button 1", and the pointer binary maps button
+    index N to evdev BTN 0x110+N, so 1 is BTN_RIGHT (0x111), not
+    BTN_LEFT (0x110). A right click opens the bar context menu and
+    typed text never reaches the bar (proven live on Firefox 160.0.1,
+    see docs/clone1-g29-urlbar-focus-20261122.md). The fake backend
+    masks this: its click never touches the pointer binary.
+    """
+    def test_real_click_sends_button_zero(self):
+        started = time.monotonic()
+        import types
+        recorded = []
+
+        class FakePointer:
+            def __init__(self, env, monitor):
+                pass
+
+            def command(self, text):
+                recorded.append(text)
+
+            def close(self):
+                pass
+
+        cu_stub = types.ModuleType("cu")
+        cu_stub.environment = lambda: {"fake": True}
+        cu_stub.monitor_box = lambda m: [m["x"], m["y"],
+                                         m["width"], m["height"]]
+
+        def fake_hypr(env, what):
+            if what == "monitors":
+                return [{"x": 0, "y": 0, "width": 1280, "height": 800,
+                         "scale": 1}]
+            if what == "cursorpos":
+                return {"x": 100, "y": 200}
+            raise AssertionError("unexpected hypr call: %s" % what)
+
+        cu_stub.hypr = fake_hypr
+        cu_stub.Pointer = FakePointer
+        saved = sys.modules.get("cu")
+        sys.modules["cu"] = cu_stub
+        try:
+            backend = mcp_server.ZenBackend.__new__(mcp_server.ZenBackend)
+            backend._real_click(100, 200)
+        finally:
+            if saved is None:
+                sys.modules.pop("cu", None)
+            else:
+                sys.modules["cu"] = saved
+        self.assertEqual(recorded, [
+            "abs 78125 250000 1000000 1000000",
+            "button 0 1",
+            "button 0 0",
+        ], "left click is button 0 (BTN_LEFT 0x110); button 1 is "
+           "BTN_RIGHT 0x111")
+        log_line("real_click_button_zero", started, commands=recorded)
+
+
 class OversizedLineTest(unittest.TestCase):
     def test_oversized_line_returns_error_and_keeps_serving(self):
         started = time.monotonic()

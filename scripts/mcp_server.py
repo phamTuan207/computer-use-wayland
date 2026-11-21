@@ -299,8 +299,14 @@ class ZenBackend:
             if math.hypot(after["x"] - x, after["y"] - y) > 3:
                 raise ToolError(
                     "pointer missed target; refusing click")
-            pointer.command("button 1 1")
-            pointer.command("button 1 0")
+            # Button index 0 is BTN_LEFT (0x110): the pointer binary
+            # sends evdev code 0x110 + index, so 1 would be BTN_RIGHT
+            # (0x111). Sending 1 here was G29: the click moved the
+            # mouse to the address bar but right-clicked it, so the
+            # bar never took typed input. See docs/clone1-g29-
+            # urlbar-focus-20261122.md.
+            pointer.command("button 0 1")
+            pointer.command("button 0 0")
         finally:
             pointer.close()
 
