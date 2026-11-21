@@ -119,10 +119,13 @@ a fresh re-review.
   is generated from the same manifest at ship time. Dry-run flag:
   python3 run_agy_y2.py --verify-manifest (no driving).
 - FROZEN BASE (C1 F2 / C3 F1): run_live.py is shipped ONLY from
-  commit 1e3901c (md5 84fa106c253d5e7f16daccf2ce3f14a5; HEAD's
-  run_live.py is byte-identical to 1e3901c, zero diff). The a82bb41
-  tree alone cannot run (its run_live.py has no diagnose_body and
-  no allow_hidden kwarg; the runner raises ImportError against it).
+  commit 1e3901c (md5 84fa106c253d5e7f16daccf2ce3f14a5), the Y4d
+  live-proven base (10/10 twice). It is deliberately NOT taken from
+  HEAD: HEAD's run_live.py changed in 91d3cd2 (Y11 live-metrics
+  wiring, +415/-66), which is not live-proven, and the runner was
+  written and reviewed against the 1e3901c API. The a82bb41 tree
+  alone cannot run (its run_live.py has no diagnose_body and no
+  allow_hidden kwarg; the runner raises ImportError against it).
   Before launch, re-check the laptop ship md5s against the manifest
   and record the check in the run report; any mismatch stops the
   launch and forces a re-ship. Ship gate on the laptop: python3 -m

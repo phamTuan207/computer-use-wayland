@@ -102,10 +102,11 @@
   1defa4ebf184c7e52df9604e75cd7f4b (both match the manifest).
 - Laptop syntax + import: LAPTOP_SYNTAX_OK, LAPTOP_IMPORT_OK.
 - run_live.py shipped from commit 1e3901c (the Y4d revisions are
-  committed there; HEAD's run_live.py is byte-identical to 1e3901c,
-  zero diff). The "uncommitted Y4d revisions, HEAD a82bb41" line in
-  the first ship record is stale; corrected here and in plan
-  section 7.
+  committed there; the live-proven base, 10/10 twice). It is
+  deliberately NOT taken from HEAD: HEAD's run_live.py changed in
+  91d3cd2 (Y11 live-metrics wiring), which is not live-proven.
+  The "uncommitted Y4d revisions, HEAD a82bb41" line in the first
+  ship record is stale; corrected here and in plan section 7.
 - Launch command (NOT run yet): see plan section 5. The handover
   token /tmp/worker-y9-handover.json is written by the launcher at
   launch time, not shipped.

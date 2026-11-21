@@ -19,13 +19,14 @@ goto()) and the C3-F4/F5/F6 orphan hardening (append-mode geckodriver
 log, PID write and session POST inside try with cleanup, exception
 proof terminate), verified by reading the shipped bytes. FROZEN BASE:
 run_live.py is shipped ONLY from commit 1e3901c (md5
-84fa106c253d5e7f16daccf2ce3f14a5; HEAD's run_live.py is byte-identical
-to 1e3901c). The a82bb41 tree alone cannot run (its run_live.py has
-no diagnose_body and no allow_hidden kwarg). The runner refuses to
-launch unless every shipped file matches agy-y2-manifest.json
-(launch-time manifest check, Redteam re-review B3). The frozen
-ship is recorded in SHIPPED.md next to this file; later VM edits do
-not affect the run.
+84fa106c253d5e7f16daccf2ce3f14a5), the Y4d live-proven base (10/10
+twice). It is deliberately NOT taken from HEAD: HEAD's run_live.py
+changed in 91d3cd2 (Y11 live-metrics wiring, +415/-66), which is
+not live-proven, and the runner was written and reviewed against
+the 1e3901c API. The runner refuses to launch unless every shipped
+file matches agy-y2-manifest.json (launch-time manifest check,
+Redteam re-review B3). The frozen ship is recorded in SHIPPED.md
+next to this file; later VM edits do not affect the run.
 
 RULES (from the v2 plan, all enforced in code below):
 - One fresh WebDriver session per test, always deleted in finally.
