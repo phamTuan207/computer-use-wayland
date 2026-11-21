@@ -891,3 +891,112 @@ council 3 (5 steps, stdout and stderr recorded separately).
   his decision get reported immediately; routine work runs silently and is
   reported in the morning. F1 has no blocker right now; if the live
   activation hits one, it goes to the parent at once.
+
+## 23:05-23:24 - Round 2 commit C: hyprglass gate (R3) + FAKE + tests, via a regression and its diagnosis
+- 23:05: owner note (fleet): MERGE DONE, graph 456, target 240 EXCEEDED.
+  main HEAD 5c94e6c (merge 0ac4311 todolist-push 313 commits + 0c473f9),
+  3 conflicts kept both sides, suite 1618 tests: 3 fail + 5 error (all
+  pre-existing at baseline, 0 regression, +124 tests). Graph UTC 21/11:
+  455 commits + 1 PR = 456. The commit-count pressure is off; small
+  commits continue as good practice, and MERGE will pick them up.
+- 23:05: owner note (deferred, low): Zen keybinds. Worker KB is gathering
+  all keybinds (Omarchy + Hyprland + Zen) and integrating them into the
+  computer-use board ON THE MACHINE (local-only, not pushed to the repo).
+  The owner asked why the watch fumbled when the Omarchy skill has it all;
+  the answer: skill_search 'omarchy' returns 0 results, there is no
+  Omarchy skill in the catalog; the keybinds live in the Hyprland/Omarchy
+  config on the machine, not in a skill. Not F1 work.
+- 23:14: fleet note: F3 DONE, slot re-wedged 22:56:12. Marionette root cause
+  proven from source (driver.sys.mjs #registerWindow 4639 passes null into
+  #registerBrowser 4616); restart 22:36 fixed it (session 0.1s); cleanup
+  redo 22:54-22:56 closed 55 tabs, 14 real tabs left, 0 fixture tabs.
+  J21 = F3's click (the app-launcher button, not workspace 1). Slot
+  re-wedged, zombie NOT proven, council 3x AMEND + redteam BLOCK (B7: 4
+  close methods not yet tried). Restart 2 approved (F3b, baseline first,
+  right-click Close Tab first, then Arms A/B/C). Live Y13/Y14 blocked
+  tonight. F1's live activation needs a healthy slot for the proof click,
+  so it waits on F3b. AGENTS.md 23:19 records the proven workspace command:
+  hyprctl dispatch "hl.dsp.focus({ workspace = 2 })" switches in ~1s.
+- 23:16: fleet note: OPT DONE. The single optimal fix method is at
+  improvements/optimal-fix-method-20261121.md (202 lines, 6 commits,
+  verified). Order: F3 slot-health > F1+F2 > ZT-B > Y6 pill > Y13 live >
+  Y14 live > A1 > hidden-body > clone2 heavy > Y1b > scrub > final test
+  LAST. OPT said Y13g had 0 output (WRONG in part: the log
+  worker-y13g-fix-log.md EXISTS, just no commit yet; Y13g still active).
+  Clone2-watch MISS 23:16: the owner did not see Muse switch workspace to
+  approve, so he switched himself. Cause: the cron run 23:11:56 was STILL
+  RUNNING (5+ minutes, no log, no result), so no workspace switch happened.
+  Fix: stop the stuck run, check ws2 at once per the owner's order. Not F1.
+
+### C3 regression, diagnosis, and fix (23:04-23:24)
+- 23:04: first full run of the R3 gate + FAKE (c3.log) FAILED badly: many
+  F/E in the progress line, run still going after 90s (normal ~30s). I
+  killed it with pkill (too early, losing the failure summary; lesson: let
+  a failing run finish and read its summary instead of killing it).
+- 23:06: single-test run (c3-single.log) gave the first real clue: the
+  envelope error was "module 'cursor_theme' has no attribute
+  'redact_text'". Cause: /tmp/f1-test/scripts/cursor_theme.py was STALE
+  (md5 502a4941, the 5033c9d version, grep 0 for redact_text). I had scp'd
+  cursor_session.py and test_cursor_session.py after Commit A but never
+  cursor_theme.py, so the test runtime lacked redact_text, which B3's
+  _tail() calls. Lesson: when a fix touches a helper (redact_text in
+  cursor_theme.py), deploy ALL the files it touches to the test bundle,
+  not just the file under test. Fixed by scp'ing cursor_theme.py (grep 1).
+- 23:07: re-ran the single test (c3-single2.log). New error, the real one:
+  "session guardian startup failed: another automation session is active"
+  plus "session recovery ownership changed; current owner must restore".
+  The first subtest TIMED OUT at 8s (the session hung), leaving its
+  guardian holding the lock, so the second subtest failed on the lock.
+  The hang was reproducible (c3-single3.log, same 13.216s, same errors).
+- 23:08-23:12: diagnosis. The FAKE hyprglass branch is FAST (0.016s per
+  call, rc 0, valid JSON, proven on the laptop), so the gate itself was not
+  slow. A ps snapshot caught the orphaned guardian (PID 470001, parent 1)
+  from the timed-out first subtest, still running. I added a faulthandler
+  timeout to the LAPTOP copy only (via a patch script file, after an inline
+  python -c mangled the quotes and broke the file; the file was restored
+  by re-scp). The faulthandler dump (c3-diag2.log) proved the hang:
+  the guardian was stuck in indicator.Native.__init__ (line 73) calling
+  activation_checks.wait_for_profile (line 27, and line 14 in check_output
+  waiting in select). Root cause: Native.__init__ calls wait_for_profile
+  (30s timeout) whenever _valid_liquid is True. Before my FAKE change,
+  _valid_liquid was False in the test env (hyprglass status exited 1), so
+  wait_for_profile was never called. My FAKE made _valid_liquid True, so
+  Native now called wait_for_profile, which polls `hyprctl configerrors`
+  and requires it to return empty before it even checks liquid_available.
+  The FAKE did not handle `configerrors`, so check_output raised
+  CalledProcessError every iteration, the loop ran the full 30s, and the
+  test timed out at 8s. The R3 gate (placed AFTER Native) was never even
+  reached. Two defects, one root: the gate was after Native, and the FAKE
+  lacked configerrors.
+- 23:12: fix. (1) Moved the R3 gate BEFORE indicator.Native (right after
+  cursor_theme.apply), so a down or warming-up backend fails fast with a
+  named cause instead of hanging 30s in wait_for_profile. (2) Added a
+  `configerrors` branch to the FAKE (returns empty, rc 0), so
+  wait_for_profile returns fast when the backend is ready. Verified on
+  the VM: FAKE compiles, configerrors rc 0 empty, hyprglass status rc 0
+  valid JSON; py_compile cursor_session.py OK.
+- 23:13: re-ran the full suite (c3b.log): 35 tests in 32.603s, FAILED
+  (2 failures + 3 errors), no hang. The 2 R3-test failures: my assertion
+  released()==[] was wrong, the guard lease is created BEFORE the gate, so
+  cleanup releases it and the list holds the token (glass_down: 1 token,
+  glass_pending: 2, accumulated across subtests). The 3 cleanup-test
+  errors: the R3 gate calls indicator.liquid_available, which spawns a
+  subprocess, but that test patches session.os.read globally, which breaks
+  subprocess communication, so liquid_available returned False and the
+  gate raised. That test already stubs every guardian dependency (Native,
+  listen, check_guard, apply, snapshot, hotkey, signal, select, os.read,
+  restore); it needed liquid_available stubbed too.
+- 23:14: fix. (1) R3 test: assert released() grows by exactly 1 per
+  subtest (before+1), proving the lease is released, not leaked, on the
+  failure path. (2) Cleanup test: patch indicator.liquid_available to
+  return True. BUT adding a third manager to the inner with pushed the
+  file over the compiler static-nesting limit even on Python 3.14
+  (SyntaxError at line 590). That is the R12/C3-5 defect biting again.
+- 23:15: fix. Refactored test_cleanup_exceptions_cannot_skip_restore to
+  use contextlib.ExitStack (sequential enter_context calls, no giant
+  nested with), including the liquid_available stub with a comment. This
+  ALSO fixes R12/C3-5: the file now compiles on VM Python 3.12.3
+  (py_compile OK), where it previously failed at line 566/570.
+- 23:16: re-ran the full suite (c3d.log): 35 tests in 32.212s, OK. All
+  green. The R3 gate, the FAKE branches, the R3 test, and the cleanup
+  test refactor are all proven on the laptop (Python 3.14.10).

@@ -78,6 +78,26 @@ elif a[:2]==['cu-cursor','release']:
                 guard_state['token']='';guard_state['active']=False
                 guard_file.seek(0);json.dump(guard_state,guard_file);guard_file.truncate()
                 print(json.dumps({'ok':True,'schema':1,'released':token}))
+elif a==['configerrors']:
+    # activation_checks.wait_for_profile polls this; the fake compositor
+    # has no config errors, so answer empty and let it proceed to the
+    # liquid check instead of looping to its timeout.
+    pass
+elif a==['-j','hyprglass','status']:
+    # The liquid backend. The guardian gates the session on this (R3), so
+    # the fake must answer it or every lifecycle test fails closed.
+    # glass_down mimics an unloaded plugin: plain text, exit code 0.
+    # glass_pending mimics shaders still compiling.
+    liquid={'schema':1,'version':'1.1.1-cu.1','versionCheck':'match','active':True,
+            'shaders':'ready','features':{'layers':{'enabled':True,'active':True,'reason':None},
+            'windows':{'enabled':False},'subsurfaces':{'enabled':False}}}
+    if s.get('glass_down'):
+        print('unknown request')
+    elif s.get('glass_pending'):
+        liquid['shaders']='pending'
+        print(json.dumps(liquid))
+    else:
+        print(json.dumps(liquid))
 else:sys.exit(1)
 p.write_text(json.dumps(s))
 '''
@@ -565,9 +585,36 @@ class Lifecycle(unittest.TestCase):
     def test_cleanup_exceptions_cannot_skip_restore(self):
         import cancel_hotkey
         import indicator
+        from contextlib import ExitStack
+        # ExitStack, not one giant with: the nested with this test used to
+        # have exceeded the compiler's static nesting limit (it did not
+        # compile on Python 3.12, and one more manager broke it on 3.14 too).
         for failing in ('request_stop','stop_group','drain_input'):
-            with self.subTest(failing=failing),patch.object(session.signal,'signal'),patch.object(session,'STATE',self.folder),patch.object(session,'SNAPSHOT',self.folder/'snapshot'),patch.object(session,'CANCEL',self.folder/'cancel'),patch.object(session,'owner_lock'),patch.object(cancel_hotkey,'hotkey_on'),patch.object(cancel_hotkey,'hotkey_off'),patch.object(session,'request_stop'),patch.object(session,'stop_group'),patch.object(session,'drain_input'),patch.object(session,'restore',return_value=True) as restore,patch.object(session.select,'select',return_value=([1],[],[])),patch.object(session.os,'read',side_effect=[b'123',b'']),patch.object(session,failing,side_effect=RuntimeError('cleanup injected')),patch.object(cursor_theme,'snapshot',return_value={'agent_theme':'cu-agent-test','agent_size':32}),patch.object(cursor_theme,'check_guard'),patch.object(cursor_theme,'apply'):
-                with patch.object(indicator,'Native') as native,patch.object(indicator,'listen'):
+            with self.subTest(failing=failing):
+                with ExitStack() as stack:
+                    stack.enter_context(patch.object(session.signal,'signal'))
+                    stack.enter_context(patch.object(session,'STATE',self.folder))
+                    stack.enter_context(patch.object(session,'SNAPSHOT',self.folder/'snapshot'))
+                    stack.enter_context(patch.object(session,'CANCEL',self.folder/'cancel'))
+                    stack.enter_context(patch.object(session,'owner_lock'))
+                    stack.enter_context(patch.object(cancel_hotkey,'hotkey_on'))
+                    stack.enter_context(patch.object(cancel_hotkey,'hotkey_off'))
+                    stack.enter_context(patch.object(session,'request_stop'))
+                    stack.enter_context(patch.object(session,'stop_group'))
+                    stack.enter_context(patch.object(session,'drain_input'))
+                    restore=stack.enter_context(patch.object(session,'restore',return_value=True))
+                    stack.enter_context(patch.object(session.select,'select',return_value=([1],[],[])))
+                    stack.enter_context(patch.object(session.os,'read',side_effect=[b'123',b'']))
+                    stack.enter_context(patch.object(session,failing,side_effect=RuntimeError('cleanup injected')))
+                    stack.enter_context(patch.object(cursor_theme,'snapshot',return_value={'agent_theme':'cu-agent-test','agent_size':32}))
+                    stack.enter_context(patch.object(cursor_theme,'check_guard'))
+                    stack.enter_context(patch.object(cursor_theme,'apply'))
+                    native=stack.enter_context(patch.object(indicator,'Native'))
+                    stack.enter_context(patch.object(indicator,'listen'))
+                    # The R3 gate calls liquid_available, which spawns a
+                    # subprocess; os.read is patched above, so stub it True
+                    # and let this test exercise the cleanup path it owns.
+                    stack.enter_context(patch.object(indicator,'liquid_available',return_value=True))
                     native.return_value.process.poll.return_value=None
                     self.assertEqual(session.guardian(self.env,1,'a'*32),1)
                     restore.assert_called_once_with(self.env)
@@ -791,6 +838,34 @@ class Lifecycle(unittest.TestCase):
         self.assertIn('not valid JSON',combined)
         self.assertIn('may not be loaded',combined)
         self.configure(status_garbage=False)
+
+    def test_hyprglass_gate_fails_closed_and_names_the_cause(self):
+        # R3: a session must not start when hyprglass is not active or its
+        # shaders are still warming up, or the pill never appears and the
+        # session succeeds silently. The gate must fail closed with the cause
+        # named in the JSON envelope on stdout, not a bare message.
+        try:
+            for flag,expected in (('glass_down','hyprglass is not active'),
+                                  ('glass_pending','shaders are still warming up')):
+                with self.subTest(flag=flag):
+                    self.configure(**{flag:True})
+                    before=len(self.released())
+                    marker=self.folder/'must-not-run'
+                    p=self.launch(f"from pathlib import Path;Path({str(marker)!r}).touch()")
+                    out,err=p.communicate(timeout=8)
+                    self.assertNotEqual(p.returncode,0,(out,err))
+                    self.assertFalse(marker.exists(),'driver ran without hyprglass')
+                    self.assertFalse((self.state/'session.json').exists())
+                    # The guard lease is created before the gate, so cleanup
+                    # releases it on the failure path; assert exactly one
+                    # release, proving the lease is not leaked.
+                    self.assertEqual(len(self.released()),before+1)
+                    envelope=json.loads(out)
+                    self.assertIn(expected,envelope['error'])
+                    self.assertNotEqual(envelope['error'],'session guardian startup failed')
+                    self.configure(**{flag:False})
+        finally:
+            self.configure(glass_down=False,glass_pending=False)
 
     def test_lost_lease_stops_driver_and_restores(self):
         heart=self.folder/'heartbeat';ready=self.folder/'driver-ready'
