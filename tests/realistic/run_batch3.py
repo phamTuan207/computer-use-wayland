@@ -91,8 +91,8 @@ KEY_ENTER = "\uE007"
 KEY_HOME = "\uE011"
 KEY_ARROW_LEFT = "\uE012"
 KEY_ARROW_UP = "\uE013"
-KEY_ARROW_DOWN = "\uE014"
-KEY_ARROW_RIGHT = "\uE015"
+KEY_ARROW_RIGHT = "\uE014"
+KEY_ARROW_DOWN = "\uE015"
 
 # Preflight result: set by run_preflight, read by type_empty.
 # True when Marionette /clear was proven to fire the input event live.
@@ -1243,6 +1243,12 @@ def run_b3_t08(r, d):
 def run_b3_t09(r, d):
     url = r.base + "/clone1-batch3/t09-multi-window/fixture.html"
     main_tab = open_test(r, d, url)
+    # Live handles() returns EVERY tab/window in the attached Zen, so
+    # counts are relative to a baseline captured here, never absolute
+    # (redteam D2: check.mjs counts 3/1 run in a fresh Playwright
+    # context with only test pages; live there are user tabs too).
+    handles_before = r.step("record handle baseline", "eval",
+                            lambda: len(d.handles()))
 
     def title_of(pid):
         return d.eval(
@@ -1367,7 +1373,8 @@ def run_b3_t09(r, d):
         lambda: open_popup("#prefs-btn"))
     n = r.step("count handles with two popups", "eval",
                lambda: len(d.handles()))
-    r.check("3 pages with two popups open", n == 3, str(n))
+    r.check("two more handles with two popups open",
+            n == handles_before + 2, f"got {n}, baseline {handles_before}")
     r.step("select dark in second prefs", "select",
            lambda: select_option(d, "#theme-select", "dark"))
     r.step("apply dark in second prefs", "click",
@@ -1389,7 +1396,8 @@ def run_b3_t09(r, d):
     expect_title("alpha", "Alpha Final", "Alpha title at the end")
     expect_title("beta", "Beta", "Beta title at the end")
     n = r.step("count handles at end", "eval", lambda: len(d.handles()))
-    r.check("1 page after all popups closed", n == 1, str(n))
+    r.check("handles back to baseline after all popups closed",
+            n == handles_before, f"got {n}, baseline {handles_before}")
     r.details["finalTitles"] = {
         "alpha": title_of("alpha"),
         "beta": title_of("beta"),
@@ -1420,9 +1428,12 @@ def run_b3_t10(r, d):
         # script as a function body). The sampler starts the moment this
         # eval runs, right after the Next click, exactly as check.mjs
         # starts its sampler promise before the now-playing assert.
-        # /execute/sync awaits the returned promise, so this call
+        # /execute/sync awaits the returned promise (W3C Execute Script
+        # 13.2.1; Marionette bug 1398095, Firefox 67), so this call
         # blocks about 500 ms and returns the minimum observed.
-        return d.eval(
+        # Fail-closed (redteam D3): a None or non-numeric result raises
+        # here, never defaults to 0 and never skips the assert.
+        result = d.eval(
             "return new Promise((resolve) => {"
             "let min = Infinity;"
             "const t0 = Date.now();"
@@ -1433,6 +1444,10 @@ def run_b3_t10(r, d):
             "if (Date.now() - t0 >= 500) resolve(min);"
             "else setTimeout(sample, 10);"
             "}; sample(); })")
+        if not isinstance(result, (int, float)):
+            raise RuntimeError(
+                f"sampler returned non-numeric: {result!r}")
+        return result
 
     listed = r.step("read playlist", "eval", lambda: tracks())
     r.check("playlist lists 5 tracks", len(listed) == 5, str(listed))
@@ -1582,8 +1597,8 @@ def run_preflight(r, d):
     exists for every required case: /actions, or raw element/value on
     both a text input and a range input."""
     global CLEAR_FIRES_INPUT, ACTIONS_OK
-    url = r.base + "/probe.html"
-    open_test(r, d, url)
+    url = r.base + "/run_batch3_probe.html"
+    tab = open_test(r, d, url)
     probe = lambda: d.eval("return window.__probe")  # noqa: E731
 
     # (i) Keys on a text input: exact e.key strings, focus verified.
@@ -1618,6 +1633,17 @@ def run_preflight(r, d):
                   lambda: probe()["keys"])
     r.check("preflight keys are Enter, ArrowUp",
             len(keys) >= 2 and keys[-2:] == ["Enter", "ArrowUp"],
+            str(keys))
+    # D1 fix: assert the arrow e.key strings directly, so a future
+    # Right/Down PUA swap is named here instead of surfacing as a
+    # wrong volume number.
+    r.step("preflight press ArrowRight+ArrowDown", "key",
+           lambda: press_keys(d, [KEY_ARROW_RIGHT, KEY_ARROW_DOWN],
+                              css="#probe-input"))
+    keys = r.step("preflight read keys after arrows", "eval",
+                  lambda: probe()["keys"])
+    r.check("preflight keys are ArrowRight, ArrowDown",
+            len(keys) >= 2 and keys[-2:] == ["ArrowRight", "ArrowDown"],
             str(keys))
 
     # (ii) Range input: click leaves 50, Home sets 0, ArrowRight x70
@@ -1713,6 +1739,53 @@ def run_preflight(r, d):
         raise RuntimeError(
             "PREFLIGHT FAIL: neither /actions nor raw element/value "
             "provides a working key path for all required cases")
+    # (vii) Promise proof (redteam D3): /execute/sync must await a
+    # returned Promise. Plus a control showing a bare IIFE returns
+    # null (the Y4d lesson: no top-level return discards the value).
+    promise_result = r.step("preflight promise eval", "eval",
+                            lambda: d.eval(
+                                "return new Promise(r => setTimeout("
+                                "() => r(42), 100))"))
+    r.check("preflight promise eval returns 42", promise_result == 42,
+            str(promise_result))
+    iife_result = r.step("preflight bare IIFE control", "eval",
+                         lambda: d.eval("(function(){ return 42; })()"))
+    r.check("preflight bare IIFE returns null (control)",
+            iife_result is None, str(iife_result))
+
+    # (viii) window.open popup proof (redteam D5): t09 popups are
+    # window.open with width/height features, which Firefox opens as
+    # separate windows, not tabs (unlike the <a target=_blank> tabs in
+    # run_t05/run_t06). Open one from a real click, switch to it,
+    # assert visible, close it, switch back, assert the handle count
+    # returns to baseline.
+    before_handles = r.step("preflight record handles", "eval",
+                            lambda: d.handles())
+    r.step("preflight open window.open popup", "click",
+           lambda: d.click("#probe-popup-btn"))
+    _wait_handles(d, len(before_handles) + 1)
+    popup = [h for h in d.handles() if h not in before_handles][0]
+    r.step("preflight switch to popup", "switch",
+           lambda: d.switch(popup))
+    r.step("preflight settle popup", "wait",
+           lambda: (d.wait_ready(), time.sleep(1.0)))
+    ok, _sw = r.step("preflight ensure popup visible", "diagnose",
+                     lambda: ensure_visible(d, r, "probe popup",
+                                            allow_swap=False))
+    if not ok:
+        raise RuntimeError("PREFLIGHT FAIL: window.open popup tab hidden")
+    title = r.step("preflight read popup title", "text",
+                   lambda: d.text("#popup-title"))
+    r.check("preflight popup title", title.strip() == "probe popup",
+            title)
+    r.step("preflight close popup", "close", lambda: d.close_tab())
+    r.step("preflight switch back", "switch",
+           lambda: d.switch(tab))
+    n = r.step("preflight count handles after popup", "eval",
+               lambda: len(d.handles()))
+    r.check("preflight handles back to baseline",
+            n == len(before_handles), f"got {n}, baseline {len(before_handles)}")
+
     if actions_ok:
         ACTIONS_OK = True
     r.details["actionsOk"] = actions_ok

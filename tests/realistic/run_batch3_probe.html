@@ -8,7 +8,15 @@
 <ul id="probe-list"></ul>
 <input id="probe-filter" autocomplete="off" spellcheck="false">
 <ul id="probe-items"><li>apple</li><li>apricot</li><li>banana</li><li>cherry</li></ul>
+<p><button id="probe-popup-btn" type="button">open popup</button></p>
 <script>
+  // Button for preflight (viii): opens a window.open popup with
+  // width/height features, the same shape as the t09 popups, so the
+  // preflight proves the window case live (a real click is required,
+  // window.open from a bare eval is blocked by the popup blocker).
+  document.getElementById('probe-popup-btn').addEventListener('click', () => {
+    window.open('run_batch3_probe_popup.html', '_blank', 'width=500,height=400');
+  });
 window.__probe = {keys: [], clicks: [], dblclicks: 0, filtered: 4};
 const input = document.getElementById('probe-input');
 input.addEventListener('keydown', (e) => { window.__probe.keys.push(e.key); });

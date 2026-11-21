@@ -47,11 +47,18 @@ payloads (Council 1 A1), always explicit, never relying on defaults:
   `{"actions": [{"type": "key", "id": "keyboard", "actions": [{"type": "keyDown", "value": "\uE007"}, {"type": "keyUp", "value": "\uE007"}]}]}`.
   Batched max 10 pairs per call, then DELETE /session/:id/actions to
   release. Key values are the WebDriver PUA codes: Enter U+E007, Home
-  U+E011, ArrowLeft U+E012, ArrowUp U+E013, ArrowDown U+E014, ArrowRight
+  U+E011, ArrowLeft U+E012, ArrowUp U+E013, ArrowRight U+E014, ArrowDown
   U+E015. Note: the legacy Firefox Marionette Keys doc maps ENTER to
   0xE006, not E007; that is the old mapping, not the W3C Actions
   mapping, which is why preflight asserts the recorded `e.key` string
-  is exactly `Enter`, not just that a keydown fired. DELETE is best
+  is exactly `Enter`, not just that a keydown fired. Redteam D1: the
+  first draft had Right and Down swapped (ArrowDown U+E014, ArrowRight
+  U+E015). The W3C WebDriver key table, the Selenium wire table,
+  go-selenium and the Haskell webdriver bindings all agree: Right
+  U+E014, Down U+E015. The swapped codes would have failed the t08/t10
+  volume steps, and the preflight range test would have caught it
+  fail-closed, but the slot would have burned on a preflight abort.
+  DELETE is best
   effort (Council 1 A2): wrap in try/except, never raise; try
   `_wd("DELETE", _s("/actions"), {})` first, if geckodriver rejects
   the `{}` body retry with body None, and log which form worked.
@@ -199,10 +206,18 @@ payloads (Council 1 A1), always explicit, never relying on defaults:
   (L104). Cancel: clickAndClose on #cancel-btn (await the close first),
   then dwell 500 ms, then read the title immediately, no verify
   (L128-133). Two-popups step: open detail popup, switch back to main
-  WITHOUT closing it, open prefs popup, assert handles count is 3,
-  close prefs, verify dark, switch to the still-open detail popup,
-  rename, close, verify. Final assert: handles count is 1 after all
-  popups closed (L149-150).
+  WITHOUT closing it, open prefs popup, assert the handle count is
+  handles_before + 2, where handles_before is captured at t09 start
+  (redteam D2: check.mjs counts 3/1 in a fresh Playwright context with
+  only test pages; live handles() returns every tab/window in the
+  attached Zen, so an absolute 3/1 is a guaranteed false-fail with any
+  user tab open). Save the detail popup handle explicitly at open time,
+  since the later switch to the still-open detail popup needs it.
+  Close prefs, verify dark, switch to the still-open detail popup,
+  rename, close, verify. The close-wait (_wait_handles_gone) raises on
+  timeout and never proceeds on timeout, so a missed Cancel click cannot
+  pass silently. Final assert: handles count is back to handles_before
+  after all popups closed (L149-150).
 - t10 music player: clicks; sleeps as in check.mjs (700 ms after play,
   400 ms paused, 500 ms after resume, 350 ms after sampler); sampler:
   eval with top-level `return new Promise(...)` sampling
@@ -215,7 +230,14 @@ payloads (Council 1 A1), always explicit, never relying on defaults:
   100 ms, and a late sampler can read min above 2 and fail a correct
   reset), then check now-playing, then await the min; fail if min is
   greater than 2 or min is greater than or equal to posBeforeNext.
-  Advance assert: after sleep 350, position must be at least 2, not
+  Fail-closed rule (redteam D3): run_batch3.py raises a test failure on
+  a None or non-numeric sampler result, never defaults it to 0 and never
+  skips the assert, so a sampler that proves nothing cannot pass
+  vacuously. The sampler start gap (click return to first sample, one
+  HTTP round trip) is derivable from the step log timestamps in
+  /tmp/worker-y14-live.jsonl; on a min in 3-5 with a gap over 200 ms,
+  treat as INFRA/timing and retry once rather than recording a fixture
+  failure. Advance assert: after sleep 350, position must be at least 2, not
   just past 0 (check.mjs L93-95). Volume: click #volume, Home,
   ArrowRight x30, with the same live asserts as t08 (50 after click,
   0 after Home, 30 after the batch, checked immediately). Seek:
@@ -266,6 +288,14 @@ hidden body; removal was never measured live.
 - If `ensure_visible` swaps tabs, reload the fixture on the new tab
   exactly as `open_fixture` does (goto + clear + refresh +
   `ensure_visible` again, one final fresh tab before finalising INFRA).
+  That rule is for MAIN test tabs only. For popup tabs (t09)
+  `ensure_visible` is called with allow_swap=False, a popup that stays
+  hidden after poll plus removal is INFRA, and the main fixture is NEVER
+  reloaded into a popup slot (redteam D4: rebootstrap returns an
+  about:blank tab or a reused visible test tab, never the popup
+  document, so reloading the fixture there would put the runner on the
+  wrong document and record the failure as a step failure instead of
+  the INFRA hidden-body event it was).
   The swapped tab handle is appended to `d.opened_tabs` so the session
   cleanup closes it (rebootstrap keeps it out of opened_tabs by design,
   and this runner uses one session per test, so an unappended swap
@@ -280,6 +310,19 @@ hidden body; removal was never measured live.
   failures and report, instead of grinding through the remaining tests
   on a wedged Zen.
 
+## Line-by-line verification (redteam demand, 19:47)
+
+run_batch3.py was diffed against all 10 check.mjs files before the slot.
+The two items the redteam flagged as missing from the plan text are both
+present in the runner: t04 asserts #empty visible on a no-match search,
+and t06 asserts the #form-day label 'June 12, 2026'. The plan lines for
+t04/t06 are summary-level; the runner is the faithful translation.
+Details-only differences (no pass/fail effect): t01 historyLines counts
+non-empty output lines while check.mjs counts a regex match; t10 records
+a supplementary D1 diagnostic that does not affect the suite verdict. No
+assert in any check.mjs was found missing from the runner. A second
+redteam pass on run_batch3.py itself is required before the slot opens.
+
 ## Preflight step 0 (inside my slot, before t01)
 
 The /actions helpers have never run against live Zen. Before t01, open a
@@ -292,7 +335,11 @@ clear probe. Prove live, and FAIL the preflight (blocking t01) on any
 miss (Council 1 A3, Council 2 A1/A9):
 - (i) Type into the text input, press_keys Enter and ArrowUp, assert the
   recorded `e.key` strings are exactly `Enter` and `ArrowUp`, and assert
-  `document.activeElement.id` is the input before each press.
+  `document.activeElement.id` is the input before each press. Then press
+  ArrowRight and ArrowDown on the text input and assert the recorded
+  `e.key` strings are exactly `ArrowRight` and `ArrowDown`, so a future
+  Right/Down PUA swap is named directly instead of surfacing as a wrong
+  volume number (redteam D1).
 - (ii) On the range input: click leaves value 50, Home sets 0,
   ArrowRight x70 in 10-pair batches sets 70. This proves the full 70-key
   batch and that focus survives across batches.
@@ -309,6 +356,19 @@ miss (Council 1 A3, Council 2 A1/A9):
 - (vi) Test the key fallback in the same preflight: no-clear raw
   element/value with PUA codes (append_text pattern) on both a text
   input (Enter, ArrowUp) and a range input (Home, ArrowRight).
+- (vii) Promise proof (redteam D3): eval `return new Promise(r =>
+  setTimeout(() => r(42), 100))` must return 42, plus a control showing
+  a bare IIFE returns null (the Y4d lesson). This proves on this Zen
+  that /execute/sync awaits a returned Promise (W3C Execute Script
+  13.2.1; Marionette bug 1398095, Firefox 67), which the t10 sampler
+  depends on.
+- (viii) window.open popup proof (redteam D5): click #probe-popup-btn,
+  which opens run_batch3_probe_popup.html with width=500,height=400
+  features, assert a new handle appears, switch to it, assert visible,
+  close it, switch back, assert the handle count returns to baseline.
+  This proves the window case live: t09 popups are window.open with
+  features, which Firefox opens as separate windows, not the
+  <a target=_blank> tabs proven live by run_t05/run_t06.
 If /actions fails, fall back exactly as specified in the helpers section
 (no-clear raw element/value for keys, d.click where a selector exists,
 two d.click() for dblclick) and record the fallback as a deviation in
@@ -468,5 +528,27 @@ mutation probes matched. Overall: SOUND WITH NOTED DEFECTS.
   order (already covered by Council 3 A3); A9 preflight extensions
   (range probe, re-render dblclick probe, empty clear probe); A10 t07
   dirty asserts + t03/t06 existence/class asserts named in the runner.
-- Redteam: verdict pending at the time of this edit; fold it in when
-  it arrives.
+- Redteam (BLOCK, 19:47 21/11): D1 ArrowRight/ArrowDown PUA codes swapped
+  in the first draft (fixed: Right U+E014, Down U+E015 in plan + code,
+  preflight (i) now asserts the ArrowRight/ArrowDown e.key strings);
+  D2 t09 absolute handle counts 3/1 (fixed: relative to handles_before
+  captured at t09 start, +2 at two-popups, baseline at end); D3 t10
+  sampler Promise unproven + no fail-closed rule (fixed: preflight
+  (vii) Promise proof returning 42 + bare-IIFE control, sampler raises
+  on None/non-numeric, never defaults to 0); D4 hidden-body ladder
+  wrong for popup tabs (fixed in plan text: main tabs only reload the
+  fixture on swap; popups use allow_swap=False, persistent hidden is
+  INFRA; the code already passed allow_swap=False for popups); D5
+  window.open popup transfer unproven (fixed: preflight (viii) opens a
+  real window.open popup from a click, switches, asserts visible,
+  closes, asserts the handle count returns to baseline; new probe page
+  run_batch3_probe_popup.html). The redteam reviewed the plan before
+  run_batch3.py existed, so its "no code exists" claims were stale at
+  arrival; Y12 HAS reported (897ca17, see the section above). During
+  the fix, a sixth bug was found by inspection: run_preflight opened
+  "/probe.html", a file that does not exist (fixed to
+  "/run_batch3_probe.html", probe tab handle captured for the
+  switch-back; the earlier fix attempt died on its first assert because
+  it assumed the wrong URL, and the failure was caught by the
+  verification inspect, not by the run). A second redteam pass on
+  run_batch3.py itself is required before the slot opens.
