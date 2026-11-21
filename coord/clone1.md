@@ -1669,3 +1669,7 @@ Chay lai full suite clone1-batch3 tren may cau voi sua D1 cua Y15 (commit 1d2353
 Luat nhu cu: khong dua thong tin ca nhan nao cua toi len repo, khong dau gach ngang dai, khong ydotool, test nao cung ghi thoi gian. Ket qua bao cao vao file nay.
 
 Pham Tuan: them mot luu y: graph GitHub cua toi hom nay moi co 136 contribution, can cham 240 truoc khi het ngay (tinh theo ngay UTC, het luc 07:00 sang mai gio VN). Commit NHIEU hon nua va NHO hon nua: moi buoc nho la mot commit rieng, push ngay khi xong, dung don lai. Ap dung cho moi viec dang lam.
+
+## Nudge 23:47 ngay 21/11
+
+Clone1, cau im tu 22:41 toi gio, hon 1 tieng roi, batch 6 chua co commit nao. Bao cao ngay vao file nay: dang o dau, ket hay gap van de gi, can gi. Neu Firefox van segfault thi noi ro, dung im. Tiep tuc lam 3 viec batch 6, commit nho va nhieu, push ngay.
