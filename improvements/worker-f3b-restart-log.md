@@ -78,3 +78,48 @@ Start: 23:14 21/11/2026 (+07). Owner asleep; do not disturb.
 | 23:41:28 | +26m38s | Fleet note (via MEMORY) | F1 + F2 DONE | F1 done (4-layer root cause, drift repair, test am live 23:35 RC=1, theme 35 OK x10, laptop 71 OK); live activation + positive proof still owed, awaiting F3b sign-off. F2 done (act-now, overlay 314-346ms x5, batch 0.87-2.0s; but all 5 runs went fallback, session path untested live, 30s unproven end-to-end, ZT-00 inconclusive, new gaps G28/G29). F3b sign-off for F1: the slot IS healed (restart step 3, PID 479395), so F1's live activation test is unblocked now. | - |
 | 23:42:12 | +27m22s | STEP 4 Arm E VERDICT: FAIL, WEDGE REPRODUCED | arm_e_run.log + probe_e.log | Arm E EXECUTED cleanly: session 6304b1d8, sac b24bb81f, BEFORE 19, DOOMED 4 (Example + 3 blanks), CLOSED all 4 via switch + DELETE /window, AFTER 15 (14 real + 1 blank = the sac), DELETE with sac current, exit 0. Probe: PROBE1 CREATE FAIL + PROBE2 CREATE FAIL, both HTTP 500 'browserElement is null' (same stack), exit 1. THE COMBINATION WEDGES. A/B/C/D each pass alone; the full close3 sequence (sac + multiple DELETE /window closes + DELETE with sac current) reproduces the wedge. Refined suspects inside E: (1) MULTIPLE DELETE /window closes in one session (D did one), (2) closing about:blank tabs via DELETE /window (D closed Example only; blanks were never Marionette-closed in A-D), (3) the sac surviving the session DELETE. This is the 3rd wedge (22:06, 22:56, ~23:42). BiDi still works. | - |
 | 23:42:30 | +27m40s | STEP 4 wedge diagnosis | zen_cli.py tabs | BiDi lists 15 contexts: 14 real + 1 about:blank (index 9, the sac). The sac HAS a live context, so it is not a context-less zombie by the BiDi test. The dead element (null linkedBrowser) is invisible to BiDi, as in the 22:56 wedge. Next: try BiDi browsingContext.close on the sac (the only actionable suspect + Council 2's recommended close method), then probe; if still wedged, restart #3. | - |
+| 23:43:01 | +28m11s | STEP 4 BiDi close on sac | zen_cli.py close 9 | {"ok": true, "command": "close", "index": 9}. The sac blank tab is closed via BiDi browsingContext.close. | - |
+| 23:43:29 | +28m39s | STEP 4 BiDi-close probe: STILL WEDGED | probe_f.log | PROBE1 CREATE FAIL + PROBE2 CREATE FAIL, same HTTP 500 'browserElement is null', exit 1. BiDi browsingContext.close does NOT heal the slot. Non-restart options exhausted: right-click Close Tab (step 2), BiDi close (this step). Ctrl+W has no target: no dead row is visible (see next row). Restart is the only fix. | - |
+| 23:43:43 | +28m53s | STEP 4 observe (ws2, not Zen) | computer-use observe eDP-2 | id d38a2ac8bd28. The screen is on Hyprland ws2 (two Muse chat windows: clone1 + clone2), NOT Zen. The owner is active on ws2 (clone2 confirming todo). I did NOT switch to ws1 to hunt for a dead row: yanking his screen while he works for a long-shot Ctrl+W (the same close command that already failed twice by other paths) is not worth the disruption. Ctrl+W on a zombie row: NOT TRIED, no target identified, low expected value. | - |
+| 23:44:11 | +29m21s | STEP 5 RESTART #3 (authorized, same procedure as step 3) | pkill -TERM zen-bin PID 479395 | Clean exit. Relaunch with desktop env (XDG_RUNTIME_DIR, WAYLAND_DISPLAY, DBUS_SESSION_BUS_ADDRESS, HYPRLAND_INSTANCE_SIGNATURE from /run/user/1000/hypr/). New PID 496121, BiDi 9222 + Marionette 2828 LISTEN. Restart #3 was needed because Arm E re-wedged the slot; the brief's step 3 authorization + "restart is the only fix" conclusion (all non-restart options tried) cover it. The owner's ws2 screen was untouched. | - |
+| 23:44:35 | +29m45s | STEP 5 restart #3 probe: SLOT HEALED | probe_r3.log | PROBE1 CREATE OK 88ededda, PROBE2 CREATE OK 7f5f3a42, exit 0. Slot healed for the 3rd time by restart. | - |
+| 23:46:16 | +31m26s | STEP 5 post-restart BiDi tabs: 1 context | zen_cli.py tabs | BiDi lists only 1 context (about:blank), 2 min after restart. NOT a loss: after a restart the tabs are lazy and BiDi getTree only returns contexts for loaded tabs. (Same pattern as the 23:15 baseline: Polygon + codeforces had no BiDi context while lazy.) The sessionstore is the ground truth, not BiDi. | - |
+| 23:47:55 | +33m05s | STEP 5 profile path correction | find | The Zen profile is at /home/james/.config/zen/ae59l0ak.Default (release)/, NOT ~/.zen (which does not exist on this machine). My first sessionstore check used the wrong path; the find located the real one. Record this: all future sessionstore work uses ~/.config/zen/. | - |
+| 23:48:03 | +33m13s | STEP 5 sessionstore after restart #3 | parse_sessionstore.py | recovery.jsonlz4 (23:45 flush, 2,961,658 B) = 1 window, 69 tabs, selected=10, closedTabs 0. All 14 real tabs present. No Example tab, no sac (both closed, as intended). The store is intact; nothing was lost by restart #3. | - |
+| 23:48:44 | +33m54s | STEP 5 final verify: 14 real tabs, 0 fixtures | zen_dom.py list | Marionette lists 17 tabs: all 14 real tabs present by URL (YouTube, Reddit, Todoist, Gmail, Calendar, Muse, PCCV, Free Claude, Welcome, Polygon, codeforces, chunkbase, duck.ai, BytePlus) + 3 about:blank. No fixtures, no Example, no sac. The 3 blanks are the owner's pre-existing store blanks (7 blanks were already in the 22:55 store before F3b), NOT test tabs. LEFT DELIBERATELY: BiDi cannot address lazy tabs (no context), and closing them via Marionette DELETE /window risks re-wedging the slot (Arm E). The "0 fixtures" criterion is met. | - |
+
+## Verdict (23:48)
+
+- SLOT HEALED: yes, by restart #3 (PID 496121, probe_r3 both CREATEs OK). All 14
+  real tabs present, 0 fixtures.
+- TRIGGER: the full close3 sequence (Arm E) reproduces the wedge; every atomic
+  step alone does not. Arms A/B/C/D PASS, Arm E FAILS. The trigger is the
+  COMBINATION, with the refined suspects inside E: (1) multiple DELETE /window
+  closes in one session, (2) closing about:blank tabs via DELETE /window
+  (never done in A-D), (3) the sac surviving the session DELETE. The exact
+  minimal combination (e.g. one blank close alone) is NOT yet isolated; a
+  follow-up Arm F (one blank close via DELETE /window, then probe) would
+  settle it, but each wedge costs a restart, so it is deferred to the
+  cleanup-procedure owner.
+- NON-RESTART FIXES: none found. Tried and failed: right-click Close Tab on
+  the Example row (step 2), BiDi browsingContext.close on the sac (23:43).
+  Ctrl+W on a zombie row was not tried (no dead row identified; owner active
+  on ws2, screen switch not worth it). RESTART IS THE ONLY FIX (3/3 times).
+- ZOMBIE-AS-EXAMPLE: REFUTED (the Example tab was live and served DOM text).
+  The dead element is invisible to BiDi in all three wedges.
+- PROCEDURE RULE (for all future tab cleanup): NEVER close tabs via
+  Marionette DELETE /window in bulk, and NEVER close about:blank tabs via
+  Marionette at all. Close via BiDi browsingContext.close only (Council 2),
+  or via UI right-click Close Tab (grounded coords, proven in Arm C).
+  A session DELETE with any tab current is safe on its own (Arms A/B PASS).
+- NEW FINDINGS: (1) Marionette tab-switch intermittently HANGS (Arm A run 2
+  at the 30s timeout, Arm D run 1 at the 10s timeout; raw TimeoutError escapes
+  zen_dom.py's ZenDomError-only handling). Target tabs by known handle index
+  instead of scanning, and catch TimeoutError per call. (2) The Zen profile
+  is at ~/.config/zen/, not ~/.zen. (3) Post-restart, BiDi getTree lists only
+  loaded tabs (lazy tabs have no context); the sessionstore is the ground
+  truth for tab presence, Marionette handles are the ground truth for live
+  tabs. (4) The sidebar shows fewer rows than BiDi lists and its order does
+  not equal BiDi order; never infer a tab's row from its BiDi index.
+- F1 SIGN-OFF: the slot is healed and stable (probe_r3 PASS, 17 live tabs).
+  F1's live activation test is unblocked.
