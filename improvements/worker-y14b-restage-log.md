@@ -2688,4 +2688,18 @@ Verification (VM, all green):
   probe, fix6 probe). The uncommitted fix-pass-6 redteam
   paper is still untracked in the working tree, untouched.
   Spawning 4 re-reviewers over the fix diff only.
+- 00:38 +07: fix-pass-8 re-reviews SPAWNED (4): redteam,
+  Council 1, Council 2, Council 3, each with a self-contained
+  brief (diff range 0857d19..6f72fe3, blob/md5, claim list,
+  probe paths, verdict + paper deliverable,
+  stage-only-their-paper rule, do-NOT-touch the uncommitted
+  fix-pass-6 redteam paper, do-NOT-run git fetch). Ship waits
+  for them unless one BLOCKs. Proposed stopping rule (to put
+  to Muse): if the re-review is AMEND with only doc items,
+  fix the docs and ship without another round (doc fixes do
+  not change code, so they do not need re-review); a further
+  code fix pass follows only on a BLOCK or a code AMEND.
+  Reported to Muse: fix-pass-7 final tally (3 GO + 1 AMEND)
+  + fix pass 8 done and committed (6f72fe3) + 4 re-reviews
+  spawned.
 
