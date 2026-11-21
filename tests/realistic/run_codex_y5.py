@@ -2817,7 +2817,18 @@ def _reload_settings(d, r, step):
         raised = exc
     d.wait_ready()
     time.sleep(1.0)
-    ok, _swapped = ensure_visible(d, r, "reloaded settings page")
+    ok, swapped = ensure_visible(d, r, "reloaded settings page")
+    if swapped:
+        # Council B F3: a swapped ladder leaves a fresh about:blank
+        # tab with no fixture and no sessionStorage. The persistence
+        # wait_for below would time out after 10 s on that empty tab
+        # and a genuine tz-hidden incident would read as a live
+        # failure. Raise INFRA before the wait_for. (Raised inside
+        # r.step, so main() matches ": INFRA:" in the wrapped
+        # message; see the exception handler there.)
+        raise RuntimeError(
+            "INFRA: hidden-body after settings reload; ladder swapped "
+            "to a fresh tab, fixture not loaded")
     if not ok:
         raise RuntimeError("reload: hidden-body after settings reload")
     try:
@@ -3063,8 +3074,8 @@ FIXTURES = {
 # driver). A passing test with fewer primitives is a live failure:
 # a driver that silently omits steps cannot pass.
 STEP_COUNTS = {
-    "01": 86, "02": 47, "03": 63, "04": 58, "05": 59,
-    "06": 76, "07": 51, "08": 57, "09": 58, "10": 69,
+    "01": 86, "02": 48, "03": 63, "04": 58, "05": 59,
+    "06": 76, "07": 52, "08": 57, "09": 58, "10": 69,
 }
 
 # Per-test wall cap in seconds: each test's spec Maximum allowable
@@ -3080,6 +3091,14 @@ WALL_CAPS = {
 # never count as spec steps.
 AUDIT_OPS = {"click", "type", "wait", "select", "check", "text"}
 
+# JSONL step names that are harness checks, never spec primitives.
+# The body-visible gate in open_fixture logs op "check" while the
+# audit is disabled, so it must be excluded here or every clean run
+# counts one extra record (council B F1: jsonl_n = mem_n + 1).
+_AUDIT_EXCLUDED_STEPS = {
+    "check: body renders visible (no hidden-body incident)",
+}
+
 
 def _audit_count(tid, attempt):
     """Count JSONL primitive records for one test attempt."""
@@ -3093,7 +3112,8 @@ def _audit_count(tid, attempt):
                     continue
                 if (rec.get("test") == tid
                         and rec.get("attempt") == attempt
-                        and rec.get("op") in AUDIT_OPS):
+                        and rec.get("op") in AUDIT_OPS
+                        and rec.get("step") not in _AUDIT_EXCLUDED_STEPS):
                     n += 1
     except Exception as exc:
         print(f"[audit] JSONL read failed for {tid} a{attempt}: {exc}",
@@ -3668,7 +3688,13 @@ def main():
                 print(f"[{tid}] GUARD INCONCLUSIVE: {exc}", flush=True)
             except Exception as exc:
                 msg = str(exc)
-                if msg.startswith("INFRA:"):
+                # Match INFRA raises even when wrapped by r.step as
+                # "step failed: <name>: RuntimeError: INFRA: ..." (the
+                # _reload_settings swap raise takes this path). The
+                # string "INFRA:" only appears in deliberate infra
+                # raises in this codebase, so the substring match
+                # cannot misclassify a live failure.
+                if msg.startswith("INFRA:") or ": INFRA:" in msg:
                     raised_infra = True
                     outcome = "infra-blocked"
                 elif msg.startswith("FIXTURE-UNAVAILABLE"):

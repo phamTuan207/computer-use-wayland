@@ -67,6 +67,30 @@ codex executor, predecessor ports free, flock -w 60, preflight).
 Poll cadence every 15 min at most; 4h without a Y6c marker -> report
 to Muse instead of launching. Never wait silently.
 
+## Re-review Council B (drivers) - BLOCK, ~19:49
+- Paper: improvements/worker-y13-rereview-council-b.md (23,673 bytes).
+- Verdict BLOCK. Drivers spec-faithful (step coverage, action sequences
+  vs simulate.mjs, primitives, ported verify 1:1, WALL_CAPS, no dashes).
+- F1 (BLOCKER) - step-count audit unsatisfiable: _audit_count counted
+  the harness body-visible r.check (op "check", logged unconditionally
+  while audit disabled), so jsonl_n = mem_n + 1 on every clean run.
+  FIXED: _AUDIT_EXCLUDED_STEPS filter in _audit_count excludes
+  "check: body renders visible (no hidden-body incident)".
+  Verified: simulated clean-run JSONL (48 primitives + body check +
+  guard/goto/eval noise) -> _audit_count("02", 1) = 48.
+- F2 (BLOCKER) - STEP_COUNTS wrong for 02 and 07: my first grep missed
+  `x = r.step(...)` assignments (run_02 "11 read first playlist track",
+  run_07 "20 read forward modal heading"). FIXED: "02": 48, "07": 52
+  (total 626). Verified: corrected recount matches the table exactly.
+- F3 (SHOULD-FIX) - _reload_settings ignored the swap flag: a swapped
+  ladder leaves an empty tab and the persistence wait_for times out as
+  a live failure. FIXED: raise INFRA when swapped, before wait_for;
+  main() now also matches ": INFRA:" in the message (r.step wraps
+  raises as "step failed: ...: RuntimeError: INFRA: ..."). Verified:
+  wrapped INFRA matches, live-failure message does not.
+- Council A (harness) + Redteam still running at fix time; their
+  findings will be adjudicated when they land, in a follow-up commit.
+
 ## Run results (filled at run time)
 - Not run yet. Per-test results, total wall time, steps, hidden-body
   encounters with diagnosis, and the test-04 step 22 observation go
