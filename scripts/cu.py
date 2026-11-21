@@ -2308,6 +2308,7 @@ def main():
     act.add_argument('--no-after',action='store_true',help='skip successful final capture; preflight safety and error captures stay enabled')
     act.add_argument('--expected-terminal-window',default='same',help='final guard/capture target: same, none, unbound, or an exact Hyprland address')
     act.add_argument('--expected-terminal-bounds',nargs=4,type=int,help='optional expected x y width height for the terminal window')
+    an=sub.add_parser('act-now',help='overlay on + session attempt with deadline + direct Pointer fallback; first visible action fast');an.add_argument('--actions',required=True,help='JSON path; same batch format as act');an.add_argument('--observation',default=None,help='fresh observation JSON path; captured when omitted');an.add_argument('--screen',default='eDP-2',help='monitor for a fresh capture');an.add_argument('--agent',default='Muse');an.add_argument('--method',default='act-now');an.add_argument('--label',default=None);an.add_argument('--session-deadline-s',type=float,default=20,help='hard deadline for the session attempt')
     obs.add_argument('--verbose',action='store_true');act.add_argument('--verbose',action='store_true')
     b=sub.add_parser('browser');b.add_argument('operation',choices=['start','tabs','observe','act']);b.add_argument('--endpoint',default=None);b.add_argument('--target');b.add_argument('--snapshot');b.add_argument('--actions');b.add_argument('--image',action='store_true')
     b.add_argument('--no-after',action='store_true',help='skip the successful after-snapshot; the final action must be a meaningful assert')
@@ -2487,6 +2488,9 @@ def main():
                 print('session refusal: error='+result['error']+' action=require_reobserve',file=sys.stderr)
             elif result.get('ok') is True or is_completed_capture_error(result,len(actions)):
                 session_policy.complete_requirement(STATE,os.environ.get('CU_SESSION_TOKEN'))
+    elif args.command=='act-now':
+        import first_action
+        return first_action.run(args)
     elif args.command=='a11y':
         check_cancel()
         request={'operation':args.operation,'pid':args.pid,'snapshot':args.snapshot}
