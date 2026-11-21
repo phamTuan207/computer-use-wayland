@@ -837,3 +837,36 @@ thật từ môi trường sạch.
   kiến mọi lần: EditableText trả True nhưng đọc lại "", Bug 2087495.
   Dọn dẹp đã kiểm chứng: 0 tiến trình còn lại.
 - UNVERIFIED: Zen, Wayland (chạy dưới Xvfb/X11), mode session.
+
+## ĐỢT 5 VIỆC 4 XONG, 19:07 ngày 21/11
+
+Audit evidence contract 20 commit mới nhất trên todolist-push,
+báo cáo ở docs/clone1-todolist-push-evidence-20261121.md (508 dòng).
+Kết quả: 13 COMPLIANT, 6 PARTIAL, 1 MISSING.
+
+- COMPLIANT (13): beebe50, ef12850, 13b8144, 1e3901c, 4f4c890,
+  b913d7d, a82bb41, 4153371, dce42ca, 9cf6391, 4a78f7f, 66e5e48,
+  e8fad29.
+- PARTIAL (6): 695efea, b97d681, 0879700, 482e4ba, f31abcf, 556a592.
+- MISSING (1): 6f20fb5, claim "all Y4d council fixes applied" là
+  sai, không có runner nào tồn tại, commit sau a82bb41 đã sửa lại.
+- Lỗi thật mới tìm được trong code đóng băng: a1_unblind.py ở
+  f31abcf, đường INCONCLUSIVE qua gate wall chưa đo bị crash
+  TypeError ở dòng 226 (median trên int/str lẫn nhau), exit 1,
+  không có verdict. GO/NO-GO và INCONCLUSIVE qua dispersion tái
+  hiện đúng.
+- 695efea: plan có 19 eval, không phải 21, 10 cái bắt đầu bằng
+  return, 4 cái không có return. f31abcf: checkout mới fail matrix
+  14/17 cho tới khi chạy build_matrix.py (chỉ ghi trong script,
+  không ghi trong commit message). a82bb41: vài số đếm lệch 1
+  (88 dòng check không phải 87, 79 selector không phải 80).
+- Đã chạy lại thật trên máy này: md5 4/4 và 25/25 khớp, sha256
+  FREEZE.md 12/12 khớp f31abcf, checker matrix 17/17 sau bước
+  build, preflight 7/7, test_code_exec 53 test OK (11.894 s),
+  unblinding smoke GO/NO-GO/INCONCLUSIVE, stop-script dry run
+  11/11, gap table 113 dòng đếm lại đúng, step mapping 343 dòng
+  đếm lại đúng.
+- Giới hạn: evidence chỉ chạy được trên laptop (đường /tmp, crash
+  report, log fcc, output verifier Y5) không chạy lại được ở đây,
+  đã ghi là laptop-only theo từng commit. Nửa spec draft của Y5
+  cho defect test-07 không có trong branch nào, vẫn UNVERIFIED.
