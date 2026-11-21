@@ -1902,7 +1902,7 @@ Clone1, batch 7 nay xep san de cau khong roi viec. CHI bat dau khi batch 6 xong 
 Dieu tra tai sao click vao thanh dia chi Zen roi dung diem nhung khong focus, sua, test live tren may cau. Bao cao vao docs/clone1-g29-urlbar-focus-20261122.md.
 
 ### Task 2 - H2: do think time va cat bot
-Do chi phi vong lap think-observe-think tren may cau, de xuat cach cat bot buoc de tien toi mot vision lam nhieu viec nhat. Bao cao vao docs/clone1-thinktime-20261122.md, kem so do thuc. Cai last30days-skill (npx skills add mvanhorn/last30days-skill -g) tren may cau va dung no de research, chi dung data that 30 ngay gan nhat, moi claim ghi nguon + ngay.
+Do chi phi vong lap think-observe-think tren may cau, de xuat cach cat bot buoc de tien toi mot vision lam nhieu viec nhat. Bao cao vao docs/clone1-thinktime-20261122.md, kem so do thuc. VE last30days-skill: DUNG cai bang npx skills add -g. Installer bao Critical Risk ca 3 scanner, toi dang cho review source de quyet dinh, chua co verdict thi khong ai duoc click qua xac nhan. Research bang web search gioi han 30 ngay gan nhat, moi claim ghi nguon + ngay.
 
 ### Task 3 - sua cac vi pham HIGH da xac nhan
 Doc ket qua kiem tra cua clone2 o batch 7 Task 1 (coord/clone2.md), sua cac vi pham HIGH ma clone2 xac nhan la dung. Bao cao + commit sua, council + redteam.
@@ -1936,3 +1936,19 @@ Luat nhu cu: khong dua thong tin ca nhan nao cua toi len repo, khong dau gach ng
 - Viec 3: XONG, da push (f4f2059), verdict SOUND, agent goc im 36 phut nhung viec da xong qua agent kiem tra, resume khong duoc (khac phien).
 - Muse: khong co yeu cau moi, coord khong doi tu watermark, chi co commit moi cua clone2 (batch 7), batch 7 van xep san.
 - Hanh dong: pull --rebase xong, ghi khoi nay, commit chi coord/clone1.md, push.
+
+## Batch 8 - XEP SAN (03:06 22/11, chi bat dau khi batch 7 xong het + da bao cao)
+
+Clone1, batch 8 nay xep san de cau khong roi viec, dung het suc toi limit. CHI bat dau khi batch 7 xong het ca 3 viec va da bao cao day du. Dung bo batch 7 giua chung de lam batch 8. 2 viec, goal chung: mot vision lam duoc nhieu thao tac nhat, tong thoi gian giam toi da, do chinh xac tu 90% tro len. Council 3 nguoi + redteam cho moi ket luan, commit nho va nhieu, push ngay khi xong tung phan.
+
+### Task 1 - review source last30days-skill, y kien doc lap thu hai (LAM TRUOC NHAT)
+
+Viec nay lam truoc Task 2, vi ca team dang cho verdict moi duoc cai skill. Installer bao Critical Risk ca 3 scanner (Gen, Socket, Snyk) roi dung o xac nhan. Clone2 cung dang review doc lap ben batch 8 cua no; cau review rieng, khong doc ket qua cua clone2 truoc khi ket luan. Khong click qua xac nhan installer trong bat cu truong hop nao.
+
+Lam the nay: clone repo read-only (git clone --depth 1 https://github.com/mvanhorn/last30days-skill vao /tmp, CHI DOC nhu plain text, khong chay installer, khong chay bat cu file nao trong repo, khong copy vao home/config/PATH/tools). Doc skills/last30days/SKILL.md, cac script (last30days.py, store.py, box_chrome_login.py, setup-keychain.sh, setup-pass.sh), thu muc lib/, thu muc mcp/ (Go server). Ket luan bang bang chung: Critical Risk la false positive tu hanh vi da ghi trong tai lieu (doc browser session va API key theo thiet ke, gui query toi api.scrapecreators.com, api.x.com, api.x.ai, hn.algolia.com, gamma-api.polymarket.com, v.v.) hay la hanh vi doc hai that (exfiltration, obfuscation, trom credential). Bao cao vao docs/clone1-last30days-review-20261122.md, ghi ro file/dong bi flag tung cai, verdict PROCEED hay HOLD, va ly do. Council 3 nguoi + redteam cho verdict. Verdict PROCEED cung khong cho phep cau tu cai -g; quyet dinh cai la cua Muse tong sau khi doc verdict.
+
+### Task 2 - kiem tra doc lap diff CLICK-AMEND
+
+Doc lap kiem tra lai diff sua loi click cua Muse tong (nhanh todolist-push, tu e4082ff toi 4b7d6ac): chay lai cac test suite lien quan (test_first_action, test_type_verification, test_zen_dom, test_dom_act, test_pick4_fastpath, test_session_continuation), kiem tra 12 muc sua co that trong code khong, kiem tra fail-before cho it nhat mot suite moi o worktree e4082ff, danh gia C12 tu code (viewport_origin co dung khong). Ket luan GO/AMEND/BLOCK, ghi ro moi loi can sua kem file/dong. Bao cao vao docs/clone1-amend-verify-20261122.md. Council 3 nguoi + redteam cho ket luan. Day la y kien doc lap thu hai, ben canh council cua Muse tong dang review cung diff.
+
+Luat nhu cu: khong dua thong tin ca nhan nao cua toi len repo, khong dau gach ngang dai, khong ydotool, test nao cung ghi thoi gian. Ket qua bao cao vao file nay.
