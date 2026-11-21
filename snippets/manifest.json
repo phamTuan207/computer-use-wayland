@@ -16,7 +16,7 @@
       ],
       "source": "improvements/pick1-program-template.md P1",
       "last_verified": "2026-11-21",
-      "verified_against": "cff27b2c43f199e0c9fc7f150d55a482e9b39c82",
+      "verified_against": "714e4f9019c5469c3b33d9be060b384477874892",
       "expected_result": "ok is true, the exact df command was sent, and verify_image contains the post-act observation image path.",
       "tags": [
         "terminal",
@@ -42,7 +42,7 @@
       ],
       "source": "improvements/pick1-program-template.md P2",
       "last_verified": "2026-11-21",
-      "verified_against": "cff27b2c43f199e0c9fc7f150d55a482e9b39c82",
+      "verified_against": "714e4f9019c5469c3b33d9be060b384477874892",
       "expected_result": "ok is true, the exact Python calculation command was sent, and verify_image contains the post-act observation image path.",
       "tags": [
         "terminal",
@@ -68,7 +68,7 @@
       ],
       "source": "improvements/pick1-program-template.md P3",
       "last_verified": "2026-11-21",
-      "verified_against": "cff27b2c43f199e0c9fc7f150d55a482e9b39c82",
+      "verified_against": "714e4f9019c5469c3b33d9be060b384477874892",
       "expected_result": "ok is true and /tmp/hoc-ky-2/dsa, /tmp/hoc-ky-2/ktvm, and /tmp/hoc-ky-2/oop exist after the target root was removed and recreated.",
       "tags": [
         "terminal",
@@ -95,7 +95,7 @@
       ],
       "source": "improvements/pick1-program-template.md P4",
       "last_verified": "2026-11-21",
-      "verified_against": "cff27b2c43f199e0c9fc7f150d55a482e9b39c82",
+      "verified_against": "714e4f9019c5469c3b33d9be060b384477874892",
       "expected_result": "ok is true and /tmp/y-tuong.txt contains all three exact idea lines after the old target was removed.",
       "tags": [
         "terminal",

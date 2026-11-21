@@ -79,3 +79,24 @@ Phase B verification checkpoint 2026-11-21 18:44:24 Asia/Ho_Chi_Minh, elapsed +4
 - A source scan of all files written in this phase found no U+2014 or U+2013 characters.
 
 The runner checkpoint commit `cff27b2` was pushed to `origin y1-snippets`. The manifest currently records that commit as an audit reference. After committing the complete Phase B code and snippet files, rerun the verification helper so `verified_against` names that final code commit, then run the required full suite. Phase B is not yet complete.
+
+## Phase B: snippets registry
+
+Phase B started about 2026-11-21 18:15:33 Asia/Ho_Chi_Minh, elapsed about +13:50. Completed 2026-11-21 18:48:21 Asia/Ho_Chi_Minh, elapsed +46:38.
+
+The post-commit verification helper passed all four fake snippet runs and updated `verified_against` to `714e4f9` (audit only). SHA-256 values match the exact snippet bytes. Search and describe return metadata only. P1-P4 use a `terminal_title` parameter with default `speed-pick1-term`; window matching rejects zero or multiple matches without indexing `[0]`. P3/P4 remove their fixed task target before recreating it, then assert fresh output.
+
+Phase B full-suite run:
+
+| Approx local time | Command | Result |
+| --- | --- | --- |
+| 2026-11-21 18:46:02 to 18:48:10 | `python3 -m unittest discover -s tests -p 'test_*.py'` | 1549 tests, OK, 2 skipped, 127.622s. Exit 0. |
+
+Full-suite counts across completed full-suite checkpoints: after Phase A and before Phase B, 1530 tests with 2 skipped; after Phase B, 1549 tests with 2 skipped. No pre-Phase A baseline full-suite run was captured.
+
+Phase B verdict: PASS. Implementation commits `cff27b2` and `714e4f9`, plus the metadata/log commit following this entry, are pushed to `origin y1-snippets`.
+
+Known Phase B limits:
+
+- C-level work is still only checked after it returns; no hard process preemption or memory limit was added. Envelope serialization is capped at 64KB as requested.
+- Existing APIs cannot safely ask whether a target path exists without raising. P3/P4 use required approval, fixed-path cleanup, postcondition asserts, and the applied-snippet ledger. This is the recorded deviation from the pre-action state-check requirement.
