@@ -14,8 +14,8 @@
 - 17:44 +07, T+2m: browser.search METR replication + token burn. Strong hits: METR re-analysis arXiv Oct 2026, Claude Code token stats.
 - 17:44 +07, T+2m: priority update received from owner: weight toward think-observe-think loop performance when Muses control his machine. Ran engine query "computer use agent latency grounding": only 4 HN items, thin.
 - 17:45 +07, T+3m: browser.search screenshot vs DOM grounding + parallel tool calling. Strong hits: MobiBench, PureTensor bake-off, SyndiPath Playwright MCP, Zylos parallel concurrency.
-- 17:48 +07, T+6m: browser.search stall detection + context rot. Strong hits: walking-dead detection, heartbeat watchdog, ContextRot arXiv 2026-10-27, long-horizon degradation.
-- 17:52 +07, T+10m: findings file written, committed, pushed.
+- 17:44 +07, T+2m: browser.search stall detection + context rot. Strong hits: walking-dead detection, heartbeat watchdog, ContextRot arXiv 2026-10-27, long-horizon degradation.
+- 17:45 +07, T+3m: findings file written, committed, pushed.
 
 ## INTERNAL baseline (our own runs, not crawled)
 
