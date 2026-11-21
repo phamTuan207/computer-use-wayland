@@ -759,3 +759,16 @@ coordinates go here too.
   (first entry under the new rule) and committed as its own small
   commit fa2100b, pushed, ls-remote verified
   fa2100bb05bc4112024de5cb47a54dbed698bcc7.
+- 22:48:43 +07 (elapsed ~28 min): hash-record follow-up
+  committed 5bfddbb (record event-log commit fa2100b hash in the
+  log), pushed, ls-remote verified
+  5bfddbb5f12e3188ead011643f7824bf03810504.
+- 22:48 +07 (elapsed ~28 min): owner order (MEMORY.md): continue,
+  follow the Lauren Tan structure tightly, FORBIDDEN to cut steps
+  or it produces garbage code. Owner going to sleep; work
+  overnight, do not stop, do not disturb; report results tomorrow
+  morning. OPT told: the optimal method must follow the Lauren
+  Tan structure exactly (evidence contract, council + redteam,
+  commit small and many, generator does not run its own tests,
+  kill rules, continuous logging), no shortcuts. Y14b already
+  follows this structure; no change to my line.
