@@ -72,10 +72,10 @@ tests/two_vision_fixture.html.
 
 ## 4. Files
 
-- tests/two_vision_bench.py: the benchmark script (862 lines after
-  the batch 9 task 2 fix pass, commit 9a15647; first built in
+- tests/two_vision_bench.py: the benchmark script (868 lines after
+  the batch 9 task 1 fix pass, commit c267411; first built in
   commit 072e060, fixes 9196744, fix pass 7e81213, plan
-  validation 9a15647).
+  validation 9a15647, pre-send reservation TODO c267411).
 - tests/two_vision_fixture.html: local chat fixture. One page per
   clone (?clone=1, ?clone=2). A message input, a Send button, a
   thread div. Enter or Send appends a bubble with the typed text.
@@ -385,8 +385,10 @@ as 379; the doc was 547 lines at commit e6ecdea, and the
 self-referential count is dropped here because a doc stating its own
 length goes stale on every edit. The task 2 agent's report also
 stated 548 lines; the correct figure is 547. The script count is
-also historical: the script is 862 lines after the fix pass in
-commit 9a15647; see the fix-pass paragraph below.) The
+also historical: the script is 868 lines after the batch 9 task 1
+fix pass in commit c267411 (862 lines after the batch 9 task 2 fix
+pass in commit 9a15647, plus a 6-line TODO comment); see the
+fix-pass paragraph below.) The
 preserved fix-pass numbers in this section recompute exactly from
 ~/workspace/tools/two_vision_fixpass/ (fix2 PASS 8.4457 s, fix2-ce
 PASS 6.6076 s, fix2-noid PASS 5.4565 s, fix2-belowfold PASS
@@ -511,9 +513,9 @@ coordinator says run, and this script has never run live.
 ### 10.1 Workspace state (check before anything else)
 
 - [ ] Repo on main, script tests/two_vision_bench.py at the
-  reviewed commit (862 lines after the batch 9 task 2 fix pass,
-  commit 9a15647). Run `git log --oneline -1 --
-  tests/two_vision_bench.py` and confirm it prints 9a15647: any
+  reviewed commit (868 lines after the batch 9 task 1 fix pass,
+  commit c267411). Run `git log --oneline -1 --
+  tests/two_vision_bench.py` and confirm it prints c267411: any
   other hash means an unreviewed change sits on top of it.
 - [ ] BLOCKER, open: the script launches its own fresh headless
   Firefox with a fresh profile (main() calls launch_browser; no
