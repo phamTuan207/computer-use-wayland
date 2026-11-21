@@ -550,3 +550,235 @@ tools reference read on 2026-11-20, plus the installed package.json metadata.
 - Next step, on a machine with a real Zen binary: run the procedure in
   section 8.3 and 8.4, then fill in the UNVERIFIED cells in section 7 with
   measured numbers before choosing a default driver.
+
+## 11. Deep verification, 2026-11-21: CVE-2026-7064 and the three MCP servers
+
+Checked 2026-11-21, 08:22 UTC and later, by reading upstream sources and
+the GitHub API. No package was executed for this section. The scratch
+folder from the earlier install (/tmp/firefox-mcp-scratch) no longer exists,
+so the installed package.json could not be re-read here; the dependency
+figures in section 1.2 rest on the earlier plain read reported in
+section 9.
+
+### 11.1 CVE-2026-7064, full record
+
+- CVE ID: CVE-2026-7064. Type: OS command injection, CWE-78.
+  Published Apr 26, 2026, last modified Oct 3, 2026 (DevGuard record;
+  Atomicorp record last modified Oct 26, 2026).
+- Affected product: AgentDeskAI browser-tools-mcp only. Affected versions:
+  1.0, 1.1, 1.1.0, 1.2.0. In short, every version up to and including
+  1.2.0. There is no 1.2.1 release in the upstream GitHub release
+  list, which is v2.0.4, v2.0.3, v2.0.2, v2.0.0, v1.2.0, v1.1.0,
+  v1.0.0. Note the unscoped npm package browser-tools-mcp does list
+  a 1.2.1 (2025-04-06), but it has no matching GitHub release, so
+  treat it as an old npm-only publishing, not a project release. The
+  canonical npm package for the 2.x line is
+  @agentdeskai/browser-tools-mcp.
+- Flaw location: `browser-tools-server/browser-connector.ts`. Attacker
+  controlled path data is interpolated into a shell command via osascript
+  without escaping, which enables arbitrary OS command execution on macOS
+  deployments where screenshot autoPaste is enabled. The CVE record says
+  the attack may be performed from remote and the exploit has been
+  published.
+- Scores differ by source, so quote the source with the number. DevGuard
+  lists CVSS 5.5 (medium). The Yack CVE table lists 6.9 medium (v4),
+  7.3 high (v3), 7.5 high (v2). Do not quote a single score without its
+  source.
+- Fixed version: 2.0.0. DevGuard and Atomicorp both list 2.0.0 as the
+  first unaffected version. The 1.x line will never be patched: the
+  upstream README and SECURITY.md tell anyone still on 1.x to upgrade,
+  and the related advisory GHSA-xvrv-w8pg-f25f (critical, CVSS 9.8)
+  covers the broader 1.x exposure (unauthenticated access to captured
+  data plus the command injection) and is also fixed only by moving to
+  2.x.
+- Sources: DevGuard CVE record,
+  https://docs.devguard.org/vulnerability-database/CVE-2026-7064/;
+  Atomicorp CVE record,
+  https://research.atomicorp.com/cves/CVE-2026-7064/; TrustedMCP guide,
+  https://trustedmcp.io/guides/browser-tools-mcp; GitHub releases list
+  for AgentDeskAI/browser-tools-mcp, read through the GitHub API on
+  2026-11-21.
+
+### 11.2 Correction to the correction in section 5 and commit 5cd5c74
+
+Section 5 (as corrected in commit 5cd5c74) says browser-tools-mcp is "a
+different project that is now discontinued" and that the CVE "was not
+patched before that project was discontinued". That wording is now
+outdated and must not be repeated. What the deeper check shows:
+
+- At 1.x the project did look dormant: latest release v1.2.0 (March
+  2025), README saying "THIS PROJECT IS NO LONGER ACTIVE PLEASE USE A
+  DIFFERENT SOLUTION FOR THIS", no active support or roadmap.
+- The project was then revived with a 2.0 rewrite in August 2026: one
+  process instead of three, loopback-only authenticated connector, a
+  per-run token, credential scrubbing. npm latest for the scoped
+  package @agentdeskai/browser-tools-mcp is 2.0.4, released
+  27 Oct 2026 (checked with `npm view @agentdeskai/browser-tools-mcp`
+  on 2026-11-21; unpacked size 766,652 bytes). The 2.0 line is the
+  fixed line for CVE-2026-7064.
+- A second advisory applies to the 2.x line itself:
+  GHSA-fm7v-38h4-4q7w (high), a server-side request forgery in the four
+  Lighthouse audit tools, present in 2.0.0 through 2.0.2, fixed in
+  2.0.3. So the minimum safe browser-tools-mcp version today is 2.0.4,
+  not 2.0.0, if the audit tools are used. The audit tools can also be
+  excluded with `--exclude`.
+- Net effect for this repo: the CVE never applied to Mozilla firefox-mcp
+  (section 11.3), and it no longer blocks anything in browser-tools-mcp
+  either, provided the installed version is 2.0.4 or later and 1.x is
+  nowhere in use. Version 1.x must still be treated as critically
+  unsafe and never installed.
+
+### 11.3 Mozilla firefox-mcp is clean of CVE-2026-7064
+
+Three independent checks, all done 2026-11-21:
+
+- GitHub code search for `7064` in repo mozilla/firefox-mcp: 0 hits.
+- GitHub issue search for `7064` in repo mozilla/firefox-mcp: 0 hits.
+- Release v0.11.0, published 2026-11-19T10:22:56Z: the release body
+  contains no mention of CVE, 7064, or any security fix. The changelog
+  lists only Added (shadow DOM snapshots, iframe UIDs, form control
+  state, `fill_by_uid` on selects, public `list_extensions`), Fixed
+  (`fill_by_uid` replacing controlled-input values, dialogs staying open
+  until accepted or dismissed), and Changed (rename to Firefox MCP, npm
+  package `@mozilla/firefox-mcp`, internal package
+  `@mozilla/firefox-mcp-moz`, local data moved to `~/.firefox-mcp`,
+  dialog tools moved to WebDriver BiDi). Source: Mozilla Discourse
+  release announcement,
+  https://discourse.mozilla.org/t/firefox-mcp-v0-11-0-released/150327,
+  and the release page linked from it.
+- `npm view @mozilla/firefox-mcp` on 2026-11-21: version 0.11.0,
+  unpacked size 1,183,081 bytes, published 2026-11-19.
+
+Conclusion: there is nothing to fix in firefox-mcp for CVE-2026-7064,
+and no CVE re-check is needed before adopting it. Do not block adoption
+of firefox-mcp on this CVE.
+
+### 11.4 Comparison: three MCP servers
+
+Browser-tools-mcp is Chrome-only (Chrome extension plus CDP). It does
+not drive Firefox or Zen at all, so it is in this table only for the CVE
+and security comparison, not as a Zen driver candidate.
+
+| Axis | Mozilla firefox-mcp | dh1011 firefox-mcp | browser-tools-mcp (AgentDeskAI) |
+| --- | --- | --- | --- |
+| Browser | Firefox, dedicated launch or connect-existing. Zen via `--firefox-path`. UNVERIFIED on Zen. | Your own Firefox, your signed-in sites, tabs of its own. Firefox 140+. Zen not documented. UNVERIFIED. | Chrome only. Not a Firefox or Zen driver. |
+| Tools | 50 tools in the public package (57 including the gated moz-only modules), across 19 modules: pages, snapshot, input, network, console, screenshot, print, downloads, utilities, management, webextension, profiler, screencast, script, debugging, plus gated prefs, privileged, launch, bidi. See section 4. | One tool, `browser`, with a command language: goto, back, forward, reload, click, fill, type, press, select, check, uncheck, upload, hover, drag, scroll, dialog, snapshot, find, get text/value/count/attr/url/title, screenshot, eval, console, requests, tab list/new/select/close/show, wait. | 2.x tools include navigateBrowser, listTabs, readTab, navigateTab, softClick, softType (off unless started with `--allow-input`), screenshots, console, network, and four Lighthouse audits. 1.x also had runDebuggerMode, runAuditMode, runNextJSAudit; 2.0 removed them. |
+| Permissions and trust model | Dedicated profile recommended; agent reaches whatever the browser can reach, including cookies and saved sessions. Save paths restricted to `~/.firefox-mcp` by default. Snapshot output never includes password values. Marionette must not be left enabled during normal browsing. | Extension sideloaded or signed; daemon on 127.0.0.1; first use needs approval through the toolbar button. No trusted input, no debugger, no dialog answers (Firefox extension limits). | 2.x: loopback-only connector, per-run token, credentials scrubbed from captured data, cookie access now an optional permission. 1.x: server listened on every interface, no password, no origin check; any visited page or device on the same network could read captured data and, on macOS with autoPaste, run commands. |
+| Install speed | Measured on this machine: `npm install @mozilla/firefox-mcp@0.11.0` added 147 packages in 16.768 s, installed size 1.2M. One `npx` command to start, no build. | UNVERIFIED. Build from source: `npm install` then `npm run build`, then load the extension. No npm package, so no install timing was measured here. | UNVERIFIED. No install was run here. npm metadata only: version 2.0.4, unpacked size 766,652 bytes. Node 22.19+ required by its engines field. |
+| Stability | Maintained by Mozilla. v0.11.0 released 2026-11-19. Known failure modes from section 7: Firefox not found, slow first run, stale UIDs after navigation, Marionette one client at a time with 1800 s idle timeout. Live run UNVERIFIED on this machine. | Single-maintainer project. Latest release v0.1.3, published 2026-11-13 (checked through the GitHub API). Live run UNVERIFIED on this machine. | Single maintainer. 2.0 rewrite August 2026, latest 2.0.4 on 27 Oct 2026. Second advisory GHSA-fm7v-38h4-4q7w affected 2.0.0 to 2.0.2, fixed in 2.0.3. 1.x is critically unsafe and unpatched. Live run UNVERIFIED on this machine. |
+| CVE-2026-7064 | Does not apply. 0 code hits, 0 issue hits, no mention in v0.11.0 changelog. | Does not apply. Different codebase, no shared server code with browser-tools-mcp. No CVE record links it. | Applies to versions up to 1.2.0. Fixed in 2.0.0. Minimum safe version today is 2.0.4 (see 11.2). |
+
+Reading for this repo: adopt Mozilla firefox-mcp as the reference Firefox
+driver and dh1011 firefox-mcp as the reference for driving the user's own
+Firefox tabs. Do not use browser-tools-mcp for Zen work at all: it is
+Chrome-only, and its 1.x line is critically unsafe.
+
+### 11.5 Test procedure: firefox-mcp on a real Zen after reboot
+
+Run on the laptop after reboot, in order. Record wall-clock start and end
+plus elapsed time for every step, one JSON line per event in the format
+from section 8.5. Do not report a timing you did not measure. Use a
+throwaway profile for every step, never the daily profile.
+
+Step 0, preconditions. Find the Zen binary and check the version floors
+from section 6 (Firefox 100+ to run at all, 153+ for debugging tools,
+154+ for screencast):
+
+```
+which zen
+zen --version
+node --version
+npm --version
+```
+
+Record the Zen version and the Node version. If Zen is below the
+debugging floor, note which tools are out of scope and continue with the
+rest.
+
+Step 1, install and smoke test. From a scratch folder, not from the repo:
+
+```
+date -u +%FT%TZ
+time npm install @mozilla/firefox-mcp@0.11.0
+node -e "console.log(require('./node_modules/@mozilla/firefox-mcp/package.json').version)"
+timeout 30 npx @mozilla/firefox-mcp --help
+date -u +%FT%TZ
+```
+
+Pass criteria: version prints 0.11.0, `--help` prints the CLI options
+from section 3.7. Record the install wall-clock time and package count,
+and the `--help` exit code (note that `--help` may still start the
+server path, so the timeout and exit code are both findings).
+
+Step 2, MCP handshake without a browser. Use a small Node stdio client
+with no extra dependency: spawn
+`node node_modules/@mozilla/firefox-mcp/dist/index.js --headless`, send
+JSON-RPC `initialize` with protocol version `2024-11-05`, then
+`notifications/initialized`, then `tools/list`. Record the tool list and
+the elapsed time per message. Pass criteria: the server answers
+`tools/list` without a browser, because Firefox launches lazily on the
+first tool call. Count the tools returned and compare with the 50 tools
+in section 4; report any difference as a finding.
+
+Step 3, live end-to-end test on Zen. Start Zen with a throwaway profile
+and the debug flags, then connect the server:
+
+```
+zen --headless --marionette --remote-debugging-port --profile /tmp/zen-mcp-test &
+npx @mozilla/firefox-mcp --connect-existing --marionette-port 2828 --firefox-path /path/to/zen --log-file /tmp/firefox-mcp.log
+```
+
+Replace `/path/to/zen` with the real binary path found in step 0. Through
+MCP Inspector, or through the stdio client from step 2, call in order and
+time each call:
+
+1. `list_pages`
+2. `navigate_page` to the local fixture `tests/bidi_fixture.html` from
+   this repo, served over loopback or opened with a `file://` URL, so
+   the run is repeatable offline
+3. `take_snapshot`
+4. `click_by_uid` on the counter button from the snapshot, then
+   `take_snapshot` again and confirm the counter reads 1
+5. `fill_by_uid` on the text input with `bidi-test`, then
+   `evaluate_script` with `() => document.querySelector('input').value`
+   and confirm the value
+6. `screenshot_page` with `saveTo`, and record the file size in bytes
+7. `list_console_messages` and `list_network_requests`
+
+Record for each call: wall-clock start, elapsed ms, result size in
+bytes, and whether the expected state change was observed. A call counts
+as passed only if the observed DOM state matches the expected state; a
+returned OK without a state check is not a pass.
+
+Step 4, Zen acceptance checks. Record, as separate findings, whether Zen
+accepts `--marionette` and `--remote-debugging-port` together, whether
+the server connects, and whether each tool call behaves the same as
+section 8.3 describes for stock Firefox. If stock Firefox is also
+available on the laptop, repeat step 3 against it and record the
+per-call timing difference. Any difference is a finding, not a failure
+to hide.
+
+Step 5, CVE re-check at test time. Confirm that no browser-tools-mcp
+1.x is installed anywhere the test uses: `npm ls -g @agentdeskai/browser-tools-mcp`
+and the MCP client config must not reference `@agentdeskai/browser-tools-mcp@1.x`.
+If any 1.x install is found, stop, record it, and upgrade or remove it
+before continuing. This is a guard step, not a firefox-mcp test step.
+
+Step 6, report. Append the timed log and the per-call pass or fail
+results to `coord/clone1.md`, and fill in the UNVERIFIED cells in
+section 7 and section 11.4 with the measured numbers. Keep the raw log
+file next to the report so the numbers can be re-checked.
+
+### 11.6 What is still UNVERIFIED
+
+- Every live timing and every live behavior in sections 11.4 and 11.5:
+  no Firefox or Zen binary exists on this machine, and the earlier live
+  run of the firefox-mcp package was blocked by an execution-risk flag,
+  so the package was not executed here in any form.
+- Install speed for dh1011 firefox-mcp and for browser-tools-mcp: only
+  npm metadata was read, no install was run.
+- Stability of dh1011 firefox-mcp beyond its release date (v0.1.3,
+  2026-11-13): no live run, no issue review was done here.
+- The exact osascript payload behind CVE-2026-7064 was not reproduced
+  here, and must not be reproduced on the laptop either; the CVE record
+  and the vendor advisory are the evidence, not a live exploit test.
