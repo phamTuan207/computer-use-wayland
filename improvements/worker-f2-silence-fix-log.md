@@ -422,10 +422,28 @@ omitted; append as it happens, never batch at the end)
   workspace; this is the working CLI-first route. The exact
   hl.dsp.workspace sub-function is still unknown (follow-up: find it
   in the Hyprland Lua docs, do not guess).
-- 22:52:08.492 (T+728s) fresh observe ce2bf0b9a594: capture 35 ms,
-  1920x1200, image 268,630 B (much smaller than the Muse shots,
-  consistent with a mostly-empty Zen page). This is the observation
-  for the act-now batch.
+- 22:53:39 (T+819s) F3 cleanup check: NO F3 process running (no
+  cleanup2.py, zen_dom.py, run_live, computer-use session). Only
+  kernel i915_cleanup workers. /tmp/zen_tab_cleanup/ files all from
+  22:03-22:19 (my earlier cleanup). Coast clear; F3 has not started
+  its re-run yet. Proceeding with the rehearsal now (fast, one
+  batch), and will re-baseline before the close check.
+- 22:53:57.380 (T+837s) act-now run 1 (ZT-00 step 4): batch [Ctrl+N,
+  click address bar (165,72), type "example.com", Enter],
+  observation ce2bf0b9a594 (given, fresh). RESULT: REFUSED, ok false,
+  completed 0, total 638 ms. Overlay acquire FAST:
+  order_to_overlay_ms 356 ms, daemon spawned PID 446144 (overlay
+  mechanism works). Session error (clear, F1's improved message):
+  "session guardian startup failed: cursor guard reply is not valid
+  JSON (got: unknown request); the cursor backend may not be loaded,
+  load it with scripts/activate-glass.py and scripts/activate-cursor-guard.py
+  or re-run the fresh-login loader scripts/visuals.py". Fallback
+  attempted, but desktop_act REFUSED the batch: "screen observations
+  support pointer actions only; use a window or accessibility target
+  for typing". NEW FINDING: a screen observation cannot do type/key
+  actions; typing needs a window or accessibility target. The batch
+  as designed (mouse + keyboard in one desktop batch) cannot run on
+  a screen observation. Investigating the window-observe option.
 
 ### Rehearsal (in progress)
 - ZT-00 health gate via act-now. Gate 0-3 PASS (above). Step 4 next:
