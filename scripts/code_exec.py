@@ -559,8 +559,12 @@ def _validate_snippet_entry(raw, op_paths):
 def load_snippet_manifest():
     """Load metadata only. Invalid entries are skipped; duplicate names fail all."""
     try:
-        fd = os.open(SNIPPET_MANIFEST, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC)
+        fd = os.open(SNIPPET_MANIFEST,
+                     os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC | os.O_NONBLOCK)
         with os.fdopen(fd, 'rb') as stream:
+            import stat as _stat
+            if not _stat.S_ISREG(os.fstat(stream.fileno()).st_mode):
+                raise SnippetRegistryError('manifest must be a regular file')
             raw_bytes = stream.read(MAX_SNIPPET_MANIFEST_BYTES + 1)
     except OSError as exc:
         raise SnippetRegistryError('manifest unavailable: ' + str(exc)) from exc
@@ -597,8 +601,11 @@ def load_snippet_manifest():
 def _read_snippet_once(entry):
     path = _resolve_snippet_path(entry)
     try:
-        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC)
+        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC | os.O_NONBLOCK)
         with os.fdopen(fd, 'rb') as stream:
+            import stat as _stat
+            if not _stat.S_ISREG(os.fstat(stream.fileno()).st_mode):
+                raise CodeExecError('snippet path is not a regular file')
             raw = stream.read(MAX_SNIPPET_FILE_BYTES + 1)
     except OSError as exc:
         raise CodeExecError('snippet file could not be read: ' + str(exc)) from exc
@@ -1173,8 +1180,9 @@ class CodeExecSession:
         if 'wall_seconds' in entry:
             self._deadline = min(self._deadline, started + entry['wall_seconds'])
         if 'max_api_calls' in entry:
+            api_start = self.api_calls - 1
             self._api_limit = min(
-                self._api_limit, self.api_calls + entry['max_api_calls'])
+                self._api_limit, api_start + entry['max_api_calls'])
         if 'max_trace_steps' in entry:
             self._trace_limit = min(
                 self._trace_limit, self._trace_steps + entry['max_trace_steps'])
@@ -1199,7 +1207,10 @@ class CodeExecSession:
             attempted = True
             code = compile(tree, PROGRAM_FILENAME, 'exec')
             exec(code, self._active_namespace, frame_locals)  # noqa: S102 - validated snippet bytes
+            self._check_budgets()
             output_name = entry.get('output')
+            if output_name and output_name not in frame_locals:
+                raise CodeExecError('snippet did not assign its declared output: ' + output_name)
             output_value = frame_locals.get(output_name) if output_name else None
             if not _is_jsonable(output_value) or _serialized_size(output_value) > MAX_ENVELOPE_BYTES:
                 raise CodeExecError('snippet output must be JSON-serializable and at most 64KB')

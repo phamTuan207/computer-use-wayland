@@ -1,0 +1,110 @@
+{
+  "snippets": [
+    {
+      "name": "p1-disk-free",
+      "file": "p1-disk-free.py",
+      "sha256": "a3b25ccb0c1c16d52f497a3961486520c27f9114a9cc8c2c71e5a849ad9a4785",
+      "description": "Type df -h / in exactly one terminal with the requested title and capture a fresh verification image.",
+      "params": [
+        {
+          "name": "terminal_title",
+          "type": "string",
+          "required": false,
+          "default": "speed-pick1-term",
+          "description": "Exact title of the test terminal window."
+        }
+      ],
+      "source": "improvements/pick1-program-template.md P1",
+      "last_verified": "2026-11-21",
+      "verified_against": "cff27b2c43f199e0c9fc7f150d55a482e9b39c82",
+      "expected_result": "ok is true, the exact df command was sent, and verify_image contains the post-act observation image path.",
+      "tags": [
+        "terminal",
+        "disk",
+        "free-space"
+      ],
+      "live_only": true,
+      "output": "verify_image"
+    },
+    {
+      "name": "p2-percent-calc",
+      "file": "p2-percent-calc.py",
+      "sha256": "252fe173eb38c03e335644ec419ee09b94ba736dc8b66096a33827b3423ab188",
+      "description": "Type the 144 divided by 150 percentage calculation in exactly one terminal and capture a fresh verification image.",
+      "params": [
+        {
+          "name": "terminal_title",
+          "type": "string",
+          "required": false,
+          "default": "speed-pick1-term",
+          "description": "Exact title of the test terminal window."
+        }
+      ],
+      "source": "improvements/pick1-program-template.md P2",
+      "last_verified": "2026-11-21",
+      "verified_against": "cff27b2c43f199e0c9fc7f150d55a482e9b39c82",
+      "expected_result": "ok is true, the exact Python calculation command was sent, and verify_image contains the post-act observation image path.",
+      "tags": [
+        "terminal",
+        "percent",
+        "calculation"
+      ],
+      "live_only": true,
+      "output": "verify_image"
+    },
+    {
+      "name": "p3-make-dirs",
+      "file": "p3-make-dirs.py",
+      "sha256": "ccd3b0997db294d925c6eb5621662ece7d11cdecffa02c37e6d1350af3488a89",
+      "description": "Recreate and verify the three Pick 1 study directories from exactly one titled terminal.",
+      "params": [
+        {
+          "name": "terminal_title",
+          "type": "string",
+          "required": false,
+          "default": "speed-pick1-term",
+          "description": "Exact title of the test terminal window."
+        }
+      ],
+      "source": "improvements/pick1-program-template.md P3",
+      "last_verified": "2026-11-21",
+      "verified_against": "cff27b2c43f199e0c9fc7f150d55a482e9b39c82",
+      "expected_result": "ok is true and /tmp/hoc-ky-2/dsa, /tmp/hoc-ky-2/ktvm, and /tmp/hoc-ky-2/oop exist after the target root was removed and recreated.",
+      "tags": [
+        "terminal",
+        "directories",
+        "filesystem"
+      ],
+      "live_only": true,
+      "requires_approval": true,
+      "output": "verify_image"
+    },
+    {
+      "name": "p4-write-ideas",
+      "file": "p4-write-ideas.py",
+      "sha256": "d031d50147be38a7b352214b4488696a07f14f390afd1b774121b4a2126dc1db",
+      "description": "Write and verify the three Pick 1 idea lines from exactly one titled terminal.",
+      "params": [
+        {
+          "name": "terminal_title",
+          "type": "string",
+          "required": false,
+          "default": "speed-pick1-term",
+          "description": "Exact title of the test terminal window."
+        }
+      ],
+      "source": "improvements/pick1-program-template.md P4",
+      "last_verified": "2026-11-21",
+      "verified_against": "cff27b2c43f199e0c9fc7f150d55a482e9b39c82",
+      "expected_result": "ok is true and /tmp/y-tuong.txt contains all three exact idea lines after the old target was removed.",
+      "tags": [
+        "terminal",
+        "ideas",
+        "file"
+      ],
+      "live_only": true,
+      "requires_approval": true,
+      "output": "verify_image"
+    }
+  ]
+}
