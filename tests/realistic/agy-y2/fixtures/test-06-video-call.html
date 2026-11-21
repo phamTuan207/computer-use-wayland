@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Video Conference Client</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background: #0f172a; color: #f8fafc; padding: 20px; }
+    .app-container { max-width: 1100px; margin: 0 auto; background: #1e293b; border-radius: 8px; overflow: hidden; border: 1px solid #334155; }
+    header { background: #0f172a; padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; }
+    h1 { font-size: 18px; color: #38bdf8; font-weight: 600; }
+    .status-group { display: flex; gap: 14px; font-size: 13px; align-items: center; }
+    .badge { padding: 4px 10px; border-radius: 4px; font-weight: 600; font-size: 12px; }
+    .badge-lobby { background: #475569; color: #cbd5e1; }
+    .badge-connected { background: #059669; color: #a7f3d0; }
+    .badge-disconnected { background: #b91c1c; color: #fecaca; }
+    .main-body { display: flex; min-height: 480px; position: relative; }
+    .video-grid-area { flex: 1; padding: 16px; display: flex; flex-direction: column; background: #0b1120; }
+    .screen-share-banner { background: #0284c7; color: #ffffff; padding: 8px 16px; border-radius: 4px; font-size: 13px; font-weight: 500; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
+    .screen-share-banner.hidden { display: none !important; }
+    .participants-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; flex: 1; }
+    .participant-tile { background: #1e293b; border-radius: 6px; border: 1px solid #334155; display: flex; flex-direction: column; justify-content: center; align-items: center; position: relative; min-height: 160px; }
+    .participant-name { position: absolute; bottom: 8px; left: 8px; background: rgba(0,0,0,0.6); padding: 2px 8px; border-radius: 4px; font-size: 12px; }
+    .toolbar { background: #0f172a; padding: 12px 20px; display: flex; justify-content: center; gap: 10px; border-top: 1px solid #334155; align-items: center; }
+    button { background: #334155; color: #f8fafc; border: 1px solid #475569; padding: 8px 14px; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 500; }
+    button:hover { background: #475569; }
+    button.btn-primary { background: #0284c7; border-color: #0369a1; }
+    button.btn-primary:hover { background: #0369a1; }
+    button.btn-danger { background: #dc2626; border-color: #b91c1c; }
+    button.btn-danger:hover { background: #b91c1c; }
+    .indicator { padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: bold; }
+    .indicator.active { background: #065f46; color: #6ee7b7; }
+    .indicator.muted, .indicator.off { background: #7f1d1d; color: #fca5a5; }
+    .indicator.raised { background: #854d0e; color: #fef08a; }
+    .indicator.neutral { background: #334155; color: #94a3b8; }
+    .chat-sidebar { width: 300px; background: #1e293b; border-left: 1px solid #334155; display: none; flex-direction: column; }
+    .chat-sidebar.open { display: flex; }
+    .chat-header { padding: 12px 16px; border-bottom: 1px solid #334155; font-size: 14px; font-weight: 600; }
+    .chat-messages { flex: 1; padding: 12px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; max-height: 380px; }
+    .chat-msg { background: #0f172a; padding: 8px 12px; border-radius: 4px; font-size: 13px; }
+    .chat-msg .sender { color: #38bdf8; font-weight: bold; font-size: 11px; margin-bottom: 2px; }
+    .chat-input-box { padding: 12px; border-top: 1px solid #334155; display: flex; gap: 6px; }
+    .chat-input-box input { flex: 1; background: #0f172a; border: 1px solid #334155; padding: 6px 10px; color: #f8fafc; border-radius: 4px; outline: none; font-size: 13px; }
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; justify-content: center; align-items: center; z-index: 100; }
+    .modal-overlay.active { display: flex; }
+    .modal-card { background: #1e293b; border: 1px solid #475569; border-radius: 6px; padding: 20px; width: 380px; }
+    .lobby-view { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 40px; gap: 16px; }
+    .lobby-view input { background: #0f172a; border: 1px solid #334155; padding: 8px 12px; color: #f8fafc; border-radius: 4px; width: 280px; font-size: 13px; }
+    .rejoin-panel { display: none; flex-direction: column; align-items: center; justify-content: center; flex: 1; padding: 40px; gap: 14px; }
+    .toast-summary { display: none; background: #064e3b; color: #6ee7b7; padding: 10px 16px; font-size: 13px; font-weight: 500; border-top: 1px solid #047857; text-align: center; }
+    .toast-summary.active { display: block; }
+  </style>
+</head>
+<body>
+
+<div class="app-container">
+  <header>
+    <h1>Web Video Conference</h1>
+    <div class="status-group">
+      <div>Room: <strong id="room-name-display">None</strong></div>
+      <div>Participants: <span id="participant-count">0</span></div>
+      <div>Call Status: <span id="call-status-badge" class="badge badge-lobby">Lobby</span></div>
+    </div>
+  </header>
+
+  <div id="screen-share-banner" class="screen-share-banner hidden">
+    <span>Screen sharing active</span>
+    <button id="btn-stop-screenshare" class="btn-danger" style="padding: 4px 8px; font-size: 11px;">Stop Sharing</button>
+  </div>
+
+  <div class="main-body">
+    <!-- Lobby View -->
+    <div id="lobby-panel" class="lobby-view">
+      <h2 style="font-size: 16px; color: #e2e8f0;">Join a Conference</h2>
+      <input type="text" id="input-meeting-id" placeholder="Meeting ID (e.g. Sprint Planning)">
+      <input type="text" id="input-display-name" placeholder="Your Display Name">
+      <button id="btn-join-meeting" class="btn-primary" style="width: 280px;">Join Meeting</button>
+    </div>
+
+    <!-- Active Call Area -->
+    <div id="call-panel" class="video-grid-area" style="display: none; width: 100%;">
+      <div class="participants-grid" id="grid-container">
+        <div class="participant-tile" id="tile-local">
+          <div style="font-size: 32px;">👤</div>
+          <div class="participant-name">James (You)</div>
+        </div>
+        <div class="participant-tile" id="tile-peer-1">
+          <div style="font-size: 32px;">👩‍💻</div>
+          <div class="participant-name">Sarah Connor</div>
+        </div>
+        <div class="participant-tile" id="tile-peer-2">
+          <div style="font-size: 32px;">👨‍💻</div>
+          <div class="participant-name">Alex Miller</div>
+        </div>
+        <div class="participant-tile" id="tile-peer-3">
+          <div style="font-size: 32px;">🧑‍💼</div>
+          <div class="participant-name">Elena Rostova</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Disconnected Rejoin Panel -->
+    <div id="rejoin-prompt-panel" class="rejoin-panel">
+      <h2 style="font-size: 16px; color: #f87171;">You left the meeting</h2>
+      <p style="color: #94a3b8; font-size: 13px;">Meeting "Sprint Planning" is still in progress.</p>
+      <button id="btn-rejoin-meeting" class="btn-primary" style="padding: 8px 24px;">Rejoin Meeting</button>
+    </div>
+
+    <!-- Chat Drawer -->
+    <div id="chat-sidebar" class="chat-sidebar">
+      <div class="chat-header">Meeting Chat</div>
+      <div class="chat-messages" id="chat-message-list">
+        <div class="chat-msg">
+          <div class="sender">Sarah Connor</div>
+          <div>Welcome everyone, let us get started.</div>
+        </div>
+      </div>
+      <div class="chat-input-box">
+        <input type="text" id="input-chat-message" placeholder="Type a message...">
+        <button id="btn-send-chat" class="btn-primary">Send</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toolbar" id="call-toolbar" style="display: none;">
+    <span id="mic-status-indicator" class="indicator active">Unmuted</span>
+    <button id="btn-toggle-mic">Toggle Mic</button>
+    <span id="cam-status-indicator" class="indicator active">Camera On</span>
+    <button id="btn-toggle-cam">Toggle Cam</button>
+    <button id="btn-share-screen">Share Screen</button>
+    <span id="hand-raise-indicator" class="indicator neutral">Hand Down</span>
+    <button id="btn-raise-hand">Raise Hand</button>
+    <button id="btn-open-chat">Chat</button>
+    <button id="btn-leave-meeting" class="btn-danger">Leave</button>
+    <button id="btn-save-call-summary" class="btn-primary">Summary</button>
+  </div>
+
+  <div id="call-summary-toast" class="toast-summary"></div>
+</div>
+
+<!-- Screen Share Modal -->
+<div id="screenshare-modal" class="modal-overlay">
+  <div class="modal-card">
+    <h3 style="font-size: 15px; margin-bottom: 12px; color: #f8fafc;">Select Screen to Share</h3>
+    <div style="margin-bottom: 16px;">
+      <label style="display: block; margin-bottom: 6px; font-size: 13px; cursor: pointer;">
+        <input type="radio" name="screenshare_opt" id="screen-option-desktop" checked> Entire Screen (Desktop)
+      </label>
+      <label style="display: block; font-size: 13px; cursor: pointer;">
+        <input type="radio" name="screenshare_opt" id="screen-option-tab"> Browser Tab
+      </label>
+    </div>
+    <div style="display: flex; justify-content: flex-end; gap: 8px;">
+      <button id="btn-cancel-screenshare">Cancel</button>
+      <button id="btn-confirm-screenshare" class="btn-primary">Share</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const callState = {
+    room: '',
+    user: '',
+    connected: false,
+    mic: 'Unmuted',
+    cam: 'Camera On',
+    sharing: false,
+    handRaised: false,
+    chatOpen: false,
+    participants: 4
+  };
+
+  const dom = {
+    roomDisplay: document.getElementById('room-name-display'),
+    partCount: document.getElementById('participant-count'),
+    callStatusBadge: document.getElementById('call-status-badge'),
+    lobbyPanel: document.getElementById('lobby-panel'),
+    callPanel: document.getElementById('call-panel'),
+    rejoinPanel: document.getElementById('rejoin-prompt-panel'),
+    toolbar: document.getElementById('call-toolbar'),
+    micIndicator: document.getElementById('mic-status-indicator'),
+    camIndicator: document.getElementById('cam-status-indicator'),
+    handIndicator: document.getElementById('hand-raise-indicator'),
+    shareBanner: document.getElementById('screen-share-banner'),
+    shareModal: document.getElementById('screenshare-modal'),
+    chatSidebar: document.getElementById('chat-sidebar'),
+    chatList: document.getElementById('chat-message-list'),
+    summaryToast: document.getElementById('call-summary-toast')
+  };
+
+  function updateStatus() {
+    dom.roomDisplay.textContent = callState.room || 'None';
+    if (callState.connected) {
+      dom.partCount.textContent = String(callState.participants);
+      dom.callStatusBadge.textContent = 'Connected';
+      dom.callStatusBadge.className = 'badge badge-connected';
+      dom.lobbyPanel.style.display = 'none';
+      dom.rejoinPanel.style.display = 'none';
+      dom.callPanel.style.display = 'flex';
+      dom.toolbar.style.display = 'flex';
+    } else if (callState.room) {
+      dom.partCount.textContent = '0';
+      dom.callStatusBadge.textContent = 'Disconnected';
+      dom.callStatusBadge.className = 'badge badge-disconnected';
+      dom.lobbyPanel.style.display = 'none';
+      dom.callPanel.style.display = 'none';
+      dom.toolbar.style.display = 'none';
+      dom.rejoinPanel.style.display = 'flex';
+    } else {
+      dom.partCount.textContent = '0';
+      dom.callStatusBadge.textContent = 'Lobby';
+      dom.callStatusBadge.className = 'badge badge-lobby';
+      dom.lobbyPanel.style.display = 'flex';
+      dom.callPanel.style.display = 'none';
+      dom.toolbar.style.display = 'none';
+      dom.rejoinPanel.style.display = 'none';
+    }
+  }
+
+  document.getElementById('btn-join-meeting').onclick = () => {
+    const room = document.getElementById('input-meeting-id').value.trim() || 'Sprint Planning';
+    const user = document.getElementById('input-display-name').value.trim() || 'James';
+    callState.room = room;
+    callState.user = user;
+    callState.connected = true;
+    updateStatus();
+  };
+
+  document.getElementById('btn-toggle-mic').onclick = () => {
+    if (callState.mic === 'Unmuted') {
+      callState.mic = 'Muted';
+      dom.micIndicator.textContent = 'Muted';
+      dom.micIndicator.className = 'indicator muted';
+    } else {
+      callState.mic = 'Unmuted';
+      dom.micIndicator.textContent = 'Unmuted';
+      dom.micIndicator.className = 'indicator active';
+    }
+  };
+
+  document.getElementById('btn-toggle-cam').onclick = () => {
+    if (callState.cam === 'Camera On') {
+      callState.cam = 'Camera Off';
+      dom.camIndicator.textContent = 'Camera Off';
+      dom.camIndicator.className = 'indicator off';
+    } else {
+      callState.cam = 'Camera On';
+      dom.camIndicator.textContent = 'Camera On';
+      dom.camIndicator.className = 'indicator active';
+    }
+  };
+
+  document.getElementById('btn-share-screen').onclick = () => {
+    dom.shareModal.classList.add('active');
+  };
+
+  document.getElementById('btn-cancel-screenshare').onclick = () => {
+    dom.shareModal.classList.remove('active');
+  };
+
+  document.getElementById('btn-confirm-screenshare').onclick = () => {
+    callState.sharing = true;
+    dom.shareModal.classList.remove('active');
+    dom.shareBanner.classList.remove('hidden');
+  };
+
+  document.getElementById('btn-stop-screenshare').onclick = () => {
+    callState.sharing = false;
+    dom.shareBanner.classList.add('hidden');
+  };
+
+  document.getElementById('btn-raise-hand').onclick = () => {
+    callState.handRaised = !callState.handRaised;
+    if (callState.handRaised) {
+      dom.handIndicator.textContent = 'Hand Raised';
+      dom.handIndicator.className = 'indicator raised';
+    } else {
+      dom.handIndicator.textContent = 'Hand Down';
+      dom.handIndicator.className = 'indicator neutral';
+    }
+  };
+
+  document.getElementById('btn-open-chat').onclick = () => {
+    callState.chatOpen = !callState.chatOpen;
+    if (callState.chatOpen) {
+      dom.chatSidebar.classList.add('open');
+    } else {
+      dom.chatSidebar.classList.remove('open');
+    }
+  };
+
+  document.getElementById('btn-send-chat').onclick = () => {
+    const inp = document.getElementById('input-chat-message');
+    const msg = inp.value.trim();
+    if (!msg) return;
+    const box = document.createElement('div');
+    box.className = 'chat-msg';
+    box.innerHTML = '<div class="sender">' + callState.user + ' (You)</div><div>' + msg + '</div>';
+    dom.chatList.appendChild(box);
+    inp.value = '';
+    dom.chatList.scrollTop = dom.chatList.scrollHeight;
+  };
+
+  document.getElementById('btn-leave-meeting').onclick = () => {
+    callState.connected = false;
+    updateStatus();
+  };
+
+  document.getElementById('btn-rejoin-meeting').onclick = () => {
+    callState.connected = true;
+    updateStatus();
+  };
+
+  document.getElementById('btn-save-call-summary').onclick = () => {
+    const audioWord = callState.mic === 'Unmuted' ? 'audio active' : 'audio muted';
+    const videoWord = callState.cam === 'Camera On' ? 'video active' : 'video muted';
+    dom.summaryToast.textContent = 'Meeting ' + callState.room + ': ' + callState.participants + ' participants, ' + audioWord + ', ' + videoWord;
+    dom.summaryToast.classList.add('active');
+  };
+</script>
+
+</body>
+</html>

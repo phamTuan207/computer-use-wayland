@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Photo Studio Pro</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background: #18181b; color: #f4f4f5; padding: 20px; }
+    .container { max-width: 1050px; margin: 0 auto; background: #27272a; border-radius: 8px; border: 1px solid #3f3f46; overflow: hidden; }
+    header { background: #09090b; padding: 14px 20px; border-bottom: 1px solid #3f3f46; display: flex; justify-content: space-between; align-items: center; }
+    h1 { font-size: 18px; font-weight: 600; color: #38bdf8; }
+    .status-text { font-size: 13px; color: #a1a1aa; }
+    .banner { display: none; padding: 12px 20px; background: #065f46; color: #a7f3d0; border-bottom: 1px solid #047857; font-size: 13px; font-weight: 500; }
+    .banner.active { display: block; }
+    .workspace { display: grid; grid-template-columns: 280px 1fr; min-height: 520px; }
+    .sidebar { background: #1c1c1f; border-right: 1px solid #3f3f46; padding: 16px; display: flex; flex-direction: column; gap: 16px; }
+    .tab-bar { display: flex; gap: 4px; background: #27272a; padding: 4px; border-radius: 6px; }
+    .tab-btn { flex: 1; padding: 6px 4px; font-size: 12px; background: transparent; border: none; color: #a1a1aa; border-radius: 4px; cursor: pointer; text-align: center; }
+    .tab-btn.active { background: #3f3f46; color: #f4f4f5; font-weight: 600; }
+    .panel-content { display: none; }
+    .panel-content.active { display: block; }
+    button { background: #3f3f46; color: #f4f4f5; border: 1px solid #52525b; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 500; }
+    button:hover { background: #52525b; }
+    button.btn-primary { background: #0284c7; border-color: #0369a1; }
+    button.btn-primary:hover { background: #0369a1; }
+    .list-group { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+    .file-item { padding: 10px 12px; background: #27272a; border: 1px solid #3f3f46; border-radius: 4px; cursor: pointer; font-size: 13px; }
+    .file-item.selected { border-color: #38bdf8; background: #1e293b; }
+    .canvas-area { background: #09090b; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; position: relative; }
+    .preview-box { border: 2px dashed #52525b; border-radius: 6px; display: flex; align-items: center; justify-content: center; background: #18181b; overflow: hidden; transition: all 0.2s ease; }
+    .info-bar { position: absolute; bottom: 12px; left: 24px; right: 24px; display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #a1a1aa; background: rgba(24, 24, 27, 0.85); padding: 8px 16px; border-radius: 4px; border: 1px solid #3f3f46; }
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; justify-content: center; align-items: center; z-index: 100; }
+    .modal-overlay.active { display: flex; }
+    .modal-card { background: #27272a; border: 1px solid #52525b; border-radius: 8px; padding: 24px; width: 420px; }
+    .modal-card h3 { font-size: 16px; margin-bottom: 16px; }
+    .modal-card select { width: 100%; background: #18181b; border: 1px solid #3f3f46; padding: 8px 12px; color: #f4f4f5; border-radius: 4px; font-size: 13px; margin-bottom: 16px; outline: none; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 8px; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <h1>Photo Studio Pro</h1>
+    <div id="editor-status-text" class="status-text">Ready. No file loaded.</div>
+    <button id="btn-open-export" class="btn-primary">Export Photo</button>
+  </header>
+
+  <div id="export-status-banner" class="banner"></div>
+
+  <div class="workspace">
+    <div class="sidebar">
+      <div>
+        <span style="font-size: 12px; font-weight: 600; color: #71717a; text-transform: uppercase;">Image Library</span>
+        <div class="list-group">
+          <div id="file-item-sunset" class="file-item">
+            <div style="font-weight: 600;">sunset.jpg</div>
+            <div style="font-size: 11px; color: #a1a1aa;">1200 x 900 px (3.2 MB)</div>
+          </div>
+          <div id="file-item-forest" class="file-item">
+            <div style="font-weight: 600;">forest.jpg</div>
+            <div style="font-size: 11px; color: #a1a1aa;">800 x 600 px (1.8 MB)</div>
+          </div>
+        </div>
+        <button id="btn-load-photo" class="btn-primary" style="width: 100%; margin-top: 8px;">Load Photo</button>
+      </div>
+
+      <div class="tab-bar">
+        <button id="tool-tab-crop" class="tab-btn active">Crop</button>
+        <button id="tool-tab-filters" class="tab-btn">Filter</button>
+        <button id="tool-tab-adjust" class="tab-btn">Adjust</button>
+        <button id="tool-tab-transform" class="tab-btn">Rotate</button>
+      </div>
+
+      <!-- Crop Panel -->
+      <div id="crop-controls" class="panel-content active">
+        <div style="font-size: 13px; margin-bottom: 8px;">Aspect Ratio: <span id="active-crop-ratio" style="font-weight: bold; color: #38bdf8;">Free</span></div>
+        <div style="display: flex; gap: 6px; margin-bottom: 12px;">
+          <button id="btn-ratio-free">Free</button>
+          <button id="btn-ratio-1-1">1:1</button>
+          <button id="btn-ratio-4-3">4:3</button>
+          <button id="btn-ratio-16-9">16:9</button>
+        </div>
+        <button id="btn-apply-crop" class="btn-primary" style="width: 100%;">Apply Crop</button>
+      </div>
+
+      <!-- Filters Panel -->
+      <div id="filters-panel" class="panel-content">
+        <div style="font-size: 13px; margin-bottom: 8px;">Active Filter: <span id="active-filter-name" style="font-weight: bold; color: #38bdf8;">Original</span></div>
+        <div class="list-group">
+          <button id="btn-filter-normal">Original</button>
+          <button id="btn-filter-vivid">Vivid</button>
+          <button id="btn-filter-mono">Monochrome</button>
+          <button id="btn-filter-warm">Warm</button>
+        </div>
+      </div>
+
+      <!-- Adjustments Panel -->
+      <div id="adjust-panel" class="panel-content">
+        <div style="font-size: 13px; margin-bottom: 8px;">Brightness: <span id="brightness-display" style="font-weight: bold; color: #38bdf8;">0</span></div>
+        <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+          <button id="btn-brightness-minus">-20</button>
+          <button id="btn-brightness-plus">+20</button>
+          <button id="btn-undo-adjust">Undo Adjustment</button>
+        </div>
+        <div id="history-log" style="font-size: 11px; color: #71717a; min-height: 20px;"></div>
+      </div>
+
+      <!-- Transform Panel -->
+      <div id="transform-panel" class="panel-content">
+        <div style="font-size: 13px; margin-bottom: 8px;">Rotation: <span id="rotation-angle" style="font-weight: bold; color: #38bdf8;">0 deg</span></div>
+        <button id="btn-rotate-90-cw" style="width: 100%;">Rotate 90 deg Clockwise</button>
+      </div>
+    </div>
+
+    <!-- Canvas Preview -->
+    <div class="canvas-area">
+      <div id="photo-preview-box" class="preview-box" style="width: 360px; height: 270px;">
+        <span id="canvas-placeholder" style="color: #71717a; font-size: 14px;">Select and load an image</span>
+      </div>
+      <div class="info-bar">
+        <div>Image: <span id="current-filename" style="color: #f4f4f5; font-weight: 600;">None</span></div>
+        <div>Dimensions: <span id="dim-width">0</span> x <span id="dim-height">0</span> px</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Export Modal -->
+<div id="export-modal" class="modal-overlay">
+  <div class="modal-card">
+    <h3>Export Image Options</h3>
+    <div style="margin-bottom: 12px; font-size: 13px;">
+      <div>Output Dimensions: <span id="dialog-dimensions-display" style="font-weight: bold; color: #38bdf8;">750 x 1000 px</span></div>
+      <div style="margin-top: 4px;">Selected Format: <span id="dialog-format-display" style="font-weight: bold; color: #38bdf8;">JPEG</span></div>
+    </div>
+    <label style="font-size: 12px; color: #a1a1aa; display: block; margin-bottom: 4px;">File Format</label>
+    <select id="select-export-format">
+      <option value="JPEG">JPEG Image (.jpg)</option>
+      <option value="PNG">PNG Image (.png)</option>
+      <option value="WEBP">WebP Image (.webp)</option>
+    </select>
+    <div class="modal-actions">
+      <button id="btn-cancel-export">Cancel</button>
+      <button id="btn-confirm-export" class="btn-primary">Confirm Export</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const photoState = {
+    selectedFile: null,
+    loadedFile: null,
+    width: 0,
+    height: 0,
+    cropRatio: 'Free',
+    filter: 'Original',
+    brightness: 0,
+    prevBrightness: 0,
+    rotation: 0,
+    exportFormat: 'JPEG',
+    exported: false
+  };
+
+  // Selection
+  const sunsetItem = document.getElementById('file-item-sunset');
+  const forestItem = document.getElementById('file-item-forest');
+  const btnLoad = document.getElementById('btn-load-photo');
+
+  sunsetItem.onclick = () => {
+    sunsetItem.classList.add('selected');
+    forestItem.classList.remove('selected');
+    photoState.selectedFile = 'sunset.jpg';
+  };
+
+  forestItem.onclick = () => {
+    forestItem.classList.add('selected');
+    sunsetItem.classList.remove('selected');
+    photoState.selectedFile = 'forest.jpg';
+  };
+
+  btnLoad.onclick = () => {
+    if (!photoState.selectedFile) return;
+    photoState.loadedFile = photoState.selectedFile;
+    photoState.width = 1200;
+    photoState.height = 900;
+    photoState.rotation = 0;
+    photoState.brightness = 0;
+    document.getElementById('current-filename').textContent = photoState.loadedFile;
+    document.getElementById('dim-width').textContent = String(photoState.width);
+    document.getElementById('dim-height').textContent = String(photoState.height);
+    document.getElementById('editor-status-text').textContent = 'Loaded ' + photoState.loadedFile;
+    document.getElementById('canvas-placeholder').textContent = photoState.loadedFile + ' (1200x900)';
+  };
+
+  // Tabs
+  const tabs = {
+    crop: document.getElementById('tool-tab-crop'),
+    filters: document.getElementById('tool-tab-filters'),
+    adjust: document.getElementById('tool-tab-adjust'),
+    transform: document.getElementById('tool-tab-transform')
+  };
+  const panels = {
+    crop: document.getElementById('crop-controls'),
+    filters: document.getElementById('filters-panel'),
+    adjust: document.getElementById('adjust-panel'),
+    transform: document.getElementById('transform-panel')
+  };
+
+  function switchTab(name) {
+    Object.keys(tabs).forEach(k => tabs[k].classList.remove('active'));
+    Object.keys(panels).forEach(k => panels[k].classList.remove('active'));
+    tabs[name].classList.add('active');
+    panels[name].classList.add('active');
+  }
+
+  tabs.crop.onclick = () => switchTab('crop');
+  tabs.filters.onclick = () => switchTab('filters');
+  tabs.adjust.onclick = () => switchTab('adjust');
+  tabs.transform.onclick = () => switchTab('transform');
+
+  // Crop
+  document.getElementById('btn-ratio-4-3').onclick = () => {
+    photoState.cropRatio = '4:3';
+    document.getElementById('active-crop-ratio').textContent = '4:3';
+  };
+
+  document.getElementById('btn-apply-crop').onclick = () => {
+    if (photoState.cropRatio === '4:3') {
+      photoState.width = 1000;
+      photoState.height = 750;
+      document.getElementById('dim-width').textContent = '1000';
+      document.getElementById('dim-height').textContent = '750';
+    }
+  };
+
+  // Filters
+  document.getElementById('btn-filter-vivid').onclick = () => {
+    photoState.filter = 'Vivid';
+    document.getElementById('active-filter-name').textContent = 'Vivid';
+  };
+
+  // Adjustments
+  const brightnessDisplay = document.getElementById('brightness-display');
+  const historyLog = document.getElementById('history-log');
+
+  document.getElementById('btn-brightness-plus').onclick = () => {
+    photoState.prevBrightness = photoState.brightness;
+    photoState.brightness += 20;
+    brightnessDisplay.textContent = String(photoState.brightness);
+    historyLog.textContent = 'Adjustment: Brightness +20';
+  };
+
+  document.getElementById('btn-undo-adjust').onclick = () => {
+    photoState.brightness = photoState.prevBrightness;
+    brightnessDisplay.textContent = String(photoState.brightness);
+    historyLog.textContent = 'Undone: Brightness +20 reverted';
+  };
+
+  // Rotate
+  document.getElementById('btn-rotate-90-cw').onclick = () => {
+    photoState.rotation = (photoState.rotation + 90) % 360;
+    document.getElementById('rotation-angle').textContent = photoState.rotation + ' deg';
+    const temp = photoState.width;
+    photoState.width = photoState.height;
+    photoState.height = temp;
+    document.getElementById('dim-width').textContent = String(photoState.width);
+    document.getElementById('dim-height').textContent = String(photoState.height);
+  };
+
+  // Export
+  const exportModal = document.getElementById('export-modal');
+  const selectFormat = document.getElementById('select-export-format');
+  const dialogFormat = document.getElementById('dialog-format-display');
+  const dialogDims = document.getElementById('dialog-dimensions-display');
+
+  document.getElementById('btn-open-export').onclick = () => {
+    exportModal.classList.add('active');
+    dialogDims.textContent = photoState.width + ' x ' + photoState.height + ' px';
+  };
+
+  document.getElementById('btn-cancel-export').onclick = () => {
+    exportModal.classList.remove('active');
+  };
+
+  selectFormat.onchange = () => {
+    photoState.exportFormat = selectFormat.value;
+    dialogFormat.textContent = selectFormat.value;
+  };
+
+  document.getElementById('btn-confirm-export').onclick = () => {
+    photoState.exported = true;
+    exportModal.classList.remove('active');
+    const banner = document.getElementById('export-status-banner');
+    banner.textContent = 'Image exported: sunset.png (' + photoState.width + 'x' + photoState.height + ', ' + photoState.exportFormat + ')';
+    banner.classList.add('active');
+  };
+</script>
+
+</body>
+</html>
