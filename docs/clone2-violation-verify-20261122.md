@@ -35,7 +35,7 @@ Evidence, checked by me:
 - `git cat-file -t origin/todolist-push:MEMORY.md` fails: path does not exist in the branch. The branch root listing has no MEMORY.md. Still absent at current tip c450f5d.
 - The claim is present in all five places the audit cites, verified line by line: improvements/opt-council-m2-verdict.md:90 and :107, improvements/opt-crawl-src-20261121.md:148, improvements/optimal-fix-method-20261121.md:198, improvements/worker-f1-guardian-fix-log.md:862.
 - A branch-wide grep for H3 acceptance citations finds no acceptance artifact other than MEMORY.md 22:57. The redteam already flagged this as P-33, M-1 and AM-13 (opt-redteam-m-skeptic.md:58, opt-redteam-m-verdict.md:33,81), and it is still unresolved at the tip.
-- The audit's staleness note is also correct: redteam-M's "Y13g has zero observable output" was true when written and is stale at the tip (51 Y13g commits exist).
+- The audit's staleness note is also correct: redteam-M's "Y13g has zero observable output" was true when written and is stale at the tip (50 Y13g commits exist at the anchor e4082ff, 52 at the current tip c450f5d).
 
 Verdict: UPHELD. A gate decision that unblocks a live run rests on a citation that cannot be checked from the repo.
 
@@ -60,7 +60,7 @@ Evidence, checked by me:
 - The claim text is present at lines 985-991 as cited, including the evidence list: test-cases.md, test-scores.md (rewritten, 174 lines), typing-fix-multipage-report.md, test-execution-report.md, stress.log, 14 state.json files plus finish-record.json and start-readiness.json, 20 screenshots in /tmp/judge/, repo_head c9b96a7 in all 14 state.json.
 - Whole-branch filename search at e4082ff: test-scores.md 0 hits, test-cases.md 0 hits, test-execution-report.md 0 hits, typing-fix-multipage-report.md 0 hits, stress.log 0 hits. Still 0 hits at current tip c450f5d.
 - The cited commit c9b96a7 does exist (`git cat-file -t` returns commit). The cited content hash 8da1f562 is not a git object, which is expected for a file-content hash.
-- Precision note on the audit's wording: a filename search for state.json does return 16 hits, but all 16 are tests/realistic/a1-pilot/checker-selftest/cases/T*/end-state.json, A1 pilot fixtures unrelated to the judge's tc01-tc13 trial state files. No finish-record.json or start-readiness.json exists anywhere on the branch. The audit's conclusion stands; its sentence "No state.json exists" is true only for the judge's files, not for every file ending in state.json.
+- Precision note on the audit's wording: a filename search for state.json does return 15 hits, but all 15 are tests/realistic/a1-pilot/checker-selftest/cases/T*/end-state.json, A1 pilot fixtures unrelated to the judge's tc01-tc13 trial state files. No finish-record.json or start-readiness.json exists anywhere on the branch. The audit's conclusion stands; its sentence "No state.json exists" is true only for the judge's files, not for every file ending in state.json.
 - Mitigating factor confirmed: the section honestly lists WITHHELD items (pill/overlay visibility, cursor-glyph appearance, Worker N's offline claims not re-verified), so the judge did not overclaim scope.
 
 Verdict: UPHELD. The verdict cannot be re-run or re-checked from the repo; only the inline summary survives.
@@ -73,7 +73,7 @@ Evidence, checked by me:
 - All three claims are present at the cited lines, each citing a laptop log: /tmp/det-finish-baseline-tests.log, /tmp/det-finish-after-tests.log, /tmp/det-finish-worktree2-tests.log (the fourth cited log, /tmp/det-finish-final-tests.log, is explicitly marked INVALID in the doc itself because the shared checkout switched branches mid-run).
 - No file matching det-finish*.log exists anywhere on the branch at e4082ff.
 - The cited commit e01399d exists.
-- Arithmetic is internally consistent as the audit says: 1359 baseline, +20 from 10 det_finish + 10 from another worker's file, 1350 final in a clean worktree without the untracked files.
+- Arithmetic is internally consistent as the audit says: 1339 baseline, +20 from 10 det_finish + 10 from another worker's file gives 1359 after the first pass, 1350 final in a clean worktree without the untracked files (+11 over baseline).
 
 Verdict: UPHELD. The counts are consistent on paper, but the raw logs cannot be re-checked from the repo.
 
@@ -188,7 +188,7 @@ Verdict: UPHELD, as a disclosed low-severity finding. The evidence is local-only
 ## Notes on the audit itself
 
 - The audit is accurate on all 13 violations. Two precision notes, neither of which changes any verdict:
-  - V3: the audit's sentence "No state.json exists on the branch" is true for the judge's trial state files, but 16 A1 pilot end-state.json fixtures do exist under tests/realistic/a1-pilot/checker-selftest/cases/. They are unrelated to the judge's files.
+  - V3: the audit's sentence "No state.json exists on the branch" is true for the judge's trial state files, but 15 A1 pilot end-state.json fixtures do exist under tests/realistic/a1-pilot/checker-selftest/cases/. They are unrelated to the judge's files.
   - V10: the audit's "t01-t09 check.mjs diff is 0 lines" is confirmed by blob-hash comparison; my first attempt at re-checking it used wrong directory names and I corrected it before concluding.
 - V6 was verified more strongly than the audit did: the audit verified by code reading only; I reproduced the crash live with a synthetic B3a manifest (TypeError at line 226, exit 1, no verdict).
 - Nothing in this verification changes the audit's census or its recommendations. The highest-priority items remain: an H3 acceptance artifact in the repo (V1), the missing raw evidence files (V2, V3, V4, V7, V8), the run_matrix.py total (V5), and finishing the a1_unblind.py B3a guard (V6).
