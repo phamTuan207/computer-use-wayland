@@ -14,6 +14,8 @@ faked below; _wd conversion is tested by mocking urlopen.
 """
 import importlib.util
 import json
+import shutil
+import subprocess
 import sys
 import unittest
 from pathlib import Path
@@ -747,6 +749,94 @@ class TestDomHelpers(unittest.TestCase):
         self.assertTrue(all(c[1].endswith('/execute/sync')
                             for c in session.calls),
                         'only JS evals, no observe call')
+
+
+NODE = shutil.which('node')
+
+
+def _capture_js(method_name, *args):
+    """The exact JS string a zen_dom helper sends to evaluate()."""
+    session = zen_dom.ZenSession()
+    captured = {}
+
+    def _eval(script, args=None):
+        captured['script'] = script
+        return None
+
+    session.evaluate = _eval
+    getattr(session, method_name)(*args)
+    return captured['script']
+
+
+def _run_node(code):
+    proc = subprocess.run([NODE, '-e', code], capture_output=True,
+                          text=True, timeout=20)
+    if proc.returncode != 0:
+        raise AssertionError('node failed: ' + proc.stderr[:500])
+    return proc.stdout.strip()
+
+
+class TestFaithfulShadowShim(unittest.TestCase):
+    """R7 re-run with a FAITHFUL shim (AMEND4 item 2, C3 step-8).
+
+    The frozen R7 test stubs document.querySelector to return the
+    shadow-nested input directly, which a real browser never does:
+    querySelector cannot see into a shadow root. That stub let a
+    querySelector-only focus_check pass. This test uses a faithful
+    shim: querySelector returns null for the shadow-nested input,
+    and the host is reachable only through querySelectorAll('*')
+    plus shadowRoot recursion. Only a real pierce/find passes it.
+    Would fail on the pre-AMEND4 code (querySelector-only lookup
+    returns null, focus_check False); passes with find().
+    """
+
+    @unittest.skipUnless(NODE, 'node is required to run production JS')
+    def test_focus_check_faithful_shadow_shim(self):
+        script = _capture_js('focus_check', '#msg-input')
+        shim = (
+            "var __inner = {tagName: 'INPUT', isContentEditable:"
+            " false, readOnly: false};\n"
+            "var __shadow = {activeElement: __inner,\n"
+            " querySelector: function(sel){"
+            " return sel === '#msg-input' ? __inner : null; },\n"
+            " querySelectorAll: function(sel){ return []; }};\n"
+            "var __host = {tagName: 'DIV', shadowRoot: __shadow};\n"
+            "var document = {querySelector: function(sel){"
+            " return null; },\n"
+            " querySelectorAll: function(sel){"
+            " return sel === '*' ? [__host] : []; },\n"
+            " activeElement: __host};\n")
+        out = _run_node(shim + 'console.log(JSON.stringify(' + script
+                        + '));')
+        self.assertEqual(json.loads(out), True,
+                         'focus_check failed a focused shadow input '
+                         'under a faithful shim: %s' % (out,))
+
+    @unittest.skipUnless(NODE, 'node is required to run production JS')
+    def test_hit_check_faithful_shadow_shim(self):
+        script = _capture_js('hit_check', '#msg-input')
+        shim = (
+            "var __inner = {tagName: 'INPUT', isContentEditable:"
+            " false, readOnly: false,\n"
+            " getBoundingClientRect: function(){ return {left: 10,"
+            " top: 10, width: 80, height: 30, x: 10, y: 10}; },\n"
+            " contains: function(el){ return el === __inner; }};\n"
+            "var __shadow = {activeElement: null,\n"
+            " querySelector: function(sel){"
+            " return sel === '#msg-input' ? __inner : null; },\n"
+            " querySelectorAll: function(sel){ return []; }};\n"
+            "var __host = {tagName: 'DIV', shadowRoot: __shadow};\n"
+            "var document = {querySelector: function(sel){"
+            " return null; },\n"
+            " querySelectorAll: function(sel){"
+            " return sel === '*' ? [__host] : []; },\n"
+            " activeElement: __host,\n"
+            " elementFromPoint: function(x, y){ return __inner; }};\n")
+        out = _run_node(shim + 'console.log(JSON.stringify(' + script
+                        + '));')
+        self.assertEqual(json.loads(out), True,
+                         'hit_check failed an uncovered shadow input '
+                         'under a faithful shim: %s' % (out,))
 
 
 if __name__ == '__main__':

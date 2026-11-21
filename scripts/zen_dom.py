@@ -206,6 +206,110 @@ def check_viewport_geometry(moz_inner, absolute_origin, window_origin,
     return absolute
 
 
+# Shared DOM traversal for every gate helper (AMEND4 item 2).
+# pierce() walks open shadow roots; framesOf() enumerates
+# same-origin frames, including frames inside shadow roots, by
+# contentWindow presence (a shim frame has no tagName, so tagName
+# must never be the test); find() runs pierce, then recurses into
+# each frame document to depth 5, fail-closed on cross-origin
+# frames (accessing a cross-origin contentWindow.document throws
+# and is caught). The helpers below interpolate this constant into
+# their IIFE. It contains no % (callers use % formatting) and no
+# marker substring the test fakes dispatch on (no activeElement,
+# elementFromPoint, textContent, getBoundingClientRect, or
+# mozInnerScreenX), so the fakes keep routing each script to its
+# own branch. deepActive() and framePoint() live apart because they
+# DO contain a dispatch substring (activeElement,
+# getBoundingClientRect) and belong only in the scripts whose fake
+# branch already expects it.
+_FIND_JS = (
+    "function pierce(sel, root){"
+    "let e=root.querySelector(sel);"
+    "if(e) return e;"
+    "const all=root.querySelectorAll('*');"
+    "for(const el of all){"
+    "if(el.shadowRoot){"
+    "e=pierce(sel, el.shadowRoot);"
+    "if(e) return e;"
+    "}}"
+    "return null;"
+    "}"
+    "function framesOf(root){"
+    "let out=[];"
+    "let frames=[];"
+    "try{frames=root.querySelectorAll('iframe');}catch(_){}"
+    "for(const f of frames){"
+    "try{if(f.contentWindow && f.contentWindow.document) out.push(f);}"
+    "catch(_){}"
+    "}"
+    "let all=[];"
+    "try{all=root.querySelectorAll('*');}catch(_){}"
+    "for(const el of all){"
+    "if(el.shadowRoot){"
+    "try{out=out.concat(framesOf(el.shadowRoot));}catch(_){}"
+    "}}"
+    "return out;"
+    "}"
+    "function find(sel, root, depth){"
+    "if(root===undefined) root=document;"
+    "if(depth===undefined) depth=0;"
+    "let e=pierce(sel, root);"
+    "if(e) return e;"
+    "if(depth>=5) return null;"
+    "const frames=framesOf(root);"
+    "for(const f of frames){"
+    "try{"
+    "e=find(sel, f.contentWindow.document, depth+1);"
+    "if(e) return e;"
+    "}catch(_){"
+    "}}"
+    "return null;"
+    "}"
+)
+
+# Deep activeElement walk: down through shadow roots AND same-origin
+# iframes, fail-closed on cross-origin frames. Used by focus_check
+# and harvest, whose fake branches already expect activeElement.
+_DEEP_ACTIVE_JS = (
+    "function deepActive(){"
+    "let a=document.activeElement;"
+    "while(a){"
+    "if(a.shadowRoot && a.shadowRoot.activeElement){"
+    "a=a.shadowRoot.activeElement; continue;"
+    "}"
+    "try{"
+    "const cw=a.contentWindow;"
+    "if(cw && cw.document && cw.document.activeElement){"
+    "a=cw.document.activeElement; continue;"
+    "}"
+    "}catch(_){}"
+    "break;"
+    "}"
+    "return a;"
+    "}"
+)
+
+# Frame-viewport point for elementFromPoint: [owner document, x, y]
+# in that document's viewport coords. An element inside an iframe
+# reports a top-viewport rect, so the iframe offsets are walked off
+# up the frame chain. Used by hit_check and harvest, whose fake
+# branches already expect elementFromPoint / the harvest marker.
+_FRAME_POINT_JS = (
+    "function framePoint(e, x, y){"
+    "let doc=(e.ownerDocument||document);"
+    "let px=x, py=y;"
+    "let d=doc;"
+    "while(d && d.defaultView && d.defaultView.frameElement){"
+    "const f=d.defaultView.frameElement;"
+    "const r=f.getBoundingClientRect();"
+    "px-=r.left; py-=r.top;"
+    "d=(f.ownerDocument||document);"
+    "}"
+    "return [doc, px, py];"
+    "}"
+)
+
+
 class ZenSession:
     """One WebDriver session against one Zen, with guaranteed cleanup."""
 
@@ -473,34 +577,13 @@ class ZenSession:
         browsing-context call, never silently drop the target from an
         "every input" harvest.
         """
-        js = ("(function(){"
-              "function pierce(sel, root){"
-              "let e = root.querySelector(sel);"
-              "if (e) return e;"
-              "const all = root.querySelectorAll('*');"
-              "for (const el of all){"
-              "if (el.shadowRoot){"
-              "e = pierce(sel, el.shadowRoot);"
-              "if (e) return e;"
-              "}}"
-              "return null;"
-              "}"
-              "let e = pierce(%s, document);"
-              "if (!e){"
-              "const frames = document.querySelectorAll('iframe');"
-              "for (const f of frames){"
-              "try{"
-              "if (f.contentWindow && f.contentWindow.document){"
-              "e = pierce(%s, f.contentWindow.document);"
-              "if (e) break;"
-              "}}catch(_){"
-              "}}"
-              "}"
-              "if (!e) return null;"
-              " const r = e.getBoundingClientRect();"
+        js = ("(function(){" + _FIND_JS +
+              "const e=find(%s);"
+              "if(!e) return null;"
+              " const r=e.getBoundingClientRect();"
               " return {x: r.x, y: r.y, width: r.width, height: r.height,"
               " center_x: r.x + r.width / 2, center_y: r.y + r.height / 2};})()"
-              % (json.dumps(selector), json.dumps(selector)))
+              % json.dumps(selector))
         rect = self.evaluate(js, [selector])
         return rect
 
@@ -700,12 +783,15 @@ class ZenSession:
         the field. A plain text SPAN inside the field still passes.
         """
         return bool(self.evaluate(
-            "(function(){const e=document.querySelector(%s);"
+            "(function(){" + _FIND_JS + _FRAME_POINT_JS +
+            "const e=find(%s);"
             "if(!e) return false;"
             "const r=e.getBoundingClientRect();"
             "if(!r.width||!r.height) return false;"
             "const x=r.left+r.width/2, y=r.top+r.height/2;"
-            "const hit=document.elementFromPoint(x,y);"
+            "const fp=framePoint(e, x, y);"
+            "const doc=fp[0];"
+            "const hit=doc.elementFromPoint(fp[1], fp[2]);"
             "if(!hit) return false;"
             "if(e===hit) return true;"
             "if(!e.contains(hit)) return false;"
@@ -733,11 +819,10 @@ class ZenSession:
         false-negatived that shape.
         """
         return bool(self.evaluate(
-            "(function(){const e=document.querySelector(%s);"
+            "(function(){" + _FIND_JS + _DEEP_ACTIVE_JS +
+            "const e=find(%s);"
             "if(!e) return false;"
-            "let a=document.activeElement;"
-            "while(a && a.shadowRoot && a.shadowRoot.activeElement)"
-            "a=a.shadowRoot.activeElement;"
+            "const a=deepActive();"
             "return a===e && !e.readOnly && "
             "(e.isContentEditable || /^(INPUT|TEXTAREA)$/.test(e.tagName));})()"
             % json.dumps(selector)))
@@ -746,7 +831,8 @@ class ZenSession:
         """Current value/text of one field, or None when it has none.
 
         The query pierces open shadow roots (same helper shape as
-        locate) and traverses same-origin iframes, so a field inside
+        locate) and traverses same-origin iframes, including nested
+        frames and frames inside shadow roots, so a field inside
         an iframe reads the same as one in the top document. A
         cross-origin iframe is unreachable from parent JS, so a
         field there returns None and the caller must fall back to
@@ -754,31 +840,7 @@ class ZenSession:
         the target.
         """
         return self.evaluate(
-            "(function(){"
-            "function pierce(sel, root){"
-            "let e=root.querySelector(sel);"
-            "if(e) return e;"
-            "const all=root.querySelectorAll('*');"
-            "for(const el of all){"
-            "if(el.shadowRoot){"
-            "e=pierce(sel, el.shadowRoot);"
-            "if(e) return e;"
-            "}}"
-            "return null;"
-            "}"
-            "function find(sel){"
-            "let e=pierce(sel, document);"
-            "if(e) return e;"
-            "const frames=document.querySelectorAll('iframe');"
-            "for(const f of frames){"
-            "try{"
-            "if(f.contentWindow && f.contentWindow.document){"
-            "e=pierce(sel, f.contentWindow.document);"
-            "if(e) return e;"
-            "}}catch(_){"
-            "}}"
-            "return null;"
-            "}"
+            "(function(){" + _FIND_JS +
             "const e=find(%s);"
             "if(!e) return null;"
             "return e.isContentEditable ? e.textContent : "
@@ -802,31 +864,7 @@ class ZenSession:
         callers that never type.
         """
         result = self.evaluate(
-            "(function(){"
-            "function pierce(sel, root){"
-            "let e=root.querySelector(sel);"
-            "if(e) return e;"
-            "const all=root.querySelectorAll('*');"
-            "for(const el of all){"
-            "if(el.shadowRoot){"
-            "e=pierce(sel, el.shadowRoot);"
-            "if(e) return e;"
-            "}}"
-            "return null;"
-            "}"
-            "function find(sel){"
-            "let e=pierce(sel, document);"
-            "if(e) return e;"
-            "const frames=document.querySelectorAll('iframe');"
-            "for(const f of frames){"
-            "try{"
-            "if(f.contentWindow && f.contentWindow.document){"
-            "e=pierce(sel, f.contentWindow.document);"
-            "if(e) return e;"
-            "}}catch(_){"
-            "}}"
-            "return null;"
-            "}"
+            "(function(){" + _FIND_JS +
             "const e=find(%s);"
             "if(!e) return null;"
             "/* verify_typed */ return {value: e.isContentEditable"
@@ -873,24 +911,13 @@ class ZenSession:
         appears with no trusted input event must fail verification.
         """
         return bool(self.evaluate(
-            "(function(){"
-            "function pierce(sel, root){"
-            "let e=root.querySelector(sel);"
-            "if(e) return e;"
-            "const all=root.querySelectorAll('*');"
-            "for(const el of all){"
-            "if(el.shadowRoot){"
-            "e=pierce(sel, el.shadowRoot);"
-            "if(e) return e;"
-            "}}"
-            "return null;"
-            "}"
+            "(function(){" + _FIND_JS +
             "const sel=%s;"
             "window.__agentCuTyped = window.__agentCuTyped || {};"
             "window.__agentCuTyped[sel] = false;"
             "window.__agentCuMutated = window.__agentCuMutated || {};"
             "window.__agentCuMutated[sel] = false;"
-            "const e=pierce(sel, document);"
+            "const e=find(sel);"
             "if(!e) return false;"
             "e.addEventListener('input', function(ev){"
             "if(ev.isTrusted) window.__agentCuTyped[sel]=true;"
@@ -923,14 +950,26 @@ class ZenSession:
         plus the app can put the bubble there. Returns False when no
         bubble holds the text."""
         return bool(self.evaluate(
-            "/* zen_sent_bubble */ return (function(){"
+            ("/* zen_sent_bubble */ return (function(){"
             "const want=%s;"
-            "const els=document.querySelectorAll('*');"
+            + _FIND_JS +
+            "function leaves(root, out){"
+            "const all=root.querySelectorAll('*');"
+            "for(const el of all){"
+            "if(el.shadowRoot){leaves(el.shadowRoot, out);}"
+            "if(!el.children || el.children.length===0){out.push(el);}"
+            "}"
+            "const frames=framesOf(root);"
+            "for(const f of frames){"
+            "try{leaves(f.contentWindow.document, out);}catch(_){}"
+            "}"
+            "return out;"
+            "}"
+            "const els=leaves(document, []);"
             "for(const el of els){"
-            "if(el.children.length) continue;"
             "if((el.textContent||'').trim()===want) return true;"
             "}"
-            "return false;})()" % json.dumps(text)))
+            "return false;})()") % json.dumps(text)))
 
     def harvest(self, selectors):
         """One-shot bulk DOM harvest (doma11y C1): ONE evaluate
@@ -953,6 +992,7 @@ class ZenSession:
                     'inner_size': [0, 0], 'outer_size': [0, 0], 'items': {}}
         raw = self.evaluate(
             "/* zen_harvest */ return (function(){"
+            + _FIND_JS + _DEEP_ACTIVE_JS + _FRAME_POINT_JS +
             "const out={moz_inner:[window.mozInnerScreenX,"
             "window.mozInnerScreenY],"
             "device_pixel_ratio:window.devicePixelRatio,"
@@ -963,17 +1003,6 @@ class ZenSession:
             "inner_size:[window.innerWidth,window.innerHeight],"
             "outer_size:[window.outerWidth,window.outerHeight],"
             "items:{}};"
-            "function pierce(sel, root){"
-            "let e=root.querySelector(sel);"
-            "if(e) return e;"
-            "const all=root.querySelectorAll('*');"
-            "for(const el of all){"
-            "if(el.shadowRoot){"
-            "e=pierce(sel, el.shadowRoot);"
-            "if(e) return e;"
-            "}}"
-            "return null;"
-            "}"
             "function interactive(el){"
             "if(!el) return false;"
             "const tag=(el.tagName||'').toUpperCase();"
@@ -984,15 +1013,14 @@ class ZenSession:
             "[role=\"tab\"]')) return true;"
             "return false;"
             "}"
-            "let a=document.activeElement;"
-            "while(a && a.shadowRoot && a.shadowRoot.activeElement)"
-            "a=a.shadowRoot.activeElement;"
+            "const a=deepActive();"
             "for(const sel of %s){"
-            "const e=pierce(sel, document);"
+            "const e=find(sel);"
             "if(!e){out.items[sel]=null;continue;}"
             "const r=e.getBoundingClientRect();"
             "const x=r.left+r.width/2, y=r.top+r.height/2;"
-            "const hit=document.elementFromPoint(x,y);"
+            "const fp=framePoint(e, x, y);"
+            "const hit=fp[0].elementFromPoint(fp[1], fp[2]);"
             "out.items[sel]={rect:{x:r.x,y:r.y,width:r.width,"
             "height:r.height,center_x:x,center_y:y},"
             "hit:!!hit&&(e===hit||(e.contains(hit)&&!interactive(hit))),"
