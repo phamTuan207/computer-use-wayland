@@ -78,15 +78,15 @@ exit 2, and the 1124 ms new-tab timing. (c) is in the diff: the
 the `return` rule in the driver reference eval line. (d) is WRONG.
 The plan file improvements/worker-x-e1-plan-test-05.md at this
 commit contains 19 eval command objects, not 21. Only 10 of the 19
-start with `return`. Five more contain a `return` later in the body
-(fine under function-body semantics). Four have NO `return` at all
-and return null from Marionette /execute/sync: the select-set
-evals (steps for #select-contact-group and #filter-contact-group)
-and the search-input dispatch eval. Those four are side-effect-only
-commands whose results are verified by later check evals, so the
-conclusion "the plan file is NOT affected" is still defensible for
-value-returning evals, but the stated justification (21 evals, all
-starting with return) is inaccurate. Step 56 IS
+start with `return`. Nine more contain a `return` later in the body
+(fine under function-body semantics). None has no `return` at all.
+CORRECTION (redteam, 21:15, verified by me from the plan at
+695efea: 19 eval commands, 10 start with return, 9 contain it
+later, 0 with none): the first version of this section wrongly
+claimed 5 contain it later and 4 have none. The conclusion "the
+plan file is NOT affected" is therefore stronger than first stated:
+every eval in the plan returns a value, so the preflight exit 2
+diagnosis cannot be blamed on the plan file at all. Step 56 IS
 `return window.__agyVerify()`, that part is true.
 
 Missing evidence: the fix itself was unproven live at commit time.
@@ -449,7 +449,8 @@ headline done-claim is false rather than merely under-evidenced.
    check the dispersion and timeout-median blocks already use, or
    move the inconclusive verdict before the think computation.
 2. WRONG NUMBER, 695efea design note: the plan file has 19 evals,
-   not 21; 10 start with `return`, 4 have no `return` at all.
+   not 21; 10 start with `return`, 9 contain it later, 0 have none.
+   CORRECTION (redteam, 21:15): first version wrote 5 and 4.
    The fix itself is in code and correct for the diagnose path.
 3. FALSE CLAIM, 6f20fb5: "all Y4d council fixes applied" with no
    runner in existence. Corrected by a82bb41, but the correction
@@ -461,8 +462,11 @@ headline done-claim is false rather than merely under-evidenced.
    and regenerates byte-identical files, but the freeze commit
    message does not mention the step.
 5. COUNT OFF-BY-ONES, a82bb41: 88 check() assertion lines, not 87;
-   79 #id selectors, not 80; verdict files 92/90/98/133 lines, not
-   91/89/97/132. Substance holds in every case.
+   79 #id selectors, not 80. CORRECTION (council 2, 21:16): the
+   verdict-file numbers here were wrong. The commit message was
+   right: verdict files are 91/89/97/132 lines, not 92/90/98/133.
+   The 88-line and 79-selector corrections are right. Substance
+   holds in every case.
 6. F2/F3 RESOLVED BY SPEC AMENDMENT, f31abcf: the schema was
    changed to match the checker, not the other way round. Fine,
    but the freeze record should say so.

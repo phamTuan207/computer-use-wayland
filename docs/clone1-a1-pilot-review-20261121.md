@@ -18,8 +18,9 @@ The frozen file list is tests/realistic/a1-pilot/FREEZE.md at f31abcf.
   (880 lines), tests/realistic/fcc-k/test-01-spreadsheet-formula.md
   (81 lines), both fixtures, tests/realistic/live-run-u-20261121.jsonl
   and run-u-all-20261121.log, improvements/worker-a1-council-measurement-20261121.md.
-- Freeze integrity checked first: all 10 sha256 hashes in FREEZE.md
-  at f31abcf match the files at f31abcf (0 mismatches). No frozen
+- Freeze integrity checked first: all 12 sha256 hashes in FREEZE.md
+  at f31abcf match the files at f31abcf (0 mismatches). CORRECTION
+  (redteam, 21:15): the review first wrote 10, the file has 12. No frozen
   file changed after f31abcf; only the pilot log and the FREEZE.md
   hash line changed, in commit dce42ca, which adds the freeze hash
   and changes nothing else. The plan file at f31abcf is byte-identical
@@ -174,7 +175,8 @@ Counts: blocker 3, major 13, minor 12. Total 28 holes.
   check, so the promised INCONCLUSIVE verdict is unreachable for this
   input.
 - B3b. Malformed first run-log line. a1_unblind.py line 125 opens the
-  run log and parses the first line with no try/except. Reproduced:
+  run log, line 128 parses the first line with no try/except.
+  Reproduced:
   json.decoder.JSONDecodeError on "{not json" as line 1. The checker
   would have flagged the line as a problem (run FAIL with problems),
   but the unblinder crashes before computing any verdict.
@@ -613,3 +615,18 @@ risk with a named owner. The minor holes can be fixed in the same
 round at low cost. After the amendment, re-run the matrix (build then
 run) and the unblinder smoke tests including the three B3 inputs, and
 re-verify FREEZE.md hashes before issuing the resume order.
+
+## Correction after council 2 (21:16, 21/11)
+
+The "17/17" matrix numbers in this review are wrong. Council 2
+found, and I verified: run_matrix.py hardcodes total = 17 (line
+147, comment line 146 "15 regular cases + T11 + T12 = 17 checks"),
+but the frozen tree has only 16 case dirs (T01 to T10, T11a, T11b,
+T13, T14, T15, T16; there is no T12 dir). The script prints
+17/17 while only 16 checks exist, so the nonexistent T12 counts
+as a phantom pass. True figures: 16/16 with the build step,
+2/16 without it (not 3/17). Both this review and the evidence
+audit repeated the script's printed number. This is a defect in
+the frozen checker self-test itself, on top of the M12 build-step
+gap already reported: the matrix total must be derived from the
+case dirs on disk, not hardcoded.

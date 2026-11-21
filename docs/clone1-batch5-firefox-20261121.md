@@ -52,11 +52,19 @@ event (shim), t10 failed on the Night Drive read (see below).
 
 ## Worker-fix check (per the 19:01 order)
 
-No newer fix for t09 or t10 batch3 has landed on main or
-todolist-push after b629e11. The batch-4 version was run, stated
-plainly. One related fix DID land during the work: commit 08f36d2
-(19:10 +07), t05 rename to the real dialog flow. The batch3 runs
-used the tree including that t05 fix.
+CORRECTION (council 1, 21:11): the sentence below was wrong at
+commit time. Commit ed78e83 (Y10 t09/t10 reconcile, real behavioral
+changes) landed 12:19:42 UTC, about 5 min before this doc was
+committed at 12:25 UTC. The task 5 agent checked before ed78e83
+landed, so its runs used the batch-4 version, but which check
+version the Firefox runs executed cannot be proven from the JSONs
+(no check hash recorded). Future runs must record the check hash.
+
+No newer fix for t09 or t10 batch3 had landed on main or
+todolist-push after b629e11 at the time the agent checked. The
+batch-4 version was run, stated plainly. One related fix DID land
+during the work: commit 08f36d2 (19:10 +07), t05 rename to the real
+dialog flow. The batch3 runs used the tree including that t05 fix.
 
 ## Defects per test
 

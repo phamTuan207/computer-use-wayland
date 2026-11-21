@@ -53,6 +53,10 @@ this").
 - /tmp needs a few MB free for the Firefox profile and the X
   socket. One run failed while /tmp was at 100 percent (Xvfb
   socket never appeared); at 79M free the same run passed.
+  The script now checks this up front in the prereq stage: /tmp
+  must be writable and have at least 50 MB free, and it fails
+  fast with the exact free KB instead of a generic "X socket
+  never appeared" 10 s later.
 
 ## How to run
 
@@ -122,7 +126,11 @@ under /tmp, no X socket left.
   else. Added in this task so the wrapper can poll for readiness
   without side effects. click and full modes must not be used as
   a readiness poll: they press the fixture button and would
-  change the counter the full run later checks.
+  change the counter the full run later checks. Exit codes: 0
+  when a dialog button was found and clicked, 3 when no dialog
+  button is present (the dialog is already gone, which is the
+  wanted state), 2 when a button was found but the click failed.
+  The wrapper breaks its poll on 0 and 3 and retries only on 2.
 - session: the older staged diagnostic from clone2, kept
   unchanged. It audits the environment and records where a
   machine stops. It does not run the live probe; use the wrapper
@@ -147,6 +155,47 @@ under /tmp, no X socket left.
    named "BiDi fixture" appears, and only then runs the probe.
    Before this fix the wait failed after 30 s with no document
    web node in the tree.
+
+## Fixes after the batch 5 redteam review, 2026-11-21
+
+The redteam found 4 bugs in the wrapper (docs/batch5-redteam-
+20261121.md, findings 13, 14, 15, 21). All 4 are fixed in
+tests/run_atspi_session.sh and tests/atspi_probe.py:
+
+1. The dismiss poll could not tell "no dialog" from "dismiss
+   failed": --mode dismiss returned 2 for both, so the wrapper
+   retried 15 times when the dialog was already gone. Now the
+   probe returns 3 when no dialog button is found, and the
+   wrapper breaks its poll on 0 (clicked) and 3 (already gone)
+   and retries only on 2 (click failed). The wait_document stage
+   line now records the dismiss exit code as dismiss_rc.
+2. A wait_document failure did not gate: the script logged the
+   stage as failed and ran the probe stages anyway. Now it exits
+   2 right there with a clear message, instead of spending probe
+   time on a dead session. The final verdict is unchanged
+   (exit 2), only the wasted work is gone.
+3. The prereq stage did not check /tmp writability or free
+   space, although the doc documents a /tmp-full failure mode.
+   It now requires /tmp writable and at least 50 MB free and
+   fails fast with the exact free KB. The passing prereq line
+   records tmp_free_kb.
+4. The script header comment said "full mode exits 2 even when
+   the session is fine", which contradicted the doc and the code.
+   The probe's full mode does return 2 when typing fails, but
+   the wrapper exits 0 when the session works. The comment now
+   says exactly that.
+
+Verification of these fixes (live Firefox is down: it segfaults
+on startup since about 12:29 UTC on 2026-11-21, same crash as
+the Y10 retry log, so no live wrapper run was possible): bash -n
+clean on the script, py_compile clean on the probe, a stubbed
+unit test of --mode dismiss returns 3/2/0 for no-dialog /
+click-fails / click-ok (ALL PASS), and a standalone run of the
+poll loop and /tmp check logic (break after 1 call on rc 3,
+retry then break on rc 0, all 15 tries on rc 2; /tmp check
+passes at 123860 KB free and fails with exact numbers when the
+threshold is forced high). The fixes are code-only until a live
+run is possible again.
 
 ## Known limits
 

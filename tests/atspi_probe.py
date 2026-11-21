@@ -15,7 +15,10 @@ Usage:
   python3 tests/atspi_probe.py --mode session [--app-path PATH]
 
 Every step logs one JSON line with wall_clock and elapsed_ms.
-Exit 0 when every requested op is verified, 2 otherwise.
+Exit 0 when every requested op is verified, 2 otherwise, except
+--mode dismiss, which exits 3 when no dialog button is found
+(the dialog is already gone, which is the wanted state; a click
+that fails still exits 2).
 Requires a running AT-SPI bus (at-spi2-core) and a desktop session.
 
 The session mode is a staged bring-up diagnostic. It audits the
@@ -577,7 +580,12 @@ def main():
                     click_ms=round((time.time() - t0) * 1000, 1))
                 return 0 if clicked else 2
         log("dismiss_onboarding", False, detail="no dialog button found")
-        return 2
+        # Exit 3, not 2: no dialog button means the dialog is already
+        # gone, which is the state the caller wants. Exit 2 is
+        # reserved for a real failure (a button was found but the
+        # click did not land). The wrapper breaks its poll loop on
+        # both 0 and 3 and retries only on 2.
+        return 3
 
     if args.mode == "dump":
         nodes = []

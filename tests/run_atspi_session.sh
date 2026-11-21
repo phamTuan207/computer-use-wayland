@@ -10,10 +10,12 @@
 #
 # Known limit, NOT a session failure: typing through EditableText is
 # BROKEN on Firefox 160.0.1 (Mozilla Bug 2087495: setTextContents
-# returns True but reads back empty), so full mode exits 2 even when
-# the session is fine. The verdict line at the end separates the
-# session result from the typing result. Use BiDi for typing until
-# the fix lands in the Firefox base.
+# returns True but reads back empty), so the probe's full mode
+# returns 2 when the type step fails. The wrapper does NOT treat
+# that as a session failure: it exits 0 when the session itself
+# works (tree read and Action click verified). The verdict line at
+# the end separates the session result from the typing result. Use
+# BiDi for typing until the fix lands in the Firefox base.
 #
 # The working recipe, found by council 3 in batch 4 after
 # dbus-run-session failed three times with find_app timeouts:
@@ -84,7 +86,23 @@ if [ -n "$MISSING" ]; then
   echo "Firefox: download Firefox 160.0.1 and extract to /tmp/firefox (or pass --firefox PATH)" >&2
   exit 2
 fi
-stage "prereq" true "$T0" '"firefox":"'"$FIREFOX_BIN"'","fixture":"'"$FIXTURE"'"'
+# /tmp must be writable and have room for the Firefox profile, the
+# X socket and the D-Bus runtime dir. One run failed at 100 percent
+# /tmp (Xvfb socket never appeared); the same run passed at 79M
+# free, so the floor is 50M. Fail here with the exact numbers
+# instead of surfacing a generic "X socket never appeared" 10 s
+# later.
+TMP_MIN_FREE_KB=51200
+TMP_FREE_KB=$(df -k --output=avail /tmp 2>/dev/null | tail -1 | tr -d ' ')
+TMP_PROBE=$(mktemp /tmp/atspi-prereq.XXXXXX 2>/dev/null) || TMP_PROBE=""
+if [ -n "$TMP_PROBE" ]; then rm -f "$TMP_PROBE"; TMP_WRITABLE=1; else TMP_WRITABLE=0; fi
+if [ "$TMP_WRITABLE" -ne 1 ] || [ -z "$TMP_FREE_KB" ] || [ "$TMP_FREE_KB" -lt "$TMP_MIN_FREE_KB" ]; then
+  stage "prereq" false "$T0" '"error":"/tmp not writable or too full","tmp_free_kb":'"${TMP_FREE_KB:-0}"',"tmp_writable":'"$TMP_WRITABLE"',"tmp_min_free_kb":'"$TMP_MIN_FREE_KB"''
+  echo "/tmp not usable: free ${TMP_FREE_KB:-unknown} KB, writable $TMP_WRITABLE, need at least $TMP_MIN_FREE_KB KB free" >&2
+  echo "Free space under /tmp (old Firefox profiles and minidumps are safe to delete) and re-run" >&2
+  exit 2
+fi
+stage "prereq" true "$T0" '"firefox":"'"$FIREFOX_BIN"'","fixture":"'"$FIXTURE"'","tmp_free_kb":'"$TMP_FREE_KB"''
 
 # Stage 2: start Xvfb on a free display.
 T0=$(now_ms)
@@ -176,8 +194,18 @@ T0=$(now_ms)
 PROBE="python3 $REPO_ROOT/tests/atspi_probe.py"
 DOC_OK=false
 WAIT_OUT=$(mktemp /tmp/atspi-wait.XXXXXX)
+# The dismiss poll breaks on two distinct outcomes: rc 0 (a dialog
+# button was found and clicked) and rc 3 (no dialog button is
+# present, so the dialog is already gone). Only rc 2, a button
+# found but the click failing, is retried. Before this fix the
+# probe returned 2 for both "no dialog" and "click failed", so
+# the loop retried 15 times when there was nothing to dismiss.
+DISMISS_RC=2
 for _ in $(seq 1 15); do
-  timeout 60 $PROBE --mode dismiss >"$WAIT_OUT" 2>&1 && break
+  timeout 60 $PROBE --mode dismiss >"$WAIT_OUT" 2>&1
+  DISMISS_RC=$?
+  [ "$DISMISS_RC" -eq 0 ] && break
+  [ "$DISMISS_RC" -eq 3 ] && break
   sleep 2
 done
 for _ in $(seq 1 15); do
@@ -187,9 +215,15 @@ for _ in $(seq 1 15); do
 done
 rm -f "$WAIT_OUT"
 if [ "$DOC_OK" = true ]; then
-  stage "wait_document" true "$T0" '"note":"document web named BiDi fixture present in the tree"'
+  stage "wait_document" true "$T0" '"note":"document web named BiDi fixture present in the tree","dismiss_rc":'"$DISMISS_RC"''
 else
-  stage "wait_document" false "$T0" '"error":"no BiDi fixture document in the tree after waiting"'
+  stage "wait_document" false "$T0" '"error":"no BiDi fixture document in the tree after waiting","dismiss_rc":'"$DISMISS_RC"''
+  # Gate: do not run the probe stages on a dead session. The
+  # document never appeared, so dump and full can only fail with
+  # misleading errors. Exit here; the final verdict is the same
+  # (exit 2) but without the wasted probe time.
+  echo "wait_document failed: no BiDi fixture document in the tree after waiting (dismiss_rc $DISMISS_RC)" >&2
+  exit 2
 fi
 
 # Stage 7: run the probe. Dump proves the tree is readable, full
