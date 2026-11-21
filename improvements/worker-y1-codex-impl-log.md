@@ -100,3 +100,13 @@ Known Phase B limits:
 
 - C-level work is still only checked after it returns; no hard process preemption or memory limit was added. Envelope serialization is capped at 64KB as requested.
 - Existing APIs cannot safely ask whether a target path exists without raising. P3/P4 use required approval, fixed-path cleanup, postcondition asserts, and the applied-snippet ledger. This is the recorded deviation from the pre-action state-check requirement.
+
+## Phase C: Python 3.12 test portability
+
+Started 2026-11-21 18:48:21 Asia/Ho_Chi_Minh, elapsed +46:38. Finished 2026-11-21 18:50:25 Asia/Ho_Chi_Minh, elapsed +48:42. The laptop interpreter is Python 3.14.10.
+
+Refactored `test_cleanup_exceptions_cannot_skip_restore` to use `contextlib.ExitStack`. Mocks are entered in the same order as the prior nested `with` statements, so they exit in the same reverse order and the cleanup/restore behavior stays unchanged.
+
+Verification: `python3 -m unittest tests.test_cursor_session` ran 33 tests, OK, 29.259s, exit 0. The Phase B full-suite reference immediately before this phase was 1549 tests with 2 skipped. A full suite was not required or run after this portability-only test refactor. VM Python 3.12.3 import verification remains with Y1.
+
+Phase C verdict: PASS on the laptop. This phase and its log are committed and pushed in the next recorded commit.

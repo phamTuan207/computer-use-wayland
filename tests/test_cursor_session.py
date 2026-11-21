@@ -5,6 +5,7 @@ import os
 import re
 import socket
 import threading
+from contextlib import ExitStack
 from pathlib import Path
 import shutil
 import signal
@@ -562,8 +563,30 @@ class Lifecycle(unittest.TestCase):
         import cancel_hotkey
         import indicator
         for failing in ('request_stop','stop_group','drain_input'):
-            with self.subTest(failing=failing),patch.object(session.signal,'signal'),patch.object(session,'STATE',self.folder),patch.object(session,'SNAPSHOT',self.folder/'snapshot'),patch.object(session,'CANCEL',self.folder/'cancel'),patch.object(session,'owner_lock'),patch.object(cancel_hotkey,'hotkey_on'),patch.object(cancel_hotkey,'hotkey_off'),patch.object(session,'request_stop'),patch.object(session,'stop_group'),patch.object(session,'drain_input'),patch.object(session,'restore',return_value=True) as restore,patch.object(session.select,'select',return_value=([1],[],[])),patch.object(session.os,'read',side_effect=[b'123',b'']),patch.object(session,failing,side_effect=RuntimeError('cleanup injected')),patch.object(cursor_theme,'snapshot',return_value={'agent_theme':'cu-agent-test','agent_size':32}),patch.object(cursor_theme,'check_guard'),patch.object(cursor_theme,'apply'):
-                with patch.object(indicator,'Native') as native,patch.object(indicator,'listen'):
+            with self.subTest(failing=failing):
+                with ExitStack() as stack:
+                    stack.enter_context(patch.object(session.signal,'signal'))
+                    stack.enter_context(patch.object(session,'STATE',self.folder))
+                    stack.enter_context(patch.object(session,'SNAPSHOT',self.folder/'snapshot'))
+                    stack.enter_context(patch.object(session,'CANCEL',self.folder/'cancel'))
+                    stack.enter_context(patch.object(session,'owner_lock'))
+                    stack.enter_context(patch.object(cancel_hotkey,'hotkey_on'))
+                    stack.enter_context(patch.object(cancel_hotkey,'hotkey_off'))
+                    stack.enter_context(patch.object(session,'request_stop'))
+                    stack.enter_context(patch.object(session,'stop_group'))
+                    stack.enter_context(patch.object(session,'drain_input'))
+                    restore=stack.enter_context(patch.object(session,'restore',return_value=True))
+                    stack.enter_context(patch.object(session.select,'select',return_value=([1],[],[])))
+                    stack.enter_context(patch.object(session.os,'read',side_effect=[b'123',b'']))
+                    stack.enter_context(patch.object(
+                        session,failing,side_effect=RuntimeError('cleanup injected')))
+                    stack.enter_context(patch.object(
+                        cursor_theme,'snapshot',
+                        return_value={'agent_theme':'cu-agent-test','agent_size':32}))
+                    stack.enter_context(patch.object(cursor_theme,'check_guard'))
+                    stack.enter_context(patch.object(cursor_theme,'apply'))
+                    native=stack.enter_context(patch.object(indicator,'Native'))
+                    stack.enter_context(patch.object(indicator,'listen'))
                     native.return_value.process.poll.return_value=None
                     self.assertEqual(session.guardian(self.env,1,'a'*32),1)
                     restore.assert_called_once_with(self.env)
