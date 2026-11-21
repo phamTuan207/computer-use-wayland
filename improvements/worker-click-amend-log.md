@@ -166,3 +166,17 @@ hashes (c19c227, 50343fe). The first push attempt failed because the
 rebase left a detached HEAD and pushed the stale branch pointer; the
 branch was moved to HEAD and the push then succeeded fast-forward.
 Post-rebase verification: 315 tests OK in 4.503s.
+
+## AMEND2 note 2026-11-22 (item R: item-12 numbering, C1 F6)
+
+- Amend-log "item 12" is the owner-corrected grounding item (owner corrections
+  02:00/02:02): DOM-first grounding + cheap verification, no slow observe
+  cycles. It REPLACES the original item 12 shape "verify caret by fresh
+  observe before typing".
+- Coord-log "12 items" is a different numbering: C1 items 1-3 + RT R1-R9
+  (3 + 9 = 12). Its "item 12" is not the amend log's item 12; the two
+  numberings must not be read against each other.
+- R9 is covered by the widening: scripts/first_action.py:56-61, the G28
+  stale-observation refusal (a given observation that is stale, missing, or
+  unreadable is never silently replaced by a screen capture; the run refuses
+  loudly instead, for any batch).

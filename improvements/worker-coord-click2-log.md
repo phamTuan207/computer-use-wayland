@@ -216,3 +216,56 @@ Clone1: batch 7 already queued in coord/clone1.md (b31b881, 02:08), starts when 
 - Clone1 batch 7 Task 2 amended (main 9260185): its "install last30days-skill via npx -g" line is now a HOLD (do not install until the review verdict lands; web search 30-day meanwhile). Without this fix clone1 could have installed on batch 7 start.
 - Clone1 batch 8 queued (main 9260185, starts only when batch 7 fully done + reported): Task 1 last30days review (second opinion), Task 2 independent verification of the amend diff e4082ff..4b7d6ac (re-run suites, check 12 items, fail-before for one suite, C12 from code, GO/AMEND/BLOCK). Both clones now have their next batch queued before the current one ends, per the full-throttle order.
 - One edit mistake caught and fixed in this turn: the first Task 4 append matched the wrong "Luat nhu cu" occurrence and landed after batch 5 (line 611); removed it and re-appended at the true end of batch 8 (line 717, verified by grep before committing).
+
+## AMEND2 design addendum (2026-11-22, item B finalized from the C12 probe, items Q/R/S)
+
+- Item B CLOSED by the live probe (commit cd89597): mozInnerScreenX/Y are
+  WINDOW-RELATIVE. Absolute viewport origin = Hyprland window origin +
+  mozInnerScreenX/Y times the scale factor. Implemented in
+  scripts/zen_dom.py viewport_origin (requires the window origin, raises
+  without it) and scripts/fastpath.py dom_rect_to_screen_point /
+  dom_rect_to_image_point (scale factor = screenPixelsPerCSSPixel, fallback
+  devicePixelRatio). AT-SPI cross-check DROPPED per probe (AT-SPI cannot see
+  Zen at all); replaced by check_viewport_geometry: dimension closure
+  (mozInner + inner + chrome gap == outer, gaps >= 0), absolute origin inside
+  the window rect, inside the monitor box when given.
+- The 7 accuracy cases are rewritten to true viewport-relative inputs and
+  relabeled MAP accuracy (tests/test_pick4_fastpath.py,
+  tests/test_dom_act.py). The map is proven; live conversion is proven only
+  by the probe's real click, not by these tests, and no 7/7 is quoted as
+  live accuracy anywhere.
+- Tab-switch protocol (item O, D1): one Zen instance, two tabs for the two
+  clone windows. Marionette only while a ZenSession is held, BiDi only after
+  it exits, never parallel; the session slot is held by ZEN_DOM_LOCK
+  (scripts/zen_cli.py BidiSession, scripts/zen_dom.py LOCK_PATH). Cold
+  session.new costs 1.5-2.8s and must be budgeted in the benchmark.
+- D2 HCU guard is now code, not design text: ground_input re-locates after
+  hit_check and re-grounds on move; GroundPoints re-reads the live rect on
+  every [] access and refuses when the element is gone.
+- D4 exactly-once is now mechanized: per-session intent ledger on the
+  session object plus the V12 sent-bubble gate in focus_type; a retry after
+  a failed V12 gate does not double-send.
+- One-shot harvest built (item Q): scripts/zen_dom.py harvest (one evaluate:
+  moz_inner, DPR, screenPixelsPerCSSPixel, zoom, inner/outer size, per
+  selector rect/hit/focused) and scripts/cdp.mjs harvest (one evaluate plus
+  Accessibility.getFullAXTree plus DOM.getBoxModel cross-check). Open item:
+  the CDP harvest runs against the agent-managed Chromium, not Brave, until
+  the remote-debugging-port custom profile/relaunch question is resolved.
+- "VISION 1" is a DOM harvest, not a screenshot (item Q, D5): the one vision
+  is the bulk harvest; the screenshot is only the cheap after-capture used
+  by the input-line band, already in memory.
+- Mantis numbering EXPLICITLY DEFERRED (item Q, D3): vendor numbers do not
+  transfer to Messenger React; contenteditable ref stability on a mutating
+  page is unproven. Deferral reason: the harvest already returns stable
+  selector-keyed rects; numbering adds a mapping layer with no proven
+  stability benefit. Revisit only after a live Messenger run shows
+  selector-keyed rects going stale.
+- Step-6 loop hygiene owner (item Q, D6): the parent orchestrator owns it
+  (prompt caching, diff-gated re-observation, downscale, context editing,
+  low effort, adaptive waiting). It is a benchmark-runner concern, not a
+  grounding-code concern, so it stays out of this amend.
+- Item R: see the AMEND2 note appended to improvements/worker-click-amend-log.md
+  (amend-log item 12 is the owner-replaced grounding item; coord-log 12 items
+  are C1 1-3 + RT R1-R9; R9 covered by first_action.py:56-61).
+- Item S: no synthetic 7/7 is quoted as live accuracy anywhere in scripts,
+  tests, or these logs; the map tests carry an explicit "never quoted" note.
