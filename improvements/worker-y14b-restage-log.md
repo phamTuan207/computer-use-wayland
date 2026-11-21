@@ -2064,3 +2064,56 @@ C2-9/C2-10 INFO parts (covered by item 14).
   fix6 probe, reconstruction done, commit in fix pass 7;
   C6-6 disclosure, no action). Council 1 INFO-1/INFO-2 are
   optional, no action required for ship.
+
+### Fix-pass-6 reviews: Council 3 AMEND (3 of 4 in)
+
+- 00:05 +07: Council 3 verdict AMEND. Paper 7bd6516
+  (todolist-push, ls-remote verified, ANCESTOR_OK; only its
+  paper file staged/committed; agent ccd4d6fc, completed
+  00:05:15 UTC). Own probe /tmp/y14b-c3-fix6-probe.py, 87/87
+  cases plus 26/26 helpers, 3-way differential across
+  fix4/fix5/fix6 blobs, all 30 fix5-to-fix6 flips explained.
+  Verified every fix-pass-5 finding (R5-1..R5-9, C5-1..C5-8,
+  C2-3..C2-10, C3-1..C3-9, plus B12) against the d552f4d diff
+  and by direct test, nothing silently dropped. Hashes verify
+  exactly (blob 261f09ae, md5 fac96935 at d552f4d;
+  ff4a5358/9e99d9aa at 0b88ed3), the plan pins the fix-pass-6
+  values IN the commit, the H4 numbers re-derive clean with
+  Decimal (8.57/9.165 ticks, margins 2.43/1.84, first fail
+  71.4-83.3 ms, sure fail 100-116.7 ms), and difflib proves
+  the diff is scanner-only (changed lines 2342-2756 old /
+  2289-2978 new, zero t10 hunks). Reconstructed 71-check probe
+  ran 71/71 PASS plus live /proc checks 9/9 with an
+  ancestry-exclusion PASS. Two AMEND items: U-C3-1, a one-line
+  doc fix (the import-branch docstring mislabels the
+  nested-misclassification residual "(fail-closed)" when it
+  errs toward a missed match, i.e. fail-open, and the form
+  cannot occur from a real shell launch); and U-C3-2,
+  committing the reconstructed probe, which was already
+  SATISFIED during its review by the parallel landing 57fcdb2.
+  Concrete U-C3-1 fix: replace "(fix pass 6, import-branch
+  heuristic, fail-closed, contrived, recorded not fixed)"
+  with "(fix pass 6, import-branch heuristic, synthetic-only,
+  recorded not fixed: a single /proc cmdline cannot hold two
+  top-level commands from a real shell launch, so no live
+  runner is missed)". Also noted: the apostrophe caveat is
+  harmless for runnable forms (DONT2/DONT3 are shell syntax
+  errors, verified live), the C2-10 bullet staleness is
+  trivial optional polish, and the reconstructed probe's live
+  helper orphaned one leaf (PID 8655, killed by exact PID by
+  Council 3). Live impact of U-C3-1 is nil under both
+  readings (the leaf python3 process is caught directly; the
+  combined argv cannot occur from a real launch). No code
+  change.
+- 00:06 +07: only the redteam (284a71f9) still running. Fix
+  pass 7 waits for it; adjudicate all 4 together. Updated
+  partial adjudication: Council 1 GO (no action), Council 2
+  AMEND (C6-3 code + C6-1/C6-2/C6-4 doc + C6-5 probe
+  committed in 57fcdb2 + C6-6 disclosure), Council 3 AMEND
+  (U-C3-1 doc one-liner + U-C3-2 satisfied by 57fcdb2).
+  Fleet note (MEMORY.md 00:01): clone2 batch 5 DONE (commit
+  56c2077), batch 6 BLOCKED (push blocked by an
+  execution-risk check on the rebase; Muse stopped, waiting
+  for the owner's morning decision); clone1 still silent 77m;
+  an omasnap crash notification is showing on both
+  workspaces. Not Y14b's work, noted for the record.
