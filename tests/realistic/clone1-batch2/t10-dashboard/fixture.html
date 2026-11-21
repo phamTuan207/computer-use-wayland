@@ -227,7 +227,7 @@ document.getElementById('exportBtn').addEventListener('click', () => {
   a.download = 'orders.csv';
   document.body.appendChild(a);
   a.click();
-  a.remove();
+  setTimeout(() => { a.remove(); URL.revokeObjectURL(url); }, 1000);
 });
 render();
 </script>
