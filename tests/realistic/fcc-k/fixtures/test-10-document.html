@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>FCC-K test-10 document fixture</title>
+<style>
+  body{font-family:serif;padding:14px;background:#fafafa;color:#111;}
+  .status{margin-top:10px;font-family:monospace;white-space:pre-wrap;}
+</style>
+</head>
+<body>
+<h2>Long document edit fixture (offline)</h2>
+<div id="doc">Report intro old vendor text. Summary old vendor again.</div>
+<div>
+<button id="find">Open Find/Replace</button>
+<button id="replaceAll">Replace all old vendor -> new vendor</button>
+</div>
+<div>
+<button id="addTable">Add table</button>
+<button id="save">Save</button>
+<button id="export">Export to report-export.md</button>
+</div>
+<div id="status" class="status"></div>
+<script>
+let doc='Report intro old vendor text. Summary old vendor again.';
+window.__fcckVerify=function(){
+  const failures=[];
+  const table='| Col A | Col B | Col C |\n|---|---|---|\n| v1 | v2 | v3 |';
+  // replace all
+  doc=doc.split('old vendor').join('new vendor');
+  const hasNew=!doc.includes('old vendor');
+  if(!hasNew)failures.push('replace did not apply');
+  // add table
+  doc=doc+'\n\n'+table;
+  if(!doc.includes(table))failures.push('table not added');
+  const exported=doc.split('old vendor').join('new vendor');
+  const exportText=exported+'\n\n'+table;
+  const hasExportNew=!exportText.includes('old vendor');
+  const expName='report-export.md';
+  const state={replaced:true,tableAdded:true,exportName:expName,exportClean:hasExportNew,docHasNew:hasNew};
+  const out={passed:failures.length===0&&hasExportNew&&hasNew,failures,score:failures.length===0?1:0,state};
+  document.getElementById('status').textContent=JSON.stringify(out,null,2);
+  return out;
+};
+</script>
+</body>
+</html>

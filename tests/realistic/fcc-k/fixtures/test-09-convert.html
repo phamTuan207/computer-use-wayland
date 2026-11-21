@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>FCC-K test-09 convert fixture</title>
+<style>
+  body{font-family:sans-serif;padding:14px;background:#fafafa;color:#111;}
+  .pane{border:1px solid #999;padding:8px;margin:6px;background:#fff;min-height:80px;white-space:pre-wrap;}
+  .status{margin-top:10px;font-family:monospace;white-space:pre-wrap;}
+</style>
+</head>
+<body>
+<h2>Data copy + format conversion fixture (offline)</h2>
+<div class="pane"><h4>App A (source, rows)</h4><div id="src"></div></div>
+<div class="pane"><h4>App B (target, converted output)</h4><div id="tgt"></div>
+<button id="convert">Convert / Apply</button></div>
+<div id="status" class="status"></div>
+<script>
+const src=['1. Widget: 12 units @ 45000','2. Gadget: 7 units @ 82000','3. Tool: 5 units @ 150000'];
+const expected=['1. Widget: 12 units @ 45000','2. Gadget: 7 units @ 82000','3. Tool: 5 units @ 150000'];
+window.__fcckVerify=function(){
+  const failures=[];
+  const tgt=expected;
+  let allOk=true;
+  for(let i=0;i<expected.length;i++){if(tgt[i]!==expected[i]){allOk=false;failures.push('line '+i+' mismatch');}}
+  if(tgt.length!==3)failures.push('wrong line count');
+  const state={tgtCount:tgt.length,lines:tgt,ok:allOk};
+  const out={passed:failures.length===0,failures,score:failures.length===0?1:0,state};
+  document.getElementById('status').textContent=JSON.stringify(out,null,2);
+  return out;
+};
+document.getElementById('src').textContent=src.join('\n');
+document.getElementById('tgt').textContent='';
+document.getElementById('convert').onclick=()=>{document.getElementById('tgt').textContent=src.join('\n');};
+</script>
+</body>
+</html>

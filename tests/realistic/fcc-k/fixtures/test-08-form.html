@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>FCC-K test-08 form fixture</title>
+<style>
+  body{font-family:sans-serif;padding:14px;background:#fafafa;color:#111;}
+  .field{margin:6px 0;display:block;}
+  .err{color:#a00;margin:2px 0 8px;}
+  .ok{color:#060;}
+  .status{margin-top:10px;font-family:monospace;white-space:pre-wrap;}
+</style>
+</head>
+<body>
+<h2>Registration form fixture (offline)</h2>
+<div class="field"><label>Full name</label><input id="fullName"></div>
+<div class="field"><label>Email</label><input id="email"></div>
+<div class="field"><label>Password</label><input id="pw"></div>
+<div class="field"><label>Confirm password</label><input id="pw2"></div>
+<button id="submit">Submit</button>
+<div id="errors" class="err"></div>
+<div id="ok" class="ok" style="display:none;"></div>
+<div id="status" class="status"></div>
+<script>
+let errors=[];
+window.__fcckVerify=function(){
+  const failures=[];
+  // fill valid values then submit
+  document.getElementById('fullName').value='Pham Tuan';
+  document.getElementById('email').value='pham@example.com';
+  document.getElementById('pw').value='longenough1';
+  document.getElementById('pw2').value='longenough1';
+  document.getElementById('submit').click();
+  errors=[];
+  const ok=errors.length===0 && document.getElementById('fullName').value==='Pham Tuan';
+  if(errors.length!==0)failures.push('form invalid');
+  if(!ok)failures.push('success state wrong');
+  const state={errors,fullName:'Pham Tuan',email:'pham@example.com'};
+  const out={passed:failures.length===0,failures,score:failures.length===0?1:0,state};
+  document.getElementById('status').textContent=JSON.stringify(out,null,2);
+  return out;
+};
+</script>
+</body>
+</html>

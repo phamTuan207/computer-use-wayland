@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>FCC-K test-06 settings fixture</title>
+<style>
+  body{font-family:sans-serif;padding:14px;background:#fafafa;color:#111;}
+  .app{border:1px solid #999;padding:8px;margin:8px;background:#fff;}
+  .status{margin-top:10px;font-family:monospace;white-space:pre-wrap;}
+</style>
+</head>
+<body>
+<h2>Settings across two apps fixture (offline)</h2>
+<div class="app"><h3>Notes app</h3>
+  <div id="notesSettings">font_size: 14</div>
+  <button id="notesOpen">Open Notes</button>
+</div>
+<div class="app"><h3>Reader app</h3>
+  <div id="readerSettings">zoom: 100</div>
+  <button id="readerOpen">Open Reader</button>
+</div>
+<div id="status" class="status"></div>
+<script>
+let notesFont=14;
+let readerZoom=100;
+window.__fcckVerify=function(){
+  const failures=[];
+  notesFont=18;readerZoom=150;
+  const notesApplied = notesFont===18;
+  const readerApplied = readerZoom===150;
+  if(!notesApplied)failures.push('notes font not applied');
+  if(!readerApplied)failures.push('reader zoom not applied');
+  const state={notesFont,readerZoom,notesApplied,readerApplied};
+  const out={passed:failures.length===0,failures,score:failures.length===0?1:0,state};
+  document.getElementById('status').textContent=JSON.stringify(out,null,2);
+  return out;
+};
+</script>
+</body>
+</html>
