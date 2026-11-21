@@ -65,3 +65,8 @@ T0 = 23:22:46.
 ## 23:42:00 T+~19m - fastest-paths.md fixed
 - /tmp/kb-fix-fastest.py (VM) scp'd to laptop /tmp, run: 6 patterns replaced (workspace, movetoworkspace, movefocus, focuswindow, togglefloating, resizeactive) + Keybind map note appended. Verified by grep (new hl.dsp forms present, old string forms gone from command cells).
 - Workspace row now: hyprctl dispatch "hl.dsp.focus({ workspace = N })". movefocus -> hl.dsp.focus direction form. togglefloating -> hl.dsp.window.float toggle. movetoworkspace/resizeactive/focuswindow -> honest "no CLI form established" notes (no invented commands).
+
+## 23:47:00 T+~24m - Committed + DONE
+- Commit e869e35 on todolist-push (verified via ls-remote): report + log + scripts/hypr_cmd.py + tests/test_hypr_cmd.py (4 files, 335 insertions). Explicit pathspec only; other workers' uncommitted changes untouched.
+- Final state: laptop machine dir has keybinds.md + keybinds.json; fastest-paths.md 6 rows fixed; repo has hypr_cmd.py (13/13 tests).
+- DONE. Verdict to Muse: no Omarchy skill exists; 250 Omarchy + 85 Zen bindings integrated laptop-local; string dispatchers proven broken (rc=7); 6 fastest-path rows fixed; repo wiring is pure builders only; move-window + absolute-resize hl.dsp forms remain unverified (follow-ups in the report).
