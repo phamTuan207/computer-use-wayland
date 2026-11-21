@@ -182,3 +182,72 @@ hidden. A pre-flight that does not capture htmlClass is not a pre-flight.
   the final test, stated plainly.
 - O-6: G-HIDDEN pre-flight payload is the M2 diagnose_body snapshot.
 - O-7: E1 locked in PARKED, never re-ranked after the final test.
+
+## Section 2. TEST-DESIGN RULES (owner 22:23 + Lauren Tan)
+
+### 2.1 Composite tests
+- Every live test is composite: DOM + CLI + mouse + keyboard in ONE task
+  (owner 22:23, PRIO council 2). A test that exercises only one channel
+  does not prove the stack the owner uses. ZT-01..ZT-10 (ZT-A v2,
+  improvements/zen-ordinary-user-tests-20261121.md) are the template:
+  composite scenarios on real Zen, ordinary-user actions, errors fed back
+  into the fix queue.
+- [CHECK] steps are instrumentation, not user steps. A failed control makes
+  the scenario INCONCLUSIVE, not FAIL, except the two safety gates
+  (OPT-M2 mechanism, section G, adopting ZT-A v2). A test that calls an
+  instrumentation failure a product failure manufactures a fix cycle for a
+  bug that does not exist.
+- Cleanup is identity, not count: the tab title set after a scenario must
+  equal the pre-scenario set; count alone is never enough (M2 section G).
+  Pre-close check before EVERY Ctrl+W: the DOM active title must equal the
+  expected test-tab identity, or STOP (M2 section G). R-01 (blind Ctrl+W
+  could close the owner's real tab) is the failure this rule prevents.
+
+### 2.2 Blind executor, independent setter
+- The test-taker must NOT know the exercise in advance; a separate
+  independent setter designs the test for objectivity (owner 22:23, PRIO
+  council 2). ZT-B runs blind: it has not seen the scenarios (M2 section G).
+- The generator NEVER runs its own tests. The worker that writes a fix
+  does not run the live proof of that fix; an independent worker does
+  (Lauren Tan structure, owner 22:48). A fix proven only by its own author
+  is unproven. This rule applies to every rank: F1/F2's end-to-end proof,
+  the Y6 retry, Y13/Y14, A1, the hidden-body experiment, and the final test
+  are each run by a worker that did not write the fix.
+- The test-designer never runs its own scenarios either: the designer
+  writes, the executor runs blind, a third worker (checker) verifies the
+  evidence. Three roles, three workers, no overlap on one item.
+
+### 2.3 One live runner, one session, time-boxed runs
+- One runner at a time (G-SINGLE-LIVE). One session TOTAL (BiDi +
+  Marionette share the cap). 90 minutes maximum per live run (M2 section G,
+  adopting ZT-A v2). A run that exceeds its box stops and reports; it does
+  not silently continue.
+- ZT-00 health gate first: Marionette session creation is the deciding
+  check (step 3); the known "browserElement is null" failure is a gate
+  failure, not a test failure (M2 section G). A run that fails its health
+  gate reports INFRA, never FAIL.
+- Kill rule (owner standing rule, 15 minutes): any worker with no progress
+  for 15 minutes is killed at once and reported, never left silent. Any
+  long-running process is launched FULLY DETACHED (setsid nohup ... &
+  disown) so the spawning agent can complete and report.
+
+### 2.4 Pass accounting: flagged passes, infra-blocked, no false passes
+- A test that passes only after an intervention (for example
+  `removed-tz-hidden`) is a FLAGGED pass, counted separately, never folded
+  into the headline pass count (M2 section G, amendment O-4). Removing the
+  class masks a real user-facing defect; the intervention must be disclosed
+  in the test report and tracked as a separate item.
+- Two consecutive infra-blocked tests abort the suite (M2 section G: the
+  hidden-body recovery ladder, 8s total budget per tab opening; declare
+  INFRA: hidden-body, never a fixture failure). A suite that keeps running
+  through infra failures produces noise, not signal.
+- Never use a real click as a recovery probe. Never drive a user tab. The
+  `ensure_visible` internals are replaced (keep the name and call sites):
+  no switching to the first non-test handle, which is a user tab by
+  definition in a live Zen (M2 section G).
+- `WD.goto` is the choke point: diagnose after the 1.0s settle, never return
+  a hidden page as ready. `preflight()` fails closed before any tab opens:
+  stale-geckodriver sweep by PID with parent check (kill only verified
+  orphans), single-session lock check, Zen liveness, fixture server
+  loopback check, owner-away check (explicit `LIVE_OWNER_AWAY=1`, never
+  inferred from silence) (M2 section G).
