@@ -250,6 +250,26 @@ const testSimulators = {
     await page.click('#btn-submit-quiz');
     // Save
     await page.click('#btn-save-quiz');
+  },
+  '09': async (page) => {
+    // 1. Settings: 30m work, 6m break, autoBreak
+    await page.click('#btn-open-settings');
+    await page.$eval('#input-work-duration', el => el.value = '30');
+    await page.$eval('#input-break-duration', el => el.value = '6');
+    await page.click('#check-auto-break');
+    await page.click('#btn-save-settings');
+    // 2. Start & complete first focus
+    await page.click('#btn-start-pause');
+    await page.click('#btn-complete-cycle');
+    // 3. Complete short break
+    await page.click('#btn-complete-cycle');
+    // 4. Start & reset
+    await page.click('#btn-start-pause');
+    await page.click('#btn-reset-timer');
+    // 5. Complete second focus
+    await page.click('#btn-complete-cycle');
+    // 6. Save session
+    await page.click('#btn-save-session');
   }
 };
 
