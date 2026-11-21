@@ -10,7 +10,7 @@ Verdict PROCEED khong cho phep tu cai bang -g. Quyet dinh cai la cua Muse tong s
 
 ## Cach review
 
-Doc SKILL.md, SECURITY.md, cac script last30days.py, store.py, box_chrome_login.py, setup-keychain.sh, setup-pass.sh, thu muc lib/ (khoang 170 module), thu muc mcp/ (Go server), pyproject.toml, uv.lock, CHANGELOG.md, tests/hermes/. Chay lai logic replica cua repo (tests/hermes/test_no_critical_scan_findings.py) bang python3 tren ban clone: 0 CRITICAL hit. Grep toan repo cho eval, exec, shell=True, os.system, verify=False, pickle, curl pipe shell, authorized_keys, NOPASSWD, /etc/passwd, rm -rf.
+Doc SKILL.md, SECURITY.md, cac script last30days.py, store.py, box_chrome_login.py, setup-keychain.sh, setup-pass.sh, thu muc lib/ (130 module Python), thu muc mcp/ (Go server), pyproject.toml o repo root, uv.lock, CHANGELOG.md, tests/hermes/. Chay lai logic replica cua repo (tests/hermes/test_no_critical_scan_findings.py) bang python3 tren ban clone: 0 CRITICAL hit. Grep toan repo cho eval, exec, shell=True, os.system, verify=False, pickle, curl pipe shell, authorized_keys, NOPASSWD, /etc/passwd, rm -rf.
 
 ## Nhung gi scanner thay, va su that tung cai
 
@@ -46,7 +46,7 @@ Day la cach luu key chuan cua he dieu hanh, khong phai trom key. Scanner thay "r
 
 ### 3. Chuoi curl pipe shell con sot trong CHANGELOG.md (trigger that cho scanner regex)
 
-Skill dir hien tai SACH chuoi nay: grep toan bo skills/ va mcp/ khong con dong nao. Fix #1502 da doi hint cai Grok CLI thanh `npm install -g @xai-official/grok` (references/setup-wizard.md:193, lib/grok_x.py:8, lib/health.py:225-226, 246-247, lib/prescriptions.py:137-140, lib/backends.py:307).
+Skill dir hien tai SACH chuoi nay: grep toan bo skills/ va mcp/ khong con dong nao. Fix #1502 da doi hint cai Grok CLI thanh `npm install -g @xai-official/grok` (references/setup-wizard.md:193, lib/health.py:225-226, 246-247, lib/prescriptions.py:137-140, lib/backends.py:307; rieng lib/grok_x.py:8 dung dang viet tat `npm i -g`).
 
 Nhung chuoi cu van con o 3 cho NGOAI skill dir, ma installer quet ca repo se thay:
 
@@ -65,21 +65,26 @@ Khong co lenh tai ve roi chay kieu pipe-to-shell trong skill. Rui ro chi la supp
 
 ### 5. Nhung gi da kiem tra la KHONG co
 
-- 0 hardcoded secret: chay replica Hermes (50 rule CRITICAL cua skills-guard-v16) tren skills/last30days cho 0 hit. Grep sk-, ghp_, github_pat_, AKIA, BEGIN PRIVATE KEY: 0 hit.
-- 0 eval, exec, __import__, compile chay code dong (chi co re.compile).
+- 0 hardcoded secret: chay replica Hermes (50 rule CRITICAL cua skills-guard-v16) tren skills/last30days cho 0 hit. Grep sk-, ghp_, github_pat_, AKIA, BEGIN PRIVATE KEY: 0 secret that, chi 1 duong dan gia tu chu "disk-" trong comment "on-disk-but-off-PATH" (lib/health.py:268).
+- 0 eval, exec, __import__ chay code dong. Grep eval( chi gap 2 lan ten ham verify_eval (verify_v3.py:138, 187), khong phai lenh eval. Ve compile: ngoai re.compile con co helper ten _compile (lib/x_api.py:336) chi ghep chuoi query X, khong phai lenh compile() chay code.
 - 0 shell=True, os.system, os.popen trong scripts/.
 - 0 verify=False, CERT_NONE, unverified context trong scripts/. http.py co guard SSRF: redirect toi dia chi private bi tu choi (dong 121-130).
 - 0 pickle, marshal, shelve, yaml.load khong an toan.
 - SQL co tham so hoa: store.py dung f-string chi de ghep ten cot da kiem tra qua allowlist _UPDATABLE_RUN_COLUMNS / _UPDATABLE_FINDING_COLUMNS (dong 541, 943), gia tri luon la placeholder ?.
-- Runtime dependencies bang 0 (pyproject.toml dependencies = []), chi dung stdlib. Dev deps trong uv.lock chi co pytest, pyyaml, towncrier va phu thuoc cua chung, khong co CVE runtime de quet.
+- Runtime dependencies bang 0 (pyproject.toml o repo root, dependencies = []), chi dung stdlib. Dev deps trong uv.lock chi co pytest, pyyaml, towncrier va phu thuoc cua chung, khong co CVE runtime de quet.
 - MCP Go server (mcp/internal/engine/run.go): chi goi exec.Command(pythonPath, ...) voi env thua ke tu parent cong ExtraEnv, khong truyen secret rieng, khong co lenh shell.
 - Vendored bird-search package.json: private, khong co install script, khong co dependencies.
 - box_chrome_login.py: chi in lenh khoi dong Chrome de nguoi dung tu dang nhap, docstring ghi ro "Reads NO cookies and prints NO cookie values", khong doc cookie nao.
 
 ### 6. Ghi chu ve quy mo va lich su scanner cua repo
 
-- Repo tu co test bao ve tests/hermes/test_no_critical_scan_findings.py (replica 50 rule CRITICAL cua Hermes skills-guard-v16) va file tests/hermes/baseline_findings.md ghi lai lich su: thang 07/2026 Hermes tung danh dangerous voi 14 CRITICAL, chu yeu do cac rule doc bien moi truong (os.environ.get API_KEY) va 6 curl_pipe_shell tu hint cai Grok CLI. Sau fix #1502, Hermes ve caution, 0 CRITICAL. Nghia la repo da tung bi flag va da sua dung huong, nhung Gen/Socket/Snyk co rule khac Hermes, nhat la rule doc cookie trinh duyet, nen van flag.
+- Repo tu co test bao ve tests/hermes/test_no_critical_scan_findings.py (replica 50 rule CRITICAL cua Hermes skills-guard-v16) va file tests/hermes/baseline_findings.md ghi lai lich su: thang 07/2026 Hermes tung danh dangerous voi 14 CRITICAL (7 python_environ_get_secret, 4 ruby_env_secret, 2 env_exfil_httpx, 1 deception_hide), khong co curl_pipe_shell trong so do. 6 curl_pipe_shell thuoc lan do lai thang 11/2026 (7 CRITICAL truoc fix #1502). Sau fix #1502, Hermes ve caution, 0 CRITICAL. Nghia la repo da tung bi flag va da sua dung huong, nhung Gen/Socket/Snyk co rule khac Hermes, nhat la rule doc cookie trinh duyet, nen van flag.
 - Skill dir hien 19M (scripts 4.2M). Hermes tung danh HIGH oversized_skill (1615KB luc do), khong phai CRITICAL, khong anh huong verdict nay.
+
+## Luu y bo sung (sau council + redteam)
+
+- Luong du lieu rerank: resolve_runtime (lib/providers.py:476-493) tu chon provider theo key co san theo thu tu Gemini, OpenAI, xAI, OpenRouter, nen key dat cho mot muc dich (vi du XAI_API_KEY cho search X) cung duoc dung de gui topic + tieu de, doan trich, comment duoc chon loc toi provider do de rerank (lib/rerank.py:304-310; lib/planner.py:536-537 cung goi provider.generate_json). Da ghi trong SECURITY.md muc Hosted reasoning models, opt-in bang key co san, key chi toi dung provider cua no, khong co key thi cham diem cuc bo. Khong phai exfiltration, khong doc hai, nhung lam ro khung "du lieu chi toi dung host": du lieu co the toi them provider rerank.
+- Luat Grok Bot la dieu kien mem: x_policy (lib/env.py:1820-1838) chi kich hoat khi host khai LAST30DAYS_HOST=grok-bot; neu chuoi khong bao gio duoc set thi x_policy khong ap dung. Dong y doc cookie van bat buoc trong moi truong hop, day la gia dinh trien khai, khong phai lo hong code.
 
 ## Dieu kien kem theo verdict PROCEED
 
