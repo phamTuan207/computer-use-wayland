@@ -1245,3 +1245,231 @@ and their disposition:
   main via that merge. I continue committing to todolist-push.
 - 23:09 +07: redteam + Council 1 + Council 2 still running.
   Committing the C3-5/C3-9p doc fixes (log + plan only).
+
+## Adjudication, fix pass 6 (PARTIAL, 3 of 4 reviews in; redteam pending)
+
+### Council 3 AMEND (paper 6ba5e09, 8 of 9 CLOSED, 1 PARTIAL)
+
+- Required fix U-C3-5b (log line 667 breakdown) + optional polish
+  C3-9p (U11 parenthetical rewording) both APPLIED in commit
+  b9cd0f0. Closed. No further action.
+
+### Council 2 AMEND (paper cebd868, own probe 59 cases, 43 PASS, 16 FAIL)
+
+- C2-3 (code, REQUIRED, fix5 REGRESSION): the R3 quote-bound
+  breaks nested codex -c snippets containing a spaced separator
+  or unspaced `;` after an opening quote (`codex -c 'a & b
+  marionette'`, `'a ; b...'`, `'a && b...'`, `'a;b...'` all
+  False, must be True). Differential fix4 True to fix5 False.
+  Root cause: `_top_level_sep_index` treats standalone
+  separators as top-level unconditionally and cannot tell an
+  opening quote from a closing quote. SAME root cause as
+  Council 1 C5-1. Fix: Council 1's proven sketch (return -1
+  for a token starting with a quote holding only one quote of
+  that kind), verified against Council 2's C2-3 cases too.
+- C2-4 (code, REQUIRED or record): C2-1 half fixed; unspaced
+  glue on the runner token still misses (7 cases:
+  `run_foo.py;echo`, `&&echo`, `||echo`, `|cat`, `&echo`, bare
+  forms). The fix5 probe only covers spaced forms. Fix: truncate
+  the basename at the first separator char (in the basename
+  block), not just rstrip the tail. Over-strip controls
+  (md5sum/echo/vim) verified staying False.
+- C2-5 (code, record, NOT a code fix): `_owning_command`
+  returns ANY bare word before `-c` (`echo bash -c
+  run_batch3.py`, `ssh host bash -c ...`, `cat notes.txt bash
+  -c ...` all True, must be False; fix4 False to fix5 True).
+  Live-proved by Council 2 with a compiled sleeper (exact argv
+  in real /proc, flagged True, `_scan_other_runners` hits it).
+  This is a FALSE POSITIVE (fail-closed), not a miss. Council 2
+  says recording is proportionate (fail-closed, narrow) or
+  forward-parse wrappers. Adjudication: RECORD in the docstring
+  (forward-parsing which commands actually execute their
+  arguments vs print them is a bigger design change; the form
+  is contrived and fail-closed).
+- C2-6 (doc, REQUIRED correction to MY OWN refutation): the
+  C1-2 refutation is WRONG. I verified it myself by reading the
+  bf3c939 blobs: at bf3c939 the plan lines 614-615 pinned the
+  fix-pass-3 values (md5 e9e3519a, blob 3a9b7b17, commit
+  3875215), NOT the fix-pass-4 values, and the log at bf3c939
+  has NO fix-pass-4 entry (grep for 2920f169/585fb801 returns
+  nothing). Council 1's C1-2 was VALID at the time. It was
+  fixed by the hash-record follow-up 40c4e48 (plan then pins
+  md5 2920f169). My refutation read the CURRENT plan (already
+  fixed by 40c4e48), not the bf3c939 plan. I own the error
+  plainly. Correct the record: C1-2 was valid, fixed by
+  40c4e48, not refuted. (This is the same pattern Council 1
+  C5-4 notes for fix pass 5: the pin in 46e0909 still pointed
+  at fix-pass-4 values, fixed in 8a99ea0.)
+- C2-7 (doc, REQUIRED): plan F7 sentence ("a codex -c flag
+  now includes everything after it", lines 746-751) is false
+  after the R3 bound. Rewrite the sentence to state the
+  quote-aware bound.
+- C2-8 (doc, REQUIRED): `_top_level_sep_index` docstring
+  omits the unmatched-opening-quote limitation; same root
+  cause makes the nested python -c import wrapper miss (d4,
+  leaf caught). Add the limitation to the docstring and note
+  the d4 case.
+- C2-9/C2-10 (INFO, no action, but correct MY claim): the
+  direct-form codex `&` unchanged True is correct (Council 2's
+  first expectation was wrong); my "cannot occur in /proc" is
+  OVERSTATED (Council 2 L4 proves a bare `&` in a real /proc
+  cmdline via direct exec) but the behavior is defensible.
+  Correct my claim to "cannot occur in /proc via a shell, but
+  can occur via direct exec". Also fix the fix5 probe docstring
+  (it claims live cases it does not have) and the adjudication
+  C2-1 bullet (it states the pre-extension rstrip set).
+- Council 2 disclosure noted: it accidentally overwrote the
+  working-tree run_batch3.py with the fix4 blob via `cp`
+  through a symlinked scratch dir; restored immediately with
+  `git checkout`, md5 re-verified 9e99d9aa. I verified the
+  working tree myself at 23:19 +07: md5 9e99d9aa, blob
+  ff4a5358, no repo state affected.
+
+### Council 1 AMEND (paper cebd868, own differential probe 63 cases)
+
+- C5-1 (code, REQUIRED, fix5 REGRESSION): `_top_level_sep_index`
+  treats an opening quote as a closing quote. Reproduced live
+  by Council 1 (B5/B6/B7 all old True, new False; wrapper `bash
+  -c codex -c 'x=1; marionette'; sleep 60` in old hits, absent
+  from new hits). SAME root cause as C2-3. Fix sketch (proven
+  in Council 1's scratch copy): in `_top_level_sep_index`,
+  after the last_quote computation, `if tok[0] in ("'", '"')
+  and tok.count(tok[0]) == 1: return -1`. Neighbours checked
+  by Council 1: "'hello';" still 7, "os';" still 3, "time;"
+  still -1, "'a'&&" still 3, the documented "'a';'b;c'"
+  limitation stays missed. With this sketch plus C5-2, its
+  probe goes 57/63 to 61/63 (the 2 remaining "FAIL" lines are
+  stale live expectations) and all regressions stay green.
+- C5-2 (code, REQUIRED, fix5 REGRESSION): `_owning_command`
+  does not skip flag VALUES. Reproduced live by Council 1
+  (B1 `bash -o pipefail -c run_batch3.py` old True, new False;
+  wrapper with /tmp/run_c1_stub.py old hits, new misses; leaf
+  caught in both). Fix sketch (proven in scratch): in
+  `_owning_command`, before the path-argument skip, skip a bare
+  word that follows a flag UNLESS its basename is a known
+  command (so `env -i bash -c` still works; a naive version
+  breaks A5, which Council 1 caught while testing the sketch).
+  Record the residual: a flag value whose basename is exactly
+  a known command (e.g. an init file literally named
+  "python3") would still be returned as the owner; contrived,
+  record not fix.
+- C5-3 (CLOSED at HEAD): C3-5 was half-applied in 46e0909 but
+  fixed in b9cd0f0. No action.
+- C5-4 (CLOSED at HEAD): the plan pin in 46e0909 still pointed
+  at fix-pass-4 values, fixed in 8a99ea0. Process note for fix
+  pass 6: pin the NEW values IN the fix commit, not in a
+  follow-up, since C1-2's ship-blocking logic applies to the
+  fix commit itself. I will follow this.
+- C5-5 (doc, REQUIRED): "A1-A14" is a phantom label. The
+  redteam paper defines only A1-A9; its U1 text mentions "A1
+  to A14" without defining A10-A14. The fix5 probe covers all
+  9 redteam cases plus 7 more R2 cases (16 R2 unit cases
+  total), so coverage is there but the label is wrong.
+  Correct it to "A1-A9 plus 7 further wrapper cases" wherever
+  it appears (adjudication, verification plan, log).
+- C5-6 (probe, REQUIRED): the fix5 probe's URL case is
+  vacuous (the cmdline is just `python3 run_batch3.py`, no
+  URL, no "&"). Strengthen the case to a real URL (Council 1
+  B15: `python3 run_batch3.py http://x/?a=1&b=2` returns True
+  in both blobs) or rename it. No code change.
+- C5-7 (INFO, record): direct-form codex "&" still True,
+  recorded in the log only. One line in the
+  `_same_command_tokens` docstring would close it; not
+  ship-blocking. Apply it in fix pass 6 (one line).
+- C5-8 (INFO, mechanism): the C2-extra L6 flip is the C2-1 fix
+  through bash exec optimisation (the raw double-nested cmdline
+  still returns False in fix5, but live the outer bash
+  exec-replaces itself with the inner bash, whose cmdline is
+  caught by the C2-1 glued-separator fix). The author's
+  "expected-behavior change" classification is right. No
+  action.
+
+### Fix pass 6 scope (pending the redteam)
+
+Code (3 items):
+1. C5-1/C2-3: `_top_level_sep_index` opening-quote fix
+   (Council 1's sketch, verified against Council 2's C2-3
+   cases too).
+2. C5-2: `_owning_command` flag-value skip (Council 1's
+   sketch, with the known-command exception).
+3. C2-4: basename truncate at the first separator char
+   (unspaced glue).
+
+Doc/record (8 items):
+4. C2-5: record the `_owning_command` bare-word FP in the
+   docstring (fail-closed, narrow, contrived).
+5. C2-6: correct the C1-2 refutation (C1-2 was valid, fixed
+   by 40c4e48, not refuted).
+6. C2-7: rewrite the plan F7 sentence (the R3 bound).
+7. C2-8: `_top_level_sep_index` docstring (unmatched-opening-
+   quote limitation + d4 case).
+8. C5-5: correct "A1-A14" to "A1-A9 plus 7 further wrapper
+   cases".
+9. C5-6: strengthen the fix5 probe's URL case to a real URL.
+10. C5-7: one line in the `_same_command_tokens` docstring
+    (direct-form codex "&" residual).
+11. C2-9/C2-10: correct the "cannot occur in /proc" claim;
+    fix the fix5 probe docstring.
+12. C5-4 process note: pin the NEW run_batch3.py blob/md5
+    IN the fix-pass-6 commit itself (plan md5 line updated in
+    the same commit), not in a follow-up.
+
+The redteam is still running. Fix pass 6 starts after it
+lands, so its findings (if any) fold into the same pass
+instead of forcing a fix pass 7.
+
+### Event log (continued, 23:18-23:20 +07)
+
+- 23:18 +07: Council 2 verdict received: AMEND, paper
+  cebd868 (also swept in Council 1's paper, 483 lines, same
+  shared-checkout race as fix4 26366a9; per precedent, not
+  split). Council 2's own numbers: fix5 probe 38/38,
+  regressions green, its own probe 59 cases (43 PASS, 16 FAIL,
+  all 16 are its findings). Findings C2-3/C2-4/C2-5 (code) +
+  C2-6/C2-7/C2-8 (doc) + C2-9/C2-10 (INFO).
+- 23:19 +07: verified the working tree after Council 2's
+  overwrite incident: run_batch3.py md5 9e99d9aa, blob
+  ff4a5358, git status clean for that file. No repo state
+  affected. Outcome: intact.
+- 23:19 +07: read Council 1's paper (in cebd868): verdict
+  AMEND, differential probe 63 cases (57/63 on fix5, 61/63 on
+  its scratch with the C5-1/C5-2 sketches). Findings C5-1/C5-2
+  (code, REQUIRED) + C5-5/C5-6 (doc/probe) + C5-7/C5-8 (INFO);
+  C5-3/C5-4 CLOSED at HEAD.
+- 23:19 +07: verified Council 2's C2-6 myself by reading the
+  bf3c939 blobs: plan lines 614-615 at bf3c939 pin the
+  fix-pass-3 values (md5 e9e3519a, blob 3a9b7b17, commit
+  3875215); the log at bf3c939 has NO fix-pass-4 entry (grep
+  for 2920f169/585fb801 returns nothing); at 40c4e48 the plan
+  pins md5 2920f169. C1-2 was VALID, fixed by 40c4e48. My
+  refutation was wrong (it read the current plan, already
+  fixed). I own the error plainly; the correction goes into
+  fix pass 6.
+- 23:20 +07: MEMORY.md updates noted: F3 DONE + SLOT RE-WEDGED
+  (23:14): F3 proved the Marionette root cause from source
+  (driver.sys.mjs #registerWindow 4639 passes null into
+  #registerBrowser 4616); restart 22:36 fixed it (session
+  0.1s); cleanup redo 22:54-22:56 closed 55 tabs, 14 real tabs
+  left, 0 fixture tabs; J21 = F3's click (app-launcher, not
+  workspace 1). BUT the slot RE-WEDGED at 22:56:12 (4 failed
+  retries), zombie NOT proven, council 3x AMEND + redteam
+  BLOCK (B7: 4 untested close methods). Muse approved a 2nd
+  restart (F3b, baseline first, right-click Close Tab first,
+  then Arms A/B/C). Blocks live Y13/Y14 tonight. OPT DONE
+  (23:16): single optimal fix method
+  (improvements/optimal-fix-method-20261121.md, 202 lines, 6
+  commits, verified); order: F3 slot-health > F1+F2 > ZT-B >
+  Y6 pill > Y13 live > Y14 live > A1 > hidden-body > clone2
+  heavy > Y1b > scrub > final test LAST. OPT said Y13g 0
+  output (WRONG in part: the log worker-y13g-fix-log.md EXISTS,
+  just no commit yet; Y13g still active). J21 confirmed =
+  F3's click. CLONE2-WATCH MISS (23:16): the owner did not see
+  Muse switch workspace to approve, he switched himself; cause:
+  the cron run at 23:11:56 was STILL RUNNING (5+ minutes, no
+  log, no result) so no workspace switch happened. Fix: Muse
+  stop the stuck run, check ws2 immediately per the owner's
+  order; fix the cron later. All three are parent-level (Muse)
+  items, not Y14b's. Noted here for the record.
+- 23:20 +07: redteam still running. Writing the partial
+  adjudication (3 of 4 reviews) to the log and committing it;
+  fix pass 6 starts after the redteam lands.
