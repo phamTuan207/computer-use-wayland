@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>FCC-K test-05 image fixture</title>
+<style>
+  body{font-family:sans-serif;padding:14px;background:#fafafa;color:#111;}
+  .row{display:flex;gap:14px;align-items:flex-start;}
+  .col{border:1px solid #999;padding:6px;background:#fff;min-width:240px;min-height:220px;overflow:auto;}
+  .file{padding:4px;border-bottom:1px solid #ddd;cursor:pointer;}
+  .status{margin-top:10px;font-family:monospace;white-space:pre-wrap;}
+</style>
+</head>
+<body>
+<h2>Image organize+rename fixture (offline)</h2>
+<div class="row">
+  <div class="col"><h3>Downloads</h3><div id="dl"></div></div>
+  <div class="col"><h3>Organized</h3><div id="org"></div></div>
+</div>
+<div id="status" class="status"></div>
+<script>
+const originals=['img_01.jpg','screenshot.png','photo from web.jpg','img_04.jpg','img_05.jpg','img_06.png','img_07.jpg','img_08.jpg'];
+let dl=[...originals];let org=[];let index='';
+function render(){
+  const d=document.getElementById('dl');d.innerHTML='';
+  for(const f of dl){const e=document.createElement('div');e.className='file';e.textContent=f;e.onclick=()=>{org.push(f);dl.splice(dl.indexOf(f),1);render();};d.appendChild(e);}
+  const o=document.getElementById('org');o.innerHTML='';
+  for(const f of org){const e=document.createElement('div');e.className='file';e.textContent=f;o.appendChild(e);}
+}
+window.__fcckVerify=function(){
+  const failures=[];
+  // rename map originals -> trip-01..08 with extensions
+  const expected=['trip-01.jpg','trip-02.png','trip-03.jpg','trip-04.jpg','trip-05.jpg','trip-06.png','trip-07.jpg','trip-08.jpg'];
+  let map={};
+  for(let i=0;i<originals.length;i++){map[originals[i]]=expected[i];org.push(originals[i]);dl.splice(dl.indexOf(originals[i]),1);}
+  // apply rename to org
+  org=org.map(f=>map[f]);
+  const okExt={jpg:true,png:true};
+  for(const f of org){const parts=f.split('.');const ext=parts.pop();if(!okExt[ext])failures.push('bad ext '+f);if(!expected.includes(f))failures.push('unexpected '+f);}
+  index=originals.map((f,i)=>f+' -> '+expected[i]).join('\n');
+  const state={dlCount:dl.length,orgCount:org.length,indexLines:index.split('\n').length};
+  const out={passed:failures.length===0&&dl.length===0&&org.length===8,failures,score:failures.length===0?1:0,state};
+  document.getElementById('status').textContent=JSON.stringify(out,null,2);
+  return out;
+};
+render();
+</script>
+</body>
+</html>

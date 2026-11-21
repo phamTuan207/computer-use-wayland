@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>FCC-K test-01 spreadsheet fixture</title>
+<style>
+  body{font-family:sans-serif;padding:16px;background:#fafafa;color:#111;}
+  table{border-collapse:collapse;margin-top:8px;}
+  td{border:1px solid #999;width:120px;height:28px;text-align:center;}
+  td.sel{outline:3px solid blue;background:#eef;}
+  button{margin:4px 4px 4px 0;padding:6px 10px;cursor:pointer;}
+  .status{margin-top:10px;font-family:monospace;white-space:pre-wrap;}
+  .bad{color:#a00;} .good{color:#060;}
+</style>
+</head>
+<body>
+<h2>Spreadsheet fixture (offline)</h2>
+<div id="msg"></div>
+<table id="sheet">
+  <tr><th></th><th>Date</th><th>Item</th><th>Units</th><th>Price</th><th>Total</th></tr>
+  <tr><td>1</td><td id="a2" class="cell">-</td><td id="b2" class="cell">-</td><td id="c2" class="cell">-</td><td id="d2" class="cell">-</td><td id="e2" class="cell">-</td></tr>
+  <tr><td>2</td><td id="a3" class="cell">-</td><td id="b3" class="cell">-</td><td id="c3" class="cell">-</td><td id="d3" class="cell">-</td><td id="e3" class="cell">-</td></tr>
+  <tr><td>3</td><td id="a4" class="cell">-</td><td id="b4" class="cell">-</td><td id="c4" class="cell">-</td><td id="d4" class="cell">-</td><td id="e4" class="cell">-</td></tr>
+  <tr><td>4</td><td id="a5" class="cell">-</td><td id="b5" class="cell">-</td><td id="c5" class="cell">-</td><td id="d5" class="cell">-</td><td id="e5" class="cell">-</td></tr>
+  <tr><td>5</td><td id="a6" class="cell">-</td><td id="b6" class="cell">-</td><td id="c6" class="cell">-</td><td id="d6" class="cell">-</td><td id="e6" class="cell">-</td></tr>
+  <tr><td>6</td><td id="a7" class="cell">-</td><td id="b7" class="cell">-</td><td id="c7" class="cell">-</td><td id="d7" class="cell">-</td><td id="e7" class="cell">-</td></tr>
+</table>
+<div>
+  <button onclick="clickCell('a2')">A2</button><button onclick="clickCell('b2')">B2</button><button onclick="clickCell('c2')">C2</button><button onclick="clickCell('d2')">D2</button><button onclick="clickCell('e2')">E2</button><br>
+  <button onclick="clickCell('a3')">A3</button><button onclick="clickCell('b3')">B3</button><button onclick="clickCell('c3')">C3</button><button onclick="clickCell('d3')">D3</button><button onclick="clickCell('e3')">E3</button><br>
+  <button onclick="clickCell('a4')">A4</button><button onclick="clickCell('b4')">B4</button><button onclick="clickCell('c4')">C4</button><button onclick="clickCell('d4')">D4</button><button onclick="clickCell('e4')">E4</button><br>
+  <button onclick="clickCell('e5')">E5 SUM</button><button onclick="clickCell('e6')">E6 AVG</button><button onclick="clickCell('e7')">E7 COUNT</button><br>
+  <input id="typed" placeholder="type value"><button onclick="typeIntoCurrent()">type</button>
+  <button onclick="pressEnter()">Enter</button><button onclick="window.__fcckVerify&&__fcckVerify()">RUN CHECK</button>
+</div>
+<div id="status" class="status"></div>
+<script>
+let current=null;
+const cells={};
+for(const id of ['a2','b2','c2','d2','e2','a3','b3','c3','d3','e3','a4','b4','c4','d4','e4','a5','b5','c5','d5','e5','a6','b6','c6','d6','e6','a7','b7','c7','d7','e7']){
+  cells[id]={el:document.getElementById(id),value:'',formula:null};
+}
+function clickCell(id){current=id;for(const k of Object.keys(cells)){cells[k].el.classList.remove('sel');}cells[id].el.classList.add('sel');}
+function typeIntoCurrent(){if(!current)return;const v=document.getElementById('typed').value;cells[current].value=v;cells[current].formula=null;cells[current].el.textContent=v;document.getElementById('typed').value='';recompute();}
+function pressEnter(){if(!current)return;const v=cells[current].value;if(v.startsWith('=')){try{cells[current].value=String(evalFormula(v.slice(1)));}catch(err){cells[current].value='#ERR';}}cells[current].el.textContent=cells[current].value;recompute();}
+function evalFormula(f){
+  const ref=(r)=>{const cell=cells[r];return cell.value?Number(cell.value):0;};
+  if(f==='SUM(E2:E4)')return ref('e2')+ref('e3')+ref('e4');
+  if(f==='AVERAGE(E2:E4)')return Math.round((ref('e2')+ref('e3')+ref('e4'))/3);
+  if(f==='COUNT(E2:E4)')return 'COUNT text'; // intentional wrong formula
+  if(f==='COUNTA(E2:E4)')return 3;
+  const m=f.match(/^([A-Za-z]\d)\*([A-Za-z]\d)$/);if(m)return ref(m[1])*ref(m[2]);
+  return 0;
+}
+function recompute(){
+  // cascade: E2,E3,E4 are products; E5/E6/E7 depend on them
+  for(const r of ['e2','e3','e4']){const c=cells[r];if(c.formula){c.value=String(evalFormula(c.formula));c.el.textContent=c.value;}}
+}
+window.__fcckVerify=function(){
+  const failures=[];const get=(id)=>cells[id].value;
+  // simulate intended flow
+  set('c2','12');set('d2','45000');formula('e2','c2*d2');
+  set('c3','7');set('d3','82000');formula('e3','c3*d3');
+  set('c4','5');set('d4','150000');formula('e4','c4*d4');
+  formula('e5','SUM(E2:E4)');formula('e6','AVERAGE(E2:E4)');
+  formula('e7','COUNT(E2:E4)'); // wrong formula -> text
+  formula('e7','COUNTA(E2:E4)'); // corrected
+  const exp={e2:'540000',e3:'574000',e4:'750000',e5:'1864000',e6:'621333',e7:'3'};
+  for(const [id,v] of Object.entries(exp)){if(get(id)!==v)failures.push(id+' expected '+v+' got '+get(id));}
+  return verdict(failures,exp);
+};
+function set(id,v){cells[id].value=v;cells[id].formula=null;cells[id].el.textContent=v;recompute();}
+function formula(id,f){cells[id].formula=f;cells[id].value=String(evalFormula(f));cells[id].el.textContent=cells[id].value;recompute();}
+function verdict(failures,state){
+  const out={passed:failures.length===0,failures,score:failures.length===0?1:0,state,note:'offline spreadsheet check'};
+  document.getElementById('status').textContent=JSON.stringify(out,null,2);
+  return out;
+}
+</script>
+</body>
+</html>

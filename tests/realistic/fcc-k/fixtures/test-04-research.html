@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>FCC-K test-04 research fixture</title>
+<style>
+  body{font-family:sans-serif;padding:14px;background:#fafafa;color:#111;}
+  .row{display:flex;gap:14px;align-items:flex-start;}
+  .col{min-width:220px;border:1px solid #999;padding:6px;background:#fff;}
+  .card{border:1px solid #ccc;padding:6px;margin:6px 0;cursor:pointer;}
+  .notes{border:1px solid #999;padding:6px;min-height:140px;white-space:pre-wrap;overflow:auto;}
+  .status{margin-top:10px;font-family:monospace;white-space:pre-wrap;}
+</style>
+</head>
+<body>
+<h2>Research notes fixture (offline)</h2>
+<div class="row">
+  <div class="col"><h3>Sources</h3>
+    <div id="sources"></div></div>
+  <div class="col"><h3>Notes</h3>
+    <div id="notes" class="notes"></div>
+    <div>Summary:</div>
+    <textarea id="summary" style="width:100%"></textarea>
+    <button id="saveBtn">Save notes</button></div>
+</div>
+<div id="status" class="status"></div>
+<script>
+const sources=[
+  {id:'A',name:'Alpha Service',price:'$12/mo',support:'email'},
+  {id:'B',name:'Beta Service',price:'$19/mo',support:'chat'},
+  {id:'C',name:'Gamma Service',price:'$9/mo',support:'phone'},
+];
+let notes=[];let summary='';let saved=false;
+function render(){
+  const s=document.getElementById('sources');s.innerHTML='';
+  for(const so of sources){
+    const c=document.createElement('div');c.className='card';
+    c.textContent=so.id+': '+so.name+' '+so.price+' '+so.support;
+    c.onclick=()=>{notes.push({src:so.id,fact1:so.name,fact2:so.price});render();};
+    s.appendChild(c);
+  }
+  const n=document.getElementById('notes');n.textContent=notes.map(x=>x.src+': '+x.fact1+' price='+x.fact2).join('\n');
+}
+document.getElementById('saveBtn').onclick=()=>{saved=true;summary=document.getElementById('summary').value;render();};
+window.__fcckVerify=function(){
+  const failures=[];
+  // simulate reading all 3 sources -> 6 facts
+  for(const so of sources){notes.push({src:so.id,fact1:so.name,fact2:so.price});notes.push({src:so.id,fact1:so.name+' tier',fact2:so.support});}
+  summary='Alpha price $12/mo vs Beta $19/mo vs Gamma $9/mo, all differ.';
+  saved=true;
+  document.getElementById('summary').value=summary;
+  let n1=notes.filter(x=>x.src==='A').length;let n2=notes.filter(x=>x.src==='B').length;let n3=notes.filter(x=>x.src==='C').length;
+  if(notes.length<6)failures.push('fewer than 6 facts');
+  if(n1<2||n2<2||n3<2)failures.push('not 2 facts per source');
+  if(summary.length<20)failures.push('summary too short');
+  if(!saved)failures.push('notes not saved');
+  const state={factCount:notes.length,perSrc:{A:n1,B:n2,C:n3},summaryLen:summary.length,saved};
+  const out={passed:failures.length===0,failures,score:failures.length===0?1:0,state};
+  document.getElementById('status').textContent=JSON.stringify(out,null,2);
+  return out;
+};
+render();
+</script>
+</body>
+</html>
