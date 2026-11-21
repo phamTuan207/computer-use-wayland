@@ -93,3 +93,43 @@ Procedure (M2 D steps, as amended by REDTEAM-M):
 - D-2, omni.ja patch veto: AM-8. Restate the veto on its cited grounds only (repack on every Zen update, restart already clears the zombie). The signature premise is uncited (opt-council-m2-mechanism.md:35 is the only occurrence); either cite a source for it or strike it. BiDi-only was falsified twice and stays falsified.
 
 Fastest verification path: CLI first (BiDi getTree, POST /session, pkill, zen-ai relaunch, curl 200/2828), then DOM (none for this class), mouse last (never; the 22:44 rail click proved the far-left rail is the Omarchy dock, not a workspace switch). Evidence required: the saved getTree + tab list file paths, the restart verification output, the post-close slot check output after every close batch.
+
+## 6. Class E: Zen wedge / workspace switching
+
+Root cause status: J1 mechanism UNPROVEN (no click attempted during the wedge). J2 has no captured symptom at all. The far-left rail is the Omarchy dock, not Zen workspaces: F3's 22:42-22:45 clicks proved (15,30) is the app launcher and Logo+1 opens the system menu, which makes F3 the likely actor in the owner-reported 22:44 workspace-1 click that opened the Omarchy menu. Two workspace systems are conflated in the record (Hyprland vs Zen-internal); the latter has no test. F1 guardian failure (check_guard JSONDecodeError on "unknown request", exit 0) is a separate wedge that looks identical to the owner; wedge and slot stay separate until a capture proves otherwise.
+
+Procedure (M2 E steps, as amended by REDTEAM-M):
+- E-1, workspace switching: AM-10. Turn E-1 into a LIVE PROBE, not just a config read: run `hl.dsp.focus({ workspace = "N" })`, verify with activeworkspace + clients + screenshot, save the outputs. The string exists in repo precedent (hyprctl dispatch 'hl.dsp.focus({ workspace = "N" })', tests/browser_field_live.py line 98 and others), but no live run proves it switches workspaces on this Hyprland 0.57.2, and F3 introspection shows hl.dsp.workspace has NO goto/switch.
+- E-3, Zen keybinds: AM-10. Make E-3 conditional on the E-1 probe passing. Cite the local-only keybind record (ZK probe, commit 81a3bc4: customKeys.json in the Zen profile, 3 customized keys, file + defaults merge, never on the repo) rather than any repo file, per the owner order 23:03. Zen keybind recording is deferred, low priority, machine-specific layer only.
+- Launcher command, found by F3: `omarchy-menu toggle root`, SUPER+SPACE, ~/.config/hypr/bindings.lua (F3 log 22:50). ZEN G-06 is closed. Record it here so no worker re-derives it by clicking.
+- E-4, wedge-signature capture: AM-11. A restart without a signature is called a safety violation, but no enforcement names who checks it; the 22:56 recurrence produced no signature either. Name the enforcer: the checker role verifies the signature files exist before any restart is approved. Capture the wedge signature BEFORE any restart, every time, no exceptions.
+- E-2, E-5, E-6: SURVIVE as written in the M2 verdict.
+- ZT-05 steps 2, 3, 5 rewritten from Super+M/N keybinds to the hl.dsp form before ZT-B runs. J2 fix is gated on the ZT-05 observation. Zen-internal workspaces need a new scenario or a recorded out-of-scope decision.
+
+Fastest verification path: CLI first (hyprctl activeworkspace + clients, the hl.dsp command form, the launcher command from config), then DOM (none for this class), mouse last (never for workspace switching; the 22:45 CLI-first order stands). Evidence required: the saved E-1 probe outputs, the wedge signature files, the checker approval before any restart.
+
+## 7. Class F: pill measurement 2.2.3 (Y6r A1-A10)
+
+Root cause status: F1 dead ABI proven fixed at link level (.so md5 78ac1023, ldd 0 not found). Y6r reversal confirmed: the profile config WAS applied on parse 2 (layers.enabled true, default false, optics.lua only setter); U6 is a deterministic false-fail gate; manual `nest hyprctl reload` must NOT be added (redteam wins, R2). The retry dies first at the ldd pre-flight because the y6e conf was never staged as the active conf (A1). The liquid gate is proven blind as code fact. Pill measurement itself is still UNPROVEN; no arms ever ran live. Y6 retry runs AFTER Y13 (H3 resolution).
+
+Procedure (M2 F steps, as amended by REDTEAM-M):
+- Adopt Y6r A1-A10 whole. Load-only trial first (F-8). Fresh re-review before any measurement.
+- A1 staging, with saved ldd output (new-conf ldd output was never saved, gap G-10; saving it is part of A1, not an afterthought). A3 positive marker in nest optics.lua only. U6 replaced by a positive gate (A2). AMEND4/AMEND5 ported (A5).
+- No manual reload (R2 confirmed by independent re-argument). Falsifier: marker absent in the F-8 load-only trial promotes reload to the next test.
+- AM-12, the second most urgent amendment in this file: the A3 marker proves the calls returned, NOT layer registration or values. Either strengthen the marker with a registration read-back after layer() returns, or downgrade ORDER O-2 to "proves the calls returned" and keep the registration question open after the retry. Settle this BEFORE the 4-8 hours of A1-A10 fix work are spent. Note the n=1 caveat on parse-2 determinism; the F-8 load-only trial is the test that settles it.
+
+Fastest verification path: CLI first (ldd output saved, parse-2 config read, marker grep), then DOM (none for this class), mouse last (never). Evidence required: the saved ldd output, the A3 marker output, the registration read-back (or the written downgrade of O-2).
+
+## 8. Class G: hidden-body experiment + blind test design
+
+Root cause status: V1 badly wounded, not dead (R's "no class" is two concordant records, output never saved). V2 dead as stated (CSS visibility interpolation rule, two sources). Third mechanism sketch recorded (grouping-rule / unreadable-sheet blind scan). Four record corrections stand: switch-away never tested, "cleared by itself" mislabelled, bootstrap mechanism story false, geckodriver-kill causation unproven. Y13r2 BLOCK (2fee242, B1-B4 + 5 amend); Y13g is fixing per the redteam paper, then a fresh re-review runs.
+
+Procedure (M2 G steps, as amended by REDTEAM-M):
+- Adopt the Y4b diagnose-first fix design (V2 category removed, repaint and switch-away steps removed, flagged passes counted separately) plus the 6-phase decisive experiment (old-versus-new pair is the key capture; V1 refuted by one saved counterexample) plus the ZT-A v2 blind composite suite.
+- AM-13: add one sentence to G-7 Phase 2: switch-away-and-back is a diagnostic on a test tab with the owner away, never a recovery step, and must not be copied into the fix ladder. This reconciles G-2's switch-away removal with G-7 Phase 2, which includes switch-away-and-back on the same hidden tab.
+- Close G-12 (ZT-00 step-4 wording, wrong zen_dom.py path) before ZT-B runs. G-9's ZT-B run is blocked on G-12, which is still open.
+- Cite the H3 acceptance in a council paper or log entry, not only MEMORY.md 22:57. Name Y13g's deliverable (fix diff + fresh re-review) as the rank-5 gate item; Y13g has zero observable output (no log file, no commits) at write time.
+- AM-22: measure the diagnose_body pre-flight false-positive rate and perturbation cost on healthy tabs BEFORE O-6 becomes a gate on ranks 5-7. The measurement is owed (Skeptic P-12); O-6 makes the pre-flight a gate on every live run at ranks 5-7, so an unmeasured gate is a method violation.
+- G-1, G-3, G-4, G-5, G-6, G-8 survive as written in the M2 verdict; the V1 burden placement is correct.
+
+Fastest verification path: CLI first (diagnose_body snapshot, BiDi getTree, saved counterexample), then DOM (the old-versus-new pair capture), mouse last (never for diagnosis). Evidence required: the saved counterexample (V1 refutation), the Phase 2 diagnostic outputs, the pre-flight false-positive measurement.
