@@ -98,8 +98,10 @@ Each batch prompt is a full instruction file written to /tmp/prompt-y2b-N.txt on
 
 ## Runs
 ### Batch 1 (tests 01-05), prompt /tmp/prompt-y2b-1.txt
-- Launched: (pending, waiting for Y2)
-- Result: (pending)
+- Launched: NEVER. Parent redirect 18:14: agy hit quota exhaustion (429 RESOURCE_EXHAUSTED at 18:10:55, resets ~28/11, 165h37m). Y2's batch is stuck on the same quota. Do NOT wait for Y2, do NOT invoke agy.
+- Evidence seen by Y2b: /tmp/out-y2-1.log = "error: interrupted / AGY_HYPR_EXIT:124" (17:59); /tmp/out-y2-2.log = quota error 429 (18:10). No agy process running on the laptop at 18:14.
+- New task instead: independently verify Y2's 10 tests (tests/realistic/agy-y2/) WITHOUT agy, static review + live headless execution. Full report: improvements/worker-y2b-verification.md.
+- VERDICT: 8/10 PASS (01-06, 08, 10), 1 FAIL (07: toast "Root: 5 files" vs checker "Root: 3 files", spec miscounted, fixture is right), 1 CRASH (09: dead id #note-item-archived-draft, destroyed by renderList() at load; also a vacuous checker assertion). No __verify hooks anywhere; dashes PASSED; VM copies == laptop copies (md5, 22 files).
+- My 10 generation topics move to Codex (per parent). Drafted specs stay in this log, ready to hand over.
 ### Batch 2 (tests 06-10), prompt /tmp/prompt-y2b-2.txt
-- Launched: (pending)
-- Result: (pending)
+- Launched: NEVER (same quota death).
