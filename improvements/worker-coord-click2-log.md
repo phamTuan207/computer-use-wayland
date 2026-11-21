@@ -1,0 +1,102 @@
+# Coordinator COORD-CLICK-2 log: synthesis of all 16 children + next steps
+
+Branch: todolist-push. Task start 02:46 +07 (replacement for COORD-CLICK 53e4f4ae, killed 02:45 after 31 min silence with 6 completed children unreacted). All times wall-clock Asia/Ho_Chi_Minh + elapsed from 02:46. No em dash (U+2014) or en dash (U+2013) anywhere. No ydotool. No live driving by this coordinator (VM synthesis only).
+
+## 02:46 +07 (t+0m) Start: all 16 children collected
+
+The old coordinator produced no final report (cancelled before finishing), so the synthesis is done here from the children's logs and commits on todolist-push. All 16 verified complete:
+
+| # | Child | Commit | Verdict |
+| --- | --- | --- | --- |
+| 1 | CLICK-SRC | 050272d (+12b6da7) | Conversion correct; G28 fallback trigger is staleness only; type never verified |
+| 2 | CLICK-PROBE | fa289eb (+a28bf9c) | Stage A single X: NOT sent; fault at focus/app layer (later explained by grounding) |
+| 3 | CLICK-SWEEP | affaf54 | 12 ranked failure items, triage of all open computer-use failures |
+| 4 | CLICK-CODEX-CMP | 238b528 | Formal comparison: Codex succeeded, Muse failed on vision-grounding |
+| 5 | CLICK-FIX | e4082ff | G28 loud refusal, type verification, zen_dom TimeoutError, ime trace; 241 tests pass |
+| 6 | CLICK-C1 | 846cf0d | AMEND, 3 required fixes (regression, G28 widening, type_verified gap) |
+| 7 | CLICK-C2 | 9d5ae86 | AMEND, same 3, independently verified |
+| 8 | CLICK-C3 | 59acd36 | AMEND, widen G28 refusal to pointer-only batches |
+| 9 | CLICK-RT | 6cdebda | AMEND, R1-R9 |
+| 10 | CLICK-AMEND | 4b7d6ac (+7 commits) | 12/12 items done, DOM-first grounding, 315 tests OK |
+| 11 | CRAWL-GROUNDING | c450f5d | 20 candidates, rank 1 exact rects + SoM + verify + outcome scoring |
+| 12 | CRAWL-MULTIACTION | 43b7c42 | 16 candidates, rank 1 HCU batched AX + guard + diff |
+| 13 | CRAWL-DOMA11Y | 8fd87e2 (+96f49ac, 7b85472) | 15 candidates, rank 1 bulk DOM harvest, rank 2 conversion layer, rank 3 Mantis text |
+| 14 | CRAWL-THINKTIME | f5ac63f | 21 candidates, rank 1 batched actions, rank 2 DOM/a11y-first |
+| 15 | CRAWL-VERIFY | 50343fe | V1-V20, rank 1 DOM value readback, governing V16 independent channel |
+| 16 | CLICK-BASELINE | 17ca627 (+7437384) | NOT measured: lane never freed (ZT-C ZT-10 still running at 02:44); procedure + sync plan delivered |
+
+Also read: old coordinator log (worker-coord-click-log.md, full, through 02:10), clone2 batch 7 task 2 bench (docs/clone2-dom-grounding-20261122.md on main, commit 3fd6986 + tests/dom_grounding_bench.py 79b75e7).
+
+## The root cause (proven, unchanged)
+
+Muse clicked (250,1037), 64px above the real input field (field y 1101-1164, center (306,1132)). Vision-grounding error, not conversion, not type, not session, not Enter. All 5 Muse attempts inherited the wrong point. Codex re-grounded from a fresh observe, clicked (300,1132), saw the caret, typed, sent 01:37. The fix must make grounding right the FIRST time from exact rects, with cheap verification, and one vision must drive max actions at accuracy >= 90%.
+
+## What is already built: CLICK-AMEND (4b7d6ac series)
+
+Implements the consolidated 12 items (C1 items 1-3, C3 widening, RT R1-R9) plus the owner corrections (item 12 replaced: DOM-first, no slow observe cycles; bar numbers required). Commits: e704187 (cu.py type verification band + focus/type hooks + terminal-None marker), e10fef4 (first_action G28 widening + envelope fields + window-only remedy), 7d37d60 (zen_dom R5-R8 + DOM helpers), 8e52ba9 (DOM-first grounding, rect center to image point, dom_act orchestrator), eb9066a (type verification band + hooks, preflight harness, item 1 fake fix), 90b7026 (first_action refusal flip, zen_dom R5-R8 + DOM helpers, rect mapping, dom_act), 96a9e46 (logs), 4b7d6ac (log, push verified).
+
+Measured bar numbers (tests, 02:26): observes per task unchanged (3: preflight fresh + after-capture + settle re-capture), amend adds zero observes; actions per observation 3 (click, type, Enter) in one batch, ground_many grounds 2 inputs from 1 meta in 6 DOM calls; 13-suite run 315 tests OK in 5.173s; full discover 1752 tests, 2 failures + 4 errors, ALL pre-existing (test_core umask x2, test_a11y_skeleton import, test_cursor_file g++ -std=c++26, test_perf_evidence missing JSON); grounding accuracy 7/7 = 100% synthetic (fastpath + dom_act), bar >= 90%. Fail-before proven on e4082ff worktree for all new suites. No changed line touches image_point, move, or _check_entry_pyc. Live proof (2-vision benchmark, total wall time vs Codex 2.5 min) is OWED, not claimed.
+
+## What the 5 crawls converge on (85 candidates total)
+
+All five crawls, independently, rank the same shape first. The convergence is the synthesis:
+
+### Grounding: exact rects, never JPEG eyeballing
+- One-shot bulk DOM rect harvest (doma11y C1, rank 1): one evaluate returns rects for EVERY actionable element (tag, role, name, rect, center, visibility, focused). One read yields the whole click list.
+- Coordinate conversion layer (doma11y C12, rank 2, required by every DOM candidate): CSS viewport px to screen px via Hyprland window geometry + DPR + viewport origin, cross-checked against AT-SPI screen extents. The amend's dom_rect_to_image_point reuses the calibration_e2 chain; whether that fully satisfies C12 is an OPEN adjudication item for council (see below).
+- AT-SPI-first (grounding C2, doma11y C9): only screen-coordinate-native method, only non-browser method. Fresh corroboration: agent-desktop (Vercel Labs, 2026-11-04), linux-use 28 elements in 48 ms (2026-11-07, author reported), Tarsier (Nov 2026).
+- Mantis numbered compact text + diff-only updates (doma11y C14, rank 3, fresh 2026-11-06): ref numbers replace coordinates in the agent view, diff-only re-read after each action. Vendor numbers: 29-47% fewer tokens, 29-37% fewer calls, about a third less time, same accuracy within one run.
+- CDP DOM domain + AX tree (doma11y C2/C3): best Brave-side grounding. BUT clone2 proved CDP is DEAD on Firefox/Zen (removed Firefox 141, /json returns 404). Rule: CDP for Chromium (Brave/Chrome) only; Marionette/BiDi for Zen/Firefox. Never assume CDP on Zen.
+- Fresh vision top: GroundCascade 85.33% ScreenSpot-Pro (Nov 2026, arXiv:2611.13177), still below 90%. GroundGUI-8B 63.9% Pro (Oct 2026, 10 days outside window, flagged). No vision-only method meets the 90% bar; exact methods first is strengthened, not weakened.
+- MEASUREMENT CORRECTION M1 (grounding, arXiv:2610.36831, Oct 2026): point-in-box scoring under-counts correct clicks (14.4% of box-rejected clicks on web were actually correct). Score by OUTCOME (message sent, field focused, button activated), not by point-in-box. Adopted: the 2-vision benchmark passes iff both messages land in the threads, not iff coordinates fall in boxes.
+
+### Batching: one observation, many actions, guarded
+- HCU batched AX actions + live guard + AX diff (multiaction rank 1, arXiv 2610.41432, Oct 2026): up to 64 actions per call, OSWorld 1.0 70.13% vs 62.47% baseline, cost down 59.1%, 17% fewer steps, 30% lower cost. The guard (re-check live target + live layout before sending any input, reject changed targets) is the accuracy answer.
+- Grouping policy (multiaction rank 2, OSWorld-Human, MLSys 2026): only groupable actions share one observation (target visible, no UI change expected); group-breaking actions force a fresh state. Planning/reflection is 75-94% of latency.
+- Plan-once, execute-all (multiaction rank 4, StructAgent + in-repo Pick1): the whole ordered program emitted once, run with zero inference until something goes wrong. This IS the 2-vision benchmark shape, generalized from one terminal window to two browser windows.
+- Anthropic batch loop contract (multiaction rank 6, GA Aug 2026): sequential execution, stop at first failure, rest reported not-executed. Small loop change; fixes the false-ok failure mode.
+- Programmatic executor (multiaction rank 7): CDP/Marionette scripts run at machine speed, fail loudly with assertions. Zero-vision middle for the benchmark.
+
+### Verification: cheap, non-vision, independent
+- Minimal bundle (verify rank 1-6, all in ONE evaluate call per step, zero extra observes): V1 DOM input value readback (exact compare, the required fix for the e4082ff false pass), V2 contenteditable innerText + caret offset (the incident shape), V4 caret position check, V3 activeElement focus check (shadow-root walk), V11 MutationObserver / input-event flag armed before typing, V5 elementFromPoint hit test before clicking.
+- Task level: V12 state-grounded finish gate (verify the sent bubble / artifact, the cheap VISION 2) + V17 expectation-first (name the expected effect BEFORE acting, arXiv 2604.05477).
+- Governing rule V16: never trust an action's own return code; every ok must be corroborated by an independent channel the action cannot set. Strengthened by fresh numbers V18 (arXiv 2610.29609, Oct 2026: withholding the self-report improves dangerous-misreport recall by 43.4pp) and doctrine V20 (three-proof model, Sep 2026: fresh observation, exact grounding, authoritative record).
+- Visual fallback only: V8 input-region hash via grim -g (must pair with V1/V2; a focus ring alone changes the region), V15 crop-only OCR tesseract PSM 7, V9 phash/dhash.
+
+### Think time: cut the loop cost
+- Ranked: batched actions (C1), DOM/a11y-first (C2), diff-based observations (C4, 40-50% vision-token cut, OSWright 21x per-step tokens), speculative perception / verify without vision (C5), prompt caching cache-aware ordering (C3, up to 85% latency cut on cached prefixes), OmniParser local grounding (C6, fallback where DOM is unavailable), downscale to token tier (C7), context editing (C8), low effort (C9), adaptive waiting (C10, 11.9s per 50 steps), small-model routing (C11, strongest numbers, needs local-model infra first).
+
+## Independent corroboration: clone2 batch 7 task 2 bench (Firefox 160.0.1, VM)
+
+Measured on this machine, 3 full runs, fixture 66 interactive elements:
+- One-shot all 66 rects: 0.019s median Marionette, 0.006-0.011s BiDi. Per-element rects 16 ms each (55x slower, the trap to avoid). Rects agree across protocols to 5.7e-14 px.
+- 5 pointer clicks from one snapshot: all 5 landed, 3 of 3 runs. Verify by one DOM read: 0.005-0.015s.
+- Selenium 4.53 a11y snapshots (released 2026-11-17): whole page 0.018-0.025s, 83 nodes; semantics from a11y tree, geometry from DOM rect.
+- Hard constraints proved 3 times: Firefox 160 allows exactly one active remote session per browser instance (Marionette blocks BiDi with "Maximum number of active sessions"). Sequence protocols, never open both at once on one browser.
+- UNVERIFIED on the VM: real Zen numbers (Firefox stand-in only), AT-SPI live (no daemons/pyatspi), headed/live-page runs. Laptop re-run against real Zen 1.24.3b is owed.
+
+## The combined design (for council + redteam review)
+
+One design, assembled from the converged rank-1 items (NOT yet reviewed, NOT yet implemented beyond the amend):
+
+1. VISION 1 builds the inventory: one-shot bulk DOM harvest (Zen: Marionette evaluate; Brave/Chrome: CDP DOM + AX tree) returning ref, role, name, rect, center, visibility, focused for every input + button of both clones, formatted as numbered compact text (Mantis pattern), converted to screen coordinates via the C12 layer with an AT-SPI cross-check where available. Vision is the fallback only where no DOM/a11y path exists.
+2. Plan-once program: the whole send sequence (click clone1 input, type, Enter, click clone2 input, type, Enter) emitted as one script from the inventory, with the grouping policy deciding what shares the observation.
+3. Guarded execution: HCU-style live guard re-checks each target's live geometry + focus right before input; stop at first failure, rest not-executed; exactly-once intent per send (no double-send on retry).
+4. Cheap verification inside the run: V1+V2+V3+V4+V11 in one evaluate call per step, V5 hit test before each click, V12 finish gate after each send (sent bubble in thread DOM). No vision between VISION 1 and VISION 2.
+5. VISION 2 checks both messages landed (outcome scoring per M1). Total: exactly 2 visions.
+6. Loop hygiene: prompt caching (history before fresh screenshot), diff-gated re-observation, downscale to token tier, context editing, low effort, adaptive waiting.
+
+## Open items (owned, not skipped, sequenced)
+
+1. AMEND RE-REVIEW OWED: the amend diff (e4082ff..4b7d6ac) has never been re-reviewed. Council + redteam re-review is required before it lands (owner 02:03 gate). Spawning now (see below).
+2. COMBINATION REVIEW OWED: the combined design above has never been reviewed. Same review round covers it.
+3. C12 ADJUDICATION: does the amend's dom_rect_to_image_point (calibration_e2 chain) satisfy the doma11y C12 conversion layer, or is a full window-geometry + DPR + AT-SPI cross-check build still open? Council to judge with evidence.
+4. BASELINE NOT MEASURED: CLICK-BASELINE got 8 polls, lane never freed (ZT-C ZT-10 still running 02:44). Pre-amend baseline is still owed. Installed laptop code still lacks e4082ff, which is GOOD for the baseline (pre-amend code still installed) and must NOT be synced over before the baseline runs. Baseline worker's final report went to the dead coordinator; its log ends at poll 8, no closing entry. A fresh baseline run is needed when the lane frees.
+5. ZT-C STILL RUNNING: ZT-10 in progress (last check 02:44). The live lane is busy. No live driving until ZT-C finishes and the lane is verified free.
+6. last30days -g INSTALL BLOCKED (decision owed to parent): npx skills add hangs on an interactive picker (no TTY) AND clone2 stopped at a Critical Risk flag from the installer's own scanners (Gen, Socket, Snyk) on the skill. The engine IS usable from the existing clone at ~/workspace/last30days-skill (v4.4.0; doma11y + verify crawlers ran it from there, HN-led, Reddit/GitHub/X/YouTube gaps honestly reported). Whether to install -g despite the flag is the parent's call, not mine. The team proceeds with the clone path meanwhile.
+7. CLONE BATCHES: clone1 batch 6 tasks 2+3 done (6c4afef 02:40), task 1 follow-up spawned; clone2 batch 7 tasks 1-3 done (4994543 02:38). Both near idle; next batches to assign after the review round defines the work (independent amend verification is the likely next batch for one clone).
+8. SEQUENCING (owner order, unchanged): (1) research + improve, (2) 2-vision benchmark as acceptance test AFTER the method looks good, (3) only after it passes, whole todolist + all error-file fixes. Nothing skipped.
+
+## 02:52 +07 (t+6m) Review round spawned
+
+Council C1/C2/C3 + redteam RT, in parallel, VM-only, no live driving. Each reviews independently: (a) amend diff e4082ff..4b7d6ac against the 12 consolidated items + owner corrections + bar numbers, (b) the combined design above, (c) C12 adjudication. Verdict GO/AMEND/BLOCK with required fixes. Logs: improvements/worker-click2-c1-review-log.md, c2, c3, rt.
