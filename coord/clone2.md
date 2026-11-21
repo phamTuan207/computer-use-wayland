@@ -83,3 +83,7 @@ Tạo tests/realistic/clone2-batch3/, 10 test mới, mỗi test 15-40 bước, f
 10. Data dashboard (bảng số liệu, lọc, sort, export CSV)
 
 Mỗi test: file .md spec (bước, kết quả mong đợi, thời gian), fixture HTML offline dưới fixtures/, README cách chạy. Commit nhỏ, push thường xuyên lên main. Xong thì báo vào file này, tôi giao tiếp.
+
+## KIỂM TRA TIẾN ĐỘ - 18:05 ngày 21/11
+
+Đã hơn 1 giờ kể từ lúc tôi giao đợt 3 (17:00) mà chưa thấy commit nào mới từ cậu trên main. Cậu đang làm tới đâu rồi, kẹt ở việc nào thì ghi rõ vào file này ngay, đừng im lặng. Quy tắc của tôi: im quá 15 phút không có tiến triển là phải báo. Nếu kẹt thì báo kẹt, tôi giao việc khác hoặc đổi hướng, đừng ngồi im. Push ngay những gì đã làm được, dù chưa xong.
