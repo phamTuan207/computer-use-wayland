@@ -1158,3 +1158,48 @@ council 3 (5 steps, stdout and stderr recorded separately).
   post-login check so a missed window is noticed), and the re-pin
   workflow above. The R3 gate, the wrapper, and the loader repair are
   the parts that are done and proven.
+
+## 23:39-23:53 - F1 status: all code work done and proven; live activation GATED on F3b
+- F3b status at 23:39: the slot is HEALED (restart step 3, Zen PID
+  479395, website-open PASS), Arms A, B, C all PASS (no single factor
+  wedges the slot), Arm D LAUNCHED 23:38:48 and still in flight, no
+  verdict yet. F3b is actively driving the browser. Council-2
+  precondition 1 (F3 sign-off, Zen PID stable, single operator, no
+  parallel driving) is NOT met, so the live activation (plan B) does
+  NOT run now. The activation is ready: the lock-holding wrapper is
+  built, tested, and deployed to the installed tree, the pinned values
+  are in native/visuals.json, and the pre-flight + half-state recovery
+  + crash contingency are written in council-2. When F3b signs off,
+  run: python3 scripts/activate-session-backend.py (installed tree),
+  then the positive proof (council-3, 5 steps).
+- Everything F1 could do without the live activation is DONE and
+  committed (todolist-push, all pushes ls-remote verified):
+  root cause (4 layers, proven live), drift repair, round-1 fix
+  (guard_reply + supervise tail), round-2 fixes (drain settle, drain
+  errors='replace', larger deque/tail, mid-session death naming, R3
+  hyprglass gate, FAKE branches, ExitStack refactor fixing the 3.12
+  compile, BrokerError cause, lock message, envelope assertion,
+  missing-socket naming + test, BrokenPipeError), the lock-holding
+  wrapper, and the sync manifest regression test.
+- Evidence: VM theme tests 35 OK x10 in a row; laptop session + theme
+  71 tests OK in 34.575s; sync tests 9 OK; wrapper tests 3 OK; live
+  negative test round 2 (23:35, fresh observe 50cf368e61ea, RC=1 in
+  0.220s) shows the new named error with runnable remedy on both
+  stdout (JSON envelope) and stderr (tee). The 22:39 negative test
+  showed the round-1 message; the 23:35 test shows the round-2 message.
+- Reviews: council 1, council 2, council 3, redteam, all AMEND, all
+  required items addressed except the two tracked durability
+  follow-ups, which are NOT blocking the activation but ARE required
+  before the fix is declared complete: R10 (the 30s fresh-login gate
+  is single-shot, no retry; add a retry or a post-login check so a
+  missed window is noticed) and the re-pin workflow (run
+  refresh-visuals-manifest.py whenever the optics change; the sync
+  already validates the manifest, so the gap is the manual re-pin
+  step, not a missing check).
+- F1 commits this session (todolist-push): 392bc09 (A), 5b11696 (B1),
+  9b9e0b0 (B2), 26fd1ce (B3), e7913d5 (C1 gate), a152f31 (C2 FAKE +
+  tests), a5b3c02 (council 3), cc6bc9a (D1), ceae45d (D2), b3fac91
+  (E1/E2/E3), e0f3229 (log), ab67173 (wrapper), 0246a69 (sync
+  regression test). Plus the round-1 commits 5033c9d, 708bef0,
+  e84e329, f3e32e5, 2acbb67, 88aeef2, 218b223, e52d477, 86c4a01,
+  7af9658.
