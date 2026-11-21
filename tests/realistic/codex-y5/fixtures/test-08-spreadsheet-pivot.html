@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Grid Ledger</title>
+  <style>
+    *{box-sizing:border-box}body{margin:0;padding:24px;background:#edf2ef;color:#23312a;font:14px system-ui,sans-serif}.app{max-width:1040px;margin:auto;background:white;border:1px solid #cbd8cf;border-radius:10px;overflow:hidden}header{padding:18px 22px;background:#245c45;color:white;display:flex;justify-content:space-between;align-items:center}h1{margin:0;font-size:20px}.stats{color:#d4eee0}.stats b{color:#fff}main{padding:18px;display:grid;grid-template-columns:1fr 1fr;gap:15px}.panel{padding:14px;border:1px solid #d0ddd4;border-radius:8px;background:#fbfdfb}h2{margin:0 0 12px;font-size:16px}.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:8px 0}button,select,input{font:inherit;padding:7px 9px;border:1px solid #aabcae;border-radius:5px;background:white;color:#27372d}button{background:#357858;color:white;border:0;cursor:pointer}button:hover{background:#286548}table{width:100%;border-collapse:collapse}th,td{padding:8px;border-bottom:1px solid #e1e9e2;text-align:left}td input{width:90px}.status{padding:9px;background:#edf5ef;color:#306246;border-radius:5px;min-height:35px}.total{font-weight:700;background:#f3f8f4}.muted{color:#75857a}
+  </style>
+</head>
+<body>
+<div class="app">
+  <header><h1>Grid Ledger</h1><div class="stats">Source rows: <b id="source-row-count">6</b> | Pivot rows: <b id="pivot-row-count">0</b></div></header>
+  <main>
+    <section class="panel"><h2>Source data</h2><table><thead><tr><th>Region</th><th>Category</th><th>Amount</th></tr></thead><tbody>
+      <tr><td>North</td><td>Hardware</td><td><input id="source-north-hardware" value="1200"></td></tr>
+      <tr><td>North</td><td>Software</td><td><input id="source-north-software" value="800"></td></tr>
+      <tr><td>South</td><td>Hardware</td><td><input id="source-south-hardware" value="600"></td></tr>
+      <tr><td>South</td><td>Software</td><td><input id="source-south-software" value="1400"></td></tr>
+      <tr><td>East</td><td>Hardware</td><td><input id="source-east-hardware" value="500"></td></tr>
+      <tr><td>East</td><td>Software</td><td><input id="source-east-software" value="700"></td></tr>
+    </tbody></table></section>
+    <section class="panel"><h2>Pivot settings</h2><button id="btn-create-pivot">Create pivot table</button><div class="row"><label>Group rows <select id="pivot-group-select"><option value="none">Choose field</option><option value="Category">Category</option><option value="Region">Region</option></select></label><label>Values <select id="pivot-value-select"><option value="none">Choose field</option><option value="Amount">Amount</option></select></label></div><div class="row"><label>Summarize by <select id="pivot-aggregation-select"><option value="Count">Count</option><option value="Sum">Sum</option></select></label><label>Region filter <select id="pivot-filter-select"><option value="All">All regions</option><option value="North">North</option><option value="South">South</option><option value="East">East</option></select></label><button id="btn-refresh-pivot">Refresh pivot</button></div><div id="pivot-group-field">None</div><div id="pivot-value-field">None</div><div id="pivot-aggregation">Count</div><div id="pivot-filter-region">All</div><div id="pivot-status" class="status">No pivot table</div><div id="pivot-refresh-status" class="muted">Not refreshed</div></section>
+    <section class="panel"><h2>Pivot results</h2><table><thead><tr><th>Category</th><th>Total</th></tr></thead><tbody><tr><td>Hardware</td><td id="pivot-hardware-total">-</td></tr><tr><td>Software</td><td id="pivot-software-total">-</td></tr><tr class="total"><td>Grand total</td><td id="pivot-grand-total">-</td></tr></tbody></table></section>
+  </main>
+</div>
+<script>
+  const source = [
+    { region: 'North', category: 'Hardware', selector: '#source-north-hardware' },
+    { region: 'North', category: 'Software', selector: '#source-north-software' },
+    { region: 'South', category: 'Hardware', selector: '#source-south-hardware' },
+    { region: 'South', category: 'Software', selector: '#source-south-software' },
+    { region: 'East', category: 'Hardware', selector: '#source-east-hardware' },
+    { region: 'East', category: 'Software', selector: '#source-east-software' },
+  ];
+  let created = false;
+  const el = (selector) => document.querySelector(selector);
+  function refresh() {
+    if (!created) return;
+    const group = el('#pivot-group-select').value;
+    const valueField = el('#pivot-value-select').value;
+    const aggregation = el('#pivot-aggregation-select').value;
+    const region = el('#pivot-filter-select').value;
+    el('#pivot-group-field').textContent = group;
+    el('#pivot-value-field').textContent = valueField;
+    el('#pivot-aggregation').textContent = aggregation;
+    el('#pivot-filter-region').textContent = region;
+    const rows = source.filter((row) => region === 'All' || row.region === region);
+    const totals = { Hardware: 0, Software: 0 };
+    const counts = { Hardware: 0, Software: 0 };
+    for (const row of rows) {
+      counts[row.category] += 1;
+      totals[row.category] += Number(el(row.selector).value);
+    }
+    const result = aggregation === 'Count' ? counts : totals;
+    el('#pivot-hardware-total').textContent = String(result.Hardware);
+    el('#pivot-software-total').textContent = String(result.Software);
+    el('#pivot-grand-total').textContent = String(result.Hardware + result.Software);
+    el('#pivot-row-count').textContent = '2';
+    el('#pivot-refresh-status').textContent = `Pivot refreshed from ${source.length} rows`;
+    el('#pivot-status').textContent = 'Pivot table ready';
+  }
+  el('#btn-create-pivot').onclick = () => {
+    created = true;
+    el('#pivot-status').textContent = 'Pivot created from 6 rows';
+  };
+  el('#btn-refresh-pivot').onclick = refresh;
+  for (const row of source) el(row.selector).addEventListener('input', () => {});
+</script>
+</body>
+</html>

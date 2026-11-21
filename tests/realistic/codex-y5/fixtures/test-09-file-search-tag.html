@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Cabinet File Manager</title>
+  <style>
+    *{box-sizing:border-box}body{margin:0;padding:24px;background:#f3f1ed;color:#332f29;font:14px system-ui,sans-serif}.app{max-width:1050px;margin:auto;background:white;border:1px solid #ddd7cc;border-radius:10px;overflow:hidden}header{padding:17px 21px;background:#5e584a;color:white;display:flex;justify-content:space-between;align-items:center}h1{margin:0;font-size:20px}.stats{color:#e7e1d5}.stats b{color:#fff}main{padding:18px}.toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:12px;background:#f8f6f2;border:1px solid #e3ded4;border-radius:8px}.toolbar input,.toolbar select{padding:8px;font:inherit;border:1px solid #bfb8aa;border-radius:5px}button{padding:8px 11px;font:inherit;color:white;background:#71674f;border:0;border-radius:5px;cursor:pointer}button:hover{background:#5c523c}.panel{margin-top:14px;padding:14px;border:1px solid #ded9cf;border-radius:8px}.file-row{display:grid;grid-template-columns:28px 1fr 100px 100px;align-items:center;gap:10px;padding:10px;border-bottom:1px solid #e9e5dd}.file-row small{color:#766f62}.status{padding:9px;background:#f3f1e9;color:#62583d;border-radius:5px;min-height:36px}.modal{padding:12px;background:#faf8f1;border:2px solid #aca17f;border-radius:7px;margin-top:10px}.hidden{display:none}.tag{padding:2px 6px;background:#e6f0e9;border-radius:4px;color:#356349}
+  </style>
+</head>
+<body>
+<div class="app">
+  <header><h1>Cabinet File Manager</h1><div>Folder: <b id="active-folder">Root</b> | Visible: <b id="visible-file-count">6</b> | Selected: <b id="selected-file-count">0</b></div></header>
+  <main>
+    <div class="toolbar"><input id="file-search-input" placeholder="search file names"><button id="btn-search-files">Search</button><button id="btn-filter-review">Filter tag: Review</button><button id="btn-clear-tag-filter">Clear tag filter</button><div>Tag filter: <b id="active-tag-filter">All</b></div></div>
+    <section class="panel"><h2>Files</h2><div id="file-list"></div><div id="file-action-status" class="status">No file action yet</div>
+      <div class="toolbar"><button id="btn-open-tag-panel">Add tag to selected</button><input id="rename-prefix-input" placeholder="rename prefix"><button id="btn-rename-selected">Rename selected set</button><select id="move-target-folder"><option value="Root">Root</option><option value="Reviewed">Reviewed</option></select><button id="btn-move-selected">Move selected set</button></div>
+      <div id="tag-panel" class="modal" hidden><label>Tag <input id="tag-name-input" placeholder="tag name"></label><button id="btn-apply-tag">Apply tag</button></div>
+      <button id="btn-select-visible-files" style="margin-top:10px">Select visible files</button>
+    </section>
+  </main>
+</div>
+<script>
+  const files = [
+    { id: 'checklist', name: 'release-checklist.md', folder: 'Root', tags: [] },
+    { id: 'plan', name: 'release-plan.md', folder: 'Root', tags: [] },
+    { id: 'artwork', name: 'release-artwork.png', folder: 'Root', tags: [] },
+    { id: 'budget', name: 'budget-draft.csv', folder: 'Root', tags: [] },
+    { id: 'meeting', name: 'meeting-notes.txt', folder: 'Root', tags: [] },
+    { id: 'archive', name: 'archive-2025.zip', folder: 'Root', tags: [] },
+  ];
+  let activeFolder = 'Root';
+  let tagFilter = 'All';
+  let searchText = '';
+  const selected = new Set();
+  const el = (selector) => document.querySelector(selector);
+  function visibleFiles() {
+    return files.filter((file) => file.folder === activeFolder && file.name.toLowerCase().includes(searchText.toLowerCase()) && (tagFilter === 'All' || file.tags.includes(tagFilter)));
+  }
+  function render() {
+    const visible = visibleFiles();
+    el('#active-folder').textContent = activeFolder;
+    el('#active-tag-filter').textContent = tagFilter;
+    el('#visible-file-count').textContent = String(visible.length);
+    el('#selected-file-count').textContent = String(selected.size);
+    el('#file-list').innerHTML = visible.map((file) => `<div class="file-row" id="file-row-${file.id}"><input id="check-file-${file.id}" type="checkbox" ${selected.has(file.id) ? 'checked' : ''}><div><b id="file-name-${file.id}">${file.name}</b><small>Folder: <span id="file-location-${file.id}">${file.folder}</span></small></div><div id="tag-${file.id}" class="tag">${file.tags.join(', ') || 'No tag'}</div><span>${file.id}</span></div>`).join('') || '<p>No matching files</p>';
+    for (const file of visible) el(`#check-file-${file.id}`).onchange = (event) => {
+      if (event.target.checked) selected.add(file.id); else selected.delete(file.id);
+      render();
+    };
+  }
+  el('#btn-search-files').onclick = () => {
+    searchText = el('#file-search-input').value.trim();
+    el('#file-action-status').textContent = `Search: ${searchText || 'All files'}`;
+    render();
+  };
+  el('#btn-filter-review').onclick = () => { tagFilter = 'Review'; render(); };
+  el('#btn-clear-tag-filter').onclick = () => { tagFilter = 'All'; render(); };
+  el('#btn-open-tag-panel').onclick = () => { el('#tag-panel').hidden = false; };
+  el('#btn-apply-tag').onclick = () => {
+    const tag = el('#tag-name-input').value.trim();
+    if (!tag || !selected.size) return;
+    for (const file of files) if (selected.has(file.id) && !file.tags.includes(tag)) file.tags.push(tag);
+    el('#tag-panel').hidden = true;
+    el('#file-action-status').textContent = `Tagged ${selected.size} files with ${tag}`;
+    render();
+  };
+  el('#btn-select-visible-files').onclick = () => {
+    selected.clear();
+    for (const file of visibleFiles()) selected.add(file.id);
+    el('#file-action-status').textContent = `Selected ${selected.size} visible files`;
+    render();
+  };
+  el('#btn-rename-selected').onclick = () => {
+    const prefix = el('#rename-prefix-input').value.trim();
+    if (!prefix || !selected.size) return;
+    for (const file of files) if (selected.has(file.id)) file.name = `${prefix}${file.name}`;
+    el('#file-action-status').textContent = `Renamed ${selected.size} files with prefix ${prefix}`;
+    render();
+  };
+  el('#btn-move-selected').onclick = () => {
+    const target = el('#move-target-folder').value;
+    if (!selected.size) return;
+    for (const file of files) if (selected.has(file.id)) file.folder = target;
+    activeFolder = target;
+    el('#file-action-status').textContent = `Moved ${selected.size} tagged files to ${target}`;
+    render();
+  };
+  render();
+</script>
+</body>
+</html>
