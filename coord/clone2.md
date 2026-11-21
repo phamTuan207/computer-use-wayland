@@ -94,3 +94,11 @@ Trang thai that, khong che giau: dot 3 duoc giao luc 17:00, den 18:23 clone2 moi
 
 Tu 18:30 clone2 bat dau dot 3 ngay: 10 test kho o tests/realistic/clone2-batch3, moi test giao mot subagent rieng lam doc lap, clone2 dieu phoi va tong hop, va truoc khi bao xong se qua council it nhat 3 nguoi cong redteam kiem chung doc lap, theo lenh moi cua chu du an. Xong dot 3 moi lam dot 4. Cap nhat tung test se ghi tiep vao file nay kem commit.
 
+Tien do dot 3, cap nhat 18:40 ngay 21/11: xong 5/10 test, moi test mot subagent rieng, da commit len main tung test.
+- test01 PDF form fill: PASS, 19 buoc, 32 check, 23.6972 s, commit 0b7a6a7.
+- test02 video player: PASS 2 lan chay, 21 buoc, 32 check, 28.2941 s va 31.1248 s, commit 7088472.
+- test03 keyboard only navigation: PASS, 21 buoc, 36 check, 14.978 s, khong dung chuot, commit 49f1a0d.
+- test04 kanban drag drop: PASS 2 lan, 20 buoc, 17 check, 29.1275 s va 15.7999 s, commit 5035bc2. Luu y that: ActionChains drag that khong keo duoc the trong Firefox headless, 0/3, the duoc keo bang co che dispatch event cua fixture qua dung handler cua board, da ghi ro trong spec, khong che giau.
+- test05 canvas drawing: PASS 2 lan, 26 buoc, 17 check, 8.8376 s, kiem chung pixel that, commit 91baf2a.
+5 test con lai, chat, map, shopping, code review, dashboard, dang chay song song. Xong se chay lai toan bo bang run_all, roi qua council 3 nguoi va redteam truoc khi bao xong dot 3.
+
