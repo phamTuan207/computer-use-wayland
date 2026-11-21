@@ -2296,3 +2296,22 @@ C2-9/C2-10 INFO parts (covered by item 14).
   visible in raw grim, token match, indicator PID 513273);
   F2b spawned 00:12 for the F2 phase; ZT-B waits after F2b.
   Not Y14b's work, noted for the record.
+
+### Fix pass 7 hash record
+
+- Fix pass 7 commit: 65d669b5efd3be927d64e2d516dd8258a310d34c
+  (todolist-push, ls-remote verified, ANCESTOR_OK).
+- run_batch3.py at 65d669b: git blob
+  8df578c7013fc096a30470667ae57bf994884280, md5
+  0d98342e57c44464752cf08715ac3861.
+- Plan md5 line pins these fix-pass-7 values IN the fix commit
+  (per C5-4). Parent fix-pass-6 bytes: blob 261f09ae, md5
+  fac96935, commit d552f4d.
+- Fix7 probe: tests/realistic/y14b-fix7-probe.py, committed in
+  65d669b, 86/86 PASS.
+- Redteam fix-pass-6 paper: still UNCOMMITTED in the working
+  tree (improvements/worker-y14b-fix6-redteam.md), landing
+  blocked by the execution-risk check; parent action needed
+  (confirm with the user, then add/commit/push that one file
+  only). It is NOT in 65d669b and must not be swept into
+  another worker's commit by `git add -A`.
