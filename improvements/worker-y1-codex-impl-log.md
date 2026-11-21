@@ -142,3 +142,38 @@ Phase D timing supplement, exact reruns on 2026-11-21 Asia/Ho_Chi_Minh, 18:55:22
 | 18:55:45 to 18:55:45, 0.006s | One-off Python assertions against the C4/C5 runbook lines and C7 missing-narration rule | All 7 assertions passed, exit 0. |
 
 The reruns confirm the Phase D verdict above. At 18:55:51, `git diff --check` passed and only this log was modified. Phase D log commit and push started at 18:55:51, elapsed +54:08.
+
+## Phase E: live verification of P1-P4
+
+The live setup attempt was made after the Phase D log push. Its exact command-start second was not captured. Failure review completed 2026-11-21 19:00:59 Asia/Ho_Chi_Minh, elapsed +59:16 from the approximate setup origin. This timestamp gap is recorded rather than reconstructed.
+
+Attempted command: `computer-use session -- computer-use session-driver`.
+
+Exact returned output:
+
+```text
+Expecting value: line 1 column 1 (char 0)
+{"ok": false, "error": "session guardian startup failed"}
+```
+
+Exit code: 1. The failure occurred before a session was available. The parent shell had `CU_CODE_EXEC` disabled and no `CU_SESSION_TOKEN`; the session-scoped enablement was never applied. No kitty window was launched and no `cu.py code-exec --snippet` command ran. P1, P2, P3, and P4 therefore have no live run time or live outcome, and their manifest verification dates were not changed. Per the owner's stop-on-phase-failure rule, the session start was not retried and no alternate input path was used.
+
+Cleanup checks after the failure: `computer-use status` returned `{"ok":true,"cancelled":false}`; process checks found zero `computer-use`, `cursor_session.py`, `scripts/cu.py session`, and `native/indicator` processes; the exact `speed-pick1-term` window count was zero. No test terminal was created and no desktop or target file was acted on. Before attempting setup, `/tmp/hoc-ky-2` and `/tmp/y-tuong.txt` were absent.
+
+Phase E verdict: NOT RUN because the computer-use session guardian failed to start. Exact open reason: `session guardian startup failed` from the command above. Stop here per the owner's instruction.
+
+## Final summary
+
+Commits pushed to `origin y1-snippets` before this final log record: `87cd34f`, `84b88bb`, `cff27b2`, `714e4f9`, `76fa20b`, `c58c98f`, and `5e188cf`. This final summary is itself committed and pushed after these entries; its commit id is reported in the final response.
+
+| Phase | Full suite before and after | Phase checks and outcome |
+| --- | --- | --- |
+| A | No captured pre-phase baseline; after A: 1530 tests, 2 skipped, OK. | Focused executor checks: 81 tests, OK. PASS. |
+| B | Before B: 1530 tests, 2 skipped; after B: 1549 tests, 2 skipped, OK. | Registry focused checks: 100 tests, OK; four fake snippet runs passed. PASS. |
+| C | Before C: 1549 tests, 2 skipped; no full suite after C. | `tests.test_cursor_session`: 33 tests, OK on Python 3.14.10. VM Python 3.12.3 import check remains with Y1. PASS on laptop. |
+| D | Before D: 1549 tests, 2 skipped; no full suite after D. | C1 4, C2 5, C3 6, brief C6/C7 5, cleanup C8 5 tests passed. C4, C5, and an extra C7 assertion passed. C1-C8 PASS. |
+| E | Before E: last full suite had 1549 tests, 2 skipped; no suite after E. | Live P1-P4 not run because session guardian startup failed. |
+
+Part C verdict: C1 PASS, C2 PASS, C3 PASS, C4 PASS, C5 PASS, C6 PASS, C7 PASS, and C8 PASS, with the exact commands and runbook assertions recorded above.
+
+Remaining open items: live P1-P4 verification needs a working computer-use session launcher; Y1 still owns the Python 3.12.3 VM import check; the Phase B notes retain the pre-action file-state API limitation and lack of hard C-level preemption/memory limits. No result is claimed for the live snippets or VM check.
