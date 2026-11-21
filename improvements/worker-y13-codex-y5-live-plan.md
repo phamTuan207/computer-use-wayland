@@ -78,14 +78,16 @@ Adopted, by finding:
   manifest verification FIRST in main(); WD-timeout match wording is
   "timed out" / TimeoutError / URLError.
 - C3 F11 / RT H4/H7: mid-test hidden-body reclassification narrowed
-  to TZ_STUCK_V1 / OTHER_HIDDEN only; FIXTURE_FAILURE and UNKNOWN
-  stay live failures. AND the rule is implemented, not just stated:
-  on ANY step failure, main runs diagnose_body once before
-  classifying; TZ_STUCK_V1 / OTHER_HIDDEN reclassifies to INFRA and
-  runs the ladder via ensure_visible; VISIBLE means the live failure
-  stands. For test-10 reload steps: after the reload click, run
-  ensure_visible (ladder), not just diagnose_body, because a reload
-  is a new document.
+  to TZ_STUCK_V1 / OTHER_HIDDEN only; FIXTURE_FAILURE splits (a
+  positively proven no-body document is fixture-unavailable, a
+  diagnose transport error is INFRA; see the mid-test rule below)
+  and UNKNOWN stays a live failure. AND the rule is implemented, not
+  just stated: on ANY step failure, main runs diagnose_body once
+  before classifying; TZ_STUCK_V1 / OTHER_HIDDEN reclassifies to
+  INFRA and runs the ladder via ensure_visible; VISIBLE means the
+  live failure stands. For test-10 reload steps: after the reload
+  click, run ensure_visible (ladder), not just diagnose_body,
+  because a reload is a new document.
 - C3 G1: guard outcomes, all three: fresh-fail (expected): proceed,
   record the untouched failure list. fresh-pass: FAIL the test as a
   suite defect. fresh-error / fresh-timeout: FAIL the test as
@@ -374,12 +376,14 @@ autonomy per the Lauren Tan direction. Work directly with Muse.
   once before classifying; TZ_STUCK_V1 / OTHER_HIDDEN reclassifies
   to INFRA and runs the ladder via ensure_visible; VISIBLE means the
   live failure stands; UNKNOWN stays a live failure. FIXTURE_FAILURE
-  splits (redteam re-review H4): a positively proven no-body
-  document (a snapshot with hasBody false and readyState complete)
-  is fixture-unavailable; a diagnose transport error (eval_error
-  present, or no snapshots) is INFRA. Test-05 has no mid-test
-  navigation, so its exposure is load-time plus this safety net; no
-  general mid-test INFRA claim is made.
+  splits (redteam re-review H4, as fixed by Y13f): a positively proven
+  no-body document (no eval_error, a snapshot with hasBody false and
+  readyState complete, no snapshot with a body) is fixture-unavailable;
+  a diagnose transport error (eval_error present, or no snapshots) is
+  INFRA. A wall-cap trip (WallCapExceeded) is a live failure directly,
+  classified before diagnose, never INFRA, never re-run. Test-05 has
+  no mid-test navigation, so its exposure is load-time plus this safety
+  net; no general mid-test INFRA claim is made.
 - A re-run is allowed ONLY for a test proven infra-blocked, max ONE
   per test, immediately after the failed attempt, logged with the
   attempt field; attempt-1 summary printed before the re-run;
@@ -471,25 +475,37 @@ autonomy per the Lauren Tan direction. Work directly with Muse.
   proof run, then Y6c runs the Wayland-nested probe. My live run goes
   AFTER Y6c reports completion. Y14 (batch-3 live) queues AFTER Y13.
 - Y6b prep is DONE (commit c8bee88); the nested run itself is done by
-  a NEW agent Y6c. Y6c completion marker, exact: a todolist-push
-  commit whose message matches
-  ^Y6c.*(nested|Wayland).*(complete|DONE|verdict|REPRODUCED|
-  NOT REPRODUCED) AND that touches an improvements/worker-y6c-*.md
-  file, PLUS Muse's go order. A progress commit is NEVER a completion
-  marker. An ABORT marker (message matching ^Y6c.*(ABORT|abort))
-  frees the slot only after the launch-time live checks pass.
+  a NEW agent Y6c. Y6c completion marker, exact (Y13f H3, tightened):
+  a todolist-push commit whose SUBJECT matches
+  ^Y6c.*(nested|Wayland).*(run.*(DONE|complete)|verdict.*(REPRODUCED|
+  NOT REPRODUCED|DONE|complete)) AND that touches an
+  improvements/worker-y6c-*.md file, AND whose subject contains no
+  "harness" (harness-ready is prep, never completion), AND that is
+  NEWER than the newest abort marker on the branch. Subjects are
+  matched in Python, never via git log --grep (which matches body
+  lines too). An ABORT marker (subject matching ^Y6c.*(ABORT|abort))
+  newer than the newest completion refuses. PLUS Muse's go order.
+  A progress commit is NEVER a completion marker. --repo is REQUIRED
+  for the launcher (no operator-assertion fallback); the launcher
+  also compares the ship manifest md5 against the committed manifest
+  from git and refuses a stale ship.
 - Launch-time checks, in ORDER: (1) git fetch + confirm the exact
-  Y6c marker; (2) runner-quiet process check BEFORE flock (no
-  run_*.py process other than self, no hand_drive_e1.py, no Codex
-  executor process driving a browser, no live geckodriver with a live
-  parent); (3) predecessor ports free by TCP connect (Y9 8769/4449,
-  Y8b 8767/4451; Y11b ports once its plan names them; Y6c nested uses
-  no TCP ports, so for Y6c the process check + marker + go order are
-  load-bearing); (4) Muse's go order, fresh, at run time; (5) flock
-  -w 60 on zen_dom.lock, timeout ABORTS the launch and reports, never
-  waits silently; (6) preflight (fail-closed). NEGATIVE CONTROL: Y8b
-  is live now (arm A launched 19:17:04), so any launch-time check run
-  today MUST fail.
+  Y6c marker (subject-only, freshness rule above); (2) ship manifest
+  md5 vs the committed manifest; (3) runner-quiet process check
+  BEFORE flock (argv-tokenized: no run_*.py / run-nested* /
+  hand_drive_e1.py process other than self, no Codex executor
+  process driving a browser -- a codex cmdline mentioning the E1
+  driver, a geckodriver, a browser profile path, or Marionette
+  refuses, a plain codex process warns only -- no live geckodriver
+  with a live parent); (4) predecessor ports free by TCP connect
+  (Y9 8769/4449, Y8b 8767/4451, Y4d 8768/4448, and the 8770/4450 pair
+  from Y14's gate range; Y11b ports once its plan names them; Y6c
+  nested uses no TCP ports, so for Y6c the process check + marker +
+  go order are load-bearing); (5) Muse's go order, fresh, at run
+  time; (6) flock -w 60 on zen_dom.lock, timeout ABORTS the launch
+  and reports, never waits silently; (7) preflight (fail-closed).
+  NEGATIVE CONTROL: Y8b is live now (arm A launched 19:17:04), so
+  any launch-time check run today MUST fail.
 - Poll cadence every 15 minutes at most; timeout 4 hours without a
   Y6c completion marker, then report to Muse with the queue state
   instead of launching. Never wait silently.
@@ -530,6 +546,60 @@ autonomy per the Lauren Tan direction. Work directly with Muse.
   1e3901c and run_agy_y2.py is required before any live driving.
   No live driving until the re-review passes or its findings are
   fixed and re-verified.
+
+## Y13f amendments (Y13r re-review BLOCK fix, 2026-11-21)
+
+- Manifest regen (F1): the manifest is regenerated by script, not by
+  hand, after ANY runner edit:
+  `python3 tests/realistic/regen_codex_y5_manifest.py`
+  (and `--stage /tmp/worker-y13-server` to assemble the ship, delete
+  __pycache__, and run --verify-manifest on the staged bytes).
+  The manifest must be committed + pushed before the launcher will
+  accept a ship staged from it (the launcher compares the ship
+  manifest md5 against the COMMITTED manifest from git).
+- Ship integrity (H1): three layers. (1) sys.dont_write_bytecode
+  before the run_live import + PYTHONDONTWRITEBYTECODE=1 in the
+  launcher env, so the ship never writes .pyc. (2) A pre-import scan
+  at the top of run_codex_y5.py refuses any .pyc or symlink under
+  the ship dir with exit 2 BEFORE run_live loads (the manifest
+  check in main() runs after the import, so it alone cannot stop a
+  forged .pyc from executing). (3) _verify_manifest refuses any
+  .pyc / __pycache__ dir and any symlink or non-manifest-prefix
+  directory. Exemption, narrow: the .pyc files of the two __main__
+  entry points (run_codex_y5.py, launch_y13.py) only -- CPython
+  writes them during get_code before dont_write_bytecode is set, so
+  a plain module import would otherwise refuse its own cache file;
+  they cannot execute in production (both run as __main__).
+  run_live.py's .pyc is NEVER exempt. Probes importing the runner
+  must use PYTHONDONTWRITEBYTECODE=1 or a clean extraction, and
+  must never run `python3 -m py_compile` on the ship files (it
+  writes .pyc into the repo dir).
+- Process check (H2, SHARED PATTERN -- read this if you own another
+  runner): the old regex r"(^|/)run_[^/\s]*\.py" misses every
+  bare-relative launch (/proc cmdlines are NUL-separated) and every
+  flock -c / shell -c form, and false-positives on a mere path
+  mention. The fix, identical in run_codex_y5.py (preflight) and
+  launch_y13.py: tokenize argv on NUL, split -c arguments on
+  whitespace, and require the script token to be argv[0], follow a
+  python interpreter token, be the first word of a -c string, follow
+  a python flag with a python token earlier, or (non-.py run-nested
+  scripts only) follow bash/sh. Script basenames: run_*.py,
+  run-nested*, hand_drive_e1.py. Y14 MUST apply this same fix to
+  run_batch3.py when it re-stages (Y14 files were NOT edited here);
+  Y9's run_agy_y2.py and run_live.py's preflight carry the same old
+  pattern. See improvements/worker-y13f-fix-log.md for the exact
+  code and the probe matrix.
+- Y6c gate (H3): see the tightened marker + freshness rule in the
+  Slot/queue section above. NOTE (21/11 ~20:55 +07): Y6c ended NO
+  VERDICT (commit 5a2b69d, BLOCKED at launch: F0 --socket, F1
+  hyprglass ABI, U5b wrong log); that commit matches NEITHER the
+  completion NOR the abort pattern, so the gate refuses until Y6d's
+  rebuild run produces a fresh marker (or Muse directs otherwise).
+  Do NOT weaken the gate to work around this.
+- Wall cap (M1): a trip raises WallCapExceeded; main() classifies it
+  as a live failure BEFORE the diagnose block, never INFRA, never a
+  re-run. WD timeouts match on f"{type(exc).__name__}: {exc}" (F8),
+  so bare TimeoutError/URLError raises match too.
 
 ## Deliverables
 - improvements/worker-y13-codex-y5-live-plan.md (this file, v2) +
