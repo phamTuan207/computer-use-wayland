@@ -807,3 +807,23 @@ council 3 (5 steps, stdout and stderr recorded separately).
 - 22:53: VM test evidence: python3 -m unittest tests.test_cursor_theme,
   35 tests OK in 0.245s (34 + 1 new). Run once; the 10x green re-run per
   C3-6 comes after the drop-case flake fix.
+
+## 22:54-22:55 - Round 2 commit B1: drain pipe errors='replace', deque 200, tail 4000 (R5 + R7)
+- 22:54: edited scripts/cursor_session.py supervise. Popen now passes
+  errors='replace' (R5), so one non-UTF8 byte on guardian stderr no longer
+  kills the drain thread and loses the tail. guard_errors deque maxlen 32 to
+  200 and the startup tail cut 1200 to 4000 chars (R7), so a long traceback
+  plus finally cleanup lines no longer push the root cause out of the window.
+- 22:54: R5 probe evidence (/tmp/f1-r5-probe.py, VM python 3.12). A child
+  writing b'cause: \xff\n' to stderr: with errors=None the reader raises
+  UnicodeDecodeError and the tail is lost; with errors='replace' the line is
+  delivered as 'cause: U+FFFD'. The first probe attempt was inconclusive
+  (shell quoting ate the child code, the child printed a traceback instead);
+  the second probe, written to a file to avoid quoting, proves the fix.
+  py_compile scripts/cursor_session.py OK. grep confirms the three lines
+  (228 errors='replace', 237 maxlen=200, 250 detail[-4000:]).
+- 22:55: owner note (fleet, not F1): clone2-watch cron set up (15m). If
+  clone2 is silent over 15m, Muse checks workspace 2, approves what it needs
+  or prompts it to keep working, then switches back to workspace 1. Approve
+  or nudge only for clone2 work, never money, data deletion, or PII. No
+  effect on F1; F1 does no live driving in this round.

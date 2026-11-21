@@ -225,7 +225,7 @@ def supervise(env, argv):
             previous[sig]=signal.signal(sig,interrupted)
         guard=subprocess.Popen([sys.executable,str(Path(__file__).resolve()),'guard',str(read_fd),token],
                                env=env,pass_fds=(read_fd,),stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,
-                               start_new_session=True)
+                               errors='replace',start_new_session=True)
         os.close(read_fd);read_fd=None
         # The guardian's stderr carries the real startup failure; drain it on
         # a daemon thread so the pipe can never block the guardian, and keep
@@ -234,7 +234,7 @@ def supervise(env, argv):
         # line to our own stderr as it arrives, so warnings (for example the
         # Escape-binding warning) stay visible exactly as when the guardian
         # inherited our stderr.
-        guard_errors=deque(maxlen=32)
+        guard_errors=deque(maxlen=200)
         def _drain(stream, sink):
             try:
                 for line in stream:
@@ -247,7 +247,7 @@ def supervise(env, argv):
         ready,_,_=select.select([guard.stdout],[],[],15)
         if not ready or guard.stdout.readline().strip()!='ready':
             detail=''.join(guard_errors).strip()
-            raise RuntimeError('session guardian startup failed' + (': '+detail[-1200:] if detail else ''))
+            raise RuntimeError('session guardian startup failed' + (': '+detail[-4000:] if detail else ''))
         driver_env=env.copy();driver_env['CU_SESSION_TOKEN']=token
         # Child cannot execute input before the guardian owns its process group.
         gate_read,gate_write=os.pipe()
