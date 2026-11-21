@@ -52,21 +52,26 @@ Session scripts: `~/workspace/b7t1/start_session.sh`,
 `stop_session.sh`. One setup finding: XDG_RUNTIME_DIR must be
 exported BEFORE dbus-launch, so the D-Bus-activated
 at-spi-bus-launcher puts the a11y bus socket at
-$XDG_RUNTIME_DIR/at-spi/bus. Exported after dbus-launch, the
-launcher falls back to the shared ~/.cache/at-spi/bus path, and a
-second concurrent session on this machine contests the same socket:
-the probe failed with "Couldn't register with accessibility bus"
-until the order was fixed. The wrapper in the repo has the same
-ordering and works only when a single session runs.
+$XDG_RUNTIME_DIR/at-spi/bus. In this G29 session the probe failed
+with "Couldn't register with accessibility bus" until the order was
+fixed, then passed. The repo wrapper `tests/run_atspi_session.sh`
+has the same broken ordering, export after dbus-launch (dbus-launch
+at line 133, export at line 141). Whether the wrapper also fails
+with two concurrent sessions was not tested on the wrapper itself:
+council 3 found the fallback sockets are display-suffixed
+(bus_97, bus_98 under ~/.cache/at-spi/) and a second session
+registered fine, so the shared-socket contention did not reproduce
+there. The wrapper's two-session behavior is untested, not proven
+to work only with a single session.
 
 Address bar node: role "combo box", name "Search with Google or
 enter address", inside the "Navigation" toolbar. Extents moved
 between runs as the chrome settled ([268, 48, 652, 32], then
 [294, 48, 650, 32], then [294, 48, 626, 32]); the probe re-reads
 the node fresh before every experiment, so every click used
-current coordinates. First-run spotlight dialog was dismissed first
-(AT-SPI dismiss, "Continue", 0.2 ms); before that the bar is not
-in the tree at all.
+current coordinates. No spotlight-dialog dismiss step is recorded
+in the probe code, the session starter, or the log; the log starts
+with find_app and find_urlbar succeeding.
 
 Probe: `~/workspace/b7t1/g29_probe.py`, log
 `~/workspace/b7t1/g29-log.jsonl`. Each experiment: clear the bar
@@ -96,7 +101,7 @@ markers E1/E2 shared "g29t" by a probe bug, fixed before run 2):
 - E4 Ctrl+L (29.3 ms): PASS (control). Bar focused, typed "g29l"
   read back as "g29l".
 
-Run 2 (unique markers, same session, 7646 ms wall): E1 left PASS
+Run 2 (unique markers, same session, 7516.5 ms wall): E1 left PASS
 ("g29a" landed), E2 right FAIL ("g29b" did not land, context menu
 present), E3 AT-SPI PASS ("g29c" landed), E4 Ctrl+L PASS ("g29d"
 landed). Same result twice.
@@ -183,3 +188,32 @@ suite passes: 20 tests OK in 1.764 s (1 skipped).
 - Probe: ~/workspace/b7t1/g29_probe.py, ~/workspace/b7t1/g29_discover.py
 - Session: ~/workspace/b7t1/start_session.sh, ~/workspace/b7t1/stop_session.sh
 - Log: ~/workspace/b7t1/g29-log.jsonl (both probe runs, JSON lines)
+
+## Corrections after the batch 7 redteam review
+
+Applied by the batch 7 fix agent, each recomputed first-hand from
+the saved log (g29-log.jsonl) and the probe code.
+
+- W6: run 2 wall "7646 ms" was wrong; g29-log.jsonl records
+  probe_done total_ms 7516.5 for run 2 (run 1 matches exactly at
+  7476.5 ms). Fixed in the run 2 header.
+- U1: the earlier draft said the first-run spotlight dialog was
+  dismissed with "(AT-SPI dismiss, 'Continue', 0.2 ms)". No such
+  step exists in the evidence: no dismiss step appears in the probe
+  code, the session starter, or the log, and the only "0.2" in the
+  probe code is time.sleep(0.2), which is 0.2 seconds in
+  clear_urlbar, not a dismiss timing. The parenthetical is removed
+  and the sentence now states what the log shows (it starts with
+  find_app and find_urlbar succeeding). The context-menu dismiss in
+  the probe is a different step (Escape key, logged as
+  E2_menu_dismissed) and is unaffected.
+- U6: the XDG setup finding is reworded. What was observed: in this
+  G29 session the probe failed with "Couldn't register with
+  accessibility bus" until XDG_RUNTIME_DIR was exported before
+  dbus-launch, then passed. What was not tested: the repo wrapper
+  with two concurrent sessions, so "works only when a single
+  session runs" is dropped. The ambiguous "the same ordering" now
+  states the ordering explicitly (the wrapper exports after
+  dbus-launch, lines 133 then 141, i.e. the broken order). Council 3's
+  qualification is added: the fallback sockets are display-suffixed
+  (bus_97, bus_98), and a second session registered fine there.
