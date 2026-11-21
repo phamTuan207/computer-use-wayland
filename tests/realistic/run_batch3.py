@@ -2178,6 +2178,11 @@ def run_one(test_id, base_url, metrics=None):
     # starts after the preflight is caught before this test drives
     # Zen. A hit is recorded as INFRA (one retry + breaker count),
     # not as a fixture failure; the test is not driven at all.
+    # Note (redteam F7): a runner starting MID-TEST, after this
+    # re-scan and during the test's WD session, is not caught until
+    # the next test's re-scan. The window is one test's duration;
+    # the other runner's own gate is the backstop for documented
+    # launch forms.
     hits = _scan_other_runners()
     if hits:
         r.failures.append(
@@ -2261,28 +2266,46 @@ def _is_runner_cmdline(cmdline):
     -u/-m flags, flock -c, shell -c), to be the first word of a -c
     string, or (for non-.py run-nested scripts only) to follow
     bash/sh. A path mention after md5sum/cat/git never matches.
-    Module form (Council 2 Fix 1, redteam H1): "python3 -m
-    run_batch3" has no .py suffix, so it is accepted as a bare
-    run_* / hand_drive_e1 token after -m. -c import form (redteam
-    H1): "python3 -c 'import run_batch3; ...'" is accepted when a
-    bare runner module name follows "import" or "from" in the -c
-    words. Known residual limitations, recorded not hidden:
-    double-nested -c quoting (flock -c "bash -c 'python3
-    run_foo.py'"), runpy.run_path inside -c, extensionless script
-    tokens ("python3 run_batch3"), direct .pyc execution, renamed
-    copies, shebang renamed copies, and spoofed argv[0] all miss;
-    none is a launch form in use, and the renamed/spoofed forms
-    are adversarial, outside this gate's accidental-collision
-    threat model. A flock lock held for the whole run would close
-    those shapes too, but only fleet-wide (every runner must take
-    the same lock; run_live.py does not today), so that is a
-    Muse-level fleet decision, not a change for this runner.
-    Keep in sync with launch_y13.py and run_codex_y5.py (identical
-    logic). This copy IS the Y14 application of the fix (Y14b
-    re-stage from suite HEAD 1d23532)."""
+    Module form (Council 2 Fix 1, redteam H1, fix pass 2): "python3
+    -m run_batch3" has no .py suffix, so it is accepted as a bare
+    run_* / hand_drive_e1 token after -m; the joined form
+    "python3 -mrun_batch3" and dotted paths "python3 -m
+    foo.run_batch3" are also accepted (dotted only for exact runner
+    module names, so foo.run_tests does not flag). A spaced -W/-X
+    value ("python3 -W ignore run_batch3.py") is accepted via the
+    token two back. -c import form (redteam H1): "python3 -c
+    'import run_batch3; ...'" is accepted when a bare runner module
+    name follows "import" or "from" in the -c words. Known residual
+    limitations, recorded not hidden: runpy.run_path inside -c;
+    "import os, run_foo" (runner second in a comma list) misses;
+    dynamic imports (__import__, importlib.import_module,
+    exec(open(...).read())) evade the static check; a -c string
+    that only imports the runner module (no main() call) is
+    flagged although it does not execute it (fail-closed
+    over-approximation); extensionless script tokens and direct
+    .pyc execution miss for run_*/hand_drive_e1 names only
+    ("python3 run-nested-pill" returns True via the run-nested
+    prefix rule); renamed copies, shebang renamed copies, and
+    spoofed argv[0] all miss. None is a launch form in use, and
+    the renamed/spoofed forms are adversarial, outside this gate's
+    accidental-collision threat model. (Correction to the fix-pass-1
+    record, redteam F8: double-nested -c quoting is NOT a residual;
+    the leaf python process is caught live.) A flock lock held for
+    the whole run would close those shapes too, but only fleet-wide
+    (every runner must take the same lock; run_live.py does not
+    today), so that is a Muse-level fleet decision, not a change
+    for this runner. Sync note: this copy has the fix-pass-1 and
+    fix-pass-2 additions; the sibling copies in launch_y13.py and
+    run_codex_y5.py do NOT yet have them, so the "identical logic"
+    claim is currently FALSE. Re-diff the copies before treating
+    them as in sync; the sync itself belongs to Y13f's fix pass."""
     tokens = _argv_tokens(cmdline)
     for i, tok in enumerate(tokens):
         base = tok.rsplit("/", 1)[-1]
+        # Joined -m form (redteam F2): "python3 -mrun_batch3".
+        if tok.startswith("-m") and len(tok) > 2 and \
+                _is_runner_module(tok[2:]):
+            return True
         if _script_basename_is_runner(base):
             if i == 0:
                 return True
@@ -2295,11 +2318,16 @@ def _is_runner_cmdline(cmdline):
             if prev.startswith("-") and any(
                     _is_python_token(t) for t in tokens[:i]):
                 return True
+            # Spaced -W/-X value form (redteam F2): "python3 -W
+            # ignore run_batch3.py" (the flag's value sits between
+            # the python token and the script).
+            if i >= 2 and tokens[i - 2] in ("-W", "-X"):
+                return True
             if not base.endswith(".py") and prev_base in ("bash", "sh"):
                 return True
             continue
-        if i > 0 and tokens[i - 1] == "-m" and (
-                base.startswith("run_") or base == "hand_drive_e1"):
+        if i > 0 and tokens[i - 1] == "-m" and \
+                _is_runner_module(base):
             return True
         if i > 0 and tokens[i - 1] in ("import", "from") and (
                 base.rstrip(";,()").startswith("run_")
@@ -2308,12 +2336,30 @@ def _is_runner_cmdline(cmdline):
     return False
 
 
+_RUNNER_MODULES = ("run_batch3", "run_live", "run_agyq2", "run_agyq",
+                   "run_fcck", "run_codex_y5", "hand_drive_e1")
+
+
+def _is_runner_module(mod):
+    """True if a -m module name executes a runner (fix pass 2). A
+    bare name matches the run_* prefix rule (same as the spaced -m
+    branch); a dotted name matches only when its last component is
+    an exact runner module, so foo.run_tests does not flag."""
+    last = mod.rsplit(".", 1)[-1]
+    if "." in mod:
+        return last in _RUNNER_MODULES
+    return last.startswith("run_") or last == "hand_drive_e1"
+
+
 # Codex executor processes that must REFUSE, not just warn (Y13f,
 # council 3 fix 2): a codex CLI whose cmdline mentions the E1
 # driver, a geckodriver, a browser profile path, or Marionette is
 # driving (or about to drive) a browser. A plain "codex" match with
 # none of these is warning-only (a Codex CLI may be doing
-# unrelated work). Keep in sync with launch_y13.py.
+# unrelated work). The MARKER tuple below is still in sync with
+# launch_y13.py; the predicate using it (_is_codex_executor) is
+# NOT identical across copies since fix pass 2 (executable-position
+# anchor lives only in this copy so far).
 CODEX_REFUSE_MARKERS = ("hand_drive_e1", "geckodriver", ".config/zen",
                         "zen-bin", ".mozilla", "remote-debugging",
                         "marionette")
@@ -2334,15 +2380,26 @@ def _ppid_of(pid):
 
 def _is_codex_executor(cmdline):
     """True if the cmdline is a codex CLI driving (or about to
-    drive) a browser (redteam M3). The old predicate matched
-    "codex" as a substring of the whole flat cmdline, so a sleep
-    process whose argv mentioned codex + marionette was flagged.
-    Anchor "codex" to the executable token (argv[0] basename, or
-    a token exactly "codex" as in a shell -c string) and require a
-    refuse marker in a DIFFERENT token than the codex token."""
+    drive) a browser (redteam M3, fix pass 2). "codex" must sit in
+    an executable position: argv[0] (direct launch, possibly a
+    full path), the first word after a -c (shell/flock -c string),
+    or the word after env. A bare "codex" elsewhere (a grep
+    pattern, a cat file argument, an echo string) is not an
+    executor and no longer flags. A refuse marker is required in
+    a DIFFERENT token than the codex token. Known gap: a
+    sudo-prefixed codex ("sudo codex ...", "sudo -u x codex ...")
+    misses; no fleet launcher uses sudo for codex."""
     tokens = _argv_tokens(cmdline)
     for i, tok in enumerate(tokens):
         if tok.rsplit("/", 1)[-1] != "codex":
+            continue
+        if i == 0:
+            executable = True
+        elif tokens[i - 1] in ("-c", "env"):
+            executable = True
+        else:
+            executable = False
+        if not executable:
             continue
         rest = " ".join(tokens[:i] + tokens[i + 1:]).lower()
         if any(m in rest for m in CODEX_REFUSE_MARKERS):
@@ -2513,33 +2570,55 @@ def launch_gate():
 
 
 def _verify_served_fixture(base_url):
-    """Fetch the t10 fixture over HTTP and compare its md5 to the
-    on-disk file under LIVE_SERVER_ROOT (redteam M1). start_server()
-    reuses any listening server on port 8771, so the gate's disk
-    check alone cannot prove the served bytes are the staged suite.
-    Returns True on match, False on mismatch or fetch failure
-    (a foreign server without the path 404s, which also refuses)."""
+    """Fetch every browser-served suite file over HTTP and compare
+    its md5 to the on-disk file under LIVE_SERVER_ROOT (redteam M1,
+    fix pass 2: all 12 files, not just the t10 fixture). The 10
+    fixture.html files plus the t09 detail.html and prefs.html the
+    t09 fixture opens via window.open. start_server() reuses any
+    listening server on port 8771, so the gate's disk check alone
+    cannot prove the served bytes are the staged suite. Returns
+    True only if every file matches; False on any mismatch or
+    fetch failure (a foreign server without a path 404s, which
+    also refuses). Known limits, recorded: a server that redirects
+    or serves different bytes per User-Agent could still fool this
+    check (the md5 is the check, not the URL or headers); that is
+    adversarial server behavior, outside this gate's threat model
+    (the server is started by this runner or reused from a
+    previous Y14 run on the same loopback)."""
     import hashlib
     import urllib.request
     root = os.environ.get("LIVE_SERVER_ROOT", "")
-    disk = os.path.join(root, "clone1-batch3", "t10-music-player",
-                        "fixture.html")
-    try:
-        with open(disk, "rb") as f:
-            want = hashlib.md5(f.read()).hexdigest()
-        with urllib.request.urlopen(
-                base_url + "/clone1-batch3/t10-music-player/fixture.html",
-                timeout=5) as resp:
-            got = hashlib.md5(resp.read()).hexdigest()
-    except Exception as exc:
-        print(f"SERVED FIXTURE CHECK: fetch failed: {exc}", flush=True)
-        return False
-    if got != want:
-        print(f"SERVED FIXTURE CHECK: served md5 {got} != on-disk "
-              f"md5 {want} (foreign root reuse), refusing",
-              flush=True)
-        return False
-    print(f"SERVED FIXTURE CHECK: t10 fixture md5 {got} matches "
+    served = (
+        "clone1-batch3/t01-terminal/fixture.html",
+        "clone1-batch3/t02-spreadsheet/fixture.html",
+        "clone1-batch3/t03-video-call/fixture.html",
+        "clone1-batch3/t04-email-client/fixture.html",
+        "clone1-batch3/t05-file-manager/fixture.html",
+        "clone1-batch3/t06-calendar/fixture.html",
+        "clone1-batch3/t07-code-editor/fixture.html",
+        "clone1-batch3/t08-settings-panel/fixture.html",
+        "clone1-batch3/t09-multi-window/fixture.html",
+        "clone1-batch3/t09-multi-window/detail.html",
+        "clone1-batch3/t09-multi-window/prefs.html",
+        "clone1-batch3/t10-music-player/fixture.html",
+    )
+    for rel in served:
+        try:
+            with open(os.path.join(root, rel), "rb") as f:
+                want = hashlib.md5(f.read()).hexdigest()
+            with urllib.request.urlopen(base_url + "/" + rel,
+                                       timeout=5) as resp:
+                got = hashlib.md5(resp.read()).hexdigest()
+        except Exception as exc:
+            print(f"SERVED FIXTURE CHECK: fetch failed for {rel}: "
+                  f"{exc}", flush=True)
+            return False
+        if got != want:
+            print(f"SERVED FIXTURE CHECK: served md5 {got} != on-disk "
+                  f"md5 {want} for {rel} (foreign root reuse), "
+                  "refusing", flush=True)
+            return False
+    print("SERVED FIXTURE CHECK: all 12 served files match the "
           "on-disk root", flush=True)
     return True
 

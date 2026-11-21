@@ -267,3 +267,138 @@ on its merits; nothing accepted or declined silently.
 - Fresh council (3) + redteam over the FIX DIFF only: spawned after
   this commit (per the Y13r pattern). Ship to the laptop waits for
   their verdicts.
+
+## Fix re-review verdicts (21:36-21:44 +07)
+
+- Council 1 (paper 0388381 + hash follow-up e05e56f): GO. Fix diff
+  is exactly the two claimed changes; assert set 69/69, no threshold
+  changed; moved asserts prove the same thing; frozen Nexts in place;
+  transcribe 82 PASS; int() removal sound. H4 margin recomputed from
+  the Y11b proof: 850 ms + 3 round trips after the move (Council 3
+  counts 4; the difference is whether the advancing read's own
+  transit counts, at most 0.19 ticks); at 2 ms RTT value 8 or 9,
+  margin 2 discrete (2.44 continuous); at 19 ms value 9, margin 2
+  (1.93 continuous); at 50 ms reads 10 (margin 1); at 100 ms reads
+  11 (zero); at 150 ms reads 13 (FAIL). Margin still thin, does not
+  meet redteam (c)'s 3-tick bar; GO because the thinness was
+  adjudicated with the watch item as tripwire. Ship condition: the
+  live run re-measures and honors the watch item.
+- Council 2 (paper 9757161): AMEND, docstring-only. H2 probe 45/45
+  + gate dry 4/4 + own extra probe 25/25 re-run green. Required:
+  (1) the "identical logic" sync claim is now false, siblings
+  unfixed; (2) record the new residual "import os, run_foo"
+  (runner second in a comma list) misses; (3) qualify
+  "extensionless/.pyc all miss" as run_*/hand_drive_e1 only
+  (run-nested without suffix returns True). Flag: siblings at HEAD
+  still need the fix (run_codex_y5.py:3604, launch_y13.py:125 old
+  matcher; M3 substring predicate still at run_codex_y5.py:3776,
+  launch_y13.py:248).
+- Council 3 (paper e162834): AMEND, R1-R4 plan-only. F1-F5, F7 PASS;
+  hash records PASS; H2/H3 correction PASS; adjudication PASS. H4
+  arithmetic mostly verified, one count off (4 round trips
+  post-move, not 5; 6 pre-move). F6 PARTIAL: all 23 md5s correct
+  and seek L169 correct, but the pinned command does not run:
+  (G1) find path tests/realistic/clone1-batch3 fails against the
+  faithful /tmp/y14-server layout (suite at
+  /tmp/y14-server/clone1-batch3/...); (G2) file set misses t09
+  detail.html (md5 40dfc0db44aa8448341587f8559b773a) and prefs.html
+  (1169a1d5a1a6599093bdedac9c2aa74e), both opened by t09; (G3)
+  run_batch3.py md5 line has the same path problem and says compare
+  against "the fix commit's blob hash" instead of the recorded md5.
+  Not BLOCK (wrong path fails loudly, values right).
+- Redteam (paper 04ce6b1): AMEND, no BLOCK-grade finding. F1 MEDIUM:
+  served check verifies only t10 (1 of 10); mixed server, redirect
+  to correct bytes, and UA-split server all pass. F2 MEDIUM: -m
+  branch misses "python3 -mrun_batch3" and "python3 -m
+  foo.run_batch3" (both proven executing live) plus -X/-W
+  flag-with-value forms. F3 LOW: codex anchor accepts "codex" in
+  any token (grep/cat/echo false-flags, all reproduced live). F4
+  LOW: siblings still old, docstring "(identical logic)" false.
+  F5 LOW: "~2.4-tick margin" holds only at 2 ms RTT (1.93 at 19 ms,
+  1.0 at 50 ms, first possible fail above 83 ms, guaranteed at
+  117 ms); the move itself is correct (first-fail RTT 50 to 83 ms).
+  F6 LOW: -c bypasses __import__/importlib/exec all execute live
+  and evade; plus a live import-only FP (import without main()
+  flagged). F7 INFO: mid-test runner start not caught until the
+  next test's re-scan (0.3 s dummy proven); no code change, record
+  the window. F8: declined items all reproduced live, none a
+  plausible accidental fleet form; correction: double-nested -c is
+  actually caught live via the leaf process, so the docstring
+  overstates that residual.
+
+## Adjudication, fix pass 2 (21:44-21:52 +07)
+
+- F1: FIXED in part. Served-fixture check now covers all 12
+  browser-served files (10 fixtures + t09 detail.html/prefs.html),
+  not just t10. DECLINED: redirect refusal (the md5 is the check;
+  a redirect to correct bytes is harmless, to foreign bytes fails
+  md5) and UA-spoofing (adversarial server behavior, outside the
+  threat model). Both recorded as known limits in the docstring.
+- F2: FIXED. Joined -m accepted; dotted -m accepted for exact
+  runner module names only (foo.run_tests does not flag); spaced
+  -W/-X value forms accepted via the token two back. All three
+  are precise (no new false-positive class) and probe-verified.
+- F3: FIXED. "codex" restricted to executable positions (argv[0],
+  first word after -c, word after env). grep/cat/echo FPs fixed
+  live. sudo-prefixed codex recorded as a gap (no fleet launcher
+  uses sudo for codex).
+- F4: FIXED by correcting the claim (docstring now states the
+  "identical logic" claim is FALSE and the sync belongs to Y13f).
+  The marker tuple comment qualified the same way. Siblings NOT
+  edited (Y13f's files).
+- F5: FIXED by restatement. Margin now a range in the plan: 850 ms
+  + about 3.5 effective round trips (Council 1 counts 3, Council 3
+  counts 4, bracketing the true value); expected read 8-9, margin 2
+  discrete (1.93-2.44 continuous); first fail roughly 70-85 ms
+  (tick-phase dependent), sure fail ~100-117 ms; the move raised
+  the first-fail threshold from ~50 ms to ~70-85 ms. The plan's
+  "850 ms + 5 round trips" (fix pass 1) is corrected here, not
+  rewritten in history.
+- F6: RECORDED, no code change (per the redteam's own U6).
+  Residuals added to the docstring: __import__ / importlib /
+  exec(open().read()) bypasses; the import-only FP is a
+  fail-closed over-approximation (only a literal -c import
+  invocation trips it; importing the module inside a process does
+  not appear in any cmdline).
+- F7: RECORDED, no code change (per the redteam). Mid-test window
+  noted in run_one's re-scan comment and in the plan's launch-gate
+  bullet.
+- F8: FIXED. Double-nested -c removed from the residual list (the
+  leaf is caught live, probe-verified); the other declined items
+  stand as recorded.
+- Council 2 AMEND: FIXED (docstring: sync claim corrected, comma
+  import residual recorded, extensionless/.pyc qualified). The
+  comma-list fix itself is NOT implemented (would need import-list
+  tracking for a sub-variant of an already unusual launch form);
+  recorded as a residual per Council 2's own ask.
+- Council 3 R1-R4: FIXED (find path clone1-batch3, t09 detail/prefs
+  md5s verified by me against git blobs at 1d23532, run_batch3.py
+  md5 line corrected to the log's fix-pass-2 entry, round-trip
+  count corrected to about 3.5 effective with both counts noted).
+- Council 1 GO: no fix; ship condition (live run re-measures and
+  honors the watch item) written into the plan's H4 note.
+
+## Fix-pass-2 verification (21:47-21:52 +07, all on the VM)
+
+- py_compile OK; import OK, 10 tests (b3-t01..b3-t10).
+- Fix2 probe /tmp/y14b-fix2-probe.py: 31/31 PASS, exit 0 (joined
+  -m x3, dotted -m x2, -W/-X x4, -c residuals x4, codex positions
+  x10, live double-nested leaf caught). First run 30/31: my probe
+  expectation was wrong, not the code (the double-nested WRAPPER
+  cmdline is not matchable at unit level; the leaf IS caught live,
+  which is the F8 correction); probe corrected, second run 31/31.
+- M1 all-12 probe /tmp/y14b-fix2-m1-probe.py: 4/4 PASS, exit 0
+  (all matching accepted; foreign t01 mixed server refused;
+  foreign t09 detail.html refused; missing prefs.html refused).
+- Regressions, all green: H2 probe /tmp/y14b-h2-probe.py 45/45
+  PASS (incl. M2 INFRA in 1 ms); transcription
+  /tmp/y14b-transcribe.py 82 PASS lines, 0 failures; gate dry run
+  /tmp/y14b-gate-dry.py 4/4 PASS; old M1 probe
+  /tmp/y14b-m1-probe.py 3/3 PASS (updated to complete 12-file
+  roots; the first run failed only because the old probe's root
+  held just the t10 fixture, which the new check rightly refuses).
+- No em/en dash in the fix diff (grep 0), no ydotool, no personal
+  info.
+- Fix commit: (hash filled below after commit).
+- Redteam re-review over the fix-pass-2 diff: spawned after this
+  commit. Ship waits for it unless it BLOCKs.

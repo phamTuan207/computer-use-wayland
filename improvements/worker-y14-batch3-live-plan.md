@@ -440,10 +440,14 @@ the other.
   codex executor driving a browser (replaces the old pgrep -f sweep,
   which missed bare-relative launches and false-positived on path
   mentions); Zen alive; Marionette 2828 responsive; server port 8771
-  free, or proven to serve /tmp/y14-server (the runner fetches the t10
-  fixture over HTTP after start_server() and compares its md5 to the
+  free, or proven to serve /tmp/y14-server (the runner fetches all
+  12 browser-served files, 10 fixtures + t09 detail.html/prefs.html,
+  over HTTP after start_server() and compares each md5 to the
   on-disk root, refusing on mismatch or fetch failure; start_server()
-  silently reuses any listening server on the port); WD port 4452 free
+  silently reuses any listening server on the port; known limits: a
+  server that redirects or serves different bytes per User-Agent
+  could still fool the check, adversarial behavior outside the
+  threat model); WD port 4452 free
   and predecessor ports 8767/8768/8769/8770 and 4448/4449/4450/4451
   free or owned by no live runner; no other runner process live; the
   live slot is mine (Y13 DONE posted) and the Muse go-order is in
@@ -454,7 +458,10 @@ the other.
   but only fleet-wide, so that is a Muse-level fleet decision, not a
   change for this runner. run_one re-scans at the top of each test
   (redteam M2): a runner starting mid-suite aborts that test as INFRA
-  before any tab is driven.
+  before any tab is driven. Mid-test window (redteam F7): a runner
+  starting mid-test, after the re-scan and during the test's WD
+  session, is caught only at the next test's re-scan; the other
+  runner's own gate is the backstop for documented launch forms.
 - In run_batch3.py, construct LiveMetrics exactly as run_live.main()
   does (A6) and verify the -metrics.jsonl sibling exists after
   preflight.
@@ -558,12 +565,21 @@ header/imports, run_b3_t10, run_preflight, H2 helpers, launch_gate):
   --verify-manifest cases and audit simulation do not apply here;
   the suite is verified by md5 against the git HEAD at ship time.
   Adding a manifest would be new design work beyond a re-stage.
-- Ship-time md5 procedure (Council 3 F6, pinned): after copying the
-  suite to /tmp/y14-server on the laptop, run from that dir:
-  find tests/realistic/clone1-batch3 -type f \( -name 'check.mjs'
-  -o -name 'fixture.html' -o -path '*/lib/*' -o -name 'run_all.mjs'
+- Ship-time md5 procedure (Council 3 F6, pinned; corrected by the
+  fix re-review, Council 3 R1-R3): after copying the suite to
+  /tmp/y14-server on the laptop, run from that dir:
+  find clone1-batch3 -type f \( -name 'check.mjs'
+  -o -name 'fixture.html' -o -name 'detail.html'
+  -o -name 'prefs.html' -o -path '*/lib/*' -o -name 'run_all.mjs'
   \) -exec md5sum {} + | sort -k2
-  and compare against these expected md5s (suite HEAD 1d23532,
+  (the suite lives at /tmp/y14-server/clone1-batch3/..., NOT under
+  tests/realistic/; the earlier draft's find path was wrong and
+  fails with "No such file or directory"). The file set covers
+  every check.mjs, every fixture.html, the t09 detail.html and
+  prefs.html the t09 fixture opens via window.open, lib/, and
+  run_all.mjs. Per-test READMEs and results.json are not
+  load-bearing (docs / previous-run output) and are not in the set.
+  Compare against these expected md5s (suite HEAD 1d23532,
   computed from git blobs on the VM):
   run_all.mjs 526e418175c47f214004653402a63cc0;
   lib/browser.mjs 6068b11577e32bd2d299b00ae20a097f;
@@ -585,12 +601,15 @@ header/imports, run_b3_t10, run_preflight, H2 helpers, launch_gate):
   t08 check.mjs f25fa0ce937059244d13f0b0fb93b128,
   fixture.html d588dc93c2a2e61dbe79ff025a9b7ede;
   t09 check.mjs 860a6cfef8002a94ef8d656361f5a233,
-  fixture.html 7da064f7dcd94bcc3cad941e1f75e137;
+  fixture.html 7da064f7dcd94bcc3cad941e1f75e137,
+  detail.html 40dfc0db44aa8448341587f8559b773a,
+  prefs.html 1169a1d5a1a6599093bdedac9c2aa74e;
   t10 check.mjs c55ef3c792b2faaea7c829818eb6420b,
   fixture.html eb814c944dab6279417c6182e1950876.
-  Also md5sum tests/realistic/run_batch3.py and compare against the
-  fix commit's blob hash, recorded in the re-stage log's fix-pass
-  entry. Paste the actual command output into the live log at ship
+  Also md5sum run_batch3.py (from /tmp/y14-server, where the runner
+  is shipped) and compare against the md5 recorded in the re-stage
+  log's fix-pass-2 entry (value filled in after the fix-pass-2
+  commit). Paste the actual command output into the live log at ship
   time. Any mismatch refuses the slot.
 - Council (3) + redteam over the re-stage diff f732d6a: Council 1 GO
   (t10 translation 69/69, watch item: middle advancing read margin);
@@ -613,19 +632,51 @@ header/imports, run_b3_t10, run_preflight, H2 helpers, launch_gate):
   a future suite revision), caps re-derived in the runner
   (divergence; margin analysis recorded instead). Fresh council +
   redteam over the fix diff only, then ship.
-- H4 margin note (redteam + Council 1 watch item): the 2..11 bound
-  on the middle advancing read was copied verbatim from check.mjs,
-  whose timing is Playwright (~10 ms round trips, correct value near
-  8). The runner's path is 850 ms + 5 Marionette round trips; at the
-  measured laptop rates (Y11b proof: eval median ~2 ms, click steps
-  ~56 ms for ~3 POSTs, so a round trip is ~2-19 ms) the correct
-  fixture reads about 8-9, margin ~2 ticks. The fix pass moves the
-  now-playing assert (2 round trips) out of the sampler-to-advancing
-  path at the playing and shuffle Nexts, buying ~0.4 ticks. The live
-  run must watch details.positionAdvancingAfterNext and
+- H4 margin note (redteam + Council 1 watch item, corrected by the
+  fix re-review): the 2..11 bound on the middle advancing read was
+  copied verbatim from check.mjs, whose timing is Playwright (~10 ms
+  round trips, correct value near 8). The runner's path is 850 ms +
+  about 3.5 effective Marionette round trips (Council 1 counts 3,
+  Council 3 counts 4; the advancing read's own transit contributes
+  about half a round trip, so the two counts bracket the true value
+  and differ by at most 0.19 ticks). At the measured laptop rates
+  (Y11b proof: eval median ~2 ms, click steps ~56 ms for ~3 POSTs,
+  so a round trip is ~2-19 ms) the correct fixture reads about 8-9
+  (8 at ~2 ms/round trip, 9 at ~19 ms), margin 2 discrete ticks
+  (1.93-2.44 continuous). At 50 ms/round trip it reads 10 (margin
+  1); the bound first fails when round trips exceed roughly 70-85 ms
+  (tick-phase dependent) and fails surely at ~100-117 ms. The fix
+  pass moves the now-playing assert (2 round trips) out of the
+  sampler-to-advancing path at the playing and shuffle Nexts, raising
+  the first-fail threshold from ~50 ms to ~70-85 ms. SHIP CONDITION
+  (Council 1): the live run re-measures the round-trip time and
+  honors this watch item. The live run must watch
+  details.positionAdvancingAfterNext and
   details.positionAdvancingAfterShuffleNext: if either reads 11
   repeatedly, report the thin margin explicitly instead of calling
   it a fixture failure outright.
+- Fix pass 2 (over the fix re-review verdicts, 21:44-21:52 +07):
+  Council 1 GO, Council 2 AMEND (docstring-only), Council 3 AMEND
+  (R1-R4 plan-only), redteam AMEND (no BLOCK-grade finding, F1-F8).
+  Fixes: joined -m ("python3 -mrun_batch3") + dotted -m (exact
+  runner names only) + spaced -W/-X value forms; codex anchored to
+  executable positions only (argv[0], after -c, after env; grep/cat/
+  echo false-positives fixed; sudo-prefixed codex recorded as a gap);
+  served-fixture check extended to all 12 browser-served files;
+  docstring corrected ("identical logic" claim false, siblings
+  unfixed; double-nested -c removed from residuals per F8, it is
+  caught live via the leaf; new residuals: comma-list imports,
+  dynamic imports, import-only over-approximation; extensionless/
+  .pyc qualified as run_*/hand_drive_e1 only); plan R1-R4 (find path
+  clone1-batch3, t09 detail/prefs md5s, run_batch3.py md5 line,
+  round-trip count 3.5 effective with margin restated as a range);
+  F7 mid-test window recorded. Declined with reasons: redirect/UA
+  refusal for the served check (md5 is the check; adversarial server
+  behavior outside the threat model); -c import-list tracking
+  (recorded as residual instead). Verification in the log. A redteam
+  re-review over the fix-pass-2 diff is spawned after this commit;
+  ship waits for it unless it BLOCKs, in which case one more fix
+  pass follows.
 
 ## Runner status (21/11, after Y14b re-stage)
 
