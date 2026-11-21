@@ -235,3 +235,6 @@ Doc ky diff cua F1 (guardian fix), F2 (act-now), F3b (slot heal) tren todolist-p
 coord/clone2.md dang conflict tren PR #1, go cho sach.
 
 Luat nhu cu: khong dua thong tin ca nhan nao cua toi len repo, khong dau gach ngang dai, khong ydotool, test nao cung ghi thoi gian. Ket qua bao cao vao file nay.
+
+## Da nhan batch 6, 00:49 ngay 22/11
+Clone2 da nhan batch 6 (commit 41e09a6): task 1 kiem tra 2 bug tren main roi moi sua, task 2 review doc lap diff F1/F2/F3b, task 3 go conflict PR #1. Clone2 lam ngay, council + redteam cho moi ket luan, commit nho va push ngay tung phan.
