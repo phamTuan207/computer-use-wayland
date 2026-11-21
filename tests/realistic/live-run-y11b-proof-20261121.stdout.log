@@ -1,0 +1,95 @@
+serving /tmp/worker-y11b-server at http://127.0.0.1:8765
+127.0.0.1 - - [21/Nov/2026 20:35:34] "GET /clone1/t01-upload-single/fixture.html HTTP/1.1" 200 -
+[t01] open fixture ok 1635ms detail=d9f6c487-089b-46d8-b473-75f86e7f7962 error=None
+[t01] fill title ok 15ms detail=None error=None
+[t01] choose file ok 5ms detail=None error=None
+[t01] click upload ok 61ms detail=None error=None
+[t01] wait confirmation ok 308ms detail=True error=None
+[t01] read confirmation ok 18ms detail=Uploaded t01-statement.txt (38 bytes, checksum 258f5a4f) for problem "Sample Problem". error=None
+[t01] CHECK ok name in confirmation: Uploaded t01-statement.txt (38 bytes, checksum 258f5a4f) for problem "Sample Problem".
+[t01] CHECK ok size in confirmation: Uploaded t01-statement.txt (38 bytes, checksum 258f5a4f) for problem "Sample Problem".
+[t01] CHECK ok checksum in confirmation: Uploaded t01-statement.txt (38 bytes, checksum 258f5a4f) for problem "Sample Problem".
+[t01] CHECK ok title in confirmation: Uploaded t01-statement.txt (38 bytes, checksum 258f5a4f) for problem "Sample Problem".
+RESULT {"test": "t01", "pass": true, "failures": [], "details": {"file": "t01-statement.txt", "size": 38, "checksum": "258f5a4f", "confirmation": "Uploaded t01-statement.txt (38 bytes, checksum 258f5a4f) for problem \"Sample Problem\"."}, "started_at": "2026-11-21T13:35:33.973835+00:00", "finished_at": "2026-11-21T13:35:36.667269+00:00", "elapsed_ms": 2693}
+127.0.0.1 - - [21/Nov/2026 20:35:37] "GET /fcc-k/test-01-spreadsheet.html HTTP/1.1" 200 -
+[f01] open fixture ok 1635ms detail=0709ab3a-ce0b-4c47-94c0-6f57ef5f8511 error=None
+[f01] read headers ok 1ms detail=,Date,Item,Units,Price,Total error=None
+[f01] CHECK ok headers Date Item Units Price Total: ,Date,Item,Units,Price,Total
+[f01] TRAP: click td#a2 directly ok 1ms detail=None error=None
+[f01] check td click selected nothing ok 1ms detail=False error=None
+[f01] CHECK ok td click does NOT select (fixture trap): False
+[f01] select A2 ok 59ms detail=None error=None
+[f01] type 2026-11-16 into A2 ok 10ms detail=None error=None
+[f01] press type for A2 ok 2ms detail=None error=None
+[f01] select B2 ok 58ms detail=None error=None
+[f01] type Widget into B2 ok 10ms detail=None error=None
+[f01] press type for B2 ok 2ms detail=None error=None
+[f01] select C2 ok 58ms detail=None error=None
+[f01] type 12 into C2 ok 7ms detail=None error=None
+[f01] press type for C2 ok 2ms detail=None error=None
+[f01] select D2 ok 57ms detail=None error=None
+[f01] type 45000 into D2 ok 8ms detail=None error=None
+[f01] press type for D2 ok 2ms detail=None error=None
+[f01] select E2 ok 59ms detail=None error=None
+[f01] type =C2*D2 into E2 ok 8ms detail=None error=None
+[f01] press type for E2 ok 3ms detail=None error=None
+[f01] press Enter for E2 ok 2ms detail=None error=None
+[f01] select A3 ok 59ms detail=None error=None
+[f01] type 2026-11-17 into A3 ok 10ms detail=None error=None
+[f01] press type for A3 ok 3ms detail=None error=None
+[f01] select B3 ok 58ms detail=None error=None
+[f01] type Gadget into B3 ok 8ms detail=None error=None
+[f01] press type for B3 ok 2ms detail=None error=None
+[f01] select C3 ok 57ms detail=None error=None
+[f01] type 7 into C3 ok 8ms detail=None error=None
+[f01] press type for C3 ok 2ms detail=None error=None
+[f01] select D3 ok 59ms detail=None error=None
+[f01] type 82000 into D3 ok 7ms detail=None error=None
+[f01] press type for D3 ok 2ms detail=None error=None
+[f01] select E3 ok 57ms detail=None error=None
+[f01] type =C3*D3 into E3 ok 9ms detail=None error=None
+[f01] press type for E3 ok 2ms detail=None error=None
+[f01] press Enter for E3 ok 2ms detail=None error=None
+[f01] select A4 ok 61ms detail=None error=None
+[f01] type 2026-11-18 into A4 ok 10ms detail=None error=None
+[f01] press type for A4 ok 3ms detail=None error=None
+[f01] select B4 ok 58ms detail=None error=None
+[f01] type Tool into B4 ok 8ms detail=None error=None
+[f01] press type for B4 ok 2ms detail=None error=None
+[f01] select C4 ok 59ms detail=None error=None
+[f01] type 5 into C4 ok 8ms detail=None error=None
+[f01] press type for C4 ok 2ms detail=None error=None
+[f01] select D4 ok 59ms detail=None error=None
+[f01] type 150000 into D4 ok 10ms detail=None error=None
+[f01] press type for D4 ok 3ms detail=None error=None
+[f01] select E4 ok 58ms detail=None error=None
+[f01] type =C4*D4 into E4 ok 7ms detail=None error=None
+[f01] press type for E4 ok 2ms detail=None error=None
+[f01] press Enter for E4 ok 2ms detail=None error=None
+[f01] select E5 ok 57ms detail=None error=None
+[f01] type =SUM(E2:E4) into E5 ok 10ms detail=None error=None
+[f01] press type for E5 ok 2ms detail=None error=None
+[f01] press Enter for E5 ok 1ms detail=None error=None
+[f01] select E6 ok 58ms detail=None error=None
+[f01] type =AVERAGE(E2:E4) into E6 ok 8ms detail=None error=None
+[f01] press type for E6 ok 3ms detail=None error=None
+[f01] press Enter for E6 ok 2ms detail=None error=None
+[f01] select E7 ok 59ms detail=None error=None
+[f01] type =COUNT(E2:E4) into E7 ok 10ms detail=None error=None
+[f01] press type for E7 ok 2ms detail=None error=None
+[f01] press Enter for E7 ok 2ms detail=None error=None
+[f01] read E7 after wrong formula ok 5ms detail=COUNT text error=None
+[f01] CHECK ok E7 shows COUNT text after wrong formula: COUNT text
+[f01] select E7 ok 58ms detail=None error=None
+[f01] type corrected formula ok 11ms detail=None error=None
+[f01] press type for correction ok 3ms detail=None error=None
+[f01] press Enter for correction ok 2ms detail=None error=None
+[f01] read all result cells ok 3ms detail={'c2': '12', 'c3': '7', 'c4': '5', 'e2': '540000', 'e3': '574000', 'e4': '750000', 'e5': '1864000', 'e6': '621333', 'e7': '3'} error=None
+[f01] CHECK ok E2 == 540000: e2=540000
+[f01] CHECK ok E3 == 574000: e3=574000
+[f01] CHECK ok E4 == 750000: e4=750000
+[f01] CHECK ok E5 == 1864000: e5=1864000
+[f01] CHECK ok E6 == 621333: e6=621333
+[f01] CHECK ok E7 == 3: e7=3
+RESULT {"test": "f01", "pass": true, "failures": [], "details": {"tdClickSelects": false, "e7AfterCount": "COUNT text", "endState": {"c2": "12", "c3": "7", "c4": "5", "e2": "540000", "e3": "574000", "e4": "750000", "e5": "1864000", "e6": "621333", "e7": "3"}}, "started_at": "2026-11-21T13:35:36.667335+00:00", "finished_at": "2026-11-21T13:35:40.301674+00:00", "elapsed_ms": 3634}
+SUMMARY 2/2 passed, total_ms=6327

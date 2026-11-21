@@ -1,0 +1,76 @@
+{"ts": "2026-11-21T13:36:16.854502+00:00", "test": "t01", "step": "open fixture", "op": "goto", "elapsed_ms": 1636.6, "ok": true, "detail": "3ead5be7-2a5e-47ee-9df7-c38c65f14a4f", "error": null}
+{"ts": "2026-11-21T13:36:16.871225+00:00", "test": "t01", "step": "fill title", "op": "type", "elapsed_ms": 16.6, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T13:36:16.875678+00:00", "test": "t01", "step": "choose file", "op": "set_file", "elapsed_ms": 4.4, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T13:36:16.933714+00:00", "test": "t01", "step": "click upload", "op": "click", "elapsed_ms": 58.0, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T13:36:17.241656+00:00", "test": "t01", "step": "wait confirmation", "op": "wait", "elapsed_ms": 307.9, "ok": true, "detail": true, "error": null}
+{"ts": "2026-11-21T13:36:17.246094+00:00", "test": "t01", "step": "read confirmation", "op": "text", "elapsed_ms": 4.3, "ok": true, "detail": "Uploaded t01-statement.txt (38 bytes, checksum 258f5a4f) for problem \"Sample Problem\".", "error": null}
+{"ts": "2026-11-21T13:36:19.540997+00:00", "test": "f01", "step": "open fixture", "op": "goto", "elapsed_ms": 1648.3, "ok": true, "detail": "0729852f-14e7-4411-8252-ae63590b2f43", "error": null}
+{"ts": "2026-11-21T13:36:19.542781+00:00", "test": "f01", "step": "read headers", "op": "eval", "elapsed_ms": 1.7, "ok": true, "detail": ",Date,Item,Units,Price,Total", "error": null}
+{"ts": "2026-11-21T13:36:19.544103+00:00", "test": "f01", "step": "TRAP: click td#a2 directly", "op": "click_js", "elapsed_ms": 1.3, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T13:36:19.545250+00:00", "test": "f01", "step": "check td click selected nothing", "op": "eval", "elapsed_ms": 1.1, "ok": true, "detail": false, "error": null}
+{"ts": "2026-11-21T13:36:19.602734+00:00", "test": "f01", "step": "select A2", "op": "click", "elapsed_ms": 57.4, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T13:36:19.612060+00:00", "test": "f01", "step": "type 2026-11-16 into A2", "op": "type", "elapsed_ms": 9.2, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T13:36:19.614426+00:00", "test": "f01", "step": "press type for A2", "op": "click", "elapsed_ms": 2.3, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T13:36:19.670358+00:00", "test": "f01", "step": "select B2", "op": "click", "elapsed_ms": 55.9, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T13:36:19.675542+00:00", "test": "f01", "step": "type Widget into B2", "op": "type", "elapsed_ms": 5.1, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T13:36:19.677669+00:00", "test": "f01", "step": "press type for B2", "op": "click", "elapsed_ms": 2.1, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T13:36:19.734660+00:00", "test": "f01", "step": "select C2", "op": "click", "elapsed_ms": 56.9, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T13:36:19.740909+00:00", "test": "f01", "step": "type 12 into C2", "op": "type", "elapsed_ms": 6.2, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T13:36:19.743801+00:00", "test": "f01", "step": "press type for C2", "op": "click", "elapsed_ms": 2.8, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T13:36:19.800452+00:00", "test": "f01", "step": "select D2", "op": "click", "elapsed_ms": 56.6, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T13:36:19.806953+00:00", "test": "f01", "step": "type 45000 into D2", "op": "type", "elapsed_ms": 6.4, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T13:36:19.808891+00:00", "test": "f01", "step": "press type for D2", "op": "click", "elapsed_ms": 1.9, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T13:36:19.865940+00:00", "test": "f01", "step": "select E2", "op": "click", "elapsed_ms": 57.0, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T13:36:19.873311+00:00", "test": "f01", "step": "type =C2*D2 into E2", "op": "type", "elapsed_ms": 7.3, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T13:36:19.876718+00:00", "test": "f01", "step": "press type for E2", "op": "click", "elapsed_ms": 3.3, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T13:36:19.878881+00:00", "test": "f01", "step": "press Enter for E2", "op": "click", "elapsed_ms": 2.1, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T13:36:19.935279+00:00", "test": "f01", "step": "select A3", "op": "click", "elapsed_ms": 56.3, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T13:36:19.947447+00:00", "test": "f01", "step": "type 2026-11-17 into A3", "op": "type", "elapsed_ms": 12.1, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T13:36:19.949806+00:00", "test": "f01", "step": "press type for A3", "op": "click", "elapsed_ms": 2.2, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T13:36:20.008050+00:00", "test": "f01", "step": "select B3", "op": "click", "elapsed_ms": 58.1, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T13:36:20.014557+00:00", "test": "f01", "step": "type Gadget into B3", "op": "type", "elapsed_ms": 6.4, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T13:36:20.017523+00:00", "test": "f01", "step": "press type for B3", "op": "click", "elapsed_ms": 2.9, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T13:36:20.073740+00:00", "test": "f01", "step": "select C3", "op": "click", "elapsed_ms": 56.1, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T13:36:20.080256+00:00", "test": "f01", "step": "type 7 into C3", "op": "type", "elapsed_ms": 6.4, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T13:36:20.082108+00:00", "test": "f01", "step": "press type for C3", "op": "click", "elapsed_ms": 1.8, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T13:36:20.139062+00:00", "test": "f01", "step": "select D3", "op": "click", "elapsed_ms": 56.9, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T13:36:20.146398+00:00", "test": "f01", "step": "type 82000 into D3", "op": "type", "elapsed_ms": 7.2, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T13:36:20.149008+00:00", "test": "f01", "step": "press type for D3", "op": "click", "elapsed_ms": 2.5, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T13:36:20.206198+00:00", "test": "f01", "step": "select E3", "op": "click", "elapsed_ms": 57.1, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T13:36:20.213203+00:00", "test": "f01", "step": "type =C3*D3 into E3", "op": "type", "elapsed_ms": 6.9, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T13:36:20.214887+00:00", "test": "f01", "step": "press type for E3", "op": "click", "elapsed_ms": 1.6, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T13:36:20.216912+00:00", "test": "f01", "step": "press Enter for E3", "op": "click", "elapsed_ms": 1.9, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T13:36:20.271690+00:00", "test": "f01", "step": "select A4", "op": "click", "elapsed_ms": 54.7, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T13:36:20.277064+00:00", "test": "f01", "step": "type 2026-11-18 into A4", "op": "type", "elapsed_ms": 5.3, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T13:36:20.279826+00:00", "test": "f01", "step": "press type for A4", "op": "click", "elapsed_ms": 2.7, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T13:36:20.335390+00:00", "test": "f01", "step": "select B4", "op": "click", "elapsed_ms": 55.5, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T13:36:20.341192+00:00", "test": "f01", "step": "type Tool into B4", "op": "type", "elapsed_ms": 5.7, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T13:36:20.342943+00:00", "test": "f01", "step": "press type for B4", "op": "click", "elapsed_ms": 1.7, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T13:36:20.399012+00:00", "test": "f01", "step": "select C4", "op": "click", "elapsed_ms": 56.0, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T13:36:20.404200+00:00", "test": "f01", "step": "type 5 into C4", "op": "type", "elapsed_ms": 5.1, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T13:36:20.406158+00:00", "test": "f01", "step": "press type for C4", "op": "click", "elapsed_ms": 1.9, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T13:36:20.463404+00:00", "test": "f01", "step": "select D4", "op": "click", "elapsed_ms": 57.1, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T13:36:20.468520+00:00", "test": "f01", "step": "type 150000 into D4", "op": "type", "elapsed_ms": 5.0, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T13:36:20.470122+00:00", "test": "f01", "step": "press type for D4", "op": "click", "elapsed_ms": 1.5, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T13:36:20.526665+00:00", "test": "f01", "step": "select E4", "op": "click", "elapsed_ms": 56.5, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T13:36:20.533207+00:00", "test": "f01", "step": "type =C4*D4 into E4", "op": "type", "elapsed_ms": 6.5, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T13:36:20.535451+00:00", "test": "f01", "step": "press type for E4", "op": "click", "elapsed_ms": 2.2, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T13:36:20.537185+00:00", "test": "f01", "step": "press Enter for E4", "op": "click", "elapsed_ms": 1.7, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T13:36:20.593041+00:00", "test": "f01", "step": "select E5", "op": "click", "elapsed_ms": 55.8, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T13:36:20.598536+00:00", "test": "f01", "step": "type =SUM(E2:E4) into E5", "op": "type", "elapsed_ms": 5.4, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T13:36:20.600707+00:00", "test": "f01", "step": "press type for E5", "op": "click", "elapsed_ms": 2.1, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T13:36:20.602544+00:00", "test": "f01", "step": "press Enter for E5", "op": "click", "elapsed_ms": 1.7, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T13:36:20.658873+00:00", "test": "f01", "step": "select E6", "op": "click", "elapsed_ms": 56.3, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T13:36:20.667304+00:00", "test": "f01", "step": "type =AVERAGE(E2:E4) into E6", "op": "type", "elapsed_ms": 8.3, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T13:36:20.669558+00:00", "test": "f01", "step": "press type for E6", "op": "click", "elapsed_ms": 2.2, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T13:36:20.671290+00:00", "test": "f01", "step": "press Enter for E6", "op": "click", "elapsed_ms": 1.7, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T13:36:20.725908+00:00", "test": "f01", "step": "select E7", "op": "click", "elapsed_ms": 54.6, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T13:36:20.734266+00:00", "test": "f01", "step": "type =COUNT(E2:E4) into E7", "op": "type", "elapsed_ms": 8.3, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T13:36:20.736235+00:00", "test": "f01", "step": "press type for E7", "op": "click", "elapsed_ms": 1.9, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T13:36:20.738833+00:00", "test": "f01", "step": "press Enter for E7", "op": "click", "elapsed_ms": 2.5, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T13:36:20.743112+00:00", "test": "f01", "step": "read E7 after wrong formula", "op": "text", "elapsed_ms": 4.2, "ok": true, "detail": "COUNT text", "error": null}
+{"ts": "2026-11-21T13:36:20.797713+00:00", "test": "f01", "step": "select E7", "op": "click", "elapsed_ms": 54.5, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T13:36:20.806083+00:00", "test": "f01", "step": "type corrected formula", "op": "type", "elapsed_ms": 8.3, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T13:36:20.809102+00:00", "test": "f01", "step": "press type for correction", "op": "click", "elapsed_ms": 2.9, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T13:36:20.810726+00:00", "test": "f01", "step": "press Enter for correction", "op": "click", "elapsed_ms": 1.6, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T13:36:20.812176+00:00", "test": "f01", "step": "read all result cells", "op": "eval", "elapsed_ms": 1.4, "ok": true, "detail": {"c2": "12", "c3": "7", "c4": "5", "e2": "540000", "e3": "574000", "e4": "750000", "e5": "1864000", "e6": "621333", "e7": "3"}, "error": null}
