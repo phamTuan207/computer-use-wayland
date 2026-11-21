@@ -164,6 +164,43 @@ def test_apply_holders_prunes_dead_holders():
         assert set(overlay.load_holders()) == {'Muse:%d' % os.getpid()}
 
 
+def test_cmd_acquire_failure_leaks_nothing():
+    """Re-review D1: a failed CLI acquire removes the just-added holder,
+    so no pid-None entry is left that prune can never drop."""
+    import types
+    with tempfile.TemporaryDirectory() as tmp:
+        _isolated(tmp)
+        args = types.SimpleNamespace(agent='Muse', method='act-now',
+                                     pid=None, label=None)
+        orig_ensure = overlay._ensure_daemon
+        orig_send = overlay._send_socket
+        try:
+            def fail_daemon():
+                raise RuntimeError('overlay daemon exited during startup')
+            overlay._ensure_daemon = fail_daemon
+            try:
+                overlay.cmd_acquire(args)
+                raise AssertionError('cmd_acquire must raise on daemon failure')
+            except RuntimeError:
+                pass
+            assert overlay.load_holders() == {}, 'daemon failure must not leak a holder'
+            overlay._ensure_daemon = lambda: True
+
+            def fail_socket(*a, **k):
+                raise OSError('socket gone')
+            overlay._send_socket = fail_socket
+            try:
+                overlay.cmd_acquire(args)
+                raise AssertionError('cmd_acquire must raise on socket failure')
+            except OSError:
+                pass
+            assert overlay.load_holders() == {}, 'socket failure must not leak a holder'
+            assert overlay.prune_dead_holders() == []
+        finally:
+            overlay._ensure_daemon = orig_ensure
+            overlay._send_socket = orig_send
+
+
 def test_daemon_respawns_dead_native():
     """I12: a dead native indicator must be respawned while holders remain,
     not leave the pill invisible. The daemon detects the dead process in
@@ -209,6 +246,7 @@ if __name__ == '__main__':
     test_show_label_returns_bool()
     test_apply_holders_visible_false_on_show_failure()
     test_apply_holders_prunes_dead_holders()
+    test_cmd_acquire_failure_leaks_nothing()
     test_daemon_respawns_dead_native()
     test_daemon_keeps_live_native()
     print('all overlay tests pass')
