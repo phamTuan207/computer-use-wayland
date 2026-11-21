@@ -42,6 +42,13 @@ DOM-first grounding (item 12): locate() plus viewport_origin() gives
 the exact rect center in screen coordinates with no screenshot, and
 focus_check() / verify_typed() verify focus and typed text with cheap
 JS evals (document.activeElement, field value), never a fresh observe.
+viewport_origin() returns the ABSOLUTE origin: Hyprland window origin
++ mozInnerScreenX/Y (the live C12 probe 2026-11-22 03:36 proved
+mozInnerScreen is WINDOW-relative in this Zen build, (240, 8), so the
+raw pair as absolute coords is off-monitor). The geometry is verified
+by check_viewport_geometry (dimension closure + window/monitor
+containment), which replaces the AT-SPI cross-check: AT-SPI cannot see
+Zen (probe run 3: the bus works, Zen never registered accessibility).
 """
 import argparse
 import fcntl
@@ -92,6 +99,79 @@ def _wait_http(url, timeout_s=30):
     return False
 
 
+def check_viewport_geometry(moz_inner, absolute_origin, window_origin,
+                            window_size, inner_size, monitor_box=None):
+    """Probe checks that replace the AT-SPI cross-check (C12).
+
+    Returns the absolute viewport origin, or raises ZenDomError when
+    the geometry is impossible. The live C12 probe (2026-11-22 03:36,
+    four runs, one real click) proved mozInnerScreenX/Y are
+    WINDOW-relative in this Zen build: (240, 8) as absolute screen
+    coords is off the eDP-2 monitor, while window-relative closes
+    exactly (240 + 1615 + 8 = 1863 wide, 8 + 1160 + 8 = 1176 tall).
+    AT-SPI cannot see Zen at all (probe run 3: the bus works, Zen
+    never registered accessibility), so there is no AT-SPI cross-check
+    for this path; these two checks are the independent instruments
+    instead:
+    - dimension closure: mozInner + inner size + trailing gap equals
+      the window size on both axes (the gaps must be >= 0);
+    - containment: the absolute origin lies inside the window rect,
+      and inside the monitor box when one is given (this is the check
+      that catches the old bug: raw mozInner treated as absolute).
+    All sizes are CSS px except the window origin and monitor box,
+    which are screen px; at the measured setup the factor between them
+    is 1. The caller applies the CSS-to-screen factor to mozInner
+    before computing the absolute origin.
+    """
+    def _pair(value, name):
+        if (not isinstance(value, (list, tuple)) or len(value) != 2
+                or any(isinstance(v, bool)
+                       or not isinstance(v, (int, float)) for v in value)):
+            raise ZenDomError('%s must be two numbers [x, y]' % name)
+        return [value[0], value[1]]
+
+    moz = _pair(moz_inner, 'mozInnerScreen')
+    absolute = _pair(absolute_origin, 'absolute viewport origin')
+    window = _pair(window_origin, 'window origin')
+    size = _pair(window_size, 'window size')
+    inner = _pair(inner_size, 'inner size')
+    if any(v < 0 for v in moz):
+        raise ZenDomError('mozInnerScreen is negative: %r' % (moz,))
+    if size[0] <= 0 or size[1] <= 0 or inner[0] <= 0 or inner[1] <= 0:
+        raise ZenDomError('window/inner size must be positive: %r %r'
+                          % (size, inner))
+    right_gap = size[0] - inner[0] - moz[0]
+    bottom_gap = size[1] - inner[1] - moz[1]
+    if right_gap < 0 or bottom_gap < 0:
+        raise ZenDomError(
+            'dimension closure fails: mozInner %r + inner %r exceeds '
+            'window size %r (gaps %r, %r); the viewport origin cannot '
+            'be window-relative with these numbers'
+            % (moz, inner, size, right_gap, bottom_gap))
+    if not (window[0] <= absolute[0] < window[0] + size[0]
+            and window[1] <= absolute[1] < window[1] + size[1]):
+        raise ZenDomError(
+            'absolute viewport origin %r falls outside the window rect '
+            '%r size %r; the origin is not absolute screen coordinates'
+            % (absolute, window, size))
+    if monitor_box is not None:
+        if (not isinstance(monitor_box, (list, tuple))
+                or len(monitor_box) != 4
+                or any(isinstance(v, bool)
+                       or not isinstance(v, (int, float))
+                       for v in monitor_box)):
+            raise ZenDomError('monitor_box must be [x, y, w, h]')
+        if not (monitor_box[0] <= absolute[0]
+                < monitor_box[0] + monitor_box[2]
+                and monitor_box[1] <= absolute[1]
+                < monitor_box[1] + monitor_box[3]):
+            raise ZenDomError(
+                'absolute viewport origin %r falls outside the monitor '
+                'box %r; a viewport origin cannot sit off-monitor while '
+                'its window is on-screen' % (absolute, monitor_box))
+    return absolute
+
+
 class ZenSession:
     """One WebDriver session against one Zen, with guaranteed cleanup."""
 
@@ -105,6 +185,8 @@ class ZenSession:
         self.gecko_proc = None
         self.session = None
         self._lock_file = None
+        self.last_display_metrics = None
+        self.last_scale_factor = 1
 
     def __enter__(self):
         LOCK_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -349,13 +431,42 @@ class ZenSession:
 
         Returns {x, y, width, height, center_x, center_y} in CSS pixels,
         or None if the selector matches nothing. Use center_x/center_y
-        for the REAL mouse click; never a DOM click.
+        for the REAL mouse click; never a DOM click. The query pierces
+        open shadow roots (a Messenger composer inside a shadow tree
+        is findable) and same-origin iframes; a cross-origin iframe is
+        unreachable from parent JS, so an element there returns None
+        and the caller must fall back to vision or a BiDi
+        browsing-context call, never silently drop the target from an
+        "every input" harvest.
         """
-        js = ("const el = document.querySelector(arguments[0]);"
-              " if (!el) return null;"
-              " const r = el.getBoundingClientRect();"
+        js = ("(function(){"
+              "function pierce(sel, root){"
+              "let e = root.querySelector(sel);"
+              "if (e) return e;"
+              "const all = root.querySelectorAll('*');"
+              "for (const el of all){"
+              "if (el.shadowRoot){"
+              "e = pierce(sel, el.shadowRoot);"
+              "if (e) return e;"
+              "}}"
+              "return null;"
+              "}"
+              "let e = pierce(%s, document);"
+              "if (!e){"
+              "const frames = document.querySelectorAll('iframe');"
+              "for (const f of frames){"
+              "try{"
+              "if (f.contentWindow && f.contentWindow.document){"
+              "e = pierce(%s, f.contentWindow.document);"
+              "if (e) break;"
+              "}}catch(_){"
+              "}}"
+              "}"
+              "if (!e) return null;"
+              " const r = e.getBoundingClientRect();"
               " return {x: r.x, y: r.y, width: r.width, height: r.height,"
-              " center_x: r.x + r.width / 2, center_y: r.y + r.height / 2};")
+              " center_x: r.x + r.width / 2, center_y: r.y + r.height / 2};})()"
+              % (json.dumps(selector), json.dumps(selector)))
         rect = self.evaluate(js, [selector])
         return rect
 
@@ -364,41 +475,169 @@ class ZenSession:
         when the JS expression equals the expected value."""
         return self.evaluate(script) == expected
 
-    def viewport_origin(self):
-        """[x, y] of the viewport origin in screen coordinates (CSS px).
+    def display_metrics(self):
+        """DPR, zoom, and viewport metrics in one JS eval.
 
-        Firefox-only: mozInnerScreenX/Y is the viewport origin on the
-        screen. Rect centers from getBoundingClientRect are viewport
-        relative, so screen = origin + rect center (the calibration_e2
-        proven chain). One cheap JS eval, no screenshot.
+        Returns {device_pixel_ratio, screen_pixels_per_css_pixel,
+        zoom, inner_size, outer_size, moz_inner}. mozInnerScreenX/Y
+        are CSS px (MDN: affected by zoom); physical screen px need
+        screenPixelsPerCSSPixel, with devicePixelRatio as the fallback
+        (devicePixelRatio already reflects page zoom in Firefox).
+        The values are recorded with every snapshot so a conversion
+        can be re-checked later; the live probe measured DPR 1,
+        screenPixelsPerCSSPixel 1, zoom 1 on this Zen. The last read
+        is kept on self.last_display_metrics for the grounding
+        evidence; display_metrics() itself never raises for a missing
+        value, it records None.
         """
-        origin = self.evaluate(
-            "return [window.mozInnerScreenX, window.mozInnerScreenY];")
-        if (not isinstance(origin, (list, tuple)) or len(origin) != 2
-                or any(isinstance(v, bool)
-                       or not isinstance(v, (int, float)) for v in origin)):
+        raw = self.evaluate(
+            "/* zen_display_metrics */ return {"
+            "mozInnerScreenX: window.mozInnerScreenX,"
+            "mozInnerScreenY: window.mozInnerScreenY,"
+            "devicePixelRatio: window.devicePixelRatio,"
+            "screenPixelsPerCSSPixel:"
+            " (typeof window.screenPixelsPerCSSPixel === 'number'"
+            " ? window.screenPixelsPerCSSPixel : null),"
+            "zoom: (window.visualViewport"
+            " ? window.visualViewport.scale : 1),"
+            "innerWidth: window.innerWidth,"
+            "innerHeight: window.innerHeight,"
+            "outerWidth: window.outerWidth,"
+            "outerHeight: window.outerHeight};")
+        if not isinstance(raw, dict):
             raise ZenDomError(
-                "viewport origin is not two numbers: %r" % (origin,))
-        return [origin[0], origin[1]]
+                'display metrics are not an object: %r' % (raw,))
+        metrics = {
+            'device_pixel_ratio': raw.get('devicePixelRatio'),
+            'screen_pixels_per_css_pixel':
+                raw.get('screenPixelsPerCSSPixel'),
+            'zoom': raw.get('zoom'),
+            'inner_size': [raw.get('innerWidth'), raw.get('innerHeight')],
+            'outer_size': [raw.get('outerWidth'), raw.get('outerHeight')],
+            'moz_inner': [raw.get('mozInnerScreenX'),
+                          raw.get('mozInnerScreenY')],
+        }
+        self.last_display_metrics = metrics
+        return metrics
+
+    def scale_factor(self):
+        """CSS px to screen px factor for the conversion chain.
+
+        screenPixelsPerCSSPixel when the browser reports it, else
+        devicePixelRatio. The live probe measured 1 on this Zen; at
+        monitor scale 2 the factor is 2 and the unscaled map lands
+        about 306 screen px off (RT R13). Reads the last display
+        metrics when available, else one fresh read.
+        """
+        metrics = getattr(self, 'last_display_metrics', None)
+        if not isinstance(metrics, dict):
+            metrics = self.display_metrics()
+        factor = metrics.get('screen_pixels_per_css_pixel')
+        if not isinstance(factor, (int, float)) or isinstance(factor, bool) \
+                or factor <= 0:
+            factor = metrics.get('device_pixel_ratio')
+        if not isinstance(factor, (int, float)) or isinstance(factor, bool) \
+                or factor <= 0:
+            raise ZenDomError('no usable CSS-to-screen factor in %r'
+                              % (metrics,))
+        return factor
+
+    def viewport_origin(self, window_origin=None, window_size=None,
+                        monitor_box=None):
+        """[x, y] of the viewport origin in ABSOLUTE screen coordinates.
+
+        Firefox-only. The live C12 probe (2026-11-22 03:36) proved
+        mozInnerScreenX/Y are WINDOW-relative in this Zen build, so
+        the absolute origin is the Hyprland window origin plus
+        mozInnerScreenX/Y times the CSS-to-screen factor:
+        (2509, 914) + (240, 8) = (2749, 922) at the measured setup.
+        window_origin is REQUIRED: without it the raw pair cannot be
+        placed on screen, and returning it as-is was the old bug
+        (the pair as absolute coords is off-monitor). window_size is
+        the Hyprland window size (defaults to the JS outer size);
+        monitor_box is [x, y, w, h] of the monitor when known. The
+        result is verified by check_viewport_geometry (dimension
+        closure + window/monitor containment), which replaces the
+        AT-SPI cross-check: AT-SPI cannot see Zen (probe run 3), so
+        no AT-SPI check exists for this path. Rect centers from
+        getBoundingClientRect are viewport relative, so screen =
+        origin + rect center times the factor. One cheap JS eval
+        (metrics bundled), no screenshot.
+        """
+        if window_origin is None:
+            raise ZenDomError(
+                'viewport_origin needs the Hyprland window origin: raw '
+                'mozInnerScreenX/Y are window-relative in this Zen '
+                'build (live probe 03:36), not absolute screen coords')
+        raw = self.evaluate(
+            "/* zen_viewport_origin */ return [window.mozInnerScreenX,"
+            " window.mozInnerScreenY, window.devicePixelRatio,"
+            " (typeof window.screenPixelsPerCSSPixel === 'number'"
+            " ? window.screenPixelsPerCSSPixel : null),"
+            " (window.visualViewport ? window.visualViewport.scale : 1),"
+            " window.innerWidth, window.innerHeight,"
+            " window.outerWidth, window.outerHeight];")
+        if (not isinstance(raw, (list, tuple)) or len(raw) != 9
+                or any(v is None or isinstance(v, bool)
+                       or not isinstance(v, (int, float)) for v in raw)):
+            raise ZenDomError(
+                'viewport origin read is not nine numbers: %r' % (raw,))
+        moz_inner = [raw[0], raw[1]]
+        factor = raw[3]
+        if not isinstance(factor, (int, float)) or factor <= 0:
+            factor = raw[2]
+        self.last_display_metrics = {
+            'device_pixel_ratio': raw[2],
+            'screen_pixels_per_css_pixel': raw[3],
+            'zoom': raw[4],
+            'inner_size': [raw[5], raw[6]],
+            'outer_size': [raw[7], raw[8]],
+            'moz_inner': moz_inner,
+        }
+        self.last_scale_factor = factor
+        absolute = [window_origin[0] + moz_inner[0] * factor,
+                    window_origin[1] + moz_inner[1] * factor]
+        size = window_size if window_size is not None else [raw[7], raw[8]]
+        return check_viewport_geometry(
+            moz_inner, absolute, window_origin, size,
+            [raw[5], raw[6]], monitor_box)
 
     def locate_point(self, meta, selector):
         """Image point of one element's rect center, first-time-right.
 
-        locate() gives the rect, viewport_origin() gives the viewport
-        origin, and fastpath.dom_rect_to_image_point maps the rect
-        center into the observation image (same linear map as
-        cu.image_point, inverted). No screenshot is read to locate
-        the element: the DOM rect is ground truth. Raises ZenDomError
-        when the element is missing or the point falls outside the
-        observed image.
+        locate() gives the rect, viewport_origin() gives the absolute
+        viewport origin (Hyprland window origin + mozInnerScreen, live
+        probe 03:36), and fastpath.dom_rect_to_image_point maps the
+        rect center into the observation image (same linear map as
+        cu.image_point, inverted), times the CSS-to-screen factor
+        recorded with the origin read. The window origin comes from
+        the meta's window_bounds, else its region. No screenshot is
+        read to locate the element: the DOM rect is ground truth.
+        Raises ZenDomError when the element is missing or the point
+        falls outside the observed image.
         """
         from fastpath import dom_rect_to_image_point
         rect = self.locate(selector)
         if rect is None:
             raise ZenDomError(f"no element matches {selector!r}")
-        origin = self.viewport_origin()
+        bounds = meta.get('window_bounds') if isinstance(meta, dict) else None
+        if (isinstance(bounds, (list, tuple)) and len(bounds) == 4):
+            window_origin = [bounds[0], bounds[1]]
+            window_size = [bounds[2], bounds[3]]
+        elif isinstance(meta, dict) and isinstance(meta.get('region'),
+                                                  (list, tuple)):
+            window_origin = [meta['region'][0], meta['region'][1]]
+            window_size = [meta['region'][2], meta['region'][3]]
+        else:
+            raise ZenDomError('meta needs window_bounds or region')
+        monitor_box = meta.get('monitor_box') if isinstance(meta, dict) \
+            else None
+        origin = self.viewport_origin(window_origin, window_size,
+                                      monitor_box)
         try:
-            return dom_rect_to_image_point(meta, rect, origin)
+            return dom_rect_to_image_point(
+                meta, rect, origin,
+                getattr(self, 'last_scale_factor', 1))
         except ValueError as exc:
             raise ZenDomError(str(exc)) from exc
 
@@ -407,8 +646,12 @@ class ZenSession:
 
         Cheap JS eval (elementFromPoint), no screenshot. The
         first-time-right guard: the rect center must resolve to the
-        element (or something inside it), or the click would land on
-        whatever covers it.
+        element itself or to a NON-interactive descendant, or the
+        click would land on whatever covers it. An interactive child
+        at the center (BUTTON, A, INPUT, [role=button]: a clear-text,
+        emoji, or send affordance inside the composer) FAILS the
+        check: the click would activate the child instead of focusing
+        the field. A plain text SPAN inside the field still passes.
         """
         return bool(self.evaluate(
             "(function(){const e=document.querySelector(%s);"
@@ -417,7 +660,18 @@ class ZenSession:
             "if(!r.width||!r.height) return false;"
             "const x=r.left+r.width/2, y=r.top+r.height/2;"
             "const hit=document.elementFromPoint(x,y);"
-            "return !!hit && (e===hit||e.contains(hit));})()"
+            "if(!hit) return false;"
+            "if(e===hit) return true;"
+            "if(!e.contains(hit)) return false;"
+            "const tag=(hit.tagName||'').toUpperCase();"
+            "if(/^(BUTTON|A|INPUT|TEXTAREA|SELECT|OPTION|LABEL|SUMMARY)$/"
+            ".test(tag)) return false;"
+            "if(hit.closest && hit.closest('[role=\"button\"],"
+            "[role=\"link\"],[role=\"checkbox\"],[role=\"menuitem\"],"
+            "[role=\"tab\"]')) return false;"
+            "if(hit.getAttribute && /^(button|link)$/"
+            ".test(hit.getAttribute('role')||'')) return false;"
+            "return true;})()"
             % json.dumps(selector)))
 
     def focus_check(self, selector):
@@ -426,29 +680,243 @@ class ZenSession:
         Cheap JS eval (document.activeElement), no screenshot. The
         pre-type gate in the DOM-first flow: after the click, the
         input must be activeElement before any keystroke is sent.
+        The active element is walked down through shadowRoot
+        .activeElement (V3): an input inside a shadow root is focused
+        when the host is document.activeElement and the input is the
+        shadow root's activeElement; the old strict equality
+        false-negatived that shape.
         """
         return bool(self.evaluate(
             "(function(){const e=document.querySelector(%s);"
-            "return !!e && document.activeElement===e && !e.readOnly && "
+            "if(!e) return false;"
+            "let a=document.activeElement;"
+            "while(a && a.shadowRoot && a.shadowRoot.activeElement)"
+            "a=a.shadowRoot.activeElement;"
+            "return a===e && !e.readOnly && "
             "(e.isContentEditable || /^(INPUT|TEXTAREA)$/.test(e.tagName));})()"
             % json.dumps(selector)))
 
     def field_value(self, selector):
-        """Current value/text of one field, or None when it has none."""
+        """Current value/text of one field, or None when it has none.
+
+        The query pierces open shadow roots (same helper shape as
+        locate); a field inside a shadow tree reads the same as one
+        in the top document.
+        """
         return self.evaluate(
-            "(function(){const e=document.querySelector(%s);"
+            "(function(){"
+            "function pierce(sel, root){"
+            "let e=root.querySelector(sel);"
+            "if(e) return e;"
+            "const all=root.querySelectorAll('*');"
+            "for(const el of all){"
+            "if(el.shadowRoot){"
+            "e=pierce(sel, el.shadowRoot);"
+            "if(e) return e;"
+            "}}"
+            "return null;"
+            "}"
+            "const e=pierce(%s, document);"
             "if(!e) return null;"
             "return e.isContentEditable ? e.textContent : "
             "('value' in e ? e.value : null);})()" % json.dumps(selector))
 
-    def verify_typed(self, selector, expected):
+    def verify_typed(self, selector, expected, before=None):
         """True when the field holds exactly the expected text.
 
         Cheap JS eval, no screenshot. The sufficient type check: the
         pixel band can only show that the input line changed, while
-        this reads what the field actually holds.
+        this reads what the field actually holds. For contenteditable
+        fields the comparison normalizes trailing whitespace
+        (textContent carries a trailing newline the typed text does
+        not). When before is given, a field that ALREADY held the
+        expected text before typing fails unless a real typed event
+        was recorded (V11 flag): a pre-filled value proves no typing
+        happened (RT R2/R10). before None keeps the old equality-only
+        shape for callers that never type.
         """
-        return self.field_value(selector) == expected
+        result = self.evaluate(
+            "(function(){"
+            "function pierce(sel, root){"
+            "let e=root.querySelector(sel);"
+            "if(e) return e;"
+            "const all=root.querySelectorAll('*');"
+            "for(const el of all){"
+            "if(el.shadowRoot){"
+            "e=pierce(sel, el.shadowRoot);"
+            "if(e) return e;"
+            "}}"
+            "return null;"
+            "}"
+            "const e=pierce(%s, document);"
+            "if(!e) return null;"
+            "/* verify_typed */ return {value: e.isContentEditable"
+            " ? e.textContent : ('value' in e ? e.value : null),"
+            " editable: !!e.isContentEditable};})()"
+            % json.dumps(selector))
+        if result is None:
+            return False
+        if isinstance(result, dict):
+            value = result.get('value')
+            editable = bool(result.get('editable'))
+        else:
+            value = result
+            editable = False
+        if not isinstance(value, str) or not isinstance(expected, str):
+            return False
+        norm_value = value.rstrip() if editable else value
+        norm_expected = expected.rstrip() if editable else expected
+        if norm_value != norm_expected:
+            return False
+        if before is not None:
+            norm_before = (before.rstrip() if editable
+                           and isinstance(before, str) else before)
+            if norm_before == norm_expected and not self.typed_flag(selector):
+                return False
+        return True
+
+    def arm_typed_flag(self, selector):
+        """Arm the V11 typed-event flag on the target, before typing.
+
+        Installs a trusted-input-event listener (real keystrokes
+        dispatch trusted input events; a page script setting el.value
+        and dispatching synthetic input events produces UNTRUSTED
+        events, so the flag stays clear) plus a MutationObserver that
+        records any DOM mutation of the field for diagnostics. The
+        flag lives on window.__agentCuTyped keyed by selector.
+        typed_flag() reads it after the type step. A value that
+        appears with no trusted input event must fail verification.
+        """
+        return bool(self.evaluate(
+            "(function(){"
+            "function pierce(sel, root){"
+            "let e=root.querySelector(sel);"
+            "if(e) return e;"
+            "const all=root.querySelectorAll('*');"
+            "for(const el of all){"
+            "if(el.shadowRoot){"
+            "e=pierce(sel, el.shadowRoot);"
+            "if(e) return e;"
+            "}}"
+            "return null;"
+            "}"
+            "const sel=%s;"
+            "window.__agentCuTyped = window.__agentCuTyped || {};"
+            "window.__agentCuTyped[sel] = false;"
+            "window.__agentCuMutated = window.__agentCuMutated || {};"
+            "window.__agentCuMutated[sel] = false;"
+            "const e=pierce(sel, document);"
+            "if(!e) return false;"
+            "e.addEventListener('input', function(ev){"
+            "if(ev.isTrusted) window.__agentCuTyped[sel]=true;"
+            "});"
+            "try{"
+            "const obs=new MutationObserver(function(){"
+            "window.__agentCuMutated[sel]=true;"
+            "});"
+            "obs.observe(e, {childList:true, characterData:true,"
+            "subtree:true, attributes:false});"
+            "(window.__agentCuObservers ="
+            " window.__agentCuObservers || {})[sel]=obs;"
+            "}catch(_){}"
+            "/* zen_arm_typed_flag */ return true;})()"
+            % json.dumps(selector)))
+
+    def typed_flag(self, selector):
+        """True when a trusted input event fired on the target since
+        arm_typed_flag(). A synthetic JS-set value dispatches no
+        trusted input event, so the flag stays False for it."""
+        return bool(self.evaluate(
+            "/* zen_typed_flag */ return !!(window.__agentCuTyped"
+            " && window.__agentCuTyped[%s]);" % json.dumps(selector)))
+
+    def sent_bubble_contains(self, text):
+        """V12 finish gate: True when the thread DOM holds a sent
+        bubble whose text is exactly the message (leaf elements only,
+        so a container holding the whole thread cannot false-pass).
+        This is the one check the type step cannot set: only Enter
+        plus the app can put the bubble there. Returns False when no
+        bubble holds the text."""
+        return bool(self.evaluate(
+            "/* zen_sent_bubble */ return (function(){"
+            "const want=%s;"
+            "const els=document.querySelectorAll('*');"
+            "for(const el of els){"
+            "if(el.children.length) continue;"
+            "if((el.textContent||'').trim()===want) return true;"
+            "}"
+            "return false;})()" % json.dumps(text)))
+
+    def harvest(self, selectors):
+        """One-shot bulk DOM harvest (doma11y C1): ONE evaluate
+        returns rects for EVERY selector, plus the viewport origin
+        inputs and display metrics. Clone2 measured one-shot 66 rects
+        in 0.019s Marionette versus 16ms per element per-element
+        grounding (55x slower), so per-element ground_many is the slow
+        shape and this is the VISION 1 shape. Returns {moz_inner,
+        device_pixel_ratio, screen_pixels_per_css_pixel, zoom,
+        inner_size, outer_size, items: {selector: {rect, hit,
+        focused} or None}}. hit uses the same interactive-descendant
+        rule as hit_check; focused is the deep activeElement walk.
+        The caller adds the Hyprland window origin to moz_inner for
+        the absolute origin (viewport_origin) and maps rect centers
+        through fastpath with the recorded factor.
+        """
+        if not selectors:
+            return {'moz_inner': [0, 0], 'device_pixel_ratio': 1,
+                    'screen_pixels_per_css_pixel': 1, 'zoom': 1,
+                    'inner_size': [0, 0], 'outer_size': [0, 0], 'items': {}}
+        raw = self.evaluate(
+            "/* zen_harvest */ return (function(){"
+            "const out={moz_inner:[window.mozInnerScreenX,"
+            "window.mozInnerScreenY],"
+            "device_pixel_ratio:window.devicePixelRatio,"
+            "screen_pixels_per_css_pixel:"
+            "(typeof window.screenPixelsPerCSSPixel==='number'"
+            "?window.screenPixelsPerCSSPixel:null),"
+            "zoom:(window.visualViewport?window.visualViewport.scale:1),"
+            "inner_size:[window.innerWidth,window.innerHeight],"
+            "outer_size:[window.outerWidth,window.outerHeight],"
+            "items:{}};"
+            "function pierce(sel, root){"
+            "let e=root.querySelector(sel);"
+            "if(e) return e;"
+            "const all=root.querySelectorAll('*');"
+            "for(const el of all){"
+            "if(el.shadowRoot){"
+            "e=pierce(sel, el.shadowRoot);"
+            "if(e) return e;"
+            "}}"
+            "return null;"
+            "}"
+            "function interactive(el){"
+            "if(!el) return false;"
+            "const tag=(el.tagName||'').toUpperCase();"
+            "if(/^(BUTTON|A|INPUT|TEXTAREA|SELECT|OPTION|LABEL|SUMMARY)$/"
+            ".test(tag)) return true;"
+            "if(el.closest && el.closest('[role=\"button\"],"
+            "[role=\"link\"],[role=\"checkbox\"],[role=\"menuitem\"],"
+            "[role=\"tab\"]')) return true;"
+            "return false;"
+            "}"
+            "let a=document.activeElement;"
+            "while(a && a.shadowRoot && a.shadowRoot.activeElement)"
+            "a=a.shadowRoot.activeElement;"
+            "for(const sel of %s){"
+            "const e=pierce(sel, document);"
+            "if(!e){out.items[sel]=null;continue;}"
+            "const r=e.getBoundingClientRect();"
+            "const x=r.left+r.width/2, y=r.top+r.height/2;"
+            "const hit=document.elementFromPoint(x,y);"
+            "out.items[sel]={rect:{x:r.x,y:r.y,width:r.width,"
+            "height:r.height,center_x:x,center_y:y},"
+            "hit:!!hit&&(e===hit||(e.contains(hit)&&!interactive(hit))),"
+            "focused:(a===e)};"
+            "}"
+            "return out;})()" % json.dumps(list(selectors)))
+        if not isinstance(raw, dict) or 'items' not in raw:
+            raise ZenDomError('harvest did not return items: %r' % (raw,))
+        return raw
 
 
 def kill_hung_remote_clients(max_age_s=900):
@@ -498,17 +966,24 @@ def main():
     if args.cmd == "kill-hung":
         print(json.dumps({"killed": kill_hung_remote_clients()}, indent=1))
         return 0
-    with ZenSession(marionette_port=args.marionette_port,
-                    wd_port=args.wd_port) as z:
-        if args.cmd == "list":
-            print(json.dumps(z.list_tabs(), indent=1, ensure_ascii=False))
-        elif args.cmd == "tab":
-            print(json.dumps(z.tab_at(args.index), indent=1,
-                             ensure_ascii=False))
-        elif args.cmd == "eval":
-            print(json.dumps(z.evaluate(args.script), indent=1, ensure_ascii=False))
-        elif args.cmd == "locate":
-            print(json.dumps(z.locate(args.selector), indent=1, ensure_ascii=False))
+    try:
+        with ZenSession(marionette_port=args.marionette_port,
+                        wd_port=args.wd_port) as z:
+            if args.cmd == "list":
+                print(json.dumps(z.list_tabs(), indent=1, ensure_ascii=False))
+            elif args.cmd == "tab":
+                print(json.dumps(z.tab_at(args.index), indent=1,
+                                 ensure_ascii=False))
+            elif args.cmd == "eval":
+                print(json.dumps(z.evaluate(args.script), indent=1, ensure_ascii=False))
+            elif args.cmd == "locate":
+                print(json.dumps(z.locate(args.selector), indent=1, ensure_ascii=False))
+    except ZenDomError as exc:
+        # A wedged session (R7) used to die with a traceback here; a
+        # CLI that dies mid-pipe is unreadable to its caller. Fail
+        # cleanly: one JSON error object on stdout, exit code 1.
+        print(json.dumps({"ok": False, "error": str(exc)[:400]}))
+        return 1
     return 0
 
 
