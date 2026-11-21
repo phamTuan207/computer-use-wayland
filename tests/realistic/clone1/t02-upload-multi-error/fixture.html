@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Upload test data files</title>
+<style>
+body { font-family: sans-serif; max-width: 640px; margin: 2em auto; }
+table { border-collapse: collapse; margin-top: 1em; width: 100%; }
+td, th { border: 1px solid #999; padding: 0.3em 0.6em; text-align: left; }
+.ok { color: #070; }
+.err { color: #b00; }
+#result { color: #070; margin-top: 1em; }
+button { margin-top: 0.6em; margin-right: 0.5em; }
+</style>
+</head>
+<body>
+<h1>Upload test data files</h1>
+<p>Limit: 64 KB per file.</p>
+<input id="files" type="file" multiple>
+<div>
+  <button id="upload">Upload all</button>
+  <button id="remove-failed" disabled>Remove failed files</button>
+  <button id="retry" disabled>Upload remaining</button>
+</div>
+<table>
+  <thead><tr><th>File</th><th>Size</th><th>Status</th></tr></thead>
+  <tbody id="rows"></tbody>
+</table>
+<div id="result" role="status"></div>
+<script>
+const LIMIT = 64 * 1024;
+let queue = [];
+let uploaded = [];
+const rowsEl = document.getElementById('rows');
+const resultEl = document.getElementById('result');
+const removeBtn = document.getElementById('remove-failed');
+const retryBtn = document.getElementById('retry');
+function render() {
+  rowsEl.innerHTML = '';
+  for (const item of queue) {
+    const tr = document.createElement('tr');
+    const status = item.status === 'ok' ? '<span class="ok">ok</span>'
+      : item.status === 'failed' ? '<span class="err">failed: file exceeds the 64 KB limit</span>'
+      : 'pending';
+    tr.innerHTML = '<td></td><td></td><td>' + status + '</td>';
+    tr.children[0].textContent = item.file.name;
+    tr.children[1].textContent = item.file.size + ' bytes';
+    rowsEl.appendChild(tr);
+  }
+}
+document.getElementById('files').addEventListener('change', (event) => {
+  queue = Array.from(event.target.files).map((file) => ({ file, status: 'pending' }));
+  uploaded = [];
+  resultEl.textContent = '';
+  removeBtn.disabled = true;
+  retryBtn.disabled = true;
+  render();
+});
+document.getElementById('upload').addEventListener('click', async () => {
+  for (const item of queue) {
+    await new Promise((r) => setTimeout(r, 80));
+    if (item.file.size > LIMIT) {
+      item.status = 'failed';
+    } else {
+      item.status = 'ok';
+      uploaded.push(item.file.name);
+    }
+    render();
+  }
+  const failed = queue.some((i) => i.status === 'failed');
+  removeBtn.disabled = !failed;
+  retryBtn.disabled = !failed;
+});
+removeBtn.addEventListener('click', () => {
+  queue = queue.filter((i) => i.status !== 'failed');
+  render();
+});
+retryBtn.addEventListener('click', async () => {
+  for (const item of queue) {
+    if (item.status === 'ok') continue;
+    await new Promise((r) => setTimeout(r, 80));
+    item.status = 'ok';
+    uploaded.push(item.file.name);
+    render();
+  }
+  resultEl.textContent = 'Uploaded: ' + uploaded.join(', ') + '.';
+  retryBtn.disabled = true;
+});
+</script>
+</body>
+</html>

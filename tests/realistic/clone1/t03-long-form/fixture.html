@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Create problem</title>
+<style>
+body { font-family: sans-serif; max-width: 640px; margin: 2em auto; }
+label { display: block; margin: 0.6em 0 0.2em; }
+input, select, textarea { width: 100%; box-sizing: border-box; }
+textarea { height: 4em; }
+#errors { color: #b00; margin-top: 1em; }
+#summary { color: #070; margin-top: 1em; }
+</style>
+</head>
+<body>
+<h1>Create problem</h1>
+<form id="form">
+  <label for="title">Title *</label><input id="title" type="text">
+  <label for="short">Short name</label><input id="short" type="text">
+  <label for="time">Time limit (seconds, 1-10)</label><input id="time" type="text">
+  <label for="memory">Memory limit (MB, 16-1024)</label><input id="memory" type="text">
+  <label for="difficulty">Difficulty</label>
+  <select id="difficulty"><option>easy</option><option>medium</option><option>hard</option></select>
+  <label for="ptype">Problem type</label>
+  <select id="ptype"><option>batch</option><option>interactive</option></select>
+  <label for="tags">Tags (comma separated)</label><input id="tags" type="text">
+  <label for="statement">Statement *</label><textarea id="statement"></textarea>
+  <label for="inputfmt">Input format</label><textarea id="inputfmt"></textarea>
+  <label for="outputfmt">Output format</label><textarea id="outputfmt"></textarea>
+  <label for="samplein">Sample input *</label><textarea id="samplein"></textarea>
+  <label for="sampleout">Sample output *</label><textarea id="sampleout"></textarea>
+  <label for="checker">Checker</label>
+  <select id="checker"><option>exact</option><option>token</option><option>special</option></select>
+  <label for="notes">Author notes</label><textarea id="notes"></textarea>
+  <div><button id="submit" type="submit">Create problem</button></div>
+</form>
+<div id="errors" role="alert"></div>
+<div id="summary" role="status"></div>
+<script>
+document.getElementById('form').addEventListener('submit', (event) => {
+  event.preventDefault();
+  const errors = [];
+  const val = (id) => document.getElementById(id).value.trim();
+  if (!val('title')) errors.push('Title is required.');
+  if (!val('statement')) errors.push('Statement is required.');
+  if (!val('samplein')) errors.push('Sample input is required.');
+  if (!val('sampleout')) errors.push('Sample output is required.');
+  const time = Number(val('time'));
+  if (val('time') && (Number.isNaN(time) || time < 1 || time > 10)) {
+    errors.push('Time limit must be a number from 1 to 10.');
+  }
+  const memory = Number(val('memory'));
+  if (val('memory') && (Number.isNaN(memory) || memory < 16 || memory > 1024)) {
+    errors.push('Memory limit must be a number from 16 to 1024.');
+  }
+  const errorsEl = document.getElementById('errors');
+  const summaryEl = document.getElementById('summary');
+  errorsEl.textContent = '';
+  summaryEl.textContent = '';
+  if (errors.length) {
+    errorsEl.textContent = errors.join(' ');
+    return;
+  }
+  summaryEl.textContent = 'Problem "' + val('title') + '" created. ' +
+    'Received 14 fields, checker ' + val('checker') + ', difficulty ' +
+    val('difficulty') + '.';
+});
+</script>
+</body>
+</html>

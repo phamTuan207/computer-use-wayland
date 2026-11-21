@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Problem list</title>
+<style>
+body { font-family: sans-serif; max-width: 640px; margin: 2em auto; }
+table { border-collapse: collapse; width: 100%; }
+td, th { border: 1px solid #999; padding: 0.3em 0.6em; text-align: left; }
+button { margin-top: 0.6em; }
+</style>
+</head>
+<body>
+<h1>Problem list</h1>
+<table>
+  <thead><tr><th>ID</th><th>Title</th><th>Open</th></tr></thead>
+  <tbody id="rows"></tbody>
+</table>
+<button id="refresh">Refresh list</button>
+<script>
+const DEFAULTS = {
+  1: 'Problem One',
+  2: 'Problem Two',
+  3: 'Problem Three',
+  4: 'Problem Four',
+  5: 'Problem Five',
+};
+function titleFor(id) {
+  return localStorage.getItem('t05-title-' + id) || DEFAULTS[id];
+}
+function render() {
+  const rowsEl = document.getElementById('rows');
+  rowsEl.innerHTML = '';
+  for (let id = 1; id <= 5; id++) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = '<td>' + id + '</td><td class="title"></td>' +
+      '<td><a href="detail.html?id=' + id + '" target="_blank">Open</a></td>';
+    tr.querySelector('.title').textContent = titleFor(id);
+    rowsEl.appendChild(tr);
+  }
+}
+document.getElementById('refresh').addEventListener('click', render);
+render();
+</script>
+</body>
+</html>

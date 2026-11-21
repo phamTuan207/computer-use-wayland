@@ -1,0 +1,89 @@
+{
+  "started_at": "2026-11-21T08:26:23.919Z",
+  "finished_at": "2026-11-21T08:26:39.935Z",
+  "wall_clock_ms": 16016,
+  "passed": 10,
+  "failed": 0,
+  "results": [
+    {
+      "test": "t01-upload-single",
+      "exitCode": 0,
+      "pass": true,
+      "elapsed_ms": 2172,
+      "stdout": "{\"test\":\"t01-upload-single\",\"pass\":true,\"failures\":[],\"details\":{\"file\":\"t01-statement.txt\",\"size\":38,\"checksum\":\"258f5a4f\",\"confirmation\":\"Uploaded t01-statement.txt (38 bytes, checksum 258f5a4f) for problem \\\"Sample Problem\\\".\"},\"started_at\":\"2026-11-21T08:26:24.020Z\",\"finished_at\":\"2026-11-21T08:26:26.091Z\",\"elapsed_ms\":2070}",
+      "stderr": ""
+    },
+    {
+      "test": "t02-upload-multi-error",
+      "exitCode": 0,
+      "pass": true,
+      "elapsed_ms": 1487,
+      "stdout": "{\"test\":\"t02-upload-multi-error\",\"pass\":true,\"failures\":[],\"details\":{\"files\":[\"t02-a.txt\",\"t02-b.txt\",\"t02-big.txt\"],\"rowsAfterFirstUpload\":\"t02-a.txt9 bytesokt02-b.txt9 bytesokt02-big.txt102400 bytesfailed: file exceeds the 64 KB limit\",\"finalResult\":\"Uploaded: t02-a.txt, t02-b.txt.\"},\"started_at\":\"2026-11-21T08:26:26.182Z\",\"finished_at\":\"2026-11-21T08:26:27.577Z\",\"elapsed_ms\":1395}",
+      "stderr": ""
+    },
+    {
+      "test": "t03-long-form",
+      "exitCode": 0,
+      "pass": true,
+      "elapsed_ms": 1489,
+      "stdout": "{\"test\":\"t03-long-form\",\"pass\":true,\"failures\":[],\"details\":{\"emptySubmitErrors\":\"Title is required. Statement is required. Sample input is required. Sample output is required.\",\"summary\":\"Problem \\\"Long Form Problem\\\" created. Received 14 fields, checker token, difficulty medium.\"},\"started_at\":\"2026-11-21T08:26:27.665Z\",\"finished_at\":\"2026-11-21T08:26:29.067Z\",\"elapsed_ms\":1401}",
+      "stderr": ""
+    },
+    {
+      "test": "t04-long-form-draft",
+      "exitCode": 0,
+      "pass": true,
+      "elapsed_ms": 1699,
+      "stdout": "{\"test\":\"t04-long-form-draft\",\"pass\":true,\"failures\":[],\"details\":{\"batchExtraVisible\":false,\"interactiveExtraVisible\":true,\"restored\":{\"title\":\"Interactive Guessing Problem\",\"interactor\":\"Judge answers each query.\",\"qlimit\":\"30\",\"statement\":\"Guess the hidden number.\"},\"result\":\"Problem \\\"Interactive Guessing Problem\\\" created as interactive.\"},\"started_at\":\"2026-11-21T08:26:29.156Z\",\"finished_at\":\"2026-11-21T08:26:30.765Z\",\"elapsed_ms\":1609}",
+      "stderr": ""
+    },
+    {
+      "test": "t05-multi-tab",
+      "exitCode": 0,
+      "pass": true,
+      "elapsed_ms": 1617,
+      "stdout": "{\"test\":\"t05-multi-tab\",\"pass\":true,\"failures\":[],\"details\":{\"initialRowCount\":5,\"titlesBefore\":[\"Problem One\",\"Problem Two\",\"Problem Three\",\"Problem Four\",\"Problem Five\"],\"detailInitialTitle\":\"Problem Two\",\"titlesAfter\":[\"Problem One\",\"Edited Title Two\",\"Problem Three\",\"Problem Four\",\"Problem Five\"]},\"started_at\":\"2026-11-21T08:26:30.848Z\",\"finished_at\":\"2026-11-21T08:26:32.382Z\",\"elapsed_ms\":1534}",
+      "stderr": ""
+    },
+    {
+      "test": "t06-popup-dialog",
+      "exitCode": 0,
+      "pass": true,
+      "elapsed_ms": 2155,
+      "stdout": "{\"test\":\"t06-popup-dialog\",\"pass\":true,\"failures\":[],\"details\":{\"alert\":\"alert accepted\",\"confirmDismissed\":\"cancelled\",\"prompt\":\"name: Reviewer\",\"modal\":\"note: Looks good, publish it.\",\"popup\":\"popup name: Popup Tester\"},\"started_at\":\"2026-11-21T08:26:32.468Z\",\"finished_at\":\"2026-11-21T08:26:34.537Z\",\"elapsed_ms\":2068}",
+      "stderr": ""
+    },
+    {
+      "test": "t07-download-check",
+      "exitCode": 0,
+      "pass": true,
+      "elapsed_ms": 1317,
+      "stdout": "{\"test\":\"t07-download-check\",\"pass\":true,\"failures\":[],\"details\":{\"pageInfo\":\"Expected: 5 data rows, 6 lines total, checksum ed70e477.\",\"lines\":6,\"firstLine\":\"id,input,expected\",\"checksum\":\"ed70e477\"},\"started_at\":\"2026-11-21T08:26:34.657Z\",\"finished_at\":\"2026-11-21T08:26:35.854Z\",\"elapsed_ms\":1197}",
+      "stderr": ""
+    },
+    {
+      "test": "t08-login-auth",
+      "exitCode": 0,
+      "pass": true,
+      "elapsed_ms": 1391,
+      "stdout": "{\"test\":\"t08-login-auth\",\"pass\":true,\"failures\":[],\"details\":{\"shortCodeError\":\"Access code must be at least 6 characters.\",\"protectedVisibleAfterShortCode\":false,\"welcome\":\"Welcome, setter. You are logged in.\",\"reviewResult\":\"Problem 42 marked reviewed.\",\"protectedVisibleAfterReload\":true,\"protectedVisibleAfterLogout\":false},\"started_at\":\"2026-11-21T08:26:35.939Z\",\"finished_at\":\"2026-11-21T08:26:37.245Z\",\"elapsed_ms\":1306}",
+      "stderr": ""
+    },
+    {
+      "test": "t09-upload-metadata",
+      "exitCode": 0,
+      "pass": true,
+      "elapsed_ms": 1385,
+      "stdout": "{\"test\":\"t09-upload-metadata\",\"pass\":true,\"failures\":[],\"details\":{\"emptyError\":\"Title is required. Statement file is required.\",\"pngError\":\"Only .txt files are accepted.\",\"result\":\"Problem P-1042 created: \\\"Metadata Problem\\\" with t09-statement.txt (16 bytes).\"},\"started_at\":\"2026-11-21T08:26:37.331Z\",\"finished_at\":\"2026-11-21T08:26:38.630Z\",\"elapsed_ms\":1299}",
+      "stderr": ""
+    },
+    {
+      "test": "t10-login-upload-download",
+      "exitCode": 0,
+      "pass": true,
+      "elapsed_ms": 1294,
+      "stdout": "{\"test\":\"t10-login-upload-download\",\"pass\":true,\"failures\":[],\"details\":{\"verdict\":\"Judged: 4 cases, PASS.\",\"report\":\"Report for t10-data.txt\\nCases: 4\\nVerdict: PASS\\n\"},\"started_at\":\"2026-11-21T08:26:38.718Z\",\"finished_at\":\"2026-11-21T08:26:39.924Z\",\"elapsed_ms\":1205}",
+      "stderr": ""
+    }
+  ]
+}

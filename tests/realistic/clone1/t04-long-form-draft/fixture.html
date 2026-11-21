@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Create problem, draft</title>
+<style>
+body { font-family: sans-serif; max-width: 640px; margin: 2em auto; }
+label { display: block; margin: 0.6em 0 0.2em; }
+input, select, textarea { width: 100%; box-sizing: border-box; }
+#interactive-fields { display: none; }
+#draft-msg { color: #075; margin-top: 1em; }
+#result { color: #070; margin-top: 1em; }
+#error { color: #b00; margin-top: 1em; }
+button { margin-top: 0.6em; margin-right: 0.5em; }
+</style>
+</head>
+<body>
+<h1>Create problem</h1>
+<form id="form">
+  <label for="title">Title *</label><input id="title" type="text">
+  <label for="ptype">Problem type</label>
+  <select id="ptype"><option value="batch">batch</option><option value="interactive">interactive</option></select>
+  <div id="interactive-fields">
+    <label for="interactor">Interactor description *</label>
+    <textarea id="interactor"></textarea>
+    <label for="qlimit">Query limit *</label>
+    <input id="qlimit" type="text">
+  </div>
+  <label for="statement">Statement *</label><textarea id="statement"></textarea>
+  <div>
+    <button id="save-draft" type="button">Save draft</button>
+    <button id="submit" type="submit">Create problem</button>
+  </div>
+</form>
+<div id="draft-msg" role="status"></div>
+<div id="error" role="alert"></div>
+<div id="result" role="status"></div>
+<script>
+const KEY = 't04-draft';
+const ptype = document.getElementById('ptype');
+const extra = document.getElementById('interactive-fields');
+function applyType() {
+  extra.style.display = ptype.value === 'interactive' ? 'block' : 'none';
+}
+ptype.addEventListener('change', applyType);
+function collect() {
+  return {
+    title: document.getElementById('title').value,
+    ptype: ptype.value,
+    interactor: document.getElementById('interactor').value,
+    qlimit: document.getElementById('qlimit').value,
+    statement: document.getElementById('statement').value,
+  };
+}
+function restore(data) {
+  if (!data) return;
+  document.getElementById('title').value = data.title || '';
+  ptype.value = data.ptype || 'batch';
+  document.getElementById('interactor').value = data.interactor || '';
+  document.getElementById('qlimit').value = data.qlimit || '';
+  document.getElementById('statement').value = data.statement || '';
+  applyType();
+}
+try {
+  restore(JSON.parse(localStorage.getItem(KEY)));
+} catch {
+  // No usable draft, start empty.
+}
+applyType();
+document.getElementById('save-draft').addEventListener('click', () => {
+  localStorage.setItem(KEY, JSON.stringify(collect()));
+  document.getElementById('draft-msg').textContent = 'Draft saved.';
+});
+document.getElementById('form').addEventListener('submit', (event) => {
+  event.preventDefault();
+  const data = collect();
+  const errorEl = document.getElementById('error');
+  const resultEl = document.getElementById('result');
+  errorEl.textContent = '';
+  resultEl.textContent = '';
+  if (!data.title) {
+    errorEl.textContent = 'Title is required.';
+    return;
+  }
+  if (data.ptype === 'interactive' && (!data.interactor || !data.qlimit)) {
+    errorEl.textContent = 'Interactive problems need an interactor description and a query limit.';
+    return;
+  }
+  if (!data.statement) {
+    errorEl.textContent = 'Statement is required.';
+    return;
+  }
+  localStorage.removeItem(KEY);
+  resultEl.textContent = 'Problem "' + data.title + '" created as ' + data.ptype + '.';
+});
+</script>
+</body>
+</html>
