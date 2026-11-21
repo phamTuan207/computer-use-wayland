@@ -663,3 +663,29 @@ in the repo worktree and /tmp test copies.
   yet delivered its formal completion handoff (still listed
   running); this entry is from its committed report only.
   Still waiting: Council 2, Redteam, Verifier handoff (3/5).
+
+01:17 +07 22/11 (T+2h21m) VERIFIER ROUND-2 FORMAL HANDOFF RECEIVED.
+  Agent daa11faa completed 01:16:45Z. Confirms the report already
+  logged (75dff55): FAIL 277/280, 2 defects, both in the launcher's
+  _check_entry_pyc. Per-battery (full tables in the report): A2
+  19/19 (11 original + 8 new R2), A6d 66/66 (15 .py names, 3 no-P
+  safe_path refusals, 16 .so stems x 3 forms; plants proven armed
+  by a control import), A4 unit 81/81 (39 + 42 new), A4 live 17/17,
+  A3 17/19 (2 FAIL, 1 root cause: A3h co_filename), A5 10/10,
+  A5b URL normalization 18/18, A7 13/14 (1 FAIL: shape-6b),
+  A8 12/12 (None now returns False), AST 14/14 identical (raw
+  diff exactly the 2 sync notes + CODEX comment), clean ship +
+  launcher dry run 9/9, R6 7/7, R8 OSError 1/1. Pins verified
+  first and hold. Harnesses committed under
+  improvements/y13g-r2-verify/ (3129ba2, dec965c, 0d628f8);
+  staged ships + result logs under ~/workspace/y13g-r2-verify/.
+  Final verifier log commit a410510 ("log push race + final
+  verdict note") is HEAD on origin; local already at a410510
+  (shared worktree, verifier committed here), fetch confirms
+  ls-remote = a410510, no rebase needed. Known limitations
+  carried over (not failures): -m/import forged-.pyc hole
+  (unfixable in-process, controlled out-of-process), subject-only
+  marker passing a fake completion by design, nested empty-dir
+  residue (fail-closed). Verifier touched no fix file, no live
+  Zen, no other worker's files.
+  Still waiting: Council 2, Redteam (2/5 running).
