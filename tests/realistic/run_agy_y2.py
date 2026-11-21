@@ -275,6 +275,58 @@ def _md5_of(path):
         return None
 
 
+def _manifest_entries():
+    """(entries, error) for the manifest, with all structural
+    guards applied once and shared by both checks (redteam diff2
+    B1).
+
+    The manifest must be a dict, files a list of exactly
+    EXPECTED_MANIFEST_FILES dict entries, each with a unique path
+    contained in the ship dir and a 32-hex md5. The count pin
+    alone counts entries, not files: a duplicated entry could
+    disguise a dropped file (proven by the redteam: test-08
+    dropped, test-07 duplicated, both checks passed), and a path
+    escape could hide a file outside the ship dir. Returns
+    (None, error) on any structural problem. The per-file md5
+    comparison is NOT done here; callers do it against the
+    returned (rel, want) pairs."""
+    mpath = Path(__file__).with_name(MANIFEST_NAME)
+    try:
+        manifest = json.loads(mpath.read_text())
+    except Exception as exc:
+        return None, f"manifest unreadable: {exc}"
+    if not isinstance(manifest, dict):
+        return None, "manifest is not an object"
+    files = manifest.get("files", [])
+    if not isinstance(files, list):
+        return None, "manifest files is not a list"
+    if len(files) != EXPECTED_MANIFEST_FILES:
+        return None, (f"manifest lists {len(files)} files, want "
+                      f"{EXPECTED_MANIFEST_FILES}")
+    base_dir = Path(__file__).resolve().parent
+    seen = set()
+    entries = []
+    for entry in files:
+        if not isinstance(entry, dict):
+            return None, f"malformed manifest entry: {entry!r}"
+        rel = entry.get("path")
+        want = entry.get("md5")
+        if (not isinstance(rel, str) or not isinstance(want, str)
+                or len(want) != 32
+                or any(c not in "0123456789abcdef" for c in want)):
+            return None, f"malformed manifest entry: {entry!r}"
+        full = (base_dir / rel).resolve()
+        try:
+            full.relative_to(base_dir)
+        except ValueError:
+            return None, f"manifest path escapes ship dir: {rel}"
+        if full in seen:
+            return None, f"duplicate manifest path: {rel}"
+        seen.add(full)
+        entries.append((rel, want))
+    return entries, None
+
+
 def _verify_manifest():
     """(ok, checked, mismatches, manifest_md5) for the launch-time
     manifest check (Redteam re-review B3).
@@ -286,37 +338,17 @@ def _verify_manifest():
     silently and pass, since the integrity guard only proves the
     verify FAILS on untouched bytes."""
     mpath = Path(__file__).with_name(MANIFEST_NAME)
-    try:
-        manifest = json.loads(mpath.read_text())
-    except Exception as exc:
-        return False, 0, [f"manifest unreadable: {exc}"], None
+    entries, err = _manifest_entries()
+    if err is not None:
+        return False, 0, [err], _md5_of(mpath)
     base_dir = Path(__file__).resolve().parent
     bad = []
     checked = 0
-    files = manifest.get("files", [])
-    # Pinned count (redteam diff F2): a manifest listing fewer files
-    # would silently skip checks.
-    if len(files) != EXPECTED_MANIFEST_FILES:
-        bad.append(f"manifest lists {len(files)} files, want "
-                   f"{EXPECTED_MANIFEST_FILES}")
-    for entry in files:
-        try:
-            rel = entry.get("path")
-            want = entry.get("md5")
-            # A null/non-hex expected md5 must refuse, never pass:
-            # _md5_of returns None for a missing file, and None ==
-            # None would pass a null-md5 entry for a missing file.
-            if (not isinstance(rel, str) or not isinstance(want, str)
-                    or len(want) != 32
-                    or any(c not in "0123456789abcdef" for c in want)):
-                bad.append(f"malformed manifest entry: {entry!r}")
-                continue
-            got = _md5_of(base_dir / rel)
-            checked += 1
-            if got != want:
-                bad.append(f"{rel}: want {want}, got {got}")
-        except Exception as exc:
-            bad.append(f"manifest entry error {entry!r}: {exc}")
+    for rel, want in entries:
+        got = _md5_of(base_dir / rel)
+        checked += 1
+        if got != want:
+            bad.append(f"{rel}: want {want}, got {got}")
     return (not bad), checked, bad, _md5_of(mpath)
 
 
@@ -326,17 +358,16 @@ def _verify_served_files(base):
     probes only test-01 with a 200 check, which never proves the
     served root; a stale server on the port could serve old fixture
     bytes while the disk manifest passes. Fetch every manifest file
-    over HTTP and compare md5s."""
-    mpath = Path(__file__).with_name(MANIFEST_NAME)
-    try:
-        manifest = json.loads(mpath.read_text())
-    except Exception as exc:
-        return False, 0, [f"manifest unreadable: {exc}"]
+    over HTTP and compare md5s. The entry list comes from the same
+    _manifest_entries() helper as the disk check (redteam diff2
+    B1), so a duplicated or escaping entry cannot pass here while
+    failing there."""
+    entries, err = _manifest_entries()
+    if err is not None:
+        return False, 0, [err]
     bad = []
     checked = 0
-    for entry in manifest.get("files", []):
-        rel = entry.get("path")
-        want = entry.get("md5")
+    for rel, want in entries:
         try:
             with urllib.request.urlopen(f"{base}/{rel}",
                                         timeout=5) as resp:
@@ -2837,7 +2868,7 @@ def main():
                     shot = d.screenshot(
                         str(SHOTS_DIR / f"{tid}-a{attempt}.png"))
                 except Exception as exc:
-                    print(f"[{tid}] pre-screenshot switch failed; "
+                    print(f"[{tid}] pre-screenshot step failed; "
                           f"skipping screenshot: {exc}", flush=True)
                     shot = None
                 if shot:

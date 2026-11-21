@@ -177,7 +177,7 @@ a fresh re-review.
   total_ms sums final attempts only while suite_wall_ms covers all
   (C3 O4, stated not hidden).
 - Diff re-review fixes (council GO WITH FIXES, redteam NO BLOCK,
-  19:2x on 21/11): council fix 1, runner line count corrected to
+  19:26 on 21/11): council fix 1, runner line count corrected to
   2865 at 9564304 (the "2853" in this section and the log was
   wrong); council fix 2, the two best-effort B2 fallbacks hardened
   (skip the end-state screenshot if the pre-screenshot switch
