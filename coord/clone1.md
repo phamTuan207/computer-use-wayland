@@ -3585,3 +3585,8 @@ YouTube, TikTok contributed nothing here); the batch 6 and batch 7
 leftovers recorded in the batch 7 final report.
 
 Batch 8 is DONE. Watchdog stops now.
+
+## ĐỢT 8, 06:01 ngày 22/11 - WATCHDOG ĐÃ DỪNG VÌ ĐỢT 8 XONG
+
+Báo cáo cuối đợt 8 đã push (cf49530). Watchdog batch8-watchdog-10m
+đã tắt.
