@@ -476,7 +476,19 @@ async function assertAction(a) {
             const e=(${pageState.toString()})(${JSON.stringify(request.snapshot)},${locator});
             if(!/^(INPUT|TEXTAREA)$/.test(e.tagName)||e.tagName==='INPUT'&&!/^(text|search|tel|url|email)$/.test(e.type||'text'))return {ok:false,error:'unsupported field'};
             if(e.disabled||e.matches(':disabled')||e.readOnly||e.getAttribute('aria-disabled')==='true'||e.closest('[inert]'))return {ok:false,error:'field unavailable'};
-            if(e.maxLength>=0&&${text}.length>e.maxLength)return {ok:false,error:'value exceeds maxlength'};
+            const requested=${text};
+            // HTML Standard input value sanitization strips newlines;
+            // URL/email states also trim ASCII whitespace. Textarea API
+            // values normalize CRLF and CR to LF. See
+            // https://html.spec.whatwg.org/multipage/input.html and
+            // https://html.spec.whatwg.org/multipage/form-elements.html#the-textarea-element
+            const stripped=requested.replace(/[\\r\\n]/g,'');
+            const expectedValue=e.tagName==='INPUT'
+              ? (e.type==='url'||e.type==='email'
+                  ? stripped.replace(/^[\\t\\n\\f\\r ]+|[\\t\\n\\f\\r ]+$/g,'')
+                  : stripped)
+              : requested.replace(/\\r\\n?/g,'\\n');
+            if(e.maxLength>=0&&expectedValue.length>e.maxLength)return {ok:false,error:'value exceeds maxlength'};
             const r=e.getBoundingClientRect(),style=getComputedStyle(e),x=r.left+r.width/2,y=r.top+r.height/2,hit=document.elementFromPoint(x,y);
             if(!e.getClientRects().length||!r.width||!r.height||style.display==='none'||style.visibility!=='visible'||x<0||x>=innerWidth||y<0||y>=innerHeight||!(${HIT_USABLE})(e,hit))return {ok:false,error:'field is not visible'};
             // No prefill early return: set_value always performs the
@@ -489,8 +501,8 @@ async function assertAction(a) {
             const proto=e.tagName==='INPUT'?HTMLInputElement.prototype:HTMLTextAreaElement.prototype;
             const setter=Object.getOwnPropertyDescriptor(proto,'value')?.set;if(!setter)return {ok:false,error:'field setter unavailable'};
             const oldValue=e.value;
-            attempted=true;setter.call(e,${text});
-            if(!e.isConnected||e.value!==${text})return {ok:false,error:'value verification failed',mutation_may_have_occurred:true};
+            attempted=true;setter.call(e,requested);
+            if(!e.isConnected||e.value!==expectedValue)return {ok:false,error:'value verification failed',mutation_may_have_occurred:true};
             // Snapshot contract (tests/cdp_snapshot.mjs): unchanged
             // text fires no synthetic notifications. The setter write
             // and the read-back above stay unconditional (the R2
@@ -500,7 +512,7 @@ async function assertAction(a) {
               e.dispatchEvent(new InputEvent('input',{bubbles:true,composed:true,inputType:'insertReplacementText',data:null}));
               e.dispatchEvent(new Event('change',{bubbles:true}));
             }
-            if(!e.isConnected||e.value!==${text})return {ok:false,error:'value verification failed',mutation_may_have_occurred:true};
+            if(!e.isConnected||e.value!==expectedValue)return {ok:false,error:'value verification failed',mutation_may_have_occurred:true};
             return {ok:true};
           }catch(_){return {ok:false,error:'value update failed',mutation_may_have_occurred:attempted};}})()`;
           const updated=await evaluate(source);

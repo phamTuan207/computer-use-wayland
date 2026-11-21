@@ -7,8 +7,19 @@ import { fileURLToPath } from 'node:url';
 import { generateHeldoutCases } from './heldout_dom_cases.mjs';
 const source=fs.readFileSync(new URL('../scripts/cdp.mjs',import.meta.url),'utf8');
 const token='fake-api-token-NEVER-EXPOSE';
-class FakeInput {get value(){return this._value??'';} set value(value){this._value=value;}}
-class FakeTextarea {get value(){return this._value??'';} set value(value){this._value=value;}}
+class FakeInput {
+  get value(){return this._value??'';}
+  set value(value){
+    let normalized=String(value).replace(/[\r\n]/g,'');
+    if(this.type==='url'||this.type==='email')
+      normalized=normalized.replace(/^[\t\n\f\r ]+|[\t\n\f\r ]+$/g,'');
+    this._value=normalized;
+  }
+}
+class FakeTextarea {
+  get value(){return this._value??'';}
+  set value(value){this._value=String(value).replace(/\r\n?/g,'\n');}
+}
 // The fake DOM needs enough selector support for scoped observe: which nodes are
 // interactive, and which live inside a subtree.
 const TAGS=/^(BUTTON|INPUT|TEXTAREA|SELECT|SUMMARY|A)$/;
@@ -191,6 +202,14 @@ for(const field of [
 const unchanged=element('',{tagName:'INPUT',value:'same'});
 runResult=await run([unchanged],[{type:'set_value',ref:'e1',text:'same'}]);
 assert.equal(runResult.result.ok,true);assert.deepEqual(unchanged.events??[],[]);
+const newlineInput=element('',{tagName:'INPUT',value:''});
+runResult=await run([newlineInput],[{type:'set_value',ref:'e1',text:'one\r\ntwo\rthree\n'}]);
+assert.equal(runResult.result.ok,true,JSON.stringify(runResult.result));
+assert.equal(newlineInput.value,'onetwothree');
+const newlineArea=element('',{tagName:'TEXTAREA',value:''});
+runResult=await run([newlineArea],[{type:'set_value',ref:'e1',text:'one\r\ntwo\rthree\n'}]);
+assert.equal(runResult.result.ok,true,JSON.stringify(runResult.result));
+assert.equal(newlineArea.value,'one\ntwo\nthree\n');
 const rewritten=element('',{tagName:'TEXTAREA',value:'',onEvent:(_event,node)=>{node.value='rewritten';}});
 runResult=await run([rewritten],[{type:'set_value',ref:'e1',text:'exact'}]);
 assert.equal(runResult.result.ok,false);assert.equal(runResult.result.mutation_may_have_occurred,true);
