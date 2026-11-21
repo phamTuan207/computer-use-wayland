@@ -399,3 +399,90 @@ Checked against the v2 exact marker after git fetch:
   completion commit; the single "E1 EXECUTION COMPLETE" grep hit
   in the Y8 log is still the 18:53 line naming the marker, not
   the marker itself. Y9 waits.
+
+## Addendum 7 (19:33 +07, 21/11): diff2 verdicts in, BLOCK fixed, re-shipped
+
+- LIGHT DIFF RE-REVIEW COUNCIL IN (completed 19:28 +07): GO WITH
+  FIXES (1 fix), improvements/worker-y9-diff2-council.md. All 10
+  scope items verified against the 9d95f74 diff, including the
+  base-cleanup trace proving the skipped DELETE still terminates
+  the geckodriver proc, closes the log, and unlinks the pid file.
+  Fix demanded: _verify_manifest line 297 does
+  manifest.get("files", []) outside any try, so a manifest whose
+  JSON parses to a non-dict raises AttributeError out of the
+  function with no suite JSON. Y9 confirmed the crash by
+  simulation before fixing. Nits: plan "19:2x" vs log "19:26";
+  screenshot-skip message says "switch failed" even when the
+  screenshot call itself raises.
+- LIGHT DIFF RE-REVIEW REDTEAM IN (completed 19:31 +07): BLOCK,
+  improvements/worker-y9-diff2-redteam.md. One confirmed hole B1:
+  the count pin counts entries, not unique files. Proven
+  mechanically with the real functions and a real HTTP server:
+  test-08 fixture entry deleted, test-07 entry duplicated (count
+  stays 26), test-08 tampered on disk and served, and BOTH checks
+  returned ok=True. The dropped file is never verified anywhere,
+  so stale test-08 bytes would run. Same root cause lets
+  path-escape entries pass. Fix demanded: enforce uniqueness of
+  resolved paths (and containment under base_dir) in
+  _verify_manifest, and reuse the validated entry list in the
+  served check. Everything else held (park fallback, skipped
+  DELETE, manifest other forms, served order, check() guard,
+  bootstrap stall, screenshot skip, F8). Non-blocking N1-N6
+  recorded in the verdict file.
+- FIXES APPLIED, commit 7e7996d (pushed, ls-remote verified):
+  new _manifest_entries() helper shared by both checks enforces
+  dict manifest, list files, exactly 26 entries, each a dict with
+  a 32-hex md5 and a unique path contained in the ship dir
+  (resolve + relative_to + seen set). This closes B1, N4 (path
+  escape), N1 (files not a list), and the council non-dict guard
+  in one place. Nits applied (plan time 19:26, message reworded
+  to "pre-screenshot step failed"). Accepted as notes, no code
+  change: N2 TOCTOU window between the two manifest reads (both
+  enforce the same structural rules; a swap needs ship-dir write
+  access mid-launch, any mismatch still refuses); N3 bootstrap
+  stall undercount on raise (metric only); N5 park fallback can
+  close the shared test tab (recoverable by rebootstrap, as
+  designed); N6 skipped-DELETE pid unlink vs a hypothetically
+  surviving proc (pre-existing base behavior). Runner 3013 lines.
+- VERIFICATION (VM, after 7e7996d): py_compile OK, import OK
+  (10 tests), dashes 0. Negative tests, all refuse: duplicate
+  entry (26 entries, 25 unique) with "duplicate manifest path:
+  agy-y2/fixtures/test-07-file-manager.html"; path escape
+  "../outside.py" with "manifest path escapes ship dir"; JSON
+  list manifest with "manifest is not an object"; files null
+  with "manifest files is not a list". B1 scenario reproduced
+  end to end: dup manifest plus tampered test-08 refused by
+  BOTH the disk check and the served check (file:// fetch);
+  clean served check passes True, 26 files, 0 mismatches.
+  (One test-harness slip: my B1 re-confirmation script unpacked
+  _verify_manifest() into 3 variables instead of 4 and raised
+  ValueError; test bug, not runner code. The disk refusal for
+  the same dup manifest was already proven by the --verify-manifest
+  CLI run, and re-proven by the file:// run.)
+- MANIFEST REGENERATED from committed bytes, commit 4e7a414
+  (pushed, ls-remote verified): runner from 7e7996d (md5
+  2add2a0bf68bb77d5d3fa01d691bcffc), run_live.py from 1e3901c
+  (84fa106c, unchanged), suite from 30a72e5 (unchanged). Only
+  the runner md5 changed. Manifest md5
+  7f744edddf14ff39e912691812fdb6bc. SHIPPED.md regenerated.
+  Ship-layout dry run in /tmp/y9-ship-check3 (exact shippable
+  combination): compile OK, import OK, --verify-manifest OK
+  (26 files, 0 mismatches, exit 0), md5s match.
+- LAPTOP RE-SHIP 19:33: /tmp/worker-y9-server rebuilt from git
+  archive (runner + manifest + SHIPPED.md from 4e7a414,
+  run_live.py from 1e3901c, suite from 0ded7ae). Laptop gate all
+  green: LAPTOP_COMPILE_OK, LAPTOP_IMPORT_OK (10 tests),
+  --verify-manifest OK (26 files, 0 mismatches, exit 0), md5s
+  match (runner 2add2a0b, run_live.py 84fa106c, manifest
+  7f744edd). Ship is frozen and ready to launch the moment the
+  slot frees. No further re-review is owed on this diff: both
+  diff2 verdicts are applied and the fixes were verified
+  mechanically, not re-reviewed by a third round (the fixes are
+  a single shared helper plus two one-line guards; a third round
+  would review the same ground a third time).
+- SLOT POLL 19:33: Y8b still owns the slot. Arm A2 also failed
+  (commit ad64bc6 "A2 FAIL identical quoting trap, mechanism
+  proven live, council+redteam called"). No Y8 completion
+  commit; the single "E1 EXECUTION COMPLETE" grep hit in the Y8
+  log is still the 18:53 line naming the marker, not the marker
+  itself. Y9 waits.
