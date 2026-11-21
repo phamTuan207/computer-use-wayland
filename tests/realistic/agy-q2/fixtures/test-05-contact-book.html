@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Offline Contact Directory</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background: #f3f4f6; color: #1f2937; padding: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; background: #fff; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); padding: 24px; }
+    header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e5e7eb; padding-bottom: 16px; margin-bottom: 16px; }
+    h1 { font-size: 22px; color: #111827; }
+    .status-banner { padding: 10px 14px; border-radius: 4px; font-size: 13px; font-weight: 500; display: none; margin-bottom: 16px; }
+    .status-banner.success { display: block; background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
+    .status-banner.error { display: block; background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+    .toolbar { display: flex; flex-wrap: wrap; gap: 14px; background: #f9fafb; padding: 12px 18px; border: 1px solid #e5e7eb; border-radius: 6px; margin-bottom: 20px; align-items: center; }
+    input[type="text"], input[type="email"], input[type="tel"], select { padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 13px; }
+    .btn { padding: 7px 14px; border-radius: 4px; font-size: 13px; font-weight: 600; cursor: pointer; border: none; }
+    .btn-primary { background: #2563eb; color: #fff; }
+    .btn-secondary { background: #e5e7eb; color: #374151; }
+    .btn-danger { background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; }
+    .contacts-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+    .contact-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px; display: flex; flex-direction: column; justify-content: space-between; gap: 10px; }
+    .contact-card.favorite { border-color: #fbbf24; background: #fffdf5; }
+    .contact-name { font-size: 15px; font-weight: 600; color: #111827; display: flex; align-items: center; gap: 6px; }
+    .fav-star { cursor: pointer; font-size: 16px; color: #d1d5db; user-select: none; }
+    .fav-star.active { color: #f59e0b; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; background: #e0f2fe; color: #0284c7; }
+    .meta-line { font-size: 12px; color: #4b5563; margin-top: 3px; }
+    .card-actions { display: flex; gap: 8px; margin-top: 8px; }
+    /* Modal */
+    .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 100; }
+    .modal-box { background: #fff; border-radius: 8px; width: 420px; padding: 20px; box-shadow: 0 10px 15px rgba(0,0,0,0.2); }
+    .modal-field { margin-bottom: 12px; }
+    .modal-field label { display: block; font-size: 12px; font-weight: 500; margin-bottom: 4px; }
+    .modal-field input, .modal-field select { width: 100%; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>Directory & Contacts</h1>
+    <div style="display: flex; gap: 12px;">
+      <button id="btn-new-contact" class="btn btn-secondary">+ Add Contact</button>
+      <button id="btn-save-directory" class="btn btn-primary">Save Directory</button>
+    </div>
+  </header>
+
+  <div id="contact-status-banner" class="status-banner"></div>
+
+  <div class="toolbar">
+    <div>
+      <label for="contact-search" style="font-size: 12px; font-weight: 500; margin-right: 6px;">Search:</label>
+      <input type="text" id="contact-search" placeholder="Search by name, email..." style="width: 200px;">
+    </div>
+    <div>
+      <label for="filter-contact-group" style="font-size: 12px; font-weight: 500; margin-right: 6px;">Group:</label>
+      <select id="filter-contact-group">
+        <option value="all">All Groups</option>
+        <option value="Engineering">Engineering</option>
+        <option value="Design">Design</option>
+        <option value="Product">Product</option>
+        <option value="Operations">Operations</option>
+      </select>
+    </div>
+    <div style="margin-left: auto; font-size: 13px; color: #6b7280;">
+      Showing: <strong id="contacts-count">5</strong> Contacts
+    </div>
+  </div>
+
+  <div id="contacts-list" class="contacts-grid"></div>
+</div>
+
+<!-- Modal -->
+<div id="contact-modal" class="modal-overlay">
+  <div class="modal-box">
+    <h2 id="modal-title" style="font-size: 16px; margin-bottom: 14px;">Add New Contact</h2>
+    <input type="hidden" id="edit-contact-id" value="">
+    <div class="modal-field">
+      <label for="input-contact-first">First Name:</label>
+      <input type="text" id="input-contact-first" placeholder="Alice">
+    </div>
+    <div class="modal-field">
+      <label for="input-contact-last">Last Name:</label>
+      <input type="text" id="input-contact-last" placeholder="Chen">
+    </div>
+    <div class="modal-field">
+      <label for="input-contact-email">Email:</label>
+      <input type="email" id="input-contact-email" placeholder="alice.chen@example.com">
+    </div>
+    <div class="modal-field">
+      <label for="input-contact-phone">Phone:</label>
+      <input type="tel" id="input-contact-phone" placeholder="+1-555-0101">
+    </div>
+    <div class="modal-field">
+      <label for="select-contact-group">Group:</label>
+      <select id="select-contact-group">
+        <option value="Engineering">Engineering</option>
+        <option value="Design">Design</option>
+        <option value="Product">Product</option>
+        <option value="Operations">Operations</option>
+      </select>
+    </div>
+    <div class="modal-field">
+      <label for="input-contact-notes">Notes:</label>
+      <input type="text" id="input-contact-notes" placeholder="Optional notes...">
+    </div>
+    <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px;">
+      <button id="btn-modal-close" class="btn btn-secondary">Cancel</button>
+      <button id="btn-modal-save-contact" class="btn btn-primary">Save Contact</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  let contacts = [
+    { id: 'alice-chen', first: 'Alice', last: 'Chen', email: 'alice.chen@example.com', phone: '+1-555-0101', group: 'Engineering', notes: 'Core Backend', fav: false },
+    { id: 'bob-martin', first: 'Bob', last: 'Martin', email: 'bob.m@example.com', phone: '+1-555-0102', group: 'Design', notes: 'UI Lead', fav: false },
+    { id: 'clara-vance', first: 'Clara', last: 'Vance', email: 'clara.v@example.com', phone: '+1-555-0103', group: 'Product', notes: 'Product Owner', fav: false },
+    { id: 'david-kim', first: 'David', last: 'Kim', email: 'david.k@example.com', phone: '+1-555-0104', group: 'Engineering', notes: 'DevOps', fav: false },
+    { id: 'eva-rostova', first: 'Eva', last: 'Rostova', email: 'eva.r@example.com', phone: '+1-555-0105', group: 'Operations', notes: 'Release Manager', fav: false },
+    { id: 'spam-bot', first: 'Spam', last: 'Bot', email: 'spam@bot.net', phone: '+1-000-0000', group: 'Operations', notes: 'To be removed', fav: false }
+  ];
+
+  let dirSaved = false;
+
+  function slugify(text) {
+    return text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+  }
+
+  function renderGrid() {
+    const search = document.getElementById('contact-search').value.toLowerCase().trim();
+    const groupFilter = document.getElementById('filter-contact-group').value;
+    const list = document.getElementById('contacts-list');
+    list.innerHTML = '';
+
+    const filtered = contacts.filter(c => {
+      if (groupFilter !== 'all' && c.group !== groupFilter) return false;
+      if (search) {
+        const full = `${c.first} ${c.last}`.toLowerCase();
+        if (!full.includes(search) && !c.email.toLowerCase().includes(search)) return false;
+      }
+      return true;
+    });
+
+    document.getElementById('contacts-count').textContent = filtered.length;
+
+    filtered.forEach(c => {
+      const card = document.createElement('div');
+      card.className = 'contact-card' + (c.fav ? ' favorite' : '');
+      card.id = 'contact-card-' + c.id;
+
+      card.innerHTML = `
+        <div>
+          <div class="contact-name">
+            <span id="btn-fav-contact-${c.id}" class="fav-star ${c.fav ? 'active is-favorite' : ''}" data-id="${c.id}">★</span>
+            <span>${c.first} ${c.last}</span>
+          </div>
+          <div style="margin-top: 4px;"><span class="badge">${c.group}</span></div>
+          <div class="meta-line" style="margin-top: 8px;">✉ <span id="email-${c.id}">${c.email}</span></div>
+          <div class="meta-line">☎ <span id="phone-${c.id}">${c.phone}</span></div>
+          ${c.notes ? `<div class="meta-line" style="color: #6b7280; font-style: italic;">${c.notes}</div>` : ''}
+        </div>
+        <div class="card-actions">
+          <button id="btn-edit-contact-${c.id}" class="btn btn-secondary btn-edit" data-id="${c.id}" style="padding: 3px 8px; font-size: 11px;">Edit</button>
+          <button id="btn-del-contact-${c.id}" class="btn btn-danger btn-del" data-id="${c.id}" style="padding: 3px 8px; font-size: 11px;">Delete</button>
+        </div>
+      `;
+      list.appendChild(card);
+    });
+
+    list.querySelectorAll('.fav-star').forEach(star => {
+      star.addEventListener('click', () => {
+        const id = star.getAttribute('data-id');
+        const c = contacts.find(x => x.id === id);
+        if (c) {
+          c.fav = !c.fav;
+          dirSaved = false;
+          renderGrid();
+        }
+      });
+    });
+
+    list.querySelectorAll('.btn-edit').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-id');
+        const c = contacts.find(x => x.id === id);
+        if (c) openEditModal(c);
+      });
+    });
+
+    list.querySelectorAll('.btn-del').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-id');
+        contacts = contacts.filter(x => x.id !== id);
+        dirSaved = false;
+        renderGrid();
+      });
+    });
+  }
+
+  function openEditModal(c) {
+    document.getElementById('modal-title').textContent = 'Edit Contact';
+    document.getElementById('edit-contact-id').value = c.id;
+    document.getElementById('input-contact-first').value = c.first;
+    document.getElementById('input-contact-last').value = c.last;
+    document.getElementById('input-contact-email').value = c.email;
+    document.getElementById('input-contact-phone').value = c.phone;
+    document.getElementById('select-contact-group').value = c.group;
+    document.getElementById('input-contact-notes').value = c.notes || '';
+    document.getElementById('contact-modal').style.display = 'flex';
+  }
+
+  function openNewModal() {
+    document.getElementById('modal-title').textContent = 'Add New Contact';
+    document.getElementById('edit-contact-id').value = '';
+    document.getElementById('input-contact-first').value = '';
+    document.getElementById('input-contact-last').value = '';
+    document.getElementById('input-contact-email').value = '';
+    document.getElementById('input-contact-phone').value = '';
+    document.getElementById('select-contact-group').value = 'Engineering';
+    document.getElementById('input-contact-notes').value = '';
+    document.getElementById('contact-modal').style.display = 'flex';
+  }
+
+  document.getElementById('btn-new-contact').addEventListener('click', openNewModal);
+  document.getElementById('btn-modal-close').addEventListener('click', () => {
+    document.getElementById('contact-modal').style.display = 'none';
+  });
+
+  document.getElementById('btn-modal-save-contact').addEventListener('click', () => {
+    const editId = document.getElementById('edit-contact-id').value;
+    const first = document.getElementById('input-contact-first').value.trim();
+    const last = document.getElementById('input-contact-last').value.trim();
+    const email = document.getElementById('input-contact-email').value.trim();
+    const phone = document.getElementById('input-contact-phone').value.trim();
+    const group = document.getElementById('select-contact-group').value;
+    const notes = document.getElementById('input-contact-notes').value.trim();
+
+    if (!first || !last) return;
+
+    if (editId) {
+      const c = contacts.find(x => x.id === editId);
+      if (c) {
+        c.first = first;
+        c.last = last;
+        c.email = email;
+        c.phone = phone;
+        c.group = group;
+        c.notes = notes;
+      }
+    } else {
+      const id = slugify(first + ' ' + last);
+      contacts.push({ id, first, last, email, phone, group, notes, fav: false });
+    }
+
+    dirSaved = false;
+    document.getElementById('contact-modal').style.display = 'none';
+    renderGrid();
+  });
+
+  document.getElementById('contact-search').addEventListener('input', renderGrid);
+  document.getElementById('filter-contact-group').addEventListener('change', renderGrid);
+
+  document.getElementById('btn-save-directory').addEventListener('click', () => {
+    const favCount = contacts.filter(c => c.fav).length;
+    dirSaved = true;
+    const banner = document.getElementById('contact-status-banner');
+    banner.className = 'status-banner success';
+    banner.textContent = `Directory saved: ${contacts.length} contacts (${favCount} favorite)`;
+  });
+
+  // Initial render
+  renderGrid();
+
+  // Verification hook (REAL DOM only - no self-simulation)
+  window.__agyVerify = function() {
+    const failures = [];
+    const bannerText = document.getElementById('contact-status-banner').textContent.trim();
+    const favCount = contacts.filter(c => c.fav).length;
+
+    if (!dirSaved) {
+      failures.push('Contact directory not saved via btn-save-directory');
+    }
+    if (contacts.length !== 6) {
+      failures.push(`Expected 6 contacts, found ${contacts.length}`);
+    }
+    if (favCount !== 1) {
+      failures.push(`Expected 1 favorite contact, found ${favCount}`);
+    }
+    if (!bannerText.includes('Directory saved: 6 contacts (1 favorite)')) {
+      failures.push(`Banner text mismatch, got '${bannerText}'`);
+    }
+
+    // Verify David Kim is favorite
+    const david = contacts.find(c => c.id === 'david-kim');
+    if (!david || !david.fav) {
+      failures.push('David Kim should be marked as favorite');
+    }
+
+    // Verify Bob Martin phone updated to +1-555-9999
+    const bob = contacts.find(c => c.id === 'bob-martin');
+    if (!bob || bob.phone !== '+1-555-9999') {
+      failures.push(`Bob Martin phone expected '+1-555-9999', got '${bob ? bob.phone : 'missing'}'`);
+    }
+
+    // Verify Frank Sinatra added
+    const frank = contacts.find(c => c.id === 'frank-sinatra');
+    if (!frank || frank.group !== 'Engineering') {
+      failures.push('Frank Sinatra missing or incorrect group');
+    }
+
+    // Verify Spam Bot deleted
+    const spam = contacts.find(c => c.id === 'spam-bot');
+    if (spam) {
+      failures.push('Spam Bot should have been deleted');
+    }
+
+    return {
+      passed: failures.length === 0,
+      failures,
+      score: failures.length === 0 ? 1 : 0,
+      state: {
+        saved: dirSaved,
+        contactCount: contacts.length,
+        favCount,
+        bobPhone: bob ? bob.phone : '',
+        banner: bannerText
+      }
+    };
+  };
+})();
+</script>
+</body>
+</html>

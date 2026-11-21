@@ -156,6 +156,33 @@ const testSimulators = {
     await page.select('#filter-expense-category', 'all');
     // 7. Save report
     await page.click('#btn-save-budget');
+  },
+  '05': async (page) => {
+    // 1. Add Frank Sinatra
+    await page.click('#btn-new-contact');
+    await page.type('#input-contact-first', 'Frank');
+    await page.type('#input-contact-last', 'Sinatra');
+    await page.type('#input-contact-email', 'frank.s@example.com');
+    await page.type('#input-contact-phone', '+1-555-0106');
+    await page.select('#select-contact-group', 'Engineering');
+    await page.type('#input-contact-notes', 'Vocal Architect');
+    await page.click('#btn-modal-save-contact');
+    // 2. Edit Bob Martin phone
+    await page.click('#btn-edit-contact-bob-martin');
+    await page.$eval('#input-contact-phone', el => el.value = '');
+    await page.type('#input-contact-phone', '+1-555-9999');
+    await page.click('#btn-modal-save-contact');
+    // 3. Star David Kim
+    await page.click('#btn-fav-contact-david-kim');
+    // 4. Delete Spam Bot
+    await page.click('#btn-del-contact-spam-bot');
+    // 5. Test search and filter
+    await page.type('#contact-search', 'Kim');
+    await page.$eval('#contact-search', el => el.value = '');
+    await page.select('#filter-contact-group', 'Engineering');
+    await page.select('#filter-contact-group', 'all');
+    // 6. Save directory
+    await page.click('#btn-save-directory');
   }
 };
 
