@@ -125,3 +125,97 @@ Each sub-step above is its own commit, pushed at once (see the COMMIT METHOD
 section below). No batching. The live activation (step 4) is one commit for the
 lock wrapper plus one commit for the log of the activation itself, each pushed
 immediately after the step completes.
+
+## CLASS B: silence / slow first action
+## Verdict: make act-now the DEFAULT path, overlay first, 20s session deadline,
+## fallback only on session-start failure, <30s order-to-first-visible-action.
+## Exactly one method, 7 steps.
+
+### B step 1. Wire act-now as the default command path (VM, code already exists)
+Files: scripts/first_action.py (F2, new) and scripts/cu.py (act-now subcommand).
+The default entry for any pointer action becomes: overlay acquire first, then
+session attempt with a hard 20s deadline, then actions. The old path (observe,
+then session with a 15s supervise wait, then act, with require_session at
+scripts/cu.py lines 2599-2602 refusing everything without a session) stays
+available only as an explicit fallback flag, never as the default. No agent
+brief, prompt, or runbook may invoke the old path without naming why. The
+Lauren Tan rule applies: a repeated mistake becomes a deterministic rule, never
+a reminder. Speed is structural, not a decision.
+Gate: `computer-use act-now --help` works on the VM and on the laptop, and the
+old `act` path prints a pointer to act-now in its refusal text.
+
+### B step 2. Enforce the overlay gate in code on both paths
+File: scripts/first_action.py acquire_overlay (lines 68-90). Overlay acquire is
+a PRECONDITION of any pointer action, session path and direct Pointer path
+alike. If the overlay cannot be shown, the run REFUSES loudly with a clear
+error and executes nothing. Never act invisibly (safety veto V5). The pill must
+be verified VISIBLE in a fresh observe before the first click, not just by the
+acquire reply, because an acquire reply alone does not prove a visible pill
+(F2 log 22:25: holders.json can be empty with no daemon running).
+Gate: a test where the overlay acquire fails and the run refuses with zero
+pointer movement (extend tests/test_first_action.py; the 21 existing tests
+already cover the acquire-fail refusal on the VM).
+
+### B step 3. Bound the session attempt and define the fallback exactly
+File: scripts/first_action.py attempt_session (lines 112-124, process-group kill
+on timeout) and is_session_start_failure (lines 153-176). The session attempt
+has a hard 20s deadline. On a session-START failure only (guardian never ready,
+guardian error named, timeout with no live session), fall back to the same
+desktop_act the session path uses, with the overlay already on, and log the
+bypass with the guardian error, the deadline, and the path taken. On ANY other
+failure (act refusal, screen-change refusal, timeout with a live session), do
+NOT fall back; the actions may have partially run and must never be replayed
+blind (safety veto V6). After each click, verify pointer position within 3px.
+Release the overlay at the end. Return the JSON envelope: path taken, timings
+(order -> overlay-on, order -> first move, order -> first click), pill_shown
+flag, bypass reason if any. Append the JSONL timing log.
+Gate: VM tests green (21/21 already) plus one new test per fallback predicate
+branch. The 20s constant is a chosen value, not a measured one; step 6 measures
+whether it is right.
+
+### B step 4. Rehearse on a harmless composite task set by an independent agent
+The rehearsal task is COMBINED (DOM + CLI + mouse + keyboard in one task) and
+set by an independent agent who does not know the implementation (owner test
+rule 22:23; ZT-A scenarios or a fresh setter). It runs AFTER F3 sign-off on Zen
+restore and AFTER class A step 5 proves a session can start, because the
+rehearsal measures the fast path, not the broken session. The task is harmless
+by design: open a new tab, navigate to example.com, close only that tab. Never
+rehearse on a real Polygon page, a real contest, or any page with unsaved state.
+At most one planned pointer click, on the already-active tab only, never on the
+bar (owner 22:45). Safety vetoes V3, V4, V7 apply: stop at once if human input
+is observed; commands only for workspace/menu; touch no owner tab or session.
+Gate: rehearsal runs only when G-F1-BEFORE-F2 is green (todolist gate: measure
+F2 only when F1 is green).
+
+### B step 5. Measure and publish the timings
+Recorded for the rehearsal: order timestamp, overlay-on timestamp, first move
+timestamp, first click timestamp, the JSON envelope, the JSONL timing log entry,
+and a fresh observe showing the pill plus the landed click. Targets: order to
+first visible action under 30s (owner 22:21); no gap over 60s between visible
+actions while the task runs. Publish the numbers in the F2 log, not in chat
+only. No narration before each step (owner 22:21 correction); the overlay itself
+reports progress, and the pill label must track the step (evidence paper B
+candidate 3, unmeasured until the rehearsal shows it).
+Falsifier: order-to-first-visible-action over 30s with the overlay on, or a pill
+absent from the after-capture, or a fallback that replays an act failure. Any
+one kills "act-now is fast enough" or "act-now is safe" and forces a re-measure
+of the bottleneck (observe capture, agent think, session deadline) before any
+further claim.
+
+### B step 6. Re-set the constants from the measured distribution
+After the rehearsal, set the session deadline and the 30s target from measured
+numbers, not from guesses. If successful session starts cluster above 20s, the
+deadline converts successes into fallbacks and must move. If the rehearsal lands
+well under 30s, the next target comes from the measured distribution. If a floor
+above 30s appears that no path beats (observe capture + agent think alone exceed
+30s on a cold start), the target is wrong and must be re-set from the measured
+floor, not defended. Think time (H2) is instrumented in this run (G-H2); until
+an agent-driven run measures it, no claim about think time as the bottleneck is
+made for class B.
+Gate: one commit with the measured distribution and the re-set constants, pushed
+at once.
+
+### B step 7. Commit discipline for class B
+Each sub-step above is its own commit, pushed at once (see the COMMIT METHOD
+section below). The rehearsal log entry is its own commit, pushed immediately
+after the run, never batched at the end of the day.
