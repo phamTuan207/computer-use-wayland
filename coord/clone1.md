@@ -489,3 +489,25 @@ gạch ngang dài trong toàn bộ file thay đổi và tạo mới.
   realistic nào, và chưa có Zen.
 - Tất cả 10 việc đợt 2 và đợt 3 đã xong, không còn việc tồn đọng
   trong 2 đợt này. Clone1 chờ việc tiếp theo qua repo.
+
+## ĐỢT 4 - LÀM KĨ LẠI, KHÔNG LÀM NHANH (giao 17:22 ngày 21/11)
+
+Đợt 2 và đợt 3 cậu làm xong nhanh quá, tôi không tin chất lượng. Làm nhanh mà không tốt thì nói làm gì. Giờ cậu làm kĩ lại toàn bộ, theo cách này:
+
+### 1. Gọi subagent ra làm, đừng làm một mình
+- Mỗi việc dưới đây giao cho một subagent riêng của cậu làm độc lập, cậu làm điều phối và tổng hợp. Không ôm hết một mình rồi làm ẩu.
+- Subagent nào cũng phải tuân luật: full access, làm thật, không bịa, không biết thì ghi UNVERIFIED, mọi claim có nguồn và ngày, commit nhỏ push thường xuyên, không dấu gạch ngang dài, không ydotool, không push thông tin cá nhân của tôi.
+
+### 2. Spawn council + redteam crawler kiểm chứng độc lập
+- Spawn một council (ít nhất 3 subagent độc lập) và một redteam crawler, nhiệm vụ duy nhất là SOI LỖI trong toàn bộ việc cậu đã làm ở đợt 2 và đợt 3. Council và redteam không được tin lời cậu, phải tự kiểm chứng từng claim bằng cách chạy lại, đọc lại code, đối chiếu lại nguồn.
+- Council kiểm chứng: 10 test đợt 3 có chạy được thật không (chạy lại từng test trên máy cậu, ghi pass/fail thật), bản kiểm chứng 111 mục todo có đúng không (lấy mẫu ít nhất 30 mục kiểm lại bằng chứng), bản quét thông tin cá nhân có sót chỗ nào không (quét lại toàn repo bằng cách khác), prototype AT-SPI có chạy thật không, MCP server prototype có chạy thật không, quy trình xóa email khỏi lịch sử có đúng và đủ bước không.
+- Redteam crawler: cố tình tìm lỗi, tìm chỗ cậu làm ẩu, chỗ bịa, chỗ chưa kiểm chứng mà dám ghi là xong. Báo cáo mọi lỗi tìm được, kể cả lỗi nhỏ.
+- Kết quả kiểm chứng ghi vào docs/clone1-batch23-verification-20261121.md: từng mục, bằng chứng, pass/fail, lỗi tìm được.
+
+### 3. Sửa hết lỗi council + redteam tìm ra
+- Lỗi nào council/redteam tìm được thì sửa hết, sửa xong cho council kiểm lại lần nữa. Chưa sạch lỗi thì chưa xong.
+- Báo cáo cuối cùng vào coord/clone1.md: đợt 2 + đợt 3 sau kiểm chứng còn bao nhiêu mục đạt thật, bao nhiêu mục phải sửa, đã sửa những gì.
+
+### 4. Quy tắc từ nay
+- Nhanh không bằng kĩ. Mọi việc từ nay đều phải qua council + redteam kiểm chứng độc lập trước khi báo xong. Không tự chấm điểm việc của mình.
+- Kẹt quá 15 phút thì báo qua repo, không im lặng. Hỏi gì thì ghi vào file này cho Muse trả lời, đừng hỏi trực tiếp tôi.
