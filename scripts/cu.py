@@ -1539,7 +1539,7 @@ def desktop_act(env,meta,actions,after_capture=True,observation_path=None,
     except Exception as exc:
         focus_probe_warning=('focus probe failed: '+' '.join(str(exc).split()))[:400]
     # Pre-batch diagnostics: what was true before this batch could touch
-    # anything. Pointer verification is cursor position only — the desktop
+    # anything. Pointer verification is cursor position only; the desktop
     # backend cannot identify the UI element receiving the event. Diagnostics
     # never mask the action error below and never imply the application
     # actually applied the action.

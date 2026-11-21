@@ -21,3 +21,9 @@ Start: 16:35:30 +07
 | 16:54:06 +07 | 18:36 | Pushed Zen isolation fix 4da7deb. Read the active Lua profile: its explicit 2026-11-21 user-order comment raises blur_strength from 0.0 to 0.15, and the material table is passed to hl.plugin.hyprglass.config. Only stale test expectations will change; shader files stay untouched. |
 | 16:54:44 +07 | 19:14 | Updated six stale pill-profile expectations to the active 0.15 blur value and 12.75 px derived pad; test_glass_shayxo_contract exit 0, runtime 1s. No shader code changed. |
 | 16:55:58 +07 | 20:28 | Removed transport metadata from the initial pull entry; reviewed the O2 log for account and credential details before committing the report. |
+| 16:58:11 +07 | 22:41 | Built generated native test dependencies in the isolated worktree with scripts/build.py; exit 0, runtime 1s. |
+| 17:00:48 +07 | 25:18 | Final full suite passed: python3 -m unittest discover -s tests -p test_*.py; exit 0, 1,523 tests, 2 skipped, 0 failures, 0 errors, runtime 120.843s. |
+| 17:01:49 +07 | 26:19 | Stopped an accidental duplicate full-suite invocation after 61s; it received KeyboardInterrupt during test_explicit_finish_waits_for_supervisor_cleanup_order. The completed run above is the final suite verdict. |
+| 17:05:44 +07 | 30:14 | Review found one pre-existing non-ASCII dash in the already changed scripts/cu.py comment. Replacing only that punctuation to meet the file rule before the final rerun. |
+| 17:08:19 +07 | 32:49 | Final full suite rerun after the comment punctuation cleanup: command python3 -m unittest discover -s tests -p test_*.py; exit 0, runtime 121s; Ran 1523 tests in 119.885s;OK (skipped=2); |
+| 17:09:05 +07 | 33:35 | Pushed pill-profile expectation update 0cde1c3. Final full suite rerun after the ASCII comment cleanup passed: 1,523 tests, 2 skipped, 0 failures, 0 errors, 119.885s. |
