@@ -34,18 +34,18 @@ DIAGNOSE_JS = """return (function(){
   var cs = getComputedStyle(document.body);
   var hs = getComputedStyle(document.documentElement);
   var r = document.body.getBoundingClientRect();
-  var cc = document.querySelector('#contacts-count');
+  var cc = document.querySelector("#contacts-count");
   return {
     readyState: document.readyState,
     url: location.href,
     htmlClass: document.documentElement.className,
     htmlClassList: Array.from(document.documentElement.classList),
-    htmlInline: document.documentElement.getAttribute('style') || '',
+    htmlInline: document.documentElement.getAttribute("style") || '',
     bodyClass: document.body.className,
-    bodyInline: document.body.getAttribute('style') || '',
+    bodyInline: document.body.getAttribute("style") || '',
     bodyVis: cs.visibility, bodyOpacity: cs.opacity, bodyDisplay: cs.display,
     htmlVis: hs.visibility,
-    transition: cs.transitionProperty + ' ' + cs.transitionDuration + ' ' + cs.transitionDelay,
+    transition: cs.transitionProperty + " " + cs.transitionDuration + " " + cs.transitionDelay,
     rect: {x: r.x, y: r.y, w: r.width, h: r.height},
     innerLen: document.body.innerText.length,
     hasFocus: document.hasFocus(),
@@ -57,8 +57,8 @@ DIAGNOSE_JS = """return (function(){
 # Exact mirror of removeLoadingScreen: remove the class AND the inline
 # --zen-logo-path property it set. Diagnostic use only.
 REMOVE_TZ_JS = """return (function(){
-  document.documentElement.classList.remove('tz-hidden');
-  document.documentElement.style.removeProperty('--zen-logo-path');
+  document.documentElement.classList.remove("tz-hidden");
+  document.documentElement.style.removeProperty("--zen-logo-path");
   return document.documentElement.className;
 })()"""
 
