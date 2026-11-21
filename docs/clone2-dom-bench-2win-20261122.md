@@ -13,11 +13,14 @@ Two headless Firefox windows in ONE Marionette session work fine for
 the 2-vision benchmark shape, and the one-shot harvest beats the
 amend's ground_many by a wide margin on cost: for the full visible
 inventory (65 elements per window) ground_many needs 200 evaluates
-and 0.42 to 0.68 s per window, while one evaluate returns all 65
-rects in 0.006 to 0.17 s (pooled median 0.011 s), about 48x faster
-in time and 200x fewer evaluates. For the benchmark-shaped set (6
-selectors per window) ground_many needs 18 evaluates and 0.10 to
-0.59 s per window against 1 evaluate at about 0.01 s.
+(the bench's scroll-first variant; the amend's ground_many as
+written cannot complete the full inventory at all, it fails fast on
+the first below-fold selector, see finding 1) and 0.42 to 0.68 s per
+window, while one evaluate returns all 65 rects in 0.006 to 0.17 s
+(pooled median 0.011 s), about 48x faster in time and 200x fewer
+evaluates. For the benchmark-shaped set (6 selectors per window)
+ground_many needs 18 evaluates and 0.10 to 0.59 s per window
+against 1 evaluate at about 0.01 s.
 
 Two real limits of the amend's ground_many, both reproduced live:
 
@@ -28,14 +31,25 @@ Two real limits of the amend's ground_many, both reproduced live:
    link sit below the fold (name-input rect center y 1927.37
    against a viewport height of 814). A scroll-first variant
    (3 evaluates above the fold, 5 below it) grounds them fine.
-2. A scroll invalidates snapshot rects. The first version of the
+2. A stale snapshot can misdirect clicks. The first version of the
    click step clicked straight from one snapshot per window and
-   2 of 5 clicks landed on the tall spacer in BOTH windows, because
-   a scroll for an earlier target moved the page under the later
-   targets' snapshot coordinates. The fix used here, re-reading
-   each target's rect immediately before its click (1 cheap
-   evaluate each, 7 evaluates for 5 clicks), lands all 5 in both
-   windows in both runs.
+   2 of 5 clicks landed on the tall spacer in BOTH windows (log
+   /tmp/dom_2win_run1_stale_rect.log, clicked log
+   "btn-3;btn-17;btn-42;tall;tall;", counter "clicks: 5",
+   all_five_landed false). The mechanism is UNKNOWN: the stale
+   code was not preserved, so the true cause cannot be verified
+   from the artifacts. The bottom/top scroll story first written
+   here was tested live by the redteam and is wrong: a snapshot
+   taken at scroll-bottom puts the first target's center y about
+   -1041, and clicking an off-viewport point raises
+   MoveTargetOutOfBoundsException instead of landing on the
+   spacer, and pointer clicks do not scroll the page. The fix
+   used here, re-reading each target's rect immediately before
+   its click (1 cheap evaluate each, 7 evaluates for 5 clicks),
+   lands all 5 in both windows in both runs, so the fix stands
+   on runs 1 and 2 regardless of the unknown mechanism. VISION 1
+   inventory is valid only while the page does not scroll; the
+   benchmark flow must re-read after any scroll.
 
 The benchmark-shaped flow works end to end: click input window 1,
 type, Enter, click input window 2, type, Enter, in 0.72 to 1.21 s
@@ -68,13 +82,17 @@ Run accounting, stated exactly:
   2026-11-21T20:18:57Z to 20:19:07Z, run_total 11.3547 s, log
   /tmp/dom_2win_run1.log. Run 2: wall 2026-11-21T20:19:19Z to
   20:19:30Z, run_total 11.0837 s, log /tmp/dom_2win_run2.log.
-- 2 earlier partial runs, both preserved, both disclosed in
-  section 6. Run 0: the first bench version crashed at the
-  ground_many step with RuntimeError "hit check failed for
-  #name-input" (log /tmp/dom_2win_run0_crash.log). Run 1 stale
+- 2 earlier partial runs, both preserved. Run 0: the first bench
+  version crashed at the ground_many step with RuntimeError "hit
+  check failed for #name-input" (log /tmp/dom_2win_run0_crash.log),
+  disclosed here in section 1. The first version's set A included
+  name-input; after the crash the set was split into set A (6
+  above-fold buttons) and set B (3 below-fold selectors), which
+  is why section 2 defines set A without name-input. Run 1 stale
   rect: a full run of the first click-step version in which 2 of
   5 clicks landed on the tall spacer in both windows (log
-  /tmp/dom_2win_run1_stale_rect.log).
+  /tmp/dom_2win_run1_stale_rect.log), disclosed in section 6,
+  finding 2.
 - No other runs. Every number in this report comes from run 1,
   run 2, or the two preserved partial logs named above. The /tmp
   tmpfs filled to 100 percent before the first run (stale Firefox
@@ -202,8 +220,10 @@ more than steady state. Evidence from the logs:
 - ground_many set A (the first evaluates in each window):
   52.01, 38.96, 97.74 and 16.34 ms per selector across the 4
   window-runs. The same bench, once warm, grounds the full
-  inventory at 6.52 to 10.48 ms per selector (200 evaluates in
-  0.42 to 0.68 s).
+  inventory at 6.52 to 10.40 ms per selector in runs 1 and 2
+  (200 evaluates in 0.42 to 0.68 s). The 10.48 ms per selector
+  figure in the earlier draft came from the partial stale-rect
+  run (0.6814 s / 65), not from runs 1 and 2.
 - One-shot harvest first read in a fresh window: run 2 win1
   first read 0.0995 s, second 0.0271 s, third 0.1685 s (the
   third read is slower than the first, so VM contention also
@@ -220,6 +240,15 @@ a fresh window and call it the steady-state cost. Warm the
 window with one throwaway evaluate first, or report the range
 as this report does.
 
+Variance note: the ranges in this report are 2-run samples on a
+contended shared virtual machine, not stable bounds. Council 1's
+independent third run (log /tmp/dom_2win_council1.log) measured
+ground_many full win1 at 1.5922 s (24.5 ms per selector) and set B
+win2 at 0.1839 s, both outside the 2-run ranges in section 3
+(0.4239 to 0.6758 s and 0.0362 to 0.1194 s). The headline
+conclusion is unaffected: slower ground_many times only widen
+the gap to one-shot.
+
 ## 6. Findings that change the benchmark design
 
 Finding 1: strict ground_many fails below the fold, reproduced
@@ -231,20 +260,37 @@ scroll-first variant grounds all 3 below-fold benchmark
 selectors in 0.036 to 0.119 s per window (12 evaluates). The
 benchmark must either keep its inputs in view or scroll first.
 
-Finding 2: a scroll invalidates snapshot rects, reproduced live.
-The first version of the click step clicked straight from one
-snapshot per window. Result in both windows (log
-/tmp/dom_2win_run1_stale_rect.log): clicked log
-"btn-3;btn-17;btn-42;tall;tall;", counter "clicks: 5",
+Finding 2: a stale snapshot can misdirect clicks, mechanism
+UNKNOWN, reproduced live as a phenomenon. The first version of
+the click step clicked straight from one snapshot per window.
+Result in both windows (log /tmp/dom_2win_run1_stale_rect.log):
+clicked log "btn-3;btn-17;btn-42;tall;tall;", counter "clicks: 5",
 all_five_landed false. The "moved" and "scroll-btn" clicks
-landed on the #tall spacer at stale coordinates: their snapshot
-rects were measured while the page was scrolled to the bottom,
-and earlier clicks had scrolled the page to the top, so the
-stored coordinates pointed at the spacer. The fix measured in
-runs 1 and 2: re-read each target's rect immediately before
-its click (1 cheap evaluate each). VISION 1 inventory is valid
-only while the page does not scroll; the benchmark flow must
-re-read after any scroll.
+landed on the #tall spacer at stale coordinates. The page's
+clicked log later grew to
+"btn-3;btn-17;btn-42;tall;tall;name-input;" when that partial
+run continued into the benchmark flow step (counter "clicks: 6").
+Why the snapshot coordinates were stale is UNKNOWN: the stale
+code was not preserved. The bottom/top scroll story first
+written here (snapshot measured at scroll-bottom, earlier
+clicks scrolled the page to the top) was tested live by the
+redteam and is impossible under the bench's own click
+mechanics: a snapshot at scroll-bottom puts the first target's
+center y about -1041, and clicking an off-viewport point raises
+MoveTargetOutOfBoundsException at the very first click, so the
+stale log could not have a complete clicked log; out-of-viewport
+coordinates throw in both directions, they do not clamp onto
+the spacer; no single scroll position puts all five snapshot
+coordinates in-viewport, yet the stale log shows all five
+pointer moves succeeded; and pointer clicks do not scroll the
+page, so "earlier clicks scrolled the page to the top" has no
+mechanism in this fixture. The log is genuine evidence that 2
+of 5 clicks landed on #tall in both windows, but the cause is
+unverifiable from the artifacts. The fix measured in runs 1
+and 2: re-read each target's rect immediately before its click
+(1 cheap evaluate each). VISION 1 inventory is valid only while
+the page does not scroll; the benchmark flow must re-read after
+any scroll.
 
 Finding 3: a scroll-first full harvest leaves early rects stale.
 In the full-inventory step the bench scrolls to a below-fold
@@ -279,7 +325,7 @@ active remote session per browser instance (batch 7 task 2).
 - 5 pointer clicks from a snapshot: batch 7, 1.49 s total for
   one window; here 1.36 to 1.38 s per window, 2.74 to 2.76 s
   for both windows together. Per-click cost is the same (about 0.27 s).
-- Verify by one DOM read: batch 7, 0.005 to 0.015 s; here
+- Verify by one DOM read: batch 7, 0.002 to 0.015 s; here
   0.0045 to 0.0345 s. Same order.
 - Rect agreement: batch 7, BiDi vs Marionette 5.7e-14 px; here
   ground_many vs one-shot 0.0 px (same protocol, same calls).
