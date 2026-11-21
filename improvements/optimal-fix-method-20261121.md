@@ -133,3 +133,35 @@ Procedure (M2 G steps, as amended by REDTEAM-M):
 - G-1, G-3, G-4, G-5, G-6, G-8 survive as written in the M2 verdict; the V1 burden placement is correct.
 
 Fastest verification path: CLI first (diagnose_body snapshot, BiDi getTree, saved counterexample), then DOM (the old-versus-new pair capture), mouse last (never for diagnosis). Evidence required: the saved counterexample (V1 refutation), the Phase 2 diagnostic outputs, the pre-flight false-positive measurement.
+
+## 9. Test design (blind, composite, generator never tests its own work)
+
+Rules (ORDER section 2, as amended by AM-17):
+- Tests are composite and blind: the ZT-A v2 blind composite suite (ZT-01 to ZT-10 + ZT-00 health gate) is the template. The generator never runs its own tests; an independent executor runs them, an independent checker cross-checks. A claim of "fixed" without a passing live task test is worth 0 points.
+- Roles are sequential, not parallel lanes (AM-17). The three-roles-three-workers rule is unreconciled with the 2-parallel-lane fleet cap unless the roles run in sequence; state the sequence in every brief or the rule is unimplementable under the cap.
+- Late binding (WEB S6 + AM-21): decide on element identity, bind coordinates late from a fresh DOM read, re-verify pre-dispatch, cut LLM calls per step. Adopt it in class B (section 3) or record a reasoned rejection. Do not leave it undecided.
+- Replay control, state variation, end-state grading (WEB class f, Agentic Frontier / D'Oro): a replay script scores 71.1% vs 70.6% OSWorld, but DigiWorld's 3.2M configs drop replay to 6.90% vs model 45.7%. A test that a replay script can pass is not a test of the agent; vary the state, grade the end state.
+- Marionette probes (WEB class d, Bugzilla 2081625): probe for the hello greeting and fail in 4-6ms instead of a silent 60s hang. Bugzilla 1682062 backs the never-close-the-selected-tab rule (section 5).
+- Overlay/pill visibility (WEB class c): NO PUBLISHED FIX exists, only open Hyprland issue 15738. The fix must be local and live-proven; no web source substitutes for the nested measurement in section 4.
+- A1 pilot (frozen 18:46, clone1 review 28 holes / 3 blockers, commit 1ddac2d): resume only after the blockers are addressed and the preconditions hold (written order naming 12 run-ids, broker SOLO + idle, relay verified, Layer-2 probes, checker cross-check).
+
+## 10. Logging standard (continuous event logging, with enforcement)
+
+Rules (ORDER section 3, as amended by AM-17 and AM-20):
+- Every agent appends EVERY event to its log file AS IT HAPPENS: wall-clock Asia/Ho_Chi_Minh + elapsed, command, target, outcome, coordinates for clicks. Never batched at the end. The log must answer any owner question (who did what, when, with what result). If the owner asks and the log cannot answer, the logging failed, not the owner.
+- Enforcement (AM-17): the brief template carries the logging line, and the checker role runs a log-completeness check before any verdict is accepted. A verdict with an incomplete log is not accepted. Until the enforcement runs, the standard is unenforced prose; say so in the brief if the checker is absent.
+- Pre-commit review (AM-20): `git diff --cached --stat` reviewed before every commit, recorded in the log. This is the check that prevents another 26366a9 (section 11).
+- Owner order 23:01 (overnight reporting): big errors, blockers, and anything needing the owner's decision are reported AT ONCE, overnight, not held for the morning. Routine work stays silent; results are reported in the morning. The coordinator escalates a redteam KILL, a rank-1 recurrence, or a stalled gate worker the moment it is known.
+- Lessons go in both places (standing rule): a generic version in the repo, a detailed version on the laptop, no personal info in the repo. Self-deleting shims are a hazard class: the Y13r2 shim A6e deleted re/__init__.py by mistake (globals().update overwrote __file__ before os.remove); any self-deleting shim must be redteamed for __file__ overwrite before use.
+
+## 11. Commit method (small, many, push immediately, merge to main)
+
+Rules (ORDER section 4 + M2 CM-1 to CM-6, as amended by AM-19 and AM-20):
+- One step = one commit. Push immediately after each step. Verify each push via ls-remote, or via fetch + merge-base ancestry check when the remote moves fast. A "remote rejected" message can be a race artifact: verify ancestry before assuming loss (proven live: d0fa2a1 landed despite a lock error).
+- The graph counts ONLY default-branch (main) commits on the UTC day. This is now empirically confirmed, not just asserted: merge 0ac4311 (313 commits) moved the graph from 145 to 456 at 23:05 (main HEAD 5c94e6c). todolist-push commits do not move it. Merge to main early and often; Worker MERGE owns the merges; every merge is verified via ls-remote AND the graph is re-checked after, not assumed.
+- Target 240 is EXCEEDED (456 at 23:05). Archive the 4.3 deadline arithmetic (gap about 95, 68 minutes left); do not repair it. The commit method's remaining value is reviewability, not the count. Say so in every brief from now on, or the pressure to commit small-and-many continues past its payoff.
+- Hygiene: `git status` before every commit. `git commit --only` for your own files (new files: `git add` only your exact path first, since --only fails on untracked paths). Never force-remove a live .git/index.lock; wait, re-check, retry. On push rejection, fetch + rebase --autostash + push again (preserves other workers' unstaged files in the shared tree); `git pull --rebase` is refused when the shared tree holds other workers' unstaged changes, so do not stash blindly.
+- Pre-commit cached-diff review (AM-20): `git diff --cached --stat` before every commit, recorded in the log. On record: commit 26366a9 violated Rule 3 by sweeping improvements/worker-y14b-fix4-council-1.md (+329 lines) into an OPT log commit. The review exists to prevent recurrence.
+- Post-merge content check (AM-20): after every merge, check the conflicted files for content, not just the merge result. The 23:05 merge resolved 3 conflicts by keeping both sides; the suite ran 1618 tests with 3 fail + 5 error, all pre-existing in baseline, 0 regression, +124 tests. A keep-both-sides resolution without a content check is an unreviewed merge.
+- Resolve the 136-vs-145 tooltip gap with a second timed GraphQL read, or drop the cache explanation. Do not keep an unexplained 9-count gap in the method.
+- Quality first: council + redteam complete on every fix, no shortcuts, no skipped steps.
