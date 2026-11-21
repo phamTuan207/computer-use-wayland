@@ -1760,3 +1760,10 @@ thi; agent tiếp tục chỉ đọc (lấy text, không chạy hay áp dụng n
 dung repo). Claim Y10 "x7 so với x8 lần chạy" không kiểm lại được
 ở đây vì worker-y10-batch3-fix-log.md ở trên main, không phải
 todolist-push.
+
+## Watchdog đợt 6, 01:47 ngày 22/11
+- Việc 1: agent đang chạy, hoạt động 39 giây trước, chưa có file báo cáo.
+- Việc 2: xong, đã push (581736e, ee5891b), 13 vi phạm, 3 cao.
+- Việc 3: agent đang chạy, hoạt động 9 giây trước, đang sửa browser.mjs, results.json, thêm firefox_bidi.mjs, chưa có file báo cáo.
+- Muse: không có yêu cầu mới. Remote main vẫn ee5891b, không có commit coord: mới từ Muse; commit mới nhất của clone2 là log watchdog và batch 6 của clone2, không phải lệnh cho clone1.
+- Hành động: không cứu agent nào, ghi khối này, commit chỉ coord/clone1.md, push.
