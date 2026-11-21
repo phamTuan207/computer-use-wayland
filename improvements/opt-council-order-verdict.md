@@ -481,3 +481,72 @@ improvements/worker-opt-council-order-log.md, follows it.)
   Sections 5.1-5.2.
 - Running workers at verdict time (do NOT stop or redirect): F1, F2, F3,
   Y13r2, Y14b, PRIO (complete), MERGE (new).
+
+## Section 6. ATTACK SURFACE FOR THE REDTEAM (write it so it can be attacked)
+
+### 6.1 Claims most likely to be wrong
+- A-1. "F3 runs first in wall time as the unblocker; the silence cluster is
+  first in importance." Attack: if F3's re-run cleanup takes hours, the
+  owner's FIRST fix (silence) has no live proof until then, and the priority
+  label is words without a run. Is there a form of the F2 proof that runs
+  WITHOUT Zen (unit + scripted + Chromium) and counts as partial proof?
+- A-2. "Y13/Y14 order by readiness at run time." Attack: readiness judging
+  is itself a decision point with no owner. Who judges "all gates green"
+  at the moment the slot frees, and what stops that judge from picking the
+  easier run and calling it readiness?
+- A-3. "The scrub gets a scheduled fleet pause with a date, or deferral
+  after the final test." Attack: no date is named in this verdict. A
+  mechanism without a date is the same dead letter redteam A6 attacked.
+  The redteam should demand the date or strike the mechanism.
+- A-4. "G-HIDDEN pre-flight with the diagnose_body payload." Attack: the
+  pre-flight itself runs an eval on the tab it will drive. Does the eval
+  perturb the tab (a 300 ms double sample, a focus call) in a way that
+  changes the measurement? What is the false-positive rate of the
+  pre-flight on a healthy tab?
+- A-5. "Merge to main early and often closes the ~95 graph gap." Attack:
+  merges of a fast-moving branch risk merge conflicts on the coord files
+  (PR #1 is ALREADY conflicting on a coord file). What is the merge cadence
+  that moves the number without creating a conflict that blocks the next
+  merge? Who resolves it, and on which branch?
+- A-6. "E1 locked in PARKED." Attack: the final test is defined as the
+  proof of the whole fixed stack. If E1's fresh comparison is the only
+  experiment that could show whether deliberation beats direct execution,
+  does parking it forever lose the one measurement that would change the
+  method itself? Is PARKED a decision or a deferral with no date?
+- A-7. "H2 folded into ranks 5-7, with a fallback dedicated run." Attack:
+  the fallback triggers only if NO live run yields real think values. Who
+  checks that, when, and what counts as "usable"? A fold with an unowned
+  trigger is a deletion.
+- A-8. "Y6 retry success = A3 positive marker proving the FULL profile."
+  Attack: the A3 marker is printed AFTER config() and layer() return in
+  the NEST copy of optics.lua only. What proves the marker itself is not
+  printed on a path where layer() silently failed? The precision limit may
+  have moved, not closed.
+
+### 6.2 Open questions for Worker OPT (not decided here)
+- Q-1. Who owns the scrub's scheduled fleet pause (name + date), and does
+  the pause happen before or after the final test?
+- Q-2. Who judges Y13/Y14 readiness at slot-free time, and what is the
+  written checklist they judge against?
+- Q-3. What is Worker MERGE's merge cadence to main, and who resolves a
+  coord-file conflict if a merge conflicts?
+- Q-4. Who owns the H2 fallback trigger check, and what counts as "usable
+  real think values"?
+- Q-5. The exact hl.dsp workspace-switch command and Omarchy launcher
+  command are still unknown (M2 section E). Who reads them from config,
+  and where are they recorded so no worker ever guesses them again?
+- Q-6. The J7 deleter is still unknown. Does VMFIX have a named owner and a
+  deadline for naming it, or does the G-VMFIX watch run indefinitely?
+
+### 6.3 Verdict sign-off
+- Voices: attitude (improvements/opt-council-order-attitude.md),
+  dependency (improvements/opt-council-order-dependency.md), risk/cost
+  (improvements/opt-council-order-risk.md). Log:
+  improvements/worker-opt-council-order-log.md. This verdict:
+  improvements/opt-council-order-verdict.md.
+- The council debated only; it ran no live tests and drove no laptop, per
+  its brief. Its verdict goes to a redteam next.
+- Commits by this council (todolist-push, each push verified via
+  git ls-remote): log start 0a4f3d6, voice 1 de7ea25, voice 2 2698fa0,
+  voice 3 2157f74, log follow-up 0d383e6, verdict s1 71b862d, s2 bd99e7b,
+  s3 841ae2b, s4 16d7579, s5 e4ef479, s6 (this section, commit on landing).
