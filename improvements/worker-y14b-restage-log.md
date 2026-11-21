@@ -640,6 +640,15 @@ on its merits; nothing accepted or declined silently.
   fix. How it broke is unknown: the probes ran fine at 22:09 and
   the re/ directory mtime is 15:25, so the deletion predates the
   failure window; no Y14b command touches /usr/lib.
+  UPDATE 22:41 +07 (verified by me, not trusted): F1 has since
+  repaired it properly. /usr/lib/python3.12/re/__init__.py now
+  exists (16,315 B, real CPython 3.12.3 source, "Secret Labs'
+  Regular Expression Engine"); my sourceless __init__.pyc is gone;
+  `import re` resolves to the .py file and compile works; `dpkg -V
+  python3.12` is clean (exit 0, no output). The stopgap is
+  superseded. Root cause of the deletion is still UNKNOWN (per
+  MEMORY.md 22:40); the guardian failure was not due to re
+  (cursor-guard plugin not loaded, F1 fixing).
 - No other findings. The fix-pass-4 code changes are in
   tests/realistic/run_batch3.py only (plus the plan H4 note and
   this log).
