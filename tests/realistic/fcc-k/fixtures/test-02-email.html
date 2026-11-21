@@ -9,8 +9,11 @@
   ul{list-style:none;padding:4px;border:1px solid #999;background:#fff;min-width:220px;}
   li{padding:6px;border-bottom:1px solid #ddd;cursor:pointer;}
   li.flagged::before{content:'* ';}
-  .msg{border:1px solid #999;background:#fff;padding:8px;min-width:260px;min-height:80px;}
+  .msg{border:1px solid #999;background:#fff;padding:8px;min-width:260px;min-height:80px;white-space:pre-wrap;}
   .status{margin-top:10px;font-family:monospace;white-space:pre-wrap;}
+  button{margin:4px 4px 4px 0;padding:6px 10px;cursor:pointer;}
+  input,textarea{display:block;margin:4px 0;width:320px;}
+  textarea{min-height:80px;}
 </style>
 </head>
 <body>
@@ -21,51 +24,105 @@
     <ul id="inbox"></ul>
     <h3>Sidebar</h3>
     <button id="sentBtn">Sent</button>
+    <button id="inboxBtn">Inbox</button>
+    <button id="composeBtn">Compose</button>
   </div>
-  <div class="msg" id="msg">Select a message.</div>
+  <div>
+    <div class="msg" id="msg">Select a message.</div>
+    <div id="actions" style="display:none;margin-top:6px;">
+      <button id="markReadBtn">Mark as read</button>
+      <button id="flagBtn">Flag / Star</button>
+      <button id="archiveBtn">Archive</button>
+    </div>
+    <div id="compose" style="display:none;margin-top:6px;">
+      <label>To <input id="toInput"></label>
+      <label>Subject <input id="subjectInput"></label>
+      <label>Body <textarea id="bodyInput"></textarea></label>
+      <button id="sendBtn">Send</button>
+    </div>
+  </div>
 </div>
-<div class="msg" id="sent" style="display:none;margin-top:8px;">(Sent folder)</div>
+<div class="msg" id="sent" style="display:none;margin-top:8px;"></div>
 <div id="status" class="status"></div>
 <script>
 const messages=[
-  {id:1,subject:'Vendor quote',sender:'vendor@example.com',read:false,flag:false,archived:false},
-  {id:2,subject:'Customer complaint',sender:'cust@example.com',read:false,flag:false,archived:false},
-  {id:3,subject:'Meeting request',sender:'boss@example.com',read:false,flag:false,archived:false},
-  {id:4,subject:'Newsletter A',sender:'news1@example.com',read:false,flag:false,archived:false},
-  {id:5,subject:'Newsletter B',sender:'news2@example.com',read:false,flag:false,archived:false},
-  {id:6,subject:'Vendor follow-up',sender:'vendor@example.com',read:false,flag:false,archived:false},
+  {id:1,subject:'Vendor quote',sender:'vendor@example.com',body:'Quote for Widget: 45000 per unit, 12 units. Total 540000. Valid 7 days.',read:false,flag:false,archived:false},
+  {id:2,subject:'Customer complaint',sender:'cust@example.com',body:'Complaint: the Gadget arrived damaged. Please arrange a replacement.',read:false,flag:false,archived:false},
+  {id:3,subject:'Meeting request',sender:'boss@example.com',body:'Meeting request: project sync on Tuesday 2026-11-24 at 10:00, 30 minutes.',read:false,flag:false,archived:false},
+  {id:4,subject:'Newsletter A',sender:'news1@example.com',body:'Newsletter A: weekly roundup.',read:false,flag:false,archived:false},
+  {id:5,subject:'Newsletter B',sender:'news2@example.com',body:'Newsletter B: product updates.',read:false,flag:false,archived:false},
+  {id:6,subject:'Vendor follow-up',sender:'vendor@example.com',body:'Follow-up: confirming the quote for Widget at 45000 per unit.',read:false,flag:false,archived:false},
 ];
 const sent=[];
 let active=null;
+let view='inbox';
 function render(){
   const inbox=document.getElementById('inbox');inbox.innerHTML='';
   for(const m of messages){
     if(m.archived)continue;
     const li=document.createElement('li');li.id='msg'+m.id;li.className=m.flag?'flagged':'';
     li.textContent=m.subject+' - '+m.sender+(m.read?' (read)':'');
-    li.onclick=()=>{active=m;document.getElementById('msg').textContent='Subject: '+m.subject+'\nFrom: '+m.sender+'\nBody: ...';};
+    li.onclick=()=>{openMessage(m);};
     inbox.appendChild(li);
   }
-  if(sent.length){document.getElementById('sent').style.display='block';document.getElementById('sent').textContent='Sent: '+sent[sent.length-1].subject+' to '+sent[sent.length-1].to;}
-  else document.getElementById('sent').style.display='none';
+  // Sent list text is always kept current in the DOM; only its visibility follows the view.
+  const s=document.getElementById('sent');
+  s.textContent=sent.length?sent.map(x=>'Subject: '+x.subject+'\nTo: '+x.to+'\nBody: '+x.body).join('\n---\n'):'Sent folder is empty.';
+  s.style.display=view==='sent'?'block':'none';
 }
-document.getElementById('sentBtn').onclick=()=>{document.getElementById('msg').textContent='Sent folder: '+(sent.length?sent[sent.length-1].subject:'empty');};
-window.__fcckVerify=function(){
-  const failures=[];
-  // simulate triage: archive 4,5; flag 2; read 1,6
-  messages[3].archived=true;messages[4].archived=true;
-  messages[1].flag=true;messages[0].read=true;messages[2].read=true;messages[5].read=true;messages[5].flag=true;
-  sent.push({to:'vendor@example.com',subject:'Re: vendor quote - price correction',body:'original 45000 corrected 42000, 45000 and 42000'});
-  const inboxLeft=messages.filter(m=>!m.archived).map(m=>m.id);
-  if(inboxLeft.length!==4||inboxLeft.includes(4)||inboxLeft.includes(5))failures.push('inbox wrong: '+JSON.stringify(inboxLeft));
-  if(!messages[1].flag)failures.push('complaint not flagged');
-  if(!messages[0].read||!messages[5].read)failures.push('read state wrong');
-  const s=sent[sent.length-1];
-  if(!s||s.to!=='vendor@example.com'||!s.subject.includes('price correction'))failures.push('reply missing or wrong');
-  if(!s||!s.body.includes('45000')||!s.body.includes('42000'))failures.push('reply body missing prices');
+function openMessage(m){
+  active=m;view='inbox';
+  document.getElementById('msg').textContent='Subject: '+m.subject+'\nFrom: '+m.sender+'\nBody: '+m.body;
+  document.getElementById('actions').style.display='block';
+  document.getElementById('compose').style.display='none';
   render();
-  const state={inboxLeft,flagged:messages.filter(m=>m.flag).map(m=>m.id),sentCount:sent.length,reply:sent[sent.length-1]};
-  const out={passed:failures.length===0,failures,score:failures.length===0?1:0,state};
+}
+document.getElementById('markReadBtn').onclick=()=>{if(active){active.read=true;render();}};
+document.getElementById('flagBtn').onclick=()=>{if(active){active.flag=true;render();}};
+document.getElementById('archiveBtn').onclick=()=>{
+  if(!active)return;
+  active.archived=true;active=null;
+  document.getElementById('msg').textContent='Select a message.';
+  document.getElementById('actions').style.display='none';
+  render();
+};
+document.getElementById('composeBtn').onclick=()=>{
+  document.getElementById('compose').style.display='block';
+  document.getElementById('actions').style.display='none';
+};
+document.getElementById('sendBtn').onclick=()=>{
+  const to=document.getElementById('toInput').value.trim();
+  const subject=document.getElementById('subjectInput').value.trim();
+  const body=document.getElementById('bodyInput').value;
+  if(!to||!subject){document.getElementById('msg').textContent='To and Subject are required before sending.';return;}
+  sent.push({to,subject,body});
+  document.getElementById('toInput').value='';
+  document.getElementById('subjectInput').value='';
+  document.getElementById('bodyInput').value='';
+  document.getElementById('compose').style.display='none';
+  document.getElementById('msg').textContent='Message sent.';
+  render();
+};
+document.getElementById('sentBtn').onclick=()=>{view='sent';document.getElementById('msg').textContent='Sent folder open, see below.';render();};
+document.getElementById('inboxBtn').onclick=()=>{view='inbox';render();};
+window.__fcckVerify=function(){
+  // REAL DOM assertion: reads only the inbox list, flags, and Sent folder text
+  // the agent actually produced. Never mutates message or sent state.
+  const failures=[];
+  const inboxIds=[...document.querySelectorAll('#inbox li')].map(li=>li.id);
+  if(inboxIds.length!==4||inboxIds.includes('msg4')||inboxIds.includes('msg5'))failures.push('inbox wrong: '+JSON.stringify(inboxIds));
+  const m2=document.getElementById('msg2');
+  if(!m2||!m2.classList.contains('flagged'))failures.push('complaint not flagged');
+  const m1=document.getElementById('msg1');
+  if(!m1||!m1.textContent.includes('(read)'))failures.push('message 1 not read');
+  const m6=document.getElementById('msg6');
+  if(!m6||!m6.textContent.includes('(read)')||!m6.classList.contains('flagged'))failures.push('message 6 not read+starred');
+  const sentText=document.getElementById('sent').textContent;
+  if(!sentText.includes('Re: vendor quote - price correction'))failures.push('reply missing from Sent');
+  if(!sentText.includes('vendor@example.com'))failures.push('reply To wrong');
+  if(!sentText.includes('45000')||!sentText.includes('42000'))failures.push('reply body missing prices');
+  const state={inboxIds,flagged:[...document.querySelectorAll('#inbox li.flagged')].map(li=>li.id),sentText:sentText.slice(0,300)};
+  const out={passed:failures.length===0,failures,score:failures.length===0?1:0,state,note:'DOM-only email check'};
   document.getElementById('status').textContent=JSON.stringify(out,null,2);
   return out;
 };

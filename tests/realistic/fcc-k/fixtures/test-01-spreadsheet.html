@@ -41,41 +41,51 @@ for(const id of ['a2','b2','c2','d2','e2','a3','b3','c3','d3','e3','a4','b4','c4
   cells[id]={el:document.getElementById(id),value:'',formula:null};
 }
 function clickCell(id){current=id;for(const k of Object.keys(cells)){cells[k].el.classList.remove('sel');}cells[id].el.classList.add('sel');}
-function typeIntoCurrent(){if(!current)return;const v=document.getElementById('typed').value;cells[current].value=v;cells[current].formula=null;cells[current].el.textContent=v;document.getElementById('typed').value='';recompute();}
-function pressEnter(){if(!current)return;const v=cells[current].value;if(v.startsWith('=')){try{cells[current].value=String(evalFormula(v.slice(1)));}catch(err){cells[current].value='#ERR';}}cells[current].el.textContent=cells[current].value;recompute();}
+function typeIntoCurrent(){
+  if(!current)return;
+  const v=document.getElementById('typed').value;
+  cells[current].value=v;
+  cells[current].formula=v.startsWith('=')?v.slice(1):null;
+  cells[current].el.textContent=v;
+  document.getElementById('typed').value='';
+  recompute();
+}
+function pressEnter(){
+  if(!current)return;
+  const c=cells[current];
+  if(c.formula){try{c.value=String(evalFormula(c.formula));}catch(err){c.value='#ERR';}c.el.textContent=c.value;}
+  recompute();
+}
 function evalFormula(f){
-  const ref=(r)=>{const cell=cells[r];return cell.value?Number(cell.value):0;};
-  if(f==='SUM(E2:E4)')return ref('e2')+ref('e3')+ref('e4');
-  if(f==='AVERAGE(E2:E4)')return Math.round((ref('e2')+ref('e3')+ref('e4'))/3);
-  if(f==='COUNT(E2:E4)')return 'COUNT text'; // intentional wrong formula
-  if(f==='COUNTA(E2:E4)')return 3;
-  const m=f.match(/^([A-Za-z]\d)\*([A-Za-z]\d)$/);if(m)return ref(m[1])*ref(m[2]);
+  // Case-insensitive like a real spreadsheet: =C2*D2 and =c2*d2 both work.
+  const fu=String(f).toUpperCase();
+  const ref=(r)=>{const cell=cells[String(r).toLowerCase()];return cell&&cell.value?Number(cell.value):0;};
+  if(fu==='SUM(E2:E4)')return ref('e2')+ref('e3')+ref('e4');
+  if(fu==='AVERAGE(E2:E4)')return Math.round((ref('e2')+ref('e3')+ref('e4'))/3);
+  if(fu==='COUNT(E2:E4)')return 'COUNT text'; // intentional wrong formula: returns text, not a number
+  if(fu==='COUNTA(E2:E4)')return 3;
+  const m=fu.match(/^([A-Z]\d)\*([A-Z]\d)$/);if(m)return ref(m[1])*ref(m[2]);
   return 0;
 }
 function recompute(){
   // cascade: E2,E3,E4 are products; E5/E6/E7 depend on them
-  for(const r of ['e2','e3','e4']){const c=cells[r];if(c.formula){c.value=String(evalFormula(c.formula));c.el.textContent=c.value;}}
+  for(const r of ['e2','e3','e4','e5','e6','e7']){
+    const c=cells[r];
+    if(c.formula){try{c.value=String(evalFormula(c.formula));}catch(err){c.value='#ERR';}c.el.textContent=c.value;}
+  }
 }
 window.__fcckVerify=function(){
-  const failures=[];const get=(id)=>cells[id].value;
-  // simulate intended flow
-  set('c2','12');set('d2','45000');formula('e2','c2*d2');
-  set('c3','7');set('d3','82000');formula('e3','c3*d3');
-  set('c4','5');set('d4','150000');formula('e4','c4*d4');
-  formula('e5','SUM(E2:E4)');formula('e6','AVERAGE(E2:E4)');
-  formula('e7','COUNT(E2:E4)'); // wrong formula -> text
-  formula('e7','COUNTA(E2:E4)'); // corrected
-  const exp={e2:'540000',e3:'574000',e4:'750000',e5:'1864000',e6:'621333',e7:'3'};
-  for(const [id,v] of Object.entries(exp)){if(get(id)!==v)failures.push(id+' expected '+v+' got '+get(id));}
-  return verdict(failures,exp);
-};
-function set(id,v){cells[id].value=v;cells[id].formula=null;cells[id].el.textContent=v;recompute();}
-function formula(id,f){cells[id].formula=f;cells[id].value=String(evalFormula(f));cells[id].el.textContent=cells[id].value;recompute();}
-function verdict(failures,state){
-  const out={passed:failures.length===0,failures,score:failures.length===0?1:0,state,note:'offline spreadsheet check'};
+  // REAL DOM assertion: reads only the cell text the agent actually produced.
+  // Never writes cell state. A fresh fixture fails, as it should.
+  const failures=[];
+  const read=(id)=>document.getElementById(id).textContent.trim();
+  const exp={a2:'2026-11-16',b2:'Widget',c2:'12',d2:'45000',e2:'540000',a3:'2026-11-17',b3:'Gadget',c3:'7',d3:'82000',e3:'574000',a4:'2026-11-18',b4:'Tool',c4:'5',d4:'150000',e4:'750000',e5:'1864000',e6:'621333',e7:'3'};
+  for(const [id,v] of Object.entries(exp)){if(read(id)!==v)failures.push(id+' expected '+v+' got '+read(id));}
+  const state={};for(const id of Object.keys(exp))state[id]=read(id);
+  const out={passed:failures.length===0,failures,score:failures.length===0?1:0,state,note:'DOM-only spreadsheet check'};
   document.getElementById('status').textContent=JSON.stringify(out,null,2);
   return out;
-}
+};
 </script>
 </body>
 </html>
