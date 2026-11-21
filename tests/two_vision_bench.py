@@ -22,9 +22,12 @@ never reads a screenshot to locate anything.
 
 SAFETY. This is an acceptance test. It runs live ONLY after the
 improved method is approved and the coordinator says run. The script
-refuses live mode unless BOTH --live and --confirm-live are given, and
-it never touches a real thread in fixture mode (default). Dry-test it
-only against tests/two_vision_fixture.html in headless Firefox.
+refuses live mode unless BOTH --live and --confirm-live are given,
+AND the gate is on the plan URLs, not the flag: any plan URL outside
+the local fixture file refuses without both flags, so a custom --plan
+cannot smuggle a live run past the gate. It never touches a real
+thread in fixture mode (default). Dry-test it only against
+tests/two_vision_fixture.html in headless Firefox.
 
 Transport: Marionette (Selenium) only. Firefox 160 allows exactly one
 active remote session per browser instance, so no BiDi session is
@@ -46,7 +49,14 @@ from datetime import datetime, timezone
 FF = "/home/hatch/workspace/tools/firefox/firefox"
 GD = "/home/hatch/workspace/tools/geckodriver"
 FIXTURE = "file:///home/hatch/workspace/computer-use-wayland/tests/two_vision_fixture.html"
+FIXTURE_DIR = "file:///home/hatch/workspace/computer-use-wayland/tests/"
 DEFAULT_WORKDIR = "/tmp/two_vision_bench"
+
+# TODO (step-6 loop hygiene): prompt caching, diff-gated
+# re-observation, downscale to token tier, context editing, low
+# effort, adaptive waiting are unowned agent-harness concerns, not
+# built here. TODO (D5): nothing open; VISION 1 is a DOM harvest,
+# stated explicitly in the docstring above, never a screenshot.
 
 # TODO (F5, bulk harvest): this script implements the one-shot bulk
 # harvest as a single evaluate per window, which is the harvest the
@@ -54,14 +64,36 @@ DEFAULT_WORKDIR = "/tmp/two_vision_bench"
 # Accessibility.getFullAXTree in scripts/cdp.mjs (Chromium path only);
 # a production V11 MutationObserver flag (here the fixture counts input
 # events in window.__inputEvents, a Messenger page needs a real
-# observer armed before typing); the BiDi/Marionette handover protocol
-# under the one-session constraint (D1); step-6 loop hygiene is
-# unowned (prompt caching, diff-gated re-observation, downscale to
-# token tier, context editing, low effort, adaptive waiting).
+# observer armed before typing).
+# TODO (D1): no BiDi/Marionette handover protocol exists under the
+# one-session constraint; sequencing for a live run that needs both
+# protocols is unspecified.
 HARVEST_JS = """
 return (function(){
+  // Unique, valid CSS selector for an element: '#id' when it has one,
+  // else a full css path (tag:nth-of-type(k) segments up the tree).
+  // The old form tag + '[' + i + ']' (for example 'input[0]') is NOT
+  // a valid selector and crashed every downstream querySelector call.
+  function cssPath(e) {
+    const parts = [];
+    let n = e;
+    while (n && n.nodeType === 1) {
+      if (n.id) { parts.unshift('#' + CSS.escape(n.id)); break; }
+      let k = 1, sib = n;
+      while ((sib = sib.previousElementSibling)) {
+        if (sib.tagName === n.tagName) k++;
+      }
+      parts.unshift(n.tagName.toLowerCase() + ':nth-of-type(' + k + ')');
+      n = n.parentElement;
+    }
+    return parts.join(' > ');
+  }
+  // Native controls plus ARIA controls: div[role=button], links with
+  // role button, [role=textbox] without contenteditable. Plain links
+  // and role-less divs are NOT inventoried (documented limit).
   const els = [...document.querySelectorAll(
-    'input, textarea, button, [contenteditable="true"]')];
+    'input, textarea, button, [contenteditable="true"], '
+    + '[role="button"], [role="textbox"]')];
   return els.map((e, i) => {
     const r = e.getBoundingClientRect();
     const cs = getComputedStyle(e);
@@ -73,7 +105,7 @@ return (function(){
        e.isContentEditable ? 'textbox' : tag);
     const name = (e.getAttribute('aria-label') || e.placeholder ||
       (e.textContent || '').trim().slice(0, 40) || e.value || '');
-    return {ref: e.id ? ('#' + e.id) : (tag + '[' + i + ']'),
+    return {ref: cssPath(e),
             tag: tag, role: role, name: name,
             x: r.x, y: r.y, w: r.width, h: r.height,
             cx: r.x + r.width / 2, cy: r.y + r.height / 2,
@@ -114,6 +146,10 @@ return (function(sel){
 # passing through a fixture helper. bubble_selector comes from the
 # plan window entry (default matches the fixture's .bubble and any
 # [data-sender] element); a live Messenger plan overrides it.
+# Known limit: the gate requires exact textContent === text, and the
+# default bubble selector is fixture-shaped. A Messenger bubble's
+# textContent may not equal the message exactly, so the default would
+# fail closed live; a live plan MUST override bubble_selector.
 GATE_JS = """
 return (function(threadSel, bubbleSel, text){
   const t = document.querySelector(threadSel);
@@ -132,11 +168,6 @@ def log(name, t0, **kw):
     return rec
 
 
-def median(xs):
-    xs = sorted(xs)
-    return xs[len(xs) // 2]
-
-
 def port_open(port):
     import socket
     s = socket.socket()
@@ -152,6 +183,17 @@ def port_open(port):
 
 class Ledger:
     """Exactly-once send ledger (gap D4, mechanized here, needs review).
+
+    TODO (D4): exactly-once needs review-round approval. What the
+    mechanism honestly guarantees: within one session, a retry never
+    re-sends a message the V12 pre-check can see in the thread. It
+    does NOT guarantee it when the thread/bubble selectors cannot see
+    the bubble: after a v12-timeout the intent is marked
+    failed-unverified and a later run with the same intent REFUSES to
+    re-send it, because the message may have landed unseen. To retry,
+    fix the selectors and use a new run_id after manually checking
+    the thread. A fresh page load with an empty thread re-sends a
+    recorded intent once, by design: the bubble is genuinely absent.
 
     A JSON file keyed by intent id (run_id + window label). An intent
     is marked sent only after its V12 gate passed. Before any send the
@@ -218,8 +260,15 @@ def launch_browser(profile, bidi_port=9223):
     """Launch headless Firefox by hand with Marionette + BiDi port flags,
     the same shape as the batch 7 task 2 bench. Returns the Popen proc.
     The BiDi port is opened by the flag only; no BiDi session is ever
-    created while the Marionette session is active (one-session rule)."""
+    created while the Marionette session is active (one-session rule).
+    Refuses when the ports are already held: the old check only waited
+    for the ports to answer, so a stale browser holding them would get
+    attached to instead of the process just launched."""
     os.makedirs(profile, exist_ok=True)
+    if port_open(2828) or port_open(bidi_port):
+        raise RuntimeError(
+            "Marionette/BiDi ports already in use; a stale browser "
+            "may be running. Kill it first, do not attach to it.")
     t0 = time.monotonic()
     proc = subprocess.Popen(
         [FF, "-headless", "-marionette",
@@ -228,6 +277,9 @@ def launch_browser(profile, bidi_port=9223):
         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     deadline = time.time() + 30
     while time.time() < deadline:
+        if proc.poll() is not None:
+            raise RuntimeError(
+                f"browser exited early with code {proc.returncode}")
         if port_open(2828) and port_open(bidi_port):
             break
         time.sleep(0.25)
@@ -241,11 +293,25 @@ def launch_browser(profile, bidi_port=9223):
 def attach_driver():
     from selenium import webdriver
     from selenium.webdriver.firefox.service import Service
-    service = Service(GD, log_output="/tmp/two_vision_geckodriver.log",
-                      service_args=["--connect-existing",
-                                    "--marionette-port", "2828"])
-    t0 = time.monotonic()
-    driver = webdriver.Firefox(service=service)
+    # Create the Selenium session AFTER the browser is up: creating it
+    # first and polling after can fail the attach when Marionette is
+    # not yet ready. Retry a few times; a not-yet-ready Marionette
+    # raises instead of answering.
+    last_exc = None
+    for attempt in range(3):
+        try:
+            service = Service(
+                GD, log_output="/tmp/two_vision_geckodriver.log",
+                service_args=["--connect-existing",
+                              "--marionette-port", "2828"])
+            t0 = time.monotonic()
+            driver = webdriver.Firefox(service=service)
+            break
+        except Exception as exc:  # noqa: BLE001 - retry, then raise
+            last_exc = exc
+            time.sleep(1)
+    else:
+        raise last_exc
     # Readiness poll: the Marionette port can answer before the
     # session is fully usable; wait until a trivial eval succeeds.
     deadline = time.monotonic() + 15
@@ -296,12 +362,20 @@ def ensure_visible(driver, ref):
     return r
 
 
-def hcu_guard(driver, item, t0):
-    """HCU-style live guard (gap D2: the guard lives here; no
-    production component owns it yet). Re-checks the target's live
-    geometry + visibility + hit test right before input. Returns
-    (ok, reason, verify_evidence). Geometry moved more than 2 px from
-    the VISION 1 snapshot fails the guard: the inventory is stale."""
+def hcu_guard(driver, item, t0, expect=None):
+    """HCU-style live guard. Re-checks the target's live geometry +
+    visibility + hit test right before input. Returns (ok, reason,
+    verify_evidence). Geometry moved more than 2 px from the expected
+    center fails the guard: the inventory is stale.
+
+    TODO (D2): no production component owns the guard yet; it lives
+    here, in this script only.
+
+    expect is the center to compare against: the VISION 1 snapshot
+    center by default, or the fresh center from ensure_visible when
+    the page was just scrolled (a scroll legitimately moves every
+    rect, so the guard must compare against post-scroll geometry,
+    not the stale snapshot)."""
     v = driver.execute_script(VERIFY_JS, item["ref"])
     if not v.get("found"):
         return False, "target-gone", v
@@ -309,8 +383,9 @@ def hcu_guard(driver, item, t0):
         return False, "not-visible", v
     if not v.get("hit"):
         return False, "covered", v
-    dx = abs(v["rect"]["cx"] - item["cx"])
-    dy = abs(v["rect"]["cy"] - item["cy"])
+    ex, ey = expect if expect is not None else (item["cx"], item["cy"])
+    dx = abs(v["rect"]["cx"] - ex)
+    dy = abs(v["rect"]["cy"] - ey)
     if dx > 2 or dy > 2:
         return False, f"geometry-moved dx={dx:.1f} dy={dy:.1f}", v
     return True, None, v
@@ -345,26 +420,44 @@ def send_one(driver, window, item, message, intent_id, ledger,
         log("send_skipped_already_sent", t0, window=window["label"],
             intent_id=intent_id)
         return step
+    # A previous attempt ended in a v12-timeout: the message may have
+    # landed unseen (wrong thread/bubble selectors make the pre-check
+    # blind), so this intent is never re-attempted with the same
+    # selectors. Fix the selectors and use a new run_id after manually
+    # checking the thread. The pre-check above runs first so a fixed
+    # selector that CAN see the bubble still skips correctly.
+    if ledger.status(intent_id) == "failed-unverified":
+        step["error"] = "retry-blocked-unverified"
+        step["elapsed_s"] = round(time.monotonic() - t0, 4)
+        log("send_retry_blocked", t0, window=window["label"],
+            intent_id=intent_id,
+            note="previous v12-timeout; message may have landed unseen")
+        return step
     if ledger.status(intent_id) == "sent":
         log("ledger_stale_bubble_absent", t0, window=window["label"],
             intent_id=intent_id)
 
+    # Scroll first, then guard: a below-fold target fails the hit test
+    # before ensure_visible ever runs, so the guard must run on
+    # post-scroll geometry. The click uses the guard-verified center,
+    # not the pre-scroll position.
+    pos = ensure_visible(driver, item["ref"])
+    if pos is None:
+        step["error"] = "target-gone"
+        step["elapsed_s"] = round(time.monotonic() - t0, 4)
+        return step
     # V5 hit test + HCU guard, from the live DOM, before any input.
-    ok, reason, v = hcu_guard(driver, item, t0)
+    ok, reason, v = hcu_guard(driver, item, t0,
+                              expect=(pos["cx"], pos["cy"]))
     if not ok:
         step["error"] = reason
         step["elapsed_s"] = round(time.monotonic() - t0, 4)
         log("guard_failed", t0, window=window["label"], reason=reason)
         return step
 
-    # Real pointer click at the snapshot center, then focus check (V3)
-    # before any keystroke: a missed click must never type.
-    pos = ensure_visible(driver, item["ref"])
-    if pos is None:
-        step["error"] = "target-gone"
-        step["elapsed_s"] = round(time.monotonic() - t0, 4)
-        return step
-    click_at(driver, pos["cx"], pos["cy"])
+    # Real pointer click at the guard-verified center, then focus
+    # check (V3) before any keystroke: a missed click must never type.
+    click_at(driver, v["rect"]["cx"], v["rect"]["cy"])
     v = driver.execute_script(VERIFY_JS, item["ref"])
     if not v.get("active"):
         step["error"] = "focus-failed"
@@ -374,15 +467,20 @@ def send_one(driver, window, item, message, intent_id, ledger,
         return step
 
     # Type with real keys, then V1 value readback before Enter.
+    # Inputs and textareas hold the text in value; contenteditable
+    # elements (Messenger's message input) hold it in innerText and
+    # report value null, so check innerText for them.
     events_before = v.get("inputEvents")
     driver.find_element("css selector", item["ref"]).send_keys(message)
     v = driver.execute_script(VERIFY_JS, item["ref"])
-    if v.get("value") != message:
+    typed = (v.get("innerText") if v.get("innerText") is not None
+             else v.get("value"))
+    if typed != message:
         step["error"] = "value-mismatch"
         step["evidence"] = v
         step["elapsed_s"] = round(time.monotonic() - t0, 4)
         log("value_check_failed", t0, window=window["label"],
-            value=v.get("value"))
+            value=v.get("value"), innerText=v.get("innerText"))
         return step
     step["v1_value_ok"] = True
     step["v11_input_events"] = (
@@ -402,6 +500,16 @@ def send_one(driver, window, item, message, intent_id, ledger,
     else:
         step["error"] = "v12-timeout"
         step["elapsed_s"] = round(time.monotonic() - t0, 4)
+        # The message may have landed unseen (the selectors are the
+        # only witness and they just failed to see it). Mark the
+        # intent failed-unverified so no later run re-sends it with
+        # the same selectors; see the block at the top of send_one.
+        ledger.mark(intent_id, "failed-unverified",
+                    window=window["label"], message=message,
+                    error="v12-timeout",
+                    note="message may have landed unseen; fix "
+                    "selectors and use a new run_id after manually "
+                    "checking the thread")
         log("v12_gate_timeout", t0, window=window["label"],
             timeout_s=v12_timeout)
         return step
@@ -449,11 +557,11 @@ def open_windows(driver, plan, t_start):
 
     TODO (D6): one vs two Zen instances for the two clone windows is
     unspecified. This script uses ONE instance with two windows (the
-    shape the live run needs if both clones live in one Zen), and the
-    --instances flag records the choice for the live run; two
+    shape the live run needs if both clones live in one Zen); two
     instances would need a second Marionette attach, which the
     one-session rule forbids on one browser but allows across two
-    browser processes.
+    browser processes. --instances two is REFUSED until that exists:
+    it is never recorded in results as if it ran.
     """
     handles = {}
     first = True
@@ -514,9 +622,12 @@ def main():
         print("REFUSED: --live and --fixture together make no sense.",
               file=sys.stderr)
         return 2
-    if args.instances == "two" and not args.live:
-        print("NOTE: two instances is a live-run shape; fixture mode "
-              "uses one instance with two windows.", file=sys.stderr)
+    if args.instances == "two":
+        print("REFUSED: --instances two is not implemented: the run "
+              "always uses one browser instance with two windows, and "
+              "recording 'two' in results would lie about what ran.",
+              file=sys.stderr)
+        return 2
 
     os.makedirs(args.workdir, exist_ok=True)
     t_start = time.monotonic()
@@ -530,6 +641,20 @@ def main():
     else:
         print("REFUSED: live mode needs --plan with thread URLs.",
               file=sys.stderr)
+        return 2
+    # Live gate, on the plan URLs, not the flag: a custom --plan with
+    # real thread URLs and no --live flag used to run the full send
+    # chain against those threads. Any URL outside the local fixture
+    # files now requires BOTH --live and --confirm-live, before any
+    # browser starts. Fixture mode is the default plan and any plan
+    # whose windows all point at local fixture files under tests/.
+    fixture_urls = all(
+        w.get("url", "").startswith(FIXTURE_DIR)
+        for w in plan["windows"])
+    if not fixture_urls and not (args.live and args.confirm_live):
+        print("REFUSED: plan URLs are not the local fixture. A live "
+              "run needs --live and --confirm-live; without them the "
+              "script sends nothing.", file=sys.stderr)
         return 2
     run_id = plan["run_id"]
     ledger_path = args.ledger or os.path.join(args.workdir, "ledger.json")
@@ -607,8 +732,12 @@ def main():
             results["steps"].append(step)
             if step["status"] not in ("sent", "skipped-already-sent"):
                 failed = True
-                ledger.mark(intent_id, "failed",
-                            error=step.get("error"))
+                # Never overwrite failed-unverified: send_one already
+                # marked it, and a plain "failed" would unblock the
+                # retry the block exists to prevent.
+                if ledger.status(intent_id) != "failed-unverified":
+                    ledger.mark(intent_id, "failed",
+                                error=step.get("error"))
 
         sent = [s for s in results["steps"]
                 if s["status"] in ("sent", "skipped-already-sent")]
