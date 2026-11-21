@@ -28,8 +28,18 @@ Usage (on the laptop, from the repo root):
 Output: one JSON summary line per test on stdout, plus a JSONL step log
 at tests/realistic/live-run-20261121.jsonl (relative to the server root
 copy) and /tmp/worker-p-live.jsonl.
+
+Live metrics (Worker Y11, 21/11): every run also writes a timed JSONL
+metrics file next to the step log (LIVE_LOG sibling with -metrics
+before .jsonl), with per-step think/act/wait/exec and per-click
+records. Scripted steps record think_s null (no model decisions);
+the click record is a selector-delivery rate, not an agent grounding
+hit rate. Env: LIVE_METRICS=<path> overrides the path, exact "off"
+disables metrics; LIVE_RUN_ID=<id> fixes the run id. See
+improvements/worker-y11-design.md and scripts/live_metrics.py.
 """
 import datetime
+import functools
 import json
 import os
 import re
@@ -43,6 +53,32 @@ import urllib.request
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+
+# ---------------- live metrics (Worker Y11, 21/11) ----------------
+# scripts/live_metrics.py is imported when it can be found, so this
+# file works both from the repo (tests/realistic/run_live.py, scripts/
+# is two levels up) and from a frozen runner copy in /tmp/worker-*-server
+# (live_metrics.py shipped next to run_live.py). LIVE_METRICS_DIR
+# overrides both. When the import fails, metrics stays off and the run
+# behaves exactly as before, with one stderr line saying so.
+live_metrics = None
+for _cand in (os.environ.get("LIVE_METRICS_DIR") or "",
+              str(Path(__file__).resolve().parents[2] / "scripts"),
+              str(Path(__file__).resolve().parent)):
+    if _cand and Path(_cand, "live_metrics.py").exists():
+        if _cand not in sys.path:
+            sys.path.insert(0, _cand)
+        break
+try:
+    import live_metrics
+except Exception as _lm_exc:  # pragma: no cover - import failure path
+    print(f"[metrics] live_metrics unavailable: {_lm_exc}", file=sys.stderr)
+    live_metrics = None
+
+# Current LiveMetrics for module-level waits (wait_download). Set by
+# Runner.step while a step is open, cleared after. Same pattern as
+# run_agy_y2's _CURRENT_ATTEMPT global.
+_CURRENT_METRICS = None
 
 GECKO = "/tmp/geckodriver"
 WD_PORT = int(os.environ.get("WD_PORT", "4445"))
@@ -74,6 +110,88 @@ def log_step(test, step, op, elapsed_ms, ok, detail=None, error=None):
         # default=str: details may hold Path objects (downloads).
         f.write(json.dumps(rec, ensure_ascii=False, default=str) + "\n")
     return rec
+
+
+# ---------------- live metrics helpers (Worker Y11, 21/11) ----------------
+# Design frozen in improvements/worker-y11-design.md. One depth guard
+# (self._meter_depth) makes only the OUTERMOST driver call count: click
+# calls scroll_into_view and find internally, and those nested calls
+# must not double-count exec time or emit extra action rows. goto,
+# refresh, new_tab, and switch are NOT decorated: their wait parts are
+# metered explicitly inside them, and their action rows are written in
+# finally blocks, so nested wait_ready/diagnose calls still count once.
+
+def _action_detail(kind, args, kwargs):
+    """Safe detail for an action row: identifiers and lengths only.
+
+    Never typed text, never file contents, never full paths.
+    """
+    try:
+        if kind in ("click", "find", "text", "value", "visible",
+                    "scroll_into_view"):
+            return {"selector": args[0]} if args else {}
+        if kind == "click_js":
+            js = args[0] if args else kwargs.get("js_expr", "")
+            return {"js": str(js)[:200], "js_len": len(str(js))}
+        if kind == "type":
+            return {"selector": args[0] if args else "",
+                    "text_len": len(args[1]) if len(args) > 1 else 0}
+        if kind == "type_text":
+            return {"selector": args[0] if args else "",
+                    "text_len": len(args[1]) if len(args) > 1 else 0}
+        if kind == "eval":
+            script = str(args[0]) if args else ""
+            return {"script_len": len(script),
+                    "has_click": ".click(" in script}
+        if kind == "goto":
+            return {"url": args[0] if args else ""}
+        if kind == "set_file":
+            path = str(args[1]) if len(args) > 1 else ""
+            return {"selector": args[0] if args else "",
+                    "filename": Path(path).name}
+        if kind == "switch":
+            handle = args[0] if args else ""
+            return {"handle_prefix": str(handle)[:8]}
+        if kind in ("alert_send",):
+            return {"text_len": len(args[0]) if args else 0}
+        return {}
+    except Exception:
+        return {}
+
+
+def _metered(bucket):
+    """Meter one WD method call: time it, emit one action row.
+
+    bucket is "exec", "wait", or None (time in neither bucket, row
+    only). Nested calls are suppressed by _meter_depth, so only the
+    outermost driver call counts. When metrics is None the wrapper is
+    a pass-through: zero extra calls, zero behavior change.
+    """
+    def deco(fn):
+        @functools.wraps(fn)
+        def wrapper(self, *args, **kwargs):
+            metrics = getattr(self, "metrics", None)
+            if metrics is None or getattr(self, "_meter_depth", 0) > 0:
+                return fn(self, *args, **kwargs)
+            self._meter_depth = 1
+            t0 = time.perf_counter()
+            try:
+                return fn(self, *args, **kwargs)
+            finally:
+                dt = time.perf_counter() - t0
+                self._meter_depth = 0
+                try:
+                    if bucket == "exec":
+                        metrics.note_exec(dt)
+                    elif bucket == "wait":
+                        metrics.note_wait(dt)
+                    metrics.note_action(
+                        fn.__name__,
+                        _action_detail(fn.__name__, args, kwargs))
+                except Exception:
+                    pass
+        return wrapper
+    return deco
 
 
 # ---------------- hidden-body diagnosis (Y4b design, 21/11) ----------------
@@ -170,7 +288,7 @@ def _classify_snapshot(snap):
     return "OTHER_HIDDEN"
 
 
-def diagnose_body(d):
+def _diagnose_body_impl(d):
     """One eval, one snapshot of body visibility state.
 
     Returns {"classification": ..., "snapshots": [...]}. Sampled twice
@@ -244,6 +362,31 @@ def diagnose_body(d):
     return {"classification": cls, "snapshots": [snap1, snap2]}
 
 
+def diagnose_body(d):
+    """Wait-metered wrapper around _diagnose_body_impl (Worker Y11).
+
+    The whole diagnose (evals plus settle sleeps) counts as wait time,
+    never think or exec. Nested d.eval calls are suppressed by the
+    depth guard so they are not double-counted as exec. Behavior is
+    otherwise identical to the impl.
+    """
+    t0 = time.perf_counter()
+    depth = getattr(d, "_meter_depth", 0)
+    try:
+        if hasattr(d, "_meter_depth"):
+            d._meter_depth = depth + 1
+        return _diagnose_body_impl(d)
+    finally:
+        if hasattr(d, "_meter_depth"):
+            d._meter_depth = depth
+        metrics = getattr(d, "metrics", None)
+        if metrics is not None:
+            try:
+                metrics.note_wait(time.perf_counter() - t0)
+            except Exception:
+                pass
+
+
 def require_visible(d, label):
     """Diagnose a freshly opened tab and raise INFRA unless visible.
 
@@ -269,6 +412,51 @@ class WD:
         self.last_diagnosis = None
         self._gecko_log = None
         self._gecko_pid_path = None
+        # Live metrics (Worker Y11). None means metrics off: zero extra
+        # calls, zero behavior change. _meter_depth is the reentrancy
+        # guard for the _metered decorator (outermost call only).
+        self.metrics = None
+        self._meter_depth = 0
+
+    def _note_wait(self, seconds):
+        """Add seconds to the current step's wait bucket (fail-open)."""
+        metrics = self.metrics
+        if metrics is not None:
+            try:
+                metrics.note_wait(seconds)
+            except Exception:
+                pass
+
+    def _note_action(self, kind, detail=None):
+        """Emit one action row for a non-decorated method (fail-open)."""
+        metrics = self.metrics
+        if metrics is not None:
+            try:
+                metrics.note_action(kind, detail or {})
+            except Exception:
+                pass
+
+    def _probe_click(self, css):
+        """Pre-click probe for the click oracle (Worker Y11).
+
+        One eval, run after scroll_into_view and find, BEFORE the
+        element click: rect center plus document.elementFromPoint at
+        that point, with the intended/top element identities and their
+        relation. Returns the probe dict, or None when the probe
+        itself fails (the click still runs; the row records unknown).
+        Never raises.
+        """
+        if live_metrics is None:
+            return None
+        try:
+            snap = self.eval(live_metrics.PROBE_JS, [css])
+        except Exception as exc:
+            return {"found": False,
+                    "probe_error": f"{type(exc).__name__}: {exc}"}
+        if not isinstance(snap, dict):
+            return {"found": False,
+                    "probe_error": "probe eval returned non-dict sample"}
+        return snap
 
     def __enter__(self):
         # Geckodriver log goes to a file in APPEND mode, not DEVNULL
@@ -395,6 +583,7 @@ class WD:
     def _s(self, path):
         return f"/session/{self.session}{path}"
 
+    @_metered("exec")
     def eval(self, script, args=None):
         return self._wd("POST", self._s("/execute/sync"),
                         {"script": script, "args": args or []})["value"]
@@ -403,32 +592,43 @@ class WD:
         return self._wd("GET", self._s("/window/handles"))["value"]
 
     def switch(self, handle):
-        self._wd("POST", self._s("/window"), {"handle": handle})
-        # Settle: a freshly selected tab needs a beat before Marionette's
-        # interactability check passes (probe v2 vs v4, 21/11).
-        time.sleep(0.5)
+        try:
+            self._wd("POST", self._s("/window"), {"handle": handle})
+            # Settle: a freshly selected tab needs a beat before
+            # Marionette's interactability check passes (probe v2 vs
+            # v4, 21/11).
+            t0 = time.perf_counter()
+            time.sleep(0.5)
+            self._note_wait(time.perf_counter() - t0)
+        finally:
+            self._note_action("switch", {"handle_prefix": str(handle)[:8]})
 
     def new_tab(self, url, allow_hidden=False):
-        resp = self._wd("POST", self._s("/window/new"), {"type": "tab"})
-        handle = resp["value"]["handle"]
-        self.opened_tabs.append(handle)
-        # CRITICAL: geckodriver --connect-existing does NOT switch the
-        # current window to the new tab (proven 21/11: current handle
-        # stays on the old tab after window/new). Without this switch,
-        # goto/type/click all land in the PREVIOUSLY current tab (a user
-        # tab), and close_tab would close that user tab. Always switch.
-        self.switch(handle)
-        current = self._wd("GET", self._s("/window"))["value"]
-        if current != handle:
-            raise RuntimeError(
-                f"window switch failed: current {current[:8]} != new {handle[:8]}")
-        self.goto(url, allow_hidden=allow_hidden)
-        return handle
+        try:
+            resp = self._wd("POST", self._s("/window/new"), {"type": "tab"})
+            handle = resp["value"]["handle"]
+            self.opened_tabs.append(handle)
+            # CRITICAL: geckodriver --connect-existing does NOT switch the
+            # current window to the new tab (proven 21/11: current handle
+            # stays on the old tab after window/new). Without this switch,
+            # goto/type/click all land in the PREVIOUSLY current tab (a user
+            # tab), and close_tab would close that user tab. Always switch.
+            self.switch(handle)
+            current = self._wd("GET", self._s("/window"))["value"]
+            if current != handle:
+                raise RuntimeError(
+                    f"window switch failed: current {current[:8]} != new {handle[:8]}")
+            self.goto(url, allow_hidden=allow_hidden)
+            return handle
+        finally:
+            self._note_action("new_tab", {"url": url})
 
+    @_metered("exec")
     def scroll_into_view(self, css):
         self.eval("const el = document.querySelector(arguments[0]);"
                   " if (el) el.scrollIntoView({block: 'center'});", [css])
 
+    @_metered("exec")
     def close_tab(self):
         self._wd("DELETE", self._s("/window"), {})
 
@@ -452,31 +652,42 @@ class WD:
         return self.last_diagnosis
 
     def goto(self, url, allow_hidden=False):
-        self._wd("POST", self._s("/url"), {"url": url})
-        self.wait_ready()
-        # Settle: readyState == complete is NOT enough. Probe v2 (1s sleep
-        # after goto) passes element clear/type; probe v4 (no sleep) fails
-        # with "could not be scrolled into view" although the element has
-        # a valid rect and the tab reports visible + focused. The tab needs
-        # a paint before Marionette's interactability check passes.
-        time.sleep(1.0)
-        # Choke point (Y4b): diagnose after the settle, never return a
-        # hidden page as ready unless the caller opted out.
-        return self._diagnose_or_raise(url, allow_hidden)
+        try:
+            self._wd("POST", self._s("/url"), {"url": url})
+            self.wait_ready()
+            # Settle: readyState == complete is NOT enough. Probe v2 (1s sleep
+            # after goto) passes element clear/type; probe v4 (no sleep) fails
+            # with "could not be scrolled into view" although the element has
+            # a valid rect and the tab reports visible + focused. The tab needs
+            # a paint before Marionette's interactability check passes.
+            t0 = time.perf_counter()
+            time.sleep(1.0)
+            self._note_wait(time.perf_counter() - t0)
+            # Choke point (Y4b): diagnose after the settle, never return a
+            # hidden page as ready unless the caller opted out.
+            return self._diagnose_or_raise(url, allow_hidden)
+        finally:
+            self._note_action("goto", {"url": url})
 
     def refresh(self, allow_hidden=False):
-        self._wd("POST", self._s("/refresh"), {})
-        self.wait_ready()
-        # Same settle as goto(): after a reload, JS listeners / init
-        # scripts lag behind readyState. Without this, the first element
-        # interaction fails ("could not be scrolled into view") and
-        # select/change handlers appear not to fire (t04, t05, t08, 21/11).
-        time.sleep(1.0)
-        # A reload is a new document (the extension content script runs
-        # again at document_start), so refresh diagnoses exactly like
-        # goto and raises on a hidden body unless opted out (C1 F2).
-        return self._diagnose_or_raise("refresh", allow_hidden)
+        try:
+            self._wd("POST", self._s("/refresh"), {})
+            self.wait_ready()
+            # Same settle as goto(): after a reload, JS listeners / init
+            # scripts lag behind readyState. Without this, the first element
+            # interaction fails ("could not be scrolled into view") and
+            # select/change handlers appear not to fire (t04, t05, t08, 21/11).
+            t0 = time.perf_counter()
+            time.sleep(1.0)
+            self._note_wait(time.perf_counter() - t0)
+            # A reload is a new document (the extension content script runs
+            # again at document_start), so refresh diagnoses exactly like
+            # goto and raises on a hidden body unless opted out (C1 F2).
+            return self._diagnose_or_raise("refresh", allow_hidden)
+        finally:
+            self._note_action("refresh", {})
 
+    @_metered("wait")
     def wait_ready(self, timeout=10):
         deadline = time.perf_counter() + timeout
         while time.perf_counter() < deadline:
@@ -488,6 +699,7 @@ class WD:
             time.sleep(0.1)
         raise RuntimeError("page did not reach readyState complete")
 
+    @_metered("wait")
     def wait_for(self, js_cond, timeout=10, desc="condition"):
         deadline = time.perf_counter() + timeout
         while time.perf_counter() < deadline:
@@ -499,41 +711,103 @@ class WD:
             time.sleep(0.1)
         raise RuntimeError(f"timeout waiting for {desc}: {js_cond}")
 
+    @_metered("exec")
     def find(self, css):
         resp = self._wd("POST", self._s("/element"),
                         {"using": "css selector", "value": css})
         return resp["value"][EL_KEY]
 
+    @_metered("exec")
     def click(self, css):
-        self.scroll_into_view(css)
-        el = self.find(css)
-        self._wd("POST", self._s(f"/element/{el}/click"), {})
+        """Marionette element click, with a pre-click probe (Y11).
 
+        The probe (rect center + elementFromPoint) runs after scroll
+        and find, BEFORE the click. The click_attempt row is written
+        after the click returns or raises, including on the exception
+        path (a failed DOM attempt must exist in the file even when
+        the step later retries through JS). Metrics never change the
+        click outcome: the probe is advisory and record_click is
+        fail-open.
+        """
+        probe = None
+        probe_error = None
+        click_error = None
+        try:
+            self.scroll_into_view(css)
+            el = self.find(css)
+        except Exception as exc:
+            click_error = f"{type(exc).__name__}: {exc}"
+            if self.metrics is not None:
+                try:
+                    self.metrics.record_click(css, None, error=click_error)
+                except Exception:
+                    pass
+            raise
+        if self.metrics is not None:
+            probe = self._probe_click(css)
+            if isinstance(probe, dict):
+                probe_error = probe.pop("probe_error", None)
+        try:
+            self._wd("POST", self._s(f"/element/{el}/click"), {})
+        except Exception as exc:
+            click_error = f"{type(exc).__name__}: {exc}"
+            raise
+        finally:
+            if self.metrics is not None:
+                try:
+                    self.metrics.record_click(
+                        css, probe, error=click_error,
+                        probe_error=probe_error)
+                except Exception:
+                    pass
+
+    @_metered("exec")
     def click_js(self, js_expr):
         """Click an element located by arbitrary JS (returns the element)."""
         self.eval(f"({js_expr}).click()")
 
+    @_metered("exec")
     def type_text(self, css, text):
         self.scroll_into_view(css)
         el = self.find(css)
         self._wd("POST", self._s(f"/element/{el}/clear"), {})
         self._wd("POST", self._s(f"/element/{el}/value"), {"text": text})
+        if self.metrics is not None:
+            # Post-type read-back (Y11): input fidelity, not click hit.
+            # Only lengths are recorded, never the text. A read-back
+            # failure (e.g. contenteditable) records hit null, not a
+            # failure: the type itself already succeeded or raised.
+            readback = None
+            read_error = None
+            try:
+                readback = self.value(css)
+            except Exception as exc:
+                read_error = f"{type(exc).__name__}: {exc}"
+            try:
+                self.metrics.record_type(css, text, readback,
+                                         error=read_error)
+            except Exception:
+                pass
 
+    @_metered("exec")
     def set_file(self, css, path):
         self.scroll_into_view(css)
         el = self.find(css)
         self._wd("POST", self._s(f"/element/{el}/value"),
                  {"text": str(path)})
 
+    @_metered("exec")
     def text(self, css):
         el = self.find(css)
         return self._wd("GET", self._s(f"/element/{el}/text"))["value"]
 
+    @_metered("exec")
     def value(self, css):
         el = self.find(css)
         return self._wd("GET",
                         self._s(f"/element/{el}/property/value"))["value"]
 
+    @_metered("exec")
     def visible(self, css):
         return self.eval(
             "const el = document.querySelector(arguments[0]);"
@@ -543,39 +817,75 @@ class WD:
             " return r.width > 0 && r.height > 0 && cs.display !== 'none'"
             " && cs.visibility !== 'hidden';", [css])
 
+    @_metered("exec")
     def alert_text(self):
         return self._wd("GET", self._s("/alert/text"))["value"]
 
+    @_metered("exec")
     def alert_accept(self):
         self._wd("POST", self._s("/alert/accept"), {})
 
+    @_metered("exec")
     def alert_dismiss(self):
         self._wd("POST", self._s("/alert/dismiss"), {})
 
+    @_metered("exec")
     def alert_send(self, text):
         self._wd("POST", self._s("/alert/text"), {"text": text})
 
 
 class Runner:
-    def __init__(self, test_id, base_url):
+    def __init__(self, test_id, base_url, metrics=None):
         self.test = test_id
         self.base = base_url
         self.failures = []
         self.details = {}
         self.t0 = time.perf_counter()
         self.wall_start = now_iso()
+        # Live metrics (Worker Y11). None means metrics off: step()
+        # behaves exactly as before. When set, the test id is registered
+        # so click/type counters reset per test.
+        self.metrics = metrics
+        if metrics is not None:
+            try:
+                metrics.set_test(test_id)
+            except Exception:
+                pass
 
     def step(self, name, op, fn):
         start = time.perf_counter()
+        metrics = self.metrics
+        if metrics is not None:
+            try:
+                metrics.begin_step(name, op)
+            except Exception:
+                pass
+        global _CURRENT_METRICS
+        prev_metrics = _CURRENT_METRICS
+        _CURRENT_METRICS = metrics
+        ok, error = False, None
         try:
-            detail = fn()
-            ok, error = True, None
-        except Exception as exc:
-            detail, ok, error = None, False, f"{type(exc).__name__}: {exc}"
-        ms = (time.perf_counter() - start) * 1000
-        log_step(self.test, name, op, ms, ok, detail, error)
-        print(f"[{self.test}] {name} {'ok' if ok else 'FAIL'} "
-              f"{ms:.0f}ms detail={detail} error={error}", flush=True)
+            try:
+                detail = fn()
+                ok, error = True, None
+            except Exception as exc:
+                detail, ok, error = None, False, f"{type(exc).__name__}: {exc}"
+            ms = (time.perf_counter() - start) * 1000
+            log_step(self.test, name, op, ms, ok, detail, error)
+            print(f"[{self.test}] {name} {'ok' if ok else 'FAIL'} "
+                  f"{ms:.0f}ms detail={detail} error={error}", flush=True)
+        finally:
+            # Metrics row is written AFTER the log_step row, and can
+            # never change ok, the print line, or the raise below.
+            # Scripted steps record think_s null (no model decisions);
+            # act_s is the step wall time (machine time).
+            if metrics is not None:
+                try:
+                    metrics.finish_step(ok, error, think_s=None,
+                                        think_source="scripted")
+                except Exception:
+                    pass
+            _CURRENT_METRICS = prev_metrics
         if not ok:
             self.failures.append(f"{name}: {error}")
             raise RuntimeError(f"step failed: {name}: {error}")
@@ -617,14 +927,25 @@ def start_server():
 
 
 def wait_download(name, timeout=15):
-    deadline = time.perf_counter() + timeout
-    target = DOWNLOADS / name
-    while time.perf_counter() < deadline:
-        if target.exists() and target.stat().st_size > 0:
-            time.sleep(0.3)
-            return target
-        time.sleep(0.2)
-    raise RuntimeError(f"download {name} did not appear in {DOWNLOADS}")
+    # Wait time is metered through _CURRENT_METRICS (set by Runner.step
+    # while a step is open). A download poll is machine waiting, never
+    # think time.
+    t0 = time.perf_counter()
+    try:
+        deadline = time.perf_counter() + timeout
+        target = DOWNLOADS / name
+        while time.perf_counter() < deadline:
+            if target.exists() and target.stat().st_size > 0:
+                time.sleep(0.3)
+                return target
+            time.sleep(0.2)
+        raise RuntimeError(f"download {name} did not appear in {DOWNLOADS}")
+    finally:
+        if _CURRENT_METRICS is not None:
+            try:
+                _CURRENT_METRICS.note_wait(time.perf_counter() - t0)
+            except Exception:
+                pass
 
 
 def clear_download(name):
@@ -1405,12 +1726,13 @@ TESTS = {
 }
 
 
-def run_one(test_id, base_url):
+def run_one(test_id, base_url, metrics=None):
     fn = TESTS[test_id]
-    r = Runner(test_id, base_url)
+    r = Runner(test_id, base_url, metrics=metrics)
     UPLOADS.mkdir(parents=True, exist_ok=True)
     try:
         with WD() as d:
+            d.metrics = metrics
             fn(r, d)
     except Exception as exc:
         r.failures.append(f"RUNNER ERROR: {type(exc).__name__}: {exc}")
@@ -1434,15 +1756,42 @@ def main():
         if t not in TESTS:
             print(f"unknown test {t}", flush=True)
             return 2
+    # Live metrics (Worker Y11): one LiveMetrics per main() invocation,
+    # run_id created once here, never in run_one. Default path is the
+    # LIVE_LOG sibling with -metrics before .jsonl. Exact string "off"
+    # disables metrics entirely. A construction failure degrades to
+    # disabled with one stderr line; the run proceeds unmeasured.
+    metrics = None
+    if live_metrics is not None and os.environ.get("LIVE_METRICS") != "off":
+        try:
+            metrics_path = os.environ.get("LIVE_METRICS") or \
+                live_metrics.default_metrics_path(LOG_PATH)
+            run_id = live_metrics.make_run_id(
+                os.environ.get("LIVE_RUN_ID"))
+            metrics = live_metrics.LiveMetrics(metrics_path, run_id)
+            metrics.live_log = str(LOG_PATH)
+        except Exception as exc:
+            print(f"[metrics] disabled: {exc}", file=sys.stderr)
+            metrics = None
+    elif os.environ.get("LIVE_METRICS") == "off":
+        print("[metrics] OFF (LIVE_METRICS=off)", file=sys.stderr)
     httpd, base_url = start_server()
     print(f"serving {SERVER_ROOT} at {base_url}", flush=True)
     results = []
     try:
         for t in wanted:
-            results.append(run_one(t, base_url))
+            results.append(run_one(t, base_url, metrics=metrics))
     finally:
         if httpd is not None:
             httpd.shutdown()
+        if metrics is not None:
+            try:
+                detail = [{"test": x["test"], "pass": x["pass"],
+                           "elapsed_s": x["elapsed_ms"] / 1000.0}
+                          for x in results]
+                metrics.summary(detail)
+            except Exception as exc:
+                print(f"[metrics] summary failed: {exc}", file=sys.stderr)
     passed = sum(1 for x in results if x["pass"])
     print(f"SUMMARY {passed}/{len(results)} passed, "
           f"total_ms={sum(x['elapsed_ms'] for x in results)}", flush=True)
