@@ -32,22 +32,31 @@ Code and test files changed by those commits, 12 files, 1632 insertions,
 
 The range also contains other workers' commits that are NOT part of
 CLICK-AMEND and were NOT verified here: batch 7 corrections `748cc35`,
-`219720c`, `05ee34d`, `16c4196`; ZT-C `c19c227`; crawls `50343fe`,
-`c450f5d`, `8fd87e2`, `f5ac63f`, `43b7c42`; reviews `846cf0d`, `9d5ae86`,
-`59acd36`, `6cdebda`; coord logs. Scope claims below cover only the
+`219720c`, `05ee34d`, `16c4196`; ZT-C `c19c227`, `7437384`, `0b92542`,
+`646cf71`; crawls `50343fe`, `c450f5d`, `8fd87e2`, `f5ac63f`, `43b7c42`,
+`7b85472`, `96f49ac`; reviews `846cf0d`, `9d5ae86`,
+`59acd36`, `6cdebda`; ZT-B `f2999c7`, `88d3d0a`; CODEX comparisons
+`238b528`, `9350db7`; Y13g `ab0b62c`, `167a2e9`; coord logs `ce2b4d7`,
+`7d3db26`, `07dcb0b`, `9a1be5c`, `0db32fc`, `96ce916`, `5dacdeb`,
+`9e6c80c`. That is all 33 non-amend commits in the range (41 total).
+Scope claims below cover only the
 CLICK-AMEND code and test files.
 
-Scope check, by `git diff e4082ff..4b7d6ac`: zero diff lines touch
-`image_point`, `move`, or `_check_entry_pyc` definitions, so the
+Scope check, by `git diff e4082ff..4b7d6ac`: 15 changed lines mention
+`image_point` (new calls, the new `dom_rect_to_image_point` function,
+docstrings), but zero diff lines touch the `image_point`, `move`, or
+`_check_entry_pyc` definitions, so the
 calibration-proven coordinate conversion and the entry check are untouched.
 Zero em dashes and zero en dashes in the code and test diff.
 
 ## 2. Test suites re-run on this machine
 
 Method: `python3 -m unittest <suite>` in the amend worktree `tests/`
-directory. Run 2026-11-21 21:44 UTC and re-runs 22:01 UTC. The suites use
+directory. Run 2026-11-21 21:44 UTC and re-runs 22:01 UTC (run times
+unlogged, no artifact on disk). The suites use
 fakes, no live browser. Only `native/wtype` was built from vendored source;
-the full `scripts/build.py` fails here on missing gtk4 dev packages, which
+the full `scripts/build.py` fails here on missing gtk4 dev packages (no
+build log on disk; `pkg-config --exists gtk4` fails), which
 does not affect these suites.
 
 | Suite | Tests | Result | Time |
@@ -58,7 +67,7 @@ does not affect these suites.
 | test_dom_act | 10 | OK | 0.001s |
 | test_pick4_fastpath | 28 | OK | 0.074s |
 | test_session_continuation | 10 | OK | 0.242s |
-| Total 6 suites | 181 | OK | 1.385s |
+| Total 6 suites | 181 | OK | 1.375s |
 
 Extra runs, same worktree:
 
@@ -83,7 +92,7 @@ All 12 confirmed present. Line numbers verified by reading the files at
 
 1. Session-continuation regression test: `tests/test_session_continuation.py:252`,
    `post = dict(after, pixel_sha256='1111')`. PASS.
-2. G28 widening: `scripts/first_action.py:478-498`. The refusal covers EVERY
+2. G28 widening: `scripts/first_action.py:474-498`. The refusal covers EVERY
    batch, not only key/type batches; docstring says "for any batch";
    `has_keyboard` is now computed only to pick the message text. Flipped
    test `tests/test_first_action.py:620`
@@ -96,9 +105,10 @@ All 12 confirmed present. Line numbers verified by reading the files at
    type_check hook `:1913`; DOM-value basis `:2050`. Fix-log Stage A claim
    corrected in `improvements/worker-click-fix-log.md`. PASS.
 5. R2, subsumed by item 2: no proceed path remains. `rejected is not None`
-   always refuses with `fallback_reason` set (`scripts/first_action.py:478-498`).
-   `_fresh_observation` has exactly one caller in the repo, `run()` at
-   `scripts/first_action.py:470`. PASS.
+   always refuses with `fallback_reason` set (`scripts/first_action.py:474-498`).
+   `_fresh_observation` has exactly one production caller in the repo, `run()` at
+   `scripts/first_action.py:470` (plus 8 direct test calls in
+   `tests/test_first_action.py:809, 823, 843, 856, 868, 878, 892, 904`). PASS.
 6. R3: envelope `type_verified` and `error_code` init
    `scripts/first_action.py:427-428`; copied from session `:543-544` and
    from the fallback `:597-599`. PASS.
@@ -125,16 +135,19 @@ All 12 confirmed present. Line numbers verified by reading the files at
     `focus_type` `:78`. Test coverage: rect center
     (`tests/test_dom_act.py:123`), covered-refusal before any click
     (`:132`), miss never types (`:233`), no extra observes
-    (`tests/test_type_verification.py:195`, `tests/test_dom_act.py:227-228`
-    assert `observes_added` 0 and `act_observes` 0), 7-case accuracy
+    (`tests/test_dom_act.py:227-228`
+    assert `observes_added` 0 and `act_observes` 0;
+    `tests/test_type_verification.py:195` asserts the observe call
+    sequence `['fresh', 'persist', 'persist']`), 7-case accuracy
     (`tests/test_pick4_fastpath.py:488-541`). PASS.
 
 Bonus, not demanded by any review: R10 third bullet is fixed. In
 `list_tabs` the range check now runs before `current_handle()`
 (`scripts/zen_dom.py:288-294`): handles are fetched, the index is range
 checked, then `current = self.current_handle()`. R10 bullets 1 and 2
-(session creation failure type, 200-char error truncation) remain as
-noted, no change demanded.
+remain as noted, no change demanded: (1) verification is skipped, not
+failed, when after_capture is False or terminal_address is None; (2) the
+age check uses the max session deadline, not actual attempt time.
 
 ## 4. Fail-before evidence at e4082ff
 
@@ -252,3 +265,60 @@ matches the live-proven calibration_e2 truth formula.
 - The other commits in the range (batch 7 corrections, ZT-C, crawls,
   reviews, coord logs) were not verified here; they are not CLICK-AMEND
   work.
+
+## Corrections after the batch 8 council and redteam review
+
+Applied to this report by the batch 8 fix agent, each number recomputed
+first-hand from the code and the diff at `4b7d6ac` / `e4082ff..4b7d6ac`.
+No code change; the GO verdict is unaffected.
+
+- W1 (redteam): 6-suite total "1.385s" was wrong; the listed per-suite
+  times sum to 1.375s (0.629+0.424+0.005+0.001+0.074+0.242). Fixed in the
+  section 2 table.
+- Item 5 (council 2, redteam W2): "_fresh_observation has exactly one
+  caller in the repo" was wrong; there are 9 call sites: 1 production
+  caller (`run()` at `scripts/first_action.py:470`) plus 8 direct test
+  calls (`tests/test_first_action.py:809, 823, 843, 856, 868, 878, 892,
+  904`). Fixed to "exactly one production caller". The R2 subsumption
+  stands.
+- Item 2 (council 2): refusal range was "478-498"; `if rejected is not
+  None:` is at line 474 and `return 1` at 498. Fixed to 474-498, here and
+  in item 5.
+- Item 12 (council 2): the parenthetical wrongly attributed the counter
+  asserts to `tests/test_type_verification.py:195`. Only
+  `tests/test_dom_act.py:227-228` asserts `observes_added` 0 and
+  `act_observes` 0; the 195 test asserts the observe call sequence
+  `['fresh', 'persist', 'persist']`. Fixed. The "no extra observes" claim
+  stands.
+- R10 bonus (redteam W3): bullets 1 and 2 were misstated as "(session
+  creation failure type, 200-char error truncation)". Actual R10
+  (`improvements/worker-click-rt-log.md:94-100`): (1) verification is
+  skipped, not failed, when after_capture is False or terminal_address is
+  None; (2) the age check uses the max session deadline, not actual
+  attempt time. Fixed.
+- Non-amend enumeration (redteam M2): the range has 41 commits (8 amend
+  + 33 others); the report named 14 and covered 8 as "coord logs", leaving
+  11 unlisted. Completed: ZT-C `7437384`, `0b92542`, `646cf71`; crawls
+  `7b85472`, `96f49ac`; ZT-B `f2999c7`, `88d3d0a`; CODEX comparisons
+  `238b528`, `9350db7`; Y13g `ab0b62c`, `167a2e9`; the 8 coord logs are
+  `ce2b4d7`, `7d3db26`, `07dcb0b`, `9a1be5c`, `0db32fc`, `96ce916`,
+  `5dacdeb`, `9e6c80c` (all verified with `git log`).
+- Scope sentence (redteam M4): clarified. 15 changed lines mention
+  `image_point` (new calls, the new `dom_rect_to_image_point` function,
+  docstrings), but zero diff lines touch the `image_point`, `move`, or
+  `_check_entry_pyc` definitions.
+- Run times and build failure (redteam U1/U2): marked as unlogged. The
+  "21:44 UTC and re-runs 22:01 UTC" times have no artifact on disk, and
+  there is no build log on disk; `pkg-config --exists gtk4` fails, which
+  confirms the cause but not the build failure itself.
+
+NOT applied, because first-hand verification showed the report was already
+correct and the council 2 correction was wrong:
+
+- Council 2 item 6: the session copy is at lines 543-544
+  (`type_verified` at 543, `error_code` at 544), exactly as the report
+  said. Council 2 claimed 543-545; `grep -n` in the amend worktree shows
+  the `error_code` assignment at 544.
+- Council 2 item 9: `def _try_restore` is at line 227, exactly as the
+  report said. Council 2 claimed 226; `grep -n` in the amend worktree
+  shows the def at 227 and the first docstring line at 228.
