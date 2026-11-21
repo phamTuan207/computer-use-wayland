@@ -419,7 +419,11 @@ omitted; append as it happens, never batch at the end)
   methods are swap_monitors, rename, move, change_id, toggle_special,
   no goto or switch; hl.dispatch("workspace", "1") also fails.
   Workspace switching by command is still unsolved except via the
-  focus side effect. Did NOT fall back to the plain
+  focus side effect. UPDATE 23:19 (AGENTS.md): `hl.dsp.focus({
+  workspace = 2 })` switches workspaces in ~1 s (verified both
+  directions); `hl.dsp.workspace.goto` FAILS (goto is a Lua reserved
+  word, rc 7). Workspace switching by command is SOLVED via the
+  focus form. Did NOT fall back to the plain
   string form `hyprctl dispatch workspace 1` (broken in Hyprland
   0.57.2 Lua per AGENTS.md).
 - 22:51:56.149 (T+716s) focus Zen by address instead (repo pattern,
@@ -535,16 +539,22 @@ omitted; append as it happens, never batch at the end)
   still "Example Domain", main area still the Example Domain page.
   No example.org tab. So the mouse click on the urlbar does NOT
   focus it, 2/2 attempts (run 2 without wait, run 4 with 500 ms
-  wait after Ctrl+N). CONFIRMED FINDING: in this Zen layout, a mouse
-  click on the sidebar-top urlbar/search field lands (cursorpos
-  exact) but does NOT focus it for URL entry; Ctrl+L is required.
-  ZT-00 step 4 as written (mouse click the address bar) cannot be
-  completed via this field. ZT-A must fix the scenario (different
-  click target, double-click, or Ctrl+L as the focus method). This
-  is a Zen UI behavior, NOT an act-now bug (act-now delivered the
-  click exactly; the browser did not focus the field). Record in
-  the error file as a new finding (H3 family: click lands but does
-  not take effect).
+  wait after Ctrl+N). HYPOTHESIS (redteam A7, downgraded from
+  CONFIRMED FINDING): in this Zen layout, a mouse click on the
+  sidebar-top urlbar/search field lands (cursorpos exact on run 2)
+  but may not focus it for URL entry; Ctrl+L is required for now.
+  NOT proven: the 2 attempts used an identical target, identical
+  coords, and an identical sequence shape, with zero hover dwell
+  before the click, no control click, no double-click, no click
+  without the preceding Ctrl+N, and the field identity read off a
+  screenshot, not DOM/a11y. Discriminating probes before calling
+  it proven: hover 100 ms then click; click a control text field;
+  click the urlbar without a preceding Ctrl+N; double-click.
+  ZT-00 step 4 as written (mouse click the address bar) stays
+  blocked (the mouse path did not navigate 2/2). Act-now delivery
+  itself is exonerated (coordinate conversion and press/release
+  are correct). Record in the error file as a new finding (G29),
+  scoped as a hypothesis, cross-referenced to H3.
 - 23:00:55 (T+1255s) sessionstore read: recovery.jsonlz4 still
   dated 22:55 (NOT updated since), 68 tabs, Example Domain at index
   50. The sessionstore is stale and NOT a reliable live tab counter
