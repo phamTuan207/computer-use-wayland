@@ -169,3 +169,85 @@
   check at the top of _check_entry_pyc (return [] / refuse
   when realpath(cache) is outside the ship dir, mirroring
   _entry_pyc_paths).
+
+## 2026-11-22 01:12:14 +07 (T+12m): A5 10/10 PASS (after 1 harness fix)
+
+- First run 0/10: harness bug, the driver did not extract
+  _normalize_remote_url, which R7's _check_remote now calls
+  (NameError, driver rc 1 on every marker/manifest check).
+  Fixed the driver (extract it for marker/manifest/remote),
+  re-ran: 10/10 PASS in 6.0s (results/a5.log). Fake
+  completion passes BY DESIGN (known limitation, case 1);
+  3a/3b refuse by log order; C1-C4 as specified; attacker
+  fork refuses on the remote URL (real git); real-repo
+  control: pin passes, marker check runs on real state
+  (refuses: no Y6c marker).
+
+## 2026-11-22 01:12:23 +07 (T+12m): A5b 18/18 PASS
+
+- _normalize_remote_url unit 11 cases + pinned self-check:
+  SSH form, trailing slash, no .git, wrong-case host all
+  normalize equal; http, wrong owner/repo/host do not.
+  Driver _check_remote 6 cases against a synthetic clone:
+  the 4 pass variants rc 0, http + attacker fork refuse rc 2
+  "not the known repo" (results/a5b.log, 1.0s).
+
+## 2026-11-22 01:13:01 +07 (T+13m): A4 live 17/17 PASS (after 1 harness fix)
+
+- First run 12/17: harness bug, the driver's runner-quiet
+  extraction list missed the two new R2 functions
+  (_m_module_is_runner, _is_timeout_dur), so any /proc
+  cmdline hitting -m/timeout crashed the driver (rc 1).
+  Fixed the driver, re-ran: 17/17 PASS in 6.6s
+  (results/a4_live.log). Baseline clean (rc 0, no offenders,
+  no warnings). All 9 new flagged cases name the dummy pid
+  (nice, sudo, uv run, timeout 60s/1m, pdb, stdin, bash -c
+  glued ;, exec -a); echo/md5sum/-c import mentions not
+  flagged. Driver runs take 0.1-0.4s each now (quiet VM).
+
+## 2026-11-22 01:13:26 +07 (T+13m): clean ship 9/9 PASS (after 1 harness fix)
+
+- First run 7/9: harness bug, the token checks did not
+  extract TOKEN_TTL_S, which check_token reads (NameError).
+  Fixed the driver, re-ran: 9/9 PASS in 2.5s
+  (results/clean_ship.log). Fresh re-stage rc 0 (27 checked,
+  md5 7c763834); direct verify rc 0; launcher dry run
+  manifest/scan/entry-pyc all rc 0; self-consistent tampered
+  ship refused by the manifest pin; write_token produces a
+  fresh token check_token accepts; 5h-stale and missing
+  tokens refuse.
+
+## 2026-11-22 01:13:35 +07 (T+13m): spot checks R6 7/7, R8 1/1
+
+- R6 _is_codex_process (AST-extracted, both copies
+  AST-identical so one copy suffices): argv[0] codex True,
+  /usr/bin/codex True, token ending /codex True; grep/echo
+  codex False; path containing a codex dir False; empty
+  False. 7/7.
+- R8 _check_remote with git missing from PATH: refuses exit
+  2 with a clean message ("git remote get-url origin failed
+  to run ... [Errno 2] No such file or directory: 'git'"),
+  no traceback. The OSError path exits 2 as specified.
+
+## TOTALS
+
+- 280 checks across 10 batteries: 277 pass, 3 fail, from 2
+  root causes, both in the launcher's _check_entry_pyc:
+  (1) A3h co_filename sensitivity (2 checks); (2) A7
+  shape-6b symlink-unsafe deletion (1 check). Everything
+  else passes, including every security property (forged
+  entry .pyc refused in all forms, .so/.py plants refused,
+  marker/log-order/remote pin hold, tokenizer rewrite
+  complete and identical in both copies).
+- Harness bugs found and fixed during the run (all in my
+  code, none in the fix): driver missing _normalize_remote_url
+  (A5 0/10 first run), driver missing _m_module_is_runner +
+  _is_timeout_dur (A4 live 12/17 first run), driver missing
+  TOKEN_TTL_S (clean ship 7/9 first run); A2j/A2l
+  expectations corrected after root-causing the outputs
+  (kind mixed; empty nested-dir residue). Each fix was
+  followed by a full re-run of the affected battery.
+- Repo tree never tampered: all forges/plants/symlinks were
+  staged copies under ~/workspace/y13g-r2-verify/ships/.
+  git status shows only my files modified plus other
+  workers' files (untouched).

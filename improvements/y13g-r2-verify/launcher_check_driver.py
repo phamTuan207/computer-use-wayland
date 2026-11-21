@@ -31,9 +31,11 @@ LAUNCHER = os.path.join(REPO, "tests", "realistic", "launch_y13.py")
 CHECKS = {
     "entry-pyc": (("_check_entry_pyc", "_fail"), ()),
     "scan": (("_scan_ship", "_ship_manifest_entries", "_fail"), ()),
-    "manifest": (("_check_remote", "check_manifest", "_fail"),
+    "manifest": (("_check_remote", "_normalize_remote_url",
+                  "check_manifest", "_fail"),
                  ("MARKER_RE", "ABORT_RE", "KNOWN_REMOTE_URL")),
-    "marker": (("_check_remote", "check_marker", "_fail"),
+    "marker": (("_check_remote", "_normalize_remote_url",
+                "check_marker", "_fail"),
                ("MARKER_RE", "ABORT_RE", "KNOWN_REMOTE_URL")),
     "remote": (("_check_remote", "_normalize_remote_url", "_fail"),
                ("KNOWN_REMOTE_URL",)),
@@ -43,7 +45,8 @@ CHECKS = {
                       "_script_basename_is_runner", "_is_python_token",
                       "_shlex_tokens", "_runner_md5s",
                       "_path_is_runner_copy", "_token_is_runner_script",
-                      "_c_code_executes_runner", "_python_executes_runner",
+                      "_c_code_executes_runner", "_m_module_is_runner",
+                      "_python_executes_runner", "_is_timeout_dur",
                       "_argv_tokens"),
                      ("_RUNNER_MODULE_NAMES", "_RUNNER_MANIFEST_PATHS",
                       "_RUNNER_MD5S", "_PY_NO_VALUE",
@@ -55,9 +58,10 @@ CHECKS = {
     # checks it (must pass). "token-stale" writes a 5h-old token
     # file then checks it (must refuse). "token-missing" checks
     # with no file at all (must refuse).
-    "token": (("write_token", "check_token", "_fail"), ()),
-    "token-stale": (("check_token", "_fail"), ()),
-    "token-missing": (("check_token", "_fail"), ()),
+    "token": (("write_token", "check_token", "_fail"),
+               ("TOKEN_TTL_S",)),
+    "token-stale": (("check_token", "_fail"), ("TOKEN_TTL_S",)),
+    "token-missing": (("check_token", "_fail"), ("TOKEN_TTL_S",)),
 }
 
 
