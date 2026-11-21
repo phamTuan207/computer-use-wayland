@@ -1,9 +1,11 @@
 # First visible action rule (2026-11-21)
 
 Owner order 22:18, correction 22:21, method 22:22, test rule 22:23.
-This rule binds every live computer-use run. It is a deterministic rule,
-not a reminder (Lauren Tan: a repeated mistake becomes a deterministic
-rule).
+`computer-use act-now` enforces this rule in code when used. It is a
+deterministic rule, not a reminder (Lauren Tan: a repeated mistake
+becomes a deterministic rule), but only inside `act-now`: `act` and
+direct `desktop_act` remain callable with no overlay gate, so adoption
+is by brief until entry-point enforcement lands. (Council 3, R1.)
 
 ## The weakness it fixes
 
@@ -34,15 +36,23 @@ improvements/worker-f2-silence-fix-log.md):
 
 1. FAST. Any live computer-use task must produce a visible move or pill
    within 30 s of the order. Target: order to first visible action under
-   30 s. Tonight's baseline was ~330 s. The published reference point:
+   30 s. The 30 s is a target measured post-hoc from the envelope, not a
+   code-enforced bound: `FIRST_VISIBLE_ACTION_TARGET_MS = 30000` is
+   defined in `first_action.py` but the envelope carries no pass/fail
+   verdict against it yet (follow-up: add a target verdict to the
+   envelope). Tonight's baseline was ~330 s. The published reference point:
    the mean observation-to-action gap on real OSWorld workloads is 6.51 s
    (arXiv 2604.18860); a single naive loop step is 4-8 s
    (datarekha latency engineering). 30 s is generous against those and
    binding against tonight.
 2. CONTINUOUS. No idle gap between actions. While the user watches, a run
-   with no visible action for more than 60 s is a failure. Diagnosis
-   happens after the first visible action, or in parallel with it, never
-   as a long silent phase first.
+   with no visible action for more than 60 s is a failure. The 60 s bound
+   is a stated expectation measured post-hoc from the JSONL timestamps;
+   no watchdog enforces it in code yet (follow-up: a gap watchdog).
+   Diagnosis happens after the overlay is up, or in parallel with it,
+   never as a long silent phase first. Ordering, exact: the overlay
+   comes first; the first pointer move follows as soon as the session
+   attempt resolves or times out (deadline 20 s).
 3. OVERLAY MUST BE VISIBLE. The pill is on from the first visible action
    until the task ends, on BOTH paths (session and fallback). The overlay
    itself is what reports to the user what is happening. Narration before
@@ -53,13 +63,17 @@ improvements/worker-f2-silence-fix-log.md):
 
 - CLI FIRST (22:45). Open the Omarchy menu and switch workspaces by
   COMMAND, never by clicking the bar. Fastest-path-first: CLI before
-  mouse, mouse last. Working form for focusing a window (and switching
-  to its workspace): `hyprctl dispatch 'hl.dsp.focus({ window =
-  "address:0x..." })'` (repo pattern, cu.py:541; proven 22:51, activeWs
-  1). `hl.dsp.workspace(1)` FAILS (hl.dsp.workspace is a table, not a
-  function, rc 7); the workspace sub-function name is unknown, do not
-  guess it. Never use the plain string form `hyprctl dispatch workspace
-  1` (broken in Hyprland 0.57.2 Lua).
+  mouse, mouse last. The menu command is `omarchy-menu toggle root`
+  (from the Omarchy config). Working form for focusing a window (and
+  switching to its workspace): `hyprctl dispatch 'hl.dsp.focus({ window
+  = "address:0x..." })'` (repo pattern, cu.py:541; proven 22:51,
+  activeWs 1). Switching workspaces by command is STILL UNSOLVED
+  except via that focus side effect (focusing a window pulls its
+  workspace): `hl.dsp.workspace` is a table with methods swap_monitors,
+  rename, move, change_id, toggle_special and no goto or switch, and
+  `hl.dispatch("workspace", "1")` also fails (J23, 22:58). Never use
+  the plain string form `hyprctl dispatch workspace 1` (broken in
+  Hyprland 0.57.2 Lua).
 - LOG EVERY EVENT (22:47). Append every action to the worker log AS IT
   HAPPENS (wall-clock Asia/Ho_Chi_Minh + elapsed, what, target,
   outcome, coordinates for clicks). Never batch the log at the end.
@@ -79,9 +93,15 @@ A SCREEN observation supports pointer actions only. `desktop_act`
 (cu.py:1475) refuses any batch containing type/key actions on a screen
 observation: "screen observations support pointer actions only; use a
 window or accessibility target for typing". So for any batch that types,
-pass a WINDOW observation (`observe --window 0x...`). `act-now` refuses
-loudly (exit 2) rather than acting invisibly or wrongly when the
-observation cannot carry the batch. Follow-up (not implemented here):
+pass a WINDOW observation (`observe --window 0x...`). A typing batch
+given a screen observation is refused, not executed, and the caller must
+re-run with a window observation; the 30 s guarantee depends on this
+precondition. The refusal is an uncaught ValueError from `desktop_act`
+(cu.py:1475), so it exits 1 with a traceback, not exit 2 (exit 2 is only
+the overlay-unavailable refusal). It is loud, but not a clean refusal.
+Follow-up (code hardening, not required for GO): catch the `desktop_act`
+refusal in the fallback branch and return exit 1 with a clean JSON
+envelope instead of a traceback. Follow-up (not implemented here):
 `act-now` could auto-capture a window observation of the focused window
 when the batch types and the given observation is a screen observation;
 until then, the caller must pass the window observation.
@@ -101,8 +121,11 @@ fix the scenario.
 
 ## The mechanism (code, not a reminder)
 
-`computer-use act-now` (`scripts/first_action.py`) is the default command
-for a live action batch. It enforces the rule in this order:
+`computer-use act-now` (`scripts/first_action.py`) is the command that
+enforces the rule when used (it is not yet the default entry point:
+`act` and direct `desktop_act` have no overlay gate; see the header).
+It runs in this order: overlay first; the move follows as soon as the
+session attempt resolves or times out (deadline 20 s):
 
 1. Acquire the overlay FIRST (`overlay.py` acquire, agent + method).
    The pill is visible within about a second of the command starting.
@@ -131,9 +154,17 @@ for a live action batch. It enforces the rule in this order:
 Every live run records order-to-first-visible-action in the envelope and
 the JSONL log. The rehearsal target is the same as the rule: first visible
 action under 30 s, overlay visible in the after-capture, click landed,
-no gap over 60 s. The rehearsal test is a COMBINED test (DOM + CLI +
-mouse + keyboard in one task), set by an independent agent (owner rule
-22:23). The test-taker never sets their own test.
+no gap over 60 s. Scope, plainly (council 2, Finding 2): act-now timings
+start at command start. They exclude agent decision and observation time,
+so the under-30 s rule from a user order is NOT yet demonstrated end to
+end. The ~330 s baseline is end to end (thinking + diagnosis before any
+command ran); the act-now numbers are command-internal. The 333 ms figure
+is the session-attempt start (order_to_session_attempt_ms, renamed from
+order_to_action_start_ms), not the first pointer move; the first pointer
+move is bounded by the total batch time (0.87-2.0 s). The rehearsal test
+is a COMBINED test (DOM + CLI + mouse + keyboard in one task), set by an
+independent agent (owner rule 22:23). The test-taker never sets their own
+test.
 
 Rehearsal measured (ZT-00 via act-now, 2026-11-21 22:44-23:01, live Zen,
 owner asleep, no user present):
@@ -146,26 +177,37 @@ owner asleep, no user present):
   observation cannot type (cu.py:1475).
 - act-now run 2 (window obs, Ctrl+N + click urlbar + type + Enter):
   OK, fallback, 4/4, 1477 ms. Overlay 333 ms. Pill "Muse via act-now"
-  visible in the after-capture. Click landed exactly (cursorpos
-  2629,974 = target, 0 px error). Navigation did NOT happen (urlbar
+  visible in the after-capture. Click landed exactly on run 2
+  (cursorpos 2629,974 = target, 0 px error), read 22:56:33 about 60 s
+  after run 2 finished, with no pointer move recorded in between; run
+  4 has no cursorpos check. Navigation did NOT happen (urlbar
   click does not focus; see above).
 - act-now run 3 (window obs, Ctrl+L + type + Enter): OK, fallback,
-  3/3, 1592 ms. Overlay 314 ms. Navigation WORKED (Example Domain
-  loaded, urlbar shows example.com, tab title Example Domain).
+  3/3, 1592 ms. Overlay 314 ms. Pill visible in the after-capture
+  (viewed). Navigation WORKED (Example Domain loaded, urlbar shows
+  example.com, tab title Example Domain).
 - act-now run 4 (window obs, Ctrl+N + wait 500 ms + click urlbar +
   type example.org + Enter): OK, fallback, 5/5, 1998 ms. Overlay
-  346 ms. Navigation did NOT happen (urlbar click, 2/2 fail).
+  346 ms. Pill visible in the after-capture (viewed). Navigation did
+  NOT happen (urlbar click, 2/2 fail).
 - act-now run 5 (window obs, Ctrl+W): OK, fallback, 1/1, 865 ms.
-  Overlay 330 ms. Closed my run-opened Example Domain tab (active tab
-  is now Welcome!, a baseline tab).
+  Overlay 330 ms. Pill visible in the after-capture (viewed). Ctrl+W
+  ran; active tab became Welcome!. The close is verified only as
+  'active tab became Welcome!', not as 'my Example Domain tab closed'
+  (tab identities confounded by F3's concurrent cleanup; see below).
 - vs tonight's baseline: ~330 s of silent diagnosis before the first
-  click. act-now: overlay in 314-346 ms, first action in ~330 ms,
-  whole batches in 0.87-2.0 s. That is the fix, measured.
+  click. act-now: overlay in 314-346 ms, session attempt starts in
+  ~330 ms, whole batches in 0.87-2.0 s. That is the fix, measured
+  command-internally (the end-to-end under-30 s rule from a user order
+  is not yet demonstrated; see the scope note above).
 - ZT-00 verdict: INCONCLUSIVE as a scenario (step 4 mouse path blocked
   by the Zen urlbar behavior; step-7 set check unverifiable tonight
-  because Marionette re-broke and the sessionstore is stale; final
-  count 67 or 68 vs baseline 67, at most 1 extra blank tab from run
-  4's Ctrl+N). The act-now fix itself is proven on its own claims.
+  because Marionette re-broke, the sessionstore is stale, and F3's
+  concurrent cleanup confounded the tab identities: F3's cleanup_full
+  launched 22:54:22 and closed 52 tabs, 68 to 16; live count 14-17,
+  not 67-68). The act-now fix itself is proven on its own claims,
+  scoped to the fallback path (all 4 OK runs took the fallback; the
+  session path is untested in this rehearsal).
 
 ## What this rule does NOT do
 
