@@ -569,3 +569,20 @@ wall-clock times.
 - Next: commit the two verdict files + this log update (3 small commits),
   then adjudicate all four verdicts once council 3 lands and implement the
   AMEND code fixes (A1-A4, R3-R8, R11, R12) with re-tests.
+
+## 22:51 - Verdict files + log committed and pushed (3 commits)
+- 22:51: committed council-1 verdict (2acbb67, 216 insertions), redteam
+  verdict (88aeef2, 222 insertions), log update (218b223, 196 insertions,
+  5 deletions). Pushed: remote todolist-push a230ac3..218b223, ls-remote
+  confirms HEAD 218b223f2f4f098695a1fccf45266bd8450d09eb.
+- 22:51: dash check (python3, exact U+2014/U+2013 count): council-1 0/0,
+  redteam 0/0, log 0/0. The earlier shell grep counts (163/166/464) were a
+  quoting artifact ($'...' not interpreted, bracket matched digits), not real
+  dashes.
+- 22:51: council-3.md exists on disk (201 lines, header shows Verdict: AMEND,
+  role tests and user-visible behavior) but its completion handoff has NOT
+  arrived yet and the agent is still listed running, so it was NOT committed.
+  Commit it only after the handoff confirms delivery.
+- Next: adjudicate all four verdicts once council 3 lands, then implement the
+  AMEND code fixes (A1-A4, R3-R8, R11, R12) with re-tests, then the live
+  activation gated on F3 sign-off.
