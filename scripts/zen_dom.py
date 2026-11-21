@@ -29,13 +29,23 @@ Usage:
 Environment: ZEN_MARIONETTE_PORT, ZEN_GECKODRIVER, ZEN_WD_PORT.
 
 Timeouts (F3b): every WebDriver call converts TimeoutError, OSError,
-and URLError into ZenDomError, so a hung Marionette tab-switch never
-escapes raw. tab_at / list_tabs(handle_index=N) targets one tab by its
-known handle index instead of scanning; a full list_tabs scan records
-a hung handle as an error entry and keeps going.
+URLError, HTTPException, JSON decode failures, and a response without
+a "value" member into ZenDomError, so a hung Marionette tab-switch
+never escapes raw. tab_at / list_tabs(handle_index=N) targets one tab
+by its known handle index instead of scanning; the switch is verified
+against the current handle, and a failed restore of the original tab
+is raised, never swallowed. A full list_tabs scan stops after the
+first hung handle (a hang means the session is wedged) instead of
+burning one timeout per handle.
+
+DOM-first grounding (item 12): locate() plus viewport_origin() gives
+the exact rect center in screen coordinates with no screenshot, and
+focus_check() / verify_typed() verify focus and typed text with cheap
+JS evals (document.activeElement, field value), never a fresh observe.
 """
 import argparse
 import fcntl
+import http.client
 import json
 import os
 import socket
@@ -57,6 +67,17 @@ ELEMENT_KEY = "element-6066-11e4-a52e-4f735466cecf"
 
 class ZenDomError(RuntimeError):
     pass
+
+
+def _is_transport_failure(exc):
+    """True for a hung/wedged transport: a raw TimeoutError/OSError,
+    or a ZenDomError carrying the _wd transport-failure text. Other
+    ZenDomErrors (an HTTP status, a missing tab) are per-handle
+    failures, not a wedged session.
+    """
+    if isinstance(exc, (TimeoutError, OSError)):
+        return True
+    return isinstance(exc, ZenDomError) and 'transport failure' in str(exc)
 
 
 def _wait_http(url, timeout_s=30):
@@ -151,7 +172,11 @@ class ZenSession:
         kill the whole live lane. urllib wraps a socket timeout in a
         URLError whose reason is the TimeoutError, so URLError is
         caught too; HTTPError keeps its own branch first because it
-        is a URLError subclass and carries the status code.
+        is a URLError subclass and carries the status code. A
+        malformed response (non-JSON body, HTTPException such as a bad
+        status line, or a JSON object without a "value" member) is a
+        ZenDomError too: the callers all read ["value"], so a missing
+        member would otherwise escape as a raw KeyError.
         """
         url = f"http://127.0.0.1:{self.wd_port}{path}"
         data = json.dumps(body).encode() if body is not None else None
@@ -159,11 +184,17 @@ class ZenSession:
                                      headers={"Content-Type": "application/json"})
         try:
             with urllib.request.urlopen(req, timeout=self.timeout_s) as resp:
-                return json.loads(resp.read().decode())
+                parsed = json.loads(resp.read().decode())
+            if not isinstance(parsed, dict) or "value" not in parsed:
+                raise ZenDomError(
+                    f"malformed WebDriver response on {method} {path}: "
+                    f"no 'value' member in {str(parsed)[:200]}")
+            return parsed
         except urllib.error.HTTPError as e:
             raw = e.read().decode(errors="replace")[:400]
             raise ZenDomError(f"HTTP {e.code} on {method} {path}: {raw}")
-        except (TimeoutError, OSError, urllib.error.URLError) as e:
+        except (TimeoutError, OSError, urllib.error.URLError,
+                http.client.HTTPException, ValueError) as e:
             raise ZenDomError(
                 f"transport failure on {method} {path} after "
                 f"{self.timeout_s}s timeout: {e}") from e
@@ -193,59 +224,124 @@ class ZenSession:
                         {"script": script, "args": args or []})
         return resp["value"]
 
+    def _try_restore(self, handle):
+        """Restore the originally selected tab. Returns the
+        ZenDomError when the restore fails, else None. The caller
+        decides whether to raise it; a failed restore is never
+        swallowed silently (RT R6), or later DOM reads run in the
+        wrong tab.
+        """
+        try:
+            self.switch_to_handle(handle)
+        except (ZenDomError, TimeoutError, OSError) as exc:
+            return exc
+        return None
+
+    def _verify_selected(self, handle):
+        """Confirm Marionette actually selected the requested handle.
+
+        A switch that reports success but leaves another tab selected
+        would make the title/URL read describe the wrong tab. Raises
+        ZenDomError on a mismatch. One cheap GET, no screenshot.
+        """
+        selected = self.current_handle()
+        if selected != handle:
+            raise ZenDomError(
+                "tab switch did not take effect: requested "
+                f"{handle[:8]}, selected is "
+                f"{selected[:8] if isinstance(selected, str) else selected!r}")
+
     def tab_at(self, index):
         """One tab by known handle index, without scanning the rest.
 
-        Handle order is tab order (proven in F3b Arm A run 3), so a
-        caller that already knows the index targets that handle
-        directly: one switch, one title read, one URL read, then the
-        original tab is restored. A hang on that single switch raises
-        ZenDomError (via _wd) instead of escaping raw. Raises
-        ZenDomError when the index is out of range.
+        The index is a handle-LIST index (creation order in this
+        session), not a verified visual tab order: one data point
+        (F3b Arm A run 3, handles[8]) never proved handle order
+        equals visual tab order, and tab drags, restores, and pinned
+        tabs reorder visuals without reordering handles. The switch
+        itself IS verified: after switching, the current handle must
+        equal the requested handle, and the title/URL read belongs to
+        that tab. A hang on the single switch raises ZenDomError (via
+        _wd) instead of escaping raw. Raises ZenDomError when the
+        index is out of range, when the switch does not take effect,
+        or when the original tab cannot be restored.
         """
         return self.list_tabs(handle_index=index)[0]
 
     def list_tabs(self, handle_index=None):
         """List tabs, or one tab when handle_index is given.
 
-        Full scan: every handle is switched to in turn, and a hang or
-        transport failure on ONE handle is recorded as an error entry
-        for that handle and skipped (F3b Arm D v2 pattern), instead of
-        killing the whole listing. The originally selected tab is
-        always restored, even when a handle hangs. A tab entry is
-        {handle, title, url}; a skipped handle is {handle, error}.
+        Full scan: every handle is switched to in turn and read. A
+        hang on ONE handle stops the scan after that handle (F3b Arm
+        E: a hang means the session is wedged and only a restart
+        clears it, so later handles would hang too) and raises
+        ZenDomError naming the wedge, instead of burning one timeout
+        per handle. A non-transport failure on one handle is recorded
+        as an error entry for that handle and the scan continues. The
+        originally selected tab is restored afterwards, and a failed
+        restore is raised, never swallowed.
+        A tab entry is {handle, title, url}; a skipped handle is
+        {handle, error}.
         """
         handles = self._wd("GET", f"/session/{self.session}/window/handles")["value"]
-        current = self.current_handle()
         if handle_index is not None:
             if (not isinstance(handle_index, int) or isinstance(handle_index, bool)
                     or handle_index < 0 or handle_index >= len(handles)):
                 raise ZenDomError(
                     f"tab index {handle_index!r} out of range: "
                     f"{len(handles)} tabs")
+        current = self.current_handle()
+        if handle_index is not None:
+            target = handles[handle_index]
+            primary = None
+            entry = None
             try:
-                self.switch_to_handle(handles[handle_index])
-                return [self._read_current_tab(handles[handle_index])]
-            finally:
-                try:
-                    self.switch_to_handle(current)
-                except ZenDomError:
-                    pass
+                self.switch_to_handle(target)
+                self._verify_selected(target)
+                entry = self._read_current_tab(target)
+            except ZenDomError as exc:
+                primary = exc
+            restore_error = self._try_restore(current)
+            if primary is not None and restore_error is not None:
+                raise ZenDomError(
+                    f"tab switch failed ({primary}) and the original tab "
+                    f"{current[:8]} could not be restored ({restore_error})")
+            if primary is not None:
+                raise primary
+            if restore_error is not None:
+                raise ZenDomError(
+                    f"switched to tab {handle_index} but the original tab "
+                    f"{current[:8]} could not be restored: {restore_error}")
+            return [entry]
         tabs = []
+        wedge = None
         try:
             for handle in handles:
                 try:
                     self.switch_to_handle(handle)
+                    self._verify_selected(handle)
                     tabs.append(self._read_current_tab(handle))
                 except (ZenDomError, TimeoutError, OSError) as exc:
-                    # F3b Arm D v2: catch per handle, record, keep going.
                     tabs.append({"handle": handle[:8],
                                  "error": str(exc)[:200]})
+                    if _is_transport_failure(exc):
+                        wedge = exc
+                        break
         finally:
-            try:
-                self.switch_to_handle(current)
-            except (ZenDomError, TimeoutError, OSError):
-                pass
+            restore_error = self._try_restore(current)
+        if wedge is not None:
+            if restore_error is not None:
+                raise ZenDomError(
+                    f"tab scan stopped at hung handle {tabs[-1]['handle']}: "
+                    f"session wedged ({wedge}); original tab {current[:8]} "
+                    f"could not be restored ({restore_error})")
+            raise ZenDomError(
+                f"tab scan stopped after the first hang ({wedge}); the "
+                f"session is wedged and only a restart clears it")
+        if restore_error is not None:
+            raise ZenDomError(
+                f"tab scan done but the original tab {current[:8]} could "
+                f"not be restored: {restore_error}")
         return tabs
 
     def locate(self, selector):
@@ -267,6 +363,92 @@ class ZenSession:
         """Check a DOM condition after a real mouse click. Returns True
         when the JS expression equals the expected value."""
         return self.evaluate(script) == expected
+
+    def viewport_origin(self):
+        """[x, y] of the viewport origin in screen coordinates (CSS px).
+
+        Firefox-only: mozInnerScreenX/Y is the viewport origin on the
+        screen. Rect centers from getBoundingClientRect are viewport
+        relative, so screen = origin + rect center (the calibration_e2
+        proven chain). One cheap JS eval, no screenshot.
+        """
+        origin = self.evaluate(
+            "return [window.mozInnerScreenX, window.mozInnerScreenY];")
+        if (not isinstance(origin, (list, tuple)) or len(origin) != 2
+                or any(isinstance(v, bool)
+                       or not isinstance(v, (int, float)) for v in origin)):
+            raise ZenDomError(
+                "viewport origin is not two numbers: %r" % (origin,))
+        return [origin[0], origin[1]]
+
+    def locate_point(self, meta, selector):
+        """Image point of one element's rect center, first-time-right.
+
+        locate() gives the rect, viewport_origin() gives the viewport
+        origin, and fastpath.dom_rect_to_image_point maps the rect
+        center into the observation image (same linear map as
+        cu.image_point, inverted). No screenshot is read to locate
+        the element: the DOM rect is ground truth. Raises ZenDomError
+        when the element is missing or the point falls outside the
+        observed image.
+        """
+        from fastpath import dom_rect_to_image_point
+        rect = self.locate(selector)
+        if rect is None:
+            raise ZenDomError(f"no element matches {selector!r}")
+        origin = self.viewport_origin()
+        try:
+            return dom_rect_to_image_point(meta, rect, origin)
+        except ValueError as exc:
+            raise ZenDomError(str(exc)) from exc
+
+    def hit_check(self, selector):
+        """True when the element's rect center hits the element itself.
+
+        Cheap JS eval (elementFromPoint), no screenshot. The
+        first-time-right guard: the rect center must resolve to the
+        element (or something inside it), or the click would land on
+        whatever covers it.
+        """
+        return bool(self.evaluate(
+            "(function(){const e=document.querySelector(%s);"
+            "if(!e) return false;"
+            "const r=e.getBoundingClientRect();"
+            "if(!r.width||!r.height) return false;"
+            "const x=r.left+r.width/2, y=r.top+r.height/2;"
+            "const hit=document.elementFromPoint(x,y);"
+            "return !!hit && (e===hit||e.contains(hit));})()"
+            % json.dumps(selector)))
+
+    def focus_check(self, selector):
+        """True when the element is the focused, editable element.
+
+        Cheap JS eval (document.activeElement), no screenshot. The
+        pre-type gate in the DOM-first flow: after the click, the
+        input must be activeElement before any keystroke is sent.
+        """
+        return bool(self.evaluate(
+            "(function(){const e=document.querySelector(%s);"
+            "return !!e && document.activeElement===e && !e.readOnly && "
+            "(e.isContentEditable || /^(INPUT|TEXTAREA)$/.test(e.tagName));})()"
+            % json.dumps(selector)))
+
+    def field_value(self, selector):
+        """Current value/text of one field, or None when it has none."""
+        return self.evaluate(
+            "(function(){const e=document.querySelector(%s);"
+            "if(!e) return null;"
+            "return e.isContentEditable ? e.textContent : "
+            "('value' in e ? e.value : null);})()" % json.dumps(selector))
+
+    def verify_typed(self, selector, expected):
+        """True when the field holds exactly the expected text.
+
+        Cheap JS eval, no screenshot. The sufficient type check: the
+        pixel band can only show that the input line changed, while
+        this reads what the field actually holds.
+        """
+        return self.field_value(selector) == expected
 
 
 def kill_hung_remote_clients(max_age_s=900):
@@ -303,9 +485,9 @@ def main():
     parser.add_argument("--wd-port", type=int, default=DEFAULT_WD_PORT)
     sub = parser.add_subparsers(dest="cmd", required=True)
     sub.add_parser("list", help="list tabs")
-    p_tab = sub.add_parser("tab", help="one tab by handle index, no scan")
+    p_tab = sub.add_parser("tab", help="one tab by handle-list index, no scan")
     p_tab.add_argument("index", type=int,
-                       help="handle index (handle order is tab order)")
+                       help="handle-list index (creation order, not visual tab order)")
     p_eval = sub.add_parser("eval", help="run JS in the current tab")
     p_eval.add_argument("script")
     p_loc = sub.add_parser("locate", help="exact rect of a selector")
