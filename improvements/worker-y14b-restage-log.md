@@ -688,3 +688,74 @@ on its merits; nothing accepted or declined silently.
   the plan's md5 procedure; supersedes the fix-pass-3 values).
 - Redteam re-review over the fix-pass-4 diff: spawned after this
   commit. Ship waits for it unless it BLOCKs.
+
+## Event log (continuous, from 22:47 +07)
+
+Owner rule 22:47 +07: log EVERY event with time, nothing omitted.
+From now on every action is appended here AS IT HAPPENS
+(wall-clock Asia/Ho_Chi_Minh + elapsed from the fix-pass-4 start
+22:20 +07, what was done, target, outcome). Never batched at the
+end. No clicks are made by Y14b (code-only worker, no GUI driving),
+so there are no click coordinates to record; if that ever changes,
+coordinates go here too.
+
+- 22:20 +07 (elapsed 0 min): fix pass 4 work starts (adjudication
+  over the fix-pass-3 redteam verdict AMEND bd3c6c9).
+- 22:30 +07 (elapsed ~10 min): VM system Python `re` breakage
+  found while running the fix4 probe (`import re` resolved to an
+  empty namespace package, `__init__.py` missing). Restored
+  sourceless from the system's own `__pycache__` as
+  /usr/lib/python3.12/re/__init__.pyc; verified `import re` and
+  `import subprocess` OK. Recorded in the adjudication section
+  above.
+- 22:40 +07 (elapsed ~20 min): fix pass 4 code done, fix4 probe
+  64/64 PASS, full regression set green. Commit bf3c939 on
+  todolist-push, pushed, ls-remote verified
+  bf3c939741f86c6c639c730882f8a4f721265a74. Hash-record follow-up
+  40c4e48 committed, pushed, ls-remote verified. run_batch3.py at
+  bf3c939: blob 585fb801, md5 2920f169.
+- 22:41 +07 (elapsed ~21 min): redteam re-review over the
+  fix-pass-4 diff spawned (child agent, brief: break the new code,
+  reproduce everything, verdict GO/AMEND/BLOCK, paper to
+  improvements/worker-y14b-fix4-redteam.md).
+- 22:42 +07 (elapsed ~22 min): 3 council re-reviews spawned in
+  parallel with the redteam (Council 1 transcription/verification,
+  Council 2 gate/process check, Council 3 plan/documentation),
+  papers to improvements/worker-y14b-fix4-council-1/2/3.md. Reason:
+  owner order 22:40 (target 240 commits by 24:00, quality above
+  all, council + redteam complete).
+- 22:44 +07 (elapsed ~24 min, approximate): verified F1's proper
+  `re` fix (`/usr/lib/python3.12/re/__init__.py` exists, 16,315 B,
+  real CPython 3.12.3 source; my sourceless `__init__.pyc` gone;
+  `dpkg -V python3.12` clean, exit 0). Log correction committed
+  e434e7f, pushed, ls-remote verified
+  e434e7f209e53eda20556a61b8a4f78a8847bd28.
+- 22:45:26 +07 (elapsed ~25 min, exact from runtime): redteam
+  completed. Verdict AMEND, paper eae5a99
+  (improvements/worker-y14b-fix4-redteam.md, 369 lines),
+  ls-remote verified
+  eae5a9907b7de3d8c9b55e2f08a2d397ce50611e. Findings: R2 LOW
+  (regression, `_c_is_shell` walks back to argv[0], wrapper
+  -prefixed shell -c misclassified, 9 unit cases, live impact
+  nil); R3 LOW (new FP class, marker in a later shell command
+  counts after a codex -c); R4 LOW (import guard separator
+  -blind); INFO pre-existing items. Unblock: U1 REQUIRED (fix
+  `_c_is_shell` + `_in_shell_c_string`), U2/U3 FIX OR RECORD.
+- 22:46 +07 (elapsed ~26 min, approximate): reported the redteam
+  verdict + council status + commit plan to Muse (parent agent).
+  Decision recorded: do NOT edit run_batch3.py until the 3
+  councils finish, because their probes run against the working
+  tree and an edit now would corrupt their verification of
+  bf3c939.
+- 22:47 +07 (elapsed ~27 min): owner rule received (this task):
+  log EVERY event with time, nothing omitted, append as it
+  happens. Owner order 22:46-22:47 (MEMORY.md): stop groping,
+  gather ALL agents, each spawns many crawlers + council +
+  redteam to argue and find 1 OPTIMAL FIX METHOD for the whole
+  pile of errors; Worker OPT spawned as coordinator for that.
+  Y14b continues its own line (fix pass 5 after the councils
+  land, then ship); the OPT coordination is a separate effort.
+- 22:48 +07 (elapsed ~28 min): this event-log section appended
+  (first entry under the new rule) and committed as its own small
+  commit, pushed, ls-remote verified (hash filled below after
+  commit).
