@@ -132,3 +132,11 @@ Gioi han con lai, khai that:
 
 Dot 3 xong. Dot 4 se lam tiep theo thu tu da giao.
 
+Tien do dot 4, cap nhat 18:55 ngay 21/11: xong 5/6 task, da commit len main tung task, council 3 nguoi va redteam dang kiem chung.
+- Task 2 agy-y2 live Firefox: 10/10 PASS, 179 action, 88/88 assertion, 68.838 s, commit 80c548a, bao cao docs/research/2026-11-21-agy-y2-live-firefox-run.md. Dieu kien Y7 da kiem tra truoc, co tren todolist-push o 9a74a70 va a07fd27.
+- Task 3 fcc-k live Firefox: 10/10 PASS, 0 fail, tong 72,932.9 ms trong do khoi dong browser 37,763.3 ms, thoi gian thao tac thuan 29,672.2 ms so voi so tham chieu Zen cua Worker U la 28,613 ms, 383 buoc, 0 fail, commit dd59fb7.
+- Task 4 Marionette raw: chung minh quy tac mot session, session thu hai bi loi session not created, ket noi TCP thu hai bi dong ngay khong handshake khi dang co session, xoa session xong tao lai duoc, commit f7de515, docs/firefox-multi-session-proof-20261121.md.
+- Task 5 AT-SPI probe mo rong: ket qua am tinh va ghi that, may nay khong co daemon at-spi o bat cu dau, pyatspi khong cai duoc tu pip (404) hay apt (khong co candidate), Xvfb va bus rieng khoi dong duoc nhung khong doc duoc cay va khong an duoc nut that, commit bc88646.
+- Task 6 evidence batch actions: 10 nguon moi, commit eb090c3, docs/research/2026-11-21-batch-actions-evidence.md.
+- Task 1 chua xong: subagent bi co an toan cua he thong chan o ban clone phu dung de sua nhanh PR 1, chua dung gi vao code. Clone2 da hoi nguoi dung chon cach di tiep ngay trong chat, dang cho tra loi. Chan doan 2 loi da xong tu code doc duoc.
+
