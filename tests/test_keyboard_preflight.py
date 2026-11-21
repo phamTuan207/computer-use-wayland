@@ -40,6 +40,11 @@ class DesktopPreflight(unittest.TestCase):
                    'monitor_transform':0,'image_size':[20,20],'region':[0,0,20,20],
                    'image':'synthetic.png','max_width':1280,'pixel_sha256':'fixture',
                    **cu._capture_identity({}),'created':time.time()}
+        # The after-capture (persist=True) simulates typed text landing:
+        # its pixels differ from the pre-action observation, so a type
+        # batch verifies by default. Tests set after_pixel_sha256 back
+        # to 'fixture' to simulate typed text landing nowhere.
+        self.after_pixel_sha256='after-frame-changed'
         self.stack=ExitStack();self.addCleanup(self.stack.close)
         # A mock test must never reach the live session socket.
         self.indicator=self.stack.enter_context(patch.object(indicator,'request',return_value=False))
@@ -67,7 +72,8 @@ class DesktopPreflight(unittest.TestCase):
         raise AssertionError('unexpected compositor query '+query)
 
     def observe(self,env,address,crop,max_width,**kwargs):
-        if kwargs.get('persist',True):return self.meta.copy()
+        if kwargs.get('persist',True):
+            return dict(self.meta,pixel_sha256=self.after_pixel_sha256)
         return self.image,self.meta.copy()
 
     def test_keyboard_only_batch_does_not_open_pointer(self):

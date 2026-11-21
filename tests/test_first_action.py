@@ -574,6 +574,146 @@ class TestRun(unittest.TestCase):
         self.assertEqual(env['path'], 'refused')
         self.assertIn('monitor gone', env['error'])
 
+    def _write_obs(self, obs_id, age_s):
+        path = Path(self.tmp.name) / ('obs-' + obs_id + '.json')
+        path.write_text(json.dumps(
+            {'id': obs_id, 'image': '/x.jpg',
+             'monitor_box': [0, 0, 901, 1176],
+             'created': time.time() - age_s}))
+        return str(path)
+
+    def test_stale_given_observation_refused_loudly_typing_batch(self):
+        # G28 regression (CL1-MSG batch 2): a stale given window
+        # observation must be refused LOUDLY before any session
+        # attempt, naming the given id and its age, instead of
+        # silently falling back to a screen capture the batch then
+        # acts on (or refuses with a misleading scope error).
+        obs = self._write_obs('8fef498445d2', 114)
+        path = _write_actions(self.tmp.name,
+                              [{'type': 'click', 'x': 250, 'y': 1037},
+                               {'type': 'type', 'text': 'hi'}])
+        with mock.patch.object(first_action, 'attempt_session') as sess:
+            buf = io.StringIO()
+            with contextlib.redirect_stdout(buf):
+                code = first_action.run(
+                    _args(path, observation=obs))
+        env = json.loads(buf.getvalue())
+        sess.assert_not_called()
+        self.assertEqual(code, 1)
+        self.assertFalse(env['ok'])
+        self.assertEqual(env['path'], 'refused')
+        self.assertIn('8fef498445d2', env['error'])
+        self.assertIn('stale', env['error'])
+        self.assertIn('114', env['error'])
+        self.assertIn('re-observe', env['error'])
+        self.assertEqual(env['observation']['source'], 'captured')
+        self.assertEqual(
+            env['observation']['given_observation_rejected']['given_id'],
+            '8fef498445d2')
+        self.assertEqual(self.fake_cu.desktop_calls, [])
+        log = list(self.fake_cu.state.glob('first-action-*.jsonl'))
+        self.assertEqual(len(log), 1)
+        logged = json.loads(log[0].read_text().splitlines()[0])
+        self.assertEqual(logged['path'], 'refused')
+        self.assertIn('8fef498445d2', logged['error'])
+
+    def test_stale_given_observation_pointer_only_proceeds_recorded(self):
+        # G28, SRC spec: the loud refusal fires only for batches with
+        # key/type actions. A pointer-only batch proceeds on the
+        # substituted screen capture, but the substitution is recorded
+        # explicitly in the envelope, never silent.
+        obs = self._write_obs('8fef498445d2', 114)
+        code, env, _ = self._run(
+            [{'type': 'click', 'x': 250, 'y': 1037}],
+            (0, '{"ok": true, "completed": 1}', '', False, 0.5),
+            observation=obs)
+        self.assertEqual(code, 0)
+        self.assertTrue(env['ok'])
+        self.assertEqual(env['path'], 'session')
+        self.assertEqual(env['observation']['source'], 'captured')
+        self.assertEqual(
+            env['observation']['given_observation_rejected']['given_id'],
+            '8fef498445d2')
+        self.assertIsNone(env['fallback_reason'])
+        self.assertIsNone(env['error'])
+
+    def test_stale_given_observation_refused_loudly_key_only_batch(self):
+        # G28, SRC spec: the refusal covers key actions too, not only
+        # type actions.
+        obs = self._write_obs('8fef498445d2', 114)
+        path = _write_actions(self.tmp.name,
+                              [{'type': 'key', 'keys': ['Enter']}])
+        with mock.patch.object(first_action, 'attempt_session') as sess:
+            buf = io.StringIO()
+            with contextlib.redirect_stdout(buf):
+                code = first_action.run(
+                    _args(path, observation=obs))
+        env = json.loads(buf.getvalue())
+        sess.assert_not_called()
+        self.assertEqual(code, 1)
+        self.assertEqual(env['path'], 'refused')
+        self.assertIn('8fef498445d2', env['error'])
+        self.assertIn('stale', env['error'])
+        self.assertEqual(self.fake_cu.desktop_calls, [])
+
+    def test_fresh_given_observation_typing_batch_reaches_session(self):
+        # The refusal fires only on a rejected given observation: a
+        # fresh given window observation with typing still runs.
+        obs = self._write_obs('c9e5e9cb4bc0', 10)
+        code, env, _ = self._run(
+            [{'type': 'click', 'x': 250, 'y': 1037},
+             {'type': 'type', 'text': 'hi'}],
+            (0, '{"ok": true, "completed": 2}', '', False, 0.5),
+            observation=obs)
+        self.assertEqual(code, 0)
+        self.assertTrue(env['ok'])
+        self.assertEqual(env['path'], 'session')
+        self.assertEqual(env['observation']['source'], 'given')
+        self.assertNotIn('given_observation_rejected',
+                         env['observation'])
+
+    def test_session_ime_state_trace_surfaced_in_envelope(self):
+        # CLICK-PROBE Stage A: ime_state_trace was absent from act-now
+        # envelopes, leaving a silent type failure with no IME
+        # evidence. The session result carries it (desktop_act merges
+        # ime_result); act-now must surface it in the envelope.
+        trace = [{'phase': 'before', 'state': '2',
+                  'state_source': 'initial_query', 'status': 'observed'},
+                 {'phase': 'after_switch', 'state': '1',
+                  'state_source': 'switch_query', 'status': 'observed'},
+                 {'phase': 'after_restore', 'state': '2',
+                  'state_source': 'switch_query', 'status': 'observed'}]
+        code, env, _ = self._run(
+            [{'type': 'type', 'text': 'X'}],
+            (0, json.dumps({'ok': True, 'completed': 1,
+                            'ime_state_trace': trace}), '', False, 0.5))
+        self.assertEqual(code, 0)
+        self.assertTrue(env['ok'])
+        self.assertEqual(env['ime_state_trace'], trace)
+
+    def test_session_without_ime_trace_reports_none(self):
+        code, env, _ = self._run(
+            [{'type': 'click', 'x': 100, 'y': 100}],
+            (0, '{"ok": true, "completed": 1}', '', False, 0.5))
+        self.assertEqual(code, 0)
+        self.assertIsNone(env['ime_state_trace'])
+
+    def test_fallback_ime_state_trace_surfaced_in_envelope(self):
+        trace = [{'phase': 'before', 'state': '1',
+                  'state_source': 'initial_query', 'status': 'observed'}]
+        self.fake_cu.desktop_act = mock.Mock(
+            return_value={'ok': True, 'completed': 1,
+                          'after': str(self.fake_cu.state / 'after.json'),
+                          'ime_state_trace': trace})
+        code, env, _ = self._run(
+            [{'type': 'type', 'text': 'X'}],
+            (1, '{"ok": false, "error": "session guardian startup failed"}',
+             '', False, 0.4))
+        self.assertEqual(code, 0)
+        self.assertTrue(env['ok'])
+        self.assertEqual(env['path'], 'fallback')
+        self.assertEqual(env['ime_state_trace'], trace)
+
 
 class TestFreshObservation(unittest.TestCase):
     def test_given_fresh_used(self):
@@ -583,9 +723,10 @@ class TestFreshObservation(unittest.TestCase):
                 'created': time.time()}
         path = Path(fake_cu.tmp) / 'obs.json'
         path.write_text(json.dumps(meta))
-        out_meta, out_path, source = first_action._fresh_observation(
+        out_meta, out_path, source, rejected = first_action._fresh_observation(
             fake_cu, {}, 'eDP-2', str(path))
         self.assertEqual(source, 'given')
+        self.assertIsNone(rejected)
         self.assertEqual(out_meta['id'], 'deadbeefcafe')
         self.assertEqual(fake_cu.observe_calls, [])
 
@@ -596,10 +737,65 @@ class TestFreshObservation(unittest.TestCase):
                 'created': time.time() - 600}
         path = Path(fake_cu.tmp) / 'obs.json'
         path.write_text(json.dumps(meta))
-        _out_meta, _out_path, source = first_action._fresh_observation(
+        _out_meta, _out_path, source, rejected = first_action._fresh_observation(
             fake_cu, {}, 'eDP-2', str(path))
         self.assertEqual(source, 'captured')
         self.assertEqual(fake_cu.observe_calls, ['eDP-2'])
+        # G28: the substitution is reported, not silent.
+        self.assertEqual(rejected['given_id'], 'deadbeefcafe')
+        self.assertIn('stale', rejected['reason'])
+        self.assertGreater(rejected['age_s'], 500)
+
+    def test_stale_batch2_age_114_rejected(self):
+        # G28 regression, the exact CL1-MSG batch 2 case: a 114 s old
+        # window observation plus the 20 s deadline reaches 134 s,
+        # past the 120 s window, so it is rejected, not silently
+        # replaced by a screen capture the batch then acts on.
+        fake_cu = FakeCu(tempfile.mkdtemp())
+        meta = {'id': '8fef498445d2', 'image': '/x.jpg',
+                'monitor_box': [0, 0, 901, 1176],
+                'created': time.time() - 114}
+        path = Path(fake_cu.tmp) / 'obs.json'
+        path.write_text(json.dumps(meta))
+        _out_meta, _out_path, source, rejected = first_action._fresh_observation(
+            fake_cu, {}, 'eDP-2', str(path), deadline_s=20.0)
+        self.assertEqual(source, 'captured')
+        self.assertEqual(rejected['given_id'], '8fef498445d2')
+        self.assertIn('stale', rejected['reason'])
+        msg = first_action.loud_substitution_refusal(rejected)
+        self.assertIn('8fef498445d2', msg)
+        self.assertIn('114', msg)
+        self.assertIn('re-observe', msg)
+
+    def test_missing_file_rejected(self):
+        fake_cu = FakeCu(tempfile.mkdtemp())
+        missing = str(Path(fake_cu.tmp) / 'nope.json')
+        _out_meta, _out_path, source, rejected = first_action._fresh_observation(
+            fake_cu, {}, 'eDP-2', missing)
+        self.assertEqual(source, 'captured')
+        self.assertIsNone(rejected['given_id'])
+        self.assertIn('unreadable', rejected['reason'])
+
+    def test_incomplete_observation_rejected(self):
+        fake_cu = FakeCu(tempfile.mkdtemp())
+        meta = {'id': 'deadbeefcafe', 'image': '/x.jpg',
+                'created': time.time()}
+        path = Path(fake_cu.tmp) / 'obs.json'
+        path.write_text(json.dumps(meta))
+        _out_meta, _out_path, source, rejected = first_action._fresh_observation(
+            fake_cu, {}, 'eDP-2', str(path))
+        self.assertEqual(source, 'captured')
+        self.assertEqual(rejected['given_id'], 'deadbeefcafe')
+        self.assertIn('incomplete', rejected['reason'])
+
+    def test_no_observation_given_is_not_a_rejection(self):
+        # No --observation is the documented default (fresh screen
+        # capture), not a substitution: nothing is rejected.
+        fake_cu = FakeCu(tempfile.mkdtemp())
+        _out_meta, _out_path, source, rejected = first_action._fresh_observation(
+            fake_cu, {}, 'eDP-2', None)
+        self.assertEqual(source, 'captured')
+        self.assertIsNone(rejected)
 
     def test_age_plus_deadline_must_stay_under_120(self):
         # Redteam A6: a 110 s old observation plus a 20 s deadline
@@ -610,9 +806,10 @@ class TestFreshObservation(unittest.TestCase):
                 'created': time.time() - 110}
         path = Path(fake_cu.tmp) / 'obs.json'
         path.write_text(json.dumps(meta))
-        _out_meta, _out_path, source = first_action._fresh_observation(
+        _out_meta, _out_path, source, rejected = first_action._fresh_observation(
             fake_cu, {}, 'eDP-2', str(path), deadline_s=20.0)
         self.assertEqual(source, 'captured')
+        self.assertIn('stale', rejected['reason'])
 
     def test_age_plus_deadline_within_120_is_used(self):
         fake_cu = FakeCu(tempfile.mkdtemp())
@@ -621,9 +818,10 @@ class TestFreshObservation(unittest.TestCase):
                 'created': time.time() - 90}
         path = Path(fake_cu.tmp) / 'obs.json'
         path.write_text(json.dumps(meta))
-        _out_meta, _out_path, source = first_action._fresh_observation(
+        _out_meta, _out_path, source, rejected = first_action._fresh_observation(
             fake_cu, {}, 'eDP-2', str(path), deadline_s=20.0)
         self.assertEqual(source, 'given')
+        self.assertIsNone(rejected)
 
 
 if __name__ == '__main__':

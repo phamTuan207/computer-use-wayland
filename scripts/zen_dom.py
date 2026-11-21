@@ -21,11 +21,18 @@ pass --marionette-port.
 
 Usage:
   python3 scripts/zen_dom.py list
+  python3 scripts/zen_dom.py tab 8
   python3 scripts/zen_dom.py eval "return document.title"
   python3 scripts/zen_dom.py locate "#count-btn"
   python3 scripts/zen_dom.py rect "#count-btn"
   python3 scripts/zen_dom.py tabs
 Environment: ZEN_MARIONETTE_PORT, ZEN_GECKODRIVER, ZEN_WD_PORT.
+
+Timeouts (F3b): every WebDriver call converts TimeoutError, OSError,
+and URLError into ZenDomError, so a hung Marionette tab-switch never
+escapes raw. tab_at / list_tabs(handle_index=N) targets one tab by its
+known handle index instead of scanning; a full list_tabs scan records
+a hung handle as an error entry and keeps going.
 """
 import argparse
 import fcntl
@@ -137,6 +144,15 @@ class ZenSession:
             self._lock_file = None
 
     def _wd(self, method, path, body=None):
+        """One WebDriver call. Every transport failure becomes a
+        ZenDomError, never a raw exception (F3b): Marionette
+        tab-switch intermittently HANGS past the timeout, and the raw
+        TimeoutError used to escape the ZenDomError-only handling and
+        kill the whole live lane. urllib wraps a socket timeout in a
+        URLError whose reason is the TimeoutError, so URLError is
+        caught too; HTTPError keeps its own branch first because it
+        is a URLError subclass and carries the status code.
+        """
         url = f"http://127.0.0.1:{self.wd_port}{path}"
         data = json.dumps(body).encode() if body is not None else None
         req = urllib.request.Request(url, data=data, method=method,
@@ -147,6 +163,29 @@ class ZenSession:
         except urllib.error.HTTPError as e:
             raw = e.read().decode(errors="replace")[:400]
             raise ZenDomError(f"HTTP {e.code} on {method} {path}: {raw}")
+        except (TimeoutError, OSError, urllib.error.URLError) as e:
+            raise ZenDomError(
+                f"transport failure on {method} {path} after "
+                f"{self.timeout_s}s timeout: {e}") from e
+
+    def current_handle(self):
+        """The handle of the tab Marionette currently has selected."""
+        return self._wd("GET", f"/session/{self.session}/window")["value"]
+
+    def switch_to_handle(self, handle):
+        """Select one tab by its known handle. Raises ZenDomError on a
+        hang or transport failure (via _wd); the caller decides whether
+        to skip that handle or abort."""
+        self._wd("POST", f"/session/{self.session}/window",
+                 {"handle": handle})
+
+    def _read_current_tab(self, handle):
+        """Title and URL of the currently selected tab."""
+        return {
+            "handle": handle[:8],
+            "title": self._wd("GET", f"/session/{self.session}/title")["value"],
+            "url": self._wd("GET", f"/session/{self.session}/url")["value"],
+        }
 
     def evaluate(self, script, args=None):
         """Run JS in the current tab. The reliable read/write path."""
@@ -154,19 +193,59 @@ class ZenSession:
                         {"script": script, "args": args or []})
         return resp["value"]
 
-    def list_tabs(self):
+    def tab_at(self, index):
+        """One tab by known handle index, without scanning the rest.
+
+        Handle order is tab order (proven in F3b Arm A run 3), so a
+        caller that already knows the index targets that handle
+        directly: one switch, one title read, one URL read, then the
+        original tab is restored. A hang on that single switch raises
+        ZenDomError (via _wd) instead of escaping raw. Raises
+        ZenDomError when the index is out of range.
+        """
+        return self.list_tabs(handle_index=index)[0]
+
+    def list_tabs(self, handle_index=None):
+        """List tabs, or one tab when handle_index is given.
+
+        Full scan: every handle is switched to in turn, and a hang or
+        transport failure on ONE handle is recorded as an error entry
+        for that handle and skipped (F3b Arm D v2 pattern), instead of
+        killing the whole listing. The originally selected tab is
+        always restored, even when a handle hangs. A tab entry is
+        {handle, title, url}; a skipped handle is {handle, error}.
+        """
         handles = self._wd("GET", f"/session/{self.session}/window/handles")["value"]
+        current = self.current_handle()
+        if handle_index is not None:
+            if (not isinstance(handle_index, int) or isinstance(handle_index, bool)
+                    or handle_index < 0 or handle_index >= len(handles)):
+                raise ZenDomError(
+                    f"tab index {handle_index!r} out of range: "
+                    f"{len(handles)} tabs")
+            try:
+                self.switch_to_handle(handles[handle_index])
+                return [self._read_current_tab(handles[handle_index])]
+            finally:
+                try:
+                    self.switch_to_handle(current)
+                except ZenDomError:
+                    pass
         tabs = []
-        current = self._wd("GET", f"/session/{self.session}/window")["value"]
-        for handle in handles:
-            self._wd("POST", f"/session/{self.session}/window",
-                     {"handle": handle})
-            tabs.append({
-                "handle": handle[:8],
-                "title": self._wd("GET", f"/session/{self.session}/title")["value"],
-                "url": self._wd("GET", f"/session/{self.session}/url")["value"],
-            })
-        self._wd("POST", f"/session/{self.session}/window", {"handle": current})
+        try:
+            for handle in handles:
+                try:
+                    self.switch_to_handle(handle)
+                    tabs.append(self._read_current_tab(handle))
+                except (ZenDomError, TimeoutError, OSError) as exc:
+                    # F3b Arm D v2: catch per handle, record, keep going.
+                    tabs.append({"handle": handle[:8],
+                                 "error": str(exc)[:200]})
+        finally:
+            try:
+                self.switch_to_handle(current)
+            except (ZenDomError, TimeoutError, OSError):
+                pass
         return tabs
 
     def locate(self, selector):
@@ -224,6 +303,9 @@ def main():
     parser.add_argument("--wd-port", type=int, default=DEFAULT_WD_PORT)
     sub = parser.add_subparsers(dest="cmd", required=True)
     sub.add_parser("list", help="list tabs")
+    p_tab = sub.add_parser("tab", help="one tab by handle index, no scan")
+    p_tab.add_argument("index", type=int,
+                       help="handle index (handle order is tab order)")
     p_eval = sub.add_parser("eval", help="run JS in the current tab")
     p_eval.add_argument("script")
     p_loc = sub.add_parser("locate", help="exact rect of a selector")
@@ -238,6 +320,9 @@ def main():
                     wd_port=args.wd_port) as z:
         if args.cmd == "list":
             print(json.dumps(z.list_tabs(), indent=1, ensure_ascii=False))
+        elif args.cmd == "tab":
+            print(json.dumps(z.tab_at(args.index), indent=1,
+                             ensure_ascii=False))
         elif args.cmd == "eval":
             print(json.dumps(z.evaluate(args.script), indent=1, ensure_ascii=False))
         elif args.cmd == "locate":

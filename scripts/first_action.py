@@ -53,8 +53,11 @@ Usage (one command, the agent's default for a live action batch):
       [--label TEXT] [--session-deadline-s N]
 
 The actions file is the same JSON batch `act` takes (up to 32 actions).
-The observation, when given, must be fresh (under 120 s); otherwise a
-fresh screen observation is captured first. The overlay is acquired
+The observation, when given, must be fresh (under 120 s); a given
+observation that is stale, missing, or unreadable is NEVER silently
+replaced by a screen capture that the batch then acts on (G28): the
+run refuses loudly instead, naming the given observation, why it was
+rejected, and what to pass. The overlay is acquired
 before anything else, so the pill is visible within about a second of
 the command starting. The run appends a JSON timing record to
 STATE/first-action-YYYYMMDD.jsonl. Every invocation prints exactly one
@@ -286,32 +289,92 @@ def append_log(path, record):
         os.close(fd)
 
 
+def _read_given_observation(cu, observation_path, deadline_s):
+    """Read and validate a given observation file.
+
+    Returns (meta, None) when the file parses, has id, image,
+    monitor_box and created, and is still within the freshness window
+    when the session attempt ends (age + deadline < 120 s). Otherwise
+    returns (None, rejection) with the given id when known, the age in
+    seconds when known, and the reason: 'unreadable', 'incomplete', or
+    'stale'. A None observation_path returns (None, None): nothing was
+    given, nothing is rejected.
+    """
+    if not observation_path:
+        return None, None
+    try:
+        meta = cu.read_json_file(observation_path)
+    except (OSError, ValueError, KeyError) as exc:
+        return None, {'given_id': None, 'age_s': None,
+                      'reason': 'unreadable: ' + str(exc)[:200]}
+    given_id = meta.get('id') if isinstance(meta, dict) else None
+    created = meta.get('created') if isinstance(meta, dict) else None
+    if (not isinstance(meta, dict) or not meta.get('id')
+            or not meta.get('image') or not meta.get('monitor_box')
+            or not isinstance(created, (int, float))):
+        return None, {'given_id': given_id, 'age_s': None,
+                      'reason': ('incomplete: missing id, image, '
+                                 'monitor_box, or created')}
+    age_s = time.time() - created
+    if age_s + deadline_s >= OBSERVATION_MAX_AGE_S:
+        return None, {'given_id': given_id, 'age_s': round(age_s, 1),
+                      'reason': ('stale: age %.1fs + %.1fs deadline '
+                                 'reaches the %ds freshness window'
+                                 % (age_s, deadline_s,
+                                    OBSERVATION_MAX_AGE_S))}
+    return meta, None
+
+
 def _fresh_observation(cu, env, screen, observation_path,
                        deadline_s=DEFAULT_SESSION_DEADLINE_S):
     """Load a given observation when fresh, else capture a new one.
 
-    Returns (meta, observation_path, source). A stale, missing, or
-    unreadable given observation is replaced by a fresh screen capture;
-    the replacement is recorded in the envelope, never hidden. Fresh
-    means the observation is still within the 120 s window when the
-    session attempt ends: age plus the session deadline must stay
+    Returns (meta, observation_path, source, rejected). A fresh given
+    observation returns source 'given' and rejected None. When no
+    observation was given, a fresh screen capture is taken and
+    rejected is None: that is the documented default, not a
+    substitution. When a given observation was REJECTED (stale,
+    missing fields, or unreadable), a fresh screen capture is still
+    taken so the envelope can name what was substituted, but rejected
+    carries the given id, age, and reason, and the caller (run) must
+    refuse loudly on it instead of acting on the substitute (G28).
+    Acting on the substitute would run window-image coordinates
+    against a screen region, off by the window offset inside the
+    monitor, or refuse typing with a misleading scope error.
+    Fresh means the observation is still within the 120 s window when
+    the session attempt ends: age plus the session deadline must stay
     under OBSERVATION_MAX_AGE_S (redteam A6), or the act would be
     refused for a stale observation after a wasted session attempt.
     """
-    if observation_path:
-        try:
-            meta = cu.read_json_file(observation_path)
-            if (isinstance(meta, dict) and meta.get('id')
-                    and meta.get('image')
-                    and meta.get('monitor_box')
-                    and isinstance(meta.get('created'), (int, float))
-                    and time.time() - meta['created'] + deadline_s
-                    < OBSERVATION_MAX_AGE_S):
-                return meta, str(observation_path), 'given'
-        except (OSError, ValueError, KeyError):
-            pass
+    meta, rejected = _read_given_observation(cu, observation_path,
+                                             deadline_s)
+    if meta is not None:
+        return meta, str(observation_path), 'given', None
     meta = cu.observe_screen(env, screen, max_width=1920, persist=True)
-    return meta, str(meta['observation']), 'captured'
+    return meta, str(meta['observation']), 'captured', rejected
+
+
+def loud_substitution_refusal(rejected):
+    """The G28 loud-refusal message for a rejected given observation.
+
+    Names the given observation id when known, its age, and why it was
+    rejected, states that a screen capture was substituted and will
+    NOT be acted on, and says what to pass instead: a fresh window
+    observation captured in the same call as act-now, or no
+    observation at all (with coordinates written for the screen).
+    """
+    given = rejected.get('given_id') or 'unknown id'
+    reason = rejected.get('reason', 'unknown reason')
+    age = rejected.get('age_s')
+    age_txt = ''
+    if isinstance(age, (int, float)) and 'age' not in reason:
+        age_txt = '; age %.1fs' % age
+    return ('given observation %s rejected (%s%s); act-now captured a '
+            'fresh screen observation instead and refuses rather than '
+            'acting on it: re-observe the target window in the same '
+            'call as act-now and pass the fresh window observation, or '
+            'omit --observation and write coordinates for the screen'
+            % (given, reason, age_txt))
 
 
 def _load_cu():
@@ -353,6 +416,7 @@ def run(args):
         'session_error': None,
         'session_timed_out': False,
         'fallback_reason': None,
+        'ime_state_trace': None,
         'completed': 0,
         'observation': None,
         'after': None,
@@ -394,9 +458,35 @@ def run(args):
         overlay_acquired = True
         envelope['order_to_overlay_ms'] = _ms(t0)
         envelope['overlay_owner'] = reply.get('owner')
-        meta, obs_path, obs_source = _fresh_observation(
+        meta, obs_path, obs_source, rejected = _fresh_observation(
             cu, env, args.screen, args.observation, deadline)
-        envelope['observation'] = {'id': meta.get('id'), 'source': obs_source}
+        envelope['observation'] = {'id': meta.get('id'),
+                                   'source': obs_source}
+        if rejected is not None:
+            # G28: a given observation was rejected and a screen
+            # capture was substituted. The substitution is recorded
+            # explicitly in the envelope, never silent. When the batch
+            # has key/type actions, refuse LOUDLY before any session
+            # attempt and before any action runs, naming the given
+            # observation, its age, and why it was rejected (SRC spec:
+            # staleness-only trigger, age + 20 s deadline over 120 s).
+            # The substitute is never acted on for typing: window-image
+            # coordinates against a screen region land off by the
+            # window offset, and typing on a screen observation is
+            # refused with a misleading scope error. A pointer-only
+            # batch proceeds on the substituted capture (per the SRC
+            # spec), with the rejection recorded here for the agent to
+            # see. fallback_reason is set on this path, as specified.
+            envelope['observation']['given_observation_rejected'] = rejected
+            has_keyboard = any(
+                isinstance(a, dict) and a.get('type') in ('key', 'type')
+                for a in actions)
+            if has_keyboard:
+                message = loud_substitution_refusal(rejected)
+                envelope['fallback_reason'] = message
+                envelope['error'] = message
+                envelope['path'] = 'refused'
+                return 1
         envelope['order_to_session_attempt_ms'] = _ms(t0)
         child_env = dict(env)
         child_env.pop('CU_SESSION_TOKEN', None)
@@ -419,6 +509,21 @@ def run(args):
                    for w in ('error', 'failed', 'traceback')):
                 session_error = last[:400]
         envelope['session_error'] = session_error
+        # CLICK-PROBE Stage A: ime_state_trace was ABSENT from act-now
+        # envelopes, so a silent type failure left no IME evidence.
+        # desktop_act already records the fcitx5 state trace in its
+        # result (cu.py literal_keyboard, result.update(ime_result)),
+        # and code-exec callers see it because they return that result
+        # directly; act-now parsed only ok/error out of the session
+        # stdout and discarded the rest. Surface the trace in this
+        # envelope (and the JSONL log) whenever the session result
+        # carries it, on success and on failure alike, so the next
+        # type-failure diagnosis can read the before/after_switch/
+        # after_restore phases without a separate probe.
+        if (isinstance(session_result, dict)
+                and isinstance(session_result.get('ime_state_trace'),
+                               list)):
+            envelope['ime_state_trace'] = session_result['ime_state_trace']
         if rc == 0 and not timed_out:
             # Council 1, A3: the exit code alone never proves success.
             # Require the stdout envelope to say ok, or to be the
@@ -468,6 +573,9 @@ def run(args):
                     else:
                         envelope['ok'] = result.get('ok') is True
                         envelope['completed'] = result.get('completed', 0)
+                        if isinstance(result.get('ime_state_trace'), list):
+                            envelope['ime_state_trace'] = result[
+                                'ime_state_trace']
                         if not envelope['ok']:
                             envelope['error'] = str(result.get('error', ''))
             else:

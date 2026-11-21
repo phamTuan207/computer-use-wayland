@@ -1598,6 +1598,18 @@ def desktop_act(env,meta,actions,after_capture=True,observation_path=None,
     # A keyboard-only batch must not open the virtual pointer device at all, and an
     # ordinary startup failure belongs in the result envelope, not outside it.
     pointer=None;completed=0;error=None;ime_result={};transient_error=False;outcome_uncertain=False
+    # Type verification (verification asymmetry fix): pointer moves are
+    # verified twice against cursorpos, but a type action used to count
+    # as done on wtype exit alone, so a batch could report ok while the
+    # text never landed (CL1-MSG batch 3, CL1-MSG2 retry: 9/9 clean,
+    # input still empty). has_type marks batches whose typed text must
+    # be verified against a fresh frame below; key-only batches are
+    # not verified, since a shortcut may legitimately change nothing
+    # visible.
+    has_type=any((isinstance(g,dict) and g.get('type')=='type') or
+                 (isinstance(g,list) and any(isinstance(x,dict) and
+                                             x.get('type')=='type' for x in g))
+                 for g in groups)
     preflight_ms=round((time.monotonic()-preflight_start)*1000,3)
     def move(x,y,index,action_type):
         gx,gy=image_point(meta,x,y);mx,my,mw,mh=meta['monitor_box']
@@ -1797,6 +1809,13 @@ def desktop_act(env,meta,actions,after_capture=True,observation_path=None,
         result={'ok':True,'completed':completed,'preflight_ms':preflight_ms,
                 'execution_ms':execution_ms,'after_skipped':True,
                 'input_diagnostics':diagnostics}
+        if has_type:
+            # No fresh frame was requested, so there is nothing to
+            # verify the typed text against: say so explicitly instead
+            # of letting ok rest on process exit alone.
+            result['type_verified']=None
+            result['type_verification']=('skipped: after_capture is False, '
+                                         'no fresh frame to compare')
         transition=transition_outcome()
         if transition is not None:result['transition']=transition
         result.update(ime_result)
@@ -1832,6 +1851,24 @@ def desktop_act(env,meta,actions,after_capture=True,observation_path=None,
         except Exception as exc:
             result['ok']=False;result['capture_error']=str(exc)
             result.setdefault('error','final capture failed: '+str(exc))
+    # Type verification: after a batch containing a type action, the
+    # after-capture frame must differ from the pre-action observation;
+    # an unchanged frame fails the batch instead of reporting ok on
+    # process exit alone. A changed frame is necessary, not sufficient,
+    # proof the text landed: animations also change the frame, so this
+    # catches the static no-effect case (typed text nowhere on screen),
+    # not every misdelivery. Runs only when the after-capture
+    # succeeded; a failed capture already fails the batch above.
+    if has_type and error is None and 'after' in result:
+        verified=result.get('frame_bytes_changed') is True
+        result['type_verified']=verified
+        if not verified:
+            result['ok']=False
+            result['error']=('type verification failed: screen unchanged '
+                             'after typing; text may not have landed; '
+                             're-observe and check focus before retrying')
+            result['error_code']='type_unverified'
+            result['next_step']=DESKTOP_REOBSERVE
     transition=transition_outcome()
     if transition is not None:result['transition']=transition
     if is_transient_refusal(result):result['next_step']=DESKTOP_REOBSERVE
