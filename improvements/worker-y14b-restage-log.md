@@ -2750,4 +2750,67 @@ Verification (VM, all green):
   commit covering all reviews' doc nits, if the rest are GO
   or doc-only AMEND); no fix pass 9 for code unless a review
   BLOCKs or has a code AMEND.
+- 00:42 +07: fix-pass-8 Council 3 DONE: GO (paper 3f62d67,
+  todolist-push, ls-remote verified, ANCESTOR_OK; agent
+  921a2eb2, completed 00:34:50 UTC). Own probe
+  /tmp/y14b-c3-fix8-probe.py, exit 0, own 4-way blob
+  differential, own live stubs. C7-1 closed: run_foo(a).py
+  and run_(foo).py are fix5 True, fix6 False, fix7 True,
+  fix8 False, unit and live on real /proc cmdlines. Paren
+  forms run_foo.py(x, run_foo.py)x, run_foo.py() all False in
+  fix8. Separators (; , &&, |, & glue) and plain run_foo.py,
+  hand_drive_e1.py, run-nested-pill.py all stay True. Fix7 to
+  fix8 moves in its 20 cases: 3, all FIXED direction (the two
+  C7-1 forms plus an extra run-nested(a)-pill.py the author
+  did not list). Wrong-direction moves: 0. Helper
+  _script_basename_is_runner("run_foo(a).py") True in fix7,
+  False in fix8. _top_level_sep_index("a=1;", False, False)
+  is 3 in fix6/7/8. Doc fixes verified verbatim: both
+  docstrings at run_batch3.py lines 2221-2226 and 2551-2558,
+  and both log CORRECTION notes at restage-log lines 2277
+  and 2425 in the committed 6f72fe3 tree. C7-3 closed: fix6
+  probe live helper now kills children first then wrapper by
+  exact PID, same as fix7 probe; fix6 probe 71/71 on the
+  fix8 tree. Counts re-derived from PASS lines: fix8 probe
+  103/103 (14 unit + 3 live C7-1 = 17 new, 86 + 17 = 103),
+  fix7 probe 86/86, fix6 probe 71/71, redteam 98-case
+  differential 98 same / 0 diff. Council 2 fix7 probe re-run
+  reproduces the original finding: 118 PASS + 2 FAIL, both
+  C7-1 against fix7. B12 values confirmed: True fix5, False
+  fix6/7/8. Hashes by direct git: fix7 blob 8df578c7 / md5
+  0d98342e, fix8 blob eec33fd5 / md5 0527b55e, fix5 ff4a5358
+  / 9e99d9aa, fix6 261f09ae / fac96935. Plan lines 614-615
+  pin the fix8 values in the fix commit. Hygiene: 0 em/en
+  dash in the diff and in its paper, 0 banned-tool lines and
+  0 t10 mentions in the code diff, no personal info, no live
+  Zen driving. Its paper has 0 occurrences of the
+  banned-tool word and 0 em/en dashes (verified by scan).
+  The blocked fix6-redteam file was untouched (md5 6756f7bc
+  unchanged). Only its paper was staged and committed. Its
+  stubs were killed by exact PID; 0 remain. New findings,
+  all INFO with no author action required (same class as
+  C7-2): C8-1, two log hygiene sentences over-claim grep
+  scope (whole-diff counts are 3 t10 lines and 2
+  banned-tool-word lines, log prose and a hunk header, not 0
+  as stated; the substance holds when scoped to the code
+  diff) - CONFIRMED by me: whole fix8 commit diff has 3 t10
+  lines (1 hunk header + 2 added log lines) and 2 ydotool
+  lines (both log hygiene sentences), while the run_batch3.py
+  diff alone has 0 t10 and 0 ydotool; the log sentences need
+  scoping to the code diff. C8-2, plan line 620 still says
+  the fix-pass-8 commit hash is in the log's fix-pass-7 entry
+  (same as Council 2's C8-1); the record is in the follow-up
+  hash-record commit and fix-pass-8 log section. C8-3, log
+  line 2596 cites call site "line 2724"; in the fix8 tree it
+  is line 2735 (same as Council 2's C8-2, docstring growth
+  moved it); the code is right, only the number is stale.
+  Note: Council 3 says a Council 1 paper landed on the same
+  branch while it worked; the recent remote log shows no
+  fix8 Council 1 paper yet, and the Council 1 agent is still
+  listed running, so that note is unconfirmed, possibly a
+  misread of a concurrent Y13g paper. Fix-pass-8 tally so
+  far: Council 2 GO + Council 3 GO, redteam + Council 1
+  still running. The C8 nits (Council 2's C8-1/C8-2, Council
+  3's C8-1/C8-2/C8-3, overlapping) are held for the joint
+  adjudication as one doc-only commit.
 
