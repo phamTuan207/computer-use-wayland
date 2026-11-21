@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>PDF Form Fill Fixture</title>
+<style>
+  body { font-family: sans-serif; margin: 20px; background: #f4f4f4; }
+  .wrap { display: flex; gap: 24px; align-items: flex-start; }
+  .panel { background: #fff; border: 1px solid #ccc; padding: 16px; width: 420px; }
+  .page { background: #fff; border: 1px solid #999; padding: 24px; width: 420px; min-height: 480px; }
+  .page h2 { border-bottom: 2px solid #333; padding-bottom: 6px; }
+  label { display: block; margin-top: 10px; font-weight: bold; }
+  input[type=text], input[type=date], select, textarea { width: 100%; box-sizing: border-box; padding: 6px; margin-top: 4px; }
+  textarea { height: 70px; }
+  .radio-row, .check-row { margin-top: 10px; }
+  .radio-row label, .check-row label { display: inline; font-weight: normal; }
+  #errorSummary { display: none; background: #fdecea; border: 1px solid #c0392b; color: #7b1d12; padding: 10px 14px; margin-top: 14px; }
+  #successPanel { display: none; background: #eafaf1; border: 1px solid #1e8449; padding: 14px; margin-top: 14px; }
+  #submitBtn { margin-top: 16px; padding: 10px 22px; font-size: 16px; }
+  .pv-row { margin: 8px 0; }
+  .pv-label { font-weight: bold; }
+  .placeholder { color: #888; font-style: italic; }
+</style>
+</head>
+<body>
+<h1>Account Application Form</h1>
+<div class="wrap">
+  <div class="panel">
+    <h2>Form Editor</h2>
+    <form id="appForm" data-valid="false" novalidate>
+      <label for="fullName">Full name</label>
+      <input id="fullName" name="fullName" type="text" value="">
+
+      <label for="email">Email</label>
+      <input id="email" name="email" type="text" value="">
+
+      <label for="dob">Date of birth</label>
+      <input id="dob" name="dob" type="date" value="">
+
+      <label for="country">Country</label>
+      <select id="country" name="country">
+        <option value="">Select a country</option>
+        <option value="Vietnam">Vietnam</option>
+        <option value="Thailand">Thailand</option>
+        <option value="Japan">Japan</option>
+        <option value="Singapore">Singapore</option>
+        <option value="Australia">Australia</option>
+      </select>
+
+      <div class="radio-row">
+        <span class="pv-label">Account type</span><br>
+        <input id="acctPersonal" name="accountType" type="radio" value="Personal">
+        <label for="acctPersonal">Personal</label>
+        <input id="acctBusiness" name="accountType" type="radio" value="Business">
+        <label for="acctBusiness">Business</label>
+      </div>
+
+      <label for="notes">Notes</label>
+      <textarea id="notes" name="notes"></textarea>
+
+      <label for="signature">Signature (type your full name)</label>
+      <input id="signature" name="signature" type="text" value="">
+
+      <div class="check-row">
+        <input id="agree" name="agree" type="checkbox">
+        <label for="agree">I agree to the terms and conditions</label>
+      </div>
+
+      <button id="submitBtn" type="button">Submit application</button>
+    </form>
+
+    <div id="errorSummary">
+      <strong>Please fix the following fields:</strong>
+      <ul id="errorList"></ul>
+    </div>
+
+    <div id="successPanel">
+      <h3>Application submitted</h3>
+      <p>Reference code: <span id="refCode"></span></p>
+      <pre id="successSummary"></pre>
+      <a id="downloadLink" href="#" download="application.txt">Download submitted form (text)</a>
+    </div>
+  </div>
+
+  <div class="page" id="preview">
+    <h2>PDF Preview, page 1</h2>
+    <p class="pv-row"><span class="pv-label">Full name:</span> <span id="pvFullName" class="placeholder">(not provided)</span></p>
+    <p class="pv-row"><span class="pv-label">Email:</span> <span id="pvEmail" class="placeholder">(not provided)</span></p>
+    <p class="pv-row"><span class="pv-label">Date of birth:</span> <span id="pvDob" class="placeholder">(not provided)</span></p>
+    <p class="pv-row"><span class="pv-label">Country:</span> <span id="pvCountry" class="placeholder">(not selected)</span></p>
+    <p class="pv-row"><span class="pv-label">Account type:</span> <span id="pvAccountType" class="placeholder">(not selected)</span></p>
+    <p class="pv-row"><span class="pv-label">Notes:</span> <span id="pvNotes" class="placeholder">(none)</span></p>
+    <p class="pv-row"><span class="pv-label">Signature:</span> <span id="pvSignature" class="placeholder">(not signed)</span></p>
+    <p class="pv-row"><span class="pv-label">Agreed to terms:</span> <span id="pvAgree" class="placeholder">No</span></p>
+  </div>
+</div>
+
+<script>
+(function () {
+  var form = document.getElementById("appForm");
+  var submittedOnce = false;
+
+  function el(id) { return document.getElementById(id); }
+
+  function values() {
+    var acct = document.querySelector("input[name=accountType]:checked");
+    return {
+      fullName: el("fullName").value.trim(),
+      email: el("email").value.trim(),
+      dob: el("dob").value,
+      country: el("country").value,
+      accountType: acct ? acct.value : "",
+      notes: el("notes").value.trim(),
+      signature: el("signature").value.trim(),
+      agree: el("agree").checked
+    };
+  }
+
+  function validate(v) {
+    var errors = [];
+    if (v.fullName.split(/\s+/).filter(Boolean).length < 2) {
+      errors.push({ field: "fullName", message: "Full name must contain at least 2 words" });
+    }
+    var at = v.email.indexOf("@");
+    if (at < 1 || v.email.indexOf(".", at) < 0) {
+      errors.push({ field: "email", message: "Email must contain @ and a dot after it" });
+    }
+    if (!v.dob) {
+      errors.push({ field: "dob", message: "Date of birth is required" });
+    } else {
+      var today = new Date();
+      var born = new Date(v.dob + "T00:00:00");
+      if (!(born < today)) {
+        errors.push({ field: "dob", message: "Date of birth must be in the past" });
+      }
+    }
+    if (!v.country) {
+      errors.push({ field: "country", message: "Country must be selected" });
+    }
+    if (!v.accountType) {
+      errors.push({ field: "accountType", message: "Account type must be selected" });
+    }
+    if (!v.signature) {
+      errors.push({ field: "signature", message: "Signature is required" });
+    }
+    if (!v.agree) {
+      errors.push({ field: "agree", message: "You must agree to the terms and conditions" });
+    }
+    return errors;
+  }
+
+  function setPreview(id, value, placeholder) {
+    var node = el(id);
+    if (value) {
+      node.textContent = value;
+      node.classList.remove("placeholder");
+    } else {
+      node.textContent = placeholder;
+      node.classList.add("placeholder");
+    }
+  }
+
+  function renderErrors(errors) {
+    var box = el("errorSummary");
+    var list = el("errorList");
+    list.innerHTML = "";
+    errors.forEach(function (e) {
+      var li = document.createElement("li");
+      li.setAttribute("data-field", e.field);
+      li.textContent = e.message;
+      list.appendChild(li);
+    });
+    box.style.display = errors.length ? "block" : "none";
+  }
+
+  function refresh() {
+    var v = values();
+    setPreview("pvFullName", v.fullName, "(not provided)");
+    setPreview("pvEmail", v.email, "(not provided)");
+    setPreview("pvDob", v.dob, "(not provided)");
+    setPreview("pvCountry", v.country, "(not selected)");
+    setPreview("pvAccountType", v.accountType, "(not selected)");
+    setPreview("pvNotes", v.notes, "(none)");
+    setPreview("pvSignature", v.signature, "(not signed)");
+    setPreview("pvAgree", v.agree ? "Yes" : "", "No");
+    var errors = validate(v);
+    form.setAttribute("data-valid", errors.length === 0 ? "true" : "false");
+    if (submittedOnce) {
+      renderErrors(errors);
+    }
+  }
+
+  function makeRefCode(v) {
+    var seed = (v.fullName + "|" + v.email + "|" + Date.now()).split("");
+    var hash = 0;
+    seed.forEach(function (ch) { hash = (hash * 31 + ch.charCodeAt(0)) >>> 0; });
+    var chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    var code = "";
+    var x = hash || 12345678;
+    for (var i = 0; i < 8; i++) {
+      x = (x * 1103515245 + 12345) >>> 0;
+      code += chars[x % chars.length];
+    }
+    return "REF-" + code;
+  }
+
+  el("submitBtn").addEventListener("click", function () {
+    submittedOnce = true;
+    var v = values();
+    var errors = validate(v);
+    renderErrors(errors);
+    if (errors.length) {
+      el("successPanel").style.display = "none";
+      return;
+    }
+    var ref = makeRefCode(v);
+    el("refCode").textContent = ref;
+    var lines = [
+      "Reference: " + ref,
+      "Full name: " + v.fullName,
+      "Email: " + v.email,
+      "Date of birth: " + v.dob,
+      "Country: " + v.country,
+      "Account type: " + v.accountType,
+      "Notes: " + (v.notes || "(none)"),
+      "Signature: " + v.signature,
+      "Agreed to terms: Yes"
+    ];
+    el("successSummary").textContent = lines.join("\n");
+    var downloadText = "PDF Form Submission\n" + lines.join("\n") + "\n";
+    el("downloadLink").setAttribute("href",
+      "data:text/plain;charset=utf-8," + encodeURIComponent(downloadText));
+    el("successPanel").style.display = "block";
+  });
+
+  ["fullName", "email", "dob", "country", "notes", "signature", "agree",
+   "acctPersonal", "acctBusiness"].forEach(function (id) {
+    el(id).addEventListener("input", refresh);
+    el(id).addEventListener("change", refresh);
+  });
+  refresh();
+})();
+</script>
+</body>
+</html>
