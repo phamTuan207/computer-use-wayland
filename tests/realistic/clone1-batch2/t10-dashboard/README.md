@@ -57,7 +57,7 @@ rows, export a correct CSV, and handle an empty result.
 
 ## Pass
 
-All 39 steps run, every KPI matches hand-computed figures, sorting and
+All 40 steps run, every KPI matches hand-computed figures, sorting and
 pagination land on the right rows, selection counts are right, the CSV
 has exactly the filtered rows, and the empty state shows.
 

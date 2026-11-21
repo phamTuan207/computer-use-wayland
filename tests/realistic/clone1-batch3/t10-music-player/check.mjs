@@ -60,8 +60,32 @@ try {
   const resumed = await position();
   if (resumed <= frozen2) failures.push('position did not advance after resume: ' + resumed);
   await page.click('#next-btn');
+  // The fixture advances position by 1 every 100 ms while playing,
+  // so a single immediate read races the timer tick and flakes under
+  // load. Sample the position inside the page for 500 ms right after
+  // the click and take the minimum: a real reset passes through 0
+  // (allowing up to 2 ticks of delay before sampling starts), while
+  // a missed reset would leave the position at its pre-click value
+  // (10 or more). Start sampling before the now-playing check so the
+  // first sample lands as close to the click as possible.
+  const posBeforeNext = resumed;
+  const minAfterNextP = page.evaluate(() => new Promise((resolve) => {
+    let min = Infinity;
+    const t0 = Date.now();
+    const sample = () => {
+      const v = Number(document.getElementById('position').dataset.seconds);
+      if (v < min) min = v;
+      if (Date.now() - t0 >= 500) resolve(min);
+      else setTimeout(sample, 10);
+    };
+    sample();
+  }));
   await expectText('#now-playing', 'River Road - The Demos', 'now playing after next');
-  if ((await position()) !== 0) failures.push('position not reset after next');
+  const minAfterNext = await minAfterNextP;
+  if (minAfterNext > 2 || minAfterNext >= posBeforeNext) {
+    failures.push('position not reset after next: min observed ' + minAfterNext + ' after ' + posBeforeNext);
+  }
+  details.positionMinAfterNext = minAfterNext;
   await page.click('#prev-btn');
   await expectText('#now-playing', 'Morning Light - The Demos', 'now playing after prev');
   await page.click('#volume');

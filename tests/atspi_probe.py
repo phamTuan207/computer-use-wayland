@@ -62,8 +62,7 @@ def find_app(name_sub, timeout_s=30.0):
     while time.time() < deadline:
         try:
             desktop = pyatspi.Registry.getDesktop(0)
-        except Exception as exc:
-            log("desktop", False, error=str(exc))
+        except Exception:
             time.sleep(1.0)
             continue
         for i in range(desktop.childCount):
@@ -147,6 +146,24 @@ def node_text(acc):
         return text.getText(0, text.characterCount)
     except Exception:
         return None
+
+
+def find_document(app):
+    """The web document node, or None if the tree has none yet."""
+    return find(app, role="document web")
+
+
+def find_in_document(app, role=None, name=None):
+    """First node matching role/name inside the web document.
+
+    Chrome UI (toolbars, address bar) lives outside the document,
+    so searching here cannot return a browser entry or button
+    by mistake.
+    """
+    doc = find_document(app)
+    if doc is None:
+        return None
+    return find(doc, role=role, name=name)
 
 
 def do_click(acc):
@@ -522,6 +539,7 @@ def main():
         return 0
 
     ok = True
+    field = None
     if args.mode in ("click", "full"):
         for label in ("Continue", "Not now", "Skip"):
             dlg = find(app, role="push button", name=label)
@@ -533,16 +551,12 @@ def main():
                     click_ms=round((time.time() - t0) * 1000, 1))
                 time.sleep(2.0)
                 break
-        btn = find(app, role="push button", name="Increment")
+        btn = find_in_document(app, role="push button", name="Increment")
         if btn is None:
             log("find_button", False, wanted="Increment")
             ok = False
         else:
             log("find_button", True)
-            counter_before = None
-            counter = find(app, role="text", name="0")
-            if counter is not None:
-                counter_before = node_text(counter)
             t0 = time.time()
             clicked, detail = do_click(btn)
             log("click", clicked, detail=detail,
@@ -550,9 +564,12 @@ def main():
             ok = ok and clicked
 
     if args.mode in ("type", "full"):
-        field = find(app, role="entry")
+        field = find_in_document(app, role="entry", name="Name")
         if field is None:
-            field = find(app, role="text")
+            # Fallback: the only entry inside the document. Never fall
+            # back to the first entry in the whole tree: that can be
+            # the browser address bar, not the fixture field.
+            field = find_in_document(app, role="entry")
         if field is None:
             log("find_field", False)
             ok = False
@@ -571,10 +588,17 @@ def main():
             ok = ok and typed
 
     if args.mode == "full":
-        log("final_readback", True,
-            paragraph=paragraph_text(app),
-            entry=node_text(field) if 'field' in dir() else None,
-            counter_seen=paragraph_text(app) == "Counter: 1")
+        entry_back = node_text(field) if field is not None else None
+        para = paragraph_text(app)
+        entry_ok = entry_back == args.text
+        counter_ok = para == "Counter: 1"
+        readback_ok = entry_ok and counter_ok
+        log("final_readback", readback_ok,
+            paragraph=para,
+            entry=entry_back,
+            expected_entry=args.text,
+            counter_seen=counter_ok)
+        ok = ok and readback_ok
     return 0 if ok else 2
 
 
