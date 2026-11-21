@@ -490,6 +490,52 @@ class TestRun(unittest.TestCase):
         fields['#msg-input']['value'] = 'hello'
         self.assertEqual(kwargs['type_check'](), (True, None))
 
+    def test_fallback_with_dom_selector_supplies_grounded_ranges(self):
+        import dom_act
+        fields = {'#msg-input': {'value': None, 'focused': True}}
+        fake_session = FakeZenSession(fields)
+        fake_zen_dom = mock.Mock()
+        fake_zen_dom.ZenSession = lambda *a, **k: fake_session
+        meta = {'id': 'fixture', 'scope': 'window', 'window': '0x1',
+                'window_bounds': [2533, 914, 901, 1176],
+                'region': [2533, 914, 901, 1176],
+                'image_size': [901, 1176]}
+        ground = {'rect': {'x': 86, 'y': 1101, 'width': 440,
+                           'height': 63},
+                  'point': [306, 1132.5], 'scale_factor': 1}
+        saved_zen_dom = sys.modules.get('zen_dom')
+        saved_dom_act = sys.modules.get('dom_act')
+        sys.modules['zen_dom'] = fake_zen_dom
+        sys.modules['dom_act'] = dom_act
+        try:
+            with mock.patch.object(
+                    first_action, '_fresh_observation',
+                    return_value=(meta, 'fixture-observation.json',
+                                  'fresh', None)), \
+                 mock.patch.object(dom_act, 'ground_input',
+                                   return_value=ground):
+                code, env, _ = self._run(
+                    [{'type': 'click', 'x': 306, 'y': 1132.5},
+                     {'type': 'type', 'text': 'hello'}],
+                    (1, '{"ok": false, "error": "session guardian startup failed"}',
+                     '', False, 0.4),
+                    dom_selector='#msg-input')
+        finally:
+            if saved_zen_dom is None:
+                sys.modules.pop('zen_dom', None)
+            else:
+                sys.modules['zen_dom'] = saved_zen_dom
+            if saved_dom_act is None:
+                sys.modules.pop('dom_act', None)
+            else:
+                sys.modules['dom_act'] = saved_dom_act
+        self.assertEqual(code, 0)
+        self.assertEqual(env['path'], 'fallback')
+        kwargs = self.fake_cu.desktop_kwargs[0]
+        self.assertEqual(kwargs['type_x_ranges'], [[86.0, 526.0]])
+        self.assertEqual(kwargs['type_y_ranges'], [[1101.0, 1164.0]])
+        self.assertTrue(kwargs['require_type_ranges'])
+
     def test_fallback_without_dom_selector_passes_no_hooks(self):
         # No --dom-selector: the fallback batch runs exactly as
         # before, with no hook kwargs and no dom_hooks claim.

@@ -156,11 +156,13 @@ class FakeAct:
         self.session = session
         self.typed = []
         self.executed = []
+        self.kwargs = []
         self.calls = 0
         self.observes = 0
 
     def __call__(self, meta, actions, focus_check=None, type_check=None,
                  **kw):
+        self.kwargs.append(kw)
         self.calls += 1
         completed = 0
         focus_done = False
@@ -212,6 +214,14 @@ G30_FIELD = {'rect': {'x': 86, 'y': 1101, 'width': 440, 'height': 63},
 
 
 class GroundInputTests(unittest.TestCase):
+    def test_grounded_ranges_match_rect_in_image_pixels(self):
+        ground = {'rect': G30_FIELD['rect'], 'point': [306.0, 1132.5],
+                  'scale_factor': 1}
+        self.assertEqual(dom_act.grounded_x_range(ground, G30_META),
+                         [86.0, 526.0])
+        self.assertEqual(dom_act.grounded_y_range(ground, G30_META),
+                         [1101.0, 1164.0])
+
     def test_ground_input_refuses_screen_region_without_window_bounds(self):
         session = FakeDomSession({'#msg-input': G30_FIELD})
         meta = {'scope': 'screen', 'image_size': [1920, 1080],
@@ -334,6 +344,18 @@ class GroundInputTests(unittest.TestCase):
 
 
 class FocusTypeTests(unittest.TestCase):
+    def test_focus_type_forwards_grounded_ranges(self):
+        session = FakeDomSession({'#msg-input': G30_FIELD})
+        act = FakeAct(session)
+        result = dom_act.focus_type(session, act, G30_META, '#msg-input',
+                                    'hello')
+        self.assertTrue(result['ok'])
+        self.assertEqual(act.kwargs[0]['type_x_ranges'],
+                         [[86.0, 526.0]])
+        self.assertEqual(act.kwargs[0]['type_y_ranges'],
+                         [[1101.0, 1164.0]])
+        self.assertTrue(act.kwargs[0]['require_type_ranges'])
+
     def test_happy_path_click_type_enter_from_one_observation(self):
         session = FakeDomSession({'#msg-input': G30_FIELD})
         act = FakeAct(session)

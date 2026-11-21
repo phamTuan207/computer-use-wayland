@@ -587,7 +587,6 @@ def run(args):
                     dom_kwargs = {}
                     selector = getattr(args, 'dom_selector', None)
                     if selector:
-                        dom_kwargs['require_type_ranges'] = True
                         try:
                             import dom_act
                             text = dom_act.typed_text_of(actions)
@@ -598,7 +597,8 @@ def run(args):
                                 dom_session, focus_check, type_check = \
                                     dom_act.open_dom_hooks(selector, text)
                                 dom_kwargs = {'focus_check': focus_check,
-                                              'type_check': type_check}
+                                              'type_check': type_check,
+                                              'require_type_ranges': True}
                                 envelope['dom_hooks'] = 'dom-value'
                                 try:
                                     ground = dom_act.ground_input(
