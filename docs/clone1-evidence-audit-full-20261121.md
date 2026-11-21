@@ -61,8 +61,11 @@
   zero observable output: no log file, no commits matching Y13g"
   (opt-redteam-m-attack.md:108, opt-redteam-m-verdict.md:33,81) was TRUE
   when written (files added 16:06-16:07 UTC) because the first Y13g
-  commit landed 16:19 UTC (4ad7b88). At the tip it is STALE: 51 Y13g
-  commits and 21 worker-y13g files exist. Do not quote it as current.
+  commit landed 16:19 UTC (4ad7b88). At the tip it is STALE: 50 Y13g
+  commits and 20 worker-y13g files exist. Do not quote it as current.
+  (CORRECTION after council 2, 03:12 22/11: the audit first wrote 51
+  commits and 21 files; council 2 counts 50 and 20. The conclusion,
+  that the redteam-M claim is stale, still holds.)
 
 ## V2 (HIGH): F3 arm verdicts cite 9 run logs that do not exist
 
@@ -95,11 +98,16 @@
   14 state.json.
 - Check: test-scores.md, test-cases.md, test-execution-report.md,
   typing-fix-multipage-report.md and stress.log return 0 hits in a
-  whole-branch filename search. No state.json, finish-record.json or
-  start-readiness.json exists on the branch. The cited commit c9b96a7
-  does exist, and the cited content hash 8da1f562 is not a git object
-  (it is a file-content hash, which is expected), but the files it
-  hashes are not in the repo either.
+  whole-branch filename search. None of the judge's 14 tc state.json
+  files, nor finish-record.json or start-readiness.json, exists on the
+  branch. (CORRECTION after council 2, 03:12 22/11: the audit first
+  wrote "No state.json exists on the branch", which is wrong as a
+  blanket sentence: 15 end-state.json files exist in the A1
+  checker-selftest case dirs. None of them are the judge's tc files,
+  so the verdict stands, but the sentence is narrowed here.) The cited
+  commit c9b96a7 does exist, and the cited content hash 8da1f562 is
+  not a git object (it is a file-content hash, which is expected), but
+  the files it hashes are not in the repo either.
 - The verdict cannot be re-run or re-checked from the repo. Mitigating:
   the section honestly lists WITHHELD items (pill/overlay visibility,
   cursor-glyph appearance, Worker N's offline claims not re-verified),
