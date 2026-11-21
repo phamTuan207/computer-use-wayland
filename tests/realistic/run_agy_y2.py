@@ -143,6 +143,11 @@ _TOTAL_WD_CALLS = {"n": 0}
 # bytes. The runner refuses to run on any mismatch.
 MANIFEST_NAME = "agy-y2-manifest.json"
 
+# Pinned manifest size (redteam diff F2): the suite ships exactly
+# this many files; a manifest listing fewer would silently skip
+# checks. Update together with the manifest when the suite grows.
+EXPECTED_MANIFEST_FILES = 26
+
 
 def now_iso():
     return datetime.now(timezone.utc).isoformat()
@@ -202,10 +207,10 @@ def _hyprland_signature():
                reverse=True)
     for cand in cands:
         try:
-            s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-            s.settimeout(2)
-            s.connect(str(cand / ".socket.sock"))
-            s.close()
+            with socket.socket(socket.AF_UNIX,
+                               socket.SOCK_STREAM) as s:
+                s.settimeout(2)
+                s.connect(str(cand / ".socket.sock"))
             return cand.name
         except Exception:
             continue
@@ -288,14 +293,62 @@ def _verify_manifest():
     base_dir = Path(__file__).resolve().parent
     bad = []
     checked = 0
+    files = manifest.get("files", [])
+    # Pinned count (redteam diff F2): a manifest listing fewer files
+    # would silently skip checks.
+    if len(files) != EXPECTED_MANIFEST_FILES:
+        bad.append(f"manifest lists {len(files)} files, want "
+                   f"{EXPECTED_MANIFEST_FILES}")
+    for entry in files:
+        try:
+            rel = entry.get("path")
+            want = entry.get("md5")
+            # A null/non-hex expected md5 must refuse, never pass:
+            # _md5_of returns None for a missing file, and None ==
+            # None would pass a null-md5 entry for a missing file.
+            if (not isinstance(rel, str) or not isinstance(want, str)
+                    or len(want) != 32
+                    or any(c not in "0123456789abcdef" for c in want)):
+                bad.append(f"malformed manifest entry: {entry!r}")
+                continue
+            got = _md5_of(base_dir / rel)
+            checked += 1
+            if got != want:
+                bad.append(f"{rel}: want {want}, got {got}")
+        except Exception as exc:
+            bad.append(f"manifest entry error {entry!r}: {exc}")
+    return (not bad), checked, bad, _md5_of(mpath)
+
+
+def _verify_served_files(base):
+    """(ok, checked, mismatches) proving the HTTP server serves the
+    manifest bytes (redteam diff F3). The reuse path in start_server
+    probes only test-01 with a 200 check, which never proves the
+    served root; a stale server on the port could serve old fixture
+    bytes while the disk manifest passes. Fetch every manifest file
+    over HTTP and compare md5s."""
+    mpath = Path(__file__).with_name(MANIFEST_NAME)
+    try:
+        manifest = json.loads(mpath.read_text())
+    except Exception as exc:
+        return False, 0, [f"manifest unreadable: {exc}"]
+    bad = []
+    checked = 0
     for entry in manifest.get("files", []):
         rel = entry.get("path")
         want = entry.get("md5")
-        got = _md5_of(base_dir / rel)
+        try:
+            with urllib.request.urlopen(f"{base}/{rel}",
+                                        timeout=5) as resp:
+                data = resp.read()
+            got = hashlib.md5(data).hexdigest()
+        except Exception as exc:
+            bad.append(f"{rel}: served fetch failed: {exc}")
+            continue
         checked += 1
         if got != want:
-            bad.append(f"{rel}: want {want}, got {got}")
-    return (not bad), checked, bad, _md5_of(mpath)
+            bad.append(f"{rel}: served {got}, want {want}")
+    return (not bad), checked, bad
 
 
 def _child_in(d, parent_css, child_css):
@@ -371,7 +424,10 @@ class Y9WD(WD):
 
     def _park_before_exit(self):
         """Park the session on a throwaway tab before DELETE /session
-        (Redteam re-review B2).
+        (Redteam re-review B2). Returns True when the session is
+        parked on a safe current window, False when no safe window
+        could be established (the caller must then NOT let DELETE
+        /session run on an uncontrolled window).
 
         Y4d proved DELETE /session closes the session's current tab
         (the shared test tab died 20/20 at session exit). Parking on
@@ -380,10 +436,12 @@ class Y9WD(WD):
         base cleanup does not delete it first) makes the session
         delete close the throwaway instead. Opened test tabs are
         closed first, so the sacrificial tab is current when the
-        session is deleted. Best effort: any failure falls back to
-        the base cleanup (previous behavior)."""
+        session is deleted. If sacrificial creation fails, fall back
+        to a registered test tab (council diff fix 2b): losing a
+        test tab to the session delete is recoverable (rebootstrap);
+        losing a user tab is not."""
         if getattr(self, "session", None) is None:
-            return
+            return True
         for handle in list(getattr(self, "opened_tabs", [])):
             try:
                 self.switch(handle)
@@ -396,22 +454,40 @@ class Y9WD(WD):
             pass
         try:
             h = self.new_tab("about:blank", allow_hidden=True)
-        except Exception:
-            return
-        try:
-            self.opened_tabs.remove(h)
-        except Exception:
-            pass
-        try:
+            try:
+                self.opened_tabs.remove(h)
+            except Exception:
+                pass
+            _TEST_TABS.add(h)
             self.switch(h)
+            return True
         except Exception:
             pass
+        for handle in list(_TEST_TABS):
+            try:
+                self.switch(handle)
+                return True
+            except Exception:
+                continue
+        return False
 
     def __exit__(self, *exc):
+        parked = False
         try:
-            self._park_before_exit()
+            parked = self._park_before_exit()
         except Exception:
-            pass
+            parked = False
+        if not parked and getattr(self, "session", None) is not None:
+            # No safe current window: do NOT let DELETE /session run
+            # on an uncontrolled window (redteam diff F1). Drop the
+            # session reference so the base cleanup skips the DELETE
+            # (it still terminates the geckodriver proc and closes
+            # the log); the browser keeps its tabs, and the
+            # preflight sweep can reclaim the driver slot.
+            print("[park] could not park before exit; skipping "
+                  "DELETE /session (session dropped, proc still "
+                  "terminated by cleanup)", flush=True)
+            self.session = None
         return super().__exit__(*exc)
 
     def find_in(self, parent_el, css):
@@ -466,10 +542,16 @@ class Y9Runner(Runner):
         start = time.perf_counter()
         ok = super().check(name, cond, detail)
         ms = (time.perf_counter() - start) * 1000
-        log_step(self.test, f"check: {name}", "check", ms, bool(ok),
-                 detail if isinstance(detail, str) else json.dumps(
-                     detail, ensure_ascii=False, default=str),
-                 None if ok else f"check failed: {name}: {detail}")
+        # The JSONL write must never fail a check (redteam diff F5):
+        # a logging I/O error is recorded on stdout, not raised.
+        try:
+            log_step(self.test, f"check: {name}", "check", ms, bool(ok),
+                     detail if isinstance(detail, str) else json.dumps(
+                         detail, ensure_ascii=False, default=str),
+                     None if ok else f"check failed: {name}: {detail}")
+        except Exception as exc:
+            print(f"[{self.test}] check log failed (harmless): {exc}",
+                  flush=True)
         return ok
 
     def step(self, name, op, fn):
@@ -1351,10 +1433,11 @@ def run_02(r, d):
             "present in #available-bt-list")
     r.step("pair MX Master", "click",
            lambda: d.click("#btn-pair-mx-master"))
+    # Single eval, not two (redteam diff F8): the paired check used
+    # to evaluate the same child text twice.
+    paired_txt = _child_txt(d, "#paired-bt-list", "#paired-item-mx-master")
     r.check("MX Master paired in paired list",
-            "Paired" in (_child_txt(d, "#paired-bt-list",
-                                    "#paired-item-mx-master") or ""),
-            _child_txt(d, "#paired-bt-list", "#paired-item-mx-master"))
+            "Paired" in (paired_txt or ""), paired_txt)
     r.step("bluetooth off", "click", lambda: d.click("#toggle-bluetooth"))
     r.check("bluetooth disabled", txt(d, "#bt-toggle-status") == "Disabled",
             txt(d, "#bt-toggle-status"))
@@ -2210,7 +2293,10 @@ def bootstrap_tab(base):
     invisible). Raises BootstrapError after 3 failed attempts.
     """
     info = {"intervened": False, "tz_hidden_removed": False,
-            "hidden_body_encounters": 0, "detail": "none"}
+            "hidden_body_encounters": 0, "detail": "none",
+            # Bootstrap ladder time (redteam diff F7): it is stall
+            # time too, and main() folds it into the suite stall_ms.
+            "stall_ms": 0}
     last_exc = None
     for attempt in range(1, 4):
         wd = Y9WD()
@@ -2230,6 +2316,8 @@ def bootstrap_tab(base):
             ok, _swapped = ensure_visible(d, r, "new test tab",
                                           allow_swap=False)
             h = r.tab
+            info["stall_ms"] = round(
+                info["stall_ms"] + getattr(r, "stall_ms", 0), 1)
             if r.details.get("tz_hidden_removed"):
                 info["tz_hidden_removed"] = True
                 info["intervened"] = True
@@ -2556,6 +2644,19 @@ def main():
     suite_t0 = time.perf_counter()
     _, base = start_server()
     print(f"serving at {base}", flush=True)
+    # Prove the server serves the manifest bytes (redteam diff F3):
+    # the reuse probe only checks a 200, never the served root.
+    served_ok, served_checked, served_bad = _verify_served_files(base)
+    if not served_ok:
+        print(f"SERVED FILES FAILED: {served_bad}", flush=True)
+        print(json.dumps({"suite": "agy-y2",
+                          "served_files_failed": True,
+                          "mismatches": served_bad,
+                          "total": len(selected)}, ensure_ascii=False),
+              flush=True)
+        return 2
+    print(f"SERVED FILES OK ({served_checked} files over HTTP)",
+          flush=True)
     try:
         preflight(base)
     except Exception as exc:
@@ -2721,19 +2822,24 @@ def main():
                 # Switch to a known test tab first (Redteam re-review
                 # B2): after a rebootstrap failure the current window
                 # is uncontrolled, and the screenshot must never
-                # capture a user tab as test evidence.
+                # capture a user tab as test evidence. If the switch
+                # fails, SKIP the screenshot (council diff fix 2a)
+                # instead of capturing an uncontrolled window.
+                shot = None
                 try:
                     if r.tab in d.handles():
                         d.switch(r.tab)
                     else:
                         h = d.new_tab("about:blank", allow_hidden=True)
                         d.opened_tabs.remove(h)
+                        _TEST_TABS.add(h)
                         d.switch(h)
+                    shot = d.screenshot(
+                        str(SHOTS_DIR / f"{tid}-a{attempt}.png"))
                 except Exception as exc:
-                    print(f"[{tid}] pre-screenshot switch failed "
-                          f"(harmless): {exc}", flush=True)
-                shot = d.screenshot(
-                    str(SHOTS_DIR / f"{tid}-a{attempt}.png"))
+                    print(f"[{tid}] pre-screenshot switch failed; "
+                          f"skipping screenshot: {exc}", flush=True)
+                    shot = None
                 if shot:
                     r.details["end_state_screenshot"] = shot
                 wd.__exit__()
@@ -2802,6 +2908,15 @@ def main():
     suite = {"suite": "agy-y2", "passed": passed,
              "flagged": flagged, "total_passed": total_passed,
              "failed": len(results) - total_passed,
+             # Separate count (redteam diff F4): a fixture-unavailable
+             # outcome still counts in "failed" (the test did not
+             # pass) and still exits 1, but it must be visible
+             # separately, not conflated with live failures. The
+             # infra streak is deliberately NOT reset by it (fail
+             # safe, consistent with the guard-defect precedent).
+             "fixture_unavailable": sum(
+                 1 for s in results
+                 if s.get("outcome") == "fixture-unavailable"),
              "total": len(results), "selected": len(selected),
              "total_ms": total_ms,
              "suite_wall_ms": round(
@@ -2823,9 +2938,11 @@ def main():
                          "tokens": "UNMEASURED",
                          "observation_cost": "UNMEASURED",
                          "vcr": False,
-                         "stall_ms": round(stall_ms, 1)},
-             "md5": {"run_live.py": _md5_of(__file__.replace(
-                         "run_agy_y2.py", "run_live.py")),
+                         "stall_ms": round(
+                             stall_ms + boot_info.get("stall_ms", 0),
+                             1)},
+             "md5": {"run_live.py": _md5_of(
+                         Path(__file__).with_name("run_live.py")),
                      "run_agy_y2.py": _md5_of(__file__)},
              "shipped": _read_shipped()}
     print(json.dumps(suite, ensure_ascii=False), flush=True)

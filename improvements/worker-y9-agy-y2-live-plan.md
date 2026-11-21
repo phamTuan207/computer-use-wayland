@@ -164,8 +164,8 @@ a fresh re-review.
   (N11); the misleading "check body visible" step removed, the
   following r.check is the real gate (N14); per-test worst-case
   bound corrected to about 35-40 s (C1 F7 / N4); counts corrected
-  in the paperwork (88 checks, not 93 and not 87; runner 2853 lines
-  after the fixes, 2517 at a82bb41) (C3 F8); mapping test-09 step 10
+  in the paperwork (88 checks, not 93 and not 87; runner 2865 lines
+  at 9564304, 2517 at a82bb41) (C3 F8); mapping test-09 step 10
   row corrected to the full-text type (C1 F7 / C3 F10).
 - Accepted as notes, no code change: the infra counter counts
   attempts while the abort rule speaks of tests, with a guard-defect
@@ -176,3 +176,30 @@ a fresh re-review.
   window is the test tab on paths that already raise INFRA (N10);
   total_ms sums final attempts only while suite_wall_ms covers all
   (C3 O4, stated not hidden).
+- Diff re-review fixes (council GO WITH FIXES, redteam NO BLOCK,
+  19:2x on 21/11): council fix 1, runner line count corrected to
+  2865 at 9564304 (the "2853" in this section and the log was
+  wrong); council fix 2, the two best-effort B2 fallbacks hardened
+  (skip the end-state screenshot if the pre-screenshot switch
+  fails; if sacrificial-tab creation fails, park on a registered
+  test tab from _TEST_TABS; if no park is possible at all, DELETE
+  /session is skipped and the session reference dropped, the
+  geckodriver proc is still terminated by cleanup); redteam F1 is
+  the same park rule; redteam F2 manifest pinned to 26 files,
+  non-hex/null expected md5 refuses, entry loop guarded; redteam
+  F3 served bytes verified over HTTP against the manifest after
+  start_server (a stale server on the port can no longer serve old
+  fixture bytes past the disk check); redteam F4
+  fixture-unavailable now counted separately in the suite JSON
+  (still counts in "failed", still exits 1; the infra streak is
+  deliberately not reset by it, fail-safe, consistent with the
+  guard-defect precedent); redteam F5 check() logging wrapped so
+  a JSONL I/O error cannot fail a check; redteam F7 bootstrap
+  ladder time folded into suite stall_ms and the screenshot
+  fallback tab registered in _TEST_TABS; redteam F8 Hyprland
+  socket closed via context manager, run_02 paired check single
+  eval, run_live.py md5 path via Path.with_name, screenshot skip
+  same as council fix 2. Redteam F6 accepted as a note (the
+  fingerprint is not a content hash; the threat is accidental
+  swap, not a forger restoring mtime_ns). Runner 2982 lines after
+  these fixes.

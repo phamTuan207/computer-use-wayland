@@ -53,7 +53,7 @@
   frozen commit + md5 list, six metrics with UNMEASURED stated);
   re-run rule with attempt fields; mid-test hidden-body rule;
   WD-timeout classification; integrity-guard procedure pinned.
-- Runner written: tests/realistic/run_agy_y2.py (2517 lines at a82bb41; 2853 lines after the re-review fixes, see addendum 3).
+- Runner written: tests/realistic/run_agy_y2.py (2517 lines at a82bb41; 2865 lines at 9564304; 2982 lines after the diff-review fixes, see addendum 6).
   Self-contained except run_live imports. Ported verify is a 1:1
   transcription of check.mjs verifyTest (JS via Marionette eval).
   All 10 drivers follow simulate.mjs step for step plus the spec
@@ -215,8 +215,8 @@ Checked against the v2 exact marker after git fetch:
   on three paths); B3 no launch-time proof shipped bytes are
   committed bytes (md5s recorded with no expected values, no
   fixture hash, SHIPPED.md not yet existent as a checked file).
-- Fixes applied in tests/realistic/run_agy_y2.py (2517 to 2853
-  lines): B1 two-source signature restored verbatim from Y4d;
+- Fixes applied in tests/realistic/run_agy_y2.py (2517 to 2865
+  lines at 9564304): B1 two-source signature restored verbatim from Y4d;
   B2 Y9WD.__exit__ parks on a sacrificial about:blank tab before
   DELETE /session + finally screenshot switches to a known test
   tab first; B3 tests/realistic/agy-y2-manifest.json with expected
