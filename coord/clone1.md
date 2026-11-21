@@ -870,3 +870,59 @@ Kết quả: 13 COMPLIANT, 6 PARTIAL, 1 MISSING.
   report, log fcc, output verifier Y5) không chạy lại được ở đây,
   đã ghi là laptop-only theo từng commit. Nửa spec draft của Y5
   cho defect test-07 không có trong branch nào, vẫn UNVERIFIED.
+
+## ĐỢT 5 VIỆC 3 XONG, 19:08 ngày 21/11
+
+Review độc lập plan thí điểm A1 BẢN ĐÓNG BĂNG ở commit f31abcf trên
+todolist-push, báo cáo ở docs/clone1-a1-pilot-review-20261121.md
+(616 dòng). Đã kiểm chứng trước: cả 10 sha256 trong FREEZE.md ở
+f31abcf khớp đúng file ở f31abcf, 0 lệch. Kết quả: 28 lỗ hổng
+(3 blocker, 13 major, 12 minor). Khuyến nghị: không chạy arm live
+nào cho tới khi sửa xong 3 blocker bằng sửa đổi trước run 1.
+
+- B1: quy tắc executor chết sau 30 phút không có end marker sẽ
+  giết run Case B hợp lệ. Cap Case B là 60 phút, nguồn plan tự
+  trích ước tính run Case B khoảng 40 phút làm tay. Run 40 phút bị
+  tuyên chết, bản thay thế chết y hệt, lần chết thứ 2 làm dừng cả
+  pilot. Quy tắc bỏ qua marker tiến độ 15 phút.
+- B2: mọi đường chạy lại đều không tương thích với unblinder đóng
+  băng. Thay thế sau chết thêm entry manifest thứ 13, run INVALID
+  và INCOMPLETE chạy lại dưới run-id mới, nhưng a1_unblind.py dòng
+  80 đòi đúng 12 dòng, số run đúng [1,2,3], run-id manifest bằng
+  thư mục run. Đã chạy thật: manifest 13 dòng exit 2, manifest 12
+  dòng cộng thư mục run chết giữ lại cũng exit 2. Lần chết hay
+  invalid hay incomplete đầu tiên làm pilot không unblind được nếu
+  không sửa file đóng băng.
+- B3: unblinder đóng băng crash trên 3 input chạm được, đều tái
+  hiện, exit 1, không có verdict: run CODE có wall UNMEASURED
+  nhưng think đầy đủ thì TypeError ở median dòng 226, dòng log đầu
+  sai định dạng thì JSONDecodeError dòng 125, thiếu run-log.jsonl
+  thì FileNotFoundError dòng 125.
+- Major khác: draw held-out nằm trong sidecar .meta.json không
+  nhắc tới, không có quản lý (M1); cap đóng băng (8192 ký tự, cap
+  call, cap run) không script nào ép (M2); INVALID không có code
+  trong unblinder (M3); STEP total think chỉ định nghĩa trong
+  comment code, là proxy gap thiên về CODE (M4); wall timeout bị
+  kiểm duyệt được tính như giá trị đúng trong dispersion (M5);
+  plan và runbook liệt kê 8 evidence item khác nhau, không script
+  nào kiểm setup-log.jsonl, proof SOLO hay proof relay (M6); Stage
+  1 operator và đường commit verdict chưa định nghĩa (M7); seal
+  output checker không có cơ chế (M8); executor thay thế phá vỡ
+  control single-executor (M9); điều kiện flag thủ công chưa tự
+  động và chưa định nghĩa (M10); Probe 5 log sai category op
+  (M11); matrix fail 3/17 trên checkout sạch vì thiếu verify.png
+  trong cây đóng băng (M12); executor truy cập repo theo danh dự,
+  không ép (M13). 12 minor còn lại về câu chữ, file cases/ chưa
+  hash, điểm split "preferred", loại ref-taking chưa probe, thứ tự
+  case cố định.
+- Đã chạy lại thật từ file f31abcf: checker matrix 17/17 (sau khi
+  chạy build_matrix.py trước), Layer-1 preflight 7/7 trong 0.002 s,
+  đường crash của unblinder tái hiện trên dữ liệu tổng hợp.
+- Cái đúng: freeze nguyên vẹn 10/10 hash, md5 fixture đúng, spec
+  f01 26 bước với bước 23 diagnosis và 6 cell khớp, Worker U 71
+  dòng cộng 2960.7 ms với dòng RESULT 3604 ms đúng, Layer-1 7/7,
+  matrix 17/17, cap trong code (8192/32/30), checker 0 lần nhắc
+  "manifest", Stage 1 chỉ đọc end-state cộng screenshot, trích dẫn
+  Council 3 đã kiểm chứng, pool agy-q2 test-06 tới test-10 có mặt
+  với simulation 10/10 trong hồ sơ, fix F1/F2/F3 của review checker
+  độc lập đã kiểm chứng trong code.
