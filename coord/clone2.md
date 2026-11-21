@@ -8,7 +8,7 @@ Received from the coordinator through the user, 6 tasks. Status at the start of 
 
 1. PR 1 handling: in progress. Latest main merged into this branch, the add/add conflict in this file was the only conflict and is resolved in the merge commit. PR summary updated on GitHub. Not merged by clone2, ready for the coordinator to review and merge.
 2. Desktop control research, Vercel agent-desktop, linux-use, kde-desktop-mcp, CUA Hyprland native: in progress.
-3. AT-SPI research and a button click prototype without screenshots: pending.
+3. AT-SPI research and a button click prototype without screenshots: done, doc docs/research/2026-11-21-atspi-desktop-control.md, prototype tests/atspi_prototype.py. Selftest passed on this machine, 2026-11-21T09:29:45Z, all steps ok, press verified by state read back. Live desktop mode UNVERIFIED here, headless VM, no pyatspi, no session bus, no display, recorded in the prototype log output. Needs a graphical session on the laptop, run command is in the doc section 6.
 4. Ten realistic tests, code editing, file management, terminal and editor, error handling, reading docs: pending.
 5. Selenium on real Zen, full preparation package: pending. All Selenium code is re-verified on Firefox on this machine as part of this batch.
 6. Speed comparison table for all Zen control methods: pending.
