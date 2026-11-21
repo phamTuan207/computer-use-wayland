@@ -1098,3 +1098,29 @@ council 3 (5 steps, stdout and stderr recorded separately).
 - Round-2 scripts are deployed to the installed tree (md5-verified):
   cursor_session.py 9208afee, cursor_theme.py 3bf3d391,
   session_remote.py ea1da781, matching the VM repo exactly.
+
+## 23:36-23:44 - Lock-holding wrapper (council-2 precondition 4)
+- Built scripts/activate-session-backend.py. It holds
+  cursor_session.owner_lock() across the whole glass + guard sequence
+  (activate-glass.py takes no lock on its own, so two concurrent runs
+  could both pass the pre-load check; the guard CLI holds the lock only
+  for its own step). The pinned values come from native/visuals.json
+  (library, cursor_guard_library, abi, profile_sha256) unless overridden
+  on the command line. After both loads it verifies: the plugin list
+  shows hyprglass + computer-use-cursor, cu-cursor status answers, and
+  hyprglass is ready (liquid_available ready=True). Glass runs first,
+  then the guard, in that order; a glass failure skips the guard.
+- Tests: tests/test_activate_session_backend.py, 3 tests, all OK on the
+  VM (0.003s). The lock-held proof is real: each fake activation tries
+  to acquire owner_lock() itself and records that it raised
+  'another automation session or plugin activation is active', proving
+  the wrapper held the lock during both calls. The test loads the
+  hyphenated wrapper module via importlib (a plain import cannot name
+  a file with hyphens). A third test proves the lock is released after
+  activation, and a glass failure skips the guard.
+- The wrapper is the tool for plan B (the live activation). The
+  activation itself is NOT run yet: it is gated on council-2
+  preconditions 1-8 in order, and precondition 1 needs F3 sign-off and
+  a free live slot. The Marionette slot re-wedged 22:56:12 and F3b
+  (restart 2) has not reported an outcome yet, so the live activation
+  waits. No plugin load is attempted tonight until that gate clears.
