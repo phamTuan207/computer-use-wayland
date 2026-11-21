@@ -1955,3 +1955,12 @@ C2-9/C2-10 INFO parts (covered by item 14).
 - Plan md5 line pins these fix-pass-6 values IN the fix commit
   (per C5-4). Parent fix-pass-5 bytes: blob ff4a5358, md5
   9e99d9aa, commit 46e0909.
+
+- 23:52 +07: fix pass 6 committed (d552f4d, ls-remote verified,
+  ANCESTOR_OK) + hash-record follow-up committed (6235dab,
+  ls-remote verified). 4 re-reviewers spawned over the
+  fix-pass-6 diff only (0b88ed3..d552f4d): redteam, Council 1,
+  Council 2, Council 3. Each brief is self-contained (diff
+  range, blob/md5, claim list, probe paths, verdict + paper
+  deliverable, stage-only-their-paper rule). Ship waits for
+  them unless one BLOCKs.
