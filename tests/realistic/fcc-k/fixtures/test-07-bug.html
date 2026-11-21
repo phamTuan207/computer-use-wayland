@@ -6,35 +6,71 @@
 <style>
   body{font-family:sans-serif;padding:14px;background:#fafafa;color:#111;}
   .status{margin-top:10px;font-family:monospace;white-space:pre-wrap;}
+  button{margin:4px 4px 4px 0;padding:6px 10px;cursor:pointer;}
+  textarea{display:block;margin:6px 0;width:420px;min-height:90px;}
 </style>
 </head>
 <body>
 <h2>Bug reproduction fixture (offline)</h2>
+<div id="reproSteps" style="border:1px solid #999;padding:6px;background:#fff;">
+  <b>Written reproduction steps:</b>
+  <ol>
+    <li>Record the current setting value (before).</li>
+    <li>Click Toggle setting.</li>
+    <li>Click Save immediately, without waiting.</li>
+    <li>Read the setting value again (after).</li>
+    <li>Click Save again, deliberately.</li>
+    <li>Read the setting value again (after2).</li>
+  </ol>
+  <div>Known race in this app: the first Save after a toggle writes the previous value back. A second Save commits the toggled value.</div>
+</div>
 <div id="settingRow">Setting: <span id="settingVal">enabled</span></div>
 <button id="toggle">Toggle setting</button>
 <button id="save">Save</button>
 <textarea id="bugNote" placeholder="bug note"></textarea>
 <button id="saveNote">Save note</button>
+<div id="noteSaved" style="border:1px solid #999;padding:6px;margin-top:6px;min-height:40px;white-space:pre-wrap;">No note saved yet.</div>
 <div id="status" class="status"></div>
 <script>
-let value='enabled';let noteSaved=false;let bugConclusion='unknown';let after2='';
+let committed='enabled';
+let pending='enabled';
+let savesSinceToggle=0;
+let toggled=false;
+function show(v){document.getElementById('settingVal').textContent=v;}
+document.getElementById('toggle').onclick=()=>{
+  pending=committed==='enabled'?'disabled':'enabled';
+  toggled=true;savesSinceToggle=0;
+  show(pending);
+};
+document.getElementById('save').onclick=()=>{
+  if(toggled&&savesSinceToggle===0){
+    // First save after a toggle: the race writes the stale committed value back.
+    show(committed);
+  } else {
+    committed=pending;
+    show(committed);
+  }
+  savesSinceToggle++;
+};
+document.getElementById('saveNote').onclick=()=>{
+  document.getElementById('noteSaved').textContent=document.getElementById('bugNote').value;
+};
 window.__fcckVerify=function(){
+  // REAL DOM assertion: reads only the saved note text and the final setting
+  // value the agent actually produced. Never toggles, saves, or writes a note.
+  // Observed behavior for the correct flow: before=enabled, after=enabled
+  // (reverted, bug reproduced), after2=disabled (toggled value sticks).
   const failures=[];
-  // step: read before
-  const before=value;
-  // step: toggle
-  value = (value==='enabled')?'disabled':'enabled';
-  // step: immediate save
-  after=value;
-  // step: deliberate save
-  after2=value;
-  const bugReproduced=(before!==after);
-  bugConclusion=bugReproduced?'reproduced':'not reproduced';
-  document.getElementById('bugNote').value='Bug: setting reverts. Before '+before+' After '+after+' After2 '+after2+'. Conclusion: '+bugConclusion;
-  noteSaved=true;
-  if(!bugReproduced)failures.push('bug should reproduce but did not');
-  const state={before,after,after2,bugReproduced,bugConclusion,noteSaved};
-  const out={passed:failures.length===0,failures,score:failures.length===0?1:0,state};
+  const note=document.getElementById('noteSaved').textContent;
+  const finalVal=document.getElementById('settingVal').textContent.trim();
+  if(note.includes('No note saved yet'))failures.push('no bug note saved');
+  if(!note.includes('Before')||!note.includes('After')||!note.includes('After2'))failures.push('note missing before/after/after2 labels');
+  if(!note.includes('enabled'))failures.push('note missing before value enabled');
+  if(!note.includes('disabled'))failures.push('note missing toggled value disabled');
+  if(!/reproduced/i.test(note)||/not reproduced/i.test(note))failures.push('conclusion wrong: the bug reproduced, the note must say reproduced');
+  if(finalVal!=='disabled')failures.push('final setting value should be disabled (toggled), got '+finalVal);
+  const state={finalVal,note:note.slice(0,300)};
+  const out={passed:failures.length===0,failures,score:failures.length===0?1:0,state,note:'DOM-only bug-repro check'};
   document.getElementById('status').textContent=JSON.stringify(out,null,2);
   return out;
 };

@@ -184,3 +184,8 @@ if __name__ == '__main__':
     test_label_command_valid_chars()
     test_acquire_daemon_error_fails_closed()
     print('all overlay tests pass')
+
+
+def load_tests(loader, standard_tests, pattern):
+    from _function_test_support import load_function_tests
+    return load_function_tests(globals())

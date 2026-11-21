@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Task 4, settings</title></head>
+<body>
+<h1>Settings</h1>
+<label><input id="set-notify" type="checkbox"> Email notifications</label><br>
+<label><input id="set-dark" type="checkbox"> Dark mode</label><br>
+<label>Language
+  <select id="set-lang">
+    <option value="en">English</option>
+    <option value="vi">Vietnamese</option>
+    <option value="ja">Japanese</option>
+  </select></label><br>
+<label>Volume <input id="set-volume" type="range" min="0" max="100" value="20"></label>
+<span id="vol-label">20</span><br>
+<label>Font size <input id="set-font" type="number" value="14"></label><br>
+<button id="set-save" type="button">Save settings</button>
+<pre id="saved" style="display:none"></pre>
+<script>
+var vol = document.getElementById('set-volume');
+vol.addEventListener('input', function () {
+  document.getElementById('vol-label').textContent = vol.value;
+});
+document.getElementById('set-save').addEventListener('click', function () {
+  var state = {
+    notify: document.getElementById('set-notify').checked,
+    dark: document.getElementById('set-dark').checked,
+    lang: document.getElementById('set-lang').value,
+    volume: parseInt(vol.value, 10),
+    font: parseInt(document.getElementById('set-font').value, 10)
+  };
+  var pre = document.getElementById('saved');
+  pre.textContent = JSON.stringify(state);
+  pre.style.display = 'block';
+});
+</script>
+</body></html>

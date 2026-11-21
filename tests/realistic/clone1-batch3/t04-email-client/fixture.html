@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Demo Mail</title>
+<style>
+  body { font-family: sans-serif; margin: 16px; display: flex; gap: 16px; }
+  #folders { width: 160px; }
+  #folders button { display: block; width: 100%; margin: 4px 0; text-align: left; }
+  #main { flex: 1; }
+  .msg { border: 1px solid #999; padding: 8px; margin: 6px 0; cursor: pointer; }
+  .msg.unread { background: #eef4ff; font-weight: bold; }
+  .msg .star { float: right; cursor: pointer; }
+  #reader { border: 1px solid #999; padding: 10px; margin-top: 10px; display: none; }
+  #compose { border: 1px solid #999; padding: 10px; margin-top: 10px; display: none; }
+  #compose input, #compose textarea { display: block; width: 95%; margin: 6px 0; }
+  #toast { color: green; font-weight: bold; }
+  #empty { display: none; color: #666; }
+</style>
+</head>
+<body>
+<div id="folders">
+  <h2>Folders</h2>
+  <button id="folder-inbox">Inbox (<span id="inbox-count">3</span>)</button>
+  <button id="folder-starred">Starred (<span id="starred-count">0</span>)</button>
+  <button id="folder-sent">Sent (<span id="sent-count">0</span>)</button>
+  <button id="folder-trash">Trash (<span id="trash-count">0</span>)</button>
+  <div>Unread: <span id="unread-count">2</span></div>
+  <button id="mark-all-read">Mark all read</button>
+  <button id="compose-btn">Compose</button>
+</div>
+<div id="main">
+  <h1 id="folder-title">Inbox</h1>
+  <input id="search" placeholder="Search messages">
+  <div id="empty">No messages match.</div>
+  <div id="list"></div>
+  <div id="reader">
+    <h3 id="reader-subject"></h3>
+    <div id="reader-meta"></div>
+    <p id="reader-body"></p>
+    <button id="reader-delete">Delete</button>
+    <button id="reader-back">Back to list</button>
+  </div>
+  <div id="compose">
+    <h3>Compose</h3>
+    <input id="to" placeholder="To">
+    <input id="subject" placeholder="Subject">
+    <textarea id="body" placeholder="Body"></textarea>
+    <button id="send-btn">Send</button>
+    <button id="compose-cancel">Cancel</button>
+  </div>
+  <div id="toast"></div>
+</div>
+<script>
+  const store = {
+    inbox: [
+      { id: 1, from: 'billing@example.org', subject: 'Your invoice for June', body: 'Invoice INV-1001 is attached. Total 42.00.', read: false, starred: false },
+      { id: 2, from: 'team@example.org', subject: 'Weekly sync notes', body: 'Notes from the sync: ship the demo on Friday.', read: false, starred: false },
+      { id: 3, from: 'alerts@example.org', subject: 'System maintenance Sunday', body: 'Maintenance window Sunday 02:00 to 04:00.', read: true, starred: false },
+    ],
+    sent: [],
+    trash: [],
+  };
+  let folder = 'inbox';
+  let openId = null;
+  const list = document.getElementById('list');
+
+  function visibleMessages() {
+    let msgs = folder === 'starred'
+      ? [...store.inbox, ...store.sent, ...store.trash].filter((m) => m.starred)
+      : store[folder] || [];
+    const q = document.getElementById('search').value.trim().toLowerCase();
+    if (q) {
+      msgs = msgs.filter((m) =>
+        (m.subject + ' ' + m.from + ' ' + m.body).toLowerCase().includes(q));
+    }
+    return msgs;
+  }
+  function refresh() {
+    document.getElementById('inbox-count').textContent = store.inbox.length;
+    document.getElementById('sent-count').textContent = store.sent.length;
+    document.getElementById('trash-count').textContent = store.trash.length;
+    const starred = [...store.inbox, ...store.sent, ...store.trash].filter((m) => m.starred).length;
+    document.getElementById('starred-count').textContent = starred;
+    const unread = store.inbox.filter((m) => !m.read).length;
+    document.getElementById('unread-count').textContent = unread;
+    document.getElementById('folder-title').textContent =
+      folder === 'inbox' ? 'Inbox' : folder === 'sent' ? 'Sent' : folder === 'trash' ? 'Trash' : 'Starred';
+    list.innerHTML = '';
+    const msgs = visibleMessages();
+    document.getElementById('empty').style.display = msgs.length === 0 ? 'block' : 'none';
+    msgs.forEach((m) => {
+      const div = document.createElement('div');
+      div.className = 'msg' + (m.read ? '' : ' unread');
+      div.dataset.id = m.id;
+      div.innerHTML = '<span class="star">' + (m.starred ? 'STARRED' : 'star') + '</span>' +
+        '<span class="subj"></span> - <span class="from"></span>';
+      div.querySelector('.subj').textContent = m.subject;
+      div.querySelector('.from').textContent = m.from;
+      div.querySelector('.star').addEventListener('click', (e) => {
+        e.stopPropagation();
+        m.starred = !m.starred;
+        refresh();
+      });
+      div.addEventListener('click', () => openMessage(m));
+      list.appendChild(div);
+    });
+  }
+  function openMessage(m) {
+    openId = m.id;
+    m.read = true;
+    document.getElementById('reader-subject').textContent = m.subject;
+    document.getElementById('reader-meta').textContent = 'From: ' + m.from;
+    document.getElementById('reader-body').textContent = m.body;
+    document.getElementById('reader').style.display = 'block';
+    refresh();
+  }
+  function setFolder(name) {
+    folder = name;
+    document.getElementById('reader').style.display = 'none';
+    document.getElementById('compose').style.display = 'none';
+    refresh();
+  }
+  document.getElementById('folder-inbox').addEventListener('click', () => setFolder('inbox'));
+  document.getElementById('folder-starred').addEventListener('click', () => setFolder('starred'));
+  document.getElementById('folder-sent').addEventListener('click', () => setFolder('sent'));
+  document.getElementById('folder-trash').addEventListener('click', () => setFolder('trash'));
+  document.getElementById('search').addEventListener('input', refresh);
+  document.getElementById('mark-all-read').addEventListener('click', () => {
+    store.inbox.forEach((m) => { m.read = true; });
+    refresh();
+  });
+  document.getElementById('reader-back').addEventListener('click', () => {
+    document.getElementById('reader').style.display = 'none';
+  });
+  document.getElementById('reader-delete').addEventListener('click', () => {
+    const all = [...store.inbox, ...store.sent];
+    const idx = all.findIndex((m) => m.id === openId);
+    if (idx === -1) return;
+    const [m] = all.splice(idx, 1);
+    if (store.inbox.includes(m)) store.inbox.splice(store.inbox.indexOf(m), 1);
+    else store.sent.splice(store.sent.indexOf(m), 1);
+    store.trash.push(m);
+    document.getElementById('reader').style.display = 'none';
+    refresh();
+  });
+  document.getElementById('compose-btn').addEventListener('click', () => {
+    document.getElementById('compose').style.display = 'block';
+  });
+  document.getElementById('compose-cancel').addEventListener('click', () => {
+    document.getElementById('compose').style.display = 'none';
+  });
+  document.getElementById('send-btn').addEventListener('click', () => {
+    const to = document.getElementById('to').value.trim();
+    const subject = document.getElementById('subject').value.trim();
+    const body = document.getElementById('body').value.trim();
+    if (!to || !subject) {
+      document.getElementById('toast').textContent = 'To and subject are required.';
+      return;
+    }
+    store.sent.push({ id: Date.now(), from: 'me@example.org', subject, body, read: true, starred: false, to });
+    document.getElementById('toast').textContent = 'Message sent.';
+    document.getElementById('compose').style.display = 'none';
+    refresh();
+  });
+  refresh();
+</script>
+</body>
+</html>

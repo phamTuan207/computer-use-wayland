@@ -1,0 +1,1842 @@
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index 6948f65..76ef613 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -104,5 +104,13 @@ jobs:
+       - name: Checkout
+         uses: actions/checkout@v4
+ 
++      - name: Check the build channel
++        if: github.base_ref == 'main' || github.ref_name == 'main'
++        run: |
++          if ! grep -Eq 'BUILT_FOR_HYPRLAND_GIT *= *true' src/BuildChannel.hpp; then
++            echo "::error::main follows hyprland-git: BUILT_FOR_HYPRLAND_GIT must stay true in src/BuildChannel.hpp."
++            exit 1
++          fi
++
+       - name: Build plugin
+         run: make
+diff --git a/.github/workflows/hyprland-update.yml b/.github/workflows/hyprland-update.yml
+index 6909a34..10a5366 100644
+--- a/.github/workflows/hyprland-update.yml
++++ b/.github/workflows/hyprland-update.yml
+@@ -109,7 +109,7 @@ jobs:
+           Hyprland [v${VERSION}](https://github.com/hyprwm/Hyprland/releases/tag/v${VERSION}) is out and \`${BRANCH}\` does not exist yet.
+ 
+           1. Pick the \`main\` commit that builds against Hyprland ${VERSION} (\`main\` follows hyprland-git).
+-          2. Create \`${BRANCH}\` from it, set \`.hyprland-version\` to \`${VERSION}\` with a \`build:\` commit, and push: the release workflow publishes the build and pins it for hyprpm.
++          2. Create \`${BRANCH}\` from it. In one \`build:\` commit, set \`.hyprland-version\` to \`${VERSION}\` and \`BUILT_FOR_HYPRLAND_GIT\` to \`false\` in \`src/BuildChannel.hpp\` (the release refuses to run otherwise), and push: the release workflow publishes the build and pins it for hyprpm.
+           3. From then on, fixes and features target \`${BRANCH}\`; the previous line is frozen.
+           EOF
+           )"
+diff --git a/.github/workflows/release.yml b/.github/workflows/release.yml
+index 51edda4..72b38c9 100644
+--- a/.github/workflows/release.yml
++++ b/.github/workflows/release.yml
+@@ -141,9 +141,25 @@ jobs:
+             exit 1
+           fi
+ 
++          # Without a release tag in the headers, the binary can't tell which
++          # Hyprland it was built for and skips its version check.
++          if ! grep -Eq '^#define GIT_TAG +"v[0-9]+\.[0-9]+\.[0-9]+"' /usr/include/hyprland/src/version.h; then
++            echo "::error::The Hyprland headers carry no release tag."
++            exit 1
++          fi
++
+           echo "version=${HYPRLAND_VERSION}" >> "$GITHUB_OUTPUT"
+           echo "Built against Hyprland ${HYPRLAND_VERSION}"
+ 
++      - name: Check the build channel
++        if: steps.version-bump.outputs.skip != 'true'
++        run: |
++          # Left true, a release loads only on the Hyprland commit it was built against.
++          if grep -Eq 'BUILT_FOR_HYPRLAND_GIT *= *true' src/BuildChannel.hpp 2>/dev/null; then
++            echo "::error::${GITHUB_REF_NAME} is a stable line: set BUILT_FOR_HYPRLAND_GIT to false in src/BuildChannel.hpp."
++            exit 1
++          fi
++
+       - name: Build plugin
+         if: steps.version-bump.outputs.skip != 'true'
+         env:
+@@ -361,8 +377,15 @@ jobs:
+             git checkout -f -B forward-merge "$STABLE"
+             git clean -fdq
+             PROBLEM="it conflicts with main"
+-          elif [[ "$MAIN_BUILDS" == true ]] && ! make; then
+-            PROBLEM="main no longer builds against hyprland-git after it"
++          else
++            # The stable line's BUILT_FOR_HYPRLAND_GIT = false must not reach main.
++            if git cat-file -e HEAD^1:src/BuildChannel.hpp 2>/dev/null && ! git diff --quiet HEAD^1 HEAD -- src/BuildChannel.hpp; then
++              git checkout HEAD^1 -- src/BuildChannel.hpp
++              git commit --amend --no-edit
++            fi
++            if [[ "$MAIN_BUILDS" == true ]] && ! make; then
++              PROBLEM="main no longer builds against hyprland-git after it"
++            fi
+           fi
+ 
+           if [[ -z "$PROBLEM" ]]; then
+diff --git a/.hyprland-version b/.hyprland-version
+index 4425c37..46448c7 100644
+--- a/.hyprland-version
++++ b/.hyprland-version
+@@ -1 +1 @@
+-0.56.2
++0.57.0
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index c3f753c..2423cac 100644
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -1,4 +1,136 @@
+ 
++## [v1.1.1](https://github.com/Hyprnux/hyprglass/compare/v1.1.0...v1.1.1) - 2026-11-03
++
++### Bug Fixes
++
++* glass refreshes over video and other GPU-rendered backgrounds ([#102](https://github.com/Hyprnux/hyprglass/issues/102))
++
++
++## [v1.1.0](https://github.com/Hyprnux/hyprglass/compare/v1.0.0...v1.1.0) - 2026-10-30
++
++### Bug Fixes
++
++* glass no longer keeps a stale backdrop after a window behind it opens or closes ([#98](https://github.com/Hyprnux/hyprglass/issues/98))
++* rotating or rescaling a monitor at runtime resamples the glass on it
++* a glass item that moves inside its window no longer keeps its old background
++* glassed layers and items no longer keep the monitor redrawing under an animated blur variant
++* glass lands in the right place on rotated and flipped monitors under Hyprland 0.57 ([#99](https://github.com/Hyprnux/hyprglass/issues/99))
++
++### Chores
++
++* **release:** v1.1.0 [skip ci]
++
++### Code Refactoring
++
++* the config is Lua-native: table presets, hyprglass.layer() namespaces, boolean switches
++* hyprglass drops the hyprlang code paths that Hyprland 0.57 no longer has
++
++### Documentation
++
++* the README writes every option as hg.config() takes it, with windows and debug examples
++
++### Features
++
++* hyprglass.layer("*") keeps glass on every layer while other calls tune one namespace
++
++
++## [v1.0.0](https://github.com/Hyprnux/hyprglass/compare/v0.11.0...v1.0.0) - 2026-10-30
++
++### Bug Fixes
++
++* hyprglass works on Hyprland 0.57 ([#100](https://github.com/Hyprnux/hyprglass/issues/100))
++* a build from main pauses instead of loading on a different Hyprland commit
++* glass renders correctly with hyprland-git's new renderer
++* use explicit instead of global render context
++
++### Build System
++
++* hyprglass targets Hyprland 0.57 and its Lua-only config ([#100](https://github.com/Hyprnux/hyprglass/issues/100))
++* v0.11.0 features build against hyprland-git
++* hyprglass builds against the latest hyprland-git
++* support hyprland-git passing the workspace presentable to window decorations
++* support hyprland-git (view, workspace and hyprctl API refactors)
++
++### Chores
++
++* **release:** v1.0.0 [skip ci]
++* **release:** pin hyprland 0.56.2 to v0.11.0 [skip ci]
++* **release:** pin hyprland 0.56.2 to v0.10.0 [skip ci]
++* **release:** pin hyprland 0.56.2 to v0.9.1 [skip ci]
++* **release:** pin hyprland 0.56.2 to v0.9.0 [skip ci]
++
++### Documentation
++
++* the README documents Hyprland 0.57's Lua-only config ([#100](https://github.com/Hyprnux/hyprglass/issues/100))
++
++
++## [v0.11.0](https://github.com/Hyprnux/hyprglass/compare/v0.10.0...v0.11.0) - 2026-10-19
++
++### Bug Fixes
++
++* glass edges and refraction of app-drawn glass shapes follow the shape
++* a glass shader that fails to compile no longer stalls every frame (spotted by [@Eddie175](https://github.com/Eddie175))
++* layer glass no longer shifts for a frame when its blur region changes (spotted by [@Eddie175](https://github.com/Eddie175))
++* glass no longer stays stale after a quick burst of changes (spotted by [@Eddie175](https://github.com/Eddie175))
++* no stray glass from bars or glass layers over the lock screen (spotted by [@Eddie175](https://github.com/Eddie175))
++
++### Chores
++
++* **release:** v0.11.0 [skip ci]
++
++### Documentation
++
++* a user preset named like a built-in one extends it instead of replacing it
++
++### Features
++
++* layer glass can follow each shape an app draws (idea from [@Eddie175](https://github.com/Eddie175)'s True Glass)
++* glass frosts only where other windows are behind it (idea from [@Eddie175](https://github.com/Eddie175)'s True Glass)
++* bars and panels can have their own rounded glass shape (idea from [@Eddie175](https://github.com/Eddie175)'s True Glass)
++* optional light along the active window's glass edge (idea from [@Eddie175](https://github.com/Eddie175)'s True Glass)
++* lens-like glass edges that can mirror their surroundings (idea from [@Eddie175](https://github.com/Eddie175)'s True Glass)
++* set the glass edge thickness in pixels ([#92](https://github.com/Hyprnux/hyprglass/issues/92))
++
++### Performance Improvements
++
++* glass effects that are switched off cost nothing
++
++
++## [v0.10.0](https://github.com/Hyprnux/hyprglass/compare/v0.9.1...v0.10.0) - 2026-10-09
++
++### Bug Fixes
++
++* faint parts of bars and panels, like shadows, no longer disappear
++* steady, even grain on every window and theme ([#67](https://github.com/Hyprnux/hyprglass/issues/67))
++* window glass works even with shadows turned off
++* faster Hyprland startup with hyprglass loaded ([#88](https://github.com/Hyprnux/hyprglass/issues/88))
++* loading hyprglass twice no longer makes the two copies clash
++* glass works on rotated and flipped screens
++
++### CI/CD
++
++* releases are only built against a released Hyprland version
++
++### Chores
++
++* **release:** v0.10.0 [skip ci]
++
++### Documentation
++
++* what to do when Hyprland hangs at startup ([#88](https://github.com/Hyprnux/hyprglass/issues/88))
++
++### Features
++
++* set the layer mask threshold once for all layers ([#52](https://github.com/Hyprnux/hyprglass/issues/52))
++* optional grain on the glass for a frosted look ([#67](https://github.com/Hyprnux/hyprglass/issues/67))
++* soft glass edges can be set per layer ([#58](https://github.com/Hyprnux/hyprglass/issues/58))
++* glass follows rounded shapes requested by apps more closely
++* layer glass follows the soft edges of rounded panels ([#58](https://github.com/Hyprnux/hyprglass/issues/58))
++* x-ray can be set per preset and hides every window behind the glass ([#68](https://github.com/Hyprnux/hyprglass/issues/68))
++* add xray option to hide windows under the glass ([#68](https://github.com/Hyprnux/hyprglass/issues/68))
++* hyprglass pauses instead of crashing on a Hyprland it was not built for
++
++
+ ## [v0.9.1](https://github.com/Hyprnux/hyprglass/compare/v0.9.0...v0.9.1) - 2026-10-03
+ 
+ ### Bug Fixes
+@@ -7,6 +139,10 @@
+ * hyprctl hyprglass status tells whether glass is actually drawn, not just loaded
+ * hyprctl plugin list shows the installed hyprglass version instead of 1.0.0
+ 
++### Chores
++
++* **release:** v0.9.1 [skip ci]
++
+ ### Documentation
+ 
+ * give option ranges as typical values and describe vibrancy_darkness as the shader applies it
+diff --git a/Makefile b/Makefile
+index d67eed1..9444e09 100644
+--- a/Makefile
++++ b/Makefile
+@@ -21,12 +21,13 @@ HYPRGLASS_VERSION := dev
+ endif
+ CXXFLAGS += -DHYPRGLASS_VERSION='"$(HYPRGLASS_VERSION)"'
+ 
+-ifeq ($(basename $(CXX)),g++)
++# Keeps two loaded copies from sharing their globals. GCC only, whatever CXX calls it: clang has no such flag.
++ifneq ($(shell $(CXX) --version 2>/dev/null | grep -c 'Free Software Foundation'),0)
+ 	CXXFLAGS += --no-gnu-unique
+ endif
+ 
+ TARGET = hyprglass.so
+-SOURCES = src/main.cpp src/GlassDecoration.cpp src/GlassPassElement.cpp src/GlassRenderer.cpp src/GlassLayerSurface.cpp src/GlassLayerPassElement.cpp src/GlassLayerCompositeElement.cpp src/BackgroundDamageObserver.cpp src/PluginConfig.cpp src/ShaderManager.cpp src/Diagnostics.cpp src/GlassSubsurfaceState.cpp src/GlassSubsurfacePassElement.cpp src/GlassSubsurfaceCompositeElement.cpp src/ItemHints.cpp
++SOURCES = src/main.cpp src/LoadGuard.cpp src/GlassDecoration.cpp src/GlassPassElement.cpp src/GlassRenderer.cpp src/GlassLayerSurface.cpp src/GlassLayerPassElement.cpp src/GlassLayerCompositeElement.cpp src/BackgroundDamageObserver.cpp src/PluginConfig.cpp src/ShaderManager.cpp src/Diagnostics.cpp src/GlassSubsurfaceState.cpp src/GlassSubsurfacePassElement.cpp src/GlassSubsurfaceCompositeElement.cpp src/ItemHints.cpp src/GlassSnapshotElement.cpp src/Frost.cpp src/Contour.cpp
+ OBJ = $(SOURCES:.cpp=.o)
+ HEADERS = $(wildcard src/*.hpp)
+ 
+diff --git a/README.md b/README.md
+index d8d21cb..dc73681 100644
+--- a/README.md
++++ b/README.md
+@@ -21,19 +21,9 @@ hyprpm enable hyprglass
+ 
+ On a Hyprland release, hyprpm installs the hyprglass release made for it. On hyprland-git, it builds `main`, which follows Hyprland's development branch.
+ 
+-If your distribution's Hyprland isn't recognized as a release and the build fails, use the stable branch of your Hyprland version:
+-
+-```bash
+-hyprpm remove https://github.com/hyprnux/hyprglass
+-hyprpm add https://github.com/hyprnux/hyprglass origin/hyprland-0.56
+-hyprpm enable hyprglass
+-```
+-
+-hyprpm then stays on that branch through `hyprpm update`. Repeat this with the new branch when you upgrade Hyprland to its next minor version.
+-
+ ### Pre-built release
+ 
+-Grab `hyprglass.so` from [Releases](https://github.com/hyprnux/hyprglass/releases/latest). Each release targets a specific Hyprland API version — check the release notes to confirm it matches yours.
++Grab `hyprglass.so` from [Releases](https://github.com/hyprnux/hyprglass/releases/latest). Each release targets a specific Hyprland API version — check the release notes to confirm it matches yours. If it doesn't match, hyprglass stays paused instead of crashing Hyprland (see [Troubleshooting](#troubleshooting)).
+ 
+ ```bash
+ hyprctl plugin load /path/to/hyprglass.so
+@@ -41,22 +31,22 @@ hyprctl plugin load /path/to/hyprglass.so
+ 
+ Or persist it in your config:
+ 
+-```ini
+-plugin = /path/to/hyprglass.so
++```lua
++hl.plugin.load("/path/to/hyprglass.so")
+ ```
+ 
+ ### Manual build
+ 
+ ```bash
+ git clone https://github.com/hyprnux/hyprglass && cd hyprglass
+-git checkout hyprland-0.56   # branch of your Hyprland version; stay on main for hyprland-git
++git checkout hyprland-0.57   # branch of your Hyprland version; stay on main for hyprland-git
+ make
+ hyprctl plugin load $(pwd)/hyprglass.so
+ ```
+ 
+ ## Configuration
+ 
+-### Lua config
++### Config
+ 
+ The plugin must be loaded before configuring it. Wrap everything in a guard:
+ 
+@@ -102,56 +92,24 @@ end
+ **Checking the config**
+ 
+ ```sh
+-hyprctl configerrors                                # unknown options, with the file and line of the hg.config call
++hyprctl configerrors                                # unknown options and wrong values in hg.config, hg.preset and hg.layer
+ hyprctl getoption plugin:hyprglass:layers:enabled   # "set: true" once your value is applied
+ ```
+ 
+-### Legacy .conf config
+-
+-_Deprecated as of Hyprland 0.55, but still supported._
+-
+-```ini
+-plugin:hyprglass {
+-    default_theme = dark
+-    default_preset = clear
+-    tint_color = 0x8899aa22
+-
+-    brightness = 0.9
+-    dark:brightness = 0.82
+-    light:adaptive_boost = 0.5
+-
+-    preset = name:clear, glass_opacity:0.8, blur_strength:1.5
+-    preset = name:clear:dark, brightness:0.7
+-    preset = name:clear:light, brightness:1.2
+-
+-    preset = name:contrasted, inherits:high_contrast, contrast:1.2, adaptive_dim:1.5
+-    preset = name:contrasted:dark, tint_color:0x02142aa9
+-
+-    layers {
+-        enabled = 1
+-        namespaces = waybar, swaync, quickshell:bezel
+-        exclude_namespaces = debug-panel
+-        preset = subtle
+-        namespace_presets = quickshell:bezel:ui
+-        namespace_mask_thresholds = waybar=0.05, quickshell:bezel=0.3
+-    }
+-}
+-```
+-
+ ### Global settings
+ 
+ | Option | Type | Default | Description |
+ |---|---|---|---|
+-| `enabled` | bool | `true` (`1` in .conf) | Enable/disable the effect globally. Per-window tags override this. |
+-| `manage_window_blur` | bool | `true` (`1` in .conf) | Automatically set the `noblur` property on glassed windows. Glass replaces Hyprland's blur; without `noblur`, Hyprland's cached-blur optimization (`blur:new_optimizations`) hides the glass on static windows. Set to `0` to manage `windowrule = noblur` yourself. |
+-| `skip_opaque_windows` | bool | `true` (`1` in .conf) | Skip glass under an opaque window — it would be invisible anyway, so skipping it saves GPU. Set to `0` to force glass everywhere. Windows using `self_sample` are never skipped, since their glass shows their own content. |
+-| `blur_fold` | bool | `true` (`1` in .conf) | Fewer blur passes with an identical look. Set to `0` to always run `blur_iterations` passes at the configured radius. |
++| `enabled` | bool | `true` | Enable/disable the effect globally. Per-window tags override this. |
++| `manage_window_blur` | bool | `true` | Automatically set the `no_blur` property on glassed windows. Glass replaces Hyprland's blur; without `no_blur`, Hyprland's cached-blur optimization (`decoration.blur.new_optimizations`) hides the glass on static windows. Set to `false` to set the `no_blur` window rule yourself (`hl.window_rule({ match = { class = "kitty" }, no_blur = true })`). |
++| `skip_opaque_windows` | bool | `true` | Skip glass under an opaque window — it would be invisible anyway, so skipping it saves GPU. Set to `false` to force glass everywhere. Windows using `self_sample` are never skipped, since their glass shows their own content. |
++| `blur_fold` | bool | `true` | Fewer blur passes with an identical look. Set to `false` to always run `blur_iterations` passes at the configured radius. |
+ | `default_theme` | string | `dark` | Default theme: `dark` or `light` |
+ | `default_preset` | string | `default` | Default preset name |
+ 
+ ### Overridable settings
+ 
+-Set globally, per theme (`dark:` / `light:` prefix in .conf, or `dark = {}` / `light = {}` table in Lua), or in a preset.
++Set globally, per theme (`dark = {}` / `light = {}` table), or in a preset.
+ 
+ Settings resolve through: **preset chain** (theme variant, shared, inherited) then **theme override** then **global value** then **hardcoded default**.
+ 
+@@ -159,6 +117,7 @@ Settings resolve through: **preset chain** (theme variant, shared, inherited) th
+ |---|---|---|---|---|---|
+ | `blur_strength` | float | `2.0` | — | — | Blur radius scale (`value * 12.0` px) |
+ | `blur_iterations` | int | `3` | — | — | Gaussian blur passes (1-5) |
++| `noise_strength` | float | `0.0` | — | — | Frosted grain over the glass, see [Frosted grain](#frosted-grain) (0.0-1.0) |
+ | `refraction_strength` | float | `0.6` | — | — | Edge refraction intensity (0.0-1.0) |
+ | `refraction_flow` | float | `0.0` | — | — | Where the edge distortion pulls: 0 toward the window center, 1 along the edges (0.0-1.0) |
+ | `refraction_spread` | float | `1.0` | — | — | How deep the distortion reaches: 1 across the whole window, 0 only a rim with a flat center (0.0-1.0) |
+@@ -176,9 +135,17 @@ Settings resolve through: **preset chain** (theme variant, shared, inherited) th
+ | `bevel_shadow` | float | `0.0` | — | — | Darkening of the bevel line on the side away from the light (0.0-1.0) |
+ | `glass_opacity` | float | `1.0` | — | — | Overall glass opacity (0.0-1.0) |
+ | `edge_thickness` | float | `0.06` | — | — | Bezel width, fraction of smallest dimension (0.0-0.15) |
++| `edge_thickness_px` | float | `0.0` | — | — | Bezel width in logical pixels, the same on every window size and monitor scale. Above `0` it replaces `edge_thickness`, see [Edge thickness in pixels](#edge-thickness-in-pixels) |
++| `edge_height` | float | `0.0` | — | — | Turns the edge into a lens: a narrow, crisp bend with a flat center. Height of the glass edge in logical pixels, `0` keeps the soft edge, see [Lens edge](#lens-edge) (0-60) |
++| `fresnel_reflection` | float | `0.0` | — | — | The lens edge mirrors what is around the glass: 0 none, 1 a mirror. Needs `edge_height` (0.0-1.0) |
+ | `tint_color` | color | `0x8899aa22` | — | — | Glass tint RRGGBBAA hex. Alpha = tint strength |
+ | `lens_distortion` | float | `0.5` | — | — | Center dome magnification (0.0-1.0) |
+ | `self_sample` | float | `0.0` | — | — | Mixes the window's own content into the glass behind it (0.0-1.0). Windows only |
++| `xray` | int | `0` | — | — | `1` hides the windows under the glass: only the wallpaper shows through, `0` off. `true` and `false` work too. See [X-ray](#x-ray) |
++| `focus_light` | float | `0.0` | — | — | Light along the glass edge of the active window, `0` off. See [Focus light](#focus-light) (0.0-1.0). Windows only |
++| `focus_light_color` | color | `0xffffff00` | — | — | Color of the focus light; alpha sets how much it replaces white (0xRRGGBBAA) |
++| `frost` | float | `0.0` | — | — | The glass blurs further where other windows are behind it and stays clear over the wallpaper, `0` off. See [Frost](#frost) (0.0-1.0). Windows only |
++| `frost_blur` | float | `3.0` | — | — | Extra blur of the frost, in `blur_strength` units on top of it. Needs `frost` (0.5-3, at most 10: past about 3 the blur stops getting wider) |
+ | `brightness` | float | — | `0.82` | `1.12` | Brightness multiplier |
+ | `contrast` | float | — | `0.90` | `0.92` | Contrast around midpoint |
+ | `saturation` | float | — | `0.80` | `0.85` | Desaturation (0 = grayscale, 1 = full) |
+@@ -189,37 +156,159 @@ Settings resolve through: **preset chain** (theme variant, shared, inherited) th
+ 
+ `—` in Global Default = falls through to per-theme default. `—` in Dark/Light = inherits global value.
+ 
+-Ranges in parentheses are the usual span, not limits: only `blur_iterations` and `self_sample` are clamped, and the built-in presets go past some of them (`glass` uses `refraction_strength = 8.0`).
++Ranges in parentheses are the usual span, not limits: only `blur_iterations`, `self_sample`, `focus_light`, `frost`, `fresnel_reflection`, `edge_thickness_px` (at most half the smaller side) and `edge_height` (at most 500) are clamped, and the built-in presets go past some of them (`glass` uses `refraction_strength = 8.0`).
+ 
+ #### Self sampling
+ 
+ `self_sample` needs a translucent window: its content is composited over the sampled desktop.
+ 
+ - At `1.0` the pane shows the window's own pixels. Where the client draws translucent ones (terminal transparency), the desktop still shows through
+-- A window made see-through by `windowrule = opacity` draws opaque pixels, so its pane is entirely its own content
++- A window made see-through by an `opacity` window rule draws opaque pixels, so its pane is entirely its own content
+ - Raise `blur_strength` with it, or the window's own text stays readable in its glass
+ - A window showing the screen (screen-share preview, OBS) sees a one-frame-old copy of itself
+-- Transformed monitors (rotated or flipped) and layer surfaces ignore it
++- Layer surfaces ignore it
+ 
+ **Cost:** a self-sampling window re-blurs its whole pane whenever its content changes, so busy windows cost more than static ones.
+ 
+ **On the fly:**
+ ```bash
+-hyprctl keyword plugin:hyprglass:self_sample 1.0
++hyprctl eval 'hl.plugin.hyprglass.config({ self_sample = 1.0 })'
+ ```
+ 
+-**Lua:**
+ ```lua
+ hg.config({ self_sample = 0.6 })
+ hg.preset("aura", { inherits = "glass", self_sample = 1.0, blur_strength = 2.5 })
+ ```
+ 
+-**Legacy .conf:**
+-```ini
+-self_sample = 0.6
+-preset = name:aura, inherits:glass, self_sample:1.0, blur_strength:2.5
++#### X-ray
++
++With `xray = true` the glass shows the wallpaper (and background/bottom layers) and never the windows under it, however light the blur. Same idea as Hyprland's `decoration.blur.xray`. Turn it on everywhere, or only where a preset applies:
++
++**On the fly:**
++```bash
++hyprctl eval 'hl.plugin.hyprglass.config({ xray = true })'
+ ```
+ 
++```lua
++hg.config({ xray = true })                                   -- every glass
++hg.preset("pane", { inherits = "glass", xray = true })       -- or only this preset
++hl.window_rule({ match = { class = "foot" }, tag = "+hyprglass_preset_pane" })
++hg.layer("waybar", { preset = "pane" })
++```
++
++- Background and bottom layers never use it: they already show only what is under them
++- No effect with `render.xp_mode`, which draws no wallpaper
++- Layer glass samples the live frame while the session is locked
++- Glass over a fullscreen window or on a special workspace shows the wallpaper without the fullscreen window or the special workspace dim
++- Subsurface item glass ignores it
++
++**Cost:** one monitor-sized framebuffer per monitor showing x-ray glass (twice that with HDR), freed once the monitor has drawn 600 frames with no x-ray glass on it (about 10 s of activity at 60 Hz).
++
++#### Frosted grain
++
++`noise_strength` adds a fine, still grain to the glass so the blur reads as frosted glass: `0` none, `1` strong. `0.12` is about as strong as Hyprland's default `decoration.blur.noise`.
++
++**On the fly:**
++```bash
++hyprctl eval 'hl.plugin.hyprglass.config({ noise_strength = 0.3 })'
++```
++
++```lua
++hg.config({ noise_strength = 0.3, light = { noise_strength = 0.15 } })
++hg.preset("frosted", { inherits = "subtle", noise_strength = 0.5 })
++```
++
++- The built-in `clear` preset turns the grain off, as it does the blur
++
++#### Edge thickness in pixels
++
++`edge_thickness` is a fraction of the window's smaller side, so big windows get a wide edge and small ones a thin edge. `edge_thickness_px` gives every window the same edge width, in logical pixels. `0` (default) keeps `edge_thickness`.
++
++**On the fly:**
++```bash
++hyprctl eval 'hl.plugin.hyprglass.config({ edge_thickness_px = 12 })'
++```
++
++```lua
++hg.config({ edge_thickness_px = 12 })
++hg.preset("relative", { inherits = "glass", edge_thickness_px = 0 })   -- back to edge_thickness
++```
++
++- Applies to windows, layers and subsurface items
++- Never wider than half the smaller side of the glass: the window, the layer, or a subsurface item's shape
++
++#### Lens edge
++
++`edge_height` turns the soft edge into a lens, like the rim of a thick glass pane: a narrow, crisp bend with a perfectly flat center. It is the height of the glass at the edge, in logical pixels: higher bends more. `0` (default) keeps the soft edge. The lens is as wide as the edge (`edge_thickness`, or `edge_thickness_px` when set).
++
++`fresnel_reflection` makes the lens edge mirror what is around the glass, most where the edge is steepest: `0` none, `1` a mirror. It needs `edge_height` above `0`.
++
++**On the fly:**
++```bash
++hyprctl eval 'hl.plugin.hyprglass.config({ edge_height = 30, fresnel_reflection = 0.4 })'
++```
++
++```lua
++hg.config({ edge_height = 30, edge_thickness_px = 20, fresnel_reflection = 0.4 })
++hg.preset("lens", { inherits = "clear", edge_height = 30, edge_thickness_px = 20 })
++```
++
++- Shows best on clear or lightly blurred glass over busy content (text, other windows); strong blur hides it
++- `refraction_strength` sets how much it bends (`0.6` bends like real glass) and `chromatic_aberration` its rainbow, which shows only where the edge is steep. `refraction_flow` and `refraction_spread` do not apply to it
++- A narrow edge looks best: try `edge_thickness_px` 16-24 with `edge_height` 20-40
++- Square and tight corners bend less than the straight edges
++- Applies to windows, layers and subsurface items
++
++**Cost:** none while `edge_height` is `0`. Above `0`, a little extra GPU work on the edge only.
++
++#### Focus light
++
++`focus_light` lights the glass edge of the active window all the way round: a bright line just inside the edge over a soft sheen, brightest on the side the bevel light comes from (`bevel_angle`). `0` (default) turns it off. When focus moves, the light fades over to the new window.
++
++**On the fly:**
++```bash
++hyprctl eval 'hl.plugin.hyprglass.config({ focus_light = 0.8, focus_light_color = 0x66b3ffff })'
++```
++
++```lua
++hg.config({ focus_light = 0.8, focus_light_color = 0x66b3ffff })
++hg.preset("terminal", { inherits = "clear", focus_light = 1.0 })
++```
++
++- Visible through translucent windows only: the glass sits under the window
++- With `general.border_size = 0` it can replace Hyprland's border
++- Windows only: not on layers or subsurface items, and not on fullscreen windows
++- With `animations.enabled = false` it switches without a fade
++
++**Cost:** none while `focus_light` is `0`. Above `0`, a little extra GPU work on the active window only. When focus moves, a few redrawn frames and one extra refresh of the glass around the two windows. Nothing is redrawn while focus stays put.
++
++#### Frost
++
++`frost` blurs the glass further where other windows are behind it, and leaves it clear over the wallpaper. A floating terminal stays crisp on an empty desktop and turns into frosted glass when it slides over a browser, so the text behind never fights the text in front. `0` (default) turns it off.
++
++It is a low `blur_strength` that makes it worth it: with the default blur the glass is already frosted everywhere. Pair `frost` with a clear look, like the `clear` preset.
++
++**On the fly:**
++```bash
++hyprctl eval 'hl.plugin.hyprglass.config({ frost = 1.0, frost_blur = 2.0 })'
++```
++
++```lua
++hg.config({ frost = 1.0, frost_blur = 2.0 })
++hg.preset("terminal", { inherits = "clear", frost = 1.0 })
++```
++
++- `frost` is how frosted the glass gets once windows cover it: `0.5` is half way between clear and fully frosted
++- `frost_blur` is the extra blur, in the same unit as `blur_strength`, on top of it
++- The glass frosts once windows behind it cover about 4% of it and is fully frosted from about 45%, fading over a fraction of a second
++- Only windows below the glass count: windows above it, and the wallpaper, do not
++- Tiled windows rarely overlap, so it mostly shows on floating windows and while windows slide
++- Windows only: layers and subsurface items ignore it, and so does a fullscreen window
++- Off with `xray = true`, which never shows windows behind the glass
++- With `animations.enabled = false` it switches without a fade
++
++**Cost:** none while `frost` is `0`, and none while the glass is clear over the wallpaper. While it is frosted, a little extra GPU work and a few MB of memory per glass window (freed once it is clear again), plus a few redrawn frames while it fades.
++
+ ### Layer surfaces
+ 
+ The glass effect can be applied to layer surfaces (bars, docks, widgets). **Disabled by default.**
+@@ -228,48 +317,88 @@ Where the glass goes on a layer:
+ - Apps that request blur through the `ext-background-effect-v1` Wayland protocol get glass exactly where they ask for it
+ - Other layers get glass wherever their content is visible (alpha above `mask_threshold`), so partially transparent content (down to ~0.004 opacity) **triggers** the glass effect
+ 
+-`mask_mode` forces one behaviour: `auto` (default), `region` (only where the app requests blur; other layers get no glass) or `alpha` (visible content only).
++`mask_mode` forces one behaviour: `auto` (default), `region` (only where the app requests blur; other layers get no glass), `alpha` (visible content only) or `contour` (visible content, with the edge following the shapes the app draws, see below).
+ 
+-**Caveat:** Layer shadows count as visible content. Use `mask_threshold` to set an alpha cutoff higher than your shadow opacity.
++**Caveat:** Layer shadows count as visible content. Use `mask_threshold` to set an alpha cutoff higher than your shadow opacity. Set it once for every layer with `layers.mask_threshold`; a per-layer value wins.
+ 
+-#### Lua config
++**Soft edges:** `mask_feather` fades the glass in over that much alpha above `mask_threshold`, so antialiased rounded corners blend instead of stepping. Content fainter than `mask_threshold + mask_feather` then gets lighter glass: keep `0` (default) for near-transparent bars. Only applies where glass follows visible content, not to the region an app requests.
++
++**Contour:** with `mask_mode = "contour"` every shape the app draws gets its own edge, bend and highlights, instead of the layer's rectangle getting them: a stack of notifications, a card in a full-screen overlay, a floating pill. The glass goes where the content is visible, like `alpha`, so `mask_threshold` is the cutoff of the outline: set it above the opacity of the app's shadows (`0.1` to `0.3`) so a shadow does not count as part of the shape. A full-width bar looks the same as with `alpha`.
++
++```lua
++hg.config({ layers = { enabled = true, mask_threshold = 0.15 } })
++hg.layer("swaync", { mask_mode = "contour" })
++hg.layer("quickshell:notifications", { mask_mode = "contour" })
++```
++
++- `edge_thickness` is a fraction of the layer's shorter side, at most 160 px, here (a card in a screen-sized layer gets a card's edge); `edge_thickness_px` sets an exact width
++- `mask_feather` still softens the cut. `shape`, `refraction_flow` and `lens_distortion` do not apply
++- The outline follows the app when it redraws, at most 30 times a second
++- A layer behind an opaque window keeps the `alpha` look until it has been redrawn in full once
++- A GPU that cannot render it falls back to `alpha`, with a notification
++
++**Cost:** none for layers that do not use it. For a layer that does, one extra texture read per glass pixel, and a few short GPU passes and a few MB of memory while a contour layer exists (shared work buffers included), freed when the last one closes or stops using `contour`. `hyprctl hyprglass stats` counts the rebuilds (`contour_build`).
++
++**Fixed shape:** `shape` gives a layer's glass its own rounded box, so a floating bar or a card inside a larger layer gets its own edge, bend and highlights instead of those of the whole layer. `inset` trims the layer's edges (one value, or top, right, bottom, left) and `radius` rounds the corners, `-1` for a pill; both in logical px (up to 16384), and a negative inset reaches past that edge. Content outside the shape is still drawn, without glass. Inside it, `mask_mode` still decides where the glass goes: set the layer's `mask_threshold` to `0` to fill the whole shape.
+ 
+ ```lua
+ hg.config({ layers = { enabled = true } })
++hg.layer("eww-bar", { shape = { inset = 6, radius = -1 } })
++hg.layer("quickshell:card", { shape = { inset = { 24, 0, 24, 0 }, radius = 16 } })
++```
++
++#### Per-layer settings
++
++Every layer gets glass until you list one. `hg.layer(namespace, { ... })` whitelists a layer namespace (`hyprctl layers` shows them) and sets what differs for it; once a namespace is listed, only the listed layers get glass.
++
++```lua
++hg.config({ layers = { enabled = true } })
++-- hg.config({ layers = { mask_threshold = 0.05 } })  -- cutoff for every layer (hides shadows fainter than 5%)
+ 
+--- Each call whitelists the namespace and optionally configures it
+ hg.layer("waybar", { preset = "subtle", mask_threshold = 0.05, live_resample = false })
+ hg.layer("swaync")
+ hg.layer("quickshell:bezel", { preset = "ui", mask_threshold = 0.3 })
+ hg.layer("quickshell:bar", { mask_mode = "region" })
++hg.layer("quickshell:notifications", { mask_mode = "contour", mask_threshold = 0.15 })
++hg.layer("dock", { mask_feather = 0.45 })
++hg.layer("eww-bar", { shape = { inset = 6, radius = -1 } })                     -- pill, 6 px inside the layer
++hg.layer("quickshell:card", { shape = { inset = { 24, 0, 24, 0 }, radius = 16 } }) -- top, right, bottom, left
+ hg.layer("debug-panel", { exclude = true })
+ ```
+ 
+ | Field | Type | Description |
+ |---|---|---|
+ | `preset` | string | Preset override for this layer |
+-| `mask_threshold` | float | Alpha threshold (pixels below this are not glassed). Default `0.001` |
+-| `live_resample` | bool | Per-layer override of `layers:live_resample` |
+-| `mask_mode` | string | `"auto"`, `"region"` or `"alpha"`. See `layers:mask_mode` |
++| `mask_threshold` | float | Per-layer override of `layers.mask_threshold` |
++| `live_resample` | bool | Per-layer override of `layers.live_resample` |
++| `mask_mode` | string | `"auto"`, `"region"`, `"alpha"` or `"contour"`. Per-layer override of `layers.mask_mode` |
++| `mask_feather` | float | Per-layer override of `layers.mask_feather` |
++| `shape` | table | Fixed glass shape: `{ inset = px or { top, right, bottom, left }, radius = px }`, both optional (`0`); `radius = -1` = pill |
+ | `exclude` | bool | Blacklist this namespace instead of whitelisting it |
+ 
+-#### Legacy .conf config
++To tune one layer while every other layer keeps glass, whitelist them all with `hg.layer("*")`. It takes no settings: those for every layer go in the `layers` table of `hg.config`. `exclude` still wins over `"*"`.
++
++```lua
++hg.layer("*")
++hg.layer("waybar", { preset = "subtle" })
++hg.layer("debug-panel", { exclude = true })
++```
++
++#### Layer options
++
++Options of the `layers` table in `hg.config`.
+ 
+ | Option | Type | Default | Description |
+ |---|---|---|---|
+-| `layers:enabled` | bool | `false` (`0` in .conf) | Enable glass on layer surfaces |
+-| `layers:namespaces` | string | `""` | Comma-separated namespace whitelist. Empty = all layers |
+-| `layers:exclude_namespaces` | string | `""` | Comma-separated namespace blacklist (priority over whitelist) |
+-| `layers:preset` | string | `""` | Preset override for all layers |
+-| `layers:namespace_presets` | string | `""` | Per-namespace preset (`ns:preset` pairs, comma-separated) |
+-| `layers:namespace_mask_thresholds` | string | `""` | Per-namespace alpha threshold (`ns=value` pairs, comma-separated) |
+-| `layers:namespace_live_resample` | string | `""` | Per-namespace live resample override (`ns=0/1` pairs, comma-separated) |
+-| `layers:live_resample` | bool | `true` (`1` in .conf) | Re-render layer glass when content behind it changes (e.g. a playing video). GPU cost scales with background activity; static scenes stay free. Overridable per layer |
+-| `layers:live_resample_fps` | int | `30` | Max re-renders per second per layer for live resample. `0` = uncapped |
+-| `layers:force_live_resample` | bool | `false` (`0` in .conf) | Experimental: re-render layer glass every frame regardless of changes, ignoring `live_resample_fps`. Heavy GPU/battery cost |
+-| `layers:mask_mode` | string | `auto` | Where the glass goes: `auto` = where the app requests blur, else where content is visible; `region` = only where the app requests blur; `alpha` = only where content is visible |
+-| `layers:namespace_mask_modes` | string | `""` | Per-namespace `mask_mode` (`ns=mode` pairs, comma-separated) |
+-| `layers:manage_blur` | bool | `true` (`1` in .conf) | Replace Hyprland's own blur with glass on glassed layers (`layerrule = ignorealpha` then has no effect, use `mask_threshold`). Set to `0` to keep Hyprland's blur |
++| `enabled` | bool | `false` | Enable glass on layer surfaces |
++| `preset` | string | `""` | Preset override for all layers |
++| `mask_threshold` | float | `0.001` | Alpha threshold for all layers: pixels below it get no glass. A per-layer value wins |
++| `live_resample` | bool | `true` | Re-render layer glass when content behind it changes (e.g. a playing video). GPU cost scales with background activity; static scenes stay free. Overridable per layer |
++| `live_resample_fps` | int | `30` | Max re-renders per second per layer for live resample. `0` = uncapped |
++| `force_live_resample` | bool | `false` | Experimental: re-render layer glass every frame regardless of changes, ignoring `live_resample_fps`. Heavy GPU/battery cost |
++| `mask_mode` | string | `auto` | Where the glass goes: `auto` = where the app requests blur, else where content is visible; `region` = only where the app requests blur; `alpha` = only where content is visible; `contour` = where content is visible, with the edge following each shape the app draws |
++| `mask_feather` | float | `0` | Soft edges: glass fades in over this much alpha above `mask_threshold` (e.g. `0.45` for a rounded dock). `0` = hard edge. Ignored where the app requests a blur region |
++| `manage_blur` | bool | `true` | Replace Hyprland's own blur with glass on glassed layers (the `ignore_alpha` layer rule then has no effect, use `mask_threshold`). Set to `false` to keep Hyprland's blur |
+ 
+ > Layer support hooks into Hyprland's internal render pipeline. This is version-sensitive and may break across Hyprland updates.
+ 
+@@ -277,30 +406,18 @@ hg.layer("debug-panel", { exclude = true })
+ 
+ Glass a `wl_subsurface` of a window (a toolbar capsule, a round button) instead of the whole window: the client attaches `ext-background-effect-v1` to that subsurface, and glass is drawn exactly in its requested region.
+ 
++Options of the `subsurfaces` table in `hg.config`.
++
+ | Option | Type | Default | Description |
+ |---|---|---|---|
+-| `subsurfaces:enabled` | bool | `false` (`0` in .conf) | Enable glass on subsurfaces that request it |
+-| `subsurfaces:preset` | string | `""` | Preset override for all items. Falls back to `layers:preset`, then `default_preset` |
+-| `subsurfaces:radius` | float | `-1` | Corner radius in logical px. `-1` (default) = capsule (fully rounded) |
++| `enabled` | bool | `false` | Enable glass on subsurfaces that request it |
++| `preset` | string | `""` | Preset override for all items. Falls back to `layers.preset`, then `default_preset` |
++| `radius` | float | `-1` | Corner radius in logical px. `-1` (default) = capsule (fully rounded) |
+ 
+-**Lua:**
+ ```lua
+ hg.config({ subsurfaces = { enabled = true, preset = "subtle", radius = 12 } })
+ ```
+ 
+-**Legacy .conf:**
+-```ini
+-plugin {
+-    hyprglass {
+-        subsurfaces {
+-            enabled = 1
+-            preset = subtle
+-            radius = 12
+-        }
+-    }
+-}
+-```
+-
+ A client app can hint its own preset and shape per item via the `hyprglass_item_v1` Wayland protocol (`protocols/hyprglass-item-v1.xml`), overriding the config above for that one item:
+ 
+ - `set_preset` / `unset_preset` — request a named preset for this item, or clear the hint
+@@ -308,17 +425,23 @@ A client app can hint its own preset and shape per item via the `hyprglass_item_
+ - `set_inherit_shape` — shape the item like its parent window instead: same corners, same rounding curve
+ - `unset_shape` — clear the shape hint
+ 
+-An item that sends no hints, or a preset name the compositor doesn't recognize, gets `subsurfaces:radius`'s capsule/rounded-rect shape over its blur region and the preset chain above.
++An item that sends no hints, or a preset name the compositor doesn't recognize, gets `subsurfaces.radius`'s capsule/rounded-rect shape over its blur region and the preset chain above.
+ 
+ ### Window background cache
+ 
+ Windows cache their sampled, blurred background and only re-sample it when something actually changed behind the window (it moved/resized, the window behind it changed, or the cache was just allocated) — the same idea as the layer `live_resample` cache above, always on.
+ 
++Options of the `windows` table in `hg.config`.
++
+ | Option | Type | Default | Description |
+ |---|---|---|---|
+-| `windows:background_cache` | bool | `true` (`1` in .conf) | Reuse a window's last sampled+blurred background instead of re-sampling it every frame. Set to `0` to always re-sample (pre-cache behavior). |
+-| `windows:live_resample` | bool | `true` (`1` in .conf) | Re-render window glass when content behind it changes (e.g. a playing video, another window). GPU cost scales with background activity; static scenes stay free |
+-| `windows:live_resample_fps` | int | `30` | Max background-dirty marks per second for windows. `0` = uncapped |
++| `background_cache` | bool | `true` | Reuse a window's last sampled+blurred background instead of re-sampling it every frame. Set to `false` to always re-sample (pre-cache behavior). |
++| `live_resample` | bool | `true` | Re-render window glass when content behind it changes (e.g. a playing video, another window). GPU cost scales with background activity; static scenes stay free |
++| `live_resample_fps` | int | `30` | Max background-dirty marks per second for windows. `0` = uncapped |
++
++```lua
++hg.config({ windows = { live_resample = true, live_resample_fps = 60 } })
++```
+ 
+ > `hyprctl hyprglass stats` reports `win_hit`/`win_miss`/`win_defer`/`win_disc` (and `layer_hit`/`layer_miss`/`layer_defer` for layers, `sub_hit`/`sub_miss`/`sub_defer` for subsurface items) per monitor to watch the cache in action.
+ 
+@@ -346,7 +469,6 @@ Assign via window rules:
+ 
+ #### Examples
+ 
+-**Lua:**
+ ```lua
+ hl.window_rule({ match = { class = "mpv" },       tag = "+hyprglass_disabled" })
+ hl.window_rule({ match = { fullscreen = true },    tag = "+hyprglass_disabled" })
+@@ -354,24 +476,16 @@ hl.window_rule({ match = { class = "firefox" },    tag = "+hyprglass_theme_light
+ hl.window_rule({ match = { class = "myterminal" }, tag = "+hyprglass_preset_high_contrast" })
+ ```
+ 
+-**Legacy .conf:**
+-```ini
+-windowrule = tag +hyprglass_disabled, class:mpv
+-windowrule = tag +hyprglass_disabled, fullscreen:1
+-windowrule = tag +hyprglass_theme_light, class:firefox
+-windowrule = tag +hyprglass_preset_high_contrast, class:myterminal
+-```
+-
+ **On the fly:**
+ ```bash
+-hyprctl dispatch tagwindow +hyprglass_disabled
+-hyprctl dispatch tagwindow +hyprglass_theme_dark
+-hyprctl dispatch tagwindow +hyprglass_preset_subtle
++hyprctl dispatch 'hl.dsp.window.tag({ tag = "+hyprglass_disabled" })'
++hyprctl dispatch 'hl.dsp.window.tag({ tag = "+hyprglass_theme_dark" })'
++hyprctl dispatch 'hl.dsp.window.tag({ tag = "+hyprglass_preset_subtle" })'
+ ```
+ 
+ ### Presets
+ 
+-Presets are named config overrides. They can be **built-in** or **user-defined**. User presets with the same name override built-in ones.
++Presets are named config overrides. They can be **built-in** or **user-defined**. A user preset with the same name as a built-in one extends it: the options you set replace the built-in values, the others keep them.
+ 
+ Each preset can have shared values (theme-agnostic), a dark variant, a light variant, and can inherit from another preset.
+ 
+@@ -391,7 +505,6 @@ Always available. Activate via `default_preset` or per-window tags.
+ 
+ #### User-defined presets
+ 
+-**Lua (table syntax):**
+ ```lua
+ hg.preset("clear", {
+     glass_opacity = 0.8,
+@@ -402,20 +515,6 @@ hg.preset("clear", {
+ })
+ ```
+ 
+-**Lua (string syntax, backward compat):**
+-```lua
+-hg.preset("name:clear, glass_opacity:0.8, blur_strength:1.5")
+-hg.preset("name:clear:dark, brightness:0.7")
+-```
+-
+-**Legacy .conf:**
+-```ini
+-preset = name:clear, glass_opacity:0.8, blur_strength:1.5
+-preset = name:clear:dark, brightness:0.7
+-preset = name:clear:light, brightness:1.2
+-preset = name:contrasted, inherits:high_contrast, contrast:1.2
+-```
+-
+ *Tip: increase the last two hex digits of `tint_color` for more tint opacity.*
+ 
+ ## How It Works
+@@ -424,7 +523,7 @@ The window/layer is modeled as a **thick convex glass slab**. The rendering pipe
+ 
+ 1. **Background sampling** — The framebuffer behind the window is captured with padding (content beyond the window boundary is included). `self_sample` mixes the window's own content into this capture.
+ 2. **Gaussian blur** — Multi-pass two-pass (horizontal + vertical) Gaussian blur for the frosted look.
+-3. **Glass height field** — An SDF-based height profile: 1.0 deep inside the window, smooth S-curve to 0.0 at the edge. The transition width is `edge_thickness`.
++3. **Glass height field** — An SDF-based height profile: 1.0 deep inside the window, smooth S-curve to 0.0 at the edge. The transition width is `edge_thickness` (or `edge_thickness_px` when set).
+ 4. **Edge refraction** — The height field gradient drives UV displacement. At the center the gradient is near-zero (no distortion). At the edges the gradient is steep, pushing sample UVs outward — pulling in content from beyond the window boundary. This creates natural color bleeding.
+ 5. **Chromatic aberration** — R, G, B channels are sampled with slightly different refraction scales (blue bends more), creating spectral fringing at edges.
+ 6. **Center dome lens** — Subtle barrel magnification in the flat interior, controlled by `lens_distortion`.
+@@ -452,6 +551,7 @@ hyprctl -j hyprglass status      # same, as JSON
+ 
+ ```
+ hyprglass 0.9.1: active
++  version check: match
+   shaders: ready
+   windows: on   layers: hook missing   subsurfaces: off
+   hyprglass_item_v1 protocol: active
+@@ -459,7 +559,7 @@ hyprglass 0.9.1: active
+ 
+ ```json
+ {
+-  "schema": 1, "version": "0.9.1", "active": true, "shaders": "ready", "itemProtocol": true,
++  "schema": 1, "version": "0.9.1", "versionCheck": "match", "active": true, "shaders": "ready", "itemProtocol": true,
+   "features": {
+     "windows": {"enabled": true, "active": true, "reason": null},
+     "layers": {"enabled": true, "active": false, "reason": "hook_missing"},
+@@ -472,19 +572,35 @@ hyprglass 0.9.1: active
+ |---|---|
+ | `schema` | Raised when a field is removed, renamed or changes meaning. New fields and new `shaders` or `reason` values can appear without a raise: treat any non-null `reason` as inactive. |
+ | `version` | Same as `hyprctl plugin list`. |
++| `versionCheck` | `match` (built for this Hyprland), `unknown` (Hyprland or hyprglass was built without a release tag or commit: only Hyprland's libraries were checked) or `skipped` (`HYPRGLASS_SKIP_VERSION_CHECK`). |
+ | `active` | `true` when at least one feature is active. |
+-| `shaders` | `ready`, `pending` (compiled at the first glass draw) or `failed` (retried at the next draw). |
++| `shaders` | `ready`, `pending` (compiled at the first glass draw) or `failed` (glass stays off until the plugin is reloaded). |
+ | `itemProtocol` | `hyprglass_item_v1` is offered to clients. |
+-| `features.*.enabled` | The setting: `enabled`, `layers:enabled`, `subsurfaces:enabled`. |
+-| `features.*.active` | The feature draws glass. `windows` is active with `enabled = 0` while a window tagged `hyprglass_enabled` is open. |
++| `features.*.enabled` | The setting: `enabled`, `layers.enabled`, `subsurfaces.enabled`. |
++| `features.*.active` | The feature draws glass. `windows` is active with `enabled = false` while a window tagged `hyprglass_enabled` is open. |
+ | `features.*.reason` | `null` when active, else `disabled`, `hook_missing` (after a Hyprland update, or another plugin hooked it first: reinstall or report it), `shaders_failed`, or for `subsurfaces`, `window_glass_off` (items only draw on windows that have glass). |
+ 
++A paused hyprglass (see [Troubleshooting](#troubleshooting)) draws nothing and has no `hyprctl hyprglass` command: `hyprctl hyprglass status` answers `unknown request`. `hyprctl plugin list` (or `hyprctl -j plugin list`) gives the reason as its description, `Paused (<reason>): <message>`, where `<reason>` is `hyprland_version`, `dependencies` or `duplicate`:
++
++```
++Plugin hyprglass by Hyprnux:
++	Handle: 7f3a2c000000
++	Version: 1.0.0
++	Description: Paused (hyprland_version): built for Hyprland 0.57, running 0.58
++```
++
+ ## Performance diagnostics
+ 
++Options of the `debug` table in `hg.config`.
++
+ | Option | Type | Default | Description |
+ |---|---|---|---|
+-| `debug:mode` | string | `off` | `off`, `hints_only` (render pass hints only, no GL work — isolates render-pass cost), or `gl_work_only` (runs the GL pipeline but drops the live-blur hint — isolates pipeline cost from render-pass damage-expansion cost). For A/B GPU measurement; leave `off` for normal use. |
+-| `debug:timers` | bool | `false` (`0` in .conf) | Time each pipeline stage on the GPU (`GL_EXT_disjoint_timer_query`) and report per-stage averages in `hyprctl hyprglass stats`. No effect if the driver doesn't support the extension. |
++| `mode` | string | `off` | `off`, `hints_only` (render pass hints only, no GL work — isolates render-pass cost), or `gl_work_only` (runs the GL pipeline but drops the live-blur hint — isolates pipeline cost from render-pass damage-expansion cost). For A/B GPU measurement; leave `off` for normal use. |
++| `timers` | bool | `false` | Time each pipeline stage on the GPU (`GL_EXT_disjoint_timer_query`) and report per-stage averages in `hyprctl hyprglass stats`. No effect if the driver doesn't support the extension. |
++
++```lua
++hg.config({ debug = { timers = true } })
++```
+ 
+ ```bash
+ hyprctl hyprglass stats          # per-monitor counters and (if enabled) stage timers
+@@ -494,10 +610,10 @@ hyprctl -j hyprglass stats       # same, as JSON
+ 
+ ```
+ hyprglass stats
+-  stage timers: off (plugin:hyprglass:debug:timers = 0)
++  stage timers: off (hg.config({ debug = { timers = true } }))
+ 
+-  monitor        frames  win_draws  opaque_skip  win_hit  win_miss  win_defer  win_disc  layer_draws  layer_hit  layer_miss  layer_defer  sub_draws  sub_hit  sub_miss  sub_defer  blur_pass  sampled_mpx  glass_mpx
+-  eDP-1            7212       3401         5122     3120       240         41         0         1560       1420          92            3        410      380        22          8       5520        41.30      18.77
++  monitor        frames  win_draws  opaque_skip  win_hit  win_miss  win_defer  win_disc  layer_draws  layer_hit  layer_miss  layer_defer  sub_draws  sub_hit  sub_miss  sub_defer  xray_copy  xray_defer  xray_evict  blur_pass  sampled_mpx  glass_mpx  frost_build  contour_build
++  eDP-1            7212       3401         5122     3120       240         41         0         1560       1420          92            3        410      380        22          8          0           0           0       5520        41.30      18.77            0              0
+   eDP-1          per frame: 0.47 win draws, 0.22 layer draws, 0.06 sub draws, 0.77 blur passes, 0.006 sampled mpx, 0.003 glass mpx
+ ```
+ 
+@@ -520,30 +636,69 @@ hyprglass items
+ 
+ ## Notes
+ 
+-- The plugin requires Hyprland shadows to be present in the render pipeline. It **auto-enables them** at load time if disabled — shadow visual values (range, color…) can be zero, only the decoration's presence matters.
+-- If glass edges look stale while a window is dragged, raise `decoration:blur:size` or `decoration:blur:passes`. They matter even with Hyprland's blur disabled.
+-- Glass **replaces Hyprland's blur** on glassed windows: the plugin sets the `noblur` window property on them so their translucency composites against the glass instead of Hyprland's blur (whose `new_optimizations` cache is captured before plugin decorations render, hiding the glass on static windows — the "effect only shows while dragging" symptom). Disable with `manage_window_blur = 0`. The property is withdrawn when glass is disabled for a window or the plugin unloads.
+-- Layer surface glass uses a function hook on `renderLayer`, which is a private Hyprland internal. The hook may break on Hyprland updates that change this function's signature.
++- Window glass requires Hyprland shadows to be present in the render pipeline. While any window has glass (`enabled = true`, or a window tagged `hyprglass_enabled`), the plugin **turns `decoration.shadow.enabled` back on** after every config load and whenever a window gets glass — shadow visual values (range, color…) can be zero, only the decoration's presence matters.
++- If glass edges look stale while a window is dragged, raise `decoration.blur.size` or `decoration.blur.passes`. They matter even with Hyprland's blur disabled.
++- Glass **replaces Hyprland's blur** on glassed windows: the plugin sets the `no_blur` window property on them so their translucency composites against the glass instead of Hyprland's blur (whose `new_optimizations` cache is captured before plugin decorations render, hiding the glass on static windows — the "effect only shows while dragging" symptom). Disable with `manage_window_blur = false`. The property is withdrawn when glass is disabled for a window or the plugin unloads.
++- Layer surface glass hooks an internal Hyprland function and may break on Hyprland updates.
+ 
+ ## Troubleshooting
+ 
+ `hyprctl plugin list` shows the hyprglass version you are running: include it in bug reports. A build from a checkout without its tags reports `dev`.
+ 
+-### "Version mismatch" on hyprland-git or a self-built Hyprland
++### "Paused: built for Hyprland 0.56, running 0.57"
+ 
+-The plugin compares its build-time Hyprland ABI signature against the running compositor. The comparison uses the dependency ABI suffix (`_aq_…_hu_…`), not the exact commit hash, so a plugin built against matching headers loads fine on git builds. If it still fails, the reported hashes (shown in the error notification) tell you which dependency versions differ — rebuild the plugin against the headers of the Hyprland you are actually running.
++hyprglass stays loaded but does nothing when the running Hyprland isn't the one it was built for: another release line (0.56 vs 0.57), or another commit when either side is hyprland-git. Rebuild it for the running Hyprland, then reload it:
+ 
+-As a last resort, setting `HYPRGLASS_SKIP_VERSION_CHECK=1` downgrades the failure to a warning. The variable must be present in **Hyprland's own environment**: export it from your session manager (uwsm, greetd, …) or set it early in your Hyprland config via the `env` keyword. This is unsupported — a real ABI mismatch can crash Hyprland.
++```bash
++hyprpm update                                  # hyprpm
++hyprctl plugin unload /path/to/hyprglass.so    # manual build: unload, make, load
++hyprctl plugin load /path/to/hyprglass.so
++```
+ 
+-### Build fails inside Hyprland's own headers ("cannot convert 'PHLLS' … to 'bool' … explicit conversion function was not considered")
++With a pre-built release, download the one made for your Hyprland. While paused, a config guarded by `if hl.plugin.hyprglass then` is skipped.
+ 
+-This happens when building against Hyprland **0.55.4 headers** with a hyprutils **newer than 0.13.1**: hyprutils made its smart-pointer `operator bool` explicit after 0.55.4 was released, and 0.55.4's headers still rely on the old implicit behavior. Every Hyprland plugin fails identically on such a system — it is not a hyprglass bug. Until the next Hyprland release, either downgrade/pin hyprutils to 0.13.1, or run hyprland-git (fixed upstream) and rebuild the plugin against its headers.
++A Nix build of hyprland-git reports itself as the release it follows, so a hyprglass built for that release isn't paused there. A hyprglass built from `main` runs only on the Hyprland commit it was built against.
++
++### "Paused: built with aquamarine 0.15 -> 0.16"
++
++Same fix: one of Hyprland's libraries changed version since hyprglass was built.
++
++### "Paused: already loaded from …"
++
++Two copies of hyprglass are loaded, e.g. a distribution package and your own build or hyprpm's, or one file through two paths (a symlink). The first keeps working and this one does nothing. Load only one: remove the extra `hl.plugin.load(...)` line, or `hyprpm disable hyprglass`. After removing the other copy, reload this one (`hyprctl plugin unload <path>` then `hyprctl plugin load <path>`) or restart Hyprland.
++
++### Skipping the check
++
++`HYPRGLASS_SKIP_VERSION_CHECK=1` loads hyprglass despite the version checks above, not despite another copy. It must be in **Hyprland's own environment**: export it from your session manager (uwsm, greetd, …) or set it early in your `hyprland.lua` with `hl.env("HYPRGLASS_SKIP_VERSION_CHECK", "1")`. This is unsupported: a real mismatch can crash Hyprland.
++
++### Hyprland never finishes starting with the plugin in hyprland.lua
++
++When `hyprland.lua` loads a plugin, Hyprland runs the whole file once more during startup, before it is ready. A top-level `hyprctl` call, or any `io.popen`/`os.execute` that waits on a command, blocks there: nothing answers `hyprctl` yet. Under uwsm the start then times out and `WAYLAND_DISPLAY` is never exported.
++
++Run such commands once Hyprland is up:
++
++```lua
++hl.on("hyprland.start", function()
++    os.execute("my-startup-script &")
++end)
++```
++
++To check whether it is the cause, load the plugin from a config that contains only your `hl.monitor(...)` lines and `hl.plugin.load(...)`. To look at a hang, give the start more time first:
++
++```bash
++mkdir -p ~/.config/systemd/user/wayland-wm@.service.d
++printf '[Service]\nTimeoutStartSec=300\n' > ~/.config/systemd/user/wayland-wm@.service.d/timeout.conf
++systemctl --user daemon-reload
++
++# undo it afterwards
++systemctl --user revert wayland-wm@.service
++```
+ 
+ ## Contributing
+ 
+ | Branch | Builds against | Target it for |
+ |---|---|---|
+-| `hyprland-X.Y` (newest, e.g. `hyprland-0.56`) | the Hyprland X.Y release | fixes and features; releases are cut from it |
++| `hyprland-X.Y` (newest, e.g. `hyprland-0.57`) | the Hyprland X.Y release | fixes and features; releases are cut from it |
+ | `main` | hyprland-git | hyprland-git compatibility only; every change of the stable branch is merged into it automatically, or through a `forward-merge/hyprland-X.Y` pull request when it conflicts or breaks the hyprland-git build |
+ 
+ ## License
+diff --git a/hyprpm.toml b/hyprpm.toml
+index adb7a7f..f175185 100644
+--- a/hyprpm.toml
++++ b/hyprpm.toml
+@@ -22,7 +22,7 @@ commit_pins = [
+   ["a0136d8c04687bb36eb8a28eb9d1ff92aea99704", "7ff4064cbed1ef6e6f703139fca4ec20ba0cbb5b"], # hyprland 0.55.4 -> hyprglass v0.6.4
+   ["36b2e0cfe0c6094dbc47bd42a437431315bb3087", "c96940a86e6c5c9290dacb9fde204e4172186a96"], # hyprland 0.56.0 -> hyprglass v0.7.0
+   ["5c9377c15f85c50648f35ca5a213754f95b93ca0", "725383e86a2a79457a81cdbc2ceb33c07363bd8d"], # hyprland 0.56.1 -> hyprglass v0.8.1
+-  ["efb50993780079460b0cbed1363e2166a2de1d9f", "725383e86a2a79457a81cdbc2ceb33c07363bd8d"], # hyprland 0.56.2 -> hyprglass v0.8.1
++  ["efb50993780079460b0cbed1363e2166a2de1d9f", "7fc328064c63d9fbaaac8d8204eadf85dcdeae19"], # hyprland 0.56.2 -> hyprglass v0.11.0
+ ]
+ 
+ [hyprglass]
+diff --git a/src/BackgroundDamageObserver.cpp b/src/BackgroundDamageObserver.cpp
+index 4bf42b1..82a6a4d 100644
+--- a/src/BackgroundDamageObserver.cpp
++++ b/src/BackgroundDamageObserver.cpp
+@@ -8,7 +8,7 @@
+ 
+ #include <hyprland/src/desktop/view/LayerSurface.hpp>
+ #include <hyprland/src/desktop/view/WLSurface.hpp>
+-#include <hyprland/src/desktop/view/Window.hpp>
++#include <hyprland/src/desktop/view/window/Window.hpp>
+ #include <hyprland/src/event/EventBus.hpp>
+ #include <hyprland/src/protocols/XDGShell.hpp>
+ #include <hyprland/src/protocols/core/Compositor.hpp>
+@@ -80,13 +80,13 @@ namespace {
+         if (!window)
+             return true;
+ 
+-        if (!window->m_isMapped)
++        if (!window->mapped())
+             return false;
+ 
+         if (view->type() == VIEW_TYPE_WINDOW && window->isHidden())
+             return false;
+ 
+-        return !window->m_workspace || window->m_workspace->m_visible;
++        return !window->m_workspace || window->m_workspace->visible();
+     }
+ 
+     // A self-sampling window draws its own content into its glass, so a commit that
+@@ -143,6 +143,31 @@ namespace {
+         return root->findFirstPreorder([&surface](SP<CWLSurfaceResource> candidate) { return candidate == surface; }) != nullptr;
+     }
+ 
++    // A contour layer's outline was traced from its own content: a commit that changes that
++    // content makes it stale. Unconditional like damageSelfSamplingWindow(): it has nothing to
++    // do with live resample, only with what the layer itself draws.
++    void invalidateContourOnOwnCommit(const SP<CWLSurfaceResource>& resource) {
++        if (!g_pGlobalState || g_pGlobalState->contourScratch.users <= 0)
++            return;
++
++        // same bit Hyprland tests: a commit without damage changes no pixel
++        if (!resource->m_current.updated.bits.damage)
++            return;
++
++        for (const auto& [_, state] : g_pGlobalState->layerSurfaces) {
++            if (!state || !state->holdsContour())
++                continue;
++
++            const auto layer = state->getLayerSurface();
++            if (!layer || !layer->mapped() || !layer->wlSurface())
++                continue;
++
++            // the layer's own surfaces, not its popups: those are not in what the field was traced from
++            if (surfaceInTree(resource, layer->wlSurface()->resource()))
++                state->markContourContentChanged();
++        }
++    }
++
+     void onSurfaceCommit(const SP<CWLSurfaceResource>& resource) {
+         if (!g_pGlobalState || !resource)
+             return;
+@@ -190,13 +215,16 @@ namespace {
+         if (!box.has_value())
+             return;
+ 
+-        CRegion damage = wlSurface->computeDamage();
+-        if (damage.empty())
+-            return;
++        CRegion damage = wlSurface->computeDamage(box);
+ 
+         // X11 clients draw at their own scale; only a window root carries it
+-        if (viewWindow && viewWindow->m_isX11 && viewWindow->m_X11SurfaceScaledBy != 1.f)
+-            damage.scale(1.0 / viewWindow->m_X11SurfaceScaledBy);
++        if (viewWindow && viewWindow->backend().isX11() && viewWindow->backend().surfaceScale() != 1.f)
++            damage.scale(1.0 / viewWindow->backend().surfaceScale());
++
++        // Hyprland's damageSurface ran first and consumed a dmabuf commit's damage
++        // (accumulateBufferDamage clears it): the bit is set, so the whole surface may have changed
++        if (damage.empty())
++            damage = CRegion(CBox{0.0, 0.0, box->w, box->h});
+ 
+         // the animated origin, not Hyprland's animation goal: it is where the
+         // content is actually drawn this frame
+@@ -205,7 +233,7 @@ namespace {
+ 
+         for (const auto& [_, state] : g_pGlobalState->layerSurfaces) {
+             const auto layer = state->getLayerSurface();
+-            if (!layer || !layer->m_mapped)
++            if (!layer || !layer->mapped())
+                 continue;
+ 
+             if (!state->liveResampleEnabled())
+@@ -288,6 +316,7 @@ namespace {
+             try {
+                 if (const auto surface = key.lock()) {
+                     damageSelfSamplingWindow(surface);
++                    invalidateContourOnOwnCommit(surface);
+                     onSurfaceCommit(surface);
+                 }
+             } catch (const std::exception& e) {
+@@ -316,6 +345,60 @@ namespace {
+ 
+         watchSurface(view->resource());
+     }
++
++    void flushDeferredResamples() {
++        try {
++            if (!g_pGlobalState)
++                return;
++
++            const auto now = std::chrono::steady_clock::now();
++            for (const auto& decoration : g_pGlobalState->decorations) {
++                if (auto* glassDecoration = decoration.get())
++                    glassDecoration->flushDeferredResample(now);
++            }
++            for (const auto& [layer, state] : g_pGlobalState->layerSurfaces) {
++                if (state)
++                    state->flushDeferredResample(now);
++            }
++        } catch (const std::exception& e) {
++            reportListenerException(e.what());
++        } catch (...) {
++            reportListenerException("unknown exception");
++        }
++    }
++
++    // Removed from Hyprland's timer list, not just dropped: the list keeps its
++    // own reference, and the callback must not outlive the plugin.
++    void cancelDeferredResamples() {
++        auto& timer = g_pGlobalState->deferredResampleTimer;
++        if (!timer)
++            return;
++
++        timer->cancel();
++        if (g_pEventLoopManager)
++            g_pEventLoopManager->removeTimer(timer);
++        timer.reset();
++    }
++}
++
++void BackgroundDamageObserver::deferResample(std::chrono::steady_clock::time_point deadline) {
++    // a disarmed observer has nobody owing a mark, and PLUGIN_EXIT disarms it first
++    if (!g_pGlobalState || !g_pEventLoopManager || !isEnabled())
++        return;
++
++    const auto delay = std::max(deadline - std::chrono::steady_clock::now(), std::chrono::steady_clock::duration::zero());
++    auto&      timer = g_pGlobalState->deferredResampleTimer;
++    if (!timer) {
++        timer = makeShared<CEventLoopTimer>(delay, [](SP<CEventLoopTimer>, void*) { flushDeferredResamples(); }, nullptr);
++        g_pEventLoopManager->addTimer(timer);
++        return;
++    }
++
++    // armed for an earlier deadline: that firing re-arms for this one
++    if (timer->armed() && timer->leftUs() <= std::chrono::duration_cast<std::chrono::microseconds>(delay).count())
++        return;
++
++    timer->updateTimeout(delay);
+ }
+ 
+ void BackgroundDamageObserver::refreshEnabled() {
+@@ -338,6 +421,7 @@ void BackgroundDamageObserver::setEnabled(bool enabled) {
+     if (!enabled) {
+         g_pGlobalState->observerListeners.clear();
+         g_pGlobalState->watchedSurfaces.clear();
++        cancelDeferredResamples();
+         return;
+     }
+ 
+diff --git a/src/BackgroundDamageObserver.hpp b/src/BackgroundDamageObserver.hpp
+index e4ee8e7..3174966 100644
+--- a/src/BackgroundDamageObserver.hpp
++++ b/src/BackgroundDamageObserver.hpp
+@@ -1,5 +1,7 @@
+ #pragma once
+ 
++#include <chrono>
++
+ // Client surface commits are the only signal that content below a glassed layer
+ // or window changed (e.g. a playing video) - the scene-generation cache only
+ // sees window events. They are also the only signal that a self_sample window's
+@@ -14,4 +16,9 @@ namespace BackgroundDamageObserver {
+     // selfSampleConfigured flag. Cheap enough for a per-frame call; it never
+     // walks the presets.
+     void refreshEnabled();
++
++    // A mark the live_resample_fps limit held back is owed, not dropped: one
++    // shared timer fires at the earliest owed deadline and hands each window
++    // and layer its deferred mark. Disarming the observer cancels it.
++    void deferResample(std::chrono::steady_clock::time_point deadline);
+ }
+diff --git a/src/BuildChannel.hpp b/src/BuildChannel.hpp
+new file mode 100644
+index 0000000..0113bfc
+--- /dev/null
++++ b/src/BuildChannel.hpp
+@@ -0,0 +1,6 @@
++#pragma once
++
++// main follows hyprland-git, whose plugin API changes between commits: only the
++// commit built against may load it. A stable line cut from main sets this to
++// false; CI refuses to release it otherwise, and the forward merge keeps main's.
++inline constexpr bool BUILT_FOR_HYPRLAND_GIT = false;
+diff --git a/src/BuiltInPresets.hpp b/src/BuiltInPresets.hpp
+index b8314f4..a64e96a 100644
+--- a/src/BuiltInPresets.hpp
++++ b/src/BuiltInPresets.hpp
+@@ -23,18 +23,22 @@ struct SThemeDefaults {
+ inline constexpr SThemeDefaults DARK_THEME_DEFAULTS  = {0.82f, 0.90f, 0.80f, 0.15f, 0.0f, 0.4f, 0.0f};
+ inline constexpr SThemeDefaults LIGHT_THEME_DEFAULTS = {1.12f, 0.92f, 0.85f, 0.12f, 0.0f, 0.0f, 0.4f};
+ 
+-// Global config defaults — values registered with Hyprlang for effect settings.
++// Global config defaults — values registered as the Lua config defaults for effect settings.
+ // Theme-sensitive settings (brightness, contrast, etc.) use SENTINEL at global
+ // level so they fall through to the per-theme hardcoded defaults above.
+ namespace GlobalDefaults {
+     inline constexpr float   BLUR_STRENGTH        = 2.0f;
+     inline constexpr int64_t BLUR_ITERATIONS      = 3;
++    inline constexpr float   NOISE_STRENGTH       = 0.0f;
+     inline constexpr float   REFRACTION_STRENGTH  = 0.6f;
+     inline constexpr float   CHROMATIC_ABERRATION = 0.5f;
+     inline constexpr float   FRESNEL_STRENGTH     = 0.6f;
+     inline constexpr float   SPECULAR_STRENGTH    = 0.8f;
+     inline constexpr float   GLASS_OPACITY        = 1.0f;
+     inline constexpr float   EDGE_THICKNESS       = 0.06f;
++    inline constexpr float   EDGE_THICKNESS_PX    = 0.0f; // 0 = use the relative EDGE_THICKNESS
++    inline constexpr float   EDGE_HEIGHT          = 0.0f; // 0 = the soft edge, no lens
++    inline constexpr float   FRESNEL_REFLECTION   = 0.0f;
+     inline constexpr int64_t TINT_COLOR           = 0x8899aa22;
+     inline constexpr float   LENS_DISTORTION      = 0.5f;
+     inline constexpr float   REFRACTION_FLOW      = 0.0f;
+@@ -49,6 +53,11 @@ namespace GlobalDefaults {
+     inline constexpr float   BEVEL_SHADOW         = 0.0f;
+     inline constexpr float   SPECULAR_ANGLE       = 0.0f;
+     inline constexpr float   SELF_SAMPLE          = 0.0f;
++    inline constexpr int64_t XRAY                 = 0;
++    inline constexpr float   FOCUS_LIGHT          = 0.0f; // 0 = no light on the active window
++    inline constexpr int64_t FOCUS_LIGHT_COLOR    = 0xffffff00;
++    inline constexpr float   FROST                = 0.0f; // 0 = no frost behind windows
++    inline constexpr float   FROST_BLUR           = 3.0f; // extra blur, in blur_strength units
+ } // namespace GlobalDefaults
+ 
+ // ── Built-in presets ─────────────────────────────────────────────────────────
+@@ -108,6 +117,7 @@ inline SCustomPreset makeClear() {
+     p.name = "clear";
+ 
+     p.shared.blurStrength        = 0.0f;
++    p.shared.noiseStrength       = 0.0f;
+     p.shared.refractionStrength  = 0.3f;
+     p.shared.chromaticAberration = 0.2f;
+     p.shared.fresnelStrength     = 0.3f;
+diff --git a/src/Contour.cpp b/src/Contour.cpp
+new file mode 100644
+index 0000000..39431f3
+--- /dev/null
++++ b/src/Contour.cpp
+@@ -0,0 +1,315 @@
++#include "Contour.hpp"
++#include "Diagnostics.hpp"
++#include "Globals.hpp"
++
++#include <array>
++#include <format>
++#include <string_view>
++#include <GLES3/gl32.h>
++#include <drm_fourcc.h>
++#include <hyprland/src/helpers/Color.hpp>
++#include <hyprland/src/render/OpenGL.hpp>
++#include <hyprland/src/render/Renderer.hpp>
++
++namespace Contour {
++
++namespace {
++
++GLuint framebufferId(const SP<Render::IFramebuffer>& framebuffer) {
++    return dynamic_cast<Render::GL::CGLFramebuffer*>(framebuffer.get())->getFBID();
++}
++
++// The only format the field can be: a signed distance needs a float, and DRM has no
++// single-channel float format.
++constexpr DRMFormat FIELD_FORMAT = DRM_FORMAT_ABGR16161616F;
++
++// Maps the VAO's [0,1] positions to clip space, as blurBackground() does.
++constexpr std::array<float, 9> FULLSCREEN_PROJECTION = {
++    2.0f, 0.0f, 0.0f,
++    0.0f, 2.0f, 0.0f,
++   -1.0f,-1.0f, 1.0f,
++};
++
++// Scratch targets only ever grow: a render target a few texels bigger than the field is
++// fine (the passes only touch the field's own corner), and realloc on every other layer's
++// build would not be. Growing each side on its own would turn a wide bar and a tall dock
++// into a screen-sized target, so growth stops at the field budget.
++bool ensureFramebuffer(SP<Render::IFramebuffer>& framebuffer, const char* name, int width, int height, bool growOnly) {
++    if (!framebuffer)
++        framebuffer = g_pHyprRenderer->createFB(name);
++
++    if (growOnly) {
++        const int currentWidth  = static_cast<int>(framebuffer->m_size.x);
++        const int currentHeight = static_cast<int>(framebuffer->m_size.y);
++        const int grownWidth    = std::max(width, currentWidth);
++        const int grownHeight   = std::max(height, currentHeight);
++
++        if (static_cast<long>(grownWidth) * grownHeight <= MAX_TEXELS) {
++            width  = grownWidth;
++            height = grownHeight;
++        } else if (currentWidth >= width && currentHeight >= height) {
++            width  = currentWidth;
++            height = currentHeight;
++        }
++    }
++
++    framebuffer->alloc(width, height, FIELD_FORMAT);
++
++    // An allocation that failed (out of GPU memory) leaves no texture to render into.
++    if (!framebuffer->isAllocated() || !framebuffer->getTexture()) {
++        framebuffer.reset();
++        return false;
++    }
++    return true;
++}
++
++} // namespace
++
++bool gpuSupportsField() {
++    auto& supported = g_pGlobalState->contourGpuSupported;
++    if (supported)
++        return *supported;
++
++    // Half-float render targets are core from GLES 3.2; before that, an extension.
++    GLint major = 0, minor = 0;
++    glGetIntegerv(GL_MAJOR_VERSION, &major);
++    glGetIntegerv(GL_MINOR_VERSION, &minor);
++
++    bool ok = major > 3 || (major == 3 && minor >= 2);
++    if (!ok) {
++        GLint count = 0;
++        glGetIntegerv(GL_NUM_EXTENSIONS, &count);
++        for (GLint i = 0; i < count && !ok; i++) {
++            const auto* name = reinterpret_cast<const char*>(glGetStringi(GL_EXTENSIONS, i));
++            ok               = name && std::string_view(name) == "GL_EXT_color_buffer_float";
++        }
++    }
++
++    supported = ok;
++    return ok;
++}
++
++CField::~CField() {
++    release();
++}
++
++CField::EInvalidation CField::invalidate(std::chrono::steady_clock::time_point now) noexcept {
++    if (!m_requested)
++        return EInvalidation::None;
++
++    m_uncoveredFrames = 0;
++
++    if (m_dirty)
++        return EInvalidation::None;
++
++    if (!m_field) {
++        m_dirty = true;
++        return EInvalidation::None;
++    }
++
++    if (now - m_lastBuild < MIN_REBUILD_INTERVAL) {
++        m_deferredAt = m_lastBuild + MIN_REBUILD_INTERVAL;
++        return EInvalidation::Deferred;
++    }
++
++    m_deferredAt.reset();
++    m_dirty = true;
++    return EInvalidation::Now;
++}
++
++CField::EInvalidation CField::flushDeferred(std::chrono::steady_clock::time_point now) noexcept {
++    if (!m_deferredAt)
++        return EInvalidation::None;
++
++    if (now < *m_deferredAt)
++        return EInvalidation::Deferred;
++
++    m_deferredAt.reset();
++    m_dirty           = true;
++    m_uncoveredFrames = 0;
++    return EInvalidation::Now;
++}
++
++bool CField::build(Render::CRenderContext& ctx, const SBuildKey& key, const SP<Render::IFramebuffer>& layerRender, const CBox& box,
++                   float fadeAlpha, const SP<Render::IFramebuffer>& callerFramebuffer) {
++    if (!g_pGlobalState || !layerRender || !layerRender->getTexture() || !callerFramebuffer)
++        return false;
++
++    auto& state = *g_pGlobalState;
++    if (state.contourUnavailable)
++        return false;
++
++    if (!gpuSupportsField()) {
++        state.contourUnavailable = true;
++        HyprlandAPI::addNotification(PHANDLE,
++            std::format("[{}] This GPU cannot render the contour field, layers fall back to mask_mode = alpha", PLUGIN_NAME),
++            CHyprColor{1.0, 0.6, 0.2, 1.0}, 8000);
++        return false;
++    }
++
++    // Before any GL binding: the first use compiles the programs, which rebinds the VAO and array buffer.
++    const auto* programs = state.shaderManager.contourPrograms();
++    if (!programs) {
++        state.contourUnavailable = true;
++        return false;
++    }
++
++    const SPlan& plan = key.plan;
++
++    // Allocation re-binds the renderer's own framebuffer and viewport; everything below binds its own.
++    const bool allocated = ensureFramebuffer(m_field, "hyprglass-contour", plan.fieldWidth, plan.fieldHeight, false) &&
++                           ensureFramebuffer(state.contourScratch.first, "hyprglass-contour-a", plan.fieldWidth, plan.fieldHeight, true) &&
++                           ensureFramebuffer(state.contourScratch.second, "hyprglass-contour-b", plan.fieldWidth, plan.fieldHeight, true);
++    if (m_field && !m_counted) {
++        m_counted = true;
++        state.contourScratch.users++;
++    }
++    if (!allocated) {
++        release();
++        return false;
++    }
++
++    const auto& first  = state.contourScratch.first;
++    const auto& second = state.contourScratch.second;
++
++    // Each pass overwrites its whole target: a leaked scissor or stencil would leave texels
++    // unwritten, blending would mix in what the shared scratch held before.
++    g_pHyprOpenGL->setCapStatus(GL_SCISSOR_TEST, false);
++    if (glIsEnabled(GL_SCISSOR_TEST)) {
++        glDisable(GL_SCISSOR_TEST);
++        Diagnostics::recordStateDesync("scissor on before the contour passes");
++    }
++    g_pHyprOpenGL->setCapStatus(GL_STENCIL_TEST, false);
++    if (glIsEnabled(GL_STENCIL_TEST)) {
++        glDisable(GL_STENCIL_TEST);
++        Diagnostics::recordStateDesync("stencil on before the contour passes");
++    }
++    g_pHyprRenderer->blend(false);
++    g_pHyprOpenGL->setViewport(0, 0, plan.fieldWidth, plan.fieldHeight);
++    g_pHyprOpenGL->setActiveTexture(GL_TEXTURE0);
++
++    const float fieldWidth  = static_cast<float>(plan.fieldWidth);
++    const float fieldHeight = static_cast<float>(plan.fieldHeight);
++    const float divisor     = static_cast<float>(plan.divisor);
++
++    const auto  pass = [&](const SP<CShader>& program, const SP<Render::IFramebuffer>& target, const SP<Render::IFramebuffer>& source, auto&& setUniforms) {
++        auto shader = g_pHyprOpenGL->useShader(program);
++        shader->setUniformMatrix3fv(SHADER_PROJ, 1, GL_FALSE, FULLSCREEN_PROJECTION);
++        setUniforms();
++        glBindVertexArray(shader->getUniformLocation(SHADER_SHADER_VAO));
++        g_pHyprOpenGL->bindFramebuffer(GL_FRAMEBUFFER, framebufferId(target));
++        source->getTexture()->bind();
++        glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
++    };
++
++    // 1. which texels are inside the outline: the layer's alpha against the mask threshold,
++    //    scaled by its fade so a layer part way through a fade keeps its shape
++    {
++        const auto& uniforms = programs->seedUniforms;
++        pass(programs->seed, first, layerRender, [&] {
++            glUniform1i(uniforms.tex, 0);
++            glUniform2f(uniforms.boxOffsetPx, static_cast<float>(box.x), static_cast<float>(box.y));
++            glUniform2f(uniforms.boxSizePx, static_cast<float>(plan.boxWidth), static_cast<float>(plan.boxHeight));
++            glUniform2f(uniforms.sourceSizePx, static_cast<float>(layerRender->m_size.x), static_cast<float>(layerRender->m_size.y));
++            glUniform1f(uniforms.divisor, divisor);
++            glUniform1f(uniforms.threshold, key.threshold * std::clamp(fadeAlpha, 0.0f, 1.0f));
++        });
++    }
++
++    // 2-3. exact distance transform, one axis then the other; the last one resolves the signed distance
++    {
++        const auto& uniforms = programs->edtUniforms;
++        const auto  common = [&] {
++            glUniform1i(uniforms.tex, 0);
++            glUniform2f(uniforms.fieldSize, fieldWidth, fieldHeight);
++            glUniform1i(uniforms.reachTexels, plan.reachTexels);
++            glUniform1f(uniforms.texelPx, divisor);
++            glUniform1f(uniforms.reachPx, plan.reachPx);
++        };
++        pass(programs->edt, second, first, [&] {
++            common();
++            glUniform2f(uniforms.direction, 0.0f, 1.0f);
++            glUniform1i(uniforms.resolveSigned, 0);
++        });
++        pass(programs->edt, first, second, [&] {
++            common();
++            glUniform2f(uniforms.direction, 1.0f, 0.0f);
++            glUniform1i(uniforms.resolveSigned, 1);
++        });
++    }
++
++    // 4-5. round the creases where distances from two edges meet
++    {
++        const auto& uniforms = programs->smoothUniforms;
++        const auto  common = [&] {
++            glUniform1i(uniforms.tex, 0);
++            glUniform2f(uniforms.fieldSize, fieldWidth, fieldHeight);
++            glUniform1i(uniforms.radius, plan.smoothRadius);
++            glUniform1f(uniforms.negHalfInvSigmaSq, plan.smoothNegHalfInvSigmaSq);
++        };
++        pass(programs->smooth, second, first, [&] {
++            common();
++            glUniform2f(uniforms.direction, 1.0f, 0.0f);
++        });
++        pass(programs->smooth, first, second, [&] {
++            common();
++            glUniform2f(uniforms.direction, 0.0f, 1.0f);
++        });
++    }
++
++    // 6. the field the glass shader reads: distance and gradient
++    {
++        const auto& uniforms = programs->packUniforms;
++        pass(programs->pack, m_field, first, [&] {
++            glUniform1i(uniforms.tex, 0);
++            glUniform2f(uniforms.fieldSize, fieldWidth, fieldHeight);
++            glUniform1f(uniforms.texelPx, divisor);
++        });
++    }
++
++    // Hand back the state blurBackground() hands back: Hyprland's blending at every element
++    // boundary, the caller's framebuffer and the viewport of its own size.
++    g_pHyprRenderer->blend(true);
++    g_pHyprOpenGL->bindFramebuffer(GL_FRAMEBUFFER, framebufferId(callerFramebuffer));
++    glBindVertexArray(0);
++    g_pHyprOpenGL->setViewport(0, 0, static_cast<int>(callerFramebuffer->m_size.x), static_cast<int>(callerFramebuffer->m_size.y));
++
++    if (const auto monitor = ctx.m_data.pMonitor.lock())
++        Diagnostics::recordContourRebuild(monitor->m_id);
++
++    m_builtKey        = key;
++    m_dirty           = false;
++    m_uncoveredFrames = 0;
++    m_deferredAt.reset();
++    m_lastBuild       = std::chrono::steady_clock::now();
++    return true;
++}
++
++void CField::release() noexcept {
++    // every glassed layer calls this each frame while it does not use contour: nothing held is nothing to do
++    if (!m_field && !m_requested && !m_counted)
++        return;
++
++    m_field.reset();
++    m_builtKey        = {};
++    m_requested       = false;
++    m_dirty           = false;
++    m_uncoveredFrames = 0;
++    m_deferredAt.reset();
++
++    if (!m_counted)
++        return;
++    m_counted = false;
++
++    if (!g_pGlobalState)
++        return;
++
++    auto& scratch = g_pGlobalState->contourScratch;
++    if (--scratch.users <= 0) {
++        scratch.users = 0;
++        scratch.first.reset();
++        scratch.second.reset();
++    }
++}
++
++} // namespace Contour
+diff --git a/src/Contour.hpp b/src/Contour.hpp
+new file mode 100644
+index 0000000..449fdd2
+--- /dev/null
++++ b/src/Contour.hpp
+@@ -0,0 +1,204 @@
++#pragma once
++
++#include <algorithm>
++#include <chrono>
++#include <cmath>
++#include <optional>
++#include <hyprland/src/helpers/memory/Memory.hpp>
++#include <hyprland/src/render/Framebuffer.hpp>
++#include <hyprutils/math/Box.hpp>
++
++namespace Render {
++    class CRenderContext;
++}
++
++// Contour: a layer with mask_mode = contour gets edge, bend and highlights along the
++// outline its app actually draws, instead of along the layer's rectangle. The outline is
++// a signed distance field, built on the GPU from the layer's own render at a fraction of
++// its size, and only rebuilt when the layer's content changes.
++namespace Contour {
++
++// edge_thickness is a fraction of this many logical px (at most the layer's shorter side),
++// not of the layer: a card in a screen-sized layer gets a card's edge, not a screen's.
++inline constexpr float REFERENCE_SIZE_LOGICAL = 160.0f;
++
++// How far the field reaches from the outline, in bezel widths: the edge effects fade out
++// well before it. Never less than what the bevel line needs, and bounded for cost.
++inline constexpr float REACH_PER_BEZEL = 4.0f;
++inline constexpr float REACH_MIN_PX    = 16.0f;
++inline constexpr float REACH_MAX_PX    = 256.0f;
++
++// The field has at most this many texels, and its distance transform looks at most this
++// many texels either way (and texels times that stays within the work budget): all of it
++// sets the cost of a rebuild. The resolution divisor (1, 2, 4 or 8 framebuffer px per
++// texel) is the smallest that respects them; the coarsest one is taken whatever the work.
++inline constexpr int  MAX_TEXELS       = 1'000'000;
++inline constexpr int  MAX_REACH_TEXELS = 64;
++inline constexpr long MAX_WORK         = 24'000'000;
++inline constexpr int  MAX_DIVISOR      = 8;
++// No field side goes past what any GPU takes as a texture size, whatever the area.
++inline constexpr int  MAX_FIELD_SIDE   = 8192;
++
++// Squared distances live in half floats: this stands for "none within reach" (the shaders'
++// FAR) and has to stay above any squared distance the passes can add up to.
++inline constexpr float NO_DISTANCE_SQUARED = 16384.0f;
++static_assert(2 * MAX_REACH_TEXELS * MAX_REACH_TEXELS < NO_DISTANCE_SQUARED);
++
++// The Gaussian that rounds the creases where distances from two edges meet.
++inline constexpr float SMOOTH_SIGMA_PER_BEZEL = 0.3f;
++inline constexpr float SMOOTH_SIGMA_MIN_PX    = 1.0f;
++inline constexpr float SMOOTH_SIGMA_MAX_PX    = 12.0f;
++inline constexpr float SMOOTH_SIGMA_MIN_TEXELS = 0.75f;
++inline constexpr int   SMOOTH_MAX_RADIUS      = 12; // texels each side; the shader loops to a uniform
++
++// A client that commits every frame still rebuilds at most this often: the last change
++// of a burst is rebuilt once the interval has passed.
++inline constexpr std::chrono::milliseconds MIN_REBUILD_INTERVAL{33};
++
++// While the layer fades in, its alpha is too coarse for a clean outline: that field is
++// provisional, and rebuilt once the layer is at least this opaque.
++inline constexpr float COMPLETE_ALPHA = 0.98f;
++
++// A build waits for a frame that redraws the whole layer. After this many tries in a row it
++// stops asking for more damage, so a layer that is never fully redrawn cannot loop the renderer.
++inline constexpr int MAX_UNCOVERED_FRAMES = 6;
++
++// What a field is built for. Equal plans mean the same texels mean the same thing.
++struct SPlan {
++    int   boxWidth = 0, boxHeight = 0;    // the layer box, framebuffer px
++    int   divisor = 1;                    // framebuffer px per texel
++    int   fieldWidth = 0, fieldHeight = 0;
++    float referencePx = 0.0f;             // what edge_thickness is a fraction of
++    float reachPx = 0.0f;                 // the stored distance is clamped to +-this
++    int   reachTexels = 0;
++    int   smoothRadius = 0;
++    float smoothNegHalfInvSigmaSq = 0.0f;
++
++    [[nodiscard]] bool operator==(const SPlan&) const noexcept = default;
++};
++
++// What edge_thickness is a fraction of, framebuffer px.
++[[nodiscard]] inline float referencePx(int boxWidth, int boxHeight, float monitorScale) noexcept {
++    const float scale = monitorScale > 0.0f ? monitorScale : 1.0f;
++    return std::min(static_cast<float>(std::min(boxWidth, boxHeight)), REFERENCE_SIZE_LOGICAL * scale);
++}
++
++// bezelPx: the bezel width, rimPx: the bevel line's width, both framebuffer px. Nullopt for
++// a box too big for any resolution to stay within MAX_TEXELS, or a non-finite input.
++[[nodiscard]] inline std::optional<SPlan> makePlan(int boxWidth, int boxHeight, float bezelPx, float rimPx, float monitorScale) noexcept {
++    if (boxWidth < 1 || boxHeight < 1 || !std::isfinite(bezelPx) || !std::isfinite(rimPx))
++        return std::nullopt;
++
++    SPlan plan;
++    plan.boxWidth    = boxWidth;
++    plan.boxHeight   = boxHeight;
++    plan.referencePx = referencePx(boxWidth, boxHeight, monitorScale);
++    plan.reachPx     = std::clamp(std::max(REACH_PER_BEZEL * std::max(bezelPx, 0.0f), 2.0f * std::max(rimPx, 0.0f)), REACH_MIN_PX, REACH_MAX_PX);
++
++    for (int divisor = 1; divisor <= MAX_DIVISOR; divisor *= 2) {
++        const long width  = (boxWidth + divisor - 1) / divisor;
++        const long height = (boxHeight + divisor - 1) / divisor;
++        const int  reach  = static_cast<int>(std::ceil(plan.reachPx / static_cast<float>(divisor)));
++        if (width * height > MAX_TEXELS || width > MAX_FIELD_SIDE || height > MAX_FIELD_SIDE || reach > MAX_REACH_TEXELS)
++            continue;
++        if (width * height * reach > MAX_WORK && divisor < MAX_DIVISOR)
++            continue;
++
++        plan.divisor     = divisor;
++        plan.fieldWidth  = static_cast<int>(width);
++        plan.fieldHeight = static_cast<int>(height);
++        plan.reachTexels = reach;
++
++        const float sigmaPx     = std::clamp(SMOOTH_SIGMA_PER_BEZEL * std::max(bezelPx, 0.0f), SMOOTH_SIGMA_MIN_PX, SMOOTH_SIGMA_MAX_PX);
++        const float sigmaTexels = std::max(sigmaPx / static_cast<float>(divisor), SMOOTH_SIGMA_MIN_TEXELS);
++        plan.smoothRadius            = std::min(static_cast<int>(std::ceil(3.0f * sigmaTexels)), SMOOTH_MAX_RADIUS);
++        plan.smoothNegHalfInvSigmaSq = -0.5f / (sigmaTexels * sigmaTexels);
++        return plan;
++    }
++
++    return std::nullopt;
++}
++
++// What a build depends on besides the plan.
++struct SBuildKey {
++    SPlan plan;
++    float threshold   = 0.0f; // mask_threshold, before the layer's fade
++    bool  provisional = false; // built while the layer was still fading in
++    // Where the box sits in the framebuffer, only while part of it is off the screen: the
++    // visible part is all that was drawn. (0, 0) while it is entirely on screen.
++    int   boxX = 0, boxY = 0;
++
++    [[nodiscard]] bool operator==(const SBuildKey&) const noexcept = default;
++};
++
++// Whether the GPU can render to the half-float field. Asked once; allocating a framebuffer
++// it cannot render to would abort the compositor. Needs a current GL context.
++[[nodiscard]] bool gpuSupportsField();
++
++// The framebuffers every field's build shares, one build at a time. Held while any layer
++// holds a field, freed with the last one.
++struct SScratch {
++    SP<Render::IFramebuffer> first;
++    SP<Render::IFramebuffer> second;
++    int                      users = 0;
++};
++
++// One layer's field and when it is stale.
++class CField {
++  public:
++    CField() = default;
++    ~CField();
++    CField(const CField&)            = delete;
++    CField& operator=(const CField&) = delete;
++
++    // True while the layer asked for a field and has none, or an out-of-date one.
++    [[nodiscard]] bool pending() const noexcept { return m_requested && (!m_field || m_dirty); }
++    [[nodiscard]] bool held() const noexcept { return static_cast<bool>(m_field); }
++
++    // A build is due: no field yet, the content changed, or what it depends on did.
++    [[nodiscard]] bool wantsBuild(const SBuildKey& key) const noexcept { return !m_field || m_dirty || key != m_builtKey; }
++
++    // The field can be drawn for this geometry (not necessarily a fresh one).
++    [[nodiscard]] bool usableFor(const SPlan& plan) const noexcept { return m_field && m_builtKey.plan == plan; }
++
++    // The layer's content changed. Now: mark it dirty, the caller damages the layer.
++    // Deferred: too soon after the last build, owed at deferredAt().
++    enum class EInvalidation { None, Now, Deferred };
++    [[nodiscard]] EInvalidation invalidate(std::chrono::steady_clock::time_point now) noexcept;
++    [[nodiscard]] std::optional<std::chrono::steady_clock::time_point> deferredAt() const noexcept { return m_deferredAt; }
++    // Applies an owed invalidation once its time came: Now when it became dirty, Deferred
++    // while it still is not due, None when nothing was owed.
++    [[nodiscard]] EInvalidation flushDeferred(std::chrono::steady_clock::time_point now) noexcept;
++
++    // A build wanted a frame that redraws the whole layer and this one did not. True while the
++    // caller should still ask for more damage.
++    [[nodiscard]] bool noteUncoveredFrame() noexcept { return ++m_uncoveredFrames <= MAX_UNCOVERED_FRAMES; }
++
++    // Builds the field from `layerRender` (the layer's own render, its alpha is the content)
++    // for `key`. `box` is the layer box in that framebuffer's pixels, `fadeAlpha` the layer's
++    // current alpha. `callerFramebuffer` is re-bound afterwards. False when the GPU or the
++    // shaders cannot do it (the caller falls back to the layer's rectangle), or on a failed allocation.
++    [[nodiscard]] bool build(Render::CRenderContext& ctx, const SBuildKey& key, const SP<Render::IFramebuffer>& layerRender, const CBox& box,
++                             float fadeAlpha, const SP<Render::IFramebuffer>& callerFramebuffer);
++
++    // Frees the field, and the shared scratch with the last one.
++    void release() noexcept;
++
++    // The texture the glass shader reads.
++    [[nodiscard]] SP<Render::IFramebuffer> framebuffer() const { return m_field; }
++
++    // Marks the layer as using contour, so that pending() starts to report.
++    void request() noexcept { m_requested = true; }
++
++  private:
++    SP<Render::IFramebuffer>                                  m_field;
++    SBuildKey                                                 m_builtKey;
++    bool                                                      m_requested = false;
++    bool                                                      m_dirty     = false;
++    bool                                                      m_counted   = false; // counted in SScratch::users
++    int                                                       m_uncoveredFrames = 0;
++    std::chrono::steady_clock::time_point                     m_lastBuild{};
++    std::optional<std::chrono::steady_clock::time_point>      m_deferredAt;
++};
++
++} // namespace Contour
+diff --git a/src/Diagnostics.cpp b/src/Diagnostics.cpp
+index 5ccc58a..4770d14 100644
+--- a/src/Diagnostics.cpp
++++ b/src/Diagnostics.cpp
+@@ -18,8 +18,9 @@
+ #include <GLES3/gl32.h>
+ #include <GLES2/gl2ext.h>
+ 
+-#include <hyprland/src/desktop/view/Window.hpp>
++#include <hyprland/src/desktop/view/window/Window.hpp>
+ #include <hyprland/src/helpers/MiscFunctions.hpp>
++#include <hyprland/src/ipc/s1/S1.hpp>
+ #include <hyprland/src/render/Renderer.hpp>
+ #include <hyprland/src/state/MonitorState.hpp>
+ 
+@@ -43,7 +44,7 @@ struct SStageQueryRing {
+     // The monitor being rendered when each pending slot's query was opened
+     // (captured in CScopedStageTimer's constructor). A query's result is only
+     // ever readable well after glEndQuery, on a later call to drainStage(), by
+-    // which point g_pHyprRenderer->m_renderData.pMonitor may have moved on to
++    // which point the render context's m_data.pMonitor may have moved on to
+     // another monitor entirely — the result must carry its own monitor id
+     // rather than being attributed to whatever is current at drain time.
+     std::array<MONITORID, QUERY_RING_SIZE> monitor{};
+@@ -174,10 +175,10 @@ std::string windowField(const PHLWINDOWREF& windowRef) {
+     const auto window = windowRef.lock();
+     if (!window)
+         return "-";
+-    return std::format("0x{:x} ({})", reinterpret_cast<uintptr_t>(window.get()), window->m_class.empty() ? "-" : window->m_class);
++    return std::format("0x{:x} ({})", reinterpret_cast<uintptr_t>(window.get()), window->metadata().appID().empty() ? "-" : window->metadata().appID());
+ }
+ 
+-std::string formatItems(eHyprCtlOutputFormat format) {
++std::string formatItems(IPC::Socket1::eOutputFormat format) {
+     struct SLiveItem {
+         WP<CWLSurfaceResource>                surface;
+         std::shared_ptr<CGlassSubsurfaceState> state;
+@@ -195,7 +196,7 @@ std::string formatItems(eHyprCtlOutputFormat format) {
+     const bool subsurfacesEnabled = g_pGlobalState && g_pGlobalState->config.subsurfacesEnabled && **g_pGlobalState->config.subsurfacesEnabled;
+     const bool protocolActive     = ItemHints::active();
+ 
+-    if (format == eHyprCtlOutputFormat::FORMAT_JSON) {
++    if (format == IPC::Socket1::eOutputFormat::FORMAT_JSON) {
+         std::string json = std::format("{{\n  \"subsurfacesEnabled\": {}, \"protocolActive\": {}, \"items\": [\n",
+                                         subsurfacesEnabled ? "true" : "false", protocolActive ? "true" : "false");
+ 
+@@ -227,7 +228,7 @@ std::string formatItems(eHyprCtlOutputFormat format) {
+ 
+             json += std::format("    {{\"window\": \"{}\", \"windowClass\": \"{}\", \"shapeMode\": \"{}\", \"hintPreset\": \"{}\", "
+                                 "\"hintPresetRejected\": {}, \"resolvedPreset\": \"{}\", \"hintShape\": {}, \"lastDrawn\": {}}}",
+-                                window ? std::format("0x{:x}", reinterpret_cast<uintptr_t>(window.get())) : "", escapeJSONStrings(window ? window->m_class : ""),
++                                window ? std::format("0x{:x}", reinterpret_cast<uintptr_t>(window.get())) : "", escapeJSONStrings(window ? window->metadata().appID() : ""),
+                                 shapeModeLabel(hints ? hints->shapeMode : eItemShapeMode::NONE), escapeJSONStrings(hintPreset),
+                                 drawn && state.lastPresetHint().rejected ? "true" : "false", escapeJSONStrings(drawn ? state.lastResolvedPreset() : ""), hintShape,
+                                 lastDrawn);
+@@ -238,11 +239,11 @@ std::string formatItems(eHyprCtlOutputFormat format) {
+     }
+ 
+     if (live.empty())
+-        return std::format("hyprglass items: no active subsurface glass items (subsurfaces:enabled={}, hyprglass_item_v1 protocol={})\n",
++        return std::format("hyprglass items: no active subsurface glass items (subsurfaces.enabled={}, hyprglass_item_v1 protocol={})\n",
+                             subsurfacesEnabled ? "on" : "off", protocolActive ? "active" : "inactive");
+ 
+     std::string out = "hyprglass items\n";
+-    out += std::format("  subsurfaces:enabled: {}   hyprglass_item_v1 protocol: {}\n\n", subsurfacesEnabled ? "on" : "off",
++    out += std::format("  subsurfaces.enabled: {}   hyprglass_item_v1 protocol: {}\n\n", subsurfacesEnabled ? "on" : "off",
+                         protocolActive ? "active" : "inactive");
+     out += std::format("  {:<30} {:<10} {:<9} {}\n", "window", "monitor", "shape", "preset (requested -> resolved)");
+ 
+@@ -275,13 +276,13 @@ std::string formatItems(eHyprCtlOutputFormat format) {
+     return out;
+ }
+ 
+-std::string formatStats(eHyprCtlOutputFormat format) {
++std::string formatStats(IPC::Socket1::eOutputFormat format) {
+     drainAllStages();
+ 
+     const bool timersOn    = timersEnabledBy

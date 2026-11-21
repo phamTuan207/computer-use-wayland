@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Task 3, signup wizard</title></head>
+<body>
+<h1>Sign up</h1>
+<div id="step1">
+  <h2>Step 1, account</h2>
+  <label>Email <input id="w-email" type="text" value="useratexample.com"></label>
+  <p class="hint">Hint: the prefilled email is missing its @ sign, fix it before continuing.</p>
+  <label>Password <input id="w-pass" type="password" value="short"></label>
+  <p class="hint">Password must be at least 8 characters.</p>
+  <button id="w-next1" type="button">Next</button>
+  <div id="err1" style="color:red"></div>
+</div>
+<div id="step2" style="display:none">
+  <h2>Step 2, profile</h2>
+  <label>Display name <input id="w-name" type="text"></label>
+  <label>Age <input id="w-age" type="text"></label>
+  <button id="w-next2" type="button">Next</button>
+  <div id="err2" style="color:red"></div>
+</div>
+<div id="step3" style="display:none">
+  <h2>Step 3, review</h2>
+  <div id="review"></div>
+  <button id="w-confirm" type="button">Confirm signup</button>
+</div>
+<div id="done" style="display:none">
+  <h2 id="done-title">Signup complete</h2>
+  <div id="done-code"></div>
+  <div id="done-email"></div>
+</div>
+<script>
+function show(id) {
+  ['step1', 'step2', 'step3', 'done'].forEach(function (s) {
+    document.getElementById(s).style.display = (s === id) ? 'block' : 'none';
+  });
+}
+document.getElementById('w-next1').addEventListener('click', function () {
+  var email = document.getElementById('w-email').value.trim();
+  var pass = document.getElementById('w-pass').value;
+  var err = document.getElementById('err1');
+  if (email.indexOf('@') < 0) { err.textContent = 'Email must contain @.'; return; }
+  if (pass.length < 8) { err.textContent = 'Password must be at least 8 characters.'; return; }
+  err.textContent = '';
+  show('step2');
+});
+document.getElementById('w-next2').addEventListener('click', function () {
+  var name = document.getElementById('w-name').value.trim();
+  var age = parseInt(document.getElementById('w-age').value, 10);
+  var err = document.getElementById('err2');
+  if (!name || !(age > 0)) { err.textContent = 'Name and a positive age are required.'; return; }
+  err.textContent = '';
+  document.getElementById('review').textContent =
+    'Email: ' + document.getElementById('w-email').value + ', Name: ' + name + ', Age: ' + age;
+  show('step3');
+});
+document.getElementById('w-confirm').addEventListener('click', function () {
+  document.getElementById('done-code').textContent = 'ACC-2026-OK';
+  document.getElementById('done-email').textContent = document.getElementById('w-email').value;
+  show('done');
+});
+</script>
+</body></html>

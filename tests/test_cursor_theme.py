@@ -210,6 +210,19 @@ class GuardProtocol(unittest.TestCase):
                 with self.assertRaisesRegex(RuntimeError,'did not confirm'):
                     cursor_theme.guard_reply(raw,token='a'*32)
 
+    def test_guard_reply_names_missing_backend_on_non_json_reply(self):
+        # The live failure: hyprctl answers an unloaded plugin's command
+        # with 'unknown request' and exit code 0, so the reply is plain
+        # text. The error must name the missing backend, not the JSON
+        # decoder, on both the str (hyprctl) and bytes (guard socket) paths.
+        for raw in ('unknown request', b'unknown request\n', bytearray(b'not json\n')):
+            with self.subTest(raw=repr(raw)[:30]):
+                with self.assertRaisesRegex(RuntimeError,'not valid JSON.*may not be loaded'):
+                    cursor_theme.guard_reply(raw,token='a'*32)
+        with patch.object(cursor_theme,'command',return_value='unknown request'):
+            with self.assertRaisesRegex(RuntimeError,'may not be loaded'):
+                cursor_theme.check_guard({})
+
     def test_check_guard_requires_idle_backend(self):
         with patch.object(cursor_theme,'command',return_value='{"ok":true,"schema":1,"active":false,"token":""}'):
             cursor_theme.check_guard({})
@@ -366,8 +379,9 @@ class GuardProtocol(unittest.TestCase):
                 worker,_=self._serve_once(sock,script)
                 guard=cursor_theme.Guard(env,'cu-agent-test',32,token)
                 try:
-                    # Malformed JSON surfaces the decoder's ValueError; every
-                    # other bad ack surfaces RuntimeError. Either fails closed.
+                    # Malformed JSON surfaces a RuntimeError naming the
+                    # missing backend; every other bad ack surfaces
+                    # RuntimeError too. Either fails closed.
                     with self.assertRaises((RuntimeError,ValueError)):
                         guard.command('hide')
                 finally:

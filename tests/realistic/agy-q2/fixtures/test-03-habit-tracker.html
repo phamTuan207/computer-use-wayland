@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Offline Habit Tracker</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background: #f3f4f6; color: #1f2937; padding: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; background: #fff; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); padding: 24px; }
+    header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e5e7eb; padding-bottom: 16px; margin-bottom: 16px; }
+    h1 { font-size: 22px; color: #111827; }
+    .stats-bar { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 20px; }
+    .stat-card { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px 18px; text-align: center; }
+    .stat-val { font-size: 24px; font-weight: 700; color: #1d4ed8; margin-top: 4px; }
+    .stat-label { font-size: 12px; font-weight: 500; color: #6b7280; text-transform: uppercase; }
+    .status-banner { padding: 10px 14px; border-radius: 4px; font-size: 13px; font-weight: 500; display: none; margin-bottom: 16px; }
+    .status-banner.success { display: block; background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
+    .status-banner.error { display: block; background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+    .form-panel { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px 18px; margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+    input[type="text"], input[type="number"], select { padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 13px; }
+    .btn { padding: 7px 14px; border-radius: 4px; font-size: 13px; font-weight: 600; cursor: pointer; border: none; }
+    .btn-primary { background: #2563eb; color: #fff; }
+    .btn-secondary { background: #e5e7eb; color: #374151; }
+    .btn-danger { background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; }
+    table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 13px; }
+    th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #e5e7eb; }
+    th { background: #f9fafb; font-weight: 600; color: #4b5563; }
+    .day-col { text-align: center; width: 45px; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+    .badge-health { background: #dcfce7; color: #15803d; }
+    .badge-productivity { background: #dbeafe; color: #1d4ed8; }
+    .badge-mindset { background: #fef3c7; color: #b45309; }
+    .badge-learning { background: #f3e8ff; color: #7e22ce; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>Habit & Focus Dashboard</h1>
+    <div style="display: flex; gap: 12px;">
+      <button id="btn-save-habits" class="btn btn-primary">Save Tracking Log</button>
+    </div>
+  </header>
+
+  <div id="habit-status-banner" class="status-banner"></div>
+
+  <div class="stats-bar">
+    <div class="stat-card">
+      <div class="stat-label">Active Habits</div>
+      <div id="stat-total-habits" class="stat-val">4</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Weekly Adherence Rate</div>
+      <div id="stat-adherence-rate" class="stat-val">57%</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Longest Active Streak</div>
+      <div id="stat-longest-streak" class="stat-val">5 days</div>
+    </div>
+  </div>
+
+  <div class="form-panel">
+    <div>
+      <label for="input-habit-name" style="font-size: 12px; font-weight: 500; display: block; margin-bottom: 3px;">Habit Name:</label>
+      <input type="text" id="input-habit-name" placeholder="e.g. Deep Work Sprint" style="width: 200px;">
+    </div>
+    <div>
+      <label for="select-habit-category" style="font-size: 12px; font-weight: 500; display: block; margin-bottom: 3px;">Category:</label>
+      <select id="select-habit-category">
+        <option value="Health">Health</option>
+        <option value="Productivity">Productivity</option>
+        <option value="Mindset">Mindset</option>
+        <option value="Learning">Learning</option>
+      </select>
+    </div>
+    <div>
+      <label for="input-target-days" style="font-size: 12px; font-weight: 500; display: block; margin-bottom: 3px;">Target Days/Wk:</label>
+      <input type="number" id="input-target-days" value="5" min="1" max="7" style="width: 70px;">
+    </div>
+    <div style="align-self: flex-end;">
+      <button id="btn-add-habit" class="btn btn-primary">Add Habit</button>
+    </div>
+    <div style="margin-left: auto; align-self: flex-end;">
+      <label for="filter-category" style="font-size: 12px; font-weight: 500; margin-right: 6px;">Filter:</label>
+      <select id="filter-category">
+        <option value="all">All Categories</option>
+        <option value="Health">Health</option>
+        <option value="Productivity">Productivity</option>
+        <option value="Mindset">Mindset</option>
+        <option value="Learning">Learning</option>
+      </select>
+    </div>
+  </div>
+
+  <table id="habits-table">
+    <thead>
+      <tr>
+        <th>Habit</th>
+        <th>Category</th>
+        <th class="day-col">Mon</th>
+        <th class="day-col">Tue</th>
+        <th class="day-col">Wed</th>
+        <th class="day-col">Thu</th>
+        <th class="day-col">Fri</th>
+        <th class="day-col">Sat</th>
+        <th class="day-col">Sun</th>
+        <th>Streak</th>
+        <th>Progress</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody id="habits-tbody"></tbody>
+  </table>
+</div>
+
+<script>
+(function() {
+  const DAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+
+  let habits = [
+    {
+      id: 'meditation',
+      name: 'Morning Meditation',
+      category: 'Mindset',
+      target: 5,
+      days: [true, true, true, true, true, false, false]
+    },
+    {
+      id: 'water',
+      name: 'Drink 2L Water',
+      category: 'Health',
+      target: 7,
+      days: [true, true, true, true, true, false, false]
+    },
+    {
+      id: 'reading',
+      name: 'Read 30 Mins',
+      category: 'Learning',
+      target: 5,
+      days: [true, true, true, true, false, false, false]
+    },
+    {
+      id: 'stretching',
+      name: 'Desk Stretching',
+      category: 'Health',
+      target: 4,
+      days: [true, true, false, false, false, false, false]
+    }
+  ];
+
+  let habitSaved = false;
+
+  function slugify(text) {
+    return text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+  }
+
+  function getBadgeClass(cat) {
+    const c = cat.toLowerCase();
+    if (c === 'health') return 'badge-health';
+    if (c === 'productivity') return 'badge-productivity';
+    if (c === 'mindset') return 'badge-mindset';
+    return 'badge-learning';
+  }
+
+  function computeStats() {
+    const totalHabits = habits.length;
+    let totalChecks = 0;
+    let maxStreak = 0;
+
+    habits.forEach(h => {
+      let currentStreak = 0;
+      let localMax = 0;
+      h.days.forEach(d => {
+        if (d) {
+          totalChecks++;
+          currentStreak++;
+          if (currentStreak > localMax) localMax = currentStreak;
+        } else {
+          currentStreak = 0;
+        }
+      });
+      h.streak = localMax;
+      if (localMax > maxStreak) maxStreak = localMax;
+    });
+
+    const totalPossible = totalHabits * 7;
+    const rate = totalPossible > 0 ? Math.round((totalChecks / totalPossible) * 100) : 0;
+
+    document.getElementById('stat-total-habits').textContent = totalHabits;
+    document.getElementById('stat-adherence-rate').textContent = rate + '%';
+    document.getElementById('stat-longest-streak').textContent = maxStreak + ' days';
+
+    return { totalChecks, totalPossible, rate, maxStreak };
+  }
+
+  function renderTable() {
+    const tbody = document.getElementById('habits-tbody');
+    const filterVal = document.getElementById('filter-category').value;
+    tbody.innerHTML = '';
+
+    computeStats();
+
+    habits.forEach((h) => {
+      if (filterVal !== 'all' && h.category !== filterVal) {
+        return;
+      }
+
+      const tr = document.createElement('tr');
+      tr.id = 'habit-row-' + h.id;
+
+      const completedCount = h.days.filter(Boolean).length;
+      const pct = Math.round((completedCount / 7) * 100);
+
+      let daysHtml = '';
+      DAYS.forEach((day, dIdx) => {
+        const isChecked = h.days[dIdx] ? 'checked' : '';
+        daysHtml += `
+          <td class="day-col">
+            <input type="checkbox" id="check-habit-${h.id}-${day}" class="habit-check" data-id="${h.id}" data-day="${dIdx}" ${isChecked}>
+          </td>
+        `;
+      });
+
+      tr.innerHTML = `
+        <td><strong>${h.name}</strong></td>
+        <td><span class="badge ${getBadgeClass(h.category)}">${h.category}</span></td>
+        ${daysHtml}
+        <td><span id="streak-${h.id}" style="font-weight:600;color:#1e40af;">${h.streak}d</span></td>
+        <td>${pct}% (${completedCount}/7)</td>
+        <td>
+          <button id="btn-del-habit-${h.id}" class="btn btn-danger btn-del-habit" data-id="${h.id}" style="padding:2px 8px;font-size:11px;">Delete</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    tbody.querySelectorAll('.habit-check').forEach(box => {
+      box.addEventListener('change', (e) => {
+        const id = e.target.getAttribute('data-id');
+        const dayIdx = parseInt(e.target.getAttribute('data-day'), 10);
+        const item = habits.find(x => x.id === id);
+        if (item) {
+          item.days[dayIdx] = e.target.checked;
+          habitSaved = false;
+          renderTable();
+        }
+      });
+    });
+
+    tbody.querySelectorAll('.btn-del-habit').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const id = e.target.getAttribute('data-id');
+        habits = habits.filter(x => x.id !== id);
+        habitSaved = false;
+        renderTable();
+      });
+    });
+  }
+
+  document.getElementById('btn-add-habit').addEventListener('click', () => {
+    const nameInput = document.getElementById('input-habit-name');
+    const catInput = document.getElementById('select-habit-category');
+    const targetInput = document.getElementById('input-target-days');
+    const name = nameInput.value.trim();
+    if (!name) return;
+
+    const id = slugify(name);
+    habits.push({
+      id,
+      name,
+      category: catInput.value,
+      target: parseInt(targetInput.value, 10) || 5,
+      days: [false, false, false, false, false, false, false]
+    });
+
+    nameInput.value = '';
+    habitSaved = false;
+    renderTable();
+  });
+
+  document.getElementById('filter-category').addEventListener('change', renderTable);
+
+  document.getElementById('btn-save-habits').addEventListener('click', () => {
+    const stats = computeStats();
+    habitSaved = true;
+    const banner = document.getElementById('habit-status-banner');
+    banner.className = 'status-banner success';
+    banner.textContent = `Habit log saved successfully for ${habits.length} habits (${stats.totalChecks} completed checks)`;
+  });
+
+  // Initial render
+  renderTable();
+
+  // Verification hook (REAL DOM only - no self-simulation)
+  window.__agyVerify = function() {
+    const failures = [];
+    const stats = computeStats();
+    const bannerText = document.getElementById('habit-status-banner').textContent.trim();
+    const rows = document.querySelectorAll('#habits-tbody tr');
+
+    if (!habitSaved) {
+      failures.push('Habit tracker log has not been saved via btn-save-habits');
+    }
+    if (habits.length !== 5) {
+      failures.push(`Expected 5 habits, found ${habits.length}`);
+    }
+    if (stats.totalChecks !== 23) {
+      failures.push(`Expected 23 completed checks across all habits, got ${stats.totalChecks}`);
+    }
+    if (!bannerText.includes('Habit log saved successfully for 5 habits (23 completed checks)')) {
+      failures.push(`Status banner text mismatch, got '${bannerText}'`);
+    }
+
+    // Verify Deep Work Sprint exists with 5 days checked
+    const deepWork = habits.find(h => h.id === 'deep-work-sprint');
+    if (!deepWork) {
+      failures.push("Missing 'deep-work-sprint' habit");
+    } else {
+      const checks = deepWork.days.slice(0, 5).every(Boolean) && !deepWork.days[5] && !deepWork.days[6];
+      if (!checks) {
+        failures.push("Deep Work Sprint days expected Mon-Fri checked, Sat-Sun unchecked");
+      }
+    }
+
+    // Verify water habit has 7 days checked
+    const water = habits.find(h => h.id === 'water');
+    if (!water || water.days.filter(Boolean).length !== 7) {
+      failures.push("Drink 2L Water expected 7 completed days");
+    }
+
+    // Verify accidental habit was deleted
+    const badHabit = habits.find(h => h.id === 'social-media-browsing');
+    if (badHabit) {
+      failures.push("Social Media Browsing was not removed");
+    }
+
+    return {
+      passed: failures.length === 0,
+      failures,
+      score: failures.length === 0 ? 1 : 0,
+      state: {
+        saved: habitSaved,
+        habitCount: habits.length,
+        totalChecks: stats.totalChecks,
+        rate: stats.rate,
+        banner: bannerText
+      }
+    };
+  };
+})();
+</script>
+</body>
+</html>

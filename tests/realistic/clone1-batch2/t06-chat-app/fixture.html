@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Team Chat</title>
+<style>
+body { font-family: sans-serif; margin: 20px; }
+#app { display: flex; gap: 12px; max-width: 800px; margin: 0 auto; }
+#contacts { width: 180px; border: 1px solid #999; padding: 8px; }
+#contacts button { display: block; width: 100%; padding: 8px; margin: 4px 0; text-align: left; }
+#contacts button.active { background: #bbdefb; }
+.badge { background: #d32f2f; color: #fff; border-radius: 10px; padding: 0 6px; font-size: 12px; float: right; }
+#chat { flex: 1; border: 1px solid #999; padding: 8px; display: flex; flex-direction: column; }
+#messages { height: 300px; overflow-y: auto; border: 1px solid #ddd; padding: 8px; }
+.msg { margin: 6px 0; padding: 6px 10px; border-radius: 8px; max-width: 70%; clear: both; }
+.msg.them { background: #eee; float: left; }
+.msg.me { background: #c8e6c9; float: right; text-align: right; }
+.msg .meta { font-size: 11px; color: #666; display: block; }
+.msg .actions { font-size: 11px; }
+.msg .actions button { padding: 2px 6px; margin-left: 4px; }
+#typing { min-height: 18px; color: #666; font-style: italic; }
+#composer { display: flex; gap: 6px; margin-top: 8px; }
+#composer input { flex: 1; padding: 8px; }
+#emojiRow button { padding: 6px; font-size: 16px; }
+#searchBox { margin-bottom: 6px; padding: 6px; width: 100%; box-sizing: border-box; }
+</style>
+</head>
+<body>
+<h1>Team Chat</h1>
+<div id="app">
+  <div id="contacts">
+    <button data-contact="alice" class="active">Alice <span class="badge" id="badge-alice" hidden>0</span></button>
+    <button data-contact="bob">Bob <span class="badge" id="badge-bob" hidden>0</span></button>
+  </div>
+  <div id="chat">
+    <h2 id="chatTitle">Chat with Alice</h2>
+    <input id="searchBox" type="text" placeholder="Search messages">
+    <div id="messages"></div>
+    <div id="typing"></div>
+    <div id="emojiRow">
+      <button class="emoji" data-emoji="👍">👍</button>
+      <button class="emoji" data-emoji="🎉">🎉</button>
+      <button class="emoji" data-emoji="❤️">❤️</button>
+    </div>
+    <div id="composer">
+      <input id="msgInput" type="text" placeholder="Type a message">
+      <button id="attachBtn">Attach</button>
+      <button id="sendBtn">Send</button>
+    </div>
+  </div>
+</div>
+<script>
+const threads = {
+  alice: [
+    { from: 'them', text: 'Hello, did you see the release notes?', time: '09:12' },
+    { from: 'them', text: 'The dashboard is much faster now.', time: '09:13' },
+  ],
+  bob: [
+    { from: 'them', text: 'Morning! Are we still on for review at 3?', time: '08:40' },
+  ],
+};
+const replies = {
+  alice: ['Sounds good, thanks!', 'Let me check and get back to you.', 'Agreed, shipping it.'],
+  bob: ['Yes, 3 works for me.', 'Can we move it to 4?', 'On my way.'],
+};
+let replyIndex = { alice: 0, bob: 0 };
+let current = 'alice';
+let unread = { alice: 0, bob: 0 };
+const messagesEl = document.getElementById('messages');
+
+function timeNow() {
+  const d = new Date();
+  return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+}
+function render() {
+  messagesEl.innerHTML = '';
+  const q = (document.getElementById('searchBox').value || '').toLowerCase();
+  threads[current].forEach((m, i) => {
+    if (q && !m.text.toLowerCase().includes(q)) return;
+    const d = document.createElement('div');
+    d.className = 'msg ' + m.from;
+    d.dataset.index = i;
+    const text = document.createElement('span');
+    text.className = 'text';
+    text.textContent = m.text;
+    const meta = document.createElement('span');
+    meta.className = 'meta';
+    meta.textContent = (m.from === 'me' ? 'You' : current) + ' · ' + m.time;
+    d.appendChild(text);
+    d.appendChild(meta);
+    if (m.from === 'me') {
+      const actions = document.createElement('span');
+      actions.className = 'actions';
+      const edit = document.createElement('button');
+      edit.textContent = 'Edit';
+      edit.className = 'editBtn';
+      edit.addEventListener('click', () => {
+        const input = document.createElement('input');
+        input.value = m.text;
+        input.className = 'editInput';
+        const save = document.createElement('button');
+        save.textContent = 'Save';
+        save.className = 'saveBtn';
+        save.addEventListener('click', () => {
+          m.text = input.value;
+          render();
+        });
+        text.replaceWith(input);
+        actions.replaceWith(save);
+        input.focus();
+      });
+      const del = document.createElement('button');
+      del.textContent = 'Delete';
+      del.className = 'delBtn';
+      del.addEventListener('click', () => {
+        threads[current].splice(i, 1);
+        render();
+      });
+      actions.appendChild(edit);
+      actions.appendChild(del);
+      d.appendChild(actions);
+    }
+    messagesEl.appendChild(d);
+  });
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+}
+function updateBadges() {
+  for (const c of ['alice', 'bob']) {
+    const b = document.getElementById('badge-' + c);
+    b.hidden = unread[c] === 0;
+    b.textContent = String(unread[c]);
+  }
+}
+function sendMessage() {
+  const input = document.getElementById('msgInput');
+  const text = input.value.trim();
+  if (!text) return;
+  threads[current].push({ from: 'me', text, time: timeNow() });
+  input.value = '';
+  render();
+  const who = current;
+  document.getElementById('typing').textContent = who + ' is typing...';
+  setTimeout(() => {
+    const reply = replies[who][replyIndex[who] % replies[who].length];
+    replyIndex[who] += 1;
+    threads[who].push({ from: 'them', text: reply, time: timeNow() });
+    if (who === current) {
+      document.getElementById('typing').textContent = '';
+      render();
+    } else {
+      unread[who] += 1;
+      updateBadges();
+      document.getElementById('typing').textContent = '';
+    }
+  }, 700);
+}
+document.getElementById('sendBtn').addEventListener('click', sendMessage);
+document.getElementById('msgInput').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') sendMessage();
+});
+document.querySelectorAll('.emoji').forEach((b) => b.addEventListener('click', () => {
+  const input = document.getElementById('msgInput');
+  input.value += b.dataset.emoji;
+  input.focus();
+}));
+document.getElementById('attachBtn').addEventListener('click', () => {
+  threads[current].push({ from: 'me', text: 'Attached: notes.txt (12 KB)', time: timeNow() });
+  render();
+});
+document.getElementById('searchBox').addEventListener('input', render);
+document.querySelectorAll('#contacts button').forEach((b) => b.addEventListener('click', () => {
+  current = b.dataset.contact;
+  unread[current] = 0;
+  updateBadges();
+  document.querySelectorAll('#contacts button').forEach((x) => x.classList.toggle('active', x === b));
+  document.getElementById('chatTitle').textContent = 'Chat with ' + current[0].toUpperCase() + current.slice(1);
+  render();
+}));
+render();
+</script>
+</body>
+</html>

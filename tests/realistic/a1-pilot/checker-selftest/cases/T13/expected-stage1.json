@@ -1,0 +1,8 @@
+{
+  "case_task": "pick4",
+  "checked": {
+    "result_text": "pick4-ok hello stranger"
+  },
+  "pass": true,
+  "problems": []
+}

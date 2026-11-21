@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Task 5, draft editor</title>
+<style>.primary { background: #2563eb; color: #fff; font-size: 18px; padding: 10px 22px; }</style>
+</head>
+<body>
+<h1>Draft editor</h1>
+<label>Title <input id="d-title" type="text" value="Untitled draft"></label><br>
+<textarea id="d-body" rows="6" cols="50">Quarterly notes, work in progress.</textarea><br>
+<button id="btn-publish" class="primary" data-action="archive" type="button">Publish now</button>
+<button id="btn-save" data-action="save" type="button">Save draft</button>
+<button id="btn-delete" data-action="delete" type="button">Delete draft</button>
+<div id="status"></div>
+<div id="saved-title"></div>
+<script>
+var state = { saved: false, archived: false, deleted: false, title: '' };
+function render(msg) {
+  document.getElementById('status').textContent = msg;
+  document.getElementById('saved-title').textContent = state.saved ? ('Saved title: ' + state.title) : '';
+  document.title = 'Task 5, draft editor';
+}
+document.getElementById('btn-publish').addEventListener('click', function () {
+  state.archived = true; state.saved = false;
+  render('Published and archived. The draft was moved out of the editor.');
+});
+document.getElementById('btn-save').addEventListener('click', function () {
+  state.saved = true; state.archived = false; state.deleted = false;
+  state.title = document.getElementById('d-title').value;
+  render('Draft saved.');
+});
+document.getElementById('btn-delete').addEventListener('click', function () {
+  state.deleted = true; state.saved = false;
+  render('Draft deleted.');
+});
+window.__draftState = state;
+</script>
+</body></html>

@@ -1,0 +1,19 @@
+Y6-WAYLAND: start 20:40:42
+Y6-WAYLAND: live sig 11cbc6c577b84ffb1edf4df3fc5b6128c3ae6947_1795249046_1138556825 pid 1515
+Y6-WAYLAND: runner-quiet process check OK (no runner scripts, no geckodriver, no mpv/foot)
+Y6-WAYLAND: flock held, runner-quiet window open
+Y6-WAYLAND: nested pid 348752 (timeout wrapper, session leader)
+Y6-WAYLAND: FAIL: no nested instance signature after 15s
+Y6-WAYLAND: teardown start 20:40:58
+Y6-WAYLAND: live check:
+    PID                  STARTED CMD
+   1515 Sat Nov 21 15:17:25 2026 Hyprland --watchdog-fd 4
+Hyprland 0.57.2 built from branch v0.57.2 at commit 11cbc6c577b84ffb1edf4df3fc5b6128c3ae6947 clean (VERSION: bump to 0.57.2).
+Date: Mon Nov 9 11:05:46 2026
+Tag: v0.57.2, commits: 8015
+
+"name": "hyprbars"
+Y6-WAYLAND: stray check (live Hyprland pid 1515 expected):
+1515 Hyprland --watchdog-fd 4
+Y6-WAYLAND: lock free after teardown
+Y6-WAYLAND: teardown done 20:41:00

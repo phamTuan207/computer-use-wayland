@@ -1,0 +1,55 @@
+{
+  "version": 1,
+  "source": "improvements/pick1-program-template.md, programs P1-P4, copied verbatim",
+  "note": "Sample outputs were recorded on this VM on 2026-11-21 by running the underlying shell commands. The df output reflects this machine's filesystem. Programs run under scripts/code_exec.py, shape windows -> observe -> act -> observe -> assert.",
+  "snippets": [
+    {
+      "name": "p1-terminal-df",
+      "title": "P1: disk usage in a terminal",
+      "description": "Type df -h / in the terminal titled speed-pick1-term, then verify with a fresh observe. No file asserts.",
+      "file": "p1_terminal_df.py",
+      "program": "wins = windows()\nterm = [w for w in wins if w[\"title\"] == \"speed-pick1-term\"][0]\nobs = observe(window=term[\"address\"])\nresult = act([{\"type\": \"type\", \"text\": \"df -h /\\n\"}], obs)\nverify = observe(window=term[\"address\"])\nassert_state(result[\"ok\"], \"act failed\")\nverify_image = verify[\"image\"]\n",
+      "input": {
+        "terminal_title": "speed-pick1-term",
+        "typed_text": "df -h /\n"
+      },
+      "sample_output": "Filesystem      Size  Used Avail Use% Mounted on\noverlay         7.5G   52M  7.5G   1% /\n"
+    },
+    {
+      "name": "p2-terminal-calc",
+      "title": "P2: arithmetic in a terminal",
+      "description": "Type a python3 one-liner computing 144/150*100 in the terminal titled speed-pick1-term, then verify with a fresh observe. No file asserts.",
+      "file": "p2_terminal_calc.py",
+      "program": "wins = windows()\nterm = [w for w in wins if w[\"title\"] == \"speed-pick1-term\"][0]\nobs = observe(window=term[\"address\"])\nresult = act([{\"type\": \"type\", \"text\": \"python3 -c \\\"print(144/150*100)\\\"\\n\"}], obs)\nverify = observe(window=term[\"address\"])\nassert_state(result[\"ok\"], \"act failed\")\nverify_image = verify[\"image\"]\n",
+      "input": {
+        "terminal_title": "speed-pick1-term",
+        "typed_text": "python3 -c \"print(144/150*100)\"\n"
+      },
+      "sample_output": "96.0\n"
+    },
+    {
+      "name": "p3-terminal-mkdir",
+      "title": "P3: create directories, verify they exist",
+      "description": "Create three directories under /tmp/hoc-ky-2, list them, then assert each exists with assert_file_exists after a fresh observe.",
+      "file": "p3_terminal_mkdir.py",
+      "program": "wins = windows()\nterm = [w for w in wins if w[\"title\"] == \"speed-pick1-term\"][0]\nobs = observe(window=term[\"address\"])\nresult = act([{\"type\": \"type\", \"text\": \"mkdir -p /tmp/hoc-ky-2/dsa /tmp/hoc-ky-2/ktvm /tmp/hoc-ky-2/oop && find /tmp/hoc-ky-2 -type d\\n\"}], obs)\nverify = observe(window=term[\"address\"])\nassert_state(result[\"ok\"], \"act failed\")\nassert_file_exists(\"/tmp/hoc-ky-2/dsa\")\nassert_file_exists(\"/tmp/hoc-ky-2/ktvm\")\nassert_file_exists(\"/tmp/hoc-ky-2/oop\")\nverify_image = verify[\"image\"]\n",
+      "input": {
+        "terminal_title": "speed-pick1-term",
+        "typed_text": "mkdir -p /tmp/hoc-ky-2/dsa /tmp/hoc-ky-2/ktvm /tmp/hoc-ky-2/oop && find /tmp/hoc-ky-2 -type d\n"
+      },
+      "sample_output": "/tmp/hoc-ky-2\n/tmp/hoc-ky-2/dsa\n/tmp/hoc-ky-2/ktvm\n/tmp/hoc-ky-2/oop\n"
+    },
+    {
+      "name": "p4-terminal-write-file",
+      "title": "P4: write three lines to a file, verify contents",
+      "description": "Write three idea lines to /tmp/y-tuong.txt with a single-quoted printf using literal backslash-n between lines, then assert each line with assert_file_contains after a fresh observe.",
+      "file": "p4_terminal_write_file.py",
+      "program": "wins = windows()\nterm = [w for w in wins if w[\"title\"] == \"speed-pick1-term\"][0]\nobs = observe(window=term[\"address\"])\nresult = act([{\"type\": \"type\", \"text\": \"printf 'Ý tưởng 1: app nhắc uống nước.\\\\nÝ tưởng 2: bot tóm tắt bài giảng.\\\\nÝ tưởng 3: web bán đồ secondhand.\\\\n' > /tmp/y-tuong.txt && cat /tmp/y-tuong.txt\\n\"}], obs)\nverify = observe(window=term[\"address\"])\nassert_state(result[\"ok\"], \"act failed\")\nassert_file_contains(\"/tmp/y-tuong.txt\", \"Ý tưởng 1: app nhắc uống nước.\")\nassert_file_contains(\"/tmp/y-tuong.txt\", \"Ý tưởng 2: bot tóm tắt bài giảng.\")\nassert_file_contains(\"/tmp/y-tuong.txt\", \"Ý tưởng 3: web bán đồ secondhand.\")\nverify_image = verify[\"image\"]\n",
+      "input": {
+        "terminal_title": "speed-pick1-term",
+        "typed_text": "printf 'Ý tưởng 1: app nhắc uống nước.\\nÝ tưởng 2: bot tóm tắt bài giảng.\\nÝ tưởng 3: web bán đồ secondhand.\\n' > /tmp/y-tuong.txt && cat /tmp/y-tuong.txt\n"
+      },
+      "sample_output": "Ý tưởng 1: app nhắc uống nước.\nÝ tưởng 2: bot tóm tắt bài giảng.\nÝ tưởng 3: web bán đồ secondhand.\n"
+    }
+  ]
+}

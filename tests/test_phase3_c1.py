@@ -62,3 +62,8 @@ def test_future_observation_refused():
 def test_boundary_120s_passes():
     age = _check(119)
     assert 0 <= age <= 120
+
+
+def load_tests(loader, standard_tests, pattern):
+    from _function_test_support import load_function_tests
+    return load_function_tests(globals())

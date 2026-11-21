@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Demo Terminal</title>
+<style>
+  body { background: #111; color: #0f0; font-family: monospace; margin: 0; }
+  #term { padding: 12px; }
+  #output { white-space: pre-wrap; min-height: 300px; }
+  .line { margin: 0; }
+  #input-line { display: flex; }
+  #prompt { margin-right: 6px; }
+  #cmd { flex: 1; background: #111; color: #0f0; border: none; outline: none; font: inherit; }
+</style>
+</head>
+<body>
+<div id="term">
+  <div id="output"></div>
+  <div id="input-line"><span id="prompt">/home/demo $</span><input id="cmd" autocomplete="off" spellcheck="false"></div>
+</div>
+<script>
+  const FS = {
+    '/home/demo': { type: 'dir', children: ['readme.txt', 'notes.txt', 'docs'] },
+    '/home/demo/docs': { type: 'dir', children: ['guide.txt'] },
+  };
+  const FILES = {
+    '/home/demo/readme.txt': 'Demo terminal. Type help for commands.',
+    '/home/demo/notes.txt': 'Buy milk. Call Ana. Ship the demo.',
+    '/home/demo/docs/guide.txt': 'Welcome to the docs. Keep it short.',
+  };
+  let cwd = '/home/demo';
+  let history = [];
+  let histIndex = -1;
+  const out = document.getElementById('output');
+  const cmd = document.getElementById('cmd');
+  const prompt = document.getElementById('prompt');
+
+  function print(text) {
+    const div = document.createElement('div');
+    div.className = 'line';
+    div.textContent = text;
+    out.appendChild(div);
+  }
+  function resolve(p) {
+    if (p === '..') {
+      const parts = cwd.split('/').filter(Boolean);
+      parts.pop();
+      return '/' + parts.join('/') || '/home/demo';
+    }
+    if (p.startsWith('/')) return p;
+    return (cwd === '/' ? '' : cwd) + '/' + p;
+  }
+  function run(raw) {
+    const line = raw.trim();
+    if (!line) return;
+    history.push(line);
+    histIndex = history.length;
+    print(prompt.textContent + ' ' + line);
+    const parts = line.split(/\s+/);
+    const name = parts[0];
+    const arg = parts.slice(1).join(' ');
+    if (name === 'help') {
+      print('Available commands: help, echo, pwd, ls, cd, cat, history, clear');
+    } else if (name === 'echo') {
+      print(arg);
+    } else if (name === 'pwd') {
+      print(cwd);
+    } else if (name === 'ls') {
+      const dir = FS[cwd];
+      print(dir ? dir.children.join('  ') : 'No such directory: ' + cwd);
+    } else if (name === 'cd') {
+      const target = resolve(arg || '');
+      if (FS[target]) {
+        cwd = target;
+        prompt.textContent = cwd + ' $';
+      } else {
+        print('cd: No such directory: ' + arg);
+      }
+    } else if (name === 'cat') {
+      const target = resolve(arg);
+      if (FILES[target]) {
+        print(FILES[target]);
+      } else if (FS[target]) {
+        print('cat: ' + arg + ' is a directory');
+      } else {
+        print('cat: No such file: ' + arg);
+      }
+    } else if (name === 'history') {
+      history.forEach((h, i) => print((i + 1) + '  ' + h));
+    } else if (name === 'clear') {
+      out.innerHTML = '';
+    } else {
+      print('command not found: ' + name);
+    }
+  }
+  cmd.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      run(cmd.value);
+      cmd.value = '';
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (histIndex > 0) {
+        histIndex -= 1;
+        cmd.value = history[histIndex] || '';
+      }
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      if (histIndex < history.length - 1) {
+        histIndex += 1;
+        cmd.value = history[histIndex];
+      } else {
+        histIndex = history.length;
+        cmd.value = '';
+      }
+    }
+  });
+  print('Demo Terminal. Type help for commands.');
+  cmd.focus();
+</script>
+</body>
+</html>

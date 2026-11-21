@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Preferences</title>
+<style>
+  body { font-family: sans-serif; margin: 16px; }
+  button { margin: 4px; }
+</style>
+</head>
+<body>
+<h1>Preferences</h1>
+<label>Theme:
+  <select id="theme-select">
+    <option value="light">Light</option>
+    <option value="dark">Dark</option>
+  </select>
+</label>
+<br>
+<button id="apply-btn">Apply</button>
+<button id="cancel-btn">Cancel</button>
+<script>
+  document.getElementById('apply-btn').addEventListener('click', () => {
+    const theme = document.getElementById('theme-select').value;
+    if (window.opener) {
+      window.opener.postMessage({ type: 'theme', theme }, '*');
+    }
+    window.close();
+  });
+  document.getElementById('cancel-btn').addEventListener('click', () => {
+    window.close();
+  });
+</script>
+</body>
+</html>

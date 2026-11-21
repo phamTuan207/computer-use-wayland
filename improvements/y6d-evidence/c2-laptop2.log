@@ -1,0 +1,61 @@
+=== Y6D-C2-LAPTOP2 start 21:20:13
+C2-1 runner bash -n OK
+C2-1 pill py_compile OK
+live sig 11cbc6c577b84ffb1edf4df3fc5b6128c3ae6947_1795249046_1138556825
+live pid 1515
+692d427174fa1c335eb02a46fc5e0a18  /tmp/y6-nested/run-nested-wayland.sh
+da0565086a05f77f49985bb92d887875  /tmp/y6-nested/run-nested-pill.py
+0d4ac7a9c2437fb48ecfc505ccd9046b  /tmp/y6-nested/conf/hyprland-wayland.lua
+15 /tmp/y6d-c2/read_pill_geom.sh
+live layers monitors: ['eDP-2']
+-- live layers (no pill live): expect rc=1, no traceback
+parser rc=1 out='' stderr: 
+-- synthetic nested JSON: expect rc=0 out='320,0 320x66'
+parser rc=0 out='320,0 320x66' stderr: 
+live monitor eDP-2 at 2464,902 1920x1200
+-- grim space form at live top-left corner: expect file created (ASSERTED)
+GRIM-A OK bytes=37475
+-- grim Y6b geometry 2464,902 200x200: expect file created
+GRIM-A2 OK bytes=37475
+-- grim 100,100 200x200 (outside every live output): expect did-not-intersect
+supplied geometry did not intersect with any outputs
+GRIM-B0 rc=1 (expect did-not-intersect above)
+-- grim nest-style geometry 320,0 320x66: expect NOT 'invalid geometry'
+supplied geometry did not intersect with any outputs
+GRIM-B rc=1 (error kind above, must not be invalid geometry)
+-- grim old comma form: expect 'invalid geometry'
+invalid geometry
+GRIM-C rc=1 (expect invalid geometry above)
+-- grim -g plus -o: expect 'mutually exclusive'
+-o and -g are mutually exclusive
+GRIM-D rc=1 (expect mutually exclusive above)
+8 /tmp/y6d-c2/ldd-block.sh
+-- ldd block vs current conf (backup 1, dead ABI): expect FAIL naming libaquamarine.so.14
+FAIL: hyprglass /home/james/.local/share/agent-computer-use/backups/full-1791544423/native/hyprglass.so cannot load (dead ABI): 	libaquamarine.so.14 => not found
+	libhyprgraphics.so.4 => not found
+LDD-DEAD rc=1
+-- ldd block vs good .so (all deps resolve): expect plugin ABI OK
+Y6-WAYLAND: plugin ABI OK: /tmp/y6d-good-hyprglass.so
+LDD-GOOD rc=0
+36 /tmp/y6d-teardown/teardown.sh
+Y6-WAYLAND: teardown start 21:20:14
+Y6-WAYLAND: nested log saved to /tmp/y6d-teardown/hypr-saved-test-FAKESIG
+Y6-WAYLAND: live check:
+    PID                  STARTED CMD
+   1515 Sat Nov 21 15:17:25 2026 Hyprland --watchdog-fd 4
+Hyprland 0.57.2 built from branch v0.57.2 at commit 11cbc6c577b84ffb1edf4df3fc5b6128c3ae6947 clean (VERSION: bump to 0.57.2).
+Date: Mon Nov 9 11:05:46 2026
+Tag: v0.57.2, commits: 8015
+
+"name": "hyprbars"
+Y6-WAYLAND: stray check (live Hyprland pid 1515 expected):
+1515 Hyprland --watchdog-fd 4
+Y6-WAYLAND: lock free after teardown
+Y6-WAYLAND: teardown done 21:20:14
+TEARDOWN-ASSERT1: 2
+TEARDOWN-ASSERT2: RUN-DIR-REMOVED
+TEARDOWN-ASSERT3: LOCK-FREE
+TEARDOWN-ASSERT4: LIVE-1515-ALIVE
+Hyprland 0.57.2 built from branch v0.57.2 at commit 11cbc6c577b84ffb1edf4df3fc5b6128c3ae6947 clean (VERSION: bump to 0.57.2).
+Date: Mon Nov 9 11:05:46 2026
+=== Y6D-C2-LAPTOP2 done 21:20:14

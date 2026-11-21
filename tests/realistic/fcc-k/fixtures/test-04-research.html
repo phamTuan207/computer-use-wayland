@@ -8,20 +8,26 @@
   .row{display:flex;gap:14px;align-items:flex-start;}
   .col{min-width:220px;border:1px solid #999;padding:6px;background:#fff;}
   .card{border:1px solid #ccc;padding:6px;margin:6px 0;cursor:pointer;}
-  .notes{border:1px solid #999;padding:6px;min-height:140px;white-space:pre-wrap;overflow:auto;}
   .status{margin-top:10px;font-family:monospace;white-space:pre-wrap;}
+  button{margin:4px 4px 4px 0;padding:6px 10px;cursor:pointer;}
+  textarea{width:100%;}
 </style>
 </head>
 <body>
 <h2>Research notes fixture (offline)</h2>
 <div class="row">
   <div class="col"><h3>Sources</h3>
-    <div id="sources"></div></div>
+    <div id="sources"></div>
+    <div id="detail" style="margin-top:8px;border:1px solid #ccc;padding:6px;min-height:60px;white-space:pre-wrap;">Click a source card to read its facts.</div>
+  </div>
   <div class="col"><h3>Notes</h3>
-    <div id="notes" class="notes"></div>
+    <div>Type one fact per line, e.g. "Source A: Alpha Service".</div>
+    <textarea id="notesInput" style="min-height:140px;" placeholder="Source A: ..."></textarea>
     <div>Summary:</div>
-    <textarea id="summary" style="width:100%"></textarea>
-    <button id="saveBtn">Save notes</button></div>
+    <textarea id="summary"></textarea>
+    <button id="saveBtn">Save notes</button>
+    <div id="savedNotes" style="margin-top:8px;border:1px solid #999;padding:6px;min-height:40px;white-space:pre-wrap;">Not saved yet.</div>
+  </div>
 </div>
 <div id="status" class="status"></div>
 <script>
@@ -30,32 +36,40 @@ const sources=[
   {id:'B',name:'Beta Service',price:'$19/mo',support:'chat'},
   {id:'C',name:'Gamma Service',price:'$9/mo',support:'phone'},
 ];
-let notes=[];let summary='';let saved=false;
 function render(){
   const s=document.getElementById('sources');s.innerHTML='';
   for(const so of sources){
-    const c=document.createElement('div');c.className='card';
-    c.textContent=so.id+': '+so.name+' '+so.price+' '+so.support;
-    c.onclick=()=>{notes.push({src:so.id,fact1:so.name,fact2:so.price});render();};
+    const c=document.createElement('div');c.className='card';c.id='src'+so.id;
+    c.textContent=so.id+': '+so.name;
+    c.onclick=()=>{
+      document.getElementById('detail').textContent='Source '+so.id+': '+so.name+'\nMonthly price: '+so.price+'\nSupport channel: '+so.support;
+    };
     s.appendChild(c);
   }
-  const n=document.getElementById('notes');n.textContent=notes.map(x=>x.src+': '+x.fact1+' price='+x.fact2).join('\n');
 }
-document.getElementById('saveBtn').onclick=()=>{saved=true;summary=document.getElementById('summary').value;render();};
+document.getElementById('saveBtn').onclick=()=>{
+  const notes=document.getElementById('notesInput').value;
+  const summary=document.getElementById('summary').value;
+  document.getElementById('savedNotes').textContent='Saved notes:\n'+notes+'\nSummary: '+summary;
+};
 window.__fcckVerify=function(){
+  // REAL DOM assertion: reads only the notes textarea, the summary, and the
+  // saved snapshot the agent actually produced. Never writes notes itself.
   const failures=[];
-  // simulate reading all 3 sources -> 6 facts
-  for(const so of sources){notes.push({src:so.id,fact1:so.name,fact2:so.price});notes.push({src:so.id,fact1:so.name+' tier',fact2:so.support});}
-  summary='Alpha price $12/mo vs Beta $19/mo vs Gamma $9/mo, all differ.';
-  saved=true;
-  document.getElementById('summary').value=summary;
-  let n1=notes.filter(x=>x.src==='A').length;let n2=notes.filter(x=>x.src==='B').length;let n3=notes.filter(x=>x.src==='C').length;
-  if(notes.length<6)failures.push('fewer than 6 facts');
-  if(n1<2||n2<2||n3<2)failures.push('not 2 facts per source');
-  if(summary.length<20)failures.push('summary too short');
-  if(!saved)failures.push('notes not saved');
-  const state={factCount:notes.length,perSrc:{A:n1,B:n2,C:n3},summaryLen:summary.length,saved};
-  const out={passed:failures.length===0,failures,score:failures.length===0?1:0,state};
+  const notes=document.getElementById('notesInput').value;
+  const lines=notes.split('\n').map(l=>l.trim()).filter(l=>l);
+  const count=(label)=>lines.filter(l=>l.includes(label)).length;
+  if(lines.length!==6)failures.push('expected 6 fact lines, got '+lines.length);
+  if(count('Source A')!==2)failures.push('Source A facts: '+count('Source A'));
+  if(count('Source B')!==2)failures.push('Source B facts: '+count('Source B'));
+  if(count('Source C')!==2)failures.push('Source C facts: '+count('Source C'));
+  const summary=document.getElementById('summary').value.trim();
+  if(summary.length<20)failures.push('summary too short: '+summary.length);
+  const savedText=document.getElementById('savedNotes').textContent;
+  if(!savedText.includes('Saved notes:'))failures.push('notes not saved');
+  if(savedText.includes('Saved notes:')&&!savedText.includes(summary.slice(0,20)))failures.push('saved snapshot missing summary');
+  const state={factLines:lines.length,perSrc:{A:count('Source A'),B:count('Source B'),C:count('Source C')},summaryLen:summary.length,saved:savedText.includes('Saved notes:')};
+  const out={passed:failures.length===0,failures,score:failures.length===0?1:0,state,note:'DOM-only research check'};
   document.getElementById('status').textContent=JSON.stringify(out,null,2);
   return out;
 };

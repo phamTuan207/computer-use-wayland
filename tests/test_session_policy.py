@@ -233,7 +233,8 @@ class RefusalFlow(unittest.TestCase):
             post = dict(after, observation=str(obs2))
             # The pre-batch focus diagnostic consumes one address even for a
             # screen capture; screen guards themselves do not query focus.
-            with live(tmp, token, active=['0xbeef'], pre_calls=[(big, {}), (same, {})],
+            with live(tmp, token, active=['0xbeef'],
+                      pre_calls=[(big, {}), (same, {}), (same, {})],
                        post=post) as stop:
                 code, body = relay_lines([
                     {'args': ['act', '--observation', str(obs1),

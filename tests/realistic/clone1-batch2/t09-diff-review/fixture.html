@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Code Review, PR #42</title>
+<style>
+body { font-family: sans-serif; margin: 20px; }
+#toolbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+.file { border: 1px solid #999; margin-bottom: 16px; }
+.file h2 { background: #eee; margin: 0; padding: 8px; font-size: 15px; }
+.diff { font-family: monospace; font-size: 13px; }
+.line { display: flex; padding: 2px 6px; cursor: pointer; white-space: pre; }
+.line:hover { background: #fff8e1; }
+.line .no { width: 40px; color: #888; flex: none; text-align: right; padding-right: 8px; }
+.line.add { background: #e6ffed; }
+.line.del { background: #ffebe9; }
+.line.ctx { background: #fff; }
+.line mark { background: #ffeb3b; }
+.line.current-hunk { outline: 2px solid #1565c0; }
+.thread { background: #fff3e0; border: 1px solid #ffcc80; margin: 4px 0 4px 48px; padding: 8px; font-family: sans-serif; }
+.thread.resolved { opacity: 0.6; }
+.comment-form { margin: 4px 0 4px 48px; }
+.comment-form textarea { width: 90%; height: 50px; }
+button { padding: 6px 12px; }
+#reviewBox { border: 1px solid #999; padding: 12px; max-width: 640px; }
+#reviewBox textarea { width: 100%; height: 60px; }
+#status { font-weight: bold; margin-top: 8px; }
+#history li { margin: 4px 0; }
+</style>
+</head>
+<body>
+<h1>Code Review, PR #42: add token refresh</h1>
+<div id="toolbar">
+  <label>File
+    <select id="fileFilter">
+      <option value="">All files</option>
+      <option value="auth.js">src/auth.js</option>
+      <option value="api.js">src/api.js</option>
+    </select>
+  </label>
+  <label>Search diff <input id="search" type="text" placeholder="search code"></label>
+  <span id="searchInfo"></span>
+  <button id="prevHunk">Previous hunk</button>
+  <button id="nextHunk">Next hunk</button>
+  <label><input type="checkbox" id="showResolved"> Show resolved threads</label>
+  <span>Comments: <span id="commentCount">0</span></span>
+</div>
+<div id="diff"></div>
+<div id="reviewBox">
+  <h2>Submit review</h2>
+  <label><input type="radio" name="verdict" value="approve"> Approve</label>
+  <label><input type="radio" name="verdict" value="request"> Request changes</label>
+  <br>
+  <label>Summary<br><textarea id="reviewSummary" placeholder="Review summary"></textarea></label>
+  <br>
+  <button id="submitReview">Submit review</button>
+  <div id="reviewError" style="color:#b00"></div>
+  <div id="status">No review submitted yet.</div>
+  <h3>Review history</h3>
+  <ul id="history"></ul>
+</div>
+<script>
+const FILES = [
+  { name: 'src/auth.js', lines: [
+    { type: 'ctx', oldNo: 12, newNo: 12, text: 'function login(user) {' },
+    { type: 'del', oldNo: 13, newNo: null, text: '  const token = getToken();' },
+    { type: 'add', oldNo: null, newNo: 13, text: '  const token = await getToken();' },
+    { type: 'add', oldNo: null, newNo: 14, text: "  if (!token) throw new Error('no token');" },
+    { type: 'ctx', oldNo: 14, newNo: 15, text: '  return token;' },
+    { type: 'ctx', oldNo: 15, newNo: 16, text: '}' },
+  ]},
+  { name: 'src/api.js', lines: [
+    { type: 'ctx', oldNo: 20, newNo: 20, text: 'async function fetchData(url) {' },
+    { type: 'del', oldNo: 21, newNo: null, text: '  const res = await fetch(url);' },
+    { type: 'add', oldNo: null, newNo: 21, text: '  const res = await fetch(url, { signal });' },
+    { type: 'add', oldNo: null, newNo: 22, text: '  if (!res.ok) throw new Error(res.status);' },
+    { type: 'ctx', oldNo: 22, newNo: 23, text: '  return res.json();' },
+    { type: 'ctx', oldNo: 23, newNo: 24, text: '}' },
+  ]},
+];
+let threads = {};
+let reviews = [];
+try {
+  threads = JSON.parse(localStorage.getItem('pr42-threads') || '{}');
+  reviews = JSON.parse(localStorage.getItem('pr42-reviews') || '[]');
+} catch { threads = {}; reviews = []; }
+function save() {
+  localStorage.setItem('pr42-threads', JSON.stringify(threads));
+  localStorage.setItem('pr42-reviews', JSON.stringify(reviews));
+}
+function lineKey(file, idx) { return file + ':' + idx; }
+function threadCount() {
+  return Object.values(threads).reduce((n, t) => n + 1 + t.replies.length, 0);
+}
+function render() {
+  const filter = document.getElementById('fileFilter').value;
+  const q = (document.getElementById('search').value || '').toLowerCase();
+  const showResolved = document.getElementById('showResolved').checked;
+  const diffEl = document.getElementById('diff');
+  diffEl.innerHTML = '';
+  let visibleLines = 0, matched = 0;
+  FILES.forEach((f, fi) => {
+    if (filter && f.name !== 'src/' + filter) return;
+    const fileDiv = document.createElement('div');
+    fileDiv.className = 'file';
+    fileDiv.dataset.hunk = fi;
+    const h = document.createElement('h2');
+    h.textContent = f.name;
+    fileDiv.appendChild(h);
+    const diffDiv = document.createElement('div');
+    diffDiv.className = 'diff';
+    f.lines.forEach((ln, idx) => {
+      if (q && !ln.text.toLowerCase().includes(q)) return;
+      visibleLines++;
+      if (q) matched++;
+      const row = document.createElement('div');
+      row.className = 'line ' + ln.type;
+      row.dataset.key = lineKey(f.name, idx);
+      const no = document.createElement('span');
+      no.className = 'no';
+      no.textContent = (ln.newNo || ln.oldNo || '') + '';
+      const code = document.createElement('span');
+      if (q) {
+        const i = ln.text.toLowerCase().indexOf(q);
+        code.appendChild(document.createTextNode(ln.text.slice(0, i)));
+        const m = document.createElement('mark');
+        m.textContent = ln.text.slice(i, i + q.length);
+        code.appendChild(m);
+        code.appendChild(document.createTextNode(ln.text.slice(i + q.length)));
+      } else {
+        code.textContent = (ln.type === 'add' ? '+' : ln.type === 'del' ? '-' : ' ') + ln.text;
+      }
+      row.appendChild(no);
+      row.appendChild(code);
+      row.addEventListener('click', () => openForm(row, f.name, idx));
+      diffDiv.appendChild(row);
+      const key = lineKey(f.name, idx);
+      const t = threads[key];
+      if (t && (!t.resolved || showResolved)) {
+        const th = document.createElement('div');
+        th.className = 'thread' + (t.resolved ? ' resolved' : '');
+        th.dataset.key = key;
+        th.innerHTML = '<strong>Comment:</strong> ';
+        const span = document.createElement('span');
+        span.textContent = t.text;
+        th.appendChild(span);
+        t.replies.forEach((r) => {
+          const rp = document.createElement('div');
+          rp.innerHTML = '<strong>Reply:</strong> ';
+          const rs = document.createElement('span');
+          rs.textContent = r;
+          rp.appendChild(rs);
+          th.appendChild(rp);
+        });
+        const replyBtn = document.createElement('button');
+        replyBtn.textContent = 'Reply';
+        replyBtn.className = 'replyBtn';
+        replyBtn.addEventListener('click', () => {
+          const ta = document.createElement('textarea');
+          ta.className = 'replyInput';
+          const sb = document.createElement('button');
+          sb.textContent = 'Send reply';
+          sb.className = 'sendReplyBtn';
+          sb.addEventListener('click', () => {
+            if (ta.value.trim()) { t.replies.push(ta.value.trim()); save(); render(); }
+          });
+          th.appendChild(ta);
+          th.appendChild(sb);
+        });
+        const resBtn = document.createElement('button');
+        resBtn.textContent = t.resolved ? 'Reopen' : 'Resolve';
+        resBtn.className = 'resolveBtn';
+        resBtn.addEventListener('click', () => {
+          t.resolved = !t.resolved;
+          save(); render();
+        });
+        th.appendChild(replyBtn);
+        th.appendChild(resBtn);
+        diffDiv.appendChild(th);
+      }
+    });
+    fileDiv.appendChild(diffDiv);
+    diffEl.appendChild(fileDiv);
+  });
+  document.getElementById('searchInfo').textContent = q ? ('Matched ' + matched + ' lines') : '';
+  document.getElementById('commentCount').textContent = String(threadCount());
+  const hist = document.getElementById('history');
+  hist.innerHTML = '';
+  reviews.forEach((r) => {
+    const li = document.createElement('li');
+    li.textContent = r.verdict + ': ' + r.summary;
+    hist.appendChild(li);
+  });
+  if (reviews.length) {
+    const last = reviews[reviews.length - 1];
+    document.getElementById('status').textContent =
+      'Latest review: ' + last.verdict + ' - ' + last.summary;
+  }
+}
+function openForm(row, file, idx) {
+  document.querySelectorAll('.comment-form').forEach((f) => f.remove());
+  const form = document.createElement('div');
+  form.className = 'comment-form';
+  form.innerHTML = '<textarea class="commentInput" placeholder="Write a comment on this line"></textarea><br>';
+  const btn = document.createElement('button');
+  btn.textContent = 'Add comment';
+  btn.className = 'addCommentBtn';
+  btn.addEventListener('click', () => {
+    const ta = form.querySelector('.commentInput');
+    if (!ta.value.trim()) return;
+    threads[lineKey(file, idx)] = { text: ta.value.trim(), replies: [], resolved: false };
+    save(); render();
+  });
+  form.appendChild(btn);
+  row.after(form);
+  form.querySelector('.commentInput').focus();
+}
+let currentHunk = -1;
+function goHunk(dir) {
+  const files = [...document.querySelectorAll('.file')];
+  if (!files.length) return;
+  currentHunk = (currentHunk + dir + files.length) % files.length;
+  files.forEach((f, i) => f.classList.toggle('current-hunk', i === currentHunk));
+  files[currentHunk].scrollIntoView();
+}
+document.getElementById('nextHunk').addEventListener('click', () => goHunk(1));
+document.getElementById('prevHunk').addEventListener('click', () => goHunk(-1));
+document.getElementById('fileFilter').addEventListener('change', render);
+document.getElementById('search').addEventListener('input', render);
+document.getElementById('showResolved').addEventListener('change', render);
+document.getElementById('submitReview').addEventListener('click', () => {
+  const verdict = document.querySelector('input[name="verdict"]:checked');
+  const summary = document.getElementById('reviewSummary').value.trim();
+  const err = document.getElementById('reviewError');
+  if (!verdict) { err.textContent = 'Choose Approve or Request changes.'; return; }
+  if (!summary) { err.textContent = 'Summary is required.'; return; }
+  err.textContent = '';
+  const label = verdict.value === 'approve' ? 'Approved' : 'Changes requested';
+  reviews.push({ verdict: label, summary });
+  save(); render();
+});
+render();
+</script>
+</body>
+</html>

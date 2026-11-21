@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Project Detail</title>
+<style>
+  body { font-family: sans-serif; margin: 16px; }
+  input { display: block; margin: 8px 0; width: 90%; }
+  button { margin: 4px; }
+</style>
+</head>
+<body>
+<h1>Project Detail</h1>
+<p>Project: <span id="project-id"></span></p>
+<label>Title: <input id="title-input"></label>
+<button id="save-btn">Save</button>
+<button id="cancel-btn">Cancel</button>
+<script>
+  const params = new URLSearchParams(location.search);
+  const id = params.get('project') || '';
+  const title = params.get('title') || '';
+  document.getElementById('project-id').textContent = id;
+  document.getElementById('title-input').value = title;
+  document.getElementById('save-btn').addEventListener('click', () => {
+    const next = document.getElementById('title-input').value.trim();
+    if (window.opener) {
+      window.opener.postMessage({ type: 'project-renamed', id, title: next }, '*');
+    }
+    window.close();
+  });
+  document.getElementById('cancel-btn').addEventListener('click', () => {
+    window.close();
+  });
+</script>
+</body>
+</html>

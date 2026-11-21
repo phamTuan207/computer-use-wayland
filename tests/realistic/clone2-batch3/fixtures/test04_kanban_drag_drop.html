@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Kanban Drag and Drop Fixture</title>
+<style>
+  body { font-family: sans-serif; margin: 16px; }
+  #board { display: flex; gap: 12px; }
+  .column { flex: 1; background: #f0f0f0; border: 1px solid #bbb; border-radius: 6px; padding: 8px; min-height: 260px; }
+  .column h2 { font-size: 16px; margin: 4px 0 8px 0; }
+  .count { background: #333; color: #fff; border-radius: 8px; padding: 0 7px; font-size: 13px; }
+  ul.cards { list-style: none; margin: 0; padding: 0; min-height: 200px; }
+  .card { background: #fff; border: 1px solid #999; border-radius: 4px; padding: 8px; margin: 0 0 8px 0; cursor: grab; }
+  .card.dragging { opacity: 0.5; }
+  #board-state-json { display: none; }
+  form { margin: 12px 0; }
+</style>
+</head>
+<body>
+<h1>Kanban Board</h1>
+
+<form id="add-form">
+  <label for="new-card-title">New card title</label>
+  <input id="new-card-title" type="text" value="">
+  <button id="add-card-btn" type="submit">Add card</button>
+</form>
+<button id="reset-btn" type="button">Reset board</button>
+
+<div id="board">
+  <section class="column" id="col-todo">
+    <h2>Todo <span class="count" id="count-todo">0</span></h2>
+    <ul class="cards" id="list-todo" data-column="todo"></ul>
+  </section>
+  <section class="column" id="col-doing">
+    <h2>Doing <span class="count" id="count-doing">0</span></h2>
+    <ul class="cards" id="list-doing" data-column="doing"></ul>
+  </section>
+  <section class="column" id="col-done">
+    <h2>Done <span class="count" id="count-done">0</span></h2>
+    <ul class="cards" id="list-done" data-column="done"></ul>
+  </section>
+</div>
+
+<pre id="board-state-json">{}</pre>
+
+<script>
+"use strict";
+var STORAGE_KEY = "kanban-board-v1";
+var COLUMNS = ["todo", "doing", "done"];
+var INITIAL = {
+  "todo": [
+    {"id": "card-1", "title": "Write report"},
+    {"id": "card-2", "title": "Fix login bug"},
+    {"id": "card-3", "title": "Review pull request"}
+  ],
+  "doing": [
+    {"id": "card-4", "title": "Build prototype"},
+    {"id": "card-5", "title": "Test checkout flow"}
+  ],
+  "done": [
+    {"id": "card-6", "title": "Set up repository"}
+  ]
+};
+
+function clone(obj) { return JSON.parse(JSON.stringify(obj)); }
+
+function loadState() {
+  try {
+    var raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      var parsed = JSON.parse(raw);
+      if (parsed && parsed.todo && parsed.doing && parsed.done) {
+        return parsed;
+      }
+    }
+  } catch (e) { /* fall through to initial */ }
+  return clone(INITIAL);
+}
+
+var state = loadState();
+var draggedId = null;
+
+function saveState() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+}
+
+function render(save) {
+  COLUMNS.forEach(function (col) {
+    var list = document.getElementById("list-" + col);
+    list.innerHTML = "";
+    state[col].forEach(function (card) {
+      var li = document.createElement("li");
+      li.className = "card";
+      li.id = card.id;
+      li.draggable = true;
+      li.textContent = card.title;
+      li.setAttribute("data-id", card.id);
+      li.addEventListener("dragstart", onDragStart);
+      li.addEventListener("dragend", onDragEnd);
+      list.appendChild(li);
+    });
+    document.getElementById("count-" + col).textContent = String(state[col].length);
+  });
+  document.getElementById("board-state-json").textContent = JSON.stringify(state);
+  if (save !== false) { saveState(); }
+}
+
+function findCard(cardId) {
+  for (var c = 0; c < COLUMNS.length; c++) {
+    var col = COLUMNS[c];
+    for (var i = 0; i < state[col].length; i++) {
+      if (state[col][i].id === cardId) { return {column: col, index: i, card: state[col][i]}; }
+    }
+  }
+  return null;
+}
+
+function moveCard(cardId, targetColumn) {
+  var found = findCard(cardId);
+  if (!found) { return false; }
+  state[found.column].splice(found.index, 1);
+  state[targetColumn].push(found.card);
+  render(true);
+  return true;
+}
+
+function onDragStart(e) {
+  draggedId = e.target.getAttribute("data-id");
+  if (e.dataTransfer) {
+    e.dataTransfer.effectAllowed = "move";
+    try { e.dataTransfer.setData("text/plain", draggedId); } catch (err) {}
+  }
+  e.target.classList.add("dragging");
+}
+
+function onDragEnd(e) {
+  e.target.classList.remove("dragging");
+  draggedId = null;
+}
+
+COLUMNS.forEach(function (col) {
+  var list = document.getElementById("list-" + col);
+  list.addEventListener("dragover", function (e) {
+    e.preventDefault();
+    if (e.dataTransfer) { e.dataTransfer.dropEffect = "move"; }
+  });
+  list.addEventListener("drop", function (e) {
+    e.preventDefault();
+    var cardId = draggedId;
+    if (e.dataTransfer) {
+      try { cardId = e.dataTransfer.getData("text/plain") || draggedId; } catch (err) {}
+    }
+    if (cardId) { moveCard(cardId, col); }
+  });
+});
+
+function nextCardId() {
+  var max = 0;
+  COLUMNS.forEach(function (col) {
+    state[col].forEach(function (card) {
+      var m = /(\d+)$/.exec(card.id);
+      if (m) { max = Math.max(max, parseInt(m[1], 10)); }
+    });
+  });
+  return "card-" + (max + 1);
+}
+
+document.getElementById("add-form").addEventListener("submit", function (e) {
+  e.preventDefault();
+  var input = document.getElementById("new-card-title");
+  var title = input.value.trim();
+  if (!title) { return; }
+  state.todo.push({"id": nextCardId(), "title": title});
+  input.value = "";
+  render(true);
+});
+
+document.getElementById("reset-btn").addEventListener("click", function () {
+  localStorage.removeItem(STORAGE_KEY);
+  state = clone(INITIAL);
+  render(false);
+});
+
+// Fallback drag helper for test drivers whose synthetic mouse events do
+// not trigger native HTML5 drag and drop. It dispatches the same event
+// sequence a real drag produces, dragstart, dragover, drop, dragend,
+// with a dataTransfer shim, so the board's own handlers do the move.
+window.__kanbanSimulateDrag = function (cardId, targetColumn) {
+  var found = findCard(cardId);
+  if (!found) { return false; }
+  var cardEl = document.getElementById(cardId);
+  var listEl = document.getElementById("list-" + targetColumn);
+  if (!cardEl || !listEl) { return false; }
+  var store = {};
+  var dt = {
+    effectAllowed: "move",
+    dropEffect: "move",
+    setData: function (k, v) { store[k] = v; },
+    getData: function (k) { return store[k] || ""; },
+    setDragImage: function () {}
+  };
+  function fire(target, type) {
+    var ev = new Event(type, {bubbles: true, cancelable: true});
+    ev.dataTransfer = dt;
+    target.dispatchEvent(ev);
+  }
+  fire(cardEl, "dragstart");
+  fire(listEl, "dragover");
+  fire(listEl, "drop");
+  fire(cardEl, "dragend");
+  return true;
+};
+
+render(true);
+</script>
+</body>
+</html>

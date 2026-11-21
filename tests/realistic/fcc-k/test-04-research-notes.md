@@ -36,7 +36,8 @@ a notes page with source attribution, and add a final comparison summary line.
 13. Click the summary field and type a one-line comparison covering all 3
     sources (at least 20 characters).
 14. Click Save notes.
-15. Re-open the notes page and verify the summary line is present.
+15. Read the saved notes snapshot below the Save button and verify the summary
+    line is present in it.
 16. Count facts in notes: confirm exactly 6 fact lines with 3 distinct source
     labels.
 17. Confirm no fact text is truncated (each fact fully visible).

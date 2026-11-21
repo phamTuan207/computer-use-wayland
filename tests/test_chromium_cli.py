@@ -487,6 +487,7 @@ class CuCliWiringTests(unittest.TestCase):
         self.assertIn("chromium", names)
         registry = json.loads((ROOT / "skill" / "cli-anything" / "registry.json").read_text())
         self.assertEqual(set(names), {entry["name"] for entry in registry["clis"]})
+        self.assertEqual(len(names), 15)
 
     def test_cli_info_chromium_is_repo_owned(self):
         code, out = self.run_cu(["cli", "info", "chromium"])

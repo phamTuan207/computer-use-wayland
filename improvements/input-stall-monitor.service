@@ -1,0 +1,13 @@
+[Unit]
+Description=Input stall monitor (logging only, council 21/11/2026)
+After=graphical-session.target
+Wants=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=/home/james/.local/bin/input-stall-monitor.sh
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=default.target

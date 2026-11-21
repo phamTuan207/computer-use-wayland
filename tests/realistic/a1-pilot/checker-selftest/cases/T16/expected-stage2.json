@@ -1,0 +1,40 @@
+{
+  "case_task": "pick4",
+  "fixture_md5": {
+    "f01": "2b6eda97036af51510b7eefe6d36dd93",
+    "pick4": "91b2f92945c167306a13ae32977a9bf3"
+  },
+  "gap_ms": 8400,
+  "misclick_lines": 0,
+  "misclicks": "none detected",
+  "notes": [
+    "unknown op 'teleport' ignored for metrics"
+  ],
+  "observation_service_cost_ms_by_type": {
+    "desktop:image": {
+      "gap_before_ms": 0.0,
+      "service_ms": 450.0
+    }
+  },
+  "problems": [],
+  "program_calls": 1,
+  "program_chars": 900,
+  "recovery_steps": 0,
+  "refusals": 0,
+  "retries": 0,
+  "run_end_reason": "done",
+  "run_id": "a1b2c3d4",
+  "run_sequence": 1,
+  "session_deaths": 0,
+  "silence_minutes": 0.0,
+  "think_per_call_ms": [
+    6000
+  ],
+  "tokens_in": "UNMEASURED",
+  "tokens_out": "UNMEASURED",
+  "tool_calls": 3,
+  "total_composition_think_ms": 6000,
+  "vcr_service": 0.25,
+  "vcr_wall": 0.038,
+  "wall_ms": 11000
+}

@@ -229,11 +229,18 @@ for start in range(0, len(raw), 65535):
                     lines += 'not JSON\n'
                 with patch.object(browser_worker, 'BrowserWorker', return_value=self.worker), \
                      patch.object(session_driver, 'execute', side_effect=execute):
-                    if ending in ('exception', 'bad_json'):
+                    output = io.StringIO()
+                    if ending == 'exception':
                         with self.assertRaises((RuntimeError, json.JSONDecodeError)):
-                            session_driver.relay(io.StringIO(lines), io.StringIO())
+                            session_driver.relay(io.StringIO(lines), output)
                     else:
-                        self.assertEqual(session_driver.relay(io.StringIO(lines), io.StringIO()), 0)
+                        self.assertEqual(session_driver.relay(io.StringIO(lines), output), 0)
+                        if ending == 'bad_json':
+                            rows = [json.loads(line) for line in output.getvalue().splitlines()]
+                            self.assertEqual(len(rows), 3)
+                            self.assertFalse(rows[2]['ok'])
+                            self.assertTrue(rows[2]['session_continues'])
+                            self.assertIn('not a JSON object', rows[2]['error'])
                 self.assertIs(cu.browser, original)
                 self.assert_closed()
 

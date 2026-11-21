@@ -1,0 +1,597 @@
+MANIFEST OK (26 files, manifest md5 7f744edddf14ff39e912691812fdb6bc)
+serving at http://127.0.0.1:8769
+127.0.0.1 - - [21/Nov/2026 20:28:43] "GET /run_agy_y2.py HTTP/1.1" 200 -
+127.0.0.1 - - [21/Nov/2026 20:28:43] "GET /run_live.py HTTP/1.1" 200 -
+127.0.0.1 - - [21/Nov/2026 20:28:43] "GET /agy-y2/test-01-tmux-session.md HTTP/1.1" 200 -
+127.0.0.1 - - [21/Nov/2026 20:28:43] "GET /agy-y2/test-02-network-settings.md HTTP/1.1" 200 -
+127.0.0.1 - - [21/Nov/2026 20:28:43] "GET /agy-y2/test-03-photo-editor.md HTTP/1.1" 200 -
+127.0.0.1 - - [21/Nov/2026 20:28:43] "GET /agy-y2/test-04-email-compose.md HTTP/1.1" 200 -
+127.0.0.1 - - [21/Nov/2026 20:28:43] "GET /agy-y2/test-05-spreadsheet-chart.md HTTP/1.1" 200 -
+127.0.0.1 - - [21/Nov/2026 20:28:43] "GET /agy-y2/test-06-video-call.md HTTP/1.1" 200 -
+127.0.0.1 - - [21/Nov/2026 20:28:43] "GET /agy-y2/test-07-file-manager.md HTTP/1.1" 200 -
+127.0.0.1 - - [21/Nov/2026 20:28:43] "GET /agy-y2/test-08-devtools.md HTTP/1.1" 200 -
+127.0.0.1 - - [21/Nov/2026 20:28:43] "GET /agy-y2/test-09-notes-sync.md HTTP/1.1" 200 -
+127.0.0.1 - - [21/Nov/2026 20:28:43] "GET /agy-y2/test-10-ide-debug.md HTTP/1.1" 200 -
+127.0.0.1 - - [21/Nov/2026 20:28:43] "GET /agy-y2/simulate.mjs HTTP/1.1" 200 -
+127.0.0.1 - - [21/Nov/2026 20:28:43] "GET /agy-y2/check.mjs HTTP/1.1" 200 -
+127.0.0.1 - - [21/Nov/2026 20:28:43] "GET /agy-y2/README.md HTTP/1.1" 200 -
+127.0.0.1 - - [21/Nov/2026 20:28:43] "GET /agy-y2/check-dashes.py HTTP/1.1" 200 -
+127.0.0.1 - - [21/Nov/2026 20:28:43] "GET /agy-y2/fixtures/test-01-tmux-session.html HTTP/1.1" 200 -
+127.0.0.1 - - [21/Nov/2026 20:28:43] "GET /agy-y2/fixtures/test-02-network-settings.html HTTP/1.1" 200 -
+127.0.0.1 - - [21/Nov/2026 20:28:43] "GET /agy-y2/fixtures/test-03-photo-editor.html HTTP/1.1" 200 -
+127.0.0.1 - - [21/Nov/2026 20:28:43] "GET /agy-y2/fixtures/test-04-email-compose.html HTTP/1.1" 200 -
+127.0.0.1 - - [21/Nov/2026 20:28:43] "GET /agy-y2/fixtures/test-05-spreadsheet-chart.html HTTP/1.1" 200 -
+127.0.0.1 - - [21/Nov/2026 20:28:43] "GET /agy-y2/fixtures/test-06-video-call.html HTTP/1.1" 200 -
+127.0.0.1 - - [21/Nov/2026 20:28:43] "GET /agy-y2/fixtures/test-07-file-manager.html HTTP/1.1" 200 -
+127.0.0.1 - - [21/Nov/2026 20:28:43] "GET /agy-y2/fixtures/test-08-devtools.html HTTP/1.1" 200 -
+127.0.0.1 - - [21/Nov/2026 20:28:43] "GET /agy-y2/fixtures/test-09-notes-sync.html HTTP/1.1" 200 -
+127.0.0.1 - - [21/Nov/2026 20:28:43] "GET /agy-y2/fixtures/test-10-ide-debug.html HTTP/1.1" 200 -
+SERVED FILES OK (26 files over HTTP)
+PREFLIGHT: owner-away asserted (handover token age 0s, basis: owner handed the machine over 18:24 21/11, out of the house); idle time NOT independently verified
+127.0.0.1 - - [21/Nov/2026 20:28:43] "GET /agy-y2/fixtures/test-01-tmux-session.html HTTP/1.1" 200 -
+PREFLIGHT OK
+127.0.0.1 - - [21/Nov/2026 20:28:43] "GET /agy-y2/fixtures/test-01-tmux-session.html HTTP/1.1" 200 -
+127.0.0.1 - - [21/Nov/2026 20:28:43] code 404, message File not found
+127.0.0.1 - - [21/Nov/2026 20:28:43] "GET /favicon.ico HTTP/1.1" 404 -
+[bootstrap] ensure_visible new test tab visible in 0.0s / 8.0s
+created test tab 6ce208ce (attempt 1)
+[01] shared tab gone, rebootstrap
+rebootstrap: created visible tab 646b4678
+[01] open fixture ok 1033ms detail={'classification': 'VISIBLE', 'snapshots': [{'bodyClass': '', 'bodyDisplay': 'block', 'bodyInline': '', 'bodyOpacity': '1', 'bodyVis': 'visible', 'hasBody': True, 'hasFocus': True, 'htmlClass': '', 'htmlClassList': [], 'htmlInline': '', 'htmlVis': 'visible', 'innerLen': 325, 'nowMs': 1031, 'rafTicks': 1, 'readyState': 'complete', 'rect': {'h': 618, 'w': 1615, 'x': 0, 'y': 0}, 'transition': 'visibility 0.25s, opacity 0.25s, background-color 0.25s', 'transitionDelay': '0s, 0s, 0s', 'transitionDuration': '0.25s, 0.25s, 0.25s', 'tzHidden': False, 'tzInitialized': False, 'url': 'http://127.0.0.1:8769/agy-y2/fixtures/test-01-tmux-session.html', 'visState': 'visible'}]} error=None
+127.0.0.1 - - [21/Nov/2026 20:28:50] "GET /agy-y2/fixtures/test-01-tmux-session.html HTTP/1.1" 200 -
+127.0.0.1 - - [21/Nov/2026 20:28:50] code 404, message File not found
+127.0.0.1 - - [21/Nov/2026 20:28:50] "GET /favicon.ico HTTP/1.1" 404 -
+[01] clear storage + reload ok 1043ms detail=('cleared', {'classification': 'VISIBLE', 'snapshots': [{'bodyClass': '', 'bodyDisplay': 'block', 'bodyInline': '', 'bodyOpacity': '1', 'bodyVis': 'visible', 'hasBody': True, 'hasFocus': True, 'htmlClass': '', 'htmlClassList': [], 'htmlInline': '', 'htmlVis': 'visible', 'innerLen': 325, 'nowMs': 1040, 'rafTicks': 1, 'readyState': 'complete', 'rect': {'h': 618, 'w': 1615, 'x': 0, 'y': 0}, 'transition': 'visibility 0.25s, opacity 0.25s, background-color 0.25s', 'transitionDelay': '0s, 0s, 0s', 'transitionDuration': '0.25s, 0.25s, 0.25s', 'tzHidden': False, 'tzInitialized': False, 'url': 'http://127.0.0.1:8769/agy-y2/fixtures/test-01-tmux-session.html', 'visState': 'visible'}]}) error=None
+[01] ensure_visible test tab visible in 0.0s / 8.0s
+[01] CHECK ok body renders visible (no hidden-body incident): visible
+[01] integrity guard held (8 expected failures on untouched)
+[01] CHECK ok session count starts 0: 0
+[01] CHECK ok status no active session: No Active Session
+[01] open new session modal ok 59ms detail=None error=None
+[01] wait session modal open ok 2ms detail=True error=None
+[01] type session name deploy ok 8ms detail=None error=None
+[01] create session ok 60ms detail=None error=None
+[01] CHECK ok active session deploy: deploy
+[01] CHECK ok status attached: deploy: Attached
+[01] CHECK ok window count 1: 1
+[01] CHECK ok pane count 1: 1
+[01] split horizontal ok 56ms detail=None error=None
+[01] CHECK ok pane count 2: 2
+[01] CHECK ok pane 2 present and visible: visible
+[01] type uptime (active pane) ok 9ms detail=pane-1 error=None
+[01] send command (active pane) ok 63ms detail=pane-1 error=None
+[01] read active pane output ok 3ms detail=Welcome to tmux session deploy
+$ uptime
+ 10:42:00 up 4 days, 2 users, load average: 0.18, 0.22, 0.15 error=None
+[01] CHECK ok uptime output has load average: Welcome to tmux session deploy
+$ uptime
+ 10:42:00 up 4 days, 2 users, load average: 0.18, 0.22, 0.15
+[01] new window ok 58ms detail=None error=None
+[01] CHECK ok window count 2: 2
+[01] open rename modal ok 58ms detail=None error=None
+[01] wait rename modal open ok 2ms detail=True error=None
+[01] type window name worker-logs ok 10ms detail=None error=None
+[01] confirm rename ok 59ms detail=None error=None
+[01] CHECK ok window tab 1 renamed: 1:worker-logs
+[01] split vertical ok 57ms detail=None error=None
+[01] CHECK ok pane count 2 in window 1: 2
+[01] mistake: kill pane ok 59ms detail=None error=None
+[01] CHECK ok pane count drops to 1: 1
+[01] CHECK ok alert says pane closed: Pane 2 closed
+[01] recovery: undo pane ok 56ms detail=None error=None
+[01] CHECK ok pane count back to 2: 2
+[01] detach session ok 58ms detail=None error=None
+[01] CHECK ok status detached: deploy: Detached
+[01] CHECK ok session overview visible: visible
+[01] CHECK ok session shows 2 windows: 2 windows
+[01] reattach deploy ok 57ms detail=None error=None
+[01] CHECK ok status attached again: deploy: Attached
+[01] save session state ok 57ms detail=None error=None
+[01] CHECK ok saved message shown: Session deploy saved with 2 windows
+[01] final verify PASS: []
+[gecko-log] copied to /tmp/worker-y9-gecko-01-a1.log
+{"test": "01", "pass": true, "failures": [], "details": {"integrity_guard": {"passed_on_untouched": false, "untouched_failures": ["Expected active session 'deploy', got 'None'", "Expected status to contain 'deploy: Attached', got 'No Active Session'", "Expected window count 2, got '0'", "Expected pane count 2, got '0'", "Expected tab 0 '0:bash', got 'undefined'", "Expected tab 1 '1:worker-logs', got 'undefined'", "Saved status message is not visible", "Saved message mismatch, got ''"]}, "final_verify": {"passed": true, "failures": [], "state": {"paneCount": "2", "savedMessage": "Session deploy saved with 2 windows", "sessionName": "deploy", "status": "deploy: Attached", "windowCount": "2"}}, "end_state_screenshot": "/tmp/worker-y9-shots/01-a1.png"}, "started_at": "2026-11-21T13:28:46.976687+00:00", "finished_at": "2026-11-21T13:28:54.741426+00:00", "elapsed_ms": 7765, "attempt": 1, "gaps": [], "flagged": false, "outcome": "pass", "reattempted_from_infra": false}
+[02] shared tab gone, rebootstrap
+rebootstrap: created visible tab efe138e3
+127.0.0.1 - - [21/Nov/2026 20:28:56] "GET /agy-y2/fixtures/test-02-network-settings.html HTTP/1.1" 200 -
+[02] open fixture ok 1056ms detail={'classification': 'VISIBLE', 'snapshots': [{'bodyClass': '', 'bodyDisplay': 'block', 'bodyInline': '', 'bodyOpacity': '1', 'bodyVis': 'visible', 'hasBody': True, 'hasFocus': True, 'htmlClass': '', 'htmlClassList': [], 'htmlInline': '', 'htmlVis': 'visible', 'innerLen': 135, 'nowMs': 1054, 'rafTicks': 1, 'readyState': 'complete', 'rect': {'h': 293, 'w': 1615, 'x': 0, 'y': 0}, 'transition': 'visibility 0.25s, opacity 0.25s, background-color 0.25s', 'transitionDelay': '0s, 0s, 0s', 'transitionDuration': '0.25s, 0.25s, 0.25s', 'tzHidden': False, 'tzInitialized': False, 'url': 'http://127.0.0.1:8769/agy-y2/fixtures/test-02-network-settings.html', 'visState': 'visible'}]} error=None
+127.0.0.1 - - [21/Nov/2026 20:28:58] "GET /agy-y2/fixtures/test-02-network-settings.html HTTP/1.1" 200 -
+127.0.0.1 - - [21/Nov/2026 20:28:58] code 404, message File not found
+127.0.0.1 - - [21/Nov/2026 20:28:58] "GET /favicon.ico HTTP/1.1" 404 -
+[02] clear storage + reload ok 1047ms detail=('cleared', {'classification': 'VISIBLE', 'snapshots': [{'bodyClass': '', 'bodyDisplay': 'block', 'bodyInline': '', 'bodyOpacity': '1', 'bodyVis': 'visible', 'hasBody': True, 'hasFocus': True, 'htmlClass': '', 'htmlClassList': [], 'htmlInline': '', 'htmlVis': 'visible', 'innerLen': 135, 'nowMs': 1042, 'rafTicks': 1, 'readyState': 'complete', 'rect': {'h': 293, 'w': 1615, 'x': 0, 'y': 0}, 'transition': 'visibility 0.25s, opacity 0.25s, background-color 0.25s', 'transitionDelay': '0s, 0s, 0s', 'transitionDuration': '0.25s, 0.25s, 0.25s', 'tzHidden': False, 'tzInitialized': False, 'url': 'http://127.0.0.1:8769/agy-y2/fixtures/test-02-network-settings.html', 'visState': 'visible'}]}) error=None
+[02] ensure_visible test tab visible in 0.0s / 8.0s
+[02] CHECK ok body renders visible (no hidden-body incident): visible
+[02] integrity guard held (10 expected failures on untouched)
+[02] CHECK ok wifi disabled at start: Disabled
+[02] CHECK ok not connected at start: Not Connected
+[02] toggle wifi on ok 59ms detail=None error=None
+[02] CHECK ok wifi enabled: Enabled
+[02] CHECK ok wifi content displayed: visible
+[02] connect HomeFiber-5G ok 56ms detail=None error=None
+[02] wait wifi auth modal ok 2ms detail=True error=None
+[02] type wifi password ok 8ms detail=None error=None
+[02] confirm wifi connect ok 56ms detail=None error=None
+[02] CHECK ok connected SSID: HomeFiber-5G
+[02] CHECK ok connection badge: Connected
+[02] manage known networks ok 56ms detail=None error=None
+[02] CHECK ok known networks panel visible: visible
+[02] forget CafeFree ok 57ms detail=None error=None
+[02] CHECK ok CafeFree removed from DOM: 0
+[02] switch to bluetooth tab ok 56ms detail=None error=None
+[02] CHECK ok bluetooth panel active: active
+[02] CHECK ok bluetooth enabled: Enabled
+[02] scan bluetooth devices ok 59ms detail=None error=None
+[02] CHECK ok available list visible: visible
+[02] CHECK ok MX Master listed in available list: present in #available-bt-list
+[02] pair MX Master ok 57ms detail=None error=None
+[02] CHECK ok MX Master paired in paired list: MX Master 3SConnected - Battery 90%Paired
+[02] bluetooth off ok 57ms detail=None error=None
+[02] CHECK ok bluetooth disabled: Disabled
+[02] bluetooth on again ok 57ms detail=None error=None
+[02] CHECK ok bluetooth enabled again: Enabled
+[02] CHECK ok paired device persists in paired list: present in #paired-bt-list
+[02] back to wifi tab ok 58ms detail=None error=None
+[02] open network properties ok 56ms detail=None error=None
+[02] wait properties panel ok 2ms detail=True error=None
+[02] enable metered ok 55ms detail=None error=None
+[02] CHECK ok metered indicator: Metered
+[02] save wifi properties ok 57ms detail=None error=None
+[02] open status tab ok 59ms detail=None error=None
+[02] CHECK ok summary SSID: HomeFiber-5G
+[02] CHECK ok summary metered: Yes
+[02] CHECK ok summary bluetooth: MX Master 3S
+[02] apply network settings ok 57ms detail=None error=None
+[02] CHECK ok apply toast active: active
+[02] CHECK ok apply toast text: Network settings applied successfully: HomeFiber-5G (Metered: Yes) and MX Master 3S
+[02] final verify PASS: []
+[gecko-log] copied to /tmp/worker-y9-gecko-02-a1.log
+{"test": "02", "pass": true, "failures": [], "details": {"integrity_guard": {"passed_on_untouched": false, "untouched_failures": ["Expected Wi-Fi 'Enabled', got 'Disabled'", "Expected connected SSID 'HomeFiber-5G', got 'Not Connected'", "Expected connection badge 'Connected', got 'Disconnected'", "Network CafeFree was not forgotten (still exists in DOM)", "Device MX Master 3S not paired", "Expected summary SSID 'HomeFiber-5G', got 'None'", "Expected summary metered 'Yes', got 'No'", "Expected summary BT 'MX Master 3S', got 'None'", "Settings toast notification is not active", "Toast mismatch, got ''"]}, "final_verify": {"passed": true, "failures": [], "state": {"btStatus": "Enabled", "connectedSsid": "HomeFiber-5G", "summaryMetered": "Yes", "wifiStatus": "Enabled"}}, "end_state_screenshot": "/tmp/worker-y9-shots/02-a1.png"}, "started_at": "2026-11-21T13:28:54.741572+00:00", "finished_at": "2026-11-21T13:29:02.686172+00:00", "elapsed_ms": 7945, "attempt": 1, "gaps": [], "flagged": false, "outcome": "pass", "reattempted_from_infra": false}
+[03] shared tab gone, rebootstrap
+rebootstrap: created visible tab 5a98d56a
+127.0.0.1 - - [21/Nov/2026 20:29:04] "GET /agy-y2/fixtures/test-03-photo-editor.html HTTP/1.1" 200 -
+[03] open fixture ok 1051ms detail={'classification': 'VISIBLE', 'snapshots': [{'bodyClass': '', 'bodyDisplay': 'block', 'bodyInline': '', 'bodyOpacity': '1', 'bodyVis': 'visible', 'hasBody': True, 'hasFocus': True, 'htmlClass': '', 'htmlClassList': [], 'htmlInline': '', 'htmlVis': 'visible', 'innerLen': 276, 'nowMs': 1049, 'rafTicks': 1, 'readyState': 'complete', 'rect': {'h': 624, 'w': 1615, 'x': 0, 'y': 0}, 'transition': 'visibility 0.25s, opacity 0.25s, background-color 0.25s', 'transitionDelay': '0s, 0s, 0s', 'transitionDuration': '0.25s, 0.25s, 0.25s', 'tzHidden': False, 'tzInitialized': False, 'url': 'http://127.0.0.1:8769/agy-y2/fixtures/test-03-photo-editor.html', 'visState': 'visible'}]} error=None
+127.0.0.1 - - [21/Nov/2026 20:29:05] "GET /agy-y2/fixtures/test-03-photo-editor.html HTTP/1.1" 200 -
+127.0.0.1 - - [21/Nov/2026 20:29:05] code 404, message File not found
+127.0.0.1 - - [21/Nov/2026 20:29:05] "GET /favicon.ico HTTP/1.1" 404 -
+[03] clear storage + reload ok 1045ms detail=('cleared', {'classification': 'VISIBLE', 'snapshots': [{'bodyClass': '', 'bodyDisplay': 'block', 'bodyInline': '', 'bodyOpacity': '1', 'bodyVis': 'visible', 'hasBody': True, 'hasFocus': True, 'htmlClass': '', 'htmlClassList': [], 'htmlInline': '', 'htmlVis': 'visible', 'innerLen': 276, 'nowMs': 1041, 'rafTicks': 1, 'readyState': 'complete', 'rect': {'h': 624, 'w': 1615, 'x': 0, 'y': 0}, 'transition': 'visibility 0.25s, opacity 0.25s, background-color 0.25s', 'transitionDelay': '0s, 0s, 0s', 'transitionDuration': '0.25s, 0.25s, 0.25s', 'tzHidden': False, 'tzInitialized': False, 'url': 'http://127.0.0.1:8769/agy-y2/fixtures/test-03-photo-editor.html', 'visState': 'visible'}]}) error=None
+[03] ensure_visible test tab visible in 0.0s / 8.0s
+[03] CHECK ok body renders visible (no hidden-body incident): visible
+[03] integrity guard held (9 expected failures on untouched)
+[03] CHECK ok editor ready: Ready. No file loaded.
+[03] select sunset.jpg ok 60ms detail=None error=None
+[03] load photo ok 60ms detail=None error=None
+[03] CHECK ok filename sunset: sunset.jpg
+[03] CHECK ok width 1200: 1200
+[03] CHECK ok height 900: 900
+[03] open crop tab ok 57ms detail=None error=None
+[03] CHECK ok crop controls active: active
+[03] choose 4:3 ratio ok 56ms detail=None error=None
+[03] CHECK ok ratio 4:3: 4:3
+[03] apply crop ok 57ms detail=None error=None
+[03] CHECK ok width 1000 after crop: 1000
+[03] CHECK ok height 750 after crop: 750
+[03] open filters tab ok 58ms detail=None error=None
+[03] CHECK ok filters panel active: active
+[03] apply Vivid filter ok 56ms detail=None error=None
+[03] CHECK ok filter Vivid: Vivid
+[03] open adjust tab ok 60ms detail=None error=None
+[03] CHECK ok brightness 0: 0
+[03] brightness plus ok 57ms detail=None error=None
+[03] CHECK ok brightness 20: 20
+[03] mistake: undo brightness ok 58ms detail=None error=None
+[03] CHECK ok brightness back to 0: 0
+[03] open transform tab ok 59ms detail=None error=None
+[03] rotate 90 cw ok 60ms detail=None error=None
+[03] CHECK ok rotation 90 deg: 90 deg
+[03] CHECK ok width 750 after rotate: 750
+[03] CHECK ok height 1000 after rotate: 1000
+[03] open export modal ok 60ms detail=None error=None
+[03] wait export modal ok 2ms detail=True error=None
+[03] select PNG format ok 2ms detail=PNG error=None
+[03] CHECK ok dialog format PNG: PNG
+[03] CHECK ok dialog dims 750 x 1000 px: 750 x 1000 px
+[03] confirm export ok 58ms detail=None error=None
+[03] CHECK ok export banner: Image exported: sunset.png (750x1000, PNG)
+[03] final verify PASS: []
+[gecko-log] copied to /tmp/worker-y9-gecko-03-a1.log
+{"test": "03", "pass": true, "failures": [], "details": {"integrity_guard": {"passed_on_untouched": false, "untouched_failures": ["Expected file 'sunset.jpg', got 'None'", "Expected crop ratio '4:3', got 'Free'", "Expected filter 'Vivid', got 'Original'", "Expected rotation '90 deg', got '0 deg'", "Expected width '750', got '0'", "Expected height '1000', got '0'", "Expected format display 'PNG', got 'JPEG'", "Export banner is not active", "Banner mismatch, got ''"]}, "final_verify": {"passed": true, "failures": [], "state": {"brightness": "0", "dimensions": "750x1000", "filename": "sunset.jpg", "filter": "Vivid", "rotation": "90 deg"}}, "end_state_screenshot": "/tmp/worker-y9-shots/03-a1.png"}, "started_at": "2026-11-21T13:29:02.686259+00:00", "finished_at": "2026-11-21T13:29:10.620825+00:00", "elapsed_ms": 7935, "attempt": 1, "gaps": [], "flagged": false, "outcome": "pass", "reattempted_from_infra": false}
+[04] shared tab gone, rebootstrap
+rebootstrap: created visible tab 5d1e9dd5
+127.0.0.1 - - [21/Nov/2026 20:29:12] "GET /agy-y2/fixtures/test-04-email-compose.html HTTP/1.1" 200 -
+[04] open fixture ok 1064ms detail={'classification': 'VISIBLE', 'snapshots': [{'bodyClass': '', 'bodyDisplay': 'block', 'bodyInline': '', 'bodyOpacity': '1', 'bodyVis': 'visible', 'hasBody': True, 'hasFocus': True, 'htmlClass': '', 'htmlClassList': [], 'htmlInline': '', 'htmlVis': 'visible', 'innerLen': 84, 'nowMs': 1062, 'rafTicks': 1, 'readyState': 'complete', 'rect': {'h': 620, 'w': 1615, 'x': 0, 'y': 0}, 'transition': 'visibility 0.25s, opacity 0.25s, background-color 0.25s', 'transitionDelay': '0s, 0s, 0s', 'transitionDuration': '0.25s, 0.25s, 0.25s', 'tzHidden': False, 'tzInitialized': False, 'url': 'http://127.0.0.1:8769/agy-y2/fixtures/test-04-email-compose.html', 'visState': 'visible'}]} error=None
+127.0.0.1 - - [21/Nov/2026 20:29:13] "GET /agy-y2/fixtures/test-04-email-compose.html HTTP/1.1" 200 -
+127.0.0.1 - - [21/Nov/2026 20:29:13] code 404, message File not found
+127.0.0.1 - - [21/Nov/2026 20:29:13] "GET /favicon.ico HTTP/1.1" 404 -
+[04] clear storage + reload ok 1046ms detail=('cleared', {'classification': 'VISIBLE', 'snapshots': [{'bodyClass': '', 'bodyDisplay': 'block', 'bodyInline': '', 'bodyOpacity': '1', 'bodyVis': 'visible', 'hasBody': True, 'hasFocus': True, 'htmlClass': '', 'htmlClassList': [], 'htmlInline': '', 'htmlVis': 'visible', 'innerLen': 84, 'nowMs': 1042, 'rafTicks': 1, 'readyState': 'complete', 'rect': {'h': 620, 'w': 1615, 'x': 0, 'y': 0}, 'transition': 'visibility 0.25s, opacity 0.25s, background-color 0.25s', 'transitionDelay': '0s, 0s, 0s', 'transitionDuration': '0.25s, 0.25s, 0.25s', 'tzHidden': False, 'tzInitialized': False, 'url': 'http://127.0.0.1:8769/agy-y2/fixtures/test-04-email-compose.html', 'visState': 'visible'}]}) error=None
+[04] ensure_visible test tab visible in 0.0s / 8.0s
+[04] CHECK ok body renders visible (no hidden-body incident): visible
+[04] integrity guard held (4 expected failures on untouched)
+[04] CHECK ok sent starts 12: 12
+[04] CHECK ok drafts start 0: 0
+[04] compose mail ok 58ms detail=None error=None
+[04] wait compose pane open ok 1ms detail=True error=None
+[04] type recipient ok 7ms detail=None error=None
+[04] add CC field ok 56ms detail=None error=None
+[04] CHECK ok CC group visible: visible
+[04] type CC ok 6ms detail=None error=None
+[04] type subject ok 9ms detail=None error=None
+[04] type body ok 12ms detail=None error=None
+[04] open attachment picker ok 56ms detail=None error=None
+[04] wait attachment picker ok 2ms detail=True error=None
+[04] choose report.pdf ok 55ms detail=None error=None
+[04] confirm attach ok 55ms detail=None error=None
+[04] CHECK ok attachment chip present in attached list: present in #attached-files-list
+[04] CHECK ok attachment counter 1: 1
+[04] save draft ok 55ms detail=None error=None
+[04] CHECK ok drafts count 1: 1
+[04] close composer ok 56ms detail=None error=None
+[04] CHECK ok compose pane hidden: hidden
+[04] open drafts folder ok 56ms detail=None error=None
+[04] reopen draft q4 ok 56ms detail=None error=None
+[04] wait compose pane open again ok 1ms detail=True error=None
+[04] CHECK ok subject restored: Q4 report
+[04] mistake: remove attachment ok 55ms detail=None error=None
+[04] CHECK ok attachment counter 0: 0
+[04] CHECK ok attached list empty: 
+[04] reopen attachment picker ok 55ms detail=None error=None
+[04] wait attachment picker again ok 2ms detail=True error=None
+[04] choose report.pdf again ok 55ms detail=None error=None
+[04] confirm re-attach ok 56ms detail=None error=None
+[04] CHECK ok attachment counter 1 again: 1
+[04] CHECK ok attachment chip present again in attached list: present in #attached-files-list
+[04] send email ok 56ms detail=None error=None
+[04] CHECK ok compose pane hidden after send: hidden
+[04] CHECK ok sent toast: Email sent to team@example.com with attachment report.pdf
+[04] CHECK ok sent count 13: 13
+[04] final verify PASS: []
+[gecko-log] copied to /tmp/worker-y9-gecko-04-a1.log
+{"test": "04", "pass": true, "failures": [], "details": {"integrity_guard": {"passed_on_untouched": false, "untouched_failures": ["Expected Sent count 13, got '12'", "Sent table row #sent-row-1 is not visible", "Sent toast alert is not visible", "Toast mismatch, got ''"]}, "final_verify": {"passed": true, "failures": [], "state": {"draftsCount": "0", "sentCount": "13", "sentRowDisplay": "table-row"}}, "end_state_screenshot": "/tmp/worker-y9-shots/04-a1.png"}, "started_at": "2026-11-21T13:29:10.620903+00:00", "finished_at": "2026-11-21T13:29:18.402556+00:00", "elapsed_ms": 7782, "attempt": 1, "gaps": [], "flagged": false, "outcome": "pass", "reattempted_from_infra": false}
+[05] shared tab gone, rebootstrap
+rebootstrap: created visible tab 936cc080
+127.0.0.1 - - [21/Nov/2026 20:29:20] "GET /agy-y2/fixtures/test-05-spreadsheet-chart.html HTTP/1.1" 200 -
+[05] open fixture ok 1048ms detail={'classification': 'VISIBLE', 'snapshots': [{'bodyClass': '', 'bodyDisplay': 'block', 'bodyInline': '', 'bodyOpacity': '1', 'bodyVis': 'visible', 'hasBody': True, 'hasFocus': True, 'htmlClass': '', 'htmlClassList': [], 'htmlInline': '', 'htmlVis': 'visible', 'innerLen': 199, 'nowMs': 1047, 'rafTicks': 1, 'readyState': 'complete', 'rect': {'h': 628, 'w': 1615, 'x': 0, 'y': 0}, 'transition': 'visibility 0.25s, opacity 0.25s, background-color 0.25s', 'transitionDelay': '0s, 0s, 0s', 'transitionDuration': '0.25s, 0.25s, 0.25s', 'tzHidden': False, 'tzInitialized': False, 'url': 'http://127.0.0.1:8769/agy-y2/fixtures/test-05-spreadsheet-chart.html', 'visState': 'visible'}]} error=None
+127.0.0.1 - - [21/Nov/2026 20:29:21] "GET /agy-y2/fixtures/test-05-spreadsheet-chart.html HTTP/1.1" 200 -
+127.0.0.1 - - [21/Nov/2026 20:29:21] code 404, message File not found
+127.0.0.1 - - [21/Nov/2026 20:29:21] "GET /favicon.ico HTTP/1.1" 404 -
+[05] clear storage + reload ok 1043ms detail=('cleared', {'classification': 'VISIBLE', 'snapshots': [{'bodyClass': '', 'bodyDisplay': 'block', 'bodyInline': '', 'bodyOpacity': '1', 'bodyVis': 'visible', 'hasBody': True, 'hasFocus': True, 'htmlClass': '', 'htmlClassList': [], 'htmlInline': '', 'htmlVis': 'visible', 'innerLen': 199, 'nowMs': 1039, 'rafTicks': 1, 'readyState': 'complete', 'rect': {'h': 628, 'w': 1615, 'x': 0, 'y': 0}, 'transition': 'visibility 0.25s, opacity 0.25s, background-color 0.25s', 'transitionDelay': '0s, 0s, 0s', 'transitionDuration': '0.25s, 0.25s, 0.25s', 'tzHidden': False, 'tzInitialized': False, 'url': 'http://127.0.0.1:8769/agy-y2/fixtures/test-05-spreadsheet-chart.html', 'visState': 'visible'}]}) error=None
+[05] ensure_visible test tab visible in 0.0s / 8.0s
+[05] CHECK ok body renders visible (no hidden-body incident): visible
+[05] integrity guard held (12 expected failures on untouched)
+[05] CHECK ok sheet name: Sales Forecast
+[05] type Month into #cell-input-a1 ok 12ms detail=None error=None
+[05] type Sales into #cell-input-b1 ok 8ms detail=None error=None
+[05] type Jan into #cell-input-a2 ok 8ms detail=None error=None
+[05] type 1200 into #cell-input-b2 ok 7ms detail=None error=None
+[05] type Feb into #cell-input-a3 ok 8ms detail=None error=None
+[05] type 1500 into #cell-input-b3 ok 7ms detail=None error=None
+[05] type Mar into #cell-input-a4 ok 7ms detail=None error=None
+[05] mistake: type 9800 into B4 ok 8ms detail=None error=None
+[05] CHECK ok B4 shows 9800: 9800
+[05] type Total into A5 ok 6ms detail=None error=None
+[05] select cell B5 ok 57ms detail=None error=None
+[05] type SUM formula ok 6ms detail=None error=None
+[05] commit formula ok 57ms detail=None error=None
+[05] CHECK ok B5 total 12500: 12500
+[05] type Average into A6 ok 5ms detail=None error=None
+[05] select cell B6 ok 57ms detail=None error=None
+[05] type AVERAGE formula ok 9ms detail=None error=None
+[05] commit formula 2 ok 56ms detail=None error=None
+[05] CHECK ok B6 average 4166.67: 4166.67
+[05] correct B4 to 1800 ok 62ms detail=(None, None) error=None
+[05] recalculate sheet ok 57ms detail=None error=None
+[05] CHECK ok B5 total 4500: 4500
+[05] CHECK ok B6 average 1500.00: 1500.00
+[05] open chart modal ok 54ms detail=None error=None
+[05] wait chart modal ok 1ms detail=True error=None
+[05] select Bar chart type ok 1ms detail=Bar error=None
+[05] render chart ok 54ms detail=None error=None
+[05] CHECK ok bar chart SVG present in chart wrapper: present in #chart-wrapper
+[05] wait chart title controls visible ok 1ms detail=True error=None
+[05] click chart title input ok 54ms detail=None error=None
+[05] type chart title ok 11ms detail=None error=None
+[05] apply chart title ok 56ms detail=None error=None
+[05] CHECK ok chart title set: Q1 Regional Sales
+[05] save sheet ok 55ms detail=None error=None
+[05] CHECK ok save toast: Sheet saved: Total=4500, Average=1500.00, Chart=Q1 Regional Sales
+[05] final verify PASS: []
+[gecko-log] copied to /tmp/worker-y9-gecko-05-a1.log
+{"test": "05", "pass": true, "failures": [], "details": {"integrity_guard": {"passed_on_untouched": false, "untouched_failures": ["Expected A1 'Month', got ''", "Expected B1 'Sales', got ''", "Expected Jan 1200, got ' '", "Expected Feb 1500, got ' '", "Expected A4 'Mar', got ''", "Expected B4 corrected to '1800', got ''", "Expected Total (B5) '4500', got '0'", "Expected Average (B6) '1500.00', got '0.00'", "Bar chart SVG #sales-bar-svg not found", "Expected chart title 'Q1 Regional Sales', got 'undefined'", "Sheet status toast is not active", "Toast mismatch, got ''"]}, "final_verify": {"passed": true, "failures": [], "state": {"a1": "Month", "b4": "1800", "chartTitle": "Q1 Regional Sales", "valB5": "4500", "valB6": "1500.00"}}, "end_state_screenshot": "/tmp/worker-y9-shots/05-a1.png"}, "started_at": "2026-11-21T13:29:18.402676+00:00", "finished_at": "2026-11-21T13:29:26.060973+00:00", "elapsed_ms": 7658, "attempt": 1, "gaps": [], "flagged": false, "outcome": "pass", "reattempted_from_infra": false}
+[06] shared tab gone, rebootstrap
+rebootstrap: created visible tab be0a5efe
+127.0.0.1 - - [21/Nov/2026 20:29:28] "GET /agy-y2/fixtures/test-06-video-call.html HTTP/1.1" 200 -
+[06] open fixture ok 1044ms detail={'classification': 'VISIBLE', 'snapshots': [{'bodyClass': '', 'bodyDisplay': 'block', 'bodyInline': '', 'bodyOpacity': '1', 'bodyVis': 'visible', 'hasBody': True, 'hasFocus': True, 'htmlClass': '', 'htmlClassList': [], 'htmlInline': '', 'htmlVis': 'visible', 'innerLen': 97, 'nowMs': 1042, 'rafTicks': 2, 'readyState': 'complete', 'rect': {'h': 572, 'w': 1615, 'x': 0, 'y': 0}, 'transition': 'visibility 0.25s, opacity 0.25s, background-color 0.25s', 'transitionDelay': '0s, 0s, 0s', 'transitionDuration': '0.25s, 0.25s, 0.25s', 'tzHidden': False, 'tzInitialized': False, 'url': 'http://127.0.0.1:8769/agy-y2/fixtures/test-06-video-call.html', 'visState': 'visible'}]} error=None
+127.0.0.1 - - [21/Nov/2026 20:29:29] "GET /agy-y2/fixtures/test-06-video-call.html HTTP/1.1" 200 -
+127.0.0.1 - - [21/Nov/2026 20:29:29] code 404, message File not found
+127.0.0.1 - - [21/Nov/2026 20:29:29] "GET /favicon.ico HTTP/1.1" 404 -
+[06] clear storage + reload ok 1049ms detail=('cleared', {'classification': 'VISIBLE', 'snapshots': [{'bodyClass': '', 'bodyDisplay': 'block', 'bodyInline': '', 'bodyOpacity': '1', 'bodyVis': 'visible', 'hasBody': True, 'hasFocus': True, 'htmlClass': '', 'htmlClassList': [], 'htmlInline': '', 'htmlVis': 'visible', 'innerLen': 97, 'nowMs': 1046, 'rafTicks': 1, 'readyState': 'complete', 'rect': {'h': 572, 'w': 1615, 'x': 0, 'y': 0}, 'transition': 'visibility 0.25s, opacity 0.25s, background-color 0.25s', 'transitionDelay': '0s, 0s, 0s', 'transitionDuration': '0.25s, 0.25s, 0.25s', 'tzHidden': False, 'tzInitialized': False, 'url': 'http://127.0.0.1:8769/agy-y2/fixtures/test-06-video-call.html', 'visState': 'visible'}]}) error=None
+[06] ensure_visible test tab visible in 0.0s / 8.0s
+[06] CHECK ok body renders visible (no hidden-body incident): visible
+[06] integrity guard held (7 expected failures on untouched)
+[06] CHECK ok lobby at start: Lobby
+[06] CHECK ok 0 participants at start: 0
+[06] type meeting id ok 11ms detail=None error=None
+[06] type display name ok 9ms detail=None error=None
+[06] join meeting ok 59ms detail=None error=None
+[06] CHECK ok connected: Connected
+[06] CHECK ok 4 participants: 4
+[06] CHECK ok room name: Sprint Planning
+[06] mute mic ok 56ms detail=None error=None
+[06] CHECK ok mic muted: Muted
+[06] CHECK ok mic muted class: muted
+[06] unmute mic ok 56ms detail=None error=None
+[06] CHECK ok mic unmuted: Unmuted
+[06] CHECK ok mic active class: active
+[06] camera off ok 55ms detail=None error=None
+[06] CHECK ok camera off: Camera Off
+[06] CHECK ok camera off class: off
+[06] camera on ok 55ms detail=None error=None
+[06] CHECK ok camera on: Camera On
+[06] CHECK ok camera active class: active
+[06] share screen ok 56ms detail=None error=None
+[06] wait screenshare modal ok 2ms detail=True error=None
+[06] choose desktop share ok 55ms detail=None error=None
+[06] confirm screenshare ok 56ms detail=None error=None
+[06] CHECK ok share banner text: 
+    Screen sharing active
+    Stop Sharing
+  
+[06] CHECK ok share banner visible: visible
+[06] stop screenshare ok 55ms detail=None error=None
+[06] CHECK ok share banner hidden: hidden
+[06] raise hand ok 56ms detail=None error=None
+[06] CHECK ok hand raised class: raised
+[06] CHECK ok hand raised text: Hand Raised
+[06] open chat ok 55ms detail=None error=None
+[06] CHECK ok chat sidebar open: open
+[06] type chat message ok 7ms detail=None error=None
+[06] send chat ok 57ms detail=None error=None
+[06] CHECK ok chat message recorded: 
+        
+          Sarah Connor
+          Welcome everyone, let us get started.
+        
+      James (You)Ready for updates
+[06] leave meeting ok 55ms detail=None error=None
+[06] CHECK ok disconnected: Disconnected
+[06] CHECK ok rejoin prompt visible: visible
+[06] rejoin meeting ok 54ms detail=None error=None
+[06] CHECK ok connected again: Connected
+[06] CHECK ok 4 participants again: 4
+[06] save call summary ok 54ms detail=None error=None
+[06] CHECK ok summary toast: Meeting Sprint Planning: 4 participants, audio active, video active
+[06] final verify PASS: []
+[gecko-log] copied to /tmp/worker-y9-gecko-06-a1.log
+{"test": "06", "pass": true, "failures": [], "details": {"integrity_guard": {"passed_on_untouched": false, "untouched_failures": ["Expected room 'Sprint Planning', got 'None'", "Expected 4 participants, got '0'", "Expected call status 'Connected', got 'Lobby'", "Expected hand 'Hand Raised', got 'Hand Down'", "Chat message missing in chat list", "Call summary toast is not active", "Toast mismatch, got ''"]}, "final_verify": {"passed": true, "failures": [], "state": {"cam": "Camera On", "mic": "Unmuted", "participants": "4", "room": "Sprint Planning", "status": "Connected"}}, "end_state_screenshot": "/tmp/worker-y9-shots/06-a1.png"}, "started_at": "2026-11-21T13:29:26.061090+00:00", "finished_at": "2026-11-21T13:29:33.880633+00:00", "elapsed_ms": 7820, "attempt": 1, "gaps": [], "flagged": false, "outcome": "pass", "reattempted_from_infra": false}
+[07] shared tab gone, rebootstrap
+rebootstrap: created visible tab 623ca1f4
+127.0.0.1 - - [21/Nov/2026 20:29:36] "GET /agy-y2/fixtures/test-07-file-manager.html HTTP/1.1" 200 -
+[07] open fixture ok 1054ms detail={'classification': 'VISIBLE', 'snapshots': [{'bodyClass': '', 'bodyDisplay': 'block', 'bodyInline': '', 'bodyOpacity': '1', 'bodyVis': 'visible', 'hasBody': True, 'hasFocus': True, 'htmlClass': '', 'htmlClassList': [], 'htmlInline': '', 'htmlVis': 'visible', 'innerLen': 381, 'nowMs': 1052, 'rafTicks': 1, 'readyState': 'complete', 'rect': {'h': 572, 'w': 1615, 'x': 0, 'y': 0}, 'transition': 'visibility 0.25s, opacity 0.25s, background-color 0.25s', 'transitionDelay': '0s, 0s, 0s', 'transitionDuration': '0.25s, 0.25s, 0.25s', 'tzHidden': False, 'tzInitialized': False, 'url': 'http://127.0.0.1:8769/agy-y2/fixtures/test-07-file-manager.html', 'visState': 'visible'}]} error=None
+127.0.0.1 - - [21/Nov/2026 20:29:37] "GET /agy-y2/fixtures/test-07-file-manager.html HTTP/1.1" 200 -
+127.0.0.1 - - [21/Nov/2026 20:29:37] code 404, message File not found
+127.0.0.1 - - [21/Nov/2026 20:29:37] "GET /favicon.ico HTTP/1.1" 404 -
+[07] clear storage + reload ok 1048ms detail=('cleared', {'classification': 'VISIBLE', 'snapshots': [{'bodyClass': '', 'bodyDisplay': 'block', 'bodyInline': '', 'bodyOpacity': '1', 'bodyVis': 'visible', 'hasBody': True, 'hasFocus': True, 'htmlClass': '', 'htmlClassList': [], 'htmlInline': '', 'htmlVis': 'visible', 'innerLen': 381, 'nowMs': 1044, 'rafTicks': 1, 'readyState': 'complete', 'rect': {'h': 572, 'w': 1615, 'x': 0, 'y': 0}, 'transition': 'visibility 0.25s, opacity 0.25s, background-color 0.25s', 'transitionDelay': '0s, 0s, 0s', 'transitionDuration': '0.25s, 0.25s, 0.25s', 'tzHidden': False, 'tzInitialized': False, 'url': 'http://127.0.0.1:8769/agy-y2/fixtures/test-07-file-manager.html', 'visState': 'visible'}]}) error=None
+[07] ensure_visible test tab visible in 0.0s / 8.0s
+[07] CHECK ok body renders visible (no hidden-body incident): visible
+[07] integrity guard held (6 expected failures on untouched)
+[07] CHECK ok total files 8: 8
+[07] CHECK ok selected 0 at start: 0
+[07] select img1 ok 57ms detail=None error=None
+[07] select img2 ok 54ms detail=None error=None
+[07] select img3 ok 56ms detail=None error=None
+[07] select img4 ok 56ms detail=None error=None
+[07] select img5 ok 56ms detail=None error=None
+[07] CHECK ok selected 5 files: 5
+[07] open bulk rename ok 56ms detail=None error=None
+[07] wait bulk rename modal ok 2ms detail=True error=None
+[07] type rename pattern ok 8ms detail=None error=None
+[07] apply bulk rename ok 56ms detail=None error=None
+[07] CHECK ok file 1 renamed: photo-2026-01.jpg
+[07] CHECK ok file 5 renamed: photo-2026-05.jpg
+[07] select img1 for move ok 55ms detail=None error=None
+[07] select img2 for move ok 56ms detail=None error=None
+[07] select img3 for move ok 56ms detail=None error=None
+[07] open move dialog ok 56ms detail=None error=None
+[07] wait move modal ok 2ms detail=True error=None
+[07] pick Archive target ok 55ms detail=None error=None
+[07] confirm move ok 56ms detail=None error=None
+[07] CHECK ok archive has 3 files: 3 files
+[07] mistake: delete img4 ok 56ms detail=None error=None
+[07] CHECK ok row img4 hidden after delete: hidden
+[07] CHECK ok trash counter 1: 1
+[07] open trash folder ok 55ms detail=None error=None
+[07] CHECK ok trash table visible: visible
+[07] CHECK ok trash row img4 present in trash table: present in #trash-table
+[07] restore img4 ok 55ms detail=None error=None
+[07] CHECK ok trash counter 0 after restore: 0
+[07] back to root folder ok 56ms detail=None error=None
+[07] open new folder modal ok 56ms detail=None error=None
+[07] wait new folder modal ok 2ms detail=True error=None
+[07] type folder name Processed ok 7ms detail=None error=None
+[07] confirm create folder ok 55ms detail=None error=None
+[07] generate inventory report ok 56ms detail=None error=None
+[07] CHECK ok inventory toast: Root: 5 files, Archive: 3 files, Trash: 0 files, Folder Processed created
+[07] final verify PASS: []
+[gecko-log] copied to /tmp/worker-y9-gecko-07-a1.log
+{"test": "07", "pass": true, "failures": [], "details": {"integrity_guard": {"passed_on_untouched": false, "untouched_failures": ["Expected file 1 'photo-2026-01.jpg', got 'raw_001.jpg'", "Expected file 5 'photo-2026-05.jpg', got 'raw_005.jpg'", "Expected Archive to have '3 files', got '0 files'", "Custom folder item #folder-item-processed not found", "Inventory summary toast is not active", "Toast mismatch, got ''"]}, "final_verify": {"passed": true, "failures": [], "state": {"archive": "3 files", "name1": "photo-2026-01.jpg", "name5": "photo-2026-05.jpg", "trash": "0"}}, "end_state_screenshot": "/tmp/worker-y9-shots/07-a1.png"}, "started_at": "2026-11-21T13:29:33.880750+00:00", "finished_at": "2026-11-21T13:29:41.946157+00:00", "elapsed_ms": 8065, "attempt": 1, "gaps": [], "flagged": false, "outcome": "pass", "reattempted_from_infra": false}
+[08] shared tab gone, rebootstrap
+rebootstrap: created visible tab a0d8bb30
+127.0.0.1 - - [21/Nov/2026 20:29:44] "GET /agy-y2/fixtures/test-08-devtools.html HTTP/1.1" 200 -
+[08] open fixture ok 1047ms detail={'classification': 'VISIBLE', 'snapshots': [{'bodyClass': '', 'bodyDisplay': 'flex', 'bodyInline': '', 'bodyOpacity': '1', 'bodyVis': 'visible', 'hasBody': True, 'hasFocus': True, 'htmlClass': '', 'htmlClassList': [], 'htmlInline': '', 'htmlVis': 'visible', 'innerLen': 187, 'nowMs': 1045, 'rafTicks': 1, 'readyState': 'complete', 'rect': {'h': 1160, 'w': 1615, 'x': 0, 'y': 0}, 'transition': 'visibility 0.25s, opacity 0.25s, background-color 0.25s', 'transitionDelay': '0s, 0s, 0s', 'transitionDuration': '0.25s, 0.25s, 0.25s', 'tzHidden': False, 'tzInitialized': False, 'url': 'http://127.0.0.1:8769/agy-y2/fixtures/test-08-devtools.html', 'visState': 'visible'}]} error=None
+127.0.0.1 - - [21/Nov/2026 20:29:45] "GET /agy-y2/fixtures/test-08-devtools.html HTTP/1.1" 200 -
+127.0.0.1 - - [21/Nov/2026 20:29:45] code 404, message File not found
+127.0.0.1 - - [21/Nov/2026 20:29:45] "GET /favicon.ico HTTP/1.1" 404 -
+[08] clear storage + reload ok 1047ms detail=('cleared', {'classification': 'VISIBLE', 'snapshots': [{'bodyClass': '', 'bodyDisplay': 'flex', 'bodyInline': '', 'bodyOpacity': '1', 'bodyVis': 'visible', 'hasBody': True, 'hasFocus': True, 'htmlClass': '', 'htmlClassList': [], 'htmlInline': '', 'htmlVis': 'visible', 'innerLen': 187, 'nowMs': 1044, 'rafTicks': 1, 'readyState': 'complete', 'rect': {'h': 1160, 'w': 1615, 'x': 0, 'y': 0}, 'transition': 'visibility 0.25s, opacity 0.25s, background-color 0.25s', 'transitionDelay': '0s, 0s, 0s', 'transitionDuration': '0.25s, 0.25s, 0.25s', 'tzHidden': False, 'tzInitialized': False, 'url': 'http://127.0.0.1:8769/agy-y2/fixtures/test-08-devtools.html', 'visState': 'visible'}]}) error=None
+[08] ensure_visible test tab visible in 0.0s / 8.0s
+[08] CHECK ok body renders visible (no hidden-body incident): visible
+[08] integrity guard held (7 expected failures on untouched)
+[08] CHECK ok panel collapsed at start: collapsed
+[08] CHECK ok toggle says open: Open DevTools
+[08] open devtools ok 60ms detail=None error=None
+[08] CHECK ok panel expanded: expanded
+[08] open console tab ok 57ms detail=None error=None
+[08] CHECK ok console view visible: visible
+[08] CHECK ok log count 0: 0
+[08] type eval window.appVersion ok 14ms detail=None error=None
+[08] evaluate ok 59ms detail=None error=None
+[08] CHECK ok output has version: 
+        
+      > window.appVersion => v2.4.1
+[08] CHECK ok log count 1: 1
+[08] open network tab ok 58ms detail=None error=None
+[08] CHECK ok network view visible: visible
+[08] CHECK ok network total 6: 6
+[08] type filter api ok 5ms detail=None error=None
+[08] apply filter ok 56ms detail=None error=None
+[08] CHECK ok visible count 3: 3
+[08] CHECK ok users row visible: visible
+[08] CHECK ok checkout row visible: visible
+[08] inspect checkout row (first td) ok 56ms detail=(None, None) error=None
+[08] CHECK ok detail pane open: open
+[08] CHECK ok status 404: 404 Not Found
+[08] open response tab ok 54ms detail=None error=None
+[08] CHECK ok response body: {"error": "endpoint deprecated", "redirect": "/api/v2/checkout"}
+[08] close detail pane ok 56ms detail=None error=None
+[08] CHECK ok detail pane closed: closed
+[08] back to console tab ok 55ms detail=None error=None
+[08] CHECK ok console view visible again: visible
+[08] mistake: clear console ok 55ms detail=None error=None
+[08] CHECK ok log count 0 after clear: 0
+[08] CHECK ok output empty after clear: 
+[08] type eval console.log ready ok 11ms detail=None error=None
+[08] evaluate again ok 57ms detail=None error=None
+[08] CHECK ok log count 1 again: 1
+[08] back to network tab ok 54ms detail=None error=None
+[08] CHECK ok visible count still 3: 3
+[08] save devtools report ok 54ms detail=None error=None
+[08] CHECK ok summary toast: DevTools diagnostics: 1 logs, 3 filtered network rows, error 404 checked
+[08] final verify PASS: []
+[gecko-log] copied to /tmp/worker-y9-gecko-08-a1.log
+{"test": "08", "pass": true, "failures": [], "details": {"integrity_guard": {"passed_on_untouched": false, "untouched_failures": ["DevTools panel is not expanded", "Expected console log count '1', got '0'", "Expected visible network count '3', got '6'", "Console log does not contain \"ready\"", "Unmatched row styles.css was not filtered out", "DevTools summary toast is not active", "Toast mismatch, got ''"]}, "final_verify": {"passed": true, "failures": [], "state": {"isExpanded": true, "logCount": "1", "netVisible": "3"}}, "end_state_screenshot": "/tmp/worker-y9-shots/08-a1.png"}, "started_at": "2026-11-21T13:29:41.946233+00:00", "finished_at": "2026-11-21T13:29:49.651739+00:00", "elapsed_ms": 7706, "attempt": 1, "gaps": [], "flagged": false, "outcome": "pass", "reattempted_from_infra": false}
+[09] shared tab gone, rebootstrap
+rebootstrap: created visible tab ff6831ce
+127.0.0.1 - - [21/Nov/2026 20:29:51] "GET /agy-y2/fixtures/test-09-notes-sync.html HTTP/1.1" 200 -
+[09] open fixture ok 1045ms detail={'classification': 'VISIBLE', 'snapshots': [{'bodyClass': '', 'bodyDisplay': 'block', 'bodyInline': '', 'bodyOpacity': '1', 'bodyVis': 'visible', 'hasBody': True, 'hasFocus': True, 'htmlClass': '', 'htmlClassList': [], 'htmlInline': '', 'htmlVis': 'visible', 'innerLen': 230, 'nowMs': 1043, 'rafTicks': 1, 'readyState': 'complete', 'rect': {'h': 552, 'w': 1615, 'x': 0, 'y': 0}, 'transition': 'visibility 0.25s, opacity 0.25s, background-color 0.25s', 'transitionDelay': '0s, 0s, 0s', 'transitionDuration': '0.25s, 0.25s, 0.25s', 'tzHidden': False, 'tzInitialized': False, 'url': 'http://127.0.0.1:8769/agy-y2/fixtures/test-09-notes-sync.html', 'visState': 'visible'}]} error=None
+127.0.0.1 - - [21/Nov/2026 20:29:52] "GET /agy-y2/fixtures/test-09-notes-sync.html HTTP/1.1" 200 -
+127.0.0.1 - - [21/Nov/2026 20:29:52] code 404, message File not found
+127.0.0.1 - - [21/Nov/2026 20:29:52] "GET /favicon.ico HTTP/1.1" 404 -
+[09] clear storage + reload ok 1043ms detail=('cleared', {'classification': 'VISIBLE', 'snapshots': [{'bodyClass': '', 'bodyDisplay': 'block', 'bodyInline': '', 'bodyOpacity': '1', 'bodyVis': 'visible', 'hasBody': True, 'hasFocus': True, 'htmlClass': '', 'htmlClassList': [], 'htmlInline': '', 'htmlVis': 'visible', 'innerLen': 230, 'nowMs': 1040, 'rafTicks': 1, 'readyState': 'complete', 'rect': {'h': 552, 'w': 1615, 'x': 0, 'y': 0}, 'transition': 'visibility 0.25s, opacity 0.25s, background-color 0.25s', 'transitionDelay': '0s, 0s, 0s', 'transitionDuration': '0.25s, 0.25s, 0.25s', 'tzHidden': False, 'tzInitialized': False, 'url': 'http://127.0.0.1:8769/agy-y2/fixtures/test-09-notes-sync.html', 'visState': 'visible'}]}) error=None
+[09] ensure_visible test tab visible in 0.0s / 8.0s
+[09] CHECK ok body renders visible (no hidden-body incident): visible
+[09] integrity guard held (6 expected failures on untouched)
+[09] CHECK ok total notes 2 at start: 2
+[09] CHECK ok sync status: Synchronized
+[09] create new note ok 58ms detail=None error=None
+[09] CHECK ok new title untitled: Untitled Note
+[09] type title Shopping ok 7ms detail=None error=None
+[09] type body Milk Eggs Bread ok 8ms detail=None error=None
+[09] save initial note ok 56ms detail=None error=None
+[09] CHECK ok total notes 3: 3
+[09] CHECK ok shopping title present: Shopping
+[09] switch to device A ok 55ms detail=None error=None
+[09] read current body ok 2ms detail=Milk, Eggs, Bread error=None
+[09] CHECK ok body is Milk Eggs Bread before append: Milk, Eggs, Bread
+[09] type full body with Apples ok 8ms detail=None error=None
+[09] stage device A ok 57ms detail=None error=None
+[09] CHECK ok device A draft ready: Draft ready: Laptop
+[09] switch to device B ok 56ms detail=None error=None
+[09] type conflicting body ok 10ms detail=None error=None
+[09] stage device B ok 58ms detail=None error=None
+[09] CHECK ok device B draft ready: Draft ready: Phone
+[09] trigger cloud sync ok 55ms detail=None error=None
+[09] wait conflict modal ok 2ms detail=True error=None
+[09] CHECK ok conflict modal active: active
+[09] CHECK ok conflict banner: 
+      Sync conflict detected for note Shopping between Device A and Device B.
+    
+[09] resolve keep both ok 55ms detail=None error=None
+[09] CHECK ok conflict modal closed: closed
+[09] CHECK ok total notes 4: 4
+[09] CHECK ok conflict copy present: 1
+[09] open conflict copy ok 56ms detail=None error=None
+[09] CHECK ok editor title is conflict copy: Shopping (Conflict Copy)
+[09] rename to Phone Copy ok 10ms detail=None error=None
+[09] save renamed copy ok 57ms detail=None error=None
+[09] CHECK ok conflict title renamed: Shopping - Phone Copy
+[09] select archived draft ok 55ms detail=None error=None
+[09] delete archived draft ok 55ms detail=None error=None
+[09] CHECK ok total notes 3 again: 3
+[09] view primary note ok 54ms detail=None error=None
+[09] read primary body ok 2ms detail=Milk, Eggs, Bread, Apples error=None
+[09] CHECK ok primary body has Apples: Milk, Eggs, Bread, Apples
+[09] finalize sync report ok 55ms detail=None error=None
+[09] CHECK ok sync toast: Sync completed: 3 notes active, Shopping and Shopping - Phone Copy verified
+[09] final verify PASS: []
+[gecko-log] copied to /tmp/worker-y9-gecko-09-a1.log
+{"test": "09", "pass": true, "failures": [], "details": {"integrity_guard": {"passed_on_untouched": false, "untouched_failures": ["Expected total notes '3', got '2'", "Expected note 'Shopping', got 'undefined'", "Expected note 'Shopping - Phone Copy', got 'undefined'", "Outdated note #note-item-archived-draft was not deleted", "Sync summary toast is not active", "Toast mismatch, got ''"]}, "final_verify": {"passed": true, "failures": [], "state": {"titleConflict": "Shopping - Phone Copy", "titleShopping": "Shopping", "totalNotes": "3"}}, "end_state_screenshot": "/tmp/worker-y9-shots/09-a1.png"}, "started_at": "2026-11-21T13:29:49.651820+00:00", "finished_at": "2026-11-21T13:29:57.462246+00:00", "elapsed_ms": 7810, "attempt": 1, "gaps": [], "flagged": false, "outcome": "pass", "reattempted_from_infra": false}
+[10] shared tab gone, rebootstrap
+rebootstrap: created visible tab 64495e6a
+127.0.0.1 - - [21/Nov/2026 20:29:59] "GET /agy-y2/fixtures/test-10-ide-debug.html HTTP/1.1" 200 -
+[10] open fixture ok 1055ms detail={'classification': 'VISIBLE', 'snapshots': [{'bodyClass': '', 'bodyDisplay': 'block', 'bodyInline': '', 'bodyOpacity': '1', 'bodyVis': 'visible', 'hasBody': True, 'hasFocus': True, 'htmlClass': '', 'htmlClassList': [], 'htmlInline': '', 'htmlVis': 'visible', 'innerLen': 253, 'nowMs': 1054, 'rafTicks': 1, 'readyState': 'complete', 'rect': {'h': 571, 'w': 1615, 'x': 0, 'y': 0}, 'transition': 'visibility 0.25s, opacity 0.25s, background-color 0.25s', 'transitionDelay': '0s, 0s, 0s', 'transitionDuration': '0.25s, 0.25s, 0.25s', 'tzHidden': False, 'tzInitialized': False, 'url': 'http://127.0.0.1:8769/agy-y2/fixtures/test-10-ide-debug.html', 'visState': 'visible'}]} error=None
+127.0.0.1 - - [21/Nov/2026 20:30:00] "GET /agy-y2/fixtures/test-10-ide-debug.html HTTP/1.1" 200 -
+127.0.0.1 - - [21/Nov/2026 20:30:00] code 404, message File not found
+127.0.0.1 - - [21/Nov/2026 20:30:00] "GET /favicon.ico HTTP/1.1" 404 -
+[10] clear storage + reload ok 1044ms detail=('cleared', {'classification': 'VISIBLE', 'snapshots': [{'bodyClass': '', 'bodyDisplay': 'block', 'bodyInline': '', 'bodyOpacity': '1', 'bodyVis': 'visible', 'hasBody': True, 'hasFocus': True, 'htmlClass': '', 'htmlClassList': [], 'htmlInline': '', 'htmlVis': 'visible', 'innerLen': 253, 'nowMs': 1040, 'rafTicks': 1, 'readyState': 'complete', 'rect': {'h': 571, 'w': 1615, 'x': 0, 'y': 0}, 'transition': 'visibility 0.25s, opacity 0.25s, background-color 0.25s', 'transitionDelay': '0s, 0s, 0s', 'transitionDuration': '0.25s, 0.25s, 0.25s', 'tzHidden': False, 'tzInitialized': False, 'url': 'http://127.0.0.1:8769/agy-y2/fixtures/test-10-ide-debug.html', 'visState': 'visible'}]}) error=None
+[10] ensure_visible test tab visible in 0.0s / 8.0s
+[10] CHECK ok body renders visible (no hidden-body incident): visible
+[10] integrity guard held (8 expected failures on untouched)
+[10] CHECK ok debugger inactive: Inactive
+[10] CHECK ok no file at start: None
+[10] open app.js ok 59ms detail=None error=None
+[10] CHECK ok active file app.js: app.js
+[10] CHECK ok code editor visible: visible
+[10] breakpoint line 12 ok 55ms detail=None error=None
+[10] CHECK ok line 12 has breakpoint: has-breakpoint
+[10] CHECK ok breakpoint count 1: 1
+[10] start debugger ok 55ms detail=None error=None
+[10] CHECK ok debugger paused: Paused
+[10] CHECK ok stack has calculateSum line 12: calculateSum (line 12)main (line 1)
+[10] step over 1 ok 55ms detail=None error=None
+[10] CHECK ok paused line 13: Line 13
+[10] step over 2 ok 56ms detail=None error=None
+[10] CHECK ok paused line 14: Line 14
+[10] CHECK ok watch total 120: 120
+[10] SKIPPED step 15 click #input-edit-watch-total: fixture gap: input display:none, no handler, simulator also skips it
+[10] open edit watch modal ok 56ms detail=None error=None
+[10] wait edit watch modal ok 2ms detail=True error=None
+[10] type override 250 ok 7ms detail=None error=None
+[10] confirm watch override ok 58ms detail=None error=None
+[10] CHECK ok watch total 250: 250
+[10] breakpoint line 16 ok 55ms detail=None error=None
+[10] CHECK ok line 16 has breakpoint: has-breakpoint
+[10] CHECK ok breakpoint count 2: 2
+[10] continue debugger ok 56ms detail=None error=None
+[10] CHECK ok paused line 16: Line 16
+[10] CHECK ok stack has renderSummary line 16: renderSummary (line 16)main (line 1)
+[10] CHECK ok watch grand total 250: 250
+[10] stop debugger ok 55ms detail=None error=None
+[10] CHECK ok debugger stopped: Stopped
+[10] CHECK ok paused line none: None
+[10] save debug session ok 56ms detail=None error=None
+[10] CHECK ok debug toast: Debug session complete: watched total=250, breakpoints=2, final line 16
+[10] final verify PASS: []
+[gecko-log] copied to /tmp/worker-y9-gecko-10-a1.log
+{"test": "10", "pass": true, "failures": [], "details": {"integrity_guard": {"passed_on_untouched": false, "untouched_failures": ["Expected file 'app.js', got 'None'", "Expected 2 breakpoints, got '0'", "Expected debug status 'Stopped', got 'Inactive'", "Expected watch total '250', got 'undefined'", "Expected watch grandTotal '250', got 'undefined'", "Call stack missing renderSummary", "Debug toast summary is not active", "Toast mismatch, got ''"]}, "final_verify": {"passed": true, "failures": [], "state": {"breakpoints": "2", "file": "app.js", "status": "Stopped", "watchGrand": "250", "watchTotal": "250"}}, "end_state_screenshot": "/tmp/worker-y9-shots/10-a1.png"}, "started_at": "2026-11-21T13:29:57.462326+00:00", "finished_at": "2026-11-21T13:30:05.065635+00:00", "elapsed_ms": 7603, "attempt": 1, "gaps": ["step 15 click #input-edit-watch-total: fixture gap: input display:none, no handler, simulator also skips it"], "flagged": false, "outcome": "pass", "reattempted_from_infra": false}
+{"suite": "agy-y2", "passed": 10, "flagged": 0, "total_passed": 10, "failed": 0, "fixture_unavailable": 0, "total": 10, "selected": 10, "total_ms": 78089, "suite_wall_ms": 81987, "hidden_body_encounters": 0, "tz_hidden_removed_any_attempt": false, "superseded_attempts": [], "bootstrap_intervention": {"intervened": false, "tz_hidden_removed": false, "hidden_body_encounters": 0, "detail": "none", "stall_ms": 2.9}, "gaps": ["step 15 click #input-edit-watch-total: fixture gap: input display:none, no handler, simulator also skips it"], "tracked_item": "improvements/transparent-zen-defect-tracked-item.md", "manifest": {"file": "agy-y2-manifest.json", "md5": "7f744edddf14ff39e912691812fdb6bc", "files_checked": 26}, "metrics": {"wall_ms": 78089, "marionette_calls": 1424, "marionette_calls_scope": "all Y9WD sessions before suite JSON (bootstrap, test attempts, rechecks; suite-end cleanup excluded)", "tokens": "UNMEASURED", "observation_cost": "UNMEASURED", "vcr": false, "stall_ms": 37.4}, "md5": {"run_live.py": "84fa106c253d5e7f16daccf2ce3f14a5", "run_agy_y2.py": "2add2a0bf68bb77d5d3fa01d691bcffc"}, "shipped": "# Y9 ship manifest (frozen at ship time, regenerated 2026-11-21)\n\n- Ship commit (todolist-push): 7e7996d2bae3ae1ee1e6f236c8376e7c7bc5fd5e\n- Shipped from: /home/hatch/workspace/computer-use-wayland\n- Note: run_live.py is shipped from commit 1e3901c, NOT from HEAD.\n  HEAD's run_live.py changed in 91d3cd2 (Y11 live-metrics wiring),\n  which is not live-proven; the runner was written and reviewed\n  against the 1e3901c API (Y4d live-proven base, 10/10 twice).\n  run_agyq2.py is NOT shipped: run_agy_y2.py is self-contained\n  except for the run_live import.\n- Manifest: tests/realistic/agy-y2-manifest.json (same md5s,\n  machine-readable). The runner verifies it at launch and refuses\n  on any mismatch. This file is informational; the manifest is\n  authoritative.\n\n## Files (path in /tmp/worker-y9-server, md5, source commit)\n\n- run_agy_y2.py, 2add2a0bf68bb77d5d3fa01d691bcffc, 7e7996d2bae3ae1ee1e6f236c8376e7c7bc5fd5e\n- run_live.py, 84fa106c253d5e7f16daccf2ce3f14a5, 1e3901c793c6446bf68dfeb6a5bc19c89eb7e5af\n- agy-y2/test-01-tmux-session.md, 1ffef261c0b126ac36c50f2c782756f3, 30a72e538c4e8b5fddc2bc1fbfe4bf1b1915012b\n- agy-y2/test-02-network-settings.md, 55d669ef8e6eebbeddba3634c350b36b, 30a72e538c4e8b5fddc2bc1fbfe4bf1b1915012b\n- agy-y2/test-03-photo-editor.md, 8f901137e49ee3887277aba8b9919f42, 30a72e538c4e8b5fddc2bc1fbfe4bf1b1915012b\n- agy-y2/test-04-email-compose.md, aae817fc492693cf6ffb3bdd3f669d7a, 30a72e538c4e8b5fddc2bc1fbfe4bf1b1915012b\n- agy-y2/test-05-spreadsheet-chart.md, e366d4f601a2e01b145877c6076f41c7, 30a72e538c4e8b5fddc2bc1fbfe4bf1b1915012b\n- agy-y2/test-06-video-call.md, c2e5b1f3735a148bf604de682b8e6c0e, 30a72e538c4e8b5fddc2bc1fbfe4bf1b1915012b\n- agy-y2/test-07-file-manager.md, 9f63ac6cd289fabb279b411ab1896faf, 30a72e538c4e8b5fddc2bc1fbfe4bf1b1915012b\n- agy-y2/test-08-devtools.md, bdf0bf8f08cf0f8e43005a2ec68fa3c7, 30a72e538c4e8b5fddc2bc1fbfe4bf1b1915012b\n- agy-y2/test-09-notes-sync.md, ec2faabd507e612646bfff551f68143c, 30a72e538c4e8b5fddc2bc1fbfe4bf1b1915012b\n- agy-y2/test-10-ide-debug.md, f9b3be84606468007862f2c19d72d23b, 30a72e538c4e8b5fddc2bc1fbfe4bf1b1915012b\n- agy-y2/simulate.mjs, 0643d9a5babcc5b2e3d284bb16e10b33, 30a72e538c4e8b5fddc2bc1fbfe4bf1b1915012b\n- agy-y2/check.mjs, abb75b01807758933becd999871f2fbb, 30a72e538c4e8b5fddc2bc1fbfe4bf1b1915012b\n- agy-y2/README.md, 6e6677e80acf4185b9fc4edc00075958, 30a72e538c4e8b5fddc2bc1fbfe4bf1b1915012b\n- agy-y2/check-dashes.py, a70faed01522b9be5070f4cc543b98a7, 30a72e538c4e8b5fddc2bc1fbfe4bf1b1915012b\n- agy-y2/fixtures/test-01-tmux-session.html, d7a7b296b236057227df891a3262bc87, 30a72e538c4e8b5fddc2bc1fbfe4bf1b1915012b\n- agy-y2/fixtures/test-02-network-settings.html, c167f6523ecfc31eb9278943468b9f89, 30a72e538c4e8b5fddc2bc1fbfe4bf1b1915012b\n- agy-y2/fixtures/test-03-photo-editor.html, e9ac042c657cf66eb37a857a43f9fb7f, 30a72e538c4e8b5fddc2bc1fbfe4bf1b1915012b\n- agy-y2/fixtures/test-04-email-compose.html, 7dbee8181518b9747f38cb8008aae53c, 30a72e538c4e8b5fddc2bc1fbfe4bf1b1915012b\n- agy-y2/fixtures/test-05-spreadsheet-chart.html, 486508fd359f2d47079c7722a703043d, 30a72e538c4e8b5fddc2bc1fbfe4bf1b1915012b\n- agy-y2/fixtures/test-06-video-call.html, 1f02764f86e8c8545d38c0e8387759d6, 30a72e538c4e8b5fddc2bc1fbfe4bf1b1915012b\n- agy-y2/fixtures/test-07-file-manager.html, 8fb5b686e27050e36d79bdf7a4493cf0, 30a72e538c4e8b5fddc2bc1fbfe4bf1b1915012b\n- agy-y2/fixtures/test-08-devtools.html, 991d85aa560524b5d927567d23ba14d4, 30a72e538c4e8b5fddc2bc1fbfe4bf1b1915012b\n- agy-y2/fixtures/test-09-notes-sync.html, c96f2c308252736990e60803367e6343, 30a72e538c4e8b5fddc2bc1fbfe4bf1b1915012b\n- agy-y2/fixtures/test-10-ide-debug.html, 08d9cabcad50853d04e026b4f42468a1, 30a72e538c4e8b5fddc2bc1fbfe4bf1b1915012b\n"}
+tab cleanup failed for e4cbf559 (harmless): HTTP 404 on POST /session/7105628d-a95f-4385-9869-2f0fbbc2652f/window: {"value":{"error":"no such window","message":"Unable to locate window: e4cbf559-797f-489e-bed1-63245038f543","stacktrace":"RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:14:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:169:5\nNoSuchWindowError@chrome://rem
+tab cleanup failed for ff6831ce (harmless): HTTP 404 on POST /session/7105628d-a95f-4385-9869-2f0fbbc2652f/window: {"value":{"error":"no such window","message":"Unable to locate window: ff6831ce-9b93-44d5-b1be-cad98173fa44","stacktrace":"RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:14:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:169:5\nNoSuchWindowError@chrome://rem
+tab cleanup failed for 936cc080 (harmless): HTTP 404 on POST /session/7105628d-a95f-4385-9869-2f0fbbc2652f/window: {"value":{"error":"no such window","message":"Unable to locate window: 936cc080-86a8-4e54-ab33-0a79aa568a21","stacktrace":"RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:14:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:169:5\nNoSuchWindowError@chrome://rem
+tab cleanup failed for 6ce208ce (harmless): HTTP 404 on POST /session/7105628d-a95f-4385-9869-2f0fbbc2652f/window: {"value":{"error":"no such window","message":"Unable to locate window: 6ce208ce-8532-4daf-905b-c0a7b8e56073","stacktrace":"RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:14:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:169:5\nNoSuchWindowError@chrome://rem
+tab cleanup failed for 5d1e9dd5 (harmless): HTTP 404 on POST /session/7105628d-a95f-4385-9869-2f0fbbc2652f/window: {"value":{"error":"no such window","message":"Unable to locate window: 5d1e9dd5-9333-48a4-88ff-8f9f31940140","stacktrace":"RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:14:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:169:5\nNoSuchWindowError@chrome://rem
+tab cleanup failed for 623ca1f4 (harmless): HTTP 404 on POST /session/7105628d-a95f-4385-9869-2f0fbbc2652f/window: {"value":{"error":"no such window","message":"Unable to locate window: 623ca1f4-9636-4126-93d4-a3b9255bc9a7","stacktrace":"RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:14:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:169:5\nNoSuchWindowError@chrome://rem
+tab cleanup failed for f6731c45 (harmless): HTTP 404 on POST /session/7105628d-a95f-4385-9869-2f0fbbc2652f/window: {"value":{"error":"no such window","message":"Unable to locate window: f6731c45-3006-419b-8747-b21787d94dac","stacktrace":"RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:14:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:169:5\nNoSuchWindowError@chrome://rem
+tab cleanup failed for 60d1f249 (harmless): HTTP 404 on POST /session/7105628d-a95f-4385-9869-2f0fbbc2652f/window: {"value":{"error":"no such window","message":"Unable to locate window: 60d1f249-7f54-4ffe-bed0-18a246499395","stacktrace":"RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:14:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:169:5\nNoSuchWindowError@chrome://rem
+tab cleanup failed for 886d8364 (harmless): HTTP 404 on POST /session/7105628d-a95f-4385-9869-2f0fbbc2652f/window: {"value":{"error":"no such window","message":"Unable to locate window: 886d8364-e255-4caa-b7f0-da2d956cf66f","stacktrace":"RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:14:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:169:5\nNoSuchWindowError@chrome://rem
+tab cleanup failed for efe138e3 (harmless): HTTP 404 on POST /session/7105628d-a95f-4385-9869-2f0fbbc2652f/window: {"value":{"error":"no such window","message":"Unable to locate window: efe138e3-556e-4582-8f59-032a6e3f4fe8","stacktrace":"RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:14:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:169:5\nNoSuchWindowError@chrome://rem
+tab cleanup failed for 646b4678 (harmless): HTTP 404 on POST /session/7105628d-a95f-4385-9869-2f0fbbc2652f/window: {"value":{"error":"no such window","message":"Unable to locate window: 646b4678-42d8-490a-ad8c-b96f5c5dacb1","stacktrace":"RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:14:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:169:5\nNoSuchWindowError@chrome://rem
+tab cleanup failed for d1a2f439 (harmless): HTTP 404 on POST /session/7105628d-a95f-4385-9869-2f0fbbc2652f/window: {"value":{"error":"no such window","message":"Unable to locate window: d1a2f439-eb0e-4573-bb79-a3cc615cfaea","stacktrace":"RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:14:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:169:5\nNoSuchWindowError@chrome://rem
+tab cleanup failed for 36ff2bf7 (harmless): HTTP 404 on POST /session/7105628d-a95f-4385-9869-2f0fbbc2652f/window: {"value":{"error":"no such window","message":"Unable to locate window: 36ff2bf7-4e41-4392-a5b4-e83a8e7b4ad0","stacktrace":"RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:14:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:169:5\nNoSuchWindowError@chrome://rem
+tab cleanup failed for b1aadc27 (harmless): HTTP 404 on POST /session/7105628d-a95f-4385-9869-2f0fbbc2652f/window: {"value":{"error":"no such window","message":"Unable to locate window: b1aadc27-f5d4-452e-9b54-a744465a6fe1","stacktrace":"RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:14:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:169:5\nNoSuchWindowError@chrome://rem
+tab cleanup failed for 64495e6a (harmless): HTTP 404 on POST /session/7105628d-a95f-4385-9869-2f0fbbc2652f/window: {"value":{"error":"no such window","message":"Unable to locate window: 64495e6a-231e-4264-b31c-a559523bb369","stacktrace":"RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:14:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:169:5\nNoSuchWindowError@chrome://rem
+tab cleanup failed for be0a5efe (harmless): HTTP 404 on POST /session/7105628d-a95f-4385-9869-2f0fbbc2652f/window: {"value":{"error":"no such window","message":"Unable to locate window: be0a5efe-cdd3-4429-8a07-1a7652219682","stacktrace":"RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:14:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:169:5\nNoSuchWindowError@chrome://rem
+tab cleanup failed for a0d8bb30 (harmless): HTTP 404 on POST /session/7105628d-a95f-4385-9869-2f0fbbc2652f/window: {"value":{"error":"no such window","message":"Unable to locate window: a0d8bb30-6b5a-4142-a980-9529ab001932","stacktrace":"RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:14:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:169:5\nNoSuchWindowError@chrome://rem
+tab cleanup failed for 8862501c (harmless): HTTP 404 on POST /session/7105628d-a95f-4385-9869-2f0fbbc2652f/window: {"value":{"error":"no such window","message":"Unable to locate window: 8862501c-b081-4cbc-8fc8-a041277402b4","stacktrace":"RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:14:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:169:5\nNoSuchWindowError@chrome://rem
+tab cleanup failed for 5a98d56a (harmless): HTTP 404 on POST /session/7105628d-a95f-4385-9869-2f0fbbc2652f/window: {"value":{"error":"no such window","message":"Unable to locate window: 5a98d56a-6f28-4b09-95ef-5e282a06e78b","stacktrace":"RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:14:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:169:5\nNoSuchWindowError@chrome://rem
+tab cleanup failed for 34346b38 (harmless): HTTP 404 on POST /session/7105628d-a95f-4385-9869-2f0fbbc2652f/window: {"value":{"error":"no such window","message":"Unable to locate window: 34346b38-7634-424d-8673-313eb3e78dcf","stacktrace":"RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:14:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:169:5\nNoSuchWindowError@chrome://rem
+tab cleanup failed for 1587000a (harmless): HTTP 404 on POST /session/7105628d-a95f-4385-9869-2f0fbbc2652f/window: {"value":{"error":"no such window","message":"Unable to locate window: 1587000a-f168-4028-974b-e2d97af9a459","stacktrace":"RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:14:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:169:5\nNoSuchWindowError@chrome://rem
+tab cleanup failed for 1e40a1e6 (harmless): HTTP 404 on POST /session/7105628d-a95f-4385-9869-2f0fbbc2652f/window: {"value":{"error":"no such window","message":"Unable to locate window: 1e40a1e6-4b5a-44c5-b12a-bc0b59b0460c","stacktrace":"RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:14:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:169:5\nNoSuchWindowError@chrome://rem
+test tabs returned to about:blank

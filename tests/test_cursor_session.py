@@ -50,7 +50,11 @@ elif a and a[0]=='setcursor':
 elif a[:2]==['cu-cursor','status']:
     import fcntl
     if s.get('status_down'):p.write_text(json.dumps(s));sys.exit(1)
-    if s.get('status_busy'):
+    if s.get('status_garbage'):
+        # Live Hyprland answers an unloaded plugin's custom command with
+        # plain text and exit code 0, never JSON.
+        print('unknown request')
+    elif s.get('status_busy'):
         print(json.dumps({'ok':True,'schema':1,'active':True,'token':'f'*32}))
     else:
         try:
@@ -771,6 +775,24 @@ class Lifecycle(unittest.TestCase):
                 self.assertFalse((self.state/'session.json').exists())
                 self.assertEqual(self.released(),[])
                 self.configure(status_down=False,status_busy=False)
+
+    def test_unloaded_backend_names_missing_plugin_and_never_starts_driver(self):
+        # The live failure (22:19 21/11): Hyprland answers an unloaded
+        # plugin's custom command with 'unknown request' and exit code 0.
+        # The session must fail closed with the cause named, not a bare JSON
+        # error and not an opaque 'session guardian startup failed'.
+        self.configure(status_garbage=True)
+        marker=self.folder/'must-not-run'
+        p=self.launch(f"from pathlib import Path;Path({str(marker)!r}).touch()")
+        out,err=p.communicate(timeout=8)
+        self.assertNotEqual(p.returncode,0,(out,err))
+        self.assertFalse(marker.exists(),'driver ran without a loaded backend')
+        self.assertFalse((self.state/'session.json').exists())
+        self.assertEqual(self.released(),[])
+        combined=out+err
+        self.assertIn('not valid JSON',combined)
+        self.assertIn('may not be loaded',combined)
+        self.configure(status_garbage=False)
 
     def test_lost_lease_stops_driver_and_restores(self):
         heart=self.folder/'heartbeat';ready=self.folder/'driver-ready'

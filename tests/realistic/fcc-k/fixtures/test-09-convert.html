@@ -7,31 +7,53 @@
   body{font-family:sans-serif;padding:14px;background:#fafafa;color:#111;}
   .pane{border:1px solid #999;padding:8px;margin:6px;background:#fff;min-height:80px;white-space:pre-wrap;}
   .status{margin-top:10px;font-family:monospace;white-space:pre-wrap;}
+  button{margin:4px 4px 4px 0;padding:6px 10px;cursor:pointer;}
+  textarea{width:100%;min-height:90px;}
+  table{border-collapse:collapse;}
+  td,th{border:1px solid #999;padding:4px 8px;text-align:left;}
 </style>
 </head>
 <body>
 <h2>Data copy + format conversion fixture (offline)</h2>
-<div class="pane"><h4>App A (source, rows)</h4><div id="src"></div></div>
-<div class="pane"><h4>App B (target, converted output)</h4><div id="tgt"></div>
-<button id="convert">Convert / Apply</button></div>
+<div class="pane"><h4>App A (source, rows)</h4>
+<table id="srcTable">
+<tr><th>Item</th><th>Units</th><th>Price</th></tr>
+<tr><td>Widget</td><td>12</td><td>45000</td></tr>
+<tr><td>Gadget</td><td>7</td><td>82000</td></tr>
+<tr><td>Tool</td><td>5</td><td>150000</td></tr>
+<tr><td>Cable</td><td>20</td><td>12000</td></tr>
+</table>
+</div>
+<div class="pane"><h4>Reference (canonical expected form)</h4><div id="reference">1. Widget: 12 units @ 45000
+2. Gadget: 7 units @ 82000
+3. Tool: 5 units @ 150000
+4. Cable: 20 units @ 12000</div></div>
+<div class="pane"><h4>App B (target, converted output)</h4>
+<textarea id="tgtInput" placeholder="Type one converted line per row, e.g. 1. Widget: 12 units @ 45000"></textarea>
+<button id="convert">Convert / Apply</button>
+<div id="tgt" style="margin-top:6px;border:1px solid #ccc;padding:6px;min-height:60px;white-space:pre-wrap;">(no converted output yet)</div>
+</div>
 <div id="status" class="status"></div>
 <script>
-const src=['1. Widget: 12 units @ 45000','2. Gadget: 7 units @ 82000','3. Tool: 5 units @ 150000'];
-const expected=['1. Widget: 12 units @ 45000','2. Gadget: 7 units @ 82000','3. Tool: 5 units @ 150000'];
+document.getElementById('convert').onclick=()=>{
+  document.getElementById('tgt').textContent=document.getElementById('tgtInput').value;
+};
 window.__fcckVerify=function(){
+  // REAL DOM assertion: reads only the applied output the agent actually typed
+  // and compares it line by line with the visible reference block.
+  // Never writes the converted lines itself.
   const failures=[];
-  const tgt=expected;
-  let allOk=true;
-  for(let i=0;i<expected.length;i++){if(tgt[i]!==expected[i]){allOk=false;failures.push('line '+i+' mismatch');}}
-  if(tgt.length!==3)failures.push('wrong line count');
-  const state={tgtCount:tgt.length,lines:tgt,ok:allOk};
-  const out={passed:failures.length===0,failures,score:failures.length===0?1:0,state};
+  const ref=document.getElementById('reference').textContent.trim().split('\n').map(l=>l.trim());
+  const got=document.getElementById('tgt').textContent.trim().split('\n').map(l=>l.trim()).filter(l=>l);
+  if(got.length!==4)failures.push('expected 4 lines, got '+got.length);
+  for(let i=0;i<ref.length;i++){
+    if(got[i]!==ref[i])failures.push('line '+(i+1)+' mismatch: got '+(got[i]||'(missing)')+' expected '+ref[i]);
+  }
+  const state={gotCount:got.length,lines:got};
+  const out={passed:failures.length===0,failures,score:failures.length===0?1:0,state,note:'DOM-only convert check'};
   document.getElementById('status').textContent=JSON.stringify(out,null,2);
   return out;
 };
-document.getElementById('src').textContent=src.join('\n');
-document.getElementById('tgt').textContent='';
-document.getElementById('convert').onclick=()=>{document.getElementById('tgt').textContent=src.join('\n');};
 </script>
 </body>
 </html>

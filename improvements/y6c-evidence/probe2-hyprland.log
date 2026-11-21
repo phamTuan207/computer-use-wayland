@@ -1,0 +1,189 @@
+DEBUG ]: [CCompositor::bumpNofile] Old rlimit: soft -> 65536, hard -> 524288
+DEBUG ]: [CCompositor::bumpNofile] New rlimit: soft -> 524288, hard -> 524288
+WARN ]: [main] WARNING: Hyprland is being launched without start-hyprland. This is highly advised against.
+DEBUG ]: [CCompositor::initManagers] Creating the EventLoopManager!
+DEBUG ]: [CCompositor::initManagers] Creating the KeybindManager!
+DEBUG ]: [CCompositor::initManagers] Creating the AnimationManager!
+DEBUG ]: [CCompositor::initManagers] Creating the DynamicPermissionManager!
+DEBUG ]: [CCompositor::initManagers] Creating the MonitorState!
+DEBUG ]: [CCompositor::initManagers] Creating the WorkspaceState!
+DEBUG ]: [CCompositor::initManagers] Creating the ConfigManager!
+DEBUG ]: [Config::initConfigManager] [cfg] Config is either explicit or special
+DEBUG ]: [CCompositor::initManagers] Creating the Error Overlay!
+DEBUG ]: [CCompositor::initManagers] Creating the LayoutManager!
+DEBUG ]: [CCompositor::initManagers] Creating the TokenManager!
+DEBUG ]: [hlPrint] [Lua] Y6-NEST-HOOK: hyprglass not ready (count=0 version=nil)
+DEBUG ]: [Config::Lua::CConfigManager::postConfigReload] Disabling stdout logs (debug.enable_stdout_logs = 0). Further logs will be written to /tmp/y6-nested/run/hypr/11cbc6c577b84ffb1edf4df3fc5b6128c3ae6947_1795268684_707315595/hyprland.log
+DEBUG ]: [CCompositor::initManagers] Creating the PointerManager!
+DEBUG ]: [CCompositor::initManagers] Creating the AsyncResourceGatherer!
+DEBUG from aquamarine ]: Creating an Aquamarine backend!
+DEBUG from aquamarine ]: [libseat] [libseat/backend/seatd.c:64] Could not connect to socket /run/seatd.sock: No such file or directory
+DEBUG from aquamarine ]: [libseat] [libseat/libseat.c:76] Backend 'seatd' failed to open seat, skipping
+DEBUG from aquamarine ]: [libseat] [libseat/libseat.c:76] Backend 'logind' failed to open seat, skipping
+ERR from aquamarine ]: [libseat] [libseat/libseat.c:79] No backend was able to open a seat
+ERR from aquamarine ]: libseat: failed to open a seat
+ERR from aquamarine ]: Failed to open a session
+ERR from aquamarine ]: DRM Backend failed
+DEBUG from aquamarine ]: Starting the Aquamarine backend!
+DEBUG from aquamarine ]: Starting the Wayland backend!
+DEBUG from aquamarine ]: Connected to a wayland compositor: unknown (XDG_CURRENT_DEKSTOP unset?)
+DEBUG from aquamarine ]: Got registry at 0x556ef76f2400
+DEBUG from aquamarine ]: New wayland keyboard wl_keyboard
+DEBUG from aquamarine ]: New wayland pointer wl_pointer
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format AB4H with modifier LINEAR
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format AB4H with modifier X_TILED
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format AB4H with modifier Y_TILED
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format AB4H with modifier Y_TILED_GEN12_RC_CCS
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format AB4H with modifier Y_TILED_GEN12_RC_CCS_CC
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format AB4H with modifier INVALID
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format XB4H with modifier LINEAR
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format XB4H with modifier X_TILED
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format XB4H with modifier Y_TILED
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format XB4H with modifier Y_TILED_GEN12_RC_CCS
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format XB4H with modifier Y_TILED_GEN12_RC_CCS_CC
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format XB4H with modifier INVALID
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format AB48 with modifier LINEAR
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format AB48 with modifier X_TILED
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format AB48 with modifier Y_TILED
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format AB48 with modifier Y_TILED_GEN12_RC_CCS
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format AB48 with modifier Y_TILED_GEN12_RC_CCS_CC
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format AB48 with modifier INVALID
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format XB48 with modifier LINEAR
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format XB48 with modifier X_TILED
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format XB48 with modifier Y_TILED
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format XB48 with modifier Y_TILED_GEN12_RC_CCS
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format XB48 with modifier Y_TILED_GEN12_RC_CCS_CC
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format XB48 with modifier INVALID
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format AR30 with modifier LINEAR
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format AR30 with modifier X_TILED
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format AR30 with modifier Y_TILED
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format AR30 with modifier Y_TILED_GEN12_RC_CCS
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format AR30 with modifier Y_TILED_GEN12_RC_CCS_CC
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format AR30 with modifier INVALID
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format XR30 with modifier LINEAR
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format XR30 with modifier X_TILED
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format XR30 with modifier Y_TILED
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format XR30 with modifier Y_TILED_GEN12_RC_CCS
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format XR30 with modifier Y_TILED_GEN12_RC_CCS_CC
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format XR30 with modifier INVALID
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format AB30 with modifier LINEAR
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format AB30 with modifier X_TILED
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format AB30 with modifier Y_TILED
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format AB30 with modifier Y_TILED_GEN12_RC_CCS
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format AB30 with modifier Y_TILED_GEN12_RC_CCS_CC
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format AB30 with modifier INVALID
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format XB30 with modifier LINEAR
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format XB30 with modifier X_TILED
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format XB30 with modifier Y_TILED
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format XB30 with modifier Y_TILED_GEN12_RC_CCS
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format XB30 with modifier Y_TILED_GEN12_RC_CCS_CC
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format XB30 with modifier INVALID
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format AR24 with modifier LINEAR
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format AR24 with modifier X_TILED
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format AR24 with modifier Y_TILED
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format AR24 with modifier Y_TILED_GEN12_RC_CCS
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format AR24 with modifier Y_TILED_GEN12_RC_CCS_CC
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format AR24 with modifier INVALID
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format AB24 with modifier LINEAR
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format AB24 with modifier X_TILED
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format AB24 with modifier Y_TILED
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format AB24 with modifier Y_TILED_GEN12_RC_CCS
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format AB24 with modifier Y_TILED_GEN12_RC_CCS_CC
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format AB24 with modifier INVALID
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format XR24 with modifier LINEAR
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format XR24 with modifier X_TILED
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format XR24 with modifier Y_TILED
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format XR24 with modifier Y_TILED_GEN12_RC_CCS
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format XR24 with modifier Y_TILED_GEN12_RC_CCS_CC
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format XR24 with modifier INVALID
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format XB24 with modifier LINEAR
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format XB24 with modifier X_TILED
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format XB24 with modifier Y_TILED
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format XB24 with modifier Y_TILED_GEN12_RC_CCS
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format XB24 with modifier Y_TILED_GEN12_RC_CCS_CC
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format XB24 with modifier INVALID
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format AR15 with modifier LINEAR
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format AR15 with modifier X_TILED
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format AR15 with modifier Y_TILED
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format AR15 with modifier Y_TILED_GEN12_RC_CCS
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format AR15 with modifier Y_TILED_GEN12_RC_CCS_CC
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format AR15 with modifier INVALID
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format AR12 with modifier LINEAR
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format AR12 with modifier X_TILED
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format AR12 with modifier Y_TILED
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format AR12 with modifier Y_TILED_GEN12_RC_CCS
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format AR12 with modifier Y_TILED_GEN12_RC_CCS_CC
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format AR12 with modifier INVALID
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format RG16 with modifier LINEAR
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format RG16 with modifier X_TILED
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format RG16 with modifier Y_TILED
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format RG16 with modifier Y_TILED_GEN12_RC_CCS
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format RG16 with modifier Y_TILED_GEN12_RC_CCS_CC
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format RG16 with modifier INVALID
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format R8 with modifier LINEAR
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format R8 with modifier X_TILED
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format R8 with modifier Y_TILED
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format R8 with modifier Y_TILED_GEN12_RC_CCS
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format R8 with modifier Y_TILED_GEN12_RC_CCS_CC
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format R8 with modifier INVALID
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format R16 with modifier LINEAR
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format R16 with modifier X_TILED
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format R16 with modifier Y_TILED
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format R16 with modifier Y_TILED_GEN12_RC_CCS
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format R16 with modifier Y_TILED_GEN12_RC_CCS_CC
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format R16 with modifier INVALID
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format GR88 with modifier LINEAR
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format GR88 with modifier X_TILED
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format GR88 with modifier Y_TILED
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format GR88 with modifier Y_TILED_GEN12_RC_CCS
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format GR88 with modifier Y_TILED_GEN12_RC_CCS_CC
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format GR88 with modifier INVALID
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format GR32 with modifier LINEAR
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format GR32 with modifier X_TILED
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format GR32 with modifier Y_TILED
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format GR32 with modifier Y_TILED_GEN12_RC_CCS
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format GR32 with modifier Y_TILED_GEN12_RC_CCS_CC
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format GR32 with modifier INVALID
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format R  H with modifier LINEAR
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format R  H with modifier X_TILED
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format R  H with modifier Y_TILED
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format R  H with modifier Y_TILED_GEN12_RC_CCS
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format R  H with modifier Y_TILED_GEN12_RC_CCS_CC
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format R  H with modifier INVALID
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format R  F with modifier LINEAR
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format R  F with modifier X_TILED
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format R  F with modifier Y_TILED
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format R  F with modifier Y_TILED_GEN12_RC_CCS
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format R  F with modifier Y_TILED_GEN12_RC_CCS_CC
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format R  F with modifier INVALID
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format GR H with modifier LINEAR
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format GR H with modifier X_TILED
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format GR H with modifier Y_TILED
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format GR H with modifier Y_TILED_GEN12_RC_CCS
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format GR H with modifier Y_TILED_GEN12_RC_CCS_CC
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format GR H with modifier INVALID
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format GR F with modifier LINEAR
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format GR F with modifier X_TILED
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format GR F with modifier Y_TILED
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format GR F with modifier Y_TILED_GEN12_RC_CCS
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format GR F with modifier Y_TILED_GEN12_RC_CCS_CC
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format GR F with modifier INVALID
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format AB8F with modifier LINEAR
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format AB8F with modifier X_TILED
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format AB8F with modifier Y_TILED
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format AB8F with modifier Y_TILED_GEN12_RC_CCS
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format AB8F with modifier Y_TILED_GEN12_RC_CCS_CC
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format AB8F with modifier INVALID
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format C8 with modifier Y_TILED
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format C8 with modifier X_TILED
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format XR24 with modifier Y_TILED_GEN12_MC_CCS
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format XB24 with modifier Y_TILED_GEN12_MC_CCS
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format AR24 with modifier Y_TILED_GEN12_MC_CCS
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format AB24 with modifier Y_TILED_GEN12_MC_CCS
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format XR30 with modifier Y_TILED_GEN12_MC_CCS
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format XB30 with modifier Y_TILED_GEN12_MC_CCS
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format AR30 with modifier Y_TILED_GEN12_MC_CCS
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format AB30 with modifier Y_TILED_GEN12_MC_CCS
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format XR4H with modifier Y_TILED_GEN12_MC_CCS
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format XR4H with modifier Y_TILED_GEN12_RC_CCS
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format XR4H with modifier Y_TILED_GEN12_RC_CCS_CC

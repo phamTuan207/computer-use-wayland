@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Chat App Fixture</title>
+<style>
+  body { font-family: sans-serif; margin: 0; background: #eceff1; }
+  #app { display: flex; height: 100vh; }
+  #sidebar { width: 280px; background: #ffffff; border-right: 1px solid #ccc; }
+  #sidebar h2 { font-size: 16px; padding: 12px 16px; margin: 0; }
+  .contact { padding: 12px 16px; cursor: pointer; border-bottom: 1px solid #eee;
+             display: flex; justify-content: space-between; align-items: center; }
+  .contact.active { background: #e3f2fd; }
+  .badge { background: #d32f2f; color: #fff; border-radius: 10px;
+           padding: 1px 8px; font-size: 12px; }
+  #chat-pane { flex: 1; display: flex; flex-direction: column; }
+  #chat-header { padding: 12px 16px; background: #ffffff;
+                 border-bottom: 1px solid #ccc; font-weight: bold; }
+  #search-bar { padding: 8px 16px; background: #fafafa;
+                border-bottom: 1px solid #ddd; }
+  #search-input { width: 320px; padding: 6px; }
+  #search-count { margin-left: 10px; color: #555; font-size: 13px; }
+  #messages { flex: 1; overflow-y: auto; padding: 16px; }
+  .msg { max-width: 60%; margin: 8px 0; padding: 8px 12px; border-radius: 10px;
+         clear: both; }
+  .msg.in { background: #ffffff; float: left; }
+  .msg.out { background: #c8e6c9; float: right; }
+  .msg-meta { font-size: 11px; color: #666; margin-top: 4px; text-align: right; }
+  .msg-status { margin-left: 6px; font-style: italic; }
+  mark.hl { background: #ffeb3b; }
+  #empty-state { color: #777; text-align: center; margin-top: 40px; }
+  #typing-indicator { padding: 6px 16px; color: #555; font-style: italic;
+                      min-height: 18px; }
+  #composer { display: flex; gap: 8px; padding: 12px 16px; background: #ffffff;
+              border-top: 1px solid #ccc; align-items: center; }
+  #msg-input { flex: 1; padding: 8px; }
+  #char-count { color: #777; font-size: 12px; min-width: 52px; }
+  #send-btn { padding: 8px 18px; }
+</style>
+</head>
+<body data-typing-shown="0">
+<div id="app">
+  <aside id="sidebar">
+    <h2>Conversations</h2>
+    <div id="contact-list">
+      <div class="contact active" data-contact="c1">
+        <span class="contact-name">Lan Anh</span>
+        <span class="badge" id="badge-c1" style="display:none">0</span>
+      </div>
+      <div class="contact" data-contact="c2">
+        <span class="contact-name">Minh Duc</span>
+        <span class="badge" id="badge-c2">2</span>
+      </div>
+      <div class="contact" data-contact="c3">
+        <span class="contact-name">Hoang Nam</span>
+        <span class="badge" id="badge-c3" style="display:none">0</span>
+      </div>
+    </div>
+  </aside>
+  <main id="chat-pane">
+    <header id="chat-header"><span id="chat-title">Lan Anh</span></header>
+    <div id="search-bar">
+      <input id="search-input" type="text" placeholder="Search messages">
+      <span id="search-count"></span>
+    </div>
+    <div id="messages"></div>
+    <div id="typing-indicator" style="display:none"></div>
+    <div id="composer">
+      <input id="msg-input" type="text" maxlength="500"
+             placeholder="Type a message">
+      <span id="char-count">0 / 500</span>
+      <button id="send-btn" type="button">Send</button>
+    </div>
+  </main>
+</div>
+<script>
+var conversations = {
+  c1: { name: "Lan Anh", messages: [
+    { dir: "in",  text: "Morning, the design draft is ready", time: "09:12" },
+    { dir: "out", text: "Nice, I will look at the draft today", time: "09:13",
+      status: "sent", statusHistory: "sending>sent" },
+    { dir: "in",  text: "Please check the budget numbers too", time: "09:14" },
+    { dir: "out", text: "Budget looks fine, the totals match", time: "09:15",
+      status: "sent", statusHistory: "sending>sent" },
+    { dir: "in",  text: "Great, send the summary when ready", time: "09:16" }
+  ]},
+  c2: { name: "Minh Duc", messages: [
+    { dir: "in", text: "Lunch tomorrow at noon?", time: "08:40" },
+    { dir: "in", text: "Bring the printed agenda please", time: "08:41" }
+  ]},
+  c3: { name: "Hoang Nam", messages: [] }
+};
+var unread = { c1: 0, c2: 2, c3: 0 };
+var active = "c1";
+
+var messagesEl = document.getElementById("messages");
+var inputEl = document.getElementById("msg-input");
+var counterEl = document.getElementById("char-count");
+var searchEl = document.getElementById("search-input");
+var searchCountEl = document.getElementById("search-count");
+var typingEl = document.getElementById("typing-indicator");
+var titleEl = document.getElementById("chat-title");
+
+function fmtTime(date) {
+  function pad(n) { return (n < 10 ? "0" : "") + n; }
+  return pad(date.getHours()) + ":" + pad(date.getMinutes());
+}
+
+function escapeHtml(text) {
+  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;")
+             .replace(/>/g, "&gt;");
+}
+
+function highlight(text, query) {
+  var safe = escapeHtml(text);
+  if (!query) { return safe; }
+  var pattern = new RegExp("(" + query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + ")", "gi");
+  return safe.replace(pattern, "<mark class=\"hl\">$1</mark>");
+}
+
+function renderMessages() {
+  var conv = conversations[active];
+  var query = searchEl.value.trim().toLowerCase();
+  messagesEl.innerHTML = "";
+  if (conv.messages.length === 0) {
+    var empty = document.createElement("div");
+    empty.id = "empty-state";
+    empty.textContent = "No messages yet. Say hello to start.";
+    messagesEl.appendChild(empty);
+    searchCountEl.textContent = "";
+    return;
+  }
+  var shown = 0;
+  conv.messages.forEach(function (msg) {
+    if (query && msg.text.toLowerCase().indexOf(query) === -1) { return; }
+    shown += 1;
+    var row = document.createElement("div");
+    row.className = "msg " + msg.dir;
+    row.setAttribute("data-dir", msg.dir);
+    if (msg.dir === "out") {
+      row.setAttribute("data-status", msg.status || "");
+      row.setAttribute("data-status-history", msg.statusHistory || "");
+    }
+    var body = document.createElement("div");
+    body.className = "msg-text";
+    body.innerHTML = highlight(msg.text, query);
+    var meta = document.createElement("div");
+    meta.className = "msg-meta";
+    var time = document.createElement("span");
+    time.className = "msg-time";
+    time.textContent = msg.time;
+    meta.appendChild(time);
+    if (msg.dir === "out") {
+      var status = document.createElement("span");
+      status.className = "msg-status";
+      status.textContent = msg.status || "";
+      meta.appendChild(status);
+    }
+    row.appendChild(body);
+    row.appendChild(meta);
+    messagesEl.appendChild(row);
+  });
+  if (query) {
+    searchCountEl.textContent = shown + (shown === 1 ? " match" : " matches");
+  } else {
+    searchCountEl.textContent = "";
+  }
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+}
+
+function renderContacts() {
+  Object.keys(unread).forEach(function (id) {
+    var badge = document.getElementById("badge-" + id);
+    if (unread[id] > 0) {
+      badge.textContent = unread[id];
+      badge.style.display = "";
+    } else {
+      badge.textContent = "0";
+      badge.style.display = "none";
+    }
+  });
+  var items = document.querySelectorAll(".contact");
+  items.forEach(function (item) {
+    if (item.getAttribute("data-contact") === active) {
+      item.classList.add("active");
+    } else {
+      item.classList.remove("active");
+    }
+  });
+}
+
+function switchContact(id) {
+  active = id;
+  unread[id] = 0;
+  searchEl.value = "";
+  titleEl.textContent = conversations[id].name;
+  typingEl.style.display = "none";
+  renderContacts();
+  renderMessages();
+}
+
+function updateCounter() {
+  counterEl.textContent = inputEl.value.length + " / 500";
+}
+
+function sendCurrent() {
+  var text = inputEl.value.trim();
+  if (!text) { return; }
+  var conv = conversations[active];
+  var outgoing = { dir: "out", text: text, time: fmtTime(new Date()),
+                   status: "sending", statusHistory: "sending" };
+  conv.messages.push(outgoing);
+  inputEl.value = "";
+  updateCounter();
+  renderMessages();
+  var shown = parseInt(document.body.getAttribute("data-typing-shown"), 10) || 0;
+  document.body.setAttribute("data-typing-shown", String(shown + 1));
+  typingEl.textContent = conv.name + " is typing...";
+  typingEl.style.display = "";
+  var replyTo = text;
+  var target = outgoing;
+  setTimeout(function () {
+    typingEl.style.display = "none";
+    target.status = "sent";
+    target.statusHistory = "sending>sent";
+    conv.messages.push({
+      dir: "in",
+      text: "Bot reply: I received \"" + replyTo + "\" and noted it.",
+      time: fmtTime(new Date())
+    });
+    renderMessages();
+  }, 800);
+}
+
+document.querySelectorAll(".contact").forEach(function (item) {
+  item.addEventListener("click", function () {
+    switchContact(item.getAttribute("data-contact"));
+  });
+});
+document.getElementById("send-btn").addEventListener("click", sendCurrent);
+inputEl.addEventListener("keydown", function (event) {
+  if (event.key === "Enter") { sendCurrent(); }
+});
+inputEl.addEventListener("input", updateCounter);
+searchEl.addEventListener("input", renderMessages);
+
+renderContacts();
+renderMessages();
+</script>
+</body>
+</html>

@@ -43,8 +43,8 @@ confirm it appears on the calendar without overlapping existing events.
     earliest free Wednesday gap, and record the day change.
 18. Read back the saved event: title, date, time, duration, attendees,
     reminder.
-19. Open the day view for the chosen day and confirm the event block renders
-    within the day's working hours.
+19. Confirm the event block renders in the chosen day's column of the week
+    grid within working hours (09:00-17:00).
 20. Confirm the event does not appear on any other day.
 
 ## Pass/fail criteria

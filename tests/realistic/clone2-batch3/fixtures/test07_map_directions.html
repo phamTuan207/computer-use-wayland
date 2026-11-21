@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Map Directions Fixture</title>
+<style>
+  body { font-family: sans-serif; margin: 16px; }
+  #layout { display: flex; gap: 16px; }
+  #map { position: relative; width: 600px; height: 500px; flex: none;
+         background: #eef4ea; border: 1px solid #9db38f;
+         background-image:
+           linear-gradient(to right, #d5e0cb 1px, transparent 1px),
+           linear-gradient(to top, #d5e0cb 1px, transparent 1px);
+         background-size: 50px 50px; }
+  .marker { position: absolute; transform: translate(-50%, 50%);
+            background: #c62828; color: #fff; border-radius: 10px;
+            padding: 1px 6px; font-size: 11px; white-space: nowrap; }
+  #panel { width: 430px; }
+  .field { position: relative; margin-bottom: 10px; }
+  .field input { width: 300px; padding: 6px; font-size: 14px; }
+  .ac-list { position: absolute; top: 34px; left: 0; width: 312px;
+             background: #fff; border: 1px solid #888; z-index: 5; }
+  .ac-item { padding: 6px; cursor: pointer; }
+  .ac-item:hover { background: #dde8ff; }
+  .mode-btn { padding: 6px 12px; margin-right: 6px; cursor: pointer; }
+  .mode-btn.active { background: #1e88e5; color: #fff; }
+  .route-card { border: 1px solid #888; border-radius: 6px;
+                padding: 8px; margin: 8px 0; cursor: pointer; }
+  .route-card.selected { border-color: #1e88e5; background: #eaf2fd; }
+  #route-panel { border: 1px solid #888; border-radius: 6px;
+                 padding: 10px; margin-top: 10px; }
+  #steps li { margin: 3px 0; }
+  .step-dist { font-weight: bold; }
+  #formulas { font-size: 12px; color: #333; margin-top: 12px;
+              max-width: 430px; }
+</style>
+</head>
+<body>
+<h1>City Grid Maps</h1>
+<div id="layout">
+  <div id="map"></div>
+  <div id="panel">
+    <div class="field">
+      <label for="origin-input">From</label><br>
+      <input id="origin-input" type="text" autocomplete="off"
+             placeholder="Origin place">
+      <div id="origin-list" class="ac-list" style="display:none"></div>
+    </div>
+    <button id="swap-btn" type="button">Swap origin and destination</button>
+    <div class="field" style="margin-top:10px">
+      <label for="dest-input">To</label><br>
+      <input id="dest-input" type="text" autocomplete="off"
+             placeholder="Destination place">
+      <div id="dest-list" class="ac-list" style="display:none"></div>
+    </div>
+    <div id="modes">
+      <button type="button" class="mode-btn active" data-mode="drive">Drive</button>
+      <button type="button" class="mode-btn" data-mode="transit">Transit</button>
+      <button type="button" class="mode-btn" data-mode="walk">Walk</button>
+      <button type="button" class="mode-btn" data-mode="cycle">Cycle</button>
+    </div>
+    <div id="route-options" style="display:none">
+      <div id="route-main" class="route-card selected">
+        <strong>Main route</strong><br>
+        <span class="card-dist"></span>, <span class="card-time"></span>
+      </div>
+      <div id="route-alt" class="route-card">
+        <strong>Alternative route, scenic river road</strong><br>
+        <span class="card-dist"></span>, <span class="card-time"></span>
+      </div>
+    </div>
+    <div id="route-panel" style="display:none">
+      <div>Distance: <span id="route-distance"></span></div>
+      <div>Time (<span id="route-mode-label"></span>): <span id="route-time"></span></div>
+      <h3>Turn by turn</h3>
+      <ol id="steps"></ol>
+    </div>
+    <h3>Recent searches</h3>
+    <ul id="recent-list"></ul>
+    <p id="formulas">
+      How routes are computed. Distance is the Manhattan grid
+      distance, |x2 - x1| + |y2 - y1|, in km, on the place grid.
+      Speeds: drive 30 km/h, transit 20 km/h plus a 5 min wait,
+      walk 5 km/h, cycle 15 km/h. Time in minutes is
+      distance / speed * 60, rounded to the nearest minute, plus
+      the wait for transit. The alternative route distance is the
+      main distance x 1.3, rounded to 1 decimal, because it follows
+      the scenic river road.
+    </p>
+  </div>
+</div>
+<script>
+var PLACES = [
+  {name: "Central Station", x: 2, y: 3},
+  {name: "City Museum", x: 5, y: 3},
+  {name: "Riverside Park", x: 5, y: 7},
+  {name: "Old Library", x: 1, y: 7},
+  {name: "Harbor Market", x: 8, y: 1},
+  {name: "University", x: 8, y: 6},
+  {name: "Botanical Garden", x: 3, y: 9},
+  {name: "Airport", x: 11, y: 9}
+];
+var MODES = {
+  drive:   {speed: 30, wait: 0, label: "Drive"},
+  transit: {speed: 20, wait: 5, label: "Transit"},
+  walk:    {speed: 5,  wait: 0, label: "Walk"},
+  cycle:   {speed: 15, wait: 0, label: "Cycle"}
+};
+var GRID_W = 12, GRID_H = 10;
+
+var selected = {origin: null, dest: null};
+var mode = "drive";
+var routeChoice = "main";
+var recent = [];
+var current = null;
+
+function manhattan(a, b) {
+  return Math.abs(b.x - a.x) + Math.abs(b.y - a.y);
+}
+function timeFor(distKm, modeKey) {
+  var m = MODES[modeKey];
+  return Math.round(distKm / m.speed * 60) + m.wait;
+}
+function fmtKm(v) { return v.toFixed(1) + " km"; }
+function fmtMin(v) { return v + " min"; }
+
+function chunks(total) {
+  var out = [];
+  var rest = total;
+  while (rest > 0) {
+    var seg = Math.min(2, rest);
+    out.push(seg);
+    rest -= seg;
+  }
+  return out;
+}
+
+function buildSteps(origin, dest, scenic) {
+  var steps = [{text: "Start at " + origin.name, dist: 0}];
+  var dx = dest.x - origin.x, dy = dest.y - origin.y;
+  function leg(amount, dirWord, road, firstVerb) {
+    var segs = chunks(Math.abs(amount));
+    for (var i = 0; i < segs.length; i++) {
+      var verb = (i === 0) ? firstVerb : "Continue";
+      steps.push({text: verb + " " + dirWord + " on " + road,
+                  dist: segs[i]});
+    }
+  }
+  function turn(road) {
+    steps.push({text: "Turn onto " + road, dist: 0});
+  }
+  var hWord = dx >= 0 ? "east" : "west";
+  var vWord = dy >= 0 ? "north" : "south";
+  if (!scenic) {
+    if (dx !== 0) { leg(dx, hWord, "Grid Avenue", "Head"); }
+    if (dy !== 0) {
+      if (dx !== 0) { turn("Park Lane"); }
+      leg(dy, vWord, "Park Lane", "Head");
+    }
+  } else {
+    if (dy !== 0) { leg(dy, vWord, "Park Lane", "Head"); }
+    if (dx !== 0) {
+      if (dy !== 0) { turn("Grid Avenue"); }
+      leg(dx, hWord, "Grid Avenue", "Head");
+    }
+    var main = manhattan(origin, dest);
+    var alt = Math.round(main * 1.3 * 10) / 10;
+    var extra = Math.round((alt - main) * 10) / 10;
+    steps.push({text: "Take the scenic River Road", dist: extra});
+  }
+  steps.push({text: "Arrive at " + dest.name, dist: 0});
+  return steps;
+}
+
+function computeRoute() {
+  if (!selected.origin || !selected.dest) {
+    document.getElementById("route-panel").style.display = "none";
+    document.getElementById("route-options").style.display = "none";
+    current = null;
+    return;
+  }
+  var main = manhattan(selected.origin, selected.dest);
+  var alt = Math.round(main * 1.3 * 10) / 10;
+  var dist = (routeChoice === "alt") ? alt : main;
+  var steps = buildSteps(selected.origin, selected.dest,
+                         routeChoice === "alt");
+  current = {
+    distance: dist, mainDistance: main, altDistance: alt,
+    time: timeFor(dist, mode), mode: mode, choice: routeChoice,
+    steps: steps
+  };
+  document.getElementById("route-options").style.display = "block";
+  document.getElementById("route-panel").style.display = "block";
+  var mainCard = document.getElementById("route-main");
+  var altCard = document.getElementById("route-alt");
+  mainCard.querySelector(".card-dist").textContent = fmtKm(main);
+  mainCard.querySelector(".card-time").textContent =
+    fmtMin(timeFor(main, mode));
+  altCard.querySelector(".card-dist").textContent = fmtKm(alt);
+  altCard.querySelector(".card-time").textContent =
+    fmtMin(timeFor(alt, mode));
+  mainCard.className = "route-card" +
+    (routeChoice === "main" ? " selected" : "");
+  altCard.className = "route-card" +
+    (routeChoice === "alt" ? " selected" : "");
+  document.getElementById("route-distance").textContent = fmtKm(dist);
+  document.getElementById("route-time").textContent =
+    fmtMin(current.time);
+  document.getElementById("route-mode-label").textContent =
+    MODES[mode].label;
+  var ol = document.getElementById("steps");
+  ol.innerHTML = "";
+  for (var i = 0; i < steps.length; i++) {
+    var li = document.createElement("li");
+    var txt = document.createElement("span");
+    txt.className = "step-text";
+    txt.textContent = steps[i].text + " ";
+    var d = document.createElement("span");
+    d.className = "step-dist";
+    d.textContent = fmtKm(steps[i].dist);
+    li.appendChild(txt);
+    li.appendChild(d);
+    ol.appendChild(li);
+  }
+}
+
+function addRecent() {
+  var label = selected.origin.name + " to " + selected.dest.name;
+  recent.unshift(label);
+  if (recent.length > 5) { recent.length = 5; }
+  var ul = document.getElementById("recent-list");
+  ul.innerHTML = "";
+  for (var i = 0; i < recent.length; i++) {
+    var li = document.createElement("li");
+    li.className = "recent-item";
+    li.textContent = recent[i];
+    ul.appendChild(li);
+  }
+}
+
+function wireAutocomplete(inputId, listId, key) {
+  var input = document.getElementById(inputId);
+  var list = document.getElementById(listId);
+  input.addEventListener("input", function () {
+    selected[key] = null;
+    var q = input.value.trim().toLowerCase();
+    list.innerHTML = "";
+    if (!q) { list.style.display = "none"; computeRoute(); return; }
+    var matches = PLACES.filter(function (p) {
+      return p.name.toLowerCase().indexOf(q) !== -1;
+    });
+    for (var i = 0; i < matches.length; i++) {
+      (function (place) {
+        var item = document.createElement("div");
+        item.className = "ac-item";
+        item.setAttribute("data-name", place.name);
+        item.textContent = place.name;
+        item.addEventListener("click", function () {
+          input.value = place.name;
+          selected[key] = place;
+          list.style.display = "none";
+          if (selected.origin && selected.dest) {
+            routeChoice = "main";
+            computeRoute();
+            addRecent();
+          } else {
+            computeRoute();
+          }
+        });
+        list.appendChild(item);
+      })(matches[i]);
+    }
+    list.style.display = matches.length ? "block" : "none";
+    computeRoute();
+  });
+}
+
+function renderMarkers() {
+  var map = document.getElementById("map");
+  for (var i = 0; i < PLACES.length; i++) {
+    var m = document.createElement("div");
+    m.className = "marker";
+    m.setAttribute("data-name", PLACES[i].name);
+    m.style.left = (PLACES[i].x / GRID_W * 100) + "%";
+    m.style.bottom = (PLACES[i].y / GRID_H * 100) + "%";
+    m.textContent = PLACES[i].name;
+    map.appendChild(m);
+  }
+}
+
+var modeBtns = document.querySelectorAll(".mode-btn");
+for (var b = 0; b < modeBtns.length; b++) {
+  modeBtns[b].addEventListener("click", function () {
+    mode = this.getAttribute("data-mode");
+    for (var j = 0; j < modeBtns.length; j++) {
+      modeBtns[j].className = "mode-btn" +
+        (modeBtns[j].getAttribute("data-mode") === mode ? " active" : "");
+    }
+    computeRoute();
+  });
+}
+document.getElementById("route-main").addEventListener("click",
+  function () { routeChoice = "main"; computeRoute(); });
+document.getElementById("route-alt").addEventListener("click",
+  function () { routeChoice = "alt"; computeRoute(); });
+document.getElementById("swap-btn").addEventListener("click",
+  function () {
+    var tmp = selected.origin;
+    selected.origin = selected.dest;
+    selected.dest = tmp;
+    document.getElementById("origin-input").value =
+      selected.origin ? selected.origin.name : "";
+    document.getElementById("dest-input").value =
+      selected.dest ? selected.dest.name : "";
+    routeChoice = "main";
+    computeRoute();
+    if (selected.origin && selected.dest) { addRecent(); }
+  });
+
+wireAutocomplete("origin-input", "origin-list", "origin");
+wireAutocomplete("dest-input", "dest-list", "dest");
+renderMarkers();
+
+window.mapApp = {
+  places: PLACES,
+  modes: MODES,
+  getState: function () {
+    return {
+      origin: selected.origin ? selected.origin.name : null,
+      destination: selected.dest ? selected.dest.name : null,
+      mode: mode,
+      routeChoice: routeChoice,
+      route: current,
+      recent: recent.slice()
+    };
+  }
+};
+</script>
+</body>
+</html>

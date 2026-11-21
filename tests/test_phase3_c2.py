@@ -56,3 +56,8 @@ def test_failed_recapture_keeps_first_frame():
 
     after, recaptured = cu._settle_after_capture(_boom, first, True, settle_ms=1)
     assert after is first and recaptured is False
+
+
+def load_tests(loader, standard_tests, pattern):
+    from _function_test_support import load_function_tests
+    return load_function_tests(globals())

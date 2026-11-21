@@ -1,0 +1,89 @@
+{
+  "started_at": "2026-11-21T09:46:53.040Z",
+  "finished_at": "2026-11-21T09:47:24.666Z",
+  "wall_clock_ms": 31626,
+  "passed": 9,
+  "failed": 1,
+  "results": [
+    {
+      "test": "t01-pdf-form",
+      "exitCode": 0,
+      "pass": true,
+      "elapsed_ms": 2417,
+      "stdout": "{\"test\":\"t01-pdf-form\",\"pass\":true,\"failures\":[],\"details\":{\"appId\":\"Application ID: RF-85DD3C\",\"steps\":31},\"steps\":[\"1. open fixture\",\"2. check title\",\"3. fill full name\",\"4. fill ID number\",\"5. fill invalid email\",\"6. try next page with bad email\",\"7. expect email error\",\"8. confirm still on page 1\",\"9. fix email\",\"10. go to page 2\",\"11. confirm page 2 shown\",\"12. fill address\",\"13. fill city\",\"14. fill postcode\",\"15. fill income\",\"16. select employment\",\"17. check declaration 1\",\"18. try next page without declaration 2\",\"19. expect declaration 2 error\",\"20. check declaration 2\",\"21. go to page 3\",\"22. confirm page 3 shown\",\"23. try submit without signature\",\"24. expect signature error\",\"25. draw signature on canvas\",\"26. submit application\",\"27. wait for confirmation\",\"28. check application ID format\",\"29. check summary has name\",\"30. check summary has income\",\"31. check summary has email\",\"32. reload page\",\"33. confirm record persists after reload\",\"34. check same ID after reload\",\"35. start a new application\",\"36. confirm form reset to page 1\"],\"started_at\":\"2026-11-21T09:46:53.165Z\",\"finished_at\":\"2026-11-21T09:46:55.473Z\",\"elapsed_ms\":2308}",
+      "stderr": ""
+    },
+    {
+      "test": "t02-video-player",
+      "exitCode": 0,
+      "pass": true,
+      "elapsed_ms": 8103,
+      "stdout": "{\"test\":\"t02-video-player\",\"pass\":true,\"failures\":[],\"details\":{\"duration\":10},\"steps\":[\"1. open fixture\",\"2. wait for metadata\",\"3. check duration is 10 s\",\"4. press play\",\"5. let it play 2 s\",\"6. check time advanced\",\"7. check not paused\",\"8. press pause\",\"9. check paused\",\"10. check time frozen while paused\",\"11. seek to 5 s\",\"12. check seek landed at 5 s\",\"13. set volume to 0.5\",\"14. check volume is 0.5\",\"15. press mute\",\"16. check muted\",\"17. press unmute\",\"18. check unmuted\",\"19. set speed to 2x\",\"20. check speed is 2x\",\"21. set speed back to 1x\",\"22. seek to 1 s for captions\",\"23. check first caption text\",\"24. seek to 7 s\",\"25. check last caption text\",\"26. turn captions off\",\"27. check captions cleared\",\"28. turn captions back on\",\"29. seek near end and play\",\"30. wait for ended state\",\"31. check ended flag\",\"32. press replay\",\"33. check replay restarted\",\"34. check playing after replay\",\"35. check time label format\"],\"started_at\":\"2026-11-21T09:46:55.570Z\",\"finished_at\":\"2026-11-21T09:47:03.579Z\",\"elapsed_ms\":8009}",
+      "stderr": ""
+    },
+    {
+      "test": "t03-keyboard-nav",
+      "exitCode": 0,
+      "pass": true,
+      "elapsed_ms": 1538,
+      "stdout": "{\"test\":\"t03-keyboard-nav\",\"pass\":true,\"failures\":[],\"details\":{\"tabOrder\":[\"skip\",\"menuBtn\",\"listbox\",\"name\",\"email\",\"country\",\"submitBtn\",\"openDlg\"]},\"steps\":[\"1. open fixture\",\"2. walk Tab order, 8 stops\",\"3. check Tab order matches\",\"4. Shift+Tab back to menu button\",\"5. open menu with Enter\",\"6. check menu opened\",\"7. arrow to second menu item\",\"8. check arrow focused Reference\",\"9. pick menu item with Enter\",\"10. check menu picked Reference, focus returned\",\"11. Tab to listbox, check focused\",\"12. arrow down twice in listbox\",\"13. pick listbox item with Enter\",\"14. check listbox picked Forms\",\"15. Tab to name field, type name\",\"16. Tab to email field, type email\",\"17. Tab to country select\",\"18. arrow down to first country\",\"19. check country is vn\",\"20. Tab to Send button\",\"21. submit form with Space\",\"22. check form submitted\",\"23. Tab to dialog button, check focused\",\"24. open dialog with Enter\",\"25. check dialog opened with input focused\",\"26. type feedback\",\"27. Tab inside dialog, trap check\",\"28. check focus trap cycles to Close\",\"29. close dialog with Escape\",\"30. check dialog closed, focus returned, feedback kept\",\"31. open search with Ctrl+K, check focused\",\"32. type search query\",\"33. pick first match with Enter\",\"34. check search picked apple pie, overlay closed\",\"35. open search again, close with Escape\"],\"started_at\":\"2026-11-21T09:47:03.668Z\",\"finished_at\":\"2026-11-21T09:47:05.117Z\",\"elapsed_ms\":1449}",
+      "stderr": ""
+    },
+    {
+      "test": "t04-kanban-drag",
+      "exitCode": 0,
+      "pass": true,
+      "elapsed_ms": 4030,
+      "stdout": "{\"test\":\"t04-kanban-drag\",\"pass\":true,\"failures\":[],\"details\":{\"todo\":2,\"doing\":2,\"done\":2},\"steps\":[\"1. open fixture\",\"2. clear saved board and reload\",\"3. check starting counts\",\"4. check doing starts with 2\",\"5. check done starts with 1\",\"6. drag bug card Todo to Doing\",\"7. check Todo is 2 after drag\",\"8. check Doing is 3 after drag\",\"9. check dragged card is in Doing\",\"10. check move status text\",\"11. drag card above another to reorder\",\"12. check reorder put card first\",\"13. drag card to Done\",\"14. check Done is 2\",\"15. check card is in Done\",\"16. type new card title\",\"17. pick bug tag\",\"18. add the new card\",\"19. check Todo is 3 after add\",\"20. check new card appears\",\"21. filter by bug\",\"22. check filter shows 3 of 7\",\"23. clear filter\",\"24. check counts back after filter clear\",\"25. delete a card\",\"26. check Todo is 2 after delete\",\"27. check delete status text\",\"28. reload page\",\"29. check Todo persists after reload\",\"30. check Doing persists after reload\",\"31. check Done persists after reload\",\"32. check moved card still in Done\",\"33. drag last Todo feature card to Done\",\"34. drag new bug card to Done\",\"35. check Todo is empty\",\"36. check empty column message\"],\"started_at\":\"2026-11-21T09:47:05.213Z\",\"finished_at\":\"2026-11-21T09:47:09.146Z\",\"elapsed_ms\":3933}",
+      "stderr": ""
+    },
+    {
+      "test": "t05-canvas-draw",
+      "exitCode": 0,
+      "pass": true,
+      "elapsed_ms": 2976,
+      "stdout": "{\"test\":\"t05-canvas-draw\",\"pass\":true,\"failures\":[],\"details\":{\"pngDataUrlLength\":10342},\"steps\":[\"1. open fixture\",\"2. check canvas starts blank\",\"3. pick red pen\",\"4. pick brush size 8\",\"5. draw red line\",\"6. check red pixel on line\",\"7. check stroke count is 1\",\"8. pick blue pen\",\"9. draw blue line\",\"10. check blue pixel on line\",\"11. check stroke count is 2\",\"12. press undo\",\"13. check count is 1 after undo\",\"14. check blue line gone after undo\",\"15. press redo\",\"16. check count is 2 after redo\",\"17. check blue line back after redo\",\"18. pick eraser\",\"19. erase middle of red line\",\"20. check erased pixel is white\",\"21. check untouched red pixel stays red\",\"22. pick green for fill\",\"23. fill background green\",\"24. check corner is green after fill\",\"25. save PNG\",\"26. check preview shown\",\"27. check preview is a PNG data URL\",\"28. check download link set\",\"29. clear canvas\",\"30. check count is 0 after clear\",\"31. check canvas white after clear\",\"32. pick black pen\",\"33. pick brush size 20\",\"34. draw thick black line\",\"35. check thick line covers 8 px off center\",\"36. check final stroke count is 1\"],\"started_at\":\"2026-11-21T09:47:09.251Z\",\"finished_at\":\"2026-11-21T09:47:12.123Z\",\"elapsed_ms\":2871}",
+      "stderr": ""
+    },
+    {
+      "test": "t06-chat-app",
+      "exitCode": 0,
+      "pass": true,
+      "elapsed_ms": 4271,
+      "stdout": "{\"test\":\"t06-chat-app\",\"pass\":true,\"failures\":[],\"details\":{\"aliceMessages\":5,\"bobMessages\":3},\"steps\":[\"1. open fixture\",\"2. check Alice starts with 2 messages\",\"3. type a message to Alice\",\"4. send the message\",\"5. check own message appears\",\"6. check own message text\",\"7. check typing indicator shows\",\"8. wait for Alice reply\",\"9. check reply arrived\",\"10. check typing indicator cleared\",\"11. pick party emoji\",\"12. check emoji inserted in input\",\"13. type message with emoji\",\"14. send with Enter key\",\"15. check emoji message sent\",\"16. wait for the reply to the emoji message\",\"17. check 6 messages after second reply\",\"18. attach a file\",\"19. check attachment message\",\"20. search for shipping\",\"21. check search filters to 1 message\",\"22. clear search\",\"23. check all messages back after clear\",\"24. open edit on first own message\",\"25. edit the message text\",\"26. save the edit\",\"27. check edited text saved\",\"28. delete first own message\",\"29. check count dropped after delete\",\"30. switch to Bob\",\"31. check Bob thread has 1 message\",\"32. check title says Bob\",\"33. type a message to Bob\",\"34. send to Bob\",\"35. switch back to Alice before reply\",\"36. wait for Bob unread badge\",\"37. check Bob badge is 1\",\"38. switch to Bob again\",\"39. check badge cleared and Bob reply visible\",\"40. check timestamps on messages\"],\"started_at\":\"2026-11-21T09:47:12.211Z\",\"finished_at\":\"2026-11-21T09:47:16.394Z\",\"elapsed_ms\":4183}",
+      "stderr": ""
+    },
+    {
+      "test": "t07-map-directions",
+      "exitCode": 0,
+      "pass": true,
+      "elapsed_ms": 1919,
+      "stdout": "{\"test\":\"t07-map-directions\",\"pass\":true,\"failures\":[],\"details\":{\"walkMins\":48,\"bikeMins\":16,\"driveMins\":6},\"steps\":[\"1. open fixture\",\"2. check 6 places listed\",\"3. pick Home to Office\",\"4. get directions\",\"5. check distance is 4.0 km\",\"6. check walk time is 48 min\",\"7. check 5 steps, toll bridge, east first, Toll yes\",\"8. switch to bike, get directions\",\"9. check bike time is 16 min, faster than walk\",\"10. switch to drive, get directions\",\"11. check drive time is 6 min, faster than bike\",\"12. enable avoid tolls, get directions\",\"13. check detour is 4.8 km, Toll no, detour step present\",\"14. disable avoid tolls, enable alternate route, get directions\",\"15. check alternate starts south on 1st Ave\",\"16. swap origin and destination, get directions\",\"17. check swapped route is 4.0 km, Office to Home\",\"18. save the route\",\"19. check saved list has 1 route\",\"20. plan Station to Library\",\"21. check Station to Library is 1.2 km\",\"22. load the saved route\",\"23. check saved route restored Office to Home\",\"24. delete the saved route\",\"25. check saved list empty\",\"26. pick Market as both origin and destination, get directions\",\"27. check same-place error shown\"],\"started_at\":\"2026-11-21T09:47:16.493Z\",\"finished_at\":\"2026-11-21T09:47:18.311Z\",\"elapsed_ms\":1818}",
+      "stderr": ""
+    },
+    {
+      "test": "t08-cart-checkout",
+      "exitCode": 0,
+      "pass": true,
+      "elapsed_ms": 2123,
+      "stdout": "{\"test\":\"t08-cart-checkout\",\"pass\":true,\"failures\":[],\"details\":{\"orderNum\":\"Order number: ORD-104998\"},\"steps\":[\"1. open fixture\",\"2. clear saved cart and reload\",\"3. check 8 products shown\",\"4. search for lamp\",\"5. check search leaves 1 product\",\"6. clear search\",\"7. filter electronics\",\"8. check 3 electronics products\",\"9. clear category filter, check 8 products\",\"10. add Desk Lamp twice and Headphones once\",\"11. check cart count is 3, subtotal is 109.97\",\"12. increase Lamp quantity\",\"13. check subtotal is 134.96\",\"14. decrease Lamp quantity\",\"15. check subtotal back to 109.97\",\"16. apply invalid coupon\",\"17. check invalid coupon rejected\",\"18. apply SAVE10\",\"19. check discount is 11.00, total is 103.97\",\"20. remove Headphones\",\"21. check subtotal and total are 49.98\",\"22. open checkout form\",\"23. check checkout form shown\",\"24. submit empty checkout\",\"25. check empty form errors\",\"26. fill name, address, city, postcode\",\"27. fill 15-digit card, expiry, CVC\",\"28. submit with bad card\",\"29. check card error shown\",\"30. fix card to 16 digits, place the order\",\"31. check confirmation, order ORD-104998, $49.98 charged\",\"32. check cart empty, history has 1 order\",\"33. add Monitor to new cart\",\"34. check Monitor subtotal is 129.99\",\"35. apply FREESHIP\",\"36. check shipping 0, total 129.99\",\"37. reload page\",\"38. check cart and subtotal persist after reload\",\"39. clear the cart\",\"40. check cart empty after clear\"],\"started_at\":\"2026-11-21T09:47:18.405Z\",\"finished_at\":\"2026-11-21T09:47:20.435Z\",\"elapsed_ms\":2029}",
+      "stderr": ""
+    },
+    {
+      "test": "t09-diff-review",
+      "exitCode": 0,
+      "pass": true,
+      "elapsed_ms": 2286,
+      "stdout": "{\"test\":\"t09-diff-review\",\"pass\":true,\"failures\":[],\"details\":{\"reviews\":2,\"comments\":3},\"steps\":[\"1. open fixture\",\"2. clear saved review and reload\",\"3. check 2 files and 12 lines\",\"4. filter to auth.js, check 6 lines\",\"5. clear file filter\",\"6. search token, check 4 lines, 4 highlights, info text\",\"7. clear search\",\"8. click the await getToken line, check form opened\",\"9. type and submit the comment\",\"10. check thread appears with text, count is 1\",\"11. open reply box, type and send reply\",\"12. check reply appears, count is 2\",\"13. resolve the thread, check it hides\",\"14. enable show resolved, check thread visible with text\",\"15. disable show resolved, add second comment on signal line\",\"16. check comment count is 3\",\"17. go to next hunk twice, check current is api.js\",\"18. go to previous hunk, check current is auth.js\",\"19. submit review with no verdict, check error\",\"20. choose Request changes, type summary, submit\",\"21. check status is Changes requested, history has 1\",\"22. choose Approve, type summary, submit\",\"23. check status is Approved, history has 2\",\"24. reload page, check status and comments persist\"],\"started_at\":\"2026-11-21T09:47:20.526Z\",\"finished_at\":\"2026-11-21T09:47:22.720Z\",\"elapsed_ms\":2194}",
+      "stderr": ""
+    },
+    {
+      "test": "t10-dashboard",
+      "exitCode": 1,
+      "pass": false,
+      "elapsed_ms": 1932,
+      "stdout": "{\"test\":\"t10-dashboard\",\"pass\":false,\"failures\":[\"download.path: canceled\"],\"details\":{},\"steps\":[\"1. open fixture\",\"2. check starting KPIs: 610.39, 12 orders, 50.87 avg\",\"3. check page 1 shows 5 rows\",\"4. check first row is A1001\",\"5. filter status paid\",\"6. check paid KPIs: 437.92, 8 orders, 54.74 avg\",\"7. filter category electronics too\",\"8. check paid electronics: 369.96, 4 orders\",\"9. clear category filter\",\"10. search for lamp\",\"11. check paid lamp: 2 orders, 49.98\",\"12. clear search\",\"13. set date range Nov 5 to Nov 10\",\"14. check date range: 3 orders, 187.97\",\"15. reset filters\",\"16. check KPIs back to full set\",\"17. sort by amount ascending\",\"18. check cheapest first\",\"19. sort by amount descending\",\"20. check priciest first\",\"21. reset to date order\",\"22. go to page 2\",\"23. check page 2 starts with A1006\",\"24. go back to page 1\",\"25. check back on page 1\",\"26. select two rows\",\"27. check 2 rows selected\",\"28. select all on page\",\"29. check 5 rows selected\",\"30. deselect all on page\",\"31. check 0 rows selected\",\"32. filter paid for export\",\"33. export CSV\"],\"started_at\":\"2026-11-21T09:47:22.818Z\",\"finished_at\":\"2026-11-21T09:47:24.647Z\",\"elapsed_ms\":1829}",
+      "stderr": ""
+    }
+  ]
+}

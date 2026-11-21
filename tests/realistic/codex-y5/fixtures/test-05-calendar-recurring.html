@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Calendar Studio</title>
+  <style>
+    *{box-sizing:border-box}body{margin:0;padding:24px;background:#f1f3f7;color:#242a34;font:14px system-ui,sans-serif}.app{max-width:980px;margin:auto;background:white;border:1px solid #d5dce7;border-radius:11px;overflow:hidden}header{padding:18px 22px;background:#344c75;color:white;display:flex;justify-content:space-between;align-items:center}h1{margin:0;font-size:20px}.stats{display:flex;gap:16px}.stats b{color:#dceaff}main{padding:20px;display:grid;grid-template-columns:1.1fr .9fr;gap:16px}.panel{padding:15px;border:1px solid #d7deea;border-radius:8px;background:#fbfcfe}h2{margin:0 0 12px;font-size:16px}.row{display:flex;gap:8px;margin:9px 0;flex-wrap:wrap}input,select{padding:8px;font:inherit;border:1px solid #b8c4d2;border-radius:5px;min-width:130px}button{padding:8px 11px;font:inherit;border:0;border-radius:5px;background:#42679c;color:white;cursor:pointer}button:hover{background:#315583}.event{display:grid;grid-template-columns:1fr auto;gap:8px;padding:10px 0;border-bottom:1px solid #e1e6ed}.event small{display:block;color:#68788d;margin-top:3px}.event-actions{display:flex;gap:5px}.event-actions button{padding:5px 8px;font-size:12px}.status{padding:9px;background:#edf3fb;border-radius:5px;min-height:35px;color:#2d4b73}.modal{padding:14px;border:2px solid #7294c5;border-radius:8px;background:#f4f8ff;margin-top:12px}.muted{color:#6b7888}
+  </style>
+</head>
+<body>
+<div class="app">
+  <header><h1>Calendar Studio</h1><div>Occurrences: <b id="occurrence-count">0</b> | <b id="calendar-summary">No events</b></div></header>
+  <main>
+    <section class="panel"><h2>New event</h2><div class="row"><input id="event-title-input" placeholder="event title"><input id="event-start-date" placeholder="YYYY-MM-DD"></div><div class="row"><input id="event-location-input" placeholder="location"><select id="repeat-frequency"><option value="none">Does not repeat</option><option value="weekly">Weekly</option></select><input id="occurrence-limit" value="1" aria-label="occurrence limit"><button id="btn-create-event">Create event</button></div><div id="create-status" class="status">No event created</div>
+      <div id="event-edit-modal" class="modal" hidden><h2>Edit event</h2><p>Selected occurrence: <b id="edit-occurrence-date">None</b></p><div class="row"><select id="edit-scope"><option value="this">This occurrence</option><option value="series">Entire series</option></select></div><div class="row"><input id="edit-event-title" placeholder="event title"><input id="edit-event-location" placeholder="location"></div><button id="btn-save-event-changes">Save changes</button></div>
+    </section>
+    <section class="panel"><h2>Scheduled events</h2><pre id="occurrence-summary">No scheduled occurrences</pre><div id="occurrence-list"><p class="muted">No scheduled occurrences</p></div><div class="row"><button id="btn-undo-calendar-delete" hidden>Undo delete</button></div><div id="delete-status" class="status">No occurrence deleted</div><div>Series location: <b id="series-location-summary">None</b></div></section>
+  </main>
+</div>
+<script>
+  const dates = ['2026-11-23', '2026-11-30', '2026-12-07', '2026-12-14', '2026-12-21'];
+  let events = [];
+  let seriesLocation = '';
+  let editedDate = '';
+  let deletedEvent = null;
+  const el = (selector) => document.querySelector(selector);
+  function rowId(date) { return date.slice(5).replace('-', ''); }
+  function render() {
+    el('#occurrence-count').textContent = String(events.length);
+    el('#calendar-summary').textContent = events.length ? `${events.length} of 5 occurrences scheduled` : 'No events';
+    el('#series-location-summary').textContent = seriesLocation || 'None';
+    el('#occurrence-summary').textContent = events.map((event) => `${event.date} | ${event.title} | ${event.location}`).join('\n') || 'No scheduled occurrences';
+    el('#occurrence-list').innerHTML = events.map((event) => {
+      const short = rowId(event.date);
+      return `<div class="event" id="event-${short}"><div><b id="title-${short}">${event.title}</b><small>${event.date} | ${event.location}</small></div><div class="event-actions"><button id="btn-edit-${short}">Edit</button><button id="btn-delete-${short}">Delete</button></div></div>`;
+    }).join('') || '<p class="muted">No scheduled occurrences</p>';
+    for (const event of events) {
+      const short = rowId(event.date);
+      el(`#btn-edit-${short}`).onclick = () => openEditor(event.date);
+      el(`#btn-delete-${short}`).onclick = () => deleteOccurrence(event.date);
+    }
+  }
+  function openEditor(date) {
+    const event = events.find((item) => item.date === date);
+    if (!event) return;
+    editedDate = date;
+    el('#edit-occurrence-date').textContent = date;
+    el('#edit-event-title').value = event.title;
+    el('#edit-event-location').value = event.location;
+    el('#edit-scope').value = 'this';
+    el('#event-edit-modal').hidden = false;
+  }
+  el('#btn-create-event').onclick = () => {
+    const title = el('#event-title-input').value.trim();
+    const start = el('#event-start-date').value.trim();
+    const location = el('#event-location-input').value.trim();
+    const limit = Number(el('#occurrence-limit').value);
+    if (!title || !location || !dates.includes(start) || el('#repeat-frequency').value !== 'weekly' || limit !== 5) return;
+    const startIndex = dates.indexOf(start);
+    events = dates.slice(startIndex, startIndex + limit).map((date) => ({ date, title, location }));
+    seriesLocation = location;
+    el('#create-status').textContent = `Created weekly series: ${title} (${events.length} occurrences)`;
+    render();
+  };
+  el('#btn-save-event-changes').onclick = () => {
+    const title = el('#edit-event-title').value.trim();
+    const location = el('#edit-event-location').value.trim();
+    if (!title || !location) return;
+    if (el('#edit-scope').value === 'series') {
+      events = events.map((event) => ({ ...event, location }));
+      seriesLocation = location;
+    } else {
+      events = events.map((event) => event.date === editedDate ? { ...event, title, location } : event);
+    }
+    el('#event-edit-modal').hidden = true;
+    render();
+  };
+  function deleteOccurrence(date) {
+    const index = events.findIndex((event) => event.date === date);
+    if (index < 0) return;
+    deletedEvent = { ...events[index], index };
+    events.splice(index, 1);
+    el('#delete-status').textContent = `Deleted ${date}`;
+    el('#btn-undo-calendar-delete').hidden = false;
+    render();
+  }
+  el('#btn-undo-calendar-delete').onclick = () => {
+    if (!deletedEvent) return;
+    events.splice(deletedEvent.index, 0, { date: deletedEvent.date, title: deletedEvent.title, location: deletedEvent.location });
+    deletedEvent = null;
+    el('#delete-status').textContent = 'Last occurrence restored';
+    el('#btn-undo-calendar-delete').hidden = true;
+    render();
+  };
+  render();
+</script>
+</body>
+</html>

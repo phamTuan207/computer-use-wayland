@@ -33,11 +33,13 @@ filename, and verify the export contains all edits.
 9. Fill the table header row: Column A, Column B, Column C.
 10. Fill the table body row 1 with values.
 11. Fill the table body row 2 with values.
-12. Update the table of contents count to reflect the added table.
+12. Verify the table of contents count now shows Tables: 1 (the fixture
+    updates it when the table is added).
 13. Click Save (in-document).
 14. Export the document to `report-export.md`.
-15. Open the exported file and confirm it contains `new vendor` and the table
-    with Column A/B/C headers and the two body rows.
+15. Read the export view (the exported file rendered on the page) and confirm
+    it contains `new vendor` and the table with Column A/B/C headers and the
+    two body rows.
 16. Confirm the exported file contains no `old vendor` text.
 17. Confirm the export filename is exactly `report-export.md`.
 

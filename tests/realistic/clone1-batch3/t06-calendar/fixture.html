@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Demo Calendar</title>
+<style>
+  body { font-family: sans-serif; margin: 16px; }
+  #cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; max-width: 700px; }
+  .dow { font-weight: bold; text-align: center; padding: 4px; }
+  .day { border: 1px solid #999; min-height: 64px; padding: 4px; cursor: pointer; }
+  .day.today { background: #fff3cd; }
+  .day.selected { outline: 2px solid blue; }
+  .chip { background: #cde4ff; margin: 2px 0; padding: 2px 4px; font-size: 12px; cursor: pointer; }
+  #form { display: none; border: 1px solid #999; padding: 10px; margin-top: 10px; max-width: 400px; }
+  #form input { display: block; margin: 6px 0; }
+  #details { display: none; border: 1px solid #999; padding: 10px; margin-top: 10px; max-width: 400px; }
+  button { margin: 4px; }
+</style>
+</head>
+<body>
+<h1>Demo Calendar</h1>
+<div>
+  <button id="prev-btn">Previous</button>
+  <span id="month-title">June 2026</span>
+  <button id="next-btn">Next</button>
+  <button id="today-btn">Today</button>
+</div>
+<div id="cal"></div>
+<div id="form">
+  <h3>New event on <span id="form-day"></span></h3>
+  <input id="event-title" placeholder="Event title">
+  <input id="event-time" placeholder="Time, e.g. 10:00" value="10:00">
+  <button id="save-event">Save</button>
+  <button id="cancel-event">Cancel</button>
+</div>
+<div id="details">
+  <h3 id="details-title"></h3>
+  <div id="details-meta"></div>
+  <label>Time: <input id="edit-time"></label>
+  <button id="update-event">Update time</button>
+  <button id="delete-event">Delete event</button>
+  <button id="close-details">Close</button>
+</div>
+<div id="status"></div>
+<script>
+  // Fixture world date is fixed at 15 June 2026 so runs are deterministic.
+  const TODAY = { year: 2026, month: 5, day: 15 }; // month is 0-based
+  const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'];
+  const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  let view = { year: 2026, month: 5 };
+  let events = [];
+  let nextId = 1;
+  let selectedDay = null;
+  let openEventId = null;
+  const cal = document.getElementById('cal');
+
+  function render() {
+    document.getElementById('month-title').textContent =
+      MONTH_NAMES[view.month] + ' ' + view.year;
+    cal.innerHTML = '';
+    DOW.forEach((d) => {
+      const th = document.createElement('div');
+      th.className = 'dow';
+      th.textContent = d;
+      cal.appendChild(th);
+    });
+    const first = new Date(view.year, view.month, 1).getDay();
+    const days = new Date(view.year, view.month + 1, 0).getDate();
+    for (let i = 0; i < first; i++) {
+      cal.appendChild(document.createElement('div'));
+    }
+    for (let d = 1; d <= days; d++) {
+      const cell = document.createElement('div');
+      cell.className = 'day';
+      cell.dataset.day = d;
+      if (view.year === TODAY.year && view.month === TODAY.month && d === TODAY.day) {
+        cell.classList.add('today');
+      }
+      if (selectedDay === d) cell.classList.add('selected');
+      const num = document.createElement('div');
+      num.className = 'day-num';
+      num.textContent = d;
+      cell.appendChild(num);
+      events
+        .filter((e) => e.year === view.year && e.month === view.month && e.day === d)
+        .forEach((e) => {
+          const chip = document.createElement('div');
+          chip.className = 'chip';
+          chip.dataset.eventId = e.id;
+          chip.textContent = e.time + ' ' + e.title;
+          chip.addEventListener('click', (ev) => {
+            ev.stopPropagation();
+            openDetails(e);
+          });
+          cell.appendChild(chip);
+        });
+      cell.addEventListener('click', () => {
+        selectedDay = d;
+        document.getElementById('form-day').textContent =
+          MONTH_NAMES[view.month] + ' ' + d + ', ' + view.year;
+        document.getElementById('form').style.display = 'block';
+        document.getElementById('details').style.display = 'none';
+        render();
+      });
+      cal.appendChild(cell);
+    }
+    document.getElementById('status').textContent =
+      'Events: ' + events.length;
+  }
+  function openDetails(e) {
+    openEventId = e.id;
+    document.getElementById('details-title').textContent = e.title;
+    document.getElementById('details-meta').textContent =
+      MONTH_NAMES[e.month] + ' ' + e.day + ', ' + e.year + ' at ' + e.time;
+    document.getElementById('edit-time').value = e.time;
+    document.getElementById('details').style.display = 'block';
+    document.getElementById('form').style.display = 'none';
+  }
+  document.getElementById('prev-btn').addEventListener('click', () => {
+    view.month -= 1;
+    if (view.month < 0) { view.month = 11; view.year -= 1; }
+    render();
+  });
+  document.getElementById('next-btn').addEventListener('click', () => {
+    view.month += 1;
+    if (view.month > 11) { view.month = 0; view.year += 1; }
+    render();
+  });
+  document.getElementById('today-btn').addEventListener('click', () => {
+    view = { year: TODAY.year, month: TODAY.month };
+    render();
+  });
+  document.getElementById('cancel-event').addEventListener('click', () => {
+    document.getElementById('form').style.display = 'none';
+  });
+  document.getElementById('save-event').addEventListener('click', () => {
+    const title = document.getElementById('event-title').value.trim();
+    const time = document.getElementById('event-time').value.trim();
+    if (!title) return;
+    events.push({ id: nextId++, year: view.year, month: view.month, day: selectedDay, title, time });
+    document.getElementById('event-title').value = '';
+    document.getElementById('form').style.display = 'none';
+    render();
+  });
+  document.getElementById('close-details').addEventListener('click', () => {
+    document.getElementById('details').style.display = 'none';
+  });
+  document.getElementById('update-event').addEventListener('click', () => {
+    const e = events.find((x) => x.id === openEventId);
+    if (!e) return;
+    e.time = document.getElementById('edit-time').value.trim();
+    openDetails(e);
+    render();
+    openDetails(e);
+  });
+  document.getElementById('delete-event').addEventListener('click', () => {
+    events = events.filter((x) => x.id !== openEventId);
+    document.getElementById('details').style.display = 'none';
+    render();
+  });
+  render();
+</script>
+</body>
+</html>

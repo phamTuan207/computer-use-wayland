@@ -9,7 +9,9 @@ Bug reproduction: follow written steps to reproduce a UI bug and document it.
 ## Context
 Pham Tuan received a written bug report describing a UI defect in a local app:
 when a user toggles a setting and immediately clicks Save without waiting, the
-setting reverts to its previous value. The agent must follow the written
+setting reverts to its previous value. The app has a known race: the first Save
+after a toggle writes the previous value back; a second Save commits the
+toggled value. The agent must follow the written
 reproduction steps exactly, observe whether the bug occurs, capture the before
 and after state, and document the result (reproduced or not) with evidence. This
 is a strict step-following and documentation task.
@@ -34,14 +36,12 @@ the outcome.
    `after2`.
 9. Read the setting state once more before typing any notes, so the note values
    come from a fresh observation and not from memory.
-9. Read the setting state once more before typing any notes, so the note values
-   come from a fresh observation and not from memory.
 10. Open the bug notes text area on the page.
 11. Type a bug note: title, steps followed, before value, after value, after2
     value, and conclusion (reproduced / not reproduced).
 12. Click Save note.
-13. Re-open the bug notes area and confirm the note text is present and
-    includes the conclusion.
+13. Read the saved note below the Save note button and confirm the note text
+    is present and includes the conclusion.
 14. Confirm the note mentions both before and after values explicitly.
 15. Confirm the setting value after the deliberate save (after2) matches the
     toggled value.

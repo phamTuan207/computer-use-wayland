@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Music Desk</title>
+  <style>
+    *{box-sizing:border-box}body{margin:0;padding:24px;background:#121416;color:#edf2f7;font:14px system-ui,sans-serif}.app{max-width:960px;margin:auto;background:#1c2024;border:1px solid #3a4148;border-radius:12px;overflow:hidden}header{padding:18px 22px;background:#20272b;display:flex;justify-content:space-between;align-items:center}h1{margin:0;color:#8de1c0;font-size:21px}.stats{display:flex;gap:14px;color:#aab6bd;flex-wrap:wrap}.stats b{color:#fff}main{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:18px}section{padding:15px;background:#171b1e;border:1px solid #394249;border-radius:9px}h2{margin:0 0 12px;font-size:16px}button,input{font:inherit;border:1px solid #46545b;border-radius:5px;padding:8px;color:#f3f7f8;background:#252d31}button{cursor:pointer}button:hover{background:#344147}.row{display:flex;gap:8px;margin-bottom:12px}.row input{flex:1}ul{padding-left:20px;line-height:1.9}.track{display:flex;justify-content:space-between;gap:10px;padding:4px 0}.track button{padding:4px 8px}.status{padding:8px;background:#20292b;color:#9ee4c4;border-radius:5px;min-height:36px}#playlist-track-list{white-space:pre-line;line-height:1.9}
+  </style>
+</head>
+<body>
+<div class="app">
+  <header><h1>Music Desk</h1><div class="stats"><span>Playlist: <b id="playlist-name">No playlist selected</b></span><span>Tracks: <b id="playlist-count">0</b></span><span>Duration: <b id="playlist-duration">0:00</b></span></div></header>
+  <main>
+    <section><h2>Library</h2><div class="row"><input id="playlist-name-input" placeholder="playlist name"><button id="btn-create-playlist">Create playlist</button></div>
+      <div class="track">Low Tide <span>3:20 <button id="btn-add-track-low-tide">Add</button></span></div>
+      <div class="track">Paper Planes <span>4:05 <button id="btn-add-track-paper-planes">Add</button></span></div>
+      <div class="track">Quiet Circuit <span>2:45 <button id="btn-add-track-quiet-circuit">Add</button></span></div>
+      <div class="track">Night Shift <span>3:50 <button id="btn-add-track-night-shift">Add</button></span></div>
+    </section>
+    <section><h2>Current playlist</h2><div id="playlist-track-list">No tracks</div>
+      <div class="row" style="margin-top:12px"><button id="btn-move-paper-up">Move Paper Planes up</button><button id="btn-shuffle">Shuffle</button><button id="btn-save-playlist">Save playlist</button></div>
+      <div class="row"><button id="btn-remove-quiet-circuit">Remove Quiet Circuit</button><button id="btn-remove-night-shift">Remove Night Shift</button><button id="btn-undo-playlist-change">Undo last removal</button></div>
+      <p>Shuffle: <b id="shuffle-status">Shuffle Off</b></p><div id="playlist-action-status" class="status">No changes</div><div id="save-status" class="status">Not saved</div>
+    </section>
+  </main>
+</div>
+<script>
+  const library = {
+    'low-tide': { name: 'Low Tide', seconds: 200 },
+    'paper-planes': { name: 'Paper Planes', seconds: 245 },
+    'quiet-circuit': { name: 'Quiet Circuit', seconds: 165 },
+    'night-shift': { name: 'Night Shift', seconds: 230 },
+  };
+  let playlistName = '';
+  let tracks = [];
+  let shuffled = false;
+  let undoTracks = null;
+  const el = (selector) => document.querySelector(selector);
+  function format(seconds) { return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`; }
+  function render() {
+    el('#playlist-name').textContent = playlistName || 'No playlist selected';
+    el('#playlist-count').textContent = String(tracks.length);
+    el('#playlist-duration').textContent = format(tracks.reduce((sum, id) => sum + library[id].seconds, 0));
+    el('#playlist-track-list').textContent = tracks.length ? tracks.map((id) => library[id].name).join('\n') : 'No tracks';
+    el('#shuffle-status').textContent = `Shuffle ${shuffled ? 'On' : 'Off'}`;
+  }
+  el('#btn-create-playlist').onclick = () => {
+    playlistName = el('#playlist-name-input').value.trim();
+    if (!playlistName) return;
+    tracks = [];
+    el('#playlist-name-input').value = '';
+    el('#playlist-action-status').textContent = `Created playlist: ${playlistName}`;
+    el('#save-status').textContent = 'Not saved';
+    render();
+  };
+  for (const id of Object.keys(library)) {
+    el(`#btn-add-track-${id}`).onclick = () => {
+      if (!playlistName || tracks.includes(id)) return;
+      tracks.push(id);
+      el('#playlist-action-status').textContent = `Added ${library[id].name}`;
+      render();
+    };
+  }
+  el('#btn-move-paper-up').onclick = () => {
+    const index = tracks.indexOf('paper-planes');
+    if (index > 0) [tracks[index - 1], tracks[index]] = [tracks[index], tracks[index - 1]];
+    el('#playlist-action-status').textContent = 'Moved Paper Planes up one position';
+    render();
+  };
+  function remove(id) {
+    const index = tracks.indexOf(id);
+    if (index < 0) return;
+    undoTracks = [...tracks];
+    tracks.splice(index, 1);
+    el('#playlist-action-status').textContent = `Removed ${library[id].name}`;
+    render();
+  }
+  el('#btn-remove-quiet-circuit').onclick = () => remove('quiet-circuit');
+  el('#btn-remove-night-shift').onclick = () => remove('night-shift');
+  el('#btn-undo-playlist-change').onclick = () => {
+    if (!undoTracks) return;
+    tracks = [...undoTracks];
+    undoTracks = null;
+    el('#playlist-action-status').textContent = 'Last removal undone';
+    render();
+  };
+  el('#btn-shuffle').onclick = () => {
+    if (!playlistName) return;
+    shuffled = !shuffled;
+    if (shuffled) {
+      const order = ['night-shift', 'quiet-circuit', 'paper-planes', 'low-tide'];
+      tracks = order.filter((id) => tracks.includes(id));
+    }
+    el('#playlist-action-status').textContent = shuffled ? 'Playlist shuffled' : 'Shuffle disabled';
+    render();
+  };
+  el('#btn-save-playlist').onclick = () => {
+    if (!playlistName) return;
+    const duration = format(tracks.reduce((sum, id) => sum + library[id].seconds, 0));
+    el('#save-status').textContent = `Playlist saved: ${playlistName} (${tracks.length} tracks, ${duration})`;
+  };
+  render();
+</script>
+</body>
+</html>

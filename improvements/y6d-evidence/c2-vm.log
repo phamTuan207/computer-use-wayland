@@ -1,0 +1,58 @@
+verdict block: lines 541-563
+PASS verdict logic 16/16 combos exactly 1 VERDICT line | 16/16 ok
+discovery block: lines 250-271
+PASS discovery: one listening socket + lock file -> wayland-1 | rc=0 elapsed=0.0s out=Y6-WAYLAND: nested socket wayland-1
+PASS discovery: two listening sockets -> ambiguous fail | rc=1 elapsed=0.1s out=FAIL: ambiguous nested Wayland sockets in /tmp/y6d-disc-3kunzuii
+PASS discovery: no socket -> missing fail | rc=1 elapsed=10.0s out=FAIL: no nested Wayland socket in /tmp/y6d-disc-7_erihov after 10s
+PASS discovery: dead socket only -> skipped, missing fail | rc=1 elapsed=10.4s out=FAIL: no nested Wayland socket in /tmp/y6d-disc-3kdyj167 after 10s
+PASS discovery: dead socket + live socket -> picks live | rc=0 elapsed=0.1s out=Y6-WAYLAND: nested socket wayland-2
+PASS discovery: socket appears at t=3 -> found | rc=0 elapsed=3.0s out=Y6-WAYLAND: nested socket wayland-1
+gate block: lines 235-248
+PASS backend gate: line present + live pid -> pass | rc=0 elapsed=0.0s
+PASS backend gate: line appears at t=6 -> pass via retry | rc=0 elapsed=6.0s
+PASS backend gate: line absent -> fail with stdout tail | rc=1 elapsed=10.1s
+PASS backend gate: log file missing -> fail fast | rc=1 elapsed=0.0s
+PASS backend gate: dead nest pid -> fail | rc=1
+nest() def: line 92
+PASS nest() guard: empty display -> fail closed | rc=1
+PASS nest() guard: display set -> runs | rc=0
+guard pre-check line 276: [ -n "$NEST_DISPLAY" ] || fail "nest() called before socket discovery"
+PASS guard pre-check exists before NEST_OUTPUT
+PASS guard pre-check: empty -> fail | rc=1
+PASS guard pre-check: set -> continue | rc=0
+ldd pre-flight block: lines 155-162
+dead fixture ldd:
+linux-vdso.so.1 (0x00007e1fc00c2000)
+	libaquamarine.so.14 => not found
+PASS ldd pre-flight: dead ABI fixture (libaquamarine.so.14 not found) -> fail naming it | rc=1 out=FAIL: hyprglass /tmp/y6d-dead-hyprglass.so cannot load (dead ABI): 	libaquamarine.so.14 => not found
+PASS ldd pre-flight: good .so (all deps resolve) -> pass | rc=0 out=Y6-WAYLAND: plugin ABI OK: /tmp/y6d-good-hyprglass.so
+PASS ldd pre-flight: conf with no hyprglass path -> fail | rc=1 out=FAIL: no hyprglass.so path in conf /tmp/y6d-ldd-zl6fghxd/conf.lua
+PASS ldd pre-flight: conf path missing on disk -> fail | rc=1 out=FAIL: hyprglass path in conf missing on disk: /tmp/y6d-no-such-hyprglass.so
+pill wait line: 365
+PASS pill wait: pill dies at t=2 -> fail fast, not 45s | rc=1 elapsed=2.0s
+PASS pill wait: pill alive + ready line -> READY | rc=0 elapsed=1.0s
+cleanup block: lines 197-198
+PASS cleanup: dirty dir -> only keep.txt remains | rc=0 kept=['keep.txt']
+PASS cleanup: empty dir -> rc 0 | rc=0 kept=[]
+PASS env propagation: backdrop mpv launch | rc=0 out=DISP=wayland-9
+PASS env propagation: pill launch | rc=0 out=DISP=wayland-9
+PASS env propagation: start_mpv | rc=0 out=DISP=wayland-9
+pill snippet lines 24-26: _disp = os.environ["WAYLAND_DISPLAY"]...
+PASS pill snippet: WAYLAND_DISPLAY missing -> KeyError | rc=1 out=ng>", line 4, in <module>
+  File "<frozen os>", line 685, in __getitem__
+KeyError: 'WAYLAND_DISPLAY'
+PASS pill snippet: WAYLAND_DISPLAY empty -> SystemExit with message | rc=1 out=Y6-NEST-PILL: WAYLAND_DISPLAY empty, launcher did not pass a socket name
+PASS pill snippet: WAYLAND_DISPLAY set -> env set | rc=0 out=DISP=wayland-1
+PASS no pkill -x on a shared process name (code, not comments)
+PASS no em/en dash in runner
+PASS timeout 600 present
+PASS no --socket flag in code (comments may document the removal)
+PASS no hardcoded wayland-y6 remains
+PASS tee to timestamped run log
+PASS timestamped frames dir
+PASS ldd pre-flight block present
+PASS gate retry loop present
+PASS socket connect probe present
+PASS pill liveness check present
+
+RESULT: all VM C2 checks PASS

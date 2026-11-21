@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Kanban Board</title>
+<style>
+body { font-family: sans-serif; margin: 20px; }
+#board { display: flex; gap: 12px; }
+.col { flex: 1; border: 1px solid #999; border-radius: 6px; padding: 8px; background: #f5f5f5; min-height: 300px; }
+.col h2 { margin: 4px 0 8px; font-size: 16px; }
+.count { color: #555; font-size: 13px; }
+.cards { min-height: 200px; }
+.card { background: #fff; border: 1px solid #ccc; border-radius: 4px; padding: 8px; margin: 6px 0; cursor: grab; }
+.card.dragging { opacity: 0.4; }
+.card .tag { font-size: 12px; color: #1565c0; }
+.card button { float: right; }
+.empty { color: #999; font-style: italic; padding: 8px; }
+#addForm, #filterRow { margin: 12px 0; }
+#addForm input, #addForm select, #filterRow input { padding: 8px; }
+#addForm button { padding: 8px 14px; }
+</style>
+</head>
+<body>
+<h1>Kanban Board</h1>
+<div id="filterRow">
+  <label>Filter cards <input id="filter" type="text" placeholder="type to filter"></label>
+  <span id="filterInfo"></span>
+</div>
+<div id="board">
+  <div class="col" data-col="todo"><h2>Todo <span class="count" id="count-todo"></span></h2><div class="cards" id="cards-todo"></div></div>
+  <div class="col" data-col="doing"><h2>Doing <span class="count" id="count-doing"></span></h2><div class="cards" id="cards-doing"></div></div>
+  <div class="col" data-col="done"><h2>Done <span class="count" id="count-done"></span></h2><div class="cards-done cards" id="cards-done"></div></div>
+</div>
+<div id="addForm">
+  <input id="newTitle" type="text" placeholder="New card title">
+  <select id="newTag">
+    <option value="feature">feature</option>
+    <option value="bug">bug</option>
+    <option value="docs">docs</option>
+  </select>
+  <button id="addBtn">Add card to Todo</button>
+</div>
+<p id="status"></p>
+<script>
+const DEFAULT_CARDS = [
+  { id: 'c1', col: 'todo', title: 'Fix login redirect bug', tag: 'bug' },
+  { id: 'c2', col: 'todo', title: 'Write onboarding docs', tag: 'docs' },
+  { id: 'c3', col: 'todo', title: 'Add dark mode toggle', tag: 'feature' },
+  { id: 'c4', col: 'doing', title: 'Refactor search API', tag: 'feature' },
+  { id: 'c5', col: 'doing', title: 'Fix slow dashboard query', tag: 'bug' },
+  { id: 'c6', col: 'done', title: 'Ship release 2.4', tag: 'feature' },
+];
+let cards;
+try {
+  cards = JSON.parse(localStorage.getItem('kanban') || 'null') || structuredClone(DEFAULT_CARDS);
+} catch {
+  cards = structuredClone(DEFAULT_CARDS);
+}
+let nextId = 100;
+function save() { localStorage.setItem('kanban', JSON.stringify(cards)); }
+function render() {
+  const filter = (document.getElementById('filter').value || '').toLowerCase();
+  let shown = 0;
+  for (const col of ['todo', 'doing', 'done']) {
+    const box = document.getElementById('cards-' + col);
+    box.innerHTML = '';
+    const inCol = cards.filter((c) => c.col === col);
+    const visible = inCol.filter((c) => !filter || (c.title + ' ' + c.tag).toLowerCase().includes(filter));
+    shown += visible.length;
+    document.getElementById('count-' + col).textContent = '(' + inCol.length + ')';
+    if (!visible.length) {
+      const e = document.createElement('div');
+      e.className = 'empty';
+      e.textContent = filter ? 'No matching cards' : 'No cards';
+      box.appendChild(e);
+    }
+    for (const c of visible) {
+      const d = document.createElement('div');
+      d.className = 'card';
+      d.draggable = true;
+      d.dataset.id = c.id;
+      d.innerHTML = '<button class="del" title="Delete">x</button><strong></strong><br><span class="tag"></span>';
+      d.querySelector('strong').textContent = c.title;
+      d.querySelector('.tag').textContent = c.tag;
+      d.querySelector('.del').addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        cards = cards.filter((x) => x.id !== c.id);
+        save(); render();
+        document.getElementById('status').textContent = 'Deleted ' + c.title;
+      });
+      d.addEventListener('dragstart', (ev) => {
+        ev.dataTransfer.setData('text/plain', c.id);
+        ev.dataTransfer.effectAllowed = 'move';
+        d.classList.add('dragging');
+      });
+      d.addEventListener('dragend', () => d.classList.remove('dragging'));
+      box.appendChild(d);
+    }
+  }
+  document.getElementById('filterInfo').textContent = filter ? ('Showing ' + shown + ' of ' + cards.length + ' cards') : '';
+}
+document.querySelectorAll('.cards').forEach((box) => {
+  box.addEventListener('dragover', (ev) => { ev.preventDefault(); ev.dataTransfer.dropEffect = 'move'; });
+  box.addEventListener('drop', (ev) => {
+    ev.preventDefault();
+    const id = ev.dataTransfer.getData('text/plain');
+    const card = cards.find((c) => c.id === id);
+    if (!card) return;
+    const col = box.id.replace('cards-', '');
+    const target = ev.target.closest('.card');
+    cards = cards.filter((c) => c.id !== id);
+    if (target && target.dataset.id) {
+      const idx = cards.findIndex((c) => c.id === target.dataset.id);
+      cards.splice(idx, 0, { ...card, col });
+    } else {
+      cards.push({ ...card, col });
+    }
+    save(); render();
+    document.getElementById('status').textContent = 'Moved ' + card.title + ' to ' + col;
+  });
+});
+document.getElementById('addBtn').addEventListener('click', () => {
+  const title = document.getElementById('newTitle').value.trim();
+  if (!title) { document.getElementById('status').textContent = 'Title is required'; return; }
+  cards.push({ id: 'c' + (nextId++), col: 'todo', title, tag: document.getElementById('newTag').value });
+  document.getElementById('newTitle').value = '';
+  save(); render();
+  document.getElementById('status').textContent = 'Added ' + title;
+});
+document.getElementById('filter').addEventListener('input', render);
+render();
+</script>
+</body>
+</html>

@@ -42,8 +42,19 @@ The checker launches headless chromium via puppeteer-core (default executable
 `/usr/bin/chromium`; override with `CU_CHROME_PATH`), opens the fixture via
 `file://`, calls `__fcckVerify()`, prints JSON, and exits 0 on pass.
 
-All 10 checkers were verified offline during generation (each returned
-passed:true).
+## Checker rule (Worker S fix, 21/11): DOM-only, never self-simulating
+Every `__fcckVerify()` reads ONLY the DOM state the agent actually produced
+(cell text, inbox list, rendered event, saved snapshot, export view). It never
+writes the expected state itself. That means a fresh fixture FAILS the checker,
+as it should: the checker verifies agent work, not the fixture. The old
+checkers self-simulated the intended flow and passed 10/10 offline; that
+proved nothing and was replaced (see `tests/realistic/RUN-REPORT-20261121.md`).
+
+To prove a fixture is runnable, drive it through the UI exactly as the spec
+says (Worker S did this with a jsdom simulation of every spec step, then
+called the checker: 10/10 pass after the simulated run, 10/10 fail on a fresh
+fixture). The live Zen run is the final proof; the offline simulation only
+proves the fixture CAN do what the spec asks.
 
 ## Rules kept
 - No em or en dashes (hyphen `-` only).

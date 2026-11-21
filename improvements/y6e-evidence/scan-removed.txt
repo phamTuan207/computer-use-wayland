@@ -1,0 +1,5 @@
+279:-Grab `hyprglass.so` from [Releases](https://github.com/hyprnux/hyprglass/releases/latest). Each release targets a specific Hyprland API version — check the release notes to confirm it matches yours.
+913:-As a last resort, setting `HYPRGLASS_SKIP_VERSION_CHECK=1` downgrades the failure to a warning. The variable must be present in **Hyprland's own environment**: export it from your session manager (uwsm, greetd, …) or set it early in your Hyprland config via the `env` keyword. This is unsupported — a real ABI mismatch can crash Hyprland.
+9804:-        // Last-resort escape hatch for exotic setups: HYPRGLASS_SKIP_VERSION_CHECK
+9807:-        const char* skipEnv  = std::getenv("HYPRGLASS_SKIP_VERSION_CHECK");
+9816:-            {"text", std::format("[{}] Version mismatch ignored (HYPRGLASS_SKIP_VERSION_CHECK) — ABI differences may crash Hyprland", PLUGIN_NAME)},

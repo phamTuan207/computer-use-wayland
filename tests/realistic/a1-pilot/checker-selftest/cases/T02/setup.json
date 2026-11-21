@@ -1,0 +1,13 @@
+{
+  "repo_head": "freeze",
+  "relay_head": "freeze",
+  "cu_code_exec": "1",
+  "cu_pick4_fastpath": "1",
+  "broker_solo_proof": "solo",
+  "fixture_md5": {
+    "pick4": "91b2f92945c167306a13ae32977a9bf3",
+    "f01": "2b6eda97036af51510b7eefe6d36dd93"
+  },
+  "checker_version": "freeze",
+  "runbook_version": "freeze"
+}

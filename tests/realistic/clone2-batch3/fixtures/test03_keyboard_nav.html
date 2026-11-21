@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Keyboard Only Checkout Flow</title>
+<style>
+  body { font-family: sans-serif; margin: 24px; color: #111; }
+  :focus { outline: 3px solid #005fcc; outline-offset: 2px; }
+  nav a { margin-right: 16px; }
+  section { margin-top: 24px; }
+  label { display: block; margin-top: 10px; }
+  .radio-label { display: inline-block; margin-right: 16px; }
+  .acc-panel { border: 1px solid #888; padding: 8px; margin-bottom: 8px; }
+  .acc-btn { display: block; width: 100%; text-align: left; padding: 8px; margin-top: 6px; }
+  table { border-collapse: collapse; margin-top: 8px; }
+  td, th { border: 1px solid #888; padding: 6px 12px; }
+  tr.selected td { background: #bde5bd; }
+  #focus-readout-box { position: sticky; top: 0; background: #fff8c5; padding: 8px; border: 1px solid #888; }
+  #form-error { color: #b00020; font-weight: bold; }
+  #success-message { background: #dff5df; border: 1px solid #2e7d32; padding: 10px; }
+</style>
+</head>
+<body>
+<div id="focus-readout-box">Currently focused element id: <span id="focus-readout">none</span></div>
+
+<header>
+  <h1>Checkout</h1>
+  <nav>
+    <a id="nav-home" href="#home">Home</a>
+    <a id="nav-products" href="#products">Products</a>
+    <a id="nav-help" href="#help">Help</a>
+    <a id="nav-contact" href="#contact">Contact</a>
+  </nav>
+</header>
+
+<section id="details-section">
+  <h2>Your details</h2>
+  <form id="checkout-form" novalidate>
+    <label for="field-name">Full name</label>
+    <input id="field-name" name="name" type="text" autocomplete="off">
+    <label for="field-email">Email</label>
+    <input id="field-email" name="email" type="email" autocomplete="off">
+    <label for="field-qty">Quantity</label>
+    <input id="field-qty" name="qty" type="number" min="1" value="">
+    <fieldset>
+      <legend>Shipping</legend>
+      <label class="radio-label"><input id="ship-std" name="ship" type="radio" value="standard" checked> Standard</label>
+      <label class="radio-label"><input id="ship-exp" name="ship" type="radio" value="express"> Express</label>
+    </fieldset>
+  </form>
+</section>
+
+<section id="info-section">
+  <h2>Information</h2>
+  <button id="acc-btn-1" class="acc-btn" type="button" aria-expanded="false" aria-controls="acc-panel-1">Delivery details</button>
+  <div id="acc-panel-1" class="acc-panel" hidden>Standard delivery takes three to five working days. Express delivery takes one working day.</div>
+  <button id="acc-btn-2" class="acc-btn" type="button" aria-expanded="false" aria-controls="acc-panel-2">Returns</button>
+  <div id="acc-panel-2" class="acc-panel" hidden>Items can be returned within thirty days of delivery.</div>
+  <button id="acc-btn-3" class="acc-btn" type="button" aria-expanded="false" aria-controls="acc-panel-3">Warranty</button>
+  <div id="acc-panel-3" class="acc-panel" hidden>Every item includes a two year warranty.</div>
+</section>
+
+<section id="plan-section">
+  <h2>Choose a plan row</h2>
+  <p>Selected row: <span id="selected-readout">none</span></p>
+  <table id="plan-table">
+    <thead><tr><th>Plan</th><th>Price</th></tr></thead>
+    <tbody>
+      <tr id="row-1" tabindex="0"><td>Basic</td><td>10</td></tr>
+      <tr id="row-2" tabindex="0"><td>Standard</td><td>20</td></tr>
+      <tr id="row-3" tabindex="0"><td>Premium</td><td>30</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="confirm-section">
+  <h2>Confirm</h2>
+  <label class="radio-label"><input id="confirm-check" type="checkbox"> I agree to the terms</label>
+  <p id="form-error" hidden></p>
+  <button id="submit-btn" type="button">Place order</button>
+  <p id="success-message" hidden></p>
+</section>
+
+<script>
+  var readout = document.getElementById("focus-readout");
+  document.addEventListener("focusin", function (event) {
+    readout.textContent = event.target.id || event.target.tagName;
+  });
+
+  function wireAccordion(btnId, panelId) {
+    var btn = document.getElementById(btnId);
+    var panel = document.getElementById(panelId);
+    btn.addEventListener("click", function () {
+      var open = panel.hidden;
+      panel.hidden = !open;
+      btn.setAttribute("aria-expanded", open ? "true" : "false");
+    });
+  }
+  wireAccordion("acc-btn-1", "acc-panel-1");
+  wireAccordion("acc-btn-2", "acc-panel-2");
+  wireAccordion("acc-btn-3", "acc-panel-3");
+
+  var selectedRow = null;
+  var selectedReadout = document.getElementById("selected-readout");
+  ["row-1", "row-2", "row-3"].forEach(function (rowId) {
+    var row = document.getElementById(rowId);
+    function selectRow() {
+      ["row-1", "row-2", "row-3"].forEach(function (otherId) {
+        document.getElementById(otherId).classList.remove("selected");
+      });
+      row.classList.add("selected");
+      selectedRow = row;
+      selectedReadout.textContent = rowId;
+    }
+    row.addEventListener("keydown", function (event) {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        selectRow();
+      }
+    });
+    row.addEventListener("click", selectRow);
+  });
+
+  var nameField = document.getElementById("field-name");
+  var emailField = document.getElementById("field-email");
+  var qtyField = document.getElementById("field-qty");
+  var checkBox = document.getElementById("confirm-check");
+  var errorBox = document.getElementById("form-error");
+  var successBox = document.getElementById("success-message");
+
+  document.getElementById("submit-btn").addEventListener("click", function () {
+    var invalid = null;
+    var message = "";
+    if (!nameField.value.trim()) { invalid = nameField; message = "Name is required."; }
+    else if (emailField.value.indexOf("@") < 0) { invalid = emailField; message = "A valid email is required."; }
+    else if (!(parseInt(qtyField.value, 10) >= 1)) { invalid = qtyField; message = "Quantity must be at least 1."; }
+    else if (!selectedRow) { invalid = document.getElementById("row-1"); message = "Please select a plan row."; }
+    else if (!checkBox.checked) { invalid = checkBox; message = "Please agree to the terms."; }
+    if (invalid) {
+      errorBox.textContent = message;
+      errorBox.hidden = false;
+      successBox.hidden = true;
+      invalid.focus();
+      return;
+    }
+    errorBox.hidden = true;
+    successBox.textContent = "Order confirmed for " + nameField.value.trim() +
+      ", plan " + selectedRow.id + ", quantity " + qtyField.value + ".";
+    successBox.hidden = false;
+  });
+</script>
+</body>
+</html>

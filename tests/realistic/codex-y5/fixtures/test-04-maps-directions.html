@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Route Desk</title>
+  <style>
+    *{box-sizing:border-box}body{margin:0;padding:26px;background:#e9eef2;color:#202b35;font:14px system-ui,sans-serif}.app{max-width:940px;margin:auto;background:white;border:1px solid #c8d3dc;border-radius:12px;overflow:hidden;box-shadow:0 8px 24px #20394a18}header{padding:18px 22px;background:#f3f7f8;display:flex;justify-content:space-between;align-items:center}h1{margin:0;color:#176c62;font-size:21px}.badge{color:#52616b}main{padding:20px;display:grid;grid-template-columns:1fr 1fr;gap:16px}.panel{padding:16px;border:1px solid #d4dfe3;border-radius:8px}h2{margin:0 0 12px;font-size:16px}.row{display:flex;gap:8px;margin:9px 0;flex-wrap:wrap}input{padding:9px;font:inherit;border:1px solid #aebfc6;border-radius:5px;min-width:180px;flex:1}button{padding:9px 12px;font:inherit;color:white;background:#187a6f;border:0;border-radius:5px;cursor:pointer}button:hover{background:#116359}.route{padding:12px;margin:8px 0;border:1px solid #c8d8d9;border-radius:7px;background:#f8fbfa}.route button{float:right}.status{padding:10px;background:#eaf5f2;border-radius:5px;min-height:38px;color:#135e56}.wide{grid-column:1/-1}.summary{white-space:pre-wrap;line-height:1.8}.small{font-size:12px;color:#61747c}
+  </style>
+</head>
+<body>
+<div class="app">
+  <header><h1>Route Desk</h1><div class="badge">Saved route: <b id="saved-route-status">No saved route</b></div></header>
+  <main>
+    <section class="panel"><h2>Trip</h2><div class="row"><input id="origin-input" placeholder="origin"><button id="btn-search-origin">Search origin</button></div><div id="origin-suggestions" class="small">No origin search</div><div>Origin: <b id="origin-selected">None</b></div>
+      <div class="row"><input id="destination-input" placeholder="destination"><button id="btn-search-destination">Search destination</button></div><div id="destination-suggestions" class="small">No destination search</div><div>Destination: <b id="destination-selected">None</b></div>
+      <div class="row"><button id="btn-find-routes">Find routes</button><button id="btn-reverse-route">Reverse</button><label><input id="avoid-tolls-toggle" type="checkbox"> Avoid tolls</label></div>
+      <div>Filter: <b id="avoid-tolls-status">Avoid tolls Off</b></div><div>Results: <b id="route-result-count">0</b></div>
+    </section>
+    <section class="panel"><h2>Route options</h2><div id="route-list"><p class="small">Choose an origin and destination to start.</p></div><div id="selected-route-summary" class="status">No route selected</div><div class="row"><button id="btn-save-route">Save route</button></div></section>
+    <section class="panel wide"><h2>Saved directions</h2><div id="saved-route-summary" class="summary">No saved route</div><div id="route-action-status" class="small">No route action yet</div></section>
+  </main>
+</div>
+<script>
+  const routeData = [
+    { id: 'north-loop', name: 'North Loop', distance: '14.2 km', duration: '24 min', toll: false, tollText: 'No tolls' },
+    { id: 'river-express', name: 'River Express', distance: '12.8 km', duration: '21 min', toll: true, tollText: '$2.50 toll' },
+  ];
+  let origin = '';
+  let destination = '';
+  let searched = false;
+  let selectedRoute = null;
+  const el = (selector) => document.querySelector(selector);
+  function routeText(route) { return `${route.name} | ${route.distance} | ${route.duration} | ${route.tollText}`; }
+  function renderRoutes() {
+    const results = searched && origin && destination ? routeData.filter((route) => !el('#avoid-tolls-toggle').checked || !route.toll) : [];
+    el('#route-result-count').textContent = String(results.length);
+    el('#avoid-tolls-status').textContent = `Avoid tolls ${el('#avoid-tolls-toggle').checked ? 'On' : 'Off'}`;
+    el('#route-list').innerHTML = results.map((route) => `<div class="route"><b>${routeText(route)}</b><button id="btn-select-${route.id}">Choose</button></div>`).join('') || '<p class="small">No route options</p>';
+    for (const route of results) el(`#btn-select-${route.id}`).onclick = () => {
+      selectedRoute = route;
+      el('#selected-route-summary').textContent = routeText(route);
+      el('#route-action-status').textContent = `Selected ${route.name}`;
+    };
+  }
+  function renderLocationSuggestions(kind) {
+    const input = el(`#${kind}-input`).value.trim().toLowerCase();
+    const output = el(`#${kind}-suggestions`);
+    const matches = ['Harbor Square', 'Workshop District'].filter((place) => place.toLowerCase().includes(input));
+    output.innerHTML = matches.map((place) => {
+      const slug = place.toLowerCase().replaceAll(' ', '-');
+      return `<button id="btn-pick-${kind}-${slug}">${place}</button>`;
+    }).join('') || `No ${kind} matches`;
+    for (const place of matches) {
+      const slug = place.toLowerCase().replaceAll(' ', '-');
+      el(`#btn-pick-${kind}-${slug}`).onclick = () => {
+        if (kind === 'origin') origin = place; else destination = place;
+        el(`#${kind}-selected`).textContent = place;
+      };
+    }
+  }
+  el('#btn-search-origin').onclick = () => renderLocationSuggestions('origin');
+  el('#btn-search-destination').onclick = () => renderLocationSuggestions('destination');
+  el('#btn-find-routes').onclick = () => {
+    searched = Boolean(origin && destination);
+    selectedRoute = null;
+    el('#selected-route-summary').textContent = 'No route selected';
+    el('#route-action-status').textContent = 'Route search complete';
+    renderRoutes();
+  };
+  el('#avoid-tolls-toggle').onchange = () => {
+    if (selectedRoute?.toll && el('#avoid-tolls-toggle').checked) {
+      selectedRoute = null;
+      el('#selected-route-summary').textContent = 'No route selected';
+      el('#route-action-status').textContent = 'Toll route removed from results';
+    }
+    renderRoutes();
+  };
+  el('#btn-reverse-route').onclick = () => {
+    [origin, destination] = [destination, origin];
+    el('#origin-input').value = origin;
+    el('#destination-input').value = destination;
+    el('#origin-selected').textContent = origin || 'None';
+    el('#destination-selected').textContent = destination || 'None';
+    el('#origin-suggestions').textContent = 'No origin search';
+    el('#destination-suggestions').textContent = 'No destination search';
+    selectedRoute = null;
+    el('#saved-route-summary').textContent = 'No saved route';
+    el('#saved-route-status').textContent = 'No saved route';
+    el('#selected-route-summary').textContent = 'No route selected';
+    searched = false;
+    el('#route-action-status').textContent = 'Direction reversed; search again';
+    renderRoutes();
+  };
+  el('#btn-save-route').onclick = () => {
+    if (!selectedRoute) return;
+    const savedRoute = `${origin} to ${destination} | ${routeText(selectedRoute)}`;
+    el('#saved-route-summary').textContent = savedRoute;
+    el('#saved-route-status').textContent = 'Route saved';
+    el('#route-action-status').textContent = `Saved ${selectedRoute.name}`;
+  };
+  renderRoutes();
+</script>
+</body>
+</html>

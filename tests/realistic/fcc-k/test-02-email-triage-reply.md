@@ -39,7 +39,7 @@ correction, and confirm the reply appears in Sent.
 15. In the reply draft, set To to the vendor address from message 1.
 16. Set Subject to `Re: vendor quote - price correction`.
 17. Click the body field and type the correction paragraph (at least 3 sentences
-    quoting the original price and the corrected price).
+    quoting the original price 45000 and the corrected price 42000).
 18. Click Send.
 19. Open the Sent folder (click Sent in the sidebar).
 20. Verify the new reply is the top message in Sent with the corrected subject.

@@ -1,0 +1,3 @@
+[1;32mDEBUG [0m]: [main] User-specified config location: '/tmp/y6-nested/conf/hyprland-wayland.lua'
+[ ERROR ] Hyprland was launched with only one of --socket and --wayland-fd.
+          Hint: Pass both --socket and --wayland-fd to perform Wayland socket handover.

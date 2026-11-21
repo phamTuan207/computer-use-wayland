@@ -1,0 +1,10 @@
+{
+  "case_task": "pick4",
+  "checked": {
+    "result_text": "not clicked yet"
+  },
+  "pass": false,
+  "problems": [
+    "pick4 result_text 'not clicked yet' does not contain 'pick4-ok'"
+  ]
+}

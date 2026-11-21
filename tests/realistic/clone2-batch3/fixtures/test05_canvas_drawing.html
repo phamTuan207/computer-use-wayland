@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Canvas Drawing App</title>
+<style>
+  body { font-family: sans-serif; margin: 16px; background: #fafafa; }
+  #toolbar { margin-bottom: 10px; }
+  .swatch { width: 34px; height: 34px; border: 2px solid #ccc; border-radius: 6px;
+            cursor: pointer; margin-right: 4px; vertical-align: middle; }
+  .swatch.active { border-color: #111; box-shadow: 0 0 0 2px #111 inset; }
+  button.tool { padding: 6px 12px; margin-right: 4px; cursor: pointer; }
+  button.tool.on { background: #333; color: #fff; }
+  #size { vertical-align: middle; }
+  #pad { border: 2px solid #333; background: #ffffff; display: block;
+         touch-action: none; cursor: crosshair; }
+  #status { margin-top: 8px; font-family: monospace; }
+  #preview { display: none; margin-top: 10px; border: 1px solid #999;
+             max-width: 320px; }
+  #download { display: none; margin-top: 10px; }
+</style>
+</head>
+<body>
+<h1>Canvas Drawing App</h1>
+<div id="toolbar">
+  <span>Color:</span>
+  <button class="swatch" data-color="#000000" style="background:#000000" title="black"></button>
+  <button class="swatch" data-color="#e53935" style="background:#e53935" title="red"></button>
+  <button class="swatch" data-color="#1e88e5" style="background:#1e88e5" title="blue"></button>
+  <button class="swatch" data-color="#43a047" style="background:#43a047" title="green"></button>
+  <button class="swatch" data-color="#fb8c00" style="background:#fb8c00" title="orange"></button>
+  <button class="swatch" data-color="#8e24aa" style="background:#8e24aa" title="purple"></button>
+  <label>Brush size: <input id="size" type="range" min="1" max="20" value="4">
+    <span id="sizeVal">4</span></label>
+  <button class="tool" id="eraser" type="button">Eraser</button>
+  <button class="tool" id="undo" type="button">Undo</button>
+  <button class="tool" id="redo" type="button">Redo</button>
+  <button class="tool" id="clear" type="button">Clear</button>
+  <button class="tool" id="save" type="button">Save PNG</button>
+</div>
+<canvas id="pad" width="640" height="440"></canvas>
+<p id="status">Strokes: 0 | Color: #000000 | Size: 4 | Eraser: off</p>
+<a id="download" download="drawing.png">Download drawing.png</a>
+<img id="preview" alt="Saved drawing preview">
+<script>
+(function () {
+  var canvas = document.getElementById("pad");
+  var ctx = canvas.getContext("2d");
+  var status = document.getElementById("status");
+  var sizeInput = document.getElementById("size");
+  var sizeVal = document.getElementById("sizeVal");
+  var eraserBtn = document.getElementById("eraser");
+
+  var currentColor = "#000000";
+  var brushSize = 4;
+  var erasing = false;
+  var strokes = [];
+  var redoStack = [];
+  var current = null;
+
+  function updateStatus() {
+    status.textContent = "Strokes: " + strokes.length +
+      " | Color: " + currentColor +
+      " | Size: " + brushSize +
+      " | Eraser: " + (erasing ? "on" : "off");
+  }
+
+  function drawStroke(s) {
+    if (s.points.length === 0) { return; }
+    ctx.save();
+    ctx.globalCompositeOperation = s.erase ? "destination-out" : "source-over";
+    ctx.strokeStyle = s.color;
+    ctx.lineWidth = s.size;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.beginPath();
+    ctx.moveTo(s.points[0][0], s.points[0][1]);
+    if (s.points.length === 1) {
+      ctx.lineTo(s.points[0][0] + 0.1, s.points[0][1] + 0.1);
+    } else {
+      for (var i = 1; i < s.points.length; i++) {
+        ctx.lineTo(s.points[i][0], s.points[i][1]);
+      }
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function redraw() {
+    ctx.save();
+    ctx.globalCompositeOperation = "source-over";
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.restore();
+    for (var i = 0; i < strokes.length; i++) { drawStroke(strokes[i]); }
+    if (current) { drawStroke(current); }
+  }
+
+  function pos(e) {
+    var r = canvas.getBoundingClientRect();
+    var x = (e.clientX - r.left) * (canvas.width / r.width);
+    var y = (e.clientY - r.top) * (canvas.height / r.height);
+    return [Math.round(x), Math.round(y)];
+  }
+
+  canvas.addEventListener("mousedown", function (e) {
+    current = { color: currentColor, size: brushSize, erase: erasing,
+                points: [pos(e)] };
+    drawStroke(current);
+  });
+  canvas.addEventListener("mousemove", function (e) {
+    if (!current) { return; }
+    current.points.push(pos(e));
+    drawStroke({ color: current.color, size: current.size,
+                 erase: current.erase,
+                 points: current.points.slice(-2) });
+  });
+  window.addEventListener("mouseup", function () {
+    if (!current) { return; }
+    strokes.push(current);
+    current = null;
+    redoStack = [];
+    updateStatus();
+  });
+
+  var swatches = document.querySelectorAll(".swatch");
+  swatches.forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      currentColor = btn.getAttribute("data-color");
+      erasing = false;
+      eraserBtn.classList.remove("on");
+      swatches.forEach(function (b) { b.classList.remove("active"); });
+      btn.classList.add("active");
+      updateStatus();
+    });
+  });
+  document.querySelector("[data-color='#000000']").classList.add("active");
+
+  sizeInput.addEventListener("input", function () {
+    brushSize = parseInt(sizeInput.value, 10);
+    sizeVal.textContent = String(brushSize);
+    updateStatus();
+  });
+
+  eraserBtn.addEventListener("click", function () {
+    erasing = !erasing;
+    eraserBtn.classList.toggle("on", erasing);
+    updateStatus();
+  });
+  document.getElementById("undo").addEventListener("click", function () {
+    if (strokes.length === 0) { return; }
+    redoStack.push(strokes.pop());
+    redraw();
+    updateStatus();
+  });
+  document.getElementById("redo").addEventListener("click", function () {
+    if (redoStack.length === 0) { return; }
+    strokes.push(redoStack.pop());
+    redraw();
+    updateStatus();
+  });
+  document.getElementById("clear").addEventListener("click", function () {
+    strokes = [];
+    redoStack = [];
+    current = null;
+    redraw();
+    updateStatus();
+  });
+  document.getElementById("save").addEventListener("click", function () {
+    var url = canvas.toDataURL("image/png");
+    var link = document.getElementById("download");
+    link.href = url;
+    link.style.display = "inline-block";
+    var img = document.getElementById("preview");
+    img.src = url;
+    img.style.display = "block";
+  });
+
+  updateStatus();
+
+  window.drawApp = {
+    canvas: canvas,
+    getState: function () {
+      return {
+        strokes: strokes.length,
+        redoCount: redoStack.length,
+        color: currentColor,
+        size: brushSize,
+        erasing: erasing,
+        dataUrlLength: canvas.toDataURL("image/png").length
+      };
+    }
+  };
+})();
+</script>
+</body>
+</html>

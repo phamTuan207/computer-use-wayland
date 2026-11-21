@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Team Chat Search</title>
+  <style>
+    *{box-sizing:border-box}body{margin:0;padding:24px;background:#eff2f5;color:#263342;font:14px system-ui,sans-serif}.app{max-width:1020px;margin:auto;background:white;border:1px solid #d5dde4;border-radius:10px;overflow:hidden}header{padding:18px 22px;background:#344558;color:white;display:flex;justify-content:space-between}h1{margin:0;font-size:20px}.stats{color:#dce6ef}.stats b{color:#fff}main{padding:18px;display:grid;grid-template-columns:1.1fr .9fr;gap:15px}.panel{padding:14px;border:1px solid #dbe2e8;border-radius:8px;background:#fbfcfd}h2{margin:0 0 12px;font-size:16px}.row{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin:8px 0}input,select{padding:8px;font:inherit;border:1px solid #b6c4d0;border-radius:5px;background:white;color:#263342}input[type=text]{min-width:155px}button{padding:8px 11px;font:inherit;border:0;border-radius:5px;background:#436a8c;color:#fff;cursor:pointer}button:hover{background:#335473}.result{padding:10px;border-bottom:1px solid #e1e7ec;display:flex;justify-content:space-between;gap:10px}.result small{display:block;color:#66798a;margin-top:3px}.status{padding:9px;background:#edf3f7;border-radius:5px;min-height:36px;color:#31546f}.message{padding:13px;background:#f2f6f8;border-radius:6px;min-height:100px;line-height:1.8}.modal{padding:13px;border:2px solid #6e93b3;border-radius:7px;background:#f4f8fb;margin-top:12px}
+  </style>
+</head>
+<body>
+<div class="app">
+  <header><h1>Team Chat Search</h1><div class="stats">Results: <b id="search-result-count">0</b> | Active room: <b id="active-room">None</b></div></header>
+  <main>
+    <section class="panel"><h2>Search messages</h2><div class="row"><input id="search-query-input" placeholder="search words"><button id="btn-search-messages">Search</button></div><div class="row"><label>Sender <select id="sender-filter"><option value="all">All senders</option><option value="Build Bot">Build Bot</option><option value="Design Bot">Design Bot</option></select></label><label>From <input id="from-date-input" placeholder="YYYY-MM-DD"></label><label>To <input id="to-date-input" placeholder="YYYY-MM-DD"></label><button id="btn-apply-filters">Apply filters</button></div><div id="filter-summary" class="status">No search run</div><div id="search-results"><p>No results</p></div></section>
+    <section class="panel"><h2>Selected message</h2><div class="message"><div id="active-message-text">No message selected</div><div>Sender: <b id="active-message-sender">None</b></div><div>Date: <b id="active-message-date">None</b></div></div><div class="row"><button id="btn-star-message">Star message</button><span id="star-status">Not starred</span></div><div class="row"><button id="btn-forward-message">Forward message</button><span id="forward-status">Not forwarded</span></div><div>Forwarded count: <b id="forwarded-count">0</b></div><div id="forward-modal" class="modal" hidden><h2>Forward message</h2><input id="forward-room-input" placeholder="room name"><button id="btn-confirm-forward">Forward</button></div></section>
+  </main>
+</div>
+<script>
+  const messages = [
+    { id: 'm1', text: 'Release checklist is ready for review.', sender: 'Build Bot', date: '2026-10-12', room: 'Build Room' },
+    { id: 'm2', text: 'Release checklist was approved.', sender: 'Build Bot', date: '2026-10-13', room: 'Build Room' },
+    { id: 'm3', text: 'Release checklist draft is ready.', sender: 'Design Bot', date: '2026-10-12', room: 'Design Room' },
+    { id: 'm4', text: 'Launch checklist is ready for staging.', sender: 'Build Bot', date: '2026-10-12', room: 'Build Room' },
+  ];
+  let results = [];
+  let activeMessage = null;
+  let starred = false;
+  let forwarded = 0;
+  const el = (selector) => document.querySelector(selector);
+  function renderResults() {
+    el('#search-result-count').textContent = String(results.length);
+    el('#search-results').innerHTML = results.map((message) => `<div class="result"><div>${message.text}<small>${message.sender} | ${message.date} | ${message.room}</small></div><button id="btn-open-result-${message.id}">Jump to result</button></div>`).join('') || '<p>No results</p>';
+    for (const message of results) el(`#btn-open-result-${message.id}`).onclick = () => {
+      activeMessage = message;
+      starred = false;
+      el('#active-message-text').textContent = message.text;
+      el('#active-message-sender').textContent = message.sender;
+      el('#active-message-date').textContent = message.date;
+      el('#active-room').textContent = message.room;
+      el('#star-status').textContent = 'Not starred';
+    };
+  }
+  function runSearch() {
+    const query = el('#search-query-input').value.trim().toLowerCase();
+    const sender = el('#sender-filter').value;
+    const from = el('#from-date-input').value.trim();
+    const to = el('#to-date-input').value.trim();
+    results = messages.filter((message) => message.text.toLowerCase().includes(query) && (sender === 'all' || message.sender === sender) && (!from || message.date >= from) && (!to || message.date <= to));
+    el('#filter-summary').textContent = `${results.length} matching message${results.length === 1 ? '' : 's'}`;
+    renderResults();
+  }
+  el('#btn-search-messages').onclick = runSearch;
+  el('#btn-apply-filters').onclick = runSearch;
+  el('#btn-star-message').onclick = () => {
+    if (!activeMessage) return;
+    starred = !starred;
+    el('#star-status').textContent = starred ? 'Starred' : 'Not starred';
+  };
+  el('#btn-forward-message').onclick = () => { if (activeMessage) el('#forward-modal').hidden = false; };
+  el('#btn-confirm-forward').onclick = () => {
+    const room = el('#forward-room-input').value.trim();
+    if (!activeMessage || !room) return;
+    forwarded += 1;
+    el('#forwarded-count').textContent = String(forwarded);
+    el('#forward-status').textContent = `Forwarded to ${room}`;
+    el('#active-room').textContent = room;
+    el('#forward-modal').hidden = true;
+  };
+</script>
+</body>
+</html>

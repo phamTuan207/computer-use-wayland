@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Demo Video Player</title>
+<style>
+body { font-family: sans-serif; margin: 20px; }
+#player { max-width: 640px; margin: 0 auto; }
+video { width: 100%; background: #000; display: block; }
+.controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 8px; }
+button { padding: 8px 12px; }
+#seek { flex: 1; min-width: 120px; }
+#captionBox { min-height: 20px; margin-top: 8px; font-size: 15px; color: #222; }
+#status { margin-top: 8px; color: #555; }
+</style>
+</head>
+<body>
+<div id="player">
+  <h1>Demo Video Player</h1>
+  <video id="vid" preload="auto" crossorigin="anonymous">
+    <source src="clip.mp4" type="video/mp4">
+    <track id="capTrack" kind="captions" label="English" srclang="en" src="captions.vtt" default>
+  </video>
+  <div class="controls">
+    <button id="playBtn">Play</button>
+    <button id="pauseBtn">Pause</button>
+    <input id="seek" type="range" min="0" max="10" step="0.1" value="0">
+    <span id="timeLabel">0.0 / 10.0 s</span>
+    <label>Volume <input id="vol" type="range" min="0" max="1" step="0.1" value="1"></label>
+    <button id="muteBtn">Mute</button>
+    <select id="speed">
+      <option value="0.5">0.5x</option>
+      <option value="1" selected>1x</option>
+      <option value="1.5">1.5x</option>
+      <option value="2">2x</option>
+    </select>
+    <button id="ccBtn">Captions: on</button>
+    <button id="replayBtn">Replay</button>
+  </div>
+  <div id="captionBox"></div>
+  <div id="status">ready</div>
+</div>
+<script>
+const vid = document.getElementById('vid');
+const track = document.getElementById('capTrack').track;
+const captionBox = document.getElementById('captionBox');
+const timeLabel = document.getElementById('timeLabel');
+const statusEl = document.getElementById('status');
+const seek = document.getElementById('seek');
+function fmt(t) { return t.toFixed(1) + ' / ' + vid.duration.toFixed(1) + ' s'; }
+function showCaption() {
+  const cues = track.activeCues;
+  captionBox.textContent = cues && cues.length ? cues[0].text : '';
+}
+track.addEventListener('cuechange', showCaption);
+vid.addEventListener('timeupdate', () => {
+  timeLabel.textContent = fmt(vid.currentTime);
+  seek.value = vid.currentTime;
+  showCaption();
+});
+vid.addEventListener('loadedmetadata', () => {
+  timeLabel.textContent = fmt(0);
+  seek.max = vid.duration;
+});
+vid.addEventListener('play', () => { statusEl.textContent = 'playing'; });
+vid.addEventListener('pause', () => { statusEl.textContent = 'paused'; });
+vid.addEventListener('ended', () => { statusEl.textContent = 'ended'; });
+document.getElementById('playBtn').addEventListener('click', () => vid.play());
+document.getElementById('pauseBtn').addEventListener('click', () => vid.pause());
+document.getElementById('replayBtn').addEventListener('click', () => {
+  vid.currentTime = 0;
+  vid.play();
+});
+seek.addEventListener('input', () => { vid.currentTime = Number(seek.value); });
+document.getElementById('vol').addEventListener('input', (e) => {
+  vid.volume = Number(e.target.value);
+  vid.muted = false;
+});
+document.getElementById('muteBtn').addEventListener('click', () => {
+  vid.muted = !vid.muted;
+  document.getElementById('muteBtn').textContent = vid.muted ? 'Unmute' : 'Mute';
+});
+document.getElementById('speed').addEventListener('change', (e) => {
+  vid.playbackRate = Number(e.target.value);
+});
+document.getElementById('ccBtn').addEventListener('click', (e) => {
+  const on = track.mode !== 'showing';
+  track.mode = on ? 'showing' : 'hidden';
+  e.target.textContent = on ? 'Captions: on' : 'Captions: off';
+  if (!on) captionBox.textContent = '';
+  else showCaption();
+});
+</script>
+</body>
+</html>

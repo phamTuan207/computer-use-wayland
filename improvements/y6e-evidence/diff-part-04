@@ -1,0 +1,1998 @@
+ {"color", CHyprColor{1.0, 0.8, 0.2, 1.0}},
+         });
+@@ -857,7 +1027,7 @@ bool anySelfSampleConfigured(const SPluginConfig& config, const std::unordered_m
+ static float resolvePresetFloatImpl(
+     const std::string& presetName, bool isDark,
+     float SPresetValues::* presetField,
+-    Hyprlang::FLOAT* const* SOverridableConfig::* configField,
++    Config::FLOAT* const* SOverridableConfig::* configField,
+     const SPluginConfig& config,
+     const std::unordered_map<std::string, SCustomPreset>& customPresets,
+     float hardcodedDefault, int depth
+@@ -896,7 +1066,7 @@ static float resolvePresetFloatImpl(
+ float resolvePresetFloat(
+     const SResolveContext& context,
+     float SPresetValues::* presetField,
+-    Hyprlang::FLOAT* const* SOverridableConfig::* configField,
++    Config::FLOAT* const* SOverridableConfig::* configField,
+     float hardcodedDefault
+ ) {
+     return resolvePresetFloatImpl(context.presetName, context.isDark, presetField, configField,
+@@ -906,7 +1076,7 @@ float resolvePresetFloat(
+ static int64_t resolvePresetIntImpl(
+     const std::string& presetName, bool isDark,
+     int64_t SPresetValues::* presetField,
+-    Hyprlang::INT* const* SOverridableConfig::* configField,
++    Config::INTEGER* const* SOverridableConfig::* configField,
+     const SPluginConfig& config,
+     const std::unordered_map<std::string, SCustomPreset>& customPresets,
+     int64_t hardcodedDefault, int depth
+@@ -945,7 +1115,7 @@ static int64_t resolvePresetIntImpl(
+ int64_t resolvePresetInt(
+     const SResolveContext& context,
+     int64_t SPresetValues::* presetField,
+-    Hyprlang::INT* const* SOverridableConfig::* configField,
++    Config::INTEGER* const* SOverridableConfig::* configField,
+     int64_t hardcodedDefault
+ ) {
+     return resolvePresetIntImpl(context.presetName, context.isDark, presetField, configField,
+diff --git a/src/PluginConfig.hpp b/src/PluginConfig.hpp
+index 66df020..b39da14 100644
+--- a/src/PluginConfig.hpp
++++ b/src/PluginConfig.hpp
+@@ -8,8 +8,6 @@
+ #include <typeinfo>
+ #include <unordered_map>
+ 
+-inline constexpr std::string_view CONFIG_PREFIX = "plugin:hyprglass:";
+-
+ // Window tags for theme and preset selection
+ inline constexpr std::string_view TAG_THEME_PREFIX  = "hyprglass_theme_";
+ inline constexpr std::string_view TAG_PRESET_PREFIX = "hyprglass_preset_";
+@@ -19,10 +17,10 @@ inline constexpr std::string_view TAG_PRESET_PREFIX = "hyprglass_preset_";
+ inline constexpr std::string_view TAG_ENABLED  = "hyprglass_enabled";
+ inline constexpr std::string_view TAG_DISABLED = "hyprglass_disabled";
+ 
+-// Hyprland stores dynamic tags (`tagwindow` dispatcher, dynamic window rules)
+-// with a trailing '*'. CTagKeeper::isTagged() normalizes this for exact lookups,
+-// but code iterating getTags() or registering preset names must strip it itself
+-// so "firefox" and "firefox*" refer to the same preset.
++// Hyprland stores dynamic tags (the `tag` window rule effect) with a trailing '*'.
++// CTagKeeper::isTagged() normalizes this for exact lookups, but code iterating
++// getTags() or registering preset names must strip it itself so "firefox" and
++// "firefox*" refer to the same preset.
+ inline std::string stripDynamicTagMarker(std::string_view tag) {
+     if (tag.ends_with('*'))
+         tag.remove_suffix(1);
+@@ -30,18 +28,32 @@ inline std::string stripDynamicTagMarker(std::string_view tag) {
+ }
+ 
+ // Sentinel: "not set by user, inherit from parent layer"
+-inline constexpr Hyprlang::FLOAT SENTINEL_FLOAT = -1.0;
+-inline constexpr Hyprlang::INT   SENTINEL_INT   = -1;
++inline constexpr Config::FLOAT   SENTINEL_FLOAT = -1.0;
++inline constexpr Config::INTEGER SENTINEL_INT   = -1;
+ 
+ inline constexpr int MAX_PRESET_INHERITANCE_DEPTH = 8;
+ 
++// hg.layer() namespace that whitelists every layer; exact match, no globbing.
++inline const std::string LAYER_NAMESPACE_WILDCARD = "*";
++
+ // Layer glass masking strategy: how hyprglass decides which pixels of a layer
+ // surface get the glass effect.
+-enum class ELayerMaskMode { AUTO, ALPHA, REGION };
++enum class ELayerMaskMode { AUTO, ALPHA, REGION, CONTOUR };
+ 
+-// Parses "auto"/"alpha"/"region"; nullopt for anything else.
++// Parses "auto"/"alpha"/"region"/"contour"; nullopt for anything else.
+ [[nodiscard]] std::optional<ELayerMaskMode> parseLayerMaskMode(std::string_view value);
+ 
++// Fixed glass shape of a layer namespace: the layer box inset per side and
++// rounded by one corner radius, both in logical px. A negative inset reaches
++// past that layer edge, a negative radius makes a capsule.
++struct SLayerShape {
++    float insetTop    = 0.0f;
++    float insetRight  = 0.0f;
++    float insetBottom = 0.0f;
++    float insetLeft   = 0.0f;
++    float radius      = 0.0f;
++};
++
+ // Instrumentation mode (plugin:hyprglass:debug:mode). Isolates the render-pass
+ // cost from the GL pipeline cost for A/B measurement: hints_only skips all GL
+ // work in the pass elements while keeping their boundingBox/needsLiveBlur/
+@@ -70,13 +82,10 @@ inline constexpr auto BLUR_FOLD           = "plugin:hyprglass:blur_fold";
+ inline constexpr auto DEBUG_MODE   = "plugin:hyprglass:debug:mode";
+ inline constexpr auto DEBUG_TIMERS = "plugin:hyprglass:debug:timers";
+ 
+-// Preset keyword, registered as unscoped because Hyprlang does not dispatch
+-// scoped keyword handlers inside the plugin special category.
+-inline constexpr auto PRESET_KEYWORD = "preset";
+-
+ // Overridable — global level
+ inline constexpr auto BLUR_STRENGTH        = "plugin:hyprglass:blur_strength";
+ inline constexpr auto BLUR_ITERATIONS      = "plugin:hyprglass:blur_iterations";
++inline constexpr auto NOISE_STRENGTH       = "plugin:hyprglass:noise_strength";
+ inline constexpr auto REFRACTION_STRENGTH  = "plugin:hyprglass:refraction_strength";
+ inline constexpr auto CHROMATIC_ABERRATION = "plugin:hyprglass:chromatic_aberration";
+ inline constexpr auto FRESNEL_STRENGTH     = "plugin:hyprglass:fresnel_strength";
+@@ -84,6 +93,9 @@ inline constexpr auto SPECULAR_STRENGTH    = "plugin:hyprglass:specular_strength
+ inline constexpr auto SPECULAR_ANGLE       = "plugin:hyprglass:specular_angle";
+ inline constexpr auto GLASS_OPACITY        = "plugin:hyprglass:glass_opacity";
+ inline constexpr auto EDGE_THICKNESS       = "plugin:hyprglass:edge_thickness";
++inline constexpr auto EDGE_THICKNESS_PX    = "plugin:hyprglass:edge_thickness_px";
++inline constexpr auto EDGE_HEIGHT          = "plugin:hyprglass:edge_height";
++inline constexpr auto FRESNEL_REFLECTION   = "plugin:hyprglass:fresnel_reflection";
+ inline constexpr auto TINT_COLOR           = "plugin:hyprglass:tint_color";
+ inline constexpr auto LENS_DISTORTION      = "plugin:hyprglass:lens_distortion";
+ inline constexpr auto BRIGHTNESS           = "plugin:hyprglass:brightness";
+@@ -104,20 +116,22 @@ inline constexpr auto BEVEL_TINT            = "plugin:hyprglass:bevel_tint";
+ inline constexpr auto BEVEL_ANGLE           = "plugin:hyprglass:bevel_angle";
+ inline constexpr auto BEVEL_SHADOW          = "plugin:hyprglass:bevel_shadow";
+ inline constexpr auto SELF_SAMPLE           = "plugin:hyprglass:self_sample";
++inline constexpr auto XRAY                  = "plugin:hyprglass:xray";
++inline constexpr auto FOCUS_LIGHT           = "plugin:hyprglass:focus_light";
++inline constexpr auto FOCUS_LIGHT_COLOR     = "plugin:hyprglass:focus_light_color";
++inline constexpr auto FROST                 = "plugin:hyprglass:frost";
++inline constexpr auto FROST_BLUR            = "plugin:hyprglass:frost_blur";
+ 
+ // Layer surface support
+ inline constexpr auto LAYERS_ENABLED            = "plugin:hyprglass:layers:enabled";
+-inline constexpr auto LAYERS_NAMESPACES         = "plugin:hyprglass:layers:namespaces";
+-inline constexpr auto LAYERS_EXCLUDE_NAMESPACES = "plugin:hyprglass:layers:exclude_namespaces";
+ inline constexpr auto LAYERS_PRESET             = "plugin:hyprglass:layers:preset";
+-inline constexpr auto LAYERS_NAMESPACE_PRESETS          = "plugin:hyprglass:layers:namespace_presets";
+-inline constexpr auto LAYERS_NAMESPACE_MASK_THRESHOLDS  = "plugin:hyprglass:layers:namespace_mask_thresholds";
+-inline constexpr auto LAYERS_NAMESPACE_LIVE_RESAMPLE    = "plugin:hyprglass:layers:namespace_live_resample";
++inline constexpr auto LAYERS_MASK_THRESHOLD             = "plugin:hyprglass:layers:mask_threshold";
+ inline constexpr auto LAYERS_LIVE_RESAMPLE              = "plugin:hyprglass:layers:live_resample";
+ inline constexpr auto LAYERS_LIVE_RESAMPLE_FPS          = "plugin:hyprglass:layers:live_resample_fps";
+ inline constexpr auto LAYERS_FORCE_LIVE_RESAMPLE        = "plugin:hyprglass:layers:force_live_resample";
+ inline constexpr auto LAYERS_MASK_MODE                  = "plugin:hyprglass:layers:mask_mode";
+-inline constexpr auto LAYERS_NAMESPACE_MASK_MODES       = "plugin:hyprglass:layers:namespace_mask_modes";
++// Alpha mask only: alpha range above mask_threshold over which layer glass fades in; 0 keeps the hard mask.
++inline constexpr auto LAYERS_MASK_FEATHER               = "plugin:hyprglass:layers:mask_feather";
+ inline constexpr auto LAYERS_MANAGE_BLUR                = "plugin:hyprglass:layers:manage_blur";
+ 
+ // Subsurface item glass support (see GlassSubsurfaceState).
+@@ -139,6 +153,7 @@ inline constexpr auto WINDOWS_LIVE_RESAMPLE_FPS = "plugin:hyprglass:windows:live
+ // Overridable — dark theme overrides
+ inline constexpr auto DARK_BLUR_STRENGTH        = "plugin:hyprglass:dark:blur_strength";
+ inline constexpr auto DARK_BLUR_ITERATIONS      = "plugin:hyprglass:dark:blur_iterations";
++inline constexpr auto DARK_NOISE_STRENGTH       = "plugin:hyprglass:dark:noise_strength";
+ inline constexpr auto DARK_REFRACTION_STRENGTH  = "plugin:hyprglass:dark:refraction_strength";
+ inline constexpr auto DARK_CHROMATIC_ABERRATION = "plugin:hyprglass:dark:chromatic_aberration";
+ inline constexpr auto DARK_FRESNEL_STRENGTH     = "plugin:hyprglass:dark:fresnel_strength";
+@@ -146,6 +161,9 @@ inline constexpr auto DARK_SPECULAR_STRENGTH    = "plugin:hyprglass:dark:specula
+ inline constexpr auto DARK_SPECULAR_ANGLE       = "plugin:hyprglass:dark:specular_angle";
+ inline constexpr auto DARK_GLASS_OPACITY        = "plugin:hyprglass:dark:glass_opacity";
+ inline constexpr auto DARK_EDGE_THICKNESS       = "plugin:hyprglass:dark:edge_thickness";
++inline constexpr auto DARK_EDGE_THICKNESS_PX    = "plugin:hyprglass:dark:edge_thickness_px";
++inline constexpr auto DARK_EDGE_HEIGHT          = "plugin:hyprglass:dark:edge_height";
++inline constexpr auto DARK_FRESNEL_REFLECTION   = "plugin:hyprglass:dark:fresnel_reflection";
+ inline constexpr auto DARK_TINT_COLOR           = "plugin:hyprglass:dark:tint_color";
+ inline constexpr auto DARK_LENS_DISTORTION      = "plugin:hyprglass:dark:lens_distortion";
+ inline constexpr auto DARK_BRIGHTNESS           = "plugin:hyprglass:dark:brightness";
+@@ -166,10 +184,16 @@ inline constexpr auto DARK_BEVEL_TINT           = "plugin:hyprglass:dark:bevel_t
+ inline constexpr auto DARK_BEVEL_ANGLE          = "plugin:hyprglass:dark:bevel_angle";
+ inline constexpr auto DARK_BEVEL_SHADOW         = "plugin:hyprglass:dark:bevel_shadow";
+ inline constexpr auto DARK_SELF_SAMPLE          = "plugin:hyprglass:dark:self_sample";
++inline constexpr auto DARK_XRAY                 = "plugin:hyprglass:dark:xray";
++inline constexpr auto DARK_FOCUS_LIGHT          = "plugin:hyprglass:dark:focus_light";
++inline constexpr auto DARK_FOCUS_LIGHT_COLOR    = "plugin:hyprglass:dark:focus_light_color";
++inline constexpr auto DARK_FROST                = "plugin:hyprglass:dark:frost";
++inline constexpr auto DARK_FROST_BLUR           = "plugin:hyprglass:dark:frost_blur";
+ 
+ // Overridable — light theme overrides
+ inline constexpr auto LIGHT_BLUR_STRENGTH        = "plugin:hyprglass:light:blur_strength";
+ inline constexpr auto LIGHT_BLUR_ITERATIONS      = "plugin:hyprglass:light:blur_iterations";
++inline constexpr auto LIGHT_NOISE_STRENGTH       = "plugin:hyprglass:light:noise_strength";
+ inline constexpr auto LIGHT_REFRACTION_STRENGTH  = "plugin:hyprglass:light:refraction_strength";
+ inline constexpr auto LIGHT_CHROMATIC_ABERRATION = "plugin:hyprglass:light:chromatic_aberration";
+ inline constexpr auto LIGHT_FRESNEL_STRENGTH     = "plugin:hyprglass:light:fresnel_strength";
+@@ -177,6 +201,9 @@ inline constexpr auto LIGHT_SPECULAR_STRENGTH    = "plugin:hyprglass:light:specu
+ inline constexpr auto LIGHT_SPECULAR_ANGLE       = "plugin:hyprglass:light:specular_angle";
+ inline constexpr auto LIGHT_GLASS_OPACITY        = "plugin:hyprglass:light:glass_opacity";
+ inline constexpr auto LIGHT_EDGE_THICKNESS       = "plugin:hyprglass:light:edge_thickness";
++inline constexpr auto LIGHT_EDGE_THICKNESS_PX    = "plugin:hyprglass:light:edge_thickness_px";
++inline constexpr auto LIGHT_EDGE_HEIGHT          = "plugin:hyprglass:light:edge_height";
++inline constexpr auto LIGHT_FRESNEL_REFLECTION   = "plugin:hyprglass:light:fresnel_reflection";
+ inline constexpr auto LIGHT_TINT_COLOR           = "plugin:hyprglass:light:tint_color";
+ inline constexpr auto LIGHT_LENS_DISTORTION      = "plugin:hyprglass:light:lens_distortion";
+ inline constexpr auto LIGHT_BRIGHTNESS           = "plugin:hyprglass:light:brightness";
+@@ -197,46 +224,61 @@ inline constexpr auto LIGHT_BEVEL_TINT           = "plugin:hyprglass:light:bevel
+ inline constexpr auto LIGHT_BEVEL_ANGLE          = "plugin:hyprglass:light:bevel_angle";
+ inline constexpr auto LIGHT_BEVEL_SHADOW         = "plugin:hyprglass:light:bevel_shadow";
+ inline constexpr auto LIGHT_SELF_SAMPLE          = "plugin:hyprglass:light:self_sample";
++inline constexpr auto LIGHT_XRAY                 = "plugin:hyprglass:light:xray";
++inline constexpr auto LIGHT_FOCUS_LIGHT          = "plugin:hyprglass:light:focus_light";
++inline constexpr auto LIGHT_FOCUS_LIGHT_COLOR    = "plugin:hyprglass:light:focus_light_color";
++inline constexpr auto LIGHT_FROST               = "plugin:hyprglass:light:frost";
++inline constexpr auto LIGHT_FROST_BLUR          = "plugin:hyprglass:light:frost_blur";
+ 
+ } // namespace ConfigKeys
+ 
+ // Cached pointers for a single config layer (built-in dark/light/global)
+ struct SOverridableConfig {
+-    Hyprlang::FLOAT* const* blurStrength        = nullptr;
+-    Hyprlang::INT* const*   blurIterations      = nullptr;
+-    Hyprlang::FLOAT* const* refractionStrength  = nullptr;
+-    Hyprlang::FLOAT* const* chromaticAberration = nullptr;
+-    Hyprlang::FLOAT* const* fresnelStrength     = nullptr;
+-    Hyprlang::FLOAT* const* specularStrength    = nullptr;
+-    Hyprlang::FLOAT* const* specularAngle       = nullptr;
+-    Hyprlang::FLOAT* const* glassOpacity        = nullptr;
+-    Hyprlang::FLOAT* const* edgeThickness       = nullptr;
+-    Hyprlang::INT* const*   tintColor           = nullptr;
+-    Hyprlang::FLOAT* const* lensDistortion      = nullptr;
+-    Hyprlang::FLOAT* const* brightness          = nullptr;
+-    Hyprlang::FLOAT* const* contrast            = nullptr;
+-    Hyprlang::FLOAT* const* saturation          = nullptr;
+-    Hyprlang::FLOAT* const* vibrancy            = nullptr;
+-    Hyprlang::FLOAT* const* vibrancyDarkness    = nullptr;
+-    Hyprlang::FLOAT* const* adaptiveDim         = nullptr;
+-    Hyprlang::FLOAT* const* adaptiveBoost       = nullptr;
+-    Hyprlang::FLOAT* const* refractionFlow      = nullptr;
+-    Hyprlang::FLOAT* const* refractionSpread    = nullptr;
+-    Hyprlang::FLOAT* const* fresnelTint         = nullptr;
+-    Hyprlang::FLOAT* const* bevelStrength       = nullptr;
+-    Hyprlang::FLOAT* const* bevelSize           = nullptr;
+-    Hyprlang::INT* const*   fresnelColor        = nullptr;
+-    Hyprlang::INT* const*   bevelColor          = nullptr;
+-    Hyprlang::FLOAT* const* bevelTint           = nullptr;
+-    Hyprlang::FLOAT* const* bevelAngle          = nullptr;
+-    Hyprlang::FLOAT* const* bevelShadow         = nullptr;
+-    Hyprlang::FLOAT* const* selfSample          = nullptr;
++    Config::FLOAT* const*   blurStrength        = nullptr;
++    Config::INTEGER* const* blurIterations      = nullptr;
++    Config::FLOAT* const*   noiseStrength       = nullptr;
++    Config::FLOAT* const*   refractionStrength  = nullptr;
++    Config::FLOAT* const*   chromaticAberration = nullptr;
++    Config::FLOAT* const*   fresnelStrength     = nullptr;
++    Config::FLOAT* const*   specularStrength    = nullptr;
++    Config::FLOAT* const*   specularAngle       = nullptr;
++    Config::FLOAT* const*   glassOpacity        = nullptr;
++    Config::FLOAT* const*   edgeThickness       = nullptr;
++    Config::FLOAT* const*   edgeThicknessPx     = nullptr;
++    Config::FLOAT* const*   edgeHeight          = nullptr;
++    Config::FLOAT* const*   fresnelReflection   = nullptr;
++    Config::INTEGER* const* tintColor           = nullptr;
++    Config::FLOAT* const*   lensDistortion      = nullptr;
++    Config::FLOAT* const*   brightness          = nullptr;
++    Config::FLOAT* const*   contrast            = nullptr;
++    Config::FLOAT* const*   saturation          = nullptr;
++    Config::FLOAT* const*   vibrancy            = nullptr;
++    Config::FLOAT* const*   vibrancyDarkness    = nullptr;
++    Config::FLOAT* const*   adaptiveDim         = nullptr;
++    Config::FLOAT* const*   adaptiveBoost       = nullptr;
++    Config::FLOAT* const*   refractionFlow      = nullptr;
++    Config::FLOAT* const*   refractionSpread    = nullptr;
++    Config::FLOAT* const*   fresnelTint         = nullptr;
++    Config::FLOAT* const*   bevelStrength       = nullptr;
++    Config::FLOAT* const*   bevelSize           = nullptr;
++    Config::INTEGER* const* fresnelColor        = nullptr;
++    Config::INTEGER* const* bevelColor          = nullptr;
++    Config::FLOAT* const*   bevelTint           = nullptr;
++    Config::FLOAT* const*   bevelAngle          = nullptr;
++    Config::FLOAT* const*   bevelShadow         = nullptr;
++    Config::FLOAT* const*   selfSample          = nullptr;
++    Config::INTEGER* const* xray                = nullptr;
++    Config::FLOAT* const*   focusLight          = nullptr;
++    Config::INTEGER* const* focusLightColor     = nullptr;
++    Config::FLOAT* const*   frost               = nullptr;
++    Config::FLOAT* const*   frostBlur           = nullptr;
+ };
+ 
+ // Plain values for a user-defined preset layer (all sentinel = not set → inherit)
+ struct SPresetValues {
+     float   blurStrength       = static_cast<float>(SENTINEL_FLOAT);
+     int64_t blurIterations     = SENTINEL_INT;
++    float   noiseStrength      = static_cast<float>(SENTINEL_FLOAT);
+     float   refractionStrength = static_cast<float>(SENTINEL_FLOAT);
+     float   chromaticAberration = static_cast<float>(SENTINEL_FLOAT);
+     float   fresnelStrength    = static_cast<float>(SENTINEL_FLOAT);
+@@ -244,6 +286,9 @@ struct SPresetValues {
+     float   specularAngle      = static_cast<float>(SENTINEL_FLOAT);
+     float   glassOpacity       = static_cast<float>(SENTINEL_FLOAT);
+     float   edgeThickness      = static_cast<float>(SENTINEL_FLOAT);
++    float   edgeThicknessPx    = static_cast<float>(SENTINEL_FLOAT);
++    float   edgeHeight         = static_cast<float>(SENTINEL_FLOAT);
++    float   fresnelReflection  = static_cast<float>(SENTINEL_FLOAT);
+     int64_t tintColor          = SENTINEL_INT;
+     float   lensDistortion     = static_cast<float>(SENTINEL_FLOAT);
+     float   brightness         = static_cast<float>(SENTINEL_FLOAT);
+@@ -264,6 +309,11 @@ struct SPresetValues {
+     float   bevelAngle         = static_cast<float>(SENTINEL_FLOAT);
+     float   bevelShadow        = static_cast<float>(SENTINEL_FLOAT);
+     float   selfSample         = static_cast<float>(SENTINEL_FLOAT);
++    int64_t xray               = SENTINEL_INT;
++    float   focusLight         = static_cast<float>(SENTINEL_FLOAT);
++    int64_t focusLightColor    = SENTINEL_INT;
++    float   frost              = static_cast<float>(SENTINEL_FLOAT);
++    float   frostBlur          = static_cast<float>(SENTINEL_FLOAT);
+ };
+ 
+ struct SCustomPreset {
+@@ -288,55 +338,65 @@ inline std::string_view readStringConfig(const StringConfigPtr& ptr) {
+         return value ? std::string_view(*value) : std::string_view{};
+     }
+ 
+-    if (*ptr.type == typeid(Hyprlang::STRING)) {
+-        const auto value = *reinterpret_cast<Hyprlang::STRING const*>(ptr.dataptr);
+-        return value ? std::string_view(value) : std::string_view{};
+-    }
+-
+     return {};
+ }
+ 
++// A Hyprland key stored as a bool: read through its reported type, so a key that
++// reports anything else reads as unset instead of as a misread byte.
++struct BoolConfigPtr {
++    void* const*          dataptr = nullptr;
++    const std::type_info* type    = nullptr;
++};
++
++inline bool readBoolConfig(const BoolConfigPtr& ptr) {
++    if (!ptr.dataptr || !ptr.type || *ptr.type != typeid(bool))
++        return false;
++
++    return **reinterpret_cast<const bool* const*>(ptr.dataptr);
++}
++
+ struct SPluginConfig {
+-    Hyprlang::INT* const* enabled           = nullptr;
++    Config::BOOL* const*    enabled           = nullptr;
+     // Glass replaces Hyprland's blur for glassed windows: when set, the plugin
+     // marks them with the noblur window property so Hyprland composites them
+     // against the live framebuffer (which contains the glass) instead of its
+     // pre-frame cached blur.
+-    Hyprlang::INT* const* manageWindowBlur  = nullptr;
++    Config::BOOL* const*    manageWindowBlur  = nullptr;
+     // Skip glass for windows CWindow::opaque() reports as opaque: nothing behind
+     // them is visible, so sampling and blurring their background is wasted work.
+-    Hyprlang::INT* const* skipOpaqueWindows = nullptr;
++    Config::BOOL* const*    skipOpaqueWindows = nullptr;
+     // Derives a smaller blur pass count from the requested radius (GlassRenderer::
+     // foldBlurPasses) instead of always running blur_iterations passes at full radius.
+-    Hyprlang::INT* const* blurFold = nullptr;
+-    StringConfigPtr      defaultTheme;
+-    StringConfigPtr      defaultPreset;
++    Config::BOOL* const*    blurFold          = nullptr;
++    // Hyprland's render:xp_mode: no wallpaper or bottom layers are drawn, so
++    // there is nothing for x-ray to show.
++    BoolConfigPtr           xpMode;
++    // Hyprland's animations:enabled: off, the focus light switches without a fade.
++    BoolConfigPtr           animationsEnabled;
++    StringConfigPtr         defaultTheme;
++    StringConfigPtr         defaultPreset;
+ 
+     // Performance diagnostics (see Diagnostics.hpp for the hyprctl side)
+-    StringConfigPtr       debugMode;
+-    Hyprlang::INT* const* debugTimers = nullptr;
++    StringConfigPtr         debugMode;
++    Config::BOOL* const*    debugTimers = nullptr;
+ 
+-    Hyprlang::INT* const* layersEnabled                  = nullptr;
+-    StringConfigPtr       layersNamespaces;
+-    StringConfigPtr       layersExcludeNamespaces;
+-    StringConfigPtr       layersPreset;
+-    StringConfigPtr       layersNamespacePresets;
+-    StringConfigPtr       layersNamespaceMaskThresholds;
+-    StringConfigPtr       layersNamespaceLiveResample;
+-    Hyprlang::INT* const* layersLiveResample             = nullptr;
+-    Hyprlang::INT* const* layersLiveResampleFps          = nullptr;
+-    Hyprlang::INT* const* layersForceLiveResample        = nullptr;
+-    StringConfigPtr       layersMaskMode;
+-    StringConfigPtr       layersNamespaceMaskModes;
+-    Hyprlang::INT* const* layersManageBlur               = nullptr;
++    Config::BOOL* const*    layersEnabled                 = nullptr;
++    StringConfigPtr         layersPreset;
++    Config::FLOAT* const*   layersMaskThreshold           = nullptr;
++    Config::BOOL* const*    layersLiveResample            = nullptr;
++    Config::INTEGER* const* layersLiveResampleFps         = nullptr;
++    Config::BOOL* const*    layersForceLiveResample       = nullptr;
++    StringConfigPtr         layersMaskMode;
++    Config::FLOAT* const*   layersMaskFeather             = nullptr;
++    Config::BOOL* const*    layersManageBlur              = nullptr;
+ 
+-    Hyprlang::INT* const*   subsurfacesEnabled = nullptr;
++    Config::BOOL* const*    subsurfacesEnabled = nullptr;
+     StringConfigPtr         subsurfacesPreset;
+-    Hyprlang::FLOAT* const* subsurfacesRadius  = nullptr;
++    Config::FLOAT* const*   subsurfacesRadius  = nullptr;
+ 
+-    Hyprlang::INT* const* windowsBackgroundCache  = nullptr;
+-    Hyprlang::INT* const* windowsLiveResample     = nullptr;
+-    Hyprlang::INT* const* windowsLiveResampleFps  = nullptr;
++    Config::BOOL* const*    windowsBackgroundCache = nullptr;
++    Config::BOOL* const*    windowsLiveResample    = nullptr;
++    Config::INTEGER* const* windowsLiveResampleFps = nullptr;
+ 
+     SOverridableConfig global;
+     SOverridableConfig dark;
+@@ -355,13 +415,13 @@ struct SResolveContext {
+ [[nodiscard]] float resolvePresetFloat(
+     const SResolveContext& context,
+     float SPresetValues::* presetField,
+-    Hyprlang::FLOAT* const* SOverridableConfig::* configField,
++    Config::FLOAT* const* SOverridableConfig::* configField,
+     float hardcodedDefault = static_cast<float>(SENTINEL_FLOAT));
+ 
+ [[nodiscard]] int64_t resolvePresetInt(
+     const SResolveContext& context,
+     int64_t SPresetValues::* presetField,
+-    Hyprlang::INT* const* SOverridableConfig::* configField,
++    Config::INTEGER* const* SOverridableConfig::* configField,
+     int64_t hardcodedDefault = SENTINEL_INT);
+ 
+ // True when any tier can resolve self_sample above 0. Answers "could a window
+@@ -373,14 +433,11 @@ struct SResolveContext {
+ void registerConfig(HANDLE handle);
+ void initConfigPointers(HANDLE handle, SPluginConfig& config);
+ 
+-// Preset keyword handler (registered via addConfigKeyword)
+-Hyprlang::CParseResult handlePresetKeyword(const char* command, const char* value);
++// Forget the pending presets/layers before the config is parsed again (preReload callback)
++void beginConfigReload();
+ 
+-// Clear pending presets/layers before config re-parse (called from preConfigReload callback)
+-void clearPendingPresets();
+-void clearPendingLayers();
+-
+-// Swap pending data into active maps (called from configReloaded callback)
++// Swap pending data into active maps (reloaded callback). A reload that stopped before running
++// any hyprglass.* call and failed keeps what the last good one committed.
+ void commitPendingPresets();
+ void commitPendingLayers();
+ 
+diff --git a/src/RenderGuards.hpp b/src/RenderGuards.hpp
+index 2deaa3c..7959dc1 100644
+--- a/src/RenderGuards.hpp
++++ b/src/RenderGuards.hpp
+@@ -14,8 +14,15 @@ namespace RenderGuards {
+ // mainFB alone is not a usable guard: it is truthy for the whole span of a
+ // normal frame's begin()/end(), not just replays, so a bare mainFB check would
+ // never see a foreign render as foreign.
+-[[nodiscard]] inline bool isForeignRender() {
+-    const auto& renderData = g_pHyprRenderer->m_renderData;
++// A workspace capture runs the whole monitor pipeline (RPT_MONITOR, mainFB ==
++// currentFB) into an isolated buffer, so only m_renderingCapture identifies it;
++// glassing it would write our per-window caches and the x-ray snapshot from
++// content the live frame must not inherit.
++[[nodiscard]] inline bool isForeignRender(Render::CRenderContext& ctx) {
++    if (ctx.m_renderingCapture)
++        return true;
++
++    const auto& renderData = ctx.m_data;
+ 
+     if (renderData.mainFB && renderData.currentFB != renderData.mainFB)
+         return true;
+@@ -23,4 +30,8 @@ namespace RenderGuards {
+     return renderData.renderModif.enabled && !renderData.renderModif.modifs.empty();
+ }
+ 
++[[nodiscard]] inline bool shouldSkipGlass(Render::CRenderContext& ctx) {
++    return ctx.m_renderingSnapshot || isForeignRender(ctx);
++}
++
+ } // namespace RenderGuards
+diff --git a/src/ShaderManager.cpp b/src/ShaderManager.cpp
+index eaba12f..d1ef665 100644
+--- a/src/ShaderManager.cpp
++++ b/src/ShaderManager.cpp
+@@ -16,21 +16,21 @@ std::string CShaderManager::loadShaderSource(const char* fileName) {
+     throw std::runtime_error(message);
+ }
+ 
+-bool CShaderManager::compileGlassShader() {
+-    if (!glassShader->createProgram(
++bool CShaderManager::compileGlassProgram(SGlassProgram& glass, GlassFeatureMask features) {
++    if (!glass.shader->createProgram(
+             g_pHyprOpenGL->m_shaders->TEXVERTSRC,
+-            loadShaderSource("liquidglass.frag"),
+-            true
+-        )) {
+-        HyprlandAPI::addNotification(PHANDLE,
+-            std::format("[{}] Failed to compile glass shader", PLUGIN_NAME),
+-            CHyprColor{1.0, 0.2, 0.2, 1.0}, 5000);
++            glassVariantSource(loadShaderSource("liquidglass.frag"), features),
++            true,
++            // A variant failure falls back to the default program; our notification is enough.
++            features != GLASS_FEATURE_NONE
++        ))
+         return false;
+-    }
+ 
+-    const auto program = glassShader->program();
++    const auto program       = glass.shader->program();
++    auto&      glassUniforms = glass.uniforms;
+ 
+     glassUniforms.refractionStrength  = glGetUniformLocation(program, "refractionStrength");
++    glassUniforms.noiseStrength       = glGetUniformLocation(program, "noiseStrength");
+     glassUniforms.chromaticAberration = glGetUniformLocation(program, "chromaticAberration");
+     glassUniforms.fresnelStrength     = glGetUniformLocation(program, "fresnelStrength");
+     glassUniforms.specularStrength    = glGetUniformLocation(program, "specularStrength");
+@@ -68,6 +68,7 @@ bool CShaderManager::compileGlassShader() {
+     glassUniforms.maskUVOffset        = glGetUniformLocation(program, "maskUVOffset");
+     glassUniforms.maskUVScale         = glGetUniformLocation(program, "maskUVScale");
+     glassUniforms.maskAlphaThreshold  = glGetUniformLocation(program, "maskAlphaThreshold");
++    glassUniforms.maskCoverage        = glGetUniformLocation(program, "maskCoverage");
+     glassUniforms.maskMode            = glGetUniformLocation(program, "maskMode");
+     glassUniforms.regionRectCount     = glGetUniformLocation(program, "regionRectCount");
+     glassUniforms.regionRects         = glGetUniformLocation(program, "regionRects[0]");
+@@ -77,6 +78,20 @@ bool CShaderManager::compileGlassShader() {
+     glassUniforms.sampleUVScale       = glGetUniformLocation(program, "sampleUVScale");
+     glassUniforms.glassBoxOffsetPx    = glGetUniformLocation(program, "glassBoxOffsetPx");
+     glassUniforms.glassBoxSizePx      = glGetUniformLocation(program, "glassBoxSizePx");
++    glassUniforms.glassUVScale        = glGetUniformLocation(program, "glassUVScale");
++    glassUniforms.glassUVOffset       = glGetUniformLocation(program, "glassUVOffset");
++    glassUniforms.lensHeightPx          = glGetUniformLocation(program, "lensHeightPx");
++    glassUniforms.lensReflection        = glGetUniformLocation(program, "lensReflection");
++    glassUniforms.lensReflectionReachPx = glGetUniformLocation(program, "lensReflectionReachPx");
++    glassUniforms.focusLight            = glGetUniformLocation(program, "focusLight");
++    glassUniforms.focusLightColor       = glGetUniformLocation(program, "focusLightColor");
++    glassUniforms.focusLightColorAlpha  = glGetUniformLocation(program, "focusLightColorAlpha");
++    glassUniforms.frostTex              = glGetUniformLocation(program, "frostTex");
++    glassUniforms.frostAmount           = glGetUniformLocation(program, "frostAmount");
++    glassUniforms.contourTex            = glGetUniformLocation(program, "contourTex");
++    glassUniforms.contourUVScale        = glGetUniformLocation(program, "contourUVScale");
++    glassUniforms.contourReferencePx    = glGetUniformLocation(program, "contourReferencePx");
++    glassUniforms.contourReachPx        = glGetUniformLocation(program, "contourReachPx");
+ 
+     return true;
+ }
+@@ -88,7 +103,7 @@ bool CShaderManager::compileBlurShader() {
+             true
+         )) {
+         HyprlandAPI::addNotification(PHANDLE,
+-            std::format("[{}] Failed to compile blur shader", PLUGIN_NAME),
++            std::format("[{}] Failed to compile blur shader, glass is off until the plugin is reloaded", PLUGIN_NAME),
+             CHyprColor{1.0, 0.2, 0.2, 1.0}, 5000);
+         return false;
+     }
+@@ -101,17 +116,123 @@ bool CShaderManager::compileBlurShader() {
+     return true;
+ }
+ 
++bool CShaderManager::compileContourPrograms() {
++    const auto& vertex = g_pHyprOpenGL->m_shaders->TEXVERTSRC;
++
++    // dynamic: a program the driver rejects comes back false instead of aborting the compositor
++    if (!m_contour.seed->createProgram(vertex, loadShaderSource("contourseed.frag"), true, true) ||
++        !m_contour.edt->createProgram(vertex, loadShaderSource("contouredt.frag"), true, true) ||
++        !m_contour.smooth->createProgram(vertex, loadShaderSource("contoursmooth.frag"), true, true) ||
++        !m_contour.pack->createProgram(vertex, loadShaderSource("contourfield.frag"), true, true))
++        return false;
++
++    auto locate = [](const SP<CShader>& shader, const char* name) { return glGetUniformLocation(shader->program(), name); };
++
++    auto& seed         = m_contour.seedUniforms;
++    seed.tex           = locate(m_contour.seed, "tex");
++    seed.boxOffsetPx   = locate(m_contour.seed, "boxOffsetPx");
++    seed.boxSizePx     = locate(m_contour.seed, "boxSizePx");
++    seed.sourceSizePx  = locate(m_contour.seed, "sourceSizePx");
++    seed.divisor       = locate(m_contour.seed, "divisor");
++    seed.threshold     = locate(m_contour.seed, "threshold");
++
++    auto& edt          = m_contour.edtUniforms;
++    edt.tex            = locate(m_contour.edt, "tex");
++    edt.fieldSize      = locate(m_contour.edt, "fieldSize");
++    edt.direction      = locate(m_contour.edt, "direction");
++    edt.reachTexels    = locate(m_contour.edt, "reachTexels");
++    edt.resolveSigned  = locate(m_contour.edt, "resolveSigned");
++    edt.texelPx        = locate(m_contour.edt, "texelPx");
++    edt.reachPx        = locate(m_contour.edt, "reachPx");
++
++    auto& smooth             = m_contour.smoothUniforms;
++    smooth.tex               = locate(m_contour.smooth, "tex");
++    smooth.fieldSize         = locate(m_contour.smooth, "fieldSize");
++    smooth.direction         = locate(m_contour.smooth, "direction");
++    smooth.radius            = locate(m_contour.smooth, "radius");
++    smooth.negHalfInvSigmaSq = locate(m_contour.smooth, "negHalfInvSigmaSq");
++
++    auto& pack     = m_contour.packUniforms;
++    pack.tex       = locate(m_contour.pack, "tex");
++    pack.fieldSize = locate(m_contour.pack, "fieldSize");
++    pack.texelPx   = locate(m_contour.pack, "texelPx");
++
++    return true;
++}
++
++const SContourPrograms* CShaderManager::contourPrograms() {
++    if (m_contourCompiled)
++        return &m_contour;
++    if (m_contourFailed)
++        return nullptr;
++
++    if (compileContourPrograms()) {
++        m_contourCompiled = true;
++        return &m_contour;
++    }
++
++    m_contourFailed = true;
++    m_contour.seed->destroy();
++    m_contour.edt->destroy();
++    m_contour.smooth->destroy();
++    m_contour.pack->destroy();
++    HyprlandAPI::addNotification(PHANDLE,
++        std::format("[{}] The contour shaders failed to compile, layers fall back to mask_mode = alpha", PLUGIN_NAME),
++        CHyprColor{1.0, 0.6, 0.2, 1.0}, 8000);
++    return nullptr;
++}
++
+ void CShaderManager::initializeIfNeeded() {
+-    if (m_initialized)
++    if (m_initialized || m_compileFailed)
+         return;
+ 
+-    m_initialized   = compileGlassShader() && compileBlurShader();
++    if (!compileGlassProgram(m_defaultGlass, GLASS_FEATURE_NONE)) {
++        HyprlandAPI::addNotification(PHANDLE,
++            std::format("[{}] Failed to compile glass shader, glass is off until the plugin is reloaded", PLUGIN_NAME),
++            CHyprColor{1.0, 0.2, 0.2, 1.0}, 5000);
++        m_compileFailed = true;
++        return;
++    }
++
++    m_initialized   = compileBlurShader();
+     m_compileFailed = !m_initialized;
+ }
+ 
++SGlassProgram& CShaderManager::glassProgram(GlassFeatureMask features) {
++    features &= GLASS_FEATURE_ALL;
++    if (features == GLASS_FEATURE_NONE)
++        return m_defaultGlass;
++
++    auto [variant, inserted] = m_glassVariants.try_emplace(features);
++    if (inserted)
++        variant->second.features = features;
++    if (inserted && !compileGlassProgram(variant->second, features)) {
++        variant->second.failed = true;
++        HyprlandAPI::addNotification(PHANDLE,
++            std::format("[{}] An optional glass effect failed to compile (features {:#x}), glass is drawn without it",
++                        PLUGIN_NAME, features),
++            CHyprColor{1.0, 0.6, 0.2, 1.0}, 8000);
++    }
++
++    return variant->second.failed ? m_defaultGlass : variant->second;
++}
++
+ void CShaderManager::destroy() noexcept {
+-    glassShader->destroy();
++    m_defaultGlass.shader->destroy();
++    m_defaultGlass.uniforms = {};
++    for (auto& [features, variant] : m_glassVariants)
++        variant.shader->destroy();
++    m_glassVariants.clear();
+     blurShader->destroy();
++    if (m_contourCompiled) {
++        m_contour.seed->destroy();
++        m_contour.edt->destroy();
++        m_contour.smooth->destroy();
++        m_contour.pack->destroy();
++    }
++    m_contour         = {};
++    m_contourCompiled = false;
++    m_contourFailed   = false;
+     m_initialized   = false;
+     m_compileFailed = false;
+ }
+diff --git a/src/ShaderManager.hpp b/src/ShaderManager.hpp
+index 70b9aa9..ae09c87 100644
+--- a/src/ShaderManager.hpp
++++ b/src/ShaderManager.hpp
+@@ -1,11 +1,15 @@
+ #pragma once
+ 
++#include "ShaderVariants.hpp"
++
+ #include <GLES3/gl32.h>
+ #include <hyprland/src/render/Shader.hpp>
+ #include <string>
++#include <unordered_map>
+ 
+ struct SGlassUniforms {
+     GLint refractionStrength = -1;
++    GLint noiseStrength = -1;
+     GLint chromaticAberration = -1;
+     GLint fresnelStrength = -1;
+     GLint specularStrength = -1;
+@@ -45,16 +49,39 @@ struct SGlassUniforms {
+     GLint maskUVOffset = -1;
+     GLint maskUVScale = -1;
+     GLint maskAlphaThreshold = -1;
++    GLint maskCoverage = -1;
+     GLint maskMode = -1;
+     GLint regionRectCount = -1;
+     GLint regionRects = -1;
+     GLint sampleUVOffset = -1;
+     GLint sampleUVScale = -1;
+ 
+-    // Subsurface item glass only: glass-box sub-rect the SDF is measured
+-    // against, in box-local pixels (see Shaders.hpp).
++    // The glass shape's sub-rect of the drawn box (smaller only for subsurface
++    // items), in box-local pixels, and its UV mapping (see Shaders.hpp).
+     GLint glassBoxOffsetPx = -1;
+     GLint glassBoxSizePx = -1;
++    GLint glassUVScale = -1;
++    GLint glassUVOffset = -1;
++
++    // GLASS_FEATURE_LENS_EDGE variant only; -1 (uploads ignored) in every other program.
++    GLint lensHeightPx = -1;
++    GLint lensReflection = -1;
++    GLint lensReflectionReachPx = -1;
++
++    // GLASS_FEATURE_FOCUS_LIGHT variant only.
++    GLint focusLight = -1;
++    GLint focusLightColor = -1;
++    GLint focusLightColorAlpha = -1;
++
++    // GLASS_FEATURE_FROST variant only.
++    GLint frostTex    = -1;
++    GLint frostAmount = -1;
++
++    // GLASS_FEATURE_CONTOUR variant only.
++    GLint contourTex         = -1;
++    GLint contourUVScale     = -1;
++    GLint contourReferencePx = -1;
++    GLint contourReachPx     = -1;
+ };
+ 
+ struct SBlurUniforms {
+@@ -62,17 +89,55 @@ struct SBlurUniforms {
+     GLint radius    = -1;
+ };
+ 
++// The programs that trace a layer's outline into a distance field (see Contour.hpp), and
++// where each reads its settings. Compiled together, the first time a layer asks for a field.
++struct SContourPrograms {
++    SP<CShader> seed   = makeShared<CShader>();
++    SP<CShader> edt    = makeShared<CShader>();
++    SP<CShader> smooth = makeShared<CShader>();
++    SP<CShader> pack   = makeShared<CShader>();
++
++    struct {
++        GLint tex = -1, boxOffsetPx = -1, boxSizePx = -1, sourceSizePx = -1, divisor = -1, threshold = -1;
++    } seedUniforms;
++    struct {
++        GLint tex = -1, fieldSize = -1, direction = -1, reachTexels = -1, resolveSigned = -1, texelPx = -1, reachPx = -1;
++    } edtUniforms;
++    struct {
++        GLint tex = -1, fieldSize = -1, direction = -1, radius = -1, negHalfInvSigmaSq = -1;
++    } smoothUniforms;
++    struct {
++        GLint tex = -1, fieldSize = -1, texelPx = -1;
++    } packUniforms;
++};
++
++// One compiled variant of the glass program, with the uniform locations of that program.
++struct SGlassProgram {
++    SP<CShader>    shader = makeShared<CShader>();
++    SGlassUniforms uniforms;
++    bool           failed = false; // variants only; m_compileFailed covers the default program
++    // What this program really draws: none for the default program, a variant's own set once it compiled.
++    GlassFeatureMask features = GLASS_FEATURE_NONE;
++};
++
+ class CShaderManager {
+   public:
+     [[nodiscard]] bool isInitialized() const noexcept { return m_initialized; }
+-    // The last compile attempt failed; it is retried at the next glass draw.
++    // The default glass program or the blur program failed to compile. Not retried
++    // before the plugin is reloaded: every attempt would stall the frame and notify again.
+     [[nodiscard]] bool compileFailed() const noexcept { return m_compileFailed; }
+ 
+     void initializeIfNeeded();
+     void destroy() noexcept;
+ 
+-    SP<CShader>    glassShader = makeShared<CShader>();
+-    SGlassUniforms glassUniforms;
++    // The glass program for a draw using `features`, compiled on its first use. A
++    // variant that fails to compile is reported once, never retried, and the default
++    // program draws in its place. Only call once isInitialized().
++    [[nodiscard]] SGlassProgram& glassProgram(GlassFeatureMask features);
++
++    // The contour field programs, compiled on first use. Null when they failed to compile:
++    // reported once, not retried before the plugin is reloaded.
++    [[nodiscard]] const SContourPrograms* contourPrograms();
+ 
+     SP<CShader>    blurShader = makeShared<CShader>();
+     SBlurUniforms  blurUniforms;
+@@ -81,7 +146,15 @@ class CShaderManager {
+     bool m_initialized = false;
+     bool m_compileFailed = false;
+ 
++    SGlassProgram                                       m_defaultGlass;
++    std::unordered_map<GlassFeatureMask, SGlassProgram> m_glassVariants;
++
++    SContourPrograms m_contour;
++    bool             m_contourCompiled = false;
++    bool             m_contourFailed   = false;
++
+     [[nodiscard]] static std::string loadShaderSource(const char* fileName);
+-    [[nodiscard]] bool compileGlassShader();
++    [[nodiscard]] static bool compileGlassProgram(SGlassProgram& program, GlassFeatureMask features);
+     [[nodiscard]] bool compileBlurShader();
++    [[nodiscard]] bool compileContourPrograms();
+ };
+diff --git a/src/ShaderVariants.hpp b/src/ShaderVariants.hpp
+new file mode 100644
+index 0000000..d7e05ee
+--- /dev/null
++++ b/src/ShaderVariants.hpp
+@@ -0,0 +1,75 @@
++#pragma once
++
++#include <algorithm>
++#include <array>
++#include <cstdint>
++#include <format>
++#include <string>
++#include <string_view>
++
++// Optional glass effects. Each one is compiled into its own variant of the glass
++// program, behind a GLSL #define, so a draw that leaves every effect off runs the
++// default program, unchanged, and pays nothing for effects it does not use: a
++// runtime branch in one big program costs every draw registers and occupancy.
++using GlassFeatureMask = uint32_t;
++
++inline constexpr GlassFeatureMask GLASS_FEATURE_NONE = 0;
++// edge_height > 0: the rim is a lens that refracts (and can mirror) what is around it.
++inline constexpr GlassFeatureMask GLASS_FEATURE_LENS_EDGE = 1u << 0;
++// focus_light > 0 on the active window: a light along its glass edge.
++inline constexpr GlassFeatureMask GLASS_FEATURE_FOCUS_LIGHT = 1u << 1;
++// frost > 0 and windows behind the glass: the backdrop is blurred further.
++inline constexpr GlassFeatureMask GLASS_FEATURE_FROST = 1u << 2;
++// A layer with mask_mode = contour: its edge follows a traced outline (Contour.hpp).
++inline constexpr GlassFeatureMask GLASS_FEATURE_CONTOUR = 1u << 3;
++
++struct SGlassFeatureDefine {
++    GlassFeatureMask bit;
++    std::string_view name; // defined to 1 in the variant's source
++};
++
++// One entry per feature bit.
++inline constexpr std::array GLASS_FEATURE_DEFINES{
++    SGlassFeatureDefine{GLASS_FEATURE_LENS_EDGE, "HYPRGLASS_FEATURE_LENS_EDGE"},
++    SGlassFeatureDefine{GLASS_FEATURE_FOCUS_LIGHT, "HYPRGLASS_FEATURE_FOCUS_LIGHT"},
++    SGlassFeatureDefine{GLASS_FEATURE_FROST, "HYPRGLASS_FEATURE_FROST"},
++    SGlassFeatureDefine{GLASS_FEATURE_CONTOUR, "HYPRGLASS_FEATURE_CONTOUR"},
++};
++
++[[nodiscard]] consteval GlassFeatureMask allGlassFeatures() {
++    GlassFeatureMask all = GLASS_FEATURE_NONE;
++    for (const auto& feature : GLASS_FEATURE_DEFINES) {
++        if (feature.bit == 0 || (feature.bit & (feature.bit - 1)) != 0 || (all & feature.bit) != 0)
++            throw "each glass feature needs its own single bit";
++        all |= feature.bit;
++    }
++    return all;
++}
++
++inline constexpr GlassFeatureMask GLASS_FEATURE_ALL = allGlassFeatures();
++
++// The glass program's source for `features`. With no feature it is `base` itself,
++// byte for byte; otherwise the features' #defines follow the #version line, then a
++// #line directive keeps compile errors at the default source's line numbers.
++[[nodiscard]] inline std::string glassVariantSource(std::string_view base, GlassFeatureMask features) {
++    std::string source{base};
++    features &= GLASS_FEATURE_ALL;
++    if (features == GLASS_FEATURE_NONE)
++        return source;
++
++    const auto version = source.find("#version");
++    const auto lineEnd = version == std::string::npos ? std::string::npos : source.find('\n', version);
++    if (lineEnd == std::string::npos)
++        return source;
++
++    std::string defines;
++    for (const auto& feature : GLASS_FEATURE_DEFINES)
++        if (features & feature.bit)
++            defines += std::format("#define {} 1\n", feature.name);
++
++    const auto nextLine = 2 + std::count(source.begin(), source.begin() + static_cast<std::ptrdiff_t>(lineEnd), '\n');
++    defines += std::format("#line {}\n", nextLine);
++
++    source.insert(lineEnd + 1, defines);
++    return source;
++}
+diff --git a/src/Shaders.hpp b/src/Shaders.hpp
+index 1f6a46e..5f4a0ab 100644
+--- a/src/Shaders.hpp
++++ b/src/Shaders.hpp
+@@ -23,7 +23,7 @@ precision highp float;
+  * 3. Edge raw-texture blend for vivid color pickup
+  * 4. Subtle center dome lens magnification
+  * 5. Frosted tint (brightness boost + desaturation)
+- * 6. Configurable color tint overlay
++ * 6. Configurable color tint overlay, then frosted grain
+  * 7. Bevel (thin lit line at the edge)
+  * 8. Fresnel edge glow (white or tinted by the background)
+  * 9. Specular highlight (top)
+@@ -37,12 +37,13 @@ uniform vec4 radii;            // per-corner radius: top-left, top-right, bottom
+ uniform vec2 uvPadding;
+ 
+ uniform float refractionStrength;
++uniform float noiseStrength;
+ uniform float chromaticAberration;
+ uniform float fresnelStrength;
+ uniform float specularStrength;
+ uniform float glassOpacity;
+ uniform float edgeThickness;
+-uniform float invBezelWidthPx; // = 1.0 / (edgeThickness * minDim), hoisted per-draw
++uniform float invBezelWidthPx; // = 1.0 / (edgeThickness * minDim), hoisted per-draw (minDim: the glass box's smaller side)
+ uniform vec3 tintColor;
+ uniform float tintAlpha;
+ uniform float lensDistortion;
+@@ -76,18 +77,24 @@ uniform int useMask;
+ uniform vec2 maskUVOffset;
+ uniform vec2 maskUVScale;
+ uniform float maskAlphaThreshold;
++uniform float maskCoverage;    // alpha mask: glass fades in over this alpha range above the threshold (0 = hard mask)
+ uniform int maskMode;          // 0 = alpha threshold, 1 = protocol region
+-uniform int regionRectCount;   // 0..16
+-uniform vec4 regionRects[16];  // box-local pixels: xy = offset from box top-left, zw = size
++uniform int regionRectCount;   // 0..64
++uniform vec4 regionRects[64];  // box-local pixels: xy = offset from box top-left, zw = size
+ 
+-// Subsurface item glass only: the rounded-box SDF (getCornerSDF below) is
+-// evaluated over this sub-rect of the drawn box instead of the full box —
+-// the item's blur-region extents, which can be smaller than its own surface
+-// box (e.g. a capsule pill inside a wider hit-test area). Box-local pixels,
+-// same space as regionRects. Windows and alpha-mask layers pass offset (0,0)
+-// and size == fullSize, so the SDF is unchanged from the old whole-box math.
++// The glass shape: the outline, bezel, lens, refraction centre and lighting
++// all follow this sub-rect of the drawn box. Smaller than the drawn box only
++// for subsurface items (e.g. a capsule pill inside a wider hit-test area) and
++// layers with a fixed shape. Box-local pixels, same space as regionRects.
++// Windows and other layers pass offset (0,0) and size == fullSize.
+ uniform vec2 glassBoxOffsetPx;
+ uniform vec2 glassBoxSizePx;
++// glassUV = uv * glassUVScale - glassUVOffset: 0..1 across the glass box.
++// = fullSize / glassBoxSizePx and glassBoxOffsetPx / glassBoxSizePx, hoisted
++// per-draw; exactly (1,1) and (0,0) when the glass box is the whole box, so
++// glassUV == uv bit for bit for windows and layers.
++uniform vec2 glassUVScale;
++uniform vec2 glassUVOffset;
+ 
+ // Maps this fragment's own box UV into the sample texture's normalized space
+ // before uvPadding is applied. Identity (offset 0, scale 1) unless the sample
+@@ -97,6 +104,49 @@ uniform vec2 glassBoxSizePx;
+ uniform vec2 sampleUVOffset;
+ uniform vec2 sampleUVScale;
+ 
++#ifdef HYPRGLASS_FEATURE_LENS_EDGE
++uniform float lensHeightPx;          // edge_height in framebuffer px, > 0
++uniform float lensReflection;        // fresnel_reflection, 0..1
++uniform float lensReflectionReachPx; // farthest the rim mirrors outside the glass, inside the sample padding
++
++const float LENS_IOR = 1.5;
++// refractive index spread per unit of chromatic_aberration: red below LENS_IOR, blue above
++const float LENS_DISPERSION = 0.25;
++// refraction_strength that bends by exactly what Snell's law gives
++const float LENS_REFERENCE_STRENGTH = 0.6;
++#endif
++
++#ifdef HYPRGLASS_FEATURE_FOCUS_LIGHT
++uniform float focusLight;           // focus_light times the focus fade, > 0
++uniform vec3  focusLightColor;
++uniform float focusLightColorAlpha;
++
++// Logical px, so the light looks the same on every monitor scale.
++const float FOCUS_LIGHT_LINE_DEPTH = 1.0;  // the bright line peaks this far in from the edge
++const float FOCUS_LIGHT_LINE_WIDTH = 1.0;
++const float FOCUS_LIGHT_SHEEN_FALLOFF = 4.0; // the soft sheen inside it fades out over ~3 of these
++const float FOCUS_LIGHT_SHEEN = 0.3;       // sheen brightness, relative to the line
++const float FOCUS_LIGHT_FLOOR = 0.5;       // the side facing away from bevel_angle keeps this much
++const float FOCUS_LIGHT_REACH = 24.0;      // deeper, the light is under a third of a colour step: skipped
++#endif
++
++#ifdef HYPRGLASS_FEATURE_FROST
++uniform sampler2D frostTex;  // tex blurred further, at half its size: same UVs as tex
++uniform float frostAmount;   // frost times its ease, > 0
++
++const float FROST_SATURATION_LIFT = 0.35; // frosted glass reads slightly more colourful ...
++const float FROST_DIM = 0.10;             // ... and slightly deeper, at full amount
++#endif
++
++#ifdef HYPRGLASS_FEATURE_CONTOUR
++// Layers with mask_mode = contour: the edge follows the outline the app draws, read
++// from a distance field (Contour.hpp) instead of the layer's rectangle.
++uniform highp sampler2D contourTex; // r: signed distance to the outline in px (negative inside), gb: its gradient
++uniform vec2 contourUVScale;      // box UV -> field UV: the field covers whole texels, the box need not
++uniform float contourReferencePx; // the bezel is a fraction of this, not of the layer's short side
++uniform float contourReachPx;     // where the field stops; the edge effects fade out before it
++#endif
++
+ in vec2 v_texcoord;
+ layout(location = 0) out vec4 fragColor;
+ 
+@@ -116,7 +166,19 @@ vec2 toTexUV(vec2 wuv) {
+ 
+ vec4 sampleBlurred(vec2 wuv) {
+     vec2 tuv = toTexUV(toSampleBoxUV(wuv));
++#ifdef HYPRGLASS_FEATURE_FROST
++    tuv = clamp(tuv, 0.001, 0.999);
++    return mix(texture(tex, tuv), texture(frostTex, tuv), frostAmount);
++#else
+     return texture(tex, clamp(tuv, 0.001, 0.999));
++#endif
++}
++
++// hash12 from "Hash without Sine" (Dave Hoskins), tuned for integer pixel coordinates
++float pixelHash(vec2 p) {
++    vec3 p3 = fract(vec3(p.xyx) * 0.1031);
++    p3 += dot(p3, p3.yzx + 33.33);
++    return fract((p3.x + p3.y) * p3.z);
+ }
+ 
+ // ============================================================================
+@@ -134,7 +196,7 @@ float lpNorm(vec2 v, float p, float invP) {
+ // Quadrant lookup for the per-corner radius. p is measured from the box
+ // center (as getRoundedBoxSDF/getBevelSDF compute it below): negative y is
+ // the top half (v_texcoord grows downward — see the specular highlight's
+-// 1.0 - uv.y), negative x is the left half. cornerRadii is (top-left,
++// 1.0 - glassUV.y), negative x is the left half. cornerRadii is (top-left,
+ // top-right, bottom-right, bottom-left).
+ float pickCornerRadius(vec2 p, vec4 cornerRadii) {
+     float top    = p.x < 0.0 ? cornerRadii.x : cornerRadii.y;
+@@ -196,22 +258,22 @@ float getBevelSDF(vec2 uv) {
+ 
+ // ============================================================================
+ // REFRACTION DIRECTION
+-// Pixel-space direction toward window center — perfectly smooth everywhere,
++// Pixel-space direction toward the glass box center — perfectly smooth everywhere,
+ // no SDF gradient needed (optional edge-following blend below). On straight edges the perpendicular pixel distance
+ // dominates, giving approximately edge-normal direction. At corners it
+ // naturally follows the diagonal.
+ // ============================================================================
+ 
+-vec2 refractionDir(vec2 uv) {
+-    vec2 toCenterPx = (vec2(0.5) - uv) * fullSize;
++vec2 refractionDir(vec2 glassUV) {
++    vec2 toCenterPx = (vec2(0.5) - glassUV) * glassBoxSizePx;
+     float len = length(toCenterPx);
+     return len > 0.1 ? toCenterPx / len : vec2(0.0);
+ }
+ 
+-// Smooth edge-following field: points into the box, hugging each edge's normal
++// Smooth edge-following field: points into the glass box, hugging each edge's normal
+ // away from the corners and blending crease-free through the diagonals.
+-vec2 edgeDir(vec2 posPx) {
+-    vec2 halfSize = fullSize * 0.5;
++vec2 edgeDir(vec2 posPx) {   // posPx: from the glass box center
++    vec2 halfSize = max(glassBoxSizePx * 0.5, vec2(0.5)); // a sub-pixel glass box rounds to 0
+     vec2 n = abs(posPx) / halfSize;
+     vec2 g = sign(posPx) * pow(n, vec2(7.0)) / halfSize;
+     float len = length(g);
+@@ -235,6 +297,41 @@ vec2 sdfOutwardNormal(vec2 uv) {
+     return len > 0.0 ? grad / len : vec2(0.0, -1.0);
+ }
+ 
++#ifdef HYPRGLASS_FEATURE_LENS_EDGE
++// ============================================================================
++// LENS EDGE
++// The rim (the edge width) is a convex glass wall edge_height tall: a quarter
++// ellipse across its width, vertical at the edge and flat from its inner side
++// on, so the centre is not bent at all. A vertical eye ray refracts where it
++// enters the rim (Snell's law) and runs down through the glass to the backdrop.
++// ============================================================================
++
++// The edge distance main() uses (bevelSdf), so the rim normal has no crease either.
++float lensEdgeSDF(vec2 uv) {
++    return roundingPower == 2.0 ? getBevelSDF(uv) : getCornerSDF(uv);
++}
++
++// Inward distance, in px, between where the eye ray enters the glass and where
++// it meets the backdrop: n is the surface normal as (inward, up), surfacePx the
++// glass height there. gain scales it, capPx bounds it smoothly.
++float lensBendPx(vec2 n, float surfacePx, float ior, float gain, float capPx) {
++    vec2 ray = refract(vec2(0.0, -1.0), n, 1.0 / ior);
++    float runPx = surfacePx * ray.x / max(-ray.y, 1e-3);
++    return capPx * tanh(clamp(gain * runPx / capPx, -8.0, 8.0));
++}
++
++// At a square or tight corner the rim normal turns all the way round within a
++// few pixels, so every ray there bends toward one point (a dark curl) and the
++// reflection swirls. Fades both out near a corner whose radius is under the rim width.
++float lensCornerFade(vec2 uv, float rimPx) {
++    vec2  halfBox    = glassBoxSizePx * 0.5;
++    vec2  fromCenter = uv * fullSize - glassBoxOffsetPx - halfBox;
++    float radius     = min(pickCornerRadius(fromCenter, radii), min(halfBox.x, halfBox.y));
++    float toCorner   = length(max(halfBox - abs(fromCenter), 0.0));
++    return mix(smoothstep(0.0, rimPx, toCorner), 1.0, clamp(radius / rimPx, 0.0, 1.0));
++}
++#endif
++
+ // ============================================================================
+ // MAIN — Thick-glass refraction model
+ // ============================================================================
+@@ -243,9 +340,10 @@ void main() {
+     vec2 uv = v_texcoord;
+ 
+     // Layers only: sample the temp FBO to get the rendered surface pixel.
+-    // Discard fully transparent fragments so glass only covers visible content.
++    // Glass only covers visible content: layer pixels under the mask threshold get none.
+     // For windows, hasMask is false and this block is skipped entirely.
+     vec4 surfacePixel = vec4(0.0);
++    float maskRamp = 1.0;
+     bool hasMask = (useMask == 1);
+     if (hasMask) {
+         vec2 maskUV = uv * maskUVScale + maskUVOffset;
+@@ -263,18 +361,38 @@ void main() {
+                 }
+             }
+             if (!insideRegion) { fragColor = surfacePixel; return; } // premultiplied, output as-is
+-        } else if (surfacePixel.a < maskAlphaThreshold) {
+-            discard;
++        } else {
++            // Below the threshold the content gets no glass but is still drawn
++            // (shadows, faint fills), like outside a region.
++            if (surfacePixel.a < maskAlphaThreshold) { fragColor = surfacePixel; return; } // premultiplied, output as-is
++            // Antialiased edges get proportionally less glass, so rounded corners fade
++            // out instead of ending on a hard, stepped edge. Not smoothstep(): it is undefined
++            // when threshold + coverage rounds to threshold in float.
++            if (maskCoverage > 0.0) {
++                float t = clamp((surfacePixel.a - maskAlphaThreshold) / maskCoverage, 0.0, 1.0);
++                maskRamp = t * t * (3.0 - 2.0 * t);
++            }
+         }
+     }
+ 
++#ifdef HYPRGLASS_FEATURE_CONTOUR
++    // The traced outline replaces the layer box. The mask above already limits the glass
++    // to the visible content, so the outline only shapes the edge effects, not the cut.
++    vec4  contourSample  = texture(contourTex, uv * contourUVScale);
++    float cornerSdf      = contourSample.r;
++    float cornerAlpha    = 1.0;
++    float contourGradLen = length(contourSample.gb);
++    // zero where the field is flat (deep inside, or past its reach): no edge there
++    vec2  contourOutward = contourGradLen > 0.05 ? contourSample.gb / contourGradLen : vec2(0.0);
++#else
+     float cornerSdf    = getCornerSDF(uv);
+     float cornerAlpha  = 1.0 - smoothstep(-1.5, 0.5, cornerSdf);
++#endif
+ 
+-    if (maskMode == 1) {
+-        // Subsurface items: the glass box (glassBoxOffsetPx/SizePx) can be
+-        // smaller than the item's own drawn box/region — e.g. a capsule glass
+-        // shape inside a rectangular blur region. Outside it, fall back to the
++    if (hasMask) {
++        // Layers and subsurface items: the glass box (glassBoxOffsetPx/SizePx) can be
++        // smaller than the drawn box/region — e.g. a capsule glass shape inside a
++        // rectangular blur region, or a layer's fixed shape. Outside it, fall back to the
+         // plain surface pixel instead of dropping it (a hard discard here would
+         // silently delete client content, like an icon, that simply isn't under
+         // the glass). cornerAlpha fades smoothly across the boundary (the same
+@@ -286,31 +404,89 @@ void main() {
+             return;
+         }
+     } else {
+-        // Windows, and alpha-mask layers: no surface pixel to fall back to
+-        // outside the glass shape, so this is exactly the old hard-edged cutoff.
++        // Windows: no surface pixel to fall back to outside the glass shape.
+         if (cornerSdf > 0.0) discard;
+         if (cornerAlpha < 0.001) discard;
+     }
+ 
+-    float minDim = min(fullSize.x, fullSize.y);
+-    float bezelWidthPx = edgeThickness * minDim;
++    // Position within the glass box: everything shaped by the glass (bezel, lens,
++    // refraction centre, lighting) follows it, not the drawn box.
++    vec2 glassUV = uv * glassUVScale - glassUVOffset;
++#ifdef HYPRGLASS_FEATURE_CONTOUR
++    float minDim = contourReferencePx;
++#else
++    float minDim = min(glassBoxSizePx.x, glassBoxSizePx.y);
++#endif
++    float bezelWidthPx = max(edgeThickness * minDim, 1e-4); // same floor as invBezelWidthPx
+ 
+     // ========================================
+     // EDGE PROXIMITY + DIRECTION
+     // edgeProximity: 1.0 at boundary, exponential decay inward
+     // inwardDir: pixel-space direction toward center (smooth everywhere)
+-    // Clamped to 1.0: cornerSdf can be positive here (maskMode==1's glass box
++    // Clamped to 1.0: cornerSdf can be positive here (a layer or item glass box
+     // can be smaller than fullSize, so fragments just outside it still reach
+     // this code with cornerAlpha > 0.001), and exp() of a positive value would
+     // otherwise overshoot every effect that scales off edgeProximity.
+     // ========================================
+     // crease-free bevel distance, so the edge has no seam along the corner diagonals;
+     // it assumes circular corners, so a superellipse outline keeps the exact SDF
++#ifdef HYPRGLASS_FEATURE_CONTOUR
++    // The field is smoothed, so it has no corner seam to avoid. Its reach is the end of the
++    // data: the window takes the effects to zero before it, rather than cutting them off.
++    float bevelSdf = cornerSdf;
++    float edgeProximity = min(exp(bevelSdf * invBezelWidthPx), 1.0) *
++                          (1.0 - smoothstep(0.5 * contourReachPx, contourReachPx, -bevelSdf));
++    vec2 inwardDir = -contourOutward;
++#else
+     float bevelSdf = roundingPower == 2.0 ? getBevelSDF(uv) : cornerSdf;
+     float edgeProximity = min(exp(bevelSdf * invBezelWidthPx), 1.0);
+-    vec2 inwardDir = refractionDir(uv);
+-    vec2 posPx = (uv - 0.5) * fullSize; // pixel-space position for the edge-flow direction below
++    vec2 inwardDir = refractionDir(glassUV);
++    vec2 posPx = (glassUV - 0.5) * glassBoxSizePx; // pixel-space position for the edge-flow direction below
++#endif
+ 
++#ifdef HYPRGLASS_FEATURE_LENS_EDGE
++    // ========================================
++    // LENS EDGE REFRACTION (see lensBendPx). Replaces the soft edge refraction
++    // below: refraction_flow and refraction_spread do not apply. Each channel has
++    // its own refractive index, so the rainbow shows only where the rim is steep.
++    // ========================================
++    float rimDepthPx = max(-bevelSdf, 0.0);
++    bool  inRim      = rimDepthPx < bezelWidthPx;
++    vec2  offsetR    = vec2(0.0);
++    vec2  offsetG    = vec2(0.0);
++    vec2  offsetB    = vec2(0.0);
++    vec2  lensInward    = inwardDir;
++    vec2  lensNormal    = vec2(0.0, 1.0); // (inward, up)
++    float lensSurfacePx = 0.0;            // glass height over the backdrop here
++    float lensCornerWeight = 1.0;
++    if (inRim) {
++        float u    = 1.0 - rimDepthPx / bezelWidthPx; // 1 at the edge, 0 at the rim's inner side
++        float rise = sqrt(max(1.0 - u * u, 0.0));
++        lensSurfacePx = lensHeightPx * rise;
++        lensNormal    = normalize(vec2(-u / bezelWidthPx, rise / max(lensHeightPx, 1e-3)));
++
++#ifdef HYPRGLASS_FEATURE_CONTOUR
++        lensInward = inwardDir;
++#else
++        vec2 grad = vec2(lensEdgeSDF(uv + vec2(invFullSize.x, 0.0)) - bevelSdf,
++                         lensEdgeSDF(uv + vec2(0.0, invFullSize.y)) - bevelSdf);
++        float gradLen = length(grad);
++        if (gradLen > 1e-4) lensInward = -grad / gradLen;
++
++        lensCornerWeight = lensCornerFade(uv, bezelWidthPx);
++#endif
++        float gain   = refractionStrength / LENS_REFERENCE_STRENGTH * lensCornerWeight;
++        vec2  inwardStep = lensInward * invFullSize;
++        offsetG = inwardStep * lensBendPx(lensNormal, lensSurfacePx, LENS_IOR, gain, bezelWidthPx);
++        offsetR = offsetG;
++        offsetB = offsetG;
++        if (chromaticAberration > 0.001) {
++            float spread = chromaticAberration * LENS_DISPERSION;
++            offsetR = inwardStep * lensBendPx(lensNormal, lensSurfacePx, max(LENS_IOR - spread, 1.0), gain, bezelWidthPx);
++            offsetB = inwardStep * lensBendPx(lensNormal, lensSurfacePx, LENS_IOR + spread, gain, bezelWidthPx);
++        }
++    }
++#else
+     // ========================================
+     // EDGE REFRACTION
+     // Offset sampling UV inward (toward center) at edges — like looking
+@@ -328,12 +504,15 @@ void main() {
+     }
+     float refractionMag = lensFalloff * refractionPx;
+     vec2 dir = inwardDir;
++#ifndef HYPRGLASS_FEATURE_CONTOUR
++    // (a traced outline already pulls along each edge's own normal)
+     if (refractionFlow > 0.001) {
+         // pull along the edges instead of toward the centre
+         vec2 mixedDir = mix(inwardDir, edgeDir(posPx), refractionFlow);
+         float mixedLen = length(mixedDir);
+         dir = mixedLen > 0.0001 ? mixedDir / mixedLen : inwardDir;
+     }
++#endif
+     vec2 baseOffset = dir * refractionMag * invFullSize;
+ 
+     // ========================================
+@@ -344,14 +523,16 @@ void main() {
+     vec2 offsetR = baseOffset * (1.0 - chromaSpread);
+     vec2 offsetG = baseOffset;
+     vec2 offsetB = baseOffset * (1.0 + chromaSpread);
++#endif
+ 
+     // ========================================
+     // CENTER DOME LENS (subtle magnification in the flat interior)
+     // Fades near edges so it doesn't interfere with edge refraction.
+     // ========================================
+     vec2 domeUV = vec2(0.0);
++#ifndef HYPRGLASS_FEATURE_CONTOUR   // a dome needs one centre: a traced outline has one per card
+     if (lensDistortion > 0.001) {
+-        vec2 c = (uv - 0.5) * 2.0;
++        vec2 c = (glassUV - 0.5) * 2.0;
+         vec2 dGrad = vec2(
+             -4.0 * c.x * (1.0 - c.y * c.y),
+             -4.0 * c.y * (1.0 - c.x * c.x)
+@@ -359,6 +540,7 @@ void main() {
+         float lensFade = 1.0 - edgeProximity;
+         domeUV = dGrad * lensMaxPx * lensFade * invFullSize;
+     }
++#endif
+ 
+     // ========================================
+     // BACKGROUND SAMPLING (frosted blur only)
+@@ -370,7 +552,11 @@ void main() {
+     vec2 uvG = uv + offsetG + domeUV;
+     vec2 uvB = uv + offsetB + domeUV;
+ 
++#ifdef HYPRGLASS_FEATURE_LENS_EDGE
++    if (chromaticAberration > 0.001 && inRim) {
++#else
+     if (chromaticAberration > 0.001 && edgeProximity > 0.01) {
++#endif
+         color.r = sampleBlurred(uvR).r;
+         color.g = sampleBlurred(uvG).g;
+         color.b = sampleBlurred(uvB).b;
+@@ -378,6 +564,15 @@ void main() {
+         color = sampleBlurred(uvG).rgb;
+     }
+ 
++#ifdef HYPRGLASS_FEATURE_FROST
++    // Frosted glass (frost): the backdrop was blurred further above; it also gets
++    // a little more colour and depth, before the theme's tone mapping below.
++    {
++        float frostLum = dot(color, vec3(0.2126, 0.7152, 0.0722));
++        color = max(mix(vec3(frostLum), color, 1.0 + FROST_SATURATION_LIFT * frostAmount), 0.0) * (1.0 - FROST_DIM * frostAmount);
++    }
++#endif
++
+     // ========================================
+     // FROSTED TINT (per-theme tone mapping)
+     // ========================================
+@@ -410,6 +605,41 @@ void main() {
+     // ========================================
+     color = mix(color, tintColor, tintAlpha);
+ 
++#ifdef HYPRGLASS_FEATURE_LENS_EDGE
++    // ========================================
++    // RIM REFLECTION — the rim mirrors what is around the glass, as much as
++    // Schlick's Fresnel term gives for its slope: strongest where it is steepest.
++    // ========================================
++    if (lensReflection > 0.001 && inRim) {
++        vec2 mirrored = reflect(vec2(0.0, -1.0), lensNormal); // (inward, up)
++        // mirrored downward it lands on the backdrop just outside the edge; mirrored
++        // upward it sees the surroundings, read as far out as the sample reaches
++        // (one formula for both, so the reach has no seam where the slope crosses 45 degrees)
++        float runPx   = lensSurfacePx * -mirrored.x / max(-mirrored.y, 1e-3);
++        float reachPx = lensReflectionReachPx * tanh(min((rimDepthPx + runPx) / lensReflectionReachPx, 8.0));
++        vec4  seen    = sampleBlurred(uv - lensInward * reachPx * invFullSize);
++        // Schlick with lensReflection as the reflectance straight on (real glass: 0.04,
++        // a thin line only), fading out across the rim so the flat centre gets no seam
++        float u        = 1.0 - rimDepthPx / bezelWidthPx;
++        float straight = lensReflection * u;
++        float fresnel  = straight + (1.0 - straight) * pow(1.0 - clamp(lensNormal.y, 0.0, 1.0), 5.0);
++        // padding past the screen edge is cleared to transparent: mirror only what was sampled
++        float amount   = clamp(lensReflection * fresnel * seen.a * lensCornerWeight, 0.0, 1.0);
++        color = mix(color, seen.rgb / max(seen.a, 0.001), amount);
++    }
++#endif
++
++    // grain-free copy for the rim tints, so the grain does not speckle their hue
++    vec3 tintSource = color;
++
++    // ========================================
++    // FROSTED GRAIN
++    // Hashed on box-local pixels so the grain moves with the glass and keeps
++    // its size on any window; after the tint so the tint does not fade it.
++    // ========================================
++    if (noiseStrength > 0.001)
++        color += (pixelHash(floor(uv * fullSize)) - 0.5) * noiseStrength * 0.1;
++
+     // ========================================
+     // BEVEL — thin lit line hugging the edge, brightest on the side facing the light
+     // ========================================
+@@ -420,18 +650,24 @@ void main() {
+         float ring = (1.0 - smoothstep(-core, 0.0, cornerSdf)) * smoothstep(-tail, -core, cornerSdf);
+ 
+         // lit side faces the light, the far side fades out and can be shadowed
++#ifdef HYPRGLASS_FEATURE_CONTOUR
++        float facing = clamp(dot(contourOutward, lightDir(bevelAngle)) * 0.5 + 0.5, 0.0, 1.0);
++#else
+         float facing = clamp(dot(sdfOutwardNormal(uv), lightDir(bevelAngle)) * 0.5 + 0.5, 0.0, 1.0);
++#endif
+ 
+         vec3 bevelLight = vec3(1.0);
+         if (bevelColorAlpha > 0.001) bevelLight = mix(vec3(1.0), bevelColor, bevelColorAlpha);   // a dark colour gives a dark line
+         if (bevelTint > 0.001) {
+-            float maxC = max(max(color.r, color.g), color.b);
+-            bevelLight = mix(bevelLight, maxC > 0.001 ? color / maxC : vec3(1.0), bevelTint);
++            float maxC = max(max(tintSource.r, tintSource.g), tintSource.b);
++            bevelLight = mix(bevelLight, maxC > 0.001 ? tintSource / maxC : vec3(1.0), bevelTint);
+         }
+ 
+-        color = mix(color, bevelLight, ring * facing * bevelStrength);
+-        if (bevelShadow > 0.001)
+-            color = mix(color, vec3(0.0), ring * (1.0 - facing) * bevelShadow);
++        // the fresnel tint below reads the bevelled colour, so bevel the copy too
++        float bevelLit = ring * facing * bevelStrength;
++        float bevelDark = bevelShadow > 0.001 ? ring * (1.0 - facing) * bevelShadow : 0.0;
++        color = mix(mix(color, bevelLight, bevelLit), vec3(0.0), bevelDark);
++        tintSource = mix(mix(tintSource, bevelLight, bevelLit), vec3(0.0), bevelDark);
+     }
+ 
+     // ========================================
+@@ -443,8 +679,8 @@ void main() {
+         if (fresnelColorAlpha > 0.001) fresnelLight = mix(vec3(1.0), fresnelColor, fresnelColorAlpha);   // chosen colour, then the tint below
+         if (fresnelTint > 0.001) {
+             // rim light in the background's own hue, at full brightness so the gain matches white
+-            float maxC = max(max(color.r, color.g), color.b);
+-            fresnelLight = mix(fresnelLight, maxC > 0.001 ? color / maxC : vec3(1.0), fresnelTint);
++            float maxC = max(max(tintSource.r, tintSource.g), tintSource.b);
++            fresnelLight = mix(fresnelLight, maxC > 0.001 ? tintSource / maxC : vec3(1.0), fresnelTint);
+         }
+         color += fresnelLight * fresnel;
+     }
+@@ -453,13 +689,18 @@ void main() {
+     // SPECULAR — subtle top highlight (edge zone)
+     // ========================================
+     if (specularStrength > 0.001) {
+-        float specT = max(1.0 - uv.y, 0.0);
++#ifdef HYPRGLASS_FEATURE_CONTOUR
++        // the edge facing the light, like the top of a box at angle 0
++        float specT = clamp(0.5 + 0.5 * dot(contourOutward, lightDir(specularAngle)), 0.0, 1.0);
++#else
++        float specT = max(1.0 - glassUV.y, 0.0);
+         if (abs(specularAngle) > 0.001) {
+             // rotate the highlight gradient toward the light: at angle 0, lightDir gives
+-            // (0,-1) and dot(uv-0.5, L) = 0.5-uv.y, so 0.5+dot(...) reduces to 1-uv.y exactly
++            // (0,-1) and dot(glassUV-0.5, L) = 0.5-glassUV.y, so 0.5+dot(...) reduces to 1-glassUV.y exactly
+             vec2 L = lightDir(specularAngle);
+-            specT = clamp(0.5 + dot(uv - 0.5, L), 0.0, 1.0);
++            specT = clamp(0.5 + dot(glassUV - 0.5, L), 0.0, 1.0);
+         }
++#endif
+         float topBias = pow(specT, 2.0);
+         float spec = topBias * edgeProximity * edgeProximity * specularStrength * 0.08;
+         color += vec3(1.0, 0.99, 0.97) * spec;
+@@ -469,15 +710,45 @@ void main() {
+     // INNER SHADOW (bottom rim)
+     // ========================================
+     {
+-        float bottomBias = pow(uv.y, 2.0);
++#ifdef HYPRGLASS_FEATURE_CONTOUR
++        // the edge facing away from the light: 1 at the bottom, a quarter at the sides, like a box
++        float bottomBias = pow(0.5 + 0.5 * contourOutward.y, 2.0);
++#else
++        // max(): item fragments just above the glass box have glassUV.y < 0, where pow() is undefined
++        float bottomBias = pow(max(glassUV.y, 0.0), 2.0);
++#endif
+         float shadow = bottomBias * edgeProximity * edgeProximity * 0.06;
+         color *= 1.0 - shadow;
+     }
+ 
++#ifdef HYPRGLASS_FEATURE_FOCUS_LIGHT
++    // ========================================
++    // FOCUS LIGHT — the active window's edge lit all the way round: a bright
++    // line just inside the edge over a soft sheen, brightest on the side the
++    // bevel light comes from. Last, so the inner shadow does not dim it.
++    // ========================================
++    float depthLogical = max(-bevelSdf, 0.0) / max(monitorScale, 0.001);
++    if (depthLogical < FOCUS_LIGHT_REACH) {
++        float lineT = (depthLogical - FOCUS_LIGHT_LINE_DEPTH) / FOCUS_LIGHT_LINE_WIDTH;
++        float profile = exp(-lineT * lineT) + FOCUS_LIGHT_SHEEN * exp(-depthLogical / FOCUS_LIGHT_SHEEN_FALLOFF);
++
++        // outward normal of the same crease-free distance, so the corners light without a seam
++        float sdfRight = roundingPower == 2.0 ? getBevelSDF(uv + vec2(invFullSize.x, 0.0)) : getCornerSDF(uv + vec2(invFullSize.x, 0.0));
++        float sdfDown  = roundingPower == 2.0 ? getBevelSDF(uv + vec2(0.0, invFullSize.y)) : getCornerSDF(uv + vec2(0.0, invFullSize.y));
++        vec2  grad     = vec2(sdfRight - bevelSdf, sdfDown - bevelSdf);
++        float gradLen  = length(grad);
++        vec2  outward  = gradLen > 1e-4 ? grad / gradLen : vec2(0.0, -1.0);
++        float facing   = clamp(dot(outward, lightDir(bevelAngle)) * 0.5 + 0.5, 0.0, 1.0);
++
++        vec3 light = focusLightColorAlpha > 0.001 ? mix(vec3(1.0), focusLightColor, focusLightColorAlpha) : vec3(1.0);
++        color = mix(color, light, clamp(focusLight * mix(FOCUS_LIGHT_FLOOR, 1.0, facing) * profile, 0.0, 1.0));
++    }
++#endif
++
+     // float framebuffers (FP16 under wide-gamut cm) store unbounded values and
+     // the glass re-samples its own output: unclamped color diverges over frames
+     color = clamp(color, 0.0, 1.0);
+-    float glassA = clamp(glassOpacity * cornerAlpha, 0.0, 1.0);
++    float glassA = clamp(glassOpacity * cornerAlpha * maskRamp, 0.0, 1.0);
+ 
+     if (hasMask) {
+         // Layers only: composite the rendered surface over the glass effect
+@@ -546,5 +817,164 @@ void main() {
+ 
+     fragColor = result / totalWeight;
+ }
++)GLSL"},
++    // ----------------------------------------------------------------------------
++    // Contour field (mask_mode = contour, see Contour.hpp). Six passes at a fraction of the
++    // layer's size build a signed distance field of the outline the app draws; they run only
++    // when the layer's content changes. Texel (i, j) is framebuffer row j, like everywhere else.
++    // ----------------------------------------------------------------------------
++
++    // Pass 1: which texels are inside the outline. The result is the start of a distance
++    // transform: per channel the squared distance to the nearest texel of the other kind
++    // (r: for an inside texel, to an outside one; g: the opposite), 0 on texels of that
++    // other kind and FAR where nothing is known yet.
++    {"contourseed.frag", R"GLSL(
++#version 300 es
++precision highp float;
++precision highp sampler2D;
++
++uniform sampler2D tex;       // the layer's own render, alpha is the mask
++uniform vec2 boxOffsetPx;    // the layer box in that framebuffer
++uniform vec2 boxSizePx;
++uniform vec2 sourceSizePx;
++uniform float divisor;       // framebuffer px per texel: 1, 2, 4 or 8
++uniform float threshold;     // alpha at which the app's content counts
++
++layout(location = 0) out vec4 fragColor;
++
++const float FAR = 16384.0;   // above any squared distance within reach, and exact in half floats (Contour.hpp)
++
++void main() {
++    vec2 texel = floor(gl_FragCoord.xy);
++
++    // Mean alpha over the texel's block. A tap on the shared corner of 2x2 pixels already
++    // averages them in hardware, so one tap per 2 px, and only the block's own pixels.
++    float taps    = max(divisor * 0.5, 1.0);
++    float stepPx  = divisor > 1.5 ? 2.0 : 1.0;
++    float startPx = divisor > 1.5 ? 1.0 : 0.5;
++    float sum = 0.0;
++    for (float j = 0.0; j < taps; j += 1.0) {
++        for (float i = 0.0; i < taps; i += 1.0) {
++            vec2 p = texel * divisor + vec2(startPx + i * stepPx, startPx + j * stepPx);
++            // never past the box: outside it the layer's render is not cleared, so it holds old frames
++            p = clamp(p, vec2(0.5), boxSizePx - 0.5);
++            // past the monitor the layer is cut off: carry its edge on
++            vec2 q = clamp(boxOffsetPx + p, vec2(0.5), sourceSizePx - 0.5);
++            sum += texture(tex, q / sourceSizePx).a;
++        }
++    }
++
++    bool inside = sum / (taps * taps) >= threshold;
++    fragColor = vec4(inside ? FAR : 0.0, inside ? 0.0 : FAR, 0.0, 1.0);
++}
++)GLSL"},
++
++    // Passes 2 and 3: the exact Euclidean distance transform, one axis at a time (squared
++    // distance = min over the row of (offset^2 + what the previous axis found)), looking at
++    // most reachTexels away. Texels past the box count as outside, so a layer's own edge is an
++    // outline. The last pass turns both distances into one signed distance in framebuffer px,
++    // half a texel in from each class's centre so that zero is the outline itself.
++    {"contouredt.frag", R"GLSL(
++#version 300 es
++precision highp float;
++precision highp int;
++precision highp sampler2D;
++
++uniform sampler2D tex;
++uniform vec2 fieldSize;       // texels
++uniform vec2 direction;       // (1, 0) or (0, 1)
++uniform int reachTexels;
++uniform int resolveSigned;    // 1 on the last pass
++uniform float texelPx;        // framebuffer px per texel
++uniform float reachPx;        // the signed distance is clamped to +-this
++
++layout(location = 0) out vec4 fragColor;
++
++const float FAR = 16384.0;
++
++vec2 known(vec2 p) {
++    if (p.x < 0.0 || p.y < 0.0 || p.x >= fieldSize.x || p.y >= fieldSize.y)
++        return vec2(0.0, FAR);
++    return texelFetch(tex, ivec2(p), 0).rg;
++}
++
++void main() {
++    vec2 p = floor(gl_FragCoord.xy);
++    vec2 best = known(p);
++    for (int k = 1; k <= reachTexels; k++) {
++        float offsetSq = float(k * k);
++        // nothing farther can beat what is found
++        if (offsetSq >= max(best.x, best.y)) break;
++        vec2 step = direction * float(k);
++        best = min(best, min(known(p + step), known(p - step)) + offsetSq);
++    }
++
++    if (resolveSigned == 1) {
++        // an outside texel has best.x == 0: its own squared distance to "outside" is nothing
++        float signedPx = best.x > 0.0 ? -(sqrt(best.x) - 0.5) * texelPx
++                                      :  (sqrt(best.y) - 0.5) * texelPx;
++        fragColor = vec4(clamp(signedPx, -reachPx, reachPx), 0.0, 0.0, 1.0);
++    } else {
++        fragColor = vec4(best, 0.0, 1.0);
++    }
++}
++)GLSL"},
++
++    // Passes 4 and 5: a Gaussian along one axis on the signed distance. The distance is linear
++    // through the outline, so this leaves the outline where it is and only rounds the creases
++    // where distances from two edges meet at a corner.
++    {"contoursmooth.frag", R"GLSL(
++#version 300 es
++precision highp float;
++precision highp int;
++precision highp sampler2D;
++
++uniform sampler2D tex;
++uniform vec2 fieldSize;
++uniform vec2 direction;
++uniform int radius;           // taps each side
++uniform float negHalfInvSigmaSq;
++
++layout(location = 0) out vec4 fragColor;
++
++void main() {
++    ivec2 p = ivec2(gl_FragCoord.xy);
++    ivec2 last = ivec2(fieldSize) - 1;
++    ivec2 axis = ivec2(direction);
++    float sum = 0.0;
++    float weights = 0.0;
++    for (int k = -radius; k <= radius; k++) {
++        float w = exp(float(k * k) * negHalfInvSigmaSq);
++        sum += w * texelFetch(tex, clamp(p + axis * k, ivec2(0), last), 0).r;
++        weights += w;
++    }
++    fragColor = vec4(sum / weights, 0.0, 0.0, 1.0);
++}
++)GLSL"},
++
++    // Pass 6: the field the glass shader reads. r: the signed distance, gb: its gradient
++    // (outward, about unit length), so the shader needs one fetch for both.
++    {"contourfield.frag", R"GLSL(
++#version 300 es
++precision highp float;
++precision highp int;
++precision highp sampler2D;
++
++uniform sampler2D tex;
++uniform vec2 fieldSize;
++uniform float texelPx;
++
++layout(location = 0) out vec4 fragColor;
++
++void main() {
++    ivec2 p = ivec2(gl_FragCoord.xy);
++    ivec2 last = ivec2(fieldSize) - 1;
++    float centre = texelFetch(tex, p, 0).r;
++    float left   = texelFetch(tex, clamp(p + ivec2(-1, 0), ivec2(0), last), 0).r;
++    float right  = texelFetch(tex, clamp(p + ivec2(1, 0), ivec2(0), last), 0).r;
++    float above  = texelFetch(tex, clamp(p + ivec2(0, -1), ivec2(0), last), 0).r;
++    float below  = texelFetch(tex, clamp(p + ivec2(0, 1), ivec2(0), last), 0).r;
++    fragColor = vec4(centre, vec2(right - left, below - above) / (2.0 * texelPx), 1.0);
++}
+ )GLSL"},
+ };
+diff --git a/src/SubsurfaceGeometry.hpp b/src/SubsurfaceGeometry.hpp
+index f59f61a..fad254e 100644
+--- a/src/SubsurfaceGeometry.hpp
++++ b/src/SubsurfaceGeometry.hpp
+@@ -1,11 +1,7 @@
+ #pragma once
+ 
+-#include "WindowGeometry.hpp"
+-
+-#include <array>
+ #include <cmath>
+ #include <hyprland/src/desktop/view/WLSurface.hpp>
+-#include <hyprland/src/helpers/math/Math.hpp>
+ #include <hyprland/src/protocols/core/Compositor.hpp>
+ #include <hyprland/src/render/OpenGL.hpp>
+ #include <hyprutils/math/Box.hpp>
+@@ -20,15 +16,15 @@
+ // CGlassLayerSurface (which recomputes its box from a long-lived PHLLS on every
+ // call), all geometry here is derived once from a box handed in by the caller,
+ // captured at CRenderPass::add() hook time while the CSurfacePassElement is
+-// still in hand. WindowGeometry::applyMonitorTransform() is reused verbatim for
+-// the 90/270-degree monitor rotation case, the same helper CGlassPassElement
+-// and CGlassDecoration already share.
++// still in hand.
+ namespace SubsurfaceGeometry {
+ 
+ // itemLogicalBox: CSurfacePassElement::getTexBox() for the item's subsurface,
+-// unmodified. Converts to a monitor-local PIXEL box (pre-rotation-transform) —
+-// the "rawBox" family GlassRenderer::sampleBackground()/applyGlassEffect() use
+-// for the desktop, matching CGlassLayerSurface's computeLayerBox() output.
++// unmodified. Converts to a monitor-local PIXEL box in render space, which is
++// also the pixel space of the framebuffers (Hyprland draws the pass unrotated,
++// so a rotated monitor needs no further conversion) — the box
++// GlassRenderer::sampleBackground()/applyGlassEffect() use for the desktop,
++// matching CGlassLayerSurface's computeLayerBox() output.
+ [[nodiscard]] inline std::optional<CBox> toPixelBox(CBox itemLogicalBox, PHLMONITOR monitor) {
+     if (!monitor)
+         return std::nullopt;
+@@ -43,15 +39,6 @@ namespace SubsurfaceGeometry {
+     return itemLogicalBox;
+ }
+ 
+-// rawBox: toPixelBox() result. Applies the monitor rotation transform to land in
+-// the same post-transform pixel space as the source/target framebuffers — the
+-// "transformBox" family, matching CGlassLayerSurface's transformedLayerBox().
+-[[nodiscard]] inline CBox toTransformBox(CBox rawBox, PHLMONITOR monitor) {
+-    auto box = WindowGeometry::applyMonitorTransform(rawBox, monitor);
+-    box.noNegativeSize().round();
+-    return box;
+-}
+-
+ // itemLogicalBox: CSurfacePassElement::getTexBox(), unmodified. Padded for the
+ // IPassElement::boundingBox() contract (monitor-local logical, pre-scale) so the
+ // render pass's damage expansion (needsLiveBlur) re-renders the desktop under
+@@ -72,11 +59,11 @@ namespace SubsurfaceGeometry {
+ }
+ 
+ // ext-background-effect-v1's blur region is surface-local logical coordinates,
+-// clipped to the subsurface's own committed size. Maps it into rawBox's pixel
+-// space (same scale/translate/transform sequence as
+-// CGlassLayerSurface::transformedBlurRegion()) so it lands in the same
+-// post-transform space as transformBox, ready for the shader's regionRects mask.
+-[[nodiscard]] inline CRegion transformedItemBlurRegion(const SP<CWLSurfaceResource>& surface, const CBox& rawBox, PHLMONITOR monitor) {
++// clipped to the subsurface's own committed size. Maps it into pixelBox's pixel
++// space (same scale/translate sequence as
++// CGlassLayerSurface::transformedBlurRegion()), ready for the shader's
++// regionRects mask.
++[[nodiscard]] inline CRegion transformedItemBlurRegion(const SP<CWLSurfaceResource>& surface, const CBox& pixelBox, PHLMONITOR monitor) {
+     if (!surface || !monitor)
+         return {};
+ 
+@@ -89,36 +76,9 @@ namespace SubsurfaceGeometry {
+     CRegion region = wlSurface->m_blurRegion.copy();
+     region.intersect(0, 0, surfaceSize.x, surfaceSize.y);
+     region.scale(static_cast<float>(monitor->m_scale));
+-    region.translate(rawBox.pos());
+-    region.intersect(rawBox.x, rawBox.y, rawBox.w, rawBox.h);
+-    region.transform(Math::wlTransformToHyprutils(Math::invertTransform(monitor->m_transform)),
+-                      monitor->m_transformedSize.x, monitor->m_transformedSize.y);
++    region.translate(pixelBox.pos());
++    region.intersect(pixelBox.x, pixelBox.y, pixelBox.w, pixelBox.h);
+     return region;
+ }
+ 
+-// Permutes the four corner radii (top-left, top-right, bottom-right,
+-// bottom-left) to follow the same rotation/mirror WindowGeometry::
+-// applyMonitorTransform() applies to a box: a rigid transform maps a
+-// rectangle's corners onto one another independent of its size or position,
+-// so this permutation depends only on the monitor's transform. Uses the
+-// identical transform value applyMonitorTransform() derives, so a radii
+-// array and a box transformed through the two never disagree about which
+-// corner is which. A no-op whenever all four radii are equal.
+-[[nodiscard]] inline std::array<float, 4> permuteRadiiForMonitorTransform(const std::array<float, 4>& radii, PHLMONITOR monitor) {
+-    if (!monitor)
+-        return radii;
+-
+-    switch (Math::wlTransformToHyprutils(Math::invertTransform(monitor->m_transform))) {
+-        case HYPRUTILS_TRANSFORM_NORMAL: return radii;
+-        case HYPRUTILS_TRANSFORM_90: return {radii[3], radii[0], radii[1], radii[2]};
+-        case HYPRUTILS_TRANSFORM_180: return {radii[2], radii[3], radii[0], radii[1]};
+-        case HYPRUTILS_TRANSFORM_270: return {radii[1], radii[2], radii[3], radii[0]};
+-        case HYPRUTILS_TRANSFORM_FLIPPED: return {radii[1], radii[0], radii[3], radii[2]};
+-        case HYPRUTILS_TRANSFORM_FLIPPED_90: return {radii[0], radii[3], radii[2], radii[1]};
+-        case HYPRUTILS_TRANSFORM_FLIPPED_180: return {radii[3], radii[2], radii[1], radii[0]};
+-        case HYPRUTILS_TRANSFORM_FLIPPED_270: return {radii[2], radii[1], radii[0], radii[3]};
+-    }
+-    return radii;
+-}
+-
+ } // namespace SubsurfaceGeometry
+diff --git a/src/WindowGeometry.hpp b/src/WindowGeometry.hpp
+index 581e72d..d0d3927 100644
+--- a/src/WindowGeometry.hpp
++++ b/src/WindowGeometry.hpp
+@@ -1,24 +1,28 @@
+ #pragma once
+ 
+-#include <hyprland/src/desktop/view/Window.hpp>
++#include <hyprland/src/desktop/view/window/Window.hpp>
++#include <hyprland/src/desktop/view/window/WindowPresentation.hpp>
+ #include <hyprland/src/render/OpenGL.hpp>
+ #include <hyprutils/math/Box.hpp>
+ #include <optional>
+ 
+ namespace WindowGeometry {
+ 
++// Monitor-local physical pixels in render space, which is also the work
++// buffer's pixel space: Hyprland draws the whole pass unrotated, so a rotated
++// or flipped monitor needs no conversion before sampling or drawing.
+ [[nodiscard]] inline std::optional<CBox> computeWindowBox(PHLWINDOW window, PHLMONITOR monitor) {
+     if (!window || !monitor)
+         return std::nullopt;
+ 
+     const auto workspace = window->m_workspace;
+-    const auto workspaceOffset = workspace && !window->m_pinned
++    const auto workspaceOffset = workspace && !(window->m_state & Desktop::View::WINDOW_STATE_PINNED)
+         ? workspace->m_renderOffset->value()
+         : Vector2D();
+ 
+     auto box = window->getWindowMainSurfaceBox();
+     box.translate(workspaceOffset);
+-    box.translate(-monitor->m_position + window->m_floatingOffset);
++    box.translate(-monitor->m_position + window->presentation().floatingOffset());
+     box.scale(monitor->m_scale);
+     box.round();
+     return box;
+@@ -38,9 +42,9 @@ namespace WindowGeometry {
+ 
+     // A slide translates content under a still window with no geometry change
+     // of its own; only relevant while the workspace is actually animating.
+-    if (workspace && workspace->m_renderOffset->isBeingAnimated() && !window->m_pinned)
++    if (workspace && workspace->m_renderOffset->isBeingAnimated() && !(window->m_state & Desktop::View::WINDOW_STATE_PINNED))
+         box.translate(workspace->m_renderOffset->value());
+-    box.translate(window->m_floatingOffset);
++    box.translate(window->presentation().floatingOffset());
+ 
+     const auto monitor = window->m_monitor.lock();
+     const float scale = monitor ? monitor->m_scale : 1.0f;
+@@ -49,17 +53,4 @@ namespace WindowGeometry {
+     return box;
+ }
+ 
+-// The monitor transform CGlassDecoration::renderPass() applies to its own
+-// transformBox, factored out so CGlassPassElement::needsLiveBlur() can apply
+-// it identically to the box it evaluates wantsBackgroundResample() against —
+-// the two must agree on 90/270-degree-rotated monitors.
+-[[nodiscard]] inline CBox applyMonitorTransform(CBox box, PHLMONITOR monitor) {
+-    if (!monitor)
+-        return box;
+-
+-    const auto transform = Math::wlTransformToHyprutils(Math::invertTransform(monitor->m_transform));
+-    box.transform(transform, monitor->m_transformedSize.x, monitor->m_transformedSize.y);
+-    return box;
+-}
+-
+ } // namespace WindowGeometry
+diff --git a/src/WorkspaceAnimation.hpp b/src/WorkspaceAnimation.hpp
+index d263b8e..6ddcff2 100644
+--- a/src/WorkspaceAnimation.hpp
++++ b/src/WorkspaceAnimation.hpp
+@@ -1,6 +1,6 @@
+ #pragma once
+ 
+-#include <hyprland/src/desktop/Workspace.hpp>
++#include <hyprland/src/workspace/HLWorkspace.hpp>
+ #include <hyprland/src/state/WorkspaceState.hpp>
+ 
+ // Shared by CGlassLayerSurface::sampleAndRedirect and
+diff --git a/src/main.cpp b/src/main.cpp
+index 111902b..2a22d54 100644
+--- a/src/main.cpp
++++ b/src/main.cpp
+@@ -5,21 +5,28 @@
+ #include "GlassLayerPassElement.hpp"
+ #include "GlassLayerSurface.hpp"
+ #include "GlassRenderer.hpp"
++#include "GlassSnapshotElement.hpp"
+ #include "GlassSubsurfaceCompositeElement.hpp"
+ #include "GlassSubsurfacePassElement.hpp"
+ #include "GlassSubsurfaceState.hpp"
+ #include "Globals.hpp"
++#include "Hash.hpp"
+ #include "ItemHints.hpp"
++#include "LoadGuard.hpp"
+ #include "PluginConfig.hpp"
+ #include "RenderGuards.hpp"
+ #include "SubsurfaceGeometry.hpp"
+ 
+ #include <hyprland/src/Compositor.hpp>
+-#include <hyprland/src/desktop/Workspace.hpp>
++#include <hyprland/src/desktop/state/FadingOutState.hpp>
++#include <hyprland/src/desktop/view/window/WindowPresentation.hpp>
++#include <hyprland/src/workspace/HLWorkspace.hpp>
+ #include <hyprland/src/desktop/view/LayerSurface.hpp>
++#include <hyprland/src/state/MonitorState.hpp>
+ #include <hyprland/src/state/WorkspaceState.hpp>
+ #include <hyprland/src/desktop/view/WLSurface.hpp>
+ #include <hyprland/src/helpers/time/Time.hpp>
++#include <hyprland/src/managers/SessionLockManager.hpp>
+ #include <hyprland/src/managers/fullscreen/FullscreenController.hpp>
+ #include <hyprland/src/plugins/PluginAPI.hpp>
+ #include <hyprland/src/render/Renderer.hpp>
+@@ -27,13 +34,14 @@
+ #include <hyprland/src/render/pass/SurfacePassElement.hpp>
+ #include <hyprland/src/helpers/Color.hpp>
+ #include <hyprland/src/config/ConfigManager.hpp>
++#include <hyprland/src/config/supplementary/propRefresher/PropRefresher.hpp>
+ #include <hyprland/src/debug/log/Logger.hpp>
+ #include <hyprland/src/event/EventBus.hpp>
+ 
+ #include <algorithm>
+ #include <cstdlib>
++#include <dlfcn.h>
+ #include <optional>
+-#include <sstream>
+ 
+ static void clearLayerGlassOnClose(PHLLS layerSurface) {
+     if (!g_pGlobalState || !layerSurface)
+@@ -50,21 +58,52 @@ static void clearLayerGlassOnClose(PHLLS layerSurface) {
+         g_pHyprRenderer->damageMonitor(monitor);
+ }
+ 
+-static void clearSubsurfaceFramebufferForMonitor(PHLMONITOR monitor) {
++static void onMonitorGone(PHLMONITOR monitor) {
+     if (!g_pGlobalState || !monitor)
+         return;
+ 
+-    // The monitor is gone, so its temp FBO can never be reused: drop it
+-    // instead of keeping a dead entry around indefinitely.
++    // The monitor is gone, so its framebuffers can never be reused: drop them
++    // instead of keeping dead entries around indefinitely.
+     g_pGlobalState->subsurfaceTempFramebuffers.erase(monitor->m_id);
++    g_pGlobalState->backgroundSnapshots.erase(monitor->m_id);
++}
++
++// A transform, scale or mode change on a live monitor leaves boxes that read as unchanged
++// while the pixels behind them are not: no per-window event reports it, so every cached
++// sample (windows, layers, items) is stale and the x-ray snapshot no longer matches.
++static void onMonitorLayoutChanged() {
++    if (!g_pGlobalState)
++        return;
++
++    for (const auto& monitor : State::monitorState()->monitors()) {
++        if (!monitor)
++            continue;
++
++        g_pGlobalState->bumpSceneGeneration(monitor);
++        if (const auto snapshot = g_pGlobalState->backgroundSnapshots.find(monitor->m_id); snapshot != g_pGlobalState->backgroundSnapshots.end())
++            snapshot->second.valid = CRegion{};
++    }
++}
++
++// A closing window is drawn from a snapshot with no decoration draw(), so it drops out of the
++// fingerprint once and nothing else changes while it fades or when it is gone. Folding the
++// fade-outs makes every fade step and their removal a change; with none, nothing is folded.
++static void foldFadeouts(const PHLMONITOR& monitor, size_t& hash) {
++    for (const auto& fadeout : Desktop::fadingOutState()->fadeouts()) {
++        if (!fadeout || fadeout->monitor() != monitor)
++            continue;
++
++        const auto box = fadeout->renderBox();
++        Hash::hashCombine(hash, fadeout.get(), fadeout->alpha(), box.x, box.y, box.w, box.h);
++    }
+ }
+ 
+ static void onNewWindow(PHLWINDOW window) {
+-    if (std::ranges::any_of(window->m_windowDecorations,
++    if (std::ranges::any_of(window->presentation().decorations(),
+                             [](const auto& decoration) { return decoration->getDisplayName() == "HyprGlass"; }))
+         return;
+ 
+-    auto decoration = makeUnique<CGlassDecoration>(window);
++    auto decoration = makeShared<CGlassDecoration>(window);
+     g_pGlobalState->decorations.emplace_back(decoration);
+     decoration->m_self = decoration;
+     HyprlandAPI::addWindowDecoration(PHANDLE, window, std::move(decoration));
+@@ -89,7 +128,7 @@ CGlassDecoration* glassDecorationFor(const PHLWINDOW& window) {
+ // Hyprland skips window decorations when internal fullscreen mode is
+ // FSMODE_FULLSCREEN, queue the glass pass from RENDER_PRE_WINDOW to avoid double-queue.
+ // The caller has already gated on the real monitor pass and locked both handles.
+-static void drawGlassForFullscreenWindow(const PHLWINDOW& window, const PHLMONITOR& monitor) {
++static void drawGlassForFullscreenWindow(Render::CRenderContext& ctx, const PHLWINDOW& window, const PHLMONITOR& monitor) {
+     // decorations render normally, draw() already ran
+     if (Fullscreen::controller()->getFullscreenModes(window).internal != Fullscreen::FSMODE_FULLSCREEN)
+         return;
+@@ -99,7 +138,21 @@ static void drawGlassForFullscreenWindow(const PHLWINDOW& window, const PHLMONIT
+         return;
+ 
+     if (auto* deco = glassDecorationFor(window))
+-        deco->draw(monitor, 1.f); // alpha unused, recomputed in renderPass
++        deco->draw(ctx, monitor, 1.f, window->presentation().renderPresentation(dynamicPointerCast<Workspace::CWorkspacePresentable>(window->m_workspace))); // alpha unused, recomputed in renderPass
++}
++
++// Hyprland draws X11 override-redirect and no-border windows (menus, tooltips, splash) without
++// decorations, yet they still fade in and out over glass, so draw() never folds them into the
++// render-order fingerprint. Fullscreen ones are folded by drawGlassForFullscreenWindow().
++static void foldUndecoratedWindow(Render::CRenderContext& ctx, const PHLWINDOW& window, const PHLMONITOR& monitor) {
++    if (!window->backend().traits().suggestsNoBorder ||
++        Fullscreen::controller()->getFullscreenModes(window).internal == Fullscreen::FSMODE_FULLSCREEN)
++        return;
++
++    if (auto* deco = glassDecorationFor(window)) {
++        const auto presentation = window->presentation().renderPresentation(dynamicPointerCast<Workspace::CWorkspacePresentable>(window->m_workspace));
++        deco->foldRenderFingerprint(ctx, monitor, presentation.alpha * presentation.fadeAlpha);
++    }
+ }
+ 
+ // ── Duplicate window copies ──────────────────────────────────────────────────
+@@ -109,7 +162,7 @@ static void drawGlassForFullscreenWindow(const PHLWINDOW& window, const PHLMONIT
+ static bool otherSpecialWorkspaceVisible(const PHLWORKSPACE& workspace) {
+     for (const auto& ref : State::workspaceState()->workspaces()) {
+         const auto other = ref.lock();
+-        if (!other || other == workspace || !other->m_isSpecialWorkspace)
++        if (!other || other == workspace || other->type() != Workspace::eWorkspaceType::SPECIAL)
+             continue;
+         if (other->m_alpha->value() > 0.f)
+             return true;
+@@ -129,16 +182,16 @@ static bool isRedundantCopy(const PHLWINDOW& window, const PHLMONITOR& monitor)
+     const auto& dedupe = g_pGlobalState->dedupe;
+ 
+     // the "and floating ones too" loop, below the fullscreen window
+-    if (!window->m_isFloating)
++    if (!window->isFloating())
+         return false;
+ 
+     // pinned windows get a third render after the workspace passes, and nothing
+     // in the render stages tells i

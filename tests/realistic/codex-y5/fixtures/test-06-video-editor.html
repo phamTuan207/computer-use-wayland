@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Cutline Video Editor</title>
+  <style>
+    *{box-sizing:border-box}body{margin:0;padding:24px;background:#11151c;color:#e8edf5;font:14px system-ui,sans-serif}.app{max-width:1100px;margin:auto;background:#1a202b;border:1px solid #384354;border-radius:10px;overflow:hidden}header{padding:17px 22px;background:#202a38;display:flex;justify-content:space-between;align-items:center}h1{margin:0;color:#e5bd74;font-size:20px}.stats{display:flex;gap:15px;color:#aebbd0}.stats b{color:white}main{padding:18px;display:grid;grid-template-columns:1fr 1fr;gap:14px}.panel{padding:14px;background:#141a23;border:1px solid #344155;border-radius:8px}h2{font-size:15px;margin:0 0 11px}.row{display:flex;gap:8px;align-items:center;margin:8px 0;flex-wrap:wrap}input,select{font:inherit;padding:8px;border:1px solid #48586f;border-radius:5px;color:#eef2f8;background:#10151d}button{font:inherit;padding:8px 10px;border:1px solid #59677b;border-radius:5px;color:#f6f8fa;background:#303d51;cursor:pointer}button:hover{background:#43536c}.clip{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid #2d3949}.status{padding:9px;border-radius:5px;background:#212b39;color:#e4c783;min-height:35px}.modal{padding:12px;border:2px solid #b8924e;border-radius:8px;background:#202a38;margin-top:10px}.timeline{white-space:pre-line;line-height:1.8;min-height:35px}.subtle{color:#9eacc0}
+  </style>
+</head>
+<body>
+<div class="app">
+  <header><h1>Cutline Video Editor</h1><div class="stats"><span>Imported: <b id="imported-clip-count">0</b></span><span>Timeline: <b id="timeline-clip-count">0</b> clips</span><span>Duration: <b id="timeline-duration">0 sec</b></span></div></header>
+  <main>
+    <section class="panel"><h2>Media bin</h2><button id="btn-open-import">Import media</button><div id="import-modal" class="modal" hidden><h2>Choose media</h2><label><input id="chk-import-forest" type="checkbox"> Forest A-roll (12 sec)</label><br><label><input id="chk-import-city" type="checkbox"> City B-roll (8 sec)</label><br><label><input id="chk-import-score" type="checkbox"> Night Score (20 sec)</label><div class="row"><button id="btn-import-selected">Import selected</button></div></div><div id="media-bin"><p class="subtle">No clips imported</p></div></section>
+    <section class="panel"><h2>Timeline</h2><div id="timeline-order" class="timeline">Timeline is empty</div><div id="timeline-controls" class="row"></div><div class="row"><button id="btn-add-forest">Add Forest A-roll</button><button id="btn-add-city">Add City B-roll</button></div><div class="row"><button id="btn-move-selected-left">Move selected clip left</button><button id="btn-split-selected">Split selected clip</button><button id="btn-undo-edit">Undo last edit</button></div><div class="row"><label>Playhead seconds <input id="playhead-input" value="0"></label><label>Trim duration <input id="trim-duration-input" placeholder="seconds"></label><button id="btn-apply-trim">Apply trim</button></div><div id="timeline-selection" class="status">No clip selected</div></section>
+    <section class="panel"><h2>Transition</h2><select id="transition-type"><option value="none">None</option><option value="Cross Dissolve">Cross Dissolve</option><option value="Wipe">Wipe</option></select><button id="btn-add-transition">Add transition</button><div id="transition-summary" class="status">No transition</div></section>
+    <section class="panel"><h2>Export</h2><div class="row"><label>Resolution <select id="export-resolution-select"><option value="1280x720">1280x720</option><option value="1920x1080">1920x1080</option></select></label><label>Frame rate <select id="export-frame-rate-select"><option value="24 fps">24 fps</option><option value="30 fps">30 fps</option></select></label><label>Codec <select id="export-codec-select"><option value="H.264">H.264</option><option value="HEVC">HEVC</option></select></label></div><div class="row"><input id="export-filename-input" placeholder="filename"><button id="btn-export-video">Export video</button></div><div>Resolution: <b id="export-resolution">Not set</b> | Frame rate: <b id="export-frame-rate">Not set</b> | Codec: <b id="export-codec">Not set</b></div><div id="export-filename">Not set</div><div id="export-status" class="status">Not exported</div></section>
+  </main>
+</div>
+<script>
+  const media = {
+    forest: { id: 'forest', name: 'Forest A-roll', duration: 12 },
+    city: { id: 'city', name: 'City B-roll', duration: 8 },
+    score: { id: 'score', name: 'Night Score', duration: 20 },
+  };
+  let imported = [];
+  let timeline = [];
+  let selectedId = '';
+  let undoTimeline = null;
+  const el = (selector) => document.querySelector(selector);
+  function snapshot() { undoTimeline = timeline.map((clip) => ({ ...clip })); }
+  function render() {
+    el('#imported-clip-count').textContent = String(imported.length);
+    el('#timeline-clip-count').textContent = String(timeline.length);
+    el('#timeline-duration').textContent = `${timeline.reduce((sum, clip) => sum + clip.duration, 0)} sec`;
+    el('#media-bin').innerHTML = imported.map((id) => `<div class="clip"><span id="media-name-${id}">${media[id].name} (${media[id].duration} sec)</span><button id="btn-bin-add-${id}">Add to timeline</button></div>`).join('') || '<p class="subtle">No clips imported</p>';
+    el('#timeline-order').textContent = timeline.map((clip) => `${clip.name} (${clip.duration} sec)`).join('\n') || 'Timeline is empty';
+    el('#timeline-selection').textContent = selectedId ? `Selected ${timeline.find((clip) => clip.id === selectedId)?.name || 'clip'}` : 'No clip selected';
+    for (const id of imported) {
+      const button = el(`#btn-bin-add-${id}`);
+      button.onclick = () => addToTimeline(id);
+    }
+    el('#timeline-controls').innerHTML = '';
+    for (const clip of timeline) {
+      const button = document.createElement('button');
+      button.id = `btn-select-${clip.id}`;
+      button.textContent = `Select ${clip.name}`;
+      button.onclick = () => { selectedId = clip.id; render(); };
+      el('#timeline-controls').appendChild(button);
+    }
+  }
+  el('#btn-open-import').onclick = () => { el('#import-modal').hidden = false; };
+  el('#btn-import-selected').onclick = () => {
+    for (const [key, checkbox] of [['forest', '#chk-import-forest'], ['city', '#chk-import-city'], ['score', '#chk-import-score']]) {
+      if (el(checkbox).checked && !imported.includes(key)) imported.push(key);
+    }
+    el('#import-modal').hidden = true;
+    render();
+  };
+  function addToTimeline(id) {
+    if (!imported.includes(id)) return;
+    const clip = { ...media[id] };
+    timeline.push(clip);
+    selectedId = clip.id;
+    render();
+  }
+  el('#btn-add-forest').onclick = () => addToTimeline('forest');
+  el('#btn-add-city').onclick = () => addToTimeline('city');
+  el('#btn-split-selected').onclick = () => {
+    const index = timeline.findIndex((clip) => clip.id === selectedId);
+    const playhead = Number(el('#playhead-input').value);
+    if (index < 0 || playhead <= 0 || playhead >= timeline[index].duration) return;
+    snapshot();
+    const clip = timeline[index];
+    const head = { id: 'forest-head', name: clip.name, duration: playhead };
+    const tail = { id: 'forest-tail', name: clip.name, duration: clip.duration - playhead };
+    timeline.splice(index, 1, head, tail);
+    selectedId = tail.id;
+    render();
+  };
+  el('#btn-apply-trim').onclick = () => {
+    const clip = timeline.find((item) => item.id === selectedId);
+    const duration = Number(el('#trim-duration-input').value);
+    if (!clip || duration < 1 || duration > clip.duration) return;
+    snapshot();
+    clip.duration = duration;
+    render();
+  };
+  el('#btn-undo-edit').onclick = () => {
+    if (!undoTimeline) return;
+    timeline = undoTimeline.map((clip) => ({ ...clip }));
+    undoTimeline = null;
+    render();
+  };
+  el('#btn-move-selected-left').onclick = () => {
+    const index = timeline.findIndex((clip) => clip.id === selectedId);
+    if (index <= 0) return;
+    [timeline[index - 1], timeline[index]] = [timeline[index], timeline[index - 1]];
+    render();
+  };
+  el('#btn-add-transition').onclick = () => {
+    if (timeline.length < 2 || el('#transition-type').value === 'none') return;
+    const transition = el('#transition-type').value;
+    el('#transition-summary').textContent = `${transition} between ${timeline[0].name} and ${timeline[1].name}`;
+  };
+  el('#btn-export-video').onclick = () => {
+    if (!timeline.length || !el('#export-filename-input').value.trim()) return;
+    const resolution = el('#export-resolution-select').value;
+    const frameRate = el('#export-frame-rate-select').value;
+    const codec = el('#export-codec-select').value;
+    const filename = el('#export-filename-input').value.trim();
+    el('#export-resolution').textContent = resolution;
+    el('#export-frame-rate').textContent = frameRate;
+    el('#export-codec').textContent = codec;
+    el('#export-filename').textContent = filename;
+    el('#export-status').textContent = `Export complete: ${filename} (${resolution}, ${frameRate}, ${codec})`;
+  };
+  render();
+</script>
+</body>
+</html>

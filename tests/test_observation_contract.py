@@ -62,8 +62,11 @@ class ObservationContract(unittest.TestCase):
 
     def test_stale_boot_and_compositor_metadata_are_rejected(self):
         meta=observation_meta()
-        with patch.object(cu.time,'monotonic',return_value=meta['capture_started_monotonic']+90.01):
-            with self.assertRaisesRegex(ValueError,'older than 90s'):
+        with patch.object(cu.time,'monotonic',
+                          return_value=meta['capture_started_monotonic']+
+                          cu.OBSERVATION_MAX_AGE+0.01):
+            with self.assertRaisesRegex(ValueError,
+                                        f'older than {cu.OBSERVATION_MAX_AGE}s'):
                 cu.validate_desktop_observation(meta,{})
         with patch.object(cu,'boot_identity',return_value='00000000-0000-0000-0000-000000000000'):
             with self.assertRaisesRegex(ValueError,'another system boot'):
