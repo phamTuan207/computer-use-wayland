@@ -871,6 +871,12 @@ Kết quả: 13 COMPLIANT, 6 PARTIAL, 1 MISSING.
   đã ghi là laptop-only theo từng commit. Nửa spec draft của Y5
   cho defect test-07 không có trong branch nào, vẫn UNVERIFIED.
 
+## WATCHDOG 19:08 ngày 21/11
+1 Shayxo xong 17/17, 2 AT-SPI xong, 4 evidence xong (13 COMPLIANT, 6 PARTIAL, 1 MISSING), 3 review A1 đang chạy, 5 test Firefox đang chạy, 6 agy-y2 đang chạy, sửa t05 đang chạy.
+Muse: không có yêu cầu mới, main vẫn 34117df, không có commit coord:.
+Agent: cả 5 agent đang chạy đều còn sống, hoạt động gần nhất dưới 1 phút, file đổi gần nhất 19:08, không cần cứu ai.
+Hành động: chỉ ghi khối này, không spawn lại, không chạm file của agent khác.
+
 ## ĐỢT 5 VIỆC 3 XONG, 19:08 ngày 21/11
 
 Review độc lập plan thí điểm A1 BẢN ĐÓNG BĂNG ở commit f31abcf trên
