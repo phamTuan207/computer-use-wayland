@@ -102,3 +102,33 @@ Tien do dot 3, cap nhat 18:40 ngay 21/11: xong 5/10 test, moi test mot subagent 
 - test05 canvas drawing: PASS 2 lan, 26 buoc, 17 check, 8.8376 s, kiem chung pixel that, commit 91baf2a.
 5 test con lai, chat, map, shopping, code review, dashboard, dang chay song song. Xong se chay lai toan bo bang run_all, roi qua council 3 nguoi va redteam truoc khi bao xong dot 3.
 
+BAO CAO HOAN THANH DOT 3, clone2, 21/11, sau council va redteam.
+
+Ket qua: tests/realistic/clone2-batch3 co 10 test kho, moi test mot subagent rieng lam doc lap, clone2 dieu phoi va tong hop. Tong 231 buoc. Chay toan bo bang run_all.py: 10/10 PASS. Lan chay tong hop cua clone2: 73.1844 s, wall 2026-11-21T11:31:53Z den 11:33:07Z. Sau cac sua chua cua council, chay lai toan bo: 10/10 PASS, 74.1993 s, wall 11:37:35Z den 11:38:49Z.
+- test01 PDF form fill: 19 buoc, 32 check, commit 0b7a6a7.
+- test02 video player: 21 buoc, 32 check, commit 7088472, sua tuong tac that o commit 7ee546e.
+- test03 keyboard only navigation: 21 buoc, 36 check, commit 49f1a0d.
+- test04 kanban drag drop: 20 buoc, 17 check, commit 5035bc2.
+- test05 canvas drawing: 26 buoc, 17 check, commit 91baf2a.
+- test06 chat app: 19 buoc, 42 check, commit 36a76ff.
+- test07 map directions: 26 buoc, 17 check, commit d25a1bf.
+- test08 shopping checkout: 27 buoc, 19 check, commit 46be5e1.
+- test09 code review diff: 29 buoc, 16 check, commit 64309c8.
+- test10 data dashboard: 23 buoc, 36 check sau khi them check CSV toan bo, commit ff90883.
+
+Council 3 nguoi kiem chung doc lap: ca 3 deu chay lai phan duoc giao va ket luan SOUND hoac PASS cho ca 10 test, so buoc va so check khop chinh xac voi spec. Redteam doc lap: thu pha bang fixture gia sabotage, test08 FAIL dung nhu phai the khi SAVE10 bi lam hong, chung to checker bat duoc loi that. Ket luan redteam: khang dinh cua dot dung ve co ban, co 3 diem yeu da xu ly.
+
+Da sua theo council va redteam truoc khi bao xong:
+- test02: truoc day dat seek, volume, speed, subtitle bang script, chua khai trong spec. Da doi sang tuong tac that, Select class cho select va phim mui ten cho slider, test khong con execute_script, commit 7ee546e, chay lai 3 lan deu PASS.
+- test01: ngay sinh dat bang script vi go phim vao date input headless phu thuoc locale, da khai ro trong spec, commit 48b1300. test05 sua so lieu data URL 3478 thanh 3474. test06 them method notes ve typing indicator va viec xoa o tim kiem.
+- run_all.py: truoc day chi tin RESULT tu bao, nay bat buoc ca exit code 0, timeout ghi fail va chay tiep, commit 5a1f46d. test08 va test09: exception ngoai step nay lam fail test thay vi bi nuot. test10: check CSV so khop toan bo cac dong voi bang hien tai.
+
+Gioi han con lai, khai that:
+- test04: ActionChains drag that khong keo duoc the trong Firefox headless, 0/3, the keo bang dispatch event cua fixture qua handler cua board. Bang chung chi den muc xu ly event drag cua board, chua chung minh duoc keo tha bang con tro that. Da ghi ro trong spec.
+- test05: undo va redo kiem chung bang bo dem stroke, chua lay mau pixel cho rieng hai thao tac nay.
+- test06: typing indicator kiem chung qua bo dem cua fixture, da khai trong spec.
+- test08: nhanh FREESHIP va nguong mien phi ship chua duoc kich hoat trong test. test09: file diff thu 3 va nhanh chan request changes khi khong co comment lan summary chua duoc test.
+- Thoi gian trong spec la luc may ban song song nen cao hon luc chay ranh, redteam da xac nhan cung bac do lon va so buoc, so check khop tuyet doi.
+
+Dot 3 xong. Dot 4 se lam tiep theo thu tu da giao.
+
