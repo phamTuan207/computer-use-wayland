@@ -210,3 +210,42 @@ None in the three reports themselves. The arithmetic and citation errors above a
 3. Task 3 report: tip moved 36 commits since c19c227 (not twice); :148 line is 766 chars (not 767); clone2's fix doc is on main, not todolist-push.
 4. G29 report: run 2 wall 7,516.5 ms (not 7,646 ms); drop or re-time the "(AT-SPI dismiss, 'Continue', 0.2 ms)" figure; reword the XDG wrapper sentence to state the ordering explicitly.
 5. Open for Muse: the last30days install decision for clone1 (git clone as clone2 did, or stay uninstalled), and the three HIGH full fixes (V1 coordinator re-record per AM-13; V2 laptop logs or re-run; V3 laptop files or judge re-run).
+
+## Correction to this report (batch 7 fix): W11 is wrong and is withdrawn
+
+W11 claimed the task 3 report wrongly groups clone2's fix report
+doc with the four fix commits "on todolist-push". That finding is
+itself wrong, and it is withdrawn. The task 3 report's grouping was
+correct. Evidence, re-checked first-hand by the fix agent:
+
+- Commit 16c4196 IS an ancestor of origin/todolist-push
+  (git merge-base --is-ancestor 16c4196 origin/todolist-push
+  returns true).
+- The consolidated corrections document
+  improvements/batch7-high-corrections-20261122.md EXISTS in the
+  todolist-push tree at tip da60024 (78 lines, read back with
+  git show da60024:...). This is the document the task 3 report
+  verifies in its V1 section ("Present at the tip, read in full"),
+  and the "on todolist-push" in the task 3 report attaches to the
+  four fix commits, all verified ancestors of da60024.
+- Commit 5777535 is a different document,
+  docs/clone2-batch7-high-fixes-20261122.md, clone2's task 3 report,
+  on main only (git log --all shows that single commit for the
+  file; git cat-file -e da60024:docs/clone2-batch7-high-fixes-20261122.md
+  fails). W11 conflated the two documents: the corrections record
+  (16c4196) is on todolist-push, the report doc (5777535) is on main.
+
+The narrow fact inside W11 is true (the report doc is not in the
+todolist-push tree at da60024), but it does not make the task 3
+report wrong, because the task 3 report never claims that doc is on
+todolist-push: its operative citations are to the corrections
+document, which is on todolist-push. At most the intro bullet's
+grouping is ambiguous wording, not a wrong fact.
+
+Consequences: item 3 in "Corrections owed" is struck to the extent
+it repeats W11 (no change to the task 3 report is owed for it), the
+verdict paragraph's "W1, W2, W7, W8 and W11 must be corrected in
+the source docs" is corrected to "W1, W2, W7 and W8" only, and M6's
+list of the task 3 report's own errors is corrected from "W7, W8
+and W11" to "W7 and W8" only. No other finding in this report is
+affected.

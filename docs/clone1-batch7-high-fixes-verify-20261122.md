@@ -2,7 +2,7 @@
 
 - Verifier: clone1, batch 7 task 3, 22/11/2026, 04:01 to 04:10 +07.
 - What I found first: clone2 had already fixed the three HIGH violations (docs/clone2-batch7-high-fixes-20261122.md, commits 748cc35, 219720c, 05ee34d, 16c4196 on todolist-push). I did NOT duplicate the fixes. This report independently verifies them.
-- Anchor tip: origin/todolist-push da60024 (clone2 checked at c19c227; the tip moved twice since, and every correction below was re-checked at da60024).
+- Anchor tip: origin/todolist-push da60024 (clone2 checked at c19c227; the tip moved 36 commits since, and every correction below was re-checked at da60024).
 - Method: read-only git checks only (git show, git cat-file, git grep, git ls-tree, git log --all, git merge-base). No file was edited on todolist-push, no test was run (there is no code to test, the work is evidence recovery). No file, log, number, or evidence item was invented anywhere in this task.
 
 ## Outcome summary
@@ -22,7 +22,7 @@ Fix commits are ancestors of the current tip (git merge-base --is-ancestor 16c41
 What clone2 did, and what I re-checked at da60024:
 - Correction entry appended to improvements/worker-f1-guardian-fix-log.md (commit 05ee34d, 5 lines, at the end of the file). Present at the tip (tail read back verbatim). It states the H3 gate line at line 862 cites no acceptance artifact, MEMORY.md exists on no branch and never existed in git history, the proposal commit 5a2b69d exists but no council paper, log entry, or owner message records who accepted it, and the corrected status is UNVERIFIED, to be re-recorded by the coordinator before the Y13 live run treats it as resolved. It also notes the re.py deleter claim is independently corroborated by VMFIX commit c16dd4e.
 - Consolidated corrections document improvements/batch7-high-corrections-20261122.md (commit 16c4196, 78 lines). Present at the tip, read in full. It records the correction for all five sites and states the other three files were not edited (two are council/method papers, one is a council verdict record).
-- My checks, all at da60024: git log --all -- MEMORY.md returns nothing (never existed in any history). Commit 5a2b69d exists ("Y6c: nested v2 run BLOCKED at launch ... NO VERDICT, probes + evidence"). Commit c16dd4e exists ("VMFIX: VM Python re breakage verified + durable"). All five citation sites still carry the original claim at the cited lines: opt-council-m2-verdict.md:90 (G-10, H3 resolved per MEMORY.md 22:57) and :107 (U-1, H3 RESOLVED per MEMORY.md 22:57), opt-crawl-src-20261121.md:148 (G8, line is 767 chars; the H3 acceptance text is at the end of the line), optimal-fix-method-20261121.md:198 (H3 gate: accepted Y13r2 proposal), worker-f1-guardian-fix-log.md:862 (H3 gate: accept Y13r2's proposal). The method file line 131 requires the acceptance to be cited in a council paper or log entry, not only MEMORY.md 22:57 (AM-13). The method file line 202 states it is amended only by a new council + redteam cycle and a worker does not edit it directly, so clone2 was right not to edit it.
+- My checks, all at da60024: git log --all -- MEMORY.md returns nothing (never existed in any history). Commit 5a2b69d exists ("Y6c: nested v2 run BLOCKED at launch ... NO VERDICT, probes + evidence"). Commit c16dd4e exists ("VMFIX: VM Python re breakage verified + durable"). All five citation sites still carry the original claim at the cited lines: opt-council-m2-verdict.md:90 (G-10, H3 resolved per MEMORY.md 22:57) and :107 (U-1, H3 RESOLVED per MEMORY.md 22:57), opt-crawl-src-20261121.md:148 (G8, line is 766 chars; the H3 acceptance text is at the end of the line), optimal-fix-method-20261121.md:198 (H3 gate: accepted Y13r2 proposal), worker-f1-guardian-fix-log.md:862-863 (H3 gate: accept Y13r2's proposal; the word "proposal" is on line 863). The method file line 131 requires the acceptance to be cited in a council paper or log entry, not only MEMORY.md 22:57 (AM-13). The method file line 202 states it is amended only by a new council + redteam cycle and a worker does not edit it directly, so clone2 was right not to edit it. Note: the correction entry in the log itself cites line 862 the same way, so the 862-only citation is inherited from it, not invented here.
 
 Still missing (UNFIXABLE FROM HERE): the acceptance record itself (MEMORY.md 22:57, laptop-only). Full fix needs the coordinator to re-record the acceptance decision in a council paper or log entry (who accepted, when, on what basis), per AM-13. Only the coordinator can do this, because only the coordinator can read that MEMORY.md entry.
 
@@ -44,7 +44,8 @@ Still missing (UNFIXABLE FROM HERE): the 5 report files, stress.log, the 16 JSON
 
 ## Precision notes
 
-- None of my checks contradicts any claim in clone2's fix report or in the corrections document. The one place I first suspected an error, the V1 "five places" list including opt-crawl-src-20261121.md:148, turned out to be correct: the line is 767 characters long and ends with "H3 gate: Y13r2 proposal accepted (5a2b69d NO VERDICT + runner-quiet/ports check counts as the done marker leg for this run, gate text unchanged, Y6 retry after Y13)."
+- None of my checks contradicts any claim in clone2's fix report or in the corrections document. The one place I first suspected an error, the V1 "five places" list including opt-crawl-src-20261121.md:148, turned out to be correct: the line is 766 characters long and ends with "H3 gate: Y13r2 proposal accepted (5a2b69d NO VERDICT + runner-quiet/ports check counts as the done marker leg for this run, gate text unchanged, Y6 retry after Y13)."
+- Two more places state the H3 acceptance as fact and are NOT covered by clone2's corrections (council 2 finding D2, verified first-hand at da60024): improvements/worker-f2-silence-fix-log.md:598-600 ("H3 gate: accept Y13r2's proposal (5a2b69d NO VERDICT + a runner-quiet/ports check counts as a done-marker for this run, keep the gate text, Y6 retry after Y13)") and improvements/worker-opt-method-log.md:81 ("- H3 gate: accept Y13r2 proposal (5a2b69d NO VERDICT + runner-quiet/ports check counts as the done marker leg for this run, keep gate text, Y6 retry after Y13)"). Neither line contains the exact string "MEMORY.md 22:57" (the opt-method-log line sits under the "Parent MEMORY.md updated 22:57" heading at line 79), which is why they fall outside the five-place count; both still state the acceptance as fact and still need correction entries. Does not change the PARTIALLY FIXED verdict. No file was edited on todolist-push for this note.
 - The audit's V2 listed 9 missing logs; the true count is 14, as clone2 found. The 5 extra logs (arm_d_run.log, probe_d.log, probe_f.log, probe_r3.log, relaunch-f3b.log) are cited at lines 55, 73-74, 82, 85 of the F3b log and are missing too. I verified all 5 citations and all 5 absences.
 - The corrections document says its checks were done at anchor tip c19c227. I re-ran every check at the current tip da60024 and every result still holds.
 
@@ -54,3 +55,32 @@ Still missing (UNFIXABLE FROM HERE): the 5 report files, stress.log, the 16 JSON
 2. V2 full fix: the 14 logs from the laptop, or a re-run of arms A-E with logs committed under improvements/f3-evidence/. Needs the owner or the laptop worker.
 3. V3 full fix: the 5 report files, stress.log, 16 JSON files and 20 screenshots from the laptop/VM, or a re-run of the judge with evidence committed. Needs the owner or the judge worker.
 4. Nothing further is fixable from this machine. No additional commit on todolist-push is needed from clone1 for these three HIGHs; the record is corrected and the gaps are named with exact file lists.
+
+## Corrections after the batch 7 redteam review
+
+Applied by the batch 7 fix agent, each recomputed first-hand from
+the todolist-push branch at da60024.
+
+- W7: the tip "moved twice" since c19c227 was wrong; git rev-list
+  --count c19c227..da60024 returns 36. Fixed in the anchor line.
+- W8: the :148 line "767 chars" was wrong; true length excluding the
+  newline is 766 (wc -c 767 includes the newline). Fixed in the V1
+  checks and in the precision notes.
+- M4: the :862 citation was imprecise; the H3 acceptance text spans
+  lines 862-863 of improvements/worker-f1-guardian-fix-log.md, and
+  the word "proposal" is on line 863. Fixed to 862-863; the
+  correction entry in the log itself cites 862 the same way, so the
+  imprecision was inherited.
+- D2 (council 2): two more places state the H3 acceptance as fact
+  and are not covered by clone2's corrections:
+  improvements/worker-f2-silence-fix-log.md:598-600 and
+  improvements/worker-opt-method-log.md:81. Named above in the
+  precision notes; both still need correction entries.
+- Scope note (redteam M6): the "0 discrepancies found" verdict in
+  this report refers to clone2's fixes only, not to this report's own
+  numbers (which contained W7, W8 and the M4 imprecision, now
+  corrected above). The batch 7 final report must not quote
+  "0 discrepancies" without that scope.
+- W11 was NOT applied: see the correction note in
+  docs/batch7-redteam-20261122.md. The redteam finding is itself
+  wrong; the task 3 report's grouping was correct.
