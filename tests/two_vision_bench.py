@@ -578,6 +578,71 @@ def open_windows(driver, plan, t_start):
     return handles
 
 
+def normalize_file_url(url):
+    """Normalize a file:// plan URL so the live gate cannot be
+    bypassed by a path that starts with the fixture dir textually
+    but points outside it (redteam batch 9 task 2 finding 5:
+    tests/../../tmp/rt-bypass.html passed startswith(FIXTURE_DIR)
+    and ran the full send chain against a file outside tests/).
+    os.path.normpath resolves '..' segments; non-file URLs pass
+    through unchanged and fail the fixture gate on their own."""
+    if not url.startswith("file://"):
+        return url
+    return "file://" + os.path.normpath(url[len("file://"):])
+
+
+def validate_plan(plan):
+    """Plan validation, before any browser starts (redteam batch 9
+    task 2 findings 1, 2, 3, 5). The benchmark is defined as exactly
+    two windows, two distinct threads, two messages. Before this
+    check an empty plan reported PASS (0 sent == 0 windows), a
+    one-window plan PASSED with one message, and two windows on the
+    same URL PASSED with both messages in one thread. All four now
+    refuse with exit 2 before the browser starts. Returns the plan
+    with its URLs normalized in place. Raises ValueError on any
+    defect; the caller prints REFUSED and returns 2."""
+    if not isinstance(plan, dict):
+        raise ValueError("plan must be a JSON object")
+    run_id = plan.get("run_id")
+    if not isinstance(run_id, str) or not run_id:
+        raise ValueError("plan needs a non-empty run_id string")
+    windows = plan.get("windows")
+    if not isinstance(windows, list) or len(windows) != 2:
+        n = (len(windows) if isinstance(windows, list)
+             else "not a list")
+        raise ValueError(
+            "plan needs exactly 2 windows (got "
+            f"{n}); the benchmark is two clones, two threads, "
+            "two messages")
+    urls = []
+    for w in windows:
+        if not isinstance(w, dict):
+            raise ValueError("each plan window must be an object")
+        label = w.get("label")
+        if not isinstance(label, str) or not label:
+            raise ValueError("each plan window needs a label string")
+        url = w.get("url")
+        if not isinstance(url, str) or not url:
+            raise ValueError("each plan window needs a url string")
+        url = normalize_file_url(url)
+        w["url"] = url
+        urls.append(url)
+    if urls[0] == urls[1]:
+        raise ValueError(
+            "the two plan windows must point at different URLs; "
+            "two windows on the same thread would report PASS "
+            "with both messages in one thread")
+    messages = plan.get("messages")
+    if not isinstance(messages, dict):
+        raise ValueError("plan needs a messages object")
+    for w in windows:
+        if w["label"] not in messages:
+            raise ValueError(
+                "plan messages has no entry for window "
+                f"{w['label']!r}")
+    return plan
+
+
 def main():
     ap = argparse.ArgumentParser(
         description="2-vision benchmark: build only, no live run yet.")
@@ -642,12 +707,22 @@ def main():
         print("REFUSED: live mode needs --plan with thread URLs.",
               file=sys.stderr)
         return 2
+    # Plan validation first, before any browser starts: exactly 2
+    # windows, distinct URLs, non-empty run_id. See validate_plan.
+    try:
+        plan = validate_plan(plan)
+    except ValueError as exc:
+        print(f"REFUSED: invalid plan: {exc}", file=sys.stderr)
+        return 2
     # Live gate, on the plan URLs, not the flag: a custom --plan with
     # real thread URLs and no --live flag used to run the full send
     # chain against those threads. Any URL outside the local fixture
     # files now requires BOTH --live and --confirm-live, before any
     # browser starts. Fixture mode is the default plan and any plan
     # whose windows all point at local fixture files under tests/.
+    # Plan URLs were normalized by validate_plan above, so a '..'
+    # path cannot pass this gate textually while pointing outside
+    # tests/.
     fixture_urls = all(
         w.get("url", "").startswith(FIXTURE_DIR)
         for w in plan["windows"])
@@ -744,7 +819,11 @@ def main():
         # Outcome scoring (M1): PASS iff both messages are in their
         # threads. VISION 2 is the agent looking at both threads once;
         # the script's V12 gates are the same check by DOM read.
-        results["outcome"] = ("PASS" if len(sent) == len(plan["windows"])
+        # The rule requires exactly 2 sent AND exactly 2 windows:
+        # validate_plan already refuses any other window count, but
+        # the outcome must not pass on 0 == 0 if that ever changes.
+        results["outcome"] = ("PASS" if len(sent) == 2
+                              and len(plan["windows"]) == 2
                               else "FAIL")
         return finish(results, args, t_start,
                       0 if results["outcome"] == "PASS" else 1)
