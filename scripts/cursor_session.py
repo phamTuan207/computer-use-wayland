@@ -77,7 +77,10 @@ def owner_lock():
     try:fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
     except BlockingIOError:
         lock.close()
-        raise RuntimeError('another automation session is active')
+        # The lock is also held by plugin activation (the lock-holding
+        # wrapper), not only by a running session; name both so the
+        # message does not mislead when activation holds it.
+        raise RuntimeError('another automation session or plugin activation is active')
     return lock
 
 

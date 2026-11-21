@@ -226,7 +226,7 @@ class SyncInstalledTests(unittest.TestCase):
             self.assertEqual(process.stdout.readline().strip(), 'locked')
             code, _output, error = self._run([])
             self.assertNotEqual(code, 0)
-            self.assertIn('another automation session is active', error)
+            self.assertIn('another automation session or plugin activation is active', error)
         finally:
             process.terminate()
             process.communicate(timeout=5)
