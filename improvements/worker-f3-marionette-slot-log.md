@@ -54,7 +54,17 @@ Corrected theory (22:38, after restart): lazy tabs do NOT break `#registerBrowse
 | 22:45:38 | +27m38s | wtype Logo+1 | Hyprland workspace 1 | Executed, no error. Outcome: opened OMARCHY SYSTEM menu ("Search system...", Reboot / Shutdown / Logout / Screensaver / Suspend / Lock). Logo+1 is bound to the system menu, NOT workspace 1. Second menu-opening miss. No menu item clicked. | - |
 | 22:45 | +27m | Owner correction received | F3 | Never click workspace/menu buttons on the bar again. CLI first. | - |
 | 22:47 | +29m | Owner log rule received | F3 | Log every event with time as it happens. This log is now the live record. | - |
-| 22:47:xx | +29m | wtype Escape | Omarchy System menu | System menu CLOSED (observe 8b3d868f88c9, verification pending in this log). | - |
+| 22:47:xx | +29m | wtype Escape | Omarchy System menu | System menu CLOSED (observe 8b3d868f88c9, verified by viewing 22:48: two Muse windows, no menu overlay). | - |
+| 22:48 | +30m | Log file created + viewed | worker-f3 log | Log written to improvements/worker-f3-marionette-slot-log.md. Screenshot after-esc3 confirmed System menu closed. | - |
+| 22:48 | +30m | Log commit 8a5b18a pushed | todolist-push | Commit "F3: live event log, Marionette root cause + restore + 22:43 click-miss" pushed 072e973..8a5b18a. ls-remote then showed b45f3b82 (another worker pushed after me; my commit is in, ancestry to verify). | - |
+| 22:48 | +30m | Owner orders (22:45-22:48, via MEMORY) | F3 + fleet | 22:45 fastest-path-first (CLI, no bar clicks). 22:46-22:47 OPT coordinator: find ONE optimal fix method for the whole error pile, all agents + crawlers + council + redteam. 22:48 Lauren Tan, NO cutting steps. Owner asleep, work overnight, report in the morning. | - |
+| 22:49 | +31m | Owner steer (240 target) | F3 | GitHub graph 136 contributions, need 240 before end of day. Commit EVEN MORE and EVEN SMALLER: every small step its own commit, push at once, do not batch. | - |
+| 22:49-22:50 | +31m to +32m | Owner steer (cleanup redo) | F3 | Owner screenshot 22:50 proves the 39 fixture tabs came back after the restart. Re-run FULL cleanup with the same keep-list (28 real tabs), verify with a fresh tab list they do not come back. Delete any tab definitely no longer used. | - |
+| 22:50 | +32m | Launcher command confirmed from config | bindings.lua | Exact launcher command: `omarchy-menu toggle root` (SUPER+SPACE). Found in ~/.config/hypr/bindings.lua, not guessed. | - |
+| 22:50 | +32m | hyprctl activeworkspace | compositor | Active workspace 2 (id 2, eDP-2, 2 windows, last "Muse"). Still on ws2. | - |
+| 22:50 | +32m | hl.dsp.workspace introspection via hyprctl eval | hl.dsp.workspace | Methods: swap_monitors, rename, move, change_id, toggle_special. NO goto/switch. (via hl.exec_cmd writing to /tmp/dsp-ws.txt) | - |
+| 22:51 | +33m | hl.dsp top-level introspection | hl.dsp | 21 keys. cursor=table, group=table, window=table, workspace=table; dpms/event/exec_cmd/exec_raw/exit/focus/force_idle/force_renderer_reload/global/layout/no_op/pass/release_input_capture/reload_config/send_key_state/send_shortcut/submap=function. focus is a FUNCTION. | - |
+| 22:51 | +33m | hl.dsp.focus introspection attempt | hl.dsp.focus | FAILED as expected: pairs() on a function ("bad argument #1 ... got function"). Confirms focus is a function, not a table. | - |
 
 ## Notes added after the fact (22:47, from the man page)
 
@@ -75,8 +85,7 @@ Corrected theory (22:38, after restart): lazy tabs do NOT break `#registerBrowse
 
 ## Open items (in order)
 
-1. Read the Hyprland/Omarchy config on the laptop for the exact workspace-switch command (hl.dsp form) and the exact launcher command. Do not guess.
-2. Return to Hyprland workspace 1 by command, verify Zen is visible.
-3. Redo the tab cleanup via Marionette (DOM route). Sacrificial tab FIRST, end the session on a live tab.
-4. Add the Marionette failure + the 22:43:15 click-miss to the error file.
-5. Council (3) + redteam over the fix. Commit + push each small step at once.
+1. (TOP, owner 22:49) Re-run the FULL tab cleanup via Marionette: close the 39 resurrected fixture tabs + the definitely-unused ones among the 28 (13 about:blank, httpbin, BiDi fixture 40301), keep the 13 real tabs (incl. Free Claude Code Admin 127.0.0.1:8082). Verify with a FRESH tab list that they do not come back. Sacrificial tab FIRST, end the session on a live tab.
+2. Workspace-switch by command: hl.dsp has no goto. Next: check `hyprctl binds -j` for the Omarchy default workspace binds, and test `hl.dispatch("workspace", "1")` (string form) with immediate activeworkspace verification. Then return to ws1 and verify Zen visible.
+3. Add the Marionette failure + the 22:43:15 click-miss to the error file.
+4. Council (3) + redteam over the fix. Commit + push each small step at once.
