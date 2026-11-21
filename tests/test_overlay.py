@@ -73,10 +73,68 @@ def test_label_command_valid_chars():
     assert not re.fullmatch(r'label [\x20-\x7e]{1,40}', 'label bad\nline')
 
 
+class _FakeProc:
+    def __init__(self, dead):
+        self._dead = dead
+    def poll(self):
+        return 1 if self._dead else None
+
+
+class _FakeNative:
+    def __init__(self, dead=False):
+        self.process = _FakeProc(dead)
+        self.commands = []
+        self.closed = False
+    def command(self, cmd):
+        if self.process.poll() is not None:
+            raise OSError('indicator disconnected')
+        self.commands.append(cmd)
+        return 'ok'
+    def close(self):
+        self.closed = True
+
+
+def test_daemon_respawns_dead_native():
+    """I12: a dead native indicator must be respawned while holders remain,
+    not leave the pill invisible. The daemon detects the dead process in
+    _show_label and brings a fresh one up before labelling."""
+    with tempfile.TemporaryDirectory() as tmp:
+        _isolated(tmp)
+        daemon = overlay.Daemon()
+        daemon.owner = 'daemon'
+        daemon.native = _FakeNative(dead=True)
+        spawned = []
+        def fake_spawn(env):
+            daemon.native = _FakeNative(dead=False)
+            daemon.owner = 'daemon'
+            spawned.append(True)
+        daemon._spawn_native = fake_spawn
+        daemon._show_label('Muse via BiDi')
+        assert spawned, 'dead native must be respawned'
+        assert daemon.native.commands == ['label Muse via BiDi', 'show']
+
+
+def test_daemon_keeps_live_native():
+    """No respawn when the native process is alive: exactly one show."""
+    with tempfile.TemporaryDirectory() as tmp:
+        _isolated(tmp)
+        daemon = overlay.Daemon()
+        daemon.owner = 'daemon'
+        live = _FakeNative(dead=False)
+        daemon.native = live
+        spawned = []
+        daemon._spawn_native = lambda env: spawned.append(True)
+        daemon._show_label('Codex via DOM')
+        assert spawned == [], 'live native must not be respawned'
+        assert live.commands == ['label Codex via DOM', 'show']
+
+
 if __name__ == '__main__':
     test_label_format()
     test_add_release_refcount()
     test_holders_persist_json()
     test_prune_dead_pid()
     test_label_command_valid_chars()
+    test_daemon_respawns_dead_native()
+    test_daemon_keeps_live_native()
     print('all overlay tests pass')

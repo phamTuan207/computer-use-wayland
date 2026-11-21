@@ -108,8 +108,9 @@ def main(argv=None):
         else:
             issue = 'visual_grounding'
         append_attempt(args.hits_out, case_id=args.case_id, attempt=len(rows) + 1,
-                       backend='desktop', intended_target=tid,
-                       actual_target=actual, issue_group=issue)
+                       backend='desktop', intended_target=tid.lower(),
+                       actual_target=(actual.lower() if actual else None),
+                       issue_group=issue)
         rows.append({
             'id': tid, 'ix': est['ix'], 'iy': est['iy'],
             'screen_x': round(sx, 1), 'screen_y': round(sy, 1),
