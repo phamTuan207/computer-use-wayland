@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Git Workbench</title>
+  <style>
+    *{box-sizing:border-box}body{margin:0;padding:24px;background:#10151d;color:#d9e2ef;font:14px system-ui,sans-serif}.app{max-width:1050px;margin:auto;background:#18212c;border:1px solid #314154;border-radius:10px;overflow:hidden}header,.toolbar,section{padding:16px 20px;border-bottom:1px solid #314154}header{display:flex;justify-content:space-between;align-items:center}h1{margin:0;font-size:20px;color:#8cc8ff}.stats{display:flex;gap:14px;flex-wrap:wrap}.stat{color:#9eb0c4}.stat b{color:#fff}button,select,input,textarea{font:inherit;color:inherit;background:#111923;border:1px solid #43546a;border-radius:5px;padding:8px}button{cursor:pointer;background:#26384c}button:hover{background:#334b64}.toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}section{display:grid;grid-template-columns:1fr 1fr;gap:16px}.panel{padding:14px;background:#111923;border:1px solid #304257;border-radius:8px}h2{margin:0 0 12px;font-size:15px;color:#b8d9fa}textarea{width:100%;min-height:105px;display:block;white-space:pre;font-family:ui-monospace,monospace}.row{display:flex;gap:8px;margin:8px 0}.row input{flex:1}pre{white-space:pre-wrap;margin:8px 0 0;color:#b5c5d8}.muted{color:#91a3b8}
+  </style>
+</head>
+<body>
+<main class="app">
+  <header><h1>Git Workbench</h1><div class="stats"><span>Branch: <b id="current-branch">main</b></span><span>Tree: <b id="worktree-status">Clean</b></span><span>Commits: <b id="commit-count">1</b></span><span>Conflicts: <b id="conflict-count">0</b></span></div></header>
+  <div class="toolbar">
+    <input id="branch-name-input" aria-label="New branch name" placeholder="new branch name">
+    <button id="btn-create-branch">Create branch</button>
+    <select id="branch-picker" aria-label="Branch"></select>
+    <button id="btn-switch-branch">Switch branch</button>
+    <button id="btn-merge-main">Merge main into current branch</button>
+  </div>
+  <section>
+    <div class="panel" style="grid-column:1/-1">
+      <h2>Terminal</h2>
+      <pre id="terminal-output">Ready on branch main</pre>
+      <div class="row"><input id="terminal-command-input" aria-label="Git command" placeholder="git command"><button id="btn-run-git-command">Run command</button></div>
+    </div>
+    <div class="panel">
+      <h2>config.txt</h2>
+      <textarea id="file-config-editor" aria-label="config.txt">mode=stable
+log=verbose</textarea>
+      <div class="row"><button id="btn-stage-config">Stage config.txt</button><input id="commit-message-input" placeholder="commit message"><button id="btn-commit">Commit</button></div>
+      <div>Staged files: <b id="staged-count">0</b></div>
+      <p>Merge status: <b id="merge-status">No merge in progress</b></p>
+      <p id="conflict-markers" class="muted">No conflict markers</p>
+      <div class="row"><button id="btn-use-incoming" hidden>Use incoming</button><button id="btn-use-ours" hidden>Use ours and keep incoming log</button><button id="btn-undo-conflict-resolution" hidden>Undo resolution</button></div>
+    </div>
+    <div class="panel"><h2>Branches</h2><pre id="branch-list"></pre><h2 style="margin-top:18px">Commit history</h2><div>Latest: <b id="latest-commit">Initial commit</b></div><pre id="git-log-list">Initial commit</pre></div>
+  </section>
+</main>
+<script>
+  const baseConfig = 'mode=stable\nlog=verbose';
+  const branches = {
+    main: { config: baseConfig, committed: baseConfig },
+  };
+  const commits = ['Initial commit'];
+  let currentBranch = 'main';
+  let staged = false;
+  let conflict = false;
+  let wrongResolution = false;
+  const editor = document.querySelector('#file-config-editor');
+  const branchPicker = document.querySelector('#branch-picker');
+  const ids = (id) => document.querySelector(id);
+
+  function render() {
+    branches[currentBranch].config = editor.value;
+    ids('#current-branch').textContent = currentBranch;
+    ids('#worktree-status').textContent = editor.value === branches[currentBranch].committed ? 'Clean' : 'Modified: config.txt';
+    ids('#commit-count').textContent = String(commits.length);
+    ids('#conflict-count').textContent = conflict ? '1' : '0';
+    ids('#staged-count').textContent = staged ? '1' : '0';
+    ids('#branch-list').textContent = Object.keys(branches).join('\n');
+    ids('#git-log-list').textContent = [...commits].reverse().join('\n');
+    ids('#latest-commit').textContent = commits[commits.length - 1];
+    ids('#conflict-markers').textContent = conflict ? '<<<<<<< feature/cleanup\nmode=preview\n=======\nmode=stable\n>>>>>>> main' : 'No conflict markers';
+    branchPicker.innerHTML = Object.keys(branches).map((name) => `<option value="${name}">${name}</option>`).join('');
+    branchPicker.value = currentBranch;
+  }
+
+  editor.addEventListener('input', () => { staged = false; render(); });
+  ids('#btn-create-branch').onclick = () => {
+    const name = ids('#branch-name-input').value.trim();
+    if (!name || branches[name]) return;
+    branches[name] = { config: branches[currentBranch].committed, committed: branches[currentBranch].committed };
+    currentBranch = name;
+    editor.value = branches[name].config;
+    ids('#branch-name-input').value = '';
+    render();
+  };
+  ids('#btn-switch-branch').onclick = () => {
+    if (ids('#worktree-status').textContent !== 'Clean' || conflict) return;
+    currentBranch = branchPicker.value;
+    editor.value = branches[currentBranch].config;
+    staged = false;
+    render();
+  };
+  ids('#btn-stage-config').onclick = () => {
+    staged = editor.value !== branches[currentBranch].committed;
+    render();
+  };
+  ids('#btn-commit').onclick = () => {
+    const message = ids('#commit-message-input').value.trim();
+    if (!staged || !message || conflict) return;
+    branches[currentBranch].config = editor.value;
+    branches[currentBranch].committed = editor.value;
+    commits.push(message);
+    ids('#commit-message-input').value = '';
+    staged = false;
+    if (ids('#merge-status').textContent === 'Conflict resolved') ids('#merge-status').textContent = 'Merge committed';
+    render();
+  };
+  ids('#btn-merge-main').onclick = () => {
+    if (currentBranch === 'main' || conflict) return;
+    conflict = true;
+    staged = false;
+    ids('#merge-status').textContent = 'Conflict in config.txt';
+    ids('#btn-use-incoming').hidden = false;
+    ids('#btn-use-ours').hidden = false;
+    render();
+  };
+  ids('#btn-use-incoming').onclick = () => {
+    if (!conflict) return;
+    conflict = false;
+    wrongResolution = true;
+    editor.value = branches.main.committed;
+    branches[currentBranch].config = editor.value;
+    ids('#merge-status').textContent = 'Resolved with incoming version';
+    ids('#btn-use-incoming').hidden = true;
+    ids('#btn-use-ours').hidden = true;
+    ids('#btn-undo-conflict-resolution').hidden = false;
+    render();
+  };
+  ids('#btn-undo-conflict-resolution').onclick = () => {
+    if (!wrongResolution) return;
+    wrongResolution = false;
+    conflict = true;
+    editor.value = '<<<<<<< feature/cleanup\nmode=preview\n=======\nmode=stable\n>>>>>>> main';
+    ids('#merge-status').textContent = 'Conflict in config.txt';
+    ids('#btn-use-incoming').hidden = false;
+    ids('#btn-use-ours').hidden = false;
+    ids('#btn-undo-conflict-resolution').hidden = true;
+    render();
+  };
+  ids('#btn-use-ours').onclick = () => {
+    if (!conflict) return;
+    conflict = false;
+    branches[currentBranch].config = 'mode=preview\nlog=compact';
+    editor.value = branches[currentBranch].config;
+    ids('#merge-status').textContent = 'Conflict resolved';
+    ids('#btn-use-incoming').hidden = true;
+    ids('#btn-use-ours').hidden = true;
+    ids('#btn-undo-conflict-resolution').hidden = true;
+    staged = true;
+    render();
+  };
+  function runGitCommand(command) {
+    const newBranch = command.match(/^git switch -c (.+)$/);
+    if (newBranch) {
+      if (branches[newBranch[1]]) return `fatal: branch '${newBranch[1]}' already exists`;
+      ids('#branch-name-input').value = newBranch[1];
+      ids('#btn-create-branch').click();
+      return `Switched to a new branch '${newBranch[1]}'`;
+    }
+    const add = command.match(/^git add (.+)$/);
+    if (add) {
+      if (add[1] !== 'config.txt') return `fatal: pathspec '${add[1]}' did not match a file`;
+      ids('#btn-stage-config').click();
+      return staged ? 'staged config.txt' : 'nothing to stage';
+    }
+    const commit = command.match(/^git commit -m "(.+)"$/);
+    if (commit) {
+      ids('#commit-message-input').value = commit[1];
+      ids('#btn-commit').click();
+      return `committed: ${commit[1]}`;
+    }
+    const switchBranch = command.match(/^git switch ([\w/.-]+)$/);
+    if (switchBranch) {
+      if (!branches[switchBranch[1]]) return `fatal: invalid reference '${switchBranch[1]}'`;
+      branchPicker.value = switchBranch[1];
+      ids('#btn-switch-branch').click();
+      return `Switched to branch ${currentBranch}`;
+    }
+    if (command === 'git merge main') {
+      ids('#btn-merge-main').click();
+      return conflict ? 'Auto-merging config.txt\nCONFLICT in config.txt' : 'Already up to date';
+    }
+    if (command === 'git status --short') return `${ids('#worktree-status').textContent === 'Clean' ? 'working tree clean' : 'modified config.txt'} on ${currentBranch}`;
+    if (command === 'git log --oneline') return [...commits].reverse().map((message, index) => `${commits.length - index} ${message}`).join('\n');
+    return `unknown command: ${command}`;
+  }
+  ids('#btn-run-git-command').onclick = () => {
+    const command = ids('#terminal-command-input').value.trim();
+    ids('#terminal-output').textContent = runGitCommand(command);
+    ids('#terminal-command-input').value = '';
+  };
+  render();
+</script>
+</body>
+</html>
