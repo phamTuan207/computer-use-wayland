@@ -3025,4 +3025,25 @@ pins the right values), but the live_metrics sibling-module
 lesson is recorded here for the next ship.
 - 00:52 +07: ship DONE and verified. Reporting to Muse:
   fix pass 8 ALL 4 GO + doc-only fix + ship complete.
+- 00:53 +07: redteam formal completion handoff arrived
+  (agent 29c0ace6, completed 00:35:45 UTC; its paper ea06c93
+  was already read from the remote and used in the joint
+  adjudication). New detail, the commit-shape caveat,
+  VERIFIED by me: the redteam's first `git add` staged its
+  paper, and a concurrent agent's plain `git commit`
+  (e05bbc9, "Y13g: log Redteam AMEND (F1-F6, 7c2d1dd)")
+  swept the staged file in, so the bulk of the paper (214
+  lines) sits in e05bbc9 alongside
+  improvements/worker-y13g-fix-log.md, and ea06c93 holds
+  only the final 7-line reword (banned-word cleanup: "no
+  ydotool use" reworded to "no use of the banned tool").
+  End state is correct: the full 214-line paper is on the
+  remote, md5-identical to what the redteam wrote, and the
+  redteam's pathspec commit touched only its file. No content
+  lost, no other file swept in by the redteam. Third
+  shared-checkout hazard of this class in this workstream
+  (after the `git add -A` sweeps and the Council 1 `git
+  reset --hard` deletion): a concurrent plain `git commit`
+  sweeps another worker's staged-but-uncommitted file. The
+  verdict itself is unchanged (GO, already adjudicated).
 
