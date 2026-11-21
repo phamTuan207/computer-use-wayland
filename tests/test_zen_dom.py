@@ -64,6 +64,7 @@ class FakeWdSession(ZenSession):
         self.dom_origin = [100, 200]
         self.dom_inner = [901, 1176]
         self.dom_outer = [901, 1176]
+        self.dom_factor = 1
         self.dom_fields = {}
         self.sent_bubbles = []
         self._armed = {}
@@ -124,7 +125,8 @@ class FakeWdSession(ZenSession):
                     selector = json.loads(m.group(1))
                     break
         if 'zen_viewport_origin' in script:
-            return [self.dom_origin[0], self.dom_origin[1], 1, 1, 1,
+            return [self.dom_origin[0], self.dom_origin[1],
+                    self.dom_factor, self.dom_factor, 1,
                     self.dom_inner[0], self.dom_inner[1],
                     self.dom_outer[0], self.dom_outer[1]]
         if 'zen_display_metrics' in script:
@@ -511,6 +513,27 @@ class TestDomHelpers(unittest.TestCase):
         session.dom_outer = [1863, 1176]
         self.assertEqual(session.viewport_origin([2509, 914], [1863, 1176]),
                          [2749, 922])
+
+    def test_viewport_origin_factor_two_geometry(self):
+        # Unit mixing (amend3 step 5): at monitor scale 2 the
+        # Hyprland window size is screen px (3726x2352) while
+        # mozInner and inner size are CSS px. viewport_origin
+        # converts the window size to CSS px before the geometry
+        # check, so the closure holds exactly and the absolute
+        # origin is window origin + mozInner * 2.
+        session = self._session()
+        session.dom_origin = [240, 8]
+        session.dom_inner = [1615, 1160]
+        session.dom_outer = [1863, 1176]
+        session.dom_factor = 2
+        self.assertEqual(session.viewport_origin([2509, 914], [3726, 2352]),
+                         [2989, 930])
+        # And impossible CSS geometry is refused at factor 2: the
+        # window is only 1500x1000 CSS px, so mozInner + inner size
+        # cannot close inside it. Before the fix the check compared
+        # against the screen-px size and let this through.
+        with self.assertRaises(ZenDomError):
+            session.viewport_origin([2509, 914], [3000, 2000])
 
     def test_viewport_origin_requires_window_origin(self):
         # Without the Hyprland window origin the raw pair cannot be

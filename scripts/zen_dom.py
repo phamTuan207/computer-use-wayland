@@ -121,7 +121,11 @@ def check_viewport_geometry(moz_inner, absolute_origin, window_origin,
     All sizes are CSS px except the window origin and monitor box,
     which are screen px; at the measured setup the factor between them
     is 1. The caller applies the CSS-to-screen factor to mozInner
-    before computing the absolute origin.
+    before computing the absolute origin, and converts the Hyprland
+    screen-px window size to CSS px (divide by the factor) before
+    calling this check: passing a screen-px size would make the
+    closure check loose and mis-scaled at factors other than 1
+    (amend3 step 5).
     """
     def _pair(value, name):
         if (not isinstance(value, (list, tuple)) or len(value) != 2
@@ -598,8 +602,20 @@ class ZenSession:
         absolute = [window_origin[0] + moz_inner[0] * factor,
                     window_origin[1] + moz_inner[1] * factor]
         size = window_size if window_size is not None else [raw[7], raw[8]]
+        # Unit mixing (amend3 step 5): window_size arrives in screen
+        # px from Hyprland, while mozInner and inner size are CSS px.
+        # check_viewport_geometry takes the window size in CSS px
+        # (its dimension-closure check is a CSS-px check), so divide
+        # by the factor here; at factor 1 this is exact and changes
+        # nothing. Note the containment check then compares a screen
+        # absolute origin against a CSS-px window rect, which is
+        # conservative at factor > 1 (it can only refuse, never
+        # accept a wrong origin); the viewport origin sits
+        # mozInner * factor from the window origin, well inside that
+        # rect for any real sidebar geometry.
+        size_css = [size[0] / factor, size[1] / factor]
         return check_viewport_geometry(
-            moz_inner, absolute, window_origin, size,
+            moz_inner, absolute, window_origin, size_css,
             [raw[5], raw[6]], monitor_box)
 
     def locate_point(self, meta, selector):
