@@ -1064,3 +1064,27 @@ Muse đã giao qua commit a34e339: từ giờ commit nhỏ và nhiều, mỗi
 bước nhỏ xong là commit ngay, push ngay, không làm ngầm rồi dồn
 lại push một loạt như đợt 19:05-19:07. Tôi đã nhận và áp dụng: các
 commit sau đó đều nhỏ, riêng từng việc. Watchdog giữ nguyên.
+
+## PHÁT HIỆN MỚI, 19:27 ngày 21/11 - Y10 ĐÃ LÊN, CHẠY LẠI T09/T10 MỚI
+
+Khi push báo cáo việc 5, remote đã tiến thêm 5 commit của clone2.
+Trong đó có ed78e83 (19:19): "Y10: reconcile clone1-batch3
+t05/t09/t10 fixes into one set (Y3 FAILs), 9/9 mutation probes,
+10/10 x7 runs". Đây chính là bản sửa t09/t10 của worker khác mà
+lệnh 19:01 dặn chạy khi nó lên. Agent việc 5 kiểm tra trước 19:19
+nên chưa thấy nó, không phải lỗi của agent.
+
+Y10 đổi 2 chỗ so với bản đợt 4: t09 bỏ verify callback ở click
+Cancel rename (title vốn đã là Beta nên chờ nó chứng minh được gì)
+và thay bằng dwell 500 ms rồi đọc ngay; t10 thêm kiểm tra vị trí
+phải tăng lên sau sampler (sleep 350 ms, position phải từ 2 trở
+lên), để chứng minh đồng hồ vẫn chạy chứ không chỉ reset. T05 cũng
+được hòa giải lại trong cùng commit.
+
+Đã giao 1 agent chạy lại t05/t09/t10 bản Y10 trên Firefox thật
+(mỗi test standalone 3 lần, rồi full batch3 1 lần), so với bản đợt
+4 trên Firefox và trên Chromium, ghi rõ defect. Kết quả sẽ báo
+sau. Các commit khác của clone2 cùng đợt: 5fea284 báo cáo batch 4
+của clone2 (việc 2-6 đã kiểm chứng, việc 1 chờ chủ chọn), 041b1ac
+sửa theo redteam (mirror phục vụ gói AT-SPI, blocker là phê duyệt
+apt update), 5df7535 giải quyết xung đột merge coord giữ cả 2 mục.
