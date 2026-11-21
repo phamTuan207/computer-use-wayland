@@ -65,16 +65,20 @@ landing; G2-G4 are minor residuals to fix in the same round.
   the old field_value script; the 2 contentWindow occurrences in old
   zen_dom.py are locate's lines 463-464 only).
 - 05:20 +12m step-1 fail-before at c01d4a2: test_cdp_snapshot FAILED
-  (failures=1); 2/2 OK at HEAD. Full discover started.
+  (failures=1); 2/2 OK at HEAD. Full discover run 1 started in
+  background (217.988s measured, overlapped the checks below).
 - 05:21 +13m affected suites 373/373 OK; node cdp_validation.mjs
-  3 ok lines. Temp worktrees removed.
-- 05:24 +16m full discover run 1: Ran 1855 tests, FAILED (errors=4,
-  skipped=17), 0 failures. Re-ran to file for the exact count line.
-- 05:28 +20m full discover run 2 (to /tmp/discover-c1r2.log):
+  3 ok lines; full discover run 1 done: Ran 1855 tests, FAILED
+  (errors=4, skipped=17), 0 failures. Run 2 started to file
+  (230.627s measured, background) and finished before cleanup;
   Ran 1855 tests in 228.459s, FAILED (errors=4, skipped=17).
-  The 4 errors are the pre-existing set (see Test evidence).
-- 05:29 +21m review written; commit follows with an explicit
-  pathspec for this file only.
+  Temp worktrees removed (clock reading 05:21:51).
+- 05:23 +15m review written; commit follows with an explicit
+  pathspec for this file only. (Correction note: an earlier draft of
+  this time log overstated the intermediate clock times; the exact
+  anchors are start 05:08:38, cleanup 05:21:51, finish 05:23:37,
+  and the two discover durations above. Intermediate +elapsed
+  entries are approximate.)
 
 ## Scope check: AMEND2 committed verbatim
 
