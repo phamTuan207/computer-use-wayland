@@ -71,15 +71,14 @@ class FakeWdSession(ZenSession):
         self._MISSING = object()
 
     def _typed_flag(self, selector):
-        if self._typed.get(selector):
-            return True
-        field = self.dom_fields.get(selector)
-        if field is None:
-            return False
-        armed = self._armed.get(selector, self._MISSING)
-        if armed is self._MISSING:
-            return False
-        return field.get('value') != armed
+        # Faithful model of the real V11 flag: True only when a
+        # trusted input event was recorded (the test sets _typed
+        # directly). A bare value change with no trusted event (a
+        # page script setting el.value) leaves the flag clear,
+        # exactly like the real window.__agentCuTyped flag. An
+        # earlier shape treated any value change since arming as
+        # typed, which made the fake blind to the R10 JS-set attack.
+        return bool(self._typed.get(selector))
 
     def _harvest(self):
         items = {}
@@ -588,6 +587,28 @@ class TestDomHelpers(unittest.TestCase):
         session._typed['#msg-input'] = True
         self.assertTrue(session.verify_typed('#msg-input', 'hello',
                                              before='hello'))
+
+    def test_verify_typed_js_set_without_keystrokes_must_not_verify(self):
+        # R10, substantive (amend3): the field starts EMPTY and a
+        # page script sets the expected text with no keystrokes, so
+        # no trusted input event fires and the V11 flag stays clear.
+        # before='' (the field was empty) must NOT verify, even
+        # though the value now equals the expected text. The old
+        # code consulted the flag only in the prefill case
+        # (before == expected), so this shape verified.
+        session = self._session()
+        session.dom_fields['#msg-input']['value'] = ''
+        session.arm_typed_flag('#msg-input')
+        # JS sets the value: no keystrokes, no trusted input event.
+        session.dom_fields['#msg-input']['value'] = 'hello'
+        self.assertFalse(session.typed_flag('#msg-input'))
+        self.assertFalse(session.verify_typed('#msg-input', 'hello',
+                                              before=''))
+        # And a real trusted input event on the same shape DOES
+        # verify: the flag, not the value alone, is the discriminator.
+        session._typed['#msg-input'] = True
+        self.assertTrue(session.verify_typed('#msg-input', 'hello',
+                                             before=''))
 
     def test_display_metrics_records_dpr_and_zoom(self):
         session = self._session()

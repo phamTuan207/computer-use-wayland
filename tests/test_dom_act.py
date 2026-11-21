@@ -25,9 +25,10 @@ class FakeDomSession:
     build), so the default is [0, 0]: the absolute viewport origin
     is the meta's window origin plus this pair. viewport_origin()
     takes the Hyprland window origin the way the real ZenSession
-    does. The session also models the V11 typed-event flag (armed
-    value plus an explicit note_typed from the act) and the one-shot
-    harvest, so the orchestrator's strict rules are testable here.
+    does. The session also models the V11 typed-event flag
+    (trusted input events only, via an explicit note_typed from the
+    act) and the one-shot harvest, so the orchestrator's strict rules
+    are testable here.
     """
 
     _MISSING = object()
@@ -87,8 +88,7 @@ class FakeDomSession:
                 before = before.rstrip()
         if value != expected:
             return False
-        if (before is not None and before == expected
-                and not self.typed_flag(selector)):
+        if before is not None and not self.typed_flag(selector):
             return False
         return True
 
@@ -104,16 +104,15 @@ class FakeDomSession:
         self._typed[selector] = True
 
     def typed_flag(self, selector):
+        # Faithful model of the real V11 flag: True only when a
+        # trusted input event was recorded (note_typed from the act).
+        # A bare value change with no trusted event (a page script
+        # setting el.value) leaves the flag clear, exactly like the
+        # real window.__agentCuTyped flag. An earlier shape treated
+        # any value change since arming as typed, which made the fake
+        # blind to the R10 JS-set attack.
         self.dom_calls += 1
-        if self._typed.get(selector):
-            return True
-        field = self.fields.get(selector)
-        if field is None:
-            return False
-        armed = self._armed.get(selector, self._MISSING)
-        if armed is self._MISSING:
-            return False
-        return field.get('value') != armed
+        return bool(self._typed.get(selector))
 
     def harvest(self, selectors):
         self.dom_calls += 1

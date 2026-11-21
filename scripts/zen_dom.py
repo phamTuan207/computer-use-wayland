@@ -729,11 +729,11 @@ class ZenSession:
         this reads what the field actually holds. For contenteditable
         fields the comparison normalizes trailing whitespace
         (textContent carries a trailing newline the typed text does
-        not). When before is given, a field that ALREADY held the
-        expected text before typing fails unless a real typed event
-        was recorded (V11 flag): a pre-filled value proves no typing
-        happened (RT R2/R10). before None keeps the old equality-only
-        shape for callers that never type.
+        not). When before is given, the check also requires a
+        recorded typed event (V11 flag): a pre-filled value and a
+        JS-set value on an empty field both prove no typing happened
+        without one (RT R2/R10). before None keeps the old
+        equality-only shape for callers that never type.
         """
         result = self.evaluate(
             "(function(){"
@@ -769,9 +769,15 @@ class ZenSession:
         if norm_value != norm_expected:
             return False
         if before is not None:
-            norm_before = (before.rstrip() if editable
-                           and isinstance(before, str) else before)
-            if norm_before == norm_expected and not self.typed_flag(selector):
+            # The V11 flag is consulted whenever a before-value is
+            # given, not only in the prefill case: a value that
+            # appears with no trusted input event (a page script
+            # setting it on an empty field, before='' != expected)
+            # must fail exactly like a prefilled value does (RT
+            # R10). dom_act's type_check is a typed-input check, so
+            # requiring the flag there is correct; cdp.mjs set_value
+            # is the programmatic path and is unaffected.
+            if not self.typed_flag(selector):
                 return False
         return True
 
