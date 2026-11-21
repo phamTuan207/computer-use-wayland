@@ -106,20 +106,23 @@ async function main() {
   const pageIdx = Number((np.text.match(/\[(\d+)\]/) || [])[1]);
   log('new_page', 'ok', { ms: np.ms, pageIdx });
 
-  // Step 1: general info
-  await fillChecked('title', 'Bubble Sort Practice', async () => (await evalJs("() => document.querySelector('#title').value")) === 'Bubble Sort Practice');
-  await fillChecked('shortname', 'bubble-sort', async () => (await evalJs("() => document.querySelector('#shortname').value")) === 'bubble-sort');
-  await fillChecked('timelimit', '2000', async () => (await evalJs("() => document.querySelector('#timelimit').value")) === '2000');
+  // Dismiss any leftover alert dialog from a previous run, if present.
+  try { const d = await callTool('dismiss_dialog'); log('dismiss_leftover_dialog', 'ok', { text: d.text.slice(0, 80) }); } catch { log('dismiss_leftover_dialog', 'skipped', { reason: 'no dialog' }); }
+
+  // Step 1: general info (snapshot lines use label text, not HTML ids)
+  await fillChecked('Problem title', 'Bubble Sort Practice', async () => (await evalJs("() => document.querySelector('#title').value")) === 'Bubble Sort Practice');
+  await fillChecked('Short name', 'bubble-sort', async () => (await evalJs("() => document.querySelector('#shortname').value")) === 'bubble-sort');
+  await fillChecked('Time limit', '2000', async () => (await evalJs("() => document.querySelector('#timelimit').value")) === '2000');
   await clickChecked('Next: Statement', async () => (await evalJs("() => document.querySelector('#step2').classList.contains('active')")) === true);
 
   // Step 2: statement + checker
-  await fillChecked('statement', 'Sort the array in non-decreasing order.', async () => (await evalJs("() => document.querySelector('#statement').value")) === 'Sort the array in non-decreasing order.');
-  await fillChecked('lcmp', 'lcmp', async () => (await evalJs("() => document.querySelector('#checker').value")) === 'lcmp');
+  await fillChecked('Statement (English)', 'Sort the array in non-decreasing order.', async () => (await evalJs("() => document.querySelector('#statement').value")) === 'Sort the array in non-decreasing order.');
+  await fillChecked('Checker', 'lcmp', async () => (await evalJs("() => document.querySelector('#checker').value")) === 'lcmp');
   await clickChecked('Next: Tests', async () => (await evalJs("() => document.querySelector('#step3').classList.contains('active')")) === true);
 
   // Step 3: upload + points + submit
   const snap3 = await snapshot();
-  const fileUid = findUid(snap3, 'testzip') || findUid(snap3, 'file') || findUid(snap3, 'Choose File') || findUid(snap3, 'No file');
+  const fileUid = findUid(snap3, 'Test archive') || findUid(snap3, 'Choose File') || findUid(snap3, 'No file chosen');
   if (!fileUid) { misses++; log('upload', 'failed', { reason: 'file input uid not found' }); }
   else {
     const t0 = performance.now();
@@ -130,7 +133,7 @@ async function main() {
     if (!ok) misses++;
     log('upload', ok ? 'ok' : 'MISS', { ms, status: shown, tool: up.text.slice(0, 100) });
   }
-  await fillChecked('points', '20', async () => (await evalJs("() => document.querySelector('#points').value")) === '20');
+  await fillChecked('Points per hidden test', '20', async () => (await evalJs("() => document.querySelector('#points').value")) === '20');
   await clickChecked('Submit problem', async () => (await evalJs("() => document.querySelector('#result').style.display")) === 'block');
 
   // Verify the result summary
