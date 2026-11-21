@@ -2381,3 +2381,74 @@ C2-9/C2-10 INFO parts (covered by item 14).
   docs and ship without another round (proposed stopping
   rule, to put to Muse). The fix-pass-6 redteam paper landing
   is still BLOCKED (parent action needed, see above).
+
+### Fix-pass-7 reviews: Council 3 GO (2 of 4 in)
+
+- 00:21 +07: Council 3 verdict GO. Paper a9c33ad
+  (todolist-push, ls-remote verified, ANCESTOR_OK; only its
+  paper file staged/committed; agent 3fc1de31, completed
+  00:20:38 UTC). The push was NOT blocked this time (unlike
+  the fix6 redteam landing). The uncommitted fix-pass-6
+  redteam paper was not touched, and no git fetch was run.
+  Own probe /tmp/c3-fix7-probe.py, 43 checks, written from
+  scratch. Findings, all verified by direct commands and
+  its own probe: (1) U-C3-1 CLOSED (its own fix6 finding):
+  the import-branch docstring (run_batch3.py:2689-2696) and
+  the import-branch comment (:2799-2806) both now say
+  "synthetic-only" with the single-/proc-cmdline reasoning.
+  Note: the literal string "(fail-closed)" still occurs at
+  lines 2694 and 2804, but only inside the clause "the old
+  '(fail-closed)' label was the wrong direction", an audit
+  trail of the correction, not a mislabel. No action.
+  (2) U-C3-2 CLOSED: fix7 probe exists at 65d669b (blob
+  899b1135, 379 lines, verified by me: git rev-parse
+  65d669b:tests/realistic/y14b-fix7-probe.py = 899b1135...,
+  wc 379); re-ran it, 86 PASS lines, 0 FAIL lines, exit 0.
+  Fix6 probe regression re-run: 71/71 PASS. (3) R6-1
+  CLOSED: all three escape forms proven independently unit +
+  live /proc, all True in fix7, False in fix6, live-proven.
+  Controls (R5-1, C5-1, C2-3, F2, R3/R4) unmoved.
+  (4) C6-3/R6-2 CLOSED: paren forms run_foo.py(x /
+  run_foo.py)x now False (unit, wrapped, and live via exec -a
+  sleeper); separator forms (; , &&, |, &) still True.
+  Differential vs fix6 blob: exactly 7 moves, all fixed
+  direction, zero wrong-direction moves, no true case lost.
+  (The redteam's differential counted 6 case diffs; Council
+  3 counts 7 moves, the extra one is the run_foo.py)x form.
+  Same direction, no contradiction.) Real bash exits 2 on the
+  paren form. (5) Docs CLOSED: log line 1006 corrected
+  rstrip set ";,()&|"; _top_level_sep_index("a=1;", False,
+  False) measured = 3 in both blobs; B12 no-separator example
+  in both the code comment and the log; R6-4 bounding
+  sentence in the _in_shell_c_string docstring with the exact
+  form; plan md5 line pins fix-pass-7 values IN the fix
+  commit (lines 614-615 at 65d669b). (6) Hashes verified
+  directly: blob 8df578c7 / md5 0d98342e at 65d669b; blob
+  261f09ae / md5 fac96935 at parent. Diff is scanner-only (7
+  hunks, zero t10 hunks); H4 note unchanged (plan diff is a
+  single md5 hunk). (7) Hygiene clean: 0 em/en dashes in the
+  diff and in its paper; ydotool appears only in the log's
+  own "grep 0" sentence; no personal info; no Zen driving;
+  all its stubs killed by exact PID, final sweep clean.
+  Three initial FAILs in its probe were all probe errors,
+  re-derived in the paper: (1) `bash -c "echo hi; python3
+  -c 'import run_batch3'"` is False in fix6 too
+  (pre-existing, see INFO-2); (2) `codex -c 'a \'b;
+  marionette'` is False in both blobs and real bash exits 2
+  (escape rule correctly scoped); (3) live (b) first read
+  bash's exec-replaced `sleep 60` cmdline because the python
+  -c exits fast, corrected construction (python -c itself
+  sleeps) reads True fix7 / False fix6. INFO notes (no
+  action): INFO-1, the "(fail-closed)" literal note above;
+  INFO-2, the pre-existing `echo hi; python3 -c ...` miss,
+  identical in fix6/fix7, adjacent to but not literally the
+  recorded import-branch residual, worth one accurate record
+  sentence in a future pass, not this one; INFO-3, transient
+  run_foo.py processes seen during the window expired on
+  their own, and three more at 00:19 +07 belong to a
+  concurrent agent's probe loop, not this review.
+- 00:22 +07: Councils 1 and 2 still running. Fix pass 8 (if
+  needed) waits for them. Current tally: redteam GO, Council
+  3 GO, Councils 1 and 2 pending. The proposed stopping rule
+  (AMEND with only doc items, fix the docs and ship without
+  another round) still stands to be put to Muse.
