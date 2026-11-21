@@ -162,7 +162,8 @@ OK
   improvements/worker-y11-council-3-integration-schema.md,
   improvements/worker-y11-design.md, improvements/worker-y11-redteam.md,
   improvements/worker-y11-live-metrics-log.md.
-- Commit hash: (filled below after push; verify with ls-remote).
+- Commit hash: 91d3cd29099c3e01b4d2c63631e509fb417aa668 (verified via
+  `git ls-remote origin todolist-push`, 21/11 19:10).
 
 ## Follow-ups (not this task)
 
