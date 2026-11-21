@@ -871,3 +871,86 @@ coordinates go here too.
   local HEAD has since moved to c8ef590 (OPT-M2, another worker's
   commit, not yet pushed, not mine); I do not touch it. Council 1
   still running.
+- 22:54:31 +07 (elapsed ~34 min, exact from runtime): Council 1
+  completed. Verdict AMEND (doc-only fixes; no code change
+  required before ship), paper committed in 26366a9
+  (improvements/worker-y14b-fix4-council-1.md, byte-identical
+  content, md5 3ee25a1401118caee1c3facbedb68f12), verified on
+  origin (ls-remote eb759fbc0c8d10d9a6bc7b07f20039290f29c8a9,
+  26366a9 is an ancestor, 10 commits above). Note: Council 1's
+  `git commit` raced a concurrent OPT worker push; their `git add
+  -A` swept Council 1's staged paper into their commit 26366a9
+  alongside their own opt-method-log. Council 1 did not stage or
+  commit any other file, and did not rewrite the shared branch to
+  split it. What verified clean (all reproduced by Council 1):
+  code vs log claim by claim (differential probe
+  /tmp/y14b-c1-diff-probe.py, 51 cases, old blob 3875215 vs new
+  blob bf3c939, confirms every R1/F1-F8 claim); blob/md5
+  re-verified (585fb801, 2920f169); all 8 probes re-run green
+  (fix4 64/64, H2 45/45, fix2 31/31, fix3 70/70, transcription
+  82, gate dry 4/4, M1 3/3, M1 all-12 4/4, each with exactly one
+  "^FAIL" line, the "FAILURES: 0 []" summary); live re-proof
+  (`python3 -m/-mrun/-um run_foo.py` exit 124, `python3
+  -crun_foo.py` NameError exit 1, `--check-hash-based-pycs
+  =always` exit 2 "unknown option", spaced form exit 0, Python
+  3.12.3, no stub processes left); H4/F10 arithmetic re-derived
+  exactly with Decimal (N=3.5 margins 2.43 at R=2 and 1.84 at
+  R=19, 1.835 half-up; first fail 71.43 ms at N=3.5 to 83.33 ms
+  at N=3, matching "roughly 70-85 ms"; sure fail 100.0 to 116.67
+  ms, matching "~100-117 ms"; 1 round trip at 19 ms = 0.19
+  ticks; reads 8-10, discrete margin 1-3; Council 1's 3
+  undercounts by half a round trip, Council 3's 4 overcounts by
+  half; "bracket" phrasing gone); t10 assert set vs check.mjs at
+  1d23532 (33 expectText + 36 failures.push + 3 volume extras =
+  72 ordered, all in order; thresholds cross-checked:
+  exact-zero x6, sampler x3, gain x6+2, range 2-11 x8, playlist
+  5 x2, seek 85-100; zero t10 hunks in the fix-pass-4 diff; one
+  label wording difference only, 'repeat All before wrap test'
+  vs '"repeat All before wrap"'); ship condition confirmed with
+  amendment (watch item actionable, details at run_batch3.py:1588
+  and :1730; round-trip derived procedurally from live step
+  timings); hygiene (py_compile OK, import OK, 10 tests, 0 em/en
+  dash, no ydotool use, no personal info, no live Zen driving).
+  Findings, all doc-only: C1-1 (MEDIUM, doc): F5 outcome stated
+  backwards in the log and the plan (same as C3-1, both say
+  `python3 run_other -W ignore run_batch3.py` is "now True via
+  run_other itself"; reality False, differential old=True
+  new=False, False is correct, the old True was the false
+  positive; the probe label "stays False" also misstates history,
+  it changed True to False). C1-2 (MEDIUM, doc, ship-blocking if
+  uncorrected): pinned ship-time md5 is stale, plan lines 612-615
+  still pin fix-pass-3 values, log has no superseding fix-pass-4
+  entry. C1-R1 (LOW, record): import guard leaks across a shell
+  separator (same as R4/C3-3). C1-R2 (LOW, record): non-run_
+  extensionless script is still not a barrier (same as C3-2).
+  C1-R3 (INFO, pre-existing, record): glued `;codex` misses in
+  both blobs. C1-R4 (disclosed, no action): F2 later-command
+  marker over-inclusion matches the log's disclosure exactly.
+  Ship after the doc-only fixes (C1-1, C1-2 required before the
+  slot, C1-R1/R2/R3 recorded). All 4 fix-pass-4 reviews are now
+  done (redteam + 3 councils, all AMEND, none BLOCK). Fix pass 5
+  can now start; editing run_batch3.py is safe.
+- 22:54:52 +07 (elapsed ~35 min): C1-2 VERIFIED BY ME AND
+  REFUTED. Direct grep: plan lines 614-615 DO pin the fix-pass-4
+  values (md5 2920f1697edb3b33711b83b8a874d88b, blob
+  585fb8016b0618ab02b3e97afa362dbcce7342c9, commit bf3c939); log
+  lines 686-687 DO have the superseding fix-pass-4 entry (same
+  blob/md5); grep for e9e3519a/3a9b7b17 in the plan returns
+  NOTHING (no fix-pass-3 values anywhere in the plan). Council 1
+  must have read a stale file (its claim contradicts the current
+  file state). C1-2 is WRONG; no fix needed for it, recorded as
+  refuted in the fix-pass-5 adjudication. The log lines 496-497
+  DO mention the fix-pass-3 values, but that is the historical
+  fix-pass-3 verification section, not the live pin.
+- 22:51 +07 (elapsed ~31 min, from MEMORY.md): owner correction
+  on the 240 target. GitHub graph shows only 136 contributions
+  on 21/11 (tooltip), not 190. The count was wrong timezone: 190
+  is the +07 day (recounted 22:51 as 201 commits + 1 PR), graph
+  counts by UTC day (144 commits + 1 PR = 145 at 22:51). Graph
+  only counts commits on the default branch (main);
+  todolist-push has 290 commits on UTC day 21/11 but they do NOT
+  count. Worker MERGE spawned to merge todolist-push into main
+  to push the graph past 240. My commits on todolist-push count
+  once MERGE merges them into main. Tab: restarting Zen restored
+  the 39 fixture tabs (owner's screenshot 22:50); F3 re-running
+  FULL cleanup with the same keep-list (28 real tabs).
