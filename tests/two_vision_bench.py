@@ -59,7 +59,7 @@ DEFAULT_WORKDIR = "/tmp/two_vision_bench"
 # unowned (prompt caching, diff-gated re-observation, downscale to
 # token tier, context editing, low effort, adaptive waiting).
 HARVEST_JS = """
-(function(){
+return (function(){
   const els = [...document.querySelectorAll(
     'input, textarea, button, [contenteditable="true"]')];
   return els.map((e, i) => {
@@ -90,7 +90,7 @@ HARVEST_JS = """
 # TODO (F5): V11 here reads the fixture counter window.__inputEvents.
 # A production page needs a MutationObserver armed before typing.
 VERIFY_JS = """
-(function(sel){
+return (function(sel){
   const e = document.querySelector(sel);
   if (!e) return {found: false};
   const r = e.getBoundingClientRect();
@@ -109,15 +109,18 @@ VERIFY_JS = """
 """
 
 # V12 finish gate: the exact message text as a bubble in the thread DOM.
+# Deliberately no __bubblePresent shortcut: the gate must honor the
+# plan's thread selector, so a wrong selector fails loudly instead of
+# passing through a fixture helper. bubble_selector comes from the
+# plan window entry (default matches the fixture's .bubble and any
+# [data-sender] element); a live Messenger plan overrides it.
 GATE_JS = """
-(function(threadSel, text){
-  if (typeof window.__bubblePresent === 'function')
-    return window.__bubblePresent(text);
+return (function(threadSel, bubbleSel, text){
   const t = document.querySelector(threadSel);
   if (!t) return false;
-  return [...t.querySelectorAll('.bubble, [data-sender]')]
+  return [...t.querySelectorAll(bubbleSel)]
     .some(b => b.textContent === text);
-})(arguments[0], arguments[1])
+})(arguments[0], arguments[1], arguments[2])
 """
 
 
@@ -152,15 +155,19 @@ class Ledger:
 
     A JSON file keyed by intent id (run_id + window label). An intent
     is marked sent only after its V12 gate passed. Before any send the
-    chain checks the ledger AND re-checks the V12 gate: a recorded
-    intent whose bubble is present is skipped, never re-sent; a
-    recorded intent whose bubble is absent is treated as stale and
-    re-sent once, because the earlier V12 may have failed on a slow
-    render rather than on a lost message.
+    chain runs the V12 gate first, regardless of ledger status: a
+    recorded intent whose bubble is present is skipped, never re-sent;
+    a failed gate whose message actually landed is also caught by the
+    same pre-check, so a retry cannot double-send. A recorded intent
+    whose bubble is absent is treated as stale and re-sent once,
+    because the earlier V12 may have failed on a slow render rather
+    than on a lost message.
     """
 
     def __init__(self, path):
         self.path = path
+        parent = os.path.dirname(os.path.abspath(path))
+        os.makedirs(parent, exist_ok=True)
         self.data = {"intents": {}}
         if os.path.exists(path):
             with open(path, encoding="utf-8") as f:
@@ -239,6 +246,17 @@ def attach_driver():
                                     "--marionette-port", "2828"])
     t0 = time.monotonic()
     driver = webdriver.Firefox(service=service)
+    # Readiness poll: the Marionette port can answer before the
+    # session is fully usable; wait until a trivial eval succeeds.
+    deadline = time.monotonic() + 15
+    while True:
+        try:
+            driver.execute_script("return 1")
+            break
+        except Exception:
+            if time.monotonic() > deadline:
+                raise
+            time.sleep(0.5)
     driver.set_window_size(1280, 900)
     log("marionette_attach_session", t0)
     return driver
@@ -308,18 +326,26 @@ def send_one(driver, window, item, message, intent_id, ledger,
             "intent_id": intent_id, "status": "failed",
             "elapsed_s": 0.0}
     thread_sel = window.get("thread_selector", "#thread")
+    bubble_sel = window.get("bubble_selector", ".bubble, [data-sender]")
     v12_timeout = plan.get("timeouts", {}).get("v12_gate_s", 5)
 
-    # Exactly-once pre-check: ledger says sent AND the bubble is in
-    # the DOM, so skip the send entirely (no duplicate).
+    # Exactly-once pre-check (D4): before any send, check whether the
+    # bubble is already in the thread DOM. If it is, the message was
+    # already sent (by an earlier attempt whose V12 gate timed out, or
+    # by a previous run with the same intent), so mark sent and skip.
+    # This runs regardless of ledger status: a failed gate must not
+    # double-send on retry. Cost is one cheap evaluate per send.
+    present = driver.execute_script(
+        GATE_JS, thread_sel, bubble_sel, message)
+    if present:
+        ledger.mark(intent_id, "sent", window=window["label"],
+                    message=message, note="bubble-already-present")
+        step["status"] = "skipped-already-sent"
+        step["elapsed_s"] = round(time.monotonic() - t0, 4)
+        log("send_skipped_already_sent", t0, window=window["label"],
+            intent_id=intent_id)
+        return step
     if ledger.status(intent_id) == "sent":
-        present = driver.execute_script(GATE_JS, thread_sel, message)
-        if present:
-            step["status"] = "skipped-already-sent"
-            step["elapsed_s"] = round(time.monotonic() - t0, 4)
-            log("send_skipped_already_sent", t0, window=window["label"],
-                intent_id=intent_id)
-            return step
         log("ledger_stale_bubble_absent", t0, window=window["label"],
             intent_id=intent_id)
 
@@ -369,7 +395,8 @@ def send_one(driver, window, item, message, intent_id, ledger,
     # V12 finish gate: the sent bubble must appear in the thread DOM.
     deadline = time.monotonic() + v12_timeout
     while time.monotonic() < deadline:
-        if driver.execute_script(GATE_JS, thread_sel, message):
+        if driver.execute_script(GATE_JS, thread_sel, bubble_sel,
+                                 message):
             break
         time.sleep(0.2)
     else:
