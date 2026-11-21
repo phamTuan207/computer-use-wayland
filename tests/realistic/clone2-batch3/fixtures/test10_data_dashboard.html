@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Data Dashboard Fixture</title>
+<style>
+  body { font-family: sans-serif; margin: 24px; color: #222; }
+  h1 { font-size: 22px; }
+  .kpis { display: flex; gap: 12px; margin: 16px 0; }
+  .kpi { border: 1px solid #bbb; border-radius: 6px; padding: 12px 16px; min-width: 150px; }
+  .kpi .label { font-size: 12px; color: #555; text-transform: uppercase; }
+  .kpi .value { font-size: 24px; font-weight: bold; margin-top: 4px; }
+  .controls { display: flex; gap: 12px; align-items: center; margin: 12px 0; flex-wrap: wrap; }
+  .controls label { font-size: 13px; color: #444; }
+  table { border-collapse: collapse; width: 100%; }
+  th, td { border: 1px solid #ccc; padding: 6px 10px; text-align: left; }
+  th.sortable { cursor: pointer; background: #eef; }
+  .sort-ind { font-size: 11px; color: #06c; }
+  #exportBtn { display: inline-block; padding: 6px 12px; border: 1px solid #06c; border-radius: 4px; color: #06c; text-decoration: none; }
+</style>
+</head>
+<body>
+<h1>Analytics Dashboard</h1>
+
+<div class="kpis">
+  <div class="kpi"><div class="label">Total Revenue</div><div class="value" id="kpiRevenue">0</div></div>
+  <div class="kpi"><div class="label">Orders</div><div class="value" id="kpiOrders">0</div></div>
+  <div class="kpi"><div class="label">Visitors</div><div class="value" id="kpiVisitors">0</div></div>
+  <div class="kpi"><div class="label">Conversion</div><div class="value" id="kpiConversion">0%</div></div>
+</div>
+
+<div class="controls">
+  <label>Channel
+    <select id="channelFilter">
+      <option value="all">All channels</option>
+      <option value="Organic">Organic</option>
+      <option value="Paid">Paid</option>
+      <option value="Social">Social</option>
+      <option value="Referral">Referral</option>
+    </select>
+  </label>
+  <label>Search
+    <input id="searchBox" type="text" placeholder="date or channel">
+  </label>
+  <label>Date range
+    <select id="rangeSelect">
+      <option value="all">All entries</option>
+      <option value="last7">Last 7 entries</option>
+      <option value="last30">Last 30 entries</option>
+    </select>
+  </label>
+  <a id="exportBtn" href="#" download="dashboard.csv">Export CSV</a>
+  <span id="rowCount"></span>
+</div>
+
+<table id="dataTable">
+  <thead>
+    <tr>
+      <th>Date</th>
+      <th>Channel</th>
+      <th class="sortable" data-sort="visitors">Visitors <span class="sort-ind" id="ind-visitors"></span></th>
+      <th class="sortable" data-sort="orders">Orders <span class="sort-ind" id="ind-orders"></span></th>
+      <th class="sortable" data-sort="revenue">Revenue <span class="sort-ind" id="ind-revenue"></span></th>
+    </tr>
+  </thead>
+  <tbody id="tableBody"></tbody>
+</table>
+
+<script id="dataset-json" type="application/json">
+[
+{"date": "2026-11-01", "channel": "Organic", "visitors": 1200, "orders": 45, "revenue": 2250},
+{"date": "2026-11-02", "channel": "Paid", "visitors": 2400, "orders": 96, "revenue": 5280},
+{"date": "2026-11-03", "channel": "Social", "visitors": 1800, "orders": 54, "revenue": 2430},
+{"date": "2026-11-04", "channel": "Referral", "visitors": 600, "orders": 30, "revenue": 1650},
+{"date": "2026-11-05", "channel": "Organic", "visitors": 1350, "orders": 51, "revenue": 2550},
+{"date": "2026-11-06", "channel": "Paid", "visitors": 2600, "orders": 110, "revenue": 6050},
+{"date": "2026-11-07", "channel": "Social", "visitors": 2100, "orders": 63, "revenue": 2835},
+{"date": "2026-11-08", "channel": "Organic", "visitors": 1500, "orders": 60, "revenue": 3120},
+{"date": "2026-11-09", "channel": "Referral", "visitors": 750, "orders": 36, "revenue": 1980},
+{"date": "2026-11-10", "channel": "Paid", "visitors": 2800, "orders": 126, "revenue": 6930},
+{"date": "2026-11-11", "channel": "Social", "visitors": 1950, "orders": 58, "revenue": 2610},
+{"date": "2026-11-12", "channel": "Organic", "visitors": 1650, "orders": 66, "revenue": 3432},
+{"date": "2026-11-13", "channel": "Referral", "visitors": 900, "orders": 45, "revenue": 2475},
+{"date": "2026-11-14", "channel": "Paid", "visitors": 3000, "orders": 140, "revenue": 7700}
+]
+</script>
+
+<script>
+var DATA = JSON.parse(document.getElementById("dataset-json").textContent);
+var sortKey = null;
+var sortDir = null;
+
+function filteredRows() {
+  var rows = DATA.slice();
+  var range = document.getElementById("rangeSelect").value;
+  if (range === "last7") { rows = rows.slice(-7); }
+  if (range === "last30") { rows = rows.slice(-30); }
+  var channel = document.getElementById("channelFilter").value;
+  if (channel !== "all") {
+    rows = rows.filter(function (r) { return r.channel === channel; });
+  }
+  var query = document.getElementById("searchBox").value.trim().toLowerCase();
+  if (query) {
+    rows = rows.filter(function (r) {
+      return r.date.toLowerCase().indexOf(query) !== -1
+        || r.channel.toLowerCase().indexOf(query) !== -1;
+    });
+  }
+  return rows;
+}
+
+function render() {
+  var rows = filteredRows();
+  var revenue = 0, orders = 0, visitors = 0;
+  rows.forEach(function (r) {
+    revenue += r.revenue; orders += r.orders; visitors += r.visitors;
+  });
+  document.getElementById("kpiRevenue").textContent = String(revenue);
+  document.getElementById("kpiOrders").textContent = String(orders);
+  document.getElementById("kpiVisitors").textContent = String(visitors);
+  document.getElementById("kpiConversion").textContent =
+    visitors ? (orders / visitors * 100).toFixed(2) + "%" : "0.00%";
+
+  var view = rows.slice();
+  if (sortKey) {
+    view.sort(function (a, b) {
+      return sortDir === "asc" ? a[sortKey] - b[sortKey] : b[sortKey] - a[sortKey];
+    });
+  }
+  ["visitors", "orders", "revenue"].forEach(function (key) {
+    document.getElementById("ind-" + key).textContent =
+      sortKey === key ? "(" + sortDir + ")" : "";
+  });
+
+  var body = document.getElementById("tableBody");
+  body.innerHTML = "";
+  view.forEach(function (r) {
+    var tr = document.createElement("tr");
+    [r.date, r.channel, String(r.visitors), String(r.orders), String(r.revenue)]
+      .forEach(function (text) {
+        var td = document.createElement("td");
+        td.textContent = text;
+        tr.appendChild(td);
+      });
+    body.appendChild(tr);
+  });
+  document.getElementById("rowCount").textContent =
+    "Showing " + view.length + " of " + DATA.length + " rows";
+
+  var lines = ["date,channel,visitors,orders,revenue"];
+  view.forEach(function (r) {
+    lines.push([r.date, r.channel, r.visitors, r.orders, r.revenue].join(","));
+  });
+  document.getElementById("exportBtn").href =
+    "data:text/csv;charset=utf-8," + encodeURIComponent(lines.join("\n"));
+}
+
+document.querySelectorAll("th.sortable").forEach(function (th) {
+  th.addEventListener("click", function () {
+    var key = th.getAttribute("data-sort");
+    if (sortKey === key) {
+      sortDir = sortDir === "desc" ? "asc" : "desc";
+    } else {
+      sortKey = key;
+      sortDir = "desc";
+    }
+    render();
+  });
+});
+document.getElementById("channelFilter").addEventListener("change", render);
+document.getElementById("rangeSelect").addEventListener("change", render);
+document.getElementById("searchBox").addEventListener("input", render);
+render();
+</script>
+</body>
+</html>
