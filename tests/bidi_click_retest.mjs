@@ -71,23 +71,16 @@ async function main() {
     results.v2_evaluate_click = await page.$eval('#count', (el) => el.textContent);
     logStep(steps, 'click_v2_evaluate', 'ok', { counter: results.v2_evaluate_click, click_ms: Math.round(performance.now() - v2Start) });
 
-    // Variant 3: input.performActions real pointer down/up at the button center
+    // Variant 3: page.mouse.click at the button center (BiDi input.performActions,
+    // real pointer events through the BiDi protocol, no CDP).
     const v3Start = performance.now();
     const rect = await page.evaluate(() => {
       const r = document.querySelector('#count-btn').getBoundingClientRect();
       return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
     });
-    const cdp = await page.createCDPSession().catch(() => null);
-    if (cdp) {
-      await cdp.send('Input.dispatchMouseEvent', { type: 'mousePressed', x: rect.x, y: rect.y, button: 'left', clickCount: 1 });
-      await cdp.send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: rect.x, y: rect.y, button: 'left', clickCount: 1 });
-    } else {
-      // BiDi fallback: input.performActions via raw session
-      const session = await page.createCDPSession().catch(() => null);
-      if (!session) throw new Error('no CDP session for variant 3');
-    }
-    results.v3_real_pointer = await page.$eval('#count', (el) => el.textContent);
-    logStep(steps, 'click_v3_real_pointer', 'ok', { counter: results.v3_real_pointer, rect, click_ms: Math.round(performance.now() - v3Start) });
+    await page.mouse.click(rect.x, rect.y);
+    results.v3_bidi_pointer = await page.$eval('#count', (el) => el.textContent);
+    logStep(steps, 'click_v3_bidi_pointer', 'ok', { counter: results.v3_bidi_pointer, rect, click_ms: Math.round(performance.now() - v3Start) });
 
     const ok = Object.values(results).some((v) => v !== '0');
     console.log(JSON.stringify({ ok, results, wall_clock_start: wallStart, wall_clock_end: new Date().toISOString(), total_elapsed_ms: Math.round(performance.now() - steps.startedAt) }));
