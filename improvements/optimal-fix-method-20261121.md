@@ -165,3 +165,38 @@ Rules (ORDER section 4 + M2 CM-1 to CM-6, as amended by AM-19 and AM-20):
 - Post-merge content check (AM-20): after every merge, check the conflicted files for content, not just the merge result. The 23:05 merge resolved 3 conflicts by keeping both sides; the suite ran 1618 tests with 3 fail + 5 error, all pre-existing in baseline, 0 regression, +124 tests. A keep-both-sides resolution without a content check is an unreviewed merge.
 - Resolve the 136-vs-145 tooltip gap with a second timed GraphQL read, or drop the cache explanation. Do not keep an unexplained 9-count gap in the method.
 - Quality first: council + redteam complete on every fix, no shortcuts, no skipped steps.
+
+## 12. Stop / redirect / kill rules (when a method is proven wrong, what replaces it)
+
+- Kill on 15 minutes of no progress: stop and report, never retry silently. The watchdog reports directly to Muse, never via a coordinator (a stuck coordinator can never silence its own stall flags). Y13g has zero observable output at write time: record the stall and reassign per this rule rather than letting rank 5 wait on an invisible worker.
+- AMEND means the method stands only with the exact amendment; executing it as written is wrong or wasteful. KILL means the method must not be executed, and the verdict names what replaces it. REDTEAM-M killed NOTHING outright. The three struck items inside surviving methods are:
+  - STRUCK-1: M1 A step 2 items A1-A6 as prescriptions. Done in code (392bc09, 5b11696). Executing them again is wasted work with merge-conflict risk on scripts/cursor_session.py. Replaced by AM-1 (keep A7 only).
+  - STRUCK-2: M2 D-7's 28-tab target. Contradicts the executed cleanup and the owner steer. Replaced by AM-6 (14 real + 1 sacrificial).
+  - STRUCK-3: ORDER 4.3 deadline arithmetic (gap about 95, 68 minutes left). Target exceeded (456 at 23:05). Archived, not repaired.
+- Closest kill candidate (NOT killed): the F no-reload ruling's status as "settled" rests on parse-2 determinism from one load run (n=1). Kill it only if the F-8 load-only trial shows the marker absent AND the reload is then refused as well. Its falsifier (marker absent in the F-8 trial promotes reload to the next test) is well-formed, so it stands until the trial runs.
+- When a gate fails, stop at that gate and follow this section instead of improvising: name the failed gate, the evidence, and the replacement (the amendment, the re-review, or the reassign). A worker that invents a new step at a failed gate is violating the method.
+- When a method is proven wrong by a live result, the replacement comes from a fresh council + redteam, not from the worker that ran it. The generator never re-grades its own failure.
+- Do not stop or redirect a running worker from this file. Only the owner, Muse, or the kill rule (15 minutes, no progress) stops a worker, and the stop is logged with the reason.
+
+## 13. Clone management (clone2-watch)
+
+- Cron clone2-watch, every 15 minutes (set up 22:55): check GitHub first, switch workspace only when clone2 is silent more than 15 minutes or more than 1 hour unchecked; approve or nudge only for clone2's work, never money, never delete data, never personal info; switch back to workspace 1 after. Clone2-watch is another consumer of the command-switch method (section 6): workspace switches by command, never by clicking the rail.
+- Clones never ask the owner directly; they write questions into a file for Muse to answer.
+- The fleet cap is 2 parallel lanes per workstream. Clone batches are sequential inside the cap; a batch is handed out before the current one ends so the fleet never idles.
+- Owner order 23:01 applies to clones too: a clone that hits a big error, a blocker, or a decision it cannot make reports it at once through its log and its coordinator; routine progress waits for the morning report.
+
+## 14. Open items, gaps, and what this method does not decide
+
+Open questions (ORDER): Q-1 open (scrub owner + date, AM-15). Q-2 open in ORDER, answered here by AM-14 (readiness judge is Worker OPT). Q-3 partly answered (the merge works, 0ac4311; the cadence for the next merge is still unwritten). Q-4 open (H2 fallback trigger owner + definition of usable think values). Q-5 partly closed (launcher found; workspace command unproven live until the E-1 probe runs). Q-6 CLOSED (deleter named: Y13r2 shim A6e; VMFIX c16dd4e).
+
+ORDER claims A-1 to A-8: A-1 partly answered (a fallback-path partial proof exists, F2 4/4; the partial-proof bar is still undefined). A-2 open, see O-3/AM-14. A-3 open, see O-5/AM-15. A-4 open, P-12 measurement owed, see AM-22. A-5 answered in practice (one big merge worked) but the cadence is unwritten. A-6 open, see O-7/AM-16. A-7 open, unowned trigger. A-8 open, see O-2/AM-12 and F.
+
+ZEN gaps still open: G-02 (run_live.py WD never takes zen_dom.lock), G-03 (wedge mechanism), G-05 (Zen-internal workspaces, no scenario), G-07 (ZT-B has not run), G-08 (no pre-restart snapshot for the 22:36 restart), G-10 (new-conf ldd output never saved), G-11 (run_live.py ensure_visible replacement unverified), G-12 (ZT-00 text drift + wrong path), G-15 (22:03-22:06 trigger), G-16 (Obsidian Web Clipper unexamined). Closed: G-01 (M2 direct read of TabManager.sys.mjs:39-41), G-04 (Y13r2 final 2fee242 BLOCK), G-06 (launcher found by F3), G-09 (F1 council 3 AMEND).
+
+SRC gaps: G1 laptop native/require-liquid state unverified; G2 live plugin state after the 22:36 Zen restart not re-probed; G3 flicker log file missing on VM; G4 Y6r A1-A10 not enumerated item by item (closed in substance by M2 F adopting A1-A10 whole); G5 F1 council-3/redteam not read line by line; G6 J21 click attribution unknown (narrowed by the F3 rail finding in section 6, not closed); G7 clone2-watch cron is operational, not code; G8 SOLVED (re.py deleter, Y13r2 shim A6e, VMFIX c16dd4e).
+
+Y13r2 BLOCK items (B1-B4 + 5 amend, commit 2fee242): B1 entry .pyc forge via -m/import makes verify lie; B2 stdlib shadowing 9/15 names; B3 tokenizer misses -m/flag/doi names; B4 -m bricks ship. Y13g is fixing per the redteam paper; a fresh re-review runs after. H3 gate: accepted Y13r2 proposal (5a2b69d NO VERDICT + runner-quiet/ports check counts as the done marker leg for this run, gate text kept, Y6 retry after Y13). G-10's H3 resolution must be cited in a council paper or log entry, not only MEMORY.md 22:57 (AM-13).
+
+What this method does not decide: the Y6 retry success criterion until AM-12 is settled; the 20s deadline until AM-5 measures the distribution; the warm-up window until AM-3 measures it; the diagnose_body pre-flight gate until AM-22 measures it; the scrub date until AM-15 names it; the E1 review date until AM-16 sets it. Each is named with its owner step, not left as a silent assumption.
+
+Method maintenance: this file is amended only by a new council + redteam cycle, one section per commit, same as its creation. A worker that finds this file wrong opens a redteam item with file:line evidence; it does not edit the file directly.
