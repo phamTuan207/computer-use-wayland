@@ -498,3 +498,180 @@ on its merits; nothing accepted or declined silently.
   the plan's md5 procedure; supersedes the fix-pass-2 values).
 - Redteam re-review over the fix-pass-3 diff: spawned after this
   commit. Ship waits for it unless it BLOCKs.
+
+## Fix-pass-3 redteam verdict (21:48-22:20 +07, paper bd3c6c9)
+
+- Redteam (paper bd3c6c9, commit bd3c6c90b53fec32bb428eb822c36e3964ef4324,
+  todolist-push, ls-remote verified; agent 7c659457, completed
+  15:22:15 UTC): AMEND, no BLOCK. Headline R1 MEDIUM, regression:
+  `python3 -m run_batch3.py` (and -u -m, -um variants) executes
+  the stub live but is now missed; proved by loading both blobs
+  (True at ad085d9, False at 3875215); mechanism: the new
+  _python_executes guard treats the -m token itself as a barrier
+  between python and the script token, while _is_runner_module
+  rejects the .py suffix; the fix author's probe never tested a
+  .py-suffixed -m form, which is how it slipped through; no fleet
+  launcher uses -m <runner>.py, so AMEND not BLOCK, but it must be
+  fixed before ship (U1: strip trailing .py in _is_runner_module
+  and/or exempt an immediately-preceding -m/-c from the guard
+  barrier). Other findings, all LOW/INFO, each reproduced: F1 (new
+  FP) `python3 -crun_batch3.py` flags but live it is a NameError,
+  the file never runs; expansion + -c split conflate python's -c
+  (code) with shell -c (command line). F2 (wrapper-level miss)
+  `bash/sh/flock -c "codex -c 'import time; x # marionette'"`
+  returns False; the ; inside the codex -c snippet truncates the
+  marker scope; live impact bounded: with a real codex binary the
+  leaf process IS caught (pid 183770 hit, wrapper missed). F3
+  (carryover) -m and import branches still unguarded (`pytest -m
+  run_batch3`, `echo -m run_batch3`, `echo import run_batch3` all
+  True); U3 left open. F4 _python_executes does not reset at shell
+  ; (`bash -c "python3 --version; pytest -W ignore run_batch3.py"`
+  True). F5 guard blind to extensionless scripts (`python3
+  run_other -W ignore run_batch3.py` True); record-only. F6
+  _codex_at_command treats any -c as a boundary (`python3 -c
+  "codex marionette"` True). F7 glued ; is not a separator (`bash
+  -c "codex --help;echo marionette"` True). F8 (doc) sudo silently
+  dropped from the recorded codex gaps (grep -c sudo
+  run_batch3.py = 0) while `sudo codex` still misses. F9 (probe
+  accuracy) fix3 probe is 70 checks, not the claimed 72/72; its
+  --check-hash-based-pycs=always (=) case asserts True for a form
+  CPython rejects as "unknown option" (verified live). F10
+  (wording) H4 numbers all check out (recomputed independently
+  with Decimal: 1.835 half-up to 1.84, ticks (8,9)/(9,10)/(10,11),
+  first-fail 71.4 ms, sure-fail 100.0 ms at N=3.5), but U6's letter
+  is unmet: the plan keeps Council 3's count of 4 as a "bracket"
+  instead of stating it overcounts by 1. What verified clean: all
+  prior probes re-run against the current tree with zero failures
+  (fix3 70/70, H2 45/45, fix2 31/31, transcription 82, gate-dry
+  4/4, M1 3/3, fix2-M1 4/4, fix2-rt-M1 all-12); bundles, the long
+  option, the -W/-X FP fixes, the env codex chain, and the direct
+  H2 live codex case (`codex -c 'import time;... # marionette'`)
+  all confirmed live; 5792a82 hash record verified exactly (blob
+  3a9b7b17..., md5 e9e3519a...); hygiene: py_compile OK, 0 em/en
+  dash, 0 personal info; no live Zen driving; all stub processes
+  killed and verified gone. Unblock conditions U1-U11 in the paper:
+  U1 is the only code fix required before ship (R1 re-proof live);
+  U2-U5, U7-U8 are small code fixes or recordings; U6, U9-U11 are
+  doc/log/wording.
+
+## Adjudication, fix pass 4 (22:20-22:30 +07)
+
+- R1 FIXED by code: the -m branch now runs before the
+  runner-basename block, so a .py-suffixed module name no longer
+  hits the basename block's `continue` before the -m check, and
+  _is_runner_module strips a trailing .py. Verified live before
+  writing the fix: `python3 -m run_foo.py` DOES execute (exit 124,
+  timed out while the sleeping stub ran), `python3 -m run_foo`
+  also runs (exit 124), `python3 -mrun_foo.py` also runs (exit
+  124). The old fix-pass-2 probe case "joined -m run_batch3.py
+  (invalid Python)" expected False; that label was wrong, the
+  code returning True is correct, and the probe case is corrected
+  (expect True, note it executes live).
+- F1 FIXED by code: the -c branch now requires BOTH no script
+  token before the -c AND _c_is_shell (a -c token is a shell -c
+  only when owned by bash/sh/flock, found by walking back to
+  argv[0], a previous -c, or a separator). Verified live before
+  the fix: `python3 -crun_foo.py` is a NameError (exit 1, "name
+  'run_foo' is not defined"), the file never runs. Also fixed the
+  related false positive in the import branch (the nearest -c
+  before the import token must be a python -c).
+- F2 FIXED by code: _same_command_tokens now includes everything
+  after a codex -c flag, because everything after it is codex's
+  snippet (a prompt, not shell words), so no ; after it can be a
+  shell separator. A marker in a LATER shell command would also
+  count, but that form is contrived and the gate is fail-closed.
+  (My first fix-pass-4 build did NOT implement this; the fix4
+  probe caught it: 'codex bash -c codex -c snippet with ;' failed,
+  and the rule was added before committing.)
+- F3 FIXED by code: the -m and import branches are now guarded by
+  _python_executes (callers pass the introducing flag's index, so
+  the -m/-c token is never its own barrier). Correction to the
+  redteam's example: `python3 run_other.py -m run_batch3` is a TRUE
+  positive via run_other.py itself (it is a run_* script); the
+  guard is verified with a non-runner script name (`python3
+  other.py -m run_batch3` returns False). Same correction as fix
+  pass 3: my probe used run_other.py and expected False, which
+  was wrong; the probe is corrected, not the code.
+- F4 FIXED by code: _python_executes is now command-start aware
+  (the search stops at a shell separator or a -c), so `bash -c
+  "python3 --version; pytest -W ignore run_batch3.py"` no longer
+  false-positives.
+- F5 FIXED by code (as a guard, not a miss): _python_executes
+  treats an extensionless run_* token as a script barrier, so
+  `python3 run_other -W ignore run_batch3.py` is now True via
+  run_other itself.
+- F6 FIXED by code: _codex_at_command treats a -c as a boundary
+  only when it is a shell -c (via _c_is_shell), so `python3 -c
+  "codex marionette"` no longer false-positives.
+- F7 FIXED by code: _same_command_tokens splits glued separators
+  (forward scan includes the part before the first ;/&&/|| in a
+  glued token, then stops; backward scan stops at any token
+  containing a separator), so `bash -c "codex --help;echo
+  marionette"` no longer false-positives.
+- F8 FIXED by doc: sudo restored to the recorded codex gaps in
+  _codex_at_command.
+- F9 FIXED by probe + log: the fix3 probe is 70 checks, not the
+  claimed 72 (the redteam's count of 70 is correct; my 71 recount
+  counted the "FAILURES: 0 []" summary line, which starts with
+  FAIL). The --check-hash-based-pycs=always (=) case is documented
+  as a fail-closed over-approximation (CPython rejects the form
+  with "unknown option", exit 2, verified live; the scanner still
+  flags it, which is safe but a false positive). Verified live:
+  `python3 --check-hash-based-pycs always --version` is accepted
+  (exit 0, prints Python 3.12.3).
+- F10 FIXED by plan wording: the H4 note now states Council 1's 3
+  undercounts by half a round trip and Council 3's 4 overcounts by
+  half a round trip (the advancing read's own transit is half a
+  round trip, not zero and not one); the "bracket" phrasing is
+  removed.
+- Environment incident (22:30 +07, BLOCKED verification until
+  fixed): the VM's system Python lost /usr/lib/python3.12/re/
+  __init__.py (only the 4 submodules + __pycache__ remain, so
+  `import re` resolved to an empty namespace package and every
+  probe failed with "module 're' has no attribute 'compile'").
+  The __pycache__ still held __init__.cpython-312.pyc, so I
+  restored it sourceless as /usr/lib/python3.12/re/__init__.pyc
+  (root on this VM, the system's own bytecode, no reconstruction,
+  no internet). Verified: `import re` OK (compile, match present),
+  `import subprocess` OK. Flagged to Muse: the VM stdlib is
+  damaged and should be repaired properly (reinstall the
+  python3.12 package or restore the source file) when the fleet
+  is quiet; the .pyc restore is a working stopgap, not a proper
+  fix. How it broke is unknown: the probes ran fine at 22:09 and
+  the re/ directory mtime is 15:25, so the deletion predates the
+  failure window; no Y14b command touches /usr/lib.
+- No other findings. The fix-pass-4 code changes are in
+  tests/realistic/run_batch3.py only (plus the plan H4 note and
+  this log).
+
+## Fix-pass-4 verification (22:30-22:50 +07, all on the VM)
+
+- py_compile OK; import OK, 10 tests.
+- Fix4 probe /tmp/y14b-fix4-probe.py: 64/64 PASS, exit 0 (R1
+  -m.py x6, F1 x5, F3 x8, F4 x3, F5 x2, regressions x17, codex
+  F6/F7/F8 x21, live x4). First run 8 failures: 6 were the real
+  R1 ordering bug (the -m branch was skipped by the basename
+  block's `continue`) plus the missing F2 -c rule, both fixed in
+  code; 1 was my probe expectation (run_other.py IS a runner, so
+  `python3 run_other.py -m run_batch3` is True via run_other.py,
+  corrected to other.py + a True case for run_other.py); the 8th
+  was the live -m case, fixed by the same R1 code fix. Second run
+  64/64.
+- Regressions, all green: H2 probe 45/45 PASS; fix2 probe 31/31
+  PASS (first run 30/31: the "joined -m run_batch3.py (invalid
+  Python)" case expected False, but the form executes live, exit
+  124, so the probe case was corrected to expect True); fix3 probe
+  70/70 PASS (the = case now documented as a fail-closed
+  over-approximation); transcription 82 PASS lines, 0 failures;
+  gate dry run 4/4 PASS; M1 probe 3/3 PASS; M1 all-12 probe 4/4
+  PASS.
+- Accurate probe counts (counted from PASS lines only, not the
+  "FAILURES:" summary line, which starts with FAIL): H2 45, fix2
+  31, fix3 70, fix4 64, transcription 82, gate dry 4, M1 3,
+  M1 all-12 4. The earlier "72" (fix3) and "65" (fix4) claims
+  counted the summary line; the redteam's 70 for fix3 was right.
+- No em/en dash in the fix diff (grep 0), no ydotool, no personal
+  info.
+- Fix commit: (hash filled below after commit).
+- Redteam re-review over the fix-pass-4 diff: spawned after this
+  commit. Ship waits for it unless it BLOCKs.

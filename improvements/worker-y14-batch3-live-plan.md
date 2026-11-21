@@ -641,9 +641,10 @@ header/imports, run_b3_t10, run_preflight, H2 helpers, launch_gate):
   copied verbatim from check.mjs, whose timing is Playwright (~10 ms
   round trips, correct value near 8). The runner's path is 850 ms +
   about 3.5 effective Marionette round trips (Council 1 counts 3,
-  Council 3 counts 4; the advancing read's own transit contributes
-  about half a round trip, so the two counts bracket the true value
-  and differ by at most 0.19 ticks). At the measured laptop rates
+  which undercounts by half a round trip, and Council 3 counts 4,
+  which overcounts by half a round trip; the advancing read's own
+  transit is half a round trip, not zero and not one; the two
+  counts differ by at most 0.19 ticks). At the measured laptop rates
   (Y11b proof: eval median ~2 ms, click steps ~56 ms for ~3 POSTs,
   so a round trip is ~2-19 ms) the correct fixture reads about 8-10
   (8 at ~2 ms/round trip in good phase, 10 at ~19 ms in adverse
@@ -713,6 +714,47 @@ header/imports, run_b3_t10, run_preflight, H2 helpers, launch_gate):
   12-file set confirmed complete). Verification in the log. A
   redteam re-review over the fix-pass-3 diff is spawned after this
   commit; ship waits for it unless it BLOCKs.
+- Fix pass 4 (over the fix-pass-3 redteam verdict AMEND bd3c6c9,
+  22:20-22:45 +07): R1 -m .py regression FIXED (the -m branch now
+  runs before the runner-basename block, so a .py-suffixed module
+  name no longer hits the basename block's `continue` before the
+  -m check; _is_runner_module strips a trailing .py; verified live
+  that `python3 -m run_foo.py`, `-mrun_foo.py`, `-um run_foo.py`
+  all execute the stub, exit 124); F1 -crun_batch3.py false
+  positive FIXED (the -c branch now requires no script token
+  before the -c AND the -c to be a shell -c, via _c_is_shell;
+  verified live that `-crun_foo.py` is a NameError, exit 1, the
+  file never runs); F3 -m/import branches FIXED (both guarded by
+  _python_executes, which is now command-start aware: the search
+  stops at a shell separator or a -c, and an extensionless run_*
+  token counts as a script barrier, so pytest/echo -m and -W/-X
+  forms no longer false-positive; note the redteam's example used
+  run_other.py, which IS a run_* script, so that cmdline is still
+  a true positive via run_other.py itself; the guard is verified
+  with a non-runner script name); F4 _python_executes FIXED (stops
+  at shell separators, so `bash -c "python3 --version; pytest -W
+  ignore run_batch3.py"` no longer false-positives); F5
+  extensionless-script barrier FIXED (recorded as a guard, not a
+  miss: `python3 run_other -W ignore run_batch3.py` is now True
+  via run_other itself); F6 codex -c boundary FIXED (a -c bounds
+  the command only when it is a shell -c, via _c_is_shell, so
+  `python3 -c "codex marionette"` no longer false-positives);
+  F7 glued separators FIXED (_same_command_tokens splits glued
+  ";" / "&&" / "||" in both directions, so `codex --help;echo
+  marionette` no longer false-positives; and a codex -c flag now
+  includes everything after it, so `bash -c "codex -c 'import
+  time; x # marionette'"` is caught); F8 sudo RESTORED to the
+  recorded codex gaps (it was dropped from the docstring); F9
+  probe accuracy FIXED (the fix3 probe is 70 checks, not the
+  claimed 72; the `--check-hash-based-pycs=always` joined case is
+  documented as a fail-closed over-approximation, CPython rejects
+  the form with "unknown option", exit 2); F10 H4 wording FIXED
+  (the plan now states Council 1's 3 undercounts by half a round
+  trip and Council 3's 4 overcounts by half a round trip; the
+  "bracket" phrasing is removed). Verification in the log. A
+  redteam re-review over the fix-pass-4 diff is spawned after this
+  commit; ship waits for it unless it BLOCKs, in which case one
+  more fix pass follows.
 
 ## Runner status (21/11, after Y14b re-stage)
 

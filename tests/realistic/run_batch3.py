@@ -2309,24 +2309,59 @@ def _argv_tokens(cmdline):
     return tokens
 
 
+def _is_cmd_separator(tok):
+    """True if the token is (or contains) a shell command separator
+    (fix pass 4, redteam F7). A glued ";" ("--help;echo") separates
+    commands just as a standalone ";" does; "&&" and "||" likewise.
+    A lone "|" inside a token is left alone (it is more often a
+    literal, e.g. in a regex, than a pipeline)."""
+    return tok in (";", "&&", "||", "|") or ";" in tok or \
+        "&&" in tok or "||" in tok
+
+
+def _c_is_shell(tokens, c_idx):
+    """True if the "-c" token at c_idx is a shell -c (owned by
+    bash, sh or flock). A python/codex -c argument is code or a
+    prompt, not a command line, so its first word is not a command
+    (fix pass 4, redteam F1/F6). Finds the command owning the -c
+    by walking back to argv[0], a previous -c, or a separator."""
+    s = c_idx
+    while s > 0 and tokens[s - 1] != "-c" and \
+            not _is_cmd_separator(tokens[s - 1]):
+        s -= 1
+    return tokens[s].rsplit("/", 1)[-1] in ("bash", "sh", "flock")
+
+
 def _python_executes(tokens, i):
     """True if the token at i is executed BY a python interpreter,
-    not merely mentioned after one (fix pass 3, redteam F3). Finds
-    the nearest python token before i; returns False when there is
-    none, or when a script token (.py basename, -m, -c) sits between
-    it and i, because then the token at i is an argument to that
-    script, not to python (e.g. "python3 run_other.py -W ignore
-    run_batch3.py" and "pytest -W ignore run_batch3.py" both miss).
-    Used by the flag branch and the two-back rule."""
+    not merely mentioned after one (fix pass 3, redteam F3; fix
+    pass 4, redteam F4/F5). Finds the nearest python token before
+    i within the same shell command (the search stops at a shell
+    separator or a -c, so "python3 --version; pytest -W ignore
+    run_batch3.py" does not count the python3 of the first
+    command); returns False when there is none, or when a script
+    token sits between it and i, because then the token at i is an
+    argument to that script, not to python. A script token is a
+    .py basename, -m, -c, or an extensionless run_* token
+    ("python3 run_other -W ignore run_batch3.py" misses).
+    Callers pass the index of the flag introducing the runner
+    token (the -m index, or the -c index for an import), so the
+    introducing flag itself is never counted as a barrier."""
+    s = i
+    while s > 0 and tokens[s - 1] != "-c" and \
+            not _is_cmd_separator(tokens[s - 1]):
+        s -= 1
     py_idx = -1
-    for j in range(i):
+    for j in range(s, i):
         if _is_python_token(tokens[j]):
             py_idx = j
     if py_idx < 0:
         return False
     for k in range(py_idx + 1, i):
-        if tokens[k].rsplit("/", 1)[-1].endswith(".py") or \
-                tokens[k] in ("-m", "-c"):
+        base = tokens[k].rsplit("/", 1)[-1]
+        if base.endswith(".py") or tokens[k] in ("-m", "-c") or \
+                (base.startswith("run_") and
+                 not tokens[k].startswith("-")):
             return False
     return True
 
@@ -2352,15 +2387,34 @@ def _is_runner_cmdline(cmdline):
     module names, so foo.run_tests does not flag). Combined short
     flags (fix pass 3, redteam F1) are expanded by _argv_tokens
     ("-umrun_batch3" becomes "-u" "-m" "run_batch3", "-uc" becomes
-    "-u" "-c"), so they are caught by the same branches. A spaced
+    "-u" "-c"), so they are caught by the same branches. A
+    trailing ".py" on a -m module name is stripped before
+    matching: "python3 -m run_batch3.py" DOES execute the file
+    (verified live, exit 124 on the sleeping stub), so it must
+    match (fix pass 4, redteam R1 regression). A spaced
     -W/-X value ("python3 -W ignore run_batch3.py") is accepted
     via the token two back, as is the long option
     "--check-hash-based-pycs always" (fix pass 3, redteam F2; the
-    only CPython long option that takes a value). The flag branch
-    and the two-back rule both require the token to be executed BY
-    python (_python_executes), so "pytest -W ignore run_batch3.py"
-    and "python3 run_other.py -W ignore run_batch3.py" no longer
-    false-positive (fix pass 3, redteam F3). -c import form
+    only CPython long option that takes a value; the joined
+    "--check-hash-based-pycs=always" form is rejected by CPython
+    as an unknown option, so the flag branch returning True for it
+    is a fail-closed over-approximation, not an execution). The
+    flag branch and the two-back rule both require the token to be
+    executed BY python (_python_executes), so "pytest -W ignore
+    run_batch3.py" and "python3 run_other.py -W ignore
+    run_batch3.py" no longer false-positive (fix pass 3, redteam
+    F3); the guard respects shell command boundaries (fix pass 4,
+    redteam F4) and treats an extensionless run_* token as a
+    script barrier (fix pass 4, redteam F5). The -m branch is
+    guarded the same way (the -m index itself is the guard
+    endpoint, so the -m token is never its own barrier), and the
+    import branch requires the import to sit inside a python -c
+    string (fix pass 4, redteam F3: "pytest -m run_batch3",
+    "echo -m run_batch3" and "echo import run_batch3" all miss
+    now). The first word of a -c string is a command only when
+    the -c is a shell -c (fix pass 4, redteam F1: "python3
+    -crun_batch3.py" is a NameError, the file never runs). -c
+    import form
     (redteam H1): "python3 -c 'import run_batch3; ...'" is accepted
     when a bare runner module name follows "import" or "from" in
     the -c words. Known residual limitations, recorded not hidden:
@@ -2381,14 +2435,24 @@ def _is_runner_cmdline(cmdline):
     the whole run would close those shapes too, but only fleet-wide
     (every runner must take the same lock; run_live.py does not
     today), so that is a Muse-level fleet decision, not a change
-    for this runner. Sync note: this copy has the fix-pass-1, -2
-    and -3 additions; the sibling copies in launch_y13.py and
+    for this runner. Sync note: this copy has the fix-pass-1, -2,
+    -3 and -4 additions; the sibling copies in launch_y13.py and
     run_codex_y5.py do NOT yet have them, so the "identical logic"
     claim is currently FALSE. Re-diff the copies before treating
     them as in sync; the sync itself belongs to Y13f's fix pass."""
     tokens = _argv_tokens(cmdline)
     for i, tok in enumerate(tokens):
         base = tok.rsplit("/", 1)[-1]
+        # -m branch FIRST (fix pass 4, redteam R1): a .py-suffixed
+        # module name ("run_batch3.py") IS a runner basename, so
+        # it would hit the `continue` in the basename block below
+        # before reaching this check. The guard endpoint is the
+        # -m index itself, so the -m token is never its own
+        # barrier.
+        if i > 0 and tokens[i - 1] == "-m" and \
+                _is_runner_module(base) and \
+                _python_executes(tokens, i - 1):
+            return True
         if _script_basename_is_runner(base):
             if i == 0:
                 return True
@@ -2397,11 +2461,15 @@ def _is_runner_cmdline(cmdline):
             if _is_python_token(prev):
                 return True
             # First word of a -c string (bash -c "run_batch3.py").
-            # Only when no script token precedes the -c itself:
-            # "python3 run_other.py -c 'run_batch3.py'" passes the
+            # Only when no script token precedes the -c itself
+            # ("python3 run_other.py -c 'run_batch3.py'" passes the
             # runner name as an argument to run_other.py, it does
-            # not execute it (fix pass 3, redteam F3 class).
-            if prev == "-c" and not any(
+            # not execute it, fix pass 3, redteam F3 class) AND
+            # the -c is a shell -c (fix pass 4, redteam F1: a
+            # python -c string is code, so "python3
+            # -crun_batch3.py" is a NameError, the file never
+            # runs; a codex -c string is a prompt, not a command).
+            if prev == "-c" and _c_is_shell(tokens, i - 1) and not any(
                     tokens[k].rsplit("/", 1)[-1].endswith(".py")
                     or tokens[k] in ("-m", "-c")
                     for k in range(i - 1)):
@@ -2420,13 +2488,21 @@ def _is_runner_cmdline(cmdline):
             if not base.endswith(".py") and prev_base in ("bash", "sh"):
                 return True
             continue
-        if i > 0 and tokens[i - 1] == "-m" and \
-                _is_runner_module(base):
-            return True
         if i > 0 and tokens[i - 1] in ("import", "from") and (
                 base.rstrip(";,()").startswith("run_")
                 or base.rstrip(";,()") == "hand_drive_e1"):
-            return True
+            # Guard (fix pass 4, redteam F3): the import must be
+            # inside a python -c string. Find the nearest "-c"
+            # before the import token; without one (e.g. "echo
+            # import run_batch3") it is not a python import. The
+            # -c itself must be owned by python.
+            c_idx = -1
+            for j in range(i - 1, -1, -1):
+                if tokens[j] == "-c":
+                    c_idx = j
+                    break
+            if c_idx >= 0 and _python_executes(tokens, c_idx):
+                return True
     return False
 
 
@@ -2435,10 +2511,16 @@ _RUNNER_MODULES = ("run_batch3", "run_live", "run_agyq2", "run_agyq",
 
 
 def _is_runner_module(mod):
-    """True if a -m module name executes a runner (fix pass 2). A
-    bare name matches the run_* prefix rule (same as the spaced -m
-    branch); a dotted name matches only when its last component is
-    an exact runner module, so foo.run_tests does not flag."""
+    """True if a -m module name executes a runner (fix pass 2, fix
+    pass 4). A bare name matches the run_* prefix rule (same as the
+    spaced -m branch); a dotted name matches only when its last
+    component is an exact runner module, so foo.run_tests does not
+    flag. A trailing ".py" is stripped first: "python3 -m
+    run_batch3.py" DOES execute the file (verified live, exit 124
+    on the sleeping stub), so it must match (fix pass 4, redteam
+    R1 regression)."""
+    if mod.endswith(".py"):
+        mod = mod[:-3]
     last = mod.rsplit(".", 1)[-1]
     if "." in mod:
         return last in _RUNNER_MODULES
@@ -2481,15 +2563,24 @@ def _codex_at_command(tokens, i):
     codex. Anything else before codex (echo, grep, cat, another
     command) means codex is an argument or a printed word, not the
     command, so "echo env codex marionette" no longer flags. Known
-    gaps, recorded: nohup, setsid, timeout, flock-direct, time and
-    nice wrappers each need their own argument parser (flock takes
-    a lockfile, timeout a duration); no fleet launcher uses them
-    for codex, so they are recorded, not parsed."""
+    gaps, recorded: nohup, setsid, timeout, flock-direct, time,
+    nice and sudo wrappers each need their own argument parser
+    (flock takes a lockfile, timeout a duration); no fleet launcher
+    uses them for codex, so they are recorded, not parsed. A "-c"
+    bounds the command only when it is a shell -c: "python3 -c
+    'codex marionette'" is Python code, not a command (fix pass 4,
+    redteam F6)."""
     s = i
     while s > 0 and tokens[s - 1] != "-c" and \
-            tokens[s - 1] not in (";", "&&", "||", "|") and \
-            not tokens[s - 1].endswith(";"):
+            not _is_cmd_separator(tokens[s - 1]):
         s -= 1
+    # A "-c" bounds the command only when it is a shell -c (fix
+    # pass 4, redteam F6): "python3 -c 'codex marionette'" is
+    # Python code, not a command, so codex there is not the
+    # command of anything.
+    if s > 0 and tokens[s - 1] == "-c" and \
+            not _c_is_shell(tokens, s - 1):
+        return False
     if s == i:
         return True
     if tokens[s].rsplit("/", 1)[-1] != "env":
@@ -2526,8 +2617,7 @@ def _in_shell_c_string(tokens, i):
         return False
     s = c
     while s > 0 and tokens[s - 1] != "-c" and \
-            tokens[s - 1] not in (";", "&&", "||", "|") and \
-            not tokens[s - 1].endswith(";"):
+            not _is_cmd_separator(tokens[s - 1]):
         s -= 1
     return tokens[s].rsplit("/", 1)[-1] in ("bash", "sh", "flock")
 
@@ -2540,20 +2630,36 @@ def _same_command_tokens(tokens, i):
     tokens before and after i within that command, lowercased
     joined text is the caller's job."""
     lo = i
-    while lo > 0 and tokens[lo - 1] not in (";", "&&", "||", "|") \
-            and not tokens[lo - 1].endswith(";"):
+    while lo > 0 and tokens[lo - 1] != "-c" and \
+            not _is_cmd_separator(tokens[lo - 1]):
         lo -= 1
-    hi = i
-    while hi < len(tokens) - 1:
-        nxt = tokens[hi + 1]
-        if nxt in (";", "&&", "||", "|"):
+    parts = list(tokens[lo:i])
+    j = i + 1
+    while j < len(tokens):
+        tok = tokens[j]
+        if tok in (";", "&&", "||", "|"):
             break
-        hi += 1
-        # A token ending in ";" is the last word of this command
-        # (e.g. "marionette;"): include it, then stop.
-        if nxt.endswith(";"):
+        if tok == "-c":
+            # Codex's own -c flag: everything after it is codex's
+            # snippet (a prompt, not shell words), so no ";" after
+            # it can be a shell separator (fix pass 4, redteam F2).
+            # A marker in the snippet counts; a marker in a LATER
+            # shell command would too, but that form is contrived
+            # and the gate is fail-closed.
+            parts.extend(tokens[j:])
             break
-    return tokens[lo:i] + tokens[i + 1:hi + 1]
+        if ";" in tok or "&&" in tok or "||" in tok:
+            # A glued separator ("--help;echo", "marionette;echo"):
+            # the part before the first separator belongs to this
+            # command, the rest does not (fix pass 4, redteam F7).
+            first = tok.replace("&&", ";").replace("||", ";") \
+                .split(";", 1)[0]
+            if first:
+                parts.append(first)
+            break
+        parts.append(tok)
+        j += 1
+    return parts
 
 
 def _is_codex_executor(cmdline):
