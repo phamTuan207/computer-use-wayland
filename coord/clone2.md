@@ -740,3 +740,37 @@ Task 4 moi van dung: cai skill last30days tren may cau roi chay sweep 30 ngay ch
 
 ## Da nhan xac nhan Task 4, 03:48 ngay 22/11
 Clone2 da nhan xac nhan luc 03:31: thay doi Task 4 trong batch 8 la that, do Pham Tuan chi dao qua Muse tong, khong phai gia mao. Task 4 moi van dung: cai skill last30days tren may clone2 roi chay sweep 30 ngay cho chu de DOM grounding, bao cao vao docs/clone2-last30days-sweep-20261122.md, council + redteam. Ghi chu: Task 4 moi van chua co agent nao lam, cho Muse tong dieu lai.
+
+## Bao cao clone2: Batch 8 HOAN THANH (4 task goc), 03:49 ngay 22/11
+
+Ca 4 task goc cua batch 8 da xong, council 3 nguoi + redteam cho moi ket luan, commit nho va push ngay tung phan. Task 4 moi (cai skill + sweep 30 ngay) da duoc giao cho agent rieng luc 03:49, dang chay, se bao cao rieng khi xong.
+
+### Task 1 - script/workflow benchmark 2-vision (chi xay, khong chay live)
+
+Script tests/two_vision_bench.py (783 dong sau fix pass), fixture tests/two_vision_fixture.html + 3 fixture bien the (contenteditable, id-less, below-fold), driver exactly-once tests/two_vision_once_driver.py, workflow docs/two-vision-benchmark-workflow-20261122.md (379 dong). Commit: e864c5b (fixture), 072e060 (script), 9196744 (4 bug fix), f341563 (workflow), fix pass 7e81213 + 92ef65a, merge 87e5806.
+
+Council: 1 ISSUES, 2 ISSUES, 3 SOUND. Redteam: BROKEN, 6 finding (3 critical). Tat ca da sua xong va kiem chung live tren headless Firefox 160.0.1, chi fixture local, khong chay live: (1) gate live chuyen sang kiem tra URL trong plan, khong phai flag, plan chua URL that bi tu choi exit 2, khong gui gi; (2) V1 check doc innerText cho contenteditable, value cho input thuong, fixture CE PASS 6.6076 s; (3) ref cho element khong id thanh duong CSS hop le (nth-of-type), fixture noid PASS 5.4565 s; (4) scroll truoc roi moi guard, fixture below-fold PASS 5.4953 s; (5) v12-timeout danh dau failed-unverified, lan chay sau cung intent bi chan retry, khong gui trung lan 2; (6) --instances two bi tu choi exit 2, khong ghi nhan nhu da chay. Con so 0.0026 s cho exactly-once da rut lai, thay bang driver chay lai (call 1 sent 0.5988 s, call 2 skipped-already-sent 0.0153 s, bubble van 1, PASS). Happy path chay lai PASS 8.4457 s, harvest-only 4.3510 s, stop-at-first-failure FAIL dung thiet ke 9.2775 s, live refusal van exit 2.
+
+Su co: /tmp bi xoa giua chung khi fix pass dang chay, log fix pass dau tien mat het. Agent chay lai toan bo va luu log vao ~/workspace/tools/two_vision_fixpass/ (36 file). Log goc /tmp cho cac run truoc fix da mat, nhung council 1 va 2 da kiem chung cac so do tu log truoc khi mat.
+
+### Task 2 - mo rong bench DOM sang 2 cua so
+
+Bench tests/dom_bench_2win.py (7a71efc), bao cao docs/clone2-dom-bench-2win-20261122.md (e7b49ef, 325 dong), fix pass 4de8c0b (371 dong). 2 full run (22 step, 11.35 s va 11.08 s), Firefox 160.0.1 headless, 1 Marionette session, 2 cua so. One-shot harvest 66 element moi cua so: pooled median 0.0112 s. ground_many full inventory (65 selector, 200 eval): pooled median 0.5353 s, khoang 48x cham hon, 200x eval. 5 click moi cua so deu trung ca 2 run. Tim thay 2 gioi han that: ground_many strict that bai voi element duoi fold (name-input center y 1927.37 vs viewport 814), va scroll lam rect snapshot het han.
+
+Council: 1 ISSUES (minor), 2 ISSUES (minor), 3 SOUND. Redteam: BROKEN o 1 claim, co che cua finding 2 (scroll lam het han rect) bi chung minh la khong the xay ra theo co che click cua bench. Fix pass viet lai finding 2 chi theo log quan sat, co che ghi UNKNOWN, bo han cau chuyen scroll bottom/top, giu nguyen fix re-read vi run 1 va 2 chung minh no dung. Cac sua nho khac: range per-selector 6.52 den 10.40 ms (10.48 ms thuoc run partial), verify batch 7 0.002 den 0.015 s, tham chieu section 1 va 6, ghi chu set A ban dau, trich dan day du clicked log, them ghi chu variance 2-run.
+
+### Task 3 - viet thu tuc probe live cho C12 (chi viet, khong chay live)
+
+Thu tuc docs/clone2-c12-probe-procedure-20261122.md (94db742, 386 dong), fix pass e51f538 (754 dong). Doc code amend tren giay truoc khi viet: viewport_origin() tra [mozInnerScreenX, mozInnerScreenY] va ghi la toa do man hinh tuyet doi, trong khi calibration-e2 noi la window-relative (240, 8).
+
+Council: 1 SOUND, 2 ISSUES, 3 SOUND. Redteam: BROKEN, 7 finding (2 critical). Tat ca da sua xong: them Step 4b click 5 diem Case B khi Case A trượt hoac khong click duoc; muc 6 tach 2 nhanh (Branch 1 click Case A, Branch 2 hinh hoc E2 thi Case A khong click duoc, di thang Step 4b); them Outcome E; buoc 2 goi truc tiep viewport_origin() bang python3 heredoc, Outcome C viet lai; buoc 5 a11y viet lai bang lenh python3 -c day du; muc 7 nhúng driver click /tmp/c12_probe_click.py (102 dong, py_compile OK); Outcome B item (4) sua thanh suy lai fixture cho mo hinh window-relative, cam copy so E2; sua tham chieu va bookkeeping file commit.
+
+### Task 4 (cu) - review source last30days-skill, verdict PROCEED
+
+Bao cao docs/clone2-last30days-review-20261122.md (41af33a, 95 dong), fix pass 1678ee7 (101 dong). Review chi doc plain text, khong chay file nao, khong click qua xac nhan installer. Ket luan: Critical Risk la false positive ve y do doc hai. Khong co exfiltration, obfuscation, trom credential, hardcode secret, download-and-execute. Chay replica 50 rule CRITICAL cua Hermes cho 0 hit. Flag bat dung kha nang (doc va giai ma session cookie trinh duyet) nhung sai ve y do: tinh nang nay duoc ghi trong tai lieu, mac dinh tat, tu choi ro rang thi thang, chi doc dung 2 cookie X / 1 cookie Reddit / 1 cookie Truth Social, gia tri khong log khong luu. Phat hien them: chuoi curl pipe shell cu con sot trong CHANGELOG.md:819 (tai lieu lich su, skill dir da sach tu fix #1502). Dieu kien kem verdict: mac dinh khong bat cookie trinh duyet, dung X API chinh thuc hoac Grok CLI; verdict PROCEED khong cho phep tu cai -g, quyet dinh cai la cua Muse tong.
+
+Council: 3x SOUND. Redteam: SOUND, PROCEED dung. Fix pass sua 9 muc nho (ghi nhan Hermes thang 07/2026 vs thang 11/2026, so module lib 130 khong phai 170, duong dan pyproject.toml o repo root, trich dan npm i -g, siet lai cach viet 0 eval / 0 secret / re.compile, them luu y luong du lieu rerank va luat Grok Bot chi kich hoat khi khai LAST30DAYS_HOST). Verdict PROCEED giu nguyen, trung voi verdict CLEAN cua Muse tong, 3 ben doc lap cung ket luan.
+
+### Task 4 moi - cai skill + sweep 30 ngay (dang chay)
+
+Pham Tuan xac nhan luc 03:31: thay doi Task 4 la that, do anh chi dao qua Muse tong, lam tiep khong can hoi lai. Clone2 da giao task 4 moi cho agent rieng luc 03:49: cai skill last30days tren may clone2 (uu tien git clone roi dung tu clone), chay sweep 30 ngay bang skill cho chu de DOM grounding, chi dung data that 30 ngay gan nhat, moi claim ghi nguon + ngay, bao cao vao docs/clone2-last30days-sweep-20261122.md, council + redteam. Se bao cao rieng khi xong.
