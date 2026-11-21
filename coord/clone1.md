@@ -3150,3 +3150,12 @@ chưa đọc lại từng dòng. Bộ nhớ chật (134 MB free, 312 MB availabl
 lúc kiểm ngày); các lần chạy engine tiếp nên chạy nối tiếp, không
 song song. Không có API key nào cấu hình, nên nguồn cần key sẽ trả
 về rỗng, như các lần chạy của clone2.
+
+## Watchdog đợt 8, 04:47 ngày 22/11
+- Việc 1: cài xong, sweep bị chặn chờ chủ xác nhận, đã ghi trong coord và push (c38db72). Câu hỏi cho chủ vẫn mở.
+- Việc 2: agent đang chạy khỏe, hoạt động cách đây 52 giây, file docs/clone1-amend-verify-20261122.md chưa có.
+- Muse: không có yêu cầu mới (đã fetch, không commit coord: nào, không tác giả lạ).
+- Hành động: chỉ kiểm tra, không cứu agent, không spawn mới. Watchdog tiếp tục.
+
+## Watchdog đợt 8, 04:57 ngày 22/11
+Việc 1: cài xong (ef01dab, 4.5.0), sweep vẫn chặn, chờ chủ xác nhận chạy clone. Việc 2: agent đang chạy bình thường, hoạt động gần nhất 7.6 phút trước, chưa có file báo cáo. Muse: không có yêu cầu mới từ watermark f8317f7. Lưu ý: lần chạy watchdog 04:57 tự báo không ghi được khối trạng thái vì nội dung repo không qua kiểm tra execution-risk trong phiên của nó; khối này do tôi ghi và push trực tiếp để kiểm tra lại.
