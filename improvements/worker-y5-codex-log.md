@@ -211,3 +211,36 @@ Below is Codex's own log file as committed on y5-tests (f051784 + 0367138). It o
 - 2026-11-21 19:02:47 +07 | elapsed 00:41:46 | Test 10: 27 steps; simulator 297 ms; checker pass; fresh fixture failed as expected.
 - 2026-11-21 19:04:11 +07 | elapsed 00:43:10 | Pushed the suite harness commit and 10 isolated spec plus fixture commits to origin/y5-tests. Council reports and this running log are ready for their own commit.
 - 2026-11-21 19:08:22 +07 | Test 07 follow-up: verified the spec's existing unfiltered count of 3 matches against the fixture; Design Bot, Build Bot, and Build Bot with date 2026-10-12 return 1, 2, and 1. Proof results: `node tests/realistic/codex-y5/check.mjs --all` passed (10/10); `node tests/realistic/codex-y5/simulate.mjs --all` passed (10/10); `python3 tests/realistic/codex-y5/check-dashes.py` passed.
+
+## 19:14 +07 | 00:55 | DONE, 10/10 on the merged tree
+- Merged y5-tests into todolist-push as 7c07f6b (32 files, 2694 insertions).
+  One conflict only: improvements/worker-y5-codex-log.md (add/add), resolved
+  by keeping both records in the one file (driver log first, Codex's log
+  appended under its own heading). Suite now lives at
+  tests/realistic/codex-y5/ on todolist-push.
+- Final independent verification (my jsdom per-step harness, run against
+  the MERGED tree): `node /tmp/y5-verify/verify.mjs --all
+  ~/workspace/computer-use-wayland/tests/realistic/codex-y5 --fresh`
+  -> 10/10 PASS, overall true, 0 unknown steps. Step totals: 34, 22, 29,
+  27, 26, 36, 23, 21, 24, 27 (269 steps). Full output
+  /tmp/y5-verify/codex-y5-run-merged.log, JSON
+  /tmp/y5-verify/codex-y5-result-merged.json. Calibration re-run on agy-y2
+  the same hour: 10/10, so the harness did not drift.
+- Headless proof re-run BY ME on the laptop (not trusting Codex's claim):
+  from the worktree root, `node tests/realistic/codex-y5/check.mjs --all`
+  -> allPassed true, 10/10, every fresh fixture failed as expected,
+  exit 0; `node tests/realistic/codex-y5/simulate.mjs --all` -> allPassed
+  true, 10/10, exit 0; `python3 check-dashes.py` -> PASSED, exit 0.
+  Output /tmp/y5-my-proof2.log (check/sim) and /tmp/y5-my-proof.log
+  (dashes). GOTCHA for the live runner: check.mjs/simulate.mjs MUST run
+  from the repo/worktree root, not from inside the suite dir; from inside,
+  fixture paths double up and both fail with net::ERR_FILE_NOT_FOUND
+  (exit 3). My first attempt hit exactly that; the re-run from the root
+  passed.
+- Tokens: main Codex run 358,114; fix-pass run 49,486; total 407,600.
+- Open warnings (not failures): test-04 step 22 is a weak check (passes on
+  a fresh load, final-step check unaffected). Same class as the 5 weak
+  checks already known in agy-y2. Worth strengthening later, not blocking.
+- NOT done by Y5 (separate job): the live run on Zen in a real browser.
+  Generators never run their own tests as the verdict; the independent live
+  runner takes the merged suite from here.
