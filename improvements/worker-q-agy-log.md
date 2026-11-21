@@ -65,3 +65,20 @@ Strict requirements enforced:
 - Created offline fixture `tests/realistic/agy-q/fixtures/test-04-notes-app.html` with markdown authoring, live rendered preview, bidirectional `[[WikiLink]]` routing, backlinks computation, note pinning, search by `#tag`, and note archiving.
 - Verified test with `node tests/realistic/agy-q/check.mjs --fixture tests/realistic/agy-q/fixtures/test-04-notes-app.html --test 04`: score 1, 0 failures, 74ms.
 - Verified zero em/en dashes.
+
+## 2026-11-21 15:53:00 (T+00:09:11) - Completed Test 05 (file search) and suite audit
+
+- Created `tests/realistic/agy-q/test-05-file-search.md` (30 exact steps, within 15-40 limit).
+- Created offline fixture `tests/realistic/agy-q/fixtures/test-05-file-search.html` with filename vs full-text content search modes, extension filter, code preview with line numbers, file renaming, editor launch simulator, read-only permissions, and audit log export.
+- Verified test with `node tests/realistic/agy-q/check.mjs --fixture tests/realistic/agy-q/fixtures/test-05-file-search.html --test 05`: score 1, 0 failures, 62ms.
+- Executed full suite verification via `node tests/realistic/agy-q/check.mjs --all`: all 5 tests passed (5/5 score: 1.0, 0 failures, total runtime under 300ms).
+- Verified step counts across all test files:
+  - test-01-music-player.md: 28 steps
+  - test-02-photo-gallery.md: 30 steps
+  - test-03-rss-reader.md: 28 steps
+  - test-04-notes-app.md: 30 steps
+  - test-05-file-search.md: 30 steps
+  All strictly satisfy the 15-40 step complexity threshold.
+- Verified absence of em dashes and en dashes across all test documents, fixtures, runner, and log.
+- Verified zero external requests: all fixtures run completely offline from local file URLs.
+- Git identity verified as phamTuan207.

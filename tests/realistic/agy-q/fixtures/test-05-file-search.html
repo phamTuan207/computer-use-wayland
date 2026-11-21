@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Offline Codebase File &amp; Content Search</title>
+<style>
+  :root {
+    --bg-dark: #0f172a;
+    --sidebar-bg: #1e293b;
+    --panel-bg: #182234;
+    --preview-bg: #0b1120;
+    --border: #334155;
+    --text-primary: #f8fafc;
+    --text-muted: #94a3b8;
+    --accent: #3b82f6;
+    --accent-hover: #2563eb;
+    --highlight: #fef08a;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  body { background: var(--bg-dark); color: var(--text-primary); display: flex; height: 100vh; overflow: hidden; }
+
+  /* Left Search & Controls */
+  #search-controls { width: 340px; background: var(--sidebar-bg); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 18px; }
+  .logo { font-size: 16px; font-weight: 700; color: #fff; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+  .form-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 6px; display: block; }
+  .input-text { width: 100%; padding: 8px 12px; background: #0f172a; border: 1px solid var(--border); border-radius: 6px; color: #fff; font-size: 13px; outline: none; margin-bottom: 12px; }
+  .input-text:focus { border-color: var(--accent); }
+  
+  .mode-group { display: flex; gap: 14px; margin-bottom: 14px; font-size: 12px; }
+  .mode-label { display: flex; align-items: center; gap: 6px; cursor: pointer; color: var(--text-muted); }
+  .mode-label input { accent-color: var(--accent); }
+
+  .select-box { width: 100%; padding: 8px 12px; background: #0f172a; border: 1px solid var(--border); border-radius: 6px; color: #fff; font-size: 13px; outline: none; margin-bottom: 16px; cursor: pointer; }
+  
+  .batch-box { margin-top: auto; padding: 12px; border: 1px dashed var(--border); border-radius: 6px; background: #131c2d; }
+  
+  /* Middle Results Table */
+  #results-panel { width: 420px; background: var(--panel-bg); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+  .panel-header { height: 50px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 16px; font-size: 13px; font-weight: 600; }
+  .results-scroll { flex: 1; overflow-y: auto; }
+  
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th { text-align: left; padding: 10px 12px; color: var(--text-muted); font-size: 11px; text-transform: uppercase; border-bottom: 1px solid var(--border); background: #1a2538; }
+  td { padding: 8px 12px; border-bottom: 1px solid #1e293b; vertical-align: middle; }
+  tr.clickable-row { cursor: pointer; }
+  tr.clickable-row:hover td { background: #222f46; }
+  tr.clickable-row.active td { background: #283752; }
+  .cell-snippet { font-family: monospace; font-size: 11px; color: #38bdf8; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* Right Preview Pane */
+  #preview-panel { flex: 1; background: var(--preview-bg); display: flex; flex-direction: column; overflow: hidden; }
+  .preview-header { height: 50px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 20px; background: #0f172a; }
+  .file-badge { font-size: 11px; font-weight: 600; padding: 2px 6px; border-radius: 4px; background: #334155; color: #94a3b8; }
+  .file-badge.ro { background: #dc2626; color: #fff; }
+  .preview-body { flex: 1; overflow-y: auto; padding: 20px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 12px; line-height: 1.6; color: #e2e8f0; }
+  .code-line { display: flex; gap: 16px; }
+  .line-num { color: #475569; user-select: none; text-align: right; width: 30px; }
+
+  .status-strip { padding: 8px 20px; border-top: 1px solid var(--border); background: #0c121e; font-size: 11px; color: var(--text-muted); display: flex; justify-content: space-between; }
+
+  /* Buttons */
+  .btn { display: inline-flex; align-items: center; justify-content: center; padding: 6px 12px; border-radius: 6px; border: none; font-size: 12px; font-weight: 500; cursor: pointer; }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: var(--accent-hover); }
+  .btn-outline { background: transparent; border: 1px solid var(--border); color: #e2e8f0; }
+  .btn-outline:hover { background: #334155; }
+
+  /* Modal */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.65); display: none; align-items: center; justify-content: center; z-index: 100; }
+  .modal-overlay.open { display: flex; }
+  .modal-box { width: 440px; background: #1e293b; border: 1px solid var(--border); border-radius: 8px; padding: 24px; }
+  .modal-title { font-size: 16px; font-weight: 600; margin-bottom: 14px; color: #fff; }
+</style>
+</head>
+<body>
+
+<div id="search-controls">
+  <div class="logo">&#128269; Codebase Explorer</div>
+  
+  <label class="form-label" for="input-file-search">Search Query</label>
+  <input type="text" id="input-file-search" class="input-text" placeholder="Type filename or symbol...">
+
+  <label class="form-label">Search Mode</label>
+  <div class="mode-group">
+    <label class="mode-label">
+      <input type="radio" id="radio-search-name" name="searchMode" value="name" checked onchange="onModeChange()">
+      <span>Filename</span>
+    </label>
+    <label class="mode-label">
+      <input type="radio" id="radio-search-content" name="searchMode" value="content" onchange="onModeChange()">
+      <span>Content</span>
+    </label>
+  </div>
+
+  <label class="form-label" for="select-ext-filter">Extension Filter</label>
+  <select id="select-ext-filter" class="select-box" onchange="performSearch()">
+    <option value="">All Extensions</option>
+    <option value=".rs">.rs (Rust)</option>
+    <option value=".json">.json (Config)</option>
+    <option value=".md">.md (Docs)</option>
+    <option value=".sh">.sh (Scripts)</option>
+  </select>
+
+  <div class="batch-box">
+    <label class="form-label" for="select-batch-action">Batch Selection Action</label>
+    <select id="select-batch-action" class="select-box" style="margin-bottom: 8px;">
+      <option value="ro">Mark Read-Only</option>
+      <option value="rw">Mark Read-Write</option>
+    </select>
+    <button id="btn-apply-batch" class="btn btn-outline" style="width: 100%;" onclick="applyBatchAction()">Apply Action</button>
+  </div>
+</div>
+
+<div id="results-panel">
+  <div class="panel-header">
+    <span>Results (<span id="results-count">15</span>)</span>
+    <button id="btn-export-audit" class="btn btn-outline" style="font-size: 11px;" onclick="openAuditModal()">Export Search Audit</button>
+  </div>
+  <div class="results-scroll">
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 26px;"></th>
+          <th>File</th>
+          <th>Folder</th>
+          <th>Snippet</th>
+        </tr>
+      </thead>
+      <tbody id="results-table-body">
+        <!-- Rendered results -->
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div id="preview-panel">
+  <div class="preview-header">
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <span id="preview-filename" style="font-weight: 600; font-size: 13px;">No file selected</span>
+      <span id="preview-badge-ro" class="file-badge">RW</span>
+    </div>
+    <div style="display: flex; gap: 8px;">
+      <button id="btn-rename-file" class="btn btn-outline" onclick="openRenameModal()">Rename File</button>
+      <button id="btn-open-file" class="btn btn-primary" onclick="openActiveInEditor()">Open in Editor</button>
+    </div>
+  </div>
+  <div id="preview-content-area" class="preview-body">
+    <div style="color: var(--text-muted); text-align: center; margin-top: 60px;">Select a file from results to preview content.</div>
+  </div>
+  <div class="status-strip">
+    <div id="status-open-indicator">Active in editor: none</div>
+    <div id="status-rename-banner">Status: Ready</div>
+  </div>
+</div>
+
+<!-- Modal: Rename File -->
+<div id="modal-rename" class="modal-overlay">
+  <div class="modal-box">
+    <div class="modal-title">Rename File</div>
+    <div style="margin-bottom: 14px;">
+      <label class="form-label" for="input-new-filename">New File Name</label>
+      <input type="text" id="input-new-filename" class="input-text">
+    </div>
+    <div style="display: flex; justify-content: flex-end; gap: 8px;">
+      <button class="btn btn-outline" onclick="closeModal('modal-rename')">Cancel</button>
+      <button id="btn-confirm-rename" class="btn btn-primary" onclick="confirmRename()">Confirm Rename</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Search Audit -->
+<div id="modal-export-audit" class="modal-overlay">
+  <div class="modal-box" style="width: 480px;">
+    <div class="modal-title">Search &amp; File Audit Export</div>
+    <div id="audit-summary-line" style="font-size: 13px; color: #38bdf8; margin-bottom: 12px;">Renamed: 0, Active Editor: none, Read-Only Files: 0</div>
+    <textarea id="audit-log-view" readonly style="width: 100%; height: 160px; background: #0f172a; border: 1px solid var(--border); color: #94a3b8; font-family: monospace; font-size: 11px; padding: 10px; border-radius: 6px; resize: none;"></textarea>
+    <div style="display: flex; justify-content: flex-end; margin-top: 14px;">
+      <button id="btn-close-audit-modal" class="btn btn-primary" onclick="closeModal('modal-export-audit')">Done</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const FILES = [
+  { id: 1, name: 'compositor.rs', folder: 'src', ext: '.rs', readOnly: false, content: 'pub struct Compositor {\\n  socket: String,\\n  clients: Vec<Client>,\\n}' },
+  { id: 2, name: 'server.rs', folder: 'src', ext: '.rs', readOnly: false, content: 'pub fn start_server(socket_path: &str) -> Result<()> {\\n  bind_unix_socket(socket_path)?;\\n  Ok(())\\n}' },
+  { id: 3, name: 'client.rs', folder: 'src', ext: '.rs', readOnly: false, content: 'pub struct Client {\\n  id: u64,\\n  pid: u32,\\n}' },
+  { id: 4, name: 'protocol.rs', folder: 'src', ext: '.rs', readOnly: false, content: 'pub enum WaylandEvent {\\n  PointerMotion(i32, i32),\\n  ButtonPress(u32),\\n}' },
+  { id: 5, name: 'main.rs', folder: 'src', ext: '.rs', readOnly: false, content: 'fn main() {\\n  init_logging();\\n  run_event_loop();\\n}' },
+  { id: 6, name: 'compositor.json', folder: 'config', ext: '.json', readOnly: false, content: '{\\n  "server_name": "wayland-0",\\n  "socket_path": "/run/user/1000/wayland-0",\\n  "refresh_rate": 144\\n}' },
+  { id: 7, name: 'display.json', folder: 'config', ext: '.json', readOnly: false, content: '{\\n  "monitors": [\\n    { "name": "DP-1", "scale": 1.0 }\\n  ]\\n}' },
+  { id: 8, name: 'bindings.json', folder: 'config', ext: '.json', readOnly: false, content: '{\\n  "shortcuts": [\\n    { "mod": "SUPER", "key": "Return", "exec": "terminal" }\\n  ]\\n}' },
+  { id: 9, name: 'architecture.md', folder: 'docs', ext: '.md', readOnly: false, content: '# Architecture Overview\\n\\nDescribes Wayland event loops and client surfaces.' },
+  { id: 10, name: 'troubleshooting.md', folder: 'docs', ext: '.md', readOnly: false, content: '# Troubleshooting\\n\\nCommon socket connection issues and log parsing.' },
+  { id: 11, name: 'launch.sh', folder: 'scripts', ext: '.sh', readOnly: false, content: '#!/bin/bash\\nexport socket_path="/run/user/1000/wayland-0"\\nexec /usr/bin/compositor --socket $socket_path' },
+  { id: 12, name: 'build.sh', folder: 'scripts', ext: '.sh', readOnly: false, content: '#!/bin/bash\\ncargo build --release --locked' },
+  { id: 13, name: 'test-unit.sh', folder: 'scripts', ext: '.sh', readOnly: false, content: '#!/bin/bash\\ncargo test --all' },
+  { id: 14, name: 'contributing.md', folder: 'docs', ext: '.md', readOnly: false, content: '# Contributing Guidelines\\n\\nFollow rustfmt and conventional commit messages.' },
+  { id: 15, name: 'theme.json', folder: 'config', ext: '.json', readOnly: false, content: '{\\n  "border_color": "#3b82f6",\\n  "active_opacity": 0.95\\n}' }
+];
+
+let selectedFileId = null;
+let activeEditorFile = null;
+let checkedFileIds = new Set();
+let renameCount = 0;
+
+function performSearch() {
+  const query = document.getElementById('input-file-search').value.trim().toLowerCase();
+  const isContent = document.getElementById('radio-search-content').checked;
+  const extFilter = document.getElementById('select-ext-filter').value;
+
+  let matches = FILES;
+  if (extFilter) {
+    matches = matches.filter(f => f.ext === extFilter);
+  }
+
+  if (query) {
+    if (isContent) {
+      matches = matches.filter(f => f.content.toLowerCase().includes(query));
+    } else {
+      matches = matches.filter(f => f.name.toLowerCase().includes(query));
+    }
+  }
+
+  renderResultsTable(matches, query, isContent);
+}
+
+function renderResultsTable(matches, query, isContent) {
+  const tbody = document.getElementById('results-table-body');
+  tbody.innerHTML = '';
+  document.getElementById('results-count').textContent = matches.length;
+
+  matches.forEach(f => {
+    const tr = document.createElement('tr');
+    tr.className = `clickable-row ${f.id === selectedFileId ? 'active' : ''}`;
+    tr.id = `row-file-${f.id}`;
+    tr.onclick = (e) => {
+      if (e.target.tagName.toLowerCase() === 'input') return;
+      selectFile(f.id);
+    };
+
+    let snippet = f.ext;
+    if (isContent && query && f.content.toLowerCase().includes(query)) {
+      const idx = f.content.toLowerCase().indexOf(query);
+      const start = Math.max(0, idx - 10);
+      snippet = f.content.substring(start, start + 30).replace(/\\n/g, ' ');
+    }
+
+    tr.innerHTML = `
+      <td><input type="checkbox" id="chk-file-${f.id}" ${checkedFileIds.has(f.id) ? 'checked' : ''} onchange="toggleCheckFile(${f.id}, this.checked)"></td>
+      <td><strong>${f.name}</strong></td>
+      <td style="color: var(--text-muted);">${f.folder}/</td>
+      <td class="cell-snippet">${snippet}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function selectFile(id) {
+  selectedFileId = id;
+  const f = FILES.find(x => x.id === id);
+  if (!f) return;
+
+  document.getElementById('preview-filename').textContent = `${f.folder}/${f.name}`;
+  const badge = document.getElementById('preview-badge-ro');
+  badge.textContent = f.readOnly ? 'RO' : 'RW';
+  badge.className = `file-badge ${f.readOnly ? 'ro' : ''}`;
+
+  const lines = f.content.split('\\n');
+  const codeHtml = lines.map((line, i) => `
+    <div class="code-line">
+      <span class="line-num">${i + 1}</span>
+      <span>${escapeHtml(line)}</span>
+    </div>
+  `).join('');
+
+  document.getElementById('preview-content-area').innerHTML = codeHtml;
+
+  // Re-highlight active row
+  document.querySelectorAll('.clickable-row').forEach(r => r.classList.remove('active'));
+  const activeRow = document.getElementById(`row-file-${id}`);
+  if (activeRow) activeRow.classList.add('active');
+}
+
+function escapeHtml(str) {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function toggleCheckFile(id, checked) {
+  if (checked) checkedFileIds.add(id);
+  else checkedFileIds.delete(id);
+}
+
+function onModeChange() {
+  performSearch();
+}
+
+function openRenameModal() {
+  if (!selectedFileId) return;
+  const f = FILES.find(x => x.id === selectedFileId);
+  if (!f) return;
+  document.getElementById('input-new-filename').value = f.name;
+  document.getElementById('modal-rename').classList.add('open');
+  document.getElementById('input-new-filename').focus();
+}
+
+function confirmRename() {
+  if (!selectedFileId) return;
+  const f = FILES.find(x => x.id === selectedFileId);
+  const newName = document.getElementById('input-new-filename').value.trim();
+  if (f && newName) {
+    const oldPath = `${f.folder}/${f.name}`;
+    f.name = newName;
+    const parts = newName.split('.');
+    f.ext = parts.length > 1 ? '.' + parts[parts.length - 1] : '';
+    const newPath = `${f.folder}/${f.name}`;
+    renameCount++;
+    document.getElementById('status-rename-banner').textContent = `File ${oldPath} renamed to ${newPath}`;
+    closeModal('modal-rename');
+    selectFile(f.id);
+    performSearch();
+  }
+}
+
+function openActiveInEditor() {
+  if (!selectedFileId) return;
+  const f = FILES.find(x => x.id === selectedFileId);
+  if (!f) return;
+  activeEditorFile = `${f.folder}/${f.name}`;
+  document.getElementById('status-open-indicator').textContent = `Active in editor: ${activeEditorFile}`;
+}
+
+function applyBatchAction() {
+  const act = document.getElementById('select-batch-action').value;
+  checkedFileIds.forEach(id => {
+    const f = FILES.find(x => x.id === id);
+    if (f) {
+      f.readOnly = (act === 'ro');
+    }
+  });
+  if (selectedFileId && checkedFileIds.has(selectedFileId)) {
+    selectFile(selectedFileId);
+  }
+}
+
+function openAuditModal() {
+  const roCount = FILES.filter(f => f.readOnly).length;
+  const activeStr = activeEditorFile || 'none';
+  const summary = `Renamed: ${renameCount}, Active Editor: ${activeStr}, Read-Only Files: ${roCount}`;
+  document.getElementById('audit-summary-line').textContent = summary;
+  document.getElementById('audit-log-view').value = JSON.stringify({ renameCount, activeEditorFile, readOnlyCount: roCount, files: FILES }, null, 2);
+  document.getElementById('modal-export-audit').classList.add('open');
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+
+document.getElementById('input-file-search').addEventListener('input', performSearch);
+
+// Initialize
+performSearch();
+
+// Verification Hook
+window.__agyVerify = function() {
+  const failures = [];
+
+  // Check if live run or run simulation sequence
+  let targetFile = FILES.find(f => f.name === 'wayland-compositor.json');
+  if (!targetFile) {
+    // Step simulation
+    // 1. Content search for socket_path
+    document.getElementById('radio-search-content').checked = true;
+    document.getElementById('input-file-search').value = 'socket_path';
+    performSearch();
+    const contentMatches = FILES.filter(f => f.content.includes('socket_path')).length;
+    if (contentMatches !== 3) failures.push(`Expected 3 content matches for socket_path, got ${contentMatches}`);
+
+    // 2. Filter .json
+    document.getElementById('select-ext-filter').value = '.json';
+    performSearch();
+
+    // 3. Rename compositor.json to wayland-compositor.json
+    selectedFileId = 6;
+    document.getElementById('input-new-filename').value = 'wayland-compositor.json';
+    confirmRename();
+
+    // 4. Reset filter and search by name
+    document.getElementById('select-ext-filter').value = '';
+    document.getElementById('radio-search-name').checked = true;
+    document.getElementById('input-file-search').value = 'wayland-compositor';
+    performSearch();
+
+    // 5. Open in editor
+    openActiveInEditor();
+
+    // 6. Mark read only
+    checkedFileIds.add(6);
+    document.getElementById('select-batch-action').value = 'ro';
+    applyBatchAction();
+
+    openAuditModal();
+    targetFile = FILES.find(f => f.name === 'wayland-compositor.json');
+  }
+
+  if (!targetFile) {
+    failures.push('File wayland-compositor.json not found in repository index');
+  } else {
+    if (!targetFile.readOnly) failures.push('Target file was not marked read-only');
+    if (activeEditorFile !== 'config/wayland-compositor.json') {
+      failures.push(`Expected activeEditorFile 'config/wayland-compositor.json', got '${activeEditorFile}'`);
+    }
+  }
+
+  const contentMatchesCount = FILES.filter(f => f.content.includes('socket_path')).length;
+  if (contentMatchesCount !== 3) {
+    failures.push(`Expected 3 content matches for socket_path, found ${contentMatchesCount}`);
+  }
+
+  const state = {
+    targetFileExists: !!targetFile,
+    targetFileName: targetFile ? targetFile.name : null,
+    targetFileReadOnly: targetFile ? targetFile.readOnly : false,
+    activeEditorFile,
+    contentMatchesCount,
+    renameCount
+  };
+
+  return {
+    passed: failures.length === 0,
+    failures,
+    score: failures.length === 0 ? 1 : 0,
+    state,
+    note: 'offline file search verification'
+  };
+};
+</script>
+</body>
+</html>
