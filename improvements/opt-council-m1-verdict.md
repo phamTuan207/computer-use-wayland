@@ -361,3 +361,67 @@ Owner rule 22:47: append EVERY action to the log file AS IT HAPPENS
 (wall-clock Asia/Ho_Chi_Minh + elapsed, what was done, target, outcome), never
 batch the log at the end. When the owner asks, the answer must be in the log,
 never "I don't know". The log itself is committed in small pieces under Rule 1.
+
+## SEQUENCE AND GATES (order of execution across classes)
+1. Class A steps 1-3 (fact check, code gaps, durability check). VM + laptop,
+   no live driving. May run in parallel with class C2 step 2 preparation.
+2. F3 sign-off on Zen restore (todolist gate G-RESTORE), then class A step 4
+   (live activation under preconditions 1-8) and step 5 (proof of restoration).
+   Single operator, single live runner (G-SINGLE-LIVE).
+3. Class A step 6 (hyprglass gate) under its own council + redteam, then class
+   C1 steps 2-3 (gate + watchdog live proof).
+4. Class B steps 1-3 (act-now default, overlay gate, deadline + fallback) on
+   the VM, then step 4 rehearsal, only when G-F1-BEFORE-F2 is green.
+5. Class B steps 5-6 (measure, re-set constants from the distribution).
+6. Class C2 step 2 (nested measurement) any time after Y6r A1-A10 + fresh
+   re-review; it never touches the live compositor and never blocks on A or B.
+7. Class A step 7 (tracked recurrence follow-up) closes class A. No class is
+   declared complete until its falsifier has been tested and its proof is in a
+   committed log.
+
+## GATES (all must hold)
+- G-F1-BEFORE-F2 (todolist): measure B only when A is green.
+- G-PILL: never load hyprglass live while the F-team works.
+- G-SINGLE-LIVE: one runner live, one session total.
+- G-HIDDEN: check body-visible before the first action of every live run.
+- G-H2: think-time instrumentation on in every agent-driven run.
+- G-SCRUB: no PII in any push (this verdict contains none; redteam re-checks).
+- Preconditions 1-8 (F1 council 2) before any live activation.
+- Safety vetoes V1-V12 (safety paper) at all times.
+
+## OPEN GAPS (what this verdict does NOT claim)
+- OPT-SRC crawl file did not exist at council start; Worker OPT must reconcile
+  this verdict against it when it lands, and the redteam must note any conflict.
+- Flicker work log file not present in the VM repo; the 2.2.1 numbers are cited
+  as todolist-recorded, not re-verified here.
+- A5 d27ad0a sha unverified by this council; class A step 1 closes it.
+- Live activation and F2 rehearsal both still pending (gated, not run).
+- The VM `re` deletion cause is unknown; no agent has proven which process
+  deleted it.
+- F3 is re-running the FULL tab cleanup (39 resurrected fixture tabs, same
+  keep-list of 28 real tabs, owner photo 22:50); Zen tab state may change under
+  the rehearsal, so the rehearsal must re-verify the tab count before it runs.
+- Worker MERGE is merging todolist-push into main; this council stays on
+  todolist-push and does not switch branches.
+
+## REDTEAM ATTACK SURFACE (how to attack this verdict)
+1. Attack the A5 fact: check the d27ad0a sha yourself; if it does not match
+   674441ea, the Layer 4 story in the mechanism paper is wrong in one line.
+2. Attack the drain fix: run a fast-death test and see if the envelope is ever
+   still bare (council 1 A1); if yes, the diagnostic fix is incomplete.
+3. Attack the 20s deadline: measure real session start times on a cold start;
+   if they cluster above 20s, the deadline converts successes into fallbacks.
+4. Attack the fallback predicate: construct a live session-start failure where
+   an action partially ran; if is_session_start_failure returns True, the
+   predicate is unsafe and the fallback must be disabled.
+5. Attack the R3 gate: show a case where glass is briefly down during shader
+   warm-up and the gate would refuse a working session; if so, the gate needs
+   the warm-up distinction or it breaks working sessions.
+6. Attack the C2 hypothesis: run the four-cell nested measurement; if the
+   animated + LIQUID cell shows 0 repaints, the compositor-loop hypothesis is
+   dead and the verdict C2 section is wrong.
+7. Attack the commit method: find any commit in this council that batches
+   unrelated work, sweeps another worker's files, or exists only to move the
+   graph number; each such commit is a violation of Rule 5.
+8. Attack the evidence: every claim in the three papers must carry file:line or
+   a runnable-evidence citation; any claim without one must be struck or cited.
