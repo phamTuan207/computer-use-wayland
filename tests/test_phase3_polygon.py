@@ -128,3 +128,8 @@ def test_cli_good_and_bad(tmp_path=None):
                              capture_output=True, text=True)
         assert bad.returncode == 1
         assert 'FAIL B1' in bad.stdout and 'FAIL B6' in bad.stdout
+
+
+def load_tests(loader, standard_tests, pattern):
+    from _function_test_support import load_function_tests
+    return load_function_tests(globals())

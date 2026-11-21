@@ -55,3 +55,8 @@ def test_screen_scope_skipped():
 def test_failed_lookup_fails_open():
     with mock.patch.object(cu, 'window', side_effect=RuntimeError('hypr down')):
         cu._refuse_zen_ctrl_t({}, '0x1234', CTRL_T, False)
+
+
+def load_tests(loader, standard_tests, pattern):
+    from _function_test_support import load_function_tests
+    return load_function_tests(globals())

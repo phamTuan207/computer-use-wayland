@@ -85,3 +85,8 @@ def test_cli_exit_codes():
                                capture_output=True, text=True)
         assert dirty.returncode == 1
         assert 'snapshot' in dirty.stdout
+
+
+def load_tests(loader, standard_tests, pattern):
+    from _function_test_support import load_function_tests
+    return load_function_tests(globals())

@@ -138,3 +138,8 @@ if __name__ == '__main__':
     test_daemon_respawns_dead_native()
     test_daemon_keeps_live_native()
     print('all overlay tests pass')
+
+
+def load_tests(loader, standard_tests, pattern):
+    from _function_test_support import load_function_tests
+    return load_function_tests(globals())
