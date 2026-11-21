@@ -36,8 +36,16 @@ Search done 21/11 17:52, VM + laptop:
 ## 3.4.1 E1 - EXPERIMENT RUNNING (coordinator spawned 17:53)
 - Design: same task both conditions, agy-q2 mid-size test (coordinator picks, records why). Condition A: 1 fresh executor, direct hand-driven. Condition B: 3 deliberators in parallel produce one plan, 1 fresh executor runs only the plan. Sequential on Zen, localStorage cleared per run, own tabs only.
 - Coordinator: Worker X-E1 (52a82e07). Deliberation may proceed now; executor runs must wait for Zen to be free: Worker Y4 (parent's) is running agy-q2's 10 tests live on Zen at spawn time; coordinator was warned to check for Y4's report commit before starting any executor run.
+
+## 3.4.1 E1 - UPDATE 21/11 18:07 (coordinator completed, experiment INCOMPLETE)
+- Deliberation DONE and measured: task test-05-contact-book (28 steps). 3 fresh codex CLI processes in parallel, 8m40s / 7m40s / 4m32s (parallel max 8m40s), 0 UNVERIFIED. Merge ~2 min into one plan (58 steps, 64 JSON commands parse, all ids resolve). Commit cad1543: improvements/worker-x-e1-experiment-log.md, improvements/worker-x-e1-experiment-report.md, improvements/worker-x-e1-plan-test-05.md + briefs/scripts.
+- Executor runs A and B: UNMEASURED, ON HOLD. Cause: new standing rule 17:59 (no live driving while user at keyboard, Y4 focus-steal incident) + Y4 not done. No executor started, no Zen tab touched, no Marionette session, E1 ports free (verified 18:07). Hold order sent 18:04, acknowledged by coordinator.
+- No verdict yet. Honest bound: B must beat A by more than ~10m40s (deliberation + merge) to win on total time.
+- Resume path: merged plan at /tmp/e1/plan-test-05.md on laptop; executor briefs + infra scripts at /tmp/e1/; run A first, then B, sequentially; pre-flight: verify fresh tab renders body visible (Y4 hidden-body lesson).
+- Mechanism accepted by Worker X: coordinator (depth-2, no spawn tool) used fresh codex CLI invocations (1 process/agent, no memory of task) as the fresh agents. The load-bearing property (independent, no shared memory) holds; no redo required.
 - Verdict pending coordinator's report. Todolist line untouched until numbers exist.
 
 ## Count
 - Before: todolist-push 110/115 (main 111/115).
 - After this log (E1 pending): todolist-push 112/115. Open: 2.1.7 (needs user video), 2.2.3 (needs user A/B/C/D pick), 3.4.1 (E1 experiment running).
+- Final 21/11 18:08: todolist-push still 112/115 (3.4.1 not ticked: experiment incomplete, no verdict). Open: 2.1.7 (needs user video file), 2.2.3 (needs user A/B/C/D pick), 3.4.1 (E1 deliberation measured, executor runs on hold until handover + Y4 done).
