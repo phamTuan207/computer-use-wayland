@@ -1835,6 +1835,7 @@ ghi vào báo cáo và làm bước khác, không im lặng.
 - Muse: không có yêu cầu mới. Remote main vẫn ee5891b, không có commit coord: mới từ Muse; commit mới nhất của clone2 là log watchdog và batch 6 của clone2, không phải lệnh cho clone1.
 - Hành động: không cứu agent nào, ghi khối này, commit chỉ coord/clone1.md, push.
 
+
 ## Watchdog đợt 6, 01:57 ngày 22/11
 - Việc 1: agent đang chạy, hoạt động 18 giây trước, chưa có file báo cáo.
 - Việc 2: xong, đã push (581736e, ee5891b), 13 vi phạm, 3 cao.
@@ -1848,3 +1849,18 @@ ghi vào báo cáo và làm bước khác, không im lặng.
 - Việc 3: agent đang chạy, hoạt động 6 phút trước, file báo cáo sửa lần cuối 02:01, chưa xong.
 - Muse: không có yêu cầu mới. Commit mới duy nhất từ lần trước là log watchdog của clone2 (78067c6), không chạm coord/clone1.md, không có lệnh mới.
 - Hành động: không cứu agent nào, ghi khối này, commit chỉ coord/clone1.md, push.
+
+## Batch 7 - XEP SAN (02:08 22/11, chi bat dau khi batch 6 xong het + da bao cao)
+
+Clone1, batch 7 nay xep san de cau khong roi viec. CHI bat dau khi batch 6 xong het ca 3 viec va da bao cao day du. Dung bo batch 6 giua chung de lam batch 7. 3 viec, goal chung: mot vision lam duoc nhieu thao tac nhat, tong thoi gian giam toi da, do chinh xac tu 90% tro len. Council 3 nguoi + redteam cho moi ket luan, commit nho va nhieu, push ngay khi xong tung phan.
+
+### Task 1 - G29: click thanh dia chi Zen khong focus
+Dieu tra tai sao click vao thanh dia chi Zen roi dung diem nhung khong focus, sua, test live tren may cau. Bao cao vao docs/clone1-g29-urlbar-focus-20261122.md.
+
+### Task 2 - H2: do think time va cat bot
+Do chi phi vong lap think-observe-think tren may cau, de xuat cach cat bot buoc de tien toi mot vision lam nhieu viec nhat. Bao cao vao docs/clone1-thinktime-20261122.md, kem so do thuc. Cai last30days-skill (npx skills add mvanhorn/last30days-skill -g) tren may cau va dung no de research, chi dung data that 30 ngay gan nhat, moi claim ghi nguon + ngay.
+
+### Task 3 - sua cac vi pham HIGH da xac nhan
+Doc ket qua kiem tra cua clone2 o batch 7 Task 1 (coord/clone2.md), sua cac vi pham HIGH ma clone2 xac nhan la dung. Bao cao + commit sua, council + redteam.
+
+Luat nhu cu: khong dua thong tin ca nhan nao cua toi len repo, khong dau gach ngang dai, khong ydotool, test nao cung ghi thoi gian. Ket qua bao cao vao file nay.

@@ -663,3 +663,18 @@ Ca 3 task xong, moi task qua council 3 nguoi va redteam doc lap, commit nho push
 - Task 2, review doc lap F1/F2/F3b, commit f99ac12, doc docs/clone2-f-team-review-20261122.md (407 dong). Ket luan: F1 SOUND, F2 SOUND, F2b SOUND, F3b SOUND (chi bang chung), khong gi BROKEN. Tu chay lai: F1 test_cursor_theme 35 OK, test_cursor_session 36 OK, wrapper 3 OK, sync 9 OK; F2 test_first_action 46 OK, test_overlay 12 OK; F2b 12.262 s, 5/5 action; full suite tren tip todolist-push 8bdd5aa: Ran 1634 test, 4 failure, 68 error (giam tu 14-16 xuong 4, phan lon do thieu binary wtype). Loi BLOCK D1 da sua o 1c6344e/4c32fc4, re-review GO. File ban dau bi cat cut giua chung o dong 229 va thieu muc coverage, council va redteam deu chan lai, da sua xong truoc khi commit: viet lai duoi F3b tu log goc, them muc coverage, sua dong "still broken on main" thanh da sua boi 9171773. Crawl F1 HIGH (pilot A1) khong ai dung toi, van mo.
 - Task 3, go conflict PR #1, merge commit 1d25d2e tren nhanh coord-clone2-setup. Chi xung dot coord/clone2.md, go bang hop ca hai phia, khong xoa gi, selftest AT-SPI van pass. Sau do Muse tong da merge PR #1 luc 01:06, commit d322cd7.
 - Watchdog 10 phut van chay, log o docs/clone2-watchdog-log.md. Clone1 STALL tu 22:41 ngay 21/11, batch 6 chua co commit nao, da nhac trong coord/clone1.md va bao len chat.
+
+## Batch 7 - kiem tra 13 vi pham + grounding DOM/a11y nhanh (02:08 22/11, toi giao)
+
+Clone2, batch 6 xong roi, tot. Bay gio lam batch 7, 3 viec. Goal chung cho moi viec: mot vision lam duoc nhieu thao tac nhat, tong thoi gian giam toi da, do chinh xac tu 90% tro len. Council 3 nguoi + redteam cho moi ket luan, commit nho va nhieu, push ngay khi xong tung phan.
+
+### Task 1 - kiem tra doc lap 13 vi pham cua clone1
+Clone1 tu audit thay 13 vi pham (docs/clone1-evidence-audit-full-20261121.md, commit 581736e 01:45 22/11): 3 HIGH (V1 thieu file gate H3, V2 F3 dan 9 log khong ton tai, V3 thieu bang chung cham 130/130), 5 MEDIUM, 5 LOW. Cau kiem tra doc lap tung vi pham mot: dung hay sai, bang chung file/dong. Bao cao vao docs/clone2-violation-verify-20261122.md, ghi ro tung vi pham: giu nguyen / bac bo, ly do, bang chung.
+
+### Task 2 - nghien cuu grounding DOM/a11y nhanh cho Firefox/Zen
+Tim cach lay toa do chinh xac tu DOM/a11y thay vi doc anh JPEG: BiDi/CDP/AT-SPI, rect chinh xac, mot observation cho nhieu action, verify re khong can observe lai. Bao cao vao docs/clone2-dom-grounding-20261122.md, kem so do duoc tren may cau neu co (thoi gian, do chinh xac). Day la y kien doc lap thu hai, ben canh dan crawl cua Muse tong. Cai last30days-skill (npx skills add mvanhorn/last30days-skill -g) tren may cau va dung no de research, chi dung data that 30 ngay gan nhat, moi claim ghi nguon + ngay.
+
+### Task 3 - sua cac vi pham HIGH da xac nhan
+Sua cac vi pham HIGH ma Task 1 xac nhan la dung. Neu khong co HIGH nao dung, lam G29 thay the: click vao thanh dia chi Zen roi dung diem nhung khong focus, tim nguyen nhan va sua, test live tren Firefox cua cau. Bao cao + commit sua, council + redteam.
+
+Luat nhu cu: khong dua thong tin ca nhan nao cua toi len repo, khong dau gach ngang dai, khong ydotool, test nao cung ghi thoi gian. Ket qua bao cao vao file nay.
