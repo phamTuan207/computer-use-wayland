@@ -6,7 +6,7 @@
 - Measurement checked: improvements/speed-proto-pick4-summary.md (2026-11-19)
 - Redteam: independent attack worker. No live arm has run. No speedup is claimed here.
 - Method: every load-bearing number re-checked against its cited source file in the repo. Anything I could not verify is labeled UNVERIFIED, not stated as fact.
-- Verdict up front: the design as written does NOT survive. 6 attacks KILL it as written (A1, A2, A3, A4, A5, A8, B1 is 7; count them in the list). All 7 are fixable with specific amendments, none requires abandoning the pilot. The fixes must land BEFORE any live arm runs, because 4 of the 7 (A1, A2, A3, A5) are unfixable after the fact: once the runs exist, no re-analysis can remove off-clock authorship, order learning, expectancy, or hidden in-program recovery from the numbers.
+- Verdict up front: the design as written does NOT survive. 7 attacks KILL it as written (A1, A2, A3, A4, A5, A8, B1). All 7 are fixable with specific amendments, none requires abandoning the pilot. The fixes must land BEFORE any live arm runs, because 4 of the 7 (A1, A2, A3, A5) are unfixable after the fact: once the runs exist, no re-analysis can remove off-clock authorship, order learning, expectancy, or hidden in-program recovery from the numbers.
 
 ## 0. What the plan gets right (so the attacks stay honest)
 
