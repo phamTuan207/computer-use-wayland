@@ -472,3 +472,26 @@ in the repo worktree and /tmp test copies.
   -P form still expects kind planted-py. Next: implement R1-R10
   in small commits, regen manifest, then spawn a fresh review
   round (council x3 + redteam + verifier) over the new diff.
+
+- 01:12 +07 (T+2h16m): ROUND 2 IMPLEMENTATION STARTED. Runner
+  module top committed 0639d04 (R1 allowlist scan + safe_path +
+  shlex pre-import, R2/R4 guard 3 stems recursive any-tag
+  symlink-safe, R5 entry-hash check before run_live import).
+  Launcher module top committed 87eec47 (same R1/R2/R4, plus
+  C3-1 repo-tree guard, C3-9 --ship-dir validation). Both
+  py_compile OK; _SHIP_FILES identical (29 paths) and equal to
+  manifest + manifest itself + SHIPPED.md. CAUGHT WHILE
+  EDITING: the staged ship holds 29 files, not 27 (regen also
+  copies codex-y5-manifest.json + codex-y5/SHIPPED.md); the
+  first _SHIP_FILES draft (27) would have refused every clean
+  ship. Fixed before commit. C3-6 VERIFIED ON LAPTOP via SSH:
+  both /home/james/computer-use-wayland (detached HEAD 56f5af4)
+  and /home/james/workspace/computer-use-wayland (branch
+  todolist-push, HEAD 4500a18) exist; neither currently holds
+  tests/realistic/launch_y13.py; the todolist-push checkout is
+  /home/james/workspace/computer-use-wayland, now the single
+  --repo path in both docs. Also verified: no .git at
+  ~/workspace, ~, or /tmp, so the repo-tree guard cannot
+  false-fire on staged ships there. Next: R3 tokenizer rewrite
+  (both copies), then R6/R7/R8 launcher checks, R9, R10 docs,
+  regen, fresh review round.
