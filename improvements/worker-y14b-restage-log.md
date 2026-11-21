@@ -772,3 +772,40 @@ coordinates go here too.
   commit small and many, generator does not run its own tests,
   kill rules, continuous logging), no shortcuts. Y14b already
   follows this structure; no change to my line.
+- 22:50:05 +07 (elapsed ~30 min, exact from runtime): Council 2
+  completed. Verdict AMEND, paper 505f3e5
+  (improvements/worker-y14b-fix4-council-2.md, 291 insertions,
+  only file committed), ls-remote verified
+  505f3e5d85a4af6759c34ee8f2c2929bb0580583. Regression set re-run
+  by Council 2 and confirmed: fix4 64/64, H2 45/45, fix2 31/31,
+  fix3 70/70, transcription 82, gate dry 4/4, M1 3/3, M1 all-12
+  4/4, all exit 0. Live proofs re-verified. Its own extra probe
+  /tmp/y14b-fix4-c2-probe.py 46/46 PASS (34 unit + 12 live).
+  Findings, both LOW and AMEND-level, leaf always caught live:
+  C2-1 (miss, wrapper-level): a glued separator on the runner
+  token misses, `bash -c "python3 run_foo.py; echo done"` (and
+  `&&`, `||` variants, and bare `run_foo.py; echo done`) all
+  return False, because `_argv_tokens` leaves the token as
+  `run_foo.py;` and the basename block requires `.py`; the `-m`
+  branch tolerates the same glue. Live: wrapper False, leaf
+  python3 process True. Fix sketch: `base.rstrip(";,()")` in the
+  basename block, mirroring the import branch. C2-2 (false
+  positive, fail-closed): bare `&` is not a separator,
+  `python3 --version & pytest -W ignore run_batch3.py` returns
+  True (F4 analogue), and `codex --help & echo marionette`
+  returns True (live: echo prints while codex still sleeps,
+  timeout exit 124). Fix sketch: add bare `"&"` only to the
+  separator tuple (not `"&" in tok`, so URL tokens are not
+  split). INFO notes: `;` inside a token splits while `|` inside
+  does not (inherent token-level asymmetry, no action); synthetic
+  `env`/`nice` `-c` argv cannot occur in /proc (both exec
+  -replace; live the surviving bash `-c` is caught), and `sudo`
+  parent misses but its bash child is caught (no live impact);
+  double-nested `-c` wrapper miss is the documented F8 position
+  with the leaf verified caught live; gate-dry is concurrency
+  -sensitive on the shared VM (Council 2's first two runs failed
+  3/4 and 2/4 only because a concurrent Council 3 worker had live
+  dummies in /proc; clean re-run 4/4 after it finished, and its
+  own `python3 -c "import run_batch3"` self-flags via the
+  documented import over-approx). Councils 1 and 3 still running.
+  Still NOT editing run_batch3.py until they finish.
