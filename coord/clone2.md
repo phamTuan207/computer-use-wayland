@@ -140,3 +140,26 @@ Tien do dot 4, cap nhat 18:55 ngay 21/11: xong 5/6 task, da commit len main tung
 - Task 6 evidence batch actions: 10 nguon moi, commit eb090c3, docs/research/2026-11-21-batch-actions-evidence.md.
 - Task 1 chua xong: subagent bi co an toan cua he thong chan o ban clone phu dung de sua nhanh PR 1, chua dung gi vao code. Clone2 da hoi nguoi dung chon cach di tiep ngay trong chat, dang cho tra loi. Chan doan 2 loi da xong tu code doc duoc.
 
+
+## NHIỆM VỤ MỚI: WATCHDOG 10 PHÚT + TIẾP TỤC DỰ ÁN (giao 19:09 ngày 21/11)
+
+Tôi là Phạm Tuấn. Thêm một nhiệm vụ chạy song song với việc dự án của cậu, không thay thế việc đó.
+
+### Watchdog: canh tất cả subagent mỗi 10 phút
+
+Cứ mỗi 10 phút, cậu kiểm tra một vòng:
+1. Tất cả subagent còn sống không: subagent của chính cậu, và các lane khác nhìn được qua GitHub (commit mới trên todolist-push là các worker Muse của tôi, commit mới trên main là clone1 và cậu, PR và issue mới). Cậu không nhìn được danh sách subagent trong máy của Muse tổng, nên cậu canh bằng dấu vết để lại trên GitHub, đó là cách duy nhất của cậu, ghi rõ giới hạn này trong báo cáo.
+2. Muse tổng (Muse điều phối, chính là ông Muse chính) có nhắn gì mới không: kiểm tra coord/clone2.md và coord/clone1.md có commit mới nào từ Muse không, có issue mới không. Có chỉ thị mới thì làm ngay, báo lại vào file này là đã nhận.
+3. Lane nào im hơn 30 phút trong khi việc chưa xong thì ghi cờ STALL vào file này, kèm bằng chứng: lane nào, commit cuối lúc nào, việc gì đang dở. Không cần chờ đủ 1 giờ mới báo như trước nữa.
+
+Ghi kết quả mỗi lần kiểm tra vào file này hoặc một file log riêng docs/clone2-watchdog-log.md, ngắn gọn: giờ kiểm tra, lane nào sống, lane nào im, có chỉ thị mới nào không.
+
+Clone1 cũng đã nhận nhiệm vụ watchdog này từ chính tôi rồi. Hai đứa cùng canh, đừng ỷ lại nhau.
+
+### Tiếp tục dự án
+
+Goal, todolist, quy trình Lauren Tan, final test đều đã có hết rồi, cứ làm hết đi là thành công, không cần hỏi lại. Goal quan trọng nhất: fix hết tất cả lỗi trong file tổng hợp lỗi để các Muse dùng computer-use hầu như không trượt, nghĩ nhanh, tổng thời gian task rút gọn vài lần, overlay không nhấp nháy nữa. Todolist đang 112/115. Thí điểm A1 đã đóng băng, chờ lệnh chạy. Final test (tự tạo contest riêng trên nick Codeforces của tôi, up 5 đề) chạy CUỐI CÙNG, sau khi xong hết mọi việc khác.
+
+### Quy tắc commit mới: nhỏ và NHIỀU
+
+Từ giờ commit nhỏ và nhiều lên, vài trăm commit càng tốt. Mỗi bước nhỏ xong là commit ngay, push ngay, đừng dồn lại rồi push một cục. Làm ngầm rồi mới push một loạt là không được nữa. Quy tắc này áp cho mọi việc cậu làm từ giờ.

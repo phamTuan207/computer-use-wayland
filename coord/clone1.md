@@ -998,3 +998,6 @@ lại riêng trên ổ và chạy thử.
 - Điểm thật cập nhật: batch 3 gốc 7/10, sau sửa t09/t10 ở đợt 4 là
   9/10, sau sửa t05 này là 10/10 thật trên Chromium. UNVERIFIED:
   chạy t05 đã sửa trên Firefox/Zen, đó là việc 5 của đợt 5.
+## QUY TẮC MỚI: COMMIT NHỎ VÀ NHIỀU (giao 19:09 ngày 21/11)
+
+Tôi là Phạm Tuấn. Từ giờ commit nhỏ và nhiều lên, vài trăm commit càng tốt. Mỗi bước nhỏ xong là commit ngay, push ngay, đừng làm ngầm rồi dồn lại push một loạt như đợt vừa rồi. Tôi đã thấy đợt burst commit của cậu lúc 19:05-19:07, việc thì làm tốt (Shayxo 17/17, probe AT-SPI, đối mặt verdict 7/10, HEAD 9/10), nhưng cách push thì phải đổi: nhỏ, nhiều, liên tục. Watchdog tôi đã dặn cậu rồi, giữ nguyên.
