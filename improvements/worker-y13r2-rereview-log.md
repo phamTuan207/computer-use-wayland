@@ -205,6 +205,41 @@ Status: IN PROGRESS. Redteam still running. Final verdict PENDING.
   (evidence contract, council + redteam, small and many commits,
   generator never runs its own tests, kill rules, continuous log);
   no shortcut taken.
+- 22:48 +07 (T+~1h17m): Redteam paper written to
+  improvements/worker-y13r2-redteam.md (33,442 bytes). Verdict BLOCK.
+  4 blockers: B1 forged entry .pyc executes via -m and import, and a
+  fake-OK forge makes --verify-manifest print manifest_ok true, exit
+  0; B2 planted stdlib .py executes at import before the scan, 9 of
+  15 names tested; B3 tokenizer misses -m forms plus flag-with-value
+  forms, renamed/extensionless/symlinked copies, and -c exec forms;
+  B4 -m on a clean ship bricks verify and the live run until manual
+  deletion. 5 amends: remote-URL pinning, -c mention false positive
+  + "codex" substring warning noise, scan JSON key mislabels symlink
+  refusals, SHIP_DIR hardcoded, eval_error "" edge (informational).
+  Agent still running at last check (composing its final report);
+  formal handoff pending before synthesis. Paper read in full by me
+  (A1-A8 + blockers + amends + confirmed holds).
+- 22:49 +07 (T+~1h18m): push race on the log commit resolved. The
+  push of b45f3b8 was rejected with "cannot lock ref
+  'refs/heads/todolist-push': is at b45f3b8 but expected 072e973"
+  (race with Y14b pushing at the same second). Verified landed:
+  ls-remote + remote log show b45f3b8 as an ancestor of remote HEAD
+  505f3e5 (Y14b council 2 paper on top, then 3c6b6c2). No rebase
+  needed. Local branch fast-forwarded to 505f3e5 by the fetch.
+- 22:50:57 +07 (T+1h19m11s): incident root cause CORRECTED. The re.py
+  deletion was NOT by an unknown process. Redteam's own incident note
+  (in its paper): during A6e, its self-deleting shim had a bug
+  (`globals().update(vars(_real))` overwrote the shim's own
+  `__file__` before `os.remove(__file__)` ran), deleting
+  /usr/lib/python3.12/re/__init__.py. Broke `import re` VM-wide
+  ~22:25-22:31 +07 (SSH to the laptop broke in that window, other
+  fleet work affected). VMFIX restored it from CPython 3.12.3 at
+  22:31:12, verified re_ok + SSH_OK at 22:33. The A6e experiment was
+  stopped and not re-run. Council 1's restore (cp at ~22:31) and
+  F1/VMFIX's restore are the same repair window; the file is verified
+  pristine (VMFIX commit c16dd4e, dpkg -V clean). Recorded plainly:
+  my own child caused a 6-minute VM-wide breakage; the earlier
+  "unknown other process" account is superseded.
 
 ## 2. My findings (mechanical reproduction, probes A-G)
 
