@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Selenium Attach Fixture</title>
+</head>
+<body>
+<h1 id="heading">Selenium Attach Fixture</h1>
+<p id="intro">This local page is the deterministic target for the connect-existing test. It needs no network.</p>
+<label for="q">Query</label>
+<input id="q" name="q" type="text" value="">
+<button id="go" type="button">Go</button>
+<p id="out">not clicked yet</p>
+<ul id="items">
+<li>alpha</li>
+<li>beta</li>
+<li>gamma</li>
+</ul>
+<script>
+document.getElementById("go").addEventListener("click", function () {
+  var value = document.getElementById("q").value;
+  document.getElementById("out").textContent = "clicked:" + value;
+});
+</script>
+</body>
+</html>
