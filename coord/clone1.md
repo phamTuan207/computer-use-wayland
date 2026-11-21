@@ -1088,3 +1088,537 @@ sau. Các commit khác của clone2 cùng đợt: 5fea284 báo cáo batch 4
 của clone2 (việc 2-6 đã kiểm chứng, việc 1 chờ chủ chọn), 041b1ac
 sửa theo redteam (mirror phục vụ gói AT-SPI, blocker là phê duyệt
 apt update), 5df7535 giải quyết xung đột merge coord giữ cả 2 mục.
+
+## WATCHDOG 19:27 ngày 21/11
+
+- Đợt 5: việc 1-6 đều xong theo agent (1: 17/17, 2: probe AT-SPI, 3: review A1, 4: evidence 20 commit, 5: Firefox 20/20, 6: agy-y2 10/10 live). Chờ agent Y10 chạy lại t05/t09/t10 xong mới có báo cáo cuối đợt 5.
+- Y10 followup đang chạy, hoạt động 8 giây trước, không kẹt, không cứu. Không agent nào interrupted, failed hay unknown.
+- Muse: không có yêu cầu mới. Commit mới từ clone2 (ed78e83, 5fea284, 041b1ac, 5df7535) đã ghi ở mục trên, không phải lệnh cho clone1.
+- Hành động: chỉ ghi khối này, cập nhật watermark f006137. Watchdog tiếp tục.
+
+## Y10 FOLLOWUP, KẾT QUẢ MỘT PHẦN, 19:36 ngày 21/11 - T05 PASS, T09/T10 BỊ CHẶN
+
+Agent chạy lại t05/t09/t10 bản Y10 (ed78e83) trên Firefox thật.
+Tôi đọc lại các file kết quả trên ổ trước khi ghi. Bằng chứng ở
+~/workspace/b5t5-results-y10/ (6 JSON + README.md).
+
+- Y10 đổi gì (diff ed78e83 so với b629e11, tách đúng từng commit):
+  t05 fixture là của clone1 (08f36d2), Y10 không chạm (diff 0 dòng).
+  Y10 chỉ sửa check t05: tên mới mà fixture không biết được
+  (field-notes-7.txt, Old Files 2026, tên folder gõ kèm khoảng
+  trắng 2 đầu để test trim), cancel có gõ tên, assert dialog mở
+  với prefill và assert dialog ẩn sau mỗi Save/Cancel, folder rename
+  khi trong folder còn video.mp4, assert text nút tree và click
+  nút tree, search 2026 thay cho old. T09: clickAndClose ở cancel
+  rename bỏ verify callback, dwell 500 ms rồi đọc ngay (verify cũ
+  vô nghĩa vì title vốn đã là Beta). T10: sau sampler thêm sleep
+  350 ms, vị trí phải từ 2 trở lên, chứng minh đồng hồ vẫn chạy.
+  Chromium của Y10 ở ed78e83: 10/10, 25024 ms (t05 2983, t09 3216,
+  t10 4990), 9/9 mutation probe khớp, 10/10 x7 lần.
+- Firefox, bản Y10: t05 standalone 3/3 PASS (6145, 5925, 5058 ms),
+  cộng 1 smoke pass 6800 ms. finalHome mọi lần: budget.csv,
+  field-notes-7.txt, Old Files 2026, video.mp4, tên mới chứng minh
+  check Y10 chạy đúng trên Firefox. So với t05 bản đợt 4 trên
+  Firefox (5589 ms trong full run): tương đương.
+- t09/t10 BỊ CHẶN, không phải fail: Firefox 160.0.1 segfault khi
+  khởi động (exit 11) từ khoảng 12:29, sau khi còn chạy tốt lúc
+  12:27 cho t05. Đã thử trực tiếp 6 lần: có và không có debug port,
+  --headless và MOZ_HEADLESS=1, --safe-mode, wrapper và firefox-bin
+  trực tiếp, profile /tmp và profile workspace, đều exit 11 với
+  cùng stderr (minidump generation failed, Gtk cannot open
+  display). firefox --version vẫn in 160.0.1, exit 0, binary còn
+  nguyên. Nguyên nhân có thể là áp lực bộ nhớ host: free lúc 12:32
+  còn 150M free / 777M available, 12:34 còn 127M / 491M, tôi đo lại
+  lúc 19:36 còn 178M free / 292M available và đang giảm, trong khi
+  cell này chỉ chạy 8 tiến trình khoảng 330M, không có gì để giải
+  phóng. Chờ 110 s chạy lại vẫn crash.
+- t09 standalone 3 lần đều FAIL vì lỗi môi trường, không phải lỗi
+  test: "could not connect to Firefox BiDi", mỗi lần hết 30 s
+  timeout (30340, 30284, 30285 ms). t10 standalone và full batch3
+  CHƯA CHẠY. Sẽ chạy lại khi áp lực bộ nhớ host giảm.
+- Lỗi shim tìm được và sửa trong lúc chạy: browser.pages().map is
+  not a function (Puppeteer pages() là async, Playwright
+  context.pages() là sync). Đã sửa bằng page registry nội bộ
+  (đăng ký khi newPage và popup, gỡ khi close). Kết quả t05 không
+  bị ảnh hưởng (t05 không dùng context.pages()), bản sửa chưa được
+  chứng minh trên luồng popup thật, phải test lại khi Firefox chạy
+  được.
+- So sánh: Y10 chặt hơn đợt 4 ở cả 3 test. t05 tên mới + cancel có
+  gõ tên + assert dialog đóng 2 lỗ còn lại của đợt 4 (hardcode bỏ
+  qua input vẫn pass, cancel áp dụng vẫn pass). t09 dwell bắt được
+  thông điệp rename sai mà verify trả về ngay không bắt được. t10
+  assert tăng vị trí bắt được timer dừng sau Next mà sampler một
+  mình sẽ cho qua. Đánh đổi duy nhất: dwell 500 ms của t09 là chờ
+  cố định, không phải poll, nên thông điệp chậm hơn 500 ms sẽ bị
+  sót, nhưng delivery ở mức mili giây.
+- Trạng thái git lúc này: commit và push đang BỊ CHẶN bởi EPERM
+  (git không ghi được .git/objects và .git/index.lock, dù ghi file
+  thường vẫn được). Khối watchdog 19:27 và mục này đang nằm trong
+  working tree, chưa push được. Watchdog lần tới thử lại khi cửa
+  ghi mở lại (thường sau VM restart). Cây làm việc: lib/browser.mjs
+  đã hoàn trả đúng HEAD (tôi diff lại, khớp byte), shim tạm đã xóa.
+
+## Watchdog đợt 5, 19:37
+- Việc 1 Shayxo 17/17 xong (fab3ce1). Việc 2 AT-SPI xong. Việc 3 review A1 xong. Việc 4 evidence xong. Việc 6 agy-y2 READY 10/10.
+- Việc 5: Y10-followup PARTIAL, t05 Firefox 3/3 PASS, t09/t10 bị chặn do Firefox segfault (exit 11) và áp lực bộ nhớ host. Y10-RETRY vừa chạy lại lúc 19:37, đang sống.
+- Muse: không có yêu cầu mới (origin/main vẫn f006137, khớp watermark).
+- Đã xóa ref hỏng .git/refs/heads/py3 (file 0 byte), fetch đã chạy lại được. Commit/push vẫn bị chặn EPERM (không ghi được .git/index.lock), khối 19:27 + mục Y10 + khối này vẫn nằm trong working tree, thử lại lần sau.
+
+## Watchdog đợt 5, 19:47
+- Việc 1 Shayxo 17/17 xong. Việc 2 AT-SPI xong. Việc 3 review A1 xong. Việc 4 evidence xong. Việc 6 agy-y2 READY 10/10.
+- Việc 5: Y10-RETRY đang chạy (bắt đầu 19:37, còn sống, vừa hoạt động), file mới nhất 19:37:38, chưa quá 15 phút im nên không cứu.
+- Muse: không có yêu cầu mới (origin/main vẫn f006137, khớp watermark).
+- Đã xóa index.lock kẹt, touch test trong .git ghi được nhưng git add/commit vẫn lỗi EPERM, chưa push được. Khối 19:27, 19:37, 19:47 vẫn nằm trong working tree, thử lại lần sau.
+
+## Watchdog đợt 5, 19:57
+- Việc 1 Shayxo 17/17 xong. Việc 2 AT-SPI xong. Việc 3 review A1 xong. Việc 4 evidence xong. Việc 6 agy-y2 READY 10/10.
+- Việc 5: Y10-RETRY đang chạy (bắt đầu 19:37, vòng lặp thử Firefox mỗi 10 phút, tối đa 9 lần), attempt 0 lỗi segfault, còn sống và đang hoạt động, không cứu.
+- Muse: không có yêu cầu mới (origin/main vẫn f006137, khớp watermark).
+- Ghi file toàn hệ thống bị chặn EPERM (kể cả /tmp, ghi nội dung nào cũng lỗi, chỉ tạo file 0 byte được), git add/commit/push vẫn không làm được. Khối 19:27, 19:37, 19:47, 19:57 vẫn nằm trong working tree, thử lại lần sau.
+
+## Watchdog đợt 5, 20:07
+- Việc 1 Shayxo 17/17 xong. Việc 2 AT-SPI xong. Việc 3 review A1 xong. Việc 4 evidence xong. Việc 6 agy-y2 READY 10/10.
+- Việc 5: Y10-RETRY đang chạy (bắt đầu 19:37, còn sống, hoạt động cách đây 89 s), chưa có file kết quả mới từ 19:37:38, theo vòng thử lại mỗi 10 phút, không cứu.
+- Muse: không có yêu cầu mới (origin/main vẫn f006137, khớp watermark).
+- Ghi file thường đã mở lại (/tmp và coord ghi được), nhưng git vẫn lỗi EPERM khi ghi .git/index.lock nên chưa add/commit/push được. Khối 19:27, 19:37, 19:47, 19:57, 20:07 vẫn nằm trong working tree, thử lại lần sau.
+
+## Watchdog đợt 5, 20:17
+- Việc 1 Shayxo 17/17 xong. Việc 2 AT-SPI xong. Việc 3 review A1 xong. Việc 4 evidence xong. Việc 6 agy-y2 READY 10/10.
+- Việc 5: Y10-RETRY đang chạy (bắt đầu 19:37, còn sống, hoạt động cách đây 68 s), chưa có file kết quả mới từ 19:37, theo vòng thử lại mỗi 10 phút, không cứu.
+- Muse: không có yêu cầu mới (origin/main vẫn f006137, khớp watermark).
+- Git vẫn lỗi EPERM khi ghi .git/index.lock (file lock không tồn tại nhưng git không tạo được), chưa add/commit/push được. Khối 19:27, 19:37, 19:47, 19:57, 20:07, 20:17 vẫn nằm trong working tree, thử lại lần sau.
+
+## Watchdog đợt 5, 20:27
+- Việc 1 Shayxo 17/17 xong. Việc 2 AT-SPI xong. Việc 3 review A1 xong. Việc 4 evidence xong. Việc 6 agy-y2 READY 10/10.
+- Việc 5: Y10-RETRY đang chạy (bắt đầu 19:37, còn sống, hoạt động cách đây 48 s), chưa có file kết quả mới từ 19:37:38, theo vòng thử lại mỗi 10 phút, không cứu.
+- Muse: không có yêu cầu mới (origin/main vẫn f006137, khớp watermark).
+- Git vẫn lỗi EPERM khi ghi .git/index.lock (file lock không tồn tại nhưng git không tạo được), chưa add/commit/push được. Khối 19:27, 19:37, 19:47, 19:57, 20:07, 20:17, 20:27 vẫn nằm trong working tree, thử lại lần sau.
+
+## Watchdog đợt 5, 20:37
+- Việc 1 Shayxo 17/17 xong. Việc 2 AT-SPI xong. Việc 3 review A1 xong. Việc 4 evidence xong. Việc 6 agy-y2 READY 10/10.
+- Việc 5: Y10-RETRY đang chạy (bắt đầu 19:37, 60 phút, còn sống, hoạt động cách đây 25 s), chưa có file kết quả mới từ 19:37:38, theo vòng thử lại mỗi 10 phút, không cứu.
+- Muse: không có yêu cầu mới (origin/main vẫn f006137, khớp watermark).
+- Git vẫn lỗi EPERM khi ghi .git/index.lock (file lock không tồn tại nhưng git không tạo được, git status rc=128), chưa add/commit/push được. Khối 19:27, 19:37, 19:47, 19:57, 20:07, 20:17, 20:27, 20:37 vẫn nằm trong working tree, thử lại lần sau.
+
+## Watchdog đợt 5, 20:47
+- Việc 1 Shayxo 17/17 xong. Việc 2 AT-SPI xong. Việc 3 review A1 xong. Việc 4 evidence xong. Việc 6 agy-y2 READY 10/10.
+- Việc 5: Y10-RETRY đang chạy (bắt đầu 19:37, 70 phút, còn sống, hoạt động cách đây 11 s), chưa có file kết quả mới từ 19:37:38, theo vòng thử lại mỗi 10 phút, không cứu.
+- Muse: không có yêu cầu mới (origin/main vẫn f006137, khớp watermark).
+- Git vẫn lỗi EPERM khi ghi .git/index.lock (git status rc=128), chưa add/commit/push được. Khối 19:27 đến 20:47 vẫn nằm trong working tree, thử lại lần sau.
+
+## Watchdog đợt 5, 20:57
+- Việc 1 Shayxo 17/17 xong. Việc 2 AT-SPI xong. Việc 3 review A1 xong. Việc 4 evidence xong. Việc 6 agy-y2 READY 10/10.
+- Việc 5: Y10-RETRY đang chạy (bắt đầu 19:37, 80 phút, còn sống, hoạt động cách đây 2 phút), chưa có file kết quả mới từ 19:37, theo vòng thử lại mỗi 10 phút, không cứu.
+- Muse: không có yêu cầu mới (origin/main vẫn f006137, khớp watermark).
+- Git vẫn lỗi EPERM khi ghi .git/index.lock (git status rc=128; ghi nội dung file qua shell cũng bị chặn rc=1, chỉ touch file rỗng được), chưa add/commit/push được. Khối 19:27 đến 20:57 vẫn nằm trong working tree, thử lại lần sau.
+
+## Y10-RETRY XONG, 21:08 ngày 21/11 - FIREFOX KHÔNG HỒI TRONG 90 PHÚT
+
+Chạy lại t09/t10 bản Y10 trên Firefox: BLOCKED, không chạy được
+lần nào. Log đầy đủ ở ~/workspace/b5t5-results-y10/ff-retry-log.txt
+(tôi đọc lại, khớp báo cáo).
+
+- 10 lần thử, 12:37 tới 14:07 UTC (19:37 tới 21:08 +07), mỗi lần
+  cách 10 phút, cùng lệnh: timeout 20 /tmp/firefox/firefox
+  --headless --profile /tmp/ff-retry-profile --screenshot
+  /tmp/ff-retry-test.png about:blank, profile mới mỗi lần. Cả 10
+  đều segfault, không lần nào ra file screenshot. Stderr giống hệt
+  mọi lần (minidump generation failed ở lần 0, từ lần 1 minidump
+  được ghi, 231120 byte mỗi cái).
+- Bộ nhớ available trong cửa sổ: dao động 179M tới 688M, không có
+  xu hướng hồi (mẫu: 12:44 521M, 12:59 688M, 13:24 192M, 13:45
+  179M, 14:08 324M). Free luôn ở 121M tới 242M. firefox --version
+  vẫn in 160.0.1, exit 0, binary còn nguyên. Áp lực bộ nhớ host
+  vẫn là nguyên nhân có thể nhất.
+- Không có số Firefox mới nào để so sánh. Tham chiếu: batch-4
+  Firefox batch3 chạy 4, 10/10 trong 56623 ms (t09 7269 ms, t10
+  7489 ms); Y10 Chromium 10/10 trong 25024 ms (t09 3216 ms, t10
+  4990 ms). t05 bản Y10 trên Firefox 3/3 pass (6145, 5925, 5058
+  ms) từ lần followup trước vẫn đứng. t09/t10 trên Firefox vẫn
+  CHƯA KIỂM CHỨNG.
+- Ghi chú thêm: ghi file bằng shell bị EPERM trong phần lớn cửa
+  sổ này (heredoc, echo append, python write đều Operation not
+  permitted, cả /tmp lẫn workspace). Tạo và xóa file được, đọc
+  được, crash reporter của Firefox vẫn ghi được minidump. Log
+  retry chỉ lưu được nhờ ghi bằng file tool.
+- Shim BiDi không còn bản sao nào trên ổ, lần thử lại sau vẫn phải
+  dựng lại lib/firefox_bidi.mjs cộng nhánh FIREFOX_BIDI tạm trong
+  lib/browser.mjs theo tài liệu phương pháp.
+- Đợt 5 giờ có đủ kết quả để hội đồng kiểm chứng: việc 1, 2, 3, 4,
+  6 xong; việc 5 xong phần Firefox 20/20 bản đợt 4 và t05 bản Y10
+  3/3, chỉ t09/t10 bản Y10 trên Firefox là BLOCKED. Đã giao hội
+  đồng 3 người cộng redteam kiểm lại toàn bộ đợt 5 trước khi báo
+  xong.
+
+## Watchdog đợt 5, 21:07
+- Việc 1 Shayxo 17/17 xong. Việc 2 AT-SPI xong. Việc 3 review A1 xong. Việc 4 evidence xong. Việc 6 agy-y2 READY 10/10.
+- Việc 5: Y10-RETRY đã xong lúc 21:08, BLOCKED, Firefox segfault cả 10 lần thử trong 90 phút, t09/t10 chưa kiểm chứng được. Hội đồng 3 người cộng redteam spawn lúc 21:09, đang sống, kiểm lại toàn bộ đợt 5 trước báo cáo cuối.
+- Muse: không có yêu cầu mới. Remote main có 2 commit mới 1d23532 và 3b50e94 (Y15 t10 D1 fix, 810 dòng thêm, 37 dòng xóa), không chạm coord/clone1.md, không có chỉ thị cho clone1.
+- Git vẫn lỗi EPERM khi ghi .git/index.lock nên chưa add/commit/push được, remote đã tiến lên 3b50e94 nên bỏ qua lần push này theo quy tắc. Khối 19:27 đến 21:07 vẫn nằm trong working tree, thử lại lần sau.
+
+## HỘI ĐỒNG ĐỢT 5: COUNCIL 1 XONG, 21:11 ngày 21/11
+
+Báo cáo ở docs/batch5-council1-tests-20261121.md (204 dòng).
+
+- Việc 1 Shayxo: CONFIRMED. Council chạy lại 2 lần: 17/17, 0 lỗi
+  (0.029 s và 0.027 s). Lua dòng 14 blur_strength = 0.15, test
+  assert 0.15 và pad 12.75.
+- Việc 2 probe AT-SPI: PARTIALLY CONFIRMED. Script (250 dòng,
+  bash -n OK) và doc (174 dòng) đúng: công thức dbus-launch,
+  registry trước Firefox, find_documents và mode dismiss đều có
+  trong code, điều kiện tiên quyết đang có đủ. Chạy lại live BỊ
+  CHẶN: Firefox 160.0.1 segfault khi khởi động, council tự thử
+  headless lúc 14:10 UTC exit 11 với minidump mới 240664 byte,
+  không có screenshot. Số liệu chạy 3-6 trong doc (19212 ms,
+  125 node) không có log thô lưu trên ổ, chỉ dựa vào doc.
+- Việc 5 Firefox 20/20: CONFIRMED, kèm 2 sửa. Cả 7 file kết quả
+  đọc lại từng trường: số lượng, wall và ms từng test khớp doc
+  đúng (batch2 5/5, 10/10, 10/10; batch3 1/9, 5/5, 8/2, 10/10),
+  nguyên nhân fail khớp stdout đã ghi. Sửa 1: câu "No newer fix
+  for t09 or t10 has landed on main after b629e11" trong doc là
+  SAI tại thời điểm commit, ed78e83 lên lúc 12:19:42 UTC, khoảng
+  5 phút trước khi doc được commit lúc 12:25 UTC; phiên bản check
+  nào mà các lần chạy Firefox đã chạy không chứng minh được từ
+  JSON (không ghi check hash), lần chạy sau phải ghi. Tôi đã sửa
+  câu đó trong doc. Sửa 2: claim "standalone t10 3/3, t05 1/1"
+  không có JSON lưu lại. Nhỏ: chẩn đoán chạy 1 batch2 bỏ sót t04,
+  lỗi của nó cùng là bug fill('') đó.
+- Y10 t09/t10 Firefox: CONFIRMED BLOCKED, không phải chạy rồi.
+  t05 3/3 pass (6145/5925/5058 ms, tên mới), t09 3/3 lỗi kết nối
+  (timeout 30 s, port 19586/19520/19338), t10 và full run chưa
+  chạy, log retry 10 lần fail 12:37-14:07 UTC với minidump cuối
+  đã kiểm chứng trên ổ.
+- Sửa t05: CONFIRMED trong code. Không còn rename ghi cứng
+  (grep rỗng), check tự điền tên mới, cancel và từ chối tên rỗng
+  đã cover, results.json đã commit có t05 pass 2983 ms. Council
+  tự chạy lại t05 trên Chromium BỊ CHẶN bởi môi trường (Chromium
+  SIGTRAP 2 lần, host còn 146M free), không phải lỗi test.
+
+## HỘI ĐỒNG ĐỢT 5: COUNCIL 3 XONG, 21:13 ngày 21/11
+
+Báo cáo ở docs/batch5-council3-agy-y2-20261121.md (215 dòng).
+Kết luận: CONFIRMED cho việc 6 agy-y2.
+
+- Code đúng: 30a72e5 là commit duy nhất trên todolist-push chạm
+  tests/realistic/agy-y2/, nằm trong branch, tip beebe50, commit
+  Y7 9a74a70 và a07fd27 đều là ancestor của beebe50. Bản copy chạy
+  ở /tmp/agy-y2-verify/tests giống hệt 30a72e5 trên cả 25 file
+  (git show so với diff, 0 khác biệt).
+- Bằng chứng còn nguyên: simulate-all.json allPassed true, 10/10,
+  ms từng test khớp đúng báo cáo của tôi, tổng 6252 ms;
+  live_results.json 10/10, 179 action và 88/88 assertion, cả 2
+  tổng đều được council tính lại; live_steps.jsonl khớp từng dòng
+  với live_results.json. Tổng 140.821 s so với tổng từng test
+  124.904 s không phải lỗi: thời gian driver.quit() chỉ tính vào
+  tổng chính.
+- Phương pháp đúng: run_live.py trích verifyTest từ check.mjs bằng
+  máy lúc chạy, guard bắt buộc phải fail trên fixture chưa chạm
+  (guard fail 4-12 mỗi test, đều trên 0), click và gõ thật qua
+  Selenium, profile mới mỗi test.
+- Đối chiếu clone2: action, check và guard fail từng test khớp
+  đúng lần chạy live độc lập của clone2 (commit 80c548a) trên cả
+  10 test.
+- 2 follow-up của Y7: council xác nhận cách tôi trình bày ở cả 2.
+  Đọc check.mjs, lỗ skip của t07 (8 check chỉ trạng thái cuối,
+  không có marker restore) và bypass của t09 (6 check, không assert
+  title editor sau delete) đều thật và vẫn mở trong checker. Nhưng
+  ghi chú giữa lần chạy chứng minh lần chạy này không làm cả 2:
+  t07 trash 1 rồi 0 với img4 ẩn rồi hiện, t09 title editor về
+  "Personal Tasks" và total 3 sau click delete thật. Lần chạy thật,
+  lỗ vẫn mở làm follow-up cho Y2.
+- Giới hạn thật: council không chạy lại được simulate hay live
+  (cửa ghi đóng, Chromium --dump-dom exit 133, Firefox gate fail
+  không profile và minidump crashreporter fail), nên output chạy
+  là second-hand; mọi thứ còn lại là first-hand. Selenium 4.53.0
+  cũng chưa kiểm chứng (không tìm thấy module selenium, venv của
+  agent đã mất). Không có điểm nào agent việc 6 sai về mặt thực
+  chất.
+
+## HỘI ĐỒNG ĐỢT 5: REDTEAM XONG, 21:15 ngày 21/11
+
+Báo cáo ở docs/batch5-redteam-20261121.md (225 dòng).
+21 finding: 5 số liệu sai, 7 claim chưa kiểm chứng nói như đã xong,
+5 bug thật, 4 nhỏ.
+
+Số liệu sai (đã sửa trong doc, xem dưới):
+- Số dòng trong coord đều lệch +1, cùng lỗi hệ thống như đợt 4
+  (đếm \n + 1): run_atspi_session.sh 251 thành 250,
+  atspi-session-probe.md 175 thành 174, evidence doc 508 thành
+  507, A1 review 616 thành 615. Tôi đã kiểm chứng bằng wc -l.
+- A1 review (dòng 21, 52) và coord việc 3 nói FREEZE.md ở f31abcf
+  có 10 sha256 hash; thực ra có 12. Evidence doc 12/12 là đúng.
+  Đã sửa trong A1 review.
+- Evidence doc mục 695efea: "Four have NO return at all" là SAI.
+  Tôi tự tính lại từ plan ở 695efea: 19 eval, 10 bắt đầu bằng
+  return, 9 có return sau đó, 0 không có return. Chia đúng là
+  10+9+0, không phải 10+5+4. Kết luận "plan NOT affected" thực ra
+  mạnh hơn audit nói. Đã sửa trong evidence doc (cả 2 chỗ).
+- Y10 "10/10 x7 runs": log fix liệt kê 8 lần chạy (1 đầu + 3 tuần
+  tự + 3 tải + 1 cuối), không phải 7.
+- A1 review B3b: JSONDecodeError ở dòng 128, không phải 125 (dòng
+  125 là open(); B3c ở 125 đúng, B2 dòng 80 và B3a dòng 226 đúng).
+  Đã sửa trong A1 review.
+
+Claim chưa kiểm chứng nói như đã xong:
+- Số liệu chạy AT-SPI (chạy 3-6, find_app 52.1 ms, tôi chạy lại
+  23620 ms) không có file log trên ổ. Redteam tự chạy wrapper
+  fail ở start_xvfb ("X socket never appeared"); Xvfb hiện không
+  tạo socket, nên thành công đó hiện không tái tạo được ở đây.
+- Firefox việc 5 standalone "t10 3/3, t05 1/1" không có JSON;
+  số BiDi smoke (314/219/149/95 ms) và lỗi Juggler của Playwright
+  không có log.
+- Y10 9/9 mutation probe và 7 trong 8 lần chạy lặp: script, diff
+  và JSON ở /tmp/y10m2*, bị VM restart xóa; chỉ results.json của
+  lần chạy cuối (25024 ms) đã commit.
+- 08f36d2 t05 standalone (5091/5289/5790 ms), full run thứ 2
+  (59449 ms) và chứng minh negative không còn artifact; redteam
+  không chạy lại được vì ghi shell bị EPERM (copy ra 0 byte).
+- agy-y2 lần chạy live đầu crash (test 02, geckodriver refused,
+  load 8.23) không có log trong /tmp/agy-y2-verify.
+- Log retry khoảng free "121M tới 242M" không truy được trong
+  ff-retry-log.txt (chỉ lần 0 ghi free, 132M); khoảng available
+  179-688M thì truy được.
+- test_code_exec "53 tests OK (11.894 s)": số 53 đúng, nhưng
+  redteam chạy lại ra 13 lỗi, đều do môi trường (tempfile EPERM,
+  không có temp dir dùng được) vì cửa ghi đóng, không phải lỗi
+  assert.
+
+Bug thật:
+- run_atspi_session.sh dismiss poll lẫn "không có dialog" với
+  "dismiss fail" (probe trả 2 cho cả 2), nên retry vô ích 15 lần
+  khi dialog đã mất.
+- run_atspi_session.sh wait_document fail không chặn: log stage
+  fail rồi vẫn chạy probe.
+- run_atspi_session.sh prereq không kiểm tra /tmp ghi được hay còn
+  chỗ trống, dù doc có ghi failure mode /tmp đầy; redteam tái tạo
+  đúng lỗi đó live (start_xvfb false sau 10.2 s, /tmp dùng 77%).
+- Check t05 đợt 4 ở 08f36d2 có 2 lỗ Y10 sau đó đóng: điền
+  'meeting-notes.txt', đúng giá trị ghi cứng cũ, nên handler ghi
+  cứng bỏ qua input vẫn pass; test cancel không gõ tên trước
+  Cancel, nên cancel áp dụng prefill vẫn pass. Vậy mục 19:09 trong
+  coord "10/10 thật" là sớm; chỉ bản Y10 mới mutation-proven.
+  Mục Y10 đã nói điều này, nhưng mục 19:09 chưa bao giờ được sửa.
+  SỬA Ở ĐÂY: 19:09 nói batch 3 lên 10/10 thật trên Chromium sau
+  sửa t05 là SAI về mặt kiểm chứng. Bản 08f36d2 chỉ sửa fixture
+  và check chạy pass, chưa chứng minh được bằng mutation. Chỉ bản
+  Y10 (ed78e83) mới mutation-proven 9/9. Điểm 10/10 đúng cho bản
+  Y10, không phải bản 08f36d2.
+- Shim BiDi page-registry fix chưa chứng minh trên luồng popup live
+  (đã nói thật trong Y10 README); không phải bug trong cây hiện
+  tại, shim đã xóa và lib/browser.mjs đã kiểm chứng giống HEAD.
+
+Nhỏ:
+- agy-y2 live: tổng từng test 124.904 s so với tổng 140.821 s;
+  khoảng 15.9 s chưa giải thích. Ghi chú: council 3 giải thích là
+  thời gian driver.quit() chỉ tính vào tổng chính; redteam không
+  chấp nhận giải thích đó vì không có log chứng minh.
+- Câu trong Firefox doc "No newer fix for t09/t10 has landed" giờ
+  stale sau ed78e83; chỉ coord mang sửa. Ghi chú: redteam đọc doc
+  trước khi sửa của tôi vào; tôi đã sửa câu đó trong doc lúc 21:11
+  (CORRECTION council 1), nên finding này đã lỗi thời.
+- Wall so với timestamp chênh 1-2 ms ở 2 lần chạy Firefox (trivial).
+- Comment đầu run_atspi_session.sh ("full mode exits 2 even when
+  the session is fine") mâu thuẫn doc và code; hành vi đúng.
+
+Kết luận BLOCKED: Y10 t09/t10 Firefox BLOCKED là thật: 3 JSON t09
+đều fail ở BiDi connect sau timeout 30 s, không có JSON t10, log
+retry 10 lần segfault với id minidump, t05 3/3 pass ngay trước khi
+crash bắt đầu. Giải thích bộ nhớ là giả thuyết, không phải nguyên
+nhân đã chứng minh (Firefox segfault cả khi available 688M).
+Không có gì nói là xong mà phụ thuộc vào lần chạy lại bị chặn,
+trừ shim page-registry fix và so sánh Y10 t09/t10 Firefox; coord
+ghi đúng việc 5 là một phần.
+
+Đã kiểm chứng đúng: số Firefox doc khớp cả 7 results.json đúng
+(kể cả chạy 3 t05 crumbs fail, chạy 3 t10 Night Drive read,
+positionMinAfterNext 0, batch2 t10 csvLines 9); Y10 t05 3/3 và t09
+3x FAIL khớp JSON; Shayxo redteam chạy lại 17/17 OK; agy-y2
+live/sim số từng test khớp JSON đúng (179 action, 88/88 check,
+commit Y7 là ancestor của beebe50); evidence 13/6/1 đếm lại đúng,
+a82bb41 kiểm chứng đúng (runner 2517 dòng, 88 check call, 79
+selector); A1 28 lỗ = 3+13+12, B3a dòng 226 đúng, Worker U 71 dòng
+/ 2960.7 / 3604 đúng; diff Y10 khớp mô tả, diff fixture t05 so với
+08f36d2 là 0 dòng.
+
+Đã giao fix agent F sửa 4 finding về run_atspi_session.sh
+(dismiss poll, wait_document gate, prereq /tmp, comment đầu).
+
+## HỘI ĐỒNG ĐỢT 5: COUNCIL 2 XONG, 21:16 ngày 21/11
+
+Báo cáo ở docs/batch5-council2-audits-20261121.md (342 dòng).
+
+Việc 3 review A1: CONFIRMED, kèm 2 sửa và 1 finding mới.
+- Freeze: mọi hash khớp, nhưng FREEZE.md ở f31abcf có 12 sha256
+  hash, không phải 10 như agent nói. Kết luận đứng, số sai. Đã
+  sửa trong A1 review lúc 21:15.
+- B1 đúng từ text đóng băng (luật chết 30 phút so với cap Case B
+  60 phút so với ước tính 40 phút). B2 tái tạo live: manifest 13
+  dòng exit 2 với cả 3 chuỗi lỗi nguyên văn. B3a/B3b/B3c đều tái
+  tạo live trên unblinder đóng băng với dữ liệu giả: TypeError
+  dòng 226 exit 1, JSONDecodeError dòng 128 exit 1,
+  FileNotFoundError dòng 125 exit 1; control sạch trả NO-GO exit
+  0. (Crash B3b ở dòng 128, không phải 125 như agent viết. Đã sửa
+  trong A1 review lúc 21:15.)
+- Spot check M1, M2, M7, cơ chế M12, md5 fixture, plan 1072 dòng
+  giống hệt tip, f01 spec 26 bước: đều đúng.
+- FINDING MỚI của council 2: run_matrix.py báo 17/17 nhưng chỉ
+  có 16 check (14 thường + T11 + T12; cây có 16 thư mục case,
+  không có thư mục T12; tổng ghi cứng là 17). Tôi tự kiểm chứng:
+  16 thư mục case ở f31abcf (T01 tới T10, T11a, T11b, T13, T14,
+  T15, T16), không có T12; run_matrix.py dòng 146 comment "15
+  regular cases + T11 + T12 = 17 checks", dòng 147 total = 17 ghi
+  cứng. Số thật là 16/16 khi có build step và 2/16 khi không có.
+  Cả 2 agent việc đều lặp lại số in ra của script. Finding này
+  thuộc về A1 review, cần ghi vào đó khi sửa đợt sau.
+
+Việc 4 evidence audit: CONFIRMED, kèm 2 sửa.
+- Council tự tính lại: bảng 20 dòng 13/6/1, md5 beebe50 4/4,
+  FREEZE ở dce42ca 12/12, bảng gap 113 dòng 82/31/0 với 113 ID
+  riêng, tổng ms chạy 2 49885 đúng, step mapping 670 dòng / 343
+  dòng / số từng test đúng, port diff 88 dòng check() và 79
+  selector đều có, claim sai 6f20fb5 (không có runner ở commit
+  đó, message của a82bb41 nói vậy), số spec/fixture test-07,
+  fixture 1043 dòng.
+- Sửa 1: chia eval 695efea là 10 bắt đầu bằng return / 9 return
+  sau / 0 không return, không phải 10/5/4. Cả 4 eval agent gọi là
+  "no return" đều kết bằng return e.value / return {...}. Verdict
+  PARTIAL đứng (19 khác 21, fix chưa chứng minh live), nhưng
+  claim "4 return null" phải bỏ. Đã sửa trong evidence doc lúc
+  21:15.
+- Sửa 2: file verdict của a82bb41 là 91/89/97/132 (message commit
+  đúng); số 92/90/98/133 của agent là lỗi đếm +1. Sửa trong
+  evidence doc lúc 21:16. Sửa 88 dòng và 79 selector trong finding
+  đó là đúng.
+
+Phán quyết 7/10 cho batch 3 gốc: ĐỒNG Ý cả 3, với dòng đúng ở
+1767d4c: t05 rename ghi cứng không có input (fixture dòng 151-167,
+1 input trên trang); t09 postMessage rồi đóng đồng bộ với assert
+ngay; t10 đọc exact-0 đua với timer 100 ms. 7 test còn lại pass
+thật. Lưu ý: ở HEAD f006137 cả 3 đã sửa (08f36d2, b629e11,
+ed78e83), nên 7/10 chỉ áp dụng cho bản nộp gốc.
+
+Giới hạn: cửa ghi exec đóng cả phiên (ghi shell/Python/tar/git
+đều EPERM), nên council không chạy lại được matrix checker,
+preflight test, suite code_exec hay dry run stop-script. Với
+matrix council kiểm chứng cơ chế từ code đóng băng và tự tính tay
+số không build.
+
+## WATCHDOG 21:17 ngày 21/11
+- Đợt 5: việc 1-6 xong theo agent; council 1/2/3 và redteam đã xong, FIX F (AT-SPI) đang chạy, hoạt động tốt. Y10-RETRY xong: BLOCKED, Firefox không hồi trong 90 phút, t09/t10 vẫn chặn.
+- Không agent nào interrupted, failed hay unknown. Không cứu agent nào.
+- Muse: không có yêu cầu mới (remote HEAD 3b50e94, khớp watermark).
+- Hành động: chỉ ghi khối này. Commit/push vẫn EPERM (git không ghi được .git/objects), thử lại lần sau.
+
+## FIX F: SỬA 4 BUG PROBE AT-SPI, 21:18 ngày 21/11
+
+Báo cáo ở docs/batch5-fix-probe-20261121.md. Cả 4 finding của
+redteam về probe đều sửa xong, code-only (Firefox vẫn segfault).
+
+- Dismiss poll: atspi_probe.py mode dismiss giờ trả 3 khi không
+  tìm thấy nút dialog (dialog đã mất, đúng trạng thái muốn);
+  click fail giữ 2, click ok giữ 0, docstring ghi rõ 3. Wrapper
+  stage 6 dừng poll khi rc 0 và rc 3, chỉ retry khi rc 2; dòng
+  stage wait_document ghi dismiss_rc.
+- wait_document gate: DOC_OK false thì wrapper exit 2 ngay tại đó
+  với message rõ, không chạy các stage probe trên session chết.
+  Verdict cuối không đổi (exit 2), bỏ công việc thừa.
+- Prereq /tmp: stage 1 giờ kiểm tra /tmp ghi được (file probe
+  mktemp) và còn chỗ trống (df), yêu cầu ít nhất 50 MB (1 lần chạy
+  fail ở /tmp 100%, pass ở 79 MB trống). Fail nhanh với số đúng
+  tmp_free_kb/tmp_writable/tmp_min_free_kb; dòng prereq pass ghi
+  tmp_free_kb.
+- Comment đầu: giờ nói probe full mode trả 2 khi typing fail,
+  nhưng wrapper exit 0 khi session chạy được. Doc probe đã cập
+  nhật theo: kiểm tra /tmp và ngưỡng 50 MB trong Prerequisites,
+  exit code dismiss 0/3/2, mục mới "Fixes after the batch 5
+  redteam review".
+
+Kiểm chứng: bash -n sạch trên script; probe syntax sạch qua
+compile() (py_compile fail chỉ vì ghi __pycache__ bị EPERM);
+unit test stub mode dismiss trả 3/2/0 cho no-dialog / click-fails
+/ click-ok, ALL PASS; chạy riêng vòng poll và logic kiểm tra /tmp,
+dừng sau 1 lần gọi khi rc 3, retry rồi dừng khi rc 0, đủ 15 lần
+khi rc 2 kéo dài, kiểm tra /tmp pass ở 123860 KB trống và fail với
+số đúng khi ép ngưỡng cao. Live run không được: Firefox 160.0.1
+segfault khi khởi động (test headless screenshot 14:18 UTC, cùng
+stderr crash như log retry của Y10, minidump đã ghi, không có
+screenshot), nên fix chỉ là code cho tới khi Firefox chạy lại.
+Số dòng sau fix (wc -l, tôi tự đếm): run_atspi_session.sh 284,
+atspi_probe.py 666, doc session-probe 223. Ghi chú: doc fix ghi
+285/667/224, lại lệch +1 như lỗi đếm cũ (đếm \n + 1); số wc -l ở
+đây mới đúng. 0 dấu gạch ngang dài trong các file đổi.
+
+## ĐỢT 5 - BÁO CÁO CUỐI, 21:20 ngày 21/11
+
+Hội đồng 3 người cộng redteam đã kiểm lại toàn bộ đợt 5. Đây là
+báo cáo cuối đợt 5. Chưa push được (git EPERM từ 19:27, remote
+đang ở 3b50e94, fetch cũng lỗi unpack-objects); tất cả nội dung
+dưới đây đang ở working tree, sẽ push ngay khi cửa ghi mở lại.
+
+Kết quả từng việc:
+1. Shayxo contract: XONG, 17/17. Council 1 chạy lại 2 lần, 17/17
+   cả 2 (0.029 s, 0.027 s). Redteam chạy lại 17/17 OK.
+2. Probe AT-SPI tự chứa: XONG, code đúng. Council 1: script và
+   doc đúng, chạy live bị chặn (Firefox segfault). 4 bug redteam
+   tìm ra đã sửa xong bằng fix F (dismiss poll, wait_document
+   gate, prereq /tmp 50 MB, comment đầu), code-only vì Firefox
+   vẫn segfault lúc 14:18 UTC.
+3. Review A1: XONG, 28 lỗ (3 blocker, 13 major, 12 minor).
+   Council 2 CONFIRMED, B1/B2/B3a/B3b/B3c đều tái tạo live trên
+   unblinder đóng băng. Sửa: FREEZE 12 hash không phải 10, B3b
+   dòng 128 không phải 125. Finding mới: run_matrix.py ghi cứng
+   total 17 nhưng chỉ có 16 case (không có T12); số thật 16/16
+   có build, 2/16 không build. Đã ghi vào A1 review.
+4. Evidence 20 commit todolist-push: XONG, 13 COMPLIANT, 6
+   PARTIAL, 1 MISSING. Council 2 CONFIRMED, tự tính lại hết. Sửa:
+   chia eval 695efea 10/9/0 không phải 10/5/4; file verdict
+   a82bb41 91/89/97/132 không phải 92/90/98/133.
+5. 20 test batch2+batch3 trên Firefox thật: XONG MỘT PHẦN. 20/20
+   bản đợt 4 trên Firefox (batch2 10/10 x2, batch3 10/10 chạy 4),
+   council 1 CONFIRMED với 2 sửa (câu worker-fix sai tại thời
+   điểm commit, đã sửa trong doc; claim standalone t10 3/3, t05
+   1/1 không có JSON). t05 bản Y10 trên Firefox 3/3 pass.
+   t09/t10 bản Y10 trên Firefox: BLOCKED, không chạy được (10 lần
+   thử segfault trong 90 phút, 19:37 tới 21:08 +07). Chưa có số
+   Firefox nào cho t09/t10 bản Y10.
+6. agy-y2: XONG, 10/10 simulate và 10/10 live Firefox. Council 3
+   CONFIRMED: code đúng 30a72e5, bằng chứng còn nguyên, khớp
+   đúng lần chạy độc lập của clone2. 2 follow-up Y7 (t07 skip,
+   t09 bypass) vẫn mở trong checker, nhưng lần chạy này không
+   làm cả 2.
+
+Sửa t05: fixture dialog thật, bản Y10 mutation-proven 9/9. Đính
+chính: mục 19:09 nói batch 3 lên 10/10 thật sau sửa 08f36d2 là
+sớm; bản 08f36d2 có 2 lỗ (điền đúng tên ghi cứng cũ, cancel không
+gõ tên), chỉ bản Y10 mới mutation-proven. Điểm 10/10 đúng cho
+bản Y10.
+
+Phán quyết 7/10 cho batch 3 gốc: ĐÚNG, council 2 đồng ý cả 3
+(t05 tự mô phỏng, t09 race postMessage, t10 race exact 0), với
+dòng đúng ở 1767d4c. Ở HEAD hiện tại cả 3 đã sửa, nên 7/10 chỉ
+áp dụng cho bản nộp gốc.
+
+Còn nợ, không giấu:
+- t09/t10 bản Y10 trên Firefox: BLOCKED, chạy lại khi Firefox
+  khởi động được. Shim BiDi page-registry fix cũng chưa chứng
+  minh trên luồng popup live.
+- Số liệu chạy AT-SPI (chạy 3-6) và vài claim standalone không có
+  log thô trên ổ; lần chạy sau phải lưu log và ghi check hash.
+- Y10 9/9 mutation probe và 7 trong 8 lần chạy lặp: bằng chứng ở
+  /tmp đã bị VM restart xóa, chỉ results.json cuối đã commit.
+- A1: 3 blocker phải sửa bằng amendment trước run 1; matrix
+  total ghi cứng 17 phải sửa thành đếm từ thư mục case.
+- Probe AT-SPI: fix F là code-only, cần 1 lần chạy live khi
+  Firefox hồi để chứng minh.
+
+Việc chưa push: Y10 followup, các khối watchdog 19:27 tới 21:07,
+council 1/2/3, redteam, fix F, sửa doc, báo cáo cuối này. Tổng
+cộng hơn 300 dòng coord đang kẹt trong working tree vì EPERM.
+Khi cửa ghi mở: commit từng phần nhỏ, pull --rebase (remote đã
+tiến tới 3b50e94, 2 commit Y15, coord không đổi ở đó), push,
+kiểm chứng bằng git ls-remote origin main.
+## WATCHDOG 21:27 ngày 21/11
+- Đợt 5: báo cáo cuối đã ở coord (21:20), 6 việc xong (5 XONG, 1 XONG MỘT PHẦN t09/t10 Y10 BLOCKED Firefox segfault).
+- Agent: không còn agent nào chạy, tất cả council/redteam/fix F đã xong, không cần cứu.
+- Muse: remote main vẫn 3b50e94, khớp watermark, không có yêu cầu mới.
+- Push: vẫn BLOCKED, git EPERM từ 19:27, fetch/status/commit đều lỗi ghi .git, ls-remote OK. Chưa push được báo cáo cuối, thử lại lần sau.
