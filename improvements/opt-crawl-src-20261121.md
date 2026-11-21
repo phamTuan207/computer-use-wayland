@@ -133,3 +133,43 @@ Two different failures share this class and must not be conflated: (C-i) the pil
 - native/indicator.c input() + redraw(): overlapping-command quit (C7, strongest I12 candidate); changed()/capabilities()/removed()/discarded(): quit-on-layout/blur-loss (C8).
 - scripts/cursor_session.py guardian() loop (lines 165-176): no respawn for session-owned natives (C11).
 - Y6 pill measurement retry (todolist 4.13, gate G-PILL) must precede any flicker fix prescription: the liquid-mode flicker cause is still unproven (C9).
+
+## 4. Gaps, unproven items, and inputs from running workers
+
+### 4.1 Gaps (explicitly NOT evidenced; councils must not treat these as facts)
+
+- G1. Laptop install state of native/require-liquid. The VM repo does NOT contain native/require-liquid (checked 22:52), so the `final` branch in scripts/indicator.py:56-59 is OFF on the VM. Whether the file exists in the laptop install (/home/james/.local/share/agent-computer-use/native/) was NOT verified by this crawler (read-only SSH was allowed but not used; F1/F2 logs do not state it). If it exists on the laptop, Native.__init__ raises 'final liquid-glass profile unavailable' whenever hyprglass metadata does not match, which is a separate class-A throwing point (A11) with no VM-side evidence.
+- G2. Live plugin state after F3's Zen restart (22:36, PID 426338). Whether the cursor-guard plugin is NOW loaded in the live Hyprland (hyprctl plugin list, hyprctl cu-cursor status) was NOT re-probed by this crawler. F1's Layer 2 evidence (hyprbars only, 'unknown request') is from 22:19-22:33, before the restart. F1's plan B (live activation) is gated on review GO + the live slot; do not assume it has happened.
+- G3. overlay-flicker-work-log-20261121.md does NOT exist in the VM repo (checked improvements/ and docs/ 22:53). The todolist (2.2.1) cites it as the source for the E2 live flicker measurement. The measurement itself is cited here as a secondary source only. If the file lives on the laptop, councils should fetch it before prescribing a flicker fix.
+- G4. Y6r AMEND A1-A10 full text. This crawler read the Y6r council-1 mechanism verdict (AMEND, gate-conflation finding, lines 102 and 144) and council-2/3 verdict lines, but did NOT enumerate A1-A10 item by item. Councils deciding the pill-measurement retry should read improvements/worker-y6r-council-1-mechanism.md, worker-y6r-council-2-evidence.md, and worker-y6r-council-3-safety.md directly.
+- G5. F1 council-3 and redteam full text. This crawler read F1 council-1 (A1-A6) in full and the F1 log root cause; council-3 and the redteam file (R1-R13, cited in the F1 log) were NOT read line by line. The redteam's live-safety constraints on plan B (live activation) are therefore not reproduced here.
+- G6. The 22:44-22:45 workspace-1 click that opened the Omarchy menu (J21). Attribution is UNKNOWN (log F2/F3 records no click; owner screenshot 22:44:32 shows no menu open anymore). Owner order 22:45: open the Omarchy menu and switch workspaces by COMMAND (hyprctl dispatch in hl.dsp form; exact launcher command from config), NEVER click workspace/menu buttons on the bar; CLI first, mouse last. This crawler did not read the Hyprland/Omarchy config to find the exact launcher command; that is F3's open item 1.
+- G7. Clone2 watch (owner 22:55, MEMORY.md): a 15-minute cron (clone2-watch) checks GitHub first and only switches to workspace 2 when clone2 is silent over 15 minutes or unchecked over 1 hour; it approves/nudges only clone2's work, never money, data deletion, or PII; then switches back to workspace 1. This is an OPERATIONAL monitor, not code; it is recorded here because it is a silence-watch mechanism adjacent to class B, but it does not change any code-path evidence above.
+- G8. The VM `re/__init__.py` deletion root cause is UNKNOWN (J7, F2 log R6). Only the file was restored. No agent or cron has been identified as the deleter. Councils should not assume it cannot recur; the todolist gate G-VMFIX (verify `import re` + SSH_OK before every live lane from 4 onward) is the standing mitigation.
+
+### 4.2 Open items the method must address (from the inputs, not new claims)
+
+- O1. F1 plan B live activation + proof (E), gated on review GO (council 1 + 3 + redteam over the fix diff) and the live slot (F3 restoring Zen; do not drive the screen concurrently). F1 log lines 296-299.
+- O2. F1 council-1 A1-A6 (drain race, registration-path detail, UnicodeDecodeError, Lifecycle test proving fix D, Layer 4 correction DONE 22:50, recurrence tracking). See section 1.2 A5f.
+- O3. F3 open items (F3 log, 22:48, updated by the 22:50 restore): return to Hyprland workspace 1 by COMMAND and verify Zen is visible; redo the FULL tab cleanup via Marionette with the same 28-real-tab keep-list (39 fixture tabs resurrected by the restart); add the Marionette failure + the 22:43:15 click-miss to the error file; council (3) + redteam over the fix; commit + push each small step at once.
+- O4. Y6 pill measurement retry (todolist 4.13, serial lane 4, gate G-PILL): fix A1-A7/A9-A10 on paper in parallel lanes, A8 load-only trial first, fresh re-review, then retry. Never load hyprglass live while the F-team is fixing the machine.
+- O5. H2 think-time instrumentation (todolist 4.18, J10): fold into Y13/Y14/A1 (gate G-H2), no separate run. Only an agent-driven run with real think closes H2.
+- O6. J19/M4 (commit + push diffs immediately, lane P-H): F1/F2 code diffs are committed on the VM (5033c9d, a576e69); the F1/F2 log files are still being edited and the laptop copies may differ. The method should require a VM-vs-laptop diff check (md5sum) before declaring any fix deployed.
+- O7. Graph counting (section 0.3): todolist-push commits do not move the graph; merge to main early and often, every merge verified via ls-remote. Worker MERGE owns the merge; this crawler stays on todolist-push.
+
+### 4.3 Test coverage of the cited code (read from tests/, not run)
+
+- tests/test_cursor_session.py, tests/test_cursor_theme.py: guardian/supervise/guard_reply coverage; F1 council-1 A4 notes the Lifecycle test does not prove fix D (see section 1.2).
+- tests/test_first_action.py: 21 tests, VM-only, fakes for cu + overlay (F2 log); 20/21 on first run, one real bug found (double-printed refusal envelope) and fixed, 21/21 on second run.
+- tests/test_overlay.py, tests/test_indicator.py, tests/test_indicator_native.py, tests/test_indicator_material.py, tests/test_indicator_ink.py: overlay daemon + native indicator coverage, including test_daemon_respawns_dead_native + test_daemon_keeps_live_native.
+- tests/test_timing.py, tests/test_step_watchdog.py, tests/test_drive_log.py: instrument libraries that are NOT wired into the live path (section 2.3, B8).
+- tests/test_session_policy.py: require_observation / record_observation / complete_requirement.
+- tests/test_cursor_guard_activation.py, tests/test_cursor_build.py, tests/test_cursor_guard_build.py, tests/test_cursor_file.py: guard build + activation gates.
+- tests/indicator_state_test.c: native retry-once rule (indicator_should_retry_present).
+
+### 4.4 How this file was built (for the councils' evidence contract)
+
+- Every code claim was read from the VM repo files listed in the header, on branch todolist-push, between 22:49:50 and 22:58 +07 on 2026-11-21. Line numbers are from those reads; where a line number was re-checked by grep after writing, the file was corrected before commit (section 1: check_guard line 147, detail tail 4000 chars, indicator-lost line 166; section 3: capture_clean lines 921/958).
+- Secondary sources (F1/F2/F3 logs, todolist, error file, council files) are cited as secondary and were not re-verified live. Where a secondary source was corrected by a later one (J19 stale, Layer 4 A5 correction, H1 Codex-vs-Muse correction), the correction is stated, not the original.
+- No live tests were run, no laptop files were written, no sessions were started, no mouse was moved. No ydotool was used. No em/en dashes appear in this file.
+- Commits for this file (todolist-push, each pushed immediately and verified by fetch + branch -r --contains): sec 0 (db46a63), sec 1 (725ba7b), sec 2 (0a8b89a), sec 3 (2b2fbb7), sec 4 (this commit). Log: improvements/worker-opt-crawl-src-log.md (a146d0a, eb759fb, plus a closing entry to follow).
