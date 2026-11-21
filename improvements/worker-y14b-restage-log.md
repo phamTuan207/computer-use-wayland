@@ -2702,4 +2702,52 @@ Verification (VM, all green):
   Reported to Muse: fix-pass-7 final tally (3 GO + 1 AMEND)
   + fix pass 8 done and committed (6f72fe3) + 4 re-reviews
   spawned.
+- 00:41 +07: fix-pass-8 Council 2 DONE: GO (paper 547636e,
+  todolist-push, ls-remote verified, ANCESTOR_OK; agent
+  9f522e84, completed 00:34:04 UTC). C7-1 CLOSED, proved
+  hardest: its own fresh probe /tmp/y14b-fix8-c2-probe.py
+  loads fix5/6/7/8 side by side, run_foo(a).py and
+  run_(foo).py are fix5 True, fix6 False, fix7 True, fix8
+  False, unit (direct + bash -c) AND live on real stub files
+  with real /proc cmdlines; helper True in fix7, False in
+  fix8; all four paren shapes False in fix8; separator forms
+  (; , &&, |, &) and plain run_foo.py, hand_drive_e1.py,
+  run-nested-pill.py stay True in both; probe 94 PASS, 0
+  FAIL, exactly 6 moves, all the intended C7-1 True-to-False.
+  Re-running its original fix7 probe reproduces 118 PASS +
+  2 FAIL, both FAILs the intentional C7-1 cases, confirming
+  they are fix7-blob behaviour. C7-2 confirmed (B12
+  no-separator True fix5, False fix6/7/8). C7-3 CLOSED:
+  committed fix6 probe ran 71/71 PASS with 0 orphans after
+  (was 2 per run). Doc and log fixes verified verbatim at
+  6f72fe3 (the _runner_basename_head reword, and the "zero
+  wrong-direction moves" correction at both sites, site 1
+  scoped to the redteam's 98 cases with an explicit
+  CORRECTION note, site 2 scopes Council 3's claim to its
+  own differential). Regressions re-run: author fix8 probe
+  re-derived 103 PASS lines, 0 FAIL; committed fix7 probe
+  86/86; redteam fix7 probe 56/56; redteam 98-case
+  differential cross-check 98 same, 0 diff; sep index 3 in
+  both. No new wrong-direction move anywhere. Hygiene: 0
+  em/en dash in the diff and in its paper; ydotool occurs
+  twice in the diff but only as prose in log hygiene
+  sentences, 0 usage; no PII; 0 t10 mentions in the
+  run_batch3.py diff; no live Zen driving; all stubs killed
+  by exact PID, 0 remain. Two INFO nits only (no author
+  action required for GO): C8-1, plan line 620-621 says "The
+  fix-pass-8 commit hash is in the log's fix-pass-7 entry"
+  (should be fix-pass-8 entry; the hash itself is correctly
+  recorded in follow-up 718729a); C8-2, the log's "Only call
+  site is line 2724" is the fix7 line, in fix8 the single
+  call site is line 2735 (docstring grew 11 lines),
+  substance (exactly one call site) verified true. The
+  fix-pass-7 tally is now closed: 3 GO + its AMEND, with its
+  one required code item fixed and proved, doc corrections
+  fixed verbatim, and the optional C7-3 patch proved by a
+  clean orphan sweep. Fix-pass-8 tally so far: Council 2 GO,
+  redteam + Council 1 + Council 3 still running. The C8-1 /
+  C8-2 nits are held for the joint adjudication (one doc-only
+  commit covering all reviews' doc nits, if the rest are GO
+  or doc-only AMEND); no fix pass 9 for code unless a review
+  BLOCKs or has a code AMEND.
 
