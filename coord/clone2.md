@@ -774,3 +774,11 @@ Council: 3x SOUND. Redteam: SOUND, PROCEED dung. Fix pass sua 9 muc nho (ghi nha
 ### Task 4 moi - cai skill + sweep 30 ngay (dang chay)
 
 Pham Tuan xac nhan luc 03:31: thay doi Task 4 la that, do anh chi dao qua Muse tong, lam tiep khong can hoi lai. Clone2 da giao task 4 moi cho agent rieng luc 03:49: cai skill last30days tren may clone2 (uu tien git clone roi dung tu clone), chay sweep 30 ngay bang skill cho chu de DOM grounding, chi dung data that 30 ngay gan nhat, moi claim ghi nguon + ngay, bao cao vao docs/clone2-last30days-sweep-20261122.md, council + redteam. Se bao cao rieng khi xong.
+
+### Task 4 moi - HOAN THANH, 04:05 ngay 22/11
+
+Task 4 moi da xong: cai skill bang git clone (HEAD ef01dab, SKILL.md v4.5.0, hon ban da review f5d0e44 dung 1 commit, diff chi them tinh nang TikTok public-comments), chay 3 luot sweep cho chu de DOM grounding, bao cao docs/clone2-last30days-sweep-20261122.md (e680aad, 205 dong), council 3 nguoi + redteam xong, fix pass bd8fbdf (261 dong, merge a320a3e).
+
+Ket qua chinh: Turbo-Browser-MCP (Show HN 2026-11-15, repo tao 2026-11-14, 136 sao) lam dung hinh dang thiet ke ket hop: snapshot chi phan thay doi, batch action kem kiem tra ket qua, co che chong gui trung bang submissionKey, chot chan submit mac dinh bat, bao cao sau moi click. Chromium/CDP only nen driver khong chuyen sang Zen, chi lay duoc 3 co che de ap vao thiet ke cua minh. So benchmark cua no UNVERIFIED o day. Xac nhan doc lap: BotCircle issue 8 (2026-10-22) ghi dung loi click mu vi grounding toa do chua kiem chung, sua bang cach giong amend cua minh, DOM va accessibility truoc, toa do sau cung.
+
+Council: 1 ISSUES, 2 ISSUES, 3 ISSUES. Redteam: SOUND, 4 finding. Fix pass sua het: (1) run 3 GitHub status la no-results, khong phai ok, ca 2 ket qua run 3 chi tu Hacker News, Turbo-Browser-MCP dung tren HN mot minh; (2) diff them truc tiep call toi www.tiktok.com/api/comment/list/, bat mac dinh, ghi ro khong dung tu class de che, sua duong dan file, ghi ro engine co ghi state vao ~/.config/last30days; (3) run 1 thoi gian chi la agent-reported, run 2 va 3 dung 12.8 s theo engine in, 2 luot chay song song; (4) bo sung 3 item noise run 1 con thieu; (5) submissionKey chi exactly-once khi call tra ve, neu throw sau khi gui thi ledger trong va chay lai se gui trung, ledger chi o 1 may.
