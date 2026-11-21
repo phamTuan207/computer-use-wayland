@@ -3530,3 +3530,58 @@ Việc 1: SWEEP XONG, council 1/2/3 + redteam XONG HẾT. Council 1: mục 0-2 C
 Muse: không có yêu cầu mới (không có commit coord: mới từ watermark 9514518, chỉ có commit clone1 và 1 commit watchdog của clone2).
 Agent: không còn agent nào đang chạy, tất cả đã done, không cần cứu.
 Hành động: chỉ ghi khối này và push. Cả 2 việc đợt 8 đã xong council + redteam, còn chờ báo cáo cuối đợt 8 trong coord rồi mới dừng watchdog.
+
+## BATCH 8 - FINAL REPORT (06:00 22/11) - DONE, BOTH TASKS CLOSED
+
+Task 1, last30days install + sweep: DONE. Install by git clone into
+~/workspace/tools/last30days-skill, HEAD ef01dab, SKILL.md 4.5.0,
+diff from reviewed f5d0e44 is 1 commit, 7 files, 238 insertions,
+7 deletions, matching clone2 exactly. Sweep RUN after the user
+confirmed at 05:49 +07 in chat: 3 engine runs, 22:50:11Z to
+22:51:14Z, all exit 0, sequential, 33 kept results (10 + 9 + 14),
+engine times 12.2/10.9/15.1 s, flags --emit=json --auto-resolve
+--no-browser-cookies, keyless, one save dir per run under
+~/workspace/b8t1-sweep/. No new usable implementation in these
+runs: Turbo-Browser-MCP 0 hits, because run 3 used the planned
+topic "single observation multi-action browser agents" while
+clone2's run 3 used "DOM snapshot element grounding browser
+agents", so these runs neither confirm nor refute it. Found:
+BotCircle issue 8 (2026-10-22, relevance 0.2834) reproduces the
+blind-click corroboration, and 2 in-window explainers (Utilix,
+published 2026-10-24, updated 2026-11-11; SkillVeris, 2026-10-28)
+corroborate the hybrid design the team already has (tree first,
+pixels fallback, numbered overlays, verify after each action).
+Report docs/clone1-last30days-sweep-20261122.md, 491 lines after
+fixes. Council 1 (sections 0-2 CONFIRMED), council 2 (section 3
+stands), council 3 (sections 4-6 SURVIVE), redteam GO SURVIVES.
+Fixes applied per docs/batch8-fix-sweep-20261122.md: 2 wrong facts
+(Utilix top grounding not top overall, Bolt 0.2868 higher;
+BotCircle relevance 0.2834), undated grounding count 3 to 4
+(2 in-window + 3 out of window + 4 undated = 9), all 3 save dirs
+born 22:49:57.797Z, empty leftover run3-single-obs recorded,
+OpenDots label corrected, title-sourcing note added, BotCircle
+accents restored, 5 unverified claims marked unlogged or inference
+(memory figures, ps observation, 2 risk notices, install
+timestamps, "single" keyword inference). Nothing refuted. Honest
+note: the 3 engine commands were typed by a concurrent duplicate
+agent (task dispatched twice); every number was verified first-hand
+from the on-disk artifacts, by the report agent, all 3 councils,
+the redteam, and the coordinator.
+
+Task 2, CLICK-AMEND independent verification: GO, done and closed
+earlier. 6 suites all PASS on amend code, 181 tests in 1.375 s;
+13-suite set 315 tests OK in 2.239 s; all 12 fix items confirmed in
+code; fail-before reproduces the amend log exactly at base; 12-module
+neighbor set 209 tests with exactly 2 pre-existing failures, no
+regression; C12 viewport_origin CORRECT; G30 7/7. Council 1/2/3 +
+redteam done, fixes applied, all pushed.
+
+Still owed (needs Muse or the laptop, not this machine): live
+browser proof of the amend (suites use fakes, no Zen/Brave here;
+the 2-vision benchmark worker owns it); Turbo-Browser-MCP
+implementation read on this side (only clone2 read its tool
+surface); a sweep with API keys set would widen recall (X,
+YouTube, TikTok contributed nothing here); the batch 6 and batch 7
+leftovers recorded in the batch 7 final report.
+
+Batch 8 is DONE. Watchdog stops now.
