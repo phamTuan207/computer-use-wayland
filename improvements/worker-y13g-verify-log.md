@@ -98,3 +98,19 @@ wall-clock Asia/Ho_Chi_Minh + elapsed since T0.
   12-23s on this loaded VM (full /proc scan); slow, not a
   failure. Dummies used an argv-ignoring C sleeper (gcc -O2,
   improvements/y13g-verify/sleeper.c).
+- 00:22-00:23 +07 (T+~17m to T+~18m): A3 brick sequence DONE,
+  7/7 PASS in 1.4s (results a3.log). (a) -m on a clean ship exits
+  2 via the guard ("run as a script..."), no .pyc left behind.
+  (b) Direct verify after is rc 0, manifest_ok true. (c)
+  Live-run attempt `python3 -P run_codex_y5.py all` prints
+  MANIFEST OK, then fails rc 2 at the served-files check with
+  all 27 files 404: the server root defaults to the production
+  path, not the staged ship dir (harness artifact, not a
+  runner defect). (c2, added after manual confirmation) With
+  LIVE_SERVER_ROOT pointed at the staged ship it reaches
+  SERVED FILES OK (27 files over HTTP) then PREFLIGHT FAILED
+  "LIVE_OWNER_AWAY is not 1", rc 2, no driving. (d) Empty
+  __pycache__ dir alone, direct verify rc 0. (e)
+  PYTHONDONTWRITEBYTECODE=1 -m writes nothing (no __pycache__
+  created). (f) Forged non-entry run_live .pyc refuses rc 2,
+  no marker, kind pyc.
