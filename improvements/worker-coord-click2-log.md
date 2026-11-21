@@ -100,3 +100,17 @@ One design, assembled from the converged rank-1 items (NOT yet reviewed, NOT yet
 ## 02:52 +07 (t+6m) Review round spawned
 
 Council C1/C2/C3 + redteam RT, in parallel, VM-only, no live driving. Each reviews independently: (a) amend diff e4082ff..4b7d6ac against the 12 consolidated items + owner corrections + bar numbers, (b) the combined design above, (c) C12 adjudication. Verdict GO/AMEND/BLOCK with required fixes. Logs: improvements/worker-click2-c1-review-log.md, c2, c3, rt.
+
+## 03:00 +07 (t+14m) CLICK2-C1 DONE: AMEND (commit 25ebf10)
+
+Independent verification: 7 named suites all OK (213 tests), 13-suite run 315 tests OK in 4.012s, fail-before on e4082ff worktree matches the amend log exactly. Items C1-1, C1-2, C1-3, R2-R9 DONE; R1 and item 12 PARTIAL. Hygiene clean (0 dashes, ydotool only the words "No ydotool", no PII, no touch of image_point/move/Y13g).
+
+Required fixes F1-F6:
+- F1 (blocking): the sufficient DOM value check is unwired in production. Hooks exist at scripts/cu.py:1570 but no production caller passes them (cu.py:2470, :2759, first_action.py:581); only dom_act.py focus_type and tests do. Default path relies solely on the input-line band.
+- F3 (same root): a correct click shows a caret/focus ring on the input line, so the band returns True with zero text delivered. Existing click-only test uses a pixel-identical after image and does not cover the caret case. Acceptance test required: correct click + stubbed type + after image differing only by caret/focus-ring pixels must report ok False, type_unverified.
+- F2 (C12 adjudication: NOT SATISFIED): zen_dom.py:367 viewport_origin() treats mozInnerScreenX/Y as absolute screen coords, contradicted by docs/calibration-e2-report.md:21 (live laptop: window-relative (240, 8), add window origin) and by the ZT-B log (Marionette eval returned null). No DPR/monitor_scale (meta carries it, fastpath.py:169 ignores it), no Hyprland window-geometry path, no AT-SPI cross-check. The 7/7 accuracy tests assume the origin is absolute and build truth from the same origin, so they test the linear map only. Fix: origin = Hyprland window origin + mozInnerScreenX/Y, times DPR/scale, AT-SPI cross-check that stops on disagreement, live Marionette probe on real Zen, relabel the 7/7 as map accuracy.
+- F4 (minor): cu.py:1038 _input_line_changed returns True on size mismatch (fail-open); must return None.
+- F5 (combined design gaps): bulk harvest unbuilt (ground_many is 3N evals, not one-shot); Brave CDP DOM.getBoxModel/Accessibility.getFullAXTree absent from cdp.mjs; no exactly-once send ledger; no V12 sent-bubble gate; no V11 MutationObserver flag; no BiDi/Marionette handover protocol under the one-session constraint; step-6 loop hygiene unowned. Design must specify or explicitly defer each before implementation.
+- F6 (minor): clarify the item-12 numbering mismatch between amend log and coord log.
+
+Context from C1: MEMORY.md updated 02:57, ZT-C DONE, live lane now free, so baseline/benchmark runs can be scheduled. Still waiting: C2, C3, RT.
