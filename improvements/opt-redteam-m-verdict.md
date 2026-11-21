@@ -61,3 +61,52 @@ SURVIVES means the method stands as written; the note names what to watch, not w
 - opt-crawl-src-20261121.md: AMEND. Update the stale items: the `re` cause is solved (section 0.2), the F3 cleanup state is done-and-redone with a recurrence (section 0.2), the guard_reply/supervise line citations drifted (sections 1.2, 1.3). The code-path analysis itself survives; the flicker log gap (file absent, S-0.10) stands as recorded.
 - opt-crawl-web-20261121.md: SURVIVES as a base, with one orphan: the synthesis step 2 (Chronotope late binding, S6, 0/100 to 100/100, plus PUSV pre-dispatch check S5) is adopted by no council method and rejected by none (Attack 11). M1 B must adopt it (re-read the DOM rect immediately before dispatch) or record a reasoned rejection.
 - opt-crawl-zen-20261121.md: SURVIVES as a base. Gap updates: G-01 CLOSED (M2 direct read), G-04 CLOSED (Y13r2 final 2fee242 BLOCK), G-06 CLOSED (launcher found by F3), G-09 CLOSED (F1 council 3 AMEND). Still open: G-02 (run_live.py WD never takes zen_dom.lock), G-03 (wedge mechanism), G-05 (Zen-internal workspaces, no scenario), G-07 (ZT-B has not run), G-08 (no pre-restart snapshot for the 22:36 restart), G-10 (new-conf ldd output never saved), G-11 (run_live.py ensure_visible replacement unverified), G-12 (ZT-00 text drift + wrong path), G-15 (22:03-22:06 trigger), G-16 (Obsidian Web Clipper unexamined).
+
+## 5. Exact amendments, consolidated (what Worker OPT must apply)
+
+Apply in this order; each is one commit on the verdict file it amends, pushed immediately.
+
+- AM-1 (M1 A2). Strike A1-A6 from M1 A step 2. Keep A7 only: assert the exact envelope string 'session guardian startup failed: cursor guard reply is not valid JSON' in stdout in tests/test_cursor_session.py, replacing the 'not valid JSON' substring assertion at line 791. Re-pin line citations to current code (guard_reply scripts/cursor_theme.py:104, supervise scripts/cursor_session.py:212). Require an independent re-run of the tests; F1's "34 OK" claims are self-reported.
+- AM-2 (M1 A4). Add precondition 0: slot health verified AFTER the last tab-close, immediately before activation (POST /session once, or BiDi getTree). Prove the lock-holding wrapper exists as a file with a path before step 4 runs, or record that activate-cursor-guard.py:63 already holds the lock and no wrapper is needed.
+- AM-3 (M1 A6). Quantify the shader warm-up window in seconds with a measurement, decide marker-publish vs code gate, and name the refusal behavior (what the session prints, what the remedy is, whether a bypass exists) before the gate lands.
+- AM-4 (M1 B1). Add the act-now pointer to the require_session refusal text (scripts/cu.py:2599-2602), or strike the B1 gate. Record in the M1 verdict that the F2 rehearsal ran while G-F1-BEFORE-F2 was NOT green and covers the fallback path only.
+- AM-5 (M1 B3). Re-verify is_session_start_failure (scripts/first_action.py:157-177) against post-392bc09 error strings, one test per branch by an independent checker. Measure the session-start distribution (at least 10 starts, cold and warm) before the 20s deadline goes live as the default. Test the transient-socket case for session_live() (scripts/overlay.py:146-161).
+- AM-6 (M1 B4, M2 D-7, ORDER O-1). Replace the 28-tab target with the 22:56 baseline: 14 real tabs + 1 sacrificial, blanks closed. Add the provenance rule: never close window/new-created tabs via Marionette teardown without a post-close slot check (POST /session once, or BiDi getTree) after EVERY close batch. Rank 1 closes only on a G-RESTORE verification taken AFTER the last tab-close of the rank, with no tab-close between verification and closure.
+- AM-7 (M1 C1 step 3). Specify daemon-owned indicator only for the kill proof, with the session alive through the proof.
+- AM-8 (M2 D-2). Restate the omni.ja veto on its cited grounds (repack on every Zen update, restart already clears the zombie). Either cite a source for the signature premise or strike it.
+- AM-9 (M2 D). Add teeth to D-3: the worker that observes a slot failure saves the BiDi getTree + tab list to files before any other step and names the file paths in its log. Pull D-6 (repo-code fixes) earlier in the execution order on cost grounds: the restart tax is about 2-3 minutes plus one unflushed tab per occurrence, paid 7 times in one evening.
+- AM-10 (M2 E-1, E-3). Turn E-1 into a live probe: run `hl.dsp.focus({ workspace = "N" })`, verify with activeworkspace + clients + screenshot, save the outputs. Make E-3 conditional on the probe passing. Record the launcher command as found (`omarchy-menu toggle root`, SUPER+SPACE, ~/.config/hypr/bindings.lua). Cite the local-only keybind record (ZK probe, commit 81a3bc4: customKeys.json, 3 customized keys, file + defaults merge) for Zen-side keybinds, never a repo file.
+- AM-11 (M2 E-4). Name who enforces the signature-before-restart rule and how (the checker role verifies the signature files exist before any restart is approved).
+- AM-12 (M2 F, ORDER O-2). Strengthen the A3 marker with a registration read-back after layer() returns, or downgrade O-2 to "proves the calls returned" and keep the registration question open after the retry.
+- AM-13 (M2 G). Add one sentence to G-7 Phase 2: switch-away-and-back is a diagnostic on a test tab with the owner away, never a recovery step, and must not be copied into the fix ladder. Close G-12 (ZT-00 step-4 wording, zen_dom.py path) before ZT-B runs. Cite the H3 acceptance in a council paper or log entry, not only MEMORY.md 22:57. Name Y13g's deliverable (fix diff + fresh re-review) as the rank-5 gate item.
+- AM-14 (ORDER O-3). Name the readiness judge (Worker OPT) and the written checklist (the gate list per run); require the decision logged with the gate states at decision time.
+- AM-15 (ORDER O-5). Name the scrub date and owner, price the re-clone, or defer plainly after the final test. Cite the sweep behind the 71 lines / 45 files PII count.
+- AM-16 (ORDER O-7). Set a review date for the E1 PARKED decision, or state explicitly that parking is permanent pending the owner re-opening it.
+- AM-17 (ORDER sections 2, 3). State that the three test roles are sequential, not parallel lanes (reconciling the 3-role rule with the 2-lane cap). Name the logging enforcement (brief template line, or a log-completeness check by the checker role).
+- AM-18 (ORDER P0, Q-6). Record the solved `re` cause (Y13r2 shim A6e, VMFIX c16dd4e) in ORDER P0 and close Q-6. Narrow the G-VMFIX watch to a pre-run smoke test and the freeze rule to shim-class causes.
+- AM-19 (ORDER 5.2, section 4). Reconcile 5.2 with the M2 correction and the F3 introspection. Archive section 4.3 (target exceeded, 456 at 23:05).
+- AM-20 (commit method, all verdicts). Add the pre-commit `git diff --cached --stat` review, recorded in the log, to Rule 3 / CM-3. Add a post-merge content check for conflicted files (the 23:05 merge resolved 3 conflicts by keeping both sides). Resolve the 136-vs-145 tooltip gap with a second timed GraphQL read or drop the cache explanation.
+- AM-21 (M1 B, WEB S6). Adopt Chronotope late binding in M1 B (re-read the DOM rect immediately before dispatch, record E/O/D/A clocks) or record a reasoned rejection. Do not leave the WEB crawl's synthesis step 2 undecided.
+- AM-22 (ORDER A-4, O-6). Measure the diagnose_body pre-flight false-positive rate and perturbation cost on healthy tabs before O-6 becomes a gate on ranks 5-7.
+
+## 6. Killed outright: none. Nearest calls
+
+No method is killed. Three items inside surviving methods are struck, not amended:
+
+- STRUCK-1. M1 A step 2 items A1-A6 as prescriptions. They are done in code (392bc09, 5b11696). Executing them again is wasted work with merge-conflict risk on scripts/cursor_session.py. Replaced by AM-1 (keep A7 only).
+- STRUCK-2. M2 D-7's 28-tab target. It contradicts the executed cleanup and the owner steer. Replaced by AM-6 (14 real + 1 sacrificial).
+- STRUCK-3. ORDER 4.3 deadline arithmetic (gap ~95, 68 minutes left). The target is exceeded (456 at 23:05). Archived, not repaired.
+
+If Worker OPT wants a kill, the closest candidate is the F no-reload ruling's status as "settled": it rests on parse-2 determinism from one load run (n=1). This redteam does NOT kill it, because its falsifier (marker absent in the F-8 load-only trial promotes reload to next test) is well-formed. Kill it only if the load-only trial shows the marker absent and the reload is then refused as well.
+
+## 7. What survives, and handoff notes for Worker OPT
+
+Survives without amendment: M1 A1 (closed), A3, A5, B2, B5, B6, C2, O-4, O-6 (with the P-12 measurement owed), M2 CM-1, CM-2, CM-4 (mechanism confirmed by the merge), CM-5, CM-6, the D throw-site chain, the F1/F2 code fixes, the restart ladder commands, the V2 and stale-geckodriver deaths, the indicator idle innocence, the WEB base, the ZEN base with updated gaps.
+
+Handoff notes:
+
+- The single most urgent amendment is AM-6 (D-7/O-1/B4): the cleanup that rank 1 is executing is the thing re-wedging the slot. Every rank that follows pays for it until the provenance rule and the post-close slot check land.
+- The second most urgent is AM-12 (marker overclaim): the Y6 retry's success criterion claims a proof the specified marker cannot give. Settle it before the 4-8 hours of A1-A10 fix work are spent.
+- Y13g has produced nothing observable. If it stays silent, Worker OPT should record the stall and reassign, per the kill rule (15 minutes, no progress, stop and report), rather than let rank 5 wait on an invisible worker.
+- The graph target is exceeded (456 vs 240). No further commits are needed for the number. The commit method's remaining value is reviewability, not the count; say so, or the pressure to commit small-and-many continues past its payoff.
+- This redteam's own correction record: section 0 of the Attacker paper claimed zero merges by 23:05 (N-5). That claim is WITHDRAWN, overtaken by merge 0ac4311 at 23:05. The correction is in Attacker section 6 (F-2). No other claim in these papers is withdrawn.
