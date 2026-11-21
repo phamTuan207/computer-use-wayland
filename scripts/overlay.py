@@ -498,17 +498,21 @@ def cmd_acquire(args):
         label = args.label or _label_for(args.agent, args.method)
         reply = _send_socket({'command': 'acquire', 'agent': args.agent,
                               'method': args.method, 'pid': args.pid})
+        reply['label'] = label
     except Exception:
         # Re-review D1: remove the just-added holder on failure, or the
         # entry (pid None on the CLI path) stays in holders.json forever:
         # prune_dead_holders only drops int pids, so it can never heal it,
         # and the stale entry keeps the pill up after the run ends.
+        # The label assignment stays inside the try: a non-dict reply
+        # (unreachable through the real daemon, every reply is a dict
+        # literal) would raise TypeError here and leak the same way
+        # (D1 re-check hardening note).
         try:
             remove_holder(args.agent, args.pid)
         except Exception:
             pass
         raise
-    reply['label'] = label
     _log('acquired', agent=args.agent, method=args.method, holders=len(holders))
     print(json.dumps(reply, sort_keys=True))
     return 0
