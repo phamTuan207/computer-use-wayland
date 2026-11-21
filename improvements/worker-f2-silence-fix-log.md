@@ -614,3 +614,34 @@ omitted; append as it happens, never batch at the end)
   (globals().update overwrote __file__ before os.remove). NOT a
   foreign process. VMFIX restored it durably (commit c16dd4e,
   dpkg -V clean). This log's R6 "cause UNKNOWN" is superseded.
+
+- 23:03 (T+1380s) rule doc updated (CLI-first, log-everything,
+  commit-small-and-many, Lauren Tan no-cutting-steps, typing needs a
+  window observation, Zen urlbar-click finding, rehearsal measured
+  numbers). Committed 82539bf, pushed, ls-remote verified. 9th F2
+  commit.
+- 23:03 (T+1380s) owner (MEMORY.md): DEFERRED, LOW: Zen keybinds.
+  Sometime go into Settings, Shortcuts of Zen on his machine, record
+  the Zen keybinds into the computer-use copy ON THE MACHINE
+  (machine-specific layer, local-only), do NOT push to the repo. Not
+  important, do later. Not done; saved for later. Noted as a
+  follow-up: knowing the keybinds (e.g., Ctrl+L) helps diagnose the
+  urlbar-click finding, but it is a separate deferred task, not part
+  of F2.
+- 23:04 (T+1440s) council + redteam spawned (4 subagents, parallel):
+  council 1 (code correctness), council 2 (evidence + measurement),
+  council 3 (rule + error-file plan), redteam (attack the fix).
+  Each writes its verdict to improvements/worker-f2-council-1/2/3.md
+  or improvements/worker-f2-redteam.md and returns GO/AMEND/BLOCK
+  to F2. F2 commits the verdict files. No code changes by reviewers,
+  no live driving, no commits by reviewers.
+- 23:04 (T+1440s) error-file prep (not yet written, waits for the
+  council verdicts): located the exact lines in
+  ~/workspace/cf26-upload/LOI-VA-GIAI-PHAP-TOAN-BO-20261121.md.
+  H2 fix line is line 307 ("Cách sửa: CHƯA XÁC ĐỊNH. Cần đo think
+  time từng bước..."). G27 ends line 292, Part H starts line 294,
+  so G28 goes after G27. Part J exists (J10 at line 694). The update
+  will be: H2 fix line -> the act-now path with the measured numbers,
+  new G28 (screen observation cannot type), the urlbar-click finding,
+  R6 root cause solved. The error file is NOT in the repo, so it is
+  NOT committed.
