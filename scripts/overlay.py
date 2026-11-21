@@ -99,12 +99,23 @@ def save_holders(holders):
     tmp.replace(HOLDERS_FILE)
 
 
+def _holder_key(agent, pid=None):
+    """One entry per live run: key by (agent, pid) when a pid is known,
+    else by the bare agent name (backward compat for callers and old
+    holders.json entries that carry no pid)."""
+    if isinstance(pid, int) and pid > 0:
+        return '%s:%d' % (agent, pid)
+    return agent
+
+
 def add_holder(agent, method, pid=None):
     """Record a holder under the lock. Returns (holders, is_new)."""
     with _holders_lock():
         holders = load_holders()
-        is_new = agent not in holders
-        holders[agent] = {
+        key = _holder_key(agent, pid)
+        is_new = key not in holders
+        holders[key] = {
+            'agent': agent,
             'method': method,
             'acquired': datetime.now().astimezone().isoformat(timespec='seconds'),
             'pid': pid,
@@ -113,12 +124,28 @@ def add_holder(agent, method, pid=None):
         return holders, is_new
 
 
-def remove_holder(agent):
-    """Remove a holder under the lock. Returns (holders, was_present)."""
+def remove_holder(agent, pid=None):
+    """Remove a holder under the lock. Returns (holders, was_present).
+
+    With a pid, only that run's entry is removed, so a concurrent
+    same-agent run keeps its pill (redteam A4). Without a pid, all of
+    the agent's entries are removed (backward compat for the CLI and
+    the hold() helper). A bare-agent key from before the rekey is
+    removed in both cases.
+    """
     with _holders_lock():
         holders = load_holders()
-        was_present = agent in holders
-        holders.pop(agent, None)
+        was_present = False
+        if isinstance(pid, int) and pid > 0:
+            for key in (_holder_key(agent, pid), agent):
+                if key in holders:
+                    holders.pop(key, None)
+                    was_present = True
+        else:
+            for key in list(holders):
+                if key == agent or (agent and key.startswith(agent + ':')):
+                    holders.pop(key, None)
+                    was_present = True
         save_holders(holders)
         return holders, was_present
 
@@ -235,26 +262,32 @@ class Daemon:
             return False
 
     def _show_label(self, label):
-        """Show the pill with the given label, via whoever owns it."""
-        if self.owner == 'daemon' and self.native is not None:
+        """Show the pill with the given label, via whoever owns it.
+        Returns True only when the show was acknowledged (redteam A3):
+        a failed show must not be reported as visible."""
+        if self.owner == 'daemon':
             if not self._ensure_native():
-                return
+                return False
             try:
                 self.native.command('label ' + label)
                 self.native.command('show')
+                return True
             except (OSError, RuntimeError):
                 if self._ensure_native():
                     try:
                         self.native.command('label ' + label)
                         self.native.command('show')
+                        return True
                     except (OSError, RuntimeError):
                         _log('native_command_failed')
+                return False
         elif self.owner == 'session':
-            session_label(label)
-            session_live()
+            return bool(session_label(label) and session_live())
+        return False
 
     def apply_holders(self):
         """Reconcile pill state with the holder registry. Returns status."""
+        prune_dead_holders()
         holders = load_holders()
         with self.lock:
             if not holders:
@@ -266,7 +299,8 @@ class Daemon:
                     self._close_native()
                 return {'visible': False, 'owner': 'none', 'holders': {}}
             latest = sorted(holders.items(), key=lambda kv: kv[1].get('acquired', ''))[-1]
-            label = _label_for(latest[0], latest[1].get('method', ''))
+            label = _label_for(latest[1].get('agent', latest[0]),
+                               latest[1].get('method', ''))
             live = session_live()
             if live and self.owner != 'session':
                 if self.owner == 'daemon':
@@ -284,7 +318,10 @@ class Daemon:
                     _log('native_spawn_failed', error=str(error))
                     return {'visible': False, 'owner': 'none', 'holders': holders,
                             'error': str(error)}
-            self._show_label(label)
+            if not self._show_label(label):
+                return {'visible': False, 'owner': self.owner,
+                        'holders': holders, 'label': label,
+                        'error': 'pill show failed'}
             return {'visible': True, 'owner': self.owner, 'holders': holders,
                     'label': label}
 
@@ -351,7 +388,8 @@ class Daemon:
                                    req.get('pid'))
                         reply = self.apply_holders()
                     elif cmd == 'release':
-                        holders, _ = remove_holder(req.get('agent', ''))
+                        holders, _ = remove_holder(req.get('agent', ''),
+                                                   req.get('pid'))
                         reply = self.apply_holders()
                         if not holders:
                             reply['daemon_exiting'] = True
@@ -418,6 +456,7 @@ def _send_socket(req, timeout=10):
 
 
 def _ensure_daemon():
+    prune_dead_holders()
     if _daemon_running():
         try:
             _send_socket({'command': 'status'}, timeout=3)
@@ -466,14 +505,15 @@ def cmd_acquire(args):
 
 def cmd_release(args):
     if not _daemon_running():
-        holders, was_present = remove_holder(args.agent)
+        holders, was_present = remove_holder(args.agent, args.pid)
         _log('released_no_daemon', agent=args.agent, was_present=was_present)
         print(json.dumps({'visible': False, 'owner': 'none', 'holders': holders}))
         return 0
     try:
-        reply = _send_socket({'command': 'release', 'agent': args.agent})
+        reply = _send_socket({'command': 'release', 'agent': args.agent,
+                              'pid': args.pid})
     except (OSError, ValueError):
-        holders, _ = remove_holder(args.agent)
+        holders, _ = remove_holder(args.agent, args.pid)
         reply = {'visible': bool(holders), 'owner': 'none', 'holders': holders}
     _log('released', agent=args.agent)
     print(json.dumps(reply, sort_keys=True))
@@ -542,6 +582,7 @@ def main(argv=None):
     acquire.set_defaults(func=cmd_acquire)
     release = sub.add_parser('release')
     release.add_argument('--agent', required=True)
+    release.add_argument('--pid', type=int, default=None)
     release.set_defaults(func=cmd_release)
     status = sub.add_parser('status')
     status.set_defaults(func=cmd_status)
