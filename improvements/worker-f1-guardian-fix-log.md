@@ -1124,3 +1124,37 @@ council 3 (5 steps, stdout and stderr recorded separately).
   a free live slot. The Marionette slot re-wedged 22:56:12 and F3b
   (restart 2) has not reported an outcome yet, so the live activation
   waits. No plugin load is attempted tonight until that gate clears.
+
+## 23:44-23:52 - Durability (R1/R2): the sync ALREADY validates the manifest
+- I first added a _check_visuals_manifest step to sync-installed.py
+  main(), then REVERTED it: it was redundant. The sync already has
+  _validate_manifest (since dbaba59, Nov 16), called from
+  _required_staged_files during _sync, which raises SyncError('visuals
+  manifest profile_sha256 does not match hyprglass-local-optics.lua')
+  on a stale pin. My new step could never add value: if the existing
+  check passes, mine passes too; if it fails, _sync raises before mine
+  runs. Dead code, removed. Lesson: read the existing validation before
+  adding a new one.
+- So the F1 drift was NOT a missing-check problem. The check existed
+  since Nov 16, before the blur-0.15 drift (Nov 20). The drift happened
+  because the repo's manifest and optics drifted WITHOUT a sync being
+  run on the laptop repo: the optics file stayed at 09a8df7 (blur 0.0)
+  while the manifest pinned d27ad0a (blur 0.10), two different stale
+  commits, and no sync ran to catch the mismatch. The b2afcd1 change
+  re-pinned the INSTALLED manifest but never the repo manifest. The
+  durability gap is therefore the manual re-pin step
+  (refresh-visuals-manifest.py) not being run whenever the optics
+  change, not a missing sync check. That step stays a tracked
+  follow-up: wire the re-pin into the optics-change workflow (or into
+  setup.py), and add the post-login self-check (R1) so a loader
+  failure is noticed at login, not at first use.
+- What I DID land: a regression test in test_sync_installed.py
+  (test_stale_visuals_manifest_fails_the_sync) proving the sync fails
+  on a stale manifest pin, pinning the pre-existing _validate_manifest
+  as a guard. Sync-installed.py itself is unchanged (git diff empty).
+  Evidence: 9 sync tests OK in 2.007s on the VM, including the new one.
+- The remaining tracked durability items (not done tonight): R10 (the
+  30s fresh-login gate is single-shot, no retry; add a retry or a
+  post-login check so a missed window is noticed), and the re-pin
+  workflow above. The R3 gate, the wrapper, and the loader repair are
+  the parts that are done and proven.

@@ -190,6 +190,17 @@ class SyncInstalledTests(unittest.TestCase):
         for name in (*sync.HAND_PATCH_BACKUPS, *sync.COLD_TESTS):
             self.assertTrue((snapshot / 'trees' / name).is_file(), name)
 
+    def test_stale_visuals_manifest_fails_the_sync(self):
+        # R1/R2: the F1 drift was an optics change whose manifest was never
+        # re-pinned, so the login loader failed silently from then on. The
+        # sync must fail loudly instead of publishing the drift. The check
+        # is the pre-existing _validate_manifest (since dbaba59, Nov 16);
+        # this test pins it as a regression guard.
+        (self.repo / 'native/hyprglass-local-optics.lua').write_text('return {changed=true}\n')
+        code, output, error = self._run([])
+        self.assertNotEqual(code, 0, output)
+        self.assertIn('does not match hyprglass-local-optics.lua', error)
+
     def test_runtime_and_history_files_are_preserved(self):
         keep = {
             'backups/keep.txt': 'backups sentinel\n',
