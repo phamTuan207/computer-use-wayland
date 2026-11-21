@@ -3478,6 +3478,115 @@ Muse: không có yêu cầu mới (không có commit coord: mới, HEAD 5d77262 
 Agent: không còn agent nào đang chạy, tất cả đã done, không cần cứu.
 Hành động: chỉ ghi khối này và push, watchdog tiếp tục vì đợt 8 chưa xong hẳn.
 
+## Watchdog đợt 8, 05:37 ngày 22/11
+Việc 1: cài xong (ef01dab, 4.5.0), sweep vẫn chặn, chờ chủ xác nhận chạy clone, không có file mới từ 04:47. Việc 2: XONG HẲN, đã push hết.
+Muse: không có yêu cầu mới (chỉ có commit watchdog của clone2, 4d61df9, coord/clone1.md không đổi từ watermark 0e8b308).
+Agent: không còn agent nào đang chạy, tất cả đã done, không cần cứu.
+Hành động: chỉ ghi khối này và push, watchdog tiếp tục vì đợt 8 chưa xong hẳn.
+
 ## Chu xac nhan cho clone1 chay sweep, 05:47 ngay 22/11 (clone2 chuyen loi)
 
 Chu da xac nhan truc tiep trong chat luc 05:47 ngay 22/11: clone1 DUOC chay clone o ~/workspace/tools/last30days-skill (HEAD ef01dab, SKILL.md 4.5.0) tren may cua clone1 cho sweep batch 8 task 1. Chay 3 sweep da len ke hoach nhu brief (DOM grounding, accessibility tree grounding, single-observation multi-action), --emit=json, --auto-resolve, --no-browser-cookies, khong key, moi lan 1 thu muc rieng duoi ~/workspace/b8t1-sweep/, ghi wall clock va elapsed do engine bao. Blocked task 1 duoc go.
+
+## Watchdog đợt 8, 05:47 ngày 22/11
+Việc 1: ĐÃ GỠ CHẶN, sweep đang chạy. Chủ xác nhận 05:47 cho chạy clone (ef01dab, 4.5.0), đã giao agent sweep chạy 3 sweep (DOM grounding, a11y grounding, single-observation multi-action), --emit=json --auto-resolve --no-browser-cookies, không key, mỗi lần 1 thư mục dưới ~/workspace/b8t1-sweep/. Việc 2: XONG HẲN, đã push hết.
+Muse: CÓ yêu cầu mới, commit coord: 9514518, chủ xác nhận chạy sweep, clone2 chuyển lời. Đã làm theo ngay: giao agent sweep.
+Agent: không còn agent cũ nào chạy, tất cả đã done. Agent sweep mới spawn, đang khởi động.
+Hành động: xử lý xung đột rebase, giữ cả khối 05:37 và mục xác nhận của chủ, rebase 28089fd lên 9514518, ghi khối này và push. Watchdog tiếp tục vì đợt 8 chưa xong hẳn.
+
+## ĐỢT 8, VIỆC 1, 05:49 ngày 22/11 - CHỦ ĐÃ XÁC NHẬN, SWEEP ĐANG CHẠY
+
+Chủ xác nhận trong chat lúc 05:49 +07 ngày 22/11: cho chạy clone ở
+~/workspace/tools/last30days-skill (HEAD ef01dab, SKILL.md 4.5.0) để làm
+sweep đợt 8, hiểu rằng output của clone đã không qua kiểm tra
+execution-risk. Agent sweep tiếp đã giao: đọc đủ references/runtime.md và
+references/research-runbook.md trước mọi lệnh engine, rồi chạy 3 sweep
+(DOM grounding, accessibility tree grounding, single-observation
+multi-action) với --emit=json, --auto-resolve, --no-browser-cookies,
+không key, mỗi lần 1 thư mục lưu riêng dưới ~/workspace/b8t1-sweep/,
+ghi wall clock và elapsed do engine báo, chạy nối tiếp không song song
+(bộ nhớ chật). Báo cáo cập nhật vào
+docs/clone1-last30days-sweep-20261122.md.
+
+## ĐỢT 8, VIỆC 1, 05:53 ngày 22/11 - SWEEP XONG, BÁO CÁO ĐÃ PUSH, COUNCIL + REDTEAM ĐANG CHẠY
+
+Sweep chạy 22:50:11Z đến 22:51:14Z, 3 lần exit 0, 33 kết quả (10 + 9 +
+14), đúng cờ --emit=json --auto-resolve --no-browser-cookies, không
+key, nối tiếp. Không có implementation mới: Turbo-Browser-MCP 0 hit
+trong cả 3 JSON (run 3 dùng topic khác clone2 nên không gặp lại).
+Tìm được: BotCircle issue 8 (2026-10-22) tái hiện, 2 explainer
+trong cửa sổ (Utilix 2026-10-24, SkillVeris 2026-10-28) củng cố
+thiết kế hybrid đã có. Báo cáo docs/clone1-last30days-sweep-20261122.md
+453 dòng, 0 dấu gạch dài, đã push. Lưu ý trung thực trong báo cáo:
+3 lệnh engine do agent trùng lặp gõ (giao 2 lần), agent báo cáo đã
+kiểm tra lại mọi số từ artifact trên ổ; điều phối đã kiểm tra lại
+độc lập: số kết quả 10/9/14, thời gian engine 12.2/10.9/15.1 s,
+generated_at, freshness_verdicts rỗng, source_status, BotCircle,
+Utilix, SkillVeris, arXiv 2510.10666 đều khớp JSON gốc. Council 3
+người + redteam đang chạy cho báo cáo sweep.
+
+## Watchdog đợt 8, 05:57 ngày 22/11
+Việc 1: SWEEP XONG, council 1/2/3 + redteam XONG HẾT. Council 1: mục 0-2 CONFIRMED, council 2: mục 3 stands, council 3: mục 4-6 SURVIVE, redteam: GO SURVIVES, còn 2 sai sót W1 W2 + 5 claim chưa kiểm + 6 lỗi nhỏ ở tầng citation, chờ điều phối quyết có sửa không. Việc 2: XONG HẲN, đã push hết.
+Muse: không có yêu cầu mới (không có commit coord: mới từ watermark 9514518, chỉ có commit clone1 và 1 commit watchdog của clone2).
+Agent: không còn agent nào đang chạy, tất cả đã done, không cần cứu.
+Hành động: chỉ ghi khối này và push. Cả 2 việc đợt 8 đã xong council + redteam, còn chờ báo cáo cuối đợt 8 trong coord rồi mới dừng watchdog.
+
+## BATCH 8 - FINAL REPORT (06:00 22/11) - DONE, BOTH TASKS CLOSED
+
+Task 1, last30days install + sweep: DONE. Install by git clone into
+~/workspace/tools/last30days-skill, HEAD ef01dab, SKILL.md 4.5.0,
+diff from reviewed f5d0e44 is 1 commit, 7 files, 238 insertions,
+7 deletions, matching clone2 exactly. Sweep RUN after the user
+confirmed at 05:49 +07 in chat: 3 engine runs, 22:50:11Z to
+22:51:14Z, all exit 0, sequential, 33 kept results (10 + 9 + 14),
+engine times 12.2/10.9/15.1 s, flags --emit=json --auto-resolve
+--no-browser-cookies, keyless, one save dir per run under
+~/workspace/b8t1-sweep/. No new usable implementation in these
+runs: Turbo-Browser-MCP 0 hits, because run 3 used the planned
+topic "single observation multi-action browser agents" while
+clone2's run 3 used "DOM snapshot element grounding browser
+agents", so these runs neither confirm nor refute it. Found:
+BotCircle issue 8 (2026-10-22, relevance 0.2834) reproduces the
+blind-click corroboration, and 2 in-window explainers (Utilix,
+published 2026-10-24, updated 2026-11-11; SkillVeris, 2026-10-28)
+corroborate the hybrid design the team already has (tree first,
+pixels fallback, numbered overlays, verify after each action).
+Report docs/clone1-last30days-sweep-20261122.md, 491 lines after
+fixes. Council 1 (sections 0-2 CONFIRMED), council 2 (section 3
+stands), council 3 (sections 4-6 SURVIVE), redteam GO SURVIVES.
+Fixes applied per docs/batch8-fix-sweep-20261122.md: 2 wrong facts
+(Utilix top grounding not top overall, Bolt 0.2868 higher;
+BotCircle relevance 0.2834), undated grounding count 3 to 4
+(2 in-window + 3 out of window + 4 undated = 9), all 3 save dirs
+born 22:49:57.797Z, empty leftover run3-single-obs recorded,
+OpenDots label corrected, title-sourcing note added, BotCircle
+accents restored, 5 unverified claims marked unlogged or inference
+(memory figures, ps observation, 2 risk notices, install
+timestamps, "single" keyword inference). Nothing refuted. Honest
+note: the 3 engine commands were typed by a concurrent duplicate
+agent (task dispatched twice); every number was verified first-hand
+from the on-disk artifacts, by the report agent, all 3 councils,
+the redteam, and the coordinator.
+
+Task 2, CLICK-AMEND independent verification: GO, done and closed
+earlier. 6 suites all PASS on amend code, 181 tests in 1.375 s;
+13-suite set 315 tests OK in 2.239 s; all 12 fix items confirmed in
+code; fail-before reproduces the amend log exactly at base; 12-module
+neighbor set 209 tests with exactly 2 pre-existing failures, no
+regression; C12 viewport_origin CORRECT; G30 7/7. Council 1/2/3 +
+redteam done, fixes applied, all pushed.
+
+Still owed (needs Muse or the laptop, not this machine): live
+browser proof of the amend (suites use fakes, no Zen/Brave here;
+the 2-vision benchmark worker owns it); Turbo-Browser-MCP
+implementation read on this side (only clone2 read its tool
+surface); a sweep with API keys set would widen recall (X,
+YouTube, TikTok contributed nothing here); the batch 6 and batch 7
+leftovers recorded in the batch 7 final report.
+
+Batch 8 is DONE. Watchdog stops now.
+
+## ĐỢT 8, 06:01 ngày 22/11 - WATCHDOG ĐÃ DỪNG VÌ ĐỢT 8 XONG
+
+Báo cáo cuối đợt 8 đã push (cf49530). Watchdog batch8-watchdog-10m
+đã tắt.
