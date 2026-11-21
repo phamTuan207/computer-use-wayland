@@ -407,5 +407,30 @@ class HostEnvironment(unittest.TestCase):
             self.run_environment(base)
 
 
+    def test_omarchy_path_added_when_install_exists(self):
+        tuple_env = self.make_instance('explicit-signature')
+        base = self.base(**tuple_env)
+        with tempfile.TemporaryDirectory() as tmp:
+            with patch.object(cu, 'OMARCHY_DEFAULT_PATH', tmp):
+                found = self.run_environment(base)
+        self.assertEqual(found['OMARCHY_PATH'], tmp)
+
+    def test_omarchy_path_not_invented_when_install_absent(self):
+        tuple_env = self.make_instance('explicit-signature')
+        base = self.base(**tuple_env)
+        with patch.object(cu, 'OMARCHY_DEFAULT_PATH',
+                          '/nonexistent-omarchy-path'):
+            found = self.run_environment(base)
+        self.assertNotIn('OMARCHY_PATH', found)
+
+    def test_omarchy_path_explicit_value_never_overridden(self):
+        tuple_env = self.make_instance('explicit-signature')
+        base = self.base(**tuple_env, OMARCHY_PATH='/custom/omarchy')
+        with tempfile.TemporaryDirectory() as tmp:
+            with patch.object(cu, 'OMARCHY_DEFAULT_PATH', tmp):
+                found = self.run_environment(base)
+        self.assertEqual(found['OMARCHY_PATH'], '/custom/omarchy')
+
+
 if __name__ == '__main__':
     unittest.main()

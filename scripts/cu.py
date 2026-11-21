@@ -38,6 +38,11 @@ SESSION_KEYS = {'XDG_RUNTIME_DIR','WAYLAND_DISPLAY','DISPLAY','HYPRLAND_INSTANCE
                 'XDG_SESSION_TYPE','XDG_SEAT','XDG_VTNR','USER','HOME','LOGNAME','PATH',
                 'GDK_BACKEND','QT_QPA_PLATFORM','ELECTRON_OZONE_PLATFORM_HINT',
                 'MOZ_ENABLE_WAYLAND'}
+# Fixed upstream Omarchy install path. Omarchy CLI commands (agent usage,
+# plugin list, omarchy-shell) crash over plain SSH with KeyError
+# OMARCHY_PATH because only the desktop session sets it. environment()
+# sets it when the directory exists; never overrides an explicit value.
+OMARCHY_DEFAULT_PATH = "/usr/share/omarchy"
 _TUPLE_KEYS = ('XDG_RUNTIME_DIR','WAYLAND_DISPLAY','HYPRLAND_INSTANCE_SIGNATURE')
 _IDENTITY_KEYS = {'USER','HOME','LOGNAME','PATH'}
 _PLATFORM_KEYS = {'GDK_BACKEND','QT_QPA_PLATFORM','ELECTRON_OZONE_PLATFORM_HINT',
@@ -446,6 +451,23 @@ def _guard_state_home(base, selected):
         raise RuntimeError('donated HOME would change the already computed default computer-use state root')
 
 
+def _with_omarchy_path(env, default=None):
+    """Copy env with OMARCHY_PATH set when unset and the install exists.
+
+    Only the desktop session sets OMARCHY_PATH, so plain SSH sessions
+    lack it and Omarchy commands crash. The path is fixed upstream; set
+    it only when the directory exists so non-Omarchy machines are
+    unaffected. Never overrides an explicit value. The default resolves
+    at call time so tests can point it at a fixture directory.
+    """
+    if default is None:
+        default = OMARCHY_DEFAULT_PATH
+    out = dict(env)
+    if not out.get("OMARCHY_PATH") and os.path.isdir(default):
+        out["OMARCHY_PATH"] = default
+    return out
+
+
 def environment(base=None, *, refresh=False):
     """Return a new environment with one verified compositor session selected."""
     env=dict(os.environ if base is None else base)
@@ -461,16 +483,16 @@ def environment(base=None, *, refresh=False):
         else:
             env.pop('GTK_IM_MODULE',None)
             if token:
-                return env
+                return _with_omarchy_path(env)
             selected=_enrich_explicit_tuple(
                 env,_process_donors(),explicit_key,refresh=refresh)
             selected.pop('GTK_IM_MODULE',None)
             _guard_state_home(env,selected)
-            return selected
+            return _with_omarchy_path(selected)
     if token and not complete:
         raise RuntimeError('automation session has no pinned compositor tuple; refusing environment discovery')
     donors=_process_donors()
-    return _discovery_result(env,donors)
+    return _with_omarchy_path(_discovery_result(env,donors))
 
 def compositor_identity(env):
     values=_session_tuple(env or {})
