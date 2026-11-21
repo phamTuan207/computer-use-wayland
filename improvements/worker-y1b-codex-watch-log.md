@@ -127,3 +127,23 @@ best quality, not speed. Council + redteam debate every phase verdict.
   /tmp/y1b-verify/native/wtype (35,984 bytes, executes). Full suite run 2
   launched in background (log /tmp/y1b-fullsuite2.log). No verdict on
   the suite until run 2 lands.
+
+## 18:25 +07 | Full suite run 2: FAILED (failures=1, errors=4, skipped=16)
+- Ran 1467 tests (vs Y1 baseline2 1483; delta is branch drift, see below).
+- 2 of 4 errors are the known baseline errors (test_cursor_file g++
+  C++26, test_cursor_session import). The other 2 are MY worktree setup
+  again: test_wtype_native setUpClass needs generated
+  native/keyboard-protocol.c (present in main worktree, absent in fresh
+  worktree), and the 2 tc02 tests need tesseract on PATH
+  (scripts/tc02_controller.py _ocr_text does shutil.which('tesseract')
+  BEFORE the mocked subprocess.run; tesseract is NOT installed on the VM).
+- The 16-test delta vs baseline2: todolist-push advanced past the
+  y1-snippets branch point (e.g. commit 1399342 added
+  tests/test_a1_preflight.py, absent from the worktree). The verify
+  worktree is a clean checkout of origin/y1-snippets, so it lacks those
+  tests. Not a Codex deletion.
+- Decisive comparison launched: full suite on the BASE worktree
+  /tmp/y1b-base (87cd34f, pre-Codex) with the SAME setup (wtype binary +
+  generated protocol files copied). If base shows the same failures,
+  Codex introduced zero suite regressions. Y1's baseline2 log is gone
+  (/tmp is ephemeral), so it cannot be re-checked directly.
