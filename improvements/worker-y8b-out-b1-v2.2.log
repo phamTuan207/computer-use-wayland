@@ -1,0 +1,59 @@
+{"ok": true, "result": "3fbba432", "ms": 4}
+{"ok": true, "result": "022e068c", "ms": 1105}
+{"ok": true, "result": {"bodyDisplay": "block", "bodyOpacity": "1", "bodyVis": "visible", "countText": "6", "hasFocus": true, "htmlClassList": [], "innerLen": 576, "readyState": "complete", "rect": {"h": 580.5333251953125, "w": 1615}, "visState": "visible"}, "ms": 2}
+{"ok": true, "result": 0, "ms": 2}
+{"ok": true, "result": {"cardCount": 6, "count": "6", "ids": ["contact-card-alice-chen", "contact-card-bob-martin", "contact-card-clara-vance", "contact-card-david-kim", "contact-card-eva-rostova", "contact-card-spam-bot"], "names": ["Alice Chen", "Bob Martin", "Clara Vance", "David Kim", "Eva Rostova", "Spam Bot"]}, "ms": 2}
+{"ok": true, "result": "0f816751-c098-444c-9eb2-6aa204c65cdc", "ms": 2}
+{"ok": true, "result": "clicked", "ms": 59}
+{"ok": true, "result": {"display": "flex", "title": "Add New Contact"}, "ms": 2}
+{"ok": true, "result": "94b92eb8-64ef-4f7f-9f5f-e79bfbda40a6", "ms": 2}
+{"ok": true, "result": "typed", "ms": 6}
+{"ok": true, "result": "01513187-d58a-4ea2-a0ab-1e7d7c99fc53", "ms": 2}
+{"ok": true, "result": "typed", "ms": 7}
+{"ok": true, "result": "d233dbea-0574-4a6b-bbef-ade424277272", "ms": 1}
+{"ok": true, "result": "typed", "ms": 4}
+{"ok": true, "result": "701e61de-807a-4b09-8446-037b7c440fed", "ms": 1}
+{"ok": true, "result": "typed", "ms": 5}
+{"ok": true, "result": "Engineering", "ms": 2}
+{"ok": true, "result": "8ec4c15b-545e-48ae-a547-ed419b267ac7", "ms": 1}
+{"ok": true, "result": "typed", "ms": 5}
+{"ok": true, "result": "7904b135-8059-4d7b-af53-036f4b176351", "ms": 3}
+{"ok": true, "result": "clicked", "ms": 58}
+{"ok": true, "result": {"cardCount": 7, "count": "7", "frankEmail": "frank.s@example.com", "frankGroup": "Engineering", "frankName": "Frank Sinatra", "frankNotes": "Vocal Architect", "frankPhone": "+1-555-0106", "modalDisplay": "none"}, "ms": 2}
+{"ok": true, "result": "f3b4a6be-9ee4-4e25-8766-cb9c315f61d2", "ms": 1}
+{"ok": true, "result": "clicked", "ms": 54}
+{"ok": true, "result": {"display": "flex", "editId": "bob-martin", "phone": "+1-555-0102", "title": "Edit Contact"}, "ms": 2}
+{"ok": true, "result": "701e61de-807a-4b09-8446-037b7c440fed", "ms": 1}
+{"ok": true, "result": "cleared", "ms": 3}
+{"ok": true, "result": "typed", "ms": 8}
+{"ok": true, "result": "7904b135-8059-4d7b-af53-036f4b176351", "ms": 2}
+{"ok": true, "result": "clicked", "ms": 56}
+{"ok": true, "result": {"bobPhone": "+1-555-9999", "count": "7", "modalDisplay": "none"}, "ms": 2}
+{"ok": true, "result": "clicked_js", "ms": 3}
+{"ok": true, "result": {"cardFavorite": true, "favoriteCards": 1, "starActive": true, "starClass": "fav-star active is-favorite"}, "ms": 2}
+{"ok": true, "result": "16bd2e09-7cb8-42b6-a31c-1a9a180d59bb", "ms": 2}
+{"ok": true, "result": "clicked", "ms": 56}
+{"ok": true, "result": {"cardCount": 6, "count": "6", "spamCardPresent": false}, "ms": 3}
+{"ok": true, "result": "fa065146-e16e-4ac9-9bcc-6621c89c6460", "ms": 3}
+{"ok": true, "result": "typed", "ms": 5}
+{"ok": true, "result": {"cardCount": 1, "count": "1", "names": ["David Kim"], "search": "Kim"}, "ms": 2}
+{"ok": true, "result": "fa065146-e16e-4ac9-9bcc-6621c89c6460", "ms": 1}
+{"ok": true, "result": "cleared", "ms": 2}
+{"ok": true, "result": {"cardCount": 6, "count": "6", "names": ["Alice Chen", "Bob Martin", "Clara Vance", "David Kim", "Eva Rostova", "Frank Sinatra"], "search": ""}, "ms": 4}
+{"ok": true, "result": "Engineering", "ms": 3}
+{"ok": true, "result": {"cardCount": 3, "count": "3", "group": "Engineering", "names": ["Alice Chen", "David Kim", "Frank Sinatra"]}, "ms": 2}
+{"ok": true, "result": "all", "ms": 7}
+{"ok": true, "result": {"cardCount": 6, "count": "6", "group": "all", "names": ["Alice Chen", "Bob Martin", "Clara Vance", "David Kim", "Eva Rostova", "Frank Sinatra"], "search": ""}, "ms": 2}
+{"ok": true, "result": "f72ad7cf-3e93-4268-9fbb-5b6407a36b0b", "ms": 2}
+{"ok": true, "result": "clicked", "ms": 54}
+{"ok": true, "result": "Directory saved: 6 contacts (1 favorite)", "ms": 2}
+{"ok": true, "result": "6", "ms": 2}
+{"ok": true, "result": "", "ms": 2}
+{"ok": true, "result": "all", "ms": 2}
+{"ok": true, "result": "+1-555-9999", "ms": 2}
+{"ok": true, "result": {"cardFavorite": true, "starActive": true}, "ms": 2}
+{"ok": true, "result": {"cardPresent": false, "namePresent": false}, "ms": 2}
+{"ok": true, "result": {"cardPresent": true, "email": "frank.s@example.com", "group": "Engineering", "name": "Frank Sinatra", "notes": "Vocal Architect", "phone": "+1-555-0106"}, "ms": 2}
+{"ok": true, "result": {"failures": [], "passed": true, "score": 1, "state": {"banner": "Directory saved: 6 contacts (1 favorite)", "bobPhone": "+1-555-9999", "contactCount": 6, "favCount": 1, "saved": true}}, "ms": 2}
+{"ok": true, "result": "closed", "ms": 37}
+{"ok": true, "result": "deleted", "ms": 2}
