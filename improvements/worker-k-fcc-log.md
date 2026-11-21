@@ -56,3 +56,9 @@ testing, small commits, push often to todolist-push.
   dashes) and contain no ydotool references.
 - Fixed arithmetic error in test-01 (1325000 -> 1864000, 441666 -> 621333
   after recomputing 12*45000+7*82000+5*150000).
+- Wrote README.md for the fcc-k directory explaining how to run each checker
+  offline and the rules kept.
+- Committed in 3 small commits and pushed to todolist-push:
+  bab56ec (fixtures + checker), test cases, aeeae09 (log). After a remote
+  push from another worker, rebased onto origin/todolist-push and pushed as
+  a5d0849 (branch now in sync: local == origin == a5d0849).
