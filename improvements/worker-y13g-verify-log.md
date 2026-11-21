@@ -114,3 +114,32 @@ wall-clock Asia/Ho_Chi_Minh + elapsed since T0.
   PYTHONDONTWRITEBYTECODE=1 -m writes nothing (no __pycache__
   created). (f) Forged non-entry run_live .pyc refuses rc 2,
   no marker, kind pyc.
+- 00:27-00:28 +07 (T+~22m to T+~23m): A5 marker + remote-URL
+  suite DONE, 10/10 PASS in 9.3s (results a5.log). Setup:
+  synthetic bare repo + clone under ~/workspace/y13g-verify/a5/
+  (never the real repo). Driver bug found and fixed first:
+  launcher_check_driver.py required --ship-dir even for marker
+  checks (it printed its own docstring, rc 2); --ship-dir now
+  defaults to the repo dir. Marker logic runs with a git
+  test-double (a5/bin/git) that intercepts only `git remote
+  get-url origin` (returns the known URL) and `git fetch origin
+  todolist-push` (real fetch from the local bare, explicit
+  refspec); all other git calls pass through to real git. The
+  pin itself is verified with REAL git (case 6 + real-repo
+  control). Results: case 1 fake completion PASSES BY DESIGN
+  (subject spoof, documented limitation, not a pass); 3a
+  old-date completion vs newer abort refuses; 3b forged
+  FUTURE-date completion (2026-11-23 %ct) older in log position
+  than a genuine abort (2026-11-22 %ct) refuses via log-order
+  (state log confirms position order: abort first despite the
+  older %ct; old %ct code would have passed this); C1
+  completion newer than abort passes; C2 harness subject
+  refuses; C3 body-DONE under "Fix flake" refuses; C4
+  completion on the wrong path refuses; case 6 attacker repo
+  refuses on the remote URL in BOTH check_marker and
+  check_manifest (exact message: "git remote origin is
+  .../a5/attacker.git, not the known repo
+  https://github.com/phamTuan207/computer-use-wayland.git;
+  refusing (attacker fork?)"); real-repo control: pin passes
+  with real git, refuses "no Y6c completion marker on
+  todolist-push" (real state, as expected).

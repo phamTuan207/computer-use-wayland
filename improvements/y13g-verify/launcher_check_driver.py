@@ -68,9 +68,13 @@ def main(argv):
         else:
             print(f"unknown arg: {args[i]}", file=sys.stderr)
             return 2
-    if not ship_dir or check not in CHECKS:
+    if check not in CHECKS:
         print(__doc__, file=sys.stderr)
         return 2
+    if not ship_dir:
+        # Marker checks never touch SHIP_DIR; default it to the
+        # repo dir (or cwd) so the extraction still has a value.
+        ship_dir = repo or os.getcwd()
     funcs, consts = CHECKS[check]
     ns = extract_lib.extract_funcs(
         LAUNCHER, funcs, consts,
