@@ -278,4 +278,5 @@ Zen driving was done for this review.
 ## Commit
 
 Paper: `improvements/worker-y14b-fix-council-1.md` on
-`todolist-push`. Commit hash filled below after push.
+`todolist-push`. Paper commit: `0388381` (pushed, see the
+hash-record commit for this file's final state).
