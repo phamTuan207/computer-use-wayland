@@ -191,6 +191,15 @@ for(const field of [
 const unchanged=element('',{tagName:'INPUT',value:'same'});
 runResult=await run([unchanged],[{type:'set_value',ref:'e1',text:'same'}]);
 assert.equal(runResult.result.ok,true);assert.deepEqual(unchanged.events??[],[]);
+// AMEND4 item 10 (C1 G4): the mirror case, a changed value MUST fire
+// the synthetic notifications, input then change, in that order.
+// The suite used to assert only the zero-event side (unchanged
+// text), so a template that never dispatched would have passed.
+const changed=element('',{tagName:'INPUT',value:'hello'});
+runResult=await run([changed],[{type:'set_value',ref:'e1',text:'world'}]);
+assert.equal(runResult.result.ok,true);
+assert.equal(changed.value,'world');
+assert.deepEqual((changed.events??[]).map(e=>e.type),['input','change']);
 const rewritten=element('',{tagName:'TEXTAREA',value:'',onEvent:(_event,node)=>{node.value='rewritten';}});
 runResult=await run([rewritten],[{type:'set_value',ref:'e1',text:'exact'}]);
 assert.equal(runResult.result.ok,false);assert.equal(runResult.result.mutation_may_have_occurred,true);
