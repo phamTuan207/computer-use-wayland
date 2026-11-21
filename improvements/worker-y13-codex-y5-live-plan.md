@@ -358,16 +358,28 @@ autonomy per the Lauren Tan direction. Work directly with Muse.
   a step failure URL contains "/session/<id>/..." and must never
   count; wd_failures resets to 0 after a successful session
   creation). infra_blocked resets on any pass and on any non-INFRA
-  failure; first INFRA counts, a successful re-run resets it to 0, a
-  second INFRA increments again. A 30s WD HTTP timeout is INFRA
+  failure, EXCEPT fixture-unavailable and guard outcomes (guard
+  defect / guard inconclusive), which leave the streak unchanged.
+  AMENDMENT (redteam re-review M5, 21/11): the plan's original
+  wording said "any non-INFRA failure", but the runner (following
+  Y9's code precedent) deliberately does NOT reset on
+  fixture-unavailable / guard outcomes. The fail-safe direction is
+  kept: a fixture failure between two INFRA tests does not hide the
+  streak, so the run aborts sooner rather than later. First INFRA
+  counts, a successful re-run resets it to 0, a second INFRA
+  increments again. A 30s WD HTTP timeout is INFRA
   (match wording "timed out" / TimeoutError / URLError); a wait_for
   timeout is a live failure.
 - Mid-test hidden body: on ANY step failure, main runs diagnose_body
   once before classifying; TZ_STUCK_V1 / OTHER_HIDDEN reclassifies
   to INFRA and runs the ladder via ensure_visible; VISIBLE means the
-  live failure stands; FIXTURE_FAILURE / UNKNOWN stay live failures.
-  Test-05 has no mid-test navigation, so its exposure is load-time
-  plus this safety net; no general mid-test INFRA claim is made.
+  live failure stands; UNKNOWN stays a live failure. FIXTURE_FAILURE
+  splits (redteam re-review H4): a positively proven no-body
+  document (a snapshot with hasBody false and readyState complete)
+  is fixture-unavailable; a diagnose transport error (eval_error
+  present, or no snapshots) is INFRA. Test-05 has no mid-test
+  navigation, so its exposure is load-time plus this safety net; no
+  general mid-test INFRA claim is made.
 - A re-run is allowed ONLY for a test proven infra-blocked, max ONE
   per test, immediately after the failed attempt, logged with the
   attempt field; attempt-1 summary printed before the re-run;

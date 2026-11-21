@@ -85,12 +85,16 @@ RULES (from the v2 plan, all enforced in code below):
   a click that raises after the navigation is success-then-wait,
   proven by the post-reload status text, never by message matching.
 
-Usage (on the laptop, from /tmp/worker-y13-server):
-  cd /tmp/worker-y13-server && LIVE_SERVER_ROOT=/tmp/worker-y13-server \\
-  LIVE_SERVER_PORT=8771 LIVE_LOG=/tmp/worker-y13-live.jsonl WD_PORT=4452 \\
-  LIVE_OWNER_AWAY=1 flock -w 60 ~/.cache/agent-computer-use/zen_dom.lock \\
-  -c "python3 run_codex_y5.py all > /tmp/worker-y13-stdout.log 2>&1"
-  python3 run_codex_y5.py 01 02
+Usage (on the laptop, from /tmp/worker-y13-server). LAUNCH VIA
+launch_y13.py (council A F4): it performs the launch-time checks
+(go order asserted, handover token fresh, runner-quiet process
+check, predecessor ports free, no live geckodriver with a live
+parent) and then execs the runner under flock -w 60. Do NOT
+launch the runner directly; the direct command below is the
+equivalent only for reference.
+  cd /tmp/worker-y13-server && Y13_GO=1 python3 launch_y13.py all \\
+  > /tmp/worker-y13-stdout.log 2>&1
+  Y13_GO=1 python3 launch_y13.py 01 02
   python3 run_codex_y5.py --verify-manifest
 Output: one JSON summary line per test on stdout, a suite JSON line,
 per-step JSONL at LIVE_LOG (with attempt fields), per-test
@@ -101,6 +105,7 @@ import glob
 import hashlib
 import json
 import os
+import re
 import socket
 import subprocess
 import sys
@@ -172,7 +177,7 @@ MANIFEST_NAME = "codex-y5-manifest.json"
 # 10 fixtures. SHIPPED.md is not listed (it is generated at ship
 # time; its own md5 is recorded in the suite JSON via _read_shipped,
 # not self-checked).
-EXPECTED_MANIFEST_FILES = 26
+EXPECTED_MANIFEST_FILES = 27
 
 
 def now_iso():
@@ -256,7 +261,8 @@ def _check_handover():
     if os.environ.get("LIVE_OWNER_AWAY") != "1":
         return False, "LIVE_OWNER_AWAY is not 1"
     try:
-        tok = json.loads(HANDOVER_FILE.read_text())
+        raw = HANDOVER_FILE.read_bytes()
+        tok = json.loads(raw)
     except Exception as exc:
         return False, f"handover file unreadable: {exc}"
     try:
@@ -266,11 +272,11 @@ def _check_handover():
     if age < 0 or age > HANDOVER_MAX_AGE_S:
         return False, (f"handover token age {age:.0f}s outside "
                        f"0-{HANDOVER_MAX_AGE_S}s window")
-    try:
-        st = HANDOVER_FILE.stat()
-        fp = (float(tok["asserted_at_unix"]), st.st_mtime_ns, st.st_size)
-    except Exception:
-        return False, "handover file has no statable fingerprint"
+    # Redteam M6: fingerprint the token CONTENT (sha256 of the file
+    # bytes), not (asserted_at, mtime, size). A rewrite that
+    # preserves mtime with identical asserted_at and size would pass
+    # the old fingerprint; it cannot pass a content hash.
+    fp = hashlib.sha256(raw).hexdigest()
     if _HANDOVER_FP["fp"] is None:
         _HANDOVER_FP["fp"] = fp
     elif fp != _HANDOVER_FP["fp"]:
@@ -375,6 +381,32 @@ def _verify_manifest():
         checked += 1
         if got != want:
             bad.append(f"{rel}: want {want}, got {got}")
+    # Redteam M1: refuse unexpected files in the ship dir. The
+    # entry check above only verifies listed files; a planted
+    # live_metrics.py or a shadowing functools.py at top level
+    # would otherwise pass (the runner inserts the ship dir at
+    # sys.path[0], so a planted functools.py shadows the stdlib
+    # for both this file and run_live.py). Allowlist: manifest
+    # paths + the manifest itself + SHIPPED.md + __pycache__
+    # (bytecode the import generates at load; a planted top-level
+    # .py is still refused). The manifest-md5 pin the redteam also
+    # asked for is NOT implemented: it is self-referential (the
+    # pin lives in the runner, the runner is in the manifest, so
+    # changing the pin changes the manifest md5). The pin lives
+    # outside the ship instead: SHIPPED.md + the commit + the log
+    # record the manifest md5, and the agent verifies it at ship
+    # time via git.
+    allowed = {rel for rel, _ in entries}
+    allowed.add(MANIFEST_NAME)
+    allowed.add(f"{SUITE_DIR}/SHIPPED.md")
+    for p in base_dir.rglob("*"):
+        if p.is_dir():
+            continue
+        rel = str(p.relative_to(base_dir))
+        if rel.startswith("__pycache__/"):
+            continue
+        if rel not in allowed:
+            bad.append(f"unexpected file in ship dir: {rel}")
     return (not bad), checked, bad, _md5_of(
         Path(__file__).with_name(MANIFEST_NAME))
 
@@ -494,6 +526,24 @@ class Y13WD(WD):
         losing a user tab is not."""
         if getattr(self, "session", None) is None:
             return True
+        # Y13 v2 (council A F5): a registered test tab must NEVER sit
+        # in opened_tabs when the session is deleted, and the removal
+        # MUST happen BEFORE the close loop below: the loop would
+        # otherwise close a keeper test tab that was wrongly
+        # registered as opened. A registered tab found here is a
+        # bookkeeping bug; log it loudly. (Defense in depth;
+        # bootstrap/open_fixture already keep them out, so this
+        # normally removes nothing. Previously this loop sat AFTER
+        # opened_tabs was reset to [], where it was dead code.)
+        for handle in list(_TEST_TABS):
+            if handle in getattr(self, "opened_tabs", []):
+                print(f"[park] WARNING: registered test tab "
+                      f"{handle[:8]} was in opened_tabs; removing "
+                      f"(bookkeeping bug)", flush=True)
+                try:
+                    self.opened_tabs.remove(handle)
+                except Exception:
+                    pass
         for handle in list(getattr(self, "opened_tabs", [])):
             try:
                 self.switch(handle)
@@ -504,14 +554,6 @@ class Y13WD(WD):
             self.opened_tabs = []
         except Exception:
             pass
-        # Y13 v2: a registered test tab must never sit in
-        # opened_tabs when the session is deleted (defense in depth;
-        # bootstrap/open_fixture already keep them out).
-        for handle in list(_TEST_TABS):
-            try:
-                self.opened_tabs.remove(handle)
-            except Exception:
-                pass
         try:
             h = self.new_tab("about:blank", allow_hidden=True)
             try:
@@ -591,12 +633,32 @@ class Y13Runner(Runner):
         self.spec_step_count = 0
         self.audit_enabled = False
 
+    def _check_wall_cap(self, name):
+        """Council A F7: enforce the per-test wall cap DURING the
+        test, not only post-hoc in main(). The cap (spec Maximum
+        allowable latency) counts from Runner creation, so session
+        creation + open_fixture + every primitive count. A primitive
+        that starts after the cap raises immediately, so the trip
+        names the primitive in flight and its elapsed time. Runners
+        without a cap (bootstrap, smoke) are unaffected. The raise
+        is a plain RuntimeError, so main() classifies it as a live
+        failure, never INFRA."""
+        cap = WALL_CAPS.get(self.test)
+        if cap is None:
+            return
+        elapsed = time.perf_counter() - self.t0
+        if elapsed > cap:
+            raise RuntimeError(
+                f"wall cap exceeded: {elapsed:.0f}s > {cap}s at "
+                f"primitive {name!r}")
+
     def check(self, name, cond, detail=""):
         """Base check plus a timed JSONL record with the attempt
         field (C1 re-review F1 / C3 re-review F5). Without this
         override the base Runner.check only prints, so every
         intermediate check (including the load-bearing pinned ones)
         left no JSONL record at all."""
+        self._check_wall_cap(name)
         start = time.perf_counter()
         ok = super().check(name, cond, detail)
         ms = (time.perf_counter() - start) * 1000
@@ -615,12 +677,15 @@ class Y13Runner(Runner):
         return ok
 
     def step(self, name, op, fn):
+        self._check_wall_cap(name)
         start = time.perf_counter()
+        caught = None
         try:
             detail = fn()
             ok, error = True, None
         except Exception as exc:
             detail, ok, error = None, False, f"{type(exc).__name__}: {exc}"
+            caught = exc
         ms = (time.perf_counter() - start) * 1000
         if self.audit_enabled:
             self.spec_step_count += 1
@@ -629,6 +694,14 @@ class Y13Runner(Runner):
               f"{ms:.0f}ms detail={detail} error={error}", flush=True)
         if not ok:
             self.failures.append(f"{name}: {error}")
+            if caught is not None and ("INFRA:" in error
+                                       or "FIXTURE-UNAVAILABLE" in error):
+                # Redteam L1: classify on the UNWRAPPED exception,
+                # not on a substring of the wrapped message. The
+                # original raise reaches main's startswith match
+                # directly. (The substring matches in main stay as
+                # defense in depth for raises outside r.step.)
+                raise caught
             raise RuntimeError(f"step failed: {name}: {error}")
         return detail
 
@@ -742,6 +815,27 @@ def rebootstrap_tab(d, base, deadline=None):
         "INFRA: rebootstrap: no visible test tab after 3 attempts")
 
 
+def _proven_no_body(diag):
+    """Redteam H4: split diagnose_body's FIXTURE_FAILURE into a
+    genuine no-body document vs an eval transport failure (hung
+    driver). Only a diagnose that POSITIVELY proves "document
+    loaded, no body element" counts as a fixture failure: at least
+    one snapshot with hasBody false AND readyState complete, and no
+    snapshot with a body (contradictory samples mean instability,
+    not proof). A transport error (eval_error present, or no
+    snapshots at all) is NOT a proven no-body fixture; callers must
+    treat it as INFRA. The frozen base cannot be changed, so the
+    split lives here in the caller, not in diagnose_body."""
+    snaps = diag.get("snapshots") or []
+    if not snaps:
+        return False
+    if any(isinstance(s, dict) and s.get("hasBody") for s in snaps):
+        return False
+    return any(isinstance(s, dict)
+               and not s.get("hasBody")
+               and s.get("readyState") == "complete" for s in snaps)
+
+
 def _ensure_visible_inner(d, r, label="test tab", allow_swap=True):
     """Diagnose-first recovery ladder (Y4b design). Body of
     ensure_visible; the wrapper accumulates ladder time into
@@ -793,9 +887,16 @@ def _ensure_visible_inner(d, r, label="test tab", allow_swap=True):
               f"{_elapsed():.1f}s / 8.0s", flush=True)
         return True, False
     if diag["classification"] == "FIXTURE_FAILURE":
+        # Redteam H4: a transport error (hung driver) is INFRA,
+        # not a fixture failure. Only a positively proven no-body
+        # document raises FIXTURE-UNAVAILABLE.
+        if _proven_no_body(diag):
+            raise RuntimeError(
+                f"FIXTURE-UNAVAILABLE: {label}: no body element")
         raise RuntimeError(
-            f"FIXTURE-UNAVAILABLE: {label}: "
-            f"{diag.get('eval_error', 'no body element')}")
+            f"INFRA: diagnose transport error, not a proven "
+            f"no-body fixture: "
+            f"{diag.get('eval_error', 'no snapshots')}")
     _log_diag(r, diag, label, "initial")
     poll_end = min(deadline - 3.0, t0 + 2.0)
     while time.perf_counter() < poll_end:
@@ -806,9 +907,13 @@ def _ensure_visible_inner(d, r, label="test tab", allow_swap=True):
                   f"poll in {_elapsed():.1f}s / 8.0s", flush=True)
             return True, False
         if diag["classification"] == "FIXTURE_FAILURE":
+            if _proven_no_body(diag):
+                raise RuntimeError(
+                    f"FIXTURE-UNAVAILABLE: {label}: no body element")
             raise RuntimeError(
-                f"FIXTURE-UNAVAILABLE: {label}: "
-                f"{diag.get('eval_error', 'no body element')}")
+                f"INFRA: diagnose transport error, not a proven "
+                f"no-body fixture: "
+                f"{diag.get('eval_error', 'no snapshots')}")
     if diag["classification"] == "TZ_STUCK_V1":
         if time.perf_counter() > deadline - 1.1:
             print(f"[{r.test}] ensure_visible {label} deadline near "
@@ -853,9 +958,14 @@ def _ensure_visible_inner(d, r, label="test tab", allow_swap=True):
             # Post-removal fixture failure raises immediately (C1
             # re-review F3), same as the poll loop and the initial
             # diagnose do, instead of burning tabs on rebootstrap.
+            # Redteam H4: same no-body vs transport split.
+            if _proven_no_body(diag):
+                raise RuntimeError(
+                    f"FIXTURE-UNAVAILABLE: {label}: no body element")
             raise RuntimeError(
-                f"FIXTURE-UNAVAILABLE: {label}: "
-                f"{diag.get('eval_error', 'no body element')}")
+                f"INFRA: diagnose transport error, not a proven "
+                f"no-body fixture: "
+                f"{diag.get('eval_error', 'no snapshots')}")
         _log_diag(r, diag, label, "after-remove")
     if not allow_swap:
         print(f"[{r.test}] ensure_visible {label} still hidden after "
@@ -1071,7 +1181,7 @@ def verify_test(d, test_id):
     if not isinstance(res, dict):
         return {"passed": False,
                 "failures": [f"ported verify returned non-dict: {res!r}"],
-                "state": {}, "score": 0}
+                "state": {}, "score": 0, "eval_nondict": True}
     res.setdefault("failures", [])
     res.setdefault("state", {})
     res.setdefault("score", 0)
@@ -1182,6 +1292,14 @@ def open_fixture(r, d, fname, test_id):
         raise GuardInconclusiveError(
             f"GUARD-INCONCLUSIVE: verify eval raised on untouched "
             f"fixture for test {test_id}: {guard['failures']}")
+    # Council A F6: a non-dict verify result does not prove the
+    # guard either (the eval machinery returned garbage); it is
+    # guard-inconclusive, never proceed.
+    if isinstance(guard, dict) and guard.get("eval_nondict"):
+        raise GuardInconclusiveError(
+            f"GUARD-INCONCLUSIVE: verify returned non-dict on "
+            f"untouched fixture for test {test_id}: "
+            f"{guard['failures']}")
     r.details["integrity_guard"] = {
         "passed_on_untouched": guard["passed"],
         "untouched_failures": guard["failures"],
@@ -2811,6 +2929,17 @@ def _reload_settings(d, r, step):
     Returns "reloaded" (or "reloaded (click raised, tolerance)").
     """
     raised = None
+    # Council A F9 reload proof: set a window marker BEFORE the
+    # click; a real navigation creates a fresh window object, so
+    # the marker must be GONE after the reload. Without this, a
+    # click that raises for a NON-navigation reason (button missing,
+    # wrong page state) could pass the persistence wait_for below
+    # on STALE text: step 26 runs after step 21 already set
+    # "State restored after reload", so the text is already there
+    # even if the second reload never happened. A surviving marker
+    # is proof the reload did not land, and raises a step failure.
+    d.eval("window.__y13_reload_probe = 'before-reload';"
+           " return 'marker-set';")
     try:
         d.click("#btn-reload-settings")
     except Exception as exc:
@@ -2831,6 +2960,16 @@ def _reload_settings(d, r, step):
             "to a fresh tab, fixture not loaded")
     if not ok:
         raise RuntimeError("reload: hidden-body after settings reload")
+    marker = d.eval("return typeof window.__y13_reload_probe;")
+    if marker != "undefined":
+        if raised is not None:
+            raise RuntimeError(
+                f"reload settings: click raised "
+                f"{type(raised).__name__}: {raised}; and the reload "
+                f"did not land (marker survived)")
+        raise RuntimeError(
+            "reload settings: reload did not land (marker survived "
+            "the click)")
     try:
         d.wait_for(
             "document.querySelector('#extension-persistence-status') && "
@@ -3329,6 +3468,36 @@ def preflight(base):
             raise
         except Exception:
             pass
+    # Redteam H5: runner-quiet process check, in code, as defense
+    # in depth behind the launcher's pre-flock check (launch_y13.py
+    # does this before flock; preflight re-checks it after the lock
+    # is held, in case a runner started in between). No run_*.py
+    # process other than this process's own ancestry, and no
+    # hand_drive_e1.py (E1's driver), may be running.
+    _own = {os.getpid()}
+    _pid = os.getpid()
+    while _pid > 1:
+        _ppid = _ppid_of(_pid)
+        if _ppid is None:
+            break
+        _pid = _ppid
+        _own.add(_pid)
+    for _name in os.listdir("/proc"):
+        if not _name.isdigit():
+            continue
+        _rpid = int(_name)
+        if _rpid in _own:
+            continue
+        try:
+            with open(f"/proc/{_rpid}/cmdline", "rb") as _f:
+                _cmd = _f.read().decode("utf-8", "replace")
+        except OSError:
+            continue
+        if re.search(r"(^|/)run_[^/\s]*\.py", _cmd) \
+                or "hand_drive_e1.py" in _cmd:
+            raise RuntimeError(
+                f"PREFLIGHT: live slot busy, runner process running: "
+                f"pid {_rpid}: {_cmd.replace(chr(0), ' ').strip()}")
     for pid_path in glob.glob("/tmp/geckodriver-*.pid"):
         try:
             pid = int(Path(pid_path).read_text().strip())
@@ -3540,7 +3709,21 @@ def main():
                   flush=True)
             return 2
     suite_t0 = time.perf_counter()
-    _, base = start_server()
+    # Redteam M7: a start_server failure used to escape main as an
+    # uncaught traceback with no suite JSON. Wrap it in the same
+    # structured-failure pattern as preflight.
+    try:
+        _, base = start_server()
+    except Exception as exc:
+        print(f"SERVER FAILED {type(exc).__name__}: {exc}", flush=True)
+        print(json.dumps({"suite": "codex-y5", "server_failed": True,
+                          "error": f"{type(exc).__name__}: {exc}",
+                          "passed": 0, "flagged": 0, "failed": 0,
+                          "hidden_body_encounters": 0,
+                          "bootstrap_intervention": None, "gaps": [],
+                          "total": len(selected)}, ensure_ascii=False),
+              flush=True)
+        return 2
     print(f"serving at {base}", flush=True)
     # Prove the server serves the manifest bytes (redteam diff F3):
     # the reuse probe only checks a 200, never the served root.
@@ -3623,6 +3806,9 @@ def main():
     superseded = []
     hidden_encounters_all = 0
     tz_removed_any = False
+    # Redteam M2: cumulative wall time per test across attempts
+    # (ms). Attempt 2 does not get a fresh cap budget.
+    cum_ms = {}
     for tid in selected:
         ok, detail = _check_handover()
         if not ok:
@@ -3633,8 +3819,26 @@ def main():
         summary = None
         for attempt in (1, 2):
             _CURRENT_ATTEMPT["n"] = attempt
+            # Council A F10: re-check the handover before EVERY
+            # attempt, not only before each test. The token can
+            # expire between attempt 1 and attempt 2; a re-run must
+            # never drive without a live handover.
+            ok, detail = _check_handover()
+            if not ok:
+                print(f"HANDOVER EXPIRED before {tid} attempt "
+                      f"{attempt}: {detail}; aborting run", flush=True)
+                aborted_handover = True
+                break
             r = Y13Runner(tid, base)
             r.attempt = attempt
+            attempt_t0 = r.t0
+            if tid in cum_ms:
+                # Redteam M2: offset t0 so the per-primitive
+                # deadline check and the post-hoc cap check measure
+                # CUMULATIVE time across attempts, not a fresh
+                # budget per attempt. attempt_t0 (kept above) is
+                # the un-offset start for the per-attempt elapsed.
+                r.t0 = time.perf_counter() - cum_ms[tid] / 1000.0
             r.tab = tab
             try:
                 wd = Y13WD()
@@ -3697,7 +3901,13 @@ def main():
                 if msg.startswith("INFRA:") or ": INFRA:" in msg:
                     raised_infra = True
                     outcome = "infra-blocked"
-                elif msg.startswith("FIXTURE-UNAVAILABLE"):
+                elif (msg.startswith("FIXTURE-UNAVAILABLE")
+                        or ": FIXTURE-UNAVAILABLE" in msg):
+                    # Redteam M3: match the substring too, like
+                    # ": INFRA:": a FIXTURE-UNAVAILABLE raised inside
+                    # an r.step lambda is wrapped as "step failed:
+                    # ...: RuntimeError: FIXTURE-UNAVAILABLE: ...",
+                    # which the startswith check alone misses.
                     # Own outcome (C1 re-review F4): a fixture that
                     # never renders a body is not a live test
                     # failure. Suite continues, no infra count,
@@ -3712,8 +3922,12 @@ def main():
                     # narrowed (C3 re-review F4): only a PROVEN
                     # hidden body (TZ_STUCK_V1 / OTHER_HIDDEN) may
                     # reclassify to INFRA and earn a re-run.
-                    # FIXTURE_FAILURE and UNKNOWN stay live
-                    # failures (no re-run, no infra count).
+                    # UNKNOWN stays a live failure (no re-run, no
+                    # infra count). FIXTURE_FAILURE splits (redteam
+                    # H4): a positively proven no-body document is
+                    # fixture-unavailable; a diagnose transport
+                    # error is INFRA.
+                    diag = {}
                     try:
                         diag = diagnose_body(d)
                         cls = diag["classification"]
@@ -3728,15 +3942,33 @@ def main():
                         print(f"[{tid}] MID-TEST HIDDEN BODY ({cls}); "
                               "reclassified INFRA", flush=True)
                     elif cls == "FIXTURE_FAILURE":
-                        outcome = "fixture-unavailable"
-                        r.failures.append(
-                            f"fixture unavailable mid-test "
-                            f"({cls}) after step failure: {exc}")
-                        print(f"[{tid}] FIXTURE-UNAVAILABLE mid-test "
-                              f"({cls})", flush=True)
+                        if _proven_no_body(diag):
+                            outcome = "fixture-unavailable"
+                            r.failures.append(
+                                f"fixture unavailable mid-test "
+                                f"({cls}) after step failure: {exc}")
+                            print(f"[{tid}] FIXTURE-UNAVAILABLE mid-test "
+                                  f"({cls})", flush=True)
+                        else:
+                            raised_infra = True
+                            outcome = "infra-blocked"
+                            r.failures.append(
+                                f"reclassified INFRA: diagnose "
+                                f"transport error, not a proven "
+                                f"no-body fixture "
+                                f"({diag.get('eval_error', 'no snapshots')}) "
+                                f"after step failure: {exc}")
+                            print(f"[{tid}] DIAGNOSE TRANSPORT ERROR; "
+                                  f"reclassified INFRA", flush=True)
                     elif (("timed out" in msg.lower()
-                           or "timeout" in msg.lower())
+                           or "TimeoutError" in msg
+                           or "URLError" in msg)
                             and "timeout waiting for" not in msg):
+                        # Council A F8: match ONLY the pinned
+                        # wording ("timed out", TimeoutError,
+                        # URLError), not any "timeout" substring:
+                        # a fixture-side message mentioning timeout
+                        # must not be reclassified as INFRA.
                         # A WD HTTP timeout is INFRA (driver or
                         # browser hung) unless evidence shows a
                         # fixture cause. Evidence recorded: the
@@ -3797,6 +4029,12 @@ def main():
                 pass  # suite/fixture defect, not infra: no effect
             else:
                 infra_blocked = 0
+            # Redteam M4: a test whose checks failed still had
+            # outcome "pass" (r.check failures do not raise, they
+            # append to r.failures). Set the outcome here, before
+            # the audit block, so the per-test JSON tells the truth.
+            if outcome == "pass" and r.failures:
+                outcome = "failed"
             # Wall-cap + step-count audit (Y13 v2, C3 V1 / RT M4):
             # only when the test would otherwise pass. A pass over
             # its spec max latency, or with fewer driven primitives
@@ -3835,6 +4073,16 @@ def main():
             summary["flagged"] = bool(r.details.get("tz_hidden_removed"))
             summary["outcome"] = outcome
             summary["reattempted_from_infra"] = (attempt == 2)
+            # Redteam M2: cumulative wall accounting. The cap checks
+            # (per-primitive + post-hoc) measure cumulative time via
+            # the offset t0; the summary keeps elapsed_ms as THIS
+            # attempt only (plan C3 F1: total_ms sums final attempts
+            # only) and records the cumulative separately, so a
+            # superseded attempt's time is visible per test.
+            attempt_elapsed_ms = (time.perf_counter() - attempt_t0) * 1000
+            cum_ms[tid] = cum_ms.get(tid, 0) + attempt_elapsed_ms
+            summary["elapsed_ms"] = round(attempt_elapsed_ms, 1)
+            summary["cumulative_elapsed_ms"] = round(cum_ms[tid], 1)
             # Ladder time only (C1 re-review F6 / C3 re-review F2),
             # accumulated across attempts, including recovered and
             # flagged tests. Cross-attempt hidden-body evidence
@@ -3868,6 +4116,8 @@ def main():
                 print("two consecutive INFRA-blocked tests, aborting run",
                       flush=True)
                 break
+            break
+        if aborted_handover:
             break
         if summary is not None and summary.get("outcome") == \
                 "session-creation-failure" and wd_failures >= 2:

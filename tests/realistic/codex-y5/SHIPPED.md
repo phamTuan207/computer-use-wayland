@@ -6,6 +6,12 @@ Base: run_live.py from commit 1e3901c ONLY, md5 84fa106c253d5e7f16daccf2ce3f14a5
 NOT HEAD: HEAD's run_live.py changed in 91d3cd2 (Y11 live-metrics, +415/-66),
 unit-verified only. live_metrics.py must be ABSENT from the ship dir.
 
+Launcher: tests/realistic/launch_y13.py (council A F4 + redteam H5). It performs
+the launch-time checks (go order asserted, optional Y6c marker check with
+--repo, handover token fresh, runner-quiet process check, predecessor + own
+ports free, no live geckodriver with a live parent) and then execs the runner
+under flock -w 60. Launch ONLY via the launcher, never directly.
+
 Ship dir (laptop): /tmp/worker-y13-server
 Ports: server 8771, WD 4452, Marionette 2828 (shared, connect-existing).
 Handover token: /tmp/worker-y13-handover.json (written by the launcher at run start).
@@ -14,15 +20,14 @@ Gecko log: /tmp/geckodriver-4452.log (copied per test).
 
 Launch (on the laptop, from /tmp/worker-y13-server, ONLY after the
 Y6c completion marker + Muse's go order + the launch-time checks pass):
-  cd /tmp/worker-y13-server && LIVE_SERVER_ROOT=/tmp/worker-y13-server \
-  LIVE_SERVER_PORT=8771 LIVE_LOG=/tmp/worker-y13-live.jsonl WD_PORT=4452 \
-  LIVE_OWNER_AWAY=1 flock -w 60 ~/.cache/agent-computer-use/zen_dom.lock \
-  -c "python3 run_codex_y5.py all > /tmp/worker-y13-stdout.log 2>&1"
+  cd /tmp/worker-y13-server && Y13_GO=1 python3 launch_y13.py all \
+  > /tmp/worker-y13-stdout.log 2>&1
 
-Manifest: codex-y5-manifest.json, md5 3606fe843abe3d0db2da5ef1a8bd4f71, 26 files.
+Manifest: codex-y5-manifest.json, md5 d3e71259dd7a5de3fab663534724428c, 27 files.
 Files (path, md5):
 
-- run_codex_y5.py 9a7c6ace1d0ad9aa7a4fb6972cc39e80
+- run_codex_y5.py f28b5da5fd2b02b15cc9a18bac636fe0
+- launch_y13.py 3898bc59e35f99ddef47d13350ced014
 - run_live.py 84fa106c253d5e7f16daccf2ce3f14a5
 - codex-y5/test-01-git-workflow.md 0f347247c21b2f1375596c1ee51449b4
 - codex-y5/test-02-music-player.md 15925f6709c62908dfd5cd88f1fc8c91
