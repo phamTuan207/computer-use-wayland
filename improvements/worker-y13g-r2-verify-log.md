@@ -251,3 +251,18 @@
   staged copies under ~/workspace/y13g-r2-verify/ships/.
   git status shows only my files modified plus other
   workers' files (untouched).
+
+## 2026-11-22 01:14 +07 (T+14m): REPORT COMMITTED, VERDICT FAIL
+
+- Report improvements/worker-y13g-r2-verify-report.md
+  committed 75dff55, pushed, ls-remote matches HEAD.
+  Push raced with Council 1 (b74b36d landed on top of
+  0d628f8 while the report was being written; the first
+  push attempt hit a remote ref-lock race, but the ref
+  ended at 75dff55 with the council commit as its parent,
+  verified via ls-remote + ancestor check). No files of
+  other workers touched in any commit; all 4 verify
+  commits (3129ba2, dec965c, 0d628f8, 75dff55) are on
+  todolist-push. VERDICT: FAIL, 277/280, 2 defects, both
+  in the launcher's _check_entry_pyc (co_filename false
+  refusal; symlink-unsafe outside deletion).
