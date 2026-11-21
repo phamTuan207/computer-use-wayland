@@ -524,7 +524,7 @@ on its merits; nothing accepted or declined silently.
   leaf process IS caught (pid 183770 hit, wrapper missed). F3
   (carryover) -m and import branches still unguarded (`pytest -m
   run_batch3`, `echo -m run_batch3`, `echo import run_batch3` all
-  True); U3 left open. F4 _python_executes does not reset at shell
+  True); U4 left open. F4 _python_executes does not reset at shell
   ; (`bash -c "python3 --version; pytest -W ignore run_batch3.py"`
   True). F5 guard blind to extensionless scripts (`python3
   run_other -W ignore run_batch3.py` True); record-only. F6
@@ -585,21 +585,25 @@ on its merits; nothing accepted or declined silently.
   and the rule was added before committing.)
 - F3 FIXED by code: the -m and import branches are now guarded by
   _python_executes (callers pass the introducing flag's index, so
-  the -m/-c token is never its own barrier). Correction to the
-  redteam's example: `python3 run_other.py -m run_batch3` is a TRUE
-  positive via run_other.py itself (it is a run_* script); the
-  guard is verified with a non-runner script name (`python3
-  other.py -m run_batch3` returns False). Same correction as fix
-  pass 3: my probe used run_other.py and expected False, which
-  was wrong; the probe is corrected, not the code.
+  the -m/-c token is never its own barrier). Correction to my own
+  claim (Council 3 C3-4): the redteam's -m example was `python3
+  other.py -m run_batch3`, NOT `python3 run_other.py -m run_batch3`
+  (verified from the redteam paper bd3c6c9 lines 222-243).
+  other.py is NOT a run_* script, so the guard must return False
+  for it, and it does. The guard is verified with a non-runner
+  script name (`python3 other.py -m run_batch3` returns False).
+  My probe used run_other.py and expected False, which was wrong;
+  the probe is corrected, not the code.
 - F4 FIXED by code: _python_executes is now command-start aware
   (the search stops at a shell separator or a -c), so `bash -c
   "python3 --version; pytest -W ignore run_batch3.py"` no longer
   false-positives.
 - F5 FIXED by code (as a guard, not a miss): _python_executes
   treats an extensionless run_* token as a script barrier, so
-  `python3 run_other -W ignore run_batch3.py` is now True via
-  run_other itself.
+  `python3 run_other -W ignore run_batch3.py` is now False (the
+  extensionless run_* script barrier correctly blocks the -W/-X
+  two-back rule; the earlier claim that it was True was backwards,
+  the fix-pass-3 True was the false positive).
 - F6 FIXED by code: _codex_at_command treats a -c as a boundary
   only when it is a shell -c (via _c_is_shell), so `python3 -c
   "codex marionette"` no longer false-positives.
@@ -646,9 +650,12 @@ on its merits; nothing accepted or declined silently.
   Regular Expression Engine"); my sourceless __init__.pyc is gone;
   `import re` resolves to the .py file and compile works; `dpkg -V
   python3.12` is clean (exit 0, no output). The stopgap is
-  superseded. Root cause of the deletion is still UNKNOWN (per
-  MEMORY.md 22:40); the guardian failure was not due to re
-  (cursor-guard plugin not loaded, F1 fixing).
+  superseded. UPDATE 22:57 +07 (MEMORY.md): root cause SOLVED,
+  the Y13r2 redteam's shim (A6e) accidentally deleted the file
+  (globals().update overwrote __file__ before os.remove), NOT a
+  stray process; VMFIX restored it durably (c16dd4e). The guardian
+  failure was not due to re (cursor-guard plugin not loaded, F1
+  fixing).
 - No other findings. The fix-pass-4 code changes are in
   tests/realistic/run_batch3.py only (plus the plan H4 note and
   this log).
@@ -677,8 +684,10 @@ on its merits; nothing accepted or declined silently.
 - Accurate probe counts (counted from PASS lines only, not the
   "FAILURES:" summary line, which starts with FAIL): H2 45, fix2
   31, fix3 70, fix4 64, transcription 82, gate dry 4, M1 3,
-  M1 all-12 4. The earlier "72" (fix3) and "65" (fix4) claims
-  counted the summary line; the redteam's 70 for fix3 was right.
+  M1 all-12 4. The earlier "65" (fix4) claim counted the summary
+  line (64+1=65); the earlier "72" (fix3) was a plain miscount
+  (70+1=71, not 72), not from the summary line; the redteam's 70
+  for fix3 was right.
 - No em/en dash in the fix diff (grep 0), no ydotool, no personal
   info.
 - Fix commit: bf3c939 (todolist-push, pushed, ls-remote verified
@@ -954,3 +963,225 @@ coordinates go here too.
   once MERGE merges them into main. Tab: restarting Zen restored
   the 39 fixture tabs (owner's screenshot 22:50); F3 re-running
   FULL cleanup with the same keep-list (28 real tabs).
+
+## Adjudication, fix pass 5 (22:56-23:00 +07)
+
+All 4 fix-pass-4 reviews are AMEND, none BLOCK. Combined findings
+and their disposition:
+
+### Code fixes (in run_batch3.py)
+
+- R2/U1 (redteam, REQUIRED, LOW regression): fix `_c_is_shell`
+  and `_in_shell_c_string` to find the command owning the -c.
+  New helper `_owning_command(tokens, c_idx)` walks back from the
+  -c, skipping flags (start with "-"), VAR=value assignments, and
+  path arguments (contain "/" with a basename not in a known
+  command set), and returns the owning command's basename. Add
+  "dash" to the shell list (bash, sh, dash, flock). Apply the same
+  helper in both `_c_is_shell` and `_in_shell_c_string`, which
+  duplicate the walk-back. Re-probe must show the redteam's A1-A14
+  all PASS, fix4 probe still 64/64, all regressions green.
+- R4/C3-3/C1-R1 (redteam R4, Council 3 C3-3, Council 1 C1-R1,
+  LOW): import-branch guard's nearest-`-c` scan crosses `;`.
+  FIXED by code: the -c search now stops at a shell separator
+  (same shell command only). `python3 -c 'import os'; echo import
+  run_batch3` and `bash -c "python3 -c 'import x'; echo import
+  run_batch3"` now return False.
+- C2-1 (Council 2, LOW, miss): glued separator on the runner
+  token misses (`bash -c "python3 run_foo.py; echo done"` False).
+  FIXED by code: the basename block now checks
+  `base.rstrip(";,()")` (mirroring the import branch), so
+  `run_foo.py;` matches.
+- C2-2 (Council 2, LOW, FP, fail-closed): bare `&` is not a
+  separator. FIXED by code: bare `"&"` added to the separator
+  exact-match tuple in `_is_cmd_separator` (NOT `"&" in tok`, so
+  URL tokens are not split). `python3 --version & pytest -W
+  ignore run_batch3.py` and `codex --help & echo marionette` now
+  return False.
+- R3/C1-R4 (redteam R3, Council 1 C1-R4, LOW, FP, fail-closed):
+  `_same_command_tokens` includes everything after a codex -c,
+  so a marker in a LATER shell command counts (`bash -c "codex
+  -c 'hello'; echo marionette"` True). FIXED by code with a
+  quote-aware bound: after a codex -c, tokens are included until
+  a TOP-LEVEL separator, defined as a `;`/`&&`/`||` that appears
+  after the last quote character in its token. A `;` in a token
+  with no quotes (e.g. "time;" inside the F2 snippet) is inside
+  the snippet and does not stop the scan; a `;` after a closing
+  quote (e.g. "'hello';") is a top-level separator and stops it.
+  The F2 case (`bash -c "codex -c 'import time; x # marionette'"`)
+  still returns True. New helper `_top_level_sep_index(tok)`.
+
+### Doc/record fixes (plan + log + docstrings)
+
+- C1-1/C3-1 (MEDIUM, doc): F5 outcome stated backwards. The plan
+  (line 738) and the log (lines 601-602) said `python3 run_other
+  -W ignore run_batch3.py` is "now True via run_other itself".
+  Reality: it returns False, and False is correct (run_other is
+  extensionless, so it is not a runner token, and the barrier
+  blocks the flag branch; the old True was the false positive).
+  Both sentences corrected to False. The fix4 probe label
+  "python3 run_other -W ignore stays False" corrected to "now
+  False (was True in fix pass 3, the FP is fixed)".
+- C3-2/C1-R2 (required, record): F5 only half fixed. The barrier
+  covers run_* only; `python3 other -W ignore run_batch3.py`
+  (a non-run_* extensionless script) still returns True (a false
+  positive). Recorded as a residual in the `_python_executes`
+  docstring. A code fix (treat any extensionless script token as
+  a barrier) would need flag-value tracking (skip -W/-X/-c/-m
+  values to find the script position) and is deferred as a
+  future improvement, not attempted here.
+- C3-4 (minor, doc): F3 attribution wrong. The redteam's -m
+  example was `python3 other.py -m run_batch3`, not `python3
+  run_other.py -m run_batch3`. Corrected in the log's fix-pass-4
+  adjudication F3 section. (The run_other.py correction stands
+  for the -W case from the fix-pass-2 redteam, where the example
+  was `python3 run_other.py -W ignore run_batch3.py`.)
+- C3-5 (minor, doc): fix4 probe breakdown corrected. The true
+  breakdown is R1 6, F1 5, F3 9, F4 3, F5 2, regressions 14,
+  codex 21, live 4 = 64 (counted from the probe source). The log
+  said F3 x8 and regressions x17 (summing to 66); F3 is 9 and
+  regressions is 14.
+- C3-6 (minor, doc): the "72 counted the summary line"
+  explanation is off by one (70+1=71, not 72). Corrected: the
+  "72" was a plain miscount, not from counting the summary line.
+  The true fix3 probe count is 70.
+- C3-7 (minor, doc): the log's fix-pass-3 redteam verdict section
+  labels F3's unblock "U3"; it is U4 in the paper (redteam
+  bd3c6c9 line 394). Corrected to U4.
+- C3-8 (minor, doc): env incident note updated to state
+  explicitly that the proper repair is done (`re/__init__.py`
+  16,315 B restored, `dpkg -V` clean, `import re` OK) and the
+  sourceless `__init__.pyc` no longer exists (so a literal check
+  for it correctly fails).
+- C3-9 (optional, doc): U11 parenthetical added to the plan's H4
+  note (leg-precise 3.0, 4 overcounts by 1; the half/half fix is
+  correct on the N=3.5 model).
+- C1-R3 (INFO, pre-existing, record): glued `;codex` misses in
+  both blobs (`bash -c "echo foo;codex marionette"`, `bash -c "cd
+  dir;codex exec marionette"`). Recorded in the known-limitations
+  docstring. Not a fix-pass-4 regression, not claimed fixed.
+- C1-2 (MEDIUM, doc, ship-blocking if uncorrected): REFUTED, no
+  fix. Council 1 claimed the plan (lines 612-615) still pins the
+  fix-pass-3 values and the log has no superseding fix-pass-4
+  entry. Direct grep by me at 22:54:52 +07 shows the plan lines
+  614-615 DO pin the fix-pass-4 values (md5 2920f169, blob
+  585fb801, commit bf3c939), the log lines 686-687 DO have the
+  superseding fix-pass-4 entry, and grep for e9e3519a/3a9b7b17 in
+  the plan returns NOTHING. Council 1 must have read a stale
+  file. The log lines 496-497 DO mention the fix-pass-3 values,
+  but that is the historical fix-pass-3 verification section, not
+  the live pin.
+
+### Declined / deferred
+
+- None declined. Every finding is fixed in code or recorded in
+  the docstring/log/plan with its exact form named.
+- The C3-2 code fix (extend the barrier to any extensionless
+  script token) is deferred, not declined: it needs flag-value
+  tracking and is a future improvement. Recorded as a residual.
+
+### Verification plan
+
+- New fix5 probe /tmp/y14b-fix5-probe.py covering R2 (A1-A14
+  per the redteam, wrapper-prefixed shell -c + dash), R4/C3-3
+  (import guard boundary), C2-1 (glued separator on the runner
+  token), C2-2 (bare `&`), R3 (quote-aware codex -c bound, F2
+  case still True), plus the redteam's A1-A14 re-proof.
+- Regressions: fix4 probe 64/64, H2 45/45, fix2 31/31, fix3
+  70/70, transcription 82, gate dry 4/4, M1 3/3, M1 all-12 4/4,
+  Council 2 extra probe 46/46, py_compile + import OK.
+- A redteam re-review over the fix-pass-5 diff is spawned after
+  this commit (full council + redteam round per the owner's
+  22:40 order). Ship waits for it unless it BLOCKs.
+
+### Fix pass 5 verification (23:00-23:03 +07)
+
+- py_compile OK; import OK (10 tests).
+- Fix5 probe /tmp/y14b-fix5-probe.py: first run 34/38 PASS, 4 FAIL.
+  Two were real code bugs, two were probe cases using a form that
+  cannot occur in /proc:
+  (1) C2-1 `&&` / `||` variants failed because the basename
+  rstrip set was ";,()" and did not strip "&" or "|"; fixed by
+  extending the set to ";,()&|" (run_foo.py&& and run_foo.py||
+  now match). (2) The two codex C2-2 cases used the direct form
+  `codex --help & echo marionette` (no bash -c wrapper), which
+  goes through the non-shell-c path (all tokens, no bounding) and
+  returns True; that form cannot occur in /proc (the shell splits
+  `&` before exec, so a codex process never has `&` in its argv),
+  so the probe cases were changed to the real occurrent form
+  `bash -c "codex --help & echo marionette"` (and `&&`), which
+  now return False via _same_command_tokens. The direct form is
+  recorded here as a synthetic-only residual, not a code fix.
+  Second run: 38/38 PASS, 0 failures.
+- Regressions, all green: H2 probe 45/45, fix2 probe 31/31, fix3
+  probe 70/70, fix4 probe 64/64 (label corrected per C1-1/C3-1,
+  re-run confirms 64/64), transcription 82 PASS, gate dry 4/4,
+  M1 probe 3/3, M1 all-12 probe 4/4.
+- Council 2 extra probe /tmp/y14b-fix4-c2-probe.py: 36/46 PASS,
+  10 "failures", ALL of them expected-behavior changes (the fix),
+  not regressions. Each encodes the fix-pass-4 behavior Council 2
+  documented, which fix pass 5 corrects: 'sep single & alone'
+  (C2-2: "&" is now a separator, per Council 2's own fix sketch);
+  'c env/nice/sudo bash -c MISS' (R2: wrapper-prefixed shell -c
+  now caught, was missed in fix4); 'glued; python3 run_foo.py;
+  echo MISS' and 'glued; bare run_foo.py; echo MISS' (C2-1: glued
+  separator now matches); 'codex -c marker in LATER shell cmd'
+  (R3: later-command marker now excluded); 'codex single &
+  --help & echo FP' (C2-2: "&" now bounds the marker scope);
+  'live glued ; wrapper missed' and 'live double-nested wrapper
+  missed' (C2-1 + R2 fixes working live; the leaves are still
+  found and caught). The fix5 probe covers all 10 with the
+  corrected expectations (38/38).
+- Doc fixes applied: plan F3 attribution (other.py, C3-4), plan
+  F5 record to False (C1-1/C3-1), plan H4 U11 parenthetical
+  (C3-9, optional, added), log lines 601-602 F5 to False, log
+  F3 adjudication attribution (C3-4), log "72" explanation
+  corrected to plain miscount (C3-6), log U-label U3 to U4
+  (C3-7), log env note updated with the solved root cause
+  (C3-8 + MEMORY.md 22:57: Y13r2 redteam shim A6e deleted
+  re/__init__.py, VMFIX restored durably c16dd4e), fix4 probe
+  label corrected to "now False (was True in fix3)".
+- No em/en dash in the fix diff (grep 0), no ydotool, no personal
+  info. `import re` OK (verified 23:02 +07).
+- Fix commit: (pending, this section is written before the
+  commit; hash recorded in the follow-up entry).
+
+### Event log (continued, 23:00-23:03 +07)
+
+- 23:00 +07 (elapsed 2h40m from fix-pass-4 start 22:20 +07):
+  rewrote _in_shell_c_string to use _owning_command (shell list
+  now bash, sh, dash, flock); rewrote _same_command_tokens -c
+  branch to use the quote-aware _top_level_sep_index bound
+  (redteam R3). Outcome: edits applied, no errors.
+- 23:00 +07: updated _is_runner_cmdline docstring (sync note to
+  fix-pass-1..-5; recorded C1-R3 glued `;codex` miss and C3-2
+  non-run_* extensionless blind spot in known limitations) and
+  _same_command_tokens docstring (R3 bound). Outcome: applied.
+- 23:00 +07: py_compile OK, import OK (10 tests). Outcome: green.
+- 23:00 +07: wrote /tmp/y14b-fix5-probe.py (38 cases) and ran it.
+  Outcome: first run 34/38, 4 FAIL (2 code bugs, 2 synthetic
+  probe cases). Fixed the basename rstrip set to ";,()&|" and
+  changed the 2 codex C2-2 cases to the bash -c form. Second run:
+  38/38 PASS, 0 failures.
+- 23:01 +07: ran the full regression set. Outcome: H2 45/45,
+  fix2 31/31, fix3 70/70, fix4 64/64, transcription 82, gate dry
+  4/4, M1 3/3, M1 all-12 4/4, all 0 failures. Council 2 extra
+  probe 36/46 with 10 expected-behavior changes (all fixes, not
+  regressions, each named above).
+- 23:01 +07: MEMORY.md updated by the parent (22:57 Y13r2 BLOCK +
+  re.py root cause SOLVED; 23:01 owner order BAO LOI QUA DEM:
+  big errors/blockers/decisions report immediately all night,
+  routine work silent, morning report). Noted: Y13r2 BLOCKed with
+  4 new blockers (B1 .pyc forge, B2 stdlib shadowing, B3 tokenizer
+  misses, B4 -m brick ship) + 5 amend; Y13g fixing per the
+  redteam paper. Y14b work is routine (AMEND-level, no BLOCK),
+  so it continues silently; the live run waits for Y13. The re.py
+  root cause is now SOLVED (Y13r2 redteam shim A6e), recorded in
+  the log env note (C3-8).
+- 23:02 +07: applied the doc fixes (plan F3/F5/H4, log F3/F5/72/
+  U-label/env, fix4 probe label). Outcome: all applied.
+- 23:02 +07: re-ran fix4 probe (64/64) and fix5 probe (38 PASS),
+  verified `import re` OK. Outcome: green.
+- 23:03 +07: committing fix pass 5 (run_batch3.py + plan + log
+  only; the F3 log change and other workers' untracked files in
+  the shared checkout are NOT staged).

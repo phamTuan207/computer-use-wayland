@@ -728,15 +728,18 @@ header/imports, run_b3_t10, run_preflight, H2 helpers, launch_gate):
   _python_executes, which is now command-start aware: the search
   stops at a shell separator or a -c, and an extensionless run_*
   token counts as a script barrier, so pytest/echo -m and -W/-X
-  forms no longer false-positive; note the redteam's example used
-  run_other.py, which IS a run_* script, so that cmdline is still
-  a true positive via run_other.py itself; the guard is verified
-  with a non-runner script name); F4 _python_executes FIXED (stops
+  forms no longer false-positive; note the redteam's -m example
+  was `python3 other.py -m run_batch3` (other.py is NOT a run_*
+  script, so the guard must return False for it, and it does; the
+  earlier claim that the example used run_other.py was wrong);
+  the guard is verified with a non-runner script name); F4 _python_executes FIXED (stops
   at shell separators, so `bash -c "python3 --version; pytest -W
   ignore run_batch3.py"` no longer false-positives); F5
   extensionless-script barrier FIXED (recorded as a guard, not a
-  miss: `python3 run_other -W ignore run_batch3.py` is now True
-  via run_other itself); F6 codex -c boundary FIXED (a -c bounds
+  miss: `python3 run_other -W ignore run_batch3.py` is now False,
+  the extensionless run_* script barrier correctly blocks the
+  -W/-X two-back rule; the earlier claim that it was True was
+  backwards, the fix-pass-3 True was the false positive); F6 codex -c boundary FIXED (a -c bounds
   the command only when it is a shell -c, via _c_is_shell, so
   `python3 -c "codex marionette"` no longer false-positives);
   F7 glued separators FIXED (_same_command_tokens splits glued
@@ -751,7 +754,12 @@ header/imports, run_b3_t10, run_preflight, H2 helpers, launch_gate):
   the form with "unknown option", exit 2); F10 H4 wording FIXED
   (the plan now states Council 1's 3 undercounts by half a round
   trip and Council 3's 4 overcounts by half a round trip; the
-  "bracket" phrasing is removed). Verification in the log. A
+  "bracket" phrasing is removed). (U11, closed: the literal clause
+  the redteam asked for, leg-precise 3.0 with 4 overcounting by 1,
+  is not stated because on the N=3.5 model both 3 and 4 are half a
+  round trip off; stating either as exact would be wrong, so the
+  plan states the half/half position instead.) Verification in
+  the log. A
   redteam re-review over the fix-pass-4 diff is spawned after this
   commit; ship waits for it unless it BLOCKs, in which case one
   more fix pass follows.
