@@ -46,13 +46,29 @@ def test_add_release_refcount():
         assert holders == {}, 'pill hides only when ALL holders released'
 
 
+def test_same_agent_two_pids_are_independent():
+    """Redteam A4: two concurrent same-agent runs are two entries; the
+    first release must not hide the pill for the second."""
+    with tempfile.TemporaryDirectory() as tmp:
+        _isolated(tmp)
+        overlay.add_holder('Muse', 'act-now', pid=111)
+        holders, _ = overlay.add_holder('Muse', 'act-now', pid=222)
+        assert len(holders) == 2
+        holders, was_present = overlay.remove_holder('Muse', 111)
+        assert was_present and len(holders) == 1
+        assert 'Muse:222' in holders
+        holders, _ = overlay.remove_holder('Muse', 222)
+        assert holders == {}
+
+
 def test_holders_persist_json():
     with tempfile.TemporaryDirectory() as tmp:
         _isolated(tmp)
         overlay.add_holder('opencode', 'CLI', pid=123456)
         raw = json.loads(overlay.HOLDERS_FILE.read_text())
-        assert raw['opencode']['method'] == 'CLI'
-        assert raw['opencode']['pid'] == 123456
+        assert raw['opencode:123456']['method'] == 'CLI'
+        assert raw['opencode:123456']['pid'] == 123456
+        assert raw['opencode:123456']['agent'] == 'opencode'
         assert overlay.load_holders() == raw
 
 
@@ -62,8 +78,8 @@ def test_prune_dead_pid():
         overlay.add_holder('ghost', 'shell', pid=999999)
         overlay.add_holder('alive', 'shell', pid=os.getpid())
         pruned = overlay.prune_dead_holders()
-        assert pruned == ['ghost']
-        assert set(overlay.load_holders()) == {'alive'}
+        assert pruned == ['ghost:999999']
+        assert set(overlay.load_holders()) == {'alive:%d' % os.getpid()}
 
 
 def test_label_command_valid_chars():
@@ -92,6 +108,60 @@ class _FakeNative:
         return 'ok'
     def close(self):
         self.closed = True
+
+
+class _FakeNativeFailing:
+    """A native indicator whose show command always fails."""
+    def __init__(self):
+        self.process = _FakeProc(False)
+        self.commands = []
+        self.closed = False
+    def command(self, cmd):
+        self.commands.append(cmd)
+        raise OSError('indicator refuses show')
+    def close(self):
+        self.closed = True
+
+
+def test_show_label_returns_bool():
+    """Redteam A3: _show_label returns True on ack, False on failure."""
+    with tempfile.TemporaryDirectory() as tmp:
+        _isolated(tmp)
+        daemon = overlay.Daemon()
+        daemon.owner = 'daemon'
+        daemon.native = _FakeNative(dead=False)
+        assert daemon._show_label('Muse via BiDi') is True
+        daemon.native = _FakeNativeFailing()
+        assert daemon._show_label('Muse via BiDi') is False
+
+
+def test_apply_holders_visible_false_on_show_failure():
+    """Redteam A3: apply_holders reports visible False when the pill
+    cannot be shown, instead of claiming visible True."""
+    with tempfile.TemporaryDirectory() as tmp:
+        _isolated(tmp)
+        overlay.add_holder('Muse', 'act-now', pid=os.getpid())
+        daemon = overlay.Daemon()
+        daemon.owner = 'daemon'
+        daemon.native = _FakeNativeFailing()
+        status = daemon.apply_holders()
+        assert status['visible'] is False
+        assert 'error' in status
+
+
+def test_apply_holders_prunes_dead_holders():
+    """Redteam A4: the daemon prunes a dead holder on reconcile, so a
+    killed run does not keep the pill up."""
+    with tempfile.TemporaryDirectory() as tmp:
+        _isolated(tmp)
+        overlay.add_holder('ghost', 'shell', pid=999999)
+        overlay.add_holder('Muse', 'act-now', pid=os.getpid())
+        daemon = overlay.Daemon()
+        daemon.owner = 'daemon'
+        daemon.native = _FakeNative(dead=False)
+        status = daemon.apply_holders()
+        assert status['visible'] is True
+        assert set(overlay.load_holders()) == {'Muse:%d' % os.getpid()}
 
 
 def test_daemon_respawns_dead_native():
@@ -132,9 +202,13 @@ def test_daemon_keeps_live_native():
 if __name__ == '__main__':
     test_label_format()
     test_add_release_refcount()
+    test_same_agent_two_pids_are_independent()
     test_holders_persist_json()
     test_prune_dead_pid()
     test_label_command_valid_chars()
+    test_show_label_returns_bool()
+    test_apply_holders_visible_false_on_show_failure()
+    test_apply_holders_prunes_dead_holders()
     test_daemon_respawns_dead_native()
     test_daemon_keeps_live_native()
     print('all overlay tests pass')
