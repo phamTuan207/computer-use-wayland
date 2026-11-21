@@ -147,3 +147,20 @@ best quality, not speed. Council + redteam debate every phase verdict.
   generated protocol files copied). If base shows the same failures,
   Codex introduced zero suite regressions. Y1's baseline2 log is gone
   (/tmp is ephemeral), so it cannot be re-checked directly.
+
+## 18:29 +07 | Base suite: FAILED (failures=1, errors=4, skipped=16)
+- Ran 1483 tests. The failure/error set is IDENTICAL to verify run 2
+  except two setup/timing artifacts (see below). The tc02 failures
+  (tesseract missing) and the 2 known baseline errors are the same on
+  base and verify: PRE-EXISTING environmental, NOT Codex regressions.
+- The Ran delta (base 1483 vs verify run 2 1467) is explained: run 2
+  lacked native/keyboard-protocol.c, so test_wtype_native setUpClass
+  errored and its tests never ran. With protocol files copied,
+  tests.test_wtype_native passes 23/23 OK on the verify worktree.
+- test_cursor_theme GuardProtocol wrong-token test: ERROR on base
+  (BrokenPipeError), OK on verify in isolation. Re-ran 3x on base:
+  OK, OK, FAILED. CONFIRMED FLAKY (socket race), not a Codex fix
+  and not a Codex regression.
+- Full suite run 3 on verify launched (protocol files now present).
+  Expected clean comparison: Ran 1483, failures=1 (tc02 tesseract),
+  errors=2-3 (known baseline + maybe the flaky cursor_theme).
