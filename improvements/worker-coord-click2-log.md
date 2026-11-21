@@ -127,3 +127,19 @@ Two gating findings (agree with C1 on both roots, with new proof):
 Combined design gaps D1-D6 (settle before the benchmark worker builds): D1 one-session BiDi/Marionette sequencing and cold session.new cost (1.5-2.8s) unspecified; D2 HCU guard has no owning component; D3 Mantis numbering is Chromium-only and ref stability on a mutating Messenger page is unaddressed (vendor numbers must not transfer); D4 exactly-once sends asserted but not mechanized (retry after a failed V12 gate double-sends); D5 "VISION 1" is a DOM harvest, not a screenshot; D6 one vs two Zen instances for the two clone windows unspecified.
 
 Still waiting: C3, RT, BASELINE2 (spawned 03:00, lane free).
+
+## 03:05 +07 (t+19m) Clone2 batch 8 assigned (main b8cfe92)
+
+Batch 7 COMPLETE (8fa95e6, council+redteam verified). Batch 8 assigned via coord/clone2.md so clone2 never idles. Three tasks, owner first-person voice:
+- Task 1: build the 2-vision benchmark script/workflow (VM-side, NO live run). Follows the combined design; HCU guard, stop-at-first-failure, exactly-once intents, V12 gate, outcome scoring. Known gaps F5/D1-D6 marked as TODOs, revised after the review round.
+- Task 2: extend the DOM bench to the two-window benchmark shape (headless Firefox): one-shot harvest per window, click accuracy, verify time; ground_many (3N evals) vs one-shot compared on the same fixture; same rigor as batch 7 task 2 (its first draft was caught by council+redteam for wrong BiDi session.new time, wrong run count, missing a11y evidence).
+- Task 3: write the C12 live-probe procedure (paper review of viewport_origin + dom_rect_to_image_point only, no live laptop work; lane busy with BASELINE2): exact steps, expected-outcomes table for both mozInnerScreen cases, decision rule.
+- last30days note in the batch: do NOT run npx skills add -g (awaiting the parent's source-review verdict); web claims from 30-day sources with source + date.
+
+Clone1: batch 7 already queued in coord/clone1.md (b31b881, 02:08), starts when batch 6 fully done. Task 1 follow-up 2 still running (ZT-00..ZT-10 attempt), so clone1 is not idle yet; nothing new to assign now.
+
+## 03:04-03:05 +07 Owner decisions (via parent)
+
+- last30days (03:04): read the repo source code; if nothing dangerous is found, just use it. He encourages using it. The parent is doing the source review itself right now (clone + inspect SKILL.md, mcp/, scripts for exfiltration/obfuscation/credential theft). Do NOT click through the installer confirmation until the parent's verdict lands. If clean, install and use across the team with 30-day-only real data, source + date on every claim. The earlier plan to spawn a separate inspection worker is SUPERSEDED (parent does it itself).
+- Fresh real data rationale (03:05): fresh real data is good, do not use old datasets, because recently someone may have done this or invented something usable already. Crawls must find those new things. This sharpens the 30-day rule: it is not just recency for its own sake, it is hunting for newly invented usable methods.
+- J46 owner confirmation (03:02): Ctrl+S toggles the sidebar (Toggle Compact Mode live binding in this Zen; documented Ctrl+Alt+C is NOT bound). Noted for the error file (sequenced after the benchmark).
