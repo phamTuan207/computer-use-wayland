@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Offline Recipe & Meal Planner</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background: #f3f4f6; color: #1f2937; padding: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; background: #fff; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); padding: 24px; }
+    header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e5e7eb; padding-bottom: 16px; margin-bottom: 20px; }
+    h1 { font-size: 22px; color: #111827; }
+    .header-plan-controls { display: flex; gap: 12px; align-items: center; }
+    .status-banner { padding: 10px 14px; border-radius: 4px; font-size: 13px; font-weight: 500; display: none; margin-bottom: 16px; }
+    .status-banner.success { display: block; background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
+    .status-banner.error { display: block; background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+    .filters-bar { display: flex; flex-wrap: wrap; gap: 16px; background: #f9fafb; padding: 14px 18px; border: 1px solid #e5e7eb; border-radius: 6px; margin-bottom: 20px; align-items: center; }
+    .filter-item { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 500; }
+    input[type="text"], select { padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 13px; }
+    .main-layout { display: grid; grid-template-columns: 2fr 1fr; gap: 24px; }
+    .recipes-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; }
+    .recipe-card { border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px; background: #fff; display: flex; flex-direction: column; justify-content: space-between; gap: 10px; }
+    .recipe-card:hover { border-color: #93c5fd; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+    .card-title { font-size: 15px; font-weight: 600; color: #111827; }
+    .card-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+    .tag { font-size: 11px; padding: 2px 6px; border-radius: 4px; background: #e0f2fe; color: #0369a1; font-weight: 500; }
+    .tag-category { background: #fef3c7; color: #92400e; }
+    .card-meta { font-size: 12px; color: #6b7280; }
+    .card-actions { display: flex; gap: 8px; margin-top: 6px; }
+    .btn { padding: 6px 12px; border-radius: 4px; font-size: 12px; font-weight: 600; cursor: pointer; border: 1px solid transparent; }
+    .btn-primary { background: #2563eb; color: #fff; }
+    .btn-secondary { background: #e5e7eb; color: #374151; }
+    .btn-danger { background: #fee2e2; color: #dc2626; border-color: #fca5a5; }
+    .planner-sidebar { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 18px; display: flex; flex-direction: column; gap: 16px; }
+    .planner-list { display: flex; flex-direction: column; gap: 10px; min-height: 120px; }
+    .planner-item { display: flex; justify-content: space-between; align-items: center; background: #fff; border: 1px solid #e5e7eb; border-radius: 4px; padding: 8px 12px; font-size: 13px; }
+    .shopping-list-box { background: #fff; border: 1px solid #e5e7eb; border-radius: 4px; padding: 12px; max-height: 200px; overflow-y: auto; font-size: 12px; }
+    .shopping-item { padding: 3px 0; border-bottom: 1px dashed #f3f4f6; }
+    /* Modal styles */
+    .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 100; }
+    .modal-content { background: #fff; border-radius: 8px; max-width: 500px; width: 90%; padding: 24px; box-shadow: 0 10px 15px rgba(0,0,0,0.2); }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e5e7eb; padding-bottom: 12px; margin-bottom: 12px; }
+    .servings-control { display: flex; align-items: center; gap: 8px; margin: 12px 0; font-size: 13px; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>Recipe Vault & Meal Planner</h1>
+    <div class="header-plan-controls">
+      <label for="input-plan-name" style="font-size: 13px; font-weight: 500;">Plan Name:</label>
+      <input type="text" id="input-plan-name" placeholder="Weekly Health Plan" style="width: 220px;">
+      <button id="btn-save-plan" class="btn btn-primary">Save Meal Plan</button>
+    </div>
+  </header>
+
+  <div id="recipe-status-banner" class="status-banner"></div>
+
+  <div class="filters-bar">
+    <div class="filter-item">
+      <label for="recipe-search">Search:</label>
+      <input type="text" id="recipe-search" placeholder="Search title or tag..." style="width: 180px;">
+    </div>
+    <div class="filter-item">
+      <label for="filter-category">Category:</label>
+      <select id="filter-category">
+        <option value="all">All Categories</option>
+        <option value="breakfast">Breakfast</option>
+        <option value="lunch">Lunch</option>
+        <option value="dinner">Dinner</option>
+        <option value="dessert">Dessert</option>
+      </select>
+    </div>
+    <div class="filter-item">
+      <label><input type="checkbox" id="filter-diet-gf"> Gluten-Free</label>
+    </div>
+    <div class="filter-item">
+      <label><input type="checkbox" id="filter-diet-veg"> Vegetarian</label>
+    </div>
+    <div class="filter-item" style="margin-left: auto;">
+      <span style="font-size: 12px; color: #6b7280;">Catalog: <strong id="catalog-count">12</strong> recipes</span>
+    </div>
+  </div>
+
+  <div class="main-layout">
+    <div>
+      <div id="recipe-grid" class="recipes-grid"></div>
+    </div>
+
+    <div class="planner-sidebar">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h2 style="font-size: 16px; font-weight: 600;">Meal Planner (<span id="planner-count">0</span>)</h2>
+        <button id="btn-clear-planner" class="btn btn-secondary" style="font-size: 11px;">Clear</button>
+      </div>
+      <div id="meal-planner-list" class="planner-list"></div>
+
+      <div style="border-top: 1px solid #e5e7eb; padding-top: 14px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <h3 style="font-size: 14px; font-weight: 600;">Shopping List</h3>
+          <button id="btn-generate-shopping-list" class="btn btn-secondary" style="font-size: 11px;">Generate List</button>
+        </div>
+        <div id="shopping-list-output" class="shopping-list-box">
+          <p style="color: #9ca3af; font-style: italic;">Click 'Generate List' to compile ingredients from planned meals.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal -->
+<div id="recipe-modal" class="modal-overlay">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2 id="modal-recipe-title" style="font-size: 18px;"></h2>
+      <button id="btn-close-modal" style="background: none; border: none; font-size: 20px; cursor: pointer;">&times;</button>
+    </div>
+    <div class="servings-control">
+      <span>Servings:</span>
+      <button id="btn-dec-servings" class="btn btn-secondary" style="padding: 2px 8px;">-</button>
+      <span id="servings-count" style="font-weight: 600; width: 24px; text-align: center;">2</span>
+      <button id="btn-inc-servings" class="btn btn-secondary" style="padding: 2px 8px;">+</button>
+    </div>
+    <div style="margin-bottom: 12px;">
+      <h4 style="font-size: 13px; margin-bottom: 6px;">Ingredients:</h4>
+      <ul id="modal-ingredients-list" style="font-size: 12px; margin-left: 20px; line-height: 1.6;"></ul>
+    </div>
+    <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px;">
+      <button id="btn-modal-add-plan" class="btn btn-primary">Add to Meal Plan</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  const recipes = [
+    {
+      id: 'salmon',
+      title: 'Lemon Herb Salmon',
+      category: 'dinner',
+      prepTime: 25,
+      calories: 420,
+      gf: true,
+      veg: false,
+      baseServings: 2,
+      ingredients: [
+        { name: 'Salmon fillets', qty: 2, unit: 'fillets' },
+        { name: 'Olive oil', qty: 2, unit: 'tbsp' },
+        { name: 'Fresh lemon juice', qty: 1, unit: 'lemon' },
+        { name: 'Garlic cloves', qty: 2, unit: 'cloves' }
+      ]
+    },
+    {
+      id: 'quinoa-bowl',
+      title: 'Quinoa Vegetable Bowl',
+      category: 'dinner',
+      prepTime: 30,
+      calories: 380,
+      gf: true,
+      veg: true,
+      baseServings: 2,
+      ingredients: [
+        { name: 'Cooked quinoa', qty: 2, unit: 'cups' },
+        { name: 'Roasted broccoli', qty: 1, unit: 'cup' },
+        { name: 'Avocado', qty: 1, unit: 'whole' }
+      ]
+    },
+    {
+      id: 'pancakes',
+      title: 'Fluffy Banana Oat Pancakes',
+      category: 'breakfast',
+      prepTime: 20,
+      calories: 350,
+      gf: true,
+      veg: true,
+      baseServings: 2,
+      ingredients: [
+        { name: 'Rolled oats', qty: 1.5, unit: 'cups' },
+        { name: 'Ripe banana', qty: 2, unit: 'medium' },
+        { name: 'Almond milk', qty: 1, unit: 'cup' },
+        { name: 'Maple syrup', qty: 2, unit: 'tbsp' }
+      ]
+    },
+    {
+      id: 'smoothie',
+      title: 'Berry Protein Smoothie',
+      category: 'breakfast',
+      prepTime: 5,
+      calories: 280,
+      gf: true,
+      veg: true,
+      baseServings: 1,
+      ingredients: [
+        { name: 'Mixed berries', qty: 1, unit: 'cup' },
+        { name: 'Protein powder', qty: 1, unit: 'scoop' },
+        { name: 'Greek yogurt', qty: 0.5, unit: 'cup' }
+      ]
+    },
+    {
+      id: 'tacos',
+      title: 'Crispy Beef Tacos',
+      category: 'dinner',
+      prepTime: 25,
+      calories: 520,
+      gf: false,
+      veg: false,
+      baseServings: 3,
+      ingredients: [
+        { name: 'Ground beef', qty: 1, unit: 'lb' },
+        { name: 'Taco shells', qty: 6, unit: 'shells' },
+        { name: 'Cheddar cheese', qty: 0.5, unit: 'cup' }
+      ]
+    },
+    {
+      id: 'pasta-primavera',
+      title: 'Pasta Primavera',
+      category: 'dinner',
+      prepTime: 30,
+      calories: 440,
+      gf: false,
+      veg: true,
+      baseServings: 2,
+      ingredients: [
+        { name: 'Penne pasta', qty: 250, unit: 'g' },
+        { name: 'Zucchini', qty: 1, unit: 'sliced' },
+        { name: 'Parmesan cheese', qty: 3, unit: 'tbsp' }
+      ]
+    },
+    {
+      id: 'avocado-toast',
+      title: 'Poached Egg Avocado Toast',
+      category: 'breakfast',
+      prepTime: 12,
+      calories: 310,
+      gf: false,
+      veg: true,
+      baseServings: 1,
+      ingredients: [
+        { name: 'Sourdough bread', qty: 2, unit: 'slices' },
+        { name: 'Avocado', qty: 1, unit: 'mashed' },
+        { name: 'Eggs', qty: 2, unit: 'eggs' }
+      ]
+    },
+    {
+      id: 'med-salad',
+      title: 'Mediterranean Chickpea Salad',
+      category: 'lunch',
+      prepTime: 15,
+      calories: 340,
+      gf: true,
+      veg: true,
+      baseServings: 2,
+      ingredients: [
+        { name: 'Canned chickpeas', qty: 1, unit: 'can' },
+        { name: 'Cucumber', qty: 1, unit: 'diced' },
+        { name: 'Feta cheese', qty: 50, unit: 'g' }
+      ]
+    },
+    {
+      id: 'turkey-wrap',
+      title: 'Smoked Turkey Club Wrap',
+      category: 'lunch',
+      prepTime: 10,
+      calories: 410,
+      gf: false,
+      veg: false,
+      baseServings: 1,
+      ingredients: [
+        { name: 'Tortilla wrap', qty: 1, unit: 'wrap' },
+        { name: 'Sliced turkey', qty: 100, unit: 'g' },
+        { name: 'Crisp bacon', qty: 2, unit: 'strips' }
+      ]
+    },
+    {
+      id: 'miso-soup',
+      title: 'Tofu Wakame Miso Soup',
+      category: 'lunch',
+      prepTime: 15,
+      calories: 160,
+      gf: true,
+      veg: true,
+      baseServings: 2,
+      ingredients: [
+        { name: 'Miso paste', qty: 2, unit: 'tbsp' },
+        { name: 'Firm tofu', qty: 100, unit: 'g' },
+        { name: 'Wakame seaweed', qty: 1, unit: 'tbsp' }
+      ]
+    },
+    {
+      id: 'chia-pudding',
+      title: 'Coconut Chia Seed Pudding',
+      category: 'dessert',
+      prepTime: 10,
+      calories: 220,
+      gf: true,
+      veg: true,
+      baseServings: 2,
+      ingredients: [
+        { name: 'Chia seeds', qty: 4, unit: 'tbsp' },
+        { name: 'Coconut milk', qty: 1, unit: 'cup' },
+        { name: 'Vanilla extract', qty: 1, unit: 'tsp' }
+      ]
+    },
+    {
+      id: 'apple-crisp',
+      title: 'Warm Cinnamon Apple Crisp',
+      category: 'dessert',
+      prepTime: 40,
+      calories: 360,
+      gf: false,
+      veg: true,
+      baseServings: 4,
+      ingredients: [
+        { name: 'Honeycrisp apples', qty: 4, unit: 'sliced' },
+        { name: 'Brown sugar', qty: 0.5, unit: 'cup' },
+        { name: 'Oat topping', qty: 1, unit: 'cup' }
+      ]
+    }
+  ];
+
+  let activeModalRecipe = null;
+  let currentServings = 2;
+  let plannedMeals = []; // list of { id, title, servings, ingredients }
+  let shoppingList = [];
+  let planSaved = false;
+
+  const grid = document.getElementById('recipe-grid');
+  const catalogCountEl = document.getElementById('catalog-count');
+
+  function renderCatalog() {
+    const searchVal = document.getElementById('recipe-search').value.toLowerCase().trim();
+    const catVal = document.getElementById('filter-category').value;
+    const gfVal = document.getElementById('filter-diet-gf').checked;
+    const vegVal = document.getElementById('filter-diet-veg').checked;
+
+    const filtered = recipes.filter(r => {
+      if (catVal !== 'all' && r.category !== catVal) return false;
+      if (gfVal && !r.gf) return false;
+      if (vegVal && !r.veg) return false;
+      if (searchVal) {
+        const matchesTitle = r.title.toLowerCase().includes(searchVal);
+        const matchesCat = r.category.toLowerCase().includes(searchVal);
+        if (!matchesTitle && !matchesCat) return false;
+      }
+      return true;
+    });
+
+    catalogCountEl.textContent = filtered.length;
+    grid.innerHTML = '';
+
+    filtered.forEach(r => {
+      const card = document.createElement('div');
+      card.className = 'recipe-card';
+      card.id = 'recipe-card-' + r.id;
+      
+      const tagsHtml = `
+        <span class="tag tag-category">${r.category}</span>
+        ${r.gf ? '<span class="tag">GF</span>' : ''}
+        ${r.veg ? '<span class="tag">Veg</span>' : ''}
+      `;
+
+      card.innerHTML = `
+        <div>
+          <div class="card-title">${r.title}</div>
+          <div class="card-tags" style="margin-top:6px;">${tagsHtml}</div>
+          <div class="card-meta" style="margin-top:8px;">${r.prepTime} min | ${r.calories} kcal</div>
+        </div>
+        <div class="card-actions">
+          <button id="btn-view-${r.id}" class="btn btn-secondary btn-view-recipe" data-id="${r.id}">View Recipe</button>
+          <button id="btn-plan-${r.id}" class="btn btn-primary btn-quick-plan" data-id="${r.id}">Add to Plan</button>
+        </div>
+      `;
+      grid.appendChild(card);
+    });
+
+    grid.querySelectorAll('.btn-view-recipe').forEach(b => {
+      b.addEventListener('click', () => openModal(b.getAttribute('data-id')));
+    });
+
+    grid.querySelectorAll('.btn-quick-plan').forEach(b => {
+      b.addEventListener('click', () => {
+        const rec = recipes.find(x => x.id === b.getAttribute('data-id'));
+        if (rec) addPlannedMeal(rec, rec.baseServings);
+      });
+    });
+  }
+
+  function openModal(id) {
+    const rec = recipes.find(x => x.id === id);
+    if (!rec) return;
+    activeModalRecipe = rec;
+    currentServings = rec.baseServings;
+    document.getElementById('modal-recipe-title').textContent = rec.title;
+    document.getElementById('servings-count').textContent = currentServings;
+    renderModalIngredients();
+    document.getElementById('recipe-modal').style.display = 'flex';
+  }
+
+  function renderModalIngredients() {
+    const list = document.getElementById('modal-ingredients-list');
+    list.innerHTML = '';
+    const ratio = currentServings / activeModalRecipe.baseServings;
+    activeModalRecipe.ingredients.forEach(ing => {
+      const li = document.createElement('li');
+      const scaledQty = +(ing.qty * ratio).toFixed(1);
+      li.textContent = `${scaledQty} ${ing.unit} ${ing.name}`;
+      list.appendChild(li);
+    });
+  }
+
+  document.getElementById('btn-close-modal').addEventListener('click', () => {
+    document.getElementById('recipe-modal').style.display = 'none';
+  });
+
+  document.getElementById('btn-inc-servings').addEventListener('click', () => {
+    currentServings++;
+    document.getElementById('servings-count').textContent = currentServings;
+    renderModalIngredients();
+  });
+
+  document.getElementById('btn-dec-servings').addEventListener('click', () => {
+    if (currentServings > 1) {
+      currentServings--;
+      document.getElementById('servings-count').textContent = currentServings;
+      renderModalIngredients();
+    }
+  });
+
+  document.getElementById('btn-modal-add-plan').addEventListener('click', () => {
+    if (activeModalRecipe) {
+      addPlannedMeal(activeModalRecipe, currentServings);
+      document.getElementById('recipe-modal').style.display = 'none';
+    }
+  });
+
+  function addPlannedMeal(rec, servings) {
+    const ratio = servings / rec.baseServings;
+    const scaledIngredients = rec.ingredients.map(ing => ({
+      name: ing.name,
+      qty: +(ing.qty * ratio).toFixed(1),
+      unit: ing.unit
+    }));
+
+    plannedMeals.push({
+      id: rec.id,
+      title: rec.title,
+      servings,
+      ingredients: scaledIngredients
+    });
+    planSaved = false;
+    renderMealPlanner();
+  }
+
+  function renderMealPlanner() {
+    const list = document.getElementById('meal-planner-list');
+    const countEl = document.getElementById('planner-count');
+    list.innerHTML = '';
+    countEl.textContent = plannedMeals.length;
+
+    plannedMeals.forEach((item, idx) => {
+      const row = document.createElement('div');
+      row.className = 'planner-item';
+      row.id = 'planner-item-' + idx;
+      row.innerHTML = `
+        <div>
+          <strong>${item.title}</strong>
+          <span style="font-size:11px;color:#6b7280;margin-left:6px;">(${item.servings} serv)</span>
+        </div>
+        <button id="btn-remove-plan-${item.id}" class="btn btn-danger btn-remove-item" data-index="${idx}" style="padding:2px 8px;font-size:11px;">Remove</button>
+      `;
+      list.appendChild(row);
+    });
+
+    list.querySelectorAll('.btn-remove-item').forEach(b => {
+      b.addEventListener('click', () => {
+        const idx = parseInt(b.getAttribute('data-index'), 10);
+        plannedMeals.splice(idx, 1);
+        planSaved = false;
+        renderMealPlanner();
+      });
+    });
+  }
+
+  document.getElementById('btn-clear-planner').addEventListener('click', () => {
+    plannedMeals = [];
+    planSaved = false;
+    renderMealPlanner();
+    document.getElementById('shopping-list-output').innerHTML = '<p style="color:#9ca3af;font-style:italic;">Planner cleared.</p>';
+  });
+
+  document.getElementById('btn-generate-shopping-list').addEventListener('click', () => {
+    const map = {};
+    plannedMeals.forEach(meal => {
+      meal.ingredients.forEach(ing => {
+        const key = ing.name + '::' + ing.unit;
+        if (!map[key]) {
+          map[key] = { name: ing.name, unit: ing.unit, qty: 0 };
+        }
+        map[key].qty += ing.qty;
+      });
+    });
+
+    shoppingList = Object.values(map);
+    const box = document.getElementById('shopping-list-output');
+    if (shoppingList.length === 0) {
+      box.innerHTML = '<p style="color:#9ca3af;font-style:italic;">No ingredients found.</p>';
+      return;
+    }
+
+    box.innerHTML = '';
+    shoppingList.forEach(item => {
+      const div = document.createElement('div');
+      div.className = 'shopping-item';
+      div.textContent = `${item.qty} ${item.unit} ${item.name}`;
+      box.appendChild(div);
+    });
+  });
+
+  document.getElementById('btn-save-plan').addEventListener('click', () => {
+    const planName = document.getElementById('input-plan-name').value.trim() || 'Weekly Health Plan';
+    const banner = document.getElementById('recipe-status-banner');
+    if (plannedMeals.length === 0) {
+      banner.className = 'status-banner error';
+      banner.textContent = 'Cannot save empty meal plan.';
+      return;
+    }
+    planSaved = true;
+    banner.className = 'status-banner success';
+    banner.textContent = `Meal plan '${planName}' saved with ${plannedMeals.length} recipes and shopping list`;
+  });
+
+  // Filter listeners
+  document.getElementById('recipe-search').addEventListener('input', renderCatalog);
+  document.getElementById('filter-category').addEventListener('change', renderCatalog);
+  document.getElementById('filter-diet-gf').addEventListener('change', renderCatalog);
+  document.getElementById('filter-diet-veg').addEventListener('change', renderCatalog);
+
+  // Initial render
+  renderCatalog();
+  renderMealPlanner();
+
+  // Verification hook (REAL DOM only - no self-simulation)
+  window.__agyVerify = function() {
+    const failures = [];
+    const planNameVal = document.getElementById('input-plan-name').value.trim();
+    const bannerText = document.getElementById('recipe-status-banner').textContent.trim();
+    const plannerCount = parseInt(document.getElementById('planner-count').textContent.trim(), 10);
+    const shoppingItems = document.querySelectorAll('#shopping-list-output .shopping-item');
+
+    if (planNameVal !== 'Weekly Health Plan') {
+      failures.push(`Plan name expected 'Weekly Health Plan', got '${planNameVal}'`);
+    }
+    if (!planSaved) {
+      failures.push('Meal plan not saved via btn-save-plan');
+    }
+    if (!bannerText.includes("Meal plan 'Weekly Health Plan' saved with 3 recipes and shopping list")) {
+      failures.push(`Status banner text mismatch, got '${bannerText}'`);
+    }
+    if (plannerCount !== 3) {
+      failures.push(`Planner count expected 3, got ${plannerCount}`);
+    }
+    if (plannedMeals.length !== 3) {
+      failures.push(`Internal planned meals count expected 3, got ${plannedMeals.length}`);
+    }
+
+    // Verify exactly the 3 planned meals
+    if (plannedMeals.length === 3) {
+      const ids = plannedMeals.map(m => m.id);
+      if (!ids.includes('salmon')) failures.push('Missing Lemon Herb Salmon in plan');
+      if (!ids.includes('pancakes')) failures.push('Missing Fluffy Banana Oat Pancakes in plan');
+      if (!ids.includes('smoothie')) failures.push('Missing Berry Protein Smoothie in plan');
+      if (ids.includes('tacos')) failures.push('Tacos should have been removed from plan');
+
+      // Check scaled salmon servings
+      const salmon = plannedMeals.find(m => m.id === 'salmon');
+      if (salmon && salmon.servings !== 4) {
+        failures.push(`Salmon servings expected 4, got ${salmon.servings}`);
+      }
+    }
+
+    if (shoppingItems.length < 5) {
+      failures.push(`Expected at least 5 shopping items generated, found ${shoppingItems.length}`);
+    }
+
+    const state = {
+      planName: planNameVal,
+      saved: planSaved,
+      plannedCount: plannedMeals.length,
+      recipes: plannedMeals.map(m => ({ id: m.id, servings: m.servings })),
+      shoppingItemCount: shoppingItems.length
+    };
+
+    return {
+      passed: failures.length === 0,
+      failures,
+      score: failures.length === 0 ? 1 : 0,
+      state
+    };
+  };
+})();
+</script>
+</body>
+</html>

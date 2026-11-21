@@ -64,6 +64,41 @@ const testSimulators = {
     await page.click('#btn-add-shape');
     // 9. Save
     await page.click('#btn-save-board');
+  },
+  '02': async (page) => {
+    // 1. Enter plan name
+    await page.type('#input-plan-name', 'Weekly Health Plan');
+    // 2. Filter category dinner
+    await page.select('#filter-category', 'dinner');
+    // 3. Filter GF
+    await page.click('#filter-diet-gf');
+    // 4. View Salmon
+    await page.click('#btn-view-salmon');
+    // 5. Inc servings to 4 (2 clicks)
+    await page.click('#btn-inc-servings');
+    await page.click('#btn-inc-servings');
+    // 6. Modal add
+    await page.click('#btn-modal-add-plan');
+    // 7. Reset filters
+    await page.select('#filter-category', 'all');
+    await page.click('#filter-diet-gf');
+    // 8. Search pancakes & add
+    await page.type('#recipe-search', 'Pancakes');
+    await page.click('#btn-plan-pancakes');
+    // 9. Search smoothie & add
+    await page.$eval('#recipe-search', el => el.value = '');
+    await page.type('#recipe-search', 'Smoothie');
+    await page.click('#btn-plan-smoothie');
+    // 10. Search tacos & mistakenly add
+    await page.$eval('#recipe-search', el => el.value = '');
+    await page.type('#recipe-search', 'Tacos');
+    await page.click('#btn-plan-tacos');
+    // 11. Remove tacos
+    await page.click('#btn-remove-plan-tacos');
+    // 12. Generate shopping list
+    await page.click('#btn-generate-shopping-list');
+    // 13. Save plan
+    await page.click('#btn-save-plan');
   }
 };
 
