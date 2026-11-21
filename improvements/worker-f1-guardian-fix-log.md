@@ -105,8 +105,14 @@ be force-synced.
 - Laptop optics file: sha256 `545455d3...` = commit 09a8df7 (blur 0.0, shayxo
   Legacy Chrome params). The user ORDERED blur 0.15 on Nov 21 (G11: pill read
   as almost transparent).
-- Laptop manifest `profile_sha256`: `674441ea...` - matches NO known optics
-  version (checked 09a8df7=545455d3, 9ecc167=71a52904, 78b0615=a3cd50e9).
+- Laptop manifest `profile_sha256`: `674441ea...` = commit d27ad0a (blur 0.10
+  bottle candidate), verified 22:50 by `git show d27ad0a:native/hyprglass-local-optics.lua | sha256sum`
+  = 674441ea1b7d27f347aa8e31224ac5a8fcd923fc22ae75e65a0936ad8acc17c9. CORRECTED
+  22:50 (council 1 A5): the earlier claim that it matched no known optics
+  version was WRONG. The true drift was subtler: the laptop optics file was
+  from 09a8df7 (blur 0.0) while the manifest pin was from d27ad0a (blur 0.10),
+  so optics and manifest came from two different stale commits, and both were
+  stale against b2afcd1 (blur 0.15).
 - Laptop manifest `library`: hyprglass-`d086bc43...`.so (older build).
 Setup-published state (installed tree `/home/james/.local/share/agent-computer-use/`):
 - optics sha256 `9a151634...` = commit b2afcd1 (blur 0.15).
@@ -323,9 +329,10 @@ New facts from council 2's live checks:
   label command, capture nesting); the liquid gate logic is identical, so the
   activation gates are unaffected. A future repo-to-installed sync would
   regress it. Follow up, not a precondition.
-- The laptop manifest pin 674441ea matched no known optics version and was
-  never explained. It suggests a manual edit or a partial re-pin. Worth one
-  line in the follow up, not a blocker tonight.
+- The laptop manifest pin 674441ea matches commit d27ad0a (blur 0.10), verified
+  22:50. CORRECTED 22:50 (council 1 A5): the earlier "matched no known optics
+  version, suggests a manual edit" line was WRONG. The drift was two stale
+  commits (optics 09a8df7, pin d27ad0a), not a mystery pin.
 
 Findings F1-F10 (full text in the verdict file):
 - F1. Plugin load dlopens in-process; a segfault kills Hyprland PID 1515
@@ -378,3 +385,187 @@ Preconditions 1-8 (all required, in order, before the live activation):
 Status: waiting on council 1, council 3 and redteam verdicts. The live
 activation stays gated until all four verdicts are adjudicated and the
 preconditions are met.
+
+## 22:47:53 - Owner rule: log EVERY event as it happens
+Owner rule 22:47: log EVERY event with time, nothing omitted. From now on,
+append EVERY action to the log file AS IT HAPPENS (wall-clock Asia/Ho_Chi_Minh
++ elapsed, what was done, target, outcome, coordinates for clicks). Never batch
+the log at the end. When the owner asks, the answer must be in the log, never
+"I don't know". This entry starts that practice. All entries below carry
+wall-clock times.
+
+## 22:47 - Council 1 + redteam verdicts arrived (both AMEND)
+- 22:47:44Z (22:47 +07): redteam completed. Verdict AMEND, 13 findings R1-R13,
+  file improvements/worker-f1-redteam.md (222 lines, 0 em/en dashes).
+- 22:47:26Z (22:47 +07): council 1 completed. Verdict AMEND, 6 required changes
+  A1-A6, file improvements/worker-f1-council-1.md.
+- Council 3 still running at 22:47. Council 2 already AMEND (22:42-22:48,
+  recorded above). Live activation stays gated until all four verdicts are
+  adjudicated and the AMEND items are addressed.
+- 22:47:53: owner rule received (log every event as it happens, see above).
+
+### Council 1 required changes A1-A6 (AMEND)
+- A1. Drain race in supervise (cursor_session.py:247-250): guard_errors is read
+  the instant select reports, with no wait for guardian exit and no join of
+  the drain thread, so the envelope can still be bare on a fast death. Require
+  a short guardian-exit wait plus drain-thread join before reading the tail.
+- A2. driver registration failed (line 260) carries no detail. Require the same
+  drained tail there.
+- A3. guard_reply misses UnicodeDecodeError (cursor_theme.py:100-101). Verified
+  live on the VM: non-UTF8 bytearray replies escape as a raw UnicodeDecodeError,
+  bypassing the named error on the socket path. Require catching it alongside
+  JSONDecodeError.
+- A4. The new Lifecycle test does not isolate fix D: the asserted text also
+  arrives via the guardian stderr tee, so it passes even if supervise raised
+  the old bare error. Require asserting the exact envelope string
+  'session guardian startup failed: cursor guard reply is not valid JSON' in stdout.
+- A5. LOG ERROR, Layer 4: the old pin 674441ea DOES match a known optics
+  version, commit d27ad0a (blur 0.10). The true drift was optics from 09a8df7
+  versus a manifest pin from d27ad0a, two different stale commits. The log must
+  be corrected. (F1 to verify the sha on the laptop repo before correcting.)
+- A6. Recurrence is untracked: the fix is diagnostic only, and nothing stops
+  the sync from re-pinning only the installed manifest again at the next optics
+  change. Require a tracked follow-up before live activation is declared complete.
+- Other findings (not blocking): guard_reply over-attributes every non-JSON
+  reply to a missing backend; session_remote.py wraps the named error in a
+  generic BrokerError; mid-run guardian death is still silent (exit 1, no
+  message); test_cursor_session.py cannot compile on VM Python 3.12
+  (pre-existing SyntaxError at line 570), so all session-test evidence is
+  laptop-only; one flaky BrokenPipeError in the theme tests observed once,
+  then 5/5 passes, pre-existing and unrelated.
+- Bottom line from council 1: the root-cause chain is proven live, the fix is
+  correct in design, but it must not be presented as restoring sessions. Until
+  plan B live activation runs, sessions still fail, only with a clearer error now.
+
+### Redteam findings R1-R13 (AMEND, ranked by severity in the file)
+- R1 (High): loader still fails silently at login. The fix only improves the
+  session error message. visuals-login.lua fires visuals.py once via hl.exec_cmd
+  to /dev/null with the exit code never recorded. The next optics edit without
+  a re-pin repeats the exact incident. Also check-visuals-manifest.py only runs
+  in the pre-commit hook, and the b2afcd1 commit message admits the manifest
+  was absent from that checkout, so the hook is structurally blind to this
+  drift class.
+- R2 (High): drift repair is not durable. The optics fix is an uncommitted
+  change in a repo at detached HEAD 56f5af4; the manifest is gitignored local
+  state. Any checkout, reset, clean, or fresh clone wipes it. It was done by
+  manual copy, not via the existing refresh-visuals-manifest.py.
+- R3 (High): session never gates on hyprglass. check_guard only checks
+  cu-cursor. liquid_available is consulted only by activation, and Native fails
+  closed on missing glass only when the require-liquid marker exists, which is
+  gitignored and absent from the installed tree (verified). Paused or crashed
+  glass plus loaded guard starts a session with no pill, the original symptom
+  returning silently with a successful session.
+- R4 (Medium-high): guard_reply misdiagnoses truncated JSON as a missing
+  backend. Verified on the VM: a truncated '{"ok": true, ...' reply yields
+  "backend may not be loaded" plus the activation remedy, which then fails
+  confusingly because setup_baseline rejects an inventory already containing
+  hyprglass.
+- R5 (Medium): drain thread dies silently on non-UTF8 stderr. Verified with a
+  test program: one 0xff byte raises UnicodeDecodeError (a ValueError subclass),
+  the except (OSError, ValueError) swallows it, the deque stays empty, and the
+  real cause is lost, making the error opaque again.
+- R6 (Medium): no drain settle before composing the detail. No wait or join
+  before reading the deque, and guard.stderr.close() in finally can discard
+  buffered lines. Exact-pattern simulation: 0 empty in 300 trials; variant:
+  1 partial in 200, so the window is small but real.
+- R7 (Medium): deque maxlen 32 plus detail[-1200:] can drop the root cause.
+  Guardian finally cleanup lines are appended after the root traceback and can
+  push it out of the window.
+- R8 (Medium): second gate and mid-session guard death still opaque. driver
+  registration failed carries no detail; mid-session guard death ends with
+  outcome 1 and no message. Same bug class as gate 1, unfixed at gates 2 and 3.
+- R9 (Medium): root-cause claim overstates proof. Only the profile mismatch was
+  proven to throw. The old library d086bc43 (verified self-consistent, hash
+  matches name) was never shown to pass liquid_available; the old pin 674441ea
+  matches no known optics version and its origin is unexplained.
+- R10 (Low-medium): 30-second fresh-login gate is single-shot with no retry.
+  A slow boot past 30s leaves plugins unloaded for the whole login, silently.
+- R11 (Low): no redaction in the supervise tail or guard_reply echo, unlike
+  visuals.py _loader_log. A truncated busy reply can carry a partial token;
+  tee writes raw stderr unsanitized.
+- R12 (Low): test_cursor_session.py does not compile on VM Python 3.12
+  (SyntaxError, too many statically nested blocks, line 570), so the new
+  Lifecycle test was only run on the laptop and could not be independently
+  re-run here.
+- R13 (Low): lock message misleads when activation holds owner_lock ("another
+  automation session is active").
+- Required fixes, in order: R1 login-time loader-failure detection plus manifest
+  check in sync/setup; R2 durable repair via commit/rebase and scripted re-pin;
+  R3 session gate on hyprglass active (or publish require-liquid); R4
+  distinguish truncated JSON from missing backend; R5 errors='replace' on the
+  drain pipe; R6 join drain thread before composing detail; R7 larger
+  deque/tail; R8 name the cause at registration and mid-session death; R9 close
+  the d086bc43 and 674441ea gaps; R10 retry or report a missed 30s window; R11
+  redact 32-hex tokens; R12 make the session tests compile on VM Python 3.12;
+  R13 correct the lock message.
+- Redteam note on plan B: the live activation may proceed as the correct remedy,
+  but positive proof must include a hyprglass-active check (R3), not only
+  cu-cursor status and the socket. Do not declare the fix complete until R1
+  through R5 are fixed.
+
+## 22:46-22:48 - Owner orders: optimal method, log everything, Lauren Tan, no cut steps
+- 22:46-22:47: owner order (OPTIMAL METHOD + LOG EVERYTHING): too many errors,
+  stop working sloppily (wastes time); gather ALL agents, each agent spawns
+  many crawlers + council + redteam to argue, find the ONE MOST OPTIMAL FIX
+  METHOD for the whole pile of errors. Log TIME AND EVENTS, NOTHING OMITTED
+  (append continuously as you work, never batch at the end), so when the owner
+  asks, never say "I don't know". Worker OPT (coordinator) spawned; all 6
+  running workers told to log continuously.
+- 22:48: owner order (LAUREN TAN, KHONG CAT BUOC): continue, follow the Lauren
+  Tan structure, stick to it tightly, DO NOT cut steps or it produces garbage
+  code. Owner is going to sleep; work overnight, do not stop, do not disturb;
+  report results in the morning. OPT told: the optimal method must follow the
+  Lauren Tan structure exactly (evidence contract, council + redteam, small and
+  many commits, generator never runs its own tests, kill rules, continuous
+  logging), no shortcuts.
+- F1 note: this task already follows that structure (evidence contract, council
+  1/2/3 + redteam, small commits, generator F1 does not run its own tests as
+  the judge, continuous logging from 22:47:53). The OPT coordinator is a
+  separate fleet effort for the whole error pile; F1 continues its assigned
+  guardian fix inside it.
+
+## 22:48-22:49 - Read council 1 + redteam verdict files, verify A5 claim
+- 22:48: read improvements/worker-f1-council-1.md in full (AMEND, A1-A6 + F1-F9).
+- 22:49: read improvements/worker-f1-redteam.md in full (AMEND, R1-R13, dated
+  about 22:50 +07).
+- Both verdicts verified as real files in the VM repo, uncommitted, 0 em/en
+  dashes claimed. Council 1 verified the root-cause chain live at every layer
+  except the A5 detail. Redteam verified the drift repair on disk and the
+  d086bc43 library file exists and hashes to its own name.
+- A5 (council 1) + R9 (redteam) correction pending verification: the old pin
+  674441ea is claimed to match commit d27ad0a (blur 0.10 bottle candidate),
+  meaning the drift was optics from 09a8df7 (blur 0.0) vs a manifest pin from
+  d27ad0a (blur 0.10), two different stale commits, both stale against b2afcd1
+  (blur 0.15). F1 to verify `git show d27ad0a:native/hyprglass-local-optics.lua
+  | sha256sum` in the VM repo before correcting the log. If it matches, the
+  log Layer 4 line "674441ea matches no known optics version" is wrong and
+  must be corrected to the two-stale-commits story. The repair itself stays
+  correct either way.
+- Adjudication (deferred until council 3 lands): A1/R6 drain race (wait for
+  guardian exit + join drain thread), A2/R8 registration + mid-session death
+  naming, A3/R5 UnicodeDecodeError + errors='replace', A4 exact envelope
+  assertion in the Lifecycle test, R3 session gate on hyprglass active,
+  R4 truncated JSON vs missing backend, R7 larger deque/tail, R11 32-hex
+  redaction, R12 test file compile on VM 3.12, R1/R2/A6 durability follow-up
+  (re-pin check in sync/setup, loader-failure visibility), R10 30s gate retry
+  or report, R13 lock message. Redteam: do not declare the fix complete until
+  R1-R5 are fixed.
+- Council 3 still running at 22:49. Live activation stays gated.
+
+## 22:50 - A5 verified and log corrected
+- 22:50: verified council 1 A5 in the VM repo: `git show
+  d27ad0a:native/hyprglass-local-optics.lua | sha256sum` =
+  674441ea1b7d27f347aa8e31224ac5a8fcd923fc22ae75e65a0936ad8acc17c9, EXACTLY the
+  old laptop manifest pin. `git log --oneline -1 d27ad0a` = "fix(glass): bottle
+  candidate at refrPx 9.35px (DEPTH_DP 11.0), blur 0.10". The next optics
+  commit on that path is b2afcd1 (blur 0.15). A5 CONFIRMED.
+- 22:50: corrected the two wrong lines in this log (Layer 4, line ~108, and the
+  council-2 notes section, line ~326): the pin is d27ad0a, the drift was two
+  stale commits (optics 09a8df7 blur 0.0 vs pin d27ad0a blur 0.10), both stale
+  against b2afcd1 blur 0.15. The repair itself is unchanged and still correct.
+  R9's d086bc43 part: the old library was verified self-consistent (hash
+  matches name) but was never shown to pass liquid_available; that gap is
+  recorded, not claimed fixed.
+- Next: commit the two verdict files + this log update (3 small commits),
+  then adjudicate all four verdicts once council 3 lands and implement the
+  AMEND code fixes (A1-A4, R3-R8, R11, R12) with re-tests.
