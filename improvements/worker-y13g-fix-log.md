@@ -263,3 +263,32 @@ in the repo worktree and /tmp test copies.
   passes, tokenizer AST-identical, remote pin matches, Amend 5
   in code. NOT adjudicating yet: waiting on Council 1/2,
   Redteam, Verifier (4/5 still running).
+
+- 00:18 +07 (T+1h22m): COUNCIL 1 DONE, verdict AMEND, paper
+  6e9544f (improvements/worker-y13g-council-1.md + log). 10
+  findings: F1 (Medium) _check_entry_pyc UNREACHABLE for a
+  pre-existing .pyc (module-top scan + check_manifest refuse
+  first); docs present it as the operative B1 control. Fix (a)
+  rewrite docs to name top scan + check_manifest operative and
+  _check_entry_pyc TOCTOU-only, or (b) exempt entry .pyc from
+  the launcher top scan + check_manifest so _check_entry_pyc
+  adjudicates. F2 (Medium-Low) guard stem asymmetry, same as
+  C3-4 (run_live missing from runner guard + _ENTRY_PYC_NAMES).
+  F3 (Medium-Low) NEW REAL BUG: bundled value-flags misparsed
+  (-uc, -Bc, -um, -Bum fall through to generic skip, want True,
+  got False; 4 probes). Fix: consume next token as -c/-m value
+  when a bundled token ends in c/m, both copies, add cases to
+  verifier battery. F4 (Low-Medium) -c docstring claims os.system
+  caught, plan says not, probe confirms False; fix docstring in
+  both copies + SHIPPED.md + launcher check 7. F5 (Low)
+  _proven_no_body docstring contradicts code (None accepted).
+  F6 (Low) runner docstring launch lines lack -P (same as C3-7).
+  F7 (Low) plan B2 bullet overstates check_manifest (same as
+  C3-11a). F8 (Low) runner preflight comment says plain codex
+  "only warns" but runner has no warning branch. F9 (Low)
+  Amend 3 "scan JSON" unscoped (runner only). F10 (Trivial)
+  CODEX comment drift in the "identical" block. Holds: both
+  bootstraps consistent, tokenizer AST-identical, 18 behavioral
+  probes pass, manifest/SHIPPED agree, no dashes, no
+  pyc_refused left. Still waiting: Council 2, Redteam,
+  Verifier (3/5 running).
