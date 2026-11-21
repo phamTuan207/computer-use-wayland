@@ -755,12 +755,11 @@ header/imports, run_b3_t10, run_preflight, H2 helpers, launch_gate):
   the form with "unknown option", exit 2); F10 H4 wording FIXED
   (the plan now states Council 1's 3 undercounts by half a round
   trip and Council 3's 4 overcounts by half a round trip; the
-  "bracket" phrasing is removed). (U11, closed: the literal clause
-  the redteam asked for, leg-precise 3.0 with 4 overcounting by 1,
-  is not stated because on the N=3.5 model both 3 and 4 are half a
-  round trip off; stating either as exact would be wrong, so the
-  plan states the half/half position instead.) Verification in
-  the log. A
+  "bracket" phrasing is removed). (U11, closed: the operative H4
+  sentence states the half/half position instead of the literal
+  leg-precise clause, because on the N=3.5 model both 3 and 4
+  are half a round trip off and stating either as exact would be
+  wrong.) Verification in the log. A
   redteam re-review over the fix-pass-4 diff is spawned after this
   commit; ship waits for it unless it BLOCKs, in which case one
   more fix pass follows.

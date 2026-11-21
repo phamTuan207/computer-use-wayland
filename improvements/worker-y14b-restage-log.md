@@ -664,7 +664,7 @@ on its merits; nothing accepted or declined silently.
 
 - py_compile OK; import OK, 10 tests.
 - Fix4 probe /tmp/y14b-fix4-probe.py: 64/64 PASS, exit 0 (R1
-  -m.py x6, F1 x5, F3 x8, F4 x3, F5 x2, regressions x17, codex
+  -m.py x6, F1 x5, F3 x9, F4 x3, F5 x2, regressions x14, codex
   F6/F7/F8 x21, live x4). First run 8 failures: 6 were the real
   R1 ordering bug (the -m branch was skipped by the basename
   block's `continue`) plus the missing F2 -c rule, both fixed in
@@ -1217,3 +1217,31 @@ and their disposition:
   shared-checkout staging rule, evidence contract). Papers to
   improvements/worker-y14b-fix5-redteam.md and
   worker-y14b-fix5-council-{1,2,3}.md. Ship waits for them.
+- 23:09 +07: Council 3 fix-pass-5 verdict received: AMEND, paper
+  improvements/worker-y14b-fix5-council-3.md, committed in
+  6ba5e09 (swept by a concurrent worker's git add -A, verified
+  byte-identical by the author, ancestor of remote head 28a3592).
+  8 of its 9 findings CLOSED, 1 PARTIALLY CLOSED: C3-5, log line
+  667 still read "F3 x8 ... regressions x17" (sums to 66 for a
+  64-case probe). Required fix U-C3-5b applied now (one line, no
+  code change, no re-probe): log line 667 now reads "F3 x9 ...
+  regressions x14". Optional polish C3-9p applied in the same
+  edit: the plan's U11 parenthetical now reads "the operative H4
+  sentence states the half/half position instead of the literal
+  leg-precise clause". Council 3's own verification: hashes exact,
+  its 26-case probe 26/26, regressions re-run by it (fix5 38/38,
+  fix4 64/64, H2 45/45, fix2 31/31, fix3 70/70, transcription 82,
+  gate dry 4/4, M1 3/3, M1 all-12 4/4), C2 extra probe 36/46 with
+  all 10 failures confirmed as the fix itself, t10 untouched,
+  hygiene clean.
+- 23:09 +07: MEMORY.md updates noted: Zen keybinds deferred item
+  DONE by ZK (probe 23:05, commit 81a3bc4, customKeys.json, 3
+  customized keys, local-only, not on the repo). MERGE DONE +
+  GRAPH 456 (23:05): main HEAD 5c94e6c (merge 0ac4311
+  todolist-push 313 commits + 0c473f9), 3 conflicts kept both
+  sides, suite 1618 tests (3 fail + 5 error, all pre-existing,
+  0 regression, +124 tests). Graph UTC 21/11: 455 commits + 1 PR
+  = 456, EXCEEDED the 240 target. My fix-pass-5 commits are on
+  main via that merge. I continue committing to todolist-push.
+- 23:09 +07: redteam + Council 1 + Council 2 still running.
+  Committing the C3-5/C3-9p doc fixes (log + plan only).
