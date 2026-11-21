@@ -150,15 +150,13 @@ The author's claim on all 10 is correct.
   `import re` OK.
 - C3-9 FIXED. U11 parenthetical added to the plan's H4 note
   (plan lines 758-762).
-- C1-2 REFUTATION VERIFIED. The plan pins the fix-pass-5
-  values at lines 614-615 (md5 9e99d9aa, blob ff4a5358,
-  commit 46e0909) and lists the fix-pass-4 values as
-  superseded; grep for e9e3519a/3a9b7b17 in the plan returns
-  nothing. The log's fix-pass-5 entry records the same blob
-  and md5 (lines 1149-1150, 1198-1199, 1208). The fix-pass-3
-  values appear in the log only in the historical fix-pass-3
-  section (lines 496-497, 550), which is not the live pin.
-  Council 1 read a stale file or the historical section.
+- C1-2 REFUTATION WITHDRAWN, see the Correction addendum
+  below. (My original verification repeated the fix author's
+  error: I checked the current plan, not the bf3c939 plan. At
+  bf3c939 the plan DID pin the fix-pass-3 values and the log
+  had no fix-pass-4 entry, so Council 1's C1-2 was valid at
+  the time. At HEAD the pin is correct, which is what I
+  actually verified; the "refutation" claim is withdrawn.)
 - C1-R3 RECORDED. The glued `;codex` miss is in the
   known-limitations docstring. My B13 case confirms the
   adjacent _top_level_sep_index limitation is real (R5-5).
@@ -424,6 +422,12 @@ log sentence to say that (see U5).
   quoting, where True is fail-closed.
 - U6 PAPERWORK: none. Hashes verify exactly, docs verify,
   hygiene is clean.
+- U7 FIX OR RECORD (R5-8, see Correction addendum): the
+  _owning_command bare-word false-positive class.
+- U8 PAPERWORK (R5-9 and the C1-2 correction, see Correction
+  addendum): rewrite the plan F7 sentence; record that the
+  C1-2 refutation is withdrawn; pin the new values IN the
+  fix commit, not in a follow-up.
 
 ## Hygiene
 
@@ -521,3 +525,145 @@ log sentence to say that (see U5).
   direct grep).
 - 23:19 +07: paper written. Dash check, commit, and push to
   follow; hashes to be filled below on landing.
+- 23:20 +07: paper committed 92fbefd, pushed, ls-remote
+  verified 92fbefd296072a96ab7cbd585944b07ae525938a,
+  ANCESTOR_OK. Outcome: landed.
+
+## Correction addendum (23:21 +07, after the 92fbefd push)
+
+I wrote the paper above before the parallel Council 1 and
+Council 2 papers landed (239b380, 23:20 +07). Their papers
+contain three points that change mine, and I verified each
+myself instead of taking them on trust. I own the first one
+plainly: it is my own error, the same error the fix author
+made. Verdict stays AMEND; the required fixes U1 and U2 are
+unchanged. Two findings and one doc correction are added.
+
+### Correction 1: the C1-2 refutation is WRONG, I withdraw it
+
+My disposition bullet claimed the C1-2 refutation verified,
+on the ground that the plan (at HEAD) pins the fix-pass-5
+values and contains no fix-pass-3 values. That checks the
+wrong tree. The claim to test was about the bf3c939 tree,
+and there it is false, verified by me just now:
+
+- Plan at bf3c939, lines 614-615: pins the fix-pass-3 values
+  (md5 e9e3519a, blob 3a9b7b17, commit 3875215), NOT the
+  fix-pass-4 values.
+- Log at bf3c939: grep for 2920f169/585fb801 returns 0
+  matches. There was no fix-pass-4 entry at all.
+
+So Council 1's C1-2 was VALID at the time, and it was fixed
+by the hash-record follow-up 40c4e48 (fix4 values), not
+refuted. The fix author's refutation read the current plan
+(already fixed by 40c4e48), and my verification repeated
+exactly that error. What I actually verified, and what
+stands, is narrower: at HEAD the plan pins the fix-pass-5
+values (lines 614-615, md5 9e99d9aa, blob ff4a5358, commit
+46e0909) and contains no fix-pass-3 values, and the log has
+the superseding fix-pass-5 entry. The "Council 1 read a
+stale file" sentence in my original bullet is withdrawn.
+
+Process note for fix pass 6 (from the same correction): the
+fix commit 46e0909 itself still pinned the fix-pass-4
+values; the fix-pass-5 pin arrived only in the follow-up
+8a99ea0. Pin the new values IN the fix commit, not in a
+follow-up, since C1-2's ship-blocking logic applies to the
+fix commit itself.
+
+### R5-8 LOW, NEW false positive, fix5-introduced: _owning_command returns ANY bare word before -c as the owner
+
+File: tests/realistic/run_batch3.py, _owning_command lines
+2340-2365, via _c_is_shell line 2393. The walk-back returns
+the first bare word before the -c without checking whether
+that word is actually a command. A bare word that is merely
+an argument to another command, and happens to be a shell
+name, is treated as the owner, so a non-command that merely
+mentions `bash -c` now flags.
+
+Reproduced by me (differential fix4 blob vs fix5 blob; all
+five were False in fix4, True in fix5):
+
+- `echo bash -c run_batch3.py` True, want False (echo prints
+  the words; no shell -c runs).
+- `ssh host bash -c run_batch3.py` True, want False (the ssh
+  client is not running the runner locally).
+- `echo bash -c codex exec marionette` True, want False
+  (codex side).
+- `cat bash -c run_batch3.py` True, want False.
+- `grep -r bash -c run_batch3.py` True, want False.
+
+Mitigation, verified by me: `python3 script.py bash -c
+run_batch3.py` stays False, because the basename block's
+`any(... .py ...)` guard catches script.py. So the class
+needs a bare shell name with no script token before it.
+
+Severity LOW: fail-closed false positive, narrow shape
+(needs a literal shell name as a bare word immediately
+before a -c in a non-shell command). It is the mirror image
+of R5-2: _owning_command is wrong in both directions (a flag
+value read as the owner, and a non-command bare word read as
+the owner). Fix direction: accept a bare word as the owner
+only when it sits in command position (argv[0], or after a
+separator, a -c, or a wrapper chain), or record the class in
+the docstring with the probe cases pinning it. Recording is
+acceptable for this one (see U7).
+
+### R5-1 addendum: the d4 instance (wrapper import, glued ; after an OPENING quote)
+
+The R5-1 heuristic misfires in the other direction too, and
+I verified this instance myself: `bash -c "python3 -c
+'a=1; import run_batch3'"` returns False (fix4 True), while
+the direct leaf form `python3 -c 'a=1; import run_batch3'`
+returns True in both. Mechanism: the token is `'a=1;`, whose
+only quote is the OPENING quote at index 0, so the ";" at
+index 4 sits after the last quote and _top_level_sep_index
+calls it top-level, breaking the guard scan before it reaches
+the -c. The direct form has no quotes in the token (`a=1;`),
+so it is correctly treated as code. Both failure modes (a ";"
+after an opening quote read as top-level, and a ";" before
+the last quote missed) come from "after the last quote"
+being the wrong test; the U1 quote-state sketch fixes both.
+Control checked and pre-existing, not added as a finding:
+`bash -c "python3 -c 'import run_batch3'"` returns False in
+both blobs (the known nested-quotes miss, fix4 redteam I3).
+
+### R5-9 minor, doc: the plan F7 sentence is false after the R3 bound
+
+Plan lines 750-752: "and a codex -c flag now includes
+everything after it, so `bash -c "codex -c 'import time; x #
+marionette'"` is caught". After the fix5 R3 bound, the
+general clause is false: a codex -c flag includes everything
+after it only until a top-level separator. The F2 example in
+the same sentence is still caught (its ";" is glued inside
+the snippet), so only the general clause needs rewriting,
+not the example. See U8.
+
+### Unblock additions (verdict unchanged: AMEND)
+
+- U7 FIX OR RECORD (R5-8): the _owning_command bare-word
+  false-positive class. Fix by requiring command position
+  for the owner, or record the exact forms (`echo bash -c
+  run_batch3.py`, `ssh host bash -c run_batch3.py`, `echo
+  bash -c codex exec marionette`) as a known residual.
+- U8 PAPERWORK (R5-9, Correction 1, process note): rewrite
+  the plan F7 sentence to state the quote-aware bound;
+  record the C1-2 refutation withdrawal (C1-2 was valid,
+  fixed by 40c4e48); pin the new hash values IN the fix
+  commit, not in a follow-up.
+
+### Addendum work log (Asia/Ho_Chi_Minh, 21/11)
+
+- 23:20 +07: paper 92fbefd landed. Council papers landed in
+  parallel (239b380); their C2-6, C2-5, C2-7, C2-8 points
+  checked against my paper instead of assumed.
+- 23:21 +07: C1-2 re-verified against the bf3c939 blobs
+  (plan pins fix3 values, log has 0 fix4 mentions):
+  refutation withdrawn, error owned. C2-5 bare-word FP
+  verified by differential (5 cases fix4 False to fix5
+  True). d4 verified (fix4 True to fix5 False) and d5/d4b
+  controls checked. Plan F7 sentence verified at lines
+  750-752. My paper contains no "A1-A14" string (grep),
+  so the C5-5 phantom-label point does not touch it.
+- 23:21 +07: addendum appended, dash-checked, committed as
+  a second commit on todolist-push (hash below on landing).
