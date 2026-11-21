@@ -156,9 +156,12 @@ rehearsal is gated on F3's Zen restore.
   (16,315 B) from raw.githubusercontent.com, verified
   `re.compile('x').search('xyz')` works and `urllib.parse` imports.
   SSH works again.
-- Cause UNKNOWN. No F2 command touches /usr/lib. Needs investigation by
-  the parent (which agent/cron deleted it at 22:25:39). Recorded here so
-  it is not lost. The owner noted at 22:25 that the workspace "has many
+- Cause KNOWN (solved 22:57, per MEMORY.md + VMFIX c16dd4e): a
+  self-deleting shim from Redteam Y13r2 (A6e) deleted the file by
+  accident (globals().update overwrote __file__ before os.remove),
+  NOT a foreign process. VMFIX restored it durably. The earlier
+  "cause UNKNOWN" note is superseded; the record above is what was
+  known at 22:30. The owner noted at 22:25 that the workspace "has many
   strange errors" (doi workspace nhieu loi ki); this may be one of them.
 
 ## 3. Crawl findings (how other harnesses guarantee fast first action + always-on overlay)
@@ -412,7 +415,11 @@ omitted; append as it happens, never batch at the end)
   "[string ...]:1: attempt to call a table value (field
   'workspace')", rc=7, activeWs stayed 2. So hl.dsp.workspace is a
   TABLE, not a function; the workspace sub-function name is unknown
-  (candidates: goto/switch/change). Did NOT fall back to the plain
+  (candidates: goto/switch/change). SUPERSEDED (J23, 22:58): the
+  methods are swap_monitors, rename, move, change_id, toggle_special,
+  no goto or switch; hl.dispatch("workspace", "1") also fails.
+  Workspace switching by command is still unsolved except via the
+  focus side effect. Did NOT fall back to the plain
   string form `hyprctl dispatch workspace 1` (broken in Hyprland
   0.57.2 Lua per AGENTS.md).
 - 22:51:56.149 (T+716s) focus Zen by address instead (repo pattern,
@@ -484,7 +491,17 @@ omitted; append as it happens, never batch at the end)
   22:56:33. Suspect: the act-now Ctrl+N / new-tab navigation, or the
   eval session DELETE while focused on a new/blank tab (the 22:10
   lesson: DELETE /session when current is a closed/discarded tab
-  leaves Zen in a dead-tab state). F3 must fix it (likely another
+  leaves Zen in a dead-tab state). CORRECTED (council 2, Finding 5;
+  F3 log; MEMORY.md 23:14): the timing exonerates act-now. The slot
+  worked at 22:55:34 (F3 verify listed 17 tabs, AFTER run 2 at
+  22:55:31), close3 ended about 22:56:05, and the slot failed at
+  22:56:12. So the break window is 22:56:05-22:56:12, after F3's
+  close3, not after F2's run 2. The act-now Ctrl+N suspicion above
+  is withdrawn. F3's hypothesis (close3 DELETE of a BiDi-navigated
+  Example Domain tab leaves a zombie with null linkedBrowser) fits
+  the window but is still UNPROVEN (needs BiDi diagnosis; MEMORY.md
+  23:14: zombie CHUA chung minh). This is a timing correction, not
+  a root-cause verdict. F3 must fix it (likely another
   Zen restart or a live-tab click). This BLOCKS Y13/Y14 live runs
   (they need Marionette). FLAG TO PARENT as a blocker (owner 23:01
   rule: report blockers immediately).
@@ -500,9 +517,12 @@ omitted; append as it happens, never batch at the end)
   for use in documentation examples..."). So Ctrl+L DOES focus the
   urlbar and typing + Enter navigates. The keyboard path works; the
   MOUSE CLICK on the urlbar does not focus it. The navigation
-  happened on MY run-opened tab (run 2's Ctrl+N tab), not a baseline
-  tab. Tab count now 68 (67 baseline + 1 run tab, sessionstore
-  22:55 confirms 68 with Example Domain at index 50).
+  happened on a run-opened tab (run 2's Ctrl+N tab), not a baseline
+  tab. CORRECTION (council 2, Finding 1): the 'Tab count now 68'
+  claim is RETRACTED. F3's cleanup_full launched 22:54:22 and closed
+  52 tabs (68 to 16 at 22:54:50); F3's live verify at 22:55:34 listed
+  17 tabs. The sessionstore (68 tabs, dated 22:55, not updated since)
+  was stale and must not have been used as a counter at all.
 - 22:59:31 (T+1171s) fresh window observe 70cd5cc023ea (capture
   33 ms) for the mouse-click retest.
 - 22:59:40.680 (T+1180s) act-now run 4 (mouse-click retest): batch
@@ -537,15 +557,21 @@ omitted; append as it happens, never batch at the end)
   order_to_overlay_ms 330 ms. After-capture 2155674040fa.
 - 23:01:36 (T+1296s) obs7 (screen 8bf0f6b1ade5) VERIFIES the close:
   active tab is now "Welcome!" (zen-browser.app, "Welcome to Zen!"
-  page). The sidebar still shows an "Example Domain" row: that is
-  F3's BASELINE tab (index 10, part of the 67), NOT mine. My
-  run-opened Example Domain tab is gone. The "New Tab" row is not
-  visible in this scroll position. Final count: 67 or 68 vs baseline
-  67 (at most 1 extra blank tab from run 4's Ctrl+N, unverifiable
-  right now because Marionette is broken and the sessionstore is
-  stale). Bounded, minor, known deviation; F3's full cleanup (which
-  closes blank tabs) will resolve it. The ZT-00 step-7 set check
-  therefore cannot be fully verified tonight; recorded honestly.
+  page). CORRECTION (council 2, Finding 1): the '67 or 68' final
+  count and the 'at most 1 extra blank tab' bound are RETRACTED. The
+  67 baseline no longer existed after F3's cleanup (22:54:22-22:54:50,
+  68 to 16 tabs; F3 verify 22:55:34 listed 17; close3 22:56:01 closed
+  3 more to 15; final 14 real tabs, 0 fixture). The sidebar 'Example
+  Domain' row in obs7 is the zombie F3 proved at 23:01:10 (clicking
+  the row selects 'New Tab' instead; no browsing context), NOT F3's
+  baseline tab (index 10), which close3 had already closed at
+  22:56:01. Run 5's Ctrl+W closed whatever tab was active at
+  23:01:21 (after F3's 23:01:10 click had selected New Tab, so it may
+  have closed the sacrificial New Tab, not an Example Domain tab).
+  The close is verified only as 'active tab became Welcome!'. Tab
+  identities are confounded, not merely unverifiable. The ZT-00
+  step-7 set check therefore cannot be verified tonight; recorded
+  honestly.
 - 23:01 (T+1260s) owner (MEMORY.md): going to sleep, but if there
   is an error or something that really needs him, report it (do not
   wait until morning). Big errors, blockers, things needing his
@@ -594,19 +620,34 @@ omitted; append as it happens, never batch at the end)
 - Step 6 (hyprctl activewindow diagnostic): done in equivalent form
   (hyprctl clients/monitors used throughout; activeWs tracked).
 - Step 7 (pre-close check + Ctrl+W + set check): pre-close check
-  PASSED (active tab was Example Domain). Ctrl+W CLOSED my tab
-  (active tab now Welcome!). Set check: CANNOT FULLY VERIFY
-  (Marionette broken, sessionstore stale); count is 67 or 68 vs
-  baseline 67 (at most 1 extra blank tab from run 4).
+  PASSED (active tab was Example Domain). Ctrl+W ran (active tab now
+  Welcome!). Set check: CANNOT VERIFY (Marionette broken,
+  sessionstore stale, and F3's concurrent cleanup confounded the tab
+  identities; live count 14-17, not 67-68). The close is verified
+  only as 'active tab became Welcome!', not as 'my Example Domain
+  tab closed'.
 - Overall: ZT-00 as a scenario is INCONCLUSIVE (step 4 mouse path
   blocked by the Zen urlbar behavior; step-7 set check unverifiable
-  tonight). The F2 FIX (act-now) is PROVEN on its own claims:
-  overlay in 314-346 ms (4 runs), fallback works (4/4 runs, session
-  guardian fails -> desktop_act completes), full batches in
-  0.87-2.0 s (vs ~5.5 min silent diagnosis tonight), click lands
-  exactly (0 px error), keyboard navigation works. The urlbar-click
-  finding is a Zen UI issue for ZT-A / the error file, not an
-  act-now defect.
+  tonight). The F2 FIX (act-now) is PROVEN on its own claims, scoped
+  to the FALLBACK path: all 4 OK runs took the fallback (the session
+  guardian failed every time), so the session path was never
+  exercised in this rehearsal and is untested here. Overlay in
+  314-346 ms (4 runs), fallback works (4/4 runs, session guardian
+  fails -> desktop_act completes), full batches in 0.87-2.0 s. The
+  ~5.5 min baseline is end to end (agent thinking + diagnosis before
+  any command ran); the act-now numbers start at command start and
+  exclude agent decision and observation time, so the under-30 s rule
+  from a user order is NOT yet demonstrated end to end. The 333 ms
+  figure is the session-attempt start (order_to_session_attempt_ms),
+  not the first pointer move; the first pointer move is bounded by
+  the total batch time (0.87-2.0 s). The click landed exactly on run
+  2 (cursorpos 2629,974 = target, 0 px error), read 22:56:33 about
+  60 s after run 2 finished, with no pointer move recorded in
+  between; run 4 has no cursorpos check. The pill is visually
+  confirmed in runs 2, 3, 4, 5 via their after-captures (fetched
+  from the laptop and viewed; run 1 has no after-capture, it
+  refused). Keyboard navigation works. The urlbar-click finding is
+  a Zen UI issue for ZT-A / the error file, not an act-now defect.
 
 ### R6 update (root cause SOLVED, 22:57)
 - The re/__init__.py deletion cause is now KNOWN: a self-deleting
@@ -645,3 +686,107 @@ omitted; append as it happens, never batch at the end)
   new G28 (screen observation cannot type), the urlbar-click finding,
   R6 root cause solved. The error file is NOT in the repo, so it is
   NOT committed.
+
+### Council verdicts + fixes (23:05-23:17)
+- 23:06 council 3 verdict (AMEND, R1-R6 + M1-M4), file committed
+  f9f3184. Required: narrow the determinism claim (R1), H2 PARTIALLY
+  fixed with the exact wording (R2), fix the 30 s / 60 s enforcement
+  wording and the D2 ordering sentence (R3), correct the
+  typing-refusal exit code (exit 1, not exit 2) and state the
+  window-obs precondition (R4), add `omarchy-menu toggle root` and
+  the J23 unsolved-workspace-switch note (R5), add G28 + G29 with the
+  exact texts (R6). The doc fixes R1/R3/R4/R5 and the log
+  supersessions M2/M3/R5 were applied to the rule doc and this log
+  and are committed separately (see below). R2/R6 go in the error
+  file, which waits for the redteam verdict.
+- 23:07 council 1 verdict (BLOCK, B1-B3 + A1-A5), file committed
+  2b5e6cb. The fallback safety predicate had two false-positive
+  replay paths plus a fail-open liveness check. Fix applied to
+  scripts/first_action.py (commit bb8f4e3): B1 timeout NEVER falls
+  back (the driver may have acted and been torn down); B2 substring
+  matching replaced by a positive start-failure signal (parsed
+  stdout JSON error starts with 'session guardian startup failed'
+  or 'driver registration failed', both emitted by supervise before
+  the driver can act, cursor_session.py:275, :290); B3 the
+  post-kill session_live probe removed entirely (it measured
+  liveness after the kill, which cannot prove "never started");
+  A1 acquire failure removes the holder again (no leak); A2 run()
+  never lets an exception escape (single JSON envelope, deadline
+  validated positive and finite); A3 session success requires the
+  stdout envelope to say ok (or the completed-capture-error shape);
+  A4 bad actions file goes through the envelope + log; A5 the
+  overlay is re-checked (status) immediately before the fallback
+  acts, and a release failure is recorded in the envelope; M1 the
+  stderr tail is used only when it names a failure; M2 the STATE
+  dir is created and a log failure is recorded; M3 the overlay
+  module is threaded through run() instead of re-imported in the
+  fallback branch. Field rename (council 2, Finding 2):
+  order_to_action_start_ms is now order_to_session_attempt_ms
+  (it measures the session-attempt start, not the first pointer
+  move). The 5 rehearsal envelopes below still carry the old field
+  name; that is the historical record, not an error.
+- 23:07 council 2 verdict (AMEND, findings 1-7), file committed
+  8bfc8c8. Corrections applied in this log and the rule doc:
+  Finding 1 tab accounting (F3 ran cleanup_full 22:54:22,
+  68 to 16 tabs, during the rehearsal; '67 or 68' and the run-5
+  close attribution retracted; tab identities confounded);
+  Finding 2 the baseline comparison scoped (act-now timings start
+  at command start; the under-30 s rule from a user order is not
+  yet demonstrated end to end; the 333 ms figure is the
+  session-attempt start); Finding 3 raw envelopes pasted below;
+  Finding 4 pill scope RESOLVED BY VIEWING: the after-captures for
+  runs 3, 4, 5 were fetched from the laptop and viewed, and the
+  pill 'Muse via act-now' is visible in all three, so the pill is
+  visually confirmed in runs 2, 3, 4, 5 (run 1 has no
+  after-capture, it refused); Finding 5 Marionette attribution
+  corrected to the 22:56:05-22:56:12 window after F3 close3 (timing
+  correction, root cause still unproven); Finding 6 the verdict
+  scoped to 'fallback path proven; session path untested in this
+  rehearsal' plus the default-use gap as a follow-up; Finding 7
+  the click exactness scoped to run 2 with the 60 s caveat.
+- 23:08 tests: 41 tests, ALL PASS, 0.575 s (21 original + 20 new
+  counter-examples). Test file committed fca30c1.
+- 23:09 the fixed first_action.py deployed to the laptop
+  (/home/james/.local/share/agent-computer-use/scripts/),
+  md5 dc6b5cfd01bf152f038e36ac8f1c38c0 on both sides,
+  `computer-use act-now --help` works, import OK with the new
+  START_FAILURE_PREFIXES. cu.py on the laptop unchanged (it already
+  carries the act-now wiring).
+- 23:14 (MEMORY.md): F3 DONE + SLOT RE-WEDGED. F3 proved the
+  Marionette root cause from source (driver.sys.mjs #registerWindow
+  4639 passes null to #registerBrowser 4616); restart 22:36 fixed
+  it (session 0.1 s); cleanup redo 22:54-22:56 closed 55 tabs, 14
+  real tabs left, 0 fixture (verify 22:55:34); J21 = F3's click
+  (the app-launcher button, not workspace 1). BUT the slot wedged
+  again 22:56:12 (4 retries failed), zombie NOT proven, council 3x
+  AMEND + redteam BLOCK (B7: 4 close methods untested). Muse
+  approved a 2nd restart (F3b, baseline first, try right-click
+  Close Tab first, then test distinguishing Arms A/B/C). Live
+  Y13/Y14 blocked tonight. This confirms the council 2 Finding 1
+  tab counts (14-17, not 67-68) and the Finding 5 qualification
+  (the zombie hypothesis is unproven).
+- 23:05 (MEMORY.md): MERGE DONE + GRAPH 456. main HEAD 5c94e6c
+  (merge 0ac4311 todolist-push 313 commits + 0c473f9), 3 conflicts
+  kept both sides, suite 1618 tests: 3 fail + 5 error (all
+  pre-existing in baseline, 0 regression, +124 tests). Graph UTC
+  21/11 recount: 455 commits + 1 PR = 456, EXCEEDS the 240 target.
+  My F2 commits are on main via that merge.
+- Redteam verdict still pending (no file yet). The error-file
+  update (H2 partial wording, G28, G29, R6 solved) waits for it.
+  After the redteam lands, a council 1 re-review of the BLOCK fix
+  is owed before this lands.
+
+### Raw rehearsal envelopes (council 2, Finding 3)
+Fetched from the laptop STATE/first-action-20261121.jsonl
+(/home/james/.cache/agent-computer-use/first-action-20261121.jsonl,
+5 lines, 5041 bytes) and pasted verbatim. The numbers match this
+log exactly. After-capture images are on the laptop at
+/home/james/.cache/agent-computer-use/<id>.jpg; the pill is visible
+in runs 2 (594806e130f1), 3 (de010258f1fd), 4 (c35ef9025e45), 5
+(2155674040fa); run 1 has no after-capture (refused).
+
+{"after": null, "after_error": null, "agent": "Muse", "completed": 0, "fallback_reason": "session guardian startup failed: cursor guard reply is not valid JSON (got: unknown request); the cursor backend may not be loaded, load it with scripts/activate-glass.py and scripts/activate-cursor-guard.py or re-run the fresh-login loader scripts/visuals.py", "method": "act-now", "observation": {"id": "ce2bf0b9a594", "source": "given"}, "ok": false, "order_to_action_start_ms": 356.079, "order_to_overlay_ms": 356.003, "overlay_owner": "daemon", "path": "refused", "session_error": "session guardian startup failed: cursor guard reply is not valid JSON (got: unknown request); the cursor backend may not be loaded, load it with scripts/activate-glass.py and scripts/activate-cursor-guard.py or re-run the fresh-login loader scripts/visuals.py", "session_timed_out": false, "total_ms": 638.216, "wall_time": "2026-11-21T22:53:57.440+07:00"}
+{"after": {"id": "594806e130f1", "observation": "/home/james/.cache/agent-computer-use/594806e130f1.json"}, "after_error": null, "agent": "Muse", "completed": 4, "fallback_reason": "session guardian startup failed: cursor guard reply is not valid JSON (got: unknown request); the cursor backend may not be loaded, load it with scripts/activate-glass.py and scripts/activate-cursor-guard.py or re-run the fresh-login loader scripts/visuals.py", "method": "act-now", "observation": {"id": "cdd81db8e871", "source": "given"}, "ok": true, "order_to_action_start_ms": 333.438, "order_to_overlay_ms": 333.388, "overlay_owner": "daemon", "path": "fallback", "session_error": "session guardian startup failed: cursor guard reply is not valid JSON (got: unknown request); the cursor backend may not be loaded, load it with scripts/activate-glass.py and scripts/activate-cursor-guard.py or re-run the fresh-login loader scripts/visuals.py", "session_timed_out": false, "total_ms": 1477.763, "wall_time": "2026-11-21T22:55:31.694+07:00"}
+{"after": {"id": "de010258f1fd", "observation": "/home/james/.cache/agent-computer-use/de010258f1fd.json"}, "after_error": null, "agent": "Muse", "completed": 3, "fallback_reason": "session guardian startup failed: cursor guard reply is not valid JSON (got: unknown request); the cursor backend may not be loaded, load it with scripts/activate-glass.py and scripts/activate-cursor-guard.py or re-run the fresh-login loader scripts/visuals.py", "method": "act-now", "observation": {"id": "e76537a263e6", "source": "given"}, "ok": true, "order_to_action_start_ms": 314.537, "order_to_overlay_ms": 314.463, "overlay_owner": "daemon", "path": "fallback", "session_error": "session guardian startup failed: cursor guard reply is not valid JSON (got: unknown request); the cursor backend may not be loaded, load it with scripts/activate-glass.py and scripts/activate-cursor-guard.py or re-run the fresh-login loader scripts/visuals.py", "session_timed_out": false, "total_ms": 1591.814, "wall_time": "2026-11-21T22:58:17.815+07:00"}
+{"after": {"id": "c35ef9025e45", "observation": "/home/james/.cache/agent-computer-use/c35ef9025e45.json"}, "after_error": null, "agent": "Muse", "completed": 5, "fallback_reason": "session guardian startup failed: cursor guard reply is not valid JSON (got: unknown request); the cursor backend may not be loaded, load it with scripts/activate-glass.py and scripts/activate-cursor-guard.py or re-run the fresh-login loader scripts/visuals.py", "method": "act-now", "observation": {"id": "70cd5cc023ea", "source": "given"}, "ok": true, "order_to_action_start_ms": 345.817, "order_to_overlay_ms": 345.766, "overlay_owner": "daemon", "path": "fallback", "session_error": "session guardian startup failed: cursor guard reply is not valid JSON (got: unknown request); the cursor backend may not be loaded, load it with scripts/activate-glass.py and scripts/activate-cursor-guard.py or re-run the fresh-login loader scripts/visuals.py", "session_timed_out": false, "total_ms": 1998.431, "wall_time": "2026-11-21T22:59:40.741+07:00"}
+{"after": {"id": "2155674040fa", "observation": "/home/james/.cache/agent-computer-use/2155674040fa.json"}, "after_error": null, "agent": "Muse", "completed": 1, "fallback_reason": "session guardian startup failed: cursor guard reply is not valid JSON (got: unknown request); the cursor backend may not be loaded, load it with scripts/activate-glass.py and scripts/activate-cursor-guard.py or re-run the fresh-login loader scripts/visuals.py", "method": "act-now", "observation": {"id": "e656ed429720", "source": "given"}, "ok": true, "order_to_action_start_ms": 330.067, "order_to_overlay_ms": 329.967, "overlay_owner": "daemon", "path": "fallback", "session_error": "session guardian startup failed: cursor guard reply is not valid JSON (got: unknown request); the cursor backend may not be loaded, load it with scripts/activate-glass.py and scripts/activate-cursor-guard.py or re-run the fresh-login loader scripts/visuals.py", "session_timed_out": false, "total_ms": 865.078, "wall_time": "2026-11-21T23:01:21.680+07:00"}
