@@ -220,3 +220,19 @@ in the repo worktree and /tmp test copies.
   run_live 84fa106c (pin holds). SHIPPED.md + plan doc updated
   (Y13g amendments section). Committing now, then spawning
   council (3) + redteam + independent verifier in parallel.
+
+- 00:05 +07 (T+1h09m): FIX DIFF COMPLETE + REVIEWERS SPAWNED.
+  Fix diff 431b2a9..HEAD, 6 files, +1413/-259 (only Y13g commits
+  touch them): runner db3e357f, launcher eec63492, manifest
+  0ca16ddd, run_live pin holds 84fa106c. Commits: 4ad7b88 (log),
+  caa4a7c, 0cf43f8, 03303f4, 6cd0f7a, b815590 (all verified via
+  ls-remote). Spawned in parallel: Council 1 (design), Council 2
+  (adversarial, checks all 6 of Y13r2-C2 amends), Council 3
+  (operator), Redteam (fresh A1-A8+ attacks on new bytes),
+  Independent Verifier (rebuilds harnesses from specs - /tmp
+  harnesses lost - full battery A2/A6d/A4/A3/A5/A7/A8 + AST +
+  clean verify + launcher dry run; stages under
+  ~/workspace/y13g-verify/). Awaiting their results; will
+  adjudicate findings, fix holes in small commits, re-verify,
+  then report to Muse. No live Zen driving before the fresh
+  re-review (Y13r3) lands.
