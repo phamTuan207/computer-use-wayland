@@ -611,13 +611,14 @@ header/imports, run_b3_t10, run_preflight, H2 helpers, launch_gate):
   fixture.html eb814c944dab6279417c6182e1950876.
   Also md5sum run_batch3.py (from /tmp/y14-server, where the runner
   is shipped) and compare against the md5 recorded in the re-stage
-  log's fix-pass-6 entry: fac96935988b9c327dcbe9b3cfa1342e (git blob
-  261f09aed1b52c7b80b0b2fc260f13f70fafd142).
-  (Supersedes the fix-pass-5 values: md5 9e99d9aa, blob ff4a5358,
-  commit 46e0909; and the fix-pass-4 values: md5 2920f169, blob
-  585fb801, commit bf3c939. The fix-pass-6 commit hash is in the
-  log's fix-pass-6 entry.) Paste the actual command output into the live
-  log at ship time. Any mismatch refuses the slot.
+  log's fix-pass-7 entry: 0d98342e57c44464752cf08715ac3861 (git blob
+  8df578c7013fc096a30470667ae57bf994884280).
+  (Supersedes the fix-pass-6 values: md5 fac96935, blob 261f09ae,
+  commit d552f4d; and the fix-pass-5 values: md5 9e99d9aa, blob
+  ff4a5358, commit 46e0909; and the fix-pass-4 values: md5 2920f169,
+  blob 585fb801, commit bf3c939. The fix-pass-7 commit hash is in
+  the log's fix-pass-7 entry.) Paste the actual command output into
+  the live log at ship time. Any mismatch refuses the slot.
 - Council (3) + redteam over the re-stage diff f732d6a: Council 1 GO
   (t10 translation 69/69, watch item: middle advancing read margin);
   Council 2 AMEND (Fix 1: -m module form bypasses the gate, four-line

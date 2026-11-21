@@ -1003,8 +1003,12 @@ and their disposition:
 - C2-1 (Council 2, LOW, miss): glued separator on the runner
   token misses (`bash -c "python3 run_foo.py; echo done"` False).
   FIXED by code: the basename block now checks
-  `base.rstrip(";,()")` (mirroring the import branch), so
-  `run_foo.py;` matches.
+  `base.rstrip(";,()&|")` (mirroring the import branch), so
+  `run_foo.py;` matches. (Fix pass 7, Council 2 C6-1: this
+  bullet originally stated the pre-extension set `";,()"`;
+  the shipped fix-pass-5 code was `";,()&|"`. The rstrip is
+  itself superseded by the fix-pass-6 head-before-first-
+  separator check, and the fix-pass-7 paren drop.)
 - C2-2 (Council 2, LOW, FP, fail-closed): bare `&` is not a
   separator. FIXED by code: bare `"&"` added to the separator
   exact-match tuple in `_is_cmd_separator` (NOT `"&" in tok`, so
@@ -1697,10 +1701,16 @@ Code (4 items, plus 2 found during verification):
    `_c_arg_flat_end(cmdline, c_idx)` re-simulates _argv_tokens
    to find where the -c argument's words end. In the DIRECT
    case, the import must lie within the -c argument; an import
-   in a LATER argv element (e.g. `python3 -c "import os';"
-   echo import run_batch3`, redteam B12) is a command-line
+   in a LATER argv element (e.g. `python3 -c "import os"
+   echo import run_batch3`, redteam B12: the no-separator later
+   argv, True in fix5 and False in fix6) is a command-line
    argument, not executed code, and must not match. The nested
    case does not need this (the separator stop handles it).
+   (Fix pass 7, Council 2 C6-4: this item originally cited the
+   glued-";" form `python3 -c "import os';" echo import
+   run_batch3`, which returns False in both fix5 and fix6 and
+   does not demonstrate the gap; the no-separator form above
+   is the real gap. The code fix itself is unchanged.)
 5. R5-4 (U4, was "fix or record", now FIXED): `_in_shell_c_string`
    skips a non-shell -c in an earlier command. When the nearest
    "-c" is a python/codex -c and a top-level separator
@@ -2117,3 +2127,172 @@ C2-9/C2-10 INFO parts (covered by item 14).
   for the owner's morning decision); clone1 still silent 77m;
   an omasnap crash notification is showing on both
   workspaces. Not Y14b's work, noted for the record.
+
+### Fix-pass-6 reviews: redteam AMEND (4 of 4 in) + paper landing BLOCKED
+
+- 00:10 +07: redteam verdict AMEND. Paper written and verified
+  at improvements/worker-y14b-fix6-redteam.md (451 lines, 0
+  em/en dashes) but NOT LANDED: its final `git fetch` failed
+  an execution-risk check, and the security notice that
+  followed prohibits further git operations in this checkout
+  (add/commit/push can execute repo hooks) without the user
+  explicitly agreeing to go ahead. The redteam stopped before
+  committing, per that notice. The paper file is present in
+  the working tree (untracked, 22441 bytes). I do NOT commit
+  it myself: the redteam explicitly deferred it to the parent,
+  and Muse already decided the same way on the identical
+  block for clone2's batch 6 push (MEMORY.md 00:01: Muse
+  stopped, waiting for the owner's morning decision). PARENT
+  ACTION NEEDED: confirm with the user whether to proceed,
+  then run only `git add improvements/worker-y14b-fix6-
+  redteam.md`, commit, and push on todolist-push (remote was
+  at 9165881 when the redteam last checked; never `git add
+  -A`, the checkout holds other workers' uncommitted
+  changes). The redteam's findings are usable for fix pass 7
+  regardless (full handoff + the paper file in the tree).
+  Findings: R6-1 (LOW, code, fix-or-record) the quote-state
+  tracker ignores backslash escapes (_quote_states /
+  _top_level_sep_index, lines 2431-2504). Three instances,
+  all live-proven with the leaf caught: (a) `bash -c 'codex
+  -c "a \"b; marionette"; sleep 60'` wrapper False, leaf
+  codex True (fix4 True, fix5/6 False; fix5 regression left
+  unfixed); (b) `bash -c 'python3 -c "x=\"a\\\"b\"; import
+  run_batch3"'` wrapper False, leaf python3 True (same);
+  (c) `bash -c "codex -c 'don'\''t stop; marionette'"`
+  wrapper False, leaf True (fix4 True, fix5 True, fix6 False;
+  a NEW fix6 regression on the standard shell apostrophe
+  idiom). Fix sketch: skip the char after a backslash when
+  outside single quotes (shell rule) in both scanners;
+  prototype /tmp/y14b-fix6-rt-bsfix.py flips exactly these
+  3 cases and moves nothing else across the 98-case probe.
+  R6-2 (LOW, code, NEW false positive) _runner_basename_head
+  "(" cut: `python3 run_foo.py(x` returns True in fix6
+  (fix4/5 False); verified live that bash calls it a syntax
+  error (exit 2). Fix: drop "(" from the cut set. The ")"
+  cut is pre-existing fix5 behaviour (INFO only). R6-3
+  (INFO, verified recorded): `bash --init-file python3 -c
+  run_foo.py` misses (fix4 True, fix5/6 False); verified live
+  it really executes; already recorded accurately, no action.
+  R6-4 (INFO, pre-existing FP): R5-4 fix is bounded, with no
+  separator between a python -c and codex (`bash -c "python3
+  -c 'x=1;__import__(\"time\").sleep(60)' codex --help; echo
+  marionette"`) the wrapper flags True although no codex
+  process exists (live-proven, pid 15389). Recommend one
+  record sentence in the _in_shell_c_string docstring.
+  Pre-existing, unchanged by fix6 (INFO): `python3 -c "a b"
+  python3 -c ...`, `bash -c "echo hi" python3 -c ...`,
+  `python3 -W -c ...`, `bash -o bash -c ...` (all True, all
+  verified against real shell semantics). Unreachable forms
+  (INFO): bare-`don't` wrapped forms return True at unit
+  level but bash exits 2, syntax error, never reach a live
+  scan. Pre-existing miss (INFO): `bash -c "echo
+  $(python3 run_foo.py)"` misses in all blobs, leaf caught.
+  Unblock conditions: U1 REQUIRED (R6-1 fix or record the
+  three exact forms; fix preferred, prototype is 4 lines),
+  U2 REQUIRED (R6-2 drop "(" or record `run_foo.py(x`), U3
+  PAPERWORK (R6-4 one sentence), U4 PAPERWORK none (hashes /
+  docs / hygiene clean; counts should be re-published from a
+  committed probe location, satisfied going forward by the
+  fix6 probe committed in 57fcdb2). Evidence base: unit probe
+  /tmp/y14b-fix6-rt-probe.py 98 cases (84 pass on fix6, 38
+  fix5-to-fix6 flips, 34 fixed direction, 4 wrong
+  direction); live probe /tmp/y14b-fix6-rt-live.py 19 checks,
+  16 pass, 3 fail (exactly the R6-1 instances), all stubs
+  killed by exact PID, final orphan sweep zero. Caveat: the
+  author's probe scripts are not on disk, so the log's counts
+  could not be re-run verbatim; the fix5 probe's 3 known
+  failures verified as probe-expectation errors.
+- 00:11 +07: ALL 4 fix-pass-6 reviews are in: Council 1 GO
+  (0cc8e27), Council 2 AMEND (4e905e2), Council 3 AMEND
+  (7bd6516), redteam AMEND (paper uncommitted, landing
+  blocked, see above). No BLOCK. Fix pass 7 scope, adjudicated
+  together:
+  CODE (2 items): (1) R6-1/U1: backslash-escape handling in
+  _quote_states and _top_level_sep_index (skip the char after
+  a backslash when outside single quotes; the redteam's
+  prototype diff is exactly 4 lines, applied verbatim in
+  structure, verified by my own probe, not trusted from the
+  prototype). (2) C6-3/R6-2: drop "(" AND ")" from the
+  _runner_basename_head cut set. Council 2's fix subsumes the
+  redteam's "(" only; the redteam records ")" as pre-existing
+  fix5 behaviour, but Council 2's argument holds for both
+  (neither is a shell separator in argument position; a direct
+  argv is a literal filename, in a shell -c string a syntax
+  error), and Council 2's re-proof covers both forms. The
+  differential below proves no true case is lost.
+  DOC (7 items): (3) C6-1: log line 1006 stale rstrip set
+  corrected (fix-pass-5 code was `";,()&|"`, now annotated as
+  superseded). (4) C6-2: _top_level_sep_index docstring
+  reworded (the helper DOES return a top-level index for an
+  unquoted "a=1;", measured 3; the direct case is safe because
+  its caller applies no separator stop there). (5) C6-4: B12
+  example corrected to the no-separator form in the
+  import-branch comment AND in this log's fix-pass-6
+  adjudication item 4. (6) U-C3-1 / INFO-1: the "(fail-closed)"
+  label replaced with the synthetic-only wording in the
+  _is_runner_cmdline docstring AND in the import-branch
+  comment (one edit covers both findings; they name the same
+  sentence). (7) R6-4/U3: one bounding sentence in the
+  _in_shell_c_string docstring, naming the exact no-separator
+  form. (8) C6-3 doc note: `grep -r bash -c run_batch3.py`
+  added to the _is_runner_cmdline docstring C2-5 list. (9)
+  Plan md5 line updated to the NEW fix-pass-7 values IN this
+  fix commit (per C5-4).
+  NO ACTION: R6-3 (already recorded accurately); C6-6
+  (disclosure); Council 1 INFO-2 (style, hoist _quote_states;
+  "No action", moving code with no behaviour benefit); the
+  redteam's pre-existing / unreachable / miss INFO items;
+  Council 3's apostrophe-caveat and C2-10 notes (the C2-10
+  bullet IS C6-1, fixed above). INFO-1 is closed by the
+  U-C3-1 edit (same sentence).
+
+### Fix pass 7 verification
+
+- 00:12 +07: py_compile OK; import OK (7 runner modules).
+  Quick checks: _quote_states on the escaped-quote tokens
+  gives (True, False) before "marionette'" (inside single
+  quotes, correct); _top_level_sep_index("a=1;", False, False)
+  returns 3 (confirming C6-2); _runner_basename_head
+  ("run_foo.py(x") returns "run_foo.py(x" (no cut);
+  ("run_foo.py;echo") returns "run_foo.py" (`;` still cuts).
+- 00:13 +07: fix7 probe tests/realistic/y14b-fix7-probe.py
+  86/86 PASS, exit 0 (71 fix6 cases unchanged + R6-1 (a)/(b)/
+  (c) + 2 R6-1 controls + R6-2/C6-3 4 paren cases + 4
+  separator controls + 2 live R6-1 cases). First run 85/86:
+  the "bare dont" control expected False, but the code returns
+  True; the PROBE expectation was wrong, not the code (the
+  redteam's own paper says this form returns True in fix6 at
+  unit level and is unreachable live, bash exits 2 syntax
+  error; the unbalanced apostrophe makes the tracker read
+  everything after it as inside quotes, fail-closed, as the
+  _quote_states docstring already records). The case was
+  corrected to expect True with that explanation, second run
+  86/86. Fix6 probe regression: 71/71 PASS (no FAIL lines).
+  Differential /tmp/y14b-fix7-diff.py (redteam's 98 cases,
+  fix6 blob vs fix7 working tree): 92 same, 6 diff, ALL 6 in
+  the FIXED direction (C15 paren glue ( True to False, C16
+  paren glue ) True to False, backslash import False to True,
+  C15b paren wrapped True to False, dont shell idiom False to
+  True, backslash esc dq False to True). Zero wrong-direction
+  moves. Helper checks: _runner_basename_head paren is the
+  intended change; _top_level_sep_index a=1; is 3 in both
+  (C6-2, unchanged). Orphan note: the fix6-probe live cases
+  left 2 orphan run_foo.py children (PIDs 16901, 16908); the
+  fix6 probe's live helper kills only the wrapper, not the
+  children (the Council 2 C6-6 lesson). Killed by exact PID,
+  verified 0 remaining. The fix7 probe's live helper kills
+  children first, then the wrapper.
+- 00:14 +07: no em/en dash in the fix diff (grep 0), no
+  ydotool lines in the fix diff (grep 0), no personal info.
+  `import re` OK. New run_batch3.py: git blob
+  8df578c7013fc096a30470667ae57bf994884280, md5
+  0d98342e57c44464752cf08715ac3861. Parent fix-pass-6 bytes:
+  blob 261f09ae, md5 fac96935, commit d552f4d. The plan md5
+  line pins the fix-pass-7 values IN this fix commit (per
+  C5-4); the fix-pass-7 commit hash itself goes in the log's
+  hash-record follow-up, since it cannot be known before
+  committing. Fleet note (MEMORY.md 00:12): F1a DONE,
+  activation PASS, pill proven (5-step proof all PASS, pill
+  visible in raw grim, token match, indicator PID 513273);
+  F2b spawned 00:12 for the F2 phase; ZT-B waits after F2b.
+  Not Y14b's work, noted for the record.
