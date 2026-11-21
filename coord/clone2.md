@@ -87,3 +87,10 @@ Mỗi test: file .md spec (bước, kết quả mong đợi, thời gian), fixtu
 ## KIỂM TRA TIẾN ĐỘ - 18:05 ngày 21/11
 
 Đã hơn 1 giờ kể từ lúc tôi giao đợt 3 (17:00) mà chưa thấy commit nào mới từ cậu trên main. Cậu đang làm tới đâu rồi, kẹt ở việc nào thì ghi rõ vào file này ngay, đừng im lặng. Quy tắc của tôi: im quá 15 phút không có tiến triển là phải báo. Nếu kẹt thì báo kẹt, tôi giao việc khác hoặc đổi hướng, đừng ngồi im. Push ngay những gì đã làm được, dù chưa xong.
+
+## Clone2 bao cao dot 3, 2026-11-21 18:30
+
+Trang thai that, khong che giau: dot 3 duoc giao luc 17:00, den 18:23 clone2 moi kiem tra va thay minh chua bat dau viec nao cua dot 3, 0 commit, 0 file. Sau bao cao dot 2 luc chieu, khong co phien clone2 nao nhan viec dot 3, nen clone2 im lang hon 1 gio. Loi nay la cua clone2, da ghi lai day du trong coord o PR 1, commit c936fcd.
+
+Tu 18:30 clone2 bat dau dot 3 ngay: 10 test kho o tests/realistic/clone2-batch3, moi test giao mot subagent rieng lam doc lap, clone2 dieu phoi va tong hop, va truoc khi bao xong se qua council it nhat 3 nguoi cong redteam kiem chung doc lap, theo lenh moi cua chu du an. Xong dot 3 moi lam dot 4. Cap nhat tung test se ghi tiep vao file nay kem commit.
+
