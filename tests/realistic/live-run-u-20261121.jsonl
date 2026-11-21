@@ -1,0 +1,383 @@
+{"ts": "2026-11-21T09:55:12.210645+00:00", "test": "q04", "step": "open fixture", "op": "goto", "elapsed_ms": 1670.7, "ok": true, "detail": "04aebc94-c81b-486b-89e1-d0b22affc659", "error": null}
+{"ts": "2026-11-21T09:55:13.254598+00:00", "test": "q04", "step": "clear storage + reload", "op": "eval", "elapsed_ms": 1043.8, "ok": true, "detail": [null, null], "error": null}
+{"ts": "2026-11-21T09:55:13.256701+00:00", "test": "q04", "step": "check body visible", "op": "eval", "elapsed_ms": 2.0, "ok": true, "detail": "visible", "error": null}
+{"ts": "2026-11-21T09:55:13.258725+00:00", "test": "q04", "step": "read sidebar notes", "op": "eval", "elapsed_ms": 2.0, "ok": true, "detail": ["System Architecture", "Storage Engine", "Security Model"], "error": null}
+{"ts": "2026-11-21T09:55:13.325910+00:00", "test": "q04", "step": "click New Note", "op": "click", "elapsed_ms": 67.1, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:55:13.336762+00:00", "test": "q04", "step": "type note title", "op": "type", "elapsed_ms": 10.8, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:55:13.345953+00:00", "test": "q04", "step": "type note tags", "op": "type", "elapsed_ms": 9.1, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:55:13.365676+00:00", "test": "q04", "step": "type note body", "op": "type", "elapsed_ms": 19.7, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:55:13.425061+00:00", "test": "q04", "step": "click Save Note", "op": "click", "elapsed_ms": 59.3, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:55:13.427535+00:00", "test": "q04", "step": "read sidebar after create", "op": "eval", "elapsed_ms": 2.4, "ok": true, "detail": ["System Architecture # System Architecture Overview of microkernel and userspace compositors. Tags: #architecture, #core #architecture#core", "Storage Engine # Storage Engine LSM-tree write optimization and caching strategies. Tags: #storage, #performance #storage#performance", "Security Model # Security Model Capability-based sandboxing and IPC permission tokens. Tags: #security, #architecture #security#architecture", "Memory Tiering RFC # Memory Tiering Architecture This proposal integrates tiered RAM and CXL memory. Related: [[Storage Engine]] and [[Security Model]]. #rfc#performance#memory"], "error": null}
+{"ts": "2026-11-21T09:55:13.482762+00:00", "test": "q04", "step": "switch to Preview tab", "op": "click", "elapsed_ms": 55.1, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:55:13.484607+00:00", "test": "q04", "step": "read preview HTML", "op": "eval", "elapsed_ms": 1.8, "ok": true, "detail": "<p></p><h1>Memory Tiering Architecture</h1><p></p><p>This proposal integrates tiered RAM and CXL memory.</p><p>Related: <a class=\"wiki-link\" id=\"link-note-Storage Engine\" onclick=\"openNoteByName('Storage Engine')\">Storage Engine</a> and <a class=\"wiki-link\" id=\"link-note-Security Model\" onclick=\"openNoteByName('Security Model')\">Security Model</a>.</p>", "error": null}
+{"ts": "2026-11-21T09:55:13.485841+00:00", "test": "q04", "step": "check wiki link rendered", "op": "eval", "elapsed_ms": 1.2, "ok": true, "detail": true, "error": null}
+{"ts": "2026-11-21T09:55:13.542880+00:00", "test": "q04", "step": "click rendered wiki link", "op": "click", "elapsed_ms": 57.0, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:55:13.545198+00:00", "test": "q04", "step": "read current note title after link click", "op": "value", "elapsed_ms": 2.2, "ok": true, "detail": "Storage Engine", "error": null}
+{"ts": "2026-11-21T09:55:13.550195+00:00", "test": "q04", "step": "read backlinks box", "op": "text", "elapsed_ms": 4.9, "ok": true, "detail": "Linked from: Memory Tiering RFC", "error": null}
+{"ts": "2026-11-21T09:55:13.605956+00:00", "test": "q04", "step": "switch to Edit tab", "op": "click", "elapsed_ms": 55.7, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:55:13.620715+00:00", "test": "q04", "step": "append reciprocal link", "op": "append", "elapsed_ms": 14.7, "ok": true, "detail": "appended", "error": null}
+{"ts": "2026-11-21T09:55:13.680047+00:00", "test": "q04", "step": "click Save Note again", "op": "click", "elapsed_ms": 59.2, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:55:13.737952+00:00", "test": "q04", "step": "click Pin Note", "op": "click", "elapsed_ms": 57.8, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:55:13.739913+00:00", "test": "q04", "step": "check PINNED section content", "op": "eval", "elapsed_ms": 1.9, "ok": true, "detail": "PINNED\nStorage Engine\n📌\n# Storage Engine LSM-tree write optimization and caching strategies. Tags: #storage, #performance Reference: [[Memory Tiering RFC]].\n#storage\n#performance\n", "error": null}
+{"ts": "2026-11-21T09:55:13.754608+00:00", "test": "q04", "step": "search #performance", "op": "type", "elapsed_ms": 14.6, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:55:13.756708+00:00", "test": "q04", "step": "read filtered notes", "op": "eval", "elapsed_ms": 2.0, "ok": true, "detail": ["Storage Engine", "Memory Tiering RFC"], "error": null}
+{"ts": "2026-11-21T09:55:13.758398+00:00", "test": "q04", "step": "clear search", "op": "eval", "elapsed_ms": 1.6, "ok": true, "detail": "cleared", "error": null}
+{"ts": "2026-11-21T09:55:13.762288+00:00", "test": "q04", "step": "open Security Model note", "op": "click_js", "elapsed_ms": 3.8, "ok": true, "detail": "clicked: Security Model", "error": null}
+{"ts": "2026-11-21T09:55:13.764299+00:00", "test": "q04", "step": "read current title before archive", "op": "value", "elapsed_ms": 1.9, "ok": true, "detail": "Security Model", "error": null}
+{"ts": "2026-11-21T09:55:13.820487+00:00", "test": "q04", "step": "click Archive Note", "op": "click", "elapsed_ms": 56.1, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:55:13.822781+00:00", "test": "q04", "step": "read sidebar after archive", "op": "eval", "elapsed_ms": 2.2, "ok": true, "detail": ["Storage Engine", "System Architecture", "Memory Tiering RFC"], "error": null}
+{"ts": "2026-11-21T09:55:13.879040+00:00", "test": "q04", "step": "open Archived view", "op": "click", "elapsed_ms": 56.2, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:55:13.881257+00:00", "test": "q04", "step": "read archived list", "op": "eval", "elapsed_ms": 2.1, "ok": true, "detail": ["Security Model"], "error": null}
+{"ts": "2026-11-21T09:55:13.937280+00:00", "test": "q04", "step": "return to All Notes view", "op": "click", "elapsed_ms": 56.0, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:55:13.942810+00:00", "test": "q04", "step": "read active count badge", "op": "text", "elapsed_ms": 5.4, "ok": true, "detail": "3", "error": null}
+{"ts": "2026-11-21T09:55:14.000936+00:00", "test": "q04", "step": "click Export Notes Manifest", "op": "click", "elapsed_ms": 58.0, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:55:14.005592+00:00", "test": "q04", "step": "read export summary", "op": "text", "elapsed_ms": 4.6, "ok": true, "detail": "Active: 3, Archived: 1, Pinned: 1", "error": null}
+{"ts": "2026-11-21T09:55:14.061704+00:00", "test": "q04", "step": "dismiss export modal", "op": "click", "elapsed_ms": 56.0, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:55:14.065093+00:00", "test": "q04", "step": "re-open Memory Tiering RFC", "op": "click_js", "elapsed_ms": 3.3, "ok": true, "detail": "clicked: Memory Tiering RFC", "error": null}
+{"ts": "2026-11-21T09:55:14.071402+00:00", "test": "q04", "step": "read backlinks of new note", "op": "text", "elapsed_ms": 6.2, "ok": true, "detail": "Linked from: Storage Engine", "error": null}
+{"ts": "2026-11-21T09:56:12.566124+00:00", "test": "q04", "step": "open fixture", "op": "goto", "elapsed_ms": 1628.7, "ok": true, "detail": "77bdc4fa-09f4-4105-8806-7e44dced0dd6", "error": null}
+{"ts": "2026-11-21T09:56:13.604901+00:00", "test": "q04", "step": "clear storage + reload", "op": "eval", "elapsed_ms": 1038.6, "ok": true, "detail": [null, null], "error": null}
+{"ts": "2026-11-21T09:56:13.607219+00:00", "test": "q04", "step": "check body visible", "op": "eval", "elapsed_ms": 2.2, "ok": true, "detail": "visible", "error": null}
+{"ts": "2026-11-21T09:56:13.609325+00:00", "test": "q04", "step": "read sidebar notes", "op": "eval", "elapsed_ms": 2.0, "ok": true, "detail": ["System Architecture", "Storage Engine", "Security Model"], "error": null}
+{"ts": "2026-11-21T09:56:13.679535+00:00", "test": "q04", "step": "click New Note", "op": "click", "elapsed_ms": 70.2, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:13.688544+00:00", "test": "q04", "step": "type note title", "op": "type", "elapsed_ms": 8.9, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:13.696899+00:00", "test": "q04", "step": "type note tags", "op": "type", "elapsed_ms": 8.3, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:13.716399+00:00", "test": "q04", "step": "type note body", "op": "type", "elapsed_ms": 19.4, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:13.774888+00:00", "test": "q04", "step": "click Save Note", "op": "click", "elapsed_ms": 58.3, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:13.777058+00:00", "test": "q04", "step": "read sidebar after create", "op": "eval", "elapsed_ms": 2.1, "ok": true, "detail": ["System Architecture # System Architecture Overview of microkernel and userspace compositors. Tags: #architecture, #core #architecture#core", "Storage Engine # Storage Engine LSM-tree write optimization and caching strategies. Tags: #storage, #performance #storage#performance", "Security Model # Security Model Capability-based sandboxing and IPC permission tokens. Tags: #security, #architecture #security#architecture", "Memory Tiering RFC # Memory Tiering Architecture This proposal integrates tiered RAM and CXL memory. Related: [[Storage Engine]] and [[Security Model]]. #rfc#performance#memory"], "error": null}
+{"ts": "2026-11-21T09:56:13.832786+00:00", "test": "q04", "step": "switch to Preview tab", "op": "click", "elapsed_ms": 55.6, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:13.834382+00:00", "test": "q04", "step": "read preview HTML", "op": "eval", "elapsed_ms": 1.5, "ok": true, "detail": "<p></p><h1>Memory Tiering Architecture</h1><p></p><p>This proposal integrates tiered RAM and CXL memory.</p><p>Related: <a class=\"wiki-link\" id=\"link-note-Storage Engine\" onclick=\"openNoteByName('Storage Engine')\">Storage Engine</a> and <a class=\"wiki-link\" id=\"link-note-Security Model\" onclick=\"openNoteByName('Security Model')\">Security Model</a>.</p>", "error": null}
+{"ts": "2026-11-21T09:56:13.835609+00:00", "test": "q04", "step": "check wiki link rendered", "op": "eval", "elapsed_ms": 1.2, "ok": true, "detail": true, "error": null}
+{"ts": "2026-11-21T09:56:13.891204+00:00", "test": "q04", "step": "click rendered wiki link", "op": "click", "elapsed_ms": 55.5, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:13.893468+00:00", "test": "q04", "step": "read current note title after link click", "op": "value", "elapsed_ms": 2.2, "ok": true, "detail": "Storage Engine", "error": null}
+{"ts": "2026-11-21T09:56:13.899326+00:00", "test": "q04", "step": "read backlinks box", "op": "text", "elapsed_ms": 5.8, "ok": true, "detail": "Linked from: Memory Tiering RFC", "error": null}
+{"ts": "2026-11-21T09:56:13.955255+00:00", "test": "q04", "step": "switch to Edit tab", "op": "click", "elapsed_ms": 55.8, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:13.970414+00:00", "test": "q04", "step": "append reciprocal link", "op": "append", "elapsed_ms": 15.1, "ok": true, "detail": "appended", "error": null}
+{"ts": "2026-11-21T09:56:14.028355+00:00", "test": "q04", "step": "click Save Note again", "op": "click", "elapsed_ms": 57.9, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:14.086017+00:00", "test": "q04", "step": "click Pin Note", "op": "click", "elapsed_ms": 57.6, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:14.087873+00:00", "test": "q04", "step": "check PINNED section content", "op": "eval", "elapsed_ms": 1.8, "ok": true, "detail": "PINNED\nStorage Engine\n📌\n# Storage Engine LSM-tree write optimization and caching strategies. Tags: #storage, #performance Reference: [[Memory Tiering RFC]].\n#storage\n#performance\n", "error": null}
+{"ts": "2026-11-21T09:56:14.099480+00:00", "test": "q04", "step": "search #performance", "op": "type", "elapsed_ms": 11.5, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:14.101992+00:00", "test": "q04", "step": "read filtered notes", "op": "eval", "elapsed_ms": 2.4, "ok": true, "detail": ["Storage Engine", "Memory Tiering RFC"], "error": null}
+{"ts": "2026-11-21T09:56:14.104298+00:00", "test": "q04", "step": "clear search", "op": "eval", "elapsed_ms": 2.2, "ok": true, "detail": "cleared", "error": null}
+{"ts": "2026-11-21T09:56:14.107797+00:00", "test": "q04", "step": "open Security Model note", "op": "click_js", "elapsed_ms": 3.4, "ok": true, "detail": "clicked: Security Model", "error": null}
+{"ts": "2026-11-21T09:56:14.110174+00:00", "test": "q04", "step": "read current title before archive", "op": "value", "elapsed_ms": 2.3, "ok": true, "detail": "Security Model", "error": null}
+{"ts": "2026-11-21T09:56:14.167114+00:00", "test": "q04", "step": "click Archive Note", "op": "click", "elapsed_ms": 56.9, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:14.169280+00:00", "test": "q04", "step": "read sidebar after archive", "op": "eval", "elapsed_ms": 2.1, "ok": true, "detail": ["Storage Engine", "System Architecture", "Memory Tiering RFC"], "error": null}
+{"ts": "2026-11-21T09:56:14.225585+00:00", "test": "q04", "step": "open Archived view", "op": "click", "elapsed_ms": 56.2, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:14.227814+00:00", "test": "q04", "step": "read archived list", "op": "eval", "elapsed_ms": 2.2, "ok": true, "detail": ["Security Model"], "error": null}
+{"ts": "2026-11-21T09:56:14.284674+00:00", "test": "q04", "step": "return to All Notes view", "op": "click", "elapsed_ms": 56.8, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:14.288783+00:00", "test": "q04", "step": "read active count badge", "op": "text", "elapsed_ms": 4.0, "ok": true, "detail": "3", "error": null}
+{"ts": "2026-11-21T09:56:14.344718+00:00", "test": "q04", "step": "click Export Notes Manifest", "op": "click", "elapsed_ms": 55.9, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:14.348818+00:00", "test": "q04", "step": "read export summary", "op": "text", "elapsed_ms": 4.0, "ok": true, "detail": "Active: 3, Archived: 1, Pinned: 1", "error": null}
+{"ts": "2026-11-21T09:56:14.405300+00:00", "test": "q04", "step": "dismiss export modal", "op": "click", "elapsed_ms": 56.4, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:14.409109+00:00", "test": "q04", "step": "re-open Memory Tiering RFC", "op": "click_js", "elapsed_ms": 3.7, "ok": true, "detail": "clicked: Memory Tiering RFC", "error": null}
+{"ts": "2026-11-21T09:56:14.415225+00:00", "test": "q04", "step": "read backlinks of new note", "op": "text", "elapsed_ms": 6.0, "ok": true, "detail": "Linked from: Storage Engine", "error": null}
+{"ts": "2026-11-21T09:56:16.695102+00:00", "test": "f01", "step": "open fixture", "op": "goto", "elapsed_ms": 1638.3, "ok": true, "detail": "2f0abdc3-9735-4cfb-a45e-186ae3ab5bfb", "error": null}
+{"ts": "2026-11-21T09:56:16.697392+00:00", "test": "f01", "step": "check body visible", "op": "eval", "elapsed_ms": 2.2, "ok": true, "detail": "visible", "error": null}
+{"ts": "2026-11-21T09:56:16.698914+00:00", "test": "f01", "step": "read headers", "op": "eval", "elapsed_ms": 1.5, "ok": true, "detail": ",Date,Item,Units,Price,Total", "error": null}
+{"ts": "2026-11-21T09:56:16.700535+00:00", "test": "f01", "step": "TRAP: click td#a2 directly", "op": "click_js", "elapsed_ms": 1.6, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:16.701631+00:00", "test": "f01", "step": "check td click selected nothing", "op": "eval", "elapsed_ms": 1.0, "ok": true, "detail": false, "error": null}
+{"ts": "2026-11-21T09:56:16.768613+00:00", "test": "f01", "step": "select A2", "op": "click", "elapsed_ms": 66.9, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:16.778423+00:00", "test": "f01", "step": "type 2026-11-16 into A2", "op": "type", "elapsed_ms": 9.7, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:16.780889+00:00", "test": "f01", "step": "press type for A2", "op": "click", "elapsed_ms": 2.4, "ok": true, "detail": "clicked: type", "error": null}
+{"ts": "2026-11-21T09:56:16.838015+00:00", "test": "f01", "step": "select B2", "op": "click", "elapsed_ms": 57.0, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:16.844963+00:00", "test": "f01", "step": "type Widget into B2", "op": "type", "elapsed_ms": 6.8, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:16.848290+00:00", "test": "f01", "step": "press type for B2", "op": "click", "elapsed_ms": 3.2, "ok": true, "detail": "clicked: type", "error": null}
+{"ts": "2026-11-21T09:56:16.905198+00:00", "test": "f01", "step": "select C2", "op": "click", "elapsed_ms": 56.8, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:16.912337+00:00", "test": "f01", "step": "type 12 into C2", "op": "type", "elapsed_ms": 7.0, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:16.914646+00:00", "test": "f01", "step": "press type for C2", "op": "click", "elapsed_ms": 2.2, "ok": true, "detail": "clicked: type", "error": null}
+{"ts": "2026-11-21T09:56:16.972569+00:00", "test": "f01", "step": "select D2", "op": "click", "elapsed_ms": 57.9, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:16.980074+00:00", "test": "f01", "step": "type 45000 into D2", "op": "type", "elapsed_ms": 7.4, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:16.982428+00:00", "test": "f01", "step": "press type for D2", "op": "click", "elapsed_ms": 2.2, "ok": true, "detail": "clicked: type", "error": null}
+{"ts": "2026-11-21T09:56:17.039884+00:00", "test": "f01", "step": "select E2", "op": "click", "elapsed_ms": 57.3, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:17.045688+00:00", "test": "f01", "step": "type =C2*D2 into E2", "op": "type", "elapsed_ms": 5.7, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:17.048895+00:00", "test": "f01", "step": "press type for E2", "op": "click", "elapsed_ms": 3.1, "ok": true, "detail": "clicked: type", "error": null}
+{"ts": "2026-11-21T09:56:17.051153+00:00", "test": "f01", "step": "press Enter for E2", "op": "click", "elapsed_ms": 2.2, "ok": true, "detail": "clicked: Enter", "error": null}
+{"ts": "2026-11-21T09:56:17.108145+00:00", "test": "f01", "step": "select A3", "op": "click", "elapsed_ms": 56.9, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:17.113642+00:00", "test": "f01", "step": "type 2026-11-17 into A3", "op": "type", "elapsed_ms": 5.4, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:17.116161+00:00", "test": "f01", "step": "press type for A3", "op": "click", "elapsed_ms": 2.4, "ok": true, "detail": "clicked: type", "error": null}
+{"ts": "2026-11-21T09:56:17.172665+00:00", "test": "f01", "step": "select B3", "op": "click", "elapsed_ms": 56.4, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:17.179136+00:00", "test": "f01", "step": "type Gadget into B3", "op": "type", "elapsed_ms": 6.4, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:17.182136+00:00", "test": "f01", "step": "press type for B3", "op": "click", "elapsed_ms": 2.9, "ok": true, "detail": "clicked: type", "error": null}
+{"ts": "2026-11-21T09:56:17.239786+00:00", "test": "f01", "step": "select C3", "op": "click", "elapsed_ms": 57.6, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:17.246648+00:00", "test": "f01", "step": "type 7 into C3", "op": "type", "elapsed_ms": 6.7, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:17.249555+00:00", "test": "f01", "step": "press type for C3", "op": "click", "elapsed_ms": 2.8, "ok": true, "detail": "clicked: type", "error": null}
+{"ts": "2026-11-21T09:56:17.307114+00:00", "test": "f01", "step": "select D3", "op": "click", "elapsed_ms": 57.5, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:17.346212+00:00", "test": "f01", "step": "type 82000 into D3", "op": "type", "elapsed_ms": 39.0, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:17.349403+00:00", "test": "f01", "step": "press type for D3", "op": "click", "elapsed_ms": 3.1, "ok": true, "detail": "clicked: type", "error": null}
+{"ts": "2026-11-21T09:56:17.407717+00:00", "test": "f01", "step": "select E3", "op": "click", "elapsed_ms": 58.2, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:17.413991+00:00", "test": "f01", "step": "type =C3*D3 into E3", "op": "type", "elapsed_ms": 6.2, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:17.416152+00:00", "test": "f01", "step": "press type for E3", "op": "click", "elapsed_ms": 2.1, "ok": true, "detail": "clicked: type", "error": null}
+{"ts": "2026-11-21T09:56:17.417909+00:00", "test": "f01", "step": "press Enter for E3", "op": "click", "elapsed_ms": 1.7, "ok": true, "detail": "clicked: Enter", "error": null}
+{"ts": "2026-11-21T09:56:17.473187+00:00", "test": "f01", "step": "select A4", "op": "click", "elapsed_ms": 55.2, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:17.481680+00:00", "test": "f01", "step": "type 2026-11-18 into A4", "op": "type", "elapsed_ms": 8.4, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:17.483684+00:00", "test": "f01", "step": "press type for A4", "op": "click", "elapsed_ms": 1.9, "ok": true, "detail": "clicked: type", "error": null}
+{"ts": "2026-11-21T09:56:17.540029+00:00", "test": "f01", "step": "select B4", "op": "click", "elapsed_ms": 56.3, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:17.545959+00:00", "test": "f01", "step": "type Tool into B4", "op": "type", "elapsed_ms": 5.9, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:17.548678+00:00", "test": "f01", "step": "press type for B4", "op": "click", "elapsed_ms": 2.6, "ok": true, "detail": "clicked: type", "error": null}
+{"ts": "2026-11-21T09:56:17.604999+00:00", "test": "f01", "step": "select C4", "op": "click", "elapsed_ms": 56.2, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:17.610967+00:00", "test": "f01", "step": "type 5 into C4", "op": "type", "elapsed_ms": 5.9, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:17.613102+00:00", "test": "f01", "step": "press type for C4", "op": "click", "elapsed_ms": 2.1, "ok": true, "detail": "clicked: type", "error": null}
+{"ts": "2026-11-21T09:56:17.669917+00:00", "test": "f01", "step": "select D4", "op": "click", "elapsed_ms": 56.7, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:17.676613+00:00", "test": "f01", "step": "type 150000 into D4", "op": "type", "elapsed_ms": 6.6, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:17.678771+00:00", "test": "f01", "step": "press type for D4", "op": "click", "elapsed_ms": 2.1, "ok": true, "detail": "clicked: type", "error": null}
+{"ts": "2026-11-21T09:56:17.734939+00:00", "test": "f01", "step": "select E4", "op": "click", "elapsed_ms": 56.1, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:17.741992+00:00", "test": "f01", "step": "type =C4*D4 into E4", "op": "type", "elapsed_ms": 7.0, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:17.744430+00:00", "test": "f01", "step": "press type for E4", "op": "click", "elapsed_ms": 2.3, "ok": true, "detail": "clicked: type", "error": null}
+{"ts": "2026-11-21T09:56:17.746612+00:00", "test": "f01", "step": "press Enter for E4", "op": "click", "elapsed_ms": 2.1, "ok": true, "detail": "clicked: Enter", "error": null}
+{"ts": "2026-11-21T09:56:17.802297+00:00", "test": "f01", "step": "select E5", "op": "click", "elapsed_ms": 55.6, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:17.809090+00:00", "test": "f01", "step": "type =SUM(E2:E4) into E5", "op": "type", "elapsed_ms": 6.7, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:17.811211+00:00", "test": "f01", "step": "press type for E5", "op": "click", "elapsed_ms": 2.0, "ok": true, "detail": "clicked: type", "error": null}
+{"ts": "2026-11-21T09:56:17.813735+00:00", "test": "f01", "step": "press Enter for E5", "op": "click", "elapsed_ms": 2.4, "ok": true, "detail": "clicked: Enter", "error": null}
+{"ts": "2026-11-21T09:56:17.868429+00:00", "test": "f01", "step": "select E6", "op": "click", "elapsed_ms": 54.6, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:17.873824+00:00", "test": "f01", "step": "type =AVERAGE(E2:E4) into E6", "op": "type", "elapsed_ms": 5.3, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:17.876856+00:00", "test": "f01", "step": "press type for E6", "op": "click", "elapsed_ms": 3.0, "ok": true, "detail": "clicked: type", "error": null}
+{"ts": "2026-11-21T09:56:17.878654+00:00", "test": "f01", "step": "press Enter for E6", "op": "click", "elapsed_ms": 1.7, "ok": true, "detail": "clicked: Enter", "error": null}
+{"ts": "2026-11-21T09:56:17.934832+00:00", "test": "f01", "step": "select E7", "op": "click", "elapsed_ms": 56.1, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:17.943284+00:00", "test": "f01", "step": "type =COUNT(E2:E4) into E7", "op": "type", "elapsed_ms": 8.4, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:17.945911+00:00", "test": "f01", "step": "press type for E7", "op": "click", "elapsed_ms": 2.5, "ok": true, "detail": "clicked: type", "error": null}
+{"ts": "2026-11-21T09:56:17.947915+00:00", "test": "f01", "step": "press Enter for E7", "op": "click", "elapsed_ms": 1.9, "ok": true, "detail": "clicked: Enter", "error": null}
+{"ts": "2026-11-21T09:56:17.953419+00:00", "test": "f01", "step": "read E7 after wrong formula", "op": "text", "elapsed_ms": 5.4, "ok": true, "detail": "COUNT text", "error": null}
+{"ts": "2026-11-21T09:56:18.009251+00:00", "test": "f01", "step": "select E7", "op": "click", "elapsed_ms": 55.7, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:18.017747+00:00", "test": "f01", "step": "type corrected formula", "op": "type", "elapsed_ms": 8.4, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:18.019904+00:00", "test": "f01", "step": "press type for correction", "op": "click", "elapsed_ms": 2.1, "ok": true, "detail": "clicked: type", "error": null}
+{"ts": "2026-11-21T09:56:18.022106+00:00", "test": "f01", "step": "press Enter for correction", "op": "click", "elapsed_ms": 2.1, "ok": true, "detail": "clicked: Enter", "error": null}
+{"ts": "2026-11-21T09:56:18.023893+00:00", "test": "f01", "step": "read all result cells", "op": "eval", "elapsed_ms": 1.7, "ok": true, "detail": {"c2": "12", "c3": "7", "c4": "5", "e2": "540000", "e3": "574000", "e4": "750000", "e5": "1864000", "e6": "621333", "e7": "3"}, "error": null}
+{"ts": "2026-11-21T09:56:20.292898+00:00", "test": "f02", "step": "open fixture", "op": "goto", "elapsed_ms": 1633.0, "ok": true, "detail": "e23cc6d7-5e4d-48e2-8c45-0428f29d69a1", "error": null}
+{"ts": "2026-11-21T09:56:20.295755+00:00", "test": "f02", "step": "check body visible", "op": "eval", "elapsed_ms": 2.7, "ok": true, "detail": "visible", "error": null}
+{"ts": "2026-11-21T09:56:20.297435+00:00", "test": "f02", "step": "count inbox rows", "op": "eval", "elapsed_ms": 1.6, "ok": true, "detail": 6, "error": null}
+{"ts": "2026-11-21T09:56:20.363484+00:00", "test": "f02", "step": "open message 1", "op": "click", "elapsed_ms": 66.0, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:20.368201+00:00", "test": "f02", "step": "read message 1 body", "op": "text", "elapsed_ms": 4.6, "ok": true, "detail": "Subject: Vendor quote\nFrom: vendor@example.com\nBody: Quote for Widget: 45000 per unit, 12 units. Total 540000. Valid 7 days.", "error": null}
+{"ts": "2026-11-21T09:56:20.426727+00:00", "test": "f02", "step": "mark message 1 read", "op": "click", "elapsed_ms": 58.4, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:20.431733+00:00", "test": "f02", "step": "read msg1 row after read", "op": "text", "elapsed_ms": 4.9, "ok": true, "detail": "Vendor quote - vendor@example.com (read)", "error": null}
+{"ts": "2026-11-21T09:56:20.487503+00:00", "test": "f02", "step": "open message 2", "op": "click", "elapsed_ms": 55.7, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:20.492673+00:00", "test": "f02", "step": "read message 2 body", "op": "text", "elapsed_ms": 5.1, "ok": true, "detail": "Subject: Customer complaint\nFrom: cust@example.com\nBody: Complaint: the Gadget arrived damaged. Please arrange a replacement.", "error": null}
+{"ts": "2026-11-21T09:56:20.548367+00:00", "test": "f02", "step": "flag message 2", "op": "click", "elapsed_ms": 55.6, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:20.550329+00:00", "test": "f02", "step": "check msg2 flagged class", "op": "eval", "elapsed_ms": 1.9, "ok": true, "detail": true, "error": null}
+{"ts": "2026-11-21T09:56:20.605865+00:00", "test": "f02", "step": "open message 3", "op": "click", "elapsed_ms": 55.5, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:20.611074+00:00", "test": "f02", "step": "read message 3 body", "op": "text", "elapsed_ms": 5.1, "ok": true, "detail": "Subject: Meeting request\nFrom: boss@example.com\nBody: Meeting request: project sync on Tuesday 2026-11-24 at 10:00, 30 minutes.", "error": null}
+{"ts": "2026-11-21T09:56:20.666836+00:00", "test": "f02", "step": "mark message 3 read", "op": "click", "elapsed_ms": 55.7, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:20.723537+00:00", "test": "f02", "step": "open message 4", "op": "click", "elapsed_ms": 56.6, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:20.728693+00:00", "test": "f02", "step": "read message 4 subject", "op": "text", "elapsed_ms": 5.1, "ok": true, "detail": "Subject: Newsletter A\nFrom: news1@example.com\nBody: Newsletter A: weekly roundup.", "error": null}
+{"ts": "2026-11-21T09:56:20.784110+00:00", "test": "f02", "step": "archive message 4", "op": "click", "elapsed_ms": 55.3, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:20.786351+00:00", "test": "f02", "step": "read inbox ids after archive 4", "op": "eval", "elapsed_ms": 2.2, "ok": true, "detail": ["msg1", "msg2", "msg3", "msg5", "msg6"], "error": null}
+{"ts": "2026-11-21T09:56:20.841960+00:00", "test": "f02", "step": "open message 5", "op": "click", "elapsed_ms": 55.5, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:20.898141+00:00", "test": "f02", "step": "archive message 5", "op": "click", "elapsed_ms": 56.1, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:20.900182+00:00", "test": "f02", "step": "read inbox ids after archive 5", "op": "eval", "elapsed_ms": 2.0, "ok": true, "detail": ["msg1", "msg2", "msg3", "msg6"], "error": null}
+{"ts": "2026-11-21T09:56:20.955385+00:00", "test": "f02", "step": "open message 6", "op": "click", "elapsed_ms": 55.1, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:21.011747+00:00", "test": "f02", "step": "mark message 6 read", "op": "click", "elapsed_ms": 56.3, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:21.067555+00:00", "test": "f02", "step": "star message 6", "op": "click", "elapsed_ms": 55.7, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:21.069354+00:00", "test": "f02", "step": "read msg6 row", "op": "eval", "elapsed_ms": 1.7, "ok": true, "detail": {"flagged": true, "text": "Vendor follow-up - vendor@example.com (read)"}, "error": null}
+{"ts": "2026-11-21T09:56:21.125268+00:00", "test": "f02", "step": "click Compose", "op": "click", "elapsed_ms": 55.8, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:21.138017+00:00", "test": "f02", "step": "type To vendor", "op": "type", "elapsed_ms": 12.6, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:21.149219+00:00", "test": "f02", "step": "type Subject", "op": "type", "elapsed_ms": 11.1, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:21.168352+00:00", "test": "f02", "step": "type body paragraph", "op": "type", "elapsed_ms": 19.1, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:21.226983+00:00", "test": "f02", "step": "click Send", "op": "click", "elapsed_ms": 58.6, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:21.232494+00:00", "test": "f02", "step": "read send confirmation", "op": "text", "elapsed_ms": 5.4, "ok": true, "detail": "Message sent.", "error": null}
+{"ts": "2026-11-21T09:56:21.288054+00:00", "test": "f02", "step": "open Sent folder", "op": "click", "elapsed_ms": 55.4, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:21.293147+00:00", "test": "f02", "step": "read Sent folder", "op": "text", "elapsed_ms": 5.0, "ok": true, "detail": "Subject: Re: vendor quote - price correction\nTo: vendor@example.com\nBody: The original quote was 45000 per unit for 12 units. Please correct the price to 42000 per unit. The total should be recalculated accordingly.", "error": null}
+{"ts": "2026-11-21T09:56:21.348422+00:00", "test": "f02", "step": "return to Inbox", "op": "click", "elapsed_ms": 55.2, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:21.350174+00:00", "test": "f02", "step": "read final inbox ids", "op": "eval", "elapsed_ms": 1.7, "ok": true, "detail": ["msg1", "msg2", "msg3", "msg6"], "error": null}
+{"ts": "2026-11-21T09:56:21.351739+00:00", "test": "f02", "step": "re-check msg2 flagged", "op": "eval", "elapsed_ms": 1.5, "ok": true, "detail": true, "error": null}
+{"ts": "2026-11-21T09:56:21.356719+00:00", "test": "f02", "step": "re-check msg1 read", "op": "text", "elapsed_ms": 4.9, "ok": true, "detail": "Vendor quote - vendor@example.com (read)", "error": null}
+{"ts": "2026-11-21T09:56:23.625420+00:00", "test": "f03", "step": "open fixture", "op": "goto", "elapsed_ms": 1630.3, "ok": true, "detail": "6e649958-a37d-4949-aace-a8af0d1432b2", "error": null}
+{"ts": "2026-11-21T09:56:23.627673+00:00", "test": "f03", "step": "check body visible", "op": "eval", "elapsed_ms": 2.1, "ok": true, "detail": "visible", "error": null}
+{"ts": "2026-11-21T09:56:23.629340+00:00", "test": "f03", "step": "read day headers", "op": "eval", "elapsed_ms": 1.6, "ok": true, "detail": "Tue,Wed,Thu,Fri,Sat", "error": null}
+{"ts": "2026-11-21T09:56:23.631241+00:00", "test": "f03", "step": "read busy slots", "op": "eval", "elapsed_ms": 1.9, "ok": true, "detail": ["Tue 9:00", "Thu 9:00", "Sat 9:00", "Wed 10:00", "Fri 10:00", "Wed 11:00", "Thu 12:00", "Tue 13:00", "Wed 14:00", "Sat 15:00"], "error": null}
+{"ts": "2026-11-21T09:56:23.695726+00:00", "test": "f03", "step": "click busy Tue 9:00 slot", "op": "click", "elapsed_ms": 64.4, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:23.700497+00:00", "test": "f03", "step": "read grid message", "op": "text", "elapsed_ms": 4.7, "ok": true, "detail": "That slot is busy. Pick a free (white) slot.", "error": null}
+{"ts": "2026-11-21T09:56:23.702069+00:00", "test": "f03", "step": "dialog stays hidden after busy click", "op": "eval", "elapsed_ms": 1.5, "ok": true, "detail": "none", "error": null}
+{"ts": "2026-11-21T09:56:23.761418+00:00", "test": "f03", "step": "click free Tue 10:00 slot", "op": "click", "elapsed_ms": 59.3, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:23.763202+00:00", "test": "f03", "step": "dialog visible after free click", "op": "visible", "elapsed_ms": 1.7, "ok": true, "detail": true, "error": null}
+{"ts": "2026-11-21T09:56:23.768447+00:00", "test": "f03", "step": "read dialog day", "op": "text", "elapsed_ms": 5.2, "ok": true, "detail": "Tue", "error": null}
+{"ts": "2026-11-21T09:56:23.773908+00:00", "test": "f03", "step": "read dialog hour", "op": "text", "elapsed_ms": 5.4, "ok": true, "detail": "10:00", "error": null}
+{"ts": "2026-11-21T09:56:23.789214+00:00", "test": "f03", "step": "set title", "op": "type", "elapsed_ms": 15.2, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:23.790932+00:00", "test": "f03", "step": "set date Tue", "op": "select", "elapsed_ms": 1.6, "ok": true, "detail": "Tue", "error": null}
+{"ts": "2026-11-21T09:56:23.799076+00:00", "test": "f03", "step": "set start 10:00", "op": "type", "elapsed_ms": 8.1, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:23.801404+00:00", "test": "f03", "step": "set duration 30", "op": "select", "elapsed_ms": 2.2, "ok": true, "detail": "30", "error": null}
+{"ts": "2026-11-21T09:56:23.814543+00:00", "test": "f03", "step": "set attendee 1", "op": "type", "elapsed_ms": 13.0, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:23.822622+00:00", "test": "f03", "step": "set attendee 2", "op": "type", "elapsed_ms": 8.0, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:23.824353+00:00", "test": "f03", "step": "set reminder 10", "op": "select", "elapsed_ms": 1.7, "ok": true, "detail": "10", "error": null}
+{"ts": "2026-11-21T09:56:23.882012+00:00", "test": "f03", "step": "click Save", "op": "click", "elapsed_ms": 57.6, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:23.884016+00:00", "test": "f03", "step": "read new event cell", "op": "eval", "elapsed_ms": 1.9, "ok": true, "detail": {"day": "Tue", "hour": "10", "text": "Project sync 10:00-10:30"}, "error": null}
+{"ts": "2026-11-21T09:56:23.887970+00:00", "test": "f03", "step": "read event detail", "op": "text", "elapsed_ms": 3.9, "ok": true, "detail": "Title: Project sync | Day: Tue | Start: 10:00 | Duration: 30 minutes | Attendees: teammate1@example.com, teammate2@example.com | Reminder: 10 minutes before", "error": null}
+{"ts": "2026-11-21T09:56:26.175317+00:00", "test": "f04", "step": "open fixture", "op": "goto", "elapsed_ms": 1640.2, "ok": true, "detail": "73b71d73-c3ef-4bb8-8f7e-bfe9a72225cd", "error": null}
+{"ts": "2026-11-21T09:56:26.177407+00:00", "test": "f04", "step": "check body visible", "op": "eval", "elapsed_ms": 2.0, "ok": true, "detail": "visible", "error": null}
+{"ts": "2026-11-21T09:56:26.182172+00:00", "test": "f04", "step": "verify notes empty", "op": "value", "elapsed_ms": 4.7, "ok": true, "detail": "", "error": null}
+{"ts": "2026-11-21T09:56:26.183980+00:00", "test": "f04", "step": "count source cards", "op": "eval", "elapsed_ms": 1.7, "ok": true, "detail": 3, "error": null}
+{"ts": "2026-11-21T09:56:26.246223+00:00", "test": "f04", "step": "open source A", "op": "click", "elapsed_ms": 62.2, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:26.251472+00:00", "test": "f04", "step": "read source A detail", "op": "text", "elapsed_ms": 5.2, "ok": true, "detail": "Source A: Alpha Service\nMonthly price: $12/mo\nSupport channel: email", "error": null}
+{"ts": "2026-11-21T09:56:26.306785+00:00", "test": "f04", "step": "open source B", "op": "click", "elapsed_ms": 55.2, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:26.312643+00:00", "test": "f04", "step": "read source B detail", "op": "text", "elapsed_ms": 5.8, "ok": true, "detail": "Source B: Beta Service\nMonthly price: $19/mo\nSupport channel: chat", "error": null}
+{"ts": "2026-11-21T09:56:26.368736+00:00", "test": "f04", "step": "open source C", "op": "click", "elapsed_ms": 56.0, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:26.374369+00:00", "test": "f04", "step": "read source C detail", "op": "text", "elapsed_ms": 5.5, "ok": true, "detail": "Source C: Gamma Service\nMonthly price: $9/mo\nSupport channel: phone", "error": null}
+{"ts": "2026-11-21T09:56:26.396752+00:00", "test": "f04", "step": "type 6 fact lines", "op": "type", "elapsed_ms": 22.3, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:26.416272+00:00", "test": "f04", "step": "type summary", "op": "type", "elapsed_ms": 19.4, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:26.418302+00:00", "test": "f04", "step": "count fact lines", "op": "eval", "elapsed_ms": 1.9, "ok": true, "detail": ["Source A: Alpha Service", "Source A: $12/mo", "Source B: Beta Service", "Source B: $19/mo", "Source C: Gamma Service", "Source C: $9/mo"], "error": null}
+{"ts": "2026-11-21T09:56:26.475645+00:00", "test": "f04", "step": "click Save notes", "op": "click", "elapsed_ms": 57.3, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:26.481459+00:00", "test": "f04", "step": "read saved snapshot", "op": "text", "elapsed_ms": 5.7, "ok": true, "detail": "Saved notes:\nSource A: Alpha Service\nSource A: $12/mo\nSource B: Beta Service\nSource B: $19/mo\nSource C: Gamma Service\nSource C: $9/mo\nSummary: Alpha $12/mo vs Beta $19/mo vs Gamma $9/mo, all differ.", "error": null}
+{"ts": "2026-11-21T09:56:26.483563+00:00", "test": "f04", "step": "re-read notes after save", "op": "value", "elapsed_ms": 2.0, "ok": true, "detail": "Source A: Alpha Service\nSource A: $12/mo\nSource B: Beta Service\nSource B: $19/mo\nSource C: Gamma Service\nSource C: $9/mo", "error": null}
+{"ts": "2026-11-21T09:56:28.759095+00:00", "test": "f05", "step": "open fixture", "op": "goto", "elapsed_ms": 1639.5, "ok": true, "detail": "a3537b38-cdc0-4d52-8fb4-e8217b4fe48e", "error": null}
+{"ts": "2026-11-21T09:56:28.761466+00:00", "test": "f05", "step": "check body visible", "op": "eval", "elapsed_ms": 2.3, "ok": true, "detail": "visible", "error": null}
+{"ts": "2026-11-21T09:56:28.763412+00:00", "test": "f05", "step": "list downloads", "op": "eval", "elapsed_ms": 1.9, "ok": true, "detail": ["img_01.jpg", "screenshot.png", "photo from web.jpg", "img_04.jpg", "img_05.jpg", "img_06.png", "img_07.jpg", "img_08.jpg"], "error": null}
+{"ts": "2026-11-21T09:56:28.784619+00:00", "test": "f05", "step": "type folder name Organized", "op": "type", "elapsed_ms": 21.1, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:28.843029+00:00", "test": "f05", "step": "click New Folder", "op": "click", "elapsed_ms": 58.3, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:28.844856+00:00", "test": "f05", "step": "Organized column visible", "op": "visible", "elapsed_ms": 1.8, "ok": true, "detail": true, "error": null}
+{"ts": "2026-11-21T09:56:28.846621+00:00", "test": "f05", "step": "move img_01.jpg to Organized", "op": "click_js", "elapsed_ms": 1.7, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:28.848813+00:00", "test": "f05", "step": "downloads after moving img_01.jpg", "op": "eval", "elapsed_ms": 2.1, "ok": true, "detail": ["screenshot.png", "photo from web.jpg", "img_04.jpg", "img_05.jpg", "img_06.png", "img_07.jpg", "img_08.jpg"], "error": null}
+{"ts": "2026-11-21T09:56:28.905520+00:00", "test": "f05", "step": "select img_01.jpg in Organized", "op": "click", "elapsed_ms": 56.6, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:28.911644+00:00", "test": "f05", "step": "read selected file", "op": "text", "elapsed_ms": 6.0, "ok": true, "detail": "img_01.jpg", "error": null}
+{"ts": "2026-11-21T09:56:28.918138+00:00", "test": "f05", "step": "type new name trip-01.jpg", "op": "type", "elapsed_ms": 6.4, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:28.974354+00:00", "test": "f05", "step": "click Rename for trip-01.jpg", "op": "click", "elapsed_ms": 56.1, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:28.976499+00:00", "test": "f05", "step": "Organized after rename to trip-01.jpg", "op": "eval", "elapsed_ms": 2.1, "ok": true, "detail": ["trip-01.jpg"], "error": null}
+{"ts": "2026-11-21T09:56:28.978790+00:00", "test": "f05", "step": "move screenshot.png to Organized", "op": "click_js", "elapsed_ms": 2.2, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:28.980770+00:00", "test": "f05", "step": "downloads after moving screenshot.png", "op": "eval", "elapsed_ms": 1.9, "ok": true, "detail": ["photo from web.jpg", "img_04.jpg", "img_05.jpg", "img_06.png", "img_07.jpg", "img_08.jpg"], "error": null}
+{"ts": "2026-11-21T09:56:29.036434+00:00", "test": "f05", "step": "select screenshot.png in Organized", "op": "click", "elapsed_ms": 55.5, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:29.041325+00:00", "test": "f05", "step": "read selected file", "op": "text", "elapsed_ms": 4.8, "ok": true, "detail": "screenshot.png", "error": null}
+{"ts": "2026-11-21T09:56:29.049227+00:00", "test": "f05", "step": "type new name trip-02.png", "op": "type", "elapsed_ms": 7.8, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:29.106088+00:00", "test": "f05", "step": "click Rename for trip-02.png", "op": "click", "elapsed_ms": 56.8, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:29.108052+00:00", "test": "f05", "step": "Organized after rename to trip-02.png", "op": "eval", "elapsed_ms": 1.9, "ok": true, "detail": ["trip-01.jpg", "trip-02.png"], "error": null}
+{"ts": "2026-11-21T09:56:29.110330+00:00", "test": "f05", "step": "move photo from web.jpg to Organized", "op": "click_js", "elapsed_ms": 2.2, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:29.112432+00:00", "test": "f05", "step": "downloads after moving photo from web.jpg", "op": "eval", "elapsed_ms": 2.0, "ok": true, "detail": ["img_04.jpg", "img_05.jpg", "img_06.png", "img_07.jpg", "img_08.jpg"], "error": null}
+{"ts": "2026-11-21T09:56:29.167755+00:00", "test": "f05", "step": "select photo from web.jpg in Organized", "op": "click", "elapsed_ms": 55.2, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:29.172035+00:00", "test": "f05", "step": "read selected file", "op": "text", "elapsed_ms": 4.2, "ok": true, "detail": "photo from web.jpg", "error": null}
+{"ts": "2026-11-21T09:56:29.178560+00:00", "test": "f05", "step": "type new name trip-03.jpg", "op": "type", "elapsed_ms": 6.5, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:29.234494+00:00", "test": "f05", "step": "click Rename for trip-03.jpg", "op": "click", "elapsed_ms": 55.9, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:29.236646+00:00", "test": "f05", "step": "Organized after rename to trip-03.jpg", "op": "eval", "elapsed_ms": 2.1, "ok": true, "detail": ["trip-01.jpg", "trip-02.png", "trip-03.jpg"], "error": null}
+{"ts": "2026-11-21T09:56:29.239250+00:00", "test": "f05", "step": "move img_04.jpg to Organized", "op": "click_js", "elapsed_ms": 2.5, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:29.241095+00:00", "test": "f05", "step": "downloads after moving img_04.jpg", "op": "eval", "elapsed_ms": 1.8, "ok": true, "detail": ["img_05.jpg", "img_06.png", "img_07.jpg", "img_08.jpg"], "error": null}
+{"ts": "2026-11-21T09:56:29.296134+00:00", "test": "f05", "step": "select img_04.jpg in Organized", "op": "click", "elapsed_ms": 55.0, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:29.300398+00:00", "test": "f05", "step": "read selected file", "op": "text", "elapsed_ms": 4.2, "ok": true, "detail": "img_04.jpg", "error": null}
+{"ts": "2026-11-21T09:56:29.308243+00:00", "test": "f05", "step": "type new name trip-04.jpg", "op": "type", "elapsed_ms": 7.8, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:29.365388+00:00", "test": "f05", "step": "click Rename for trip-04.jpg", "op": "click", "elapsed_ms": 57.1, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:29.367071+00:00", "test": "f05", "step": "Organized after rename to trip-04.jpg", "op": "eval", "elapsed_ms": 1.6, "ok": true, "detail": ["trip-01.jpg", "trip-02.png", "trip-03.jpg", "trip-04.jpg"], "error": null}
+{"ts": "2026-11-21T09:56:29.368742+00:00", "test": "f05", "step": "move img_05.jpg to Organized", "op": "click_js", "elapsed_ms": 1.6, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:29.370323+00:00", "test": "f05", "step": "downloads after moving img_05.jpg", "op": "eval", "elapsed_ms": 1.5, "ok": true, "detail": ["img_06.png", "img_07.jpg", "img_08.jpg"], "error": null}
+{"ts": "2026-11-21T09:56:29.424392+00:00", "test": "f05", "step": "select img_05.jpg in Organized", "op": "click", "elapsed_ms": 54.0, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:29.429318+00:00", "test": "f05", "step": "read selected file", "op": "text", "elapsed_ms": 4.8, "ok": true, "detail": "img_05.jpg", "error": null}
+{"ts": "2026-11-21T09:56:29.435417+00:00", "test": "f05", "step": "type new name trip-05.jpg", "op": "type", "elapsed_ms": 6.0, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:29.492958+00:00", "test": "f05", "step": "click Rename for trip-05.jpg", "op": "click", "elapsed_ms": 57.5, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:29.495251+00:00", "test": "f05", "step": "Organized after rename to trip-05.jpg", "op": "eval", "elapsed_ms": 2.2, "ok": true, "detail": ["trip-01.jpg", "trip-02.png", "trip-03.jpg", "trip-04.jpg", "trip-05.jpg"], "error": null}
+{"ts": "2026-11-21T09:56:29.497561+00:00", "test": "f05", "step": "move img_06.png to Organized", "op": "click_js", "elapsed_ms": 2.2, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:29.499392+00:00", "test": "f05", "step": "downloads after moving img_06.png", "op": "eval", "elapsed_ms": 1.8, "ok": true, "detail": ["img_07.jpg", "img_08.jpg"], "error": null}
+{"ts": "2026-11-21T09:56:29.556171+00:00", "test": "f05", "step": "select img_06.png in Organized", "op": "click", "elapsed_ms": 56.7, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:29.603648+00:00", "test": "f05", "step": "read selected file", "op": "text", "elapsed_ms": 47.4, "ok": true, "detail": "img_06.png", "error": null}
+{"ts": "2026-11-21T09:56:29.611584+00:00", "test": "f05", "step": "type new name trip-06.png", "op": "type", "elapsed_ms": 7.9, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:29.669026+00:00", "test": "f05", "step": "click Rename for trip-06.png", "op": "click", "elapsed_ms": 57.4, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:29.671198+00:00", "test": "f05", "step": "Organized after rename to trip-06.png", "op": "eval", "elapsed_ms": 2.1, "ok": true, "detail": ["trip-01.jpg", "trip-02.png", "trip-03.jpg", "trip-04.jpg", "trip-05.jpg", "trip-06.png"], "error": null}
+{"ts": "2026-11-21T09:56:29.673323+00:00", "test": "f05", "step": "move img_07.jpg to Organized", "op": "click_js", "elapsed_ms": 2.0, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:29.675419+00:00", "test": "f05", "step": "downloads after moving img_07.jpg", "op": "eval", "elapsed_ms": 2.0, "ok": true, "detail": ["img_08.jpg"], "error": null}
+{"ts": "2026-11-21T09:56:29.731584+00:00", "test": "f05", "step": "select img_07.jpg in Organized", "op": "click", "elapsed_ms": 56.1, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:29.735630+00:00", "test": "f05", "step": "read selected file", "op": "text", "elapsed_ms": 4.0, "ok": true, "detail": "img_07.jpg", "error": null}
+{"ts": "2026-11-21T09:56:29.742276+00:00", "test": "f05", "step": "type new name trip-07.jpg", "op": "type", "elapsed_ms": 6.6, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:29.800006+00:00", "test": "f05", "step": "click Rename for trip-07.jpg", "op": "click", "elapsed_ms": 57.6, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:29.802118+00:00", "test": "f05", "step": "Organized after rename to trip-07.jpg", "op": "eval", "elapsed_ms": 2.0, "ok": true, "detail": ["trip-01.jpg", "trip-02.png", "trip-03.jpg", "trip-04.jpg", "trip-05.jpg", "trip-06.png", "trip-07.jpg"], "error": null}
+{"ts": "2026-11-21T09:56:29.804254+00:00", "test": "f05", "step": "move img_08.jpg to Organized", "op": "click_js", "elapsed_ms": 2.0, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:29.806210+00:00", "test": "f05", "step": "downloads after moving img_08.jpg", "op": "eval", "elapsed_ms": 1.9, "ok": true, "detail": [], "error": null}
+{"ts": "2026-11-21T09:56:29.861194+00:00", "test": "f05", "step": "select img_08.jpg in Organized", "op": "click", "elapsed_ms": 54.9, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:29.866152+00:00", "test": "f05", "step": "read selected file", "op": "text", "elapsed_ms": 4.9, "ok": true, "detail": "img_08.jpg", "error": null}
+{"ts": "2026-11-21T09:56:29.873800+00:00", "test": "f05", "step": "type new name trip-08.jpg", "op": "type", "elapsed_ms": 7.6, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:29.930109+00:00", "test": "f05", "step": "click Rename for trip-08.jpg", "op": "click", "elapsed_ms": 56.2, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:29.932407+00:00", "test": "f05", "step": "Organized after rename to trip-08.jpg", "op": "eval", "elapsed_ms": 2.2, "ok": true, "detail": ["trip-01.jpg", "trip-02.png", "trip-03.jpg", "trip-04.jpg", "trip-05.jpg", "trip-06.png", "trip-07.jpg", "trip-08.jpg"], "error": null}
+{"ts": "2026-11-21T09:56:29.933926+00:00", "test": "f05", "step": "list Organized final", "op": "eval", "elapsed_ms": 1.5, "ok": true, "detail": ["trip-01.jpg", "trip-02.png", "trip-03.jpg", "trip-04.jpg", "trip-05.jpg", "trip-06.png", "trip-07.jpg", "trip-08.jpg"], "error": null}
+{"ts": "2026-11-21T09:56:29.935234+00:00", "test": "f05", "step": "list downloads final", "op": "eval", "elapsed_ms": 1.3, "ok": true, "detail": [], "error": null}
+{"ts": "2026-11-21T09:56:29.956693+00:00", "test": "f05", "step": "type index.txt 8 lines", "op": "type", "elapsed_ms": 21.4, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:30.014463+00:00", "test": "f05", "step": "click Save index.txt", "op": "click", "elapsed_ms": 57.7, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:30.019872+00:00", "test": "f05", "step": "read saved index", "op": "text", "elapsed_ms": 5.3, "ok": true, "detail": "img_01.jpg -> trip-01.jpg\nscreenshot.png -> trip-02.png\nphoto from web.jpg -> trip-03.jpg\nimg_04.jpg -> trip-04.jpg\nimg_05.jpg -> trip-05.jpg\nimg_06.png -> trip-06.png\nimg_07.jpg -> trip-07.jpg\nimg_08.jpg -> trip-08.jpg", "error": null}
+{"ts": "2026-11-21T09:56:30.021891+00:00", "test": "f05", "step": "re-check downloads empty", "op": "eval", "elapsed_ms": 1.9, "ok": true, "detail": 0, "error": null}
+{"ts": "2026-11-21T09:56:32.304425+00:00", "test": "f06", "step": "open fixture", "op": "goto", "elapsed_ms": 1646.1, "ok": true, "detail": "4d074268-a871-4881-94ad-b2a37f63d1f4", "error": null}
+{"ts": "2026-11-21T09:56:32.306820+00:00", "test": "f06", "step": "check body visible", "op": "eval", "elapsed_ms": 2.3, "ok": true, "detail": "visible", "error": null}
+{"ts": "2026-11-21T09:56:32.316233+00:00", "test": "f06", "step": "read Notes font size", "op": "text", "elapsed_ms": 9.3, "ok": true, "detail": "font_size: 14", "error": null}
+{"ts": "2026-11-21T09:56:32.321219+00:00", "test": "f06", "step": "read Reader zoom", "op": "text", "elapsed_ms": 4.9, "ok": true, "detail": "zoom: 100", "error": null}
+{"ts": "2026-11-21T09:56:32.387769+00:00", "test": "f06", "step": "open Notes Settings", "op": "click", "elapsed_ms": 66.5, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:32.400298+00:00", "test": "f06", "step": "set Notes font to 18", "op": "type", "elapsed_ms": 12.4, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:32.457137+00:00", "test": "f06", "step": "click Notes Apply", "op": "click", "elapsed_ms": 56.7, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:32.462268+00:00", "test": "f06", "step": "re-read Notes font size", "op": "text", "elapsed_ms": 5.0, "ok": true, "detail": "font_size: 18", "error": null}
+{"ts": "2026-11-21T09:56:32.517814+00:00", "test": "f06", "step": "close Notes settings", "op": "click", "elapsed_ms": 55.5, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:32.574493+00:00", "test": "f06", "step": "open Notes app", "op": "click", "elapsed_ms": 56.6, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:32.576545+00:00", "test": "f06", "step": "Notes sample doc visible", "op": "visible", "elapsed_ms": 2.0, "ok": true, "detail": true, "error": null}
+{"ts": "2026-11-21T09:56:32.577805+00:00", "test": "f06", "step": "read Notes doc font size", "op": "eval", "elapsed_ms": 1.2, "ok": true, "detail": "18px", "error": null}
+{"ts": "2026-11-21T09:56:32.582024+00:00", "test": "f06", "step": "read Notes doc label", "op": "text", "elapsed_ms": 4.2, "ok": true, "detail": "Sample document rendered at font size 18", "error": null}
+{"ts": "2026-11-21T09:56:32.637487+00:00", "test": "f06", "step": "open Reader Settings", "op": "click", "elapsed_ms": 55.4, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:32.644056+00:00", "test": "f06", "step": "set Reader zoom to 150", "op": "type", "elapsed_ms": 6.5, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:32.701136+00:00", "test": "f06", "step": "click Reader Apply", "op": "click", "elapsed_ms": 57.0, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:32.706754+00:00", "test": "f06", "step": "re-read Reader zoom", "op": "text", "elapsed_ms": 5.5, "ok": true, "detail": "zoom: 150", "error": null}
+{"ts": "2026-11-21T09:56:32.762656+00:00", "test": "f06", "step": "close Reader settings", "op": "click", "elapsed_ms": 55.8, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:32.819149+00:00", "test": "f06", "step": "open Reader app", "op": "click", "elapsed_ms": 56.4, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:32.821052+00:00", "test": "f06", "step": "Reader sample doc visible", "op": "visible", "elapsed_ms": 1.8, "ok": true, "detail": true, "error": null}
+{"ts": "2026-11-21T09:56:32.822310+00:00", "test": "f06", "step": "read Reader doc font size", "op": "eval", "elapsed_ms": 1.2, "ok": true, "detail": "24px", "error": null}
+{"ts": "2026-11-21T09:56:32.826737+00:00", "test": "f06", "step": "read Reader doc label", "op": "text", "elapsed_ms": 4.4, "ok": true, "detail": "Sample document at zoom 150%", "error": null}
+{"ts": "2026-11-21T09:56:32.830223+00:00", "test": "f06", "step": "re-read Notes setting at end", "op": "text", "elapsed_ms": 3.4, "ok": true, "detail": "font_size: 18", "error": null}
+{"ts": "2026-11-21T09:56:32.834619+00:00", "test": "f06", "step": "re-read Reader setting at end", "op": "text", "elapsed_ms": 4.3, "ok": true, "detail": "zoom: 150", "error": null}
+{"ts": "2026-11-21T09:56:32.835964+00:00", "test": "f06", "step": "Notes doc still open at end", "op": "visible", "elapsed_ms": 1.3, "ok": true, "detail": true, "error": null}
+{"ts": "2026-11-21T09:56:32.837341+00:00", "test": "f06", "step": "Reader doc still open at end", "op": "visible", "elapsed_ms": 1.3, "ok": true, "detail": true, "error": null}
+{"ts": "2026-11-21T09:56:35.103191+00:00", "test": "f07", "step": "open fixture", "op": "goto", "elapsed_ms": 1628.6, "ok": true, "detail": "a094f295-f4c7-4be5-b1e2-b9e8b3cca671", "error": null}
+{"ts": "2026-11-21T09:56:35.105193+00:00", "test": "f07", "step": "check body visible", "op": "eval", "elapsed_ms": 1.9, "ok": true, "detail": "visible", "error": null}
+{"ts": "2026-11-21T09:56:35.114227+00:00", "test": "f07", "step": "read written repro steps", "op": "text", "elapsed_ms": 9.0, "ok": true, "detail": "Written reproduction steps:\nRecord the current setting value (before).\nClick Toggle setting.\nClick Save immediately, without waiting.\nRead the setting value again (after).\nClick Save again, deliberately.\nRead the setting value again (after2).\nKnown race in this app: the first Save after a toggle writes the previous value back. A second Save commits the toggled value.", "error": null}
+{"ts": "2026-11-21T09:56:35.119344+00:00", "test": "f07", "step": "record before value", "op": "text", "elapsed_ms": 5.0, "ok": true, "detail": "enabled", "error": null}
+{"ts": "2026-11-21T09:56:35.183696+00:00", "test": "f07", "step": "click Toggle setting", "op": "click", "elapsed_ms": 64.3, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:35.240626+00:00", "test": "f07", "step": "click Save immediately", "op": "click", "elapsed_ms": 56.8, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:35.246085+00:00", "test": "f07", "step": "read after value", "op": "text", "elapsed_ms": 5.4, "ok": true, "detail": "enabled", "error": null}
+{"ts": "2026-11-21T09:56:35.301787+00:00", "test": "f07", "step": "click Save again deliberately", "op": "click", "elapsed_ms": 55.6, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:35.306935+00:00", "test": "f07", "step": "read after2 value", "op": "text", "elapsed_ms": 5.1, "ok": true, "detail": "disabled", "error": null}
+{"ts": "2026-11-21T09:56:35.312286+00:00", "test": "f07", "step": "re-read setting before typing note", "op": "text", "elapsed_ms": 5.3, "ok": true, "detail": "disabled", "error": null}
+{"ts": "2026-11-21T09:56:35.333228+00:00", "test": "f07", "step": "type bug note", "op": "type", "elapsed_ms": 20.9, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:35.392283+00:00", "test": "f07", "step": "click Save note", "op": "click", "elapsed_ms": 59.0, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:35.397168+00:00", "test": "f07", "step": "read saved note", "op": "text", "elapsed_ms": 4.8, "ok": true, "detail": "Bug: setting reverts on immediate save. Before enabled After enabled After2 disabled. Conclusion: reproduced.", "error": null}
+{"ts": "2026-11-21T09:56:35.402626+00:00", "test": "f07", "step": "read final setting value", "op": "text", "elapsed_ms": 5.3, "ok": true, "detail": "disabled", "error": null}
+{"ts": "2026-11-21T09:56:37.674591+00:00", "test": "f08", "step": "open fixture", "op": "goto", "elapsed_ms": 1636.2, "ok": true, "detail": "4ea88586-3e3e-4dfa-bf92-6201a6f72086", "error": null}
+{"ts": "2026-11-21T09:56:37.676587+00:00", "test": "f08", "step": "check body visible", "op": "eval", "elapsed_ms": 1.9, "ok": true, "detail": "visible", "error": null}
+{"ts": "2026-11-21T09:56:37.697754+00:00", "test": "f08", "step": "type full name", "op": "type", "elapsed_ms": 21.1, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:37.705292+00:00", "test": "f08", "step": "type short password", "op": "type", "elapsed_ms": 7.5, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:37.713426+00:00", "test": "f08", "step": "type mismatched confirm", "op": "type", "elapsed_ms": 8.1, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:37.775636+00:00", "test": "f08", "step": "click Submit (first)", "op": "click", "elapsed_ms": 62.1, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:37.781579+00:00", "test": "f08", "step": "read first-submit errors", "op": "text", "elapsed_ms": 5.8, "ok": true, "detail": "Email is required\nPassword must be at least 8 characters\nPasswords do not match", "error": null}
+{"ts": "2026-11-21T09:56:37.790671+00:00", "test": "f08", "step": "fix Email", "op": "type", "elapsed_ms": 9.0, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:37.800471+00:00", "test": "f08", "step": "fix Password to 12 chars", "op": "type", "elapsed_ms": 9.7, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:37.810070+00:00", "test": "f08", "step": "fix Confirm to match", "op": "type", "elapsed_ms": 9.5, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:37.867150+00:00", "test": "f08", "step": "click Submit (second)", "op": "click", "elapsed_ms": 56.9, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:37.872253+00:00", "test": "f08", "step": "read remaining errors", "op": "text", "elapsed_ms": 5.0, "ok": true, "detail": "", "error": null}
+{"ts": "2026-11-21T09:56:37.877394+00:00", "test": "f08", "step": "read success message", "op": "text", "elapsed_ms": 5.1, "ok": true, "detail": "Registration successful.", "error": null}
+{"ts": "2026-11-21T09:56:37.878836+00:00", "test": "f08", "step": "success message visible", "op": "visible", "elapsed_ms": 1.4, "ok": true, "detail": true, "error": null}
+{"ts": "2026-11-21T09:56:37.880185+00:00", "test": "f08", "step": "read back final field values", "op": "eval", "elapsed_ms": 1.3, "ok": true, "detail": {"email": "pham@example.com", "match": true, "name": "Pham Tuan", "pwLen": 12}, "error": null}
+{"ts": "2026-11-21T09:56:40.169163+00:00", "test": "f09", "step": "open fixture", "op": "goto", "elapsed_ms": 1651.9, "ok": true, "detail": "9e2c9453-f620-489b-8c83-9f84633595f0", "error": null}
+{"ts": "2026-11-21T09:56:40.171115+00:00", "test": "f09", "step": "check body visible", "op": "eval", "elapsed_ms": 1.9, "ok": true, "detail": "visible", "error": null}
+{"ts": "2026-11-21T09:56:40.172576+00:00", "test": "f09", "step": "read App A header", "op": "eval", "elapsed_ms": 1.4, "ok": true, "detail": "Item,Units,Price", "error": null}
+{"ts": "2026-11-21T09:56:40.174266+00:00", "test": "f09", "step": "read all 4 App A rows", "op": "eval", "elapsed_ms": 1.6, "ok": true, "detail": [["Widget", "12", "45000"], ["Gadget", "7", "82000"], ["Tool", "5", "150000"], ["Cable", "20", "12000"]], "error": null}
+{"ts": "2026-11-21T09:56:40.180344+00:00", "test": "f09", "step": "read reference block", "op": "text", "elapsed_ms": 6.0, "ok": true, "detail": "1. Widget: 12 units @ 45000\n2. Gadget: 7 units @ 82000\n3. Tool: 5 units @ 150000\n4. Cable: 20 units @ 12000", "error": null}
+{"ts": "2026-11-21T09:56:40.207980+00:00", "test": "f09", "step": "type 4 converted lines into App B", "op": "type", "elapsed_ms": 27.6, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:40.268811+00:00", "test": "f09", "step": "click Convert / Apply", "op": "click", "elapsed_ms": 60.7, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:40.274255+00:00", "test": "f09", "step": "read converted output", "op": "text", "elapsed_ms": 5.3, "ok": true, "detail": "1. Widget: 12 units @ 45000\n2. Gadget: 7 units @ 82000\n3. Tool: 5 units @ 150000\n4. Cable: 20 units @ 12000", "error": null}
+{"ts": "2026-11-21T09:56:42.536653+00:00", "test": "f10", "step": "open fixture", "op": "goto", "elapsed_ms": 1626.1, "ok": true, "detail": "eabaaade-05b2-4455-a65d-9373fb43bf19", "error": null}
+{"ts": "2026-11-21T09:56:42.538999+00:00", "test": "f10", "step": "check body visible", "op": "eval", "elapsed_ms": 2.2, "ok": true, "detail": "visible", "error": null}
+{"ts": "2026-11-21T09:56:42.540686+00:00", "test": "f10", "step": "count document sections", "op": "eval", "elapsed_ms": 1.6, "ok": true, "detail": 3, "error": null}
+{"ts": "2026-11-21T09:56:42.549698+00:00", "test": "f10", "step": "read TOC count", "op": "text", "elapsed_ms": 8.9, "ok": true, "detail": "Tables: 0", "error": null}
+{"ts": "2026-11-21T09:56:42.614997+00:00", "test": "f10", "step": "open Find/Replace", "op": "click", "elapsed_ms": 65.2, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:42.617028+00:00", "test": "f10", "step": "find panel visible", "op": "visible", "elapsed_ms": 1.9, "ok": true, "detail": true, "error": null}
+{"ts": "2026-11-21T09:56:42.628082+00:00", "test": "f10", "step": "type search term old vendor", "op": "type", "elapsed_ms": 11.0, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:42.685218+00:00", "test": "f10", "step": "click Search", "op": "click", "elapsed_ms": 57.1, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:42.688994+00:00", "test": "f10", "step": "read match count", "op": "text", "elapsed_ms": 3.7, "ok": true, "detail": "3 matches for \"old vendor\"", "error": null}
+{"ts": "2026-11-21T09:56:42.694397+00:00", "test": "f10", "step": "type replacement new vendor", "op": "type", "elapsed_ms": 5.3, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:42.750280+00:00", "test": "f10", "step": "click Replace all", "op": "click", "elapsed_ms": 55.8, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:42.755370+00:00", "test": "f10", "step": "read match count after replace", "op": "text", "elapsed_ms": 5.0, "ok": true, "detail": "Replaced. 0 matches for \"old vendor\" remain.", "error": null}
+{"ts": "2026-11-21T09:56:42.810285+00:00", "test": "f10", "step": "close Find/Replace", "op": "click", "elapsed_ms": 54.8, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:42.812034+00:00", "test": "f10", "step": "verify no old vendor in doc", "op": "eval", "elapsed_ms": 1.7, "ok": true, "detail": false, "error": null}
+{"ts": "2026-11-21T09:56:42.813252+00:00", "test": "f10", "step": "verify new vendor in doc", "op": "eval", "elapsed_ms": 1.2, "ok": true, "detail": true, "error": null}
+{"ts": "2026-11-21T09:56:42.869225+00:00", "test": "f10", "step": "click Add table", "op": "click", "elapsed_ms": 55.9, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:42.870715+00:00", "test": "f10", "step": "table exists", "op": "eval", "elapsed_ms": 1.4, "ok": true, "detail": true, "error": null}
+{"ts": "2026-11-21T09:56:42.873024+00:00", "test": "f10", "step": "fill header Column A", "op": "eval", "elapsed_ms": 2.2, "ok": true, "detail": "Column A", "error": null}
+{"ts": "2026-11-21T09:56:42.876332+00:00", "test": "f10", "step": "fill header Column B", "op": "eval", "elapsed_ms": 3.2, "ok": true, "detail": "Column B", "error": null}
+{"ts": "2026-11-21T09:56:42.878575+00:00", "test": "f10", "step": "fill header Column C", "op": "eval", "elapsed_ms": 2.2, "ok": true, "detail": "Column C", "error": null}
+{"ts": "2026-11-21T09:56:42.883193+00:00", "test": "f10", "step": "fill table row 1 col 1", "op": "eval", "elapsed_ms": 4.5, "ok": true, "detail": "Widget", "error": null}
+{"ts": "2026-11-21T09:56:42.885714+00:00", "test": "f10", "step": "fill table row 1 col 2", "op": "eval", "elapsed_ms": 2.4, "ok": true, "detail": "12", "error": null}
+{"ts": "2026-11-21T09:56:42.887774+00:00", "test": "f10", "step": "fill table row 1 col 3", "op": "eval", "elapsed_ms": 2.0, "ok": true, "detail": "45000", "error": null}
+{"ts": "2026-11-21T09:56:42.889567+00:00", "test": "f10", "step": "fill table row 2 col 1", "op": "eval", "elapsed_ms": 1.7, "ok": true, "detail": "Gadget", "error": null}
+{"ts": "2026-11-21T09:56:42.894053+00:00", "test": "f10", "step": "fill table row 2 col 2", "op": "eval", "elapsed_ms": 4.4, "ok": true, "detail": "7", "error": null}
+{"ts": "2026-11-21T09:56:42.896953+00:00", "test": "f10", "step": "fill table row 2 col 3", "op": "eval", "elapsed_ms": 2.8, "ok": true, "detail": "82000", "error": null}
+{"ts": "2026-11-21T09:56:42.900883+00:00", "test": "f10", "step": "read table header", "op": "eval", "elapsed_ms": 3.9, "ok": true, "detail": ["Column A", "Column B", "Column C"], "error": null}
+{"ts": "2026-11-21T09:56:42.903475+00:00", "test": "f10", "step": "read table body rows", "op": "eval", "elapsed_ms": 2.5, "ok": true, "detail": [["Widget", "12", "45000"], ["Gadget", "7", "82000"]], "error": null}
+{"ts": "2026-11-21T09:56:42.911609+00:00", "test": "f10", "step": "read TOC count after table", "op": "text", "elapsed_ms": 8.0, "ok": true, "detail": "Tables: 1", "error": null}
+{"ts": "2026-11-21T09:56:42.968928+00:00", "test": "f10", "step": "click Save", "op": "click", "elapsed_ms": 57.2, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:42.974099+00:00", "test": "f10", "step": "read saved state", "op": "text", "elapsed_ms": 5.1, "ok": true, "detail": "Saved.", "error": null}
+{"ts": "2026-11-21T09:56:43.030001+00:00", "test": "f10", "step": "click Export", "op": "click", "elapsed_ms": 55.8, "ok": true, "detail": null, "error": null}
+{"ts": "2026-11-21T09:56:43.035354+00:00", "test": "f10", "step": "read export view", "op": "text", "elapsed_ms": 5.3, "ok": true, "detail": "Filename: report-export.md\n\nIntroReport intro about the new vendor and its pricing.\n  DetailsDetails: the new vendor delivered late twice.\n  SummarySummary: we will keep the new vendor for now.Column AColumn BColumn CWidget1245000Gadget782000\n\n| Column A | Column B | Column C |\n|---|---|---|\n| Widget | 12 | 45000 |\n| Gadget | 7 | 82000 |", "error": null}

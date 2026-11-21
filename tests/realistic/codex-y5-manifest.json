@@ -1,0 +1,112 @@
+{
+  "files": [
+    {
+      "path": "run_codex_y5.py",
+      "md5": "3cc5fa11a4be533c1bb49941008bfa75"
+    },
+    {
+      "path": "launch_y13.py",
+      "md5": "2b02c5ec85ef474bfcddf4b59dcacc0f"
+    },
+    {
+      "path": "run_live.py",
+      "md5": "84fa106c253d5e7f16daccf2ce3f14a5"
+    },
+    {
+      "path": "codex-y5/test-01-git-workflow.md",
+      "md5": "0f347247c21b2f1375596c1ee51449b4"
+    },
+    {
+      "path": "codex-y5/test-02-music-player.md",
+      "md5": "15925f6709c62908dfd5cd88f1fc8c91"
+    },
+    {
+      "path": "codex-y5/test-03-password-vault.md",
+      "md5": "e931e09bee8d28ca64768f5bc2053f40"
+    },
+    {
+      "path": "codex-y5/test-04-maps-directions.md",
+      "md5": "0d59678a646493d17fc8b2efdf518cc3"
+    },
+    {
+      "path": "codex-y5/test-05-calendar-recurring.md",
+      "md5": "71cbaa55642161c97d7fc98e9221e72b"
+    },
+    {
+      "path": "codex-y5/test-06-video-editor.md",
+      "md5": "842783b7278cf8bb5bc7b1b40d1516cb"
+    },
+    {
+      "path": "codex-y5/test-07-chat-search.md",
+      "md5": "3b0c37be71f023d8be148a1c99805971"
+    },
+    {
+      "path": "codex-y5/test-08-spreadsheet-pivot.md",
+      "md5": "d50ffaee6f2261108551279416c5cd1b"
+    },
+    {
+      "path": "codex-y5/test-09-file-search-tag.md",
+      "md5": "cae2f8e3afb0c476590e7d6ba5ecfe68"
+    },
+    {
+      "path": "codex-y5/test-10-extension-settings.md",
+      "md5": "ed5f2b35862784b6b02eafbb185691c7"
+    },
+    {
+      "path": "codex-y5/simulate.mjs",
+      "md5": "b6c7c9c9c09a0da452c1996a8c43504d"
+    },
+    {
+      "path": "codex-y5/check.mjs",
+      "md5": "56312f93fcf8f13eae9b4fabe85d172d"
+    },
+    {
+      "path": "codex-y5/README.md",
+      "md5": "217c3edceb42a040f2f601fdddbcdf6a"
+    },
+    {
+      "path": "codex-y5/check-dashes.py",
+      "md5": "d4e7659f4e6b77dc351c6e7319ed4e61"
+    },
+    {
+      "path": "codex-y5/fixtures/test-01-git-workflow.html",
+      "md5": "ac0f3f5f6510bbd9c5ccf32e2b2f8301"
+    },
+    {
+      "path": "codex-y5/fixtures/test-02-music-player.html",
+      "md5": "0b988fde53e221f6522b6d8965f92113"
+    },
+    {
+      "path": "codex-y5/fixtures/test-03-password-vault.html",
+      "md5": "21ecdc2bb9b2ae34fdd1b7ca48e60a80"
+    },
+    {
+      "path": "codex-y5/fixtures/test-04-maps-directions.html",
+      "md5": "ea6f1365c4d57f030d58e6913f39ac28"
+    },
+    {
+      "path": "codex-y5/fixtures/test-05-calendar-recurring.html",
+      "md5": "caf9d8acd2440028b135d005ed42a4f2"
+    },
+    {
+      "path": "codex-y5/fixtures/test-06-video-editor.html",
+      "md5": "6cd220edc51a1c69c97ae6fcb87d5bb4"
+    },
+    {
+      "path": "codex-y5/fixtures/test-07-chat-search.html",
+      "md5": "45a8077d703ee5481092ec316ce26d83"
+    },
+    {
+      "path": "codex-y5/fixtures/test-08-spreadsheet-pivot.html",
+      "md5": "af10ca0627a72dc8eb8890c0ea3d635d"
+    },
+    {
+      "path": "codex-y5/fixtures/test-09-file-search-tag.html",
+      "md5": "16507889dd0cb236339cc11fe6b80f7e"
+    },
+    {
+      "path": "codex-y5/fixtures/test-10-extension-settings.html",
+      "md5": "21b2aacee36e9bc3dd7a61dbaba25123"
+    }
+  ]
+}

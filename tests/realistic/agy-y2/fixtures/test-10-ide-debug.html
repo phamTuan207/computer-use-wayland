@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Browser IDE & Debugger</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: "JetBrains Mono", "Courier New", monospace; }
+    body { background: #1e1e1e; color: #d4d4d4; padding: 20px; }
+    .ide-container { max-width: 1050px; margin: 0 auto; background: #252526; border: 1px solid #3c3c3c; border-radius: 6px; overflow: hidden; }
+    header { background: #323233; padding: 12px 18px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #3c3c3c; }
+    h1 { font-size: 15px; color: #61afef; font-weight: 600; }
+    .status-items { display: flex; gap: 14px; font-size: 12px; }
+    .badge { padding: 3px 8px; border-radius: 3px; font-weight: bold; font-size: 11px; }
+    .badge-inactive { background: #3c3c3c; color: #858585; }
+    .badge-paused { background: #d19a66; color: #282c34; }
+    .badge-stopped { background: #e06c75; color: #ffffff; }
+    .toolbar { background: #2d2d2d; padding: 8px 16px; display: flex; gap: 8px; align-items: center; border-bottom: 1px solid #3c3c3c; }
+    button { background: #3a3d41; color: #cccccc; border: 1px solid #45494e; padding: 5px 12px; border-radius: 3px; font-size: 11px; cursor: pointer; font-family: inherit; }
+    button:hover { background: #45494e; }
+    button.btn-primary { background: #0e639c; border-color: #1177bb; color: #ffffff; }
+    button.btn-primary:hover { background: #1177bb; }
+    button.btn-danger { background: #a93226; border-color: #c0392b; color: #ffffff; }
+    .main-workspace { display: flex; min-height: 440px; }
+    .sidebar { width: 180px; background: #252526; border-right: 1px solid #3c3c3c; padding: 12px; }
+    .tree-item { padding: 4px 8px; font-size: 12px; cursor: pointer; border-radius: 3px; color: #9cdcfe; margin-bottom: 4px; }
+    .tree-item:hover, .tree-item.active { background: #37373d; font-weight: bold; }
+    .editor-pane { flex: 1; display: flex; background: #1e1e1e; overflow-y: auto; }
+    .gutter { width: 50px; background: #1e1e1e; border-right: 1px solid #2d2d2d; color: #858585; padding: 10px 0; text-align: right; user-select: none; }
+    .gutter-line { height: 22px; line-height: 22px; padding-right: 10px; cursor: pointer; position: relative; }
+    .gutter-line.has-breakpoint::before { content: "●"; color: #e06c75; position: absolute; left: 8px; font-size: 14px; line-height: 22px; }
+    .code-content { flex: 1; padding: 10px 14px; font-size: 12px; }
+    .code-line { height: 22px; line-height: 22px; white-space: pre; }
+    .code-line.current-exec { background: rgba(209, 154, 102, 0.25); border-left: 3px solid #d19a66; padding-left: 6px; }
+    .debug-sidebar { width: 280px; background: #252526; border-left: 1px solid #3c3c3c; display: flex; flex-direction: column; }
+    .debug-section { border-bottom: 1px solid #3c3c3c; padding: 10px 14px; }
+    .debug-title { font-size: 11px; text-transform: uppercase; color: #858585; font-weight: bold; margin-bottom: 8px; }
+    .watch-row { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px; padding: 2px 4px; }
+    .stack-row { font-size: 11px; color: #9cdcfe; padding: 2px 4px; margin-bottom: 2px; }
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; justify-content: center; align-items: center; z-index: 100; }
+    .modal-overlay.active { display: flex; }
+    .modal-box { background: #252526; border: 1px solid #45494e; border-radius: 6px; padding: 18px; width: 340px; }
+    .modal-box h3 { font-size: 14px; margin-bottom: 12px; color: #61afef; }
+    .modal-box input { width: 100%; background: #1e1e1e; border: 1px solid #3c3c3c; padding: 8px 10px; color: #d4d4d4; font-family: inherit; font-size: 12px; border-radius: 3px; outline: none; margin-bottom: 14px; }
+    .toast-summary { display: none; background: #064e3b; color: #6ee7b7; padding: 10px 16px; font-size: 12px; text-align: center; border-top: 1px solid #047857; }
+    .toast-summary.active { display: block; }
+  </style>
+</head>
+<body>
+
+<div class="ide-container">
+  <header>
+    <h1>Browser Cloud IDE</h1>
+    <div class="status-items">
+      <div>File: <strong id="active-file-name">None</strong></div>
+      <div>Breakpoints: <strong id="breakpoint-count-indicator">0</strong></div>
+      <div>Line: <strong id="current-paused-line">None</strong></div>
+      <div>Debug State: <span id="debug-state-badge" class="badge badge-inactive">Inactive</span></div>
+    </div>
+  </header>
+
+  <div class="toolbar">
+    <button id="btn-start-debugger" class="btn-primary">Start Debug</button>
+    <button id="btn-step-over">Step Over</button>
+    <button id="btn-continue-debugger">Continue</button>
+    <button id="btn-stop-debugger" class="btn-danger">Stop</button>
+    <button id="btn-open-edit-watch" style="margin-left: auto;">Edit Watch</button>
+    <button id="btn-save-debug-session" class="btn-primary">Save Session</button>
+  </div>
+
+  <div class="main-workspace">
+    <!-- File Explorer -->
+    <div class="sidebar">
+      <div style="font-size: 11px; text-transform: uppercase; color: #858585; font-weight: bold; margin-bottom: 8px;">Explorer</div>
+      <div class="tree-item" id="file-item-app-js">📄 app.js</div>
+      <div class="tree-item" id="file-item-config-json">⚙️ config.json</div>
+    </div>
+
+    <!-- Code Editor -->
+    <div class="editor-pane" id="code-editor" style="display: none;">
+      <div class="gutter">
+        <div class="gutter-line" id="gutter-line-10">10</div>
+        <div class="gutter-line" id="gutter-line-11">11</div>
+        <div class="gutter-line" id="gutter-line-12">12</div>
+        <div class="gutter-line" id="gutter-line-13">13</div>
+        <div class="gutter-line" id="gutter-line-14">14</div>
+        <div class="gutter-line" id="gutter-line-15">15</div>
+        <div class="gutter-line" id="gutter-line-16">16</div>
+        <div class="gutter-line" id="gutter-line-17">17</div>
+      </div>
+      <div class="code-content">
+        <div class="code-line" id="code-line-10">function calculateSum(items) {</div>
+        <div class="code-line" id="code-line-11">  let total = 0;</div>
+        <div class="code-line" id="code-line-12">  const baseRate = 120;</div>
+        <div class="code-line" id="code-line-13">  total += baseRate;</div>
+        <div class="code-line" id="code-line-14">  return total;</div>
+        <div class="code-line" id="code-line-15">}</div>
+        <div class="code-line" id="code-line-16">function renderSummary() {</div>
+        <div class="code-line" id="code-line-17">  console.log("Calculated:", grandTotal);</div>
+      </div>
+    </div>
+
+    <!-- Debug Side Panel -->
+    <div class="debug-sidebar">
+      <div class="debug-section">
+        <div class="debug-title">Watch Expressions</div>
+        <div class="watch-row">
+          <span style="color: #9cdcfe;">total:</span>
+          <span id="watch-val-total" style="color: #b5cea8;">undefined</span>
+        </div>
+        <div class="watch-row">
+          <span style="color: #9cdcfe;">grandTotal:</span>
+          <span id="watch-val-grand-total" style="color: #b5cea8;">undefined</span>
+        </div>
+        <input type="text" id="input-edit-watch-total" style="display: none;">
+      </div>
+      <div class="debug-section" style="flex: 1;">
+        <div class="debug-title">Call Stack</div>
+        <div id="call-stack-list">
+          <div style="color: #858585; font-size: 11px;">Not debugging.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="debug-toast-summary" class="toast-summary"></div>
+</div>
+
+<!-- Modal Override Watch -->
+<div id="edit-watch-modal" class="modal-overlay">
+  <div class="modal-box">
+    <h3>Override Variable 'total'</h3>
+    <input type="text" id="input-watch-override-value" placeholder="Enter new numeric value (e.g. 250)">
+    <div style="display: flex; justify-content: flex-end; gap: 8px;">
+      <button id="btn-cancel-watch-override">Cancel</button>
+      <button id="btn-confirm-watch-override" class="btn-primary">Apply Value</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const debugState = {
+    fileOpen: false,
+    breakpoints: new Set(),
+    status: 'Inactive',
+    currentLine: null,
+    totalVal: 0,
+    grandTotalVal: 0
+  };
+
+  const badge = document.getElementById('debug-state-badge');
+  const lineIndicator = document.getElementById('current-paused-line');
+  const bpIndicator = document.getElementById('breakpoint-count-indicator');
+  const stackList = document.getElementById('call-stack-list');
+  const watchTotal = document.getElementById('watch-val-total');
+  const watchGrandTotal = document.getElementById('watch-val-grand-total');
+
+  document.getElementById('file-item-app-js').onclick = () => {
+    debugState.fileOpen = true;
+    document.getElementById('file-item-app-js').classList.add('active');
+    document.getElementById('active-file-name').textContent = 'app.js';
+    document.getElementById('code-editor').style.display = 'flex';
+  };
+
+  [12, 16].forEach(line => {
+    const el = document.getElementById('gutter-line-' + line);
+    if (el) {
+      el.onclick = () => {
+        if (debugState.breakpoints.has(line)) {
+          debugState.breakpoints.delete(line);
+          el.classList.remove('has-breakpoint');
+        } else {
+          debugState.breakpoints.add(line);
+          el.classList.add('has-breakpoint');
+        }
+        bpIndicator.textContent = String(debugState.breakpoints.size);
+      };
+    }
+  });
+
+  function clearExecHighlight() {
+    [10, 11, 12, 13, 14, 15, 16, 17].forEach(l => {
+      const row = document.getElementById('code-line-' + l);
+      if (row) row.classList.remove('current-exec');
+    });
+  }
+
+  function highlightLine(l) {
+    clearExecHighlight();
+    const row = document.getElementById('code-line-' + l);
+    if (row) row.classList.add('current-exec');
+    debugState.currentLine = l;
+    lineIndicator.textContent = 'Line ' + l;
+  }
+
+  document.getElementById('btn-start-debugger').onclick = () => {
+    if (!debugState.fileOpen || !debugState.breakpoints.has(12)) return;
+    debugState.status = 'Paused';
+    badge.textContent = 'Paused';
+    badge.className = 'badge badge-paused';
+    highlightLine(12);
+    debugState.totalVal = 0;
+    watchTotal.textContent = '0';
+    stackList.innerHTML = '<div class="stack-row">calculateSum (line 12)</div><div class="stack-row">main (line 1)</div>';
+  };
+
+  document.getElementById('btn-step-over').onclick = () => {
+    if (debugState.status !== 'Paused') return;
+    if (debugState.currentLine === 12) {
+      highlightLine(13);
+      debugState.totalVal = 120;
+      watchTotal.textContent = '120';
+    } else if (debugState.currentLine === 13) {
+      highlightLine(14);
+      watchTotal.textContent = String(debugState.totalVal);
+    }
+  };
+
+  const modal = document.getElementById('edit-watch-modal');
+  document.getElementById('btn-open-edit-watch').onclick = () => {
+    modal.classList.add('active');
+  };
+
+  document.getElementById('btn-cancel-watch-override').onclick = () => {
+    modal.classList.remove('active');
+  };
+
+  document.getElementById('btn-confirm-watch-override').onclick = () => {
+    const val = parseInt(document.getElementById('input-watch-override-value').value.trim(), 10) || 250;
+    debugState.totalVal = val;
+    watchTotal.textContent = String(val);
+    modal.classList.remove('active');
+  };
+
+  document.getElementById('btn-continue-debugger').onclick = () => {
+    if (debugState.breakpoints.has(16)) {
+      highlightLine(16);
+      debugState.grandTotalVal = debugState.totalVal;
+      watchGrandTotal.textContent = String(debugState.grandTotalVal);
+      stackList.innerHTML = '<div class="stack-row">renderSummary (line 16)</div><div class="stack-row">main (line 1)</div>';
+    }
+  };
+
+  document.getElementById('btn-stop-debugger').onclick = () => {
+    debugState.status = 'Stopped';
+    badge.textContent = 'Stopped';
+    badge.className = 'badge badge-stopped';
+    clearExecHighlight();
+    lineIndicator.textContent = 'None';
+  };
+
+  document.getElementById('btn-save-debug-session').onclick = () => {
+    const toast = document.getElementById('debug-toast-summary');
+    toast.textContent = 'Debug session complete: watched total=' + debugState.totalVal + ', breakpoints=' + debugState.breakpoints.size + ', final line 16';
+    toast.classList.add('active');
+  };
+</script>
+
+</body>
+</html>

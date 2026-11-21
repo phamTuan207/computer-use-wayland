@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>tmux Session Manager</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: "JetBrains Mono", "Courier New", monospace; }
+    body { background: #121417; color: #e2e8f0; padding: 20px; }
+    .container { max-width: 1100px; margin: 0 auto; background: #1a1e24; border: 1px solid #2d3748; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.5); }
+    header { background: #0f1115; padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #2d3748; }
+    h1 { font-size: 18px; color: #38bdf8; font-weight: 600; }
+    .header-stats { display: flex; gap: 16px; font-size: 13px; color: #94a3b8; }
+    .stat-badge { background: #262c36; padding: 4px 10px; border-radius: 4px; border: 1px solid #3b4252; }
+    .stat-badge span { color: #f8fafc; font-weight: bold; }
+    .toolbar { background: #202630; padding: 10px 16px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; border-bottom: 1px solid #2d3748; }
+    button { background: #334155; color: #f8fafc; border: 1px solid #475569; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 500; font-family: inherit; }
+    button:hover { background: #475569; }
+    button.btn-primary { background: #0284c7; border-color: #0369a1; }
+    button.btn-primary:hover { background: #0369a1; }
+    button.btn-danger { background: #dc2626; border-color: #b91c1c; }
+    button.btn-danger:hover { background: #b91c1c; }
+    .window-tabs { background: #15181e; display: flex; border-bottom: 1px solid #2d3748; overflow-x: auto; }
+    .tab { padding: 8px 16px; font-size: 13px; cursor: pointer; border-right: 1px solid #2d3748; color: #94a3b8; background: #15181e; }
+    .tab.active { background: #1a1e24; color: #38bdf8; border-bottom: 2px solid #38bdf8; font-weight: bold; }
+    .panes-area { min-height: 400px; padding: 16px; display: flex; gap: 12px; background: #0b0d10; }
+    .pane { flex: 1; background: #13171d; border: 1px solid #2d3748; border-radius: 4px; display: flex; flex-direction: column; overflow: hidden; }
+    .pane-header { background: #1c222b; padding: 6px 12px; font-size: 12px; color: #94a3b8; border-bottom: 1px solid #2d3748; display: flex; justify-content: space-between; }
+    .pane-content { flex: 1; padding: 12px; font-size: 13px; color: #cbd5e1; overflow-y: auto; line-height: 1.5; white-space: pre-wrap; min-height: 200px; }
+    .terminal-prompt { display: flex; border-top: 1px solid #2d3748; background: #181d24; }
+    .terminal-prompt input { flex: 1; background: transparent; border: none; padding: 8px 12px; color: #f8fafc; font-family: inherit; font-size: 13px; outline: none; }
+    .status-bar { background: #15803d; color: #f0fdf4; padding: 6px 16px; font-size: 12px; font-weight: bold; display: flex; justify-content: space-between; }
+    .alert-banner { display: none; padding: 10px 16px; background: #7f1d1d; color: #fecaca; border-bottom: 1px solid #991b1b; font-size: 13px; }
+    .alert-banner.active { display: block; }
+    .session-overview { padding: 24px; min-height: 400px; background: #0b0d10; }
+    .session-card { background: #13171d; border: 1px solid #2d3748; border-radius: 6px; padding: 16px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; justify-content: center; align-items: center; z-index: 100; }
+    .modal-overlay.open { display: flex; }
+    .modal { background: #1a1e24; border: 1px solid #475569; border-radius: 6px; padding: 20px; width: 360px; box-shadow: 0 10px 25px rgba(0,0,0,0.8); }
+    .modal h2 { font-size: 16px; margin-bottom: 14px; color: #f8fafc; }
+    .modal input { width: 100%; background: #0f1115; border: 1px solid #334155; padding: 8px 12px; color: #f8fafc; font-family: inherit; font-size: 13px; border-radius: 4px; margin-bottom: 16px; outline: none; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 8px; }
+    .saved-status-message { padding: 10px 16px; background: #064e3b; color: #6ee7b7; font-size: 13px; font-weight: 500; display: none; }
+    .saved-status-message.visible { display: block; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <h1>tmux terminal multiplexer</h1>
+    <div class="header-stats">
+      <div class="stat-badge">Sessions: <span id="session-count">0</span></div>
+      <div class="stat-badge">Active: <span id="active-session-name">None</span></div>
+      <div class="stat-badge">Status: <span id="status-indicator">No Active Session</span></div>
+      <div class="stat-badge">Windows: <span id="window-count">0</span></div>
+      <div class="stat-badge">Panes: <span id="pane-count">0</span></div>
+    </div>
+  </header>
+
+  <div id="saved-status-message" class="saved-status-message"></div>
+  <div id="alert-banner" class="alert-banner"></div>
+
+  <div class="toolbar">
+    <button id="btn-new-session" class="btn-primary">New Session</button>
+    <button id="btn-split-horizontal">Split Horizontal</button>
+    <button id="btn-split-vertical">Split Vertical</button>
+    <button id="btn-new-window">New Window</button>
+    <button id="btn-rename-window">Rename Window</button>
+    <button id="btn-kill-pane" class="btn-danger">Kill Pane</button>
+    <button id="btn-undo-pane">Undo Kill Pane</button>
+    <button id="btn-detach-session">Detach Session</button>
+    <button id="btn-save-session-state" class="btn-primary">Save Session State</button>
+  </div>
+
+  <div id="window-tabs" class="window-tabs"></div>
+
+  <div id="terminal-view" class="panes-area" style="display: none;">
+    <div id="panes-container" style="display: flex; flex: 1; gap: 12px; width: 100%;"></div>
+  </div>
+
+  <div id="session-overview" class="session-overview">
+    <p style="color: #64748b; margin-bottom: 16px;">No attached session. Start or attach to a session below.</p>
+    <div id="session-list"></div>
+  </div>
+
+  <div id="tmux-status-bar" class="status-bar">
+    <span id="tmux-status-left">[no session]</span>
+    <span id="tmux-status-right">tmux 3.4</span>
+  </div>
+</div>
+
+<!-- Modal New Session -->
+<div id="session-modal" class="modal-overlay">
+  <div class="modal">
+    <h2>Create New Session</h2>
+    <input type="text" id="input-session-name" placeholder="session name">
+    <div class="modal-actions">
+      <button id="btn-cancel-session">Cancel</button>
+      <button id="btn-create-session" class="btn-primary">Create</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Rename Window -->
+<div id="rename-window-modal" class="modal-overlay">
+  <div class="modal">
+    <h2>Rename Current Window</h2>
+    <input type="text" id="input-window-name" placeholder="new window name">
+    <div class="modal-actions">
+      <button id="btn-cancel-rename">Cancel</button>
+      <button id="btn-confirm-rename" class="btn-primary">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const state = {
+    sessions: {},
+    activeSessionId: null,
+    attached: false,
+    lastKilledPane: null,
+    saved: false
+  };
+
+  const el = {
+    sessionCount: document.getElementById('session-count'),
+    activeSessionName: document.getElementById('active-session-name'),
+    statusIndicator: document.getElementById('status-indicator'),
+    windowCount: document.getElementById('window-count'),
+    paneCount: document.getElementById('pane-count'),
+    windowTabs: document.getElementById('window-tabs'),
+    terminalView: document.getElementById('terminal-view'),
+    panesContainer: document.getElementById('panes-container'),
+    sessionOverview: document.getElementById('session-overview'),
+    sessionList: document.getElementById('session-list'),
+    statusBarLeft: document.getElementById('tmux-status-left'),
+    alertBanner: document.getElementById('alert-banner'),
+    savedStatus: document.getElementById('saved-status-message'),
+    sessionModal: document.getElementById('session-modal'),
+    renameModal: document.getElementById('rename-window-modal'),
+    inputSessionName: document.getElementById('input-session-name'),
+    inputWindowName: document.getElementById('input-window-name')
+  };
+
+  function updateHeader() {
+    const totalSessions = Object.keys(state.sessions).length;
+    el.sessionCount.textContent = String(totalSessions);
+
+    if (state.activeSessionId && state.sessions[state.activeSessionId]) {
+      const sess = state.sessions[state.activeSessionId];
+      el.activeSessionName.textContent = sess.name;
+      el.statusIndicator.textContent = state.attached ? (sess.name + ': Attached') : (sess.name + ': Detached');
+      el.windowCount.textContent = String(sess.windows.length);
+
+      const win = sess.windows[sess.activeWindowIndex];
+      el.paneCount.textContent = win ? String(win.panes.length) : '0';
+      el.statusBarLeft.textContent = '[' + sess.name + '] ' + sess.windows.map((w, idx) => idx + ':' + w.name + (idx === sess.activeWindowIndex ? '*' : '-')).join(' ');
+    } else {
+      el.activeSessionName.textContent = 'None';
+      el.statusIndicator.textContent = 'No Active Session';
+      el.windowCount.textContent = '0';
+      el.paneCount.textContent = '0';
+      el.statusBarLeft.textContent = '[no session]';
+    }
+  }
+
+  function renderTabs() {
+    el.windowTabs.innerHTML = '';
+    if (!state.activeSessionId || !state.attached) return;
+    const sess = state.sessions[state.activeSessionId];
+    sess.windows.forEach((w, idx) => {
+      const tab = document.createElement('div');
+      tab.className = 'tab' + (idx === sess.activeWindowIndex ? ' active' : '');
+      tab.id = 'window-tab-' + idx;
+      tab.textContent = idx + ':' + w.name;
+      tab.onclick = () => {
+        sess.activeWindowIndex = idx;
+        renderTabs();
+        renderPanes();
+        updateHeader();
+      };
+      el.windowTabs.appendChild(tab);
+    });
+  }
+
+  function renderPanes() {
+    el.panesContainer.innerHTML = '';
+    if (!state.activeSessionId || !state.attached) return;
+    const sess = state.sessions[state.activeSessionId];
+    const win = sess.windows[sess.activeWindowIndex];
+    if (!win) return;
+
+    win.panes.forEach((p, idx) => {
+      const pane = document.createElement('div');
+      pane.className = 'pane';
+      pane.id = 'pane-' + (idx + 1);
+
+      const header = document.createElement('div');
+      header.className = 'pane-header';
+      header.innerHTML = '<span>Pane ' + (idx + 1) + ' (' + p.pty + ')</span><span>' + (p.active ? '[active]' : '') + '</span>';
+
+      const content = document.createElement('div');
+      content.className = 'pane-content';
+      content.id = 'pane-content-' + (idx + 1);
+      if (idx === win.activePaneIndex) {
+        content.id = 'pane-active-output';
+      }
+      content.textContent = p.output.join('\n');
+
+      const promptBar = document.createElement('div');
+      promptBar.className = 'terminal-prompt';
+
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.id = 'pane-terminal-input';
+      input.placeholder = 'type command here...';
+
+      const sendBtn = document.createElement('button');
+      sendBtn.id = 'btn-send-command';
+      sendBtn.textContent = 'Run';
+      sendBtn.onclick = () => {
+        const cmd = input.value.trim();
+        if (!cmd) return;
+        p.output.push('$ ' + cmd);
+        if (cmd === 'uptime') {
+          p.output.push(' 10:42:00 up 4 days, 2 users, load average: 0.18, 0.22, 0.15');
+        } else {
+          p.output.push('command executed: ' + cmd);
+        }
+        input.value = '';
+        renderPanes();
+      };
+
+      input.onkeydown = (e) => {
+        if (e.key === 'Enter') sendBtn.click();
+      };
+
+      promptBar.appendChild(input);
+      promptBar.appendChild(sendBtn);
+
+      pane.appendChild(header);
+      pane.appendChild(content);
+      pane.appendChild(promptBar);
+
+      el.panesContainer.appendChild(pane);
+    });
+  }
+
+  function renderSessionList() {
+    el.sessionList.innerHTML = '';
+    const keys = Object.keys(state.sessions);
+    if (keys.length === 0) {
+      el.sessionList.innerHTML = '<div style="color: #64748b;">No active sessions.</div>';
+      return;
+    }
+    keys.forEach(k => {
+      const sess = state.sessions[k];
+      const card = document.createElement('div');
+      card.className = 'session-card';
+      card.id = 'session-card-' + sess.name;
+
+      const info = document.createElement('div');
+      info.innerHTML = '<div style="font-size: 14px; font-weight: bold; color: #f8fafc;">Session: ' + sess.name + '</div>' +
+        '<div id="session-windows-' + sess.name + '" style="font-size: 12px; color: #94a3b8; margin-top: 4px;">' + sess.windows.length + ' windows</div>';
+
+      const btn = document.createElement('button');
+      btn.id = 'btn-attach-' + sess.name;
+      btn.className = 'btn-primary';
+      btn.textContent = 'Attach';
+      btn.onclick = () => {
+        state.activeSessionId = sess.id;
+        state.attached = true;
+        el.terminalView.style.display = 'flex';
+        el.sessionOverview.style.display = 'none';
+        renderTabs();
+        renderPanes();
+        updateHeader();
+      };
+
+      card.appendChild(info);
+      card.appendChild(btn);
+      el.sessionList.appendChild(card);
+    });
+  }
+
+  document.getElementById('btn-new-session').onclick = () => {
+    el.inputSessionName.value = '';
+    el.sessionModal.classList.add('open');
+  };
+
+  document.getElementById('btn-cancel-session').onclick = () => {
+    el.sessionModal.classList.remove('open');
+  };
+
+  document.getElementById('btn-create-session').onclick = () => {
+    const name = el.inputSessionName.value.trim() || 'default';
+    const id = 'sess_' + Date.now();
+    state.sessions[id] = {
+      id,
+      name,
+      windows: [
+        {
+          name: 'bash',
+          panes: [{ pty: 'pts/0', active: true, output: ['Welcome to tmux session ' + name] }],
+          activePaneIndex: 0
+        }
+      ],
+      activeWindowIndex: 0
+    };
+    state.activeSessionId = id;
+    state.attached = true;
+    el.sessionModal.classList.remove('open');
+    el.terminalView.style.display = 'flex';
+    el.sessionOverview.style.display = 'none';
+    renderTabs();
+    renderPanes();
+    updateHeader();
+    renderSessionList();
+  };
+
+  document.getElementById('btn-split-horizontal').onclick = () => {
+    if (!state.activeSessionId || !state.attached) return;
+    const sess = state.sessions[state.activeSessionId];
+    const win = sess.windows[sess.activeWindowIndex];
+    const idx = win.panes.length;
+    win.panes.push({ pty: 'pts/' + idx, active: false, output: ['Pane ' + (idx + 1) + ' initialized'] });
+    renderPanes();
+    updateHeader();
+  };
+
+  document.getElementById('btn-split-vertical').onclick = () => {
+    if (!state.activeSessionId || !state.attached) return;
+    const sess = state.sessions[state.activeSessionId];
+    const win = sess.windows[sess.activeWindowIndex];
+    const idx = win.panes.length;
+    win.panes.push({ pty: 'pts/' + idx, active: false, output: ['Pane ' + (idx + 1) + ' vertical split'] });
+    renderPanes();
+    updateHeader();
+  };
+
+  document.getElementById('btn-new-window').onclick = () => {
+    if (!state.activeSessionId || !state.attached) return;
+    const sess = state.sessions[state.activeSessionId];
+    const idx = sess.windows.length;
+    sess.windows.push({
+      name: 'window-' + idx,
+      panes: [{ pty: 'pts/0', active: true, output: ['New window ' + idx] }],
+      activePaneIndex: 0
+    });
+    sess.activeWindowIndex = idx;
+    renderTabs();
+    renderPanes();
+    updateHeader();
+  };
+
+  document.getElementById('btn-rename-window').onclick = () => {
+    if (!state.activeSessionId || !state.attached) return;
+    const sess = state.sessions[state.activeSessionId];
+    const win = sess.windows[sess.activeWindowIndex];
+    el.inputWindowName.value = win.name;
+    el.renameModal.classList.add('open');
+  };
+
+  document.getElementById('btn-cancel-rename').onclick = () => {
+    el.renameModal.classList.remove('open');
+  };
+
+  document.getElementById('btn-confirm-rename').onclick = () => {
+    if (!state.activeSessionId || !state.attached) return;
+    const sess = state.sessions[state.activeSessionId];
+    const win = sess.windows[sess.activeWindowIndex];
+    win.name = el.inputWindowName.value.trim() || win.name;
+    el.renameModal.classList.remove('open');
+    renderTabs();
+    updateHeader();
+  };
+
+  document.getElementById('btn-kill-pane').onclick = () => {
+    if (!state.activeSessionId || !state.attached) return;
+    const sess = state.sessions[state.activeSessionId];
+    const win = sess.windows[sess.activeWindowIndex];
+    if (win.panes.length > 1) {
+      const killed = win.panes.pop();
+      state.lastKilledPane = { window: win, pane: killed };
+      el.alertBanner.textContent = 'Pane ' + (win.panes.length + 1) + ' closed';
+      el.alertBanner.classList.add('active');
+      renderPanes();
+      updateHeader();
+    }
+  };
+
+  document.getElementById('btn-undo-pane').onclick = () => {
+    if (state.lastKilledPane && state.lastKilledPane.window) {
+      state.lastKilledPane.window.panes.push(state.lastKilledPane.pane);
+      state.lastKilledPane = null;
+      el.alertBanner.classList.remove('active');
+      renderPanes();
+      updateHeader();
+    }
+  };
+
+  document.getElementById('btn-detach-session').onclick = () => {
+    if (!state.activeSessionId) return;
+    state.attached = false;
+    el.terminalView.style.display = 'none';
+    el.sessionOverview.style.display = 'block';
+    renderSessionList();
+    updateHeader();
+  };
+
+  document.getElementById('btn-save-session-state').onclick = () => {
+    if (!state.activeSessionId) return;
+    const sess = state.sessions[state.activeSessionId];
+    state.saved = true;
+    el.savedStatus.textContent = 'Session ' + sess.name + ' saved with ' + sess.windows.length + ' windows';
+    el.savedStatus.classList.add('visible');
+  };
+
+  updateHeader();
+  renderSessionList();
+</script>
+
+</body>
+</html>

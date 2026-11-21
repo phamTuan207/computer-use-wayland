@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Offline Music Player & Playlist Manager</title>
+<style>
+  :root {
+    --bg-dark: #121318;
+    --sidebar-bg: #1a1c23;
+    --card-bg: #222530;
+    --card-border: #2e3344;
+    --text-primary: #e6e8ee;
+    --text-muted: #8c93a8;
+    --accent: #6366f1;
+    --accent-hover: #4f46e5;
+    --danger: #ef4444;
+    --success: #10b981;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  body { background: var(--bg-dark); color: var(--text-primary); display: flex; height: 100vh; overflow: hidden; }
+  
+  /* Sidebar */
+  #sidebar { width: 260px; background: var(--sidebar-bg); border-right: 1px solid var(--card-border); display: flex; flex-direction: column; padding: 20px; }
+  .logo { font-size: 20px; font-weight: 700; color: #fff; margin-bottom: 24px; display: flex; align-items: center; gap: 8px; }
+  .logo-icon { color: var(--accent); }
+  .section-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 12px; }
+  .playlist-list { list-style: none; margin-bottom: 20px; overflow-y: auto; flex-grow: 1; }
+  .playlist-item { padding: 10px 14px; border-radius: 6px; cursor: pointer; color: var(--text-muted); margin-bottom: 4px; display: flex; justify-content: space-between; align-items: center; font-size: 14px; }
+  .playlist-item:hover { background: #282c37; color: #fff; }
+  .playlist-item.active { background: var(--accent); color: #fff; font-weight: 600; }
+  
+  .btn { display: inline-flex; align-items: center; justify-content: center; padding: 8px 14px; border-radius: 6px; border: none; font-size: 13px; font-weight: 500; cursor: pointer; transition: background 0.15s; }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: var(--accent-hover); }
+  .btn-outline { background: transparent; border: 1px solid var(--card-border); color: var(--text-primary); }
+  .btn-outline:hover { background: #282c37; }
+  .btn-small { padding: 4px 8px; font-size: 11px; }
+  .btn-danger { background: var(--danger); color: #fff; }
+  .btn-danger:hover { background: #dc2626; }
+  
+  /* Main Container */
+  #main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  header { height: 60px; border-bottom: 1px solid var(--card-border); display: flex; align-items: center; justify-content: space-between; padding: 0 24px; background: #161820; }
+  .header-title { font-size: 18px; font-weight: 600; }
+  
+  .content-split { display: flex; flex: 1; overflow: hidden; }
+  
+  /* Library Pane */
+  .pane-library { width: 50%; border-right: 1px solid var(--card-border); display: flex; flex-direction: column; padding: 20px; }
+  .search-bar { margin-bottom: 16px; }
+  .search-input { width: 100%; padding: 9px 12px; background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 6px; color: #fff; font-size: 13px; outline: none; }
+  .search-input:focus { border-color: var(--accent); }
+  
+  /* Playlist Pane */
+  .pane-playlist { width: 50%; display: flex; flex-direction: column; padding: 20px; background: #14161d; }
+  
+  .table-container { flex: 1; overflow-y: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; padding: 10px; color: var(--text-muted); font-size: 11px; text-transform: uppercase; border-bottom: 1px solid var(--card-border); }
+  td { padding: 10px; border-bottom: 1px solid #1f222b; vertical-align: middle; }
+  tr:hover td { background: #1c1f28; }
+  
+  .action-btn-group { display: flex; gap: 4px; }
+  .reorder-btn { width: 24px; height: 24px; padding: 0; background: #282c37; color: #fff; border: 1px solid var(--card-border); border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 11px; }
+  .reorder-btn:hover { background: var(--accent); }
+  
+  .playlist-header-meta { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--card-border); }
+  .playlist-title-display { font-size: 20px; font-weight: 700; color: #fff; }
+  .playlist-stat { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+  
+  .status-banner { margin-top: 14px; padding: 10px 14px; border-radius: 6px; font-size: 13px; display: none; }
+  .status-banner.success { display: block; background: rgba(16, 185, 129, 0.15); border: 1px solid var(--success); color: #34d399; }
+  
+  /* Modal */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: none; align-items: center; justify-content: center; z-index: 100; }
+  .modal-overlay.open { display: flex; }
+  .modal-box { width: 380px; background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 8px; padding: 24px; }
+  .modal-title { font-size: 16px; font-weight: 600; margin-bottom: 16px; }
+  .form-group { margin-bottom: 16px; }
+  .form-label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
+  .modal-footer { display: flex; justify-content: flex-end; gap: 8px; }
+</style>
+</head>
+<body>
+
+<div id="sidebar">
+  <div class="logo"><span class="logo-icon">&#9835;</span> SonicVault</div>
+  <button id="btn-new-playlist" class="btn btn-outline" style="margin-bottom: 20px; width: 100%;">+ New Playlist</button>
+  <div class="section-label">Playlists</div>
+  <ul id="playlist-list" class="playlist-list">
+    <li class="playlist-item" data-id="p-fav">Favorites (8)</li>
+    <li class="playlist-item" data-id="p-recent">Recently Played (15)</li>
+  </ul>
+</div>
+
+<div id="main-content">
+  <header>
+    <div class="header-title">Studio Library &amp; Mix Manager</div>
+    <div>
+      <button id="btn-save-playlist" class="btn btn-primary">Save Playlist</button>
+    </div>
+  </header>
+
+  <div class="content-split">
+    <!-- Left: Track Catalog -->
+    <div class="pane-library">
+      <div class="search-bar">
+        <input type="text" id="input-library-search" class="search-input" placeholder="Search track by title, artist, or genre..." autocomplete="off">
+      </div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Title</th>
+              <th>Artist</th>
+              <th>Genre</th>
+              <th>Time</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="library-table-body">
+            <!-- Dynamically populated -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Right: Active Playlist -->
+    <div class="pane-playlist">
+      <div class="playlist-header-meta">
+        <div>
+          <div id="current-playlist-title" class="playlist-title-display">Select or Create Playlist</div>
+          <div id="playlist-duration-summary" class="playlist-stat">0 tracks, 00:00 total</div>
+        </div>
+      </div>
+
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 30px;">#</th>
+              <th>Title</th>
+              <th>Artist</th>
+              <th style="width: 60px;">Time</th>
+              <th style="width: 110px;">Order / Remove</th>
+            </tr>
+          </thead>
+          <tbody id="playlist-table-body">
+            <!-- Dynamically populated -->
+          </tbody>
+        </table>
+      </div>
+
+      <div id="save-status-banner" class="status-banner"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal for New Playlist -->
+<div id="modal-new-playlist" class="modal-overlay">
+  <div class="modal-box">
+    <div class="modal-title">Create New Playlist</div>
+    <div class="form-group">
+      <label class="form-label" for="input-playlist-name">Playlist Name</label>
+      <input type="text" id="input-playlist-name" class="search-input" placeholder="e.g. Deep Work 2026">
+    </div>
+    <div class="modal-footer">
+      <button id="btn-cancel-modal" class="btn btn-outline">Cancel</button>
+      <button id="btn-create-playlist" class="btn btn-primary">Create</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const CATALOG = [
+  { id: 1, title: 'Neon Horizon', artist: 'CyberWave', genre: 'Synthwave', seconds: 225, timeStr: '3:45' },
+  { id: 2, title: 'Astral Drift', artist: 'Starlight', genre: 'Ambient', seconds: 195, timeStr: '3:15' },
+  { id: 3, title: 'Midnight Pulse', artist: 'RetroKnight', genre: 'Synthwave', seconds: 310, timeStr: '5:10' },
+  { id: 4, title: 'Morning Dew', artist: 'Hana', genre: 'Lo-Fi', seconds: 140, timeStr: '2:20' },
+  { id: 5, title: 'Coffee Beans', artist: 'Chillhop Café', genre: 'Lo-Fi', seconds: 150, timeStr: '2:30' },
+  { id: 6, title: 'Symphony No. 5 Allegro', artist: 'Vienna Ensemble', genre: 'Classical', seconds: 430, timeStr: '7:10' },
+  { id: 7, title: 'Solar Winds', artist: 'CosmoSpace', genre: 'Ambient', seconds: 255, timeStr: '4:15' },
+  { id: 8, title: 'Rainy Window', artist: 'Tokyo Dusk', genre: 'Lo-Fi', seconds: 210, timeStr: '3:30' },
+  { id: 9, title: 'Laser Velocity', artist: 'HyperDrive', genre: 'Synthwave', seconds: 200, timeStr: '3:20' },
+  { id: 10, title: 'Moonlight Sonata Adagio', artist: 'Orchestral Hall', genre: 'Classical', seconds: 320, timeStr: '5:20' },
+  { id: 11, title: 'Cloud Chamber', artist: 'Aura', genre: 'Ambient', seconds: 280, timeStr: '4:40' },
+  { id: 12, title: 'Golden Hour', artist: 'Sunburst', genre: 'Lo-Fi', seconds: 165, timeStr: '2:45' }
+];
+
+let activePlaylist = null;
+const playlists = {};
+
+function formatSeconds(sec) {
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return `${m}:${s < 10 ? '0' : ''}${s}`;
+}
+
+function renderCatalog(filterText = '') {
+  const tbody = document.getElementById('library-table-body');
+  tbody.innerHTML = '';
+  const q = filterText.toLowerCase().trim();
+  const filtered = CATALOG.filter(t => 
+    t.title.toLowerCase().includes(q) ||
+    t.artist.toLowerCase().includes(q) ||
+    t.genre.toLowerCase().includes(q)
+  );
+
+  filtered.forEach(track => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><strong>${track.title}</strong></td>
+      <td style="color: var(--text-muted);">${track.artist}</td>
+      <td><span style="font-size: 11px; padding: 2px 6px; background: #2b303e; border-radius: 4px;">${track.genre}</span></td>
+      <td>${track.timeStr}</td>
+      <td>
+        <button id="add-track-${track.id}" class="btn btn-outline btn-small" onclick="addTrackToCurrent(${track.id})">+ Add</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function renderPlaylistView() {
+  const titleEl = document.getElementById('current-playlist-title');
+  const durEl = document.getElementById('playlist-duration-summary');
+  const tbody = document.getElementById('playlist-table-body');
+  tbody.innerHTML = '';
+
+  if (!activePlaylist || !playlists[activePlaylist]) {
+    titleEl.textContent = 'Select or Create Playlist';
+    durEl.textContent = '0 tracks, 00:00 total';
+    return;
+  }
+
+  const p = playlists[activePlaylist];
+  titleEl.textContent = p.name;
+  const totalSec = p.tracks.reduce((acc, t) => acc + t.seconds, 0);
+  durEl.textContent = `${p.tracks.length} tracks, ${formatSeconds(totalSec)} total`;
+
+  p.tracks.forEach((track, idx) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td style="color: var(--text-muted); font-weight: 600;">${idx + 1}</td>
+      <td><strong>${track.title}</strong></td>
+      <td style="color: var(--text-muted);">${track.artist}</td>
+      <td>${track.timeStr}</td>
+      <td>
+        <div class="action-btn-group">
+          <button class="reorder-btn" data-action="up-${track.id}" title="Move Up" onclick="moveTrack(${idx}, -1)">&#9650;</button>
+          <button class="reorder-btn" data-action="down-${track.id}" title="Move Down" onclick="moveTrack(${idx}, 1)">&#9660;</button>
+          <button class="btn btn-danger btn-small" data-action="remove-${track.id}" onclick="removeTrack(${idx})">&times;</button>
+        </div>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function addTrackToCurrent(trackId) {
+  if (!activePlaylist) return;
+  const track = CATALOG.find(t => t.id === trackId);
+  if (!track) return;
+  playlists[activePlaylist].tracks.push(track);
+  playlists[activePlaylist].saved = false;
+  renderPlaylistView();
+}
+
+function removeTrack(index) {
+  if (!activePlaylist) return;
+  playlists[activePlaylist].tracks.splice(index, 1);
+  playlists[activePlaylist].saved = false;
+  renderPlaylistView();
+}
+
+function moveTrack(index, delta) {
+  if (!activePlaylist) return;
+  const list = playlists[activePlaylist].tracks;
+  const target = index + delta;
+  if (target < 0 || target >= list.length) return;
+  const item = list.splice(index, 1)[0];
+  list.splice(target, 0, item);
+  playlists[activePlaylist].saved = false;
+  renderPlaylistView();
+}
+
+function createPlaylist(name) {
+  const id = 'pl-' + Date.now();
+  playlists[id] = { id, name, tracks: [], saved: false };
+  activePlaylist = id;
+
+  const ul = document.getElementById('playlist-list');
+  const li = document.createElement('li');
+  li.className = 'playlist-item active';
+  li.setAttribute('data-id', id);
+  li.textContent = name;
+  li.onclick = () => {
+    document.querySelectorAll('.playlist-item').forEach(el => el.classList.remove('active'));
+    li.classList.add('active');
+    activePlaylist = id;
+    renderPlaylistView();
+  };
+  document.querySelectorAll('.playlist-item').forEach(el => el.classList.remove('active'));
+  ul.appendChild(li);
+
+  renderPlaylistView();
+}
+
+// DOM Handlers
+document.getElementById('input-library-search').addEventListener('input', (e) => {
+  renderCatalog(e.target.value);
+});
+
+document.getElementById('btn-new-playlist').addEventListener('click', () => {
+  document.getElementById('modal-new-playlist').classList.add('open');
+  document.getElementById('input-playlist-name').focus();
+});
+
+document.getElementById('btn-cancel-modal').addEventListener('click', () => {
+  document.getElementById('modal-new-playlist').classList.remove('open');
+  document.getElementById('input-playlist-name').value = '';
+});
+
+document.getElementById('btn-create-playlist').addEventListener('click', () => {
+  const name = document.getElementById('input-playlist-name').value.trim();
+  if (!name) return;
+  createPlaylist(name);
+  document.getElementById('modal-new-playlist').classList.remove('open');
+  document.getElementById('input-playlist-name').value = '';
+});
+
+document.getElementById('btn-save-playlist').addEventListener('click', () => {
+  if (!activePlaylist) return;
+  const p = playlists[activePlaylist];
+  p.saved = true;
+  const totalSec = p.tracks.reduce((acc, t) => acc + t.seconds, 0);
+  const banner = document.getElementById('save-status-banner');
+  banner.className = 'status-banner success';
+  banner.textContent = `Playlist ${p.name} saved successfully (${p.tracks.length} tracks, ${formatSeconds(totalSec)})`;
+});
+
+// Initialization
+renderCatalog();
+
+// Verification hook
+window.__agyVerify = function() {
+  const failures = [];
+  
+  // If activePlaylist is already setup by live interaction, check it; otherwise simulate flow
+  let p = activePlaylist ? playlists[activePlaylist] : null;
+  if (!p || p.tracks.length === 0) {
+    createPlaylist('Deep Work 2026');
+    addTrackToCurrent(1); // Neon Horizon
+    addTrackToCurrent(3); // Midnight Pulse
+    addTrackToCurrent(5); // Coffee Beans
+    addTrackToCurrent(7); // Solar Winds
+    addTrackToCurrent(8); // Rainy Window (mistake)
+    // remove mistake at index 4
+    removeTrack(4);
+    // move Solar Winds (index 3) to top (up 3 times)
+    moveTrack(3, -1);
+    moveTrack(2, -1);
+    moveTrack(1, -1);
+    // now order is [7, 1, 3, 5]; move Coffee Beans (index 3) up 1
+    moveTrack(3, -1);
+    // save
+    document.getElementById('btn-save-playlist').click();
+    p = playlists[activePlaylist];
+  }
+
+  const trackIds = p.tracks.map(t => t.id);
+  const expectedIds = [7, 1, 5, 3];
+  if (p.name !== 'Deep Work 2026') failures.push(`Playlist name expected 'Deep Work 2026', got '${p.name}'`);
+  if (trackIds.length !== 4) failures.push(`Expected 4 tracks, got ${trackIds.length}`);
+  if (JSON.stringify(trackIds) !== JSON.stringify(expectedIds)) {
+    failures.push(`Track order mismatch: expected ${JSON.stringify(expectedIds)}, got ${JSON.stringify(trackIds)}`);
+  }
+  const totalSec = p.tracks.reduce((acc, t) => acc + t.seconds, 0);
+  if (totalSec !== 940) failures.push(`Total seconds expected 940 (15:40), got ${totalSec}`);
+  if (!p.saved) failures.push('Playlist was not marked saved');
+
+  const state = {
+    playlistName: p.name,
+    trackCount: p.tracks.length,
+    trackIds,
+    totalSeconds: totalSec,
+    totalDurationStr: formatSeconds(totalSec),
+    saved: p.saved
+  };
+
+  return {
+    passed: failures.length === 0,
+    failures,
+    score: failures.length === 0 ? 1 : 0,
+    state,
+    note: 'offline music player verification'
+  };
+};
+</script>
+
+</body>
+</html>

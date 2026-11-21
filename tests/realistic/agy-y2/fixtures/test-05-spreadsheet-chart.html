@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Cloud Spreadsheet Studio</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background: #0f172a; color: #f8fafc; padding: 20px; }
+    .container { max-width: 1100px; margin: 0 auto; background: #1e293b; border-radius: 8px; border: 1px solid #334155; overflow: hidden; }
+    header { background: #0f172a; padding: 14px 20px; border-bottom: 1px solid #334155; display: flex; justify-content: space-between; align-items: center; }
+    h1 { font-size: 18px; color: #38bdf8; font-weight: 600; }
+    .toolbar { background: #1e293b; padding: 10px 16px; display: flex; gap: 10px; border-bottom: 1px solid #334155; align-items: center; }
+    button { background: #334155; color: #f8fafc; border: 1px solid #475569; padding: 6px 14px; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 500; }
+    button:hover { background: #475569; }
+    button.btn-primary { background: #0284c7; border-color: #0369a1; }
+    button.btn-primary:hover { background: #0369a1; }
+    .formula-bar { background: #0f172a; padding: 8px 16px; display: flex; gap: 10px; align-items: center; border-bottom: 1px solid #334155; }
+    .cell-ref { background: #334155; padding: 4px 10px; border-radius: 4px; font-family: monospace; font-size: 13px; font-weight: bold; width: 60px; text-align: center; }
+    .formula-input { flex: 1; background: #1e293b; border: 1px solid #334155; padding: 6px 12px; color: #f8fafc; font-family: monospace; font-size: 13px; border-radius: 4px; outline: none; }
+    .toast { display: none; padding: 12px 20px; background: #065f46; color: #a7f3d0; border-bottom: 1px solid #047857; font-size: 13px; font-weight: 500; }
+    .toast.active { display: block; }
+    .workspace { display: grid; grid-template-columns: 1fr 340px; min-height: 480px; }
+    .grid-container { padding: 16px; overflow-x: auto; }
+    table.spreadsheet { width: 100%; border-collapse: collapse; font-size: 13px; }
+    table.spreadsheet th, table.spreadsheet td { border: 1px solid #334155; padding: 0; min-width: 100px; height: 36px; text-align: left; }
+    table.spreadsheet th { background: #0f172a; color: #94a3b8; font-weight: 600; text-align: center; width: 40px; }
+    table.spreadsheet td input { width: 100%; height: 100%; border: none; background: transparent; color: #f8fafc; padding: 6px 10px; font-size: 13px; outline: none; font-family: inherit; }
+    table.spreadsheet td input:focus { background: #0f172a; box-shadow: inset 0 0 0 2px #38bdf8; }
+    .display-val { padding: 6px 10px; font-family: monospace; font-weight: 600; }
+    .chart-panel { background: #0f172a; border-left: 1px solid #334155; padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+    .chart-panel h2 { font-size: 14px; color: #94a3b8; text-transform: uppercase; font-weight: 600; }
+    .chart-box { background: #1e293b; border: 1px solid #334155; border-radius: 6px; padding: 16px; flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    .chart-title { font-size: 14px; font-weight: 600; color: #38bdf8; margin-bottom: 12px; text-align: center; }
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; justify-content: center; align-items: center; z-index: 100; }
+    .modal-overlay.active { display: flex; }
+    .modal-card { background: #1e293b; border: 1px solid #475569; border-radius: 8px; padding: 24px; width: 380px; }
+    .modal-card h3 { font-size: 16px; margin-bottom: 16px; }
+    .modal-card select, .modal-card input { width: 100%; background: #0f172a; border: 1px solid #334155; padding: 8px 12px; color: #f8fafc; border-radius: 4px; font-size: 13px; margin-bottom: 14px; outline: none; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 8px; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <h1>Cloud Spreadsheet Studio: <span id="active-sheet-name">Sales Forecast</span></h1>
+    <div style="display: flex; gap: 8px;">
+      <button id="btn-recalculate-sheet">Recalculate</button>
+      <button id="btn-insert-chart-modal" class="btn-primary">Insert Chart</button>
+      <button id="btn-save-sheet-state" class="btn-primary">Save Sheet</button>
+    </div>
+  </header>
+
+  <div id="sheet-status-toast" class="toast"></div>
+
+  <div class="formula-bar">
+    <div id="active-cell-ref" class="cell-ref">A1</div>
+    <span style="color: #94a3b8; font-family: monospace; font-weight: bold;">fx</span>
+    <input type="text" id="formula-bar-input" class="formula-input" placeholder="Type formula or value...">
+    <button id="btn-commit-formula" class="btn-primary">Commit fx</button>
+  </div>
+
+  <div class="workspace">
+    <div class="grid-container">
+      <table class="spreadsheet">
+        <thead>
+          <tr>
+            <th></th>
+            <th style="width: 140px;">A</th>
+            <th style="width: 140px;">B</th>
+            <th style="width: 140px;">C</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th>1</th>
+            <td><input type="text" id="cell-input-a1"></td>
+            <td><input type="text" id="cell-input-b1"></td>
+            <td><input type="text" id="cell-input-c1"></td>
+          </tr>
+          <tr>
+            <th>2</th>
+            <td><input type="text" id="cell-input-a2"></td>
+            <td>
+              <input type="text" id="cell-input-b2">
+              <span id="cell-value-b2" class="display-val" style="display: none;"></span>
+            </td>
+            <td><input type="text" id="cell-input-c2"></td>
+          </tr>
+          <tr>
+            <th>3</th>
+            <td><input type="text" id="cell-input-a3"></td>
+            <td>
+              <input type="text" id="cell-input-b3">
+              <span id="cell-value-b3" class="display-val" style="display: none;"></span>
+            </td>
+            <td><input type="text" id="cell-input-c3"></td>
+          </tr>
+          <tr>
+            <th>4</th>
+            <td><input type="text" id="cell-input-a4"></td>
+            <td>
+              <input type="text" id="cell-input-b4">
+              <span id="cell-value-b4" class="display-val" style="display: block;">0</span>
+            </td>
+            <td><input type="text" id="cell-input-c4"></td>
+          </tr>
+          <tr>
+            <th>5</th>
+            <td><input type="text" id="cell-input-a5"></td>
+            <td id="cell-container-b5">
+              <input type="text" id="cell-input-b5" placeholder="fx cell">
+              <span id="cell-value-b5" class="display-val">0</span>
+            </td>
+            <td><input type="text" id="cell-input-c5"></td>
+          </tr>
+          <tr>
+            <th>6</th>
+            <td><input type="text" id="cell-input-a6"></td>
+            <td id="cell-container-b6">
+              <input type="text" id="cell-input-b6" placeholder="fx cell">
+              <span id="cell-value-b6" class="display-val">0.00</span>
+            </td>
+            <td><input type="text" id="cell-input-c6"></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Chart Panel -->
+    <div class="chart-panel">
+      <h2>Chart Visualization</h2>
+      <div id="chart-wrapper" class="chart-box">
+        <span id="chart-placeholder" style="color: #64748b; font-size: 13px;">No chart created. Click "Insert Chart".</span>
+      </div>
+      <div id="chart-title-controls" style="display: none;">
+        <label style="font-size: 12px; color: #94a3b8; display: block; margin-bottom: 4px;">Edit Chart Title:</label>
+        <div style="display: flex; gap: 6px;">
+          <input type="text" id="input-chart-title" style="flex: 1; background: #1e293b; border: 1px solid #334155; padding: 6px 10px; color: #f8fafc; border-radius: 4px; font-size: 12px; outline: none;">
+          <button id="btn-apply-chart-title">Apply</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Chart Modal -->
+<div id="chart-modal" class="modal-overlay">
+  <div class="modal-card">
+    <h3>Insert Data Chart</h3>
+    <label style="font-size: 12px; color: #94a3b8; display: block; margin-bottom: 4px;">Chart Type</label>
+    <select id="select-chart-type">
+      <option value="Bar">Bar Chart</option>
+      <option value="Line">Line Chart</option>
+      <option value="Pie">Pie Chart</option>
+    </select>
+    <div class="modal-actions">
+      <button id="btn-cancel-chart">Cancel</button>
+      <button id="btn-render-chart" class="btn-primary">Generate Chart</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const sheetState = {
+    selectedCell: 'A1',
+    formulas: {
+      B5: '',
+      B6: ''
+    },
+    chartCreated: false,
+    chartTitle: 'Monthly Sales',
+    saved: false
+  };
+
+  const activeRef = document.getElementById('active-cell-ref');
+  const formulaInput = document.getElementById('formula-bar-input');
+  const valB4 = document.getElementById('cell-value-b4');
+  const valB5 = document.getElementById('cell-value-b5');
+  const valB6 = document.getElementById('cell-value-b6');
+
+  const inputB2 = document.getElementById('cell-input-b2');
+  const inputB3 = document.getElementById('cell-input-b3');
+  const inputB4 = document.getElementById('cell-input-b4');
+  const inputB5 = document.getElementById('cell-input-b5');
+  const inputB6 = document.getElementById('cell-input-b6');
+
+  // Input change on B4 updates display
+  inputB4.oninput = () => {
+    valB4.textContent = inputB4.value || '0';
+  };
+
+  // Selection handler
+  const allInputs = document.querySelectorAll('table.spreadsheet td input');
+  allInputs.forEach(inp => {
+    inp.onfocus = () => {
+      const id = inp.id.replace('cell-input-', '').toUpperCase();
+      sheetState.selectedCell = id;
+      activeRef.textContent = id;
+      if (sheetState.formulas[id]) {
+        formulaInput.value = sheetState.formulas[id];
+      } else {
+        formulaInput.value = inp.value;
+      }
+    };
+  });
+
+  function getSalesValues() {
+    const v2 = parseFloat(inputB2.value) || 0;
+    const v3 = parseFloat(inputB3.value) || 0;
+    const v4 = parseFloat(inputB4.value) || 0;
+    return [v2, v3, v4];
+  }
+
+  function recalculate() {
+    valB4.textContent = inputB4.value || '0';
+    const nums = getSalesValues();
+    const sum = nums.reduce((a, b) => a + b, 0);
+    const avg = sum / 3;
+
+    if (sheetState.formulas.B5 && sheetState.formulas.B5.toUpperCase().includes('SUM')) {
+      valB5.textContent = String(sum);
+    }
+    if (sheetState.formulas.B6 && sheetState.formulas.B6.toUpperCase().includes('AVERAGE')) {
+      valB6.textContent = avg.toFixed(2);
+    }
+    renderChartSvg();
+  }
+
+  document.getElementById('btn-recalculate-sheet').onclick = recalculate;
+
+  document.getElementById('btn-commit-formula').onclick = () => {
+    const fx = formulaInput.value.trim();
+    if (sheetState.selectedCell === 'B5') {
+      sheetState.formulas.B5 = fx;
+      inputB5.value = fx;
+    } else if (sheetState.selectedCell === 'B6') {
+      sheetState.formulas.B6 = fx;
+      inputB6.value = fx;
+    }
+    recalculate();
+  };
+
+  // Chart modal
+  const chartModal = document.getElementById('chart-modal');
+  const chartWrapper = document.getElementById('chart-wrapper');
+  const chartTitleControls = document.getElementById('chart-title-controls');
+  const inputChartTitle = document.getElementById('input-chart-title');
+
+  document.getElementById('btn-insert-chart-modal').onclick = () => {
+    chartModal.classList.add('active');
+  };
+
+  document.getElementById('btn-cancel-chart').onclick = () => {
+    chartModal.classList.remove('active');
+  };
+
+  function renderChartSvg() {
+    if (!sheetState.chartCreated) return;
+    const nums = getSalesValues();
+    const max = Math.max(...nums, 2000);
+    const h1 = Math.round((nums[0] / max) * 120);
+    const h2 = Math.round((nums[1] / max) * 120);
+    const h3 = Math.round((nums[2] / max) * 120);
+
+    chartWrapper.innerHTML = '<div id="chart-title-text" class="chart-title">' + sheetState.chartTitle + '</div>' +
+      '<svg id="sales-bar-svg" width="220" height="150" viewBox="0 0 220 150">' +
+        '<line x1="20" y1="130" x2="200" y2="130" stroke="#475569" stroke-width="2"/>' +
+        '<rect x="40" y="' + (130 - h1) + '" width="30" height="' + h1 + '" fill="#38bdf8" rx="2"/>' +
+        '<text x="55" y="145" fill="#94a3b8" font-size="10" text-anchor="middle">Jan</text>' +
+        '<rect x="95" y="' + (130 - h2) + '" width="30" height="' + h2 + '" fill="#38bdf8" rx="2"/>' +
+        '<text x="110" y="145" fill="#94a3b8" font-size="10" text-anchor="middle">Feb</text>' +
+        '<rect x="150" y="' + (130 - h3) + '" width="30" height="' + h3 + '" fill="#38bdf8" rx="2"/>' +
+        '<text x="165" y="145" fill="#94a3b8" font-size="10" text-anchor="middle">Mar</text>' +
+      '</svg>';
+  }
+
+  document.getElementById('btn-render-chart').onclick = () => {
+    sheetState.chartCreated = true;
+    chartModal.classList.remove('active');
+    chartTitleControls.style.display = 'block';
+    inputChartTitle.value = sheetState.chartTitle;
+    renderChartSvg();
+  };
+
+  document.getElementById('btn-apply-chart-title').onclick = () => {
+    sheetState.chartTitle = inputChartTitle.value.trim() || 'Chart';
+    renderChartSvg();
+  };
+
+  document.getElementById('btn-save-sheet-state').onclick = () => {
+    sheetState.saved = true;
+    const toast = document.getElementById('sheet-status-toast');
+    toast.textContent = 'Sheet saved: Total=' + valB5.textContent + ', Average=' + valB6.textContent + ', Chart=' + sheetState.chartTitle;
+    toast.classList.add('active');
+  };
+</script>
+
+</body>
+</html>

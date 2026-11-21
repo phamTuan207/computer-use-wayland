@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Offline RSS Feed Reader</title>
+<style>
+  :root {
+    --bg-dark: #0f172a;
+    --sidebar-bg: #1e293b;
+    --col2-bg: #182234;
+    --col3-bg: #0b1120;
+    --border: #334155;
+    --text-primary: #f8fafc;
+    --text-secondary: #94a3b8;
+    --accent: #38bdf8;
+    --accent-hover: #0284c7;
+    --star-gold: #facc15;
+    --unread-dot: #38bdf8;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  body { background: var(--bg-dark); color: var(--text-primary); display: flex; height: 100vh; overflow: hidden; }
+
+  /* Left Sidebar */
+  #sidebar { width: 250px; background: var(--sidebar-bg); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 18px; }
+  .logo { font-size: 18px; font-weight: 700; color: #fff; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+  .nav-btn { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border-radius: 6px; cursor: pointer; color: var(--text-secondary); font-size: 13px; margin-bottom: 4px; }
+  .nav-btn:hover { background: #334155; color: #fff; }
+  .nav-btn.active { background: #334155; color: var(--accent); font-weight: 600; }
+  .badge { background: #0284c7; color: #fff; font-size: 11px; font-weight: bold; padding: 2px 7px; border-radius: 10px; }
+  .section-hdr { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-secondary); margin: 18px 0 8px 0; }
+  .feed-cat { margin-bottom: 8px; }
+  .cat-name { font-size: 12px; font-weight: 600; color: #cbd5e1; padding: 4px 6px; }
+  .feed-item { padding: 6px 12px; font-size: 12px; color: var(--text-secondary); cursor: pointer; border-radius: 4px; display: flex; justify-content: space-between; }
+  .feed-item:hover { background: #334155; color: #fff; }
+  .feed-item.active { background: #334155; color: var(--accent); font-weight: 600; }
+
+  /* Middle Column: Articles List */
+  #col-articles { width: 340px; background: var(--col2-bg); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+  .col-header { height: 56px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 16px; font-size: 14px; font-weight: 600; }
+  .article-list { flex: 1; overflow-y: auto; }
+  .article-row { padding: 12px 16px; border-bottom: 1px solid #1e293b; cursor: pointer; transition: background 0.15s; }
+  .article-row:hover { background: #222f44; }
+  .article-row.active { background: #28364f; }
+  .article-row.unread .row-title { font-weight: 700; color: #fff; }
+  .article-row.unread::before { content: "•"; color: var(--unread-dot); font-size: 20px; line-height: 0; vertical-align: middle; margin-right: 4px; }
+  .row-meta { font-size: 11px; color: var(--text-secondary); margin-bottom: 4px; display: flex; justify-content: space-between; }
+  .row-title { font-size: 13px; color: #cbd5e1; margin-bottom: 4px; line-height: 1.3; }
+  .row-snippet { font-size: 11px; color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* Right Column: Article Reader Pane */
+  #col-reader { flex: 1; background: var(--col3-bg); display: flex; flex-direction: column; overflow: hidden; }
+  .reader-header { height: 56px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 24px; background: #0f172a; }
+  .reader-actions { display: flex; gap: 8px; align-items: center; }
+  .reader-body { flex: 1; overflow-y: auto; padding: 32px 40px; max-width: 800px; }
+  .art-h1 { font-size: 24px; font-weight: 700; margin-bottom: 12px; color: #fff; line-height: 1.3; }
+  .art-byline { font-size: 13px; color: var(--text-secondary); margin-bottom: 24px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+  .art-content { font-size: 15px; line-height: 1.6; color: #e2e8f0; }
+  .art-content p { margin-bottom: 16px; }
+
+  /* Buttons */
+  .btn { display: inline-flex; align-items: center; justify-content: center; padding: 6px 12px; border-radius: 6px; border: none; font-size: 12px; font-weight: 500; cursor: pointer; transition: background 0.15s; }
+  .btn-primary { background: #0284c7; color: #fff; }
+  .btn-primary:hover { background: #0369a1; }
+  .btn-outline { background: transparent; border: 1px solid var(--border); color: #cbd5e1; }
+  .btn-outline:hover { background: #334155; }
+  .btn-star { width: 30px; height: 30px; border-radius: 6px; border: 1px solid var(--border); background: transparent; color: var(--text-secondary); cursor: pointer; font-size: 16px; display: inline-flex; align-items: center; justify-content: center; }
+  .btn-star.starred { color: var(--star-gold); border-color: var(--star-gold); }
+
+  /* Modal */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.65); display: none; align-items: center; justify-content: center; z-index: 100; }
+  .modal-overlay.open { display: flex; }
+  .modal-box { width: 440px; background: #1e293b; border: 1px solid var(--border); border-radius: 8px; padding: 24px; }
+  .modal-title { font-size: 16px; font-weight: 600; margin-bottom: 16px; color: #fff; }
+  .form-group { margin-bottom: 14px; }
+  .form-label { display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 6px; }
+  .input-text { width: 100%; padding: 8px 12px; background: #0f172a; border: 1px solid var(--border); border-radius: 6px; color: #fff; font-size: 13px; outline: none; }
+  .select-box { width: 100%; padding: 8px 12px; background: #0f172a; border: 1px solid var(--border); border-radius: 6px; color: #fff; font-size: 13px; outline: none; }
+</style>
+</head>
+<body>
+
+<div id="sidebar">
+  <div class="logo">&#9729; Aggregator</div>
+  <button id="btn-add-feed" class="btn btn-outline" style="margin-bottom: 16px; width: 100%;">+ Subscribe</button>
+
+  <div class="section-hdr">Views</div>
+  <div id="nav-all-articles" class="nav-btn active" onclick="switchView('all')">
+    <span>All Articles</span>
+    <span id="badge-global-unread" class="badge">6</span>
+  </div>
+  <div id="nav-starred-articles" class="nav-btn" onclick="switchView('starred')">
+    <span>Starred</span>
+    <span id="badge-starred-count" class="badge" style="background: #475569;">0</span>
+  </div>
+
+  <div class="section-hdr">Subscriptions</div>
+  <div id="feed-categories-tree">
+    <!-- Populated by script -->
+  </div>
+</div>
+
+<div id="col-articles">
+  <div class="col-header">
+    <span id="articles-col-title">All Articles</span>
+    <button id="btn-mark-all-read" class="btn btn-outline" style="font-size: 11px;" onclick="markAllAsRead()">Mark All As Read</button>
+  </div>
+  <div id="articles-list-container" class="article-list">
+    <!-- Articles list -->
+  </div>
+</div>
+
+<div id="col-reader">
+  <div class="reader-header">
+    <div style="font-size: 12px; color: var(--text-secondary);" id="reader-feed-label">Select an article</div>
+    <div class="reader-actions">
+      <button id="btn-star-article" class="btn-star" title="Bookmark / Star" onclick="toggleCurrentStar()">&#9733;</button>
+      <button id="btn-toggle-read" class="btn btn-outline" onclick="toggleCurrentRead()">Toggle Read</button>
+      <button id="btn-export-starred" class="btn btn-primary" onclick="openExportModal()">Export Starred</button>
+    </div>
+  </div>
+  <div class="reader-body" id="reader-content-body">
+    <div style="text-align: center; color: var(--text-secondary); margin-top: 60px;">No article selected. Click an article from the list to view.</div>
+  </div>
+</div>
+
+<!-- Modal: Add Subscription -->
+<div id="modal-subscribe" class="modal-overlay">
+  <div class="modal-box">
+    <div class="modal-title">Subscribe to RSS Feed</div>
+    <div class="form-group">
+      <label class="form-label" for="input-feed-title">Feed Title</label>
+      <input type="text" id="input-feed-title" class="input-text" placeholder="e.g. Wayland Gazette">
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="input-feed-url">Feed URL</label>
+      <input type="text" id="input-feed-url" class="input-text" placeholder="https://example.com/feed.xml">
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="select-feed-category">Category</label>
+      <select id="select-feed-category" class="select-box">
+        <option value="Kernel & OS">Kernel & OS</option>
+        <option value="Languages">Languages</option>
+        <option value="Display Servers">Display Servers</option>
+        <option value="Web & Cloud">Web & Cloud</option>
+      </select>
+    </div>
+    <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px;">
+      <button class="btn btn-outline" onclick="closeModal('modal-subscribe')">Cancel</button>
+      <button id="btn-confirm-feed" class="btn btn-primary" onclick="confirmSubscription()">Add Subscription</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Export Starred -->
+<div id="modal-export-starred" class="modal-overlay">
+  <div class="modal-box" style="width: 500px;">
+    <div class="modal-title">Export Starred Articles (Markdown)</div>
+    <textarea id="export-markdown-content" readonly style="width: 100%; height: 180px; background: #0f172a; border: 1px solid var(--border); color: #cbd5e1; font-family: monospace; font-size: 12px; padding: 12px; border-radius: 6px; resize: none;"></textarea>
+    <div style="display: flex; justify-content: flex-end; margin-top: 16px;">
+      <button id="btn-close-export-modal" class="btn btn-primary" onclick="closeModal('modal-export-starred')">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const INITIAL_FEEDS = [
+  { id: 'f-linux', title: 'Linux Weekly', category: 'Kernel & OS', url: 'https://lwn.local/rss' },
+  { id: 'f-rust', title: 'Rust Digest', category: 'Languages', url: 'https://rust.local/feed' }
+];
+
+const INITIAL_ARTICLES = [
+  { id: 101, feedId: 'f-linux', title: 'Linux 6.13 Scheduler Refinements', author: 'Ingo M.', time: '2h ago', url: 'https://lwn.local/art-101', read: false, starred: false, content: 'Scheduler optimizations merge for high-core count NUMA machines, improving thread placement efficiency.' },
+  { id: 102, feedId: 'f-linux', title: 'Bcachefs Upstream Status Update', author: 'Kent O.', time: '5h ago', url: 'https://lwn.local/art-102', read: false, starred: false, content: 'Bcachefs fsck improvements and memory reclamation performance reports from continuous integration.' },
+  { id: 103, feedId: 'f-linux', title: 'Rust in the Kernel: Networking Subsystem', author: 'Miguel O.', time: '1d ago', url: 'https://lwn.local/art-103', read: false, starred: false, content: 'Initial bindings for PHY abstraction drivers land with zero unsafe blocks in core handler routines.' },
+  { id: 104, feedId: 'f-rust', title: 'Polonius Borrow Checker Preview', author: 'Niko M.', time: '3h ago', url: 'https://rust.local/art-104', read: false, starred: false, content: 'Next generation borrow checker moves closer to stabilization with location-sensitive analysis.' },
+  { id: 105, feedId: 'f-rust', title: 'Async Closures Stabilization', author: 'Compiler Team', time: '8h ago', url: 'https://rust.local/art-105', read: false, starred: false, content: 'AsyncFn and AsyncFnMut traits officially enter the standard beta compiler pipeline.' },
+  { id: 106, feedId: 'f-rust', title: 'Cargo Script RFC Accepted', author: 'Ed P.', time: '2d ago', url: 'https://rust.local/art-106', read: false, starred: false, content: 'Single-file executable Rust scripts with embedded dependencies now natively supported by cargo.' }
+];
+
+const MOCK_NEW_FEED_ARTICLES = [
+  { id: 201, feedId: 'f-wayland', title: 'Explicit Sync Lands in Mainline', author: 'Simon S.', time: '30m ago', url: 'https://wayland.local/art-201', read: false, starred: false, content: 'The linux-drm-syncobj-v1 protocol guarantees tear-free buffer submission across Wayland compositors and Vulkan clients without compositor stalls.' },
+  { id: 202, feedId: 'f-wayland', title: 'Fractional Scaling Best Practices', author: 'Jonas Å.', time: '1h ago', url: 'https://wayland.local/art-202', read: false, starred: false, content: 'Viewport scaling protocol recommendations for multi-DPI monitor setups to eliminate blurry glyphs.' },
+  { id: 203, feedId: 'f-wayland', title: 'Color Management v1 Specification', author: 'Pekka P.', time: '4h ago', url: 'https://wayland.local/art-203', read: false, starred: false, content: 'Draft specification for HDR and wide color gamut ICC profile distribution across Wayland surfaces.' }
+];
+
+let feeds = [...INITIAL_FEEDS];
+let articles = [...INITIAL_ARTICLES];
+let currentView = 'all'; // 'all', 'starred', or feedId
+let currentArticleId = null;
+
+function renderSidebar() {
+  const container = document.getElementById('feed-categories-tree');
+  container.innerHTML = '';
+
+  const cats = {};
+  feeds.forEach(f => {
+    if (!cats[f.category]) cats[f.category] = [];
+    cats[f.category].push(f);
+  });
+
+  for (const [catName, catFeeds] of Object.entries(cats)) {
+    const wrap = document.createElement('div');
+    wrap.className = 'feed-cat';
+    wrap.innerHTML = `<div class="cat-name">${catName}</div>`;
+    catFeeds.forEach(f => {
+      const unreadCount = articles.filter(a => a.feedId === f.id && !a.read).length;
+      const el = document.createElement('div');
+      el.className = `feed-item ${currentView === f.id ? 'active' : ''}`;
+      el.id = `feed-item-${f.id}`;
+      el.onclick = () => switchView(f.id);
+      el.innerHTML = `<span>${f.title}</span><span style="font-size: 11px;">(${unreadCount})</span>`;
+      wrap.appendChild(el);
+    });
+    container.appendChild(wrap);
+  }
+
+  const totalUnread = articles.filter(a => !a.read).length;
+  document.getElementById('badge-global-unread').textContent = totalUnread;
+
+  const starredCount = articles.filter(a => a.starred).length;
+  document.getElementById('badge-starred-count').textContent = starredCount;
+}
+
+function renderArticleList() {
+  const container = document.getElementById('articles-list-container');
+  container.innerHTML = '';
+  const titleEl = document.getElementById('articles-col-title');
+
+  let list = [];
+  if (currentView === 'all') {
+    titleEl.textContent = 'All Articles';
+    list = articles;
+  } else if (currentView === 'starred') {
+    titleEl.textContent = 'Starred Articles';
+    list = articles.filter(a => a.starred);
+  } else {
+    const f = feeds.find(x => x.id === currentView);
+    titleEl.textContent = f ? f.title : 'Feed';
+    list = articles.filter(a => a.feedId === currentView);
+  }
+
+  list.forEach(a => {
+    const row = document.createElement('div');
+    row.className = `article-row ${a.id === currentArticleId ? 'active' : ''} ${!a.read ? 'unread' : ''}`;
+    row.id = `art-row-${a.id}`;
+    row.onclick = () => selectArticle(a.id);
+    row.innerHTML = `
+      <div class="row-meta">
+        <span>${a.author}</span>
+        <span>${a.time}</span>
+      </div>
+      <div class="row-title">${a.title}</div>
+      <div class="row-snippet">${a.content}</div>
+    `;
+    container.appendChild(row);
+  });
+}
+
+function selectArticle(id) {
+  currentArticleId = id;
+  const a = articles.find(x => x.id === id);
+  if (!a) return;
+
+  if (!a.read) {
+    a.read = true;
+    renderSidebar();
+  }
+
+  renderArticleList();
+  renderReaderPane(a);
+}
+
+function renderReaderPane(a) {
+  const f = feeds.find(x => x.id === a.feedId);
+  document.getElementById('reader-feed-label').textContent = `${f ? f.title : ''} &bull; Published ${a.time}`;
+
+  const starBtn = document.getElementById('btn-star-article');
+  starBtn.className = `btn-star ${a.starred ? 'starred' : ''}`;
+  starBtn.innerHTML = a.starred ? '&#9733;' : '&#9734;';
+
+  const body = document.getElementById('reader-content-body');
+  body.innerHTML = `
+    <h1 class="art-h1">${a.title}</h1>
+    <div class="art-byline">By <strong>${a.author}</strong> | Original: <a href="${a.url}" style="color: var(--accent); text-decoration: none;">${a.url}</a></div>
+    <div class="art-content">
+      <p>${a.content}</p>
+      <p>This technical summary demonstrates low-latency frame presentation pipelines, buffer fence synchronization, and robust rendering across multi-monitor Wayland sessions.</p>
+    </div>
+  `;
+}
+
+function toggleCurrentStar() {
+  if (!currentArticleId) return;
+  const a = articles.find(x => x.id === currentArticleId);
+  if (!a) return;
+  a.starred = !a.starred;
+  renderSidebar();
+  renderReaderPane(a);
+}
+
+function toggleCurrentRead() {
+  if (!currentArticleId) return;
+  const a = articles.find(x => x.id === currentArticleId);
+  if (!a) return;
+  a.read = !a.read;
+  renderSidebar();
+  renderArticleList();
+}
+
+function markAllAsRead() {
+  articles.forEach(a => a.read = true);
+  renderSidebar();
+  renderArticleList();
+}
+
+function switchView(view) {
+  currentView = view;
+  document.getElementById('nav-all-articles').classList.toggle('active', view === 'all');
+  document.getElementById('nav-starred-articles').classList.toggle('active', view === 'starred');
+  renderSidebar();
+  renderArticleList();
+}
+
+function confirmSubscription() {
+  const title = document.getElementById('input-feed-title').value.trim();
+  const url = document.getElementById('input-feed-url').value.trim();
+  const category = document.getElementById('select-feed-category').value;
+  if (!title) return;
+
+  const fId = 'f-wayland';
+  feeds.push({ id: fId, title, category, url });
+
+  // Add its mock articles
+  MOCK_NEW_FEED_ARTICLES.forEach(art => {
+    articles.unshift({ ...art, feedId: fId });
+  });
+
+  closeModal('modal-subscribe');
+  document.getElementById('input-feed-title').value = '';
+  document.getElementById('input-feed-url').value = '';
+
+  renderSidebar();
+  renderArticleList();
+}
+
+function openExportModal() {
+  const starredList = articles.filter(a => a.starred);
+  let md = '# Starred Reading List\\n\\n';
+  if (starredList.length === 0) {
+    md += 'No starred articles.\\n';
+  } else {
+    starredList.forEach(a => {
+      md += `- [${a.title}](${a.url})\\n`;
+    });
+  }
+  document.getElementById('export-markdown-content').value = md;
+  document.getElementById('modal-export-starred').classList.add('open');
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+
+document.getElementById('btn-add-feed').addEventListener('click', () => {
+  document.getElementById('modal-subscribe').classList.add('open');
+  document.getElementById('input-feed-title').focus();
+});
+
+// Initial run
+renderSidebar();
+renderArticleList();
+
+// Verification hook
+window.__agyVerify = function() {
+  const failures = [];
+
+  // Check if live executed or run simulation
+  let waylandFeed = feeds.find(f => f.title === 'Wayland Gazette');
+  if (!waylandFeed) {
+    // Run simulation sequence
+    document.getElementById('input-feed-title').value = 'Wayland Gazette';
+    document.getElementById('input-feed-url').value = 'https://wayland.local/feed.xml';
+    document.getElementById('select-feed-category').value = 'Display Servers';
+    confirmSubscription();
+    selectArticle(201);
+    toggleCurrentStar();
+    selectArticle(202);
+    toggleCurrentRead();
+    markAllAsRead();
+    switchView('starred');
+    openExportModal();
+    waylandFeed = feeds.find(f => f.title === 'Wayland Gazette');
+  }
+
+  if (!waylandFeed) {
+    failures.push('Feed Wayland Gazette was not added');
+  } else if (waylandFeed.category !== 'Display Servers') {
+    failures.push(`Expected category 'Display Servers', got '${waylandFeed.category}'`);
+  }
+
+  const art201 = articles.find(a => a.id === 201);
+  if (!art201) {
+    failures.push('Article 201 missing');
+  } else {
+    if (!art201.starred) failures.push('Article 201 was not starred');
+  }
+
+  const totalUnread = articles.filter(a => !a.read).length;
+  if (totalUnread !== 0) {
+    failures.push(`Expected total unread 0 after markAllAsRead, got ${totalUnread}`);
+  }
+
+  const starredArticles = articles.filter(a => a.starred);
+  if (starredArticles.length !== 1 || starredArticles[0].id !== 201) {
+    failures.push(`Expected exactly 1 starred article (ID 201), got ${starredArticles.length}`);
+  }
+
+  const state = {
+    totalFeeds: feeds.length,
+    waylandSubscribed: !!waylandFeed,
+    article201Starred: art201 ? art201.starred : false,
+    article201Read: art201 ? art201.read : false,
+    totalUnreadCount: totalUnread,
+    starredCount: starredArticles.length
+  };
+
+  return {
+    passed: failures.length === 0,
+    failures,
+    score: failures.length === 0 ? 1 : 0,
+    state,
+    note: 'offline rss reader verification'
+  };
+};
+</script>
+</body>
+</html>

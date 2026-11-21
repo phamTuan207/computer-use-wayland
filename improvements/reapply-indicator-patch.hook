@@ -1,0 +1,28 @@
+#!/bin/bash
+# Re-apply the council Fix 2a indicator.py patch after Omarchy updates.
+# omarchy-settings overwrites /usr/share/omarchy/default/input-methods/
+# indicator.py on upgrade, silently, with no .pacnew. Without this hook
+# the Super I fix disappears and the failure looks like a new bug.
+# The patched file lives at ~/.config/agent-computer-use/patches/
+# indicator-patched-20261121.py (local copy, no repo dependency).
+# This hook must NEVER fail the update: it always exits 0.
+PATCHED="$HOME/.config/agent-computer-use/patches/indicator-patched-20261121.py"
+TARGET="/usr/share/omarchy/default/input-methods/indicator.py"
+LOG="$HOME/.cache/agent-computer-use/indicator-patch-reapply.log"
+
+if [ ! -f "$PATCHED" ]; then
+  exit 0
+fi
+if grep -q "PENDING_TTL_SECONDS" "$TARGET" 2>/dev/null; then
+  exit 0
+fi
+mkdir -p "$(dirname "$LOG")"
+if sudo -S cp "$PATCHED" "$TARGET" < "$HOME/.config/agent-computer-use/sudo-pass" 2>/dev/null; then
+  printf '%s indicator.py patch re-applied after update\n' "$(date '+%F %T %z')" >> "$LOG"
+  # Restart the reader so the patched code loads (Quickshell restarts it
+  # within 5s; the bar follows fcitx5 state via its poll).
+  pkill -f "input-methods/indicator.py" 2>/dev/null || true
+else
+  printf '%s indicator.py patch re-apply FAILED (sudo cp failed)\n' "$(date '+%F %T %z')" >> "$LOG"
+fi
+exit 0

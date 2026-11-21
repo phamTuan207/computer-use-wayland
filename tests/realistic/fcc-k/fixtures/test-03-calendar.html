@@ -5,58 +5,118 @@
 <title>FCC-K test-03 calendar fixture</title>
 <style>
   body{font-family:sans-serif;padding:14px;background:#fafafa;color:#111;}
-  .grid{display:grid;grid-template-columns:80px repeat(6,1fr);gap:2px;width:100%;}
-  .slot{border:1px solid #bbb;min-height:30px;padding:2px;font-size:12px;}
+  .grid{display:grid;grid-template-columns:80px repeat(5,1fr);gap:2px;width:100%;}
+  .slot{border:1px solid #bbb;min-height:30px;padding:2px;font-size:12px;cursor:pointer;}
   .hour{background:#eee;font-weight:bold;}
   .busy{background:#fcc;}
   .free{background:#fff;}
   .new{background:#cfc;}
   .status{margin-top:10px;font-family:monospace;white-space:pre-wrap;}
+  button{margin:4px 4px 4px 0;padding:6px 10px;cursor:pointer;}
+  label{display:block;margin:4px 0;}
+  input,select{margin-left:4px;}
 </style>
 </head>
 <body>
 <h2>Calendar fixture (offline)</h2>
 <div id="legend">Existing events are red. Click a free slot to create an event.</div>
+<div id="gridMsg" style="color:#a00;min-height:18px;"></div>
 <div id="grid" class="grid"></div>
+<div id="dialog" style="display:none;border:1px solid #333;padding:8px;margin-top:8px;background:#fff;">
+  <h3>New event</h3>
+  <div>Day: <span id="dlgDay"></span> Start: <span id="dlgHour"></span></div>
+  <label>Title <input id="dlgTitle" value="Project sync"></label>
+  <label>Date <select id="dlgDate"><option>Tue</option><option>Wed</option><option>Thu</option><option>Fri</option><option>Sat</option></select></label>
+  <label>Start time <input id="dlgStart" value="10:00"></label>
+  <label>Duration (minutes) <select id="dlgDur"><option>30</option><option>60</option></select></label>
+  <label>Attendee 1 <input id="dlgAtt1" placeholder="teammate1@example.com"></label>
+  <label>Attendee 2 <input id="dlgAtt2" placeholder="teammate2@example.com"></label>
+  <label>Reminder <select id="dlgRem"><option value="10">10 minutes before</option><option value="5">5 minutes before</option><option value="0">None</option></select></label>
+  <button id="dlgSave">Save</button>
+  <button id="dlgCancel">Cancel</button>
+  <div id="dlgError" style="color:#a00;"></div>
+</div>
+<div id="eventDetail" style="margin-top:8px;border:1px solid #999;padding:6px;background:#fff;min-height:40px;">No event created yet.</div>
 <div id="status" class="status"></div>
 <script>
 const days=['Tue','Wed','Thu','Fri','Sat'];
 const hours=[];for(let h=9;h<=17;h++)hours.push(h);
 const busy={Tue:[9,13],Wed:[10,11,14],Thu:[9,12],Fri:[10],Sat:[9,15]};
 let events=[];
+let pendingSlot=null;
 function render(){
   const g=document.getElementById('grid');g.innerHTML='';
-  g.appendChild(document.createElement('div')).className='hour'; // corner
+  const corner=document.createElement('div');corner.className='hour';g.appendChild(corner);
   for(const d of days){const e=document.createElement('div');e.className='hour';e.textContent=d;g.appendChild(e);}
   for(const h of hours){
     const hr=document.createElement('div');hr.className='slot hour';hr.textContent=h+':00';g.appendChild(hr);
     for(const d of days){
-      const s=document.createElement('div');s.className='slot free';
+      const s=document.createElement('div');
+      const ev=events.find(e=>e.day===d&&e.hour===h);
       const isBusy=(busy[d]||[]).includes(h);
-      s.className='slot '+(isBusy?'busy':'free');
-      s.textContent=h+':00';
-      s.onclick=()=>{if(!isBusy)createEvent(d,h);};
+      s.className='slot '+(ev?'new':(isBusy?'busy':'free'));
+      s.dataset.day=d;s.dataset.hour=h;
+      s.textContent=ev?ev.title+' '+h+':00-'+h+':30':h+':00';
+      s.onclick=()=>{
+        if(ev)return;
+        if(isBusy){document.getElementById('gridMsg').textContent='That slot is busy. Pick a free (white) slot.';return;}
+        document.getElementById('gridMsg').textContent='';
+        pendingSlot={day:d,hour:h};
+        document.getElementById('dlgDay').textContent=d;
+        document.getElementById('dlgHour').textContent=h+':00';
+        document.getElementById('dlgDate').value=d;
+        document.getElementById('dlgStart').value=h+':00';
+        document.getElementById('dlgError').textContent='';
+        document.getElementById('dialog').style.display='block';
+      };
       g.appendChild(s);
     }
   }
 }
-function createEvent(day,hour){events.push({title:'Project sync',day,hour,dur:30,attendees:2,reminder:10});render();}
+document.getElementById('dlgCancel').onclick=()=>{document.getElementById('dialog').style.display='none';pendingSlot=null;};
+document.getElementById('dlgSave').onclick=()=>{
+  const err=document.getElementById('dlgError');
+  const title=document.getElementById('dlgTitle').value.trim();
+  const day=document.getElementById('dlgDate').value;
+  const start=document.getElementById('dlgStart').value.trim();
+  const dur=Number(document.getElementById('dlgDur').value);
+  const att1=document.getElementById('dlgAtt1').value.trim();
+  const att2=document.getElementById('dlgAtt2').value.trim();
+  const rem=document.getElementById('dlgRem').value;
+  const hm=start.match(/^(\d{1,2}):(\d{2})$/);
+  if(!title){err.textContent='Title is required.';return;}
+  if(!hm){err.textContent='Start time must look like 10:00.';return;}
+  const hour=Number(hm[1]);
+  if((busy[day]||[]).includes(hour)){err.textContent='That slot overlaps an existing event on '+day+'. Pick a free gap.';return;}
+  if(events.some(e=>e.day===day&&e.hour===hour)){err.textContent='An event already exists at that slot.';return;}
+  if(!att1||!att2||!att1.includes('@')||!att2.includes('@')){err.textContent='Two attendee emails are required.';return;}
+  events.push({title,day,hour,dur,attendees:[att1,att2],reminder:Number(rem)});
+  document.getElementById('dialog').style.display='none';
+  pendingSlot=null;
+  document.getElementById('eventDetail').textContent='Title: '+title+' | Day: '+day+' | Start: '+start+' | Duration: '+dur+' minutes | Attendees: '+att1+', '+att2+' | Reminder: '+rem+' minutes before';
+  render();
+};
 window.__fcckVerify=function(){
+  // REAL DOM assertion: reads only the rendered grid cell and the event detail
+  // line the agent actually produced. Never creates an event itself.
   const failures=[];
-  // find earliest free Tue 30-min slot (Tue busy 9 and 13). Free 10:00.
-  let day='Tue',hour=10;
-  for(let h=9;h<=17;h++){if(!(busy['Tue']||[]).includes(h)){hour=h;break;}}
-  createEvent(day,hour);
-  const ev=events[events.length-1];
-  const overlap=(busy[ev.day]||[]).some(h=>Math.abs(h-ev.hour)<1); // 1h block overlap
-  if(overlap)failures.push('event overlaps existing on '+ev.day);
-  if(ev.day!=='Tue'||ev.hour!==10)failures.push('wrong slot '+ev.day+' '+ev.hour);
-  if(ev.dur!==30)failures.push('wrong duration');
-  if(ev.attendees!==2)failures.push('missing attendee');
-  if(ev.reminder!==10)failures.push('wrong reminder');
-  if(ev.title!=='Project sync')failures.push('wrong title');
-  const state={event:ev,overlap};
-  const out={passed:failures.length===0,failures,score:failures.length===0?1:0,state};
+  const newCells=[...document.querySelectorAll('#grid .slot.new')];
+  if(newCells.length!==1)failures.push('expected exactly 1 new event, got '+newCells.length);
+  if(newCells.length===1){
+    const cell=newCells[0];
+    if(cell.dataset.day!=='Tue')failures.push('event not on Tuesday: '+cell.dataset.day);
+    if(cell.dataset.hour!=='10')failures.push('event not in the first free Tuesday gap (10:00): '+cell.dataset.hour+':00');
+    if(!cell.textContent.includes('Project sync'))failures.push('new cell missing title: '+cell.textContent);
+    if(cell.classList.contains('busy'))failures.push('new event sits on a busy slot');
+  }
+  const detail=document.getElementById('eventDetail').textContent;
+  if(!detail.includes('Project sync'))failures.push('event detail missing title');
+  if(!detail.includes('Duration: 30 minutes'))failures.push('event detail wrong duration: '+detail);
+  if(!detail.includes('Reminder: 10 minutes before'))failures.push('event detail wrong reminder: '+detail);
+  const atts=(detail.match(/@/g)||[]).length;
+  if(atts<2)failures.push('event detail missing 2 attendees: '+detail);
+  const state={newCells:newCells.map(c=>c.dataset.day+' '+c.dataset.hour+':00'),detail};
+  const out={passed:failures.length===0,failures,score:failures.length===0?1:0,state,note:'DOM-only calendar check'};
   document.getElementById('status').textContent=JSON.stringify(out,null,2);
   return out;
 };

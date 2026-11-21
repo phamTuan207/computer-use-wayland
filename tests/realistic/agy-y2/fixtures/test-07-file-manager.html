@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>File Manager Web Portal</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background: #0f172a; color: #f8fafc; padding: 20px; }
+    .app-container { max-width: 1000px; margin: 0 auto; background: #1e293b; border-radius: 8px; border: 1px solid #334155; overflow: hidden; }
+    header { background: #0f172a; padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; }
+    h1 { font-size: 18px; color: #38bdf8; font-weight: 600; }
+    .header-stats { display: flex; gap: 16px; font-size: 13px; color: #94a3b8; }
+    .header-stats strong { color: #f8fafc; }
+    .layout { display: flex; min-height: 480px; }
+    .sidebar { width: 220px; background: #0b1120; border-right: 1px solid #334155; padding: 16px; }
+    .nav-item { padding: 8px 12px; border-radius: 4px; color: #94a3b8; cursor: pointer; font-size: 13px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+    .nav-item:hover, .nav-item.active { background: #1e293b; color: #38bdf8; font-weight: 500; }
+    .badge { background: #334155; color: #e2e8f0; padding: 2px 6px; border-radius: 10px; font-size: 11px; }
+    .main-area { flex: 1; display: flex; flex-direction: column; background: #1e293b; }
+    .toolbar { padding: 10px 16px; background: #0f172a; border-bottom: 1px solid #334155; display: flex; gap: 8px; align-items: center; }
+    button { background: #334155; color: #f8fafc; border: 1px solid #475569; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 500; }
+    button:hover { background: #475569; }
+    button.btn-primary { background: #0284c7; border-color: #0369a1; }
+    button.btn-primary:hover { background: #0369a1; }
+    button.btn-danger { background: #dc2626; border-color: #b91c1c; }
+    button.btn-danger:hover { background: #b91c1c; }
+    .file-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .file-table th { background: #111827; padding: 10px 12px; text-align: left; color: #94a3b8; font-weight: 500; border-bottom: 1px solid #334155; }
+    .file-table td { padding: 10px 12px; border-bottom: 1px solid #334155; color: #cbd5e1; }
+    .file-table tr.hidden { display: none !important; }
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; justify-content: center; align-items: center; z-index: 100; }
+    .modal-overlay.active { display: flex; }
+    .modal-box { background: #1e293b; border: 1px solid #475569; border-radius: 6px; padding: 20px; width: 380px; }
+    .modal-box h3 { font-size: 15px; margin-bottom: 14px; color: #f8fafc; }
+    .modal-box input { width: 100%; background: #0f172a; border: 1px solid #334155; padding: 8px 12px; color: #f8fafc; border-radius: 4px; font-size: 13px; margin-bottom: 16px; outline: none; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 8px; }
+    .toast-banner { display: none; background: #064e3b; color: #6ee7b7; padding: 10px 16px; font-size: 13px; font-weight: 500; border-top: 1px solid #047857; text-align: center; }
+    .toast-banner.active { display: block; }
+  </style>
+</head>
+<body>
+
+<div class="app-container">
+  <header>
+    <h1>Asset File Manager</h1>
+    <div class="header-stats">
+      <div>Total: <strong id="total-files-count">8</strong></div>
+      <div>Selected: <strong id="selected-files-count">0</strong></div>
+      <div>Trash: <strong id="trash-counter">0</strong></div>
+    </div>
+  </header>
+
+  <div class="layout">
+    <div class="sidebar">
+      <div class="nav-item active" id="nav-folder-root">
+        <span>📁 All Files</span>
+        <span class="badge" id="folder-count-root">8</span>
+      </div>
+      <div class="nav-item" id="nav-folder-archive">
+        <span>📦 Archive</span>
+        <span class="badge" id="folder-count-archive">0 files</span>
+      </div>
+      <div class="nav-item" id="nav-folder-trash">
+        <span>🗑️ Trash</span>
+        <span class="badge" id="folder-count-trash">0</span>
+      </div>
+      <div style="margin-top: 16px; padding-top: 12px; border-top: 1px solid #334155;">
+        <div style="font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: bold; margin-bottom: 6px;">Folders</div>
+        <div id="custom-folders-list" style="display: flex; flex-direction: column; gap: 4px;">
+          <!-- dynamic folder items appear here -->
+        </div>
+      </div>
+    </div>
+
+    <div class="main-area">
+      <div class="toolbar">
+        <button id="btn-open-bulk-rename">Bulk Rename</button>
+        <button id="btn-open-move-dialog">Move to Folder</button>
+        <button id="btn-new-folder">New Folder</button>
+        <button id="btn-generate-inventory-report" class="btn-primary" style="margin-left: auto;">Save Inventory</button>
+      </div>
+
+      <!-- Main File Table -->
+      <div id="view-root" style="flex: 1; overflow-y: auto;">
+        <table class="file-table" id="table-root-files">
+          <thead>
+            <tr>
+              <th style="width: 36px;"></th>
+              <th>Name</th>
+              <th>Size</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr id="file-row-img1">
+              <td><input type="checkbox" id="checkbox-file-img1" class="file-chk" data-id="img1"></td>
+              <td id="file-name-img1">raw_001.jpg</td>
+              <td>2.4 MB</td>
+              <td><button class="btn-danger" id="btn-delete-file-img1" style="padding: 2px 6px; font-size: 11px;">Delete</button></td>
+            </tr>
+            <tr id="file-row-img2">
+              <td><input type="checkbox" id="checkbox-file-img2" class="file-chk" data-id="img2"></td>
+              <td id="file-name-img2">raw_002.jpg</td>
+              <td>3.1 MB</td>
+              <td><button class="btn-danger" id="btn-delete-file-img2" style="padding: 2px 6px; font-size: 11px;">Delete</button></td>
+            </tr>
+            <tr id="file-row-img3">
+              <td><input type="checkbox" id="checkbox-file-img3" class="file-chk" data-id="img3"></td>
+              <td id="file-name-img3">raw_003.jpg</td>
+              <td>1.8 MB</td>
+              <td><button class="btn-danger" id="btn-delete-file-img3" style="padding: 2px 6px; font-size: 11px;">Delete</button></td>
+            </tr>
+            <tr id="file-row-img4">
+              <td><input type="checkbox" id="checkbox-file-img4" class="file-chk" data-id="img4"></td>
+              <td id="file-name-img4">raw_004.jpg</td>
+              <td>4.2 MB</td>
+              <td><button class="btn-danger" id="btn-delete-file-img4" style="padding: 2px 6px; font-size: 11px;">Delete</button></td>
+            </tr>
+            <tr id="file-row-img5">
+              <td><input type="checkbox" id="checkbox-file-img5" class="file-chk" data-id="img5"></td>
+              <td id="file-name-img5">raw_005.jpg</td>
+              <td>2.9 MB</td>
+              <td><button class="btn-danger" id="btn-delete-file-img5" style="padding: 2px 6px; font-size: 11px;">Delete</button></td>
+            </tr>
+            <tr id="file-row-doc1">
+              <td><input type="checkbox" id="checkbox-file-doc1" class="file-chk" data-id="doc1"></td>
+              <td id="file-name-doc1">notes.txt</td>
+              <td>14 KB</td>
+              <td><button class="btn-danger" id="btn-delete-file-doc1" style="padding: 2px 6px; font-size: 11px;">Delete</button></td>
+            </tr>
+            <tr id="file-row-doc2">
+              <td><input type="checkbox" id="checkbox-file-doc2" class="file-chk" data-id="doc2"></td>
+              <td id="file-name-doc2">specs.pdf</td>
+              <td>512 KB</td>
+              <td><button class="btn-danger" id="btn-delete-file-doc2" style="padding: 2px 6px; font-size: 11px;">Delete</button></td>
+            </tr>
+            <tr id="file-row-doc3">
+              <td><input type="checkbox" id="checkbox-file-doc3" class="file-chk" data-id="doc3"></td>
+              <td id="file-name-doc3">data.csv</td>
+              <td>98 KB</td>
+              <td><button class="btn-danger" id="btn-delete-file-doc3" style="padding: 2px 6px; font-size: 11px;">Delete</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Trash View -->
+      <div id="view-trash" style="flex: 1; overflow-y: auto; display: none;">
+        <table class="file-table" id="trash-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="trash-table-body">
+            <!-- deleted items appear here -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div id="inventory-summary-toast" class="toast-banner"></div>
+</div>
+
+<!-- Modal Bulk Rename -->
+<div id="bulk-rename-modal" class="modal-overlay">
+  <div class="modal-box">
+    <h3>Bulk Rename Selected Files</h3>
+    <p style="font-size: 12px; color: #94a3b8; margin-bottom: 8px;">Pattern: use ## for 2-digit sequence</p>
+    <input type="text" id="input-rename-pattern" placeholder="e.g. photo-2026-##">
+    <div class="modal-actions">
+      <button id="btn-cancel-rename">Cancel</button>
+      <button id="btn-apply-bulk-rename" class="btn-primary">Rename</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Move Files -->
+<div id="move-modal" class="modal-overlay">
+  <div class="modal-box">
+    <h3>Move Selected Files</h3>
+    <div style="margin-bottom: 16px;">
+      <label style="display: block; font-size: 13px; cursor: pointer;">
+        <input type="radio" name="move_folder" id="move-target-archive" checked> Archive
+      </label>
+    </div>
+    <div class="modal-actions">
+      <button id="btn-cancel-move">Cancel</button>
+      <button id="btn-confirm-move" class="btn-primary">Move</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal New Folder -->
+<div id="new-folder-modal" class="modal-overlay">
+  <div class="modal-box">
+    <h3>Create New Folder</h3>
+    <input type="text" id="input-new-folder-name" placeholder="Folder name">
+    <div class="modal-actions">
+      <button id="btn-cancel-new-folder">Cancel</button>
+      <button id="btn-confirm-create-folder" class="btn-primary">Create</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const state = {
+    selected: new Set(),
+    archive: [],
+    trash: [],
+    folders: [],
+    rootCount: 8
+  };
+
+  const checkboxes = document.querySelectorAll('.file-chk');
+  checkboxes.forEach(chk => {
+    chk.onchange = () => {
+      if (chk.checked) state.selected.add(chk.dataset.id);
+      else state.selected.delete(chk.dataset.id);
+      document.getElementById('selected-files-count').textContent = String(state.selected.size);
+    };
+  });
+
+  document.getElementById('btn-open-bulk-rename').onclick = () => {
+    document.getElementById('bulk-rename-modal').classList.add('active');
+  };
+  document.getElementById('btn-cancel-rename').onclick = () => {
+    document.getElementById('bulk-rename-modal').classList.remove('active');
+  };
+
+  document.getElementById('btn-apply-bulk-rename').onclick = () => {
+    const pattern = document.getElementById('input-rename-pattern').value.trim();
+    document.getElementById('bulk-rename-modal').classList.remove('active');
+    let idx = 1;
+    ['img1', 'img2', 'img3', 'img4', 'img5'].forEach(id => {
+      if (state.selected.has(id)) {
+        const num = String(idx).padStart(2, '0');
+        const newName = pattern.replace('##', num) + '.jpg';
+        const el = document.getElementById('file-name-' + id);
+        if (el) el.textContent = newName;
+        idx++;
+      }
+    });
+    // Uncheck after rename
+    checkboxes.forEach(c => { c.checked = false; });
+    state.selected.clear();
+    document.getElementById('selected-files-count').textContent = '0';
+  };
+
+  document.getElementById('btn-open-move-dialog').onclick = () => {
+    document.getElementById('move-modal').classList.add('active');
+  };
+  document.getElementById('btn-cancel-move').onclick = () => {
+    document.getElementById('move-modal').classList.remove('active');
+  };
+
+  document.getElementById('btn-confirm-move').onclick = () => {
+    document.getElementById('move-modal').classList.remove('active');
+    state.selected.forEach(id => {
+      const row = document.getElementById('file-row-' + id);
+      if (row) {
+        row.classList.add('hidden');
+        state.archive.push(id);
+      }
+    });
+    checkboxes.forEach(c => { c.checked = false; });
+    state.selected.clear();
+    document.getElementById('selected-files-count').textContent = '0';
+    document.getElementById('folder-count-archive').textContent = state.archive.length + ' files';
+  };
+
+  // Accidental delete handler
+  document.getElementById('btn-delete-file-img4').onclick = () => {
+    const row = document.getElementById('file-row-img4');
+    row.classList.add('hidden');
+    state.trash.push('img4');
+    document.getElementById('trash-counter').textContent = String(state.trash.length);
+    document.getElementById('folder-count-trash').textContent = String(state.trash.length);
+
+    const tbody = document.getElementById('trash-table-body');
+    const tr = document.createElement('tr');
+    tr.id = 'trash-row-img4';
+    const name = document.getElementById('file-name-img4').textContent;
+    tr.innerHTML = '<td>' + name + '</td><td><button class="btn-primary" id="btn-restore-file-img4" style="padding: 2px 6px; font-size: 11px;">Restore</button></td>';
+    tbody.appendChild(tr);
+
+    document.getElementById('btn-restore-file-img4').onclick = () => {
+      state.trash = state.trash.filter(x => x !== 'img4');
+      document.getElementById('trash-counter').textContent = String(state.trash.length);
+      document.getElementById('folder-count-trash').textContent = String(state.trash.length);
+      tr.remove();
+      row.classList.remove('hidden');
+    };
+  };
+
+  // Nav views
+  document.getElementById('nav-folder-root').onclick = () => {
+    document.getElementById('nav-folder-root').classList.add('active');
+    document.getElementById('nav-folder-trash').classList.remove('active');
+    document.getElementById('view-root').style.display = 'block';
+    document.getElementById('view-trash').style.display = 'none';
+  };
+
+  document.getElementById('nav-folder-trash').onclick = () => {
+    document.getElementById('nav-folder-trash').classList.add('active');
+    document.getElementById('nav-folder-root').classList.remove('active');
+    document.getElementById('view-root').style.display = 'none';
+    document.getElementById('view-trash').style.display = 'block';
+  };
+
+  // New folder
+  document.getElementById('btn-new-folder').onclick = () => {
+    document.getElementById('new-folder-modal').classList.add('active');
+  };
+  document.getElementById('btn-cancel-new-folder').onclick = () => {
+    document.getElementById('new-folder-modal').classList.remove('active');
+  };
+  document.getElementById('btn-confirm-create-folder').onclick = () => {
+    const name = document.getElementById('input-new-folder-name').value.trim() || 'New Folder';
+    state.folders.push(name);
+    document.getElementById('new-folder-modal').classList.remove('active');
+    const div = document.createElement('div');
+    div.id = 'folder-item-' + name.toLowerCase();
+    div.className = 'nav-item';
+    div.innerHTML = '<span>📁 ' + name + '</span><span class="badge">0</span>';
+    document.getElementById('custom-folders-list').appendChild(div);
+  };
+
+  document.getElementById('btn-generate-inventory-report').onclick = () => {
+    const rootVisible = Array.from(document.querySelectorAll('#table-root-files tbody tr:not(.hidden)')).length;
+    const toast = document.getElementById('inventory-summary-toast');
+    toast.textContent = 'Root: ' + rootVisible + ' files, Archive: ' + state.archive.length + ' files, Trash: ' + state.trash.length + ' files, Folder Processed created';
+    toast.classList.add('active');
+  };
+</script>
+
+</body>
+</html>

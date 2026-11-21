@@ -1,0 +1,79 @@
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index 6948f65..76ef613 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -104,5 +104,13 @@ jobs:
+       - name: Checkout
+         uses: actions/checkout@v4
+ 
++      - name: Check the build channel
++        if: github.base_ref == 'main' || github.ref_name == 'main'
++        run: |
++          if ! grep -Eq 'BUILT_FOR_HYPRLAND_GIT *= *true' src/BuildChannel.hpp; then
++            echo "::error::main follows hyprland-git: BUILT_FOR_HYPRLAND_GIT must stay true in src/BuildChannel.hpp."
++            exit 1
++          fi
++
+       - name: Build plugin
+         run: make
+diff --git a/.github/workflows/hyprland-update.yml b/.github/workflows/hyprland-update.yml
+index 6909a34..10a5366 100644
+--- a/.github/workflows/hyprland-update.yml
++++ b/.github/workflows/hyprland-update.yml
+@@ -109,7 +109,7 @@ jobs:
+           Hyprland [v${VERSION}](https://github.com/hyprwm/Hyprland/releases/tag/v${VERSION}) is out and \`${BRANCH}\` does not exist yet.
+ 
+           1. Pick the \`main\` commit that builds against Hyprland ${VERSION} (\`main\` follows hyprland-git).
+-          2. Create \`${BRANCH}\` from it, set \`.hyprland-version\` to \`${VERSION}\` with a \`build:\` commit, and push: the release workflow publishes the build and pins it for hyprpm.
++          2. Create \`${BRANCH}\` from it. In one \`build:\` commit, set \`.hyprland-version\` to \`${VERSION}\` and \`BUILT_FOR_HYPRLAND_GIT\` to \`false\` in \`src/BuildChannel.hpp\` (the release refuses to run otherwise), and push: the release workflow publishes the build and pins it for hyprpm.
+           3. From then on, fixes and features target \`${BRANCH}\`; the previous line is frozen.
+           EOF
+           )"
+diff --git a/.github/workflows/release.yml b/.github/workflows/release.yml
+index 51edda4..72b38c9 100644
+--- a/.github/workflows/release.yml
++++ b/.github/workflows/release.yml
+@@ -141,9 +141,25 @@ jobs:
+             exit 1
+           fi
+ 
++          # Without a release tag in the headers, the binary can't tell which
++          # Hyprland it was built for and skips its version check.
++          if ! grep -Eq '^#define GIT_TAG +"v[0-9]+\.[0-9]+\.[0-9]+"' /usr/include/hyprland/src/version.h; then
++            echo "::error::The Hyprland headers carry no release tag."
++            exit 1
++          fi
++
+           echo "version=${HYPRLAND_VERSION}" >> "$GITHUB_OUTPUT"
+           echo "Built against Hyprland ${HYPRLAND_VERSION}"
+ 
++      - name: Check the build channel
++        if: steps.version-bump.outputs.skip != 'true'
++        run: |
++          # Left true, a release loads only on the Hyprland commit it was built against.
++          if grep -Eq 'BUILT_FOR_HYPRLAND_GIT *= *true' src/BuildChannel.hpp 2>/dev/null; then
++            echo "::error::${GITHUB_REF_NAME} is a stable line: set BUILT_FOR_HYPRLAND_GIT to false in src/BuildChannel.hpp."
++            exit 1
++          fi
++
+       - name: Build plugin
+         if: steps.version-bump.outputs.skip != 'true'
+         env:
+@@ -361,8 +377,15 @@ jobs:
+             git checkout -f -B forward-merge "$STABLE"
+             git clean -fdq
+             PROBLEM="it conflicts with main"
+-          elif [[ "$MAIN_BUILDS" == true ]] && ! make; then
+-            PROBLEM="main no longer builds against hyprland-git after it"
++          else
++            # The stable line's BUILT_FOR_HYPRLAND_GIT = false must not reach main.
++            if git cat-file -e HEAD^1:src/BuildChannel.hpp 2>/dev/null && ! git diff --quiet HEAD^1 HEAD -- src/BuildChannel.hpp; then
++              git checkout HEAD^1 -- src/BuildChannel.hpp
++              git commit --amend --no-edit
++            fi
++            if [[ "$MAIN_BUILDS" == true ]] && ! make; then
++              PROBLEM="main no longer builds against hyprland-git after it"
++            fi
+           fi
+ 
+           if [[ -z "$PROBLEM" ]]; then

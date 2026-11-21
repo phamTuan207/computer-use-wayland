@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Network &amp; Bluetooth Settings</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background: #0f172a; color: #f8fafc; padding: 24px; }
+    .container { max-width: 960px; margin: 0 auto; background: #1e293b; border-radius: 8px; border: 1px solid #334155; overflow: hidden; }
+    header { background: #0f172a; padding: 18px 24px; border-bottom: 1px solid #334155; display: flex; justify-content: space-between; align-items: center; }
+    h1 { font-size: 20px; font-weight: 600; color: #38bdf8; }
+    .nav-tabs { display: flex; background: #1e293b; border-bottom: 1px solid #334155; }
+    .nav-tab { padding: 12px 24px; font-size: 14px; font-weight: 500; color: #94a3b8; cursor: pointer; border-bottom: 2px solid transparent; }
+    .nav-tab.active { color: #38bdf8; border-bottom-color: #38bdf8; background: #0f172a; }
+    .panel { display: none; padding: 24px; }
+    .panel.active { display: block; }
+    .toggle-row { display: flex; justify-content: space-between; align-items: center; background: #0f172a; padding: 16px; border-radius: 6px; margin-bottom: 20px; border: 1px solid #334155; }
+    .toggle-info h2 { font-size: 15px; margin-bottom: 4px; }
+    .toggle-info p { font-size: 13px; color: #94a3b8; }
+    button { background: #334155; color: #f8fafc; border: 1px solid #475569; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 500; }
+    button:hover { background: #475569; }
+    button.btn-primary { background: #0284c7; border-color: #0369a1; }
+    button.btn-primary:hover { background: #0369a1; }
+    button.btn-danger { background: #dc2626; border-color: #b91c1c; }
+    button.btn-danger:hover { background: #b91c1c; }
+    .section-title { font-size: 14px; font-weight: 600; color: #cbd5e1; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.05em; }
+    .list-group { background: #0f172a; border: 1px solid #334155; border-radius: 6px; overflow: hidden; margin-bottom: 20px; }
+    .list-item { padding: 14px 18px; border-bottom: 1px solid #334155; display: flex; justify-content: space-between; align-items: center; }
+    .list-item:last-child { border-bottom: none; }
+    .badge { padding: 4px 10px; border-radius: 9999px; font-size: 12px; font-weight: 600; }
+    .badge-connected { background: #065f46; color: #6ee7b7; }
+    .badge-disconnected { background: #334155; color: #94a3b8; }
+    .badge-paired { background: #1e3a8a; color: #93c5fd; }
+    .toast { display: none; padding: 12px 20px; background: #065f46; color: #a7f3d0; border-radius: 6px; margin-bottom: 16px; font-size: 13px; font-weight: 500; }
+    .toast.active { display: block; }
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; justify-content: center; align-items: center; z-index: 100; }
+    .modal-overlay.active { display: flex; }
+    .modal-card { background: #1e293b; border: 1px solid #475569; border-radius: 8px; padding: 24px; width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.8); }
+    .modal-card h3 { font-size: 17px; margin-bottom: 16px; }
+    .modal-card input[type="password"], .modal-card input[type="text"] { width: 100%; background: #0f172a; border: 1px solid #334155; padding: 8px 12px; color: #f8fafc; font-size: 14px; border-radius: 4px; margin-bottom: 16px; outline: none; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 8px; }
+    .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+    .summary-card { background: #0f172a; border: 1px solid #334155; padding: 18px; border-radius: 6px; }
+    .summary-card h4 { font-size: 13px; color: #94a3b8; margin-bottom: 8px; text-transform: uppercase; }
+    .summary-card div { font-size: 18px; font-weight: 600; color: #f8fafc; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <h1>System Network &amp; Device Settings</h1>
+    <div style="font-size: 13px; color: #94a3b8;">
+      Active SSID: <span id="connected-network-name" style="color: #38bdf8; font-weight: 600;">Not Connected</span>
+    </div>
+  </header>
+
+  <div id="settings-status-toast" class="toast"></div>
+
+  <div class="nav-tabs">
+    <div id="nav-tab-wifi" class="nav-tab active">Wi-Fi</div>
+    <div id="nav-tab-bluetooth" class="nav-tab">Bluetooth</div>
+    <div id="nav-tab-status" class="nav-tab">Status Overview</div>
+  </div>
+
+  <!-- Wi-Fi Panel -->
+  <div id="wifi-panel" class="panel active">
+    <div class="toggle-row">
+      <div class="toggle-info">
+        <h2>Wi-Fi Radio</h2>
+        <p>Status: <span id="wifi-toggle-status" style="font-weight: bold; color: #f8fafc;">Disabled</span></p>
+      </div>
+      <button id="toggle-wifi" class="btn-primary">Toggle Wi-Fi</button>
+    </div>
+
+    <div id="wifi-content" style="display: none;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+        <span class="section-title">Available Networks</span>
+        <button id="btn-network-properties">Connection Properties</button>
+      </div>
+
+      <div id="wifi-network-list" class="list-group">
+        <div id="network-row-homefiber" class="list-item" style="cursor: pointer;">
+          <div>
+            <div style="font-weight: 600; color: #f8fafc;">HomeFiber-5G</div>
+            <div style="font-size: 12px; color: #94a3b8;">Signal: Excellent (95%) | Security: WPA3-Personal</div>
+          </div>
+          <span id="wifi-connection-badge" class="badge badge-disconnected">Disconnected</span>
+        </div>
+        <div id="network-row-office" class="list-item">
+          <div>
+            <div style="font-weight: 600; color: #f8fafc;">OfficeGuest</div>
+            <div style="font-size: 12px; color: #94a3b8;">Signal: Fair (60%) | Security: Open</div>
+          </div>
+          <span class="badge badge-disconnected">Disconnected</span>
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+        <span class="section-title">Saved Known Networks</span>
+        <button id="btn-manage-known-networks">Manage Known Networks</button>
+      </div>
+
+      <div id="known-networks-panel" style="display: none;">
+        <div id="known-networks-list" class="list-group">
+          <div id="item-cafefree" class="list-item">
+            <div>
+              <div style="font-weight: 600; color: #f8fafc;">CafeFree</div>
+              <div style="font-size: 12px; color: #94a3b8;">Auto-connect enabled</div>
+            </div>
+            <div>
+              <button id="btn-options-cafefree" style="margin-right: 6px;">Options</button>
+              <button id="btn-forget-cafefree" class="btn-danger">Forget</button>
+            </div>
+          </div>
+          <div id="item-airport" class="list-item">
+            <div>
+              <div style="font-weight: 600; color: #f8fafc;">Airport-Public</div>
+              <div style="font-size: 12px; color: #94a3b8;">Saved network</div>
+            </div>
+            <button class="btn-danger">Forget</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bluetooth Panel -->
+  <div id="bluetooth-panel" class="panel">
+    <div class="toggle-row">
+      <div class="toggle-info">
+        <h2>Bluetooth Adapter</h2>
+        <p>Status: <span id="bt-toggle-status" style="font-weight: bold; color: #f8fafc;">Enabled</span></p>
+      </div>
+      <button id="toggle-bluetooth" class="btn-primary">Toggle Bluetooth</button>
+    </div>
+
+    <div id="bt-content">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+        <span class="section-title">Paired Devices</span>
+      </div>
+      <div id="paired-bt-list" class="list-group">
+        <div style="padding: 14px 18px; color: #94a3b8; font-size: 13px;">No devices paired yet.</div>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+        <span class="section-title">Available Nearby Devices</span>
+        <button id="btn-scan-bt-devices">Scan for Devices</button>
+      </div>
+      <div id="available-bt-list" class="list-group" style="display: none;">
+        <div id="bt-device-mx-master" class="list-item">
+          <div>
+            <div style="font-weight: 600; color: #f8fafc;">MX Master 3S</div>
+            <div style="font-size: 12px; color: #94a3b8;">Wireless Mouse (BLE)</div>
+          </div>
+          <button id="btn-pair-mx-master" class="btn-primary">Pair</button>
+        </div>
+        <div id="bt-device-headset" class="list-item">
+          <div>
+            <div style="font-weight: 600; color: #f8fafc;">Wireless Headset 700</div>
+            <div style="font-size: 12px; color: #94a3b8;">Audio Output</div>
+          </div>
+          <button class="btn-primary">Pair</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Status Overview Panel -->
+  <div id="status-panel" class="panel">
+    <div class="section-title">Current Network Configuration</div>
+    <div class="summary-grid">
+      <div class="summary-card">
+        <h4>Connected Wi-Fi SSID</h4>
+        <div id="summary-wifi-ssid">None</div>
+      </div>
+      <div class="summary-card">
+        <h4>Metered Connection</h4>
+        <div id="summary-wifi-metered">No</div>
+      </div>
+      <div class="summary-card">
+        <h4>Bluetooth Mouse</h4>
+        <div id="summary-bt-device">None</div>
+      </div>
+      <div class="summary-card">
+        <h4>Link Speed</h4>
+        <div id="summary-link-speed">866 Mbps</div>
+      </div>
+    </div>
+    <button id="btn-apply-network-settings" class="btn-primary">Apply Network Settings</button>
+  </div>
+</div>
+
+<!-- Password Modal -->
+<div id="wifi-auth-modal" class="modal-overlay">
+  <div class="modal-card">
+    <h3>Enter Password for HomeFiber-5G</h3>
+    <input type="password" id="input-wifi-password" placeholder="WPA3 Network Key">
+    <div class="modal-actions">
+      <button id="btn-cancel-wifi">Cancel</button>
+      <button id="btn-connect-wifi" class="btn-primary">Connect</button>
+    </div>
+  </div>
+</div>
+
+<!-- Properties Modal -->
+<div id="network-properties-panel" class="modal-overlay">
+  <div class="modal-card">
+    <h3>Connection Properties: HomeFiber-5G</h3>
+    <div style="margin-bottom: 16px;">
+      <label style="display: flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer;">
+        <input type="checkbox" id="toggle-metered-connection">
+        <span>Set as metered connection</span>
+      </label>
+      <div style="font-size: 12px; color: #94a3b8; margin-top: 6px;">
+        Current mode: <span id="metered-status-indicator" style="font-weight: bold; color: #38bdf8;">Unmetered</span>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button id="btn-close-properties">Close</button>
+      <button id="btn-save-wifi-properties" class="btn-primary">Save Properties</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const netState = {
+    wifiEnabled: false,
+    connectedSsid: null,
+    metered: false,
+    btEnabled: true,
+    pairedDevices: {},
+    applied: false
+  };
+
+  const navWifi = document.getElementById('nav-tab-wifi');
+  const navBt = document.getElementById('nav-tab-bluetooth');
+  const navStatus = document.getElementById('nav-tab-status');
+
+  const panelWifi = document.getElementById('wifi-panel');
+  const panelBt = document.getElementById('bluetooth-panel');
+  const panelStatus = document.getElementById('status-panel');
+
+  function showTab(panel, tab) {
+    [panelWifi, panelBt, panelStatus].forEach(p => p.classList.remove('active'));
+    [navWifi, navBt, navStatus].forEach(t => t.classList.remove('active'));
+    panel.classList.add('active');
+    tab.classList.add('active');
+  }
+
+  navWifi.onclick = () => showTab(panelWifi, navWifi);
+  navBt.onclick = () => showTab(panelBt, navBt);
+  navStatus.onclick = () => {
+    showTab(panelStatus, navStatus);
+    document.getElementById('summary-wifi-ssid').textContent = netState.connectedSsid || 'None';
+    document.getElementById('summary-wifi-metered').textContent = netState.metered ? 'Yes' : 'No';
+    document.getElementById('summary-bt-device').textContent = netState.pairedDevices['MX Master 3S'] ? 'MX Master 3S' : 'None';
+  };
+
+  // Wi-Fi toggle
+  const toggleWifiBtn = document.getElementById('toggle-wifi');
+  const wifiStatusText = document.getElementById('wifi-toggle-status');
+  const wifiContent = document.getElementById('wifi-content');
+
+  toggleWifiBtn.onclick = () => {
+    netState.wifiEnabled = !netState.wifiEnabled;
+    wifiStatusText.textContent = netState.wifiEnabled ? 'Enabled' : 'Disabled';
+    wifiContent.style.display = netState.wifiEnabled ? 'block' : 'none';
+  };
+
+  // Connect HomeFiber
+  const rowHomeFiber = document.getElementById('network-row-homefiber');
+  const modalAuth = document.getElementById('wifi-auth-modal');
+  const inputPass = document.getElementById('input-wifi-password');
+  const btnConnect = document.getElementById('btn-connect-wifi');
+  const btnCancelWifi = document.getElementById('btn-cancel-wifi');
+  const badgeConnection = document.getElementById('wifi-connection-badge');
+  const activeSsidText = document.getElementById('connected-network-name');
+
+  rowHomeFiber.onclick = () => {
+    if (!netState.wifiEnabled) return;
+    modalAuth.classList.add('active');
+  };
+
+  btnCancelWifi.onclick = () => {
+    modalAuth.classList.remove('active');
+  };
+
+  btnConnect.onclick = () => {
+    netState.connectedSsid = 'HomeFiber-5G';
+    badgeConnection.textContent = 'Connected';
+    badgeConnection.className = 'badge badge-connected';
+    activeSsidText.textContent = 'HomeFiber-5G';
+    modalAuth.classList.remove('active');
+  };
+
+  // Known networks
+  const btnManageKnown = document.getElementById('btn-manage-known-networks');
+  const knownPanel = document.getElementById('known-networks-panel');
+  btnManageKnown.onclick = () => {
+    knownPanel.style.display = (knownPanel.style.display === 'none' || !knownPanel.style.display) ? 'block' : 'none';
+  };
+
+  document.getElementById('btn-forget-cafefree').onclick = () => {
+    const item = document.getElementById('item-cafefree');
+    if (item) item.remove();
+  };
+
+  // Bluetooth
+  const toggleBtBtn = document.getElementById('toggle-bluetooth');
+  const btStatusText = document.getElementById('bt-toggle-status');
+  const btnScanBt = document.getElementById('btn-scan-bt-devices');
+  const availBtList = document.getElementById('available-bt-list');
+  const pairedBtList = document.getElementById('paired-bt-list');
+  const btnPairMx = document.getElementById('btn-pair-mx-master');
+
+  toggleBtBtn.onclick = () => {
+    netState.btEnabled = !netState.btEnabled;
+    btStatusText.textContent = netState.btEnabled ? 'Enabled' : 'Disabled';
+    document.getElementById('bt-content').style.opacity = netState.btEnabled ? '1' : '0.5';
+  };
+
+  btnScanBt.onclick = () => {
+    availBtList.style.display = 'block';
+  };
+
+  btnPairMx.onclick = () => {
+    netState.pairedDevices['MX Master 3S'] = true;
+    pairedBtList.innerHTML = '<div id="paired-item-mx-master" class="list-item">' +
+      '<div>' +
+        '<div style="font-weight: 600; color: #f8fafc;">MX Master 3S</div>' +
+        '<div style="font-size: 12px; color: #94a3b8;">Connected - Battery 90%</div>' +
+      '</div>' +
+      '<span class="badge badge-paired">Paired</span>' +
+    '</div>';
+  };
+
+  // Properties modal
+  const propModal = document.getElementById('network-properties-panel');
+  const btnProps = document.getElementById('btn-network-properties');
+  const btnCloseProps = document.getElementById('btn-close-properties');
+  const chkMetered = document.getElementById('toggle-metered-connection');
+  const meteredIndicator = document.getElementById('metered-status-indicator');
+  const btnSaveProps = document.getElementById('btn-save-wifi-properties');
+
+  btnProps.onclick = () => {
+    propModal.classList.add('active');
+  };
+
+  btnCloseProps.onclick = () => {
+    propModal.classList.remove('active');
+  };
+
+  chkMetered.onchange = () => {
+    meteredIndicator.textContent = chkMetered.checked ? 'Metered' : 'Unmetered';
+  };
+
+  btnSaveProps.onclick = () => {
+    netState.metered = chkMetered.checked;
+    propModal.classList.remove('active');
+  };
+
+  // Final apply
+  document.getElementById('btn-apply-network-settings').onclick = () => {
+    netState.applied = true;
+    const toast = document.getElementById('settings-status-toast');
+    toast.textContent = 'Network settings applied successfully: HomeFiber-5G (Metered: ' + (netState.metered ? 'Yes' : 'No') + ') and MX Master 3S';
+    toast.classList.add('active');
+  };
+</script>
+
+</body>
+</html>

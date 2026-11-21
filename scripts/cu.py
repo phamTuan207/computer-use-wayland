@@ -1539,7 +1539,7 @@ def desktop_act(env,meta,actions,after_capture=True,observation_path=None,
     except Exception as exc:
         focus_probe_warning=('focus probe failed: '+' '.join(str(exc).split()))[:400]
     # Pre-batch diagnostics: what was true before this batch could touch
-    # anything. Pointer verification is cursor position only — the desktop
+    # anything. Pointer verification is cursor position only; the desktop
     # backend cannot identify the UI element receiving the event. Diagnostics
     # never mask the action error below and never imply the application
     # actually applied the action.
@@ -2322,6 +2322,7 @@ def main():
     act.add_argument('--no-after',action='store_true',help='skip successful final capture; preflight safety and error captures stay enabled')
     act.add_argument('--expected-terminal-window',default='same',help='final guard/capture target: same, none, unbound, or an exact Hyprland address')
     act.add_argument('--expected-terminal-bounds',nargs=4,type=int,help='optional expected x y width height for the terminal window')
+    an=sub.add_parser('act-now',help='overlay on + session attempt with deadline + direct Pointer fallback; first visible action fast');an.add_argument('--actions',required=True,help='JSON path; same batch format as act');an.add_argument('--observation',default=None,help='fresh observation JSON path; captured when omitted');an.add_argument('--screen',default='eDP-2',help='monitor for a fresh capture');an.add_argument('--agent',default='Muse');an.add_argument('--method',default='act-now');an.add_argument('--label',default=None);an.add_argument('--session-deadline-s',type=float,default=20,help='hard deadline for the session attempt')
     obs.add_argument('--verbose',action='store_true');act.add_argument('--verbose',action='store_true')
     b=sub.add_parser('browser');b.add_argument('operation',choices=['start','tabs','observe','act']);b.add_argument('--endpoint',default=None);b.add_argument('--target');b.add_argument('--snapshot');b.add_argument('--actions');b.add_argument('--image',action='store_true')
     b.add_argument('--no-after',action='store_true',help='skip the successful after-snapshot; the final action must be a meaningful assert')
@@ -2343,7 +2344,7 @@ def main():
     cli_sub.add_parser('list',help='list apps from the vendored registry')
     search=cli_sub.add_parser('search',help='search app names, descriptions, and categories');search.add_argument('text')
     info=cli_sub.add_parser('info',help='show install and skill details');info.add_argument('app')
-    run=cli_sub.add_parser('run',help='run one allowlisted harness command');run.add_argument('app');run.add_argument('command_args',nargs=argparse.REMAINDER,help='harness arguments after --')
+    cli_run_parser=cli_sub.add_parser('run',help='run one allowlisted harness command');cli_run_parser.add_argument('app');cli_run_parser.add_argument('command_args',nargs=argparse.REMAINDER,help='harness arguments after --')
     args=parser.parse_args()
     if args.command=='browser' and args.scope is not None:
         if args.operation!='observe':raise ValueError('--scope is only valid for browser observe')
@@ -2501,6 +2502,9 @@ def main():
                 print('session refusal: error='+result['error']+' action=require_reobserve',file=sys.stderr)
             elif result.get('ok') is True or is_completed_capture_error(result,len(actions)):
                 session_policy.complete_requirement(STATE,os.environ.get('CU_SESSION_TOKEN'))
+    elif args.command=='act-now':
+        import first_action
+        return first_action.run(args)
     elif args.command=='a11y':
         check_cancel()
         request={'operation':args.operation,'pid':args.pid,'snapshot':args.snapshot}

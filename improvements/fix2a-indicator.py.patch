@@ -1,0 +1,134 @@
+--- improvements/indicator-original-20261121.py	2026-11-21 10:31:45.096162123 +0000
++++ improvements/indicator-patched-20261121.py	2026-11-21 10:32:06.013161588 +0000
+@@ -6,6 +6,7 @@
+ import re
+ import subprocess
+ import sys
++import time
+ 
+ from gi.repository import Gio, GLib
+ 
+@@ -13,6 +14,17 @@
+ BUS = "org.fcitx.Fcitx5"
+ INTERFACE = "org.fcitx.Fcitx.Controller1"
+ 
++# Council fix 2a (21/11/2026): a pending Super I switch used to be silently
++# dropped on ANY transient dbus error, and the re-apply was lost with it.
++# Pending is now retained until it lands, is superseded by a newer press,
++# or a 30s TTL expires (the observed stall delayed a switch by ~21s).
++# The existing 50ms pending poll does the retrying; no blocking sync loop
++# was added. Failures are logged rate-limited to stderr AND to a file,
++# because the Quickshell stderr sink is unverified.
++PENDING_TTL_SECONDS = 30.0
++LOG_RATE_LIMIT_SECONDS = 5.0
++LOG_PATH = os.path.expanduser("~/.cache/agent-computer-use/indicator-errors.log")
++
+ 
+ def call(bus, method, args=None):
+   # Reading the bar must neither activate a stopped service nor wait indefinitely.
+@@ -81,8 +93,30 @@
+   def __init__(self, bus):
+     self.bus = bus
+     self.pending = ""
++    self.pending_since = 0.0
+     self.last = ""
+     self.entries = {}
++    self._last_log = ("", 0.0)
++
++  def _log(self, message):
++    # Rate-limited failure log: same message at most once per 5s, so a
++    # 3-minute stall does not flood the journal. Always goes to a file
++    # (guaranteed sink) and to stderr (journal if Quickshell forwards it).
++    now = time.monotonic()
++    if message == self._last_log[0] and now - self._last_log[1] < LOG_RATE_LIMIT_SECONDS:
++      return
++    self._last_log = (message, now)
++    line = "%s indicator.py: %s\n" % (time.strftime("%Y-%m-%d %H:%M:%S %z"), message)
++    try:
++      os.makedirs(os.path.dirname(LOG_PATH), exist_ok=True)
++      with open(LOG_PATH, "a") as handle:
++        handle.write(line)
++    except OSError:
++      pass
++    try:
++      print(line, end="", file=sys.stderr, flush=True)
++    except (OSError, ValueError):
++      pass
+ 
+   def select_next(self, step=1):
+     devices = subprocess.run(["hyprctl", "-j", "devices"], check=True, text=True, capture_output=True)
+@@ -101,6 +135,7 @@
+     if following is None:
+       return
+     self.pending = following
++    self.pending_since = time.monotonic()
+     for command in layout_switches(keyboards, index) if index is not None else []:
+       subprocess.run(command, check=True, capture_output=True)
+     self.refresh()
+@@ -108,13 +143,27 @@
+   def refresh(self):
+     state = snapshot(self.bus)
+     methods = state["methods"]
++    if self.pending and time.monotonic() - self.pending_since > PENDING_TTL_SECONDS:
++      # Stale press: the switch never landed within the TTL. Drop it loudly
++      # instead of silently, so a stuck pending cannot flip a later context
++      # (e.g. a password field opened minutes after the press).
++      self._log("pending %r expired after %.0fs, dropping" % (self.pending, PENDING_TTL_SECONDS))
++      self.pending = ""
+     if self.pending not in methods:
+       self.pending = ""
+     if self.pending and state["current"]:
+       # Before the first application gains focus Fcitx has no input context.
+       # Retain the click until it has one, without changing startup defaults.
+       call(self.bus, "SetCurrentIM", GLib.Variant("(s)", (self.pending,)))
+-      state = snapshot(self.bus)
++      try:
++        state = snapshot(self.bus)
++      except GLib.Error:
++        # SetCurrentIM already ran, so the switch may have landed and only
++        # the confirmation read failed. Keep pending: the next poll
++        # re-checks and clears it once the snapshot confirms the landing.
++        # Never drop the press here.
++        self._log("re-snapshot failed after SetCurrentIM, keeping pending=%r" % self.pending)
++        return state
+       if state["current"] == self.pending:
+         self.pending = ""
+     if state["current"]:
+@@ -228,8 +277,11 @@
+       state = indicator.refresh()
+     except GLib.Error:
+       failed = True
+-      indicator.pending = ""
+-      indicator.last = ""
++      # Council fix 2a: a transient dbus error must NOT silently drop the
++      # pending switch or the last-known method. Keep both; the pending
++      # poll below re-attempts refresh() (with backoff, see schedule()).
++      # Only the TTL inside refresh() may drop a stale pending, loudly.
++      indicator._log("refresh failed, keeping pending=%r last=%r" % (indicator.pending, indicator.last))
+       # Keep the configured cadence: a timed-out call is not a configuration
+       # change, and a vanished service is followed by its bus name.
+       state = {"methods": [], "current": "", "name": "", "language": ""}
+@@ -254,7 +306,9 @@
+       GLib.source_remove(timer)
+       timer = 0
+     if indicator.pending:
+-      timer = GLib.timeout_add(50, poll)
++      # Council fix 2a: back off after a failure (2000ms) instead of
++      # hammering a stalled bus every 50ms; healthy retries stay at 50ms.
++      timer = GLib.timeout_add(2000 if failed else 50, poll)
+     elif polling:
+       timer = GLib.timeout_add(500, poll)
+     elif failed and present:
+@@ -299,7 +353,11 @@
+         try:
+           indicator.select_next(-1 if line == "cycle back" else 1)
+         except (GLib.Error, OSError, ValueError, subprocess.CalledProcessError):
+-          indicator.pending = ""
++          # Council fix 2a: do not drop the pending switch when select_next
++          # fails after setting it (e.g. its refresh() hit a transient dbus
++          # error). The pending poll re-attempts it; only the TTL may drop
++          # a stale pending, loudly, inside refresh().
++          indicator._log("select_next failed, keeping pending=%r" % indicator.pending)
+         refresh()
+     schedule()
+     return GLib.SOURCE_CONTINUE

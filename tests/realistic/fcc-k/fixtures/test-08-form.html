@@ -9,34 +9,59 @@
   .err{color:#a00;margin:2px 0 8px;}
   .ok{color:#060;}
   .status{margin-top:10px;font-family:monospace;white-space:pre-wrap;}
+  button{margin:4px 4px 4px 0;padding:6px 10px;cursor:pointer;}
 </style>
 </head>
 <body>
 <h2>Registration form fixture (offline)</h2>
 <div class="field"><label>Full name</label><input id="fullName"></div>
 <div class="field"><label>Email</label><input id="email"></div>
-<div class="field"><label>Password</label><input id="pw"></div>
-<div class="field"><label>Confirm password</label><input id="pw2"></div>
+<div class="field"><label>Password</label><input id="pw" type="password"></div>
+<div class="field"><label>Confirm password</label><input id="pw2" type="password"></div>
 <button id="submit">Submit</button>
 <div id="errors" class="err"></div>
 <div id="ok" class="ok" style="display:none;"></div>
 <div id="status" class="status"></div>
 <script>
-let errors=[];
+document.getElementById('submit').onclick=()=>{
+  const errs=[];
+  const name=document.getElementById('fullName').value.trim();
+  const email=document.getElementById('email').value.trim();
+  const pw=document.getElementById('pw').value;
+  const pw2=document.getElementById('pw2').value;
+  if(!name)errs.push('Full name is required');
+  if(!email)errs.push('Email is required');
+  else if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email))errs.push('Email format is invalid');
+  if(pw.length<8)errs.push('Password must be at least 8 characters');
+  if(pw2!==pw)errs.push('Passwords do not match');
+  const errDiv=document.getElementById('errors');
+  const okDiv=document.getElementById('ok');
+  if(errs.length){
+    errDiv.innerHTML=errs.map(e=>'<div class="err">'+e+'</div>').join('');
+    okDiv.style.display='none';okDiv.textContent='';
+  } else {
+    errDiv.innerHTML='';
+    okDiv.style.display='block';okDiv.textContent='Registration successful.';
+  }
+};
 window.__fcckVerify=function(){
+  // REAL DOM assertion: reads only the error list, the success message, and
+  // the field values the agent actually produced. Never fills or submits.
   const failures=[];
-  // fill valid values then submit
-  document.getElementById('fullName').value='Pham Tuan';
-  document.getElementById('email').value='pham@example.com';
-  document.getElementById('pw').value='longenough1';
-  document.getElementById('pw2').value='longenough1';
-  document.getElementById('submit').click();
-  errors=[];
-  const ok=errors.length===0 && document.getElementById('fullName').value==='Pham Tuan';
-  if(errors.length!==0)failures.push('form invalid');
-  if(!ok)failures.push('success state wrong');
-  const state={errors,fullName:'Pham Tuan',email:'pham@example.com'};
-  const out={passed:failures.length===0,failures,score:failures.length===0?1:0,state};
+  const errText=document.getElementById('errors').textContent.trim();
+  if(errText)failures.push('errors remain: '+errText);
+  const okDiv=document.getElementById('ok');
+  if(okDiv.style.display==='none'||!okDiv.textContent.includes('successful'))failures.push('success message missing');
+  const name=document.getElementById('fullName').value.trim();
+  const email=document.getElementById('email').value.trim();
+  const pw=document.getElementById('pw').value;
+  const pw2=document.getElementById('pw2').value;
+  if(!name)failures.push('name empty');
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email))failures.push('email invalid: '+email);
+  if(pw.length<8)failures.push('password too short');
+  if(pw2!==pw)failures.push('passwords do not match');
+  const state={name,email,pwLen:pw.length,match:pw===pw2,errors:errText,success:okDiv.textContent.trim()};
+  const out={passed:failures.length===0,failures,score:failures.length===0?1:0,state,note:'DOM-only form check'};
   document.getElementById('status').textContent=JSON.stringify(out,null,2);
   return out;
 };

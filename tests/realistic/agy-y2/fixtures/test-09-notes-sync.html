@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Cloud Notes Sync App</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background: #0f172a; color: #f8fafc; padding: 20px; }
+    .app-card { max-width: 1000px; margin: 0 auto; background: #1e293b; border-radius: 8px; border: 1px solid #334155; overflow: hidden; }
+    header { background: #0f172a; padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; }
+    h1 { font-size: 18px; color: #38bdf8; font-weight: 600; }
+    .stats-bar { display: flex; gap: 16px; font-size: 13px; align-items: center; }
+    .status-badge { background: #065f46; color: #6ee7b7; padding: 3px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; }
+    .main-body { display: flex; min-height: 460px; }
+    .notes-list-col { width: 280px; background: #0b1120; border-right: 1px solid #334155; display: flex; flex-direction: column; }
+    .list-header { padding: 10px 14px; background: #0f172a; border-bottom: 1px solid #334155; display: flex; justify-content: space-between; align-items: center; }
+    .note-item { padding: 12px 14px; border-bottom: 1px solid #1e293b; cursor: pointer; transition: background 0.1s; }
+    .note-item:hover, .note-item.active { background: #1e293b; border-left: 3px solid #38bdf8; }
+    .note-item-title { font-weight: 600; font-size: 13px; color: #f8fafc; margin-bottom: 4px; }
+    .note-item-preview { font-size: 11px; color: #94a3b8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .editor-col { flex: 1; display: flex; flex-direction: column; background: #1e293b; }
+    .editor-toolbar { padding: 10px 16px; background: #0f172a; border-bottom: 1px solid #334155; display: flex; gap: 10px; align-items: center; }
+    .device-tabs { display: flex; background: #1e293b; border-radius: 4px; padding: 2px; border: 1px solid #334155; }
+    .device-tab { padding: 4px 10px; font-size: 12px; cursor: pointer; border-radius: 3px; color: #94a3b8; }
+    .device-tab.active { background: #0284c7; color: #ffffff; font-weight: bold; }
+    button { background: #334155; color: #f8fafc; border: 1px solid #475569; padding: 6px 12px; border-radius: 4px; font-size: 12px; cursor: pointer; }
+    button:hover { background: #475569; }
+    button.btn-primary { background: #0284c7; border-color: #0369a1; }
+    button.btn-primary:hover { background: #0369a1; }
+    button.btn-danger { background: #dc2626; border-color: #b91c1c; }
+    .editor-inputs { padding: 16px; display: flex; flex-direction: column; gap: 12px; flex: 1; }
+    .editor-inputs input { background: #0f172a; border: 1px solid #334155; padding: 10px 12px; color: #f8fafc; font-size: 15px; font-weight: bold; border-radius: 4px; outline: none; }
+    .editor-inputs textarea { flex: 1; background: #0f172a; border: 1px solid #334155; padding: 12px; color: #f8fafc; font-size: 13px; border-radius: 4px; outline: none; resize: none; min-height: 240px; }
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; justify-content: center; align-items: center; z-index: 100; }
+    .modal-overlay.active { display: flex; }
+    .modal-box { background: #1e293b; border: 1px solid #475569; border-radius: 6px; padding: 20px; width: 440px; }
+    .modal-box h3 { font-size: 16px; margin-bottom: 12px; color: #f87171; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+    .toast-summary { display: none; background: #064e3b; color: #6ee7b7; padding: 10px 16px; font-size: 13px; font-weight: 500; border-top: 1px solid #047857; text-align: center; }
+    .toast-summary.active { display: block; }
+  </style>
+</head>
+<body>
+
+<div class="app-card">
+  <header>
+    <h1>SyncNotes Pro</h1>
+    <div class="stats-bar">
+      <div>Total Notes: <strong id="notes-total-counter">2</strong></div>
+      <div>Sync: <span id="sync-status-indicator" class="status-badge">Synchronized</span></div>
+    </div>
+  </header>
+
+  <div class="main-body">
+    <!-- Notes Sidebar -->
+    <div class="notes-list-col">
+      <div class="list-header">
+        <span style="font-size: 12px; font-weight: bold; color: #94a3b8;">ALL NOTES</span>
+        <button id="btn-create-new-note" class="btn-primary" style="padding: 2px 8px; font-size: 11px;">+ New</button>
+      </div>
+      <div id="notes-list-container" style="flex: 1; overflow-y: auto;">
+        <div class="note-item" id="note-item-personal" data-id="personal">
+          <div class="note-item-title" id="note-item-title-personal">Personal Tasks</div>
+          <div class="note-item-preview">Gym, Laundry, Grocery</div>
+        </div>
+        <div class="note-item" id="note-item-archived-draft" data-id="archived">
+          <div class="note-item-title" id="note-item-title-archived">Archived Draft</div>
+          <div class="note-item-preview">Old project notes 2025</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Editor Column -->
+    <div class="editor-col">
+      <div class="editor-toolbar">
+        <div class="device-tabs">
+          <div class="device-tab active" id="tab-device-a">Device A (Laptop)</div>
+          <div class="device-tab" id="tab-device-b">Device B (Phone)</div>
+        </div>
+        <span id="device-a-status" style="font-size: 11px; color: #94a3b8;">Synced</span>
+        <span id="device-b-status" style="font-size: 11px; color: #94a3b8; display: none;">Synced</span>
+        <div style="margin-left: auto; display: flex; gap: 6px;">
+          <button id="btn-stage-device-a">Stage Laptop</button>
+          <button id="btn-stage-device-b" style="display: none;">Stage Phone</button>
+          <button id="btn-trigger-cloud-sync" class="btn-primary">Sync Cloud</button>
+          <button id="btn-save-note-edit">Save Edit</button>
+          <button id="btn-delete-active-note" class="btn-danger">Delete</button>
+          <button id="btn-finalize-sync-report" class="btn-primary">Finalize</button>
+        </div>
+      </div>
+
+      <div class="editor-inputs">
+        <input type="text" id="note-editor-title" placeholder="Note title" value="Personal Tasks">
+        <textarea id="note-editor-body" placeholder="Write your note here...">Gym, Laundry, Grocery</textarea>
+      </div>
+    </div>
+  </div>
+
+  <div id="sync-summary-toast" class="toast-summary"></div>
+</div>
+
+<!-- Conflict Resolution Modal -->
+<div id="conflict-resolution-modal" class="modal-overlay">
+  <div class="modal-box">
+    <h3>Sync Conflict Detected</h3>
+    <div id="conflict-detected-banner" style="font-size: 13px; color: #e2e8f0; margin-bottom: 12px;">
+      Sync conflict detected for note Shopping between Device A and Device B.
+    </div>
+    <p style="font-size: 12px; color: #94a3b8;">Choose which version to preserve, or keep both copies side by side.</p>
+    <div class="modal-actions">
+      <button id="btn-resolve-laptop">Overwrite with Laptop</button>
+      <button id="btn-resolve-keep-both" class="btn-primary">Keep Both</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const notesState = {
+    notes: {
+      personal: { id: 'personal', title: 'Personal Tasks', body: 'Gym, Laundry, Grocery' },
+      archived: { id: 'archived', title: 'Archived Draft', body: 'Old project notes 2025' }
+    },
+    activeId: 'personal',
+    currentDevice: 'A',
+    deviceABuffer: null,
+    deviceBBuffer: null
+  };
+
+  const titleInput = document.getElementById('note-editor-title');
+  const bodyInput = document.getElementById('note-editor-body');
+  const totalCounter = document.getElementById('notes-total-counter');
+  const listContainer = document.getElementById('notes-list-container');
+
+  function renderList() {
+    listContainer.innerHTML = '';
+    const keys = Object.keys(notesState.notes);
+    totalCounter.textContent = String(keys.length);
+    keys.forEach(k => {
+      const n = notesState.notes[k];
+      const div = document.createElement('div');
+      div.className = 'note-item' + (k === notesState.activeId ? ' active' : '');
+      div.id = 'note-item-' + (k === 'shopping_conflict' ? 'conflict-copy' : (k === 'archived' ? 'archived-draft' : k));
+      div.dataset.id = k;
+
+      const t = document.createElement('div');
+      t.className = 'note-item-title';
+      t.id = 'note-item-title-' + (k === 'shopping' ? 'shopping' : (k === 'shopping_conflict' ? 'conflict' : k));
+      t.textContent = n.title;
+
+      const p = document.createElement('div');
+      p.className = 'note-item-preview';
+      p.textContent = n.body.substring(0, 30);
+
+      div.appendChild(t);
+      div.appendChild(p);
+
+      div.onclick = () => {
+        notesState.activeId = k;
+        titleInput.value = n.title;
+        bodyInput.value = n.body;
+        renderList();
+      };
+      listContainer.appendChild(div);
+    });
+  }
+
+  document.getElementById('btn-create-new-note').onclick = () => {
+    const id = 'note_' + Date.now();
+    notesState.notes[id] = { id, title: 'Untitled Note', body: '' };
+    notesState.activeId = id;
+    titleInput.value = 'Untitled Note';
+    bodyInput.value = '';
+    renderList();
+  };
+
+  document.getElementById('btn-save-note-edit').onclick = () => {
+    const active = notesState.notes[notesState.activeId];
+    if (active) {
+      active.title = titleInput.value.trim();
+      active.body = bodyInput.value.trim();
+      if (active.title === 'Shopping' && notesState.activeId !== 'shopping') {
+        // rename internal key if shopping
+        delete notesState.notes[notesState.activeId];
+        active.id = 'shopping';
+        notesState.notes['shopping'] = active;
+        notesState.activeId = 'shopping';
+      }
+      renderList();
+    }
+  };
+
+  // Device tabs
+  const tabA = document.getElementById('tab-device-a');
+  const tabB = document.getElementById('tab-device-b');
+  const statusA = document.getElementById('device-a-status');
+  const statusB = document.getElementById('device-b-status');
+  const btnStageA = document.getElementById('btn-stage-device-a');
+  const btnStageB = document.getElementById('btn-stage-device-b');
+
+  tabA.onclick = () => {
+    notesState.currentDevice = 'A';
+    tabA.classList.add('active');
+    tabB.classList.remove('active');
+    statusA.style.display = 'inline';
+    statusB.style.display = 'none';
+    btnStageA.style.display = 'inline-block';
+    btnStageB.style.display = 'none';
+  };
+
+  tabB.onclick = () => {
+    notesState.currentDevice = 'B';
+    tabB.classList.add('active');
+    tabA.classList.remove('active');
+    statusB.style.display = 'inline';
+    statusA.style.display = 'none';
+    btnStageB.style.display = 'inline-block';
+    btnStageA.style.display = 'none';
+  };
+
+  btnStageA.onclick = () => {
+    notesState.deviceABuffer = bodyInput.value;
+    statusA.textContent = 'Draft ready: Laptop';
+  };
+
+  btnStageB.onclick = () => {
+    notesState.deviceBBuffer = bodyInput.value;
+    statusB.textContent = 'Draft ready: Phone';
+  };
+
+  const modal = document.getElementById('conflict-resolution-modal');
+  document.getElementById('btn-trigger-cloud-sync').onclick = () => {
+    if (notesState.deviceABuffer && notesState.deviceBBuffer) {
+      modal.classList.add('active');
+    }
+  };
+
+  document.getElementById('btn-resolve-keep-both').onclick = () => {
+    modal.classList.remove('active');
+    modal.classList.add('closed');
+    // Save version A into shopping
+    notesState.notes['shopping'] = {
+      id: 'shopping',
+      title: 'Shopping',
+      body: notesState.deviceABuffer
+    };
+    // Save version B into shopping_conflict
+    notesState.notes['shopping_conflict'] = {
+      id: 'shopping_conflict',
+      title: 'Shopping (Conflict Copy)',
+      body: notesState.deviceBBuffer
+    };
+    renderList();
+  };
+
+  document.getElementById('btn-delete-active-note').onclick = () => {
+    if (notesState.notes[notesState.activeId]) {
+      delete notesState.notes[notesState.activeId];
+      const remaining = Object.keys(notesState.notes);
+      notesState.activeId = remaining[0] || null;
+      if (notesState.activeId) {
+        titleInput.value = notesState.notes[notesState.activeId].title;
+        bodyInput.value = notesState.notes[notesState.activeId].body;
+      }
+      renderList();
+    }
+  };
+
+  document.getElementById('btn-finalize-sync-report').onclick = () => {
+    const total = Object.keys(notesState.notes).length;
+    const toast = document.getElementById('sync-summary-toast');
+    toast.textContent = 'Sync completed: ' + total + ' notes active, Shopping and Shopping - Phone Copy verified';
+    toast.classList.add('active');
+  };
+
+  renderList();
+</script>
+
+</body>
+</html>

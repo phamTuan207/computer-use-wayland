@@ -14,6 +14,11 @@ counterLight 0.35; edgeLight 1; bevelPeak 0; innerShadow 0.07; legibility
 0.6; Fresnel 0.10; lit bevel 3 dp; light (-0.35, -0.94); transparent white
 tint; no pre-blur; no mirror.
 
+The active local profile later changed blur_strength from 0.0 to 0.15 after
+an explicit user order on 2026-11-21. The profile passes this material value
+to Hyprglass. Tests below pin that current source value while checking that
+the Legacy shader branch still uses sharp RGB and detail samples.
+
 Documented deviation from true GlassStyle.Chrome at f5e1fb56:
 
     Parameter       Task value       True Chrome value
@@ -185,7 +190,7 @@ class ShayxoPortContract(unittest.TestCase):
                      'specular_strength', 'bevel_size'):
             self.assertIsNotNone(lua_value(name), 'active Lua profile missing ' + name)
 
-    def test_selected_task_values_are_bound(self):
+    def test_selected_material_values_are_bound(self):
         self.assertEqual(constant('SHAYXO_REFRACT_BAND_DP'), 14.0)
         self.assertEqual(constant('SHAYXO_REFRACT_DEPTH_DP'), 9.0)
         self.assertEqual(constant('SHAYXO_IOR'), 1.5)
@@ -198,7 +203,7 @@ class ShayxoPortContract(unittest.TestCase):
         self.assertEqual(lua_value('specular_strength'), 0.55)
         self.assertEqual(lua_value('bevel_size'), 3.0)
 
-    def test_transparent_tint_no_preblur_and_no_mirror(self):
+    def test_transparent_tint_small_blur_and_no_mirror(self):
         source = PRESET.read_text()
         tint = re.search(r'\btint_color\s*=\s*(0[xX][0-9A-Fa-f]+)', source)
         self.assertIsNotNone(tint, 'active profile is missing tint_color')
@@ -264,7 +269,20 @@ class ShayxoPortContract(unittest.TestCase):
         self.assertIn('vec3 sampleSharp(vec2 wuv)', self.shader)
         self.assertNotIn('sampleBlurred(uvG)', self.shader)
 
+    def test_sharp_rgb_and_detail_samples(self):
+        self.assertEqual(lua_value('blur_strength'), 0.15)
+        self.assertIn('vec3 sharp = vec3(sampleSharp(uvR).r, sampleSharp(uvG).g, sampleSharp(uvB).b);',
+                      self.shader)
+        self.assertIn('vec3 detailCopy = sampleSharp(uvG);', self.shader)
+        self.assertIn('vec3 sampleSharp(vec2 wuv)', self.shader)
+        self.assertNotIn('sampleBlurred(uvG)', self.shader)
+
     def test_legacy_pad_is_12_75_pixels(self):
+        depth_px = constant('SHAYXO_REFRACT_DEPTH_DP')
+        pad_px = depth_px * 1.4 + max(lua_value('blur_strength'), 0.0)
+        self.assertAlmostEqual(pad_px, 12.75, places=12)
+
+    def test_legacy_pad_includes_current_profile_blur(self):
         depth_px = constant('SHAYXO_REFRACT_DEPTH_DP')
         pad_px = depth_px * 1.4 + max(lua_value('blur_strength'), 0.0)
         self.assertAlmostEqual(pad_px, 12.75, places=12)
@@ -346,6 +364,45 @@ class ShayxoPortContract(unittest.TestCase):
         # Shayxo radius is uBlur * mat * e. The source default 1.5 dp shows
         # that radius grows with e; change 4.1 sets the task value to 0.15,
         # so the radii below are small but nonzero.
+        sample_radii = [1.5 * 1.0 * e for e in (0.0, 0.25, 0.5, 1.0)]
+        self.assertEqual(sample_radii, [0.0, 0.375, 0.75, 1.5])
+        self.assertEqual(sorted(sample_radii), sample_radii)
+        self.assertEqual([blur * 1.0 * e for e in (0.0, 0.5, 1.0)],
+                         [0.0, 0.075, 0.15])
+        for e, expected in ((0.0, 1.0), (0.5, 0.25), (1.0, 0.0)):
+            with self.subTest(e=e):
+                self.assertAlmostEqual((1.0 - e) ** 2, expected, places=12)
+
+        marker = ('vec3 sharp = vec3(sampleSharp(uvR).r, '
+                  'sampleSharp(uvG).g, sampleSharp(uvB).b);')
+        self.assertIn(marker, self.shader)
+        marker_at = self.shader.index(marker)
+        branch_start = self.shader.rfind('#else', 0, marker_at)
+        branch_end = self.shader.find('float bevelPx =', marker_at)
+        self.assertGreaterEqual(branch_start, 0, 'Legacy sharp sample branch is missing')
+        self.assertGreater(branch_end, marker_at, 'Legacy sharp sample branch has no end marker')
+        branch = self.shader[branch_start:branch_end]
+        for forbidden in ('sampleBlurred', 'blurredAt', 'detailAt', 'frostTex'):
+            with self.subTest(forbidden=forbidden):
+                self.assertNotIn(forbidden, branch)
+        self.assertNotRegex(branch, r'\b(?:for|while)\s*\(')
+        push_at = self.shader.index('vec2 push = n * bend * lens;')
+        offset_at = self.shader.index('vec2 offsetG = push * invFullSize;')
+        uv_at = branch.index('vec2 uvG = uv + offsetG;')
+        sample_at = branch.index('sampleSharp(uvG).g')
+        self.assertLess(push_at, offset_at)
+        self.assertLess(offset_at, marker_at)
+        self.assertLess(uv_at, sample_at)
+        self.assertIn('float split = chromaticAberration * bend;', self.shader)
+        self.assertIn('vec2 pushR = push * (1.0 - split);', self.shader)
+        self.assertIn('vec2 pushB = push * (1.0 + split);', self.shader)
+
+
+    def test_profile_blur_and_after_push_sharp_sample_order(self):
+        blur = lua_value('blur_strength')
+        self.assertEqual(blur, 0.15)
+        # The current material value stays separate from the Legacy branch's
+        # direct sharp RGB and detail samples.
         sample_radii = [1.5 * 1.0 * e for e in (0.0, 0.25, 0.5, 1.0)]
         self.assertEqual(sample_radii, [0.0, 0.375, 0.75, 1.5])
         self.assertEqual(sorted(sample_radii), sample_radii)
@@ -470,7 +527,7 @@ SHADER_LITERAL_CITATIONS = {
 }
 
 PROFILE_VALUE_CITATIONS = {
-    'blur_strength': (0.15, 'change 4.1 (commit b2afcd1): fine blur 0.15'),
+    'blur_strength': (0.15, 'change 4.1 (commit b2afcd1): fine blur 0.15; active profile comment: 2026-11-21 user order'),
     'chromatic_aberration': (0.07, 'task value list: dispersion 0.07'),
     'specular_strength': (0.55, 'task value list: specular 0.55'),
     'fresnel_strength': (0.10, 'task value list: Fresnel 0.10'),
@@ -501,7 +558,7 @@ class ShayxoNoInventedConstants(unittest.TestCase):
                     match = pattern.search(line.split('--', 1)[0])
                     if match and float(match.group(1)) != expected:
                         findings.append(
-                            'Lua line {}: {}={} is untraced; task value {} ({})'.format(
+                            'Lua line {}: {}={} is untraced; source value {} ({})'.format(
                                 line_number, name, match.group(1), expected, citation
                             )
                         )

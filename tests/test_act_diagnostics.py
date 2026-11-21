@@ -330,16 +330,19 @@ class ActDiagnostics(unittest.TestCase):
 
     def test_preflight_refusal_raises_before_any_diagnostics_query(self):
         meta = base_meta()
-        meta['capture_started_monotonic']-=91
-        meta['capture_started_wall']-=91
-        meta['created']-=91
+        age = cu.OBSERVATION_MAX_AGE + 1
+        meta['capture_started_monotonic']-=age
+        meta['capture_started_wall']-=age
+        meta['created']-=age
         with ExitStack() as stack:
             stack.enter_context(patch.object(cu, 'STATE', self.tmp))
             stack.enter_context(patch.object(cu, 'check_cancel'))
             stack.enter_context(patch.object(cu, 'focus'))
             stack.enter_context(patch.object(cu, 'Pointer'))
             hypr = stack.enter_context(patch.object(cu, 'hypr'))
-            with self.assertRaisesRegex(cu.PreflightRefusal, 'observation older than 90s'):
+            with self.assertRaisesRegex(
+                    cu.PreflightRefusal,
+                    f'observation older than {cu.OBSERVATION_MAX_AGE}s'):
                 cu.desktop_act({}, meta, [{'type': 'wait', 'ms': 0}])
             hypr.assert_not_called()
 

@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Corporate Webmail Client</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background: #0f172a; color: #f8fafc; padding: 20px; }
+    .app-shell { max-width: 1100px; margin: 0 auto; background: #1e293b; border-radius: 8px; border: 1px solid #334155; overflow: hidden; display: grid; grid-template-columns: 240px 1fr; min-height: 580px; }
+    .sidebar { background: #0f172a; border-right: 1px solid #334155; padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+    .sidebar h2 { font-size: 16px; color: #38bdf8; font-weight: 600; margin-bottom: 8px; }
+    .btn-compose { background: #0284c7; color: #f8fafc; border: none; padding: 10px 16px; border-radius: 6px; font-weight: 600; font-size: 14px; cursor: pointer; width: 100%; }
+    .btn-compose:hover { background: #0369a1; }
+    .folder-list { list-style: none; display: flex; flex-direction: column; gap: 4px; }
+    .folder-item { padding: 10px 12px; border-radius: 6px; font-size: 13px; font-weight: 500; color: #cbd5e1; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+    .folder-item.active { background: #1e293b; color: #38bdf8; font-weight: 600; }
+    .badge { background: #334155; color: #f8fafc; padding: 2px 8px; border-radius: 9999px; font-size: 11px; }
+    .main-content { padding: 24px; position: relative; }
+    .toast-alert { display: none; padding: 12px 18px; background: #065f46; color: #a7f3d0; border-radius: 6px; font-size: 13px; font-weight: 500; margin-bottom: 16px; }
+    .toast-alert.visible { display: block; }
+    .view-header { font-size: 18px; font-weight: 600; margin-bottom: 16px; border-bottom: 1px solid #334155; padding-bottom: 8px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #334155; }
+    th { color: #94a3b8; font-weight: 500; }
+    .compose-pane { position: absolute; inset: 24px; background: #1e293b; border: 1px solid #475569; border-radius: 8px; padding: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.7); display: none; flex-direction: column; gap: 12px; z-index: 50; }
+    .compose-pane.open { display: flex; }
+    .compose-pane.hidden { display: none; }
+    .compose-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; padding-bottom: 10px; }
+    .compose-row { display: flex; align-items: center; gap: 12px; font-size: 13px; }
+    .compose-row label { width: 60px; color: #94a3b8; font-weight: 500; }
+    .compose-row input { flex: 1; background: #0f172a; border: 1px solid #334155; padding: 8px 12px; color: #f8fafc; border-radius: 4px; font-size: 13px; outline: none; }
+    .compose-row textarea { flex: 1; background: #0f172a; border: 1px solid #334155; padding: 10px 12px; color: #f8fafc; border-radius: 4px; font-size: 13px; height: 160px; resize: none; outline: none; font-family: inherit; }
+    .attachments-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; background: #0f172a; padding: 8px 12px; border-radius: 4px; border: 1px solid #334155; min-height: 42px; }
+    .chip { background: #334155; padding: 4px 10px; border-radius: 4px; font-size: 12px; display: inline-flex; align-items: center; gap: 8px; }
+    .chip button { background: none; border: none; color: #f87171; cursor: pointer; font-size: 14px; font-weight: bold; }
+    .compose-actions { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #334155; padding-top: 12px; }
+    button { background: #334155; color: #f8fafc; border: 1px solid #475569; padding: 6px 14px; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 500; }
+    button:hover { background: #475569; }
+    button.btn-primary { background: #0284c7; border-color: #0369a1; }
+    button.btn-primary:hover { background: #0369a1; }
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; justify-content: center; align-items: center; z-index: 100; }
+    .modal-overlay.active { display: flex; }
+    .modal-card { background: #1e293b; border: 1px solid #475569; border-radius: 8px; padding: 20px; width: 380px; }
+    .modal-card h3 { font-size: 15px; margin-bottom: 12px; }
+    .file-select-item { padding: 8px 12px; background: #0f172a; border: 1px solid #334155; border-radius: 4px; margin-bottom: 8px; cursor: pointer; font-size: 13px; }
+    .file-select-item.selected { border-color: #38bdf8; background: #1e293b; }
+  </style>
+</head>
+<body>
+
+<div class="app-shell">
+  <div class="sidebar">
+    <h2>Webmail Client</h2>
+    <button id="btn-compose-mail" class="btn-compose">Compose</button>
+
+    <ul class="folder-list">
+      <li id="nav-folder-inbox" class="folder-item">
+        <span>Inbox</span>
+        <span class="badge">4</span>
+      </li>
+      <li id="nav-folder-drafts" class="folder-item">
+        <span>Drafts</span>
+        <span id="drafts-folder-counter" class="badge">0</span>
+      </li>
+      <li id="nav-folder-sent" class="folder-item">
+        <span>Sent</span>
+        <span id="sent-folder-counter" class="badge">12</span>
+      </li>
+    </ul>
+  </div>
+
+  <div class="main-content">
+    <div id="toast-alert" class="toast-alert"></div>
+
+    <div id="view-inbox" class="folder-view">
+      <div class="view-header">Inbox Messages</div>
+      <p style="color: #94a3b8; font-size: 13px;">4 messages in inbox.</p>
+    </div>
+
+    <div id="view-drafts" class="folder-view" style="display: none;">
+      <div class="view-header">Draft Messages</div>
+      <table id="drafts-table">
+        <tbody id="drafts-table-body">
+          <tr id="draft-entry-q4" style="cursor: pointer; display: none;">
+            <td style="font-weight: 600;">team@example.com</td>
+            <td>Q4 report</td>
+            <td style="color: #94a3b8;">Draft</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div id="view-sent" class="folder-view" style="display: none;">
+      <div class="view-header">Sent Messages</div>
+      <table id="sent-table">
+        <tbody id="sent-table-body">
+          <tr id="sent-row-1" style="display: none;">
+            <td style="font-weight: 600;">team@example.com</td>
+            <td>Q4 report</td>
+            <td style="color: #6ee7b7;">Sent (1 attachment)</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Compose Pane -->
+    <div id="compose-pane" class="compose-pane">
+      <div class="compose-header">
+        <span style="font-weight: 600; font-size: 14px;">New Message</span>
+        <button id="btn-close-composer">X</button>
+      </div>
+
+      <div class="compose-row">
+        <label for="input-recipient-to">To:</label>
+        <input type="text" id="input-recipient-to" placeholder="recipient@example.com">
+        <button id="btn-add-cc">Add CC</button>
+      </div>
+
+      <div id="cc-group" class="compose-row" style="display: none;">
+        <label for="input-recipient-cc">CC:</label>
+        <input type="text" id="input-recipient-cc" placeholder="cc@example.com">
+      </div>
+
+      <div class="compose-row">
+        <label for="input-mail-subject">Subject:</label>
+        <input type="text" id="input-mail-subject" placeholder="Subject">
+      </div>
+
+      <div class="compose-row" style="align-items: flex-start;">
+        <label for="input-mail-body">Body:</label>
+        <textarea id="input-mail-body" placeholder="Write message..."></textarea>
+      </div>
+
+      <div class="attachments-bar">
+        <button id="btn-open-attachment-picker">Attach File</button>
+        <span style="font-size: 12px; color: #94a3b8;">Attachments (<span id="attachment-counter">0</span>):</span>
+        <div id="attached-files-list" style="display: inline-flex; gap: 6px;"></div>
+      </div>
+
+      <div class="compose-actions">
+        <button id="btn-save-draft-mail">Save Draft</button>
+        <button id="btn-dispatch-send" class="btn-primary">Send Email</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Attachment Picker Modal -->
+<div id="attachment-picker-modal" class="modal-overlay">
+  <div class="modal-card">
+    <h3>Select Attachment</h3>
+    <div id="file-option-report-pdf" class="file-select-item">
+      <div style="font-weight: 600;">report.pdf</div>
+      <div style="font-size: 11px; color: #94a3b8;">PDF Document (4.2 MB)</div>
+    </div>
+    <div id="file-option-notes-txt" class="file-select-item">
+      <div style="font-weight: 600;">notes.txt</div>
+      <div style="font-size: 11px; color: #94a3b8;">Text Document (12 KB)</div>
+    </div>
+    <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px;">
+      <button id="btn-cancel-picker">Cancel</button>
+      <button id="btn-confirm-attach-file" class="btn-primary">Attach</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const mailState = {
+    sentCount: 12,
+    draftsCount: 0,
+    hasDraft: false,
+    selectedFileToAttach: null,
+    attachments: [],
+    emailSent: false
+  };
+
+  const navInbox = document.getElementById('nav-folder-inbox');
+  const navDrafts = document.getElementById('nav-folder-drafts');
+  const navSent = document.getElementById('nav-folder-sent');
+
+  const viewInbox = document.getElementById('view-inbox');
+  const viewDrafts = document.getElementById('view-drafts');
+  const viewSent = document.getElementById('view-sent');
+
+  const composePane = document.getElementById('compose-pane');
+  const draftsCounter = document.getElementById('drafts-folder-counter');
+  const sentCounter = document.getElementById('sent-folder-counter');
+
+  function showFolder(folderView, navItem) {
+    [viewInbox, viewDrafts, viewSent].forEach(v => v.style.display = 'none');
+    [navInbox, navDrafts, navSent].forEach(n => n.classList.remove('active'));
+    folderView.style.display = 'block';
+    navItem.classList.add('active');
+  }
+
+  navInbox.onclick = () => showFolder(viewInbox, navInbox);
+  navDrafts.onclick = () => showFolder(viewDrafts, navDrafts);
+  navSent.onclick = () => showFolder(viewSent, navSent);
+
+  document.getElementById('btn-compose-mail').onclick = () => {
+    composePane.classList.remove('hidden');
+    composePane.classList.add('open');
+  };
+
+  document.getElementById('btn-close-composer').onclick = () => {
+    composePane.classList.remove('open');
+    composePane.classList.add('hidden');
+  };
+
+  document.getElementById('btn-add-cc').onclick = () => {
+    document.getElementById('cc-group').style.display = 'flex';
+  };
+
+  // Attachments picker
+  const modalPicker = document.getElementById('attachment-picker-modal');
+  const optionPdf = document.getElementById('file-option-report-pdf');
+  const optionTxt = document.getElementById('file-option-notes-txt');
+  const attachCounter = document.getElementById('attachment-counter');
+  const attachedList = document.getElementById('attached-files-list');
+
+  document.getElementById('btn-open-attachment-picker').onclick = () => {
+    modalPicker.classList.add('active');
+  };
+
+  document.getElementById('btn-cancel-picker').onclick = () => {
+    modalPicker.classList.remove('active');
+  };
+
+  optionPdf.onclick = () => {
+    optionPdf.classList.add('selected');
+    optionTxt.classList.remove('selected');
+    mailState.selectedFileToAttach = 'report.pdf';
+  };
+
+  optionTxt.onclick = () => {
+    optionTxt.classList.add('selected');
+    optionPdf.classList.remove('selected');
+    mailState.selectedFileToAttach = 'notes.txt';
+  };
+
+  function renderAttachments() {
+    attachedList.innerHTML = '';
+    attachCounter.textContent = String(mailState.attachments.length);
+    mailState.attachments.forEach(name => {
+      const chip = document.createElement('div');
+      chip.className = 'chip';
+      chip.id = 'attachment-chip-report';
+      chip.innerHTML = '<span>' + name + '</span><button id="btn-remove-attachment-report">&times;</button>';
+      chip.querySelector('#btn-remove-attachment-report').onclick = () => {
+        mailState.attachments = mailState.attachments.filter(f => f !== name);
+        renderAttachments();
+      };
+      attachedList.appendChild(chip);
+    });
+  }
+
+  document.getElementById('btn-confirm-attach-file').onclick = () => {
+    if (mailState.selectedFileToAttach && !mailState.attachments.includes(mailState.selectedFileToAttach)) {
+      mailState.attachments.push(mailState.selectedFileToAttach);
+      renderAttachments();
+    }
+    modalPicker.classList.remove('active');
+  };
+
+  // Save Draft
+  document.getElementById('btn-save-draft-mail').onclick = () => {
+    mailState.hasDraft = true;
+    mailState.draftsCount = 1;
+    draftsCounter.textContent = '1';
+    document.getElementById('draft-entry-q4').style.display = 'table-row';
+  };
+
+  // Reopen Draft
+  document.getElementById('draft-entry-q4').onclick = () => {
+    composePane.classList.remove('hidden');
+    composePane.classList.add('open');
+  };
+
+  // Dispatch Send
+  document.getElementById('btn-dispatch-send').onclick = () => {
+    mailState.emailSent = true;
+    mailState.sentCount += 1;
+    sentCounter.textContent = String(mailState.sentCount);
+    if (mailState.hasDraft) {
+      mailState.draftsCount = 0;
+      draftsCounter.textContent = '0';
+      document.getElementById('draft-entry-q4').style.display = 'none';
+    }
+    composePane.classList.remove('open');
+    composePane.classList.add('hidden');
+
+    const toast = document.getElementById('toast-alert');
+    toast.textContent = 'Email sent to ' + document.getElementById('input-recipient-to').value + ' with attachment ' + (mailState.attachments[0] || 'none');
+    toast.classList.add('visible');
+    document.getElementById('sent-row-1').style.display = 'table-row';
+  };
+</script>
+
+</body>
+</html>

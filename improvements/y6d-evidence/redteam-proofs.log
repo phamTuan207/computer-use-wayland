@@ -1,0 +1,60 @@
+[T+0s] === P1 (H1): discovery picks a DEAD socket (bound, then process gone) ===
+P1-CONNECT: refused as expected: [Errno 111] Connection refused
+Y6-WAYLAND: nested socket wayland-1
+P1-RESULT rc=0 NEST_DISPLAY=wayland-1
+P1-OUTER-RC=0
+total 4
+drwx------   2 root root   80 Nov 21 14:03 .
+drwxrwxrwt 246 root root 8820 Nov 21 14:03 ..
+srwxrwx---   1 root root    0 Nov 21 14:03 wayland-1
+-rw-rw----   1 root root    1 Nov 21 14:03 wayland-1.lock
+[T+0s] === P2 (H1): foreign socket in RUN_DIR -> ambiguous false-fail ===
+FAIL: ambiguous nested Wayland sockets in /tmp/y6d-rt-foreign-0fJ1p8
+P2-OUTER-RC=1 (fail() exits the inner shell, so the RESULT line above never prints; the outer rc is the proof)
+[T+1s] === P2b (H1): cleanup block removes stale socket/lock/file; dangling symlink survives ===
+P2b-AFTER-CLEANUP:
+(empty above = all stale entries removed)
+P2b-SYMLINK-AFTER-CLEANUP:
+  wayland-1
+P2b: dangling symlink SURVIVED cleanup ([ -e ] is false for dangling links)
+P2b: ...but discovery skips it too ([ -S ] false), so it cannot be picked
+[T+1s] === P3 (H2/H3): backend gate is single-shot, discovery retries ===
+FAIL: Wayland backend did not start in nested log /tmp/y6d-rt-gate-PAFCpV/hyprland.log
+P3-GATE-RC=1 (rc=1 proves the single-shot gate fails although the line arrives 1s later at t=6s)
+P3-GATE-ELAPSED: 5s (gate slept 0s in this extraction; runner adds sleep 5 before it)
+1
+Y6-WAYLAND: nested socket wayland-1
+P3-DISC-LATE rc=0 NEST_DISPLAY=wayland-1
+P3-DISC-LATE-RC=0
+P3-DISC-LATE-ELAPSED: 7s (socket appeared at t=6s, inside the 10s loop)
+[T+28s] === P5 (H7): nest() guard inside command substitution is masked ===
+P5-NEST_OUTPUT rc=0 NEST_OUTPUT=WAYLAND-1
+P5: SCRIPT CONTINUED past the guard (no exit, no FAIL visible to operator)
+P5-ELAPSED: 0s
+P5b-OUTER-FAIL: pill surface not found in nested layers (pill not visible)
+P5b: outer message above replaced the guard message; the guard text never reached the operator
+[T+28s] === P6 (H5): plugin-list gate fails fast, but with no ABI diagnosis ===
+FAIL: hyprglass not in nested plugin list
+P6-RC=1 (fail-fast at the plugin-list gate, no ldd/load-error evidence collected)
+P6: conf plugin line:
+16:hl.plugin.load("/home/james/.local/share/agent-computer-use/backups/full-1791544423/native/hyprglass.so")
+P6: runner ldd/backup guard lines (expect none):
+0
+[T+28s] === P7 (H8): C2 coverage gaps ===
+P7: C2-vm mentions of cleanup/stale/NEST_DISPLAY/mid-loop/dead-socket:
+66:                    'echo "Y6-WAYLAND: nested socket $NEST_DISPLAY"')
+131:# --- 7c. nest() guard: empty NEST_DISPLAY fails closed, set display runs
+138:    script = hdr + (f'RUN_DIR="/tmp"; SIG="sig"; NEST_DISPLAY="{display}"\n'
+P7: C2-laptop mentions of NEST_DISPLAY/pill-env/mpv-env:
+  (none found)
+P7: GRIM-A in c2-laptop.log (expected file, got no file, no FAIL recorded):
+12:-- grim space form inside live output: expect file created
+13-supplied geometry did not intersect with any outputs
+  (no GRIM-A OK line anywhere in the log)
+P7: c2-laptop.sh GRIM-A has no assertion (only && echo OK):
+42:grim -g "100,100 200x200" /tmp/y6d-grim-a.png && echo "GRIM-A OK bytes=$(stat -c%s /tmp/y6d-grim-a.png)"
+[T+28s] === P4 (H6): pill dies at t=2s, wait loop burns the full 45s (runs last, ~46s) ===
+bash: -c: line 5: syntax error near unexpected token `('
+bash: -c: line 5: `kill -0 "$PILL_PID" 2>/dev/null || fail "pill process died immediately (see $NEST/nest-pill.log)"'
+P4-ELAPSED: 0s (pill died at t=2s; log below shows the real cause the message hides)
+[T+30s] === ALL PROOFS DONE ===

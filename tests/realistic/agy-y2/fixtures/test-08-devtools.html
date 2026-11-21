@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Browser DevTools Simulation</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: "JetBrains Mono", monospace; }
+    body { background: #18181b; color: #f4f4f5; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+    .browser-toolbar { background: #27272a; padding: 10px 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #3f3f46; }
+    .browser-page { flex: 1; padding: 24px; background: #09090b; }
+    .page-card { background: #18181b; border: 1px solid #27272a; border-radius: 6px; padding: 20px; max-width: 600px; }
+    .devtools-panel { height: 280px; background: #18181b; border-top: 2px solid #3f3f46; display: flex; flex-direction: column; transition: height 0.2s ease; }
+    .devtools-panel.collapsed { height: 36px; overflow: hidden; }
+    .devtools-panel.expanded { height: 320px; }
+    .devtools-header { background: #27272a; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #3f3f46; }
+    .tabs-bar { display: flex; }
+    .tab { padding: 8px 16px; font-size: 12px; cursor: pointer; color: #a1a1aa; border-right: 1px solid #3f3f46; background: #27272a; }
+    .tab.active { background: #18181b; color: #38bdf8; font-weight: bold; border-top: 2px solid #38bdf8; }
+    .header-controls { padding: 4px 10px; display: flex; gap: 8px; align-items: center; }
+    button { background: #3f3f46; color: #f4f4f5; border: 1px solid #52525b; padding: 4px 10px; border-radius: 4px; font-size: 11px; cursor: pointer; font-family: inherit; }
+    button:hover { background: #52525b; }
+    button.btn-primary { background: #0284c7; border-color: #0369a1; }
+    button.btn-primary:hover { background: #0369a1; }
+    button.btn-danger { background: #dc2626; border-color: #b91c1c; }
+    .devtools-body { flex: 1; display: flex; overflow: hidden; position: relative; }
+    .tab-content { flex: 1; display: none; flex-direction: column; }
+    .tab-content.active { display: flex; }
+    /* Console View */
+    .console-logs { flex: 1; padding: 12px; overflow-y: auto; font-size: 12px; display: flex; flex-direction: column; gap: 6px; }
+    .log-entry { padding: 4px 8px; border-radius: 3px; background: #27272a; border-left: 3px solid #38bdf8; }
+    .console-input-bar { background: #27272a; padding: 8px 12px; display: flex; gap: 8px; border-top: 1px solid #3f3f46; }
+    .console-input-bar input { flex: 1; background: #09090b; border: 1px solid #3f3f46; padding: 6px 10px; color: #f4f4f5; font-family: inherit; font-size: 12px; border-radius: 3px; outline: none; }
+    /* Network View */
+    .network-toolbar { background: #202023; padding: 6px 12px; display: flex; gap: 8px; align-items: center; border-bottom: 1px solid #3f3f46; }
+    .network-toolbar input { background: #09090b; border: 1px solid #3f3f46; padding: 4px 8px; color: #f4f4f5; font-size: 11px; border-radius: 3px; outline: none; width: 200px; font-family: inherit; }
+    .network-table-area { flex: 1; overflow-y: auto; display: flex; }
+    .network-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+    .network-table th { background: #27272a; padding: 6px 10px; text-align: left; color: #a1a1aa; border-bottom: 1px solid #3f3f46; position: sticky; top: 0; }
+    .network-table td { padding: 6px 10px; border-bottom: 1px solid #27272a; cursor: pointer; color: #e4e4e7; }
+    .network-table tr:hover { background: #27272a; }
+    .network-table tr.hidden { display: none !important; }
+    .status-ok { color: #4ade80; }
+    .status-err { color: #f87171; font-weight: bold; }
+    /* Detail Pane */
+    .detail-pane { width: 340px; background: #202023; border-left: 1px solid #3f3f46; display: flex; flex-direction: column; }
+    .detail-pane.closed { display: none !important; }
+    .detail-pane.open { display: flex; }
+    .detail-header { padding: 8px 12px; border-bottom: 1px solid #3f3f46; display: flex; justify-content: space-between; align-items: center; font-size: 11px; }
+    .detail-tabs { display: flex; border-bottom: 1px solid #3f3f46; background: #27272a; }
+    .detail-tab { padding: 6px 12px; font-size: 11px; cursor: pointer; color: #a1a1aa; }
+    .detail-tab.active { color: #38bdf8; font-weight: bold; background: #202023; }
+    .detail-body { padding: 12px; font-size: 11px; overflow-y: auto; flex: 1; line-height: 1.5; }
+    .toast-summary { display: none; background: #064e3b; color: #6ee7b7; padding: 8px 14px; font-size: 12px; text-align: center; border-top: 1px solid #047857; }
+    .toast-summary.active { display: block; }
+  </style>
+</head>
+<body>
+
+<div class="browser-toolbar">
+  <div style="font-size: 13px; font-weight: bold; color: #e4e4e7;">WebApp Host: https://shop.internal</div>
+  <div>
+    <button id="devtools-toggle-btn">Open DevTools</button>
+  </div>
+</div>
+
+<div class="browser-page">
+  <div class="page-card">
+    <h2 style="font-size: 16px; margin-bottom: 8px;">Shopping Cart Checkout</h2>
+    <p style="font-size: 12px; color: #a1a1aa;">Integrated services status monitor and debugging console.</p>
+  </div>
+</div>
+
+<div id="devtools-panel" class="devtools-panel collapsed">
+  <div class="devtools-header">
+    <div class="tabs-bar">
+      <div class="tab active" id="tab-console">Console (<span id="console-log-count">0</span>)</div>
+      <div class="tab" id="tab-network">Network (<span id="network-visible-count">6</span>/<span id="network-total-count">6</span>)</div>
+    </div>
+    <div class="header-controls">
+      <button id="btn-save-devtools-report" class="btn-primary">Save Report</button>
+    </div>
+  </div>
+
+  <div class="devtools-body">
+    <!-- Console View -->
+    <div id="view-console" class="tab-content active">
+      <div style="padding: 6px 12px; background: #202023; border-bottom: 1px solid #3f3f46; display: flex; justify-content: flex-end;">
+        <button id="btn-clear-console" class="btn-danger">Clear Console</button>
+      </div>
+      <div class="console-logs" id="console-output-log">
+        <!-- outputs appear here -->
+      </div>
+      <div class="console-input-bar">
+        <input type="text" id="input-console-eval" placeholder="Evaluate JavaScript...">
+        <button id="btn-eval-console" class="btn-primary">Run</button>
+      </div>
+    </div>
+
+    <!-- Network View -->
+    <div id="view-network" class="tab-content">
+      <div class="network-toolbar">
+        <input type="text" id="input-network-filter" placeholder="Filter (e.g. api)">
+        <button id="btn-apply-network-filter">Filter</button>
+      </div>
+      <div class="network-table-area">
+        <table class="network-table" id="table-network">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Status</th>
+              <th>Type</th>
+              <th>Time</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr id="row-req-bundle" class="net-row" data-url="main.bundle.js">
+              <td>main.bundle.js</td>
+              <td class="status-ok">200 OK</td>
+              <td>script</td>
+              <td>12ms</td>
+            </tr>
+            <tr id="row-req-styles" class="net-row" data-url="styles.css">
+              <td>styles.css</td>
+              <td class="status-ok">200 OK</td>
+              <td>stylesheet</td>
+              <td>8ms</td>
+            </tr>
+            <tr id="row-req-api-users" class="net-row" data-url="/api/users/profile">
+              <td>/api/users/profile</td>
+              <td class="status-ok">200 OK</td>
+              <td>fetch</td>
+              <td>45ms</td>
+            </tr>
+            <tr id="row-req-api-cart" class="net-row" data-url="/api/cart/items">
+              <td>/api/cart/items</td>
+              <td class="status-ok">200 OK</td>
+              <td>fetch</td>
+              <td>32ms</td>
+            </tr>
+            <tr id="row-req-api-checkout" class="net-row" data-url="/api/v1/checkout">
+              <td>/api/v1/checkout</td>
+              <td class="status-err">404 Not Found</td>
+              <td>fetch</td>
+              <td>18ms</td>
+            </tr>
+            <tr id="row-req-favicon" class="net-row" data-url="favicon.ico">
+              <td>favicon.ico</td>
+              <td class="status-ok">200 OK</td>
+              <td>image</td>
+              <td>5ms</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <!-- Request Detail Pane -->
+        <div id="request-detail-pane" class="detail-pane closed">
+          <div class="detail-header">
+            <strong>Inspect Request</strong>
+            <button id="btn-close-detail" style="padding: 2px 6px;">✕</button>
+          </div>
+          <div class="detail-tabs">
+            <div class="detail-tab active" id="tab-detail-headers">Headers</div>
+            <div class="detail-tab" id="tab-detail-response">Response</div>
+          </div>
+          <div class="detail-body" id="detail-body-headers">
+            <div><strong>Request URL:</strong> https://shop.internal/api/v1/checkout</div>
+            <div><strong>Request Method:</strong> POST</div>
+            <div><strong>Status Code:</strong> <span id="detail-status-code" class="status-err">404 Not Found</span></div>
+          </div>
+          <div class="detail-body" id="detail-body-response" style="display: none;">
+            <pre id="detail-response-body">{"error": "endpoint deprecated", "redirect": "/api/v2/checkout"}</pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="devtools-toast-summary" class="toast-summary"></div>
+</div>
+
+<script>
+  window.appVersion = 'v2.4.1';
+
+  const panel = document.getElementById('devtools-panel');
+  const toggleBtn = document.getElementById('devtools-toggle-btn');
+  let isExpanded = false;
+
+  toggleBtn.onclick = () => {
+    isExpanded = !isExpanded;
+    if (isExpanded) {
+      panel.classList.remove('collapsed');
+      panel.classList.add('expanded');
+      toggleBtn.textContent = 'Close DevTools';
+    } else {
+      panel.classList.remove('expanded');
+      panel.classList.add('collapsed');
+      toggleBtn.textContent = 'Open DevTools';
+    }
+  };
+
+  // Tabs
+  const tabConsole = document.getElementById('tab-console');
+  const tabNetwork = document.getElementById('tab-network');
+  const viewConsole = document.getElementById('view-console');
+  const viewNetwork = document.getElementById('view-network');
+
+  tabConsole.onclick = () => {
+    tabConsole.classList.add('active');
+    tabNetwork.classList.remove('active');
+    viewConsole.classList.add('active');
+    viewNetwork.classList.remove('active');
+  };
+
+  tabNetwork.onclick = () => {
+    tabNetwork.classList.add('active');
+    tabConsole.classList.remove('active');
+    viewNetwork.classList.add('active');
+    viewConsole.classList.remove('active');
+  };
+
+  // Console logic
+  let logCount = 0;
+  const consoleOutput = document.getElementById('console-output-log');
+  const consoleCounter = document.getElementById('console-log-count');
+  const inputConsole = document.getElementById('input-console-eval');
+
+  document.getElementById('btn-eval-console').onclick = () => {
+    const val = inputConsole.value.trim();
+    if (!val) return;
+    let res = '';
+    try {
+      res = String(eval(val));
+    } catch (e) {
+      res = e.message;
+    }
+    const div = document.createElement('div');
+    div.className = 'log-entry';
+    div.textContent = '> ' + val + ' => ' + res;
+    consoleOutput.appendChild(div);
+    logCount++;
+    consoleCounter.textContent = String(logCount);
+    inputConsole.value = '';
+  };
+
+  document.getElementById('btn-clear-console').onclick = () => {
+    consoleOutput.innerHTML = '';
+    logCount = 0;
+    consoleCounter.textContent = '0';
+  };
+
+  // Network filter logic
+  const filterInput = document.getElementById('input-network-filter');
+  const netRows = document.querySelectorAll('.net-row');
+  const visibleCounter = document.getElementById('network-visible-count');
+
+  document.getElementById('btn-apply-network-filter').onclick = () => {
+    const q = filterInput.value.trim().toLowerCase();
+    let count = 0;
+    netRows.forEach(r => {
+      const u = r.dataset.url.toLowerCase();
+      if (!q || u.includes(q)) {
+        r.classList.remove('hidden');
+        count++;
+      } else {
+        r.classList.add('hidden');
+      }
+    });
+    visibleCounter.textContent = String(count);
+  };
+
+  // Network row click
+  const detailPane = document.getElementById('request-detail-pane');
+  document.getElementById('row-req-api-checkout').onclick = () => {
+    detailPane.classList.remove('closed');
+    detailPane.classList.add('open');
+  };
+
+  document.getElementById('btn-close-detail').onclick = () => {
+    detailPane.classList.remove('open');
+    detailPane.classList.add('closed');
+  };
+
+  // Detail subtabs
+  const tabH = document.getElementById('tab-detail-headers');
+  const tabR = document.getElementById('tab-detail-response');
+  const bodyH = document.getElementById('detail-body-headers');
+  const bodyR = document.getElementById('detail-body-response');
+
+  tabH.onclick = () => {
+    tabH.classList.add('active');
+    tabR.classList.remove('active');
+    bodyH.style.display = 'block';
+    bodyR.style.display = 'none';
+  };
+
+  tabR.onclick = () => {
+    tabR.classList.add('active');
+    tabH.classList.remove('active');
+    bodyH.style.display = 'none';
+    bodyR.style.display = 'block';
+  };
+
+  // Save report
+  document.getElementById('btn-save-devtools-report').onclick = () => {
+    const visibleCount = visibleCounter.textContent;
+    const toast = document.getElementById('devtools-toast-summary');
+    toast.textContent = 'DevTools diagnostics: ' + logCount + ' logs, ' + visibleCount + ' filtered network rows, error 404 checked';
+    toast.classList.add('active');
+  };
+</script>
+
+</body>
+</html>

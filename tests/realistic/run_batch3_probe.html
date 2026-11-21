@@ -1,0 +1,51 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>y14 preflight probe</title></head>
+<body>
+<input id="probe-input" autocomplete="off" spellcheck="false">
+<input type="range" id="probe-range" min="0" max="100" value="50">
+<div id="probe-pad" style="width:300px;height:100px;border:1px solid #999;margin:400px 0;">pad</div>
+<ul id="probe-list"></ul>
+<input id="probe-filter" autocomplete="off" spellcheck="false">
+<ul id="probe-items"><li>apple</li><li>apricot</li><li>banana</li><li>cherry</li></ul>
+<p><button id="probe-popup-btn" type="button">open popup</button></p>
+<script>
+  // Button for preflight (viii): opens a window.open popup with
+  // width/height features, the same shape as the t09 popups, so the
+  // preflight proves the window case live (a real click is required,
+  // window.open from a bare eval is blocked by the popup blocker).
+  document.getElementById('probe-popup-btn').addEventListener('click', () => {
+    window.open('run_batch3_probe_popup.html', '_blank', 'width=500,height=400');
+  });
+window.__probe = {keys: [], clicks: [], dblclicks: 0, filtered: 4};
+const input = document.getElementById('probe-input');
+input.addEventListener('keydown', (e) => { window.__probe.keys.push(e.key); });
+const pad = document.getElementById('probe-pad');
+pad.addEventListener('click', (e) => { window.__probe.clicks.push([e.clientX, e.clientY]); });
+const list = document.getElementById('probe-list');
+function renderList() {
+  list.innerHTML = '';
+  for (let i = 0; i < 3; i++) {
+    const li = document.createElement('li');
+    li.textContent = 'item ' + i;
+    li.addEventListener('click', () => { renderList(); });
+    li.addEventListener('dblclick', () => { window.__probe.dblclicks++; });
+    list.appendChild(li);
+  }
+}
+renderList();
+const filter = document.getElementById('probe-filter');
+const items = document.getElementById('probe-items');
+filter.addEventListener('input', () => {
+  const q = filter.value;
+  let n = 0;
+  [...items.children].forEach((li) => {
+    const show = li.textContent.includes(q);
+    li.style.display = show ? '' : 'none';
+    if (show) n++;
+  });
+  window.__probe.filtered = n;
+});
+</script>
+</body>
+</html>

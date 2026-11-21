@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Offline Whiteboard App</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background: #f0f2f5; color: #1f2937; padding: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; background: #ffffff; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); padding: 24px; }
+    header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e5e7eb; padding-bottom: 16px; margin-bottom: 16px; }
+    h1 { font-size: 22px; color: #111827; }
+    .header-controls { display: flex; gap: 12px; align-items: center; }
+    .toolbar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; background: #f9fafb; padding: 12px 16px; border: 1px solid #e5e7eb; border-radius: 6px; margin-bottom: 16px; }
+    .tool-group { display: flex; gap: 6px; align-items: center; border-right: 1px solid #d1d5db; padding-right: 12px; }
+    .tool-btn { padding: 8px 12px; border: 1px solid #d1d5db; background: #ffffff; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 500; }
+    .tool-btn.active { background: #2563eb; color: #ffffff; border-color: #1d4ed8; }
+    .color-swatch { width: 24px; height: 24px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; }
+    .color-swatch.active { border-color: #111827; box-shadow: 0 0 0 2px #93c5fd; }
+    .main-workspace { display: grid; grid-template-columns: 820px 1fr; gap: 20px; }
+    .canvas-container { border: 2px solid #d1d5db; border-radius: 6px; background: #ffffff; position: relative; overflow: hidden; }
+    canvas { display: block; cursor: crosshair; }
+    .sidebar { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 16px; display: flex; flex-direction: column; gap: 16px; }
+    .sidebar h2 { font-size: 15px; font-weight: 600; }
+    .object-table-wrapper { max-height: 340px; overflow-y: auto; border: 1px solid #e5e7eb; border-radius: 4px; background: #fff; }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    th, td { padding: 6px 10px; text-align: left; border-bottom: 1px solid #f3f4f6; }
+    th { background: #f3f4f6; font-weight: 600; color: #4b5563; }
+    .status-banner { padding: 10px 14px; border-radius: 4px; font-size: 13px; font-weight: 500; display: none; }
+    .status-banner.success { display: block; background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
+    .status-banner.error { display: block; background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+    input[type="text"], select { padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 13px; }
+    .btn-action { padding: 8px 16px; border-radius: 4px; font-size: 13px; font-weight: 600; cursor: pointer; border: none; }
+    .btn-primary { background: #2563eb; color: #fff; }
+    .btn-primary:hover { background: #1d4ed8; }
+    .btn-secondary { background: #e5e7eb; color: #374151; }
+    .btn-danger { background: #ef4444; color: #fff; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>Whiteboard Architect Studio</h1>
+    <div class="header-controls">
+      <label for="input-board-title" style="font-size: 13px; font-weight: 500;">Board Title:</label>
+      <input type="text" id="input-board-title" placeholder="Untitled Board" style="width: 240px;">
+      <button id="btn-save-board" class="btn-action btn-primary">Save Board</button>
+      <button id="btn-export-json" class="btn-action btn-secondary">Export JSON</button>
+    </div>
+  </header>
+
+  <div id="status-banner" class="status-banner"></div>
+
+  <div class="toolbar">
+    <div class="tool-group">
+      <span style="font-size: 12px; color: #6b7280; font-weight: 600;">TOOLS:</span>
+      <button id="tool-rect" class="tool-btn active" data-tool="rect">Rectangle</button>
+      <button id="tool-circle" class="tool-btn" data-tool="circle">Circle</button>
+      <button id="tool-line" class="tool-btn" data-tool="line">Line</button>
+      <button id="tool-text" class="tool-btn" data-tool="text">Text</button>
+    </div>
+
+    <div class="tool-group">
+      <span style="font-size: 12px; color: #6b7280; font-weight: 600;">COLOR:</span>
+      <div id="color-blue" class="color-swatch active" data-color="#1d3557" style="background: #1d3557;" title="Blue"></div>
+      <div id="color-green" class="color-swatch" data-color="#2a9d8f" style="background: #2a9d8f;" title="Green"></div>
+      <div id="color-red" class="color-swatch" data-color="#e63946" style="background: #e63946;" title="Red"></div>
+      <div id="color-yellow" class="color-swatch" data-color="#e76f51" style="background: #e76f51;" title="Yellow"></div>
+      <div id="color-black" class="color-swatch" data-color="#111827" style="background: #111827;" title="Black"></div>
+    </div>
+
+    <div class="tool-group">
+      <span style="font-size: 12px; color: #6b7280; font-weight: 600;">STROKE:</span>
+      <select id="select-stroke-width">
+        <option value="2" selected>2 px</option>
+        <option value="4">4 px</option>
+        <option value="8">8 px</option>
+      </select>
+    </div>
+
+    <div class="tool-group">
+      <label for="input-canvas-text" style="font-size: 12px; color: #6b7280; font-weight: 600;">TEXT:</label>
+      <input type="text" id="input-canvas-text" placeholder="Type text here..." style="width: 140px;">
+    </div>
+
+    <div class="tool-group" style="border-right: none;">
+      <button id="btn-undo" class="tool-btn">Undo</button>
+      <button id="btn-redo" class="tool-btn">Redo</button>
+      <button id="btn-clear" class="tool-btn btn-danger" style="color: #ef4444; border-color: #fca5a5;">Clear</button>
+    </div>
+  </div>
+
+  <div class="main-workspace">
+    <div class="canvas-container">
+      <canvas id="whiteboard-canvas" width="800" height="500"></canvas>
+    </div>
+
+    <div class="sidebar">
+      <h2>Objects Layer (<span id="objects-count">0</span>)</h2>
+      <div class="object-table-wrapper">
+        <table id="object-list">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Type</th>
+              <th>Color</th>
+              <th>Details</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="object-list-body">
+          </tbody>
+        </table>
+      </div>
+
+      <div style="border-top: 1px solid #e5e7eb; padding-top: 12px;">
+        <h3 style="font-size: 13px; margin-bottom: 8px;">Precise Placement</h3>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; font-size: 12px;">
+          <div>X: <input type="number" id="input-coord-x" value="100" style="width: 65px;"></div>
+          <div>Y: <input type="number" id="input-coord-y" value="80" style="width: 65px;"></div>
+          <div>W/R: <input type="number" id="input-coord-w" value="180" style="width: 65px;"></div>
+          <div>H: <input type="number" id="input-coord-h" value="120" style="width: 65px;"></div>
+        </div>
+        <button id="btn-add-shape" class="btn-action btn-secondary" style="width: 100%; margin-top: 8px; font-size: 12px;">Place at Coordinates</button>
+      </div>
+
+      <div style="margin-top: auto; font-size: 11px; color: #6b7280;">
+        Board State: <span id="board-save-state" style="font-weight: 600;">Unsaved</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  const canvas = document.getElementById('whiteboard-canvas');
+  const ctx = canvas.getContext('2d');
+  
+  let currentTool = 'rect';
+  let currentColor = '#1d3557';
+  let currentStroke = 2;
+  let isDrawing = false;
+  let startX = 0;
+  let startY = 0;
+  
+  let objects = [];
+  let undoStack = [];
+  let boardSaved = false;
+
+  // Tool buttons
+  const toolButtons = document.querySelectorAll('.tool-btn[data-tool]');
+  toolButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      toolButtons.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentTool = btn.getAttribute('data-tool');
+    });
+  });
+
+  // Color swatches
+  const colorSwatches = document.querySelectorAll('.color-swatch');
+  colorSwatches.forEach(swatch => {
+    swatch.addEventListener('click', () => {
+      colorSwatches.forEach(s => s.classList.remove('active'));
+      swatch.classList.add('active');
+      currentColor = swatch.getAttribute('data-color');
+    });
+  });
+
+  document.getElementById('select-stroke-width').addEventListener('change', (e) => {
+    currentStroke = parseInt(e.target.value, 10);
+  });
+
+  function render() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Background grid
+    ctx.strokeStyle = '#f3f4f6';
+    ctx.lineWidth = 1;
+    for (let x = 0; x < canvas.width; x += 40) {
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, canvas.height);
+      ctx.stroke();
+    }
+    for (let y = 0; y < canvas.height; y += 40) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(canvas.width, y);
+      ctx.stroke();
+    }
+
+    // Objects
+    objects.forEach(obj => {
+      ctx.strokeStyle = obj.color;
+      ctx.fillStyle = obj.color;
+      ctx.lineWidth = obj.stroke;
+      
+      if (obj.type === 'rect') {
+        ctx.strokeRect(obj.x, obj.y, obj.w, obj.h);
+      } else if (obj.type === 'circle') {
+        ctx.beginPath();
+        ctx.arc(obj.x, obj.y, obj.r, 0, Math.PI * 2);
+        ctx.stroke();
+      } else if (obj.type === 'line') {
+        ctx.beginPath();
+        ctx.moveTo(obj.x1, obj.y1);
+        ctx.lineTo(obj.x2, obj.y2);
+        ctx.stroke();
+      } else if (obj.type === 'text') {
+        ctx.font = '16px sans-serif';
+        ctx.fillText(obj.text, obj.x, obj.y);
+      }
+    });
+
+    updateObjectTable();
+  }
+
+  function updateObjectTable() {
+    const tbody = document.getElementById('object-list-body');
+    tbody.innerHTML = '';
+    document.getElementById('objects-count').textContent = objects.length;
+    
+    objects.forEach((obj, idx) => {
+      const tr = document.createElement('tr');
+      tr.id = 'obj-row-' + idx;
+      let details = '';
+      if (obj.type === 'rect') details = `(${obj.x}, ${obj.y}, ${obj.w}x${obj.h})`;
+      else if (obj.type === 'circle') details = `center: (${obj.x}, ${obj.y}), r=${obj.r}`;
+      else if (obj.type === 'line') details = `(${obj.x1}, ${obj.y1}) to (${obj.x2}, ${obj.y2})`;
+      else if (obj.type === 'text') details = `"${obj.text}" at (${obj.x}, ${obj.y})`;
+      
+      const colorName = getColorName(obj.color);
+      
+      tr.innerHTML = `
+        <td>${idx + 1}</td>
+        <td><strong>${obj.type}</strong></td>
+        <td><span style="display:inline-block;width:10px;height:10px;background:${obj.color};margin-right:4px;"></span>${colorName}</td>
+        <td>${details}</td>
+        <td><button class="btn-del-obj" data-index="${idx}" style="cursor:pointer;padding:2px 6px;color:#ef4444;border:1px solid #fecaca;border-radius:3px;">del</button></td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    tbody.querySelectorAll('.btn-del-obj').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const idx = parseInt(e.target.getAttribute('data-index'), 10);
+        pushHistory();
+        objects.splice(idx, 1);
+        render();
+      });
+    });
+  }
+
+  function getColorName(hex) {
+    if (hex === '#1d3557') return 'Blue';
+    if (hex === '#2a9d8f') return 'Green';
+    if (hex === '#e63946') return 'Red';
+    if (hex === '#e76f51') return 'Yellow';
+    if (hex === '#111827') return 'Black';
+    return hex;
+  }
+
+  function pushHistory() {
+    undoStack.push(JSON.parse(JSON.stringify(objects)));
+    boardSaved = false;
+    document.getElementById('board-save-state').textContent = 'Unsaved changes';
+  }
+
+  // Canvas drawing events
+  canvas.addEventListener('mousedown', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    startX = Math.round(e.clientX - rect.left);
+    startY = Math.round(e.clientY - rect.top);
+    isDrawing = true;
+  });
+
+  canvas.addEventListener('mouseup', (e) => {
+    if (!isDrawing) return;
+    isDrawing = false;
+    const rect = canvas.getBoundingClientRect();
+    const endX = Math.round(e.clientX - rect.left);
+    const endY = Math.round(e.clientY - rect.top);
+
+    pushHistory();
+
+    if (currentTool === 'rect') {
+      const w = endX - startX;
+      const h = endY - startY;
+      if (Math.abs(w) > 4 && Math.abs(h) > 4) {
+        objects.push({
+          type: 'rect',
+          x: Math.min(startX, endX),
+          y: Math.min(startY, endY),
+          w: Math.abs(w),
+          h: Math.abs(h),
+          color: currentColor,
+          stroke: currentStroke
+        });
+      }
+    } else if (currentTool === 'circle') {
+      const radius = Math.round(Math.hypot(endX - startX, endY - startY));
+      if (radius > 4) {
+        objects.push({
+          type: 'circle',
+          x: startX,
+          y: startY,
+          r: radius,
+          color: currentColor,
+          stroke: currentStroke
+        });
+      }
+    } else if (currentTool === 'line') {
+      if (Math.hypot(endX - startX, endY - startY) > 4) {
+        objects.push({
+          type: 'line',
+          x1: startX,
+          y1: startY,
+          x2: endX,
+          y2: endY,
+          color: currentColor,
+          stroke: currentStroke
+        });
+      }
+    } else if (currentTool === 'text') {
+      const textVal = document.getElementById('input-canvas-text').value.trim() || 'Sample Text';
+      objects.push({
+        type: 'text',
+        x: startX,
+        y: startY,
+        text: textVal,
+        color: currentColor,
+        stroke: currentStroke
+      });
+    }
+
+    render();
+  });
+
+  // Precise placement button
+  document.getElementById('btn-add-shape').addEventListener('click', () => {
+    const x = parseInt(document.getElementById('input-coord-x').value, 10);
+    const y = parseInt(document.getElementById('input-coord-y').value, 10);
+    const w = parseInt(document.getElementById('input-coord-w').value, 10);
+    const h = parseInt(document.getElementById('input-coord-h').value, 10);
+    
+    pushHistory();
+    if (currentTool === 'rect') {
+      objects.push({ type: 'rect', x, y, w, h, color: currentColor, stroke: currentStroke });
+    } else if (currentTool === 'circle') {
+      objects.push({ type: 'circle', x, y, r: w, color: currentColor, stroke: currentStroke });
+    } else if (currentTool === 'line') {
+      objects.push({ type: 'line', x1: x, y1: y, x2: x + w, y2: y + h, color: currentColor, stroke: currentStroke });
+    } else if (currentTool === 'text') {
+      const textVal = document.getElementById('input-canvas-text').value.trim() || 'Sample Text';
+      objects.push({ type: 'text', x, y, text: textVal, color: currentColor, stroke: currentStroke });
+    }
+    render();
+  });
+
+  // Undo button
+  document.getElementById('btn-undo').addEventListener('click', () => {
+    if (undoStack.length > 0) {
+      objects = undoStack.pop();
+      render();
+    }
+  });
+
+  // Clear button
+  document.getElementById('btn-clear').addEventListener('click', () => {
+    pushHistory();
+    objects = [];
+    render();
+  });
+
+  // Save button
+  document.getElementById('btn-save-board').addEventListener('click', () => {
+    const title = document.getElementById('input-board-title').value.trim();
+    const banner = document.getElementById('status-banner');
+    if (!title) {
+      banner.className = 'status-banner error';
+      banner.textContent = 'Please enter a board title before saving.';
+      return;
+    }
+    boardSaved = true;
+    document.getElementById('board-save-state').textContent = 'Saved (' + objects.length + ' objects)';
+    banner.className = 'status-banner success';
+    banner.textContent = `Board '${title}' saved with ${objects.length} objects`;
+  });
+
+  // Initial draw
+  render();
+
+  // Verification hook (DOM and real state only - NEVER self-simulates)
+  window.__agyVerify = function() {
+    const failures = [];
+    const titleVal = document.getElementById('input-board-title').value.trim();
+    const bannerText = document.getElementById('status-banner').textContent.trim();
+    const tableRows = document.querySelectorAll('#object-list-body tr');
+    
+    if (titleVal !== 'Architecture Sprint 2026') {
+      failures.push(`Board title expected 'Architecture Sprint 2026', got '${titleVal}'`);
+    }
+    if (!boardSaved) {
+      failures.push('Board has not been saved via btn-save-board');
+    }
+    if (!bannerText.includes("Board 'Architecture Sprint 2026' saved with 5 objects")) {
+      failures.push(`Status banner text incorrect, got '${bannerText}'`);
+    }
+    if (tableRows.length !== 5) {
+      failures.push(`Expected exactly 5 objects in table, found ${tableRows.length}`);
+    }
+    if (objects.length !== 5) {
+      failures.push(`Expected 5 internal objects, found ${objects.length}`);
+    }
+
+    // Inspect the 5 objects
+    if (objects.length === 5) {
+      if (objects[0].type !== 'rect' || objects[0].color !== '#1d3557') {
+        failures.push(`Object 1 expected Blue rect, got ${objects[0].type} ${objects[0].color}`);
+      }
+      if (objects[1].type !== 'circle' || objects[1].color !== '#2a9d8f') {
+        failures.push(`Object 2 expected Green circle, got ${objects[1].type} ${objects[1].color}`);
+      }
+      if (objects[2].type !== 'text' || objects[2].text !== 'API Gateway') {
+        failures.push(`Object 3 expected Text 'API Gateway', got '${objects[2].text}'`);
+      }
+      if (objects[3].type !== 'rect' || objects[3].color !== '#e76f51') {
+        failures.push(`Object 4 expected Yellow rect, got ${objects[3].type} ${objects[3].color}`);
+      }
+      if (objects[4].type !== 'text' || objects[4].text !== 'Database Cluster') {
+        failures.push(`Object 5 expected Text 'Database Cluster', got '${objects[4].text}'`);
+      }
+    }
+
+    const state = {
+      title: titleVal,
+      saved: boardSaved,
+      objectCount: objects.length,
+      banner: bannerText
+    };
+
+    return {
+      passed: failures.length === 0,
+      failures,
+      score: failures.length === 0 ? 1 : 0,
+      state
+    };
+  };
+})();
+</script>
+</body>
+</html>

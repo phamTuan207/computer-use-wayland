@@ -24,23 +24,32 @@ all 8 files exist with correct names and the index is complete.
 1. Open the file manager fixture `fixtures/test-05-image.html` in the local
    browser (offline, file:// URL).
 2. Verify the downloads view lists exactly 8 image files with original names.
-3. Create the `Organized` subfolder (click New Folder, type `Organized`).
-4. Select image 1 and move it into Organized.
-5. Rename image 1 inside Organized to `trip-01.jpg`.
-6. Select image 2 and move it into Organized.
-7. Rename image 2 inside Organized to `trip-02.jpg`.
-8. Select image 3 and move it into Organized.
-9. Rename image 3 inside Organized to `trip-03.png`.
-10. Select image 4 and move it into Organized.
-11. Rename image 4 inside Organized to `trip-04.jpg`.
-12. Select image 5 and move it into Organized.
-13. Rename image 5 inside Organized to `trip-05.jpg`.
-14. Select image 6 and move it into Organized.
-15. Rename image 6 inside Organized to `trip-06.png`.
-16. Select image 7 and move it into Organized.
-17. Rename image 7 inside Organized to `trip-07.jpg`.
-18. Select image 8 and move it into Organized.
-19. Rename image 8 inside Organized to `trip-08.jpg`.
+3. Create the `Organized` subfolder (type `Organized` in the folder name
+   field, click New Folder).
+4. Click image 1 in Downloads to move it into Organized.
+5. Click image 1 in Organized to select it, type `trip-01.jpg` in the rename
+   field, click Rename.
+6. Click image 2 in Downloads to move it into Organized.
+7. Click image 2 in Organized to select it, type `trip-02.png` in the rename
+   field, click Rename.
+8. Click image 3 in Downloads to move it into Organized.
+9. Click image 3 in Organized to select it, type `trip-03.jpg` in the rename
+   field, click Rename.
+10. Click image 4 in Downloads to move it into Organized.
+11. Click image 4 in Organized to select it, type `trip-04.jpg` in the rename
+   field, click Rename.
+12. Click image 5 in Downloads to move it into Organized.
+13. Click image 5 in Organized to select it, type `trip-05.jpg` in the rename
+   field, click Rename.
+14. Click image 6 in Downloads to move it into Organized.
+15. Click image 6 in Organized to select it, type `trip-06.png` in the rename
+   field, click Rename.
+16. Click image 7 in Downloads to move it into Organized.
+17. Click image 7 in Organized to select it, type `trip-07.jpg` in the rename
+   field, click Rename.
+18. Click image 8 in Downloads to move it into Organized.
+19. Click image 8 in Organized to select it, type `trip-08.jpg` in the rename
+   field, click Rename.
 20. Open the Organized folder and list all files; confirm exactly 8 files named
     trip-01..trip-08 with correct extensions.
 21. Open (or create) `index.txt` and write one line per file mapping original
@@ -75,6 +84,7 @@ all 8 files exist with correct names and the index is complete.
 ## Checker / expected end state
 Checker script: `tests/realistic/fcc-k/check.mjs --fixture
 fixtures/test-05-image.html --test 05`.
-Expected end state: Organized folder has exactly trip-01.jpg..trip-08.jpg/png
-with correct extensions, index.txt has 8 original->new mappings, downloads
-folder has 0 images.
+Expected end state: Organized folder has exactly trip-01.jpg, trip-02.png,
+trip-03.jpg, trip-04.jpg, trip-05.jpg, trip-06.png, trip-07.jpg, trip-08.jpg
+(rename keeps each file's original extension), index.txt has 8 original->new
+mappings, downloads folder has 0 images.

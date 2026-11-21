@@ -57,3 +57,8 @@ def test_cli_exit_codes(tmp_path=None):
                                str(bad)], capture_output=True, text=True)
         assert fail.returncode == 1
         assert 'ydotool ban' in fail.stdout
+
+
+def load_tests(loader, standard_tests, pattern):
+    from _function_test_support import load_function_tests
+    return load_function_tests(globals())

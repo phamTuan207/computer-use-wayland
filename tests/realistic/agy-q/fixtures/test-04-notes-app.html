@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Offline Markdown Notes & Wiki PKB</title>
+<style>
+  :root {
+    --bg-dark: #111827;
+    --sidebar-bg: #1f2937;
+    --card-bg: #374151;
+    --border: #4b5563;
+    --text-primary: #f9fafb;
+    --text-muted: #9ca3af;
+    --accent: #10b981;
+    --accent-hover: #059669;
+    --pin-gold: #f59e0b;
+    --archive-color: #6b7280;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  body { background: var(--bg-dark); color: var(--text-primary); display: flex; height: 100vh; overflow: hidden; }
+
+  /* Left Sidebar */
+  #sidebar { width: 300px; background: var(--sidebar-bg); border-right: 1px solid var(--border); display: flex; flex-direction: column; }
+  .sidebar-header { padding: 16px; border-bottom: 1px solid var(--border); }
+  .logo { font-size: 16px; font-weight: 700; color: #fff; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+  .search-input { width: 100%; padding: 8px 12px; background: #111827; border: 1px solid var(--border); border-radius: 6px; color: #fff; font-size: 13px; outline: none; margin-bottom: 10px; }
+  
+  .tab-group { display: flex; gap: 6px; margin-bottom: 10px; }
+  .tab-btn { flex: 1; padding: 6px 8px; font-size: 12px; font-weight: 500; border-radius: 4px; border: 1px solid var(--border); background: transparent; color: var(--text-muted); cursor: pointer; text-align: center; }
+  .tab-btn.active { background: #374151; color: #fff; border-color: var(--accent); }
+
+  .notes-scroll { flex: 1; overflow-y: auto; padding: 12px; }
+  .note-section-title { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin: 8px 4px 6px 4px; font-weight: 600; }
+  
+  .note-item { padding: 10px 12px; border-radius: 6px; background: #283344; margin-bottom: 6px; cursor: pointer; border: 1px solid transparent; transition: background 0.15s; }
+  .note-item:hover { background: #323f54; }
+  .note-item.active { border-color: var(--accent); background: #32445b; }
+  .note-item-title { font-size: 13px; font-weight: 600; color: #fff; margin-bottom: 4px; display: flex; justify-content: space-between; align-items: center; }
+  .note-item-snippet { font-size: 11px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 6px; }
+  .note-item-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+  .tag-pill { font-size: 10px; background: #1f2937; color: #93c5fd; padding: 1px 6px; border-radius: 4px; }
+
+  /* Main Editor & Preview Area */
+  #main-panel { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  .top-toolbar { height: 56px; border-bottom: 1px solid var(--border); background: #1a2230; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; }
+  .toolbar-left { display: flex; gap: 8px; align-items: center; }
+  .toolbar-right { display: flex; gap: 8px; align-items: center; }
+
+  .editor-meta-bar { padding: 12px 20px; border-bottom: 1px solid var(--border); background: #161e2b; display: flex; gap: 12px; }
+  .title-input { flex: 2; padding: 8px 12px; background: #111827; border: 1px solid var(--border); border-radius: 6px; color: #fff; font-size: 14px; font-weight: 600; outline: none; }
+  .tags-input { flex: 1; padding: 8px 12px; background: #111827; border: 1px solid var(--border); border-radius: 6px; color: #fff; font-size: 13px; outline: none; }
+
+  .workspace-split { flex: 1; display: flex; overflow: hidden; }
+  .pane-editor { flex: 1; border-right: 1px solid var(--border); display: flex; flex-direction: column; }
+  .editor-textarea { flex: 1; padding: 18px 20px; background: #111827; border: none; color: #f3f4f6; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 13px; line-height: 1.6; resize: none; outline: none; }
+  
+  .pane-preview { flex: 1; padding: 20px 28px; overflow-y: auto; background: #0f1521; }
+  .preview-content h1 { font-size: 22px; margin-bottom: 12px; color: #fff; border-bottom: 1px solid #374151; padding-bottom: 8px; }
+  .preview-content p { font-size: 14px; line-height: 1.6; margin-bottom: 14px; color: #d1d5db; }
+  .wiki-link { color: #38bdf8; text-decoration: underline; cursor: pointer; font-weight: 600; }
+  .wiki-link:hover { color: #7dd3fc; }
+
+  .backlinks-box { margin-top: 30px; padding: 14px; border: 1px dashed var(--border); border-radius: 6px; background: #161f2e; font-size: 12px; }
+  .backlinks-header { font-weight: 600; color: #9ca3af; margin-bottom: 6px; text-transform: uppercase; font-size: 11px; }
+
+  /* Buttons */
+  .btn { display: inline-flex; align-items: center; justify-content: center; padding: 6px 12px; border-radius: 6px; border: none; font-size: 12px; font-weight: 500; cursor: pointer; }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: var(--accent-hover); }
+  .btn-outline { background: transparent; border: 1px solid var(--border); color: #e5e7eb; }
+  .btn-outline:hover { background: #374151; }
+  .btn-icon { width: 32px; height: 32px; padding: 0; }
+  .btn-pinned { color: var(--pin-gold); border-color: var(--pin-gold); }
+
+  /* Modal */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.65); display: none; align-items: center; justify-content: center; z-index: 100; }
+  .modal-overlay.open { display: flex; }
+  .modal-box { width: 440px; background: #1f2937; border: 1px solid var(--border); border-radius: 8px; padding: 24px; }
+  .modal-title { font-size: 16px; font-weight: 600; margin-bottom: 12px; color: #fff; }
+</style>
+</head>
+<body>
+
+<div id="sidebar">
+  <div class="sidebar-header">
+    <div class="logo">&#128221; ObsidianVault PKB</div>
+    <input type="text" id="input-notes-search" class="search-input" placeholder="Search title, fulltext, or #tag...">
+    <div class="tab-group">
+      <button id="tab-view-all" class="tab-btn active" onclick="switchSidebarView('all')">All (<span id="count-active">3</span>)</button>
+      <button id="tab-view-archived" class="tab-btn" onclick="switchSidebarView('archived')">Archived (<span id="count-archived">0</span>)</button>
+    </div>
+    <button id="btn-new-note" class="btn btn-outline" style="width: 100%;">+ New Note</button>
+  </div>
+
+  <div id="notes-list-scroll" class="notes-scroll">
+    <!-- Populated by script -->
+  </div>
+</div>
+
+<div id="main-panel">
+  <div class="top-toolbar">
+    <div class="toolbar-left">
+      <button id="tab-edit-mode" class="btn btn-outline" onclick="setEditorMode('split')">Editor View</button>
+      <button id="tab-preview-mode" class="btn btn-outline" onclick="setEditorMode('preview')">Preview View</button>
+    </div>
+    <div class="toolbar-right">
+      <button id="btn-pin-note" class="btn btn-outline btn-icon" title="Pin Note" onclick="toggleCurrentPin()">&#128204;</button>
+      <button id="btn-archive-note" class="btn btn-outline btn-icon" title="Archive Note" onclick="toggleCurrentArchive()">&#128451;</button>
+      <button id="btn-save-note" class="btn btn-primary" onclick="saveCurrentNote()">Save Note</button>
+      <button id="btn-export-notes" class="btn btn-outline" onclick="openExportModal()">Export Manifest</button>
+    </div>
+  </div>
+
+  <div class="editor-meta-bar">
+    <input type="text" id="input-note-title" class="title-input" placeholder="Note Title...">
+    <input type="text" id="input-note-tags" class="tags-input" placeholder="Tags (comma-separated)...">
+  </div>
+
+  <div class="workspace-split">
+    <div id="pane-editor-view" class="pane-editor">
+      <textarea id="textarea-note-body" class="editor-textarea" placeholder="Type Markdown here... Use [[Note Title]] for wiki links."></textarea>
+    </div>
+    <div id="pane-preview-view" class="pane-preview">
+      <div id="rendered-markdown-content" class="preview-content"></div>
+      <div class="backlinks-box">
+        <div class="backlinks-header">Backlinks</div>
+        <div id="box-backlinks">No incoming links.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Export Manifest -->
+<div id="modal-export-notes" class="modal-overlay">
+  <div class="modal-box">
+    <div class="modal-title">Notes Manifest Export</div>
+    <div id="export-summary-text" style="font-size: 13px; color: var(--accent); margin-bottom: 12px;">Active: 3, Archived: 0, Pinned: 0</div>
+    <textarea id="export-json-view" readonly style="width: 100%; height: 160px; background: #111827; border: 1px solid var(--border); color: #9ca3af; font-family: monospace; font-size: 11px; padding: 10px; border-radius: 6px; resize: none;"></textarea>
+    <div style="display: flex; justify-content: flex-end; margin-top: 16px;">
+      <button id="btn-dismiss-export-modal" class="btn btn-primary" onclick="closeModal('modal-export-notes')">Dismiss</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const INITIAL_NOTES = [
+  { id: 'n-1', title: 'System Architecture', body: '# System Architecture\n\nOverview of microkernel and userspace compositors.\n\nTags: #architecture, #core', tags: ['architecture', 'core'], pinned: false, archived: false },
+  { id: 'n-2', title: 'Storage Engine', body: '# Storage Engine\n\nLSM-tree write optimization and caching strategies.\n\nTags: #storage, #performance', tags: ['storage', 'performance'], pinned: false, archived: false },
+  { id: 'n-3', title: 'Security Model', body: '# Security Model\n\nCapability-based sandboxing and IPC permission tokens.\n\nTags: #security, #architecture', tags: ['security', 'architecture'], pinned: false, archived: false }
+];
+
+let notes = [...INITIAL_NOTES];
+let activeNoteId = 'n-1';
+let sidebarView = 'all'; // 'all' or 'archived'
+let searchQuery = '';
+
+function renderNotesSidebar() {
+  const container = document.getElementById('notes-list-scroll');
+  container.innerHTML = '';
+
+  let list = notes.filter(n => sidebarView === 'all' ? !n.archived : n.archived);
+
+  // Search filter
+  if (searchQuery) {
+    const q = searchQuery.toLowerCase().trim();
+    if (q.startsWith('#')) {
+      const tagQuery = q.slice(1);
+      list = list.filter(n => n.tags.some(t => t.toLowerCase().includes(tagQuery)));
+    } else {
+      list = list.filter(n => 
+        n.title.toLowerCase().includes(q) ||
+        n.body.toLowerCase().includes(q) ||
+        n.tags.some(t => t.toLowerCase().includes(q))
+      );
+    }
+  }
+
+  // Counts
+  const activeCount = notes.filter(n => !n.archived).length;
+  const archivedCount = notes.filter(n => n.archived).length;
+  document.getElementById('count-active').textContent = activeCount;
+  document.getElementById('count-archived').textContent = archivedCount;
+
+  if (sidebarView === 'all') {
+    const pinnedList = list.filter(n => n.pinned);
+    const unpinnedList = list.filter(n => !n.pinned);
+
+    if (pinnedList.length > 0) {
+      const secTitle = document.createElement('div');
+      secTitle.className = 'note-section-title';
+      secTitle.textContent = 'Pinned';
+      container.appendChild(secTitle);
+      pinnedList.forEach(n => container.appendChild(createNoteCard(n)));
+    }
+
+    if (unpinnedList.length > 0) {
+      if (pinnedList.length > 0) {
+        const secTitle = document.createElement('div');
+        secTitle.className = 'note-section-title';
+        secTitle.textContent = 'All Notes';
+        container.appendChild(secTitle);
+      }
+      unpinnedList.forEach(n => container.appendChild(createNoteCard(n)));
+    }
+  } else {
+    list.forEach(n => container.appendChild(createNoteCard(n)));
+  }
+}
+
+function createNoteCard(n) {
+  const item = document.createElement('div');
+  item.className = `note-item ${n.id === activeNoteId ? 'active' : ''}`;
+  item.id = `note-item-${n.id}`;
+  item.onclick = () => selectNote(n.id);
+
+  item.innerHTML = `
+    <div class="note-item-title">
+      <span>${n.title}</span>
+      ${n.pinned ? '<span style="color: var(--pin-gold); font-size: 11px;">&#128204;</span>' : ''}
+    </div>
+    <div class="note-item-snippet">${n.body.replace(/\n/g, ' ')}</div>
+    <div class="note-item-tags">
+      ${n.tags.map(t => `<span class="tag-pill">#${t}</span>`).join('')}
+    </div>
+  `;
+  return item;
+}
+
+function selectNote(id) {
+  activeNoteId = id;
+  const n = notes.find(x => x.id === id);
+  if (!n) return;
+
+  document.getElementById('input-note-title').value = n.title;
+  document.getElementById('input-note-tags').value = n.tags.join(', ');
+  document.getElementById('textarea-note-body').value = n.body;
+
+  const pinBtn = document.getElementById('btn-pin-note');
+  pinBtn.className = `btn btn-outline btn-icon ${n.pinned ? 'btn-pinned' : ''}`;
+
+  renderNotesSidebar();
+  renderPreview();
+}
+
+function renderPreview() {
+  const n = notes.find(x => x.id === activeNoteId);
+  if (!n) return;
+
+  // Simple Markdown & [[WikiLink]] parser
+  let html = n.body
+    .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+    .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+    .replace(/\[\[(.*?)\]\]/g, (match, noteTitle) => {
+      return `<a class="wiki-link" id="link-note-${noteTitle}" onclick="openNoteByName('${noteTitle}')">${noteTitle}</a>`;
+    })
+    .replace(/\n\n/g, '</p><p>')
+    .replace(/\n/g, '<br>');
+
+  document.getElementById('rendered-markdown-content').innerHTML = `<p>${html}</p>`;
+
+  // Calculate backlinks
+  const backlinkNames = notes
+    .filter(other => other.id !== n.id && other.body.includes(`[[${n.title}]]`))
+    .map(other => other.title);
+
+  const blBox = document.getElementById('box-backlinks');
+  if (backlinkNames.length > 0) {
+    blBox.innerHTML = `Linked from: <strong>${backlinkNames.join(', ')}</strong>`;
+  } else {
+    blBox.textContent = 'No incoming links.';
+  }
+}
+
+function openNoteByName(title) {
+  const target = notes.find(n => n.title.toLowerCase() === title.toLowerCase());
+  if (target) {
+    selectNote(target.id);
+  }
+}
+
+function saveCurrentNote() {
+  let n = notes.find(x => x.id === activeNoteId);
+  const title = document.getElementById('input-note-title').value.trim();
+  const rawTags = document.getElementById('input-note-tags').value;
+  const body = document.getElementById('textarea-note-body').value;
+
+  const tags = rawTags.split(',').map(s => s.trim().replace(/^#/, '')).filter(Boolean);
+
+  if (!n) {
+    n = {
+      id: 'n-' + Date.now(),
+      title: title || 'Untitled Note',
+      body,
+      tags,
+      pinned: false,
+      archived: false
+    };
+    notes.push(n);
+    activeNoteId = n.id;
+  } else {
+    n.title = title || 'Untitled Note';
+    n.body = body;
+    n.tags = tags;
+  }
+
+  renderNotesSidebar();
+  renderPreview();
+}
+
+function toggleCurrentPin() {
+  const n = notes.find(x => x.id === activeNoteId);
+  if (!n) return;
+  n.pinned = !n.pinned;
+  selectNote(n.id);
+}
+
+function toggleCurrentArchive() {
+  const n = notes.find(x => x.id === activeNoteId);
+  if (!n) return;
+  n.archived = !n.archived;
+  const remaining = notes.filter(x => sidebarView === 'all' ? !x.archived : x.archived);
+  if (remaining.length > 0) {
+    selectNote(remaining[0].id);
+  } else {
+    activeNoteId = null;
+    document.getElementById('input-note-title').value = '';
+    document.getElementById('input-note-tags').value = '';
+    document.getElementById('textarea-note-body').value = '';
+  }
+  renderNotesSidebar();
+  renderPreview();
+}
+
+function switchSidebarView(v) {
+  sidebarView = v;
+  document.getElementById('tab-view-all').classList.toggle('active', v === 'all');
+  document.getElementById('tab-view-archived').classList.toggle('active', v === 'archived');
+  renderNotesSidebar();
+}
+
+function setEditorMode(mode) {
+  const pEditor = document.getElementById('pane-editor-view');
+  const pPreview = document.getElementById('pane-preview-view');
+  if (mode === 'preview') {
+    pEditor.style.display = 'none';
+    pPreview.style.display = 'block';
+  } else {
+    pEditor.style.display = 'flex';
+    pPreview.style.display = 'block';
+  }
+}
+
+function openExportModal() {
+  const activeCount = notes.filter(n => !n.archived).length;
+  const archivedCount = notes.filter(n => n.archived).length;
+  const pinnedCount = notes.filter(n => n.pinned).length;
+
+  document.getElementById('export-summary-text').textContent = `Active: ${activeCount}, Archived: ${archivedCount}, Pinned: ${pinnedCount}`;
+  document.getElementById('export-json-view').value = JSON.stringify({ activeCount, archivedCount, pinnedCount, notes }, null, 2);
+  document.getElementById('modal-export-notes').classList.add('open');
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+
+// Handlers
+document.getElementById('btn-new-note').addEventListener('click', () => {
+  activeNoteId = null;
+  document.getElementById('input-note-title').value = '';
+  document.getElementById('input-note-tags').value = '';
+  document.getElementById('textarea-note-body').value = '';
+  document.getElementById('rendered-markdown-content').innerHTML = '';
+  document.getElementById('box-backlinks').textContent = 'No incoming links.';
+  document.getElementById('input-note-title').focus();
+});
+
+document.getElementById('input-notes-search').addEventListener('input', (e) => {
+  searchQuery = e.target.value;
+  renderNotesSidebar();
+});
+
+document.getElementById('textarea-note-body').addEventListener('input', renderPreview);
+
+// Initial select
+selectNote('n-1');
+
+// Verification Hook
+window.__agyVerify = function() {
+  const failures = [];
+
+  // Check if live run or simulate test 04 flow
+  let rfcNote = notes.find(n => n.title === 'Memory Tiering RFC');
+  if (!rfcNote) {
+    // Simulate steps
+    document.getElementById('btn-new-note').click();
+    document.getElementById('input-note-title').value = 'Memory Tiering RFC';
+    document.getElementById('input-note-tags').value = 'rfc, performance, memory';
+    document.getElementById('textarea-note-body').value = '# Memory Tiering Architecture\n\nThis proposal integrates tiered RAM and CXL memory.\n\nRelated: [[Storage Engine]] and [[Security Model]].';
+    saveCurrentNote();
+
+    // Navigate to Storage Engine and backlink
+    openNoteByName('Storage Engine');
+    document.getElementById('textarea-note-body').value += '\n\nReference: [[Memory Tiering RFC]].';
+    const storageNote = notes.find(n => n.title === 'Storage Engine');
+    storageNote.pinned = true;
+    saveCurrentNote();
+
+    // Archive Security Model
+    const secNote = notes.find(n => n.title === 'Security Model');
+    secNote.archived = true;
+
+    openExportModal();
+    rfcNote = notes.find(n => n.title === 'Memory Tiering RFC');
+  }
+
+  const activeNotes = notes.filter(n => !n.archived);
+  const archivedNotes = notes.filter(n => n.archived);
+  const pinnedNotes = notes.filter(n => n.pinned);
+
+  if (activeNotes.length !== 3) failures.push(`Expected 3 active notes, got ${activeNotes.length}`);
+  if (archivedNotes.length !== 1 || archivedNotes[0].title !== 'Security Model') {
+    failures.push(`Expected 1 archived note (Security Model), got ${archivedNotes.length}`);
+  }
+  if (pinnedNotes.length !== 1 || pinnedNotes[0].title !== 'Storage Engine') {
+    failures.push('Expected Storage Engine to be pinned');
+  }
+
+  const storageNote = notes.find(n => n.title === 'Storage Engine');
+  if (!storageNote || !storageNote.body.includes('[[Memory Tiering RFC]]')) {
+    failures.push('Storage Engine does not contain reciprocal link to Memory Tiering RFC');
+  }
+
+  // Tag search #performance
+  const perfMatches = notes.filter(n => !n.archived && n.tags.includes('performance')).map(n => n.title);
+  if (perfMatches.length !== 2) {
+    failures.push(`Expected 2 active notes with tag performance, got ${perfMatches.length}: ${JSON.stringify(perfMatches)}`);
+  }
+
+  const state = {
+    activeNotesCount: activeNotes.length,
+    archivedNotesCount: archivedNotes.length,
+    pinnedNote: pinnedNotes[0] ? pinnedNotes[0].title : null,
+    perfMatches,
+    rfcCreated: !!rfcNote
+  };
+
+  return {
+    passed: failures.length === 0,
+    failures,
+    score: failures.length === 0 ? 1 : 0,
+    state,
+    note: 'offline markdown notes verification'
+  };
+};
+</script>
+</body>
+</html>
