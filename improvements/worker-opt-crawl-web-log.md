@@ -28,3 +28,7 @@ Crawler OPT-WEB, session 5ed8214a-7360-4148-abf9-a673d0d00b89. Repo ~/workspace/
 
 ## 2026-11-21 22:52 +07 (elapsed 00:03) DELIVERABLE WRITTEN
 - Wrote improvements/opt-crawl-web-20261121.md (141 lines, 14 sources S1-S14, one per class minimum, verdicts, gaps, 4-part synthesis). Checked with python: 0 em/en dash codepoints in both files. Fixed placeholder timestamps in this log (xx removed).
+
+## 2026-11-21 22:53 +07 (elapsed 00:04) COMMIT 1 PUSHED AND VERIFIED
+- Commit e284117 "OPT-WEB: web crawl 14 sources for error classes (a)-(f), synthesis for optimal fix method", 2 files, 171 insertions. Push: 7af9658..e284117 todolist-push. Verified via git ls-remote: origin todolist-push = e284117c40a66dc7ed7ff682031f74053582a082, matches local HEAD. Working tree clean for my two files. Note: local HEAD at start of my commit was 7af9658 (another worker landed F1 work at 22:49 while I crawled); my commit sits on top, no conflicts, only my two files added.
+- DONE. No stalls (longest gap between events under 2 min). No live tests run, no laptop driven, no ydotool. Handing report to Worker OPT.
