@@ -236,3 +236,30 @@ in the repo worktree and /tmp test copies.
   adjudicate findings, fix holes in small commits, re-verify,
   then report to Muse. No live Zen driving before the fresh
   re-review (Y13r3) lands.
+
+- 00:16 +07 (T+1h20m): COUNCIL 3 DONE, verdict AMEND, paper
+  a2d46b2 (improvements/worker-y13g-council-3.md + log). Method:
+  read all 6 files, AST-compared tokenizer block, 10 operability
+  probes on scratch staged ships (no live Zen). 11 findings:
+  C3-1 repo-tree path derives repo as ship, refuses as tampered
+  (moderate); C3-2 manifest-md5 refusal prescribes a fix that
+  cannot work for uncommitted edits (moderate); C3-3 verifier
+  method undocumented (AST-extraction lives only in my log;
+  md5 leg silently disables when manifest unreadable; plan
+  PYTHONDONTWRITEBYTECODE sentence stale) (moderate); C3-4
+  runner -m guard deletes only 2 stems, run_live .pyc bricks
+  verify with no self-heal, proved live P9 (moderate-low);
+  C3-5 refusal messages lack recovery hints (moderate-low);
+  C3-6 --repo paths disagree between launcher docstring and
+  SHIPPED.md (low-moderate); C3-7 runner docstring launch lines
+  lack -P (low); C3-8 plan B1 wording implies 1-2 entry .pyc
+  pass verify, they do not (low-moderate); C3-9 --ship-dir absent
+  from SHIPPED.md, dangling value silently eats next arg, proved
+  P8 (low-moderate); C3-10 handover-token "written by launcher"
+  claim false in code (low); C3-11 doc batch (plan overstates
+  check_manifest, regen docstring stale, SHIPPED regen line
+  lacks cwd note) (low). Holds verified: regen --stage rc 0 x2
+  deterministic (0ca16ddd), -m sequence clean, empty __pycache__
+  passes, tokenizer AST-identical, remote pin matches, Amend 5
+  in code. NOT adjudicating yet: waiting on Council 1/2,
+  Redteam, Verifier (4/5 still running).
