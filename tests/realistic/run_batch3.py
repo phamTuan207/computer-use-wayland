@@ -2286,6 +2286,36 @@ def _expand_bundles(tokens):
     return out
 
 
+def _c_arg_flat_end(cmdline, c_idx):
+    """Flat-token index just past the -c argument for the "-c" at
+    flat index c_idx (fix pass 6, redteam B12). The -c argument
+    is a single argv element; tokens after it are separate argv
+    elements, not part of the -c code, so an import in a later
+    argv element must not match. Re-simulates _argv_tokens to
+    find where the -c argument's words end. Only valid when the
+    -c is a top-level (part-level) "-c", i.e. the DIRECT case;
+    a -c nested inside a shell -c string is a word inside that
+    string's split, not a part, so this helper does not apply
+    to it (the nested case is bounded by the separator stop
+    instead). Returns the flat token count when the -c has no
+    argument or is not found (fail-open for the span, the
+    caller's other checks still apply)."""
+    parts = _expand_bundles([t for t in cmdline.split("\x00") if t])
+    flat = 0
+    i = 0
+    while i < len(parts):
+        if parts[i] == "-c" and i + 1 < len(parts):
+            arg_words = _expand_bundles(parts[i + 1].split())
+            if flat == c_idx:
+                return flat + 1 + len(arg_words)
+            flat += 1 + len(arg_words)
+            i += 2
+        else:
+            flat += 1
+            i += 1
+    return flat
+
+
 def _argv_tokens(cmdline):
     """Split a /proc cmdline (NUL-separated) into argv tokens, and
     split any shell -c / flock -c argument on whitespace, so a
@@ -2339,15 +2369,39 @@ _KNOWN_COMMANDS = ("bash", "sh", "dash", "flock", "env", "sudo",
 
 def _owning_command(tokens, c_idx):
     """Basename of the command owning the "-c" token at c_idx
-    (fix pass 5, redteam R2/U1). Walks back from the -c, skipping
-    flags (start with "-"), VAR=value assignments, and path
-    arguments (contain "/" with a basename not in
-    _KNOWN_COMMANDS), and returns the first remaining token's
-    basename. A bare word is always a command; a path whose
-    basename is a known command is a command; a path whose
-    basename is unknown (e.g. flock's lockfile /tmp/lock) is an
-    argument and is skipped. Returns None when no command token
-    is found before the -c."""
+    (fix pass 5, redteam R2/U1; fix pass 6, Council 1 C5-2 /
+    redteam R5-2). Walks back from the -c, skipping flags (start
+    with "-"), VAR=value assignments, path arguments (contain "/"
+    with a basename not in _KNOWN_COMMANDS), and a bare word that
+    follows a flag UNLESS its basename is a known command (a
+    flag's VALUE, e.g. "pipefail" after "-o" in "bash -o pipefail
+    -c"; the "unless known" clause matters because "bash" after
+    "-i" in "env -i bash -c" IS the command), and returns the
+    first remaining token's basename. A bare word is always a
+    command; a path whose basename is a known command is a
+    command; a path whose basename is unknown (e.g. flock's
+    lockfile /tmp/lock) is an argument and is skipped. Returns
+    None when no command token is found before the -c. Residual
+    (fix pass 6, Council 1 C5-2): a flag value whose basename is
+    exactly a known command (e.g. an init file literally named
+    "python3") would still be returned as the owner; that form
+    is contrived and the redteam's own path rule has the same
+    shape, so it is a record, not a fix. Residual (fix pass 6,
+    redteam R5-8 / Council 2 C2-5, NEW false positive,
+    fix5-introduced): the walk-back returns ANY bare word as
+    the owner without checking whether that word is actually a
+    command, so `echo bash -c run_batch3.py`, `ssh host bash -c
+    run_batch3.py`, `cat bash -c run_batch3.py` and `grep -r
+    bash -c run_batch3.py` all flag True (fix4 False), although
+    no shell -c runs (echo prints the words; the ssh client is
+    not running the runner locally). Fail-closed, narrow shape
+    (needs a literal shell name as a bare word immediately
+    before a -c in a non-shell command); fixing it properly
+    would require command-position tracking (accept a bare word
+    as the owner only when it sits in command position: argv[0],
+    or after a separator, a -c, or a wrapper chain). Recorded,
+    not fixed; the leaf process is still caught live in every
+    case."""
     j = c_idx - 1
     while j >= 0:
         tok = tokens[j]
@@ -2358,6 +2412,15 @@ def _owning_command(tokens, c_idx):
             j -= 1
             continue
         base = tok.rsplit("/", 1)[-1]
+        if j > 0 and tokens[j - 1].startswith("-") and \
+                base not in _KNOWN_COMMANDS:
+            # C5-2 (fix pass 6): a bare word after a flag is the
+            # flag's VALUE, not a command (e.g. "pipefail" after
+            # "-o"). Skip it, unless its basename is a known
+            # command (then it IS the command, e.g. "bash" after
+            # "-i" in "env -i bash -c").
+            j -= 1
+            continue
         if "/" in tok and base not in _KNOWN_COMMANDS:
             j -= 1
             continue
@@ -2365,29 +2428,95 @@ def _owning_command(tokens, c_idx):
     return None
 
 
-def _top_level_sep_index(tok):
+def _quote_states(tokens):
+    """Quote state BEFORE each token index, scanning forward from
+    tokens[0] (fix pass 6, redteam R5-1 / Council 1 C5-1 /
+    Council 2 C2-3). Returns a list of (in_single, in_double)
+    tuples, one per token. A ' toggles in_single unless inside
+    double quotes; a " toggles in_double unless inside single
+    quotes. Backslash escapes are ignored (the fleet's launchers
+    do not use them in these positions). A token is inside quotes
+    when either flag is True before it. Caveat: an apostrophe in
+    a prompt ("don't") unbalances the tracker, so everything
+    after it reads as inside quotes; that errs fail-closed (a
+    later real separator would be missed and the marker scope
+    would extend too far), which is the safe direction and the
+    same class of over-approximation the guard already carries."""
+    states = []
+    in_single = False
+    in_double = False
+    for tok in tokens:
+        states.append((in_single, in_double))
+        for ch in tok:
+            if ch == "'" and not in_double:
+                in_single = not in_single
+            elif ch == '"' and not in_single:
+                in_double = not in_double
+    return states
+
+
+def _top_level_sep_index(tok, in_single=False, in_double=False):
     """Index of the first top-level shell separator (; / && / ||)
-    in tok, or -1 (fix pass 5, redteam R3/R4). A separator is
-    top-level when it appears after the last quote character
-    (single or double) in the token, i.e. outside the quoted
-    region that ends the token. A token with no quotes (e.g.
-    "time;" inside a codex -c snippet, or "1;" inside a python
-    -c string) has no top-level separator: its ";" is code, not a
-    shell separator. A standalone separator token returns 0.
-    Limitation: a token with a top-level separator BEFORE its
-    last quote (e.g. "'a';'b;c'") is missed; that form is
-    contrived and not in the fleet's launchers."""
+    in tok, or -1 (fix pass 5, redteam R3/R4; fix pass 6, redteam
+    R5-1 / Council 1 C5-1 / Council 2 C2-3: rewritten from the
+    "after the last quote" heuristic to a char-by-char scan from
+    the quote state BEFORE tok). in_single/in_double is the quote
+    state before tok (from _quote_states). A separator is
+    top-level only when it appears while outside quotes. A token
+    that OPENS a quoted region (starts with a quote and holds
+    only one quote of that kind, e.g. "'x=1;") has no top-level
+    separator: its ";" is inside the opened region (this
+    subsumes Council 1's C5-1 sketch). A token with no quotes
+    (e.g. "time;" inside a codex -c snippet, or "1;" inside a
+    python -c string) has no top-level separator when the state
+    before it is inside quotes; when outside, its ";" is a real
+    separator. A standalone separator token returns 0 when
+    outside quotes, -1 when inside. Limitation: a token with a
+    top-level separator BEFORE its last quote (e.g.
+    "'a';'b;marionette'") returns the FIRST such separator, so
+    a marker after it in the same token is missed (redteam R5-5
+    / B13, pre-existing, documented); that form is contrived
+    and not in the fleet's launchers. Note the d4 instance
+    (redteam addendum): a glued ";" after an OPENING quote
+    ("'a=1;") is NOT top-level (the old heuristic called it
+    top-level); the direct leaf form ("a=1;") has no quotes and
+    is correctly treated as code."""
     if tok in (";", "&&", "||", "&", "|"):
-        return 0
-    last_quote = max(tok.rfind("'"), tok.rfind('"'))
-    if last_quote < 0:
-        return -1
-    best = -1
-    for sep in (";", "&&", "||"):
-        idx = tok.find(sep, last_quote + 1)
-        if idx >= 0 and (best < 0 or idx < best):
-            best = idx
-    return best
+        return 0 if not (in_single or in_double) else -1
+    i = 0
+    while i < len(tok):
+        ch = tok[i]
+        if ch == "'" and not in_double:
+            in_single = not in_single
+            i += 1
+            continue
+        if ch == '"' and not in_single:
+            in_double = not in_double
+            i += 1
+            continue
+        if not in_single and not in_double:
+            if tok.startswith("&&", i) or tok.startswith("||", i):
+                return i
+            if ch == ";":
+                return i
+        i += 1
+    return -1
+
+
+def _runner_basename_head(base):
+    """The runner basename before the first shell separator char
+    (fix pass 6, Council 2 C2-4 / redteam R5-3). A glued
+    separator with no space ("run_foo.py&&echo",
+    "run_foo.py;echo", "run_foo.py|cat") still leaves the runner
+    basename as the head; rstrip only strips a separator at the
+    END of the token and misses mid-token glue. Returns base up
+    to (not including) the first of ";", "&", "|", "(", ")"."""
+    cut = len(base)
+    for sep in (";", "&", "|", "(", ")"):
+        idx = base.find(sep)
+        if 0 <= idx < cut:
+            cut = idx
+    return base[:cut]
 
 
 def _c_is_shell(tokens, c_idx):
@@ -2489,7 +2618,11 @@ def _is_runner_cmdline(cmdline):
     import branch requires the import to sit inside a python -c
     string (fix pass 4, redteam F3: "pytest -m run_batch3",
     "echo -m run_batch3" and "echo import run_batch3" all miss
-    now). The first word of a -c string is a command only when
+    now; fix pass 6, redteam R5-1 / Council 1 C5-1: the
+    import guard is now quote-state aware and direct-vs-nested
+    aware, so a ";" in direct python -c code no longer blocks
+    while a ";" after a nested python -c argument's closing
+    quote still does). The first word of a -c string is a command only when
     the -c is a shell -c (fix pass 4, redteam F1: "python3
     -crun_batch3.py" is a NameError, the file never runs). -c
     import form
@@ -2509,6 +2642,18 @@ def _is_runner_cmdline(cmdline):
     returns True, fix pass 5, Council 3 C3-2 / Council 1 C1-R2);
     a glued ";codex" misses ("bash -c 'echo foo;codex
     marionette'", fix pass 5, Council 1 C1-R3, pre-existing);
+    a bare word before a -c is always taken as the owning
+    command, so `echo bash -c run_batch3.py`, `ssh host bash -c
+    run_batch3.py` and `cat bash -c run_batch3.py`
+    false-positive (fix pass 6, redteam R5-8 / Council 2 C2-5,
+    fail-closed, recorded not fixed); the nearest--c search in
+    _in_shell_c_string crosses a shell separator (fix pass 6,
+    redteam R5-4, FIXED: a non-shell -c in an earlier command is
+    skipped, so a marker in a later command after a codex -c no
+    longer counts); a python -c
+    in a later top-level command after a shell -c is treated as
+    nested (fix pass 6, import-branch heuristic, fail-closed,
+    contrived, recorded not fixed);
     renamed copies, shebang renamed copies, and
     spoofed argv[0] all miss. None is a launch form in use, and
     the renamed/spoofed forms are adversarial, outside this gate's
@@ -2519,7 +2664,7 @@ def _is_runner_cmdline(cmdline):
     (every runner must take the same lock; run_live.py does not
     today), so that is a Muse-level fleet decision, not a change
     for this runner. Sync note: this copy has the fix-pass-1, -2,
-    -3, -4 and -5 additions; the sibling copies in launch_y13.py and
+    -3, -4, -5 and -6 additions; the sibling copies in launch_y13.py and
     run_codex_y5.py do NOT yet have them, so the "identical logic"
     claim is currently FALSE. Re-diff the copies before treating
     them as in sync; the sync itself belongs to Y13f's fix pass."""
@@ -2536,13 +2681,15 @@ def _is_runner_cmdline(cmdline):
                 _is_runner_module(base) and \
                 _python_executes(tokens, i - 1):
             return True
-        if _script_basename_is_runner(base.rstrip(";,()&|")):
-            # C2-1 (fix pass 5, Council 2): a glued separator on
-            # the runner token ("run_foo.py;", "run_foo.py&&",
-            # "run_foo.py||") must still match, mirroring the
-            # import branch's rstrip. The stripped form is used
-            # only for the basename check; `base` itself is used
-            # for the .py / bash-sh checks below.
+        if _script_basename_is_runner(_runner_basename_head(base)):
+            # C2-1 (fix pass 5, Council 2) + C2-4/R5-3 (fix pass
+            # 6): a glued separator on the runner token
+            # ("run_foo.py;", "run_foo.py&&", "run_foo.py||",
+            # and the no-space forms "run_foo.py&&echo",
+            # "run_foo.py;echo", "run_foo.py|cat") must still
+            # match. The head before the first separator char is
+            # used only for the basename check; `base` itself is
+            # used for the .py / bash-sh checks below.
             if i == 0:
                 return True
             prev = tokens[i - 1]
@@ -2581,28 +2728,65 @@ def _is_runner_cmdline(cmdline):
                 base.rstrip(";,()").startswith("run_")
                 or base.rstrip(";,()") == "hand_drive_e1"):
             # Guard (fix pass 4, redteam F3; fix pass 5, redteam
-            # R4 / Council 3 C3-3 / Council 1 C1-R1): the import
-            # must be inside a python -c string in the SAME shell
+            # R4 / Council 3 C3-3 / Council 1 C1-R1; fix pass 6,
+            # redteam R5-1 / Council 1 C5-1): the import must be
+            # inside a python -c string in the SAME shell
             # command. Find the nearest "-c" before the import
-            # token, stopping at a TOP-LEVEL shell separator (a
-            # ";" after a closing quote, or a standalone
-            # separator); without one (e.g. "echo import
-            # run_batch3") it is not a python import, and a "-c"
-            # from an earlier command (e.g. "python3 -c 'import
-            # os'; echo import run_batch3") does not satisfy the
-            # guard. A ";" with no quotes (e.g. "1;" inside the
-            # -c string) is Python code, not a shell separator,
-            # so it does not stop the search. The -c itself must
-            # be owned by python.
+            # token (NO separator stop on the way back; the stop
+            # is applied forward, below). The -c itself must be
+            # owned by python. A DIRECT python -c (no shell -c
+            # before it) has its argument's outer quotes consumed
+            # by the shell, so a ";" between the -c and the
+            # import is Python code (B1/B2/B8 direct standalone
+            # ";", B10 direct glued ";") and must not block: a
+            # single /proc cmdline never contains a top-level
+            # shell ";" separating two top-level commands (the
+            # shell splits those into separate processes), so a
+            # ";" in a direct python -c cmdline is always code.
+            # A NESTED python -c (inside a shell -c string,
+            # detected by a shell -c at some index j < c_idx)
+            # has its argument quoted in the tokens, so a
+            # top-level separator between the -c and the import
+            # (a ";" after the argument's closing quote, B12/R4)
+            # means the import is in a later shell command and
+            # blocks; a ";" inside the argument's opened quote
+            # region (d4 "'a=1;", C5-1 B5 "'x=1;") is code and
+            # does not block. The stop uses
+            # _top_level_sep_index with the quote state before
+            # each token (from _quote_states). Limitation: a
+            # python -c in a later top-level command after a
+            # shell -c (e.g. `bash -c "echo hi"; python3 -c
+            # 'import os; import run_batch3'`) is wrongly
+            # treated as nested (fail-closed); that form is
+            # contrived and not in the fleet's launchers.
             c_idx = -1
             for j in range(i - 1, -1, -1):
-                if _top_level_sep_index(tokens[j]) >= 0:
-                    break
                 if tokens[j] == "-c":
                     c_idx = j
                     break
             if c_idx >= 0 and _python_executes(tokens, c_idx):
-                return True
+                nested = any(tokens[j] == "-c" and
+                             _c_is_shell(tokens, j)
+                             for j in range(c_idx))
+                blocked = False
+                if nested:
+                    states = _quote_states(tokens)
+                    blocked = any(
+                        _top_level_sep_index(tokens[k], *states[k]) >= 0
+                        for k in range(c_idx + 1, i))
+                else:
+                    # DIRECT python -c: the -c argument is a single
+                    # argv element, so the import must lie within
+                    # it. An import in a LATER argv element (e.g.
+                    # `python3 -c "import os';" echo import
+                    # run_batch3`, redteam B12) is a command-line
+                    # argument, not executed code, and must not
+                    # match. _c_arg_flat_end bounds the -c
+                    # argument's flat-token span.
+                    if i >= _c_arg_flat_end(cmdline, c_idx):
+                        blocked = True
+                if not blocked:
+                    return True
     return False
 
 
@@ -2706,30 +2890,62 @@ def _in_shell_c_string(tokens, i):
     or python -c argument is a prompt/snippet, not a shell command,
     so its ";" must not truncate the marker scope (the H2 live
     case is "codex -c 'import time; ... # marionette'"). Finds the
-    nearest "-c" before i and checks whether the command owning it
+    "-c" containing i and checks whether the command owning it
     is a shell (bash, sh, dash or flock), via _owning_command
-    (fix pass 5, redteam R2: same walk-back fix as _c_is_shell)."""
-    c = -1
+    (fix pass 5, redteam R2: same walk-back fix as _c_is_shell).
+    Fix pass 6, redteam R5-4: a non-shell -c in an EARLIER
+    command does not contain i. When the nearest "-c" is a
+    python/codex -c and a top-level shell separator (quote-state
+    aware) lies between it and i, the token is in a later command
+    within the enclosing shell -c string, so that -c is skipped
+    and the search continues backward to the shell -c that does
+    contain i. `bash -c "python3 -c 'x'; codex exec foo; echo
+    marionette"` now returns True (the bash -c contains the
+    codex), so _same_command_tokens bounds the marker scope and
+    the echo's marker does not count. A shell -c is returned
+    immediately (a separator inside its string separates
+    commands within the string, it does not end the string)."""
+    states = _quote_states(tokens)
     for j in range(i - 1, -1, -1):
         if tokens[j] == "-c":
-            c = j
-            break
-    if c < 0:
-        return False
-    return _owning_command(tokens, c) in ("bash", "sh", "dash", "flock")
+            if _owning_command(tokens, j) in ("bash", "sh", "dash",
+                                              "flock"):
+                return True
+            # Non-shell -c (python/codex). If a top-level
+            # separator lies between it and i, the token is in a
+            # later command, not inside this -c's argument; skip
+            # it and keep searching. Otherwise the token is
+            # inside this -c's argument, so it is not in a shell
+            # -c string.
+            if any(_top_level_sep_index(tokens[k], *states[k]) >= 0
+                   for k in range(j + 1, i)):
+                continue
+            return False
+    return False
 
 
 def _same_command_tokens(tokens, i):
     """Tokens of the same shell command as the token at i (fix pass
-    3, redteam F5; fix pass 5, redteam R3). Stops at command
+    3, redteam F5; fix pass 5, redteam R3; fix pass 6, redteam
+    R5-1 / Council 1 C5-1 / Council 2 C2-3: the bound after a
+    codex -c is now quote-state aware). Stops at command
     separators (";", "&&", "||", "|", "&"), so "codex --help; echo
     marionette" does not let the marker from the later command
     count against codex. After a codex -c flag, tokens are
     included until a TOP-LEVEL separator (a ";" after a closing
-    quote); a ";" with no quotes inside the snippet is code, not
-    a separator, so the F2 case still counts its marker. Returns
-    the tokens before and after i within that command, lowercased
-    joined text is the caller's job."""
+    quote); a ";" inside the snippet's opened quote region is
+    code, not a separator, so the F2 case ("time;" inside the
+    snippet) and the C5-1/R5-1 cases ("'x=1;", "'a=1;", a SPACED
+    separator inside the prompt, e.g. "&&", "|", "&") still count
+    their marker. Returns the tokens before and after i within
+    that command, lowercased joined text is the caller's job.
+    Residual (fix pass 6, redteam R5-7 / Council 2 C2-9/C2-10):
+    the direct-form codex "&" (a bare "&" as a separate argv
+    element, e.g. `codex --help & echo marionette`) still
+    returns True; a bare "&" CAN occur in /proc via direct exec
+    (redteam L4), so the old "cannot occur in /proc" claim is
+    corrected, but the behaviour is fail-closed and the form is
+    contrived."""
     lo = i
     while lo > 0 and tokens[lo - 1] != "-c" and \
             not _is_cmd_separator(tokens[lo - 1]):
@@ -2747,13 +2963,19 @@ def _same_command_tokens(tokens, i):
             # But a TOP-LEVEL separator (a ";" after a closing
             # quote, fix pass 5, redteam R3) ends the snippet and
             # starts a later shell command, whose marker must not
-            # count. A ";" with no quotes (e.g. "time;" inside
-            # the snippet) is code, not a separator, so the scan
-            # continues past it.
+            # count. A ";" inside the snippet's opened quote
+            # region (e.g. "time;", "'x=1;") is code, not a
+            # separator, so the scan continues past it (fix pass
+            # 6, redteam R5-1 / Council 1 C5-1 / Council 2 C2-3:
+            # the bound now uses _quote_states, so a token that
+            # OPENS a quoted region has no top-level separator).
             j += 1
+            states = _quote_states(tokens)
             while j < len(tokens):
                 tok2 = tokens[j]
-                sep_idx = _top_level_sep_index(tok2)
+                in_single, in_double = states[j]
+                sep_idx = _top_level_sep_index(tok2, in_single,
+                                               in_double)
                 if sep_idx >= 0:
                     if sep_idx > 0:
                         parts.append(tok2[:sep_idx])

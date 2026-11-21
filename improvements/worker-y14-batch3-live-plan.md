@@ -611,10 +611,12 @@ header/imports, run_b3_t10, run_preflight, H2 helpers, launch_gate):
   fixture.html eb814c944dab6279417c6182e1950876.
   Also md5sum run_batch3.py (from /tmp/y14-server, where the runner
   is shipped) and compare against the md5 recorded in the re-stage
-  log's fix-pass-5 entry: 9e99d9aa1bcdbb525407adfb31e0692b (git blob
-  ff4a5358ac7f621a1fd649c36cec94da2031399d, commit 46e0909).
-  (Supersedes the fix-pass-4 values: md5 2920f169, blob 585fb801,
-  commit bf3c939.) Paste the actual command output into the live
+  log's fix-pass-6 entry: fac96935988b9c327dcbe9b3cfa1342e (git blob
+  261f09aed1b52c7b80b0b2fc260f13f70fafd142).
+  (Supersedes the fix-pass-5 values: md5 9e99d9aa, blob ff4a5358,
+  commit 46e0909; and the fix-pass-4 values: md5 2920f169, blob
+  585fb801, commit bf3c939. The fix-pass-6 commit hash is in the
+  log's fix-pass-6 entry.) Paste the actual command output into the live
   log at ship time. Any mismatch refuses the slot.
 - Council (3) + redteam over the re-stage diff f732d6a: Council 1 GO
   (t10 translation 69/69, watch item: middle advancing read margin);
@@ -746,8 +748,11 @@ header/imports, run_b3_t10, run_preflight, H2 helpers, launch_gate):
   F7 glued separators FIXED (_same_command_tokens splits glued
   ";" / "&&" / "||" in both directions, so `codex --help;echo
   marionette` no longer false-positives; and a codex -c flag now
-  includes everything after it, so `bash -c "codex -c 'import
-  time; x # marionette'"` is caught); F8 sudo RESTORED to the
+  includes everything after it UP TO a top-level separator, the
+  bound being quote-state aware (fix pass 6, redteam R5-1 /
+  Council 1 C5-1 / Council 2 C2-3), so `bash -c "codex -c 'import
+  time; x # marionette'"` is caught while `bash -c "codex -c
+  'hello'; echo marionette"` is not); F8 sudo RESTORED to the
   recorded codex gaps (it was dropped from the docstring); F9
   probe accuracy FIXED (the fix3 probe is 70 checks, not the
   claimed 72; the `--check-hash-based-pycs=always` joined case is

@@ -951,6 +951,18 @@ coordinates go here too.
   refuted in the fix-pass-5 adjudication. The log lines 496-497
   DO mention the fix-pass-3 values, but that is the historical
   fix-pass-3 verification section, not the live pin.
+  CORRECTION (fix pass 6): this refutation was WRONG. I verified
+  it myself by reading the bf3c939 blobs at 23:19 +07: at bf3c939
+  the plan lines 614-615 pinned the fix-pass-3 values (md5
+  e9e3519a, blob 3a9b7b17, commit 3875215), NOT the fix-pass-4
+  values, and the log at bf3c939 has NO fix-pass-4 entry (grep
+  for 2920f169/585fb801 returns nothing). Council 1's C1-2 was
+  VALID at the time. It was fixed by the hash-record follow-up
+  40c4e48 (plan then pins md5 2920f169). My refutation read the
+  CURRENT plan (already fixed by 40c4e48), not the bf3c939 plan.
+  Council 2's C2-6 and the redteam's Correction 1 independently
+  confirmed the same error. The C1-2 record is corrected, not
+  refuted.
 - 22:51 +07 (elapsed ~31 min, from MEMORY.md): owner correction
   on the 240 target. GitHub graph shows only 136 contributions
   on 21/11 (tooltip), not 190. The count was wrong timezone: 190
@@ -979,8 +991,9 @@ and their disposition:
   command set), and returns the owning command's basename. Add
   "dash" to the shell list (bash, sh, dash, flock). Apply the same
   helper in both `_c_is_shell` and `_in_shell_c_string`, which
-  duplicate the walk-back. Re-probe must show the redteam's A1-A14
-  all PASS, fix4 probe still 64/64, all regressions green.
+  duplicate the walk-back. Re-probe must show the redteam's A1-A9
+  plus 7 further wrapper cases all PASS, fix4 probe still 64/64,
+  all regressions green.
 - R4/C3-3/C1-R1 (redteam R4, Council 3 C3-3, Council 1 C1-R1,
   LOW): import-branch guard's nearest-`-c` scan crosses `;`.
   FIXED by code: the -c search now stops at a shell separator
@@ -1071,6 +1084,11 @@ and their disposition:
   file. The log lines 496-497 DO mention the fix-pass-3 values,
   but that is the historical fix-pass-3 verification section, not
   the live pin.
+  CORRECTION (fix pass 6): this refutation was WRONG (see the
+  correction note at the 22:54:52 event-log entry above). C1-2
+  was VALID at bf3c939, fixed by the hash-record follow-up
+  40c4e48, not refuted. Confirmed three ways (Council 2 C2-6,
+  redteam Correction 1, my own bf3c939 grep).
 
 ### Declined / deferred
 
@@ -1082,11 +1100,12 @@ and their disposition:
 
 ### Verification plan
 
-- New fix5 probe /tmp/y14b-fix5-probe.py covering R2 (A1-A14
-  per the redteam, wrapper-prefixed shell -c + dash), R4/C3-3
-  (import guard boundary), C2-1 (glued separator on the runner
-  token), C2-2 (bare `&`), R3 (quote-aware codex -c bound, F2
-  case still True), plus the redteam's A1-A14 re-proof.
+- New fix5 probe /tmp/y14b-fix5-probe.py covering R2 (A1-A9 plus 7
+  further wrapper cases per the redteam, wrapper-prefixed shell -c
+  + dash), R4/C3-3 (import guard boundary), C2-1 (glued separator
+  on the runner token), C2-2 (bare `&`), R3 (quote-aware codex -c
+  bound, F2 case still True), plus the redteam's A1-A9 plus 7
+  further wrapper cases re-proof.
 - Regressions: fix4 probe 64/64, H2 45/45, fix2 31/31, fix3
   70/70, transcription 82, gate dry 4/4, M1 3/3, M1 all-12 4/4,
   Council 2 extra probe 46/46, py_compile + import OK.
@@ -1473,3 +1492,455 @@ instead of forcing a fix pass 7.
 - 23:20 +07: redteam still running. Writing the partial
   adjudication (3 of 4 reviews) to the log and committing it;
   fix pass 6 starts after the redteam lands.
+
+### Redteam AMEND (paper 92fbefd + addendum 5f842a2)
+
+- R5-1 (LOW, regression, 8 cases, U1 REQUIRED): a standalone
+  separator inside a -c string truncates the scan. _argv_tokens
+  splits -c strings on whitespace with no quote awareness, so a
+  SPACED separator becomes a standalone separator token and
+  _top_level_sep_index returns 0 for it. B1/B2/B8 (direct python
+  -c import, spaced ;/&), B3-B7 (bash -c codex prompt, spaced
+  &&/;/|/&/||). All True in fix4. Live L1/L5 prove it. Fix
+  sketch: quote-state tracking forward from the -c. U1
+  acceptance: B1-B8 True again; R3/R4 controls (B11, B12)
+  still False; fix4 probe 64/64, fix5 probe 38/38.
+- R5-2 (LOW, regression, 4 cases, U2 REQUIRED): _owning_command
+  returns a shell's own separate-value flag as the owner
+  (`bash -o pipefail -c`, `sh -o`, `bash -O`, codex via
+  `bash -o`). All True in fix4. Live L2 proves it. Fix sketch:
+  skip the value of known value-taking shell flags (-o, -O).
+  SAME root cause as Council 1 C5-2; Council 1's sketch (skip
+  any bare word after a flag unless it is a known command) is
+  more general and covers these cases. Use Council 1's sketch.
+- R5-3 (LOW, pre-existing, U3 FIX OR RECORD): C2-1 half fixed;
+  mid-token glue (`run_foo.py&&echo`, no space) still misses,
+  5 cases. Same as Council 2 C2-4. Fix: check the head before
+  the first separator in the token.
+- R5-4 (LOW, pre-existing FP, U4 FIX OR RECORD):
+  _in_shell_c_string nearest -c crosses a separator (E1:
+  `bash -c "python3 -c 'x'; codex exec foo; echo marionette"`
+  True, want False). RECORD (not a code fix): fixing it
+  properly requires knowing which -c's string contains the
+  codex token (a -c string span), which the flat token list
+  does not carry; the shape is contrived (needs a python -c
+  before the codex in the same -c string) and fail-closed.
+  Record the exact form in the _in_shell_c_string docstring.
+- R5-5 (INFO): documented "separator before last quote"
+  limitation confirmed real (B13). Already documented. No
+  action.
+- R5-6 (INFO): C3-2 prototype passes 14/14, so the deferral
+  is a scope choice, not forced; record is accurate, no
+  unblock. No action.
+- R5-7 (minor doc): the synthetic-& claim is imprecise; L4
+  proves "&" CAN appear in /proc via direct exec. Correct the
+  claim (same as Council 2 C2-9/C2-10).
+- R5-8 (LOW, NEW FP, fix5-introduced, U7 FIX OR RECORD):
+  _owning_command returns ANY bare word as the owner (`echo
+  bash -c run_batch3.py`, `ssh host bash -c run_batch3.py`,
+  `cat/grep bash -c ...` all True, fix4 False). Same as
+  Council 2 C2-5. RECORD (not a code fix): requiring command
+  position for the owner is a bigger design change; the form
+  is contrived and fail-closed. Record the exact forms in the
+  docstring.
+- R5-9 (minor doc): plan F7 sentence false after the R3 bound.
+  Same as Council 2 C2-7. Rewrite it.
+- Correction 1 (owned plainly by the redteam, same error I
+  made): its paper first claimed the C1-2 refutation verified;
+  that was wrong (it checked the current plan, not bf3c939).
+  Withdrawn in the addendum. Third independent confirmation
+  (Council 2 C2-6, redteam Correction 1, my own bf3c939 grep)
+  that C1-2 was VALID and fixed by 40c4e48.
+- R5-1 addendum (d4): `bash -c "python3 -c 'a=1; import
+  run_batch3'"` returns False (fix4 True), while the direct
+  leaf form returns True in both. Mechanism: the token
+  `'a=1;` has only the OPENING quote, so its ";" sits after
+  the last quote and _top_level_sep_index calls it top-level.
+  Same root cause as C5-1/C2-3; the U1 quote-state sketch
+  fixes it.
+
+### Fix pass 6 scope (CONSOLIDATED, all 4 reviews in)
+
+Code (4 items):
+1. R5-1/C5-1/C2-3 (U1 REQUIRED): quote-state-aware separator
+   bound. Replace the _top_level_sep_index "after the last
+   quote" heuristic with a char-by-char scan from the quote
+   state before the token (new helper _quote_states computes
+   (in_single, in_double) before each token index, forward
+   from 0; _top_level_sep_index takes that state and returns
+   the first separator appearing while outside quotes). This
+   subsumes Council 1's C5-1 sketch (a token starting with a
+   quote holding only one quote of that kind opens a region)
+   AND the R5-1 standalone case (a standalone separator
+   inside quotes is not a separator). Apply in _same_command_tokens
+   (forward scan after a codex -c) and in the import-branch
+   backward search. For the import branch, restructure to:
+   find the nearest -c before the import (no separator stop),
+   check it is a python -c, then scan forward from it to the
+   import for a REAL separator (glued after a closing quote,
+   or standalone outside quotes in a nested shell -c string);
+   a standalone separator after a DIRECT python -c (no shell
+   -c before it) is Python code, not a separator. This makes
+   B1-B8 True while B11/B12 stay False.
+2. C5-2/R5-2 (U2 REQUIRED): _owning_command flag-value skip
+   (Council 1's sketch: skip a bare word that follows a flag
+   UNLESS its basename is a known command; placed before the
+   path-argument skip). Record the residual (a flag value
+   whose basename is exactly a known command).
+3. C2-4/R5-3 (U3 FIX): basename truncate at the first
+   separator char (mid-token glue). Replace
+   base.rstrip(";,()&|") with a head-before-first-separator
+   check in the basename block.
+4. (No code fix for R5-4 or R5-8/C2-5; both RECORDED per
+   their U4/U7 "fix or record" terms.)
+
+Doc/record (9 items):
+5. R5-4: record the exact E1 form in the _in_shell_c_string
+   docstring.
+6. R5-8/C2-5: record the bare-word FP forms in the
+   _owning_command docstring (and the _is_runner_cmdline
+   known limitations).
+7. C2-6 / redteam Correction 1: correct the C1-2 record
+   (C1-2 was VALID, fixed by 40c4e48, not refuted) wherever
+   the refutation appears (log adjudication, log event
+   entries).
+8. C2-7/R5-9: rewrite the plan F7 sentence to state the
+   quote-aware bound.
+9. C2-8: _top_level_sep_index docstring (unmatched-opening-
+   quote limitation + d4 case; note the rewrite subsumes the
+   old heuristic).
+10. C5-5: correct "A1-A14" to "A1-A9 plus 7 further wrapper
+    cases" wherever it appears.
+11. C5-6: strengthen the fix5 probe's URL case to a real URL
+    (Council 1 B15).
+12. C5-7: one line in the _same_command_tokens docstring
+    (direct-form codex "&" residual).
+13. C2-9/C2-10/R5-7: correct the "cannot occur in /proc"
+    claim (an unquoted shell & never survives into argv,
+    while a literal & arg can occur via direct exec or
+    quoting, where True is fail-closed); fix the fix5 probe
+    docstring (it claims live cases it does not have).
+14. C5-4 process note: pin the NEW run_batch3.py blob/md5
+    IN the fix-pass-6 commit itself (plan md5 line updated
+    in the same commit), not in a follow-up.
+
+No action: R5-5 (already documented), R5-6 (deferral is a
+scope choice), C5-8 (mechanism note), C5-3/C5-4 (closed at
+HEAD), C2-9/C2-10 INFO parts (covered by item 13).
+
+### Event log (continued, 23:22-23:24 +07)
+
+- 23:22 +07: redteam verdict received: AMEND, paper 92fbefd +
+  addendum 5f842a2 (both ls-remote verified, ANCESTOR_OK).
+  Own probes: /tmp/y14b-fix5-rt-probe.py 45 checks,
+  /tmp/y14b-fix5-rt-live.py 16 checks, /tmp/y14b-fix5-rt-diff.py
+  fix4-vs-fix5 differential. Findings R5-1/R5-2 (code,
+  REQUIRED) + R5-3/R5-4 (fix or record) + R5-8 (fix or
+  record) + R5-7/R5-9 (doc) + R5-5/R5-6 (INFO). Correction 1
+  withdraws its C1-2 refutation (same error I made; third
+  independent confirmation C1-2 was valid). Redteam
+  disclosures noted: a pkill -f once matched its own exec
+  shell (same known footgun); one live L5 run gave a
+  transient True corrected by a standalone re-run with an
+  aliveness guard (shared-VM interference).
+- 23:22 +07: all 4 fix-pass-5 reviews in, all AMEND, none
+  BLOCK. Fix pass 6 scope consolidated (4 code items, 9
+  doc/record items). Starting fix pass 6 now.
+- 23:22 +07: MEMORY.md / AGENTS.md updates noted: workspace
+  focus proven live (23:19, hyprctl dispatch
+  hl.dsp.focus workspace 2 in ~1s; HYPRLAND_INSTANCE_SIGNATURE
+  is a dir name under /run/user/1000/hypr/; hl.dsp.workspace.goto
+  FAILS as goto is a Lua reserved word). Owner order 23:22
+  (KEYBIND INTEGRATION): find all keybinds and integrate into
+  computer-use; skill_search 'omarchy' = 0 results, no Omarchy
+  skill in the catalog; Worker KB is gathering all keybinds
+  (Omarchy + Hyprland + Zen) into the computer-use doc ON THE
+  MACHINE (local-only). Both are parent-level / other workers'
+  items, not Y14b's. Noted for the record.
+
+## Fix pass 6 (23:24-23:47 +07)
+
+### Adjudication (all 4 fix-pass-5 reviews, all AMEND, none BLOCK)
+
+Code (4 items, plus 2 found during verification):
+1. R5-1/C5-1/C2-3 (U1 REQUIRED): quote-state-aware separator
+   bound. New helper `_quote_states(tokens)` returns the
+   (in_single, in_double) state BEFORE each token index,
+   scanning forward from tokens[0]. `_top_level_sep_index(tok,
+   in_single, in_double)` rewritten as a char-by-char scan from
+   that state (subsumes Council 1's C5-1 sketch: a token starting
+   with a quote and holding only one quote of that kind OPENS a
+   region, so its ";" is inside). Applied in `_same_command_tokens`
+   (forward scan after a codex -c) and in the import-branch
+   backward search, restructured to: find the nearest -c (no
+   separator stop on the way back), check it is a python -c via
+   `_python_executes`, then scan forward for a REAL separator
+   only when NESTED (a shell -c before the -c); a DIRECT python
+   -c has no separator stop (a single /proc cmdline never
+   contains a top-level shell ";" separating two top-level
+   commands, the shell splits those into separate processes, so
+   a ";" in direct python -c code is always code).
+2. C5-2/R5-2 (U2 REQUIRED): `_owning_command` flag-value skip
+   per Council 1's sketch (proven in its scratch copy): skip a
+   bare word that follows a flag UNLESS its basename is a known
+   command, placed before the path-argument skip. Recorded
+   residual: a flag value whose basename is exactly a known
+   command (e.g. an init file literally named "python3") would
+   still be returned as the owner; contrived, record not fix.
+3. C2-4/R5-3 (U3 FIX): basename truncate at the first separator
+   char. New helper `_runner_basename_head(base)` replaces
+   `base.rstrip(";,()&|")` in the basename block. Fixes
+   `run_foo.py;echo`, `&&echo`, `||echo`, `|cat`, `&echo`
+   (no space) still missing.
+4. B12 (found during verification, redteam rt-probe control):
+   direct python -c argv-boundary. New helper
+   `_c_arg_flat_end(cmdline, c_idx)` re-simulates _argv_tokens
+   to find where the -c argument's words end. In the DIRECT
+   case, the import must lie within the -c argument; an import
+   in a LATER argv element (e.g. `python3 -c "import os';"
+   echo import run_batch3`, redteam B12) is a command-line
+   argument, not executed code, and must not match. The nested
+   case does not need this (the separator stop handles it).
+5. R5-4 (U4, was "fix or record", now FIXED): `_in_shell_c_string`
+   skips a non-shell -c in an earlier command. When the nearest
+   "-c" is a python/codex -c and a top-level separator
+   (quote-state aware) lies between it and the token, that -c is
+   skipped and the search continues backward to the shell -c
+   that does contain the token. A shell -c is returned
+   immediately (a separator inside its string separates commands
+   within the string, it does not end the string). `bash -c
+   "python3 -c 'x'; codex exec foo; echo marionette"` now
+   returns False (the echo's marker does not count). This also
+   fixes rt-probe E1 and rt-live L6.
+6. No code fix for R5-8/C2-5 (bare-word FP in _owning_command);
+   RECORDED per its U7 "fix or record" terms.
+
+Doc/record (9 items, all applied):
+7. R5-8/C2-5: bare-word FP forms recorded in the
+   `_owning_command` docstring and the `_is_runner_cmdline`
+   known limitations.
+8. C2-6 / redteam Correction 1: C1-2 record corrected (C1-2 was
+   VALID, fixed by 40c4e48, not refuted) at both places the
+   refutation appears (the 22:54:52 event-log entry and the
+   fix-pass-5 adjudication C1-2 bullet), each with an explicit
+   CORRECTION note.
+9. C2-7/R5-9: plan F7 sentence rewritten to state the
+   quote-aware bound ("includes everything after it UP TO a
+   top-level separator, the bound being quote-state aware").
+10. C2-8: `_top_level_sep_index` docstring rewritten for the new
+    char-by-char scan (unmatched-opening-quote limitation + d4
+    case; notes the rewrite subsumes the old heuristic).
+11. C5-5: "A1-A14" corrected to "A1-A9 plus 7 further wrapper
+    cases" at all 3 live uses in the log (lines 994, 1102,
+    1106). The C5-5 finding itself and the fix-pass-6 scope
+    items quote the label, so they stay as written.
+12. C5-6: fix6 probe's URL case strengthened to a real URL
+    (Council 1 B15: `python3 run_batch3.py http://x/?a=1&b=2`
+    returns True in both blobs).
+13. C5-7: one line in the `_same_command_tokens` docstring
+    (direct-form codex "&" residual).
+14. C2-9/C2-10/R5-7: "cannot occur in /proc" claim corrected in
+    the `_same_command_tokens` docstring (a bare "&" CAN occur
+    in /proc via direct exec, redteam L4; the behaviour is
+    fail-closed); fix5 probe docstring note (it claims live
+    cases it does not have) recorded in the fix6 probe header.
+15. C5-4 process note: the plan's md5 line is updated to the NEW
+    run_batch3.py blob/md5 IN this fix commit (blob
+    261f09aed1b52c7b80b0b2fc260f13f70fafd142, md5
+    fac96935988b9c327dcbe9b3cfa1342e), not in a follow-up. The
+    fix-pass-6 commit hash itself goes in the log's hash-record
+    follow-up (it cannot be known before committing).
+
+No action: R5-5 (already documented, B13 limitation), R5-6
+(C3-2 deferral is a scope choice, the redteam's prototype passes
+14/14), C5-8 (mechanism note), C5-3/C5-4 (closed at HEAD),
+C2-9/C2-10 INFO parts (covered by item 14).
+
+### Verification (VM, all green except documented probe artifacts)
+
+- py_compile OK; import OK (10 tests b3-t01..b3-t10).
+- Fix6 probe /tmp/y14b-fix6-probe.py: 71/71 PASS (68 original
+  + R5-4 fixed case + 2 R5-4 controls + B12 direct case).
+  First run 67/68: one probe expectation was wrong, not the
+  code (the "F2 glued" case `codex -c 'a' ; 'b; marionette'`
+  has a REAL standalone ";" after a complete codex -c argument,
+  so the marker is in a later command and False is correct;
+  the probe case was corrected to expect False and renamed).
+  After the B12/R5-4 code additions, first run 67/71: 4
+  failures were the B1/B2/B8/B10 direct cases, caused by the
+  probe constructing the -c code as separate NUL-separated
+  elements (unrealistic; a real -c argument is one element).
+  The probe was corrected to single-element -c code; second
+  run 71/71.
+- Regressions, clean single runs (see orphan note below):
+  H2 probe 45/45, fix2 probe 31/31, fix3 probe 70/70, fix4
+  probe 64/64, transcription 82, gate dry 4/4, M1 probe 3/3,
+  M1 all-12 probe 4/4.
+- Council 2 extra probe 36/46, with the same 10 "failures" as
+  fix5 (all expected-behavior changes, the fix itself, same
+  names and directions as fix5; not regressions).
+- Council 1 differential probe (fix5-c1): 6 failures, but it
+  loads the fix4 blob (585fb801) and the fix5 blob (ff4a5358)
+  from /tmp, NOT the working tree, so it documents the fix5
+  regressions (C5-1/C5-2) that fix6 fixes; the fix6 probe
+  passes those same cases on the current tree. Not a
+  regression.
+- Council 2 probe (fix5-c2): 7 failures, all expected: b1-b5
+  are the R5-8/C2-5 recorded FP (True is the documented
+  behaviour, the probe expects the fix); d4 and L2 are fixes
+  (True is correct, the probe's False expectation is stale
+  from fix5, documenting the fix5 miss).
+- Redteam probes: rt-probe 45/45 (0 failures, B12 and E1 now
+  pass), rt-live 16/16 (0 failures, L6 now passes), rt-diff
+  shows C2-C5 + E1 all FIX (want True/False as labelled).
+- Fix5 probe: 35/38, 3 failures, ALL probe construction
+  artifacts, not code regressions:
+  (a) `python3 -c import run_batch3` and `python3 -c x=1;
+  import run_batch3` construct the -c code as separate
+  NUL-separated elements (unrealistic). In a real cmdline the
+  -c code is one element; my fix6 probe's realistic
+  single-element B1/B2/B8/B10 and the live B1 case all pass.
+  The unquoted `python3 -c import run_batch3` form (separate
+  elements) has the -c code as just "import", so False is
+  actually CORRECT for that invocation (the import is not in
+  the -c code). The probe's True expectation was written for
+  the flat-token model.
+  (b) `bash -c python3 -c import x; echo import run_batch3`
+  is the R4-2 tokenization bug (missing leading quote on
+  "'import"); the redteam's correct R4 tokenization passes
+  (False) in the fix6 probe.
+- Orphan pollution note: the H2 and gate-dry probes failed
+  twice during the sweep only because orphaned run_foo.py
+  dummies from earlier probe runs were still alive (PIDs
+  222149, 222258, 222269, 224454, all ppid 1, all my dummies
+  from prior runs, legitimately flagged as runners). Killed by
+  exact PID, clean re-runs pass 45/45 and 4/4. The H2 probe's
+  finally block does not always reap orphans when a prior run
+  was interrupted. Not a code regression. Lesson for the next
+  pass: sweep for orphan run_foo.py before running H2/gate-dry.
+- No em/en dash in the fix diff, no ydotool, no personal info.
+  `import re` OK.
+
+### Hashes
+
+- run_batch3.py at this commit: git blob
+  261f09aed1b52c7b80b0b2fc260f13f70fafd142, md5
+  fac96935988b9c327dcbe9b3cfa1342e.
+- Parent fix-pass-5 bytes: blob ff4a5358, md5 9e99d9aa,
+  commit 46e0909.
+- Plan md5 line updated IN this commit to the fix-pass-6
+  values (per C5-4). The fix-pass-6 commit hash goes in the
+  hash-record follow-up commit.
+
+### Event log (continued, 23:24-23:47 +07)
+
+- 23:24 +07: fix pass 6 implementation started. Verified the
+  ground truth by direct test: B1 tokens are ['python3', '-c',
+  'import', 'os', ';', 'import', 'run_batch3'] (NO quotes,
+  direct form, currently False, want True); B3 tokens are
+  ['bash', '-c', 'codex', '-c', "'run", 'tests', '&&',
+  'restart', "marionette'"] (quotes survive, currently False,
+  want True); B12 tokens are ['python3', '-c', 'import',
+  "os';", 'echo', 'import', 'run_batch3'] (glued ";" after
+  closing quote, currently False, want False); B10 tokens are
+  ['python3', '-c', 'import', 'os;', 'import', 'run_batch3']
+  (glued, currently True, want True). _argv_tokens splits a -c
+  argument on whitespace and LOSES argv-element boundaries,
+  which is why the direct form cannot be fixed by quote-state
+  tracking alone; the direct-vs-nested rule is the targeted
+  fix.
+- 23:25 +07: MEMORY.md update noted (KB DONE 23:33): no Omarchy
+  skill in the catalog (independent search 0 results); the
+  fastest-paths.md on the machine had the WRONG workspace
+  command (string dispatcher, proven broken live 23:32 rc=7);
+  the correct hl.dsp.focus was proven 23:19. KB integrated 250
+  Omarchy/Hyprland + 85 Zen keybinds into the computer-use doc
+  ON THE MACHINE (local-only); fastest-paths fixed (6 lines);
+  repo added scripts/hypr_cmd.py + tests 13/13 (commit
+  9e9b811). Parent-level / other workers' item, not Y14b's.
+  Noted for the record.
+- 23:26 +07: code edits: _quote_states + _top_level_sep_index
+  rewrite (char-by-char scan from quote state before token);
+  _owning_command flag-value skip (C5-2 sketch) + R5-8/C2-5
+  residual record; _runner_basename_head + basename block
+  (C2-4/R5-3); import branch restructure (direct-vs-nested +
+  forward separator stop); _same_command_tokens quote-state
+  bound + docstring updates (R5-7/R5-9/C5-7); _in_shell_c_string
+  docstring (R5-4 recorded, later fixed, see below);
+  _is_runner_cmdline docstring (sync note + residuals).
+- 23:30 +07: smoke test 25/25 PASS (R5-1 B1-B8/B10/B11/B12/B13,
+  d4, C5-1 B5/B6/B7, R5-2 A1-A4, R5-3 C1-C5, R5-8 echo/ssh).
+  B13 now returns False (was True in fix5), matching the
+  redteam's expectation: the new scan finds the ";" after the
+  first closing quote, so the marker after it in the same token
+  is missed (documented R5-5/B13 limitation).
+- 23:31 +07: fix6 probe written (/tmp/y14b-fix6-probe.py, 68
+  checks). First run 67/68: the "F2 glued" probe expectation
+  was wrong (a standalone ";" after a complete codex -c
+  argument is a REAL separator, so False is correct); probe
+  corrected, second run 68/68.
+- 23:33 +07: regression sweep (first pass): H2 45/45 after
+  killing 3 orphaned run_foo.py dummies (PIDs 222149, 222258,
+  222269, ppid 1, from earlier probe runs); fix2 31/31, fix3
+  70/70, fix4 64/64, transcription 82, gate dry 4/4, M1 3/3,
+  M1 all-12 4/4, fix5 36/38 (2 known R4 tokenization failures).
+  C2 extra probe 36/46 (same 10 expected flips as fix5). C1
+  diff probe 6 failures (tests the fix5 blob, not the working
+  tree). C2 probe 7 failures (5 recorded FP + 2 stale
+  expectations for fixed cases). Redteam probes: rt-probe 2
+  failures (B12, E1), rt-live 1 failure (L6).
+- 23:35 +07: rt-probe B12 investigated: direct python -c
+  argv-boundary gap. The -c argument is one argv element;
+  tokens after it are separate argv elements, not part of the
+  -c code. _argv_tokens loses the boundary. Fix: new helper
+  _c_arg_flat_end(cmdline, c_idx) re-simulates _argv_tokens to
+  find where the -c argument's words end; the import branch
+  uses it in the DIRECT case only (the nested case is bounded
+  by the separator stop). E1/L6 investigated: R5-4, the
+  nearest--c search in _in_shell_c_string finds the python -c
+  in an earlier command instead of the bash -c containing the
+  codex. Fix: skip a non-shell -c across a top-level separator
+  (quote-state aware); a shell -c is returned immediately.
+  Both fixes are small and targeted; the adjudication is
+  updated (R5-4 now FIXED, not recorded; B12 added as code
+  item 4).
+- 23:36 +07: B12/R5-4 code added. _c_arg_flat_end helper +
+  import-branch direct-case bound; _in_shell_c_string
+  separator-aware skip; _is_runner_cmdline docstring updated
+  (R5-4 FIXED). Fix6 probe updated: R5-4 case changed from
+  recorded-True to fixed-False + 2 controls, B12 direct case
+  added (71 checks total).
+- 23:38 +07: fix6 probe first run after B12/R5-4 additions:
+  67/71. The 4 failures are B1/B2/B8/B10, caused by the probe
+  constructing the -c code as separate NUL-separated elements
+  (unrealistic). The probe was corrected to single-element -c
+  code; second run 71/71 PASS.
+- 23:39 +07: rt-probe 0 failures, rt-live 0 failures, rt-diff
+  shows C2-C5 + E1 all FIX. Fix5 probe now 35/38 (3 failures:
+  the 2 unquoted-construction cases + R4-2 tokenization bug;
+  all probe artifacts, documented above). Fix2/3/4 probes
+  0 failures. H2 and gate-dry failed once more in a
+  double-run loop (orphan pollution from the first run);
+  killed orphan 224454, clean single runs pass 45/45 and 4/4.
+- 23:41 +07: MEMORY.md updates noted: F1 + F2 DONE (F2: act-now,
+  overlay 314-346ms x5, batch 0.87-2.0s, click 0px, pill
+  visible; all 5 runs went fallback, guardian broken, session
+  path untested live; G28/G29 new. F1: root cause 4 layers,
+  drift repair, test 23:35 RC=1, theme 35 OK x10, laptop 71 OK.
+  F3b: slot HEALTHY, Zen PID 479395, website-open PASS, Arms
+  A/B/C PASS, Arm D running since 23:38:48). OA DONE: Omarchy
+  is NOT an agent runtime (4.0.0.alpha, no MCP server stock);
+  the Omarchy skill EXISTS on the machine
+  (/usr/share/omarchy/default/agents/skills/omarchy/SKILL.md)
+  but NOT in Muse's catalog; skill imported 23:42 into
+  ~/workspace/custom-skills/omarchy/. Parent-level / other
+  workers' items, not Y14b's. Noted for the record. The F3b
+  slot-healthy note matters for Y14: the live run needs the
+  slot healthy first, and it now is.
+- 23:47 +07: plan edits done (F7 sentence rewritten to the
+  quote-aware bound; md5 line updated to fix-pass-6 values IN
+  this commit, per C5-4). Log edits done (C1-2 correction notes
+  at both refutation sites; "A1-A14" corrected at 3 live uses).
+  Fix-pass-6 adjudication + verification appended. Committing
+  fix pass 6 now (run_batch3.py + plan + log, stage ONLY my
+  files).
