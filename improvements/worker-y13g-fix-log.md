@@ -613,3 +613,53 @@ in the repo worktree and /tmp test copies.
   in _check_entry_pyc"). I have NOT yet read its detail; will read
   improvements/worker-y13g-r2-verify-log.md before adjudication.
   Still waiting: Council 2, Redteam, Verifier (3/5 running).
+
+01:16 +07 22/11 (T+2h20m) VERIFIER ROUND-2 REPORT LANDED, verdict FAIL.
+  Report commit 75dff55 (improvements/worker-y13g-r2-verify-report.md,
+  314 lines), log dec965c + 0d628f8. Note: 75dff55 landed on top of
+  my log commit b74b36d in the shared worktree (verifier committed
+  + pushed in the same checkout between my commit and my push);
+  ls-remote = 75dff55 = local HEAD, my b74b36d is on origin as its
+  parent. No conflict, no loss. Score 277/280 across 10 batteries.
+  2 root causes, BOTH in the launcher's _check_entry_pyc:
+  (1) A3h co_filename sensitivity (2 checks): a legitimate entry
+  .pyc from relative-path `python3 -m py_compile run_codex_y5.py`
+  (run from inside the ship dir, the natural form) is refused:
+  cached code has co_filename "run_codex_y5.py" while the fresh
+  compile uses the absolute ship path; consts/names/code bytes
+  identical, marshal equality fails ONLY on co_filename. Ship
+  does NOT self-heal to direct verify rc 0 after a relative-path
+  py_compile. Fail-closed (refuse + "re-stage the ship"), trivial
+  recovery (delete the .pyc). Documented self-cache path
+  (-m/import, absolute filenames) unaffected. Fix shape:
+  normalize co_filename in the comparison (e.g.
+  code.replace(co_filename=src) on both sides). Same root cause
+  as Council 1 F8 (P3b). (2) A7 shape-6b symlink-unsafe deletion
+  (1 check): _check_entry_pyc uses plain os.listdir() +
+  os.unlink() on SHIP_DIR/__pycache__ and never applies the
+  realpath-inside-ship check that _entry_pyc_paths (the -m guard
+  helper) has. A legitimate .pyc behind a symlinked __pycache__
+  is DELETED OUTSIDE the ship (proven twice: manual probe +
+  harness re-run). R4 claims symlink safety ("the guard never
+  deletes a file OUTSIDE the ship") but that holds only for the
+  guard helper, not for the function that deletes files during
+  launch checks. Reachability in production flow is LIMITED:
+  the launcher module-top scan refuses a symlinked __pycache__
+  before main() runs _check_entry_pyc. Damage scope narrow (only
+  a file under the symlinked dir). Fix shape: apply the same
+  realpath-inside-ship check inside _check_entry_pyc (or reuse
+  _entry_pyc_paths). Everything else passes, including every
+  security property (forged entry .pyc refused in all forms,
+  .so/.py plants refused, marker/log-order/remote pin hold,
+  tokenizer rewrite complete and identical in both copies).
+  Harness bugs found and fixed during the run (all in verifier
+  code, none in the fix): driver missing _normalize_remote_url
+  (A5 0/10 first run), missing _m_module_is_runner +
+  _is_timeout_dur (A4 live 12/17 first run), missing TOKEN_TTL_S
+  (clean ship 7/9 first run); A2j/A2l expectations corrected
+  after root-causing (kind mixed; empty nested-dir residue).
+  NOT tested: no live run; R8 TimeoutExpired not directly
+  triggered (only OSError path). The verifier subagent has NOT
+  yet delivered its formal completion handoff (still listed
+  running); this entry is from its committed report only.
+  Still waiting: Council 2, Redteam, Verifier handoff (3/5).
