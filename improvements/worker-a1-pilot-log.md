@@ -161,8 +161,12 @@ All four verdicts resolved in the frozen plan. Key resolutions:
   all correct with expected exit codes (0, 0, 3). Harness in /tmp
   (not committed).
 - FREEZE.md written with per-file sha256 (to be re-verified at commit
-  time) + the GO bar in full text. Freeze commit hash to be recorded
-  after the commit lands.
+  time) + the GO bar in full text. Freeze commit: f31abcf (2026-11-21,
+  "A1 pilot: frozen plan, runbook, schema, blinded checker, manifest
+  + unblinding scripts"); the hash was recorded in FREEZE.md and in
+  this log in a second commit that changed nothing else. All
+  FREEZE.md hashes re-verified against the working tree at freeze
+  time (10 sha256 + 2 fixture md5s matched).
 
 ## Independent checker review (2026-11-21, reviewer agent 834a5254)
 

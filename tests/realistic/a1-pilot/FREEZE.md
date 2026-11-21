@@ -1,8 +1,10 @@
 # A1 pilot freeze record (Council 3 section 5.3)
 
-- Freeze commit: (recorded after the freeze commit lands; added in a
-  second commit that changes nothing else. The hashes below must not
-  change between the two commits.)
+- Freeze commit: f31abcf ("A1 pilot: frozen plan, runbook, schema,
+  blinded checker, manifest + unblinding scripts", 2026-11-21,
+  branch todolist-push). This line and the pilot-log freeze line
+  were added in a second commit that changes nothing else. The
+  hashes below must not change between the two commits.
 - Branch: todolist-push. Repo: computer-use-wayland.
 - No live arm has run. No speedup is claimed.
 
