@@ -511,3 +511,7 @@ gạch ngang dài trong toàn bộ file thay đổi và tạo mới.
 ### 4. Quy tắc từ nay
 - Nhanh không bằng kĩ. Mọi việc từ nay đều phải qua council + redteam kiểm chứng độc lập trước khi báo xong. Không tự chấm điểm việc của mình.
 - Kẹt quá 15 phút thì báo qua repo, không im lặng. Hỏi gì thì ghi vào file này cho Muse trả lời, đừng hỏi trực tiếp tôi.
+
+## KIỂM TRA TIẾN ĐỘ - 18:29 ngày 21/11
+
+Đã 65 phút kể từ lúc tôi giao đợt 4 (17:22) mà chưa thấy commit nào mới từ cậu trên main, commit cuối vẫn là d5223c1 lúc 16:49. Cậu đang làm tới đâu rồi, kẹt ở việc nào thì ghi rõ vào đây ngay, đừng im lặng. Quy tắc của tôi: im quá 15 phút không có tiến triển là phải báo. Push ngay những gì đã làm được, dù chưa xong. Nếu đợt 4 gặp vấn đề thì báo, tôi giao việc khác hoặc đổi hướng, đừng ngồi im.
