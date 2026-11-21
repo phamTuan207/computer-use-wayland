@@ -22,9 +22,14 @@ tests/two_vision_fixture.html.
 - Guarded execution: HCU-style live guard re-checks each target's live
   geometry + focus right before input; stop at first failure, rest
   reported not-executed; exactly-once intent per send (ledger +
-  V12 pre-check, a retry never re-sends a message already in the
-  thread); V12 finish gate after each send (sent bubble in the thread
-  DOM).
+  V12 pre-check). The honest form of the exactly-once claim: a retry
+  never re-sends a message the V12 pre-check can SEE in the thread.
+  After a v12-timeout the same intent is never re-attempted, because
+  the message may have landed unseen (the selectors are the only
+  witness and they just failed to see it); the run marks the intent
+  failed-unverified and a later run with the same intent refuses to
+  re-send it. V12 finish gate after each send (sent bubble in the
+  thread DOM).
 - Scoring is by OUTCOME (message in the thread or not, M1), never by
   point-in-box. PASS iff both messages land in their threads.
 - Total: exactly 2 visions. VISION 1 is the inventory read; VISION 2
@@ -36,8 +41,14 @@ tests/two_vision_fixture.html.
 ## 2. Safety rules (read before any run)
 
 - NEVER run live without the coordinator saying run. The script
-  refuses live mode unless BOTH --live and --confirm-live are given.
+  refuses live mode unless BOTH --live and --confirm-live are given,
+  and the gate is on the plan URLs, not the flag: any plan URL
+  outside the local fixture files under tests/ refuses without both
+  flags, so a custom --plan cannot smuggle a live run past the gate.
   --confirm-live is only passed when the coordinator approved the run.
+- --instances two is refused: the run always uses one browser
+  instance with two windows, and recording "two" in results would
+  lie about what ran. Two instances are not implemented yet.
 - NEVER type into a real thread in fixture mode. Fixture mode (the
   default) only opens tests/two_vision_fixture.html in headless
   Firefox on this VM.
@@ -61,16 +72,28 @@ tests/two_vision_fixture.html.
 
 ## 4. Files
 
-- tests/two_vision_bench.py: the benchmark script (commit 072e060,
-  fixes 9196744).
+- tests/two_vision_bench.py: the benchmark script (783 lines after
+  the fix pass, commit 7e81213; first built in commit 072e060, fixes
+  9196744, fix pass 7e81213).
 - tests/two_vision_fixture.html: local chat fixture. One page per
   clone (?clone=1, ?clone=2). A message input, a Send button, a
   thread div. Enter or Send appends a bubble with the typed text.
   Also a Search input and an Emoji button so the harvest is not
   trivial (4 inputs + buttons per window).
-- Workdir (default /tmp/two_vision_bench/<run>): inventory.json,
-  ledger.json, results.json, profile/ (Firefox profile, delete after
-  the run; /tmp is a 512M tmpfs and fills up fast).
+- Variant fixtures for the fix-pass tests (same page shape, one
+  difference each): tests/two_vision_fixture_ce.html (message input
+  is a contenteditable div, the Messenger input type),
+  tests/two_vision_fixture_noid.html (message input has no id),
+  tests/two_vision_fixture_belowfold.html (a 1500 px spacer above
+  the input, so it sits below the fold).
+- tests/two_vision_once_driver.py: exactly-once driver test. Calls
+  send_one twice with the same intent in one browser session and
+  records both calls plus the bubble count.
+- Workdir (default /tmp/two_vision_bench, shared by runs unless
+  --workdir is passed): inventory.json, ledger.json, results.json,
+  profile/ (Firefox profile, delete after the run; /tmp is a 512M
+  tmpfs and fills up fast). Pass a separate --workdir per run to
+  keep each run's artifacts apart.
 
 ## 5. Step by step
 
@@ -106,7 +129,11 @@ messages). A live plan looks like this:
 - thread_selector must point at the thread container. bubble_selector
   defaults to ".bubble, [data-sender]"; override it for Messenger.
   A wrong thread_selector fails the V12 gate loudly (the gate honors
-  the selector; there is no fixture-helper shortcut).
+  the selector; there is no fixture-helper shortcut). The gate also
+  requires exact textContent === text, and the default bubble
+  selector is fixture-shaped: a Messenger bubble's textContent may
+  not equal the message exactly, so the default would fail closed
+  live and a live plan MUST override bubble_selector.
 
 ### Step 1. VISION 1, harvest only (optional, recommended)
 
@@ -146,7 +173,9 @@ For a live run (coordinator approval only):
 ```
 
 Without --confirm-live the script refuses with exit code 2 and sends
-nothing.
+nothing. The same refusal applies to a custom --plan whose URLs are
+not the local fixture files: the gate is on the URLs, not the flag,
+so --plan alone can never start a live run.
 
 To reuse a saved inventory instead of harvesting again:
 
@@ -178,8 +207,9 @@ To reuse a saved inventory instead of harvesting again:
 | not-visible / covered | V5 hit test failed: the rect center does not hit the input, or it is hidden. |
 | geometry-moved | The input moved more than 2 px from the VISION 1 snapshot. The inventory is stale; re-harvest. |
 | focus-failed | The click landed but activeElement is not the input. Nothing was typed. |
-| value-mismatch | V1 readback: the field does not hold the typed text. Enter was not sent. |
-| v12-timeout | No sent bubble in the thread DOM within the gate timeout. The message may still have been typed (check the thread); the run is FAIL and the ledger marks the intent failed. A retry first runs the V12 pre-check, so a message that did land is not sent twice. |
+| value-mismatch | V1 readback: the field does not hold the typed text. Enter was not sent. For inputs and textareas the check reads value; for contenteditable elements it reads innerText (a div has no value property). |
+| v12-timeout | No sent bubble in the thread DOM within the gate timeout. The message may still have been typed (check the thread); the run is FAIL and the ledger marks the intent failed-unverified. A retry of the same intent is REFUSED (see retry-blocked-unverified below): the message may have landed unseen. |
+| retry-blocked-unverified | A later run with the same intent id found the ledger marked failed-unverified (a previous v12-timeout). Nothing is typed or sent. Fix the thread/bubble selectors and use a new run_id after manually checking the thread. |
 | not-executed | A later step after a failure. The chain stopped at the first failure (Anthropic batch loop contract). |
 
 ## 7. Dry-test results (measured on this VM, headless Firefox 160.0.1)
@@ -195,10 +225,24 @@ repo venv python. Fixture: 4 inputs + buttons per window.
   /tmp/two_vision_bench/final.log, results in
   /tmp/two_vision_bench/final/results.json. (An earlier happy-path
   run, run1b, gave the same PASS with wall 6.2165 s and sends
-  0.86 s / 0.39 s.)
-- Exactly-once (separate driver test, same intent twice in one
-  browser session): first send "sent", 1 bubble; second send
-  "skipped-already-sent" in 0.0026 s, still 1 bubble. PASS.
+  0.86 s / 0.39 s.) The original /tmp logs for these runs were lost
+  when /tmp was wiped on 2026-11-22; the fix-pass re-runs below are
+  preserved in ~/workspace/tools/two_vision_fixpass/ instead.
+- Exactly-once (driver test tests/two_vision_once_driver.py, same
+  intent twice in one browser session, run once2): first call "sent"
+  in 0.5988 s, 1 bubble; second call "skipped-already-sent" in
+  0.0153 s, still 1 bubble. PASS, wall 4.9248 s. Log, results.json,
+  and ledger.json preserved in
+  ~/workspace/tools/two_vision_fixpass/ (once2.log,
+  once2.results.json, once2.ledger.json). The ledger holds one
+  intent, bench-once-20261122:clone1, status sent, note
+  bubble-already-present. The earlier 0.0026 s figure is WITHDRAWN:
+  it had no preserved artifact and did not reproduce (council 1
+  measured 0.0549 s for the second send on its own driver test).
+  The old /tmp/two_vision_bench/once/ ledger is also withdrawn as
+  evidence: it holds two DIFFERENT intent ids with two different
+  message texts (two separate script runs, each with a fresh
+  run_id), not the same intent twice.
 - Stop-at-first-failure, 3-window plan with a wrong thread selector
   for clone2 (run3b, 2026-11-21T20:23:16Z to 20:23:27Z): FAIL as
   designed, wall 11.0567 s. Clone1 sent (0.69 s), clone2 failed
@@ -219,6 +263,74 @@ the plan's thread selector, so a wrong selector passed silently;
 so a retry after a failed gate could double-send; it now runs the
 V12 pre-check before every send regardless of ledger status.
 
+Fix pass (commit 7e81213), council 1 and 2 ISSUES plus redteam
+BROKEN, all fixed and re-measured on this VM, headless Firefox
+160.0.1, repo venv python. Every log, results.json, ledger.json,
+and inventory.json is preserved in
+~/workspace/tools/two_vision_fixpass/ (the /tmp workdirs from the
+first fix-pass runs were lost when /tmp was wiped mid-task, so all
+runs below were re-run and their artifacts copied out of /tmp
+immediately):
+
+- Happy path re-run (fix2): PASS, wall 8.4457 s. Browser launch
+  3.5212 s (contended VM), Marionette attach 2.7635 s, harvest
+  0.0225 s (clone1) and 0.0089 s (clone2) for 4 elements each, sends
+  0.3717 s (clone1) and 0.5410 s (clone2). Both V12 gates passed.
+- Contenteditable input (fix2-ce, fixture
+  two_vision_fixture_ce.html): PASS, wall 6.6076 s, sends 0.5100 s
+  and 0.2950 s. The V1 check now reads innerText for
+  contenteditable elements; the redteam repro (FAIL
+  value_check_failed, value null) no longer reproduces.
+- Id-less input (fix2-noid, fixture
+  two_vision_fixture_noid.html): PASS, wall 5.4565 s, sends 0.6510 s
+  and 0.3963 s. The harvest ref for the id-less input is the valid
+  CSS path
+  "html:nth-of-type(1) > body:nth-of-type(1) > input:nth-of-type(1)";
+  the redteam repro (harness_error, "not a valid selector", exit 2)
+  no longer reproduces.
+- Below-fold input (fix2-belowfold, fixture
+  two_vision_fixture_belowfold.html, 1500 px spacer): PASS, wall
+  5.4953 s, sends 0.7078 s and 0.4564 s. The send chain now scrolls
+  first (ensure_visible) and guards on post-scroll geometry; the
+  redteam repro (guard_failed "covered" in 0.018 s) no longer
+  reproduces.
+- Harvest-only re-run (fix2-harvest): HARVEST-ONLY, wall 4.3510 s.
+- Stop-at-first-failure re-run (fix2-stop, 3-window plan, wrong
+  thread selector for clone2): FAIL as designed, wall 9.2775 s.
+  Clone1 sent, clone2 failed v12-timeout, clone3 not-executed.
+- Wrong-selector retry (fix2-wrongsel, redteam runW repro, same
+  plan and ledger twice): run 1 FAIL v12-timeout, ledger marks the
+  intent failed-unverified; run 2 FAIL retry-blocked-unverified,
+  nothing typed or sent, no second bubble. The double-send the
+  redteam reproduced (2 identical bubbles) no longer happens.
+- Plan-bypass refusal: a custom plan with a non-fixture URL and no
+  --live flags is REFUSED with exit code 2 and sends nothing
+  (bypass-refusal.log). The redteam repro (both messages sent,
+  outcome PASS, live false) no longer reproduces.
+- --instances two refusal: exit code 2, nothing recorded as "two"
+  (instances2-refusal.log).
+- Live refusal still holds: --live without --confirm-live exits 2
+  and sends nothing (live-refusal.log).
+
+Fixes in the script (commit 7e81213), all verified by the runs
+above: (1) the live gate is on the plan URLs, not the flag; any URL
+outside the local fixture files under tests/ refuses without both
+--live and --confirm-live. (2) The V1 check reads innerText for
+contenteditable elements and value otherwise. (3) Id-less elements
+get a unique valid CSS path ref instead of the invalid
+tag + '[' + i + ']' form. (4) The send chain scrolls first, then
+guards on post-scroll geometry, and clicks at the guard-verified
+center. (5) A v12-timeout marks the intent failed-unverified and a
+later run with the same intent refuses to re-send it. (6)
+--instances two is refused. (7) HARVEST_JS also inventories
+[role="button"] and [role="textbox"] controls. (8) The dead
+median() function is removed. (9) launch_browser refuses when the
+Marionette/BiDi ports are already held by a stale browser, and
+attach_driver retries the Selenium session creation. (10) All gaps
+now have literal TODO comments in the script (D1, D2, D3, D4, D6,
+F5, step-6 loop hygiene; D5 is closed by statement, VISION 1 is a
+DOM harvest).
+
 Incident during dry-testing: /tmp (512M tmpfs) filled to 100% from
 stale Firefox profiles and was cleared by deleting only this
 benchmark's own stale profiles plus stale .xpi files (no live
@@ -236,15 +348,15 @@ must not claim them done.
 | --- | --- | --- |
 | F5 bulk harvest | Built here as one evaluate per window. | Brave CDP DOM.getBoxModel / Accessibility.getFullAXTree in scripts/cdp.mjs; production V11 MutationObserver flag (the fixture counts input events; a Messenger page needs a real observer armed before typing). |
 | F5 V12 gate | Built here (sent-bubble check after each send). | No V12 gate exists in production code; this script is the first implementation. |
-| F5 exactly-once ledger | Built here (ledger file + V12 pre-check before every send). | Needs review-round approval; a wrong thread_selector still lets a typed-but-unseen message double-send on retry with a fixed selector. |
+| F5 exactly-once ledger | Built here (ledger file + V12 pre-check before every send). | Needs review-round approval. A v12-timeout now marks the intent failed-unverified and a later run with the same intent refuses to re-send it, so a typed-but-unseen message cannot double-send on retry. A fresh page load with an empty thread still re-sends a recorded intent once, by design: the bubble is genuinely absent. |
 | F5 BiDi/Marionette handover | Not built. Script is Marionette-only. | No handover protocol exists under the one-session constraint. |
 | F5 step-6 loop hygiene | Not built. | Prompt caching, diff-gated re-observation, downscale to token tier, context editing, low effort, adaptive waiting: unowned, agent-harness concerns. |
 | D1 one-session sequencing | Marionette-only; BiDi session.new cost is known (1.5-2.8 s cold, 0.014 s warm, batch 7 task 2). | Sequencing for a live run that needs both protocols is unspecified. |
 | D2 HCU guard owner | The guard lives in hcu_guard() in this script. | No production component owns the guard. |
-| D3 Mantis numbering | Refs are DOM-derived per run; the doc warns they must not transfer. | Ref stability on a mutating Messenger page is unaddressed. |
-| D4 exactly-once | Mechanized here (ledger + pre-check). | Needs the review round; see the F5 ledger row. |
+| D3 Mantis numbering | Refs are DOM-derived per run; the doc warns they must not transfer. | Ref stability on a mutating Messenger page is unaddressed. Id-less elements now get a unique CSS path ref instead of the invalid tag + '[' + i + ']' form. |
+| D4 exactly-once | Mechanized here (ledger + pre-check + failed-unverified retry block). | Needs the review round; see the F5 ledger row. |
 | D5 VISION 1 is DOM | Stated in the script docstring and here. | Nothing open; do not call the harvest a screenshot. |
-| D6 one vs two instances | One instance, two windows (flag --instances records the choice). | Unspecified which the live run uses; two instances need a second Marionette attach. |
+| D6 one vs two instances | One instance, two windows. --instances two is REFUSED until two instances exist; it is never recorded in results as if it ran. | Unspecified which the live run uses; two instances need a second Marionette attach. |
 
 ## 9. What is NOT done (do not claim it)
 
@@ -254,7 +366,12 @@ must not claim them done.
   stand-in; real Zen timings are UNVERIFIED until the laptop run.
 - No Messenger selectors. The live plan needs real thread URLs,
   thread selectors, and bubble selectors, which only the coordinator
-  can supply for the live run.
+  can supply for the live run. The V12 gate requires exact
+  textContent === text and the default bubble selector is
+  fixture-shaped, so a live plan MUST override bubble_selector.
+- The harvest inventories native controls plus [role="button"] and
+  [role="textbox"] controls. Plain links and role-less divs are not
+  inventoried; the "every input + button" claim does not cover them.
 - The C12 conversion layer (viewport origin, DPR) is NOT used by
   this script: clicks use viewport coordinates from
   getBoundingClientRect directly, the same shape as the batch 7
