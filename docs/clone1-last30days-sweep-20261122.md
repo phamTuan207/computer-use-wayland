@@ -39,7 +39,11 @@ the brief, the same method clone2 used.
   `~/workspace/tools/last30days-skill`, then `git fetch --unshallow`
   so the reviewed commit could be diffed. Clone took 55.7 s real.
   Date check before the clone: 2026-11-21T21:42:40Z. First report
-  written 2026-11-21T21:45:46Z (04:45:46 +07).
+  written 2026-11-21T21:45:46Z (04:45:46 +07). (Unlogged: these
+  three figures are carried from the earlier 192-line version of
+  this report; the first commit fd250da at 21:47:27Z is consistent
+  with the write time but proves nothing about the clone duration
+  or the date check.)
 - Installed HEAD: ef01dab, "feat(tiktok): free top comments for
   every kept TikTok from the public comment endpoint (#1555)".
   SKILL.md version 4.5.0, read in full at
@@ -100,9 +104,9 @@ unblocked this run.
 How the runs were executed, stated plainly: the three engine
 commands were executed by a concurrent duplicate agent running the
 same follow-up task (the same task dispatched twice). Evidence on
-disk: the run2-a11y and run3-multi save dirs were created at
-22:49:57Z, run 1 started at 22:50:11Z, and the engine processes
-observed in `ps` carried the exact briefed flags and topics. I did
+disk: all three save dirs were created at 22:49:57.797Z, run 1
+started at 22:50:11Z, and the engine processes observed in `ps`
+carried the exact briefed flags and topics. I did
 not type the engine commands myself. I verified every number in
 this report first-hand from the on-disk artifacts: the three raw
 JSONs (parsed with python3), the three timing.txt files, the three
@@ -110,7 +114,8 @@ stderr.log files, and the two dated grounding pages (fetched and
 read). The runs were sequential, not parallel, which matches the
 brief (memory is tight). No API keys are configured on this machine,
 so keyed sources returned nothing, as in clone2's runs. Browser
-cookies stayed off (`--no-browser-cookies`).
+cookies stayed off (`--no-browser-cookies`, unpreserved, see the
+note below the invocation).
 
 Engine invocation (as observed in `ps`, identical to the brief):
 `python3 skills/last30days/scripts/last30days.py "<topic>"
@@ -122,9 +127,17 @@ freshness=evergreen_ok, cluster_mode=none, one subquery per run,
 sources [reddit, hackernews, github, grounding]). The stderr logs
 contain a [Planner] note telling the hosting model to generate a
 JSON query plan itself; that instruction was not followed, because
-the brief orders `--auto-resolve` and no plan. Two further system
+the brief orders `--auto-resolve` and no plan. (Unpreserved: no
+`ps` output survives in the run dirs, so the exact command line,
+`--no-browser-cookies`, and keyless operation rest on that live
+observation and are not verified by surviving artifacts. Indirect
+corroboration: the topics match the JSON query fields, the stderr
+logs show the fallback planner with no `--plan`, the JSON outputs
+exist in the named save dirs, and the source status is consistent
+with keyless, cookies-off runs.) Two further system
 execution-risk notices arrived during this run (on reads of the
-repo docs and of the engine stderr logs); the run proceeded on the
+repo docs and of the engine stderr logs, unlogged: no artifact
+records the notices); the run proceeded on the
 basis of the user's 05:49 confirmation above, which was given
 after the same risk was explained in plain words.
 
@@ -141,7 +154,7 @@ run. End times are anchored by generated_at in each raw JSON
 (run 1: 22:50:23.69Z, run 2: 22:50:49.66Z, run 3: 22:51:14.25Z).
 Memory at the pre-run check (22:50 UTC): 155 MB free, 665 MB
 available; after the runs (22:53 UTC): 175 MB free, 508 MB
-available.
+available. (Unlogged: no memory log survives.)
 
 Source status (from each raw JSON `source_status`, and the
 engine's own "Research complete" line in stderr):
@@ -175,14 +188,15 @@ separately in section 3.4.
 (see section 4).
 
 - Corroboration, same as clone2 found: GitHub, 2026-10-22, Sr-0w /
-  BotCircle issue 8, "Computer use : clics a l'aveugle / mal
-  positionnes (capture apres action invisible, grounding des
-  coordonnees non verifie)", at
-  https://github.com/Sr-0w/BotCircle/issues/8 (relevance not shown
+  BotCircle issue 8, "Computer use : clics à l'aveugle / mal
+  positionnés (capture après action invisible, grounding des
+  coordonnées non vérifié)", at
+  https://github.com/Sr-0w/BotCircle/issues/8 (relevance 0.2834
   in the raw JSON results list; the engine cluster quotes the
-  OpenDots changelog: system prompt and tool descriptions changed
-  to accessibility and DOM first, act on a named reference then
-  inspect the result, coordinates only as a last resort). Same
+  issue's own summary of the OpenDots fixes: system prompt and
+  tool descriptions changed to accessibility and DOM first, act
+  on a named reference then inspect the result, coordinates only
+  as a last resort). Same
   value as in clone2's report: an independent practitioner hit the
   blind-click failure in the window and converged on the same fix
   direction the team's amend already takes.
@@ -218,7 +232,8 @@ engine (the engine JSON gives them no published date):
 
 - IN WINDOW, explainer: "Computer-Use Agents: Pixel vs. A11y-Tree
   Grounding | Utilix", https://www.utilix.tech/blog/computer-use-agents-screenshots-accessibility-trees-grounding
-  (relevance 0.2654, top result of this run). Page fetched and
+  (relevance 0.2654, top grounding result of this run, second
+  overall). Page fetched and
   read: Published 2026-10-24T09:15:37Z, Updated
   2026-11-11T16:12:41Z. Both dates are inside the window. Content
   is a general explainer: pixel grounding (screenshot in,
@@ -263,6 +278,14 @@ engine (the engine JSON gives them no published date):
   the engine data, and the page was not fetched, so no date is
   claimed for it and it is not counted as an in-window finding.
 
+Title quoting note: titles are quoted from the engine JSON, with
+four exceptions. The "| SkillVeris" suffix on the SkillVeris
+title comes from the fetched page heading, not the engine title.
+The Aria-UI title drops the engine's "- arXiv.org" suffix and the
+browser-act title drops the engine's "GitHub - " prefix. Long
+dashes in raw titles are replaced by commas per the no-long-dash
+rule (the Subvocal title and the dark-factory title above).
+
 ### 3.3 Run 3 (single-observation multi-action): all noise, no usable result
 
 14 results. The 10 Hacker News items are all off-topic: zine
@@ -274,14 +297,17 @@ single NAND gate (2026-11-19), Strand single-file graphs
 (2026-11-19), a single technology killing oil demand (2026-11-19),
 Danbooru Flash XSS worm from a single-line PR (2026-11-11). The
 word "single" in the topic pulled keyword matches, not
-multi-action agents.
+multi-action agents (inference: the engine states no reason for
+its ranking; 10 of 10 HN titles in this run contain the word).
 
 The 4 grounding (web) items:
 
 - "Building a Multi-Agent Browser Orchestration POC with
   Playwright" (Medium, relevance 0.2149): multi-user browser
   flows, not single-observation multi-action. No date in the
-  engine data, not fetched, no date claimed.
+  engine data, not fetched, no date claimed. The "with
+  Playwright" part comes from the URL slug; the engine title is
+  truncated with "...".
 - "browser-act/skills: Browser automation CLI built for AI
   agents" (GitHub repo via the grounding lane, relevance 0.0):
   anti-bot walls, parallel multi-task execution, multi-session
@@ -292,7 +318,9 @@ The 4 grounding (web) items:
   https://tiger-ai-lab.github.io/BrowserAgent (relevance 0.0):
   arXiv ID 2510 means October 2025, outside the window. A browser
   agent paper, not a single-observation multi-action method. Not
-  counted as an in-window finding.
+  counted as an in-window finding. The project page itself has
+  no date in the engine data and is counted among the undated
+  grounding items in section 3.4.
 
 No Turbo-Browser-MCP and no Pomerado appear in this run (verified
 by grep: 0 hits for "turbo" or "pomerado" in all three raw JSONs).
@@ -306,9 +334,11 @@ the engine data. Three grounding items are identifiably older than
 the window by their arXiv IDs (2412 = Dec 2024, 2510 = Oct 2025,
 2608 = Aug 2026). Two grounding items were dated by fetching the
 pages (Utilix published 2026-10-24, SkillVeris 2026-10-28, both
-in-window). Three grounding items have no established date
+in-window). Four grounding items have no established date
 (dark-factory knowledge base, Medium multi-agent POC,
-browser-act/skills) and are reported without one. The "in the last
+browser-act/skills, BrowserAgent project page) and are reported
+without one. That accounts for all 9 grounding items (2 in-window
++ 3 out of window by arXiv ID + 4 undated). The "in the last
 30 days" claim in this report therefore applies strictly to the
 Hacker News and GitHub items (which carry engine dates) and to
 the two fetched pages; it does not apply to the other grounding
@@ -320,7 +350,8 @@ Most of the recall was keyword noise. Run 1 was agent
 infrastructure news plus one corroborating GitHub issue. Run 2 was
 general accessibility news plus two on-topic explainers and three
 out-of-window or undated web pages. Run 3 was dominated by the
-word "single" matching unrelated stories. No new Firefox or Zen
+word "single" matching unrelated stories (inference, see
+section 3.3). No new Firefox or Zen
 specific grounding method appeared in the reachable sources in
 this window.
 
@@ -395,9 +426,9 @@ New in MY runs, in the 30-day window:
    each action. Corroboration, not a new method and not an
    implementation.
 2. Independent field evidence, reproduced from clone2's sweep
-   (BotCircle issue 8, 2026-10-22, and the OpenDots changelog it
-   quotes): the blind-click failure is being hit and fixed the
-   same way elsewhere.
+   (BotCircle issue 8, 2026-10-22, and the issue's own summary of
+   the OpenDots fixes): the blind-click failure is being hit and
+   fixed the same way elsewhere.
 
 Nothing in my runs contradicts the combined design, and nothing
 in them offers a new vision-only or DOM-only method that meets
@@ -433,16 +464,23 @@ explainer corroborations above.
   preferred).
 - The grounding lane does not date its items (section 3.4). Three
   grounding items are identifiably out of window by arXiv ID;
-  three have no established date. Only the two fetched pages are
+  four have no established date. Only the two fetched pages are
   claimed as in-window grounding items.
 - No implementation was read or verified here beyond the two
   fetched explainer pages. Turbo-Browser-MCP's performance claims
   remain UNVERIFIED here (and absent from my runs); only clone2
   read its tool surface.
-- The OpenDots changelog text is quoted from the engine's cluster
-  summary of GitHub data, not re-read commit by commit here.
+- The BotCircle issue's summary of the OpenDots fixes is quoted
+  from the engine's cluster summary of GitHub data, not re-read
+  commit by commit here.
 - Memory on this machine is tight (155 MB free, 665 MB available
-  at the pre-run check). The runs were sequential, not parallel.
+  at the pre-run check, figures unlogged, see section 2). The runs
+  were sequential, not parallel.
+- One empty leftover dir exists in the sweep save area:
+  ~/workspace/b8t1-sweep/run3-single-obs (0 bytes, created
+  22:50:09.342Z, during run 1), almost certainly the duplicate
+  agent's abandoned run 3 save dir; the actual run 3 used
+  run3-multi. It holds no files and changes nothing above.
 - The earlier version of this report said the sweep was NOT RUN
   and BLOCKED (sections 0, 2, 3, 4, 5 of the 192-line version).
   That was true at the time (2026-11-21T21:45:46Z). This version
