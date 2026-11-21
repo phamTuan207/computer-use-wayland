@@ -3156,3 +3156,6 @@ về rỗng, như các lần chạy của clone2.
 - Việc 2: agent đang chạy khỏe, hoạt động cách đây 52 giây, file docs/clone1-amend-verify-20261122.md chưa có.
 - Muse: không có yêu cầu mới (đã fetch, không commit coord: nào, không tác giả lạ).
 - Hành động: chỉ kiểm tra, không cứu agent, không spawn mới. Watchdog tiếp tục.
+
+## Watchdog đợt 8, 04:57 ngày 22/11
+Việc 1: cài xong (ef01dab, 4.5.0), sweep vẫn chặn, chờ chủ xác nhận chạy clone. Việc 2: agent đang chạy bình thường, hoạt động gần nhất 7.6 phút trước, chưa có file báo cáo. Muse: không có yêu cầu mới từ watermark f8317f7. Lưu ý: lần chạy watchdog 04:57 tự báo không ghi được khối trạng thái vì nội dung repo không qua kiểm tra execution-risk trong phiên của nó; khối này do tôi ghi và push trực tiếp để kiểm tra lại.
