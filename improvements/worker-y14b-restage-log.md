@@ -2593,9 +2593,9 @@ Adjudication:
 - C7-1 (code, REQUIRED): FIXED. _script_basename_is_runner
   now returns False when the name contains "(" or ")", since
   no real runner name contains parens. Only call site is
-  line 2724 (via _runner_basename_head), so the change is
-  contained. The fix is Council 2's preferred one-line fix,
-  applied exactly as specified.
+  line 2735 in the fix8 tree (via _runner_basename_head), so
+  the change is contained. The fix is Council 2's preferred
+  one-line fix, applied exactly as specified.
 - C7-1 doc: FIXED. The _runner_basename_head docstring
   sentence "dropping it is the same correction, not a new
   regression" is reworded: the paren drop re-exposed the
@@ -2659,9 +2659,13 @@ Verification (VM, all green):
   fix8 diff touches only the basename matcher (2 hunks in
   run_batch3.py) plus probe docstrings, so the H2 launch
   gate, t10 transcription, and served-fixture paths are
-  untouched by the diff (0 t10 mentions in the diff).
+  untouched by the diff (0 t10 mentions in the run_batch3.py
+  code diff; the whole-commit diff has 3 t10 lines, all log
+  prose and one hunk header).
 - No em/en dash in the fix diff (grep 0), no ydotool lines
-  in the fix diff (grep 0), no personal info. `import re` OK.
+  in the run_batch3.py code diff (grep 0; the word occurs
+  only in this log's own prose hygiene sentences), no
+  personal info. `import re` OK.
   New run_batch3.py: git blob
   eec33fd589a6da5803fd0488745020c579ecd9db, md5
   0527b55e48ec3a406ca1b100c2c1cd04. Parent fix-pass-7 bytes:
@@ -2813,4 +2817,141 @@ Verification (VM, all green):
   still running. The C8 nits (Council 2's C8-1/C8-2, Council
   3's C8-1/C8-2/C8-3, overlapping) are held for the joint
   adjudication as one doc-only commit.
+- 00:44 +07: fix-pass-8 Council 1 DONE: GO (paper 82ff0a4,
+  todolist-push, ls-remote verified, ANCESTOR_OK; agent
+  efc2d165, completed 00:35:23 UTC). Own differential probe
+  (/tmp/c1-fix8-review/probe.py, fix7/fix8 blobs loaded from
+  git objects, unit AND live on real /proc cmdlines):
+  run_foo(a).py and run_(foo).py are True in fix7, False in
+  fix8, direct and bash -c; all four paren shapes now False;
+  separator forms (; , &&, |, &, ||) and plain run_foo.py,
+  hand_drive_e1.py, run-nested-pill.py stay True. Helper
+  values match the claim; _top_level_sep_index("a=1;", False,
+  False) is 3 in both. Differential over its 18 cases:
+  exactly 5 diffs, all correct-direction True to False on
+  mid-name parens. No new wrong-direction move. 98-case
+  differential: 98 same, 0 diff. Doc fixes verified verbatim:
+  _runner_basename_head rewording (lines 2540-2562) and both
+  log CORRECTION notes (restage log lines 2274 and 2422)
+  confirmed word for word. C7-3: fix6 probe live() now kills
+  children first then wrapper by exact PID, same structure as
+  the fix7 probe helper. Regressions re-run: fix8 probe
+  103/103 PASS (count re-derived from PASS lines; 86
+  carried-forward cases unchanged, 17 new C7-1: 14 unit + 3
+  live), fix7 probe 86/86, fix6 probe 71/71, redteam fix7
+  probe 56/56, Council 2 fix7 probe 118 unit PASS + 2 FAIL
+  (both the intentional C7-1 cases) with all 5 live cases
+  passing. Gap (C6-5 lost probes) stated plainly in the log,
+  as claimed. Hygiene: 0 em/en dash in the diff and in its
+  paper, 0 ydotool in the code diff (word occurs only in log
+  prose stating 0), no personal info, no live Zen driving,
+  no git fetch, no pkill -f, all its stubs killed by exact
+  PID, final orphan sweep clean. The fix6 redteam paper was
+  left untouched (still untracked, md5 6756f7bc). No new
+  findings. One INFO nit: cite line 2735 (not 2724) for the
+  fix8 call site (same as C8-2/C8-3). INCIDENT: a concurrent
+  worker's `git reset --hard` (reflog: "reset: moving to
+  HEAD" at 3f62d67) deleted the first copy of its paper while
+  it was staged but uncommitted. It rewrote it verbatim from
+  its review notes and re-staged only that file; the
+  committed paper notes this. Shared-checkout hazard,
+  recorded: a concurrent reset can delete another worker's
+  staged-but-uncommitted work. (Council 3's "Council 1 paper
+  landed" note is now confirmed: it was this paper, 82ff0a4,
+  which landed while Council 3 was still working.)
+- 00:44 +07: fix-pass-8 redteam DONE: GO (paper ea06c93,
+  todolist-push, ls-remote verified, ANCESTOR_OK; agent
+  29c0ace6). Own probe /tmp/y14b-fix8-rt-probe.py (37 unit +
+  3 helper + 5 live, exit 0, 0 failures, fresh cases written
+  from the brief and the C7-1 finding, not from the author
+  fix8 probe). C7-1 mid-name parens False in fix8, True in
+  fix7, unit AND live on real stub files with real /proc
+  cmdlines: run_foo(a).py, run_(foo).py, plus extra forms
+  run_(a)b.py, run_foo(a,b).py, run_x(y).py, run_foo((a)).py,
+  absolute path, run-nested-pill(a).py, bash -c forms,
+  python3.11 form. Paren forms already False in fix7 stay
+  False: run_foo.py(x, run_foo.py), run_foo.py(), run_foo.py(,
+  run_foo.py(a), bash -c run_foo.py(x. Separator forms stay
+  True in both: run_foo.py;echo, &&echo, |cat, &echo,
+  trailing run_foo.py;, spaced run_foo.py ; echo. Plain true
+  runners stay True: run_foo.py, hand_drive_e1.py,
+  run-nested-pill.py, run-nested-wayland.sh, absolute path,
+  run_bar.py, bash -c. Controls stay False: foo.py,
+  run_foo.txt, run_foo (extensionless), echo hello,
+  run_foo.py.bak, python3 -c "import os". B12 direct case
+  python3 -c "import run_batch3" stays True in both.
+  Helpers: _script_basename_is_runner("run_foo(a).py") True
+  in fix7, False in fix8; ("run_foo.py") True in both;
+  _top_level_sep_index("a=1;", False, False) is 3 in both.
+  Differential over its 42 unit/live predicate cases: 13
+  diffs, every one fix7 True to fix8 False on a
+  paren-carrying literal filename (11 unit + 2 live), all the
+  intended C7-1 FP removal. WRONG-DIRECTION moves: 0. All
+  four paren shapes are now closed: mid-name (new), glued
+  run_foo.py(x, trailing run_foo.py), run_foo.py(). Doc fixes
+  verified verbatim (head docstring lines 2554-2557, both log
+  CORRECTION notes lines 2277-2282 and 2425-2430). C7-3
+  verified empirically: committed fix6 probe 71/71 PASS on
+  the fix8 tree, /proc scan after shows 0 leftover stub
+  processes. Cross-check 1: the author fix8 probe run against
+  the fix7 blob gives 97 PASS + 6 FAIL, the 6 FAILs exactly
+  the C7-1 checks (4 unit + 2 live, all got True want False),
+  reproducing C7-1 in fix7 and proving the fix8 tree corrects
+  it. Cross-check 2: the Council 2 fix7 probe run unmodified
+  against fix7 gives 118 PASS + 2 FAIL, exactly the two C7-1
+  checks; the same probe with its fix7 module swapped for the
+  fix8 file gives 119 PASS + 1 FAIL, the two C7-1 checks now
+  PASS, and the single FAIL is the probe's own stale
+  expectation (expects the old fix7 value True), an intended
+  behavior change, not a regression. Gap (C6-5) accepted as
+  stated; blast radius is one predicate with one call site.
+  Hygiene: 0 em/en dash in the diff (counted with Python over
+  the full 0857d19..6f72fe3 diff); banned-tool name occurs 2
+  times in the full diff, both inside the log's own prose
+  hygiene sentences, 0 invocations or uses in code; no
+  personal info; no live Zen driving; all live checks were
+  python3 stub processes killed by exact PID, final /proc
+  scans show 0 remain. INFO notes only: R8-1, sibling copies
+  still carry the FP (launch_y13.py line 254 and
+  run_codex_y5.py line 3669, neither with a paren guard;
+  run_foo(a).py returns True in both, executed standalone via
+  AST extraction; out of scope for this fix pass, flagged for
+  a future pass, not this one - this EXTENDS standing flag 3,
+  the siblings now need the paren guard as well as the -m
+  fix); R8-2, stale line number 2724 vs 2735 (same as
+  C8-2/C8-3); R8-3, the log's "(grep 0)" parenthetical is
+  literally wrong as a grep statement (grep returns the 2
+  self-referential prose hits), substance (no use) is true
+  (same class as C8-1).
+
+## Fix-pass-8 joint adjudication: ALL 4 GO, doc-only fixes, SHIP
+
+Fix-pass-8 tally: redteam GO (ea06c93) + Council 1 GO
+(82ff0a4) + Council 2 GO (547636e) + Council 3 GO (3f62d67),
+none BLOCK, none AMEND. Every code claim is verified by
+independent reproduction (C7-1 closed 4 ways, C7-3 closed
+empirically with 0 orphans, 0 wrong-direction moves across
+all four differentials). The only open items are doc INFO
+nits, fixed in this commit (doc-only, no code change, so no
+further review round per the stopping rule):
+- C8-1/C8-2 (Council 2) + C8-1/C8-2/C8-3 (Council 3) +
+  Council 1 INFO nit + redteam R8-2/R8-3: plan line 620-621
+  "fix-pass-7 entry" corrected to "fix-pass-8 entry"; log
+  adjudication "line 2724" corrected to "line 2735 in the
+  fix8 tree"; log hygiene sentences scoped to the
+  run_batch3.py code diff (0 t10 mentions and 0 ydotool
+  lines in the code diff; the whole-commit diff has 3 t10
+  lines and 2 ydotool lines, all log prose and one hunk
+  header).
+- Redteam R8-1 (siblings carry the FP) is NOT fixed here:
+  out of scope (this pass restages only run_batch3.py), and
+  it extends standing flag 3 for Muse (siblings
+  launch_y13.py / run_codex_y5.py need the paren guard as
+  well as the -m fix).
+- The fix-pass-8 runner bytes are UNCHANGED by this doc
+  commit (blob eec33fd5, md5 0527b55e, commit 6f72fe3), so
+  the ship md5 is unchanged. SHIP NEXT: the re-staged runner
+  to /tmp/y14-server on the laptop, md5-verified with the
+  corrected ship procedure, live_metrics import verified
+  before any slot run.
 

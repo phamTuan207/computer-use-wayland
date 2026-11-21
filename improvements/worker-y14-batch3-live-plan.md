@@ -618,7 +618,7 @@ header/imports, run_b3_t10, run_preflight, H2 helpers, launch_gate):
   commit d552f4d; and the fix-pass-5 values: md5 9e99d9aa, blob
   ff4a5358, commit 46e0909; and the fix-pass-4 values: md5 2920f169,
   blob 585fb801, commit bf3c939. The fix-pass-8 commit hash is in
-  the log's fix-pass-7 entry.) Paste the actual command output into
+  the log's fix-pass-8 entry.) Paste the actual command output into
   the live log at ship time. Any mismatch refuses the slot.
 - Council (3) + redteam over the re-stage diff f732d6a: Council 1 GO
   (t10 translation 69/69, watch item: middle advancing read margin);
