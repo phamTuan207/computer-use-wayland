@@ -207,17 +207,15 @@ def dom_rect_to_image_point(meta, rect, viewport_origin, scale_factor=1):
     window-relative in this Zen build, so a caller that passes the raw
     pair as the origin is wrong by the window origin (the old bug:
     (240, 8) as absolute maps off-monitor). The origin argument is
-    therefore the ABSOLUTE origin from zen_dom.viewport_origin(). As a
-    safety net, when the absolute reading maps outside the observed
-    image, the function retries with the window-relative reading
-    (window origin from the meta's window_bounds, else its region,
-    plus the passed origin times the factor); when that lands inside,
-    it is used. When neither reading lands inside, it fails closed.
-    The net only triggers when the absolute reading is impossible, so
-    a correct absolute origin is never overridden; the residual case
-    (both readings land inside, e.g. a window near the screen origin)
-    is decided by the caller passing the probe-verified absolute
-    origin, not by this function.
+    therefore the ABSOLUTE origin from zen_dom.viewport_origin().
+    There is no fallback retry: when the absolute reading maps
+    outside the observed image the function raises (a stale
+    observation, a moved window, or a wrong origin are all refusals,
+    never guesses). An earlier safety net that retried with a
+    window-relative reading was deleted in amend3: it silently
+    rescued exactly the old-bug call, so the R1 test passed via the
+    net instead of via the fixed chain, and a wrong origin that
+    happened to land inside was used with no warning.
     """
     if not isinstance(meta, dict):
         raise ValueError('meta must be an object')
@@ -233,21 +231,6 @@ def dom_rect_to_image_point(meta, rect, viewport_origin, scale_factor=1):
             or region[2] <= 0 or region[3] <= 0):
         raise ValueError('meta needs a region [x, y, w, h] with positive size')
     sx, sy = dom_rect_to_screen_point(rect, viewport_origin, scale_factor)
-    point = _image_point_for_screen(meta, sx, sy)
-    if point is not None:
-        return point
-    bounds = meta.get('window_bounds')
-    if (isinstance(bounds, (list, tuple)) and len(bounds) == 4
-            and all(isinstance(v, (int, float))
-                    and not isinstance(v, bool) for v in bounds)):
-        window_origin = [bounds[0], bounds[1]]
-    else:
-        window_origin = [region[0], region[1]]
-    center = _rect_center_float(rect)
-    absolute = [window_origin[0] + viewport_origin[0] * scale_factor,
-                window_origin[1] + viewport_origin[1] * scale_factor]
-    sx, sy = [absolute[0] + center[0] * scale_factor,
-              absolute[1] + center[1] * scale_factor]
     point = _image_point_for_screen(meta, sx, sy)
     if point is not None:
         return point

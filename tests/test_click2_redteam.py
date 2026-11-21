@@ -21,6 +21,7 @@ import dom_act
 import fastpath
 import zen_dom
 from test_dom_act import FakeDomSession, G30_FIELD, G30_META
+from test_zen_dom import FakeWdSession
 # NOTE: cu must come from test_keyboard_preflight, not a plain import:
 # the harness loads cu via importlib spec (its own module object) and
 # patches THAT object's focus/window/observe. A plain `import cu` loads
@@ -129,17 +130,29 @@ def _capture_js(method_name, selector='#msg-input'):
 
 class R1ConversionTests(unittest.TestCase):
     def test_raw_moz_inner_screen_origin_must_land(self):
-        # R1: calibration-e2-report.md (measured on the laptop Zen):
-        # mozInnerScreenX/Y are WINDOW-relative (240, 8); the window
-        # sits at (2509, 914), size 1863x1176; the observation is
-        # 1200x757 over the same region. The amend treats (240, 8) as
-        # screen coords, so the point maps far outside the image.
+        # R1, rewritten in amend3: the point must land through the
+        # corrected chain, zen_dom.viewport_origin output (the
+        # absolute origin), not through the raw mozInner pair. Live
+        # C12 probe geometry: window (2509, 914), mozInner (240, 8),
+        # viewport 1615x1160, absolute origin (2749, 922). Passing
+        # the raw pair (240, 8) as the origin is the old bug and must
+        # now fail closed instead of being silently rescued.
+        session = FakeWdSession(['aaa11111'])
+        session.dom_origin = [240, 8]
+        session.dom_inner = [1615, 1160]
+        session.dom_outer = [1863, 1176]
+        origin = session.viewport_origin([2509, 914], [1863, 1176])
+        self.assertEqual(origin, [2749, 922])
         meta = {'image_size': [1200, 757],
                 'region': [2509, 914, 1863, 1176]}
         rect = {'x': 86, 'y': 1101, 'width': 440, 'height': 63}
-        point = fastpath.dom_rect_to_image_point(meta, rect, [240, 8])
+        point = fastpath.dom_rect_to_image_point(meta, rect, origin)
         self.assertTrue(0 <= point[0] < 1200 and 0 <= point[1] < 757,
                         'point %s falls outside the observed image' % (point,))
+        self.assertAlmostEqual(point[0], 351.7, places=0)
+        self.assertAlmostEqual(point[1], 734.4, places=0)
+        with self.assertRaises(ValueError):
+            fastpath.dom_rect_to_image_point(meta, rect, [240, 8])
 
     def test_window_origin_added_lands(self):
         # Fix direction (PASSES): window origin + mozInnerScreen +
