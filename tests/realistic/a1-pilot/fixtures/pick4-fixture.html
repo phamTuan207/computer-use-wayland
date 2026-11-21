@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Pick 4 DOM fixture</title></head>
+<body>
+<h1 id="heading">Pick 4 DOM-first fixture</h1>
+<p id="intro">Press the button to reveal the result. No screenshot is needed for this page.</p>
+<label>Your name <input id="name" type="text" value=""></label>
+<button id="show" type="button">Show result</button>
+<label><input id="agree" type="checkbox"> I agree</label>
+<div id="result">not clicked yet</div>
+<script>
+document.getElementById('show').addEventListener('click', function () {
+  var name = document.getElementById('name').value || 'stranger';
+  document.getElementById('result').textContent = 'pick4-ok hello ' + name;
+});
+</script>
+</body>
+</html>
