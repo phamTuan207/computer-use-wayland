@@ -68,27 +68,48 @@ Corrected theory (22:38, after restart): lazy tabs do NOT break `#registerBrowse
 | 22:52 | +34m | Log commit 065744c pushed | todolist-push | Commit "F3: log introspection results + 22:49 owner steers" pushed 26366a9..065744c. ls-remote confirms 065744c2 (matches). | - |
 | 22:52 | +34m | Owner correction (22:49-22:51, via MEMORY) | 240 target | Graph shows 136 contributions (tooltip), not 190. My count used the +07 day (201 commits + 1 PR at 22:51); the graph counts the UTC day (144 + 1 = 145). The graph only counts default-branch (main) commits; todolist-push has 290 commits on UTC 21/11 but they do NOT count. Worker MERGE spawned to merge todolist-push into main. | - |
 | 22:54:22 | +36m22s | Full cleanup launched (detached) | cleanup_full.py | Sacrificial tab opened FIRST (handle 9e3a8a00). BEFORE 68 tabs (67 + sacrificial). DOOMED 52. First CLOSED: BiDi fixture 40301. Running detached, log /tmp/zen_tab_cleanup/full.log. DOOMED includes "Browser DevTools Simulation" (title differs from FIXTURE_TITLES "Simulator", caught by the URL predicate) and fixture app titles (Markdown Live Studio, Focus Engine, etc.) caught by the URL predicate. AFTER expected 16 (15 real + sacrificial); the 2 extra vs the 13 are "Just a moment..." + "ModelArk-Coding-Plan" (real tabs). | - |
+| 22:54:50 | +36m50s | Full cleanup DONE | cleanup_full.py | CLOSED 52, errors 0, elapsed 8.5s. AFTER 16 tabs. | - |
+| 22:55:34 | +37m34s | Fresh verify list (verify_list.py) | Marionette | VERIFY 17 tabs (incl. 1 sacrificial). All 14 real tabs present by URL (YouTube, Reddit, Todoist, Gmail, Calendar, Muse, PCCV CF26, Free Claude Code Admin, Welcome, Polygon, codeforces, chunkbase, duck.ai, BytePlus). ZERO fixture tabs. "Problem loading page" = Reddit (failed load, URL preserved). "Example Domain" = my 22:40 test tab. 2 "" about:blank = leftover sacrificial tabs (session DELETE does not reliably close the current tab). | - |
+| 22:56:01 | +38m01s | close3.py (tidy) | Marionette | BEFORE 18, DOOMED 3 (Example Domain + 2 blanks), CLOSED 3, AFTER 15 (14 real + 1 sacrificial). | - |
+| 22:56:12 | +38m12s | Fresh verify FAILED, slot wedged AGAIN | Marionette POST /session | HTTP 500 browserElement is null, same stack (4616/4640/2707). RECURRENCE. | - |
+| 22:56:31 | +38m31s | Retry verify FAILED | Marionette POST /session | Same HTTP 500. NOT transient (19s later, still wedged). | - |
+| 22:56 | +38m | Refined hypothesis | root cause | The wedge reappeared between close3 end (~22:56:05) and 22:56:12. close3 is the only session that CLOSED tabs created via window/new (the 2 leftover sacrificial blanks). Hypothesis: closing a window/new-created tab leaves a zombie tab element with linkedBrowser null (removeTab nulls it, Bug 1342723); the next newSession trips on it. cleanup_full closed 13 RESTORED blanks and the next session worked, so restored blanks do not wedge it. To be proven by BiDi diagnosis + a click/activate test. | - |
+| 22:57:15 | +39m15s | BiDi/DevTools probe | laptop | curl /json/list returned empty (Firefox does not serve CDP /json/list). Marionette 2828 LISTEN (zen-bin 426338, fd 55). Zen alive. | - |
+| 22:58:05 | +40m05s | BiDi tabs (zen_cli.py) | BiDi | 15 tabs, all normal with URLs. NO zombie visible via BiDi (a tab element with no browsing context is invisible to BiDi). 1 sacrificial blank remains (index 9). | - |
+| 22:58:17 | +40m17s | BiDi activate YouTube (index 0) | BiDi | Activated OK. NOTE: this switched the Hyprland active workspace to ws1 (focusing Zen's window switches workspace). | - |
+| 22:58:45 | +40m45s | hl.dispatch string form test | hyprctl eval | FAILED: "hl.dispatch: expected a dispatcher (e.g. hl.dsp.window.close()) or a lua function". hl.dispatch takes a dispatcher OBJECT or a Lua function, never a string name. BUT activeworkspace then showed ws1 (id 1, 1 window, "Example Domain — Zen Browser") — the switch came from the BiDi activate at 22:58:17, not the eval. The window title is STALE (Example Domain tab was closed 22:56:01). | - |
+| 22:59:13 | +41m13s | Observe Zen on ws1 | observe | Zen visible. Sidebar shows "Example Domain" row (selected, page rendered) + "New Tab" — but BiDi (22:58:05) lists NO example.com tab. The UI tab list and BiDi context list DISAGREE. The "Example Domain" row is a tab element with no browsing context: the zombie. | - |
+| 23:00:03 | +42m03s | Click Welcome! tab row img(120,390) | mouse | CLICKED 28ms, miss 0.0px. Welcome! selected, page rendered. UI fully responsive. | img(120,390) global(2584,1292) |
+| 23:00:24 | +42m24s | Retry Marionette session | POST /session | FAILED, same HTTP 500. Mouse click on a real tab does NOT fix the slot. | - |
+| 23:01:10 | +43m10s | Click Example Domain row img(120,483) | mouse | CLICKED 28ms, miss 0.0px. Result: "New Tab" selected instead (X shown). Clicking the zombie row does NOT select it; Zen falls back to the neighboring tab. CONFIRMS the Example Domain row is a dead tab element. | img(120,483) global(2584,1385) |
+| 23:01:53 | +43m53s | Click X at img(255,483) (zombie close attempt) | mouse | CLICKED 28ms, miss 1.0px. Result: the "New Tab" (sacrificial) row is GONE; "Example Domain" REMAINS. The rows had shifted between the screenshot and the click, so the X closed the sacrificial tab, not the zombie. Harmless (it was my empty tab), but the zombie survives. UI-close attempts STOPPED (rising misclick risk near real tabs). | img(255,483) global(2719,1385) |
+| 23:02:04 | +44m04s | Retry Marionette session | POST /session | FAILED, same HTTP 500 (4th failure since the recurrence: 22:56:12, 22:56:31, 23:00:24, 23:02:04). | - |
+| 23:01 | +43m | Owner instruction (via MEMORY) | fleet | Owner asleep but: big errors/blockers/things needing his decision get reported AT ONCE (do not wait until morning); routine work stays quiet until morning. This recurrence IS a big blocker (gates Y13/Y14 live runs). | - |
+| 22:57 | +39m | Fleet note (via MEMORY) | Y13r2 | Y13r2 BLOCK (4 new blockers + 5 amends); Y13g spawned to fix per the redteam paper, then a fresh re-review. re.py root cause SOLVED: a Redteam Y13r2 shim (A6e) deleted the file by accident (globals().update overwrote __file__ before os.remove), NOT a stray process; VMFIX restored durably (c16dd4e). H3 gate: Y13r2 proposal accepted (5a2b69d NO VERDICT + runner-quiet/ports check counts as the done marker leg for this run, gate text unchanged, Y6 retry after Y13). | - |
+| 22:55 | +37m | Owner note (clone2-watch, via MEMORY) | fleet | Cron clone2-watch 15m: check clone2 on ws2, approve/nudge if silent >15min, then back to ws1. Not F3 work; no action. | - |
 
 ## Notes added after the fact (22:47, from the man page)
 
 - wtype modifier names are: shift, capslock, ctrl, logo, win, alt, altgr. So Super = "logo" (or "win"). The 22:44:59 and 22:45:11 failures were wrong modifier names, not a compositor problem.
 - The far-left rail is the Omarchy system dock. Its top item (15,30) is the app launcher. Its numbers are Hyprland workspaces. Zen-internal workspaces are NOT switched from that rail; the owner's complaint about Zen workspace switching is a separate item (Zen-internal), not yet tested.
 
-## Verification status (22:48)
+## Verification status (23:02)
 
-- Marionette slot: FIXED (session 0.1s, 67 tabs listed). PASS.
+- Marionette slot: FIXED 22:37 by restart, then WEDGED AGAIN 22:56:12 (4 failed retries: 22:56:12, 22:56:31, 23:00:24, 23:02:04). Recurrence confirmed.
 - Session restore: 67 contexts, all 13 real tabs present. PASS. (LMS login tab opened ~22:26 was never flushed to sessionstore and is lost; login page only, trivially reopenable.)
 - Website open: PASS (example.com).
 - Click a tab: PASS (29ms, 1.0px miss, content rendered).
-- Hyprland workspace switch by rail click: WORKS (22:42:28, ws1 to ws2) but MIS-TARGETED method; bar clicks now BANNED by owner. Return to ws1 by COMMAND is still pending.
+- Hyprland workspace switch by rail click: WORKS (22:42:28, ws1 to ws2) but MIS-TARGETED method; bar clicks now BANNED by owner. Return to ws1 happened via BiDi activate side effect (22:58:17), not by command.
 - Zen-internal workspace switch: NOT yet tested.
-- Tab cleanup redo (39 resurrected fixture tabs + 13 about:blank + httpbin + BiDi fixture 40301): NOT yet done. KEEP Free Claude Code Admin 127.0.0.1:8082 and all real tabs.
-- Error-file entry (Marionette failure + 22:43:15 click-miss): NOT yet done.
+- Tab cleanup redo: DONE and VERIFIED (22:54:50). Closed 52 (cleanup_full) + 3 (close3) = 55 tabs. Fresh verify list 22:55:34: all 14 real tabs present by URL, ZERO fixture tabs. Final state 14 real + 1 sacrificial empty tab = 15 tabs. (The 14th real tab is Reddit, which the 22:10 note had not listed separately; "Problem loading page" = Reddit failed load, URL preserved.)
+- Zombie identified: the "Example Domain" tab element (Marionette DELETE on a BiDi-navigated tab leaves the tab element with null linkedBrowser). Visible in the sidebar, absent from BiDi tree, cannot be selected (click falls back to the neighboring tab). BiDi activate + mouse click on a real tab + UI X-close attempt ALL FAILED to clear it. Only proven fix: Zen restart (awaiting Muse direction; NOT done on my own).
+- Error-file entries: in progress (J3/J7/J21 updates + J22-J24 new).
 - Council (3) + redteam over the fix: NOT yet done.
 
 ## Open items (in order)
 
-1. (TOP, owner 22:49) Re-run the FULL tab cleanup via Marionette: close the 39 resurrected fixture tabs + the definitely-unused ones among the 28 (13 about:blank, httpbin, BiDi fixture 40301), keep the 13 real tabs (incl. Free Claude Code Admin 127.0.0.1:8082). Verify with a FRESH tab list that they do not come back. Sacrificial tab FIRST, end the session on a live tab.
-2. Workspace-switch by command: hl.dsp has no goto. Next: check `hyprctl binds -j` for the Omarchy default workspace binds, and test `hl.dispatch("workspace", "1")` (string form) with immediate activeworkspace verification. Then return to ws1 and verify Zen visible.
-3. Add the Marionette failure + the 22:43:15 click-miss to the error file.
-4. Council (3) + redteam over the fix. Commit + push each small step at once.
+1. (TOP) Report the recurrence to Muse: slot re-wedged after the cleanup, zombie identified, all non-restart fixes failed, restart is the proven fix awaiting direction. Muse decides whether to report it to the owner now (owner 23:01: big blockers get reported at once, not next morning).
+2. Add the Marionette failure + the 22:43:15 click-miss + the recurrence/zombie to the error file (J3/J7/J21 updates + J22-J24).
+3. Council (3) + redteam over the fix. Commit + push each small step at once.
+4. Procedure change (for the next cleanup): NEVER close a BiDi-navigated tab via Marionette DELETE (it leaves the zombie). Close tabs only via the UI, or navigate them away first. Also: session DELETE does not reliably close the sacrificial tab (2 remained); accept 1 leftover empty tab.
+5. Workspace-switch by command: still unresolved. hl.dispatch takes dispatcher objects only (no string form). The workspace table has no goto. Next lead: hl.dsp.focus (a function) or the Omarchy default binds. Low priority (BiDi activate switches workspace as a side effect).
