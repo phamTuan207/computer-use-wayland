@@ -617,25 +617,108 @@ class TestRun(unittest.TestCase):
         self.assertEqual(logged['path'], 'refused')
         self.assertIn('8fef498445d2', logged['error'])
 
-    def test_stale_given_observation_pointer_only_proceeds_recorded(self):
-        # G28, SRC spec: the loud refusal fires only for batches with
-        # key/type actions. A pointer-only batch proceeds on the
-        # substituted screen capture, but the substitution is recorded
-        # explicitly in the envelope, never silent.
+    def test_stale_given_observation_pointer_only_refused(self):
+        # G28 widened (amend): the loud refusal fires for EVERY batch
+        # when a given observation was rejected, not only for key/type
+        # batches. A pointer-only batch on the substituted screen
+        # capture would run window-image coordinates against a screen
+        # region, off by the window offset, and cursorpos cannot catch
+        # it. The run refuses before any session attempt, with
+        # fallback_reason naming the stale observation, and the
+        # pointer-only remedy (screen coordinates) is offered.
         obs = self._write_obs('8fef498445d2', 114)
-        code, env, _ = self._run(
-            [{'type': 'click', 'x': 250, 'y': 1037}],
-            (0, '{"ok": true, "completed": 1}', '', False, 0.5),
-            observation=obs)
-        self.assertEqual(code, 0)
-        self.assertTrue(env['ok'])
-        self.assertEqual(env['path'], 'session')
+        with mock.patch.object(first_action, 'attempt_session') as sess:
+            buf = io.StringIO()
+            with contextlib.redirect_stdout(buf):
+                code = first_action.run(
+                    _args(_write_actions(
+                        self.tmp.name,
+                        [{'type': 'click', 'x': 250, 'y': 1037}]),
+                        observation=obs))
+        env = json.loads(buf.getvalue())
+        sess.assert_not_called()
+        self.assertEqual(code, 1)
+        self.assertFalse(env['ok'])
+        self.assertEqual(env['path'], 'refused')
+        self.assertIn('8fef498445d2', env['error'])
+        self.assertIn('stale', env['error'])
+        self.assertIn('114', env['error'])
+        self.assertIn('omit --observation', env['error'])
+        self.assertIn('8fef498445d2', env['fallback_reason'])
         self.assertEqual(env['observation']['source'], 'captured')
         self.assertEqual(
             env['observation']['given_observation_rejected']['given_id'],
             '8fef498445d2')
-        self.assertIsNone(env['fallback_reason'])
-        self.assertIsNone(env['error'])
+        self.assertEqual(self.fake_cu.desktop_calls, [])
+        log = list(self.fake_cu.state.glob('first-action-*.jsonl'))
+        self.assertEqual(len(log), 1)
+        logged = json.loads(log[0].read_text().splitlines()[0])
+        self.assertEqual(logged['path'], 'refused')
+        self.assertIn('8fef498445d2', logged['fallback_reason'])
+
+    def test_stale_given_observation_refusal_key_type_offers_window_only(self):
+        # RT R4: on the key/type path the refusal must NOT offer the
+        # screen-coordinates remedy, because a type batch with no
+        # observation ends at desktop_act on a screen observation,
+        # which refuses key/type. Only the fresh window remedy applies.
+        obs = self._write_obs('8fef498445d2', 114)
+        path = _write_actions(self.tmp.name,
+                              [{'type': 'click', 'x': 250, 'y': 1037},
+                               {'type': 'type', 'text': 'hi'}])
+        with mock.patch.object(first_action, 'attempt_session') as sess:
+            buf = io.StringIO()
+            with contextlib.redirect_stdout(buf):
+                code = first_action.run(
+                    _args(path, observation=obs))
+        env = json.loads(buf.getvalue())
+        sess.assert_not_called()
+        self.assertEqual(code, 1)
+        self.assertEqual(env['path'], 'refused')
+        self.assertIn('re-observe', env['error'])
+        self.assertNotIn('omit --observation', env['error'])
+
+    def test_session_type_verified_and_error_code_surfaced_in_envelope(self):
+        # RT R3: type_verified and error_code from the session result
+        # reach the act-now envelope instead of being dropped.
+        code, env, _ = self._run(
+            [{'type': 'type', 'text': 'X'}],
+            (0, json.dumps({'ok': False, 'completed': 1,
+                            'error': 'type verification failed',
+                            'error_code': 'type_unverified',
+                            'type_verified': False}), '', False, 0.5))
+        self.assertEqual(code, 1)
+        self.assertFalse(env['ok'])
+        self.assertIs(env['type_verified'], False)
+        self.assertEqual(env['error_code'], 'type_unverified')
+
+    def test_session_without_verification_fields_reports_none(self):
+        # RT R3: the fields are always present in the envelope, None
+        # when the session result carries neither.
+        code, env, _ = self._run(
+            [{'type': 'click', 'x': 100, 'y': 100}],
+            (0, '{"ok": true, "completed": 1}', '', False, 0.5))
+        self.assertEqual(code, 0)
+        self.assertIn('type_verified', env)
+        self.assertIsNone(env['type_verified'])
+        self.assertIn('error_code', env)
+        self.assertIsNone(env['error_code'])
+
+    def test_fallback_type_verified_and_error_code_surfaced_in_envelope(self):
+        # RT R3 on the fallback path: the direct desktop_act result
+        # carries the fields into the envelope.
+        self.fake_cu.desktop_act = mock.Mock(
+            return_value={'ok': False, 'completed': 1,
+                          'error': 'type verification failed',
+                          'error_code': 'type_unverified',
+                          'type_verified': False})
+        code, env, _ = self._run(
+            [{'type': 'type', 'text': 'X'}],
+            (1, '{"ok": false, "error": "session guardian startup failed"}',
+             '', False, 0.4))
+        self.assertEqual(code, 1)
+        self.assertEqual(env['path'], 'fallback')
+        self.assertIs(env['type_verified'], False)
+        self.assertEqual(env['error_code'], 'type_unverified')
 
     def test_stale_given_observation_refused_loudly_key_only_batch(self):
         # G28, SRC spec: the refusal covers key actions too, not only

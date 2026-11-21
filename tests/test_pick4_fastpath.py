@@ -468,5 +468,129 @@ class CuGroundCliTests(unittest.TestCase):
         self.assertEqual(json.loads(output.getvalue())['backend'], 'a11y-query')
 
 
+class DomRectMappingTests(unittest.TestCase):
+    """Item 12: DOM rect to image point, first-time-right.
+
+    Grounding accuracy is measured, not asserted case by case only:
+    every positive case maps its rect center to an image point whose
+    round trip through cu.image_point lands inside the truth screen
+    rect. Accuracy is hits / cases and must be >= 90%.
+    """
+
+    def _hit(self, rect, origin, meta):
+        """Map rect center to image point, round trip to screen, hit?"""
+        point = fastpath.dom_rect_to_image_point(meta, rect, origin)
+        sx, sy = cu.image_point(meta, point[0], point[1])
+        truth = {'x': origin[0] + rect['x'], 'y': origin[1] + rect['y'],
+                 'width': rect['width'], 'height': rect['height']}
+        return fastpath.point_in_rect(truth, sx, sy), point, (sx, sy)
+
+    def test_grounding_accuracy_across_cases(self):
+        # (rect, viewport origin, meta)
+        cases = [
+            # 1. G30 exact: Brave window [2533,914,901,1176], field
+            # x 86..526, y 1101..1164, center (306,1132.5).
+            ({'x': 86, 'y': 1101, 'width': 440, 'height': 63},
+             [2533, 914],
+             {'image_size': [901, 1176],
+              'region': [2533, 914, 901, 1176]}),
+            # 2. Same window, image downscaled to half (max_width).
+            ({'x': 86, 'y': 1101, 'width': 440, 'height': 63},
+             [2533, 914],
+             {'image_size': [450, 588],
+              'region': [2533, 914, 901, 1176]}),
+            # 3. Scrolled page: field near the viewport top edge.
+            ({'x': 100, 'y': 5, 'width': 200, 'height': 30},
+             [100, 200],
+             {'image_size': [800, 600],
+              'region': [100, 200, 800, 600]}),
+            # 4. Small field: 8x8 target, center must still land inside.
+            ({'x': 400, 'y': 300, 'width': 8, 'height': 8},
+             [0, 0],
+             {'image_size': [800, 600],
+              'region': [0, 0, 800, 600]}),
+            # 5. Wide field: center far from the text start at the
+            # left edge; the rect center is the click, not the text.
+            ({'x': 0, 'y': 500, 'width': 800, 'height': 40},
+             [50, 60],
+             {'image_size': [900, 700],
+              'region': [50, 60, 900, 700]}),
+            # 6. Chrome offset: 100px tab bar + address bar above the
+            # viewport, so the viewport origin is below the window
+            # origin and the rect is viewport relative.
+            ({'x': 86, 'y': 1001, 'width': 440, 'height': 63},
+             [2533, 1014],
+             {'image_size': [901, 1176],
+              'region': [2533, 914, 901, 1176]}),
+            # 7. Scale 2 capture: device pixels double the region.
+            ({'x': 86, 'y': 1101, 'width': 440, 'height': 63},
+             [2533, 914],
+             {'image_size': [1802, 2352],
+              'region': [2533, 914, 901, 1176]}),
+        ]
+        hits = 0
+        for rect, origin, meta in cases:
+            hit, _point, _screen = self._hit(rect, origin, meta)
+            hits += 1 if hit else 0
+        accuracy = hits / len(cases)
+        self.assertGreaterEqual(
+            accuracy, 0.9,
+            'grounding accuracy %s (%d/%d) is below the 90%% bar'
+            % (accuracy, hits, len(cases)))
+        self.assertEqual(hits, len(cases),
+                         'every synthetic case must hit; a miss is a bug')
+
+    def test_g30_dom_point_hits_and_old_eye_point_misses(self):
+        # The incident as a test: the DOM rect center (306,1132.5)
+        # lands inside the field; the eye-read point (250,1037) sits
+        # 64px above the field top edge and misses it.
+        rect = {'x': 86, 'y': 1101, 'width': 440, 'height': 63}
+        origin = [2533, 914]
+        meta = {'image_size': [901, 1176],
+                'region': [2533, 914, 901, 1176]}
+        hit, point, _screen = self._hit(rect, origin, meta)
+        self.assertTrue(hit)
+        self.assertEqual(point, [306.0, 1132.5])
+        truth = {'x': origin[0] + rect['x'], 'y': origin[1] + rect['y'],
+                 'width': rect['width'], 'height': rect['height']}
+        self.assertFalse(fastpath.point_in_rect(truth, 2533 + 250, 914 + 1037),
+                         'the eye-read point misses the field by 64px')
+
+    def test_dom_rect_to_screen_point(self):
+        self.assertEqual(
+            fastpath.dom_rect_to_screen_point(
+                {'x': 86, 'y': 1101, 'width': 440, 'height': 63},
+                [2533, 914]),
+            [2839, 2046.5])
+        with self.assertRaises(ValueError):
+            fastpath.dom_rect_to_screen_point(
+                {'x': 0, 'y': 0, 'width': 0, 'height': 10}, [0, 0])
+
+    def test_point_outside_image_fails_closed(self):
+        # The rect belongs to another window (or the window moved):
+        # never guess a point off the observed image.
+        meta = {'image_size': [901, 1176],
+                'region': [2533, 914, 901, 1176]}
+        with self.assertRaisesRegex(ValueError, 'outside the observed image'):
+            fastpath.dom_rect_to_image_point(
+                meta, {'x': 2000, 'y': 100, 'width': 50, 'height': 20},
+                [2533, 914])
+        with self.assertRaises(ValueError):
+            fastpath.dom_rect_to_image_point(
+                {'region': [0, 0, 100, 100]},
+                {'x': 1, 'y': 1, 'width': 10, 'height': 10}, [0, 0])
+        with self.assertRaises(ValueError):
+            fastpath.dom_rect_to_image_point(
+                {'image_size': [100, 100], 'region': [0, 0, 0, 100]},
+                {'x': 1, 'y': 1, 'width': 10, 'height': 10}, [0, 0])
+
+    def test_point_in_rect(self):
+        rect = {'x': 10, 'y': 20, 'width': 30, 'height': 40}
+        self.assertTrue(fastpath.point_in_rect(rect, 10, 20))
+        self.assertTrue(fastpath.point_in_rect(rect, 40, 60))
+        self.assertFalse(fastpath.point_in_rect(rect, 41, 30))
+        self.assertFalse(fastpath.point_in_rect(rect, 5, 30))
+
+
 if __name__ == '__main__':
     unittest.main()
