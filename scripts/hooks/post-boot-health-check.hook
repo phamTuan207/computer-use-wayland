@@ -1,0 +1,32 @@
+#!/bin/bash
+# Post-boot health check for the computer-use fleet.
+# Installed at ~/.config/omarchy/hooks/post-boot.d/post-boot-health-check.hook
+# (laptop-local; the repo copy at scripts/hooks/ is the source of truth).
+# Runs once at boot. CHECK-ONLY: it verifies and logs, it never restarts,
+# kills, or changes anything, and it always exits 0 so a failure here can
+# never break the boot. Pattern reused from the post-update hook
+# reapply-indicator-patch.hook (same log dir, same always-exit-0 rule).
+LOG_DIR="$HOME/.cache/agent-computer-use"
+LOG="$LOG_DIR/post-boot-health.log"
+mkdir -p "$LOG_DIR" 2>/dev/null || exit 0
+
+# GUI env the same way every laptop probe does it: the signature is a
+# directory under /run/user/1000/hypr/ (hyprland/ is empty). Without it
+# hyprctl and omarchy-shell fail outright.
+export XDG_RUNTIME_DIR=/run/user/1000 WAYLAND_DISPLAY=wayland-1
+export DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus
+export HYPRLAND_INSTANCE_SIGNATURE="$(ls /run/user/1000/hypr/ 2>/dev/null | head -n1)"
+
+stamp="$(date '+%F %T %z' 2>/dev/null || echo unknown)"
+hypr_ok=no
+if hyprctl version >/dev/null 2>&1; then hypr_ok=yes; fi
+zen_ok=no
+if pgrep -x zen-bin >/dev/null 2>&1; then zen_ok=yes; fi
+relay_ok=no
+if pgrep -f "session_remote.py serve" >/dev/null 2>&1; then relay_ok=yes; fi
+shell_ok=no
+if OMARCHY_PATH=/usr/share/omarchy omarchy-shell shell ping 2>/dev/null | grep -qx ok; then shell_ok=yes; fi
+
+printf '%s boot health: hyprland=%s zen=%s relay=%s shell=%s\n' \
+  "$stamp" "$hypr_ok" "$zen_ok" "$relay_ok" "$shell_ok" >> "$LOG" 2>/dev/null || true
+exit 0
