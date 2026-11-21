@@ -143,3 +143,53 @@ wall-clock Asia/Ho_Chi_Minh + elapsed since T0.
   refusing (attacker fork?)"); real-repo control: pin passes
   with real git, refuses "no Y6c completion marker on
   todolist-push" (real state, as expected).
+- 00:29-00:30 +07 (T+~24m to T+~25m): A7 symlink set DONE,
+  10/10 PASS in 2.2s (results a7.log). All 5 shapes refuse at
+  BOTH layers with kind "symlink" (never "pyc_refused"). Scan
+  layer: {"refused": true, "kind": "symlink"} rc 2 for the
+  fixtures dir, the manifest file, the codex-y5 dir, the
+  fixture-to-outside-tampered file, and the non-manifest extras
+  dir. Verify layer (stripped copy, manifest re-pointed):
+  shapes 1-4 refuse via _manifest_entries path containment
+  ("manifest path escapes ship dir: ...", files_checked 0);
+  shape 5 refuses via the walk ("symlink in ship dir:
+  codex-y5/extras", 27 checked). Two harness bugs found and
+  fixed during the run: outside paths collided between the two
+  ships per shape (made per-ship), and my first verify-layer
+  assertion required the literal word "symlink" while the
+  containment refusal says "escapes ship dir" (assertion
+  widened; the refusal itself was always correct).
+- 00:30-00:31 +07 (T+~25m to T+~26m): A8 + AST comparison DONE,
+  25/25 PASS in 1.1s (results a8_ast.log). A8: all 12 cases,
+  including the required eval_error "" + good snapshot returning
+  False (Amend 5 `is not None` holds; eval_error None and
+  missing-key still return True, as designed). AST: all 12
+  tokenizer functions AST-identical between runner and launcher
+  (docstrings stripped). Raw block text diff is exactly 4
+  lines = the two sync-direction notes (block comment + the
+  _is_runner_cmdline docstring naming the counterpart file).
+- 00:30-00:31 +07 (T+~25m to T+~26m): clean ship + launcher dry
+  run DONE, 6/6 PASS in 2.0s (results clean_ship.log). Fresh
+  re-stage rc 0; direct verify rc 0 (27 checked, md5 0ca16ddd).
+  Launcher dry run on the staged ship with --ship-dir (real
+  repo, no Y13_GO, no live ports, no live run): check_manifest
+  rc 0, _scan_ship rc 0, _check_entry_pyc rc 0. Extra: a
+  self-consistent tampered ship (fixture byte changed +
+  manifest edited to match) is refused by check_manifest:
+  "ship manifest md5 e657094887a1450a96188d13952b93f3 !=
+  committed manifest md5 0ca16ddd743acc9e28294fecd07a9c70".
+- 00:31 +07 (T+~26m): all batteries complete. Zero em/en dashes
+  in every harness file and in this log (grep verified). No fix
+  file was edited. No live Zen driving. No /usr/lib touch.
+  Writing the verification report next.
+- 00:31-00:35 +07 (T+~26m to T+~30m): report written to
+  improvements/worker-y13g-verify-report.md. Overall verdict
+  PASS: 132 checks across 10 batteries, all passing. A2 11/11,
+  A6d 18/18, A4 unit 39/39, A4 live 6/6, A3 7/7, A5 10/10,
+  A7 10/10, A8 12/12, AST 13/13, clean ship 6/6. Known
+  limitations documented in the report (in-process -m/import
+  hole, subject-only marker, md5 fail-open on unresolvable
+  paths, git test-double for A5 marker logic). Zero dashes in
+  the report (grep verified). Committing the remaining
+  harnesses (attack_a7, attack_a8_ast, clean_ship) + report +
+  log now.
