@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Test 08 Shop</title>
+<style>
+  body { font-family: sans-serif; margin: 16px; }
+  #product-grid { display: flex; flex-wrap: wrap; gap: 12px; }
+  .product { border: 1px solid #999; padding: 10px; width: 180px; }
+  .product-name { font-weight: bold; }
+  #cart-panel { border: 1px solid #333; padding: 12px; margin-top: 16px; width: 520px; }
+  .cart-line { display: flex; gap: 8px; align-items: center; margin: 4px 0; }
+  .cart-line .line-name { width: 150px; }
+  .cart-line .line-total { width: 70px; text-align: right; }
+  #summary { margin-top: 10px; }
+  #summary div { display: flex; gap: 8px; }
+  #summary .label { width: 120px; }
+  .error { color: #b00020; font-size: 0.85em; }
+  #checkout-form { margin-top: 16px; width: 520px; }
+  #checkout-form label { display: block; margin-top: 8px; }
+  #confirmation { border: 2px solid #2e7d32; padding: 12px; margin-top: 16px; width: 520px; }
+</style>
+</head>
+<body>
+<h1>Test 08 Shop</h1>
+
+<div id="product-grid"></div>
+
+<div id="cart-panel">
+  <h2>Cart</h2>
+  <div id="cart-lines"></div>
+  <p id="cart-empty">Cart is empty</p>
+  <div id="summary">
+    <div><span class="label">Subtotal</span><span id="subtotal">0.00</span></div>
+    <div><span class="label">Discount</span><span id="discount">0.00</span></div>
+    <div><span class="label">Shipping</span><span id="shipping">0.00</span></div>
+    <div><span class="label">Total</span><span id="total">0.00</span></div>
+  </div>
+  <div id="code-row">
+    <label for="discount-code">Discount code</label>
+    <input id="discount-code" type="text">
+    <button id="apply-code" type="button">Apply code</button>
+    <p id="code-message"></p>
+  </div>
+</div>
+
+<form id="checkout-form" novalidate>
+  <h2>Checkout</h2>
+  <label for="co-name">Name</label>
+  <input id="co-name" type="text">
+  <span class="error" id="err-name"></span>
+  <label for="co-address">Address</label>
+  <input id="co-address" type="text">
+  <span class="error" id="err-address"></span>
+  <label for="co-card">Card number</label>
+  <input id="co-card" type="text">
+  <span class="error" id="err-card"></span>
+  <label for="co-expiry">Expiry (MM/YY)</label>
+  <input id="co-expiry" type="text">
+  <span class="error" id="err-expiry"></span>
+  <label for="co-cvc">CVC</label>
+  <input id="co-cvc" type="text">
+  <span class="error" id="err-cvc"></span>
+  <div>
+    <button id="place-order" type="button">Place order</button>
+  </div>
+</form>
+
+<div id="confirmation" style="display:none">
+  <h2>Order confirmed</h2>
+  <p>Order number: <span id="order-number"></span></p>
+  <p>Final total: <span id="order-total"></span></p>
+</div>
+
+<script>
+var PRODUCTS = [
+  { id: "p1", name: "Wireless Mouse", priceCents: 2450 },
+  { id: "p2", name: "Mechanical Keyboard", priceCents: 7999 },
+  { id: "p3", name: "USB Cable", priceCents: 999 },
+  { id: "p4", name: "Laptop Stand", priceCents: 4500 },
+  { id: "p5", name: "Webcam", priceCents: 5995 },
+  { id: "p6", name: "Desk Lamp", priceCents: 1999 }
+];
+var FREE_SHIPPING_THRESHOLD = 10000;
+var FLAT_SHIPPING = 500;
+var cart = {};
+var appliedCode = null;
+
+function fmt(cents) {
+  return (cents / 100).toFixed(2);
+}
+
+function productById(id) {
+  for (var i = 0; i < PRODUCTS.length; i++) {
+    if (PRODUCTS[i].id === id) { return PRODUCTS[i]; }
+  }
+  return null;
+}
+
+function cartSubtotalCents() {
+  var sum = 0;
+  for (var id in cart) {
+    sum += productById(id).priceCents * cart[id];
+  }
+  return sum;
+}
+
+function discountCents(subtotal) {
+  if (appliedCode === "SAVE10") {
+    return Math.round(subtotal * 0.10);
+  }
+  return 0;
+}
+
+function shippingCents(subtotal, discount) {
+  if (subtotal === 0) { return 0; }
+  if (appliedCode === "FREESHIP") { return 0; }
+  if (subtotal - discount >= FREE_SHIPPING_THRESHOLD) { return 0; }
+  return FLAT_SHIPPING;
+}
+
+function render() {
+  var lines = document.getElementById("cart-lines");
+  lines.innerHTML = "";
+  var ids = Object.keys(cart);
+  document.getElementById("cart-empty").style.display =
+    ids.length === 0 ? "block" : "none";
+  ids.forEach(function (id) {
+    var p = productById(id);
+    var row = document.createElement("div");
+    row.className = "cart-line";
+    row.setAttribute("data-id", id);
+    row.innerHTML =
+      '<span class="line-name"></span>' +
+      '<button type="button" class="qty-minus" data-minus="' + id + '">-</button>' +
+      '<span class="line-qty"></span>' +
+      '<button type="button" class="qty-plus" data-plus="' + id + '">+</button>' +
+      '<span class="line-total"></span>' +
+      '<button type="button" class="remove-btn" data-remove="' + id + '">Remove</button>';
+    row.querySelector(".line-name").textContent = p.name;
+    row.querySelector(".line-qty").textContent = cart[id];
+    row.querySelector(".line-total").textContent = fmt(p.priceCents * cart[id]);
+    lines.appendChild(row);
+  });
+  var subtotal = cartSubtotalCents();
+  var discount = discountCents(subtotal);
+  var shipping = shippingCents(subtotal, discount);
+  document.getElementById("subtotal").textContent = fmt(subtotal);
+  document.getElementById("discount").textContent = fmt(discount);
+  document.getElementById("shipping").textContent = fmt(shipping);
+  document.getElementById("total").textContent = fmt(subtotal - discount + shipping);
+}
+
+function renderProducts() {
+  var grid = document.getElementById("product-grid");
+  PRODUCTS.forEach(function (p) {
+    var card = document.createElement("div");
+    card.className = "product";
+    card.setAttribute("data-id", p.id);
+    card.innerHTML =
+      '<div class="product-name"></div>' +
+      '<div class="product-price"></div>' +
+      '<button type="button" class="add-btn" data-add="' + p.id + '">Add to cart</button>';
+    card.querySelector(".product-name").textContent = p.name;
+    card.querySelector(".product-price").textContent = fmt(p.priceCents);
+    grid.appendChild(card);
+  });
+}
+
+document.addEventListener("click", function (ev) {
+  var t = ev.target;
+  if (t.hasAttribute("data-add")) {
+    var addId = t.getAttribute("data-add");
+    cart[addId] = (cart[addId] || 0) + 1;
+    render();
+  } else if (t.hasAttribute("data-plus")) {
+    cart[t.getAttribute("data-plus")] += 1;
+    render();
+  } else if (t.hasAttribute("data-minus")) {
+    var minusId = t.getAttribute("data-minus");
+    cart[minusId] -= 1;
+    if (cart[minusId] <= 0) { delete cart[minusId]; }
+    render();
+  } else if (t.hasAttribute("data-remove")) {
+    delete cart[t.getAttribute("data-remove")];
+    render();
+  }
+});
+
+document.getElementById("apply-code").addEventListener("click", function () {
+  var code = document.getElementById("discount-code").value.trim().toUpperCase();
+  var msg = document.getElementById("code-message");
+  if (code === "SAVE10") {
+    appliedCode = "SAVE10";
+    msg.textContent = "Code applied: 10% off";
+    msg.style.color = "#2e7d32";
+  } else if (code === "FREESHIP") {
+    appliedCode = "FREESHIP";
+    msg.textContent = "Code applied: free shipping";
+    msg.style.color = "#2e7d32";
+  } else {
+    msg.textContent = "Invalid discount code";
+    msg.style.color = "#b00020";
+  }
+  render();
+});
+
+function setError(id, text) {
+  document.getElementById(id).textContent = text;
+}
+
+function expiryValid(value) {
+  var m = value.match(/^(\d{2})\/(\d{2})$/);
+  if (!m) { return false; }
+  var month = parseInt(m[1], 10);
+  var year = 2000 + parseInt(m[2], 10);
+  if (month < 1 || month > 12) { return false; }
+  var now = new Date();
+  if (year < now.getFullYear()) { return false; }
+  if (year === now.getFullYear() && month < now.getMonth() + 1) { return false; }
+  return true;
+}
+
+document.getElementById("place-order").addEventListener("click", function () {
+  var name = document.getElementById("co-name").value.trim();
+  var address = document.getElementById("co-address").value.trim();
+  var card = document.getElementById("co-card").value.replace(/\s+/g, "");
+  var expiry = document.getElementById("co-expiry").value.trim();
+  var cvc = document.getElementById("co-cvc").value.trim();
+  var ok = true;
+  setError("err-name", "");
+  setError("err-address", "");
+  setError("err-card", "");
+  setError("err-expiry", "");
+  setError("err-cvc", "");
+  if (!name) { setError("err-name", "Name is required"); ok = false; }
+  if (!address) { setError("err-address", "Address is required"); ok = false; }
+  if (!/^\d{16}$/.test(card)) {
+    setError("err-card", "Card number must be 16 digits");
+    ok = false;
+  }
+  if (!expiryValid(expiry)) {
+    setError("err-expiry", "Expiry must be a future date in MM/YY format");
+    ok = false;
+  }
+  if (!/^\d{3}$/.test(cvc)) {
+    setError("err-cvc", "CVC must be 3 digits");
+    ok = false;
+  }
+  if (!ok) { return; }
+  var finalTotal = document.getElementById("total").textContent;
+  var orderNumber = "ORD-" + Math.floor(100000 + Math.random() * 900000);
+  document.getElementById("order-number").textContent = orderNumber;
+  document.getElementById("order-total").textContent = finalTotal;
+  document.getElementById("confirmation").style.display = "block";
+  cart = {};
+  appliedCode = null;
+  document.getElementById("discount-code").value = "";
+  document.getElementById("code-message").textContent = "";
+  render();
+});
+
+renderProducts();
+render();
+</script>
+</body>
+</html>
