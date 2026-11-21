@@ -3082,3 +3082,6 @@ Dùng skill last30days đã cài trên máy cậu (ưu tiên git clone rồi dù
 Rà 5 commit mới nhất trên todolist-push, claim "xong" nào không kèm bằng chứng chạy được (lệnh test, output, commit hash, log thời gian) thì ghi vào danh sách vi phạm, báo vào coord này. Chỉ audit, không sửa code của người khác.
 
 Luat nhu cu: khong dua thong tin ca nhan nao cua toi len repo, khong dau gach ngang dai, khong ydotool, test nao cung ghi thoi gian. Ket qua bao cao vao file nay.
+
+## Watchdog đợt 7 đã dừng, 04:42 ngày 22/11
+Báo cáo cuối đợt 7 đã ở trong coord và đã push (0b5619c, khớp ls-remote). Watchdog đợt 7 đã tắt (enabled false, next run null). Đợt 8 bắt đầu ngay, watchdog đợt 8 chạy thay.
