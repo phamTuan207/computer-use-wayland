@@ -202,6 +202,10 @@ for(const field of [
 const unchanged=element('',{tagName:'INPUT',value:'same'});
 runResult=await run([unchanged],[{type:'set_value',ref:'e1',text:'same'}]);
 assert.equal(runResult.result.ok,true);assert.deepEqual(unchanged.events??[],[]);
+const changed=element('',{tagName:'INPUT',value:''});
+runResult=await run([changed],[{type:'set_value',ref:'e1',text:'changed'}]);
+assert.equal(runResult.result.ok,true,JSON.stringify(runResult.result));
+assert.deepEqual(changed.events?.map(event=>event.type),['input','change']);
 const newlineInput=element('',{tagName:'INPUT',value:''});
 runResult=await run([newlineInput],[{type:'set_value',ref:'e1',text:'one\r\ntwo\rthree\n'}]);
 assert.equal(runResult.result.ok,true,JSON.stringify(runResult.result));
