@@ -493,10 +493,21 @@ def _ensure_daemon():
 
 def cmd_acquire(args):
     holders, _ = add_holder(args.agent, args.method, args.pid)
-    _ensure_daemon()
-    label = args.label or _label_for(args.agent, args.method)
-    reply = _send_socket({'command': 'acquire', 'agent': args.agent,
-                          'method': args.method, 'pid': args.pid})
+    try:
+        _ensure_daemon()
+        label = args.label or _label_for(args.agent, args.method)
+        reply = _send_socket({'command': 'acquire', 'agent': args.agent,
+                              'method': args.method, 'pid': args.pid})
+    except Exception:
+        # Re-review D1: remove the just-added holder on failure, or the
+        # entry (pid None on the CLI path) stays in holders.json forever:
+        # prune_dead_holders only drops int pids, so it can never heal it,
+        # and the stale entry keeps the pill up after the run ends.
+        try:
+            remove_holder(args.agent, args.pid)
+        except Exception:
+            pass
+        raise
     reply['label'] = label
     _log('acquired', agent=args.agent, method=args.method, holders=len(holders))
     print(json.dumps(reply, sort_keys=True))
