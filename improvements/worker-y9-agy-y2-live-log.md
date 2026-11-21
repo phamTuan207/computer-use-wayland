@@ -283,3 +283,29 @@ Checked against the v2 exact marker after git fetch:
   (1e3901c run_live.py + fixed runner + manifest + SHIPPED.md +
   agy-y2/), then py_compile + import + --verify-manifest +
   _hyprland_signature probe on the laptop.
+
+## Addendum 5 (19:13, laptop ship gate green, diff re-review launched, slot still Y8b)
+
+- LAPTOP SHIP GATE, all green (re-shipped to /tmp/worker-y9-server
+  from git archive: runner + manifest + SHIPPED.md from 0ded7ae,
+  run_live.py from 1e3901c, suite from 0ded7ae):
+  LAPTOP_COMPILE_OK, LAPTOP_IMPORT_OK (10 tests), --verify-manifest
+  OK (26 files, 0 mismatches, exit 0), md5s on the laptop match the
+  manifest (run_live.py 84fa106c, run_agy_y2.py 4de5c577, manifest
+  a051e77f). B1 re-proved live: _hyprland_signature() returns
+  11cbc6c577b84ffb1edf4df3fc5b6128c3ae6947_1795249046_1138556825 on
+  the laptop (the environ-only version returned None here).
+- DIFF RE-REVIEW LAUNCHED 19:13 (redteam required it): council
+  re-reviewer (checklist over every fix in plan section 7, base pin,
+  manifest correctness with spot-checked md5s) + redteam
+  re-attacker (park order vs _cleanup, manifest holes, check()
+  override semantics, classification chain, accumulation
+  double-counts, handover fingerprint, new driver-line holes).
+  Verdict files improvements/worker-y9-diffreview-council.md and
+  worker-y9-diffreview-redteam.md, uncommitted. No live driving
+  before the diff re-review passes.
+- SLOT POLL 19:13: Y8b still owns the slot. No Y8 completion commit
+  (latest Y8 commit still 695efea, design v2.1 freeze); the Y8 log
+  ends 18:57:43 (fresh pre-flight A due after 19:05:40); the single
+  "E1 EXECUTION COMPLETE" grep hit in the Y8 log is the 18:53 line
+  NAMING the marker Y9 polls for, not the marker itself. Y9 waits.
