@@ -44,7 +44,7 @@
 - NOTE: scenario file DOM path is wrong on this laptop: file says /home/james/computer-use-wayland/scripts/zen_dom.py, python3 says no such file. Real paths found by find: /home/james/workspace/computer-use-wayland/scripts/zen_dom.py (repo) and /home/james/.local/share/agent-computer-use/scripts/zen_dom.py (installed). I will use the repo path /home/james/workspace/computer-use-wayland/scripts/zen_dom.py and record this as a finding (scenario-file path defect, not a Zen defect).
 - F2b log read: act-now session path proven, order-to-overlay 12.262s, click 0px, pill "Computer use active" in raw grim during run. Key mechanics: observe hides pill by design (use raw grim for pill visuals); act --actions/--observation take FILE PATHS; act converts coords with the observation REGION origin (F2b-1); on session path the pill ends with the session, after-capture cannot evidence it (F2b-2); SSH dispatch dominates order-to-overlay (F2b-3).
 
-## ZT-00 VERDICT: PASS (with documented deviations) — 00:52, elapsed ~28m
+## ZT-00 VERDICT: PASS (with documented deviations) - 00:52, elapsed ~28m
 - Steps 0-3 PASS (baseline 18 tabs; ps zen-bin 496121; curl 9222 = 200; Marionette session creates, list returns).
 - Step 4 PASS in the run-opened tab: click (180,60) + type example.com + Enter, completed 5/5, total 2786ms, session path.
 - Step 5 PASS: title "Example Domain" on poll 1 (00:52:11).
@@ -54,7 +54,7 @@
 - window.open IS the working-tab opener for the run: eval "return window.open(url, '_blank')" returns "opened", count +1, new tab active. Use it to open each scenario's working tab (deviation from the scenarios' implied Ctrl+T). For ZT-09 (tab open/close IS the test), the Ctrl+T/Ctrl+N failure is the result, not a setup deviation.
 - WS RULE (revised): check ws before each batch; if ws=2, wait up to ~2 min for the cron to return; if still ws=2 after ~3 min, switch back to ws1 manually with hl.dsp.focus({workspace=1}) (proven 00:52:05). Do NOT let act-now fall back to a captured screen observation (guard: OBS non-empty check before every act-now).
 
-## ZT-01 VERDICT: PASS — 00:57:40, elapsed ~34m (scenario ~5m)
+## ZT-01 VERDICT: PASS - 00:57:40, elapsed ~34m (scenario ~5m)
 - Step 0: pre-scenario list recorded (18 tabs). Working tab opened via window.open (deviation, UI new-tab broken).
 - Step 1 PASS: Ctrl+L, screenshot 5f8796423907 shows address bar focused, "https://example.com/" selected (blue), dropdown open. Pill in after-image reads "Muse via act-now" (holder label, per F2b-2; batch was session path).
 - Step 2 PASS: type en.wikipedia.org + Enter, 3/3.
@@ -65,7 +65,7 @@
 - Step 8 PASS: pre-close check title HCMC; Ctrl+W closed working tab; count 19->18; set = step 0 (Chat badge "(2)" is live fluctuation, not a set change).
 - Findings carried forward: built-ins work (Ctrl+L, Ctrl+W, Alt+Left); custom keys do not (Ctrl+N). Offset (240,16) validated. activeElement is NOT a reliable focus check (use the outcome/title instead).
 
-## ZT-02 VERDICT: FAIL (step 6) — 01:00, elapsed ~36m (scenario ~2m)
+## ZT-02 VERDICT: FAIL (step 6) - 01:00, elapsed ~36m (scenario ~2m)
 - Step 0: pre-scenario list (18). Working tab via window.open.
 - Step 1 PASS: Ctrl+L + type HCMC URL + Enter, 5/5. (ws2 flip by clone2-watch run 8 mid-call; ws returned to 1 on poll 3 at 00:58:55.)
 - Step 2 PASS: title "Ho Chi Minh City - Wikipedia" poll 1 (00:58:59). Curl control: 200 (direct article URL). This CONFIRMS the ZT-01 curl 301 was just the bare-domain redirect.
@@ -75,3 +75,15 @@
 - Step 6 FAIL: Escape (keys-only, completed 2/2) did NOT close the find bar. After-image b7233fc3a366 (taken ~500ms after Escape) still shows the find bar open with "population" and "2 of 27 matches". ps: zen-bin PID 496121 alive (etime 01:15:47). Hypothesis: after Enter, focus is on the page match (not the find input), so Escape goes to the page content and does nothing to the find bar (a chrome widget). A real user would click into the find bar first or click the X. The scenario as written ("Press Escape") does not include a focus step, so it FAILS as written. This is a J-series candidate (find-bar Escape / focus).
 - Step 7 PASS: pre-close title HCMC; Ctrl+W closed working tab; count 19->18; set = step 0.
 - Overall: FAIL (step 6 only). Steps 1-5 and cleanup all pass.
+
+## ZT-03 VERDICT: FAIL (steps 3, 5) - 01:05, elapsed ~41m (scenario ~5m)
+- Step 0: pre-scenario list (18). Working tab via window.open.
+- Step 1 PASS: Ctrl+L + type HCMC URL + Enter, 5/5; title HCMC poll 1 (01:01:00); curl 200.
+- Step 2 (middle-click): mechanism WORKED. Lead Vietnam link rect confirmed DOM (614,411). Moved cursor away first (cursor sat on the link point), then middle-click (854,427, button middle), 2/2. New tab opened (count 19 to 20). BUT it opened in the BACKGROUND (Firefox default: middle-click does not switch to the new tab). Active tab stayed HCMC. Scenario expected "becomes active".
+- Step 3 FAIL as written: count is step0+2 = 20, not +1 (the +2 is my working tab +1 and the middle-click tab +1; the middle-click itself added exactly 1, 19 to 20). Active tab title is HCMC, not Vietnam. Root causes: working-tab deviation (count arithmetic) and Firefox background-tab default (active tab). The middle-click itself is not broken.
+- Step 4 PASS (F-001 does NOT reproduce): clicked Vietnam tab row (150,535) first to activate it (setup, since middle-click left it in background), title Vietnam. Then clicked HCMC tab row (150,490), title HCMC. Sidebar clicks DO switch tabs. F-001 is closed for this build.
+- Step 5 FAIL: Ctrl+Tab (keys-only, completed 2/2) did NOT change the active tab. It opened the tab-switcher overlay (screenshot 175f43c93eb6 shows thumbnails) but the selection stayed on HCMC and no switch happened. After Escape dismissed the overlay, title still HCMC (screenshot 11f18f374f22 confirms HCMC row highlighted). Ctrl+Tab via act opens the switcher but does not switch. J-series candidate.
+- Step 6 PASS: pre-close HCMC; Ctrl+W closed HCMC; count 20 to 19; active title now Vietnam.
+- Step 7 PASS: Ctrl+W closed Vietnam; count 19 to 18; set = step 0.
+- Overall: FAIL (steps 3 and 5). Sidebar switching works; middle-click opens a background tab; Ctrl+Tab does not switch via act.
+- Hygiene: watchdog step 10 flagged em dashes in this log lines 47, 57 (commit 9fb5a74). Fixed all 3 em dashes (lines 47, 57, 68) to short hyphens; verified 0 em/en dashes remain. Future entries use short hyphens only.
