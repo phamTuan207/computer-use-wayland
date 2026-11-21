@@ -3,6 +3,11 @@
 Run: python3 -m pytest tests/test_first_action.py -q
 Or:  python3 tests/test_first_action.py (stdlib runner at the bottom).
 VM only. No laptop, no Zen, no network, no desktop.
+
+Council 1 (BLOCK, 2026-11-21) required the counter-example tests
+here: timeout after the driver started, mid-session guard loss, a late
+hyprctl JSON failure, acquire failure leaving zero holders, and every
+exception path printing exactly one JSON object on stdout.
 """
 import contextlib
 import io
@@ -27,6 +32,7 @@ class FakeOverlay:
         self.visible = visible
         self.calls = []
         self.holders = {}
+        self.fail_status = False
 
     def add_holder(self, agent, method, pid=None):
         self.calls.append(('add', agent, method, pid))
@@ -44,6 +50,11 @@ class FakeOverlay:
         if req.get('command') == 'release':
             self.holders.pop(req.get('agent'), None)
             return {'visible': bool(self.holders), 'owner': 'none',
+                    'holders': self.holders}
+        if req.get('command') == 'status':
+            if self.fail_status:
+                raise OSError('daemon gone')
+            return {'visible': bool(self.holders), 'owner': 'daemon',
                     'holders': self.holders}
         return {'visible': bool(self.holders)}
 
@@ -116,30 +127,71 @@ class TestSessionStartFailure(unittest.TestCase):
     def test_guardian_json_error(self):
         self.assertTrue(first_action.is_session_start_failure(
             '{"ok": false, "error": "session guardian startup failed"}',
-            '', False, False))
+            False))
 
-    def test_expecting_value_stderr(self):
+    def test_guardian_json_error_with_detail(self):
+        # The rehearsal error (F1's improved message, 22:53 21/11).
         self.assertTrue(first_action.is_session_start_failure(
-            '', 'json.decoder.JSONDecodeError: Expecting value: line 1 '
-            'column 1 (char 0)', False, False))
+            '{"ok": false, "error": "session guardian startup failed: '
+            'cursor guard reply is not valid JSON (got: unknown '
+            'request)"}',
+            False))
 
-    def test_cursor_guard_stderr(self):
+    def test_driver_registration_failed(self):
         self.assertTrue(first_action.is_session_start_failure(
-            '', 'cursor guard did not confirm ownership', False, False))
+            '{"ok": false, "error": "driver registration failed: guard '
+            'closed"}',
+            False))
+
+    def test_timeout_never_falls_back(self):
+        # Council 1, B1: a timeout may have acted and been torn down.
+        self.assertFalse(first_action.is_session_start_failure('', True))
+        self.assertFalse(first_action.is_session_start_failure(
+            '{"ok": false, "error": "session guardian startup failed"}',
+            True))
+
+    def test_timeout_after_driver_started_never_replays(self):
+        self.assertFalse(first_action.is_session_start_failure(
+            '{"ok": false, "error": "screen changed", "completed": 1}',
+            True))
+
+    def test_mid_session_guard_lost_never_replays(self):
+        # Council 1, B2: 'session cursor guard lost' is raised mid
+        # session (cursor_session.py:178) after the driver may have
+        # acted, and 'session guardian died mid-session' is its
+        # supervise print (cursor_session.py:294).
+        self.assertFalse(first_action.is_session_start_failure(
+            '{"ok": false, "error": "session guardian died mid-session: '
+            'session cursor guard lost"}',
+            False))
+
+    def test_mid_session_guard_lost_stderr_never_replays(self):
+        self.assertFalse(first_action.is_session_start_failure(
+            'session guardian died mid-session: session cursor guard '
+            'lost',
+            False))
+
+    def test_late_expecting_value_never_replays(self):
+        # Council 1, B2: a late hyprctl JSON failure (cu.py:519, :213)
+        # after earlier actions ran carries the same string.
+        self.assertFalse(first_action.is_session_start_failure(
+            '{"ok": false, "error": "Expecting value: line 1 column 1 '
+            '(char 0)", "completed": 1}',
+            False))
+        self.assertFalse(first_action.is_session_start_failure(
+            'json.decoder.JSONDecodeError: Expecting value: line 1 '
+            'column 1 (char 0)',
+            False))
+
+    def test_bare_cursor_guard_substring_never_replays(self):
+        self.assertFalse(first_action.is_session_start_failure(
+            'cursor guard did not confirm ownership', False))
 
     def test_act_failure_never_replays(self):
         self.assertFalse(first_action.is_session_start_failure(
-            '', 'screen changed', False, False))
+            '{"ok": false, "error": "screen changed"}', False))
         self.assertFalse(first_action.is_session_start_failure(
-            '', 'focus changed', False, False))
-
-    def test_timeout_live_session_never_replays(self):
-        self.assertFalse(first_action.is_session_start_failure(
-            '', '', True, True))
-
-    def test_timeout_no_session_falls_back(self):
-        self.assertTrue(first_action.is_session_start_failure(
-            '', '', True, False))
+            '{"ok": false, "error": "focus changed"}', False))
 
 
 class TestAttemptSession(unittest.TestCase):
@@ -185,22 +237,33 @@ class TestAcquireOverlay(unittest.TestCase):
         self.assertIn(('add', 'Muse', 'act-now', os.getpid()),
                       fake.calls)
 
-    def test_not_visible_refuses(self):
+    def test_not_visible_refuses_and_leaks_nothing(self):
         fake = FakeOverlay(visible=False)
         with self.assertRaises(RuntimeError):
             first_action.acquire_overlay('Muse', 'act-now', overlay_mod=fake)
+        self.assertEqual(fake.holders, {})
 
-    def test_daemon_start_failure_refuses(self):
+    def test_daemon_start_failure_refuses_and_leaks_nothing(self):
         fake = FakeOverlay(visible=True)
         fake._ensure_daemon = mock.Mock(
             side_effect=RuntimeError('overlay daemon exited'))
         with self.assertRaises(RuntimeError):
             first_action.acquire_overlay('Muse', 'act-now', overlay_mod=fake)
+        self.assertEqual(fake.holders, {})
 
     def test_release_never_raises(self):
         fake = FakeOverlay(visible=True)
         fake._send_socket = mock.Mock(side_effect=OSError('no socket'))
-        first_action.release_overlay('Muse', overlay_mod=fake)
+        self.assertIsNone(first_action.release_overlay(
+            'Muse', overlay_mod=fake))
+
+    def test_release_returns_error_on_failure(self):
+        fake = FakeOverlay(visible=True)
+        fake._send_socket = mock.Mock(side_effect=OSError('no socket'))
+        fake.remove_holder = mock.Mock(
+            side_effect=OSError('no holders file'))
+        self.assertIsNotNone(first_action.release_overlay(
+            'Muse', overlay_mod=fake))
 
 
 class TestAppendLog(unittest.TestCase):
@@ -235,19 +298,28 @@ class TestRun(unittest.TestCase):
             sys.modules['overlay'] = self._ov_mod
         self.tmp.cleanup()
 
-    def _run(self, actions, session_result):
+    def _run(self, actions, session_result, **arg_overrides):
         path = _write_actions(self.tmp.name, actions)
         with mock.patch.object(first_action, 'attempt_session',
                                return_value=session_result):
             buf = io.StringIO()
             with contextlib.redirect_stdout(buf):
-                code = first_action.run(_args(path))
+                code = first_action.run(_args(path, **arg_overrides))
+        # json.loads raises unless stdout is exactly one JSON object.
         return code, json.loads(buf.getvalue()), path
+
+    def _run_raw_args(self, args, session_result):
+        with mock.patch.object(first_action, 'attempt_session',
+                               return_value=session_result):
+            buf = io.StringIO()
+            with contextlib.redirect_stdout(buf):
+                code = first_action.run(args)
+        return code, json.loads(buf.getvalue())
 
     def test_session_path(self):
         code, env, _ = self._run(
             [{'type': 'click', 'x': 100, 'y': 100}],
-            (0, '', '', False, 0.5))
+            (0, '{"ok": true, "completed": 1}', '', False, 0.5))
         self.assertEqual(code, 0)
         self.assertTrue(env['ok'])
         self.assertEqual(env['path'], 'session')
@@ -258,6 +330,36 @@ class TestRun(unittest.TestCase):
         self.assertEqual(self.fake_overlay.holders, {})
         log = list(self.fake_cu.state.glob('first-action-*.jsonl'))
         self.assertEqual(len(log), 1)
+
+    def test_session_path_rc0_ok_false_not_ok(self):
+        # Council 1, A3: the exit code alone never proves success.
+        code, env, _ = self._run(
+            [{'type': 'click', 'x': 100, 'y': 100}],
+            (0, '{"ok": false, "error": "screen changed", "completed": 0}',
+             '', False, 0.5))
+        self.assertEqual(code, 1)
+        self.assertFalse(env['ok'])
+        self.assertEqual(env['path'], 'session')
+        self.assertEqual(self.fake_cu.desktop_calls, [])
+
+    def test_session_path_completed_capture_error_ok(self):
+        code, env, _ = self._run(
+            [{'type': 'click', 'x': 100, 'y': 100}],
+            (0, '{"ok": false, "capture_error": "after capture failed", '
+             '"completed": 1, "error": "capture failed"}',
+             '', False, 0.5))
+        self.assertEqual(code, 0)
+        self.assertTrue(env['ok'])
+        self.assertEqual(env['path'], 'session')
+        self.assertEqual(env['completed'], 1)
+
+    def test_session_path_rc0_empty_stdout_not_ok(self):
+        code, env, _ = self._run(
+            [{'type': 'click', 'x': 100, 'y': 100}],
+            (0, '', '', False, 0.5))
+        self.assertEqual(code, 1)
+        self.assertFalse(env['ok'])
+        self.assertEqual(env['path'], 'session')
 
     def test_fallback_path_on_guardian_failure(self):
         code, env, _ = self._run(
@@ -270,6 +372,60 @@ class TestRun(unittest.TestCase):
         self.assertIn('guardian', env['fallback_reason'])
         self.assertEqual(len(self.fake_cu.desktop_calls), 1)
         self.assertEqual(self.fake_overlay.holders, {})
+        # A5: the overlay is re-checked (status) before the fallback acts.
+        self.assertIn(('send', 'status', None), self.fake_overlay.calls)
+
+    def test_fallback_path_on_driver_registration_failure(self):
+        code, env, _ = self._run(
+            [{'type': 'click', 'x': 100, 'y': 100}],
+            (1, '{"ok": false, "error": "driver registration failed: '
+             'guard closed"}',
+             '', False, 0.4))
+        self.assertEqual(code, 0)
+        self.assertTrue(env['ok'])
+        self.assertEqual(env['path'], 'fallback')
+        self.assertEqual(len(self.fake_cu.desktop_calls), 1)
+
+    def test_timeout_never_replays(self):
+        # Council 1, B1.
+        code, env, _ = self._run(
+            [{'type': 'click', 'x': 100, 'y': 100}],
+            (1, '', '', True, 20.0))
+        self.assertEqual(code, 1)
+        self.assertFalse(env['ok'])
+        self.assertEqual(env['path'], 'session')
+        self.assertIn('timed out', env['error'])
+        self.assertEqual(self.fake_cu.desktop_calls, [])
+
+    def test_timeout_after_driver_started_never_replays(self):
+        code, env, _ = self._run(
+            [{'type': 'click', 'x': 100, 'y': 100}],
+            (1, '{"ok": false, "error": "screen changed", "completed": 1}',
+             '', True, 20.0))
+        self.assertEqual(code, 1)
+        self.assertFalse(env['ok'])
+        self.assertEqual(self.fake_cu.desktop_calls, [])
+
+    def test_mid_session_guard_lost_never_replays(self):
+        # Council 1, B2.
+        code, env, _ = self._run(
+            [{'type': 'click', 'x': 100, 'y': 100}],
+            (1, '', 'session guardian died mid-session: session cursor '
+             'guard lost', False, 5.0))
+        self.assertEqual(code, 1)
+        self.assertFalse(env['ok'])
+        self.assertEqual(self.fake_cu.desktop_calls, [])
+
+    def test_late_expecting_value_never_replays(self):
+        # Council 1, B2.
+        code, env, _ = self._run(
+            [{'type': 'click', 'x': 100, 'y': 100}],
+            (1, '{"ok": false, "error": "Expecting value: line 1 column '
+             '1 (char 0)", "completed": 1}',
+             '', False, 5.0))
+        self.assertEqual(code, 1)
+        self.assertFalse(env['ok'])
+        self.assertEqual(self.fake_cu.desktop_calls, [])
 
     def test_act_failure_not_replayed(self):
         code, env, _ = self._run(
@@ -289,6 +445,88 @@ class TestRun(unittest.TestCase):
         self.assertFalse(env['ok'])
         self.assertEqual(env['path'], 'refused')
         self.assertEqual(self.fake_cu.desktop_calls, [])
+        self.assertEqual(self.fake_overlay.holders, {})
+
+    def test_overlay_lost_before_fallback_refuses(self):
+        # Council 1, A5: the daemon dies after acquire, before fallback.
+        self.fake_overlay.fail_status = True
+        code, env, _ = self._run(
+            [{'type': 'click', 'x': 100, 'y': 100}],
+            (1, '{"ok": false, "error": "session guardian startup failed"}',
+             '', False, 0.4))
+        self.assertEqual(code, 1)
+        self.assertFalse(env['ok'])
+        self.assertEqual(env['path'], 'fallback')
+        self.assertIn('overlay lost', env['error'])
+        self.assertEqual(self.fake_cu.desktop_calls, [])
+
+    def test_bad_actions_file_envelope(self):
+        # Council 1, A4: a bad actions file goes through the envelope
+        # and the log, not an ad-hoc print.
+        missing = str(Path(self.tmp.name) / 'nope.json')
+        code, env = self._run_raw_args(
+            _args(missing), (0, '', '', False, 0.5))
+        self.assertEqual(code, 1)
+        self.assertFalse(env['ok'])
+        self.assertEqual(env['path'], 'bad_actions')
+        self.assertIn('bad actions file', env['error'])
+        log = list(self.fake_cu.state.glob('first-action-*.jsonl'))
+        self.assertEqual(len(log), 1)
+        self.assertEqual(json.loads(log[0].read_text().splitlines()[0])
+                         ['path'], 'bad_actions')
+
+    def test_empty_actions_list_envelope(self):
+        path = _write_actions(self.tmp.name, [])
+        code, env = self._run_raw_args(
+            _args(path), (0, '', '', False, 0.5))
+        self.assertEqual(code, 1)
+        self.assertEqual(env['path'], 'bad_actions')
+        self.assertIn('non-empty', env['error'])
+
+    def test_nan_deadline_refused_single_json(self):
+        # Council 1, A2: an invalid deadline is refused, and stdout
+        # stays exactly one JSON object.
+        code, env, _ = self._run(
+            [{'type': 'click', 'x': 100, 'y': 100}],
+            (0, '', '', False, 0.5), session_deadline_s=float('nan'))
+        self.assertEqual(code, 1)
+        self.assertEqual(env['path'], 'refused')
+        self.assertIn('deadline', env['error'])
+        self.assertEqual(self.fake_cu.desktop_calls, [])
+
+    def test_negative_deadline_refused(self):
+        code, env, _ = self._run(
+            [{'type': 'click', 'x': 100, 'y': 100}],
+            (0, '', '', False, 0.5), session_deadline_s=-1)
+        self.assertEqual(code, 1)
+        self.assertEqual(env['path'], 'refused')
+
+    def test_fallback_desktop_act_raises_single_json(self):
+        # Council 1, A2: an exception in the fallback must not print a
+        # second JSON object after the envelope.
+        self.fake_cu.desktop_act = mock.Mock(
+            side_effect=RuntimeError('pointer gone'))
+        code, env, _ = self._run(
+            [{'type': 'click', 'x': 100, 'y': 100}],
+            (1, '{"ok": false, "error": "session guardian startup failed"}',
+             '', False, 0.4))
+        self.assertEqual(code, 1)
+        self.assertFalse(env['ok'])
+        self.assertEqual(env['path'], 'fallback')
+        self.assertIn('pointer gone', env['error'])
+
+    def test_stale_monitor_observation_raises_single_json(self):
+        # Council 1, A2: an exception in the fresh observation must
+        # not print a second JSON object either.
+        self.fake_cu.observe_screen = mock.Mock(
+            side_effect=ValueError('monitor gone'))
+        code, env, _ = self._run(
+            [{'type': 'click', 'x': 100, 'y': 100}],
+            (0, '', '', False, 0.5))
+        self.assertEqual(code, 1)
+        self.assertFalse(env['ok'])
+        self.assertEqual(env['path'], 'refused')
+        self.assertIn('monitor gone', env['error'])
 
 
 class TestFreshObservation(unittest.TestCase):
