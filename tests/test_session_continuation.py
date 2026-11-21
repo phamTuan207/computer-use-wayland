@@ -237,10 +237,11 @@ class TypedRefusalRecovery(unittest.TestCase):
         token = 'c3' * 16
         same = Image.new('RGB', (20, 20))
         with tempfile.TemporaryDirectory() as tmp:
+            stale_age = cu.OBSERVATION_MAX_AGE + 1
             stale, _ = write_observation(
-                tmp, '000000000102', image=same, created=time.time()-91,
-                capture_started_monotonic=time.monotonic()-91,
-                capture_started_wall=time.time()-92)
+                tmp, '000000000102', image=same, created=time.time()-stale_age,
+                capture_started_monotonic=time.monotonic()-stale_age,
+                capture_started_wall=time.time()-stale_age-1)
             fresh, after = write_observation(tmp, '000000000103', image=same)
             post = dict(after)
             with live(tmp, token, active=[ADDR] * 12,
@@ -254,7 +255,8 @@ class TypedRefusalRecovery(unittest.TestCase):
         self.assertEqual(code, 0)
         refusal, observed, acted = body[1], body[2], body[3]
         self.assertEqual(refusal['returncode'], 1)
-        self.assertIn('observation older than 90s', refusal['result']['error'])
+        self.assertIn(f'observation older than {cu.OBSERVATION_MAX_AGE}s',
+                      refusal['result']['error'])
         self.assertIn('observe again', refusal['result']['error'])
         self.assertIs(refusal['session_continues'], True,
                       'TTL expiry is a typed preflight refusal, not an end')

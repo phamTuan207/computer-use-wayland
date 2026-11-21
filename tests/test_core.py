@@ -80,12 +80,14 @@ class Coordinates(IsolatedCuState):
               'monitor_box':[0,0,20,20],'monitor_scale':1,'monitor_transform':0,
               'image_size':[20,20],'region':[0,0,20,20],'max_width':1280,
               **cu._capture_identity({}),'created':time.time()}
-        meta['capture_started_monotonic']-=91
-        meta['capture_started_wall']-=91
-        meta['created']-=91
+        age=cu.OBSERVATION_MAX_AGE+1
+        meta['capture_started_monotonic']-=age
+        meta['capture_started_wall']-=age
+        meta['created']-=age
         with patch.object(cu,'check_cancel'), patch.object(cu,'focus') as focus, \
              patch.object(cu,'Pointer') as pointer:
-            with self.assertRaisesRegex(cu.PreflightRefusal,'observation older than 90s'):
+            with self.assertRaisesRegex(cu.PreflightRefusal,
+                                        f'observation older than {cu.OBSERVATION_MAX_AGE}s'):
                 cu.desktop_act({},meta,[{'type':'wait','ms':0}])
         focus.assert_not_called()
         pointer.assert_not_called()
