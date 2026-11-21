@@ -129,3 +129,32 @@ thoroughly, council + redteam, best quality not speed.
 - No other change to the task. My final report will carry: the jsdom
   verification command + full output, the y5-tests commit hash, and the
   timed run log.
+
+## 18:56 +07 | 00:37 | Verifier fixed (2 harness bugs, both mine), re-verification 9/10
+- Harness bug 1 (test-06): click-replace action set the value but never
+  clicked the button first. Fixed: click, then set value, then fire
+  input/change. test-06 now PASSES (split works: 5 sec + 7 sec clips).
+- Harness bug 2 (test-10): jsdom with a file:// URL has an opaque origin,
+  sessionStorage.setItem throws SecurityError, and the fixture's save()
+  runs before render(), so every handler aborted mid-way (toggle stayed
+  "Disabled", permissions stayed "Ask", save status "Not saved"). Proven
+  by direct probe. This is NOT a fixture bug: in a real browser
+  sessionStorage works. Fixed: jsdom URL is now http://localhost/<file>
+  (non-opaque origin) + reload simulation (click on a *reload* control
+  rebuilds the DOM from the same HTML with storage seeded, exactly what a
+  real reload does). test-10 now PASSES, both reloads included.
+- Re-run (12 s): `node /tmp/y5-verify/verify.mjs --all /tmp/y5-stage --fresh`
+  9/10 PASS (01, 02, 03, 04, 05, 06, 08, 09, 10). Calibration still 10/10
+  on agy-y2. Full output /tmp/y5-verify/codex-y5-run-1856.log, JSON
+  /tmp/y5-verify/codex-y5-result-1856.json.
+- One REAL defect remains, test-07 (SPEC error, fixture is right): spec
+  steps 4-5 say "2 matching messages" but the fixture returns 3 (m1, m2,
+  m3 all contain "Release checklist"; m4 is "Launch checklist", no match).
+  Step 5 actual: "3 matching messages". Fix: spec steps 4-5 "2" -> "3".
+  Codex's own check.mjs + simulate.mjs only assert final state, so they
+  would NOT catch this; only the per-step jsdom verifier did. Fix goes to
+  Codex in a short follow-up run after its main run exits (I cannot inject
+  into a running codex exec session).
+- Codex still running: PID 209222, 37:03 elapsed, log 5.5 MB, no commits
+  yet on y5-tests. Log tail shows spec text being written. Next: poll for
+  exit, then fix-pass run for test-07, then final report with evidence.
