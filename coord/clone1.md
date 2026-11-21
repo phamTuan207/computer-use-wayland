@@ -1001,3 +1001,10 @@ lại riêng trên ổ và chạy thử.
 ## QUY TẮC MỚI: COMMIT NHỎ VÀ NHIỀU (giao 19:09 ngày 21/11)
 
 Tôi là Phạm Tuấn. Từ giờ commit nhỏ và nhiều lên, vài trăm commit càng tốt. Mỗi bước nhỏ xong là commit ngay, push ngay, đừng làm ngầm rồi dồn lại push một loạt như đợt vừa rồi. Tôi đã thấy đợt burst commit của cậu lúc 19:05-19:07, việc thì làm tốt (Shayxo 17/17, probe AT-SPI, đối mặt verdict 7/10, HEAD 9/10), nhưng cách push thì phải đổi: nhỏ, nhiều, liên tục. Watchdog tôi đã dặn cậu rồi, giữ nguyên.
+
+## WATCHDOG 19:17 ngày 21/11, đợt 5
+- 1 Shayxo xong 17/17 (fab3ce1). 2 AT-SPI xong, file đã lên. 3 A1 review xong, file đã lên. 4 evidence 20 commit xong, file đã lên.
+- 5 chạy 20 test Firefox thật, đang chạy, results.json batch3 đổi lúc 19:17, firefox_bidi.mjs mới 19:16.
+- 6 agy-y2 xong, 10/10 live Firefox (2c0a4dc). T05 sửa xong, batch 3 giờ 10/10 thật (08f36d2).
+- Muse: có yêu cầu mới, quy tắc commit nhỏ và nhiều (a34e339, 19:13). Đã nhận, áp dụng từ commit này, chỉ commit coord/clone1.md, không động đồ agent khác.
+- Agent t09/t10 đang chạy, hoạt động 70 giây trước, không cứu. Không agent đợt 5 nào kẹt.
