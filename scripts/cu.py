@@ -32,7 +32,12 @@ CANCEL = STATE / 'cancelled'
 # Default browser CDP endpoint. A successful `browser start` updates it for the
 # rest of this process/session; an explicit --endpoint on one later command wins
 # for that command only and never silently replaces this default.
-BROWSER_ENDPOINT = 'http://127.0.0.1:9222'
+# 9223, NOT 9222: 9222 is Zen's BiDi port since Firefox 141 (/json
+# answers 404 there; the live Zen holds it), so a CDP default on 9222
+# talks to Zen's BiDi listener and browser_start misreads the 404 as
+# "no live endpoint" and cold-launches Chromium onto a port Zen
+# holds. The agent-managed Chromium lives on 9223 instead.
+BROWSER_ENDPOINT = 'http://127.0.0.1:9223'
 SESSION_KEYS = {'XDG_RUNTIME_DIR','WAYLAND_DISPLAY','DISPLAY','HYPRLAND_INSTANCE_SIGNATURE',
                 'DBUS_SESSION_BUS_ADDRESS','XDG_CURRENT_DESKTOP','XDG_SESSION_DESKTOP',
                 'XDG_SESSION_TYPE','XDG_SEAT','XDG_VTNR','USER','HOME','LOGNAME','PATH',
@@ -1015,7 +1020,7 @@ def _mean_image_difference(old,new):
     if old.size!=new.size:return float('inf')
     return sum(ImageStat.Stat(ImageChops.difference(old,new)).mean)/3
 
-def _input_line_changed(old,new,anchor_y,half=12,min_pixels=3,threshold=50):
+def _input_line_changed(old,new,anchor_y,half=12,min_pixels=4,threshold=50):
     """True when the input line band changed between two frames.
 
     The band is the full image width, anchor_y plus/minus half pixels:
@@ -1027,16 +1032,22 @@ def _input_line_changed(old,new,anchor_y,half=12,min_pixels=3,threshold=50):
     4:4:4 re-encodes of identical pixels are byte identical, and the
     measured max pixel error of that encoding is 39, so threshold 50
     sits above encoding noise. Returns None when the images cannot be
-    compared. A caret or focus ring alone also changes the band, so a
-    True here is necessary, not sufficient, proof the text landed; the
-    DOM value check is the sufficient check. No observe is taken: both
-    frames are already in memory (pre-batch image, after-capture).
+    compared, including a size mismatch: incomparable frames are
+    unverifiable, never a pass. A caret blink or focus tick changes at
+    most 3 pixels on the line, so min_pixels 4 is the caret-scale
+    baseline: fewer changed pixels do not verify. Limits, stated
+    plainly: the band is full width, so multi-pixel text landing in a
+    DIFFERENT field on the same line still passes it, and a caret or
+    focus ring alone also changes the band, so a True here is
+    necessary, not sufficient, proof the text landed; the DOM value
+    check is the sufficient check. No observe is taken: both frames
+    are already in memory (pre-batch image, after-capture).
     """
     from PIL import ImageChops
     if old is None or new is None:
         return None
     if old.size!=new.size:
-        return True
+        return None
     y0=max(0,int(anchor_y)-half)
     y1=min(old.height,int(anchor_y)+half+1)
     if y1<=y0:
@@ -1096,6 +1107,30 @@ def _group_has_type(group):
     if isinstance(group,list):
         return any(isinstance(x,dict) and x.get('type')=='type' for x in group)
     return False
+
+def _type_group_anchors(groups):
+    """One anchor per type group: the last click before that group.
+
+    The anchor marks the input line the group's text lands on, so the
+    band check reads one band per type group instead of one band for
+    the whole batch. A type group with no preceding click gets None
+    (no input region to read; the frame hash stays its check). Only a
+    click or double_click sets an anchor: move, hover, and drag never
+    focus an input, so a hover-state change on a hover point must not
+    become the line the band reads. A drag end is not a focus click
+    either. Groups are the keyboard_groups() output, so a type group
+    is a list holding a type action (or a lone type dict).
+    """
+    anchors=[]
+    last_click=None
+    for group in groups:
+        if _group_has_type(group):
+            anchors.append(last_click)
+        acts=group if isinstance(group,list) else [group]
+        for act in acts:
+            if isinstance(act,dict) and act.get('type') in ('click','double_click'):
+                last_click=(act['x'],act['y'])
+    return anchors
 
 def screen_changed(old,new,actions):
     if old.size!=new.size:return True
@@ -1572,14 +1607,15 @@ def desktop_act(env,meta,actions,after_capture=True,observation_path=None,
 
     focus_check and type_check are optional cheap zero-arg callables
     (DOM state reads, never a screenshot observe). focus_check runs
-    before the first type group: when it fails the batch stops before
-    any typing, with error_code focus_unverified, instead of typing
-    blind after a click that missed the input. type_check runs after
+    before every type group: when it fails the batch stops before any
+    typing in that group, with error_code focus_unverified, instead of
+    typing blind after a click that missed the input. type_check runs after
     the batch executed: when it fails the batch reports
     type_unverified. With neither hook, type verification falls back
     to the input line band between the pre-batch frame and the
-    after-capture (both already in memory), or to the whole-frame hash
-    when the batch has no pointer target before the type.
+    after-capture (both already in memory), one band per type group,
+    or to the whole-frame hash when a group has no pointer target
+    before the type.
     """
     preflight_start=time.monotonic()
     try:
@@ -1699,27 +1735,16 @@ def desktop_act(env,meta,actions,after_capture=True,observation_path=None,
     # text never landed (CL1-MSG batch 3, CL1-MSG2 retry: 9/9 clean,
     # input still empty). has_type marks batches whose typed text must
     # be verified below; key-only batches are not verified, since a
-    # shortcut may legitimately change nothing visible. type_anchor is
-    # the last pointer target before the first type action: the input
-    # line band around its y is the region the verification reads.
-    # focus_click is the last click before the first type, when the
-    # batch clicked to focus an input at all.
+    # shortcut may legitimately change nothing visible. type_anchors
+    # holds one anchor per type group (the last click before that
+    # group); type_anchor is the first group's anchor, kept for the
+    # single-input shape.
     has_type=any((isinstance(g,dict) and g.get('type')=='type') or
                  (isinstance(g,list) and any(isinstance(x,dict) and
                                              x.get('type')=='type' for x in g))
                  for g in groups)
-    type_anchor=None
-    focus_click=None
-    for _act in actions:
-        if _act.get('type')=='type':
-            break
-        if _act.get('type') in ('click','double_click'):
-            type_anchor=(_act['x'],_act['y'])
-            focus_click=type_anchor
-        elif _act.get('type') in ('move','hover'):
-            type_anchor=(_act['x'],_act['y'])
-        elif _act.get('type')=='drag':
-            type_anchor=tuple(_act['to'])
+    type_anchors=_type_group_anchors(groups)
+    type_anchor=type_anchors[0] if type_anchors else None
     preflight_ms=round((time.monotonic()-preflight_start)*1000,3)
     def move(x,y,index,action_type):
         gx,gy=image_point(meta,x,y);mx,my,mw,mh=meta['monitor_box']
@@ -1823,7 +1848,6 @@ def desktop_act(env,meta,actions,after_capture=True,observation_path=None,
     start=time.monotonic()
     focus_verified=None
     focus_note=None
-    focus_checked=False
     error_code_override=None
     try:
         # A new virtual device at an unchanged cursor position may not cause
@@ -1846,15 +1870,17 @@ def desktop_act(env,meta,actions,after_capture=True,observation_path=None,
                               completed=completed,active_window=active_window)
         for index,a in enumerate(groups):
             guard()
-            if has_type and focus_check is not None and not focus_checked and _group_has_type(a):
+            if has_type and focus_check is not None and _group_has_type(a):
                 # Cheap pre-type focus gate (G30): the click already ran;
                 # before any keystroke, ask the cheap check (DOM
                 # activeElement, no screenshot) whether the target took
                 # focus. A miss stops the batch here, with the type
                 # never sent, instead of typing blind into dead space.
-                # No hook means no gate; the after-capture band check
-                # below stays the loud backstop.
-                focus_checked=True
+                # The gate runs before EVERY type group, not just the
+                # first: in a two-input batch the second click can miss
+                # even when the first landed. No hook means no gate;
+                # the after-capture band check below stays the loud
+                # backstop.
                 _ok,_reason=_run_check(focus_check,'focus')
                 focus_verified=bool(_ok)
                 focus_note=_reason
@@ -1967,12 +1993,20 @@ def desktop_act(env,meta,actions,after_capture=True,observation_path=None,
                     'DOM check: the typed text is present in the target '
                     'field (value read, no screenshot used)')
             else:
-                # No fresh frame was requested, so there is nothing to
-                # verify the typed text against: say so explicitly instead
-                # of letting ok rest on process exit alone.
+                # No fresh frame was requested and no DOM check passed,
+                # so the typed text is unverified: the batch must not
+                # report ok on wtype exit alone, the exact failure the
+                # verification was built to kill. A passing DOM check
+                # above is the only way this branch reports ok.
+                result['ok']=False
                 result['type_verified']=None
                 result['type_verification']=('skipped: after_capture is False, '
                                              'no fresh frame to compare')
+                result['error']=('type verification failed: no after-capture '
+                                 'frame and no DOM value check, so the typed '
+                                 'text is unverified; re-observe and check '
+                                 'focus before retrying')
+                result['error_code']='type_unverified'
         if focus_verified is not None:
             result['focus_verified']=focus_verified
             if focus_note:
@@ -1999,13 +2033,30 @@ def desktop_act(env,meta,actions,after_capture=True,observation_path=None,
         result['after_skipped']=True
         result['after_skip_reason']='no expected terminal window to capture'
         if has_type:
-            # Same skip shape as after_capture=False: record the
-            # missing marker instead of reporting ok on process exit
-            # alone with no verification field at all.
-            result['type_verified']=None
-            result['type_verification']=(
-                'skipped: no expected terminal window to capture, '
-                'no fresh frame to compare')
+            if type_dom_verified is True:
+                # A passing DOM value check IS the verification even
+                # when no terminal window exists to capture: keep the
+                # pass instead of discarding it as None.
+                result['type_verified']=True
+                result['type_verified_basis']='dom-value'
+                result['type_verification']=(
+                    'DOM check: the typed text is present in the target '
+                    'field (value read, no screenshot used)')
+            else:
+                # Same skip shape as after_capture=False: no frame to
+                # compare and no DOM check passed, so the typed text
+                # is unverified and the batch must not report ok.
+                result['ok']=False
+                result['type_verified']=None
+                result['type_verification']=(
+                    'skipped: no expected terminal window to capture, '
+                    'no fresh frame to compare')
+                result['error']=('type verification failed: no expected '
+                                 'terminal window to capture and no DOM '
+                                 'value check, so the typed text is '
+                                 'unverified; re-observe and check focus '
+                                 'before retrying')
+                result['error_code']='type_unverified'
     else:
         try:
             after_capture_start=time.monotonic()
@@ -2030,45 +2081,69 @@ def desktop_act(env,meta,actions,after_capture=True,observation_path=None,
     # after-capture hash with the PRE-BATCH observation, so any click
     # in the same batch set the bit and a click+type batch with zero
     # text delivered still reported type_verified True. The check here
-    # reads the input line band (full width, around the last pointer
-    # target before the type) between the pre-batch frame and the
-    # after-capture, both already in memory: no new observe is taken.
-    # A click into dead space changes nothing on that line, so the
-    # incident shape (click 64px above the field, type into nothing)
-    # now fails instead of verifying. Limits, stated plainly: a caret
-    # or focus ring alone also changes the band, so the band is
+    # reads one input line band per type group (full width, around
+    # that group's own click point) between the pre-batch frame and
+    # the after-capture, both already in memory: no new observe is
+    # taken. A click into dead space changes nothing on that line, so
+    # the incident shape (click 64px above the field, type into
+    # nothing) now fails instead of verifying. Limits, stated plainly:
+    # a caret or focus ring alone also changes a band, so the band is
     # necessary, not sufficient, proof the text landed; the DOM value
-    # check (type_check hook) is the sufficient check. With no pointer
-    # target before the type there is no input region to read, so the
-    # whole-frame hash stays the check for type-only batches, where
-    # the batch has no click to confound it. Runs only when the
-    # after-capture succeeded; a failed capture already fails the
-    # batch above.
+    # check (type_check hook) is the sufficient check. A has_type
+    # batch with no verification at all (no frame and no DOM check)
+    # reports ok False, never ok True: see the after_capture=False
+    # and terminal-None branches above. With no pointer target before
+    # a type group there is no input region to read, so the whole-frame
+    # hash stays the check for that group, where the batch has no click
+    # to confound it. Runs only when the after-capture succeeded; a
+    # failed capture already fails the batch above. The off-line-click
+    # false-fail is documented: when the text lands in a field whose
+    # line is NOT the click line (the click focused a field, the text
+    # went to another field on a different line), the band reads the
+    # click line, finds nothing, and fails a batch whose text did
+    # land somewhere; only the DOM value check distinguishes that
+    # shape from a real miss.
     if has_type and error is None and 'after' in result:
         if type_dom_verified is True:
             verified=True
             basis='dom-value'
             note=('DOM check: the typed text is present in the target '
                   'field (value read, no screenshot used)')
-        elif type_anchor is not None:
+        elif type_anchors:
+            # One band per type group: each group's band reads the input
+            # line around that group's own click point, so text landing
+            # in the second input cannot be verified by the first
+            # group's line, and a stubbed second type fails even when
+            # the first type landed. Groups with no preceding click have
+            # no input region; the whole-frame hash stays their check.
+            # A band that cannot be compared (size mismatch) falls back
+            # to the hash for the whole batch, the same as before.
             after_image=_load_after_image(result)
-            band=_input_line_changed(old,after_image,type_anchor[1]) \
-                if after_image is not None else None
-            if band is None:
+            anchored=[a for a in type_anchors if a is not None]
+            unanchored=len(type_anchors)-len(anchored)
+            bands=([_input_line_changed(old,after_image,anchor[1])
+                    for anchor in anchored]
+                   if after_image is not None else [None])
+            if any(band is None for band in bands):
                 verified=result.get('frame_bytes_changed') is True
                 basis='frame-hash'
                 note=('input-region image unavailable; fell back to the '
                       'whole-frame hash, which a click or an animation '
                       'can also change')
             else:
-                verified=band
-                basis='input-line-band'
-                note=('input line band around the click point changed '
-                      'between the pre-batch frame and the after-capture; '
-                      'a caret or focus ring alone also changes the band, '
-                      'so this is necessary, not sufficient, proof the '
-                      'text landed; the DOM value check is the sufficient '
-                      'check')
+                verified=all(bands) and (unanchored==0 or
+                                         result.get('frame_bytes_changed') is True)
+                basis=('input-line-band' if unanchored==0
+                       else 'input-line-band+frame-hash')
+                note=('input line band around each type group\'s click '
+                      'point changed between the pre-batch frame and the '
+                      'after-capture; a caret or focus ring alone also '
+                      'changes a band, so this is necessary, not '
+                      'sufficient, proof the text landed; the DOM value '
+                      'check is the sufficient check'
+                      + ('; groups with no preceding click were checked '
+                         'against the whole-frame hash' if unanchored
+                         else ''))
         else:
             verified=result.get('frame_bytes_changed') is True
             basis='frame-hash'
@@ -2110,7 +2185,7 @@ def browser_start(env,endpoint):
     import urllib.parse
     url=urllib.parse.urlparse(endpoint)
     if url.scheme!='http' or url.hostname not in ('localhost','127.0.0.1','::1'):raise ValueError('loopback http endpoint required')
-    try:port=url.port or 9222
+    try:port=url.port or 9223
     except ValueError:raise ValueError('endpoint port is not a number') from None
     if not 1<=port<=65535:raise ValueError('endpoint port must be 1..65535')
     try:
@@ -2118,8 +2193,23 @@ def browser_start(env,endpoint):
     except ImportError:
         return _browser_start_cold(env,endpoint,url,port)
     try:
+        import urllib.error
         json.load(urllib.request.urlopen(urllib.parse.urljoin(endpoint,'/json/version'),timeout=1))
         alive=True
+    except urllib.error.HTTPError as exc:
+        # Any HTTP response means a live listener holds the port, even
+        # when it is not CDP: Zen's BiDi port (9222 since Firefox 141)
+        # answers 404 on /json/version. A 404 is not "no browser": it
+        # is "a non-CDP service holds this port". Cold-launching
+        # Chromium onto it would fight Zen for the port, so refuse
+        # instead of launching.
+        return {'ok':False,'endpoint':endpoint,
+                'error':('endpoint %s is held by a non-CDP service '
+                         '(HTTP %s on /json/version; Zen BiDi answers '
+                         '404 there): refusing to cold-launch Chromium '
+                         'onto a port Zen holds; start the agent '
+                         'Chromium on another port, e.g. --endpoint '
+                         'http://127.0.0.1:9223' % (endpoint,exc.code))}
     except Exception:
         alive=False
     if alive:
@@ -2465,9 +2555,25 @@ class CodeExecBackend:
         session_policy.record_observation(STATE, os.environ.get('CU_SESSION_TOKEN'), meta)
         return meta
 
-    def act(self, meta, actions, observation_path):
+    def act(self, meta, actions, observation_path, dom_session=None,
+            dom_selector=None):
         import session_policy
-        result = desktop_act(self.env, meta, actions, observation_path=observation_path)
+        focus_check = type_check = None
+        if dom_session is not None and dom_selector is not None:
+            # Item A: the DOM value hooks reach this production path.
+            # The session is owned by the caller (one-session rule);
+            # the code-exec allowlist does not expose ZenSession yet,
+            # so a program passes a session only when a future
+            # allowlist addition provides one.
+            import dom_act
+            text = dom_act.typed_text_of(actions)
+            if text is not None:
+                focus_check, type_check = dom_act.dom_hooks(
+                    dom_session, dom_selector, text)
+        result = desktop_act(self.env, meta, actions,
+                             observation_path=observation_path,
+                             focus_check=focus_check,
+                             type_check=type_check)
         if is_transient_refusal(result):
             session_policy.record_refusal(STATE, os.environ.get('CU_SESSION_TOKEN'))
         elif result.get('ok') is True or is_completed_capture_error(result, len(actions)):
@@ -2579,7 +2685,7 @@ def main():
     obs.add_argument('--low-res',action='store_true',help='routine framing observe at 640 px wide; verify observes and small-target grounding stay at full resolution')
     obs.add_argument('--focus',action='store_true',help='explicitly focus the target window before capture (may switch workspace)')
     obs.add_argument('--settle-ms',type=int,default=0,help='wait up to 2000 ms for 120 ms of unchanged crop pixels; not semantic readiness')
-    act=sub.add_parser('act',help='execute one batch of known actions, then capture its final result');act.add_argument('--observation',required=True);act.add_argument('--actions',required=True,help='JSON path or - for stdin; batch up to 32 predictable actions from one inspected observation')
+    act=sub.add_parser('act',help='execute one batch of known actions, then capture its final result');act.add_argument('--observation',required=True);act.add_argument('--actions',required=True,help='JSON path or - for stdin; batch up to 32 predictable actions from one inspected observation');act.add_argument('--dom-selector',default=None,help='CSS selector of the input the type action targets; wires the DOM value hooks (focus + typed-value check) into the batch instead of the pixel band')
     act.add_argument('--no-after',action='store_true',help='skip successful final capture; preflight safety and error captures stay enabled')
     act.add_argument('--expected-terminal-window',default='same',help='final guard/capture target: same, none, unbound, or an exact Hyprland address')
     act.add_argument('--expected-terminal-bounds',nargs=4,type=int,help='optional expected x y width height for the terminal window')
@@ -2756,7 +2862,41 @@ def main():
                         'observation_path':args.observation}
             if expected_terminal is not None:
                 act_kwargs['expected_terminal_window']=expected_terminal
-            result=desktop_act(env,read_json_file(args.observation),actions,**act_kwargs)
+            # Item A: --dom-selector wires the DOM value hooks into
+            # this production path. The hooks are best-effort: when
+            # no DOM session can open, the batch still runs with the
+            # pixel band, and the reason is recorded on the result.
+            dom_session = None
+            result_dom_error = None
+            if getattr(args, 'dom_selector', None):
+                import dom_act
+                text = dom_act.typed_text_of(actions)
+                if text is not None:
+                    try:
+                        dom_session, focus_check, type_check = \
+                            dom_act.open_dom_hooks(args.dom_selector, text)
+                        act_kwargs['focus_check'] = focus_check
+                        act_kwargs['type_check'] = type_check
+                    except Exception as exc:
+                        result_dom_error = ('dom hooks unavailable: '
+                                            + str(exc)[:200])
+                else:
+                    result_dom_error = ('dom hooks unavailable: no type '
+                                        'action in the batch')
+            else:
+                result_dom_error = None
+            try:
+                result=desktop_act(env,read_json_file(args.observation),actions,**act_kwargs)
+            finally:
+                if dom_session is not None:
+                    try:
+                        dom_session.__exit__()
+                    except Exception:
+                        pass
+            if result_dom_error is not None:
+                result['dom_hooks_error'] = result_dom_error
+            elif getattr(args, 'dom_selector', None):
+                result['dom_hooks'] = 'dom-value'
             if is_transient_refusal(result):
                 check_cancel()
                 session_policy.record_refusal(STATE,os.environ.get('CU_SESSION_TOKEN'))
