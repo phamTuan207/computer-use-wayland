@@ -292,3 +292,33 @@ in the repo worktree and /tmp test copies.
   probes pass, manifest/SHIPPED agree, no dashes, no
   pyc_refused left. Still waiting: Council 2, Redteam,
   Verifier (3/5 running).
+
+- 00:32 +07 (T+1h36m): REDTEAM DONE, verdict AMEND, paper
+  7c2d1dd (improvements/worker-y13g-redteam.md + log; 4 commits;
+  harnesses rebuilt from spec under ~/workspace/y13g-redteam/).
+  Results: A1 PASS 3/3; A2 direct PASS, -m/import marker PRINTS
+  (documented unfixable hole, confirmed live), fake-OK forge via
+  -m prints fake manifest_ok true rc 0, launcher path refuses
+  pre-exec rc 2 no marker, isolated _check_entry_pyc 8/8 correct;
+  A3 PASS (residual: import run_live / py_compile still brick
+  verify until re-stage, F4); A4 specified set PASS (unit 69/80,
+  live 24/24), 11 FRESH evasions proven real execution forms;
+  A5 13/13 (case 1 passes BY DESIGN, case 3 refuses by log
+  order, fork refuses); A6 PASS 38/38 (all 15 names, marker never
+  prints); A7 PASS 22/22 (kind symlink); A8 PASS 12/12 ("" False).
+  A9 extra: tampered run_live.py executes on the DIRECT path
+  (launcher layers refuse pre-exec, no marker); --ship-dir refuses
+  tampered ship, real ship untouched. Findings: F1 documented
+  residual (-m/import forged entry .pyc executes; accept
+  adjudication, do not claim literal B1 re-test met); F2
+  _check_entry_pyc unreachable (same as C1-F1); F3 11 tokenizer
+  evasions (wrappers nice/nice -n/stdbuf/taskset/sudo, trailing
+  -W/-X bundles -uW/-uX/-iuW, -c os.system nesting, -c
+  runpy.run_path, -c exec of renamed copy with __file__ preset;
+  re-test must reach A4 unit 80/80, live 6/6); F4 import
+  run_live / py_compile brick verify (same family as C3-4/F2);
+  F5 tampered run_live.py executes on direct path, fix: verify
+  entry .py hashes at module top before importing run_live; F6
+  marker case 1 passes by design (keep documented). Redteam says
+  fix F2-F5, re-run probes, then live may proceed. Still waiting:
+  Council 2, Verifier (2/5 running).
