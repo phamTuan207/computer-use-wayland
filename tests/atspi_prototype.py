@@ -122,6 +122,10 @@ def press_button(node):
             index = names.index(wanted)
             break
     ok = node.do_action(index)
+    if not ok:
+        raise RuntimeError(
+            f"do_action returned False for action {names[index]!r} "
+            f"on widget {node.name!r}")
     return {"actions": names, "used": names[index], "ok": bool(ok)}
 
 
