@@ -20,3 +20,26 @@ Elapsed origin is the first setup inspection, approximately 2026-11-21 18:01:43 
 ## Phases
 
 Pending.
+
+## Phase A: executor hardening
+
+Started about 2026-11-21 18:07:00 Asia/Ho_Chi_Minh, elapsed about +05:17. Finished 2026-11-21 18:14:30 Asia/Ho_Chi_Minh, elapsed +12:47. Log entry written 2026-11-21 18:15:33 Asia/Ho_Chi_Minh.
+
+Decisions and changes:
+
+- Removed `format` from both safe attribute lists. Regression probes cover the three format-string payloads in both executors.
+- Pinned codemode `__builtins__` to a copy of `SAFE_BUILTINS`. A test captures the actual execution namespace and checks it has no builtins module or `eval`.
+- Codemode now rejects dunder names, yield/yield-from, async-for, and async-with. It executes at module level, with no `__codemode_main__` function. For compatibility with existing callers and tests that end their code with `return`, only a final top-level return is lowered to an assignment to `result` before compilation. Nested or non-final returns remain invalid module code.
+- Both executors bound serialized result envelopes to 65536 bytes. An oversized result returns `result_too_large`; code_exec restores the prior persistent variables instead of saving the oversized result.
+- No em dash or en dash characters were added. `git diff --check` passed.
+- Setup log commit `87cd34f` (`docs: record Y1 implementation setup`) was pushed to `origin y1-snippets` before Phase A.
+
+Test runs:
+
+| Approx local time | Command | Result |
+| --- | --- | --- |
+| 2026-11-21 about 18:10 | `python3 -m unittest tests.test_codemode tests.test_code_exec` | 81 tests, OK, 11.591s. Exit 0. |
+| 2026-11-21 about 18:10 to 18:12 | `python3 -m unittest discover -s tests -p 'test_*.py'` | First invocation completed, but the exec wrapper did not retain its final output or exit status. It is not counted as evidence. |
+| 2026-11-21 18:12:16 to 18:14:19 | `python3 -m unittest discover -s tests -p 'test_*.py'` | 1530 tests, OK, 2 skipped, 123.611s. Exit 0. This is the required Phase A full-suite result. |
+
+Phase A verdict: PASS. Full suite succeeded, so Phase B may proceed. Phase A implementation and this log entry are committed and pushed in the next recorded commit.

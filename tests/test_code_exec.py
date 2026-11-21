@@ -1,4 +1,5 @@
 import importlib.util
+import json
 import os
 import pathlib
 import re
@@ -299,6 +300,28 @@ class SandboxTests(unittest.TestCase):
         result = run('x = "a".__class__')
         self.assertFalse(result['ok'])
         self.assertEqual(result['error_type'], 'sandbox')
+
+    def test_format_cannot_reach_dunder_data_or_session_token(self):
+        session_token = '0123456789abcdef0123456789abcdef'
+        probes = (
+            'x = "{0.__class__}".format("")',
+            'x = "{0.__globals__}".format(windows)',
+            'x = "{0.__self__.session_token}".format(windows)',
+        )
+        for source in probes:
+            with self.subTest(source=source):
+                result = run(source, session_token=session_token)
+                self.assertFalse(result['ok'])
+                self.assertEqual(result['error_type'], 'sandbox')
+                self.assertNotIn(session_token, json.dumps(result))
+
+    def test_50mb_result_is_not_returned(self):
+        result = run('x = "A" * (50 * 10**6)')
+        self.assertFalse(result['ok'])
+        self.assertEqual(result['error_type'], 'result_too_large')
+        self.assertLessEqual(code_exec._serialized_size(result),
+                             code_exec.MAX_ENVELOPE_BYTES)
+        self.assertNotIn('x', result['variables'])
 
     def test_program_size_cap(self):
         result = run('x = 1\n' + '# ' + 'a' * 9000)

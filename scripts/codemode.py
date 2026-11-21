@@ -33,6 +33,7 @@ DEFAULT_WALL_SECONDS = 30
 MAX_WALL_SECONDS = 60
 MAX_TRACE_STEPS = 20000
 MAX_READ_BYTES = 65536
+MAX_ENVELOPE_BYTES = 65536
 
 SAFE_BUILTINS = {
     "True": True, "False": False, "None": None,
@@ -46,7 +47,7 @@ SAFE_BUILTINS = {
 SAFE_ATTRIBUTE_NAMES = {
     "get", "keys", "values", "items",
     "startswith", "endswith", "strip", "split", "join", "lower", "upper",
-    "format", "replace", "count", "find", "index",
+    "replace", "count", "find", "index",
     "append", "extend", "pop", "remove",
 }
 BANNED_NAMES = {
@@ -208,17 +209,52 @@ def _scan(code):
     for node in ast.walk(tree):
         if isinstance(node, (ast.Import, ast.ImportFrom)):
             raise CodemodeError("imports are banned")
-        if isinstance(node, ast.Name) and node.id in BANNED_NAMES:
-            raise CodemodeError("banned name: %s" % node.id)
+        if isinstance(node, ast.Name):
+            if node.id in BANNED_NAMES:
+                raise CodemodeError("banned name: %s" % node.id)
+            if node.id.startswith("__"):
+                raise CodemodeError("dunder access is banned")
         if isinstance(node, ast.Attribute) and node.attr.startswith("_"):
             raise CodemodeError("dunder attribute access is banned")
         if isinstance(node, ast.Attribute) \
                 and node.attr not in SAFE_ATTRIBUTE_NAMES:
             raise CodemodeError("attribute not allowlisted: %s" % node.attr)
-        if isinstance(node, (ast.Lambda, ast.AsyncFunctionDef, ast.Await,
-                             ast.Global, ast.Nonlocal)):
-            raise CodemodeError("lambda/async/global are banned")
+        if isinstance(node, (ast.Lambda, ast.AsyncFunctionDef, ast.AsyncFor,
+                             ast.AsyncWith, ast.Await, ast.Yield,
+                             ast.YieldFrom, ast.Global, ast.Nonlocal)):
+            raise CodemodeError("lambda/async/yield/global are banned")
     return tree
+
+
+def _serialized_size(value):
+    try:
+        return len(json.dumps(value, ensure_ascii=False, separators=(",", ":"),
+                              allow_nan=False).encode("utf-8"))
+    except (TypeError, ValueError, OverflowError):
+        return MAX_ENVELOPE_BYTES + 1
+
+
+def _bounded_envelope(envelope, started):
+    envelope["elapsed_ms"] = round((time.monotonic() - started) * 1000, 1)
+    if _serialized_size(envelope) <= MAX_ENVELOPE_BYTES:
+        return envelope
+    return {"status": "error", "error": "serialized result envelope exceeds %d bytes" % MAX_ENVELOPE_BYTES,
+            "error_type": "result_too_large",
+            "elapsed_ms": round((time.monotonic() - started) * 1000, 1)}
+
+
+def _module_code(tree):
+    """Keep legacy final return statements without a reachable wrapper function."""
+    body = list(tree.body)
+    if body and isinstance(body[-1], ast.Return):
+        final_return = body[-1]
+        body[-1] = ast.Assign(
+            targets=[ast.Name(id="result", ctx=ast.Store())],
+            value=final_return.value or ast.Constant(value=None))
+    module = ast.Module(body=body or [ast.Expr(ast.Constant(value=None))],
+                        type_ignores=[])
+    ast.fix_missing_locations(module)
+    return module
 
 
 def execute_op(code, wall_seconds=DEFAULT_WALL_SECONDS):
@@ -239,6 +275,7 @@ def execute_op(code, wall_seconds=DEFAULT_WALL_SECONDS):
                 "elapsed_ms": round((time.monotonic() - started) * 1000, 1)}
 
     namespace = dict(SAFE_BUILTINS)
+    namespace["__builtins__"] = dict(SAFE_BUILTINS)
     namespace["print"] = lambda *args: None
     for op in OPS:
         namespace[op["path"].replace(".", "_")] = op["fn"]
@@ -257,39 +294,25 @@ def execute_op(code, wall_seconds=DEFAULT_WALL_SECONDS):
             raise CodemodeError("wall-clock budget exceeded")
         return tracer
 
-    body = ast.Module(body=tree.body, type_ignores=[])
-    wrapped = ast.Module(body=[
-        ast.FunctionDef(
-            name="__codemode_main__", args=ast.arguments(
-                posonlyargs=[], args=[], vararg=None, kwonlyargs=[],
-                kw_defaults=[], kwarg=None, defaults=[]),
-            body=body.body or [ast.Expr(ast.Constant(value=None))],
-            decorator_list=[]),
-    ], type_ignores=[])
-    ast.fix_missing_locations(wrapped)
     old_tracer = sys.gettrace()
     sys.settrace(tracer)
     try:
-        compiled = compile(wrapped, "<codemode>", "exec")
+        compiled = compile(_module_code(tree), "<codemode>", "exec")
         exec(compiled, namespace)  # noqa: S102 - scanned code only
-        result = namespace["__codemode_main__"]()
+        result = namespace.get("result")
     except CodemodeError as exc:
         message = str(exc)
         if message == "requires_laptop":
-            return {"status": "requires_laptop",
-                    "error": "op needs the laptop, not runnable on the VM",
-                    "elapsed_ms": round((time.monotonic() - started) * 1000, 1)}
-        return {"status": "error", "error": message,
-                "elapsed_ms": round((time.monotonic() - started) * 1000, 1)}
+            return _bounded_envelope({"status": "requires_laptop",
+                    "error": "op needs the laptop, not runnable on the VM"}, started)
+        return _bounded_envelope({"status": "error", "error": message}, started)
     except Exception as exc:  # noqa: BLE001 - envelope the failure
         message = str(exc)
-        return {"status": "error", "error": "%s: %s" % (type(exc).__name__, message),
-                "elapsed_ms": round((time.monotonic() - started) * 1000, 1)}
+        return _bounded_envelope({"status": "error", "error": "%s: %s" % (type(exc).__name__, message)}, started)
     finally:
         sys.settrace(old_tracer)
-    return {"status": "completed", "result": result,
-            "elapsed_ms": round((time.monotonic() - started) * 1000, 1),
-            "steps": steps[0]}
+    return _bounded_envelope({"status": "completed", "result": result,
+                              "steps": steps[0]}, started)
 
 
 def main():

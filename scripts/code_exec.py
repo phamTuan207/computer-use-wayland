@@ -96,6 +96,7 @@ MAX_API_CALLS = 32
 MAX_TRACE_STEPS = 20000
 PROGRAM_FILENAME = '<code-exec>'
 MAX_READ_BYTES = 65536
+MAX_ENVELOPE_BYTES = 65536
 OBSERVATION_MAX_AGE = 120
 DOM_WINDOW_CLASS = 'chromium'
 DOM_WINDOW_WAIT_SECONDS = 10.0
@@ -117,7 +118,7 @@ SAFE_BUILTINS = {
 SAFE_ATTRIBUTE_NAMES = {
     'get', 'keys', 'values', 'items',
     'startswith', 'endswith', 'strip', 'split', 'join', 'lower', 'upper',
-    'format', 'replace', 'count', 'find', 'index',
+    'replace', 'count', 'find', 'index',
     'append', 'extend', 'pop', 'remove',
 }
 BANNED_NAMES = {
@@ -152,6 +153,14 @@ def _jsonable_copy(value):
     if isinstance(value, (list, tuple)):
         return [_jsonable_copy(item) for item in value]
     return value if _is_jsonable(value) else None
+
+
+def _serialized_size(value):
+    try:
+        return len(json.dumps(value, ensure_ascii=False, separators=(',', ':'),
+                              allow_nan=False).encode('utf-8'))
+    except (TypeError, ValueError, OverflowError):
+        return MAX_ENVELOPE_BYTES + 1
 
 
 def _utf16_length(value):
@@ -803,6 +812,7 @@ class CodeExecSession:
         self.log_lines = []
         self._trace_steps = 0
         self._trace_events = 0
+        previous_variables = _jsonable_copy(self.variables)
         self._deadline = started + self.wall_seconds
         envelope = {
             'ok': False, 'intent': intent, 'api_calls': 0,
@@ -842,9 +852,20 @@ class CodeExecSession:
                                   'assert_file_exists', 'dom_start', 'dom_tabs',
                                   'dom_observe', 'dom_act', 'dom_assert', 'print')
                     and _is_jsonable(v)}
-            self.variables = _jsonable_copy(kept)
-            envelope['ok'] = True
-            envelope['variables'] = _jsonable_copy(self.variables)
+            variables = _jsonable_copy(kept)
+            candidate = dict(envelope, ok=True, variables=variables,
+                             api_calls=self.api_calls,
+                             elapsed_ms=round((time.monotonic() - started) * 1000, 3),
+                             log=list(self.log_lines))
+            if _serialized_size(candidate) > MAX_ENVELOPE_BYTES:
+                envelope['error'] = 'serialized result envelope exceeds %d bytes' % MAX_ENVELOPE_BYTES
+                envelope['error_type'] = 'result_too_large'
+                envelope['variables'] = {}
+                self.variables = previous_variables
+            else:
+                self.variables = variables
+                envelope['ok'] = True
+                envelope['variables'] = variables
         except AssertionError as exc:
             envelope['error'] = 'assert failed: ' + str(exc)
             envelope['error_type'] = 'assert_failed'
@@ -865,6 +886,15 @@ class CodeExecSession:
         envelope['log'] = list(self.log_lines)
         if 'variables' not in envelope or not envelope.get('variables'):
             envelope['variables'] = _jsonable_copy(self.variables)
+        if _serialized_size(envelope) > MAX_ENVELOPE_BYTES:
+            self.variables = previous_variables
+            self._save_state()
+            envelope = {
+                'ok': False, 'error': 'serialized result envelope exceeds %d bytes' % MAX_ENVELOPE_BYTES,
+                'error_type': 'result_too_large', 'api_calls': self.api_calls,
+                'elapsed_ms': round((time.monotonic() - started) * 1000, 3),
+                'log': [], 'variables': {},
+            }
         return envelope
 
 

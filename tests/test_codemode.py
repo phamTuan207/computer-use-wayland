@@ -5,11 +5,14 @@ Or:  python3 tests/test_codemode.py (stdlib runner at the bottom).
 VM only. No laptop, no Zen, no network.
 """
 
+import builtins
 import json
 import os
 import sys
 import time
+import types
 import unittest
+from unittest import mock
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
 
@@ -106,6 +109,55 @@ class TestExecute(unittest.TestCase):
     def test_dunder_rejected(self):
         out = codemode.execute_op("return (1).__class__")
         self.assertEqual(out["status"], "error")
+
+    def test_format_cannot_reach_dunder_data(self):
+        probes = (
+            'return "{0.__class__}".format("")',
+            'return "{0.__globals__}".format(repo_list_scripts)',
+            'return "{0.__self__.session_token}".format(repo_list_scripts)',
+        )
+        for source in probes:
+            with self.subTest(source=source):
+                out = codemode.execute_op(source)
+                self.assertEqual(out["status"], "error")
+                self.assertIn("format", out["error"])
+
+    def test_dunder_name_rejected(self):
+        with self.assertRaisesRegex(codemode.CodemodeError, "dunder"):
+            codemode._scan("__codemode_main__")
+
+    def test_yield_and_async_rejected(self):
+        for source in (
+                "yield 2",
+                "yield from ()",
+                "async for item in items:\n    pass",
+                "async with manager:\n    pass"):
+            with self.subTest(source=source):
+                out = codemode.execute_op(source)
+                self.assertEqual(out["status"], "error")
+
+    def test_execute_namespace_pins_safe_builtins(self):
+        captured = []
+        original_exec = builtins.exec
+
+        def capture_exec(code, namespace, *args):
+            captured.append(namespace)
+            return original_exec(code, namespace, *args)
+
+        with mock.patch("builtins.exec", new=capture_exec):
+            out = codemode.execute_op("result = 7")
+        self.assertEqual(out["status"], "completed")
+        self.assertEqual(len(captured), 1)
+        safe = captured[0]["__builtins__"]
+        self.assertIsInstance(safe, dict)
+        self.assertNotIsInstance(safe, types.ModuleType)
+        self.assertNotIn("eval", safe)
+
+    def test_50mb_result_is_not_returned(self):
+        out = codemode.execute_op('return "A" * (5 * 10**7)')
+        self.assertEqual(out["status"], "error")
+        self.assertEqual(out["error_type"], "result_too_large")
+        self.assertNotIn("result", out)
 
     def test_syntax_error_envelope(self):
         out = codemode.execute_op("return 1 +")
