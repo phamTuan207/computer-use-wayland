@@ -429,3 +429,30 @@
    results file), never a /tmp or ~/workspace path alone. The workers
    already do this well in places (Y8b out.log + judge files, Y13g
    harnesses, FCCK report arithmetic); make it the default.
+
+## Fix status after batch 7 (added 04:10 22/11, clone1 task 3)
+
+The three HIGH violations are PARTIALLY FIXED, not by clone1 but
+by clone2 in batch 7 task 3 (docs/clone2-batch7-high-fixes-20261122.md).
+Clone1 independently verified every fix at todolist-push tip
+da60024 (docs/clone1-batch7-high-fixes-verify-20261122.md):
+0 discrepancies found.
+
+- V1: correction appended to improvements/worker-f1-guardian-fix-log.md
+  (05ee34d) plus the consolidated record
+  improvements/batch7-high-corrections-20261122.md (16c4196). H3
+  acceptance now marked UNVERIFIED from repo evidence. The acceptance
+  record itself (MEMORY.md 22:57, laptop-only) is still missing; only
+  the coordinator can re-record it, per AM-13.
+- V2: correction appended to improvements/worker-f3b-restart-log.md
+  (748cc35). Arm verdicts now marked inline-summary-only. The true
+  count is 14 missing logs, not 9 (the 5 extra: arm_d_run.log,
+  probe_d.log, probe_f.log, probe_r3.log, relaunch-f3b.log). The 14
+  logs are still missing; they need the laptop files or a re-run.
+- V3: correction appended to improvements/live-test-log.md (219720c).
+  The 130/130 verdict is now marked UNVERIFIABLE from repo evidence.
+  The 5 report files, stress.log, 16 JSON files and 20 screenshots
+  are still missing; they need the laptop/VM files or a re-run.
+
+All four fix commits are pure insertions (0 deletions). Nothing
+further is fixable from this machine for these three HIGHs.
