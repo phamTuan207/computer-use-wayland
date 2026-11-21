@@ -144,9 +144,9 @@
 
 <script>
 const INITIAL_NOTES = [
-  { id: 'n-1', title: 'System Architecture', body: '# System Architecture\\n\\nOverview of microkernel and userspace compositors.\\n\\nTags: #architecture, #core', tags: ['architecture', 'core'], pinned: false, archived: false },
-  { id: 'n-2', title: 'Storage Engine', body: '# Storage Engine\\n\\nLSM-tree write optimization and caching strategies.\\n\\nTags: #storage, #performance', tags: ['storage', 'performance'], pinned: false, archived: false },
-  { id: 'n-3', title: 'Security Model', body: '# Security Model\\n\\nCapability-based sandboxing and IPC permission tokens.\\n\\nTags: #security, #architecture', tags: ['security', 'architecture'], pinned: false, archived: false }
+  { id: 'n-1', title: 'System Architecture', body: '# System Architecture\n\nOverview of microkernel and userspace compositors.\n\nTags: #architecture, #core', tags: ['architecture', 'core'], pinned: false, archived: false },
+  { id: 'n-2', title: 'Storage Engine', body: '# Storage Engine\n\nLSM-tree write optimization and caching strategies.\n\nTags: #storage, #performance', tags: ['storage', 'performance'], pinned: false, archived: false },
+  { id: 'n-3', title: 'Security Model', body: '# Security Model\n\nCapability-based sandboxing and IPC permission tokens.\n\nTags: #security, #architecture', tags: ['security', 'architecture'], pinned: false, archived: false }
 ];
 
 let notes = [...INITIAL_NOTES];
@@ -218,7 +218,7 @@ function createNoteCard(n) {
       <span>${n.title}</span>
       ${n.pinned ? '<span style="color: var(--pin-gold); font-size: 11px;">&#128204;</span>' : ''}
     </div>
-    <div class="note-item-snippet">${n.body.replace(/\\n/g, ' ')}</div>
+    <div class="note-item-snippet">${n.body.replace(/\n/g, ' ')}</div>
     <div class="note-item-tags">
       ${n.tags.map(t => `<span class="tag-pill">#${t}</span>`).join('')}
     </div>
@@ -250,11 +250,11 @@ function renderPreview() {
   let html = n.body
     .replace(/^# (.*$)/gim, '<h1>$1</h1>')
     .replace(/^## (.*$)/gim, '<h2>$1</h2>')
-    .replace(/\\[\\[(.*?)\\]\\]/g, (match, noteTitle) => {
+    .replace(/\[\[(.*?)\]\]/g, (match, noteTitle) => {
       return `<a class="wiki-link" id="link-note-${noteTitle}" onclick="openNoteByName('${noteTitle}')">${noteTitle}</a>`;
     })
-    .replace(/\\n\\n/g, '</p><p>')
-    .replace(/\\n/g, '<br>');
+    .replace(/\n\n/g, '</p><p>')
+    .replace(/\n/g, '<br>');
 
   document.getElementById('rendered-markdown-content').innerHTML = `<p>${html}</p>`;
 
@@ -396,7 +396,7 @@ window.__agyVerify = function() {
     document.getElementById('btn-new-note').click();
     document.getElementById('input-note-title').value = 'Memory Tiering RFC';
     document.getElementById('input-note-tags').value = 'rfc, performance, memory';
-    document.getElementById('textarea-note-body').value = '# Memory Tiering Architecture\\n\\nThis proposal integrates tiered RAM and CXL memory.\\n\\nRelated: [[Storage Engine]] and [[Security Model]].';
+    document.getElementById('textarea-note-body').value = '# Memory Tiering Architecture\n\nThis proposal integrates tiered RAM and CXL memory.\n\nRelated: [[Storage Engine]] and [[Security Model]].';
     saveCurrentNote();
 
     // Navigate to Storage Engine and backlink
