@@ -1,5 +1,11 @@
 # E1 execution comparison: FINAL design v2 (FROZEN)
 
+## v2.1 re-freeze note (2026-11-21 ~18:57 +07, Worker Y8b, before any arm ran)
+
+Instrument bug found by the first live pre-flight, not by debate. Pre-flight A at 18:55:40 +07 exited 2 INFRA-BLOCKED with reason "diagnose eval failed: {'ok': True, 'result': None, 'ms': 2}", snapshots empty, no classification made. Root cause: hand_drive.py posts eval JS as-is to Marionette /execute/sync, which runs it as a function body, so the bare IIFE in DIAGNOSE_JS (preflight.py), in the exact diagnose JS of both briefs, evaluated and discarded its value. Identical to the _DIAG_JS bug Y4d already found and fixed live in run_live.py (commit 1e3901c); the plan file is NOT affected (all 21 of its evals start with `return`, step 56 is `return window.__agyVerify()`).
+
+Fix (mechanical, same as Y4d's proven fix): prefix `return ` to DIAGNOSE_JS and REMOVE_TZ_JS in worker-y8-preflight.py, to the exact diagnose JS in both executor briefs, and add the `return` rule to the eval line of the shared driver reference. No criterion, threshold, rubric, or procedure changed; only the instrument now returns the value the design always assumed it returned. New md5s are recorded in the run record before arm A. The failed 18:55:40 pre-flight consumed no retry budget (no valid pre-flight had run, no classification was made); the fresh pre-flight A runs after 19:05:40 +07, satisfying even a strict reading of the 10-minute pre-start retry wait. The fresh pre-flight doubles as the one live eval the fixed diagnose helper must pass before the suite trusts it (Y4d's lesson).
+
 Status: FROZEN v2, 2026-11-21 ~18:35 +07. Supersedes the DRAFT (commit e602ebb).
 Debated by Council 1 (5fb4e1d), Council 2 (42407f2), Council 3 (bba3340), Redteam (c9ff386).
 Reconciled by Worker Y8 from the evidence cited in those verdicts, not by vote count.

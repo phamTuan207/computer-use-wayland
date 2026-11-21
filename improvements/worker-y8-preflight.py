@@ -30,7 +30,7 @@ STEP = "/tmp/e1/step.sh"
 DEADLINE_S = 8.0
 POLL_S = 2.0
 
-DIAGNOSE_JS = """(function(){
+DIAGNOSE_JS = """return (function(){
   var cs = getComputedStyle(document.body);
   var hs = getComputedStyle(document.documentElement);
   var r = document.body.getBoundingClientRect();
@@ -56,7 +56,7 @@ DIAGNOSE_JS = """(function(){
 
 # Exact mirror of removeLoadingScreen: remove the class AND the inline
 # --zen-logo-path property it set. Diagnostic use only.
-REMOVE_TZ_JS = """(function(){
+REMOVE_TZ_JS = """return (function(){
   document.documentElement.classList.remove('tz-hidden');
   document.documentElement.style.removeProperty('--zen-logo-path');
   return document.documentElement.className;
