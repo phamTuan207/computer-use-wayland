@@ -557,3 +557,59 @@ in the repo worktree and /tmp test copies.
   passable live (no Y6c marker), so check_manifest/_scan_ship/
   _check_entry_pyc probed by AST-extraction only. Still waiting:
   Council 1, Council 2, Redteam, Verifier (4/5 running).
+
+01:14 +07 22/11 (T+2h18m) COUNCIL 1 ROUND-2 DONE, verdict AMEND.
+  Paper commit 1e49436 (improvements/worker-y13g-r2-council-1.md),
+  log follow-up ecadd31, both verified on origin via ls-remote.
+  Probes persistent under ~/workspace/y13g-r2-council-1/ (probe_r2.py,
+  probe_r2b.py, staged ships ship1/3a/b/c/4/4c/5b/6/8/9, repotree).
+  Pins hold: runner d5047ff5, launcher 8e72a5ce, manifest 7c763834
+  (27 files), run_live 84fa106c (pin 1e3901c holds). Findings F1-F8:
+  F1 (Medium-Low) runner docstring launch lines 103,105 still
+  `python3 launch_y13.py` without -P; probe P7 proves the exact form
+  exits 2 at the safe-path gate. R10 claim "runner docstring -P"
+  NOT fixed (same as round-1 C3-7/C1-F6). F2 (Medium-Low) launcher
+  -m guard runs AFTER _derive_ship_dir and cleans the derived dir,
+  not the file's dir (launch_y13.py:185,227): (a) -m from a repo-tree
+  copy exits with the new C3-1 message and leaves the .pyc behind
+  (P4a); (b) -m with --ship-dir elsewhere prints the guard message
+  but the real .pyc stays (P4c). Contradicts the B4 "no .pyc is left
+  behind" assertion. Fix: guard before derive, against
+  dirname(__file__). F3 (Low) SHIPPED.md "How to verify" omits the
+  Assign constants; literal method raises NameError:
+  _RUNNER_MODULE_NAMES on extensionless, -m, -m pdb inputs (P2c);
+  working method is extract_lib.py. (Overlaps C3-2 round-2.) F4
+  (Low) -c sink docs say "subprocess.*" but _SINKS covers only
+  call/run/Popen/check_output/check_call; subprocess.getoutput(...)
+  returns False (P6). F5 (Low) runner _verify_manifest comment
+  still says "two entry .pyc files (0, 1, or 2)"
+  (run_codex_y5.py:750); code has 3 stems. Tag-scope difference
+  there (current-tag only vs any-tag elsewhere) outcome-identical.
+  (Overlaps C3-5 round-2.) F6 (Low) plan Amend 4 / SHIPPED.md "a
+  repo-tree path refuses with..." holds only for the file-dir
+  branch; explicit --ship-dir at a repo tree is refused later as
+  tampered (different message, proven live). F7 (Low) R8 missed the
+  main() exec subprocess.run (launch_y13.py:1503), the only
+  unwrapped launcher call; a missing flock would exit 1 with a
+  traceback. F8 (Low) _check_entry_pyc marshal comparison is
+  filename-sensitive: a relative-path-compiled legitimate .pyc is
+  refused as forged (P3b); absolute py_compile, `import run_live`,
+  and stale-tag .pyc all verify+delete (P3a/P3c/P8).
+  Verified consistent: allowlist 29 = manifest 27 + manifest +
+  SHIPPED.md, identical in both files (P1b); tokenizer
+  AST-identical 14/14 (P1-AST14); guard stems 3/3 everywhere
+  (P1c); R2 composition (launcher scan + check_manifest exempt
+  top-level entry .pyc, _check_entry_pyc adjudicates, _scan_ship
+  backstops); symlinked __pycache__ refuses, sentinel survives;
+  R5 tampered run_live.py refused before import, import marker
+  never written (P9); write_token before check_token, after
+  go+marker; R7 remote normalization all 7 forms, --topo-order
+  present; R9 A8 6/6; R6 basename-only + reworded preflight;
+  regen reproduces manifest 7c763834, staged verify exit 0.
+  Council 1: no live run until F1 + F2 are fixed and re-verified;
+  F3-F8 can ride the same fix pass.
+  NOTE: verifier interim commit dec965c landed BEFORE this log
+  entry (A2/A4-unit/A8/A3/A6d/A7 results, "2 defects found, both
+  in _check_entry_pyc"). I have NOT yet read its detail; will read
+  improvements/worker-y13g-r2-verify-log.md before adjudication.
+  Still waiting: Council 2, Redteam, Verifier (3/5 running).
