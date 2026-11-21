@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Task 1, registration form</title></head>
+<body>
+<h1>Create account</h1>
+<form id="reg">
+  <label>Full name <input id="f-name" type="text"></label><br>
+  <label>Email <input id="f-email" type="text"></label><br>
+  <label>City <input id="f-city" type="text"></label><br>
+  <label>Country
+    <select id="f-country">
+      <option value="">Pick one</option>
+      <option value="VN">Vietnam</option>
+      <option value="JP">Japan</option>
+      <option value="DE">Germany</option>
+      <option value="BR">Brazil</option>
+    </select></label><br>
+  <label><input id="f-plan-pro" type="radio" name="plan" value="pro"> Pro plan</label>
+  <label><input id="f-plan-free" type="radio" name="plan" value="free"> Free plan</label><br>
+  <label><input id="f-agree" type="checkbox"> I agree to the terms</label><br>
+  <button id="f-submit" type="button">Register</button>
+</form>
+<div id="error" style="color:red"></div>
+<div id="success" style="display:none">
+  <h2 id="success-title"></h2>
+  <ul>
+    <li id="s-name"></li><li id="s-email"></li><li id="s-city"></li>
+    <li id="s-country"></li><li id="s-plan"></li>
+  </ul>
+</div>
+<script>
+document.getElementById('f-submit').addEventListener('click', function () {
+  var name = document.getElementById('f-name').value.trim();
+  var email = document.getElementById('f-email').value.trim();
+  var city = document.getElementById('f-city').value.trim();
+  var country = document.getElementById('f-country').value;
+  var plan = document.querySelector('input[name=plan]:checked');
+  var agree = document.getElementById('f-agree').checked;
+  var err = document.getElementById('error');
+  if (!name || email.indexOf('@') < 0 || !city || !country || !plan || !agree) {
+    err.textContent = 'Please complete every field with a valid email and agree to the terms.';
+    return;
+  }
+  err.textContent = '';
+  document.getElementById('success-title').textContent = 'Registered: ' + name;
+  document.getElementById('s-name').textContent = name;
+  document.getElementById('s-email').textContent = email;
+  document.getElementById('s-city').textContent = city;
+  document.getElementById('s-country').textContent = country;
+  document.getElementById('s-plan').textContent = plan.value;
+  document.getElementById('success').style.display = 'block';
+});
+</script>
+</body></html>

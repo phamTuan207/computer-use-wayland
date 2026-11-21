@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Task 6, cart</title></head>
+<body>
+<h1>Shop</h1>
+<div class="product"><span>Keyboard, 50.00</span> <button id="add-kbd" type="button">Add</button></div>
+<div class="product"><span>Mouse, 25.00</span> <button id="add-mouse" type="button">Add</button></div>
+<div class="product"><span>Stand, 40.00</span> <button id="add-stand" type="button">Add</button></div>
+<h2>Cart</h2>
+<div id="cart-lines"></div>
+<label>Discount code <input id="code" type="text"></label>
+<button id="apply-code" type="button">Apply</button>
+<div id="code-msg"></div>
+<div>Subtotal: <span id="subtotal">0.00</span></div>
+<div>Discount: <span id="discount">0.00</span></div>
+<div>Total: <span id="total">0.00</span></div>
+<script>
+var PRICES = { kbd: 50.00, mouse: 25.00, stand: 40.00 };
+var NAMES = { kbd: 'Keyboard', mouse: 'Mouse', stand: 'Stand' };
+var cart = {};
+var appliedCode = '';
+function money(x) { return x.toFixed(2); }
+function render() {
+  var lines = document.getElementById('cart-lines');
+  lines.innerHTML = '';
+  var sub = 0;
+  Object.keys(cart).forEach(function (k) {
+    sub += PRICES[k] * cart[k];
+    var div = document.createElement('div');
+    div.className = 'line';
+    div.innerHTML = NAMES[k] + ' x ' + cart[k] +
+      ' <button data-dec="' + k + '" type="button">-</button>' +
+      ' <button data-inc="' + k + '" type="button">+</button>';
+    lines.appendChild(div);
+  });
+  var disc = appliedCode === 'SAVE10' ? sub * 0.10 : 0;
+  document.getElementById('subtotal').textContent = money(sub);
+  document.getElementById('discount').textContent = money(disc);
+  document.getElementById('total').textContent = money(sub - disc);
+  lines.querySelectorAll('button[data-inc]').forEach(function (b) {
+    b.addEventListener('click', function () { cart[b.getAttribute('data-inc')] += 1; render(); });
+  });
+  lines.querySelectorAll('button[data-dec]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var k = b.getAttribute('data-dec');
+      cart[k] -= 1; if (cart[k] <= 0) { delete cart[k]; }
+      render();
+    });
+  });
+}
+['kbd', 'mouse', 'stand'].forEach(function (k) {
+  document.getElementById('add-' + k).addEventListener('click', function () {
+    cart[k] = (cart[k] || 0) + 1; render();
+  });
+});
+document.getElementById('apply-code').addEventListener('click', function () {
+  var v = document.getElementById('code').value.trim();
+  if (v === 'SAVE10') { appliedCode = v; document.getElementById('code-msg').textContent = 'Code applied: 10 percent off.'; }
+  else { appliedCode = ''; document.getElementById('code-msg').textContent = 'Invalid code.'; }
+  render();
+});
+render();
+</script>
+</body></html>

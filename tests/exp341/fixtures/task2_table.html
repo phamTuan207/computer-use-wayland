@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Task 2, orders table</title></head>
+<body>
+<h1>Orders</h1>
+<label>Category
+  <select id="filter-cat">
+    <option value="all">All</option>
+    <option value="Books">Books</option>
+    <option value="Games">Games</option>
+    <option value="Music">Music</option>
+  </select></label>
+<button id="sort-amount" type="button">Sort by amount, high to low</button>
+<table id="orders">
+  <thead><tr><th>Item</th><th>Category</th><th>Amount</th></tr></thead>
+  <tbody id="rows"></tbody>
+</table>
+<div id="visible-count"></div>
+<script>
+var DATA = [
+  ['Novel A', 'Books', 45], ['Chess Set', 'Games', 60],
+  ['Novel B', 'Books', 30], ['Vinyl LP', 'Music', 80],
+  ['Textbook', 'Books', 120], ['Puzzle', 'Games', 25],
+  ['Poetry', 'Books', 15], ['Guitar Picks', 'Music', 10],
+  ['Atlas', 'Books', 90], ['Card Game', 'Games', 40],
+  ['Drum Pad', 'Music', 150], ['Comic', 'Books', 55]
+];
+var tbody = document.getElementById('rows');
+function render(list) {
+  tbody.innerHTML = '';
+  list.forEach(function (r) {
+    var tr = document.createElement('tr');
+    tr.innerHTML = '<td>' + r[0] + '</td><td>' + r[1] + '</td><td class="amt">' + r[2] + '</td>';
+    tbody.appendChild(tr);
+  });
+  document.getElementById('visible-count').textContent = 'Showing ' + list.length + ' rows';
+}
+render(DATA);
+document.getElementById('filter-cat').addEventListener('change', function () {
+  var cat = this.value;
+  render(cat === 'all' ? DATA : DATA.filter(function (r) { return r[1] === cat; }));
+});
+document.getElementById('sort-amount').addEventListener('click', function () {
+  var rows = Array.prototype.map.call(tbody.querySelectorAll('tr'), function (tr) {
+    var td = tr.querySelectorAll('td');
+    return [td[0].textContent, td[1].textContent, parseInt(td[2].textContent, 10)];
+  });
+  rows.sort(function (a, b) { return b[2] - a[2]; });
+  render(rows);
+});
+</script>
+</body></html>
