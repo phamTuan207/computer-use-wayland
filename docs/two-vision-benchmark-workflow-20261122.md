@@ -72,9 +72,10 @@ tests/two_vision_fixture.html.
 
 ## 4. Files
 
-- tests/two_vision_bench.py: the benchmark script (783 lines after
-  the fix pass, commit 7e81213; first built in commit 072e060, fixes
-  9196744, fix pass 7e81213).
+- tests/two_vision_bench.py: the benchmark script (862 lines after
+  the batch 9 task 2 fix pass, commit 9a15647; first built in
+  commit 072e060, fixes 9196744, fix pass 7e81213, plan
+  validation 9a15647).
 - tests/two_vision_fixture.html: local chat fixture. One page per
   clone (?clone=1, ?clone=2). A message input, a Send button, a
   thread div. Enter or Send appends a bubble with the typed text.
@@ -376,10 +377,16 @@ plans preserved in ~/workspace/tools/two_vision_b9t2/, 41 files):
   nothing, no browser started.
 
 No drift found in this re-check: the script on main is still 783
-lines, the doc's line counts (783 script, 379 doc), default
-workdir (/tmp/two_vision_bench), gate behavior, contenteditable
-check, id-less refs, scroll-first guard, v12-timeout retry block
-and --instances two refusal all match the code as read. The
+lines, default workdir (/tmp/two_vision_bench), gate behavior,
+contenteditable check, id-less refs, scroll-first guard, v12-timeout
+retry block and --instances two refusal all match the code as read.
+(The first sentence originally also cited this doc's own line count
+as 379; the doc was 547 lines at commit e6ecdea, and the
+self-referential count is dropped here because a doc stating its own
+length goes stale on every edit. The task 2 agent's report also
+stated 548 lines; the correct figure is 547. The script count is
+also historical: the script is 862 lines after the fix pass in
+commit 9a15647; see the fix-pass paragraph below.) The
 preserved fix-pass numbers in this section recompute exactly from
 ~/workspace/tools/two_vision_fixpass/ (fix2 PASS 8.4457 s, fix2-ce
 PASS 6.6076 s, fix2-noid PASS 5.4565 s, fix2-belowfold PASS
@@ -394,6 +401,61 @@ benchmark's own stale profiles plus stale .xpi files (no live
 Firefox running at the time). Other agents' /tmp material was left
 untouched. Delete the profile/ dir under each run workdir after the
 run to avoid repeating this.
+
+Fix pass (batch 9 task 2, commit 9a15647, script only). The council
+and redteam review of this re-check found four false-PASS holes in
+the script, all fixed here and verified live on the fixture:
+(1) validate_plan runs before any browser starts and requires
+exactly 2 windows, distinct URLs, a non-empty run_id, and a
+message for each window label; an empty plan used to report PASS
+(0 sent == 0 windows), a one-window plan PASSED with one message,
+and two windows on the same URL PASSED with both messages in one
+thread. (2) Plan file:// URLs are normalized (os.path.normpath)
+before the live gate, so a ".." path can no longer pass the gate
+textually while pointing outside tests/. (3) The outcome rule now
+requires exactly 2 sent AND exactly 2 windows. The old 3-window
+stop plan (b9t2-stop) is now refused by the exactly-2-windows
+rule; the stop test below uses a 2-window plan instead.
+
+Fix-pass verification runs (2026-11-21T21:54:35Z to 21:55:43Z, same
+machine, headless Firefox 160.0.1, repo venv python, artifacts in
+~/workspace/tools/two_vision_b9t2_fix/, profiles deleted after):
+
+- Happy path (fix-happy): PASS, wall 8.0933 s. Launch 1.2636 s,
+  attach 4.5709 s (slower than the 2.65 to 2.79 s range; contended
+  shared VM, same shape, not a defect), harvest 0.0901 s and
+  0.0065 s for 4 elements each, sends 0.5303 s and 0.6443 s.
+  Both V12 gates passed.
+- Empty plan (fix-empty): REFUSED exit 2, "plan needs exactly 2
+  windows (got 0)", no browser started.
+- One-window plan (fix-one): REFUSED exit 2, "plan needs exactly
+  2 windows (got 1)", no browser started.
+- Same-URL plan (fix-sameurl, both windows on
+  ?clone=1): REFUSED exit 2, "the two plan windows must point at
+  different URLs", no browser started.
+- ".." path plan (fix-dotdot, one URL
+  tests/../../tmp/rt-bypass.html): REFUSED exit 2 by the URL gate
+  (normalized URL outside tests/), no browser started. The
+  redteam repro (both messages sent, outcome PASS) no longer
+  reproduces.
+- Stop-at-first-failure, 2-window plan (fix-stop2, wrong thread
+  selector for clone2): FAIL as designed, wall 10.1698 s. Clone1
+  sent, clone2 failed v12-timeout, no clone3 step exists anymore.
+- Harvest-only (fix-harvest): HARVEST-ONLY, wall 5.1561 s, 4
+  elements per window.
+- Exactly-once driver (fix-once): PASS, wall 5.8881 s. Call 1 sent
+  in 0.5481 s, 1 bubble; call 2 skipped-already-sent in 0.0038 s,
+  still 1 bubble.
+
+NOT fixed in the script, recorded as an open item in section 10.3:
+reusing a run_id on a live thread reports PASS with zero new sends
+(redteam finding 4). The message text is derived from run_id and
+the V12 pre-check counts a bubble already in the thread as sent, so
+a reused run_id on a persistent live thread skips both sends and
+still passes. Fixture threads do not persist across fresh page
+loads, so this cannot be reproduced on the fixture; it follows from
+the code. The checklist now requires verifying the run_id is fresh
+against both live threads before the run.
 
 ## 8. Known gaps (F5/D1-D6, TODOs, from the combined design)
 
@@ -434,6 +496,11 @@ must not claim them done.
   getBoundingClientRect directly, the same shape as the batch 7
   bench. Live Zen clicks need the C12 adjudication (batch 8 task 3)
   before the coordinates can be trusted on the laptop.
+- ensure_visible scrolls only for vertical out-of-view (center
+  above or below the viewport); horizontal out-of-view is not
+  handled. Fail-closed via the HCU hit test, so not a hole, but a
+  live target off the side of the viewport would fail the guard
+  instead of scrolling into view.
 
 ## 10. Live-run prerequisites checklist (added batch 9 task 2)
 
@@ -444,20 +511,40 @@ coordinator says run, and this script has never run live.
 ### 10.1 Workspace state (check before anything else)
 
 - [ ] Repo on main, script tests/two_vision_bench.py at the
-  reviewed commit (783 lines after the fix pass, commit 7e81213).
-  Run `git log --oneline -1 -- tests/two_vision_bench.py` and
-  confirm no unreviewed change sits on top of it.
+  reviewed commit (862 lines after the batch 9 task 2 fix pass,
+  commit 9a15647). Run `git log --oneline -1 --
+  tests/two_vision_bench.py` and confirm it prints 9a15647: any
+  other hash means an unreviewed change sits on top of it.
+- [ ] BLOCKER, open: the script launches its own fresh headless
+  Firefox with a fresh profile (main() calls launch_browser; no
+  attach-to-existing-browser option, no profile reuse, no login
+  step anywhere in the argument list), so it cannot use the laptop
+  Zen's login state.
+  A fresh profile is logged out of Messenger, so a live run as
+  specified would hit the login wall and FAIL with
+  no-message-input-in-inventory (fail-closed and safe, but not a
+  passing run). The live run needs an attach-to-Zen mode (not
+  implemented) or a logged-in profile / login step before it can
+  pass. Until one exists, do NOT present Zen login as the
+  readiness condition. One profile holds one Messenger session,
+  so both windows in the one-instance shape share the same login;
+  the two clones are two threads under one account in this shape.
+  The run machine must have the Firefox binary, geckodriver and
+  venv at the script's hardcoded paths (FF and GD in the script
+  header, lines 49-50).
 - [ ] The live lane is free: no BASELINE2 or other live run is
   running, and no other agent holds the laptop browser. Confirm
   with the coordinator; do not guess.
 - [ ] The installed laptop code is still the pre-amend code if a
   baseline is still owed. Do not sync the amend over the laptop
   before the baseline runs.
-- [ ] The C12 adjudication (batch 8 task 3) is settled for the
-  window the live run uses: viewport_origin is confirmed absolute
-  or window-relative, and the click coordinates are trusted on
-  that geometry. If C12 is still open, the live run measures the
-  wrong thing.
+- [ ] The C12 adjudication (batch 8 task 3) does NOT apply to
+  this script's clicks and is NOT a prerequisite for this run:
+  section 9 states the C12 conversion layer is not used here
+  (clicks use getBoundingClientRect viewport coordinates
+  directly), so requiring C12 settled would block a run that does
+  not need it. C12 applies only to a future Zen-attached variant
+  whose clicks go through the conversion layer.
 - [ ] /tmp has room (512M tmpfs; check `df -h /tmp`) and ports
   2828 and 9223 are free on the run machine. A stale browser
   holding either port makes launch_browser refuse.
@@ -469,14 +556,25 @@ coordinator says run, and this script has never run live.
 
 - [ ] The coordinator supplies the two real thread URLs, one per
   clone window, plus the thread selector and bubble selector for
-  each. The script cannot invent them; a wrong selector fails the
-  V12 gate loudly (fail-closed), and a wrong selector that cannot
-  see a landed bubble is exactly the case the retry block exists
-  for.
-- [ ] Both clones are logged in on the laptop Zen and both threads
-  open and reachable before the run starts. If either thread is
-  unreachable, abort before starting: do not start a live run
-  with a half-known target.
+  each. The two URLs must differ: the script now refuses a plan
+  whose two windows point at the same URL, because both messages
+  would land in one thread and still report PASS. The script
+  cannot invent selectors; a wrong selector fails the V12 gate
+  loudly, but only after the message was already typed; a
+  typed-but-unseen message is exactly what the retry block and
+  the hand-check exist for.
+- [ ] Both threads are open and reachable before the run starts.
+  If either thread is unreachable, abort before starting: do not
+  start a live run with a half-known target. (The laptop Zen
+  login is NOT the readiness condition: the script drives its own
+  fresh Firefox, never the laptop Zen; see the blocker item in
+  10.1. What matters is the script's own browser's Messenger
+  session, which does not exist yet.)
+- [ ] Run --mode harvest with the live plan first, before any
+  send run: confirm both inputs are visible and the thread
+  container resolves against the real threads. Wrong selectors
+  are the proven typed-but-unseen failure mode, and this cheap
+  pre-check catches them before any typing.
 - [ ] The message input in each thread is a contenteditable
   textbox (the Messenger input type). The script's V1 check reads
   innerText for contenteditable elements; if a thread's input is
@@ -491,6 +589,16 @@ coordinator says run, and this script has never run live.
 - [ ] The plan JSON carries a unique run_id (for example
   bench-20261122-001) and the two messages in exactly this form:
   "BENCH-TEST clone1 <run_id>" and "BENCH-TEST clone2 <run_id>".
+  Verify the run_id is fresh before the run: check both live
+  threads for an existing bubble with that text. The message text
+  is derived from run_id, and the script's V12 pre-check returns
+  skipped-already-sent whenever the bubble is already in the
+  thread, which the outcome counts as sent, so reusing a run_id
+  on a live thread reports PASS with zero new sends. The script
+  does not check run_id against thread history (open item, not
+  fixed: fixture threads do not persist, so it cannot be
+  reproduced on the fixture). Use a fresh run_id per live attempt
+  and never re-run with the same run_id.
 - [ ] Test messages are bench strings only. Never put real user
   text, names, or personal information in a plan, inventory,
   ledger, log, or result file.
@@ -516,7 +624,10 @@ coordinator says run, and this script has never run live.
   thread (M1), never by point-in-box.
 - [ ] Overall: PASS iff both messages land. Any single failed
   step makes the run FAIL; the chain stops at the first failure
-  and later steps are recorded not-executed.
+  and later steps are recorded not-executed. The script now
+  refuses any plan that is not exactly 2 windows with distinct
+  URLs, before the browser starts, so an empty or one-window
+  plan cannot report PASS.
 - [ ] Per-step failure meanings are in section 6. A
   value-mismatch means nothing was sent (Enter was not pressed);
   a v12-timeout means the message may have been typed and may
