@@ -170,6 +170,21 @@ class FakeZenSession:
         armed = self._armed.get(selector)
         return field.get('value') != armed
 
+    def locate(self, selector):
+        # Grounding reads the field rect (G30 shape); a field with
+        # no rect is not groundable, exactly like a missing element.
+        field = self.fields.get(selector)
+        if field is None:
+            return None
+        return field.get('rect')
+
+    def viewport_origin(self, *args):
+        # The window origin of the G30-shaped observation below.
+        return [2533, 914]
+
+    def hit_check(self, selector):
+        return selector in self.fields
+
     def verify_typed(self, selector, expected, before=None):
         field = self.fields.get(selector)
         if not field:
@@ -489,6 +504,57 @@ class TestRun(unittest.TestCase):
         self.assertFalse(kwargs['type_check']()[0])
         fields['#msg-input']['value'] = 'hello'
         self.assertEqual(kwargs['type_check'](), (True, None))
+
+    def test_fallback_with_window_observation_supplies_ranges(self):
+        # AMEND4 item 9 (C2 A3): with a window-scope observation and
+        # a groundable field, first_action supplies the grounded
+        # x-range and y-range to the fallback desktop_act, so the
+        # band reads only that field. A screen-scope observation (no
+        # window_bounds) supplies no ranges, which the companion
+        # test above pins by omission.
+        import dom_act
+        fields = {'#msg-input': {
+            'value': None, 'focused': True,
+            'rect': {'x': 86, 'y': 1101, 'width': 440, 'height': 63}}}
+        fake_session = FakeZenSession(fields)
+        fake_zen_dom = mock.Mock()
+        fake_zen_dom.ZenSession = lambda *a, **k: fake_session
+        saved_zen_dom = sys.modules.get('zen_dom')
+        saved_dom_act = sys.modules.get('dom_act')
+        sys.modules['zen_dom'] = fake_zen_dom
+        sys.modules['dom_act'] = dom_act
+        obs_path = Path(self.tmp.name) / 'obs-window.json'
+        obs_path.write_text(json.dumps({
+            'id': 'obs-window-1',
+            'image': str(Path(self.tmp.name) / 'obs.jpg'),
+            'monitor_box': [0, 0, 1920, 1200],
+            'created': time.time(),
+            'image_size': [901, 1176],
+            'region': [2533, 914, 901, 1176],
+            'window_bounds': [2533, 914, 901, 1176]}))
+        try:
+            code, env, _ = self._run(
+                [{'type': 'click', 'x': 10, 'y': 10},
+                 {'type': 'type', 'text': 'hello'}],
+                (1, '{"ok": false, "error": "session guardian startup failed"}',
+                 '', False, 0.4),
+                dom_selector='#msg-input', observation=str(obs_path))
+        finally:
+            if saved_zen_dom is None:
+                sys.modules.pop('zen_dom', None)
+            else:
+                sys.modules['zen_dom'] = saved_zen_dom
+            if saved_dom_act is None:
+                sys.modules.pop('dom_act', None)
+            else:
+                sys.modules['dom_act'] = saved_dom_act
+        self.assertEqual(code, 0)
+        self.assertEqual(env['path'], 'fallback')
+        self.assertEqual(env['dom_hooks'], 'dom-value')
+        self.assertEqual(len(self.fake_cu.desktop_calls), 1)
+        kwargs = self.fake_cu.desktop_kwargs[0]
+        self.assertEqual(kwargs.get('type_x_ranges'), [[86.0, 526.0]])
+        self.assertEqual(kwargs.get('type_y_ranges'), [[1101.0, 1164.0]])
 
     def test_fallback_without_dom_selector_passes_no_hooks(self):
         # No --dom-selector: the fallback batch runs exactly as

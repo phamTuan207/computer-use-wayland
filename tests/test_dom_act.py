@@ -254,6 +254,19 @@ class GroundInputTests(unittest.TestCase):
         # band instead of a bogus range.
         self.assertIsNone(dom_act.grounded_y_range(ground, {}))
 
+    def test_grounded_x_range_is_field_x_in_image_px(self):
+        # AMEND4 item 9 (C2 A3): the grounded x-range is the field's
+        # x span in image px, mirroring the y-range test. G30 field
+        # rect x 86..526, point x 306, image and region map 1:1, so
+        # the range is exactly the rect.
+        session = FakeDomSession({'#msg-input': G30_FIELD})
+        ground = dom_act.ground_input(session, G30_META, '#msg-input')
+        self.assertEqual(dom_act.grounded_x_range(ground, G30_META),
+                         [86.0, 526.0])
+        # A meta that cannot map the rect keeps the full-width band
+        # instead of a bogus range.
+        self.assertIsNone(dom_act.grounded_x_range(ground, {}))
+
     def test_ground_input_refuses_meta_without_window_bounds(self):
         # AMEND4 item 5 (F2): a screen-scope meta carries no
         # window_bounds, and falling back to the region origin
@@ -404,6 +417,25 @@ class FocusTypeTests(unittest.TestCase):
         self.assertEqual(act.typed, ['hello'])
         self.assertEqual([a['type'] for a in act.executed],
                          ['click', 'type', 'key'])
+
+    def test_focus_type_forwards_grounded_ranges_to_act_fn(self):
+        # AMEND4 item 9 (C2 A3): focus_type must forward the grounded
+        # field's x-range and y-range to the act_fn, so the band in
+        # desktop_act reads only that field. A wrapper that accepted
+        # and ignored the ranges would let a silent drop through.
+        session = FakeDomSession({'#msg-input': G30_FIELD})
+        inner = FakeAct(session)
+        seen = {}
+
+        def recording_act(meta, actions, **kwargs):
+            seen.update(kwargs)
+            return inner(meta, actions, **kwargs)
+
+        result = dom_act.focus_type(session, recording_act, G30_META,
+                                    '#msg-input', 'hello')
+        self.assertTrue(result['ok'])
+        self.assertEqual(seen.get('type_x_ranges'), [[86.0, 526.0]])
+        self.assertEqual(seen.get('type_y_ranges'), [[1101.0, 1164.0]])
 
     def test_click_miss_never_types(self):
         missed = dict(G30_FIELD, focused=False)
