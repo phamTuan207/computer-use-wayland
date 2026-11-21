@@ -48,7 +48,7 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
-DEFAULT_ENDPOINT = "http://127.0.0.1:9222"
+DEFAULT_ENDPOINT = "http://127.0.0.1:9223"
 DEFAULT_STATE_DIR = Path.home() / ".local" / "share" / "agent-computer-use"
 STATE_FILENAME = "warm-browser.json"
 LOG_FILENAME = "warm-browser.log"
@@ -207,7 +207,7 @@ def _launch_chromium(endpoint, profile, state_dir, env=None):
     prototype probe uses. The headed default matches browser_start.
     """
     url = urllib.parse.urlparse(endpoint)
-    port = url.port or 9222
+    port = url.port or 9223
     profile = Path(profile)
     profile.mkdir(parents=True, exist_ok=True, mode=0o700)
     log_path = Path(state_dir) / LOG_FILENAME
@@ -798,7 +798,7 @@ def _build_parser():
         prog="warm_browser",
         description="Warm Chromium manager: one process, fresh context per task.")
     parser.add_argument("--endpoint", default=None,
-                        help="CDP endpoint (default $CU_WARM_BROWSER_ENDPOINT or 127.0.0.1:9222)")
+                        help="CDP endpoint (default $CU_WARM_BROWSER_ENDPOINT or 127.0.0.1:9223)")
     parser.add_argument("--state-dir", default=None,
                         help="state dir (default $CU_WARM_BROWSER_STATE_DIR)")
     parser.add_argument("--profile", default=None,

@@ -62,13 +62,14 @@ def relay(source, sink):
     browser=cu.browser;worker=BrowserWorker()
     # The browser endpoint default is session state, scoped exactly like the
     # browser executor above: one serial relay session starts from the
-    # standalone CLI default (9222) and never inherits a previous session's
+    # standalone CLI default (9223, the agent Chromium; 9222 is Zen's
+    # BiDi port) and never inherits a previous session's
     # retained endpoint; the enclosing process default is restored in the
     # finally block even when a command raises. No concurrent relay support.
     endpoint=cu.BROWSER_ENDPOINT
     try:
         cu.browser=worker.request
-        cu.BROWSER_ENDPOINT='http://127.0.0.1:9222'
+        cu.BROWSER_ENDPOINT='http://127.0.0.1:9223'
         return relay_commands(source,sink)
     finally:
         cu.browser=browser

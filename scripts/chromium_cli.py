@@ -12,7 +12,7 @@ Reading a page's DOM still goes through
 full WebSocket side; this file's client does one call only.
 
 Endpoint rule (same as `computer-use browser start`): the default
-endpoint is http://127.0.0.1:9222, the agent-managed Chromium. Pham
+endpoint is http://127.0.0.1:9223, the agent-managed Chromium. Pham
 Tuan's own Chromium runs WITHOUT a remote debugging port (verified
 2026-11-18: no DevToolsActivePort file, nothing listening on 9222), so
 this wrapper can never attach to his session. If no endpoint answers,
@@ -52,7 +52,7 @@ Commands (each prints exactly one JSON object on stdout):
                               version, profile and History presence.
                               Always exits 0; check `reachable`.
 
-Global flags: --endpoint URL (default http://127.0.0.1:9222),
+Global flags: --endpoint URL (default http://127.0.0.1:9223),
 --profile DIR (default ~/.config/chromium/Default).
 Exit 0 on success, 1 on error. No REPL mode, no shell, argv only.
 """
@@ -75,7 +75,7 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
-DEFAULT_ENDPOINT = "http://127.0.0.1:9222"
+DEFAULT_ENDPOINT = "http://127.0.0.1:9223"
 DEFAULT_PROFILE = Path.home() / ".config" / "chromium" / "Default"
 STATE_PATH = (Path.home() / ".local" / "share" / "agent-computer-use"
               / "chromium-cli-state.json")
