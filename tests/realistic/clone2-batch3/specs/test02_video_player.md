@@ -49,6 +49,27 @@ Test: tests/test02_video_player.py
 - Loading a playlist item resets the time to zero and pauses.
 - Every check in the test passes.
 
+## Interaction note
+
+How each control is operated, stated plainly:
+
+- Play and pause toggle, mute and unmute button, and the playlist
+  items: real mouse clicks.
+- Seek slider and volume slider: real keyboard input. The test
+  clicks the slider to focus it (that click also moves the value
+  to the clicked position), reads the live value back, then sends
+  exactly the number of arrow key presses needed to reach the
+  target, one press per unit because both sliders have step 1.
+  The final slider value is verified after the keys.
+- Speed select and subtitles select: the Selenium Select class,
+  select_by_value, which is a real WebDriver interaction and
+  fires the native change event.
+- No control is set by script value assignment with synthetic
+  events. An earlier version of this test did exactly that for
+  the sliders and the selects; the council and redteam flagged
+  it as undisclosed, and this fix replaced it with the real
+  interactions above. The fixture was not changed.
+
 ## Timing
 
 Filled after the verification run on the clone2 machine, headless
@@ -64,3 +85,17 @@ Firefox, 2026-11-21:
   seconds at speed 1, and 2.40 s of video time in about 1.2 real
   seconds at speed 2, an exact 2.0 ratio against the 1.5 minimum
   the test asserts
+
+Fix verification run, after the interaction fix described above,
+clone2 machine, headless Firefox, 2026-11-21:
+
+- RESULT ok: true
+- Step count: 21, including browser_start, unchanged
+- Checks: 32, all passing, unchanged
+- Total elapsed: 15.2566 s, of which browser start was 6.4645 s
+- Measured playback on this run: 1.30 s of video time in about
+  1.2 real seconds at speed 1, and 2.40 s at speed 2, a ratio of
+  about 1.85 against the 1.5 minimum the test asserts
+- Two further post fix runs on the same day also passed with the
+  same 21 steps and 32 checks, at 9.3965 s and 10.9153 s total
+  elapsed

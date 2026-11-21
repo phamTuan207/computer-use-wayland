@@ -6,6 +6,12 @@ play, pause, seek, volume, mute, playback speed, subtitles in two
 languages, and a 3 item playlist, verifying DOM state after every
 action. Playback is a JS clock in the fixture, no real media.
 Timing assertions use tolerant ranges so the test is not flaky.
+
+Interactions are real WebDriver input throughout: buttons and
+playlist items are clicked, the two selects are operated with the
+Selenium Select class, and the seek and volume sliders are set
+with real arrow key presses after a focusing click. No control is
+set by script value assignment.
 """
 
 import sys
@@ -14,6 +20,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from harness import BrowserCase, fixture_uri
+
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.support.ui import Select
 
 EN_CAPTION = "This segment explains the basics."
 VI_CAPTION = "Phan nay giai thich cac kien thuc co ban."
@@ -31,21 +40,32 @@ def text_of(driver, element_id):
     return driver.find_element("id", element_id).text
 
 
-def set_range(driver, element_id, value):
-    driver.execute_script(
-        "var el = document.getElementById(arguments[0]);"
-        "el.value = arguments[1];"
-        "el.dispatchEvent(new Event('input', {bubbles: true}));"
-        "el.dispatchEvent(new Event('change', {bubbles: true}));",
-        element_id, str(value))
+def set_range(driver, element_id, target):
+    """Set a range slider with real keyboard input.
+
+    Clicking a range input focuses it and also moves its value to
+    the clicked position, so read the live value after the click
+    and send exactly the arrow keys needed to reach the target.
+    Both fixture sliders have step 1, so one key press per unit.
+    Each key press fires the native input event the fixture
+    listens to, exactly as a user pressing the keys would.
+    """
+    el = driver.find_element("id", element_id)
+    el.click()
+    current = int(float(el.get_attribute("value")))
+    delta = int(target) - current
+    if delta > 0:
+        el.send_keys(Keys.ARROW_RIGHT * delta)
+    elif delta < 0:
+        el.send_keys(Keys.ARROW_LEFT * (-delta))
+    actual = int(float(el.get_attribute("value")))
+    if actual != int(target):
+        raise AssertionError(
+            f"slider {element_id} ended at {actual}, wanted {target}")
 
 
 def set_select(driver, element_id, value):
-    driver.execute_script(
-        "var el = document.getElementById(arguments[0]);"
-        "el.value = arguments[1];"
-        "el.dispatchEvent(new Event('change', {bubbles: true}));",
-        element_id, value)
+    Select(driver.find_element("id", element_id)).select_by_value(value)
 
 
 def main():
