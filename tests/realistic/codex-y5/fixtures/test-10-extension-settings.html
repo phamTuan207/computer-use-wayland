@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Extension Control Center</title>
+  <style>
+    *{box-sizing:border-box}body{margin:0;padding:25px;background:#eaf0f8;color:#253244;font:14px system-ui,sans-serif}.app{max-width:900px;margin:auto;background:white;border:1px solid #d0dbe8;border-radius:12px;overflow:hidden;box-shadow:0 8px 24px #18304b16}header{padding:18px 22px;background:#254a73;color:white;display:flex;justify-content:space-between;align-items:center}h1{margin:0;font-size:20px}.badge{padding:7px 10px;border-radius:6px;background:#315c88}.badge b{color:#fff}nav{display:flex;gap:8px;padding:12px 20px;background:#f4f7fb;border-bottom:1px solid #dce4ed}button,select{font:inherit;padding:8px 11px;border:1px solid #aebfd1;border-radius:5px;background:white;color:#26364a;cursor:pointer}button.primary{background:#326da4;color:white;border-color:#326da4}main{padding:20px}.panel{padding:17px;border:1px solid #d9e2ec;border-radius:8px;margin-bottom:13px;background:#fcfdff}.panel h2{margin:0 0 13px;font-size:16px}.row{display:flex;gap:10px;align-items:center;margin:11px 0;flex-wrap:wrap}.site{display:grid;grid-template-columns:1fr 180px;gap:12px;align-items:center;padding:11px 0;border-bottom:1px solid #e5ebf2}.site small{display:block;color:#65778b;margin-top:3px}.status{padding:9px;background:#eef4fa;color:#315b7f;border-radius:5px;min-height:35px}.subtle{color:#687c91}input[type=checkbox]{width:18px;height:18px;accent-color:#326da4}
+  </style>
+</head>
+<body>
+<div class="app">
+  <header><h1>Extension Control Center</h1><div class="badge">Status: <b id="extension-enabled-state">Disabled</b></div></header>
+  <nav><button id="btn-open-sites">Site access</button><button id="btn-open-options">Options page</button><button id="btn-reload-settings">Reload settings</button></nav>
+  <main>
+    <section class="panel"><h2>Extension</h2><div class="row"><label><input id="extension-toggle" type="checkbox"> Enable Clean Page</label><button id="btn-toggle-extension" class="primary">Toggle extension</button></div><div id="extension-persistence-status" class="status">Not reloaded</div></section>
+    <section id="site-access-page" class="panel" hidden><h2>Site access</h2><div class="site"><div>Calendar Board<small>calendar.example.test</small></div><select id="site-calendar-select"><option>Ask</option><option>Allow</option><option>Block</option></select></div><div class="site"><div>Drive Board<small>drive.example.test</small></div><select id="site-drive-select"><option>Ask</option><option>Allow</option><option>Block</option></select></div><div class="row"><button id="btn-save-site-permissions">Save site permissions</button></div><div>Calendar permission: <b id="site-calendar-permission">Ask</b></div><div>Drive permission: <b id="site-drive-permission">Ask</b></div></section>
+    <section id="options-page" class="panel" hidden><h2>Clean Page options</h2><div class="row"><label><input id="option-notify-toggle" type="checkbox" checked> Show cleanup notices</label><b id="option-notify-state">On</b></div><div class="row"><label><input id="option-auto-update-toggle" type="checkbox" checked> Update filter lists automatically</label><b id="option-auto-update-state">On</b></div><div class="row"><button id="btn-save-options">Save options</button><button id="btn-reset-defaults">Reset to defaults</button></div><div id="options-save-status" class="status">Not saved</div></section>
+  </main>
+</div>
+<script>
+  const defaults = { enabled: true, calendar: 'Ask', drive: 'Ask', notify: true, autoUpdate: true, saveStatus: 'Not saved' };
+  const storageKey = 'codex-y5-extension-settings';
+  let settings = { enabled: false, calendar: 'Ask', drive: 'Ask', notify: true, autoUpdate: true, saveStatus: 'Not saved' };
+  let restored = false;
+  try {
+    const stored = sessionStorage.getItem(storageKey);
+    if (stored) { settings = { ...settings, ...JSON.parse(stored) }; restored = true; }
+  } catch {}
+  const el = (selector) => document.querySelector(selector);
+  function save(status) {
+    settings.enabled = el('#extension-toggle').checked;
+    settings.calendar = el('#site-calendar-select').value;
+    settings.drive = el('#site-drive-select').value;
+    settings.notify = el('#option-notify-toggle').checked;
+    settings.autoUpdate = el('#option-auto-update-toggle').checked;
+    settings.saveStatus = status;
+    sessionStorage.setItem(storageKey, JSON.stringify(settings));
+  }
+  function render() {
+    el('#extension-toggle').checked = settings.enabled;
+    el('#extension-enabled-state').textContent = settings.enabled ? 'Enabled' : 'Disabled';
+    el('#site-calendar-select').value = settings.calendar;
+    el('#site-drive-select').value = settings.drive;
+    el('#site-calendar-permission').textContent = settings.calendar;
+    el('#site-drive-permission').textContent = settings.drive;
+    el('#option-notify-toggle').checked = settings.notify;
+    el('#option-auto-update-toggle').checked = settings.autoUpdate;
+    el('#option-notify-state').textContent = settings.notify ? 'On' : 'Off';
+    el('#option-auto-update-state').textContent = settings.autoUpdate ? 'On' : 'Off';
+    el('#options-save-status').textContent = settings.saveStatus;
+    el('#extension-persistence-status').textContent = restored ? 'State restored after reload' : 'Not reloaded';
+  }
+  el('#btn-open-sites').onclick = () => { el('#site-access-page').hidden = false; el('#options-page').hidden = true; };
+  el('#btn-open-options').onclick = () => { el('#options-page').hidden = false; el('#site-access-page').hidden = true; };
+  el('#btn-toggle-extension').onclick = () => {
+    el('#extension-toggle').checked = !el('#extension-toggle').checked;
+    settings.enabled = el('#extension-toggle').checked;
+    save('Extension state saved');
+    render();
+  };
+  el('#extension-toggle').onchange = () => {
+    settings.enabled = el('#extension-toggle').checked;
+    el('#extension-enabled-state').textContent = settings.enabled ? 'Enabled' : 'Disabled';
+  };
+  el('#option-notify-toggle').onchange = () => {
+    el('#option-notify-state').textContent = el('#option-notify-toggle').checked ? 'On' : 'Off';
+  };
+  el('#option-auto-update-toggle').onchange = () => {
+    el('#option-auto-update-state').textContent = el('#option-auto-update-toggle').checked ? 'On' : 'Off';
+  };
+  el('#btn-save-site-permissions').onclick = () => { save('Site permissions saved'); render(); };
+  el('#btn-save-options').onclick = () => { save('Options saved'); render(); };
+  el('#btn-reset-defaults').onclick = () => {
+    settings = { ...defaults };
+    render();
+    save('Defaults restored');
+    render();
+  };
+  el('#btn-reload-settings').onclick = () => location.reload();
+  render();
+</script>
+</body>
+</html>
