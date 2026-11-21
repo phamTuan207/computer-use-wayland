@@ -10,7 +10,6 @@ This loader never unloads or reloads plugins itself.
 import argparse
 import hashlib
 import json
-import jsonlutil
 import os
 from pathlib import Path
 import re
@@ -20,6 +19,12 @@ import sys
 import subprocess
 import tempfile
 import time
+
+try:
+    import jsonlutil
+except ImportError:  # loaded by file path without the scripts dir on sys.path
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import jsonlutil
 
 
 def _capture_spawn_stderr():

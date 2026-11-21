@@ -54,11 +54,24 @@ typedef struct {
   guint64 paint_callbacks,surface_commits,idle_paint_callbacks,pending_frame_callbacks,redraw_requests;
   guint64 hide_commands,show_commands,duplicate_hides,duplicate_shows,entrance_ticks;
   guint64 label_commands;
+  guint64 discarded_events,expired_events,present_retries,overlapping_commands;
 } Metrics;
 static Metrics metrics;
+static int present_failures;
 static char label_text[41]="Computer use active";
 static gint64 metrics_started,metrics_window_started;
 static guint metrics_timer;
+
+static void log_event(const char *event, const char *detail) {
+  gint64 now=g_get_monotonic_time();
+  GDateTime *date=g_date_time_new_now_local();
+  char *wall=g_date_time_format(date,"%Y-%m-%dT%H:%M:%S%z");
+  fprintf(stderr,"[indicator-event] {\"wall_time\":\"%s\",\"elapsed_ms\":%" G_GINT64_FORMAT
+    ",\"event\":\"%s\",\"detail\":\"%s\",\"present_failures\":%d}\n",
+    wall?wall:"unknown",(now-metrics_started)/1000,event,detail?detail:"",present_failures);
+  fflush(stderr);
+  g_free(wall);g_date_time_unref(date);
+}
 
 static void reply(void) {
   if (remaining) return;
@@ -80,32 +93,65 @@ static gboolean report_metrics(gpointer data) {
     ",\"hide_commands\":%" G_GUINT64_FORMAT ",\"show_commands\":%" G_GUINT64_FORMAT
     ",\"duplicate_hides\":%" G_GUINT64_FORMAT ",\"duplicate_shows\":%" G_GUINT64_FORMAT
     ",\"label_commands\":%" G_GUINT64_FORMAT ",\"entrance_ticks\":%" G_GUINT64_FORMAT
+    ",\"discarded_events\":%" G_GUINT64_FORMAT ",\"expired_events\":%" G_GUINT64_FORMAT
+    ",\"present_retries\":%" G_GUINT64_FORMAT ",\"overlapping_commands\":%" G_GUINT64_FORMAT
     ",\"hidden\":%d,\"entrance_mode\":%d}\n",
     wall?wall:"unknown",(now-metrics_started)/1000,
     (now-metrics_window_started)/1000,metrics.paint_callbacks,metrics.surface_commits,
     metrics.idle_paint_callbacks,metrics.pending_frame_callbacks,metrics.redraw_requests,
     metrics.hide_commands,metrics.show_commands,metrics.duplicate_hides,metrics.duplicate_shows,
     metrics.label_commands,
-    metrics.entrance_ticks,hidden,entrance_mode);
+    metrics.entrance_ticks,metrics.discarded_events,metrics.expired_events,
+    metrics.present_retries,metrics.overlapping_commands,hidden,entrance_mode);
   fflush(stderr);
   g_free(wall);g_date_time_unref(date);
   metrics=(Metrics){0};metrics_window_started=now;
   return G_SOURCE_CONTINUE;
 }
+static void present_output(Output *output);
+static void glass_region(Output *output);
+static const struct wp_presentation_feedback_listener frame_listener;
 static void framed(void *data, struct wp_presentation_feedback *callback,
                    uint32_t hi,uint32_t lo,uint32_t ns,uint32_t refresh,
                    uint32_t seq_hi,uint32_t seq_lo,uint32_t flags) {
   (void)hi;(void)lo;(void)ns;(void)refresh;(void)seq_hi;(void)seq_lo;(void)flags;
   Output *output=data;
   wp_presentation_feedback_destroy(callback); output->frame=NULL;
+  present_failures=0;
   if (output->pending) { output->pending=0; remaining--; }
+  log_event("framed","buffer presented");
   reply();
 }
 static void synchronized(void *data,struct wp_presentation_feedback *feedback,struct wl_output *output) {
   (void)data;(void)feedback;(void)output;
 }
+/* Re-arm one pending output: new presentation feedback, full damage, commit.
+   Shared by painted() and by the bounded retry after a discarded buffer or
+   an ack timeout, so a transient compositor hiccup re-presents instead of
+   killing the pill. */
+static void present_output(Output *output) {
+  GdkSurface *surface=gtk_native_get_surface(GTK_NATIVE(output->window));
+  struct wl_surface *wl=gdk_wayland_surface_get_wl_surface(surface);
+  glass_region(output);
+  if (failed) return;
+  output->frame=wp_presentation_feedback(presentation,wl);
+  wp_presentation_feedback_add_listener(output->frame,&frame_listener,output);
+  wl_surface_damage(wl,0,0,G_MAXINT,G_MAXINT);
+  metrics.surface_commits++;
+  wl_surface_commit(wl);
+  gdk_display_flush(gdk_surface_get_display(surface));
+}
 static void discarded(void *data,struct wp_presentation_feedback *feedback) {
   Output *output=data;wp_presentation_feedback_destroy(feedback);output->frame=NULL;
+  metrics.discarded_events++;
+  log_event("discarded","buffer was not presented");
+  if (indicator_should_retry_present(present_failures)) {
+    present_failures++;
+    metrics.present_retries++;
+    log_event("present_retry","re-arming discarded output once");
+    if (output->pending) present_output(output);
+    return;
+  }
   failed=1;fputs("indicator buffer was not presented\n",stderr);g_main_loop_quit(loop);
 }
 static const struct wp_presentation_feedback_listener frame_listener={
@@ -164,27 +210,31 @@ static void painted(GdkFrameClock *clock, gpointer data) {
   (void)clock;
   metrics.paint_callbacks++;
   Output *output=data;
-  GdkSurface *surface=gtk_native_get_surface(GTK_NATIVE(output->window));
-  struct wl_surface *wl=gdk_wayland_surface_get_wl_surface(surface);
   if (!indicator_needs_present(output->pending,output->frame!=NULL)) {
     if (!output->pending) metrics.idle_paint_callbacks++;
     else metrics.pending_frame_callbacks++;
     return;
   }
-  glass_region(output);
-  if (failed) return;
   // Recommit GTK's fresh buffer with damage and require actual presentation,
   // not merely a frame-scheduling callback or a server queue sync.
-  output->frame=wp_presentation_feedback(presentation,wl);
-  wp_presentation_feedback_add_listener(output->frame,&frame_listener,output);
-  wl_surface_damage(wl,0,0,G_MAXINT,G_MAXINT);
-  metrics.surface_commits++;
-  wl_surface_commit(wl);
-  gdk_display_flush(gdk_surface_get_display(surface));
+  present_output(output);
 }
 static gboolean expired(gpointer data) {
   (void)data;
   timeout_id=0;
+  metrics.expired_events++;
+  log_event("expired","frame acknowledgement timed out");
+  if (indicator_should_retry_present(present_failures)) {
+    present_failures++;
+    metrics.present_retries++;
+    log_event("present_retry","re-arming pending outputs once after timeout");
+    for (guint i=0;i<outputs->len;i++) {
+      Output *output=g_ptr_array_index(outputs,i);
+      if (output->pending && !output->frame) present_output(output);
+    }
+    if (!failed) timeout_id=g_timeout_add(2000,expired,NULL);
+    return G_SOURCE_REMOVE;
+  }
   failed=1;
   fputs("indicator frame acknowledgement timed out\n",stderr);
   g_main_loop_quit(loop);
@@ -193,6 +243,7 @@ static gboolean expired(gpointer data) {
 static void redraw(const char *ack) {
   if (busy) { fputs("overlapping indicator command\n",stderr);g_main_loop_quit(loop);return; }
   metrics.redraw_requests++;
+  log_event("redraw",ack);
   busy=1;remaining=(int)outputs->len;
   snprintf(acknowledgement,sizeof acknowledgement,"%s",ack);
   timeout_id=g_timeout_add(2000,expired,NULL);
@@ -315,7 +366,11 @@ static gboolean input(GIOChannel *channel, GIOCondition condition, gpointer data
   gchar *line=NULL;gsize length=0;
   GIOStatus status=g_io_channel_read_line(channel,&line,&length,NULL,NULL);
   if (status==G_IO_STATUS_AGAIN) return G_SOURCE_CONTINUE;
-  if (status!=G_IO_STATUS_NORMAL || !line || length>256) {
+  if (status!=G_IO_STATUS_NORMAL || !line || length>256 || busy) {
+    if (busy && status==G_IO_STATUS_NORMAL && line && length<=256) {
+      metrics.overlapping_commands++;
+      log_event("overlapping","stdin command arrived while a redraw was in flight");
+    }
     g_free(line);g_main_loop_quit(loop);return G_SOURCE_REMOVE;
   }
   g_strstrip(line);
@@ -327,18 +382,21 @@ static gboolean input(GIOChannel *channel, GIOCondition condition, gpointer data
   double x,y;char name[128],extra;
   if (!strcmp(line,"hide")) {
     metrics.hide_commands++;
+    log_event("hide","stdin hide command");
     if (!indicator_set_hidden(&hidden,1)) {
       metrics.duplicate_hides++;puts("hidden");fflush(stdout);
     } else { settle_entrance();redraw("hidden"); }
   }
   else if (!strcmp(line,"show")) {
     metrics.show_commands++;
+    log_event("show","stdin show command");
     if (!indicator_set_hidden(&hidden,0)) {
       metrics.duplicate_shows++;puts("visible");fflush(stdout);
     } else redraw("visible");
   }
   else if (!strncmp(line,"label ",6)) {
     metrics.label_commands++;
+    log_event("label",line+6);
     const char *text=line+6;
     size_t len=strlen(text);
     if (len<1 || len>40) { g_free(line);g_main_loop_quit(loop);return G_SOURCE_REMOVE; }

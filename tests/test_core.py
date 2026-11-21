@@ -236,6 +236,14 @@ class Coordinates(IsolatedCuState):
     def test_validate_bad_batches(self):
         for a in ([],[{'type':'shell'}],[{'type':'wait','ms':-1}],[{'type':'type','text':10}],[{'type':'key','keys':'Ctrl+A'}],[{'type':'wait'}]*33):
             with self.subTest(a=a),self.assertRaises(ValueError):cu.validate_actions(a,'desktop')
+    def test_hover_action_validation(self):
+        # G21: hover moves the pointer and settles without clicking, so a
+        # button that needs a hover state (file-picker Browse) can darken
+        # before the click lands. Same x/y rules as move; no modifiers.
+        cu.validate_actions([{'type':'hover','x':100,'y':200}],'desktop')
+        for a in ([{'type':'hover'}],[{'type':'hover','x':100}],
+                  [{'type':'hover','x':100,'y':200,'modifiers':['Ctrl']}]):
+            with self.subTest(a=a),self.assertRaises(ValueError):cu.validate_actions(a,'desktop')
     def test_browser_set_value_payload_validation(self):
         cu.validate_actions([{'type':'set_value','text':'Tạo 🐱'}],'browser')
         for text in (None,'x'*10001):
