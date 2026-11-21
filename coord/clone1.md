@@ -3284,3 +3284,6 @@ Không kiểm: chứng minh live trên browser (suite dùng fake, không có Zen
 Brave trên VM này; chứng minh độ chính xác live do worker benchmark 2-vision
 trên laptop làm, như báo cáo việc 2 đã nói). Full test discover cũng không
 chạy lại ở đây.
+
+## Watchdog đợt 8, 05:07 ngày 22/11
+Việc 1: sweep vẫn chặn, chờ chủ xác nhận chạy clone, câu hỏi vẫn mở. Việc 2: xong, kết luận GO, council 1 và 3 xong đã push, council 2 và redteam đang chạy khỏe, hoạt động cách đây vài giây, chưa có file báo cáo. Muse: không có yêu cầu mới từ watermark f8317f7 (chỉ commit của clone1 và clone2, không commit coord: nào của Muse). Hành động: chỉ kiểm tra, không cứu agent, không spawn mới. Watchdog tiếp tục.
