@@ -516,25 +516,29 @@ class TestDomHelpers(unittest.TestCase):
                          [2749, 922])
 
     def test_viewport_origin_factor_two_geometry(self):
-        # Unit mixing (amend3 step 5): at monitor scale 2 the
-        # Hyprland window size is screen px (3726x2352) while
-        # mozInner and inner size are CSS px. viewport_origin
-        # converts the window size to CSS px before the geometry
-        # check, so the closure holds exactly and the absolute
-        # origin is window origin + mozInner * 2.
+        # Unit rule (AMEND4 item 1): the given window size is the
+        # Hyprland logical size, which equals CSS px numerically,
+        # so it is passed as-is, never divided by the factor. At
+        # monitor scale 2 the live C12 geometry is window (2509,
+        # 914), size 1863x1176 logical px, mozInner (240, 8) CSS px,
+        # inner 1615x1160 CSS px: the absolute origin is window
+        # origin + mozInner * 2 = (2989, 930).
         session = self._session()
         session.dom_origin = [240, 8]
         session.dom_inner = [1615, 1160]
         session.dom_outer = [1863, 1176]
         session.dom_factor = 2
-        self.assertEqual(session.viewport_origin([2509, 914], [3726, 2352]),
+        self.assertEqual(session.viewport_origin([2509, 914], [1863, 1176]),
+                         [2989, 930])
+        # The None branch takes the size from outerWidth/Height,
+        # already CSS px, so it returns the same origin.
+        self.assertEqual(session.viewport_origin([2509, 914]),
                          [2989, 930])
         # And impossible CSS geometry is refused at factor 2: the
         # window is only 1500x1000 CSS px, so mozInner + inner size
-        # cannot close inside it. Before the fix the check compared
-        # against the screen-px size and let this through.
+        # cannot close inside it.
         with self.assertRaises(ZenDomError):
-            session.viewport_origin([2509, 914], [3000, 2000])
+            session.viewport_origin([2509, 914], [1500, 1000])
 
     def test_viewport_origin_requires_window_origin(self):
         # Without the Hyprland window origin the raw pair cannot be

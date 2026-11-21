@@ -100,7 +100,8 @@ def _wait_http(url, timeout_s=30):
 
 
 def check_viewport_geometry(moz_inner, absolute_origin, window_origin,
-                            window_size, inner_size, monitor_box=None):
+                            window_size, inner_size, monitor_box=None,
+                            factor=None):
     """Probe checks that replace the AT-SPI cross-check (C12).
 
     Returns the absolute viewport origin, or raises ZenDomError when
@@ -111,21 +112,33 @@ def check_viewport_geometry(moz_inner, absolute_origin, window_origin,
     exactly (240 + 1615 + 8 = 1863 wide, 8 + 1160 + 8 = 1176 tall).
     AT-SPI cannot see Zen at all (probe run 3: the bus works, Zen
     never registered accessibility), so there is no AT-SPI cross-check
-    for this path; these two checks are the independent instruments
-    instead:
-    - dimension closure: mozInner + inner size + trailing gap equals
-      the window size on both axes (the gaps must be >= 0);
-    - containment: the absolute origin lies inside the window rect,
-      and inside the monitor box when one is given (this is the check
-      that catches the old bug: raw mozInner treated as absolute).
-    All sizes are CSS px except the window origin and monitor box,
-    which are screen px; at the measured setup the factor between them
-    is 1. The caller applies the CSS-to-screen factor to mozInner
-    before computing the absolute origin, and converts the Hyprland
-    screen-px window size to CSS px (divide by the factor) before
-    calling this check: passing a screen-px size would make the
-    closure check loose and mis-scaled at factors other than 1
-    (amend3 step 5).
+    for this path; these checks are the independent instruments
+    instead.
+
+    Unit contract (AMEND4 item 1, one consistent system throughout):
+    moz_inner and inner size and window size are CSS px; the window
+    size is the Hyprland logical size, which equals CSS px
+    numerically, so it is passed as-is and NEVER divided by the
+    factor (the amend3 step 5 divide was the unit mixing that F9
+    caught). window_origin, absolute_origin, and monitor_box are
+    screen px. factor is the CSS-to-screen factor and is REQUIRED:
+    a validator that silently assumes factor 1 is the F10 hole (a
+    factor-forgotten origin is self-consistent at factor 1, so no
+    pure consistency check can refuse it; only the explicit factor
+    lets the exactness check below catch it). Passing no factor
+    raises ZenDomError instead of guessing.
+    Checks, in order:
+    - dimension closure in CSS px: mozInner + inner size + trailing
+      gap equals the window size on both axes (gaps must be >= 0);
+    - exactness in screen px: the absolute origin must equal the
+      window origin plus mozInner times the factor (within half a
+      pixel), which is the check that catches a factor-forgotten
+      origin at factor != 1;
+    - containment in screen px: the absolute origin lies inside the
+      window rect (window origin + window size times the factor),
+      and inside the monitor box when one is given (this is the
+      check that catches the old bug: raw mozInner treated as
+      absolute).
     """
     def _pair(value, name):
         if (not isinstance(value, (list, tuple)) or len(value) != 2
@@ -134,6 +147,13 @@ def check_viewport_geometry(moz_inner, absolute_origin, window_origin,
             raise ZenDomError('%s must be two numbers [x, y]' % name)
         return [value[0], value[1]]
 
+    if (not isinstance(factor, (int, float)) or isinstance(factor, bool)
+            or factor <= 0):
+        raise ZenDomError(
+            'viewport factor is required: pass the CSS-to-screen '
+            'factor explicitly; a validator that silently assumes '
+            'factor 1 accepts a factor-forgotten origin at factor '
+            '!= 1 (F10)')
     moz = _pair(moz_inner, 'mozInnerScreen')
     absolute = _pair(absolute_origin, 'absolute viewport origin')
     window = _pair(window_origin, 'window origin')
@@ -152,12 +172,22 @@ def check_viewport_geometry(moz_inner, absolute_origin, window_origin,
             'window size %r (gaps %r, %r); the viewport origin cannot '
             'be window-relative with these numbers'
             % (moz, inner, size, right_gap, bottom_gap))
-    if not (window[0] <= absolute[0] < window[0] + size[0]
-            and window[1] <= absolute[1] < window[1] + size[1]):
+    expected = [window[0] + moz[0] * factor,
+                window[1] + moz[1] * factor]
+    if (abs(absolute[0] - expected[0]) > 0.5
+            or abs(absolute[1] - expected[1]) > 0.5):
+        raise ZenDomError(
+            'absolute viewport origin %r is not window origin %r plus '
+            'mozInner %r times factor %r (expected %r); the origin '
+            'was computed without the factor'
+            % (absolute, window, moz, factor, expected))
+    if not (window[0] <= absolute[0] < window[0] + size[0] * factor
+            and window[1] <= absolute[1] < window[1] + size[1] * factor):
         raise ZenDomError(
             'absolute viewport origin %r falls outside the window rect '
-            '%r size %r; the origin is not absolute screen coordinates'
-            % (absolute, window, size))
+            '%r size %r at factor %r; the origin is not absolute '
+            'screen coordinates'
+            % (absolute, window, size, factor))
     if monitor_box is not None:
         if (not isinstance(monitor_box, (list, tuple))
                 or len(monitor_box) != 4
@@ -558,12 +588,14 @@ class ZenSession:
         window_origin is REQUIRED: without it the raw pair cannot be
         placed on screen, and returning it as-is was the old bug
         (the pair as absolute coords is off-monitor). window_size is
-        the Hyprland window size (defaults to the JS outer size);
-        monitor_box is [x, y, w, h] of the monitor when known. The
-        result is verified by check_viewport_geometry (dimension
-        closure + window/monitor containment), which replaces the
-        AT-SPI cross-check: AT-SPI cannot see Zen (probe run 3), so
-        no AT-SPI check exists for this path. Rect centers from
+        the Hyprland window size in logical px, which equals CSS px
+        numerically, so it is passed as-is to the geometry check
+        (defaults to the JS outer size, also CSS px); monitor_box is
+        [x, y, w, h] of the monitor when known. The result is verified
+        by check_viewport_geometry (dimension closure + exactness +
+        window/monitor containment in one consistent unit system),
+        which replaces the AT-SPI cross-check: AT-SPI cannot see Zen
+        (probe run 3), so no AT-SPI check exists for this path. Rect centers from
         getBoundingClientRect are viewport relative, so screen =
         origin + rect center times the factor. One cheap JS eval
         (metrics bundled), no screenshot.
@@ -602,21 +634,19 @@ class ZenSession:
         absolute = [window_origin[0] + moz_inner[0] * factor,
                     window_origin[1] + moz_inner[1] * factor]
         size = window_size if window_size is not None else [raw[7], raw[8]]
-        # Unit mixing (amend3 step 5): window_size arrives in screen
-        # px from Hyprland, while mozInner and inner size are CSS px.
-        # check_viewport_geometry takes the window size in CSS px
-        # (its dimension-closure check is a CSS-px check), so divide
-        # by the factor here; at factor 1 this is exact and changes
-        # nothing. Note the containment check then compares a screen
-        # absolute origin against a CSS-px window rect, which is
-        # conservative at factor > 1 (it can only refuse, never
-        # accept a wrong origin); the viewport origin sits
-        # mozInner * factor from the window origin, well inside that
-        # rect for any real sidebar geometry.
-        size_css = [size[0] / factor, size[1] / factor]
+        # Unit rule (AMEND4 item 1): the size is passed as-is in
+        # BOTH branches. A given window_size is the Hyprland logical
+        # size, which equals CSS px numerically; the None fallback
+        # is outerWidth/Height, already CSS px. Dividing by the
+        # factor (amend3 step 5) was unit mixing: it made the
+        # closure check run on a halved size and the containment
+        # check compare a screen-px origin against a CSS-px rect,
+        # which falsely refused valid factor-2 geometry (F9) and
+        # accepted a factor-forgotten origin (F10). The factor is
+        # passed explicitly: the validator refuses when it is absent.
         return check_viewport_geometry(
-            moz_inner, absolute, window_origin, size_css,
-            [raw[5], raw[6]], monitor_box)
+            moz_inner, absolute, window_origin, size,
+            [raw[5], raw[6]], monitor_box, factor=factor)
 
     def locate_point(self, meta, selector):
         """Image point of one element's rect center, first-time-right.

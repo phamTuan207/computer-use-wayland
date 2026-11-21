@@ -275,14 +275,15 @@ def ground_many_one_shot(session, meta, selectors):
         from zen_dom import check_viewport_geometry
         outer = raw.get('outer_size') or [0, 0]
         inner = raw.get('inner_size') or [0, 0]
-        # Same unit rule as viewport_origin (amend3 step 5): the
-        # check takes the window size in CSS px. window_size from the
-        # meta is Hyprland screen px, so divide by the factor; outer
-        # is already CSS px and is used as-is when no window size
-        # was given.
-        size_for_check = (
-            [window_size[0] / factor, window_size[1] / factor]
-            if window_size is not None else outer)
+        # Same unit rule as viewport_origin (AMEND4 item 1): the
+        # check takes the window size in CSS px. window_size from
+        # the meta is the Hyprland logical size, which equals CSS px
+        # numerically, so it is passed as-is; outer is already CSS
+        # px and is used as-is when no window size was given. The
+        # factor is passed explicitly: the validator refuses without
+        # it.
+        size_for_check = (window_size if window_size is not None
+                          else outer)
         absolute = check_viewport_geometry(
             moz_inner,
             [window_origin[0] + moz_inner[0] * factor,
@@ -290,7 +291,8 @@ def ground_many_one_shot(session, meta, selectors):
             window_origin,
             size_for_check,
             inner,
-            monitor_box)
+            monitor_box,
+            factor=factor)
     except ImportError:
         absolute = [window_origin[0] + moz_inner[0] * factor,
                     window_origin[1] + moz_inner[1] * factor]
