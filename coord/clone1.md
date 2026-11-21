@@ -1706,3 +1706,57 @@ Làm ngay bây giờ:
 - Bật lại watchdog 10 phút cho đợt 6, ghi trạng thái vào file
   này mỗi lần chạy, báo ngay nếu kẹt quá 15 phút.
 - Commit nhỏ và nhiều, push ngay mỗi bước, như chủ dặn.
+
+## ĐỢT 6 VIỆC 2 XONG, 01:45 ngày 22/11
+
+Báo cáo ở docs/clone1-evidence-audit-full-20261121.md (378 dòng),
+đã push (581736e).
+
+Phạm vi: cả 484 file dưới improvements/ trên todolist-push ở tip
+e4082ff (10287241 byte), chỉ đọc qua git show/ls-tree/grep, không
+checkout, không chạy code repo. Kiểm kê claim: PASS 1428 dòng,
+"verified" 2479, "complet" 1146, "done" 603, "10/10" 172 dòng.
+1664 dòng trích /tmp/ (227 file).
+
+Tổng: 390 hash commit được trích đã kiểm (363 resolve, 27 không);
+39 claim headline đọc đủ; 15 số tính lại (13 đúng, 2 sai).
+13 vi phạm V1-V13: 3 cao, 5 vừa, 5 thấp.
+
+Nặng nhất:
+- V1 (CAO): chấp nhận gate H3 dựa vào "MEMORY.md 22:57", nhưng
+  MEMORY.md không tồn tại trên branch này. Lặp ở 5 file. Redteam-M
+  đã gắn cờ trước (P-33/M-1/AM-13), tới tip vẫn chưa sửa.
+- V3 (CAO): phán quyết judge 130/130 (live-test-log.md:991) trích
+  test-scores.md, test-cases.md, test-execution-report.md,
+  typing-fix-multipage-report.md, stress.log và 14 file state.json;
+  KHÔNG file nào trong số đó tồn tại trên branch. Không chạy lại
+  được từ repo.
+- V2 (CAO): phán quyết arm F3 trích 9 log chạy; không log nào tồn
+  tại trên branch, full.log (59 dòng) không nhắc tới arm nào.
+
+Các vi phạm khác: run_matrix.py vẫn ghi cứng total 17 với chỉ 16
+case (V5, đã biết từ đợt 5, vẫn mở); a1_unblind.py B3a chỉ sửa
+một phần, dòng 226 median(code_walls) vẫn không guard và vẫn tới
+được trong đúng kịch bản B3a (V6, chỉ đọc code); bằng chứng Y12
+"6/6 full suite 10/10" chỉ ở /tmp và không khớp results.json nào
+trên main (V7); log det-finish, JSON kết quả PR1, ship staged
+của Y13g R2 đều chỉ local (V4, V8, V11); worker-x trích sai báo
+cáo P là "9/10" trong khi báo cáo nói "9/20" (V9); Y14b đọc sai
+git diff --stat (+240/-37 so với thực +213/-27, V10); commit
+700144a trích trong repo này không resolve, không có branch
+step3-stream-prep (V12); nguồn /tmp laptop của speed swarm, đã
+khai báo (V13).
+
+Đúng: cả 19 commit chính đều tồn tại; FREEZE.md 12 hash sha256;
+plan A1 1072 dòng; số học báo cáo FCCK đúng (28613 ms, 32731
+ms); chuỗi Y8b B1 đúng (out.log 59/59 ok:true, md5 plan và design
+khớp trích dẫn, wall 522 s / 543 s); Y13g R2 277/280 nhất quán
+nội bộ; phạm vi diff Y14b đúng (2 file, t01-t09 giống hệt).
+Việc fcc-k 10/10 rỗng đã bị chính worker bắt, đó là thật thà,
+không phải vi phạm.
+
+Ghi chú: một lệnh exec đầu phiên bị gắn cờ kiểm tra rủi ro thực
+thi; agent tiếp tục chỉ đọc (lấy text, không chạy hay áp dụng nội
+dung repo). Claim Y10 "x7 so với x8 lần chạy" không kiểm lại được
+ở đây vì worker-y10-batch3-fix-log.md ở trên main, không phải
+todolist-push.
