@@ -156,6 +156,61 @@
   probe used the launcher WANTED set on the runner plus a list
   cmdline (needs the NUL-joined /proc form); run3 is the clean
   record.
+- 02:30 +07 (T+91m): A7 done (attack_a7.py run4, log a7-run4.log):
+  36/36. All 5 symlink shapes refuse at L1 (kind symlink), L2
+  (stripped _verify_manifest: shapes 1-4 refuse "manifest path
+  escapes ship dir", shape 5 "symlink in ship dir"), L3a _scan_ship
+  and L3b check_manifest. Mixed kind label correct (symlink + pyc
+  -> mixed). C2-4 HOLDS: symlinked __pycache__ refuses kind
+  symlink and the outside .pyc survives. Hardlink re.py refuses
+  kind planted-py (islink False, so the path leg fires, not the
+  symlink leg); hardlink tampered check.mjs at an allowlisted path
+  refuses on the md5 leg at L1/L2/_scan_ship. __pycache__-as-file
+  and dir-named-like-.pyc refuse at L1/_scan_ship; check_manifest
+  does NOT flag either (its walk only flags symlinks, .pyc and
+  top-level .py), backstopped by _scan_ship. Harness fixes: added
+  _normalize_remote_url to the launcher extract set (R7 addition
+  the round-1 set lacked); fixed the py_compile cwd assumption;
+  corrected the dir-named-like-.pyc kind expectation to mixed
+  (the dir AND the file inside it are both flagged).
+- 02:32 +07 (T+93m): A8 done (attack_a8.py run1, log a8-run1.log):
+  14/14. R9 key-presence semantics confirmed: eval_error None and
+  "" both return False, no-key + good snapshot returns True,
+  snapshots None returns False, eval_error 0 (falsy, key present)
+  returns False. Non-dict diag None raises TypeError, but all 5
+  call sites pass diagnose_body's dict and read
+  diag["classification"] first, so it is unreachable (documented
+  non-issue).
+- 02:35 +07 (T+96m): A9 done (attack_a9.py run2, log a9-run2.log):
+  7/7. Tampered run_live.py direct: R5 refuses rc 2 ("entry file
+  run_live.py does not match the ship manifest"), no marker.
+  Self-consistent tamper (run_live.py + manifest entry): direct
+  path PASSES rc 0 and the marker PRINTS (documented
+  self-referential limit); check_manifest refuses (ship manifest
+  md5 b412cd79... != committed 7c763834...). Tampered ship
+  launch_y13.py: check_manifest PASSES (manifest file unchanged),
+  _scan_ship refuses on the md5 mismatch, no marker. Tampered
+  runner: marker prints first (the entry script runs before its
+  own hash is checked), then rc 2; _scan_ship refuses, no marker.
+- 02:40 +07 (T+101m): A4 unit re-run (attack_a4_unit.py, log
+  a4unit-run2.log): SPEC 80/80, EXTRA 48/49 (the one miss is the
+  bash -c sequence with the runner second), FRESH 2/29, both copies
+  agree. Cross-check: _SHIP_FILES identical between the two entry
+  points (29 files), _SHIP_DIRS identical ({codex-y5,
+  codex-y5/fixtures}); AST identity already True for the 14
+  tokenizer defs.
+- 02:50 +07 (T+111m): DONE. Paper written:
+  improvements/worker-y13g-r2-redteam.md, verdict BLOCK. Findings:
+  F1 HIGH (check_manifest R2 exemption dead code,
+  _check_entry_pyc unreachable), F2 HIGH (PYTHONPATH plants
+  execute in both entry points under -P), F3 MEDIUM (20+ live
+  tokenizer evasions), F4 MEDIUM (--topo-order does not order
+  across merges), F5 MEDIUM (py_compile co_filename refusal),
+  F6 LOW-MEDIUM (nested .pyc empty-dir brick), F7 LOW
+  (check_manifest gaps, backstopped by _scan_ship). 510 probe
+  cases total. Fixed in round 2 and verified: ship-dir .so/.py
+  plants, symlinks, R5, R9, linear marker ordering, remote pin.
+  Reporting verdict + paper commit to the parent.
   32/32 as defined. Cases 1-9 re-proven (case 1 fake completion passes
   BY DESIGN; other-branch / no-marker / unpushed / harness-subject /
   body-DONE / wrong-file all refuse; old-date completion vs newer
