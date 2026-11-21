@@ -96,7 +96,22 @@ def snapshot(env):
 
 def guard_reply(raw, **expected):
     if len(raw) > 4096:raise RuntimeError('cursor guard reply exceeds 4096 bytes')
-    reply = json.loads(raw)
+    try:
+        reply = json.loads(raw)
+    except json.JSONDecodeError as error:
+        # Hyprland answers an unloaded plugin's custom command with
+        # 'unknown request' and exit code 0, so the reply is plain text, not
+        # JSON. Say so plainly instead of surfacing a bare JSON error. The
+        # reply is str from hyprctl and bytearray from the guard socket.
+        if isinstance(raw,(bytes,bytearray)):
+            shown = bytes(raw).decode('utf-8','replace')
+        else:
+            shown = raw
+        raise RuntimeError(
+            'cursor guard reply is not valid JSON (got: ' + shown.strip()[:120] + '); '
+            'the cursor backend may not be loaded, load it with '
+            'scripts/activate-glass.py and scripts/activate-cursor-guard.py or '
+            're-run the fresh-login loader scripts/visuals.py') from error
     if (not isinstance(reply,dict) or reply.get('ok') is not True or
         type(reply.get('schema')) is not int or reply['schema'] != 1 or
         any(type(reply.get(key)) is not type(value) or reply[key] != value for key,value in expected.items())):

@@ -3,12 +3,14 @@
 import fcntl
 import json
 import os
+from collections import deque
 from pathlib import Path
 import re
 import select
 import signal
 import subprocess
 import sys
+import threading
 import time
 import uuid
 
@@ -222,12 +224,30 @@ def supervise(env, argv):
         for sig in (signal.SIGTERM,signal.SIGINT,signal.SIGHUP):
             previous[sig]=signal.signal(sig,interrupted)
         guard=subprocess.Popen([sys.executable,str(Path(__file__).resolve()),'guard',str(read_fd),token],
-                               env=env,pass_fds=(read_fd,),stdout=subprocess.PIPE,text=True,
+                               env=env,pass_fds=(read_fd,),stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,
                                start_new_session=True)
         os.close(read_fd);read_fd=None
+        # The guardian's stderr carries the real startup failure; drain it on
+        # a daemon thread so the pipe can never block the guardian, and keep
+        # the tail so a startup death names its cause instead of failing
+        # silently with a bare 'session guardian startup failed'. Tee every
+        # line to our own stderr as it arrives, so warnings (for example the
+        # Escape-binding warning) stay visible exactly as when the guardian
+        # inherited our stderr.
+        guard_errors=deque(maxlen=32)
+        def _drain(stream, sink):
+            try:
+                for line in stream:
+                    sink.append(line)
+                    sys.stderr.write(line)
+                    sys.stderr.flush()
+            except (OSError,ValueError):
+                pass
+        threading.Thread(target=_drain,args=(guard.stderr,guard_errors),daemon=True).start()
         ready,_,_=select.select([guard.stdout],[],[],15)
         if not ready or guard.stdout.readline().strip()!='ready':
-            raise RuntimeError('session guardian startup failed')
+            detail=''.join(guard_errors).strip()
+            raise RuntimeError('session guardian startup failed' + (': '+detail[-1200:] if detail else ''))
         driver_env=env.copy();driver_env['CU_SESSION_TOKEN']=token
         # Child cannot execute input before the guardian owns its process group.
         gate_read,gate_write=os.pipe()
@@ -261,6 +281,7 @@ def supervise(env, argv):
                 guard.terminate()
                 guard.wait()  # Never SIGKILL the session owner during cleanup.
             guard.stdout.close()
+            guard.stderr.close()
             if SNAPSHOT.exists():
                 # Retry any retained snapshot, including exhausted guardian retries.
                 recover(env,token)
