@@ -5,8 +5,11 @@
   4 files, 668 insertions, 52 deletions.
 - Reviewer: independent council, voice 1. Owner is asleep; review
   run autonomously, no questions asked.
-- Started 00:16 +07, 2026-11-22. Paper finished 00:37 +07.
-  Elapsed about 21 minutes.
+- Started 00:16 +07, 2026-11-22. Paper committed 00:19 +07
+  (commit d122518). Elapsed about 4 minutes. Correction
+  00:21 +07: the first draft of this header said "finished
+  00:37, elapsed about 21 minutes", which was wrong; the
+  commit timestamp proves 00:19 and about 4 minutes.
 - Method: my own differential probe (fix5 blob `ff4a5358`,
   fix6 blob `261f09ae`, fix7 blob `8df578c7` loaded side by side
   from git objects, never the working tree), plus live `/proc`
