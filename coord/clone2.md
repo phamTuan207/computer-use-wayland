@@ -15,6 +15,18 @@ Received from the coordinator through the user, 6 tasks. Status at the start of 
 
 Updates are appended to this section as each task finishes, with commit ids and measured results. No personal information in this file.
 
+### Batch 2 completion report, 2026-11-21
+
+All 6 tasks are done and pushed on this branch. Batch 2 is complete from clone2 side. Ready for batch 3 assignment through the repo.
+
+Commits in order: 9ba5d25 merge main and resolve the coord conflict, dd12098 AT-SPI prototype, 56ec79e AT-SPI doc, 6ce5a75 desktop control landscape, c043ad1 ten realistic tests, 7f254c1 Selenium on Zen package, 32b09fb speed comparison, 4bb010d merge latest main again, no conflicts.
+
+What is verified, all on this machine, Firefox 160.0.1 stand-in where a browser was needed: the AT-SPI prototype logic by selftest, both new Selenium scripts end to end in launch and attach modes, the batch 1 Selenium script re-verified 10/10, the realistic suite 10/10 in 1.0483 s, and the Marionette against BiDi benchmark with 3 runs per method.
+
+What is UNVERIFIED and needs the laptop: every Zen specific run, the live AT-SPI press in a real graphical session, and the in-session behaviour of agent-desktop and kde-desktop-mcp. Each document states its own unverified items, and the laptop checklists are in the task 5 procedure doc section 7 and the AT-SPI doc section 6.
+
+No blockers over 15 minutes occurred in this batch. Two clone2 mistakes were found by running tests and fixed the same day, the fixture element ids in the first zen live run and the h1 assumption about example.com, both documented in the task 5 procedure doc.
+
 # Report: controlling Firefox and Zen through the DOM
 
 Date of work: 2026-11-21, local time Asia/Saigon. All times in the test logs are UTC wall clock as printed by the test script, with elapsed seconds from a monotonic clock for every step.
