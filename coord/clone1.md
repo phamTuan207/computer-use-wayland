@@ -727,3 +727,61 @@ Theo lệnh 18:23 ngày 21/11, mỗi việc 1 subagent riêng, qua council
 chấm điểm. 6 việc đã ghi ở trên (Shayxo, probe AT-SPI, review A1,
 evidence 20 commit todolist-push, 20 test trên Firefox thật,
 agy-y2 sau khi Y7 sửa xong).
+
+## TRẠNG THÁI 19:02 ngày 21/11 - TRẢ LỜI TRỰC TIẾP CHỦ
+
+Chủ nói đúng: từ 17:22 tới 18:46 không có commit nào hiện lên
+main, dù council đang chạy. Đó là lỗi của tôi, không phải kẹt kỹ
+thuật. Council 1, 2, 3 và redteam xong lúc 18:45, tôi commit lần
+đầu 18:46 và push 7 commit xong lúc 19:00, remote main giờ là
+b629e11, cây sạch. Từ giờ báo cáo mỗi 15 phút vào file này, và
+watchdog mỗi 10 phút kiểm tra subagent, kẹt hoặc chết thì thúc dậy.
+
+### Đợt 4: XONG, đã push, nhưng có kết luận mới phải đối mặt
+
+Đợt 4 đã xong hoàn toàn: kiểm chứng độc lập, sửa hết lỗi, council
+kiểm lại tất cả PASS, báo cáo ở mục ĐỢT 4 - KẾT QUẢ trên đây, 7
+commit đã lên main (2757ff1, 734df31, 62745e8, 05b6f6f, 4087ebd,
+f8f803d, b629e11).
+
+Về kết luận batch 3 chỉ đạt 7/10 của đội kiểm chứng độc lập: tôi
+NHẬN, không bênh claim cũ. Council 1 của tôi đã ghi batch3 không
+ổn định 10/10 (10/10 một lần rồi 9/10, t10 flaky), và tôi đã sửa
+t09 (race postMessage rồi close đồng bộ) và t10 (race vị trí bằng
+0 chính xác) trong đợt 4, chạy lại 10/10 nhiều lần trên Chromium.
+Nhưng t05 rename tự mô phỏng là lỗi MỚI mà council của tôi đã sót.
+Tôi đang cho 1 agent độc lập kiểm tra lại t05, t09, t10 đối chiếu
+với kết luận 7/10. Nếu t05 đúng là tự mô phỏng, tôi sửa báo cáo
+đợt 4 và sửa luôn t05, không giữ số 10/10 cho bản batch 3 gốc.
+
+### Đợt 5: đang chạy, 1 xong, 5 đang làm
+
+1. Shayxo: XONG, 17/17 pass hai lần (0.019 s suite, 0.156 s wall),
+   nguồn blur 0.15 xác nhận ở native/hyprglass-local-optics.lua:14
+   và commit b2afcd1, pad 12.75 theo công thức của test. Tôi kiểm
+   tra lại riêng: 17 test OK. Commit ngay cùng báo cáo này.
+2. Probe AT-SPI tự chứa: đang làm, file tests/run_atspi_session.sh
+   đã xuất hiện trong cây.
+3. Review A1: đang làm. CHỈNH LẠI theo lệnh mới: review bản ĐÃ ĐÓNG
+   BĂNG ở freeze commit f31abcf trên todolist-push, file liệt kê
+   trong tests/realistic/a1-pilot/FREEZE.md, không review bản làm
+   việc trên main.
+4. Evidence 20 commit todolist-push: đang làm, đã fetch
+   origin/todolist-push, đầu hiện tại beebe50.
+5. 20 test batch2+batch3 trên Firefox thật: đang làm, đang sửa
+   lib/browser.mjs để chạy Firefox. CHỈNH LẠI: t09/t10 batch 3 đang
+   có worker khác sửa, chạy bản đã sửa khi nó lên, ghi rõ defect
+   trong so sánh. Trên main hiện tại, t09/t10 mới nhất là bản sửa
+   của tôi ở b629e11, chưa thấy bản của worker khác.
+6. agy-y2: KHÔNG CÒN BỊ CHẶN, bản sửa đã lên commit 30a72e5 trên
+   todolist-push ("Y2: 10 new hard realistic tests agy-y2"). Đang
+   chạy simulate.mjs --all rồi live Firefox.
+
+### 4 câu trả lời của chủ lúc 19:01, đã ghi nhận
+
+1. Tên thật: không thay hàng loạt lúc này, gộp vào đợt scrub lịch
+   sử, filter-repo thay cả email và tên trong một lần viết lại.
+2. Shayxo: sửa CONTRACT theo giá trị mới, đã xong ở việc 1.
+3. PR số 1: trình tự merge tôi đề xuất là đúng, chỉ còn 2 fix
+   atspi_prototype của clone2, không phải việc của tôi.
+4. Probe AT-SPI tự chứa: đang làm ở việc 2.
