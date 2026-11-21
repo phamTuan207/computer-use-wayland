@@ -781,10 +781,125 @@ omitted; append as it happens, never batch at the end)
   pre-existing in baseline, 0 regression, +124 tests). Graph UTC
   21/11 recount: 455 commits + 1 PR = 456, EXCEEDS the 240 target.
   My F2 commits are on main via that merge.
-- Redteam verdict still pending (no file yet). The error-file
-  update (H2 partial wording, G28, G29, R6 solved) waits for it.
-  After the redteam lands, a council 1 re-review of the BLOCK fix
-  is owed before this lands.
+- Redteam verdict LANDED 23:19 (improvements/worker-f2-redteam.md,
+  commit bbbbf73): BLOCK, A1-A9. Fixes applied, tested, committed,
+  deployed (see the "Redteam BLOCK fixes" section below). A council
+  1 re-review of the BLOCK fix + a redteam re-check are owed before
+  this lands. The error-file update (H2 partial wording, G28, G29,
+  R6 solved) waits for the re-reviews.
+
+## Redteam BLOCK fixes (applied 23:20-23:25)
+
+- A1 (phase-aware replay classifier): the start-failure prefixes ARE
+  the phase evidence. supervise raises 'session guardian startup
+  failed' only BEFORE the driver is spawned (cursor_session.py:275)
+  and 'driver registration failed' only when 'registered' is NOT
+  received within 2 s, before the 'go' gate byte is written
+  (cursor_session.py:290). The error can only be raised in the
+  pre-driver phase, so a matching prefix proves the driver never
+  started. A post-start 'Expecting value' or 'cursor guard' can
+  never carry these prefixes. No further change needed beyond the
+  council 1 fix (bb8f4e3).
+- A2 (session deadline): the deadline clamp is implemented as an
+  upper bound of 120 s (the observation freshness window), with
+  REFUSAL (not silent clamping) for out-of-range values (0,
+  negative, non-finite, >120 s). The lock-timeout point is based
+  on a FALSE premise: cu.locked() is a NON-BLOCKING flock
+  (cu.py:1988-1993, LOCK_EX|LOCK_NB, raises RuntimeError on
+  contention), so the fallback already fails fast instead of
+  hanging forever; no lock timeout is needed. The SIGTERM-grandchild
+  test was NOT implemented: the timeout fallback was removed (B1),
+  so there is no replay risk from a surviving process, and orphan
+  cleanup is the supervisor's finally (terminate_driver +
+  guard.wait), which is the session machinery's domain (F1), not
+  act-now's. The whole-run time budget is recorded in the envelope
+  as target_breached (total_ms > 30000).
+- A3 (overlay show ack): _show_label returns bool (True only on
+  ack; daemon path retries once after _ensure_native; session path
+  returns session_label(label) and session_live()); apply_holders
+  returns visible False with error 'pill show failed' when the
+  show ack fails. The fallback re-check now uses a 'sync' round
+  trip (not 'status'): apply_holders (called by 'sync') returns
+  visible False on a show failure, while 'status' only reports
+  whether holders exist.
+- A4 (per-run holders + prune): holders are keyed by (agent, pid)
+  via _holder_key() (key f"{agent}:{pid}" for a positive int pid,
+  bare agent name for backward compat); remove_holder(agent,
+  pid=None) removes only that run's entry when a pid is given, or
+  all of the agent's entries when pid is None; the daemon serve()
+  'release' handler passes req pid to remove_holder; cmd_release
+  gained a --pid argument. prune_dead_holders is called by
+  _ensure_daemon and by apply_holders (start of reconcile). A
+  killed run leaves no live holder.
+- A5 (fallback preflight refusals): the fallback desktop_act call
+  is wrapped in an inner try/except (ValueError, RuntimeError)
+  that writes the error into the envelope, keeps path 'fallback',
+  returns 1 cleanly with no traceback, and still attempts the
+  after-capture.
+- A6 (stale observation): _fresh_observation takes deadline_s
+  (default 20.0) and requires age + deadline < 120 s
+  (OBSERVATION_MAX_AGE_S) for a given observation to count as
+  fresh. Up-front scope/backend/window validation was NOT
+  implemented: desktop_act already enforces it, and the refusal
+  is now clean (A5), so the age+deadline budget is the concrete
+  fix and the scope check is covered by the clean-refusal path.
+- A7 (urlbar claim): downgraded from CONFIRMED FINDING to
+  HYPOTHESIS in the rule doc and in this log (run 4 entry). The
+  discriminating probes are queued for the next live run (hover
+  100 ms then click; click a control text field; click the urlbar
+  without a preceding Ctrl+N; double-click). Do NOT drive Zen
+  live now (Marionette slot broken, F3b restart pending, owner
+  asleep).
+- A8 (session-path completion): fixed by the council 1 fix (A3):
+  session success requires the stdout envelope to say ok (or the
+  completed-capture-error shape, cu.py:1341).
+- A9 (tests): 46 tests in test_first_action.py (41 + 5 new:
+  huge deadline refused, target_breached recorded, age+deadline
+  must stay under 120, age+deadline within 120 is used, fallback
+  desktop_act raises ValueError), 11 tests in test_overlay.py
+  (7 + 4 new: two same-agent pids independent, show-label bool,
+  apply-holders visible False on show failure, apply-holders
+  prunes dead holders). All pass on the VM (0.592 s + 0.097 s).
+  Overlay-adjacent suites also pass with no regression:
+  test_indicator.py 42 OK, test_phase3_cleanup.py exit 0,
+  test_activate_glass.py 12 OK, test_visuals.py 34 OK.
+- Rule doc: A7 downgrade (f584a20) + CLI-first workspace command
+  (hl.dsp.focus({ workspace = 2 }) switches in ~1 s, verified
+  23:19; hl.dsp.workspace.goto FAILS, goto is a Lua reserved
+  word). Log: A7 downgrade + workspace update (8767d9b).
+- Commits (all pushed, verified via ls-remote, remote HEAD
+  8767d9b): 91895b3 (overlay.py A3+A4), 268fcbf
+  (first_action.py A2+A5+A6), dcabc4c (test_first_action 46
+  tests), 3eb53b1 (test_overlay rekey/show-ack/prune tests),
+  f584a20 (rule doc A7 + workspace), 8767d9b (log A7 +
+  workspace).
+- DEPLOY 23:25: overlay.py + first_action.py scp'd to the
+  installed scripts dir. First scp attempt failed ("Connection
+  closed"): the scp call lacked -i/IdentitiesOnly, so it tried
+  the default keys and fell back to password (the known AGENTS.md
+  lesson: a bare ssh/scp without -i/IdentitiesOnly reports
+  Permission denied with the same key). Retried with
+  -i /home/hatch/.ssh/id_ed25519 -o IdentitiesOnly=yes and it
+  worked. md5s match on both sides: overlay.py
+  6df09642a9ef931d61d533d9c37de386, first_action.py
+  8caff3651bc2d11d2101f05d5f030e9f. No overlay daemon was
+  running (holders {}), so the next acquire spawns a fresh
+  daemon with the new code; no restart was needed.
+  Verified on the laptop: `computer-use act-now --help` works;
+  rekey smoke test passes on the deployed copy (two same-agent
+  pids independent, releases isolated); overlay status is
+  holders {}, owner none, visible false (clean).
+- MEMORY.md 23:22: owner ordered keybind integration (find all
+  keybinds, integrate into computer-use). Worker KB is collecting
+  them (Omarchy + Hyprland + Zen) into the computer-use copy ON
+  THE MACHINE (local-only, not pushed to the repo). The deferred
+  Zen-keybinds item (23:03) now has an owner (KB); F2 does not
+  duplicate it.
+- NEXT: re-review (council 1 + redteam re-check) of the BLOCK
+  fixes, then the error-file update (H2 partial wording, G28,
+  G29, R6 solved), then the final report to the parent. The
+  final test (independent Codeforces contest, 5 problems) runs
+  LAST, after all other work; not started.
 
 ### Raw rehearsal envelopes (council 2, Finding 3)
 Fetched from the laptop STATE/first-action-20261121.jsonl
