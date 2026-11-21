@@ -99,6 +99,33 @@ const testSimulators = {
     await page.click('#btn-generate-shopping-list');
     // 13. Save plan
     await page.click('#btn-save-plan');
+  },
+  '03': async (page) => {
+    // 1. Add Deep Work Sprint
+    await page.type('#input-habit-name', 'Deep Work Sprint');
+    await page.select('#select-habit-category', 'Productivity');
+    await page.$eval('#input-target-days', el => el.value = '5');
+    await page.click('#btn-add-habit');
+    // 2. Check Mon-Fri
+    await page.click('#check-habit-deep-work-sprint-mon');
+    await page.click('#check-habit-deep-work-sprint-tue');
+    await page.click('#check-habit-deep-work-sprint-wed');
+    await page.click('#check-habit-deep-work-sprint-thu');
+    await page.click('#check-habit-deep-work-sprint-fri');
+    // 3. Add accidental habit
+    await page.type('#input-habit-name', 'Social Media Browsing');
+    await page.select('#select-habit-category', 'Mindset');
+    await page.click('#btn-add-habit');
+    // 4. Delete accidental habit
+    await page.click('#btn-del-habit-social-media-browsing');
+    // 5. Water Sat & Sun
+    await page.click('#check-habit-water-sat');
+    await page.click('#check-habit-water-sun');
+    // 6. Filter test
+    await page.select('#filter-category', 'Productivity');
+    await page.select('#filter-category', 'all');
+    // 7. Save log
+    await page.click('#btn-save-habits');
   }
 };
 
