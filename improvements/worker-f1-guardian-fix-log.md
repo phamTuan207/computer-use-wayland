@@ -1203,3 +1203,8 @@ council 3 (5 steps, stdout and stderr recorded separately).
   regression test). Plus the round-1 commits 5033c9d, 708bef0,
   e84e329, f3e32e5, 2acbb67, 88aeef2, 218b223, e52d477, 86c4a01,
   7af9658.
+
+## BATCH 7 CORRECTION, 22/11/2026 (clone2 task 3, violation V1)
+- The H3 gate line in this log (line 862, "H3 gate: accept Y13r2's proposal...") cites no acceptance artifact: the acceptance is recorded only as "per MEMORY.md 22:57" in four other places (improvements/opt-council-m2-verdict.md:90 and :107, improvements/opt-crawl-src-20261121.md:148, improvements/optimal-fix-method-20261121.md:198). Checked 22/11/2026: MEMORY.md exists on no branch and never existed in git history on any branch; the proposal commit 5a2b69d itself exists (Y13r2 NO VERDICT run), but no council paper, log entry, or owner message in the repo records who accepted the proposal. The redteam already flagged this (opt-redteam-m-skeptic.md:58 P-33, opt-redteam-m-verdict.md:33,81 AM-13); the method file itself requires the acceptance to be cited in a council paper or log entry, not only MEMORY.md 22:57.
+- Corrected status: the H3 gate acceptance is UNVERIFIED from repo evidence. The gate decision must be re-recorded in a council paper or log entry by the coordinator before the Y13 live run treats it as resolved.
+- Note: not every MEMORY.md 22:57 citation is equally broken. The re.py deleter claim citing the same entry is independently corroborated in-repo by the VMFIX commit c16dd4e. Only the H3 acceptance lacks any in-repo corroboration.
