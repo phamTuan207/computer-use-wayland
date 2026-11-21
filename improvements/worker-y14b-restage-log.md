@@ -1964,3 +1964,103 @@ C2-9/C2-10 INFO parts (covered by item 14).
   range, blob/md5, claim list, probe paths, verdict + paper
   deliverable, stage-only-their-paper rule). Ship waits for
   them unless one BLOCKs.
+
+### Fix-pass-6 reviews: Council 1 GO + Council 2 AMEND (2 of 4 in)
+
+- 23:59 +07: Council 2 verdict AMEND. Paper 4e905e2
+  (todolist-push, ls-remote verified, ANCESTOR_OK; only its
+  paper file staged/committed; agent 734ec35a, completed
+  23:58:48 UTC). Own probe /tmp/y14b-fix6-c2-probe.py, 99
+  checks incl. 8 live, exit 0. All 8 fix-pass-5 findings
+  CLOSED (C2-3 quote-state bound + C2-4 basename truncate
+  fixed in code, confirmed by fix5-vs-fix6 differential and
+  live /proc checks; C2-5 recorded with exact forms and the
+  command-position fix direction; C2-6, C2-7, C2-8, C2-9/C2-10
+  corrected in record, with d4 now fixed rather than
+  residual). Fresh probe also verified B12 (real gap is the
+  no-separator later-argv form), R5-4, and that the flag-value
+  skip breaks no real wrapper (env -i, sudo -u root, flock -w
+  5 all caught live), plus double-quote, mixed-quote, and
+  apostrophe edges with no tracker bug found. New findings:
+  C6-3 (LOW, code) the basename truncate over-strips
+  direct-argv literal filenames (python3 run_foo.py(x) now
+  True, was False in fix5; python3 run_foo.py;echo True;
+  run_foo.py&echo True; run_foo.py) True; /tmp/run_foo.py;echo
+  True) and the paren cut buys nothing since no true case
+  needs it; fix is dropping "(" and ")" from the cut set.
+  C6-1/C6-2/C6-4 are one-line doc corrections (stale rstrip
+  set at log line 1006, a misleading d4 sentence in the
+  _top_level_sep_index docstring, and a B12 example that does
+  not demonstrate the gap). C6-5 (process) none of the claimed
+  regression counts are re-runnable because every author
+  probe file is gone from the filesystem (find / returns
+  nothing), so the probes must be committed under
+  tests/realistic/. Disclosed in the paper (C6-6): Council 2
+  once used `pkill -x -f "run_foo"` in cleanup against the
+  task rule, killing Council 1's pre-existing stubs 3511/3513;
+  all its own stubs were otherwise killed by exact PID and
+  confirmed gone.
+- 00:00 +07: Council 1 verdict GO. Paper 0cc8e27
+  (todolist-push, ls-remote verified, ANCESTOR_OK; only its
+  paper file staged/committed; agent f87542cb, completed
+  23:59:44 UTC). Own probe /tmp/y14b-fix6-c1-probe.py, 97/97
+  unit + 21/21 helper + live 6/6, exit 0, 0 OLD-DIFF lines.
+  Every claimed fix verified, zero unintended flips, every
+  doc/record correction verifies against the tree. C1-2
+  correction re-verified by Council 1 reading the bf3c939
+  blobs itself. Plan md5 at d552f4d pins fix6 values in-commit.
+  INFO-1 (doc, minor): the import-branch "later top-level
+  command" limitation is vacuous (cannot occur as a single
+  /proc cmdline; the genuinely reachable form, the ; inside
+  one bash -c string, returns True in both blobs and True is
+  CORRECT there); over-disclosure, not a bug; optional reword
+  or drop. INFO-2 (style, trivial): _quote_states is computed
+  inside the -c branch; hoisting it to the top of the
+  function would read cleaner; no action. Review limitation:
+  author's probe files absent from /tmp (same C6-5), so
+  Council 1 substituted an independent differential probe.
+- 00:01 +07: C6-5 CONFIRMED by me. All 17 author probe files
+  are MISSING from /tmp (y14b-h2-probe.py, y14b-transcribe.py,
+  y14b-gate-dry.py, y14b-m1-probe.py, y14b-fix2-m1-probe.py,
+  y14b-fix2-probe.py, y14b-fix3-probe.py, y14b-fix4-probe.py,
+  y14b-fix5-probe.py, y14b-fix6-probe.py, y14b-fix4-c2-probe.py,
+  y14b-c1-diff-probe.py, y14b-fix5-c1-probe.py,
+  y14b-fix5-c2-probe.py, y14b-fix5-rt-probe.py,
+  y14b-fix5-rt-live.py, y14b-fix5-rt-diff.py). The reviewers'
+  own probe files REMAIN (/tmp/y14b-fix6-c1-probe.py,
+  y14b-fix6-c2-probe.py, y14b-fix6-rt-probe.py,
+  y14b-c3-fix6-probe.py, timestamps 16:49-16:59 UTC). The
+  surviving /tmp/y14b-* files are all from 16:49 UTC or later;
+  my fix6 probe was written ~16:31 UTC, so the loss happened
+  between 16:31 and 16:49 UTC. Cause unknown (not
+  investigated further; no evidence it was a reviewer, both
+  reviewers report finding the files already gone). The
+  consequence is as Council 2 states: the claimed regression
+  counts are not re-runnable from my files. The reviewers'
+  independent probes (Council 1 97+21+6, Council 2 99) cover
+  the same ground at spot level and all pass, so the code
+  evidence stands, but the author-probe re-run is lost.
+- 00:02 +07: fix6 probe RECONSTRUCTED and saved to the repo
+  (tests/realistic/y14b-fix6-probe.py, untracked, NOT yet
+  committed; will commit with the fix-pass-6 review log
+  entry). Reconstructed from my own context (the probe as
+  written for fix pass 6, with the single-element -c code and
+  the R5-4/B12 additions). Verification: ran from
+  tests/realistic, 71/71 PASS, exit 0 (the "^FAIL" grep count
+  of 1 is the "FAILURES: 0 []" summary line, the same counting
+  artifact documented in fix pass 6). The other 16 author
+  probes are NOT reconstructed (their full content is not in
+  my current context with confidence); the fix6 probe is the
+  minimum C6-5 asks for ("at minimum commit the fix6 probe").
+  Fix pass 7 will commit this file and add a paren case for
+  C6-3.
+- 00:03 +07: redteam (284a71f9) and Council 3 (ccd4d6fc)
+  still running (last activity 2s and 27s ago at check time).
+  Fix pass 7 waits for them; adjudicate all 4 together per
+  the established pattern. Partial adjudication so far:
+  Council 1 GO (no action), Council 2 AMEND (C6-3 code: drop
+  "(" and ")" from the _runner_basename_head cut set;
+  C6-1/C6-2/C6-4 doc one-liners; C6-5 process: commit the
+  fix6 probe, reconstruction done, commit in fix pass 7;
+  C6-6 disclosure, no action). Council 1 INFO-1/INFO-2 are
+  optional, no action required for ship.
