@@ -1921,6 +1921,84 @@ Lưu ý: /tmp bị xóa lại giữa 02:42 và 03:09 (mọi log diag và
 /tmp/firefox mất; chỉ JSON ở ~/workspace còn, log diag sau này
 nên để vào ~/workspace).
 
+## COUNCIL 2 XONG, 03:12 ngày 22/11 - AUDIT ĐÚNG, CẢ 13 VI PHẠM ĐỨNG
+
+Báo cáo ở docs/batch6-council2-audits-20261122.md (287 dòng theo
+wc -l), đã push (ef0426a).
+
+Kết luận: audit đúng. Cả 13 vi phạm đứng, không cái nào bị bác.
+Tự kiểm lại ở tip e4082ff: V1 CAO đồng ý (MEMORY.md không có trên
+branch; cả 5 trích dẫn kiểm đúng dòng). V2 CAO đồng ý (cả 9 log
+arm F3 vắng; f3-evidence/ đúng 14 file đã liệt; full.log 59 dòng,
+0 lần nhắc arm; các dòng verdict 65/67/72/76/79 khớp nguyên văn).
+V3 CAO đồng ý về thực chất, với 1 câu sai: các dòng 985-991 khớp
+nguyên văn; cả 5 file bằng chứng nêu tên 0 kết quả toàn branch;
+finish-record.json và start-readiness.json 0 ở đâu; c9b96a7
+resolve, 8da1f562 không phải git object. Nhưng câu "No state.json
+exists on the branch" của audit là sai: 15 file end-state.json
+tồn tại trong các thư mục case của A1 checker-selftest (không file
+nào là file tc của judge). Đã sửa câu đó trong audit (C1), phán
+quyết đứng. V4-V13 đều đồng ý (đã kiểm từng cái, xem báo cáo).
+11 số tính lại độc lập, đều đúng: 484 file, 10287241 byte,
+live-test-log 4229 dòng / 1058871 byte / 113 dòng PASS, 1664 dòng
+/tmp/, FREEZE 12 sha256, plan A1 1072 dòng, FCCK 28613 + 4118 =
+32731, Y8b out.log 59/59/0, check.mjs 167 lên 353, log Y13g R2
+268 dòng 277/280.
+
+Đã sửa vào audit (commit 0ac9bf0): C1 câu V3 thu hẹp như trên;
+C2 ghi chú stale Y13g "51 commit / 21 file" sửa thành 50 / 20
+(kết luận vẫn giữ). Thêm lưu ý C3: tip đã chuyển sang 167a2e9
+trong lúc council làm (485 file ở đó), nên việc tiếp theo phải
+ghim lại tip; C4: nhãn "LOW-MEDIUM" của V9/V12 làm tỉ lệ 3/5/5
+mơ hồ. Chưa kiểm lại: toàn bộ trích xuất 390 hash (audit không
+lưu danh sách trích xuất; kiểm điểm ủng hộ: 5 hash không resolve
+và 9 hash resolve đã xác nhận), 2 giá trị md5 Y8b (trích trong doc
+judge, không tìm được file đúng), claim con results.json trên main
+của V7, toàn bộ danh sách đường dẫn local của V11.
+
+## COUNCIL 1 XONG, 03:12 ngày 22/11 - VIỆC 3 ĐỒNG Ý MỌI CLAIM QUAN TRỌNG
+
+Báo cáo ở docs/batch6-council1-tests-20261122.md (197 dòng), đã
+push (047476e).
+
+Kết luận: đồng ý mọi claim quan trọng trong báo cáo việc 3. Tự
+chạy trong phiên này (03:09-03:13 +07): full suite Chromium 10/10,
+wall 37276 ms (20:11:06Z-20:11:43Z), từng test t01 4259, t02 4005,
+t03 2777, t04 1980, t05 2649, t06 2454, t07 2605, t08 2049, t09 3344,
+t10 11143; các lần chạy của báo cáo là 36367 / 36122 ms, tái hiện
+được. Mutation probe (Chromium, checker D1): control PASS 15144
+ms; M1 FAIL 11298 ms, 6 lỗi; M2 FAIL 11277 ms, 6 lỗi; M3 FAIL
+12112 ms, 8 lỗi. Mọi thông báo lỗi khớp báo cáo đúng từng chữ.
+Fixture mutation kiểm bằng diff: M1 đổi đúng 3 dòng
+position = 0; thành 1, M2 thêm đúng 1 dòng stopTimer();, M3 đổi
+đúng 3 dòng thành if (!playing) position = 0;. Suite control
+giống hệt cây đã commit. Đọc code D1: 1d23532 là tổ tiên của HEAD,
+lần đổi cuối của check t10 là 1d23532; diff thêm đọc exact-zero
+trong trang, sampleMin, kiểm advancing 3 điểm như mô tả. Cả 4 hash
+check khớp báo cáo đúng từng chữ. t09 là bản Y10 (verify polling
+5 s, cancel dwell 500 ms); t05 điền tên mới field-notes-7.txt.
+Firefox 3/5, kiểm từ file kết quả: cả 5 JSON lần chạy khớp bảng
+của báo cáo đúng từng số (số lượng, wall, ms từng test ở lần
+2/4/5, thông báo lỗi ở lần 1/3). Chạy riêng khớp (t09 2/2 PASS
+7691/7266 ms; t10 lần 2 PASS 16926 ms, lần 3 FAIL 13121 ms chỉ vì
+race Night Drive). ff-stderr.log có 3 lần "No space left on device"
+(mã Os 28), ủng hộ chẩn đoán lần 1 hết đĩa. Firefox 160.0.1 vẫn
+khởi động được lúc council làm (screenshot headless exit 0, 5763
+byte).
+
+Ghi chú nhỏ (không đổi phán quyết nào): elapsed nội bộ của
+m1-probe-recheck.json là 13648 ms so với "wall 13909 ms" trong
+phần kiểm chứng hoàn thiện (lệch 261 ms, có thể do đồng hồ ngoài
+so với elapsed nội bộ); giá trị timer live của M3 lệch 1 tick so
+với lần chạy của báo cáo (21/91 so với 20/90, bình thường với lần
+đọc timer 100 ms); file lần chạy Chromium 1 /tmp/b6t3-run1-results.json
+đã mất sau một lần /tmp bị xóa nữa, nên claim "10/10 2 lần" trên
+Chromium giờ dựa vào hồ sơ báo cáo cộng lần chạy 10/10 mới của
+council; báo cáo việc 3 là 372 dòng theo wc -l (brief nói 373).
+Giới hạn: không chạy lại gì trên Firefox (shim đã xóa; chỉ kiểm
+file, theo brief) và không chạy lại t09/t10 riêng trên Firefox.
+Zen thật vẫn chưa kiểm chứng, như báo cáo nói.
+
 ## Watchdog đợt 6, 01:47 ngày 22/11
 - Việc 1: agent đang chạy, hoạt động 39 giây trước, chưa có file báo cáo.
 - Việc 2: xong, đã push (581736e, ee5891b), 13 vi phạm, 3 cao.
