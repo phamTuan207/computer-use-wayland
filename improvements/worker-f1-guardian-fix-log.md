@@ -586,3 +586,140 @@ wall-clock times.
 - Next: adjudicate all four verdicts once council 3 lands, then implement the
   AMEND code fixes (A1-A4, R3-R8, R11, R12) with re-tests, then the live
   activation gated on F3 sign-off.
+
+## 22:52 - Council 3 verdict read (AMEND) + full adjudication of all four verdicts
+- 22:52: read improvements/worker-f1-council-3.md in full (201 lines, verdict
+  AMEND, role tests and user-visible behavior). File ends cleanly with a
+  bottom line, so it is fully written, but its completion handoff has NOT
+  arrived yet and the agent is still listed running, so it is NOT committed
+  yet. Commit it when the handoff confirms delivery.
+- Council 3 independently re-verified: theme tests 34 OK on VM 5x; session
+  tests 34 OK on laptop 30.574s; theme 34 OK on laptop 0.126s; laptop scripts
+  match VM by md5 (cursor_session.py 5d6c580a, cursor_theme.py 502a4941);
+  neg.out matches the log word for word; test file does not compile on VM
+  3.12 (pre-existing, parent fails at line 566 too); no em/en dashes in the
+  diff or the four changed files; FAKE status_garbage faithful.
+- Council 3 findings C3-1 to C3-8: 1. Lifecycle test does not prove the
+  envelope names the cause (same as A4, stronger: parse stdout as JSON,
+  assert the error field contains 'not valid JSON' and 'may not be loaded',
+  plus assert the bare message never appears alone). 2. The remedy in the
+  error message is partly wrong and partly unrunnable (NEW, important):
+  activate-glass.py needs a library path + --abi + --profile-sha256,
+  activate-cursor-guard.py needs a library path + --abi, visuals.py refuses
+  outside the first 30s of fresh login (so re-run visuals.py cannot fix a
+  running session, only the next login), and activate-cursor-guard.py refuses
+  unless glass is already available (order matters). Required: rewrite the
+  remedy to name runnable commands with required arguments and pinned
+  values, or point at the log plan B commands, and say plainly the loader
+  only runs at next login. 3. Supervise tail race (same as A1/R6). 4. Second
+  live failure layer has no test: Guard.__init__ would throw FileNotFoundError
+  on the missing socket directory even if check_guard passed; the FAKE always
+  provides a guard socket. Required: add one Lifecycle case for the missing
+  socket directory, asserting fail closed with the cause named in the
+  envelope, or record explicitly in the log that this layer is unproven and
+  why the live positive test covers it. 5. Python 3.12 failure gates the new
+  test (same as R12). Required: fix the nesting in
+  test_cleanup_exceptions_cannot_skip_restore, or split the new Lifecycle
+  test into a 3.12-compatible file, or record a pinned minimum Python
+  version. 6. 34 OK claim is luck dependent: pre-existing flake in
+  test_wrong_token_oversize_framing_and_drop_all_fail_closed (BrokenPipeError
+  at cursor_theme.py:148 in the drop case; the test accepts RuntimeError and
+  ConnectionResetError but not BrokenPipeError; measured pre-fix 5/50,
+  post-fix about 5/95 overall). Required: accept BrokenPipeError in the drop
+  case, or make the server close cleanly, then re-run the suite until green
+  ten times in a row before quoting a pass count. 7. Duplication: the message
+  appears twice by design (stderr via tee + JSON envelope on stdout); the
+  log says neg.err was empty in the live run, which does not match the tee
+  design, so either the live harness did not capture session stderr or the
+  tee line went elsewhere. Not a blocker; the live positive run should record
+  both streams separately. 8. The message leads with decoder jargon; lead
+  with the cause, keep the raw reply as parenthetical detail.
+- Council 3 exact positive proof (5 steps, for plan B after activation):
+  plugin list shows hyprglass + computer-use-cursor + hyprbars; cu-cursor
+  status returns JSON with active true and the session token; socket dir
+  exists; fresh observe during the session with the pill visible (fresh
+  observe id, not reused); prove the pill is the session pill (indicator
+  pid + state dir token matching the session); stop cleanly, fresh observe,
+  pill gone, no stray indicator; start a second time, pill returns; one
+  harmless click through the session on an already selected tab row,
+  re-checked in a fresh observe first, verified by cursorpos + fresh observe;
+  record stdout and stderr separately for the whole run.
+
+### ADJUDICATION (all four verdicts: council 1 AMEND, council 2 AMEND, council 3 AMEND, redteam AMEND)
+The fix design and the root-cause chain are proven. No reviewer says the
+fix is wrong or must be reverted. Every verdict is AMEND, and the required
+items converge on one second round of code fixes, then the live activation.
+Items agreed by two or more reviewers (implement in round 2):
+- Drain race (A1 = R6 = C3-3): on the startup failure path, wait for the
+  guardian to exit, then join the drain thread with a short bounded timeout,
+  before composing the detail. Join before closing guard.stderr.
+- Registration gate (A2 = R8 part): include the drained tail in 'driver
+  registration failed' too.
+- Non-UTF8 (A3 = R5): catch UnicodeDecodeError in guard_reply alongside
+  JSONDecodeError; open the drain pipe with errors='replace'.
+- Envelope assertion (A4 = C3-1): Lifecycle test must parse stdout as JSON
+  and assert the error field contains 'not valid JSON' and 'may not be
+  loaded', and assert the bare message never appears alone.
+- Test file on 3.12 (R12 = C3-5): fix the nesting in
+  test_cleanup_exceptions_cannot_skip_restore so the file compiles on VM
+  Python 3.12, or split the new Lifecycle test into a 3.12-compatible file.
+- A5/R9 log correction: DONE 22:50 (d27ad0a verified, log corrected,
+  committed 218b223).
+Single-reviewer required items (implement in round 2):
+- R3 (High): gate the session on hyprglass active. The guardian must check
+  indicator.liquid_available before print('ready') and fail closed naming
+  glass, or publish the require-liquid marker so Native fails closed.
+  Positive proof must include a hyprglass-active check, not only cu-cursor
+  status and the socket.
+- R4: guard_reply must distinguish truncated JSON (raw starts with { or [,
+  JSON fails: say truncated or corrupt, show the decoder position, do NOT
+  prescribe activation) from a missing backend (plainly non-JSON reply such
+  as 'unknown request').
+- R7: larger deque (32 to 200) and larger tail (1200 chars up), or keep first
+  lines and last lines instead of only the last 1200 chars.
+- R8: name the cause on mid-session guard death (print the guard death cause
+  when guard.poll() is not None mid-session).
+- R11: redact 32-hex tokens in the supervise tail and in guard_reply output,
+  strip control characters before echoing.
+- C3-2: rewrite the remedy in the error message to name runnable commands
+  with required arguments and pinned values (or point at the log plan B
+  commands), say plainly the loader only runs at next login, and state the
+  order (glass before guard). C3-8: lead with the cause, raw reply as
+  parenthetical detail.
+- C3-4: add one Lifecycle case for a loaded status reply with a missing
+  socket directory, asserting fail closed with the cause named in the
+  envelope (or record explicitly that this layer is unproven and why the
+  live positive test covers it).
+- C3-6: accept BrokenPipeError in the drop case of
+  test_wrong_token_oversize_framing_and_drop_all_fail_closed, then re-run the
+  suite until green ten times in a row before quoting a pass count.
+- F2 (council 1): session_remote.py wraps the named error in a generic
+  BrokerError; include str(error) in the BrokerError message.
+- R13: correct the lock message when activation holds owner_lock.
+- C3-7: live positive run records stdout and stderr separately (settles the
+  duplication question).
+Tracked follow-ups (named here, land separately, not blockers for round 2
+code but required before the fix is declared complete):
+- A6/R1/R2: recurrence. Make setup or sync re-pin the repo manifest and
+  optics together with the installed copies on every optics change, or make
+  the loader refuse to run with a stale pin at setup time; run
+  check-visuals-manifest.py inside sync-installed.py and setup.py on every
+  sync; add a post-login self-check so a loader failure is noticed at login,
+  not at first use; make the drift repair durable (move the laptop repo
+  forward to a commit containing the blur 0.15 optics, or commit the optics
+  change, and re-pin through refresh-visuals-manifest.py).
+- R10: 30-second fresh-login gate is single-shot; retry the loader once after
+  a short delay, or add the post-login check so a missed window is noticed
+  immediately.
+- F3/F6: mid-run guardian death is silent (covered by R8); pre-existing second
+  wait without a timeout in the finally block (note only, pre-existing).
+- F1 (council 1): guard_reply mislabels any non-JSON reply as a missing
+  backend; covered by R4 (name the missing backend only when the reply is
+  exactly 'unknown request').
+- F4/F5: restore swallows the named error by design (acceptable); first_action.py
+  still matches (verified by reading, no fallback regression).
+Plan: round 2 code fixes in the VM repo, re-run theme tests on the VM (10x
+green per C3-6) and session tests on the laptop, re-run the live negative
+test, commit each increment, then the live activation (plan B) gated on F3
+sign-off and the council-2 preconditions, then the positive proof per
+council 3 (5 steps, stdout and stderr recorded separately).
