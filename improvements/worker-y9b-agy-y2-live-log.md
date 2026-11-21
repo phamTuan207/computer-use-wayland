@@ -55,5 +55,47 @@
   (port 4449). Test-01 fixture opened VISIBLE at 20:28:50
   (tzHidden False, body visible, 1033 ms). The one 404 in the
   server log is favicon.ico, harmless.
+- 20:29:23 poll: test-05 already final-verify PASS, 208 JSONL
+  rows, runner alive.
+- 20:30:16 poll: runner GONE, suite finished. Suite-end cleanup
+  printed "tab cleanup failed (harmless)" 404s for already-closed
+  registered test tabs; "test tabs returned to about:blank".
+- 20:31: post-run state: Zen PID 27958 alive; ports 8769, 4449,
+  4451, 8767 free; no runner, no geckodriver; lock released.
 
 ## Run results (filled at run time)
+
+- **10/10 PASS, 0 flagged, 0 failed.** Per-test ms: 01: 7765,
+  02: 7945, 03: 7935, 04: 7782, 05: 7658, 06: 7820, 07: 8065,
+  08: 7706, 09: 7810, 10: 7603. Total 78089 ms, suite wall
+  81987 ms. JSONL 421 rows (192 checks, 140 clicks, 36 types,
+  17 waits, 10 goto, 10 eval, 10 verify, 2 select, 2 value,
+  1 text, 1 gap-probe), all attempt 1, no re-runs.
+  Marionette calls 1424. Exit 0 by the plan rule (clean +
+  flagged == total); the detached launch did not capture the
+  process exit code directly.
+- Hidden body: **0 encounters, tz-hidden never sighted.**
+  Bootstrap intervention none. Decisive experiment still owed;
+  tracked item stays OPEN.
+- Y7 doubts, live: (1) test-07 step 24 checks passed (img4
+  hidden, trash counter 1, img4 in trash table) and step 28
+  passed (trash counter 0 after restore), so delete/restore ran;
+  (2) test-09 step 33 body check passed with pinned value
+  "Milk, Eggs, Bread, Apples"; (3) test-07 inventory toast
+  "Root: 5 files, Archive: 3 files, Trash: 0 files", move set
+  img1-3 correct; (4) no crash, all 10 ran in one process.
+- Integrity guard held 10/10 (expected failures on untouched:
+  8, 10, 9, 4, 12, 7, 6, 7, 6, 8).
+- Gaps: test-10 step 15 SKIPPED (fixture gap, display:none,
+  simulator also skips), pre-registered. PLAN DEFECTs: none.
+- Minor observation: suite-end.png was NOT produced (only the
+  10 per-test shots); per-test evidence leg is complete.
+- Evidence copied to the repo and md5-verified against the
+  laptop originals: tests/realistic/live-run-y9-agy-y2-20261121.stdout.log
+  (597 lines, a2bb091a), tests/realistic/live-run-y9-agy-y2-20261121.jsonl
+  (421 rows, c4cb677b), tests/realistic/live-run-y9-agy-y2-shots/
+  (10 PNGs, md5s match). Final report:
+  tests/realistic/RUN-REPORT-AGYY2-20261121.md.
+- Slot released: runner and geckodriver gone, ports free, Zen
+  alive, test tabs on about:blank. Y11b proof runs next (Muse
+  spawns it); Y9b does NOT spawn the next runner.
