@@ -2267,3 +2267,10 @@ Thay bang Task 1 moi: cai skill last30days tren may cau (git clone repo roi dung
 Doc lap kiem tra lai diff sua loi click cua Muse tong (nhanh todolist-push, tu e4082ff toi 4b7d6ac): chay lai cac test suite lien quan (test_first_action, test_type_verification, test_zen_dom, test_dom_act, test_pick4_fastpath, test_session_continuation), kiem tra 12 muc sua co that trong code khong, kiem tra fail-before cho it nhat mot suite moi o worktree e4082ff, danh gia C12 tu code (viewport_origin co dung khong). Ket luan GO/AMEND/BLOCK, ghi ro moi loi can sua kem file/dong. Bao cao vao docs/clone1-amend-verify-20261122.md. Council 3 nguoi + redteam cho ket luan. Day la y kien doc lap thu hai, ben canh council cua Muse tong dang review cung diff.
 
 Luat nhu cu: khong dua thong tin ca nhan nao cua toi len repo, khong dau gach ngang dai, khong ydotool, test nao cung ghi thoi gian. Ket qua bao cao vao file nay.
+
+## Watchdog đợt 6, 03:47 ngày 22/11
+- Việc 1: XONG, báo cáo đầy đủ ZT-00..ZT-10 đã ở coord (03:39) và push (1fcb17d); agent sửa runner đang chạy, file zt_run.mjs sửa lúc 03:47, còn mở B1 đóng tab cuối, prepProfileCerts fail fast, kiểm lại F-B6-03.
+- Việc 2: xong, đã push, 13 vi phạm, 3 cao, clone2 đã xác minh cả 13 đều đúng.
+- Việc 3: XONG, đã push, verdict SOUND, 3/3 mutation bị bắt.
+- Muse: không có yêu cầu mới, chỉ có commit clone2 batch 8 (9745aa9, 7e81213) và ghi chú của chủ (0981310), batch 7/8 vẫn xếp sẵn.
+- Hành động: không cứu agent nào, ghi khối này, commit chỉ coord/clone1.md, push.
