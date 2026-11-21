@@ -6,6 +6,10 @@ rects come out of the DOM (one observation, many elements) over
 Marionette (Selenium) and over raw WebDriver BiDi, how much a
 screenshot costs in comparison, and whether one rect snapshot can
 drive several real pointer clicks verified by a cheap DOM read.
+It also times Selenium 4.53 accessibility snapshots (whole page
+and one element) and a warm BiDi session.new, and it handles a
+BiDi rect item without an "id" defensively instead of crashing
+(run 1 crashed on exactly that, KeyError 'id', flaky).
 
 Every step prints one JSON line: wall clock (UTC) and elapsed seconds
 from a monotonic clock. Run with the repo venv python.
@@ -123,7 +127,7 @@ def main():
             median_s=round(median(times), 4), elements=len(rects))
         marionette_rects = {r["id"]: r for r in rects}
 
-        # 2. Marionette: per-element rect calls, 60 round trips, 1 run (slow).
+        # 2. Marionette: per-element rect calls, 66 round trips, 1 run (slow).
         t0 = time.monotonic()
         per = {}
         els = driver.find_elements(By.CSS_SELECTOR, "button, input, select, a")
@@ -158,6 +162,43 @@ def main():
             sizes.append(len(png))
         log("screenshot_png", t_start, runs=[round(x, 4) for x in times],
             median_s=round(median(times), 4), bytes=sizes[0])
+
+        # 4b. Accessibility snapshot (Selenium 4.53): whole page and
+        # one element, timed. The snapshot is computed from the DOM
+        # following WAI-ARIA, html-aam and accname; it is not the
+        # browser's own accessibility tree. Node count counts the
+        # returned tree recursively. json_chars is the length of
+        # json.dumps of a compact recursive projection
+        # {role, name, children} of the whole-page tree.
+        def count_nodes(node):
+            return 1 + sum(count_nodes(c) for c in (node.children or []))
+
+        def compact(node):
+            return {"role": node.role, "name": node.name,
+                    "children": [compact(c) for c in (node.children or [])]}
+
+        times = []
+        nodes = None
+        json_chars = None
+        to_text_chars = None
+        for i in range(3):
+            t0 = time.monotonic()
+            tree = driver.accessibility_snapshot()
+            times.append(time.monotonic() - t0)
+            if i == 0:
+                nodes = count_nodes(tree)
+                json_chars = len(json.dumps(compact(tree)))
+                to_text_chars = len(tree.to_text())
+        log("a11y_snapshot_page", t_start, runs=[round(x, 4) for x in times],
+            median_s=round(median(times), 4), nodes=nodes,
+            json_chars=json_chars, to_text_chars=to_text_chars)
+        t0 = time.monotonic()
+        el = driver.find_element(By.ID, "btn-42")
+        one = el.accessibility_snapshot()
+        one_t = time.monotonic() - t0
+        log("a11y_snapshot_one_element", t_start, elapsed_s=round(one_t, 4),
+            role=one.role, node_name=one.name,
+            has_element_handle=one.element is not None)
 
         # 5. BiDi while a Marionette session is active on the same
         # browser: Firefox 160 allows one active session in total.
@@ -316,7 +357,17 @@ def main():
             elements=len(bidi_rects) if isinstance(bidi_rects, list) else None,
             error=r.get("error"))
         if isinstance(bidi_rects, list):
-            bm = {x["id"]: x for x in bidi_rects}
+            # Defensive: a BiDi evaluate result item is expected to
+            # carry "id", but run 1 of this bench crashed here with
+            # KeyError 'id' (flaky, not reproduced since). Skip items
+            # without an id and record how many were skipped instead
+            # of crashing the whole run.
+            skipped = sum(1 for x in bidi_rects
+                          if not (isinstance(x, dict) and "id" in x))
+            bm = {x["id"]: x for x in bidi_rects
+                  if isinstance(x, dict) and "id" in x}
+            log("bidi_rects_without_id", t_start, skipped=skipped,
+                total=len(bidi_rects))
             worst = 0.0
             worst_id = None
             for k, v in bm.items():
@@ -347,6 +398,46 @@ def main():
             proc2.wait(timeout=10)
         except subprocess.TimeoutExpired:
             proc2.kill()
+    # 9. Warm BiDi session.new: same fresh browser launch, but wait
+    # 5 s after the remote-debugging port opens before connecting,
+    # so the remote agent is already warm. This separates the
+    # first-session cost (measured in step 8) from the steady-state
+    # session.new cost.
+    bidi_port3 = 9225
+    profile3 = "/tmp/dom_grounding_profile3"
+    import os
+    os.makedirs(profile3, exist_ok=True)
+    proc3 = subprocess.Popen(
+        [FF, "-headless", f"--remote-debugging-port={bidi_port3}",
+         "-profile", profile3, "about:blank"],
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    try:
+        deadline = time.time() + 30
+        while time.time() < deadline:
+            if port_open(bidi_port3):
+                break
+            time.sleep(0.25)
+        if not port_open(bidi_port3):
+            raise RuntimeError("warm bidi port did not open in 30 s")
+        time.sleep(5)
+        ws3 = websocket.create_connection(f"ws://127.0.0.1:{bidi_port3}/session",
+                                          timeout=10, suppress_origin=True)
+        try:
+            t0 = time.monotonic()
+            ws3.send(json.dumps({"id": 1, "method": "session.new",
+                                 "params": {"capabilities": {}}}))
+            msg = json.loads(ws3.recv())
+            log("bidi_session_new_warm", t_start,
+                elapsed_s=round(time.monotonic() - t0, 4),
+                ok="result" in msg)
+        finally:
+            ws3.close()
+    finally:
+        proc3.terminate()
+        try:
+            proc3.wait(timeout=10)
+        except subprocess.TimeoutExpired:
+            proc3.kill()
     log("run_total", t_start)
 
 
