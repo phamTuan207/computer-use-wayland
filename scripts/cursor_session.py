@@ -243,9 +243,19 @@ def supervise(env, argv):
                     sys.stderr.flush()
             except (OSError,ValueError):
                 pass
-        threading.Thread(target=_drain,args=(guard.stderr,guard_errors),daemon=True).start()
+        drain_thread=threading.Thread(target=_drain,args=(guard.stderr,guard_errors),daemon=True)
+        drain_thread.start()
+        def _settle_drain():
+            # A fast guardian death can leave the drain thread behind: wait
+            # for the guardian to exit, then join the drain thread with a
+            # short bounded timeout, so the tail is complete before it is
+            # read instead of falling back to the bare message.
+            try:guard.wait(timeout=0.5)
+            except subprocess.TimeoutExpired:pass
+            drain_thread.join(timeout=0.5)
         ready,_,_=select.select([guard.stdout],[],[],15)
         if not ready or guard.stdout.readline().strip()!='ready':
+            _settle_drain()
             detail=''.join(guard_errors).strip()
             raise RuntimeError('session guardian startup failed' + (': '+detail[-4000:] if detail else ''))
         driver_env=env.copy();driver_env['CU_SESSION_TOKEN']=token
@@ -257,7 +267,9 @@ def supervise(env, argv):
         os.write(write_fd,str(driver.pid).encode())
         ready,_,_=select.select([guard.stdout],[],[],2)
         if not ready or guard.stdout.readline().strip()!='registered':
-            raise RuntimeError('driver registration failed')
+            _settle_drain()
+            detail=''.join(guard_errors).strip()
+            raise RuntimeError('driver registration failed' + (': '+detail[-4000:] if detail else ''))
         os.write(gate_write,b'go')
         os.close(gate_write);gate_write=None
         while driver.poll() is None:

@@ -827,3 +827,39 @@ council 3 (5 steps, stdout and stderr recorded separately).
   or prompts it to keep working, then switches back to workspace 1. Approve
   or nudge only for clone2 work, never money, data deletion, or PII. No
   effect on F1; F1 does no live driving in this round.
+
+## 22:56-22:57 - Round 2 commit B2: drain settle before reading the tail (A1/R6/C3-3 + A2/R8)
+- 22:56: edited scripts/cursor_session.py supervise. Added _settle_drain():
+  wait for the guardian to exit (0.5s), then join the drain thread (0.5s),
+  before the tail is read. Called at both failure gates: the startup gate
+  (A1/R6/C3-3, the exact race fix D exists to remove) and the driver
+  registration gate, which now includes the drained tail in the error
+  instead of the bare 'driver registration failed' (A2/R8 part 1). The
+  drain thread is now kept in a named variable (drain_thread) instead of
+  an anonymous thread.
+- 22:56: laptop evidence. scp of the new cursor_session.py to
+  /tmp/f1-test/scripts/ OK, md5 1687ffa8624c35b770a671252fc891e0. Session
+  tests run detached (SSH dies ~30s): 34 tests OK in 29.698s
+  (/tmp/f1-test/b2.log), no unittest process left running. py_compile on the
+  VM OK before that. grep confirms _settle_drain at lines 248, 258, 270.
+- 22:56: push-race lesson from B1. The B1 push printed "remote rejected
+  (cannot lock ref, is at 22c3b35 but expected 9b8ddc4b)" yet the commit
+  LANDED: verified three ways (git branch -r --contains 5b11696 shows
+  origin/todolist-push; merge-base --is-ancestor 5b11696 origin/todolist-push
+  says YES; git log shows it in the range). The shared branch moves fast
+  and a push can report a transient lock rejection while the commit still
+  lands. Ground truth is ls-remote + branch --contains + merge-base, not
+  the push exit message. After a fetch + fast-forward merge, local HEAD
+  and remote HEAD are both a96b47c (OPT-WEB S13).
+- 22:57: fleet notes (not F1). Y13r2 DONE, verdict BLOCK: 4 new blockers
+  (B1 .pyc forge via -m/import, B2 stdlib shadowing 9/15 names, B3
+  tokenizer missing -m/flag/renames, B4 -m breaks ship) + 5 amends; Y13g
+  spawned to fix per the redteam paper, then a new re-review. The VM
+  python re/__init__.py deletion cause is SOLVED: it was the Redteam Y13r2
+  self-deleting shim (A6e) deleting the wrong file (globals().update
+  overwrote __file__ before os.remove), NOT a stray process. VMFIX restored
+  it durably (c16dd4e). So the "VM python deletion cause still unknown"
+  item in F1's final report is now resolved. H3 gate: accept Y13r2's
+  proposal (5a2b69d NO VERDICT + runner-quiet/ports check is enough as the
+  done marker leg, keep the gate text, Y6 retry after Y13). No effect on
+  F1's code fixes; the live queue is further backed up.
