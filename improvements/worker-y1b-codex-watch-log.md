@@ -111,3 +111,19 @@ best quality, not speed. Council + redteam debate every phase verdict.
   Phase A verdict before Y1b reports it. Draft verdict: BLOCK on 2a/2b
   (no preemption), 1e (real regression), 4a (op fn globals unpinned);
   4b is a probe artifact; 2e is documented residual risk.
+
+## 18:22 +07 | Full suite run 1 on worktree: INVALID (my setup, not Codex)
+- Result: FAILED (failures=3, errors=69, skipped=16), Ran 1467 tests.
+  Cause: the fresh worktree /tmp/y1b-verify has NO native/wtype binary
+  (gitignored; built only in the main VM worktree). 133 mentions of
+  "private wtype helper is missing" in the log; all 69 errors are that
+  cause, and 2 of the 3 failures are the same cause (FullRestoreEnvelope).
+  The 3rd failure (test_tc02_controller, tesseract unavailable) is also
+  knock-on: tesseract is NOT installed on the VM (which tesseract: none);
+  with wtype present the test takes a different branch (Y1 baseline2
+  passed it with wtype present). The other 2 errors match baseline2
+  exactly (test_cursor_file g++ C++26, test_cursor_session import).
+- Fix: copied the built wtype binary from the main worktree into
+  /tmp/y1b-verify/native/wtype (35,984 bytes, executes). Full suite run 2
+  launched in background (log /tmp/y1b-fullsuite2.log). No verdict on
+  the suite until run 2 lands.
