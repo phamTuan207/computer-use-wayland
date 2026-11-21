@@ -125,6 +125,20 @@ Checked against the v2 exact marker after git fetch:
 
 ## Remaining gates before any live driving
 
+## Addendum (18:55, correction to the 18:53 poll)
+
+- Y4d COMPLETED its agy-q2 rerun while this log was being
+  written: commit 1e3901c (18:52 +07), "agy-q2 live rerun 10/10".
+  Run 2: 10/10 clean, 0 flagged, 0 hidden-body encounters,
+  tz-hidden never sighted. Evidence:
+  improvements/worker-y4d-rerun-log.md and
+  tests/realistic/RUN-REPORT-AGYQ2-20261121.md. Slot-marker leg
+  (c) is now SATISFIED (direct Y4d marker, not inferred).
+- Y8 marker STILL ABSENT on re-check at 18:55: no execution
+  complete commit, no "E1 EXECUTION COMPLETE" line, log still
+  ends "UNMEASURED (prep phase, Y4d owns the slot)". The slot
+  now belongs to Y8; Y9 still waits for leg (a) + (b).
+
 1. FRESH RE-REVIEW of the runner code (Redteam re-review gate):
    the v1 verdicts demand a second council/redteam pass on
    tests/realistic/run_agy_y2.py as committed (a82bb41). Not run
