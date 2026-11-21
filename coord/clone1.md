@@ -3524,3 +3524,9 @@ kiểm tra lại mọi số từ artifact trên ổ; điều phối đã kiểm 
 generated_at, freshness_verdicts rỗng, source_status, BotCircle,
 Utilix, SkillVeris, arXiv 2510.10666 đều khớp JSON gốc. Council 3
 người + redteam đang chạy cho báo cáo sweep.
+
+## Watchdog đợt 8, 05:57 ngày 22/11
+Việc 1: SWEEP XONG, council 1/2/3 + redteam XONG HẾT. Council 1: mục 0-2 CONFIRMED, council 2: mục 3 stands, council 3: mục 4-6 SURVIVE, redteam: GO SURVIVES, còn 2 sai sót W1 W2 + 5 claim chưa kiểm + 6 lỗi nhỏ ở tầng citation, chờ điều phối quyết có sửa không. Việc 2: XONG HẲN, đã push hết.
+Muse: không có yêu cầu mới (không có commit coord: mới từ watermark 9514518, chỉ có commit clone1 và 1 commit watchdog của clone2).
+Agent: không còn agent nào đang chạy, tất cả đã done, không cần cứu.
+Hành động: chỉ ghi khối này và push. Cả 2 việc đợt 8 đã xong council + redteam, còn chờ báo cáo cuối đợt 8 trong coord rồi mới dừng watchdog.
