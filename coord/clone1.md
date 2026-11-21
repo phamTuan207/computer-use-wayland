@@ -3405,3 +3405,66 @@ luận GO. Cộng thêm 5 sửa trích dẫn của council 2 (dải từ chối 
 copy session 543-545, def _try_restore 226, test 195 assert chuỗi call
 chứ không phải counter, và mục 5 "1 production caller"), agent sửa sẽ
 áp dụng cả 2 bộ, gộp trùng.
+
+## ĐỢT 8, SỬA VIỆC 2 XONG, 05:16 ngày 22/11 - MỌI SỬA ĐÃ ÁP, 2 CLAIM CỦA COUNCIL 2 BỊ BÁC
+
+Báo cáo sửa docs/batch8-fix-amend-20261122.md (120 dòng theo wc -l),
+đã push (9f058af). Báo cáo việc 2 nay 324 dòng (trước sửa 254), 0 dấu
+gạch. Mọi số đã tính lại trực tiếp trước khi sửa.
+
+Council 2 đã áp: mục 5 (cũng là W2 của redteam, áp 1 lần) "đúng 1
+caller trong repo" thành "đúng 1 production caller" (run() ở
+first_action.py:470) cộng 8 lần gọi test trực tiếp (test_first_action.py:809,
+823, 843, 856, 868, 878, 892, 904), kiểm bằng grep: tổng 9 chỗ gọi. Mục 2
+dải từ chối 478-498 thành 474-498 (`if rejected is not None:` ở 474,
+`return 1` ở 498), sửa cả mục 2 và mục 5. Mục 12: assert counter
+(observes_added 0, act_observes 0) nay chỉ gán cho test_dom_act.py:227-228;
+test_type_verification.py:195 assert chuỗi call observe ['fresh',
+'persist', 'persist']. Đã kiểm: file đó có 0 lần xuất hiện các counter.
+Tham chiếu :132 và :233 giữ nguyên.
+
+Redteam đã áp: W1 tổng 6 suite 1.385 s thành 1.375 s
+(0.629+0.424+0.005+0.001+0.074+0.242 = 1.375). W3 bullet 1 và 2 của R10
+sửa thành mô tả thật, kiểm với improvements/worker-click-rt-log.md:94-100:
+(1) verification bị bỏ qua, không phải lỗi, khi after_capture False hoặc
+terminal_address None; (2) age check dùng deadline tối đa của session,
+không phải thời gian attempt thật. M2 liệt kê commit không phải amend đã
+đủ: cả 33 commit (tổng 41 trong dải, kiểm bằng git rev-list --count), gồm
+11 hash trước đây chưa liệt và 8 coord log, mỗi cái kiểm bằng git log. M4
+câu phạm vi đã rõ: 15 dòng thay đổi nhắc image_point (call mới, hàm mới
+dom_rect_to_image_point, docstring), nhưng 0 dòng diff chạm định nghĩa
+image_point, move, hay _check_entry_pyc (kiểm bằng diff grep). U1/U2 thời
+gian chạy và lỗi build.py ghi rõ là chưa log (không có run log hay build
+log trên ổ; pkg-config xác nhận gtk4 vắng, chỉ xác nhận nguyên nhân chứ
+không xác nhận chính lỗi build).
+
+2 sửa của council 2 KHÔNG áp, vì council 2 sai, báo cáo đúng: mục 6
+council 2 nói copy từ session trải 543-545. Grep trực tiếp thấy
+type_verified ở 543 và error_code ở 544. "543-544" của báo cáo là đúng.
+Mục 9 council 2 nói `def _try_restore` ở 226. Grep trực tiếp thấy def ở
+227 (226 trống, 228 là dòng đầu docstring). "227" của báo cáo là đúng.
+Cả 2 lần bác đều ghi trong mục corrections của chính báo cáo, kèm bằng
+chứng grep. Tôi tự kiểm lại cả 2 điểm: sed 543-545 thấy type_verified 543,
+error_code 544, dòng 545 là `if rc == 0 and not timed_out:`; sed 226-228
+thấy 226 trống, def ở 227, docstring ở 228. Council 2 sai cả 2.
+
+Dọn worktree (M5): worktree base ~/workspace/b8t2/base đã đưa về checkout
+sạch của e4082ff (git checkout -- . cộng xóa 2 file chưa track
+scripts/dom_act.py và tests/test_dom_act.py). Kiểm bằng git status: trống.
+Worktree amend không đụng, sạch.
+
+Kiểm báo cáo đã sửa: không còn số sai cũ trong thân ngoài mục corrections
+(đã quét 1.385 s, 478-498, "exactly one caller in the repo", "200-char
+error truncation", và liệt kê cũ chưa đủ). Số mới đã có trong thân: 1.375 s,
+474-498, "exactly one production caller", "max session deadline", liệt kê
+đủ 33 commit, làm rõ phạm vi 15 dòng, ghi chưa log cho U1/U2. Một lỗi tự
+bắt lúc sửa: lần sửa đầu vô tình làm mất tham chiếu :132 và :233 ở mục 12;
+agent tự bắt khi đọc lại và đã khôi phục trước khi xong.
+
+Không còn sửa nào chưa áp. Mọi sửa của council 2 và redteam đều đã áp
+hoặc bác trực tiếp kèm bằng chứng. Claim 255 dòng trong handoff của agent
+việc 2 (M1) không cần sửa doc: báo cáo không nêu số dòng, wc -l nói 254
+trước sửa, 324 sau sửa.
+
+Việc 2 đợt 8 XONG HẲN: báo cáo + council 1/2/3 + redteam + sửa, tất cả đã
+push. Việc 1 vẫn chặn chờ chủ xác nhận chạy clone; đợt 8 chưa xong hẳn.
