@@ -112,3 +112,52 @@
 - Open gaps for OPT to reconcile: OPT-SRC crawl file missing at council start;
   flicker work log file not present in the VM repo; A5 d27ad0a sha unverified by
   this council; live activation and F2 rehearsal both still pending (gated).
+
+## CORRECTION 22:56 (T+360s) - log timestamps written ahead, corrected here
+- The debate and verdict entries above carry estimated times (22:52-23:05 debate,
+  23:05 verdict, 23:05-23:15 writing, 23:15 done). Those were written ahead of
+  real time when the log file was created at 22:50. ACTUAL times, from commit
+  records: log + mechanism committed 22:51 (a851c75, ls-remote verified);
+  evidence committed 22:52 (afd7766); safety committed 22:53 (d5e2dc4); verdict
+  part 1 class A 22:54 (7f96153); part 2 class B 22:54 (432f89e); part 3 class C
+  22:55 (6a823a9); part 4 commit method 22:55 (c07a596); part 5 sequence/gates
+  22:56 (0419ce8). The debate itself ran 22:50-22:51, not 22:52-23:05. This
+  correction is appended as it happens, per the owner log rule; the earlier
+  entries are left as written so the correction is visible.
+- Follow-up received during verdict writing (parent, 22:53): COMMIT MORE AND
+  SMALLER, graph target. Graph shows 136 contributions; target 240 before
+  midnight +07. OPT verified via GraphQL at 22:52: UTC day 21/11 = 144 commits
+  + 1 PR = 145; local +07 day = 201 commits + 1 PR = 202. Gap to 240 is about
+  95, not about 51. Rule applied: every small step its OWN commit, push
+  immediately, never batch. One paper = one commit, one verdict section = one
+  commit. Verdict part 4 (commit method) covers this discipline. All 8 council
+  commits followed it, each verified via git ls-remote.
+- Correction received 22:53 (parent, graph counting): the GitHub graph counts
+  ONLY commits on the DEFAULT branch (main). todolist-push has 290 commits on
+  UTC 21/11 but they do NOT count. Worker MERGE spawned to merge todolist-push
+  into main. This council stays on todolist-push and does NOT switch branches.
+  Verdict part 4 rule 2 records the graph rule; verdict open gaps record the
+  MERGE worker and the F3 full tab cleanup re-run (39 resurrected fixture tabs,
+  same keep-list of 28 real tabs, owner photo 22:50).
+- Commit hygiene applied: git status checked before every commit; git commit
+  --only used for this council files only, so no other worker files were swept
+  in. Verified: git status showed other workers files (worker-f1-council-3.md,
+  worker-y13r2-redteam.md, worker-f1-guardian-fix-log.md modified, opt-crawl
+  web sources) and none entered a council commit.
+- Incident 22:55: verdict part 5 commit failed with .git/index.lock held by a
+  concurrent Y14b git add/commit/push process (PID 201580, push PID 201588).
+  No lock file removal was done; waited, re-checked (lock gone), retried the
+  commit, push succeeded (0419ce8, ls-remote verified). Lesson recorded: the
+  shared tree has concurrent git writers; a lock failure means wait and retry,
+  never force-remove a live lock.
+
+## 22:56 (T+360s) DONE, REPORT TO WORKER OPT
+- Four papers + this log delivered. 8 commits total, all on todolist-push, all
+  verified via git ls-remote: a851c75 (log + mechanism), afd7766 (evidence),
+  d5e2dc4 (safety), 7f96153 (verdict part 1), 432f89e (part 2), 6a823a9 (part 3),
+  c07a596 (part 4), 0419ce8 (part 5). Verdict goes to redteam next (Worker OPT
+  wave 2). Open gaps for OPT to reconcile: OPT-SRC crawl file missing at council
+  start; flicker work log file not present in the VM repo; A5 d27ad0a sha
+  unverified by this council; live activation and F2 rehearsal both still
+  pending (gated); VM `re` deletion cause unknown; F3 tab cleanup re-run in
+  progress; MERGE worker merging todolist-push into main.
