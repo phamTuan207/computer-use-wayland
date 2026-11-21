@@ -2435,6 +2435,74 @@ trong báo cáo: XDG_RUNTIME_DIR phải export TRƯỚC dbus-launch, nếu
 không 2 phiên đồng thời tranh socket chung ~/.cache/at-spi/bus và
 probe không đăng ký được.
 
+## ĐỢT 7, COUNCIL 2 XONG, 04:18 ngày 22/11 - CẢ 3 HIGH SỬA MỘT PHẦN, ĐÃ XÁC NHẬN
+
+Báo cáo docs/batch7-council2-audits-20261122.md (86 dòng theo
+wc -l), đã push (c0304d9). Kết luận: cả 3 HIGH SỬA MỘT PHẦN,
+đúng như clone2 báo và clone1 kiểm. Hồ sơ đã sửa ở các chỗ trích,
+vật liệu gốc vẫn thiếu cả 3 trường hợp.
+
+Mỏ neo: origin/todolist-push da60024, fetch mới. Tip KHÔNG tiến
+từ da60024 (câu trong brief của tôi nói tip đã tiến là sai).
+Báo cáo việc 3 nói tip "tiến 2 lần" từ c19c227 cũng sai: log có
+36 commit giữa c19c227 và da60024. Cả 2 lỗi không ảnh hưởng kết
+luận nào. Cả 4 commit sửa tồn tại, đều là tổ tiên của tip da60024,
+thêm thuần đúng số (748cc35 5/0, 219720c 4/0, 05ee34d 5/0, 16c4196
+78/0), 0 dấu gạch ngang dài trong dòng thêm. Mỗi "BATCH 7
+CORRECTION" có ở tip (1 lần mỗi log; F1 header dòng 1207/1210,
+F3b header dòng 130/134, live-test-log dòng 4231/4233, doc sửa 78
+dòng). Council đọc đủ cả 3 entry sửa và doc sửa. V1: git log
+--all -- MEMORY.md trả 0 (36 remote branch đã fetch; không cái
+nào trên todolist-push); 5a2b69d và c16dd4e tồn tại đúng thông
+điệp; cả 5 chỗ trích vẫn giữ claim ở đúng dòng; method dòng 131
+(AM-13) và 202 (không sửa trực tiếp) đã xác nhận; grep toàn branch
+không thấy bản ghi chấp nhận nào ngoài các chỗ claim và flag
+redteam. V2: cả 14 log vẫn vắng (git cat-file từng cái), 0 commit
+trong mọi history, không tên file nào trùng trên branch;
+f3-evidence/ giữ đúng 14 file đã liệt; các dòng trích đọc nguyên
+văn (55, 64-65, 66-67, 72, 73-74, 75-76, 77/79, 82, 85); cả 4
+session ID 0 hit trong full.log (59 dòng) và result_full.json.
+Sửa "14, không phải 9" là ĐÚNG: 5 log thêm trích ở dòng 55,
+73-74, 82, 85 và đều vắng. V3: phán quyết vẫn ở live-test-log.md
+dòng 991 đúng text; cả 7 file nêu tên 0 trên branch; chỉ có tên
+judge là 2 file worker-y8b không liên quan; 15 file end-state.json
+trên branch là fixture checker-selftest của A1, không phải file
+judge. SHA corroboration giữ đúng (tc02-v1.json:9 full hash; trial
+dòng 836 full, 938/941/2091 short). "16 file JSON" = 14 state.json
++ finish-record.json + start-readiness.json; "test-scores.md (174
+dòng)" là trích dẫn của chính log, cả 2 báo cáo xử lý đúng. Phụ
+lục audit (431-458 dòng): ĐÚNG mọi câu; ghi đúng commit sửa, sửa
+14-vs-9, và khoảng trống còn lại.
+
+Sai lệch: D1 (nhỏ): dòng 148 dài 766 ký tự, không phải 767 như cả
+2 báo cáo nói (awk 766, Python len 766, wc -c 767 tính cả newline).
+Cùng lỗi đếm +1 newline như đợt 4, 5, 6. Nội dung đã xác nhận. D2
+(phát hiện mới): chấp nhận H3 còn nêu như fact ở 2 chỗ nữa mà danh
+sách "5 chỗ" không gồm: improvements/worker-f2-silence-fix-log.md:598
+và improvements/worker-opt-method-log.md:81 (chỗ sau dưới heading
+"Parent MEMORY.md updated 22:57"). Đếm 5 chỗ đúng với chuỗi trích
+chính xác "MEMORY.md 22:57", nhưng claim vẫn chưa sửa ở 2 log đó.
+Việc tiếp: thêm entry sửa ở đó nữa. Không đổi kết luận SỬA MỘT
+PHẦN. Lỏng câu chữ (không đổi kết luận): clone1 viết "dòng 77 và
+79 Arm E verdict FAIL", dòng 77 là hàng launch Arm E, dòng 79 mới
+là hàng VERDICT. Ghi chú: trích "MEMORY.md 22:57" giờ tổng 20
+dòng trên branch (đợt 6 audit là 13), giải thích đủ bằng chính các
+sửa (5 trong doc sửa + 2 trong entry V1).
+
+Không kiểm lại được: "Không tồn tại trên VM của clone2" (cả 3 vi
+phạm, cả 2 báo cáo): không truy cập VM clone2 từ máy này. Chưa
+chứng minh sai, chỉ là chưa kiểm được ở đây. P-33 ở
+opt-redteam-m-skeptic.md:58 xác nhận qua grep; council không đọc
+đủ opt-redteam-m-verdict.md dòng 33 và 81. Tip "tiến 2 lần" theo
+nghĩa 2 lần push: số lần push không thấy trong log; theo số commit
+thì tiến 36 lần.
+
+Kết: cả 3 HIGH sửa một phần đúng như clone2 báo và clone1 kiểm;
+hồ sơ đã sửa ở các chỗ trích và vật liệu gốc vẫn thiếu cả 3. Sửa
+đủ vẫn cần: V1, điều phối ghi lại chấp nhận (AM-13); V2, 14 log
+hoặc chạy lại; V3, file hoặc chạy lại judge. Không còn gì sửa
+được từ máy này.
+
 ## Watchdog đợt 6 đã dừng, 03:56 ngày 22/11
 Báo cáo cuối đợt 6 đã ở trong coord và đã push (7f9c699, khớp
 ls-remote). Watchdog đợt 6 đã tắt (enabled false, next run null).
