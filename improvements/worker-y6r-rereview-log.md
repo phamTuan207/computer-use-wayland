@@ -189,3 +189,7 @@ All four papers agree on the verdict (AMEND) and on the staging blocker, the pos
 - What the re-review PROVED (stands): F1 fixed at the link level (V1: .so 34,440,704 B, md5 78ac1023, ldd 0 not found,.so.15/.so.5 resolve); conf diff exactly 2 lines (V2); nested load test LOADED with versionCheck match (V3, live plugin lists byte-identical per Council 2); C2 re-run ALL PASS (V6); live PID 1515 untouched (V7, start time corrected to Sat Nov 21 15:17:25 2026).
 - What the re-review REVERSED: the profile WAS applied in the Y6e run (R1). The retry's blocker is NOT a missing profile. It is two mechanical defects: the y6e conf was never staged as the active conf (the retry dies at the ldd pre-flight on the old backup-1 conf), and U6 is a false-fail gate that would kill a healthy run at line 302.
 - What the re-review did NOT prove: the pill measurement itself (no arms ever ran live), the full G11 profile (layer() registration and material values unproven until A3), and the liquid gate's readiness window (O3).
+
+## Commit record
+
+- Commit 6239298 on todolist-push (verified via ls-remote: 6239298e574986e2df8149bd877bfd1a98b31665), 5 files, 792 insertions: this log + the 4 review papers. Committed by exact paths only; other workers' uncommitted changes were left untouched.
