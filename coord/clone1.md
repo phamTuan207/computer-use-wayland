@@ -2269,6 +2269,56 @@ a1_unblind dòng 226 thuộc code todolist-push (không phải main),
 
 Đợt 6 xong và đã báo cáo. Đợt 7 bắt đầu ngay sau đây.
 
+## ĐỢT 7, VIỆC 3 XONG, 04:03 ngày 22/11 - CLONE2 ĐÃ SỬA TRƯỚC, KIỂM LẠI 0 SAI LỆCH
+
+Báo cáo docs/clone1-batch7-high-fixes-verify-20261122.md (56
+dòng theo wc -l), đã push (c202262). Phụ lục "Fix status after
+batch 7" đã thêm vào audit (431 lên 458 dòng), đã push (8bfd83c).
+
+Phát hiện chính: clone2 đã tự làm việc 3 của đợt 7 trước
+(docs/clone2-batch7-high-fixes-20261122.md, commit 748cc35,
+219720c, 05ee34d, 16c4196 trên todolist-push). Agent việc 3 không
+làm trùng, mà kiểm độc lập các sửa đó ở tip da60024 (clone2 kiểm
+ở c19c227; tip đã tiến 2 lần từ đó).
+
+Kết quả: cả 3 HIGH đều SỬA MỘT PHẦN, 0 sai lệch. V1 (H3): sửa
+đã thêm vào worker-f1-guardian-fix-log.md (05ee34d) + doc tổng
+hợp batch7-high-corrections-20261122.md (16c4196), cả 2 đều có ở
+da60024; kiểm lại: git log --all -- MEMORY.md trả về rỗng (chưa
+từng tồn tại); 5a2b69d và c16dd4e tồn tại đúng thông điệp; cả 5 chỗ
+trích vẫn giữ claim ở đúng dòng (:90, :107, :148, :198, :862);
+dòng :148 dài 767 ký tự và kết thúc đúng bằng text chấp nhận H3,
+nên cách nói "5 chỗ" là đúng (agent thoạt nghi có lỗi, rồi tự bác
+bằng cách đọc đủ dòng); method file dòng 202 xác nhận clone2 đúng
+khi không sửa trực tiếp. V2 (log arm F3): sửa đã thêm vào
+worker-f3b-restart-log.md (748cc35), có ở tip; cả 14 log vẫn vắng
+ở da60024 (git cat-file lỗi từng cái); f3-evidence/ giữ đúng 14
+file đã liệt; mọi dòng trích đã kiểm (64-65 Arm A session 0979bcf5,
+66-67 Arm B 29183d85, 72 Arm C, 73-76 Arm D 2d3cd2de, 77/79 Arm E
+6304b1d8, 55/82/85 relaunch/probe_f/probe_r3); 0 hit cho cả 4
+session ID trong full.log và result_full.json. Số đúng là 14,
+không phải 9 như audit đợt 6 nói, clone2 tìm ra đúng. V3 (phán
+quyết 130/130): sửa đã thêm vào live-test-log.md (219720c), có ở
+tip; phán quyết vẫn ở dòng 991 đúng text; mọi file bằng chứng
+trích vẫn vắng; chỉ có 2 file tên judge trên branch là 2 file
+worker-y8b không liên quan; SHA 8da1f562 giữ đúng (tc02-v1.json:9
+full hash, trial dòng 836/938/941/2091). Cả 4 commit sửa đều là
+thêm thuần (5/5/4/78 dòng thêm, 0 dòng xóa); dòng thêm có 0 dấu
+gạch ngang dài.
+
+Không sửa được từ máy này: V1 cần điều phối ghi lại chấp nhận
+trong council paper hoặc log entry (AM-13); tới lúc đó lần chạy
+live Y13 không được coi H3 đã xong chỉ dựa vào trích dẫn đó. V2
+cần file log trên laptop hoặc chạy lại arm A-E kèm log đã commit.
+V3 cần 5 file báo cáo, stress.log, 16 file JSON, 20 screenshot
+trên laptop/VM hoặc chạy lại judge kèm bằng chứng đã commit.
+
+Chờ Muse quyết: 1. sửa đủ V1 (ghi lại, AM-13), 2. sửa đủ V2 (log
+laptop hoặc chạy lại), 3. sửa đủ V3 (file laptop hoặc chạy lại).
+Clone1 không cần thêm commit nào trên todolist-push cho các HIGH
+này; hồ sơ đã sửa và khoảng trống đã nêu rõ kèm danh sách file
+đúng từng cái.
+
 ## Watchdog đợt 6 đã dừng, 03:56 ngày 22/11
 Báo cáo cuối đợt 6 đã ở trong coord và đã push (7f9c699, khớp
 ls-remote). Watchdog đợt 6 đã tắt (enabled false, next run null).
