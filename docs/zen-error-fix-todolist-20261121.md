@@ -6,22 +6,22 @@
 ## PHASE 1 - ZEN DIEU KHIEN DUOC TOI DA (lam truoc, goal hien tai)
 
 ### 1.1 Test truc tiep tung tool tren Zen that (Muse tu test, khong phai Codex)
-- [ ] 1.1.1 Puppeteer via BiDi: chay code clone1 (tests/puppeteer_bidi.mjs) tren Zen that, list tabs, read DOM, click, type, do thoi gian tung buoc, ghi log
-- [ ] 1.1.2 firefox-mcp: chay npx @mozilla/firefox-mcp --connect-existing, list tabs, read DOM, click, type, do thoi gian, ghi log
-- [ ] 1.1.3 Selenium + geckodriver: chay code clone2 khi no nop len GitHub, attach --connect-existing, list tabs, read DOM, click, type, do thoi gian
-- [ ] 1.1.4 zenpilot / zen-mcp: opencode dang test, lay ket qua, do thoi gian
-- [ ] 1.1.5 Playwright moz-firefox: fcc dang test, xac nhan KHONG attach duoc vao Zen dang chay (launch-only), co bang chung cu the
+- [ ] 1.1.1 Puppeteer via BiDi: chay code clone1 (tests/puppeteer_bidi.mjs) tren Zen that, list tabs, read DOM, click, type, do thoi gian tung buoc, ghi log. PARTIAL 21/11 04:49 (Muse): connect 109ms OK, list 111 tabs OK, read DOM 4ms OK, NHUNG click FAILED (counter 0, 971ms). Can re-test click sau reboot (chua phan biet duoc loi BiDi click hay loi 0x0 viewport nhu Selenium).
+- [ ] 1.1.2 firefox-mcp: chay npx @mozilla/firefox-mcp --connect-existing, list tabs, read DOM, click, type, do thoi gian, ghi log. BLOCKED 21/11 07:09: live Zen het slot session (session leak, xem 1.2.1). Re-test sau reboot. Backup, khong phai blocker vi zen-mcp da WORKS.
+- [x] 1.1.3 Selenium + geckodriver: chay code clone2 khi no nop len GitHub, attach --connect-existing, list tabs, read DOM, click, type, do thoi gian. DONE 21/11 07:19 (Muse, Worker G): headless Zen 1.24.2b FULL PASS 0.227s, click verified ("clicked:zen marionette test"). Windowed Zen: session/list/read/JS OK nhung clear/click FAIL do tab Marionette-mo co viewport 0x0 (innerWidth 0, elementFromPoint null). Live Zen BLOCKED boi session leak. Script an toan cho live Zen: tests/zen_selenium_attach.py (mo tab MOI, dong sau test, khong cham tab cua ong).
+- [x] 1.1.4 zenpilot / zen-mcp: opencode dang test, lay ket qua, do thoi gian. DONE (Worker B): zen-mcp 1.2.3 WORKS 2-20ms, zenpilot 0.7.0 WORKS 439-478ms.
+- [x] 1.1.5 Playwright moz-firefox: fcc dang test, xac nhan KHONG attach duoc vao Zen dang chay (launch-only), co bang chung cu the. DONE (Worker C): BROKEN, khong attach duoc, launch-only cung khong drive duoc Zen.
 
 ### 1.2 So sanh va chon tool tot nhat
-- [ ] 1.2.1 Tong hop ket qua 5 tool: WORKS / PARTIAL / BROKEN, toc do moi action, do chinh xac click, do on dinh
-- [ ] 1.2.2 So sanh DOM vs screenshot/mouse: DOM nhanh hon bao nhieu lan, chinh xac hon bao nhieu
-- [ ] 1.2.3 De xuat huong dot pha moi neu co: cach nao nhanh hon gap nhieu lan, it loi hon gan nhu khong co loi, du phai viet lai repo
-- [ ] 1.2.4 Chon tool tot nhat lam cach dieu khien Zen chinh, viet code tich hop vao computer-use repo
+- [x] 1.2.1 Tong hop ket qua 5 tool: WORKS / PARTIAL / BROKEN, toc do moi action, do chinh xac click, do on dinh. DONE 21/11 07:30: docs/zen-dom-control-comparison.md. Phat hien lon: session cap CHIA SE giua BiDi + Marionette (1 session TOTAL), leak block ca hai; session leak tu node test treo 1h51m.
+- [x] 1.2.2 So sanh DOM vs screenshot/mouse: DOM nhanh hon bao nhieu lan, chinh xac hon bao nhieu. DONE: DOM read 3-14ms vs observe vai giay; DOM locate chinh xac tuyet doi (vision 58.6%); DOM click KHONG bang chuot that.
+- [x] 1.2.3 De xuat huong dot pha moi neu co: cach nao nhanh hon gap nhieu lan, it loi hon gan nhu khong co loi, du phai viet lai repo. DONE: khong phai tool moi nhanh hon, ma la IT round trip hon (batch + diff-only observation + DOM locate). Driver da 2-20ms; chi phi nam o vong lap think-observe.
+- [x] 1.2.4 Chon tool tot nhat lam cach dieu khien Zen chinh, viet code tich hop vao computer-use repo. DONE: chinh = zen-mcp 1.2.3 (nhanh nhat, click works); fallback = Selenium headless; click tren live Zen = DOM rect + chuot that (hybrid). Code: scripts/zen_dom.py.
 
 ### 1.3 Tich hop va commit
-- [ ] 1.3.1 Viet code tich hop tool tot nhat vao computer-use repo, commit nho push nhieu
-- [ ] 1.3.2 Test lai tren task that, do tong wall time, so sanh truoc/sau
-- [ ] 1.3.3 Cap nhat .desktop Zen + Chromium da xong (02:55 21/11), verify lai sau reboot
+- [x] 1.3.1 Viet code tich hop tool tot nhat vao computer-use repo, commit nho push nhieu. DONE 21/11 07:30: scripts/zen_dom.py (single session manager: file lock, session.delete trong finally, locate via JS rect, kill-hung watchdog). Stdlib only, khong can selenium module.
+- [ ] 1.3.2 Test lai tren task that, do tong wall time, so sanh truoc/sau. BLOCKED: can session tren live Zen, leak chi het sau reboot. Chay dau tien sau khi ong reboot.
+- [ ] 1.3.3 Cap nhat .desktop Zen + Chromium da xong (02:55 21/11), verify lai sau reboot. BLOCKED: can reboot de verify flags co hieu luc tren fresh launch.
 
 ## PHASE 2 - FIX LOI MUSE UU TIEN (phan G, H, I - uu tien hon loi Codex)
 
@@ -39,11 +39,11 @@
 - [ ] 2.1.11 B9/I21: Nut Browse bam chinh giua khong nhan, phai hover lech cho nut toi dam roi moi bam. Da co fix, can dua vao code
 
 ### 2.2 Overlay nhap nhay lien tuc (uu tien so 2)
-- [ ] 2.2.1 H1/I9: Overlay nhap nhay lien tuc khi Muse lai truc tiep, Codex lai thi binh thuong. Nguyen nhan that CHUA XAC MINH. Can dieu tra: pill render loop xung dot screenshot capture? Pill redraw moi lan observe?
-- [ ] 2.2.2 I10: Nhay ~10 lan/giay ma khong lam gi ca. Can log thoi gian, tan suat nhap nhay, dieu kien trigger
+- [x] 2.2.1 H1/I9: Overlay nhap nhay lien tuc khi Muse lai truc tiep, Codex lai thi binh thuong. Nguyen nhan that CHUA XAC MINH. Can dieu tra: pill render loop xung dot screenshot capture? Pill redraw moi lan observe? DONE 21/11 07:01 (Worker G, E2 live): fixed indicator does NOT repaint at idle (0 idle paints in 122 one-second windows, 32/32 frames pill pixel-identical). No in-repo 10Hz driver exists (redteam worker4 proved). Most likely cause is compositor/plugin repaint loop triggered by animated backdrop (H-E) in LIQUID mode, which could not be tested live (hyprglass not loaded now). E1 per-event logging added so any recurrence is captured. See overlay-flicker-work-log-20261121.md.
+- [x] 2.2.2 I10: Nhay ~10 lan/giay ma khong lam gi ca. Can log thoi gian, tan suat nhap nhay, dieu kien trigger. DONE 21/11 07:01: E2 measured live instead of the user estimate: 0 paints/commits/events during 60s idle driving-equivalent. The ~10Hz rate was never measured, only estimated by the user; E2 replaces the estimate with a measured 0 Hz on the fixed code. Trigger still unidentified for the 20/11 liquid-mode incident.
 - [ ] 2.2.3 I11: Ong bat tat computer-use vi nhay ngua mat (19:13). Sua xong moi bat lai
-- [ ] 2.2.4 I12: Overlay mat han (15:28). Phien computer-use rot hoac pill tat ma worker khong hay. Sua: watchdog phat hien overlay mat, khoi dong lai
-- [ ] 2.2.5 I20: Da bia "chup man hinh qua nhieu gay nhay overlay", da thua nhan sai. Khong bia nua, dieu tra that
+- [x] 2.2.4 I12: Overlay mat han (15:28). Phien computer-use rot hoac pill tat ma worker khong hay. Sua: watchdog phat hien overlay mat, khoi dong lai. DONE 21/11 06:44 (Worker G): Daemon._ensure_native() respawns a dead native indicator while holders remain + retries the label/show once; unit tests test_daemon_respawns_dead_native + test_daemon_keeps_live_native pass. Live respawn proof still owed (needs a killed indicator during a hold; will verify after reboot).
+- [x] 2.2.5 I20: Da bia "chup man hinh qua nhieu gay nhay overlay", da thua nhan sai. Khong bia nua, dieu tra that. DONE 21/11 07:01: disproven by code (redteam worker4 section 2: exactly 2 visibility toggles per observe, 0 while idle) AND by live E2 measurement (0 events during 60s idle). The claim is false, not just retracted.
 - [x] 2.2.6 Overlay hien khi BAT KI agent nao dieu khien may/trinh duyet, khong rieng Muse drive chuot (ong yeu cau 03:28 21/11). DONE 05:00 21/11: scripts/overlay.py (daemon + CLI, refcount, session-aware) + label command in native/indicator.c + docs/overlay.md. Live tested on laptop: pill shows "Muse via BiDi", refcount 2->1->0, idle surface_commits=0. PENDING: sync-installed (relay down, broker_unavailable) so installed copy lacks overlay.py + new binary.
 
 ### 2.3 Nghi sieu lau, quyet dinh cham (uu tien so 3)
