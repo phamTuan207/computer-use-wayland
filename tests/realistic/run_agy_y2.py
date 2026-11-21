@@ -17,12 +17,23 @@ already contains the Council-1 diagnose fixes (second-sample eval
 error keeps the snap1 classification; refresh() diagnoses like
 goto()) and the C3-F4/F5/F6 orphan hardening (append-mode geckodriver
 log, PID write and session POST inside try with cleanup, exception
-proof terminate), verified by reading the shipped bytes. The frozen
+proof terminate), verified by reading the shipped bytes. FROZEN BASE:
+run_live.py is shipped ONLY from commit 1e3901c (md5
+84fa106c253d5e7f16daccf2ce3f14a5; HEAD's run_live.py is byte-identical
+to 1e3901c). The a82bb41 tree alone cannot run (its run_live.py has
+no diagnose_body and no allow_hidden kwarg). The runner refuses to
+launch unless every shipped file matches agy-y2-manifest.json
+(launch-time manifest check, Redteam re-review B3). The frozen
 ship is recorded in SHIPPED.md next to this file; later VM edits do
 not affect the run.
 
 RULES (from the v2 plan, all enforced in code below):
 - One fresh WebDriver session per test, always deleted in finally.
+  Sessions exit parked on a sacrificial about:blank tab (Y9WD park):
+  DELETE /session closes the throwaway, never a keeper test tab and
+  never a user tab (Redteam re-review B2). The shared test tab
+  therefore survives session exit; if the live run still prints
+  "shared tab gone, rebootstrap", that itself is a finding.
 - ONE shared test tab for the whole suite (bootstrap_tab, fresh
   tab only, up to 3 attempts). No handle scanning: only REGISTERED
   handles are ever switched to. User tabs are never navigated,
@@ -76,7 +87,7 @@ from pathlib import Path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from run_live import (  # noqa: E402
-    EL_KEY, WD, Runner, diagnose_body, log_step as _rl_log_step,
+    EL_KEY, WD, Runner, diagnose_body,
     start_server as _rl_start_server,
 )
 
@@ -112,6 +123,25 @@ TRACKED_ITEM = "improvements/transparent-zen-defect-tracked-item.md"
 # (Redteam A11). Set by main() before each attempt.
 _CURRENT_ATTEMPT = {"n": 1}
 
+# Fingerprint of the handover token file as first seen in this run
+# (Redteam re-review N5): the token file must not change mid-run.
+# A rewritten token (fresh asserted_at) would otherwise extend a run
+# past the handover. Cross-launch reuse is prevented procedurally:
+# the launcher writes a fresh token on every launch and flock
+# prevents concurrent runs.
+_HANDOVER_FP = {"fp": None}
+
+# Marionette calls across ALL Y9WD sessions in this process
+# (bootstrap, test attempts, rechecks; the suite-end cleanup session
+# runs after the suite JSON is printed, so it is excluded). This is
+# the six-metrics marionette_calls value (C3 re-review F7).
+_TOTAL_WD_CALLS = {"n": 0}
+
+# Launch-time manifest (Redteam re-review B3): expected md5s for
+# every shipped file, generated mechanically from the committed
+# bytes. The runner refuses to run on any mismatch.
+MANIFEST_NAME = "agy-y2-manifest.json"
+
 
 def now_iso():
     return datetime.now(timezone.utc).isoformat()
@@ -131,20 +161,51 @@ def _ppid_of(pid):
 
 
 def _hyprland_signature():
-    """HYPRLAND_INSTANCE_SIGNATURE of a running Hyprland, read from
-    its own /proc environ (robust against stale socket dirs)."""
+    """Return the live Hyprland instance signature, or None.
+
+    Two sources, in order (Y4d, proven live 18:40 21/11; the
+    environ-only version this replaces FAILED on this laptop):
+    1. The environ of the live Hyprland process (pgrep -x Hyprland).
+    2. The socket directory under $XDG_RUNTIME_DIR/hypr/ (Hyprland
+       0.57 puts its instance dir there, named <signature>).
+    UWSM-launched sessions do NOT carry HYPRLAND_INSTANCE_SIGNATURE
+    in the compositor's own environ, so source 1 is often empty and
+    the dir is the reliable source. Stale dirs from crashed nested
+    sessions can linger, so each candidate is verified with a real
+    AF_UNIX connect to its .socket.sock; only a dir whose socket
+    answers is returned.
+    """
     try:
         out = subprocess.run(["pgrep", "-x", "Hyprland"],
                              capture_output=True, text=True, timeout=5)
         pids = out.stdout.split()
     except Exception:
-        return None
+        pids = []
     for pid in pids:
         try:
             env = Path(f"/proc/{pid}/environ").read_bytes().split(b"\0")
             for kv in env:
                 if kv.startswith(b"HYPRLAND_INSTANCE_SIGNATURE="):
                     return kv.split(b"=", 1)[1].decode()
+        except Exception:
+            continue
+    runtime = os.environ.get("XDG_RUNTIME_DIR") or f"/run/user/{os.getuid()}"
+    try:
+        cands = [d for d in Path(runtime, "hypr").iterdir()
+                 if d.is_dir() and (d / ".socket.sock").exists()]
+    except Exception:
+        return None
+    if not cands:
+        return None
+    cands.sort(key=lambda d: (d / ".socket.sock").stat().st_mtime,
+               reverse=True)
+    for cand in cands:
+        try:
+            s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            s.settimeout(2)
+            s.connect(str(cand / ".socket.sock"))
+            s.close()
+            return cand.name
         except Exception:
             continue
     return None
@@ -173,6 +234,15 @@ def _check_handover():
     if age < 0 or age > HANDOVER_MAX_AGE_S:
         return False, (f"handover token age {age:.0f}s outside "
                        f"0-{HANDOVER_MAX_AGE_S}s window")
+    try:
+        st = HANDOVER_FILE.stat()
+        fp = (float(tok["asserted_at_unix"]), st.st_mtime_ns, st.st_size)
+    except Exception:
+        return False, "handover file has no statable fingerprint"
+    if _HANDOVER_FP["fp"] is None:
+        _HANDOVER_FP["fp"] = fp
+    elif fp != _HANDOVER_FP["fp"]:
+        return False, "handover token changed mid-run; refusing"
     return True, (f"handover token age {age:.0f}s, "
                   f"basis: {tok.get('basis', '?')}")
 
@@ -199,6 +269,53 @@ def _md5_of(path):
         return None
 
 
+def _verify_manifest():
+    """(ok, checked, mismatches, manifest_md5) for the launch-time
+    manifest check (Redteam re-review B3).
+
+    Every shipped file's md5 must match the manifest generated from
+    the committed bytes. The manifest itself is a repo file; its own
+    md5 is recorded in the suite JSON, not self-checked. Refuse the
+    run on any mismatch: a stale or edited fixture must never run
+    silently and pass, since the integrity guard only proves the
+    verify FAILS on untouched bytes."""
+    mpath = Path(__file__).with_name(MANIFEST_NAME)
+    try:
+        manifest = json.loads(mpath.read_text())
+    except Exception as exc:
+        return False, 0, [f"manifest unreadable: {exc}"], None
+    base_dir = Path(__file__).resolve().parent
+    bad = []
+    checked = 0
+    for entry in manifest.get("files", []):
+        rel = entry.get("path")
+        want = entry.get("md5")
+        got = _md5_of(base_dir / rel)
+        checked += 1
+        if got != want:
+            bad.append(f"{rel}: want {want}, got {got}")
+    return (not bad), checked, bad, _md5_of(mpath)
+
+
+def _child_in(d, parent_css, child_css):
+    """True iff an element matching child_css exists INSIDE the
+    element matching parent_css (C2 re-review F3: id presence in
+    the whole DOM does not prove containment)."""
+    return bool(d.eval(
+        "const p=document.querySelector(arguments[0]);"
+        "return p ? !!p.querySelector(arguments[1]) : false;",
+        [parent_css, child_css]))
+
+
+def _child_txt(d, parent_css, child_css):
+    """Text of the child element inside the parent element, or None
+    (C2 re-review F3: same containment rule, for text checks)."""
+    return d.eval(
+        "const p=document.querySelector(arguments[0]);"
+        "const c=p ? p.querySelector(arguments[1]) : null;"
+        "return c ? c.textContent : null;", [parent_css, child_css])
+
+
 def select_option(d, css, value):
     """Set a <select> value and fire change."""
     return d.eval(
@@ -206,14 +323,6 @@ def select_option(d, css, value):
         "el.value=arguments[1];"
         "el.dispatchEvent(new Event('change',{bubbles:true}));"
         "return el.value;", [css, value])
-
-
-def clear_input(d, css):
-    """Clear an input and fire input so filters re-render."""
-    return d.eval(
-        "const el=document.querySelector(arguments[0]); el.value='';"
-        "el.dispatchEvent(new Event('input',{bubbles:true})); return 'cleared';",
-        [css])
 
 
 def txt(d, css):
@@ -256,7 +365,53 @@ class Y9WD(WD):
 
     def _wd(self, method, path, body=None):
         self.wd_calls += 1
+        _TOTAL_WD_CALLS["n"] += 1
         return super()._wd(method, path, body)
+
+    def _park_before_exit(self):
+        """Park the session on a throwaway tab before DELETE /session
+        (Redteam re-review B2).
+
+        Y4d proved DELETE /session closes the session's current tab
+        (the shared test tab died 20/20 at session exit). Parking on
+        a keeper test tab would kill it; parking on a fresh
+        sacrificial about:blank tab (kept OUT of opened_tabs so the
+        base cleanup does not delete it first) makes the session
+        delete close the throwaway instead. Opened test tabs are
+        closed first, so the sacrificial tab is current when the
+        session is deleted. Best effort: any failure falls back to
+        the base cleanup (previous behavior)."""
+        if getattr(self, "session", None) is None:
+            return
+        for handle in list(getattr(self, "opened_tabs", [])):
+            try:
+                self.switch(handle)
+                self._wd("DELETE", self._s("/window"), {})
+            except Exception:
+                pass
+        try:
+            self.opened_tabs = []
+        except Exception:
+            pass
+        try:
+            h = self.new_tab("about:blank", allow_hidden=True)
+        except Exception:
+            return
+        try:
+            self.opened_tabs.remove(h)
+        except Exception:
+            pass
+        try:
+            self.switch(h)
+        except Exception:
+            pass
+
+    def __exit__(self, *exc):
+        try:
+            self._park_before_exit()
+        except Exception:
+            pass
+        return super().__exit__(*exc)
 
     def find_in(self, parent_el, css):
         """Find a child element inside a parent element (WebDriver
@@ -296,6 +451,25 @@ class Y9Runner(Runner):
         super().__init__(test_id, base_url)
         self.attempt = 1
         self.gaps = []
+        # Ladder time in ms, accumulated by ensure_visible (C1
+        # re-review F6 / C3 re-review F2): stall is time spent in
+        # hidden-body recovery ladders, never whole-test elapsed.
+        self.stall_ms = 0
+
+    def check(self, name, cond, detail=""):
+        """Base check plus a timed JSONL record with the attempt
+        field (C1 re-review F1 / C3 re-review F5). Without this
+        override the base Runner.check only prints, so every
+        intermediate check (including the load-bearing pinned ones)
+        left no JSONL record at all."""
+        start = time.perf_counter()
+        ok = super().check(name, cond, detail)
+        ms = (time.perf_counter() - start) * 1000
+        log_step(self.test, f"check: {name}", "check", ms, bool(ok),
+                 detail if isinstance(detail, str) else json.dumps(
+                     detail, ensure_ascii=False, default=str),
+                 None if ok else f"check failed: {name}: {detail}")
+        return ok
 
     def step(self, name, op, fn):
         start = time.perf_counter()
@@ -418,11 +592,14 @@ def rebootstrap_tab(d, base, deadline=None):
         except Exception:
             pass
         _TEST_TABS.discard(h)
-    raise RuntimeError("rebootstrap: no visible test tab after 3 attempts")
+    raise RuntimeError(
+        "INFRA: rebootstrap: no visible test tab after 3 attempts")
 
 
-def ensure_visible(d, r, label="test tab", allow_swap=True):
-    """Diagnose-first recovery ladder (Y4b design).
+def _ensure_visible_inner(d, r, label="test tab", allow_swap=True):
+    """Diagnose-first recovery ladder (Y4b design). Body of
+    ensure_visible; the wrapper accumulates ladder time into
+    r.stall_ms on every call, including raises.
 
     Budget: 8.0 s wall per call, ENFORCED by deadline (C2 F5).
     Poll up to 2.0 s (about 3 samples: each hidden diagnose costs
@@ -433,8 +610,9 @@ def ensure_visible(d, r, label="test tab", allow_swap=True):
     enforceable rule is INFRA when the remaining budget is below the
     next phase's known cost (new tab about 1.7-2.0 s, removal about
     1.1 s, diagnose about 0.5-0.7 s), never a new tab when the
-    deadline is near. Per-test worst case is about 20 s (open_fixture
-    calls this up to twice per test plus goto/refresh pairs).
+    deadline is near. Per-test worst case is about 35-40 s
+    (open_fixture calls this up to three times per test plus
+    goto/refresh pairs; each call is bounded by its 8.0 s ladder).
     1. diagnose_body; VISIBLE -> (True, False).
     2. Poll 250 ms up to 2.0 s for the extension's own removal.
     3. If TZ_STUCK_V1 persists, remove tz-hidden exactly as
@@ -501,14 +679,19 @@ def ensure_visible(d, r, label="test tab", allow_swap=True):
         time.sleep(0.5)
         diag = diagnose_body(d)
         if diag["classification"] == "VISIBLE":
+            # Empty-snapshot guard (Redteam re-review N1): the
+            # _DIAG_JS None bug taught that snapshots can be empty;
+            # never index [-1] unguarded.
+            snaps = diag.get("snapshots") or []
+            last = snaps[-1] if snaps else {}
             removed = "tz-hidden" not in (
-                diag["snapshots"][-1].get("htmlClassList") or [])
+                last.get("htmlClassList") or [])
             if removed:
                 r.details["tz_hidden_removed"] = True
             log_step(r.test, "remove tz-hidden (intervention)",
                      "intervention", 0, True,
                      json.dumps({"verified_removed": removed,
-                                 "snapshot": diag["snapshots"][-1]},
+                                 "snapshot": last},
                                 default=str))
             if removed:
                 print(f"[{r.test}] INTERVENTION removed tz-hidden on "
@@ -520,6 +703,13 @@ def ensure_visible(d, r, label="test tab", allow_swap=True):
             print(f"[{r.test}] ensure_visible {label} visible after "
                   f"removal in {_elapsed():.1f}s / 8.0s", flush=True)
             return True, False
+        if diag["classification"] == "FIXTURE_FAILURE":
+            # Post-removal fixture failure raises immediately (C1
+            # re-review F3), same as the poll loop and the initial
+            # diagnose do, instead of burning tabs on rebootstrap.
+            raise RuntimeError(
+                f"FIXTURE-UNAVAILABLE: {label}: "
+                f"{diag.get('eval_error', 'no body element')}")
         _log_diag(r, diag, label, "after-remove")
     if not allow_swap:
         print(f"[{r.test}] ensure_visible {label} still hidden after "
@@ -549,6 +739,19 @@ def ensure_visible(d, r, label="test tab", allow_swap=True):
     return False, True
 
 
+def ensure_visible(d, r, label="test tab", allow_swap=True):
+    """Public ladder entry point: runs _ensure_visible_inner and
+    accumulates the ladder wall time into r.stall_ms on every call,
+    including raises (C1 re-review F6 / C3 re-review F2). Stall is
+    ladder time only, never whole-test elapsed."""
+    t0 = time.perf_counter()
+    try:
+        return _ensure_visible_inner(d, r, label, allow_swap)
+    finally:
+        r.stall_ms = getattr(r, "stall_ms", 0) + \
+            (time.perf_counter() - t0) * 1000
+
+
 def _recheck_shared_tab(r, tab):
     """Re-diagnose the old shared tab after an INFRA failure: it may
     have cleared on its own, and its later state is evidence either
@@ -557,11 +760,12 @@ def _recheck_shared_tab(r, tab):
         with Y9WD() as d:
             d.switch(tab)
             diag = diagnose_body(d)
+            snaps = diag.get("snapshots") or []
             log_step(r.test, "recheck shared tab after INFRA", "diagnose",
                      0, True, json.dumps(
                          {"tab": tab[:8],
                           "classification": diag["classification"],
-                          "snapshot": diag["snapshots"][-1]},
+                          "snapshot": snaps[-1] if snaps else {}},
                          default=str))
             print(f"[{r.test}] RECHECK shared tab {tab[:8]}: "
                   f"{diag['classification']}", flush=True)
@@ -915,7 +1119,10 @@ def open_fixture(r, d, fname, test_id):
             "INFRA: hidden-body on test tab after recovery ladder; "
             "cannot drive (Marionette refuses clicks on "
             "visibility:hidden content)")
-    r.step("check body visible", "check", lambda: d.visible("body"))
+    # The check below is the real gate (Redteam re-review N14: the
+    # old r.step("check body visible") logged ok True even when the
+    # body was hidden, because Y9Runner.step only fails on
+    # exception and ignores a False return).
     r.check("body renders visible (no hidden-body incident)",
             d.visible("body"), "visible")
     # INTEGRITY GUARD (C2 F7, Redteam A6): the SAME ported verify
@@ -1084,6 +1291,10 @@ def run_01(r, d):
             txt(d, "#status-indicator"))
     r.step("save session state", "click",
            lambda: d.click("#btn-save-session-state"))
+    r.check("saved message shown",
+            "Session deploy saved with 2 windows" in
+            (txt(d, "#saved-status-message") or ""),
+            txt(d, "#saved-status-message"))
     final_verify(r, d, "01")
 
 
@@ -1134,13 +1345,15 @@ def run_02(r, d):
            lambda: d.click("#btn-scan-bt-devices"))
     r.check("available list visible", d.visible("#available-bt-list"),
             "visible")
-    r.check("MX Master listed", count(d, "#bt-device-mx-master") == 1,
-            count(d, "#bt-device-mx-master"))
+    r.check("MX Master listed in available list",
+            _child_in(d, "#available-bt-list", "#bt-device-mx-master"),
+            "present in #available-bt-list")
     r.step("pair MX Master", "click",
            lambda: d.click("#btn-pair-mx-master"))
-    r.check("MX Master paired",
-            "Paired" in (txt(d, "#paired-item-mx-master") or ""),
-            txt(d, "#paired-item-mx-master"))
+    r.check("MX Master paired in paired list",
+            "Paired" in (_child_txt(d, "#paired-bt-list",
+                                    "#paired-item-mx-master") or ""),
+            _child_txt(d, "#paired-bt-list", "#paired-item-mx-master"))
     r.step("bluetooth off", "click", lambda: d.click("#toggle-bluetooth"))
     r.check("bluetooth disabled", txt(d, "#bt-toggle-status") == "Disabled",
             txt(d, "#bt-toggle-status"))
@@ -1149,9 +1362,9 @@ def run_02(r, d):
     r.check("bluetooth enabled again",
             txt(d, "#bt-toggle-status") == "Enabled",
             txt(d, "#bt-toggle-status"))
-    r.check("paired device persists",
-            count(d, "#paired-item-mx-master") == 1,
-            count(d, "#paired-item-mx-master"))
+    r.check("paired device persists in paired list",
+            _child_in(d, "#paired-bt-list", "#paired-item-mx-master"),
+            "present in #paired-bt-list")
     r.step("back to wifi tab", "click", lambda: d.click("#nav-tab-wifi"))
     r.step("open network properties", "click",
            lambda: d.click("#btn-network-properties"))
@@ -1253,8 +1466,9 @@ def run_03(r, d):
     r.check("dialog format PNG",
             txt(d, "#dialog-format-display") == "PNG",
             txt(d, "#dialog-format-display"))
-    r.check("dialog dims 750 x 1000",
-            "750 x 1000" in (txt(d, "#dialog-dimensions-display") or ""),
+    r.check("dialog dims 750 x 1000 px",
+            (txt(d, "#dialog-dimensions-display") or "").strip()
+            == "750 x 1000 px",
             txt(d, "#dialog-dimensions-display"))
     r.step("confirm export", "click",
            lambda: d.click("#btn-confirm-export"))
@@ -1299,9 +1513,10 @@ def run_04(r, d):
            lambda: d.click("#file-option-report-pdf"))
     r.step("confirm attach", "click",
            lambda: d.click("#btn-confirm-attach-file"))
-    r.check("attachment chip present",
-            count(d, "#attachment-chip-report") == 1,
-            count(d, "#attachment-chip-report"))
+    r.check("attachment chip present in attached list",
+            _child_in(d, "#attached-files-list",
+                      "#attachment-chip-report"),
+            "present in #attached-files-list")
     r.check("attachment counter 1",
             txt(d, "#attachment-counter") == "1",
             txt(d, "#attachment-counter"))
@@ -1346,9 +1561,10 @@ def run_04(r, d):
     r.check("attachment counter 1 again",
             txt(d, "#attachment-counter") == "1",
             txt(d, "#attachment-counter"))
-    r.check("attachment chip present again",
-            count(d, "#attachment-chip-report") == 1,
-            count(d, "#attachment-chip-report"))
+    r.check("attachment chip present again in attached list",
+            _child_in(d, "#attached-files-list",
+                      "#attachment-chip-report"),
+            "present in #attached-files-list")
     r.step("send email", "click", lambda: d.click("#btn-dispatch-send"))
     r.check("compose pane hidden after send",
             has_class(d, "#compose-pane", "hidden"), "hidden")
@@ -1393,8 +1609,12 @@ def run_05(r, d):
            lambda: d.click("#btn-commit-formula"))
     r.check("B6 average 4166.67", txt(d, "#cell-value-b6") == "4166.67",
             txt(d, "#cell-value-b6"))
+    # Simulator clicks the input first (simulate.mjs lines 204-206);
+    # the runner used to type without the prior click (C1 re-review
+    # Q1). Click, then clear-and-type, literally.
     r.step("correct B4 to 1800", "type",
-           lambda: d.type_text("#cell-input-b4", "1800"))
+           lambda: (d.click("#cell-input-b4"),
+                    d.type_text("#cell-input-b4", "1800")))
     r.step("recalculate sheet", "click",
            lambda: d.click("#btn-recalculate-sheet"))
     r.check("B5 total 4500", txt(d, "#cell-value-b5") == "4500",
@@ -1414,8 +1634,9 @@ def run_05(r, d):
     r.step("select Bar chart type", "select",
            lambda: select_option(d, "#select-chart-type", "Bar"))
     r.step("render chart", "click", lambda: d.click("#btn-render-chart"))
-    r.check("bar chart SVG present", count(d, "#sales-bar-svg") == 1,
-            count(d, "#sales-bar-svg"))
+    r.check("bar chart SVG present in chart wrapper",
+            _child_in(d, "#chart-wrapper", "#sales-bar-svg"),
+            "present in #chart-wrapper")
     # M12: #chart-title-controls is display:none until the render
     # handler shows it; wait for it before the title steps.
     r.step("wait chart title controls visible", "wait",
@@ -1595,8 +1816,9 @@ def run_07(r, d):
     r.step("open trash folder", "click",
            lambda: d.click("#nav-folder-trash"))
     r.check("trash table visible", d.visible("#trash-table"), "visible")
-    r.check("trash row img4 present", count(d, "#trash-row-img4") == 1,
-            count(d, "#trash-row-img4"))
+    r.check("trash row img4 present in trash table",
+            _child_in(d, "#trash-table", "#trash-row-img4"),
+            "present in #trash-table")
     r.step("restore img4", "click",
            lambda: d.click("#btn-restore-file-img4"))
     r.check("trash counter 0 after restore",
@@ -1660,10 +1882,14 @@ def run_08(r, d):
     r.check("checkout row visible", d.visible("#row-req-api-checkout"),
             "visible")
     # P rule: click <td> never <tr>. The fixture handler sits on the
-    # tr itself (line 273), so a td click bubbles to it.
+    # tr itself (line 273), so a td click bubbles to it. Scroll the
+    # row into view first: click_el does not scroll, while every
+    # other click goes through d.click, which does (C1 re-review F8
+    # / Redteam re-review N7).
     r.step("inspect checkout row (first td)", "click",
-           lambda: d.click_el(d.find_in(
-               d.find("#row-req-api-checkout"), "td")))
+           lambda: (d.scroll_into_view("#row-req-api-checkout"),
+                    d.click_el(d.find_in(
+                        d.find("#row-req-api-checkout"), "td"))))
     r.check("detail pane open",
             has_class(d, "#request-detail-pane", "open"), "open")
     r.check("status 404",
@@ -2165,6 +2391,21 @@ def preflight(base):
             raise RuntimeError(
                 f"PREFLIGHT: live geckodriver PID {pid} with live parent "
                 f"{ppid}; another driver is active, refusing to run")
+        # Re-verify the pid still names geckodriver BEFORE SIGTERM
+        # too (Redteam re-review N11): the pid could have been
+        # recycled between the liveness check and this kill.
+        try:
+            cmdline = Path(f"/proc/{pid}/cmdline").read_bytes()
+        except Exception:
+            cmdline = b""
+        if b"geckodriver" not in cmdline:
+            print(f"preflight: PID {pid} no longer geckodriver; "
+                  "treating PID file as stale", flush=True)
+            try:
+                os.unlink(pid_path)
+            except Exception:
+                pass
+            continue
         print(f"preflight: killing orphaned geckodriver PID {pid}",
               flush=True)
         try:
@@ -2264,11 +2505,33 @@ def _read_shipped():
 
 def main():
     args = sys.argv[1:]
+    if args == ["--verify-manifest"]:
+        # Dry-run the B3 manifest check without driving anything:
+        # used by the laptop ship verification.
+        ok, checked, bad, mmd5 = _verify_manifest()
+        print(json.dumps({"manifest_ok": ok, "files_checked": checked,
+                          "mismatches": bad, "manifest_md5": mmd5},
+                         ensure_ascii=False), flush=True)
+        return 0 if ok else 2
     selected = list(TESTS) if not args or args == ["all"] else args
     unknown = [a for a in selected if a not in TESTS]
     if unknown:
         print(f"unknown tests: {unknown}", file=sys.stderr)
         return 2
+    _TOTAL_WD_CALLS["n"] = 0
+    # Launch-time manifest check FIRST (Redteam re-review B3): the
+    # shipped bytes must be the committed bytes, before any driving.
+    manifest_ok, manifest_checked, manifest_bad, manifest_md5 = \
+        _verify_manifest()
+    if not manifest_ok:
+        print(f"MANIFEST FAILED: {manifest_bad}", flush=True)
+        print(json.dumps({"suite": "agy-y2", "manifest_failed": True,
+                          "mismatches": manifest_bad,
+                          "total": len(selected)}, ensure_ascii=False),
+              flush=True)
+        return 2
+    print(f"MANIFEST OK ({manifest_checked} files, "
+          f"manifest md5 {manifest_md5})", flush=True)
     # Rotate the JSONL at launch (Redteam A11): one file holds
     # exactly one run; the previous run is kept with a timestamp.
     if LOG_PATH.exists():
@@ -2279,8 +2542,16 @@ def main():
             LOG_PATH.rename(prev)
             print(f"rotated previous JSONL to {prev}", flush=True)
         except Exception as exc:
-            print(f"JSONL rotation failed (continuing to append): {exc}",
+            # Refuse, do not fail open (C3 re-review F9b): appending
+            # into a stale log would mix two runs in one file.
+            print(f"JSONL rotation failed, refusing to run: {exc}",
                   flush=True)
+            print(json.dumps({"suite": "agy-y2",
+                              "jsonl_rotation_failed": True,
+                              "error": f"{type(exc).__name__}: {exc}",
+                              "total": len(selected)}, ensure_ascii=False),
+                  flush=True)
+            return 2
     suite_t0 = time.perf_counter()
     _, base = start_server()
     print(f"serving at {base}", flush=True)
@@ -2290,6 +2561,9 @@ def main():
         print(f"PREFLIGHT FAILED {type(exc).__name__}: {exc}", flush=True)
         print(json.dumps({"suite": "agy-y2", "preflight_failed": True,
                           "error": f"{type(exc).__name__}: {exc}",
+                          "passed": 0, "flagged": 0, "failed": 0,
+                          "hidden_body_encounters": 0,
+                          "bootstrap_intervention": None, "gaps": [],
                           "total": len(selected)}, ensure_ascii=False),
               flush=True)
         return 2
@@ -2310,8 +2584,13 @@ def main():
     wd_failures = 0
     infra_blocked = 0
     aborted_handover = False
-    total_wd_calls = 0
     stall_ms = 0
+    # Cross-attempt evidence (C3 re-review F3): hidden-body
+    # encounters and verified removals on a SUPERSEDED attempt 1
+    # must survive in the suite total, not vanish with the summary.
+    superseded = []
+    hidden_encounters_all = 0
+    tz_removed_any = False
     for tid in selected:
         ok, detail = _check_handover()
         if not ok:
@@ -2371,17 +2650,29 @@ def main():
                 if msg.startswith("INFRA:"):
                     raised_infra = True
                     outcome = "infra-blocked"
+                elif msg.startswith("FIXTURE-UNAVAILABLE"):
+                    # Own outcome (C1 re-review F4): a fixture that
+                    # never renders a body is not a live test
+                    # failure. Suite continues, no infra count,
+                    # no re-run.
+                    outcome = "fixture-unavailable"
+                    r.failures.append(
+                        f"fixture unavailable: {exc}")
+                    print(f"[{tid}] FIXTURE-UNAVAILABLE: {exc}",
+                          flush=True)
                 else:
-                    # Mid-test hidden-body rule (Redteam A10):
-                    # diagnose on any step failure before
-                    # classifying it. A hidden body found mid-test
-                    # is INFRA, not a step failure.
+                    # Mid-test hidden-body rule (Redteam A10),
+                    # narrowed (C3 re-review F4): only a PROVEN
+                    # hidden body (TZ_STUCK_V1 / OTHER_HIDDEN) may
+                    # reclassify to INFRA and earn a re-run.
+                    # FIXTURE_FAILURE and UNKNOWN stay live
+                    # failures (no re-run, no infra count).
                     try:
                         diag = diagnose_body(d)
                         cls = diag["classification"]
                     except Exception:
                         cls = "UNKNOWN"
-                    if cls != "VISIBLE":
+                    if cls in ("TZ_STUCK_V1", "OTHER_HIDDEN"):
                         raised_infra = True
                         outcome = "infra-blocked"
                         r.failures.append(
@@ -2389,16 +2680,33 @@ def main():
                             f"({cls}) after step failure: {exc}")
                         print(f"[{tid}] MID-TEST HIDDEN BODY ({cls}); "
                               "reclassified INFRA", flush=True)
-                    elif ("timeout waiting for" not in msg
-                            and "timeout" in msg.lower()):
-                        # A 30 s WD HTTP timeout is INFRA (driver or
+                    elif cls == "FIXTURE_FAILURE":
+                        outcome = "fixture-unavailable"
+                        r.failures.append(
+                            f"fixture unavailable mid-test "
+                            f"({cls}) after step failure: {exc}")
+                        print(f"[{tid}] FIXTURE-UNAVAILABLE mid-test "
+                              f"({cls})", flush=True)
+                    elif (("timed out" in msg.lower()
+                           or "timeout" in msg.lower())
+                            and "timeout waiting for" not in msg):
+                        # A WD HTTP timeout is INFRA (driver or
                         # browser hung) unless evidence shows a
-                        # fixture cause. A wait_for timeout ("timeout
-                        # waiting for ...") is a live failure.
+                        # fixture cause. Evidence recorded: the
+                        # exception type + message, and the fact the
+                        # diagnose just answered VISIBLE, so the
+                        # driver is alive but the step call hung.
+                        # A wait_for timeout ("timeout waiting for
+                        # ...") is a live failure. (C1 re-review F5:
+                        # a genuine urlopen timeout surfaces as
+                        # "timed out", which contains no "timeout"
+                        # substring on its own.)
                         raised_infra = True
                         outcome = "infra-blocked"
                         r.failures.append(
-                            f"reclassified INFRA: WD timeout: {exc}")
+                            f"reclassified INFRA: WD timeout "
+                            f"({type(exc).__name__}: {exc}; diagnose "
+                            f"answered {cls})")
                         print(f"[{tid}] WD TIMEOUT; reclassified INFRA",
                               flush=True)
                     else:
@@ -2409,25 +2717,48 @@ def main():
                               f"{type(exc).__name__}: {exc}", flush=True)
             finally:
                 # End-state screenshot while the session is alive.
+                # Switch to a known test tab first (Redteam re-review
+                # B2): after a rebootstrap failure the current window
+                # is uncontrolled, and the screenshot must never
+                # capture a user tab as test evidence.
+                try:
+                    if r.tab in d.handles():
+                        d.switch(r.tab)
+                    else:
+                        h = d.new_tab("about:blank", allow_hidden=True)
+                        d.opened_tabs.remove(h)
+                        d.switch(h)
+                except Exception as exc:
+                    print(f"[{tid}] pre-screenshot switch failed "
+                          f"(harmless): {exc}", flush=True)
                 shot = d.screenshot(
                     str(SHOTS_DIR / f"{tid}-a{attempt}.png"))
                 if shot:
                     r.details["end_state_screenshot"] = shot
                 wd.__exit__()
-                total_wd_calls += d.wd_calls
                 _copy_gecko_log(tid, attempt)
             if raised_infra:
                 _recheck_shared_tab(r, tab)
                 infra_blocked += 1
-                stall_ms += r.summary()["elapsed_ms"]
             elif guard_defect:
                 pass  # no effect on the abort counter
+            elif outcome == "fixture-unavailable":
+                pass  # suite/fixture defect, not infra: no effect
             else:
                 infra_blocked = 0
             summary = r.summary()
             summary["flagged"] = bool(r.details.get("tz_hidden_removed"))
             summary["outcome"] = outcome
             summary["reattempted_from_infra"] = (attempt == 2)
+            # Ladder time only (C1 re-review F6 / C3 re-review F2),
+            # accumulated across attempts, including recovered and
+            # flagged tests. Cross-attempt hidden-body evidence
+            # (C3 re-review F3).
+            stall_ms += getattr(r, "stall_ms", 0)
+            hidden_encounters_all += r.details.get(
+                "hidden_body_encounters", 0)
+            if r.details.get("tz_hidden_removed"):
+                tz_removed_any = True
             if r.tab not in bootstrap_tabs:
                 bootstrap_tabs.append(r.tab)
                 tab = r.tab
@@ -2435,7 +2766,14 @@ def main():
                 # ONE re-run for a proven infra-blocked test,
                 # immediately after the failed attempt. The first
                 # INFRA still counts toward infra_blocked; a
-                # successful re-run resets it (pass rule).
+                # successful re-run resets it (pass rule). The
+                # superseded attempt-1 summary is printed before
+                # re-running (C1 re-review F7 / C3 re-review F6),
+                # so the INFRA failure text exists as a per-test
+                # JSON summary and not only as JSONL step records.
+                superseded.append(summary)
+                print(json.dumps({**summary, "superseded": True},
+                                 ensure_ascii=False), flush=True)
                 print(f"[{tid}] infra-blocked on attempt 1; "
                       "re-running once", flush=True)
                 continue
@@ -2454,9 +2792,10 @@ def main():
     passed = sum(1 for s in results if s["pass"] and not s.get("flagged"))
     flagged = sum(1 for s in results if s["pass"] and s.get("flagged"))
     total_passed = passed + flagged
-    hidden_encounters = sum(
-        s["details"].get("hidden_body_encounters", 0) for s in results)
-    hidden_encounters += boot_info.get("hidden_body_encounters", 0)
+    # Cross-attempt total (C3 re-review F3): appended summaries plus
+    # superseded attempt-1 encounters plus bootstrap encounters.
+    hidden_encounters = hidden_encounters_all + boot_info.get(
+        "hidden_body_encounters", 0)
     all_gaps = [g for s in results for g in s.get("gaps", [])]
     total_ms = sum(s["elapsed_ms"] for s in results)
     suite = {"suite": "agy-y2", "passed": passed,
@@ -2467,15 +2806,23 @@ def main():
              "suite_wall_ms": round(
                  (time.perf_counter() - suite_t0) * 1000),
              "hidden_body_encounters": hidden_encounters,
+             "tz_hidden_removed_any_attempt": tz_removed_any,
+             "superseded_attempts": superseded,
              "bootstrap_intervention": boot_info,
              "gaps": all_gaps,
              "tracked_item": TRACKED_ITEM,
+             "manifest": {"file": MANIFEST_NAME, "md5": manifest_md5,
+                          "files_checked": manifest_checked},
              "metrics": {"wall_ms": total_ms,
-                         "marionette_calls": total_wd_calls,
+                         "marionette_calls": _TOTAL_WD_CALLS["n"],
+                         "marionette_calls_scope":
+                             "all Y9WD sessions before suite JSON "
+                             "(bootstrap, test attempts, rechecks; "
+                             "suite-end cleanup excluded)",
                          "tokens": "UNMEASURED",
                          "observation_cost": "UNMEASURED",
                          "vcr": False,
-                         "stall_ms": stall_ms},
+                         "stall_ms": round(stall_ms, 1)},
              "md5": {"run_live.py": _md5_of(__file__.replace(
                          "run_agy_y2.py", "run_live.py")),
                      "run_agy_y2.py": _md5_of(__file__)},

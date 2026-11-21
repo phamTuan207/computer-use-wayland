@@ -53,7 +53,7 @@
   frozen commit + md5 list, six metrics with UNMEASURED stated);
   re-run rule with attempt fields; mid-test hidden-body rule;
   WD-timeout classification; integrity-guard procedure pinned.
-- Runner written: tests/realistic/run_agy_y2.py (2502 lines).
+- Runner written: tests/realistic/run_agy_y2.py (2517 lines at a82bb41; 2853 lines after the re-review fixes, see addendum 3).
   Self-contained except run_live imports. Ported verify is a 1:1
   transcription of check.mjs verifyTest (JS via Marionette eval).
   All 10 drivers follow simulate.mjs step for step plus the spec
@@ -70,7 +70,7 @@
 
 - python3 -m py_compile run_agy_y2.py: OK (VM and laptop).
 - Import on VM and laptop: OK, 10 tests, 10 fixtures.
-- Port diff: all 87 check() assertion lines in check.mjs are
+- Port diff: all 88 check() assertion lines in check.mjs are
   byte-identical in the ported verify (the only diff lines are
   the check() helper definition itself); all 80 verify selectors
   identical.
@@ -101,8 +101,11 @@
   84fa106c253d5e7f16daccf2ce3f14a5, run_agy_y2.py
   1defa4ebf184c7e52df9604e75cd7f4b (both match the manifest).
 - Laptop syntax + import: LAPTOP_SYNTAX_OK, LAPTOP_IMPORT_OK.
-- run_live.py shipped from the working tree (uncommitted Y4d
-  revisions, HEAD a82bb41); recorded as such in SHIPPED.md.
+- run_live.py shipped from commit 1e3901c (the Y4d revisions are
+  committed there; HEAD's run_live.py is byte-identical to 1e3901c,
+  zero diff). The "uncommitted Y4d revisions, HEAD a82bb41" line in
+  the first ship record is stale; corrected here and in plan
+  section 7.
 - Launch command (NOT run yet): see plan section 5. The handover
   token /tmp/worker-y9-handover.json is written by the launcher at
   launch time, not shipped.
@@ -165,7 +168,7 @@ Checked against the v2 exact marker after git fetch:
 - Mapping contents: step tables for all 10 tests, modal-wait
   inventory (33 modals/panels/panes/drawers/views with exact
   open-proof selector and opening step), fixture-fact notes with
-  file+line citations, check.mjs assertion inventory (93 checks,
+  file+line citations, check.mjs assertion inventory (88 checks,
   two READ-NOT-ASSERTED values flagged), 16 mismatches M1-M16.
   Load-bearing: M1 (test-02 missing apply click, added as required
   unnumbered action), M7/M8/M9 (intermediate checks are the only
@@ -184,3 +187,66 @@ Checked against the v2 exact marker after git fetch:
   running now. The live-driving slot belongs to Y8b (E1 A then B).
   Y9 still waits. Y6b also spawned by the parent for the nested
   Hyprland probe; it does not drive Zen, no slot conflict.
+
+## Addendum 3 (19:0x, re-review round 2 in, fixes applied, diff re-review pending)
+
+- Re-review verdicts (all read in full, files uncommitted at the
+  time of this writing, to be committed with the fixes):
+  council 1 GO WITH FIXES (F1-F8),
+  improvements/worker-y9-rereview-council-1.md; council 2 GO WITH
+  FIXES (3 fixes), worker-y9-rereview-council-2.md; council 3 GO
+  WITH FIXES (F1-F10), worker-y9-rereview-council-3.md; redteam
+  BLOCK (B1-B3 + N1-N14), worker-y9-rereview-redteam.md.
+- What held: ported verify 88 of 88 identical to check.mjs (all
+  four reviewers, mechanically); all 10 drivers follow the mapping
+  tables; M11/M12 in code; flagged rule, abort rule, exit rule,
+  re-run rule, JSONL rotation, screenshots all present in code.
+  Count corrections (paperwork only, code was right): the inventory
+  is 88 checks, not 93 (my addendum 2 said 93, unreproducible) and
+  not 87 (my first log said 87); the runner was 2517 lines at
+  a82bb41, not 2502.
+- Redteam BLOCK, all three proven with file + line + scenario:
+  B1 preflight could never pass (environ-only _hyprland_signature,
+  Y4d proved at 18:40 UWSM carries no signature in environ);
+  B2 session exit could close a user tab and screenshot user
+  content (DELETE /session closes the current tab, Y4d proved
+  20/20, and the runner left current uncontrolled after close_tab
+  on three paths); B3 no launch-time proof shipped bytes are
+  committed bytes (md5s recorded with no expected values, no
+  fixture hash, SHIPPED.md not yet existent as a checked file).
+- Fixes applied in tests/realistic/run_agy_y2.py (2517 to 2853
+  lines): B1 two-source signature restored verbatim from Y4d;
+  B2 Y9WD.__exit__ parks on a sacrificial about:blank tab before
+  DELETE /session + finally screenshot switches to a known test
+  tab first; B3 tests/realistic/agy-y2-manifest.json with expected
+  md5s for every shipped file, verified first in main(),
+  --verify-manifest dry-run flag; check() override (C1 F1 / C3 F5);
+  post-removal FIXTURE_FAILURE raises immediately (C1 F3);
+  FIXTURE-UNAVAILABLE own outcome (C1 F4); mid-test reclass
+  narrowed to TZ_STUCK_V1 / OTHER_HIDDEN (C3 F4); WD-timeout match
+  fixed to real wording with evidence recorded (C1 F5); stall_ms
+  is ladder time only (C1 F6 / C3 F2); superseded attempt-1 summary
+  printed + cross-attempt hidden-body accumulation (C1 F7 / C3 F3
+  / C3 F6); marionette_calls counts all Y9WD sessions (C3 F7);
+  INFRA-prefixed rebootstrap error (C1 F8 / C3 F9a); JSONL rotation
+  failure refuses (C3 F9b); test-03 step 31 exact "750 x 1000 px"
+  (C2 F1); test-01 step 35 saved-message check (C2 F2); 7
+  containment checks parent-scoped (C2 F3); test-05 B4 click
+  before type (C1 Q1); test-08 td click scrolls first (C1 F8);
+  empty-snapshot guards (N1); handover fingerprint binding (N5);
+  preflight JSON common fields (N6); dead code removed (N9);
+  cmdline re-verified before SIGTERM (N11); misleading "check body
+  visible" step removed (N14); per-test bound 35-40 s (C1 F7).
+  Mapping test-09 step 10 row corrected to the full-text type (C1
+  F7 / C3 F10). Plan section 7 records the full list + the frozen
+  base pin (run_live.py ONLY from 1e3901c).
+- Verification after the fixes (VM): py_compile OK, import OK (10
+  tests), port diff still 88 of 88 identical, 0 em/en dashes.
+  Laptop ship gate still to run: re-ship, py_compile + import +
+  --verify-manifest + _hyprland_signature probe on the laptop.
+- Remaining gates before any live driving: (1) fresh re-review of
+  the fix diff (redteam required it; council + redteam to be
+  spawned on the diff); (2) Y8b E1 execution completion (slot
+  still Y8b's: pre-flight A failed 18:55 on the diagnose-JS return
+  bug, design v2.1 re-frozen 695efea, fresh pre-flight A after
+  19:05:40).
