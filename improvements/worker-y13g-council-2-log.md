@@ -173,3 +173,9 @@ No ydotool. No em/en dashes. Work only in the repo worktree and
   0 em dashes, 0 en dashes in both files. Committing the paper
   + this log now (only these two files; other workers' files
   in the worktree are untouched).
+- 00:57 +07 (T+52m): COMMIT LANDED: cb499a8 on todolist-push
+  (paper + log, 2 files, 330 insertions), push verified
+  (3f62d67..cb499a8). Remote HEAD moved on right after to
+  ea06c93 (Y14b redteam fix pass 8 GO); fetch confirms cb499a8
+  IS an ancestor of origin/todolist-push. Work complete.
+  Probes kept at ~/workspace/y13g-council-2/probes/ (persistent).
