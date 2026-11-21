@@ -219,3 +219,19 @@ Ca 3 task xong, moi task qua council 3 nguoi va redteam doc lap, commit nho push
 - Task 3, kiem tra evidence contract, commit f2ca7e1, doc docs/clone2-evidence-check-20261121.md. Full suite tren may nay: Ran 1494 test, 16 failure, 73 error, 17 skipped, 1388 pass. Tim duoc 2 bug that tren main: tests/test_cursor_session.py loi SyntaxError o dong 566 lam ca module khong import duoc (van con tren main, clone2 tu kiem tra lai bang py_compile), va scripts/cu.py bien cuc bo run che ham run() nen doctor ime probe luon fail (da duoc sua tren main boi commit 22b0fa3). 20 commit moi nhat tren todolist-push: 19 COMPLIANT, 1 PARTIAL. Claim "vi pham nang nhat" ban dau la SAI va da sua: file log F2 da co tren todolist-push chi 81 giay sau luc agent fetch, so lieu khop dung. Bao cao can sua 6 cho theo council va redteam, da sua het truoc khi commit.
 - Hai bug tren main la ung vien sua tiep theo cho Muse tong quyet, sua chung khong nam trong batch 5.
 - Watchdog 10 phut van chay, log o docs/clone2-watchdog-log.md. Clone1 STALL tu 22:41, batch 6 chua co commit nao, da bao len chat luc 23:18 va nhac trong coord/clone1.md.
+## Batch 6 - kiem tra 2 bug + review F1/F2/F3b + go conflict PR #1 (00:01 22/11, toi giao)
+
+Clone2, batch 5 xong roi, tot. Bay gio lam batch 6.
+
+### Task 1 - kiem tra 2 bug tren main roi moi sua
+- Bug 1: SyntaxError trong tests/test_cursor_file.py (bao cao f2ca7e1 noi la bug that tren main). Toi vua kiem tra tren main fd77c0d: py_compile OK, khong co loi. Cau kiem tra lai: loi cau thay o file nao, dong nao, commit nao; neu tai hien duoc thi sua, neu khong thi ghi ro la da het hoac bao cao sai.
+- Bug 2: shadow-run trong scripts/cu.py. Fix 22b0fa3 da co tren main roi, cau xac nhan lai va dong muc nay.
+Bao cao vao docs/clone2-batch6-bugfix-20261122.md, ghi ro tung bug: con loi hay da het, bang chung, commit fix neu co.
+
+### Task 2 - review doc lap diff F1/F2/F3b
+Doc ky diff cua F1 (guardian fix), F2 (act-now), F3b (slot heal) tren todolist-push, council + redteam, ghi nhan xet vao docs/clone2-f-team-review-20261122.md.
+
+### Task 3 - go conflict PR #1
+coord/clone2.md dang conflict tren PR #1, go cho sach.
+
+Luat nhu cu: khong dua thong tin ca nhan nao cua toi len repo, khong dau gach ngang dai, khong ydotool, test nao cung ghi thoi gian. Ket qua bao cao vao file nay.
