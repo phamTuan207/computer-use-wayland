@@ -2865,3 +2865,25 @@ Luat nhu cu: khong dua thong tin ca nhan nao cua toi len repo, khong dau gach ng
 - Redteam đợt 7: đang chạy, còn sống (hoạt động 5 giây trước), chưa có file báo cáo.
 - Muse: không có yêu cầu mới, không có commit coord: mới, chỉ có commit clone2 watchdog log batch 8 (3f9291e).
 - Hành động: không cứu agent nào, ghi khối này, commit chỉ coord/clone1.md, push.
+
+## Batch 8, giao 04:35 ngày 22/11 (Muse điều phối, lệnh của tôi)
+
+Batch 7 xong hết: G29 nguyên nhân gốc là click phải BTN_RIGHT, H2 xong số đo thật, sửa HIGH xong, council 3 người xong, redteam xong (W11 bị bác). Làm tiếp batch 8, 4 việc, mỗi việc council 3 người + redteam, commit nhỏ push ngay từng phần, làm hết ga hết số, dùng hết token cần dùng, không tiết kiệm.
+
+### Việc 1 - Kiểm chứng lại script benchmark 2-vision của clone2 trên máy cậu
+
+Clone2 viết script tests/two_vision_bench.py (783 dòng sau fix pass), driver tests/two_vision_once_driver.py, workflow docs/two-vision-benchmark-workflow-20261122.md, fixture tests/two_vision_fixture.html + 3 fixture biến thể. Nó báo happy path PASS 8.4457 s, harvest-only 4.3510 s, stop-at-first-failure FAIL đúng thiết kế 9.2775 s, exactly-once driver call 1 sent 0.5988 s, call 2 skipped-already-sent 0.0153 s, bubble vẫn 1, PASS. Cậu chạy lại toàn bộ fixture suite trên máy cậu với headless Firefox, ghi số đo thật của cậu, so với số của nó, chỗ nào lệch thì chỉ ra. Không chạy live, chỉ fixture local. Báo cáo vào docs/clone1-two-vision-reverify-20261122.md.
+
+### Việc 2 - Kiểm chứng sửa ZT runner
+
+Agent sửa runner đang chạy: file zt_run.mjs, còn mở B1 đóng tab cuối, prepProfileCerts fail fast, kiểm lại F-B6-03. Cậu kiểm chứng các sửa này bằng một lần chạy live trên Firefox của cậu, ZT-00 phải vẫn PASS, ghi số đo thật và log. Nếu sửa nào chưa đủ thì sửa tiếp, không để lọt.
+
+### Việc 3 - Crawl data mới 30 ngày về one-vision
+
+Dùng skill last30days đã cài trên máy cậu (ưu tiên git clone rồi dùng từ clone), crawl data thật trong 30 ngày qua về cách làm một lần quan sát mà được nhiều thao tác nhất: batch action, grounding cache, snapshot chỉ phần thay đổi, các framework agent làm kiểu này. Chỉ dùng data thật 30 ngày gần nhất, mỗi claim ghi nguồn + ngày, không dùng dataset cũ kĩ. Báo cáo vào docs/clone1-one-vision-sweep-20261122.md, council + redteam.
+
+### Việc 4 - Audit evidence contract 5 commit mới nhất trên todolist-push
+
+Rà 5 commit mới nhất trên todolist-push, claim "xong" nào không kèm bằng chứng chạy được (lệnh test, output, commit hash, log thời gian) thì ghi vào danh sách vi phạm, báo vào coord này. Chỉ audit, không sửa code của người khác.
+
+Luat nhu cu: khong dua thong tin ca nhan nao cua toi len repo, khong dau gach ngang dai, khong ydotool, test nao cung ghi thoi gian. Ket qua bao cao vao file nay.

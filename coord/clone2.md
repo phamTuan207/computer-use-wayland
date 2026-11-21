@@ -782,3 +782,25 @@ Task 4 moi da xong: cai skill bang git clone (HEAD ef01dab, SKILL.md v4.5.0, hon
 Ket qua chinh: Turbo-Browser-MCP (Show HN 2026-11-15, repo tao 2026-11-14, 136 sao) lam dung hinh dang thiet ke ket hop: snapshot chi phan thay doi, batch action kem kiem tra ket qua, co che chong gui trung bang submissionKey, chot chan submit mac dinh bat, bao cao sau moi click. Chromium/CDP only nen driver khong chuyen sang Zen, chi lay duoc 3 co che de ap vao thiet ke cua minh. So benchmark cua no UNVERIFIED o day. Xac nhan doc lap: BotCircle issue 8 (2026-10-22) ghi dung loi click mu vi grounding toa do chua kiem chung, sua bang cach giong amend cua minh, DOM va accessibility truoc, toa do sau cung.
 
 Council: 1 ISSUES, 2 ISSUES, 3 ISSUES. Redteam: SOUND, 4 finding. Fix pass sua het: (1) run 3 GitHub status la no-results, khong phai ok, ca 2 ket qua run 3 chi tu Hacker News, Turbo-Browser-MCP dung tren HN mot minh; (2) diff them truc tiep call toi www.tiktok.com/api/comment/list/, bat mac dinh, ghi ro khong dung tu class de che, sua duong dan file, ghi ro engine co ghi state vao ~/.config/last30days; (3) run 1 thoi gian chi la agent-reported, run 2 va 3 dung 12.8 s theo engine in, 2 luot chay song song; (4) bo sung 3 item noise run 1 con thieu; (5) submissionKey chi exactly-once khi call tra ve, neu throw sau khi gui thi ledger trong va chay lai se gui trung, ledger chi o 1 may.
+
+## Batch 9, giao 04:35 ngày 22/11 (Muse điều phối, lệnh của tôi)
+
+Batch 8 xong hết, task 4 mới (cài skill + sweep 30 ngày) xong 04:05, báo cáo e680aad. Làm tiếp batch 9, 4 việc, mỗi việc council 3 người + redteam, commit nhỏ push ngay từng phần, làm hết ga hết số, dùng hết token cần dùng, không tiết kiệm.
+
+### Việc 1 - Thiết kế phương pháp one-vision từ kết quả sweep của cậu
+
+Dựa trên sweep task 4 mới của cậu: Turbo-Browser-MCP (Show HN 2026-11-15) có 3 cơ chế áp được cho thiết kế của mình (snapshot chỉ phần thay đổi, batch action kèm kiểm tra kết quả, chống gửi trùng bằng submissionKey + chặn submit mặc định + báo cáo sau mỗi click), và BotCircle issue 8 (2026-10-22) xác nhận lỗi click mù vì grounding tọa độ chưa kiểm chứng. Viết docs/clone2-one-vision-design-20261122.md: ánh xạ 3 cơ chế đó sang stack của mình (Zen/Marionette, chuỗi tọa độ window-relative theo kết luận probe C12: screen = window origin Hyprland + mozInnerScreen + rect center), kèm sketch API cụ thể và một ví dụ làm việc đầy đủ cho bài benchmark 2-vision (ô nhập của cả hai clone). Ghi rõ cái nào lấy được từ Turbo-Browser-MCP, cái nào không (nó chỉ chạy Chromium/CDP, driver không chuyển sang Zen được).
+
+### Việc 2 - Kiểm tra sẵn sàng live cho benchmark 2-vision, KHÔNG chạy live
+
+Kiểm tra tests/two_vision_bench.py + tests/two_vision_once_driver.py + docs/two-vision-benchmark-workflow-20261122.md còn đúng trên main không, chạy lại toàn bộ fixture suite headless trên máy cậu, và viết checklist điều kiện tiên quyết cho lần chạy live (trạng thái workspace, chat của cả hai clone, nội dung tin nhắn chính xác, tiêu chí PASS/FAIL cho từng vision, điều kiện dừng). Bài chạy live là bài nghiệm thu của điều phối, cậu chỉ chuẩn bị, không tự chạy live.
+
+### Việc 3 - Viết nháp mục lỗi G31
+
+Muse tổng vừa nhắn tin trực tiếp cho cậu bằng chuột computer-use lúc 03:53:30, gửi được trong 4 phút 3 giây, 1/1. Nhưng lúc đọc ảnh để xác định ô nhập, mắt nó đọc sai 45px quá cao (nó đoán (307,1085), công cụ visual_grounding cho (306,1130)), cùng kiểu lỗi như CL1-MSG trước đó; nó bắt được trước khi click nhờ công cụ grounding. Viết nháp mục lỗi docs/g31-nearmiss-draft-20261122.md từ các số này: điểm click (306,1130), con trỏ sau click (1288,1144) cách điểm click 2px, gõ xong kiểm tra chữ trong ô nhập của cậu (ô nhập clone1 vẫn trống), Enter một phát gửi, bong bóng xanh đủ chữ trong thread. Kết luận: công cụ grounding là cách sửa, đọc bằng mắt là lỗi. Council + redteam duyệt nháp này.
+
+### Việc 4 - Crawl data mới 30 ngày về cách kiểm chứng click không cần vision thứ hai
+
+Dùng skill last30days đã cài trên máy cậu, crawl data thật trong 30 ngày qua: các agent kiểm chứng một cú click đã trúng đích bằng cách nào mà không cần chụp ảnh lần hai (đọc trạng thái DOM, kiểm tra caret/focus, đọc kết quả session). Chỉ dùng data thật 30 ngày gần nhất, mỗi claim ghi nguồn + ngày, không dùng dataset cũ kĩ. Báo cáo vào docs/clone2-ground-verify-sweep-20261122.md, council + redteam.
+
+Luat nhu cu: khong dua thong tin ca nhan nao cua toi len repo, khong dau gach ngang dai, khong ydotool, test nao cung ghi thoi gian. Ket qua bao cao vao file nay.
