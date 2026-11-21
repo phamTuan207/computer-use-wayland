@@ -901,6 +901,59 @@ omitted; append as it happens, never batch at the end)
   final test (independent Codeforces contest, 5 problems) runs
   LAST, after all other work; not started.
 
+## Re-review verdict (BLOCK on D1, fixed 23:35)
+
+- Re-review LANDED 23:33 (improvements/worker-f2-rereview.md,
+  commit 1a45f8d): BLOCK on ONE remaining defect, D1.
+  Everything else verified FIXED against source (council B1/B2/
+  B3, A1-A5, M1-M3; redteam A1, A3, A5, A7, A8; A2 lock-timeout
+  premise confirmed false; A6 scope-skip reasoning sound).
+  Test counts confirmed: 46 + 11, all green on the VM.
+- D1: `overlay.cmd_acquire` (overlay.py:494-503) called
+  add_holder first with no cleanup, so a daemon-start or socket
+  failure left a holder with pid None that prune_dead_holders
+  (int pids only) can never drop. The pill stays up after the
+  run ends. Same defect class as redteam A4, in the same file,
+  but F2 applied the remove-on-failure only to
+  first_action.acquire_overlay. The re-review ran both repros
+  from /tmp (isolated BASE): daemon failure and socket failure
+  each left {'Muse': {..., 'pid': None}} and prune removed [].
+- FIX (commit 1c6344e): cmd_acquire now wraps the post-add_holder
+  steps in try/except and calls remove_holder(args.agent,
+  args.pid) on failure, then re-raises; mirrors
+  first_action.acquire_overlay (first_action.py:116-131).
+  TEST (commit 526919d): test_cmd_acquire_failure_leaks_nothing
+  (daemon failure + socket failure, each asserts holders == {}
+  and prune == []). First run of the test failed on a test bug:
+  the socket-fault half used the REAL _ensure_daemon, which
+  exits during startup on the VM (no Wayland); fixed by
+  monkeypatching _ensure_daemon to a no-op for that half.
+  Suites now: test_overlay.py 12 tests pass, test_first_action.py
+  46 tests OK.
+- DEPLOY 23:35: overlay.py scp'd to the installed scripts dir
+  (md5 9d2473ce3aa78404f32b69add0b27a01 on both sides);
+  first_action.py unchanged since the 23:25 deploy. Overlay
+  status clean (holders {}, owner none, visible false).
+- MEMORY.md 23:33: KB DONE (commit 9e9b811): no Omarchy skill
+  (independent search 0 results); the fumbling cause was
+  fastest-paths.md on the machine writing the WRONG workspace
+  command (string dispatcher, proven broken live 23:32 rc=7);
+  the correct hl.dsp.focus command was proven 23:19. KB
+  integrated 250 Omarchy/Hyprland binds + 85 Zen binds into the
+  computer-use copy ON THE MACHINE (local-only); fastest-paths
+  fixed 6 broken lines; repo added scripts/hypr_cmd.py + tests
+  13/13 OK. Still unsolved: move-to-workspace, absolute resize,
+  {omarchy/panel/ipc/menu} table forms (keypress-only), Zen has
+  no CLI.
+- NEXT: narrow D1 re-check (spawned 23:35) verifies the fix +
+  the test and checks hold() for the same leak class; then the
+  error-file update (H2 partial wording, G28, G29, R6 solved),
+  then the final report to the parent. Re-review amends NOT
+  implemented in this pass (A-M2 status reports holders not
+  pill-rendered, A2 grandchild test, A6 up-front scope
+  validation, whole-run budget recorded not enforced): recorded
+  as follow-ups, none blocks the fix.
+
 ### Raw rehearsal envelopes (council 2, Finding 3)
 Fetched from the laptop STATE/first-action-20261121.jsonl
 (/home/james/.cache/agent-computer-use/first-action-20261121.jsonl,
