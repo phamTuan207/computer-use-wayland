@@ -1208,3 +1208,12 @@ and their disposition:
   to fix-pass-5 values (md5 9e99d9aa, blob ff4a5358, commit
   46e0909); log fix-pass-5 verification section records the commit.
   Committing the hash record now.
+- 23:05 +07: hash-record commit 8a99ea0 landed, ls-remote verified
+  8a99ea0a473d8f4eae4f203264522c9bc86511f3. Outcome: landed.
+- 23:06 +07: spawned the fix-pass-5 re-review round (4 agents in
+  parallel): redteam + Council 1 + Council 2 + Council 3, each
+  over the fix-pass-5 diff only (46e0909 vs bf3c939), each with a
+  self-contained brief (prior papers, adjudication, probe paths,
+  shared-checkout staging rule, evidence contract). Papers to
+  improvements/worker-y14b-fix5-redteam.md and
+  worker-y14b-fix5-council-{1,2,3}.md. Ship waits for them.
