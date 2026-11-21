@@ -186,3 +186,52 @@ best quality, not speed. Council + redteam debate every phase verdict.
   ls-remote; the earlier rejection was a race, resolved by rebase).
   The sibling worker's runner files (run_agyq2.py, run_live.py) are
   still uncommitted in the VM worktree; Y1b does not touch them.
+
+## 18:33 +07 | FINAL Phase A verdict: BLOCK (all 4 verdict panel members in)
+- Verdict Council 1 (da0b85e): Item 1 PARTIAL, Item 2 BLOCKED. Reproduced Y1b's probes
+  (2a 6.70s, 2b 9.63s on re-run). Follow-up: add chr (optionally
+  ord) to SAFE_BUILTINS, real preemption (signal timer or child
+  process; literal-only refusal of range() would be a probe bypass).
+- Verdict Council 2 (23c5604): Item 3 FIXED, Item 4 FIXED with probe
+  amendments. 20 adversarial path attempts, none escapes. 4a/4b are
+  probe defects (wrong globals dict; string form). Model-defined
+  function globals ARE pinned (verified in-process).
+- Verdict Council 3 (9d9bd63): overall BLOCK. Rule-as-written BLOCK,
+  but 4a/4b are probe artifacts; three real blocking fails are 1e,
+  2a, 2b. Phase B design may proceed in a separate branch, no merge
+  and no snippet promotion until Phase A re-verifies green.
+- Verdict redteam: BLOCK stands, only on 2a/2b; 1e and 4a are probe
+  artifacts; PLUS two new non-RCE holes B1/B2 (see below). The
+  redteam could not run code in its turn (execution-risk notice);
+  Y1b ran its proofs live (see next entry) and committed its file.
+- Probe-panel redteam (90 probes attacked, 86 GAP, 4 HOLDS):
+  1e GAP HIGH (broken negative control, fails a correct fix),
+  4a GAP HIGH (false premise), 4b GAP MEDIUM (exact-string match),
+  2a/2b GAP HIGH (error-text narrowness, one C shape only).
+  2d aggregate-blowup gap does NOT apply to Codex's whole-envelope
+  cap (confirmed by B6 + live 2d PASS).
+
+## 18:33 +07 | Y1b live verification of redteam B1/B2 (runner /tmp/y1b-verify-b1b2.py)
+- B1 CONFIRMED: x=[] then append("pwned") + assert_state(False)
+  fails (assert_failed) but s.variables["x"] == ["pwned"] AND the
+  state file on disk holds ["pwned"]. Failed-run mutation persists
+  in memory and on disk. Fix: restore previous_variables on EVERY
+  failure path, or deep-copy the namespace on entry.
+- B2 CONFIRMED: 5 observe() calls store 5 observations, state file
+  1285 bytes, no cap and no prune on save. Fix: prune expired
+  observations/DOM snapshots in _save_state + cap serialized state.
+- A1 CONFIRMED: fixed 1e with len("ab") passes ("2" / "ok-1").
+  A3 CONFIRMED: all 5 globals routes scan-rejected; model-defined
+  fn globals pinned (dict, no eval/open/__import__/compile/getattr).
+- Y1b FINAL Phase A verdict: BLOCK. Blocking code items: 2a/2b
+  (preemption), B1 (failure-path restore), B2 (state cap/prune),
+  1e follow-up (add chr+ord to SAFE_BUILTINS, amend probe to
+  len("ab")). Probe amendments: 4a (model-fn probe), 4b (regex).
+  Residual risk: 2e. Suite: zero regressions (1490 tests).
+  Codex must address these in its next commit(s) on y1-snippets;
+  Y1b re-verifies with the same probes + B1/B2 checks.
+
+## 18:33 +07 | Codex poll 4: alive, Phase B in progress
+- PID 184702 alive, elapsed 32:21. Log 923,220 bytes. No new commits
+  (HEAD still 84b88bb). Uncommitted Phase B work now also includes
+  modified tests/test_code_exec.py. Still writing tests.
