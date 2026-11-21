@@ -110,3 +110,35 @@ Refactored `test_cleanup_exceptions_cannot_skip_restore` to use `contextlib.Exit
 Verification: `python3 -m unittest tests.test_cursor_session` ran 33 tests, OK, 29.259s, exit 0. The Phase B full-suite reference immediately before this phase was 1549 tests with 2 skipped. A full suite was not required or run after this portability-only test refactor. VM Python 3.12.3 import verification remains with Y1.
 
 Phase C verdict: PASS on the laptop. This phase and its log are committed and pushed in the next recorded commit.
+
+## Phase D: Part C verification
+
+Read Part C, lines 108-142, of `LOI-VA-GIAI-PHAP-TOAN-BO-20261121.md`. Started 2026-11-21 18:50:25 Asia/Ho_Chi_Minh, elapsed +48:42. Completed 2026-11-21 18:53:02 Asia/Ho_Chi_Minh, elapsed +51:19. No source fix was needed.
+
+| Item | Verification run | Result |
+| --- | --- | --- |
+| C1 observation expiry | `python3 -m unittest discover -s tests -p 'test_phase3_c1.py'` | 4 tests, OK. |
+| C2 post-navigation capture | `python3 -m unittest discover -s tests -p 'test_phase3_c2.py'` | 5 tests, OK. |
+| C3 Ctrl+T preflight | `python3 -m unittest discover -s tests -p 'test_phase3_c3.py'` | 6 tests, OK. |
+| C4 Commit Changes runbook | One-off assertion against `docs/polygon-upload-runbook.md` for end of right column, ADDED changes, and End navigation | PASS. |
+| C5 Continue navigation runbook | One-off assertion against `docs/polygon-upload-runbook.md` for direct URL 404, Dashboard > View Problems > Continue on the left, and canceling the delete dialog | PASS. |
+| C6 ydotool ban | Included in `python3 -m unittest discover -s tests -p 'test_phase3_brief.py'` | 5 tests, OK; missing-ban test fails a deliberately incomplete brief as expected. |
+| C7 narrate before acting | Same 5-test brief run, plus an assert that a brief without narration reports the missing rule | PASS. |
+| C8 session cleanup | `python3 -m unittest discover -s tests -p 'test_phase3_cleanup.py'` | 5 tests, OK. |
+
+Invocation note: the first C1 command, `python3 -m unittest tests.test_phase3_c1`, errored before tests because `_function_test_support` was not importable through that module invocation. The repo's `load_tests` helper works under unittest discovery; the corrected discovery command ran all 4 C1 tests successfully. This was a test invocation issue, not a C1 assertion failure.
+
+Full-suite reference before Phase D: 1549 tests, 2 skipped, OK after Phase B. Phase D verdict: C1-C8 PASS by the runs above. This phase and the per-item log are committed and pushed in the next recorded commit.
+
+Phase D timing supplement, exact reruns on 2026-11-21 Asia/Ho_Chi_Minh, 18:55:22 to 18:55:45, phase elapsed +53:39 to +54:02:
+
+| Start to end | Command | Result |
+| --- | --- | --- |
+| 18:55:22 to 18:55:22, 0.062s | `python3 -m unittest discover -s tests -p test_phase3_c1.py` | 4 tests, OK, exit 0. |
+| 18:55:22 to 18:55:22, 0.046s | `python3 -m unittest discover -s tests -p test_phase3_c2.py` | 5 tests, OK, exit 0. |
+| 18:55:22 to 18:55:22, 0.064s | `python3 -m unittest discover -s tests -p test_phase3_c3.py` | 6 tests, OK, exit 0. |
+| 18:55:22 to 18:55:23, 0.074s | `python3 -m unittest discover -s tests -p test_phase3_brief.py` | 5 tests, OK, exit 0. |
+| 18:55:23 to 18:55:23, 0.118s | `python3 -m unittest discover -s tests -p test_phase3_cleanup.py` | 5 tests, OK, exit 0. |
+| 18:55:45 to 18:55:45, 0.006s | One-off Python assertions against the C4/C5 runbook lines and C7 missing-narration rule | All 7 assertions passed, exit 0. |
+
+The reruns confirm the Phase D verdict above. At 18:55:51, `git diff --check` passed and only this log was modified. Phase D log commit and push started at 18:55:51, elapsed +54:08.
