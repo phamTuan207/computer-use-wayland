@@ -1761,6 +1761,73 @@ dung repo). Claim Y10 "x7 so với x8 lần chạy" không kiểm lại được
 ở đây vì worker-y10-batch3-fix-log.md ở trên main, không phải
 todolist-push.
 
+## ĐỢT 6 VIỆC 1 CHƯA XONG, 01:58 ngày 22/11 - PARTIAL, ĐANG LÀM TIẾP
+
+Báo cáo ở docs/clone1-zen-ordinary-user-run-20261121.md (190
+dòng), commit 3323170, chưa push được vì cây bẩn do việc 3 đang
+chạy (lib/browser.mjs và results.json đang sửa, firefox_bidi.mjs
+mới). Push lại khi cây sạch.
+
+Kết quả việc 1 tới lúc này: KHÔNG kịch bản nào chạy xong. ZT-00
+gate FAIL như viết (Ctrl+L, title vẫn "" sau 10 s). ZT-01, 02,
+03, 04, 06, 07, 08, 09 chưa chạy. ZT-05 không áp dụng (không có
+Hyprland, hyprctl, workspace trên máy này; F-002 chưa test).
+ZT-10 không áp dụng (không có Zen sidebar trong Firefox stock;
+F-001 không test lại được ở đây). Không có gì bịa, không claim
+chạy nào chưa chạy.
+
+Đã kiểm chứng được:
+- Firefox 160.0.1 tải lại: tarball 90943956 byte đúng kích thước
+  đợt 3, giải nén vào ~/workspace/firefox. --version in 160.0.1.
+  Headless screenshot exit 0, không minidump. Firefox khởi động
+  được lúc này; cửa segfault ngày 21/11 tạm qua. Bộ nhớ: free
+  144M / available 469M lúc 01:39, free 545M / available 2098M
+  sau khi dọn.
+- F-B6-01, Ctrl+L không làm gì khi headless (đã chứng minh): sau
+  Ctrl+L, gõ example.com, Enter, href vẫn about:blank. Headless
+  Firefox không có thanh địa chỉ. Mọi kịch bản ZT đều đi bằng
+  cách đó, nên runner đổi navigation sang BiDi goto và ghi rõ
+  việc đổi này. Mạng chạy (Wikipedia 200 trong 1.18 s, httpbin
+  200, PDF irs.gov 200, example.com 200).
+- F-B6-02, HTTPS lỗi trong profile mới (đã chứng minh, rồi sửa):
+  BiDi goto https://example.com lỗi SEC_ERROR_UNKNOWN_ISSUER.
+  Proxy egress của máy ký lại TLS bằng CA nội bộ mà curl tin
+  (bundle của máy) nhưng NSS store của Firefox không tin. Cách
+  sửa đã kiểm chứng 02:03 +07: chuẩn bị mỗi profile bằng certutil
+  (-N DB rỗng, rồi -A import CA với trust CT,C,c); sau đó
+  example.com load được, title "Example Domain". Pref
+  security.enterprise_roots.enabled=true một mình KHÔNG sửa được.
+  Runner CHƯA có bước certutil, phải thêm trước khi chạy kịch bản.
+- F-B6-03, goto Wikipedia timeout một lần (30 s, 02:03 +07): sau
+  khi sửa TLS, goto bài Ho Chi Minh City lỗi "Navigation timeout
+  of 30000 ms exceeded" trong khi example.com vừa load tốt vài
+  giây trước. Chưa rõ nguyên nhân; cần test lại sạch một lần.
+- Ctrl+T / Ctrl+W khi headless: CHƯA TEST (diag dừng ở timeout
+  Wikipedia). Firefox giới hạn session BiDi đồng thời ("Maximum
+  number of active sessions"); process Firefox thừa từ diag crash
+  đã chặn một lần connect sau. Một agent khác (việc 3) cũng đang
+  chạy Firefox từ /tmp/firefox (pid 12112), agent việc 1 không
+  động vào.
+- Screenshot headless chỉ chụp viewport, không bao giờ chụp chrome
+  (find bar, toolbar, sidebar, bookmark library, download panel).
+  Các bước ZT đó KHÔNG ÁP DỤNG khi headless, ghi như vậy trong
+  runner, không pass hay fail.
+
+Còn nợ: (1) thêm certutil vào launch của zt_run.mjs; (2) test lại
+goto Wikipedia một lần sạch, không còn Firefox khác chạy; (3)
+test Ctrl+T / Ctrl+W headless (diag có ở ~/workspace/b6t1/
+diag_tls.mjs); (4) chạy ZT-00 (gate đã đổi), rồi ZT-01..ZT-10 theo
+thứ tự, kết quả vào ~/workspace/b6t1-results/; (5) điền báo cáo
+từ các file kết quả đó.
+
+Chú ý: một lệnh chạy diag TLS bị yêu cầu duyệt mà không ai trả lời
+kịp nên hết hạn. Lệnh đó vẫn chạy xong và output đã trích trong
+báo cáo. Agent không thử lại phần đó sau thông báo, theo hướng
+dẫn. Nếu lần chạy sau cần duyệt đó, vẫn cần được duyệt. Agent đã
+dừng exec ở đó và viết báo cáo thay vì ngồi im. Đã giao agent
+follow-up làm tiếp 5 bước nợ trên, ghi rõ nếu duyệt hết hạn thì
+ghi vào báo cáo và làm bước khác, không im lặng.
+
 ## Watchdog đợt 6, 01:47 ngày 22/11
 - Việc 1: agent đang chạy, hoạt động 39 giây trước, chưa có file báo cáo.
 - Việc 2: xong, đã push (581736e, ee5891b), 13 vi phạm, 3 cao.
