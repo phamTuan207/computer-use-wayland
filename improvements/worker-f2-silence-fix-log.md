@@ -303,7 +303,136 @@ Design conclusions for the fix:
   council + redteam complete. F2 commits below follow that order.
 
 ### Commits (todolist-push, each verified via ls-remote)
-- (to fill as they land)
+- a576e69 F2: first_action.py (overlay-first fast path, session watchdog
+  + Pointer fallback)
+- afed06e F2: tests for first_action (21 tests, VM-only)
+- 8d1f775 F2: wire act-now subcommand into cu.py
+- 8979b30 F2: first-visible-action rule doc
+- 2495382 F2: silence-fix log (root causes R1-R6 + crawl + design +
+  deploy). Remote HEAD verified 2495382 via ls-remote 22:44.
+- Push race note: the first push was rejected (remote had moved to
+  08014a07, Y13r2 council 1); a later fetch showed a576e69 already in
+  the remote history (branch -r --contains) and the push then went
+  019bdf3..2495382. The remote moves fast (Y13r2, F1, PRIO all
+  committing); always fetch before push.
 
-### Rehearsal (pending)
-- ZT-00 health gate via act-now, then ZT-01, after the gate passes.
+### Event log (owner rule 22:47: log EVERY event with time, nothing
+omitted; append as it happens, never batch at the end)
+- T0 = 22:40:00 +07 (owner target steer, start of this work block).
+  T_order (rehearsal) = 22:45:15.749 +07 (fresh observe start).
+  Elapsed below is since T0 unless marked T_order.
+- 22:40:00 (T+0s) owner target: team to 240 commits before 24:00
+  (189 now, ~51 more). Commit small and often, quality first,
+  council + redteam complete.
+- 22:41-22:42 (T+60-120s) appended deployment note to this log
+  (implementation section 5).
+- 22:42 (T+120s) git fetch + ff: HEAD d5239ab, already up to date.
+- 22:43 (T+180s) commit a576e69 (scripts/first_action.py) created;
+  push REJECTED: remote at 08014a07 (Y13r2 council 1), expected
+  d5239ab. Rebase failed: unstaged changes in the shared tree.
+- 22:44 (T+240s) diagnostics: remote HEAD 5033c9d (F1); a576e69
+  confirmed in remote history (git branch -r --contains).
+- 22:44 (T+240s) committed 4 more: afed06e (tests), 8d1f775 (cu.py),
+  8979b30 (rule doc), 2495382 (this log).
+- 22:44 (T+240s) push OK: 019bdf3..2495382, ls-remote verified
+  remote HEAD 2495382. All 5 F2 commits on todolist-push.
+- 22:44 (T+240s) ZT-00 gate step 0: zen_dom.py list (via
+  /tmp/zen_tab_cleanup/zen_dom.py) returned 67 tabs, saved to
+  /tmp/zt00-baseline.json (8974 B). Outcome: PASS. Note: the restart
+  restored ALL 67 tabs, undoing the 22:03 cleanup (39 fixture tabs
+  back). Example Domain tab at index 10 (F3 likely opened it during
+  verification). ZT doc path /home/james/computer-use-wayland/scripts/
+  zen_dom.py does NOT exist; the file is at
+  /home/james/workspace/computer-use-wayland/scripts/zen_dom.py.
+- 22:44 (T+240s) ZT-00 gate step 1: ps zen-bin PID 426338 alive
+  (etime 07:00). PASS.
+- 22:44 (T+240s) ZT-00 gate step 2: curl 127.0.0.1:9222/ -> 200. PASS.
+- 22:44 (T+240s) ZT-00 gate step 3: Marionette session created without
+  error (the list worked, no browserElement null). PASS. Gate 0-3 all
+  PASS; the slot is healthy after F3's restart.
+- 22:44:54 (T+294s) eval document.title -> null (active tab is
+  blank/unloaded). No concurrent driver processes (no zen_dom,
+  run_live, run_agy, computer-use session, act-now). Coast clear.
+- 22:45:15.749 (T+315s, T_order+0s) fresh observe: id 20a5e52da440,
+  capture 39 ms, 1920x1200, image 568,754 B, monitor eDP-2
+  [2464,902,1920,1200], scale 1.0. Image
+  /home/james/.cache/agent-computer-use/20a5e52da440.jpg.
+- 22:45 (T+300s) owner correction: open Omarchy menu and switch
+  workspaces by COMMAND, never click the bar (hyprctl dispatch in
+  hl.dsp form for workspace; find the exact launcher command from the
+  Hyprland/Omarchy config for the menu). Fastest-path-first: CLI
+  first, mouse last. Applies to the rehearsal: if a workspace switch
+  or menu open is needed, use the command, not a bar click. ZT-00
+  does not need either (Zen is on the current workspace).
+- 22:47 (T+420s) owner rule: log EVERY event with time, nothing
+  omitted; append as it happens. This section is that log.
+- 22:48 (T+480s) viewed observe 20a5e52da440 (22:45:15): the screen
+  shows TWO Muse chat windows tiled side by side (clone1 left,
+  clone2 right), NOT Zen. Zen is not visible on the current
+  workspace; it is on another workspace or behind. No Omarchy menu
+  open in this shot. Owner's 22:44 missed-click note (MEMORY.md):
+  a click missed workspace 1 and opened the Omarchy menu ~22:44;
+  F2 made NO pointer click at 22:44 (only DOM list + ps + curl +
+  eval, all CLI/connector), so the click was not F2's. F3's
+  verification is the likely source (unproven; F3 has no log yet).
+- 22:48 (T+480s) owner updates (MEMORY.md): (a) 22:45 menu/workspace
+  by COMMAND, CLI first (already recorded above); (b) 22:46-22:47
+  OPTIMAL METHOD: convene ALL agents, each spawns many crawlers +
+  council + redteam, find ONE optimal fix method for the whole error
+  pile; log time + events continuously; Worker OPT (coordinator)
+  spawned; (c) 22:48 LAUREN TAN, NO CUTTING STEPS: follow the Lauren
+  Tan structure tightly, do not cut steps or the code will be garbage;
+  owner asleep, work overnight, do not disturb, report results in
+  the morning. F2 continues its brief as written (rehearsal ->
+  council/redteam -> error file -> commit -> report); that IS the
+  Lauren Tan structure (evidence contract, council + redteam, small
+  commits, generator never runs its own tests, kill rules, continuous
+  logging). No shortcuts.
+- 22:48 (T+480s) next: find Zen's workspace via hyprctl clients,
+  switch by COMMAND (hl.dsp.workspace), never a bar click, then
+  re-observe before any pointer action.
+- 22:49 (T+540s) hyprctl clients (4 clients): Zen 0x557052b62dd0 on
+  workspace 1, at [2509,914], size [1863,1176], not floating, PID
+  426338. Two Muse windows (chrome-... and brave-... classes, both
+  titled 'Muse') on workspace 2, at [2533,914] and [3448,914], each
+  901x1176 (tiled halves). A herdrdrop special window also present.
+  Active workspace NOW is 1 (Zen's). So the 22:45:15 observe showed
+  workspace 2 (Muse), and the workspace switched to 1 between
+  22:45:15 and 22:49 (switcher unknown: F3's verification or the
+  owner; NOT F2, F2 issued no workspace command). No workspace
+  switch needed now; Zen is on the active workspace.
+- 22:50:27.772 (T+627s) fresh observe 7650ae3be6e7: capture 24 ms,
+  1920x1200, image 569,185 B, monitor eDP-2 [2464,902,1920,1200],
+  scale 1.0. This is the observation for the act-now batch.
+- 22:50:45 (T+645s) viewed observe 7650ae3be6e7: it STILL shows the
+  two Muse chat windows (clone1 left, clone2 right), NOT Zen. So
+  eDP-2 is still on workspace 2 despite activeworkspace saying 1.
+- 22:51:32.440 (T+692s) workspace switch attempt (CLI, owner 22:45
+  rule): `hyprctl dispatch "hl.dsp.workspace(1)"` FAILED: error
+  "[string ...]:1: attempt to call a table value (field
+  'workspace')", rc=7, activeWs stayed 2. So hl.dsp.workspace is a
+  TABLE, not a function; the workspace sub-function name is unknown
+  (candidates: goto/switch/change). Did NOT fall back to the plain
+  string form `hyprctl dispatch workspace 1` (broken in Hyprland
+  0.57.2 Lua per AGENTS.md).
+- 22:51:56.149 (T+716s) focus Zen by address instead (repo pattern,
+  cu.py:541): `hyprctl dispatch "hl.dsp.focus({ window =
+  \"address:0x557052b62dd0\" })"` -> "ok", rc=0. eDP-2 activeWs is
+  now 1 (Zen's workspace). Focusing the window switches to its
+  workspace; this is the working CLI-first route. The exact
+  hl.dsp.workspace sub-function is still unknown (follow-up: find it
+  in the Hyprland Lua docs, do not guess).
+- 22:52:08.492 (T+728s) fresh observe ce2bf0b9a594: capture 35 ms,
+  1920x1200, image 268,630 B (much smaller than the Muse shots,
+  consistent with a mostly-empty Zen page). This is the observation
+  for the act-now batch.
+
+### Rehearsal (in progress)
+- ZT-00 health gate via act-now. Gate 0-3 PASS (above). Step 4 next:
+  fresh observe viewed, then ONE act-now batch [Ctrl+N, click address
+  bar, type example.com, Enter]. Deviation from ZT-00 as written
+  (recorded): ZT-00 navigates the active tab, but the count/identity
+  cleanup rule (title set AND count must match after close) means the
+  closed tab must be run-opened, so a new tab is opened first. The
+  active tab is a blank baseline tab; navigating and closing it would
+  drop the count 67 -> 66.
