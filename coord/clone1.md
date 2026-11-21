@@ -3159,3 +3159,59 @@ về rỗng, như các lần chạy của clone2.
 
 ## Watchdog đợt 8, 04:57 ngày 22/11
 Việc 1: cài xong (ef01dab, 4.5.0), sweep vẫn chặn, chờ chủ xác nhận chạy clone. Việc 2: agent đang chạy bình thường, hoạt động gần nhất 7.6 phút trước, chưa có file báo cáo. Muse: không có yêu cầu mới từ watermark f8317f7. Lưu ý: lần chạy watchdog 04:57 tự báo không ghi được khối trạng thái vì nội dung repo không qua kiểm tra execution-risk trong phiên của nó; khối này do tôi ghi và push trực tiếp để kiểm tra lại.
+
+## ĐỢT 8, VIỆC 2 XONG, 05:04 ngày 22/11 - KẾT LUẬN: GO
+
+Báo cáo docs/clone1-amend-verify-20261122.md (254 dòng theo wc -l;
+agent báo 255, sai +1), đã push (09bfedb). Làm read-only trong 2
+worktree: ~/workspace/b8t2/amend ở 4b7d6ac, ~/workspace/b8t2/base ở
+e4082ff.
+
+6 suite trên code amend, tất cả PASS, 181 test, tổng 1.385 s:
+test_first_action 61 OK 0.629 s, test_type_verification 47 OK 0.424 s,
+test_zen_dom 25 OK 0.005 s, test_dom_act 10 OK 0.001 s,
+test_pick4_fastpath 28 OK 0.074 s, test_session_continuation 10 OK
+0.242 s. Thêm: bộ 13 suite 315 test OK trong 2.239 s, khớp log amend.
+
+Cả 12 mục đều có thật ở 4b7d6ac, kèm file + dòng, mỗi mục đã đọc
+code kiểm: G28 nới rộng (first_action.py:478-498, mọi batch đều từ
+chối), R2 subsumption (_fresh_observation chỉ có đúng 1 caller,
+run() :470), mục 12 DOM helpers (zen_dom.py:367/384/405/423/436/444,
+fastpath.py:152/169/206, dom_act.py:38/64/78).
+
+Fail-before tái hiện đúng log amend: base ở e4082ff lỗi
+first_action 3 fail + 2 error, type_verification 1 + 7, zen_dom 6 +
+9, dom_act 9 error trên 10, pick4_fastpath 5 error;
+session_continuation và keyboard_preflight OK như kỳ vọng. Tên lỗi
+chính đã ghi (R1 demo, test pointer-only bị lật, restore/wedge/switch,
+trường hợp G30).
+
+Bộ hồi quy 12 module lân cận: 209 test, đúng 2 lỗi, cả 2 đều là lỗi
+umask test_core đã có từ trước, giống hệt ở base và amend, nên
+không hồi quy.
+
+C12: viewport_origin ĐÚNG. zen_dom.py:367-383 trả mozInnerScreenX/Y
+(gốc viewport trên màn hình, chrome đã tính sẵn),
+fastpath.py:152-167 cộng tâm rect, và dom_rect_to_image_point là
+nghịch đảo đại số đúng của cu.image_point đã chứng minh live; khớp
+đúng công thức truth của calibration_e2. Suite G30 7 trường hợp
+pass 7/7, trên ngưỡng 90%. Tôi tự kiểm lại 1 điểm: scripts/zen_dom.py
+viewport_origin dòng 367-383 trả đúng [window.mozInnerScreenX,
+window.mozInnerScreenY] kèm validate 2 số.
+
+Bonus: R10 bullet thứ 3 (kiểm tra range trước current_handle) đã sửa
+ở zen_dom.py:288-294, dù không ai yêu cầu thay đổi. Phạm vi: 0 dòng
+diff chạm image_point, move, hay _check_entry_pyc; 0 dấu gạch trong
+diff code + test. Dải còn chứa các commit không phải amend (sửa đợt 7,
+ZT-C, crawl, review) mà agent không kiểm; đã ghi trong báo cáo.
+
+Không kiểm được: chứng minh live trên browser, vì các suite dùng fake
+và không có Zen/Brave chạy trên VM này; chứng minh độ chính xác live
+do worker benchmark 2-vision trên laptop làm. Full test discover không
+chạy lại; bộ 13 suite và 12 module đã bao mặt hồi quy được chỉ ra.
+2 giới hạn C12 ghi là việc live còn nợ, không phải lỗi code: không hệ
+số DPR (không cần ở pipeline 1:1 của laptop, thêm vào sẽ phá chuỗi đã
+chứng minh) và không cross-check AT-SPI lúc chạy (thuộc worker
+benchmark).
+
+Council 1/2/3 + redteam cho việc 2 đã giao, đang chạy.
