@@ -103,7 +103,19 @@ equivalent only for reference.
   cd /tmp/worker-y13-server && Y13_GO=1 python3 launch_y13.py all \\
   > /tmp/worker-y13-stdout.log 2>&1
   Y13_GO=1 python3 launch_y13.py 01 02
-  python3 run_codex_y5.py --verify-manifest
+  python3 -P run_codex_y5.py --verify-manifest
+
+SCRIPT FORM ONLY (Y13g B1/B4): run this file ONLY as a script,
+`python3 -P run_codex_y5.py ...` (PYTHONSAFEPATH=1: the ship
+dir is never added to sys.path from the environment, so a
+planted stdlib .py cannot execute at import). -m and bare
+imports are UNSUPPORTED and exit 2: the guard at the module
+top deletes the two entry .pyc files it may have created, so
+a -m/import probe never bricks the ship; run the script form
+directly afterwards. Never invoke -m/import on an unverified
+ship: a forged entry .pyc invoked that way executes (the
+forged bytecode IS the running code); the launcher's
+out-of-process check refuses a forged ship before exec.
 Output: one JSON summary line per test on stdout, a suite JSON line,
 per-step JSONL at LIVE_LOG (with attempt fields), per-test
 screenshots in /tmp/worker-y13-shots/.
@@ -1027,7 +1039,7 @@ def _proven_no_body(diag):
     genuine no-body document vs an eval transport failure (hung
     driver). Only a diagnose that POSITIVELY proves "document
     loaded, no body element" counts as a fixture failure: the
-    diagnose carries NO eval_error, at least one snapshot has
+    diagnose carries NO eval_error key at all, at least one snapshot has
     hasBody False AND readyState complete, and no snapshot has a
     body (contradictory samples mean instability, not proof).
     A transport error (eval_error present, or no snapshots at all)
@@ -1037,8 +1049,11 @@ def _proven_no_body(diag):
     behind, but the fail-safe direction is INFRA, which earns a
     re-run, over fixture-unavailable, which loses it. The frozen
     base cannot be changed, so the split lives here in the caller,
-    not in diagnose_body.)"""
-    if diag.get("eval_error"):
+    not in diagnose_body. Y13g Amend 5: the check is `is not
+    None`, so an empty-string eval_error also reads as a transport
+    error, not proof; run_live only ever sets non-empty strings
+    or omits the key, so this is hardening only.)"""
+    if diag.get("eval_error") is not None:
         return False
     snaps = diag.get("snapshots") or []
     if not snaps:
@@ -3628,10 +3643,14 @@ def bootstrap_tab(base):
 
 def _script_basename_is_runner(name):
     """True if a cmdline token's basename is a test-runner script
-    (Y13f H2/H3). run_*.py covers Y9/Y13/Y14/Y4d; run-nested*
-    covers Y6c's nested run (run-nested-pill.py, run-nested-wayland
-    [.sh]: a hyphen, not run_, so the old run_ pattern was blind
-    to it); hand_drive_e1.py is E1's driver."""
+    (Y13f H2/H3, kept by Y13g B3). run_*.py covers Y9/Y13/Y14/Y4d;
+    run-nested* covers Y6c's nested run (run-nested-pill.py,
+    run-nested-wayland[.sh]: a hyphen, not run_, so the old run_
+    pattern was blind to it); hand_drive_e1.py is E1's driver.
+    Generic on purpose: in this project every run_*.py is a
+    runner, and the check is fail-closed. A renamed copy is NOT
+    caught here; it is caught by the md5 leg in
+    _token_is_runner_script."""
     if name == "hand_drive_e1.py":
         return True
     if name.startswith("run-nested"):
@@ -3645,60 +3664,330 @@ def _is_python_token(tok):
             or base.startswith("python3.") or base.startswith("python2."))
 
 
-def _argv_tokens(cmdline):
-    """Split a /proc cmdline (NUL-separated) into argv tokens, and
-    split any shell -c / flock -c argument on whitespace, so a
-    bare-relative or wrapped launch is visible (Y13f H2). The -c
-    argument itself is replaced by its words: the first word of a
-    -c string is the command being run."""
-    parts = [t for t in cmdline.split("\x00") if t]
-    tokens = []
+# Y13g B3 (C2 AMEND 3/4, redteam B3): the Y13f tokenizer used a
+# prev-token heuristic and missed -m forms, flag-with-value forms,
+# renamed/extensionless/symlinked copies, and -c exec forms. This
+# block parses the command the way a shell + python would: wrappers
+# first (env/nohup/setsid/timeout/flock/bash -c), then a real
+# python argv parse (flags and their values skipped, first
+# positional is the script candidate), then identity by name OR by
+# md5 against the manifest. A mere path mention (md5sum, cat, git)
+# never matches: only a token in an execution position is
+# examined. Keep in sync with launch_y13.py (identical block,
+# AST-verified); _SHIP_DIR is the ship dir in both files.
+_RUNNER_MODULE_NAMES = (
+    "run_codex_y5", "run_live", "run_agyq2", "run_batch3",
+    "run_agy_y2", "run-nested-pill", "hand_drive_e1",
+)
+_RUNNER_MANIFEST_PATHS = ("run_codex_y5.py", "launch_y13.py", "run_live.py")
+_RUNNER_MD5S = None
+
+
+def _shlex_tokens(s):
+    """Split a -c command string on shell words (shlex, whitespace
+    fallback), stripping trailing ;, &, | from each token (C2 AMEND
+    3: 'python3 run_codex_y5.py;' is the same command as without
+    the semicolon)."""
+    import shlex
+    try:
+        parts = shlex.split(s)
+    except Exception:
+        parts = s.split()
+    out = []
+    for p in parts:
+        p = p.rstrip(";&|")
+        if p:
+            out.append(p)
+    return out
+
+
+def _runner_md5s():
+    """md5s of the known runner .py files, from the ship manifest
+    (cached). An unreadable manifest yields an empty set: the md5
+    leg is then off, but the name leg still catches every named
+    form, and the launcher's check_manifest refuses a bad
+    manifest before exec."""
+    global _RUNNER_MD5S
+    if _RUNNER_MD5S is not None:
+        return _RUNNER_MD5S
+    md5s = set()
+    try:
+        import json
+        with open(os.path.join(_SHIP_DIR,
+                               "codex-y5-manifest.json"),
+                  "rb") as f:
+            man = json.load(f)
+        for entry in man.get("files", []):
+            if (isinstance(entry, dict)
+                    and entry.get("path") in _RUNNER_MANIFEST_PATHS
+                    and entry.get("md5")):
+                md5s.add(entry["md5"])
+    except Exception:
+        pass
+    _RUNNER_MD5S = md5s
+    return md5s
+
+
+def _path_is_runner_copy(tok, cwd=None):
+    """True if the token resolves (symlinks followed, relative
+    against cwd) to a file whose md5 is a known runner md5
+    (redteam B3(4)). A renamed, extensionless, or symlinked copy
+    of a runner is caught here, name-independently. An
+    unresolvable or unreadable path is NOT a copy: the file being
+    executed exists on disk in every real case, so an unresolvable
+    path is a race or a namespace we cannot read, not a runner.
+    The ports + flock backstop still applies."""
+    import hashlib
+    path = tok
+    if not os.path.isabs(path):
+        path = os.path.join(cwd or os.getcwd(), path)
+    try:
+        real = os.path.realpath(path)
+        if not os.path.isfile(real):
+            return False
+        with open(real, "rb") as f:
+            digest = hashlib.md5(f.read()).hexdigest()
+    except OSError:
+        return False
+    return digest in _runner_md5s()
+
+
+def _token_is_runner_script(tok, cwd=None):
+    """True if a script-candidate token executes a runner: by
+    generic runner name, by bare module name (extensionless form:
+    python3 run_codex_y5), or by md5 (renamed/extensionless/
+    symlinked copy)."""
+    base = tok.rsplit("/", 1)[-1]
+    if _script_basename_is_runner(base):
+        return True
+    stem = base[:-3] if base.endswith(".py") else base
+    if stem in _RUNNER_MODULE_NAMES:
+        return True
+    return _path_is_runner_copy(tok, cwd)
+
+
+def _c_code_executes_runner(code, cwd=None):
+    """True if a python -c code string executes a runner. First
+    the code is parsed as a shell command (a nested 'python3
+    run_codex_y5.py', e.g. via os.system or a -c inside -c, is
+    caught by the same recursive parse). Then the exec(/eval(
+    special case: exec(open('run_codex_y5.py').read()) IS an
+    execution, while a bare 'import run_codex_y5' is NOT (an
+    import runs the script-form guard and exits 2, never the
+    suite) and neither is a mere mention such as
+    print('run_codex_y5.py'). LIMIT (documented): a nested
+    os.system/exec inside -c code beyond exec(/eval( is not
+    caught; the ports + flock backstop applies."""
+    inner = _shlex_tokens(code)
+    if inner and _command_executes_runner(inner, cwd):
+        return True
+    if "exec(" in code or "eval(" in code:
+        import re
+        for m in re.finditer(r"run_[A-Za-z0-9_.\-]*\.py|"
+                             r"run-nested[A-Za-z0-9_.\-]*|"
+                             r"hand_drive_e1\.py", code):
+            if _script_basename_is_runner(m.group(0)):
+                return True
+    return False
+
+
+_PY_NO_VALUE = frozenset("bBdeEhiIOqSsuv")
+
+
+def _python_executes_runner(args, cwd=None):
+    """Real python argv parse (C2 AMEND 3). Skips interpreter
+    flags and their values (-u -B -E -s -v -W <val> -X <val> -O
+    -c <code> -m <mod>, -- separator, bundled short flags, and
+    attached values such as -Wignore, -Xdev, -c..., -m...); the
+    first positional is the script candidate. A -m module is a
+    runner when its LAST dotted segment is a known runner module
+    (pkg.run_codex_y5 counts; run_codex_y5.py as a -m argument
+    is an invalid form and cannot execute)."""
     i = 0
-    while i < len(parts):
-        if parts[i] == "-c" and i + 1 < len(parts):
-            tokens.append("-c")
-            tokens.extend(parts[i + 1].split())
-            i += 2
-        else:
-            tokens.append(parts[i])
+    n = len(args)
+    while i < n:
+        tok = args[i]
+        if tok == "--":
             i += 1
-    return tokens
-
-
-def _is_runner_cmdline(cmdline):
-    """True if the cmdline EXECUTES a runner script (Y13f H2).
-
-    The old regex r"(^|/)run_[^/\\s]*\\.py" matched raw cmdline
-    text and missed every bare-relative launch (the token sits
-    after a NUL, not after "/" or string start) and every flock -c
-    / shell -c form. It also false-positived on a mere path
-    mention (md5sum /abs/run_foo.py). This version tokenizes argv
-    and requires the script token to be argv[0] (shebang exec), to
-    follow a python interpreter token (bare-relative, absolute,
-    -u/-m flags, flock -c, shell -c), to be the first word of a -c
-    string, or (for non-.py run-nested scripts only) to follow
-    bash/sh. A path mention after md5sum/cat/git never matches.
-    Keep in sync with launch_y13.py (identical logic) and with
-    the note in the plan: Y14's run_batch3.py carries the same old
-    pattern and must apply this same fix when it re-stages."""
-    tokens = _argv_tokens(cmdline)
-    for i, tok in enumerate(tokens):
-        base = tok.rsplit("/", 1)[-1]
-        if not _script_basename_is_runner(base):
+            break
+        if tok == "-c":
+            if i + 1 >= n:
+                return False
+            return _c_code_executes_runner(args[i + 1], cwd)
+        if tok == "-m":
+            if i + 1 >= n:
+                return False
+            mod = args[i + 1]
+            if mod.endswith(".py"):
+                return False
+            return mod.rsplit(".", 1)[-1] in _RUNNER_MODULE_NAMES
+        if tok in ("-W", "-X"):
+            i += 2
             continue
-        if i == 0:
-            return True
-        prev = tokens[i - 1]
-        prev_base = prev.rsplit("/", 1)[-1]
-        if _is_python_token(prev):
-            return True
-        if prev == "-c":
-            return True
-        if prev.startswith("-") and any(
-                _is_python_token(t) for t in tokens[:i]):
-            return True
-        if not base.endswith(".py") and prev_base in ("bash", "sh"):
-            return True
+        if tok.startswith("--check-hash-based-pycs"):
+            i += 1 if "=" in tok else 2
+            continue
+        if tok.startswith("--"):
+            i += 1
+            continue
+        if tok.startswith("-c") and len(tok) > 2:
+            return _c_code_executes_runner(tok[2:], cwd)
+        if tok.startswith("-m") and len(tok) > 2:
+            mod = tok[2:]
+            if mod.endswith(".py"):
+                return False
+            return mod.rsplit(".", 1)[-1] in _RUNNER_MODULE_NAMES
+        if tok.startswith(("-W", "-X")) and len(tok) > 2:
+            i += 1
+            continue
+        if len(tok) > 1 and tok.startswith("-") and all(
+                ch in _PY_NO_VALUE for ch in tok[1:]):
+            i += 1
+            continue
+        if tok == "-":
+            return False
+        if tok.startswith("-"):
+            i += 1
+            continue
+        return _token_is_runner_script(tok, cwd)
+    if i < n:
+        return _token_is_runner_script(args[i], cwd)
+    return False
+
+
+def _command_executes_runner(tokens, cwd=None):
+    """Recursive shell-ish parse: strips wrappers (env VAR=1,
+    nohup, setsid, exec, command, timeout <dur>, flock <flags>
+    <lock> [-c <cmd>], bash/sh -c <cmd> or <script>), then a
+    python token hands off to _python_executes_runner, and any
+    other token reaching this point is argv[0] of the command
+    and is checked as a shebang exec (./run_codex_y5.py).
+    Only a token in an execution position is ever examined, so
+    'echo python3 run_codex_y5.py' and 'grep python3 ...' do
+    NOT match, while 'exec python3 run_codex_y5.py' does."""
+    i = 0
+    n = len(tokens)
+    while i < n:
+        tok = tokens[i]
+        base = tok.rsplit("/", 1)[-1]
+        if base == "env":
+            i += 1
+            while i < n:
+                t = tokens[i]
+                if t.startswith("-"):
+                    if t == "-u" and i + 1 < n:
+                        i += 2
+                        continue
+                    i += 1
+                    continue
+                if "=" in t:
+                    i += 1
+                    continue
+                break
+            continue
+        if base in ("nohup", "setsid", "exec", "command"):
+            i += 1
+            continue
+        if base == "timeout":
+            i += 1
+            while i < n:
+                t = tokens[i]
+                if t in ("-k", "--kill-after", "-s", "--signal"):
+                    i += 2
+                    continue
+                if t.startswith("-") or t.replace(".", "", 1).isdigit():
+                    i += 1
+                    continue
+                break
+            continue
+        if base == "flock":
+            i += 1
+            while i < n:
+                t = tokens[i]
+                if t == "-c":
+                    if i + 1 >= n:
+                        return False
+                    return _command_executes_runner(
+                        _shlex_tokens(tokens[i + 1]), cwd)
+                if t in ("-w", "--timeout", "-E",
+                         "--conflict-exit-code"):
+                    i += 2
+                    continue
+                if t.startswith("-"):
+                    i += 1
+                    continue
+                break
+            if i >= n:
+                return False
+            i += 1
+            if i >= n:
+                return False
+            if tokens[i] == "-c":
+                if i + 1 >= n:
+                    return False
+                return _command_executes_runner(
+                    _shlex_tokens(tokens[i + 1]), cwd)
+            return _command_executes_runner(tokens[i:], cwd)
+        if base in ("bash", "sh", "zsh", "dash"):
+            j = i + 1
+            while j < n:
+                if tokens[j] == "-c" and j + 1 < n:
+                    return _command_executes_runner(
+                        _shlex_tokens(tokens[j + 1]), cwd)
+                if tokens[j].startswith("-"):
+                    j += 1
+                    continue
+                return _token_is_runner_script(tokens[j], cwd)
+            return False
+        if _is_python_token(tok):
+            return _python_executes_runner(tokens[i + 1:], cwd)
+        return _token_is_runner_script(tok, cwd)
+    return False
+
+
+def _argv_tokens(cmdline):
+    """Split a /proc cmdline (NUL-separated) into argv tokens.
+    (Y13g B3: the Y13f version expanded -c arguments inline,
+    which conflated 'echo python3 run_codex_y5.py' with a real
+    execution; -c strings are now parsed recursively by
+    _command_executes_runner instead.)"""
+    return [t for t in cmdline.split("\x00") if t]
+
+
+def _is_runner_cmdline(cmdline, cwd=None):
+    """True if the cmdline EXECUTES a runner script (Y13g B3).
+
+    Parses the command like a shell + python would (see
+    _command_executes_runner): wrappers, real python argv parse,
+    -m by last dotted segment, -c by first-word semantics plus
+    the exec(/eval( special case, renamed/extensionless/
+    symlinked copies by md5 against the manifest. A mere path
+    mention (md5sum /abs/run_foo.py, echo/grep of a runner
+    name, python -c 'import run_codex_y5') never matches.
+    cwd (the process's /proc/<pid>/cwd) resolves relative
+    script paths for the md5 leg; without it, relative paths
+    resolve against this process's cwd. Keep in sync with
+    launch_y13.py (identical block)."""
+    return _command_executes_runner(_argv_tokens(cmdline), cwd)
+
+
+def _is_codex_process(cmdline):
+    """True if the cmdline names a codex executable: some argv
+    token has a path component 'codex', or argv[0]'s basename
+    is 'codex' (Y13g Amend 2). A raw substring match ('mycodex',
+    'codex-backup') is noise and does NOT count. Used by the
+    launcher's WARNING branch only; the refuse branch keeps the
+    fail-closed substring rule (C2 AMEND 6). Kept in both files
+    so the shared block stays identical."""
+    parts = _argv_tokens(cmdline)
+    if not parts:
+        return False
+    if parts[0].rsplit("/", 1)[-1].lower() == "codex":
+        return True
+    for tok in parts:
+        for comp in tok.split("/"):
+            if comp.lower() == "codex":
+                return True
     return False
 
 
@@ -3829,7 +4118,11 @@ def preflight(base):
         except OSError:
             continue
         _flat = _cmd.replace(chr(0), " ").strip()
-        if _is_runner_cmdline(_cmd):
+        try:
+            _cwd = os.readlink(f"/proc/{_rpid}/cwd")
+        except OSError:
+            _cwd = None
+        if _is_runner_cmdline(_cmd, _cwd):
             raise RuntimeError(
                 f"PREFLIGHT: live slot busy, runner process running: "
                 f"pid {_rpid}: {_flat}")

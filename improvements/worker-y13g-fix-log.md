@@ -135,3 +135,16 @@ in the repo worktree and /tmp test copies.
   unstaged changes (other workers' files + my runner edits), but
   the parent was still origin HEAD so a fast-forward push worked.
   Continuing: _verify_manifest fix next.
+
+- 23:33 +07 (T+37m): KB DONE noted in MEMORY (not my lane; no
+  action). caa4a7c CONFIRMED in history (ancestor of HEAD
+  e7913d5, ls-remote = e7913d5). A4 unit table re-read
+  (/tmp/y13r2-redteam/attack_a4_unit.py, 39 cases): old wants
+  are False for -m (old tokenizer missed them) and None for
+  flag-value/-c/renamed cases (undetermined then). New
+  expectations per adjudicated design: -m forms CAUGHT,
+  flag-value forms CAUGHT, -c exec(open(...)) CAUGHT,
+  -c import NOT caught, renamed/symlinked CAUGHT via md5
+  (needs the real file staged; unresolvable path is NOT a
+  copy, fail-open on identity only), echo/grep/md5sum mentions
+  NOT caught. Writing the runner tokenizer rewrite now.
