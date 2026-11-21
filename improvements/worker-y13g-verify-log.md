@@ -64,3 +64,37 @@ wall-clock Asia/Ho_Chi_Minh + elapsed since T0.
   designed; the production control (launcher out-of-process
   check + never invoking -m/import on an unverified ship) holds
   on every form tested.
+- 00:14 +07 (T+~9m): commit d76daba pushed (harness rebuild +
+  A2, 5 files), ls-remote matches d76daba.
+- 00:14-00:15 +07 (T+~9m to T+~10m): A6d stdlib map DONE, 18/18
+  PASS in 2.0s (results a6d.log). All 15 names (enum, re, json,
+  socket, subprocess, hashlib, datetime, pathlib, copyreg,
+  functools, collections, os, warnings, typing, sre_compile)
+  refused rc 2 with {"refused": true, "kind": "planted-py"},
+  marker never printed, via `python3 -P run_codex_y5.py
+  --verify-manifest`. Extra no-P spot checks (re, json, enum)
+  also refuse rc 2, marker never printed: the module-top scan
+  protects even the non-P path. Shims never delete any file.
+- 00:15 +07 (T+~10m): A4 unit table DONE, 39/39 PASS in 0.1s
+  (results a4_unit.log). Both copies agree on every case; all
+  -m forms, flag-value forms, renamed/symlinked copies (md5
+  leg, real /tmp/mycopy.py + /tmp/link.py fixtures), -c exec
+  caught; -c import, echo/grep mentions, md5sum mention, and
+  the invalid -m .py form correctly NOT caught.
+- 00:17-00:21 +07 (T+~12m to T+~16m): A4 live probe DONE, 6/6
+  PASS in 106.8s over two runs (results a4_live.log +
+  a4_live2.log). First run's echo case was VACUOUS (bash
+  exec-replaced itself with the trailing `sleep 60`, so the
+  process under test was `sleep 60`, not bash); fixed with a
+  trailing `read x` builtin on a held-open pipe, re-ran the
+  whole probe. Second run: baseline had 3 fleet-probe offenders
+  (pids 19080/19089/19097, other workers), per-case verdicts
+  keyed on the dummy pid being named. Bare, -m, renamed,
+  symlink dummies all refused rc 2 with the dummy pid named;
+  the echo-mention bash (cmdline verified `bash -c echo
+  python3 run_codex_y5.py; read x`) was NOT flagged, rc 0.
+  Warnings 0 on every case (no misleading "codex" warning on
+  runner cmdlines; Amend 2 works). Note: each driver run takes
+  12-23s on this loaded VM (full /proc scan); slow, not a
+  failure. Dummies used an argv-ignoring C sleeper (gcc -O2,
+  improvements/y13g-verify/sleeper.c).
