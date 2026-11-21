@@ -207,6 +207,25 @@ const testSimulators = {
     await page.click('#btn-download-photo-png');
     // 7. Save session
     await page.click('#btn-save-session');
+  },
+  '07': async (page) => {
+    // 1. Toggle to F then back to C
+    await page.click('#btn-unit-f');
+    await page.click('#btn-unit-c');
+    // 2. Add Ho Chi Minh City
+    await page.select('#select-add-city', 'ho-chi-minh-city');
+    await page.click('#btn-add-city');
+    // 3. Add accidental Reykjavik
+    await page.select('#select-add-city', 'reykjavik');
+    await page.click('#btn-add-city');
+    // 4. Remove Reykjavik
+    await page.click('#btn-remove-city-reykjavik');
+    // 5. Set Primary Ho Chi Minh City
+    await page.click('#btn-primary-city-ho-chi-minh-city');
+    // 6. Switch unit to F
+    await page.click('#btn-unit-f');
+    // 7. Save weather dashboard
+    await page.click('#btn-save-weather');
   }
 };
 
