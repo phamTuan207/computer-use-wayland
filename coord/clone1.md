@@ -1008,3 +1008,59 @@ Tôi là Phạm Tuấn. Từ giờ commit nhỏ và nhiều lên, vài trăm com
 - 6 agy-y2 xong, 10/10 live Firefox (2c0a4dc). T05 sửa xong, batch 3 giờ 10/10 thật (08f36d2).
 - Muse: có yêu cầu mới, quy tắc commit nhỏ và nhiều (a34e339, 19:13). Đã nhận, áp dụng từ commit này, chỉ commit coord/clone1.md, không động đồ agent khác.
 - Agent t09/t10 đang chạy, hoạt động 70 giây trước, không cứu. Không agent đợt 5 nào kẹt.
+
+## ĐỢT 5 VIỆC 5 XONG, 19:24 ngày 21/11
+
+20 test batch 2 + batch 3 đã chạy trên Firefox thật 160.0.1 ở
+/tmp/firefox. Tôi đọc lại 7 file kết quả trên ổ trước khi ghi.
+Báo cáo đầy đủ ở docs/clone1-batch5-firefox-20261121.md.
+
+- Cách chạy: Playwright 1.55 không lái được Firefox stock 160.0.1
+  (giao thức Juggler chỉ có trong bản Firefox riêng của Playwright,
+  stock 160.0.1 thoát im với code 0 khi gặp -juggler-pipe, đã thử
+  tay). Dùng puppeteer-core 24.43.1 qua WebDriver BiDi, Firefox mới
+  cho mỗi check, qua shim API Playwright tạm thời, chạy xong đã
+  hoàn trả và xóa, cây làm việc sạch. BiDi kiểm chứng trước bằng
+  tests/puppeteer_bidi.mjs của repo: connect 314 ms, goto 219 ms,
+  click 149 ms, type 95 ms.
+- Kiểm tra bản sửa của worker khác trước, theo lệnh 19:01: không có
+  bản sửa t09/t10 batch3 nào mới hơn lên main hay todolist-push sau
+  b629e11, đã chạy đúng bản đợt 4 và ghi rõ. Bản sửa t05 ở 08f36d2
+  đã lên lúc 19:10 và batch3 chạy với nó.
+- Batch2 trên Firefox: chạy 1 được 5/10 (toàn lỗi shim), chạy 2
+  10/10 trong 65122 ms, chạy 3 10/10 trong 63700 ms. Chromium tham
+  chiếu 10/10 hai lần, 32799/32809 ms.
+- Batch3 trên Firefox: chạy 1 được 1/10, chạy 2 được 5/10, chạy 3
+  được 8/10 trong 61131 ms, chạy 4 10/10 trong 56623 ms. Chromium
+  tham chiếu 10/10 hai lần, 30592/22620 ms. Xác nhận riêng: t10
+  3/3 pass, t05 1/1 pass.
+- Firefox chậm hơn Chromium khoảng 2 lần (batch2 64-65 s so với
+  32-35 s, batch3 57-61 s so với 23-31 s), chủ yếu do mỗi check mở
+  Firefox mới cộng round trip BiDi chậm hơn.
+- Defect từng test: t09 race postMessage rồi close đồng bộ, trên
+  Firefox hành xử y hệt và polling 5 s của check xử lý được
+  (pass ở chạy 3 và 4). t10 race vị trí bằng 0 chính xác, sampler
+  đợt 4 hoạt động trên Firefox (positionMinAfterNext 0), nhưng
+  chạy 3 fail vì race thứ 2: click Night Drive xong đọc ra "Morning
+  Light" do timer 100 ms vẫn chạy trong lúc shim click chậm, không
+  tái hiện standalone 3/3 hay chạy 4, nên t10 trên Firefox vẫn
+  flaky trong full run vì cùng lý do timing như Chromium, không
+  phải lỗi riêng Firefox. t05 rename thật sau 08f36d2 pass trên
+  Firefox ở chạy 4 (sau khi shim sửa dblclick, vì clickCount 2 qua
+  BiDi không bắn event dblclick trên Firefox). t10 batch2 download
+  race: CSV export ra orders.csv 9 dòng đúng header và dòng
+  Monitor ở cả 2 lần 10/10.
+- Không có failure nào chỉ xảy ra trên Firefox: video mp4 chạy,
+  vẽ canvas bằng chuột chạy, download chạy, popup và postMessage
+  chạy, localStorage qua reload chạy, drag HTML5 chạy qua drag mô
+  phỏng, điều hướng chỉ bằng bàn phím chạy.
+- UNVERIFIED: mọi thứ trên Zen thật (chỉ Firefox 160.0.1, headless,
+  BiDi không X11). dragTo và dblclick là dispatch event tổng hợp,
+  không phải drag bằng con trỏ thật.
+
+## GHI NHẬN QUY TẮC MỚI: COMMIT NHỎ VÀ NHIỀU (19:13 ngày 21/11)
+
+Muse đã giao qua commit a34e339: từ giờ commit nhỏ và nhiều, mỗi
+bước nhỏ xong là commit ngay, push ngay, không làm ngầm rồi dồn
+lại push một loạt như đợt 19:05-19:07. Tôi đã nhận và áp dụng: các
+commit sau đó đều nhỏ, riêng từng việc. Watchdog giữ nguyên.
