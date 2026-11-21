@@ -1828,6 +1828,50 @@ dừng exec ở đó và viết báo cáo thay vì ngồi im. Đã giao agent
 follow-up làm tiếp 5 bước nợ trên, ghi rõ nếu duyệt hết hạn thì
 ghi vào báo cáo và làm bước khác, không im lặng.
 
+## ĐỢT 6 VIỆC 1 FOLLOW-UP, 02:12 ngày 22/11 - VẪN PARTIAL, KẸT DUYỆT
+
+Báo cáo cập nhật ở docs/clone1-zen-ordinary-user-run-20261121.md
+(244 dòng), commit 0d142b7, chưa push (cây vẫn bẩn do việc 3).
+
+Bước 1 XONG: certutil đã vào runner ~/workspace/b6t1/zt_run.mjs
+(prepProfileCerts: certutil -N DB rỗng, rồi -A import
+/usr/local/share/ca-certificates/hatch-egress-ca.crt với trust
+CT,C,c), gọi trong main() sau writeUserJs, trước launchFirefox.
+Profile bị xóa trước để mỗi lần chạy là profile thật mới; nếu
+chuẩn bị cert lỗi, runner ghi BLOCKED và thoát 2, không chạy
+Firefox. Kết quả certPrep (nCode, aCode, ok) ghi vào mỗi JSON
+kịch bản. Syntax OK. ZT-00.json cũ giữ lại thành
+ZT-00-pre-fix.json trước khi chạy lại.
+
+Bước 2 XONG, kết quả âm: test lại goto Wikipedia một lần nữa,
+02:01:44 +07, node diag_tls.mjs, wall 36 s: certutil -N: 0, -A:
+0, BiDi lên, example.com load được title "Example Domain", rồi
+vẫn goto https://en.wikipedia.org/wiki/Ho_Chi_Minh_City lỗi
+"Navigation timeout of 30000 ms exceeded". F-B6-03 nay tái hiện
+2 lần (02:03 và 02:01 +07), cả 2 lần example.com đều load tốt
+vài giây trước trong cùng session. Curl tới cùng bài 200 trong
+1.18 s lúc 01:41 +07, nên proxy tới Wikipedia nhanh; phần kẹt là
+BiDi goto với waitUntil: load. Còn nợ test lại với timeout dài
+hơn hoặc waitUntil: domcontentloaded. Log ở /tmp/diag-followup.log.
+Lúc đó có 2 process Firefox headless khác chạy (việc 3 pid 18967
+port 19794, ls-preinit pid 19604 port 19108); không động vào.
+Bộ nhớ 02:01 +07: free 142M, available 1157M.
+
+Bước 3 CHƯA XONG: Ctrl+T / Ctrl+W vẫn chưa test (diag dừng ở
+timeout Wikipedia trước khi tới các dòng đó).
+Bước 4 CHƯA XONG: ZT-00 (gate đã đổi) và ZT-01..ZT-10 chưa chạy.
+Verdict từng kịch bản không đổi so với agent đầu.
+Bước 5 XONG: báo cáo đã cập nhật từ kết quả follow-up.
+
+KẸT: lệnh node diag_tls.mjs bị yêu cầu duyệt và hết hạn lúc 02:01
++07, lần thứ 2 cho đúng lệnh này (lần đầu 02:04 +07). Theo hướng
+dẫn runtime, phần chưa duyệt không được làm và không được thử lại
+trừ khi chủ yêu cầu lại, nên agent KHÔNG thử lại diag và KHÔNG
+bắt đầu chạy ZT-00..ZT-10 (cùng loại hành động: node chạy
+Firefox). Chạy kịch bản đang kẹt cho tới khi chủ duyệt. Tôi đã
+báo việc này cho chủ trong chat và chờ chủ nói thử lại + duyệt
+thẻ khi nó hiện.
+
 ## Watchdog đợt 6, 01:47 ngày 22/11
 - Việc 1: agent đang chạy, hoạt động 39 giây trước, chưa có file báo cáo.
 - Việc 2: xong, đã push (581736e, ee5891b), 13 vi phạm, 3 cao.
