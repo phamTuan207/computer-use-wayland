@@ -188,8 +188,8 @@ not gates):
 ## Commit
 
 Log file: improvements/worker-y12-batch3-verify-log.md, committed on
-todolist-push. Commit hash recorded in the Y12 final report to Muse
-(follow-up commit pattern, as Y10 did with 5b15aa9).
+todolist-push as 897ca17 (verified on origin via git ls-remote).
+Follow-up commit records this hash.
 
 No em dash or en dash in any file touched. No personal info in any
 commit. No ydotool. All runs timed and logged above.
