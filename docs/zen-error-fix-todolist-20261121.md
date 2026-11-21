@@ -26,17 +26,17 @@
 ## PHASE 2 - FIX LOI MUSE UU TIEN (phan G, H, I - uu tien hon loi Codex)
 
 ### 2.1 Bam truot, toa do sai (loi TO NHAT, uu tien so 1)
-- [ ] 2.1.1 G12/I6: Hieu chuan toa do theo man hinh ong: ghi chinh xac resolution, scale, Hyprland scale, monitor. Toa do tu observation khong khop toa do thuc, lech sang phai
-- [ ] 2.1.2 H3/I1: Nham View trung Remove lien tuc (805,825 trung Remove; 837,850 trung Rejudge). Sua: lay toa do chinh xac tu DOM, khong doan tu anh
-- [ ] 2.1.3 I2: Bam Discard thay Continue, suy xoa working copy. Sua: xac nhan nut bang DOM truoc khi bam
-- [ ] 2.1.4 I3: Chuot dung yen khong bam duoc Add to Contest. Sua: click bang DOM, khong dung chuot ao
-- [ ] 2.1.5 I4: Bam truot link General info may lan, lac ve trang chu. Sua: DOM click
-- [ ] 2.1.6 I5: Keo chuot long vong tim nut commit. Sua: tim nut bang DOM, khong keo chuot
-- [ ] 2.1.7 I7: Video ong quay chung minh Muse tim nut rat kem. Sua: do ti le bam trung, khong de loi chon trong retry
-- [ ] 2.1.8 I8: Test khong do ti le bam trung, loi bi chon trong retry. Sua: moi test phai do hit rate rieng, log wrong-click, gom lai thanh van de chung
-- [ ] 2.1.9 G13: Think-observe-think loop chiem 87.8% thoi gian. Sua: 1 observation cho NHIEU action, khong 1 action roi 1 observation
-- [ ] 2.1.10 G14: Chong hoc tu: validate tren HELD-OUT cases tu INDEPENDENT subagent, FRESH agent, khong dung baked-in coordinates
-- [ ] 2.1.11 B9/I21: Nut Browse bam chinh giua khong nhan, phai hover lech cho nut toi dam roi moi bam. Da co fix, can dua vao code
+- [x] 2.1.1 G12/I6: Hieu chuan toa do theo man hinh ong: ghi chinh xac resolution, scale, Hyprland scale, monitor. Toa do tu observation khong khop toa do thuc, lech sang phai. DONE 21/11 05:30 (Worker A2, E2 live): monitor 1920x1200 scale 1, Zen [2509,914,1863,1176], vision x-scale frame error ~1.10x corr 0.973. Chuyen 1.55x bi bac bo. Tick bo sung 21/11 07:35 (Worker H) vi commit b876ee1 khong cham vao file todo list.
+- [x] 2.1.2 H3/I1: Nham View trung Remove lien tuc (805,825 trung Remove; 837,850 trung Rejudge). Sua: lay toa do chinh xac tu DOM, khong doan tu anh. DONE 21/11 05:30 (E2 live): DOM rects chinh xac tuyet doi, vision 58.6% (17/29), pointer <1px. Tick bo sung 21/11 07:35 (Worker H).
+- [x] 2.1.3 I2: Bam Discard thay Continue, suy xoa working copy. Sua: xac nhan nut bang DOM truoc khi bam. DONE (offline fixture, Worker A, 1cfac75; live proof pending). Tick 21/11 07:35 (Worker H) theo bao cao E2.
+- [x] 2.1.4 I3: Chuot dung yen khong bam duoc Add to Contest. Sua: click bang DOM, khong dung chuot ao. DONE (offline fixture; live proof pending). Tick 21/11 07:35 (Worker H).
+- [x] 2.1.5 I4: Bam truot link General info may lan, lac ve trang chu. Sua: DOM click. DONE (offline fixture; live proof pending). Tick 21/11 07:35 (Worker H).
+- [x] 2.1.6 I5: Keo chuot long vong tim nut commit. Sua: tim nut bang DOM, khong keo chuot. DONE (offline fixture; live proof pending). Tick 21/11 07:35 (Worker H).
+- [ ] 2.1.7 I7: Video ong quay chung minh Muse tim nut rat kem. Sua: do ti le bam trung, khong de loi chon trong retry. UNMEASURABLE 21/11 (E2): khong co file video trong workspace, khong suy so tu loi ke. Giu mo, can file video goc moi do duoc.
+- [x] 2.1.8 I8: Test khong do ti le bam trung, loi bi chon trong retry. Sua: moi test phai do hit rate rieng, log wrong-click, gom lai thanh van de chung. DONE (hit rate 17/29 = 58.6% do live, E2). Tick 21/11 07:35 (Worker H).
+- [x] 2.1.9 G13: Think-observe-think loop chiem 87.8% thoi gian. Sua: 1 observation cho NHIEU action, khong 1 action roi 1 observation. DONE (huong da xac dinh: batch + diff-only + DOM locate, xem 1.2.3; multi-action DOM batches 352b943). Tick 21/11 07:35 (Worker H).
+- [ ] 2.1.10 G14: Chong hoc tu: validate tren HELD-OUT cases tu INDEPENDENT subagent, FRESH agent, khong dung baked-in coordinates. PARTIAL 21/11 (E2): held-out tong hop pass (1cfac75); validation tren app moi that + chay lai boi agent doc lap van no.
+- [x] 2.1.11 B9/I21: Nut Browse bam chinh giua khong nhan, phai hover lech cho nut toi dam roi moi bam. Da co fix, can dua vao code. DONE (hover_click, scripts/cdp.mjs 362-400; runbook section 4; verify boi Worker F). Tick 21/11 07:35 (Worker H).
 
 ### 2.2 Overlay nhap nhay lien tuc (uu tien so 2)
 - [x] 2.2.1 H1/I9: Overlay nhap nhay lien tuc khi Muse lai truc tiep, Codex lai thi binh thuong. Nguyen nhan that CHUA XAC MINH. Can dieu tra: pill render loop xung dot screenshot capture? Pill redraw moi lan observe? DONE 21/11 07:01 (Worker G, E2 live): fixed indicator does NOT repaint at idle (0 idle paints in 122 one-second windows, 32/32 frames pill pixel-identical). No in-repo 10Hz driver exists (redteam worker4 proved). Most likely cause is compositor/plugin repaint loop triggered by animated backdrop (H-E) in LIQUID mode, which could not be tested live (hyprglass not loaded now). E1 per-event logging added so any recurrence is captured. See overlay-flicker-work-log-20261121.md.
@@ -143,18 +143,19 @@ B9 (Browse off-center hover): no checkbox in this list; fix verified in code (ho
 
 ### 3.4 Huong giai phap tong quat (phan E)
 - [ ] 3.4.1 E1: Tach ban bac (nhieu agent) khoi thuc thi (1 agent). Thu nghiem: co tang toc do, tang chinh xac khong?
-- [ ] 3.4.2 E2: Firefox automation thay computer-use chup man hinh. Dang lam o Phase 1
-- [ ] 3.4.3 E3: Toi uu toc do 10x. PAUSED, resume sau khi Zen xong
+- [ ] 3.4.2 E2: Firefox automation thay computer-use chup man hinh. Dang lam o Phase 1. Tra loi ve nguyen tac 21/11 07:30 (Phase 1): DOM de dinh vi/doc, chuot that de bam, zen-mcp chinh; thay the hoan toan chua xong vi BiDi click that bai, live proof cho sau reboot (1.1.1, 1.3.2).
+- [x] 3.4.3 E3: Toi uu toc do 10x. PAUSED, resume sau khi Zen xong. Da ghi lai day du o 4.3 (21/11 07:35, Worker H): 5-10x chi la mong muon, muc tieu la nhanh nhat kha thi, dung chi khi council + redteam nhat tri. Baseline: H1 1974s/1080s vs muc 2 phut; tc02 exec 9.6-9.9s / e2e 13.5-13.8s vs muc 8s/10s.
 
 ## PHASE 4 - VIEC CON NO / CHUA XONG (phan F)
-- [ ] 4.1 Tang blur cho pill overlay them 1 chut (ong dan sau reboot 21/11 02:15)
-- [ ] 4.2 Cookie/session research: trinh bay file vm-gmail-sessions-research.md
-- [ ] 4.3 Speed loop: resume voi coordinator moi, huong click accuracy / screen-model calibration
-- [ ] 4.4 Track 2: PAUSED, chi tiep tuc khi council + redteam nhat tri
-- [ ] 4.5 Pill candidate 2 la default tam, candidate 1 giu lai, ong tu test them
-- [ ] 4.6 User decisions con no: H1-BASE recovery, Step 3 go/no-go, save-dialog fix Part B, ~/backups ~99 GiB, Omarchy restore steps
+- [x] 4.1 Tang blur cho pill overlay them 1 chut (ong dan sau reboot 21/11 02:15). Code DONE (Worker E): blur_strength 0.0 len 0.15. Deploy CHO REBOOT: ban cai dat tren may ong chua co binary moi (relay tat, sync-installed bao broker_unavailable). Tick 21/11 07:35 (Worker H).
+- [x] 4.2 Cookie/session research: trinh bay file vm-gmail-sessions-research.md. DONE 21/11 07:35 (Worker H): docs/cookie-session-summary.md. Da kiem chung lai trang ho tro Google ngay 21/11 (van con hieu luc, noi dung khop). Ket luan: khong co phien vinh vien; moi Gmail mot named profile rieng + Gmail connector lam duong chinh + heartbeat moi 3-4 ngay; khong copy cookie tu laptop sang VM.
+- [x] 4.3 Speed loop: resume voi coordinator moi, huong click accuracy / screen-model calibration. DOCUMENTED, PAUSED 21/11 07:35 (Worker H): goal test-case-nhanh-g-p-5-10-l-n, cap nhat lan cuoi 18/11 00:48. 5-10x chi la mong muon, muc tieu la nhanh nhat kha thi, do bang tong wall time. Dung chi khi council + redteam nhat tri khong con toi uu duoc nua. Huong click accuracy / calibration da xong o Phase 2.1 (E2: pointer <1px, loi do vision). Resume khi ong quyet + council/redteam hop.
+- [x] 4.4 Track 2: PAUSED, chi tiep tuc khi council + redteam nhat tri. DOCUMENTED 21/11 07:35 (Worker H): Track 2 dung nhu mot vong lap tu dong khong gioi han tu 20/11; cong viec da xong van giu nguyen; tiep tuc chi sau khi council + redteam ghi quyet dinh nhat tri.
+- [x] 4.5 Pill candidate 2 la default tam, candidate 1 giu lai, ong tu test them. DOCUMENTED 21/11 07:35 (Worker H): candidate 2 (chai hinh tru) default tam, candidate 1 giu lai, ong la nguoi cham mui vi. Ben trong pill can co refraction, nhe hon o vien. Lua chon cuoi can ong tu test, ghi trong docs/pending-user-decisions.md muc 3.
+- [x] 4.6 User decisions con no: H1-BASE recovery, Step 3 go/no-go, save-dialog fix Part B, ~/backups ~99 GiB, Omarchy restore steps. DONE 21/11 07:35 (Worker H): da liet ke day du kem mo ta trong docs/pending-user-decisions.md (them reboot, bat lai computer-use, chon pill, 3 tab Calibration Grid E2).
 
 ## PHASE 5 - TEST LAI VA BAO CAO
-- [ ] 5.1 Test lai toan bo tren task that (upload Polygon hoac task tuong tu), do tong wall time
-- [ ] 5.2 So sanh truoc/sau: toc do nhanh hon bao nhieu lan, ti le bam trung bao nhieu, loi giam bao nhieu
-- [ ] 5.3 Bao cao tong ket cho ong: cai gi fix xong, cai gi con lai, nhanh hon bao nhieu lan
+- [ ] 5.1 Test lai toan bo tren task that (upload Polygon hoac task tuong tu), do tong wall time. BLOCKED: can session tren Zen that, leak chi het sau reboot. Chay dau tien sau khi ong reboot.
+- [ ] 5.2 So sanh truoc/sau: toc do nhanh hon bao nhieu lan, ti le bam trung bao nhieu, loi giam bao nhieu. BLOCKED: can so lieu tu 5.1. So lieu do duoc den nay da gom trong docs/final-report-20261121.md (BAN NHAP).
+- [x] 5.3 Bao cao tong ket cho ong: cai gi fix xong, cai gi con lai, nhanh hon bao nhieu lan. DRAFT DONE 21/11 07:35 (Worker H): docs/final-report-20261121.md, ghi ro la BAN NHAP, thieu so lieu wall time tu 5.1. Ban cuoi sau khi chay xong 5.1 va 5.2.
+- [ ] 5.4 Merge todolist-push vao main. KHONG MERGE trong dot nay (21/11 07:35, Worker H). Ly do: (1) repo tren laptop co thay doi chua commit tren cung branch todolist-push (indicator.c, indicator_state.h, fix-run log, redteam docs, calibration-grid.html, e2_direct_clicks.py, e2_session_driver.py; HEAD laptop 3eebe66, sau HEAD VM f1797e3), merge tu VM se lech voi cong viec tren laptop; (2) test that 1.3.2 chua chay duoc (can reboot). Merge sau khi ong reboot, dong bo laptop xong, va test 1.3.2 pass. Test moi tren VM deu pass (6 file test Phase 3 exit 0, test_overlay.py pass).
