@@ -235,3 +235,22 @@ best quality, not speed. Council + redteam debate every phase verdict.
 - PID 184702 alive, elapsed 32:21. Log 923,220 bytes. No new commits
   (HEAD still 84b88bb). Uncommitted Phase B work now also includes
   modified tests/test_code_exec.py. Still writing tests.
+
+## 18:35 +07 | Probe-panel redteam report arrived (e9efd18, delayed delivery)
+- 90 probes attacked, 86 GAP, 4 HOLDS (1c, 1d, 4c, 7c). Severity:
+  21 HIGH, 50 MEDIUM, 15 LOW. File:
+  improvements/worker-y1b-verify-redteam.md (836 lines).
+- Confirms the verdict inputs already used: 1e GAP HIGH (inverted),
+  4a GAP HIGH (false premise), 4b GAP MEDIUM (exact-string match),
+  2a/2b GAP HIGH (error-text narrowness, one C shape only).
+  2d aggregate-blowup gap does NOT apply to Codex's whole-envelope
+  cap (B6 + live 2d PASS).
+- NEW, affects Phase B verification (not Phase A): probes 10b/10f
+  are structurally unable to catch the budget amplification they
+  were written for (outer program aborts at the first snippet's
+  2s wall, so the second run_snippet never executes in EITHER
+  implementation; identical observable behavior). They would PASS
+  the vulnerable implementation and certify the exact hole. MUST
+  be rewritten before Phase B is judged. Same for the 1e/4a
+  replacements. The panel must not certify Phase B/C until then.
+- Phase A BLOCK verdict stands unchanged.
