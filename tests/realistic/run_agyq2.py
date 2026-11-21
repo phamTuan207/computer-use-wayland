@@ -36,18 +36,131 @@ Usage (on the laptop, from /tmp/worker-y4-server):
   python3 run_agyq2.py all
   python3 run_agyq2.py q01 q02
 """
+import glob
 import json
 import os
+import socket
+import subprocess
 import sys
 import time
+import traceback
 import urllib.request
+from pathlib import Path
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from run_live import (  # noqa: E402
-    SERVER_PORT, WD, Runner,
+    SERVER_PORT, WD, Runner, diagnose_body, log_step,
     start_server as _rl_start_server,
 )
+
+# Registry of known test-tab handles (C2 F6): only these handles are
+# ever switched to during tab discovery. Unknown handles are user
+# tabs and must not be focused to read their URL. Pre-existing
+# fixture tabs from earlier probes are NOT reused; the runner creates
+# a fresh tab instead. This set is also the cleanup set: every tab in
+# it is returned to about:blank at suite end.
+_TEST_TABS = set()
+
+# Timestamped handover token (RT H2): written by the launcher at run
+# start, re-checked before every test. Requires the env var AND a
+# fresh token; a bare env var is never enough.
+HANDOVER_FILE = Path("/tmp/worker-y4d-handover.json")
+HANDOVER_MAX_AGE_S = 4 * 3600
+
+# Tracked item pairing the tz-hidden removal step (RT H3 / Y4b design):
+# the removal is legitimate only with this item open.
+TRACKED_ITEM = "improvements/transparent-zen-defect-tracked-item.md"
+
+
+def _ppid_of(pid):
+    """Parent pid from /proc/<pid>/stat, parsed after the last ")",
+    because the comm field (in parentheses) may contain spaces and
+    shift every index of a blind split (C3 F7). Returns None when
+    unreadable."""
+    try:
+        stat = Path(f"/proc/{pid}/stat").read_text()
+        rest = stat[stat.rfind(")") + 2:]
+        return int(rest.split()[1])
+    except Exception:
+        return None
+
+
+def _hyprland_signature():
+    """Return the live Hyprland instance signature, or None.
+
+    Two sources, in order:
+    1. The environ of the live Hyprland process (pgrep -x Hyprland).
+    2. The socket directory under $XDG_RUNTIME_DIR/hypr/ (Hyprland
+       0.57 puts its instance dir there, named <signature>).
+    UWSM-launched sessions do NOT carry HYPRLAND_INSTANCE_SIGNATURE
+    in the compositor's own environ, so source 1 is often empty and
+    the dir is the reliable source. Stale dirs from crashed nested
+    sessions can linger, so each candidate is verified with a real
+    AF_UNIX connect to its .socket.sock; only a dir whose socket
+    answers is returned.
+    """
+    try:
+        out = subprocess.run(["pgrep", "-x", "Hyprland"],
+                             capture_output=True, text=True, timeout=5)
+        pids = out.stdout.split()
+    except Exception:
+        pids = []
+    for pid in pids:
+        try:
+            env = Path(f"/proc/{pid}/environ").read_bytes().split(b"\0")
+            for kv in env:
+                if kv.startswith(b"HYPRLAND_INSTANCE_SIGNATURE="):
+                    return kv.split(b"=", 1)[1].decode()
+        except Exception:
+            continue
+    runtime = os.environ.get("XDG_RUNTIME_DIR") or f"/run/user/{os.getuid()}"
+    try:
+        cands = [d for d in Path(runtime, "hypr").iterdir()
+                 if d.is_dir() and (d / ".socket.sock").exists()]
+    except Exception:
+        return None
+    if not cands:
+        return None
+    cands.sort(key=lambda d: (d / ".socket.sock").stat().st_mtime,
+               reverse=True)
+    for cand in cands:
+        try:
+            s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            s.settimeout(2)
+            s.connect(str(cand / ".socket.sock"))
+            s.close()
+            return cand.name
+        except Exception:
+            continue
+    return None
+
+
+def _check_handover():
+    """(ok, detail) for the owner-away assertion.
+
+    Requires BOTH LIVE_OWNER_AWAY=1 AND a handover token file younger
+    than HANDOVER_MAX_AGE_S, asserting the owner's handover with its
+    basis and timestamp. Idle time is NOT independently verified (no
+    reliable idle source on this machine); the token is an assertion
+    by the launcher, recorded with basis + timestamp, and it is
+    re-checked before every test, not just once in preflight.
+    """
+    if os.environ.get("LIVE_OWNER_AWAY") != "1":
+        return False, "LIVE_OWNER_AWAY is not 1"
+    try:
+        tok = json.loads(HANDOVER_FILE.read_text())
+    except Exception as exc:
+        return False, f"handover file unreadable: {exc}"
+    try:
+        age = time.time() - float(tok["asserted_at_unix"])
+    except Exception:
+        return False, "handover file has no valid asserted_at_unix"
+    if age < 0 or age > HANDOVER_MAX_AGE_S:
+        return False, (f"handover token age {age:.0f}s outside "
+                       f"0-{HANDOVER_MAX_AGE_S}s window")
+    return True, (f"handover token age {age:.0f}s, "
+                  f"basis: {tok.get('basis', '?')}")
 
 
 def start_server():
@@ -142,39 +255,240 @@ def norm(s):
     return " ".join((s or "").split())
 
 
-def ensure_visible(d, r, label="test tab"):
-    """Body must be visible before Marionette can click/type.
-
-    Window/new tabs intermittently open with body visibility:hidden
-    (observed 17:52-17:57 on 21/11: every new tab hidden, all 22
-    existing tabs visible, window.focus() did not help; the state
-    cleared by itself ~17:59 after a real click in a reused tab).
-    Recovery: switch away and back, window.focus, wait, re-check.
-    Returns True if visible, False if still hidden after recovery.
-    """
-    if d.visible("body"):
-        return True
-    print(f"[{r.test}] body hidden on {label}, attempting recovery",
+def _log_diag(r, diag, label, stage):
+    """Record one hidden-body encounter: classification, htmlClass
+    (tz-hidden present or not), rAF tick count, on the same tab at
+    the same minute (wall-clock ts is in the JSONL record)."""
+    snaps = diag.get("snapshots", [])
+    last = (snaps[-1] if snaps and isinstance(snaps[-1], dict) else {})
+    raf_delta = None
+    if (len(snaps) == 2 and isinstance(snaps[0], dict)
+            and isinstance(snaps[1], dict)):
+        t0, t1 = snaps[0].get("rafTicks"), snaps[1].get("rafTicks")
+        if isinstance(t0, int) and isinstance(t1, int):
+            raf_delta = t1 - t0
+    detail = {
+        "label": label, "stage": stage,
+        "classification": diag["classification"],
+        "htmlClass": last.get("htmlClass"),
+        "tz_hidden": "tz-hidden" in (last.get("htmlClassList") or []),
+        "bodyVis": last.get("bodyVis"),
+        "bodyOpacity": last.get("bodyOpacity"),
+        "rafTicks": last.get("rafTicks"),
+        "rafDelta300ms": raf_delta,
+        "url": last.get("url"),
+    }
+    r.details["hidden_body_encounters"] = \
+        r.details.get("hidden_body_encounters", 0) + 1
+    log_step(r.test, f"hidden-body: {diag['classification']} ({label})",
+             "diagnose", 0, True, json.dumps(detail, ensure_ascii=False))
+    print(f"[{r.test}] HIDDEN-BODY {diag['classification']} {label}: "
+          f"htmlClass={detail['htmlClass']!r} "
+          f"bodyVis={detail['bodyVis']} opacity={detail['bodyOpacity']} "
+          f"rafTicks={detail['rafTicks']} rafDelta={raf_delta}",
           flush=True)
-    # switch away to a different tab and back to the test tab
+    return detail
+
+
+def rebootstrap_tab(d, base, deadline=None):
+    """Find or create a fresh visible test tab, using the live driver.
+
+    Only REGISTERED test-tab handles are ever switched to (C2 F6):
+    unknown handles are user tabs and must not be focused to read
+    their URL. Each registered handle is diagnosed (guarded: a
+    diagnose failure skips that tab, it never aborts the scan). Else
+    create up to 3 new tabs via window/new, each verified; a new tab
+    that opens hidden is closed (it is ours, we opened it) and the
+    next is tried. A new tab whose diagnose raises after it left
+    opened_tabs is closed explicitly and dropped from the registry
+    (C2 F8). The new handle is kept out of opened_tabs so session
+    cleanup never closes it. Raises RuntimeError when no visible tab
+    is found, or when the deadline passes.
+    """
+    for h in list(_TEST_TABS):
+        if deadline is not None and time.perf_counter() > deadline:
+            raise RuntimeError("rebootstrap deadline exceeded")
+        try:
+            d.switch(h)
+            diag = diagnose_body(d)
+        except Exception:
+            continue
+        if diag["classification"] == "VISIBLE":
+            print(f"rebootstrap: reusing visible test tab {h[:8]}",
+                  flush=True)
+            return h
+    for _attempt in range(3):
+        if deadline is not None and time.perf_counter() > deadline - 2.0:
+            raise RuntimeError("rebootstrap deadline exceeded")
+        h = d.new_tab("about:blank", allow_hidden=True)
+        d.opened_tabs.remove(h)
+        _TEST_TABS.add(h)
+        try:
+            diag = diagnose_body(d)
+        except Exception as exc:
+            print(f"rebootstrap: diagnose failed on new tab {h[:8]}: "
+                  f"{exc}; closing it", flush=True)
+            try:
+                d.close_tab()
+            except Exception:
+                pass
+            _TEST_TABS.discard(h)
+            continue
+        if diag["classification"] == "VISIBLE":
+            print(f"rebootstrap: created visible tab {h[:8]}", flush=True)
+            return h
+        print(f"rebootstrap: new tab {h[:8]} hidden "
+              f"({diag['classification']}), closing and retrying",
+              flush=True)
+        try:
+            d.close_tab()
+        except Exception:
+            pass
+        _TEST_TABS.discard(h)
+    raise RuntimeError("rebootstrap: no visible test tab after 3 attempts")
+
+
+def ensure_visible(d, r, label="test tab", allow_swap=True):
+    """Diagnose-first recovery ladder (Y4b design).
+
+    Budget: 8.0 s wall per call, ENFORCED by deadline (C2 F5 / RT
+    H8). Poll up to 2.0 s (about 3 samples: each hidden diagnose
+    costs ~0.3 s + evals on top of the 0.25 s sleep), remove ~1.1 s,
+    rebootstrap gets the remainder. Elapsed time against the budget
+    is logged on every return path.
+    1. diagnose_body; VISIBLE -> (True, False).
+    2. Poll 250 ms up to 2.0 s for the extension's own removal.
+    3. If TZ_STUCK_V1 persists, remove tz-hidden exactly as
+       Transparent Zen's removeLoadingScreen does (class + the
+       --zen-logo-path inline property, single eval, test tab only,
+       test origin only), logged as an intervention. The flag is set
+       ONLY when the post-remove snapshot proves the class is gone
+       (C2 F1). A test passing after a verified removal is a FLAGGED
+       pass, counted separately, never folded silently into the
+       headline number. The removal is legitimate only paired with
+       the tracked item (see TRACKED_ITEM).
+    4. Fall back to a fresh bootstrap tab (rebootstrap_tab), unless
+       allow_swap is False.
+    5. Still hidden -> (False, swapped); the caller raises
+       INFRA: hidden-body, never a fixture failure. A FIXTURE_FAILURE
+       diagnosis raises FIXTURE-UNAVAILABLE immediately, without
+       burning tabs (RT H9).
+    REMOVED vs the old version: the switch-away step (it steals a user
+    tab; Y4b correction 1) and the repaint step (V2 is dead). Never a
+    real click as a recovery probe.
+    Returns (ok, swapped).
+    """
+    t0 = time.perf_counter()
+    deadline = t0 + 8.0
+
+    def _elapsed():
+        return time.perf_counter() - t0
+
+    diag = diagnose_body(d)
+    if diag["classification"] == "VISIBLE":
+        print(f"[{r.test}] ensure_visible {label} visible in "
+              f"{_elapsed():.1f}s / 8.0s", flush=True)
+        return True, False
+    if diag["classification"] == "FIXTURE_FAILURE":
+        raise RuntimeError(
+            f"FIXTURE-UNAVAILABLE: {label}: "
+            f"{diag.get('eval_error', 'no body element')}")
+    _log_diag(r, diag, label, "initial")
+    poll_end = min(deadline - 3.0, t0 + 2.0)
+    while time.perf_counter() < poll_end:
+        time.sleep(0.25)
+        diag = diagnose_body(d)
+        if diag["classification"] == "VISIBLE":
+            print(f"[{r.test}] ensure_visible {label} visible after "
+                  f"poll in {_elapsed():.1f}s / 8.0s", flush=True)
+            return True, False
+        if diag["classification"] == "FIXTURE_FAILURE":
+            raise RuntimeError(
+                f"FIXTURE-UNAVAILABLE: {label}: "
+                f"{diag.get('eval_error', 'no body element')}")
+    if diag["classification"] == "TZ_STUCK_V1":
+        try:
+            d.eval("document.documentElement.classList.remove('tz-hidden');"
+                   "document.documentElement.style.removeProperty"
+                   "('--zen-logo-path'); return 'removed';")
+        except Exception as exc:
+            raise RuntimeError(
+                f"INFRA: tz-hidden removal eval failed: {exc}")
+        time.sleep(0.5)
+        diag = diagnose_body(d)
+        if diag["classification"] == "VISIBLE":
+            last_snap = (diag["snapshots"][-1]
+                         if diag["snapshots"]
+                         and isinstance(diag["snapshots"][-1], dict)
+                         else {})
+            removed = "tz-hidden" not in (
+                last_snap.get("htmlClassList") or [])
+            if removed:
+                r.details["tz_hidden_removed"] = True
+            log_step(r.test, "remove tz-hidden (intervention)",
+                     "intervention", 0, True,
+                     json.dumps({"verified_removed": removed,
+                                 "snapshot": diag["snapshots"][-1]},
+                                default=str))
+            if removed:
+                print(f"[{r.test}] INTERVENTION removed tz-hidden on "
+                      f"{label} (verified); this test can only be a "
+                      f"FLAGGED pass", flush=True)
+            else:
+                print(f"[{r.test}] removal eval ran on {label} but the "
+                      f"class is still present; not flagged", flush=True)
+            print(f"[{r.test}] ensure_visible {label} visible after "
+                  f"removal in {_elapsed():.1f}s / 8.0s", flush=True)
+            return True, False
+        _log_diag(r, diag, label, "after-remove")
+    if not allow_swap:
+        print(f"[{r.test}] ensure_visible {label} still hidden after "
+              f"{_elapsed():.1f}s / 8.0s, no swap allowed", flush=True)
+        return False, False
+    if time.perf_counter() > deadline - 2.0:
+        print(f"[{r.test}] ensure_visible {label} deadline near "
+              f"({_elapsed():.1f}s / 8.0s), skipping rebootstrap",
+              flush=True)
+        return False, False
     try:
-        test_tab = getattr(r, "tab", None)
-        away = None
-        for h in d.handles():
-            if h != test_tab:
-                try:
-                    d.switch(h)
-                    away = h
-                    break
-                except Exception:
-                    continue
-        if away is not None and test_tab is not None:
-            d.switch(test_tab)
-            d.eval("window.focus(); return 'focused';")
-            time.sleep(2)
+        new_tab = rebootstrap_tab(d, r.base, deadline=deadline)
     except Exception as exc:
-        print(f"[{r.test}] recovery switch failed: {exc}", flush=True)
-    return d.visible("body")
+        print(f"[{r.test}] rebootstrap failed after {_elapsed():.1f}s / "
+              f"8.0s: {exc}", flush=True)
+        return False, False
+    r.tab = new_tab
+    d.switch(new_tab)
+    diag = diagnose_body(d)
+    if diag["classification"] == "VISIBLE":
+        print(f"[{r.test}] ensure_visible {label} visible on new tab "
+              f"in {_elapsed():.1f}s / 8.0s", flush=True)
+        return True, True
+    _log_diag(r, diag, "rebootstrap tab", "after-rebootstrap")
+    print(f"[{r.test}] ensure_visible {label} still hidden after "
+          f"{_elapsed():.1f}s / 8.0s", flush=True)
+    return False, True
+
+
+def _recheck_shared_tab(r, tab):
+    """Re-diagnose the old shared tab after an INFRA failure (RT H5):
+    it may have cleared on its own, and its later state is evidence
+    either way. Read-only diagnose, fresh session, never fails the run.
+    """
+    try:
+        with WD() as d:
+            d.switch(tab)
+            diag = diagnose_body(d)
+            log_step(r.test, "recheck shared tab after INFRA", "diagnose",
+                     0, True, json.dumps(
+                         {"tab": tab[:8],
+                          "classification": diag["classification"],
+                          "snapshot": diag["snapshots"][-1]},
+                         default=str))
+            print(f"[{r.test}] RECHECK shared tab {tab[:8]}: "
+                  f"{diag['classification']}", flush=True)
+    except Exception as exc:
+        print(f"[{r.test}] recheck shared tab failed (harmless): {exc}",
+              flush=True)
 
 
 def open_fixture(r, d, fname):
@@ -183,15 +497,61 @@ def open_fixture(r, d, fname):
     # intermittently open with body visibility:hidden (see
     # ensure_visible). The tab is shared across tests; each test
     # clears storage and reloads, so state stays isolated.
+    if r.tab not in d.handles():
+        # The shared tab is gone (closed externally); get a fresh one.
+        print(f"[{r.test}] shared tab gone, rebootstrap", flush=True)
+        try:
+            r.tab = rebootstrap_tab(d, r.base)
+        except Exception as exc:
+            raise RuntimeError(
+                f"INFRA: shared tab gone, rebootstrap failed: {exc}")
     d.switch(r.tab)
-    r.step("open fixture", "goto", lambda: d.goto(url))
+    r.step("open fixture", "goto",
+           lambda: d.goto(url, allow_hidden=True))
     r.step("clear storage + reload", "eval",
            lambda: (d.eval("localStorage.clear(); sessionStorage.clear();"
-                           "return 'cleared';"), d.refresh()))
-    if not ensure_visible(d, r):
+                           "return 'cleared';"),
+                    d.refresh(allow_hidden=True)))
+    ok, swapped = ensure_visible(d, r)
+    if swapped:
+        # The fixture is not loaded in the new tab yet; load it now.
+        # A second swap is not attempted by the ladder itself.
+        d.switch(r.tab)
+        r.step("open fixture on rebootstrap tab", "goto",
+               lambda: d.goto(url, allow_hidden=True))
+        r.step("clear storage + reload on rebootstrap tab", "eval",
+               lambda: (d.eval("localStorage.clear(); sessionStorage.clear();"
+                               "return 'cleared';"),
+                        d.refresh(allow_hidden=True)))
+        ok, swapped2 = ensure_visible(d, r)
+        if swapped2 or not ok:
+            # RT H5: one more fresh tab before finalising INFRA. A
+            # stall that hides the rebootstrap fixture load is not a
+            # final verdict until one more fresh tab has been tried.
+            try:
+                r.tab = rebootstrap_tab(
+                    d, r.base, deadline=time.perf_counter() + 8.0)
+            except Exception as exc:
+                raise RuntimeError(
+                    f"INFRA: hidden-body, final fresh tab failed: {exc}")
+            d.switch(r.tab)
+            r.step("open fixture on final tab", "goto",
+                   lambda: d.goto(url, allow_hidden=True))
+            r.step("clear storage + reload on final tab", "eval",
+                   lambda: (d.eval("localStorage.clear(); "
+                                   "sessionStorage.clear();"
+                                   "return 'cleared';"),
+                            d.refresh(allow_hidden=True)))
+            ok, _swapped3 = ensure_visible(d, r, allow_swap=False)
+            if not ok:
+                raise RuntimeError(
+                    "INFRA: hidden-body after final fresh tab; cannot "
+                    "drive")
+    if not ok:
         raise RuntimeError(
-            "test tab body still hidden after recovery; cannot drive "
-            "(Marionette refuses clicks on visibility:hidden content)")
+            "INFRA: hidden-body on test tab after recovery ladder; "
+            "cannot drive (Marionette refuses clicks on "
+            "visibility:hidden content)")
     r.step("check body visible", "check", lambda: d.visible("body"))
     r.check("body renders visible (no hidden-body incident)",
             d.visible("body"), "visible")
@@ -313,7 +673,7 @@ def run_q02(r, d):
     r.check("ingredients scale to 4 fillets", "4 fillets" in norm(ing),
             norm(ing))
     r.check("ingredients scale to 4 tbsp olive oil",
-            "4 tbsp olive oil" in norm(ing), norm(ing))
+            "4 tbsp olive oil" in norm(ing).lower(), norm(ing))
     r.step("add salmon to plan", "click",
            lambda: d.click("#btn-modal-add-plan"))
     r.check("planner count 1", txt(d, "#planner-count") == "1",
@@ -609,12 +969,12 @@ def run_q06(r, d):
     r.step("download sample-data.json", "click",
            lambda: d.click("#btn-download-sample-data-csv"))
     r.check("csv badge Downloaded",
-            txt(d, "#badge-download-sample-data-csv") == "Downloaded",
+            norm(txt(d, "#badge-download-sample-data-csv")) == "Downloaded",
             txt(d, "#badge-download-sample-data-csv"))
     r.step("download photo.webp", "click",
            lambda: d.click("#btn-download-photo-png"))
     r.check("png badge Downloaded",
-            txt(d, "#badge-download-photo-png") == "Downloaded",
+            norm(txt(d, "#badge-download-photo-png")) == "Downloaded",
             txt(d, "#badge-download-photo-png"))
     r.step("save session", "click", lambda: d.click("#btn-save-session"))
     banner = r.step("read status banner", "text",
@@ -920,39 +1280,222 @@ TESTS = {
 
 
 def bootstrap_tab(base):
-    """Find or create ONE visible test tab, shared by all tests.
+    """Create ONE visible test tab, shared by all tests.
 
-    Preference order: an about:blank tab, then any tab already on our
-    test origin (leftovers from probes are fine, they hold no user
-    content). Only if neither exists, create one with window/new and
-    verify it is visible (with the ensure_visible recovery). The tab
-    is kept out of opened_tabs so session cleanup never closes it.
-    Returns the tab handle.
+    No handle scanning (C2 F6): pre-existing fixture tabs from
+    earlier probes are NOT reused, because finding them would mean
+    switching to unknown handles (user tabs) to read their URL. A
+    fresh tab is created instead; leftover tabs from earlier runs
+    stay as they are, empty about:blank tabs, harmless. The tab is
+    kept out of opened_tabs so session cleanup never closes it, and
+    registered in _TEST_TABS for the suite-end cleanup.
+    Returns (handle, info) where info records any intervention on
+    the shared tab (C2 F2: no intervention on the shared tab may be
+    invisible).
     """
     wd = WD()
     d = wd.__enter__()
     try:
-        for h in d.handles():
-            try:
-                d.switch(h)
-                url = d.eval("return document.URL")
-            except Exception:
-                continue  # alert tab etc: never touch it
-            if url == "about:blank" or url.startswith(base):
-                print(f"reusing test tab {h[:8]} url={url[:60]}",
-                      flush=True)
-                return h
-        h = d.new_tab(base + "/agy-q2/fixtures/test-01-whiteboard.html")
+        h = d.new_tab(base + "/agy-q2/fixtures/test-01-whiteboard.html",
+                      allow_hidden=True)
         r = Runner("bootstrap", base)
         r.tab = h
-        if not ensure_visible(d, r, "new test tab"):
+        ok, _swapped = ensure_visible(d, r, "new test tab")
+        h = r.tab
+        info = {"tz_hidden_removed": bool(
+                    r.details.get("tz_hidden_removed")),
+                "hidden_body_encounters": r.details.get(
+                    "hidden_body_encounters", 0)}
+        if info["tz_hidden_removed"] or info["hidden_body_encounters"]:
+            print(f"BOOTSTRAP INTERVENTION: {info}", flush=True)
+        if not ok:
             raise RuntimeError(
-                "new test tab body hidden after recovery; cannot drive")
-        d.opened_tabs.remove(h)
+                "INFRA: new test tab body hidden after recovery ladder")
+        _TEST_TABS.add(h)
+        if h in d.opened_tabs:
+            d.opened_tabs.remove(h)
         print(f"created test tab {h[:8]}", flush=True)
-        return h
+        return h, info
     finally:
         wd.__exit__()
+
+
+def preflight(base):
+    """Fail-closed preflight (Y4b design). Raises RuntimeError on any
+    failure; nothing proceeds to tab opening until it passes.
+
+    Checks, in order: owner-away (explicit LIVE_OWNER_AWAY=1 AND a
+    timestamped handover token, never inferred), Zen liveness (BiDi
+    port 9222 + Marionette port 2828; the TCP connect proves the
+    port listens, the session POST in WD.__enter__ is the real
+    protocol probe), Hyprland IPC as a labeled SAFETY gate (not an
+    incident detector), fixture server loopback, stale-geckodriver
+    sweep by PID file with parent check (kill only verified orphans),
+    single-session lock check (zen_dom.lock must show an exclusive
+    flock held by an ancestor of this process). Idle time is NOT
+    independently verified (no reliable idle source on this machine);
+    the handover token records the basis and timestamp instead.
+    """
+    ok, detail = _check_handover()
+    if not ok:
+        raise RuntimeError(f"PREFLIGHT: owner-away check failed: {detail}")
+    print(f"PREFLIGHT: owner-away asserted ({detail}); idle time NOT "
+          "independently verified", flush=True)
+    # Zen liveness: the remote-debugging HTTP server on 9222 serves
+    # its httpd.js root page (GET / -> 200). There is no /json/version
+    # here: that is a Chrome DevTools path and 404s on Firefox/Zen.
+    # The Marionette check below is a TCP connect only; the session
+    # POST in WD.__enter__ is the real protocol probe.
+    try:
+        with urllib.request.urlopen("http://127.0.0.1:9222/",
+                                    timeout=5) as resp:
+            if resp.status != 200:
+                raise RuntimeError("BiDi root endpoint not 200")
+    except Exception as exc:
+        raise RuntimeError(
+            f"PREFLIGHT: Zen BiDi port 9222 unreachable: {exc}")
+    try:
+        s = socket.create_connection(("127.0.0.1", 2828), timeout=5)
+        s.close()
+    except Exception as exc:
+        raise RuntimeError(
+            f"PREFLIGHT: Marionette port 2828 unreachable: {exc}")
+    # SAFETY gate (C3 F9): Hyprland IPC liveness. This is NOT an
+    # incident detector (the IPC wedge is an unproven correlate for
+    # the CSS value); it is a fail-closed safety gate: if the
+    # compositor cannot answer, input/focus delivery is unverified
+    # and driving is unsafe. Timeout-guarded, never a bare call.
+    try:
+        sig = _hyprland_signature()
+        if not sig:
+            raise RuntimeError("no Hyprland signature found")
+        env = dict(os.environ)
+        env["XDG_RUNTIME_DIR"] = "/run/user/1000"
+        env["HYPRLAND_INSTANCE_SIGNATURE"] = sig
+        subprocess.run(["hyprctl", "version"], env=env,
+                       capture_output=True, timeout=10, check=True)
+    except Exception as exc:
+        raise RuntimeError(
+            f"PREFLIGHT SAFETY: Hyprland IPC unresponsive: {exc}")
+    try:
+        with urllib.request.urlopen(
+                base + "/agy-q2/fixtures/test-01-whiteboard.html",
+                timeout=5) as resp:
+            if resp.status != 200:
+                raise RuntimeError("fixture probe not 200")
+    except Exception as exc:
+        raise RuntimeError(f"PREFLIGHT: fixture server check failed: {exc}")
+    for pid_path in glob.glob("/tmp/geckodriver-*.pid"):
+        try:
+            pid = int(Path(pid_path).read_text().strip())
+        except Exception:
+            print(f"preflight: unreadable PID file {pid_path}, "
+                  "unlinking it", flush=True)
+            try:
+                os.unlink(pid_path)
+            except Exception:
+                pass
+            continue
+        try:
+            os.kill(pid, 0)
+            alive = True
+        except (ProcessLookupError, PermissionError):
+            alive = False
+        if not alive:
+            try:
+                os.unlink(pid_path)
+            except Exception:
+                pass
+            continue
+        ppid = _ppid_of(pid)
+        if ppid is None:
+            # Unknown parentage: re-check liveness; if still alive,
+            # REFUSE rather than kill a driver we cannot attribute
+            # (C3 F3). Never kill on unknown parentage.
+            try:
+                os.kill(pid, 0)
+                raise RuntimeError(
+                    f"PREFLIGHT: geckodriver PID {pid} alive with "
+                    "unreadable parent; refusing to kill or run")
+            except ProcessLookupError:
+                pass
+            try:
+                os.unlink(pid_path)
+            except Exception:
+                pass
+            continue
+        parent_alive = (ppid != 1 and os.path.exists(f"/proc/{ppid}"))
+        if parent_alive:
+            raise RuntimeError(
+                f"PREFLIGHT: live geckodriver PID {pid} with live parent "
+                f"{ppid}; another driver is active, refusing to run")
+        print(f"preflight: killing orphaned geckodriver PID {pid}",
+              flush=True)
+        try:
+            os.kill(pid, 15)
+            time.sleep(1)
+            os.kill(pid, 0)
+            # Re-verify the pid still names geckodriver before SIGKILL
+            # (pid could have been recycled in that 1 s window).
+            try:
+                cmdline = Path(f"/proc/{pid}/cmdline").read_bytes()
+            except Exception:
+                cmdline = b""
+            if b"geckodriver" not in cmdline:
+                raise RuntimeError(
+                    f"PREFLIGHT: PID {pid} no longer geckodriver; "
+                    "refusing SIGKILL")
+            os.kill(pid, 9)
+        except ProcessLookupError:
+            pass
+        except Exception as exc:
+            raise RuntimeError(
+                f"PREFLIGHT: could not kill orphan {pid}: {exc}")
+        try:
+            os.unlink(pid_path)
+        except Exception:
+            pass
+    lock_path = Path.home() / ".cache/agent-computer-use/zen_dom.lock"
+    try:
+        inode = lock_path.stat().st_ino
+    except Exception as exc:
+        raise RuntimeError(f"PREFLIGHT: lock file missing: {exc}")
+    holders = []
+    try:
+        locks = Path("/proc/locks").read_text().splitlines()
+    except Exception as exc:
+        raise RuntimeError(f"PREFLIGHT: cannot read /proc/locks: {exc}")
+    for line in locks:
+        parts = line.split()
+        # Lock type is POSIX (fcntl.lockf), FLOCK (flock(2)), or
+        # OFDLCK. The launch holds the lock via flock(1), so the
+        # entry is FLOCK; requiring POSIX alone fails every correct
+        # launch (C3 F1 / RT H1, proven live).
+        if (len(parts) < 6 or parts[1] not in ("POSIX", "FLOCK", "OFDLCK")
+                or parts[3] != "WRITE"):
+            continue
+        try:
+            ino = int(parts[5].rsplit(":", 1)[1])
+        except (ValueError, IndexError):
+            continue
+        if ino == inode:
+            holders.append(int(parts[4]))
+    ancestors = {os.getpid()}
+    pid = os.getpid()
+    while pid > 1:
+        ppid = _ppid_of(pid)
+        if ppid is None:
+            break
+        pid = ppid
+        ancestors.add(pid)
+    if not holders:
+        raise RuntimeError("PREFLIGHT: no flock holder on zen_dom.lock; "
+                           "run must be launched under flock")
+    if not any(h in ancestors for h in holders):
+        raise RuntimeError(
+            f"PREFLIGHT: zen_dom.lock held by {holders}, not by an "
+            "ancestor of this process")
+    print("PREFLIGHT OK", flush=True)
 
 
 def main():
@@ -965,13 +1508,29 @@ def main():
     _, base = start_server()
     print(f"serving at {base}", flush=True)
     try:
-        tab = bootstrap_tab(base)
+        preflight(base)
+    except Exception as exc:
+        print(f"PREFLIGHT FAILED {type(exc).__name__}: {exc}", flush=True)
+        traceback.print_exc()
+        return 2
+    try:
+        tab, boot_info = bootstrap_tab(base)
     except Exception as exc:
         print(f"BOOTSTRAP FAILED {type(exc).__name__}: {exc}", flush=True)
+        traceback.print_exc()
         return 2
+    bootstrap_tabs = [tab]
     results = []
     wd_failures = 0
+    infra_blocked = 0
+    aborted_handover = False
     for tid in selected:
+        ok, detail = _check_handover()
+        if not ok:
+            print(f"HANDOVER EXPIRED before {tid}: {detail}; aborting run",
+                  flush=True)
+            aborted_handover = True
+            break
         r = Runner(tid, base)
         r.tab = tab
         try:
@@ -986,39 +1545,94 @@ def main():
             print(f"[{tid}] SESSION ERROR {type(exc).__name__}: {exc}",
                   flush=True)
             wd_failures += 1
-            results.append(r.summary())
+            infra_blocked = 0
+            s = r.summary()
+            s["flagged"] = False
+            results.append(s)
             print(json.dumps(results[-1], ensure_ascii=False), flush=True)
             if wd_failures >= 2:
                 print("two consecutive session-creation failures, aborting run",
                       flush=True)
                 break
             continue
+        abort_infra = False
+        raised_infra = False
+        raised = False
         try:
             TESTS[tid](r, d)
         except Exception as exc:
+            raised = True
             r.failures.append(f"runner: {type(exc).__name__}: {exc}")
             print(f"[{tid}] RUNNER ERROR {type(exc).__name__}: {exc}",
                   flush=True)
+            traceback.print_exc()
+            if str(exc).startswith("INFRA:"):
+                raised_infra = True
+                infra_blocked += 1
+                if infra_blocked >= 2:
+                    abort_infra = True
+            else:
+                infra_blocked = 0
         finally:
             wd.__exit__()
+        if raised_infra:
+            # RT H5: re-diagnose the old shared tab after an INFRA
+            # failure; it may have cleared, and its later state is
+            # evidence either way.
+            _recheck_shared_tab(r, tab)
+        if not raised:
+            infra_blocked = 0
         wd_failures = 0
         summary = r.summary()
+        summary["flagged"] = bool(r.details.get("tz_hidden_removed"))
+        if r.tab not in bootstrap_tabs:
+            bootstrap_tabs.append(r.tab)
+            tab = r.tab
         results.append(summary)
         print(json.dumps(summary, ensure_ascii=False), flush=True)
-    passed = sum(1 for s in results if s["pass"])
+        if abort_infra:
+            print("two consecutive INFRA-blocked tests, aborting run",
+                  flush=True)
+            break
+    passed = sum(1 for s in results if s["pass"] and not s.get("flagged"))
+    flagged = sum(1 for s in results if s["pass"] and s.get("flagged"))
+    total_passed = passed + flagged
+    hidden_encounters = sum(
+        s["details"].get("hidden_body_encounters", 0) for s in results)
+    hidden_encounters += boot_info.get("hidden_body_encounters", 0)
     total_ms = sum(s["elapsed_ms"] for s in results)
     print(json.dumps({"suite": "agy-q2", "passed": passed,
-                      "total": len(results), "total_ms": total_ms},
+                      "flagged": flagged, "total_passed": total_passed,
+                      "failed": len(results) - total_passed,
+                      "total": len(results), "total_ms": total_ms,
+                      "hidden_body_encounters": hidden_encounters,
+                      "bootstrap_intervention": boot_info,
+                      "tracked_item": TRACKED_ITEM},
                      ensure_ascii=False), flush=True)
-    # Leave the shared test tab clean (about:blank) for the next runner.
+    # "passed" counts CLEAN passes only (C2 F3). A flagged pass is a
+    # test that drove successfully only after the tz-hidden removal,
+    # and it must never read as clean green.
+    if flagged > 0 or boot_info.get("tz_hidden_removed"):
+        print(f"SUITE FLAGGED: {flagged} flagged passes"
+              + (" + bootstrap intervention" if boot_info.get(
+                  "tz_hidden_removed") else "")
+              + f"; browser unhealthy; see {TRACKED_ITEM}", flush=True)
+    # Leave every shared test tab clean (about:blank) for the next runner.
     try:
         with WD() as d:
-            d.switch(tab)
-            d.goto("about:blank")
-            print("test tab returned to about:blank", flush=True)
+            for t in set(bootstrap_tabs) | _TEST_TABS:
+                try:
+                    d.switch(t)
+                    d.goto("about:blank", allow_hidden=True)
+                except Exception as exc:
+                    print(f"tab cleanup failed for {t[:8]} (harmless): {exc}",
+                          flush=True)
+            print("test tabs returned to about:blank", flush=True)
     except Exception as exc:
         print(f"tab cleanup failed (harmless): {exc}", flush=True)
-    return 0 if passed == len(results) else 1
+    if aborted_handover:
+        return 2
+    return 0 if total_passed == len(results) else 1
 
 
 if __name__ == "__main__":

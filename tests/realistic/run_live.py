@@ -76,6 +76,189 @@ def log_step(test, step, op, elapsed_ms, ok, detail=None, error=None):
     return rec
 
 
+# ---------------- hidden-body diagnosis (Y4b design, 21/11) ----------------
+# Transparent Zen 0.9.4 injects a content script at document_start that
+# adds class tz-hidden to <html>; its CSS hides the body (visibility:
+# hidden, opacity: 0). Removal is async with no timeout or fallback, so
+# a stalled extension chain leaves new tabs blank for minutes. One eval,
+# one snapshot per diagnose; sampled twice 300 ms apart when hidden.
+
+# NOTE: the top-level `return` is REQUIRED. Marionette /execute/sync
+# runs the script as the body of an anonymous function, so a bare
+# IIFE expression evaluates and discards its value (the call returns
+# null). Every value-returning script in this file needs the explicit
+# top-level return; _DIAG_JS shipped without it and diagnose_body
+# crashed on a None snapshot on the first live run.
+_DIAG_JS = """
+return (() => {
+  const de = document.documentElement;
+  const b = document.body;
+  const cs = b ? getComputedStyle(b) : null;
+  const csHtml = getComputedStyle(de);
+  const rect = b ? b.getBoundingClientRect() : null;
+  return {
+    url: document.URL,
+    readyState: document.readyState,
+    hasBody: !!b,
+    htmlClass: de.className || "",
+    htmlClassList: [...de.classList],
+    htmlInline: de.getAttribute("style") || "",
+    bodyClass: b ? (b.className || "") : null,
+    bodyInline: b ? (b.getAttribute("style") || "") : null,
+    tzHidden: de.classList.contains("tz-hidden"),
+    tzInitialized: de.classList.contains("tz-initialized"),
+    bodyVis: cs ? cs.visibility : null,
+    bodyOpacity: cs ? cs.opacity : null,
+    bodyDisplay: cs ? cs.display : null,
+    htmlVis: csHtml.visibility,
+    transition: cs ? cs.transition : null,
+    transitionDuration: cs ? cs.transitionDuration : null,
+    transitionDelay: cs ? cs.transitionDelay : null,
+    rect: rect ? {x: rect.x, y: rect.y, w: rect.width, h: rect.height} : null,
+    innerLen: b ? (b.innerText || "").length : 0,
+    hasFocus: document.hasFocus(),
+    visState: document.visibilityState,
+    rafTicks: (typeof window.__y4dRafTicks === "number"
+               ? window.__y4dRafTicks : null),
+    nowMs: performance.now()
+  };
+})()
+"""
+
+_RAF_INSTALL_JS = """
+if (typeof window.__y4dRafTicks === "undefined") {
+  window.__y4dRafTicks = 0;
+  const tick = () => { window.__y4dRafTicks++; requestAnimationFrame(tick); };
+  requestAnimationFrame(tick);
+}
+return window.__y4dRafTicks;
+"""
+
+
+def _classify_snapshot(snap):
+    """VISIBLE, TZ_STUCK_V1, OTHER_HIDDEN, or FIXTURE_FAILURE.
+
+    There is no TRANSITION_FROZEN_V2 category: V2 is dead (CSS
+    visibility interpolation makes a hidden-to-visible transition
+    visible from the first frame), so class-absent plus computed-hidden
+    is OTHER_HIDDEN, a third mechanism, not a live diagnosis.
+    The tz-hidden check sits outside the visibility branch: any
+    effectively-hidden body (visibility not visible, or opacity 0)
+    with the class present is V1, including collapse or any other
+    hidden-ish computed value. A missing bodyVis means OTHER_HIDDEN,
+    in both this function and diagnose_body.
+    """
+    if not isinstance(snap, dict) or not snap.get("hasBody"):
+        return "FIXTURE_FAILURE"
+    vis = snap.get("bodyVis")
+    if vis is None:
+        return "OTHER_HIDDEN"
+    classes = snap.get("htmlClassList") or []
+    op = snap.get("bodyOpacity")
+    try:
+        op_f = float(op) if op is not None else 1.0
+    except (TypeError, ValueError):
+        op_f = None
+    if op_f is None:
+        # Opacity unreadable: cannot prove visible.
+        return "TZ_STUCK_V1" if "tz-hidden" in classes else "OTHER_HIDDEN"
+    effectively_hidden = (vis != "visible") or (op_f <= 0)
+    if not effectively_hidden:
+        return "VISIBLE"
+    if "tz-hidden" in classes:
+        return "TZ_STUCK_V1"
+    return "OTHER_HIDDEN"
+
+
+def diagnose_body(d):
+    """One eval, one snapshot of body visibility state.
+
+    Returns {"classification": ..., "snapshots": [...]}. Sampled twice
+    300 ms apart when hidden, so the rAF tick delta between the two
+    snapshots shows whether refresh ticks flow while hidden. That
+    delta is a raw datum only: a 300 ms window cannot measure the 5 s
+    largest-gap history the decisive experiment wants, and it must
+    never be cited as evidence for or against any mechanism. The 5 s
+    measurement belongs in the experiment harness, not here.
+    A failed first-sample eval returns FIXTURE_FAILURE with the error
+    attached instead of raising, so callers that cannot diagnose (an
+    open alert, a dead session) get a label, not a raw exception. A
+    failed second-sample eval keeps the first sample's classification.
+    A missing body while still loading is re-sampled once instead of
+    being called a fixture failure.
+    """
+    try:
+        d.eval(_RAF_INSTALL_JS)
+    except Exception as exc:
+        print(f"[diag] rAF counter install failed: {exc}", flush=True)
+    try:
+        snap1 = d.eval(_DIAG_JS)
+    except Exception as exc:
+        return {"classification": "FIXTURE_FAILURE", "snapshots": [],
+                "eval_error": f"{type(exc).__name__}: {exc}"}
+    if not isinstance(snap1, dict):
+        # A null/non-dict sample (eval ran while the document was
+        # being replaced, or Marionette returned a null value) is a
+        # failed sample, not a crash: no caller may ever see a None
+        # snapshot (it broke _log_diag / the post-remove check).
+        return {"classification": "FIXTURE_FAILURE", "snapshots": [],
+                "eval_error": "diag eval returned non-dict sample"}
+    if not snap1.get("hasBody") and snap1.get("readyState") != "complete":
+        time.sleep(0.5)
+        try:
+            snap1 = d.eval(_DIAG_JS)
+        except Exception as exc:
+            return {"classification": "FIXTURE_FAILURE",
+                    "snapshots": [snap1],
+                    "eval_error": f"{type(exc).__name__}: {exc}"}
+        if not isinstance(snap1, dict):
+            return {"classification": "FIXTURE_FAILURE",
+                    "snapshots": [],
+                    "eval_error": "diag re-sample returned non-dict"}
+    if _classify_snapshot(snap1) == "VISIBLE":
+        return {"classification": "VISIBLE", "snapshots": [snap1]}
+    time.sleep(0.3)
+    try:
+        snap2 = d.eval(_DIAG_JS)
+    except Exception as exc:
+        # Keep snap1's classification: a transport error is not a
+        # fixture failure and must not skip the tz-hidden removal step.
+        return {"classification": _classify_snapshot(snap1),
+                "snapshots": [snap1],
+                "eval_error": f"{type(exc).__name__}: {exc}"}
+    if not isinstance(snap2, dict):
+        # Null second sample: keep snap1's classification, same as a
+        # second-sample transport error.
+        return {"classification": _classify_snapshot(snap1),
+                "snapshots": [snap1],
+                "eval_error": "diag second sample returned non-dict"}
+    if isinstance(snap2, dict) and "bodyVis" in snap2:
+        cls = _classify_snapshot(snap2)
+    else:
+        cls = _classify_snapshot(snap1)
+    if (snap1.get("rafTicks") is None
+            and (not isinstance(snap2, dict)
+                 or snap2.get("rafTicks") is None)):
+        print("[diag] WARNING rafTicks null in both snapshots; "
+              "rAF delta is absent, not zero", flush=True)
+    return {"classification": cls, "snapshots": [snap1, snap2]}
+
+
+def require_visible(d, label):
+    """Diagnose a freshly opened tab and raise INFRA unless visible.
+
+    Used by tests that open a tab by clicking (t05 detail tab, t06
+    popup): those tabs never pass through goto/new_tab, so the choke
+    point would otherwise miss them (RT H4).
+    """
+    diag = diagnose_body(d)
+    if diag["classification"] != "VISIBLE":
+        raise RuntimeError(
+            f"INFRA: hidden-body on {label} "
+            f"({diag['classification']})")
+    return diag["classification"]
+
+
 class WD:
     """Minimal WebDriver client over geckodriver --connect-existing."""
 
@@ -83,28 +266,60 @@ class WD:
         self.proc = None
         self.session = None
         self.opened_tabs = []
+        self.last_diagnosis = None
+        self._gecko_log = None
+        self._gecko_pid_path = None
 
     def __enter__(self):
-        self.proc = subprocess.Popen(
-            [GECKO, "--connect-existing", "--marionette-host", "127.0.0.1",
-             "--marionette-port", str(MARIONETTE_PORT),
-             "--port", str(WD_PORT), "--log", "warn"],
-            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        deadline = time.perf_counter() + 30
-        while time.perf_counter() < deadline:
+        # Geckodriver log goes to a file in APPEND mode, not DEVNULL
+        # and not "wb" (Y4b orphan fix + C3 F6: a dead session must
+        # leave evidence, and each new WD() must not truncate the
+        # previous session's log). The PID is recorded so preflight
+        # can sweep verified orphans by PID. NOTE: the pid/log paths
+        # are keyed only by WD_PORT, so two concurrent WD sessions on
+        # the same port would collide; this runner is strictly
+        # single-session, sequential.
+        self._gecko_pid_path = f"/tmp/geckodriver-{WD_PORT}.pid"
+        self._gecko_log = open(f"/tmp/geckodriver-{WD_PORT}.log", "ab")
+        try:
+            self.proc = subprocess.Popen(
+                [GECKO, "--connect-existing", "--marionette-host",
+                 "127.0.0.1", "--marionette-port", str(MARIONETTE_PORT),
+                 "--port", str(WD_PORT), "--log", "warn"],
+                stdout=self._gecko_log, stderr=subprocess.STDOUT)
+        except Exception:
             try:
-                with urllib.request.urlopen(
-                        f"http://127.0.0.1:{WD_PORT}/status", timeout=2) as r:
-                    if r.status == 200:
-                        break
+                self._gecko_log.close()
             except Exception:
-                time.sleep(0.1)
-        else:
+                pass
+            self._gecko_log = None
+            raise
+        try:
+            Path(self._gecko_pid_path).write_text(str(self.proc.pid))
+            deadline = time.perf_counter() + 30
+            while time.perf_counter() < deadline:
+                try:
+                    with urllib.request.urlopen(
+                            f"http://127.0.0.1:{WD_PORT}/status",
+                            timeout=2) as r:
+                        if r.status == 200:
+                            break
+                except Exception:
+                    time.sleep(0.1)
+            else:
+                raise RuntimeError(
+                    "geckodriver status endpoint did not answer")
+            resp = self._wd("POST", "/session", {"capabilities": {
+                "alwaysMatch": {"browserName": "firefox"}}})
+            self.session = resp["value"]["sessionId"]
+        except Exception:
+            # Any failure after Popen (PID write, status wait, session
+            # POST, malformed session response) must clean up: without
+            # this the geckodriver is orphaned (__exit__ never runs)
+            # and blocks the session slot for later runners.
             self._cleanup()
-            raise RuntimeError("geckodriver status endpoint did not answer")
-        resp = self._wd("POST", "/session", {"capabilities": {
-            "alwaysMatch": {"browserName": "firefox"}}})
-        self.session = resp["value"]["sessionId"]
+            raise
+        return self
         # No maximize here: the live Zen is already 1863x1176, and
         # maximize is an unneeded variable (its effect was never
         # isolated; probe v3's failure is fully explained by the
@@ -132,13 +347,37 @@ class WD:
             except Exception:
                 pass
             self.session = None
-        if self.proc is not None and self.proc.poll() is None:
-            self.proc.terminate()
+        if self.proc is not None:
+            # Exception-proof teardown: a terminate() raise must never
+            # skip the log close and PID unlink below (C3 F5).
             try:
-                self.proc.wait(timeout=10)
+                if self.proc.poll() is None:
+                    try:
+                        self.proc.terminate()
+                    except Exception:
+                        pass
+                    try:
+                        self.proc.wait(timeout=10)
+                    except Exception:
+                        try:
+                            self.proc.kill()
+                        except Exception:
+                            pass
             except Exception:
-                self.proc.kill()
+                pass
             self.proc = None
+        if self._gecko_log is not None:
+            try:
+                self._gecko_log.close()
+            except Exception:
+                pass
+            self._gecko_log = None
+        if self._gecko_pid_path is not None:
+            try:
+                os.unlink(self._gecko_pid_path)
+            except Exception:
+                pass
+            self._gecko_pid_path = None
 
     def _wd(self, method, path, body=None):
         url = f"http://127.0.0.1:{WD_PORT}{path}"
@@ -169,7 +408,7 @@ class WD:
         # interactability check passes (probe v2 vs v4, 21/11).
         time.sleep(0.5)
 
-    def new_tab(self, url):
+    def new_tab(self, url, allow_hidden=False):
         resp = self._wd("POST", self._s("/window/new"), {"type": "tab"})
         handle = resp["value"]["handle"]
         self.opened_tabs.append(handle)
@@ -183,7 +422,7 @@ class WD:
         if current != handle:
             raise RuntimeError(
                 f"window switch failed: current {current[:8]} != new {handle[:8]}")
-        self.goto(url)
+        self.goto(url, allow_hidden=allow_hidden)
         return handle
 
     def scroll_into_view(self, css):
@@ -193,7 +432,26 @@ class WD:
     def close_tab(self):
         self._wd("DELETE", self._s("/window"), {})
 
-    def goto(self, url):
+    def _diagnose_or_raise(self, url, allow_hidden):
+        """Diagnose after a navigation and enforce the choke point.
+
+        Raises INFRA: hidden-body on a non-VISIBLE diagnosis unless
+        the caller passed allow_hidden=True (ladder paths only:
+        open_fixture, rebootstrap_tab, bootstrap_tab). Every other
+        caller gets the raise, so no test ever clicks or types into
+        a hidden page (C1 F2, RT H4).
+        """
+        self.last_diagnosis = diagnose_body(self)
+        cls = self.last_diagnosis["classification"]
+        if cls != "VISIBLE":
+            print(f"[diag] {url[:60]} -> {cls}", flush=True)
+            if not allow_hidden:
+                raise RuntimeError(
+                    f"INFRA: hidden-body after navigation to "
+                    f"{url[:80]} ({cls})")
+        return self.last_diagnosis
+
+    def goto(self, url, allow_hidden=False):
         self._wd("POST", self._s("/url"), {"url": url})
         self.wait_ready()
         # Settle: readyState == complete is NOT enough. Probe v2 (1s sleep
@@ -202,8 +460,11 @@ class WD:
         # a valid rect and the tab reports visible + focused. The tab needs
         # a paint before Marionette's interactability check passes.
         time.sleep(1.0)
+        # Choke point (Y4b): diagnose after the settle, never return a
+        # hidden page as ready unless the caller opted out.
+        return self._diagnose_or_raise(url, allow_hidden)
 
-    def refresh(self):
+    def refresh(self, allow_hidden=False):
         self._wd("POST", self._s("/refresh"), {})
         self.wait_ready()
         # Same settle as goto(): after a reload, JS listeners / init
@@ -211,6 +472,10 @@ class WD:
         # interaction fails ("could not be scrolled into view") and
         # select/change handlers appear not to fire (t04, t05, t08, 21/11).
         time.sleep(1.0)
+        # A reload is a new document (the extension content script runs
+        # again at document_start), so refresh diagnoses exactly like
+        # goto and raises on a hidden body unless opted out (C1 F2).
+        return self._diagnose_or_raise("refresh", allow_hidden)
 
     def wait_ready(self, timeout=10):
         deadline = time.perf_counter() + timeout
@@ -547,6 +812,8 @@ def run_t05(r, d):
     # that is still painting its first load; t05 failed here 21/11).
     r.step("settle detail tab", "wait",
            lambda: (d.wait_ready(), time.sleep(1.0)))
+    r.step("diagnose detail tab", "diagnose",
+           lambda: require_visible(d, "detail tab"))
     title0 = r.step("read detail title", "value", lambda: d.value("#title"))
     r.details["detailInitialTitle"] = title0
     r.check("detail opens Problem Two", title0 == "Problem Two", str(title0))
@@ -639,6 +906,8 @@ def run_t06(r, d):
     # in batch 1 and failed in the final run at this exact step, 21/11).
     r.step("settle popup", "wait",
            lambda: (d.wait_ready(), time.sleep(1.0)))
+    r.step("diagnose popup tab", "diagnose",
+           lambda: require_visible(d, "popup tab"))
     r.step("fill popup name", "type",
            lambda: d.type_text("#pname", "Popup Tester"))
     r.step("submit popup", "click", lambda: d.click("#send"))
