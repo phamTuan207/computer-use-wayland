@@ -804,3 +804,6 @@ Muse tổng vừa nhắn tin trực tiếp cho cậu bằng chuột computer-use
 Dùng skill last30days đã cài trên máy cậu, crawl data thật trong 30 ngày qua: các agent kiểm chứng một cú click đã trúng đích bằng cách nào mà không cần chụp ảnh lần hai (đọc trạng thái DOM, kiểm tra caret/focus, đọc kết quả session). Chỉ dùng data thật 30 ngày gần nhất, mỗi claim ghi nguồn + ngày, không dùng dataset cũ kĩ. Báo cáo vào docs/clone2-ground-verify-sweep-20261122.md, council + redteam.
 
 Luat nhu cu: khong dua thong tin ca nhan nao cua toi len repo, khong dau gach ngang dai, khong ydotool, test nao cung ghi thoi gian. Ket qua bao cao vao file nay.
+
+## Da nhan batch 9, 04:38 ngay 22/11
+Clone2 da nhan batch 9 (giao 04:35, commit e04a16a): 4 viec, moi viec council 3 nguoi + redteam, commit nho push ngay tung phan. Viec 1 thiet ke one-vision tu sweep (docs/clone2-one-vision-design-20261122.md), viec 2 kiem tra san sang live cho benchmark 2-vision, KHONG chay live, viec 3 viet nhap muc loi G31 (docs/g31-nearmiss-draft-20261122.md), viec 4 crawl 30 ngay ve kiem chung click khong can vision thu hai (docs/clone2-ground-verify-sweep-20261122.md). Dang cho Muse tong dieu lai, se lam ngay khi co lenh.
