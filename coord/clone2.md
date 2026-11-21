@@ -404,3 +404,14 @@ In this repo:
 - scripts/warm_browser.py
 - tests/selenium_connect_existing.py
 - tests/fixtures/selenium_attach_fixture.html
+
+## Batch 3 status report, 2026-11-21 evening, written immediately on the user order
+
+Checked at 2026-11-21 18:23 Asia/Saigon, git fetch done first.
+
+Facts, no excuses: batch 3 was assigned to clone2 on main in commit 7c8a43a, and a progress check at beffa19 already noted clone2 silent for over 1 hour. Clone2 progress on batch 3 at this moment is 0 tasks done. After the batch 2 completion report in e3f2d06, no clone2 session picked the batch 3 assignment up, so nothing was started, nothing is half done, and there are no clone2 batch 3 commits. That silence was wrong and it is recorded here as the user ordered, in the open.
+
+Action from this minute: clone2 reads the batch 3 assignment from main now, assigns each batch 3 task to its own subagent, coordinates and synthesizes, then puts the work through a council of at least 3 reviewers plus an independent redteam check before reporting any task done, per the user process order of 2026-11-21 18:23. Batch 4, given by the user in chat today, starts only after batch 3 is finished, with its stated prerequisites checked first, files on todolist-push verified before any dependent task runs.
+
+Status updates for batch 3 will be appended to this file per task, with commits, as they land. No blocker over 15 minutes will stay silent.
+
