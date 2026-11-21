@@ -300,3 +300,64 @@ the first real frequency count. The pill blur increase (0.0 to 0.15, todolist
 ### C2 step 4. Commit discipline for C2
 Each sub-step above is its own commit, pushed at once. The measurement result
 is its own commit with the four-cell counts, pushed immediately after the run.
+
+## COMMIT METHOD: the optimal method prescribes this discipline
+## (owner order 22:49, parent correction 22:51)
+
+### Rule 1. Small, many, immediate.
+Every small step is its OWN commit. One paper is one commit. One verdict
+section is one commit. One code fix is one commit. One test is one commit. One
+log entry batch is one commit. Push IMMEDIATELY when the step is done, never
+batch. A step that is done but unpushed does not exist: it can be lost, it
+cannot be reviewed, and it cannot be counted. This council itself followed the
+rule: log + mechanism in one commit, evidence in one commit, safety in one
+commit, verdict parts 1-3 in three commits, each pushed and verified via
+git ls-remote before the next step started.
+
+### Rule 2. Working-branch commits do NOT move the graph; merge to main is what counts.
+CORRECTION 22:51 (parent, graph counting): the GitHub graph counts ONLY commits
+on the DEFAULT branch (main). todolist-push has 290 commits on UTC 21/11 but
+they do NOT count toward the graph. The graph showed 136 contributions while the
+team counted 190, because 190 was the +07 day and the graph counts the UTC day
+on main only (144 commits + 1 PR = 145 at 22:51). Consequence for the method:
+pushing to todolist-push is necessary but not sufficient. Work that stays on the
+working branch is invisible on the graph and invisible to anyone who reads main.
+Therefore: merge to main EARLY AND OFTEN. Do not accumulate a large branch and
+merge once at the end. Each merged batch must be small enough to review and
+revert, and each merge must be verified via git ls-remote on main. Worker MERGE
+owns the merge; every other worker's job is to keep its branch mergeable at all
+times (small commits, no conflicts left sitting, no uncommitted work at the end
+of a step). A worker who finishes a step and does not push has not finished the
+step; a branch that is not merged has not delivered.
+
+### Rule 3. Commit hygiene: never sweep another worker's files.
+Check git status before EVERY commit. Use git commit --only for your own files,
+so you never sweep another worker's staged or modified files into your commit.
+The shared tree moves fast (F1, F2, F3, Y13r2, Y14b, PRIO, OPT children all
+committing); a bare `git commit -a` or `git add .` will capture someone else's
+work and misattribute it. This council used --only on every verdict commit and
+verified with git status first each time.
+
+### Rule 4. Verify every push.
+After every push, run git ls-remote and confirm the remote HEAD is the commit
+just pushed (or a later commit from another worker that already contains it).
+A push that reports success without verification is unverified. A rejected push
+means the remote moved: fetch, rebase or merge, and push again; never force
+push a shared branch. If a push is rejected twice, stop and report to the
+parent instead of retrying blindly.
+
+### Rule 5. Quality still first; the graph is a counter, not a target to game.
+The owner target is 240 contributions before midnight +07. The gap is real
+(about 95 at 22:52 by the UTC-day count, not about 51). The method does NOT
+meet the number by splitting one change into meaningless commits, by committing
+noise, or by skipping council + redteam. Small commits mean small REAL steps:
+one function, one test, one paper section, one log batch. Council + redteam
+stay complete on every fix; the generator never runs its own tests; kill rules
+stay in force; logging stays continuous. A commit that exists only to move the
+number is a violation of the evidence contract and the redteam must flag it.
+
+### Rule 6. Log every event as it happens.
+Owner rule 22:47: append EVERY action to the log file AS IT HAPPENS
+(wall-clock Asia/Ho_Chi_Minh + elapsed, what was done, target, outcome), never
+batch the log at the end. When the owner asks, the answer must be in the log,
+never "I don't know". The log itself is committed in small pieces under Rule 1.
