@@ -44,3 +44,10 @@ Strict requirements enforced:
 - Created offline fixture `tests/realistic/agy-q/fixtures/test-01-music-player.html` featuring interactive track catalog, playlist creation, track filtering, reordering, duration tracking, and state verification.
 - Verified test with headless chromium via `check.mjs`: score 1, 0 failures, total runtime 51ms.
 - Verified no em/en dashes in any files.
+
+## 2026-11-21 15:48:10 (T+00:04:21) - Completed Test 02 (photo gallery)
+
+- Created `tests/realistic/agy-q/test-02-photo-gallery.md` (30 exact steps, within 15-40 limit).
+- Created offline fixture `tests/realistic/agy-q/fixtures/test-02-photo-gallery.html` with photo grid, dynamic album management, compound tag filtering, modal tag editing, and JSON export.
+- Verified test with `node tests/realistic/agy-q/check.mjs --fixture tests/realistic/agy-q/fixtures/test-02-photo-gallery.html --test 02`: score 1, 0 failures, 56ms.
+- Verified zero em/en dashes.

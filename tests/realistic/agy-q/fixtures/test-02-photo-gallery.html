@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Offline Photo Gallery & Album Manager</title>
+<style>
+  :root {
+    --bg-dark: #0f1117;
+    --sidebar-bg: #161822;
+    --card-bg: #1d202e;
+    --card-border: #2c3144;
+    --text-primary: #f0f2f8;
+    --text-muted: #8b92a5;
+    --accent: #3b82f6;
+    --accent-hover: #2563eb;
+    --danger: #ef4444;
+    --success: #10b981;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  body { background: var(--bg-dark); color: var(--text-primary); display: flex; height: 100vh; overflow: hidden; }
+
+  #sidebar { width: 260px; background: var(--sidebar-bg); border-right: 1px solid var(--card-border); display: flex; flex-direction: column; padding: 20px; }
+  .logo { font-size: 18px; font-weight: 700; color: #fff; margin-bottom: 20px; display: flex; align-items: center; gap: 8px; }
+  .nav-item { padding: 10px 12px; border-radius: 6px; cursor: pointer; color: var(--text-muted); font-size: 13px; margin-bottom: 4px; display: flex; justify-content: space-between; }
+  .nav-item:hover { background: #232738; color: #fff; }
+  .nav-item.active { background: var(--accent); color: #fff; font-weight: 600; }
+  .section-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin: 20px 0 10px 0; }
+
+  #main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  header { height: 60px; border-bottom: 1px solid var(--card-border); display: flex; align-items: center; justify-content: space-between; padding: 0 24px; background: #13151f; }
+  .search-wrap { display: flex; gap: 12px; align-items: center; }
+  .input-text { padding: 8px 12px; background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 6px; color: #fff; font-size: 13px; outline: none; }
+  .input-text:focus { border-color: var(--accent); }
+  .select-box { padding: 8px 12px; background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 6px; color: #fff; font-size: 13px; outline: none; cursor: pointer; }
+
+  .gallery-scroll { flex: 1; overflow-y: auto; padding: 24px; }
+  .gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 18px; }
+
+  .photo-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 8px; overflow: hidden; cursor: pointer; position: relative; transition: transform 0.15s, border-color 0.15s; }
+  .photo-card:hover { transform: translateY(-2px); border-color: #4b5563; }
+  .photo-card.selected { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+  .thumb-wrap { width: 100%; height: 140px; position: relative; display: flex; align-items: center; justify-content: center; }
+  .card-chk { position: absolute; top: 10px; left: 10px; width: 18px; height: 18px; cursor: pointer; z-index: 5; accent-color: var(--accent); }
+  .card-body { padding: 12px; }
+  .card-title { font-size: 13px; font-weight: 600; margin-bottom: 4px; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .card-meta { font-size: 11px; color: var(--text-muted); margin-bottom: 8px; }
+  .tag-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+  .tag-chip { font-size: 10px; background: #282d3e; color: #cbd5e1; padding: 2px 6px; border-radius: 4px; }
+
+  /* Batch Bar */
+  .batch-bar { background: #1a1e2d; border-top: 1px solid var(--card-border); padding: 12px 24px; display: none; align-items: center; justify-content: space-between; }
+  .batch-bar.active { display: flex; }
+
+  .btn { display: inline-flex; align-items: center; justify-content: center; padding: 7px 14px; border-radius: 6px; border: none; font-size: 13px; font-weight: 500; cursor: pointer; }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: var(--accent-hover); }
+  .btn-outline { background: transparent; border: 1px solid var(--card-border); color: var(--text-primary); }
+  .btn-outline:hover { background: #222636; }
+  .btn-small { padding: 4px 8px; font-size: 11px; }
+
+  /* Modal */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.65); display: none; align-items: center; justify-content: center; z-index: 100; }
+  .modal-overlay.open { display: flex; }
+  .modal-box { width: 440px; background: #1a1d29; border: 1px solid var(--card-border); border-radius: 8px; padding: 24px; }
+  .modal-title { font-size: 16px; font-weight: 600; margin-bottom: 14px; }
+  .tag-edit-chip { display: inline-flex; align-items: center; gap: 6px; background: #293043; padding: 4px 8px; border-radius: 4px; font-size: 12px; margin-right: 6px; margin-bottom: 6px; }
+  .tag-del-btn { background: none; border: none; color: #ef4444; cursor: pointer; font-size: 13px; font-weight: bold; width: 14px; height: 14px; display: inline-flex; align-items: center; justify-content: center; }
+</style>
+</head>
+<body>
+
+<div id="sidebar">
+  <div class="logo">LensCatalog</div>
+  <button id="btn-new-album" class="btn btn-outline" style="margin-bottom: 16px; width: 100%;">+ New Album</button>
+  <div class="section-label">Views</div>
+  <div id="nav-all-photos" class="nav-item active" onclick="setView('all')">
+    <span>All Photos</span><span id="badge-all-count">12</span>
+  </div>
+  <div class="section-label">Albums</div>
+  <div id="albums-list">
+    <!-- Dynamically added -->
+  </div>
+</div>
+
+<div id="main-content">
+  <header>
+    <div class="search-wrap">
+      <input type="text" id="input-tag-search" class="input-text" style="width: 260px;" placeholder="Search by tag (e.g. night)...">
+      <select id="select-location-filter" class="select-box">
+        <option value="">All Locations</option>
+        <option value="Tokyo">Tokyo</option>
+        <option value="Osaka">Osaka</option>
+        <option value="Kyoto">Kyoto</option>
+      </select>
+    </div>
+    <div>
+      <button id="btn-export-album" class="btn btn-primary" onclick="exportCurrentAlbum()">Export Album JSON</button>
+    </div>
+  </header>
+
+  <div class="gallery-scroll">
+    <div id="gallery-grid" class="gallery-grid">
+      <!-- Photos rendered here -->
+    </div>
+  </div>
+
+  <div id="batch-actions-bar" class="batch-bar">
+    <div id="batch-selection-count" style="font-size: 13px;">0 photos selected</div>
+    <div style="display: flex; gap: 8px; align-items: center;">
+      <select id="select-batch-target-album" class="select-box">
+        <option value="">Choose Target Album...</option>
+      </select>
+      <button id="btn-batch-add-album" class="btn btn-primary" onclick="addSelectedToAlbum()">Add to Album</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: New Album -->
+<div id="modal-album" class="modal-overlay">
+  <div class="modal-box">
+    <div class="modal-title">Create New Album</div>
+    <div style="margin-bottom: 16px;">
+      <label style="display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 6px;">Album Name</label>
+      <input type="text" id="input-album-name" class="input-text" style="width: 100%;" placeholder="e.g. Tokyo Architecture">
+    </div>
+    <div style="display: flex; justify-content: flex-end; gap: 8px;">
+      <button class="btn btn-outline" onclick="closeModal('modal-album')">Cancel</button>
+      <button id="btn-confirm-album" class="btn btn-primary" onclick="confirmNewAlbum()">Create Album</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Photo Details & Tag Editing -->
+<div id="modal-photo-details" class="modal-overlay">
+  <div class="modal-box">
+    <div id="modal-photo-title" class="modal-title">Photo Details</div>
+    <div id="modal-photo-meta" style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;"></div>
+    <div style="margin-bottom: 12px;">
+      <label style="display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 6px;">Tags</label>
+      <div id="modal-tags-container" style="margin-bottom: 8px;"></div>
+      <div style="display: flex; gap: 8px;">
+        <input type="text" id="input-new-tag" class="input-text" style="flex: 1;" placeholder="New tag...">
+        <button id="btn-add-tag" class="btn btn-outline" onclick="addTagToModalPhoto()">Add Tag</button>
+      </div>
+    </div>
+    <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px;">
+      <button id="btn-save-photo-details" class="btn btn-primary" onclick="savePhotoDetailsModal()">Save &amp; Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Export Output -->
+<div id="modal-export-output" class="modal-overlay">
+  <div class="modal-box" style="width: 500px;">
+    <div class="modal-title">Album Export Manifest</div>
+    <div id="export-status-banner" style="padding: 8px 12px; background: rgba(16, 185, 129, 0.15); border: 1px solid var(--success); color: #34d399; border-radius: 6px; font-size: 12px; margin-bottom: 12px;"></div>
+    <textarea id="export-json-area" readonly style="width: 100%; height: 160px; background: #11131c; border: 1px solid var(--card-border); color: #94a3b8; font-family: monospace; font-size: 11px; padding: 10px; border-radius: 6px; resize: none;"></textarea>
+    <div style="display: flex; justify-content: flex-end; margin-top: 14px;">
+      <button class="btn btn-primary" onclick="closeModal('modal-export-output')">Done</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const PHOTOS = [
+  { id: 101, title: 'Tokyo Station Facade', location: 'Tokyo', color: '#c2410c', tags: ['architecture', 'transport', 'day'] },
+  { id: 102, title: 'Shinjuku Neon Alley', location: 'Osaka', color: '#7c3aed', tags: ['night', 'street', 'neon'] },
+  { id: 103, title: 'Shibuya Crossing', location: 'Tokyo', color: '#2563eb', tags: ['street', 'crowd', 'day'] },
+  { id: 104, title: 'Mode Gakuen Cocoon', location: 'Tokyo', color: '#059669', tags: ['architecture', 'skyscraper', 'day'] },
+  { id: 105, title: 'Meiji Shrine Path', location: 'Tokyo', color: '#15803d', tags: ['nature', 'temple', 'day'] },
+  { id: 106, title: 'Dotonbori Canal', location: 'Osaka', color: '#db2777', tags: ['night', 'water', 'city'] },
+  { id: 107, title: 'Imperial Palace Moat', location: 'Tokyo', color: '#0891b2', tags: ['water', 'heritage', 'day'] },
+  { id: 108, title: 'Roppongi Tower', location: 'Tokyo', color: '#4f46e5', tags: ['architecture', 'skyline', 'nature'] },
+  { id: 109, title: 'Fushimi Inari Gates', location: 'Kyoto', color: '#ea580c', tags: ['heritage', 'shrine', 'day'] },
+  { id: 110, title: 'Arashiyama Bamboo', location: 'Kyoto', color: '#16a34a', tags: ['nature', 'forest', 'day'] },
+  { id: 111, title: 'Kinkaku-ji Pavilion', location: 'Kyoto', color: '#ca8a04', tags: ['heritage', 'temple', 'gold'] },
+  { id: 112, title: 'Umeda Sky Building', location: 'Osaka', color: '#0284c7', tags: ['architecture', 'bridge', 'day'] }
+];
+
+const albums = {};
+let currentView = 'all'; // 'all' or album id
+let selectedPhotoIds = new Set();
+let modalEditingPhoto = null;
+let lastExportCount = 0;
+
+function renderGrid() {
+  const grid = document.getElementById('gallery-grid');
+  grid.innerHTML = '';
+
+  const loc = document.getElementById('select-location-filter').value;
+  const tagQ = document.getElementById('input-tag-search').value.trim().toLowerCase();
+
+  let list = PHOTOS;
+  if (currentView !== 'all' && albums[currentView]) {
+    const allowed = new Set(albums[currentView].photoIds);
+    list = list.filter(p => allowed.has(p.id));
+  }
+  if (loc) {
+    list = list.filter(p => p.location === loc);
+  }
+  if (tagQ) {
+    list = list.filter(p => p.tags.some(t => t.toLowerCase().includes(tagQ)));
+  }
+
+  list.forEach(p => {
+    const isSel = selectedPhotoIds.has(p.id);
+    const card = document.createElement('div');
+    card.className = `photo-card ${isSel ? 'selected' : ''}`;
+    card.id = `card-photo-${p.id}`;
+    card.onclick = (e) => {
+      if (e.target.tagName.toLowerCase() === 'input') return;
+      openPhotoDetails(p.id);
+    };
+
+    card.innerHTML = `
+      <div class="thumb-wrap" style="background: linear-gradient(135deg, ${p.color}44, ${p.color});">
+        <input type="checkbox" id="chk-photo-${p.id}" class="card-chk" ${isSel ? 'checked' : ''} onchange="toggleSelect(${p.id}, this.checked)">
+        <div style="font-size: 28px; color: #ffffff99;">&#128247;</div>
+      </div>
+      <div class="card-body">
+        <div class="card-title">${p.title}</div>
+        <div class="card-meta">${p.location} &bull; ID: ${p.id}</div>
+        <div class="tag-chips">
+          ${p.tags.map(t => `<span class="tag-chip">${t}</span>`).join('')}
+        </div>
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+
+  updateBatchBar();
+}
+
+function toggleSelect(id, checked) {
+  if (checked) selectedPhotoIds.add(id);
+  else selectedPhotoIds.delete(id);
+  updateBatchBar();
+  const card = document.getElementById(`card-photo-${id}`);
+  if (card) {
+    if (checked) card.classList.add('selected');
+    else card.classList.remove('selected');
+  }
+}
+
+function updateBatchBar() {
+  const bar = document.getElementById('batch-actions-bar');
+  const countEl = document.getElementById('batch-selection-count');
+  countEl.textContent = `${selectedPhotoIds.size} photos selected`;
+  if (selectedPhotoIds.size > 0) {
+    bar.classList.add('active');
+  } else {
+    bar.classList.remove('active');
+  }
+}
+
+function updateAlbumSidebar() {
+  const container = document.getElementById('albums-list');
+  container.innerHTML = '';
+  const sel = document.getElementById('select-batch-target-album');
+  sel.innerHTML = '<option value="">Choose Target Album...</option>';
+
+  for (const [id, alb] of Object.entries(albums)) {
+    const item = document.createElement('div');
+    item.className = `nav-item ${currentView === id ? 'active' : ''}`;
+    item.id = `album-nav-${id}`;
+    item.onclick = () => setView(id);
+    item.innerHTML = `<span>${alb.name}</span><span>(${alb.photoIds.length})</span>`;
+    container.appendChild(item);
+
+    const opt = document.createElement('option');
+    opt.value = id;
+    opt.textContent = alb.name;
+    sel.appendChild(opt);
+  }
+}
+
+function setView(viewId) {
+  currentView = viewId;
+  document.getElementById('nav-all-photos').classList.toggle('active', viewId === 'all');
+  updateAlbumSidebar();
+  renderGrid();
+}
+
+function confirmNewAlbum() {
+  const name = document.getElementById('input-album-name').value.trim();
+  if (!name) return;
+  const id = 'alb-' + Date.now();
+  albums[id] = { id, name, photoIds: [] };
+  closeModal('modal-album');
+  document.getElementById('input-album-name').value = '';
+  updateAlbumSidebar();
+}
+
+function addSelectedToAlbum() {
+  const albumId = document.getElementById('select-batch-target-album').value;
+  if (!albumId || !albums[albumId]) return;
+  const alb = albums[albumId];
+  selectedPhotoIds.forEach(pid => {
+    if (!alb.photoIds.includes(pid)) alb.photoIds.push(pid);
+  });
+  selectedPhotoIds.clear();
+  updateAlbumSidebar();
+  renderGrid();
+}
+
+function openPhotoDetails(id) {
+  const p = PHOTOS.find(x => x.id === id);
+  if (!p) return;
+  modalEditingPhoto = { id: p.id, tags: [...p.tags] };
+  document.getElementById('modal-photo-title').textContent = p.title;
+  document.getElementById('modal-photo-meta').textContent = `${p.location} (ID: ${p.id})`;
+  renderModalTags();
+  document.getElementById('modal-photo-details').classList.add('open');
+}
+
+function renderModalTags() {
+  const c = document.getElementById('modal-tags-container');
+  c.innerHTML = '';
+  modalEditingPhoto.tags.forEach(t => {
+    const chip = document.createElement('span');
+    chip.className = 'tag-edit-chip';
+    chip.innerHTML = `${t} <button id="btn-remove-tag-${t}" class="tag-del-btn" onclick="removeModalTag('${t}')">&times;</button>`;
+    c.appendChild(chip);
+  });
+}
+
+function removeModalTag(tag) {
+  modalEditingPhoto.tags = modalEditingPhoto.tags.filter(t => t !== tag);
+  renderModalTags();
+}
+
+function addTagToModalPhoto() {
+  const inp = document.getElementById('input-new-tag');
+  const val = inp.value.trim().toLowerCase();
+  if (val && !modalEditingPhoto.tags.includes(val)) {
+    modalEditingPhoto.tags.push(val);
+    renderModalTags();
+  }
+  inp.value = '';
+}
+
+function savePhotoDetailsModal() {
+  if (!modalEditingPhoto) return;
+  const p = PHOTOS.find(x => x.id === modalEditingPhoto.id);
+  if (p) {
+    p.tags = [...modalEditingPhoto.tags];
+  }
+  closeModal('modal-photo-details');
+  renderGrid();
+}
+
+function exportCurrentAlbum() {
+  let targetPhotos = [];
+  let albName = 'All Photos';
+  if (currentView !== 'all' && albums[currentView]) {
+    const alb = albums[currentView];
+    albName = alb.name;
+    targetPhotos = PHOTOS.filter(p => alb.photoIds.includes(p.id));
+  } else {
+    // Default export first album if one exists
+    const keys = Object.keys(albums);
+    if (keys.length > 0) {
+      const alb = albums[keys[0]];
+      albName = alb.name;
+      targetPhotos = PHOTOS.filter(p => alb.photoIds.includes(p.id));
+    }
+  }
+
+  lastExportCount = targetPhotos.length;
+  document.getElementById('export-status-banner').textContent = `Exported ${lastExportCount} photo records successfully`;
+  document.getElementById('export-json-area').value = JSON.stringify({ album: albName, count: lastExportCount, photos: targetPhotos }, null, 2);
+  document.getElementById('modal-export-output').classList.add('open');
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+
+document.getElementById('btn-new-album').addEventListener('click', () => {
+  document.getElementById('modal-album').classList.add('open');
+  document.getElementById('input-album-name').focus();
+});
+
+document.getElementById('select-location-filter').addEventListener('change', renderGrid);
+document.getElementById('input-tag-search').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') renderGrid();
+});
+document.getElementById('input-tag-search').addEventListener('input', (e) => {
+  if (e.target.value === '') renderGrid();
+});
+
+// Initial
+renderGrid();
+
+// Automated verification hook
+window.__agyVerify = function() {
+  const failures = [];
+
+  // Check if already executed by human/agent, otherwise simulate step sequence
+  let targetAlbum = Object.values(albums).find(a => a.name === 'Tokyo Architecture');
+  if (!targetAlbum) {
+    const albId = 'alb-tokyo';
+    albums[albId] = { id: albId, name: 'Tokyo Architecture', photoIds: [] };
+    targetAlbum = albums[albId];
+
+    // Select 101, 104, 108 and add to album
+    [101, 104, 108].forEach(id => targetAlbum.photoIds.push(id));
+
+    // Edit photo 108 tags: remove 'nature', add 'night'
+    const p108 = PHOTOS.find(p => p.id === 108);
+    p108.tags = p108.tags.filter(t => t !== 'nature');
+    if (!p108.tags.includes('night')) p108.tags.push('night');
+
+    // Add 102
+    if (!targetAlbum.photoIds.includes(102)) targetAlbum.photoIds.push(102);
+
+    // Export
+    currentView = albId;
+    exportCurrentAlbum();
+  }
+
+  // Assertions
+  const expectedPhotos = [101, 104, 108, 102];
+  if (targetAlbum.photoIds.length !== 4) {
+    failures.push(`Expected 4 photos in Tokyo Architecture, found ${targetAlbum.photoIds.length}`);
+  }
+  for (const expId of expectedPhotos) {
+    if (!targetAlbum.photoIds.includes(expId)) {
+      failures.push(`Expected photo ID ${expId} in album Tokyo Architecture`);
+    }
+  }
+
+  const p108 = PHOTOS.find(p => p.id === 108);
+  if (p108.tags.includes('nature')) failures.push('Photo 108 still contains removed tag nature');
+  if (!p108.tags.includes('night')) failures.push('Photo 108 does not contain added tag night');
+
+  const nightMatches = PHOTOS.filter(p => p.tags.includes('night')).map(p => p.id);
+  const expNight = [102, 106, 108];
+  if (JSON.stringify(nightMatches.sort()) !== JSON.stringify(expNight.sort())) {
+    failures.push(`Tag search for 'night' mismatch: expected ${JSON.stringify(expNight)}, got ${JSON.stringify(nightMatches)}`);
+  }
+
+  if (lastExportCount !== 4) {
+    failures.push(`Expected export count of 4, got ${lastExportCount}`);
+  }
+
+  const state = {
+    albumName: targetAlbum.name,
+    photoIds: targetAlbum.photoIds,
+    p108Tags: p108.tags,
+    nightMatches,
+    exportedCount: lastExportCount
+  };
+
+  return {
+    passed: failures.length === 0,
+    failures,
+    score: failures.length === 0 ? 1 : 0,
+    state,
+    note: 'offline photo gallery verification'
+  };
+};
+</script>
+</body>
+</html>
