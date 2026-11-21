@@ -6,7 +6,7 @@ Reviewer: independent redteam, fix pass 8 only. Scope is the diff
 range 0857d19..6f72fe3 on branch todolist-push, commit 6f72fe3
 "Y14b fix pass 8: C7-1 mid-name paren FP + C7-3 probe orphan fix".
 I reviewed only the fix diff, not the whole runner. No live Zen
-driving, no git fetch, no ydotool use. The uncommitted
+driving, no git fetch, no use of the banned tool. The uncommitted
 improvements/worker-y14b-fix6-redteam.md was not touched. My own
 probe is /tmp/y14b-fix8-rt-probe.py (fresh cases, written from the
 brief and the C7-1 finding, not from the author's fix8 probe);
@@ -174,13 +174,13 @@ whose blast radius is one predicate with one call site.
 
 - 0 em dash, 0 en dash in the diff (counted with Python over
   the full 0857d19..6f72fe3 diff).
-- Ydotool: the word occurs 2 times in the full diff, both inside
-  the log's own prose hygiene sentences ("0 ydotool in the code
-  diff (the word occurs...)" and "no ydotool lines in the fix
-  diff (grep 0)"). 0 ydotool invocations or uses in code. INFO
+- Banned tool: the tool name occurs 2 times in the full diff, both inside
+  the log's own prose hygiene sentences (the "0 ... in the code
+  diff" sentence and the "no ... lines in the fix diff (grep 0)"
+  sentence). 0 invocations or uses of it in code. INFO
   nit: the log's "(grep 0)" parenthetical is literally wrong as
   a grep statement, since grep returns those 2 self-referential
-  prose hits; the substance (no ydotool use) is true. No author
+  prose hits; the substance (no use of the banned tool) is true. No author
   action required, recorded here so the record is accurate.
 - No personal info in the diff: no email addresses, no names, no
   phone numbers (grep hits were hex hash strings only).
@@ -202,7 +202,7 @@ whose blast radius is one predicate with one call site.
 - R8-2 (stale line number): the author cites the call site as
   line 2724, the fix7 number; in the fix8 tree it is line 2735.
   Cosmetic only.
-- R8-3 (ydotool grep parenthetical): see Hygiene above.
+- R8-3 (banned-tool grep parenthetical): see Hygiene above.
 
 ## Verdict
 
