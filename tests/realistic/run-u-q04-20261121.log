@@ -1,0 +1,77 @@
+serving at http://127.0.0.1:8767
+127.0.0.1 - - [21/Nov/2026 16:55:11] "GET /agy-q/fixtures/test-04-notes-app.html HTTP/1.1" 200 -
+127.0.0.1 - - [21/Nov/2026 16:55:11] code 404, message File not found
+127.0.0.1 - - [21/Nov/2026 16:55:11] "GET /favicon.ico HTTP/1.1" 404 -
+[q04] open fixture ok 1671ms detail=04aebc94-c81b-486b-89e1-d0b22affc659 error=None
+127.0.0.1 - - [21/Nov/2026 16:55:12] "GET /agy-q/fixtures/test-04-notes-app.html HTTP/1.1" 200 -
+127.0.0.1 - - [21/Nov/2026 16:55:12] code 404, message File not found
+127.0.0.1 - - [21/Nov/2026 16:55:12] "GET /favicon.ico HTTP/1.1" 404 -
+[q04] clear storage + reload ok 1044ms detail=(None, None) error=None
+[q04] check body visible ok 2ms detail=visible error=None
+[q04] CHECK ok body renders visible (no hidden-body incident): visible
+[q04] read sidebar notes ok 2ms detail=['System Architecture', 'Storage Engine', 'Security Model'] error=None
+[q04] CHECK ok 3 initial notes: ['System Architecture', 'Storage Engine', 'Security Model']
+[q04] CHECK ok initial notes are the 3 expected: ['System Architecture', 'Storage Engine', 'Security Model']
+[q04] click New Note ok 67ms detail=None error=None
+[q04] type note title ok 11ms detail=None error=None
+[q04] type note tags ok 9ms detail=None error=None
+[q04] type note body ok 20ms detail=None error=None
+[q04] click Save Note ok 59ms detail=None error=None
+[q04] read sidebar after create ok 2ms detail=['System Architecture # System Architecture Overview of microkernel and userspace compositors. Tags: #architecture, #core #architecture#core', 'Storage Engine # Storage Engine LSM-tree write optimization and caching strategies. Tags: #storage, #performance #storage#performance', 'Security Model # Security Model Capability-based sandboxing and IPC permission tokens. Tags: #security, #architecture #security#architecture', 'Memory Tiering RFC # Memory Tiering Architecture This proposal integrates tiered RAM and CXL memory. Related: [[Storage Engine]] and [[Security Model]]. #rfc#performance#memory'] error=None
+[q04] CHECK ok Memory Tiering RFC in sidebar: ['System Architecture # System Architecture Overview of microkernel and userspace compositors. Tags: #architecture, #core #architecture#core', 'Storage Engine # Storage Engine LSM-tree write optimization and caching strategies. Tags: #storage, #performance #storage#performance', 'Security Model # Security Model Capability-based sandboxing and IPC permission tokens. Tags: #security, #architecture #security#architecture', 'Memory Tiering RFC # Memory Tiering Architecture This proposal integrates tiered RAM and CXL memory. Related: [[Storage Engine]] and [[Security Model]]. #rfc#performance#memory']
+[q04] CHECK ok new note shows tags rfc, performance, memory: ['System Architecture # System Architecture Overview of microkernel and userspace compositors. Tags: #architecture, #core #architecture#core', 'Storage Engine # Storage Engine LSM-tree write optimization and caching strategies. Tags: #storage, #performance #storage#performance', 'Security Model # Security Model Capability-based sandboxing and IPC permission tokens. Tags: #security, #architecture #security#architecture', 'Memory Tiering RFC # Memory Tiering Architecture This proposal integrates tiered RAM and CXL memory. Related: [[Storage Engine]] and [[Security Model]]. #rfc#performance#memory']
+[q04] switch to Preview tab ok 55ms detail=None error=None
+[q04] read preview HTML ok 2ms detail=<p></p><h1>Memory Tiering Architecture</h1><p></p><p>This proposal integrates tiered RAM and CXL memory.</p><p>Related: <a class="wiki-link" id="link-note-Storage Engine" onclick="openNoteByName('Storage Engine')">Storage Engine</a> and <a class="wiki-link" id="link-note-Security Model" onclick="openNoteByName('Security Model')">Security Model</a>.</p> error=None
+[q04] check wiki link rendered ok 1ms detail=True error=None
+[q04] CHECK ok wiki link renders in preview after fix: <p></p><h1>Memory Tiering Architecture</h1><p></p><p>This proposal integrates tiered RAM and CXL memory.</p><p>Related: <a class="wiki-link" id="link-note-Storage Engine" onclick="openNoteByName('Storage Engine')">Storage Engine</a> and <a class="wiki-link" id="link-note-Security Model" onclick="ope
+[q04] CHECK ok no raw [[...]] markup survives in preview: <p></p><h1>Memory Tiering Architecture</h1><p></p><p>This proposal integrates tiered RAM and CXL memory.</p><p>Related: <a class="wiki-link" id="link-note-Storage Engine" onclick="openNoteByName('Storage Engine')">Storage Engine</a> and <a class="wiki-link" id="link-note-Security Model" onclick="ope
+[q04] CHECK ok paragraph breaks render as </p><p>: <p></p><h1>Memory Tiering Architecture</h1><p></p><p>This proposal integrates tiered RAM and CXL memory.</p><p>Related: <a class="wiki-link" id="link-note-Storage Engine" onclick="openNoteByName('Storage Engine')">Storage Engine</a> and <a class="wiki-link" id="link-note-Security Model" onclick="ope
+[q04] click rendered wiki link ok 57ms detail=None error=None
+[q04] read current note title after link click ok 2ms detail=Storage Engine error=None
+[q04] CHECK ok wiki link navigates to Storage Engine: Storage Engine
+[q04] read backlinks box ok 5ms detail=Linked from: Memory Tiering RFC error=None
+[q04] CHECK ok backlink shows Memory Tiering RFC: Linked from: Memory Tiering RFC
+[q04] switch to Edit tab ok 56ms detail=None error=None
+[q04] append reciprocal link ok 15ms detail=appended error=None
+[q04] click Save Note again ok 59ms detail=None error=None
+[q04] click Pin Note ok 58ms detail=None error=None
+[q04] check PINNED section content ok 2ms detail=PINNED
+Storage Engine
+📌
+# Storage Engine LSM-tree write optimization and caching strategies. Tags: #storage, #performance Reference: [[Memory Tiering RFC]].
+#storage
+#performance
+ error=None
+[q04] CHECK ok PINNED section lists Storage Engine: PINNED
+Storage Engine
+📌
+# Storage Engine LSM-tree write optimization and caching strategies. Tags: #storage, #performance Reference: [[Memory Tiering RFC]].
+#storage
+#performance
+
+[q04] search #performance ok 15ms detail=None error=None
+[q04] read filtered notes ok 2ms detail=['Storage Engine', 'Memory Tiering RFC'] error=None
+[q04] CHECK ok tag search matches exactly 2 notes: ['Storage Engine', 'Memory Tiering RFC']
+[q04] CHECK ok matches are Storage Engine + Memory Tiering RFC: ['Storage Engine', 'Memory Tiering RFC']
+[q04] clear search ok 2ms detail=cleared error=None
+[q04] open Security Model note ok 4ms detail=clicked: Security Model error=None
+[q04] read current title before archive ok 2ms detail=Security Model error=None
+[q04] CHECK ok Security Model opened: Security Model
+[q04] click Archive Note ok 56ms detail=None error=None
+[q04] read sidebar after archive ok 2ms detail=['Storage Engine', 'System Architecture', 'Memory Tiering RFC'] error=None
+[q04] CHECK ok Security Model removed from active list: ['Storage Engine', 'System Architecture', 'Memory Tiering RFC']
+[q04] open Archived view ok 56ms detail=None error=None
+[q04] read archived list ok 2ms detail=['Security Model'] error=None
+[q04] CHECK ok Security Model in archived list: ['Security Model']
+[q04] return to All Notes view ok 56ms detail=None error=None
+[q04] read active count badge ok 5ms detail=3 error=None
+[q04] CHECK ok active count badge is 3: 3
+[q04] click Export Notes Manifest ok 58ms detail=None error=None
+[q04] read export summary ok 5ms detail=Active: 3, Archived: 1, Pinned: 1 error=None
+[q04] CHECK ok manifest says Active: 3, Archived: 1, Pinned: 1: Active: 3, Archived: 1, Pinned: 1
+[q04] dismiss export modal ok 56ms detail=None error=None
+[q04] re-open Memory Tiering RFC ok 3ms detail=clicked: Memory Tiering RFC error=None
+[q04] read backlinks of new note ok 6ms detail=Linked from: Storage Engine error=None
+[q04] CHECK ok reciprocal backlink shows Storage Engine: Linked from: Storage Engine
+RESULT {"test": "q04", "pass": true, "failures": [], "details": {"initialNotes": ["System Architecture", "Storage Engine", "Security Model"], "notesAfterCreate": ["System Architecture # System Architecture Overview of microkernel and userspace compositors. Tags: #architecture, #core #architecture#core", "Storage Engine # Storage Engine LSM-tree write optimization and caching strategies. Tags: #storage, #performance #storage#performance", "Security Model # Security Model Capability-based sandboxing and IPC permission tokens. Tags: #security, #architecture #security#architecture", "Memory Tiering RFC # Memory Tiering Architecture This proposal integrates tiered RAM and CXL memory. Related: [[Storage Engine]] and [[Security Model]]. #rfc#performance#memory"], "previewHtml": "<p></p><h1>Memory Tiering Architecture</h1><p></p><p>This proposal integrates tiered RAM and CXL memory.</p><p>Related: <a class=\"wiki-link\" id=\"link-note-Storage Engine\" onclick=\"openNoteByName('Storage Engine')\">Storage Engine</a> and <a class=\"wiki-link\" id=\"link-note-Security Model\" onclick=\"openNoteByName('Security Model')\">Security Model</a>.</p>", "wikiLinkRendered": true, "titleAfterLinkClick": "Storage Engine", "backlinksStorageEngine": "Linked from: Memory Tiering RFC", "pinnedSection": "PINNED\nStorage Engine\n📌\n# Storage Engine LSM-tree write optimization and caching strategies. Tags: #storage, #performance Reference: [[Memory Tiering RFC]].\n#storage\n#performance\n", "performanceSearch": ["Storage Engine", "Memory Tiering RFC"], "notesAfterArchive": ["Storage Engine", "System Architecture", "Memory Tiering RFC"], "archivedList": ["Security Model"], "activeCount": "3", "exportSummary": "Active: 3, Archived: 1, Pinned: 1", "backlinksNewNote": "Linked from: Storage Engine"}, "started_at": "2026-11-21T09:55:10.434661+00:00", "finished_at": "2026-11-21T09:55:14.606731+00:00", "elapsed_ms": 4172}
+SUMMARY 1/1 passed, total_ms=4172

@@ -1,0 +1,830 @@
+serving at http://127.0.0.1:8767
+127.0.0.1 - - [21/Nov/2026 16:56:11] "GET /agy-q/fixtures/test-04-notes-app.html HTTP/1.1" 304 -
+[q04] open fixture ok 1629ms detail=77bdc4fa-09f4-4105-8806-7e44dced0dd6 error=None
+127.0.0.1 - - [21/Nov/2026 16:56:12] "GET /agy-q/fixtures/test-04-notes-app.html HTTP/1.1" 200 -
+127.0.0.1 - - [21/Nov/2026 16:56:12] code 404, message File not found
+127.0.0.1 - - [21/Nov/2026 16:56:12] "GET /favicon.ico HTTP/1.1" 404 -
+[q04] clear storage + reload ok 1039ms detail=(None, None) error=None
+[q04] check body visible ok 2ms detail=visible error=None
+[q04] CHECK ok body renders visible (no hidden-body incident): visible
+[q04] read sidebar notes ok 2ms detail=['System Architecture', 'Storage Engine', 'Security Model'] error=None
+[q04] CHECK ok 3 initial notes: ['System Architecture', 'Storage Engine', 'Security Model']
+[q04] CHECK ok initial notes are the 3 expected: ['System Architecture', 'Storage Engine', 'Security Model']
+[q04] click New Note ok 70ms detail=None error=None
+[q04] type note title ok 9ms detail=None error=None
+[q04] type note tags ok 8ms detail=None error=None
+[q04] type note body ok 19ms detail=None error=None
+[q04] click Save Note ok 58ms detail=None error=None
+[q04] read sidebar after create ok 2ms detail=['System Architecture # System Architecture Overview of microkernel and userspace compositors. Tags: #architecture, #core #architecture#core', 'Storage Engine # Storage Engine LSM-tree write optimization and caching strategies. Tags: #storage, #performance #storage#performance', 'Security Model # Security Model Capability-based sandboxing and IPC permission tokens. Tags: #security, #architecture #security#architecture', 'Memory Tiering RFC # Memory Tiering Architecture This proposal integrates tiered RAM and CXL memory. Related: [[Storage Engine]] and [[Security Model]]. #rfc#performance#memory'] error=None
+[q04] CHECK ok Memory Tiering RFC in sidebar: ['System Architecture # System Architecture Overview of microkernel and userspace compositors. Tags: #architecture, #core #architecture#core', 'Storage Engine # Storage Engine LSM-tree write optimization and caching strategies. Tags: #storage, #performance #storage#performance', 'Security Model # Security Model Capability-based sandboxing and IPC permission tokens. Tags: #security, #architecture #security#architecture', 'Memory Tiering RFC # Memory Tiering Architecture This proposal integrates tiered RAM and CXL memory. Related: [[Storage Engine]] and [[Security Model]]. #rfc#performance#memory']
+[q04] CHECK ok new note shows tags rfc, performance, memory: ['System Architecture # System Architecture Overview of microkernel and userspace compositors. Tags: #architecture, #core #architecture#core', 'Storage Engine # Storage Engine LSM-tree write optimization and caching strategies. Tags: #storage, #performance #storage#performance', 'Security Model # Security Model Capability-based sandboxing and IPC permission tokens. Tags: #security, #architecture #security#architecture', 'Memory Tiering RFC # Memory Tiering Architecture This proposal integrates tiered RAM and CXL memory. Related: [[Storage Engine]] and [[Security Model]]. #rfc#performance#memory']
+[q04] switch to Preview tab ok 56ms detail=None error=None
+[q04] read preview HTML ok 2ms detail=<p></p><h1>Memory Tiering Architecture</h1><p></p><p>This proposal integrates tiered RAM and CXL memory.</p><p>Related: <a class="wiki-link" id="link-note-Storage Engine" onclick="openNoteByName('Storage Engine')">Storage Engine</a> and <a class="wiki-link" id="link-note-Security Model" onclick="openNoteByName('Security Model')">Security Model</a>.</p> error=None
+[q04] check wiki link rendered ok 1ms detail=True error=None
+[q04] CHECK ok wiki link renders in preview after fix: <p></p><h1>Memory Tiering Architecture</h1><p></p><p>This proposal integrates tiered RAM and CXL memory.</p><p>Related: <a class="wiki-link" id="link-note-Storage Engine" onclick="openNoteByName('Storage Engine')">Storage Engine</a> and <a class="wiki-link" id="link-note-Security Model" onclick="ope
+[q04] CHECK ok no raw [[...]] markup survives in preview: <p></p><h1>Memory Tiering Architecture</h1><p></p><p>This proposal integrates tiered RAM and CXL memory.</p><p>Related: <a class="wiki-link" id="link-note-Storage Engine" onclick="openNoteByName('Storage Engine')">Storage Engine</a> and <a class="wiki-link" id="link-note-Security Model" onclick="ope
+[q04] CHECK ok paragraph breaks render as </p><p>: <p></p><h1>Memory Tiering Architecture</h1><p></p><p>This proposal integrates tiered RAM and CXL memory.</p><p>Related: <a class="wiki-link" id="link-note-Storage Engine" onclick="openNoteByName('Storage Engine')">Storage Engine</a> and <a class="wiki-link" id="link-note-Security Model" onclick="ope
+[q04] click rendered wiki link ok 56ms detail=None error=None
+[q04] read current note title after link click ok 2ms detail=Storage Engine error=None
+[q04] CHECK ok wiki link navigates to Storage Engine: Storage Engine
+[q04] read backlinks box ok 6ms detail=Linked from: Memory Tiering RFC error=None
+[q04] CHECK ok backlink shows Memory Tiering RFC: Linked from: Memory Tiering RFC
+[q04] switch to Edit tab ok 56ms detail=None error=None
+[q04] append reciprocal link ok 15ms detail=appended error=None
+[q04] click Save Note again ok 58ms detail=None error=None
+[q04] click Pin Note ok 58ms detail=None error=None
+[q04] check PINNED section content ok 2ms detail=PINNED
+Storage Engine
+📌
+# Storage Engine LSM-tree write optimization and caching strategies. Tags: #storage, #performance Reference: [[Memory Tiering RFC]].
+#storage
+#performance
+ error=None
+[q04] CHECK ok PINNED section lists Storage Engine: PINNED
+Storage Engine
+📌
+# Storage Engine LSM-tree write optimization and caching strategies. Tags: #storage, #performance Reference: [[Memory Tiering RFC]].
+#storage
+#performance
+
+[q04] search #performance ok 12ms detail=None error=None
+[q04] read filtered notes ok 2ms detail=['Storage Engine', 'Memory Tiering RFC'] error=None
+[q04] CHECK ok tag search matches exactly 2 notes: ['Storage Engine', 'Memory Tiering RFC']
+[q04] CHECK ok matches are Storage Engine + Memory Tiering RFC: ['Storage Engine', 'Memory Tiering RFC']
+[q04] clear search ok 2ms detail=cleared error=None
+[q04] open Security Model note ok 3ms detail=clicked: Security Model error=None
+[q04] read current title before archive ok 2ms detail=Security Model error=None
+[q04] CHECK ok Security Model opened: Security Model
+[q04] click Archive Note ok 57ms detail=None error=None
+[q04] read sidebar after archive ok 2ms detail=['Storage Engine', 'System Architecture', 'Memory Tiering RFC'] error=None
+[q04] CHECK ok Security Model removed from active list: ['Storage Engine', 'System Architecture', 'Memory Tiering RFC']
+[q04] open Archived view ok 56ms detail=None error=None
+[q04] read archived list ok 2ms detail=['Security Model'] error=None
+[q04] CHECK ok Security Model in archived list: ['Security Model']
+[q04] return to All Notes view ok 57ms detail=None error=None
+[q04] read active count badge ok 4ms detail=3 error=None
+[q04] CHECK ok active count badge is 3: 3
+[q04] click Export Notes Manifest ok 56ms detail=None error=None
+[q04] read export summary ok 4ms detail=Active: 3, Archived: 1, Pinned: 1 error=None
+[q04] CHECK ok manifest says Active: 3, Archived: 1, Pinned: 1: Active: 3, Archived: 1, Pinned: 1
+[q04] dismiss export modal ok 56ms detail=None error=None
+[q04] re-open Memory Tiering RFC ok 4ms detail=clicked: Memory Tiering RFC error=None
+[q04] read backlinks of new note ok 6ms detail=Linked from: Storage Engine error=None
+[q04] CHECK ok reciprocal backlink shows Storage Engine: Linked from: Storage Engine
+RESULT {"test": "q04", "pass": true, "failures": [], "details": {"initialNotes": ["System Architecture", "Storage Engine", "Security Model"], "notesAfterCreate": ["System Architecture # System Architecture Overview of microkernel and userspace compositors. Tags: #architecture, #core #architecture#core", "Storage Engine # Storage Engine LSM-tree write optimization and caching strategies. Tags: #storage, #performance #storage#performance", "Security Model # Security Model Capability-based sandboxing and IPC permission tokens. Tags: #security, #architecture #security#architecture", "Memory Tiering RFC # Memory Tiering Architecture This proposal integrates tiered RAM and CXL memory. Related: [[Storage Engine]] and [[Security Model]]. #rfc#performance#memory"], "previewHtml": "<p></p><h1>Memory Tiering Architecture</h1><p></p><p>This proposal integrates tiered RAM and CXL memory.</p><p>Related: <a class=\"wiki-link\" id=\"link-note-Storage Engine\" onclick=\"openNoteByName('Storage Engine')\">Storage Engine</a> and <a class=\"wiki-link\" id=\"link-note-Security Model\" onclick=\"openNoteByName('Security Model')\">Security Model</a>.</p>", "wikiLinkRendered": true, "titleAfterLinkClick": "Storage Engine", "backlinksStorageEngine": "Linked from: Memory Tiering RFC", "pinnedSection": "PINNED\nStorage Engine\n📌\n# Storage Engine LSM-tree write optimization and caching strategies. Tags: #storage, #performance Reference: [[Memory Tiering RFC]].\n#storage\n#performance\n", "performanceSearch": ["Storage Engine", "Memory Tiering RFC"], "notesAfterArchive": ["Storage Engine", "System Architecture", "Memory Tiering RFC"], "archivedList": ["Security Model"], "activeCount": "3", "exportSummary": "Active: 3, Archived: 1, Pinned: 1", "backlinksNewNote": "Linked from: Storage Engine"}, "started_at": "2026-11-21T09:56:10.832056+00:00", "finished_at": "2026-11-21T09:56:14.950400+00:00", "elapsed_ms": 4118}
+127.0.0.1 - - [21/Nov/2026 16:56:15] "GET /fcc-k/fixtures/test-01-spreadsheet.html HTTP/1.1" 200 -
+[f01] open fixture ok 1638ms detail=2f0abdc3-9735-4cfb-a45e-186ae3ab5bfb error=None
+[f01] check body visible ok 2ms detail=visible error=None
+[f01] CHECK ok body renders visible: visible
+[f01] read headers ok 1ms detail=,Date,Item,Units,Price,Total error=None
+[f01] CHECK ok headers Date Item Units Price Total: ,Date,Item,Units,Price,Total
+[f01] TRAP: click td#a2 directly ok 2ms detail=None error=None
+[f01] check td click selected nothing ok 1ms detail=False error=None
+[f01] CHECK ok td click does NOT select (fixture trap): False
+[f01] select A2 ok 67ms detail=None error=None
+[f01] type 2026-11-16 into A2 ok 10ms detail=None error=None
+[f01] press type for A2 ok 2ms detail=clicked: type error=None
+[f01] select B2 ok 57ms detail=None error=None
+[f01] type Widget into B2 ok 7ms detail=None error=None
+[f01] press type for B2 ok 3ms detail=clicked: type error=None
+[f01] select C2 ok 57ms detail=None error=None
+[f01] type 12 into C2 ok 7ms detail=None error=None
+[f01] press type for C2 ok 2ms detail=clicked: type error=None
+[f01] select D2 ok 58ms detail=None error=None
+[f01] type 45000 into D2 ok 7ms detail=None error=None
+[f01] press type for D2 ok 2ms detail=clicked: type error=None
+[f01] select E2 ok 57ms detail=None error=None
+[f01] type =C2*D2 into E2 ok 6ms detail=None error=None
+[f01] press type for E2 ok 3ms detail=clicked: type error=None
+[f01] press Enter for E2 ok 2ms detail=clicked: Enter error=None
+[f01] select A3 ok 57ms detail=None error=None
+[f01] type 2026-11-17 into A3 ok 5ms detail=None error=None
+[f01] press type for A3 ok 2ms detail=clicked: type error=None
+[f01] select B3 ok 56ms detail=None error=None
+[f01] type Gadget into B3 ok 6ms detail=None error=None
+[f01] press type for B3 ok 3ms detail=clicked: type error=None
+[f01] select C3 ok 58ms detail=None error=None
+[f01] type 7 into C3 ok 7ms detail=None error=None
+[f01] press type for C3 ok 3ms detail=clicked: type error=None
+[f01] select D3 ok 57ms detail=None error=None
+[f01] type 82000 into D3 ok 39ms detail=None error=None
+[f01] press type for D3 ok 3ms detail=clicked: type error=None
+[f01] select E3 ok 58ms detail=None error=None
+[f01] type =C3*D3 into E3 ok 6ms detail=None error=None
+[f01] press type for E3 ok 2ms detail=clicked: type error=None
+[f01] press Enter for E3 ok 2ms detail=clicked: Enter error=None
+[f01] select A4 ok 55ms detail=None error=None
+[f01] type 2026-11-18 into A4 ok 8ms detail=None error=None
+[f01] press type for A4 ok 2ms detail=clicked: type error=None
+[f01] select B4 ok 56ms detail=None error=None
+[f01] type Tool into B4 ok 6ms detail=None error=None
+[f01] press type for B4 ok 3ms detail=clicked: type error=None
+[f01] select C4 ok 56ms detail=None error=None
+[f01] type 5 into C4 ok 6ms detail=None error=None
+[f01] press type for C4 ok 2ms detail=clicked: type error=None
+[f01] select D4 ok 57ms detail=None error=None
+[f01] type 150000 into D4 ok 7ms detail=None error=None
+[f01] press type for D4 ok 2ms detail=clicked: type error=None
+[f01] select E4 ok 56ms detail=None error=None
+[f01] type =C4*D4 into E4 ok 7ms detail=None error=None
+[f01] press type for E4 ok 2ms detail=clicked: type error=None
+[f01] press Enter for E4 ok 2ms detail=clicked: Enter error=None
+[f01] select E5 ok 56ms detail=None error=None
+[f01] type =SUM(E2:E4) into E5 ok 7ms detail=None error=None
+[f01] press type for E5 ok 2ms detail=clicked: type error=None
+[f01] press Enter for E5 ok 2ms detail=clicked: Enter error=None
+[f01] select E6 ok 55ms detail=None error=None
+[f01] type =AVERAGE(E2:E4) into E6 ok 5ms detail=None error=None
+[f01] press type for E6 ok 3ms detail=clicked: type error=None
+[f01] press Enter for E6 ok 2ms detail=clicked: Enter error=None
+[f01] select E7 ok 56ms detail=None error=None
+[f01] type =COUNT(E2:E4) into E7 ok 8ms detail=None error=None
+[f01] press type for E7 ok 3ms detail=clicked: type error=None
+[f01] press Enter for E7 ok 2ms detail=clicked: Enter error=None
+[f01] read E7 after wrong formula ok 5ms detail=COUNT text error=None
+[f01] CHECK ok E7 shows COUNT text after wrong formula: COUNT text
+[f01] select E7 ok 56ms detail=None error=None
+[f01] type corrected formula ok 8ms detail=None error=None
+[f01] press type for correction ok 2ms detail=clicked: type error=None
+[f01] press Enter for correction ok 2ms detail=clicked: Enter error=None
+[f01] read all result cells ok 2ms detail={'c2': '12', 'c3': '7', 'c4': '5', 'e2': '540000', 'e3': '574000', 'e4': '750000', 'e5': '1864000', 'e6': '621333', 'e7': '3'} error=None
+[f01] CHECK ok E2 == 540000: e2=540000
+[f01] CHECK ok E3 == 574000: e3=574000
+[f01] CHECK ok E4 == 750000: e4=750000
+[f01] CHECK ok E5 == 1864000: e5=1864000
+[f01] CHECK ok E6 == 621333: e6=621333
+[f01] CHECK ok E7 == 3: e7=3
+RESULT {"test": "f01", "pass": true, "failures": [], "details": {"tdClickSelects": false, "e7AfterCount": "COUNT text", "endState": {"c2": "12", "c3": "7", "c4": "5", "e2": "540000", "e3": "574000", "e4": "750000", "e5": "1864000", "e6": "621333", "e7": "3"}}, "started_at": "2026-11-21T09:56:14.950492+00:00", "finished_at": "2026-11-21T09:56:18.554317+00:00", "elapsed_ms": 3604}
+127.0.0.1 - - [21/Nov/2026 16:56:19] "GET /fcc-k/fixtures/test-02-email.html HTTP/1.1" 200 -
+[f02] open fixture ok 1633ms detail=e23cc6d7-5e4d-48e2-8c45-0428f29d69a1 error=None
+[f02] check body visible ok 3ms detail=visible error=None
+[f02] CHECK ok body renders visible: visible
+[f02] count inbox rows ok 2ms detail=6 error=None
+[f02] CHECK ok inbox shows 6 messages: 6
+[f02] open message 1 ok 66ms detail=None error=None
+[f02] read message 1 body ok 5ms detail=Subject: Vendor quote
+From: vendor@example.com
+Body: Quote for Widget: 45000 per unit, 12 units. Total 540000. Valid 7 days. error=None
+[f02] CHECK ok message 1 quotes price 45000: Subject: Vendor quote
+From: vendor@example.com
+Body: Quote for Widget: 45000 per unit, 12 units. Total 540000. Valid 7 days.
+[f02] mark message 1 read ok 58ms detail=None error=None
+[f02] read msg1 row after read ok 5ms detail=Vendor quote - vendor@example.com (read) error=None
+[f02] CHECK ok message 1 shows (read): Vendor quote - vendor@example.com (read)
+[f02] open message 2 ok 56ms detail=None error=None
+[f02] read message 2 body ok 5ms detail=Subject: Customer complaint
+From: cust@example.com
+Body: Complaint: the Gadget arrived damaged. Please arrange a replacement. error=None
+[f02] CHECK ok message 2 is the complaint: Subject: Customer complaint
+From: cust@example.com
+Body: Complaint: the Gadget arrived damaged. Please arrange a replacement.
+[f02] flag message 2 ok 56ms detail=None error=None
+[f02] check msg2 flagged class ok 2ms detail=True error=None
+[f02] CHECK ok message 2 flagged: True
+[f02] open message 3 ok 55ms detail=None error=None
+[f02] read message 3 body ok 5ms detail=Subject: Meeting request
+From: boss@example.com
+Body: Meeting request: project sync on Tuesday 2026-11-24 at 10:00, 30 minutes. error=None
+[f02] CHECK ok message 3 has meeting time 10:00: Subject: Meeting request
+From: boss@example.com
+Body: Meeting request: project sync on Tuesday 2026-11-24 at 10:00, 30 minutes.
+[f02] mark message 3 read ok 56ms detail=None error=None
+[f02] open message 4 ok 57ms detail=None error=None
+[f02] read message 4 subject ok 5ms detail=Subject: Newsletter A
+From: news1@example.com
+Body: Newsletter A: weekly roundup. error=None
+[f02] CHECK ok message 4 is Newsletter A: Subject: Newsletter A
+From: news1@example.com
+Body: Newsletter A: weekly roundup.
+[f02] archive message 4 ok 55ms detail=None error=None
+[f02] read inbox ids after archive 4 ok 2ms detail=['msg1', 'msg2', 'msg3', 'msg5', 'msg6'] error=None
+[f02] CHECK ok message 4 gone from inbox: ['msg1', 'msg2', 'msg3', 'msg5', 'msg6']
+[f02] open message 5 ok 56ms detail=None error=None
+[f02] archive message 5 ok 56ms detail=None error=None
+[f02] read inbox ids after archive 5 ok 2ms detail=['msg1', 'msg2', 'msg3', 'msg6'] error=None
+[f02] CHECK ok message 5 gone from inbox: ['msg1', 'msg2', 'msg3', 'msg6']
+[f02] open message 6 ok 55ms detail=None error=None
+[f02] mark message 6 read ok 56ms detail=None error=None
+[f02] star message 6 ok 56ms detail=None error=None
+[f02] read msg6 row ok 2ms detail={'flagged': True, 'text': 'Vendor follow-up - vendor@example.com (read)'} error=None
+[f02] CHECK ok message 6 read: {'flagged': True, 'text': 'Vendor follow-up - vendor@example.com (read)'}
+[f02] CHECK ok message 6 starred: {'flagged': True, 'text': 'Vendor follow-up - vendor@example.com (read)'}
+[f02] click Compose ok 56ms detail=None error=None
+[f02] type To vendor ok 13ms detail=None error=None
+[f02] type Subject ok 11ms detail=None error=None
+[f02] type body paragraph ok 19ms detail=None error=None
+[f02] click Send ok 59ms detail=None error=None
+[f02] read send confirmation ok 5ms detail=Message sent. error=None
+[f02] CHECK ok send confirms Message sent: Message sent.
+[f02] open Sent folder ok 55ms detail=None error=None
+[f02] read Sent folder ok 5ms detail=Subject: Re: vendor quote - price correction
+To: vendor@example.com
+Body: The original quote was 45000 per unit for 12 units. Please correct the price to 42000 per unit. The total should be recalculated accordingly. error=None
+[f02] CHECK ok Sent has corrected subject: Subject: Re: vendor quote - price correction
+To: vendor@example.com
+Body: The original quote was 45000 per unit for 12 units. Please correct the price to 42000 per unit. The total should be recalculated accordingly.
+[f02] CHECK ok Sent To is vendor: Subject: Re: vendor quote - price correction
+To: vendor@example.com
+Body: The original quote was 45000 per unit for 12 units. Please correct the price to 42000 per unit. The total should be recalculated accordingly.
+[f02] CHECK ok Sent body has both prices: Subject: Re: vendor quote - price correction
+To: vendor@example.com
+Body: The original quote was 45000 per unit for 12 units. Please correct the price to 42000 per unit. The total should be recalculated accordingly.
+[f02] return to Inbox ok 55ms detail=None error=None
+[f02] read final inbox ids ok 2ms detail=['msg1', 'msg2', 'msg3', 'msg6'] error=None
+[f02] CHECK ok inbox holds only 1,2,3,6: ['msg1', 'msg2', 'msg3', 'msg6']
+[f02] re-check msg2 flagged ok 1ms detail=True error=None
+[f02] CHECK ok message 2 still flagged: True
+[f02] re-check msg1 read ok 5ms detail=Vendor quote - vendor@example.com (read) error=None
+[f02] CHECK ok message 1 still read: Vendor quote - vendor@example.com (read)
+RESULT {"test": "f02", "pass": true, "failures": [], "details": {"inboxCount": 6, "msg1": "Subject: Vendor quote\nFrom: vendor@example.com\nBody: Quote for Widget: 45000 per unit, 12 units. Total 540000. Valid 7 days.", "msg2": "Subject: Customer complaint\nFrom: cust@example.com\nBody: Complaint: the Gadget arrived damaged. Please arrange a replacement.", "msg3": "Subject: Meeting request\nFrom: boss@example.com\nBody: Meeting request: project sync on Tuesday 2026-11-24 at 10:00, 30 minutes.", "msg4": "Subject: Newsletter A\nFrom: news1@example.com\nBody: Newsletter A: weekly roundup.", "msg6": {"flagged": true, "text": "Vendor follow-up - vendor@example.com (read)"}, "sentFolder": "Subject: Re: vendor quote - price correction\nTo: vendor@example.com\nBody: The original quote was 45000 per unit for 12 units. Please correct the price to 42000 per unit. The total should be recalculated accordingly.", "finalInbox": ["msg1", "msg2", "msg3", "msg6"]}, "started_at": "2026-11-21T09:56:18.554392+00:00", "finished_at": "2026-11-21T09:56:21.889412+00:00", "elapsed_ms": 3335}
+127.0.0.1 - - [21/Nov/2026 16:56:22] "GET /fcc-k/fixtures/test-03-calendar.html HTTP/1.1" 200 -
+[f03] open fixture ok 1630ms detail=6e649958-a37d-4949-aace-a8af0d1432b2 error=None
+[f03] check body visible ok 2ms detail=visible error=None
+[f03] CHECK ok body renders visible: visible
+[f03] read day headers ok 2ms detail=Tue,Wed,Thu,Fri,Sat error=None
+[f03] CHECK ok week shows Tue-Sat: Tue,Wed,Thu,Fri,Sat
+[f03] read busy slots ok 2ms detail=['Tue 9:00', 'Thu 9:00', 'Sat 9:00', 'Wed 10:00', 'Fri 10:00', 'Wed 11:00', 'Thu 12:00', 'Tue 13:00', 'Wed 14:00', 'Sat 15:00'] error=None
+[f03] CHECK ok Tue busy at 9:00 and 13:00: ['Tue 9:00', 'Thu 9:00', 'Sat 9:00', 'Wed 10:00', 'Fri 10:00', 'Wed 11:00', 'Thu 12:00', 'Tue 13:00', 'Wed 14:00', 'Sat 15:00']
+[f03] click busy Tue 9:00 slot ok 64ms detail=None error=None
+[f03] read grid message ok 5ms detail=That slot is busy. Pick a free (white) slot. error=None
+[f03] CHECK ok busy slot refuses with message: That slot is busy. Pick a free (white) slot.
+[f03] dialog stays hidden after busy click ok 2ms detail=none error=None
+[f03] CHECK ok no dialog on busy click: none
+[f03] click free Tue 10:00 slot ok 59ms detail=None error=None
+[f03] dialog visible after free click ok 2ms detail=True error=None
+[f03] CHECK ok dialog opens on free slot: True
+[f03] read dialog day ok 5ms detail=Tue error=None
+[f03] CHECK ok dialog day is Tue: Tue
+[f03] read dialog hour ok 5ms detail=10:00 error=None
+[f03] CHECK ok dialog hour is 10:00: 10:00
+[f03] set title ok 15ms detail=None error=None
+[f03] set date Tue ok 2ms detail=Tue error=None
+[f03] set start 10:00 ok 8ms detail=None error=None
+[f03] set duration 30 ok 2ms detail=30 error=None
+[f03] set attendee 1 ok 13ms detail=None error=None
+[f03] set attendee 2 ok 8ms detail=None error=None
+[f03] set reminder 10 ok 2ms detail=10 error=None
+[f03] click Save ok 58ms detail=None error=None
+[f03] read new event cell ok 2ms detail={'day': 'Tue', 'hour': '10', 'text': 'Project sync 10:00-10:30'} error=None
+[f03] CHECK ok exactly one new event cell: {'day': 'Tue', 'hour': '10', 'text': 'Project sync 10:00-10:30'}
+[f03] CHECK ok event on Tue: {'day': 'Tue', 'hour': '10', 'text': 'Project sync 10:00-10:30'}
+[f03] CHECK ok event at 10:00: {'day': 'Tue', 'hour': '10', 'text': 'Project sync 10:00-10:30'}
+[f03] CHECK ok cell shows Project sync: {'day': 'Tue', 'hour': '10', 'text': 'Project sync 10:00-10:30'}
+[f03] read event detail ok 4ms detail=Title: Project sync | Day: Tue | Start: 10:00 | Duration: 30 minutes | Attendees: teammate1@example.com, teammate2@example.com | Reminder: 10 minutes before error=None
+[f03] CHECK ok detail has title: Title: Project sync | Day: Tue | Start: 10:00 | Duration: 30 minutes | Attendees: teammate1@example.com, teammate2@example.com | Reminder: 10 minutes before
+[f03] CHECK ok detail duration 30 minutes: Title: Project sync | Day: Tue | Start: 10:00 | Duration: 30 minutes | Attendees: teammate1@example.com, teammate2@example.com | Reminder: 10 minutes before
+[f03] CHECK ok detail reminder 10 minutes: Title: Project sync | Day: Tue | Start: 10:00 | Duration: 30 minutes | Attendees: teammate1@example.com, teammate2@example.com | Reminder: 10 minutes before
+[f03] CHECK ok detail has 2 attendees: Title: Project sync | Day: Tue | Start: 10:00 | Duration: 30 minutes | Attendees: teammate1@example.com, teammate2@example.com | Reminder: 10 minutes before
+[f03] CHECK ok event not on any other day: new cells count
+RESULT {"test": "f03", "pass": true, "failures": [], "details": {"days": "Tue,Wed,Thu,Fri,Sat", "busySlots": ["Tue 9:00", "Thu 9:00", "Sat 9:00", "Wed 10:00", "Fri 10:00", "Wed 11:00", "Thu 12:00", "Tue 13:00", "Wed 14:00", "Sat 15:00"], "busyClickMsg": "That slot is busy. Pick a free (white) slot.", "newCell": {"day": "Tue", "hour": "10", "text": "Project sync 10:00-10:30"}, "eventDetail": "Title: Project sync | Day: Tue | Start: 10:00 | Duration: 30 minutes | Attendees: teammate1@example.com, teammate2@example.com | Reminder: 10 minutes before"}, "started_at": "2026-11-21T09:56:21.889561+00:00", "finished_at": "2026-11-21T09:56:24.429996+00:00", "elapsed_ms": 2540}
+127.0.0.1 - - [21/Nov/2026 16:56:25] "GET /fcc-k/fixtures/test-04-research.html HTTP/1.1" 200 -
+[f04] open fixture ok 1640ms detail=73b71d73-c3ef-4bb8-8f7e-bfe9a72225cd error=None
+[f04] check body visible ok 2ms detail=visible error=None
+[f04] CHECK ok body renders visible: visible
+[f04] verify notes empty ok 5ms detail= error=None
+[f04] CHECK ok notes start empty: 
+[f04] count source cards ok 2ms detail=3 error=None
+[f04] CHECK ok 3 source cards: 3
+[f04] open source A ok 62ms detail=None error=None
+[f04] read source A detail ok 5ms detail=Source A: Alpha Service
+Monthly price: $12/mo
+Support channel: email error=None
+[f04] CHECK ok source A detail has name: Source A: Alpha Service
+Monthly price: $12/mo
+Support channel: email
+[f04] CHECK ok source A detail has price: Source A: Alpha Service
+Monthly price: $12/mo
+Support channel: email
+[f04] open source B ok 55ms detail=None error=None
+[f04] read source B detail ok 6ms detail=Source B: Beta Service
+Monthly price: $19/mo
+Support channel: chat error=None
+[f04] CHECK ok source B detail has name: Source B: Beta Service
+Monthly price: $19/mo
+Support channel: chat
+[f04] CHECK ok source B detail has price: Source B: Beta Service
+Monthly price: $19/mo
+Support channel: chat
+[f04] open source C ok 56ms detail=None error=None
+[f04] read source C detail ok 6ms detail=Source C: Gamma Service
+Monthly price: $9/mo
+Support channel: phone error=None
+[f04] CHECK ok source C detail has name: Source C: Gamma Service
+Monthly price: $9/mo
+Support channel: phone
+[f04] CHECK ok source C detail has price: Source C: Gamma Service
+Monthly price: $9/mo
+Support channel: phone
+[f04] type 6 fact lines ok 22ms detail=None error=None
+[f04] type summary ok 19ms detail=None error=None
+[f04] count fact lines ok 2ms detail=['Source A: Alpha Service', 'Source A: $12/mo', 'Source B: Beta Service', 'Source B: $19/mo', 'Source C: Gamma Service', 'Source C: $9/mo'] error=None
+[f04] CHECK ok 6 fact lines present: ['Source A: Alpha Service', 'Source A: $12/mo', 'Source B: Beta Service', 'Source B: $19/mo', 'Source C: Gamma Service', 'Source C: $9/mo']
+[f04] CHECK ok 2 facts with Source A: ['Source A: Alpha Service', 'Source A: $12/mo', 'Source B: Beta Service', 'Source B: $19/mo', 'Source C: Gamma Service', 'Source C: $9/mo']
+[f04] CHECK ok 2 facts with Source B: ['Source A: Alpha Service', 'Source A: $12/mo', 'Source B: Beta Service', 'Source B: $19/mo', 'Source C: Gamma Service', 'Source C: $9/mo']
+[f04] CHECK ok 2 facts with Source C: ['Source A: Alpha Service', 'Source A: $12/mo', 'Source B: Beta Service', 'Source B: $19/mo', 'Source C: Gamma Service', 'Source C: $9/mo']
+[f04] click Save notes ok 57ms detail=None error=None
+[f04] read saved snapshot ok 6ms detail=Saved notes:
+Source A: Alpha Service
+Source A: $12/mo
+Source B: Beta Service
+Source B: $19/mo
+Source C: Gamma Service
+Source C: $9/mo
+Summary: Alpha $12/mo vs Beta $19/mo vs Gamma $9/mo, all differ. error=None
+[f04] CHECK ok saved snapshot present: Saved notes:
+Source A: Alpha Service
+Source A: $12/mo
+Source B: Beta Service
+Source B: $19/mo
+Source C: Gamma Service
+Source C: $9/mo
+Summary: Alpha $12/mo vs Beta $19/mo vs Gamma $9/mo, all differ.
+[f04] CHECK ok saved snapshot has summary: Saved notes:
+Source A: Alpha Service
+Source A: $12/mo
+Source B: Beta Service
+Source B: $19/mo
+Source C: Gamma Service
+Source C: $9/mo
+Summary: Alpha $12/mo vs Beta $19/mo vs Gamma $9/mo, all differ.
+[f04] CHECK ok saved snapshot has all 6 facts: Saved notes:
+Source A: Alpha Service
+Source A: $12/mo
+Source B: Beta Service
+Source B: $19/mo
+Source C: Gamma Service
+Source C: $9/mo
+Summary: Alpha $12/mo vs Beta $19/mo vs Gamma $9/mo, all differ.
+[f04] re-read notes after save ok 2ms detail=Source A: Alpha Service
+Source A: $12/mo
+Source B: Beta Service
+Source B: $19/mo
+Source C: Gamma Service
+Source C: $9/mo error=None
+[f04] CHECK ok notes survive save: Source A: Alpha Service
+Source A: $12/mo
+Source B: Beta Service
+Source B: $19/mo
+Source C: Gamma Service
+Source C: $9/mo
+RESULT {"test": "f04", "pass": true, "failures": [], "details": {"sourceA": "Source A: Alpha Service\nMonthly price: $12/mo\nSupport channel: email", "sourceB": "Source B: Beta Service\nMonthly price: $19/mo\nSupport channel: chat", "sourceC": "Source C: Gamma Service\nMonthly price: $9/mo\nSupport channel: phone", "factLines": ["Source A: Alpha Service", "Source A: $12/mo", "Source B: Beta Service", "Source B: $19/mo", "Source C: Gamma Service", "Source C: $9/mo"], "savedNotes": "Saved notes:\nSource A: Alpha Service\nSource A: $12/mo\nSource B: Beta Service\nSource B: $19/mo\nSource C: Gamma Service\nSource C: $9/mo\nSummary: Alpha $12/mo vs Beta $19/mo vs Gamma $9/mo, all differ."}, "started_at": "2026-11-21T09:56:24.430058+00:00", "finished_at": "2026-11-21T09:56:27.013975+00:00", "elapsed_ms": 2584}
+127.0.0.1 - - [21/Nov/2026 16:56:27] "GET /fcc-k/fixtures/test-05-image.html HTTP/1.1" 200 -
+[f05] open fixture ok 1640ms detail=a3537b38-cdc0-4d52-8fb4-e8217b4fe48e error=None
+[f05] check body visible ok 2ms detail=visible error=None
+[f05] CHECK ok body renders visible: visible
+[f05] list downloads ok 2ms detail=['img_01.jpg', 'screenshot.png', 'photo from web.jpg', 'img_04.jpg', 'img_05.jpg', 'img_06.png', 'img_07.jpg', 'img_08.jpg'] error=None
+[f05] CHECK ok 8 files in downloads: ['img_01.jpg', 'screenshot.png', 'photo from web.jpg', 'img_04.jpg', 'img_05.jpg', 'img_06.png', 'img_07.jpg', 'img_08.jpg']
+[f05] type folder name Organized ok 21ms detail=None error=None
+[f05] click New Folder ok 58ms detail=None error=None
+[f05] Organized column visible ok 2ms detail=True error=None
+[f05] CHECK ok Organized folder created: True
+[f05] move img_01.jpg to Organized ok 2ms detail=None error=None
+[f05] downloads after moving img_01.jpg ok 2ms detail=['screenshot.png', 'photo from web.jpg', 'img_04.jpg', 'img_05.jpg', 'img_06.png', 'img_07.jpg', 'img_08.jpg'] error=None
+[f05] CHECK ok img_01.jpg left downloads: ['screenshot.png', 'photo from web.jpg', 'img_04.jpg', 'img_05.jpg', 'img_06.png', 'img_07.jpg', 'img_08.jpg']
+[f05] select img_01.jpg in Organized ok 57ms detail=None error=None
+[f05] read selected file ok 6ms detail=img_01.jpg error=None
+[f05] CHECK ok selected is img_01.jpg: img_01.jpg
+[f05] type new name trip-01.jpg ok 6ms detail=None error=None
+[f05] click Rename for trip-01.jpg ok 56ms detail=None error=None
+[f05] Organized after rename to trip-01.jpg ok 2ms detail=['trip-01.jpg'] error=None
+[f05] CHECK ok trip-01.jpg in Organized: ['trip-01.jpg']
+[f05] CHECK ok img_01.jpg gone from Organized: ['trip-01.jpg']
+[f05] move screenshot.png to Organized ok 2ms detail=None error=None
+[f05] downloads after moving screenshot.png ok 2ms detail=['photo from web.jpg', 'img_04.jpg', 'img_05.jpg', 'img_06.png', 'img_07.jpg', 'img_08.jpg'] error=None
+[f05] CHECK ok screenshot.png left downloads: ['photo from web.jpg', 'img_04.jpg', 'img_05.jpg', 'img_06.png', 'img_07.jpg', 'img_08.jpg']
+[f05] select screenshot.png in Organized ok 56ms detail=None error=None
+[f05] read selected file ok 5ms detail=screenshot.png error=None
+[f05] CHECK ok selected is screenshot.png: screenshot.png
+[f05] type new name trip-02.png ok 8ms detail=None error=None
+[f05] click Rename for trip-02.png ok 57ms detail=None error=None
+[f05] Organized after rename to trip-02.png ok 2ms detail=['trip-01.jpg', 'trip-02.png'] error=None
+[f05] CHECK ok trip-02.png in Organized: ['trip-01.jpg', 'trip-02.png']
+[f05] CHECK ok screenshot.png gone from Organized: ['trip-01.jpg', 'trip-02.png']
+[f05] move photo from web.jpg to Organized ok 2ms detail=None error=None
+[f05] downloads after moving photo from web.jpg ok 2ms detail=['img_04.jpg', 'img_05.jpg', 'img_06.png', 'img_07.jpg', 'img_08.jpg'] error=None
+[f05] CHECK ok photo from web.jpg left downloads: ['img_04.jpg', 'img_05.jpg', 'img_06.png', 'img_07.jpg', 'img_08.jpg']
+[f05] select photo from web.jpg in Organized ok 55ms detail=None error=None
+[f05] read selected file ok 4ms detail=photo from web.jpg error=None
+[f05] CHECK ok selected is photo from web.jpg: photo from web.jpg
+[f05] type new name trip-03.jpg ok 6ms detail=None error=None
+[f05] click Rename for trip-03.jpg ok 56ms detail=None error=None
+[f05] Organized after rename to trip-03.jpg ok 2ms detail=['trip-01.jpg', 'trip-02.png', 'trip-03.jpg'] error=None
+[f05] CHECK ok trip-03.jpg in Organized: ['trip-01.jpg', 'trip-02.png', 'trip-03.jpg']
+[f05] CHECK ok photo from web.jpg gone from Organized: ['trip-01.jpg', 'trip-02.png', 'trip-03.jpg']
+[f05] move img_04.jpg to Organized ok 3ms detail=None error=None
+[f05] downloads after moving img_04.jpg ok 2ms detail=['img_05.jpg', 'img_06.png', 'img_07.jpg', 'img_08.jpg'] error=None
+[f05] CHECK ok img_04.jpg left downloads: ['img_05.jpg', 'img_06.png', 'img_07.jpg', 'img_08.jpg']
+[f05] select img_04.jpg in Organized ok 55ms detail=None error=None
+[f05] read selected file ok 4ms detail=img_04.jpg error=None
+[f05] CHECK ok selected is img_04.jpg: img_04.jpg
+[f05] type new name trip-04.jpg ok 8ms detail=None error=None
+[f05] click Rename for trip-04.jpg ok 57ms detail=None error=None
+[f05] Organized after rename to trip-04.jpg ok 2ms detail=['trip-01.jpg', 'trip-02.png', 'trip-03.jpg', 'trip-04.jpg'] error=None
+[f05] CHECK ok trip-04.jpg in Organized: ['trip-01.jpg', 'trip-02.png', 'trip-03.jpg', 'trip-04.jpg']
+[f05] CHECK ok img_04.jpg gone from Organized: ['trip-01.jpg', 'trip-02.png', 'trip-03.jpg', 'trip-04.jpg']
+[f05] move img_05.jpg to Organized ok 2ms detail=None error=None
+[f05] downloads after moving img_05.jpg ok 2ms detail=['img_06.png', 'img_07.jpg', 'img_08.jpg'] error=None
+[f05] CHECK ok img_05.jpg left downloads: ['img_06.png', 'img_07.jpg', 'img_08.jpg']
+[f05] select img_05.jpg in Organized ok 54ms detail=None error=None
+[f05] read selected file ok 5ms detail=img_05.jpg error=None
+[f05] CHECK ok selected is img_05.jpg: img_05.jpg
+[f05] type new name trip-05.jpg ok 6ms detail=None error=None
+[f05] click Rename for trip-05.jpg ok 57ms detail=None error=None
+[f05] Organized after rename to trip-05.jpg ok 2ms detail=['trip-01.jpg', 'trip-02.png', 'trip-03.jpg', 'trip-04.jpg', 'trip-05.jpg'] error=None
+[f05] CHECK ok trip-05.jpg in Organized: ['trip-01.jpg', 'trip-02.png', 'trip-03.jpg', 'trip-04.jpg', 'trip-05.jpg']
+[f05] CHECK ok img_05.jpg gone from Organized: ['trip-01.jpg', 'trip-02.png', 'trip-03.jpg', 'trip-04.jpg', 'trip-05.jpg']
+[f05] move img_06.png to Organized ok 2ms detail=None error=None
+[f05] downloads after moving img_06.png ok 2ms detail=['img_07.jpg', 'img_08.jpg'] error=None
+[f05] CHECK ok img_06.png left downloads: ['img_07.jpg', 'img_08.jpg']
+[f05] select img_06.png in Organized ok 57ms detail=None error=None
+[f05] read selected file ok 47ms detail=img_06.png error=None
+[f05] CHECK ok selected is img_06.png: img_06.png
+[f05] type new name trip-06.png ok 8ms detail=None error=None
+[f05] click Rename for trip-06.png ok 57ms detail=None error=None
+[f05] Organized after rename to trip-06.png ok 2ms detail=['trip-01.jpg', 'trip-02.png', 'trip-03.jpg', 'trip-04.jpg', 'trip-05.jpg', 'trip-06.png'] error=None
+[f05] CHECK ok trip-06.png in Organized: ['trip-01.jpg', 'trip-02.png', 'trip-03.jpg', 'trip-04.jpg', 'trip-05.jpg', 'trip-06.png']
+[f05] CHECK ok img_06.png gone from Organized: ['trip-01.jpg', 'trip-02.png', 'trip-03.jpg', 'trip-04.jpg', 'trip-05.jpg', 'trip-06.png']
+[f05] move img_07.jpg to Organized ok 2ms detail=None error=None
+[f05] downloads after moving img_07.jpg ok 2ms detail=['img_08.jpg'] error=None
+[f05] CHECK ok img_07.jpg left downloads: ['img_08.jpg']
+[f05] select img_07.jpg in Organized ok 56ms detail=None error=None
+[f05] read selected file ok 4ms detail=img_07.jpg error=None
+[f05] CHECK ok selected is img_07.jpg: img_07.jpg
+[f05] type new name trip-07.jpg ok 7ms detail=None error=None
+[f05] click Rename for trip-07.jpg ok 58ms detail=None error=None
+[f05] Organized after rename to trip-07.jpg ok 2ms detail=['trip-01.jpg', 'trip-02.png', 'trip-03.jpg', 'trip-04.jpg', 'trip-05.jpg', 'trip-06.png', 'trip-07.jpg'] error=None
+[f05] CHECK ok trip-07.jpg in Organized: ['trip-01.jpg', 'trip-02.png', 'trip-03.jpg', 'trip-04.jpg', 'trip-05.jpg', 'trip-06.png', 'trip-07.jpg']
+[f05] CHECK ok img_07.jpg gone from Organized: ['trip-01.jpg', 'trip-02.png', 'trip-03.jpg', 'trip-04.jpg', 'trip-05.jpg', 'trip-06.png', 'trip-07.jpg']
+[f05] move img_08.jpg to Organized ok 2ms detail=None error=None
+[f05] downloads after moving img_08.jpg ok 2ms detail=[] error=None
+[f05] CHECK ok img_08.jpg left downloads: []
+[f05] select img_08.jpg in Organized ok 55ms detail=None error=None
+[f05] read selected file ok 5ms detail=img_08.jpg error=None
+[f05] CHECK ok selected is img_08.jpg: img_08.jpg
+[f05] type new name trip-08.jpg ok 8ms detail=None error=None
+[f05] click Rename for trip-08.jpg ok 56ms detail=None error=None
+[f05] Organized after rename to trip-08.jpg ok 2ms detail=['trip-01.jpg', 'trip-02.png', 'trip-03.jpg', 'trip-04.jpg', 'trip-05.jpg', 'trip-06.png', 'trip-07.jpg', 'trip-08.jpg'] error=None
+[f05] CHECK ok trip-08.jpg in Organized: ['trip-01.jpg', 'trip-02.png', 'trip-03.jpg', 'trip-04.jpg', 'trip-05.jpg', 'trip-06.png', 'trip-07.jpg', 'trip-08.jpg']
+[f05] CHECK ok img_08.jpg gone from Organized: ['trip-01.jpg', 'trip-02.png', 'trip-03.jpg', 'trip-04.jpg', 'trip-05.jpg', 'trip-06.png', 'trip-07.jpg', 'trip-08.jpg']
+[f05] list Organized final ok 1ms detail=['trip-01.jpg', 'trip-02.png', 'trip-03.jpg', 'trip-04.jpg', 'trip-05.jpg', 'trip-06.png', 'trip-07.jpg', 'trip-08.jpg'] error=None
+[f05] CHECK ok Organized has exactly the 8 trip names: ['trip-01.jpg', 'trip-02.png', 'trip-03.jpg', 'trip-04.jpg', 'trip-05.jpg', 'trip-06.png', 'trip-07.jpg', 'trip-08.jpg']
+[f05] list downloads final ok 1ms detail=[] error=None
+[f05] CHECK ok downloads empty: []
+[f05] type index.txt 8 lines ok 21ms detail=None error=None
+[f05] click Save index.txt ok 58ms detail=None error=None
+[f05] read saved index ok 5ms detail=img_01.jpg -> trip-01.jpg
+screenshot.png -> trip-02.png
+photo from web.jpg -> trip-03.jpg
+img_04.jpg -> trip-04.jpg
+img_05.jpg -> trip-05.jpg
+img_06.png -> trip-06.png
+img_07.jpg -> trip-07.jpg
+img_08.jpg -> trip-08.jpg error=None
+[f05] CHECK ok index has 8 lines: img_01.jpg -> trip-01.jpg
+screenshot.png -> trip-02.png
+photo from web.jpg -> trip-03.jpg
+img_04.jpg -> trip-04.jpg
+img_05.jpg -> trip-05.jpg
+img_06.png -> trip-06.png
+img_07.jpg -> trip-07.jpg
+img_08.jpg -> trip-08.jpg
+[f05] CHECK ok index maps img_01.jpg -> trip-01.jpg: img_01.jpg -> trip-01.jpg
+screenshot.png -> trip-02.png
+photo from web.jpg -> trip-03.jpg
+img_04.jpg -> trip-04.jpg
+img_05.jpg -> trip-05.jpg
+img_06.png -> trip-06.png
+img_07.jpg -> trip-07.jpg
+img_08.jpg -> trip-08.jpg
+[f05] CHECK ok index maps screenshot.png -> trip-02.png: img_01.jpg -> trip-01.jpg
+screenshot.png -> trip-02.png
+photo from web.jpg -> trip-03.jpg
+img_04.jpg -> trip-04.jpg
+img_05.jpg -> trip-05.jpg
+img_06.png -> trip-06.png
+img_07.jpg -> trip-07.jpg
+img_08.jpg -> trip-08.jpg
+[f05] CHECK ok index maps photo from web.jpg -> trip-03.jpg: img_01.jpg -> trip-01.jpg
+screenshot.png -> trip-02.png
+photo from web.jpg -> trip-03.jpg
+img_04.jpg -> trip-04.jpg
+img_05.jpg -> trip-05.jpg
+img_06.png -> trip-06.png
+img_07.jpg -> trip-07.jpg
+img_08.jpg -> trip-08.jpg
+[f05] CHECK ok index maps img_04.jpg -> trip-04.jpg: img_01.jpg -> trip-01.jpg
+screenshot.png -> trip-02.png
+photo from web.jpg -> trip-03.jpg
+img_04.jpg -> trip-04.jpg
+img_05.jpg -> trip-05.jpg
+img_06.png -> trip-06.png
+img_07.jpg -> trip-07.jpg
+img_08.jpg -> trip-08.jpg
+[f05] CHECK ok index maps img_05.jpg -> trip-05.jpg: img_01.jpg -> trip-01.jpg
+screenshot.png -> trip-02.png
+photo from web.jpg -> trip-03.jpg
+img_04.jpg -> trip-04.jpg
+img_05.jpg -> trip-05.jpg
+img_06.png -> trip-06.png
+img_07.jpg -> trip-07.jpg
+img_08.jpg -> trip-08.jpg
+[f05] CHECK ok index maps img_06.png -> trip-06.png: img_01.jpg -> trip-01.jpg
+screenshot.png -> trip-02.png
+photo from web.jpg -> trip-03.jpg
+img_04.jpg -> trip-04.jpg
+img_05.jpg -> trip-05.jpg
+img_06.png -> trip-06.png
+img_07.jpg -> trip-07.jpg
+img_08.jpg -> trip-08.jpg
+[f05] CHECK ok index maps img_07.jpg -> trip-07.jpg: img_01.jpg -> trip-01.jpg
+screenshot.png -> trip-02.png
+photo from web.jpg -> trip-03.jpg
+img_04.jpg -> trip-04.jpg
+img_05.jpg -> trip-05.jpg
+img_06.png -> trip-06.png
+img_07.jpg -> trip-07.jpg
+img_08.jpg -> trip-08.jpg
+[f05] CHECK ok index maps img_08.jpg -> trip-08.jpg: img_01.jpg -> trip-01.jpg
+screenshot.png -> trip-02.png
+photo from web.jpg -> trip-03.jpg
+img_04.jpg -> trip-04.jpg
+img_05.jpg -> trip-05.jpg
+img_06.png -> trip-06.png
+img_07.jpg -> trip-07.jpg
+img_08.jpg -> trip-08.jpg
+[f05] re-check downloads empty ok 2ms detail=0 error=None
+[f05] CHECK ok downloads still empty at end: 0
+RESULT {"test": "f05", "pass": true, "failures": [], "details": {"downloadsStart": ["img_01.jpg", "screenshot.png", "photo from web.jpg", "img_04.jpg", "img_05.jpg", "img_06.png", "img_07.jpg", "img_08.jpg"], "organizedFinal": ["trip-01.jpg", "trip-02.png", "trip-03.jpg", "trip-04.jpg", "trip-05.jpg", "trip-06.png", "trip-07.jpg", "trip-08.jpg"], "savedIndex": "img_01.jpg -> trip-01.jpg\nscreenshot.png -> trip-02.png\nphoto from web.jpg -> trip-03.jpg\nimg_04.jpg -> trip-04.jpg\nimg_05.jpg -> trip-05.jpg\nimg_06.png -> trip-06.png\nimg_07.jpg -> trip-07.jpg\nimg_08.jpg -> trip-08.jpg"}, "started_at": "2026-11-21T09:56:27.014042+00:00", "finished_at": "2026-11-21T09:56:30.553088+00:00", "elapsed_ms": 3539}
+127.0.0.1 - - [21/Nov/2026 16:56:31] "GET /fcc-k/fixtures/test-06-settings.html HTTP/1.1" 200 -
+[f06] open fixture ok 1646ms detail=4d074268-a871-4881-94ad-b2a37f63d1f4 error=None
+[f06] check body visible ok 2ms detail=visible error=None
+[f06] CHECK ok body renders visible: visible
+[f06] read Notes font size ok 9ms detail=font_size: 14 error=None
+[f06] CHECK ok Notes font starts 14: font_size: 14
+[f06] read Reader zoom ok 5ms detail=zoom: 100 error=None
+[f06] CHECK ok Reader zoom starts 100: zoom: 100
+[f06] open Notes Settings ok 66ms detail=None error=None
+[f06] set Notes font to 18 ok 12ms detail=None error=None
+[f06] click Notes Apply ok 57ms detail=None error=None
+[f06] re-read Notes font size ok 5ms detail=font_size: 18 error=None
+[f06] CHECK ok Notes font size now 18: font_size: 18
+[f06] close Notes settings ok 55ms detail=None error=None
+[f06] open Notes app ok 57ms detail=None error=None
+[f06] Notes sample doc visible ok 2ms detail=True error=None
+[f06] CHECK ok Notes sample doc opens: True
+[f06] read Notes doc font size ok 1ms detail=18px error=None
+[f06] CHECK ok Notes doc renders at 18px: 18px
+[f06] read Notes doc label ok 4ms detail=Sample document rendered at font size 18 error=None
+[f06] CHECK ok Notes doc label mentions 18: Sample document rendered at font size 18
+[f06] open Reader Settings ok 55ms detail=None error=None
+[f06] set Reader zoom to 150 ok 6ms detail=None error=None
+[f06] click Reader Apply ok 57ms detail=None error=None
+[f06] re-read Reader zoom ok 6ms detail=zoom: 150 error=None
+[f06] CHECK ok Reader zoom now 150: zoom: 150
+[f06] close Reader settings ok 56ms detail=None error=None
+[f06] open Reader app ok 56ms detail=None error=None
+[f06] Reader sample doc visible ok 2ms detail=True error=None
+[f06] CHECK ok Reader sample doc opens: True
+[f06] read Reader doc font size ok 1ms detail=24px error=None
+[f06] CHECK ok Reader doc renders at 24px (150% of 16px): 24px
+[f06] read Reader doc label ok 4ms detail=Sample document at zoom 150% error=None
+[f06] CHECK ok Reader doc label mentions 150: Sample document at zoom 150%
+[f06] re-read Notes setting at end ok 3ms detail=font_size: 18 error=None
+[f06] CHECK ok Notes font still 18 at end: font_size: 18
+[f06] re-read Reader setting at end ok 4ms detail=zoom: 150 error=None
+[f06] CHECK ok Reader zoom still 150 at end: zoom: 150
+[f06] Notes doc still open at end ok 1ms detail=True error=None
+[f06] CHECK ok Notes doc remains open: True
+[f06] Reader doc still open at end ok 1ms detail=True error=None
+[f06] CHECK ok Reader doc remains open: True
+RESULT {"test": "f06", "pass": true, "failures": [], "details": {"notesSettingsAfter": "font_size: 18", "notesDocFont": "18px", "readerSettingsAfter": "zoom: 150", "readerDocFont": "24px"}, "started_at": "2026-11-21T09:56:30.553139+00:00", "finished_at": "2026-11-21T09:56:33.369245+00:00", "elapsed_ms": 2816}
+127.0.0.1 - - [21/Nov/2026 16:56:34] "GET /fcc-k/fixtures/test-07-bug.html HTTP/1.1" 200 -
+[f07] open fixture ok 1629ms detail=a094f295-f4c7-4be5-b1e2-b9e8b3cca671 error=None
+[f07] check body visible ok 2ms detail=visible error=None
+[f07] CHECK ok body renders visible: visible
+[f07] read written repro steps ok 9ms detail=Written reproduction steps:
+Record the current setting value (before).
+Click Toggle setting.
+Click Save immediately, without waiting.
+Read the setting value again (after).
+Click Save again, deliberately.
+Read the setting value again (after2).
+Known race in this app: the first Save after a toggle writes the previous value back. A second Save commits the toggled value. error=None
+[f07] CHECK ok repro steps mention Toggle: Written reproduction steps:
+Record the current setting value (before).
+Click Toggle setting.
+Click Save immediately, without waiting.
+Read the setting value again (after).
+Click Save again, deliberately.
+Read the setting value again (after2).
+Known race in this app: the first Save after a toggle writes the previous value back. A second Save commits the toggled value.
+[f07] record before value ok 5ms detail=enabled error=None
+[f07] CHECK ok before is enabled: enabled
+[f07] click Toggle setting ok 64ms detail=None error=None
+[f07] click Save immediately ok 57ms detail=None error=None
+[f07] read after value ok 5ms detail=enabled error=None
+[f07] CHECK ok after reverted to enabled (bug reproduced): enabled
+[f07] CHECK ok before and after differ from toggled value: before=enabled after=enabled
+[f07] click Save again deliberately ok 56ms detail=None error=None
+[f07] read after2 value ok 5ms detail=disabled error=None
+[f07] CHECK ok after2 is disabled (toggled value sticks): disabled
+[f07] re-read setting before typing note ok 5ms detail=disabled error=None
+[f07] CHECK ok fresh re-read still disabled: disabled
+[f07] type bug note ok 21ms detail=None error=None
+[f07] click Save note ok 59ms detail=None error=None
+[f07] read saved note ok 5ms detail=Bug: setting reverts on immediate save. Before enabled After enabled After2 disabled. Conclusion: reproduced. error=None
+[f07] CHECK ok note saved and present: Bug: setting reverts on immediate save. Before enabled After enabled After2 disabled. Conclusion: reproduced.
+[f07] CHECK ok note has Before label: Bug: setting reverts on immediate save. Before enabled After enabled After2 disabled. Conclusion: reproduced.
+[f07] CHECK ok note has After label: Bug: setting reverts on immediate save. Before enabled After enabled After2 disabled. Conclusion: reproduced.
+[f07] CHECK ok note has After2 label: Bug: setting reverts on immediate save. Before enabled After enabled After2 disabled. Conclusion: reproduced.
+[f07] CHECK ok note mentions before value enabled: Bug: setting reverts on immediate save. Before enabled After enabled After2 disabled. Conclusion: reproduced.
+[f07] CHECK ok note mentions toggled value disabled: Bug: setting reverts on immediate save. Before enabled After enabled After2 disabled. Conclusion: reproduced.
+[f07] CHECK ok note conclusion is reproduced: Bug: setting reverts on immediate save. Before enabled After enabled After2 disabled. Conclusion: reproduced.
+[f07] read final setting value ok 5ms detail=disabled error=None
+[f07] CHECK ok final setting is disabled: disabled
+RESULT {"test": "f07", "pass": true, "failures": [], "details": {"reproSteps": "Written reproduction steps:\nRecord the current setting value (before).\nClick Toggle setting.\nClick Save immediately, without waiting.\nRead the setting value again (after).\nClick Save again, deliberately.\nRead the setting value again (after2).\nKnown race in this app: the first Save after a toggle writes the previous value back. A second Save commits the toggled value.", "before": "enabled", "after": "enabled", "after2": "disabled", "savedNote": "Bug: setting reverts on immediate save. Before enabled After enabled After2 disabled. Conclusion: reproduced."}, "started_at": "2026-11-21T09:56:33.369296+00:00", "finished_at": "2026-11-21T09:56:35.932032+00:00", "elapsed_ms": 2563}
+127.0.0.1 - - [21/Nov/2026 16:56:36] "GET /fcc-k/fixtures/test-08-form.html HTTP/1.1" 200 -
+[f08] open fixture ok 1636ms detail=4ea88586-3e3e-4dfa-bf92-6201a6f72086 error=None
+[f08] check body visible ok 2ms detail=visible error=None
+[f08] CHECK ok body renders visible: visible
+[f08] type full name ok 21ms detail=None error=None
+[f08] type short password ok 7ms detail=None error=None
+[f08] type mismatched confirm ok 8ms detail=None error=None
+[f08] click Submit (first) ok 62ms detail=None error=None
+[f08] read first-submit errors ok 6ms detail=Email is required
+Password must be at least 8 characters
+Passwords do not match error=None
+[f08] CHECK ok first submit shows exactly 3 errors: Email is required
+Password must be at least 8 characters
+Passwords do not match
+[f08] CHECK ok error: Email is required: Email is required
+Password must be at least 8 characters
+Passwords do not match
+[f08] CHECK ok error: password too short: Email is required
+Password must be at least 8 characters
+Passwords do not match
+[f08] CHECK ok error: passwords do not match: Email is required
+Password must be at least 8 characters
+Passwords do not match
+[f08] fix Email ok 9ms detail=None error=None
+[f08] fix Password to 12 chars ok 10ms detail=None error=None
+[f08] fix Confirm to match ok 9ms detail=None error=None
+[f08] click Submit (second) ok 57ms detail=None error=None
+[f08] read remaining errors ok 5ms detail= error=None
+[f08] CHECK ok zero errors remain: 
+[f08] read success message ok 5ms detail=Registration successful. error=None
+[f08] CHECK ok success message shown: Registration successful.
+[f08] success message visible ok 1ms detail=True error=None
+[f08] CHECK ok success block visible: True
+[f08] read back final field values ok 1ms detail={'email': 'pham@example.com', 'match': True, 'name': 'Pham Tuan', 'pwLen': 12} error=None
+[f08] CHECK ok final name filled: {'email': 'pham@example.com', 'match': True, 'name': 'Pham Tuan', 'pwLen': 12}
+[f08] CHECK ok final email valid: {'email': 'pham@example.com', 'match': True, 'name': 'Pham Tuan', 'pwLen': 12}
+[f08] CHECK ok final password >= 8 chars: {'email': 'pham@example.com', 'match': True, 'name': 'Pham Tuan', 'pwLen': 12}
+[f08] CHECK ok final passwords match: {'email': 'pham@example.com', 'match': True, 'name': 'Pham Tuan', 'pwLen': 12}
+RESULT {"test": "f08", "pass": true, "failures": [], "details": {"firstErrors": "Email is required\nPassword must be at least 8 characters\nPasswords do not match", "remainingErrors": "", "success": "Registration successful.", "finalValues": {"email": "pham@example.com", "match": true, "name": "Pham Tuan", "pwLen": 12}}, "started_at": "2026-11-21T09:56:35.932100+00:00", "finished_at": "2026-11-21T09:56:38.410815+00:00", "elapsed_ms": 2479}
+127.0.0.1 - - [21/Nov/2026 16:56:39] "GET /fcc-k/fixtures/test-09-convert.html HTTP/1.1" 200 -
+[f09] open fixture ok 1652ms detail=9e2c9453-f620-489b-8c83-9f84633595f0 error=None
+[f09] check body visible ok 2ms detail=visible error=None
+[f09] CHECK ok body renders visible: visible
+[f09] read App A header ok 1ms detail=Item,Units,Price error=None
+[f09] CHECK ok header is Item, Units, Price: Item,Units,Price
+[f09] read all 4 App A rows ok 2ms detail=[['Widget', '12', '45000'], ['Gadget', '7', '82000'], ['Tool', '5', '150000'], ['Cable', '20', '12000']] error=None
+[f09] CHECK ok 4 source rows: [['Widget', '12', '45000'], ['Gadget', '7', '82000'], ['Tool', '5', '150000'], ['Cable', '20', '12000']]
+[f09] CHECK ok row 1 is Widget 12 45000: [['Widget', '12', '45000'], ['Gadget', '7', '82000'], ['Tool', '5', '150000'], ['Cable', '20', '12000']]
+[f09] CHECK ok row 4 is Cable 20 12000: [['Widget', '12', '45000'], ['Gadget', '7', '82000'], ['Tool', '5', '150000'], ['Cable', '20', '12000']]
+[f09] read reference block ok 6ms detail=1. Widget: 12 units @ 45000
+2. Gadget: 7 units @ 82000
+3. Tool: 5 units @ 150000
+4. Cable: 20 units @ 12000 error=None
+[f09] CHECK ok reference has 4 lines: 1. Widget: 12 units @ 45000
+2. Gadget: 7 units @ 82000
+3. Tool: 5 units @ 150000
+4. Cable: 20 units @ 12000
+[f09] type 4 converted lines into App B ok 28ms detail=None error=None
+[f09] click Convert / Apply ok 61ms detail=None error=None
+[f09] read converted output ok 5ms detail=1. Widget: 12 units @ 45000
+2. Gadget: 7 units @ 82000
+3. Tool: 5 units @ 150000
+4. Cable: 20 units @ 12000 error=None
+[f09] CHECK ok output has exactly 4 lines: 1. Widget: 12 units @ 45000
+2. Gadget: 7 units @ 82000
+3. Tool: 5 units @ 150000
+4. Cable: 20 units @ 12000
+[f09] CHECK ok line 1 matches reference: got=1. Widget: 12 units @ 45000 exp=1. Widget: 12 units @ 45000
+[f09] CHECK ok line 2 matches reference: got=2. Gadget: 7 units @ 82000 exp=2. Gadget: 7 units @ 82000
+[f09] CHECK ok line 3 matches reference: got=3. Tool: 5 units @ 150000 exp=3. Tool: 5 units @ 150000
+[f09] CHECK ok line 4 matches reference: got=4. Cable: 20 units @ 12000 exp=4. Cable: 20 units @ 12000
+[f09] CHECK ok no extra lines: 1. Widget: 12 units @ 45000
+2. Gadget: 7 units @ 82000
+3. Tool: 5 units @ 150000
+4. Cable: 20 units @ 12000
+RESULT {"test": "f09", "pass": true, "failures": [], "details": {"header": "Item,Units,Price", "sourceRows": [["Widget", "12", "45000"], ["Gadget", "7", "82000"], ["Tool", "5", "150000"], ["Cable", "20", "12000"]], "reference": "1. Widget: 12 units @ 45000\n2. Gadget: 7 units @ 82000\n3. Tool: 5 units @ 150000\n4. Cable: 20 units @ 12000", "convertedOutput": "1. Widget: 12 units @ 45000\n2. Gadget: 7 units @ 82000\n3. Tool: 5 units @ 150000\n4. Cable: 20 units @ 12000"}, "started_at": "2026-11-21T09:56:38.410878+00:00", "finished_at": "2026-11-21T09:56:40.803342+00:00", "elapsed_ms": 2393}
+127.0.0.1 - - [21/Nov/2026 16:56:41] "GET /fcc-k/fixtures/test-10-document.html HTTP/1.1" 200 -
+[f10] open fixture ok 1626ms detail=eabaaade-05b2-4455-a65d-9373fb43bf19 error=None
+[f10] check body visible ok 2ms detail=visible error=None
+[f10] CHECK ok body renders visible: visible
+[f10] count document sections ok 2ms detail=3 error=None
+[f10] CHECK ok document has 3 sections: 3
+[f10] read TOC count ok 9ms detail=Tables: 0 error=None
+[f10] CHECK ok TOC starts at Tables: 0: Tables: 0
+[f10] open Find/Replace ok 65ms detail=None error=None
+[f10] find panel visible ok 2ms detail=True error=None
+[f10] CHECK ok find panel opens: True
+[f10] type search term old vendor ok 11ms detail=None error=None
+[f10] click Search ok 57ms detail=None error=None
+[f10] read match count ok 4ms detail=3 matches for "old vendor" error=None
+[f10] CHECK ok search finds 3 matches: 3 matches for "old vendor"
+[f10] type replacement new vendor ok 5ms detail=None error=None
+[f10] click Replace all ok 56ms detail=None error=None
+[f10] read match count after replace ok 5ms detail=Replaced. 0 matches for "old vendor" remain. error=None
+[f10] CHECK ok 0 matches remain after replace: Replaced. 0 matches for "old vendor" remain.
+[f10] close Find/Replace ok 55ms detail=None error=None
+[f10] verify no old vendor in doc ok 2ms detail=False error=None
+[f10] CHECK ok no old vendor remains in document: False
+[f10] verify new vendor in doc ok 1ms detail=True error=None
+[f10] CHECK ok new vendor present in document: True
+[f10] click Add table ok 56ms detail=None error=None
+[f10] table exists ok 1ms detail=True error=None
+[f10] CHECK ok table inserted under Summary: True
+[f10] fill header Column A ok 2ms detail=Column A error=None
+[f10] fill header Column B ok 3ms detail=Column B error=None
+[f10] fill header Column C ok 2ms detail=Column C error=None
+[f10] fill table row 1 col 1 ok 5ms detail=Widget error=None
+[f10] fill table row 1 col 2 ok 2ms detail=12 error=None
+[f10] fill table row 1 col 3 ok 2ms detail=45000 error=None
+[f10] fill table row 2 col 1 ok 2ms detail=Gadget error=None
+[f10] fill table row 2 col 2 ok 4ms detail=7 error=None
+[f10] fill table row 2 col 3 ok 3ms detail=82000 error=None
+[f10] read table header ok 4ms detail=['Column A', 'Column B', 'Column C'] error=None
+[f10] CHECK ok header is Column A/B/C: ['Column A', 'Column B', 'Column C']
+[f10] read table body rows ok 2ms detail=[['Widget', '12', '45000'], ['Gadget', '7', '82000']] error=None
+[f10] CHECK ok 2 body rows: [['Widget', '12', '45000'], ['Gadget', '7', '82000']]
+[f10] CHECK ok body rows non-empty: [['Widget', '12', '45000'], ['Gadget', '7', '82000']]
+[f10] read TOC count after table ok 8ms detail=Tables: 1 error=None
+[f10] CHECK ok TOC count now Tables: 1: Tables: 1
+[f10] click Save ok 57ms detail=None error=None
+[f10] read saved state ok 5ms detail=Saved. error=None
+[f10] CHECK ok document saved: Saved.
+[f10] click Export ok 56ms detail=None error=None
+[f10] read export view ok 5ms detail=Filename: report-export.md
+
+IntroReport intro about the new vendor and its pricing.
+  DetailsDetails: the new vendor delivered late twice.
+  SummarySummary: we will keep the new vendor for now.Column AColumn BColumn CWidget1245000Gadget782000
+
+| Column A | Column B | Column C |
+|---|---|---|
+| Widget | 12 | 45000 |
+| Gadget | 7 | 82000 | error=None
+[f10] CHECK ok export filename is report-export.md: Filename: report-export.md
+
+IntroReport intro about the new vendor and its pricing.
+  DetailsDetails: the new vendor delivered late twice.
+  SummarySummary: we will keep the new vendor for now.Column AColumn BColumn CWidget1245000Gadget782000
+
+| Column A | Column B | Column C |
+|---|---|---|
+| Widget | 12 | 45000 |
+| Gadget | 7 | 82000 |
+[f10] CHECK ok export contains new vendor: Filename: report-export.md
+
+IntroReport intro about the new vendor and its pricing.
+  DetailsDetails: the new vendor delivered late twice.
+  SummarySummary: we will keep the new vendor for now.Column AColumn BColumn CWidget1245000Gadget782000
+
+| Column A | Column B | Column C |
+|---|---|---|
+| Widget | 12 | 45000 |
+| Gadget | 7 | 82000 |
+[f10] CHECK ok export has no old vendor: Filename: report-export.md
+
+IntroReport intro about the new vendor and its pricing.
+  DetailsDetails: the new vendor delivered late twice.
+  SummarySummary: we will keep the new vendor for now.Column AColumn BColumn CWidget1245000Gadget782000
+
+| Column A | Column B | Column C |
+|---|---|---|
+| Widget | 12 | 45000 |
+| Gadget | 7 | 82000 |
+[f10] CHECK ok export contains table headers: Filename: report-export.md
+
+IntroReport intro about the new vendor and its pricing.
+  DetailsDetails: the new vendor delivered late twice.
+  SummarySummary: we will keep the new vendor for now.Column AColumn BColumn CWidget1245000Gadget782000
+
+| Column A | Column B | Column C |
+|---|---|---|
+| Widget | 12 | 45000 |
+| Gadget | 7 | 82000 |
+[f10] CHECK ok export contains table rows: Filename: report-export.md
+
+IntroReport intro about the new vendor and its pricing.
+  DetailsDetails: the new vendor delivered late twice.
+  SummarySummary: we will keep the new vendor for now.Column AColumn BColumn CWidget1245000Gadget782000
+
+| Column A | Column B | Column C |
+|---|---|---|
+| Widget | 12 | 45000 |
+| Gadget | 7 | 82000 |
+RESULT {"test": "f10", "pass": true, "failures": [], "details": {"matchCountBefore": "3 matches for \"old vendor\"", "matchCountAfter": "Replaced. 0 matches for \"old vendor\" remain.", "tableHeader": ["Column A", "Column B", "Column C"], "tableBody": [["Widget", "12", "45000"], ["Gadget", "7", "82000"]], "tocAfterTable": "Tables: 1", "exportView": "Filename: report-export.md\n\nIntroReport intro about the new vendor and its pricing.\n  DetailsDetails: the new vendor delivered late twice.\n  SummarySummary: we will keep the new vendor for now.Column AColumn BColumn CWidget1245000Gadget782000\n\n| Column A | Column B | Column C |\n|---|---|---|\n| Widget | 12 | 45000 |\n| Gadget | 7 | 82000 |"}, "started_at": "2026-11-21T09:56:40.803545+00:00", "finished_at": "2026-11-21T09:56:43.563775+00:00", "elapsed_ms": 2760}
+SUMMARY 11/11 passed, total_ms=32731
