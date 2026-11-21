@@ -116,4 +116,5 @@ this path in this probe.
   03:27:26 +07 run 2 (same HTTP 500, same message).
 - Driver used: scripts/zen_dom.py ZenSession (todolist-push HEAD
   49081aa at probe time), geckodriver 0.37.1, Marionette port 2828.
-- Commit of this log: (filled at commit time).
+- Commit of this log: 3790901 (todolist-push), verified via git
+  ls-remote: 37909014cf7c5a11d54a68be16fe8971e9e23727.
