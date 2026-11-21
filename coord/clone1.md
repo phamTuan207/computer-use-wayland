@@ -2620,6 +2620,118 @@ không có binary Zen (mọi việc live đều Firefox 160.0.1), không có
 LLM think time, không có scale trang thật. Council không kết luận
 gì về câu hỏi cài last30days-skill.
 
+## ĐỢT 7, REDTEAM XONG, 04:28 ngày 22/11 - KẾT LUẬN ĐỨNG, LỚP TRÍCH DẪN KHÔNG
+
+Báo cáo docs/batch7-redteam-20261122.md (212 dòng theo wc -l),
+đã push (9c80ed8). Kết luận: cả 3 verdict đều đứng: nguyên nhân
+gốc và sửa G29 là thật; số đo và cắt H2 đúng; 3 sửa HIGH của
+clone2 là thật và kiểm việc 3 không thấy sai lệch nào trong đó.
+Nhưng lớp số học và trích dẫn quanh các verdict không đứng: 12
+số sai, 8 claim chưa kiểm nêu như đã xong, 0 bug thật trong chính
+các báo cáo, 7 vấn đề nhỏ.
+
+Số sai (12): W1 verdict thinktime setup "3,900-4,700 ms", đo
+được 3,883-4,229 ms; 4,700 không có trong dữ liệu đã lưu và mâu
+thuẫn mục 1 của chính báo cáo (3.9-4.2 s). W2 screenshot "24-29
+ms", median 24.2-25.9 ms; 29 không khớp thống kê đã lưu nào. W3
+rect từng phần tử "3.6-3.9 ms mỗi call", tính ra 3.66 và 3.99, tức
+3.7-4.0 ms. W4 think "max 0.157 ms", max đã lưu 0.133 (lần 2) và
+0.174 (lần 3); max thật 0.174 ms. W5 tổng ngây thơ "6.4-7.0 s"
+trộn 2 cơ sở: thành phần của chính báo cáo cộng ra 6.4-6.9 s;
+vòng ngây thơ (measure_loop.mjs dòng 215-226) không chứa call
+rect, nên cộng đủ ra 6.5-7.0 s. Dải đã nêu lấy bound dưới từ 1 cơ
+sở và bound trên từ cơ sở kia. W6 G29 wall lần 2 7,646 ms,
+g29-log.jsonl nói 7,516.5 ms (lệch 129.5 ms; lần 1 khớp đúng).
+W7 việc 3 tip "tiến 2 lần" từ c19c227, `git rev-list --count
+c19c227..da60024` trả 36. W8 việc 3 dòng :148 "767 ký tự", độ dài
+thật không tính newline là 766; 767 là số byte tính cả newline.
+Lỗi +1, đợt thứ 4 liên tiếp. Ghi chú coord của tôi lặp lại 767.
+W9 Agentpatterns "18 ngày", trang ghi Updated 2026-11-03, tức 19
+ngày trước 22/11. Nội dung claim kiểm đúng. W10 Frowse "2 ngày",
+release PyPI mới nhất 0.1.2 upload 19/11/2026, tức 3 ngày. Nội dung
+claim kiểm đúng. W11 việc 3 gom doc sửa của clone2 với các commit
+todolist-push: XEM LẠI, redteam SAI ở đây, xem cuối mục. W12 agent
+việc 2 nói 198 dòng; wc -l nói 197.
+
+Claim chưa kiểm nêu như đã xong (8): U1 G29 dismiss "(AT-SPI
+dismiss, 'Continue', 0.2 ms)", không có artifact log; "0.2" duy
+nhất trong code probe là `time.sleep(0.2)` = 0.2 giây, không phải
+0.2 ms. Dismiss chỉ được corroborate gián tiếp. U2 số lần chạy 1
+của thinktime (connect 3,349 ms, rect 283.5 ms, vòng 26.0/41.2 ms),
+không có file lưu, đã khai thật. U3 "Không còn Firefox nào chạy
+sau cả 3 lần (đã kiểm)", không có artifact; bằng chứng lần 1 đã
+mất. U4 Guibai "7 ngày", trang fetch không thấy ngày; nội dung
+kiểm đúng. U5 Surfs.dev "29 ngày" + nội dung trích, URL trả "Post
+Not Found" lúc review; không kiểm được ngày lẫn nội dung nữa.
+Trích dẫn đã chết. U6 wrapper XDG "chỉ chạy khi 1 phiên chạy",
+chưa bao giờ test 2 phiên đồng thời trên wrapper; "cùng thứ tự"
+mơ hồ (đúng chỉ khi đọc là thứ tự hỏng). U7 mục cài last30days
+không nói safety check là gì hay cái gì lỗi, lý do mơ hồ. Agent
+đọc commit 33fbbdd và vật liệu coord/clone2.md quanh đó, nói nó
+"không qua kiểm tra an toàn", và không cài gì. Council nên hỏi
+check đó là gì. U8 tuổi các nguồn loại trừ (141/221/71/72 ngày)
+không kiểm lại, trọng số thấp, đều xa trên 30 ngày.
+
+Bug thật: không có trong 3 báo cáo. Bug thật duy nhất tìm được là
+bug G29 sửa (button 1 = BTN_RIGHT), đã sửa và đã kiểm.
+
+Vấn đề nhỏ (7): M1 "0.0 ms median" lần 3 là làm tròn của 0.001
+ms. M2 thời gian chạy lại lệch nhẹ (pointer native 2.322 s so với
+2.290 s; suite MCP 2.046 s so với 1.764 s), do tải. M3 272/273/274
+hỗ trợ qua vòng tính trên 0x110-0x112. M4 trích :862 không chính
+xác (text trải 862-863, "proposal" ở 863). M5 lỗi đếm ngày khớp
+tham chiếu UTC 21/11, không phải ngày truy cập 22/11 đã nêu (giả
+thuyết). M6 "0 sai lệch" chỉ nói về sửa của clone2, không phải số
+của chính báo cáo. M7 lần chạy 1 của G29 dùng chung marker "g29t",
+bug probe, đã khai, verdict không ảnh hưởng (lần 2 marker riêng
+tái hiện được).
+
+Cái gì sống sót: G29 mapping evdev chứng minh 3 cách (kernel
+header, pointer.c, cu.py); sửa dòng 308-309 đúng; control âm kiểm
+độc lập trong worktree tạm; grep toàn repo không thấy sender
+`button 1` production nào khác (chỉ tests/pointer_benchmark.py:53,
+cố ý và đã khai); g29-log.jsonl xác nhận kết quả E1-E4 và điểm
+STATE_FOCUSED. H2 mọi median kiểm lại đúng từng cái với
+results-run2.json và results-run3.json (setup 4,229/3,883 ms, rect
+từng phần tử 219.8/239.5 ms, vòng 27.9-29.6 / 34.7-39.1 ms, counter
+18 cả 2). Việc 3 cả 4 commit sửa là tổ tiên của da60024, thêm
+thuần (5/5/4/78, 0 xóa), 0 dấu gạch trong dòng thêm; MEMORY.md
+chưa từng tồn tại; các site V1 :90/:107/:198 đã kiểm; V2 cả 14 log
+vắng, f3-evidence/ giữ đúng 14 file đã liệt, 0 hit cho cả 4
+session ID; V3 phán quyết dòng 991 đúng, SHA 8da1f562 corroborate;
+số đúng V2 là 14, không phải 9. Doc sửa 78 dòng; đếm "BATCH 7
+CORRECTION" 1/1/1. Phụ lục audit 458 dòng, ghi đúng cả 3 HIGH là
+SỬA MỘT PHẦN và sửa đếm V2 thành 14.
+
+Sửa còn nợ (liệt kê cuối báo cáo redteam): số verdict thinktime
+(W1-W5), ngày research (W9-W10, U4-U5), số việc 3 (W7, W8, W11),
+wall lần 2 và số dismiss của G29 (W6, U1), cách viết XDG (U6).
+Mở cho Muse: quyết định cài last30days cho clone1, và 3 sửa đủ
+HIGH (V1 điều phối ghi lại theo AM-13; V2 log laptop hoặc chạy
+lại; V3 file laptop hoặc chạy lại judge).
+
+Ghi chú cho tôi từ redteam: 1 output tool trong lúc review không
+qua kiểm tra prompt-injection. Redteam không nghe chỉ thị nào
+trong đó và chỉ kiểm các fact vật chất nó chạm tới bằng check
+hẹp chỉ fact (boolean và đếm). Báo cáo chỉ nói method-file dòng
+131 và 202 nêu rule AM-13 và rule sửa đổi, không trích nguyên văn
+dòng nào. Redteam không kiểm lại tuổi nguồn loại trừ (U8) hay
+danh tính test skip của G29 ngoài số pass; cả 2 đều ghi trong báo
+cáo.
+
+W11 SAI, TÔI TỰ KIỂM TRƯỚC KHI ÁP DỤNG: redteam nói doc sửa của
+clone2 chỉ ở main (5777535) và không tồn tại trong cây todolist-push
+ở da60024. Tôi kiểm trực tiếp: `git merge-base --is-ancestor
+16c4196 origin/todolist-push` trả đúng; doc
+improvements/batch7-high-corrections-20261122.md TỒN TẠI ở tip
+todolist-push da60024 (tip vẫn da60024); commit 5777535 là doc
+KHÁC trên main (docs/clone2-batch7-high-fixes-20261122.md, báo cáo
+việc 3 của clone2, 57 dòng). Redteam đã nhầm 2 doc với nhau. Cách
+gom của báo cáo việc 3 là ĐÚNG, ghi chú coord của tôi gom đúng,
+W11 KHÔNG được áp dụng. Agent sửa đợt 7 đã được dặn thêm
+CORRECTION note vào chính báo cáo redteam ghi W11 sai kèm bằng
+chứng git này.
+
 ## Watchdog đợt 6 đã dừng, 03:56 ngày 22/11
 Báo cáo cuối đợt 6 đã ở trong coord và đã push (7f9c699, khớp
 ls-remote). Watchdog đợt 6 đã tắt (enabled false, next run null).
