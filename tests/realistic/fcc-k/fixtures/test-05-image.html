@@ -8,38 +8,94 @@
   .row{display:flex;gap:14px;align-items:flex-start;}
   .col{border:1px solid #999;padding:6px;background:#fff;min-width:240px;min-height:220px;overflow:auto;}
   .file{padding:4px;border-bottom:1px solid #ddd;cursor:pointer;}
+  .file.sel{background:#eef;outline:2px solid blue;}
   .status{margin-top:10px;font-family:monospace;white-space:pre-wrap;}
+  button{margin:4px 4px 4px 0;padding:6px 10px;cursor:pointer;}
+  textarea{width:100%;min-height:80px;}
 </style>
 </head>
 <body>
 <h2>Image organize+rename fixture (offline)</h2>
+<div>
+  <button id="newFolderBtn">New Folder</button>
+  <input id="folderName" placeholder="folder name">
+  <span id="msg" style="color:#a00;"></span>
+</div>
 <div class="row">
   <div class="col"><h3>Downloads</h3><div id="dl"></div></div>
-  <div class="col"><h3>Organized</h3><div id="org"></div></div>
+  <div class="col" id="orgCol" style="display:none;"><h3>Organized</h3><div id="org"></div></div>
+</div>
+<div style="margin-top:8px;">
+  <div>Selected file: <span id="selected">none</span></div>
+  <input id="renameInput" placeholder="new name">
+  <button id="renameBtn">Rename</button>
+</div>
+<div style="margin-top:8px;">
+  <div>index.txt (one line per file: original -&gt; new name)</div>
+  <textarea id="indexInput" placeholder="img_01.jpg -> trip-01.jpg"></textarea>
+  <button id="saveIndexBtn">Save index.txt</button>
+  <div id="indexSaved" style="border:1px solid #999;padding:6px;min-height:40px;white-space:pre-wrap;">index.txt not saved yet.</div>
 </div>
 <div id="status" class="status"></div>
 <script>
 const originals=['img_01.jpg','screenshot.png','photo from web.jpg','img_04.jpg','img_05.jpg','img_06.png','img_07.jpg','img_08.jpg'];
-let dl=[...originals];let org=[];let index='';
+// Rename keeps each file's own extension: trip-01.jpg, trip-02.png, trip-03.jpg, ...
+const expected=['trip-01.jpg','trip-02.png','trip-03.jpg','trip-04.jpg','trip-05.jpg','trip-06.png','trip-07.jpg','trip-08.jpg'];
+let dl=[...originals];let org=[];let selected=null;let orgCreated=false;
+function setMsg(t){document.getElementById('msg').textContent=t;}
 function render(){
   const d=document.getElementById('dl');d.innerHTML='';
-  for(const f of dl){const e=document.createElement('div');e.className='file';e.textContent=f;e.onclick=()=>{org.push(f);dl.splice(dl.indexOf(f),1);render();};d.appendChild(e);}
+  for(const f of dl){
+    const e=document.createElement('div');e.className='file';e.dataset.name=f;e.textContent=f;
+    e.onclick=()=>{
+      if(!orgCreated){setMsg('Create the Organized folder first.');return;}
+      org.push(f);dl.splice(dl.indexOf(f),1);setMsg('');render();
+    };
+    d.appendChild(e);
+  }
+  document.getElementById('orgCol').style.display=orgCreated?'block':'none';
   const o=document.getElementById('org');o.innerHTML='';
-  for(const f of org){const e=document.createElement('div');e.className='file';e.textContent=f;o.appendChild(e);}
+  for(const f of org){
+    const e=document.createElement('div');e.className='file'+(f===selected?' sel':'');e.dataset.name=f;e.textContent=f;
+    e.onclick=()=>{selected=f;document.getElementById('selected').textContent=f;render();};
+    o.appendChild(e);
+  }
 }
+document.getElementById('newFolderBtn').onclick=()=>{
+  const name=document.getElementById('folderName').value.trim();
+  if(name==='Organized'){orgCreated=true;setMsg('Folder Organized created.');render();}
+  else setMsg('Type the folder name Organized first.');
+};
+document.getElementById('renameBtn').onclick=()=>{
+  const nv=document.getElementById('renameInput').value.trim();
+  if(!selected){setMsg('Select a file in Organized first.');return;}
+  if(!nv){setMsg('Type a new name first.');return;}
+  org[org.indexOf(selected)]=nv;selected=nv;
+  document.getElementById('selected').textContent=nv;
+  document.getElementById('renameInput').value='';
+  setMsg('');render();
+};
+document.getElementById('saveIndexBtn').onclick=()=>{
+  document.getElementById('indexSaved').textContent=document.getElementById('indexInput').value;
+};
 window.__fcckVerify=function(){
+  // REAL DOM assertion: reads only the two folder lists and the saved index
+  // the agent actually produced. Never moves or renames a file itself.
   const failures=[];
-  // rename map originals -> trip-01..08 with extensions
-  const expected=['trip-01.jpg','trip-02.png','trip-03.jpg','trip-04.jpg','trip-05.jpg','trip-06.png','trip-07.jpg','trip-08.jpg'];
-  let map={};
-  for(let i=0;i<originals.length;i++){map[originals[i]]=expected[i];org.push(originals[i]);dl.splice(dl.indexOf(originals[i]),1);}
-  // apply rename to org
-  org=org.map(f=>map[f]);
-  const okExt={jpg:true,png:true};
-  for(const f of org){const parts=f.split('.');const ext=parts.pop();if(!okExt[ext])failures.push('bad ext '+f);if(!expected.includes(f))failures.push('unexpected '+f);}
-  index=originals.map((f,i)=>f+' -> '+expected[i]).join('\n');
-  const state={dlCount:dl.length,orgCount:org.length,indexLines:index.split('\n').length};
-  const out={passed:failures.length===0&&dl.length===0&&org.length===8,failures,score:failures.length===0?1:0,state};
+  const dlFiles=[...document.querySelectorAll('#dl .file')].map(e=>e.textContent.trim());
+  const orgFiles=[...document.querySelectorAll('#org .file')].map(e=>e.textContent.trim());
+  if(dlFiles.length!==0)failures.push('downloads not empty: '+JSON.stringify(dlFiles));
+  if(orgFiles.length!==8)failures.push('organized count '+orgFiles.length);
+  for(const f of expected){if(!orgFiles.includes(f))failures.push('missing '+f);}
+  const idx=document.getElementById('indexSaved').textContent;
+  const idxLines=idx.split('\n').map(l=>l.trim()).filter(l=>l);
+  if(idxLines.length!==8)failures.push('index lines '+idxLines.length);
+  for(let i=0;i<originals.length;i++){
+    const line=originals[i]+' -> '+expected[i];
+    if(!idx.includes(line))failures.push('index missing mapping '+line);
+  }
+  const state={dlCount:dlFiles.length,orgFiles,indexLines:idxLines.length};
+  const out={passed:failures.length===0,failures,score:failures.length===0?1:0,state,note:'DOM-only image check'};
   document.getElementById('status').textContent=JSON.stringify(out,null,2);
   return out;
 };

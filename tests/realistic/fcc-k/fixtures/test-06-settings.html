@@ -7,31 +7,83 @@
   body{font-family:sans-serif;padding:14px;background:#fafafa;color:#111;}
   .app{border:1px solid #999;padding:8px;margin:8px;background:#fff;}
   .status{margin-top:10px;font-family:monospace;white-space:pre-wrap;}
+  button{margin:4px 4px 4px 0;padding:6px 10px;cursor:pointer;}
+  .doc{margin-top:6px;border:1px solid #ccc;padding:6px;}
 </style>
 </head>
 <body>
 <h2>Settings across two apps fixture (offline)</h2>
 <div class="app"><h3>Notes app</h3>
   <div id="notesSettings">font_size: 14</div>
+  <button id="notesSettingsBtn">Settings</button>
   <button id="notesOpen">Open Notes</button>
+  <div id="notesPanel" style="display:none;margin-top:6px;">
+    <label>Font size <input id="notesFontInput" type="number" value="14"></label>
+    <button id="notesApply">Apply</button>
+    <button id="notesClose">Close</button>
+  </div>
+  <div id="notesDoc" class="doc" style="display:none;">
+    <div id="notesDocLabel">Sample document</div>
+    <p id="notesDocText" style="font-size:14px;">The quick brown fox jumps over the lazy dog. Notes sample text.</p>
+  </div>
 </div>
 <div class="app"><h3>Reader app</h3>
   <div id="readerSettings">zoom: 100</div>
+  <button id="readerSettingsBtn">Settings</button>
   <button id="readerOpen">Open Reader</button>
+  <div id="readerPanel" style="display:none;margin-top:6px;">
+    <label>Zoom (%) <input id="readerZoomInput" type="number" value="100"></label>
+    <button id="readerApply">Apply</button>
+    <button id="readerClose">Close</button>
+  </div>
+  <div id="readerDoc" class="doc" style="display:none;">
+    <div id="readerDocLabel">Sample document</div>
+    <p id="readerDocText" style="font-size:16px;">The quick brown fox jumps over the lazy dog. Reader sample text.</p>
+  </div>
 </div>
 <div id="status" class="status"></div>
 <script>
 let notesFont=14;
 let readerZoom=100;
+document.getElementById('notesSettingsBtn').onclick=()=>{document.getElementById('notesPanel').style.display='block';};
+document.getElementById('notesClose').onclick=()=>{document.getElementById('notesPanel').style.display='none';};
+document.getElementById('notesApply').onclick=()=>{
+  notesFont=Number(document.getElementById('notesFontInput').value)||14;
+  document.getElementById('notesSettings').textContent='font_size: '+notesFont;
+  document.getElementById('notesDocText').style.fontSize=notesFont+'px';
+  document.getElementById('notesDocLabel').textContent='Sample document rendered at font size '+notesFont;
+};
+document.getElementById('notesOpen').onclick=()=>{document.getElementById('notesDoc').style.display='block';};
+document.getElementById('readerSettingsBtn').onclick=()=>{document.getElementById('readerPanel').style.display='block';};
+document.getElementById('readerClose').onclick=()=>{document.getElementById('readerPanel').style.display='none';};
+document.getElementById('readerApply').onclick=()=>{
+  readerZoom=Number(document.getElementById('readerZoomInput').value)||100;
+  document.getElementById('readerSettings').textContent='zoom: '+readerZoom;
+  // Zoom scales the sample text: 150% of the base 16px is 24px.
+  document.getElementById('readerDocText').style.fontSize=Math.round(16*readerZoom/100)+'px';
+  document.getElementById('readerDocLabel').textContent='Sample document at zoom '+readerZoom+'%';
+};
+document.getElementById('readerOpen').onclick=()=>{document.getElementById('readerDoc').style.display='block';};
 window.__fcckVerify=function(){
+  // REAL DOM assertion: reads only the settings lines and the sample docs
+  // the agent actually configured. Never sets a value itself.
   const failures=[];
-  notesFont=18;readerZoom=150;
-  const notesApplied = notesFont===18;
-  const readerApplied = readerZoom===150;
-  if(!notesApplied)failures.push('notes font not applied');
-  if(!readerApplied)failures.push('reader zoom not applied');
-  const state={notesFont,readerZoom,notesApplied,readerApplied};
-  const out={passed:failures.length===0,failures,score:failures.length===0?1:0,state};
+  const ns=document.getElementById('notesSettings').textContent.trim();
+  const rs=document.getElementById('readerSettings').textContent.trim();
+  if(ns!=='font_size: 18')failures.push('notes font_size wrong: '+ns);
+  if(rs!=='zoom: 150')failures.push('reader zoom wrong: '+rs);
+  const nf=document.getElementById('notesDocText').style.fontSize;
+  if(nf!=='18px')failures.push('notes sample doc font-size wrong: '+nf);
+  const nl=document.getElementById('notesDocLabel').textContent;
+  if(!nl.includes('18'))failures.push('notes sample doc label missing 18: '+nl);
+  const rf=document.getElementById('readerDocText').style.fontSize;
+  if(rf!=='24px')failures.push('reader sample doc font-size wrong (150% of 16px = 24px): '+rf);
+  const rl=document.getElementById('readerDocLabel').textContent;
+  if(!rl.includes('150'))failures.push('reader sample doc label missing 150: '+rl);
+  if(document.getElementById('notesDoc').style.display==='none')failures.push('notes sample doc not open');
+  if(document.getElementById('readerDoc').style.display==='none')failures.push('reader sample doc not open');
+  const state={notesSettings:ns,readerSettings:rs,notesDocFont:nf,readerDocFont:rf};
+  const out={passed:failures.length===0,failures,score:failures.length===0?1:0,state,note:'DOM-only settings check'};
   document.getElementById('status').textContent=JSON.stringify(out,null,2);
   return out;
 };
