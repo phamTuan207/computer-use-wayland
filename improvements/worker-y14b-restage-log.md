@@ -2452,3 +2452,63 @@ C2-9/C2-10 INFO parts (covered by item 14).
   3 GO, Councils 1 and 2 pending. The proposed stopping rule
   (AMEND with only doc items, fix the docs and ship without
   another round) still stands to be put to Muse.
+
+### Fix-pass-7 reviews: Council 1 GO (3 of 4 in)
+
+- 00:23 +07: Council 1 verdict GO. Paper d122518 + time-
+  correction follow-up 6fc7cda (todolist-push, ls-remote
+  verified, ANCESTOR_OK; only the paper file staged in both
+  commits; agent 43c2b578, completed 00:21:03 UTC). The push
+  was NOT blocked. The uncommitted fix-pass-6 redteam paper
+  was not touched, and no git fetch was run. (Verification
+  note: a first ls-remote read showed the remote head as
+  3a89c27, older than d122518/6fc7cda, yet merge-base said
+  they were ancestors; re-checked live: the remote head is
+  4651ef8 (a Y13g verify commit), the local tracking ref
+  matches it, and 6fc7cda IS an ancestor of 4651ef8. The
+  first read was a mid-race stale value while Y13g pushed.
+  Both Council 1 commits are on the remote.) Independent
+  verification: author probes rerun, fix7 probe 86/86 PASS,
+  fix6 probe 71/71 PASS on the fix7 tree, 0 FAIL. Own
+  differential probe /tmp/y14b-c1-diffprobe2.py (fix5/ff4a5358
+  vs fix6/261f09ae vs fix7/8df578c7 loaded side by side from
+  git objects): 53/53 PASS, unit + helper + live /proc +
+  shell semantics. R6-1: all three forms flip fix6 False to
+  fix7 True at unit AND live level (live (b) is its own
+  addition; the author probe only has live (a)/(c)). No
+  regression in R5-1, C5-1, C2-3, F2, R3/R4, R5-4, R5-3,
+  R5-8. Bare-don't returns True at unit level in all blobs
+  and bash exits 2, so the author's 85/86-to-86/86 probe
+  correction is right. C6-3/R6-2: 5 paren forms flip True to
+  False (including a live /proc check via sleeper exec); all
+  5 separator forms (; , &&, |, &, ||) still True. Zero
+  wrong-direction moves. Bash independently exits 2 on
+  run_foo.py(x and run_foo.py(). All 7 doc fixes present at
+  cited lines with cited wording (C6-1 rstrip set confirmed
+  against the fix5 blob line 2539; C6-2 helper returns 3
+  measured in both blobs; C6-4 no-separator form is True in
+  fix5 / False in fix6 while the old glued form is False in
+  both; synthetic-only wording in both places; R6-4 bounding
+  sentence verified live; grep -r in the C2-5 list; plan md5
+  lines 614-615). Hashes by direct git commands: blob
+  8df578c7 / md5 0d98342e at 65d669b; blob 261f09ae / md5
+  fac96935 at parent; fix-pass-6 commit d552f4d is an
+  ancestor. Hygiene: 0 em/en dash in the diff and in its
+  paper, no ydotool use, 0 PII hits, no Zen driving, t10
+  untouched (0 added/removed t10 lines; all 7 code hunks are
+  in the guard region lines 2434-2954). Honest notes: its
+  first probe version failed 19/52, all its own bugs (dropped
+  enclosing quotes on -c arguments, 4 backwards shell
+  expectations, 1 bash exec-optimisation race on live (b));
+  fixed its probe, re-ran to 53/53, and recorded the errors
+  in the paper rather than hiding them. It also caught and
+  corrected its own paper header: it first claimed "finished
+  00:37, elapsed 21 min" when the commit timestamp proves
+  00:19 and about 4 min; fixed in 6fc7cda. Three run_foo.py
+  orphans appeared briefly mid-review with near-identical
+  start times (within 2s); they were not from its sequential
+  probe runs, self-terminated within their 60s sleep, and a
+  final sweep shows 0 remaining.
+- 00:24 +07: only Council 2 still running. Fix pass 8 (if
+  needed) waits for it. Current tally: redteam GO, Council 3
+  GO, Council 1 GO, Council 2 pending.
