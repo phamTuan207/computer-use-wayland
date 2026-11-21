@@ -400,3 +400,84 @@ improvements/worker-opt-council-order-log.md, follows it.)
   worker's log as your own. If a push races (another worker pushed first),
   fetch, confirm your commit is an ancestor of the remote head, and
   continue; do not re-push blindly.
+
+## Section 5. SIBLING AGREEMENT AND DISAGREEMENT (OPT-M1, OPT-M2)
+
+### 5.1 OPT-M1 (session/silence/overlay): mechanism, evidence, safety
+- M1 mechanism paper (improvements/opt-council-m1-mechanism.md) and its
+  evidence + safety papers landed during this council's work (commits
+  afd7766, d5e2dc4). This verdict AGREES with M1 on:
+  - B cannot be proven until A is green (M1 B5; todolist gate
+    G-F1-BEFORE-F2). The pill exists only inside a live session; the
+    direct Pointer path never touches the overlay (M1 B2, citing
+    scripts/cu.py require_session lines 2599-2602).
+  - Glass-then-guard load order is forced (M1 A7): the guard cannot load
+    until glass loads first (scripts/indicator.py liquid_available, line
+    242). Both pinned .so files are loadable now.
+  - Three different proofs for A, B, C2: A needs a live session start with
+    pill in a fresh observe; B needs a timed rehearsal under 30s; C2 needs
+    a nested compositor measurement. No single live run proves all three
+    (M1 cross-class summary).
+  - C1 has two mechanisms: dead session (class A) and live session with
+    glass paused/crashed (M1 C1b, redteam R3). The session must gate on
+    hyprglass active, or the require-liquid marker must be published.
+  - C2 (flicker) is an unmeasured compositor-side repaint loop, not an
+    indicator bug: the indicator is proven innocent at idle (0 paints in
+    122 windows, 32/32 frames identical), and the ~10Hz rate was only a
+    user estimate, never measured (M1 C2).
+- M1 input ADOPTED into this verdict: the F3 slot FIXED 22:48 evidence
+  (67 tabs listed, click tab PASS 29ms 1.0px), qualified by amendment O-1
+  (re-verify G-RESTORE after the FULL cleanup re-run, because the restart
+  restored 39 fixture tabs at 22:50).
+- No disagreement with M1. M1's remaining gaps (guard_reply
+  UnicodeDecodeError, truncated-JSON misdiagnosis, supervise drain race,
+  driver-registration detail, non-UTF8 drain death, drain settle, deque
+  tail) are recorded in voice 3 R7 as re-run risks if F1 ships unreviewed.
+  They are F1's fix list, not ordering disputes.
+
+### 5.2 OPT-M2 (Marionette/Zen/pill/tests): mechanism
+- M2 mechanism paper (improvements/opt-council-m2-mechanism.md, written
+  22:56-23:05 +07) landed after this council's voices 1-3 were written.
+  This verdict AGREES with M2 on:
+  - D root cause proven at code level: #registerBrowser line 4616, reached
+    through #registerWindow line 4640 with a null linkedBrowser, through
+    newSession lines 2706-2707; no null check at any level; the null filter
+    exists in getBrowsers() but the session path does not call it (M2
+    section D, citing driver.sys.mjs from the laptop omni.ja). Fix D-1:
+    client-side avoidance + restart ladder, no browser patch. D-2 (patch
+    omni.ja) and D-3 (BiDi only) rejected for stated mechanism reasons.
+    This verdict adopts D-1 as the F3 slot method.
+  - E wedge mechanism UNKNOWN: no signature was captured before the restart
+    (M2 section E). The wedge and the slot failure share a window and a
+    cure, but the verdict must not merge the fixes. E-2 (capture the wedge
+    signature next time: hyprctl clients/workspaces/activewindow, Zen PID
+    and flags, BiDi getTree, one Marionette POST with its exact error) is
+    adopted as a standing rule for any future wedge.
+  - E workspace switching: the exact hl.dsp command string is NOT in any
+    primary source read; the fix worker must read it from the Hyprland/
+    Omarchy config and record it, not guess it (M2 section E). Bar clicks
+    stay banned (J21). This verdict makes "read the config, record the
+    exact command" a named step of serial rank 1.
+  - F Y6: the A1-A10 list adopted whole, including A7 (no manual reload)
+    and the precision limit (M2 section F). Adopted as amendment O-2.
+  - G hidden-body: V2 DEAD, stale-geckodriver DEAD, V1 wounded not dead,
+    third mechanism (grouping-rule / hidden-sheet blind scan) live (M2
+    section G). Fix design adopted with its redteam corrections. Adopted as
+    amendment O-4 and O-6.
+- No disagreement with M2. One timing note: M2 was written 22:56-23:05,
+  after voices 1-3; the voices recorded M2 as "does not exist yet" at their
+  write time, which was true then. This verdict section is the reconciliation.
+
+### 5.3 State changes since PRIO decided the queue (22:48)
+- VMFIX DONE 22:40 (already in the todolist P0; redteam addendum refutes
+  the re-breakage premise of A3).
+- F3 slot FIXED 22:48, then Zen restart restored 39 fixture tabs 22:50,
+  F3 re-running FULL cleanup (MEMORY.md 22:49-22:51). Amendment O-1.
+- Graph correction 22:49-22:51: graph counts main only; todolist-push 290
+  UTC-day commits do not count; Worker MERGE spawned. Section 4.
+- OPT verified via GraphQL 22:52: UTC day 145, +07 day 202, gap ~95.
+  Section 4.3.
+- Sibling papers landed: M1 mechanism/evidence/safety, M2 mechanism.
+  Sections 5.1-5.2.
+- Running workers at verdict time (do NOT stop or redirect): F1, F2, F3,
+  Y13r2, Y14b, PRIO (complete), MERGE (new).
