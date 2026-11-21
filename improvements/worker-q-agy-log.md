@@ -58,3 +58,10 @@ Strict requirements enforced:
 - Created offline fixture `tests/realistic/agy-q/fixtures/test-03-rss-reader.html` featuring multi-column feed reader layout, category subscription, read/unread toggling, star bookmarking, mark all read, and markdown export.
 - Verified test with `node tests/realistic/agy-q/check.mjs --fixture tests/realistic/agy-q/fixtures/test-03-rss-reader.html --test 03`: score 1, 0 failures, 71ms.
 - Verified zero em/en dashes.
+
+## 2026-11-21 15:51:25 (T+00:07:36) - Completed Test 04 (notes app)
+
+- Created `tests/realistic/agy-q/test-04-notes-app.md` (30 exact steps, within 15-40 limit).
+- Created offline fixture `tests/realistic/agy-q/fixtures/test-04-notes-app.html` with markdown authoring, live rendered preview, bidirectional `[[WikiLink]]` routing, backlinks computation, note pinning, search by `#tag`, and note archiving.
+- Verified test with `node tests/realistic/agy-q/check.mjs --fixture tests/realistic/agy-q/fixtures/test-04-notes-app.html --test 04`: score 1, 0 failures, 74ms.
+- Verified zero em/en dashes.
