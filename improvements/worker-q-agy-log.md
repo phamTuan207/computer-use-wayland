@@ -51,3 +51,10 @@ Strict requirements enforced:
 - Created offline fixture `tests/realistic/agy-q/fixtures/test-02-photo-gallery.html` with photo grid, dynamic album management, compound tag filtering, modal tag editing, and JSON export.
 - Verified test with `node tests/realistic/agy-q/check.mjs --fixture tests/realistic/agy-q/fixtures/test-02-photo-gallery.html --test 02`: score 1, 0 failures, 56ms.
 - Verified zero em/en dashes.
+
+## 2026-11-21 15:49:40 (T+00:05:51) - Completed Test 03 (RSS reader)
+
+- Created `tests/realistic/agy-q/test-03-rss-reader.md` (28 exact steps, within 15-40 limit).
+- Created offline fixture `tests/realistic/agy-q/fixtures/test-03-rss-reader.html` featuring multi-column feed reader layout, category subscription, read/unread toggling, star bookmarking, mark all read, and markdown export.
+- Verified test with `node tests/realistic/agy-q/check.mjs --fixture tests/realistic/agy-q/fixtures/test-03-rss-reader.html --test 03`: score 1, 0 failures, 71ms.
+- Verified zero em/en dashes.
