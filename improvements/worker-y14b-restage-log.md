@@ -99,3 +99,15 @@ driving in this task.
   H2 helpers (inserted before launch_gate), launch_gate (sweep).
   No other test function touched; t01-t09 check.mjs files are
   byte-identical between ed78e83 and 1d23532 (git diff --stat).
+- 21:12 +07: committed f732d6a on todolist-push (3 files: runner,
+  plan, this log), pushed, ls-remote verified. Only my 3 files
+  staged; Y13f's uncommitted working-tree changes untouched.
+- 21:13 +07: council (3 voices) + redteam spawned over the re-stage
+  diff f732d6a only. Council 1: t10 translation faithfulness.
+  Council 2: H2 fix + gate/preflight integration. Council 3:
+  re-stage hygiene (suite HEAD, diff scope, plan consistency, N/A
+  honesty, Y15 limits, log evidence). Redteam: break the diff
+  (false-pass paths, exact-zero soundness, H2 bypasses and
+  false-positives, gate/preflight window, stale references). Ship
+  to the laptop waits for their verdicts (ship must be from final
+  bytes after any fixes).
