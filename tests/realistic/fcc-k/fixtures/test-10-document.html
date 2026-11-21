@@ -6,39 +6,118 @@
 <style>
   body{font-family:serif;padding:14px;background:#fafafa;color:#111;}
   .status{margin-top:10px;font-family:monospace;white-space:pre-wrap;}
+  button{margin:4px 4px 4px 0;padding:6px 10px;cursor:pointer;}
+  table{border-collapse:collapse;margin-top:8px;}
+  th,td{border:1px solid #999;padding:4px 10px;min-width:90px;min-height:22px;}
+  input{margin:4px;}
 </style>
 </head>
 <body>
 <h2>Long document edit fixture (offline)</h2>
-<div id="doc">Report intro old vendor text. Summary old vendor again.</div>
-<div>
-<button id="find">Open Find/Replace</button>
-<button id="replaceAll">Replace all old vendor -> new vendor</button>
+<div id="toc" style="border:1px solid #999;padding:6px;background:#fff;">
+  <b>Table of contents</b>
+  <div>1. Intro</div>
+  <div>2. Details</div>
+  <div>3. Summary</div>
+  <div id="tocCount">Tables: 0</div>
+</div>
+<div id="doc">
+  <section id="sec-intro"><h3>Intro</h3><p>Report intro about the old vendor and its pricing.</p></section>
+  <section id="sec-details"><h3>Details</h3><p>Details: the old vendor delivered late twice.</p></section>
+  <section id="sec-summary"><h3>Summary</h3><p>Summary: we will keep the old vendor for now.</p><div id="tableSlot"></div></section>
 </div>
 <div>
+<button id="find">Open Find/Replace</button>
+</div>
+<div id="findPanel" style="display:none;border:1px solid #333;padding:8px;margin-top:8px;background:#fff;">
+  <label>Find <input id="findInput"></label>
+  <label>Replace with <input id="replaceInput"></label>
+  <button id="searchBtn">Search</button>
+  <button id="replaceAll">Replace all</button>
+  <button id="findClose">Close</button>
+  <div id="matchCount"></div>
+</div>
+<div style="margin-top:8px;">
 <button id="addTable">Add table</button>
 <button id="save">Save</button>
 <button id="export">Export to report-export.md</button>
 </div>
+<div id="savedState" style="margin-top:6px;">Not saved yet.</div>
+<div id="exportView" style="margin-top:6px;border:1px solid #999;padding:6px;min-height:60px;white-space:pre-wrap;">No export yet.</div>
 <div id="status" class="status"></div>
 <script>
-let doc='Report intro old vendor text. Summary old vendor again.';
+function docText(){return document.getElementById('doc').textContent;}
+document.getElementById('find').onclick=()=>{document.getElementById('findPanel').style.display='block';};
+document.getElementById('findClose').onclick=()=>{document.getElementById('findPanel').style.display='none';};
+document.getElementById('searchBtn').onclick=()=>{
+  const term=document.getElementById('findInput').value;
+  if(!term){document.getElementById('matchCount').textContent='Type a search term.';return;}
+  const count=docText().split(term).length-1;
+  document.getElementById('matchCount').textContent=count+' matches for "'+term+'"';
+};
+document.getElementById('replaceAll').onclick=()=>{
+  const term=document.getElementById('findInput').value;
+  const repl=document.getElementById('replaceInput').value;
+  if(!term)return;
+  // Replace inside text nodes only, so the table structure stays intact.
+  const walker=document.createTreeWalker(document.getElementById('doc'),NodeFilter.SHOW_TEXT);
+  const nodes=[];while(walker.nextNode())nodes.push(walker.currentNode);
+  for(const n of nodes){if(n.nodeValue.includes(term))n.nodeValue=n.nodeValue.split(term).join(repl);}
+  const left=docText().split(term).length-1;
+  document.getElementById('matchCount').textContent='Replaced. '+left+' matches for "'+term+'" remain.';
+};
+document.getElementById('addTable').onclick=()=>{
+  if(document.getElementById('insTable'))return;
+  const t=document.createElement('table');t.id='insTable';t.border='1';t.cellPadding='4';
+  for(let ri=0;ri<3;ri++){
+    const tr=document.createElement('tr');
+    for(let ci=0;ci<3;ci++){
+      const cell=document.createElement(ri===0?'th':'td');
+      cell.contentEditable='true';cell.textContent='';
+      tr.appendChild(cell);
+    }
+    t.appendChild(tr);
+  }
+  document.getElementById('tableSlot').appendChild(t);
+  document.getElementById('tocCount').textContent='Tables: 1';
+};
+document.getElementById('save').onclick=()=>{document.getElementById('savedState').textContent='Saved.';};
+document.getElementById('export').onclick=()=>{
+  let md=docText().trim();
+  const tbl=document.getElementById('insTable');
+  let tableMd='';
+  if(tbl){
+    const rows=[...tbl.querySelectorAll('tr')].map(tr=>[...tr.querySelectorAll('th,td')].map(c=>c.textContent.trim()).join(' | '));
+    tableMd='\n\n| '+rows[0]+' |\n|---|---|---|\n| '+rows[1]+' |\n| '+rows[2]+' |';
+  }
+  document.getElementById('exportView').textContent='Filename: report-export.md\n\n'+md+tableMd;
+};
 window.__fcckVerify=function(){
+  // REAL DOM assertion: reads only the document text, the inserted table,
+  // the TOC count, and the export view the agent actually produced.
+  // Never edits the document, adds a table, or exports itself.
   const failures=[];
-  const table='| Col A | Col B | Col C |\n|---|---|---|\n| v1 | v2 | v3 |';
-  // replace all
-  doc=doc.split('old vendor').join('new vendor');
-  const hasNew=!doc.includes('old vendor');
-  if(!hasNew)failures.push('replace did not apply');
-  // add table
-  doc=doc+'\n\n'+table;
-  if(!doc.includes(table))failures.push('table not added');
-  const exported=doc.split('old vendor').join('new vendor');
-  const exportText=exported+'\n\n'+table;
-  const hasExportNew=!exportText.includes('old vendor');
-  const expName='report-export.md';
-  const state={replaced:true,tableAdded:true,exportName:expName,exportClean:hasExportNew,docHasNew:hasNew};
-  const out={passed:failures.length===0&&hasExportNew&&hasNew,failures,score:failures.length===0?1:0,state};
+  const text=docText();
+  if(text.includes('old vendor'))failures.push('old vendor still in document');
+  if(!text.includes('new vendor'))failures.push('new vendor missing from document');
+  const tbl=document.getElementById('insTable');
+  if(!tbl)failures.push('table missing');
+  else{
+    const header=[...tbl.querySelectorAll('tr')[0].querySelectorAll('th')].map(c=>c.textContent.trim());
+    if(header.join('|')!=='Column A|Column B|Column C')failures.push('table header wrong: '+JSON.stringify(header));
+    const bodyRows=[...tbl.querySelectorAll('tr')].slice(1);
+    if(bodyRows.length!==2)failures.push('table body rows '+bodyRows.length);
+    bodyRows.forEach((tr,i)=>{[...tr.querySelectorAll('td')].forEach((c,j)=>{if(!c.textContent.trim())failures.push('table cell empty row '+(i+1)+' col '+(j+1));});});
+  }
+  const toc=document.getElementById('tocCount').textContent;
+  if(!toc.includes('1'))failures.push('TOC count not updated: '+toc);
+  const exp=document.getElementById('exportView').textContent;
+  if(!exp.includes('Filename: report-export.md'))failures.push('export filename wrong');
+  if(!exp.includes('new vendor'))failures.push('export missing new vendor');
+  if(exp.includes('old vendor'))failures.push('export still has old vendor');
+  if(tbl&&!exp.includes('Column A'))failures.push('export missing table');
+  const state={oldVendorLeft:text.includes('old vendor'),newVendor:text.includes('new vendor'),toc,exportName:exp.split('\n')[0]};
+  const out={passed:failures.length===0,failures,score:failures.length===0?1:0,state,note:'DOM-only document check'};
   document.getElementById('status').textContent=JSON.stringify(out,null,2);
   return out;
 };
