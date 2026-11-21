@@ -86,6 +86,13 @@ try {
     failures.push('position not reset after next: min observed ' + minAfterNext + ' after ' + posBeforeNext);
   }
   details.positionMinAfterNext = minAfterNext;
+  // The sampler only proves the reset happened, not that the clock
+  // kept running: a nextTrack that stopped the timer would also
+  // show min 0. After the 500 ms sample window the position must
+  // have advanced well past 0 while playing.
+  await sleep(350);
+  const advancing = await position();
+  if (advancing < 2) failures.push('position did not advance after next while playing: ' + advancing);
   await page.click('#prev-btn');
   await expectText('#now-playing', 'Morning Light - The Demos', 'now playing after prev');
   await page.click('#volume');

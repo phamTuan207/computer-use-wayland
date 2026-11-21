@@ -1,7 +1,7 @@
 {
-  "started_at": "2026-11-21T12:07:05.879Z",
-  "finished_at": "2026-11-21T12:08:29.173Z",
-  "wall_clock_ms": 83294,
+  "started_at": "2026-11-21T12:18:46.280Z",
+  "finished_at": "2026-11-21T12:19:11.304Z",
+  "wall_clock_ms": 25024,
   "passed": 10,
   "failed": 0,
   "results": [
@@ -9,80 +9,80 @@
       "test": "t01-terminal",
       "exitCode": 0,
       "pass": true,
-      "elapsed_ms": 8206,
-      "stdout": "{\"test\":\"t01-terminal\",\"pass\":true,\"failures\":[],\"details\":{\"historyLines\":0,\"finalOutputLines\":4},\"started_at\":\"2026-11-21T12:07:06.181Z\",\"finished_at\":\"2026-11-21T12:07:14.005Z\",\"elapsed_ms\":7824}",
+      "elapsed_ms": 2218,
+      "stdout": "{\"test\":\"t01-terminal\",\"pass\":true,\"failures\":[],\"details\":{\"historyLines\":0,\"finalOutputLines\":4},\"started_at\":\"2026-11-21T12:18:46.371Z\",\"finished_at\":\"2026-11-21T12:18:48.490Z\",\"elapsed_ms\":2118}",
       "stderr": ""
     },
     {
       "test": "t02-spreadsheet",
       "exitCode": 0,
       "pass": true,
-      "elapsed_ms": 7476,
-      "stdout": "{\"test\":\"t02-spreadsheet\",\"pass\":true,\"failures\":[],\"details\":{\"C1\":\"70\",\"C2\":\"30\",\"D1\":\"0\",\"B2\":\"60\",\"D4\":\"45\",\"D2\":\"#ERR\",\"D3\":\"#ERR\",\"C3\":\"95\",\"C4\":\"5\",\"D5\":\"0.5\",\"D6\":\"#ERR\"},\"started_at\":\"2026-11-21T12:07:14.911Z\",\"finished_at\":\"2026-11-21T12:07:21.396Z\",\"elapsed_ms\":6485}",
+      "elapsed_ms": 1676,
+      "stdout": "{\"test\":\"t02-spreadsheet\",\"pass\":true,\"failures\":[],\"details\":{\"C1\":\"70\",\"C2\":\"30\",\"D1\":\"0\",\"B2\":\"60\",\"D4\":\"45\",\"D2\":\"#ERR\",\"D3\":\"#ERR\",\"C3\":\"95\",\"C4\":\"5\",\"D5\":\"0.5\",\"D6\":\"#ERR\"},\"started_at\":\"2026-11-21T12:18:48.621Z\",\"finished_at\":\"2026-11-21T12:18:50.169Z\",\"elapsed_ms\":1548}",
       "stderr": ""
     },
     {
       "test": "t03-video-call",
       "exitCode": 0,
       "pass": true,
-      "elapsed_ms": 7325,
-      "stdout": "{\"test\":\"t03-video-call\",\"pass\":true,\"failures\":[],\"details\":{\"chatMessages\":2},\"started_at\":\"2026-11-21T12:07:21.912Z\",\"finished_at\":\"2026-11-21T12:07:28.888Z\",\"elapsed_ms\":6975}",
+      "elapsed_ms": 1929,
+      "stdout": "{\"test\":\"t03-video-call\",\"pass\":true,\"failures\":[],\"details\":{\"chatMessages\":2},\"started_at\":\"2026-11-21T12:18:50.268Z\",\"finished_at\":\"2026-11-21T12:18:52.097Z\",\"elapsed_ms\":1828}",
       "stderr": ""
     },
     {
       "test": "t04-email-client",
       "exitCode": 0,
       "pass": true,
-      "elapsed_ms": 7505,
-      "stdout": "{\"test\":\"t04-email-client\",\"pass\":true,\"failures\":[],\"details\":{\"finalInbox\":\"2\"},\"started_at\":\"2026-11-21T12:07:29.096Z\",\"finished_at\":\"2026-11-21T12:07:36.308Z\",\"elapsed_ms\":7212}",
+      "elapsed_ms": 1854,
+      "stdout": "{\"test\":\"t04-email-client\",\"pass\":true,\"failures\":[],\"details\":{\"finalInbox\":\"2\"},\"started_at\":\"2026-11-21T12:18:52.196Z\",\"finished_at\":\"2026-11-21T12:18:53.951Z\",\"elapsed_ms\":1755}",
       "stderr": ""
     },
     {
       "test": "t05-file-manager",
       "exitCode": 0,
       "pass": true,
-      "elapsed_ms": 8865,
-      "stdout": "{\"test\":\"t05-file-manager\",\"pass\":true,\"failures\":[],\"details\":{\"finalHome\":[\"budget.csv\",\"meeting-notes.txt\",\"Old files\",\"video.mp4\"]},\"started_at\":\"2026-11-21T12:07:36.814Z\",\"finished_at\":\"2026-11-21T12:07:45.199Z\",\"elapsed_ms\":8386}",
+      "elapsed_ms": 2983,
+      "stdout": "{\"test\":\"t05-file-manager\",\"pass\":true,\"failures\":[],\"details\":{\"finalHome\":[\"budget.csv\",\"field-notes-7.txt\",\"Old Files 2026\",\"video.mp4\"]},\"started_at\":\"2026-11-21T12:18:54.064Z\",\"finished_at\":\"2026-11-21T12:18:56.936Z\",\"elapsed_ms\":2872}",
       "stderr": ""
     },
     {
       "test": "t06-calendar",
       "exitCode": 0,
       "pass": true,
-      "elapsed_ms": 5325,
-      "stdout": "{\"test\":\"t06-calendar\",\"pass\":true,\"failures\":[],\"details\":{\"chips\":[\"11:00 Team sync\",\"14:00 Demo\",\"09:00 Deadline\"]},\"started_at\":\"2026-11-21T12:07:45.582Z\",\"finished_at\":\"2026-11-21T12:07:50.582Z\",\"elapsed_ms\":5000}",
+      "elapsed_ms": 1865,
+      "stdout": "{\"test\":\"t06-calendar\",\"pass\":true,\"failures\":[],\"details\":{\"chips\":[\"11:00 Team sync\",\"14:00 Demo\",\"09:00 Deadline\"]},\"started_at\":\"2026-11-21T12:18:57.031Z\",\"finished_at\":\"2026-11-21T12:18:58.799Z\",\"elapsed_ms\":1767}",
       "stderr": ""
     },
     {
       "test": "t07-code-editor",
       "exitCode": 0,
       "pass": true,
-      "elapsed_ms": 11202,
-      "stdout": "{\"test\":\"t07-code-editor\",\"pass\":true,\"failures\":[],\"details\":{\"lines\":\"1\"},\"started_at\":\"2026-11-21T12:07:50.796Z\",\"finished_at\":\"2026-11-21T12:08:01.723Z\",\"elapsed_ms\":10927}",
+      "elapsed_ms": 2393,
+      "stdout": "{\"test\":\"t07-code-editor\",\"pass\":true,\"failures\":[],\"details\":{\"lines\":\"1\"},\"started_at\":\"2026-11-21T12:18:58.922Z\",\"finished_at\":\"2026-11-21T12:19:01.194Z\",\"elapsed_ms\":2271}",
       "stderr": ""
     },
     {
       "test": "t08-settings-panel",
       "exitCode": 0,
       "pass": true,
-      "elapsed_ms": 7172,
-      "stdout": "{\"test\":\"t08-settings-panel\",\"pass\":true,\"failures\":[],\"details\":{\"finalTheme\":\"Light\"},\"started_at\":\"2026-11-21T12:08:02.417Z\",\"finished_at\":\"2026-11-21T12:08:08.882Z\",\"elapsed_ms\":6462}",
+      "elapsed_ms": 1888,
+      "stdout": "{\"test\":\"t08-settings-panel\",\"pass\":true,\"failures\":[],\"details\":{\"finalTheme\":\"Light\"},\"started_at\":\"2026-11-21T12:19:01.286Z\",\"finished_at\":\"2026-11-21T12:19:03.083Z\",\"elapsed_ms\":1796}",
       "stderr": ""
     },
     {
       "test": "t09-multi-window",
       "exitCode": 0,
       "pass": true,
-      "elapsed_ms": 12052,
-      "stdout": "{\"test\":\"t09-multi-window\",\"pass\":true,\"failures\":[],\"details\":{\"finalTitles\":{\"alpha\":\"Alpha Final\",\"beta\":\"Beta\",\"gamma\":\"Gamma v2\"}},\"started_at\":\"2026-11-21T12:08:09.176Z\",\"finished_at\":\"2026-11-21T12:08:21.006Z\",\"elapsed_ms\":11830}",
+      "elapsed_ms": 3216,
+      "stdout": "{\"test\":\"t09-multi-window\",\"pass\":true,\"failures\":[],\"details\":{\"finalTitles\":{\"alpha\":\"Alpha Final\",\"beta\":\"Beta\",\"gamma\":\"Gamma v2\"}},\"started_at\":\"2026-11-21T12:19:03.185Z\",\"finished_at\":\"2026-11-21T12:19:06.298Z\",\"elapsed_ms\":3112}",
       "stderr": ""
     },
     {
       "test": "t10-music-player",
       "exitCode": 0,
       "pass": true,
-      "elapsed_ms": 8124,
-      "stdout": "{\"test\":\"t10-music-player\",\"pass\":true,\"failures\":[],\"details\":{\"positionAfter700ms\":7,\"positionMinAfterNext\":0,\"positionAfterSeek\":90},\"started_at\":\"2026-11-21T12:08:21.277Z\",\"finished_at\":\"2026-11-21T12:08:29.134Z\",\"elapsed_ms\":7856}",
+      "elapsed_ms": 4990,
+      "stdout": "{\"test\":\"t10-music-player\",\"pass\":true,\"failures\":[],\"details\":{\"positionAfter700ms\":7,\"positionMinAfterNext\":0,\"positionAfterSeek\":90},\"started_at\":\"2026-11-21T12:19:06.417Z\",\"finished_at\":\"2026-11-21T12:19:11.289Z\",\"elapsed_ms\":4872}",
       "stderr": ""
     }
   ]

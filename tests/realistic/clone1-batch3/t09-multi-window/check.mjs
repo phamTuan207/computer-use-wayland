@@ -125,7 +125,11 @@ try {
   }
   popup = await openPopup('.project[data-id="beta"] .detail-btn');
   await popup.fill('#title-input', 'Beta Changed');
-  await clickAndClose(popup, '#cancel-btn', titleIs('beta', 'Beta'), 'Beta title after cancelled rename');
+  await clickAndClose(popup, '#cancel-btn');
+  // No verify here: the title is already 'Beta', so waiting for it
+  // would return instantly and prove nothing. Dwell instead, then
+  // read immediately: a wrong rename message would have arrived.
+  await sleep(500);
   await expectTitle('beta', 'Beta', 'Beta title after cancelled rename');
   const detailPopup = await openPopup('.project[data-id="gamma"] .detail-btn');
   const prefsPopup = await openPopup('#prefs-btn');
