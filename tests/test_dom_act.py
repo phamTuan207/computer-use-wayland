@@ -221,6 +221,18 @@ class GroundInputTests(unittest.TestCase):
                          'locate + viewport_origin + hit_check + '
                          're-locate (HCU live guard) only')
 
+    def test_grounded_y_range_is_field_y_in_image_px(self):
+        # AMEND4 item 3: the grounded y-range is the field's y span
+        # in image px. G30 field rect y 1101..1164, point y 1132.5,
+        # image and region map 1:1, so the range is exactly the rect.
+        session = FakeDomSession({'#msg-input': G30_FIELD})
+        ground = dom_act.ground_input(session, G30_META, '#msg-input')
+        self.assertEqual(dom_act.grounded_y_range(ground, G30_META),
+                         [1101.0, 1164.0])
+        # A meta that cannot map the rect keeps the click-anchored
+        # band instead of a bogus range.
+        self.assertIsNone(dom_act.grounded_y_range(ground, {}))
+
     def test_ground_input_covered_refuses_before_any_click(self):
         covered = dict(G30_FIELD, covered=True)
         session = FakeDomSession({'#msg-input': covered})

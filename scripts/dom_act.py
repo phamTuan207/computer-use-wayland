@@ -205,6 +205,28 @@ def grounded_x_range(ground, meta):
         return None
 
 
+def grounded_y_range(ground, meta):
+    """Image-px y-range of the grounded field, for the band check.
+
+    The mirror of grounded_x_range on the y axis: the rect's image
+    height is its CSS height times the CSS-to-screen factor times
+    image px per screen px; the range is centered on the image
+    point (the rect center). Returns [y0, y1] floats, or None when
+    the meta cannot map the rect (the caller then keeps the
+    click-anchored band).
+    """
+    try:
+        rect = ground['rect']
+        point = ground['point']
+        factor = ground.get('scale_factor', 1)
+        size = meta.get('image_size')
+        region = meta.get('region')
+        half = rect['height'] * factor * size[1] / region[3] / 2
+        return [point[1] - half, point[1] + half]
+    except Exception:
+        return None
+
+
 class GroundPoints(dict):
     """Grounding evidence that re-validates on every read (R7).
 
@@ -428,10 +450,10 @@ def focus_type(session, act_fn, meta, selector, text, enter=False):
     """Click an input, type, and verify, from one observation.
 
     act_fn is a callable (meta, actions, focus_check, type_check,
-    type_x_ranges) returning a result dict, normally a closure over
-    cu.desktop_act; it must forward type_x_ranges to desktop_act
-    (the grounded field's x-range, so the band reads only that
-    field). It runs the batch against the given meta. The focus_check
+    type_x_ranges, type_y_ranges) returning a result dict, normally
+    a closure over cu.desktop_act; it must forward type_x_ranges and
+    type_y_ranges to desktop_act (the grounded field's ranges, so
+    the band reads only that field). It runs the batch against the given meta. The focus_check
     closure runs inside the batch before the first type group: when
     the click missed, the batch stops before any keystroke. The
     type_check closure runs after the type step, BEFORE Enter when a
@@ -479,13 +501,16 @@ def focus_type(session, act_fn, meta, selector, text, enter=False):
                     'already_sent': True, 'sent_verified': True}
     focus_check, type_check = dom_hooks(session, selector, text)
     calls['dom'] += 2
-    # R3a: the band reads only the grounded field's x-range, so text
-    # in another field on the same line cannot verify this type. The
-    # range rides to desktop_act through the act_fn kwargs; an act_fn
-    # that wraps desktop_act must forward it (the test fakes accept
-    # and ignore it).
+    # R3a: the band reads only the grounded field's x-range and
+    # y-range, so text in another field on the same line, or in a
+    # stacked field sharing the x-range, cannot verify this type.
+    # The ranges ride to desktop_act through the act_fn kwargs; an
+    # act_fn that wraps desktop_act must forward them (the test
+    # fakes accept and ignore them).
     x_range = grounded_x_range(ground, meta)
     type_ranges = [x_range] if x_range is not None else None
+    y_range = grounded_y_range(ground, meta)
+    type_y_ranges = [y_range] if y_range is not None else None
     actions = [{'type': 'click', 'x': ground['point'][0],
                 'y': ground['point'][1]},
                {'type': 'type', 'text': text}]
@@ -500,7 +525,8 @@ def focus_type(session, act_fn, meta, selector, text, enter=False):
 
     result = act_fn(meta, actions, focus_check=_counted_focus_check,
                     type_check=_counted_type_check,
-                    type_x_ranges=type_ranges)
+                    type_x_ranges=type_ranges,
+                    type_y_ranges=type_y_ranges)
     if not isinstance(result, dict):
         raise DomActError('act_fn must return a result dict')
     completed = result.get('completed', 0)

@@ -1021,16 +1021,19 @@ def _mean_image_difference(old,new):
     return sum(ImageStat.Stat(ImageChops.difference(old,new)).mean)/3
 
 def _input_line_changed(old,new,anchor_y,half=12,min_pixels=4,threshold=50,
-                        x_range=None):
+                        x_range=None,y_range=None):
     """True when the input line band changed between two frames.
 
     The band is the target field's x-range when x_range is given
     (image px, from the grounded rect: the band then reads only the
-    field the text was typed into), else the full image width,
-    anchor_y plus/minus half pixels: typed text lands on the caret
-    line, which is the clicked line, even when the click point itself
-    is far from where the text starts (an empty field takes text at
-    its left edge, not at the click). The count uses per-channel
+    field the text was typed into), else the full image width. The
+    band y is the field's y-range when y_range is given (image px,
+    from the grounded rect: the band then reads only that field's
+    lines, so text in a stacked field sharing the x-range cannot
+    verify it), else anchor_y plus/minus half pixels: typed text
+    lands on the caret line, which is the clicked line, even when
+    the click point itself is far from where the text starts (an
+    empty field takes text at its left edge, not at the click). The count uses per-channel
     histogram bins above threshold, so a few fully changed pixels
     decide it, not a diluted band mean. JPEG q90 4:4:4 re-encodes of
     identical pixels are byte identical, and the measured max pixel
@@ -1041,10 +1044,12 @@ def _input_line_changed(old,new,anchor_y,half=12,min_pixels=4,threshold=50,
     pixels on the line, so min_pixels 4 is the caret-scale baseline:
     fewer changed pixels do not verify. Limits, stated plainly: with
     no x_range the band is full width, so multi-pixel text landing
-    in a DIFFERENT field on the same line still passes it, and a
-    caret or focus ring alone also changes the band, so a True here
-    is necessary, not sufficient, proof the text landed; the DOM
-    value check is the sufficient check. No observe is taken: both
+    in a DIFFERENT field on the same line still passes it, and with
+    no y_range the band is click-anchored, so text in a stacked
+    field below the click line can still pass it; a caret or focus
+    ring alone also changes a band, so a True here is necessary,
+    not sufficient, proof the text landed; the DOM value check is
+    the sufficient check. No observe is taken: both
     frames are already in memory (pre-batch image, after-capture).
     """
     from PIL import ImageChops
@@ -1052,8 +1057,17 @@ def _input_line_changed(old,new,anchor_y,half=12,min_pixels=4,threshold=50,
         return None
     if old.size!=new.size:
         return None
-    y0=max(0,int(anchor_y)-half)
-    y1=min(old.height,int(anchor_y)+half+1)
+    if y_range is not None:
+        try:
+            y0=max(0,int(y_range[0]))
+            y1=min(old.height,int(y_range[1]))
+        except Exception:
+            return None
+        if y1<=y0:
+            return False
+    else:
+        y0=max(0,int(anchor_y)-half)
+        y1=min(old.height,int(anchor_y)+half+1)
     if y1<=y0:
         return None
     if x_range is not None:
@@ -1618,7 +1632,7 @@ def _settle_after_capture(capture, first_after, nav_candidate, settle_ms=400):
 
 def desktop_act(env,meta,actions,after_capture=True,observation_path=None,
                 expected_terminal_window=None,focus_check=None,type_check=None,
-                type_x_ranges=None):
+                type_x_ranges=None,type_y_ranges=None):
     """Run a desktop action batch against a validated observation.
 
     focus_check and type_check are optional cheap zero-arg callables
@@ -1636,7 +1650,11 @@ def desktop_act(env,meta,actions,after_capture=True,observation_path=None,
     grounded field rect (supplied by dom_act/first_action): the band
     then reads only that field's x-range on the anchor line, so text
     landing in a different field on the same line no longer verifies
-    (RT R3a). A group with no range keeps the full-width band.
+    (RT R3a). type_y_ranges is the parallel list of (y0, y1)
+    image-px pairs from the same rect: the band then reads only
+    that field's lines, so text in a stacked field sharing the
+    x-range no longer verifies either. A group with no range keeps
+    the full-width band (x) or the click-anchored band (y).
     """
     preflight_start=time.monotonic()
     try:
@@ -2145,13 +2163,19 @@ def desktop_act(env,meta,actions,after_capture=True,observation_path=None,
                     else [None]*len(type_anchors))
             if len(ranges)<len(type_anchors):
                 ranges=ranges+[None]*(len(type_anchors)-len(ranges))
-            paired=[(a,r) for a,r in zip(type_anchors,ranges)
+            y_ranges=(list(type_y_ranges) if type_y_ranges is not None
+                      else [None]*len(type_anchors))
+            if len(y_ranges)<len(type_anchors):
+                y_ranges=y_ranges+[None]*(len(type_anchors)
+                                          -len(y_ranges))
+            paired=[(a,r,y) for a,r,y in
+                    zip(type_anchors,ranges,y_ranges)
                     if a is not None]
-            anchored=[a for a,_r in paired]
+            anchored=[a for a,_r,_y in paired]
             unanchored=len(type_anchors)-len(anchored)
             bands=([_input_line_changed(old,after_image,anchor[1],
-                                        x_range=x_range)
-                    for anchor,x_range in paired]
+                                        x_range=x_range,y_range=y_range)
+                    for anchor,x_range,y_range in paired]
                    if after_image is not None else [None])
             if any(band is None for band in bands):
                 verified=result.get('frame_bytes_changed') is True

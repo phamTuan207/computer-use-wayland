@@ -350,6 +350,67 @@ class TypeVerification(DesktopPreflight):
         self.assertTrue(result['ok'], result)
         self.assertIs(result['type_verified'], True)
 
+    def test_band_stacked_field_with_y_range_must_not_verify(self):
+        # AMEND4 item 3: the band y is field-anchored when y_range
+        # is given. Stacked fields share the x-range; the upper
+        # field spans y 4..16, the click is at y 10, and text in the
+        # lower field at y 18 must not verify the upper field's
+        # type, while text inside the field at y 10 must. Without
+        # the y_range the click-anchored band (10 +- 12) covers
+        # y 18 and verifies the stacked text: that is the hole.
+        from PIL import Image
+        old = Image.new('RGB', (20, 20))
+        lower = old.copy()
+        for x in range(0, 12):
+            lower.putpixel((x, 18), (255, 255, 255))
+        self.assertFalse(cu._input_line_changed(old, lower, 10,
+                                                y_range=(4, 16)),
+                         'stacked lower-field pixels verified the band')
+        self.assertTrue(cu._input_line_changed(old, lower, 10),
+                        'without y_range the click-anchored band must '
+                        'still cover y 18 (the hole being closed)')
+        inside = old.copy()
+        for x in range(0, 12):
+            inside.putpixel((x, 10), (255, 255, 255))
+        self.assertTrue(cu._input_line_changed(old, inside, 10,
+                                               y_range=(4, 16)),
+                        'the y_range narrows the band, it does not '
+                        'blind it')
+
+    def test_band_stacked_field_with_y_range_reports_not_ok(self):
+        # AMEND4 item 3 at the desktop_act level: click (10, 10),
+        # type hello, no type_check hook. The after image changes
+        # only at y 18 (12 pixels in the stacked lower field),
+        # outside the grounded rect's y-range (4, 16), so the batch
+        # must report ok False with error_code type_unverified. The
+        # positive control (text pixels at y 10 inside the range)
+        # still verifies.
+        from PIL import Image
+        lower = Image.new('RGB', (20, 20))
+        for x in range(0, 12):
+            lower.putpixel((x, 18), (255, 255, 255))
+        self.after_image = lower
+        result = cu.desktop_act(
+            {}, self.meta,
+            [{'type': 'click', 'x': 10, 'y': 10},
+             {'type': 'type', 'text': 'hello'}],
+            type_y_ranges=[(4, 16)])
+        self.assertFalse(result['ok'],
+                         'stacked-field pixels verified the type: %s'
+                         % (result,))
+        self.assertIs(result['type_verified'], False)
+        self.assertEqual(result['error_code'], 'type_unverified')
+        self.after_image = Image.new('RGB', (20, 20))
+        for x in range(0, 12):
+            self.after_image.putpixel((x, 10), (255, 255, 255))
+        result = cu.desktop_act(
+            {}, self.meta,
+            [{'type': 'click', 'x': 10, 'y': 10},
+             {'type': 'type', 'text': 'hello'}],
+            type_y_ranges=[(4, 16)])
+        self.assertTrue(result['ok'], result)
+        self.assertIs(result['type_verified'], True)
+
     def test_type_group_anchors_click_only(self):
         # AMEND2 C: only click/double_click set an anchor. A move,
         # hover, or drag before the type leaves the group anchorless,
