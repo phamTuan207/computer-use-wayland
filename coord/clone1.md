@@ -932,3 +932,40 @@ nào cho tới khi sửa xong 3 blocker bằng sửa đổi trước run 1.
   Council 3 đã kiểm chứng, pool agy-q2 test-06 tới test-10 có mặt
   với simulation 10/10 trong hồ sơ, fix F1/F2/F3 của review checker
   độc lập đã kiểm chứng trong code.
+
+## ĐỢT 5 VIỆC 6 XONG, 19:09 ngày 21/11
+
+Kiểm chứng độc lập bộ agy-y2 đã sửa: READY, 10/10 live trên
+Firefox thật. Tôi kiểm tra lại bằng chứng trên ổ trước khi ghi.
+
+- Code chạy là đúng commit 30a72e5 trên todolist-push, lấy bằng
+  git archive vào /tmp/agy-y2-verify, không checkout vào cây làm
+  việc. Y7 đã xong trên todolist-push (9a74a70 verify 10/10
+  simulate, a07fd27 redteam NO BLOCK), cả 2 đều là ancestor của
+  tip beebe50.
+- Simulate: node simulate.mjs --all, 12:00:54Z tới 12:01:03Z,
+  exit 0, allPassed true, 10/10. Từng test ms: 630, 506, 477, 626,
+  587, 561, 990, 490, 661, 724.
+- Live Firefox: 1 lần chạy duy nhất cả 10 test, 12:06:28Z tới
+  12:08:50Z, tổng 140.821 s, 179 action, 88/88 assertion.
+  Firefox 160.0.1 headless ở /tmp/firefox, geckodriver 0.36.0,
+  Selenium 4.53.0, fresh profile mỗi test. Từng test giây:
+  20.094, 9.570, 10.376, 15.787, 13.514, 17.503, 17.196, 6.903,
+  9.071, 4.890. Chậm hơn 68.838 s của clone2 vì load average 7.18
+  lúc chạy do các agent đợt 5 khác chạy song song. Số action,
+  check và guard fail khớp đúng từng con số với báo cáo của
+  clone2, chứng tỏ port verify 1:1 đúng.
+- Sự cố ghi thật: lần chạy full đầu crash ở test 02 (geckodriver
+  connection refused khi load 8.23, test 01 lần đó đã pass
+  18.908 s). Sau đó chạy riêng 02-10 đều pass, rồi chạy full lại
+  một lần nữa thì 10/10 sạch. /tmp đầy 100% hai lần lúc setup,
+  agent tự dọn profile test cũ của mình.
+- 2 follow-up của Y7 đã vô hiệu bằng bằng chứng giữa lần chạy:
+  test-07 sau delete trash "1" và img4 ẩn, sau restore trash "0"
+  và img4 hiện lại; test-09 sau delete title editor về "Personal
+  Tasks", total "3", body Shopping đúng nội dung. Cả 2 vẫn là
+  follow-up hợp lệ cho Y2 sửa checker và fixture.
+- Bằng chứng: /tmp/agy-y2-verify/live_results.json (tôi đọc lại,
+  10 PASS), live_steps.jsonl, simulate-all.json (allPassed true),
+  run_live.py. UNVERIFIED: Zen (chỉ chạy Firefox, cùng stack
+  Gecko), lần chạy live trên Zen theo kế hoạch Y9 vẫn còn nợ.
