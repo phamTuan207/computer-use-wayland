@@ -501,7 +501,22 @@ this file. No personal info.
 - Pattern is now 3/3: Brave sends in about 50-70ms of program
   time; Chromium fails at the first mouse event every time.
 
-### Run 4
+### Run 4 (10:26 +07, T+65m)
+
+- Wall 33121.8ms, mux 836.1ms. Model calls 0.
+- Brave: SENT. Program ok True, completed 3, 48ms. V12 found
+  True, attempt 1. CB-1 all three True. P9 reviewed: the R4
+  bubble is visible, composer empty. DOM and render agree.
+  P9 PASS. (Clone1's messages in the thread now discuss runs
+  1-3 and quote the Input diagnosis; it is following the test
+  messages.)
+- Chromium: FAILED-UNVERIFIED, fourth identical failure.
+  "CDP timeout: Input.dispatchMouseEvent", completed 0, 5003ms.
+  V12 found False after 40 attempts, items 40. P9 reviewed:
+  no R4 bubble, composer empty. DOM and render agree.
+- Pattern is now 4/4. One run remains.
+
+### Run 5
 
 - (to be filled)
 

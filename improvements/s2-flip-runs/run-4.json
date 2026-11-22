@@ -1,0 +1,288 @@
+{
+  "run": 4,
+  "dry_run": false,
+  "mux_baseline_ms": 836.1,
+  "browsers": {
+    "brave": {
+      "browser": "brave",
+      "label": "clone1",
+      "endpoint": "http://[::1]:9223",
+      "tab_title": "(2) Chat — clone1",
+      "target_id": "06074E282C000A95EF89CC9EBB8F9713",
+      "observe": {
+        "elements": 53,
+        "truncated": false,
+        "wall_ms": 1939.2
+      },
+      "routing": {
+        "source": "dom-chromium",
+        "target_kind": "chromium-content",
+        "fell_through": [],
+        "reason": "complete coverage: 53 elements, not truncated",
+        "coverage": {
+          "elements": 53,
+          "truncated": false
+        }
+      },
+      "outcome": "sent",
+      "message": "S2-FLIP-R4-BRAVE-IGNORE-TEST",
+      "model_calls": 0,
+      "program": {
+        "ok": true,
+        "api_calls": 2,
+        "elapsed_ms": 134.809,
+        "error": null,
+        "error_type": null,
+        "log": [
+          "dom_act ok True completed 3 ms 48 error None"
+        ],
+        "wall_ms": 1681.2
+      },
+      "cb1": {
+        "input_sent": true,
+        "target_received": true,
+        "verified": true,
+        "completed": 3
+      },
+      "v12": {
+        "found": true,
+        "items": 49,
+        "role": "user",
+        "side": "user",
+        "textLen": 32,
+        "attempts": 1,
+        "elapsed_ms": 2,
+        "ms": 1017.1
+      },
+      "wall_ms": 2698.9
+    },
+    "chromium": {
+      "browser": "chromium",
+      "label": "clone2",
+      "endpoint": "http://127.0.0.1:9223",
+      "tab_title": "Chat — clone2",
+      "target_id": "D1374C7C994D3DA72678E20C7FD099A0",
+      "observe": {
+        "elements": 70,
+        "truncated": false,
+        "wall_ms": 1932.3
+      },
+      "routing": {
+        "source": "dom-chromium",
+        "target_kind": "chromium-content",
+        "fell_through": [],
+        "reason": "complete coverage: 70 elements, not truncated",
+        "coverage": {
+          "elements": 70,
+          "truncated": false
+        }
+      },
+      "outcome": "failed-unverified",
+      "message": "S2-FLIP-R4-CHROMIUM-IGNORE-TEST",
+      "model_calls": 0,
+      "program": {
+        "ok": false,
+        "api_calls": 2,
+        "elapsed_ms": 5105.836,
+        "error": "assert failed: dom_act failed",
+        "error_type": "assert_failed",
+        "log": [
+          "dom_act ok False completed 0 ms 5003 error CDP timeout: Input.dispatchMouseEvent"
+        ],
+        "wall_ms": 6666.4
+      },
+      "cb1": {
+        "input_sent": false,
+        "target_received": false,
+        "verified": false,
+        "completed": 0
+      },
+      "v12": {
+        "found": false,
+        "items": 40,
+        "attempts": 40,
+        "elapsed_ms": 10052,
+        "ms": 11092.6
+      },
+      "wall_ms": 17759.2
+    }
+  },
+  "wall_ms": 33121.8,
+  "p9": {
+    "brave": {
+      "ok": true,
+      "png": "improvements/s2-flip-runs/p9-run4-brave.png",
+      "wall_ms": 1411.9
+    },
+    "chromium": {
+      "ok": true,
+      "png": "improvements/s2-flip-runs/p9-run4-chromium.png",
+      "wall_ms": 1236.2
+    }
+  },
+  "spans": [
+    {
+      "phase": "setup-lease",
+      "wall_ms": 942.0,
+      "laptop_ms": null
+    },
+    {
+      "phase": "broker-start",
+      "wall_ms": 1158.4,
+      "laptop_ms": null
+    },
+    {
+      "phase": "tabs-brave",
+      "wall_ms": 1954.6,
+      "laptop_ms": null
+    },
+    {
+      "phase": "observe-brave",
+      "wall_ms": 1939.2,
+      "laptop_ms": null
+    },
+    {
+      "phase": "tabs-chromium",
+      "wall_ms": 1915.9,
+      "laptop_ms": null
+    },
+    {
+      "phase": "observe-chromium",
+      "wall_ms": 1932.3,
+      "laptop_ms": null
+    },
+    {
+      "phase": "broker-finish",
+      "wall_ms": 1147.5,
+      "laptop_ms": null
+    },
+    {
+      "phase": "act-brave",
+      "wall_ms": 1681.2,
+      "laptop_ms": 134.809
+    },
+    {
+      "phase": "verify-brave",
+      "wall_ms": 1017.1,
+      "laptop_ms": 1017.1
+    },
+    {
+      "phase": "act-chromium",
+      "wall_ms": 6666.4,
+      "laptop_ms": 5105.836
+    },
+    {
+      "phase": "verify-chromium",
+      "wall_ms": 11092.6,
+      "laptop_ms": 11092.6
+    }
+  ],
+  "ssh_calls": [
+    {
+      "label": "mux-probe",
+      "wall_ms": 671.6,
+      "rc": 0
+    },
+    {
+      "label": "mux-probe",
+      "wall_ms": 1000.6,
+      "rc": 0
+    },
+    {
+      "label": "lease-cleanup",
+      "wall_ms": 942.0,
+      "rc": 0
+    },
+    {
+      "label": "broker-start",
+      "wall_ms": 1158.4,
+      "rc": 0
+    },
+    {
+      "label": "broker-request-1",
+      "wall_ms": 988.6,
+      "rc": 0
+    },
+    {
+      "label": "broker-result-1",
+      "wall_ms": 966.0,
+      "rc": 0
+    },
+    {
+      "label": "broker-request-2",
+      "wall_ms": 959.1,
+      "rc": 0
+    },
+    {
+      "label": "broker-result-2",
+      "wall_ms": 980.2,
+      "rc": 0
+    },
+    {
+      "label": "broker-request-3",
+      "wall_ms": 961.1,
+      "rc": 0
+    },
+    {
+      "label": "broker-result-3",
+      "wall_ms": 954.8,
+      "rc": 0
+    },
+    {
+      "label": "broker-request-4",
+      "wall_ms": 960.6,
+      "rc": 0
+    },
+    {
+      "label": "broker-result-4",
+      "wall_ms": 971.6,
+      "rc": 0
+    },
+    {
+      "label": "broker-finish",
+      "wall_ms": 1147.5,
+      "rc": 0
+    },
+    {
+      "label": "oneshot-code-exec",
+      "wall_ms": 1681.1,
+      "rc": 0
+    },
+    {
+      "label": "v12-check",
+      "wall_ms": 1017.1,
+      "rc": 0
+    },
+    {
+      "label": "oneshot-code-exec",
+      "wall_ms": 6666.4,
+      "rc": 0
+    },
+    {
+      "label": "v12-check",
+      "wall_ms": 11092.6,
+      "rc": 0
+    },
+    {
+      "label": "p9-capture",
+      "wall_ms": 1411.9,
+      "rc": 0
+    },
+    {
+      "label": "p9-capture",
+      "wall_ms": 1236.1,
+      "rc": 0
+    }
+  ],
+  "phase_split_ms": {
+    "model": 0,
+    "ssh": 15648.1,
+    "broker": 633.7,
+    "observe": 1053.4,
+    "act": 5240.6,
+    "verify": 10437.5,
+    "setup": 105.9,
+    "residual": 2.4
+  },
+  "model_calls": 0
+}
