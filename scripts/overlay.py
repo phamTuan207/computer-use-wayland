@@ -60,10 +60,12 @@ def _log(event, **fields):
 
 
 def _label_for(agent, method):
-    if not agent and not method:
-        return 'Computer use active'
-    label = (agent + ' via ' + method).strip(' ')
-    return label[:MAX_LABEL] if label else 'Computer use active'
+    # Pill display is always the plain readable string. The agent/method
+    # that holds the pill is still tracked internally in holders.json;
+    # only what the user sees on screen is simplified (2026-11-23,
+    # owner: "S2-flip via CDP" is unreadable jargon, just show
+    # "Computer use active").
+    return 'Computer use active'
 
 
 def _prepare():
