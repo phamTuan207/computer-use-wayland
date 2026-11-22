@@ -1417,6 +1417,24 @@ def fcitx5_running():
             return True
     return False
 
+IME_RESTORE_SETTLE_S = 0.3
+"""Settle before reactivating the input method after literal typing.
+
+wtype exits once its key events are SENT to the compositor, not
+once they are DELIVERED to the app and the input method. When
+literal_keyboard restores fcitx5 immediately (state '2'), the
+keys still in flight arrive after reactivation, fcitx5 captures
+them into a preedit and commits a Telex-composed duplicate of the
+tail of the text (f4diag runs 4-5: the field held the message
+twice, the second copy a variable-length Telex-mangled suffix,
+input_events constant at 25, one composition commit). Waiting
+300ms after the type and before the restore lets the compositor
+deliver every queued key while fcitx5 is still inactive, so the
+restore cannot capture any of them. Same class of race as the F4
+batch settle (a mid-transition frame); same shape of fix (wait
+for the transient to drain before the next step)."""
+
+
 @contextmanager
 def literal_keyboard(env,enabled=True,result=None):
     """Bypass composition for exact text; preserve the focused context's IME state."""
@@ -1508,6 +1526,14 @@ def literal_keyboard(env,enabled=True,result=None):
         try:
             # Keep the handler until the IME is restored so a late signal still cleans up.
             if original=='2' and restore_needed:
+                # F4 follow-up: settle before reactivating. wtype
+                # exits once its keys are SENT, not delivered; the
+                # keys still in flight would arrive after fcitx5
+                # is active again, and fcitx5 would commit a
+                # Telex-composed duplicate of the tail (f4diag
+                # runs 4-5). Wait out the delivery while fcitx5
+                # is still inactive, then restore.
+                time.sleep(IME_RESTORE_SETTLE_S)
                 try:
                     restored=switch('-o','2')
                 except BaseException as restore_error:

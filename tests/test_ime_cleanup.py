@@ -279,6 +279,78 @@ class ImeCleanup(unittest.TestCase):
                     self.assertEqual(restores, ['-o'],
                                      'restore exactly once after original 2')
 
+    def test_restore_settles_before_reactivating(self):
+        # F4 follow-up: after literal typing, the IME restore must
+        # wait out in-flight key delivery while fcitx5 is still
+        # inactive, or fcitx5 captures the tail of the text and
+        # commits a Telex-composed duplicate (f4diag runs 4-5).
+        # The settle (IME_RESTORE_SETTLE_S) is requested after the
+        # '-c' deactivate and before the '-o' restore.
+        import importlib.util
+        from unittest.mock import patch
+        spec = importlib.util.spec_from_file_location(
+            'cu_settle', str(CU))
+        cu = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(cu)
+        self.state.write_text('2')
+        self.log.write_text('')
+        sleeps = []
+        log_at_settle = []
+
+        def recorder(seconds):
+            sleeps.append(seconds)
+            if seconds == cu.IME_RESTORE_SETTLE_S:
+                log_at_settle.append(self.calls())
+            # No real sleep: the test asserts the settle is
+            # requested, not that wall time passes.
+
+        # shutil.which reads the process PATH, not the env dict
+        # passed to literal_keyboard, so the fake binary dir must
+        # be on the process PATH for the in-process run.
+        fake_path = str(self.folder / 'bin')
+        with patch.dict('os.environ', {'PATH': fake_path + os.pathsep
+                                       + os.environ['PATH'],
+                                       'FCITX_STATE': str(self.state),
+                                       'FCITX_LOG': str(self.log)}), \
+                patch('time.sleep', side_effect=recorder):
+            with cu.literal_keyboard(self.env, True):
+                pass
+        self.assertIn(cu.IME_RESTORE_SETTLE_S, sleeps,
+                      'restore settle not requested')
+        self.assertEqual(len(log_at_settle), 1)
+        self.assertEqual(log_at_settle[0], ['-c'],
+                         'settle must run after deactivate, before restore')
+        self.assertEqual(self.calls(), ['-c', '-o'])
+        self.assertEqual(self.state.read_text().strip(), '2')
+
+    def test_no_settle_when_ime_already_inactive(self):
+        # When the IME starts inactive ('1'), there is no
+        # deactivate and no restore, so no settle is requested.
+        import importlib.util
+        from unittest.mock import patch
+        spec = importlib.util.spec_from_file_location(
+            'cu_settle2', str(CU))
+        cu = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(cu)
+        self.state.write_text('1')
+        self.log.write_text('')
+        sleeps = []
+
+        def recorder(seconds):
+            sleeps.append(seconds)
+
+        # shutil.which reads the process PATH (see the settle test).
+        fake_path = str(self.folder / 'bin')
+        with patch.dict('os.environ', {'PATH': fake_path + os.pathsep
+                                       + os.environ['PATH'],
+                                       'FCITX_STATE': str(self.state),
+                                       'FCITX_LOG': str(self.log)}), \
+                patch('time.sleep', side_effect=recorder):
+            with cu.literal_keyboard(self.env, True):
+                pass
+        self.assertNotIn(cu.IME_RESTORE_SETTLE_S, sleeps)
+        self.assertEqual(self.calls(), [])
+
 class Fcitx5RunningHelper(unittest.TestCase):
     """N15 helper reads only the process table; unknown states refuse."""
 
