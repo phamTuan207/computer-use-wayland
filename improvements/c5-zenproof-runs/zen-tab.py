@@ -15,13 +15,17 @@ two list scans a minute apart), so a handle from one session means
 nothing in the next. Every subcommand resolves its tab by URL
 substring inside its own session, fresh, and refuses on ambiguity.
 The membership, count, and set-difference checks in cmd_open
-assume handles are stable within one cmd_open invocation: run 1
-supports this (handles were consistent across before, scan,
-/window/new, the (c) check, navigate, and the post-navigate check
-within one invocation); run 2's ephemerality was cross-session
-(two lists a minute apart, separate processes). If a handle were
-re-minted mid-invocation, the set-difference check refuses
-fail-closed. The scratch tab is the fixture URL
+assume handles are stable within one cmd_open invocation. That
+assumption is unproven by live evidence: no live invocation has
+run these checks (run 1 aborted in phase 1 before any open, and
+the checks were added after the last live run, attempt 2). The
+only support is indirect: run 2's ephemerality was cross-session
+(two lists a minute apart, separate processes), and Gecko
+handles are per-window UUIDs. A re-mint before the
+set-difference fetch is refused by that check fail-closed; a
+re-mint after the fetch is caught by the (c) check, the
+post-navigate check, and the handler's handle check, or is
+harmless (a re-minted owner handle leaves the run correct). The scratch tab is the fixture URL
 'two_vision_fixture.html?clone=zen'. Its document title is the
 static 'Two-vision benchmark fixture' (the fixture JS only sets
 the H1 text to 'Clone zen thread' and never touches
@@ -34,9 +38,10 @@ current; if it does not, one explicit select is tried, and if that
 still fails the driver refuses to navigate or close anything).
 The new tab must also increase the tab count by exactly 1, the
 returned handle must not be one that already existed before the
-open, the handle set after the open must differ from before by
-exactly the new handle added and nothing removed, and the current
-tab is re-verified right after the navigate. The
+open, the handle set after the open must differ from before AND
+from just before the open (captured immediately before POST
+/window/new) by exactly the new handle added and nothing removed,
+and the current tab is re-verified right after the navigate. The
 open exception handler deletes ONLY when the current tab is the
 fixture tab by URL AND by handle (the new handle from this open);
 it never deletes blind.
@@ -198,6 +203,11 @@ def cmd_open():
             raise zen_dom.ZenDomError(
                 'a tab already shows the fixture URL; refusing to '
                 'open a second one')
+        # Second baseline (Redteam H1, amend 4): capture the handle
+        # list immediately before POST /window/new, after the
+        # pre-check scan. The set-difference check below is run
+        # against both `before` and this `just_before`.
+        just_before = _handles(z)
         resp = z._wd("POST", f"/session/{z.session}/window/new",
                      {"type": "tab"})
         new_handle = resp["value"]["handle"]
@@ -243,8 +253,23 @@ def cmd_open():
         # difference against the scan would miss it; against
         # `before`, every ordering is caught. This check also
         # independently catches the amend-2 H1 stale-handle case
-        # and the within-session re-mint case (Redteam P-A):
-        # both change the handle set by more than {new_handle}.
+        # and a re-mint before the fetch (Redteam P-A): both
+        # change the handle set by more than {new_handle}.
+        # Second baseline (Redteam H1, amend 4): the check
+        # against `before` alone cannot catch a concurrent open
+        # that happens before the set-difference fetch when
+        # /window/new returns the new tab's handle WITHOUT
+        # creating a tab (Q-J2): the open supplies the +1, so
+        # added == {new_handle} and removed is empty against
+        # `before`. Require the same exact difference against
+        # `just_before` too: in Q-J2 the concurrent tab is
+        # already in `just_before`, so added against it is empty
+        # and the run refuses. This narrows the vulnerable
+        # window from [cmd_open start, fetch] to the /window/new
+        # round-trip itself: a tab opening DURING the POST plus
+        # a stale return (Q-J1) still defeats both baselines,
+        # and is the irreducible residual (no atomic
+        # verify-and-create), same class as the F1 race.
         # Keep the membership check and the count gate as
         # defense in depth with distinct error messages; they
         # diagnose their own cases most clearly.
@@ -255,6 +280,14 @@ def cmd_open():
                 'new tab handle set changed unexpectedly '
                 '(added %d, removed %d); refusing to navigate '
                 'or close' % (len(added), len(removed)))
+        added_jb = set(handles_after_new) - set(just_before)
+        removed_jb = set(just_before) - set(handles_after_new)
+        if added_jb != {new_handle} or removed_jb:
+            raise zen_dom.ZenDomError(
+                'new tab handle set changed unexpectedly since '
+                'just before the open (added %d, removed %d); '
+                'refusing to navigate or close'
+                % (len(added_jb), len(removed_jb)))
         # Fix (c): the new tab must actually be current before any
         # /url navigate or DELETE. Marionette may leave the
         # previous tab current (the run 2 incident: the navigate
