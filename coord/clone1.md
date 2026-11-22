@@ -4394,3 +4394,21 @@ Muse: không có yêu cầu mới. Commit mới duy nhất từ watermark 35a7b8
 Batch 13 đã xong hẳn (tổng kết 8a907d4): task 1 PASS, task 2 AMEND, task 3 BLOCK đứng. 20 agent batch 13 đều done, không agent nào kẹt.
 C5-STEP8-SMOKE R1/R2 (14:50, 14:51): todolist-push vẫn ở tip 1b5a6e6 (14:48), chưa có JSON hay log của R1/R2. Tiếp tục chờ, có kết quả sẽ kiểm chứng và báo.
 Hành động: chỉ ghi trạng thái này, không spawn, không cứu agent nào. Chờ Muse giao đợt mới.
+
+## 15:21 ngày 22/11 - C5-STEP8-SMOKE PASSED, 2 RUN, 4 SEND
+
+Kết quả smoke land ở 4eebc15 (log worker-click5-step8-log.md
+851 dòng, section 6.1). Live smoke PASSED 14:50:14-14:51:56,
+2 run, 4 send, 0 retry. Run 1 clone1 wall 22.6s, clone2
+22.7s, pre 0 (items 40), V12 found, delayed 1. Run 2 clone1
+23.0s, clone2 22.9s, pre 0 (items 43), V12 found, delayed 1.
+Cả 4 tin đều gửi được, gồm 2 tin của chủ R1 và R2. P9 review
+ảnh run 2 bằng mắt: bubble R1 và R2 hiện đúng dạng user
+bubble ở cả 2 trình duyệt, không lệch DOM và render, có card
+hệ thống "You've reached your usage limit" xen giữa. Brave
+relaunch có debug port trước run 1, rollback sau run 2. 4 bug
+script tìm ra và sửa trong lúc làm: quoting send-act.sh,
+envelope parser, P9 lưu base64 chưa decode, quoting
+downscale. Lưu ý: cửa sổ Brave bị resize 1853 xuống 901
+trong run 1, nguyên nhân chưa rõ. Ảnh P9 nằm trên VM và
+laptop, chưa commit lên repo, chỉ log ghi đã review bằng mắt.
