@@ -596,6 +596,91 @@ class TestDomHelpers(unittest.TestCase):
         with self.assertRaises(ZenDomError):
             session.viewport_origin([2509, 914], [1863, 1176])
 
+    def _sequenced_session(self, moz_sequence, inner=(677, 1160),
+                           outer=(925, 1176)):
+        """Fake session whose origin reads serve moz pairs in order.
+
+        Wraps evaluate: zen_viewport_origin scripts return the next
+        9-number array from the sequence (repeating the last pair
+        once exhausted, so a runaway loop is deterministic),
+        everything else delegates to the real fake. Returns
+        (session, calls) where calls['n'] counts the origin reads.
+        """
+        session = self._session()
+        session.dom_inner = list(inner)
+        session.dom_outer = list(outer)
+        sequence = [list(m) for m in moz_sequence]
+        calls = {'n': 0}
+        original = session.evaluate
+
+        def sequenced(script, args=None):
+            if 'zen_viewport_origin' in (script or ''):
+                calls['n'] += 1
+                moz = (sequence[calls['n'] - 1]
+                       if calls['n'] <= len(sequence) else sequence[-1])
+                return [moz[0], moz[1], 1, 1, 1,
+                        inner[0], inner[1], outer[0], outer[1]]
+            return original(script, args)
+
+        session.evaluate = sequenced
+        return session, calls
+
+    def test_viewport_origin_settles_after_stale_reads(self):
+        # F2, ZT-B run 3: the send snapshot read moz (274, 66)
+        # right after the tab switch, inside the ~0.5s stale window
+        # (validator-proof v2: stale at t=0.047s and t=0.299s,
+        # settled from t=0.552s). The origin must wait for the read
+        # to settle instead of refusing on the first stale sample.
+        # Sequence mimics the run-3 drift: stale, stale,
+        # intermediate (253, 30), then settled (240, 8).
+        session, calls = self._sequenced_session(
+            [(274, 66), (274, 66), (253, 30),
+             (240, 8), (240, 8), (240, 8)])
+        origin = session.viewport_origin(
+            [2509, 914], [925, 1176], settle_poll_s=0,
+            settle_budget_s=5)
+        self.assertEqual(origin, [2749, 922])
+        self.assertEqual(calls['n'], 6)
+        self.assertEqual(session.last_viewport_settle['settled_moz'],
+                         [240, 8])
+        self.assertEqual(session.last_viewport_settle['reads'], 6)
+
+    def test_viewport_origin_refuses_when_never_settles(self):
+        # A moz that never closes is refused fail-closed, even after
+        # the settle budget: the refusal carries the last closure
+        # error, and no origin is returned.
+        session, calls = self._sequenced_session([(274, 66)])
+        with self.assertRaisesRegex(ZenDomError, 'closure'):
+            session.viewport_origin(
+                [2509, 914], [925, 1176], settle_poll_s=0,
+                settle_budget_s=0.05)
+        self.assertGreater(calls['n'], 1)
+
+    def test_viewport_origin_accepts_settled_first_read(self):
+        # Already-settled geometry still takes three consecutive
+        # equal reads: one sample cannot prove the value is not
+        # mid-drift, so the settle requirement applies on every
+        # unverified call.
+        session, calls = self._sequenced_session(
+            [(240, 8)], inner=(1615, 1160), outer=(1863, 1176))
+        origin = session.viewport_origin(
+            [2509, 914], [1863, 1176], settle_poll_s=0)
+        self.assertEqual(origin, [2749, 922])
+        self.assertEqual(calls['n'], 3)
+        self.assertEqual(session.last_viewport_settle['reads'], 3)
+
+    def test_viewport_origin_verified_path_skips_settle(self):
+        # With a verified origin supplied, the reported moz is
+        # irrelevant: the verified path takes one read as before
+        # (v4-proven behavior) and never waits for the reported
+        # value to settle.
+        session, calls = self._sequenced_session([(274, 66)])
+        origin = session.viewport_origin(
+            [2509, 914], [925, 1176], verified_moz_inner=[240, 8])
+        self.assertEqual(origin, [2749, 922])
+        self.assertEqual(calls['n'], 1)
+        self.assertIsNone(session.last_viewport_settle)
+
     def test_locate_point_is_rect_center_in_image(self):
         # The G30 field: rect x 86..526, y 1101..1164, center
         # (306,1132.5) in viewport coords. The viewport origin is the

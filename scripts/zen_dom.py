@@ -100,6 +100,21 @@ LOCK_PATH = Path(os.environ.get("ZEN_DOM_LOCK",
                                    / "zen_dom.lock")))
 ELEMENT_KEY = "element-6066-11e4-a52e-4f735466cecf"
 
+# Viewport-origin settle (F2, ZT-B run 3, 2026-11-22): mozInnerScreenX/Y
+# reads STALE for ~0.5s after a tab activation (switch): it reports
+# (274, 66) while the true origin is (240, 8), then settles
+# (validator-proof v2: stale at t=0.047s and t=0.299s, settled from
+# t=0.552s; v4: stale first read after a 5min idle gap). A single
+# read taken right after a switch can therefore fail dimension
+# closure and refuse a valid send. viewport_origin polls until the
+# moz pair is unchanged across VIEWPORT_SETTLE_STABLE_READS
+# consecutive reads AND the geometry closes, within
+# VIEWPORT_SETTLE_BUDGET_S, polling every VIEWPORT_SETTLE_POLL_S;
+# otherwise it refuses fail-closed.
+VIEWPORT_SETTLE_BUDGET_S = 2.0
+VIEWPORT_SETTLE_POLL_S = 0.1
+VIEWPORT_SETTLE_STABLE_READS = 3
+
 
 class ZenDomError(RuntimeError):
     pass
@@ -809,8 +824,111 @@ class ZenSession:
                               % (metrics,))
         return factor
 
+    def _read_viewport_origin_raw(self):
+        """One 9-number viewport-origin read (moz, factor, sizes).
+
+        Returns the raw list [mozX, mozY, dpr, screenPixelsPerCSSPixel
+        or None, zoom, innerW, innerH, outerW, outerH]. Raises
+        ZenDomError when the read is not nine numbers: a malformed
+        read is a transport/protocol failure, never a stale value,
+        so the settle loop does not retry it.
+        """
+        raw = self.evaluate(
+            "/* zen_viewport_origin */ return [window.mozInnerScreenX,"
+            " window.mozInnerScreenY, window.devicePixelRatio,"
+            " (typeof window.screenPixelsPerCSSPixel === 'number'"
+            " ? window.screenPixelsPerCSSPixel : null),"
+            " (window.visualViewport ? window.visualViewport.scale : 1),"
+            " window.innerWidth, window.innerHeight,"
+            " window.outerWidth, window.outerHeight];")
+        if (not isinstance(raw, (list, tuple)) or len(raw) != 9
+                or any(v is None or isinstance(v, bool)
+                       or not isinstance(v, (int, float))
+                       for i, v in enumerate(raw) if i != 3)):
+            raise ZenDomError(
+                'viewport origin read is not nine numbers: %r' % (raw,))
+        return raw
+
+    def _read_viewport_origin_settled(self, window_origin, window_size,
+                                      monitor_box, settle_budget_s=None,
+                                      settle_poll_s=None,
+                                      settle_stable_reads=None):
+        """Poll the origin read until the moz pair settles (F2).
+
+        Reads repeatedly until the moz pair is unchanged across
+        settle_stable_reads consecutive reads AND the geometry
+        closes (check_viewport_geometry passes on that read's own
+        numbers), within settle_budget_s; otherwise raises
+        ZenDomError fail-closed, carrying the last closure error.
+        A stable-but-non-closing value is NOT an early exit: the
+        stale value itself holds steady for ~300ms (validator-proof
+        v2: equal reads at t=0.047s and t=0.299s) and only then
+        moves, so only the budget bounds the wait. The settle is
+        recorded on self.last_viewport_settle (reads, settled moz,
+        elapsed ms). None arguments resolve to the module constants
+        at call time, so tests can monkeypatch the constants.
+        """
+        budget = (VIEWPORT_SETTLE_BUDGET_S if settle_budget_s is None
+                  else settle_budget_s)
+        poll = (VIEWPORT_SETTLE_POLL_S if settle_poll_s is None
+                else settle_poll_s)
+        stable_reads = (VIEWPORT_SETTLE_STABLE_READS
+                        if settle_stable_reads is None
+                        else settle_stable_reads)
+        started = time.monotonic()
+        deadline = started + budget
+        last_moz = None
+        stable = 0
+        reads = 0
+        last_error = None
+        last_raw = None
+        while True:
+            raw = self._read_viewport_origin_raw()
+            reads += 1
+            last_raw = raw
+            moz = [raw[0], raw[1]]
+            if moz == last_moz:
+                stable += 1
+            else:
+                stable = 0
+                last_moz = moz
+            factor = raw[3]
+            if not isinstance(factor, (int, float)) or factor <= 0:
+                factor = raw[2]
+            absolute = [window_origin[0] + moz[0] * factor,
+                        window_origin[1] + moz[1] * factor]
+            size = (window_size if window_size is not None
+                    else [raw[7], raw[8]])
+            try:
+                check_viewport_geometry(
+                    moz, absolute, window_origin, size,
+                    [raw[5], raw[6]], monitor_box, factor=factor)
+            except ZenDomError as exc:
+                last_error = exc
+            else:
+                last_error = None
+                if stable + 1 >= stable_reads:
+                    self.last_viewport_settle = {
+                        'reads': reads,
+                        'settled_moz': moz,
+                        'elapsed_ms': round(
+                            (time.monotonic() - started) * 1000.0, 1),
+                    }
+                    return raw
+            if time.monotonic() >= deadline:
+                raise ZenDomError(
+                    'viewport origin did not settle: mozInner %r did '
+                    'not reach a stable closing value within %ss '
+                    '(%d reads); last error: %s; supply a verified '
+                    'mozInner (independent screenshot/click '
+                    'cross-check) to override'
+                    % (moz, budget, reads, last_error))
+            time.sleep(poll)
+
     def viewport_origin(self, window_origin=None, window_size=None,
-                        monitor_box=None, verified_moz_inner=None):
+                        monitor_box=None, verified_moz_inner=None,
+                        settle_budget_s=None, settle_poll_s=None,
+                        settle_stable_reads=None):
         """[x, y] of the viewport origin in ABSOLUTE screen coordinates.
 
         Firefox-only. The live C12 probe (2026-11-22 03:36) proved
@@ -830,8 +948,9 @@ class ZenSession:
         which replaces the AT-SPI cross-check: AT-SPI cannot see Zen
         (probe run 3), so no AT-SPI check exists for this path. Rect centers from
         getBoundingClientRect are viewport relative, so screen =
-        origin + rect center times the factor. One cheap JS eval
-        (metrics bundled), no screenshot.
+        origin + rect center times the factor. The read is cheap JS
+        evals (metrics bundled), no screenshot; the unverified path
+        polls until the read settles (F2, see below).
         verified_moz_inner, when given, is an independently measured
         origin (C12-style screenshot/click cross-check, pixel proof
         a42ef12): the reported mozInner is displaced (+34, +58) on
@@ -839,26 +958,36 @@ class ZenSession:
         the verified origin is supplied, and the verified origin is
         what is returned. The override is recorded in
         last_geometry_warnings.
+        Settle (F2, ZT-B run 3, 2026-11-22): mozInnerScreenX/Y reads
+        STALE for ~0.5s after a tab activation (switch): it reports
+        (274, 66) while the true origin is (240, 8), then settles
+        (validator-proof v2 stability series: stale at t=0.047s and
+        t=0.299s, settled from t=0.552s; v4 reproduced the stale
+        first read after a 5min idle gap). A single read taken right
+        after a switch can therefore fail dimension closure and
+        refuse a valid send (run 3 phase 4: open harvest (253, 30),
+        send snapshot (274, 66)). When no verified origin is
+        supplied, this method polls the read until the moz pair is
+        unchanged across VIEWPORT_SETTLE_STABLE_READS consecutive
+        reads AND the geometry closes, within
+        VIEWPORT_SETTLE_BUDGET_S; otherwise it refuses fail-closed,
+        carrying the last closure error. The verified path never
+        settles: the verified origin is independent of the reported
+        moz, so it takes one read as before. The settle is recorded
+        on last_viewport_settle (reads, settled moz, elapsed ms).
         """
         if window_origin is None:
             raise ZenDomError(
                 'viewport_origin needs the Hyprland window origin: raw '
                 'mozInnerScreenX/Y are window-relative in this Zen '
                 'build (live probe 03:36), not absolute screen coords')
-        raw = self.evaluate(
-            "/* zen_viewport_origin */ return [window.mozInnerScreenX,"
-            " window.mozInnerScreenY, window.devicePixelRatio,"
-            " (typeof window.screenPixelsPerCSSPixel === 'number'"
-            " ? window.screenPixelsPerCSSPixel : null),"
-            " (window.visualViewport ? window.visualViewport.scale : 1),"
-            " window.innerWidth, window.innerHeight,"
-            " window.outerWidth, window.outerHeight];")
-        if (not isinstance(raw, (list, tuple)) or len(raw) != 9
-                or any(v is None or isinstance(v, bool)
-                       or not isinstance(v, (int, float))
-                       for i, v in enumerate(raw) if i != 3)):
-            raise ZenDomError(
-                'viewport origin read is not nine numbers: %r' % (raw,))
+        self.last_viewport_settle = None
+        if verified_moz_inner is not None:
+            raw = self._read_viewport_origin_raw()
+        else:
+            raw = self._read_viewport_origin_settled(
+                window_origin, window_size, monitor_box,
+                settle_budget_s, settle_poll_s, settle_stable_reads)
         moz_inner = [raw[0], raw[1]]
         factor = raw[3]
         if not isinstance(factor, (int, float)) or factor <= 0:
