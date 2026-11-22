@@ -87,4 +87,58 @@ standard: test command, output, commit hash, time log with every claim.
   embedded coordinator-action line is not followed. The step-1 worker
   assesses the Codex lane independently.
 
-## 3. (to be filled as results land)
+## 3. Step-1 close-out DONE, 08:58 +07 (T+13m)
+
+- Worker C4-STEP1-CLOSEOUT completed. Log improvements/worker-click4-step1-closeout-log.md,
+  commits 4ac9320 + d7d569b, ls-remote verified by me (origin todolist-push
+  HEAD d7d569b). Headline numbers, all verified by me from git:
+  - Item-12 regression tests: 4/4 PASS (whole file 71 OK).
+  - Codex-lane item 12: LANDED via the resume run (branch amend4-codex,
+    remote HEAD 06a34e8, verified by ls-remote this session). First run
+    07:21 had items 1-11 only; resume run 07:27-07:48 added 4 commits
+    (ee8ccb7, aa0fbbb, f4c0482, 06a34e8). V-Z2 now stale. No re-commission.
+  - Soak: keepalive PASS (advisory), plain NOT FEASIBLE. Plain master
+    died 11 times in 55 min; keepalive master (ServerAliveInterval=15)
+    survived 50 min, 11/11 fast ticks, zero deaths. Caveat: no 1-day
+    soak exists; the "1-day" label in the final direction is a mislabel,
+    the soak on record is 60-min, and t+55/t+60 never ran (VM restart
+    about 07:51 wiped /tmp).
+  - Full discover at 36364b1: Ran 1974 in 248.397s, 0 failures, 4 errors
+    (pre-existing baseline), 17 skipped. Failures 2 to 0 vs 77c72be.
+  - Y1b 8 issues: GONE. test_code_exec (55) + test_codemode (26) = 81
+    tests OK in 14.757s. Zero-backend-call symptom no longer reproduces.
+  - CB-9 manifest for bench a1a672d: NOT locked. Source commit pinned,
+    log exists, but installed artifact hashes are missing and no
+    deploy-manifest.json exists anywhere. Bench pass must not be quoted
+    as a gate until a manifest is locked.
+- MY VERIFICATION, corrections to the worker's report:
+  - Side observation FALSE ALARM: the worker reported
+    docs/clone2-amend4-reverify-20261122.md missing at HEAD 36364b1,
+    "likely dropped in a shared-branch rebase". I checked: the file
+    EXISTS on origin/main (blob bf564e79); b8c908a is on main only. It
+    was never on todolist-push. Clone2's reports live on main. Nothing
+    was dropped, no restore needed. Lesson recorded: check the branch
+    before claiming a file is lost.
+  - Round-3 shape judgment: COVERED, not open. The reconcile log
+    (worker-click3-reconcile-amend4-log.md, e1a4e77, 486 lines) judges
+    all 12 items per-item (VM fix vs Codex fix, SAME/DIFFERENT,
+    verdict) with F4/F5/F6 decisions; round-3 council reviews exist
+    (r3c1/r3c2/r3c3/r3rt); clone2's independent round 3 exists (7aeea01,
+    verdict AMEND). The only open limb of step 1(c) is the defective
+    proof-test repair for items 3, 4, 5-6 (B5 limb (ii)), in flight as
+    clone2 batch 11 task 1. The worker's "round-3 shape judgment remains
+    open" is imprecise; my judgment above stands with the citations.
+- Commissioned 09:00 +07 (T+15m): C4-BENCH-MANIFEST (f3fb05a9). Re-run the
+  fixture 2-vision bench at current HEAD in a clean worktree, produce
+  and lock the CB-9 manifest (deploy-manifest.json per the 18f2304
+  mechanism), state plainly whether rung 1 is quotable as a gate.
+  Log: improvements/worker-click4-bench-manifest-log.md.
+
+## 4. Still running (T+15m)
+
+- C4-STEP5-P1P5 (9155c006): step 5 implementation.
+- C4-P3-PROBE (404124bf): P3 Brave experiment.
+- C4-BENCH-MANIFEST (f3fb05a9): bench re-run + manifest lock.
+- Clone2 batch 11 (495cfc6 on main): 3 tasks, assigned 08:50.
+
+## 5. (to be filled as results land)
