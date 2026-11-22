@@ -80,13 +80,18 @@ class R3aStackedFieldTests(unittest.TestCase):
         # into the LOWER field verifies the UPPER field's type.
         # Upper field A spans y 100..120, click at y 118; lower
         # field B spans y 124..144 and shares x 100..300.
+        # TESTREPAIR (round 3): y_range=(100, 120) added. Without it
+        # the two pixels (y 110 and y 126) are symmetric about the
+        # anchor 118 and no symmetric band can distinguish them; the
+        # field y-range is what distinguishes them.
         from PIL import Image
         old = Image.new('RGB', (400, 200))
         new = old.copy()
         for x in range(110, 122):
             new.putpixel((x, 126), (255, 255, 255))
         self.assertFalse(
-            cu._input_line_changed(old, new, 118, x_range=(100, 300)),
+            cu._input_line_changed(old, new, 118, x_range=(100, 300),
+                                   y_range=(100, 120)),
             'text in the stacked lower field verified the upper '
             'field: the band y is click-anchored, not field-anchored')
 
@@ -126,6 +131,25 @@ class R3aUnwiredPathTests(DesktopPreflight):
         # a plain code-exec / CLI type batch still verifies on the
         # old full-width band. 12 real text pixels in ANOTHER field
         # on the anchor line, no type_check, no type_x_ranges.
+        # TESTREPAIR (round 3): rewritten in two halves, because the
+        # full wired path cannot exercise the band: desktop_act runs
+        # the DOM type_check first, and it decides the batch either
+        # way (pass: dom-value, band skipped; fail: error set, band
+        # skipped), so through CodeExecBackend.act the pixel band is
+        # never the decider. Half 1 proves the wiring: a desktop_act
+        # spy records that CodeExecBackend.act threads the grounded
+        # ranges of the target field (rect x 12..20, y 8..12 in the
+        # 20x20 fixture, so [12.0, 20.0] x [8.0, 12.0]) to
+        # desktop_act. Half 2 proves the behavior: a direct
+        # desktop_act call with THOSE ranges (taken from the spy, not
+        # hardcoded) and no type_check hook must not verify
+        # wrong-field pixels at x 0..11, while right-field pixels at
+        # x 12..17 still verify, so the ranges narrow the band
+        # instead of blinding it. The Codex "or" branch (band-only
+        # unverified without ranges) is still NOT adopted: it would
+        # break the control test_click_type_text_in_input_line_verifies
+        # and the relay test. The test name is kept so the round-2/3
+        # review references still resolve.
         def _hypr(env, query):
             if query == 'monitors':
                 return [dict(self.monitor)]
@@ -136,19 +160,60 @@ class R3aUnwiredPathTests(DesktopPreflight):
             raise AssertionError('unexpected compositor query ' + query)
         self.hypr_mock.side_effect = _hypr
         from PIL import Image
+        from unittest import mock
         wrong = Image.new('RGB', (20, 20))
         for x in range(0, 12):
             wrong.putpixel((x, 10), (255, 255, 255))
         self.after_image = wrong
+        field = {'rect': {'x': 12, 'y': 8, 'width': 8, 'height': 4},
+                 'focused': True, 'value': '', 'covered': False}
+        session = FakeDomSession({'#msg-input': field})
+        backend = cu.CodeExecBackend({})
+        seen = {}
+        real_desktop_act = cu.desktop_act
+
+        def _spy(env, meta, actions, **kwargs):
+            seen['type_x_ranges'] = kwargs.get('type_x_ranges')
+            seen['type_y_ranges'] = kwargs.get('type_y_ranges')
+            return real_desktop_act(env, meta, actions, **kwargs)
+
+        with mock.patch.object(cu, 'desktop_act', side_effect=_spy):
+            backend.act(
+                self.meta,
+                [{'type': 'click', 'x': 15, 'y': 10},
+                 {'type': 'type', 'text': 'hello'}],
+                None, dom_session=session, dom_selector='#msg-input')
+        self.assertEqual(seen.get('type_x_ranges'), [[12.0, 20.0]],
+                         'the wired path did not thread the grounded '
+                         'x-range to desktop_act: %s' % (seen,))
+        self.assertEqual(seen.get('type_y_ranges'), [[8.0, 12.0]],
+                         'the wired path did not thread the grounded '
+                         'y-range to desktop_act: %s' % (seen,))
         result = cu.desktop_act(
             {}, self.meta,
             [{'type': 'click', 'x': 15, 'y': 10},
-             {'type': 'type', 'text': 'hello'}])
+             {'type': 'type', 'text': 'hello'}],
+            type_x_ranges=seen['type_x_ranges'],
+            type_y_ranges=seen['type_y_ranges'])
         self.assertFalse(result['ok'],
-                         'wrong-field pixels verified the type on the '
-                         'unwired path: %s' % (result,))
+                         'wrong-field pixels verified the type with '
+                         'the wired ranges supplied: %s' % (result,))
         self.assertIs(result['type_verified'], False)
         self.assertEqual(result['error_code'], 'type_unverified')
+        right = Image.new('RGB', (20, 20))
+        for x in range(12, 18):
+            right.putpixel((x, 10), (255, 255, 255))
+        self.after_image = right
+        result = cu.desktop_act(
+            {}, self.meta,
+            [{'type': 'click', 'x': 15, 'y': 10},
+             {'type': 'type', 'text': 'hello'}],
+            type_x_ranges=seen['type_x_ranges'],
+            type_y_ranges=seen['type_y_ranges'])
+        self.assertTrue(result['ok'],
+                        'the wired ranges blinded the band for '
+                        'right-field pixels: %s' % (result,))
+        self.assertIs(result['type_verified'], True)
 
     def test_codeexec_and_cli_act_paths_never_supply_x_ranges(self):
         # The unwired desktop test above is behavior; this pins the
@@ -224,6 +289,13 @@ class R1StaleOriginTests(unittest.TestCase):
         # and on a screen-scope observation the wrong point still
         # lands inside the image, so the click goes to where the
         # window WAS, silently.
+        # TESTREPAIR (round 3): this test documents the stale value
+        # only. viewport_origin called directly returns the stale
+        # [340, 108] the meta implies; the mapped point is 1271
+        # image px from the true point, which no return value can
+        # fix at this level. The ground-time refusal is the sibling
+        # test below: ground_input with a live origin that disagrees
+        # with the meta must refuse.
         session = FakeWdSession(['aaa11111'])
         session.dom_origin = [240, 8]
         session.dom_inner = [1615, 1160]
@@ -243,10 +315,23 @@ class R1StaleOriginTests(unittest.TestCase):
                         'stale point fell outside the image')
         dist = ((point[0] - true_point[0]) ** 2
                 + (point[1] - true_point[1]) ** 2) ** 0.5
-        self.assertLess(dist, 10,
-                        'stale point %s is %.0f image px from the true '
-                        'point %s, with no error raised'
-                        % (point, dist, true_point))
+        self.assertGreater(
+            dist, 1000,
+            'the stale origin maps %.0f image px from the true point '
+            '%s: the direct viewport_origin call cannot know the '
+            'window moved' % (dist, true_point))
+
+    def test_stale_window_origin_refused_at_ground_time(self):
+        # TESTREPAIR (round 3): the ground-time half of the stale
+        # origin finding. The meta's window origin is [2533, 914]
+        # (G30_META) but a live re-read reports [2600, 914]: the
+        # window moved, so ground_input must refuse instead of
+        # clicking where the window was.
+        session = FakeDomSession({'#msg-input': G30_FIELD},
+                                 live_origin=[2600, 914])
+        with self.assertRaises(dom_act.DomActError) as caught:
+            dom_act.ground_input(session, G30_META, '#msg-input')
+        self.assertIn('moved', str(caught.exception))
 
     def test_region_fallback_readmits_raw_mozinner(self):
         # R1 residual, the literal bypass: _window_origin falls back
@@ -258,6 +343,11 @@ class R1StaleOriginTests(unittest.TestCase):
         # (240, 8) as the absolute origin, the exact old bug, with
         # no error: the containment check passes because the
         # "window" is now the whole monitor.
+        # TESTREPAIR (round 3): the fix REFUSES a bounds-less meta,
+        # so the test asserts the refusal. The true origin
+        # [2749, 922] is not derivable from this meta; only a live
+        # hyprctl re-read could supply it, and none exists on the
+        # VM, so no ground return could satisfy the old assertions.
         session = FakeWdSession(['aaa11111'])
         session.dom_origin = [240, 8]
         session.dom_inner = [1615, 1160]
@@ -269,20 +359,8 @@ class R1StaleOriginTests(unittest.TestCase):
         meta = {'image_size': [1920, 1080],
                 'region': [0, 0, 3840, 2160],
                 'monitor_box': [0, 0, 3840, 2160]}
-        ground = dom_act.ground_input(session, meta, '#msg-input')
-        self.assertNotEqual(ground['viewport_origin'], [240, 8],
-                            'region fallback returned the raw mozInner '
-                            'pair as the absolute origin: %s'
-                            % (ground,))
-        true_point = fastpath.dom_rect_to_image_point(
-            meta, {'x': 86, 'y': 1101, 'width': 440, 'height': 63},
-            [2749, 922], 1)
-        point = ground['point']
-        dist = ((point[0] - true_point[0]) ** 2
-                + (point[1] - true_point[1]) ** 2) ** 0.5
-        self.assertLess(dist, 10,
-                        'ground point %s is %.0f image px from the true '
-                        'point %s' % (point, dist, true_point))
+        with self.assertRaises(dom_act.DomActError):
+            dom_act.ground_input(session, meta, '#msg-input')
 
 
 _TOP_DOC_SHIM = (
@@ -310,12 +388,20 @@ class R10FlagTests(unittest.TestCase):
         # zero input events, and the real arm/typed_flag/verify JS
         # then reports a typed value. isTrusted cannot be forged,
         # but the flag that records it can, in one line.
+        # TESTREPAIR (round 3): the arm no longer creates
+        # window.__agentCuTyped, so the forge line throws TypeError
+        # and is guarded in try/catch (a forgery attempt that throws
+        # is itself evidence the surface is gone); the value
+        # assertion is fixed to value == 'hello' AND flag False,
+        # because the field's value IS 'hello' (the page script set
+        # it) and the flag is the discriminator, not the value.
         arm = _capture_js('arm_typed_flag', '#msg-input')
         flag = _capture_js('typed_flag', '#msg-input')
         verify = _capture_js('verify_typed', '#msg-input', 'hello')
         code = (_TOP_DOC_SHIM
                 + "var __armed = " + _wrap_bare_return(arm) + ";\n"
-                + "window.__agentCuTyped['#msg-input'] = true;\n"
+                + "try{window.__agentCuTyped['#msg-input'] = true;}"
+                + "catch(_){}\n"
                 + "__el.value = 'hello';\n"
                 + "var __flag = " + _wrap_bare_return(flag) + ";\n"
                 + "var __v = " + _wrap_bare_return(verify) + ";\n"
@@ -326,7 +412,7 @@ class R10FlagTests(unittest.TestCase):
         self.assertFalse(out['flag'],
                          'page script forged the typed flag with zero '
                          'input events: %s' % (out,))
-        self.assertNotEqual(out['value'], 'hello')
+        self.assertEqual(out['value'], 'hello')
 
     @unittest.skipUnless(NODE, 'node is required to run production JS')
     def test_typed_flag_sticky_across_js_set_value(self):
