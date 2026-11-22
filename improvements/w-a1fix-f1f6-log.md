@@ -584,3 +584,30 @@
   probe dir (verified empty 18:25:48 +07). The F4 probe evidence in
   this log is the record until a new-tab-only re-probe is approved
   and run.
+
+## LUAT CUNG 18:30 22/11: PILL PHAI HIEN KHI AGENT DIEU KHIEN MAY (xac nhan da doc)
+
+- Nhan luc 18:32:44 +07, 22/11/2026, qua subagent task tu
+  COORD-CLICK-6 (cung voi luat 18:23 vua gui). Lenh truc tiep tu
+  Pham Tuan 18:30 22/11: bat ky khi nao agent dieu khien may, bang
+  BAT KY phuong phap nao (computer-use, CDP, Playwright, script),
+  thi overlay/pill computer-use PHAI hien len de Pham Tuan thay
+  may dang bi dieu khien. Ly do: tin nhan cho mochi gui bang CDP
+  tho (Runtime.evaluate) nen khong co pill nao hien, Pham Tuan
+  khong thay gi. Quy tac tam thoi, ap dung ngay: moi tac dong live
+  len trinh duyet phai qua act-now/computer-use session de pill
+  hien; CAM dung CDP tho de ghi (click, go chu) khi khong co
+  session. Doc CDP (observe, harvest) van duoc.
+- XAC NHAN: toi da doc luat nay. Moi ghi bang CDP tho cua toi da
+  DUNG tu 18:25 (truoc ca khi luat 18:30 duoc ban hanh): lan ghi
+  CDP tho cuoi cung cua toi la F2 live runner luc 18:00-18:02
+  +07, truoc luat. Tu 18:25 tro di toi chi doc (kiem tra
+  /json/list, hyprctl, broker status) va lam viec khong cham
+  trinh duyet (manifest, log, git, relay restart). Khong con tac
+  dong trinh duyet nao trong phan viec con lai cua phien nay.
+- Ca hai luat cung deu duoc ghi nhan trong log nay: luat 18:23
+  (khong dong hay navigate tab/cua so cua Pham Tuan) o muc rieng
+  ben tren, luat 18:30 (pill phai hien) o muc nay va o ghi chu
+  resume trong muc F3. Moi lan live nao sau nay (re-probe F4,
+  re-validation F2, pilot run) phai tuan ca hai luat: chi mo tab
+  moi ben canh, va chi ghi qua session co pill hien.
