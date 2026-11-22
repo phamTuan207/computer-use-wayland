@@ -492,6 +492,10 @@ or a named owner.
   git commit command) immediately after staging the same two
   files. No other files staged: `git status --short` on the two
   paths is empty after the commit.
-- Push verification: [TO FILL: git ls-remote output after push]
+- Push verification: `git push origin todolist-push` moved
+  0dc0dbe..4070bde, and `git ls-remote origin todolist-push`
+  returns 4070bdec0fd13cc631b066d2ce04cc379789fd4e
+  refs/heads/todolist-push, matching local HEAD 4070bde.
+  Verified 2026-11-22 10:48:24 +07 (T+6m).
 - Dash check: a Python byte-level scan for U+2014 and U+2013
   codepoints in both files returns no matches before commit.
