@@ -73,6 +73,9 @@ class ZenPointerDelegate:
         # F4 diagnostic: the begin_batch settle outcome
         # {'reads', 'stable', 'elapsed_ms'}, set by begin_batch.
         self.last_settle = None
+        # The window address begin_batch observed, kept so a
+        # post-type meta refresh can re-observe the same window.
+        self._window_address = None
 
     def _observe(self, window_address):
         """One window observation, validated as a batch binding.
@@ -164,6 +167,7 @@ class ZenPointerDelegate:
                 'observe; got %r' % (window_address,))
         if self._focus_fn is not None:
             self._focus_fn(window_address)
+        self._window_address = window_address
         meta = self._observe(window_address)
         meta, settle = self._settle_observation(window_address, meta)
         self._meta = meta
@@ -212,8 +216,28 @@ class ZenPointerDelegate:
             'ime_restore_failed': result.get('ime_restore_failed'),
             'wtype_stderr': result.get('wtype_stderr'),
         }
-        return (result.get('ok') is True
-                and result.get('completed') == len(desktop))
+        ok = (result.get('ok') is True
+              and result.get('completed') == len(desktop))
+        if ok and any(item.get('type') == 'type' for item in desktop):
+            # F4 follow-up: a type changes the screen (the text
+            # now shows in the field), so the batch meta is stale
+            # for the NEXT action's desktop_act preflight, which
+            # would refuse it as 'screen changed' (f4diag run 8:
+            # set_value verified, then the focus was refused).
+            # Refresh the meta (observe + settle) so the next
+            # dispatch compares against the screen WITH the typed
+            # text. A refresh failure must not fail the action
+            # that already succeeded; the next dispatch keeps the
+            # stale meta and its preflight stays the gatekeeper.
+            try:
+                address = self._window_address
+                fresh = self._observe(address)
+                fresh, settle = self._settle_observation(address, fresh)
+                self._meta = fresh
+                self.last_settle = settle
+            except Exception:
+                pass
+        return ok
 
     def _image_point(self, screen_point):
         """[x, y] in the batch observation image, or None.

@@ -399,6 +399,39 @@ class SettleTests(unittest.TestCase):
         self.assertEqual(trace[1]['state'], '1')
         self.assertEqual(delegate.last_dispatch.get('wtype_stderr'), '')
 
+    def test_meta_refreshes_after_a_type(self):
+        # F4 follow-up: a type changes the screen (the text now
+        # shows in the field), so the batch meta is stale for the
+        # NEXT action's desktop_act preflight, which would refuse
+        # it as 'screen changed' (f4diag run 8: set_value verified,
+        # then the focus was refused). After a successful type the
+        # delegate re-observes (and settles) so the next dispatch
+        # uses a fresh meta. A click-only dispatch does not refresh.
+        delegate, backend, _focused, _session = \
+            self._delegate_with_frames(None)
+        delegate.begin_batch('0xabc')
+        # begin_batch settles: 2 observes, meta obs-2.
+        self.assertEqual(len(backend.observe_calls), 2)
+        self.assertEqual(delegate._meta['id'], 'obs-2')
+        # A click does not refresh the meta.
+        self.assertTrue(delegate(
+            {'type': 'click', 'ref': '#c5-text'}, [2700, 1000]))
+        self.assertEqual(len(backend.observe_calls), 2)
+        self.assertEqual(delegate._meta['id'], 'obs-2')
+        # A fill (click + type) refreshes it: one more observe for
+        # the refresh plus its settle confirmation.
+        self.assertTrue(delegate(
+            {'type': 'fill', 'ref': '#c5-text', 'text': 'hello'},
+            [2700, 1000]))
+        self.assertEqual(len(backend.observe_calls), 4)
+        self.assertEqual(delegate._meta['id'], 'obs-4')
+        self.assertTrue(delegate.last_settle['stable'])
+        # The next dispatch stamps with the fresh meta id.
+        self.assertTrue(delegate(
+            {'type': 'click', 'ref': '#c5-text'}, [2700, 1000]))
+        _meta, actions, _path = backend.act_calls[-1]
+        self.assertEqual(actions[0]['observation_id'], 'obs-4')
+
 
 class BackendWiringTests(unittest.TestCase):
     def _backend(self):
@@ -465,9 +498,12 @@ class BackendWiringTests(unittest.TestCase):
         self.assertEqual(result['completed'], 4)
         self.assertEqual(session.fields['#c5-text']['value'], 'hello')
         self.assertEqual(session.sent_bubbles, ['hello'])
-        # One observation for the whole batch; three dispatches
-        # (the trailing assert reads state and dispatches nothing).
-        self.assertEqual(len(code.observe_calls), 2)
+        # One settled observation for the batch start, plus one
+        # refresh after the set_value type (the typed text changes
+        # the screen, so the next dispatch needs a fresh meta);
+        # three dispatches (the trailing assert reads state and
+        # dispatches nothing).
+        self.assertEqual(len(code.observe_calls), 4)
         self.assertEqual(len(code.act_calls), 3)
         # The set_value click is the image point (440, 223), not
         # the raw screen point (2949, 1137): with the old
@@ -560,7 +596,9 @@ class RealSignatureTests(unittest.TestCase):
         self.assertEqual(result['completed'], 4)
         self.assertEqual(session.fields['#c5-text']['value'], 'hello')
         self.assertEqual(session.sent_bubbles, ['hello'])
-        self.assertEqual(len(code.observe_calls), 2)
+        # 2 observes for the begin_batch settle, 2 more for the
+        # post-type refresh after the set_value.
+        self.assertEqual(len(code.observe_calls), 4)
         self.assertEqual(len(code.act_calls), 3)
         backend.close()
 
