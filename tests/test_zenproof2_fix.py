@@ -25,7 +25,16 @@ session that models that exact misfire, and prove:
 - the fake models unreadable tabs (error entries) and a
   silently failed scan restore (amend F3), and _restore_original
   reports scan_error and restore_failed instead of mislabelling
-  or raising (amend C5).
+  or raising (amend C5),
+- open refuses when /window/new returns an existing handle even
+  when it still creates a tab (amend 2, Redteam H1: the count
+  gate alone cannot catch that),
+- _restore_original records None instead of raising when the
+  title and URL reads fail after a scan failure (amend 2,
+  Redteam H2),
+- phase 4 (re-switch plus snapshot URL gate) is executed by
+  behavioral tests on a real Runner, not for the first time in
+  a live run (amend 2, Council 2 C1).
 
 No live tab is opened, navigated, or deleted. The fake session
 never touches a real browser.
@@ -232,6 +241,25 @@ def _owner_tabs():
         {'handle': uuid.uuid4().hex, 'title': '',
          'url': 'https://example.com/'},
     ]
+
+
+class _StaleHandleWithTab(FakeSession):
+    """POST /window/new creates a tab (count +1) but returns an
+    EXISTING handle (the owner tab's). Adapted from the redteam
+    amend repro /tmp/redteam-amend-repro-h1.py. The count gate
+    alone cannot catch this: the count grows by exactly 1, so
+    only the membership check (new_handle in before) refuses.
+    """
+
+    def _wd(self, method, path, body=None):
+        if method == 'POST' and path.endswith('/window/new'):
+            handle = uuid.uuid4().hex
+            self.tabs.append({'handle': handle, 'title': '',
+                              'url': 'about:blank'})
+            if self.select_new:
+                self.current = handle
+            return {'value': {'handle': self.tabs[0]['handle']}}
+        return super()._wd(method, path, body)
 
 
 class ZenTabFixTest(unittest.TestCase):
@@ -461,9 +489,11 @@ class ZenTabFixTest(unittest.TestCase):
 
     def test_open_count_gate_refuses_stale_handle(self):
         """Council 1 C4: POST /window/new returns an existing
-        handle without creating a tab. The (c) check alone would
-        pass (the returned handle IS current), so the count gate
-        must refuse first: no new tab exists to navigate.
+        handle without creating a tab. Since amend 2 the
+        membership check (Redteam H1) refuses this case first:
+        the returned handle was already in `before`. The count
+        gate remains the second line of defense for a genuinely
+        new handle that creates no tab (see the next test).
         """
         class _StaleHandleFake(FakeSession):
             def _wd(self, method, path, body=None):
@@ -474,11 +504,108 @@ class ZenTabFixTest(unittest.TestCase):
         fake = _StaleHandleFake(_owner_tabs(), current_index=0)
         with self.assertRaises(ZenDomError) as caught:
             self._run_cmd(fake, zen_tab.cmd_open)
+        self.assertIn('existing handle', str(caught.exception))
+        self.assertEqual(fake.deleted, [])
+        self.assertEqual(len(fake.tabs), 2)
+        self.assertEqual(fake._cur_tab()['url'], OWNER_URL)
+
+    def test_open_count_gate_refuses_new_handle_without_tab(self):
+        """Council 1 C4, count gate itself (amend 2): POST
+        /window/new returns a genuinely new handle but creates
+        no tab. The membership check passes (the handle was not
+        in `before`), so the count gate must refuse: no new tab
+        exists to navigate.
+        """
+        class _NewHandleNoTab(FakeSession):
+            def _wd(self, method, path, body=None):
+                if method == 'POST' and path.endswith('/window/new'):
+                    return {'value': {'handle': uuid.uuid4().hex}}
+                return super()._wd(method, path, body)
+
+        fake = _NewHandleNoTab(_owner_tabs(), current_index=0)
+        with self.assertRaises(ZenDomError) as caught:
+            self._run_cmd(fake, zen_tab.cmd_open)
         self.assertIn('did not increase the tab count',
                       str(caught.exception))
         self.assertEqual(fake.deleted, [])
         self.assertEqual(len(fake.tabs), 2)
         self.assertEqual(fake._cur_tab()['url'], OWNER_URL)
+
+    def test_open_refuses_stale_handle_that_creates_tab(self):
+        """Redteam H1 (amend 2), select_new=True: /window/new
+        creates a tab but returns the owner tab's handle. The
+        count grows by exactly 1, so the count gate passes; the
+        membership check must refuse before any navigate or
+        DELETE. Without it, the (c) check would select the owner
+        tab (it IS the returned handle) and the navigate would
+        rewrite it to the fixture URL.
+        """
+        fake = _StaleHandleWithTab(_owner_tabs(), current_index=0,
+                                   select_new=True, select_works=True)
+        with self.assertRaises(ZenDomError) as caught:
+            self._run_cmd(fake, zen_tab.cmd_open)
+        self.assertIn('existing handle', str(caught.exception))
+        self.assertEqual(fake.deleted, [])
+        self.assertEqual(len(fake.tabs), 3)
+        self.assertEqual(fake.tabs[0]['url'], OWNER_URL)
+        self.assertEqual(fake.tabs[2]['url'], 'about:blank')
+        self.assertEqual(fake._cur_tab()['url'], 'about:blank')
+
+    def test_open_refuses_stale_handle_that_creates_tab_no_select(self):
+        """Redteam H1 (amend 2), select_new=False (the run 2
+        mode): /window/new creates a tab but returns the owner
+        tab's handle, and the owner tab is already current, so
+        the (c) check would pass with no select at all. The
+        membership check must refuse before any navigate.
+        """
+        fake = _StaleHandleWithTab(_owner_tabs(), current_index=0,
+                                   select_new=False, select_works=True)
+        with self.assertRaises(ZenDomError) as caught:
+            self._run_cmd(fake, zen_tab.cmd_open)
+        self.assertIn('existing handle', str(caught.exception))
+        self.assertEqual(fake.deleted, [])
+        self.assertEqual(len(fake.tabs), 3)
+        self.assertEqual(fake.tabs[0]['url'], OWNER_URL)
+        self.assertEqual(fake._cur_tab()['url'], OWNER_URL)
+
+    def test_restore_original_scan_error_with_failed_reads_returns_ok(self):
+        """Redteam H2 (amend 2): the scan fails inside
+        _restore_original AND the _title/_url reads fail too.
+        The close already succeeded, so cmd_close must still
+        return ok with scan_error True, not raise and mask the
+        close. The current title and URL are recorded as None.
+        """
+        class _ScanFailsLateReadsFail(FakeSession):
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+                self._list_calls = 0
+
+            def list_tabs(self, handle_index=None):
+                self._list_calls += 1
+                if self._list_calls >= 3:
+                    raise ZenDomError('simulated scan failure')
+                return super().list_tabs(handle_index)
+
+            def _wd(self, method, path, body=None):
+                if method == 'GET' and path.endswith('/title'):
+                    raise ZenDomError('simulated read failure')
+                if method == 'GET' and path.endswith('/url'):
+                    raise ZenDomError('simulated read failure')
+                return super()._wd(method, path, body)
+
+        tabs = _owner_tabs()
+        tabs.append({'handle': uuid.uuid4().hex, 'title':
+                     'Two-vision benchmark fixture',
+                     'url': FIXTURE_URL})
+        fake = _ScanFailsLateReadsFail(tabs, current_index=2)
+        closed = self._run_cmd(fake, zen_tab.cmd_close,
+                               FIXTURE_SUBSTR, OWNER_URL)
+        self.assertTrue(closed['ok'])
+        self.assertTrue(closed['scan_error'])
+        self.assertIsNone(closed['current_title'])
+        self.assertIsNone(closed['current_url'])
+        self.assertNotIn(FIXTURE_URL, [t['url'] for t in fake.tabs])
+        self.assertIn(OWNER_URL, [t['url'] for t in fake.tabs])
 
     def test_open_precheck_passes_when_fixture_tab_unreadable(self):
         """Redteam F3a, pre-check: the existing fixture tab's
@@ -677,6 +804,80 @@ class RunnerFixTest(unittest.TestCase):
             'PROBE zen-2 ' + FIXTURE_URL + ' 1', run2.TARGET)
         self.assertEqual(url, FIXTURE_URL)
         self.assertEqual(count, '1')
+
+    def _run_phase4(self, switch_url=FIXTURE_URL, log=None):
+        """Run phase4 on a real Runner with hypr/tab/oneshot_zen
+        mocked (Council 2 phase-4 probe shape: Runner() builds a
+        Harness that only mkdirs, no SSH). Returns the runner so
+        the test can read results.
+        """
+        runner = run2.Runner()
+        runner.zen_address = '0xabc'
+        runner.results = {'run': run2.RUN_NO}
+        envelope = {'ok': True, 'elapsed_ms': 1, 'error': None,
+                    'log': log if log is not None else [
+                        'PROBE zen-9 ' + FIXTURE_URL + ' 1',
+                        'dom_act ok True completed 4']}
+        with mock.patch.object(runner, 'hypr',
+                               return_value={'address': '0xABC'}), \
+             mock.patch.object(runner, 'tab',
+                               return_value={'ok': True,
+                                             'url': switch_url}), \
+             mock.patch.object(runner, 'oneshot_zen',
+                               return_value=(12.3, envelope)):
+            runner.phase4()
+        return runner
+
+    def test_phase4_happy_path_records_send_url_and_count(self):
+        """Council 2 C1 (amend 2): the F2 mitigation (re-switch
+        plus snapshot URL gate) must be executed by a test, not
+        for the first time in a live run. Happy path records
+        send_url and send_count from the send PROBE line.
+        """
+        runner = self._run_phase4()
+        self.assertEqual(runner.results['program']['send_url'],
+                         FIXTURE_URL)
+        self.assertEqual(runner.results['program']['send_count'], '1')
+        self.assertEqual(runner.results['program']['completed'], 4)
+        self.assertIn(FIXTURE_URL,
+                      runner.results['send_switch']['url'])
+
+    def test_phase4_wrong_url_snapshot_raises(self):
+        """Council 2 C1: a send snapshot URL that does not
+        contain the target raises through parse_probe_line
+        (ValueError, not RuntimeError).
+        """
+        with self.assertRaises(ValueError):
+            self._run_phase4(
+                log=['PROBE zen-9 https://example.com/ 1',
+                     'dom_act ok True completed 4'])
+
+    def test_phase4_wrong_count_snapshot_raises(self):
+        """Council 2 C1: a send snapshot count other than 1
+        raises through parse_probe_line (ValueError).
+        """
+        with self.assertRaises(ValueError):
+            self._run_phase4(
+                log=['PROBE zen-9 ' + FIXTURE_URL + ' 0',
+                     'dom_act ok True completed 4'])
+
+    def test_phase4_missing_probe_line_raises(self):
+        """Council 2 C1: a send program that prints no PROBE
+        line raises RuntimeError before the run can record a
+        send URL.
+        """
+        with self.assertRaises(RuntimeError) as caught:
+            self._run_phase4(log=['dom_act ok True completed 4'])
+        self.assertIn('no snapshot line', str(caught.exception))
+
+    def test_phase4_switch_landing_wrong_tab_raises(self):
+        """Council 2 C1: the phase-4 re-switch must land on the
+        scratch tab; landing on any other URL raises before the
+        send program runs.
+        """
+        with self.assertRaises(RuntimeError) as caught:
+            self._run_phase4(switch_url='https://example.com/')
+        self.assertIn('send switch landed on', str(caught.exception))
 
 
 if __name__ == '__main__':
