@@ -56,5 +56,18 @@ Python suites:
 - Pre-commit check 18:54 +07: HEAD had moved 660220f to 6b60079 (parent/coordinator landed a docs-only commit: coord-click-6-log.md, 8 insertions, CORRECTION that F4 is NOT landed). `git fetch origin` then showed HEAD == origin/todolist-push == 6b60079c, in sync. HEAD still has no F4 (grep F4 = 0, old break line still at 752). Worktree cdp.mjs diff still exactly 12/1. No interference with my files.
 - Staged ONLY my files with explicit pathspec: `git add -- scripts/cdp.mjs tests/cdp_snapshot.mjs tests/cdp_worker.mjs tests/cdp_errors.mjs improvements/w-f4land-log.md`. NOT staged: tests/realistic/clone1-batch3/results.json (another worker's dirty file), untracked improvements/* files (not mine).
 - Committed with `git commit -m "..."` and NO pathspec argument (never `git commit -- <paths> -m`, never bare `git commit`, never `git add -A`, no amend).
+- Commit: 658c432 `W-F4LAND: land F4 worker loop (ok:false is a result, not a dead worker) + update stale stop-on-error expectations`, 5 files, 127 insertions, 34 deletions.
+- Push: `git push origin todolist-push` rc=0, `6b60079..658c432 todolist-push -> todolist-push`. Verified: `git ls-remote origin todolist-push` = 658c432acb9fddd53c6551a07d255fdc02b6c86b = local HEAD. Verified 18:54 +07.
+
+## Step 5: laptop read-only check (SSH, no patching)
+
+- Command (short, via ~/workspace/ssh-laptop.sh, 18:55 +07): `grep -n "F4: an ok:false" ~/computer-use-wayland/scripts/cdp.mjs` and `grep -n "result?.ok===false" ~/computer-use-wayland/scripts/cdp.mjs`. rc_ssh=0.
+- Result: F4 comment PRESENT on laptop at line 665 (`// F4: an ok:false response is a RESULT (a failed assert, a`, grep exit 0). Old break line ABSENT (grep exit 1). Laptop still has the F4 fix. No patching done on the laptop.
+- Note: laptop line number (665) differs from VM (752); the laptop copy of cdp.mjs has different line offsets, but the fix content is present.
+
+## Done
+
+F4 landed on todolist-push as 658c432, full suite green, laptop fix confirmed present. No step blocked. Total elapsed from task receipt 18:50:38 +07 to push verify 18:54:43 +07, about 4 minutes of work plus the laptop check at ~18:55 +07.
+
 
 
