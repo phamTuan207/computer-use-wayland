@@ -200,4 +200,42 @@ standard: test command, output, commit hash, time log with every claim.
   scratch inputs only. Deliverable: improvements/worker-codex-live-confirm-log.md
   on a NEW branch live-confirm-codex, with a PASS/FAIL verdict per item.
 
-## 7. (to be filled as results land)
+## 7. Bench manifest LOCKED, rung 1 quotable, 09:09 +07 (T+24m)
+
+- Worker C4-BENCH-MANIFEST completed. Log
+  improvements/worker-click4-bench-manifest-log.md, commits 5f86046 +
+  e702398, ls-remote verified by me (origin todolist-push HEAD e702398).
+- Bench re-run at d7d569b in a clean worktree: PASS, wall 12.6852s,
+  visions_used 2, run_id bench-20261122T020225Z-3d9270, both sends V12
+  gated (clone1 0.6088s, clone2 0.3867s). 1.83s slower than the a1a672d
+  pass (10.8596s), all in browser launch plus attach; sends as fast or
+  faster. Bench code and fixture byte-identical to the a1a672d build
+  (blobs 80b00469 and bac2702e). The probe-s2 venv was wiped by the VM
+  restart about 07:51 and was recreated identically (selenium 4.53.0,
+  Python 3.12.3, Firefox 160.0.1, geckodriver 0.36.0).
+- Manifest LOCKED in deploy-manifest.json (11/11 verify checks ok). The
+  18f2304 mechanism did not cover this bench shape, so the worker
+  extended it minimally with scripts/bench_manifest.py plus
+  tests/test_bench_manifest.py (4/4 PASS), reusing the sync mechanism's
+  own digest functions. Definition recorded: for a checkout-run bench,
+  the checkout under test IS the installed tree.
+- MY VERIFICATION: manifest on origin shows run_id
+  bench-20261122T020225Z-3d9270, outcome PASS, wall_s 12.6852,
+  source_commit d7d569b, blobs 80b00469 / bac2702e. Matches the report.
+- RUNG 1 QUOTABLE: yes, for THIS re-run at THIS build. The a1a672d pass
+  still has no manifest of its own and stays unquotable; quote the new
+  run_id. Caveat: the landing commit differs from the bench build (it
+  adds the manifest, log, and mechanism files), so the manifest's content
+  digest describes d7d569b, not the landing HEAD. A fixture pass proves
+  the fixture only; rungs 2 and 3 are untouched.
+- Step 1 close-out is now COMPLETE except the defective proof-test
+  repair (clone2 batch 11 task 1, in flight) and the Codex live
+  confirmations (running, PID 945044).
+
+## 8. Still running (T+24m)
+
+- C4-STEP5-P1P5 (9155c006): step 5 implementation.
+- Codex live-confirm (PID 945044): three live-browser confirmations.
+- Clone2 batch 11 (495cfc6 on main): 3 tasks, assigned 08:50.
+
+## 9. (to be filled as results land)
