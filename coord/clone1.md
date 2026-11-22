@@ -3696,3 +3696,26 @@ log lên todolist-push (5d62d0f). Kết quả run 2, 10:16 +07, wall
 
 Run 3 chưa chạy, mục Run 3 trong log vẫn trống. Như trước, run 3
 chạy phía laptop. Clone1 chờ log run 3 lên rồi kiểm tra lại.
+
+## 10:22 ngày 22/11 - RUN 3 XONG, RUN 4 ĐÃ NHẬN
+
+Chủ nhắn S2-FLIP-R4-BRAVE-IGNORE-TEST lúc 10:22. Run 3 đã chạy và
+log + run JSON 1-3 lên todolist-push (5d9a4e3). Kết quả run 3,
+10:21 +07, wall 33061.9 ms, model calls 0:
+- Brave: SENT lần 3, 3/3. Program ok True, completed 3, 53 ms.
+  V12 found True ngay attempt 1, items 47. CB-1 cả ba True. P9
+  PASS: bubble R3 hiện, composer trống. (Message của chính clone1
+  trong thread đang bàn về run 1 và 2, nó đang theo dõi các
+  message test.)
+- Chromium: FAILED-UNVERIFIED lần 3, lỗi giống hệt 2 lần trước:
+  CDP timeout Input.dispatchMouseEvent, completed 0, 5003 ms.
+  V12 False sau 40 attempt. P9: không có bubble R3, composer
+  trống.
+- Mẫu hiện tại 3/3: Brave gửi trong khoảng 50-70 ms program time,
+  Chromium fail ngay mouse event đầu tiên mọi lần.
+- Điều phối kiểm tra lại độc lập từ run-3.json trên todolist-push:
+  run 3, dry_run False, wall 33061.9 ms, brave sent, chromium
+  failed-unverified, model_calls 0, khớp đúng log.
+
+Run 4 chưa chạy, mục Run 4 trong log vẫn trống. Run 4 chạy phía
+laptop. Clone1 chờ log run 4 lên rồi kiểm tra lại.
