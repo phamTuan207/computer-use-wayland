@@ -191,7 +191,7 @@ Report goes to COORD-CLICK-14, not directly to the owner.
   top center. Pill-during ok.
 - Phase 6 cleanup PASS: close ok (count 20 down to 19),
   current restored to Chat - Muse
-  (https://muse.ai/thread/750c8dae-58fb-4a65-82ac-753e78d6ce93),
+  (https://muse.ai/thread/[THREAD-ID]),
   original_restored true, count_restored true, zen_alive
   true, same address true. This time cleanup ok is TRUE,
   not the spurious "Browsing context has been discarded"
@@ -220,7 +220,7 @@ Report goes to COORD-CLICK-14, not directly to the owner.
 
 - Independent fresh list after the run: count 19, current
   Chat - Muse
-  (https://muse.ai/thread/750c8dae-58fb-4a65-82ac-753e78d6ce93),
+  (https://muse.ai/thread/[THREAD-ID]),
   no fixture tab. URL sets before and after are identical
   (verified programmatically: only before [], only after []).
 - No owner tab closed or navigated. Only the scratch

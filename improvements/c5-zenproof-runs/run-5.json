@@ -60,7 +60,7 @@
       },
       {
         "handle": "1247f401",
-        "title": "Inbox (732) - phamtuanhuy1109@gmail.com - Gmail",
+        "title": "Inbox (732) - [EMAIL] - Gmail",
         "url": "https://mail.google.com/mail/u/1/#inbox"
       },
       {
@@ -71,7 +71,7 @@
       {
         "handle": "c1a2da5c",
         "title": "PCCV CF26 - Google Trang t\u00ednh",
-        "url": "https://docs.google.com/spreadsheets/d/1WzUJNuCQlYLAj59-gdIPFFQv2P_d3f2KhEYcGeWhRRY/edit?gid=0#gid=0"
+        "url": "https://docs.google.com/spreadsheets/d/[DOC-ID]/edit?gid=0#gid=0"
       },
       {
         "handle": "b33de0e2",
@@ -91,7 +91,7 @@
       {
         "handle": "50ef08df",
         "title": "Chat \u2014 Muse",
-        "url": "https://muse.ai/thread/750c8dae-58fb-4a65-82ac-753e78d6ce93"
+        "url": "https://muse.ai/thread/[THREAD-ID]"
       },
       {
         "handle": "154af057",
@@ -101,7 +101,7 @@
       {
         "handle": "230f3f3d",
         "title": "ModelArk-Coding-Plan",
-        "url": "https://www.byteplus.com/en/activity/codingplan?utm_source=google&utm_medium=pmax&utm_campaign=purchase_codingplan_sea_english_20260605_yuki&utm_term=20260605_deepseek-v4_white_new&utm_content=tecdo&gad_source=2&gad_campaignid=23906536929&gclid=CjwKCAjwqonVBhA4EiwA9wYJ3Xlt3CYq0n0RZg5HqXHeGMFcoLueRZE7Nmv4xOfOy74XBTxxf3dOOxoC4gUQAvD_BwE"
+        "url": "https://www.byteplus.com/en/activity/codingplan?utm_source=google&utm_medium=pmax&utm_campaign=purchase_codingplan_sea_english_20260605_yuki&utm_term=20260605_deepseek-v4_white_new&utm_content=tecdo&gad_source=2&gad_campaignid=23906536929&gclid=[GCLID]"
       },
       {
         "handle": "1a9f903e",
@@ -121,7 +121,7 @@
       {
         "handle": "f4d4d0cb",
         "title": "Just a moment...",
-        "url": "https://polygon.codeforces.com/login?backLink=%2Fpackage%3Fsession%3Da990539d869d87619249d0c813d8346ec027eda9%26ccid%3D0fb1586e2ab7dcfca7b64c98606cec8f&session=a990539d869d87619249d0c813d8346ec027eda9&ccid=19507fc1baee383a5faae847d1eb920d"
+        "url": "https://polygon.codeforces.com/login?backLink=%2Fpackage%3Fsession%3D[SESSION]%26ccid%3D[CCID]&session=[SESSION]&ccid=[CCID]"
       },
       {
         "handle": "732fe071",
@@ -136,7 +136,7 @@
       {
         "handle": "8b28505d",
         "title": "Gamerule keepInventory",
-        "url": "https://duck.ai/chat?t=ffab&chatID=5cb263e5-9c80-4dcf-8477-8b990cb70343"
+        "url": "https://duck.ai/chat?t=ffab&chatID=[CHAT-ID]"
       }
     ],
     "current": "50ef08df"
@@ -168,7 +168,7 @@
   },
   "open": {
     "ok": true,
-    "new_handle": "0157d23f-f6ae-4ebd-9a2c-f96e67146e5b",
+    "new_handle": "[ID]",
     "new_handle_prefix": "0157d23f",
     "title": "Two-vision benchmark fixture",
     "url": "file:///home/james/computer-use-wayland/tests/two_vision_fixture.html?clone=zen",
@@ -180,7 +180,7 @@
     "count_after": 20,
     "current_before": "bb28c50a",
     "title_before": "Chat \u2014 Muse",
-    "url_before": "https://muse.ai/thread/750c8dae-58fb-4a65-82ac-753e78d6ce93",
+    "url_before": "https://muse.ai/thread/[THREAD-ID]",
     "metrics": {
       "hasFocus": true,
       "innerHeight": 1160,

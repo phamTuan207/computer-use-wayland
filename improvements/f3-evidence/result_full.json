@@ -22,7 +22,7 @@
     },
     {
       "title": "",
-      "url": "https://muse.ai/thread/750c8dae-58fb-4a65-82ac-753e78d6ce93"
+      "url": "https://muse.ai/thread/[THREAD-ID]"
     },
     {
       "title": "BiDi fixture",
@@ -30,7 +30,7 @@
     },
     {
       "title": "PCCV CF26 - Google Trang tính",
-      "url": "https://docs.google.com/spreadsheets/d/1WzUJNuCQlYLAj59-gdIPFFQv2P_d3f2KhEYcGeWhRRY/edit?gid=0#gid=0"
+      "url": "https://docs.google.com/spreadsheets/d/[DOC-ID]/edit?gid=0#gid=0"
     },
     {
       "title": "Free Claude Code Admin",
@@ -254,7 +254,7 @@
     },
     {
       "title": "Package problem - Polygon",
-      "url": "https://polygon.codeforces.com/package?session=a990539d869d87619249d0c813d8346ec027eda9&ccid=0fb1586e2ab7dcfca7b64c98606cec8f"
+      "url": "https://polygon.codeforces.com/package?session=[SESSION]&ccid=[CCID]"
     },
     {
       "title": "Just a moment...",
@@ -266,11 +266,11 @@
     },
     {
       "title": "Gamerule keepInventory",
-      "url": "https://duck.ai/chat?t=ffab&chatID=5cb263e5-9c80-4dcf-8477-8b990cb70343"
+      "url": "https://duck.ai/chat?t=ffab&chatID=[CHAT-ID]"
     },
     {
       "title": "ModelArk-Coding-Plan",
-      "url": "https://www.byteplus.com/en/activity/codingplan?utm_source=google&utm_medium=pmax&utm_campaign=purchase_codingplan_sea_english_20260605_yuki&utm_term=20260605_deepseek-v4_white_new&utm_content=tecdo&gad_source=2&gad_campaignid=23906536929&gclid=CjwKCAjwqonVBhA4EiwA9wYJ3Xlt3CYq0n0RZg5HqXHeGMFcoLueRZE7Nmv4xOfOy74XBTxxf3dOOxoC4gUQAvD_BwE"
+      "url": "https://www.byteplus.com/en/activity/codingplan?utm_source=google&utm_medium=pmax&utm_campaign=purchase_codingplan_sea_english_20260605_yuki&utm_term=20260605_deepseek-v4_white_new&utm_content=tecdo&gad_source=2&gad_campaignid=23906536929&gclid=[GCLID]"
     }
   ],
   "closed": [
@@ -350,11 +350,11 @@
     },
     {
       "title": "Muse",
-      "url": "https://muse.ai/thread/750c8dae-58fb-4a65-82ac-753e78d6ce93"
+      "url": "https://muse.ai/thread/[THREAD-ID]"
     },
     {
       "title": "PCCV CF26 - Google Trang tính",
-      "url": "https://docs.google.com/spreadsheets/d/1WzUJNuCQlYLAj59-gdIPFFQv2P_d3f2KhEYcGeWhRRY/edit?gid=0#gid=0"
+      "url": "https://docs.google.com/spreadsheets/d/[DOC-ID]/edit?gid=0#gid=0"
     },
     {
       "title": "Free Claude Code Admin",
@@ -374,7 +374,7 @@
     },
     {
       "title": "Package problem - Polygon",
-      "url": "https://polygon.codeforces.com/package?session=a990539d869d87619249d0c813d8346ec027eda9&ccid=0fb1586e2ab7dcfca7b64c98606cec8f"
+      "url": "https://polygon.codeforces.com/package?session=[SESSION]&ccid=[CCID]"
     },
     {
       "title": "Just a moment...",
@@ -386,11 +386,11 @@
     },
     {
       "title": "Gamerule keepInventory",
-      "url": "https://duck.ai/chat?t=ffab&chatID=5cb263e5-9c80-4dcf-8477-8b990cb70343"
+      "url": "https://duck.ai/chat?t=ffab&chatID=[CHAT-ID]"
     },
     {
       "title": "ModelArk-Coding-Plan",
-      "url": "https://www.byteplus.com/en/activity/codingplan?utm_source=google&utm_medium=pmax&utm_campaign=purchase_codingplan_sea_english_20260605_yuki&utm_term=20260605_deepseek-v4_white_new&utm_content=tecdo&gad_source=2&gad_campaignid=23906536929&gclid=CjwKCAjwqonVBhA4EiwA9wYJ3Xlt3CYq0n0RZg5HqXHeGMFcoLueRZE7Nmv4xOfOy74XBTxxf3dOOxoC4gUQAvD_BwE"
+      "url": "https://www.byteplus.com/en/activity/codingplan?utm_source=google&utm_medium=pmax&utm_campaign=purchase_codingplan_sea_english_20260605_yuki&utm_term=20260605_deepseek-v4_white_new&utm_content=tecdo&gad_source=2&gad_campaignid=23906536929&gclid=[GCLID]"
     }
   ],
   "errors": []

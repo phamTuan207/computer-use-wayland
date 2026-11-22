@@ -27,7 +27,7 @@
  {
   "handle": "c1f84471",
   "title": "PCCV CF26 - Google Trang tính",
-  "url": "https://docs.google.com/spreadsheets/d/1WzUJNuCQlYLAj59-gdIPFFQv2P_d3f2KhEYcGeWhRRY/edit?gid=0#gid=0"
+  "url": "https://docs.google.com/spreadsheets/d/[DOC-ID]/edit?gid=0#gid=0"
  },
  {
   "handle": "0208822f",
@@ -52,7 +52,7 @@
  {
   "handle": "01b108bd",
   "title": "ModelArk-Coding-Plan",
-  "url": "https://www.byteplus.com/en/activity/codingplan?utm_source=google&utm_medium=pmax&utm_campaign=purchase_codingplan_sea_english_20260605_yuki&utm_term=20260605_deepseek-v4_white_new&utm_content=tecdo&gad_source=2&gad_campaignid=23906536929&gclid=CjwKCAjwqonVBhA4EiwA9wYJ3Xlt3CYq0n0RZg5HqXHeGMFcoLueRZE7Nmv4xOfOy74XBTxxf3dOOxoC4gUQAvD_BwE"
+  "url": "https://www.byteplus.com/en/activity/codingplan?utm_source=google&utm_medium=pmax&utm_campaign=purchase_codingplan_sea_english_20260605_yuki&utm_term=20260605_deepseek-v4_white_new&utm_content=tecdo&gad_source=2&gad_campaignid=23906536929&gclid=[GCLID]"
  },
  {
   "handle": "70315306",
@@ -72,7 +72,7 @@
  {
   "handle": "0df547d0",
   "title": "Just a moment...",
-  "url": "https://polygon.codeforces.com/login?backLink=%2Fpackage%3Fsession%3Da990539d869d87619249d0c813d8346ec027eda9%26ccid%3D0fb1586e2ab7dcfca7b64c98606cec8f&session=a990539d869d87619249d0c813d8346ec027eda9&ccid=19507fc1baee383a5faae847d1eb920d"
+  "url": "https://polygon.codeforces.com/login?backLink=%2Fpackage%3Fsession%3D[SESSION]%26ccid%3D[CCID]&session=[SESSION]&ccid=[CCID]"
  },
  {
   "handle": "93a67b66",
@@ -87,6 +87,6 @@
  {
   "handle": "bf06ab05",
   "title": "Gamerule keepInventory",
-  "url": "https://duck.ai/chat?t=ffab&chatID=5cb263e5-9c80-4dcf-8477-8b990cb70343"
+  "url": "https://duck.ai/chat?t=ffab&chatID=[CHAT-ID]"
  }
 ]

@@ -1,4 +1,4 @@
-# COORD-CLICK-14: ZT-B run 6 — PASS, F4 fix verified live
+# COORD-CLICK-14: ZT-B run 6 - PASS, F4 fix verified live
 
 ## Result
 
@@ -37,7 +37,7 @@ unblocked.
   Pill-during ok.
 - **Phase 6 cleanup PASS:** close ok (count 20 down to 19),
   current restored to Chat - Muse
-  (https://muse.ai/thread/750c8dae-58fb-4a65-82ac-753e78d6ce93),
+  (https://muse.ai/thread/[THREAD-ID]),
   original_restored true, count_restored true, zen_alive
   true, same address true. Cleanup ok is TRUE this time,
   not the spurious "Browsing context has been discarded"
