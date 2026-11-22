@@ -131,3 +131,179 @@ for(const method of ['Runtime.evaluate','Accessibility.getFullAXTree',
 assert.equal(harvestEvents.filter(m=>m==='Runtime.evaluate').length,1,
   'one evaluate grounds the whole inventory');
 console.log('ok harvest grounds one selector from one evaluate plus AX tree and box model');
+
+// Focus action tests (C5-B1 landing, spec section 8 plus F10 (a),
+// (b), (g)): whole-adapter vm run with a fake page carrying
+// globalThis.__agentCu, refs, and an activeElement stub. The focus
+// branch lives inline in the handle() dispatch loop, not in a
+// standalone function, so no function slicing applies here.
+function makeFocusPage({disabled=false, readOnly=false, focusWorks=true}={}) {
+  const body={tagName:'BODY',isConnected:true};
+  const textarea={
+    tagName:'TEXTAREA',type:'textarea',isConnected:true,
+    isContentEditable:false,readOnly,disabled,
+    maxLength:-1,_value:'',
+    getAttribute:k=>k==='aria-label'?'Message':null,
+    getBoundingClientRect:()=>({x:86,y:1101,width:440,height:63,
+      left:86,top:1101,right:526,bottom:1164}),
+    getClientRects:()=>[{}],
+    closest:()=>null,contains:()=>false,
+    matches:sel=>sel===':disabled'?disabled:false,
+    focus(){if(focusWorks)page.document.activeElement=textarea;},
+    dispatchEvent:()=>true,
+  };
+  Object.defineProperty(textarea,'value',{
+    get(){return textarea._value;},
+    set(v){textarea._value=v;},
+    configurable:true,enumerable:true});
+  const page={
+    window:{devicePixelRatio:1,innerWidth:1615,innerHeight:1160,
+      outerWidth:1863,outerHeight:1176,scrollX:0,scrollY:0},
+    document:{title:'fixture',
+      activeElement:body,
+      querySelector:sel=>sel==='textarea[aria-label="Message"]'?textarea:null,
+      querySelectorAll:sel=>sel==='textarea[aria-label="Message"]'?[textarea]:[],
+      elementFromPoint:(x,y)=>(x>=86&&x<=526&&y>=1101&&y<=1164)?textarea:null},
+    location:{href:'http://fixture/'},
+    getComputedStyle:()=>({visibility:'visible',display:'block'}),
+  };
+  // The native-setter path in set_value reads the prototype
+  // descriptor, so the fake textarea class carries the same
+  // accessor the element itself carries.
+  page.HTMLTextAreaElement=function(){};
+  page.HTMLTextAreaElement.prototype={};
+  Object.defineProperty(page.HTMLTextAreaElement.prototype,'value',{
+    get(){return this._value;},
+    set(v){this._value=v;},
+    configurable:true});
+  page.HTMLInputElement=function(){};
+  page.HTMLInputElement.prototype={};
+  page.Event=class{constructor(type,init){this.type=type;Object.assign(this,init||{});}};
+  page.InputEvent=class{constructor(type,init){this.type=type;Object.assign(this,init||{});}};
+  page.globalThis=page;
+  page.__agentCu={id:'test',created:Date.now(),url:'http://fixture/',
+    refs:new Map([['e1',textarea]])};
+  const context=vm.createContext(page);
+  return {page,context,body,textarea};
+}
+
+class FocusWebSocket extends EventTarget {
+  static CONNECTING=0;static OPEN=1;static CLOSING=2;static CLOSED=3;
+  constructor(pageContext,record){
+    super();this.readyState=FocusWebSocket.CONNECTING;this._page=pageContext;this._record=record;
+    queueMicrotask(()=>{this.readyState=FocusWebSocket.OPEN;
+      this.dispatchEvent(new Event('open'));});
+  }
+  addEventListener(name,fn){super.addEventListener(name,fn);}
+  send(raw){
+    const {id,method,params}=JSON.parse(raw);
+    this._record.push(method);
+    let result;
+    if(method==='Runtime.evaluate'){
+      let value;
+      try{value=vm.runInContext(params.expression,this._page);}
+      catch(e){result={result:{exceptionDetails:{text:'Uncaught',
+        exception:{description:'Error: '+e.message}}}};
+        this.emit({id,...result});return;}
+      result={result:{result:{value}}};
+    }else result={result:{}};
+    this.emit({id,...result});
+  }
+  emit(frame){
+    queueMicrotask(()=>this.dispatchEvent(
+      new MessageEvent('message',{data:JSON.stringify(frame)})));
+  }
+  close(){this.readyState=FocusWebSocket.CLOSED;}
+}
+
+async function runFocusAdapter(request,pageSetup={}) {
+  const {page,context}=makeFocusPage(pageSetup);
+  const calls=[];
+  const output=[];
+  const proc={exitCode:0,
+    stdin:(async function*(){yield JSON.stringify(request);})(),destroy(){}};
+  await vm.runInNewContext('(async()=>{'+source.replace(/^import .*;$/gm,'')+'})()',{
+    fs:{readFileSync:()=>JSON.stringify(request)},crypto:{randomUUID:()=>'snap-test-1'},URL,
+    WebSocket:class extends FocusWebSocket{
+      constructor(url){super(context,calls);}},
+    process:proc,EventTarget,Event,MessageEvent,
+    fetch:async ()=>({json:async ()=>[{type:'page',id:'test',
+      webSocketDebuggerUrl:'ws://127.0.0.1:9223/test'}]}),
+    AbortSignal,queueMicrotask,setTimeout,clearTimeout,
+    console:{log:s=>output.push(JSON.parse(s))}});
+  return {output:output[0],calls,page,exitCode:proc.exitCode};
+}
+
+const focusRequest={operation:'act',endpoint:'http://127.0.0.1:9223',
+  target:'test',snapshot:'test',
+  actions:[{type:'focus',ref:'e1'}]};
+let focusRun=await runFocusAdapter(focusRequest);
+assert.equal(focusRun.output.ok,true,JSON.stringify(focusRun.output));
+assert.equal(focusRun.output.completed,1);
+assert.equal(focusRun.page.document.activeElement.tagName,'TEXTAREA');
+assert.ok(!focusRun.calls.some(m=>m.startsWith('Input.')),
+  'focus dispatches zero Input methods: '+focusRun.calls.join(','));
+console.log('ok focus resolves a ref, focuses, asserts activeElement, no Input methods');
+
+// F10 (a): a focus where the element never gains focus throws the
+// fill wording.
+let focusFail=await runFocusAdapter(focusRequest,{focusWorks:false});
+assert.equal(focusFail.output.ok,false);
+assert.match(focusFail.output.error,/did not gain focus/);
+assert.equal(focusFail.output.completed,0);
+console.log('ok focus failure throws field is not editable or did not gain focus');
+
+// Focus on a disabled or readOnly field throws 'field unavailable'.
+let focusDisabled=await runFocusAdapter(focusRequest,{disabled:true});
+assert.equal(focusDisabled.output.ok,false);
+assert.match(focusDisabled.output.error,/field unavailable/);
+let focusReadOnly=await runFocusAdapter(focusRequest,{readOnly:true});
+assert.equal(focusReadOnly.output.ok,false);
+assert.match(focusReadOnly.output.error,/field unavailable/);
+console.log('ok focus on a disabled or readOnly field throws field unavailable');
+
+// Focus on a missing ref throws 'element missing; observe again'.
+let focusMissing=await runFocusAdapter({operation:'act',endpoint:'http://127.0.0.1:9223',
+  target:'test',snapshot:'test',
+  actions:[{type:'focus',ref:'e9'}]});
+assert.equal(focusMissing.output.ok,false);
+assert.match(focusMissing.output.error,/element missing; observe again/);
+console.log('ok focus on a missing ref throws element missing');
+
+// Focus with both ref and selector throws before any dispatch.
+let focusBoth=await runFocusAdapter({operation:'act',endpoint:'http://127.0.0.1:9223',
+  target:'test',snapshot:'test',
+  actions:[{type:'focus',ref:'e1',selector:'textarea'}]});
+assert.equal(focusBoth.output.ok,false);
+assert.match(focusBoth.output.error,/exactly one ref or selector required/);
+assert.equal(focusBoth.calls.length,0,'preflight must not dispatch');
+console.log('ok focus with both ref and selector throws exactly one ref or selector required');
+
+// F10 (b): focus via selector, not only by ref.
+let focusSelector=await runFocusAdapter({operation:'act',endpoint:'http://127.0.0.1:9223',
+  target:'test',snapshot:'test',
+  actions:[{type:'focus',selector:'textarea[aria-label="Message"]'}]});
+assert.equal(focusSelector.output.ok,true,JSON.stringify(focusSelector.output));
+assert.equal(focusSelector.page.document.activeElement.tagName,'TEXTAREA');
+console.log('ok focus via selector resolves and focuses');
+
+// Key Enter after focus dispatches keyDown plus keyUp with text '\r'.
+const focusKeyRequest={operation:'act',endpoint:'http://127.0.0.1:9223',
+  target:'test',snapshot:'test',
+  actions:[{type:'focus',ref:'e1'},{type:'key',keys:['Enter']}]};
+let focusKey=await runFocusAdapter(focusKeyRequest);
+assert.equal(focusKey.output.ok,true,JSON.stringify(focusKey.output));
+assert.equal(focusKey.output.completed,2);
+assert.deepEqual(focusKey.calls.filter(m=>m==='Input.dispatchKeyEvent').length,2);
+console.log('ok key Enter after focus dispatches keyDown plus keyUp');
+
+// set_value still does not focus: activeElement is unchanged after
+// a set_value call.
+let setValueRun=await runFocusAdapter({operation:'act',endpoint:'http://127.0.0.1:9223',
+  target:'test',snapshot:'test',
+  actions:[{type:'set_value',ref:'e1',text:'hello'}]});
+assert.equal(setValueRun.output.ok,true,JSON.stringify(setValueRun.output));
+assert.equal(setValueRun.page.document.activeElement.tagName,'BODY',
+  'set_value must not move focus');
+assert.equal(setValueRun.page.__agentCu.refs.get('e1').value,'hello');
+console.log('ok set_value still does not focus');

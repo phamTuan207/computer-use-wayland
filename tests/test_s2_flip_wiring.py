@@ -15,6 +15,7 @@ import io
 import json
 import os
 import pathlib
+import re
 import sys
 import tempfile
 import unittest
@@ -148,22 +149,35 @@ class ProgramShapeTests(unittest.TestCase):
         self.assertEqual(program.count('"observation_id": snap["snapshot"]'), 3)
 
     def test_set_value_program_carries_p2_stamps_and_passes_p5(self):
-        # C5-B1: the input-free program is set_value plus a value
-        # read-back assert (no key: the Enter comes from the
-        # focus+Enter helper after the program). Same P2 stamps,
-        # and the action list passes the same P5 gate.
+        # C5-B1 landed shape (option A): the input-free program is
+        # [set_value, focus, key Enter, assert bubble], 4 actions,
+        # P2 stamps on all 4. The Enter is inside the program now:
+        # the /tmp focus+Enter helper is gone. The old 2-action
+        # shape (set_value plus value assert, Enter from the helper)
+        # is removed, not kept alongside, so there is exactly one
+        # (b1) program shape.
         program = s2_flip_live.build_program_set_value('TABID123', 'hello')
         self.assertIn('"type": "set_value"', program)
+        self.assertIn('"type": "focus"', program)
+        self.assertIn('"keys": ["Enter"]', program)
         self.assertNotIn('"type": "fill"', program)
-        self.assertNotIn('"keys": ["Enter"]', program)
         self.assertIn('"scope": "TABID123"', program)
         self.assertIn('"observation_id": snap["snapshot"]', program)
-        self.assertEqual(program.count('"scope": "TABID123"'), 2)
-        self.assertEqual(program.count('"observation_id": snap["snapshot"]'), 2)
+        self.assertEqual(program.count('"scope": "TABID123"'), 4)
+        self.assertEqual(program.count('"observation_id": snap["snapshot"]'), 4)
+        # The focus action uses a ref, the same composer ref as the
+        # set_value action, so a wrong-ref focus cannot silently
+        # focus another element.
+        self.assertIn('"type": "focus", "ref": comp', program)
         actions = [
             {'type': 'set_value', 'ref': 'e1', 'text': 'hello',
              'scope': 'TABID123', 'observation_id': 'SNAP1'},
-            {'type': 'assert', 'ref': 'e1', 'value': 'hello',
+            {'type': 'focus', 'ref': 'e1',
+             'scope': 'TABID123', 'observation_id': 'SNAP1'},
+            {'type': 'key', 'keys': ['Enter'],
+             'scope': 'TABID123', 'observation_id': 'SNAP1'},
+            {'type': 'assert', 'selector': s2_flip_live.BUBBLE_ASSERT_SELECTOR,
+             'text': 'hello', 'timeout_ms': 3000,
              'scope': 'TABID123', 'observation_id': 'SNAP1'},
         ]
         self.assertTrue(dom_asserts.require_asserts(
@@ -172,6 +186,142 @@ class ProgramShapeTests(unittest.TestCase):
         from code_exec import _validate_dom_actions
         _validate_dom_actions(actions, {'e1'}, snapshot_id='SNAP1',
                               target='TABID123')
+
+    def test_set_value_program_without_focus_raises_p5(self):
+        # The send-requires-focus rule: [set_value, key Enter,
+        # assert] with no focus-establishing action raises
+        # DomAssertError, because the Enter would go to BODY and
+        # fail silently.
+        actions = [
+            {'type': 'set_value', 'ref': 'e1', 'text': 'hello'},
+            {'type': 'key', 'keys': ['Enter']},
+            {'type': 'assert', 'selector': s2_flip_live.BUBBLE_ASSERT_SELECTOR,
+             'text': 'hello', 'timeout_ms': 3000},
+        ]
+        with self.assertRaisesRegex(dom_asserts.DomAssertError,
+                                    'focus-establishing'):
+            dom_asserts.require_asserts(
+                actions, available={'focus_check': True, 'type_check': True,
+                                    'sent_bubble': False})
+
+    def test_landed_program_without_trailing_assert_fails_p5(self):
+        # F10 (c): the landed shape without its trailing assert
+        # must fail P5. The existing no-trailing-assert test covers
+        # the fill shape only, not the landed shape.
+        actions = [
+            {'type': 'set_value', 'ref': 'e1', 'text': 'hello'},
+            {'type': 'focus', 'ref': 'e1'},
+            {'type': 'key', 'keys': ['Enter']},
+        ]
+        with self.assertRaises(dom_asserts.DomAssertError):
+            dom_asserts.require_asserts(
+                actions, available={'focus_check': True, 'type_check': True,
+                                    'sent_bubble': False})
+
+    def test_type_without_click_raises_p5(self):
+        # F10 (e): [type, key Enter, assert] with no click must
+        # raise: type establishes no focus, so the Enter has no
+        # focus-establishing action before it.
+        actions = [
+            {'type': 'type', 'ref': 'e1', 'text': 'hello'},
+            {'type': 'key', 'keys': ['Enter']},
+            {'type': 'assert', 'selector': s2_flip_live.BUBBLE_ASSERT_SELECTOR,
+             'text': 'hello', 'timeout_ms': 3000},
+        ]
+        with self.assertRaisesRegex(dom_asserts.DomAssertError,
+                                    'focus-establishing'):
+            dom_asserts.require_asserts(
+                actions, available={'focus_check': True, 'type_check': True,
+                                    'sent_bubble': False})
+
+    def test_click_type_enter_still_passes_p5(self):
+        # F10 (e): the desktop focus_type chain [click, type, key
+        # Enter, assert] still passes: the click is the
+        # focus-establishing action.
+        actions = [
+            {'type': 'click', 'ref': 'e1'},
+            {'type': 'type', 'ref': 'e1', 'text': 'hello'},
+            {'type': 'key', 'keys': ['Enter']},
+            {'type': 'assert', 'selector': s2_flip_live.BUBBLE_ASSERT_SELECTOR,
+             'text': 'hello', 'timeout_ms': 3000},
+        ]
+        self.assertTrue(dom_asserts.require_asserts(
+            actions, available={'focus_check': True, 'type_check': True,
+                                'sent_bubble': False}))
+
+    def test_focus_after_enter_raises_p5(self):
+        # F10 (e): focus must PRECEDE the send key. A focus step
+        # placed after the Enter does not satisfy the rule.
+        actions = [
+            {'type': 'set_value', 'ref': 'e1', 'text': 'hello'},
+            {'type': 'key', 'keys': ['Enter']},
+            {'type': 'focus', 'ref': 'e1'},
+            {'type': 'assert', 'selector': s2_flip_live.BUBBLE_ASSERT_SELECTOR,
+             'text': 'hello', 'timeout_ms': 3000},
+        ]
+        # The raise must come from the focus rule, not from the
+        # unknown-action rule: before the focus entry lands this
+        # test would pass for the wrong reason, so the message is
+        # pinned to the focus rule.
+        with self.assertRaisesRegex(dom_asserts.DomAssertError,
+                                    'focus-establishing'):
+            dom_asserts.require_asserts(
+                actions, available={'focus_check': True, 'type_check': True,
+                                    'sent_bubble': False})
+
+    def test_unknown_action_type_raises_p5(self):
+        # F10 (d) permanent anchor: require_asserts fails closed on
+        # an unknown action type. This is the fail-closed behavior
+        # the landed-program anchor relied on before the focus
+        # entry landed in dom_asserts.
+        actions = [
+            {'type': 'teleport', 'ref': 'e1'},
+        ]
+        with self.assertRaises(dom_asserts.DomAssertError):
+            dom_asserts.require_asserts(
+                actions, available={'focus_check': True, 'type_check': True,
+                                    'sent_bubble': False})
+
+    def test_browser_whitelists_agree_on_focus(self):
+        # F10 (f): the three browser whitelists (cdp.mjs, the
+        # code_exec.py mirror, the cu.py browser set) contain the
+        # same set, except for the known hover_click drift (cu.py
+        # lines 1299 and 1341 lack hover_click; adding it there is
+        # a follow-up, not part of this landing).
+        root = pathlib.Path(__file__).resolve().parents[1] / 'scripts'
+
+        def _quoted(text):
+            return set(re.findall(r"'([^']+)'", text))
+
+        cdp = (root / 'cdp.mjs').read_text()
+        m = re.search(r"if\(!\[([^\]]+)\]\.includes\(a\.type\)\)", cdp)
+        self.assertIsNotNone(m, 'cdp.mjs action whitelist not found')
+        cdp_set = _quoted(m.group(1))
+        code_exec = (root / 'code_exec.py').read_text()
+        m = re.search(r"allowed = \{([^}]+)\}", code_exec)
+        self.assertIsNotNone(m, 'code_exec.py allowed set not found')
+        exec_set = _quoted(m.group(1))
+        cu = (root / 'cu.py').read_text()
+        validate = cu[cu.index('def validate_actions'):]
+        validate = validate[:validate.index('def validate_terminal_assert')]
+        browser_sets = [_quoted(m.group(1)) for m in
+                        re.finditer(r"\{([^{}]*)\}", validate)
+                        if 'confirm_click' in m.group(1)]
+        self.assertEqual(len(browser_sets), 1,
+                         'exactly one cu.py browser set expected')
+        cu_set = browser_sets[0]
+        m = re.search(r"backend=='browser' and a\['type'\] in \(([^)]+)\)",
+                      validate)
+        self.assertIsNotNone(m, 'cu.py browser element-action check not found')
+        cu_element_set = _quoted(m.group(1))
+        for name, s in (('cdp.mjs', cdp_set), ('code_exec.py', exec_set),
+                        ('cu.py', cu_set), ('cu.py element check', cu_element_set)):
+            self.assertIn('focus', s, 'focus missing from %s' % name)
+        self.assertEqual(cdp_set, exec_set)
+        self.assertEqual(cu_set, cdp_set - {'hover_click'})
+        self.assertEqual(cu_element_set,
+                         {'click', 'confirm_click', 'fill', 'set_value',
+                          'focus', 'assert'})
 
     def test_program_actions_satisfy_p5_requires(self):
         # The action list the program encodes, checked against the same
