@@ -66,6 +66,9 @@ ASSERTS = {
     'set_value': {'assert': 'type_check', 'mandatory': True,
                   'check': 'field value read-back equals the set text '
                            '(enforced inside cdp.mjs set_value)'},
+    'focus': {'assert': 'focus_check', 'mandatory': True,
+              'check': 'target is document.activeElement after the '
+                       'focus, before any keystroke'},
     'key': {'assert': 'sent_bubble', 'mandatory': True,
             'when': 'send',
             'check': 'thread DOM holds a sent bubble with the exact '
@@ -182,6 +185,25 @@ def assert_coverage(actions, context=None):
             'required': required, 'unknown': unknown}
 
 
+def _is_focus_establishing(action):
+    """True when this action puts focus on its target before a
+    later keystroke: any action whose ASSERTS entry is
+    focus_check (click, double_click, confirm_click, hover_click,
+    focus), plus fill as an explicit exception (it focuses
+    internally through its click, cdp.mjs, even though its ASSERTS
+    entry is type_check). Defined through the ASSERTS table, not a
+    hardcoded list, so a future focus_check action joins
+    automatically. `type` is not focus-establishing: in dom_act
+    focus_type the click establishes focus and type only types.
+    """
+    if not isinstance(action, dict):
+        return False
+    if action.get('type') == 'fill':
+        return True
+    spec = ASSERTS.get(action.get('type'))
+    return bool(spec) and spec.get('assert') == 'focus_check'
+
+
 def require_asserts(actions, available, context=None):
     """Fail closed when a mandatory assert is unavailable.
 
@@ -202,6 +224,25 @@ def require_asserts(actions, available, context=None):
         isinstance(a, dict) and a.get('type') == 'assert'
         for a in actions)
     missing = []
+    # Send-requires-focus (C5-B1 landing): a send key with no
+    # preceding focus-establishing action in the same batch raises.
+    # "Preceding" means before the send key; a focus after the
+    # Enter does not satisfy it. This runs even when a trailing
+    # assert satisfies sent_bubble: the assert proves the bubble
+    # arrived, not that the Enter went to the right element.
+    for index, action in enumerate(actions):
+        entry = assert_for(action, actions)
+        if entry is None or 'exception' in entry:
+            continue
+        if entry.get('assert') != 'sent_bubble':
+            continue
+        if not any(_is_focus_establishing(a) for a in actions[:index]):
+            missing.append(
+                'send key at index %d needs a preceding '
+                'focus-establishing action (click, double_click, '
+                'confirm_click, hover_click, focus, or fill) before '
+                'the Enter; an unfocused Enter goes to BODY and '
+                'fails silently' % index)
     for action in actions:
         entry = assert_for(action, actions)
         if entry is None:

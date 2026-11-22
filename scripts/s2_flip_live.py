@@ -73,7 +73,6 @@ LAPTOP_V12 = '/tmp/s2-v12.mjs'
 LAPTOP_P9 = '/tmp/s2-p9.mjs'
 LAPTOP_SEED = '/tmp/s2-seed.mjs'
 LAPTOP_ACTIVATE = '/tmp/c5-activate.mjs'
-LAPTOP_FOCUSENTER = '/tmp/c5-focusenter.mjs'
 LAPTOP_COUNT = '/tmp/c5-count.mjs'
 
 BROWSERS = {
@@ -127,17 +126,20 @@ def build_program(target_id, message):
 
 
 def build_program_set_value(target_id, message):
-    """The input-free send program (C5-B1): set_value, no mouse.
+    """The input-free send program (C5-B1), LANDED shape: 4 actions.
 
     Grounds the composer from a fresh DOM snapshot, sets its value
     with the native setter plus read-back (inside cdp.mjs
-    set_value, zero Input calls), and asserts the value read-back.
-    The Enter itself is NOT in this program: set_value does not
-    focus the composer, and a CDP key Enter goes to the focused
-    element, so the harness focuses the composer and dispatches
-    Enter with the /tmp/c5-focusenter.mjs helper after this
-    program returns. P2 stamps (scope + observation_id) on every
-    action, same as build_program.
+    set_value, zero Input calls), focuses it with the landed
+    focus action (cdp.mjs focus, activeElement proof, zero Input
+    calls), sends with CDP key Enter (the landed key(), no code
+    field; see the F7 decision in the step-9 log, section 2), and
+    ends with the trailing bubble assert (the V12 gate in program
+    form, P5). No value assert after the Enter: the composer is
+    empty once the message is sent. No /tmp helper remains in
+    this path. P2 stamps (scope + observation_id) on all 4
+    actions, same as build_program. The focus action uses the
+    same composer ref as set_value.
     """
     return (
         'snap = dom_observe(' + json.dumps(target_id) + ')\n'
@@ -151,7 +153,13 @@ def build_program_set_value(target_id, message):
         '    {"type": "set_value", "ref": comp, "text": ' + json.dumps(message)
         + ', "scope": ' + json.dumps(target_id)
         + ', "observation_id": snap["snapshot"]},\n'
-        '    {"type": "assert", "ref": comp, "value": ' + json.dumps(message)
+        '    {"type": "focus", "ref": comp, "scope": ' + json.dumps(target_id)
+        + ', "observation_id": snap["snapshot"]},\n'
+        '    {"type": "key", "keys": ["Enter"], "scope": ' + json.dumps(target_id)
+        + ', "observation_id": snap["snapshot"]},\n'
+        '    {"type": "assert", "selector": '
+        + json.dumps(BUBBLE_ASSERT_SELECTOR)
+        + ', "text": ' + json.dumps(message) + ', "timeout_ms": 3000'
         + ', "scope": ' + json.dumps(target_id)
         + ', "observation_id": snap["snapshot"]},\n'
         '])\n'
@@ -494,30 +502,6 @@ class Harness:
         result['ms'] = round(wall, 1)
         return result
 
-    def focus_enter(self, endpoint, target_id):
-        """C5-B1 send step: focus the composer + CDP Enter.
-
-        Runs /tmp/c5-focusenter.mjs (Runtime.evaluate focus plus
-        Input.dispatchKeyEvent Enter, zero mouse events). Returns
-        the helper's JSON dict.
-        """
-        start = time.monotonic()
-        rc, out, err, wall = self.ssh(
-            'node %s %s %s' % (LAPTOP_FOCUSENTER, endpoint, target_id),
-            'focus-enter', timeout=60)
-        wall_ms = (time.monotonic() - start) * 1000.0
-        try:
-            result = json.loads(out.strip().splitlines()[-1])
-        except (ValueError, IndexError):
-            result = {'ok': False,
-                      'error': 'focus-enter script bad output: %s'
-                      % out.strip()[:300]}
-        result['ms'] = round(wall_ms, 1)
-        result['rc'] = rc
-        self.spans.append({'phase': 'focus-enter',
-                           'wall_ms': round(wall_ms, 1), 'laptop_ms': None})
-        return result
-
     def send_browser(self, browser, target_id, message):
         """One-shot code-exec send + independent V12 for one browser."""
         cfg = BROWSERS[browser]
@@ -566,12 +550,13 @@ class Harness:
                                'wall_ms': round(wall_ms, 1),
                                'laptop_ms': out['program']['elapsed_ms']})
             if variant == 'set_value':
-                # The Enter is the helper's, not the program's: CB-1 for
-                # this variant is input_sent = focus+Enter dispatched,
-                # target_received = set_value read-back done.
-                out['focus_enter'] = self.focus_enter(endpoint, target_id)
+                # Landed 4-action program: CB-1 is input_sent =
+                # set_value, focus and Enter all ran (completed >= 3),
+                # target_received = set_value read-back done
+                # (completed >= 1), verified = V12 found. No helper
+                # remains in this path.
                 out['cb1'] = {
-                    'input_sent': bool(out['focus_enter'].get('ok')),
+                    'input_sent': bool(completed is not None and completed >= 3),
                     'target_received': bool(completed is not None and completed >= 1),
                     'verified': None,
                     'completed': completed,
@@ -753,9 +738,9 @@ class Harness:
                 laptop = max(0.0, wall - mux)
                 phases['verify'] += laptop
                 transport += wall - laptop
-            elif kind in ('broker', 'setup', 'activate', 'focus-enter'):
+            elif kind in ('broker', 'setup', 'activate'):
                 laptop = max(0.0, wall - mux)
-                phases['setup' if kind in ('activate', 'focus-enter') else kind] += laptop
+                phases['setup' if kind in ('activate',) else kind] += laptop
                 transport += wall - laptop
         transport += 2 * mux  # the two mux-baseline probes
         accounted = transport + sum(phases.values())
@@ -785,10 +770,11 @@ def main(argv=None):
     ap.add_argument('--message-prefix', default='S2-FLIP',
                     help='prefix for the unique test message per send')
     ap.add_argument('--set-value', action='store_true',
-                    help='C5-B1: set_value program (no mouse) + focus+Enter '
-                         'helper instead of the fill program, on every browser')
+                    help='C5-B1: landed set_value program (no mouse: '
+                         'set_value + focus + key Enter + assert) '
+                         'instead of the fill program, on every browser')
     ap.add_argument('--chromium-set-value', action='store_true',
-                    help='C5-S2-REOPEN: set_value program + focus+Enter on '
+                    help='C5-S2-REOPEN: landed set_value program on '
                          'Chromium only; Brave keeps the fill program')
     ap.add_argument('--workdir', required=True)
     args = ap.parse_args(argv)

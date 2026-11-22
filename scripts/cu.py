@@ -1296,7 +1296,7 @@ def validate_actions(actions,backend):
     if not isinstance(actions,list) or not 1<=len(actions)<=32: raise ValueError('actions must contain 1..32 items')
     allowed=({'click','double_click','move','hover','drag','scroll','type','key','wait'} if backend=='desktop' else
              {'click','set_text'} if backend=='a11y' else
-             {'click','confirm_click','fill','set_value','key','scroll','wait','assert'})
+             {'click','confirm_click','fill','set_value','focus','key','scroll','wait','assert'})
     for a in actions:
         if not isinstance(a,dict) or not isinstance(a.get('type'),str) or a['type'] not in allowed: raise ValueError('unsupported action')
         if backend=='desktop' and a['type'] in ('move','hover','click','double_click','drag','scroll'):
@@ -1338,7 +1338,7 @@ def validate_actions(actions,backend):
                 if 'dy' not in a:raise ValueError('browser scroll needs dy')
                 for k in ('x','y'):
                     if k in a:finite(a[k],'scroll '+k)
-        if backend=='browser' and a['type'] in ('click','confirm_click','fill','set_value','assert'):
+        if backend=='browser' and a['type'] in ('click','confirm_click','fill','set_value','focus','assert'):
             # Locator presence is optional here by existing contract; the adapter
             # requires exactly one. Types and mutual exclusion are checked early.
             if 'ref' in a and 'selector' in a:raise ValueError('ref and selector are mutually exclusive')

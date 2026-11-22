@@ -431,8 +431,8 @@ async function assertAction(a) {
     const finite=v=>typeof v==='number'&&Number.isFinite(v);
     for(const a of request.actions){
       if(!a||typeof a!=='object'||Array.isArray(a))throw new Error('each action must be an object');
-      if(!['click','confirm_click','hover_click','fill','set_value','key','scroll','wait','assert'].includes(a.type))throw new Error('unsupported action');
-      if(['click','confirm_click','hover_click','fill','set_value','assert'].includes(a.type)){
+      if(!['click','confirm_click','hover_click','fill','set_value','focus','key','scroll','wait','assert'].includes(a.type))throw new Error('unsupported action');
+      if(['click','confirm_click','hover_click','fill','set_value','focus','assert'].includes(a.type)){
         if(('ref' in a)===('selector' in a))throw new Error('exactly one ref or selector required');
         for(const k of ['ref','selector'])if(k in a&&(typeof a[k]!=='string'||!a[k].trim()))throw new Error(k+' must be a non-empty string');
       }
@@ -530,6 +530,27 @@ async function assertAction(a) {
           }catch(_){return {ok:false,error:'value update failed',mutation_may_have_occurred:attempted};}})()`;
           const updated=await evaluate(source);
           if(!updated?.ok){const error=new Error(updated?.error||'value update failed');error.mutation_may_have_occurred=!!updated?.mutation_may_have_occurred;throw error;}
+        }
+        else if(a.type==='focus'){
+          // C5-B1 landed focus action (option A, step 9): one
+          // Runtime.evaluate focuses the field and proves
+          // document.activeElement === e. No scroll, no mouse,
+          // no key. Unavailable fields refuse with 'field
+          // unavailable' (the set_value checks); a field that
+          // does not gain focus throws the fill wording.
+          // F7 decision (step-9 log section 2): the landed key()
+          // is NOT changed for Enter. The helper sent code
+          // 'Enter' on both events and text '\r' on keyDown only;
+          // key() sends no code field and the same params object
+          // (including text '\r') on both events. Both
+          // differences are harmless (the composer keys off
+          // e.key; browsers ignore text on keyUp), and the
+          // measured Enter already proved key() on Brave live.
+          await evaluate(elementExpression(a,`
+            if(e.disabled||e.matches(':disabled')||e.readOnly||e.getAttribute('aria-disabled')==='true'||e.closest('[inert]'))throw new Error('field unavailable');
+            e.focus();
+            if(document.activeElement!==e)throw new Error('field is not editable or did not gain focus');
+            return true;`));
         }
         else if(a.type==='fill'){
           await click(a);

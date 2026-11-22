@@ -214,8 +214,8 @@ def _validate_dom_actions(actions, refs, snapshot_id=None, target=None):
     its shape error first (a non-string ref must say 'ref must
     be', not 'missing scope').
     """
-    allowed = {'click', 'confirm_click', 'hover_click', 'fill', 'set_value', 'key', 'scroll', 'wait', 'assert'}
-    element_actions = {'click', 'confirm_click', 'hover_click', 'fill', 'set_value', 'assert'}
+    allowed = {'click', 'confirm_click', 'hover_click', 'fill', 'set_value', 'focus', 'key', 'scroll', 'wait', 'assert'}
+    element_actions = {'click', 'confirm_click', 'hover_click', 'fill', 'set_value', 'focus', 'assert'}
     if not isinstance(actions, list) or not 1 <= len(actions) <= 32:
         raise CodeExecError('actions must contain 1..32 items')
     for action in actions:
