@@ -3,8 +3,13 @@
 # v2 fixes U1-U21 from improvements/worker-y6b-adjudication.md (council 1/2/3 + redteam).
 # v3 (Y6d): F0 socket discovery (no --socket; the nest auto-names its socket,
 # discovered after launch); U5b Wayland-backend gate greps the per-instance
-# log, not the stdout log. The plugin load still points at backup 1 (see the
-# conf): the rebuilt plugin path is wired up only after the rebuild lands.
+# log, not the stdout log.
+# Y6C5 (2026-11-22, Y6r A1-A10): the staged conf is now the y6e conf
+# (rebuilt hyprglass 1.1.1-cu.1, worktree 03a57c4); the backup-1 dead ABI is
+# kept only as the rollback copy. U6 replaced by the positive profile gate
+# (A2); AMEND4/AMEND5 ported (A5); G4 configerrors gate + G6 stats (A6); no
+# manual reload (A7, R2); Y6_STOP_AFTER_GATES=1 stops after the gates for
+# the A8 load-only trial (no pill, no arms).
 # v3 adjudication fixes (council 1/2/3 + redteam, 21:02-21:08 +07): backend
 # gate retry loop, ldd pre-flight ABI check, socket connect probe, nest()
 # guard pre-check, pill liveness re-check, dangling-symlink cleanup.
@@ -30,6 +35,17 @@
 # group, runtime dir removed after the nested log is copied out, live session
 # re-verified (live PID resolved at runtime, hyprctl responds, live plugins
 # hyprbars only).
+# Y6C5-A7 (Y6r R2, adjudicated): DO NOT add a manual `nest hyprctl reload`
+# anywhere in this runner. Parse 2 already applies the profile
+# deterministically (redteam section 1.2: STAGE_LATE loads the plugin
+# synchronously and calls reload(), so parse 2 sees count=1 and dofiles
+# optics.lua), so a reload buys nothing and risks a parse-3 duplicate
+# layer() registration (open item O1, overwrite vs error unresolved) plus
+# live-touch surface (a wrong-target reload would hit the live session).
+# One application path only: the automatic parse-2 path (R8). If the
+# positive gate ever shows the applied marker absent, the reload becomes
+# the next hypothesis to test, not a preemptive addition. Enforced by
+# tests/test_y6c5_positive_gate.py (no non-comment `hyprctl reload` line).
 set -u
 NEST=/tmp/y6-nested
 RUN_DIR=$NEST/run
@@ -115,7 +131,26 @@ teardown() {
   if [ -n "$LIVE_PID" ]; then ps -o pid,lstart,cmd -p "$LIVE_PID" || echo "Y6-WAYLAND: LIVE PID $LIVE_PID MISSING"; else echo "Y6-WAYLAND: LIVE PID never resolved"; fi
   if [ -n "$LIVE_SIG" ]; then
     if live hyprctl version > /tmp/y6-live-version.txt 2>&1; then head -4 /tmp/y6-live-version.txt; else echo "Y6-WAYLAND: live hyprctl FAILED"; fi
-    live hyprctl -j plugin list 2>&1 | grep -o '"name": "[^"]*"' || echo "Y6-WAYLAND: live plugin list FAILED"
+    # Y6C5-A5 (AMEND5, live plugin list AFTER identity): the before/after
+    # lists must be identical; any change means the run touched live.
+    # A failed after-read warns instead of misreporting a change.
+    if [ -f "$NEST/live-plugin-list-before.json" ]; then
+      if live hyprctl -j plugin list > "$NEST/live-plugin-list-after.json" 2>&1; then
+        grep -o '"name": "[^"]*"' "$NEST/live-plugin-list-after.json" || echo "Y6-WAYLAND: (no plugins listed after)"
+        if cmp -s "$NEST/live-plugin-list-before.json" "$NEST/live-plugin-list-after.json"; then
+          echo "Y6-WAYLAND: live plugin list unchanged (before == after)"
+        else
+          echo "Y6-WAYLAND: FAIL: live plugin list CHANGED during run (before vs after):"
+          diff "$NEST/live-plugin-list-before.json" "$NEST/live-plugin-list-after.json" || true
+          echo "Y6-WAYLAND: FAIL: live plugin list changed during run"
+          exit 1
+        fi
+      else
+        echo "Y6-WAYLAND: WARN: live plugin list (after) could not be read in teardown"
+      fi
+    else
+      live hyprctl -j plugin list 2>&1 | grep -o '"name": "[^"]*"' || echo "Y6-WAYLAND: live plugin list FAILED"
+    fi
   else
     echo "Y6-WAYLAND: live signature never resolved"
   fi
@@ -146,6 +181,13 @@ command -v grim >/dev/null || fail "grim not found"
 command -v mpv >/dev/null || fail "mpv not found"
 command -v ffmpeg >/dev/null || fail "ffmpeg not found"
 
+# Y6C5-A5 (AMEND4, ported verbatim in shape from the Y6e load test): the
+# skip var must be unset in the ambient env at launch, or the version gate
+# is bypassed.
+if env | grep -q "^HYPRGLASS_SKIP_VERSION_CHECK="; then fail "HYPRGLASS_SKIP_VERSION_CHECK is set in the ambient env; refusing to run (the version gate would be bypassed)"; fi
+echo "Y6-WAYLAND: AMEND4 OK: HYPRGLASS_SKIP_VERSION_CHECK unset (env | grep HYPRGLASS empty)"
+unset HYPRGLASS_SKIP_VERSION_CHECK
+
 # Pre-flight ABI check (redteam A3): the conf's plugin .so must be loadable
 # on this machine, or the run fails here in under a second with the cause
 # instead of launching a nest and failing at the plugin-list gate with a
@@ -161,6 +203,47 @@ MISSING_LIBS=$(printf '%s\n' "$LDD_OUT" | grep "not found" || true)
 [ -z "$MISSING_LIBS" ] || fail "hyprglass $GLASS_SO cannot load (dead ABI): $MISSING_LIBS"
 echo "Y6-WAYLAND: plugin ABI OK: $GLASS_SO"
 
+# Y6C5-A5 (AMEND5-before, ported verbatim in shape from the Y6e load test):
+# the LIVE config chain must contain no hyprglass LOAD PATH, so the live
+# session can never load the rebuilt plugin. The load vector is a plugin.load
+# call or a .so filesystem path naming hyprglass. Guarded API refs are INERT
+# when the plugin is not loaded and do NOT fail the check: visuals-login.lua
+# only dofiles the optics file when exactly one hyprglass 1.1.1-cu.1 is
+# already loaded, and the optics file is itself guarded by
+# `if hl.plugin.hyprglass then`. The live plugin list (hyprbars only, checked
+# before and after) is the backstop for anything this walker misses,
+# including the Omarchy bootstrap file, which is a distro default and is not
+# followed here.
+LIVE_HG=$(python3 - "$HOME/.config/hypr" << 'PYEOF'
+import os, re, sys
+root = sys.argv[1]
+main = [os.path.join(root, "hyprland.lua"), os.path.join(root, "hyprland.conf")]
+seen, queue = set(), [p for p in main if os.path.isfile(p)]
+hits = []
+while queue:
+    p = queue.pop(0)
+    if p in seen:
+        continue
+    seen.add(p)
+    try:
+        txt = open(p, errors="replace").read()
+    except OSError:
+        continue
+    for i, line in enumerate(txt.splitlines(), 1):
+        if re.search(r'plugin\.load\s*\(.*hyprglass', line) or re.search(r'hyprglass[^"\']*\.so', line):
+            hits.append("%s:%d:%s" % (p, i, line.strip()))
+    for m in re.finditer(r'(?:source|dofile)\s*\(?\s*["\']([^"\']+)["\']', txt):
+        s = m.group(1)
+        if not os.path.isabs(s):
+            s = os.path.join(root, s)
+        if os.path.isfile(s):
+            queue.append(s)
+print("\n".join(hits))
+PYEOF
+)
+if [ -n "$LIVE_HG" ]; then echo "$LIVE_HG"; fail "live config contains a hyprglass load path; refusing to run"; fi
+echo "Y6-WAYLAND: AMEND5-BEFORE OK: no hyprglass load path in live config chain (hyprland.lua + hyprland.conf + sourced files)"
+
 # Resolve live identity at runtime (U15).
 LIVE_SIG=$(ls -t /run/user/1000/hypr/ 2>/dev/null | head -1)
 [ -n "$LIVE_SIG" ] || fail "no live Hyprland signature found"
@@ -169,6 +252,11 @@ LIVE_PID=$(pgrep -x Hyprland)
 [ -n "$LIVE_PID" ] || fail "no live Hyprland process found"
 [ "$(echo "$LIVE_PID" | wc -l)" = "1" ] || fail "ambiguous live Hyprland PIDs, refusing to guess"
 echo "Y6-WAYLAND: live sig $LIVE_SIG pid $LIVE_PID"
+
+# Y6C5-A5 (AMEND5, live plugin list BEFORE): recorded, compared in teardown.
+live hyprctl -j plugin list > "$NEST/live-plugin-list-before.json" 2>&1 || fail "live hyprctl plugin list (before) failed"
+echo "Y6-WAYLAND: live plugin list BEFORE:"
+grep -o '"name": "[^"]*"' "$NEST/live-plugin-list-before.json" || echo "Y6-WAYLAND: (no plugins listed)"
 
 # Runner-quiet process check (U8). The flock is a tripwire, not a guarantee:
 # several runners never touch the lock, and the A1 pilot arms use Chromium/CDP
@@ -295,14 +383,90 @@ if ver != "1.1.1-cu.1" or vc != "match":
     sys.exit(1)
 PYEOF
 
-# Hook marker check (U6): if the hook ran before the plugin loaded, the
-# profile was never applied. Fail fast with that diagnosis. The marker can
-# land in the nested stdout log or the per-instance log; check both.
-# (NEST_LOG was defined right after the signature discovery, above.)
+# BEGIN Y6C5-A2 positive profile gate (Y6r A2, R3; replaces the old U6 block)
+# The parse-1 "not ready" marker is EXPECTED on every successful startup
+# (parse 1 runs before the plugin system exists; the profile is applied on
+# parse 2). It must NEVER fail the run. This gate is positive: it requires
+# the applied marker printed AFTER optics.lua returns, plus a second signal,
+# features.layers.enabled == true, read from the status JSON fetched above.
+# The marker proves config()+layer() returned; layers.enabled proves the
+# config effect (optics.lua is the only setter; the plugin default is false).
+# Y6C5-A10: this greps the LIVE per-instance log ($NEST_LOG) during the run
+# (plus the stdout log $LOG). Saved-log marker counts are NOT parse evidence
+# (ofstream buffering; saved logs are flushed prefixes, tail lost on SIGKILL
+# teardown). No gate here reads a hypr-saved directory.
+# Poll timeout/interval are overridable for tests (Y6C5_GATE_TIMEOUT_S,
+# Y6C5_GATE_INTERVAL_S); production defaults are 15 s / 1 s. By the time
+# this gate runs (about 10 s after launch) parse 2 has already applied the
+# profile, so the poll is a margin for log flush lag, not for the load.
+echo "Y6-WAYLAND: profile gate: parse-1 not-ready marker is expected, waiting for applied marker"
 if grep -a -q "Y6-NEST-HOOK: hyprglass not ready" "$LOG" "$NEST_LOG" 2>/dev/null; then
-  fail "hook ran before plugin load (profile not applied); see nested log"
+  echo "Y6-WAYLAND: profile gate: parse-1 not-ready marker present (expected, not a failure)"
 fi
-echo "Y6-WAYLAND: hook marker absent, profile applied"
+GATE_TIMEOUT="${Y6C5_GATE_TIMEOUT_S:-15}"
+GATE_INTERVAL="${Y6C5_GATE_INTERVAL_S:-1}"
+GATE_DEADLINE=$(( $(date +%s) + GATE_TIMEOUT ))
+GATE_OK=""
+while [ "$(date +%s)" -le "$GATE_DEADLINE" ]; do
+  if grep -a -q "Y6-NEST-OPTICS: applied" "$LOG" "$NEST_LOG" 2>/dev/null; then GATE_OK=1; break; fi
+  sleep "$GATE_INTERVAL"
+done
+if [ -z "$GATE_OK" ]; then
+  echo "Y6-WAYLAND: profile gate: applied marker absent after ${GATE_TIMEOUT}s (tail of nested log):"
+  tail -30 "$NEST_LOG" 2>/dev/null || tail -30 "$LOG"
+  fail "profile not applied: Y6-NEST-OPTICS applied marker absent after ${GATE_TIMEOUT}s; see nested log tail above"
+fi
+grep -a -h "Y6-NEST-OPTICS: applied" "$LOG" "$NEST_LOG" 2>/dev/null | head -3
+HOOK_APPLIED=$(grep -a -h "Y6-NEST-HOOK: profile applied" "$LOG" "$NEST_LOG" 2>/dev/null | head -3 || true)
+if [ -n "$HOOK_APPLIED" ]; then printf '%s\n' "$HOOK_APPLIED"; else echo "Y6-WAYLAND: profile gate: hook applied marker not seen in logs (optics marker present, continuing)"; fi
+# Second positive signal: layers.enabled must be true in the status JSON
+# fetched above (optics.lua is the only setter; the plugin default is false).
+# NOTE: this is an early read of the same field the liquid gate already
+# requires (scripts/indicator.py _valid_liquid needs layers.enabled True);
+# its value is failing fast here instead of after a 60 s liquid wait.
+python3 - "$NEST/nest-glass-status.json" << 'PYEOF' || fail "profile not applied: features.layers.enabled is not true in hyprglass status (see status JSON above)"
+import json, sys
+d = json.load(open(sys.argv[1]))
+layers = (d.get("features") or {}).get("layers") or {}
+print("Y6-WAYLAND: profile gate: features.layers.enabled=" + str(layers.get("enabled")))
+if layers.get("enabled") is not True:
+    sys.exit(1)
+PYEOF
+# Re-run the plugin-list and version checks after the marker: the profile
+# must still be loaded when the gate passes, not only at the earlier check.
+nest hyprctl -j plugin list > "$NEST/nest-plugin-list-after-gate.json" 2> "$NEST/nest-plugin-list-after-gate.err" || fail "nested hyprctl plugin list re-check failed after profile gate"
+grep -q hyprglass "$NEST/nest-plugin-list-after-gate.json" || fail "hyprglass missing from nested plugin list on re-check after profile gate"
+nest hyprctl -j hyprglass status > "$NEST/nest-glass-status-after-gate.json" 2> "$NEST/nest-glass-status-after-gate.err" || fail "nested hyprglass status re-check failed after profile gate"
+python3 - "$NEST/nest-glass-status-after-gate.json" << 'PYEOF' || fail "hyprglass version mismatch on re-check after profile gate"
+import json, sys
+d = json.load(open(sys.argv[1]))
+ver = d.get("version"); vc = d.get("versionCheck")
+print("Y6-WAYLAND: profile gate re-check: hyprglass version=" + str(ver) + " versionCheck=" + str(vc))
+if ver != "1.1.1-cu.1" or vc != "match":
+    sys.exit(1)
+PYEOF
+echo "Y6-WAYLAND: profile gate OK: applied marker present, layers.enabled true, plugin list and version re-checked"
+# END Y6C5-A2 positive profile gate
+
+# BEGIN Y6C5-A6-G4 configerrors gate
+# Y6C5-A6 (Council 3 G4, supporting gate): nest configerrors must be empty
+# after profile application. A throwing optics.lua surfaces as a config
+# error, not as a missing marker, so this is the only gate catching that
+# case. Pattern follows scripts/activation_checks.py wait_for_profile
+# (stripped output must be empty). A failed configerrors call fails closed.
+# KNOWN TENSION (open item O1): if parse-3 duplicate layer() registration
+# errors, configerrors is non-empty while the parse-2 profile stands, and
+# this gate would false-fail a healthy profile. The A8 load-only trial
+# observes the exact configerrors content; if the trial shows a parse-3
+# duplicate-layer error with marker present and layers.enabled true, G4
+# must be narrowed to allow that specific error.
+CONFIG_ERRORS=$(nest hyprctl configerrors 2>&1) || fail "nest hyprctl configerrors failed (see above)"
+if [ -n "$(printf '%s' "$CONFIG_ERRORS" | tr -d '[:space:]')" ]; then
+  printf '%s\n' "$CONFIG_ERRORS"
+  fail "nest config errors present after profile application (see above)"
+fi
+echo "Y6-WAYLAND: configerrors empty after profile application (G4 OK)"
+# END Y6C5-A6-G4 configerrors gate
 
 # Liquid gate: liquid_available(ready=True) semantics exactly (indicator.py).
 # Shaders up to 60s: 30s LIQUID_READY_TIMEOUT + one 30s extension (Council C).
@@ -325,6 +489,15 @@ while True:
         sys.exit(1)
     time.sleep(2)
 PYEOF
+
+# Y6C5-A8 (load-only trial support): stop after the gates, before any
+# backdrop, pill, or arm. The A8 trial runs the amended runner with
+# Y6_STOP_AFTER_GATES=1 and proves the fix itself; the EXIT trap still runs
+# teardown and re-verifies live. Production runs leave this unset.
+if [ "${Y6_STOP_AFTER_GATES:-0}" = "1" ]; then
+  echo "Y6-WAYLAND: stop-after-gates requested (A8 load-only trial): gates passed, stopping before backdrop/pill/arms"
+  exit 0
+fi
 
 # Nest renderer lines (U17): the asymmetry clause needs a known rendering path.
 echo "Y6-WAYLAND: nest renderer lines:"
@@ -459,8 +632,22 @@ run_arm_A() {
   ARM_A_BG_DIFF=$bg_diff
 }
 
+# Y6C5-A6 (Council 3 G6, corroboration only, never a gate): record hyprglass
+# stats at a named point. The JSON key is contourRebuilds (the table column
+# is contour_build). No baseline exists yet, so no threshold and no fail on
+# missing stats (warn only).
+record_glass_stats() {
+  if nest hyprctl hyprglass stats > "$NEST/nest-glass-stats-$1.json" 2> "$NEST/nest-glass-stats-$1.err"; then
+    echo "Y6-WAYLAND: glass stats ($1):"
+    cat "$NEST/nest-glass-stats-$1.json"
+  else
+    echo "Y6-WAYLAND: glass stats ($1) unavailable (see $NEST/nest-glass-stats-$1.err)"
+  fi
+}
+
 check_deadline "before arm A"
 check_idle "before arm A"
+record_glass_stats before-arms
 echo "Y6-WAYLAND: arm A start $(date +%H:%M:%S)"
 # Switch the backdrop to the static image (U4).
 kill_mpv "static arm"
@@ -560,5 +747,6 @@ elif [ "$A_OUTCOME" = "void" ] && [ "$B_OUTCOME" = "negative" ]; then
 else
   echo "Y6-WAYLAND: VERDICT: VOID (uncovered outcome combination: arm A $A_OUTCOME, arm B $B_OUTCOME)"
 fi
+record_glass_stats after-arms
 echo "Y6-WAYLAND: done $(date +%H:%M:%S)"
 exit 0

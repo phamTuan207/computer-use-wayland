@@ -275,12 +275,15 @@ if ver != "1.1.1-cu.1" or vc != "match":
     sys.exit(1)
 PYEOF
 
-# Hook marker note (non-gating for a load-only test): the conf dofiles the
-# visuals hook at config time; record whether it ran before the plugin load.
+# Y6C5-A4 (Y6r R1): the parse-1 "not ready" marker is EXPECTED on every
+# successful startup and does NOT mean the profile is missing; the profile
+# is applied on parse 2 (layers.enabled true against a default of false,
+# optics.lua the only setter). This note only records the marker, it is not
+# a profile verdict. The positive proof is the Y6-NEST-OPTICS applied marker.
 if grep -a -q "Y6-NEST-HOOK: hyprglass not ready" "$LOG" "$NEST_LOG" 2>/dev/null; then
-  echo "Y6E-LOAD: NOTE: hook ran before plugin load (profile not applied; load verdict unaffected)"
+  echo "Y6E-LOAD: NOTE: parse-1 not-ready marker present (expected; profile applied on parse 2, load verdict unaffected)"
 else
-  echo "Y6E-LOAD: hook marker absent, profile applied"
+  echo "Y6E-LOAD: NOTE: parse-1 not-ready marker absent"
 fi
 
 echo "Y6E-LOAD: VERDICT: LOADED (rebuilt hyprglass 1.1.1-cu.1 listed in nested plugin list, versionCheck=match)"
