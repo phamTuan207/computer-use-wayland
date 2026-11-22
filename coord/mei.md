@@ -341,3 +341,8 @@ Dung lai ngay va bao cao khi gap mot trong cac truong hop sau:
 - Toi vua mat tab mochi (tab an danh Chromium toi mo san de dung) vi mot worker dong hoac navigate no mat luc 18:00-18:21, toi phai dang nhap lai.
 - Tu gio, em can trinh duyet thi MO TAB/CUA SO MOI BEN CANH, workspace 2 cuon duoc, tuyet doi khong dong, khong navigate tab cua toi (tab mochi an danh, cua so Brave cua em, Zen, bat ky tab nao toi mo). Ap dung ke ca live test.
 - Doc ky truoc khi lam tiep, ghi nhan da doc vao file nay.
+
+## LUAT CUNG MOI THU HAI tu toi (Pham Tuan), 18:30 22/11: pill PHAI hien khi agent dieu khien may
+- Toi thay tin nhan cho mochi di vao ma KHONG co pill/overlay computer-use nao hien, vi no gui bang CDP tho (Runtime.evaluate), khong qua computer-use session.
+- Tu gio, moi tac dong live len trinh duyet cua em phai qua act-now/computer-use session de pill hien; CAM dung CDP tho de ghi (click/go chu) khi khong co session. Doc CDP (observe/harvest) van duoc.
+- Co che hien pill cho CDP dang duoc lam (worker W-PILLCDP); khi nao xong toi bao. Doc ky truoc khi lam tiep, ghi nhan da doc vao file nay.

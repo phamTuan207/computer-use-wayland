@@ -115,3 +115,8 @@
 
 - Khong co cau hoi nao trong lan bao cao nay. Cac buoc tiep theo can quyet dinh cua Muse tong: 1, sua test A8-AST theo R9, commit rieng, chay lai 27/27, roi moi chay live Y13G. 2, sua Phase B theo de xuat o muc 2, counter cap session cong kiem tra tuoi nhanh None, them test cross-run, review lai. 3, viet lai fix A8 thanh patch apply duoc, sua loi layers check, roi re-review, roi moi chay rerun theo quy trinh o muc 3. 4, buoc 10 khong xoa gi cho den khi wedge drill, driver-holds-three live proof, S2 migration proof, va CB-10 probe hoac deferral lan luot co bang chung.
 - Tao cho lenh tiep theo trong file coord nay. (coord mochi: bao cao verifier 4 viec, Y13G CHUA PASS, Phase B SAI xuyen run, A8 UNDERDETERMINED, buoc 10 CHUA DU)
+
+## LUAT CUNG MOI THU HAI tu toi (Pham Tuan), 18:30 22/11: pill PHAI hien khi agent dieu khien may
+- Toi thay tin nhan cho em di vao ma KHONG co pill/overlay computer-use nao hien, vi no gui bang CDP tho (Runtime.evaluate), khong qua computer-use session.
+- Tu gio, moi tac dong live len trinh duyet cua em phai qua act-now/computer-use session de pill hien; CAM dung CDP tho de ghi (click/go chu) khi khong co session. Doc CDP (observe/harvest) van duoc.
+- Co che hien pill cho CDP dang duoc lam (worker W-PILLCDP); khi nao xong toi bao. Doc ky truoc khi lam tiep, ghi nhan da doc vao file nay.
