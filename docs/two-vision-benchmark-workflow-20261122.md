@@ -523,14 +523,22 @@ coordinator says run, and this script has never run live.
   step anywhere in the argument list), so it cannot use the laptop
   Zen's login state.
   A fresh profile is logged out of Messenger, so a live run as
-  specified would hit the login wall and FAIL with
-  no-message-input-in-inventory (fail-closed and safe, but not a
-  passing run). The live run needs an attach-to-Zen mode (not
-  implemented) or a logged-in profile / login step before it can
-  pass. Until one exists, do NOT present Zen login as the
-  readiness condition. One profile holds one Messenger session,
-  so both windows in the one-instance shape share the same login;
-  the two clones are two threads under one account in this shape.
+  specified would hit the login wall and FAIL with v12-timeout,
+  NOT with no-message-input-in-inventory and NOT fail-closed and
+  safe: on a login page the script types the bench text into the
+  email field (find_input returns the first visible textbox when
+  none is named "Message"), Enter submits the login form, and the
+  V12 gate times out after 5 s. The no-message-input-in-inventory
+  error fires only when a page has zero visible textboxes, which
+  a login page does not satisfy. The live run needs one of the
+  two live-shape options in runbook section 13 (option B, a CDP
+  driver to the real Brave/Chrome chats on ws2; or option A, a
+  logged-in profile pre-seeded into <run-dir>/profile) before it
+  can pass. Until the coordinator picks one, do NOT present Zen
+  login as the readiness condition. One profile holds one
+  Messenger session, so both windows in the one-instance shape
+  share the same login; the two clones are two threads under one
+  account in this shape.
   The run machine must have the Firefox binary, geckodriver and
   venv at the script's hardcoded paths (FF and GD in the script
   header, lines 49-50).
@@ -552,7 +560,15 @@ coordinator says run, and this script has never run live.
   holding either port makes launch_browser refuse.
 - [ ] A fresh --workdir per run (for example
   /tmp/two_vision_bench/live1). Never reuse a live run's workdir:
-  the ledger keys on run_id, and a reused run_id reuses intents.
+  the ledger, results, and inventory of one run must not be
+  confused with another's, and the run's results.json would
+  otherwise overwrite the harvest's HARVEST-ONLY results.json
+  (runbook steps 1 and 2 must use different workdirs,
+  <harvest-dir> and <run-dir>). The reason is not the ledger:
+  with a fresh workdir the ledger is empty, so a reused run_id
+  does not reuse intents from the ledger; the false PASS comes
+  from the V12 pre-check seeing the old bubble in the thread,
+  not from the ledger.
 
 ### 10.2 Both clones' chats
 
@@ -573,34 +589,93 @@ coordinator says run, and this script has never run live.
   10.1. What matters is the script's own browser's Messenger
   session, which does not exist yet.)
 - [ ] Run --mode harvest with the live plan first, before any
-  send run: confirm both inputs are visible and the thread
-  container resolves against the real threads. Wrong selectors
-  are the proven typed-but-unseen failure mode, and this cheap
-  pre-check catches them before any typing.
+  send run: confirm both inputs are visible and named "Message"
+  in the inventory text (operator judgment on the names, not a
+  script outcome). The harvest does NOT verify thread_selector
+  or bubble_selector: in --mode harvest main() returns
+  HARVEST-ONLY without ever evaluating them; they are only
+  touched inside send_one via GATE_JS, after typing. The
+  selectors stay unverified until the first V12 gate, so the
+  first send is the first real selector test. Wrong selectors
+  are the proven typed-but-unseen failure mode, and the
+  harvest-first step does not catch them; it catches only a
+  missing or misnamed input. Caveat on the name itself: the
+  expected name "Message" is visual-only evidence (two
+  screenshot reads in the CL1-MSG logs), the real aria-label
+  is UNKNOWN, no DOM read of the live input exists in the
+  repo. If the harvest shows a visible textbox whose name is
+  not "Message" and is not "Email"/"Password", STOP and
+  record the actual name; the name is only closed by a live
+  DOM read before the run (runbook section 6).
 - [ ] The message input in each thread is a contenteditable
   textbox (the Messenger input type). The script's V1 check reads
   innerText for contenteditable elements; if a thread's input is
   a different control, say so in the plan and re-check the
   fixture variant first.
-- [ ] Both windows live in ONE Zen instance with two windows
+- [ ] Both windows live in ONE browser instance with two windows
   (the --instances one shape). Two instances are not implemented
-  and --instances two is refused.
+  and --instances two is refused. Under G3 the live shape is
+  Brave (clone1) + Chrome (clone2) on ws2, which the script
+  cannot drive today; under the fallback option A it is the
+  script's own Firefox with two windows and one Messenger
+  account. The live shape is the coordinator's decision
+  (runbook section 13); do not write "ONE Zen instance" here,
+  that shape is stale relative to G3.
 
 ### 10.3 Exact message contents
 
 - [ ] The plan JSON carries a unique run_id (for example
   bench-20261122-001) and the two messages in exactly this form:
   "BENCH-TEST clone1 <run_id>" and "BENCH-TEST clone2 <run_id>".
-  Verify the run_id is fresh before the run: check both live
-  threads for an existing bubble with that text. The message text
-  is derived from run_id, and the script's V12 pre-check returns
-  skipped-already-sent whenever the bubble is already in the
-  thread, which the outcome counts as sent, so reusing a run_id
-  on a live thread reports PASS with zero new sends. The script
-  does not check run_id against thread history (open item, not
-  fixed: fixture threads do not persist, so it cannot be
-  reproduced on the fixture). Use a fresh run_id per live attempt
-  and never re-run with the same run_id.
+  Generation rule: generate a fresh timestamp-based run_id for
+  this attempt (the script's default format is
+  bench-<UTC timestamp>-<6 hex>) and never reuse a run_id from
+  a previous attempt, including a failed one. Freshness comes
+  from generation, not from the check: a freshly generated
+  timestamp-based run_id is fresh by construction, since no
+  earlier run could have used that exact text.
+- [ ] Verify the run_id is fresh before the run: check both live
+  threads for an existing bubble with that text. Method: the
+  only executable check on the Brave/Chrome threads is an
+  accessibility-tree substring search, not the V12 exact-text
+  DOM check. Take the AT-SPI application PID from
+  `computer-use a11y apps` for each browser (NOT the hyprctl
+  client pid: the hyprctl window PID is not the AT-SPI app
+  PID, improvements/speed-proto-pick4-summary.md:15), then run
+  `CU_PICK4_FASTPATH=1 computer-use a11y query --pid
+  <atspi-pid> --name "BENCH-TEST clone1 <run_id>"` (and the
+  same for clone2). A hit proves the text is present
+  somewhere in that app's accessibility tree, not that it is
+  a bubble in the thread; a miss does NOT prove the text is
+  absent (bounded observe, scrollback may not be in the
+  tree). If the exact text is found in either thread, the
+  run_id is NOT fresh: discard it, generate a new one, update
+  the plan and both messages, and check again. The message
+  text is derived from run_id, and the script's V12 pre-check
+  returns skipped-already-sent whenever the bubble is already
+  in the thread, which the outcome counts as sent, so reusing
+  a run_id on a live thread reports PASS with zero new sends.
+  The script does not check run_id against thread history
+  (open item, not fixed: fixture threads do not persist, so it
+  cannot be reproduced on the fixture).
+- [ ] Dry probe of the a11y method (run once, before the first
+  live run; UNRUN as of 22/11). Test the two premises
+  separately: Part 1, pid mapping, run `computer-use a11y apps`
+  and confirm Brave and Chrome both appear with PIDs, then
+  query for a KNOWN existing bubble text in each thread; a hit
+  proves the pid mapping works and bubbles are exposed.
+  Part 2, bubble exposure, is the same Part 1 hit or miss for
+  a known bubble text: a miss for text visibly in the thread
+  proves bubbles are NOT exposed (or are outside the bounded
+  observe) and the method cannot be used for freshness on that
+  browser. Premise A (bubble exposure) is UNVERIFIED; premise
+  B (hyprctl pid is the AT-SPI pid) is contradicted by prior
+  evidence. Full procedure in runbook section 5.
+- [ ] Record requirement: record the check in the run log
+  (<run-dir>/run-log.md): the run_id used, both threads
+  checked, what was found (nothing, expected), the dry-probe
+  result, and the time. A run_id that was never checked is not
+  a fresh run_id.
 - [ ] Test messages are bench strings only. Never put real user
   text, names, or personal information in a plan, inventory,
   ledger, log, or result file.
@@ -617,12 +692,21 @@ coordinator says run, and this script has never run live.
   both message inputs, each visible, with a ref, rect, center and
   role textbox. If either input is missing, the run is FAIL
   before anything is sent (no-message-input-in-inventory,
-  fail-closed).
+  fail-closed). Caveat: the expected input name "Message" is
+  visual-only evidence (two screenshot reads in the CL1-MSG
+  logs); the real aria-label is UNKNOWN and no DOM read of the
+  live input exists in the repo. A harvest showing a visible
+  textbox whose name is not "Message" and is not
+  "Email"/"Password" means STOP and record the actual name
+  (runbook section 6).
 - [ ] VISION 2 (outcome check): PASS iff both BENCH-TEST
   messages appear as bubbles in their threads. The script's V12
   gates check this by DOM read after each send; the agent's
   VISION 2 look at both threads once at the end is the
-  independent confirmation. Outcome scoring is by message in
+  independent confirmation. VISION 2 is one screen observe of
+  the monitor holding ws2, which is eDP-2 on this laptop
+  (monitor_box [2464, 902, 1920, 1200]); confirm live with
+  `hyprctl -j monitors`. Outcome scoring is by message in
   thread (M1), never by point-in-box.
 - [ ] Overall: PASS iff both messages land. Any single failed
   step makes the run FAIL; the chain stops at the first failure
@@ -657,4 +741,7 @@ coordinator says run, and this script has never run live.
   inventory.json and ledger.json out of /tmp immediately (the
   fix-pass logs were once lost to a /tmp wipe), delete the
   profile/ dir, and report the outcome with the run_id and wall
-  time. Never edit a result file after the run.
+  time. The operator's look count comes from the run log
+  (<run-dir>/run-log.md); every look outside the run must be
+  logged there with its time. Never edit a result file after the
+  run.
