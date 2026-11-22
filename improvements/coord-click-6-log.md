@@ -52,5 +52,18 @@
 - Commit d60ca6b: tick 4.26 (PR1 merged d322cd77), 4.27 (F1/F2 diffs pushed), 4.19 (Y1b 12/12, gate 4/4); dem lai 114/23.
 - Luu y: checkout dung chung, cac file scripts/cdp.mjs, scripts/s2_flip_live.py, tests/cdp_snapshot.mjs, tests/test_s2_flip_wiring.py, tests/realistic/clone1-batch3/results.json dang dirty va khong phai cua COORD-CLICK-6, tuyet doi khong add/commit chung.
 
+## W-SYNC xong 17:56 (muc 9): drift het, broker observe OK
+- Truoc sync: 54 muc drift (11 file khac noi dung, 43 file thieu), installed tree o ban sync cu 9ec713c (15:56). Sau sync: --check exit 0, 692 managed files, 0 dong DIFF, hash khop repo (cu.py 6b18f8407dfa, first_action.py 9fee1242, code_exec.py f85ee4a77924, s2_flip_live.py 6b238e039b21). Log commit ae2fe52, da kiem chung tren origin va doc log.
+- Browser observe qua broker: tabs + observe tab mochi qua relay session, khong 404, finish sach, guardian clean. Khong restart relay (session_remote.py khong doi, generation 411cfadf giu nguyen), khong restart trinh duyet nao, PID Zen/Chromium/Brave giu nguyen.
+- Chu y: started_git_head cua relay van ghi 9ec713c (label luc khoi dong), chi doi khi restart relay. F3 cua W-A1FIX bat buoc restart relay co flag de cap nhat.
+- Da gui W-A1FIX: F3 mo khoa, lam sau F1/F2/F4/F5/F6.
+
+## Giao may 17:55 + doi nhan su (commit f49b859 tren main)
+- Pham Tuan giao may cho Muse tong, khong dong vao nua. mei thay clone1, mochi thay clone2. Moi quy trinh giu nguyen nhu cu, chi doi nick (coord file GitHub, council 3 + redteam, Lauren Tan, khong tu cham). Co gi can thi ghi vao coord file cho Muse tong, dung nhan truc tiep.
+- Watchdog-zen doi sang 20 phut/lan (chay tiep 17:53).
+- He qua cho lane cua COORD-CLICK-6: live work tren may duoc phep binh thuong, khong con han che "ong dang dung may". Da gui W-ZENPREP: duoc chay luon live proof Zen delegate sau khi xong phan chuan bi, neu thay rui ro moi thi dung lai va bao. Da gui W-A1FIX: F2 live-validate tren Chromium duoc phep binh thuong.
+- Goal moi cua Pham Tuan (17:46): goal 1 repo computer-use tot nhat (doi ten goal cu), goal 2 Omarchy tot nhat cho computer-use (moi). Chien dich nay phuc vu goal 1.
+- mochi: coord file van chi co "san sang" + muc giao may, KET QUA Y13G round-3 va buoc 10 van chua len coord file. Tiep tuc doi, khong kiem chung tu anh chup chat.
+
 ## Luat ap cho moi worker
 - Huong cuoi e05fc58 la luat. Chuan Lauren Tan (lenh + output + commit hash + thoi gian). Khong tu cham pass, worker doc lap kiem chung lai. Khong ydotool. Khong dau gach ngang dai. Commit pathspec ro rang, push xong kiem tra ls-remote. Khong dua thong tin ca nhan cua Pham Tuan len GitHub. Worker ket qua 15 phut thi giet ngay. Song song het muc, khong cat buoc.
