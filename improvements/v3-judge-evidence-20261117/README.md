@@ -37,6 +37,12 @@ per-trial files. See "Still missing" below.
 | test-execution-report.md | 106 | ba6efca108e16230... (full hash in the worker log) | 2026-11-16 18:33:14 | Worker J, prior tc02 failure evidence (the baseline), reported 01:35 17/11 +07 |
 | tc02-evidence/ (19 files) | - | verified by `diff -r` clean against the source | - | Prior-run mirror, NOT judge evidence. See below |
 
+Note on the 7 PNG files in tc02-evidence/tc02/evidence/: they are
+committed with `git add -f`, overriding the repo `.gitignore` `*.png`
+rule, because the repo already tracks 45 PNG files and because the
+test-execution-report describes this mirror as including "7 key
+screenshots". Without them the mirror would be incomplete.
+
 Full SHA-256 values and the recomputation are in
 `improvements/w-evidence-remaining-log.md`.
 
