@@ -1872,4 +1872,104 @@ workspaces at the same time.
 - Still running: C5-Y13G-R3-FIX (e7f7e026), C5-STEP9
   (bef08f08). No stall at last check.
 
-## 35. (to be filled as results land)
+## 35. OWNER ORDER 16:01: MAXIMIZE PARALLELISM, 2-lane cap LIFTED; fan-out to 10 live lanes (16:01-16:05 +07)
+
+- Direct order from the owner via Muse, 16:01 +07: MAXIMIZE
+  PARALLELISM NOW. Tokens do not matter anymore. Run as many
+  parallel workers as the work allows, fast but still good.
+  The old 2-lane cap is lifted: fan out every independent item
+  at once. Queue the next independent item BEFORE the current
+  one finishes, so no lane ever sits idle waiting. Quality
+  does NOT drop: no steps cut, council + redteam + independent
+  verification stay, Lauren Tan evidence standard stays. Speed
+  comes from parallelism, never from skipping verification.
+  Both clones capped, so the load goes to Codex Luna 6 Max,
+  fcc, and my own subagents.
+- ALREADY RUNNING (3 lanes): C5-STEP9 (bef08f08, prototype),
+  C5-Y13G-R3-FIX (e7f7e026), C5-RUNG2 (32c18db1, rung 2 live
+  test, owner order 16:00).
+- NEWLY SPAWNED (7 lanes):
+  - C5-AGENT-NATIVE-EXEC (c32012cb): execute the P1-P10 plan
+    from the inventory (laptop doc, sha d750a3e1...). P1 kill
+    the 2 leaked Puppeteer Chromiums; P2 Brave persistent
+    debug port 9224 (dated backup first, relaunch in a QUIET
+    WINDOW ONLY, never mid-batch, since STEP9/RUNG2 are live;
+    rollback at once on any session trouble; cdp.mjs endpoint
+    update after it proves out); P3 Zen probe update state
+    only (no restart, no MOZ_REMOTE_ALLOW_SYSTEM_ACCESS=1);
+    P4 Chromium doc; P5 kitty probe (scratch terminal only,
+    never Jarvis); P6 VS Code probe; P7 Omafile probe; P8
+    reboot recovery design only (NO autostart edit); P9 fix
+    the 2 fastest-paths.md discrepancies; P10 port map +
+    launch chains in one place. P2 is included because the
+    owner order explicitly lists "agent-native P1-P10
+    execution"; its quiet-window gate and rollback stand.
+    P3/P8 keep their owner-approval markings (P3 is a probe,
+    not a phase 2 step; P8's autostart edit needs separate
+    approval).
+  - C5-STALL-INV (4f5145ca): read-only investigation of the
+    Chromium Input stall (5002-5003 ms mouse timeout). Scratch
+    tab only (Target.createTarget about:blank on 127.0.0.1:
+    9223), NEVER the clone chat tabs (STEP9/RUNG2 live there).
+    No code changes, no sends, no keystrokes. Deliverable: the
+    reproduction + exact trigger condition + cheapest fix with
+    evidence, or a definitive "no cheap fix". STEP9 owns the
+    implementation if a fix is found.
+  - C5-STEP10-PREP (9d35a4a7): design-only deletion plan for
+    A3/A4/A5 (what each removes, its gate, proposed DATE,
+    rollback, what breaks if deleted too early, ordering).
+    No code changes.
+  - C5-Y1B-PROBE (f9f407ce): todolist 4.19, rewrite probes
+    10b/10f + 1e/4a so they FAIL on the attack build and PASS
+    on the fixed build (prove both directions), work the
+    Phase A 12-item BLOCK checklist. Repo-only.
+  - C5-Y6-PAPER (67ab65dc): todolist 2.2.3 + 4.13, fix Y6
+    A1-A7/A9-A10 on paper + fresh re-review; A8 load-only
+    trial procedure written but NOT run; stage conf y6e only
+    if the re-review says it is safe; NO reboot, NO live
+    compositor reload, NO live Hyprland config touch.
+  - C5-BATCH3-CHECK (0f32abd3): todolist 4.24, Y12 H1-H4 +
+    Y15 follow-up (R1/R2/R3b, R5, W1 probe, E5 wart), with
+    failing-first tests. Repo-only.
+  - C5-ERRFILE-G31 (dbdb70ad): add G31 (CL2-MSG 03:53:30,
+    4m03s, 45px near-miss) to the error file in its own format
+    with sources, and reconcile the error file's J-entries
+    against the todolist ticks (report mismatches; do NOT edit
+    the todolist ticks). Docs only.
+- Todolist read in full before assigning (215 lines, 62 DONE
+  matches): the open items are 2.1.7, 2.2.3, 3.4.1, and 4.7-
+  4.28. De-conflicted: the 4 todolist/error workers above
+  cover the independent open items; the rest are NOT fanned
+  out now, for recorded reasons:
+  - 4.7/4.8/4.10 (F3 Zen restore): STALE, Zen healthy since
+    the 23:44 restart 21/11, probe PASS; ticks stale.
+  - 4.11/4.12 (F1/F2): SUPERSEDED by final direction steps
+    0-8 (done).
+  - 4.14 Y13/Y14 live: Y13 BLOCKED (fix in progress), Y14
+    after Y13.
+  - 4.15 A1 pilot: needs the blocker check first, overlaps
+    step 6/9; queued-next.
+  - 4.16 clone2 heavy batch: clone2 CAPPED.
+  - 4.17 hidden-body: live lane; two live lanes already
+    running (STEP9, RUNG2); deferred until one live lane
+    finishes (broker serializes, but a third live lane adds
+    contention).
+  - 4.18 H2: dependent (gaps into Y13/Y14/A1).
+  - 4.20 scrub: needs a quiet window (G-SCRUB), live runs in
+    flight; deferred.
+  - 4.21 final test: LAST, after everything.
+  - 4.22 E1: PARKED.
+  - 4.23 clone1 J12: clone1 CAPPED.
+  - 4.25 J15: low, only if it recurs.
+  - 4.26 PR #1 conflict: STALE, PR #1 merged d322cd7.
+  - 4.27 commit/push F1/F2/F3 diff: STALE, committed long ago.
+  - 4.28 J21: rule already in briefs (hl.dsp form).
+  - 2.1.7 I7: needs the owner's video file (blocked on owner).
+  - 3.4.1 E1: PARKED (fresh comparison de hoan).
+- QUEUED-NEXT (dependent, spawn when their gate lands):
+  Y13G round-3 independent re-verification (after the fix
+  lands); A1 pilot resume (after the blocker check); step 10
+  deletions (after step 9); final test (last); scrub (quiet
+  window).
+
+## 36. (to be filled as results land)
