@@ -8,21 +8,37 @@ failure. Endpoints are named per browser (P3 port split, P2 persistent port
 on http://127.0.0.1:9223. Never assume port 9223 is Brave.
 
 Transport split, and why there are two session shapes:
-- Routing (tabs, observe) and the P9 capture run through the broker
-  (one session per run, mux SSH, short calls).
-- The code-exec send itself runs as a one-shot session-driver with
-  CU_CODE_EXEC=1 on its own command line. The broker cannot set env
-  per request: the driver env comes from the relay process env, and
-  the relay was started without the flag. The one-shot is the only
-  place the flag is on, so the flip is scoped to exactly this
-  class's sends. Each one-shot is one mux SSH call (spawn plus
-  program plus teardown, about 7s); the session ends when its stdin
-  closes, so the next send starts clean.
+- Routing (tabs, observe) and the code-exec send run through the
+  broker (one session per run, mux SSH, short calls). The send is a
+  broker `request` with args ['code-exec', '--endpoint', endpoint,
+  '--program', '-', '--intent', intent] and the program as stdin,
+  exactly the envelope the one-shot used, delivered by shelling
+  the broker CLI directly (session_remote.py subcommands start,
+  request, result, finish). The harness never calls the
+  session_remote.py Python functions _client_start,
+  _client_start_with_wait, or _client_finish, and broker_start
+  has no busy-wait: it runs the start subcommand once, fail
+  fast (no --wait). The driver runs the program only when the relay env
+  carries CU_CODE_EXEC=1: the driver inherits the relay process
+  env, so a live run needs the relay drop-in flag (coord-click-6
+  F3: flags.conf with CU_CODE_EXEC=1, verified in the relay
+  process env). A broker send that returns the disabled envelope
+  fails loudly with outcome error and does NOT fall back
+  automatically; rerun with --transport oneshot as the documented
+  recovery path.
+- The one-shot session-driver (CU_CODE_EXEC=1 on its own command
+  line) stays as fallback and recovery only. Automatic fallback
+  happens only when the broker send was proven never accepted:
+  the request was refused before dispatch and a result probe
+  for that sequence answers not_found, so no broker record
+  exists for it. A broker result failure leaves the outcome
+  unknown, so no fallback runs there. Use --transport oneshot to force the one-shot path
+  for a whole run (recovery, or a relay without the flag).
 
 Per browser the flow is:
   broker tabs -> broker observe (coverage probe) -> P1
   route_perception (gates the send on complete DOM coverage; a
-  screenshot decision aborts the send, fail closed) -> one-shot
+  screenshot decision aborts the send, fail closed) -> broker
   code-exec send program (set_value for Brave, fill for Chromium
   by default, Enter, trailing assert) ->
   independent V12 verify (fresh DOM read, not the program asserting
@@ -200,16 +216,54 @@ def message_for(run, browser, prefix='S2-FLIP'):
     return '%s-R%d-%s-IGNORE-TEST' % (prefix, run, browser.upper())
 
 
+class _BrokerSendNotAccepted(RuntimeError):
+    """The broker refused or never ran a send request (pre-dispatch).
+
+    Raised only when the broker `request` call itself failed or the
+    broker answered with something other than accepted. That alone
+    does NOT prove the driver never saw the program: the same
+    failure string also occurs when the channel dies after the
+    broker accepted the request. _code_exec_send must probe the
+    broker result for the sequence before any fallback runs, and
+    only falls back when the probe answers not_found. A failure
+    of the `result` call is NOT this error: the outcome is unknown
+    there and no fallback may run.
+    """
+
+
+class _BrokerSendConsumed(RuntimeError):
+    """A post-accept send failure: the broker consumed sequence seq.
+
+    The broker accepted the request, so its next expected sequence
+    is seq plus 1. Carries broker_next_seq so the caller threads
+    the sequence correctly instead of reusing the consumed one.
+    Raised for result-call failures and for result statuses other
+    than completed (running, failed, unknown), for a replay of a
+    failed or unknown record, for a disabled envelope, and when
+    the pre-fallback probe finds a broker record for the sequence.
+    """
+
+    def __init__(self, message, seq):
+        super().__init__(message)
+        self.broker_next_seq = seq + 1
+
+
+
 class Harness:
     def __init__(self, workdir, run_no, dry_run=False, activate=False,
                  message_prefix='S2-FLIP', program_variant='fill',
-                 chromium_set_value=False):
+                 chromium_set_value=False, transport='broker'):
         # Validate before mkdir: a bad program_variant must not
         # create a workdir before it raises.
         if program_variant not in ('fill', 'set_value'):
             raise ValueError(
                 'program_variant must be fill or set_value, got %r'
                 % (program_variant,))
+        if transport not in ('broker', 'oneshot'):
+            raise ValueError(
+                'transport must be broker or oneshot, got %r'
+                % (transport,))
+        self.transport = transport
         self.workdir = Path(workdir)
         self.workdir.mkdir(parents=True, exist_ok=True)
         self.run_no = run_no
@@ -343,7 +397,20 @@ class Harness:
             raise RuntimeError('broker request failed rc=%d: %s %s'
                                % (rc, out.strip()[:300], err.strip()[:300]))
         accepted = json.loads(out)
-        if accepted.get('ok') is not True or accepted.get('status') != 'accepted':
+        if accepted.get('ok') is not True:
+            raise RuntimeError('broker request not accepted: %s' % out[:300])
+        status = accepted.get('status')
+        if status == 'accepted':
+            pass  # fresh accept: fetch the result below
+        elif status in ('completed', 'failed', 'running', 'unknown'):
+            # Replay of a recorded response: the broker already ran
+            # this sequence (same sequence, same digest) and answers
+            # with the recorded status instead of 'accepted'. No
+            # result fetch is needed; the recorded response travels
+            # in this body. broker_code_exec decides what each
+            # status means.
+            return req_wall, 0.0, accepted
+        else:
             raise RuntimeError('broker request not accepted: %s' % out[:300])
         rc, out, err, res_wall = self.ssh(
             'python3 ' + LAPTOP_REMOTE + ' result --lease-file ' + lease
@@ -385,9 +452,206 @@ class Harness:
         except ValueError:
             return {'ok': rc == 0, 'raw': out[:300]}
 
+    def broker_code_exec(self, lease, seq, endpoint, program, intent):
+        """One code-exec send through the broker client (A5 migrate).
+
+        Same envelope the one-shot used: args ['code-exec',
+        '--endpoint', endpoint, '--program', '-', '--intent', intent]
+        with the program as stdin, delivered as one broker request
+        plus one result fetch. 'code-exec' is on the broker allowlist
+        (session_remote.py COMMANDS) and the driver unwraps the
+        result the same way the one-shot did (driver_result), so the
+        returned envelope has the same shape (ok, api_calls,
+        elapsed_ms, error, error_type, log). Returns (wall_ms,
+        envelope, next_seq). Raises _BrokerSendNotAccepted when the
+        request was refused before dispatch (the caller must still
+        probe before falling back; see _code_exec_send). Raises
+        _BrokerSendConsumed (a RuntimeError carrying
+        broker_next_seq seq plus 1) when the result call fails or
+        the broker reports a status other than completed
+        (running, failed, unknown): the request was accepted, so
+        the sequence is consumed and no fallback may run. A
+        replay with status completed returns its recorded
+        envelope; a replay with any other status raises the same
+        _BrokerSendConsumed. The driver runs the program only
+        when the relay env carries CU_CODE_EXEC=1; a disabled
+        envelope is returned, not raised, and the caller must
+        refuse the fallback for it.
+        """
+        try:
+            req_w, res_w, resp = self.broker(
+                lease, seq,
+                ['code-exec', '--endpoint', endpoint, '--program', '-',
+                 '--intent', intent],
+                stdin=program, timeout=120)
+        except RuntimeError as exc:
+            if (str(exc).startswith('broker request failed')
+                    or str(exc).startswith('broker request not accepted')):
+                raise _BrokerSendNotAccepted(str(exc)) from exc
+            # Any other broker failure escapes after the request was
+            # accepted (the result fetch failed): the sequence is
+            # consumed, so the caller must advance past it.
+            raise _BrokerSendConsumed(str(exc), seq) from exc
+        status = resp.get('status')
+        if status == 'completed':
+            envelope = self.driver_result(resp)
+            wall_ms = req_w + res_w
+            self.spans.append({'phase': 'act-broker-code-exec',
+                               'wall_ms': round(wall_ms, 1),
+                               'laptop_ms': (envelope.get('elapsed_ms')
+                                             if isinstance(envelope, dict)
+                                             else None)})
+            return wall_ms, envelope, seq + 1
+        if status == 'unknown':
+            raise _BrokerSendConsumed(
+                'broker code-exec result unknown for sequence %d: %s'
+                % (seq, str(resp)[:300]), seq)
+        if status == 'running':
+            raise _BrokerSendConsumed(
+                'broker code-exec result still running for sequence '
+                '%d after the result wait: %s' % (seq, str(resp)[:300]),
+                seq)
+        if status == 'failed':
+            raise _BrokerSendConsumed(
+                'broker code-exec result failed for sequence %d: %s'
+                % (seq, str(resp)[:300]), seq)
+        raise _BrokerSendConsumed(
+            'broker code-exec unexpected result status for sequence '
+            '%d: %s' % (seq, str(resp)[:300]), seq)
+
+    def _probe_request_record(self, lease, seq):
+        """Ask the broker what it knows about one sequence.
+
+        Runs `result --sequence N` once and returns (kind,
+        status). kind 'record' means the broker holds a record
+        for the sequence (status completed, failed, running, or
+        unknown, or an expired answer, which also proves the
+        sequence was consumed before). kind 'not_found' means the
+        broker knows no such request: the request was never
+        accepted. kind 'unavailable' means the probe itself could
+        not get an answer (broker down, lease bad, unparseable
+        output): the outcome is unknown, not proof of anything.
+        A running record makes the result call wait up to the
+        broker REQUEST_TIMEOUT (120s) before answering, so this
+        probe can take that long; that wait is the price of
+        knowing instead of guessing.
+        """
+        try:
+            rc, out, err, _wall = self.ssh(
+                'python3 ' + LAPTOP_REMOTE + ' result --lease-file '
+                + lease + ' --sequence %d' % seq,
+                'broker-result-probe-%d' % seq, timeout=130)
+        except Exception:
+            return ('unavailable', None)
+        text = ((out or '') + (err or '')).strip()
+        if rc == 0:
+            try:
+                body = json.loads(out)
+            except ValueError:
+                return ('unavailable', None)
+            status = body.get('status')
+            if body.get('ok') is True and status in (
+                    'completed', 'failed', 'running', 'unknown'):
+                return ('record', status)
+            return ('unavailable', None)
+        if 'not_found' in text:
+            return ('not_found', None)
+        if 'expired' in text:
+            return ('record', 'expired')
+        return ('unavailable', None)
+
+    def _code_exec_send(self, lease, seq, endpoint, program, intent,
+                        before_fallback=None):
+        """Send one program by the configured transport.
+
+        Returns (wall_ms, envelope, next_seq, transport). Default
+        transport is broker (lease given). One-shot runs when the
+        transport is forced to oneshot, or when no broker lease
+        exists (legacy callers and unit tests with no session).
+        Automatic one-shot fallback runs ONLY after two gates
+        pass, in order. First, the result probe: on a
+        pre-dispatch broker refusal (_BrokerSendNotAccepted),
+        _probe_request_record(lease, seq) must answer
+        'not_found', proving the broker holds no record for the
+        sequence. A record, an expired answer, or an unanswerable
+        probe all refuse the fallback: the send outcome is
+        unknown there, so the operator decides with a fresh run
+        number instead. 'broker_unavailable' in the request error
+        is NOT accepted as proof on its own: the broker client
+        maps any socket OSError, including a receive failure
+        after the request was transmitted, to that name. Second,
+        the recount: before_fallback, when given, re-runs
+        count_check for this message and refuses the fallback
+        when the count is not 0 (the broker attempt may already
+        have sent it) or when the count itself errors. The
+        recount runs for both variants, so a Chromium fill send,
+        which has no pre-send count, still gets one count before
+        any fallback send. A broker result failure, an unknown,
+        running, or failed result, or a disabled envelope (relay
+        lacks CU_CODE_EXEC=1) raises with no fallback: the flag
+        is a relay precondition, and silently routing around it
+        would hide it; rerun with --transport oneshot instead.
+        A forced oneshot transport is not a fallback, so no
+        recount runs there; it relies on the operator's fresh
+        run number (never reuse a run number) plus the set_value
+        pre-send count, which runs before this call.
+        """
+        if lease is None or self.transport == 'oneshot':
+            wall_ms, envelope = self.oneshot_code_exec(
+                endpoint, program, intent)
+            return wall_ms, envelope, seq, 'oneshot'
+        try:
+            wall_ms, envelope, next_seq = self.broker_code_exec(
+                lease, seq, endpoint, program, intent)
+        except _BrokerSendNotAccepted as exc:
+            kind, status = self._probe_request_record(lease, seq)
+            if kind == 'record':
+                raise _BrokerSendConsumed(
+                    'broker code-exec not accepted (%s) but the '
+                    'result probe for sequence %d found a broker '
+                    'record (status %s), so the send outcome is '
+                    'unknown; one-shot fallback NOT taken '
+                    'automatically, retry with a fresh run number '
+                    'after checking the message count'
+                    % (str(exc)[:200], seq, status), seq) from exc
+            if kind != 'not_found':
+                # The probe could not answer (broker down, lease
+                # bad): consumption is unproven either way, so the
+                # sequence is kept and the run records an unknown
+                # outcome instead of falling back blind.
+                raise RuntimeError(
+                    'broker code-exec not accepted (%s) and the '
+                    'result probe for sequence %d answered %s, so '
+                    'the send outcome is unknown; one-shot '
+                    'fallback NOT taken automatically, retry with '
+                    'a fresh run number after checking the message '
+                    'count'
+                    % (str(exc)[:200], seq, kind)) from exc
+            if before_fallback is not None:
+                before_fallback()
+            self.note('broker code-exec not accepted (%s); '
+                      'one-shot fallback, probe found no record '
+                      'for sequence %d'
+                      % (str(exc)[:200], seq))
+            wall_ms, envelope = self.oneshot_code_exec(
+                endpoint, program, intent)
+            return wall_ms, envelope, seq, 'broker-fallback-oneshot'
+        if (isinstance(envelope, dict)
+                and envelope.get('error_type') == 'disabled'):
+            raise _BrokerSendConsumed(
+                'broker code-exec disabled: relay lacks CU_CODE_EXEC=1; '
+                'one-shot fallback NOT taken automatically, rerun with '
+                '--transport oneshot as the documented recovery path',
+                seq)
+        return wall_ms, envelope, next_seq, 'broker'
+
     def oneshot_code_exec(self, endpoint, program, intent):
         """One code-exec send as a one-shot session-driver.
 
+        FALLBACK AND RECOVERY PATH, kept by the A5 gate: the broker
+        is the default send path, and this stays for the automatic
+        pre-dispatch fallback in _code_exec_send and for manual
+        recovery (--transport oneshot, or the relay restart drill).
         CU_CODE_EXEC=1 is set on this command line only: the flag is
         on for exactly this class's sends, nowhere else. The session
         ends when the JSONL stdin closes. Returns (wall_ms, envelope).
@@ -733,19 +997,22 @@ class Harness:
         except Exception:
             return False
 
-    def send_browser(self, browser, target_id, message):
-        """One-shot code-exec send + independent V12 for one browser.
+    def send_browser(self, browser, target_id, message, lease=None, seq=None):
+        """Broker code-exec send + independent V12 for one browser.
 
-        The pill is held for the whole send (W-PILLCDP): the activate
-        step, the program, and the V12 read. Best effort (see
-        cdp_pill_hold); the cdp.mjs hook is the fail-closed gate for
-        the actual input. Before the first visible step (activate),
-        the holder is re-checked: if the sleeper died after the
-        acquire and the daemon pruned the holder, the send aborts
-        with outcome aborted-pill-lost and no visible action runs
-        (H1, Redteam amend2). A failed acquire still runs the body
-        (best effort, unchanged): the re-check only applies when
-        the acquire reported held.
+        lease and seq carry the live broker session: with a lease the
+        send goes through the broker by default (see
+        _code_exec_send); without one (legacy callers, unit tests)
+        it uses the one-shot path. The pill is held for the whole
+        send (W-PILLCDP): the activate step, the program, and the
+        V12 read. Best effort (see cdp_pill_hold); the cdp.mjs hook
+        is the fail-closed gate for the actual input. Before the
+        first visible step (activate), the holder is re-checked: if
+        the sleeper died after the acquire and the daemon pruned the
+        holder, the send aborts with outcome aborted-pill-lost and
+        no visible action runs (H1, Redteam amend2). A failed
+        acquire still runs the body (best effort, unchanged): the
+        re-check only applies when the acquire reported held.
         """
         t_send = time.monotonic()
         with self.cdp_pill_hold() as held:
@@ -761,10 +1028,19 @@ class Harness:
                         'outcome': 'aborted-pill-lost',
                         'error': 'S2-flip pill holder gone before activate',
                         'wall_ms': round((time.monotonic() - t_send) * 1000.0, 1)}
-            return self._send_browser_inner(browser, target_id, message)
+            return self._send_browser_inner(browser, target_id, message,
+                                            lease=lease, seq=seq)
 
-    def _send_browser_inner(self, browser, target_id, message):
-        """One-shot code-exec send + independent V12 for one browser."""
+    def _send_browser_inner(self, browser, target_id, message,
+                            lease=None, seq=None):
+        """Broker code-exec send + independent V12 for one browser.
+
+        lease and seq carry the live broker session; the returned
+        dict carries broker_next_seq (the sequence after this send)
+        when a lease was given, so run() can thread the sequence
+        across browsers. Without a lease the send uses the one-shot
+        path and broker_next_seq is absent.
+        """
         cfg = BROWSERS[browser]
         endpoint = cfg['endpoint']
         variant = self.variant_for(browser)
@@ -791,9 +1067,29 @@ class Harness:
                 program = build_program_set_value(target_id, message)
             else:
                 program = build_program(target_id, message)
-            wall_ms, envelope = self.oneshot_code_exec(
-                endpoint, program,
-                'S2 flip run %d %s' % (self.run_no, browser))
+            def _recount_before_fallback():
+                # Second double-send gate, run immediately before
+                # any automatic one-shot fallback (both variants:
+                # fill has no pre-send count, so this is its only
+                # count). The pre-send count ran before the broker
+                # attempt; the broker attempt may have sent the
+                # message since, so only a fresh count proves the
+                # thread does not already hold it. Fail closed: a
+                # count above 0, or a count error (-1), refuses
+                # the fallback.
+                recount = self.count_check(endpoint, target_id, message)
+                count = recount.get('count', -1)
+                if count != 0:
+                    raise RuntimeError(
+                        'one-shot fallback refused: message already '
+                        'present or uncountable (count %s)' % (count,))
+
+            wall_ms, envelope, next_seq, transport = self._code_exec_send(
+                lease, seq, endpoint, program,
+                'S2 flip run %d %s' % (self.run_no, browser),
+                before_fallback=_recount_before_fallback)
+            if lease is not None:
+                out['broker_next_seq'] = next_seq
             completed = None
             if isinstance(envelope, dict):
                 for line in envelope.get('log') or []:
@@ -808,6 +1104,7 @@ class Harness:
                 'error_type': envelope.get('error_type') if isinstance(envelope, dict) else None,
                 'log': envelope.get('log') if isinstance(envelope, dict) else None,
                 'wall_ms': round(wall_ms, 1),
+                'transport': transport,
             }
             self.spans.append({'phase': 'act-' + browser,
                                'wall_ms': round(wall_ms, 1),
@@ -844,6 +1141,22 @@ class Harness:
             out['outcome'] = 'error'
             out['error'] = str(exc)[:400]
             out['wall_ms'] = round((time.monotonic() - t_send) * 1000.0, 1)
+            if lease is not None and 'broker_next_seq' not in out:
+                # Sequence after a failed send. A post-accept
+                # failure (result failure, unknown, running, or
+                # failed status, disabled envelope, probe-found
+                # record) consumed the sequence: the broker next
+                # is seq plus 1, carried on the exception, so the
+                # next browser does not reuse it and hit a
+                # conflict. A pre-dispatch fallback returns
+                # through the success path above with seq
+                # unchanged, so this branch keeps seq. A failure
+                # after a successful send (for example a V12
+                # error) already recorded broker_next_seq above;
+                # the 'not in out' guard keeps that value instead
+                # of overwriting it with seq.
+                out['broker_next_seq'] = getattr(
+                    exc, 'broker_next_seq', seq)
             return out
 
     def seed_scratch(self, browser):
@@ -883,6 +1196,7 @@ class Harness:
                    'activate': self.activate,
                    'message_prefix': self.message_prefix,
                    'program_variant': self.program_variant_label(browsers),
+                   'transport': self.transport,
                    'chromium_set_value': self.chromium_set_value,
                    'mux_baseline_ms': round(mux, 1), 'browsers': {}}
         scratch = {}
@@ -915,23 +1229,29 @@ class Harness:
                         self.note('run %d %s outcome %s: %s'
                                   % (self.run_no, browser, res.get('outcome'),
                                      res.get('error', '')))
+                # Sends run INSIDE the broker session (A5 migrate):
+                # the broker send is one request on this lease, so it
+                # must happen before broker_finish, not after it.
+                # The sequence threads across browsers: each send
+                # consumes one sequence number.
+                for browser in browsers:
+                    if browser not in routed:
+                        continue
+                    message = message_for(self.run_no, browser,
+                                          self.message_prefix)
+                    res = self.send_browser(browser, routed[browser],
+                                            message, lease=lease, seq=seq)
+                    seq = res.get('broker_next_seq', seq)
+                    results['browsers'][browser].update(res)
+                    if res.get('outcome') in ('error', 'failed-unverified'):
+                        self.note('run %d %s outcome %s: %s'
+                                  % (self.run_no, browser, res.get('outcome'),
+                                     res.get('error', '')))
             finally:
                 try:
                     self.broker_finish(lease)
                 except Exception as exc:
                     self.note('broker finish failed (ignored): %s' % exc)
-            # Sends: one-shot code-exec per browser, then V12.
-            for browser in browsers:
-                if browser not in routed:
-                    continue
-                message = message_for(self.run_no, browser,
-                                      self.message_prefix)
-                res = self.send_browser(browser, routed[browser], message)
-                results['browsers'][browser].update(res)
-                if res.get('outcome') in ('error', 'failed-unverified'):
-                    self.note('run %d %s outcome %s: %s'
-                              % (self.run_no, browser, res.get('outcome'),
-                                 res.get('error', '')))
             # Scored wall stops here: both V12 verifies are done.
             results['wall_ms'] = round((time.monotonic() - t0) * 1000.0, 1)
         finally:
@@ -1051,6 +1371,12 @@ def main(argv=None):
     ap.add_argument('--chromium-set-value', action='store_true',
                     help='C5-S2-REOPEN: landed set_value program on '
                          'Chromium only; Brave already uses set_value')
+    ap.add_argument('--transport', choices=['broker', 'oneshot'],
+                    default='broker',
+                    help='send transport (A5 migrate): broker is the '
+                         'default; oneshot forces the one-shot '
+                         'session-driver fallback/recovery path for '
+                         'the whole run')
     ap.add_argument('--workdir', required=True)
     args = ap.parse_args(argv)
     browsers = ['brave', 'chromium'] if args.browser == 'both' else [args.browser]
@@ -1058,7 +1384,8 @@ def main(argv=None):
                       activate=args.activate,
                       message_prefix=args.message_prefix,
                       program_variant='set_value' if args.set_value else 'fill',
-                      chromium_set_value=args.chromium_set_value)
+                      chromium_set_value=args.chromium_set_value,
+                      transport=args.transport)
     results = harness.run(browsers)
     out_path = Path(args.workdir) / ('run-%d.json' % args.run)
     out_path.write_text(json.dumps(results, indent=2, ensure_ascii=False) + '\n')

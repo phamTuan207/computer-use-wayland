@@ -171,7 +171,7 @@ The tree is scripts/cursor_session.py (344 lines at HEAD
 What A3 does NOT remove: the driver itself
 (scripts/session_driver.py relay, lines 59-129, which runs
 inside the tree today), the broker (scripts/session_remote.py,
-which spawns the tree at _launch, line 522, with argv
+which spawns the tree at _launch, line 520, with argv
 `[python, CU, 'session', '--', python, CU, 'session-driver']`),
 the indicator module (scripts/indicator.py, the pill renderer
 the guardian uses), the cancel latch module above, or the
@@ -191,24 +191,32 @@ process).
   cursor_session.stop(env) at line 3105. `recover` calls
   cursor_session.recover(env) at line 3110. `cancel` latches
   and then calls cursor_session.request_stop() at line 3114.
-- scripts/session_remote.py line 522 (_launch): the broker
+- scripts/session_remote.py line 520 (_launch): the broker
   spawns the tree for every broker task. This is the only
   production spawner of supervise left after step 8 deleted
   the per-batch spawn in first_action.py.
-- scripts/cu.py line 3458-3459: stop_session_on_error calls
+- scripts/cu.py line 3460: stop_session_on_error calls
   cursor_session.request_stop(CU_SESSION_TOKEN) when a driver
   command fails.
 - scripts/cancel_hotkey.py lines 219-220: resume calls
   cursor_session.request_stop().
 - scripts/activate-cursor-guard.py lines 62-63, scripts/
   activate-session-backend.py line 72, scripts/setup.py lines
-  314-315, scripts/visuals.py lines 242-243: these hold
-  cursor_session.owner_lock() directly (activation and setup
-  paths). They are lock holders, not tree callers, and they
-  must keep working after A3: the lock file name
-  (STATE/cursor.lock) and the flock semantics must be
-  preserved by whatever the driver holds instead, or these
-  four call sites must be migrated in the same commit.
+  314-315, scripts/visuals.py lines 242-243, scripts/
+  sync-installed.py line 115: these hold
+  cursor_session.owner_lock() directly (activation, setup, and
+  installed-tree sync paths). The fifth holder is easy to miss:
+  sync-installed.py loads cursor_session dynamically with
+  importlib (lines 103-106) and holds the lock inside
+  _session_lock (line 115, used at line 1259), so a plain grep
+  for `import cursor_session` never finds it. They are lock
+  holders, not tree callers, and they must keep working after
+  A3: the lock file name (STATE/cursor.lock) and the flock
+  semantics must be preserved by whatever the driver holds
+  instead, or these five call sites must be migrated in the
+  same commit. The three owner_lock() calls inside
+  cursor_session.py itself (lines 104, 125, 142) are NOT
+  counted here: they are tree-internal and die with the tree.
 - scripts/session_cleanup.py lines 5-6 and the guardian check:
   documents that the guardian cleans up, and checks for a
   leftover guardian process. After A3 it must check for a
@@ -255,15 +263,15 @@ commit hash, and a time log, before the deletion executes:
    holds all three on a live run (A3 gate, B4 lift)". The
    demonstration is item 2, on a live run, not a unit test.
 4. No live runner depends on the tree: the broker _launch path
-   (session_remote.py line 522) is rewired to the driver-held
+   (session_remote.py line 520) is rewired to the driver-held
    start in the same commit, and a live broker batch runs end
    to end on the rewired path before the deletion lands (same
    shape as the step 8 live smoke: at least one batch, observe
    plus click plus type, with the result in the log).
-5. The four direct owner_lock holders (activate-cursor-guard,
-   activate-session-backend, setup, visuals) are verified
-   against the driver-held lock in the same commit: either
-   they are unchanged because the lock file and flock
+5. The five direct owner_lock holders (activate-cursor-guard,
+   activate-session-backend, setup, visuals, sync-installed) are
+   verified against the driver-held lock in the same commit:
+   either they are unchanged because the lock file and flock
    semantics are preserved, or they are migrated and their
    tests pass.
 
@@ -343,9 +351,13 @@ reconstruction step is needed.
 
 ## 4. A4: delete the overlay daemon server (keep pill visibility)
 
+Pointer: the coordinates in this section were re-measured at
+HEAD ed4fcd4; the corrected table lives in section 9, and the
+numbers below now match it.
+
 ### 4.1 What it removes
 
-The server is scripts/overlay.py (613 lines at HEAD 5a8c29d).
+The server is scripts/overlay.py (693 lines at HEAD ed4fcd4).
 Exact symbols:
 
 - State paths, lines 36-44: BASE
@@ -362,25 +374,26 @@ Exact symbols:
   until the driver-owned pill replaces them, because
   session_cleanup.py reads holders.json.
 - Holder accounting: _log, line 48; _label_for, line 62;
-  _prepare, line 69; _holders_lock, line 75; load_holders,
-  line 86; save_holders, line 94; _holder_key, line 102;
-  add_holder, line 111; remove_holder, line 127;
-  prune_dead_holders, line 153; session_live, line 173;
-  session_label, line 190.
-- Daemon, line 217: _spawn_native, line 224 (spawns
+  _prepare, line 71; _holders_lock, line 77; load_holders,
+  line 88; save_holders, line 96; _holder_key, line 104;
+  add_holder, line 113; remove_holder, line 129;
+  prune_dead_holders, line 157; session_live, line 177;
+  session_label, line 194; wayland_env, line 202.
+- Daemon, line 238: _spawn_native, line 245 (spawns
   indicator.Native, which renders the pill); _close_native,
-  line 230; _ensure_native, line 239; _show_label, line 264;
-  apply_holders, line 288; _monitor, line 328 (polls every
+  line 251; _ensure_native, line 260; _show_label, line 285;
+  apply_holders, line 309; status_reply, line 349; _monitor,
+  line 361 (polls every
   2.0s, stops the daemon after 3 empty polls with no holders);
-  serve, line 344 (binds the Unix socket, chmod 0600,
+  serve, line 377 (binds the Unix socket, chmod 0600,
   listens, writes DAEMON_FILE with pid and start time).
-- Client side: _daemon_running, line 432; _send_socket, line
-  444; _ensure_daemon, line 458 (spawns `overlay.py daemon`
+- Client side: _daemon_running, line 463; _send_socket, line
+  475; _ensure_daemon, line 489 (spawns `overlay.py daemon`
   as a detached process, waits up to 15s for a status reply).
-- CLI: cmd_acquire, line 494; cmd_release, line 521;
-  cmd_status, line 538; cmd_stop, line 553; cmd_daemon, line
-  570; hold, line 576 (context manager that shells out to
-  acquire and release); main, line 589 (acquire, release,
+- CLI: cmd_acquire, line 525; cmd_release, line 570;
+  cmd_status, line 587; cmd_stop, line 608; cmd_daemon, line
+  625; hold, line 631 (context manager that shells out to
+  acquire and release); main, line 659 (acquire, release,
   status, stop, daemon subcommands).
 - The per-batch tax this deletion removes is real: overlay
   acquire costs 315-349ms per batch (final direction A4 row,
@@ -545,12 +558,19 @@ fight over the screen.
 
 ## 5. A5: delete one-shot SSH as the default transport (keep it as fallback and recovery)
 
+Pointer: the line numbers in 5.1 describe the tree BEFORE
+the B2-4 migrate (HEAD 0400e86). The current post-migrate
+numbers live in section 9 (9.2, updated again in 9.4 by the
+fix round): broker_code_exec 455, _code_exec_send 563,
+oneshot_code_exec 648, send call site 1087, file 1400 lines.
+
 ### 5.1 What it removes
 
 A5 as MODIFY, final direction section 1: the word "only" is
 REJECTED. This is not deletion of SSH. It is deletion of
 one-shot SSH as the DEFAULT transport, in favor of
-multiplexed SSH plus broker RPC. What is removed:
+multiplexed SSH plus broker RPC. What is removed (all line
+numbers in this subsection are pre-migrate):
 
 - scripts/s2_flip_live.py oneshot_code_exec(endpoint, program,
   intent), lines 292-322. Every code-exec send for the S2 flip
@@ -622,7 +642,11 @@ What A5 does NOT remove, and must never remove:
   _client_start_with_wait, line 1494 (step 8, waits up to
   300s on busy with 5s polls and a fresh start_id);
   _client_finish, line 1563; the `start` subcommand, line
-  1591, and the `request` subcommand, line 1599. The broker
+  1591, and the `request` subcommand, line 1599. Note the
+  harness does not call those Python functions: it shells
+  the broker CLI subcommands (start, request, result,
+  finish) directly, and broker_start has no busy-wait (it
+  runs the start subcommand once, fail fast). The broker
   path is the replacement for the one-shot loop, and it is
   already proven: PROBE-S1 (commit 1af7330) ran one live
   batch end to end over the broker from the VM, 12.110s
@@ -871,3 +895,112 @@ its commit:
   docs/layer0-cbexec-contract.md (lines 460-480).
 - No code changed in this task. No live run made. No browser
   work done. The only file written is this plan.
+
+## 9. B2-4 correction, 2026-11-23 00:15 +07 (worker B2-4, HEAD ed4fcd4)
+
+Section 8 above stays as the prep task's own record (measured at
+HEAD 5a8c29d). This section corrects the live design sections
+above to HEAD ed4fcd4, measured again with grep in the B2-4 task.
+Originally measured at 0400e86, which was the HEAD at 00:09;
+re-checked at ed4fcd4, and no cited file changed between the
+two, so every value below holds at ed4fcd4 (councils 1-3 and
+the redteam re-measured all of them at ed4fcd4).
+No em dash or en dash anywhere in this file. No personal info.
+
+### 9.1 Holder list: 4 becomes 5
+
+Sections 3.2 and 3.3 item 5 above now say five direct owner_lock
+holders. The fifth is scripts/sync-installed.py line 115: lock =
+session.owner_lock() inside _session_lock, used at line 1259. It
+was missed because sync-installed.py loads cursor_session
+dynamically with importlib (lines 103-106), so a grep for
+`import cursor_session` never finds it. The five, re-measured at
+HEAD ed4fcd4:
+
+- scripts/activate-cursor-guard.py line 63
+- scripts/activate-session-backend.py line 72
+- scripts/setup.py line 314
+- scripts/visuals.py line 242
+- scripts/sync-installed.py line 115 (importlib load, _session_lock)
+
+NOT counted: the three owner_lock() calls inside
+cursor_session.py itself (lines 104, 125, 142). They are
+tree-internal and die with the tree. A future grep that finds
+eight call sites has found five external holders plus three
+internal ones, not eight holders.
+
+### 9.2 Coordinates re-measured at HEAD ed4fcd4 (old prep value first)
+
+- cursor_session.py, 344 lines, UNCHANGED from prep: prepare 22,
+  request_stop 27, restore 39, owner_lock 73, drain_input 87,
+  SessionVisuals 93, recover 103, stop 120, guardian 136,
+  stop_group 208, terminate_driver 220, supervise 228.
+- session_remote.py _launch: prep 522, NOW 520. Fixed in
+  sections 3.1, 3.2, 3.3 item 4 above. Client functions
+  UNCHANGED: _client_start 1456, _client_start_with_wait 1494,
+  _client_finish 1563, start subcommand 1591, request subcommand
+  1599. File is 1681 lines.
+- cu.py stop_session_on_error request_stop: prep 3458-3459, NOW
+  3460. Fixed in section 3.2 above. Other call sites UNCHANGED:
+  stop 3105, supervise 3109, recover 3110, request_stop 3114.
+- cancel_hotkey.py UNCHANGED: latch_present 59, latch 120,
+  cancellation_status 157, cancellation_message 197, resume
+  unlink 222, request_stop call 220.
+- first_action.py overlay gate UNCHANGED: acquire_overlay 116,
+  overlay_visible 150, release_overlay 167, import overlay 978.
+- session_cleanup.py UNCHANGED: guardian doc lines 5-6, holder
+  check lines 62-69.
+- overlay.py DRIFTED HARD: prep 613 lines, NOW 693 lines.
+  _log 48, _label_for 62, _prepare 71, _holders_lock 77,
+  load_holders 88, save_holders 96, _holder_key 104, add_holder
+  113, remove_holder 129, prune_dead_holders 157, session_live
+  177, session_label 194, wayland_env 202, Daemon 238 (prep
+  217), _spawn_native 245, _close_native 251, _ensure_native 260,
+  _show_label 285, apply_holders 309, status_reply 349,
+  _monitor 361, serve 377 (prep 344), _daemon_running 463,
+  _send_socket 475, _ensure_daemon 489 (prep 458), cmd_acquire
+  525 (prep 494), cmd_release 570, cmd_status 587, cmd_stop 608,
+  cmd_daemon 625, hold 631, main 659. Any A4 worker must use
+  these numbers, not the section 4 numbers above.
+- ssh_mux.py run 303, fresh-fallback contract docstring 42-47,
+  via values 309-310, 320, 337. File is 403 lines. UNCHANGED.
+- s2_flip_live.py at HEAD 0400e86 (BEFORE the B2-4 migrate):
+  oneshot_code_exec 388, call site in _send_browser_inner 794
+  (prep said 292-322 and 531). AFTER the B2-4 migrate in the
+  worktree (uncommitted): broker_code_exec 423,
+  _code_exec_send 467, oneshot_code_exec 506, send call site 928.
+  File is 1230 lines after the migrate. AFTER the B2-4 fix round
+  (section 9.4): broker_code_exec 455, _code_exec_send 563,
+  oneshot_code_exec 648, send call site 1087. File is 1400
+  lines after the fix round.
+
+### 9.3 What was changed in this file by B2-4
+
+- Sections 3.1, 3.2, 3.3: holder list 4 to 5 (sync-installed.py
+  line 115 added, with the importlib note and the internal-use
+  exclusion), _launch 522 to 520, cu.py 3458-3459 to 3460.
+- This section 9 appended. Section 8 left untouched: it is the
+  prep task's evidence record at HEAD 5a8c29d, and it stays true
+  as a record of that moment.
+
+### 9.4 Fix round (B2-4 fix worker, 2026-11-23, base ed4fcd4)
+
+- Section 4.1 overlay numbers corrected in place to the
+  section 9.2 table (693 lines, Daemon 238, serve 377,
+  _ensure_daemon 489, cmd_acquire 525, cmd_release 570,
+  cmd_status 587, cmd_stop 608, cmd_daemon 625, hold 631,
+  main 659), with a pointer at the top of sections 4 and 5
+  to this section.
+- Section 5.1 marked as pre-migrate numbers, with a pointer
+  to the current numbers in 9.2 above. Section 5.2
+  clarified: the harness shells the broker CLI subcommands
+  (start, request, result, finish) directly and never calls
+  the session_remote.py Python functions _client_start,
+  _client_start_with_wait, or _client_finish.
+- Importlib range corrected to 103-106 (sections 3.2, 9.1).
+- s2_flip_live.py numbers after the fix round: broker_code_exec
+  455, _code_exec_send 563, oneshot_code_exec 648, send call
+  site 1087, file 1400 lines. The fix commit hash is reported
+  to the coordinator in the fix report (a commit cannot
+  contain its own hash); the evidence contract and results
+  live in the worker log, section 10.

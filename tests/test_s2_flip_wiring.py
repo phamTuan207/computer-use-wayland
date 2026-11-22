@@ -811,5 +811,650 @@ class ProgramShapeTests(unittest.TestCase):
         self.assertTrue(decision['fell_through'])
 
 
+class BrokerCodeExecTests(unittest.TestCase):
+    # A5 migrate: the S2 flip send goes through the broker client by
+    # default, with the one-shot kept as fallback (pre-dispatch
+    # refusal only) and recovery. No SSH runs: broker, oneshot,
+    # count_check, v12_check and ssh are all replaced on the
+    # instance. The pill hold then fails fast best-effort.
+    ENVELOPE = {'ok': True, 'api_calls': 3, 'elapsed_ms': 95,
+                'error': None, 'error_type': None,
+                'log': ['dom_act ok True completed 4 ms 95 error None']}
+
+    def _harness(self, tmp, **kwargs):
+        harness = s2_flip_live.Harness(tmp, 1, **kwargs)
+        harness.ssh = lambda *a, **k: (1, '', 'no ssh in test', 0.0)
+        harness.count_calls = []
+
+        def _count(endpoint, target_id, message):
+            harness.count_calls.append((endpoint, target_id, message))
+            return {'count': 0, 'items': []}
+
+        harness.count_check = _count
+        harness.v12_check = lambda e, t, m: {
+            'found': True, 'attempts': 1, 'ms': 3.0}
+        # Default probe answer: the broker holds no record, so a
+        # pre-dispatch refusal may fall back. Tests that need a
+        # record, or an unanswerable probe, override this.
+        harness._probe_request_record = lambda lease, seq: (
+            'not_found', None)
+        return harness
+
+    def _broker_resp(self, envelope, status='completed'):
+        return {'ok': True, 'status': status,
+                'response': {'returncode': 0, 'session_continues': True,
+                             'result': envelope}}
+
+    def test_broker_code_exec_sends_code_exec_envelope(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            harness = self._harness(tmp)
+            seen = {}
+
+            def _broker(lease, seq, args, stdin='', image_policy='auto',
+                        timeout=120):
+                seen['lease'] = lease
+                seen['seq'] = seq
+                seen['args'] = args
+                seen['stdin'] = stdin
+                return (10.0, 20.0, self._broker_resp(self.ENVELOPE))
+
+            harness.broker = _broker
+            wall, envelope, nxt = harness.broker_code_exec(
+                '/tmp/x.lease', 3, 'http://127.0.0.1:9223',
+                'PROGRAM', 'intent-1')
+            self.assertEqual(seen['args'],
+                             ['code-exec', '--endpoint',
+                              'http://127.0.0.1:9223', '--program', '-',
+                              '--intent', 'intent-1'])
+            self.assertEqual(seen['stdin'], 'PROGRAM')
+            self.assertEqual(seen['seq'], 3)
+            self.assertEqual(wall, 30.0)
+            self.assertEqual(envelope, self.ENVELOPE)
+            self.assertEqual(nxt, 4)
+
+    def test_send_browser_with_lease_uses_broker_by_default(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            harness = self._harness(tmp)
+            seen = {}
+
+            def _broker(lease, seq, args, stdin='', image_policy='auto',
+                        timeout=120):
+                seen['broker_called'] = True
+                return (10.0, 20.0, self._broker_resp(self.ENVELOPE))
+
+            def _oneshot(endpoint, program, intent):
+                raise AssertionError('oneshot must not run on broker send')
+
+            harness.broker = _broker
+            harness.oneshot_code_exec = _oneshot
+            out = harness.send_browser(
+                'brave', 'TABID123', 'S2-BRAVE-B1-R1-BRAVE-IGNORE-TEST',
+                lease='/tmp/x.lease', seq=3)
+            self.assertTrue(seen.get('broker_called'))
+            self.assertEqual(out['program']['transport'], 'broker')
+            self.assertEqual(out['broker_next_seq'], 4)
+            self.assertEqual(out['outcome'], 'sent')
+
+    def test_pre_dispatch_refusal_falls_back_to_oneshot_once(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            harness = self._harness(tmp)
+            seen = {}
+
+            def _broker(lease, seq, args, stdin='', image_policy='auto',
+                        timeout=120):
+                raise RuntimeError('broker request not accepted: busy')
+
+            def _oneshot(endpoint, program, intent):
+                seen['oneshot_calls'] = seen.get('oneshot_calls', 0) + 1
+                return (95.0, dict(self.ENVELOPE))
+
+            harness.broker = _broker
+            harness.oneshot_code_exec = _oneshot
+            out = harness.send_browser(
+                'brave', 'TABID123', 'S2-BRAVE-B1-R1-BRAVE-IGNORE-TEST',
+                lease='/tmp/x.lease', seq=3)
+            self.assertEqual(seen.get('oneshot_calls'), 1)
+            self.assertEqual(out['program']['transport'],
+                             'broker-fallback-oneshot')
+            self.assertEqual(out['broker_next_seq'], 3)
+            self.assertEqual(out['outcome'], 'sent')
+            # Pre-send count plus the recount before fallback.
+            self.assertEqual(len(harness.count_calls), 2)
+
+    def test_result_failure_never_falls_back(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            harness = self._harness(tmp)
+            seen = {}
+
+            def _broker(lease, seq, args, stdin='', image_policy='auto',
+                        timeout=120):
+                raise RuntimeError('broker result failed rc=1: timeout')
+
+            def _oneshot(endpoint, program, intent):
+                seen['oneshot_calls'] = seen.get('oneshot_calls', 0) + 1
+                return (95.0, dict(self.ENVELOPE))
+
+            harness.broker = _broker
+            harness.oneshot_code_exec = _oneshot
+            out = harness.send_browser(
+                'brave', 'TABID123', 'S2-BRAVE-B1-R1-BRAVE-IGNORE-TEST',
+                lease='/tmp/x.lease', seq=3)
+            self.assertNotIn('oneshot_calls', seen)
+            self.assertEqual(out['outcome'], 'error')
+            self.assertIn('broker result failed', out['error'])
+            self.assertNotIn('program', out)
+            # Post-accept failure: the broker consumed sequence 3,
+            # so the next sequence is 4, not 3.
+            self.assertEqual(out['broker_next_seq'], 4)
+
+    def test_disabled_envelope_never_falls_back(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            harness = self._harness(tmp)
+            seen = {}
+            disabled = dict(self.ENVELOPE, ok=False,
+                            error='code execution is disabled; '
+                                  'set CU_CODE_EXEC=1',
+                            error_type='disabled', log=[])
+
+            def _broker(lease, seq, args, stdin='', image_policy='auto',
+                        timeout=120):
+                return (10.0, 20.0, self._broker_resp(disabled))
+
+            def _oneshot(endpoint, program, intent):
+                seen['oneshot_calls'] = seen.get('oneshot_calls', 0) + 1
+                return (95.0, dict(self.ENVELOPE))
+
+            harness.broker = _broker
+            harness.oneshot_code_exec = _oneshot
+            out = harness.send_browser(
+                'brave', 'TABID123', 'S2-BRAVE-B1-R1-BRAVE-IGNORE-TEST',
+                lease='/tmp/x.lease', seq=3)
+            self.assertNotIn('oneshot_calls', seen)
+            self.assertEqual(out['outcome'], 'error')
+            self.assertIn('CU_CODE_EXEC', out['error'])
+            self.assertIn('--transport oneshot', out['error'])
+            # Disabled is post-accept: the broker ran the program
+            # and consumed sequence 3, so the next sequence is 4.
+            self.assertEqual(out['broker_next_seq'], 4)
+
+    def test_oneshot_transport_forces_oneshot_with_lease(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            harness = self._harness(tmp, transport='oneshot')
+
+            def _broker(*args, **kwargs):
+                raise AssertionError('broker must not run on oneshot')
+
+            def _oneshot(endpoint, program, intent):
+                return (95.0, dict(self.ENVELOPE))
+
+            harness.broker = _broker
+            harness.oneshot_code_exec = _oneshot
+            out = harness.send_browser(
+                'brave', 'TABID123', 'S2-BRAVE-B1-R1-BRAVE-IGNORE-TEST',
+                lease='/tmp/x.lease', seq=3)
+            self.assertEqual(out['program']['transport'], 'oneshot')
+            self.assertEqual(out['broker_next_seq'], 3)
+            self.assertEqual(out['outcome'], 'sent')
+
+    def test_invalid_transport_raises(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            with self.assertRaisesRegex(ValueError, 'transport'):
+                s2_flip_live.Harness(tmp, 0, transport='pigeon')
+
+    def test_cli_maps_transport(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            created = {}
+            real_harness = s2_flip_live.Harness
+
+            class _SpyHarness(real_harness):
+                def __init__(self, *args, **kwargs):
+                    created.update(kwargs)
+                    super().__init__(*args, **kwargs)
+
+                def run(self, browsers):
+                    return {'wall_ms': 1.0, 'browsers': {}}
+
+            with patch.object(s2_flip_live, 'Harness', _SpyHarness):
+                rc = s2_flip_live.main(['--run', '1', '--workdir', tmp])
+            self.assertEqual(rc, 0)
+            self.assertEqual(created.get('transport'), 'broker')
+            created.clear()
+            with patch.object(s2_flip_live, 'Harness', _SpyHarness):
+                rc = s2_flip_live.main(['--run', '2', '--transport',
+                                        'oneshot', '--workdir', tmp])
+            self.assertEqual(rc, 0)
+            self.assertEqual(created.get('transport'), 'oneshot')
+
+
+class BrokerProbeRecountTests(unittest.TestCase):
+    # Fix round for the 4 B2-4 reviews: the probe before fallback,
+    # the post-accept sequence advance, the real broker() path and
+    # its status handling, and the recount before fallback. No SSH
+    # runs: broker, oneshot, count_check, v12_check and ssh are all
+    # replaced on the instance, except the real-broker tests, which
+    # replace ssh with a fake that answers the broker CLI calls.
+    ENVELOPE = {'ok': True, 'api_calls': 3, 'elapsed_ms': 95,
+                'error': None, 'error_type': None,
+                'log': ['dom_act ok True completed 4 ms 95 error None']}
+
+    def _harness(self, tmp, **kwargs):
+        harness = s2_flip_live.Harness(tmp, 1, **kwargs)
+        harness.ssh = lambda *a, **k: (1, '', 'no ssh in test', 0.0)
+        harness.count_calls = []
+
+        def _count(endpoint, target_id, message):
+            harness.count_calls.append((endpoint, target_id, message))
+            return {'count': 0, 'items': []}
+
+        harness.count_check = _count
+        harness.v12_check = lambda e, t, m: {
+            'found': True, 'attempts': 1, 'ms': 3.0}
+        harness._probe_request_record = lambda lease, seq: (
+            'not_found', None)
+        return harness
+
+    def _broker_resp(self, envelope, status='completed'):
+        return {'ok': True, 'status': status,
+                'response': {'returncode': 0, 'session_continues': True,
+                             'result': envelope}}
+
+    def _send(self, harness, browser, seq=3):
+        return harness.send_browser(
+            browser, 'TABID123',
+            'S2-BRAVE-B1-R1-%s-IGNORE-TEST' % browser.upper(),
+            lease='/tmp/x.lease', seq=seq)
+
+    def test_two_browser_disabled_then_broker_seq_advances(self):
+        # C1 F1, C2 F5: a first-browser disabled envelope is
+        # post-accept, so the broker consumed sequence 3 and the
+        # second browser must use 4. The fake broker models
+        # accept-time consumption: reusing a sequence with a
+        # different program raises conflict.
+        with tempfile.TemporaryDirectory() as tmp:
+            harness = self._harness(tmp)
+            seen = {'oneshot_calls': 0}
+            consumed = {}
+
+            def _broker(lease, seq, args, stdin='', image_policy='auto',
+                        timeout=120):
+                if seq in consumed and consumed[seq] != stdin:
+                    raise RuntimeError(
+                        'broker request failed rc=1: conflict')
+                if seq in consumed:
+                    return (10.0, 20.0,
+                            self._broker_resp(self.ENVELOPE))
+                consumed[seq] = stdin
+                if seq == 3:
+                    disabled = dict(self.ENVELOPE, ok=False,
+                                    error='code execution is disabled; '
+                                          'set CU_CODE_EXEC=1',
+                                    error_type='disabled', log=[])
+                    return (10.0, 20.0, self._broker_resp(disabled))
+                return (10.0, 20.0, self._broker_resp(self.ENVELOPE))
+
+            def _oneshot(endpoint, program, intent):
+                seen['oneshot_calls'] += 1
+                return (95.0, dict(self.ENVELOPE))
+
+            harness.broker = _broker
+            harness.oneshot_code_exec = _oneshot
+            brave = self._send(harness, 'brave', seq=3)
+            self.assertEqual(brave['outcome'], 'error')
+            self.assertIn('CU_CODE_EXEC', brave['error'])
+            self.assertEqual(brave['broker_next_seq'], 4)
+            chromium = self._send(
+                harness, 'chromium',
+                seq=brave['broker_next_seq'])
+            self.assertEqual(chromium['outcome'], 'sent')
+            self.assertEqual(chromium['program']['transport'], 'broker')
+            self.assertEqual(chromium['broker_next_seq'], 5)
+            self.assertEqual(seen['oneshot_calls'], 0)
+
+    def test_probe_record_found_refuses_fallback(self):
+        # C2 F1, RT F1: the request call fails after the broker
+        # accepted, and the probe finds the record, so no
+        # fallback runs and the sequence advances past 3.
+        with tempfile.TemporaryDirectory() as tmp:
+            harness = self._harness(tmp)
+            seen = {}
+
+            def _broker(*args, **kwargs):
+                raise RuntimeError(
+                    'broker request failed rc=1: ssh lost')
+
+            def _oneshot(endpoint, program, intent):
+                seen['oneshot_calls'] = seen.get('oneshot_calls', 0) + 1
+                return (95.0, dict(self.ENVELOPE))
+
+            harness.broker = _broker
+            harness.oneshot_code_exec = _oneshot
+            harness._probe_request_record = lambda lease, seq: (
+                'record', 'completed')
+            out = self._send(harness, 'brave')
+            self.assertNotIn('oneshot_calls', seen)
+            self.assertEqual(out['outcome'], 'error')
+            self.assertIn('NOT taken', out['error'])
+            self.assertEqual(out['broker_next_seq'], 4)
+
+    def test_probe_not_found_allows_fallback(self):
+        # The probe proves no record exists, so the fallback runs
+        # once and the sequence stays 3 (nothing consumed it).
+        with tempfile.TemporaryDirectory() as tmp:
+            harness = self._harness(tmp)
+            seen = {}
+
+            def _broker(*args, **kwargs):
+                raise RuntimeError('broker request not accepted: busy')
+
+            def _oneshot(endpoint, program, intent):
+                seen['oneshot_calls'] = seen.get('oneshot_calls', 0) + 1
+                return (95.0, dict(self.ENVELOPE))
+
+            harness.broker = _broker
+            harness.oneshot_code_exec = _oneshot
+            out = self._send(harness, 'brave')
+            self.assertEqual(seen.get('oneshot_calls'), 1)
+            self.assertEqual(out['program']['transport'],
+                             'broker-fallback-oneshot')
+            self.assertEqual(out['broker_next_seq'], 3)
+            self.assertEqual(out['outcome'], 'sent')
+
+    def test_probe_unavailable_refuses_fallback(self):
+        # The probe cannot answer (broker down mid-run): the
+        # outcome is unknown, so no fallback runs, and the
+        # sequence is kept because consumption is unproven.
+        with tempfile.TemporaryDirectory() as tmp:
+            harness = self._harness(tmp)
+            seen = {}
+
+            def _broker(*args, **kwargs):
+                raise RuntimeError(
+                    'broker request failed rc=1: broker_unavailable')
+
+            def _oneshot(endpoint, program, intent):
+                seen['oneshot_calls'] = seen.get('oneshot_calls', 0) + 1
+                return (95.0, dict(self.ENVELOPE))
+
+            harness.broker = _broker
+            harness.oneshot_code_exec = _oneshot
+            harness._probe_request_record = lambda lease, seq: (
+                'unavailable', None)
+            out = self._send(harness, 'brave')
+            self.assertNotIn('oneshot_calls', seen)
+            self.assertEqual(out['outcome'], 'error')
+            self.assertIn('NOT taken', out['error'])
+            self.assertEqual(out['broker_next_seq'], 3)
+
+    def test_real_broker_replay_completed_accepted(self):
+        # RT F2: the real broker() path, with ssh faked. A request
+        # answered with status completed is a replay of a recorded
+        # response, not a refusal: the envelope returns, the
+        # sequence advances, and no result fetch runs.
+        with tempfile.TemporaryDirectory() as tmp:
+            harness = self._harness(tmp)
+            fake = _FakeBrokerSSH(
+                json.dumps(self._broker_resp(self.ENVELOPE,
+                                             status='completed')))
+            harness.ssh = fake
+            wall, envelope, nxt = harness.broker_code_exec(
+                '/tmp/x.lease', 3, 'http://127.0.0.1:9223',
+                'PROGRAM', 'intent-1')
+            self.assertEqual(envelope, self.ENVELOPE)
+            self.assertEqual(nxt, 4)
+            self.assertEqual(wall, 10.0)
+            labels = [label for label, _cmd in fake.commands]
+            self.assertTrue(any(l.startswith('broker-request-')
+                                for l in labels))
+            self.assertFalse(any(l.startswith('broker-result-')
+                                 for l in labels))
+
+    def test_real_broker_replay_failed_raises_with_next_seq(self):
+        # A replay with status failed is a terminal driver
+        # failure, not a refusal and not an envelope to return.
+        with tempfile.TemporaryDirectory() as tmp:
+            harness = self._harness(tmp)
+            fake = _FakeBrokerSSH(
+                json.dumps(self._broker_resp(self.ENVELOPE,
+                                             status='failed')))
+            harness.ssh = fake
+            with self.assertRaises(s2_flip_live._BrokerSendConsumed) as ctx:
+                harness.broker_code_exec(
+                    '/tmp/x.lease', 3, 'http://127.0.0.1:9223',
+                    'PROGRAM', 'intent-1')
+            self.assertEqual(ctx.exception.broker_next_seq, 4)
+            self.assertIn('failed', str(ctx.exception))
+
+    def test_result_running_raises_with_next_seq(self):
+        # RT F3: a result still running after the wait is an
+        # unknown outcome, not an empty envelope.
+        with tempfile.TemporaryDirectory() as tmp:
+            harness = self._harness(tmp)
+            seen = {}
+
+            def _broker(lease, seq, args, stdin='', image_policy='auto',
+                        timeout=120):
+                return (10.0, 20.0, self._broker_resp(
+                    self.ENVELOPE, status='running'))
+
+            def _oneshot(endpoint, program, intent):
+                seen['oneshot_calls'] = seen.get('oneshot_calls', 0) + 1
+                return (95.0, dict(self.ENVELOPE))
+
+            harness.broker = _broker
+            harness.oneshot_code_exec = _oneshot
+            out = self._send(harness, 'brave')
+            self.assertNotIn('oneshot_calls', seen)
+            self.assertEqual(out['outcome'], 'error')
+            self.assertIn('still running', out['error'])
+            self.assertEqual(out['broker_next_seq'], 4)
+
+    def test_result_failed_raises_with_next_seq(self):
+        # RT F3: a failed result means the driver died terminally.
+        # No fallback, and the sequence advances past the
+        # consumed one so the next browser does not reuse it.
+        with tempfile.TemporaryDirectory() as tmp:
+            harness = self._harness(tmp)
+            seen = {}
+
+            def _broker(lease, seq, args, stdin='', image_policy='auto',
+                        timeout=120):
+                return (10.0, 20.0, self._broker_resp(
+                    self.ENVELOPE, status='failed'))
+
+            def _oneshot(endpoint, program, intent):
+                seen['oneshot_calls'] = seen.get('oneshot_calls', 0) + 1
+                return (95.0, dict(self.ENVELOPE))
+
+            harness.broker = _broker
+            harness.oneshot_code_exec = _oneshot
+            out = self._send(harness, 'brave')
+            self.assertNotIn('oneshot_calls', seen)
+            self.assertEqual(out['outcome'], 'error')
+            self.assertIn('result failed', out['error'])
+            self.assertEqual(out['broker_next_seq'], 4)
+
+    def test_result_unknown_raises_with_next_seq(self):
+        # The unknown-status raise stays, now carrying the
+        # consumed sequence forward.
+        with tempfile.TemporaryDirectory() as tmp:
+            harness = self._harness(tmp)
+            seen = {}
+
+            def _broker(lease, seq, args, stdin='', image_policy='auto',
+                        timeout=120):
+                return (10.0, 20.0, self._broker_resp(
+                    self.ENVELOPE, status='unknown'))
+
+            def _oneshot(endpoint, program, intent):
+                seen['oneshot_calls'] = seen.get('oneshot_calls', 0) + 1
+                return (95.0, dict(self.ENVELOPE))
+
+            harness.broker = _broker
+            harness.oneshot_code_exec = _oneshot
+            out = self._send(harness, 'brave')
+            self.assertNotIn('oneshot_calls', seen)
+            self.assertEqual(out['outcome'], 'error')
+            self.assertIn('result unknown', out['error'])
+            self.assertEqual(out['broker_next_seq'], 4)
+
+    def test_recount_refuses_fallback_when_message_present(self):
+        # RT F4: the recount before fallback sees the message
+        # already in the thread (the broker attempt sent it), so
+        # the fallback is refused even though the probe found no
+        # record for this sequence.
+        with tempfile.TemporaryDirectory() as tmp:
+            harness = self._harness(tmp)
+            seen = {}
+            counts = [0, 1]
+
+            def _count(endpoint, target_id, message):
+                harness.count_calls.append(
+                    (endpoint, target_id, message))
+                return {'count': counts.pop(0), 'items': []}
+
+            def _broker(*args, **kwargs):
+                raise RuntimeError('broker request not accepted: busy')
+
+            def _oneshot(endpoint, program, intent):
+                seen['oneshot_calls'] = seen.get('oneshot_calls', 0) + 1
+                return (95.0, dict(self.ENVELOPE))
+
+            harness.count_check = _count
+            harness.broker = _broker
+            harness.oneshot_code_exec = _oneshot
+            out = self._send(harness, 'brave')
+            self.assertNotIn('oneshot_calls', seen)
+            self.assertEqual(out['outcome'], 'error')
+            self.assertIn('already present', out['error'])
+            self.assertEqual(len(harness.count_calls), 2)
+            self.assertEqual(out['broker_next_seq'], 3)
+
+    def test_recount_runs_before_fallback_for_fill_too(self):
+        # RT F4, Chromium fill: no pre-send count exists, so the
+        # recount before fallback is the only count. It must run
+        # exactly once before the fallback send.
+        with tempfile.TemporaryDirectory() as tmp:
+            harness = self._harness(tmp)
+            seen = {}
+
+            def _broker(*args, **kwargs):
+                raise RuntimeError('broker request not accepted: busy')
+
+            def _oneshot(endpoint, program, intent):
+                seen['oneshot_calls'] = seen.get('oneshot_calls', 0) + 1
+                return (95.0, dict(self.ENVELOPE))
+
+            harness.broker = _broker
+            harness.oneshot_code_exec = _oneshot
+            out = self._send(harness, 'chromium')
+            self.assertEqual(seen.get('oneshot_calls'), 1)
+            self.assertEqual(out['program']['transport'],
+                             'broker-fallback-oneshot')
+            self.assertNotIn('pre_count', out)
+            self.assertEqual(len(harness.count_calls), 1)
+            self.assertEqual(out['broker_next_seq'], 3)
+
+    def test_real_broker_rejects_unknown_request_status(self):
+        # RT F5 M1: the real broker() must only accept the
+        # statuses the broker emits. An unknown status is a
+        # refusal, not an envelope.
+        with tempfile.TemporaryDirectory() as tmp:
+            harness = self._harness(tmp)
+            fake = _FakeBrokerSSH(json.dumps(
+                {'ok': True, 'status': 'weird', 'sequence': 3}))
+            harness.ssh = fake
+            with self.assertRaises(
+                    s2_flip_live._BrokerSendNotAccepted):
+                harness.broker_code_exec(
+                    '/tmp/x.lease', 3, 'http://127.0.0.1:9223',
+                    'PROGRAM', 'intent-1')
+
+    def test_real_broker_request_command_shape(self):
+        # RT F5 M4: the real broker() request command is pinned
+        # exactly (heredoc envelope, lease, sequence, request
+        # file). Any extra flag, such as --bogus-flag, breaks it.
+        with tempfile.TemporaryDirectory() as tmp:
+            harness = self._harness(tmp)
+            accepted = json.dumps({'ok': True, 'status': 'accepted',
+                                   'sequence': 3})
+            result = json.dumps(self._broker_resp(self.ENVELOPE))
+            harness.ssh = _FakeBrokerSSH(accepted, result_out=result)
+            wall, envelope, nxt = harness.broker_code_exec(
+                '/tmp/x.lease', 3, 'http://127.0.0.1:9223',
+                'PROGRAM', 'intent-1')
+            self.assertEqual(envelope, self.ENVELOPE)
+            self.assertEqual(nxt, 4)
+            self.assertEqual(wall, 30.0)
+            cmds = dict(harness.ssh.commands)
+            envelope_text = json.dumps(
+                {'args': ['code-exec', '--endpoint',
+                          'http://127.0.0.1:9223', '--program', '-',
+                          '--intent', 'intent-1'],
+                 'stdin': 'PROGRAM', 'image_policy': 'auto'},
+                ensure_ascii=False, separators=(',', ':'))
+            expected_request = (
+                "umask 077; cat > /tmp/s2-flip-env-3.json <<'S2EOF'\n"
+                + envelope_text + "\nS2EOF\n"
+                'python3 ' + s2_flip_live.LAPTOP_REMOTE
+                + ' request --lease-file /tmp/x.lease --sequence 3 '
+                  '--request /tmp/s2-flip-env-3.json')
+            self.assertEqual(cmds['broker-request-3'], expected_request)
+            self.assertEqual(
+                cmds['broker-result-3'],
+                'python3 ' + s2_flip_live.LAPTOP_REMOTE
+                + ' result --lease-file /tmp/x.lease --sequence 3')
+            for cmd in cmds.values():
+                self.assertNotIn('--bogus-flag', cmd)
+
+    def test_v12_failure_keeps_broker_next_seq(self):
+        # C1 F1, v12 path: a V12 error after a successful broker
+        # send must not overwrite the correct next sequence with
+        # the pre-send one.
+        with tempfile.TemporaryDirectory() as tmp:
+            harness = self._harness(tmp)
+
+            def _broker(lease, seq, args, stdin='', image_policy='auto',
+                        timeout=120):
+                return (10.0, 20.0, self._broker_resp(self.ENVELOPE))
+
+            harness.broker = _broker
+
+            def _v12_boom(endpoint, target_id, message):
+                raise RuntimeError('v12 script rc=1: boom')
+
+            harness.v12_check = _v12_boom
+            out = self._send(harness, 'brave')
+            self.assertEqual(out['outcome'], 'error')
+            self.assertIn('v12 script', out['error'])
+            self.assertEqual(out['broker_next_seq'], 4)
+
+
+class _FakeBrokerSSH:
+    """Fake ssh for the real broker() path: answers broker CLI calls.
+
+    Dispatches on the ssh label, not on the command text. The
+    request call answers with request_out, the result call with
+    result_out. Every other call (pill acquire, probe) fails
+    fast, like the _harness ssh stub. Records (label, command)
+    so tests can pin the exact request command.
+    """
+
+    def __init__(self, request_out, result_out=None, request_rc=0,
+                 result_rc=0):
+        self.commands = []
+        self.request_out = request_out
+        self.result_out = result_out
+        self.request_rc = request_rc
+        self.result_rc = result_rc
+
+    def __call__(self, remote_cmd, label, timeout=120, input_text=None):
+        self.commands.append((label, remote_cmd))
+        if label.startswith('broker-request-'):
+            return (self.request_rc, self.request_out, '', 10.0)
+        if label.startswith('broker-result-'):
+            return (self.result_rc, self.result_out or '', '', 20.0)
+        return (1, '', 'no ssh in test', 0.0)
+
+
 if __name__ == '__main__':
     unittest.main()
