@@ -437,5 +437,7 @@ around Zen Marionette only is needed on P3 grounds.
 ## 6. Commit
 
 - Log file: improvements/worker-click4-p3-probe-log.md (this file).
-- Commit hash: (filled after commit, see below).
-- Push verification: git ls-remote origin todolist-push (hash must match).
+- Commit hash: 924ec3fc4a7105128e7c43a1a12195a009a2c023.
+- Push verification: git ls-remote origin todolist-push returned
+  924ec3fc4a7105128e7c43a1a12195a009a2c023, matching local HEAD.
+- Commit-record update: this line added in a follow-up commit (see below).
