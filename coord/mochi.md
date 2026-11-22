@@ -269,3 +269,11 @@
 - Commit: 55ad3ee1303acd54d8ad56f64f67c40a8155f6e9, tren todolist-push, base 34899b2. Push: 34899b2..55ad3ee, verify bang `git ls-remote origin todolist-push`, tra 55ad3ee1303acd54d8ad56f64f67c40a8155f6e9.
 - Noi dung chinh: 8 vong sua, council 1, 2, 3 re-review vong 8 PASS, redteam vong 9 KHONG PHA DUOC, verifier PASS 19:59:37, 40/40. Ghi ro patch tich luy c597a29 va gioi han hook Lua chua bien dich.
 - Tiep theo: review log B2-5, commit rieng, bao cao ngay sau khi commit.
+
+## Bao cao review log B2-5 va quy tac review moi, 00:11 ngay 23/11, lenh truc tiep cua Pham Tuan trong chat 23:57
+
+- Artifact improvements/mochi-b2-5-review-log.md tu ho so review (worker, fix vong 1 va 2, council 1, 2, 3 hai vong, redteam vong 1, 2, 3, verifier) da nhan trong chat ngay 22/11, gom so lieu quet, leak tim thay, hash file, thoi gian.
+- Commit: bca11cb0b5cf82f9337668158476c27115408119, tren todolist-push, base 55ad3ee. Push: 55ad3ee..bca11cb, verify bang `git ls-remote origin todolist-push`, tra bca11cb0b5cf82f9337668158476c27115408119.
+- Noi dung chinh: redteam vong 1 PHA DUOC 2 leak, fix vong 1, council 3 PASS, council 1 PASS (co gioi han), redteam vong 2 KHONG PHA DUOC, council 2 CHUA PASS, fix vong 2, re-review vong 2 council 1, 2, 3 PASS, redteam vong 3 KHONG PHA DUOC, verifier PASS 19:26:20. Cay lam viec sach, gate G-SCRUB doc chat van CHUA DAT vi history va handle.
+- QUY TAC MOI, ap dung tu nay cho moi lane: moi review council, redteam, verifier phai commit artifact co hash (commit hoac file log) de nguoi khac kiem chung duoc. Khong duoc bao 'review PASS' ma khong co hash nua. Review doc lap khong tim thay commit review nao cho B2-1, B2-2, B2-3, B2-5, nen 4 log tren duoc viet bu lai tu ho so review; tu nay moi review tu commit artifact cua chinh no.
+- Ca 2 viec lenh 23:57 da xong: patch tich luy B2-3 c597a29, review log B2-1 8e9c9d9, B2-2 34899b2, B2-3 55ad3ee, B2-5 bca11cb. Con lai B2-4 va B2-6 chua co bao cao cuoi.
