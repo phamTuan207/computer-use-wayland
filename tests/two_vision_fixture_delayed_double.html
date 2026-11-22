@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Two-vision benchmark fixture</title>
+<style>
+  body { font-family: sans-serif; margin: 20px; }
+  #thread { border: 1px solid #888; min-height: 120px; padding: 8px; margin-bottom: 12px; }
+  .bubble { background: #dfe; border-radius: 8px; padding: 6px 10px; margin: 4px 0; }
+  #msg-input, #search-input { padding: 8px; width: 320px; }
+  button { padding: 8px 12px; }
+</style>
+</head>
+<body>
+<h1 id="title">Clone thread</h1>
+<div id="thread" data-thread="unknown"></div>
+<input id="msg-input" type="text" placeholder="Message" aria-label="Message" autocomplete="off">
+<button id="send-btn" aria-label="Send">Send</button>
+<input id="search-input" type="text" placeholder="Search" aria-label="Search">
+<button id="emoji-btn" aria-label="Emoji">Smile</button>
+<div id="status"></div>
+<script>
+  const params = new URLSearchParams(location.search);
+  const clone = params.get('clone') || '1';
+  document.getElementById('thread').dataset.thread = 'clone' + clone;
+  document.getElementById('title').textContent = 'Clone ' + clone + ' thread';
+  window.__inputEvents = 0;
+  const input = document.getElementById('msg-input');
+  input.addEventListener('input', () => { window.__inputEvents++; });
+  function appendBubble(text) {
+    const b = document.createElement('div');
+    b.className = 'bubble';
+    b.dataset.sender = 'me';
+    b.textContent = text;
+    document.getElementById('thread').appendChild(b);
+  }
+  function send() {
+    const text = input.value;
+    if (!text) return false;
+    // Delayed double: one bubble now, an identical second bubble
+    // 700 ms later (optimistic bubble plus server echo, a retried
+    // handler). A gate that breaks on the first poll at baseline+1
+    // scores this "sent" with two identical bubbles; the settle
+    // window must catch the second one.
+    appendBubble(text);
+    setTimeout(() => appendBubble(text), 700);
+    document.getElementById('status').textContent = 'sent: ' + text;
+    input.value = '';
+    input.focus();
+    return true;
+  }
+  document.getElementById('send-btn').addEventListener('click', send);
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') send(); });
+  window.__sentBubbles = () => [...document.querySelectorAll('#thread .bubble')]
+    .map(el => el.textContent);
+  window.__bubblePresent = (text) => window.__sentBubbles().includes(text);
+</script>
+</body>
+</html>

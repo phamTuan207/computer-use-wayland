@@ -327,8 +327,7 @@ class Ledger:
     failed-unverified and a later run with the same intent REFUSES to
     re-send it, because the message may have landed unseen. To retry,
     fix the selectors and use a new run_id after manually checking
-    the thread. A fresh page load with an empty thread re-sends a
-    recorded intent once, by design: the bubble is genuinely absent.
+    the thread.
 
     Run registry (fix pass, redteam F3): a run_id is bound to the
     ledger path of its first run in a shared registry outside the
@@ -338,6 +337,10 @@ class Ledger:
     its pre-check is blind and it would re-send. Same ledger path
     is a same-workdir retry, allowed; the outcome rule still
     requires fresh sends this run for PASS unless --allow-resume.
+    Harvest mode never touches the registry (fix pass 2, redteam
+    round 2 finding 1): a harvest sends nothing, so binding the
+    run_id there would make the rung 2 step-2 run in its own
+    workdir REFUSED; the registry binds only in run mode.
 
     Pre-send reservation (batch 12 task 2, BUILT): send_one writes
     the intent as "sending" after the V1 readback passes and before
@@ -350,9 +353,32 @@ class Ledger:
     reused (same workdir or --ledger); a fresh workdir has an empty
     ledger, so the run registry above refuses that case outright and
     the run_id freshness check in the runbook still stands as the
-    human backstop. A recorded intent whose bubble is absent is treated as
-    stale and re-sent once, because the earlier V12 may have failed
-    on a slow render rather than on a lost message.
+    human backstop.
+
+    Intent binding (fix pass 2, redteam round 2 findings 2 and 3):
+    every mark records the message text, thread URL, thread
+    selector and bubble selector it was written for. A later run
+    whose plan disagrees with the recorded intent (different text,
+    URL or selectors) refuses with retry-blocked-intent-changed
+    instead of sending a different message under the same intent.
+    A recorded "sent" intent whose bubble is absent (count 0)
+    refuses with retry-blocked-sent-bubble-absent instead of
+    re-sending: the bubble may be unloaded rather than genuinely
+    absent, and a fresh page load empties the fixture thread, so
+    the old "re-send once, by design" behavior is gone. To send
+    again after a genuine loss, use a new run_id after manually
+    checking the thread. Records written before binding existed
+    carry no message field and skip the binding check.
+
+    Status state machine (fix pass 2): "sent" is terminal and is
+    never overwritten by any later mark; "sending" reconciles only
+    to "sent", "failed-unverified" or "failed"; "failed-unverified"
+    is never overwritten by a plain "failed"; "failed" is the only
+    retryable terminal status (a new run may reserve it again).
+    mark() returns False when a transition is refused, True when
+    applied, and merges new fields into the existing record instead
+    of replacing it, so a reconciliation never loses the bound
+    message, URL and selectors.
 
     A JSON file keyed by intent id (run_id + window label). An intent
     is marked sent only after its V12 gate passed. Before any send the
@@ -377,17 +403,54 @@ class Ledger:
         os.makedirs(parent, exist_ok=True)
         self.data = {"intents": {}}
         if os.path.exists(path):
-            with open(path, encoding="utf-8") as f:
+            try:
+                with open(path, encoding="utf-8") as f:
+                    self.data = json.load(f)
+            except json.JSONDecodeError as exc:
+                # A corrupt ledger cannot be trusted: fail loudly
+                # instead of treating every intent as unsent and
+                # re-sending (fix pass 2, council 1 finding 10a).
+                raise ValueError(
+                    f"corrupt ledger file {path}: {exc}; fix or "
+                    "remove it by hand after checking the threads, "
+                    "never delete it blindly") from exc
+
+    def _load(self):
+        """Re-read the ledger file from disk. mark() writes with
+        os.replace, so a plain read always sees a whole record;
+        status() must not trust the in-memory copy loaded at
+        __init__ time, or two processes sharing one ledger both
+        see None and both send (fix pass 2, redteam round 2
+        finding 15)."""
+        if os.path.exists(self.path):
+            with open(self.path, encoding="utf-8") as f:
                 self.data = json.load(f)
+        return self.data
 
     def status(self, intent_id):
+        self._load()
         return self.data["intents"].get(intent_id, {}).get("status")
+
+    def record(self, intent_id):
+        """Full stored record for one intent ({} when absent)."""
+        self._load()
+        return dict(self.data["intents"].get(intent_id, {}))
+
+    # Allowed status transitions (fix pass 2 state machine):
+    # "sent" is terminal, never overwritten; "sending" reconciles
+    # only to "sent", "failed-unverified" or "failed";
+    # "failed-unverified" never becomes a plain "failed"; "failed"
+    # is the only retryable status.
+    _ALLOWED = {
+        None: ("sending", "sent", "failed-unverified", "failed"),
+        "failed": ("sending", "sent", "failed-unverified", "failed"),
+        "sending": ("sent", "failed-unverified", "failed"),
+        "failed-unverified": ("failed-unverified",),
+        "sent": ("sent",),
+    }
 
     def mark(self, intent_id, status, **kw):
         import fcntl
-        rec = {"status": status,
-               "wall": datetime.now(timezone.utc).isoformat()}
-        rec.update(kw)
         lock_path = self.path + ".lock"
         with open(lock_path, "w", encoding="utf-8") as lock_f:
             fcntl.flock(lock_f, fcntl.LOCK_EX)
@@ -397,13 +460,38 @@ class Ledger:
                 if os.path.exists(self.path):
                     with open(self.path, encoding="utf-8") as f:
                         self.data = json.load(f)
+                current = self.data["intents"].get(
+                    intent_id, {}).get("status")
+                if status not in self._ALLOWED.get(current, ()):
+                    # Refused transition (e.g. a gate-failure mark
+                    # trying to overwrite a "sent" record): keep
+                    # the protective record and report the refusal.
+                    return False
+                # Merge into the existing record: a reconciliation
+                # must never lose the bound message, URL and
+                # selectors written by the reservation.
+                rec = dict(self.data["intents"].get(intent_id, {}))
+                rec["status"] = status
+                rec["wall"] = datetime.now(timezone.utc).isoformat()
+                rec.update(kw)
                 self.data["intents"][intent_id] = rec
                 tmp_path = self.path + ".tmp"
                 with open(tmp_path, "w", encoding="utf-8") as f:
                     json.dump(self.data, f, indent=2, sort_keys=True)
                 os.replace(tmp_path, self.path)
+                return True
             finally:
                 fcntl.flock(lock_f, fcntl.LOCK_UN)
+
+    def reserve(self, intent_id, **kw):
+        """Atomic check-and-reserve under one lock: mark "sending"
+        only when the intent is fresh (None) or retryable
+        ("failed"). Returns True when the reservation was written,
+        False when another process or a previous run already holds
+        the intent. send_one must call this instead of a separate
+        status check plus mark, or two processes can both see None
+        and both send (fix pass 2, redteam round 2 finding 15)."""
+        return self.mark(intent_id, "sending", **kw)
 
 
 def format_inventory(label, items, frames=None):
@@ -680,17 +768,69 @@ def send_one(driver, window, item, message, intent_id, ledger,
             note="previous attempt reserved but never reconciled; "
             "message may have landed, check the thread by hand")
         return step
+    # Intent binding (fix pass 2, redteam round 2 finding 3): a
+    # recorded intent binds its message text, thread URL and
+    # selectors. This runs BEFORE the sent-skip below: a changed
+    # plan whose new text happens to have a visible stale bubble
+    # must refuse, not skip on a message this intent never sent.
+    # A later run whose plan disagrees (edited message, different
+    # thread) refuses instead of sending a different message under
+    # the same intent and overwriting the record. Records written
+    # before binding existed carry no message field and skip this
+    # check.
+    if ledger.status(intent_id) == "sent":
+        rec = ledger.record(intent_id)
+        if rec.get("message") is not None and (
+                rec.get("message") != message
+                or rec.get("url") != window.get("url")
+                or rec.get("thread_selector") != thread_sel
+                or rec.get("bubble_selector") != bubble_sel):
+            step["error"] = "retry-blocked-intent-changed"
+            step["evidence"] = {
+                "recorded": {"message": rec.get("message"),
+                             "url": rec.get("url"),
+                             "thread_selector":
+                                 rec.get("thread_selector"),
+                             "bubble_selector":
+                                 rec.get("bubble_selector")},
+                "current": {"message": message,
+                            "url": window.get("url"),
+                            "thread_selector": thread_sel,
+                            "bubble_selector": bubble_sel}}
+            step["elapsed_s"] = round(time.monotonic() - t0, 4)
+            log("send_retry_blocked_intent_changed", t0,
+                window=window["label"], intent_id=intent_id,
+                note="recorded intent binds a different message, "
+                "URL or selectors; use a new run_id")
+            return step
     if ledger.status(intent_id) == "sent" and count_now > 0:
         ledger.mark(intent_id, "sent", window=window["label"],
-                    message=message, note="bubble-already-present")
+                    message=message, url=window.get("url"),
+                    thread_selector=thread_sel,
+                    bubble_selector=bubble_sel,
+                    note="bubble-already-present")
         step["status"] = "skipped-already-sent"
         step["elapsed_s"] = round(time.monotonic() - t0, 4)
         log("send_skipped_already_sent", t0, window=window["label"],
             intent_id=intent_id)
         return step
     if ledger.status(intent_id) == "sent":
-        log("ledger_stale_bubble_absent", t0, window=window["label"],
-            intent_id=intent_id)
+        # A recorded "sent" intent whose bubble is absent refuses
+        # instead of re-sending (fix pass 2, redteam round 2
+        # finding 2 and redteam 4/4 finding 1): the bubble may be
+        # unloaded rather than genuinely absent, a wrong bubble
+        # selector reads 0 the same way, and a fresh page load
+        # empties the fixture thread. Only a hand check of the
+        # thread can tell, then a new run_id if a re-send is
+        # really wanted.
+        step["error"] = "retry-blocked-sent-bubble-absent"
+        step["elapsed_s"] = round(time.monotonic() - t0, 4)
+        log("ledger_sent_bubble_absent", t0, window=window["label"],
+            intent_id=intent_id,
+            note="ledger says sent but no bubble carrying the text "
+            "is visible; refusing to re-send, check the thread "
+            "by hand")
+        return step
 
     # D3 ref-stability check FIRST, before any scroll: re-resolve
     # the harvested ref against the live DOM. A renamed or replaced
@@ -820,8 +960,24 @@ def send_one(driver, window, item, message, intent_id, ledger,
             note="thread container vanished after the V1 readback; "
             "no reservation written, nothing sent")
         return step
-    ledger.mark(intent_id, "sending", window=window["label"],
-                message=message)
+    # Atomic reservation: reserve() marks "sending" only when the
+    # intent is fresh or retryable, under one lock, so two processes
+    # cannot both see None and both send (fix pass 2, redteam
+    # round 2 finding 15). The reservation binds the message text,
+    # thread URL and selectors (fix pass 2, redteam round 2
+    # finding 3): a later run compares its plan against them.
+    if not ledger.reserve(intent_id, window=window["label"],
+                          message=message, url=window.get("url"),
+                          thread_selector=thread_sel,
+                          bubble_selector=bubble_sel):
+        step["error"] = "retry-blocked-reservation"
+        step["elapsed_s"] = round(time.monotonic() - t0, 4)
+        log("send_retry_blocked_reservation", t0,
+            window=window["label"], intent_id=intent_id,
+            note="reservation refused: the intent is already held "
+            "by another run or a previous attempt; check the "
+            "thread by hand")
+        return step
     step["reservation"] = "sending"
 
     def v11_delta():
@@ -862,17 +1018,32 @@ def send_one(driver, window, item, message, intent_id, ledger,
         # the exact text must appear in the thread DOM, counted past
         # the pre-Enter baseline. A stale bubble from an earlier run
         # cannot pass it. A count jumping past baseline + 1 is a
-        # double append, not a pass (fix pass, redteam F5).
+        # double append, not a pass (fix pass, redteam F5). The
+        # gate settles (fix pass 2, redteam round 2 finding 4):
+        # once the count first reaches baseline + 1 it keeps
+        # polling for a full second, because an asynchronous
+        # second append (optimistic bubble plus server echo, a
+        # retried handler) landing 700 ms later used to score
+        # "sent" with two identical bubbles. The deadline extends
+        # past a late first sighting so a bubble arriving just
+        # before the timeout still gets its settle second.
         deadline = time.monotonic() + v12_timeout
         gate_count = gate_baseline
         duplicate = False
+        settled_at = None
         while time.monotonic() < deadline:
             gate_count = bubble_count()
-            if gate_count == gate_baseline + 1:
-                break
             if gate_count > gate_baseline + 1:
                 duplicate = True
                 break
+            if gate_count == gate_baseline + 1:
+                if settled_at is None:
+                    settled_at = time.monotonic()
+                    deadline = max(deadline, settled_at + 1.0)
+                elif time.monotonic() - settled_at >= 1.0:
+                    break
+            else:
+                settled_at = None
             time.sleep(0.2)
         if duplicate:
             step["error"] = "duplicate-bubble"
@@ -915,6 +1086,7 @@ def send_one(driver, window, item, message, intent_id, ledger,
             return step
         step["v12_gate_ok"] = True
         step["gate_count"] = gate_count
+        step["gate_settle_s"] = 1.0
         delta, total = v11_delta()
         step["v11_mutations"] = delta
         step["v11_mutation_flag"] = bool(delta and delta > 0)
@@ -1176,6 +1348,15 @@ def validate_plan(plan):
             "plan messages must be distinct per window; identical "
             "messages make the cross-window check fail a correct "
             "run, because it identifies messages by text alone")
+    # Substring-free (fix pass 2, redteam round 2 finding 15):
+    # the cross-window check matches foreign bubbles by
+    # containment, so if one message is a substring of the other,
+    # a correct run fails contamination on its own bubbles.
+    if msgs[0] in msgs[1] or msgs[1] in msgs[0]:
+        raise ValueError(
+            "plan messages must not be substrings of each other; "
+            "the cross-window check matches by containment and "
+            "would flag a correct run as contaminated")
     return plan
 
 
@@ -1201,8 +1382,19 @@ def registry_check_and_record(run_id, ledger_path, registry_path):
         try:
             reg = {}
             if os.path.exists(registry_path):
-                with open(registry_path, encoding="utf-8") as f:
-                    reg = json.load(f)
+                try:
+                    with open(registry_path, encoding="utf-8") as f:
+                        reg = json.load(f)
+                except json.JSONDecodeError as exc:
+                    # A corrupt registry cannot be trusted: refuse
+                    # instead of treating every run_id as fresh and
+                    # re-sending (fix pass 2, council 1 finding
+                    # 10a). The caller turns this into REFUSED.
+                    raise ValueError(
+                        f"corrupt run registry {registry_path}: "
+                        f"{exc}; fix or remove it by hand after "
+                        "checking the threads, never delete it "
+                        "blindly") from exc
             prev = reg.get(run_id)
             if prev is not None and prev != ledger_abs:
                 return False, prev
@@ -1277,6 +1469,10 @@ def main():
                     "(the agent-visible VISION 1 format)")
     args = ap.parse_args()
 
+    if args.visions_used < 0:
+        print("REFUSED: --visions-used cannot be negative.",
+              file=sys.stderr)
+        return 2
     if args.live and not args.confirm_live:
         print("REFUSED: live mode needs --confirm-live, which only the "
               "coordinator gives after approving the run.",
@@ -1346,14 +1542,31 @@ def main():
     ledger_path = args.ledger or os.path.join(args.workdir, "ledger.json")
     # Run registry (fix pass, redteam F3): refuse a reused run_id
     # bound to a different ledger path before the browser starts.
-    if args.no_run_registry:
+    # Harvest mode never touches it (fix pass 2, redteam round 2
+    # finding 1): a harvest sends nothing, so binding the run_id
+    # there would make the rung 2 step-2 run in its own workdir
+    # REFUSED. The registry binds only in run mode. The registry
+    # path and the enabled flag are recorded in results.json (fix
+    # pass 2, redteam round 2 finding 5), so a run that bypassed
+    # the registry with --no-run-registry or --run-registry is
+    # visible in its own record instead of indistinguishable from
+    # a protected run. Live runs must use the default registry
+    # path; the runbook forbids both override flags live.
+    registry_path = None
+    registry_enabled = False
+    if args.mode == "run" and args.no_run_registry:
         print("WARNING: run_id registry disabled; a reused run_id "
               "in a fresh workdir re-sends, because its ledger is "
               "empty.", file=sys.stderr)
-    else:
+    elif args.mode == "run":
         registry_path = args.run_registry or REGISTRY_DEFAULT
-        ok, prev = registry_check_and_record(
-            run_id, ledger_path, registry_path)
+        registry_enabled = True
+        try:
+            ok, prev = registry_check_and_record(
+                run_id, ledger_path, registry_path)
+        except ValueError as exc:
+            print(f"REFUSED: {exc}", file=sys.stderr)
+            return 2
         if not ok:
             print(f"REFUSED: run_id {run_id!r} already ran with "
                   f"ledger {prev}; this run would use {ledger_path}, "
@@ -1362,11 +1575,12 @@ def main():
                   "new run_id, or reuse the original workdir/ledger.",
                   file=sys.stderr)
             return 2
-    ledger = Ledger(ledger_path)
     results = {"run_id": run_id, "mode": args.mode,
                "live": bool(args.live), "instances": args.instances,
                "wall_start": wall_start,
                "visions_used": args.visions_used,
+               "registry_enabled": registry_enabled,
+               "registry_path": registry_path,
                "steps": [], "outcome": "FAIL"}
 
     proc = None
@@ -1390,8 +1604,13 @@ def main():
                 inventory[w["label"]] = items
             inv_path = args.inventory or os.path.join(
                 args.workdir, "inventory.json")
-            with open(inv_path, "w", encoding="utf-8") as f:
+            # Atomic write (fix pass 2, council 1 finding 10c):
+            # the same full-disk failure that left a 0-byte
+            # results.json would leave a 0-byte inventory.json.
+            inv_tmp = inv_path + ".tmp"
+            with open(inv_tmp, "w", encoding="utf-8") as f:
                 json.dump(inventory, f, indent=2)
+            os.replace(inv_tmp, inv_path)
             log("vision1_inventory_written", t_start, path=inv_path)
         # Gap 10 frames census: one evaluate per window, top frame
         # only. A cross-origin iframe reports accessible false; the
@@ -1522,6 +1741,12 @@ def main():
                 return finish(results, args, t_start, 1)
 
         # Guarded send chain, stop at first failure, rest not-executed.
+        # The ledger is constructed here, in run mode only: harvest
+        # mode never sends, so it needs no ledger and must not fail
+        # on a corrupt one (fix pass 2). A corrupt ledger raises
+        # ValueError, caught by the outer handler as a harness
+        # error with exit 2.
+        ledger = Ledger(ledger_path)
         step_no = 0
         failed = False
         for w in plan["windows"]:
@@ -1533,11 +1758,43 @@ def main():
                 continue
             driver.switch_to.window(handles[w["label"]])
             intent_id = run_id + ":" + w["label"]
-            step = send_one(driver, w, targets[w["label"]],
-                            plan["messages"][w["label"]], intent_id,
-                            ledger, plan, t_start, step_no,
-                            before_count=results["before_counts"][
-                                w["label"]])
+            try:
+                step = send_one(driver, w, targets[w["label"]],
+                                plan["messages"][w["label"]], intent_id,
+                                ledger, plan, t_start, step_no,
+                                before_count=results["before_counts"][
+                                    w["label"]])
+            except Exception as exc:  # noqa: BLE001 - record, not lose
+                # Pre-reservation exceptions escape send_one (its
+                # try block starts at the reservation): record the
+                # failed step instead of losing it from
+                # results["steps"], and reconcile a reservation if
+                # one was written (fix pass 2, council 1 finding
+                # 10d). The ledger is correctly left unmarked when
+                # no reservation exists.
+                if ledger.status(intent_id) == "sending":
+                    try:
+                        ledger.mark(intent_id, "failed-unverified",
+                                    window=w["label"],
+                                    message=plan["messages"][w["label"]],
+                                    error="harness-error-before-"
+                                    "reservation",
+                                    note="exception after the "
+                                    "reservation was written; the "
+                                    "message may have landed, check "
+                                    "the thread by hand")
+                    except Exception:
+                        pass
+                step = {"step": step_no, "window": w["label"],
+                        "intent_id": intent_id, "status": "failed",
+                        "error": "harness-error-before-reservation",
+                        "evidence": {"exception":
+                                     f"{type(exc).__name__}: {exc}"},
+                        "before_count": results["before_counts"][
+                            w["label"]],
+                        "elapsed_s": 0.0}
+                log("harness_error_before_reservation", t_start,
+                    window=w["label"], error=str(exc))
             results["steps"].append(step)
             if step["status"] not in ("sent", "skipped-already-sent"):
                 failed = True
@@ -1575,16 +1832,48 @@ def main():
             c > 0
             for rec in results["cross_window_check"].values()
             for c in rec["foreign"].values())
+        # A thread that vanished after the gates still scores FAIL
+        # (fix pass 2, council 1 finding 3 and redteam round 2
+        # finding 6): the cross-window check reports thread_missing
+        # and own_count -1/0 in that case, and the outcome rule used
+        # to consult neither, so contamination on a thread it could
+        # not read passed silently. own_count below 1 fails even
+        # without contamination: the sent bubble is gone.
+        thread_gone = any(
+            rec.get("thread_missing")
+            for rec in results["cross_window_check"].values())
+        own_missing = any(
+            rec.get("own_count", -1) < 1
+            for rec in results["cross_window_check"].values())
         if contaminated:
             results["outcome_note"] = (
                 "cross-window-contamination: a thread holds the "
                 "other window's message")
-        elif len(sent_now) == 0:
+        elif thread_gone or own_missing:
             results["outcome_note"] = (
-                "no sends this run: both steps skipped on recorded "
-                "sent intents; a retry that only skips does not "
-                "score PASS (pass --allow-resume to score a resume "
-                "run)")
+                "cross-window-check-incomplete: a thread vanished "
+                "after the gates or holds no bubble with its own "
+                "message; the run cannot be scored PASS on gates "
+                "alone")
+        elif len(sent_now) == 0:
+            # The note must describe the actual failure (fix pass 2,
+            # council 1 finding 2 and redteam 4/4 finding 6): the
+            # old text claimed both steps skipped even when clone1
+            # failed v12-timeout and clone2 never executed.
+            if all(s.get("status") == "skipped-already-sent"
+                   for s in results["steps"]):
+                results["outcome_note"] = (
+                    "no sends this run: both steps skipped on "
+                    "recorded sent intents; a retry that only skips "
+                    "does not score PASS (pass --allow-resume to "
+                    "score a resume run)")
+            else:
+                errors = "; ".join(
+                    f"{s.get('window')}:{s.get('error')}"
+                    for s in results["steps"] if s.get("error"))
+                results["outcome_note"] = (
+                    "no sends this run: "
+                    + (errors or "no step error recorded"))
         # Outcome scoring (M1): PASS iff both messages are in their
         # threads. VISION 2 is the agent looking at both threads once;
         # the script's V12 gates are the same check by DOM read.
@@ -1594,6 +1883,8 @@ def main():
         results["outcome"] = ("PASS" if len(effective) == 2
                               and len(plan["windows"]) == 2
                               and not contaminated
+                              and not thread_gone
+                              and not own_missing
                               else "FAIL")
         return finish(results, args, t_start,
                       0 if results["outcome"] == "PASS" else 1)
@@ -1624,10 +1915,21 @@ def finish(results, args, t_start, code):
     # Atomic write (fix pass, redteam note): a full disk mid-write
     # used to leave a 0-byte results.json; write a temp file and
     # replace, so the previous record survives a failed write.
-    tmp_path = out_path + ".tmp"
-    with open(tmp_path, "w", encoding="utf-8") as f:
-        json.dump(results, f, indent=2)
-    os.replace(tmp_path, out_path)
+    # Never raise out of finish() (fix pass 2, council 1 finding
+    # 10b): if the disk fills mid-write, the first finish() used to
+    # raise inside the try and the except block called finish()
+    # again, which raised again uncaught and no results.json was
+    # written at all. Log the loss to stderr and return the
+    # original exit code, so the outcome is still reported.
+    try:
+        tmp_path = out_path + ".tmp"
+        with open(tmp_path, "w", encoding="utf-8") as f:
+            json.dump(results, f, indent=2)
+        os.replace(tmp_path, out_path)
+    except Exception as exc:  # noqa: BLE001 - report, do not raise
+        print(f"WARNING: could not write results to {out_path}: "
+              f"{exc}; the run record is lost, the exit code still "
+              "reports the outcome.", file=sys.stderr)
     log("benchmark_finished", t_start, outcome=results["outcome"],
         wall_s=results["wall_s"], out=out_path)
     return code
