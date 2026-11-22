@@ -281,7 +281,13 @@ No interference with the measurements beyond that; no fight, no shared files tou
   7124f1e at verify time, before siblings pushed on top).
 - Second interim log commit: 4f378b0fdeef4917328f4e9073e3c2a8572e69d8
   (2026-11-22 ~07:01 +07), pushed 8008662..4f378b0, LOCAL == REMOTE at verify time.
-- Final log commit: (filled after commit; see section 14).
+- Final log commit: 39e1450009d23631e00f9f6a2c73f2af128c3ad3 (2026-11-22 ~07:53 +07).
+  Landed on origin via the shared-branch rebase (not by this probe pushing
+  directly: the remote line moved under the probe while it was down for the VM
+  restart, and a sibling rebase carried 39e1450 onto origin). Verified: 39e1450
+  is an ancestor of remote HEAD fd63a7d, and the file at origin is byte-identical
+  to the 39e1450 version (git diff empty). The hash-recording line itself is
+  committed separately; see the commit after this one.
 
 ## 14. VM restart cut both soaks short (07:51 +07) + final notes
 
