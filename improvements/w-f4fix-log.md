@@ -208,4 +208,124 @@
   uncommitted by design (see section 1b); the VM commit follows
   once W-PILLCDP lands.
 
-## 5. Live re-probe (to fill: probe 5 trial, full run, close-out, check_run)
+## 5. Live re-probe
+
+### 5a. Probe 5 trial (single probe, before the full run)
+
+- Run 18:43:53-18:44:02 +07, driver exit 0. P1 ok true,
+  retry_logged true, wall 2244.6ms, api_calls 11, log:
+  "navigate act ok True", "tab id 1F1017679AE2254F32991D7EF1C0E043"
+  (a NEW tab, not any baseline id), "first dom_act ok False
+  completed 0" (the expected failed assert), "retry dom_act ok True
+  completed 1", "retry confirmed pick4-ok". P2 ok true,
+  dom_effect true, wall 470.3ms, api_calls 5, "#result contains
+  pick4-ok", same tab. probe_ms 8619.7. PROBE 5 PASS on the first
+  try with the fixed adapter. The in-program retry genuinely
+  happened: the failed assert no longer kills the session.
+
+### 5b. Full run, all 5 probes, clean directory
+
+- Remote preflight dir wiped 18:44 (my own probe output only) and
+  recreated; full driver run 18:44:14-18:44:55 +07, exit 0,
+  all_ok true. Every probe opened its own NEW tab (Ctrl+T first
+  action, id-diff lookup); no existing tab was navigated.
+  - click, 7420.0ms: P1 ok false, error "ref is not present in the
+    bound snapshot; observe again", P2 ok true, "#result still not
+    clicked yet", same tab 873AEAA6420600A4B69FE06EA1FC0382.
+  - fill, 8836.2ms: P1 ok false, same bad-ref error, P2 ok true,
+    "#a2 still -", same tab 558290DF569CB47E20E94E57357BA815.
+  - set_value, 7585.6ms: P1 ok false, same bad-ref error, P2 ok
+    true, "#a2 still -", same tab
+    A22652F8F1962CB3A65AB3F84FF14758.
+  - assert, 7552.2ms: P1 ok false, same bad-ref error, P2 ok true,
+    "#result still not clicked yet", same tab
+    910A8C75D2FF02EAB386F037D37EAEC8.
+  - retry-logging, 8591.8ms: P1 ok true, retry_logged true, "first
+    dom_act ok False completed 0", "retry dom_act ok True
+    completed 1", "retry confirmed pick4-ok", P2 ok true,
+    "#result contains pick4-ok", same tab
+    1DD2366BF1C4186652DCFA301CEA7A41.
+- Probe dirs on the laptop: all 5 present, each with end-state.json,
+  run-log.jsonl, verify.png. preflight-log.jsonl has 10 lines (5
+  probes x P1+P2), matching the full run. No navigate act failed in
+  either run (navigate act ok True first try every time, with the
+  focus step).
+- Pill, live confirmation: all 6 probe sessions (trial + full run)
+  started through cu.py session (guardian 'ready', focus on
+  Chromium window 0x56307e202df0 verified before each session) and
+  completed their browser writes with no 'session indicator lost'
+  failure and no guardian startup failure. The pill was up under
+  every probe write, per the code path in section 3. No raw CDP
+  write was made in this session: the only CDP calls were reads
+  (/json/list, /json/version) and the /json/close calls on my own
+  tabs below.
+
+### 5c. check_run.py cross-check (Stage 1, laptop, 18:45:05 +07)
+
+- probe-1-click: FAIL exit 1, result_text "not clicked yet" does
+  not contain "pick4-ok". EXPECTED: zero-effect proof.
+- probe-2-fill: FAIL exit 1, end state {"a2": "-"} matches neither
+  pick4 nor f01 shape. EXPECTED: zero-effect proof (the checker
+  only knows the full f01 shape; a probe end state with only a2 is
+  not a full case).
+- probe-3-set-value: FAIL exit 1, same as probe-2. EXPECTED.
+- probe-4-assert: FAIL exit 1, result_text "not clicked yet".
+  EXPECTED.
+- probe-5-retry-logging: PASS exit 0, result_text "pick4-ok hello
+  stranger", no problems.
+- Cross-check verdict: the set matches the design exactly (probes
+  1-4 prove zero effect, probe 5 proves the retry landed). No
+  Stage 2 metrics run: the probe dirs are not pilot runs (no
+  setup.json, no commands.txt), Stage 1 is the cross-check here.
+
+### 5d. Tab close-out and final state
+
+- Tabs I opened (6): trial probe 5
+  1F1017679AE2254F32991D7EF1C0E043; full run click
+  873AEAA6420600A4B69FE06EA1FC0382, fill
+  558290DF569CB47E20E94E57357BA815, set_value
+  A22652F8F1962CB3A65AB3F84FF14758, assert
+  910A8C75D2FF02EAB386F037D37EAEC8, retry
+  1DD2366BF1C4186652DCFA301CEA7A41. Closed one at a time via
+  /json/close/<id>, 18:45:12-18:45:25 +07, each returning "Target
+  is closing" and verified after: 9223 still answers, mochi tab
+  still listed, the target gone. All 6 closed, Chromium never
+  faltered, no restart.
+- Final state 18:45:31 +07: /json/list shows the baseline exactly
+  (mochi A67A718D..., W-A1FIX fixture 025266AE..., stripe iframes,
+  omnibox popups, service worker). Broker idle, SOLO, generation
+  8624ae40 unchanged, error null. Chromium windows
+  0x56307e202df0 (Pick 4 fixture) and 0x56307e7d9bb0 (mochi chat),
+  the same addresses as W-A1FIX recorded: Chromium was NOT
+  restarted. Zen never touched. No live pilot arm run.
+
+## 6. Verdict and open items
+
+- F4 CLOSED. Gate met: probe 5 PASS live with a genuine in-program
+  retry (first dom_act ok False completed 0, retry dom_act ok True
+  completed 1, P2 confirms pick4-ok) + probes 1-4 still PASS +
+  check_run cross-check matches design (probe 5 PASS, probes 1-4
+  FAIL as zero-effect proof) + CB-2 template fixed in the runbook.
+- Commits (all pushed, ls-remote verified): 5745e3e (adapter
+  browser_worker.py + unit test), a51cf9c (runbook CB-2), 331523f
+  (driver new-tab-only), 9c9fea9 (this log, parts 1-4). This final
+  log update is a further commit below.
+- OPEN ITEM 1 (for COORD): scripts/cdp.mjs on the VM is still
+  UNCOMMITTED, holding my two F4 hunks mixed with W-PILLCDP's
+  uncommitted pill-gate work (diff 102 lines at 18:45:31 +07,
+  W-PILLCDP had not committed). The laptop carries ONLY my hunks
+  as a direct patch (12 insertions, 1 deletion, node --check OK,
+  node survival PASS, live probe 5 PASS on it). Once W-PILLCDP
+  commits, the VM diff will be only my hunks: commit them with
+  pathspec, push, pull to the laptop, and the laptop tree will be
+  clean. Until then, do NOT commit scripts/cdp.mjs from the VM
+  tree, or it sweeps W-PILLCDP's work.
+- OPEN ITEM 2 (resume-time, already known from F3): relay
+  started_git_head reads 4eb5917 while repo HEAD has moved past it
+  (my commits). At resume, re-verify the relay at the then-current
+  HEAD per the F3 procedure in the W-A1FIX log before run 1.
+  Probes do not go through the relay, so this did not gate F4.
+- OPEN ITEM 3 (note, not mine): preflight-probe.md literal P1
+  programs still show the unstamped shape; the driver stamps them
+  at runtime and the runbook now states the rule. COORD decides
+  whether to stamp the probe doc literals too before resume.
