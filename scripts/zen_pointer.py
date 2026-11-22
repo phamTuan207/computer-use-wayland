@@ -13,11 +13,26 @@ The delegate is a callable: pointer(action, screen_point) -> bool,
 matching the backend's _pointer contract (True means the input was
 sent and the target received it). It returns False, never raises,
 when an action cannot be mapped (drag, unknown type, no point for
-a point action, no batch observation) or when the desktop act did
-not complete every action. A CodeExecBackend.act refusal (CB-2)
-propagates: a wrong stamp is a wiring bug, not a runtime
-condition, and must be loud.
+a point action, no batch observation, or a point outside the batch
+observation image) or when the desktop act did not complete every
+action. A CodeExecBackend.act refusal (CB-2) propagates: a wrong
+stamp is a wiring bug, not a runtime condition, and must be loud.
+
+Coordinate frames (run 4 F3): the backend hands this delegate
+GLOBAL screen points (viewport rect center plus the absolute
+viewport origin), but desktop_act consumes IMAGE points: its
+preflight maps them through cu.image_point, which refuses any
+point outside the observation image. The delegate therefore
+converts every screen point to an image point against the batch
+observation meta (fastpath.screen_point_to_image_point, the
+inverse of cu.image_point) before building desktop actions. Run 4
+sent the raw screen point (2939, 1168) as an image point against
+a 925x1176 window image and was refused with 'point outside
+observed image'; the converted point is (430, 254.87), which
+round-trips to the same global point.
 """
+
+import fastpath
 
 DESKTOP_MAX_WIDTH = 960
 
@@ -80,8 +95,20 @@ class ZenPointerDelegate:
         return (result.get('ok') is True
                 and result.get('completed') == len(desktop))
 
-    def _point(self, screen_point):
-        """[x, y] as ints, or None when the point is unusable."""
+    def _image_point(self, screen_point):
+        """[x, y] in the batch observation image, or None.
+
+        The backend passes GLOBAL screen points, but desktop_act
+        consumes IMAGE points, so the point is converted against
+        the batch observation meta (the inverse of
+        cu.image_point). A point outside the observed image, or a
+        meta without an image frame, maps to None: the delegate
+        refuses the action instead of dispatching a point the
+        desktop preflight would reject. Floats are kept, not
+        truncated: validate_actions and image_point both accept
+        finite floats, and truncating would shift the click by up
+        to one image px.
+        """
         if (not isinstance(screen_point, (list, tuple))
                 or len(screen_point) != 2):
             return None
@@ -91,7 +118,13 @@ class ZenPointerDelegate:
         if not isinstance(x, (int, float)) \
                 or not isinstance(y, (int, float)):
             return None
-        return [int(x), int(y)]
+        if self._meta is None:
+            return None
+        try:
+            return fastpath.screen_point_to_image_point(
+                self._meta, x, y)
+        except (ValueError, TypeError):
+            return None
 
     def _translate(self, action, screen_point):
         """Zen DOM action -> desktop actions, or None when the
@@ -100,7 +133,10 @@ class ZenPointerDelegate:
         hover_click were already confirmed in the DOM layer, so
         they click too. A drag needs from/to, which a single point
         cannot express. wait/assert never reach the delegate from
-        the backend, and refuse here if they do."""
+        the backend, and refuse here if they do. The point is the
+        IMAGE point of the screen point (see _image_point): a
+        screen point outside the batch observation image refuses
+        the action instead of dispatching."""
         if not isinstance(action, dict):
             return None
         action_type = action.get('type')
@@ -110,7 +146,7 @@ class ZenPointerDelegate:
                     or any(not isinstance(k, str) for k in keys)):
                 return None
             return [{'type': 'key', 'keys': list(keys)}]
-        point = self._point(screen_point)
+        point = self._image_point(screen_point)
         if point is None:
             return None
         x, y = point

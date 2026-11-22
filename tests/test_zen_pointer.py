@@ -30,7 +30,16 @@ class FakeCodeBackend:
     """Stand-in for CodeExecBackend: observe_window returns a fresh
     window meta; act records the stamped desktop actions and
     simulates the desktop (a type lands in the field, a send key
-    bubbles it)."""
+    bubbles it).
+
+    The meta mirrors the live run-4 window: bounds [2509, 914,
+    925, 1176] on monitor [2464, 902, 1920, 1200], image 925x1176
+    (no downscale at max_width 960). act validates point actions
+    against the image frame the way the real desktop_act
+    preflight does (cu.image_point refuses a point outside the
+    image): a delegate that hands through a raw screen point is
+    refused here, exactly as run 4 was refused live.
+    """
 
     def __init__(self, session, act_ok=True, completed=None):
         self.session = session
@@ -47,7 +56,11 @@ class FakeCodeBackend:
                 'window': address,
                 'observation': '/tmp/obs-%d.json' % self._n,
                 'image': '/tmp/obs-%d.jpg' % self._n,
-                'monitor_box': [0, 0, 1920, 1200], 'created': 0}
+                'monitor_box': [2464, 902, 1920, 1200],
+                'window_bounds': [2509, 914, 925, 1176],
+                'region': [2509, 914, 925, 1176],
+                'image_size': [925, 1176],
+                'created': 0}
 
     def act(self, meta, actions, observation_path):
         self.act_calls.append((dict(meta), [dict(a) for a in actions],
@@ -55,6 +68,19 @@ class FakeCodeBackend:
         if not self.act_ok:
             return {'ok': False, 'completed': 0,
                     'error': 'desktop refused'}
+        size = meta.get('image_size')
+        for action in actions:
+            if action['type'] in ('click', 'double_click', 'move',
+                                  'hover', 'scroll'):
+                x, y = action.get('x'), action.get('y')
+                if (not isinstance(size, (list, tuple))
+                        or len(size) != 2
+                        or not (isinstance(x, (int, float))
+                                and isinstance(y, (int, float))
+                                and 0 <= x < size[0]
+                                and 0 <= y < size[1])):
+                    return {'ok': False, 'completed': 0,
+                            'error': 'point outside observed image'}
         for action in actions:
             if action['type'] == 'type':
                 for field in self.session.fields.values():
@@ -101,26 +127,69 @@ class DelegateUnitTests(unittest.TestCase):
             delegate.begin_batch('0xabc')
 
     def test_click_maps_and_stamps(self):
+        # Screen point (2700, 1000) inside the run-4 window region
+        # converts to image point (191, 86); the desktop click
+        # carries the image point, never the raw screen point.
         delegate, backend, _focused, _session = self._delegate()
         delegate.begin_batch('0xabc')
         self.assertTrue(delegate(
-            {'type': 'click', 'ref': '#c5-text'}, [100, 200]))
+            {'type': 'click', 'ref': '#c5-text'}, [2700, 1000]))
         self.assertEqual(len(backend.act_calls), 1)
         meta, actions, path = backend.act_calls[0]
         self.assertEqual(path, '/tmp/obs-1.json')
-        self.assertEqual(actions, [{'type': 'click', 'x': 100, 'y': 200,
-                                    'scope': 'window',
+        self.assertEqual(actions, [{'type': 'click', 'x': 191.0,
+                                    'y': 86.0, 'scope': 'window',
                                     'observation_id': 'obs-1'}])
+
+    def test_run4_screen_point_converts_to_image_point(self):
+        # F3 regression: the exact run-4 screen point for the
+        # #msg-input center (2939, 1168.87) must reach the desktop
+        # as the image point (430, 254.87) against the 925x1176
+        # window image. The old code passed (2939, 1168) through
+        # and the desktop preflight refused it with 'point outside
+        # observed image'.
+        delegate, backend, _focused, _session = self._delegate()
+        delegate.begin_batch('0xabc')
+        self.assertTrue(delegate(
+            {'type': 'click', 'ref': '#c5-text'},
+            [2939.0, 1168.86666870117188]))
+        _meta, actions, _path = backend.act_calls[0]
+        self.assertEqual((actions[0]['x'], actions[0]['y']),
+                         (430.0, 254.86666870117188))
+
+    def test_point_outside_window_image_returns_false(self):
+        # A screen point outside the batch observation region
+        # (100, 200) is left of the window at x 2509: the delegate
+        # refuses it without dispatching, instead of handing a
+        # point the desktop preflight would reject.
+        delegate, backend, _focused, _session = self._delegate()
+        delegate.begin_batch('0xabc')
+        self.assertFalse(delegate(
+            {'type': 'click', 'ref': '#c5-text'}, [100, 200]))
+        self.assertEqual(backend.act_calls, [])
+
+    def test_meta_without_image_frame_returns_false(self):
+        # A batch meta with an id and scope but no image frame
+        # cannot convert the point: fail closed, no dispatch.
+        delegate, backend, _focused, _session = self._delegate()
+        backend.observe_window = (
+            lambda address, crop, max_width: {
+                'id': 'obs-x', 'scope': 'window',
+                'observation': '/tmp/obs-x.json'})
+        delegate.begin_batch('0xabc')
+        self.assertFalse(delegate(
+            {'type': 'click', 'ref': '#c5-text'}, [2700, 1000]))
+        self.assertEqual(backend.act_calls, [])
 
     def test_fill_maps_to_click_plus_type(self):
         delegate, backend, _focused, _session = self._delegate()
         delegate.begin_batch('0xabc')
         self.assertTrue(delegate(
             {'type': 'fill', 'ref': '#c5-text', 'text': 'hello'},
-            [100, 200]))
+            [2700, 1000]))
         _meta, actions, _path = backend.act_calls[0]
         self.assertEqual(actions, [
-            {'type': 'click', 'x': 100, 'y': 200, 'scope': 'window',
+            {'type': 'click', 'x': 191.0, 'y': 86.0, 'scope': 'window',
              'observation_id': 'obs-1'},
             {'type': 'type', 'text': 'hello', 'scope': 'window',
              'observation_id': 'obs-1'}])
@@ -139,22 +208,24 @@ class DelegateUnitTests(unittest.TestCase):
         delegate, backend, _focused, _session = self._delegate()
         delegate.begin_batch('0xabc')
         self.assertTrue(delegate(
-            {'type': 'focus', 'ref': '#c5-text'}, [100, 200]))
+            {'type': 'focus', 'ref': '#c5-text'}, [2700, 1000]))
         _meta, actions, _path = backend.act_calls[0]
         self.assertEqual(actions[0]['type'], 'click')
+        self.assertEqual((actions[0]['x'], actions[0]['y']),
+                         (191.0, 86.0))
 
     def test_drag_refuses(self):
         # A drag needs from/to; a single point cannot express it.
         delegate, backend, _focused, _session = self._delegate()
         delegate.begin_batch('0xabc')
         self.assertFalse(delegate(
-            {'type': 'drag', 'ref': '#c5-text'}, [100, 200]))
+            {'type': 'drag', 'ref': '#c5-text'}, [2700, 1000]))
         self.assertEqual(backend.act_calls, [])
 
     def test_no_meta_returns_false(self):
         delegate, backend, _focused, _session = self._delegate()
         self.assertFalse(delegate(
-            {'type': 'click', 'ref': '#c5-text'}, [100, 200]))
+            {'type': 'click', 'ref': '#c5-text'}, [2700, 1000]))
         self.assertEqual(backend.act_calls, [])
 
     def test_failed_act_returns_false(self):
@@ -162,7 +233,7 @@ class DelegateUnitTests(unittest.TestCase):
             act_ok=False)
         delegate.begin_batch('0xabc')
         self.assertFalse(delegate(
-            {'type': 'click', 'ref': '#c5-text'}, [100, 200]))
+            {'type': 'click', 'ref': '#c5-text'}, [2700, 1000]))
 
     def test_completed_mismatch_returns_false(self):
         delegate, _backend, _focused, _session = self._delegate(
@@ -170,16 +241,16 @@ class DelegateUnitTests(unittest.TestCase):
         delegate.begin_batch('0xabc')
         self.assertFalse(delegate(
             {'type': 'fill', 'ref': '#c5-text', 'text': 'hello'},
-            [100, 200]))
+            [2700, 1000]))
 
     def test_second_batch_reobserves(self):
         # One observation per batch: the second batch observes
         # again and stamps with the fresh id, never the stale one.
         delegate, backend, _focused, _session = self._delegate()
         delegate.begin_batch('0xabc')
-        delegate({'type': 'click', 'ref': '#c5-text'}, [100, 200])
+        delegate({'type': 'click', 'ref': '#c5-text'}, [2700, 1000])
         delegate.begin_batch('0xabc')
-        delegate({'type': 'click', 'ref': '#c5-text'}, [100, 200])
+        delegate({'type': 'click', 'ref': '#c5-text'}, [2700, 1000])
         self.assertEqual(len(backend.observe_calls), 2)
         self.assertEqual(backend.act_calls[1][1][0]['observation_id'],
                          'obs-2')
@@ -219,10 +290,15 @@ class BackendWiringTests(unittest.TestCase):
         self.assertEqual(focused, ['0x557052b62dd0'])
         self.assertEqual(len(code.observe_calls), 1)
         # The field rect center (200, 215) in the viewport plus the
-        # verified origin (2749, 922) is the screen point.
+        # verified origin (2749, 922) is the screen point
+        # (2949, 1137); the delegate converts it to the IMAGE
+        # point (440, 223) against the batch window observation
+        # (region origin (2509, 914), image 925x1176). The raw
+        # screen point must never reach the desktop act: run 4
+        # was refused live for exactly that (F3).
         _meta, actions, _path = code.act_calls[0]
         self.assertEqual((actions[0]['x'], actions[0]['y']),
-                         (2949, 1137))
+                         (440.0, 223.0))
         backend.close()
 
     def test_backend_send_shape_through_the_delegate(self):
@@ -249,6 +325,13 @@ class BackendWiringTests(unittest.TestCase):
         # (the trailing assert reads state and dispatches nothing).
         self.assertEqual(len(code.observe_calls), 1)
         self.assertEqual(len(code.act_calls), 3)
+        # The set_value click is the image point (440, 223), not
+        # the raw screen point (2949, 1137): with the old
+        # pass-through the fake desktop preflight refuses the
+        # click and the program fails.
+        _meta, actions, _path = code.act_calls[0]
+        self.assertEqual((actions[0]['x'], actions[0]['y']),
+                         (440.0, 223.0))
         backend.close()
 
     def test_assert_only_batch_does_not_observe(self):
