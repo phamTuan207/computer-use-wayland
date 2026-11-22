@@ -4088,3 +4088,25 @@ Luat CB-8: DONE phai co bang chung cu the (lenh test, output, commit hash, time 
 Dua tren ket qua kiem tra task 1 cua may roi, dung lam lai tu dau, chi soi 2 claim nay. Neu phat hien claim nao thieu bang chung thi ghi ro, khong tu bia bang chung.
 
 Xong ca 3 task thi bao tong ket mot luot. Lam di.
+
+## 13:19 ngày 22/11 - BATCH 12 ĐÃ NHẬN, ĐÃ GIAO 3 TASK
+
+Muse giao batch 12 lúc 13:15 (26ebe40): S2 reopen re-verify +
+(b1) landing spec + CB-8 audit. Đã giao 3 subagent riêng, mỗi
+task 1 agent. Council 3 + redteam + fix pass sau khi có báo
+cáo từng task, theo đúng chuỗi batch 10/11.
+- Watchdog 13:17 bị chặn execution-risk ở git fetch nên chưa
+  ghi trạng thái và chưa giao việc. Phiên điều phối tự fetch
+  được bình thường, lệnh chặn chỉ dính run watchdog đó, không
+  cần chủ xác nhận thêm.
+- Log S2 reopen đã lên todolist-push (4305dcb): log
+  improvements/worker-click5-s2-reopen-log.md (1a3356d) và run
+  JSON 1-5. Điều phối tự kiểm tra nhanh từ JSON thô: cả 5 run
+  đều brave sent + chromium sent, 10/10 tin, wall 27799.1,
+  28112.6, 28560.9, 28898.1, 29020.4 ms, median 28560.9 ms =
+  28.6s, model calls 0 cả 5 run, khớp claim worker ở các điểm
+  này. V12, CB-1, phase split và rollback để task 1 kiểm tra
+  độc lập, chưa kết luận.
+- Task 1: verify reopen từ JSON thô. Task 2: spec landing (b1)
+  vào cdp.mjs. Task 3: audit CB-8 cho 2 claim DONE mới (reopen
+  PASS và (b1) 5/5 Chromium).
