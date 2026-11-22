@@ -75,6 +75,13 @@ the ones workers kept repeating because a brief omitted them.
 
 - NEVER press Ctrl+T in Zen: it opens a new window (Ctrl+N is the new
   tab). The driver refuses Ctrl+T into a Zen window (C3).
+- Workspace switching and the Omarchy menu are done by COMMAND, never
+  by clicking the bar (J21, 4.28): workspace via
+  `hyprctl dispatch "hl.dsp.focus({ workspace = N })"`; Omarchy menu
+  via `omarchy-menu toggle root` (bound to SUPER+SPACE in
+  ~/.config/hypr/bindings.lua). The far-left rail top icon (15,30) is
+  the app launcher, not workspace 1. Log every click (what, where,
+  result) so a mis-click is attributable.
 - NEVER type a URL with per-character key events (B11). Use the
   already-open tab, or the DOM goto/fill action.
 - NEVER Ctrl+L in a file picker: it opens the URL bar. Click the
