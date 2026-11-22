@@ -4305,3 +4305,31 @@ Hành động: không cứu agent nào, chỉ ghi trạng thái này, chờ
 Batch 12 xong hẳn (88d7f64, 13:50). Không agent nào đang chạy, 20 agent batch 12 đều done, không agent nào kẹt hay im quá 15 phút.
 Muse: không có yêu cầu mới (từ a24cb02 chỉ có push watchdog clone2 771f56c, không commit "coord:", coord/clone1.md không đổi).
 Hành động: không cứu agent nào, chỉ ghi trạng thái này, chờ đợt mới từ Muse.
+
+---
+
+# BATCH 13 - GIAO 22/11/2026 (tu dieu phoi COORD-CLICK-5)
+
+Clone1, tao la Pham Tuan. Batch 12 may lam xong roi, ca 3 task, tot. Task 1 kiem tra reopen: ca 7 claim JSON CONFIRMED, rollback CONFIRMED. Task 2 spec landing (b1) xong. Task 3 audit CB-8: ca 2 claim REVOKED vi thieu anh P9 (khong phai vi so sai, so dung het, chi thieu bang chung render). Dieu phoi da cho worker rieng land anh P9 vao repo roi, viec audit lai de dot sau. Gio la batch 13, viec moi.
+
+Repo lam viec: computer-use-wayland, branch main cho bao cao cua may. Doc code thi fetch read-only branch todolist-push (HEAD hien tai a6dfa3b). Khong sua code tren todolist-push, khong push len todolist-push. Bao cao va ket qua cua may commit len main.
+
+Moi task lam du 3 buoc: council 3 nguoi duyet, redteam soi loi, roi fix pass sua lai theo gop y. Ket qua 15 phut thi bao, khong ngoi im. Xong task nao commit luon task do, dung don cuoi.
+
+## Task 1: Kiem tra doc lap P2-AMEND-FIX (6 muc)
+
+Step 7 vua duoc sua them o commit ce399c7 (test) va 507a50b (fix) tren todolist-push: check pointer truoc moi _dispatch, test pointer=None, sua input_sent wait/assert, huong dan build wtype, discover, chay live. Doc het diff cua 2 commit do (read-only).
+
+Kiem tra doc lap, khong tin loi worker tu bao cao: chay lai bo test P2 (worker bao 97 test OK), kiem tra that su check pointer co o ca 2 cho goi _dispatch khong, kiem tra test A1/A2 co pin dung gioi han validator khong (verified-origin chi cuu nhanh closure hong), kiem tra discover worker bao (Ran 2131, errors=1, skipped=17, failures=0) co dung khong. Moi khang dinh phai co lenh chay + output + commit hash + time log. Chi bao cao, khong sua code chung. Verdict PASS hay AMEND, neu ro.
+
+## Task 2: Review spec landing (b1) ve tinh lam duoc
+
+Batch 12 task 2 cua may viet spec landing (b1) vao cdp.mjs (docs/batch12-task2-b1-landing-spec-20261122.md). Gio may review chinh spec do nhu mot nguoi khac: doc lai tung khang dinh API trong spec, doi chieu voi code that tai HEAD hien tai (scripts/cdp.mjs, scripts/code_exec.py, scripts/cu.py), cho nao spec viet sai hoac thieu thi neu cu the, cho nao thieu buoc test thi bo sung. Verdict PASS hay AMEND cho spec. Chi bao cao, khong sua code chung.
+
+## Task 3: Phan xuat vong 3 cho Y13g
+
+Y13g round-2 xong luc 01:42 22/11 (5/5 review): redteam BLOCK (F1-F7), verifier FAIL 277/280, council 1/2/3 AMEND. 2 loi HIGH: (1) check_manifest exemption la DEAD CODE (launch_y13.py:1197); (2) PYTHONPATH plants execute o ca 2 entry point khi dung -P. MEDIUM: --topo-order khong order xuyen merge. Doc log improvements/worker-y13g-fix-log.md (commit ab0b62c) tren todolist-push va cac review round-2.
+
+Nhiem vu: phan xuat vong 3, quyet tung finding: UPHELD (giu BLOCK), AMEND (sua duoc, neu ro cach sua), hay BAC BO (sai, neu ro bang chung). Ket qua la ban phan xuat de dot fix pass vong 3 lam theo, roi kiem tra doc lap lai. Khong chay live run nao (cam live cho toi khi fix vong 3 land va verify xong). Chi bao cao, khong sua code chung.
+
+Xong ca 3 task thi bao tong ket mot luot. Lam di.
