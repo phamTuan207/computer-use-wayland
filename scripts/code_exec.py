@@ -568,6 +568,24 @@ def _resolve_read_path(path):
     return resolved
 
 
+# Intent ledger for the CDP path (step-9 prototype, item 3): the
+# JSON batch interface carries its exactly-once ledger in
+# dom_act._sent_intents; the CDP path had none, so a retried
+# program could double-send. _api_dom_act runs in the parent (API
+# calls marshal back from the forked child), so this module-level
+# set persists across run_program calls in one driver process and
+# is checked and recorded there. A key is (target, intent): the
+# same intent sent twice to the same target in one driver process
+# is a double-send and refuses before any backend call. The ledger
+# resets with the driver process (a new broker task starts empty),
+# matching the per-session scope of the JSON ledger; it records
+# only verified sends (result ok True), never a failed or
+# unconfirmed attempt, so a failed send can be retried with the
+# same intent. intent None means no ledger: programs run without
+# one are not blocked. A batch with no send key is not protected.
+_SENT_INTENTS = set()
+
+
 class CodeExecSession:
     """One interpreter session: persistent variables plus observation bindings.
 
@@ -939,6 +957,21 @@ class CodeExecSession:
                            'sent_bubble': False})
         except dom_asserts.DomAssertError as exc:
             raise CodeExecError(str(exc)) from exc
+        # Intent ledger (step 9): a send program under a named
+        # intent refuses when the same (target, intent) already
+        # sent in this driver process. Checked after validation
+        # (a malformed or unbound batch reports its own error
+        # first) and before any backend call, so the refusal means
+        # no second send went out.
+        ledger_key = None
+        if (dom_asserts.is_send_program(actions)
+                and getattr(self, '_intent', None)):
+            ledger_key = (binding['target'], self._intent)
+            if ledger_key in _SENT_INTENTS:
+                raise CodeExecError(
+                    'intent %r already sent to %r in this session; '
+                    'refusing a second send (exactly-once ledger)'
+                    % (self._intent, binding['target']))
         if no_after:
             if not actions or actions[-1].get('type') != 'assert':
                 raise CodeExecError('no_after requires a final assert action')
@@ -960,6 +993,10 @@ class CodeExecSession:
             raise CodeExecError('backend dom_act returned a non-dict result')
         if result.get('ok') is True and isinstance(result.get('after'), dict):
             self._bind_dom_snapshot(binding['target'], result['after'])
+        # Record only a verified send: a failed or unconfirmed
+        # attempt leaves the intent free for a retry.
+        if result.get('ok') is True and ledger_key is not None:
+            _SENT_INTENTS.add(ledger_key)
         return result
 
     def api_dom_act(self, snapshot, actions, after_scope=None):
@@ -1078,6 +1115,7 @@ class CodeExecSession:
         started = time.monotonic()
         self.api_calls = 0
         self.log_lines = []
+        self._intent = intent
         self._trace_steps = 0
         self._trace_events = 0
         previous_variables = _jsonable_copy(self.variables)

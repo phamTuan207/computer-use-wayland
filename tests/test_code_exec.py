@@ -135,6 +135,29 @@ def run(source, backend=None, **kwargs):
     return code_exec.run_program(source, backend, **kwargs)
 
 
+def _dom_act_calls(backend):
+    return sum(1 for call in backend.dom_calls if call[0] == 'act')
+
+
+# The landed (b1) send program in program form: set_value, focus,
+# CDP Enter, trailing bubble assert. The fake backend's snapshot
+# has one button element; the program uses its ref, since the
+# ledger cares about the send shape, not the field role.
+_SEND_PROGRAM = (
+    'snap = dom_observe("tab-1")\n'
+    'ref = snap["elements"][0]["ref"]\n'
+    'result = dom_act(snap, ['
+    '{"type": "set_value", "ref": ref, "text": "hello", '
+    '"scope": "tab-1", "observation_id": snap["snapshot"]}, '
+    '{"type": "focus", "ref": ref, '
+    '"scope": "tab-1", "observation_id": snap["snapshot"]}, '
+    '{"type": "key", "keys": ["Enter"], '
+    '"scope": "tab-1", "observation_id": snap["snapshot"]}, '
+    '{"type": "assert", "ref": ref, "text": "hello", '
+    '"scope": "tab-1", "observation_id": snap["snapshot"]}])\n'
+    'assert_state(result["ok"], "dom send failed")\n')
+
+
 def template_program(label):
     doc = (ROOT / 'improvements' / 'pick1-program-template.md').read_text()
     marker = '## %s program\n\n%s\n' % (label, chr(96) * 3 + 'python')
@@ -567,6 +590,67 @@ class DomApiTests(unittest.TestCase):
         self.assertEqual(result, {
             'ok': False, 'completed': 0, 'error': 'DOM action refused',
         })
+
+    def test_cdp_intent_ledger_refuses_second_send(self):
+        # Step-9 item 3: the CDP path carries the exactly-once
+        # intent ledger the JSON batch interface already has. The
+        # same (target, intent) send twice in one driver process
+        # refuses BEFORE the backend is called the second time.
+        backend = FakeDomBackend()
+        first = run(_SEND_PROGRAM, backend, intent='S2-LEDGER-REFUSE')
+        self.assertTrue(first['ok'], first)
+        self.assertEqual(_dom_act_calls(backend), 1)
+        second = run(_SEND_PROGRAM, backend, intent='S2-LEDGER-REFUSE')
+        self.assertFalse(second['ok'])
+        self.assertIn('already sent', second.get('error') or '')
+        self.assertEqual(_dom_act_calls(backend), 1)
+
+    def test_cdp_intent_ledger_allows_different_intent(self):
+        backend = FakeDomBackend()
+        first = run(_SEND_PROGRAM, backend, intent='S2-LEDGER-A')
+        second = run(_SEND_PROGRAM, backend, intent='S2-LEDGER-B')
+        self.assertTrue(first['ok'], first)
+        self.assertTrue(second['ok'], second)
+        self.assertEqual(_dom_act_calls(backend), 2)
+
+    def test_cdp_intent_ledger_ignores_none_intent(self):
+        # No intent means no ledger: programs without one are not
+        # blocked (the ledger protects named intents only).
+        backend = FakeDomBackend()
+        first = run(_SEND_PROGRAM, backend)
+        second = run(_SEND_PROGRAM, backend)
+        self.assertTrue(first['ok'], first)
+        self.assertTrue(second['ok'], second)
+        self.assertEqual(_dom_act_calls(backend), 2)
+
+    def test_cdp_intent_ledger_allows_retry_after_failed_send(self):
+        # Only a VERIFIED send is recorded: a failed send (backend
+        # refused) leaves the intent free, so the retry with the
+        # same intent is allowed.
+        backend = FakeDomBackend(dom_act_ok=False)
+        first = run(_SEND_PROGRAM, backend, intent='S2-LEDGER-RETRY')
+        self.assertFalse(first['ok'])
+        backend.dom_act_ok = True
+        second = run(_SEND_PROGRAM, backend, intent='S2-LEDGER-RETRY')
+        self.assertTrue(second['ok'], second)
+        self.assertEqual(_dom_act_calls(backend), 2)
+
+    def test_cdp_intent_ledger_ignores_non_send_program(self):
+        # A batch with no send key is not ledger-protected: the
+        # same intent may click twice (the ledger is about
+        # double-SENDS, not double actions).
+        backend = FakeDomBackend()
+        click_program = (
+            'snap = dom_observe("tab-1")\n'
+            'ref = snap["elements"][0]["ref"]\n'
+            'result = dom_act(snap, [{"type": "click", "ref": ref, '
+            '"scope": "tab-1", "observation_id": snap["snapshot"]}])\n'
+            'assert_state(result["ok"], "dom click failed")\n')
+        first = run(click_program, backend, intent='S2-LEDGER-CLICK')
+        second = run(click_program, backend, intent='S2-LEDGER-CLICK')
+        self.assertTrue(first['ok'], first)
+        self.assertTrue(second['ok'], second)
+        self.assertEqual(_dom_act_calls(backend), 2)
 
     def test_dom_act_rejects_forged_snapshot(self):
         session = code_exec.CodeExecSession(FakeDomBackend())

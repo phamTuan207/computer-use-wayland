@@ -117,6 +117,17 @@ def _is_send_key(action, actions):
                for a in actions[:index])
 
 
+def is_send_program(actions):
+    """True when the batch sends a typed message: any key action in
+    it is a send key (Enter/Return after a type, fill, or set_value
+    in the same batch). The step-9 CDP intent ledger uses this
+    predicate to decide which batches a (target, intent) key
+    protects."""
+    return (isinstance(actions, list)
+            and any(_is_send_key(a, actions) for a in actions
+                    if isinstance(a, dict)))
+
+
 def assert_for(action, actions=None):
     """The assert spec or exception entry for one action.
 
