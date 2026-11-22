@@ -1,0 +1,152 @@
+{
+  "run": 2,
+  "fixture": "file:///home/james/computer-use-wayland/tests/two_vision_fixture.html?clone=zen",
+  "fixture_sha256": "147494cda4c6ae24a51ced03ccdfb3fc5a79a1bbab56dcdfc5afb4f72fba6cbf",
+  "message": "ZEN-DELEGATE-R2-IGNORE-TEST",
+  "intent": "c5-zen-delegate-r2",
+  "model_calls": 0,
+  "program_variant": "set_value",
+  "target": "Clone zen thread",
+  "window": {
+    "address": "0x56307e2771d0",
+    "bounds": [
+      2509,
+      914,
+      1863,
+      1176
+    ],
+    "workspace": {
+      "address": "1",
+      "id": 1,
+      "type": "normal",
+      "name": "1"
+    }
+  },
+  "tabs_before": {
+    "ok": true,
+    "count": 18,
+    "tabs": [
+      {
+        "handle": "6a034b11",
+        "title": "",
+        "url": "https://www.youtube.com/"
+      },
+      {
+        "handle": "515e643f",
+        "title": "",
+        "url": "https://www.reddit.com/"
+      },
+      {
+        "handle": "0eb19b60",
+        "title": "",
+        "url": "about:blank"
+      },
+      {
+        "handle": "c796dd18",
+        "title": "",
+        "url": "https://mail.google.com/mail/u/1/#inbox"
+      },
+      {
+        "handle": "6e3b905a",
+        "title": "",
+        "url": "about:blank"
+      },
+      {
+        "handle": "ef90cb33",
+        "title": "Chat \u2014 Muse",
+        "url": "https://muse.ai/thread/750c8dae-58fb-4a65-82ac-753e78d6ce93"
+      },
+      {
+        "handle": "bf07541e",
+        "title": "",
+        "url": "https://docs.google.com/spreadsheets/d/1WzUJNuCQlYLAj59-gdIPFFQv2P_d3f2KhEYcGeWhRRY/edit?gid=0#gid=0"
+      },
+      {
+        "handle": "286fb304",
+        "title": "",
+        "url": "about:blank"
+      },
+      {
+        "handle": "e23b5ad8",
+        "title": "",
+        "url": "https://zen-browser.app/welcome/"
+      },
+      {
+        "handle": "0d96c852",
+        "title": "",
+        "url": "about:blank"
+      },
+      {
+        "handle": "7fea6570",
+        "title": "",
+        "url": "https://www.byteplus.com/en/activity/codingplan?utm_source=google&utm_medium=pmax&utm_campaign=purchase_codingplan_sea_english_20260605_yuki&utm_term=20260605_deepseek-v4_white_new&utm_content=tecdo&gad_source=2&gad_campaignid=23906536929&gclid=CjwKCAjwqonVBhA4EiwA9wYJ3Xlt3CYq0n0RZg5HqXHeGMFcoLueRZE7Nmv4xOfOy74XBTxxf3dOOxoC4gUQAvD_BwE"
+      },
+      {
+        "handle": "b96f9f10",
+        "title": "",
+        "url": "https://example.com/"
+      },
+      {
+        "handle": "141ae356",
+        "title": "",
+        "url": "about:blank"
+      },
+      {
+        "handle": "a052a44f",
+        "title": "",
+        "url": "about:blank"
+      },
+      {
+        "handle": "1ed4c1c6",
+        "title": "Just a moment...",
+        "url": "https://polygon.codeforces.com/login?backLink=%2Fpackage%3Fsession%3Da990539d869d87619249d0c813d8346ec027eda9%26ccid%3D0fb1586e2ab7dcfca7b64c98606cec8f&session=a990539d869d87619249d0c813d8346ec027eda9&ccid=19507fc1baee383a5faae847d1eb920d"
+      },
+      {
+        "handle": "3c5141f9",
+        "title": "",
+        "url": "about:blank"
+      },
+      {
+        "handle": "6ab6f4ca",
+        "title": "",
+        "url": "https://www.chunkbase.com/apps/biome-finder#seed=-4216250823719477953&platform=java_1_21_9&dimension=overworld&x=967&z=543&zoom=0.518"
+      },
+      {
+        "handle": "d377f1a6",
+        "title": "",
+        "url": "https://duck.ai/chat?t=ffab&chatID=5cb263e5-9c80-4dcf-8477-8b990cb70343"
+      }
+    ],
+    "current": "ef90cb33"
+  },
+  "liveness": {
+    "live": false,
+    "reasons": [],
+    "drivers": [],
+    "relay": {
+      "state": "idle",
+      "owner": null,
+      "driver": "idle",
+      "guardian": "idle",
+      "recovery": "none"
+    },
+    "leases": [
+      "/home/james/.cache/agent-computer-use/c5-heldout-90.lease",
+      "/home/james/.cache/agent-computer-use/c5-heldout-91.lease",
+      "/home/james/.cache/agent-computer-use/s2-flip-run0.lease",
+      "/home/james/.cache/agent-computer-use/s2-flip-run1.lease",
+      "/home/james/.cache/agent-computer-use/s2-flip-run2.lease",
+      "/home/james/.cache/agent-computer-use/s2-flip-run3.lease",
+      "/home/james/.cache/agent-computer-use/s2-flip-run4.lease",
+      "/home/james/.cache/agent-computer-use/s2-flip-run5.lease",
+      "/home/james/.cache/agent-computer-use/s2-flip-trivial.lease",
+      "/home/james/.cache/agent-computer-use/s2-verify.lease"
+    ]
+  },
+  "outcome": "error",
+  "error": "zen-tab open failed rc=1: {\"ok\": false, \"error\": \"ZenDomError: scratch tab title 'Two-vision benchmark fixture' != 'Clone zen thread'\"} ",
+  "cleanup": {
+    "skipped": true
+  },
+  "wall_ms": 20392.6
+}
