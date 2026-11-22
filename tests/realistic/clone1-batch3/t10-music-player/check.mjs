@@ -95,7 +95,12 @@ try {
   const minAfterNextP = sampleMin();
   await expectText('#now-playing', 'River Road - The Demos', 'now playing after next');
   const minAfterNext = await minAfterNextP;
-  if (minAfterNext > 2 || minAfterNext >= posBeforeNext) {
+  // The min >= pre-click clause is guarded by pre-click > 0: when the
+  // pre-click position is 0 the clause is vacuous (min >= 0 always
+  // holds) and only adds a confusing follow-on failure after a real
+  // one, as when playTrack stops the timer and the position is stuck
+  // at 0. The exact-zero read above is the witness in that case.
+  if (minAfterNext > 2 || (posBeforeNext > 0 && minAfterNext >= posBeforeNext)) {
     failures.push('position not reset after next: min observed ' + minAfterNext + ' after ' + posBeforeNext);
   }
   details.positionMinAfterNext = minAfterNext;
@@ -103,24 +108,28 @@ try {
   // part-way through would still pass an absolute read, so read the
   // position when the sampler window ends and again after two
   // 350 ms sleeps, requiring a gain of at least 2 ticks across each
-  // sleep. The absolute 2-11 bound on the middle read still catches
-  // a clock that runs fast: one tick per 100 ms over about 850 ms
-  // of playing puts the correct value near 8.
+  // sleep. The absolute 6-11 bound on the middle read still catches
+  // a clock that runs fast, and its floor catches a clock that runs
+  // slow: one tick per 100 ms over about 850 ms of playing puts the
+  // correct value near 8.
   const afterSampler = await position();
   details.positionAtSamplerEnd = afterSampler;
   await sleep(350);
   const advancing = await position();
   details.positionAdvancingAfterNext = advancing;
   if (advancing - afterSampler < 2) failures.push('position did not gain after next while playing: ' + afterSampler + ' to ' + advancing);
-  if (advancing < 2 || advancing > 11) failures.push('position after next while playing out of range 2-11: ' + advancing);
+  if (advancing < 6 || advancing > 11) failures.push('position after next while playing out of range 6-11: ' + advancing);
   // Second gain window: a timer that dies late in the first sleep
   // still shows a gain there, so read once more after another
-  // 350 ms and require a second gain of at least 2 ticks. No
-  // absolute bound here: the correct value is near 12 by then.
+  // 350 ms and require a second gain of at least 2 ticks. The later
+  // read also carries an absolute upper bound: a clock that speeds
+  // up after the middle read is not caught by the gain check alone.
+  // The correct value is near 12 by then.
   await sleep(350);
   const advancingLater = await position();
   details.positionAdvancingLaterAfterNext = advancingLater;
   if (advancingLater - advancing < 2) failures.push('position did not gain again after next while playing: ' + advancing + ' to ' + advancingLater);
+  if (advancingLater > 15) failures.push('position after next while playing too far advanced: ' + advancingLater);
   // Exact-zero check on a clock-frozen path. The 500 ms sampler above
   // cannot tell a correct reset sampled late from a wrong reset to 1
   // or 2, so pause first (the timer stops, so no tick can land
@@ -154,10 +163,30 @@ try {
   details.positionAfterFrozenNextResumeLater = afterFrozenNextResumeLater;
   if (afterFrozenNextResumeLater - afterFrozenNextResume < 2) failures.push('position did not gain again after resume from frozen next: ' + afterFrozenNextResume + ' to ' + afterFrozenNextResumeLater);
   if (afterFrozenNextResumeLater < 2 || afterFrozenNextResumeLater > 11) failures.push('position after resume from frozen next out of range 2-11: ' + afterFrozenNextResumeLater);
-  await page.click('#prev-btn');
+  // H4: the position is read after every Previous too. Previous resets
+  // the position to 0, so the click and the read run in the same
+  // in-page task (as for Next) and require exactly 0.
+  const posAfterFirstPrev = await page.evaluate(() => {
+    document.getElementById('prev-btn').click();
+    return Number(document.getElementById('position').dataset.seconds);
+  });
+  if (posAfterFirstPrev !== 0) failures.push('position not exactly 0 after first prev: ' + posAfterFirstPrev);
+  details.positionAfterFirstPrev = posAfterFirstPrev;
   await expectText('#now-playing', 'River Road - The Demos', 'now playing after prev from frozen next');
-  await page.click('#prev-btn');
+  const posAfterSecondPrev = await page.evaluate(() => {
+    document.getElementById('prev-btn').click();
+    return Number(document.getElementById('position').dataset.seconds);
+  });
+  if (posAfterSecondPrev !== 0) failures.push('position not exactly 0 after second prev: ' + posAfterSecondPrev);
+  details.positionAfterSecondPrev = posAfterSecondPrev;
   await expectText('#now-playing', 'Morning Light - The Demos', 'now playing after prev');
+  // A Previous that stops the timer leaves the position at 0 while the
+  // status still says Playing; read again after 350 ms and require the
+  // clock to be running.
+  await sleep(350);
+  const afterPrev = await position();
+  details.positionAfterPrev = afterPrev;
+  if (afterPrev < 2 || afterPrev > 11) failures.push('position did not advance after prev: ' + afterPrev);
   await page.click('#volume');
   await page.keyboard.press('Home');
   for (let i = 0; i < 30; i++) await page.keyboard.press('ArrowRight');
@@ -188,7 +217,7 @@ try {
   const minAfterShuffleNextP = sampleMin();
   await expectText('#now-playing', 'Mountain Air - The Demos', 'now playing after next in shuffle order');
   const minAfterShuffleNext = await minAfterShuffleNextP;
-  if (minAfterShuffleNext > 2 || minAfterShuffleNext >= posBeforeShuffleNext) {
+  if (minAfterShuffleNext > 2 || (posBeforeShuffleNext > 0 && minAfterShuffleNext >= posBeforeShuffleNext)) {
     failures.push('position not reset after shuffle next: min observed ' + minAfterShuffleNext + ' after ' + posBeforeShuffleNext);
   }
   details.positionMinAfterShuffleNext = minAfterShuffleNext;
@@ -203,11 +232,12 @@ try {
   const advancingAfterShuffle = await position();
   details.positionAdvancingAfterShuffleNext = advancingAfterShuffle;
   if (advancingAfterShuffle - afterShuffleSampler < 2) failures.push('position did not gain after shuffle next while playing: ' + afterShuffleSampler + ' to ' + advancingAfterShuffle);
-  if (advancingAfterShuffle < 2 || advancingAfterShuffle > 11) failures.push('position after shuffle next while playing out of range 2-11: ' + advancingAfterShuffle);
+  if (advancingAfterShuffle < 6 || advancingAfterShuffle > 11) failures.push('position after shuffle next while playing out of range 6-11: ' + advancingAfterShuffle);
   await sleep(350);
   const advancingLaterAfterShuffle = await position();
   details.positionAdvancingLaterAfterShuffleNext = advancingLaterAfterShuffle;
   if (advancingLaterAfterShuffle - advancingAfterShuffle < 2) failures.push('position did not gain again after shuffle next while playing: ' + advancingAfterShuffle + ' to ' + advancingLaterAfterShuffle);
+  if (advancingLaterAfterShuffle > 15) failures.push('position after shuffle next while playing too far advanced: ' + advancingLaterAfterShuffle);
   // Paused shuffle Next, mirroring step 7: the sampler above proves
   // the reset happens, this exact-zero read proves the reset value
   // in shuffle order. Previous returns to Mountain Air so the
@@ -236,8 +266,18 @@ try {
   details.positionAfterFrozenShuffleResumeLater = afterFrozenShuffleResumeLater;
   if (afterFrozenShuffleResumeLater - afterFrozenShuffleResume < 2) failures.push('position did not gain again after resume from frozen shuffle next: ' + afterFrozenShuffleResume + ' to ' + afterFrozenShuffleResumeLater);
   if (afterFrozenShuffleResumeLater < 2 || afterFrozenShuffleResumeLater > 11) failures.push('position after resume from frozen shuffle next out of range 2-11: ' + afterFrozenShuffleResumeLater);
-  await page.click('#prev-btn');
+  // H4: same-task exact-zero read after Previous, as in step 7.
+  const posAfterShufflePrev = await page.evaluate(() => {
+    document.getElementById('prev-btn').click();
+    return Number(document.getElementById('position').dataset.seconds);
+  });
+  if (posAfterShufflePrev !== 0) failures.push('position not exactly 0 after prev in shuffle order: ' + posAfterShufflePrev);
+  details.positionAfterShufflePrev = posAfterShufflePrev;
   await expectText('#now-playing', 'Mountain Air - The Demos', 'now playing after prev from frozen shuffle next');
+  await sleep(350);
+  const afterShufflePrev = await position();
+  details.positionAfterShufflePrevAdvance = afterShufflePrev;
+  if (afterShufflePrev < 2 || afterShufflePrev > 11) failures.push('position did not advance after prev in shuffle order: ' + afterShufflePrev);
   await page.click('#shuffle-btn');
   await expectText('#shuffle-btn', 'Shuffle: Off', 'shuffle button after off');
   listed = await tracks();
@@ -249,7 +289,17 @@ try {
   await expectText('#repeat-btn', 'Repeat: One', 'repeat after second click');
   await page.click('#repeat-btn');
   await expectText('#repeat-btn', 'Repeat: Off', 'repeat after third click');
-  await page.click('#playlist .track[data-track="4"]');
+  // H4/R5: the position is read after every playlist click. playTrack
+  // resets the position to 0, so the click and the read run in the same
+  // in-page task and require exactly 0. This is also the only live
+  // witness for this click: Mountain Air is already the current track,
+  // so the track-name assert alone cannot see a click that does nothing.
+  const posAfterPlaylistMountain = await page.evaluate(() => {
+    document.querySelector('#playlist .track[data-track="4"]').click();
+    return Number(document.getElementById('position').dataset.seconds);
+  });
+  if (posAfterPlaylistMountain !== 0) failures.push('position not exactly 0 after clicking Mountain Air: ' + posAfterPlaylistMountain);
+  details.positionAfterPlaylistMountain = posAfterPlaylistMountain;
   await expectText('#now-playing', 'Mountain Air - The Demos', 'now playing after clicking Mountain Air');
   // Let the track play so the position is clearly past 0 before the
   // wrap Nexts: a wrap that fails to reset is only observable when
@@ -276,13 +326,34 @@ try {
   const minAfterPlayingWrapP = sampleMin();
   await expectText('#now-playing', 'Morning Light - The Demos', 'repeat All wraps to first track (playing)');
   const minAfterPlayingWrap = await minAfterPlayingWrapP;
-  if (minAfterPlayingWrap > 2 || minAfterPlayingWrap >= posBeforePlayingWrap) {
+  if (minAfterPlayingWrap > 2 || (posBeforePlayingWrap > 0 && minAfterPlayingWrap >= posBeforePlayingWrap)) {
     failures.push('position not reset after playing wrap next: min observed ' + minAfterPlayingWrap + ' after ' + posBeforePlayingWrap);
   }
   details.positionMinAfterPlayingWrap = minAfterPlayingWrap;
+  // R2/W1: three-point advancing check after the playing wrap Next, as
+  // after the plain and shuffle Nexts. Without it a timer that stops on
+  // the wrap path is masked by the next playlist click, which restarts
+  // the timer before any later position read.
+  const afterWrapSampler = await position();
+  details.positionAtWrapSamplerEnd = afterWrapSampler;
+  await sleep(350);
+  const advancingAfterWrap = await position();
+  details.positionAdvancingAfterWrap = advancingAfterWrap;
+  if (advancingAfterWrap - afterWrapSampler < 2) failures.push('position did not gain after playing wrap next while playing: ' + afterWrapSampler + ' to ' + advancingAfterWrap);
+  if (advancingAfterWrap < 6 || advancingAfterWrap > 11) failures.push('position after playing wrap next while playing out of range 6-11: ' + advancingAfterWrap);
+  await sleep(350);
+  const advancingLaterAfterWrap = await position();
+  details.positionAdvancingLaterAfterWrap = advancingLaterAfterWrap;
+  if (advancingLaterAfterWrap - advancingAfterWrap < 2) failures.push('position did not gain again after playing wrap next while playing: ' + advancingAfterWrap + ' to ' + advancingLaterAfterWrap);
+  if (advancingLaterAfterWrap > 15) failures.push('position after playing wrap next while playing too far advanced: ' + advancingLaterAfterWrap);
   // Frozen wrap second: go back to the last track and wrap again,
   // this time paused, so the reset value can be read exactly.
-  await page.click('#playlist .track[data-track="4"]');
+  const posAfterPlaylistMountainAgain = await page.evaluate(() => {
+    document.querySelector('#playlist .track[data-track="4"]').click();
+    return Number(document.getElementById('position').dataset.seconds);
+  });
+  if (posAfterPlaylistMountainAgain !== 0) failures.push('position not exactly 0 after clicking Mountain Air again: ' + posAfterPlaylistMountainAgain);
+  details.positionAfterPlaylistMountainAgain = posAfterPlaylistMountainAgain;
   await expectText('#now-playing', 'Mountain Air - The Demos', 'now playing after clicking Mountain Air again');
   await sleep(700);
   const posBeforeFrozenWrap = await position();
@@ -292,7 +363,8 @@ try {
   // repeat-All wrap branch: the wrap path resets position too, and
   // the track-name assert alone cannot see a wrap that leaves the
   // old position behind. Pausing here masks nothing: no advancing
-  // check follows the wrap Next.
+  // check follows the frozen wrap Next (the playing wrap above has
+  // one, and the resume reads below are the witness for its Play).
   await page.click('#pause-btn');
   await expectText('#status', 'Paused', 'status before frozen wrap next');
   await page.click('#next-btn');
@@ -329,7 +401,14 @@ try {
   await page.fill('#search', '');
   listed = await tracks();
   if (listed.length !== 5) failures.push('clearing search should show 5 tracks, got ' + listed.length);
-  await page.click('#playlist .track[data-track="2"]');
+  // H4/R5: same-task exact-zero read after the playlist click, as in
+  // steps 14 and 15.
+  const posAfterPlaylistNight = await page.evaluate(() => {
+    document.querySelector('#playlist .track[data-track="2"]').click();
+    return Number(document.getElementById('position').dataset.seconds);
+  });
+  if (posAfterPlaylistNight !== 0) failures.push('position not exactly 0 after clicking Night Drive: ' + posAfterPlaylistNight);
+  details.positionAfterPlaylistNight = posAfterPlaylistNight;
   await expectText('#now-playing', 'Night Drive - The Demos', 'now playing after clicking Night Drive');
   await page.click('#pause-btn');
   await expectText('#status', 'Paused', 'status after final pause');

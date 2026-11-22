@@ -52,11 +52,13 @@ try {
   // "Target page, context or browser has been closed" even though the
   // click landed. That error is tolerated only when the popup really
   // closed, and only together with a verify step: after the close,
-  // the expected effect on the main window is polled for up to 5 s,
+  // the expected effect on the main window is polled for up to 10 s,
   // because the popup posts its result with postMessage and closes
   // synchronously, so the opener applies the effect on a later task.
-  // If the effect never appears, the click is reported as a failure
-  // instead of being silently swallowed.
+  // The cap is 10 s, not 5 s: a correct delivery that takes 6 s must
+  // verify instead of failing wrongly on the poll cap. If the effect
+  // never appears, the click is reported as a failure instead of
+  // being silently swallowed.
   const clickAndClose = async (popup, sel, verify, what) => {
     const closed = popup.waitForEvent('close', { timeout: 10000 });
     try {
@@ -71,7 +73,7 @@ try {
     }
     await closed;
     if (verify) {
-      const deadline = Date.now() + 5000;
+      const deadline = Date.now() + 10000;
       let seen = false;
       while (Date.now() < deadline) {
         try {
@@ -90,6 +92,11 @@ try {
   const titleIs = (id, wanted) => async () => (await titleOf(id) || '').trim() === wanted;
   const bodyIsDark = async () => ((await page.getAttribute('body', 'class')) || '').includes('dark');
   const bodyIsLight = async () => !((await page.getAttribute('body', 'class')) || '').includes('dark');
+  const lsGet = (key) => page.evaluate((k) => localStorage.getItem(k), key);
+  const expectLs = async (key, wanted, what) => {
+    const got = await lsGet(key);
+    if (got !== wanted) failures.push(what + ': localStorage ' + key + ' is "' + got + '", want "' + wanted + '"');
+  };
 
   await expectTitle('alpha', 'Alpha', 'initial Alpha title');
   await expectTitle('beta', 'Beta', 'initial Beta title');
@@ -104,6 +111,7 @@ try {
   if (!(await text('#status')).includes('Renamed alpha to Alpha v2.')) {
     failures.push('status wrong after first rename: ' + (await text('#status')));
   }
+  await expectLs('project:alpha', 'Alpha v2', 'localStorage after first rename');
   popup = await openPopup('.project[data-id="alpha"] .detail-btn');
   if ((await popup.inputValue('#title-input')) !== 'Alpha v2') {
     failures.push('detail window did not prefill Alpha v2 on reopen');
@@ -111,18 +119,40 @@ try {
   await popup.fill('#title-input', 'Alpha Final');
   await clickAndClose(popup, '#save-btn', titleIs('alpha', 'Alpha Final'), 'Alpha title after second rename');
   await expectTitle('alpha', 'Alpha Final', 'Alpha title after second rename');
+  if (!(await text('#status')).includes('Renamed alpha to Alpha Final.')) {
+    failures.push('status wrong after second rename: ' + (await text('#status')));
+  }
+  await expectLs('project:alpha', 'Alpha Final', 'localStorage after second rename');
   popup = await openPopup('#prefs-btn');
   await popup.selectOption('#theme-select', 'dark');
   await clickAndClose(popup, '#apply-btn', bodyIsDark, 'main window dark class after prefs dark');
   if (!((await page.getAttribute('body', 'class')) || '').includes('dark')) {
     failures.push('main window missing dark class after prefs dark');
   }
+  if (!(await text('#status')).includes('Theme set to dark.')) {
+    failures.push('status wrong after prefs dark: ' + (await text('#status')));
+  }
+  await expectLs('theme', 'dark', 'localStorage after prefs dark');
   popup = await openPopup('#prefs-btn');
   await popup.selectOption('#theme-select', 'light');
   await clickAndClose(popup, '#apply-btn', bodyIsLight, 'main window light class after prefs light');
   if (((await page.getAttribute('body', 'class')) || '').includes('dark')) {
     failures.push('main window still dark after prefs light');
   }
+  if (!(await text('#status')).includes('Theme set to light.')) {
+    failures.push('status wrong after prefs light: ' + (await text('#status')));
+  }
+  await expectLs('theme', 'light', 'localStorage after prefs light');
+  // Prefs Cancel: picking Dark then cancelling must change nothing,
+  // neither the live theme nor the saved one.
+  popup = await openPopup('#prefs-btn');
+  await popup.selectOption('#theme-select', 'dark');
+  await clickAndClose(popup, '#cancel-btn');
+  await sleep(500);
+  if (((await page.getAttribute('body', 'class')) || '').includes('dark')) {
+    failures.push('main window dark after cancelled prefs change');
+  }
+  await expectLs('theme', 'light', 'localStorage after cancelled prefs change');
   popup = await openPopup('.project[data-id="beta"] .detail-btn');
   await popup.fill('#title-input', 'Beta Changed');
   await clickAndClose(popup, '#cancel-btn');
@@ -141,14 +171,43 @@ try {
   if (!((await page.getAttribute('body', 'class')) || '').includes('dark')) {
     failures.push('main window missing dark class after second prefs popup');
   }
+  if (!(await text('#status')).includes('Theme set to dark.')) {
+    failures.push('status wrong after second prefs dark: ' + (await text('#status')));
+  }
+  await expectLs('theme', 'dark', 'localStorage after second prefs dark');
   await detailPopup.fill('#title-input', 'Gamma v2');
   await clickAndClose(detailPopup, '#save-btn', titleIs('gamma', 'Gamma v2'), 'Gamma title after rename with two popups');
   await expectTitle('gamma', 'Gamma v2', 'Gamma title after rename with two popups');
+  if (!(await text('#status')).includes('Renamed gamma to Gamma v2.')) {
+    failures.push('status wrong after Gamma rename: ' + (await text('#status')));
+  }
+  await expectLs('project:gamma', 'Gamma v2', 'localStorage after Gamma rename');
   await expectTitle('alpha', 'Alpha Final', 'Alpha title at the end');
   await expectTitle('beta', 'Beta', 'Beta title at the end');
   if (context.pages().length !== 1) {
     failures.push('expected 1 page after all popups closed, got ' + context.pages().length);
   }
+  // Settle read: a spurious message arriving after the final read would
+  // otherwise escape, so dwell and re-read the titles and status.
+  await sleep(500);
+  await expectTitle('alpha', 'Alpha Final', 'Alpha title after settle');
+  await expectTitle('beta', 'Beta', 'Beta title after settle');
+  await expectTitle('gamma', 'Gamma v2', 'Gamma title after settle');
+  if (!(await text('#status')).includes('Renamed gamma to Gamma v2.')) {
+    failures.push('status wrong after settle: ' + (await text('#status')));
+  }
+  // Persistence: the renames and the theme are saved to localStorage,
+  // so a reload must restore the same titles and theme.
+  await page.reload();
+  await expectTitle('alpha', 'Alpha Final', 'Alpha title after reload');
+  await expectTitle('beta', 'Beta', 'Beta title after reload');
+  await expectTitle('gamma', 'Gamma v2', 'Gamma title after reload');
+  if (!((await page.getAttribute('body', 'class')) || '').includes('dark')) {
+    failures.push('main window missing dark class after reload');
+  }
+  await expectLs('project:alpha', 'Alpha Final', 'localStorage after reload');
+  await expectLs('project:gamma', 'Gamma v2', 'localStorage after reload');
+  await expectLs('theme', 'dark', 'localStorage theme after reload');
   details.finalTitles = {
     alpha: await titleOf('alpha'),
     beta: await titleOf('beta'),

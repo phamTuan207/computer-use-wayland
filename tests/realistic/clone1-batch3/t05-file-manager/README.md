@@ -32,12 +32,14 @@ and cancel.
     prefilled with `budget.csv`, type `budget2.csv`, click Cancel,
     check the name is unchanged and the dialog closed.
 12. Click Rename again, submit an empty name, check the name is
-    unchanged, the error shows, and the dialog stays open; then
-    Cancel and check the dialog closed.
+    unchanged, the error shows with the exact text
+    `Name cannot be empty.`, and the dialog stays open; then Cancel
+    and check the dialog closed. Submit a whitespace-only name the
+    same way and check the same rejection.
 13. Select notes.txt, click Rename, check the dialog is prefilled
-    with `notes.txt` and the old name is still listed, type
-    `field-notes-7.txt`, click Save, check the new name appears
-    and notes.txt is gone.
+    with `notes.txt` and the old name is still listed, type a
+    per-run random name `field-notes-<tag>.txt`, click Save, check
+    the new name appears and notes.txt is gone.
 14. Select photo.jpg, click Delete, check the confirm dialog asks
     about photo.jpg, then Cancel and check the list is unchanged.
 15. Select photo.jpg again, click Delete, confirm, check it is gone.
@@ -45,16 +47,19 @@ and cancel.
     longer lists it.
 17. Open Archive, check video.mp4 is there.
 18. Go back to Home, select Archive, click Rename, type
-    `  Old Files 2026  ` with surrounding spaces, click Save,
-    check the trimmed name `Old Files 2026` appears, Archive is
-    gone, and the tree button reads `Old Files 2026`.
-19. Open `Old Files 2026` from the tree, check the crumbs read
-    `Old Files 2026` and video.mp4 is still inside it.
+    `  Old Files <tag>  ` with surrounding spaces, click Save,
+    check the trimmed name `Old Files <tag>` appears, Archive is
+    gone, and the tree button reads `Old Files <tag>`.
+19. Open `Old Files <tag>` from the tree, check the crumbs read
+    `Old Files <tag>` and video.mp4 is still inside it.
 20. Move video.mp4 back to Home, check the folder is empty again.
 21. Go back to Home, check all 4 items are there.
-22. Search `2026`, check only `Old Files 2026` shows.
-23. Clear the search, double-click `Old Files 2026`, check the
-    crumbs read `Old Files 2026` and the empty state shows.
+22. Search the random tag, check only `Old Files <tag>` shows.
+23. Clear the search, double-click `Old Files <tag>`, check the
+    crumbs read `Old Files <tag>` and the empty state shows.
+24. Go back to Home, rename budget.csv to `video.mp4` (a name that
+    already exists), check the rename applies verbatim: the list
+    shows `video.mp4` twice and budget.csv is gone.
 
 ## Pass conditions
 
@@ -80,8 +85,13 @@ and cancel.
 
 Rename in this demo applies whatever name is typed into the
 dialog, trimmed of surrounding spaces. Determinism comes from the
-checker typing fixed strings, not from the fixture knowing them:
-the names `field-notes-7.txt` and `Old Files 2026` appear only in
-the checker, never in the fixture. All state lives in the page.
+checker typing names the fixture cannot know in advance, not from
+the fixture knowing them: the names carry a per-run random suffix
+(`field-notes-<tag>.txt`, `Old Files <tag>`), so a fixture that
+hardcodes an earlier run's names fails. The empty-name error is
+asserted by its exact text (`Name cannot be empty.`), not just by
+the error element being visible, and a whitespace-only name is
+rejected the same way. A duplicate name applies verbatim because
+the demo has no duplicate rule. All state lives in the page.
 The browser run is Playwright Chromium; the same flow on Firefox
 or Zen is UNVERIFIED.
