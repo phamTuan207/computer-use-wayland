@@ -40,8 +40,13 @@ and does NOT prove the liquid readiness window (O3).
 5. G4: `nest hyprctl configerrors` output empty after profile application.
    RECORD the exact output either way, even on pass (empty).
 6. AMEND4: HYPRGLASS_SKIP_VERSION_CHECK unset. AMEND5: no hyprglass load
-   path in the live config chain; live plugin list before == after
-   (hyprbars only).
+   path in the live config chain; live plugin list before == after.
+   Record the ACTUAL before-list; do NOT assume hyprbars-only. As of
+   16:12 Sun 2026-11-22 live runs hyprbars + hyprglass 1.1.1-cu.1 +
+   computer-use-cursor (loaded by another lane's live work after Y6r's
+   22:09 21/11 hyprbars-only read; live PID 1515 unchanged, no restart;
+   live config chain still load-path-free per the AMEND5 walk). The identity
+   check (before == after) is what matters, not the list contents.
 7. Live untouched: live PID 1515 alive, live hyprctl responds, live plugin
    list identical before/after, no stray mpv/foot/indicator processes, lock
    free after teardown, nest runtime dir removed.
@@ -71,6 +76,11 @@ and does NOT prove the liquid readiness window (O3).
   (exactly one); live PID single.
 - Staged files verified: conf md5 9ccb2701, hook and optics md5s match the
   repo copies in improvements/y6-nested-conf/ (record both md5s in the run log).
+- Live baseline re-verified immediately before launch: record the live
+  plugin list and confirm with the coordinator that no live lane (F1/F2/F3)
+  will load or unload plugins during the trial window. If the baseline moved
+  since staging, record the new baseline; do NOT assume the Y6r baseline
+  (hyprbars-only is stale since 16:12 22/11, see item 6 above).
 - ldd on the conf plugin path: rc=0, zero "not found" lines, output saved.
 - The amended runner file on the laptop matches the repo md5 (record it).
 

@@ -33,8 +33,9 @@
 # Exit codes: 0 = run completed, verdict lines printed. 1 = NO-GO / abort (see log).
 # Teardown always runs (trap on EXIT, TERM, INT, HUP): nest killed by process
 # group, runtime dir removed after the nested log is copied out, live session
-# re-verified (live PID resolved at runtime, hyprctl responds, live plugins
-# hyprbars only).
+# re-verified (live PID resolved at runtime, hyprctl responds, live plugin
+# list compared before/after for identity; the list contents are recorded,
+# never assumed).
 # Y6C5-A7 (Y6r R2, adjudicated): DO NOT add a manual `nest hyprctl reload`
 # anywhere in this runner. Parse 2 already applies the profile
 # deterministically (redteam section 1.2: STAGE_LATE loads the plugin

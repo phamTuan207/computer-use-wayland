@@ -243,7 +243,10 @@
   and the load-test script; errata blocks present in all three papers
   (in the test run).
 - New md5s after the fixes (recorded because Y6r V8 pinned the old ones):
-  runner f197ac651baff574e6b3e6de1d9c8d53 (was 692d427174fa1c335eb02a46fc5e0a18),
+  runner b50396bf1c68c1e047733b2a5b24f35a (was 692d427174fa1c335eb02a46fc5e0a18;
+  f197ac65 was the intermediate version before a header-comment fix removing
+  a stale hyprbars-only assumption; the final b50396bf is verified identical
+  on the VM repo and the laptop repo copy),
   load-test script 486fd1ce9bd9118932ea10a1d7aae680 (was
   65fe4c43a026b9aeb89048ff17a3b610). The load-test script is a historical
   artifact (its run already happened); the edit is a record correction only.
@@ -268,7 +271,76 @@
 
 ## 4. Staging record (laptop /tmp/y6-nested/conf, after re-review GO)
 
-- [TO FILL: exact commands, md5s before/after, ldd output file, rollback]
+- Time: 16:12-16:15 +07, Sun 2026-11-22 (T+9m to T+12m). Re-review GO (zero
+  HIGH gaps, section 5) was written before any staging write.
+- Pre-staging state verified 16:12:33: conf 0d4ac7a9, hook 9d68b2f5, optics
+  b011ea91, laptop runner 692d4271 (clean working tree for that file), live
+  PID 1515 alive.
+- Backups (all md5-verified after copy):
+  - /tmp/y6-nested/conf/hyprland-wayland.lua.bak-y6c5-20261122: 0d4ac7a9 (backup-1 conf)
+  - /tmp/y6-nested/conf/nested-visuals-hook.lua.bak-y6c5-20261122: 9d68b2f5
+  - /tmp/y6-nested/conf/optics.lua.bak-y6c5-20261122: b011ea91
+  - /tmp/y6-nested/runner-v2.sh.bak-y6c5-20261122: 692d4271 (old runner)
+- Staged (all md5-verified after copy):
+  - A1 conf: /tmp/y6-nested/conf/hyprland-wayland.lua now 9ccb27017ab63a9d2bce1d9651425d3b
+    (copied from hyprland-wayland-y6e.lua; repo copy md5 identical).
+  - A3 hook: /tmp/y6-nested/conf/nested-visuals-hook.lua now
+    6dd68aeadbe7e1c9049436dc7361ee7a (repo copy identical).
+  - A3 optics: /tmp/y6-nested/conf/optics.lua now
+    85298d2035697710d95117355c9830ca (repo copy identical).
+  - Amended runner: laptop repo
+    ~/workspace/computer-use-wayland/improvements/worker-y6b-run-nested-wayland-v2.sh
+    now b50396bf1c68c1e047733b2a5b24f35a (repo copy identical). The runner
+    changed once after the first staging copy (header comment fix removing a
+    stale hyprbars-only assumption); it was re-copied and re-verified.
+    (Intermediate md5 f197ac65 was the pre-comment-fix version.)
+- ldd proof (A1, 16:14 +07): plugin path from the staged conf
+  /home/james/.local/share/agent-computer-use/worktrees/hyprglass-03a57c4/hyprglass.so,
+  ldd rc=0, "not found" count 0, libaquamarine.so.15 and libhyprgraphics.so.5
+  resolve. Full output saved to improvements/y6c5-evidence/ldd-y6e-conf.txt
+  (closes the Council 2 artifact gap).
+- Rollback (all four files): copy each .bak-y6c5-20261122 file back over the
+  staged file, verify md5s (conf 0d4ac7a9, hook 9d68b2f5, optics b011ea91,
+  runner 692d4271). No reboot, no reload involved in either direction; the
+  staged files are inert until a nested launch reads them.
+- Live untouched by this lane: no reboot, no live reload, no plugin load,
+  no live config write. Staging was file copies only (cp + stdin pipe).
+  Live PID 1515, started Sat Nov 21 15:17:25 2026, same single signature
+  throughout.
+
+### LIVE-STATE FINDING (16:12-16:16 +07, material to the trial, NOT caused by this lane)
+
+- Live plugin list at 16:12 +07 (verified twice, full JSON read):
+  hyprbars 1.0, hyprglass 1.1.1-cu.1, computer-use-cursor 1.0.0.
+  Y6r verified hyprbars only at 22:09 21/11; Y6e recorded hyprbars only
+  before/after at 21:57 21/11. The two extra plugins were therefore loaded
+  into the live session between 22:09 21/11 and 16:12 22/11.
+- NOT caused by this lane: same PID 1515 with the same start time (no
+  restart); this lane issued no `hyprctl plugin load`, no reload, no live
+  config write; staging was file copies under /tmp + one script copy, which
+  cannot load a plugin. Most likely another lane's live work (the
+  computer-use-cursor plugin is the F1 session-guardian/cursor-lease area).
+  The coordinator should confirm with the F1 lane which step loaded them.
+- Live hyprglass status (read-only, 16:15 +07): version 1.1.1-cu.1,
+  versionCheck match, active true, shaders READY, layers enabled true
+  active true, windows/subsurface disabled. The live session is running the
+  rebuilt glass with the profile applied.
+- AMEND5 walk re-run (read-only, 16:15 +07): LIVE_CONFIG_LOAD_PATH=NONE.
+  The live config chain still contains no hyprglass load path, so the live
+  load did not come via the followed config chain (the Omarchy bootstrap
+  file is not followed by the walker, per the Y6e note, so that path is not
+  excluded by this check).
+- When exactly: NOT attributable from the live per-instance log (8237
+  lines, zero lines mentioning plugin/cursor/glass; Hyprland 0.57.2 does not
+  log the loads with those words there). Bounds only: after 22:09 21/11,
+  before 16:12 22/11.
+- Consequence for the trial (fixed in the A8 doc + runner header comment):
+  the "hyprbars-only" baseline is stale. The trial must record the ACTUAL
+  live before-list, require before == after (identity, not contents), and
+  confirm with the coordinator that no live lane will load/unload plugins
+  during the trial window. Added as re-review gap M4 (section 5). The GO
+  verdict stands: the nest gates do not depend on the live list contents,
+  and the identity check still detects any change during the trial.
 
 ## 5. Fresh re-review (new reviewer, no trust in the fix author)
 
@@ -344,6 +416,18 @@
     amended runner copy for the trial). Mitigation: backup first with md5,
     rollback is restore-from-backup. The staged nest files live under
     /tmp/y6-nested/conf, which the live session never reads.
+  - M4 (MEDIUM, found during staging, after the first re-review write): the
+    live plugin baseline moved since Y6r (live now runs hyprbars +
+    hyprglass 1.1.1-cu.1 + computer-use-cursor, shaders ready, layers on;
+    loaded by another lane's live work between 22:09 21/11 and 16:12 22/11;
+    live PID 1515 unchanged, config chain still load-path-free). The trial
+    docs assumed hyprbars-only; corrected to record-the-actual-list +
+    before == after identity. Impact: a concurrent live load/unload during
+    the trial would fail the trial loudly (safe direction), not corrupt the
+    verdict silently. Mitigation: the trial worker re-verifies the live
+    baseline immediately before launch and confirms with the coordinator
+    that no live lane will load/unload plugins during the trial window.
+    Added to the A8 trial doc preconditions.
 - Scope boundary (not a gap): nothing after the gates has been proven live.
   The liquid readiness window (O3), the pill arms, the verdict logic, and
   the runner's file-presence preconditions for BACKDROP/PILL were never
@@ -352,6 +436,8 @@
 - Verdict: ZERO HIGH gaps.
   - GO for the A8 load-only trial (improvements/worker-y6c5-a8-load-only-trial.md),
     in a nested Hyprland per option C, with the staged files from section 4.
+    Added trial precondition (M4): re-verify the live baseline at launch
+    time and confirm no live lane will load/unload plugins during the window.
   - The PILL MEASUREMENT retry (serial item 4) is NOT cleared by this
     re-review. It stays gated on: (a) the A8 trial passing on all 7 measured
     items, and (b) a fresh re-review of the trial evidence. A GO here must
