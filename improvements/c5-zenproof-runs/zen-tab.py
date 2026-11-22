@@ -25,8 +25,10 @@ Before any /url navigate or DELETE, open verifies the new tab was
 actually made current (POST /window/new must make the new tab
 current; if it does not, one explicit select is tried, and if that
 still fails the driver refuses to navigate or close anything).
-The new tab must also increase the tab count by exactly 1, and
-the current tab is re-verified right after the navigate. The
+The new tab must also increase the tab count by exactly 1, the
+returned handle must not be one that already existed before the
+open, and the current tab is re-verified right after the
+navigate. The
 open exception handler deletes ONLY when the current tab is the
 fixture tab by URL AND by handle (the new handle from this open);
 it never deletes blind.
@@ -191,6 +193,20 @@ def cmd_open():
         resp = z._wd("POST", f"/session/{z.session}/window/new",
                      {"type": "tab"})
         new_handle = resp["value"]["handle"]
+        # Hardening (Redteam H1, amend 2): the returned handle must
+        # be new. The count gate below only refuses when the count
+        # did NOT grow; if /window/new returns an existing handle
+        # (the owner's) AND still creates a tab, the count grows by
+        # 1 and every later check passes on the wrong tab: the (c)
+        # check selects the owner tab, the navigate rewrites it to
+        # the fixture URL, and the post-navigate check passes
+        # because current == new_handle (both the owner handle).
+        # Refuse when the returned handle was already in `before`,
+        # before the count gate and before any navigate or DELETE.
+        if new_handle in before:
+            raise zen_dom.ZenDomError(
+                'new tab returned an existing handle %s; refusing '
+                'to navigate or close' % (new_handle[:8],))
         # Hardening (Council 1 C4): the new tab must increase the
         # tab count by exactly 1. If /window/new ever returned a
         # stale or existing handle, the (c) check below would pass
@@ -398,6 +414,25 @@ def cmd_close(scratch_substr, original_url):
         return result
 
 
+def _safe_title_url(z):
+    """(title, url) of the current tab, or (None, None) when the
+    reads fail. Used by _restore_original only: after the scratch
+    tab is already deleted, a failed read must never raise and
+    mask the close success (Redteam H2, amend 2). When the scan
+    itself failed, the transport is the likeliest cause, so the
+    reads are the likeliest to fail too.
+    """
+    try:
+        title = _title(z)
+    except Exception:
+        title = None
+    try:
+        url = _url(z)
+    except Exception:
+        url = None
+    return title, url
+
+
 def _restore_original(z, original_url, result):
     """Best-effort switch to the original tab, by URL. Never
     guesses: when the URL is missing or matches more than one
@@ -408,7 +443,9 @@ def _restore_original(z, original_url, result):
     original tab after the scratch tab is already deleted is
     reported as restore_failed, not raised: the close already
     succeeded, and the runner records the outcome instead of
-    masking it with an exception.
+    masking it with an exception. The title and URL reads in
+    every branch are guarded the same way (Redteam H2, amend 2):
+    a failed read records None, never raises.
     """
     try:
         entries, full = _scan(z)
@@ -416,8 +453,8 @@ def _restore_original(z, original_url, result):
         result['original_missing'] = False
         result['original_ambiguous'] = False
         result['scan_error'] = True
-        result['current_title'] = _title(z)
-        result['current_url'] = _url(z)
+        result['current_title'], result['current_url'] = \
+            _safe_title_url(z)
         return
     try:
         orig = _find_in_scan(entries, original_url)
@@ -429,8 +466,8 @@ def _restore_original(z, original_url, result):
     if orig is None:
         result['original_missing'] = not ambiguous
         result['original_ambiguous'] = ambiguous
-        result['current_title'] = _title(z)
-        result['current_url'] = _url(z)
+        result['current_title'], result['current_url'] = \
+            _safe_title_url(z)
         return
     try:
         orig_full = _full_handle(full, orig['handle'])
@@ -439,11 +476,10 @@ def _restore_original(z, original_url, result):
         result['original_missing'] = False
         result['original_ambiguous'] = False
         result['restore_failed'] = True
-        result['current_title'] = _title(z)
-        result['current_url'] = _url(z)
+        result['current_title'], result['current_url'] = \
+            _safe_title_url(z)
         return
-    result['current_title'] = _title(z)
-    result['current_url'] = _url(z)
+    result['current_title'], result['current_url'] = _safe_title_url(z)
     result['current_handle'] = orig_full[:8]
 
 
