@@ -137,6 +137,6 @@ None of these changes any conclusion. Fix them in the same correction commit as 
 
 ### Commit record (this verifier's own commit, no push)
 
-- This log file: improvements/mochi-b2-6-verifier-log.md, commit [PENDING: to be filled in after commit].
+- This log file: improvements/mochi-b2-6-verifier-log.md, commit 68187a5. The commit record line itself was filled in by a follow-up commit (see below). No push was made (per the brief).
 
 Elapsed: task received 2026-11-23 00:58 +07; docs read by 00:59 +07; targeted suites re-run 00:59:18 to 00:59:58 +07; manifest and ls-remote 01:00:22 to 01:00:39 +07; discrimination 01:01:14 to 01:01:18 +07; clean-checkout digest verify 01:02:32 +07; pre-fix RT2 re-run 01:02:38 +07; discover run 1 launched 01:00:57 +07, finished 01:06:43 +07 (invalid, TMPDIR artifact); discover run 2 launched 01:07:21 +07, finished 01:09:55 +07 (invalid, /tmp full); discover run 3 launched 01:10:32 +07, finished 01:14:11 +07 (invalid, setgid scratch dir); discover run 4 launched 01:15:01 +07, finished 01:18:42 +07 (valid, Ran 2381, failures=2, errors=8, skipped=17); log written and committed 01:19 +07.
