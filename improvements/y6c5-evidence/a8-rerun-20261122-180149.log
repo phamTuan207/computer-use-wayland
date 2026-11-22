@@ -1,0 +1,86 @@
+Y6-WAYLAND: start 18:01:49
+Y6-WAYLAND: AMEND4 OK: HYPRGLASS_SKIP_VERSION_CHECK unset (env | grep HYPRGLASS empty)
+Y6-WAYLAND: plugin ABI OK: /home/james/.local/share/agent-computer-use/worktrees/hyprglass-03a57c4/hyprglass.so
+Y6-WAYLAND: AMEND5-BEFORE OK: no hyprglass load path in live config chain (hyprland.lua + hyprland.conf + sourced files)
+Y6-WAYLAND: live sig 11cbc6c577b84ffb1edf4df3fc5b6128c3ae6947_1795342782_301493614 pid 3638
+Y6-WAYLAND: live plugin list BEFORE:
+"name": "hyprbars"
+"name": "hyprglass"
+"name": "computer-use-cursor"
+Y6-WAYLAND: runner-quiet process check OK (no runner scripts, no geckodriver, no mpv/foot)
+Y6-WAYLAND: flock held, runner-quiet window open
+Y6-WAYLAND: nested pid 47234 (timeout wrapper, session leader)
+Y6-WAYLAND: nested sig 11cbc6c577b84ffb1edf4df3fc5b6128c3ae6947_1795345309_1060417543
+Y6-WAYLAND: nested Hyprland pid 47237
+DEBUG from aquamarine ]: Starting the Wayland backend!
+Y6-WAYLAND: nested socket wayland-1
+Y6-WAYLAND: nest output WAYLAND-1
+{
+  "schema": 1, "version": "1.1.1-cu.1", "versionCheck": "match", "active": true, "shaders": "pending", "itemProtocol": true,
+  "features": {
+    "windows": {"enabled": false, "active": false, "reason": "disabled"},
+    "layers": {"enabled": true, "active": true, "reason": null},
+    "subsurfaces": {"enabled": false, "active": false, "reason": "disabled"}
+  }
+}
+
+Y6-WAYLAND: hyprglass version=1.1.1-cu.1 versionCheck=match
+Y6-WAYLAND: configerrors empty after profile application (G4 OK)
+Y6-WAYLAND: profile gate: parse-1 not-ready marker is expected, waiting for applied marker
+Y6-WAYLAND: profile gate: parse-1 not-ready marker present (expected, not a failure)
+Y6-WAYLAND: profile gate: features.layers.enabled=True
+Y6-NEST-OPTICS: applied blur=0.15 refraction=0.55 mask=contour namespace=computer-use-indicator
+Y6-NEST-HOOK: profile applied
+Y6-WAYLAND: profile gate re-check: hyprglass version=1.1.1-cu.1 versionCheck=match
+Y6-WAYLAND: profile gate OK: applied marker file present, layers.enabled true, plugin list and version re-checked
+Y6-WAYLAND: liquid ready=False
+Y6-WAYLAND: liquid ready=False
+Y6-WAYLAND: liquid ready=False
+Y6-WAYLAND: liquid ready=False
+Y6-WAYLAND: liquid ready=False
+Y6-WAYLAND: liquid ready=False
+Y6-WAYLAND: liquid ready=False
+Y6-WAYLAND: liquid ready=False
+Y6-WAYLAND: liquid ready=False
+Y6-WAYLAND: liquid ready=False
+Y6-WAYLAND: liquid ready=False
+Y6-WAYLAND: liquid ready=False
+Y6-WAYLAND: liquid ready=False
+Y6-WAYLAND: liquid ready=False
+Y6-WAYLAND: liquid ready=False
+Y6-WAYLAND: liquid ready=False
+Y6-WAYLAND: liquid ready=False
+Y6-WAYLAND: liquid ready=False
+Y6-WAYLAND: liquid ready=False
+Y6-WAYLAND: liquid ready=False
+Y6-WAYLAND: liquid ready=False
+Y6-WAYLAND: liquid ready=False
+Y6-WAYLAND: liquid ready=False
+Y6-WAYLAND: liquid ready=False
+Y6-WAYLAND: liquid ready=False
+Y6-WAYLAND: liquid ready=False
+Y6-WAYLAND: liquid ready=False
+Y6-WAYLAND: liquid ready=False
+Y6-WAYLAND: liquid ready=False
+Y6-WAYLAND: liquid ready=False
+Y6-WAYLAND: liquid ready=False
+Y6-WAYLAND: liquid never ready in 60s
+Y6-WAYLAND: FAIL: liquid gate failed (see above; version mismatch or shader error is NO-GO)
+Y6-WAYLAND: teardown start 18:02:56
+Y6-WAYLAND: nested log saved to /tmp/y6-nested/hypr-saved-20261122-180149-11cbc6c577b84ffb1edf4df3fc5b6128c3ae6947_1795345309_1060417543
+Y6-WAYLAND: profile marker file saved to /tmp/y6-nested/y6-profile-applied-20261122-180149.txt
+Y6-WAYLAND: live check:
+    PID                  STARTED CMD
+   3638 Sun Nov 22 17:19:41 2026 Hyprland --watchdog-fd 4
+Hyprland 0.57.2 built from branch v0.57.2 at commit 11cbc6c577b84ffb1edf4df3fc5b6128c3ae6947 clean (VERSION: bump to 0.57.2).
+Date: Mon Nov 9 11:05:46 2026
+Tag: v0.57.2, commits: 8015
+
+"name": "hyprbars"
+"name": "hyprglass"
+"name": "computer-use-cursor"
+Y6-WAYLAND: live plugin list unchanged (before == after)
+Y6-WAYLAND: stray check (live Hyprland pid 3638 expected):
+3638 Hyprland --watchdog-fd 4
+Y6-WAYLAND: lock free after teardown
+Y6-WAYLAND: teardown done 18:02:58

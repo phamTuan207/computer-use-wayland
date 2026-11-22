@@ -1,0 +1,2 @@
+Y6-NEST-OPTICS: applied blur=0.15 refraction=0.55 mask=contour namespace=computer-use-indicator
+Y6-NEST-HOOK: profile applied
