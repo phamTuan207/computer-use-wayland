@@ -140,4 +140,8 @@ git commit -m "fix: narrow remove_holder to one holder (R6/C1) + 3 tests"
 git push origin todolist-push
 git ls-remote origin todolist-push
 ```
-Ket qua: (ghi sau khi push, kem hash commit).
+Ket qua: commit 5a272aeec9996a2febb00063d26c29da93bc9f94 tren
+todolist-push (20:16 +07), 3 files, 223 insertions, 18 deletions.
+Verify: git ls-remote origin todolist-push tra ve 5a272ae, khop
+HEAD local. Commit nay chua code fix + 3 test + log (den muc 5).
+Muc 6 nay duoc bo sung sau bang commit tiep theo.
