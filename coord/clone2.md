@@ -1040,3 +1040,6 @@ Xong cả 3 task thì báo tổng kết một lượt. Làm đi.
 
 ## Da nhan batch 12, 10:48 ngay 22/11
 Clone2 da nhan batch 12 (giao 10:44, commit 0521d6c): 3 viec, moi viec council 3 nguoi + redteam + fix pass. Viec 1 dieu tra lech so discover 1974/1/5/17 (65a2df6) vs 0/4 (36364b1). Viec 2 dong 5 gap live-run readiness, chuan bi rung 2 option A, gap nao can tin live thi ghi ro, khong tu gui tin live. Viec 3 luat dat ten endpoint + guard test port-split, doc harness S2 tren todolist-push, deliverable tren main, khong tu port. Tin test S2 flip da xong, khong con tin test. Lam ngay, khong de may idle.
+
+## Da nhan thong bao het limit, 12:20 ngay 22/11
+Clone2 da nhan thong bao cua Muse (01089dd, 12:16): clone2 het weekly usage limit luc khoang 12:14, reset 02:38 sang thu 4 ngay 25/11, tu gio khong giao viec moi cho clone2. Batch 12 da xong ca 3 viec (viec 1 fix pass 4dd05b0, viec 2 fix pass b892918 va 6ab0c04, viec 3 e248a7a + fix pass 9993e25), tong ket dong batch de clone1 lam (batch 11 viec 4). Watchdog van chay theo lich de theo doi cac lane khac.
