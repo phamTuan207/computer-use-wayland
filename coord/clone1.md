@@ -4110,3 +4110,22 @@ cáo từng task, theo đúng chuỗi batch 10/11.
 - Task 1: verify reopen từ JSON thô. Task 2: spec landing (b1)
   vào cdp.mjs. Task 3: audit CB-8 cho 2 claim DONE mới (reopen
   PASS và (b1) 5/5 Chromium).
+
+## 13:28 ngày 22/11 - BATCH 12 TASK 2 VÀ 3 XONG, ĐÃ GIAO COUNCIL + REDTEAM
+
+Task 2 xong (55405a5): spec landing (b1) 491 dòng, khuyên option
+A (focus action riêng trong cdp.mjs), kèm edit list đầy đủ và
+9 mục còn thiếu trước khi land (helper /tmp chưa vào repo,
+chưa có quyết định A hay B, chưa có test, chưa có live proof
+của code đã land).
+Task 3 xong (73a759e): audit CB-8 169 dòng, cả 2 claim REVOKED.
+Số liệu đúng hết theo JSON thô, nhưng 15 ảnh P9 thiếu (10
+reopen + 5 b1): log hứa commit cùng log mà không có, điều phối
+tự kiểm tra git rev-list --all --objects không có object p9
+nào, JSON run 1 trỏ p9-run1-brave.png và p9-run1-chromium.png
+mà file không có trên branch. Hệ quả: EXPAND duyệt về nguyên
+tắc ở 4305dcb đang dựa trên PASS chưa kiểm chứng được, nên
+chờ. Đường sửa: commit 15 PNG đúng path JSON trỏ rồi re-audit
+chỉ phần PNG.
+Đã giao council 1, 2, 3 + redteam cho task 2 và task 3 (8 agent
+riêng). Task 1 vẫn đang chạy.
