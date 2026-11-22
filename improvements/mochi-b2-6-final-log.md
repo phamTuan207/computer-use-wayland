@@ -53,7 +53,7 @@ the verifier grades the fix. No self-review.
 | 8 | python3 scripts/bench_manifest.py verify --manifest deploy-manifest.json --repo . | Source artifacts (bench_script, fixture) ok, log names the run; any FAIL explained by cause |
 | 9 | Committed-tree re-run (after fix commits): rows 1-4 again on HEAD d88a472 | Same outputs as rows 1-4 |
 | 10 | Discrimination round-trip: old template from 0400e86 restored to scripts/cdp.mjs, run new Python test, then restore HEAD version | Old template: new test FAILS. Restored template: new test passes. Worktree clean after |
-| 11 | Manifest re-verify on the clean committed tree (row 8 again after the log commit) | git_status_clean ok; only FAILs are the missing tools dir (environmental) |
+| 11 | Manifest re-verify on the clean committed tree (row 8 again after the log commit) | CORRECTED (close-out round; the original condition was not met as written): verify exit 1 with 6 FAIL categories: source_commit and source_content_sha256 (fail by construction at any HEAD after the bench commit d7d569b), git_status_clean (fails only while the tree has uncommitted or untracked files), artifact firefox, firefox_bin, geckodriver (missing tools dir, environmental). The manifest verifies only at a d7d569b checkout. See section 5. |
 
 ## 1. What step 1 is
 
@@ -138,9 +138,9 @@ before 36364b1 and re-verified in this session.
 
 - Repaired by TESTREPAIR-B (43b27a1, ancestor of 36364b1) exactly
   as the council specified: F2 assertRaises DomActError
-  (tests/test_click3_redteam2.py:370), F3 split into a stale-value
+  (tests/test_click3_redteam2.py:366), F3 split into a stale-value
   documentation test (:316) plus a ground-time refusal test
-  (:358), F4 y_range=(100, 120) (:81), F5 wired-path rewrite
+  (:358), F4 y_range=(100, 120) (comment at :90, code at :101), F5 wired-path rewrite
   (:133), F6 guarded forge plus F7-shaped value assertion (:418).
 - Re-run 2026-11-23 00:14:43 +07, 2s: the RT2 set Ran 51 tests in
   1.384s, OK (before the fix). After the fix the set is Ran 52
@@ -215,12 +215,30 @@ before 36364b1 and re-verified in this session.
   (ls: No such file or directory; the tools dir is gone after the
   VM restart). The 3 tool FAILs are environmental, not a manifest
   defect: the source-pinned artifacts still verify.
+- CORRECTION (close-out round): the FAIL list above omits two
+  FAILs that were already present at that run. The verify FAILs
+  6 categories in total: source_commit (manifest d7d569b, repo
+  HEAD at that time d88a472 or earlier, never d7d569b),
+  source_content_sha256 (the source digest covers scripts and
+  tests, which the fix commits changed), git_status_clean
+  (uncommitted or untracked files), and the 3 tool artifacts
+  above. source_commit and source_content_sha256 fail by
+  construction at any HEAD after the bench commit d7d569b, because
+  scripts/bench_manifest.py compares the manifest commit and
+  digest against the current HEAD unconditionally, so they do not
+  indicate a manifest defect. The manifest verifies only at a
+  d7d569b checkout. The R9 conclusion stands unchanged: quote the
+  d7d569b re-run, never a1a672d, as the gate.
 
 ### R10. TESTREPAIR note 1: F5 DOM-gate finding, RECORDED, not a step-1 fix
 
 - The pixel band is never the decider through the full wired
   path; the DOM type_check decides either way (cu.py:2280,
-  cu.py:2110-2117, cu.py:2279 in the TESTREPAIR log). This is a
+  cu.py:2110-2117, cu.py:2279 in the TESTREPAIR log). Those cu.py
+  line numbers are TESTREPAIR-tree coordinates, not HEAD
+  coordinates: R10 is a secondary citation from the TESTREPAIR
+  log lines 339-341, and a reader checking the numbers at HEAD
+  will not land on the finding. This is a
   design note for P5/CB-1 (step 5), not a step-1 defect. No code
   changed here. Left for the P5 implementer.
 
@@ -329,12 +347,13 @@ must be corrected to the live behavior.
 ### 3.4 Edits (coordinates at d88a472)
 
 Commit 3532bfd, scripts/cdp.mjs (27 insertions, 10 deletions):
-- Lines 581-592: header comment now states the email per-token
+- Lines 579-593: header comment now states the email per-token
   rule with the spec cite (4.10.5.1.5) and that the maxLength
   pre-check measures the sanitized length.
-- Lines 598-611: the email branch splits on comma (char code 44),
+- Lines 597-610: the email branch (if at :597, join at :610)
+  splits on comma (char code 44),
   trims each token ends over char codes 9, 12, 32, rejoins with a
-  single comma; the url branch keeps the whole-value trim
+  single comma; the url branch (else-if at :611) keeps the whole-value trim
   (unchanged behavior). Char-code form throughout, no regex
   escapes, so the template needs no backslash doubling when it is
   re-evaluated. CR/LF are already stripped above, so only TAB, FF
@@ -345,7 +364,9 @@ Commit 3532bfd, scripts/cdp.mjs (27 insertions, 10 deletions):
 Commit e500923, tests/cdp_snapshot.mjs (29 insertions, 1 deletion):
 - Lines 14-20: FakeInput setter models the engine rule (email:
   split on commas, trim each token, rejoin; url: whole trim).
-- Lines 235-261: four new cases after the emailField case:
+- Lines 240-261: four new cases after the emailField case (the
+  comment starts at :240; lines 235-238 are the pre-existing
+  emailField case):
   multiEmail (multiple, '  a@b.com , c@d.com\t' lands as
   'a@b.com,c@d.com', events input then change), singleEmailComma
   (plain email, 'a@b.com, b@c.com' lands as 'a@b.com,b@c.com'),
@@ -355,7 +376,8 @@ Commit e500923, tests/cdp_snapshot.mjs (29 insertions, 1 deletion):
   per-token-trimmed length).
 
 Commit d88a472, tests/test_click3_redteam2.py (107 insertions):
-- Lines 870-975: new named test
+- Lines 870-973: new named test (def at :870, last assert at
+  :971-973; the module guard follows at :976)
   test_set_value_email_multiple_trims_each_token in
   CdpSetValueTests, same driver shape as the C8 maxlength test,
   plus a multiple flag per case. Its FakeInput models the email
@@ -364,6 +386,23 @@ Commit d88a472, tests/test_click3_redteam2.py (107 insertions):
   true, 'a@b.com,b@c.com'), multi_maxlen (maxLength 15, ok true,
   'a@b.com,c@d.com'), multi_over (maxLength 14, ok false,
   'value exceeds maxlength').
+
+Close-out round (after the council 1, 2, 3 and redteam reviews,
+coordinates at adc7ae3):
+- tests/cdp_snapshot.mjs: two more cases after multiMaxField,
+  multiWsToken (:265, 'a@b.com, ,c@d.com' lands as
+  'a@b.com,,c@d.com') and multiTabFf (:271, token ends in TAB
+  and FF trimmed), so the new-case block is now :240-274
+  (commit 8ee4de1).
+- tests/test_click3_redteam2.py: the Python FakeInput gained
+  the url whole-trim branch (:910-913, char-code form, same
+  rule as the node fake), plus a url_trim case (:957-958,
+  '  https://example.com/a,b  ' lands as
+  'https://example.com/a,b') (commit afce25e), and two more
+  email cases, multi_ws_token (:959-960) and multi_tab_ff
+  (:961-962, built with String.fromCharCode(9) and (12))
+  (commit adc7ae3). The named test now covers seven cases and
+  ends at :998, with the module guard at :1001.
 
 No other file changed. No em dash or en dash in any changed file
 (python scan, 0 counts for U+2014 and U+2013 in all three files).
@@ -538,15 +577,30 @@ Discrimination round-trip (row 10, HEAD d88a472):
 Manifest verify (rows 8 and 11):
 - Dirty tree (uncommitted fix): 00:17:17 +07, 2s, exit 1.
   bench_script ok, fixture ok, log names the run;
-  git_status_clean FAIL (my 3 files); 3 tool artifacts FAIL
+  git_status_clean FAIL (my 3 files); source_commit FAIL and
+  source_content_sha256 FAIL (HEAD was not d7d569b, see the
+  correction in section 2 R9); 3 tool artifacts FAIL
   (tools dir gone).
 - Committed fix tree (only this log file untracked): 00:22:21
   +07, 2s, exit 1. bench_script ok, fixture ok, log names the
   run; git_status_clean FAIL only on '?? improvements/
   mochi-b2-6-final-log.md' (this file, pending its own commit);
-  3 tool artifacts FAIL (tools dir gone, environmental). After
-  this log is committed, git_status_clean is expected to pass;
-  the verifier may re-run the verify on the fully clean tree.
+  source_commit FAIL and source_content_sha256 FAIL (HEAD d88a472
+  is not d7d569b); 3 tool artifacts FAIL (tools dir gone,
+  environmental).
+- CORRECTION (close-out round): the two bullets above as first
+  written listed only 4 FAILs and the second bullet claimed
+  "After this log is committed, git_status_clean is expected to
+  pass". That claim is withdrawn as a verify-pass claim. It is
+  true only for git_status_clean alone, and it was confirmed in
+  the close-out round: at HEAD adc7ae3, on a fully clean tree
+  (git status empty), the verify still exits 1, with
+  git_status_clean ok and 5 FAILs remaining: source_commit
+  (manifest d7d569b, repo adc7ae3), source_content_sha256
+  (manifest 92891523..., repo 7324498d...), artifact firefox,
+  artifact firefox_bin, artifact geckodriver. The manifest
+  verifies only at a d7d569b checkout. The R9 conclusion stands:
+  quote the d7d569b re-run, never a1a672d, as the gate.
 
 ## 6. Residuals and commit record
 
