@@ -8,12 +8,18 @@ Updated 22/11 by the batch 11 task 2 closeout (section 9 corrected
 for AMEND4 item 12, section 13 added with both live-shape options,
 section 12 rewritten with current statuses; verdict still NOT READY,
 see docs/clone2-live-run-readiness-closeout-20261122.md).
+Updated 22/11 by batch 12 task 2 (section 14 added with the rung 2
+0-vision procedure; textNew, pre-send reservation, V11, D3 and the
+frames census built in the script, commit f49851f; verdict still
+NOT READY, see docs/clone2-batch12-readiness-closeout-20261122.md).
 
 Sources read for this runbook (all verified before writing):
 - Assignment: batch 10 task 3, coord/clone2.md line 868, commit
   422f4b0 (06:01 22/11). Decision G3 is stated there and nowhere
   else in the repo; see section 2.
-- Script: tests/two_vision_bench.py, 868 lines, commit c267411.
+- Script: tests/two_vision_bench.py, 868 lines, commit c267411
+  (pin as first written; updated batch 12 task 2 to 1200 lines,
+  commit f49851f, see section 3).
 - Workflow doc: docs/two-vision-benchmark-workflow-20261122.md,
   747 lines, checklist section 10 (added batch 9 task 2, fixed
   batch 9 task 2 fix pass).
@@ -38,7 +44,7 @@ work around them by improvisation.
 
 1. The script cannot drive the live chats as they exist today.
    It always launches its own fresh headless Firefox with a fresh
-   profile (launch_browser, script lines 265-296). There is no
+   profile (launch_browser, script lines 394-425). There is no
    attach-to-existing-browser option, no profile reuse, and no
    login step anywhere in the argument list. A fresh profile is
    logged out of Messenger, so a live run as specified would hit
@@ -46,7 +52,7 @@ work around them by improvisation.
    no-message-input-in-inventory and NOT fail-closed and safe.
    A login page has visible email and password inputs, which
    HARVEST_JS inventories as textboxes, and find_input (script
-   lines 254-262) returns the first visible textbox when none
+   lines 383-391) returns the first visible textbox when none
    is named "Message", so it picks the email field. The script
    then clicks it, types the bench text into it (the V1 readback
    passes, the text IS in the field), Enter submits the login
@@ -56,24 +62,38 @@ work around them by improvisation.
    side effects the operator must expect: the bench text typed
    into a login email field, and an Enter that submits a login
    attempt with garbage credentials. The
-   no-message-input-in-inventory error (main, script line 794)
+   no-message-input-in-inventory error (main, script line 1077)
    fires only when a page has zero visible textboxes, which a
    login page does not satisfy. An attach-to-Zen mode does not
    exist, and neither does a logged-in profile or a login step.
    The two live-shape options that would close this gap are
    written in full in section 13; the coordinator decides
-   which one runs.
+   which one runs. Rung 2 (section 14) closes the typing hazard
+   a different way: it runs with --strict-input-name, so the
+   script refuses to type into a textbox whose name does not
+   contain the plan's input_name, and fails closed with
+   input-name-mismatch before any send.
 2. Under decision G3 the live threads are in Brave (clone1) and
    Chrome (clone2) on workspace ws2. The script drives only
    Firefox and cannot attach to Brave, Chrome, or Zen. No path
    exists today for the script's browser to reach those threads.
-3. The V12 gate is a presence check only (GATE_JS, script
-   line 153): it has no before-snapshot, so a bubble whose text
-   was already in the thread when the batch started passes it.
-   The textNew distinction is designed but not built, and the
-   VISION 2 removal in the one-vision design doc is conditional
-   on textNew being built and proven. This runbook keeps 2
-   visions; see section 8.
+3. The V12 gate is now a textNew gate (batch 12 task 2, script
+   commit f49851f): main() takes a before-snapshot count per
+   window before any send, and the gate passes only when the
+   count grows past the count measured right before Enter
+   (COUNT_JS, script line 170), so a stale bubble from an
+   earlier run cannot pass a new send. Fixture-proven: stale
+   fixture run PASS with before_count 1 and gate_count 2 per
+   window, and the no-send fixture run FAILS v12-timeout with
+   gate_count stuck at 1. The pre-send reservation is also
+   built: the intent is written as "sending" after the V1
+   readback passes and before the Enter keypress, and a later
+   run finding status "sending" refuses with
+   retry-blocked-reservation. The cross-window check is built:
+   after both sends each thread must hold only its own message.
+   The 2-vision run in this runbook keeps 2 visions (section
+   8); rung 2 is 0-vision by definition and drops both agent
+   looks (section 14).
 4. The run_id freshness check is an operator check only. The
    script does not check run_id against thread history. Reusing
    a run_id on a live thread scores PASS with zero new sends;
@@ -139,9 +159,9 @@ stale window address into a command.
 Check these before the run. Any other hash means an unreviewed
 change sits on top of the reviewed code; stop and report.
 
-- Script: tests/two_vision_bench.py, 868 lines, commit c267411.
+- Script: tests/two_vision_bench.py, 1200 lines, commit f49851f.
   Run `git log --oneline -1 -- tests/two_vision_bench.py` and
-  confirm it prints c267411.
+  confirm it prints f49851f.
 - Workflow doc: docs/two-vision-benchmark-workflow-20261122.md,
   747 lines. Checklist section 10 in that doc is the
   prerequisite checklist this runbook executes.
@@ -234,7 +254,7 @@ reproduced or tested on the fixture.
 1. Generate a fresh run_id for this attempt. Never reuse a
    run_id from a previous attempt, including a failed one. The
    script's default format is bench-<UTC timestamp>-<6 hex>
-   (default_plan, script lines 543-544); the checklist example
+   (default_plan, script lines 811-812); the checklist example
    is bench-20261122-001. Use a fresh timestamp-based run_id
    and put it in the plan, in both messages, in exactly the
    form "BENCH-TEST clone1 <run_id>" and
@@ -444,7 +464,7 @@ Required outcomes before proceeding:
   no a11y dump of the input), so the real aria-label is
   UNKNOWN. HARVEST_JS takes the name as aria-label first,
   else placeholder, else textContent, else value (script
-  line 106), so an aria-label other than "Message" takes
+  line 107), so an aria-label other than "Message" takes
   precedence and breaks this rule. Rule for a non-"Message"
   name: if the harvest shows a visible textbox whose name
   is not "Message" and is not "Email"/"Password", STOP and
@@ -575,8 +595,9 @@ computer-use observe --screen eDP-2
   never by point-in-box.
 - Overall: PASS iff both messages land. Any single failed step
   makes the run FAIL; the chain stops at the first failure.
-  The script's outcome rule (main, script ~line 831) is PASS
-  iff exactly 2 sent AND exactly 2 windows.
+  The script's outcome rule (main, script line 1162) is PASS
+  iff exactly 2 sent AND exactly 2 windows AND no
+  cross-window contamination.
 - Vision budget: total exactly 2 visions during the step-2
   run invocation. A vision is one agent read of an
   observation: one observe call whose image or text the agent
@@ -591,7 +612,7 @@ computer-use observe --screen eDP-2
   must be recorded in the run log as extra looks, so the
   total is auditable. The script records visions_used: 2 in
   results.json, but that value is a hardcoded constant
-  (script line 745, in the results dict literal), never
+  (script line 1019, in the results dict literal), never
   updated by the script; it reads 2 no matter how many looks
   the operator took. Do not cite it as a measured count; the
   operator's look count comes from the run log. Do not take
@@ -612,8 +633,16 @@ computer-use observe --screen eDP-2
   only conditionally: VISION 2 stays until textNew is built
   and the gate is proven to count only new bubbles, plus a
   cross-window check (each thread holds only its own message).
-  That proposal is NOT in effect for this runbook. The live
-  run uses 2 visions.
+  Both are now built and fixture-proven (batch 12 task 2,
+  script commit f49851f): the textNew gate counts past the
+  before-snapshot, and the cross-window check runs after both
+  sends. That proposal is still NOT in effect for the 2-vision
+  run in this runbook, which keeps 2 visions: the fixture
+  proof is not a live proof, and the live run is what proves
+  the gate on a real page. Rung 2 (section 14) is 0-vision by
+  definition and drops VISION 2 entirely; the one-vision
+  proposal can be revisited after a live run with textNew
+  passing.
 - Grounding accuracy on synthetic data is 7/7 = 100% (click2
   log line 38). That is a synthetic figure, not a live one.
   Live accuracy is what this run measures; it is owed, not
@@ -852,7 +881,7 @@ on the old code per the DOT 9 task 1 council review
   profiles have filled it to 100% before).
 - Report the outcome with the run_id and wall time: outcome
   (PASS/FAIL), per-step statuses, visions_used as recorded in
-  results.json (hardcoded 2, script line 745, not a measured
+  results.json (hardcoded 2, script line 1019, not a measured
   count), plus the operator's own look count from the run log
   (<run-dir>/run-log.md, named here so the count is
   auditable; every look outside the run, including the
@@ -868,16 +897,20 @@ on the old code per the DOT 9 task 1 council review
 Consolidated, so nobody mistakes this runbook for readiness.
 A live run cannot pass until these are closed or the
 coordinator explicitly accepts them. Status as of 22/11,
-after the batch 11 task 2 fix pass (see
-docs/clone2-live-run-readiness-closeout-20261122.md): 2
-fully closed, 3 partial, 5 open, 2 standing. The numbering
+after the batch 12 task 2 build (see
+docs/clone2-batch12-readiness-closeout-20261122.md): 3
+fully closed, 4 partial, 3 open, 2 standing. The numbering
 here matches the closeout report exactly. Mapping to the
-readiness report's 11 items: closed are readiness 1 and 9;
-partial are readiness 2, 3, 5; open are readiness 4, 6, 7, 8
-plus new item 12 (cross-origin frames, from the DOM/a11y
-crawl log); standing are readiness 10 and 11.
+readiness report's 11 items: closed are readiness 1, 9 and
+8 (item 9, script features, built in batch 12 task 2);
+partial are readiness 2, 3, 5 plus item 10 (cross-origin
+frames, census built, live check owed); open are readiness
+4, 6, 7; standing are readiness 10 and 11. (Correction:
+an earlier version of this header called the frames item
+"item 12"; it is item 10 in this section and in the
+closeout.)
 
-CLOSED (2):
+CLOSED (3):
 1. Runbook section 9 corrected for AMEND4 item 12
    (cbab398): the code fix IS built on todolist-push,
    `after` is scope-matching and chainable, `after_screen`
@@ -894,7 +927,35 @@ CLOSED (2):
    eDP-2 is expected, not proven, and the live check stands.
    (Readiness item 9.)
 
-PARTIAL (3: the doc part is done, a live or build part
+9. Script features (owner: whoever builds them), BUILT in
+   batch 12 task 2 (script commit f49851f, fixture-verified,
+   logs in ~/workspace/tools/batch12-t2/):
+   textNew in the V12 gate (COUNT_JS, script line 170;
+   before-snapshot count per window in main(), gate passes
+   only on a NEW bubble past the pre-Enter baseline; stale
+   fixture PASS with before_count 1 and gate_count 2,
+   no-send fixture FAILS v12-timeout with gate_count stuck
+   at 1); pre-send reservation (intent written as "sending"
+   after the V1 readback and before Enter, reconciled to
+   "sent" or "failed-unverified" after the gate; a later run
+   finding status "sending" refuses with
+   retry-blocked-reservation, proven by the driver test
+   with and without a visible bubble); V11 MutationObserver
+   flag (OBSERVER_JS armed before typing, mutation delta
+   recorded per send; happy path shows v11_mutations 1 and
+   v11_mutation_flag true, no-send shows 0 and false);
+   D3 ref stability (REF_CHECK_JS re-resolves the ref
+   before input and fails fast with ref-stale when tag,
+   role or name changed, nearest live textboxes listed;
+   proven by the driver test, renamed input, 0 bubbles);
+   cross-window check (after both sends each thread must
+   hold only its own message; proven by the driver test,
+   injected foreign bubble detected). What remains is live
+   proof: the fixture proof is not a live proof, and the
+   VISION 2 removal stays conditional until a live run
+   passes with textNew. (Readiness item 8.)
+
+PARTIAL (4: the doc part is done, a live or build part
 remains):
 3. Checklist 10 contradictions fixed in the workflow doc
    (login-wall mode, harvest selector checking, "ONE Zen
@@ -920,14 +981,43 @@ remains):
    verification of whichever option is picked (CDP driver
    build for B, verified pre-seeded profile for A).
    (Readiness item 5.)
+10. Cross-origin frames in the Messenger web app, tooling
+    built, live check owed: the frames census is built into
+    the script (FRAMES_JS, script line 211; one evaluate per
+    window in the harvest, results["frames"] per window).
+    Fixture-proven on the iframe variant: 1 frame per window,
+    accessible true, and the input inside the frame is NOT
+    inventoried (4 items per window), which demonstrates the
+    limit the census exists to catch. Two honest limits: on
+    file:// URLs the origin reads "null" (Firefox treats
+    file origins as opaque), so the accessible flag, not the
+    origin field, is the operative signal on the fixture;
+    and file:// cannot reproduce a cross-origin frame at
+    all, so the live check on the real Messenger page is
+    still owed. What remains: the operator runs the census
+    as part of the harvest-first step on the live page
+    (section 14 step 1) and stops on any cross-origin frame
+    (accessible false), or on a same-origin frame holding
+    the input or thread. This affects both options:
+    HARVEST_JS and the cdp.mjs snapshot both evaluate in
+    the top frame. (New item, from the DOM/a11y crawl log,
+    open verification item 6.)
 
-OPEN (5):
+OPEN (3):
 6. Live Messenger input name verified against the real
    DOM (owner: operator, on the laptop, before the run):
    the aria-label is UNKNOWN, no DOM or a11y read of the
    input exists in the repo. Read it live before the run
    (section 6 rule for a non-"Message" name: stop, record
-   the actual name). (Readiness item 4.)
+   the actual name). What batch 12 task 2 added without
+   closing this: the rung 2 procedure runs with
+   --strict-input-name, so a wrongly named input fails
+   closed with input-name-mismatch before any send instead
+   of being typed into silently; but the flag checks the
+   name against the plan's input_name, and the plan's
+   input_name is still "Message" from visual-only evidence,
+   so the name itself is only closed by the live
+   harvest-first DOM read. (Readiness item 4.)
 7. Dry probe of the a11y freshness method (owner:
    operator, on the laptop, before the first live run):
    UNRUN, and the method as first written cannot work.
@@ -945,44 +1035,23 @@ OPEN (5):
    UNVERIFIED; premise B (hyprctl pid is the AT-SPI pid)
    is contradicted by prior evidence. Under option A this
    method does not apply at all (no Brave/Chrome targets).
+   The probe commands were re-verified against the code
+   in batch 12 task 2 (todolist-push tip da46c4c:
+   scripts/a11y.py observe() filter and query() unchanged,
+   scripts/cu.py a11y subparser at line 2996, query
+   requires --pid plus --name or --role); the probe itself
+   is still UNRUN, nothing here ran it.
    (Readiness item 3, probe part.)
 8. Method approval (owner: coordinator) and thread URLs,
    thread selector, bubble selector (owner: coordinator).
    Both are coordinator decisions with no repo record yet.
+   What batch 12 task 2 prepared without closing this: the
+   decision packet is written in the batch 12 report
+   (docs/clone2-batch12-readiness-closeout-20261122.md,
+   section 3), listing exactly what the coordinator must
+   supply and in what format, including the option B vs
+   option A decision and the account for option A.
    (Readiness items 6 and 7.)
-9. Unbuilt script features (owner: whoever builds them):
-   textNew in the V12 gate (NOT built; the gate is a
-   presence check only, a stale bubble passes it; VISION 2
-   removal is conditional on textNew being built and proven
-   plus a cross-window check); pre-send reservation
-   (exactly-once across a process death between send and
-   ledger mark, OPEN work in the design doc section 7 and
-   as a TODO in the script's Ledger docstring; the
-   failed-unverified retry block closes only the narrower
-   v12-timeout case); V11 MutationObserver flag (NOT built;
-   the fixture counts input events in
-   window.__inputEvents, a Messenger page needs a real
-   observer armed before typing); D3, ref stability on a
-   mutating page (unaddressed, design doc section 7; the
-   live threads are live chats that can mutate mid-run if
-   the other clone or the owner sends a message between
-   harvest and send; the HCU guard re-reads live geometry
-   before input, so this is likely fail-closed, but no
-   stale-ref fail-fast exists; the short chain and the
-   guard are the mitigation, not a fix). None was built by
-   this task. (Readiness item 8.)
-10. Cross-origin frames in the Messenger web app (owner:
-    operator, on the laptop, before the run): DOM rects
-    cannot reach cross-origin iframes from parent JS
-    (same-origin policy); BiDi browsing-context-scoped
-    calls or vision remain the fallback
-    (improvements/worker-click-crawl-doma11y-log.md, open
-    verification item 6). The Messenger web app used in
-    the benchmark must be checked for cross-origin frames
-    before the benchmark runs. This affects both options:
-    HARVEST_JS and the cdp.mjs snapshot both evaluate in
-    the top frame. (New item, not in the readiness
-    report.)
 
 STANDING (2, checked at run time, not closable in advance):
 11. Live lane must be free: no BASELINE2 or other live run
@@ -1153,7 +1222,7 @@ Procedure:
    script lines 49-50), so "record the laptop binary path
    live" consumes nothing as written: on the laptop the
    script needs an edit to FF/GD (which changes the
-   section 3 pin, c267411, and must be reviewed and
+   section 3 pin, f49851f, and must be reviewed and
    re-pinned when it lands) or the exact /home/hatch
    paths to exist there. Record the laptop binary path and
    which of those two it is. The profile holds a live
@@ -1204,7 +1273,303 @@ mode (Zen relaunched with -marionette, geckodriver
 batch 1). Requires the script to gain an attach mode and
 the coordinator to relaunch Zen on the laptop.
 
-## 14. Sources
+## 14. Rung 2: live 0-vision benchmark
+
+Rung 2 is the acceptance test for the rewrite, as defined
+in improvements/worker-arch-review-log.md section 4: a
+0-vision live benchmark, same shape as the 2-vision
+benchmark but against the REAL clone chats on ws2 (not the
+local fixture in headless Firefox): DOM harvest, plan,
+execute, DOM verify, zero screenshots in the loop, accuracy
+>= 90%, total wall time measured end to end including
+transport. Vision is used only for a final visual sanity
+check if the user asks for one.
+
+What 0-vision means here, exactly: the agent takes zero
+observations during the run. No VISION 1 inventory read by
+the agent (the script still runs its one-shot DOM harvest
+per window; a DOM evaluate the agent never reads is a cheap
+DOM read, not a vision), and no VISION 2 look at the
+threads at the end. The agent reads only the script's JSON
+results (outcome, per-step statuses, counts) and the run
+log. That is why rung 2 needs the script to check
+programmatically what the 2-vision run leaves to operator
+judgment: the --strict-input-name flag (a wrongly named
+input fails closed instead of being typed into), the
+textNew V12 gate (a stale bubble cannot pass a new send),
+the pre-send reservation (a crashed attempt cannot be
+re-sent blindly), the D3 ref check (a renamed input fails
+fast), the cross-window check (a message in the wrong
+thread fails the run), and the frames census (a hidden
+input fails the harvest-first step). All six are built in
+script commit f49851f and fixture-proven; see section 12
+item 9 and item 10. The 2-vision run in sections 6-8 keeps
+its two agent looks; rung 2 drops both by definition.
+
+Hard constraint, kept: rung 2 acceptance runs on the real
+clone threads, NOT the Firefox fixture, under either live
+shape. The fixture runs in this runbook prove the script
+only; they are not rung 2.
+
+### 14.0 Prerequisites (all must hold before step 1)
+
+1. Coordinator decision: the method is approved for a live
+   run, and the live shape is picked (option B primary,
+   section 13.1, or option A fallback, section 13.2). The
+   coordinator's decision packet is listed in the batch 12
+   report (docs/clone2-batch12-readiness-closeout-20261122.md,
+   section 3). No decision, no run.
+2. Coordinator supplies the live plan: two real thread URLs
+   (must differ), thread selector and bubble selector per
+   thread, and the run_id. The script validates the plan
+   before any browser starts (exactly 2 windows, distinct
+   URLs, non-empty run_id) and refuses otherwise (exit 2).
+3. Script pin: tests/two_vision_bench.py at commit f49851f,
+   1200 lines. Any other hash means an unreviewed change
+   sits on top; stop and report.
+4. Live lane free: no BASELINE2 or other live run running,
+   no other agent holding the laptop browser. Confirm with
+   the coordinator; do not guess.
+5. Run machine ready: the script's Firefox binary,
+   geckodriver and venv at the hardcoded paths (script
+   lines 49-50) under option A; under option B the CDP
+   driver and debug ports instead (section 13.1). /tmp has
+   room (512M tmpfs; `df -h /tmp`) and ports 2828 and 9223
+   are free. A fresh --workdir per run.
+6. Under option A, the pre-seeded logged-in profile is
+   verified (section 13.2 steps 2-5): the COPIED profile
+   loads logged in with both threads reachable. Under
+   option B, both browsers are relaunched with distinct
+   debug ports, the tabs are listed per browser, and the
+   dry send proves the CDP input path types into the
+   contenteditable input (section 13.1 steps 1-3).
+7. The run_id is fresh by generation (timestamp-based,
+   never reused, including from a failed attempt). The
+   run_id freshness check in section 5 still applies:
+   with textNew the gate itself no longer passes on a
+   stale bubble, but a reused run_id with a shared workdir
+   still skips on the ledger's "sent" record, so the
+   check is still required. Record the check in the run
+   log. Under option A the a11y method does not apply (no
+   Brave/Chrome targets); freshness rests on generation
+   plus the harvest-first DOM read.
+
+### 14.1 Step 1: harvest-first (before any send)
+
+Run --mode harvest with the live plan first, with the
+frames census read from results.json (not from an agent
+look at the inventory text):
+
+```
+~/workspace/tools/venv/bin/python tests/two_vision_bench.py \
+  --plan <live-plan.json> --mode harvest \
+  --live --confirm-live \
+  --workdir <harvest-dir> --print-inventory
+```
+
+Required outcomes before proceeding, all read from
+<harvest-dir>/results.json and <harvest-dir>/inventory.json,
+no agent look at the threads:
+- Outcome HARVEST-ONLY, exit 0. Any other outcome stops
+  the run.
+- results.json "frames" for each window: no frame with
+  accessible false (a cross-origin frame), and no frame
+  at all holding the input or thread. If the inventory
+  shows no visible textbox named "Message" in either
+  window, STOP: the input may be inside a frame, behind
+  the login wall, or differently named. Do not proceed,
+  do not guess.
+- The inventory lists, in each window, a visible textbox
+  whose name contains "Message" (case-insensitive). The
+  script does not decide this in harvest mode; the
+  operator reads the names from inventory.json (a JSON
+  file, not an observation). A textbox named "Email" or
+  "Password", or any visible textbox whose name does not
+  contain "Message", FAILS the check: stop, record the
+  actual name in the run log, do not proceed. The live
+  DOM name verification (section 12 item 6) is closed by
+  this read: record the harvested aria-label and
+  placeholder per window in the run log.
+- The harvest does NOT verify thread_selector or
+  bubble_selector (they are only touched inside send_one
+  via the gate, after typing). The selectors stay
+  unverified until the first V12 gate, so the first send
+  is the first real selector test: a wrong selector means
+  the message may be typed but unseen (v12-timeout, intent
+  failed-unverified, check the thread by hand, new run_id).
+- If the harvest shows a login wall (visible textboxes
+  named "Email" and "Password", no textbox named
+  "Message"), the run is FAIL before anything is sent and
+  the blocker in section 0 stands. Do not hand-log-in
+  inside the script's browser unless the coordinator
+  explicitly orders that step.
+
+### 14.2 Step 2: the live run (0-vision)
+
+Only after steps 0 (section 5) and 1 (14.1) pass, the live
+lane is free, and the coordinator has said run for this
+run_id. One command, with --strict-input-name:
+
+```
+~/workspace/tools/venv/bin/python tests/two_vision_bench.py \
+  --plan <live-plan.json> --mode run \
+  --live --confirm-live --strict-input-name \
+  --workdir <run-dir>
+```
+
+What the script does, in order, with no agent look in
+between: VISION 1 one-shot harvest per window (DOM reads
+only); frames census per window; before-snapshot counts
+per window (textNew baseline); strict input-name check
+(fails closed with input-name-mismatch before any send);
+plan-once send chain per clone (scroll first, D3 ref
+check, HCU guard on post-scroll geometry, real pointer
+click, focus check, V11 observer armed before typing,
+type, V1 readback, pre-send reservation written as
+"sending", Enter, textNew V12 gate requiring a NEW bubble
+past the pre-Enter count); stop at the first failure,
+later steps recorded not-executed; cross-window check
+after both sends; outcome by DOM read only.
+
+The agent does not type, click, send, observe, or look at
+anything during the run. The operator's job is the checks
+around it (steps 0 and 1, and reading results.json after),
+not the sends.
+
+### 14.3 Pass criteria (DOM only)
+
+- Harvest: PASS iff the harvest-first step (14.1) passed:
+  HARVEST-ONLY, both inputs visible and named "Message",
+  no cross-origin frame, no input hidden in a frame.
+- Sends: PASS iff both steps report "sent" in results.json,
+  each with v12_gate_ok true, gate_count strictly greater
+  than gate_baseline (a NEW bubble landed, not a stale
+  one), v11_mutation_flag true (the send mutated the page),
+  and reservation "sending" reconciled to "sent" in the
+  ledger. A step reporting "skipped-already-sent" means the
+  ledger said this intent was already sent and the bubble
+  is visible: acceptable only when the run log shows this
+  run_id was genuinely sent before (a retry after a crash,
+  not a fresh run); on a fresh run_id it means the run_id
+  was reused, and the run is FAIL on procedure, not PASS.
+- Cross-window: PASS iff results.json "cross_window_check"
+  shows foreign 0 in both threads (each thread holds only
+  its own message). Any foreign count above 0 fails the
+  run even when both sends report sent.
+- Accuracy bar: 90% or more (coordinator's bar, click2 log
+  line 32). With 2 sends, 2/2 = 100% passes and 1/2 = 50%
+  fails the bar, so in practice PASS requires both
+  messages. There is no partial pass. Precision note, as
+  in section 8: the bar is about grounding accuracy per
+  action, while this runbook operationalizes it as
+  message-delivery rate (2/2 messages landed); with 2
+  sends only 100% or 50% is possible, so the bar cannot
+  distinguish 90% grounding accuracy from 100%. The
+  criterion as stated measures delivery, not grounding
+  accuracy. Live accuracy is what this run measures; it
+  is owed, not claimed.
+- Wall time: total wall time measured end to end including
+  transport, from the run command start to
+  benchmark_finished in results.json (wall_s). Record it;
+  the arch-review acceptance test requires it measured,
+  not estimated.
+- Vision count: 0. The agent reads no observation and no
+  inventory text during the run. The operator's look count
+  for the run is 0 by definition; the step-0 and step-1
+  checks read JSON files (results.json, inventory.json,
+  run-log.md), not observations. If the user asks for a
+  final visual sanity check, that look is outside the run
+  and must be logged in the run log with its time; it does
+  not change the 0-vision count of the run itself. The
+  script's hardcoded visions_used: 2 in results.json
+  (script line 1019) does NOT apply to rung 2: it is the
+  2-vision run's constant, never updated by the script,
+  and must not be cited as rung 2's vision count. Rung 2
+  records visions_used 0 in the run log, by the operator.
+
+### 14.4 Stop conditions (abort, do not push on)
+
+- Stop at the first failed step. The script does this
+  itself; do not restart the chain mid-run.
+- If a send ends in v12-timeout, STOP. Check the thread by
+  hand. Never re-run with the same run_id: the ledger
+  marks the intent failed-unverified and refuses the
+  retry. To retry, fix the thread/bubble selectors first,
+  then use a NEW run_id and repeat the freshness check
+  (section 5).
+- If a send ends in retry-blocked-reservation, STOP. A
+  previous attempt reserved the intent but never
+  reconciled it; the message may have landed. Check the
+  thread by hand, use a NEW run_id, never re-send the
+  same intent.
+- If a send ends in ref-stale, STOP. The input was renamed
+  or replaced between harvest and send. Re-harvest with a
+  fresh run_id; do not click the stale ref.
+- If a send ends in input-name-mismatch, STOP before
+  anything is sent. Record the actual name; the plan's
+  input_name is wrong for this thread.
+- If the cross-window check shows contamination, the run
+  is FAIL even if both sends report sent. Report which
+  thread holds the foreign message; do not re-send to
+  "make up" for it.
+- If either thread becomes unreachable, or the browser
+  crashes, or a click lands on the wrong window, STOP and
+  report the state (which intents are sent, which are
+  failed-unverified or still "sending") before doing
+  anything else.
+- If --confirm-live was not explicitly given by the
+  coordinator for this run, STOP. The script refuses
+  without it, and the URL gate refuses any non-fixture
+  plan without both --live and --confirm-live.
+- If the harvest-first step fails (no textbox named
+  "Message" in either window, login wall, cross-origin
+  frame), STOP before any send.
+- If the plan validation refuses (exit 2), STOP. Fix the
+  plan. Do not bypass the validation.
+- A value-mismatch means nothing was sent (Enter was not
+  pressed). A v12-timeout means the message may have been
+  typed and may have landed unseen, so the thread must be
+  checked by hand. Do not treat them the same.
+
+### 14.5 After the run: preserve and report
+
+- Preserve the full log, results.json, inventory.json, and
+  ledger.json out of /tmp IMMEDIATELY (fix-pass logs were
+  once lost to a /tmp wipe). Also preserve the plan file
+  used, the harvest-first results.json, and the run_id
+  freshness check record from section 5.
+- Delete the profile/ dir under the run workdir after the
+  run, if present (option A only; under option B there is
+  no <run-dir>/profile) (/tmp is a 512M tmpfs; stale Firefox
+  profiles have filled it to 100% before).
+- Report the outcome with the run_id and wall time:
+  outcome (PASS/FAIL), per-step statuses with
+  before_count, gate_baseline, gate_count, v11_mutations,
+  v11_mutation_flag and reservation per step,
+  cross_window_check, frames census, and visions_used 0
+  (operator-recorded; the script's hardcoded 2 does not
+  apply). Never edit a result file after the run.
+- Confirm no Firefox process was left running and /tmp has
+  room again.
+
+### 14.6 What rung 2 still needs (not closable here)
+
+- Coordinator decisions (section 12 item 8): method
+  approval, thread URLs/selectors, option B vs option A,
+  account for option A. The decision packet is in the
+  batch 12 report, section 3.
+- Live DOM name verification (section 12 item 6): closed
+  only by the harvest-first read in step 1, at run time.
+- A11y dry probe (section 12 item 7): UNRUN. Under option
+  B it is the only executable freshness check besides
+  generation; under option A it does not apply.
+- Frames live check (section 12 item 10): closed only by
+  the harvest-first census on the live page, at run time.
+- Live lane free (section 12 item 11) and live measurement
+  of the 90% bar (section 12 item 12): checked and
+  measured by the run itself.
+
+## 15. Sources
 
 - Batch 10 assignment: coord/clone2.md line 868, commit
   422f4b0.
@@ -1212,13 +1577,21 @@ the coordinator to relaunch Zen on the laptop.
   clone2-live-run-readiness-closeout-20261122.md (verdict
   still NOT READY, exact remaining items listed there and
   in section 12 above).
-- Script: tests/two_vision_bench.py (868 lines, c267411);
-  FF/GD lines 49-50; default_plan run_id lines 543-544;
-  normalize_file_url ~line 587; validate_plan ~line 600;
-  URL gate ~lines 724-740; outcome rule ~line 831;
-  launch_browser lines 265-296; find_input lines 254-262;
-  no-message-input-in-inventory line 794; visions_used
-  hardcoded at line 745.
+- Script: tests/two_vision_bench.py (1200 lines, f49851f);
+  FF/GD lines 49-50; GATE_JS line 154; COUNT_JS line 170;
+  OBSERVER_JS line 189; FRAMES_JS line 211; REF_CHECK_JS
+  line 230; find_input lines 383-391; launch_browser lines
+  394-425; send_one line 529; harvest_window line 754;
+  frames_census line 763; cross_window_check line 787;
+  default_plan run_id lines 811-812; validate_plan line
+  868; URL gate lines 1006-1013; outcome rule line 1162;
+  no-message-input-in-inventory line 1077; visions_used
+  hardcoded at line 1019.
+- Batch 12 task 2: docs/clone2-batch12-readiness-closeout-20261122.md
+  (textNew, pre-send reservation, V11, D3, frames census,
+  rung 2 procedure; verdict still NOT READY); script
+  commit f49851f; fixture logs and artifacts in
+  ~/workspace/tools/batch12-t2/.
 - Workflow doc: docs/two-vision-benchmark-workflow-20261122.md
   (747 lines); section 5 plan shape; section 6 failure
   meanings; section 9 C12 not used; section 10 checklist.
