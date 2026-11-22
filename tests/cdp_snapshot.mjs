@@ -393,17 +393,25 @@ for(const [label,options,actions,error] of [
 }
 
 // The raw --worker entry frames the same rejection as stable JSON, completed 0.
-// The worker stops on the first ok:false, so exit status 1 is expected, not a test failure.
+// F4: an ok:false result is a result, not a dead worker. The loop serves the
+// next request and a clean stdin close exits 0, so exit status 0 is expected.
 function worker(request){
   const child=spawnSync('node',[fileURLToPath(new URL('../scripts/cdp.mjs',import.meta.url)),'--worker'],
-    {input:JSON.stringify(request),encoding:'utf8'});
+    {input:(Array.isArray(request)?request:[request]).map(r=>JSON.stringify(r)).join('\n'),encoding:'utf8'});
   return {status:child.status,lines:child.stdout.trim().split('\n').filter(Boolean).map(JSON.parse)};
 }
 const rawWorker=worker({operation:'act',endpoint:'http://127.0.0.1:9222',target:'test',
   snapshot:'before',no_after:true,actions:[{type:'assert',ref:'e1',text:'',checked:true}]});
-assert.equal(rawWorker.status,1,'worker exits nonzero after an ok:false result');
-assert.equal(rawWorker.lines.length,1,'the worker must not keep going after a rejection');
+assert.equal(rawWorker.status,0,'worker exits zero after an ok:false result on clean stdin close');
+assert.equal(rawWorker.lines.length,1,'one request in, one result line out');
 assert.deepEqual(rawWorker.lines[0],{ok:false,completed:0,error:'no_after final assert needs text, value or checked'});
+// F4: the worker survives the first rejection and serves the next request.
+const rawWorkerTwo=worker([{operation:'act',endpoint:'http://127.0.0.1:9222',target:'test',
+  snapshot:'before',no_after:true,actions:[{type:'assert',ref:'e1',text:'',checked:true}]},
+  {operation:'act',no_after:'yes'}]);
+assert.equal(rawWorkerTwo.status,0,'worker still exits zero after serving a second request');
+assert.equal(rawWorkerTwo.lines.length,2,'the worker serves the next request after an ok:false result');
+assert.equal(rawWorkerTwo.lines[1].error,'no_after must be a boolean');
 
 const rawWorkerAccepted=worker({operation:'act',endpoint:'http://127.0.0.1:9222',target:'test',
   snapshot:'before',no_after:'yes',actions:[{type:'assert',ref:'e1',text:''}]});

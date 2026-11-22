@@ -150,7 +150,7 @@ r = await run(ACT, { corrupt: { pending: '{not json' } });
 assert.equal(r.output[0].ok, false);
 assert.match(r.output[0].error, /malformed CDP WebSocket JSON/);
 assert.equal(r.pendingTimers, 0, 'every pending timer is cleared');
-assert.equal(r.exitCode, 1);
+assert.equal(r.exitCode, 0, 'F4: an ok:false result is served, then a clean stdin close exits 0');
 console.log('ok malformed frame with a pending reply rejects it and clears every timer');
 
 // 3. A syntactically valid but non-object frame is a transport failure too.
@@ -218,12 +218,16 @@ assert.equal(r.output.length, 1, 'one response, never a replay');
 assert.equal(r.fixtureState.inputEvents, 0, 'a wait batch dispatches no input');
 console.log('ok an after-snapshot failure preserves successful act status and count');
 
-// 9. Worker mode stops on a failed batch rather than draining queued requests.
+// 9. F4: worker mode serves the next request after a failed batch instead of
+// stopping. The injected fault still fails the next request too, but the
+// worker answers it and exits 0 on a clean stdin close.
 r = await run({ ...ACT, actions: [{ type: 'click', selector: '#b' }, { type: 'click', selector: '#c' }] },
   { actionErrorAfter: 1, chunks: [JSON.stringify({...ACT,actions:[{type:'click',selector:'#b'}]})+'\n'+JSON.stringify(ACT)+'\n'] });
-assert.equal(r.output.length, 1, 'the worker stops after the first failing request');
-assert.equal(r.exitCode, 1);
-console.log('ok the worker stops on a failed batch and never starts the next request');
+assert.equal(r.output.length, 2, 'the worker serves the next request after the first failing one');
+assert.equal(r.output[0].ok, false);
+assert.equal(r.output[1].ok, false, 'the injected fault fails the next request too');
+assert.equal(r.exitCode, 0);
+console.log('ok the worker serves the next request after a failed batch');
 
 console.log('all cdp error-path, transport and envelope regressions pass');
 // Exercise the actual UTF-8 stream boundary in both entry modes, including split bytes.

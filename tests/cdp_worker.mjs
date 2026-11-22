@@ -148,7 +148,8 @@ assert.deepEqual(result.output[1],result.output[0]);
 assert.equal(result.sockets.length,0);
 assert.equal(result.exitCode,0);
 
-// Both an action result failure and a preflight throw stop queued input.
+// F4: an action result failure or a preflight throw is a result, not a dead
+// worker. The loop serves the next request, and a clean stdin close exits 0.
 const errors=[
   [{...request,operation:'act',actions:[]},'--snapshot required'],
   [{...request,operation:'act',snapshot:'missing',actions:[{type:'key',keys:['ctrl']}]},'key action needs a non-modifier key'],
@@ -159,26 +160,29 @@ const errors=[
 ];
 for(const [bad,message] of errors){
   result=await run([bad,request]);
-  assert.equal(result.output.length,1);
+  assert.equal(result.output.length,2);
   assert.equal(result.output[0].ok,false);
   assert.ok(result.output[0].error.includes(message));
-  assert.equal(result.exitCode,1);
-  assert.ok(result.fetches<=1);
+  assert.ok(result.output[1].snapshot,'the next request still runs after an ok:false result');
+  assert.equal(result.exitCode,0);
+  assert.ok(result.fetches<=2);
 }
 for(const options of [{fetchError:true},{connectError:true},
   {debuggerUrl:'ws://outside.example/test'}]){
   result=await run([request,request],options);
-  assert.equal(result.output.length,1);
+  assert.equal(result.output.length,2);
   assert.equal(result.output[0].ok,false);
-  assert.equal(result.fetches,1);
-  assert.equal(result.exitCode,1);
+  assert.equal(result.output[1].ok,false,'the same transport fault fails the next request too');
+  assert.equal(result.fetches,2);
+  assert.equal(result.exitCode,0);
 }
 result=await run(['{malformed',request]);
-assert.equal(result.output.length,1);
+assert.equal(result.output.length,2);
 assert.equal(result.output[0].ok,false);
 assert.equal(result.output[0].completed,0);
-assert.equal(result.fetches,0);
-assert.equal(result.exitCode,1);
+assert.ok(result.output[1].snapshot,'the next request still runs after a malformed line');
+assert.equal(result.fetches,1);
+assert.equal(result.exitCode,0);
 assert.equal((await run([])).output.length,0);
 
 // Tabs still emit exactly one array and succeed in single-shot mode.
@@ -239,16 +243,17 @@ for(const change of ['endpoint','target','debugger','url']){
 }
 for(const invalid of [[],[{...tab(),type:'worker'}],[tab('test','http://fixture/','ws://outside.example/test')]]){
   result=await run([request,request,request],{tabList:n=>n===1?[tab()]:invalid});
-  assert.equal(result.output.length,2);
+  assert.equal(result.output.length,3);
   assert.equal(result.output[1].ok,false);
+  assert.equal(result.output[2].ok,false,'the third request still runs after the failed second one');
   assert.equal(result.sockets.length,1,'fresh invalid target never uses retained socket');
   assert.equal(result.frames,1);
-  assert.equal(result.exitCode,1);
+  assert.equal(result.exitCode,0);
 }
 result=await run([request,{...request,endpoint:'http://outside.example'},request]);
-assert.equal(result.fetches,1);assert.equal(result.output.length,2);assert.equal(result.frames,1);
+assert.equal(result.fetches,2);assert.equal(result.output.length,3);assert.equal(result.frames,2);
 result=await run([request,'{malformed',request]);
-assert.equal(result.output.length,2);assert.equal(result.fetches,1);assert.equal(result.exitCode,1);
+assert.equal(result.output.length,3);assert.equal(result.fetches,2);assert.equal(result.exitCode,0);
 result=await run([request,{...request,operation:'tabs'},request]);
 assert.equal(result.sockets.length,1);assert.equal(result.fetches,3);assert.ok(Array.isArray(result.output[1]));
 for(const invalid of [[],[tab('other')],[tab('test','http://fixture/','ws://outside.example/test')]]){
@@ -276,8 +281,9 @@ for(const fault of ['close','error','malformed']){
     else socket.emit('{bad JSON');
     return true;
   }});
-  assert.equal(result.sockets.length,1,fault);assert.equal(result.output.length,2,fault);
+  assert.equal(result.sockets.length,2,fault);assert.equal(result.output.length,3,fault);
   assert.equal(result.output[1].ok,false,fault);assert.equal(result.output[1].completed,0,fault);
+  assert.equal(result.output[2].snapshot,'snapshot-3',fault);
   assert.equal(result.fixtureState.inputEvents,0,fault);assert.equal(result.pendingTimers,0,fault);
 }
 
@@ -305,8 +311,9 @@ for(const stale of ['reload','url','age','id']){
     if(stale==='age')page.__agentCu.created=Date.now()-90001;
     if(stale==='id')page.__agentCu.id='another-snapshot';
   }});
-  assert.equal(result.sockets.length,1,stale);assert.equal(result.output.length,2,stale);
+  assert.equal(result.sockets.length,2,stale);assert.equal(result.output.length,3,stale);
   assert.equal(result.output[1].ok,false,stale);assert.equal(result.fixtureState.inputEvents,0,stale);
+  assert.equal(result.output[2].snapshot,'snapshot-3',stale);
 }
 
 
@@ -322,15 +329,17 @@ for(const unavailable of ['removed','disabled','covered']){
       element.contains=()=>false;
     }
   });
-  assert.equal(result.output.length,2,unavailable);assert.equal(result.output[1].ok,false,unavailable);
-  assert.equal(result.fixtureState.inputEvents,0,unavailable);assert.equal(result.sockets.length,1,unavailable);
+  assert.equal(result.output.length,3,unavailable);assert.equal(result.output[1].ok,false,unavailable);
+  assert.equal(result.fixtureState.inputEvents,0,unavailable);assert.equal(result.sockets.length,2,unavailable);
+  assert.equal(result.output[2].snapshot,'snapshot-3',unavailable);
 }
 result=await run([request,{...act,actions:[{type:'scroll',dy:20}]},request],{
   onResponse:({output,page})=>{if(output.length===1)vm.runInContext('delete globalThis.__agentCu',page);}
 });
 assert.equal(result.output[1].ok,false);assert.equal(result.fixtureState.inputEvents,0);
 
-// A close after mousePressed is ambiguous input: do not send release, retry, or next request.
+// A close after mousePressed is ambiguous input: do not send release or retry
+// inside the failed batch. F4: the next request still runs on a fresh connection.
 result=await run([request,{...act,actions:[{type:'click',selector:'#button'},{type:'key',keys:['a']}]},request],{
   onResponse:({output,page})=>{
     if(output.length!==1)return;
@@ -345,16 +354,17 @@ result=await run([request,{...act,actions:[{type:'click',selector:'#button'},{ty
     return false;
   }
 });
-assert.equal(result.output.length,2);assert.equal(result.output[1].ok,false);
+assert.equal(result.output.length,3);assert.equal(result.output[1].ok,false);
 assert.equal(result.output[1].completed,0);assert.equal(result.fixtureState.inputEvents,2);
-assert.equal(result.sockets.length,1);assert.equal(result.fetches,2);assert.equal(result.pendingTimers,0);
+assert.equal(result.sockets.length,2);assert.equal(result.fetches,3);assert.equal(result.pendingTimers,0);
 
 for(const fault of ['preflight','fetch']){
   result=await run([request,fault==='preflight'?{...request,max_elements:0}:request,request],{
     beforeFetch:({fetches})=>{if(fault==='fetch'&&fetches===2)throw new Error('owned list failed');}
   });
-  assert.equal(result.output.length,2,fault);assert.equal(result.output[1].ok,false,fault);
-  assert.equal(result.sockets.length,1,fault);assert.equal(result.frames,1,fault);
+  assert.equal(result.output.length,3,fault);assert.equal(result.output[1].ok,false,fault);
+  assert.ok(result.output[2].snapshot,fault); // snapshot number follows fetches, not requests
+  assert.equal(result.sockets.length,2,fault);assert.equal(result.frames,2,fault);
 }
 
 // A swallowed after-snapshot failure keeps its envelope, but retires the transport.
@@ -376,7 +386,7 @@ for(const failure of ['cdp-error','transport-error','timeout','send-throw']){
 result=await run([request],{single:true});
 assert.equal(result.sockets.length,1);assert.deepEqual(result.events.slice(-2),['close','response']);
 console.log('persistent worker identity, refresh, stale state, bounded listeners, idle faults, no replay and poison-retirement regressions pass');
-console.log('all cdp worker sequential, close, send cleanup, EOF, stop-on-error and single-shot regressions pass');
+console.log('all cdp worker sequential, close, send cleanup, EOF, survive-ok-false and single-shot regressions pass');
 }
 
 
