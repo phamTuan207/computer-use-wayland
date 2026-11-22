@@ -3,11 +3,12 @@
 
 A8: _proven_no_body AST-extracted from the runner. The required
 case is eval_error "" with a good snapshot: it must return False
-(the Y13g Amend 5 `is not None` check; the old falsy check
-returned True). The full 12-case table from the redteam paper is
+(the Y13g R9 (C2-11) key-presence check, `"eval_error" in diag`;
+an explicitly-None eval_error also returns False, not True).
+The full 12-case table from the redteam paper is
 re-run against the NEW code.
 
-AST comparison: the 12 tokenizer functions must be AST-identical
+AST comparison: the 14 tokenizer functions must be AST-identical
 between the runner and the launcher copies (docstrings stripped;
 the only allowed text differences are the two sync-direction
 notes). Also diffs the raw tokenizer-block text to show any
@@ -40,8 +41,9 @@ A8_CASES = [
                                     "snapshots": [GOOD]}, False),
     ("eval_error '' + good snapshot (REQUIRED)",
      {"eval_error": "", "snapshots": [GOOD]}, False),
-    ("eval_error None + good snapshot", {"eval_error": None,
-                                         "snapshots": [GOOD]}, True),
+    ("eval_error None + good snapshot (R9: now False)",
+     {"eval_error": None,
+      "snapshots": [GOOD]}, False),
     ("no eval_error + good snapshot", {"snapshots": [GOOD]}, True),
     ("hasBody key missing",
      {"snapshots": [{"readyState": "complete"}]}, False),
