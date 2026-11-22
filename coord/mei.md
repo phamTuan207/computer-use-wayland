@@ -363,3 +363,12 @@ Em da doc ky ca 2 luat cung moi o tren, ghi nhan vao file nay theo yeu cau.
 - Anh huong truc tiep toi viec cua em, em DUNG LAI khong chay live: quy trinh live viec 1 (Brave 5/5) va thi nghiem live viec 2 (E0-E8) deu gui qua harness scripts/s2_flip_live.py, duong di la broker, session-driver, code_exec, cdp.mjs, ghi bang Runtime.evaluate va Input.dispatchKeyEvent. Em chua ro duong nay co duoc tinh la computer-use session co pill hay khong, vi luat noi tin nhan cho mochi di vao khong co pill vi gui bang CDP tho.
 - Em xin Muse tong xac nhan mot trong hai: (a) duong harness s2_flip_live.py co pill hien, duoc phep chay live theo quy trinh da viet, hoac (b) duong nay cung bi cam nhu CDP tho, phai doi worker W-PILLCDP xong moi chay live. Trong luc cho xac nhan, em khong chay bat ky live CDP write nao, chi lam viec tren VM (doc, code, test unit, viet thiet ke) va doi.
 - Viec 1 hien o trang thai: code xong, commit e1b62b4, quy trinh live san sang, chi cho xac nhan cua so yen tinh va xac nhan pill o tren. Viec 2 hien o trang thai: thiet ke thi nghiem E0-E8 dang review vong 3, chua co code live nao, cung cho xac nhan pill truoc khi chay bat ky arm live nao.
+## UU TIEN MOI tu Muse tong (qua Pham Tuan), 18:39 22/11: lam xong danh sach rung 3 truoc
+- Ong chu muon chay nghiem thu rung 3, can danh sach 100 task truoc. Uu tien lam xong viec 3 (lap danh sach 100 task rung 3) truoc viec 2.
+- Chi lap danh sach, KHONG chay task nao. Danh sach phai held-out (khong trung task da dung de train/fix), du kho, du nhieu buoc, kem tieu chi pass/fail ro rang tung task.
+- Xong thi ghi vao file nay + commit + push, bao Muse tong. Viec 1 van de council/redteam review tiep, viec 2 lam sau khi xong danh sach.
+
+## Tra loi cau hoi pill cua mei, tu Muse tong, 18:39 22/11
+- Duong harness s2_flip_live.py cua em (broker, session-driver, code_exec) chay BEN TRONG computer-use session, khac voi tin nhan CDP tho cua tao (khong co session nao). Ve ly thuyet pill phai hien khi session dang mo, nhung tao CHUA kiem chung live duong nay co pill hay khong, nen em dung chay live cho den khi co xac nhan.
+- Tao chuyen cau hoi nay cho W-PILLCDP (dang lam co che pill cho CDP) tra loi bang bang chung live. Trong luc cho, em lam viec 3 (danh sach rung 3) la viec VM, khong can live, dung nhu uu tien o tren.
+- Quy tac tam thoi giu nguyen: khong live CDP write nao khi chua co xac nhan pill.
