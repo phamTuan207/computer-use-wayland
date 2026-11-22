@@ -386,6 +386,8 @@ class TestBrokerAttempt(unittest.TestCase):
         rc, out, err, timed_out, elapsed, detail = self._run_attempt([
             ('start', {'ok': True, 'status': 'starting',
                        'generation': 'g1'}, 0),
+            ('status', {'ok': True, 'generation': 'g1',
+                       'state': 'running', 'driver': 'ready'}, 0),
             ('request', {'ok': True, 'status': 'accepted', 'sequence': 1}, 0),
             ('result', {'ok': True, 'status': 'completed', 'sequence': 1,
                        'response': {'returncode': 0, 'result': act,
@@ -427,6 +429,8 @@ class TestBrokerAttempt(unittest.TestCase):
         rc, out, err, timed_out, elapsed, detail = self._run_attempt([
             ('start', {'ok': True, 'status': 'starting',
                        'generation': 'g1'}, 0),
+            ('status', {'ok': True, 'generation': 'g1',
+                       'state': 'running', 'driver': 'ready'}, 0),
             ('request', {'ok': True, 'status': 'accepted', 'sequence': 1}, 0),
             ('result', {'ok': True, 'status': 'completed', 'sequence': 1,
                        'response': {'returncode': 1, 'result': transient,
@@ -455,6 +459,8 @@ class TestBrokerAttempt(unittest.TestCase):
         rc, out, err, timed_out, elapsed, detail = self._run_attempt([
             ('start', {'ok': True, 'status': 'starting',
                        'generation': 'g1'}, 0),
+            ('status', {'ok': True, 'generation': 'g1',
+                       'state': 'running', 'driver': 'ready'}, 0),
             ('request', {'ok': True, 'status': 'accepted', 'sequence': 1}, 0),
             ('result', {'ok': True, 'status': 'completed', 'sequence': 1,
                        'response': {'returncode': 1, 'result': transient,
@@ -470,10 +476,54 @@ class TestBrokerAttempt(unittest.TestCase):
         self.assertEqual(detail['broker_retries'], 0)
         self.assertEqual(detail['broker_sequences'], [1, 2])
 
+    def test_start_waits_for_running_before_request(self):
+        # The relay answers start with `starting` before the driver
+        # prints ready; a request sent in that window is refused with
+        # task_stopped. broker_attempt polls status until the task is
+        # running (driver ready) before requesting.
+        act = {'ok': True, 'completed': 1}
+        rc, out, err, timed_out, elapsed, detail = self._run_attempt([
+            ('start', {'ok': True, 'status': 'starting',
+                       'generation': 'g1'}, 0),
+            ('status', {'ok': True, 'generation': 'g1',
+                        'state': 'starting', 'driver': 'starting'}, 0),
+            ('status', {'ok': True, 'generation': 'g1',
+                        'state': 'running', 'driver': 'ready'}, 0),
+            ('request', {'ok': True, 'status': 'accepted', 'sequence': 1}, 0),
+            ('result', {'ok': True, 'status': 'completed', 'sequence': 1,
+                       'response': {'returncode': 0, 'result': act,
+                                    'session_continues': True}}, 0),
+            ('finish', {'ok': True, 'status': 'finished'}, 0),
+        ])
+        self.assertEqual(rc, 0)
+        self.assertEqual(json.loads(out), act)
+        self.assertEqual(detail['broker_sequences'], [1])
+
+    def test_start_failed_before_request_falls_back(self):
+        # The task failed while starting (driver never became ready):
+        # no request was sent, so the fallback is safe and the error
+        # carries the session-guardian prefix.
+        rc, out, err, timed_out, elapsed, detail = self._run_attempt([
+            ('start', {'ok': True, 'status': 'starting',
+                       'generation': 'g1'}, 0),
+            ('status', {'ok': True, 'generation': 'g1',
+                        'state': 'failed', 'driver': 'failed',
+                        'error': 'driver_not_ready'}, 0),
+            ('finish', {'ok': True, 'status': 'failed',
+                        'error': 'driver_not_ready'}, 0),
+        ])
+        self.assertEqual(rc, 1)
+        self.assertFalse(timed_out)
+        self.assertTrue(first_action.is_session_start_failure(out, False))
+        self.assertIn('driver_not_ready', out)
+        self.assertEqual(detail['broker_sequences'], [])
+
     def test_result_timeout_never_falls_back(self):
         rc, out, err, timed_out, elapsed, detail = self._run_attempt([
             ('start', {'ok': True, 'status': 'starting',
                        'generation': 'g1'}, 0),
+            ('status', {'ok': True, 'generation': 'g1',
+                       'state': 'running', 'driver': 'ready'}, 0),
             ('request', {'ok': True, 'status': 'accepted', 'sequence': 1}, 0),
             ('result', None, None),
             ('finish', {'ok': False, 'status': 'cleaning',

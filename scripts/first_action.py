@@ -267,6 +267,32 @@ def _broker_cli(remote_py, args, timeout_s):
     return proc.returncode, parsed, proc.stderr
 
 
+def _wait_for_task_running(remote_py, generation, timeout_s=30.0):
+    """Poll broker status until the started task is running.
+
+    The relay answers start with status `starting` before the driver
+    prints its ready line (about 0.5 s of Python startup). A request
+    sent in that window is refused with task_stopped, and an
+    immediate finish poisons _await_ready into driver_not_ready, so
+    the task must be running (driver ready) before the first
+    request. Returns (True, None) when running, (False, error) when
+    the task failed before any request, (False, None) on timeout.
+    """
+    deadline = time.monotonic() + timeout_s
+    while True:
+        _rc, parsed, _err = _broker_cli(remote_py, ['status'], 30.0)
+        if isinstance(parsed, dict) and parsed.get('generation') == generation:
+            state = parsed.get('state')
+            if state == 'running' and parsed.get('driver') == 'ready':
+                return True, None
+            if state in ('failed', 'finished'):
+                return False, (parsed.get('error')
+                               or parsed.get('last_start_error') or state)
+        if time.monotonic() >= deadline:
+            return False, None
+        time.sleep(0.5)
+
+
 def _regions_equal(first, second):
     """True when two observation metas cover the same screen region.
 
@@ -380,6 +406,19 @@ def broker_attempt(observation_path, actions_path, deadline_s,
                                         + str(parsed.get('error') or ''))})
             return 1, out, err, False, time.monotonic() - start, detail
         started = True
+        running, ready_error = _wait_for_task_running(
+            remote_py, parsed.get('generation'))
+        if not running:
+            if ready_error is None:
+                out = json.dumps({'ok': False,
+                                  'error': 'broker start timed out; outcome '
+                                           'unknown, not replayed'})
+                return 1, out, '', True, time.monotonic() - start, detail
+            out = json.dumps({'ok': False,
+                              'error': ('session guardian startup failed: '
+                                        'driver start failed: '
+                                        + str(ready_error))})
+            return 1, out, '', False, time.monotonic() - start, detail
         sequence = 1
         current_obs = str(observation_path)
         current_meta = meta
