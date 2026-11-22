@@ -79,7 +79,8 @@ import json
 import math
 import os
 from pathlib import Path
-import signal
+import re
+import secrets
 import subprocess
 import sys
 import time
@@ -184,41 +185,349 @@ def release_overlay(agent, overlay_mod=None):
 
 
 def session_cmd(cu_py, observation_path, actions_path):
-    """The exact session command the manual flow used, as an argv list."""
-    py = sys.executable
-    return [py, str(cu_py), 'session', '--', py, str(cu_py), 'act',
-            '--observation', str(observation_path),
-            '--actions', str(actions_path)]
+    """DELETED in step 8 (S1/CB-6). Kept as a stub that always fails.
+
+    The per-batch session spawn (`cu.py session -- cu.py act ...`) is
+    gone: act-now routes the batch through the long-lived session
+    driver held by the broker (see broker_attempt). Any caller still
+    building a session command gets a loud failure instead of a
+    silently resurrected spawn.
+    """
+    raise RuntimeError('session_cmd was deleted in step 8: act-now routes '
+                       'through the broker (broker_attempt), it no longer '
+                       'spawns a session per batch')
 
 
 def attempt_session(cmd, deadline_s, env=None):
-    """Run a session command with a hard deadline.
+    """DELETED in step 8 (S1/CB-6). Kept as a stub that always fails.
 
-    Returns (returncode, stdout, stderr, timed_out, elapsed_s). On
-    timeout the whole process group is terminated, then killed. The
-    caller decides, from the output, whether a fallback is safe.
+    The per-batch session spawn is gone (see session_cmd). Use
+    broker_attempt, which returns the same 5-tuple shape plus a
+    detail dict.
+    """
+    raise RuntimeError('attempt_session was deleted in step 8: act-now '
+                       'routes through the broker (broker_attempt), it no '
+                       'longer spawns a session per batch')
+
+
+# Step 8 (S1/CB-6): act-now routes through the long-lived session
+# driver held by the broker (scripts/session_remote.py, relay socket),
+# never a per-batch session spawn. The broker enforces one owner at a
+# time; the queue discipline (wait/refuse/timeout for the second
+# queued batch) lives in session_remote._client_start_with_wait and is
+# decided in improvements/worker-click5-step8-log.md section 4. The
+# fresh-SSH one-shot path (`cu.py session -- cu.py session-driver`,
+# JSONL over stdin) is NOT in this file and never was: it is the
+# VM-side fallback and recovery path, documented in the step-8 log
+# section 6, used when the broker is down.
+BROKER_WAIT_S = 300.0
+BROKER_MAX_RETRIES = 1
+BROKER_OWNER_FALLBACK = 'act-now'
+
+# Broker start refusals that prove no action ran in this batch, so the
+# direct Pointer fallback is safe (same rule as the deleted spawn's
+# is_session_start_failure, council 1 B2). `cancelled` and
+# `recovery_required` are deliberately ABSENT: a cancelled task must
+# not act against the user's cancel, and a recovery-required broker
+# may still hold a live driver from a previous task, so the batch
+# reports instead of falling back.
+BROKER_START_FAILURE_ERRORS = frozenset({
+    'busy', 'broker_unavailable', 'broker_changed', 'broker_stopping',
+    'nested_session', 'native_unavailable', 'driver_start_failed',
+    'broker_command_failed',
+})
+
+
+def _broker_owner(agent):
+    """Broker owner string for an act-now agent name."""
+    if isinstance(agent, str) and re.fullmatch(r'[A-Za-z0-9_.:@+-]{1,80}', agent):
+        return agent
+    return BROKER_OWNER_FALLBACK
+
+
+def _broker_cli(remote_py, args, timeout_s):
+    """Run one session_remote.py CLI call.
+
+    Returns (returncode, parsed_stdout, stderr). returncode is None
+    when the CLI itself timed out; parsed_stdout is None when stdout
+    is not one JSON object.
+    """
+    try:
+        proc = subprocess.run(
+            [sys.executable, str(remote_py), *args],
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+            timeout=timeout_s)
+    except subprocess.TimeoutExpired:
+        return None, None, 'broker CLI timed out after %.1fs' % timeout_s
+    parsed = None
+    try:
+        parsed = json.loads(proc.stdout)
+    except ValueError:
+        pass
+    return proc.returncode, parsed, proc.stderr
+
+
+def _regions_equal(first, second):
+    """True when two observation metas cover the same screen region.
+
+    The R1/W1 retry guard: the retry act reuses the batch's pixel
+    coordinates, which are bound to the original frame, so the retry
+    is safe only when the fresh observation covers the same region.
+    A moved window reports for the model to re-ground instead of
+    clicking the wrong target.
+    """
+    if not isinstance(first, dict) or not isinstance(second, dict):
+        return False
+    for key in ('region', 'monitor_box', 'window_bounds'):
+        if first.get(key) != second.get(key):
+            return False
+    return True
+
+
+def _observe_args(meta, screen):
+    """Broker observe args that re-capture an observation's scope."""
+    args = ['observe']
+    if meta.get('scope') == 'window' and meta.get('window'):
+        args += ['--window', str(meta['window'])]
+    else:
+        args += ['--screen', screen]
+    if isinstance(meta.get('max_width'), int):
+        args += ['--max-width', str(meta['max_width'])]
+    crop = meta.get('crop')
+    if (isinstance(crop, list) and len(crop) == 4
+            and all(isinstance(v, int) for v in crop)):
+        args += ['--crop'] + [str(v) for v in crop]
+    return args
+
+
+def broker_attempt(observation_path, actions_path, deadline_s,
+                   state_dir, meta, screen, owner):
+    """Run one act batch through the broker-held session driver.
+
+    Returns (returncode, stdout, stderr, timed_out, elapsed_s, detail).
+    stdout carries exactly one JSON object (the driver act result, or
+    a start-failure error), so the caller parses it exactly as it
+    parsed the deleted spawn's stdout. detail carries the broker
+    evidence (owner, sequences, retries, finish outcome) for the
+    envelope; it is never part of stdout.
+
+    Flow: start (with the 300 s queue wait) -> request act (sequence
+    1) -> result (bounded by deadline_s) -> finish. On a typed
+    transient failure (returncode 1 with session_continues true) the
+    batch retries ONCE (R1/W1): a broker observe re-captures the same
+    scope INSIDE the session, so the session marker updates to the
+    fresh observation path, then the act is re-sent with a fresh
+    sequence and the fresh observation, but only when the fresh region
+    equals the original region (see _regions_equal). A timeout never
+    falls back and never replays: the outcome is unknown, finish is
+    still attempted so the session is released, and the caller
+    reports the unconfirmed actions. finish is attempted on every
+    path where a start succeeded, best-effort, so the broker never
+    keeps a task owned by a dead caller.
     """
     start = time.monotonic()
-    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                            stderr=subprocess.PIPE, text=True,
-                            start_new_session=True, env=env)
+    remote_py = Path(__file__).resolve().parent / 'session_remote.py'
+    owner = _broker_owner(owner)
+    detail = {'broker_owner': owner, 'broker_sequences': [],
+              'broker_retries': 0, 'broker_start': None,
+              'broker_finish': None, 'broker_lease': None}
     try:
-        out, err = proc.communicate(timeout=deadline_s)
-        return proc.returncode, out, err, False, time.monotonic() - start
-    except subprocess.TimeoutExpired:
-        try:
-            os.killpg(proc.pid, signal.SIGTERM)
-        except (ProcessLookupError, PermissionError, OSError):
-            pass
-        try:
-            out, err = proc.communicate(timeout=3)
-        except subprocess.TimeoutExpired:
+        state_dir = Path(state_dir)
+        state_dir.mkdir(parents=True, exist_ok=True)
+    except OSError as exc:
+        out = json.dumps({'ok': False,
+                          'error': ('session guardian startup failed: '
+                                    'broker state dir unavailable: %s' % exc)})
+        return 1, out, '', False, time.monotonic() - start, detail
+    token = secrets.token_hex(8)
+    lease_path = state_dir / ('act-now-%d-%s.lease' % (os.getpid(), token))
+    request_path = state_dir / ('act-now-%d-%s.json' % (os.getpid(), token))
+    detail['broker_lease'] = str(lease_path)
+    started = False
+    try:
+        rc, parsed, err = _broker_cli(
+            remote_py, ['start', '--owner', owner, '--lease-file',
+                        str(lease_path), '--wait', str(BROKER_WAIT_S)],
+            BROKER_WAIT_S + 60.0)
+        if rc is None:
+            # The start CLI itself timed out: the start outcome is
+            # unknown, so no fallback is safe. Report timed out.
+            out = json.dumps({'ok': False,
+                              'error': 'broker start timed out; outcome '
+                                       'unknown, not replayed'})
+            return 1, out, err, True, time.monotonic() - start, detail
+        detail['broker_start'] = parsed if isinstance(parsed, dict) else {'rc': rc, 'stderr': (err or '')[:200]}
+        if not isinstance(parsed, dict) or parsed.get('ok') is not True:
+            error = (parsed or {}).get('error') if isinstance(parsed, dict) else None
+            if error is None:
+                error = 'broker_command_failed'
+                if err.strip():
+                    error = 'broker_command_failed: ' + err.strip().splitlines()[-1][:200]
+            if error in BROKER_START_FAILURE_ERRORS:
+                out = json.dumps({'ok': False,
+                                  'error': ('session guardian startup '
+                                            'failed: broker ' + error)})
+            else:
+                out = json.dumps({'ok': False,
+                                  'error': ('broker start refused: ' + error)})
+            return 1, out, err, False, time.monotonic() - start, detail
+        if parsed.get('status') != 'starting':
+            # The broker accepted the start but the driver never came
+            # up (launcher exception): no act ran, fallback is safe.
+            out = json.dumps({'ok': False,
+                              'error': ('session guardian startup failed: '
+                                        'driver start failed: '
+                                        + str(parsed.get('error') or ''))})
+            return 1, out, err, False, time.monotonic() - start, detail
+        started = True
+        sequence = 1
+        current_obs = str(observation_path)
+        current_meta = meta
+        result_out = None
+        result_err = ''
+        result_rc = 1
+        result_timed_out = False
+        for attempt in range(BROKER_MAX_RETRIES + 1):
+            envelope = {'args': ['act', '--observation', current_obs,
+                                 '--actions', str(actions_path)],
+                        'stdin': '', 'image_policy': 'always'}
             try:
-                os.killpg(proc.pid, signal.SIGKILL)
-            except (ProcessLookupError, PermissionError, OSError):
+                fd = os.open(str(request_path), os.O_WRONLY | os.O_CREAT
+                             | os.O_TRUNC | os.O_NOFOLLOW, 0o600)
+                try:
+                    raw = (json.dumps(envelope, ensure_ascii=False) + '\n').encode('utf-8')
+                    if os.write(fd, raw) != len(raw):
+                        raise RuntimeError('broker request write was incomplete')
+                    os.fchmod(fd, 0o600)
+                finally:
+                    os.close(fd)
+            except OSError as exc:
+                out = json.dumps({'ok': False,
+                                  'error': ('session guardian startup failed: '
+                                            'broker request file unavailable: %s' % exc)})
+                return 1, out, '', False, time.monotonic() - start, detail
+            rc, parsed, err = _broker_cli(
+                remote_py, ['request', '--lease-file', str(lease_path),
+                            '--sequence', str(sequence),
+                            '--request', str(request_path)],
+                60.0)
+            detail['broker_sequences'].append(sequence)
+            if (not isinstance(parsed, dict)
+                    or parsed.get('ok') is not True
+                    or parsed.get('status') != 'accepted'):
+                # The request was never accepted, so the driver never
+                # saw the act: no action ran, fallback is safe.
+                error = (parsed or {}).get('error') if isinstance(parsed, dict) else 'broker_command_failed'
+                out = json.dumps({'ok': False,
+                                  'error': ('session guardian startup '
+                                            'failed: broker request not '
+                                            'accepted: ' + str(error))})
+                return 1, out, err or '', False, time.monotonic() - start, detail
+            sequence += 1
+            rc, parsed, err = _broker_cli(
+                remote_py, ['result', '--lease-file', str(lease_path),
+                            '--sequence', str(sequence - 1)],
+                deadline_s)
+            if rc is None:
+                result_timed_out = True
+                result_rc = 1
+                result_out = json.dumps({'ok': False,
+                                         'error': ('broker result timed out '
+                                                   'after %.1fs; outcome '
+                                                   'unknown, not replayed'
+                                                   % deadline_s)})
+                result_err = err or ''
+                break
+            if (not isinstance(parsed, dict)
+                    or parsed.get('ok') is not True):
+                error = (parsed or {}).get('error') if isinstance(parsed, dict) else 'broker_command_failed'
+                result_rc = 1
+                result_out = json.dumps({'ok': False, 'error': str(error)})
+                result_err = err or ''
+                break
+            response = parsed.get('response')
+            if not isinstance(response, dict):
+                result_rc = 1
+                result_out = json.dumps({'ok': False,
+                                         'error': ('broker result has no '
+                                                   'driver response')})
+                result_err = err or ''
+                break
+            result_rc = response.get('returncode', 1)
+            body = response.get('result')
+            if isinstance(body, dict):
+                result_out = json.dumps(body, ensure_ascii=False)
+            elif isinstance(response.get('stdout'), str):
+                result_out = response['stdout']
+            else:
+                result_out = json.dumps({'ok': False,
+                                         'error': ('driver response has no '
+                                                   'result')})
+            result_err = response.get('stderr', '') or err or ''
+            continues = response.get('session_continues') is True
+            if result_rc == 1 and continues and attempt < BROKER_MAX_RETRIES:
+                # R1/W1: typed transient, nothing was sent. Re-observe
+                # INSIDE the session (the marker updates to the fresh
+                # path), then re-send once with a fresh sequence and
+                # the fresh observation, but only on the same region.
+                obs_envelope = {'args': _observe_args(current_meta, screen),
+                                'stdin': '', 'image_policy': 'always'}
+                try:
+                    fd = os.open(str(request_path), os.O_WRONLY | os.O_CREAT
+                                 | os.O_TRUNC | os.O_NOFOLLOW, 0o600)
+                    try:
+                        raw = (json.dumps(obs_envelope, ensure_ascii=False) + '\n').encode('utf-8')
+                        if os.write(fd, raw) != len(raw):
+                            raise RuntimeError('broker request write was incomplete')
+                        os.fchmod(fd, 0o600)
+                    finally:
+                        os.close(fd)
+                except OSError:
+                    break
+                obs_rc, obs_parsed, obs_err = _broker_cli(
+                    remote_py, ['request', '--lease-file', str(lease_path),
+                                '--sequence', str(sequence),
+                                '--request', str(request_path)],
+                    60.0)
+                detail['broker_sequences'].append(sequence)
+                sequence += 1
+                if (not isinstance(obs_parsed, dict)
+                        or obs_parsed.get('ok') is not True
+                        or obs_parsed.get('status') != 'accepted'):
+                    break
+                obs_rc, obs_parsed, obs_err = _broker_cli(
+                    remote_py, ['result', '--lease-file', str(lease_path),
+                                '--sequence', str(sequence - 1)],
+                    deadline_s)
+                if (not isinstance(obs_parsed, dict)
+                        or obs_parsed.get('ok') is not True
+                        or not isinstance((obs_parsed.get('response') or {}).get('result'), dict)):
+                    break
+                fresh_meta = obs_parsed['response']['result']
+                fresh_obs = fresh_meta.get('observation')
+                if (not isinstance(fresh_obs, str) or not fresh_obs
+                        or not _regions_equal(current_meta, fresh_meta)):
+                    break
+                current_obs = fresh_obs
+                current_meta = fresh_meta
+                detail['broker_retries'] += 1
+                continue
+            break
+        return result_rc, result_out, result_err, result_timed_out, time.monotonic() - start, detail
+    finally:
+        if started:
+            try:
+                rc, parsed, err = _broker_cli(
+                    remote_py, ['finish', '--lease-file', str(lease_path)],
+                    130.0)
+                detail['broker_finish'] = parsed if isinstance(parsed, dict) else {'rc': rc, 'stderr': (err or '')[:200]}
+            except Exception:
                 pass
-            out, err = proc.communicate()
-        return proc.returncode, out, err, True, time.monotonic() - start
+        for path in (lease_path, request_path):
+            try:
+                path.unlink()
+            except OSError:
+                pass
 
 
 def _parse_stdout_envelope(stdout):
@@ -515,7 +824,6 @@ def run(args):
     import overlay as overlay_mod
     t0 = time.monotonic()
     wall0 = _now_iso()
-    cu_py = Path(__file__).resolve().parent / 'cu.py'
     agent = args.agent
     method = args.method
     envelope = {
@@ -538,6 +846,13 @@ def run(args):
         'total_ms': None,
         'session_error': None,
         'session_timed_out': False,
+        # Step 8: the broker route (owner, sequences attempted,
+        # transient retries, finish outcome). None when the run
+        # refuses before the broker attempt.
+        'broker_owner': None,
+        'broker_sequences': None,
+        'broker_retries': None,
+        'broker_finish': None,
         'fallback_reason': None,
         'ime_state_trace': None,
         'type_verified': None,
@@ -664,11 +979,14 @@ def run(args):
             envelope['path'] = 'refused'
             return 1
         envelope['order_to_session_attempt_ms'] = _ms(t0)
-        child_env = dict(env)
-        child_env.pop('CU_SESSION_TOKEN', None)
-        rc, out, err, timed_out, _elapsed = attempt_session(
-            session_cmd(cu_py, obs_path, args.actions),
-            deadline, env=child_env)
+        (rc, out, err, timed_out, _elapsed,
+         broker_detail) = broker_attempt(
+            obs_path, args.actions, deadline, cu.STATE, meta,
+            args.screen, agent)
+        envelope['broker_owner'] = broker_detail['broker_owner']
+        envelope['broker_sequences'] = broker_detail['broker_sequences']
+        envelope['broker_retries'] = broker_detail['broker_retries']
+        envelope['broker_finish'] = broker_detail['broker_finish']
         phase_ms['session_attempt_ms'] = round(_elapsed * 1000, 3)
         envelope['session_timed_out'] = timed_out
         session_result = _parse_stdout_envelope(out)
@@ -995,7 +1313,11 @@ def build_parser():
     parser.add_argument('--label', default=None)
     parser.add_argument('--session-deadline-s', type=float,
                         default=DEFAULT_SESSION_DEADLINE_S,
-                        help='hard deadline for the session attempt')
+                        help='hard deadline for each broker result wait '
+                             '(step 8: the per-batch session spawn is gone, '
+                             'so this bounds the broker act result, not a '
+                             'spawned session; the 300 s queue wait is '
+                             'separate)')
     parser.add_argument('--dom-selector', default=None,
                         help='CSS selector of the input the type action '
                              'targets; wires the DOM value hooks (focus + '

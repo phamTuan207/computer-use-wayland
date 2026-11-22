@@ -9,6 +9,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import random
 import re
 import secrets
 import select
@@ -1478,6 +1479,75 @@ def _client_start(owner, lease_path):
     return response
 
 
+# Step 8 (S1/CB-6) queue discipline: what the second queued batch
+# does. WAIT_POLL_S is the status-poll interval while waiting for a
+# busy broker; WAIT_JITTER_S bounds the uniform jitter before a retry
+# start, so several waiters waking together do not all restart in
+# the same instant (thundering herd). The 300 s default budget is
+# one IDLE_TIMEOUT, decided in improvements/worker-click5-step8-log.md
+# section 4 before the per-batch spawn was deleted.
+WAIT_POLL_S = 5.0
+WAIT_JITTER_S = 1.0
+WAIT_BUDGET_S = 300.0
+
+
+def _client_start_with_wait(owner, lease_path, wait_s=WAIT_BUDGET_S, *,
+                            _sleep=time.sleep, _jitter=None, _now=time.monotonic):
+    """Start, waiting out a busy broker per the step-8 queue discipline.
+
+    A start refused with `busy` WAITS: poll `status` (no lease) every
+    WAIT_POLL_S until the broker reports state finished or failed with
+    the guardian not active and recovery none, then unlink the lease
+    file and retry with a FRESH start_id (the broker replays the
+    recorded response for a reused start_id, so retrying with the same
+    one would return busy forever). Any other refusal
+    (recovery_required, cancelled, broker_changed, invalid_lease,
+    broker_unavailable) returns at once: those go to the recovery
+    procedure, the user resume, or the one-shot fallback, never to a
+    wait loop. On budget expiry the busy response is returned with
+    `waited_s` and the `current_owner` read from status, so the caller
+    can log who holds the session and report to the coordinator.
+    BrokerError from the underlying start (broker down, lease
+    mismatch) propagates: the caller treats it as a start failure.
+    """
+    lease_path = _lease_path(lease_path)
+    wait_start = _now()
+    deadline = wait_start + max(0.0, float(wait_s))
+    jitter = _jitter if _jitter is not None else (lambda: random.uniform(0, WAIT_JITTER_S))
+    while True:
+        response = _client_start(owner, lease_path)
+        if response.get('ok') is True or response.get('error') != 'busy':
+            return response
+        while True:
+            remaining = deadline - _now()
+            if remaining <= 0:
+                try:
+                    status = _exchange({'command': 'status'})
+                    response['current_owner'] = status.get('owner')
+                except BrokerError:
+                    pass
+                response['waited_s'] = round(_now() - wait_start, 3)
+                return response
+            _sleep(min(WAIT_POLL_S, remaining))
+            try:
+                status = _exchange({'command': 'status'})
+            except BrokerError:
+                continue
+            if (status.get('ok') is True
+                    and status.get('state') in ('finished', 'failed')
+                    and status.get('guardian') != 'active'
+                    and status.get('recovery') == 'none'):
+                break
+        try:
+            lease_path.unlink()
+        except FileNotFoundError:
+            pass
+        except OSError:
+            response['waited_s'] = round(_now() - wait_start, 3)
+            return response
+        _sleep(jitter())
+
+
 def _client_with_lease(command, lease_path, **extra):
     lease = _read_lease(_lease_path(lease_path))
     status = _exchange({'command': 'status'})
@@ -1521,6 +1591,11 @@ def main(argv=None):
     start = sub.add_parser('start', help='start one owned session task')
     start.add_argument('--owner', required=True)
     start.add_argument('--lease-file', type=Path, required=True)
+    start.add_argument('--wait', type=float, default=0.0,
+                       help='seconds to wait for a busy broker before '
+                            'giving up (step-8 queue discipline: poll '
+                            'status every 5s, retry with a fresh start_id; '
+                            '0 means fail fast on busy)')
     request = sub.add_parser('request', help='submit one existing driver envelope')
     request.add_argument('--lease-file', type=Path, required=True)
     request.add_argument('--sequence', type=int, required=True)
@@ -1572,7 +1647,12 @@ def main(argv=None):
         elif args.command == 'start':
             if not re.fullmatch(r'[A-Za-z0-9_.:@+-]{1,80}', args.owner):
                 raise BrokerError('invalid_owner', 'owner must be 1..80 safe characters')
-            response = _client_start(args.owner, args.lease_file)
+            if args.wait < 0:
+                raise BrokerError('invalid_wait', 'wait must be zero or more seconds')
+            if args.wait > 0:
+                response = _client_start_with_wait(args.owner, args.lease_file, args.wait)
+            else:
+                response = _client_start(args.owner, args.lease_file)
         elif args.command == 'request':
             raw = _safe_read_file(args.request, MAX_REQUEST_BYTES)
             try:

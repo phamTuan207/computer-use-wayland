@@ -215,12 +215,38 @@ class Driver(unittest.TestCase):
         self.assertEqual(session_driver.relay(io.StringIO(),io.StringIO()),0)
 
     def test_invalid_requests_never_execute(self):
-        requests=[[],{}, {'args':['resume']}, {'args':['session']}, {'args':['status'],'stdin':4}, {'args':[4]}]
+        # Step 8 (W3b): a well-formed JSON line with an invalid shape
+        # never executes, and it no longer drops the session either:
+        # the command never ran, so no input was sent, and the driver
+        # answers with an error envelope and stays alive for the next
+        # request (same shape as the I43 non-JSON branch).
+        requests = [[], {}, {'args': ['resume']}, {'args': ['session']},
+                    {'args': ['status'], 'stdin': 4}, {'args': [4]}]
         for request in requests:
-            with self.subTest(request=request),patch.object(session_driver,'execute') as run:
-                with self.assertRaises(ValueError):
-                    session_driver.relay(io.StringIO(json.dumps(request)),io.StringIO())
-                run.assert_not_called()
+            with self.subTest(request=request), patch.object(
+                    session_driver, 'execute',
+                    side_effect=self._fake_execute) as run:
+                output = io.StringIO()
+                source = io.StringIO(
+                    json.dumps(request) + '\n'
+                    + json.dumps({'args': ['status']}) + '\n'
+                    + json.dumps({'args': ['finish']}) + '\n')
+                code = session_driver.relay_commands(source, output)
+                # The bad-shape request never executes; the following
+                # status request does, exactly once.
+                run.assert_called_once()
+                self.assertEqual(run.call_args.args,
+                                 (['status'], ''))
+                rows = [json.loads(line)
+                        for line in output.getvalue().splitlines()]
+                self.assertEqual(code, 0)
+                self.assertEqual(len(rows), 4,
+                                 'ready, bad-shape envelope, status, finish')
+                self.assertFalse(rows[1]['ok'])
+                self.assertIs(rows[1]['session_continues'], True)
+                self.assertNotIn('session_ended', rows[1])
+                self.assertEqual(rows[2]['result'], {'ok': True})
+                self.assertEqual(rows[3]['driver'], 'finished')
 
     def test_execute_restores_streams_and_stops_on_exception(self):
         import cu

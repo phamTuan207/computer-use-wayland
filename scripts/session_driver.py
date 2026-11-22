@@ -111,6 +111,21 @@ def request_lines(source):
             yield _decode_line(parts)
             parts=[];total=0
 
+def _request_error(sink, error):
+    """Answer a malformed driver request with an error envelope.
+
+    Step 8 (W3b): a well-formed JSON line with an invalid shape (not
+    an object, bad image_policy, args not a non-empty string array,
+    stdin not a string, unsupported command) never executed, so no
+    input was sent and the session stays alive, exactly like the I43
+    non-JSON branch. The caller corrects the request and resends with
+    the correct sequence. Only a fatal command ends the session.
+    """
+    print(json.dumps({'ok': False, 'returncode': 1, 'error': error,
+                      'session_continues': True}, ensure_ascii=False),
+          file=sink, flush=True)
+
+
 def relay_commands(source, sink):
     from visual_delivery import VisualCheckpoint
     checkpoint = VisualCheckpoint()
@@ -129,21 +144,26 @@ def relay_commands(source, sink):
                               'session_continues': True}, ensure_ascii=False), file=sink, flush=True)
             continue
         if not isinstance(request, dict):
-            raise ValueError('request must be an object with args and optional stdin')
+            _request_error(sink, 'request must be an object with args and optional stdin')
+            continue
         args = request.get('args')
         data = request.get('stdin', '')
         policy = request.get('image_policy', 'always')
         if policy not in ('auto', 'always'):
-            raise ValueError('image_policy must be auto or always')
+            _request_error(sink, 'image_policy must be auto or always')
+            continue
         if not isinstance(args, list) or not args or not all(isinstance(a, str) for a in args):
-            raise ValueError('args must be a non-empty array of strings')
+            _request_error(sink, 'args must be a non-empty array of strings')
+            continue
         if not isinstance(data, str):
-            raise ValueError('stdin must be a string')
+            _request_error(sink, 'stdin must be a string')
+            continue
         if args == ['finish']:
             print(json.dumps({'ok': True, 'driver': 'finished'}), file=sink, flush=True)
             return 0
         if args[0] not in ('observe', 'act', 'windows', 'doctor', 'status', 'browser', 'a11y', 'code-exec'):
-            raise ValueError('unsupported driver command')
+            _request_error(sink, 'unsupported driver command')
+            continue
         result = execute(args,data)
         response={'returncode':result.returncode}
         try:response['result']=json.loads(result.stdout)

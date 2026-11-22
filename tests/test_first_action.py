@@ -294,38 +294,194 @@ class TestSessionStartFailure(unittest.TestCase):
             '{"ok": false, "error": "focus changed"}', False))
 
 
-class TestAttemptSession(unittest.TestCase):
+class TestDeletedSpawn(unittest.TestCase):
+    def test_session_cmd_raises(self):
+        # Step 8: the per-batch session spawn is deleted. Any caller
+        # still building a session command fails loudly instead of
+        # silently resurrecting the spawn.
+        with self.assertRaises(RuntimeError):
+            first_action.session_cmd('/x/cu.py', '/o.json', '/a.json')
+
+    def test_attempt_session_raises(self):
+        with self.assertRaises(RuntimeError):
+            first_action.attempt_session(['true'], 5)
+
+
+class TestBrokerOwner(unittest.TestCase):
+    def test_valid_agent_kept(self):
+        self.assertEqual(first_action._broker_owner('Muse'), 'Muse')
+
+    def test_invalid_agent_falls_back(self):
+        self.assertEqual(first_action._broker_owner('bad name!'), 'act-now')
+        self.assertEqual(first_action._broker_owner(''), 'act-now')
+
+
+class TestRegionsEqual(unittest.TestCase):
+    def test_same_region(self):
+        meta = {'region': [0, 0, 1920, 1200],
+                'monitor_box': [0, 0, 1920, 1200]}
+        self.assertTrue(first_action._regions_equal(meta, dict(meta)))
+
+    def test_moved_window_differs(self):
+        first = {'region': [2533, 914, 901, 1176],
+                 'window_bounds': [2533, 914, 901, 1176]}
+        second = {'region': [2600, 914, 901, 1176],
+                  'window_bounds': [2600, 914, 901, 1176]}
+        self.assertFalse(first_action._regions_equal(first, second))
+
+
+class TestObserveArgs(unittest.TestCase):
+    def test_window_scope(self):
+        args = first_action._observe_args(
+            {'scope': 'window', 'window': '0xabc', 'max_width': 960},
+            'eDP-2')
+        self.assertEqual(args, ['observe', '--window', '0xabc',
+                                '--max-width', '960'])
+
+    def test_screen_scope(self):
+        args = first_action._observe_args({'scope': 'screen'}, 'eDP-2')
+        self.assertEqual(args, ['observe', '--screen', 'eDP-2'])
+
+
+class TestBrokerAttempt(unittest.TestCase):
+    """broker_attempt with the session_remote CLI faked."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.state = Path(self.tmp.name) / 'state'
+        self.state.mkdir()
+        self.meta = {'id': 'obs1',
+                     'observation': str(self.state / 'obs1.json'),
+                     'image': str(self.state / 'obs1.jpg'),
+                     'monitor_box': [0, 0, 1920, 1200], 'scope': 'screen',
+                     'region': [0, 0, 1920, 1200],
+                     'image_size': [960, 600], 'created': time.time()}
+        self.actions = str(Path(self.tmp.name) / 'actions.json')
+        Path(self.actions).write_text(
+            '[{"type": "click", "x": 100, "y": 100}]')
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def _fake_cli(self, script):
+        """script: (command, parsed_dict_or_None, rc) per call, in order."""
+        def fake(remote_py, args, timeout_s):
+            if not script:
+                raise AssertionError(
+                    'unexpected broker CLI call: %r' % (args,))
+            command, parsed, rc = script.pop(0)
+            self.assertEqual(args[0], command)
+            return rc, parsed, ''
+        return fake
+
+    def _run_attempt(self, script):
+        with mock.patch.object(first_action, '_broker_cli',
+                               side_effect=self._fake_cli(script)):
+            return first_action.broker_attempt(
+                str(self.state / 'obs1.json'), self.actions, 20.0,
+                self.state, self.meta, 'eDP-2', 'Muse')
+
     def test_success(self):
-        rc, out, err, timed_out, _ = first_action.attempt_session(
-            [sys.executable, '-c', 'print("hi")'], 5)
+        act = {'ok': True, 'completed': 1}
+        rc, out, err, timed_out, elapsed, detail = self._run_attempt([
+            ('start', {'ok': True, 'status': 'starting',
+                       'generation': 'g1'}, 0),
+            ('request', {'ok': True, 'status': 'accepted', 'sequence': 1}, 0),
+            ('result', {'ok': True, 'status': 'completed', 'sequence': 1,
+                       'response': {'returncode': 0, 'result': act,
+                                    'session_continues': True}}, 0),
+            ('finish', {'ok': True, 'status': 'finished'}, 0),
+        ])
         self.assertEqual(rc, 0)
-        self.assertEqual(out.strip(), 'hi')
+        self.assertEqual(json.loads(out), act)
         self.assertFalse(timed_out)
+        self.assertEqual(detail['broker_sequences'], [1])
+        self.assertEqual(detail['broker_retries'], 0)
 
-    def test_failure(self):
-        rc, _out, _err, timed_out, _ = first_action.attempt_session(
-            [sys.executable, '-c', 'raise SystemExit(3)'], 5)
-        self.assertEqual(rc, 3)
-        self.assertFalse(timed_out)
+    def test_busy_start_falls_back(self):
+        rc, out, err, timed_out, elapsed, detail = self._run_attempt([
+            ('start', {'ok': False, 'error': 'busy', 'waited_s': 300.0}, 1),
+        ])
+        self.assertEqual(rc, 1)
+        self.assertTrue(first_action.is_session_start_failure(out, False))
 
-    def test_timeout_kills_group(self):
-        start = time.monotonic()
-        rc, _out, _err, timed_out, elapsed = first_action.attempt_session(
-            [sys.executable, '-c', 'import time; time.sleep(30)'], 0.5)
+    def test_cancelled_start_never_falls_back(self):
+        rc, out, err, timed_out, elapsed, detail = self._run_attempt([
+            ('start', {'ok': False, 'error': 'cancelled'}, 1),
+        ])
+        self.assertEqual(rc, 1)
+        self.assertFalse(first_action.is_session_start_failure(out, False))
+        self.assertIn('cancelled', out)
+
+    def test_recovery_required_never_falls_back(self):
+        rc, out, err, timed_out, elapsed, detail = self._run_attempt([
+            ('start', {'ok': False, 'error': 'recovery_required'}, 1),
+        ])
+        self.assertEqual(rc, 1)
+        self.assertFalse(first_action.is_session_start_failure(out, False))
+
+    def test_transient_retries_once_on_same_region(self):
+        transient = {'ok': False, 'error': 'focus changed'}
+        fresh = dict(self.meta)
+        fresh['observation'] = str(self.state / 'obs2.json')
+        rc, out, err, timed_out, elapsed, detail = self._run_attempt([
+            ('start', {'ok': True, 'status': 'starting',
+                       'generation': 'g1'}, 0),
+            ('request', {'ok': True, 'status': 'accepted', 'sequence': 1}, 0),
+            ('result', {'ok': True, 'status': 'completed', 'sequence': 1,
+                       'response': {'returncode': 1, 'result': transient,
+                                    'session_continues': True}}, 0),
+            ('request', {'ok': True, 'status': 'accepted', 'sequence': 2}, 0),
+            ('result', {'ok': True, 'status': 'completed', 'sequence': 2,
+                       'response': {'returncode': 0, 'result': fresh,
+                                    'session_continues': True}}, 0),
+            ('request', {'ok': True, 'status': 'accepted', 'sequence': 3}, 0),
+            ('result', {'ok': True, 'status': 'completed', 'sequence': 3,
+                       'response': {'returncode': 0,
+                                    'result': {'ok': True, 'completed': 1},
+                                    'session_continues': True}}, 0),
+            ('finish', {'ok': True, 'status': 'finished'}, 0),
+        ])
+        self.assertEqual(rc, 0)
+        self.assertEqual(detail['broker_retries'], 1)
+        self.assertEqual(detail['broker_sequences'], [1, 2, 3])
+
+    def test_transient_no_retry_when_region_moved(self):
+        transient = {'ok': False, 'error': 'focus changed'}
+        moved = dict(self.meta)
+        moved['observation'] = str(self.state / 'obs2.json')
+        moved['region'] = [10, 0, 1920, 1200]
+        moved['monitor_box'] = [10, 0, 1920, 1200]
+        rc, out, err, timed_out, elapsed, detail = self._run_attempt([
+            ('start', {'ok': True, 'status': 'starting',
+                       'generation': 'g1'}, 0),
+            ('request', {'ok': True, 'status': 'accepted', 'sequence': 1}, 0),
+            ('result', {'ok': True, 'status': 'completed', 'sequence': 1,
+                       'response': {'returncode': 1, 'result': transient,
+                                    'session_continues': True}}, 0),
+            ('request', {'ok': True, 'status': 'accepted', 'sequence': 2}, 0),
+            ('result', {'ok': True, 'status': 'completed', 'sequence': 2,
+                       'response': {'returncode': 0, 'result': moved,
+                                    'session_continues': True}}, 0),
+            ('finish', {'ok': True, 'status': 'finished'}, 0),
+        ])
+        self.assertEqual(rc, 1)
+        self.assertEqual(json.loads(out), transient)
+        self.assertEqual(detail['broker_retries'], 0)
+        self.assertEqual(detail['broker_sequences'], [1, 2])
+
+    def test_result_timeout_never_falls_back(self):
+        rc, out, err, timed_out, elapsed, detail = self._run_attempt([
+            ('start', {'ok': True, 'status': 'starting',
+                       'generation': 'g1'}, 0),
+            ('request', {'ok': True, 'status': 'accepted', 'sequence': 1}, 0),
+            ('result', None, None),
+            ('finish', {'ok': False, 'status': 'cleaning',
+                        'error': 'cleanup_pending'}, 0),
+        ])
         self.assertTrue(timed_out)
-        self.assertLess(time.monotonic() - start, 10)
-
-
-class TestSessionCmd(unittest.TestCase):
-    def test_shape(self):
-        cmd = first_action.session_cmd('/x/cu.py', '/o.json', '/a.json')
-        self.assertEqual(cmd[0], sys.executable)
-        self.assertEqual(cmd[1], '/x/cu.py')
-        self.assertEqual(cmd[2], 'session')
-        self.assertEqual(cmd[3], '--')
-        self.assertIn('act', cmd)
-        self.assertIn('/o.json', cmd)
-        self.assertIn('/a.json', cmd)
+        self.assertFalse(
+            first_action.is_session_start_failure(out, timed_out))
 
 
 class TestAcquireOverlay(unittest.TestCase):
@@ -400,8 +556,16 @@ class TestRun(unittest.TestCase):
 
     def _run(self, actions, session_result, **arg_overrides):
         path = _write_actions(self.tmp.name, actions)
-        with mock.patch.object(first_action, 'attempt_session',
-                               return_value=session_result):
+        # Step 8: run() calls broker_attempt (6-tuple). The tests still
+        # pass the old 5-tuple session result; the broker detail is
+        # appended here so every existing session-path case keeps its
+        # shape.
+        result6 = tuple(session_result) + (
+            {'broker_owner': 'Muse', 'broker_sequences': [1],
+             'broker_retries': 0,
+             'broker_finish': {'ok': True, 'status': 'finished'}},)
+        with mock.patch.object(first_action, 'broker_attempt',
+                               return_value=result6):
             buf = io.StringIO()
             with contextlib.redirect_stdout(buf):
                 code = first_action.run(_args(path, **arg_overrides))
@@ -409,8 +573,12 @@ class TestRun(unittest.TestCase):
         return code, json.loads(buf.getvalue()), path
 
     def _run_raw_args(self, args, session_result):
-        with mock.patch.object(first_action, 'attempt_session',
-                               return_value=session_result):
+        result6 = tuple(session_result) + (
+            {'broker_owner': 'Muse', 'broker_sequences': [1],
+             'broker_retries': 0,
+             'broker_finish': {'ok': True, 'status': 'finished'}},)
+        with mock.patch.object(first_action, 'broker_attempt',
+                               return_value=result6):
             buf = io.StringIO()
             with contextlib.redirect_stdout(buf):
                 code = first_action.run(args)
@@ -813,7 +981,7 @@ class TestRun(unittest.TestCase):
         path = _write_actions(self.tmp.name,
                               [{'type': 'click', 'x': 250, 'y': 1037},
                                {'type': 'type', 'text': 'hi'}])
-        with mock.patch.object(first_action, 'attempt_session') as sess:
+        with mock.patch.object(first_action, 'broker_attempt') as sess:
             buf = io.StringIO()
             with contextlib.redirect_stdout(buf):
                 code = first_action.run(
@@ -848,7 +1016,7 @@ class TestRun(unittest.TestCase):
         # fallback_reason naming the stale observation, and the
         # pointer-only remedy (screen coordinates) is offered.
         obs = self._write_obs('8fef498445d2', 114)
-        with mock.patch.object(first_action, 'attempt_session') as sess:
+        with mock.patch.object(first_action, 'broker_attempt') as sess:
             buf = io.StringIO()
             with contextlib.redirect_stdout(buf):
                 code = first_action.run(
@@ -886,7 +1054,7 @@ class TestRun(unittest.TestCase):
         path = _write_actions(self.tmp.name,
                               [{'type': 'click', 'x': 250, 'y': 1037},
                                {'type': 'type', 'text': 'hi'}])
-        with mock.patch.object(first_action, 'attempt_session') as sess:
+        with mock.patch.object(first_action, 'broker_attempt') as sess:
             buf = io.StringIO()
             with contextlib.redirect_stdout(buf):
                 code = first_action.run(
@@ -947,7 +1115,7 @@ class TestRun(unittest.TestCase):
         obs = self._write_obs('8fef498445d2', 114)
         path = _write_actions(self.tmp.name,
                               [{'type': 'key', 'keys': ['Enter']}])
-        with mock.patch.object(first_action, 'attempt_session') as sess:
+        with mock.patch.object(first_action, 'broker_attempt') as sess:
             buf = io.StringIO()
             with contextlib.redirect_stdout(buf):
                 code = first_action.run(

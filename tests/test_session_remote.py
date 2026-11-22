@@ -1289,5 +1289,85 @@ class ValidateEnvelopeArgTypeTests(unittest.TestCase):
         self.assertEqual(caught.exception.error, 'unsupported_command')
 
 
+class ClientStartWaitTests(SessionRemoteIntegration):
+    """Step 8 queue discipline: start --wait waits out a busy broker.
+
+    The waiter starts only after the holder finishes, retries with a
+    fresh start_id (the broker replays the recorded response for a
+    reused one), and gives up with the current owner named when the
+    budget ends. Polls are sped up with a patched WAIT_POLL_S; the
+    budgets stay real so the timeout path is genuinely exercised.
+    """
+
+    def _wait_start(self, owner, lease_name, wait_s):
+        lease_path = self.state / lease_name
+        with patch.object(session_remote, '_default_socket',
+                          return_value=self.socket_path), \
+                patch.object(session_remote, 'WAIT_POLL_S', 0.2):
+            return session_remote._client_start_with_wait(
+                owner, lease_path, wait_s, _jitter=lambda: 0)
+
+    def test_waiter_starts_after_holder_finishes_with_fresh_start_id(self):
+        holder = self.start_task('wait-holder')
+        launches_before = len(self.launches)
+        done = threading.Event()
+
+        def finish_later():
+            # Request the finish only: finish_owned_task would wait
+            # for state == 'finished', which the waiter replaces with
+            # 'running' as soon as it starts, so it can never be
+            # observed after the handover. The waiter's ok response
+            # below is the proof the holder finished first.
+            time.sleep(1.0)
+            self.exchange(self.with_lease(holder, 'finish'))
+            done.set()
+
+        thread = threading.Thread(target=finish_later, daemon=True)
+        thread.start()
+        response = self._wait_start('wait-waiter', 'waiter.lease', 30)
+        thread.join(timeout=10)
+        self.assertTrue(done.is_set(), 'holder finish thread did not run')
+        self.assertTrue(response['ok'], response)
+        self.assertEqual(response['owner'], 'wait-waiter')
+        self.assertEqual(len(self.launches), launches_before + 1,
+                         'exactly one driver launch for the waiter')
+        status = self.wait_for(lambda: (lambda value: value if value['driver'] == 'ready' else None)(
+            self.exchange({'command': 'status'})))
+        self.assertEqual(status['owner'], 'wait-waiter')
+        self.assertEqual(status['state'], 'running')
+        lease = session_remote._read_lease(self.state / 'waiter.lease')
+        self.assertEqual(lease['generation'], response['generation'])
+        waiter = {'owner': 'wait-waiter',
+                  'generation': response['generation'],
+                  'lease_secret': lease['lease_secret']}
+        self.finish_owned_task(waiter)
+
+    def test_wait_budget_expiry_reports_busy_with_current_owner(self):
+        holder = self.start_task('wait-holder-busy')
+        started = time.monotonic()
+        response = self._wait_start('wait-waiter-busy', 'waiter2.lease', 2)
+        elapsed = time.monotonic() - started
+        self.assertFalse(response['ok'])
+        self.assertEqual(response['error'], 'busy')
+        self.assertEqual(response['current_owner'], 'wait-holder-busy')
+        self.assertGreaterEqual(response['waited_s'], 2.0)
+        self.assertLess(elapsed, 10)
+        status = self.exchange({'command': 'status'})
+        self.assertEqual(status['owner'], 'wait-holder-busy')
+        self.finish_owned_task(holder)
+
+    def test_non_busy_refusal_returns_at_once(self):
+        # A cancelled broker must not be waited out: the waiter
+        # returns the refusal immediately.
+        (self.state / 'cancelled').write_text('')
+        try:
+            response = self._wait_start('wait-waiter-cancel', 'waiter3.lease', 30)
+        finally:
+            (self.state / 'cancelled').unlink()
+        self.assertFalse(response['ok'])
+        self.assertEqual(response['error'], 'cancelled')
+        self.assertNotIn('waited_s', response)
+
+
 if __name__ == '__main__':
     unittest.main()

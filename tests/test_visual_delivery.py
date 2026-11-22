@@ -115,7 +115,20 @@ class DeliveryTests(unittest.TestCase):
             else:self.assertNotIn('visual',replies[1])
 
     def test_invalid_delivery_policy_never_executes_input(self):
-        with patch.object(session_driver,'execute') as execute:
-            with self.assertRaises(ValueError):
-                session_driver.relay_commands(io.StringIO('{"args":["act"],"image_policy":"never"}'),io.StringIO())
-            execute.assert_not_called()
+        # Step 8 W3b: a well-formed request with an invalid image_policy
+        # is answered with an error envelope, never executed, and the
+        # session stays alive for the next request (no ValueError).
+        bad = '{"args":["act"],"image_policy":"never"}\n'
+        status = '{"args":["status"],"image_policy":"always"}\n'
+        output = io.StringIO()
+        with patch.object(session_driver,'execute',
+                           return_value=subprocess.CompletedProcess([], 0, '{"ok": true}', '')) as execute:
+            session_driver.relay_commands(io.StringIO(bad + status), output)
+        replies = [json.loads(line) for line in output.getvalue().splitlines()]
+        self.assertTrue(replies[0]['ok'])  # driver ready row
+        self.assertEqual(replies[1]['error'], 'image_policy must be auto or always')
+        self.assertTrue(replies[1]['session_continues'])
+        self.assertNotIn('session_ended', replies[1])
+        self.assertEqual(replies[2]['result'], {'ok': True})
+        execute.assert_called_once()
+        self.assertEqual(execute.call_args[0][0], ['status'])
