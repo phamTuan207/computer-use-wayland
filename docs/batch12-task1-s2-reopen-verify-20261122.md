@@ -147,9 +147,13 @@ Commit: todolist-push tip 4305dcb. Time: runs 13:05:09-13:09:12
 +07.
 
 All 10 have attempts 1, found True, role user, side user. Items
-grow by exactly 2 per run on each browser (Brave 43, 45, 47, 49,
-51; Chromium 54, 56, 58, 60, 62), which matches one new user
-bubble per run per thread. Open note: v12 textLen is 34 on Brave
+grow by exactly 2 per run on each browser between V12 reads
+(Brave 43, 45, 47, 49, 51; Chromium 54, 56, 58, 60, 62), which
+matches one user bubble plus one reply per run, per the worker
+log section 3. Note: on Chromium the pre-count to V12 delta is
++3 in run 1 (pre 51 items, V12 54) and +2 in runs 2 to 5, the
+same first-run pattern seen in the b1 series (run 1 pre 41,
+V12 44; runs 2 to 5 +2). Open note: v12 textLen is 34 on Brave
 and 37 on Chromium in every run, while the message strings are
 30 and 33 characters long. The difference is exactly +4 in all
 10 sends. See section 9, item B. It does not change this
@@ -219,8 +223,9 @@ Internal consistency checks, computed from the same JSONs:
   = 253.521 vs act 253.5. Run 2, 137.493 + 106.613 = 244.106
   vs act 244.1. Run 3, 144.855 + 107.077 = 251.932 vs act
   251.9. Run 4, 140.832 + 99.412 = 240.244 vs act 240.2. Run
-  5, 141.234 + 104.164 = 245.398 vs act 245.4. Exact in all 5
-  runs to the reported precision.
+  5, 141.234 + 104.164 = 245.398 vs act 245.4. The sums round
+  to act at the reported 1-decimal precision in all 5 runs
+  (unrounded differences 0.002 to 0.044 ms).
 
 Commit: todolist-push tip 4305dcb. Time: runs 13:05:09-13:09:12
 +07.
@@ -329,14 +334,26 @@ Minor open note.
 - The worker log never mentions this difference. It does not
   change any verdict: V12 found True with role user and side
   user in all 10 sends, and items grow by exactly 2 per run
-  per browser. The V12 script that defines textLen lives in
-  /tmp/s2-v12.mjs on the laptop, not in the repo, so its
-  definition cannot be checked from the branch. Needs the
-  script definition to close.
+  per browser. The V12 script file lives in /tmp/s2-v12.mjs
+  on the laptop, not in the repo, so which 4 characters make
+  up the difference cannot be checked from the branch, but the
+  harness in the repo states V12 is a substring match
+  (scripts/s2_flip_live.py, v12_check: a [data-message-item]
+  "whose text contains" the message), which is consistent
+  with a +4 bubble text. The same +4 appears in the earlier
+  series too: flip run 1 Brave message 28 chars, textLen 32;
+  b1 run 1 Chromium message 29 chars, textLen 33. Needs the
+  script definition to close which 4 characters they are. The
+  count script behind the pre/delayed counts, /tmp/c5-count.mjs,
+  is laptop-only too (named in worker log sections 1 and 8, no
+  count script in the repo); the counts are cross-consistent
+  from the JSONs alone, delayed items equal V12 items in all 5
+  runs here and in all 5 runs of the b1 series, and pre-send
+  count is 0 in all 10 set_value runs across both series.
 
 C. Chromium routing ran under the DISCLOSED relaxed gate in all
 5 runs. Stated caveat, not a refutation.
-- Command: for runs 2 to 5, gh api raw for run-N.json, python3
+- Command: for runs 1 to 5, gh api raw for run-N.json, python3
   print of routing, fell_through, routing_relaxed, observe.
 - Output: Brave routing dom-chromium, fell_through empty,
   relaxed absent, observe 72, 73, 75, 77, 79 elements, not
@@ -389,7 +406,8 @@ F. Worker log run table cross-check. All values match.
 
 ## 10. Overall verdict
 
-All 7 worker claims checked from the raw JSONs are CONFIRMED:
+All 7 JSON claims are CONFIRMED, and the rollback claim is
+CONFIRMED on the record:
 1. 5/5 runs complete. CONFIRMED.
 2. 10/10 messages sent. CONFIRMED.
 3. Median wall 28.6s. CONFIRMED (28560.9 ms).
@@ -419,10 +437,12 @@ residual range wording cites run 1 values (item D).
 ## 11. Commit status
 
 This report was written to
-docs/batch12-task1-s2-reopen-verify-20261122.md but was NOT
-committed or pushed. Reason: the first git fetch result in this
-session failed an execution-risk check, and that notice forbids
-running git commands inside the repo until the user confirms in
-plain words. The commit and push step therefore needs the user's
-confirmation, through the parent agent. No code was changed. No
-other file was touched. coord/clone1.md was not touched.
+docs/batch12-task1-s2-reopen-verify-20261122.md and committed
+on main as ed59f6a after the user's confirmation in plain
+words. At writing time it was NOT committed or pushed, because
+the first git fetch result in that session failed an
+execution-risk check, and that notice forbade running git
+commands inside the repo until the user confirmed. The parent
+agent committed and pushed it after confirmation. No code was
+changed. No other file was touched. coord/clone1.md was not
+touched.
