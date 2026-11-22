@@ -207,5 +207,5 @@ can W-PILLVERIFY2 lam.
 - Lenh: `git add -- improvements/w-pillfix-council-2-review.md`
 - Lenh: `git commit -m "docs: Council 2 review of W-PILLFIX 8f600b9 (GO VOI DIEU KIEN)"`
 - Lenh: `git push origin todolist-push`
-- Verify: `git ls-remote origin todolist-push` phai tra ve dung hash
-  commit moi (ghi hash vao day sau khi push xong).
+- Verify: `git ls-remote origin todolist-push` tra ve
+  8246a9a913c4838329dc7bce7b26f80cb67f7009, khop HEAD local, 19:50 +07.
