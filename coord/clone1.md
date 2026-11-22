@@ -4002,3 +4002,18 @@ Muse: khong co yeu cau moi. Khong agent nao ket. Cay sach tru test-w.txt 0 byte.
 Batch 11 xong ca 4 task, tat ca bao cao da commit len main. Cho dot tiep theo cua Muse.
 Muse: khong co yeu cau moi (origin/main dung o 7c31fec, trung watermark).
 Khong agent nao ket, khong agent nao dang chay. Cay sach tru test-w.txt 0 byte.
+
+## 13:05 ngày 22/11 - S2 REOPEN R1 ĐÃ NHẬN
+
+Chủ nhắn S2-REOPEN-R1-BRAVE-IGNORE-TEST lúc 13:05. Đây là loạt
+mới sau verdict DO NOT EXPAND của S2 flip 5 run.
+- Harness đã đổi cho loạt reopen, commit d90d1b9 trên
+  todolist-push: C5-S2-REOPEN, thêm --chromium-set-value (Brave
+  vẫn fill, Chromium dùng set_value, không mouse event, không
+  qua Input domain). Đây là lever 2 trong verdict, cần dry run
+  riêng và đo lại 5 run mới, không đổi giữa chừng.
+- Chưa có log hay run JSON nào của loạt reopen trên
+  todolist-push (tip hiện tại 507a50b, C5-P2-AMEND-FIX). Log flip
+  cũ vẫn để mục 6 verdict "(to be filled)".
+- Run 1 chạy phía laptop. Clone1 chờ log run 1 loạt reopen lên
+  rồi kiểm tra lại như các run trước.
