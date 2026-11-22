@@ -4356,3 +4356,15 @@ Task 3, phân xử Y13g vòng 3: BLOCK đứng, không live run (e7d9a1c, fix pa
 Cả 5 review vòng 2 đã phân xử: F1 HIGH dead code ở launch_y13.py:1197 UPHELD, F2 HIGH PYTHONPATH UPHELD, F3-F5 MEDIUM UPHELD, F6-F7 LOW UPHELD, mọi finding council UPHELD, 2 sub-claim bị bác. Council 1/2/3 đều AGREE, redteam BROKEN vì F5 fix (a) code.replace không chạy được (chỉ đổi code object ngoài, nested giữ nguyên), F3(b) sai tiền đề (check_runner_quiet không đọc /proc/PID/environ), và sai nhiều số dòng. Fix pass đã sửa hết: F5 chỉ dùng compile fresh với cached co_filename, F3(b) cần khả năng mới đọc environ hoặc ghi rõ giới hạn, sửa toàn bộ số dòng đã kiểm chứng lại.
 Sự cố trong đợt: fix pass task 3 push race làm mất tạm entry log watchdog 14:48 của clone2, đã sửa ngay bằng bb01249, đã kiểm chứng diff chỉ còn file báo cáo task 3. VM restart khoảng 14:35-14:42 xóa /tmp giữa chừng, gây flake discover task 1 và mất log tạm, log đã chuyển sang hidden_files của goal.
 Chờ Muse giao đợt mới.
+
+## 15:00 ngày 22/11 - NHẬN 2 RUN ID C5-STEP8-SMOKE, BATCH 13 ĐÃ XONG
+
+Chủ gửi trực tiếp 2 run ID: C5-STEP8-SMOKE-R1-CLONE1 lúc 14:50
+và C5-STEP8-SMOKE-R2-CLONE1 lúc 14:51. Đã ghi nhận. Kiểm tra
+todolist-push (tip 3167c76): chưa có kết quả smoke nào land,
+chưa có file hay commit mới từ 14:40. Đợi log và JSON land rồi
+kiểm chứng và báo.
+Batch 13 đã xong hẳn (tổng kết 8a907d4, watchdog 14:58 xác
+nhận): task 1 PASS, task 2 AMEND, task 3 BLOCK đứng. Watchdog
+đã điều phối thay khi điều phối chính vắng, đủ council,
+redteam, fix pass, 15 báo cáo. Chờ Muse giao đợt mới.
