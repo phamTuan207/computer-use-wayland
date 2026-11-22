@@ -5,6 +5,30 @@ Repo ~/workspace/computer-use-wayland, branch todolist-push, HEAD
 05140c1 at start (verified equal to origin/todolist-push, section 1).
 No em dash or en dash anywhere in this file. No personal info.
 
+## Amendment 22/11/2026 (W-ZENPROOF2-AMEND): title premise corrected
+
+Run 2 of this proof (W-ZENPROOF2) closed Pham Tuan's Muse chat tab
+because the procedure and the driver identified the scratch tab by
+document.title ('Clone zen thread'), but the fixture title is the
+static 'Two-vision benchmark fixture': the fixture JS only sets the
+H1 text. The scratch tab is now identified by URL substring
+('two_vision_fixture.html?clone=zen'), the H1 text is a content
+confirmation only, and the document title is evidence only, never
+a gate. Every stale title-gated step in this file was corrected to
+the URL-substring target (full stale list in
+improvements/w-zenproof2-fix-council-3-review.md section 6.1 and
+improvements/w-zenproof2-amend-log.md). The fixed driver
+(zen-tab.py) also verifies the new tab was actually made current
+before any navigate or DELETE, re-verifies the current tab right
+after the navigate, requires the tab count to grow by exactly 1,
+and deletes in the open exception handler only when the current
+tab is the fixture tab by URL AND by handle. The next proof copies
+the fixed run 2 runner (c5-zen-delegate-run2.py); run 1
+(c5-zen-delegate-run.py) must not be re-run as-is. On a 'not made
+current' refusal, the leftover empty about:blank tab is closed by
+hand in the Zen UI, never via Marionette, and the open is not
+retried in a loop.
+
 ## 0. Scope: preparation only, no live run
 
 This file prepares the live proof of the Zen pointer delegate
@@ -278,7 +302,7 @@ fakes, only the action shapes are the shipped ones):
 
 Fix shape (proposed, NOT landed in this task): write the Zen
 program separately from the CDP builder, as section 5 phase 4
-does: `dom_observe('Clone zen thread', '#msg-input', 80)` and a
+does: `dom_observe('two_vision_fixture.html?clone=zen', '#msg-input', 80)` and a
 key action carrying `"ref": "#msg-input"`. The alternative fix
 is backend side (skip revalidation for key actions, since a key
 has no element to revalidate), which is a coordinator decision
@@ -397,9 +421,10 @@ Evidence, read from the code:
   original tab, so the harvest reads the CURRENT tab.
 - Procedure consequence (section 5, phase 3): before the
   program runs, a small driver switches the Marionette current
-  tab to the scratch tab and verifies the current title; after
-  the program, the same driver restores the current tab to
-  Pham Tuan's original tab and verifies it. The switch is
+  tab to the scratch tab and verifies the current URL contains
+  the fixture substring; after the program, the same driver
+  restores the current tab to Pham Tuan's original tab by URL
+  and verifies the current URL equals the original URL. The switch is
   visible in Zen's UI (risk R3), and the restore is part of
   cleanup, not an afterthought.
 
@@ -459,9 +484,10 @@ improvements/c5-step9-runs/c5-heldout-fixture.py).
   anything visible: `python3
   /home/james/computer-use-wayland/scripts/zen_dom.py list`.
   It must exit 0 and list the tabs (titles and urls only, no
-  content). Record the tab count, the current tab handle prefix
-  and title (the owner's tab to restore in phase 6), and the
-  full title list. If it fails with "another process already
+  content). Record the tab count, the current tab URL and title
+  (the owner's tab, to restore in phase 6 by URL, never by
+  handle: handles are ephemeral per session), and the full title
+  list. If it fails with "another process already
   holds the Zen remote session", ABORT: the single session slot
   is held by someone else.
 - P1.3: `ls -l /tmp/geckodriver` must exist (zen_dom.py default
@@ -495,16 +521,27 @@ improvements/c5-step9-runs/c5-heldout-fixture.py).
   laptop if the driver is committed. Never type the driver in
   by hand.
 - P2.2: run the driver: open a ZenSession, record the tab count
-  and current handle, open a NEW tab (POST
-  /session/{id}/window/new {"type": "tab"}), navigate it to
+  and current URL, open a NEW tab (POST
+  /session/{id}/window/new {"type": "tab"}), verify the tab
+  count grew by exactly 1 and the new tab was actually made
+  current (one explicit select if needed; if the new tab still
+  is not current, refuse outright, no navigate, no close),
+  navigate it to
   file:///home/james/computer-use-wayland/tests/two_vision_fixture.html?clone=zen
-  (POST /session/{id}/url), wait for document.readyState
-  complete (10s budget), read the title, then delete the
-  session in finally. Expected: new handle recorded, title
-  'Clone zen thread', readyState complete. The driver must
-  never navigate, type into, or click on any existing tab.
-  Budget 30s. On timeout or wrong title: close the new tab if
-  one was opened, delete the session, ABORT.
+  (POST /session/{id}/url), re-verify the current tab is still
+  the new tab right after the navigate, wait for
+  document.readyState complete (10s budget), verify the
+  navigated URL contains 'two_vision_fixture.html?clone=zen'
+  and the H1 text is 'Clone zen thread' (content confirmation
+  that the clone JS ran; the document title is the static
+  'Two-vision benchmark fixture' and is never a gate), then
+  delete the session in finally. Expected: new handle recorded,
+  tab count +1, URL contains the fixture substring, H1 'Clone
+  zen thread', readyState complete. The driver must never
+  navigate, type into, or click on any existing tab. Budget
+  30s. On timeout or wrong URL/H1: close the new tab only if
+  the current tab is the fixture tab by URL and by handle,
+  delete the session, ABORT.
 - P2.3: the driver also records the field rect: harvest
   ['#msg-input'] on the scratch tab and record the rect plus
   the window bounds. This is evidence only; the backend
@@ -522,10 +559,12 @@ improvements/c5-step9-runs/c5-heldout-fixture.py).
 ### Phase 3: pre-select the scratch tab, read-only probe
 
 - P3.1: run the tab driver with the switch action: switch the
-  Marionette current tab to the scratch handle (finding D),
-  verify the current title is 'Clone zen thread', delete the
-  session in finally. Budget 30s. If the switch does not take
-  effect, ABORT (close scratch tab, restore, report).
+  Marionette current tab to the scratch tab by URL (finding D),
+  verify the current URL contains
+  'two_vision_fixture.html?clone=zen' and the H1 text is 'Clone
+  zen thread', delete the session in finally. Budget 30s. If the
+  switch does not take effect, ABORT (close scratch tab,
+  restore, report).
 - P3.2: focus rule (C5-FOCUS-INCIDENT): in the SAME SSH call
   immediately before the probe, `hyprctl -j activewindow` must
   show the Zen window address from P1.1. If it shows anything
@@ -533,18 +572,20 @@ improvements/c5-step9-runs/c5-heldout-fixture.py).
 - P3.3: read-only probe program through the SAME transport as
   the send (this proves CU_DOM_BACKEND=zen reaches the driver
   before any input exists to lose):
-  `dom_start()` then `snap = dom_observe('Clone zen thread',
+  `dom_start()` then `snap = dom_observe('two_vision_fixture.html?clone=zen',
   '#msg-input', 80)` then print the snapshot. No dom_act, no
-  input. Expected: ok, snapshot id zen-1, title 'Clone zen
-  thread', one element with ref '#msg-input'. If dom_observe
-  fails, or the snapshot title is anything else, ABORT: the
-  backend is not reading the scratch tab (finding D) or the env
-  did not propagate. If the env did not propagate, the fallback
-  is the 13:22 shape: run the driver on the laptop inside
-  `computer-use session` as `CU_CODE_EXEC=1 CU_DOM_BACKEND=zen
-  python3 <driver>`, with the driver invoking `scripts/cu.py
-  code-exec` directly. Do not debug the transport live with an
-  input program.
+  input. Expected: ok, snapshot id zen-1, snapshot URL contains
+  'two_vision_fixture.html?clone=zen', one element with ref
+  '#msg-input'. The snapshot title is evidence only (the static
+  'Two-vision benchmark fixture'), never a gate. If dom_observe
+  fails, or the snapshot URL does not contain the fixture
+  substring, ABORT: the backend is not reading the scratch tab
+  (finding D) or the env did not propagate. If the env did not
+  propagate, the fallback is the 13:22 shape: run the driver on
+  the laptop inside `computer-use session` as `CU_CODE_EXEC=1
+  CU_DOM_BACKEND=zen python3 <driver>`, with the driver invoking
+  `scripts/cu.py code-exec` directly. Do not debug the transport
+  live with an input program.
 - P3.4: pre-checks via an eval driver on the scratch tab:
   window.__bubblePresent(MESSAGE) false,
   window.__sentBubbles() empty, document.getElementById
@@ -556,18 +597,18 @@ improvements/c5-step9-runs/c5-heldout-fixture.py).
 
 Exact program text (Zen form, NOT the CDP builder output; the
 differences are findings A and D: scope on dom_observe, ref on
-the key, target by title substring, no role grounding loop
+the key, target by URL substring, no role grounding loop
 because Zen snapshots carry ref == selector with no role or
 name enrichment):
 
 ```
 dom_start()
-snap = dom_observe('Clone zen thread', '#msg-input', 80)
+snap = dom_observe('two_vision_fixture.html?clone=zen', '#msg-input', 80)
 res = dom_act(snap, [
-    {"type": "set_value", "ref": "#msg-input", "text": "ZEN-DELEGATE-R1-IGNORE-TEST", "scope": "Clone zen thread", "observation_id": snap["snapshot"]},
-    {"type": "focus", "ref": "#msg-input", "scope": "Clone zen thread", "observation_id": snap["snapshot"]},
-    {"type": "key", "ref": "#msg-input", "keys": ["Enter"], "scope": "Clone zen thread", "observation_id": snap["snapshot"]},
-    {"type": "assert", "selector": "#thread .bubble:last-child", "text": "ZEN-DELEGATE-R1-IGNORE-TEST", "timeout_ms": 3000, "scope": "Clone zen thread", "observation_id": snap["snapshot"]},
+    {"type": "set_value", "ref": "#msg-input", "text": "ZEN-DELEGATE-R1-IGNORE-TEST", "scope": "two_vision_fixture.html?clone=zen", "observation_id": snap["snapshot"]},
+    {"type": "focus", "ref": "#msg-input", "scope": "two_vision_fixture.html?clone=zen", "observation_id": snap["snapshot"]},
+    {"type": "key", "ref": "#msg-input", "keys": ["Enter"], "scope": "two_vision_fixture.html?clone=zen", "observation_id": snap["snapshot"]},
+    {"type": "assert", "selector": "#thread .bubble:last-child", "text": "ZEN-DELEGATE-R1-IGNORE-TEST", "timeout_ms": 3000, "scope": "two_vision_fixture.html?clone=zen", "observation_id": snap["snapshot"]},
 ])
 print("dom_act ok", res.get("ok"), "completed", res.get("completed"), "ms", res.get("execution_ms"), "error", res.get("error"))
 assert_state(res.get("ok") is True, "dom_act failed")
@@ -624,12 +665,13 @@ assert_state(res.get("ok") is True, "dom_act failed")
 
 ### Phase 6: cleanup and restore
 
-- P6.1: tab driver with the close action: switch current to the
-  scratch handle, close the tab (DELETE /session/{id}/window),
-  verify the handle count is back to the P1.2 as-found count,
-  switch current to the owner's original tab handle from P1.2,
-  verify the current title equals the original title, delete
-  the session in finally. Budget 60s.
+- P6.1: tab driver with the close action: close the scratch tab
+  by URL (driver close action: switch current to the scratch
+  tab by URL, DELETE /session/{id}/window), verify the tab
+  count is back to the P1.2 as-found count, restore the current
+  tab to the owner's original tab URL from P1.2, verify the
+  current URL equals the original URL, delete the session in
+  finally. Budget 60s.
 - P6.2: verify Zen is alive: `hyprctl -j clients` shows the
   same Zen window address and geometry as P1.1; `python3
   scripts/zen_dom.py list` exits 0 (which also proves the
@@ -668,9 +710,11 @@ measurements of this path.
   sha256 147494cda4c6ae24a51ced03ccdfb3fc5a79a1bbab56dcdfc5afb4f72fba6cbf
   (C4 bench manifest). Opened as file:///home/james/
   computer-use-wayland/tests/two_vision_fixture.html?clone=zen.
-  The ?clone=zen query sets the title to 'Clone zen thread'
-  and the thread dataset to clonezen, which keeps this run
-  distinguishable from the Chromium held-out run (?clone=1).
+  The ?clone=zen query makes the fixture JS set the H1 text to
+  'Clone zen thread' (the document title stays the static
+  'Two-vision benchmark fixture') and the thread dataset to
+  clonezen, which keeps this run distinguishable from the
+  Chromium held-out run (?clone=1).
 - Content: h1 'Clone zen thread'; #thread div (empty at open);
   #msg-input (input type text, placeholder Message, aria-label
   Message, autocomplete off); #send-btn (aria-label Send);
@@ -713,15 +757,15 @@ Laptop as-found (phase 1):
 - [ ] P1.5: no other session-driver and no other live lease.
 - [ ] P1.6: handover still holds (no sign of Pham Tuan active).
 Scratch tab (phase 2):
-- [ ] P2.2: new tab opened, title 'Clone zen thread', readyState complete.
+- [ ] P2.2: new tab opened and made current (tab count +1), navigated URL contains the fixture substring, H1 'Clone zen thread', readyState complete.
 - [ ] P2.3: #msg-input rect recorded.
 - [ ] P2.4: viewport gate passes (innerWidth and innerHeight
   greater than 0, hasFocus true, elementFromPoint non-null), or
   the run is BLOCKED with no input sent.
 Probe (phase 3):
-- [ ] P3.1: Marionette current is the scratch tab (title verified).
+- [ ] P3.1: Marionette current is the scratch tab (URL verified).
 - [ ] P3.2: activewindow is Zen in the same SSH call before the probe.
-- [ ] P3.3: read-only probe ok, snapshot title 'Clone zen thread', ref '#msg-input'.
+- [ ] P3.3: read-only probe ok, snapshot URL contains the fixture substring, count 1, ref '#msg-input' (snapshot title is evidence only).
 - [ ] P3.4: pre-checks pass (bubble absent, bubbles empty, input empty).
 Send (phase 4):
 - [ ] P4.1: focus re-checked in the same SSH call; envelope recorded verbatim.
@@ -734,7 +778,7 @@ Post-checks (phase 5):
 - [ ] P5.3: delayed count 1 after 10s.
 - [ ] P5.4: P9 reviewed by sight, PASS (bubble, empty input, status line).
 Cleanup (phase 6):
-- [ ] P6.1: scratch tab closed, handle count back to as-found, current tab restored to the owner's tab (title verified).
+- [ ] P6.1: scratch tab closed, tab count back to as-found, current tab restored to the owner's tab (URL verified).
 - [ ] P6.2: Zen alive, same window address and geometry, zen_dom.py list exits 0 (slot free).
 - [ ] P6.3: final window map matches as-found except the scratch tab gone.
 Record (phase 7):
@@ -773,7 +817,7 @@ them rather than pushing through.
   the Marionette current tab to it changes what Zen shows;
   during the run his Zen displays the fixture, not his tab.
   Mitigation: restore immediately in phase 6 and verify the
-  current title; keep the visible disturbance to the run
+  current URL; keep the visible disturbance to the run
   duration (about 10 minutes wall, most of it checks, the
   visible switch itself only phases 3-6).
 - R4 Typing into the wrong field. If the field rect moved
