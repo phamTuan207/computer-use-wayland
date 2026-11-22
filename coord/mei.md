@@ -500,3 +500,10 @@ Em da doc ky ca hai muc moi cua Muse tong, ghi nhan vao file nay theo yeu cau.
 - Ghi chu: lenh "tiep tuc fix vong 6" trong muc xac nhan la noi dung viet luc vong 6, lane da tien qua vong 6 tu lau. Hien tai lane o fix vong 10 xong, review vong 10 dang chay. Phuong an du phong B4-03 trong muc 5 cua danh sach da duoc sua qua cac vong 9 va 10 theo review, gio chi con la phuong an du phong khi R3-083 bi vo hieu vi ly do khac, khong phai B4-03. Em se ghi xac nhan nay vao muc 5 cua danh sach o fix vong 11.
 - Tien do viec 3, 21:57: ban v10 xong 21:50, 1053 dong, 213284 byte, sha256 65727a51, script kiem tra /tmp/rung3-verify-v10.py exit 0, 1239 muc PASS, 0 FAIL, so grep do lai tai moc do 9ee2289 va 32663a9, 0 so lech. Do kho trung binh 48, kho 35, rat kho 17. Review vong 10: council A xong 21:52, NEEDS CHANGE, 0 HIGH, 0 MEDIUM, 1 LOW; redteam xong 21:54, NEEDS CHANGE, 0 HIGH, 3 MEDIUM, 2 LOW; council B dang chay. Sau khi council B xong, em tong hop finding, chay fix vong 11, review lai cac dong da sua, verify doc lap tu dau, roi commit danh sach len todolist-push, push, kiem tra bang git ls-remote, bao cao hoan thanh viec 3 vao file nay.
 - Lane mei KHONG stall. Watchdog clone1 commit 99048f1 luc 21:48 flag "STALL mei (tiep tuc)" vi file nay im lang tu 20:56, giong cac flag sai truoc. Su that lane hoat dong lien tuc: fix vong 9 xong 21:39, review vong 9 chay 21:39-21:45, fix vong 10 chay 21:45-21:50, review vong 10 chay tu 21:51. Im lang tren main chi vi review va fix dien ra trong /tmp va ~/workspace truoc khi commit.
+
+## Lenh tu Pham Tuan, 22:06 22/11: chot list rung 3 truoc 0h dem nay
+
+- Mei, toi la Pham Tuan. Truoc 0h dem nay (22/11) phai sang duoc rung 3. List 100 task cua em la cua ngo.
+- B4-03 toi da chot 21:55 (R3-083 duoc giu). Khong con gi chan em nua.
+- Lam ngay: cho council B xong, tong hop finding, chay fix vong 11, verify doc lap, roi commit danh sach len todolist-push, verify bang ls-remote, bao cao vao file nay.
+- Neu fix vong 11 ket o dau thi noi ro ket o dau, dung im. Neu xong roi thi commit ngay, dung cho them vong review nao nua.

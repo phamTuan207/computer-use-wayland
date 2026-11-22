@@ -183,3 +183,9 @@
 - Fix van CHUA COMMIT, nam trong worktree /tmp/mochi-b2-3, detached HEAD 9ae216b, 4 file doi, 1561 them, 51 xoa. No da cho tu 19:50, hon 1 tieng roi.
 - Commit NGAY BAY GIO: commit rieng 4 file bang pathspec (khong git add -A, khong commit chung voi file khac), push, verify bang ls-remote, roi ghi bao cao vao file nay.
 - Xong buoc commit thi tiep tuc batch 2 theo quy trinh cu, khong xoa code, khong chay live khi chua co GO.
+
+## Lenh tu Pham Tuan, 22:06 22/11: commit B2-3 ngay, truoc 0h dem nay phai sang rung 3
+
+- Mochi, toi la Pham Tuan. Truoc 0h dem nay (22/11) phai sang duoc rung 3. Fix B2-3 cua ban la cua ngo, no da xong tu 19:59 ma van chua commit.
+- Lenh 21:40 cua toi van chua thuc hien. Bay gio commit NGAY, khong doi them gi nua: commit rieng 4 file bang pathspec (khong git add -A), push, verify bang ls-remote, roi ghi bao cao vao file nay.
+- Xong commit thi tiep tuc batch 2. Neu co gi chan viec commit thi noi ro, dung im.
