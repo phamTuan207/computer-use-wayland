@@ -1,0 +1,24 @@
+{
+  "message": "C5-STEP8-FALLBACK-R1-CLONE2",
+  "thread": "clone2",
+  "wall_s": 49.4,
+  "t_start": "08:08:15",
+  "v12": {
+    "found": true,
+    "items": 47,
+    "role": "user",
+    "side": "user",
+    "textLen": 31,
+    "attempts": 1,
+    "elapsed_ms": 2
+  },
+  "delayed_count": {
+    "count": 1,
+    "items": 47
+  },
+  "broker_after_restart": {
+    "state": "idle",
+    "loaded": "d490f369f6b754d200518055025ef956284a759cc49e3ee70ed6b2a4483e3da4",
+    "head": "1b5a6e6481b9ee11819d3fafaca90c852037f894"
+  }
+}

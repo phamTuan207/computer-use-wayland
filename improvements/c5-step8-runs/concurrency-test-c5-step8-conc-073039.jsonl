@@ -1,0 +1,29 @@
+{"t": "07:30:39", "monotonic": 4379.396, "event": "test-start", "run": "c5-step8-conc-073039", "note": "A holds ~15s, B starts +2s with --wait 300"}
+{"t": "07:30:40", "monotonic": 4380.466, "event": "start", "worker": "A", "owner": "c5-step8-conc-A", "rc": 0, "parsed": {"ok": true, "status": "starting", "generation": "1dbd1415b897db30a1fe8c592ba85c59", "owner": "c5-step8-conc-A"}, "wall": 1.069}
+{"t": "07:30:41", "monotonic": 4380.635, "event": "status-poll", "state": "starting", "owner": "c5-step8-conc-A", "driver": "starting", "guardian": "unknown", "recovery": "none"}
+{"t": "07:30:43", "monotonic": 4383.332, "event": "request", "worker": "A", "sequence": 1, "args": ["observe", "--screen", "eDP-2"], "rc": 0, "parsed": {"ok": true, "status": "accepted", "sequence": 1}, "wall": 1.203}
+{"t": "07:30:44", "monotonic": 4383.607, "event": "status-poll", "state": "running", "owner": "c5-step8-conc-A", "driver": "ready", "guardian": "active", "recovery": "active"}
+{"t": "07:30:44", "monotonic": 4384.534, "event": "result", "worker": "A", "sequence": 1, "rc": 0, "parsed": "completed", "wall": 1.201}
+{"t": "07:30:44", "monotonic": 4384.534, "event": "hold", "worker": "A", "hold_s": 12}
+{"t": "07:30:46", "monotonic": 4386.377, "event": "status-poll", "state": "running", "owner": "c5-step8-conc-A", "driver": "ready", "guardian": "active", "recovery": "active"}
+{"t": "07:30:49", "monotonic": 4389.028, "event": "status-poll", "state": "running", "owner": "c5-step8-conc-A", "driver": "ready", "guardian": "active", "recovery": "active"}
+{"t": "07:30:52", "monotonic": 4391.703, "event": "status-poll", "state": "running", "owner": "c5-step8-conc-A", "driver": "ready", "guardian": "active", "recovery": "active"}
+{"t": "07:30:54", "monotonic": 4394.34, "event": "status-poll", "state": "running", "owner": "c5-step8-conc-A", "driver": "ready", "guardian": "active", "recovery": "active"}
+{"t": "07:30:57", "monotonic": 4397.305, "event": "status-poll", "state": "running", "owner": "c5-step8-conc-A", "driver": "ready", "guardian": "active", "recovery": "active"}
+{"t": "07:30:59", "monotonic": 4399.153, "event": "request", "worker": "A", "sequence": 2, "args": ["windows"], "rc": 0, "parsed": {"ok": true, "status": "accepted", "sequence": 2}, "wall": 1.012}
+{"t": "07:31:00", "monotonic": 4400.112, "event": "status-poll", "state": "running", "owner": "c5-step8-conc-A", "driver": "ready", "guardian": "active", "recovery": "active"}
+{"t": "07:31:00", "monotonic": 4400.113, "event": "result", "worker": "A", "sequence": 2, "rc": 0, "parsed": "completed", "wall": 0.959}
+{"t": "07:31:01", "monotonic": 4401.299, "event": "finish", "worker": "A", "rc": 0, "parsed": {"ok": true, "status": "finished", "generation": "1dbd1415b897db30a1fe8c592ba85c59", "driver": "stopped", "guardian": "clean", "error": null}, "wall": 1.185}
+{"t": "07:31:03", "monotonic": 4402.801, "event": "status-poll", "state": "finished", "owner": "c5-step8-conc-A", "driver": "stopped", "guardian": "clean", "recovery": "none"}
+{"t": "07:31:03", "monotonic": 4403.517, "event": "start", "worker": "B", "owner": "c5-step8-conc-B", "rc": 0, "parsed": {"ok": true, "status": "starting", "generation": "77370093f37c5f001b6c03cd719c8967", "owner": "c5-step8-conc-B"}, "wall": 22.12}
+{"t": "07:31:06", "monotonic": 4405.984, "event": "status-poll", "state": "running", "owner": "c5-step8-conc-B", "driver": "ready", "guardian": "active", "recovery": "active"}
+{"t": "07:31:06", "monotonic": 4406.263, "event": "request", "worker": "B", "sequence": 1, "args": ["observe", "--screen", "eDP-2"], "rc": 0, "parsed": {"ok": true, "status": "accepted", "sequence": 1}, "wall": 1.226}
+{"t": "07:31:07", "monotonic": 4407.178, "event": "result", "worker": "B", "sequence": 1, "rc": 0, "parsed": "completed", "wall": 0.914}
+{"t": "07:31:09", "monotonic": 4409.039, "event": "status-poll", "state": "running", "owner": "c5-step8-conc-B", "driver": "ready", "guardian": "active", "recovery": "active"}
+{"t": "07:31:10", "monotonic": 4409.931, "event": "request", "worker": "B", "sequence": 2, "args": ["windows"], "rc": 0, "parsed": {"ok": true, "status": "accepted", "sequence": 2}, "wall": 1.237}
+{"t": "07:31:11", "monotonic": 4410.936, "event": "result", "worker": "B", "sequence": 2, "rc": 0, "parsed": "completed", "wall": 1.005}
+{"t": "07:31:12", "monotonic": 4411.939, "event": "status-poll", "state": "running", "owner": "c5-step8-conc-B", "driver": "ready", "guardian": "active", "recovery": "active"}
+{"t": "07:31:12", "monotonic": 4412.073, "event": "finish", "worker": "B", "rc": 0, "parsed": {"ok": true, "status": "finished", "generation": "77370093f37c5f001b6c03cd719c8967", "driver": "stopped", "guardian": "clean", "error": null}, "wall": 1.136}
+{"t": "07:31:13", "monotonic": 4412.869, "event": "assertion", "name": "no-interleaving", "detail": "B started 3.405s after A finished"}
+{"t": "07:31:13", "monotonic": 4412.87, "event": "assertion", "name": "waited", "detail": "B start wall 22.120s"}
+{"t": "07:31:13", "monotonic": 4412.87, "event": "test-end", "run": "c5-step8-conc-073039", "failures": [], "log_path": "/home/hatch/workspace/c5-step8-run/concurrency-test-c5-step8-conc-073039.jsonl"}
