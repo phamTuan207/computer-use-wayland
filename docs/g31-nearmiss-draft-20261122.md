@@ -2,6 +2,8 @@
 
 Status: DRAFT. Every number in this file is assignment-given, from coord/clone2.md (batch 9 task 3, commit e04a16a). Nothing here was independently measured. Council and redteam to review. Fix pass applied: sections 1 and 2 rewritten from the real CL1-MSG records on origin/todolist-push, conclusion downgraded to a hypothesis, the 2 px warning carried into the narrative and the Numbers table, "1/1" flagged as undefined.
 
+Correction note, dated 2026-11-22 (batch 10 task 1, commits 5281eda + fix f90590c): inconsistency 1 in this draft is RESOLVED. The "2 px" figure is correct: 2 px per axis, 2.83 px Euclidean. The 982 px gap is a cross-space artifact (the click point and the cursor-after-click were recorded in different coordinate spaces), not a contradiction. The WARNING lines in this draft about the 982 px gap are therefore stale; the underlying numbers (306,1130) and (1288,1144) are unchanged, only the interpretation is corrected. Inconsistency 2 (the 03:53:30 message, no repo record) remains open.
+
 ## Incident
 
 The coordinator messaged clone2 directly with the computer-use mouse at 03:53:30. Sent in 4 minutes 3 seconds, 1/1. "1/1" is undefined: no source says what it counts (1 of 1 attempts, 1 message of 1, or something else). It is recorded here exactly as given, with no meaning assigned.
