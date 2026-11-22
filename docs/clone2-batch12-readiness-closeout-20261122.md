@@ -1,7 +1,9 @@
 # Batch 12 task 2: close the 5 open readiness gaps, prepare rung 2
 
 Date: 2026-11-22. Build 10:51-11:20 +07; fix pass same day,
-verification runs 11:37-11:42 +07 (04:37-04:42Z).
+verification runs 11:37-11:42 +07 (04:37-04:42Z); fix pass 2
+same day, verification runs 12:30-12:40 +07 (05:30-05:40Z,
+driver re-run 05:33-05:36Z, baselines 05:37-05:39Z).
 Verdict: still NOT READY.
 New count: 3 fully closed, 5 partial, 2 open, 2 standing
 (was 3 / 4 / 3 / 2 after the batch 12 task 2 build, 2 / 3 / 5 / 2
@@ -23,13 +25,17 @@ Sources read before writing (all verified):
   2 standing).
 - Runbook before: docs/two-vision-live-runbook-20261122.md,
   1277 lines. After this task: 1650 lines. After the fix
-  pass: 1783 lines.
+  pass: 1783 lines. After fix pass 2: 1928 lines.
 - Workflow doc before: docs/two-vision-benchmark-workflow-20261122.md,
   798 lines. After this task: 914 lines. After the fix
-  pass: 1004 lines.
+  pass: 1004 lines. After fix pass 2: 1121 lines.
 - Script before: tests/two_vision_bench.py, 868 lines, commit
   c267411. After this task: 1200 lines, commit f49851f.
   After the fix pass: 1637 lines, commit c1b623b.
+  After fix pass 2: 1939 lines, commit 00ce862.
+- Design doc: docs/clone2-one-vision-design-20261122.md,
+  764 lines at the fix pass, 792 lines after fix pass 2,
+  commit 00ce862.
 - Design doc: docs/clone2-one-vision-design-20261122.md,
   section 4.2 (textNew is the V12 gate; fix-pass dated note:
   the built baseline is the pre-Enter gate_baseline, not
@@ -53,15 +59,17 @@ Sources read before writing (all verified):
 ### Gap 9 (unbuilt features): CLOSED as a build
 
 All four features are built in the script (commit f49851f,
-hardened in fix pass c1b623b) and fixture-verified (see
+hardened in fix pass c1b623b and again in fix pass 2,
+commit 00ce862) and fixture-verified (see
 section 2). textNew in the V12 gate (COUNT_JS; the gate
 passes only on exactly one NEW bubble past the pre-Enter
-gate_baseline, and a double append fails as
-duplicate-bubble); pre-send reservation (intent written as
-"sending" after the V1 readback and before Enter,
-reconciled to "sent" or "failed-unverified" after the
-gate; a later run finding status "sending" refuses with
-retry-blocked-reservation); V11 MutationObserver flag
+gate_baseline, settles a full second after first sighting
+it, and a double append, synchronous or delayed 700 ms,
+fails as duplicate-bubble); pre-send reservation (intent
+written as "sending" after the V1 readback and before
+Enter, reconciled to "sent" or "failed-unverified" after
+the gate; a later run finding status "sending" refuses
+with retry-blocked-reservation); V11 MutationObserver flag
 (OBSERVER_JS armed before typing, thread-scoped, counting
 mutation records per send); D3 ref stability
 (REF_CHECK_JS re-resolves the ref before input and fails
@@ -71,7 +79,14 @@ cross-window check (after both sends each thread must
 hold only its own message, matching foreign bubbles by
 containment on the raw texts); run registry (a reused
 run_id in a fresh workdir is REFUSED before the browser
-starts).
+starts; the harvest never binds the registry, so the rung
+2 harvest-then-run shape with the same run_id in
+different workdirs works); intent binding (every ledger
+mark records message, thread URL and selectors, and a
+changed plan under the same run_id refuses with
+retry-blocked-intent-changed); sent-bubble-absent refusal
+(a recorded "sent" intent whose bubble is absent refuses
+instead of re-sending).
 
 What remains is live proof: the fixture proof is not a
 live proof. VISION 2 stays for the 2-vision run until a
@@ -109,13 +124,25 @@ over-reads it:
   scrolled. An element replaced by an identical twin
   (same tag, role, name, different identity) still passes
   it; the HCU guard and the V1 readback are the backstops.
+- The fix pass 2 hardening (intent binding, sent-bubble-absent
+  refusal, 1.0 s gate settle, ledger state machine, registry
+  and ledger corruption refusal) is on the Marionette path
+  only. The CDP path for option B has no such code: the
+  option B driver does not exist yet, so none of the
+  exactly-once or gate guarantees are proven for it, and the
+  rung 2 procedure under option B is a different build, not
+  a rerun of this one.
 - The V11 observer is scoped to the thread container and
   counts mutation records, not callbacks. A send that
   types but never appends a bubble shows 0 mutations on
   an input, and typing into a contenteditable input that
   never sends also shows 0 (proven by the CE no-send
   fixture run); the flag is recorded evidence, not a pass
-  criterion.
+  criterion. That CE proof is on the fixture's own
+  contenteditable layout only: the live Messenger input is
+  a different element in a different layout, so V11's
+  behavior on the real input is UNVERIFIED until a live
+  run records it.
 
 ### Gap 10 (cross-origin frames): PARTIAL
 
@@ -195,9 +222,14 @@ run per case, each with its own --workdir under
 /tmp/two_vision_bench/b12t2-*. Wall clock UTC, elapsed
 from a monotonic clock. All logs, results.json,
 inventory.json and ledger.json preserved in
-~/workspace/tools/batch12-t2/ (logs/ and runs/),
-profiles deleted after each run, /tmp ended at 5 percent,
-no Firefox left running.
+~/workspace/tools/batch12-t2/ (logs/ and runs/). The
+profile-deletion, /tmp percentage and no-Firefox claims
+from the first version of this paragraph cannot be
+verified from the preserved record (the preserved run
+dirs hold no profile dirs and no df/ps artifact) and are
+struck here, not repeated. The batch-12 run window end
+was likewise corrected in the workflow doc (last run
+finished 04:00:53.78Z per driver.log).
 
 - Happy path with --strict-input-name (b12t2-happy): PASS,
   wall 15.3843 s (launch 4.2887 s, attach 5.4269 s, both
@@ -248,17 +280,34 @@ driver still passes, and the happy path still passes with
 the new fields present. The old wrong-selector retry
 behavior (run 1 v12-timeout, run 2 retry-blocked-
 unverified) is unchanged in code: in send_one the
-failed-unverified block runs first, then the reservation
-block, then the sent-skip (script lines 661-683). It was
+thread-missing check runs first, then the
+failed-unverified block, then the reservation block, then
+the intent-binding check, then the sent-skip (script
+lines 744-826 at commit 00ce862). It was
 not re-run here; the fix-pass logs for it are in
 ~/workspace/tools/two_vision_fixpass/.
 
 Fix-pass verification runs (script commits c1b623b and
-45315d5, 2026-11-22 11:37-11:42 +07, same machine,
+45315d5, 2026-11-22, verification window 11:36:49-11:42:41
++07 (04:36:49-04:42:41Z); same machine,
 headless Firefox 160.0.1, repo venv python; all logs,
 results.json, inventory.json and ledger.json preserved in
-~/workspace/tools/batch12-t2-fixpass/, profiles deleted
-after, /tmp ended at 52 percent, no Firefox left running):
+~/workspace/tools/batch12-t2-fixpass/. The run dirs still
+contain their full profile/ dirs, so the profiles were
+preserved, not deleted. The /tmp percentage and
+no-Firefox claims from the first version of this
+paragraph have no preserved df/ps artifact behind them
+and are struck here, not repeated. Disclosure: the
+fp-iframe-strict run below is the SECOND attempt. The
+first attempt failed with harness_error "TypeError: log()
+got multiple values for argument 'name'" (log ends
+04:37:57Z, wall 5.5436 s); the colliding call was fixed in
+the working tree between the attempts and folded into
+commit c1b623b (04:43:37Z) with no mention in the
+fix-pass report. The fix-pass runs therefore verified the
+pre-commit working tree, not the commits; the committed
+code was verified later by a fresh driver re-run on HEAD
+(11/11 PASS) and by the fix pass 2 runs below.
 
 - Happy path (fp-happy, --fixture): PASS, wall 10.3707 s,
   sends_this_run 2. Both steps: before_count 0,
@@ -280,9 +329,11 @@ after, /tmp ended at 52 percent, no Firefox left running):
   wall 5.4404 s. 4 items per window, 1 frame per window,
   accessible true, origin "null".
 - Iframe harvest with --strict-input-name
-  (fp-iframe-strict): HARVEST-ONLY. harvest_inputs recorded
-  for both windows (name, aria-label and placeholder
-  "Message" each, ref #msg-input).
+  (fp-iframe-strict): HARVEST-ONLY (second attempt; the
+  first attempt failed, see the disclosure above).
+  harvest_inputs recorded for both windows (name,
+  aria-label and placeholder "Message" each, ref
+  #msg-input).
 - Exactly-once driver (fp-once): PASS. Call 1 sent in
   0.6451 s, 1 bubble; call 2 skipped-already-sent in
   0.0056 s, still 1 bubble.
@@ -306,6 +357,69 @@ after, /tmp ended at 52 percent, no Firefox left running):
   F11: identical messages are refused by validate_plan.
   C1-2: a "sent" intent with a broken thread selector fails
   as thread-missing, ledger stays "sent", 0 bubbles.
+
+Fix pass 2 verification runs (script commits dfea01b,
+93e8f48 and 00ce862, 2026-11-22, verification window
+12:30-12:40 +07 (05:30-05:40Z); same machine, headless
+Firefox 160.0.1, repo venv python; all logs, results.json,
+inventory.json and ledger.json preserved in
+~/workspace/tools/batch12-t2-fixpass2/. The driver ran
+against the committed code (temp HOME for a fresh registry,
+so the fix-pass-1 bindings did not collide; the baseline
+CLI runs used the real default registry with fresh
+bench-fixpass2-* run_ids). The run dirs still contain their
+full profile/ dirs, so the profiles were preserved, not
+deleted. /tmp was at 90 percent at the end of the runs
+(55M free), measured by df; no Firefox was left running
+(0 marionette matches, 0 listeners on 2828/9223 at the end):
+
+- Happy path (fp2-happy, --fixture): PASS, wall 9.0674 s,
+  sends_this_run 2. Both steps: before_count 0,
+  gate_baseline 0, gate_count 1, gate_settle_s 1.0,
+  v11_mutations 1 with v11_scope "thread",
+  input_cleared_after_enter true. registry_enabled true,
+  registry_path the default
+  /home/hatch/.cache/two_vision_bench/run_registry.json.
+  Cross-window check clean (own 1, foreign 0 per thread).
+- Stale bubble (fp2-stale, fixed plan bench-fixpass2-stale,
+  stale fixture): PASS, wall 9.3794 s. Both steps:
+  before_count 1, gate_baseline 1, gate_count 2.
+- No-send (fp2-nosend, fixed plan bench-fixpass2-nosend,
+  no-send fixture): FAIL as designed, wall 11.0997 s,
+  exit 1, 0 sends. Clone1 v12-timeout, clone2
+  not-executed; outcome_note now names the failure
+  ("no sends this run: clone1:v12-timeout") instead of
+  claiming both steps skipped.
+- Strict input name (fp2-strictbad, plan input_name "Zzz"):
+  FAIL as designed, exit 1, wall 5.3623 s. Step 1
+  input-name-mismatch, no ledger file written.
+- Iframe harvest (fp2-iframe, --mode harvest): HARVEST-ONLY,
+  wall 5.2999 s. 4 items per window, 1 frame per window,
+  accessible true, origin "null".
+- Iframe harvest with --strict-input-name
+  (fp2-iframe-strict): HARVEST-ONLY, wall 5.0358 s.
+  harvest_inputs recorded for both windows (name,
+  aria-label and placeholder "Message" each, ref
+  #msg-input).
+- Exactly-once driver (fp2-once): PASS, wall 7.2159 s.
+- Batch 12 task 2 driver (fp2-b12t2): PASS, wall 6.6402 s.
+- Fix-pass driver (fp2-driver, tests/
+  two_vision_fixpass_driver.py): 19/19 PASS, wall
+  157.1595 s. New in fix pass 2: harvest-then-run with the
+  same run_id in different workdirs succeeds; a "sent"
+  intent with no visible bubble refuses with
+  retry-blocked-sent-bubble-absent; a changed message under
+  the same run_id refuses with retry-blocked-intent-changed
+  and the ledger keeps the original message; a delayed
+  double append (700 ms) fails as duplicate-bubble after
+  the 1.0 s settle; results.json records registry_enabled
+  and registry_path; substring messages are refused;
+  outcome_note names the failure; corrupt registry and
+  ledger files are REFUSED with exit 2. The first full
+  driver run failed only on the delayed-double test, and
+  only on gate_settle_s being recorded solely on the pass
+  path; the field is now recorded when the gate starts
+  (commit 00ce862) and the re-run passed 19/19.
 
 ## 3. Decision packet for the coordinator (gap 8, prepared)
 
@@ -336,9 +450,12 @@ run can be scheduled. Nothing here invents any of them.
    this run and what its value is (timestamp-based, never
    reused, including from a failed attempt). The script
    binds the run_id to the ledger path of its first run in
-   the shared registry; a reused run_id in a fresh workdir
-   is REFUSED, so the value must be fresh and the owner
-   must be named.
+   the shared registry (default path
+   /home/hatch/.cache/two_vision_bench/run_registry.json;
+   there is no --registry-path flag, and no override flag
+   for the registry path may be used live); a reused
+   run_id in a fresh workdir is REFUSED, so the value must
+   be fresh and the owner must be named.
 8. Option A binary path: the laptop Firefox binary and
    geckodriver paths the script must use (FF/GD are module
    constants, script lines 49-50; an edit changes the
@@ -355,6 +472,14 @@ run can be scheduled. Nothing here invents any of them.
 10. Live-lane-free confirmation: no BASELINE2 or other live
     run running, and no other agent holding the laptop
     browser, confirmed with the coordinator for this run_id.
+11. Resume authorization: if this run is a resume of a
+    failed attempt, the coordinator must name the failed
+    run_id, the operator who hand-checked the threads, and
+    the destination artifact for the resume report. A
+    resume without this item is refused by the runbook
+    (section 14.4): the ledger blocks re-sending a
+    recorded intent, so a new run_id after a hand check is
+    the only path, and it must be authorized, not assumed.
 
 ## 4. Rung 2 procedure (runbook section 14)
 
@@ -393,12 +518,22 @@ Hard constraint, kept: rung 2 acceptance runs on the real
 clone threads, NOT the Firefox fixture, under either live
 shape.
 
+Coordinator approval still owed on the 0-vision scoping:
+the scoped definition (0 during the step-2 run
+invocation, the step-1 harvest read as pre-run
+preparation outside the budget) narrows the unscoped
+"0-vision" acceptance label in the arch-review log, and
+the runbook section 14 intro and the decision packet item
+1 both carry that approval as an open item. Until the
+coordinator approves the scoping, a rung 2 run cannot be
+scored as a 0-vision pass against the arch-review label.
+
 ## 5. What remains (still NOT READY)
 
 - OPEN (2): gap 7 a11y dry probe (UNRUN, operator, before
   the first live run), gap 8 method approval + thread
   URLs/selectors (coordinator; decision packet in
-  section 3, now 10 items).
+  section 3, now 11 items).
 - PARTIAL (5): checklist 10 contradictions (doc done),
   10.3 definition (dry probe open), live-shape procedures
   (coordinator decision + verification of the picked
@@ -432,9 +567,25 @@ the same counts (3 / 5 / 2 / 2).
   atomic results.json, mechanized harvest name check).
 - 45315d5: fix-pass driver 11/11 plus double-append and
   CE no-send fixtures.
-- (docs fix pass: runbook, workflow doc, design doc
-  corrections and re-pins; this report and the closeout
-  dated note: committed together after this section.)
+- dfea01b: fix pass 2 script changes (harvest never binds
+  the registry; intent binding; sent-bubble-absent
+  refusal; 1.0 s gate settle; outcome rule fails on
+  thread-missing and own_count < 1; ledger state machine
+  with atomic reserve; corrupt registry/ledger refused;
+  --visions-used rejects negatives; validate_plan refuses
+  substring messages; delayed-double fixture).
+- 93e8f48: fix pass 2 driver fix (delayed-double test runs
+  on the shared browser before the CLI tests, then the
+  shared browser is quit; 19 tests).
+- c58037e: merge origin/main (clone1 batch 11 task 2/3,
+  watchdog logs; no conflicts).
+- 00ce862: gate_settle_s recorded when the gate starts,
+  not only on the pass path.
+- b72ec65: fix pass 2 docs (runbook 1928 lines, workflow
+  1121 lines, design doc 792 lines, all re-pinned at
+  00ce862).
+- (this report and the closeout dated note: committed
+  together after this section.)
 
 All commits small and pushed one at a time. 0 em/en
 dashes, no personal information.
@@ -474,8 +625,11 @@ below was applied and verified against primary sources
   citations were updated to 1004; validate_plan cited at
   ~line 600, correct 868 (now 1111 after the fix pass);
   runbook section 0 lead blockers still showed the old
-  batch 11 count (updated to 3/4/3/2, then 3/5/2/2 after
-  the fix pass); report section 2 block ordering corrected
+  batch 11 count (updated to 3/4/3/2 in the fix pass;
+  corrected to 3/5/2/2 only in fix pass 2, runbook commit
+  b72ec65; the earlier claim that it was updated to
+  3/5/2/2 in fix pass 1 was wrong, corrected by council 2
+  in round 2); report section 2 block ordering corrected
   (failed-unverified, then reservation, then sent-skip);
   describe() wording corrected (records ref, role, name,
   path, actions, plus editable/extents/state flags, and
@@ -497,7 +651,11 @@ below was applied and verified against primary sources
   F3). F4 (MEDIUM): the gate is appearance-based, not
   causal. Fixed in docs (design doc 4.2 note, runbook
   14.3, report section 1) plus input_cleared_after_enter
-  and thread-scoped V11 as recorded causal ties. F5
+  and thread-scoped V11 as recorded evidence (not causal
+  proof: the gate proves a bubble appeared after the
+  baseline, not that our Enter caused it; the wording
+  "recorded causal ties" used in the first version of
+  this paragraph was wrong and is corrected here). F5
   (MEDIUM): the gate was `>` not `== baseline+1`, so a
   double append passed silently. Fixed: exact +1, else
   duplicate-bubble (fix-pass driver F5). F6 (MEDIUM):
@@ -561,9 +719,148 @@ below was applied and verified against primary sources
   dated note marking all three BUILT in f49851f,
   hardened in c1b623b, fixture-proven, live proof owed.
 
-Fix-pass verification: section 2 above (happy, stale,
+## 8. Fix pass 2 appendix: round-2 council + redteam verdicts and fixes
+
+A second council of 3 plus an independent redteam ran on the
+fix-pass build (report 6ab0c04, script c1b623b, driver
+45315d5). All four verdicts arrived before fix pass 2; every
+correction below was applied and verified against primary
+sources (code, fixture runs, preserved logs). The four
+verdicts:
+
+- Council 1: ISSUES, 10 findings (script correctness,
+  exactly-once, doc pins).
+- Council 2: ISSUES, 16 findings (doc pins, line numbers,
+  counts, cross-doc consistency).
+- Council 3 (redteam): BROKEN, 15 findings, 4 HIGH.
+- Redteam 4/4: ISSUES, 11 findings (re-derived appendix
+  claims, blind-selector re-send, undisclosed
+  mid-verification fix, 0-vision scoping needs coordinator
+  approval, decision packet missing resume authorization).
+
+Honesty note: the round-2 verdicts were delivered as
+subagent reports in the session and are not preserved as
+files in the repo, so this appendix records the verdicts
+and the findings that drove the fix-pass-2 changes, each
+with its fix and its verification, and does not pretend
+to reproduce the full per-finding texts. The fixes are
+traceable commit by commit below; the verification for
+all of them is the fix pass 2 run set in section 2
+(driver 19/19 PASS, baselines with timings).
+
+Redteam HIGH findings, each fixed:
+
+- H1: rung 2 as written cannot execute. Step 1 harvest
+  bound the run_id to the harvest workdir in the shared
+  registry, so step 2 in a fresh run dir was REFUSED.
+  Fix: the harvest never binds the registry (script
+  commit dfea01b); only run mode binds it. The rung 2
+  harvest-then-run shape with the same run_id in
+  different workdirs now works, proven by the fix-pass
+  driver test (harvest-then-run succeeds) and by the
+  runbook section 14 rewrite (commit b72ec65).
+- H2: a recorded "sent" intent re-sent when the bubble
+  count read 0 (fresh page load, unloaded thread).
+  Fix: a recorded "sent" intent whose bubble is absent
+  refuses with retry-blocked-sent-bubble-absent instead
+  of re-sending (dfea01b). Proven by the fix-pass driver
+  test (sent intent, no bubble, refusal, 0 sends) and
+  recorded in workflow section 8 (F5 row) and runbook
+  section 14.4.
+- H3: an intent did not bind message text, thread URL,
+  or selectors, so the same intent re-sent a different
+  message under an edited plan. Fix: every ledger mark
+  records message, thread URL and selectors, and a
+  changed plan under the same run_id refuses with
+  retry-blocked-intent-changed, the ledger keeping the
+  original message (dfea01b). Proven by the fix-pass
+  driver test (changed message refused, original kept).
+- H4: the V12 gate broke on the first poll at baseline+1
+  and never settled, so a delayed second append scored
+  "sent" with two identical bubbles. Fix: the gate
+  settles a full second after first sighting baseline+1
+  (dfea01b, gate_settle_s recorded when the gate starts,
+  commit 00ce862), and a delayed double append fails as
+  duplicate-bubble. Proven by the new delayed-double
+  fixture (second bubble after 700 ms) in the fix-pass
+  driver test, and by the baselines (gate_settle_s 1.0
+  on the happy path).
+
+Redteam 4/4 findings, each fixed:
+
+- Re-derived appendix claims: the fix-pass report's
+  appendix repeated claims the evidence did not support
+  (section 0 count, run window end, "causal ties").
+  Fix: section 7 corrected (section 0 reached 3/5/2/2
+  only in fix pass 2, not in fix pass 1), section 2
+  window start corrected to 04:36:49Z, F4 wording
+  corrected to recorded evidence, not causal proof.
+- Blind-selector re-send: same shape as H2, reached
+  through a broken thread selector. Fix: the
+  thread-missing check runs first in the pre-check
+  (script lines 744-826 at 00ce862), before the
+  failed-unverified block; a "sent" intent with a broken
+  selector fails as thread-missing, never re-sends.
+- Undisclosed mid-verification fix: the fp-iframe-strict
+  first attempt failed and was fixed in the working tree
+  without mention. Fix: disclosed in workflow section 7
+  and in report section 2 above (first attempt failed
+  04:37:57Z, fix folded into c1b623b at 04:43:37Z; the
+  fix-pass runs verified the pre-commit tree, the
+  committed code was verified later).
+- 0-vision scoping needs coordinator approval: the
+  scoped definition narrows the unscoped arch-review
+  acceptance label. Fix: the approval is now an open
+  item in runbook section 14 intro, workflow section
+  10.4, and report section 4 above; a rung 2 run cannot
+  be scored as a 0-vision pass until the coordinator
+  approves it.
+- Decision packet missing resume authorization: a resume
+  of a failed attempt had no authorized path. Fix:
+  packet item 11 added (section 3 above): failed run_id,
+  operator name, artifact destination; a resume without
+  it is refused by the runbook.
+
+Remaining findings, grouped (council 1 script
+correctness and exactly-once; council 2 doc pins, line
+numbers, counts and cross-doc consistency; redteam
+non-HIGH findings):
+
+- Ledger state machine: "sent" is terminal, reserve()
+  is atomic under one lock, status() re-reads from disk,
+  corrupt ledger and registry files are refused with
+  exit 2, inventory.json writes are atomic, finish()
+  never raises, pre-reservation exceptions are recorded
+  as failed steps (dfea01b). Proven by the fix-pass
+  driver corruption tests and the 19/19 run.
+- Outcome rule: a run now fails when a thread is missing
+  after the gates or holds no bubble with its own
+  message, and outcome_note names the real failure
+  instead of claiming both steps skipped (dfea01b).
+  Proven by the fp2-nosend baseline (outcome_note "no
+  sends this run: clone1:v12-timeout").
+- results.json records registry_enabled and
+  registry_path (dfea01b); --visions-used rejects
+  negatives; validate_plan refuses substring messages
+  (dfea01b). Proven by the driver tests and the happy
+  baseline (registry_enabled true, default path).
+- Doc pins re-based at 00ce862 (1939 lines) across the
+  runbook (1928 lines), workflow (1121 lines) and
+  design doc (792 lines): script line numbers, section
+  0 count 3/5/2/2, section 13.1 dry-send run_id,
+  section 14 decision packet (11 items), section 15
+  re-pin, workflow section 7 window and housekeeping,
+  section 8 F5 row, sections 10.1/10.3/10.4, design doc
+  sections 1/4.1/4.2/4.3.3/4.3.4/5/7/8 (commit b72ec65).
+  Verified by grep against the script at 00ce862 and by
+  the line counts in the header of this report.
+
+Fix pass 2 verification: section 2 above (happy, stale,
 no-send, strict-bad, iframe, iframe-strict, once, b12t2
-drivers, fix-pass driver 11/11 PASS). The fix pass
-itself goes to a second council + redteam round before
-this report is treated as final; see the closeout dated
-note.
+drivers, fix-pass driver 19/19 PASS, wall 157.1595 s).
+No round-3 council was run for the fix-pass-2 changes:
+fix pass 2 was the last work before the weekly usage cap
+(12:14 22/11, capped until 02:38 Wed 25/11), and per the
+coordinator's decision (commit 01089dd) no new work was
+spawned. A round-3 council for the fix-pass-2 changes
+remains open for the coordinator to dispatch.

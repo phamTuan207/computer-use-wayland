@@ -8,6 +8,10 @@ dated note at the end): new count 3 fully closed, 4 partial,
 by the batch 12 task 2 fix pass on 2026-11-22 (see the
 fix-pass dated note at the end): new count 3 fully closed,
 5 partial, 2 open, 2 standing, verdict still NOT READY.
+Updated again by the batch 12 task 2 fix pass 2 on
+2026-11-22 (see the fix pass 2 dated note at the end):
+count unchanged at 3 fully closed, 5 partial, 2 open,
+2 standing, verdict still NOT READY.
 The DOT 9 task 2 readiness check
 (docs/clone2-live-run-readiness-clone1-20261122.md, 2afbde5 + fix
 7d256ae) returned NOT READY with 11 missing items. The first
@@ -16,18 +20,21 @@ redteam broke that count, and this fix pass corrects it.
 Nothing here was run live; no live run has happened.
 
 Numbering in this report matches runbook section 12 exactly
-(items 1-12). Mapping to the readiness report's 11 items:
-fully closed are readiness 1 (section 9 / AMEND4 item 12) and
-readiness 9 (VISION 2 monitor + run log named); partial are
-readiness 2 (checklist 10 contradictions), 3 (10.3 definition
-+ dry probe), 4 (input name, procedure mechanized in the fix
-pass, live value owed), 5 (live-shape procedures); open are
-readiness 6 (method approval), 7 (thread URLs/selectors),
-plus new item 10 (cross-origin frames, from the DOM/a11y
-crawl log, not in the readiness report); standing are
-readiness 10 (live lane free) and 11 (90% bar live
-measurement). (Readiness 8, unbuilt features, is closed as
-a build since batch 12 task 2.)
+(items 1-12). Mapping to the readiness report's 11 items,
+current as of fix pass 2: fully closed are items 1
+(readiness 1, section 9 / AMEND4 item 12), 2 (readiness 9,
+VISION 2 monitor + run log named) and 9 (readiness 8,
+unbuilt features, closed as a build since batch 12 task 2);
+partial are items 3 (readiness 2, checklist 10
+contradictions), 4 (readiness 3, 10.3 definition part only;
+the dry probe part is item 7), 5 (readiness 5, live-shape
+procedures), 6 (readiness 4, input name, procedure
+mechanized, live value owed) and 10 (cross-origin frames,
+census built, live check owed); open are items 7 (readiness
+3, probe part: a11y dry probe UNRUN) and 8 (readiness 6 and
+7, method approval and thread URLs/selectors); standing are
+items 11 (readiness 10, live lane free) and 12 (readiness
+11, 90% bar live measurement).
 
 Sources verified for this closeout (all read before writing):
 - Readiness report: docs/clone2-live-run-readiness-clone1-20261122.md,
@@ -179,11 +186,13 @@ Sources verified for this closeout (all read before writing):
      load logged in, since profile portability is an
      assumption, not evidence.
 
-## Still open (items 6-10)
+## Still open (items 6-10; current statuses: 6 PARTIAL, 7 OPEN,
+8 OPEN, 9 CLOSED as a build, 10 PARTIAL)
 
 6. Live Messenger input name verified against the real DOM
-   (owner: operator, on the laptop, before the run): the
-   aria-label is UNKNOWN. Only evidence is visual-only (two
+   (PARTIAL since the batch 12 fix pass: procedure
+   mechanized, live value owed. Owner: operator, on the
+   laptop, before the run): the aria-label is UNKNOWN. Only evidence is visual-only (two
    screenshot reads of the "Message" placeholder,
    worker-cl1msg-log.md:23 and worker-cl1msg2-log.md:18).
    No DOM or a11y read of the input exists anywhere in the
@@ -219,14 +228,20 @@ Sources verified for this closeout (all read before writing):
    thread selector, bubble selector (owner: coordinator).
    Both are coordinator decisions with no repo record yet.
    (Readiness items 6 and 7.)
-9. Unbuilt script features (owner: whoever builds them):
+9. Unbuilt script features (CLOSED as a build in batch 12
+   task 2, hardened in the fix pass and again in fix pass 2;
+   owner: whoever builds them):
    textNew in the V12 gate, pre-send reservation, V11
    MutationObserver flag, D3 ref stability. All listed in
-   runbook section 12; none was built by this task.
+   runbook section 12; all four are built in the script
+   (commit f49851f, hardened in fix pass c1b623b and again
+   in fix pass 2, commit 00ce862) and fixture-verified;
+   live proof is still owed.
    (Readiness item 8.)
-10. Cross-origin frames in the Messenger web app (owner:
-    operator, on the laptop, before the run): DOM rects
-    cannot reach cross-origin iframes from parent JS
+10. Cross-origin frames in the Messenger web app (PARTIAL
+    since batch 12 task 2: census built, live check owed.
+    Owner: operator, on the laptop, before the run): DOM
+    rects cannot reach cross-origin iframes from parent JS
     (same-origin policy); BiDi browsing-context-scoped calls
     or vision remain the fallback
     (improvements/worker-click-crawl-doma11y-log.md, open
@@ -368,3 +383,69 @@ What remains: gap 7 (a11y dry probe, UNRUN) and gap 8
 (coordinator decisions). The fix pass itself goes to a
 second council + redteam round before this closeout is
 treated as final.
+
+## Batch 12 task 2 fix pass 2 update, 2026-11-22
+
+Count unchanged: 3 fully closed, 5 partial, 2 open,
+2 standing. Verdict: still NOT READY. Numbering still
+matches runbook section 12 exactly. Round 2 council of 3
+plus independent redteam ran on the fix-pass build;
+verdicts: council 1 ISSUES (10 findings), council 2
+ISSUES (16 findings), redteam (council 3) BROKEN
+(15 findings, 4 HIGH), redteam 4/4 ISSUES (11 findings).
+Every correction was applied in script commits dfea01b,
+93e8f48 and 00ce862, driver tests, and the runbook,
+workflow doc and design doc (commit b72ec65); full
+per-finding record in
+docs/clone2-batch12-readiness-closeout-20261122.md,
+section 8; evidence logs and artifacts in
+~/workspace/tools/batch12-t2-fixpass2/.
+
+- Item 9 (script features) CLOSED as a build, hardened
+  again: the harvest never binds the registry (the rung 2
+  harvest-then-run shape works); every ledger mark binds
+  message, thread URL and selectors, and a changed plan
+  refuses; a recorded "sent" intent with no visible bubble
+  refuses instead of re-sending; the gate settles a full
+  second after first sighting, so a delayed double append
+  fails; "sent" is terminal in the ledger state machine,
+  reserve() is atomic under one lock; corrupt registry and
+  ledger files are refused with exit 2; the outcome rule
+  fails on a missing thread or a thread with no own bubble;
+  results.json records the registry state. Fix-pass driver
+  19/19 PASS (wall 157.1595 s); baselines re-verified
+  (happy PASS 9.0674 s, stale PASS 9.3794 s, no-send FAIL
+  as designed 11.0997 s, strict-bad FAIL as designed,
+  iframe HARVEST-ONLY, once and b12t2 drivers PASS).
+  What remains is live proof, and the fix-pass-2
+  hardening is Marionette-path only: the CDP path for
+  option B has none of it.
+- Item 6 (input name) PARTIAL, unchanged: procedure
+  mechanized, live value owed at run time.
+- Item 7 (a11y dry probe) OPEN: still UNRUN. Nothing in
+  fix pass 2 ran it.
+- Item 8 (method approval, thread URLs/selectors) OPEN:
+  coordinator decisions with no repo record yet. The
+  decision packet in the batch 12 report, section 3, was
+  extended with item 11 (resume authorization: failed
+  run_id, operator name, artifact destination) and item 7
+  now names the default registry path and forbids
+  override flags live (now 11 items). The 0-vision
+  scoping needs coordinator approval before a rung 2 run
+  can be scored against the arch-review label.
+- Rung 2 procedure corrected in runbook section 14:
+  step 1 harvest no longer blocks step 2 (harvest never
+  binds the registry); step 3 dry send requires its own
+  run_id, workdir, ledger and distinct text; the decision
+  packet is reproduced in full (11 items); the wrong-window
+  stop is worded as operator-observed; the frames census
+  is recorded evidence the operator must read.
+
+What remains: gap 7 (a11y dry probe, UNRUN) and gap 8
+(coordinator decisions). No round-3 council was run for
+the fix-pass-2 changes: fix pass 2 was the last work
+before the weekly usage cap (12:14 22/11, capped until
+02:38 Wed 25/11), and per the coordinator's decision
+(commit 01089dd) no new work was spawned. A round-3
+council for the fix-pass-2 changes remains open for the
+coordinator to dispatch.
