@@ -343,6 +343,59 @@ class TestObserveArgs(unittest.TestCase):
         self.assertEqual(args, ['observe', '--screen', 'eDP-2'])
 
 
+class TestStampActions(unittest.TestCase):
+    """stamp_actions: the CB-2 stamping path for the JSON batch
+    interface (step-9 prototype item 4). The agent loop stamps
+    scope/observation_id from the observation meta into every
+    action before the batch reaches the broker."""
+
+    META = {'id': 'obs1', 'scope': 'window'}
+
+    def test_stamps_every_action(self):
+        stamped = first_action.stamp_actions(
+            [{'type': 'click', 'x': 1, 'y': 2},
+             {'type': 'key', 'keys': ['Enter']}], self.META)
+        self.assertEqual(stamped, [
+            {'type': 'click', 'x': 1, 'y': 2, 'scope': 'window',
+             'observation_id': 'obs1'},
+            {'type': 'key', 'keys': ['Enter'], 'scope': 'window',
+             'observation_id': 'obs1'}])
+
+    def test_does_not_mutate_the_input(self):
+        actions = [{'type': 'click', 'x': 1, 'y': 2}]
+        first_action.stamp_actions(actions, self.META)
+        self.assertEqual(actions, [{'type': 'click', 'x': 1, 'y': 2}])
+
+    def test_matching_pre_stamp_is_kept(self):
+        stamped = first_action.stamp_actions(
+            [{'type': 'click', 'x': 1, 'y': 2, 'scope': 'window',
+              'observation_id': 'obs1'}], self.META)
+        self.assertEqual(stamped[0]['observation_id'], 'obs1')
+
+    def test_mismatched_pre_stamp_refuses(self):
+        # An action already bound to a different observation is a
+        # stale binding: refuse instead of silently re-stamping it
+        # onto this observation.
+        with self.assertRaises(ValueError):
+            first_action.stamp_actions(
+                [{'type': 'click', 'x': 1, 'y': 2, 'scope': 'window',
+                  'observation_id': 'obs9'}], self.META)
+
+    def test_scope_less_meta_refuses(self):
+        with self.assertRaises(ValueError):
+            first_action.stamp_actions(
+                [{'type': 'click', 'x': 1, 'y': 2}], {'id': 'obs1'})
+
+    def test_id_less_meta_refuses(self):
+        with self.assertRaises(ValueError):
+            first_action.stamp_actions(
+                [{'type': 'click', 'x': 1, 'y': 2}], {'scope': 'window'})
+
+    def test_non_dict_action_refuses(self):
+        with self.assertRaises(ValueError):
+            first_action.stamp_actions(['click'], self.META)
+
+
 class TestBrokerAttempt(unittest.TestCase):
     """broker_attempt with the session_remote CLI faked."""
 
@@ -475,6 +528,128 @@ class TestBrokerAttempt(unittest.TestCase):
         self.assertEqual(json.loads(out), transient)
         self.assertEqual(detail['broker_retries'], 0)
         self.assertEqual(detail['broker_sequences'], [1, 2])
+
+    def _run_attempt_capturing(self, script, seen):
+        """Like _run_attempt, but records every actions file the act
+        envelope points at (the driver reads that file, so what is
+        recorded is what actually ran)."""
+        base = self._fake_cli(script)
+
+        def capturing(remote_py, args, timeout_s):
+            if args and args[0] == 'request':
+                try:
+                    request_path = args[args.index('--request') + 1]
+                    envelope = json.loads(
+                        Path(request_path).read_text())
+                    act_args = envelope.get('args') or []
+                    if act_args and act_args[0] == 'act':
+                        actions_path = act_args[
+                            act_args.index('--actions') + 1]
+                        seen.append(json.loads(
+                            Path(actions_path).read_text()))
+                except (ValueError, OSError, IndexError):
+                    pass
+            return base(remote_py, args, timeout_s)
+
+        with mock.patch.object(first_action, '_broker_cli',
+                               side_effect=capturing):
+            return first_action.broker_attempt(
+                str(self.state / 'obs1.json'), self.actions, 20.0,
+                self.state, self.meta, 'eDP-2', 'Muse')
+
+    def test_act_request_carries_cb2_stamps(self):
+        # CB-2 proof: the act envelope the driver reads must carry
+        # scope + observation_id stamped from the observation meta.
+        # Without the stamping path this test fails: the actions
+        # file it records has no scope and no observation_id.
+        seen = []
+        act = {'ok': True, 'completed': 1}
+        rc, out, err, timed_out, elapsed, detail = \
+            self._run_attempt_capturing([
+                ('start', {'ok': True, 'status': 'starting',
+                           'generation': 'g1'}, 0),
+                ('status', {'ok': True, 'generation': 'g1',
+                           'state': 'running', 'driver': 'ready'}, 0),
+                ('request', {'ok': True, 'status': 'accepted',
+                             'sequence': 1}, 0),
+                ('result', {'ok': True, 'status': 'completed',
+                           'sequence': 1,
+                           'response': {'returncode': 0, 'result': act,
+                                        'session_continues': True}}, 0),
+                ('finish', {'ok': True, 'status': 'finished'}, 0),
+            ], seen)
+        self.assertEqual(rc, 0)
+        self.assertEqual(len(seen), 1)
+        self.assertEqual(seen[0], [{'type': 'click', 'x': 100, 'y': 100,
+                                    'scope': 'screen',
+                                    'observation_id': 'obs1'}])
+        # The caller's actions file is NOT rewritten in place: the
+        # stamp goes to a sibling file the driver reads.
+        self.assertEqual(Path(self.actions).read_text(),
+                         '[{"type": "click", "x": 100, "y": 100}]')
+
+    def test_scope_less_meta_never_starts_a_session(self):
+        # Full mandatory CB-2: a meta without scope cannot be
+        # stamped, so the loop refuses before any broker start and
+        # no action runs. The fake raises on any CLI call, proving
+        # no session was started.
+        self.meta = dict(self.meta)
+        del self.meta['scope']
+        with mock.patch.object(first_action, '_broker_cli',
+                               side_effect=AssertionError(
+                                   'broker CLI must not be called')):
+            rc, out, err, timed_out, elapsed, detail = \
+                first_action.broker_attempt(
+                    str(self.state / 'obs1.json'), self.actions, 20.0,
+                    self.state, self.meta, 'eDP-2', 'Muse')
+        self.assertEqual(rc, 1)
+        self.assertIn('CB-2', out)
+        self.assertIn('scope', out)
+
+    def test_retry_restamps_with_the_fresh_observation(self):
+        # R1/W1: the retried act must carry the FRESH observation's
+        # stamps, not the original meta's, or the binding check in
+        # desktop_act refuses the retry as stale.
+        seen = []
+        transient = {'ok': False, 'error': 'focus changed'}
+        fresh = dict(self.meta)
+        fresh['id'] = 'obs2'
+        fresh['observation'] = str(self.state / 'obs2.json')
+        rc, out, err, timed_out, elapsed, detail = \
+            self._run_attempt_capturing([
+                ('start', {'ok': True, 'status': 'starting',
+                           'generation': 'g1'}, 0),
+                ('status', {'ok': True, 'generation': 'g1',
+                           'state': 'running', 'driver': 'ready'}, 0),
+                ('request', {'ok': True, 'status': 'accepted',
+                             'sequence': 1}, 0),
+                ('result', {'ok': True, 'status': 'completed',
+                           'sequence': 1,
+                           'response': {'returncode': 1,
+                                        'result': transient,
+                                        'session_continues': True}}, 0),
+                ('request', {'ok': True, 'status': 'accepted',
+                             'sequence': 2}, 0),
+                ('result', {'ok': True, 'status': 'completed',
+                           'sequence': 2,
+                           'response': {'returncode': 0, 'result': fresh,
+                                        'session_continues': True}}, 0),
+                ('request', {'ok': True, 'status': 'accepted',
+                             'sequence': 3}, 0),
+                ('result', {'ok': True, 'status': 'completed',
+                           'sequence': 3,
+                           'response': {'returncode': 0,
+                                        'result': {'ok': True,
+                                                   'completed': 1},
+                                        'session_continues': True}}, 0),
+                ('finish', {'ok': True, 'status': 'finished'}, 0),
+            ], seen)
+        self.assertEqual(rc, 0)
+        self.assertEqual(detail['broker_retries'], 1)
+        self.assertEqual(len(seen), 2)
+        self.assertEqual(seen[0][0]['observation_id'], 'obs1')
+        self.assertEqual(seen[1][0]['observation_id'], 'obs2')
+        self.assertEqual(seen[1][0]['scope'], 'screen')
 
     def test_start_waits_for_running_before_request(self):
         # The relay answers start with `starting` before the driver

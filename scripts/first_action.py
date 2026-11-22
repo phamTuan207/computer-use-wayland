@@ -293,6 +293,88 @@ def _wait_for_task_running(remote_py, generation, timeout_s=30.0):
         time.sleep(0.5)
 
 
+def stamp_actions(actions, meta):
+    """Stamp CB-2 scope/observation_id onto a JSON batch (step 9).
+
+    The agent loop stamps every action with the scope and id of the
+    observation the batch is written against, so desktop_act's
+    binding check can verify the batch against the observation it
+    was grounded on instead of running it on the legacy pixel path.
+    Returns a NEW list; the input is not mutated. A meta without id
+    or scope refuses (fail closed: an unbound batch must not run).
+    An action that already carries scope/observation_id is kept when
+    it matches the meta and refuses when it does not: a stale
+    binding is never silently re-stamped onto this observation.
+    Raises ValueError on any refusal.
+    """
+    if not isinstance(meta, dict) or not meta.get('id'):
+        raise ValueError(
+            'CB-2 stamping refused: observation meta has no id; '
+            'actions cannot be bound to a snapshot')
+    if not meta.get('scope'):
+        raise ValueError(
+            'CB-2 stamping refused: observation meta has no scope; '
+            'actions cannot be bound to a scope')
+    stamped = []
+    for action in actions:
+        if not isinstance(action, dict):
+            raise ValueError(
+                'CB-2 stamping refused: action is not an object: %r'
+                % (action,))
+        scope = action.get('scope')
+        observation_id = action.get('observation_id')
+        if scope is not None and scope != meta['scope']:
+            raise ValueError(
+                'CB-2 stamping refused: action is bound to scope %r, '
+                'not this observation scope %r'
+                % (scope, meta['scope']))
+        if observation_id is not None and observation_id != meta['id']:
+            raise ValueError(
+                'CB-2 stamping refused: action is bound to observation '
+                '%r, not this observation %r'
+                % (observation_id, meta['id']))
+        stamped.append(dict(action, scope=meta['scope'],
+                            observation_id=meta['id']))
+    return stamped
+
+
+def _write_stamped_actions(actions_path, meta, state_dir, token, label):
+    """Read the actions file, stamp it with the meta, and write the
+    stamped copy into the state dir (never in place: the caller's
+    file is untouched). Returns the stamped path as a string. Raises
+    ValueError from stamp_actions or on an unreadable actions file
+    or an unwritable stamped file."""
+    try:
+        with open(actions_path, 'r', encoding='utf-8') as handle:
+            actions = json.load(handle)
+    except (OSError, ValueError) as exc:
+        raise ValueError(
+            'CB-2 stamping refused: actions file unreadable: %s' % exc)
+    if not isinstance(actions, list) or not actions:
+        raise ValueError(
+            'CB-2 stamping refused: actions must be a non-empty JSON '
+            'list')
+    stamped = stamp_actions(actions, meta)
+    path = Path(state_dir) / ('act-now-stamped-%s-%s.json'
+                              % (token, label))
+    try:
+        fd = os.open(str(path), os.O_WRONLY | os.O_CREAT
+                     | os.O_TRUNC | os.O_NOFOLLOW, 0o600)
+        try:
+            raw = (json.dumps(stamped, ensure_ascii=False)
+                   + '\n').encode('utf-8')
+            if os.write(fd, raw) != len(raw):
+                raise RuntimeError('stamped actions write was incomplete')
+            os.fchmod(fd, 0o600)
+        finally:
+            os.close(fd)
+    except OSError as exc:
+        raise ValueError(
+            'CB-2 stamping refused: stamped actions file unavailable: '
+            '%s' % exc)
+    return str(path)
+
+
 def _regions_equal(first, second):
     """True when two observation metas cover the same screen region.
 
@@ -337,19 +419,23 @@ def broker_attempt(observation_path, actions_path, deadline_s,
     evidence (owner, sequences, retries, finish outcome) for the
     envelope; it is never part of stdout.
 
-    Flow: start (with the 300 s queue wait) -> request act (sequence
+    Flow: stamp (CB-2: scope/observation_id from the observation
+    meta into a stamped copy of the actions file, never in place;
+    a meta without id or scope refuses before any broker start)
+    -> start (with the 300 s queue wait) -> request act (sequence
     1) -> result (bounded by deadline_s) -> finish. On a typed
     transient failure (returncode 1 with session_continues true) the
     batch retries ONCE (R1/W1): a broker observe re-captures the same
     scope INSIDE the session, so the session marker updates to the
     fresh observation path, then the act is re-sent with a fresh
-    sequence and the fresh observation, but only when the fresh region
-    equals the original region (see _regions_equal). A timeout never
-    falls back and never replays: the outcome is unknown, finish is
-    still attempted so the session is released, and the caller
-    reports the unconfirmed actions. finish is attempted on every
-    path where a start succeeded, best-effort, so the broker never
-    keeps a task owned by a dead caller.
+    sequence and the fresh observation, re-stamped with the fresh
+    meta, but only when the fresh region equals the original region
+    (see _regions_equal). A timeout never falls back and never
+    replays: the outcome is unknown, finish is still attempted so
+    the session is released, and the caller reports the unconfirmed
+    actions. finish is attempted on every path where a start
+    succeeded, best-effort, so the broker never keeps a task owned
+    by a dead caller.
     """
     start = time.monotonic()
     remote_py = Path(__file__).resolve().parent / 'session_remote.py'
@@ -370,7 +456,18 @@ def broker_attempt(observation_path, actions_path, deadline_s,
     request_path = state_dir / ('act-now-%d-%s.json' % (os.getpid(), token))
     detail['broker_lease'] = str(lease_path)
     started = False
+    stamped_paths = []
     try:
+        # CB-2 (step 9): stamp the batch before any broker start,
+        # so an unstampable meta refuses fast and no session is
+        # started for a batch that cannot run.
+        try:
+            current_actions = _write_stamped_actions(
+                actions_path, meta, state_dir, token, 'initial')
+        except ValueError as exc:
+            out = json.dumps({'ok': False, 'error': str(exc)})
+            return 1, out, '', False, time.monotonic() - start, detail
+        stamped_paths.append(current_actions)
         rc, parsed, err = _broker_cli(
             remote_py, ['start', '--owner', owner, '--lease-file',
                         str(lease_path), '--wait', str(BROKER_WAIT_S)],
@@ -428,7 +525,7 @@ def broker_attempt(observation_path, actions_path, deadline_s,
         result_timed_out = False
         for attempt in range(BROKER_MAX_RETRIES + 1):
             envelope = {'args': ['act', '--observation', current_obs,
-                                 '--actions', str(actions_path)],
+                                 '--actions', current_actions],
                         'stdin': '', 'image_policy': 'always'}
             try:
                 fd = os.open(str(request_path), os.O_WRONLY | os.O_CREAT
@@ -547,6 +644,19 @@ def broker_attempt(observation_path, actions_path, deadline_s,
                 if (not isinstance(fresh_obs, str) or not fresh_obs
                         or not _regions_equal(current_meta, fresh_meta)):
                     break
+                # CB-2: re-stamp the batch with the FRESH meta
+                # before the retry; the original stamps are bound
+                # to the old observation and the binding check
+                # refuses them as stale. A re-stamp failure
+                # abandons the retry and keeps the transient
+                # result.
+                try:
+                    current_actions = _write_stamped_actions(
+                        actions_path, fresh_meta, state_dir, token,
+                        'retry-%d' % attempt)
+                except ValueError:
+                    break
+                stamped_paths.append(current_actions)
                 current_obs = fresh_obs
                 current_meta = fresh_meta
                 detail['broker_retries'] += 1
@@ -565,6 +675,11 @@ def broker_attempt(observation_path, actions_path, deadline_s,
         for path in (lease_path, request_path):
             try:
                 path.unlink()
+            except OSError:
+                pass
+        for path in stamped_paths:
+            try:
+                Path(path).unlink()
             except OSError:
                 pass
 
