@@ -67,6 +67,24 @@ fixture, run order, or checker change):
   desktop verified before run 1. Focus is contended while mei works
   live in Brave on the same workspace (18:20:11 +07: active was
   Brave, not Chromium), so focus retries up to 3 times.
+- New-tab-only (W-F4FIX, rule 18:23): every P1 opens a NEW tab with
+  Ctrl+T as the first action of the navigate act, then navigates
+  THAT tab; no existing tab is ever navigated. The tab is picked by
+  id-diff (URL matches, id not in the before list taken right after
+  dom_start), so a stale fixture tab from an earlier probe can never
+  satisfy the lookup. The navigate retry reuses the new tab (no
+  second Ctrl+T). At the end of the run the operator closes ONLY the
+  tabs this run opened, by their exact tab ids from the summary,
+  verifying after each close that 9223 still answers and every
+  pre-existing tab is still listed; Chromium is never restarted.
+- Pill (W-F4FIX, rule 18:30): this driver runs every probe inside a
+  real computer-use session (cu.py session plus session-driver
+  relay). The session guardian (scripts/cursor_session.py) creates
+  the indicator pill before the driver starts and fails the session
+  outright when the pill cannot appear (hyprglass gate, indicator
+  loss monitoring), so all browser writes inside a probe happen
+  under a visible pill. This is not raw CDP: no probe input runs
+  outside a session.
 - Probe 5 finding (18:20:48 +07, adapter defect, NOT a setup
   failure): the first dom_act's failed assert returns
   {ok:false, completed:0, error:'assertion failed'} from cdp.mjs,
@@ -133,23 +151,38 @@ def scoped(action_json):
     return action_json.rstrip()[:-1] + SCOPE + '}'
 
 
-def p1_click():
+def p1_head(url):
+    """Shared P1 head, new-tab-only (rule 18:23, W-F4FIX).
+
+    The navigate act opens a NEW tab with Ctrl+T first, then Ctrl+L
+    plus type navigates THAT tab; no existing tab is ever navigated.
+    The tab is picked by id-diff (its URL matches and its id was not
+    in the before list), so a stale fixture tab from an earlier probe
+    can never satisfy the lookup. The navigate retry reuses the new
+    tab (no second Ctrl+T)."""
     return (
         'started = dom_start()\n'
         'assert_state(started["ok"], "dom start failed")\n'
+        'before = [t["id"] for t in dom_tabs()]\n'
         'wins = windows()\n'
         'chrome = [w for w in wins if w["class"] == "chromium"][0]\n'
         'obs = observe(window=chrome["address"])\n'
-        'result = act([{"type": "key", "keys": ["ctrl", "l"], "scope": obs["scope"], "observation_id": obs["id"]}, {"type": "type", "text": "' + PICK4_URL + '\\n", "scope": obs["scope"], "observation_id": obs["id"]}], obs)\n'
+        'result = act([{"type": "key", "keys": ["ctrl", "t"], "scope": obs["scope"], "observation_id": obs["id"]}, {"type": "key", "keys": ["ctrl", "l"], "scope": obs["scope"], "observation_id": obs["id"]}, {"type": "type", "text": "' + url + '\\n", "scope": obs["scope"], "observation_id": obs["id"]}], obs)\n'
         'print("navigate act ok", result.get("ok"), "error", result.get("error"))\n'
         'if not result["ok"]:\n'
         '    obs = observe(window=chrome["address"])\n'
-        '    result = act([{"type": "key", "keys": ["ctrl", "l"], "scope": obs["scope"], "observation_id": obs["id"]}, {"type": "type", "text": "' + PICK4_URL + '\\n", "scope": obs["scope"], "observation_id": obs["id"]}], obs)\n'
+        '    result = act([{"type": "key", "keys": ["ctrl", "l"], "scope": obs["scope"], "observation_id": obs["id"]}, {"type": "type", "text": "' + url + '\\n", "scope": obs["scope"], "observation_id": obs["id"]}], obs)\n'
         '    print("navigate retry ok", result.get("ok"), "error", result.get("error"))\n'
         'assert_state(result["ok"], "navigate act failed")\n'
         'tabs = dom_tabs()\n'
-        'tab = [t for t in tabs if t["url"] == "' + PICK4_URL + '"][0]\n'
+        'tab = [t for t in tabs if t["url"] == "' + url + '" and t["id"] not in before][0]\n'
         'print("tab id", tab["id"])\n'
+    )
+
+
+def p1_click():
+    return (
+        p1_head(PICK4_URL) +
         'snap = dom_observe(tab["id"])\n'
         'btn = [e for e in snap["elements"] if e["name"] == "Show result"][0]\n'
         'clicked = dom_act(snap, [' + scoped('{"type": "click", "ref": btn["ref"]}') + ', ' + scoped('{"type": "click", "ref": "bad-ref-mid-list"}') + ', ' + scoped('{"type": "click", "ref": btn["ref"]}') + '])\n'
@@ -159,21 +192,7 @@ def p1_click():
 
 def p1_fill(action_type):
     return (
-        'started = dom_start()\n'
-        'assert_state(started["ok"], "dom start failed")\n'
-        'wins = windows()\n'
-        'chrome = [w for w in wins if w["class"] == "chromium"][0]\n'
-        'obs = observe(window=chrome["address"])\n'
-        'result = act([{"type": "key", "keys": ["ctrl", "l"], "scope": obs["scope"], "observation_id": obs["id"]}, {"type": "type", "text": "' + F01_URL + '\\n", "scope": obs["scope"], "observation_id": obs["id"]}], obs)\n'
-        'print("navigate act ok", result.get("ok"), "error", result.get("error"))\n'
-        'if not result["ok"]:\n'
-        '    obs = observe(window=chrome["address"])\n'
-        '    result = act([{"type": "key", "keys": ["ctrl", "l"], "scope": obs["scope"], "observation_id": obs["id"]}, {"type": "type", "text": "' + F01_URL + '\\n", "scope": obs["scope"], "observation_id": obs["id"]}], obs)\n'
-        '    print("navigate retry ok", result.get("ok"), "error", result.get("error"))\n'
-        'assert_state(result["ok"], "navigate act failed")\n'
-        'tabs = dom_tabs()\n'
-        'tab = [t for t in tabs if t["url"] == "' + F01_URL + '"][0]\n'
-        'print("tab id", tab["id"])\n'
+        p1_head(F01_URL) +
         'snap = dom_observe(tab["id"])\n'
         'typed = [e for e in snap["elements"] if e["role"] in ("textbox", "input")][0]\n'
         'cell = [e for e in snap["elements"] if e["name"] == "A2"][0]\n'
@@ -188,21 +207,7 @@ def p1_fill(action_type):
 
 def p1_assert():
     return (
-        'started = dom_start()\n'
-        'assert_state(started["ok"], "dom start failed")\n'
-        'wins = windows()\n'
-        'chrome = [w for w in wins if w["class"] == "chromium"][0]\n'
-        'obs = observe(window=chrome["address"])\n'
-        'result = act([{"type": "key", "keys": ["ctrl", "l"], "scope": obs["scope"], "observation_id": obs["id"]}, {"type": "type", "text": "' + PICK4_URL + '\\n", "scope": obs["scope"], "observation_id": obs["id"]}], obs)\n'
-        'print("navigate act ok", result.get("ok"), "error", result.get("error"))\n'
-        'if not result["ok"]:\n'
-        '    obs = observe(window=chrome["address"])\n'
-        '    result = act([{"type": "key", "keys": ["ctrl", "l"], "scope": obs["scope"], "observation_id": obs["id"]}, {"type": "type", "text": "' + PICK4_URL + '\\n", "scope": obs["scope"], "observation_id": obs["id"]}], obs)\n'
-        '    print("navigate retry ok", result.get("ok"), "error", result.get("error"))\n'
-        'assert_state(result["ok"], "navigate act failed")\n'
-        'tabs = dom_tabs()\n'
-        'tab = [t for t in tabs if t["url"] == "' + PICK4_URL + '"][0]\n'
-        'print("tab id", tab["id"])\n'
+        p1_head(PICK4_URL) +
         'snap = dom_observe(tab["id"])\n'
         'btn = [e for e in snap["elements"] if e["name"] == "Show result"][0]\n'
         'checked = dom_act(snap, [' + scoped('{"type": "click", "ref": btn["ref"]}') + ', ' + scoped('{"type": "assert", "ref": "bad-ref-mid-list", "text": "pick4-ok"}') + ', ' + scoped('{"type": "click", "ref": btn["ref"]}') + '])\n'
@@ -212,21 +217,7 @@ def p1_assert():
 
 def p1_retry():
     return (
-        'started = dom_start()\n'
-        'assert_state(started["ok"], "dom start failed")\n'
-        'wins = windows()\n'
-        'chrome = [w for w in wins if w["class"] == "chromium"][0]\n'
-        'obs = observe(window=chrome["address"])\n'
-        'result = act([{"type": "key", "keys": ["ctrl", "l"], "scope": obs["scope"], "observation_id": obs["id"]}, {"type": "type", "text": "' + PICK4_URL + '\\n", "scope": obs["scope"], "observation_id": obs["id"]}], obs)\n'
-        'print("navigate act ok", result.get("ok"), "error", result.get("error"))\n'
-        'if not result["ok"]:\n'
-        '    obs = observe(window=chrome["address"])\n'
-        '    result = act([{"type": "key", "keys": ["ctrl", "l"], "scope": obs["scope"], "observation_id": obs["id"]}, {"type": "type", "text": "' + PICK4_URL + '\\n", "scope": obs["scope"], "observation_id": obs["id"]}], obs)\n'
-        '    print("navigate retry ok", result.get("ok"), "error", result.get("error"))\n'
-        'assert_state(result["ok"], "navigate act failed")\n'
-        'tabs = dom_tabs()\n'
-        'tab = [t for t in tabs if t["url"] == "' + PICK4_URL + '"][0]\n'
-        'print("tab id", tab["id"])\n'
+        p1_head(PICK4_URL) +
         'snap = dom_observe(tab["id"])\n'
         'btn = [e for e in snap["elements"] if e["name"] == "Show result"][0]\n'
         'first = dom_act(snap, [' + scoped('{"type": "assert", "selector": "#result", "text": "pick4-ok"}') + '])\n'
