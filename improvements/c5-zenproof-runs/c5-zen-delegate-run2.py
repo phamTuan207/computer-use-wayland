@@ -291,6 +291,20 @@ class Runner:
         self.results['window'] = {
             'address': self.zen_address, 'bounds': self.zen_bounds,
             'workspace': win.get('workspace')}
+        # Driver transfer lives here, not in phase 2: phase 1 already
+        # needs zen-tab.py for the tab list, but run 1 never reached
+        # phase 2 (it aborted at the activewindow gate), so the
+        # driver was never copied to the laptop and run 2 aborted
+        # in phase 1 with "can't open file zen-tab.py". Copy it
+        # before the first tab call.
+        self.ssh('mkdir -p ' + LAPTOP_RUN, 'mkdir run dir', timeout=30)
+        scp_to_laptop(VM_DRIVER, LAPTOP_DRIVER)
+        out, _e, _w = self.ssh('sha256sum ' + LAPTOP_DRIVER,
+                               'driver sha', timeout=30)
+        import hashlib
+        want = hashlib.sha256(VM_DRIVER.read_bytes()).hexdigest()
+        if want not in out:
+            raise RuntimeError('driver sha mismatch after scp')
         tabs = self.tab('list')
         self.results['tabs_before'] = tabs
         for t in tabs['tabs']:
@@ -349,14 +363,6 @@ class Runner:
                 % ('; '.join(verdict['reasons']),))
 
     def phase2(self):
-        self.ssh('mkdir -p ' + LAPTOP_RUN, 'mkdir run dir', timeout=30)
-        scp_to_laptop(VM_DRIVER, LAPTOP_DRIVER)
-        out, _e, _w = self.ssh('sha256sum ' + LAPTOP_DRIVER,
-                               'driver sha', timeout=30)
-        import hashlib
-        want = hashlib.sha256(VM_DRIVER.read_bytes()).hexdigest()
-        if want not in out:
-            raise RuntimeError('driver sha mismatch after scp')
         opened = self.tab('open', timeout=60)
         self.results['open'] = opened
         self.scratch_handle = opened['new_handle']

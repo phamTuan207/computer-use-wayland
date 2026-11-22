@@ -1,0 +1,31 @@
+{
+  "run": 2,
+  "fixture": "file:///home/james/computer-use-wayland/tests/two_vision_fixture.html?clone=zen",
+  "fixture_sha256": "147494cda4c6ae24a51ced03ccdfb3fc5a79a1bbab56dcdfc5afb4f72fba6cbf",
+  "message": "ZEN-DELEGATE-R2-IGNORE-TEST",
+  "intent": "c5-zen-delegate-r2",
+  "model_calls": 0,
+  "program_variant": "set_value",
+  "target": "Clone zen thread",
+  "window": {
+    "address": "0x56307e2771d0",
+    "bounds": [
+      2509,
+      914,
+      1863,
+      1176
+    ],
+    "workspace": {
+      "address": "1",
+      "id": 1,
+      "type": "normal",
+      "name": "1"
+    }
+  },
+  "outcome": "error",
+  "error": "zen-tab list failed rc=2:  python3: can't open file '/home/james/c5-zenproof-run/zen-tab.py': [Errno 2] No such file or directory",
+  "cleanup": {
+    "skipped": true
+  },
+  "wall_ms": 2722.1
+}

@@ -101,7 +101,23 @@ Report goes to COORD-CLICK-9, not directly to Pham Tuan.
   fixture shas match. Session-path pill showed in 6 sessions at
   18:43 with the old code (W-F4FIX); pill will be verified live
   with grim during this run, stop at once if absent.
-- (log continues below as the run proceeds)
+- 20:00:37 +07, T+5m: run 2 attempt 1 ABORTED in phase 1, wall
+  2.7s, outcome error, no tab opened, no input sent. Error:
+  "zen-tab list failed rc=2: python3: can't open file
+  '/home/james/c5-zenproof-run/zen-tab.py': No such file or
+  directory". Cause: phase 1 calls tab('list') but the driver scp
+  only happens in phase 2; run 1 never reached phase 2 (it
+  aborted at the activewindow gate), so the driver was never on
+  the laptop. Positive evidence from the abort: P1.1 PASSED this
+  time (Zen 0x56307e2771d0 active on ws1, bounds [2509, 914, 1863,
+  1176], recorded in run-2-attempt1.json), so the R13 focus
+  switch is effective. Fix: move the driver transfer (mkdir plus
+  scp plus sha verify) from phase 2 to phase 1, before the first
+  tab call. This is a run-kit ordering fix, not a change to the
+  delegate or the proof program. py_compile OK. Attempt 1 JSON
+  preserved as improvements/c5-zenproof-runs/run-2-attempt1.json.
+  Retry as run 2 attempt 2 with the same fresh intent/message
+  (nothing was sent, no ledger entry exists).
 
 ## 2. Phase 0 gates (VM, no live touch)
 
@@ -134,9 +150,40 @@ Report goes to COORD-CLICK-9, not directly to Pham Tuan.
   the landed R14 fix, not a change to the delegate or the proof
   program.
 
-## 3. Phase 1 laptop as-found checks
+## 3. Phase 1 laptop as-found checks (run 2 attempt 1, read-only + focus)
 
-(to be filled)
+- Window map 19:57 +07 (before focus): Zen 0x56307e2771d0 ws1
+  'Muse - Zen Browser'; chromium 0x56307e202df0 ws2 'Pick 4 DOM
+  fixture - Chromium' (ACTIVE, leftover window, no driver
+  behind it); chromium 0x56307e7d9bb0 ws2 'Chat - mochi -
+  Chromium'; brave-origin 0x56307e4c2f90 ws2 'Muse - Brave
+  Origin'; herdrdrop special.
+- Liveness 19:57 +07: ps shows NO session-driver and NO
+  session_remote client (start/request/result/finish); relay
+  serve PID 70985 up, status state idle, owner null, driver
+  idle, guardian idle, recovery none, next_sequence 1. Leases
+  all stale (16:04 to 16:31, step 9 runs). P1.5 verdict:
+  live=False. No live lane holds the machine. R13 condition
+  (lanes idle) met in fact, with this task as the coordinator
+  authorization to run now as the sole live runner.
+- Geckodriver: /tmp/geckodriver missing (expected, R14 moved
+  the default); ~/.local/bin/geckodriver present, 6029440 bytes,
+  18:10; zen_dom resolves GECKODRIVER to
+  /home/james/.local/bin/geckodriver in both laptop checkouts.
+- Fixture sha on the laptop (both checkouts) matches the
+  manifest hash.
+- Focus switch 19:59:42 +07: `hyprctl dispatch
+  "hl.dsp.focus({ workspace = 1 })"` returned ok; activewindow
+  verified Zen 0x56307e2771d0 ws1 'Chat - Muse - Zen Browser'.
+  No tab of Pham Tuan navigated or closed; only the visible
+  workspace changed ws2 to ws1 while no lane was live.
+- Baseline grim 19:59 +07: /tmp/w-zenproof2-baseline.png,
+  768335 bytes (to be reviewed with the P9 evidence).
+- Runner commit 4f31371 pushed and ls-remote verified before
+  the run. Note: at commit time HEAD had moved to c6e5a2f
+  (Council 1 review of W-PILLFIX, pushed by another lane after
+  my fetch); my commit landed on top of it cleanly, no content
+  lost.
 
 ## 4. Pill verification
 
