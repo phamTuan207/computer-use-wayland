@@ -448,4 +448,7 @@ write 00:50-00:56 +07.
 
 ## 5. Commit record (this reviewer's own commit, no push)
 
-(TODO: fill in after commit.)
+- This log file: improvements/mochi-b2-6-rereview-log.md, commit
+  dd322652d05a28eda6f7bca87d4af5e52ddef281 (dd32265). The hash
+  line was filled by a follow-up commit on this same file. No
+  push was made (per the brief).
