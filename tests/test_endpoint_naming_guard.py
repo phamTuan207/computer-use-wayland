@@ -74,6 +74,10 @@ class TestCorrectResolver(unittest.TestCase):
             with self.assertRaises(EndpointAmbiguityError):
                 resolve_endpoint(browser, host, 9223, owner)
 
+    def test_uppercase_localhost_gets_the_localhost_message(self):
+        with self.assertRaisesRegex(EndpointAmbiguityError, 'localhost'):
+            resolve_endpoint('brave', 'LOCALHOST', 9223, 'clone1')
+
     def test_swapped_loopback_family_is_rejected(self):
         # The P3 trap in spec form: brave on IPv4 is Chromium, and
         # chromium on IPv6 is Brave. Both must refuse, not repair.
@@ -160,6 +164,34 @@ class TestParseEndpointRef(unittest.TestCase):
         with self.assertRaises(EndpointAmbiguityError):
             parse_endpoint_ref('ws://[::1]:9223', 'brave')
 
+    def test_userinfo_is_rejected(self):
+        for bad in ('http://user:pass@[::1]:9223',
+                    'http://user@[::1]:9223'):
+            with self.assertRaises(EndpointAmbiguityError):
+                parse_endpoint_ref(bad, 'brave')
+
+    def test_path_query_fragment_are_rejected(self):
+        for bad in ('http://[::1]:9223/', 'http://[::1]:9223/json/list',
+                    'http://[::1]:9223?x=1', 'http://[::1]:9223#frag'):
+            with self.assertRaises(EndpointAmbiguityError):
+                parse_endpoint_ref(bad, 'brave')
+
+    def test_unhashable_browser_raises_ambiguity_not_type_error(self):
+        with self.assertRaises(EndpointAmbiguityError):
+            parse_endpoint_ref('http://[::1]:9223', ['brave'])
+        with self.assertRaises(EndpointAmbiguityError):
+            parse_endpoint_ref('http://[::1]:9223', {'brave': 1})
+
+    def test_out_of_range_port_says_out_of_range(self):
+        with self.assertRaisesRegex(EndpointAmbiguityError,
+                                    'out of range'):
+            parse_endpoint_ref('http://127.0.0.1:99999', 'chromium')
+
+    def test_non_numeric_port_says_not_a_number(self):
+        with self.assertRaisesRegex(EndpointAmbiguityError,
+                                    'not a number'):
+            parse_endpoint_ref('http://127.0.0.1:abc', 'chromium')
+
     def test_non_loopback_url_is_rejected(self):
         with self.assertRaises(EndpointAmbiguityError):
             parse_endpoint_ref('http://192.168.1.13:9223', 'brave')
@@ -182,17 +214,21 @@ class TestNaiveResolverTrap(unittest.TestCase):
         self.assertEqual(got, CHROMIUM_URL)
         self.assertNotEqual(got, BRAVE_URL)
 
-    def test_localhost_resolves_to_ipv4_while_machine_prefers_ipv6(self):
-        # The naive resolver returns 127.0.0.1 for localhost, but
-        # this machine's resolver lists ::1 first, so a real client
-        # connecting to localhost:9223 reaches Brave, not Chromium.
-        # localhost names no single browser; the two answers disagree.
+    def test_localhost_answer_depends_on_the_resolver(self):
+        # Order-independent: localhost maps to two families on every
+        # machine (both answers are present here), and the naive
+        # resolver picks one of them. On a machine with IPv4-first
+        # resolution the naive answer would coincide with the OS
+        # answer by luck, which is exactly why localhost must be
+        # banned rather than resolved: the answer depends on the
+        # resolver, not on the reference.
+        answers = {a[4][0] for a in socket.getaddrinfo(
+            'localhost', 9223, 0, socket.SOCK_STREAM)}
+        self.assertIn('::1', answers)
+        self.assertIn('127.0.0.1', answers)
         got = naive_resolve('localhost:9223')
-        first = socket.getaddrinfo('localhost', 9223, 0,
-                                   socket.SOCK_STREAM)[0][4][0]
         self.assertEqual(got, 'http://127.0.0.1:9223')
-        self.assertEqual(first, '::1')
-        self.assertNotEqual(got, 'http://[%s]:9223' % first)
+        self.assertNotEqual(got, 'http://[::1]:9223')
 
     def test_naive_ignores_the_browser_name(self):
         self.assertEqual(naive_resolve('9223', browser='brave'),

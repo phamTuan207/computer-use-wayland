@@ -77,7 +77,7 @@ def resolve_endpoint(browser, host, port, owner):
             '/json/version evidence' % (browser,))
     if not isinstance(host, str) or not host:
         raise EndpointAmbiguityError('host literal is required')
-    if host == 'localhost':
+    if host.lower() == 'localhost':
         raise EndpointAmbiguityError(
             'localhost is ambiguous: it maps to both 127.0.0.1 and '
             '::1, so it names no single browser')
@@ -104,14 +104,22 @@ def parse_endpoint_ref(text, browser):
     """Resolve a free-form endpoint reference for one named browser.
 
     The reference must be a full http URL with an explicit IP-literal
-    host and an explicit port. Anything less is rejected: a bare port
-    ('9223'), a host without a scheme, 'localhost' in any form, and a
-    URL without a port. The browser argument is required because a
+    host and an explicit port, and nothing else: no userinfo, no path,
+    no query, no fragment. Anything less, or anything more, is
+    rejected: a bare port ('9223'), a host without a scheme,
+    'localhost' in any form, a URL without a port, and a URL carrying
+    credentials or a path. The browser argument is required because a
     URL alone does not name a browser; the parsed host and port are
-    checked against the registry row for that browser.
+    checked against the registry row for that browser. The browser
+    is validated before any registry lookup, so an unhashable browser
+    raises EndpointAmbiguityError like every other bad spec.
     """
     if not isinstance(text, str) or not text.strip():
         raise EndpointAmbiguityError('endpoint reference is required')
+    if not isinstance(browser, str) or browser not in KNOWN_ENDPOINTS:
+        raise EndpointAmbiguityError(
+            'browser name is required and must be a known browser: '
+            'register it first, with ss plus /json/version evidence')
     text = text.strip()
     if '://' not in text:
         raise EndpointAmbiguityError(
@@ -122,6 +130,22 @@ def parse_endpoint_ref(text, browser):
     if url.scheme != 'http':
         raise EndpointAmbiguityError(
             'endpoint scheme must be http, got %r' % (url.scheme,))
+    if url.username is not None or url.password is not None:
+        raise EndpointAmbiguityError(
+            'endpoint reference %r carries credentials: an endpoint '
+            'reference is a bare host and port, never a login' % (text,))
+    if url.path not in ('',):
+        raise EndpointAmbiguityError(
+            'endpoint reference %r carries a path: an endpoint '
+            'reference is a bare host and port' % (text,))
+    if url.query:
+        raise EndpointAmbiguityError(
+            'endpoint reference %r carries a query: an endpoint '
+            'reference is a bare host and port' % (text,))
+    if url.fragment:
+        raise EndpointAmbiguityError(
+            'endpoint reference %r carries a fragment: an endpoint '
+            'reference is a bare host and port' % (text,))
     if not url.hostname:
         raise EndpointAmbiguityError(
             'endpoint reference %r has no host' % (text,))
@@ -129,27 +153,61 @@ def parse_endpoint_ref(text, browser):
         raise EndpointAmbiguityError(
             'localhost is ambiguous: it maps to both 127.0.0.1 and '
             '::1, so it names no single browser')
-    try:
-        port = url.port
-    except ValueError:
-        raise EndpointAmbiguityError(
-            'endpoint port is not a number') from None
-    if port is None:
+    port = _port_from_url(url, text)
+    return resolve_endpoint(browser, url.hostname, port,
+                            KNOWN_ENDPOINTS[browser]['owner'])
+
+
+def _port_from_url(url, text):
+    """Extract the port from a parsed URL, with an exact error.
+
+    url.port raises one ValueError for both a non-numeric port and
+    an out-of-range port; this separates the two so the message
+    states which one it is. A missing port is its own error: no
+    silent default, 9223 is two browsers.
+    """
+    import re
+    netloc = url.netloc
+    if netloc.startswith('['):
+        rest = netloc.split(']:', 1)
+        port_text = rest[1] if len(rest) == 2 else None
+    else:
+        port_text = netloc.rsplit(':', 1)[1] if ':' in netloc else None
+    if port_text is None or port_text == '':
         raise EndpointAmbiguityError(
             'endpoint port is required: no silent default, 9223 is '
             'two browsers')
-    return resolve_endpoint(browser, url.hostname, port,
-                            KNOWN_ENDPOINTS.get(browser, {}).get('owner'))
+    if not re.fullmatch(r'[0-9]+', port_text):
+        raise EndpointAmbiguityError(
+            'endpoint port is not a number: %r' % (port_text,))
+    port = int(port_text)
+    if not 1 <= port <= 65535:
+        raise EndpointAmbiguityError(
+            'endpoint port out of range: %d' % (port,))
+    return port
 
 
 def naive_resolve(text, browser=None):
-    """The OLD ambiguous behavior, kept only to demonstrate the trap.
+    """The OLD defaults, kept only to demonstrate the trap.
 
-    This mimics what the pre-fix code did: a bare port or a missing
-    host defaults to 127.0.0.1:9223, 'localhost' is accepted as-is,
-    and the browser name is ignored. DO NOT USE: for a Brave intent
-    it returns the Chromium endpoint. The guard test asserts exactly
-    that, so a harness wired to this behavior fails the guard.
+    This mimics the pre-fix defaults: a bare port or a missing host
+    defaults to 127.0.0.1:9223, a missing port defaults to 9223, and
+    the browser name is ignored. DO NOT USE: for a Brave intent it
+    returns the Chromium endpoint.
+
+    One leg is NOT the old behavior and is labelled as such: the
+    localhost leg. The real pre-fix stack passed a localhost
+    endpoint unchanged to cdp.mjs, whose fetch resolves it through
+    the OS (::1 first on this VM, i.e. Brave), so the old stack's
+    real localhost answer was Brave, not Chromium. This function
+    instead rewrites bare 'localhost:9223' to 127.0.0.1:9223, which
+    models a hypothetical hardcoding resolver, not the old stack.
+    The rule (localhost is ambiguous) does not depend on which
+    answer is right: the OS resolver and a hardcoded default can
+    disagree, and both real clients fall back to the other family
+    when the first refuses, so localhost means "whichever browser
+    is up", not one browser. See docs/clone2-endpoint-naming-rule-20261122.md
+    section 3 for the live experiment.
     """
     import urllib.parse
     if text is None:
