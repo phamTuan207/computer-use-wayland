@@ -1,0 +1,234 @@
+{
+  "run": 5,
+  "dry_run": false,
+  "activate": false,
+  "message_prefix": "C5-B1",
+  "program_variant": "set_value",
+  "mux_baseline_ms": 1287.7,
+  "browsers": {
+    "chromium": {
+      "browser": "chromium",
+      "label": "clone2",
+      "endpoint": "http://127.0.0.1:9223",
+      "tab_title": "Chat — clone2",
+      "target_id": "D1374C7C994D3DA72678E20C7FD099A0",
+      "observe": {
+        "elements": 80,
+        "truncated": true,
+        "wall_ms": 2892.2,
+        "composer_present": true
+      },
+      "routing": {
+        "source": "dom-chromium",
+        "target_kind": "chromium-content",
+        "fell_through": [
+          {
+            "source": "dom-chromium",
+            "reason": "truncated inventory"
+          }
+        ],
+        "reason": "relaxed gate: truncated inventory (80 elements), send target covered",
+        "coverage": {
+          "elements": 80,
+          "truncated": true
+        }
+      },
+      "routing_relaxed": true,
+      "outcome": "sent",
+      "message": "C5-B1-R5-CHROMIUM-IGNORE-TEST",
+      "model_calls": 0,
+      "program_variant": "set_value",
+      "pre_count": {
+        "count": 0,
+        "items": 50,
+        "ms": 1401.5
+      },
+      "program": {
+        "ok": true,
+        "api_calls": 2,
+        "elapsed_ms": 104.563,
+        "error": null,
+        "error_type": null,
+        "log": [
+          "dom_act ok True completed 2 ms 8 error None"
+        ],
+        "wall_ms": 2067.6
+      },
+      "focus_enter": {
+        "ok": true,
+        "focus": {
+          "focused": true,
+          "tag": "TEXTAREA"
+        },
+        "enter": {
+          "ms": 20,
+          "ok": true
+        },
+        "ms": 1317.5,
+        "rc": 0
+      },
+      "cb1": {
+        "input_sent": true,
+        "target_received": true,
+        "verified": true,
+        "completed": 2
+      },
+      "v12": {
+        "found": true,
+        "items": 52,
+        "role": "user",
+        "side": "user",
+        "textLen": 33,
+        "attempts": 1,
+        "elapsed_ms": 2,
+        "ms": 1425.9
+      },
+      "wall_ms": 6213.3
+    }
+  },
+  "wall_ms": 19094.0,
+  "delayed_count": {
+    "chromium": {
+      "count": 1,
+      "items": 52,
+      "ms": 851.2
+    }
+  },
+  "p9": {
+    "chromium": {
+      "ok": true,
+      "png": "improvements/s2-flip-b1-runs/p9-run5-chromium.png",
+      "wall_ms": 2926.4
+    }
+  },
+  "spans": [
+    {
+      "phase": "setup-lease",
+      "wall_ms": 1422.2,
+      "laptop_ms": null
+    },
+    {
+      "phase": "broker-start",
+      "wall_ms": 1569.2,
+      "laptop_ms": null
+    },
+    {
+      "phase": "tabs-chromium",
+      "wall_ms": 2807.9,
+      "laptop_ms": null
+    },
+    {
+      "phase": "observe-chromium",
+      "wall_ms": 2892.2,
+      "laptop_ms": null
+    },
+    {
+      "phase": "broker-finish",
+      "wall_ms": 1612.6,
+      "laptop_ms": null
+    },
+    {
+      "phase": "act-chromium",
+      "wall_ms": 2067.6,
+      "laptop_ms": 104.563
+    },
+    {
+      "phase": "focus-enter",
+      "wall_ms": 1317.5,
+      "laptop_ms": null
+    },
+    {
+      "phase": "verify-chromium",
+      "wall_ms": 1425.9,
+      "laptop_ms": 1425.9
+    }
+  ],
+  "ssh_calls": [
+    {
+      "label": "mux-probe",
+      "wall_ms": 1212.8,
+      "rc": 0
+    },
+    {
+      "label": "mux-probe",
+      "wall_ms": 1362.6,
+      "rc": 0
+    },
+    {
+      "label": "lease-cleanup",
+      "wall_ms": 1422.2,
+      "rc": 0
+    },
+    {
+      "label": "broker-start",
+      "wall_ms": 1569.2,
+      "rc": 0
+    },
+    {
+      "label": "broker-request-1",
+      "wall_ms": 1310.1,
+      "rc": 0
+    },
+    {
+      "label": "broker-result-1",
+      "wall_ms": 1497.8,
+      "rc": 0
+    },
+    {
+      "label": "broker-request-2",
+      "wall_ms": 1487.7,
+      "rc": 0
+    },
+    {
+      "label": "broker-result-2",
+      "wall_ms": 1404.5,
+      "rc": 0
+    },
+    {
+      "label": "broker-finish",
+      "wall_ms": 1612.6,
+      "rc": 0
+    },
+    {
+      "label": "count-check",
+      "wall_ms": 1401.5,
+      "rc": 0
+    },
+    {
+      "label": "oneshot-code-exec",
+      "wall_ms": 2067.5,
+      "rc": 0
+    },
+    {
+      "label": "focus-enter",
+      "wall_ms": 1317.5,
+      "rc": 0
+    },
+    {
+      "label": "v12-check",
+      "wall_ms": 1425.8,
+      "rc": 0
+    },
+    {
+      "label": "count-check",
+      "wall_ms": 851.2,
+      "rc": 0
+    },
+    {
+      "label": "p9-capture",
+      "wall_ms": 2926.3,
+      "rc": 0
+    }
+  ],
+  "phase_split_ms": {
+    "model": 0,
+    "ssh": 14840.1,
+    "broker": 606.4,
+    "observe": 549.3,
+    "act": 104.6,
+    "verify": 138.2,
+    "setup": 134.5,
+    "residual": 2721.0
+  },
+  "model_calls": 0
+}

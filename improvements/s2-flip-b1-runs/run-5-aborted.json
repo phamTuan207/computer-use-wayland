@@ -1,0 +1,135 @@
+{
+  "run": 5,
+  "dry_run": false,
+  "activate": false,
+  "message_prefix": "C5-B1",
+  "program_variant": "set_value",
+  "mux_baseline_ms": 1267.9,
+  "browsers": {
+    "chromium": {
+      "browser": "chromium",
+      "label": "clone2",
+      "endpoint": "http://127.0.0.1:9223",
+      "tab_title": "Chat — clone2",
+      "target_id": "D1374C7C994D3DA72678E20C7FD099A0",
+      "observe": {
+        "elements": 80,
+        "truncated": true,
+        "wall_ms": 3382.2
+      },
+      "routing": {
+        "source": "screenshot",
+        "target_kind": "chromium-content",
+        "fell_through": [
+          {
+            "source": "dom-chromium",
+            "reason": "truncated inventory"
+          }
+        ],
+        "reason": "fail-closed fallback: no backend returned complete coverage",
+        "coverage": null
+      },
+      "outcome": "aborted-routing",
+      "error": "router fell through to screenshot: fail-closed fallback: no backend returned complete coverage"
+    }
+  },
+  "wall_ms": 13734.2,
+  "delayed_count": {},
+  "p9": {
+    "chromium": {
+      "ok": true,
+      "png": "improvements/s2-flip-b1-runs/p9-run5-chromium.png",
+      "wall_ms": 9118.9
+    }
+  },
+  "spans": [
+    {
+      "phase": "setup-lease",
+      "wall_ms": 1552.7,
+      "laptop_ms": null
+    },
+    {
+      "phase": "broker-start",
+      "wall_ms": 2012.4,
+      "laptop_ms": null
+    },
+    {
+      "phase": "tabs-chromium",
+      "wall_ms": 2696.0,
+      "laptop_ms": null
+    },
+    {
+      "phase": "observe-chromium",
+      "wall_ms": 3382.2,
+      "laptop_ms": null
+    },
+    {
+      "phase": "broker-finish",
+      "wall_ms": 1553.9,
+      "laptop_ms": null
+    }
+  ],
+  "ssh_calls": [
+    {
+      "label": "mux-probe",
+      "wall_ms": 1186.0,
+      "rc": 0
+    },
+    {
+      "label": "mux-probe",
+      "wall_ms": 1349.9,
+      "rc": 0
+    },
+    {
+      "label": "lease-cleanup",
+      "wall_ms": 1552.7,
+      "rc": 0
+    },
+    {
+      "label": "broker-start",
+      "wall_ms": 2012.4,
+      "rc": 0
+    },
+    {
+      "label": "broker-request-1",
+      "wall_ms": 1315.5,
+      "rc": 0
+    },
+    {
+      "label": "broker-result-1",
+      "wall_ms": 1380.5,
+      "rc": 0
+    },
+    {
+      "label": "broker-request-2",
+      "wall_ms": 1431.1,
+      "rc": 0
+    },
+    {
+      "label": "broker-result-2",
+      "wall_ms": 1951.1,
+      "rc": 0
+    },
+    {
+      "label": "broker-finish",
+      "wall_ms": 1553.9,
+      "rc": 0
+    },
+    {
+      "label": "p9-capture",
+      "wall_ms": 9118.9,
+      "rc": 0
+    }
+  ],
+  "phase_split_ms": {
+    "model": 0,
+    "ssh": 11411.3,
+    "broker": 1030.5,
+    "observe": 1006.5,
+    "act": 0.0,
+    "verify": 0.0,
+    "setup": 284.8,
+    "residual": 1.2
+  },
+  "model_calls": 0
+}

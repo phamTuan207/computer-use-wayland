@@ -1,0 +1,208 @@
+{
+  "run": 5,
+  "dry_run": false,
+  "activate": true,
+  "message_prefix": "C5-A1",
+  "mux_baseline_ms": 1253.1,
+  "browsers": {
+    "chromium": {
+      "browser": "chromium",
+      "label": "clone2",
+      "endpoint": "http://127.0.0.1:9223",
+      "tab_title": "Chat — clone2",
+      "target_id": "D1374C7C994D3DA72678E20C7FD099A0",
+      "observe": {
+        "elements": 78,
+        "truncated": false,
+        "wall_ms": 2875.0
+      },
+      "routing": {
+        "source": "dom-chromium",
+        "target_kind": "chromium-content",
+        "fell_through": [],
+        "reason": "complete coverage: 78 elements, not truncated",
+        "coverage": {
+          "elements": 78,
+          "truncated": false
+        }
+      },
+      "outcome": "failed-unverified",
+      "message": "C5-A1-R5-CHROMIUM-IGNORE-TEST",
+      "model_calls": 0,
+      "activation": {
+        "ok": true,
+        "before": {
+          "ms": 2,
+          "value": {
+            "visibility": "visible",
+            "hasFocus": true
+          }
+        },
+        "activate": {},
+        "bringToFront": {},
+        "after": {
+          "ms": 0,
+          "value": {
+            "visibility": "visible",
+            "hasFocus": true
+          }
+        },
+        "ms": 1224.2,
+        "rc": 0
+      },
+      "program": {
+        "ok": false,
+        "api_calls": 2,
+        "elapsed_ms": 5095.515,
+        "error": "assert failed: dom_act failed",
+        "error_type": "assert_failed",
+        "log": [
+          "dom_act ok False completed 0 ms 5004 error CDP timeout: Input.dispatchMouseEvent"
+        ],
+        "wall_ms": 7143.2
+      },
+      "cb1": {
+        "input_sent": false,
+        "target_received": false,
+        "verified": false,
+        "completed": 0
+      },
+      "v12": {
+        "found": false,
+        "items": 41,
+        "attempts": 40,
+        "elapsed_ms": 10052,
+        "ms": 11374.5
+      },
+      "wall_ms": 19742.5
+    }
+  },
+  "wall_ms": 32549.9,
+  "p9": {
+    "chromium": {
+      "ok": true,
+      "png": "improvements/s2-flip-a1-runs/p9-run5-chromium.png",
+      "wall_ms": 1764.5
+    }
+  },
+  "spans": [
+    {
+      "phase": "setup-lease",
+      "wall_ms": 1397.3,
+      "laptop_ms": null
+    },
+    {
+      "phase": "broker-start",
+      "wall_ms": 1561.5,
+      "laptop_ms": null
+    },
+    {
+      "phase": "tabs-chromium",
+      "wall_ms": 2810.7,
+      "laptop_ms": null
+    },
+    {
+      "phase": "observe-chromium",
+      "wall_ms": 2875.0,
+      "laptop_ms": null
+    },
+    {
+      "phase": "broker-finish",
+      "wall_ms": 1655.9,
+      "laptop_ms": null
+    },
+    {
+      "phase": "activate",
+      "wall_ms": 1224.2,
+      "laptop_ms": null
+    },
+    {
+      "phase": "act-chromium",
+      "wall_ms": 7143.2,
+      "laptop_ms": 5095.515
+    },
+    {
+      "phase": "verify-chromium",
+      "wall_ms": 11374.5,
+      "laptop_ms": 11374.5
+    }
+  ],
+  "ssh_calls": [
+    {
+      "label": "mux-probe",
+      "wall_ms": 1100.2,
+      "rc": 0
+    },
+    {
+      "label": "mux-probe",
+      "wall_ms": 1406.0,
+      "rc": 0
+    },
+    {
+      "label": "lease-cleanup",
+      "wall_ms": 1397.3,
+      "rc": 0
+    },
+    {
+      "label": "broker-start",
+      "wall_ms": 1561.5,
+      "rc": 0
+    },
+    {
+      "label": "broker-request-1",
+      "wall_ms": 1287.8,
+      "rc": 0
+    },
+    {
+      "label": "broker-result-1",
+      "wall_ms": 1522.9,
+      "rc": 0
+    },
+    {
+      "label": "broker-request-2",
+      "wall_ms": 1419.8,
+      "rc": 0
+    },
+    {
+      "label": "broker-result-2",
+      "wall_ms": 1455.2,
+      "rc": 0
+    },
+    {
+      "label": "broker-finish",
+      "wall_ms": 1655.9,
+      "rc": 0
+    },
+    {
+      "label": "activate",
+      "wall_ms": 1224.2,
+      "rc": 0
+    },
+    {
+      "label": "oneshot-code-exec",
+      "wall_ms": 7143.2,
+      "rc": 0
+    },
+    {
+      "label": "v12-check",
+      "wall_ms": 11374.4,
+      "rc": 0
+    },
+    {
+      "label": "p9-capture",
+      "wall_ms": 1764.5,
+      "rc": 0
+    }
+  ],
+  "phase_split_ms": {
+    "model": 0,
+    "ssh": 15802.8,
+    "broker": 711.2,
+    "observe": 673.3,
+    "act": 5095.5,
+    "verify": 10121.4,
+    "setup": 144.2,
+    "residual": 1.4
+  },
+  "model_calls": 0
+}

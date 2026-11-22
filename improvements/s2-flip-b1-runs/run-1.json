@@ -1,0 +1,227 @@
+{
+  "run": 1,
+  "dry_run": false,
+  "activate": false,
+  "message_prefix": "C5-B1",
+  "program_variant": "set_value",
+  "mux_baseline_ms": 1102.3,
+  "browsers": {
+    "chromium": {
+      "browser": "chromium",
+      "label": "clone2",
+      "endpoint": "http://127.0.0.1:9223",
+      "tab_title": "Chat — clone2",
+      "target_id": "D1374C7C994D3DA72678E20C7FD099A0",
+      "observe": {
+        "elements": 78,
+        "truncated": false,
+        "wall_ms": 2917.0
+      },
+      "routing": {
+        "source": "dom-chromium",
+        "target_kind": "chromium-content",
+        "fell_through": [],
+        "reason": "complete coverage: 78 elements, not truncated",
+        "coverage": {
+          "elements": 78,
+          "truncated": false
+        }
+      },
+      "outcome": "sent",
+      "message": "C5-B1-R1-CHROMIUM-IGNORE-TEST",
+      "model_calls": 0,
+      "program_variant": "set_value",
+      "pre_count": {
+        "count": 0,
+        "items": 41,
+        "ms": 1455.6
+      },
+      "program": {
+        "ok": true,
+        "api_calls": 2,
+        "elapsed_ms": 97.656,
+        "error": null,
+        "error_type": null,
+        "log": [
+          "dom_act ok True completed 2 ms 8 error None"
+        ],
+        "wall_ms": 2107.1
+      },
+      "focus_enter": {
+        "ok": true,
+        "focus": {
+          "focused": true,
+          "tag": "TEXTAREA"
+        },
+        "enter": {
+          "ms": 23,
+          "ok": true
+        },
+        "ms": 1280.1,
+        "rc": 0
+      },
+      "cb1": {
+        "input_sent": true,
+        "target_received": true,
+        "verified": true,
+        "completed": 2
+      },
+      "v12": {
+        "found": true,
+        "items": 44,
+        "role": "user",
+        "side": "user",
+        "textLen": 33,
+        "attempts": 1,
+        "elapsed_ms": 2,
+        "ms": 1373.1
+      },
+      "wall_ms": 6216.7
+    }
+  },
+  "wall_ms": 18477.4,
+  "delayed_count": {
+    "chromium": {
+      "count": 1,
+      "items": 44,
+      "ms": 827.3
+    }
+  },
+  "p9": {
+    "chromium": {
+      "ok": true,
+      "png": "improvements/s2-flip-b1-runs/p9-run1-chromium.png",
+      "wall_ms": 3637.2
+    }
+  },
+  "spans": [
+    {
+      "phase": "setup-lease",
+      "wall_ms": 1354.5,
+      "laptop_ms": null
+    },
+    {
+      "phase": "broker-start",
+      "wall_ms": 1561.0,
+      "laptop_ms": null
+    },
+    {
+      "phase": "tabs-chromium",
+      "wall_ms": 2658.8,
+      "laptop_ms": null
+    },
+    {
+      "phase": "observe-chromium",
+      "wall_ms": 2917.0,
+      "laptop_ms": null
+    },
+    {
+      "phase": "broker-finish",
+      "wall_ms": 1563.7,
+      "laptop_ms": null
+    },
+    {
+      "phase": "act-chromium",
+      "wall_ms": 2107.1,
+      "laptop_ms": 97.656
+    },
+    {
+      "phase": "focus-enter",
+      "wall_ms": 1280.1,
+      "laptop_ms": null
+    },
+    {
+      "phase": "verify-chromium",
+      "wall_ms": 1373.1,
+      "laptop_ms": 1373.1
+    }
+  ],
+  "ssh_calls": [
+    {
+      "label": "mux-probe",
+      "wall_ms": 733.0,
+      "rc": 0
+    },
+    {
+      "label": "mux-probe",
+      "wall_ms": 1471.5,
+      "rc": 0
+    },
+    {
+      "label": "lease-cleanup",
+      "wall_ms": 1354.5,
+      "rc": 0
+    },
+    {
+      "label": "broker-start",
+      "wall_ms": 1561.0,
+      "rc": 0
+    },
+    {
+      "label": "broker-request-1",
+      "wall_ms": 1270.1,
+      "rc": 0
+    },
+    {
+      "label": "broker-result-1",
+      "wall_ms": 1388.7,
+      "rc": 0
+    },
+    {
+      "label": "broker-request-2",
+      "wall_ms": 1411.9,
+      "rc": 0
+    },
+    {
+      "label": "broker-result-2",
+      "wall_ms": 1505.1,
+      "rc": 0
+    },
+    {
+      "label": "broker-finish",
+      "wall_ms": 1563.7,
+      "rc": 0
+    },
+    {
+      "label": "count-check",
+      "wall_ms": 1455.6,
+      "rc": 0
+    },
+    {
+      "label": "oneshot-code-exec",
+      "wall_ms": 2107.0,
+      "rc": 0
+    },
+    {
+      "label": "focus-enter",
+      "wall_ms": 1280.1,
+      "rc": 0
+    },
+    {
+      "label": "v12-check",
+      "wall_ms": 1373.1,
+      "rc": 0
+    },
+    {
+      "label": "count-check",
+      "wall_ms": 827.3,
+      "rc": 0
+    },
+    {
+      "label": "p9-capture",
+      "wall_ms": 3637.1,
+      "rc": 0
+    }
+  ],
+  "phase_split_ms": {
+    "model": 0,
+    "ssh": 13032.0,
+    "broker": 920.2,
+    "observe": 1166.8,
+    "act": 97.7,
+    "verify": 270.8,
+    "setup": 252.2,
+    "residual": 2737.7
+  },
+  "model_calls": 0
+}
