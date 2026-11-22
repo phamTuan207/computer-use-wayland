@@ -110,6 +110,18 @@ per action. Re-observe after each batch of edits as the spec requires.
 2. Template rules:
    - Start the managed browser, look up its window, observe it, navigate
      with one desktop act (Ctrl+L, type the URL, Enter), observe again.
+   - Stamp every act and every dom_act action with scope plus
+     observation_id, taken from the fresh observe or snapshot the action
+     is written against. A desktop act action uses "scope": obs["scope"]
+     and "observation_id": obs["id"]; a dom_act action uses "scope":
+     tab["id"] and "observation_id": snap["snapshot"]. An action without
+     both fields is refused by the adapter before anything runs (CB-2:
+     "action 0 is missing scope"), so the navigate act above must be
+     written stamped, for example act([{"type": "key", "keys": ["ctrl",
+     "l"], "scope": obs["scope"], "observation_id": obs["id"]},
+     {"type": "type", "text": "<URL>\n", "scope": obs["scope"],
+     "observation_id": obs["id"]}], obs). A retry re-observes first and
+     stamps from the fresh observe or snapshot, never from the old one.
    - Get the tab from dom_tabs, observe the DOM with dom_observe.
    - Find the target element by name/role in the snapshot. Click by ref
      with dom_act. Assert on the AFTER snapshot returned by dom_act,
