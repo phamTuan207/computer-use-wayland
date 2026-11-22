@@ -1,0 +1,39 @@
+{"ts":"2026-11-22T11:02:00.267Z","test":"07","step":1,"kind":"click","selector":"#btn-unit-f","ok":true,"ms":10,"detail":{"x":652,"y":47}}
+{"ts":"2026-11-22T11:02:00.388Z","test":"07","step":2,"kind":"read","selector":"#temp-tokyo","ok":true,"ms":1,"detail":"64°F"}
+{"ts":"2026-11-22T11:02:00.513Z","test":"07","step":3,"kind":"click","selector":"#btn-unit-c","ok":true,"ms":5,"detail":{"x":610,"y":47}}
+{"ts":"2026-11-22T11:02:00.634Z","test":"07","step":4,"kind":"read","selector":"#temp-tokyo","ok":true,"ms":1,"detail":"18°C"}
+{"ts":"2026-11-22T11:02:00.756Z","test":"07","step":5,"kind":"select","selector":"#select-add-city","ok":true,"ms":2,"detail":null}
+{"ts":"2026-11-22T11:02:00.881Z","test":"07","step":6,"kind":"click","selector":"#btn-add-city","ok":true,"ms":5,"detail":{"x":380,"y":137}}
+{"ts":"2026-11-22T11:02:01.002Z","test":"07","step":7,"kind":"read","selector":"#temp-ho-chi-minh-city","ok":true,"ms":1,"detail":"32°C"}
+{"ts":"2026-11-22T11:02:01.124Z","test":"07","step":8,"kind":"select","selector":"#select-add-city","ok":true,"ms":1,"detail":null}
+{"ts":"2026-11-22T11:02:01.249Z","test":"07","step":9,"kind":"click","selector":"#btn-add-city","ok":true,"ms":5,"detail":{"x":380,"y":137}}
+{"ts":"2026-11-22T11:02:01.370Z","test":"07","step":10,"kind":"read","selector":"#stat-city-count","ok":true,"ms":0,"detail":"5"}
+{"ts":"2026-11-22T11:02:01.496Z","test":"07","step":11,"kind":"click","selector":"#btn-remove-city-reykjavik","ok":true,"ms":5,"detail":{"x":390,"y":1019}}
+{"ts":"2026-11-22T11:02:01.617Z","test":"07","step":12,"kind":"read","selector":"#stat-city-count","ok":true,"ms":1,"detail":"4"}
+{"ts":"2026-11-22T11:02:01.741Z","test":"07","step":13,"kind":"click","selector":"#btn-primary-city-ho-chi-minh-city","ok":true,"ms":4,"detail":{"x":519,"y":727}}
+{"ts":"2026-11-22T11:02:01.865Z","test":"07","step":14,"kind":"click","selector":"#btn-unit-f","ok":true,"ms":4,"detail":{"x":652,"y":47}}
+{"ts":"2026-11-22T11:02:01.986Z","test":"07","step":15,"kind":"read","selector":"#active-unit-indicator","ok":true,"ms":1,"detail":"°F"}
+{"ts":"2026-11-22T11:02:02.107Z","test":"07","step":16,"kind":"read","selector":"#temp-ho-chi-minh-city","ok":true,"ms":1,"detail":"90°F"}
+{"ts":"2026-11-22T11:02:02.231Z","test":"07","step":17,"kind":"click","selector":"#btn-save-weather","ok":true,"ms":3,"detail":{"x":783,"y":47}}
+{"ts":"2026-11-22T11:02:02.353Z","test":"07","step":18,"kind":"read","selector":"#weather-status-banner","ok":true,"ms":1,"detail":"Dashboard saved: 4 cities monitored in °F (Primary: Ho Chi Minh City)"}
+{"ts":"2026-11-22T11:02:02.475Z","result":{"test":"07","fixture":"test-07-weather-dashboard.html","passed":true,"failures":[],"score":1,"state":{"dashboardSaved":true,"activeUnit":"F","cityCount":4,"primaryCity":"ho-chi-minh-city","banner":"Dashboard saved: 4 cities monitored in °F (Primary: Ho Chi Minh City)"},"total_ms":2416}}
+{"ts":"2026-11-22T11:02:02.708Z","test":"09","step":1,"kind":"click","selector":"#btn-open-settings","ok":true,"ms":8,"detail":{"x":651,"y":64}}
+{"ts":"2026-11-22T11:02:02.830Z","test":"09","step":2,"kind":"set","selector":"#input-work-duration","ok":true,"ms":2,"detail":null}
+{"ts":"2026-11-22T11:02:02.951Z","test":"09","step":3,"kind":"set","selector":"#input-break-duration","ok":true,"ms":0,"detail":null}
+{"ts":"2026-11-22T11:02:03.075Z","test":"09","step":4,"kind":"click","selector":"#check-auto-break","ok":true,"ms":3,"detail":{"x":287,"y":626}}
+{"ts":"2026-11-22T11:02:03.200Z","test":"09","step":5,"kind":"click","selector":"#btn-save-settings","ok":true,"ms":4,"detail":{"x":560,"y":664}}
+{"ts":"2026-11-22T11:02:03.322Z","test":"09","step":6,"kind":"read","selector":"#timer-display","ok":true,"ms":1,"detail":"30:00"}
+{"ts":"2026-11-22T11:02:03.445Z","test":"09","step":7,"kind":"click","selector":"#btn-start-pause","ok":true,"ms":3,"detail":{"x":336,"y":349}}
+{"ts":"2026-11-22T11:02:03.570Z","test":"09","step":8,"kind":"click","selector":"#btn-complete-cycle","ok":true,"ms":5,"detail":{"x":461,"y":349}}
+{"ts":"2026-11-22T11:02:03.691Z","test":"09","step":9,"kind":"read","selector":"#timer-display","ok":true,"ms":1,"detail":"06:00"}
+{"ts":"2026-11-22T11:02:03.815Z","test":"09","step":10,"kind":"click","selector":"#btn-complete-cycle","ok":true,"ms":3,"detail":{"x":456,"y":349}}
+{"ts":"2026-11-22T11:02:03.936Z","test":"09","step":11,"kind":"read","selector":"#timer-display","ok":true,"ms":0,"detail":"30:00"}
+{"ts":"2026-11-22T11:02:04.059Z","test":"09","step":12,"kind":"click","selector":"#btn-start-pause","ok":true,"ms":3,"detail":{"x":336,"y":349}}
+{"ts":"2026-11-22T11:02:04.182Z","test":"09","step":13,"kind":"click","selector":"#btn-reset-timer","ok":true,"ms":3,"detail":{"x":575,"y":349}}
+{"ts":"2026-11-22T11:02:04.303Z","test":"09","step":14,"kind":"read","selector":"#timer-display","ok":true,"ms":1,"detail":"30:00"}
+{"ts":"2026-11-22T11:02:04.427Z","test":"09","step":15,"kind":"click","selector":"#btn-complete-cycle","ok":true,"ms":4,"detail":{"x":456,"y":349}}
+{"ts":"2026-11-22T11:02:04.548Z","test":"09","step":16,"kind":"read","selector":"#stat-completed-cycles","ok":true,"ms":1,"detail":"2"}
+{"ts":"2026-11-22T11:02:04.669Z","test":"09","step":17,"kind":"read","selector":"#stat-total-focus","ok":true,"ms":1,"detail":"60 min"}
+{"ts":"2026-11-22T11:02:04.794Z","test":"09","step":18,"kind":"click","selector":"#btn-save-session","ok":true,"ms":5,"detail":{"x":778,"y":64}}
+{"ts":"2026-11-22T11:02:04.915Z","test":"09","step":19,"kind":"read","selector":"#pomodoro-status-banner","ok":true,"ms":1,"detail":"Session log saved: 2 focus cycles completed (60 min total focus)"}
+{"ts":"2026-11-22T11:02:05.037Z","result":{"test":"09","fixture":"test-09-pomodoro-timer.html","passed":true,"failures":[],"score":1,"state":{"sessionSaved":true,"settings":{"workDuration":30,"breakDuration":6,"longBreakDuration":15,"autoBreak":true},"completedCycles":2,"totalFocusMin":60,"historyCount":3,"banner":"Session log saved: 2 focus cycles completed (60 min total focus)"},"total_ms":2562}}

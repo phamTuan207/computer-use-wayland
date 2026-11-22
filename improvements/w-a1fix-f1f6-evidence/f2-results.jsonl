@@ -1,0 +1,50 @@
+{"ts":"2026-11-22T11:01:02.161Z","test":"06","step":1,"kind":"select","selector":"#select-source-file","ok":true,"ms":4,"detail":null}
+{"ts":"2026-11-22T11:01:02.284Z","test":"06","step":2,"kind":"select","selector":"#select-target-format","ok":true,"ms":2,"detail":null}
+{"ts":"2026-11-22T11:01:02.405Z","test":"06","step":3,"kind":"select","selector":"#select-compression","ok":true,"ms":1,"detail":null}
+{"ts":"2026-11-22T11:01:02.535Z","test":"06","step":4,"kind":"click","selector":"#check-preserve-meta","ok":true,"ms":10,"detail":{"x":74,"y":253}}
+{"ts":"2026-11-22T11:01:02.661Z","test":"06","step":5,"kind":"click","selector":"#btn-add-queue","ok":true,"ms":6,"detail":{"x":190,"y":221}}
+{"ts":"2026-11-22T11:01:02.782Z","test":"06","step":6,"kind":"select","selector":"#select-source-file","ok":true,"ms":1,"detail":null}
+{"ts":"2026-11-22T11:01:02.904Z","test":"06","step":7,"kind":"select","selector":"#select-target-format","ok":true,"ms":1,"detail":null}
+{"ts":"2026-11-22T11:01:03.027Z","test":"06","step":8,"kind":"click","selector":"#btn-add-queue","ok":true,"ms":3,"detail":{"x":190,"y":221}}
+{"ts":"2026-11-22T11:01:03.149Z","test":"06","step":9,"kind":"select","selector":"#select-source-file","ok":true,"ms":1,"detail":null}
+{"ts":"2026-11-22T11:01:03.272Z","test":"06","step":10,"kind":"click","selector":"#btn-add-queue","ok":true,"ms":3,"detail":{"x":190,"y":221}}
+{"ts":"2026-11-22T11:01:03.394Z","test":"06","step":11,"kind":"read","selector":"#status-corrupted-bin","ok":true,"ms":1,"detail":"Invalid format"}
+{"ts":"2026-11-22T11:01:03.517Z","test":"06","step":12,"kind":"click","selector":"#btn-remove-queue-corrupted-bin","ok":true,"ms":3,"detail":{"x":759,"y":471}}
+{"ts":"2026-11-22T11:01:03.642Z","test":"06","step":13,"kind":"click","selector":"#btn-convert-all","ok":true,"ms":5,"detail":{"x":583,"y":64}}
+{"ts":"2026-11-22T11:01:03.763Z","test":"06","step":14,"kind":"read","selector":"#queue-status-text","ok":true,"ms":0,"detail":"Conversion complete"}
+{"ts":"2026-11-22T11:01:03.884Z","test":"06","step":15,"kind":"read","selector":"#output-count","ok":true,"ms":0,"detail":"2"}
+{"ts":"2026-11-22T11:01:04.008Z","test":"06","step":16,"kind":"click","selector":"#btn-download-sample-data-csv","ok":true,"ms":3,"detail":{"x":799,"y":535}}
+{"ts":"2026-11-22T11:01:04.129Z","test":"06","step":17,"kind":"read","selector":"#badge-download-sample-data-csv","ok":true,"ms":1,"detail":"\n            Downloaded\n          "}
+{"ts":"2026-11-22T11:01:04.252Z","test":"06","step":18,"kind":"click","selector":"#btn-download-photo-png","ok":true,"ms":3,"detail":{"x":799,"y":587}}
+{"ts":"2026-11-22T11:01:04.374Z","test":"06","step":19,"kind":"read","selector":"#badge-download-photo-png","ok":true,"ms":1,"detail":"\n            Downloaded\n          "}
+{"ts":"2026-11-22T11:01:04.497Z","test":"06","step":20,"kind":"click","selector":"#btn-save-session","ok":true,"ms":3,"detail":{"x":758,"y":64}}
+{"ts":"2026-11-22T11:01:04.618Z","test":"06","step":21,"kind":"read","selector":"#converter-status-banner","ok":true,"ms":0,"detail":"Batch complete: 2 files converted and 2 downloaded"}
+{"ts":"2026-11-22T11:01:04.740Z","result":{"test":"06","fixture":"test-06-file-converter.html","passed":true,"failures":[],"score":1,"state":{"sessionSaved":true,"convertedCount":2,"downloadedCount":2,"metaChecked":true,"compVal":"High","banner":"Batch complete: 2 files converted and 2 downloaded"},"total_ms":2772}}
+{"ts":"2026-11-22T11:01:04.923Z","result":{"test":"07","fixture":"test-07-weather-dashboard.html","passed":false,"error":"__agyVerify missing after load","total_ms":183}}
+{"ts":"2026-11-22T11:01:05.087Z","test":"08","step":1,"kind":"click","selector":"#opt-q1-201","ok":true,"ms":7,"detail":{"x":117,"y":269}}
+{"ts":"2026-11-22T11:01:05.219Z","test":"08","step":2,"kind":"click","selector":"#btn-next-question","ok":true,"ms":12,"detail":{"x":764,"y":441}}
+{"ts":"2026-11-22T11:01:05.348Z","test":"08","step":3,"kind":"click","selector":"#opt-q2-compositor","ok":true,"ms":9,"detail":{"x":117,"y":269}}
+{"ts":"2026-11-22T11:01:05.473Z","test":"08","step":4,"kind":"click","selector":"#btn-next-question","ok":true,"ms":4,"detail":{"x":764,"y":441}}
+{"ts":"2026-11-22T11:01:05.598Z","test":"08","step":5,"kind":"click","selector":"#opt-q3-linked-list","ok":true,"ms":4,"detail":{"x":117,"y":221}}
+{"ts":"2026-11-22T11:01:05.723Z","test":"08","step":6,"kind":"click","selector":"#opt-q3-hash-table","ok":true,"ms":5,"detail":{"x":117,"y":269}}
+{"ts":"2026-11-22T11:01:05.849Z","test":"08","step":7,"kind":"click","selector":"#btn-next-question","ok":true,"ms":6,"detail":{"x":764,"y":441}}
+{"ts":"2026-11-22T11:01:05.974Z","test":"08","step":8,"kind":"click","selector":"#opt-q4-will-change","ok":true,"ms":3,"detail":{"x":117,"y":317}}
+{"ts":"2026-11-22T11:01:06.100Z","test":"08","step":9,"kind":"click","selector":"#btn-next-question","ok":true,"ms":6,"detail":{"x":764,"y":441}}
+{"ts":"2026-11-22T11:01:06.225Z","test":"08","step":10,"kind":"click","selector":"#opt-q5-sigkill","ok":true,"ms":5,"detail":{"x":117,"y":317}}
+{"ts":"2026-11-22T11:01:06.351Z","test":"08","step":11,"kind":"click","selector":"#btn-prev-question","ok":true,"ms":6,"detail":{"x":150,"y":441}}
+{"ts":"2026-11-22T11:01:06.476Z","test":"08","step":12,"kind":"click","selector":"#btn-next-question","ok":true,"ms":5,"detail":{"x":764,"y":441}}
+{"ts":"2026-11-22T11:01:06.603Z","test":"08","step":13,"kind":"click","selector":"#btn-submit-quiz","ok":true,"ms":7,"detail":{"x":771,"y":441}}
+{"ts":"2026-11-22T11:01:06.724Z","test":"08","step":14,"kind":"read","selector":"#stat-final-score","ok":true,"ms":1,"detail":"5 / 5"}
+{"ts":"2026-11-22T11:01:06.845Z","test":"08","step":15,"kind":"read","selector":"#stat-score-percent","ok":true,"ms":1,"detail":"100%"}
+{"ts":"2026-11-22T11:01:06.968Z","test":"08","step":16,"kind":"click","selector":"#btn-save-quiz","ok":true,"ms":3,"detail":{"x":451,"y":454}}
+{"ts":"2026-11-22T11:01:07.089Z","test":"08","step":17,"kind":"read","selector":"#quiz-status-banner","ok":true,"ms":1,"detail":"Quiz completed: 5/5 score (100%) - Results verified and saved"}
+{"ts":"2026-11-22T11:01:07.211Z","result":{"test":"08","fixture":"test-08-quiz-app.html","passed":true,"failures":[],"score":1,"state":{"quizSubmitted":true,"resultsSaved":true,"score":5,"banner":"Quiz completed: 5/5 score (100%) - Results verified and saved"},"total_ms":2288}}
+{"ts":"2026-11-22T11:01:07.405Z","result":{"test":"09","fixture":"test-09-pomodoro-timer.html","passed":false,"error":"__agyVerify missing after load","total_ms":192}}
+{"ts":"2026-11-22T11:01:07.567Z","test":"10","step":1,"kind":"set","selector":"#input-doc-title","ok":true,"ms":2,"detail":null}
+{"ts":"2026-11-22T11:01:07.694Z","test":"10","step":2,"kind":"type","selector":"#input-doc-title","ok":true,"ms":7,"detail":null}
+{"ts":"2026-11-22T11:01:07.816Z","test":"10","step":3,"kind":"setmd","selector":"#markdown-source","ok":true,"ms":1,"detail":null}
+{"ts":"2026-11-22T11:01:07.941Z","test":"10","step":4,"kind":"click","selector":"#btn-export-html","ok":true,"ms":5,"detail":{"x":687,"y":54}}
+{"ts":"2026-11-22T11:01:08.062Z","test":"10","step":5,"kind":"read","selector":"#export-status-tag","ok":true,"ms":1,"detail":"HTML Exported"}
+{"ts":"2026-11-22T11:01:08.187Z","test":"10","step":6,"kind":"click","selector":"#btn-save-doc","ok":true,"ms":5,"detail":{"x":803,"y":54}}
+{"ts":"2026-11-22T11:01:08.308Z","test":"10","step":7,"kind":"read","selector":"#editor-status-banner","ok":true,"ms":1,"detail":"Document saved: 'Release Notes v2.3.0' (HTML exported, 0 errors)"}
+{"ts":"2026-11-22T11:01:08.429Z","result":{"test":"10","fixture":"test-10-markdown-editor.html","passed":true,"failures":[],"score":1,"state":{"docSaved":true,"htmlExported":true,"title":"Release Notes v2.3.0","listCount":2,"banner":"Document saved: 'Release Notes v2.3.0' (HTML exported, 0 errors)"},"total_ms":1024}}
