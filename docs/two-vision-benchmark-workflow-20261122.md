@@ -75,10 +75,12 @@ tests/two_vision_fixture.html.
 
 ## 4. Files
 
-- tests/two_vision_bench.py: the benchmark script (868 lines after
-  the batch 9 task 1 fix pass, commit c267411; first built in
+- tests/two_vision_bench.py: the benchmark script (1200 lines after
+  the batch 12 task 2 build, commit f49851f; first built in
   commit 072e060, fixes 9196744, fix pass 7e81213, plan
-  validation 9a15647, pre-send reservation TODO c267411).
+  validation 9a15647, pre-send reservation TODO c267411,
+  textNew + reservation + V11 + D3 + frames census + strict
+  input name f49851f).
 - tests/two_vision_fixture.html: local chat fixture. One page per
   clone (?clone=1, ?clone=2). A message input, a Send button, a
   thread div. Enter or Send appends a bubble with the typed text.
@@ -90,9 +92,23 @@ tests/two_vision_fixture.html.
   tests/two_vision_fixture_noid.html (message input has no id),
   tests/two_vision_fixture_belowfold.html (a 1500 px spacer above
   the input, so it sits below the fold).
+- Variant fixtures for the batch 12 task 2 tests:
+  tests/two_vision_fixture_stale.html (a stale bubble carrying the
+  fixed test message is seeded at load, one per clone),
+  tests/two_vision_fixture_nosend.html (same stale seed, but Enter
+  never appends a bubble), tests/two_vision_fixture_iframe.html
+  (same-origin iframe holding its own message input, which the
+  top-frame harvest must NOT list) plus
+  tests/two_vision_fixture_frame.html (the iframe page).
 - tests/two_vision_once_driver.py: exactly-once driver test. Calls
   send_one twice with the same intent in one browser session and
   records both calls plus the bubble count.
+- tests/two_vision_b12t2_driver.py: batch 12 task 2 driver test.
+  D3 ref-stale (rename the input, send_one must fail fast),
+  cross-window check (inject a foreign bubble, the check must
+  report it), pre-send reservation (seed status "sending", send_one
+  must refuse with retry-blocked-reservation, with and without a
+  visible bubble).
 - Workdir (default /tmp/two_vision_bench, shared by runs unless
   --workdir is passed): inventory.json, ledger.json, results.json,
   profile/ (Firefox profile, delete after the run; /tmp is a 512M
@@ -131,7 +147,17 @@ messages). A live plan looks like this:
   reused run_id does not reuse intents from the ledger; the
   false PASS comes from the V12 pre-check seeing the old
   bubble in the thread, not from the ledger. The ledger
-  keys intents by run_id within one workdir only.
+  keys intents by run_id within one workdir only. Since
+  batch 12 task 2 the V12 gate is a textNew gate: it passes
+  only on a NEW bubble past the before-snapshot count, so a
+  stale bubble alone can no longer pass a new send (see the
+  batch 12 task 2 runs in section 7). The run_id freshness
+  check is still required: with a shared workdir the
+  ledger's "sent" record still skips on a visible bubble,
+  and a reused run_id with a fresh workdir now sends a
+  second identical bubble instead of skipping, which is
+  honest (the gate proves a new bubble landed) but still a
+  duplicate the procedure forbids.
 - input_name is matched against the harvested textbox names; the first
   visible textbox is the fallback.
 - thread_selector must point at the thread container. bubble_selector
@@ -197,7 +223,12 @@ To reuse a saved inventory instead of harvesting again:
   HARVEST-ONLY), wall_s, and one record per step: window, intent_id,
   status (sent, skipped-already-sent, failed, not-executed),
   elapsed_s, error reason, v1_value_ok, v11_input_events,
-  v12_gate_ok.
+  v11_mutations, v11_mutation_flag, before_count, gate_baseline,
+  gate_count, reservation, v12_gate_ok. Plus before_counts and
+  cross_window_check (each thread's own count and foreign counts)
+  and frames (iframe census per window) at the top level.
+  An outcome of PASS now also requires no cross-window
+  contamination.
 - STDOUT is JSONL, one line per step: wall clock (UTC) and elapsed
   seconds from a monotonic clock.
 - Exit code: 0 PASS, 1 FAIL (benchmark outcome), 2 harness error or
@@ -216,8 +247,12 @@ To reuse a saved inventory instead of harvesting again:
 | geometry-moved | The input moved more than 2 px from the VISION 1 snapshot. The inventory is stale; re-harvest. |
 | focus-failed | The click landed but activeElement is not the input. Nothing was typed. |
 | value-mismatch | V1 readback: the field does not hold the typed text. Enter was not sent. For inputs and textareas the check reads value; for contenteditable elements it reads innerText (a div has no value property). |
-| v12-timeout | No sent bubble in the thread DOM within the gate timeout. The message may still have been typed (check the thread); the run is FAIL and the ledger marks the intent failed-unverified. A retry of the same intent is REFUSED (see retry-blocked-unverified below): the message may have landed unseen. |
+| v12-timeout | No NEW bubble in the thread DOM within the gate timeout (textNew: the count must grow past the pre-Enter baseline; a stale bubble with the exact text does not pass). The message may still have been typed (check the thread); the run is FAIL and the ledger marks the intent failed-unverified. A retry of the same intent is REFUSED (see retry-blocked-unverified below): the message may have landed unseen. |
 | retry-blocked-unverified | A later run with the same intent id found the ledger marked failed-unverified (a previous v12-timeout). Nothing is typed or sent. Fix the thread/bubble selectors and use a new run_id after manually checking the thread. |
+| retry-blocked-reservation | A later run with the same intent id found the ledger marked "sending": a previous attempt wrote the pre-send reservation and never reconciled it (the process died between Enter and the ledger mark). Nothing is typed or sent. Check the thread by hand and use a new run_id; do not re-send the same intent. |
+| ref-stale | The harvested input was renamed or replaced between harvest and send (tag, role or name changed). Nothing was clicked or typed. Re-harvest with a fresh run_id; the step record lists the nearest live textboxes. |
+| input-name-mismatch | --strict-input-name is set and the picked input's name does not contain the plan's input_name. Nothing was typed or sent, and no ledger record was written. Fix the plan's input_name (rung 2 procedure, runbook section 14). |
+| cross-window-contamination | After both sends, a thread holds the other window's message. The run is FAIL even when both sends report sent. Report which thread holds the foreign message; do not re-send to "make up" for it. |
 | not-executed | A later step after a failure. The chain stopped at the first failure (Anthropic batch loop contract). |
 
 ## 7. Dry-test results (measured on this VM, headless Firefox 160.0.1)
@@ -466,6 +501,72 @@ loads, so this cannot be reproduced on the fixture; it follows from
 the code. The checklist now requires verifying the run_id is fresh
 against both live threads before the run.
 
+UPDATE, batch 12 task 2: the gate half of this hole is now FIXED
+by the textNew gate (script commit f49851f). With a fresh workdir
+(empty ledger) a reused run_id no longer skips: the send proceeds
+and the gate passes only on a NEW bubble past the before-snapshot
+count, proven by the stale-fixture run below (before_count 1,
+gate_count 2, PASS with a genuinely new bubble). What remains is
+the shared-workdir half: with the same workdir the ledger's "sent"
+record still skips on a visible bubble, so the freshness check in
+section 10.3 still stands, and a reused run_id with a fresh
+workdir now sends a second identical bubble (honest, the gate
+proves a new bubble landed, but still a duplicate the procedure
+forbids). The pre-send reservation also closes the crash variant:
+a process death between Enter and the ledger mark leaves status
+"sending", and a later run refuses with retry-blocked-reservation
+instead of skipping.
+
+Batch 12 task 2 verification runs (2026-11-22T03:59:09Z to
+04:01:14Z, same machine, headless Firefox 160.0.1, repo venv
+python, one run per case, each with its own --workdir under
+/tmp/two_vision_bench/b12t2-*; all logs, results.json,
+inventory.json and ledger.json preserved in
+~/workspace/tools/batch12-t2/, profiles deleted after, /tmp ended
+at 5 percent, no Firefox left running):
+
+- Happy path with --strict-input-name (b12t2-happy): PASS, wall
+  15.3843 s (launch 4.2887 s, attach 5.4269 s, both slow from a
+  contended shared VM, same shape, not a defect). Sends 1.8286 s
+  and 0.5765 s. Both steps: before_count 0, gate_baseline 0,
+  gate_count 1, reservation "sending" reconciled to "sent",
+  v11_mutations 1, v11_mutation_flag true, v11_input_events 47.
+  Cross-window check clean (own 1, foreign 0 per thread).
+  Frames census empty per window.
+- Exactly-once driver (b12t2-once): PASS. Call 1 sent in 1.0249 s,
+  1 bubble; call 2 skipped-already-sent in 0.0349 s, still
+  1 bubble.
+- Stale bubble, textNew pass (b12t2-stale, fixed plan
+  bench-stale-001, stale fixture): PASS, wall 8.1306 s. Both
+  steps: before_count 1, count_at_precheck 1, gate_baseline 1,
+  gate_count 2. The gate waited for a NEW bubble past the stale
+  one; the old presence gate would have passed immediately.
+- Stale bubble, textNew timeout (b12t2-nosend, fixed plan
+  bench-stale-001, no-send fixture, 2 s gate): FAIL as designed,
+  wall 8.5256 s, exit 1. Clone1 v12-timeout with gate_count 1
+  (stale bubble only, baseline 1, never grew), v11_mutations 0,
+  v11_mutation_flag false, reservation "sending" reconciled to
+  failed-unverified; clone2 not-executed. This proves the gate
+  does NOT pass on the stale bubble.
+- Strict input name refusal (b12t2-strictbad, plan input_name
+  "Zzz"): FAIL as designed, exit 1. Step 1 input-name-mismatch
+  (expected "Zzz", actual "Message", ref #msg-input), no ledger
+  file written, nothing typed or sent.
+- Iframe harvest (b12t2-iframe, --mode harvest): HARVEST-ONLY.
+  4 items per window: the input inside the iframe is NOT
+  inventoried, as designed (top frame only). Frames census: 1
+  frame per window, accessible true, origin "null" (file://
+  origins are opaque in Firefox, so the accessible flag, not
+  the origin field, is the operative signal on the fixture).
+- Batch 12 task 2 driver (b12t2-driver): PASS, wall 7.3978 s.
+  D3 ref-stale: renamed input, error ref-stale,
+  0 bubbles, 2 nearest candidates listed. Cross-window:
+  injected foreign bubble detected (clone2 foreign clone1 1,
+  clone1 foreign clone2 0). Reservation block: seeded status
+  "sending" refused with retry-blocked-reservation both with
+  no bubble (0 bubbles after) and with a visible bubble
+  (still 1 bubble, no second send).
+
 ## 8. Known gaps (F5/D1-D6, TODOs, from the combined design)
 
 Marked as TODO in the script where they apply; the review round
@@ -474,15 +575,15 @@ must not claim them done.
 
 | Gap | State in this script | What is still open |
 | --- | --- | --- |
-| F5 bulk harvest | Built here as one evaluate per window. | Brave CDP DOM.getBoxModel / Accessibility.getFullAXTree in scripts/cdp.mjs; production V11 MutationObserver flag (the fixture counts input events; a Messenger page needs a real observer armed before typing). |
-| F5 V12 gate | Built here (sent-bubble check after each send). | No V12 gate exists in production code; this script is the first implementation. |
-| F5 exactly-once ledger | Built here (ledger file + V12 pre-check before every send). | Needs review-round approval. A v12-timeout now marks the intent failed-unverified and a later run with the same intent refuses to re-send it, so a typed-but-unseen message cannot double-send on retry. A fresh page load with an empty thread still re-sends a recorded intent once, by design: the bubble is genuinely absent. |
+| F5 bulk harvest | Built here as one evaluate per window. | Brave CDP DOM.getBoxModel / Accessibility.getFullAXTree in scripts/cdp.mjs; production V11 MutationObserver flag (batch 12 task 2 BUILT in this script: OBSERVER_JS armed before typing, mutation delta recorded per send; the fixture counter window.__inputEvents is kept alongside it). |
+| F5 V12 gate | Built here (sent-bubble check after each send). Since batch 12 task 2 it is a textNew gate: COUNT_JS with a before-snapshot, passing only on a NEW bubble past the pre-Enter baseline, plus a cross-window check after both sends. | No V12 gate exists in production code; this script is the first implementation. Live proof of the gate is still owed (fixture proof only). |
+| F5 exactly-once ledger | Built here (ledger file + V12 pre-check before every send). Since batch 12 task 2 the pre-check skips only when the ledger says the intent was already sent and the bubble is visible, and the pre-send reservation is built: the intent is written as "sending" before Enter and reconciled after the gate; a later run finding "sending" refuses with retry-blocked-reservation. | Needs review-round approval. A v12-timeout now marks the intent failed-unverified and a later run with the same intent refuses to re-send it, so a typed-but-unseen message cannot double-send on retry. A fresh page load with an empty thread still re-sends a recorded intent once, by design: the bubble is genuinely absent. The reservation closes the process-death gap only when the same ledger is reused. |
 | F5 BiDi/Marionette handover | Not built. Script is Marionette-only. | No handover protocol exists under the one-session constraint. |
 | F5 step-6 loop hygiene | Not built. | Prompt caching, diff-gated re-observation, downscale to token tier, context editing, low effort, adaptive waiting: unowned, agent-harness concerns. |
 | D1 one-session sequencing | Marionette-only; BiDi session.new cost is known (1.5-2.8 s cold, 0.014 s warm, batch 7 task 2). | Sequencing for a live run that needs both protocols is unspecified. |
 | D2 HCU guard owner | The guard lives in hcu_guard() in this script. | No production component owns the guard. |
-| D3 Mantis numbering | Refs are DOM-derived per run; the doc warns they must not transfer. | Ref stability on a mutating Messenger page is unaddressed. Id-less elements now get a unique CSS path ref instead of the invalid tag + '[' + i + ']' form. |
-| D4 exactly-once | Mechanized here (ledger + pre-check + failed-unverified retry block). | Needs the review round; see the F5 ledger row. |
+| D3 Mantis numbering | Refs are DOM-derived per run; the doc warns they must not transfer. Since batch 12 task 2 send_one re-resolves the ref before input and fails fast with ref-stale when tag, role or name changed, listing the nearest live textboxes. | Ref stability on a mutating Messenger page is proven only on the fixture (renamed input); a live mutation mid-run is still unobserved. Id-less elements now get a unique CSS path ref instead of the invalid tag + '[' + i + ']' form. |
+| D4 exactly-once | Mechanized here (ledger + pre-check + failed-unverified retry block). Since batch 12 task 2 also the pre-send reservation and the textNew gate. | Needs the review round; see the F5 ledger row. |
 | D5 VISION 1 is DOM | Stated in the script docstring and here. | Nothing open; do not call the harvest a screenshot. |
 | D6 one vs two instances | One instance, two windows. --instances two is REFUSED until two instances exist; it is never recorded in results as if it ran. | Unspecified which the live run uses; two instances need a second Marionette attach. |
 
@@ -520,9 +621,9 @@ coordinator says run, and this script has never run live.
 ### 10.1 Workspace state (check before anything else)
 
 - [ ] Repo on main, script tests/two_vision_bench.py at the
-  reviewed commit (868 lines after the batch 9 task 1 fix pass,
-  commit c267411). Run `git log --oneline -1 --
-  tests/two_vision_bench.py` and confirm it prints c267411: any
+  reviewed commit (1200 lines after the batch 12 task 2 build,
+  commit f49851f). Run `git log --oneline -1 --
+  tests/two_vision_bench.py` and confirm it prints f49851f: any
   other hash means an unreviewed change sits on top of it.
 - [ ] BLOCKER, open: the script launches its own fresh headless
   Firefox with a fresh profile (main() calls launch_browser; no
@@ -537,7 +638,13 @@ coordinator says run, and this script has never run live.
   none is named "Message"), Enter submits the login form, and the
   V12 gate times out after 5 s. The no-message-input-in-inventory
   error fires only when a page has zero visible textboxes, which
-  a login page does not satisfy. The live run needs one of the
+  a login page does not satisfy. Rung 2 closes this typing hazard
+  a different way: it runs with --strict-input-name (runbook
+  section 14), so the script refuses to type into a textbox
+  whose name does not contain the plan's input_name and fails
+  closed with input-name-mismatch before any send. The 2-vision
+  run does not pass the flag and keeps the hazard documented
+  here. The live run needs one of the
   two live-shape options in runbook section 13 (option B, a CDP
   driver to the real Brave/Chrome chats on ws2; or option A, a
   logged-in profile pre-seeded into <run-dir>/profile) before it
@@ -685,8 +792,13 @@ threads in the script's Firefox after the harvest-first step.
   is already in the thread, which the outcome counts as sent,
   so reusing a run_id on a live thread reports PASS with zero
   new sends. The script does not check run_id against thread
-  history (open item, not fixed: fixture threads do not
-  persist, so it cannot be reproduced on the fixture).
+  history. UPDATE, batch 12 task 2: the gate half of this hole
+  is now fixed by the textNew gate (the gate passes only on a
+  NEW bubble past the before-snapshot count), so with a fresh
+  workdir a reused run_id now sends a second identical bubble
+  instead of skipping; the shared-workdir half remains (the
+  ledger's "sent" record still skips on a visible bubble), so
+  the freshness check still stands.
 - [ ] Dry probe of the a11y method (run once, before the first
   live run; UNRUN as of 22/11). Test the two premises
   separately with independent steps (a single query cannot do
@@ -756,7 +868,11 @@ threads in the script's Firefox after the harvest-first step.
   no ws2 screen to observe: VISION 2 as a screen observe does
   not exist there, and the V12 DOM gates are the outcome
   check; the option-A VISION 2 procedure is still open (runbook
-  section 12 item 5). Outcome scoring is by message in
+  section 12 item 5). Rung 2 is 0-vision by definition and
+  drops VISION 2 entirely (runbook section 14): the textNew
+  gate, cross-window check and strict input name replace the
+  agent looks, and the outcome is read from results.json.
+  Outcome scoring is by message in
   thread (M1), never by point-in-box.
 - [ ] Overall: PASS iff both messages land. Any single failed
   step makes the run FAIL; the chain stops at the first failure
