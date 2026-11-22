@@ -215,10 +215,9 @@ not a live PASS.
 
 ## 5. Commit record
 
-- This log: improvements/mochi-b2-6-rereview-2-log.md,
-  committed by the reviewer itself with git add -- file
-  then git commit -m (never git commit -- <paths>).
-  Commit hash and Vietnam time filled in after commit:
-  (filled below).
+- This log: improvements/mochi-b2-6-rereview-2-log.md, commit
+  6d7d5b6077c2e6901db55de68022c688b625ad19 (6d7d5b6),
+  committed 2026-11-23 00:57:51 +07. The hash line was filled
+  by a follow-up commit on this same file.
 - No push by this reviewer. No worker file modified, no
   file deleted, no live run.
