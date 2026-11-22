@@ -749,19 +749,8 @@ if(process.argv?.includes('--worker')) {
       try{result=await handle(JSON.parse(line),owner);}
       catch(e){result={ok:false,completed:0,error:e.message};}
       console.log(JSON.stringify(result));
-      // F4: an ok:false response is a RESULT (a failed assert, a
-      // refused action), not a dead worker. The loop stays alive so
-      // the next request in the same session can run (in-program
-      // retry after a failed assert). The process exits only on
-      // stdin close or error, or a transport failure, as before. A
-      // failed result still disposes its CDP connection inside
-      // handle(), so the next request opens a fresh one.
+      if(result?.ok===false){process.exitCode=1;break;}
     }
-    // Clean stdin EOF after serving results (including ok:false
-    // ones) is a normal end, not a crash: handle() sets exitCode 1
-    // per failed request, so reset it here. A stream error still
-    // exits 1 via the catch below.
-    process.exitCode = 0;
   }catch(e){process.exitCode=1;console.log(JSON.stringify({ok:false,completed:0,error:e.message}));}
   finally{owner.connection?.dispose();process.stdin.destroy();}
 }else {
