@@ -151,6 +151,15 @@ class ZenDomBackend:
             return []
         return self._windows_fn()
 
+    def set_pointer(self, pointer):
+        """Wire the pointer/keyboard delegate after construction
+        (step-9 prototype). The delegate is built around a
+        CodeExecBackend, which itself needs this backend, so the
+        two cannot be wired in either constructor. Until this is
+        called the backend refuses input with no_pointer_delegate.
+        """
+        self._pointer = pointer
+
     def close(self):
         """Close the session in finally; idempotent."""
         session, self._session = self._session, None
@@ -479,6 +488,21 @@ class ZenDomBackend:
                     index=index)
             except element_ref.ElementRefError as exc:
                 raise zen_dom.ZenDomError(str(exc)) from exc
+        # Step-9 prototype: the pointer delegate observes the
+        # window once per batch (focus first, then observe), so
+        # every dispatch in this batch stamps the same fresh
+        # observation. A delegate without begin_batch (a plain
+        # callable) is used as-is. A begin_batch failure refuses
+        # the batch before any input. Read-only batches (wait /
+        # assert only) skip it: they dispatch nothing, so they
+        # must not focus or observe either.
+        needs_input = any(
+            isinstance(a, dict) and a.get('type') not in ('wait', 'assert')
+            for a in actions)
+        if needs_input:
+            begin_batch = getattr(self._pointer, 'begin_batch', None)
+            if callable(begin_batch):
+                begin_batch(binding.get('window_address'))
         # Window move (protocol section 3): the origin changed, so
         # re-ground all refs against the new origin first.
         window_origin = binding['window_origin']

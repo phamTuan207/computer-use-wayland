@@ -3145,12 +3145,11 @@ def main():
             BROWSER_ENDPOINT=_validate_browser_endpoint(args.endpoint)
         # P2 Zen adapter: CU_DOM_BACKEND=zen routes the code-exec
         # DOM methods to the Marionette-backed ZenDomBackend instead
-        # of CDP. The pointer/keyboard delegate is NOT wired here:
-        # it needs a broker-owned session plus a fresh window
-        # observation meta (CodeExecBackend.act), which only the
-        # step-9 prototype can supply and measure; until then the
-        # backend grounds and verifies but refuses input actions
-        # with a structured error naming the missing delegate.
+        # of CDP. Step-9 prototype (item 5): the pointer/keyboard
+        # delegate IS wired here, through CodeExecBackend.act on a
+        # fresh window observation per batch (zen_pointer). The
+        # delegate is built after the backend because it needs the
+        # CodeExecBackend, which itself needs this backend.
         dom_backend=None
         if os.environ.get('CU_DOM_BACKEND','').strip().lower()=='zen':
             import zen_backend
@@ -3158,8 +3157,15 @@ def main():
                 windows_fn=lambda: hypr(env,'clients'))
         try:
             with locked():
+                code_backend=CodeExecBackend(env, dom_backend=dom_backend)
+                if dom_backend is not None:
+                    import zen_pointer
+                    dom_backend.set_pointer(
+                        zen_pointer.ZenPointerDelegate(
+                            code_backend,
+                            focus_fn=lambda address: focus(env, address)))
                 result=code_exec.run_program(
-                    program, CodeExecBackend(env, dom_backend=dom_backend), state_dir=STATE,
+                    program, code_backend, state_dir=STATE,
                     session_token=os.environ.get('CU_SESSION_TOKEN'),
                     intent=args.intent, check_cancel=check_cancel,
                     wall_seconds=args.wall_seconds)
