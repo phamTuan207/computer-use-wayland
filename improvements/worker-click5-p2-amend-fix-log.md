@@ -506,9 +506,8 @@ every entry.
   session exit 0, wall 1.3s; composer read-back "C5-AMEND-A
   C5-AMEND-B ", cleared to "".
 - Commits: ce399c7 (failing-first tests), 507a50b (fix items
-  1, 3, 4 + docs). Both pushed to origin todolist-push and
-  verified with `git ls-remote`. This log: (commit hash to be
-  filled at commit time).
+  1, 3, 4 + docs), 03d99bc (this log). All pushed to origin
+  todolist-push and verified with `git ls-remote`.
 
 ## 10. Open questions / handoff to coordinator
 
