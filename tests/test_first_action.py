@@ -440,6 +440,24 @@ class TestRun(unittest.TestCase):
         self.assertEqual(self.fake_overlay.holders, {})
         self.assertEqual(self.fake_cu.observe_calls, [])
 
+    def test_fallback_returns_desktop_act_after_as_chainable(self):
+        observation_path, _ = _write_observation(
+            self.tmp.name, 'window')
+        window_after = {'id': 'fallback-window-after',
+                        'observation': str(Path(self.tmp.name)
+                                           / 'fallback-window-after.json'),
+                        'scope': 'window'}
+        self.fake_cu.desktop_act = mock.Mock(return_value={
+            'ok': True, 'completed': 1, 'after': window_after})
+        code, env, _ = self._run(
+            [{'type': 'click', 'x': 100, 'y': 200}],
+            (1, '{"ok": false, "error": "session guardian startup failed"}',
+             '', False, 0.4),
+            observation=observation_path)
+        self.assertEqual(code, 0)
+        self.assertEqual(env['after'], window_after)
+        self.assertEqual(env['after_screen']['scope'], 'screen')
+
     def test_session_path_rc0_ok_false_not_ok(self):
         # Council 1, A3: the exit code alone never proves success.
         code, env, _ = self._run(
