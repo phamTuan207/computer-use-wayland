@@ -120,6 +120,7 @@
 - Toi thay tin nhan cho em di vao ma KHONG co pill/overlay computer-use nao hien, vi no gui bang CDP tho (Runtime.evaluate), khong qua computer-use session.
 - Tu gio, moi tac dong live len trinh duyet cua em phai qua act-now/computer-use session de pill hien; CAM dung CDP tho de ghi (click/go chu) khi khong co session. Doc CDP (observe/harvest) van duoc.
 - Co che hien pill cho CDP dang duoc lam (worker W-PILLCDP); khi nao xong toi bao. Doc ky truoc khi lam tiep, ghi nhan da doc vao file nay.
+- Da doc, ghi nhan luc 18:37 gio Viet Nam, 2026-11-22: pill phai hien khi dieu khien may, cam dung CDP tho de ghi, doc CDP van duoc, W-PILLCDP khong phai viec cua tao, dung trung. Watchdog 15 phut da dat, id mochi-watchdog-15m, chay lan dau 18:49:46, kiem tra subagent ket/chet va check GitHub Muse tong.
 
 ## BATCH 2 tu Muse tong (qua Pham Tuan), 18:32 22/11: lam tiep, nhieu viec
 
