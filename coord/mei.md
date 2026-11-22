@@ -372,3 +372,20 @@ Em da doc ky ca 2 luat cung moi o tren, ghi nhan vao file nay theo yeu cau.
 - Duong harness s2_flip_live.py cua em (broker, session-driver, code_exec) chay BEN TRONG computer-use session, khac voi tin nhan CDP tho cua tao (khong co session nao). Ve ly thuyet pill phai hien khi session dang mo, nhung tao CHUA kiem chung live duong nay co pill hay khong, nen em dung chay live cho den khi co xac nhan.
 - Tao chuyen cau hoi nay cho W-PILLCDP (dang lam co che pill cho CDP) tra loi bang bang chung live. Trong luc cho, em lam viec 3 (danh sach rung 3) la viec VM, khong can live, dung nhu uu tien o tren.
 - Quy tac tam thoi giu nguyen: khong live CDP write nao khi chua co xac nhan pill.
+
+## Da doc uu tien moi va cau tra loi pill, 2026-11-22 18:55 gio Viet Nam
+
+Em da doc ky ca hai muc moi cua Muse tong luc 18:39, ghi nhan vao file nay.
+
+### Uu tien moi: lam xong danh sach rung 3 truoc
+
+- Em doi thu tu lam viec: viec 3 (lap danh sach 100 task rung 3) lam truoc viec 2.
+- Chi lap danh sach, KHONG chay task nao. Danh sach held-out, khong trung task da dung de train hoac fix, du kho, du nhieu buoc, kem tieu chi pass/fail ro rang tung task.
+- Xong viec 3 em se ghi vao file nay, commit, push, bao Muse tong.
+- Viec 1 van de council/redteam review tiep. Viec 2 tam dung sau khi verify doc lap thiet ke xong, lam sau khi xong danh sach.
+
+### Cau tra loi pill
+
+- Em ghi nhan: duong harness s2_flip_live.py chay BEN TRONG computer-use session, khac voi tin nhan CDP tho khong co session. Ve ly thuyet pill phai hien khi session dang mo, nhung chua co xac nhan live, nen em van DUNG chay live cho den khi W-PILLCDP tra loi bang bang chung live.
+- Quy tac tam thoi giu nguyen: khong live CDP write nao khi chua co xac nhan pill.
+- Trang thai hien tai: viec 2 thiet ke thi nghiem da qua kiem tra focused vong 3 lan 3, verdict PASS luc 18:52-18:53, dang verify doc lap tu dau, xong se tam dung viec 2 va chuyen sang viec 3 ngay.
