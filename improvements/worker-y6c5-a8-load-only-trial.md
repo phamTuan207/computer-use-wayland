@@ -136,3 +136,9 @@ and does NOT prove the liquid readiness window (O3).
   to a fresh re-review of the trial evidence.
 - If any item fails: stop, record the exact failing evidence, re-review the
   fix diff again. Do not proceed to the pill measurement on a failed trial.
+
+## Waiver + O3 answer (COORD-CLICK-6, 22/11 18:15)
+- Re-trial A8 18:01:49-18:02:58 22/11: 7/7 measured items GIU, run FAIL chi o liquid gate (shaders pending 60s, dong 67-68 run log). Re-review doc lap W-Y6REVIEW (improvements/w-y6review-log.md, commit 50096e7) xac nhan: liquid gate la loi moi truong, khong phai loi fix (indicator.py 222-224 doi shaders == "ready"; runner liquid gate 499-516 khong doi o commit fix 44b9a80; nest rong cung pending o trial 16:18 va Y6e 21:57).
+- O3 (nest co dat ready trong 60s khong): tra loi KHONG trong cua so 60s. Day la lan dau cho doi het 60s. Truoc day O3 ghi UNVERIFIED o nhieu doc.
+- WAIVER: liquid gate duoc WAIVE cho dung lan re-trial nest nay. Waiver chi go nut mau thuan giua dong 13 (trial khong chung minh O3) va abort rule (liquid timeout = FAIL, cam tien toi pill). Waiver KHONG ap dung cho pill retry tren live: o do session da doc ready, liquid gate van phai PASS; neu FAIL o live thi la loi that.
+- Hieu luc: pill retry (serial item 4, gate G-PILL) duoc phep chay sau khi co slot live + handover. 4.13 va 2.2.3 van MO cho toi khi pill retry PASS G-PILL.
