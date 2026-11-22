@@ -115,6 +115,25 @@ this file. No personal info.
   06074E282C000A95EF89CC9EBB8F9713, login intact. Stripe iframe
   tabs force the harness filter to url.startswith
   ('https://muse.ai/').
+- 10:05 +07, T+44m: dry run 0, FIRST attempt: both sends
+  failed-unverified. The programs ran fine (ok True, completed
+  3, CB-1 input_sent and target_received True); only the V12
+  helper failed: s2-v12.mjs JSON.parsed argv[4], but the remote
+  shell strips the JSON quotes, so node got the bare message
+  and JSON.parse threw. Fix: the script takes argv[4] as a
+  plain string; the harness passes it with shlex.quote. Also
+  added a setup phase bucket (seed + lease-cleanup spans) so
+  the residual stays small.
+- 10:08 +07, T+47m: dry run 0, SECOND attempt: PASS, both
+  browsers sent. Wall 15866.4ms, mux 775.9ms. CB-1 all three
+  True both browsers (completed 3). V12 found True, role user,
+  side user, attempts 1, elapsed 2-3ms. Phase split: ssh
+  13129.0, broker 753.4, observe 771.7, act 192.0, verify
+  337.7, setup 680.1, residual 2.4ms. P9 captures ok True
+  (1.2s each). Transport dominates the dry-run wall (13.1s of
+  15.9s); the live runs add the tabs lookups (+4 calls) and
+  drop the seeding (-2 calls), so a live wall near 16-19s is
+  expected if the live page behaves like the scratch page.
 
 ## 3. Laptop sync (step 8a pulled forward)
 

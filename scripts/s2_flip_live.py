@@ -55,6 +55,7 @@ import base64
 import json
 import os
 import re
+import shlex
 import subprocess
 import sys
 import time
@@ -258,7 +259,7 @@ class Harness:
         start = time.monotonic()
         rc, out, err, wall = self.ssh(
             'node %s %s %s %s %d' % (LAPTOP_V12, endpoint, target_id,
-                                    json.dumps(message), V12_TIMEOUT_MS),
+                                    shlex.quote(message), V12_TIMEOUT_MS),
             'v12-check', timeout=60)
         wall_ms = (time.monotonic() - start) * 1000.0
         if rc != 0:
@@ -416,13 +417,15 @@ class Harness:
         [data-message-item] with the typed text.
         """
         endpoint = BROWSERS[browser]['endpoint']
-        rc, out, err, _wall = self.ssh(
+        rc, out, err, wall = self.ssh(
             'node %s %s' % (LAPTOP_SEED, endpoint), 'seed-scratch', timeout=60)
         if rc != 0:
             raise RuntimeError('seed failed rc=%d: %s' % (rc, (out + err)[:300]))
         tab_id = out.strip().splitlines()[-1].strip()
         if not tab_id:
             raise RuntimeError('seed returned no tab id')
+        self.spans.append({'phase': 'setup-' + browser,
+                           'wall_ms': round(wall, 1), 'laptop_ms': None})
         return tab_id
 
     def close_scratch(self, browser, target_id):
@@ -445,7 +448,11 @@ class Harness:
             # A stale lease from a crashed run blocks start (O_EXCL);
             # remove it first. The lease is per-run-number, so this
             # never touches another run's live lease.
-            self.ssh('rm -f ' + lease, 'lease-cleanup', timeout=30)
+            _rc, _out, _err, lease_wall = self.ssh(
+                'rm -f ' + lease, 'lease-cleanup', timeout=30)
+            self.spans.append({'phase': 'setup-lease',
+                               'wall_ms': round(lease_wall, 1),
+                               'laptop_ms': None})
             self.broker_start(lease, owner)
             seq = 1
             routed = {}
@@ -511,7 +518,8 @@ class Harness:
         # when the payload carries one, e.g. code-exec elapsed_ms).
         # Residual is whatever the split does not attribute; it must
         # stay small, and a large residual means misattribution.
-        phases = {'observe': 0.0, 'act': 0.0, 'verify': 0.0, 'broker': 0.0}
+        phases = {'observe': 0.0, 'act': 0.0, 'verify': 0.0, 'broker': 0.0,
+                  'setup': 0.0}
         transport = 0.0
         for span in self.spans:
             kind = span['phase'].split('-')[0]
@@ -528,9 +536,9 @@ class Harness:
                 laptop = max(0.0, wall - mux)
                 phases['verify'] += laptop
                 transport += wall - laptop
-            elif kind == 'broker':
+            elif kind in ('broker', 'setup'):
                 laptop = max(0.0, wall - mux)
-                phases['broker'] += laptop
+                phases[kind] += laptop
                 transport += wall - laptop
         transport += 2 * mux  # the two mux-baseline probes
         accounted = transport + sum(phases.values())
@@ -541,6 +549,7 @@ class Harness:
             'observe': round(phases['observe'], 1),
             'act': round(phases['act'], 1),
             'verify': round(phases['verify'], 1),
+            'setup': round(phases['setup'], 1),
             'residual': round(max(0.0, results['wall_ms'] - accounted), 1),
         }
         results['model_calls'] = 0
