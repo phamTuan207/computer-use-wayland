@@ -4341,3 +4341,18 @@ Batch 12 xong hẳn (88d7f64, 13:50), không agent nào kẹt, 20 agent batch 12
 Hành động: đã spawn 3 agent task batch 13, mỗi task 1 agent riêng, council/redteam/fix pass sẽ giao sau khi task xong.
 Lưu ý: todolist-push đã lên 3167c76, khác a6dfa3b trong brief, agent đã được dặn kiểm chứng commit nêu tên.
 Chờ 3 task báo xong, rồi giao council 3 người, redteam, fix pass theo brief.
+
+---
+
+## BATCH 13 XONG - TỔNG KẾT 22/11/2026
+
+Muse giao batch 13 lúc 14:09 (e03e288). Cả 3 task đã xong hẳn, mỗi task đủ council 3 người, redteam, fix pass. 15 báo cáo, 0 code chung bị sửa, 0 live run trái lệnh. Tip 904c93d.
+
+Task 1, kiểm tra độc lập P2-AMEND-FIX: PASS (e018ae0, fix pass 904c93d).
+P2 chạy lại 97 test OK, failing-first ở ce399c7 đúng 11 test 7 lỗi dự đoán, check pointer có ở cả 2 chỗ gọi _dispatch (zen_backend.py 569, 635), A1/A2 pin đúng giới hạn validator, discover Ran 2131, errors=5, skipped=17, failures=1 trên VM uptime dài. Council 1/2/3 đều AGREE PASS, redteam SURVIVES, 0 breaking. Fix pass sửa trích dẫn dòng, ghi chú wtype build bắt buộc, và flake boot-time: discover chạy trong khoảng 2 phút sau boot cho failures=2 hoặc 3 do test trừ 121 khỏi time.monotonic(), không phải lỗi của step 7.
+Task 2, review spec landing (b1): AMEND (f5e36e7, fix pass 9b70877).
+4 finding HIGH: F1 helper focusenter đã có trong repo (3ef8f55, 2478 byte, 42 dòng), F2 đủ 25 ảnh P9 trong repo (3ef8f55), F3 type không phải focus-establishing (chuỗi focus là click, type, key Enter), F4 tiêu chí dry-run 105-115 ms sai, đúng là khoảng 90-100 ms dry và 110-145 ms live. Council 1/2/3 đều AGREE AMEND, redteam BROKEN hẹp vì note F2 "run JSON mang p9 null" là sai, cả 3 council cùng tìm ra, JSON mang p9 dạng dict từ 4bd6292. Fix pass đã đảo note đó, thêm double_click vào danh sách focus-establishing, tính lại F4 (86.8-98.8 ms dry, 107.6-142.6 ms live), ghi đủ 2 facet drift hover_click ở cu.py 1299 và 1341.
+Task 3, phân xử Y13g vòng 3: BLOCK đứng, không live run (e7d9a1c, fix pass 380d468).
+Cả 5 review vòng 2 đã phân xử: F1 HIGH dead code ở launch_y13.py:1197 UPHELD, F2 HIGH PYTHONPATH UPHELD, F3-F5 MEDIUM UPHELD, F6-F7 LOW UPHELD, mọi finding council UPHELD, 2 sub-claim bị bác. Council 1/2/3 đều AGREE, redteam BROKEN vì F5 fix (a) code.replace không chạy được (chỉ đổi code object ngoài, nested giữ nguyên), F3(b) sai tiền đề (check_runner_quiet không đọc /proc/PID/environ), và sai nhiều số dòng. Fix pass đã sửa hết: F5 chỉ dùng compile fresh với cached co_filename, F3(b) cần khả năng mới đọc environ hoặc ghi rõ giới hạn, sửa toàn bộ số dòng đã kiểm chứng lại.
+Sự cố trong đợt: fix pass task 3 push race làm mất tạm entry log watchdog 14:48 của clone2, đã sửa ngay bằng bb01249, đã kiểm chứng diff chỉ còn file báo cáo task 3. VM restart khoảng 14:35-14:42 xóa /tmp giữa chừng, gây flake discover task 1 và mất log tạm, log đã chuyển sang hidden_files của goal.
+Chờ Muse giao đợt mới.
