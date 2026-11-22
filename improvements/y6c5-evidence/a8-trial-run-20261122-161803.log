@@ -1,0 +1,84 @@
+# A8 load-only trial: run log copy (verbatim)
+# Source: /tmp/y6-nested/run-20261122-161803.log on the laptop
+# md5 721cb67c5b2947639236b89a706fad36, 77 lines, 5305 bytes
+# Trial launched 16:18:03 +07 Sun 2026-11-22, runner b50396bf1c68c1e047733b2a5b24f35a
+# with Y6_HANDOVER_CONFIRMED=1 Y6_STOP_AFTER_GATES=1
+# Verdict: FAIL at the A2 positive profile gate (applied marker absent after 15 s)
+# Copied to the repo by worker C5-Y6-A8-TRIAL for re-review. No em/en dash.
+Y6-WAYLAND: start 16:18:03
+Y6-WAYLAND: AMEND4 OK: HYPRGLASS_SKIP_VERSION_CHECK unset (env | grep HYPRGLASS empty)
+Y6-WAYLAND: plugin ABI OK: /home/james/.local/share/agent-computer-use/worktrees/hyprglass-03a57c4/hyprglass.so
+Y6-WAYLAND: AMEND5-BEFORE OK: no hyprglass load path in live config chain (hyprland.lua + hyprland.conf + sourced files)
+Y6-WAYLAND: live sig 11cbc6c577b84ffb1edf4df3fc5b6128c3ae6947_1795249046_1138556825 pid 1515
+Y6-WAYLAND: live plugin list BEFORE:
+"name": "hyprbars"
+"name": "hyprglass"
+"name": "computer-use-cursor"
+Y6-WAYLAND: runner-quiet process check OK (no runner scripts, no geckodriver, no mpv/foot)
+Y6-WAYLAND: flock held, runner-quiet window open
+Y6-WAYLAND: nested pid 1252978 (timeout wrapper, session leader)
+Y6-WAYLAND: nested sig 11cbc6c577b84ffb1edf4df3fc5b6128c3ae6947_1795339084_327326060
+Y6-WAYLAND: nested Hyprland pid 1252981
+DEBUG from aquamarine ]: Starting the Wayland backend!
+Y6-WAYLAND: nested socket wayland-1
+Y6-WAYLAND: nest output WAYLAND-1
+{
+  "schema": 1, "version": "1.1.1-cu.1", "versionCheck": "match", "active": true, "shaders": "pending", "itemProtocol": true,
+  "features": {
+    "windows": {"enabled": false, "active": false, "reason": "disabled"},
+    "layers": {"enabled": true, "active": true, "reason": null},
+    "subsurfaces": {"enabled": false, "active": false, "reason": "disabled"}
+  }
+}
+
+Y6-WAYLAND: hyprglass version=1.1.1-cu.1 versionCheck=match
+Y6-WAYLAND: profile gate: parse-1 not-ready marker is expected, waiting for applied marker
+Y6-WAYLAND: profile gate: parse-1 not-ready marker present (expected, not a failure)
+Y6-WAYLAND: profile gate: applied marker absent after 15s (tail of nested log):
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format GR H with modifier X_TILED
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format GR H with modifier Y_TILED
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format GR H with modifier Y_TILED_GEN12_RC_CCS
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format GR H with modifier Y_TILED_GEN12_RC_CCS_CC
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format GR H with modifier INVALID
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format GR F with modifier LINEAR
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format GR F with modifier X_TILED
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format GR F with modifier Y_TILED
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format GR F with modifier Y_TILED_GEN12_RC_CCS
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format GR F with modifier Y_TILED_GEN12_RC_CCS_CC
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format GR F with modifier INVALID
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format AB8F with modifier LINEAR
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format AB8F with modifier X_TILED
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format AB8F with modifier Y_TILED
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format AB8F with modifier Y_TILED_GEN12_RC_CCS
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format AB8F with modifier Y_TILED_GEN12_RC_CCS_CC
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format AB8F with modifier INVALID
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format C8 with modifier Y_TILED
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format C8 with modifier X_TILED
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format XR24 with modifier Y_TILED_GEN12_MC_CCS
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format XB24 with modifier Y_TILED_GEN12_MC_CCS
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format AR24 with modifier Y_TILED_GEN12_MC_CCS
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format AB24 with modifier Y_TILED_GEN12_MC_CCS
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format XR30 with modifier Y_TILED_GEN12_MC_CCS
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format XB30 with modifier Y_TILED_GEN12_MC_CCS
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format AR30 with modifier Y_TILED_GEN12_MC_CCS
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format AB30 with modifier Y_TILED_GEN12_MC_CCS
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format XR4H with modifier Y_TILED_GEN12_MC_CCS
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format XR4H with modifier Y_TILED_GEN12_RC_CCS
+DEBUG from aquamarine ]: zwp_linux_dmabuf_v1: Got format XR4H with modifier Y_TILED_GEN12_RC_CCS_CCY6-WAYLAND: FAIL: profile not applied: Y6-NEST-OPTICS applied marker absent after 15s; see nested log tail above
+Y6-WAYLAND: teardown start 16:18:27
+Y6-WAYLAND: nested log saved to /tmp/y6-nested/hypr-saved-20261122-161803-11cbc6c577b84ffb1edf4df3fc5b6128c3ae6947_1795339084_327326060
+Y6-WAYLAND: live check:
+    PID                  STARTED CMD
+   1515 Sat Nov 21 15:17:25 2026 Hyprland --watchdog-fd 4
+Hyprland 0.57.2 built from branch v0.57.2 at commit 11cbc6c577b84ffb1edf4df3fc5b6128c3ae6947 clean (VERSION: bump to 0.57.2).
+Date: Mon Nov 9 11:05:46 2026
+Tag: v0.57.2, commits: 8015
+
+"name": "hyprbars"
+"name": "hyprglass"
+"name": "computer-use-cursor"
+Y6-WAYLAND: live plugin list unchanged (before == after)
+Y6-WAYLAND: stray check (live Hyprland pid 1515 expected):
+1515 Hyprland --watchdog-fd 4
+Y6-WAYLAND: lock free after teardown
+Y6-WAYLAND: teardown done 16:18:29
