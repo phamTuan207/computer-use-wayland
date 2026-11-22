@@ -4196,3 +4196,22 @@ chương trình set_value hoặc miễn fill, kèm test fill vẫn pass.
 invented (trùng E1 council 3) và M7 thiếu kiểm tra :disabled.
 Số liệu đo trong spec đều đúng, wiring test chạy lại 12/12.
 Fix pass task 2 chờ council 1 và 2 xong rồi mới giao.
+
+## 13:40 ngày 22/11 - BATCH 12 TASK 2: COUNCIL + REDTEAM XONG, FIX PASS ĐÃ GIAO
+
+Cả 4 review task 2 xong và đồng thuận ở điểm chính. Council 1
+(e141c98) AMEND, 10 trích dẫn sai. Council 2 (e6ef2b3) NEEDS
+CHANGE. Council 3 (8922d4f) COMPLETE với 8 sửa. Redteam
+(64202db) BROKEN với B1 + 11 minor. Điểm chính: quy tắc
+send-requires-focus phải giới hạn cho chương trình set_value,
+hiện tại nó phá 2 đường đang chạy tốt là fill của Brave và
+chuỗi focus_type desktop [click, type, key Enter]. Lý do chọn
+option A cũng cần sửa (lý do (a) sai, so sánh chi phí gây hiểu
+lầm, thiếu lập luận mạnh nhất là trung thực cấu trúc với shape
+3 bước đã đo). Chuỗi lỗi 'field did not gain focus' là bịa,
+phải dùng đúng chữ của fill. Còn lại là trích dẫn sai dòng,
+thiếu kiểm tra :disabled, thiếu ghi 4 lần abort đầu của (b1),
+và spec khẳng định P9 PASS 10/10 mà không liệt kê ảnh P9
+thiếu ở mục còn thiếu. Số liệu đo đều đúng, wiring test chạy
+lại 12/12. Đã giao fix pass task 2 (1 agent riêng). Redteam
+task 1 vẫn đang chạy, xong là giao fix pass task 1.
