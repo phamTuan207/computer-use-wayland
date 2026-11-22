@@ -9,6 +9,7 @@ import builtins
 import json
 import os
 import sys
+import tempfile
 import time
 import types
 import unittest
@@ -137,21 +138,45 @@ class TestExecute(unittest.TestCase):
                 self.assertEqual(out["status"], "error")
 
     def test_execute_namespace_pins_safe_builtins(self):
-        captured = []
-        original_exec = builtins.exec
+        # The pin is checked through a temp file, not a parent-side
+        # list: exec now runs in the forked child (Y1b RPC), so a
+        # child-side append to a parent list is invisible to the
+        # parent (copy-on-write after fork). The mock records the
+        # namespace's __builtins__ facts to a file; the test reads
+        # them back. Every assertion keeps its original strength:
+        # exactly one exec, __builtins__ a dict and not a module,
+        # 'eval' absent from it.
+        with tempfile.TemporaryDirectory() as tmp:
+            record_path = os.path.join(tmp, 'exec-captures.jsonl')
+            original_exec = builtins.exec
 
-        def capture_exec(code, namespace, *args):
-            captured.append(namespace)
-            return original_exec(code, namespace, *args)
+            def capture_exec(code, namespace, *args):
+                builtins_facts = namespace["__builtins__"]
+                record = {
+                    "builtins_is_dict": isinstance(builtins_facts, dict),
+                    "builtins_is_module": isinstance(
+                        builtins_facts, types.ModuleType),
+                    "builtins_type": type(builtins_facts).__name__,
+                    "keys": sorted(builtins_facts),
+                }
+                with open(record_path, "a", encoding="utf-8") as handle:
+                    handle.write(json.dumps(record) + "\n")
+                return original_exec(code, namespace, *args)
 
-        with mock.patch("builtins.exec", new=capture_exec):
-            out = codemode.execute_op("result = 7")
+            with mock.patch("builtins.exec", new=capture_exec):
+                out = codemode.execute_op("result = 7")
+            if os.path.exists(record_path):
+                with open(record_path, encoding="utf-8") as handle:
+                    captured = [json.loads(line) for line in handle]
+            else:
+                captured = []
         self.assertEqual(out["status"], "completed")
         self.assertEqual(len(captured), 1)
-        safe = captured[0]["__builtins__"]
-        self.assertIsInstance(safe, dict)
-        self.assertNotIsInstance(safe, types.ModuleType)
-        self.assertNotIn("eval", safe)
+        safe = captured[0]
+        self.assertTrue(safe["builtins_is_dict"])
+        self.assertEqual(safe["builtins_type"], "dict")
+        self.assertFalse(safe["builtins_is_module"])
+        self.assertNotIn("eval", safe["keys"])
 
     def test_50mb_result_is_not_returned(self):
         out = codemode.execute_op('return "A" * (5 * 10**7)')
