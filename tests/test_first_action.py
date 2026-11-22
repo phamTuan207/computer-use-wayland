@@ -801,6 +801,8 @@ class TestRun(unittest.TestCase):
         path = Path(self.tmp.name) / ('obs-' + obs_id + '.json')
         path.write_text(json.dumps(
             {'id': obs_id, 'image': '/x.jpg',
+             'scope': 'window', 'window': '0x1',
+             'window_bounds': [100, 200, 901, 1176],
              'monitor_box': [0, 0, 901, 1176],
              'created': time.time() - age_s}))
         return str(path)

@@ -58,11 +58,16 @@ observation that is stale, missing, or unreadable is NEVER silently
 replaced by a screen capture that the batch then acts on (G28): the
 run refuses loudly instead, for any batch, naming the given
 observation, why it was rejected, and what to pass. The overlay is acquired
-before anything else, so the pill is visible within about a second of
-the command starting. The run appends a JSON timing record to
+after action and observation preflight, before any pointer input, so
+invalid scopes do not acquire the overlay. The run appends a JSON timing record to
 STATE/first-action-YYYYMMDD.jsonl. Every invocation prints exactly one
 JSON envelope on stdout and appends exactly one log line, including
 refusals and bad input.
+
+The envelope's `after` refers to the desktop_act after-observation with
+the input scope and can be passed as the next `--observation`. The
+`after_screen` field is a full-monitor verification image only. It is
+non-chainable and must not be used as the next key or type observation.
 """
 import argparse
 from datetime import datetime
@@ -354,6 +359,21 @@ def _fresh_observation(cu, env, screen, observation_path,
     return meta, str(meta['observation']), 'captured', rejected
 
 
+def _observation_reference(meta):
+    """Compact metadata pointer for an observation already on disk."""
+    if not isinstance(meta, dict):
+        return None
+    keys = ('id', 'observation', 'scope', 'window', 'window_bounds',
+            'monitor', 'monitor_box')
+    return {key: meta[key] for key in keys if key in meta}
+
+
+def _has_keyboard_action(actions):
+    return any(isinstance(action, dict)
+               and action.get('type') in ('key', 'type')
+               for action in actions)
+
+
 def loud_substitution_refusal(rejected, has_keyboard=True):
     """The G28 loud-refusal message for a rejected given observation.
 
@@ -432,6 +452,8 @@ def run(args):
         'observation': None,
         'after': None,
         'after_error': None,
+        'after_screen': None,
+        'after_screen_error': None,
         'error': None,
         'release_error': None,
         'log_error': None,
@@ -459,6 +481,22 @@ def run(args):
                                     OBSERVATION_MAX_AGE_S))
             envelope['path'] = 'refused'
             return 1
+        has_keyboard = _has_keyboard_action(actions)
+        preflight_meta = None
+        if has_keyboard and args.observation:
+            preflight_meta, _preflight_rejected = _read_given_observation(
+                cu, args.observation, deadline)
+            if (preflight_meta is not None
+                    and preflight_meta.get('scope') != 'window'):
+                envelope['observation'] = {
+                    'id': preflight_meta.get('id'), 'source': 'given'}
+                envelope['error'] = (
+                    'key and type actions require a window-scoped '
+                    'observation; screen observations support pointer '
+                    'actions only')
+                envelope['error_code'] = 'scope_mismatch'
+                envelope['path'] = 'refused'
+                return 1
         env = cu.environment()
         try:
             reply = acquire_overlay(agent, method, label=args.label,
@@ -469,8 +507,14 @@ def run(args):
         overlay_acquired = True
         envelope['order_to_overlay_ms'] = _ms(t0)
         envelope['overlay_owner'] = reply.get('owner')
-        meta, obs_path, obs_source, rejected = _fresh_observation(
-            cu, env, args.screen, args.observation, deadline)
+        if preflight_meta is not None:
+            meta = preflight_meta
+            obs_path = str(args.observation)
+            obs_source = 'given'
+            rejected = None
+        else:
+            meta, obs_path, obs_source, rejected = _fresh_observation(
+                cu, env, args.screen, args.observation, deadline)
         envelope['observation'] = {'id': meta.get('id'),
                                    'source': obs_source}
         if rejected is not None:
@@ -506,6 +550,8 @@ def run(args):
             deadline, env=child_env)
         envelope['session_timed_out'] = timed_out
         session_result = _parse_stdout_envelope(out)
+        scope_after = (session_result.get('after')
+                       if isinstance(session_result, dict) else None)
         session_error = None
         if (isinstance(session_result, dict)
                 and isinstance(session_result.get('error'), str)):
@@ -636,6 +682,10 @@ def run(args):
                     else:
                         envelope['ok'] = result.get('ok') is True
                         envelope['completed'] = result.get('completed', 0)
+                        scope_after = result.get('after')
+                        if result.get('capture_error'):
+                            envelope['after_error'] = str(
+                                result['capture_error'])[:400]
                         if isinstance(result.get('ime_state_trace'), list):
                             envelope['ime_state_trace'] = result[
                                 'ime_state_trace']
@@ -657,13 +707,13 @@ def run(args):
                     session_error or ('session timed out; not replayed'
                                       if timed_out else
                                       'session act failed; not replayed'))
+        envelope['after'] = _observation_reference(scope_after)
         try:
             after_meta = cu.observe_screen(env, args.screen, max_width=1920,
                                            persist=True)
-            envelope['after'] = {'id': after_meta.get('id'),
-                                 'observation': str(
-                                     after_meta.get('observation'))}
+            envelope['after_screen'] = _observation_reference(after_meta)
         except Exception as exc:
+            envelope['after_screen_error'] = str(exc)[:400]
             envelope['after_error'] = str(exc)[:400]
         return 0 if envelope['ok'] else 1
     except Exception as exc:
