@@ -19,6 +19,12 @@ fast, D3 tag/aria-label/placeholder, thread-scoped V11,
 contained cross-window matching, distinct messages; script
 commit c1b623b; verdict still NOT READY, counts now 3 closed,
 5 partial, 2 open, 2 standing).
+Updated 22/11 by fix pass 2 (round-2 council 1 + 2, redteam
+BROKEN with 4 HIGH, redteam 4/4: intent binding, sent-bubble-
+absent refusal, gate settle, harvest never binds the registry,
+ledger state machine, outcome rule on vanished threads;
+script commit 00ce862; verdict still NOT READY, counts still
+3 closed, 5 partial, 2 open, 2 standing).
 
 Sources read for this runbook (all verified before writing):
 - Assignment: batch 10 task 3, coord/clone2.md line 868, commit
@@ -27,13 +33,14 @@ Sources read for this runbook (all verified before writing):
 - Script: tests/two_vision_bench.py, 868 lines, commit c267411
   (pin as first written; updated batch 12 task 2 to 1200 lines,
   commit f49851f, hardened in the fix pass to 1637 lines,
-  commit c1b623b, see section 3).
+  commit c1b623b, hardened again in fix pass 2 to 1939 lines,
+  commit 00ce862, see section 3).
 - Workflow doc: docs/two-vision-benchmark-workflow-20261122.md,
-  1004 lines, checklist section 10 (added batch 9 task 2, fixed
+  1121 lines, checklist section 10 (added batch 9 task 2, fixed
   batch 9 task 2 fix pass).
 - One-vision design: docs/clone2-one-vision-design-20261122.md,
-  764 lines (731 at c267411, updated in the batch 12 task 2
-  fix pass).
+  792 lines (731 at c267411, updated in the batch 12 task 2
+  fix pass and again in fix pass 2).
 - Operator guard: improvements/worker-cl1sweep-fail-invest-log.md,
   commit 5f5a2fd on origin/todolist-push (CL1-SWEEP investigation,
   ~06:00 22/11). See section 9.
@@ -46,14 +53,14 @@ Sources read for this runbook (all verified before writing):
 ## 0. Blockers first: read this before anything else
 
 This runbook does NOT make a live run possible today. The
-current missing list is in section 12 (3 closed, 4 partial,
-3 open, 2 standing, as of the batch 12 task 2 fix pass).
+current missing list is in section 12 (3 closed, 5 partial,
+2 open, 2 standing, as of the batch 12 task 2 fix pass 2).
 The four blockers below are the shape of the gap; do not
 work around them by improvisation.
 
 1. The script cannot drive the live chats as they exist today.
    It always launches its own fresh headless Firefox with a fresh
-   profile (launch_browser, script lines 447-480). There is no
+   profile (launch_browser, script lines 535-566). There is no
    attach-to-existing-browser option, no profile reuse, and no
    login step anywhere in the argument list. A fresh profile is
    logged out of Messenger, so a live run as specified would hit
@@ -61,7 +68,7 @@ work around them by improvisation.
    no-message-input-in-inventory and NOT fail-closed and safe.
    A login page has visible email and password inputs, which
    HARVEST_JS inventories as textboxes, and find_input (script
-   lines 436-445) returns the first visible textbox when none
+   lines 524-533) returns the first visible textbox when none
    is named "Message", so it picks the email field. The script
    then clicks it, types the bench text into it (the V1 readback
    passes, the text IS in the field), Enter submits the login
@@ -71,7 +78,8 @@ work around them by improvisation.
    side effects the operator must expect: the bench text typed
    into a login email field, and an Enter that submits a login
    attempt with garbage credentials. The
-   no-message-input-in-inventory error (main, script line 1425)
+   no-message-input-in-inventory error (main, script line 1686,
+   run mode; the harvest-mode occurrence is line 1644)
    fires only when a page has zero visible textboxes, which a
    login page does not satisfy. An attach-to-Zen mode does not
    exist, and neither does a logged-in profile or a login step.
@@ -184,15 +192,15 @@ stale window address into a command.
 Check these before the run. Any other hash means an unreviewed
 change sits on top of the reviewed code; stop and report.
 
-- Script: tests/two_vision_bench.py, 1637 lines, commit c1b623b.
+- Script: tests/two_vision_bench.py, 1939 lines, commit 00ce862.
   Run `git log --oneline -1 -- tests/two_vision_bench.py` and
-  confirm it prints c1b623b.
+  confirm it prints 00ce862.
 - Workflow doc: docs/two-vision-benchmark-workflow-20261122.md,
-  1004 lines. Checklist section 10 in that doc is the
+  1121 lines. Checklist section 10 in that doc is the
   prerequisite checklist this runbook executes.
 - Design doc: docs/clone2-one-vision-design-20261122.md,
-  764 lines, commit c267411 (updated in the batch 12 task 2
-  fix pass).
+  792 lines, commit 00ce862 (updated in the batch 12 task 2
+  fix pass and again in fix pass 2).
 - The script hardcodes its browser paths (script lines 49-50):
   FF = /home/hatch/workspace/tools/firefox/firefox,
   GD = /home/hatch/workspace/tools/geckodriver. The run machine
@@ -291,7 +299,7 @@ cannot be reproduced or tested on the fixture.
 1. Generate a fresh run_id for this attempt. Never reuse a
    run_id from a previous attempt, including a failed one. The
    script's default format is bench-<UTC timestamp>-<6 hex>
-   (default_plan, script lines 811-812); the checklist example
+   (default_plan, script line 1223, run_id line 1226); the checklist example
    is bench-20261122-001. Use a fresh timestamp-based run_id
    and put it in the plan, in both messages, in exactly the
    form "BENCH-TEST clone1 <run_id>" and
@@ -339,8 +347,9 @@ CU_PICK4_FASTPATH=1 computer-use a11y query --pid <atspi-pid> \
    83-117) only keeps an element in its returned list if it
    has actions, is editable, or the observe runs in skeleton
    mode (`if skeleton or item['actions'] or
-   item.get('editable')`), and describe() records only
-   name/role/actions, never text content. query() calls
+   item.get('editable')`), and describe() records ref, role,
+   name, path, actions, plus editable/extents/state flags, and
+   never text content. query() calls
    observe() without skeleton and then filters that already
    pruned list by name substring. A Messenger bubble is
    static text: no actions, not editable. It is dropped
@@ -366,9 +375,14 @@ CU_PICK4_FASTPATH=1 computer-use a11y query --pid <atspi-pid> \
    is only a fallback with the same limit: a visual search
    that finds nothing does not prove the text is absent,
    and a bubble sitting in scrollback, missed by a visual
-   search, still produces the false PASS this check exists
-   to prevent (reused run_id, zero new sends, outcome
-   PASS). If in doubt, do the a11y query; if the query
+   search, still cannot prove a reused run_id absent: a bubble
+   sitting in scrollback, missed by a visual search, is still
+   a stale bubble the script's own pre-check would have to see.
+   The zero-send false PASS this check existed to prevent
+   (reused run_id, zero new sends, outcome PASS) is now closed
+   in code anyway: a run with zero fresh sends scores FAIL
+   unless --allow-resume, and a reused run_id in a fresh
+   workdir is REFUSED by the run registry. If in doubt, do the a11y query; if the query
    cannot run, record that and rely on the fresh
    generation.
 
@@ -542,9 +556,11 @@ Required outcomes before proceeding:
   textbox named "Message"), the run is FAIL before anything
   is sent and the blocker in section 0 stands. This is a
   human judgment on the inventory text, not a script
-  outcome: in harvest mode the script returns HARVEST-ONLY
-  and never emits the no-message-input-in-inventory error
-  (find_input is only called in run mode). Do not hand-log-in
+  outcome: in harvest mode without --strict-input-name the
+  script returns HARVEST-ONLY and never emits the
+  no-message-input-in-inventory error (find_input is only
+  called in run mode, and in harvest mode only when
+  --strict-input-name is passed, script line 1644). Do not hand-log-in
   inside the script's browser unless the coordinator
   explicitly orders that step: which account sends is a
   coordinator decision (assumption, no repo evidence: one
@@ -662,7 +678,7 @@ computer-use observe --screen eDP-2
   must be recorded in the run log as extra looks, so the
   total is auditable. The script records visions_used in
   results.json from the --visions-used flag (default 2,
-  script line 1369), never a measured count. Do
+  script line 1438), never a measured count. Do
   not cite it as a measured count; the
   operator's look count comes from the run log. Do not take
   extra visual looks during the run; every intermediate check
@@ -931,7 +947,7 @@ on the old code per the DOT 9 task 1 council review
 - Report the outcome with the run_id and wall time: outcome
   (PASS/FAIL), per-step statuses, visions_used as recorded in
   results.json (--visions-used flag, default 2, script line
-  1369, not a measured count), plus the operator's own look
+  1438, not a measured count), plus the operator's own look
   count from the run log
   (<run-dir>/run-log.md, named here so the count is
   auditable; every look outside the run, including the
@@ -954,8 +970,9 @@ here matches the closeout report exactly. Mapping to the
 readiness report's 11 items: closed are readiness 1, 9 and
 8 (item 9, script features, built in batch 12 task 2);
 partial are readiness 2, 3, 4, 5 plus item 10 (cross-origin
-frames, census built, live check owed); open are readiness
-6, 7; standing are readiness 10 and 11. (Correction:
+frames, census built, live check owed); open are item 7
+(readiness 3, probe part) and item 8 (readiness 6, 7);
+standing are readiness 10 and 11. (Correction:
 an earlier version of this header called the frames item
 "item 12"; it is item 10 in this section and in the
 closeout.)
@@ -979,32 +996,50 @@ CLOSED (3):
 
 9. Script features (owner: whoever builds them), BUILT in
    batch 12 task 2 (script commit f49851f, hardened in fix
-   pass c1b623b, fixture-verified, logs in
-   ~/workspace/tools/batch12-t2-fixpass/):
+   pass c1b623b and again in fix pass 2, commit 00ce862,
+   script 1939 lines, fixture-verified, logs in
+   ~/workspace/tools/batch12-t2-fixpass2/):
    textNew in the V12 gate (COUNT_JS, script line 177;
    before-snapshot count per window in main() is recorded
    evidence only, the gate passes only on exactly one NEW
-   bubble past the pre-Enter gate_baseline, and a double
-   append fails as duplicate-bubble; stale fixture PASS
-   with before_count 1 and gate_count 2, no-send fixture
-   FAILS v12-timeout with gate_count stuck at 1; the gate
-   is appearance-based, not causal); pre-send reservation
-   (intent written as "sending" after the V1 readback and
-   before Enter, reconciled to "sent" or "failed-unverified"
-   after the gate; a later run finding status "sending"
-   refuses with retry-blocked-reservation, proven by the
-   driver test with and without a visible bubble; a failed
-   retry never overwrites a "sent" or "sending" record);
+   bubble past the pre-Enter gate_baseline, settles a full
+   second after first sighting it, and a double append,
+   synchronous or delayed 700 ms, fails as duplicate-bubble;
+   stale fixture PASS with before_count 1 and gate_count 2,
+   no-send fixture FAILS v12-timeout with gate_count stuck
+   at 1; the gate is appearance-based, not causal); pre-send
+   reservation (intent written as "sending" after the V1
+   readback and before Enter, reconciled to "sent" or
+   "failed-unverified" after the gate; a later run finding
+   status "sending" refuses with retry-blocked-reservation,
+   proven by the driver test with and without a visible
+   bubble; a failed retry never overwrites a "sent" or
+   "sending" record; the ledger state machine makes "sent"
+   terminal and the reservation atomic under one lock);
+   intent binding (every mark records the message text,
+   thread URL and selectors, and a changed plan refuses
+   with retry-blocked-intent-changed; a recorded "sent"
+   intent whose bubble is absent refuses with
+   retry-blocked-sent-bubble-absent instead of re-sending);
    run registry (a reused run_id in a fresh workdir is
    REFUSED before the browser starts; a zero-send retry
-   scores FAIL unless --allow-resume); V11
+   scores FAIL unless --allow-resume; the registry binds
+   only in run mode, never in harvest mode, so the rung 2
+   harvest-then-run shape works; results.json records
+   registry_enabled and registry_path, so a run that
+   bypassed the registry with --no-run-registry or
+   --run-registry is visible in its own record); V11
    MutationObserver flag (OBSERVER_JS armed before typing,
    thread-scoped, counting mutation records; happy path
    shows v11_mutations 1 and v11_mutation_flag true,
    no-send shows 0 and false; contenteditable typing with
-   a no-op Enter shows 0, because typing mutates the input,
-   not the thread; the flag is recorded evidence only, not
-   a pass criterion); D3 ref stability (REF_CHECK_JS
+   a no-op Enter shows 0 on the fixture, because the fixture
+   input sits outside the #thread container, so the
+   thread-scoped observer cannot see its typing mutations;
+   on a live page, if the message input sits inside the
+   thread container, typing alone would move the count,
+   which is why the flag stays evidence only, never a pass
+   criterion); D3 ref stability (REF_CHECK_JS
    re-resolves the ref before input and fails fast with
    ref-stale when tag, role, name, aria-label or
    placeholder changed, nearest live textboxes listed;
@@ -1016,8 +1051,15 @@ CLOSED (3):
    hold only its own message, matching foreign bubbles by
    containment on the raw texts; proven by the driver test,
    injected foreign bubble and prefixed foreign bubble
-   detected); thread-missing fails fast (-1 preserved,
-   never collapsed to 0). What remains is live proof: the
+   detected; the outcome rule also fails the run when a
+   thread vanished after the gates or holds no bubble with
+   its own message); thread-missing fails fast (-1 preserved,
+   never collapsed to 0). Scope: all of this is built for
+   the Marionette script path (option A) only. Under option
+   B the CDP driver does not exist yet and none of these
+   features exist there (section 13.1 item 1); gap 9 is
+   CLOSED as a build for the Marionette path, not for the
+   live run as a whole. What remains is live proof: the
    fixture proof is not a live proof, and the VISION 2
    removal stays conditional until a live run passes with
    textNew. (Readiness item 8.)
@@ -1123,14 +1165,18 @@ OPEN (2):
    What batch 12 task 2 prepared without closing this: the
    decision packet is written in the batch 12 report
    (docs/clone2-batch12-readiness-closeout-20261122.md,
-   section 3), listing exactly what the coordinator must
-   supply and in what format, including the option B vs
-   option A decision and the account for option A. The fix
-   pass extended the packet with four more items the run
-   needs: who generates the run_id and its value, the
-   option A binary path and the script re-pin it forces,
-   the debug port per browser under option B, and the
-   live-lane-free confirmation.
+   section 3) and reproduced in full in section 14.0 below,
+   listing exactly what the coordinator must supply and in
+   what format, including the option B vs option A decision
+   and the account for option A. The fix pass extended the
+   packet with four more items the run needs: who generates
+   the run_id and its value, the option A binary path and
+   the script re-pin it forces, the debug port per browser
+   under option B, and the live-lane-free confirmation.
+   Fix pass 2 added an eleventh item: who may authorize a
+   resume run on the same run_id with --allow-resume, who
+   the operator is, and where the run artifacts are
+   preserved.
    (Readiness items 6 and 7.)
 
 STANDING (2, checked at run time, not closable in advance):
@@ -1276,7 +1322,18 @@ relaunched with a debug port:
    CDP driver, confirm both inputs visible and named
    per the live DOM name (section 6), then a dry send
    of a bench string into one thread and a V12 gate
-   check, proving the CDP input path works.
+   check, proving the CDP input path works. The dry send
+   IS a live message, so it is not free: it must use its
+   own run_id, its own workdir and ledger, and its text
+   must differ from the rung 2 plan messages (a distinct
+   bench string, recorded in the run log with its run_id),
+   or the rung 2 pre-check will see a stale bubble with no
+   ledger record for that text and send a second copy of
+   the same text. The decision packet (section 14.0) must
+   name the dry send's text, run_id and ledger before the
+   probe runs. Until the CDP driver exists with the
+   exactly-once features of section 12 item 9, the dry
+   send has no ledger at all, and it must not run.
 4. Coordinator supplies the plan (thread URLs, thread
    selector, bubble selector) for the two live threads.
 5. Run steps 0, 1, 2 per this runbook, with the CDP
@@ -1302,7 +1359,7 @@ Procedure:
    script lines 49-50), so "record the laptop binary path
    live" consumes nothing as written: on the laptop the
    script needs an edit to FF/GD (which changes the
-   section 3 pin, c1b623b, and must be reviewed and
+   section 3 pin, 00ce862, and must be reviewed and
    re-pinned when it lands) or the exact /home/hatch
    paths to exist there. Record the laptop binary path and
    which of those two it is. The profile holds a live
@@ -1387,12 +1444,28 @@ textNew V12 gate (a stale bubble cannot pass a new send),
 the pre-send reservation (a crashed attempt cannot be
 re-sent blindly), the D3 ref check (a renamed input fails
 fast), the cross-window check (a message in the wrong
-thread fails the run), and the frames census (a hidden
-input fails the harvest-first step). All six are built in
-script commit f49851f, hardened in fix pass c1b623b, and
-fixture-proven; see section 12 item 9 and item 10. The
-2-vision run in sections 6-8 keeps its two agent looks;
-rung 2 drops both by definition.
+thread fails the run), and the frames census (the harvest
+records every frame per window in results.json, and the
+operator stops the run on any cross-origin frame or any
+frame holding the input or thread; the census itself never
+fails the run in code, it is recorded evidence the
+operator must read). All six are built for the Marionette
+script path in script commit f49851f, hardened in fix
+pass c1b623b and again in fix pass 2, commit 00ce862, and
+fixture-proven; see section 12 item 9 and item 10. Under
+option B the CDP driver does not exist yet and none of
+the six exist there. The 2-vision run in sections 6-8
+keeps its two agent looks; rung 2 drops both by
+definition.
+
+Note on the 0-vision scoping above: the acceptance test
+as written in the arch-review log says "0-vision live
+benchmark" without scoping, and the scoping used here
+(0 during the step-2 run invocation, the step-1 harvest
+read counted as 1 vision of pre-run preparation) narrows
+that acceptance criterion. The narrowing is proposed
+here, not decided: it needs coordinator approval before
+a rung 2 run is scored against it.
 
 Hard constraint, kept: rung 2 acceptance runs on the real
 clone threads, NOT the Firefox fixture, under either live
@@ -1413,8 +1486,8 @@ only; they are not rung 2.
    before any browser starts (exactly 2 windows, distinct
    URLs, non-empty run_id, distinct non-empty messages) and
    refuses otherwise (exit 2).
-3. Script pin: tests/two_vision_bench.py at commit c1b623b,
-   1637 lines. Any other hash means an unreviewed change
+3. Script pin: tests/two_vision_bench.py at commit 00ce862,
+   1939 lines. Any other hash means an unreviewed change
    sits on top; stop and report.
 4. Live lane free: no BASELINE2 or other live run running,
    no other agent holding the laptop browser. Confirm with
@@ -1423,8 +1496,11 @@ only; they are not rung 2.
    geckodriver and venv at the hardcoded paths (script
    lines 49-50) under option A; under option B the CDP
    driver and debug ports instead (section 13.1). /tmp has
-   room (512M tmpfs; `df -h /tmp`) and ports 2828 and 9223
-   are free. A fresh --workdir per run.
+   room (512M tmpfs; `df -h /tmp`) and, under option A,
+   ports 2828 and 9223 are free; under option B the
+   per-browser debug ports are free instead (one distinct
+   port per browser, recorded, checked against 2828 and
+   9223). A fresh --workdir per run.
 6. Under option A, the pre-seeded logged-in profile is
    verified (section 13.2 steps 2-5): the COPIED profile
    loads logged in with both threads reachable. Under
@@ -1444,6 +1520,66 @@ only; they are not rung 2.
    option A the a11y method does not apply (no
    Brave/Chrome targets); freshness rests on generation
    plus the harvest-first DOM read.
+
+Decision packet (reproduced here so a runbook-only reader
+sees the same list; the batch 12 report, section 3, is
+the same 11 items):
+1. Method approval: yes or no for a live run of the
+   2-vision benchmark (sections 6-8) or rung 2 (section
+   14), for a named run_id.
+2. Live shape: option B (primary, CDP driver to the real
+   Brave/Chrome chats on ws2) or option A (fallback,
+   script's Firefox with a pre-seeded logged-in profile).
+   If option B: the CDP driver build (whoever builds it)
+   and the debug-port relaunch decision. If option A: the
+   account holding the two threads.
+3. Thread URLs: two real thread URLs, one per clone, must
+   differ. Thread selector and bubble selector per thread
+   (the default bubble selector is fixture-shaped; a live
+   plan MUST override it, the V12 gate requires exact
+   textContent === text).
+4. input_name per thread (default "Message", from
+   visual-only evidence; the live harvest-first read
+   verifies it, gap 6).
+5. v12_gate_s (default 5 s; raise it only if the live
+   thread is slow to render, and record the value used).
+6. Confirmation of --confirm-live for the named run_id.
+7. run_id owner and value: who generates the run_id for
+   this run and what its value is (timestamp-based, never
+   reused, including from a failed attempt). The script
+   binds the run_id to the ledger path of its first run in
+   the shared registry; a reused run_id in a fresh workdir
+   is REFUSED, so the value must be fresh and the owner
+   must be named. The registry path is the default
+   ~/.cache/two_vision_bench/run_registry.json; never pass
+   --no-run-registry or --run-registry on a live run.
+8. Option A binary path: the laptop Firefox binary and
+   geckodriver paths the script must use (FF/GD are module
+   constants, script lines 49-50; an edit changes the
+   section 3 pin and must be reviewed and re-pinned when it
+   lands), and whether the exact /home/hatch paths exist on
+   the laptop instead.
+9. Debug port per browser under option B: one distinct
+   port per browser (Brave, Chrome), recorded, checked
+   against 2828 and 9223. Batch 12 task 3 (sibling task,
+   endpoint naming rule + guard test for the port-split) is
+   the authority on debug-port endpoints; the rung 2
+   procedure requires a distinct debug port per browser,
+   passed explicitly, never the default.
+10. Live-lane-free confirmation: no BASELINE2 or other live
+    run running, and no other agent holding the laptop
+    browser, confirmed with the coordinator for this run_id.
+11. Resume authorization, operator, and artifact
+    destination: who may authorize a resume run on the
+    same run_id with --allow-resume (item 7 says a run_id
+    is never reused, including from a failed attempt; a
+    resume run is the one exception, and it needs a named
+    authorizer and evidence the run_id was genuinely sent
+    before, per section 14.3), who the operator is (who
+    runs steps 0 and 1 and the hand checks on the laptop),
+    and where the run artifacts are preserved after the
+    run (section 14.5 requires them out of /tmp
+    immediately; name the destination).
 
 ### 14.1 Step 1: harvest-first (before any send)
 
@@ -1562,7 +1698,9 @@ not the sends.
   each with v12_gate_ok true, gate_count exactly
   gate_baseline + 1 (exactly one NEW bubble landed, not a
   stale one and not a double append), and reservation
-  "sending" reconciled to "sent" in the ledger.
+  "sending" reconciled to "sent" in the ledger
+  (<run-dir>/ledger.json is the source for that check; a
+  step record only carries reservation "sending").
   v11_mutations is recorded evidence only (thread-scoped
   mutation-record count) and is NOT a pass criterion: it is
   entailed by gate success and can be true on gate failure
@@ -1597,10 +1735,11 @@ not the sends.
   timestamps in the run log) as the end-to-end figure; the
   script-internal wall_s in results.json (monotonic time
   from after arg parsing to benchmark_finished) excludes
-  interpreter and import startup and any launch transport,
-  so cite it only as the script-internal portion. The
-  arch-review acceptance test requires it measured, not
-  estimated.
+  interpreter and import startup and pre-t_start work, but
+  includes the browser launch (launch_browser runs after
+  t_start is set), so cite it only as the script-internal
+  portion. The arch-review acceptance test requires it
+  measured, not estimated.
 - Vision count: 0 during the step-2 run invocation. The
   agent reads no observation and no inventory text during
   the run. The step-1 harvest-first inventory read is
@@ -1641,10 +1780,13 @@ not the sends.
   thread holds the foreign message; do not re-send to
   "make up" for it.
 - If either thread becomes unreachable, or the browser
-  crashes, or a click lands on the wrong window, STOP and
-  report the state (which intents are sent, which are
-  failed-unverified or still "sending") before doing
-  anything else.
+  crashes, STOP and report the state (which intents are
+  sent, which are failed-unverified or still "sending")
+  before doing anything else. A click landing on the wrong
+  window has no script check that detects it, so it is an
+  operator-observed stop, not a script trigger: if the run
+  log or the V1 readback shows input typed into the wrong
+  window, stop the same way.
 - If --confirm-live was not explicitly given by the
   coordinator for this run, STOP. The script refuses
   without it, and the URL gate refuses any non-fixture
@@ -1705,30 +1847,33 @@ not the sends.
   clone2-live-run-readiness-closeout-20261122.md (verdict
   still NOT READY, exact remaining items listed there and
   in section 12 above).
-- Script: tests/two_vision_bench.py (1637 lines, c1b623b);
+- Script: tests/two_vision_bench.py (1939 lines, 00ce862);
   FF/GD lines 49-50; HARVEST_JS line 72; GATE_JS line 156;
   COUNT_JS line 177; OBSERVER_JS line 203; FRAMES_JS line
-  229; REF_CHECK_JS line 248; TEXTS_JS line 982; find_input
-  lines 436-445; launch_browser lines 447-480; send_one line
-  594; harvest_window line 954; frames_census line 963;
-  thread_texts line 992; bubble_count_for line 1000;
-  cross_window_check line 1011; default_plan run_id line
-  1054; validate_plan line 1111;
-  registry_check_and_record line 1186; URL gate lines
-  1337-1340; visions_used flag line 1369; outcome rule line
-  1594; no-message-input-in-inventory line 1425.
+  229; REF_CHECK_JS line 248; TEXTS_JS line 1154; find_input
+  lines 524-533; launch_browser lines 535-566; send_one line
+  682; harvest_window line 1126; frames_census line 1135;
+  thread_texts line 1164; bubble_count_for line 1172;
+  cross_window_check line 1183; default_plan run_id line
+  1226; validate_plan line 1283;
+  registry_check_and_record line 1367; URL gate lines
+  1533-1541; visions_used flag line 1438, recorded line
+  1581; outcome rule lines 1883-1892;
+  no-message-input-in-inventory lines 1644 (harvest mode)
+  and 1686 (run mode).
 - Batch 12 task 2: docs/clone2-batch12-readiness-closeout-20261122.md
   (textNew, pre-send reservation, V11, D3, frames census,
   rung 2 procedure; verdict still NOT READY); script
-  commit f49851f, hardened in fix pass c1b623b; fixture logs
-  and artifacts in ~/workspace/tools/batch12-t2/ and
-  ~/workspace/tools/batch12-t2-fixpass/.
+  commit f49851f, hardened in fix pass c1b623b and again in
+  fix pass 2, commit 00ce862; fixture logs and artifacts in
+  ~/workspace/tools/batch12-t2/, ~/workspace/tools/batch12-t2-fixpass/
+  and ~/workspace/tools/batch12-t2-fixpass2/.
 - Workflow doc: docs/two-vision-benchmark-workflow-20261122.md
-  (1004 lines); section 5 plan shape; section 6 failure
+  (1121 lines); section 5 plan shape; section 6 failure
   meanings; section 9 C12 not used; section 10 checklist.
 - Design doc: docs/clone2-one-vision-design-20261122.md
-  (764 lines, c267411; updated in the batch 12 task 2 fix
-  pass); section 1 vision budget; section 3
+  (792 lines, c267411; updated in the batch 12 task 2 fix
+  pass and again in fix pass 2); section 1 vision budget; section 3
   coordinate chain; section 4.2 textNew; section 4.3.2
   pre-send reservation; section 7 open items.
 - CL1-SWEEP investigation: improvements/

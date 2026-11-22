@@ -46,38 +46,49 @@ The benchmark script today records visions_used 2
 (tests/two_vision_bench.py, results dict in main()): VISION 1 is the
 agent reading the inventory text, VISION 2 is the agent looking at
 both threads once at the end. The script's V12 gates check the same outcome by DOM read
-(GATE_JS, tests/two_vision_bench.py:153), but removing VISION 2 is
-CONDITIONAL, not decided. The gate as built is a presence check
-only: it has no before-snapshot, so a bubble whose text was already
-in the thread when the batch started passes it (section 4.2: the
-gate currently lacks Turbo's textNew distinction, and Turbo's README
-states the reason it exists: "textMatches also matches text that
+(GATE_JS, tests/two_vision_bench.py:156), but removing VISION 2 is
+CONDITIONAL, not decided. Dated note, fix pass 2 (2026-11-22,
+script commit 00ce862, 1939 lines): the passage below was written
+when the gate was a presence check only. That is no longer true.
+The gate IS textNew now (built f49851f, hardened c1b623b, fix pass
+2 00ce862): it passes only on exactly one NEW bubble past the
+pre-Enter gate_baseline (the before-snapshot count in main() is
+recorded evidence only, the gate never consults it), settles a
+full second after first sighting it, and a double append,
+synchronous or delayed 700 ms, fails as duplicate-bubble. The
+original reason for textNew still stands (Turbo's README: "textMatches also matches text that
 was already on the page before the click, so prefer textNew for
-verifying a submit"). Until textNew is built and the gate is proven
-to count only bubbles that were absent when the batch started,
-VISION 2 stays: the agent's final look at both threads is the only
-independent witness that can distinguish "never sent" from "sent
-but unseen" when the selectors are wrong. Two concrete false PASS
-shapes the gate cannot catch today: (1) a retry with the same fixed
-plan (same run_id) after a crash between the Enter keypress and the
-ledger mark hits the V12 pre-check, sees the earlier bubble, marks
-the intent skipped-already-sent, and the run scores PASS having sent
-nothing in that run (main() counts "skipped-already-sent" as sent,
-tests/two_vision_bench.py:831, rule len(sent) == 2 and
-len(plan["windows"]) == 2); (2) the gate runs against the
-current window's thread DOM only and never compares across windows,
-so a saved inventory loaded with --inventory-in with mislabeled
-windows would send each message into the wrong thread while each
-gate still passes, because the bubble is in the window the gate
-reads. (The same-URL case is closed: validate_plan refuses two
-windows on the same URL, tests/two_vision_bench.py:600, added by the
-batch 9 task 2 fix pass.) Before the budget can drop to 1 vision, two things must
-exist: textNew in the gate, proven on a live page to count only new
-bubbles, and a cross-window check (each thread contains only its own
-message, the two threads' bubble sets differ). The selector-proving
-step that must happen before the live run is a live harvest-first
-read (--mode harvest with the live plan) proving the V12 selectors
-see a bubble on the live page.
+verifying a submit"). What remains is live proof: textNew is
+proven on the fixture only, and VISION 2 stays until a live run
+passes with textNew. The two false PASS shapes below are both
+closed as builds, live proof owed for both. (1) A retry with the
+same fixed plan (same run_id) after a crash between the Enter
+keypress and the ledger mark no longer scores PASS having sent
+nothing: the outcome rule requires 2 fresh sends this run unless
+--allow-resume is passed (tests/two_vision_bench.py:1883-1892,
+sends_this_run), the run registry refuses a reused run_id in a
+fresh workdir before the browser starts, and the pre-send
+reservation leaves status "sending", which a later run refuses.
+The old rule main() counted "skipped-already-sent" as sent
+(tests/two_vision_bench.py:831 in the pre-fix-pass numbering);
+that counting is gone. (2) The gate used to run against the
+current window's thread DOM only and never compare across windows;
+the cross-window check is now built (cross_window_check,
+tests/two_vision_bench.py:1183: each thread must contain only its
+own message, foreign bubbles matched by containment on the raw
+texts), and the outcome rule also fails the run when a thread
+vanished after the gates or holds no bubble with its own message.
+(The same-URL case is closed: validate_plan refuses two windows
+on the same URL, tests/two_vision_bench.py:1283, added by the
+batch 9 task 2 fix pass.) Before the budget can drop to 1 vision,
+one thing must still happen: textNew and the cross-window check
+must be proven on a live page, not only on the fixture. The
+selector-proving step that must happen before the live run is a
+live harvest-first read (--mode harvest with the live plan)
+proving the message input is visible and named on the live page;
+the harvest does NOT verify thread_selector or bubble_selector
+(they are only touched inside send_one via the gate, after
+typing), so the first V12 gate is the first real selector test.
 
 The design budget is therefore, as a target once those conditions
 are met:
@@ -278,7 +289,7 @@ not re-run here, and is cited only as the shape of the claim.
 Our mapping: the re-observation step in the step-6 loop hygiene gap.
 Today the benchmark script has no delta: a stale inventory means a
 full re-harvest (tests/two_vision_bench.py harvest_window,
-line 531, one evaluate per window, pooled median 0.0112 s for 66
+line 1126, one evaluate per window, pooled median 0.0112 s for 66
 elements in batch 8 task 2). The harvest is already cheap in time,
 so the delta is a token saving, not a time saving: the win is
 context size on a mutating page, where a full re-harvest replays
@@ -307,8 +318,8 @@ only (Turbo fails a ref from a previous document at once, checked
 by frame loaderId, and lists the 3 nearest current refs for a
 missing ref); a ref whose element now shows different text fails
 until a new snapshot reports it. Our equivalent is the D3 gap (ref
-stability on a mutating Messenger page, unaddressed in the script;
-tests/two_vision_bench.py format_inventory, line 236, warns refs
+stability on a mutating Messenger page, now built in the script;
+tests/two_vision_bench.py format_inventory, line 497, warns refs
 must not transfer between runs). The delta does not fix D3; it
 bounds the cost of the re-harvest D3 forces.
 
@@ -335,8 +346,11 @@ The V12 gate (GATE_JS, tests/two_vision_bench.py:156) checks the
 exact message text as a bubble in the thread DOM, which is Turbo's
 textMatches; the port adds Turbo's textNew distinction, which our
 gate now has, built in batch 12 task 2 (script commit f49851f,
-hardened in fix pass c1b623b): the gate counts only bubbles whose
-text appears after the pre-Enter gate_baseline. Dated note,
+hardened in fix pass c1b623b and again in fix pass 2, commit
+00ce862): the gate counts only bubbles whose text appears after
+the pre-Enter gate_baseline, and settles a full second after
+first sighting one, so a delayed second append fails as
+duplicate-bubble. Dated note,
 22/11, fix pass: the built baseline is deliberately stricter
 than Turbo's spec ("did not match when the batch started"). The
 operative baseline is the count measured right before Enter
@@ -368,7 +382,7 @@ def run_batch(driver, windows, steps, expect):
 
 expect = {
     "text_new": {"thread": "#thread", "bubble": ".bubble",
-                 "text": message},   # bubble text absent at batch start
+                 "text": message},   # bubble text absent at the pre-Enter gate_baseline
     "focus": {"ref": input_ref},     # activeElement is the input
     "value": {"ref": input_ref, "text": message},  # V1 readback
     "timeout_ms": 5000,
@@ -376,7 +390,8 @@ expect = {
 ```
 
 The expect kinds map one to one: textMatches is our current V12
-gate; textNew is the V12 gate with a before snapshot; selector is
+gate; textNew is the V12 gate with a pre-Enter baseline (not a
+batch-start snapshot, see the dated note above); selector is
 the thread and bubble selectors from the plan
 (docs/two-vision-benchmark-workflow-20261122.md section 5, step 0);
 urlMatches has no Messenger equivalent and is not ported. The port
@@ -488,7 +503,7 @@ in this plan-once, script-executed architecture the guard as scoped
 to the plan is vacuous: the script has no code path that performs an
 action not in the plan. main() only ever executes the send chain
 over plan["windows"]; find_input picks the input by name
-programmatically (tests/two_vision_bench.py:254). The set of actions
+programmatically (tests/two_vision_bench.py:524). The set of actions
 the script can perform is exactly the plan, so a guard that blocks
 off-plan actions can never trigger. This holds in live mode too, not
 just fixture mode: in live mode the plan is also the whole action
@@ -536,7 +551,7 @@ or none. This is the cheap non-vision verify step.
 
 Our mapping: the script's verify read after every action. The HCU
 guard already re-reads the target's live geometry, visibility and
-hit test before input (hcu_guard, tests/two_vision_bench.py:371,
+hit test before input (hcu_guard, tests/two_vision_bench.py:650,
 2 px move tolerance), and after the click the focus check (V3,
 activeElement) and the V1 value readback confirm the effect. The
 port adds Turbo's settle vocabulary to the click step: after a
@@ -591,8 +606,9 @@ numbers are the illustration.
    instead; tests/two_vision_bench.py send_one, value vs innerText
    branch). If not, stop: value-mismatch, Enter never sent.
 8. Enter. V12 gate with expect textNew: poll the thread DOM for a
-   bubble whose text equals the message and was absent when the
-   batch started, up to 5 s (v12_gate_s from the plan). On pass,
+   bubble whose text equals the message and was absent at the
+   pre-Enter gate_baseline, up to 5 s (v12_gate_s from the plan),
+   settling a full second after first sighting it. On pass,
    mark the submission key (the intent id; "bench-20261122-001:clone1"
    is illustrative, see section 4.3.1) sent in the ledger. On
    timeout, mark failed-unverified and refuse any later retry of the
@@ -665,16 +681,24 @@ is in rect reads and DOM clicks, not in session start.
 - C12 probe must run on the laptop before any live click uses the
   chain in section 3. If it returns Outcome A, amend this document.
 - VISION 2 removal is conditional (section 1): textNew in the V12
-  gate plus a cross-window check must be built and proven on a live
-  page before the budget drops to 1 vision. Until then VISION 2
-  stays. The selector-proving step is a live harvest-first read
-  proving the V12 selectors see a bubble on the live page.
+  gate plus a cross-window check are BUILT and fixture-proven
+  (batch 12 task 2 f49851f, hardened in fix pass c1b623b and
+  again in fix pass 2, commit 00ce862); what remains is proving
+  them on a live page before the budget drops to 1 vision. Until
+  then VISION 2 stays. The selector-proving step is a live
+  harvest-first read proving the message input is visible and
+  named on the live page; the harvest does NOT verify
+  thread_selector or bubble_selector, so the first V12 gate is
+  the first real selector test.
 - Pre-send reservation (section 4.3.2): write the intent as
   "sending" before the keypress, then reconcile to "sent" or
   "failed-unverified" after the gate; covers the process-death case.
   BUILT in batch 12 task 2 (script commit f49851f, hardened in
-  fix pass c1b623b, fixture-proven by the driver test and the
-  fix-pass driver F1/F2/F3). Live proof still owed.
+  fix pass c1b623b, hardened again in fix pass 2, commit 00ce862:
+  reserve() is atomic under one lock, "sent" is terminal in the
+  ledger state machine, every mark binds message, URL and
+  selectors), fixture-proven by the driver test and the
+  fix-pass driver F1/F2/F3. Live proof still owed.
 - DPR term (section 3.3): the per-part placement is now settled
   (origin never scaled, CSS part takes dpr / monitor_scale), but the
   corrected formula is untested at any scale other than 1, and it
@@ -694,7 +718,8 @@ is in rect reads and DOM clicks, not in session start.
 - D1, BiDi/Marionette handover: no protocol exists under the
   one-session constraint. The design stays Marionette-only.
 - D3, ref stability on a mutating page: BUILT in batch 12 task 2
-  (script commit f49851f, hardened in fix pass c1b623b):
+  (script commit f49851f, hardened in fix pass c1b623b and again
+  in fix pass 2, commit 00ce862):
   REF_CHECK_JS re-resolves the ref before input and fails fast
   with ref-stale when tag, role, name, aria-label or placeholder
   changed, and the HCU guard compares against the harvested
@@ -702,7 +727,8 @@ is in rect reads and DOM clicks, not in session start.
   tag swap, placeholder-only rename, moved input). Live proof
   still owed.
 - V11, production MutationObserver flag: BUILT in batch 12 task 2
-  (script commit f49851f, hardened in fix pass c1b623b):
+  (script commit f49851f, hardened in fix pass c1b623b and again
+  in fix pass 2, commit 00ce862):
   OBSERVER_JS arms a real observer before typing, scoped to the
   thread container, counting mutation records. The flag is
   recorded evidence only, not a pass criterion. Live proof still
@@ -724,13 +750,15 @@ Our stack, read on this machine 2026-11-22:
 
 - docs/clone2-last30days-sweep-20261122.md (261 lines, commit
   bd8fbdf): Turbo-Browser-MCP finding and submissionKey caveat.
-- tests/two_vision_bench.py (868 lines): HARVEST_JS line 71,
-  VERIFY_JS line 124, GATE_JS line 153, Ledger line 184, mark line
-  227, format_inventory line 236, click_at line 337, ensure_visible
-  line 350, hcu_guard line 371, send_one line 400, harvest_window
-  line 531, open_windows line 561, normalize_file_url line 587,
-  validate_plan line 600.
-- docs/two-vision-benchmark-workflow-20261122.md (547 lines: 379
+- tests/two_vision_bench.py (1939 lines, commit 00ce862):
+  HARVEST_JS line 72, VERIFY_JS line 127, GATE_JS line 156,
+  Ledger line 319, mark line 452, reserve line 486,
+  format_inventory line 497, click_at line 607,
+  ensure_visible line 620, hcu_guard line 650, send_one
+  line 682, harvest_window line 1126, open_windows line
+  1244, normalize_file_url line 1270, validate_plan line
+  1283.
+- docs/two-vision-benchmark-workflow-20261122.md (1121 lines: 379
   at commit 289b219, grown by batch 9 task 2 commit e6ecdea, which
   added the live-run prerequisites checklist): plan format, failure
   table, dry-test results.
