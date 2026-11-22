@@ -907,6 +907,10 @@ class CdpSetValueTests(unittest.TestCase):
             " var s = String(v).replace(/[\\r\\n]/g, '');"
             " if(this.type === 'email'){ s = s.split(',').map(function(t){"
             " return t.replace(/^[\\t\\n\\f\\r ]+|[\\t\\n\\f\\r ]+$/g, ''); }).join(','); }"
+            " else if(this.type === 'url'){ var a = 0, b = s.length;"
+            " while(a < b && (s.charCodeAt(a) === 9 || s.charCodeAt(a) === 10 || s.charCodeAt(a) === 12 || s.charCodeAt(a) === 13 || s.charCodeAt(a) === 32)) a++;"
+            " while(b > a && (s.charCodeAt(b - 1) === 9 || s.charCodeAt(b - 1) === 10 || s.charCodeAt(b - 1) === 12 || s.charCodeAt(b - 1) === 13 || s.charCodeAt(b - 1) === 32)) b--;"
+            " s = s.slice(a, b); }"
             " this._value = s; } }\n"
             "class FakeTextarea { get value(){ return this._value || ''; }"
             " set value(v){"
@@ -949,7 +953,9 @@ class CdpSetValueTests(unittest.TestCase):
             " multi_maxlen: runCase('INPUT', 'email', '',"
             " '  a@b.com , c@d.com  ', 15, true),\n"
             " multi_over: runCase('INPUT', 'email', '',"
-            " '  a@b.com , c@d.com  ', 14, true)};\n"
+            " '  a@b.com , c@d.com  ', 14, true),\n"
+            " url_trim: runCase('INPUT', 'url', '',"
+            " '  https://example.com/a,b  ', -1, false)};\n"
             "console.log(JSON.stringify(out));\n")
         out = json.loads(_run_node(driver))
         self.assertTrue(out['multi_spaces']['ok'],
@@ -971,6 +977,11 @@ class CdpSetValueTests(unittest.TestCase):
         self.assertFalse(out['multi_over']['ok'])
         self.assertEqual(out['multi_over']['error'],
                          'value exceeds maxlength')
+        self.assertTrue(out['url_trim']['ok'],
+                        'url whole-value trim failed: %s'
+                        % (out['url_trim'],))
+        self.assertEqual(out['url_trim']['value'],
+                         'https://example.com/a,b')
 
 
 if __name__ == '__main__':
