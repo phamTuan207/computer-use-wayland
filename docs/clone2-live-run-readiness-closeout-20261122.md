@@ -2,7 +2,9 @@
 
 Date: 2026-11-22, 08:51-09:30 +07. Verdict: still NOT READY.
 Count after the fix pass: 2 fully closed, 3 partial, 5 open,
-2 standing. The DOT 9 task 2 readiness check
+2 standing. Updated by batch 12 task 2 on 2026-11-22 (see the
+dated note at the end): new count 3 fully closed, 4 partial,
+3 open, 2 standing, verdict still NOT READY. The DOT 9 task 2 readiness check
 (docs/clone2-live-run-readiness-clone1-20261122.md, 2afbde5 + fix
 7d256ae) returned NOT READY with 11 missing items. The first
 closeout claimed 4 closed and 7 open; council 1, 2, 3 and the
@@ -247,3 +249,49 @@ NOT the Firefox fixture, under either live-shape option
 (ws2 with Brave/Chrome applies to option B only; option A
 runs the threads in the script's Firefox). Nothing in this
 closeout substitutes the fixture for the live run.
+
+## Batch 12 task 2 update, 2026-11-22
+
+New count: 3 fully closed, 4 partial, 3 open, 2 standing.
+Verdict: still NOT READY. Numbering still matches runbook
+section 12 exactly. Work done in script commit f49851f and
+runbook section 14; full report in
+docs/clone2-batch12-readiness-closeout-20261122.md; evidence
+logs and artifacts in ~/workspace/tools/batch12-t2/.
+
+- Item 9 (unbuilt features) CLOSED as a build: textNew V12
+  gate, pre-send reservation, V11 MutationObserver flag, D3
+  ref-stability fail-fast, and the cross-window check are all
+  built in the script and fixture-verified (stale fixture
+  PASS with before_count 1 and gate_count 2; no-send fixture
+  FAILS v12-timeout with gate_count stuck at 1; driver test
+  PASS for D3, cross-window and reservation). What remains
+  is live proof: the fixture proof is not a live proof.
+- Item 10 (cross-origin frames) PARTIAL: the frames census
+  is built into the harvest (FRAMES_JS) and fixture-proven
+  (1 frame per window, accessible true, iframe input NOT
+  inventoried); the live check on the real Messenger page
+  is still owed at run time. On file:// the origin reads
+  "null", so the accessible flag is the operative signal.
+- Item 6 (input name) OPEN: aria-label still UNKNOWN, no
+  live DOM read exists yet. Rung 2 runs with
+  --strict-input-name so a wrongly named input fails closed
+  instead of being typed into, but the plan's input_name is
+  still "Message" from visual-only evidence; only the live
+  harvest-first DOM read closes it.
+- Item 7 (a11y dry probe) OPEN: still UNRUN. Probe commands
+  re-verified against the code at todolist-push tip da46c4c
+  (a11y.py observe() filter and query() unchanged, cu.py
+  a11y subparser at line 2996); nothing here ran the probe.
+- Item 8 (method approval, thread URLs/selectors) OPEN:
+  coordinator decisions with no repo record yet. The
+  decision packet is listed in the batch 12 report,
+  section 3.
+- Rung 2 procedure written in runbook section 14 (live
+  0-vision on the real clone chats at ws2, option A
+  fallback): prerequisites, harvest-first with frames
+  census, run command with --strict-input-name, DOM-only
+  pass criteria (textNew gate counts, cross-window check,
+  accuracy >= 90%, wall time end to end), stop conditions,
+  log preservation. Hard constraint kept: rung 2 acceptance
+  runs on the real clone threads, not the fixture.
