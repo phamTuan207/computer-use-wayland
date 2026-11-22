@@ -740,6 +740,77 @@ def _publish_ledger(installed, ledger):
     return path
 
 
+def _deploy_manifest_path(installed):
+    return Path(installed) / 'deploy-manifest.json'
+
+
+def _write_deploy_manifest(installed, ledger, ledger_path):
+    """CB-9: stable deployment manifest, written by the deploy step.
+
+    Locks source commit + installed artifact + log into ONE file at a
+    stable path, so a bench can quote the exact build under test. The
+    per-release ledger lives under releases/ with a timestamped name;
+    this file always names the latest published release. No rung of
+    the acceptance ladder scores without a manifest for the exact
+    build under test (FINAL direction, section 4 precondition), and
+    the fixture bench pass must not be quoted as a gate until its
+    manifest is locked. Returns the manifest path.
+    """
+    snapshot = Path(ledger.get('snapshot_path') or '')
+    manifest = {
+        'installer': SNAPSHOT_MARKER,
+        'format': FORMAT_VERSION,
+        'source_root': ledger.get('source_root'),
+        'source_commit': ledger.get('source_commit'),
+        'source_content_sha256': ledger.get('source_content_sha256'),
+        'installed_root': str(installed),
+        'ledger_path': str(ledger_path),
+        'synced_wall': datetime.datetime.now().astimezone().strftime(
+            '%Y-%m-%d %H:%M:%S %Z'),
+        'sync_log': (str(snapshot / 'staging-evidence.json')
+                     if str(snapshot) else None),
+        'managed_files': len(ledger.get('managed_files', {})),
+        'artifacts': ledger.get('artifacts', {}).get('installed', {}),
+    }
+    path = _deploy_manifest_path(installed)
+    _write_json_atomic(path, manifest)
+    return path
+
+
+def _verify_deploy_manifest(installed, ledger, ledger_path):
+    """Check the stable manifest names the latest published release.
+
+    A missing manifest is a WARNING, not an error: trees synced
+    before this step have a ledger but no manifest, and the tree is
+    not broken, it simply cannot back a bench quote (no manifest, no
+    gate). A present manifest that disagrees with the latest ledger
+    is an error: the installed tree is not the build the manifest
+    claims. Returns the manifest dict, or None when absent.
+    """
+    path = _deploy_manifest_path(installed)
+    if not path.is_file() or path.is_symlink():
+        print('WARNING: no deploy manifest at ' + str(path) +
+              '; no bench may be quoted as a gate until the next sync '
+              'writes one (CB-9).', file=sys.stderr)
+        return None
+    try:
+        manifest = json.loads(path.read_text())
+    except (OSError, json.JSONDecodeError) as exc:
+        raise SyncError(f'invalid deploy manifest: {path}') from exc
+    for key, expected in (
+            ('installer', SNAPSHOT_MARKER),
+            ('format', FORMAT_VERSION),
+            ('source_commit', ledger.get('source_commit')),
+            ('source_content_sha256', ledger.get('source_content_sha256')),
+            ('ledger_path', str(ledger_path))):
+        if manifest.get(key) != expected:
+            raise SyncError(
+                f'deploy manifest {key} differs from the latest release '
+                f'ledger: manifest={manifest.get(key)!r} '
+                f'ledger={expected!r}')
+    return manifest
+
+
 def _latest_ledger(installed):
     directory = installed / 'releases'
     if directory.is_symlink():
@@ -795,8 +866,11 @@ def _check_release(repo, installed, ledger_override=None):
         raise SyncError('cannot read repo commit') from exc
     if ledger_override is None:
         ledger_path, ledger = _latest_ledger(installed)
+        deploy_manifest = _verify_deploy_manifest(
+            installed, ledger, ledger_path)
     else:
         ledger_path, ledger = None, ledger_override
+        deploy_manifest = None
     if ledger.get('installer') != SNAPSHOT_MARKER or ledger.get('status') != 'published':
         raise SyncError('latest release ledger has an invalid marker or status')
     if ledger.get('source_root') != str(repo) or ledger.get('source_commit') != commit:
@@ -870,6 +944,7 @@ def _check_release(repo, installed, ledger_override=None):
             raise SyncError(f'preserved-history exception changed: {name}')
     link = _cli_link_check(installed)
     return {'ok': True, 'managed_files': len(expected), 'ledger': str(ledger_path) if ledger_path else None,
+            'deploy_manifest': deploy_manifest,
             'preserved_history': sorted(name for name in HISTORY_FILES
                                         if name in ledger.get('preserved_history', {})),
             'cli_link': link}
@@ -1078,13 +1153,17 @@ def _sync(repo, installed, session):
             _check_release(repo, installed, ledger_override=ledger)
             ledger_path = _publish_ledger(installed, ledger)
             ledger['ledger_path'] = str(ledger_path)
+            manifest_path = _write_deploy_manifest(
+                installed, ledger, ledger_path)
             check = _check_release(repo, installed)
             print(f'Release ledger: {ledger_path}')
+            print(f'Deploy manifest: {manifest_path}')
             print(f'Installed build script: {actual_build_path}')
             print(f'--check: exit 0 ({check["managed_files"]} managed files; '
                   f'{len(check["preserved_history"])} preserved-history exceptions)')
             print('Installed sync published and verified.')
             return {'snapshot': snapshot, 'ledger': ledger_path, 'check': check,
+                    'deploy_manifest': manifest_path,
                     'staged_artifacts': stage_outputs, 'installed_artifacts': installed_outputs,
                     'build': ledger['build'], 'source_commit': commit,
                     'source_content_sha256': source_digest}
@@ -1103,6 +1182,15 @@ def _sync(repo, installed, session):
                     failed_ledger['failure'] = f'{type(exc).__name__}: {exc}'
                     _write_json_atomic(ledger_path, failed_ledger)
                 except (OSError, json.JSONDecodeError):
+                    pass
+            if 'manifest_path' in locals() and manifest_path.exists():
+                try:
+                    # CB-9: the failed release must not stay named.
+                    # Delete the manifest now; the restore below puts
+                    # back the previous release's manifest when the
+                    # snapshot had one.
+                    manifest_path.unlink()
+                except OSError:
                     pass
             journal_path = snapshot / 'transaction.json'
             try:
@@ -1153,6 +1241,9 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     modes = parser.add_mutually_exclusive_group()
     modes.add_argument('--check', action='store_true', help='verify the installed managed release')
+    modes.add_argument('--manifest', action='store_true',
+                       help='print the stable deploy manifest (CB-9: the '
+                            'lock a bench quotes as its gate)')
     modes.add_argument('--rollback', metavar='ABSOLUTE_SNAPSHOT',
                        help='restore a release snapshot made by this installer')
     parser.add_argument('--repo', type=Path, help='source git checkout')
@@ -1173,6 +1264,14 @@ def main(argv=None):
                       (', '.join(result['preserved_history']) or 'none'))
                 if not result['cli_link']['checked']:
                     print('CLI link: skipped for custom installed root')
+                return 0
+            if args.manifest:
+                path = _deploy_manifest_path(installed)
+                if not path.is_file() or path.is_symlink():
+                    raise SyncError(
+                        f'no deploy manifest at {path}; run a sync first '
+                        f'(CB-9: no manifest, no bench quoted as a gate)')
+                print(path.read_text(), end='')
                 return 0
             if args.rollback:
                 _rollback(repo, installed, args.rollback, session)

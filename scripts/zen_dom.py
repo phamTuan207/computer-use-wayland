@@ -22,11 +22,12 @@ pass --marionette-port.
 Usage:
   python3 scripts/zen_dom.py list
   python3 scripts/zen_dom.py tab 8
-  python3 scripts/zen_dom.py eval "return document.title"
+  python3 scripts/zen_dom.py eval --debug "return document.title"
   python3 scripts/zen_dom.py locate "#count-btn"
   python3 scripts/zen_dom.py rect "#count-btn"
   python3 scripts/zen_dom.py tabs
 Environment: ZEN_MARIONETTE_PORT, ZEN_GECKODRIVER, ZEN_WD_PORT.
+  CU_ZEN_DOM_DEBUG=1 enables eval without --debug (same gate).
 
 Timeouts (F3b): every WebDriver call converts TimeoutError, OSError,
 URLError, HTTPException, JSON decode failures, and a response without
@@ -1151,8 +1152,12 @@ def main():
     p_tab = sub.add_parser("tab", help="one tab by handle-list index, no scan")
     p_tab.add_argument("index", type=int,
                        help="handle-list index (creation order, not visual tab order)")
-    p_eval = sub.add_parser("eval", help="run JS in the current tab")
+    p_eval = sub.add_parser(
+        "eval", help="run JS in the current tab (debug mode only)")
     p_eval.add_argument("script")
+    p_eval.add_argument(
+        "--debug", action="store_true",
+        help="intentional debug mode: allow arbitrary JS eval")
     p_loc = sub.add_parser("locate", help="exact rect of a selector")
     p_loc.add_argument("selector")
     sub.add_parser("kill-hung", help="kill hung remote-control clients")
@@ -1161,6 +1166,18 @@ def main():
     if args.cmd == "kill-hung":
         print(json.dumps({"killed": kill_hung_remote_clients()}, indent=1))
         return 0
+    # CB-5: eval is debug-only in the CLI. The evaluate() transport
+    # stays open for harvest/locate/hit_check; only the default agent
+    # interface loses it. The refusal happens BEFORE any session
+    # opens, so a bare `eval` never touches the live browser.
+    if (args.cmd == "eval" and not args.debug
+            and os.environ.get("CU_ZEN_DOM_DEBUG") != "1"):
+        print(json.dumps({
+            "ok": False,
+            "error": ("zen_dom eval is debug-only (CB-5): "
+                      "pass --debug or set CU_ZEN_DOM_DEBUG=1"),
+        }))
+        return 1
     try:
         with ZenSession(marionette_port=args.marionette_port,
                         wd_port=args.wd_port) as z:

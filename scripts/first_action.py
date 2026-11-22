@@ -43,9 +43,18 @@ timing split):
   decision and observation time, so the under-30 s rule from a user
   order is not yet demonstrated end to end. order_to_session_attempt_ms
   is the session-attempt start, not the first pointer move. The 30 s
-  target is measured post-hoc from the envelope, not code-enforced:
-  the envelope records target_breached when the whole run exceeds
-  30 s (redteam A2).
+  target is measured post-hoc from the envelope, not code-enforced.
+  CB-7 (step 0): the envelope records target_breached when the FIRST
+  POINTER action exceeds 30 s from t0 (first_pointer_ms, basis
+  recorded), not when the whole run does; the whole-batch comparison
+  survives only as an explicit total_fallback basis when no pointer
+  action completed. dispatch_ms splits VM send + SSH connect + shell
+  startup off laptop work, from the order wall time passed with
+  --order-wall or CU_ORDER_WALL. phase_ms splits overlay acquire,
+  observation, session attempt, and after-capture per run (CB-10);
+  think time is measured by the P6 harness in the agent loop, never
+  here. Every capture pins its capture params (P6c): one max_width
+  (960, CB-3 uniformity), JPEG q90 4:4:4.
 
 Usage (one command, the agent's default for a live action batch):
   computer-use act-now --actions <file> [--observation <path>]
@@ -325,7 +334,61 @@ def _read_given_observation(cu, observation_path, deadline_s):
     return meta, None
 
 
-def _scope_after(cu, env, meta, result_after, screen_meta):
+def _dispatch_ms(order_wall_iso, laptop_wall_iso):
+    """VM-to-laptop dispatch in ms (CB-7): wall time from the user
+    order on the VM to this process starting on the laptop. That span
+    is VM send plus SSH connect plus shell startup; it is measured
+    ONLY when the caller passes the order wall time (--order-wall or
+    CU_ORDER_WALL). Returns None when the order time was not given,
+    does not parse, or is after the laptop start (clock skew): a
+    dispatch number invented from a missing input would be worse
+    than none. Pure function, unit tested."""
+    if not order_wall_iso or not laptop_wall_iso:
+        return None
+    try:
+        order = datetime.fromisoformat(str(order_wall_iso))
+        laptop = datetime.fromisoformat(str(laptop_wall_iso))
+    except ValueError:
+        return None
+    if order.tzinfo is None or laptop.tzinfo is None:
+        return None
+    delta_ms = (laptop - order).total_seconds() * 1000.0
+    if delta_ms < 0 or delta_ms > 3600000:
+        return None
+    return round(delta_ms, 3)
+
+
+POINTER_ACTION_TYPES = ('move', 'hover', 'click', 'double_click',
+                        'scroll', 'drag')
+
+
+def _first_pointer_action_ms(result):
+    """First completed pointer action in a desktop_act result, in ms
+    from that batch's execution start (its action_ms list), or None
+    when the result carries no action_ms (older build) or no pointer
+    action completed. Pure function, unit tested."""
+    if not isinstance(result, dict):
+        return None
+    entries = result.get('action_ms')
+    if not isinstance(entries, list):
+        return None
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        if entry.get('type') in POINTER_ACTION_TYPES:
+            ms = entry.get('ms')
+            if isinstance(ms, (int, float)):
+                return ms
+    return None
+
+
+def _capture_params(meta):
+    """Pinned capture params (P6c) for an observation meta dict."""
+    if not isinstance(meta, dict):
+        return None
+    return {'max_width': meta.get('max_width'),
+            'jpeg_quality': meta.get('jpeg_quality'),
+            'jpeg_subsampling': meta.get('jpeg_subsampling')}
     """The scope-matching after-capture for the envelope.
 
     AMEND4 item 12 (CL1-SWEEP): act-now used to capture its envelope
@@ -348,7 +411,7 @@ def _scope_after(cu, env, meta, result_after, screen_meta):
         return result_after
     if meta.get('scope') == 'window' and meta.get('window'):
         return cu.observe(env, meta['window'], crop=meta.get('crop'),
-                          max_width=meta.get('max_width') or 960,
+                          max_width=meta.get('max_width') or cu.CAPTURE_MAX_WIDTH,
                           activate=False)
     return screen_meta
 
@@ -378,7 +441,7 @@ def _fresh_observation(cu, env, screen, observation_path,
                                              deadline_s)
     if meta is not None:
         return meta, str(observation_path), 'given', None
-    meta = cu.observe_screen(env, screen, max_width=1920, persist=True)
+    meta = cu.observe_screen(env, screen, max_width=cu.CAPTURE_MAX_WIDTH, persist=True)
     return meta, str(meta['observation']), 'captured', rejected
 
 
@@ -465,9 +528,42 @@ def run(args):
         'release_error': None,
         'log_error': None,
         'target_breached': None,
+        # CB-7: dispatch is VM send + SSH connect + shell startup,
+        # measured from the order wall time the VM passes in
+        # (--order-wall / CU_ORDER_WALL). None when not provided.
+        'dispatch_ms': None,
+        'dispatch_basis': None,
+        # CB-7: first completed pointer action from t0, ms. None
+        # when no pointer action completed or the result carries no
+        # action_ms (older build). target_breached compares THIS
+        # against the 30 s target, not whole-batch time.
+        'first_pointer_ms': None,
+        'target_breached_basis': None,
+        # CB-10: per-phase split, overlay flicker vs think time
+        # measured separately. Think time lives in the agent loop
+        # (P6 harness, vision_measure.py), never inside act-now.
+        # Overlay flicker is UNPROBED until the LIQUID flicker probe
+        # runs (A4 worker precondition): no flicker number is claimed
+        # here, only the phase split to measure it.
+        'phase_ms': None,
+        'think_ms': None,
+        'think_basis': ('not_in_act_now: think time is measured by '
+                        'the P6 harness in the agent loop, not inside '
+                        'act-now'),
+        'overlay_flicker': ('unprobed: LIQUID flicker probe not run '
+                            '(A4 worker precondition)'),
     }
     overlay_acquired = False
     result_after = None
+    first_pointer_ms = None
+    first_pointer_basis = None
+    phase_ms = {}
+    order_wall = getattr(args, 'order_wall', None) or os.environ.get('CU_ORDER_WALL')
+    envelope['dispatch_ms'] = _dispatch_ms(order_wall, wall0)
+    envelope['dispatch_basis'] = (
+        'order_wall' if envelope['dispatch_ms'] is not None
+        else ('not_provided' if not order_wall
+              else 'unparsable_or_skewed'))
     try:
         try:
             actions = cu.read_json_file(args.actions)
@@ -526,11 +622,16 @@ def run(args):
             return 2
         overlay_acquired = True
         envelope['order_to_overlay_ms'] = _ms(t0)
+        phase_ms['overlay_acquire_ms'] = envelope['order_to_overlay_ms']
         envelope['overlay_owner'] = reply.get('owner')
+        _obs_t0 = time.monotonic()
         meta, obs_path, obs_source, rejected = _fresh_observation(
             cu, env, args.screen, args.observation, deadline)
+        phase_ms['observation_ms'] = round(
+            (time.monotonic() - _obs_t0) * 1000, 3)
         envelope['observation'] = {'id': meta.get('id'),
-                                   'source': obs_source}
+                                   'source': obs_source,
+                                   'capture_params': _capture_params(meta)}
         if rejected is not None:
             # G28: a given observation was rejected and a screen
             # capture was substituted. The substitution is recorded
@@ -562,6 +663,7 @@ def run(args):
         rc, out, err, timed_out, _elapsed = attempt_session(
             session_cmd(cu_py, obs_path, args.actions),
             deadline, env=child_env)
+        phase_ms['session_attempt_ms'] = round(_elapsed * 1000, 3)
         envelope['session_timed_out'] = timed_out
         session_result = _parse_stdout_envelope(out)
         session_error = None
@@ -604,6 +706,23 @@ def run(args):
             envelope['error_code'] = session_result.get('error_code')
             if isinstance(session_result.get('after'), dict):
                 result_after = session_result['after']
+        # CB-7: first-pointer time on the session path, from t0:
+        # session-attempt start plus the batch preflight plus the
+        # first pointer action inside the batch. The gap NOT in this
+        # sum is the session child process startup between the
+        # attempt start and desktop_act entry (about 60ms, F2b log
+        # lines 34-35; not recorded per run). At a 30 s threshold
+        # that gap cannot flip the verdict, and the basis names it.
+        _fp_action = _first_pointer_action_ms(session_result)
+        _preflight = (session_result.get('preflight_ms')
+                      if isinstance(session_result, dict) else None)
+        if (_fp_action is not None
+                and isinstance(_preflight, (int, float))
+                and envelope['order_to_session_attempt_ms'] is not None):
+            first_pointer_ms = (envelope['order_to_session_attempt_ms']
+                                + _preflight + _fp_action)
+            first_pointer_basis = ('session_computed (child startup '
+                                   'about 60ms unrecorded)')
         if rc == 0 and not timed_out:
             # Council 1, A3: the exit code alone never proves success.
             # Require the stdout envelope to say ok, or to be the
@@ -681,6 +800,10 @@ def run(args):
                         except Exception as exc:
                             envelope['dom_hooks_error'] = (
                                 'dom hooks unavailable: ' + str(exc)[:200])
+                    # CB-7: fallback runs in-process, so the desktop_act
+                    # entry time is measured exactly here (unlike the
+                    # session path, where child startup is unrecorded).
+                    fallback_start_ms = _ms(t0)
                     try:
                         with cu.locked():
                             result = cu.desktop_act(
@@ -696,6 +819,13 @@ def run(args):
                     else:
                         envelope['ok'] = result.get('ok') is True
                         envelope['completed'] = result.get('completed', 0)
+                        _fp_action = _first_pointer_action_ms(result)
+                        _preflight = result.get('preflight_ms')
+                        if (_fp_action is not None
+                                and isinstance(_preflight, (int, float))):
+                            first_pointer_ms = (
+                                fallback_start_ms + _preflight + _fp_action)
+                            first_pointer_basis = 'fallback_measured'
                         if isinstance(result.get('ime_state_trace'), list):
                             envelope['ime_state_trace'] = result[
                                 'ime_state_trace']
@@ -731,12 +861,14 @@ def run(args):
         # only, documented non-chainable: reusing a screen-scope
         # after-image for a key/type step always fails (CL1-SWEEP).
         screen_meta = None
+        _after_t0 = time.monotonic()
         try:
             screen_meta = cu.observe_screen(env, args.screen,
-                                            max_width=1920, persist=True)
+                                            max_width=cu.CAPTURE_MAX_WIDTH, persist=True)
             envelope['after_screen'] = {
                 'id': screen_meta.get('id'),
-                'observation': str(screen_meta.get('observation'))}
+                'observation': str(screen_meta.get('observation')),
+                'capture_params': _capture_params(screen_meta)}
         except Exception as exc:
             envelope['after_error'] = str(exc)[:400]
         try:
@@ -745,10 +877,13 @@ def run(args):
             if after_meta is not None:
                 envelope['after'] = {
                     'id': after_meta.get('id'),
-                    'observation': str(after_meta.get('observation'))}
+                    'observation': str(after_meta.get('observation')),
+                    'capture_params': _capture_params(after_meta)}
         except Exception as exc:
             if envelope.get('after_error') is None:
                 envelope['after_error'] = str(exc)[:400]
+        phase_ms['after_capture_ms'] = round(
+            (time.monotonic() - _after_t0) * 1000, 3)
         return 0 if envelope['ok'] else 1
     except Exception as exc:
         # Council 1, A2: never let an exception escape run(), or cu.py
@@ -758,8 +893,27 @@ def run(args):
         return 1
     finally:
         envelope['total_ms'] = _ms(t0)
-        envelope['target_breached'] = bool(
-            envelope['total_ms'] > FIRST_VISIBLE_ACTION_TARGET_MS)
+        envelope['first_pointer_ms'] = first_pointer_ms
+        envelope['phase_ms'] = phase_ms
+        # CB-7: target_breached compares the FIRST-pointer time
+        # against the 30 s threshold, not whole-batch time. The old
+        # rule (whole run over 30 s) measured the batch, not the
+        # first visible action, so a slow batch with a fast first
+        # click read as breached and a fast batch with a late first
+        # click read as fine. When no pointer action completed (or
+        # the result carries no action_ms), the basis falls back to
+        # total time and says so; the fallback is explicit, never
+        # silent.
+        if first_pointer_ms is not None:
+            envelope['target_breached'] = bool(
+                first_pointer_ms > FIRST_VISIBLE_ACTION_TARGET_MS)
+            envelope['target_breached_basis'] = first_pointer_basis
+        else:
+            envelope['target_breached'] = bool(
+                envelope['total_ms'] > FIRST_VISIBLE_ACTION_TARGET_MS)
+            envelope['target_breached_basis'] = (
+                'total_fallback: no pointer action completed or no '
+                'action_ms in result')
         if overlay_acquired:
             release_error = release_overlay(agent, overlay_mod=overlay_mod)
             if release_error is not None:
@@ -797,6 +951,11 @@ def build_parser():
                              'targets; wires the DOM value hooks (focus + '
                              'typed-value check) into the fallback batch '
                              'instead of the pixel band')
+    parser.add_argument('--order-wall', default=None,
+                        help='ISO wall timestamp of the user order on the '
+                             'VM (or set CU_ORDER_WALL); enables '
+                             'dispatch_ms, the VM send + SSH connect + '
+                             'shell startup split (CB-7)')
     return parser
 
 

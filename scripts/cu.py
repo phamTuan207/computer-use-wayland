@@ -55,6 +55,26 @@ _PLATFORM_KEYS = {'GDK_BACKEND','QT_QPA_PLATFORM','ELECTRON_OZONE_PLATFORM_HINT'
 _ROUTING_KEYS = SESSION_KEYS - _IDENTITY_KEYS
 OBSERVATION_SCHEMA = 2
 LOW_RES_MAX_WIDTH = 640
+# CB-3(a) image uniformity: ONE max_width for all captures (P6c pins it
+# with every measurement). 960 is the observe default every agent
+# grounding read uses, and the characterized width: the JPEG q90 codec
+# numbers below were measured on a real 960-wide frame. act-now used
+# to capture at 1920, so the model's input resolution changed by path;
+# first_action.py now captures at this width too. Changing this value
+# changes the model's input distribution: re-run an E2-style
+# calibration (tests/calibration_live.py) before quoting any hit rate.
+CAPTURE_MAX_WIDTH = 960
+# Pinned JPEG parameters (P6c): q90, no chroma subsampling (4:4:4).
+# Pillow defaults to 4:2:0 at q90, which smears colored small-text
+# edges (measured max pixel error 80 vs 39 on a real 960-wide frame).
+# Never below q85: blocking artifacts blur text.
+CAPTURE_JPEG_QUALITY = 90
+CAPTURE_JPEG_SUBSAMPLING = 0
+# J37 codec separation (CB-3(b)): a codec artifact is not a screen
+# change. The measured max pixel error of a q90 4:4:4 re-encode is 39,
+# so a patch whose pixels never move by more than this ceiling cannot
+# be a real change. Same 50 as _input_line_changed.
+CODEC_MAX_PIXEL_ERROR = 50
 OBSERVATION_MAX_AGE = 120
 INSTANCE_RE = re.compile(r'[A-Za-z0-9_.-]{1,200}')
 
@@ -853,17 +873,16 @@ def save_observation(image, meta, max_width, persist=True, encoded_png=None):
         if not all(key in meta for key in ('capture_started_monotonic','capture_started_wall','capture_boot_id','capture_compositor')):
             raise ValueError('desktop capture identity is incomplete')
     if not persist:
-        meta.update(image_format='JPEG',image_bytes=None,image_sha256=None,encode_ms=0)
+        meta.update(image_format='JPEG',image_bytes=None,image_sha256=None,encode_ms=0,
+                    jpeg_quality=CAPTURE_JPEG_QUALITY,jpeg_subsampling=CAPTURE_JPEG_SUBSAMPLING)
         meta.pop('_environment',None)
         return image,meta
     prepare_state()
     token=uuid.uuid4().hex[:12]
     path=STATE/(token+'.jpg')
     encode_start=time.monotonic()
-    # JPEG q90, no chroma subsampling (4:4:4). Pillow defaults to 4:2:0 at q90,
-    # which smears colored small-text edges (measured max pixel error 80 vs 39
-    # on a real 960-wide frame). Never below q85: blocking artifacts blur text.
-    buffer=io.BytesIO();image.save(buffer,format='JPEG',quality=90,subsampling=0);encoded=buffer.getvalue()
+    # JPEG q90, no chroma subsampling (4:4:4). See CAPTURE_JPEG_QUALITY.
+    buffer=io.BytesIO();image.save(buffer,format='JPEG',quality=CAPTURE_JPEG_QUALITY,subsampling=CAPTURE_JPEG_SUBSAMPLING);encoded=buffer.getvalue()
     encode_ms=round((time.monotonic()-encode_start)*1000,3)
     # pixel_sha256 must hash the STORED pixels. JPEG is lossy, so the decoded
     # file differs slightly from the pre-encode image; hash the JPEG decode so
@@ -886,7 +905,8 @@ def save_observation(image, meta, max_width, persist=True, encoded_png=None):
     with stream:stream.write(encoded)
     meta.update(id=token,created=time.time(),image=str(path),image_size=list(image.size),
                 pixel_sha256=pixel_sha256,max_width=max_width,
-                image_format='JPEG',image_bytes=len(encoded),image_sha256=hashlib.sha256(encoded).hexdigest(),encode_ms=encode_ms)
+                image_format='JPEG',image_bytes=len(encoded),image_sha256=hashlib.sha256(encoded).hexdigest(),encode_ms=encode_ms,
+                jpeg_quality=CAPTURE_JPEG_QUALITY,jpeg_subsampling=CAPTURE_JPEG_SUBSAMPLING)
     meta.pop('_environment',None)
     out=STATE/(token+'.json');meta['observation']=str(out)
     fd=os.open(out,os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600)
@@ -917,7 +937,7 @@ def _capture_identity(env):
             'capture_boot_id':boot_identity(),
             'capture_compositor':compositor_identity(env)}
 
-def observe(env, address, crop=None, max_width=960, activate=False, persist=True, low_res=False):
+def observe(env, address, crop=None, max_width=CAPTURE_MAX_WIDTH, activate=False, persist=True, low_res=False):
     low_res=bool(low_res)
     if low_res:max_width=min(max_width,LOW_RES_MAX_WIDTH)
     from PIL import Image
@@ -971,7 +991,7 @@ def screen_region(monitor_box_,crop):
         raise ValueError('crop must be a positive rectangle inside the selected monitor')
     return [mx+x,my+y,w,h]
 
-def observe_screen(env,monitor,crop=None,max_width=960,persist=True,low_res=False):
+def observe_screen(env,monitor,crop=None,max_width=CAPTURE_MAX_WIDTH,persist=True,low_res=False):
     low_res=bool(low_res)
     if low_res:max_width=min(max_width,LOW_RES_MAX_WIDTH)
     from PIL import Image
@@ -1003,17 +1023,52 @@ def image_point(meta,x,y):
     if not (0<=x<iw and 0<=y<ih): raise ValueError('point outside observed image')
     return rx+x*rw/iw, ry+y*rh/ih
 
-def _action_points_changed(old,new,actions):
+def _action_points_change_detail(old,new,actions):
+    """Per-action-point change detail (CB-3(b), J37 codec separation).
+
+    Returns {changed, max_patch_mean, max_pixel_diff, codec_suspect,
+    patches}. A patch counts as changed only when BOTH its mean
+    difference beats 6 AND its max pixel difference beats
+    CODEC_MAX_PIXEL_ERROR (50). The preflight used to compare a
+    decoded JPEG against a fresh uncompressed capture with the mean
+    alone: J37's patch diff of 6.627 tripped it, but a q90 4:4:4
+    re-encode moves pixels by at most 39 (measured), so a mean-only
+    trip with no pixel ever moving past 50 is a codec artifact, not
+    a screen change. codec_suspect is True exactly then: some patch
+    mean beat 6 while no patch pixel beat 50. A real change (text
+    appearing, a button state) moves pixels by far more than 50, so
+    the AND rule cannot hide one; a caret blink moves too few pixels
+    for the patch mean to trip at all.
+    """
     from PIL import ImageChops,ImageStat
-    if old.size!=new.size:return True
+    detail={'changed':False,'max_patch_mean':0.0,'max_pixel_diff':0,
+            'codec_suspect':False,'patches':0}
+    if old.size!=new.size:
+        detail.update(changed=True,max_pixel_diff=255)
+        return detail
     diff=ImageChops.difference(old,new)
+    mean_tripped=False
     for a in actions:
         points=[a.get('from'),a.get('to')] if a['type']=='drag' else [[a.get('x'),a.get('y')]]
         for point in points:
             if not point or point[0] is None:continue
-            x,y=point;patch=diff.crop((max(0,int(x)-24),max(0,int(y)-24),min(old.width,int(x)+25),min(old.height,int(y)+25)))
-            if sum(ImageStat.Stat(patch).mean)/3>6:return True
-    return False
+            x,y=point
+            patch=diff.crop((max(0,int(x)-24),max(0,int(y)-24),min(old.width,int(x)+25),min(old.height,int(y)+25)))
+            detail['patches']+=1
+            patch_mean=sum(ImageStat.Stat(patch).mean)/3
+            patch_max=max(hi for _lo,hi in patch.getextrema())
+            detail['max_patch_mean']=max(detail['max_patch_mean'],patch_mean)
+            detail['max_pixel_diff']=max(detail['max_pixel_diff'],patch_max)
+            if patch_mean>6:
+                mean_tripped=True
+                if patch_max>CODEC_MAX_PIXEL_ERROR:
+                    detail['changed']=True
+    detail['codec_suspect']=bool(mean_tripped and not detail['changed'])
+    return detail
+
+def _action_points_changed(old,new,actions):
+    if old.size!=new.size:return True
+    return _action_points_change_detail(old,new,actions)['changed']
 
 def _mean_image_difference(old,new):
     from PIL import ImageChops,ImageStat
@@ -1160,6 +1215,58 @@ def _type_group_anchors(groups):
             if isinstance(act,dict) and act.get('type') in ('click','double_click'):
                 last_click=(act['x'],act['y'])
     return anchors
+
+def screen_change_detail(old,new,actions):
+    """Diagnostic detail for the preflight comparison (CB-3(b)).
+
+    changed matches screen_changed() exactly: the global limb is
+    mean-only (a whole-frame mean over 3 trips, as before), the patch
+    limb is the J37 rule (patch mean over 6 AND max pixel diff over
+    CODEC_MAX_PIXEL_ERROR). The two limbs differ deliberately:
+    - The global limb stays mean-only because the existing tests pin
+      it: a stable uniform brightness shift (mean 3.5, max 4) must
+      trigger exactly one settle retry, and two raw frames that
+      disagree (mean 4) must refuse. A mean-only global rule is the
+      trigger for the retry, never a refusal by itself.
+    - The patch limb carries the J37 fix: the old-vs-settled
+      comparison pairs a decoded JPEG against a raw capture, and a
+      codec-scale patch mean (J37: 6.627, max pixel move 38-48 on
+      photographic content, under the measured q90 ceiling 39) must
+      not refuse. A real move always moves some pixel past 50.
+    codec_suspect is True when the comparison tripped (or nearly
+    tripped) on codec-scale evidence only: no pixel anywhere moved
+    past the codec ceiling. reason is size_mismatch, global_mean,
+    action_point, codec_scale_only (a patch mean tripped but no
+    pixel beat the ceiling, so the patch limb did not fire), or
+    unchanged.
+    """
+    from PIL import ImageChops
+    if old.size!=new.size:
+        return {'changed':True,'mean_diff':float('inf'),
+                'max_patch_mean':0.0,'max_pixel_diff':255,
+                'codec_suspect':False,'reason':'size_mismatch'}
+    mean_diff=_mean_image_difference(old,new)
+    global_max=max(hi for _lo,hi in ImageChops.difference(old,new).getextrema())
+    detail=_action_points_change_detail(old,new,actions)
+    max_pixel=max(detail['max_pixel_diff'],global_max)
+    global_tripped=mean_diff>3
+    patch_tripped=detail['changed']
+    changed=bool(global_tripped or patch_tripped)
+    if not changed and detail['max_patch_mean']>6:
+        reason='codec_scale_only'
+    elif global_tripped:
+        reason='global_mean'
+    elif patch_tripped:
+        reason='action_point'
+    else:
+        reason='unchanged'
+    return {'changed':changed,'mean_diff':mean_diff,
+            'max_patch_mean':detail['max_patch_mean'],
+            'max_pixel_diff':max_pixel,
+            'codec_suspect':bool(max_pixel<=CODEC_MAX_PIXEL_ERROR
+                                and (changed
+                                     or detail['max_patch_mean']>6)),
+            'reason':reason}
 
 def screen_changed(old,new,actions):
     if old.size!=new.size:return True
@@ -1419,6 +1526,7 @@ def compact_result(result):
     if result.get('backend')=='desktop':
         keys=('image','observation','id','observation_schema','image_role','created','image_size',
               'max_width','image_format','image_bytes','image_sha256','pixel_sha256','region',
+              'jpeg_quality','jpeg_subsampling',
               'crop','scope','window','window_bounds',
               'monitor','monitor_box','monitor_scale','monitor_transform','capture_ms',
               'decode_ms','encode_ms','capture_elapsed_ms','capture_started_wall',
@@ -1757,6 +1865,20 @@ def desktop_act(env,meta,actions,after_capture=True,observation_path=None,
         settled,settled_meta=(observe_screen(env,meta['monitor'],meta.get('crop'),meta['max_width'],persist=False) if screen_scope else
                               observe(env,address,meta.get('crop'),meta['max_width'],activate=False,persist=False))
         if not screen_changed(new,settled,actions) and not _action_points_changed(old,settled,actions):
+            # CB-3(b): when the old-vs-settled comparison tripped only
+            # on codec-scale diffs, name it. The screen did not change;
+            # the run proceeds on the settled frame, and the diagnostic
+            # record says why instead of silently passing a comparison
+            # that used to refuse (J37).
+            _codec_detail=screen_change_detail(old,settled,actions)
+            if _codec_detail['codec_suspect']:
+                _diagnostic_event('preflight_codec_artifact',meta,env,completed=0,
+                                  error=('codec-only difference at action points '
+                                         '(max patch mean %.3f, max pixel diff %d); '
+                                         'screen did not change'
+                                         % (_codec_detail['max_patch_mean'],
+                                            _codec_detail['max_pixel_diff'])),
+                                  active_window=active_window)
             _diagnostic_event('preflight_retry',meta,env,completed=0,error='screen changed',active_window=active_window)
             new,fresh=settled,settled_meta
         else:
@@ -1885,6 +2007,12 @@ def desktop_act(env,meta,actions,after_capture=True,observation_path=None,
         _diagnostic_event('action_completed',meta,env,action_index=index,action_type=typ,
                           completed=completed,active_window=active_window)
     start=time.monotonic()
+    # CB-7: per-action completion times (ms from batch start) for the
+    # first-pointer measurement. first_action.py reads the first
+    # pointer entry (move/hover/click/double_click/scroll/drag) and
+    # compares it against the 30 s target; a batch that fails
+    # mid-group simply has no entry for the unfinished group.
+    action_ms=[]
     focus_verified=None
     focus_note=None
     error_code_override=None
@@ -1930,6 +2058,10 @@ def desktop_act(env,meta,actions,after_capture=True,observation_path=None,
                         'from the element rect and retry')
             with mouse_modifiers(env,a.get('modifiers',[]) if isinstance(a,dict) else []):
                 execute_group(a,index)
+            action_ms.append({'index':index,
+                              'type':('keyboard_group' if isinstance(a,list)
+                                      else a.get('type')),
+                              'ms':round((time.monotonic()-start)*1000,3)})
             final_group=index==len(groups)-1
             if final_group and terminal_address is not None and not same_window_address(terminal_address,address):
                 # The expected terminal transition (e.g. Save closes the dialog
@@ -2021,6 +2153,7 @@ def desktop_act(env,meta,actions,after_capture=True,observation_path=None,
     if not after_capture and error is None:
         result={'ok':True,'completed':completed,'preflight_ms':preflight_ms,
                 'execution_ms':execution_ms,'after_skipped':True,
+                'action_ms':action_ms,
                 'input_diagnostics':diagnostics}
         if has_type:
             if type_dom_verified is True:
@@ -2058,7 +2191,7 @@ def desktop_act(env,meta,actions,after_capture=True,observation_path=None,
         return result
     time.sleep(.08)
     result={'ok':error is None,'completed':completed,'preflight_ms':preflight_ms,
-            'execution_ms':execution_ms,'input_diagnostics':diagnostics}
+            'execution_ms':execution_ms,'action_ms':action_ms,'input_diagnostics':diagnostics}
     result.update(ime_result)
     if transient_error:result['error_code']='focus_changed'
     if error_code_override:result['error_code']=error_code_override
