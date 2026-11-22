@@ -598,7 +598,10 @@ class ZenDomBackend:
                             ok = sent and received and (
                                 verified or basis.startswith(
                                     'no-dom-postcondition'))
-                            results.append({
+                            # F4 diagnostic: same dispatch outcome as
+                            # the main path, so a re-grounded failure
+                            # is equally diagnosable.
+                            reground_result = {
                                 'action_index': index,
                                 'input_sent': sent,
                                 'target_received': received,
@@ -606,7 +609,12 @@ class ZenDomBackend:
                                 'verified_basis': basis,
                                 'ok': ok,
                                 're_ground': {'plan_rect': plan_rect,
-                                              'live_rect': fresh_rect}})
+                                              'live_rect': fresh_rect}}
+                            dispatch_info = getattr(
+                                self._pointer, 'last_dispatch', None)
+                            if isinstance(dispatch_info, dict):
+                                reground_result['dispatch'] = dispatch_info
+                            results.append(reground_result)
                             if ok:
                                 completed += 1
                                 if action_type in ('fill', 'set_value'):
@@ -664,12 +672,21 @@ class ZenDomBackend:
             else:
                 ok = sent and received and (
                     verified or basis.startswith('no-dom-postcondition'))
-            results.append({'action_index': index,
-                            'input_sent': sent,
-                            'target_received': received,
-                            'verified': verified,
-                            'verified_basis': basis,
-                            'ok': ok})
+            # F4 diagnostic: attach the delegate's last dispatch
+            # outcome when it has one, so a failed action says
+            # whether the dispatch itself refused/sent or the DOM
+            # verification failed. Additive only; ok/completed are
+            # computed above and never changed by this field.
+            dispatch_info = getattr(self._pointer, 'last_dispatch', None)
+            action_result = {'action_index': index,
+                             'input_sent': sent,
+                             'target_received': received,
+                             'verified': verified,
+                             'verified_basis': basis,
+                             'ok': ok}
+            if isinstance(dispatch_info, dict):
+                action_result['dispatch'] = dispatch_info
+            results.append(action_result)
             if not ok:
                 error = {'code': 'action_failed',
                          'reason': basis}

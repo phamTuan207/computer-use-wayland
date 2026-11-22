@@ -46,6 +46,14 @@ class ZenPointerDelegate:
         self._focus_fn = focus_fn
         self._max_width = max_width
         self._meta = None
+        # F4 diagnostic: the last dispatch outcome, so a failed
+        # dom_act can say WHERE it failed instead of collapsing
+        # every cause into the verify basis. Set on every __call__:
+        # 'translated' False means _translate refused (no meta, no
+        # image point, unmappable type); 'act_ok'/'act_completed'
+        # carry the desktop_act result when the action was sent.
+        # Read-only diagnostics, never used to change dispatch.
+        self.last_dispatch = None
 
     def begin_batch(self, window_address):
         """Focus the window, then observe it once for this batch.
@@ -81,9 +89,13 @@ class ZenPointerDelegate:
 
     def __call__(self, action, screen_point):
         if self._meta is None:
+            self.last_dispatch = {'translated': False,
+                                  'reason': 'no-batch-meta'}
             return False
         desktop = self._translate(action, screen_point)
         if desktop is None:
+            self.last_dispatch = {'translated': False,
+                                  'reason': 'translate-refused'}
             return False
         for item in desktop:
             item['scope'] = self._meta['scope']
@@ -91,7 +103,22 @@ class ZenPointerDelegate:
         result = self._code_backend.act(
             self._meta, desktop, self._meta['observation'])
         if not isinstance(result, dict):
+            self.last_dispatch = {'translated': True,
+                                  'act_ok': None,
+                                  'act_completed': None,
+                                  'act_expected': len(desktop),
+                                  'reason': 'act-not-a-dict'}
             return False
+        self.last_dispatch = {
+            'translated': True,
+            'act_ok': result.get('ok'),
+            'act_completed': result.get('completed'),
+            'act_expected': len(desktop),
+            'act_error': result.get('error'),
+            'act_error_code': result.get('error_code'),
+            'type_verified': result.get('type_verified'),
+            'type_verified_basis': result.get('type_verified_basis'),
+        }
         return (result.get('ok') is True
                 and result.get('completed') == len(desktop))
 
