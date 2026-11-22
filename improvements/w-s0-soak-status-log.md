@@ -76,4 +76,5 @@ Source: improvements/worker-probe-s0-log.md, final commit 39e1450, and improveme
 
 ## 6. Commit record
 
-- Log commit: (hash recorded in the follow-up commit, same pattern as PROBE-S0 commit b4b9224).
+- Log commit: bd34aeb8386a3b33d6ea446f938071d3582a638f (2026-11-22 17:52:25 +07), pushed ab7c7a5..bd34aeb, verified with `git ls-remote origin todolist-push` at 17:52:30 +07, local HEAD matches remote.
+- Hash-record commit: (this follow-up commit).
