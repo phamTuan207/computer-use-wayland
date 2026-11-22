@@ -27,7 +27,12 @@ the fixed run 2 runner (c5-zen-delegate-run2.py); run 1
 (c5-zen-delegate-run.py) must not be re-run as-is. On a 'not made
 current' refusal, the leftover empty about:blank tab is closed by
 hand in the Zen UI, never via Marionette, and the open is not
-retried in a loop.
+retried in a loop. When the owner tab carries the fixture URL
+after a refused open, the coordinator navigates it back to the
+Muse thread by hand in the Zen UI, never via a Marionette
+navigate or DELETE, and verifies the pre-check passes before the
+next run (Council 1 C1, amend 2: the leftover after a refused
+open is not always an empty about:blank tab).
 
 ## 0. Scope: preparation only, no live run
 
@@ -613,6 +618,14 @@ res = dom_act(snap, [
 print("dom_act ok", res.get("ok"), "completed", res.get("completed"), "ms", res.get("execution_ms"), "error", res.get("error"))
 assert_state(res.get("ok") is True, "dom_act failed")
 ```
+
+Note (Council 3 G1, amend 2): the program above is the recorded
+RUN-1 program (message ZEN-DELEGATE-R1-IGNORE-TEST, no PROBE
+print). The run-2 program in c5-zen-delegate-run2.py adds the
+PROBE print after dom_observe (Redteam F2), which phase 4 gates
+on. Copy run2.py, never copy this listing into a run: a program
+copied from this listing would fail phase 4 after the send
+('send program printed no snapshot line').
 
 - P4.1: focus re-check in the SAME SSH call immediately before
   the send (same rule as P3.2). Then run the program from the
