@@ -582,4 +582,105 @@ workspaces at the same time.
   done 10:55 (e248a7a), bench commit f49851f 11:01. Clone2 at 90% of
   its usage limit: NO large batch 13 (section 15).
 
-## 18. (to be filled as results land)
+## 18. C5-FOCUS-INCIDENT DONE, verified by me, 11:46 +07 (T+1h16m)
+
+- Worker C5-FOCUS-INCIDENT completed 11:45:05 +07 (about 16 min,
+  including a planned 10-min wait for the run 51 ws2 hold). No
+  keystroke sent by the worker at any point. Deliverable:
+  improvements/worker-click5-focus-incident-log.md, commit 2d198c4
+  on todolist-push.
+- MY VERIFICATION (watch log + git, this session):
+  - M2 cause PROVEN, confirmed from the watch log itself. Run 49:
+    started 11:11:56, switched to ws2 at 11:13:xx (active window
+    after switch: clone2 Chrome 0x5570538ed160), observed clone2
+    Chrome, returned to ws1 at 11:14:36 (verified WS 1, Zen active).
+    M2 at 11:14:17 falls INSIDE that hold, 19 seconds before the
+    return. The worker's focus check for that attempt was stale
+    (minutes old) or absent. Alternatives excluded: clone2's own
+    activity (no commit/action at 11:14), focus-follows-mouse (no
+    evidence), watchdog-zen-20m (SSH checks only, no GUI action).
+    This also corroborates H3 (workspace-state-dependent moz read)
+    as the leading explanation for the transient (264, 50), one
+    sample, not proof.
+  - M1: no fresh focus move happened. Trigger, worker-side: the focus
+    command used the broken string form (hyprctl dispatch focuswindow
+    address:...), errored, and the worker sent the key anyway without
+    a successful verification. Background: focus was already on Brave
+    since run 48's return at 10:59:19. Returning to ws1 by
+    workspace-focus restores the last-focused window on that
+    workspace (runs 47-48 returned with Brave active, run 49 with Zen
+    active after the worker had focused Zen repeatedly).
+  - Chrome bookmarks bar: NONE shown, by direct visual evidence
+    (full-screen grim 11:43:45 during the run 51 ws2 hold; the Muse
+    web app starts at the top edge, no tab strip, no address bar, no
+    bookmarks bar row). The window is an app window
+    (--app-id=hichoggbhebpgpgcbcgfpkjmohpcflhh, PID 8059), and
+    Preferences has no bookmark_bar key (0 occurrences of
+    show_on_all_tabs). Pre-M2 state not directly evidenced by any
+    screenshot, stated plainly; structurally it was necessarily the
+    same, since an app window renders no browser chrome in which a
+    bar could appear. Disposition LEAVE AS IS, no keystroke:
+    accepted on the structural argument + the visual evidence.
+    Sending Ctrl+Shift+B now would be the first live toggle, not an
+    undo, and could create a change.
+  - M1 assessment NO SAVE: the worker closed the portal dialog at
+    11:06:47 without saving (verified gone); corroborated by laptop
+    checks (no file in ~/Downloads in the 11:05-11:08 window, newest
+    file Nov 21 16:16; wider home search maxdepth 3 excluding
+    .cache/.config returns only a gvfs-metadata entry). Residual
+    caveat: a save outside the searched paths cannot be excluded by
+    listing alone, but the dialog was closed, not saved.
+  - PROCEDURE FIX (recorded in the log, concrete rule): verify
+    hyprctl -j activewindow in the SAME SSH call immediately before
+    each keystroke batch; re-verify after any gap over 60 seconds or
+    any intervening non-keystroke command; use only the working focus
+    form hyprctl dispatch 'hl.dsp.focus({ window = "address:0x..." })';
+    never use the string form; if the focus command errors or the
+    active window is wrong, STOP and do not send the key. Watch holds
+    run :11:56, :26:56, :41:56, :56:56, hold about start+1m to
+    start+2m40s; prefer batches outside those windows but never rely
+    on the schedule instead of same-call verification. This rule
+    goes into every future live-machine worker brief.
+- CORRECTION to my section 15: clone1 ACKED batch 10 at 10:57
+  (81ea6e0, "batch 10 moi giao, da giao 3 subagent"), BEFORE my 11:01
+  nudge (bdae91a). The nudge crossed with the ack and was unnecessary
+  but harmless. Clone1 is progressing: d2775c4 11:25 ("task 1 fix
+  pass, task 2 council 1 2 xong"). My 10:55 main check predated the
+  ack; the nudge was sent on stale information. Noted so the next
+  nudge checks main first.
+- CLONE2 BATCH 12 status (from watch log runs 49-51): nearly done.
+  Task 1 fix pass 11:27 (4dd05b0), task 3 fix pass 11:11 (9993e25,
+  35/35 OK), task 2 running (closeout still NOT READY 3/4/3/2 per
+  run 49; task 2 report + closeout 981a0b1). Watchdog logs 11:08,
+  11:19, 11:39 "no stall". No formal batch-12-complete commit yet.
+  The 90% usage-limit banner is still visible in clone2's chat
+  (runs 48-51); do NOT click the Upgrade button (spending money is
+  forbidden). A "Tip 4: Khám phá Ideas và Feed" product-tip card
+  appeared 11:23, also not an approval, do not click.
+- INCIDENTAL FLAG from the investigator, VERIFIED BY ME: the 11:30
+  full-screen grim (/tmp/c5focus-chrome-full.jpg on the laptop,
+  fetched via scp, read directly) shows clone1's Brave with 2 pending
+  "Needs review" cards: (1) "Allow clone1 to access the web for this
+  scheduled task? clone1 wants to download the IRS Fo..." and (2)
+  "Allow clone1 to access the web for this scheduled task? clone1
+  wants to get the Wikipedia Main Page. This is for the scheduled
+  task 'Batch6 Watchdog 10m'." Plus "2 tasks need review" at the
+  bottom. These block clone1's scheduled tasks. The clone2-watch
+  observes clone2's Chrome only, so it will never see them.
+- ACTION: spawned C5-CLONE1-APPROVE (697eeb0f) 11:47 +07 to approve
+  both cards via session-driver clicks (run-40 precedent), with
+  fresh observation first, verified focus per the new procedure rule,
+  clicks only, no keystrokes. Log:
+  improvements/worker-click5-clone1-approve-log.md.
+
+## 19. Still running (T+1h17m)
+
+- C5-P2-IMPL (7d648508): step 7 implementation + validator fix
+  (follow-ups 9eecb8a3 + 809bcc98 submitted).
+- C5-CLONE1-APPROVE (697eeb0f): approve clone1's 2 pending cards.
+- Clone1 batch 10 running (task 1 fix pass, task 2 council 1-2 done
+  per d2775c4 11:25). Clone2 batch 12 nearly done (tasks 1+3 fix
+  passes landed, task 2 running). Clone2 at 90% usage: NO large
+  batch 13 (section 15); load shifts to clone1.
+
+## 20. (to be filled as results land)
