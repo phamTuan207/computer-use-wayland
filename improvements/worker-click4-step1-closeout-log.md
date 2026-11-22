@@ -313,8 +313,15 @@ rebase; not investigated further here.
 
 - Log file: improvements/worker-click4-step1-closeout-log.md
   (this file).
-- Commit: (filled at commit time)
-- Push verification: (filled at commit time)
+- Commit: 4ac9320
+  ("docs: C4 step-1 closeout, item-12 4/4 PASS, Codex-lane
+  landed, discover 1974 0 failures, Y1b 8 gone, CB-9 manifest
+  not locked"), 1 file, 322 insertions, on top of 65a2df6.
+- Push verification: 2026-11-22 about 08:58 +07, `git ls-remote
+  origin todolist-push` returns
+  4ac9320f77f5fa47c48c6d51fdd3f3a0c443529f, matching local HEAD.
+- Commit-record follow-up: this section filled in by commit
+  (filled at commit time, second commit).
 
 Elapsed: task received about 08:48 +07; item-12 tests 08:49
 +07; discover launched 08:50 +07, finished about 08:54 +07;
