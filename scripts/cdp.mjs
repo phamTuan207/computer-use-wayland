@@ -579,19 +579,36 @@ async function assertAction(a) {
             // The engine sanitizes on assignment (HTML Standard
             // value sanitization algorithm): a single-line input
             // strips carriage returns and line feeds, a textarea
-            // normalizes CRLF and CR to LF, and the url/email
-            // states also strip leading and trailing ASCII
-            // whitespace. The maxLength pre-check must measure
-            // the SANITIZED length, or it refuses a set the engine
-            // would accept. Char codes are used instead of regex
-            // escapes so this template needs no backslash doubling
-            // when it is re-evaluated. CR/LF are already stripped
-            // above, so only TAB (9), FF (12) and SPACE (32) can
-            // remain at the ends of a url/email value.
+            // normalizes CRLF and CR to LF, the url state strips
+            // leading and trailing ASCII whitespace, and the email
+            // state strips leading and trailing ASCII whitespace
+            // from EACH comma-separated token and rejoins with a
+            // single comma (4.10.5.1.5). The maxLength pre-check
+            // must measure the SANITIZED length, or it refuses a
+            // set the engine would accept. Char codes are used
+            // instead of regex escapes so this template needs no
+            // backslash doubling when it is re-evaluated. CR/LF
+            // are already stripped above, so only TAB (9), FF (12)
+            // and SPACE (32) can remain at the ends of a url value
+            // or at token ends of an email value.
             let sanitized=e.tagName==='INPUT'
               ?${text}.split(String.fromCharCode(13)).join('').split(String.fromCharCode(10)).join('')
               :${text}.split(String.fromCharCode(13,10)).join(String.fromCharCode(10)).split(String.fromCharCode(13)).join(String.fromCharCode(10));
-            if(e.tagName==='INPUT'&&(e.type==='url'||e.type==='email')){
+            if(e.tagName==='INPUT'&&e.type==='email'){
+              // Email state (HTML Standard 4.10.5.1.5 value
+              // sanitization algorithm): split on commas, strip
+              // leading and trailing ASCII whitespace from each
+              // token, rejoin with a single comma. Unconditional
+              // for email, with or without the multiple attribute.
+              // CR/LF are already stripped above, so only TAB (9),
+              // FF (12) and SPACE (32) can remain at token ends.
+              sanitized=sanitized.split(String.fromCharCode(44)).map(function(token){
+                let start=0,end=token.length;
+                while(start<end&&(token.charCodeAt(start)===9||token.charCodeAt(start)===12||token.charCodeAt(start)===32))start++;
+                while(end>start&&(token.charCodeAt(end-1)===9||token.charCodeAt(end-1)===12||token.charCodeAt(end-1)===32))end--;
+                return token.slice(start,end);
+              }).join(String.fromCharCode(44));
+            } else if(e.tagName==='INPUT'&&e.type==='url'){
               let start=0,end=sanitized.length;
               while(start<end&&(sanitized.charCodeAt(start)===9||sanitized.charCodeAt(start)===12||sanitized.charCodeAt(start)===32))start++;
               while(end>start&&(sanitized.charCodeAt(end-1)===9||sanitized.charCodeAt(end-1)===12||sanitized.charCodeAt(end-1)===32))end--;
