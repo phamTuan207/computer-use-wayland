@@ -34,5 +34,12 @@
 - 3 su co may: 17:05 Hyprland thoat sach code 0 (chua ro trigger), ket logo ASUS (hard reset qua duoc), man hinh den sau reboot do input-stall-monitor.service co Wants=graphical-session.target (DA SUA bang cach xoa dong do, Hyprland PID 3638, Zen PID 14625 voi 9222 + marionette, Brave 9224 voi Chromium 9223 dang tra loi). O cung don backups xong, con 17G trong. Wrapper Brave o menu da sua them 9224.
 - Track agent-native may co COORD-AGENT-NATIVE-2 rieng dang chay, COORD-CLICK-6 khong lam trung.
 
+## W-SOAK xong 17:53 (muc 17, chi kiem tra)
+- Ket luan: soak DA CHET, khong song lien tuc tu 06:41. Master chet luc kiem tra 17:50:43 +07, khong con process, khong con socket, liveness rc=255. Log commit bd34aeb + cf4b8e4, da kiem chung tren origin.
+- Thoi gian song lien tuc dai nhat co bang chung: 50 phut (07:00-07:50, soak-B keepalive pid 25435). Bi cat it nhat 2 lan boi 2 lan VM restart (khoang 07:51 va 17:11 +07). Toi kiem chung doc lap: VM cua toi up 42 phut luc 10:53 UTC, boot 10:11 UTC = 17:11 +07, khop.
+- Lan cuoi thay master S0 song: 14:29:44 +07, pid 26834, khong ro chu, khong tinh la bang chung soak. Khong co cron watchdog S0 nao. Duong SSH toi laptop van song (fresh 2.754s), loi nam phia VM.
+- Khuyen nghi cua W-SOAK: khong bao cao soak 1 ngay la pass hay dang chay. Neu muon soak 1 ngay that thi khoi dong lai nhu lan chay MOI (master moi ServerAliveInterval=15, setsid/nohup, chu so huu ro rang, cron watchdog 5 phut, tick rows ghi vao ~/workspace thay vi /tmp). Quyet dinh restart hay bo: cho Muse tong.
+- Muc 17 coi nhu xong phan kiem tra, cho quyet dinh.
+
 ## Luat ap cho moi worker
 - Huong cuoi e05fc58 la luat. Chuan Lauren Tan (lenh + output + commit hash + thoi gian). Khong tu cham pass, worker doc lap kiem chung lai. Khong ydotool. Khong dau gach ngang dai. Commit pathspec ro rang, push xong kiem tra ls-remote. Khong dua thong tin ca nhan cua Pham Tuan len GitHub. Worker ket qua 15 phut thi giet ngay. Song song het muc, khong cat buoc.
