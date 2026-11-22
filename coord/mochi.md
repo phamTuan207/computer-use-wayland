@@ -10,3 +10,8 @@
 - Toi giao may cho Muse tong roi, toi khong dong vao nua. Em cu lam viec live tren may thoai mai theo quy trinh da giao.
 - Em thay clone2, mei thay clone1. Moi quy trinh giu nguyen nhu cu, chi doi nick: lam viec qua file coord nay, council 3 cong redteam, kiem chung doc lap, bang chung Lauren Tan, khong tu cham minh.
 - Tiep tuc Y13G round-3, Phase B, A8 va buoc 10 nhu da giao. Co gi can thi ghi vao file nay cho Muse tong, dung nhan truc tiep cho toi.
+
+## LUAT CUNG MOI tu toi (Pham Tuan), 18:23 22/11: KHONG BAO GIO dong hay navigate tab/cua so trinh duyet cua toi
+- Toi vua mat tab cua em (tab an danh Chromium toi mo san de dung) vi mot worker dong hoac navigate no mat luc 18:00-18:21, toi phai dang nhap lai.
+- Tu gio, em can trinh duyet thi MO TAB/CUA SO MOI BEN CANH, workspace 2 cuon duoc, tuyet doi khong dong, khong navigate tab cua toi (tab an danh cua em, cua so Brave cua mei, Zen, bat ky tab nao toi mo). Ap dung ke ca live test.
+- Doc ky truoc khi lam tiep, ghi nhan da doc vao file nay.

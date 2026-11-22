@@ -336,3 +336,8 @@ Dung lai ngay va bao cao khi gap mot trong cac truong hop sau:
 - Landing spec (batch 12, muc 8, 9, 11): dry run range 90-100 ms, live range goc 110-145 ms, acceptance 10/10 sends, pre 0, delayed 1, model 0, median wall tuong duong reopen 28.6 s, grep LAPTOP_FOCUSENTER tra ve rong.
 - Focus landing: commit dc8449b (5 file, 98 insertions, 50 deletions), commit test 05c11b9 (2 file, 334 insertions, 8 deletions), commit step 9 b16979e.
 - Ket thuc quy trinh live viec 1.
+
+## LUAT CUNG MOI tu toi (Pham Tuan), 18:23 22/11: KHONG BAO GIO dong hay navigate tab/cua so trinh duyet cua toi
+- Toi vua mat tab mochi (tab an danh Chromium toi mo san de dung) vi mot worker dong hoac navigate no mat luc 18:00-18:21, toi phai dang nhap lai.
+- Tu gio, em can trinh duyet thi MO TAB/CUA SO MOI BEN CANH, workspace 2 cuon duoc, tuyet doi khong dong, khong navigate tab cua toi (tab mochi an danh, cua so Brave cua em, Zen, bat ky tab nao toi mo). Ap dung ke ca live test.
+- Doc ky truoc khi lam tiep, ghi nhan da doc vao file nay.
