@@ -47,7 +47,10 @@ fixture tab by URL AND by handle (the new handle from this open);
 it never deletes blind.
 
 Subcommands (each prints one JSON object on stdout):
-  list                      list tabs (titles, urls), current first read
+  list                      list tabs (titles, urls), current first read;
+                            when the current tab's scan entry has no
+                            URL, a verified direct read supplies it
+                            (F1 fallback, run 3)
   open                      open a NEW tab on the fixture, viewport gate,
                             harvest #msg-input rect
   switch <url-substr>       make the tab whose URL contains <url-substr>
@@ -181,11 +184,85 @@ def _switch(z, handle):
     return current
 
 
+def _resolve_current_entry(z, tabs, current_prefix):
+    """Direct-read fallback for the current tab's URL (F1, run 3).
+
+    Returns (entry, resolved). Entry is the scan entry for the
+    current tab (patched in place when the fallback fires) or
+    None when the scan has no entry for it; resolved is True
+    only when the fallback supplied the URL.
+
+    Run 3 attempt 1 aborted phase 1 because the current tab's
+    scan entry was an error entry (its title read failed with
+    HTTP 500 'unexpected alert open') with no URL, while a
+    direct read of the current window in the same session
+    resolved the Calendar URL. The scan switches through tabs
+    and restores the original, so after a successful scan the
+    current window IS that tab, and a fresh GET /url + /title
+    needs no switch. The fallback fires only when the scan did
+    not give the current tab a URL; when the scan already
+    resolved it, nothing is re-read.
+
+    Safety: the fallback never trusts a single read. It reads
+    the current handle, URL, and title, then reads the handle
+    and URL a second time, and accepts only when both handle
+    reads are equal and match the scan's current prefix, both
+    URL reads are equal and non-empty. Any mismatch, empty URL,
+    or failed read leaves the entry untouched and resolved
+    False: the caller aborts exactly as before (fail-closed).
+    The title is evidence only; it may legitimately be ''
+    (about:blank), so a failed title read still resolves with
+    title '' instead of refusing. A scan with no entry for the
+    current tab is NOT synthesized: the fallback only patches
+    an entry the scan returned, so a missing entry still
+    aborts, same as before.
+    """
+    entry = None
+    for t in tabs:
+        if t.get('handle') == current_prefix:
+            entry = t
+            break
+    if entry is None:
+        return None, False
+    if isinstance(entry.get('url'), str) and entry['url']:
+        return entry, False
+    try:
+        handle1 = _current(z)
+        url1 = _url(z)
+        handle2 = _current(z)
+        url2 = _url(z)
+    except Exception:
+        return entry, False
+    try:
+        title1 = _title(z)
+    except Exception:
+        title1 = ''
+    if handle1 != handle2 or handle1[:8] != current_prefix:
+        return entry, False
+    if not isinstance(url1, str) or not url1 or url1 != url2:
+        return entry, False
+    entry.pop('error', None)
+    entry['title'] = title1
+    entry['url'] = url1
+    return entry, True
+
+
 def cmd_list():
     with _session() as z:
         tabs = z.list_tabs()
-        return {'ok': True, 'count': len(tabs), 'tabs': tabs,
-                'current': _current(z)[:8]}
+        current = _current(z)[:8]
+        # F1 fallback (run 3 attempt 1): when the scan entry for
+        # the current tab carries no URL, re-read it directly in
+        # this same session, verified by handle plus a second
+        # read (_resolve_current_entry). The flag records that
+        # the fallback fired, so the runner's tabs_before shows
+        # the URL came from a direct read, not the scan.
+        _entry, resolved = _resolve_current_entry(z, tabs, current)
+        result = {'ok': True, 'count': len(tabs), 'tabs': tabs,
+                  'current': current}
+        if resolved:
+            result['current_fallback'] = True
+        return result
 
 
 def cmd_open():

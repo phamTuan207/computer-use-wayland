@@ -818,6 +818,167 @@ class ZenTabFixTest(unittest.TestCase):
         self.assertNotEqual(listed['current'],
                             fake.tabs[0]['handle'][:8])
 
+    def test_list_fallback_resolves_empty_current_entry(self):
+        """F1 repro (run 3 attempt 1): the current tab's scan
+        entry is an error entry with no URL (its title read
+        failed), while a direct read of the current window
+        resolves it. cmd_list patches the entry in place from
+        the verified direct read and flags current_fallback, so
+        the runner's phase 1 can identify the original tab.
+        """
+        fake = FakeSession(_owner_tabs(), current_index=0,
+                           error_entry_urls={OWNER_URL})
+        listed = self._run_cmd(fake, zen_tab.cmd_list)
+        self.assertTrue(listed['ok'])
+        self.assertTrue(listed.get('current_fallback'))
+        self.assertEqual(listed['count'], 2)
+        entry = [t for t in listed['tabs']
+                 if t.get('handle') == listed['current']][0]
+        self.assertEqual(entry['url'], OWNER_URL)
+        self.assertEqual(entry['title'], 'Chat - Muse')
+        self.assertNotIn('error', entry)
+
+    def test_list_fallback_does_not_fire_when_scan_resolves_url(self):
+        """No empty entry, no fallback: the scan already
+        resolved the current tab's URL, so cmd_list re-reads
+        nothing and carries no current_fallback flag. A
+        non-current error entry is left untouched.
+        """
+        tabs = _owner_tabs()
+        fake = FakeSession(tabs, current_index=0,
+                           error_entry_urls={'https://example.com/'})
+        listed = self._run_cmd(fake, zen_tab.cmd_list)
+        self.assertTrue(listed['ok'])
+        self.assertNotIn('current_fallback', listed)
+        entry = [t for t in listed['tabs']
+                 if t.get('handle') == listed['current']][0]
+        self.assertEqual(entry['url'], OWNER_URL)
+        other = [t for t in listed['tabs']
+                 if t.get('handle') != listed['current']][0]
+        self.assertNotIn('url', other)
+        self.assertIn('error', other)
+
+    def test_list_fallback_refuses_when_current_handle_changes(self):
+        """The fallback verifies the tab by handle plus a
+        second read. When the current handle changes between
+        the scan's current read and the fallback reads, the
+        entry stays unresolved (fail-closed): the runner aborts
+        exactly as before the fix, never with a wrong URL.
+        """
+        class _FlipsAfterScan(FakeSession):
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+                self._window_calls = 0
+
+            def _wd(self, method, path, body=None):
+                if method == 'GET' and path.endswith('/window'):
+                    self._window_calls += 1
+                    if self._window_calls > 1:
+                        self.current = self.tabs[1]['handle']
+                return super()._wd(method, path, body)
+
+        fake = _FlipsAfterScan(_owner_tabs(), current_index=0,
+                               error_entry_urls={OWNER_URL})
+        listed = self._run_cmd(fake, zen_tab.cmd_list)
+        self.assertTrue(listed['ok'])
+        self.assertNotIn('current_fallback', listed)
+        entry = [t for t in listed['tabs']
+                 if t.get('handle') == listed['current']][0]
+        self.assertNotIn('url', entry)
+        self.assertIn('error', entry)
+
+    def test_list_fallback_refuses_when_second_handle_read_differs(self):
+        """The second handle read disagrees with the first: the
+        tab changed mid-fallback, so the entry stays unresolved
+        (fail-closed).
+        """
+        class _FlipsMidFallback(FakeSession):
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+                self._window_calls = 0
+
+            def _wd(self, method, path, body=None):
+                if method == 'GET' and path.endswith('/window'):
+                    self._window_calls += 1
+                    if self._window_calls > 2:
+                        self.current = self.tabs[1]['handle']
+                return super()._wd(method, path, body)
+
+        fake = _FlipsMidFallback(_owner_tabs(), current_index=0,
+                                 error_entry_urls={OWNER_URL})
+        listed = self._run_cmd(fake, zen_tab.cmd_list)
+        self.assertTrue(listed['ok'])
+        self.assertNotIn('current_fallback', listed)
+        entry = [t for t in listed['tabs']
+                 if t.get('handle') == listed['current']][0]
+        self.assertNotIn('url', entry)
+
+    def test_list_fallback_refuses_when_url_reads_disagree(self):
+        """The two URL reads disagree, so the tab navigated (or
+        the read is unstable) mid-fallback. The entry stays
+        unresolved (fail-closed).
+        """
+        class _UrlChangesMidFallback(FakeSession):
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+                self._url_calls = 0
+
+            def _wd(self, method, path, body=None):
+                if method == 'GET' and path.endswith('/url'):
+                    self._url_calls += 1
+                    if self._url_calls > 1:
+                        return {'value': 'https://example.com/'}
+                return super()._wd(method, path, body)
+
+        fake = _UrlChangesMidFallback(_owner_tabs(), current_index=0,
+                                      error_entry_urls={OWNER_URL})
+        listed = self._run_cmd(fake, zen_tab.cmd_list)
+        self.assertTrue(listed['ok'])
+        self.assertNotIn('current_fallback', listed)
+        entry = [t for t in listed['tabs']
+                 if t.get('handle') == listed['current']][0]
+        self.assertNotIn('url', entry)
+
+    def test_list_fallback_refuses_when_direct_read_raises(self):
+        """The direct URL read raises (the transient failure
+        persists): the entry stays unresolved (fail-closed).
+        """
+        class _UrlReadRaises(FakeSession):
+            def _wd(self, method, path, body=None):
+                if method == 'GET' and path.endswith('/url'):
+                    raise ZenDomError('simulated read failure')
+                return super()._wd(method, path, body)
+
+        fake = _UrlReadRaises(_owner_tabs(), current_index=0,
+                              error_entry_urls={OWNER_URL})
+        listed = self._run_cmd(fake, zen_tab.cmd_list)
+        self.assertTrue(listed['ok'])
+        self.assertNotIn('current_fallback', listed)
+        entry = [t for t in listed['tabs']
+                 if t.get('handle') == listed['current']][0]
+        self.assertNotIn('url', entry)
+
+    def test_list_fallback_does_not_synthesize_missing_entry(self):
+        """Boundary pin: when the scan has no entry at all for
+        the current tab, the fallback does not invent one. The
+        list keeps the scan's entries and count, carries no
+        current_fallback flag, and the runner aborts exactly as
+        before the fix.
+        """
+        class _DropsCurrentEntry(FakeSession):
+            def list_tabs(self, handle_index=None):
+                entries = super().list_tabs(handle_index)
+                return [e for e in entries
+                        if e['handle'] != self.current[:8]]
+
+        fake = _DropsCurrentEntry(_owner_tabs(), current_index=0)
+        listed = self._run_cmd(fake, zen_tab.cmd_list)
+        self.assertTrue(listed['ok'])
+        self.assertNotIn('current_fallback', listed)
+        self.assertEqual(listed['count'], 1)
+        self.assertEqual([t.get('handle') for t in listed['tabs']],
+                         [fake.tabs[1]['handle'][:8]])
+
     def test_open_succeeds_despite_silent_restore_failure(self):
         """Redteam F3b mitigation: in cmd_open the (c) check
         re-reads the current tab after POST /window/new, so a
