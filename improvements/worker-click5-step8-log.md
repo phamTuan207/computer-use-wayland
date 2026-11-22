@@ -62,7 +62,15 @@ every entry.
   the reopen rollback), clone2 Chrome 0x5570538ed160 (PID 8059,
   app window, no tab strip). Brave is back on NO debug flag
   ([::1]:9223 closed); if CDP on Brave is needed, redo the
-  P3-style relaunch and roll back afterwards.
+  P3-style relaunch and roll back afterwards. WINDOW MAP CHANGE
+  recorded 14:53:13 +07 (section 6.1): the Brave relaunch moved
+  Brave from ws1 to ws2; current layout is Zen ws1 [2509, 914]
+  [1863, 1176] (full width), Chrome ws2 [2533, 914] [901,
+  1176], Brave ws2 [3448, 914] [901, 1176]. Chrome resized 1853
+  wide to 901 wide during smoke run 1 (cause not established;
+  per-send fresh grounding made it harmless). Flag the layout
+  change to the coordinator; do not move windows back
+  unprompted.
 - Test messages go into the clone1 and clone2 threads only.
   Clone2 is capped until Nov 25 02:38 (its account cannot
   work), but receiving test messages in its thread needs no
@@ -330,9 +338,414 @@ coordinator to overturn, not left open).
   The concurrency test in section 5 proves it with two
   concurrent workers.
 
-## 5. (to be filled: implementation + tests + concurrency test)
+## 5. Implementation + tests + concurrency test
 
-## 6. (to be filled: live smoke + fallback drill)
+### 5.1 Code changes (commits 8c6553a and 1b5a6e6, both pushed, verified via git ls-remote)
+
+- scripts/session_remote.py (8c6553a): added `import random`;
+  constants WAIT_POLL_S = 5.0, WAIT_JITTER_S = 1.0, WAIT_BUDGET_S
+  = 300.0. New `_client_start_with_wait(owner, lease_path,
+  wait_s=300.0, *, _sleep, _jitter, _now)`: on `busy` it polls
+  status every 5s until free (state finished/failed, guardian
+  not active, recovery none), unlinks the lease, retries with a
+  FRESH start_id; other refusals return at once; on budget
+  expiry it returns the busy response with `waited_s` and
+  `current_owner`. BrokerError propagates. The `start`
+  subcommand gained `--wait SECONDS` (default 0.0, fail fast,
+  old behavior); a negative wait raises BrokerError
+  `invalid_wait`.
+- scripts/session_driver.py (8c6553a): new `_request_error(sink,
+  error)` helper printing an error envelope `{'ok': False,
+  'returncode': 1, 'error': <msg>, 'session_continues': True}`.
+  In relay_commands the four W3b raises (non-dict request, bad
+  image_policy, args not a non-empty string array, stdin not a
+  string, unsupported command) are replaced with
+  `_request_error(...)` + `continue`. The >8MiB request_lines
+  ValueError stays fatal (transport-level, out of scope). The
+  first output line is the driver-ready row `{'ok': True,
+  'driver': 'ready'}`.
+- scripts/first_action.py (8c6553a, then 1b5a6e6): `session_cmd`
+  and `attempt_session` DELETED as live code; both kept as stubs
+  that raise RuntimeError ("session_cmd was deleted in step
+  8...") so any caller fails loudly instead of resurrecting the
+  spawn. Removed now-unused `import signal`; added `import re`,
+  `import secrets`. New `broker_attempt(observation_path,
+  actions_path, deadline_s, state_dir, meta, screen, owner)`
+  returning `(returncode, stdout, stderr, timed_out, elapsed_s,
+  detail)` where stdout carries exactly one JSON object (the
+  driver act result, or a start-failure error) so `run()` parses
+  it unchanged. Flow: start with `--wait 300` (CLI timeout 360s)
+  -> wait for the task to reach running (see the ready-wait fix
+  below) -> request act sequence 1 -> result bounded by
+  deadline_s -> finish (best-effort, 130s CLI timeout) on every
+  path where a start succeeded. R1/W1 retry: on rc 1 with
+  session_continues True, re-observe INSIDE the session via
+  `_observe_args` (window scope: `observe --window <addr>`;
+  screen scope: `observe --screen <monitor>`, plus --max-width
+  and --crop from meta when present), then re-send act with a
+  fresh sequence and a fresh observation, only when
+  `_regions_equal` holds; max 1 retry. Timeout never falls back
+  or replays; finish is still attempted. Start failures mapping
+  to fallback-eligible: BROKER_START_FAILURE_ERRORS = {'busy',
+  'broker_unavailable', 'broker_changed', 'broker_stopping',
+  'nested_session', 'native_unavailable',
+  'driver_start_failed', 'broker_command_failed'} produce out
+  starting with `session guardian startup failed: broker
+  <error>` (matches START_FAILURE_PREFIXES, so the existing
+  `is_session_start_failure` triggers the in-process desktop_act
+  fallback). `cancelled` and `recovery_required` are deliberately
+  NOT in that set (out is `broker start refused: <error>`, no
+  fallback). A request never accepted also maps to a
+  start-failure out (no action ran). Lease and request files
+  live in `cu.STATE` (user-owned dir; /tmp is root-owned so
+  `_write_new_lease` would reject it), named
+  `act-now-<pid>-<token>.lease` and `.json`, unlinked in
+  finally. Owner via `_broker_owner` (valid agent name kept,
+  else fallback `'act-now'`). `run()` rewired: the call site now
+  unpacks the 6-tuple from `broker_attempt(obs_path,
+  args.actions, deadline, cu.STATE, meta, args.screen, agent)`
+  and sets envelope fields `broker_owner`, `broker_sequences`,
+  `broker_retries`, `broker_finish` (also added to the initial
+  envelope literal as None for early-return paths). Removed the
+  now-unused `cu_py` assignment. `--session-deadline-s` help
+  updated: it bounds each broker result wait; the 300s queue
+  wait is separate. The direct Pointer fallback (in-process
+  `desktop_act`) STAYS, triggered only on proven start failure.
+  The act-now stdout envelope is the `envelope` dict (keys: ok,
+  method 'act-now', completed, error, broker_owner,
+  broker_sequences, broker_retries, broker_finish,
+  session_error, first_pointer_ms, phase_ms, etc.). It has NO
+  `returncode` key. Any parser of act-now stdout must match
+  `method == 'act-now'` and check `ok`, not `returncode`.
+- Key integration facts established while designing (do not
+  re-derive): the broker session-driver runs `cu.main()` in
+  process with the session token set, so `cu.py act`'s
+  `require_observation` marker protocol applies; a fresh broker
+  task has no marker, so act-now's externally captured persisted
+  observation is accepted; after a transient refusal
+  `record_refusal` creates marker `{observation: None}`, and
+  only an observe INSIDE the same session updates it (via
+  `record_observation`, which returns early unless a marker
+  file already exists), hence the retry must re-observe through
+  the broker. CB-2 on the `cu.py act` CLI path is
+  binding-when-present, not mandatory (actions unstamped,
+  legacy pixel path), so a retry act with a fresh observation
+  works. `cu.py observe` CLI takes `--window` or `--screen`
+  (mutually exclusive, required) plus `--crop` (4 ints) and
+  `--max-width` (default 960).
+- Ready-wait fix (1b5a6e6, the reason the first smoke failed):
+  the relay answers start with status `starting` BEFORE the
+  driver prints its ready line (about 0.5s of Python startup).
+  broker_attempt sent the act request in that window; the
+  relay's `_request` handler refuses requests while
+  `task.state != 'running'` or `task.driver != 'ready'` with
+  `task_stopped`; then the immediate finish set
+  `finish_requested`, which made `_await_ready` raise
+  `driver_not_ready` ("driver stopped during startup"), failing
+  the task. Three consecutive act-now attempts failed identically
+  (14:33:57, 14:39:06, 14:44:27 +07, session_attempt_ms about
+  255ms, "overlay lost before fallback; refused") while direct
+  CLI starts worked (their SSH latency gave the driver time to
+  become ready). The shader-warmup hypothesis was tested and
+  refuted (a manual driver launch immediately after an overlay
+  daemon spawn succeeded at 14:45:25 +07, rc 0, ready line
+  printed). Fix: new `_wait_for_task_running(remote_py,
+  generation, timeout_s=30.0)` in first_action.py polls
+  `status` until state `running` with driver `ready` (matching
+  the start's generation); a task that fails while starting
+  reports a start failure (fallback-safe); a 30s timeout reports
+  unknown outcome with no replay. Wired into broker_attempt
+  right after `started = True`.
+- Syncs after the first commit: laptop fast-forwarded to
+  8c6553a at 14:27 +07 and to 1b5a6e6 at 14:48 +07 (VM at the
+  same heads, verified via git ls-remote). sync-installed.py
+  ran at both points (647 managed files, 11 preserved-history
+  exceptions). The 8c6553a sync restarted the relay: new PID
+  1167236 (was 983809), active/running, loaded_code_sha256
+  `d490f369...` matching the new session_remote.py,
+  started_git_head 8c6553a5e54c6c31c18bcb3de6d347f61c3b318f,
+  state idle, owner None, next_sequence 1, last_start_error
+  None. The 1b5a6e6 sync did NOT restart the relay (only
+  first_action.py changed; the driver loads it fresh per task).
+  After the 8c6553a sync: session_remote.py
+  `d490f369f6b754d200518055025ef956284a759cc49e3ee70ed6b2a4483e3da4`,
+  session_driver.py `c267e5ba6cd9`, first_action.py
+  `265e193f3ff5`. After the 1b5a6e6 sync: first_action.py
+  `1270139f957b80a475abbc05e10e5b09fddf4769941ed4947af5aa4631f31a66`
+  (repo and installed match).
+- Probe of the browser-observe shape (14:15 +07,
+  ~/workspace/c5-step8-run/probe-browser.py): broker start ok,
+  clone2 tab found, observe returned 80 elements, composer e61
+  role textarea name Message. The snapshot elements carry NO
+  rect, so grounding uses c5-ground.mjs (CDP Runtime.evaluate)
+  instead.
+- Click-only probe (~/workspace/c5-step8-run/probe-act.py,
+  clone2 composer click, no message sent): failed 3 times
+  before the ready-wait fix (14:39:06, 14:44:27 +07, same
+  driver_not_ready signature), then PASSED at 14:48:36 +07
+  (send-act rc 0, first_pointer_ms 486.8, error null,
+  session_attempt_ms 1680.6) and again at 14:50:03 +07
+  (session_attempt_ms 1651.8). This was the proof the
+  ready-wait fix worked before the smoke ran.
+
+### 5.2 Tests updated and results
+
+- tests/test_first_action.py: TestAttemptSession and
+  TestSessionCmd replaced with TestDeletedSpawn (stubs raise),
+  TestBrokerOwner, TestRegionsEqual, TestObserveArgs,
+  TestBrokerAttempt (9 tests with a faked `_broker_cli`:
+  success, busy-start falls back, cancelled never falls back,
+  recovery_required never falls back, transient retries once
+  on the same region, transient no retry when the region moved,
+  result timeout never falls back, start waits for running
+  before request, start failed before request falls back). The
+  fake CLI is scripted in order; every script that reaches the
+  request phase includes a `('status', {'ok': True,
+  'generation': 'g1', 'state': 'running', 'driver': 'ready'},
+  0)` entry after start. TestRun._run and _run_raw_args now
+  mock `broker_attempt` and append a default broker detail dict
+  to the old 5-tuple session results; the four
+  `assert_not_called` mocks renamed to `broker_attempt`.
+- tests/test_session_driver.py:
+  `test_invalid_requests_never_execute` rewritten to assert the
+  error envelope + session stays alive + the status request
+  executes exactly once (previously asserted ValueError).
+- tests/test_session_remote.py: new
+  `ClientStartWaitTests(SessionRemoteIntegration)` (3 tests,
+  real in-process broker + fake driver, WAIT_POLL_S patched to
+  0.2, jitter 0): the waiter starts after the holder finishes
+  with a fresh start_id (the background thread sends a finish
+  exchange only, because `finish_owned_task`'s wait for state
+  `finished` races the waiter replacing it with `running`; it
+  also waits for driver ready before asserting state `running`);
+  wait budget expiry reports busy with the current owner (2s
+  real budget); a non-busy refusal (cancelled latch) returns at
+  once.
+- tests/test_visual_delivery.py:
+  `test_invalid_delivery_policy_never_executes_input` updated
+  to the W3b envelope shape (the old test asserted ValueError
+  for image_policy "never"; the invariant "never executes input"
+  is preserved, the mechanism changed). The envelope is
+  top-level `{'ok': False, 'returncode': 1, 'error':
+  'image_policy must be auto or always', 'session_continues':
+  True}`; row 0 of relay_commands output is the driver-ready
+  row. The test patches execute with `return_value=
+  subprocess.CompletedProcess([], 0, '{"ok": true}', '')` and
+  asserts the error envelope, session_continues True, no
+  session_ended, the status result `{'ok': True}`, and execute
+  called once with `['status']`.
+- Results: `tests.test_first_action tests.test_session_driver
+  tests.test_visual_delivery` = 124 tests OK (1.017s, after the
+  ready-wait fix); full three-file run including
+  test_session_remote = 225 tests OK (41.5s). Full suite
+  (`python3 -m unittest discover -s tests -q`, 2192 tests): 0
+  failures, 1 pre-existing environment error only:
+  test_cursor_file setUpClass, `g++: error: unrecognized
+  command-line option '-std=c++26'` (the VM's g++ has no C++26
+  support; unrelated to this task, verified separately at
+  14:31 +07).
+
+### 5.3 Concurrency test: PASSED (14:30:39-14:31:13 +07, run c5-step8-conc-073039)
+
+- Script: ~/workspace/c5-step8-run/concurrency_test.py
+  (renamed from concurrency-test.py because the hyphen was not
+  importable). Worker A (owner c5-step8-conc-A) starts first,
+  holds about 15s (observe screen, 12s hold, windows, finish);
+  worker B (owner c5-step8-conc-B) starts +2s with `start
+  --wait 300`, then runs observe + windows. An independent
+  observer thread polls status every 2s. Assertions: B starts
+  only after A finishes (timestamps), B start wall >= 8s
+  (proves it waited), both workers complete all requests, no
+  lost action. Read-only commands only (observe, windows); no
+  desktop action, no keystrokes, no test messages. Lease and
+  request files in /home/james/.cache/agent-computer-use,
+  cleaned up in finally. Uses scripts/ssh-laptop-mux.sh (S0 mux)
+  for all SSH calls; envelopes written via SSH stdin (`umask
+  077; cat > <file>; chmod 600`).
+- BUG FOUND AND FIXED in the test itself (14:30 +07): the first
+  two runs failed rc=2 because `broker_call` never passed
+  `--owner` to the start command (argparse exits 2 on the
+  missing required flag; the error went to stderr, which the
+  test did not log). Fixed: `broker_call` now adds `--owner
+  <owner>` for the start command only (request/result/finish
+  take only --lease-file); the worker error message now includes
+  stderr.
+- Evidence log: ~/workspace/c5-step8-run/concurrency-test-c5-step8-conc-073039.jsonl.
+  A started (1.07s), ran observe + windows, held 12s,
+  finished clean (guardian clean, error null). B started with
+  --wait 300, wall 22.120s (waited out A), started 3.405s
+  after A finished, ran both requests to completion, finished
+  clean. No interleaving, no lost action. Queue discipline
+  proven live on the new code.
+- A debug start earlier (14:28 +07) also worked through the
+  same harness (owner c5-step8-dbg2, finished clean); the
+  first two concurrency runs failed only on the missing --owner
+  test bug, not the broker.
+
+## 6. Live smoke + fallback drill
+
+### 6.1 Live smoke: PASSED (14:50:14-14:51:56 +07, 2 runs, 4 sends)
+
+- Driver: ~/workspace/c5-step8-run/smoke.py. Grounding is
+  deterministic, no vision: the composer rect + viewport
+  metrics from CDP (c5-ground.mjs), window bounds from
+  hyprctl, viewport origin = [win_x, win_y + win_h -
+  innerHeight*dpr], screen point = origin + rect center * dpr,
+  image point from the screen observation meta
+  (region/image_size). The observation is captured fresh per
+  send via direct SSH `cu.py observe --screen eDP-2` (under
+  120s old when act-now runs). Focus-verify + act-now in one
+  SSH call via laptop script ~/c5-step8-run/send-act.sh
+  (focuses the target window, verifies hyprctl activewindow
+  shows that address, aborts exit 2 on mismatch, then runs
+  act-now). The clone2-watch hold guard waits out holds before
+  each send. Brave was relaunched P3-style with
+  `--remote-debugging-port=9223` before run 1, rolled back
+  after run 2.
+- Results (run JSONs ~/workspace/c5-step8-run/smoke-run1.json,
+  smoke-run2.json):
+  - Run 1 clone1: wall 22.6s, origin [3448, 942], screen
+    [3734.5, 2045], image [635.2, 571.5], pre-count 0 (items
+    40), V12 found, delayed count 1, broker_sequences [1],
+    retries 0, finish finished. Ground rect {x 141, y 1091,
+    w 291, h 24, cx 286.5, cy 1103}, inner 901x1148, dpr 1,
+    window at [3448, 914] size [901, 1176] pid 1183366.
+  - Run 1 clone2: wall 22.7s, origin [2533, 942], screen
+    [2819.5, 2045], image [177.8, 571.5], pre-count 0 (items
+    40), V12 found, delayed count 1, broker_sequences [1],
+    retries 0, finish finished. Window at [2533, 914] size
+    [901, 1176] pid 8059.
+  - Run 2 clone1: wall 23.0s, same grounding, pre-count 0
+    (items 43), V12 found, delayed count 1, broker_sequences
+    [1], retries 0, finish finished.
+  - Run 2 clone2: wall 22.9s, same grounding, pre-count 0
+    (items 43), V12 found, delayed count 1, broker_sequences
+    [1], retries 0, finish finished.
+  - Messages sent: C5-STEP8-SMOKE-R1-CLONE1,
+    C5-STEP8-SMOKE-R1-CLONE2, C5-STEP8-SMOKE-R2-CLONE1,
+    C5-STEP8-SMOKE-R2-CLONE2.
+  - Observation region for the screen captures: [2464, 902,
+    1920, 1200], image [960, 600] (the eDP-2 monitor area in
+    virtual coordinates, NOT [0,0,1920,1200]; the image-point
+    math reads region/image_size from the meta, so it is
+    correct).
+- P9 review (F2 hard condition): run-2 screenshots reviewed
+  visually. Clone1 (Brave): bubbles
+  C5-STEP8-SMOKE-R1-CLONE1 (2:50 PM) and
+  C5-STEP8-SMOKE-R2-CLONE1 (2:51 PM) rendered as user bubbles,
+  with the "You've reached your usage limit" system cards
+  between them. Clone2 (Chromium): bubbles
+  C5-STEP8-SMOKE-R1-CLONE2 and C5-STEP8-SMOKE-R2-CLONE2
+  rendered as user bubbles, same usage-limit cards. No
+  DOM-vs-render mismatch. Files on the VM:
+  ~/workspace/c5-step8-run/review-run2-clone1-scp.jpg,
+  review-run2-clone2-scp.jpg (fetched via scp over the mux;
+  the manual base64 chunk reassembly corrupted the first copy,
+  scp is the reliable path). Laptop originals:
+  ~/c5-step8-run/smoke-run*-p9-decoded.png,
+  smoke-run*-p9.jpg, review-run2-*.jpg.
+- Smoke script bugs found and fixed during the work:
+  send-act.sh quoting bug (the focus dispatch built
+  `"address:0x...})` with a missing closing quote, causing a
+  Lua "unfinished string near <eof>" error; the script had
+  `set -u` but no `set -e`, so the failed focus was silently
+  ignored when the target was already active; fixed to
+  `hyprctl dispatch "hl.dsp.focus({ window =
+  \"address:$ADDR\"})"` with `set -eu`); envelope parser bug
+  (matched `returncode`, which the act-now stdout envelope does
+  not carry; now matches `method == 'act-now'` and checks
+  `ok`); P9 save bug (s2-p9.mjs prints base64 to stdout, so
+  the .png files held base64 text; decode with
+  base64.b64decode first, via laptop script
+  ~/c5-step8-run/decode-p9.py); downscale quoting bug (nested
+  double quotes broke the inline python -c; use a script file
+  instead).
+- WINDOW MAP CHANGE from the smoke (recorded 14:53:13 +07):
+  the Brave relaunch moved Brave from ws1 to ws2. Current: Zen
+  ws1 [2509, 914] [1863, 1176] (full width); Chrome ws2 [2533,
+  914] [901, 1176]; Brave ws2 [3448, 914] [901, 1176]. Chrome
+  also resized 1853 wide to 901 wide during smoke run 1 (cause
+  not established; per-send fresh grounding made it harmless).
+  Flag this layout change to the coordinator; do not move
+  windows back unprompted.
+- Brave was relaunched twice with the debug flag and rolled
+  back twice without it (P3 procedure, S2-REOPEN precedent);
+  CDP verified up after each flagged launch and closed after
+  each rollback.
+- Clone1 activity check before the Brave relaunch (14:33 +07):
+  clone1 batch 13 task 3 done, no new Muse request as of the
+  14:28 watchdog note; last clone1 commit 14:26 +07. Safe to
+  relaunch.
+
+### 6.2 Fallback drill: PASSED on the second attempt (15:07:26-15:08:15 +07)
+
+- Script: ~/workspace/c5-step8-run/fallback-drill.py. Plan:
+  stop the relay, verify the broker is down, send one test
+  message C5-STEP8-FALLBACK-R1-CLONE2 in the clone2 thread via
+  the fresh-SSH one-shot path (`cu.py session -- python3 cu.py
+  session-driver` with two JSONL lines on stdin: the act
+  envelope then `{"args": ["finish"]}`), gate with V12 +
+  delayed count, restart the relay, verify status (loaded hash,
+  state idle), and verify the broker path works again (start +
+  status + finish cycle, expecting running/ready). Uses FRESH
+  SSH (~/workspace/ssh-laptop.sh) throughout.
+- FIRST ATTEMPT FAILED (15:04:15-15:04:34 +07), correctly and
+  safely. Relay stopped (STOPPED), broker confirmed down
+  (broker_unavailable, RC 1). Ground rect {x 141, y 1091, w
+  291, h 24, cx 286.5, cy 1103}, origin [2533, 942], screen
+  [2819.5, 2045], pre-count 0 (items 45), image point [177.8,
+  571.5], obs /home/james/.cache/agent-computer-use/167f25514e55.json.
+  One-shot rc 0, driver ready, but the act returned returncode
+  1, error `screen changed`, error_code `screen_changed`,
+  preflight_ms 361.862, input_sent False, session_continues
+  True, driver finished. The drill raised RuntimeError and
+  stopped before the restart step, leaving the relay stopped.
+  ROOT CAUSE (proven by comparing the two captures): the given
+  observation showed the ZEN Welcome page (ws1), while the
+  after-capture showed ws2 (Chrome clone2 + Brave clone1 side
+  by side). At observe time the active workspace was ws1 (the
+  clone2-watch hold had returned the active workspace to ws1
+  after the smoke); the focus inside the one-shot call then
+  switched to ws2, so the act preflight correctly refused a
+  stale-workspace observation. The ordering observe-then-focus
+  is wrong when the workspace is not already the target's; the
+  smoke only passed because both browsers were already on the
+  active workspace. LESSON: focus FIRST, then observe, then
+  act. No message was sent (input_sent False), so the retry
+  carries no duplicate risk. Files on the VM:
+  ~/workspace/c5-step8-run/drill-given.jpg (Zen Welcome, ws1),
+  drill-after.jpg (ws2, both browsers).
+- RELAY RESTARTED MANUALLY between attempts (15:07:07 +07):
+  new PID 1195590, active, state idle, owner None, loaded
+  d490f369f6b7 matching the current session_remote.py.
+- DRILL FIX: focus the target window and verify the active
+  window BEFORE the ground/observe step (added to
+  fallback-drill.py with the focus rule's hl.dsp form and an
+  activewindow check that aborts on mismatch).
+- SECOND ATTEMPT PASSED (15:07:26-15:08:15 +07). Relay
+  stopped 15:07:29 (STOPPED), broker confirmed down 15:07:34
+  (broker_unavailable). Focus rc 0, active 0x5570538ed160
+  (Chrome). Ground rect as above, origin [2533, 942],
+  pre-count 0 (items 45), image point [177.8, 571.5], obs
+  /home/james/.cache/agent-computer-use/76f9163771ae.json.
+  One-shot rc 0, driver ready, act returncode 0, completed 3
+  (click + type + Return), preflight_ms 111.016,
+  execution_ms 222.042, input_sent True, type_verified True
+  (input-line-band, necessary not sufficient; the DOM check is
+  the sufficient one). V12 found True, role user, side user,
+  textLen 31, attempts 1. Delayed count 1 (items 47). Relay
+  restarted 15:08:05, new PID 1196429, active. Broker status
+  after restart: state idle, owner None, loaded d490f369f6b7,
+  head 1b5a6e6. Broker start/finish cycle 15:08:08-15:08:15:
+  start ok (generation 4716e03767646201e27e8ee7c1117859, owner
+  c5-step8-drill) -> running/ready -> finished, guardian clean,
+  error null. Drill JSON:
+  ~/workspace/c5-step8-run/fallback-drill.json.
+  CONCLUSION: the one-shot SSH path recovers a run with the
+  broker dead, and the broker restarts cleanly afterwards.
+  Spec gate item 5 (one real relay restart) is covered by this
+  drill, plus the 14:27 sync restart and the 15:07:07 manual
+  restart.
 
 ## 7. Master watchdog + soak status (condition 3 of 5)
 
@@ -370,6 +783,51 @@ coordinator to overturn, not left open).
   ControlMaster=auto creates a fresh master on first use;
   the first call after a death pays one slow fresh connect
   and then mux resumes. Recorded, not hidden.
+- 14:02 +07, T+15m: fatal-on-read-failure decision (section 3)
+  and queue discipline (section 4) written, before any
+  deletion.
+- 14:15 +07, T+28m: browser-observe probe through the broker
+  (80 elements, composer e61 role textarea name Message);
+  B8c2 endpoint fix verified live.
+- 14:27 +07, T+40m: laptop fast-forwarded to 8c6553a (step-8
+  deletion + tests + log sections 0-4, 7, 8 committed and
+  pushed); sync-installed.py ran; relay restarted by the sync
+  (new PID 1167236, loaded hash d490f369 matching, head
+  8c6553a). Commit 8c6553a verified via git ls-remote.
+- 14:30:39-14:31:13 +07, T+43m: concurrency test PASSED (run
+  c5-step8-conc-073039; A held 12s, B waited, started 3.405s
+  after A finished, wall 22.120s, no interleaving).
+- 14:31 +07, T+44m: full suite 2192 tests, 0 failures, 1
+  pre-existing environment error (g++ C++26).
+- 14:33:57-14:44:27 +07, T+46-57m: three act-now attempts
+  failed identically (driver_not_ready, session_attempt_ms
+  about 255ms); shader-warmup hypothesis tested and refuted
+  (manual driver launch 14:45:25 rc 0).
+- 14:48 +07, T+61m: laptop fast-forwarded to 1b5a6e6
+  (ready-wait fix + 2 tests), pushed, verified via ls-remote;
+  sync-installed.py ran (first_action.py 1270139f957b...);
+  relay NOT restarted (only first_action.py changed).
+  Click-only probe PASSED 14:48:36 (session_attempt_ms
+  1680.6) and 14:50:03 (1651.8).
+- 14:50:14-14:51:56 +07, T+63-64m: live smoke PASSED, 2 runs,
+  4 sends, walls 22.6-23.0s, broker_sequences [1], retries 0,
+  V12 + delayed count 1 on every send. P9 review done (section
+  6.1).
+- 14:53:13 +07, T+66m: window map change recorded (Brave ws1
+  to ws2; Chrome resized 1853 to 901 wide; Zen full width ws1).
+- 15:04:15-15:04:34 +07, T+77m: fallback drill first attempt
+  FAILED safely (screen_changed, input_sent False); relay left
+  stopped. Root cause proven by comparing the given and after
+  captures (ws1 Zen vs ws2 browsers); drill fixed to focus
+  first, then observe.
+- 15:07:07 +07, T+80m: relay restarted manually (PID 1195590,
+  idle, hash d490f369f6b7).
+- 15:07:26-15:08:15 +07, T+80-81m: fallback drill second
+  attempt PASSED. One-shot recovered the send (V12, delayed
+  count 1); relay restarted (PID 1196429); broker start/finish
+  cycle clean.
+- 15:10 +07, T+83m: log sections 5 and 6 finished; log
+  committed (see section 6.2 end for the commit).
 
 ## 8. Session-level pill: BLOCKED on the CB-10 precondition
 
