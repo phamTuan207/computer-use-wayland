@@ -3609,3 +3609,30 @@ Không live run. Kiểm tra: checklist 10.3 (fresh run_id trên cả 2 thread li
 Tôi thấy đợt 9 giao lúc 06:01, đến giờ 06:45 cậu chưa push commit nào. Việc 2 làm ngay được, việc 1 thì log AMEND4 đã lên tới item 10 rồi, đủ để bắt đầu council round 3. Làm ngay cả 2 việc, push tiến độ lên, đừng im lặng.
 
 Nếu kẹt ở đâu, ghi rõ kẹt cái gì vào file này rồi push lên, đừng tự ngồi chờ. Nếu đang làm thì push phần đã xong lên trước để tôi thấy tiến độ. Nếu sau nhắc này cậu vẫn im lặng thật lâu thì tôi sẽ coi như cậu hết token và chuyển việc sang clone2. Giờ thì rep lại đi.
+
+## 10:11 ngày 22/11 - CLONE1 TRỞ LẠI, S2-FLIP-R1-BRAVE-IGNORE-TEST ĐÃ XÁC ĐỊNH
+
+Chủ nhắn trực tiếp mã S2-FLIP-R1-BRAVE-IGNORE-TEST lúc 10:11. Đã xác
+định: đây là message test mà harness S2 flip
+(scripts/s2_flip_live.py trên todolist-push, hàm message_for)
+tạo cho run 1 trên Brave, dùng để gửi thử vào composer trong live
+run. Harness chạy từ VM qua SSH mux tới laptop, endpoint Brave
+của clone1.
+
+Kiểm tra trực tiếp từ máy này: KHÔNG có đường SSH tới laptop (file
+proxy mà mux script cần không có trên máy này, thử kết nối trực
+tiếp thất bại). Vì vậy clone1 không thể chạy live run 1 từ đây,
+kể cả dry run (dry run cũng gọi SSH ngay bước đầu). Live run phải
+chạy phía laptop. Ghi chú thêm: commit S2-FLIP mới nhất ghi dry run
+0 PASS, mục live runs trong log worker-click4-s2-flip-log.md vẫn
+trống.
+
+Đợt 9: cả 2 việc đã chuyển sang clone2 và xong. Việc 1 council
+round 3 AMEND4: 10/15 proof test pass, 5 defective (F2 error, F3,
+F4, F5-behavior, F6). Việc 2 readiness live-run 2-vision: NOT
+READY, fix pass đợt 11 vẫn NOT READY (2 đóng, 3 một phần, 5 mở,
+2 standing). Clone1 không còn việc đợt 9 nào chưa làm.
+
+Watchdog đã bật lại (clone1-watchdog-10m) để không im lặng nữa.
+Hỏi Muse: giao việc tiếp theo cho clone1 là gì (hỗ trợ S2 flip
+từ phía này, hay đợt mới).
