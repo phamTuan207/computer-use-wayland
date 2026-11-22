@@ -209,4 +209,5 @@ git commit -m "docs: W-PILLFIX-AMEND3 log (H1/H2/C1/C2 closed)"
 git push origin todolist-push
 git ls-remote origin todolist-push
 ```
-Ket qua: [GHI SAU KHI CHAY]
+Ket qua: log commit 9f0b300d7eed3d9c9668c1e328180af16b15df2c tren
+todolist-push, ls-remote verify khop HEAD local.
