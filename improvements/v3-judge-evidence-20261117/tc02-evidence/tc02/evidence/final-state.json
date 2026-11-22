@@ -1,0 +1,74 @@
+{
+  "captured_wall": "2026-11-17T01:25:19.340562+07:00",
+  "application_output": {
+    "path": "/tmp/opencode/overnight-fix-20261116-0105/tc02/output/on-tap.txt",
+    "exists": true,
+    "bytes": 91,
+    "sha256": "b10ffde1f54106f160461c967aa6c73f96f06cd8be279a30f57d8d797817d48c",
+    "utf8": "Tối nay ôn cấu tc   ữ liệu c 20:30.\nTối nay ôn cấu  c dữ liệu l c 20:30.\n",
+    "expected_utf8": "Tối nay ôn cấu trúc dữ liệu lúc 20:30.\n",
+    "exact_match": false
+  },
+  "broker_public_status": {
+    "ok": true,
+    "broker": "running",
+    "broker_generation": "7bcc844bd0a1ad67957b4a27e06fef4e",
+    "state": "finished",
+    "owner": "tc02-overnight-fix-20261116-0105",
+    "generation": "b601278a0177e70a536d6ea9af17d14b",
+    "driver": "stopped",
+    "guardian": "clean",
+    "cancelled": false,
+    "cancellation_state": "clear",
+    "recovery": "none",
+    "next_sequence": 26,
+    "active_sequence": null,
+    "error": null,
+    "stop_reason": "explicit_finish"
+  },
+  "session_snapshot_exists": false,
+  "desktop_clients_after_finish": [
+    {
+      "address": "0x55abc849aa10",
+      "class": "org.omarchy.herdrdrop",
+      "title": "omarchy: Jarvis",
+      "pid": 1672,
+      "workspace": {
+        "address": "special:herdrdrop",
+        "type": "special",
+        "name": "special:herdrdrop"
+      },
+      "focusHistoryID": 3,
+      "mapped": true
+    },
+    {
+      "address": "0x55abc9d42f00",
+      "class": "zen",
+      "title": "Chat — Muse — Zen Browser",
+      "pid": 35530,
+      "workspace": {
+        "address": "1",
+        "id": 1,
+        "type": "normal",
+        "name": "1"
+      },
+      "focusHistoryID": 1,
+      "mapped": true
+    },
+    {
+      "address": "0x55abc9eed380",
+      "class": "com.microsoft.VSCode",
+      "title": "on-tap.txt - Visual Studio Code",
+      "pid": 129628,
+      "workspace": {
+        "address": "2",
+        "id": 2,
+        "type": "normal",
+        "name": "2"
+      },
+      "focusHistoryID": 0,
+      "mapped": true
+    }
+  ],
+  "client_command_returncode": 0
+}

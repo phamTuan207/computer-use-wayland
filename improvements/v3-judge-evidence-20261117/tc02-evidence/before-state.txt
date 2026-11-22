@@ -1,0 +1,113 @@
+{
+  "repo_head": "a2ddfe14f5819805bf49a2c0f6d96622cf04072f",
+  "hashes": {
+    "cu.py": {
+      "repo": "0e89a25809639155719630c5fe32a9f06ef789cc53c9ecab6d35f723ca9c4aa5",
+      "installed": "0e89a25809639155719630c5fe32a9f06ef789cc53c9ecab6d35f723ca9c4aa5"
+    },
+    "session_remote.py": {
+      "repo": "201674578c5b79d6bc91f8507d6c6243dbd32a883156c2b4fe1500d425cb9daa",
+      "installed": "201674578c5b79d6bc91f8507d6c6243dbd32a883156c2b4fe1500d425cb9daa"
+    },
+    "mcp_bridge.py": {
+      "repo": "25ea900e5472e8c119029f4136bd4e505d38cc281c355e894784495b1c8961a8",
+      "installed": "25ea900e5472e8c119029f4136bd4e505d38cc281c355e894784495b1c8961a8"
+    }
+  },
+  "relay_candidates": [
+    {
+      "unit": "computer-use-relay.service",
+      "properties": "ActiveState=active\nSubState=running\nMainPID=106001",
+      "returncode": 0
+    }
+  ],
+  "public_status": {
+    "ok": true,
+    "broker": "running",
+    "broker_generation": "7bcc844bd0a1ad67957b4a27e06fef4e",
+    "state": "finished",
+    "owner": "mimeo-installed-smoke-20261116",
+    "generation": "8ac809aa1cdd4f032ea3d957105fb1e4",
+    "driver": "stopped",
+    "guardian": "clean",
+    "cancelled": false,
+    "cancellation_state": "clear",
+    "recovery": "none",
+    "next_sequence": 3,
+    "active_sequence": null,
+    "error": "cleanup_failed",
+    "stop_reason": "explicit_finish"
+  },
+  "session_snapshot_exists": false,
+  "windows_clients_before_start": [
+    {
+      "address": "0x55abc849aa10",
+      "class": "org.omarchy.herdrdrop",
+      "title": "omarchy: Jarvis",
+      "pid": 1672,
+      "at": [
+        2637,
+        928
+      ],
+      "size": [
+        1574,
+        816
+      ],
+      "workspace": {
+        "address": "special:herdrdrop",
+        "type": "special",
+        "name": "special:herdrdrop"
+      },
+      "mapped": true,
+      "focusHistoryID": 2
+    },
+    {
+      "address": "0x55abc9d42f00",
+      "class": "zen",
+      "title": "Chat — Muse — Zen Browser",
+      "pid": 35530,
+      "at": [
+        2509,
+        914
+      ],
+      "size": [
+        1863,
+        1176
+      ],
+      "workspace": {
+        "address": "1",
+        "id": 1,
+        "type": "normal",
+        "name": "1"
+      },
+      "mapped": true,
+      "focusHistoryID": 0
+    }
+  ],
+  "active_window_before_start": {
+    "address": null,
+    "class": null,
+    "title": null,
+    "pid": null,
+    "workspace": null,
+    "mapped": null,
+    "focusHistoryID": null
+  },
+  "active_window_probe": "hyprctl -j activewindow returned {} with exit 0",
+  "fixtures": {
+    "case": "tc02",
+    "files": [
+      {
+        "path": "/tmp/opencode/overnight-fix-20261116-0105/tc02/input/blank.txt",
+        "bytes": 0,
+        "mode": "0600",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "path": "/tmp/opencode/overnight-fix-20261116-0105/tc02/output/on-tap.txt",
+        "exists": false,
+        "expected_text": "Tối nay ôn cấu trúc dữ liệu lúc 20:30.\\n"
+      }
+    ]
+  }
+}

@@ -1,0 +1,319 @@
+{
+  "case": "tc02",
+  "owner": "tc02-overnight-fix-20261116-0105",
+  "lease_dir": "/home/james/.cache/agent-computer-use/overnight-tc02-qwazkoku",
+  "lease_file": "/home/james/.cache/agent-computer-use/overnight-tc02-qwazkoku/tc02.lease",
+  "lease_contents_saved": false,
+  "live_pre_start_status": {
+    "ok": true,
+    "broker": "running",
+    "broker_generation": "7bcc844bd0a1ad67957b4a27e06fef4e",
+    "state": "finished",
+    "owner": "mimeo-installed-smoke-20261116",
+    "generation": "8ac809aa1cdd4f032ea3d957105fb1e4",
+    "driver": "stopped",
+    "guardian": "clean",
+    "cancelled": false,
+    "cancellation_state": "clear",
+    "recovery": "none",
+    "next_sequence": 3,
+    "active_sequence": null,
+    "error": "cleanup_failed",
+    "stop_reason": "explicit_finish"
+  },
+  "pre_start_conditions": {
+    "broker_running": true,
+    "state_finished_or_idle": true,
+    "driver_terminal_or_idle": true,
+    "guardian_clean_or_idle": true,
+    "not_cancelled": true,
+    "recovery_none": true,
+    "no_session_snapshot": true,
+    "generation_matches_live_preflight": true
+  },
+  "start_submission_wall": "2026-11-17T01:04:31.759292+07:00",
+  "start_submission_monotonic": 13249.065979739,
+  "start_response_wall": "2026-11-17T01:04:32.088799+07:00",
+  "start_response_monotonic": 13249.395464111,
+  "start_elapsed_ms": 329.484,
+  "start_returncode": 0,
+  "start_response": {
+    "ok": true,
+    "status": "starting",
+    "generation": "b601278a0177e70a536d6ea9af17d14b",
+    "owner": "tc02-overnight-fix-20261116-0105"
+  },
+  "readiness_polls": [
+    {
+      "submission_wall": "2026-11-17T01:04:32.088810+07:00",
+      "submission_monotonic": 13249.395488224,
+      "response_wall": "2026-11-17T01:04:32.217578+07:00",
+      "response_monotonic": 13249.524245012,
+      "body": {
+        "ok": true,
+        "broker": "running",
+        "broker_generation": "7bcc844bd0a1ad67957b4a27e06fef4e",
+        "state": "starting",
+        "owner": "tc02-overnight-fix-20261116-0105",
+        "generation": "b601278a0177e70a536d6ea9af17d14b",
+        "driver": "starting",
+        "guardian": "unknown",
+        "cancelled": false,
+        "cancellation_state": "clear",
+        "recovery": "none",
+        "next_sequence": 1,
+        "active_sequence": null,
+        "error": null,
+        "stop_reason": null
+      }
+    },
+    {
+      "submission_wall": "2026-11-17T01:04:32.467746+07:00",
+      "submission_monotonic": 13249.774402705,
+      "response_wall": "2026-11-17T01:04:32.616453+07:00",
+      "response_monotonic": 13249.923113486,
+      "body": {
+        "ok": true,
+        "broker": "running",
+        "broker_generation": "7bcc844bd0a1ad67957b4a27e06fef4e",
+        "state": "starting",
+        "owner": "tc02-overnight-fix-20261116-0105",
+        "generation": "b601278a0177e70a536d6ea9af17d14b",
+        "driver": "starting",
+        "guardian": "unknown",
+        "cancelled": false,
+        "cancellation_state": "clear",
+        "recovery": "none",
+        "next_sequence": 1,
+        "active_sequence": null,
+        "error": null,
+        "stop_reason": null
+      }
+    },
+    {
+      "submission_wall": "2026-11-17T01:04:32.866642+07:00",
+      "submission_monotonic": 13250.173285752,
+      "response_wall": "2026-11-17T01:04:33.028485+07:00",
+      "response_monotonic": 13250.335149724,
+      "body": {
+        "ok": true,
+        "broker": "running",
+        "broker_generation": "7bcc844bd0a1ad67957b4a27e06fef4e",
+        "state": "starting",
+        "owner": "tc02-overnight-fix-20261116-0105",
+        "generation": "b601278a0177e70a536d6ea9af17d14b",
+        "driver": "starting",
+        "guardian": "unknown",
+        "cancelled": false,
+        "cancellation_state": "clear",
+        "recovery": "none",
+        "next_sequence": 1,
+        "active_sequence": null,
+        "error": null,
+        "stop_reason": null
+      }
+    },
+    {
+      "submission_wall": "2026-11-17T01:04:33.278695+07:00",
+      "submission_monotonic": 13250.585330414,
+      "response_wall": "2026-11-17T01:04:33.387548+07:00",
+      "response_monotonic": 13250.694213791,
+      "body": {
+        "ok": true,
+        "broker": "running",
+        "broker_generation": "7bcc844bd0a1ad67957b4a27e06fef4e",
+        "state": "running",
+        "owner": "tc02-overnight-fix-20261116-0105",
+        "generation": "b601278a0177e70a536d6ea9af17d14b",
+        "driver": "ready",
+        "guardian": "active",
+        "cancelled": false,
+        "cancellation_state": "clear",
+        "recovery": "active",
+        "next_sequence": 1,
+        "active_sequence": null,
+        "error": null,
+        "stop_reason": null
+      }
+    }
+  ],
+  "ready": {
+    "ok": true,
+    "broker": "running",
+    "broker_generation": "7bcc844bd0a1ad67957b4a27e06fef4e",
+    "state": "running",
+    "owner": "tc02-overnight-fix-20261116-0105",
+    "generation": "b601278a0177e70a536d6ea9af17d14b",
+    "driver": "ready",
+    "guardian": "active",
+    "cancelled": false,
+    "cancellation_state": "clear",
+    "recovery": "active",
+    "next_sequence": 1,
+    "active_sequence": null,
+    "error": null,
+    "stop_reason": null
+  },
+  "readiness_wall": "2026-11-17T01:04:33.387548+07:00",
+  "readiness_monotonic": 13250.694213791,
+  "ready_generation": "b601278a0177e70a536d6ea9af17d14b",
+  "status_errors": [],
+  "first_request_sequence": 1,
+  "first_request_type": "windows",
+  "request_file": "/tmp/opencode/overnight-fix-20261116-0105/tc02/evidence/request-windows.json",
+  "request_submission_wall": "2026-11-17T01:04:33.387717+07:00",
+  "request_submission_monotonic": 13250.694399042,
+  "request_response_wall": "2026-11-17T01:04:33.496183+07:00",
+  "request_response_monotonic": 13250.802847174,
+  "request_elapsed_ms": 108.448,
+  "request_returncode": 0,
+  "request_response": {
+    "ok": true,
+    "status": "accepted",
+    "sequence": 1
+  },
+  "result_polls": [
+    {
+      "submission_wall": "2026-11-17T01:04:33.496224+07:00",
+      "submission_monotonic": 13250.802905874,
+      "response_wall": "2026-11-17T01:04:33.604419+07:00",
+      "response_monotonic": 13250.911080456,
+      "body": {
+        "ok": true,
+        "status": "completed",
+        "sequence": 1,
+        "response": {
+          "returncode": 0,
+          "result": [
+            {
+              "address": "0x55abc849aa10",
+              "class": "org.omarchy.herdrdrop",
+              "title": "omarchy: Jarvis",
+              "at": [
+                2637,
+                928
+              ],
+              "size": [
+                1574,
+                816
+              ],
+              "workspace": {
+                "address": "special:herdrdrop",
+                "type": "special",
+                "name": "special:herdrdrop"
+              }
+            },
+            {
+              "address": "0x55abc9d42f00",
+              "class": "zen",
+              "title": "Chat — Muse — Zen Browser",
+              "at": [
+                2509,
+                914
+              ],
+              "size": [
+                1863,
+                1176
+              ],
+              "workspace": {
+                "address": "1",
+                "id": 1,
+                "type": "normal",
+                "name": "1"
+              }
+            },
+            {
+              "address": "0x55abc9eed380",
+              "class": "com.microsoft.VSCode",
+              "title": "blank.txt - Visual Studio Code",
+              "at": [
+                2514,
+                914
+              ],
+              "size": [
+                1853,
+                1176
+              ],
+              "workspace": {
+                "address": "2",
+                "id": 2,
+                "type": "normal",
+                "name": "2"
+              }
+            }
+          ],
+          "session_continues": true
+        }
+      }
+    }
+  ],
+  "result": {
+    "ok": true,
+    "status": "completed",
+    "sequence": 1,
+    "response": {
+      "returncode": 0,
+      "result": [
+        {
+          "address": "0x55abc849aa10",
+          "class": "org.omarchy.herdrdrop",
+          "title": "omarchy: Jarvis",
+          "at": [
+            2637,
+            928
+          ],
+          "size": [
+            1574,
+            816
+          ],
+          "workspace": {
+            "address": "special:herdrdrop",
+            "type": "special",
+            "name": "special:herdrdrop"
+          }
+        },
+        {
+          "address": "0x55abc9d42f00",
+          "class": "zen",
+          "title": "Chat — Muse — Zen Browser",
+          "at": [
+            2509,
+            914
+          ],
+          "size": [
+            1863,
+            1176
+          ],
+          "workspace": {
+            "address": "1",
+            "id": 1,
+            "type": "normal",
+            "name": "1"
+          }
+        },
+        {
+          "address": "0x55abc9eed380",
+          "class": "com.microsoft.VSCode",
+          "title": "blank.txt - Visual Studio Code",
+          "at": [
+            2514,
+            914
+          ],
+          "size": [
+            1853,
+            1176
+          ],
+          "workspace": {
+            "address": "2",
+            "id": 2,
+            "type": "normal",
+            "name": "2"
+          }
+        }
+      ],
+      "session_continues": true
+    }
+  },
+  "result_completion_wall": "2026-11-17T01:04:33.604419+07:00",
+  "result_completion_monotonic": 13250.911080456
+}

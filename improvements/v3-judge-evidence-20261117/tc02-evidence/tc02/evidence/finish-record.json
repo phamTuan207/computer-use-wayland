@@ -1,0 +1,83 @@
+{
+  "generation": "b601278a0177e70a536d6ea9af17d14b",
+  "lease_file": "/home/james/.cache/agent-computer-use/overnight-tc02-qwazkoku/tc02.lease",
+  "finish_submission_wall": "2026-11-17T01:24:26.644223+07:00",
+  "finish_submission_monotonic": 14443.950908663,
+  "finish_response_wall": "2026-11-17T01:24:27.063922+07:00",
+  "finish_response_monotonic": 14444.370588198,
+  "finish_elapsed_ms": 419.68,
+  "finish_returncode": 0,
+  "finish_response": {
+    "ok": true,
+    "status": "finished",
+    "generation": "b601278a0177e70a536d6ea9af17d14b",
+    "driver": "stopped",
+    "guardian": "clean",
+    "error": null
+  },
+  "authenticated_status_polls": [
+    {
+      "submission_wall": "2026-11-17T01:24:27.063962+07:00",
+      "submission_monotonic": 14444.370643148,
+      "response_wall": "2026-11-17T01:24:27.176129+07:00",
+      "response_monotonic": 14444.48279339,
+      "body": {
+        "ok": true,
+        "broker": "running",
+        "broker_generation": "7bcc844bd0a1ad67957b4a27e06fef4e",
+        "state": "finished",
+        "owner": "tc02-overnight-fix-20261116-0105",
+        "generation": "b601278a0177e70a536d6ea9af17d14b",
+        "driver": "stopped",
+        "guardian": "clean",
+        "cancelled": false,
+        "cancellation_state": "clear",
+        "recovery": "none",
+        "next_sequence": 26,
+        "active_sequence": null,
+        "error": null,
+        "stop_reason": "explicit_finish"
+      }
+    }
+  ],
+  "terminal_authenticated_status": {
+    "ok": true,
+    "broker": "running",
+    "broker_generation": "7bcc844bd0a1ad67957b4a27e06fef4e",
+    "state": "finished",
+    "owner": "tc02-overnight-fix-20261116-0105",
+    "generation": "b601278a0177e70a536d6ea9af17d14b",
+    "driver": "stopped",
+    "guardian": "clean",
+    "cancelled": false,
+    "cancellation_state": "clear",
+    "recovery": "none",
+    "next_sequence": 26,
+    "active_sequence": null,
+    "error": null,
+    "stop_reason": "explicit_finish"
+  },
+  "finish_completion_wall": "2026-11-17T01:24:27.176129+07:00",
+  "finish_completion_monotonic": 14444.48279339,
+  "public_status_after_finish": {
+    "ok": true,
+    "broker": "running",
+    "broker_generation": "7bcc844bd0a1ad67957b4a27e06fef4e",
+    "state": "finished",
+    "owner": "tc02-overnight-fix-20261116-0105",
+    "generation": "b601278a0177e70a536d6ea9af17d14b",
+    "driver": "stopped",
+    "guardian": "clean",
+    "cancelled": false,
+    "cancellation_state": "clear",
+    "recovery": "none",
+    "next_sequence": 26,
+    "active_sequence": null,
+    "error": null,
+    "stop_reason": "explicit_finish"
+  },
+  "session_snapshot_exists_after_finish": false,
+  "finish_verified_clean": true,
+  "final_wall": "2026-11-17T01:24:27.284306+07:00",
+  "final_monotonic": 14444.59099214
+}

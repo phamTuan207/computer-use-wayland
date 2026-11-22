@@ -1,0 +1,75 @@
+{
+  "sequence": 1,
+  "request": {
+    "ok": true,
+    "status": "accepted",
+    "sequence": 1
+  },
+  "result": {
+    "ok": true,
+    "status": "completed",
+    "sequence": 1,
+    "response": {
+      "returncode": 0,
+      "result": [
+        {
+          "address": "0x55abc849aa10",
+          "class": "org.omarchy.herdrdrop",
+          "title": "omarchy: Jarvis",
+          "at": [
+            2637,
+            928
+          ],
+          "size": [
+            1574,
+            816
+          ],
+          "workspace": {
+            "address": "special:herdrdrop",
+            "type": "special",
+            "name": "special:herdrdrop"
+          }
+        },
+        {
+          "address": "0x55abc9d42f00",
+          "class": "zen",
+          "title": "Chat — Muse — Zen Browser",
+          "at": [
+            2509,
+            914
+          ],
+          "size": [
+            1863,
+            1176
+          ],
+          "workspace": {
+            "address": "1",
+            "id": 1,
+            "type": "normal",
+            "name": "1"
+          }
+        },
+        {
+          "address": "0x55abc9eed380",
+          "class": "com.microsoft.VSCode",
+          "title": "blank.txt - Visual Studio Code",
+          "at": [
+            2514,
+            914
+          ],
+          "size": [
+            1853,
+            1176
+          ],
+          "workspace": {
+            "address": "2",
+            "id": 2,
+            "type": "normal",
+            "name": "2"
+          }
+        }
+      ],
+      "session_continues": true
+    }
+  }
+}

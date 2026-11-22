@@ -1,0 +1,16 @@
+{
+  "path": "/tmp/opencode/overnight-fix-20261116-0105/tc02/output/on-tap.txt",
+  "exists": true,
+  "expected_utf8": "Tối nay ôn cấu trúc dữ liệu lúc 20:30.\n",
+  "expected_bytes": 50,
+  "actual_bytes": 45,
+  "actual_utf8": "Tối nay ôn cấu tc   ữ liệu c 20:30.\n",
+  "actual_hex": "54e1bb9169206e617920c3b46e2063e1baa575207463202020e1bbaf206c69e1bb877520632032303a33302e0a",
+  "expected_sha256": "8da1f5624c1b482bcdfae9d7c6883fdc52313dbe4120c2d1df2623ec5bcb9772",
+  "actual_sha256": "8bb4c17982d795cbdcbdee17da580b586c6e7196b7e17de9860145c1bd52a1d5",
+  "exact_byte_match": false,
+  "read_only_check": true,
+  "check_started_wall": "2026-11-17T01:20:48.610441+07:00",
+  "check_started_monotonic": 14225.917126669,
+  "check_completed_monotonic": 14225.917239365
+}
