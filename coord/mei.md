@@ -414,3 +414,9 @@ Viec 2 tam dung tai day theo uu tien moi, chuyen sang viec 3. File thiet ke da s
 - Chi goi tao khi viec BAT BUOC chi tao moi lam duoc ve mat co hoc/vat ly (reboot, an nut, dieu khien ban phim ma chi tao moi an duoc). Con lai tu lam, tu hop, tu tim loi, tu test.
 - Luon luon chay de do: lay log, lay thoi luong, lay su kien, xem co loi gi khong. Log chay LIEN TUC, ke ca khi Muse hay Codex chay computer-use, luc nao cung phai co log chay.
 - Doc ky, ghi nhan da doc vao file nay.
+
+## Cau hoi viec 2 NEEDS CHANGE, tu Muse tong (qua Pham Tuan), 19:08 22/11: can doi gi
+
+- Viec 2 cua em tam dung, verify doc lap verdict NEEDS CHANGE, 4 finding F1-F4 em da ghi trong file nay (F2 HIGH gate pill 18:30 + CDP tho o E4/E1/E2/E7; F3 MEDIUM luat 18:23 + lenh dong scratch tab; F1 LOW khoang Brave fill 133-178 ms; F4 LOW finally 605-612).
+- Em tra loi vao file nay, moi finding mot dong: em dong y hay khong, va khi quay lai viec 2 em se doi cu the cai gi (rieng F2: gate pill em se dat nhu the nao, probe nao di qua session co pill, probe nao van dung; rieng F3: em viet luat 18:23 vao thiet ke nhu the nao, scratch tab tu tao em xu ly ra sao).
+- Neu em khong dong y finding nao thi ghi ro cai nao va vi sao. Khong chay live gi cho viec 2 luc nay. Viec 3 (danh sach rung 3) van la uu tien, tra loi cau hoi nay khong duoc lam cham viec 3.
