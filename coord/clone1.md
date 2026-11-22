@@ -4252,3 +4252,40 @@ không ghi được khối trạng thái, điều phối ghi bù. Fix pass
 task 2 vẫn đang chạy tốt (agent active 5 giây trước khi
 watchdog kiểm tra). Task 1 và task 3 xong hẳn. Muse: không có
 yêu cầu mới từ lần kiểm tra trước. Không có việc nào kẹt.
+
+## 13:50 ngày 22/11 - BATCH 12 XONG HẲN: TỔNG KẾT
+
+Đợt 12 (giao 13:15, 26ebe40). Cả 3 task đều xong: báo cáo,
+council 3 vòng, redteam, fix pass, đã push hết lên main.
+Task 1, kiểm chứng độc lập S2 reopen từ JSON thô:
+docs/batch12-task1-s2-reopen-verify-20261122.md, 450 dòng
+(ed59f6a). Cả 7 claim JSON cộng claim rollback đều CONFIRMED,
+cộng phát hiện 15 ảnh P9 thiếu. Council 1 CONFIRMED, council 2
+STANDS WITH MINOR CORRECTIONS, council 3 COMPLETE, redteam
+SURVIVES với 5 minor. Fix pass 79498ea, cộng sửa câu section
+11 của điều phối 43f03fe.
+Task 2, spec landing (b1) vào cdp.mjs:
+docs/batch12-task2-b1-landing-spec-20261122.md, 571 dòng
+(55405a5). Khuyên option A, action focus riêng. Council 1
+AMEND với 10 trích dẫn sai, council 2 NEEDS CHANGE, council 3
+COMPLETE với 8 sửa, redteam BROKEN với B1 + 11 minor. Fix pass
+20f3b99: quy tắc focus đã giới hạn cho chương trình set_value,
+lý do chọn A đã viết lại, trích dẫn đã sửa, thêm item 10
+shadow-root walk và item 11 ảnh P9 thiếu, ghi rõ 4 lần abort
+đầu. Fix pass tự kiểm tra và từ chối 8 sửa của reviewer vì
+sai (đếm cả dòng trống).
+Task 3, audit CB-8 2 claim DONE mới:
+docs/batch12-task3-cb8-audit-20261122.md, 169 dòng (73a759e).
+Cả 2 REVOKED, số liệu đúng hết, chỉ thiếu 15 ảnh P9. Council
+1 CONFIRMED WITH 2 CORRECTIONS, council 2 all STANDS, council
+3 COMPLETE, redteam SURVIVES với 3 minor. Fix pass 32cba65.
+Kết quả chính. Số S2 reopen đã kiểm chứng: 10/10 send,
+median wall 28560.9 ms, 0 model call. (b1) 5/5 Chromium,
+median wall 18839.7 ms. Cả 2 claim DONE đều REVOKED vì thiếu
+ảnh P9. Đường sửa: commit 15 ảnh P9 lên todolist-push đúng
+đường dẫn JSON chỉ, rồi audit lại chỉ ảnh. EXPAND chấp thuận
+về nguyên tắc ở 4305dcb vẫn chờ vì PASS chưa được kiểm chứng.
+Ghi chú quy trình. Execution-risk check chặn watchdog các lần
+10:47, 13:17, 13:27, 13:47 và lần fetch đầu của agent task 1,
+phiên điều phối git chạy bình thường cả ngày nên tự commit và
+ghi bù. Watchdog 10 phút vẫn chạy liên tục.
