@@ -347,10 +347,14 @@ ALL VALID, all rc=0.
 
 Master pid 25435 since 07:00:12 +07, /tmp/probe-s0/soak-b.jsonl.
 t+15 0.867s, t+20 0.909s, t+25 0.967s, t+30 0.919s, t+35 0.962s,
-t+40 0.915s, t+45 keepalive 1.822s, all rc=0, same pid. The t+45
-keepalive is slower (contention: many workers SSHing at once)
-but the master is alive (check_rc=0, same pid). Ends about
-08:00 +07; final rows checked below.
+t+40 0.915s, t+45 keepalive 1.822s, t+50 1.078s, all rc=0, same
+pid. The t+45 keepalive is slower (contention: many workers
+SSHing at once) but the master is alive (check_rc=0, same pid).
+VERDICT: PASS (advisory). The master survived 50 minutes with
+ServerAliveInterval=15, same pid throughout, every sample
+0.87-1.82s. The soak file itself was lost in the ~07:51 service
+restart that wiped /tmp (t+55 and t+60 rows unrecoverable), so
+the verdict rests on the t+0..t+50 rows recorded here.
 
 ## 8. Commit record
 
@@ -388,5 +392,47 @@ RECOVERY (for whoever runs it once git writes recover; run from
 5. `git push origin todolist-push`, then verify with
    `git ls-remote origin todolist-push` and record the hash here.
 
-Log commit hash: (pending, fills in when step 4 lands)
-Push verified: (pending)
+Log commit hash: 18f23048d33b89c569e43fd335f37ceaa599f926
+(local commit first made as 4985b45 on top of 5dcf2b3, then
+rebased onto origin tip 6e1324a with git merge-tree --write-tree
+because a plain rebase was blocked by other workers' untracked
+log files; the merged tree was verified to be exactly origin
+plus my 10 files, 2156 insertions / 28 deletions, before the
+commit-tree; the old 4985b45 is superseded, same content)
+Push verified: 2026-11-22 about 07:53 +07,
+`git ls-remote origin todolist-push` returns
+18f23048d33b89c569e43fd335f37ceaa599f926.
+Tests after landing: 129-test suite green (OK) at about 07:55
++07, after the service restart cleared the EPERM.
+## 9. Post-push notes (07:51-07:56 +07)
+
+- About 07:51 +07 the exec service restarted mid-loop. It wiped
+  /tmp entirely (/tmp/probe-s0/soak-b.jsonl lost with the t+55
+  and t+60 rows; /tmp/s0-measure.sh lost too) and it cleared the
+  EPERM: git writes work again (fetch, add, commit, push all OK
+  after the restart) and the 129-test suite runs green.
+- The restart also left 6 AMEND4 log files absent from disk
+  (worker-amend4-closeout-log.md, worker-click3-loglander-log.md,
+  worker-click3-r3c1/r3c2/r3c3/r3rt-review-log.md). They were
+  present as untracked files at 07:49 and gone by 07:52. Their
+  content survives in the pushed commit 18f2304 (from origin's
+  log-lander commits); I restored all 6 from HEAD with
+  `git restore` and verified them present. The 7th file
+  (worker-codex-amend4-driver-log.md) was never absent. A `git
+  reset` first fixed the stale index (it still reflected
+  5dcf2b3). After the restore, status shows only the two
+  pre-existing uncommitted modifications (scripts/code_exec.py,
+  Y1b worker; improvements/worker-probe-s0-log.md, PROBE-S0
+  worker) plus untracked files. No other worker's work was
+  touched.
+- Stash left over: stash@{0}, "WIP on todolist-push: 17fdb9b",
+  created 2026-11-22 00:15:45 UTC, holds ONLY my original
+  zen_dom CB-5 gate (first version, longer comment, error
+  string "eval is debug-only: arbitrary JS in the current tab
+  is not a default agent primitive (CB-5)..."). That is the
+  first clobber's mechanism: the gate was stashed, not just
+  overwritten. Its content is superseded by the improved gate
+  landed in 18f2304. I left the stash in place (it is not
+  mine to drop); the coordinator should ask whoever created it
+  whether to drop it.
+- Follow-up commit for this log update: (hash fills in below).
