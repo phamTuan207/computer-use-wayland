@@ -51,6 +51,14 @@ class BrowserImage(unittest.TestCase):
             self.assertEqual(set(saved.info),
                              {'jfif', 'jfif_version', 'jfif_unit', 'jfif_density'})
         self.assertEqual(result['image_size'], list(expected.size))
+        # Pinned codec parameters (S0 J37): the stored JPEG is encoded at
+        # CAPTURE_JPEG_QUALITY = 90, CAPTURE_JPEG_SUBSAMPLING = 0
+        # (scripts/cu.py:71-72, encode at cu.py:885, recorded at
+        # cu.py:908-911), so the persisted record must carry them.
+        # Literals pin the values; changing the constants must update
+        # this test consciously.
+        self.assertEqual(result['jpeg_quality'], 90)
+        self.assertEqual(result['jpeg_subsampling'], 0)
         # pixel_sha256 hashes the STORED (JPEG-decoded) pixels, not the source.
         self.assertEqual(result['pixel_sha256'],
                          hashlib.sha256(Image.open(path).convert('RGB').tobytes()).hexdigest())
@@ -156,10 +164,19 @@ class BrowserImage(unittest.TestCase):
                 self.assertEqual(result.mode, 'RGB')
                 self.assertEqual(result.size, expected.size)
                 self.assertEqual(result.tobytes(), expected.tobytes())
+                # S0 J37 codec separation (commit 18f2304): save_observation
+                # records the pinned codec parameters in the meta on both
+                # paths (scripts/cu.py:876-879 persist=False, 908-911
+                # persist=True), from CAPTURE_JPEG_QUALITY = 90 and
+                # CAPTURE_JPEG_SUBSAMPLING = 0 (cu.py:71-72). The values
+                # below are literals on purpose: they pin the pinned
+                # parameters, so changing the constants must update this
+                # test consciously instead of passing silently.
                 self.assertEqual(meta, {'backend': 'browser', 'image_size': list(expected.size),
                                         'max_width': 320, 'image_format': 'JPEG',
                                         'image_bytes': None, 'image_sha256': None,
-                                        'encode_ms': 0})
+                                        'encode_ms': 0, 'jpeg_quality': 90,
+                                        'jpeg_subsampling': 0})
                 self.assertFalse(self.state.exists())
 
     def test_browser_cli_image_maps_flag_target_and_raw_bytes(self):
