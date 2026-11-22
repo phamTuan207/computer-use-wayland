@@ -156,10 +156,51 @@ workspaces at the same time.
   Note: coord files are append-only logs (assignments + clone reports
   in one file); the new batches were APPENDED, not overwritten.
 
-## 4. Status 10:40 +07 (T+10m)
+## 5. C5-P2-SPEC DONE, verified by me, 10:49 +07 (T+19m)
 
-- 5 workers running, 0 completed yet. 2 clones queued, both loaded.
-- No errors to report. Waiting on worker results; will react on
-  completion, kill at 15 min of no progress.
+- Worker C5-P2-SPEC completed 10:48:34 +07 (6 min, no stall).
+  Deliverables: docs/stale-ref-disagreement-protocol.md (467 lines
+  by my count; worker said 465) + improvements/worker-click5-p2-spec-log.md.
+  Commits 1bbf64b, 4070bde, 1b12ada on todolist-push.
+- MY VERIFICATION (git show origin/todolist-push, this session):
+  protocol file exists, 467 lines, em dash 0, en dash 0. Live callers
+  of dom_rect_to_image_point confirmed: dom_act.py:271 (ground_input,
+  live) is the only live call site; dom_act.py:441 (ground_many_one_shot)
+  and zen_dom.py:821 (locate_point) are test-only as the worker states;
+  the other two hits are comments/docstrings. The worker's enumeration
+  stands.
+- B5 limb (i) judgment: MET. Protocol specifies stale-ref definition,
+  8 detection checks in order, disposition per case (blanket stop
+  REJECTED, re-ground first), strict path for destructive/send actions,
+  CB-2 binding folded in, exact fail-closed stale_ref error shape.
+- AMEND4 items 2-4 wiring: PRESENT and CORRECT at fccf367 (item 2
+  shared JS helpers, item 3 grounded_y_range, item 4 ranges threaded
+  through CodeExecBackend/CLI/first_action). Test evidence at tip:
+  test_zen_dom + test_dom_act + test_type_verification Ran 122 OK;
+  test_step5_p1p5 + test_pick4_fastpath Ran 65 OK; test_first_action
+  Ran 71 OK.
+- Zen adapter genuinely missing (OPEN-5): code_exec.py has zero
+  zen/marionette/bidi hits; DOM goes only through CDP (cdp.mjs).
+  Owner: P2 implementation worker + step-9 prototype worker.
+- CORRECTION to the worker's report: it says limb (ii) "belongs to
+  the round-3 council worker". Wrong owner label. Limb (ii)
+  verification is C5-B5-VERIFY, currently running. The judgment
+  stands; only the owner label is corrected.
+- Caveat stands: limb (i) MET does NOT lift B5. Limb (ii) still
+  gates the P2 rewrite start.
+- NOTE: remote todolist-push HEAD is now f394291, a C5-INPUT-INVEST
+  log commit ("Chromium Input stall cause ranking, fix ranking, step
+  9 implication"). Its completion handoff has NOT arrived yet in my
+  context; I record the commit as landed, verdict pending the handoff
+  and my verification. Do not quote it as done until then.
 
-## 5. (to be filled as results land)
+## 6. Still running (T+19m)
+
+- C5-VISIBILITY (a6260a4f): live laptop probe.
+- C5-INPUT-INVEST (ed0f5f5c): log commit f394291 landed; handoff pending.
+- C5-B5-VERIFY (0e1c6847): B5 limb (ii) verification.
+- C5-ITEMS56 (b72898b7): items 5-6 ZenDomError diagnosis.
+- Clone1 batch 10 + clone2 batch 12: assigned 10:40 (0521d6c on main),
+  no commits from either yet (expected; just assigned).
+
+## 7. (to be filled as results land)
