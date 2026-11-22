@@ -34,3 +34,305 @@
 - Toi giao may cho Muse tong roi, toi khong dong vao nua. Em cu lam viec live tren may thoai mai theo quy trinh da giao.
 - Em thay clone1, mochi thay clone2. Moi quy trinh giu nguyen nhu cu, chi doi nick: lam viec qua file coord nay, council 3 cong redteam, kiem chung doc lap, bang chung Lauren Tan, khong tu cham minh.
 - Tiep tuc viec 1 (Brave sang (b1)), viec 2, viec 3 nhu da giao. Co gi can thi ghi vao file nay cho Muse tong, dung nhan truc tiep cho toi.
+
+## Viec 1: Brave sang (b1), code xong, 2026-11-22 18:11 gio Viet Nam
+
+Trang thai code: DONE o muc code va test tren VM, chua co bang chung live Brave 5/5. Live 5/5 chi chay duoc tren may nguoi dung theo quy trinh o muc sau, ngoai pham vi VM. Khong claim live o muc nay.
+
+### Ket qua nghien cuu
+
+- Brave hien dung fill, program [fill, key Enter, assert], 3 action, completed 3. Land runs run-1..5: Brave fill gui duoc 149.6, 163.2, 177.2 ms, fail 5098.2, 5095.0 ms, completed 0, CB-1 ca ba False, V12 not found sau 40 attempts, elapsed_ms 10042-10046. Ket luan: Brave fill 3/5, chu ky stall la "CDP timeout: Input.dispatchMouseEvent", elapsed khoang 5000 ms, completed 0.
+- (b1) la [set_value, focus, key Enter, assert], 4 action, completed 4, 0 Input.dispatchMouseEvent. Chromium (b1) land runs 5/5, elapsed 143.9, 160.5, 147.4, 123.1, 124.0 ms, median 143.9 ms, range 123.13-160.51 ms, tu tinh lai tu JSON goc.
+- Focus da landing san o base, commit dc8449b, 5 file, 98 insertions, 50 deletions, test o 05c11b9. cdp.mjs dong 434 whitelist co focus, nhanh focus dong 534-554, code_exec.py dong 254-255, cu.py dong 1299 va 1341, dom_asserts.py dong 69 focus la focus_check. Khong can doi 4 file nay, chi doi scripts/s2_flip_live.py va tests/test_s2_flip_wiring.py.
+- Spec batch 12 muc 5 va 8 van ghi Brave giu fill, ky vong do da bi thay the boi commit 2290a12 "Brave to (b1) decided" va EXPAND recommendation o step 9 muc 8. Quy trinh nay dung quyet dinh moi.
+
+### Thay doi code, commit e1b62b4
+
+- Lenh: git add scripts/s2_flip_live.py tests/test_s2_flip_wiring.py, git commit -m "C5-W1: Brave uses (b1) set_value by default, 2026-11-22". Commit e1b62b4a554da585d8e46ef488854c117cdb56f3, 2 file, 468 insertions, 31 deletions.
+- Thay doi chinh: variant_for tra set_value vo dieu kien cho Brave, Chromium tra set_value chi khi chromium_set_value bat hoac program_variant set_value, con lai fill. Harness.__init__ raise ValueError neu program_variant khong thuoc fill, set_value, validation truoc mkdir. Helper program_variant_label chi ghi browser thuc te da chay, normalize va dedupe. Helper delayed_targets chi lay browser set_value co ca target_id va message, normalize, dedupe, ben voi results None. Delayed guard chi sleep 10 giay khi co send duoc thu. Help --set-value va --chromium-set-value da sua, docstring da sua. CB-1 set_value la completed >= 3 va >= 1, fill la >= 2 va >= 1, khong doi. Brave fill khong con chay duoc bang co nao, rollback ve fill la revert commit nay.
+- Lich su push: commit dau fe19c7d luc 18:09:46, push bi reject vi remote da chay truoc, fetch thay remote efa206a voi thay doi W-ARIA nho o 2 file (COMPOSER_ROLES them searchbox, combobox, 1 test moi). Rebase sach, khong conflict, thanh e3afc35 luc 18:10:27. Push lai bi reject vi remote chay them 1 commit 94d910d (chi docs, khong cham 2 file). Rebase sach lan 2, thanh e1b62b4 luc 18:11:13. Push 94d910d..e1b62b4 luc 18:11:13-18:11:16, elapsed 3s. git ls-remote origin todolist-push tra ve e1b62b4a554da585d8e46ef488854c117cdb56f3. COMMIT_W1 = e1b62b4a554da585d8e46ef488854c117cdb56f3.
+- Test sau rebase cuoi, 2026-11-22 18:11:13 +07: python3 -m unittest tests.test_s2_flip_wiring, Ran 32 tests in 0.054s, OK. 32 test gom 31 test viec 1 cong 1 test W-ARIA moi.
+
+### Test tren VM, bang chung
+
+- Lenh: python3 -m unittest tests.test_s2_flip_wiring -v, 2026-11-22 18:08:18 +07. Output: Ran 31 tests in 0.060s, OK, exit 0, real 0.274s. Base co 20 test, nay co 31 test, 0 test bi xoa, 11 test moi: dispatch Brave va Chromium, already-sent, CB-1 threshold Brave va Chromium, delayed_targets, label, validation, CLI, Brave mac dinh. Sau rebase them 1 test W-ARIA, tong 32 test, OK.
+- Lenh: node tests/cdp_validation.mjs, 2026-11-22 18:08:21 +07. Output: 11 dong ok, exit 0, real 0.290s.
+- Lenh: python3 -m unittest tests.test_step5_p1p5 tests.test_dom_act tests.test_code_exec tests.test_first_action, 2026-11-22 18:08:23 +07. Output: Ran 210 tests in 13.399s, OK, real 13.685s.
+- Lenh: python3 -m unittest tests.test_session_driver tests.test_p2_element_ref, 2026-11-22 18:08:39 +07. Output: Ran 132 tests, FAILED failures=2, errors=21. Ca 23 fail deu do thieu native/wtype, chuoi 'wtype helper is missing' xuat hien 24 lan. Kiem chung co san tren base, khong dung stash: git ls-files native/wtype rong, ls native/wtype bao file khong ton tai, git show 05140c1:scripts/cu.py dong 107 da raise loi nay tren base, git diff cho scripts/cu.py va 2 file test tren la 0 dong. Ket luan: 23 fail co san, khong phai do thay doi nay.
+- Kiem tra them: git diff --check pass, em dash 0, en dash 0, ky tu khong ASCII 0 trong diff, khong co thong tin ca nhan nao trong dong them, grep LAPTOP_FOCUSENTER trong scripts/s2_flip_live.py tra ve rong.
+
+### Council, redteam, verify doc lap
+
+- Vong 1: council 1, 2, 3 va redteam deu NEEDS CHANGE. Council 1 chi 2 cho chu muc thap. Council 2 chi thieu test dispatch, completed, P2 stamp, CLI. Council 3 chi range live 110-145 ms mau thuan voi so do 123-161 ms, quy trinh live chua viet, test chua khoa thu tu, Brave fill khong con chay bang co. Redteam chi test dispatch thieu, test moi pass gia, live Brave chua chung minh, help va docstring con sot fill, variant_for khong validate.
+- Vong 2 fix het finding HIGH va MEDIUM: them test dispatch mock, test order va parsed actions, test label, validation, delayed guard, sua wording, cap nhat quy trinh live. Re-review vong 2: council 1 NEEDS CHANGE chi 2 cho chu muc thap, council 2 NEEDS CHANGE vi thieu test already-sent va delayed guard, council 3 PASS voi 4 finding LOW khong chan, redteam NEEDS CHANGE vi thieu test already-sent va CB-1 threshold.
+- Vong 3 fix het finding MEDIUM: them test already-sent, test CB-1 threshold ca hai phia, tach helper delayed_targets va test, test CLI, assert endpoint. Re-review vong 3: council 1 NEEDS CHANGE chi 1 finding LOW (delayed_targets chua normalize), council 2 PASS voi 2 finding LOW, council 3 PASS voi 2 finding LOW (so dong trich dan), redteam PASS voi 3 finding LOW, mutation probe 8/8 deu bi bat.
+- Vong 4 fix 1 finding LOW cuoi: delayed_targets normalize, dedupe, ben voi results None, them 2 assert. Khong re-review lai cho 1 dong nay, vi 3 reviewer da PASS o vong 3 va finding chi la normalize.
+- Verify doc lap tu dau, agent khac, 2026-11-22 18:07:57-18:09:20 +07: verdict VERIFIED PASS. Tu doc diff 608 dong, tu chay lai test 31/31, node 11/11, 210 test lien quan, tu tinh lai so tu JSON goc, tu kiem tra fail wtype co san tren base, tu kiem tra ban nhap quy trinh live du lenh va tieu chi.
+
+### Quyet dinh range live
+
+- Dung 120-165 ms, thay cho 110-145 ms theo spec batch 12 muc 9. Ly do: step 9 do duoc Chromium (b1) 123.13-160.51 ms, median 143.923 ms, 2/5 vuot 145 ms, nen range 110-145 ms sai o dau tren. Range 120-165 ms bao het 5 so do, cong bien tren nho.
+- Luu y: range nay suy ra tu Chromium (b1) n=5, chua co baseline Brave (b1). Brave fill chay cham hon Chromium cung run mot cach co he thong: 149.6 so voi 143.9, 163.2 so voi 160.5, 177.2 so voi 147.4 ms. Run Brave (b1) dau tien co the vuot 165 ms ma khong stall. Neu gap, cham FAIL theo quy tac, khong tu sua so sau khi chay, de coordinator quyet dinh co noi range Brave hay khong.
+- Tieu chi wall: median scored wall o hoac duoi khoang 29 s la pass, wall chi la phu sau kiem chung stall, vi land runs do duoc 22.2-25.3 s o run gui duoc, wall 36-37 s da fail qua chu ky stall.
+
+### Can Muse tong
+
+- Theo muc Giao may 17:55, em thay clone1, duoc lam viec live tren may thoai mai theo quy trinh. Code viec 1 da landing o COMMIT_W1, quy trinh live san sang o muc sau. Em xin Muse tong xac nhan bang van ban: cua so yen tinh (thoi gian bat dau), broker ranh, khong co worker nao khac cycle Brave hoac Chromium, cay laptop da sync toi COMMIT_W1 e1b62b4a554da585d8e46ef488854c117cdb56f3, focus co trong whitelist cdp.mjs tren laptop, helper /tmp/c5-count.mjs con ton tai. Khi co xac nhan, em chay dry run 0 roi live run 1-5 theo quy trinh, bao cao day du lenh, output, commit hash, thoi gian chay.
+- Neu laptop chua sync, dung chay live, vi fail vi unsupported action cho focus la loi sync, khong phai stall.
+
+## Quy trinh live: Brave sang (b1), chung minh 5/5, khong stall
+
+Trang thai: SAN SANG, code viec 1 da landing, cho xac nhan cua so yen tinh cua Muse tong.
+Repo: ~/workspace/computer-use-wayland, nhanh todolist-push, COMMIT_W1 = e1b62b4a554da585d8e46ef488854c117cdb56f3.
+Co so: scripts/s2_flip_live.py (886 dong), improvements/worker-click5-step9-log.md muc 8 va 9, improvements/worker-click5-s2-reopen-log.md muc 2 va 3, improvements/worker-click5-input-fix-log.md muc 7.4 va 7.5, /tmp/batch12-task2-b1-landing-spec-20261122.md muc 8, 9, 11.
+Muc dich: chung minh Brave dung (b1) [set_value, focus, key Enter, assert] gui 5/5, khong stall, tren cung thread clone1 ma fill chi duoc 3/5 o land runs. Day la lan dau Brave dung set_value live, nen neu fail vi unsupported action cho focus thi do la loi sync laptop chua sync, khong phai stall, xem muc 10.
+
+### 0. Tong quan
+
+- (b1) la dang gui khong dung chuot: set_value ghi text bang native setter, focus dat caret vao composer, CDP Enter gui di, 0 lan Input.dispatchMouseEvent.
+- Code (b1) da landing: commit test 05c11b9, commit code dc8449b (5 file, 98 insertions, 50 deletions), commit chung minh step 9 b16979e. Code viec 1: COMMIT_W1 e1b62b4a554da585d8e46ef488854c117cdb56f3, 2 file, 468 insertions, 31 deletions.
+- Harness: scripts/s2_flip_live.py, chay tu VM, repo root lam workdir. Moi run gui ca hai trinh duyet, Brave clone1 va Chromium clone2, mot lenh moi run.
+- Model calls trong vong may: 0. Program viet mot lan truoc run 1 va dung lai khong doi qua cac run. P9 review la lan doc vision duy nhat, la bang chung cho nguoi, khong tinh diem.
+- Exit code cua harness khong phai ket qua pass: exit 0 khi run JSON da ghi, ke ca khi gui that bai. Exit 2 moi la loi harness. Cham pass chi theo cac truong trong run JSON, xem muc 6 va 7.
+- Khong dung --activate trong cac run (b1). Activation da chung minh vo dung voi mouse stall, va duong set_value khong dung chuot. Them activation chi them thoi gian SSH va lam nhieu phep do.
+- Khong chuyen workspace, khong cham tab Zen, khong gui phim nao ngoai cac lenh gui test qua CDP.
+
+### 1. Dieu kien tien quyet, kiem tra het truoc khi chay
+
+- [ ] Cua so yen tinh, khong co batch clone nao dang chay. Coordinator xac nhan bang van ban truoc khi chay, ghi ro thoi gian bat dau.
+- [ ] Broker ranh. Kiem tra relay state truoc run 0. Neu broker dang busy boi worker khac, dung lai, cho den khi relay free, khong force start, khong chay hai batch broker song song.
+- [ ] Brave idle, khong co worker nao khac dang cycle Brave. Chromium idle, khong co worker nao khac dang cycle Chromium.
+- [ ] Login con. Moi trinh duyet chi co dung mot tab muse.ai, title "Chat - clone1" (Brave) va tuong tu cho clone2, URL https://muse.ai/?__pwa=1, trang chat da dang nhap, khong phai trang redirect login.
+- [ ] Tab id thay doi theo moi session la binh thuong. Harness tim tab theo URL prefix https://muse.ai/, nen tab id moi van duoc. Cai on dinh phai co: dung mot page tab, cung title, cung URL, cung login.
+- [ ] Cay laptop da sync toi COMMIT_W1 = e1b62b4a554da585d8e46ef488854c117cdb56f3. Khong chay live khi chua co so nay, so nay da co trong file nay.
+- [ ] Kiem tra focus trong whitelist cdp.mjs tren laptop, xem muc 3. Khong dung ban VM de ket luan ban laptop.
+- [ ] Helper /tmp/c5-count.mjs van can tren laptop, xem muc 3. Helper focusenter khong con can, xem muc 3.
+- [ ] Endpoint Brave va Chromium thuc te da xac minh bang /json/version, xem muc 2. Khong gia dinh port.
+- [ ] Khong co lich hold nao chong len thoi gian chay. Reopen chay 13:05-13:09, tranh hold :11:56 va :26:56. Land chay 16:04-16:17. Kiem tra lich hold hien tai voi coordinator truoc khi chay, khong gia dinh hold da het.
+- [ ] Workdir live da san sang tren VM: improvements/s2-flip-brave-b1-runs (tuong doi tu repo root). Workdir dry run: /tmp/s2-brave-b1-dry.
+
+### 2. Endpoint thuc te, kiem bang /json/version, khong gia dinh
+
+Lech endpoint da ghi, phai kiem tra, khong gia dinh:
+
+- Header s2_flip_live.py, dong 7-8, va BROWSERS, dong 79-82: Brave/clone1 o http://127.0.0.1:9224, Chromium/clone2 o http://127.0.0.1:9223. Ghi chu trong file: "Never assume port 9223 is Brave."
+- Log cu (reopen, muc 2, va step 9, muc 8): Brave o [::1]:9223, Chromium o http://127.0.0.1:9223, cung so port 9223, khac dia chi bind. Reopen xac minh: [::1]:9223 bao Chrome/157.0.8103.79 (Brave), 127.0.0.1:9223 bao Chrome/157.0.8103.38 (Chromium). ss cho thay 127.0.0.1:9223 thuoc Chromium PID 8059, [::1]:9223 thuoc Brave PID 1112207.
+- Hai ban ghi tren mau thuan nhau ve port Brave (9224 so voi [::1]:9223). Day co the la do P3 port split thay doi theo thoi gian, hoac do Brave duoc relaunch voi port khac. Khong duoc chon mot ban ma khong kiem tra.
+
+Kiem tra truoc run 0, tren laptop, bang curl, ghi lai output:
+
+```
+curl -s http://127.0.0.1:9224/json/version
+curl -s http://127.0.0.1:9223/json/version
+curl -s http://[::1]:9223/json/version
+curl -s http://127.0.0.1:9224/json/list
+curl -s http://127.0.0.1:9223/json/list
+```
+
+Phan biet bang truong Browser trong /json/version:
+
+- Brave: Chrome/157.0.8103.79.
+- Chromium: Chrome/157.0.8103.38.
+
+Chi chay tiep khi ban do endpoint thuc te khop voi BROWSERS trong s2_flip_live.py dang chay tren laptop (Brave 127.0.0.1:9224, Chromium 127.0.0.1:9223). Neu khong khop, DUNG LAI, bao cao cho coordinator, khong sua endpoint tren tay trong luc chay. Neu Brave khong nghe o 9224, lam theo muc 9 (relaunch voi debug port) roi kiem tra lai tu dau.
+
+Kiem tra them bang /json/list: moi trinh duyet phai co dung mot page tab muse.ai. Neu co 0 tab hoac hon 1 tab, dung lai, bao cao.
+
+### 3. Kiem tra code tren laptop
+
+Lam tren laptop, khong phai tren VM. Ban VM (todolist-push COMMIT_W1 e1b62b4) da co focus, nhung ban laptop co the lac hau. Chung minh bang grep tren laptop, ghi lai output.
+
+- Focus da landing trong code, commit dc8449b:
+  - scripts/cdp.mjs, dong 434: whitelist action gom 'click', 'confirm_click', 'hover_click', 'fill', 'set_value', 'focus', 'key', 'scroll', 'wait', 'assert'. Nhanh focus o dong 534-554: mot Runtime.evaluate, kiem tra field unavailable, e.focus(), kiem tra document.activeElement === e, neu khong duoc thi loi 'field is not editable or did not gain focus', 0 Input method.
+  - scripts/code_exec.py, dong 254: allowed set gom 'click', 'confirm_click', 'hover_click', 'fill', 'set_value', 'focus', 'key', 'scroll', 'wait', 'assert'.
+  - scripts/cu.py, dong 1299: browser allowed set gom 'click', 'confirm_click', 'fill', 'set_value', 'focus', 'key', 'scroll', 'wait', 'assert'. Luu y: hover_click van thieu o cu.py, do la drift da ghi tu truoc, khong phai phan cua viec 1, khong sua trong lan chay nay.
+  - scripts/dom_asserts.py, dong 69: 'focus' co ASSERTS entry focus_check, mandatory True. Rule send-requires-focus o dong 238-255: key Enter gui ma khong co action focus-establishing truoc do trong cung batch thi raise DomAssertError. Focus-establishing gom click, double_click, confirm_click, hover_click, focus, cong fill la ngoai le ro rang vi fill focus qua click noi bo. Type khong phai focus-establishing.
+- Kiem tra tren laptop bang cac lenh tuong duong grep 'focus' trong 4 file tren. Ca 4 noi phai co focus. Neu mot noi thieu, DUNG LAI, sync lai cay laptop toi COMMIT_W1, kiem tra lai, bao cao.
+- Helper /tmp/c5-count.mjs VAN CAN tren laptop. Trong s2_flip_live.py, dong 77: LAPTOP_COUNT = '/tmp/c5-count.mjs'. Ham count_check, dong 564-581, dung no cho pre-send count va delayed count, bang mot Runtime.evaluate chi doc. File nay khong co trong repo (batch 12, muc 10, item 2). Neu mat, phai tao lai tu mo ta trong log truoc khi chay lai. Kiem tra file ton tai tren laptop truoc run 0.
+- Helper focusenter KHONG CON CAN. Trong s2_flip_live.py, grep LAPTOP_FOCUSENTER tra ve rong tren todolist-push. Ham build_program_set_value, dong 141-184, dung landed focus action, khong dung helper /tmp. File bang chung improvements/s2-flip-b1-runs/c5-focusenter.mjs (42 dong, 2478 byte, sha256 94ee467ed3067e044491ad19153c24b73d574a8106a5367db454c0e47e1a695f, commit 3ef8f55) chi la bang chung, khong phai duong gui. Khong can file /tmp/c5-focusenter.mjs tren laptop de chay (b1) da landing.
+- Quyet dinh F7 (step 9, muc 2): landed key() KHONG thay doi cho Enter. Helper gui code 'Enter' o ca keyDown va keyUp, text '\r' chi o keyDown. Landed key() khong bao gio gui truong code, chi gui key, modifiers, windowsVirtualKeyCode, nativeVirtualKeyCode, va gui cung params object (gom text '\r') cho ca keyDown va keyUp. Ca hai khac biet deu vo hai vi composer doc e.key, trinh duyet bo qua text o keyUp. Khong sua key() lang le trong lan chay nay.
+- Cac helper laptop khac van can: /tmp/s2-v12.mjs, /tmp/s2-p9.mjs, /tmp/s2-seed.mjs. Ghi lai chung ton tai truoc run 0.
+- Relay restart: worker code-exec duoc spawn moi session, nen du kien khong can restart relay khi doi cdp.mjs, nhung phai xac minh bang dry run, khong gia dinh. Ghi lai co restart hay khong.
+
+### 4. Dry run 0, ca hai trinh duyet, scratch tab
+
+Chay tu VM, repo root lam workdir. Lenh:
+
+```
+python3 scripts/s2_flip_live.py --run 0 --dry-run --set-value --message-prefix S2-BRAVE-B1-DRY --workdir /tmp/s2-brave-b1-dry
+```
+
+Giai thich flag, doc ky:
+
+- --set-value: buoc ca hai trinh duyet dung program (b1) [set_value, focus, key Enter, assert]. Day la flag dung sau viec 1, de ca hai trinh duyet deu (b1).
+- --chromium-set-value: chi doi Chromium sang set_value, Brave von da set_value vo dieu kien trong variant_for, khong giu Brave o fill nua. Dung flag nay thay cho --set-value cung cho ket qua (b1) ca hai trinh duyet. Khong dung flag nao thi chay mac dinh: Brave (b1) 5/5 cong Chromium fill 5/5, khong phai 10/10 (b1).
+- Viec 1 da doi Brave sang set_value vo dieu kien, flag --set-value van giu lai cho ro rang, thua chu khong hai.
+- --dry-run: tao scratch tab cho moi trinh duyet, gui tren scratch tab, dong scratch tab sau khi chay. Khong gui vao thread live.
+- --message-prefix S2-BRAVE-B1-DRY: message co dang S2-BRAVE-B1-DRY-R0-BRAVE-IGNORE-TEST va S2-BRAVE-B1-DRY-R0-CHROMIUM-IGNORE-TEST.
+- --workdir /tmp/s2-brave-b1-dry: run JSON ghi vao /tmp/s2-brave-b1-dry/run-0.json, P9 PNG ghi canh do.
+
+Ket qua ky vong, ca hai trinh duyet, cham theo tieu chi (b1), khong cham theo tieu chi fill cu completed 3:
+
+- Brave: variant set_value, program ok True, completed 4, elapsed khoang 90-100 ms, CB-1 ca ba True, V12 found True, attempt 1, pre_count 0, delayed_count 1, P9 ok True.
+- Chromium: variant set_value, program ok True, completed 4, elapsed khoang 90-100 ms, CB-1 ca ba True, V12 found True, attempt 1, pre_count 0, delayed_count 1, P9 ok True.
+- Co so cho 90-100 ms (batch 12, muc 8): baseline reopen dry run 0, Chromium elapsed 85.8 ms, completed 2, cong focus evaluate khoang 2-3 ms, cong Enter tren scratch khoang 2 ms, cong assert polling khoang 0-10 ms, tru value assert da bo khoang 2-3 ms, duoc 86.8-98.8 ms, noi tron thanh khoang 90-100 ms. Luu y: so 17-25 ms la thoi gian Enter live, khong phai thoi gian focus, khong dung no de tinh dry run.
+- Wall cua dry run khong so sanh duoc (co seeding): land dry run 0 wall 19.0 s, reopen dry run 0 wall 30123.9 ms, (b1) dry run Chromium wall 21463.0 ms. Chi cham cac truong program, CB-1, V12, pre, delayed, P9 o tren.
+- Dieu kien PASS de di tiep: ca hai trinh duyet deu dat tat ca cac truong tren. Neu mot trinh duyet fail, DUNG LAI, khong chay live, bao cao log va run JSON.
+
+### 5. Live run 1-5, mot lenh moi run
+
+Chay tu VM, repo root lam workdir. Moi run mot lenh, thay N bang 1, 2, 3, 4, 5, chay lan luot, khong chay song song:
+
+```
+python3 scripts/s2_flip_live.py --run 1 --set-value --message-prefix S2-BRAVE-B1 --workdir improvements/s2-flip-brave-b1-runs
+python3 scripts/s2_flip_live.py --run 2 --set-value --message-prefix S2-BRAVE-B1 --workdir improvements/s2-flip-brave-b1-runs
+python3 scripts/s2_flip_live.py --run 3 --set-value --message-prefix S2-BRAVE-B1 --workdir improvements/s2-flip-brave-b1-runs
+python3 scripts/s2_flip_live.py --run 4 --set-value --message-prefix S2-BRAVE-B1 --workdir improvements/s2-flip-brave-b1-runs
+python3 scripts/s2_flip_live.py --run 5 --set-value --message-prefix S2-BRAVE-B1 --workdir improvements/s2-flip-brave-b1-runs
+```
+
+- Message moi run: S2-BRAVE-B1-R<N>-BRAVE-IGNORE-TEST va S2-BRAVE-B1-R<N>-CHROMIUM-IGNORE-TEST. Moi message duy nhat theo run, khong dung lai message cu.
+- Moi run khoang 40 giay (scored wall cong 10 giay delayed-count sleep cong P9 capture). Reopen wall trung vi 28560.9 ms. Land wall 22.2-25.3 s o run gui duoc, 36.1-37.0 s o run Brave fail vi cong 5 giay mouse timeout cong 10 giay V12 retry loop.
+- Run JSON: improvements/s2-flip-brave-b1-runs/run-N.json. P9 PNG: improvements/s2-flip-brave-b1-runs/p9-run<N>-brave.png va p9-run<N>-chromium.png.
+- Giua cac run, khong can doi neu run truoc PASS. Neu run truoc fail, xem muc 7 va 10 truoc khi quyet dinh chay tiep hay dung lai. Neu broker busy hoac Brave bi relaunch, xem muc 10, khong chay tiep mu.
+- Ghi lai routing gate moi run (strict hay relaxed), xem muc 6. Live thread vuot qua cap 80 element nen relaxed gate la binh thuong khi composer co trong snapshot.
+
+### 6. Ket qua ky vong moi run va tong 5 run
+
+Muc nay ap dung cho cac run voi --set-value, ca hai trinh duyet deu set_value. Chay mac dinh thi Chromium la fill, completed 3, khong co pre_count, xem muc 4.
+
+Moi run, moi trinh duyet, phai dat tat ca cac truong sau trong run-N.json:
+
+- outcome: sent.
+- program_variant: set_value.
+- program.ok: True.
+- program completed: 4. Day la program 4 action da landing, khong phai 2 action cua helper cu (completed 2 o (b1) Chromium-only va reopen Chromium), khong phai 3 action cua fill (completed 3).
+- program elapsed_ms: khoang 120-165 ms. Dom_act ms trong program log: khoang 30-55 ms.
+- CB-1: input_sent True, target_received True, verified True. Dinh nghia trong send_browser: input_sent la completed >= 3, target_received la completed >= 1, verified la V12 found.
+- v12.found: True, v12.attempts: 1.
+- pre_count.count: 0.
+- delayed_count.<browser>.count: 1. Dung 1 nghia la khong co ban sao gui muon nao toi sau. Neu key delayed_count vang trong run JSON, nghia la khong co send nao duoc thu, khong phai loi ghi log.
+- model_calls: 0.
+- P9: ok True, PNG ton tai, xem truoc khi cham, xem muc 8.
+
+Co so cho 120-165 ms (step 9, muc 8, kiem tra lai tu JSON goc):
+
+- Land runs Chromium (b1) 4-action: elapsed 143.9, 160.5, 147.4, 123.1, 124.0 ms, median 143.9 ms, dom_act 50, 52, 53, 31, 32 ms.
+- Quyet dinh range live: dung 120-165 ms, thay cho 110-145 ms theo spec. Ly do: step 9 do duoc Chromium (b1) 123-161 ms, median 143.9 ms, 2/5 vuot 145 ms (160.5, 147.4), nen range 110-145 ms sai o dau tren. Range 120-165 ms bao het 123-161 ms do duoc, cong bien tren nho.
+- Luu y ve range: 120-165 ms suy ra tu du lieu Chromium (b1) voi n=5, chua co baseline Brave (b1) nao. Du lieu Brave fill cho thay Brave chay cham hon Chromium cung run mot cach co he thong: run 1 la 149.6 so voi 143.9 ms, run 2 la 163.2 so voi 160.5 ms, run 3 la 177.2 so voi 147.4 ms. Mot run Brave (b1) dau tien co the vuot 165 ms ma khong co stall. Neu gap truong hop do, cham FAIL theo quy tac, khong tu sua so ky vong sau khi chay, de coordinator quyet dinh co noi range Brave bang du lieu moi hay khong.
+- Spec batch 12 muc 5 va 8 van ghi Brave giu fill. Ky vong do da bi thay the boi commit 2290a12 "Brave to (b1) decided" va EXPAND recommendation o step 9 muc 8. Quy trinh nay dung quyet dinh moi, khong dung ky vong cu cua spec.
+- Program 4-action dai hon program 2-action cua helper cu (reopen Chromium elapsed 99.4-113.0 ms, dom_act 8-12 ms) vi them mot focus cong mot assert CDP round trip, nen elapsed cao hon la du kien, khong phai regression.
+- Brave fill o land runs de doi chieu: elapsed 149.6, 163.2, 177.2 ms o run gui duoc, dom_act 60, 56, 72 ms. Brave (b1) du kien gan voi Chromium (b1), khong phai gan voi fill.
+
+Tong 5 run, khi chay voi --set-value hoac --chromium-set-value:
+
+- Brave 5/5 sends (b1), Chromium 5/5 sends (b1), tong 10/10 sends (b1).
+- Chay mac dinh, khong co flag nao: Brave (b1) 5/5 cong Chromium fill 5/5, tong 10/10 sends, nhung khong phai 10/10 (b1). Khong duoc ghi 10/10 (b1) cho chay mac dinh.
+- Median wall tuong duong reopen 28.6 s (28560.9 ms). Reopen wall cac run: 29020.4, 27799.1, 28112.6, 28898.1, 28560.9 ms. Ghi wall median theo tung trinh duyet tu truong browsers.<browser>.wall_ms trong run JSON, cong voi wall tong cua run. Tieu chi wall: median scored wall o hoac duoi khoang 29 s la pass. Wall chi la phu sau kiem chung stall o muc 7, vi land runs do duoc scored wall 22.2-25.3 s o run gui duoc, thap hon 28.6 s khoang 15-20 phan tram, va wall 36-37 s da fail qua chu ky stall o muc 7.
+- Pre-send count 0 va delayed count 1 o moi run, model calls 0 o moi run.
+- Routing gate: ghi lai strict hay relaxed moi run, theo tung trinh duyet. Land runs 1-5 ca hai trinh duyet deu relaxed (80 element, truncated, composer present). Reopen runs: Brave strict 72-79 element, Chromium relaxed 80 element. Relaxed duoc chap nhan khi composer co trong snapshot, vi program tu ground lai composer va assert no ton tai. Khong yeu cau strict.
+- Neu mot run khong dat mot truong nao o tren, run do FAIL. Khong tu sua so ky vong sau khi chay. Ghi dung so do duoc vao log.
+
+### 7. Cach kiem chung khong stall, phai thay ca ba
+
+Kiem tra trong run-N.json va program log moi run, phai thay ca ba dieu sau, thieu mot la chua chung minh duoc khong stall:
+
+1. Khong co chuoi "CDP timeout: Input.dispatchMouseEvent" trong program log hay program error. Day la chu ky stall cua fill o land run 4 va 5: "CDP timeout: Input.dispatchMouseEvent", completed 0, CB-1 ca ba False, V12 not found sau 40 attempts.
+2. Khong co program elapsed khoang 5000 ms voi completed 0. Land run 4 Brave: elapsed 5098.2 ms, dom_act 5002 ms, completed 0. Land run 5 Brave: elapsed 5095.0 ms, dom_act 5002 ms, completed 0. (b1) thanh cong co elapsed khoang 120-165 ms, dom_act khoang 30-55 ms.
+3. Khong co V12 40 attempts not found. Land run 4 va 5 Brave: v12 found False, attempts 40, elapsed_ms 10042-10046, wall_ms khoang 11185-11322. (b1) thanh cong co V12 found True, attempt 1.
+
+Them mot kiem tra ve duong gui:
+
+- Duong Brave dung 0 Input.dispatchMouseEvent. Bang chung la program variant set_value, program gom [set_value, focus, key Enter, assert], completed 4, khong co fill, khong co click trong program. Set_value chi dung Runtime.evaluate, focus chi dung Runtime.evaluate, key Enter chi dung Input.dispatchKeyEvent. Run JSON khong co bo dem rieng cho Input.dispatchMouseEvent, nen khong duoc claim "bo dem bang 0" tu mot truong khong ton tai. Chung minh 0 mouse bang dang program cong khong co timeout o tren.
+- Doi chieu am tinh: neu Brave van dung fill, stall se xuat hien lai voi dung chu ky o tren, nhu land run 4 va 5. Khong co chu ky do trong ca 5 run moi la bang chung bypass hoat dong tren Brave.
+
+### 8. P9, xem tung PNG truoc khi cham
+
+- P9 file moi run: improvements/s2-flip-brave-b1-runs/p9-run<N>-brave.png va p9-run<N>-chromium.png. P9 duoc capture SAU khi scored wall dung, bang direct CDP, khong chuyen workspace. Run chi duoc cham sau khi P9 review pass.
+- Xem tung PNG truoc khi cham, khong cham theo JSON rieng. Bat ky mismatch DOM so voi render nao cung FAIL run do, ke ca khi V12 found True. Day la dieu kien cung P9 (final direction, muc 2, item b).
+- Moi message test xuat hien dung mot lan trong thread dung. Composer trong. Khong co bubble ma (phantom bubble) o run fail. Land run 4 va 5 Brave P9 xac nhan khong co bubble ma: gui that bai thi khong gui gi, composer van trong.
+- Neu P9 ok False, khong co PNG, DUNG LAI, khong cham run do la pass. Ly do co the la tab id doi giua run (land run 1) hoac Brave bi relaunch khong co flag (land run 3). Send van duoc xac minh bang V12 cong delayed count, nhung P9 phai duoc capture lai muon (late P9) va review PASS truoc khi cham. Land run 1 va 3 da lam nhu vay: p9-run1-brave-late.png (184513 byte) va p9-run3-brave-late.png (187799 byte), ca hai review PASS.
+- 5 PNG goc cua flip Chromium khong co bubble test, khong duoc trich lam bang chung gui. Chi trich PNG cua run nay.
+
+### 9. Brave relaunch voi debug port neu can, theo P3, va rollback sau run 5
+
+Chi lam muc nay khi muc 2 cho thay Brave khong nghe o port ma harness can, hoac khi can mo lai Brave voi flag. Khong relaunch Brave giua cac run neu khong can thiet.
+
+#### 9.1 Truoc khi relaunch
+
+- Lay as-found flags tu /proc/<Brave PID>/cmdline TRUOC KHI SIGTERM, ghi lai nguyen van. Khong tu nghi ra flag. Log cu chi ghi "same as-found flags plus --remote-debugging-port", khong liet ke flag, nen buoc nay la bat buoc.
+- Lay donor env tu tien trinh donor dang chay, vi du zen-bin PID, kiem tra tu /proc/<donor PID>/environ: WAYLAND_DISPLAY=wayland-1, XDG_RUNTIME_DIR=/run/user/1000, DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus. Ghi lai PID donor va cac gia tri da kiem tra.
+- Ghi lai Brave main PID hien tai, Chromium PID hien tai, dia chi cua so Brave va Chromium, workspace cua chung. Chromium khong duoc cham toi trong buoc nay.
+
+#### 9.2 Relaunch co flag
+
+- SIGTERM toi Brave main PID. Cho thoat graceful trong 1 giay. Kiem tra khong con brave process nao. Chromium khong duoc cham toi.
+- Relaunch detached (setsid nohup), dung as-found flags da ghi o 9.1, cong --remote-debugging-port=<port>. Port dung o day la port ma harness can theo muc 2. Neu harness can 9224, dung 9224. Neu coordinator chi dinh dung ban cu 9223, dung 9223 va ghi ro ly do. Khong tu doi port.
+- Log relaunch vao /tmp/s2-brave-b1-brave-debug.log.
+- Kiem tra sau relaunch:
+  - Endpoint phuc vu dung mot page tab, title "Chat - clone1", URL https://muse.ai/?__pwa=1.
+  - Login con: trang chat da dang nhap, khong phai trang redirect login.
+  - Version split: Brave bao Chrome/157.0.8103.79, Chromium bao Chrome/157.0.8103.38, kiem bang /json/version o muc 2.
+  - ss cho thay port thuoc Brave PID moi.
+  - Cua so Brave tro lai cung dia chi va geometry nhu truoc, workspace nhu truoc.
+- Vi du lich su (reopen, muc 2): SIGTERM Brave main PID 1003210 luc 13:02:45, thoat graceful trong 1 giay, relaunch luc 13:03:06, PID moi 1112207, cmdline co flag, 13:03:14 [::1]:9223 phuc vu dung mot page tab FED133417A338D5B1596D60490746672, login con, 13:03:32 version split xac nhan, cua so Brave tro lai cung dia chi 0x55705383d420.
+- Tab id moi sau relaunch la binh thuong, harness tim theo URL prefix.
+
+#### 9.3 Rollback sau run 5
+
+- Sau run 5, va sau khi P9 cua run 5 da review xong, rollback Brave ve khong flag.
+- Muc nay la rollback port debug, khong phai rollback ve fill. Rollback ve Brave fill la revert commit viec 1, khong phai doi co, khong lam o muc nay.
+- SIGTERM toi Brave main PID dang chay co flag. Cho thoat graceful trong 1 giay. Kiem tra khong con brave process nao.
+- Relaunch KHONG co flag, dung as-found flags da ghi o 9.1, donor env nhu 9.1, log vao /tmp/s2-brave-b1-brave-rollback.log.
+- Kiem tra sau rollback:
+  - Cua so Brave tro lai cung dia chi va geometry nhu truoc.
+  - Port debug da dong: endpoint debug khong con tra loi. Kiem tra cmdline cua PID moi: 0 match cho remote-debugging-port.
+  - Chromium khong bi restart hay cham toi, tab clone2 van phuc vu tren port cua no, login con.
+- Vi du lich su (reopen, muc 7): SIGTERM PID 1112207 luc 13:10:36, thoat trong 1 giay, relaunch khong flag luc 13:10:52, PID moi 1119832, 13:11:00 cua so Brave tro lai cung dia chi 0x55705383d420, [::1]:9223 dong, Chromium PID 8059 khong cham toi, tab clone2 van phuc vu, 13:11:18 cmdline check 0 match cho remote-debugging-port. Step 9 rollback luc 16:34: relaunch khong flag, PID moi 1265855, cua so 0x55705383d420, [::1]:9223 dead, chi 127.0.0.1:9223 nghe.
+- Neu Brave von da khong co flag truoc khi chay (as-found khong flag) va khong can relaunch o 9.2, bo qua rollback, ghi ro "khong can rollback vi khong relaunch".
+- Neu Chromium chet giua cac run (step 9, 16:29-16:31, Chromium PID 8059 bien mat, khong con listener tren 127.0.0.1:9223): dung lai, relaunch Chromium voi standard flags cua may cong --remote-debugging-port=9223 va cung app-id, profile ~/.config/chromium/Default, kiem tra endpoint bao Chrome/157.0.8103.38, tab clone2 co mat, URL https://muse.ai/?__pwa=1, login con, cua so cung dia chi va geometry, PID moi ghi lai. Khong chay tiep khi chua xac minh xong.
+
+### 10. Rui ro da biet va cach tranh
+
+- Broker busy. Dau hieu: broker start fail rc=1, {"ok": false, "error": "busy"}, owner la worker khac. Vi du step 9 run 2 luc 16:07:59, owner c5-rung2 giu broker. Harness tu choi nhanh truoc khi gui, nen khong co rui ro double-send. Cach tranh: doi den khi relay free, kiem tra relay state, chay lai cung run number, cung message (chua gui gi nen khong trung). Khong force start, khong chay hai batch broker song song.
+- Brave bi relaunch khong co flag boi worker khac. Dau hieu: tab id doi giua run, endpoint debug chet, P9 FAILED, PID Brave doi. Vi du step 9: Brave main PID 1234643 (relaunch co flag luc 16:02) thanh 1245658 luc khoang 16:10:31, relaunch KHONG co flag, khong co crash dump trong Crashpad/completed, settings.dat mtime 16:10, nen la relaunch, khong phai crash. Hau qua: hai P9 fail o run 1 va 3, khong phai do prototype. Cach tranh: cua so yen tinh, chi mot worker duoc phep cycle Brave, coordinator xac nhan khong co worker nao khac dang chay. Neu xay ra: dung lai, relaunch lai co flag theo muc 9, capture lai P9 muon, review, roi moi chay tiep.
+- Chromium process chet. Dau hieu: khong con process, khong con listener tren port Chromium, khong con cua so. Vi du step 9 luc 16:29, Chromium PID 8059 bien mat. Nguyen nhan khong xac dinh duoc trong log do (khong kiem tra crash). Cach tranh: kiem tra Chromium con song truoc moi run. Neu chet: lam theo muc 9.3, phan Chromium, khong chay tiep khi chua xac minh login va tab.
+- Thread vuot cap 80 element, routing aborted. Dau hieu: observe tra ve 80 element, truncated True, router fail-closed, outcome aborted-routing. Vi du (b1) Chromium-only, run 2-5 lan dau, aborted. Day khong phai loi gui: khong co program nao chay, khong co gi duoc gui, JSON aborted duoc giu lai. Cach tranh: gate relaxed da co trong code (route_browser): khi inventory truncated NHUNG composer co trong snapshot, send van chay duoi relaxed gate da ghi. Ghi lai gate moi run. Khong tang cap 80 trong lan chay nay, vi can doi cdp.mjs cong sync laptop cong restart relay.
+- Pre-send count > 0. Dau hieu: pre_count.count > 0, outcome already-sent, harness huy gui. Day la outcome hop le, khong phai loi. Khong chay lai cung run number cho Brave, vi message da co trong thread. Bao cao, retry phai dung run number moi voi message moi, theo lich cua coordinator.
+- Brave fill da tat. Sau viec 1, Brave khong con chay fill bang bat ky co nao. Rollback ve fill la revert commit viec 1, khong phai doi co. Ghi ro trong log neu phai rollback.
+- Live run nay la lan dau Brave dung set_value. Neu fail vi unsupported action cho focus, do la loi sync laptop chua sync toi commit viec 1, khong phai stall. Dung lai, kiem tra focus trong whitelist cdp.mjs tren laptop truoc khi gui, xem muc 3, sync lai, chay lai dry run 0, khong ket luan stall.
+- Tab id doi giua run. Dau hieu: P9 FAILED vi tab id cu khong con. Cach tranh: day la binh thuong sau relaunch, harness tim tab theo URL. Capture lai P9 muon, review, roi moi cham.
+- Clone2 het token. Ghi nhan tu step 9, muc 9: luc 16:31, clone2 het token, khong kiem tra them. P9 co the hien message "usage limit" cua clone2 giua cac bubble test. Day la trang thai cua clone2, khong phai cua task nay. Khong dung no de danh gia pass hay fail cua gui test. Neu clone2 khong tra loi nua, bao cao cho coordinator, khong tu ket luan ve Chromium send.
+- Hold cua clone2-watch. Kiem tra lich hold hien tai truoc khi chay, xem muc 1. Khong gia dinh hold da het.
+
+### 11. Checklist truoc khi cham pass, va truong hop dung lai
+
+Cham PASS chi khi tat ca deu dung:
+
+- [ ] Dry run 0 PASS theo muc 4, ca hai trinh duyet.
+- [ ] Live run 1-5, moi run dat tat ca truong o muc 6, ca hai trinh duyet.
+- [ ] Tong 5 run: Brave 5/5 (b1), Chromium 5/5 (b1), 10/10 sends (b1) khi chay voi --set-value, median wall o hoac duoi khoang 29 s.
+- [ ] Kiem chung khong stall o muc 7, du ca ba, o ca 5 run.
+- [ ] P9 review o muc 8, tung PNG, khong co mismatch DOM so voi render, moi message xuat hien dung mot lan, composer trong.
+- [ ] Rollback o muc 9 da xong, may tro ve as-found, ghi lai PID moi va ket qua kiem tra port dong. Rollback ve Brave fill la revert commit viec 1, khong phai doi co.
+- [ ] Run JSON va P9 PNG da luu du trong improvements/s2-flip-brave-b1-runs/run-1..5.json va p9-run<N>-<browser>.png. Log xac minh ghi day du lenh, output, commit hash, thoi gian chay theo gio Viet Nam.
+
+Dung lai ngay va bao cao khi gap mot trong cac truong hop sau:
+
+- Dry run 0 fail o bat ky trinh duyet nao.
+- Broker busy lien tuc, khong lay duoc relay free trong cua so yen tinh.
+- Endpoint khong khop voi BROWSERS, hoac Brave khong nghe o port can.
+- Focus thieu o bat ky whitelist nao tren laptop, hoac fail vi unsupported action cho focus.
+- Delayed count khac 1.
+- Mot run xuat hien chu ky stall o muc 7.
+- P9 mismatch DOM so voi render o bat ky run nao.
+- Chromium chet hoac Brave bi relaunch khong flag boi worker khac, chua khoi phuc xong.
+
+### 12. Nguon so lieu dung trong quy trinh nay
+
+- Land runs (step 9, muc 8, kiem tra lai tu improvements/s2-flip-land-runs/run-0..5.json): Chromium (b1) elapsed 143.9, 160.5, 147.4, 123.1, 124.0 ms, median 143.9 ms, dom_act 50, 52, 53, 31, 32 ms. Brave fill elapsed 149.6, 163.2, 177.2, 5098.2, 5095.0 ms, dom_act 60, 56, 72, 5002, 5002 ms. Dry run 0 wall 19005.1 ms, Brave 93.347 ms, Chromium 91.47 ms.
+- Reopen runs (reopen log, muc 3, kiem tra lai tu improvements/s2-flip-reopen-runs/run-1..5.json): wall median 28560.9 ms, Brave fill elapsed 140.5, 137.5, 144.9, 140.8, 141.2 ms, dom_act 51, 46, 46, 43, 43 ms, Chromium (b1) helper elapsed 113.0, 106.6, 107.1, 99.4, 104.2 ms, dom_act 12, 9, 9, 8, 10 ms, completed 2. Dry run 0 wall 30123.9 ms, Brave 92.5 ms, Chromium 85.8 ms.
+- (b1) Chromium-only (input-fix log, muc 7.4 va 7.5): dry run wall 21463.0 ms, elapsed 83.5 ms, completed 2, focus_enter Enter 2 ms. Live median wall 18839.7 ms, program dom_act 7-9 ms, Enter 17-23 ms, V12 attempt 1, pre 0, delayed 1, 5/5.
+- Landing spec (batch 12, muc 8, 9, 11): dry run range 90-100 ms, live range goc 110-145 ms, acceptance 10/10 sends, pre 0, delayed 1, model 0, median wall tuong duong reopen 28.6 s, grep LAPTOP_FOCUSENTER tra ve rong.
+- Focus landing: commit dc8449b (5 file, 98 insertions, 50 deletions), commit test 05c11b9 (2 file, 334 insertions, 8 deletions), commit step 9 b16979e.
+- Ket thuc quy trinh live viec 1.
