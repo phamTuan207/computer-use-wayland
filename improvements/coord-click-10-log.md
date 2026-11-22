@@ -1,4 +1,4 @@
-# COORD-CLICK-10 log — live sequence ZT-B, G-PILL retry, A1 prep, rung 3 prep
+# COORD-CLICK-10 log - live sequence ZT-B, G-PILL retry, A1 prep, rung 3 prep
 
 Coordinator: COORD-CLICK-10. Repo ~/workspace/computer-use-wayland, branch todolist-push.
 Roadmap order, one lane at a time: (1) ZT-B blind run, (2) G-PILL retry, (3) A1 resume prep,
