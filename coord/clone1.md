@@ -3963,3 +3963,11 @@ Task 3 xong han: ca 2 claim CB-8 giu REVOKED, fix 7 nhom sua, da commit bbe67c3 
 Task 1: PASS voi 2 luu y, council 1, 2, 3 xong, cho redteam.
 Task 2: spec xong, council 1 AMEND, council 2 AMEND, council 3 do phu mot phan, cho redteam.
 Khong agent nao ket. Cay sach tru test-w.txt 0 byte va cac file task 1, 2 chua commit.
+
+---
+
+12:33 ngày 22/11 - watchdog:
+Task 2 xong han: spec xoa S1/CB-6, fix 30 sua, 212 len 234 dong, da commit e0187d7 (5 file).
+Fix pass bac 1 nhan dinh cua council 1: relay mac dinh dung la 9223, khong phai 9222.
+Task 1: PASS voi 2 luu y, council 1, 2, 3 xong, cho redteam.
+Khong agent nao ket. Cay sach tru test-w.txt 0 byte va cac file task 1 chua commit.
