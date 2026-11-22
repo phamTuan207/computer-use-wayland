@@ -4175,3 +4175,24 @@ nào kẹt, lỗi hay im quá 15 phút.
 Muse: không có yêu cầu mới (13 commit mới từ watermark đều
 là push của clone1, không có commit "coord:" nào).
 Hành động: không cứu agent nào, chỉ ghi trạng thái này.
+
+## 13:38 ngày 22/11 - TASK 3 XONG HẲN, REDTEAM TASK 2 BÁO BROKEN
+
+Fix pass task 3 xong (32cba65): áp đủ 4 sửa trích dẫn, mỗi sửa
+đều kiểm chứng lại từ nguồn gốc. Cả 2 REVOKED giữ nguyên, số
+liệu không đổi, báo cáo vẫn 169 dòng. Có 1 xung đột đã giải:
+council 3 nói aborted JSONs commit ở be2371e theo log dòng 122
+là đúng, nhưng git cho thấy be2371e chỉ đổi mỗi file
+s2_flip_live.py, dòng log 122 đó tự nó cũng sai, nên sửa C2/M2
+giữ nguyên. Task 3 xong hẳn.
+Redteam task 2 xong (64202db, 322 dòng): verdict BROKEN, 1
+breaking + 11 minor. B1 breaking: quy tắc send-requires-focus
+ở spec section 5 chưa giới hạn phạm vi, theo chữ hiện tại thì
+chương trình fill [fill, key Enter, assert] cũng bị từ chối vì
+không có focus action, làm fail test P5 và phá đường fill của
+Brave mà spec nói phải giữ nguyên. Phải giới hạn quy tắc cho
+chương trình set_value hoặc miễn fill, kèm test fill vẫn pass.
+11 minor phần lớn là trích dẫn sai dòng, cộng M4 chuỗi lỗi
+invented (trùng E1 council 3) và M7 thiếu kiểm tra :disabled.
+Số liệu đo trong spec đều đúng, wiring test chạy lại 12/12.
+Fix pass task 2 chờ council 1 và 2 xong rồi mới giao.
