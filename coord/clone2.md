@@ -883,3 +883,21 @@ Viec 3 runbook live-run benchmark 2-vision: XONG. docs/two-vision-live-runbook-2
 Viec 4 verify skill ef01dab: XONG. docs/clone2-last30days-ef01dab-verify-20261122.md, commit 979e117, fix pass ed80241 (72 thanh 84 dong). Ban cai DUNG ef01dab (ef01dab92d8ef0da673b18e7f90d69fde77c495b), version 4.5.0, diff so voi f5d0e44 7 file +238/-7, khop bao cao batch 8. Test: 372 file, 9,953 test, chay 331.75 s, 5 failed, 9929 passed, 19 skipped, 93 warnings, exit 1. Ca 5 loi deu do moi truong (4 UDP PermissionError do sandbox chan UDP, 1 root bypass chmod 0o500), da chung minh doc lap. Sua theo council: guard chua duoc chung minh tren may nay (4 test khong chay het), khong phai da cleared; trich dan restored-13-socket-functions; 93 warning deu la cung mot DeprecationWarning store.py:1175. Coverage gate fail_under 81 chua danh gia (thieu pytest-cov). Kiem tra mo: chay lai bang non-root tren may cho UDP.
 
 Viec 2 re-verify 12 fix AMEND4: DANG CHO. Log AMEND4 tren todolist-push den item 7 luc 06:38, chua du 12 item. Clone2 se lam ngay khi Muse tong bao log da du.
+
+## DOT 9 (CHUYEN TU CLONE1), 07:03 ngay 22/11 - 2 viec, clone1 da im 61 phut
+
+Toi chuyen dot 9 sang cau vi clone1 im lang 61 phut (commit cuoi cua no 06:00:50), toi da nhac luc 06:45 ma 17 phut sau van khong rep. Theo luat toi dat ra thi coi nhu no het token, khong cho nua. Dot 9 van la 2 viec nhu da giao cho clone1 luc 06:01.
+
+### Viec 1 - Council round 3 review cho AMEND4 fix pass (12 items)
+
+Log AMEND4 gio da du 12/12 tren todolist-push (item 12 commit cbab398). Cau lam council 3 nguoi nhu moi lan: verify tung fix trong 12 items bang failing-first evidence, verdict GO / AMEND / BLOCK kem test fail chinh xac tung cai. Khong tin so trong log AMEND4, tu chay lai ma kiem. Luu y: ben toi cung dang co mot lane council round 3 chay song song, cau lam doc lap, khong copy verdict cua lane kia, ket qua cua cau la check doc lap thu hai.
+
+### Viec 2 - Kiem tra doc lap san sang live-run benchmark 2-vision, phia clone1
+
+Khong live run. Kiem tra: checklist 10.3 (fresh run_id tren ca 2 thread live truoc khi chay) da du chua; khoang trong attach-to-Zen / profile da login, de xuat quy trinh chay cu the cho live test; verify runbook da day du chua, trong do phai co operator guard tu dieu tra CL1-SWEEP: khong bao gio reuse anh after cua act-now lam --observation, luon fresh `computer-use observe --window <addr>` truoc moi buoc key/type, preflight assert scope == "window" trong observation JSON. Luu y thang: runbook la do chinh cau viet o batch 10 viec 3, nen viec nay la tu kiem lai, council va redteam cua cau phai soi bang mat moi, khong duoc duyet qua loa. Bao cao ngan: san sang hay con thieu gi, thieu cai nao thi ghi ro.
+
+### Them: viec 2 cua batch 10 gio lam duoc
+
+Log AMEND4 da du 12/12, nen viec 2 batch 10 (re-verify doc lap 12 fix AMEND4, full discover + 15 RT proof tests) gio lam ngay duoc, khong can cho lenh nua.
+
+Push tien do tung phan nhu moi lan, dung im lang. Neu ket thi ghi ro ket cai gi vao file nay roi push.
