@@ -465,7 +465,20 @@ class ZenDomBackend:
             if ok:
                 return True, 'dom-value'
             value = session.field_value(selector)
-            return value == expected, 'dom-value'
+            if value == expected:
+                return True, 'dom-value'
+            # F4 follow-up: the assert target may be a plain
+            # element (a sent bubble, a div with no value
+            # property), whose text is textContent, not value.
+            # verify_typed and field_value both return null for
+            # it, so neither can verify the bubble. Read the
+            # rendered text and compare (trimmed, the same
+            # normalization verify_typed applies to
+            # contenteditables).
+            text = session.element_text(selector)
+            if isinstance(text, str) and isinstance(expected, str):
+                return text == expected.strip(), 'dom-value'
+            return False, 'dom-value'
         return False, 'no-dom-postcondition:%s' % action_type
 
     def dom_act(self, target, snapshot_id, actions, after_scope=None,

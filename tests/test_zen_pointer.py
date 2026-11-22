@@ -529,6 +529,34 @@ class BackendWiringTests(unittest.TestCase):
         self.assertEqual(code.observe_calls, [])
         backend.close()
 
+    def test_assert_on_a_bubble_reads_text_not_value(self):
+        # F4 follow-up: an assert on a sent bubble (a plain div,
+        # no value property) must verify by its rendered text.
+        # verify_typed and field_value both return null/False for
+        # a div, so without the element_text fallback the trailing
+        # bubble assert of the (b1) program could never pass (f4diag
+        # run 9: set_value, focus and Enter all ok, bubble present,
+        # but the assert failed dom-value).
+        backend, session, _code, _focused = self._backend()
+        backend.dom_start()
+        session.texts['#thread .bubble:last-child'] = 'hello'
+        verified, basis = backend._verify(
+            session,
+            {'type': 'assert', 'selector': '#thread .bubble:last-child',
+             'text': 'hello'},
+            '#thread .bubble:last-child', None)
+        self.assertTrue(verified)
+        self.assertEqual(basis, 'dom-value')
+        # A mismatched bubble still fails.
+        verified, basis = backend._verify(
+            session,
+            {'type': 'assert', 'selector': '#thread .bubble:last-child',
+             'text': 'other'},
+            '#thread .bubble:last-child', None)
+        self.assertFalse(verified)
+        self.assertEqual(basis, 'dom-value')
+        backend.close()
+
 
 class RealShapeFakeSession(_p2.FakeZenSession):
     """Fake session with the REAL sent_bubble_contains signature.

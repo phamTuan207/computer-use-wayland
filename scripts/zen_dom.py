@@ -1289,6 +1289,25 @@ class ZenSession:
             "(e.isContentEditable || /^(INPUT|TEXTAREA)$/.test(e.tagName));})()"
             % json.dumps(selector)))
 
+    def element_text(self, selector):
+        """Trimmed textContent of one element, or None when it has
+        none. Unlike field_value (which reads value for inputs and
+        textContent only for contenteditables), this reads the
+        rendered text of ANY element, so an assert on a sent bubble
+        (a plain div, no value property) can verify it. The lookup
+        pierces open shadow roots and traverses same-origin
+        iframes, the same as field_value. A cross-origin iframe
+        target returns None and the caller must fall back, never
+        silently pass.
+        """
+        return self.evaluate(
+            "return (function(){" + _FIND_JS +
+            "const e=find(%s);"
+            "if(!e) return null;"
+            "const t=e.textContent;"
+            "return typeof t==='string' ? t.trim() : null;})()"
+            % json.dumps(selector))
+
     def field_value(self, selector):
         """Current value/text of one field, or None when it has none.
 

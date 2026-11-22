@@ -894,6 +894,10 @@ class FakeZenSession:
         self.dom_outer = [925, 1176]
         self.last_geometry_warnings = []
         self.sent_bubbles = []
+        # Rendered text of plain elements (a sent bubble div has
+        # no value property, so field_value returns None for it,
+        # while element_text returns its text). Keyed by selector.
+        self.texts = {}
 
     def __enter__(self):
         self.entered = True
@@ -944,6 +948,14 @@ class FakeZenSession:
     def field_value(self, selector):
         field = self.fields.get(selector)
         return None if field is None else field.get('value', '')
+
+    def element_text(self, selector):
+        # Trimmed rendered text, or None when the element has none.
+        # Mirrors the real ZenSession: a plain div (a sent bubble)
+        # has text but no value, so field_value returns None for
+        # it while element_text returns its text.
+        text = self.texts.get(selector)
+        return None if text is None else str(text).strip()
 
     def verify_typed(self, selector, text):
         return self.field_value(selector) == text
