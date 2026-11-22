@@ -47,8 +47,11 @@ tests/two_vision_fixture.html.
   flags, so a custom --plan cannot smuggle a live run past the gate.
   --confirm-live is only passed when the coordinator approved the run.
 - --instances two is refused: the run always uses one browser
-  instance with two windows, and recording "two" in results would
-  lie about what ran. Two instances are not implemented yet.
+  instance with two windows under option A (the script's
+  Firefox), and recording "two" in results would lie about
+  what ran. Two instances are not implemented yet. Under
+  option B (CDP driver to Brave/Chrome on ws2) the run uses
+  two browsers, not one instance; see runbook section 13.
 - NEVER type into a real thread in fixture mode. Fixture mode (the
   default) only opens tests/two_vision_fixture.html in headless
   Firefox on this VM.
@@ -122,9 +125,13 @@ messages). A live plan looks like this:
 }
 ```
 
-- run_id must be unique per run. The exactly-once ledger keys on it;
-  reusing a run_id reuses its intents (that is how a retry skips
-  already-sent messages).
+- run_id must be unique per run. Freshness comes from
+  generating a fresh timestamp-based run_id, not from the
+  ledger: with a fresh workdir the ledger is empty, so a
+  reused run_id does not reuse intents from the ledger; the
+  false PASS comes from the V12 pre-check seeing the old
+  bubble in the thread, not from the ledger. The ledger
+  keys intents by run_id within one workdir only.
 - input_name is matched against the harvested textbox names; the first
   visible textbox is the fallback.
 - thread_selector must point at the thread container. bubble_selector
@@ -535,19 +542,26 @@ coordinator says run, and this script has never run live.
   driver to the real Brave/Chrome chats on ws2; or option A, a
   logged-in profile pre-seeded into <run-dir>/profile) before it
   can pass. Until the coordinator picks one, do NOT present Zen
-  login as the readiness condition. One profile holds one
-  Messenger session, so both windows in the one-instance shape
-  share the same login; the two clones are two threads under one
-  account in this shape.
+  login as the readiness condition. Assumption, no repo
+  evidence: one profile holds one Messenger session (a
+  Firefox profile holds one set of Messenger cookies),
+  so both windows in the one-instance shape share the same
+  login; the two clones are two threads under one account
+  in this shape. Treat as one session until verified live.
   The run machine must have the Firefox binary, geckodriver and
   venv at the script's hardcoded paths (FF and GD in the script
-  header, lines 49-50).
+  header, lines 49-50) under option A; under option B the run
+  needs the CDP driver and debug ports instead, not the
+  script's Firefox paths (runbook section 13).
 - [ ] The live lane is free: no BASELINE2 or other live run is
   running, and no other agent holds the laptop browser. Confirm
   with the coordinator; do not guess.
 - [ ] The installed laptop code is still the pre-amend code if a
   baseline is still owed. Do not sync the amend over the laptop
-  before the baseline runs.
+  before the baseline runs. Record which code version the laptop
+  actually runs before any manual step (runbook section 9
+  requires this); the pre-amend item above states a condition
+  with no verification method unless the version is recorded.
 - [ ] The C12 adjudication (batch 8 task 3) does NOT apply to
   this script's clicks and is NOT a prerequisite for this run:
   section 9 states the C12 conversion layer is not used here
@@ -613,7 +627,8 @@ coordinator says run, and this script has never run live.
   a different control, say so in the plan and re-check the
   fixture variant first.
 - [ ] Both windows live in ONE browser instance with two windows
-  (the --instances one shape). Two instances are not implemented
+  under option A (the --instances one shape, the script's own
+  Firefox). Two instances are not implemented
   and --instances two is refused. Under G3 the live shape is
   Brave (clone1) + Chrome (clone2) on ws2, which the script
   cannot drive today; under the fallback option A it is the
@@ -624,14 +639,22 @@ coordinator says run, and this script has never run live.
 
 ### 10.3 Exact message contents
 
+This subsection is written for the option B shape (Brave/Chrome
+on ws2). Under option A (script's Firefox, no Brave/Chrome)
+it does not apply: there are no Brave/Chrome a11y targets, so
+freshness rests on generation alone plus a visual check of the
+threads in the script's Firefox after the harvest-first step.
+
 - [ ] The plan JSON carries a unique run_id (for example
-  bench-20261122-001) and the two messages in exactly this form:
+  bench-20261122-143022-a1b2c3, in the script's timestamp
+  format bench-<UTC timestamp>-<6 hex>; the older example
+  bench-20261122-001 is shape-only, not the script's format)
+  and the two messages in exactly this form:
   "BENCH-TEST clone1 <run_id>" and "BENCH-TEST clone2 <run_id>".
   Generation rule: generate a fresh timestamp-based run_id for
-  this attempt (the script's default format is
-  bench-<UTC timestamp>-<6 hex>) and never reuse a run_id from
-  a previous attempt, including a failed one. Freshness comes
-  from generation, not from the check: a freshly generated
+  this attempt and never reuse a run_id from a previous
+  attempt, including a failed one. Freshness comes from
+  generation, not from the check: a freshly generated
   timestamp-based run_id is fresh by construction, since no
   earlier run could have used that exact text.
 - [ ] Verify the run_id is fresh before the run: check both live
@@ -644,33 +667,52 @@ coordinator says run, and this script has never run live.
   PID, improvements/speed-proto-pick4-summary.md:15), then run
   `CU_PICK4_FASTPATH=1 computer-use a11y query --pid
   <atspi-pid> --name "BENCH-TEST clone1 <run_id>"` (and the
-  same for clone2). A hit proves the text is present
-  somewhere in that app's accessibility tree, not that it is
-  a bubble in the thread; a miss does NOT prove the text is
-  absent (bounded observe, scrollback may not be in the
-  tree). If the exact text is found in either thread, the
-  run_id is NOT fresh: discard it, generate a new one, update
-  the plan and both messages, and check again. The message
-  text is derived from run_id, and the script's V12 pre-check
-  returns skipped-already-sent whenever the bubble is already
-  in the thread, which the outcome counts as sent, so reusing
-  a run_id on a live thread reports PASS with zero new sends.
-  The script does not check run_id against thread history
-  (open item, not fixed: fixture threads do not persist, so it
-  cannot be reproduced on the fixture).
+  same for clone2). Hard limit: scripts/a11y.py observe()
+  only keeps elements with actions, editable, or in skeleton
+  mode, and describe() records name/role/actions only, never
+  text content, so a bubble (static text, no actions, not
+  editable) is dropped before query() sees it. The method as
+  specified can only find text that is the NAME of an element
+  that survives the filter; whether a bubble's text is exposed
+  as an accessible name at all is UNVERIFIED. A hit proves the
+  text is present somewhere in that app's accessibility tree,
+  not that it is a bubble in the thread; a miss proves nothing
+  about exposure. If the exact text is found in either thread,
+  the run_id is NOT fresh: discard it, generate a new one,
+  update the plan and both messages, and check again. The
+  message text is derived from run_id, and the script's V12
+  pre-check returns skipped-already-sent whenever the bubble
+  is already in the thread, which the outcome counts as sent,
+  so reusing a run_id on a live thread reports PASS with zero
+  new sends. The script does not check run_id against thread
+  history (open item, not fixed: fixture threads do not
+  persist, so it cannot be reproduced on the fixture).
 - [ ] Dry probe of the a11y method (run once, before the first
   live run; UNRUN as of 22/11). Test the two premises
-  separately: Part 1, pid mapping, run `computer-use a11y apps`
-  and confirm Brave and Chrome both appear with PIDs, then
-  query for a KNOWN existing bubble text in each thread; a hit
-  proves the pid mapping works and bubbles are exposed.
-  Part 2, bubble exposure, is the same Part 1 hit or miss for
-  a known bubble text: a miss for text visibly in the thread
-  proves bubbles are NOT exposed (or are outside the bounded
-  observe) and the method cannot be used for freshness on that
-  browser. Premise A (bubble exposure) is UNVERIFIED; premise
-  B (hyprctl pid is the AT-SPI pid) is contradicted by prior
-  evidence. Full procedure in runbook section 5.
+  separately with independent steps (a single query cannot do
+  both: a raise identifies a pid failure, a hit proves both,
+  but a miss is three-way ambiguous). Part 1, pid mapping and
+  app presence: run `computer-use a11y apps` and confirm
+  Brave and Chrome both appear with PIDs; if either is
+  absent, the method fails at step 1 (only 6 registered apps
+  on record, no Brave/Chrome named). Then prove the pid
+  mapping with an element that survives the observe()
+  filter: query for a KNOWN name that has actions or is
+  editable (for example the message input itself, name
+  "Message", which is editable). Part 2, bubble exposure:
+  only after Part 1 hits, query for a bubble text that is
+  currently VISIBLE in the thread (record how it was read);
+  on a miss, retry once with a second visible bubble text,
+  then run a skeleton observe (`computer-use a11y observe
+  --pid <atspi-pid> --skeleton`) and search the snapshot
+  JSON for the same text. A hit in either proves bubble text
+  is searchable on that browser. A miss in both proves
+  nothing definitive (bounded observe, or text not carried
+  as a name), and the method is unusable for freshness until
+  a working query is demonstrated. Premise A (bubble
+  exposure) is UNVERIFIED; premise B (hyprctl pid is the
+  AT-SPI pid) is contradicted by prior evidence. Full
+  procedure in runbook section 5.
 - [ ] Record requirement: record the check in the run log
   (<run-dir>/run-log.md): the run_id used, both threads
   checked, what was found (nothing, expected), the dry-probe
@@ -691,8 +733,11 @@ coordinator says run, and this script has never run live.
 - [ ] VISION 1 (harvest): PASS iff the one-shot harvest returns
   both message inputs, each visible, with a ref, rect, center and
   role textbox. If either input is missing, the run is FAIL
-  before anything is sent (no-message-input-in-inventory,
-  fail-closed). Caveat: the expected input name "Message" is
+  before anything is sent (operator judgment on the inventory
+  text, not a script error: in harvest mode the script returns
+  HARVEST-ONLY and never emits no-message-input-in-inventory;
+  that error fires only in run mode, when find_input is
+  called). Caveat: the expected input name "Message" is
   visual-only evidence (two screenshot reads in the CL1-MSG
   logs); the real aria-label is UNKNOWN and no DOM read of the
   live input exists in the repo. A harvest showing a visible
@@ -706,7 +751,12 @@ coordinator says run, and this script has never run live.
   independent confirmation. VISION 2 is one screen observe of
   the monitor holding ws2, which is eDP-2 on this laptop
   (monitor_box [2464, 902, 1920, 1200]); confirm live with
-  `hyprctl -j monitors`. Outcome scoring is by message in
+  `hyprctl -j monitors`. This is the option B shape. Under
+  option A the threads run in headless Firefox, so there is
+  no ws2 screen to observe: VISION 2 as a screen observe does
+  not exist there, and the V12 DOM gates are the outcome
+  check; the option-A VISION 2 procedure is still open (runbook
+  section 12 item 5). Outcome scoring is by message in
   thread (M1), never by point-in-box.
 - [ ] Overall: PASS iff both messages land. Any single failed
   step makes the run FAIL; the chain stops at the first failure
@@ -740,8 +790,9 @@ coordinator says run, and this script has never run live.
 - [ ] After the run, preserve the full log, results.json,
   inventory.json and ledger.json out of /tmp immediately (the
   fix-pass logs were once lost to a /tmp wipe), delete the
-  profile/ dir, and report the outcome with the run_id and wall
-  time. The operator's look count comes from the run log
-  (<run-dir>/run-log.md); every look outside the run must be
-  logged there with its time. Never edit a result file after the
-  run.
+  profile/ dir if present (option A only; under option B there
+  is no <run-dir>/profile), and report the outcome with the
+  run_id and wall time. The operator's look count comes from
+  the run log (<run-dir>/run-log.md); every look outside the
+  run must be logged there with its time. Never edit a result
+  file after the run.
