@@ -393,10 +393,10 @@ Commit 3532bfd, scripts/cdp.mjs (27 insertions, 10 deletions):
   checks need no change: they already operate on sanitized.
 
 Commit e500923, tests/cdp_snapshot.mjs (29 insertions, 1 deletion):
-- Lines 14-20: FakeInput setter models the engine rule (email:
+- Lines 14-21: FakeInput setter models the engine rule (email:
   split on commas, trim each token, rejoin; url: whole trim).
 - Lines 240-261: four new cases after the emailField case (the
-  comment starts at :240; lines 235-238 are the pre-existing
+  comment starts at :240; lines 236-239 are the pre-existing
   emailField case):
   multiEmail (multiple, '  a@b.com , c@d.com\t' lands as
   'a@b.com,c@d.com', events input then change), singleEmailComma
