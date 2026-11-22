@@ -56,6 +56,7 @@ import fcntl
 import http.client
 import json
 import os
+import secrets
 import socket
 import subprocess
 import sys
@@ -326,6 +327,10 @@ class ZenSession:
         self._lock_file = None
         self.last_display_metrics = None
         self.last_scale_factor = 1
+        # Per-arm typed-flag property names (TESTREPAIR item 7):
+        # arm_typed_flag records the unpredictable name it installed
+        # for each selector, and typed_flag reads that name back.
+        self._typed_flag_props = {}
 
     def __enter__(self):
         LOCK_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -962,30 +967,32 @@ class ZenSession:
         forge (R10). typed_flag() reads the getter after the type
         step and requires it to equal the current value. A value
         that appears with no trusted input event must fail
-        verification. Re-arming an already-armed element returns
-        true without re-installing: the earlier arm's listener and
-        getter are still live. When defineProperty throws (the page
-        pre-locked the name), the arm fails closed.
+        verification. TESTREPAIR item 7: the getter lives under a
+        per-arm unpredictable property name
+        (__agentCuTypedValue_<64-bit token>), so a page that
+        pre-locks the old fixed name (or any guessed name) with a
+        live-value getter before the arm cannot forge the flag: the
+        arm's own name is fresh and unguessable, and re-arming
+        always installs a new name. When defineProperty throws, the
+        arm fails closed.
         """
-        return bool(self.evaluate(
+        prop = '__agentCuTypedValue_' + secrets.token_hex(8)
+        self._typed_flag_props[selector] = prop
+        script = (
             "return (function(){" + _FIND_JS +
-            "const sel=%s;"
+            "const sel=" + json.dumps(selector) + ";"
             "const e=find(sel);"
             "if(!e) return false;"
             "function valOf(el){"
             "return el.isContentEditable ? el.textContent : "
             "('value' in el ? el.value : null);"
             "}"
-            "const desc=Object.getOwnPropertyDescriptor("
-            "e, '__agentCuTypedValue');"
-            "if(desc && desc.get && desc.configurable===false)"
-            "return true;"
             "let lastTrusted=null;"
             "e.addEventListener('input', function(ev){"
             "if(ev.isTrusted) lastTrusted=valOf(e);"
             "});"
             "try{"
-            "Object.defineProperty(e, '__agentCuTypedValue', {"
+            "Object.defineProperty(e, " + json.dumps(prop) + ", {"
             "get:function(){return lastTrusted;},"
             "configurable:false, enumerable:false});"
             "}catch(_){"
@@ -999,8 +1006,8 @@ class ZenSession:
             "value:obs, writable:false, configurable:false,"
             "enumerable:false});"
             "}catch(_){}"
-            "/* zen_arm_typed_flag */ return true;})()"
-            % json.dumps(selector)))
+            "/* zen_arm_typed_flag */ return true;})()")
+        return bool(self.evaluate(script))
 
     def typed_flag(self, selector):
         """True when the last trusted input event's value equals the
@@ -1009,21 +1016,27 @@ class ZenSession:
         behind a locked getter), and a sticky flag cannot pass a
         JS-set value: one keystroke recording 'h' does not equal a
         current 'hello'. Contenteditable values normalize trailing
-        whitespace, the same as verify_typed."""
-        return bool(self.evaluate(
+        whitespace, the same as verify_typed. TESTREPAIR item 7:
+        the getter is read under the per-arm unpredictable property
+        name recorded by arm_typed_flag for this selector; a check
+        on a selector never armed on this session returns False."""
+        prop = self._typed_flag_props.get(selector)
+        if prop is None:
+            return False
+        script = (
             "return (function(){/* zen_typed_flag */" + _FIND_JS +
-            "const e=find(%s);"
+            "const e=find(" + json.dumps(selector) + ");"
             "if(!e) return false;"
             "let last=null;"
-            "try{last=e['__agentCuTypedValue'];}catch(_){return false;}"
+            "try{last=e[" + json.dumps(prop) + "];}catch(_){return false;}"
             "if(last===null || last===undefined) return false;"
             "const cur=e.isContentEditable ? e.textContent : "
             "('value' in e ? e.value : null);"
             "if(e.isContentEditable && typeof last==='string' "
             "&& typeof cur==='string')"
             "return last.replace(/\\s+$/,'')===cur.replace(/\\s+$/,'');"
-            "return last===cur;})()"
-            % json.dumps(selector)))
+            "return last===cur;})()")
+        return bool(self.evaluate(script))
 
     def sent_bubble_contains(self, text):
         """V12 finish gate: True when the thread DOM holds a sent

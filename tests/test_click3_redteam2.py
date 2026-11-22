@@ -42,9 +42,16 @@ def _run_node(code):
     return proc.stdout.strip()
 
 
-def _capture_js(method_name, *args):
-    """The exact JS string a zen_dom helper sends to evaluate()."""
-    session = zen_dom.ZenSession()
+def _capture_js(method_name, *args, session=None):
+    """The exact JS string a zen_dom helper sends to evaluate().
+
+    Pass session= to capture several helpers from ONE ZenSession:
+    arm_typed_flag and typed_flag share a per-arm property name
+    recorded on the session (TESTREPAIR item 7), so a flag captured
+    from a different session than its arm would read a name that
+    was never installed."""
+    if session is None:
+        session = zen_dom.ZenSession()
     captured = {}
 
     def _eval(script, args=None):
@@ -395,8 +402,11 @@ class R10FlagTests(unittest.TestCase):
         # assertion is fixed to value == 'hello' AND flag False,
         # because the field's value IS 'hello' (the page script set
         # it) and the flag is the discriminator, not the value.
-        arm = _capture_js('arm_typed_flag', '#msg-input')
-        flag = _capture_js('typed_flag', '#msg-input')
+        # TESTREPAIR item 7: arm and flag share one session, so
+        # the flag reads the per-arm property name the arm installed.
+        session = zen_dom.ZenSession()
+        arm = _capture_js('arm_typed_flag', '#msg-input', session=session)
+        flag = _capture_js('typed_flag', '#msg-input', session=session)
         verify = _capture_js('verify_typed', '#msg-input', 'hello')
         code = (_TOP_DOC_SHIM
                 + "var __armed = " + _wrap_bare_return(arm) + ";\n"
@@ -423,8 +433,11 @@ class R10FlagTests(unittest.TestCase):
         # 'hello' that no keystroke ever produced. The flag proves
         # an input event happened at some point, not that THIS value
         # came from input events.
-        arm = _capture_js('arm_typed_flag', '#msg-input')
-        flag = _capture_js('typed_flag', '#msg-input')
+        # TESTREPAIR item 7: arm and flag share one session, so
+        # the flag reads the per-arm property name the arm installed.
+        session = zen_dom.ZenSession()
+        arm = _capture_js('arm_typed_flag', '#msg-input', session=session)
+        flag = _capture_js('typed_flag', '#msg-input', session=session)
         verify = _capture_js('verify_typed', '#msg-input', 'hello')
         code = (_TOP_DOC_SHIM
                 + "var __armed = " + _wrap_bare_return(arm) + ";\n"
@@ -477,8 +490,12 @@ class R10IframeArmTests(unittest.TestCase):
         # readable from the iframe (field_value proves it), but the
         # typed path cannot verify it: step 6's "an iframe target
         # reads and verifies" is false for the typed path.
-        arm = _capture_js('arm_typed_flag', '#msg-input')
-        flag = _capture_js('typed_flag', '#msg-input')
+        # TESTREPAIR item 7: arm and flag share one session, so
+        # the flag reads the per-arm property name the arm installed.
+        # field_value carries no flag state and needs no pairing.
+        session = zen_dom.ZenSession()
+        arm = _capture_js('arm_typed_flag', '#msg-input', session=session)
+        flag = _capture_js('typed_flag', '#msg-input', session=session)
         field_value = _capture_js('field_value', '#msg-input')
         shim = (
             "var window = {};\n"

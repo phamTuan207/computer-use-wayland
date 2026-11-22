@@ -719,8 +719,11 @@ class TestDomHelpers(unittest.TestCase):
         # closed in the form the new design admits.
         from test_click3_redteam2 import (
             _capture_js, _run_node, _TOP_DOC_SHIM, _wrap_bare_return)
-        arm = _capture_js('arm_typed_flag', '#msg-input')
-        flag = _capture_js('typed_flag', '#msg-input')
+        # TESTREPAIR item 7: arm and flag share one session, so
+        # the flag reads the per-arm property name the arm installed.
+        session = zen_dom.ZenSession()
+        arm = _capture_js('arm_typed_flag', '#msg-input', session=session)
+        flag = _capture_js('typed_flag', '#msg-input', session=session)
         code = _TOP_DOC_SHIM + """
 var __armed = """ + _wrap_bare_return(arm) + """;
 window.__agentCuTyped = {'#msg-input': true};
@@ -731,6 +734,40 @@ console.log(JSON.stringify({armed: __armed, flag: __flag}));
         out = json.loads(_run_node(code))
         self.assertTrue(out['armed'])
         self.assertFalse(out['flag'])
+
+    @unittest.skipUnless(shutil.which('node'),
+                         'node is required to run production JS')
+    def test_typed_flag_not_forgeable_via_prelocked_getter(self):
+        # TESTREPAIR item 7 (round 3, RT proof): a page that
+        # pre-locks the property name with a live-value getter
+        # BEFORE the arm defeats the old fixed-name design: the
+        # arm's re-arm trust branch returned true for the
+        # pre-locked getter, and the flag then read the live value
+        # as if it were typed. The arm now installs its getter
+        # under a per-arm unpredictable name, so the pre-locked
+        # fixed name is irrelevant: the arm succeeds, and a
+        # zero-event JS set still leaves the flag False.
+        from test_click3_redteam2 import (
+            _capture_js, _run_node, _TOP_DOC_SHIM, _wrap_bare_return)
+        session = zen_dom.ZenSession()
+        arm = _capture_js('arm_typed_flag', '#msg-input', session=session)
+        flag = _capture_js('typed_flag', '#msg-input', session=session)
+        code = (_TOP_DOC_SHIM
+                + "Object.defineProperty(__el, '__agentCuTypedValue',"
+                + " {get: function(){return __el.value;},"
+                + " configurable: false, enumerable: false});\n"
+                + "var __armed = " + _wrap_bare_return(arm) + ";\n"
+                + "__el.value = 'hello';\n"
+                + "var __flag = " + _wrap_bare_return(flag) + ";\n"
+                + "console.log(JSON.stringify({armed: __armed,"
+                " flag: __flag}));\n")
+        out = json.loads(_run_node(code))
+        self.assertTrue(out['armed'],
+                        'the arm must succeed despite the pre-locked '
+                        'fixed name: %s' % (out,))
+        self.assertFalse(out['flag'],
+                         'a pre-locked live-value getter forged the '
+                         'typed flag with zero input events: %s' % (out,))
 
     def test_display_metrics_records_dpr_and_zoom(self):
         session = self._session()
