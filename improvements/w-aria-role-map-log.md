@@ -186,4 +186,13 @@ COMPOSER_ROLES moi = ('textarea', 'textbox', 'input', 'searchbox', 'combobox').
   Chi stage bang pathspec tung file; khong dung git add -A hay
   git commit tran; khong commit tests/realistic/clone1-batch3/results.json
   hay file cua worker khac.
-- Commit log nay: (dien sau khi commit).
+- Commit log nay: commit rieng sau commit fix, cung nhanh todolist-push,
+  push cung luc; hash trong bao cao ban giao cho COORD-CLICK-6.
+- Su co day (2026-11-22 17:57 +07): checkout dung chung, W-EVID commit
+  8d5eb3b da quet edit cuoi cua log nay vao commit cua ho (broad add),
+  trong khi ban cung noi dung do da duoc push tu cho khac thanh 7267e51
+  (van giu dong placeholder). Diff 8d5eb3b..7267e51 chi khac dung 2 dong
+  cuoi cua file log nay, khong mat noi dung cua ai. Giai quyet: reset
+  --soft ve origin/todolist-push (7267e51), commit lai dung 2 dong nay
+  thanh 1 commit rieng, push fast-forward. Khong force-push, khong
+  rebase commit cua worker khac.
