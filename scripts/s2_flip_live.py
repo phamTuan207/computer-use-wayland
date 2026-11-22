@@ -23,7 +23,8 @@ Per browser the flow is:
   broker tabs -> broker observe (coverage probe) -> P1
   route_perception (gates the send on complete DOM coverage; a
   screenshot decision aborts the send, fail closed) -> one-shot
-  code-exec send program (fill, Enter, trailing assert) ->
+  code-exec send program (set_value for Brave, fill for Chromium
+  by default, Enter, trailing assert) ->
   independent V12 verify (fresh DOM read, not the program asserting
   its own success) -> P9 viewport capture (direct CDP screenshot,
   no workspace switch, reviewed by a human before the run scores).
@@ -98,9 +99,13 @@ V12_TIMEOUT_MS = 10000
 
 
 def build_program(target_id, message):
-    """The fixed send program, parameterized only by target and message.
+    """The fill send program, parameterized only by target and message.
 
-    One program for every run and both browsers. It grounds the
+    The fill fallback program for Chromium only:
+    build_program_set_value is the default (b1) program for Brave,
+    not a general default, and this builder remains only as the
+    fallback for Chromium when chromium_set_value is off and
+    program_variant is not set_value. It grounds the
     composer from a fresh DOM snapshot, fills it with real input
     (click plus focus check plus insertText plus read-back, inside
     cdp.mjs fill), sends with Enter, and ends with the trailing
@@ -190,6 +195,12 @@ class Harness:
     def __init__(self, workdir, run_no, dry_run=False, activate=False,
                  message_prefix='S2-FLIP', program_variant='fill',
                  chromium_set_value=False):
+        # Validate before mkdir: a bad program_variant must not
+        # create a workdir before it raises.
+        if program_variant not in ('fill', 'set_value'):
+            raise ValueError(
+                'program_variant must be fill or set_value, got %r'
+                % (program_variant,))
         self.workdir = Path(workdir)
         self.workdir.mkdir(parents=True, exist_ok=True)
         self.run_no = run_no
@@ -197,22 +208,81 @@ class Harness:
         self.activate = activate
         self.message_prefix = message_prefix
         self.program_variant = program_variant
-        # C5-S2-REOPEN: the re-open flip is split per browser. Brave
-        # already sends 5/5 with fill, so it keeps fill; Chromium
-        # uses the (b1) set_value shape. --set-value still forces
-        # set_value on every browser (the Chromium-only b1 runs).
+        # Work 1, 2026-11-22: Brave uses (b1), so it uses the
+        # set_value shape unconditionally. Chromium uses the (b1)
+        # set_value shape only when chromium_set_value is set.
+        # --set-value still forces set_value on every browser.
         self.chromium_set_value = chromium_set_value
         self.spans = []
         self.ssh_calls = []
         self.log_lines = []
 
     def variant_for(self, browser):
-        """Send program variant for one browser: 'fill' or 'set_value'."""
+        """Send program variant for one browser: 'fill' or 'set_value'.
+
+        Brave returns set_value unconditionally in variant_for, not
+        only by default. Chromium returns set_value only when
+        chromium_set_value is set, or when the global program_variant
+        is set_value.
+        """
+        browser = str(browser).strip().lower()
+        if browser not in ('brave', 'chromium'):
+            raise ValueError('unknown browser %r' % (browser,))
         if self.program_variant == 'set_value':
+            return 'set_value'
+        # Work 1, 2026-11-22: Brave uses (b1), so it returns
+        # set_value unconditionally. Chromium uses set_value only when
+        # chromium_set_value is set; otherwise it keeps fill.
+        if browser == 'brave':
             return 'set_value'
         if browser == 'chromium' and self.chromium_set_value:
             return 'set_value'
         return 'fill'
+
+    def program_variant_label(self, browsers):
+        """Label for the browsers actually run, e.g. brave=set_value.
+
+        Only the browsers in the given list appear in the label, so
+        a Chromium-only run does not record a Brave variant.
+        Browser names are normalized (strip, lower) and deduplicated
+        in order, so ' Brave ' and a repeated browser cannot write
+        a wrong label.
+        """
+        seen = []
+        for b in browsers:
+            norm = str(b).strip().lower()
+            if norm not in seen:
+                seen.append(norm)
+        return ','.join('%s=%s' % (b, self.variant_for(b))
+                        for b in seen)
+
+    def delayed_targets(self, results, browsers):
+        """Set_value browsers with a target id and a message.
+
+        A send was attempted for these browsers (sent,
+        failed-unverified, error, or already-sent), so the delayed
+        recount applies. A browser that aborted-routing has a
+        target id but no message, so it is left out. Chromium fill
+        never uses set_value, so it is left out too.
+        Browser names are normalized (strip, lower) and deduplicated
+        in order, like program_variant_label, so ' Brave ' and a
+        repeated browser cannot write a wrong list.
+        """
+        targets = []
+        seen = set()
+        for browser in browsers:
+            norm = str(browser).strip().lower()
+            if norm in seen:
+                continue
+            seen.add(norm)
+            if self.variant_for(norm) != 'set_value':
+                continue
+            entry = ((results or {}).get('browsers') or {}).get(norm) or {}
+            target_id = entry.get('target_id')
+            message = entry.get('message')
+            if target_id and message:
+                targets.append((norm, target_id, message))
+        return targets
 
     def note(self, text):
         self.log_lines.append(text)
@@ -531,7 +601,9 @@ class Harness:
                 # Mandatory pre-send already-sent check (CB-2 double-send
                 # guard): a retry must never run when the message is
                 # already in the thread. Unique message per run, so any
-                # count above 0 aborts the send.
+                # count above 0 aborts the send. already-sent is a
+                # valid outcome, not an error: do not rerun the same
+                # run number, retry with a new run number instead.
                 out['pre_count'] = self.count_check(endpoint, target_id, message)
                 if out['pre_count'].get('count', -1) > 0:
                     out['outcome'] = 'already-sent'
@@ -624,13 +696,14 @@ class Harness:
         mux = self.mux_baseline()
         lease = '/home/james/.cache/agent-computer-use/s2-flip-run%d.lease' % self.run_no
         owner = 's2-flip-run%d' % self.run_no
+        # The label is computed before the try block on purpose: an
+        # unknown browser raises ValueError fail-closed after the mux
+        # baseline probe, before any send runs and before any result
+        # file is written.
         results = {'run': self.run_no, 'dry_run': self.dry_run,
                    'activate': self.activate,
                    'message_prefix': self.message_prefix,
-                   'program_variant':
-                       ('brave=fill,chromium=set_value'
-                        if self.chromium_set_value
-                        else self.program_variant),
+                   'program_variant': self.program_variant_label(browsers),
                    'chromium_set_value': self.chromium_set_value,
                    'mux_baseline_ms': round(mux, 1), 'browsers': {}}
         scratch = {}
@@ -684,16 +757,22 @@ class Harness:
             # 10s after the scored wall stops, recount the message.
             # Exactly 1 means no late duplicate arrived. Only the
             # browsers that actually used set_value are recounted.
-            if any(self.variant_for(b) == 'set_value' for b in browsers):
+            # Sleep only when at least one set_value browser has a
+            # target_id and a message, that is, a send was attempted
+            # (sent, failed-unverified, error, or already-sent).
+            # When every browser aborted-routing, no send ran, so
+            # no sleep and no delayed count are recorded.
+            # already-sent is a valid outcome, not an error: do not
+            # rerun the same run number. A retry must use a new run
+            # number with a fresh unique message. Brave fill is no
+            # longer reachable by any flag; rollback is revert commit.
+            # A missing delayed_count key means no send was attempted,
+            # not a logging error.
+            delayed_targets = self.delayed_targets(results, browsers)
+            if delayed_targets:
                 results['delayed_count'] = {}
                 time.sleep(10)
-                for browser in browsers:
-                    if self.variant_for(browser) != 'set_value':
-                        continue
-                    target_id = (results['browsers'].get(browser) or {}).get('target_id')
-                    message = (results['browsers'].get(browser) or {}).get('message')
-                    if not target_id or not message:
-                        continue
+                for browser, target_id, message in delayed_targets:
                     try:
                         results['delayed_count'][browser] = self.count_check(
                             BROWSERS[browser]['endpoint'], target_id, message)
@@ -784,10 +863,11 @@ def main(argv=None):
     ap.add_argument('--set-value', action='store_true',
                     help='C5-B1: landed set_value program (no mouse: '
                          'set_value + focus + key Enter + assert) '
-                         'instead of the fill program, on every browser')
+                         'forces set_value on Chromium; Brave already '
+                         'uses set_value')
     ap.add_argument('--chromium-set-value', action='store_true',
                     help='C5-S2-REOPEN: landed set_value program on '
-                         'Chromium only; Brave keeps the fill program')
+                         'Chromium only; Brave already uses set_value')
     ap.add_argument('--workdir', required=True)
     args = ap.parse_args(argv)
     browsers = ['brave', 'chromium'] if args.browser == 'both' else [args.browser]

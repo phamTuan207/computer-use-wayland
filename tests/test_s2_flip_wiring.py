@@ -6,8 +6,9 @@ Covers the two wiring changes that make the one-class flip possible:
    silently drive Chromium on 127.0.0.1:9223. The override applies to
    that program only and the retained default is restored afterwards.
 2. The live harness program shape (scripts/s2_flip_live.py): the
-   fixed send program grounds the composer, fills, sends with Enter,
-   and ends with the trailing assert (P5 V12 gate in program form);
+   send program grounds the composer, uses set_value for Brave and
+   fill only for Chromium by default, sends with Enter, and ends
+   with the trailing assert (P5 V12 gate in program form);
    messages are unique per run and browser.
 """
 import importlib.util
@@ -411,22 +412,378 @@ class ProgramShapeTests(unittest.TestCase):
                                     'sent_bubble': False})
 
     def test_chromium_set_value_splits_variants_per_browser(self):
-        # C5-S2-REOPEN: Brave keeps fill (it already sends 5/5
-        # with fill), Chromium alone uses set_value. The global
-        # --set-value flag still forces set_value on both.
-        import tempfile
+        # Work 1, 2026-11-22: Brave returns set_value unconditionally
+        # in variant_for, not only by default. Chromium alone uses
+        # set_value only when chromium_set_value is set. The
+        # global --set-value flag still forces set_value on both.
         with tempfile.TemporaryDirectory() as tmp:
             split = s2_flip_live.Harness(
                 tmp, 0, chromium_set_value=True)
-            self.assertEqual(split.variant_for('brave'), 'fill')
+            self.assertEqual(split.variant_for('brave'), 'set_value')
             self.assertEqual(split.variant_for('chromium'), 'set_value')
             plain = s2_flip_live.Harness(tmp, 0)
-            self.assertEqual(plain.variant_for('brave'), 'fill')
+            self.assertEqual(plain.variant_for('brave'), 'set_value')
             self.assertEqual(plain.variant_for('chromium'), 'fill')
             forced = s2_flip_live.Harness(
                 tmp, 0, program_variant='set_value')
             self.assertEqual(forced.variant_for('brave'), 'set_value')
             self.assertEqual(forced.variant_for('chromium'), 'set_value')
+
+    def test_brave_uses_set_value_by_default(self):
+        # Work 1, 2026-11-22: variant_for returns set_value for
+        # Brave, and the program builder emits 4 actions, no fill.
+        # No send runs here, so no send outcome is claimed.
+        # P2 stamp counts are also covered in
+        # test_set_value_program_carries_p2_stamps_and_passes_p5;
+        # this test re-checks them on the default Brave program
+        # and adds order plus parsed actions, instead of keeping
+        # a separate duplicate stamp test.
+        with tempfile.TemporaryDirectory() as tmp:
+            harness = s2_flip_live.Harness(tmp, 0)
+            self.assertEqual(harness.variant_for('brave'), 'set_value')
+            program = s2_flip_live.build_program_set_value(
+                'TABID123', 'hello')
+            self.assertIn('"type": "set_value"', program)
+            self.assertIn('"type": "focus"', program)
+            self.assertIn('"keys": ["Enter"]', program)
+            self.assertNotIn('"type": "fill"', program)
+            # Order in the program string: set_value, focus, Enter, assert.
+            pos_set_value = program.find('"type": "set_value"')
+            pos_focus = program.find('"type": "focus"')
+            pos_enter = program.find('"keys": ["Enter"]')
+            pos_assert = program.find('"type": "assert"')
+            self.assertLess(pos_set_value, pos_focus)
+            self.assertLess(pos_focus, pos_enter)
+            self.assertLess(pos_enter, pos_assert)
+            self.assertEqual(program.count('"scope": "TABID123"'), 4)
+            self.assertEqual(
+                program.count('"observation_id": snap["snapshot"]'), 4)
+            self.assertIn('"type": "focus", "ref": comp', program)
+            self.assertIn(
+                json.dumps(s2_flip_live.BUBBLE_ASSERT_SELECTOR), program)
+            # Parse the program into real actions, instead of using
+            # a hand-written literal: exec it with a fake dom_observe
+            # and a capturing dom_act, then validate the captured list.
+            captured = {}
+
+            def _fake_dom_act(snap_arg, actions):
+                captured['actions'] = actions
+                return {'ok': True, 'completed': 4, 'execution_ms': 95}
+
+            def _assert_state(cond, msg):
+                if not cond:
+                    raise AssertionError(msg)
+
+            ns = {
+                'dom_observe': lambda _t: {
+                    'snapshot': 'SNAP1',
+                    'elements': [{'ref': 'e1', 'role': 'textarea',
+                                  'name': 'Message'}]},
+                'dom_act': _fake_dom_act,
+                'assert_state': _assert_state,
+            }
+            exec(program, ns)  # noqa: S102 - the program source is ours
+            actions = captured['actions']
+            self.assertEqual(len(actions), 4)
+            self.assertEqual(
+                [a['type'] for a in actions],
+                ['set_value', 'focus', 'key', 'assert'])
+            self.assertTrue(dom_asserts.require_asserts(
+                actions, available={'focus_check': True,
+                                    'type_check': True,
+                                    'sent_bubble': False}))
+            from code_exec import _validate_dom_actions
+            _validate_dom_actions(actions, {'e1'}, snapshot_id='SNAP1',
+                                  target='TABID123')
+
+    def test_send_browser_brave_default_uses_set_value(self):
+        # Dispatch, HIGH: Brave by default must call the (b1)
+        # program, with a pre-send count and CB-1 input_sent from
+        # completed 3. SSH is mocked: count_check, oneshot_code_exec
+        # and v12_check are replaced on the instance, so no SSH runs.
+        with tempfile.TemporaryDirectory() as tmp:
+            harness = s2_flip_live.Harness(tmp, 1)
+            seen = {}
+
+            def _count_check(endpoint, target_id, message):
+                seen['count_called'] = True
+                return {'count': 0, 'items': []}
+
+            def _oneshot(endpoint, program, intent):
+                seen['program'] = program
+                seen['endpoint'] = endpoint
+                return (95.0, {
+                    'ok': True, 'api_calls': 3, 'elapsed_ms': 95,
+                    'error': None, 'error_type': None,
+                    'log': ['dom_act ok True completed 4 ms 95 '
+                            'error None']})
+
+            def _v12(endpoint, target_id, message):
+                return {'found': True, 'attempts': 1, 'ms': 3.0}
+
+            harness.count_check = _count_check
+            harness.oneshot_code_exec = _oneshot
+            harness.v12_check = _v12
+            out = harness.send_browser(
+                'brave', 'TABID123', 'S2-BRAVE-B1-R1-BRAVE-IGNORE-TEST')
+            self.assertEqual(out['program_variant'], 'set_value')
+            self.assertTrue(seen.get('count_called'))
+            self.assertEqual(out.get('pre_count'), {'count': 0, 'items': []})
+            self.assertEqual(seen['endpoint'],
+                             s2_flip_live.BROWSERS['brave']['endpoint'])
+            self.assertIn('"type": "set_value"', seen['program'])
+            self.assertIn('"type": "focus"', seen['program'])
+            self.assertNotIn('"type": "fill"', seen['program'])
+            self.assertEqual(out['outcome'], 'sent')
+            self.assertTrue(out['cb1']['input_sent'])
+            self.assertTrue(out['cb1']['target_received'])
+            self.assertTrue(out['cb1']['verified'])
+            self.assertEqual(out['cb1']['completed'], 4)
+
+    def test_send_browser_chromium_default_uses_fill(self):
+        # Dispatch, HIGH: Chromium by default must call the fill
+        # program, with no pre-send count. Same SSH mock as above.
+        with tempfile.TemporaryDirectory() as tmp:
+            harness = s2_flip_live.Harness(tmp, 1)
+            seen = {}
+
+            def _count_check(endpoint, target_id, message):
+                seen['count_called'] = True
+                return {'count': 0, 'items': []}
+
+            def _oneshot(endpoint, program, intent):
+                seen['program'] = program
+                seen['endpoint'] = endpoint
+                return (140.0, {
+                    'ok': True, 'api_calls': 3, 'elapsed_ms': 140,
+                    'error': None, 'error_type': None,
+                    'log': ['dom_act ok True completed 3 ms 140 '
+                            'error None']})
+
+            def _v12(endpoint, target_id, message):
+                return {'found': True, 'attempts': 1, 'ms': 3.0}
+
+            harness.count_check = _count_check
+            harness.oneshot_code_exec = _oneshot
+            harness.v12_check = _v12
+            out = harness.send_browser(
+                'chromium', 'TABID123',
+                'S2-BRAVE-B1-R1-CHROMIUM-IGNORE-TEST')
+            self.assertEqual(out['program_variant'], 'fill')
+            self.assertNotIn('pre_count', out)
+            self.assertFalse(seen.get('count_called'))
+            self.assertEqual(seen['endpoint'],
+                             s2_flip_live.BROWSERS['chromium']['endpoint'])
+            self.assertIn('"type": "fill"', seen['program'])
+            self.assertNotIn('"type": "set_value"', seen['program'])
+            self.assertEqual(out['outcome'], 'sent')
+            self.assertTrue(out['cb1']['input_sent'])
+            self.assertTrue(out['cb1']['target_received'])
+            self.assertTrue(out['cb1']['verified'])
+            self.assertEqual(out['cb1']['completed'], 3)
+
+    def _send_with_completed(self, tmp, browser, completed, count=0):
+        # Shared mock for send_browser: count_check returns count,
+        # oneshot returns an envelope with the given completed value,
+        # v12 always finds the message. Returns (seen, out).
+        harness = s2_flip_live.Harness(tmp, 1)
+        seen = {}
+
+        def _count_check(endpoint, target_id, message):
+            seen['count_called'] = True
+            return {'count': count, 'items': []}
+
+        def _oneshot(endpoint, program, intent):
+            seen['program'] = program
+            seen['endpoint'] = endpoint
+            return (95.0, {
+                'ok': True, 'api_calls': 3, 'elapsed_ms': 95,
+                'error': None, 'error_type': None,
+                'log': ['dom_act ok True completed %d ms 95 error None'
+                        % completed]})
+
+        def _v12(endpoint, target_id, message):
+            return {'found': True, 'attempts': 1, 'ms': 3.0}
+
+        harness.count_check = _count_check
+        harness.oneshot_code_exec = _oneshot
+        harness.v12_check = _v12
+        out = harness.send_browser(
+            browser, 'TABID123',
+            'S2-BRAVE-B1-R1-%s-IGNORE-TEST' % browser.upper())
+        return seen, out
+
+    def test_send_browser_brave_already_sent(self):
+        # Guard, MEDIUM: a pre-send count above 0 aborts the send.
+        # No oneshot runs, no program and no cb1 are recorded.
+        with tempfile.TemporaryDirectory() as tmp:
+            seen, out = self._send_with_completed(
+                tmp, 'brave', 4, count=1)
+            self.assertEqual(out['outcome'], 'already-sent')
+            self.assertEqual(out.get('pre_count', {}).get('count'), 1)
+            self.assertTrue(seen.get('count_called'))
+            self.assertNotIn('program', seen)
+            self.assertNotIn('program', out)
+            self.assertNotIn('cb1', out)
+            self.assertNotIn('v12', out)
+
+    def test_send_browser_cb1_threshold_brave(self):
+        # CB-1 threshold, MEDIUM: Brave set_value needs completed
+        # >= 3 for input_sent. completed 2 must not send, completed
+        # 3 must send. target_received needs completed >= 1.
+        with tempfile.TemporaryDirectory() as tmp:
+            _seen, out = self._send_with_completed(tmp, 'brave', 2)
+            self.assertEqual(out['outcome'], 'sent')
+            self.assertFalse(out['cb1']['input_sent'])
+            self.assertTrue(out['cb1']['target_received'])
+            self.assertEqual(out['cb1']['completed'], 2)
+            _seen, out = self._send_with_completed(tmp, 'brave', 3)
+            self.assertTrue(out['cb1']['input_sent'])
+            self.assertTrue(out['cb1']['target_received'])
+            self.assertEqual(out['cb1']['completed'], 3)
+
+    def test_send_browser_cb1_threshold_chromium(self):
+        # CB-1 threshold, MEDIUM: Chromium fill needs completed
+        # >= 2 for input_sent. completed 1 must not send,
+        # completed 2 must send.
+        with tempfile.TemporaryDirectory() as tmp:
+            _seen, out = self._send_with_completed(tmp, 'chromium', 1)
+            self.assertEqual(out['outcome'], 'sent')
+            self.assertFalse(out['cb1']['input_sent'])
+            self.assertTrue(out['cb1']['target_received'])
+            self.assertEqual(out['cb1']['completed'], 1)
+            _seen, out = self._send_with_completed(tmp, 'chromium', 2)
+            self.assertTrue(out['cb1']['input_sent'])
+            self.assertTrue(out['cb1']['target_received'])
+            self.assertEqual(out['cb1']['completed'], 2)
+
+    def test_delayed_targets_only_set_value_attempts(self):
+        # Delayed guard, MEDIUM: only set_value browsers with both
+        # a target id and a message are recounted.
+        with tempfile.TemporaryDirectory() as tmp:
+            harness = s2_flip_live.Harness(tmp, 0)
+            results = {'browsers': {
+                'brave': {'target_id': 'TAB1', 'message': 'M1',
+                          'outcome': 'sent'},
+                'chromium': {'target_id': 'TAB2', 'message': 'M2',
+                             'outcome': 'sent'},
+            }}
+            # Plain harness: Chromium is fill, so only Brave counts.
+            self.assertEqual(
+                harness.delayed_targets(results, ['brave', 'chromium']),
+                [('brave', 'TAB1', 'M1')])
+            # Aborted-routing has a target id but no message: out.
+            aborted = {'browsers': {
+                'brave': {'target_id': 'TAB1',
+                          'outcome': 'aborted-routing'},
+            }}
+            self.assertEqual(
+                harness.delayed_targets(aborted, ['brave']), [])
+            # already-sent still counts as an attempted send.
+            already = {'browsers': {
+                'brave': {'target_id': 'TAB1', 'message': 'M1',
+                          'outcome': 'already-sent'},
+            }}
+            self.assertEqual(
+                harness.delayed_targets(already, ['brave']),
+                [('brave', 'TAB1', 'M1')])
+            # Split harness: Chromium is set_value too, so both count.
+            split = s2_flip_live.Harness(
+                tmp, 0, chromium_set_value=True)
+            self.assertEqual(
+                split.delayed_targets(results, ['brave', 'chromium']),
+                [('brave', 'TAB1', 'M1'), ('chromium', 'TAB2', 'M2')])
+            # No browser attempted: empty list, no sleep, no key.
+            self.assertEqual(
+                harness.delayed_targets(aborted, ['brave', 'chromium']),
+                [])
+            # Normalization and dedupe, like program_variant_label:
+            # ' Brave ' and a repeated browser count once, with the
+            # normalized name in the returned tuple.
+            self.assertEqual(
+                harness.delayed_targets(
+                    results, [' Brave ', 'brave', 'chromium']),
+                [('brave', 'TAB1', 'M1')])
+            # results None is an empty result, not an error.
+            self.assertEqual(
+                harness.delayed_targets(None, ['brave']), [])
+
+    def test_cli_maps_set_value_flags(self):
+        # CLI mapping, LOW: --set-value and --chromium-set-value
+        # must reach the Harness. Harness.run is replaced so no
+        # SSH runs; the spy records the Harness kwargs.
+        with tempfile.TemporaryDirectory() as tmp:
+            created = {}
+            real_harness = s2_flip_live.Harness
+
+            class _SpyHarness(real_harness):
+                def __init__(self, *args, **kwargs):
+                    created.update(kwargs)
+                    super().__init__(*args, **kwargs)
+
+                def run(self, browsers):
+                    created['browsers'] = list(browsers)
+                    return {'wall_ms': 1.0, 'browsers': {}}
+
+            with patch.object(s2_flip_live, 'Harness', _SpyHarness):
+                rc = s2_flip_live.main(['--run', '1', '--set-value',
+                                        '--workdir', tmp])
+            self.assertEqual(rc, 0)
+            self.assertEqual(created.get('program_variant'), 'set_value')
+            self.assertFalse(created.get('chromium_set_value'))
+            self.assertEqual(created.get('browsers'),
+                             ['brave', 'chromium'])
+            created.clear()
+            with patch.object(s2_flip_live, 'Harness', _SpyHarness):
+                rc = s2_flip_live.main(['--run', '2',
+                                        '--chromium-set-value',
+                                        '--workdir', tmp])
+            self.assertEqual(rc, 0)
+            self.assertEqual(created.get('program_variant'), 'fill')
+            self.assertTrue(created.get('chromium_set_value'))
+            self.assertEqual(created.get('browsers'),
+                             ['brave', 'chromium'])
+
+    def test_program_variant_label_only_lists_run_browsers(self):
+        # Label: plain is brave=set_value,chromium=fill, split is
+        # brave=set_value,chromium=set_value. A Chromium-only run
+        # records only chromium, not Brave.
+        with tempfile.TemporaryDirectory() as tmp:
+            plain = s2_flip_live.Harness(tmp, 0)
+            self.assertEqual(
+                plain.program_variant_label(['brave', 'chromium']),
+                'brave=set_value,chromium=fill')
+            self.assertEqual(
+                plain.program_variant_label(['chromium']),
+                'chromium=fill')
+            self.assertNotIn(
+                'brave', plain.program_variant_label(['chromium']))
+            split = s2_flip_live.Harness(
+                tmp, 0, chromium_set_value=True)
+            self.assertEqual(
+                split.program_variant_label(['brave', 'chromium']),
+                'brave=set_value,chromium=set_value')
+            # Normalization and dedupe: ' Brave ' and a repeated
+            # browser must not write a wrong label.
+            self.assertEqual(
+                plain.program_variant_label(
+                    [' Brave ', 'brave', 'chromium']),
+                'brave=set_value,chromium=fill')
+            self.assertEqual(plain.program_variant_label([]), '')
+
+    def test_invalid_program_variant_raises(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            with self.assertRaisesRegex(ValueError, 'program_variant'):
+                s2_flip_live.Harness(tmp, 0, program_variant='teleport')
+
+    def test_variant_for_unknown_browser_raises(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            harness = s2_flip_live.Harness(tmp, 0)
+            with self.assertRaisesRegex(ValueError, 'unknown browser'):
+                harness.variant_for('firefox')
+            # Normalization: case and surrounding space are accepted.
+            self.assertEqual(harness.variant_for(' Brave '), 'set_value')
+            self.assertEqual(harness.variant_for('CHROMIUM'), 'fill')
 
     def test_messages_unique_per_run_and_browser(self):
         seen = set()
