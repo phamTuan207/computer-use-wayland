@@ -33,3 +33,10 @@
 - Khong dau gach ngang dai. Khong ydotool. Khong thong tin ca nhan len GitHub. Commit pathspec tuong minh, push xong verify ls-remote.
 - Chuan bang chung Lauren Tan (lenh + output + commit hash + log thoi gian). Council 3 + redteam + verifier doc lap. Khong tu cham diem.
 - Worker ket (khong tien trien 15 phut) thi giet ngay va bao Muse tong.
+
+## W-A1PREP xong 19:01 (chuan bi resume A1)
+- Log improvements/w-a1prep-log.md, commit 776fe41, 1 file duy nhat, 340 dong, 0 em dash, 0 en dash.
+- Toi kiem chung doc lap: 776fe41 co tren origin; manifest sha256 470df41818c2ad5637c9429f32cace50cad18568eb6d2a1069ca1a1107d21bc7 khop (tu chay sha256sum, 1599 bytes); relay status tu chay: started_git_head 4eb5917 STALE, state idle, owner null, active_sequence null, MainPID 70985, ActiveState active; flag DU o ca 3 noi (log dong 94-99); draft order muc 4, ghi DRAFT ONLY; fixture md5 khop (pick4 91b2f929, f01 2b6eda97).
+- Ket luan: manifest SAN, flag DU, relay idle SOLO. NHUNG relay head STALE (4eb5917 vs HEAD 776fe41 luc kiem tra), desktop CHUA SACH (ws2 active, fixture Pick 4 + chat mochi + Brave mei live, ong chu dang dung may), re-probe van no, cay laptop dirty (M scripts/cdp.mjs la patch F4 da land 658c432, cach xu ly cho Muse tong hoac W-SYNC quyet).
+- Lenh resume phai bao gom quy trinh F3 o luc resume (fetch + pull ff-only ca VM va laptop toi H2, restart relay, verify flag + started_git_head = H2 + state idle) roi moi ban hanh run 1. W-A1PREP khong ban hanh lenh, khong viet H3, khong chay live arm, khong restart relay, khong sync.
+- W-SOAKRESTART van dang chay.
