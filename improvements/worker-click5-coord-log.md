@@ -856,4 +856,85 @@ workspaces at the same time.
 - Still running: C5-VALIDATOR-PROOF (3b34be64), live validator
   proof. Awaiting its handoff for the step 7 live-proof gate.
 
-## 24. (to be filled as results land)
+## 24. C5-VALIDATOR-PROOF verified PASS, step 7 validator limb closed, INPUT-FIX spawned (12:17-12:24 +07)
+
+- C5-VALIDATOR-PROOF (3b34be64) COMPLETED 12:17:49 +07, log
+  commit 108fd45 on todolist-push, push verified via ls-remote
+  (origin todolist-push = 108fd45f4c2458c31a48be2aea835c2531f15649).
+  VERIFIED from the log itself (git show 108fd45, 438 lines),
+  run v4 12:14:14 +07, 0.12s, PASS, on the live Zen window
+  0x557052b62dd0 [2509, 914] [925, 1176], unchanged throughout:
+  - Re-measured geometry: reported moz (274, 66), inner
+    (677, 1160), gaps -26/-50. Unverified viewport_origin FAILS
+    (3.1ms, ZenDomError, message preserved), reproducing the
+    ITEMS56/Codex failure exactly.
+  - Measured verified moz (240, 8), re-measured live by pixel
+    proof in v3 (two glyph-robust methods agreeing within 1px),
+    NOT assumed from old logs. v1/v2 failed on wrong pixel
+    methods and were reported as FAIL, not papered over.
+  - Origin stage: locate OK (8.0ms), _check_window_not_moved OK
+    (4.3ms), viewport_origin with measured verified moz OK
+    (1.7ms) returning (2749, 922), last_geometry_warnings naming
+    the override. dom_rect_to_screen_point [2971.0, 948.0].
+    Computed origin equals window origin + verified moz and
+    equals the pixel-inferred origin; 5x5 patch pure white (255).
+  - Wiring: ZenDomBackend(verified_moz_inner=(240, 8))
+    ._screen_point returns the identical [2971.0, 948.0]. The
+    value lives only in probe logs/runtime calls; production
+    code defaults it to None everywhere (grep verified; the
+    literal appears in repo only as cited evidence in docstrings
+    and test fixtures, never as an operational default).
+  - F9/F10 still refused live (factor-forgotten at factor 2,
+    missing factor, factor-2 small window, raw moz as absolute),
+    verified control passes. Unit evidence on the VM: Ran 128, OK.
+- NEW FINDING (from the worker, recorded in the log): mozInnerScreen
+  is a TRANSIENT stale read, not a stable state. It reads (274, 66)
+  on the first activation after an idle gap (v1 36min, v2 3min, v4
+  5min gaps all read stale first) and settles to the true (240, 8)
+  within ~0.5s of activation (v2 stability series flipped between
+  0.299s and 0.552s). Any future live probe reading moz more than
+  ~0.5s after tab activation will see the settled value and must NOT
+  expect the closure failure; the verified path is exercised only
+  inside the stale window. This REFINES H3 (workspace-state-dependent
+  moz read): the deciding variable is time-since-activation, not
+  workspace. H1 (width-dependent offset) and H2 (collapsed-state
+  paint anomaly) stay open but are now secondary to the stale-read
+  model.
+- TWO DEFECTS recorded honestly by the worker, both in the log:
+  (a) v3 cleanup left the blank tab selected (cross-session
+  Marionette handle); remediated 12:09:01 +07 by a tab scan that
+  restored the Welcome tab (verified True); v4's same-session
+  restore verified True. (b) During the first restore scan, a JS
+  alert on the Google Calendar tab was dismissed by the driver's
+  default unexpected-alert handler before its text could be read.
+  Text unknown, tab identified by elimination. Nothing else was
+  touched. No keystroke was sent at any point. Post-state verified
+  12:17:16 +07: ws1 active, Brave active (same as the 11:58
+  pre-state), Zen unchanged, selected tab Welcome, scratch removed.
+  DISPOSITION on (b): flagged here and to Muse; the text is
+  unrecoverable and no further investigation can recover it, so no
+  independent worker is commissioned for it. If the Calendar tab
+  shows anything missing, that is an owner-visible check.
+- STEP 7 STATUS, stated precisely: implementation DONE (292753f)
+  + live validator proof PASS (108fd45). The items 5-6 blocker is
+  CLOSED. What remains of the step 7 gate as written (P2 proven on
+  the S2 task class, DOM verification mandatory) is the LIVE SEND
+  with P2 element refs on the S2 task class. That limb now depends
+  on the Chromium Input stall fix, which is the next work below.
+  I am NOT claiming step 7 fully gated until a live P2-ref send
+  proves on the S2 class.
+- ACTION: spawned C5-INPUT-FIX (20a04ede) 12:24 +07: fix the
+  Chromium CDP Input stall, cheapest levers first per INPUT-INVEST:
+  (a1) CDP tab activation (Target.activateTarget +
+  Page.bringToFront) with dry run + fresh 5-run measurement, then
+  (b2) input-free send (set_value + JS Enter) only if (a1) fails,
+  with mandatory pre-send V12 check before any retry. If both fail,
+  the stall becomes the step 9 prototype's first target and the S2
+  flip stays DO NOT EXPAND. Log:
+  improvements/worker-click5-input-fix-log.md.
+- Clones: no new commits on main since 01089dd (task 4 assigned
+  12:16). Clone1 dispatched batch 11 tasks 1-3 to 3 subagents
+  (12:07) and holds task 4. Clone2 capped until Nov 25 02:38,
+  no new work. No batch 13 for clone2.
+
+## 25. (to be filled as results land)
