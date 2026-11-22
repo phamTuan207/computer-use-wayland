@@ -13,9 +13,13 @@ or en dash anywhere. Run:
 python3 -m unittest tests.test_zen_pointer
 """
 import inspect
+import os
 import sys
+import tempfile
 import unittest
 from pathlib import Path
+
+from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'scripts'))
@@ -24,6 +28,10 @@ import test_p2_element_ref as _p2
 import zen_backend
 import zen_dom
 import zen_pointer
+
+
+def _solid(color=(200, 200, 200), size=(64, 48)):
+    return Image.new('RGB', size, color)
 
 
 class FakeCodeBackend:
@@ -39,23 +47,34 @@ class FakeCodeBackend:
     preflight does (cu.image_point refuses a point outside the
     image): a delegate that hands through a raw screen point is
     refused here, exactly as run 4 was refused live.
+
+    Each observation writes a REAL JPEG (frames cycle per observe,
+    default one solid frame, so the screen is stable and the F4
+    settle converges on the second observe). The delegate's
+    _mean_diff reads meta['image'], so the file must exist.
     """
 
-    def __init__(self, session, act_ok=True, completed=None):
+    def __init__(self, session, act_ok=True, completed=None,
+                 frames=None):
         self.session = session
         self.act_ok = act_ok
         self.completed = completed
         self.observe_calls = []
         self.act_calls = []
         self._n = 0
+        self._tmp = tempfile.mkdtemp(prefix='zen-pointer-test-')
+        self._frames = frames if frames is not None else [_solid()]
 
     def observe_window(self, address, crop, max_width):
         self.observe_calls.append((address, crop, max_width))
         self._n += 1
+        frame = self._frames[(self._n - 1) % len(self._frames)]
+        path = os.path.join(self._tmp, 'obs-%d.jpg' % self._n)
+        frame.save(path, format='JPEG', quality=90, subsampling=0)
         return {'id': 'obs-%d' % self._n, 'scope': 'window',
                 'window': address,
                 'observation': '/tmp/obs-%d.json' % self._n,
-                'image': '/tmp/obs-%d.jpg' % self._n,
+                'image': path,
                 'monitor_box': [2464, 902, 1920, 1200],
                 'window_bounds': [2509, 914, 925, 1176],
                 'region': [2509, 914, 925, 1176],
@@ -106,13 +125,19 @@ class DelegateUnitTests(unittest.TestCase):
         return delegate, backend, focused, session
 
     def test_begin_batch_focuses_then_observes_once(self):
+        # F4 settle: begin_batch focuses, observes, then re-observes
+        # once to confirm the window is stable, so the batch meta is
+        # the settled (second) observation, never a mid-transition
+        # first frame.
         delegate, backend, focused, _session = self._delegate()
         meta = delegate.begin_batch('0xabc')
         self.assertEqual(focused, ['0xabc'])
         self.assertEqual(backend.observe_calls,
-                         [('0xabc', None, 960)])
-        self.assertEqual(meta['id'], 'obs-1')
+                         [('0xabc', None, 960), ('0xabc', None, 960)])
+        self.assertEqual(meta['id'], 'obs-2')
         self.assertEqual(meta['scope'], 'window')
+        self.assertEqual(delegate.last_settle['reads'], 2)
+        self.assertTrue(delegate.last_settle['stable'])
 
     def test_begin_batch_refuses_without_a_window_address(self):
         delegate, _backend, _focused, _session = self._delegate()
@@ -136,10 +161,10 @@ class DelegateUnitTests(unittest.TestCase):
             {'type': 'click', 'ref': '#c5-text'}, [2700, 1000]))
         self.assertEqual(len(backend.act_calls), 1)
         meta, actions, path = backend.act_calls[0]
-        self.assertEqual(path, '/tmp/obs-1.json')
+        self.assertEqual(path, '/tmp/obs-2.json')
         self.assertEqual(actions, [{'type': 'click', 'x': 191.0,
                                     'y': 86.0, 'scope': 'window',
-                                    'observation_id': 'obs-1'}])
+                                    'observation_id': 'obs-2'}])
 
     def test_run4_screen_point_converts_to_image_point(self):
         # F3 regression: the exact run-4 screen point for the
@@ -190,9 +215,9 @@ class DelegateUnitTests(unittest.TestCase):
         _meta, actions, _path = backend.act_calls[0]
         self.assertEqual(actions, [
             {'type': 'click', 'x': 191.0, 'y': 86.0, 'scope': 'window',
-             'observation_id': 'obs-1'},
+             'observation_id': 'obs-2'},
             {'type': 'type', 'text': 'hello', 'scope': 'window',
-             'observation_id': 'obs-1'}])
+             'observation_id': 'obs-2'}])
 
     def test_key_needs_no_point(self):
         delegate, backend, _focused, _session = self._delegate()
@@ -202,7 +227,7 @@ class DelegateUnitTests(unittest.TestCase):
         _meta, actions, _path = backend.act_calls[0]
         self.assertEqual(actions, [{'type': 'key', 'keys': ['Enter'],
                                     'scope': 'window',
-                                    'observation_id': 'obs-1'}])
+                                    'observation_id': 'obs-2'}])
 
     def test_focus_maps_to_click(self):
         delegate, backend, _focused, _session = self._delegate()
@@ -244,16 +269,107 @@ class DelegateUnitTests(unittest.TestCase):
             [2700, 1000]))
 
     def test_second_batch_reobserves(self):
-        # One observation per batch: the second batch observes
-        # again and stamps with the fresh id, never the stale one.
+        # One settled observation per batch: the second batch
+        # observes again (focus + observe + settle confirmation)
+        # and stamps with the fresh id, never the stale one.
         delegate, backend, _focused, _session = self._delegate()
         delegate.begin_batch('0xabc')
         delegate({'type': 'click', 'ref': '#c5-text'}, [2700, 1000])
         delegate.begin_batch('0xabc')
         delegate({'type': 'click', 'ref': '#c5-text'}, [2700, 1000])
-        self.assertEqual(len(backend.observe_calls), 2)
+        self.assertEqual(len(backend.observe_calls), 4)
         self.assertEqual(backend.act_calls[1][1][0]['observation_id'],
-                         'obs-2')
+                         'obs-4')
+
+
+class SettleTests(unittest.TestCase):
+    """F4: begin_batch must settle the observation before using it
+    as the batch meta, or desktop_act's preflight refuses the batch
+    as 'screen changed' (the meta was a mid-transition frame)."""
+
+    def _delegate_with_frames(self, frames, **kwargs):
+        session = _p2.FakeZenSession(_p2._zen_fields())
+        backend = FakeCodeBackend(session, frames=frames, **kwargs)
+        focused = []
+        delegate = zen_pointer.ZenPointerDelegate(
+            backend, focus_fn=focused.append)
+        return delegate, backend, focused, session
+
+    def test_mean_diff_identical_is_zero_and_changed_is_large(self):
+        # The settle comparator: identical frames compare ~0, a
+        # light-vs-dark frame compares ~180 (far above the 0.5
+        # threshold, far below nothing: it must trip the settle).
+        delegate, _b, _f, _s = self._delegate_with_frames(None)
+        same_a = {'image': _b._tmp + '/a.jpg'}
+        same_b = {'image': _b._tmp + '/b.jpg'}
+        _solid((200, 200, 200)).save(same_a['image'], format='JPEG',
+                                      quality=90, subsampling=0)
+        _solid((200, 200, 200)).save(same_b['image'], format='JPEG',
+                                      quality=90, subsampling=0)
+        self.assertLess(delegate._mean_diff(same_a, same_b), 0.5)
+        dark = {'image': _b._tmp + '/c.jpg'}
+        _solid((20, 20, 20)).save(dark['image'], format='JPEG',
+                                   quality=90, subsampling=0)
+        self.assertGreater(delegate._mean_diff(same_a, dark), 100)
+        self.assertEqual(delegate._mean_diff(
+            {'image': '/tmp/does-not-exist.jpg'}, same_a), float('inf'))
+
+    def test_settle_stable_screen_reads_twice_and_is_stable(self):
+        delegate, backend, _f, _s = self._delegate_with_frames(None)
+        meta = delegate.begin_batch('0xabc')
+        self.assertEqual(meta['id'], 'obs-2')
+        self.assertEqual(len(backend.observe_calls), 2)
+        self.assertEqual(delegate.last_settle['reads'], 2)
+        self.assertTrue(delegate.last_settle['stable'])
+
+    def test_settle_transient_then_stable_uses_the_stable_frame(self):
+        # Frames: light, dark, dark. The first pair disagrees
+        # (transient), the second pair agrees: the batch meta is
+        # the third (stable) observation, not the transient first.
+        frames = [_solid((200, 200, 200)), _solid((20, 20, 20)),
+                  _solid((20, 20, 20))]
+        delegate, backend, _f, _s = self._delegate_with_frames(frames)
+        meta = delegate.begin_batch('0xabc')
+        self.assertEqual(meta['id'], 'obs-3')
+        self.assertEqual(len(backend.observe_calls), 3)
+        self.assertEqual(delegate.last_settle['reads'], 3)
+        self.assertTrue(delegate.last_settle['stable'])
+
+    def test_settle_never_stable_returns_latest_within_budget(self):
+        # Alternating frames never agree: the settle expires on
+        # budget, returns the latest meta, and reports stable
+        # False, so the preflight stays the gatekeeper. Budget
+        # and poll are patched small so the test stays fast.
+        old_budget = zen_pointer.SETTLE_BUDGET_S
+        old_poll = zen_pointer.SETTLE_POLL_S
+        zen_pointer.SETTLE_BUDGET_S = 0.25
+        zen_pointer.SETTLE_POLL_S = 0.05
+        self.addCleanup(setattr, zen_pointer, 'SETTLE_BUDGET_S',
+                        old_budget)
+        self.addCleanup(setattr, zen_pointer, 'SETTLE_POLL_S', old_poll)
+        frames = [_solid((200, 200, 200)), _solid((20, 20, 20))]
+        delegate, backend, _f, _s = self._delegate_with_frames(frames)
+        meta = delegate.begin_batch('0xabc')
+        self.assertFalse(delegate.last_settle['stable'])
+        self.assertGreaterEqual(delegate.last_settle['reads'], 3)
+        self.assertEqual(meta['id'],
+                         'obs-%d' % len(backend.observe_calls))
+
+    def test_settle_recorded_on_dom_act_result(self):
+        # The backend surfaces the settle outcome top-level on the
+        # dom_act result, so a run's evidence says whether the
+        # batch started on a stable frame.
+        backend, session, code, _focused = BackendWiringTests()._backend()
+        backend.dom_start()
+        snapshot = backend.dom_observe('Example', '#c5-text', 10)
+        result = backend.dom_act(
+            'Example', snapshot['snapshot'],
+            [BackendWiringTests()._action(snapshot['snapshot'])],
+            None, True)
+        self.assertTrue(result['ok'], result)
+        self.assertTrue(result['settle']['stable'])
+        self.assertEqual(result['settle']['reads'], 2)
+        backend.close()
 
 
 class BackendWiringTests(unittest.TestCase):
@@ -288,7 +404,7 @@ class BackendWiringTests(unittest.TestCase):
         self.assertTrue(result['results'][0]['input_sent'])
         # Focus first, then one observation for the batch.
         self.assertEqual(focused, ['0x557052b62dd0'])
-        self.assertEqual(len(code.observe_calls), 1)
+        self.assertEqual(len(code.observe_calls), 2)
         # The field rect center (200, 215) in the viewport plus the
         # verified origin (2749, 922) is the screen point
         # (2949, 1137); the delegate converts it to the IMAGE
@@ -323,7 +439,7 @@ class BackendWiringTests(unittest.TestCase):
         self.assertEqual(session.sent_bubbles, ['hello'])
         # One observation for the whole batch; three dispatches
         # (the trailing assert reads state and dispatches nothing).
-        self.assertEqual(len(code.observe_calls), 1)
+        self.assertEqual(len(code.observe_calls), 2)
         self.assertEqual(len(code.act_calls), 3)
         # The set_value click is the image point (440, 223), not
         # the raw screen point (2949, 1137): with the old
@@ -416,7 +532,7 @@ class RealSignatureTests(unittest.TestCase):
         self.assertEqual(result['completed'], 4)
         self.assertEqual(session.fields['#c5-text']['value'], 'hello')
         self.assertEqual(session.sent_bubbles, ['hello'])
-        self.assertEqual(len(code.observe_calls), 1)
+        self.assertEqual(len(code.observe_calls), 2)
         self.assertEqual(len(code.act_calls), 3)
         backend.close()
 

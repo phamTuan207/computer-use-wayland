@@ -32,9 +32,25 @@ observed image'; the converted point is (430, 254.87), which
 round-trips to the same global point.
 """
 
+import time
+
 import fastpath
 
 DESKTOP_MAX_WIDTH = 960
+# F4 settle (begin_batch observation stability): the window may be
+# mid-transition when begin_batch observes it (a tab-switch
+# cross-fade leaves the previous tab ghosted through the new one
+# for ~1s; the batch meta then differs from the settled screen by
+# a global mean of ~3.6, and desktop_act's preflight correctly
+# refuses it as 'screen changed'). Re-observe until two
+# consecutive observations agree, so the batch meta is a stable
+# frame. Threshold 0.5 sits well above static-screen noise (~0.02)
+# and well below the preflight refusal threshold (3.0). Budget 2s
+# covers the observed ~1s transient; on expiry the latest meta is
+# used and the preflight stays the gatekeeper.
+SETTLE_BUDGET_S = 2.0
+SETTLE_POLL_S = 0.1
+SETTLE_MEAN_THRESHOLD = 0.5
 
 
 class ZenPointerDelegate:
@@ -54,21 +70,17 @@ class ZenPointerDelegate:
         # carry the desktop_act result when the action was sent.
         # Read-only diagnostics, never used to change dispatch.
         self.last_dispatch = None
+        # F4 diagnostic: the begin_batch settle outcome
+        # {'reads', 'stable', 'elapsed_ms'}, set by begin_batch.
+        self.last_settle = None
 
-    def begin_batch(self, window_address):
-        """Focus the window, then observe it once for this batch.
+    def _observe(self, window_address):
+        """One window observation, validated as a batch binding.
 
-        Returns the fresh observation meta. Raises ValueError when
-        there is no window address or the meta cannot carry a
-        binding (no id, no scope, no persisted observation path):
-        the batch refuses before any input.
+        Raises ValueError when the meta cannot carry a binding (no
+        id, no scope, no persisted observation path): the batch
+        refuses before any input.
         """
-        if not isinstance(window_address, str) or not window_address:
-            raise ValueError(
-                'Zen pointer delegate needs a window address to '
-                'observe; got %r' % (window_address,))
-        if self._focus_fn is not None:
-            self._focus_fn(window_address)
         meta = self._code_backend.observe_window(
             window_address, crop=None, max_width=self._max_width)
         if not isinstance(meta, dict) or not meta.get('id'):
@@ -84,7 +96,80 @@ class ZenPointerDelegate:
                 'Zen pointer delegate: window observation has no '
                 'persisted observation path; desktop_act cannot '
                 'validate it')
+        return meta
+
+    @staticmethod
+    def _mean_diff(meta_a, meta_b):
+        """Mean absolute pixel difference between two observation
+        images, or inf when they cannot be compared. Both images
+        are the stored JPEGs, so a static screen compares near 0
+        and a mid-transition frame compares in the units (a
+        tab-switch cross-fade measured ~3.6)."""
+        try:
+            from PIL import Image, ImageChops, ImageStat
+            a = Image.open(meta_a['image']).convert('RGB')
+            b = Image.open(meta_b['image']).convert('RGB')
+        except Exception:
+            return float('inf')
+        if a.size != b.size:
+            return float('inf')
+        return sum(ImageStat.Stat(ImageChops.difference(a, b)).mean) / 3
+
+    def _settle_observation(self, window_address, meta):
+        """Re-observe until the window is visually stable (F4).
+
+        Returns the latest observation and a settle record
+        {'reads': n, 'stable': bool, 'elapsed_ms': ms}. The first
+        observation may be a mid-transition frame (previous tab
+        ghosted through); two consecutive observations agreeing
+        within SETTLE_MEAN_THRESHOLD prove the transient resolved.
+        On budget expiry the latest meta is returned anyway and
+        stable is False, so desktop_act's preflight stays the
+        gatekeeper instead of the delegate refusing on its own.
+        """
+        start = time.monotonic()
+        reads = 1
+        stable = False
+        # The loop always compares the latest two observations.
+        while True:
+            nxt = self._observe(window_address)
+            reads += 1
+            if self._mean_diff(meta, nxt) <= SETTLE_MEAN_THRESHOLD:
+                meta = nxt
+                stable = True
+                break
+            meta = nxt
+            if time.monotonic() - start >= SETTLE_BUDGET_S:
+                break
+            time.sleep(SETTLE_POLL_S)
+        return meta, {'reads': reads, 'stable': stable,
+                      'elapsed_ms': round((time.monotonic() - start)
+                                          * 1000, 3)}
+
+    def begin_batch(self, window_address):
+        """Focus the window, then observe it once for this batch.
+
+        Returns the fresh observation meta. Raises ValueError when
+        there is no window address or the meta cannot carry a
+        binding (no id, no scope, no persisted observation path):
+        the batch refuses before any input. The observation is
+        settled first (F4): a frame captured mid-transition would
+        make desktop_act's preflight refuse the whole batch as
+        'screen changed', so begin_batch re-observes until the
+        window is visually stable.
+        """
+        if not isinstance(window_address, str) or not window_address:
+            raise ValueError(
+                'Zen pointer delegate needs a window address to '
+                'observe; got %r' % (window_address,))
+        if self._focus_fn is not None:
+            self._focus_fn(window_address)
+        meta = self._observe(window_address)
+        meta, settle = self._settle_observation(window_address, meta)
         self._meta = meta
+        # F4 diagnostic: the settle outcome rides the meta so a
+        # later refusal can say whether the batch started stable.
+        self.last_settle = settle
         return meta
 
     def __call__(self, action, screen_point):

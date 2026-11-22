@@ -698,6 +698,11 @@ class ZenDomBackend:
         ok = error is None and completed == len(actions)
         result = {'ok': ok, 'completed': completed,
                   'results': results}
+        # F4 diagnostic: the begin_batch settle outcome, so the run
+        # evidence says whether the batch started on a stable frame.
+        settle = getattr(self._pointer, 'last_settle', None)
+        if isinstance(settle, dict):
+            result['settle'] = settle
         if error is not None:
             result['error'] = error
         if fresh_snapshot is not None:
