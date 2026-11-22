@@ -1,0 +1,319 @@
+{
+  "run": 0,
+  "dry_run": true,
+  "activate": false,
+  "message_prefix": "S2-LAND-DRY",
+  "program_variant": "brave=fill,chromium=set_value",
+  "chromium_set_value": true,
+  "mux_baseline_ms": 1123.3,
+  "browsers": {
+    "brave": {
+      "browser": "brave",
+      "label": "clone1",
+      "endpoint": "http://[::1]:9223",
+      "target_id": "9400B8DE5575E22838E6831058F20341",
+      "observe": {
+        "elements": 1,
+        "truncated": false,
+        "wall_ms": 2042.9,
+        "composer_present": true
+      },
+      "routing": {
+        "source": "dom-chromium",
+        "target_kind": "chromium-content",
+        "fell_through": [],
+        "reason": "complete coverage: 1 elements, not truncated",
+        "coverage": {
+          "elements": 1,
+          "truncated": false
+        }
+      },
+      "outcome": "sent",
+      "message": "S2-LAND-DRY-R0-BRAVE-IGNORE-TEST",
+      "model_calls": 0,
+      "program_variant": "fill",
+      "program": {
+        "ok": true,
+        "api_calls": 2,
+        "elapsed_ms": 93.347,
+        "error": null,
+        "error_type": null,
+        "log": [
+          "dom_act ok True completed 3 ms 12 error None"
+        ],
+        "wall_ms": 1614.0
+      },
+      "cb1": {
+        "input_sent": true,
+        "target_received": true,
+        "verified": true,
+        "completed": 3
+      },
+      "v12": {
+        "found": true,
+        "items": 2,
+        "role": "user",
+        "side": "user",
+        "textLen": 32,
+        "attempts": 1,
+        "elapsed_ms": 2,
+        "ms": 1169.4
+      },
+      "wall_ms": 2783.9
+    },
+    "chromium": {
+      "browser": "chromium",
+      "label": "clone2",
+      "endpoint": "http://127.0.0.1:9223",
+      "target_id": "CD2141AE5CECDCE4BA0E788467D42BDE",
+      "observe": {
+        "elements": 1,
+        "truncated": false,
+        "wall_ms": 2273.8,
+        "composer_present": true
+      },
+      "routing": {
+        "source": "dom-chromium",
+        "target_kind": "chromium-content",
+        "fell_through": [],
+        "reason": "complete coverage: 1 elements, not truncated",
+        "coverage": {
+          "elements": 1,
+          "truncated": false
+        }
+      },
+      "outcome": "sent",
+      "message": "S2-LAND-DRY-R0-CHROMIUM-IGNORE-TEST",
+      "model_calls": 0,
+      "program_variant": "set_value",
+      "pre_count": {
+        "count": 0,
+        "items": 1,
+        "ms": 1136.2
+      },
+      "program": {
+        "ok": true,
+        "api_calls": 2,
+        "elapsed_ms": 91.47,
+        "error": null,
+        "error_type": null,
+        "log": [
+          "dom_act ok True completed 4 ms 11 error None"
+        ],
+        "wall_ms": 1671.0
+      },
+      "cb1": {
+        "input_sent": true,
+        "target_received": true,
+        "verified": true,
+        "completed": 4
+      },
+      "v12": {
+        "found": true,
+        "items": 2,
+        "role": "user",
+        "side": "user",
+        "textLen": 35,
+        "attempts": 1,
+        "elapsed_ms": 2,
+        "ms": 1186.8
+      },
+      "wall_ms": 3994.3
+    }
+  },
+  "wall_ms": 19005.1,
+  "delayed_count": {
+    "chromium": {
+      "count": 1,
+      "items": 2,
+      "ms": 1221.8
+    }
+  },
+  "p9": {
+    "brave": {
+      "ok": true,
+      "png": "/tmp/s2-land-dry/p9-run0-brave.png",
+      "wall_ms": 1391.5
+    },
+    "chromium": {
+      "ok": true,
+      "png": "/tmp/s2-land-dry/p9-run0-chromium.png",
+      "wall_ms": 1356.4
+    }
+  },
+  "spans": [
+    {
+      "phase": "setup-brave",
+      "wall_ms": 1187.2,
+      "laptop_ms": null
+    },
+    {
+      "phase": "setup-chromium",
+      "wall_ms": 1070.1,
+      "laptop_ms": null
+    },
+    {
+      "phase": "setup-lease",
+      "wall_ms": 940.1,
+      "laptop_ms": null
+    },
+    {
+      "phase": "broker-start",
+      "wall_ms": 1264.5,
+      "laptop_ms": null
+    },
+    {
+      "phase": "observe-brave",
+      "wall_ms": 2042.9,
+      "laptop_ms": null
+    },
+    {
+      "phase": "observe-chromium",
+      "wall_ms": 2273.8,
+      "laptop_ms": null
+    },
+    {
+      "phase": "broker-finish",
+      "wall_ms": 1200.2,
+      "laptop_ms": null
+    },
+    {
+      "phase": "act-brave",
+      "wall_ms": 1614.0,
+      "laptop_ms": 93.347
+    },
+    {
+      "phase": "verify-brave",
+      "wall_ms": 1169.4,
+      "laptop_ms": 1169.4
+    },
+    {
+      "phase": "act-chromium",
+      "wall_ms": 1671.0,
+      "laptop_ms": 91.47
+    },
+    {
+      "phase": "verify-chromium",
+      "wall_ms": 1186.8,
+      "laptop_ms": 1186.8
+    }
+  ],
+  "ssh_calls": [
+    {
+      "label": "mux-probe",
+      "wall_ms": 780.9,
+      "rc": 0
+    },
+    {
+      "label": "mux-probe",
+      "wall_ms": 1465.7,
+      "rc": 0
+    },
+    {
+      "label": "seed-scratch",
+      "wall_ms": 1187.2,
+      "rc": 0
+    },
+    {
+      "label": "seed-scratch",
+      "wall_ms": 1070.1,
+      "rc": 0
+    },
+    {
+      "label": "lease-cleanup",
+      "wall_ms": 940.1,
+      "rc": 0
+    },
+    {
+      "label": "broker-start",
+      "wall_ms": 1264.5,
+      "rc": 0
+    },
+    {
+      "label": "broker-request-1",
+      "wall_ms": 899.4,
+      "rc": 0
+    },
+    {
+      "label": "broker-result-1",
+      "wall_ms": 1143.5,
+      "rc": 0
+    },
+    {
+      "label": "broker-request-2",
+      "wall_ms": 1151.9,
+      "rc": 0
+    },
+    {
+      "label": "broker-result-2",
+      "wall_ms": 1121.9,
+      "rc": 0
+    },
+    {
+      "label": "broker-finish",
+      "wall_ms": 1200.2,
+      "rc": 0
+    },
+    {
+      "label": "oneshot-code-exec",
+      "wall_ms": 1614.0,
+      "rc": 0
+    },
+    {
+      "label": "v12-check",
+      "wall_ms": 1169.3,
+      "rc": 0
+    },
+    {
+      "label": "count-check",
+      "wall_ms": 1136.2,
+      "rc": 0
+    },
+    {
+      "label": "oneshot-code-exec",
+      "wall_ms": 1671.0,
+      "rc": 0
+    },
+    {
+      "label": "v12-check",
+      "wall_ms": 1186.8,
+      "rc": 0
+    },
+    {
+      "label": "count-check",
+      "wall_ms": 1221.8,
+      "rc": 0
+    },
+    {
+      "label": "p9-capture",
+      "wall_ms": 1391.5,
+      "rc": 0
+    },
+    {
+      "label": "p9-capture",
+      "wall_ms": 1356.4,
+      "rc": 0
+    },
+    {
+      "label": "close-scratch",
+      "wall_ms": 760.4,
+      "rc": 0
+    },
+    {
+      "label": "close-scratch",
+      "wall_ms": 1072.2,
+      "rc": 0
+    }
+  ],
+  "phase_split_ms": {
+    "model": 0,
+    "ssh": 17263.1,
+    "broker": 218.1,
+    "observe": 27.2,
+    "act": 184.8,
+    "verify": 109.6,
+    "setup": 63.9,
+    "residual": 1138.5
+  },
+  "model_calls": 0
+}

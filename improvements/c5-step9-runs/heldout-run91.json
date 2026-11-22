@@ -1,0 +1,75 @@
+{
+  "run": 91,
+  "fixture": "file:///home/james/computer-use-wayland/tests/two_vision_fixture.html?clone=1",
+  "fixture_sha256": "147494cda4c6ae24a51ced03ccdfb3fc5a79a1bbab56dcdfc5afb4f72fba6cbf",
+  "message": "C5-HELDOUT-R91-CHROMIUM-IGNORE-TEST",
+  "model_calls": 0,
+  "program_variant": "set_value",
+  "target_id": "7B5E86DEB473D4EB319E8F02061638E3",
+  "observe": {
+    "browser": "chromium",
+    "label": "clone2",
+    "endpoint": "http://127.0.0.1:9223",
+    "target_id": "7B5E86DEB473D4EB319E8F02061638E3",
+    "observe": {
+      "elements": 4,
+      "truncated": false,
+      "wall_ms": 1979.5,
+      "composer_present": true
+    },
+    "routing": {
+      "source": "dom-chromium",
+      "target_kind": "chromium-content",
+      "fell_through": [],
+      "reason": "complete coverage: 4 elements, not truncated",
+      "coverage": {
+        "elements": 4,
+        "truncated": false
+      }
+    },
+    "outcome": "routed"
+  },
+  "pre": {
+    "bubble_present": false,
+    "bubbles": [],
+    "input_events": 0
+  },
+  "program": {
+    "ok": true,
+    "elapsed_ms": 93.645,
+    "error": null,
+    "log": [
+      "dom_act ok True completed 4 ms 12 error None"
+    ],
+    "wall_ms": 1593.2,
+    "completed": 4
+  },
+  "post": {
+    "bubble_present": true,
+    "bubbles": [
+      "C5-HELDOUT-R91-CHROMIUM-IGNORE-TEST"
+    ],
+    "input_value": "",
+    "input_events": 1
+  },
+  "retry": {
+    "pre_present": true,
+    "outcome": "already-sent",
+    "bubbles_after_refusal": [
+      "C5-HELDOUT-R91-CHROMIUM-IGNORE-TEST"
+    ]
+  },
+  "delayed": {
+    "bubbles": [
+      "C5-HELDOUT-R91-CHROMIUM-IGNORE-TEST"
+    ],
+    "count": 1
+  },
+  "p9": {
+    "ok": true,
+    "png": "/tmp/c5-heldout-91/p9-run90-chromium.png",
+    "wall_ms": 1974.5
+  },
+  "outcome": "sent",
+  "wall_ms": 33286.8
+}

@@ -1,0 +1,66 @@
+{
+  "run": 90,
+  "fixture": "file:///home/james/computer-use-wayland/tests/two_vision_fixture.html?clone=1",
+  "fixture_sha256": "147494cda4c6ae24a51ced03ccdfb3fc5a79a1bbab56dcdfc5afb4f72fba6cbf",
+  "message": "C5-HELDOUT-R90-CHROMIUM-IGNORE-TEST",
+  "model_calls": 0,
+  "program_variant": "set_value",
+  "target_id": "4522C1934BDB2C35E11C2086DA10E156",
+  "observe": {
+    "browser": "chromium",
+    "label": "clone2",
+    "endpoint": "http://127.0.0.1:9223",
+    "target_id": "4522C1934BDB2C35E11C2086DA10E156",
+    "observe": {
+      "elements": 4,
+      "truncated": false,
+      "wall_ms": 1972.0,
+      "composer_present": false
+    },
+    "routing": {
+      "source": "dom-chromium",
+      "target_kind": "chromium-content",
+      "fell_through": [],
+      "reason": "complete coverage: 4 elements, not truncated",
+      "coverage": {
+        "elements": 4,
+        "truncated": false
+      }
+    },
+    "outcome": "routed"
+  },
+  "pre": {
+    "bubble_present": false,
+    "bubbles": [],
+    "input_events": 0
+  },
+  "program": {
+    "ok": false,
+    "elapsed_ms": 72.712,
+    "error": "assert failed: composer not found in snapshot",
+    "log": [],
+    "wall_ms": 1562.9,
+    "completed": null
+  },
+  "post": {
+    "bubble_present": false,
+    "bubbles": [],
+    "input_value": "",
+    "input_events": 0
+  },
+  "retry": {
+    "pre_present": false,
+    "outcome": "would-send"
+  },
+  "delayed": {
+    "bubbles": [],
+    "count": 0
+  },
+  "p9": {
+    "ok": true,
+    "png": "/tmp/c5-heldout-90/p9-run90-chromium.png",
+    "wall_ms": 1511.5
+  },
+  "outcome": "failed-unverified",
+  "wall_ms": 32398.6
+}

@@ -157,6 +157,9 @@ function makeFocusPage({disabled=false, readOnly=false, focusWorks=true}={}) {
     set(v){textarea._value=v;},
     configurable:true,enumerable:true});
   const page={
+    // Bare innerWidth/innerHeight are window globals in a real
+    // browser; the set_value visibility check reads them bare.
+    innerWidth:1615,innerHeight:1160,
     window:{devicePixelRatio:1,innerWidth:1615,innerHeight:1160,
       outerWidth:1863,outerHeight:1176,scrollX:0,scrollY:0},
     document:{title:'fixture',
@@ -217,7 +220,7 @@ class FocusWebSocket extends EventTarget {
 }
 
 async function runFocusAdapter(request,pageSetup={}) {
-  const {page,context}=makeFocusPage(pageSetup);
+  const {page,context,textarea}=makeFocusPage(pageSetup);
   const calls=[];
   const output=[];
   const proc={exitCode:0,
@@ -231,7 +234,7 @@ async function runFocusAdapter(request,pageSetup={}) {
       webSocketDebuggerUrl:'ws://127.0.0.1:9223/test'}]}),
     AbortSignal,queueMicrotask,setTimeout,clearTimeout,
     console:{log:s=>output.push(JSON.parse(s))}});
-  return {output:output[0],calls,page,exitCode:proc.exitCode};
+  return {output:output[0],calls,page,textarea,exitCode:proc.exitCode};
 }
 
 const focusRequest={operation:'act',endpoint:'http://127.0.0.1:9223',
@@ -305,5 +308,5 @@ let setValueRun=await runFocusAdapter({operation:'act',endpoint:'http://127.0.0.
 assert.equal(setValueRun.output.ok,true,JSON.stringify(setValueRun.output));
 assert.equal(setValueRun.page.document.activeElement.tagName,'BODY',
   'set_value must not move focus');
-assert.equal(setValueRun.page.__agentCu.refs.get('e1').value,'hello');
+assert.equal(setValueRun.textarea.value,'hello');
 console.log('ok set_value still does not focus');

@@ -187,6 +187,38 @@ class ProgramShapeTests(unittest.TestCase):
         _validate_dom_actions(actions, {'e1'}, snapshot_id='SNAP1',
                               target='TABID123')
 
+    def test_composer_grounding_accepts_text_input_role(self):
+        # Held-out fixture (tests/two_vision_fixture.html): the
+        # harvest maps <input type="text"> to role "input" (cdp.mjs
+        # uses the raw tag name), so the textarea/textbox-only
+        # grounding missed the fixture's #msg-input and held-out run
+        # 90 failed with "composer not found in snapshot". The
+        # grounding must accept role "input" too; set_value/focus
+        # still fail loudly on a non-editable field, so a
+        # mis-grounded non-text input cannot send silently.
+        fixture_snap = {
+            'snapshot': 'SNAP1',
+            'elements': [
+                {'ref': 'e1', 'role': 'input', 'name': 'Message'},
+                {'ref': 'e2', 'role': 'button', 'name': 'Send'},
+                {'ref': 'e3', 'role': 'input', 'name': 'Search'},
+                {'ref': 'e4', 'role': 'button', 'name': 'Emoji'},
+            ],
+        }
+
+        def _assert_state(cond, msg):
+            if not cond:
+                raise AssertionError(msg)
+
+        for build in (s2_flip_live.build_program,
+                      s2_flip_live.build_program_set_value):
+            program = build('TABID123', 'hello')
+            head = program.split('res = dom_act(snap, [')[0]
+            ns = {'dom_observe': lambda _t: fixture_snap,
+                  'assert_state': _assert_state}
+            exec(head, ns)  # noqa: S102 - the program source is ours
+            self.assertEqual(ns['comp'], 'e1')
+
     def test_set_value_program_without_focus_raises_p5(self):
         # The send-requires-focus rule: [set_value, key Enter,
         # assert] with no focus-establishing action raises

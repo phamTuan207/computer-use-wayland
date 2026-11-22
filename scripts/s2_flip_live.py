@@ -81,6 +81,14 @@ BROWSERS = {
 }
 
 BUBBLE_ASSERT_SELECTOR = '[role="log"] > [data-message-item]:last-child'
+# Composer grounding roles. The harvest (cdp.mjs) uses the raw tag name
+# as the role, so <input type="text"> arrives as role "input", not
+# "textbox". The grounding must accept it: the held-out fixture's
+# #msg-input is a text input, and the textarea/textbox-only predicate
+# missed it (held-out run 90, "composer not found in snapshot").
+# set_value/focus still fail loudly on a non-editable field, so a
+# mis-grounded non-text input cannot send silently.
+COMPOSER_ROLES = ('textarea', 'textbox', 'input')
 PROGRAM_WALL_SECONDS = 20
 V12_TIMEOUT_MS = 10000
 
@@ -103,7 +111,7 @@ def build_program(target_id, message):
         'snap = dom_observe(' + json.dumps(target_id) + ')\n'
         'comp = None\n'
         'for e in snap["elements"]:\n'
-        '    if e["role"] in ("textarea", "textbox") and e["name"] == "Message":\n'
+        '    if e["role"] in ' + repr(COMPOSER_ROLES) + ' and e["name"] == "Message":\n'
         '        comp = e["ref"]\n'
         '        break\n'
         'assert_state(comp is not None, "composer not found in snapshot")\n'
@@ -145,7 +153,7 @@ def build_program_set_value(target_id, message):
         'snap = dom_observe(' + json.dumps(target_id) + ')\n'
         'comp = None\n'
         'for e in snap["elements"]:\n'
-        '    if e["role"] in ("textarea", "textbox") and e["name"] == "Message":\n'
+        '    if e["role"] in ' + repr(COMPOSER_ROLES) + ' and e["name"] == "Message":\n'
         '        comp = e["ref"]\n'
         '        break\n'
         'assert_state(comp is not None, "composer not found in snapshot")\n'
@@ -418,7 +426,7 @@ class Harness:
             # cannot run on a live thread at all.
             out['observe']['composer_present'] = any(
                 isinstance(e, dict)
-                and e.get('role') in ('textarea', 'textbox')
+                and e.get('role') in COMPOSER_ROLES
                 and e.get('name') == 'Message'
                 for e in (snap.get('elements') or []))
             self.spans.append({'phase': 'observe-' + browser,
