@@ -65,5 +65,14 @@
 - Goal moi cua Pham Tuan (17:46): goal 1 repo computer-use tot nhat (doi ten goal cu), goal 2 Omarchy tot nhat cho computer-use (moi). Chien dich nay phuc vu goal 1.
 - mochi: coord file van chi co "san sang" + muc giao may, KET QUA Y13G round-3 va buoc 10 van chua len coord file. Tiep tuc doi, khong kiem chung tu anh chup chat.
 
+## W-S1CLOSE xong 17:57 (muc 14): step 1 close-out het sot
+- Full discover chay lai o HEAD 36364b1 (session C4 mat, /tmp bi xoa boi restart 07:51): Ran 1974 tests, 0 failures, 4 errors giong het baseline C4, 17 skipped. Y1b chay lai: 81 tests OK, 8 issue het. Log commit 3e64547 + 59d5e84, da kiem chung tren origin va doc log.
+- Live-browser confirmations ca 3 xong, chi lenh SSH read-only: F1 sanitization rule (probe live Chromium 157), item 8 fixed template (diff 7177cdc vs d91f1bb rong, harness 2 tests OK), items 5-6 live hyprctl re-read (zen-by-address [2509,914] khop hyprctl tho).
+- Codex-lane item-12 V-Z2 LANDED: ls-remote amend4-codex 06a34e86, laptop worktree clean + HEAD trung, test 67 OK, VM lane 4/4 PASS.
+- Mo: CB-9 manifest cho bench a1a672d van NOT locked (thuoc step 3, khong phai step 1). Phan quyet round-3 cho 5 proof test defective (items 3, 4, 5-6) va khac biet shape VM-vs-Codex o item 12: viec cua council, can lane council sau.
+
+## W-EVID tien trien (chua xong)
+- Commit 69287aa: V3 recover 4 file judge report + tc02 prior-run evidence (test-scores.md 174 dong, bang recompute 130 exact; stress.log, 14 state.json, 20 screenshots van thieu; V3 nay PARTIALLY VERIFIABLE).
+
 ## Luat ap cho moi worker
 - Huong cuoi e05fc58 la luat. Chuan Lauren Tan (lenh + output + commit hash + thoi gian). Khong tu cham pass, worker doc lap kiem chung lai. Khong ydotool. Khong dau gach ngang dai. Commit pathspec ro rang, push xong kiem tra ls-remote. Khong dua thong tin ca nhan cua Pham Tuan len GitHub. Worker ket qua 15 phut thi giet ngay. Song song het muc, khong cat buoc.
