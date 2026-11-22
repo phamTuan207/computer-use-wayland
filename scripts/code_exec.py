@@ -870,6 +870,26 @@ class CodeExecSession:
                 raise CodeExecError('after_scope is incompatible with no_after')
         refs = set(binding['refs'])
         _validate_dom_actions(actions, refs)
+        # P5 (step 5): a send program (fill/set_value followed by
+        # key Enter) must end with an assert action, the V12 gate
+        # in program form. focus_check and type_check are
+        # available by construction here (cdp.mjs enforces the
+        # activeElement check on click and the read-back on
+        # set_value internally); the bubble assert is not in the
+        # adapter, so the program must carry it. A missing gate
+        # raises here, before any CDP request, never after a send.
+        try:
+            import dom_asserts
+        except ImportError:  # loaded by file path, scripts not on path
+            sys.path.insert(0, str(Path(__file__).resolve().parent))
+            import dom_asserts
+        try:
+            dom_asserts.require_asserts(
+                actions,
+                available={'focus_check': True, 'type_check': True,
+                           'sent_bubble': False})
+        except dom_asserts.DomAssertError as exc:
+            raise CodeExecError(str(exc)) from exc
         if no_after:
             if not actions or actions[-1].get('type') != 'assert':
                 raise CodeExecError('no_after requires a final assert action')

@@ -860,6 +860,91 @@ class ZenSession:
             "return true;})()"
             % json.dumps(selector)))
 
+    # CB-5 locate confirmations, operational definitions (step 5):
+    # stable means two consecutive rect reads agree on every
+    # component within STABLE_TOLERANCE_PX (0.5 CSS px absorbs
+    # sub-pixel rounding; anything larger is movement). unique
+    # means exactly one element matches the selector across the
+    # document, its open shadow roots, and same-origin iframes
+    # (count 1); a caller holding a harvest ref that names one
+    # element re-grounds with that ref instead of a selector that
+    # matches several. visible, interactive, and uncovered are
+    # read in the same evaluate as the rect, so the report
+    # describes one moment, not three.
+    STABLE_TOLERANCE_PX = 0.5
+
+    def locate_confirmed(self, selector):
+        """Re-confirm a located element before acting on it (CB-5,
+        P2's re-confirm content).
+
+        Returns None when the selector matches nothing. Otherwise
+        returns a report dict: {rect, visible, interactive,
+        uncovered, stable, unique, unique_count}. visible is a
+        non-empty rect with display not none and visibility not
+        hidden; interactive is not disabled and not aria-disabled;
+        uncovered is hit_check (the rect center hits the element
+        itself or a non-interactive descendant); stable is two rect
+        reads agreeing within STABLE_TOLERANCE_PX; unique is
+        unique_count == 1. Three cheap JS evals, no screenshot.
+        The caller decides the verdict: dom_act.confirm_locate
+        refuses on a failed confirmation instead of clicking.
+        """
+        report = self.evaluate(
+            "/* zen_locate_confirmed */ return (function(){"
+            + _FIND_JS +
+            "function countAll(sel, root){"
+            "let n=0;"
+            "try{n+=root.querySelectorAll(sel).length;}catch(_){}"
+            "let all=[];"
+            "try{all=root.querySelectorAll('*');}catch(_){}"
+            "for(const el of all){"
+            "if(el.shadowRoot){n+=countAll(sel, el.shadowRoot);}"
+            "}"
+            "const frames=framesOf(root);"
+            "for(const f of frames){"
+            "try{n+=countAll(sel, f.contentWindow.document);}"
+            "catch(_){}"
+            "}"
+            "return n;"
+            "}"
+            "const e=find(%s);"
+            "if(!e) return null;"
+            "const r=e.getBoundingClientRect();"
+            "const cs=getComputedStyle(e);"
+            "const disabled=!!e.disabled || "
+            "e.getAttribute('aria-disabled')==='true';"
+            "return {rect: {x: r.x, y: r.y, width: r.width,"
+            " height: r.height,"
+            " center_x: r.x + r.width / 2,"
+            " center_y: r.y + r.height / 2},"
+            " visible: !!r.width && !!r.height"
+            " && cs.display !== 'none'"
+            " && cs.visibility !== 'hidden',"
+            " enabled: !disabled,"
+            " count: countAll(%s, document)};})()"
+            % (json.dumps(selector), json.dumps(selector)))
+        if report is None or report.get('rect') is None:
+            return None
+        rect = report.get('rect') or {}
+        second = self.locate(selector)
+        stable = False
+        if second is not None:
+            stable = all(
+                abs((second.get(k) or 0) - (rect.get(k) or 0))
+                <= self.STABLE_TOLERANCE_PX
+                for k in ('x', 'y', 'width', 'height'))
+        return {'rect': {'x': rect.get('x'), 'y': rect.get('y'),
+                         'width': rect.get('width'),
+                         'height': rect.get('height'),
+                         'center_x': rect.get('center_x'),
+                         'center_y': rect.get('center_y')},
+                'visible': bool(report.get('visible')),
+                'interactive': bool(report.get('enabled')),
+                'uncovered': bool(self.hit_check(selector)),
+                'stable': stable,
+                'unique': report.get('count') == 1,
+                'unique_count': report.get('count')}
+
     def focus_check(self, selector):
         """True when the element is the focused, editable element.
 

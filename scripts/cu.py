@@ -1738,6 +1738,77 @@ def _settle_after_capture(capture, first_after, nav_candidate, settle_ms=400):
     return first_after, False
 
 
+def _with_result_contract(fn):
+    """CB-1: attach the three-part result contract to a desktop_act
+    result (step 5). input_sent is whether every action in the batch
+    executed (completed counts actions); verified is True ONLY when
+    a DOM postcondition passed (the type_check read-back, basis
+    dom-value); a band pass is NOT a postcondition, so it leaves
+    verified None with the basis naming the band as diagnostic
+    only; a failed band or a failed DOM check makes verified
+    False. target_received is the DOM value outcome when one was
+    read, False when focus demonstrably missed, else None (a band
+    cannot say which field received the text). ok is recomputed
+    from the contract ANDed with the old ok: the contract can only
+    fail a batch the old code passed, never pass one it failed (a
+    failed after-capture keeps ok False even though the input went
+    out). Preflight refusals raise instead of returning, so they
+    never reach this wrapper.
+    """
+    try:
+        import action_result
+    except ImportError:  # loaded by file path without scripts on sys.path
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        import action_result
+
+    def wrapper(*args, **kwargs):
+        result = fn(*args, **kwargs)
+        if not isinstance(result, dict):
+            return result
+        actions = args[2] if len(args) > 2 else kwargs.get('actions')
+        action_count = len(actions) if isinstance(actions, list) else 0
+        completed = result.get('completed')
+        input_sent = (isinstance(completed, int) and action_count > 0
+                      and completed == action_count)
+        type_verified = result.get('type_verified')
+        type_basis = result.get('type_verified_basis')
+        error_code = result.get('error_code')
+        if type_verified is True and type_basis == 'dom-value':
+            verified, vbasis = True, 'dom-value'
+        elif error_code in ('type_unverified', 'focus_unverified'):
+            verified, vbasis = False, 'dom-value'
+        elif type_verified is False:
+            verified, vbasis = False, type_basis or 'input-line-band'
+        elif type_verified is True:
+            verified, vbasis = (
+                None, 'no-dom-postcondition: pixel band is diagnostic '
+                      'only')
+        elif 'type_verified' in result:
+            verified, vbasis = (
+                None, type_basis or 'no-dom-postcondition')
+        else:
+            verified, vbasis = None, 'no postcondition for this batch'
+        if type_verified is True and type_basis == 'dom-value':
+            target_received = True
+        elif type_verified is False and type_basis == 'dom-value':
+            target_received = False
+        elif result.get('focus_verified') is False:
+            target_received = False
+        else:
+            target_received = None
+        contract = action_result.build_contract(
+            input_sent=input_sent, target_received=target_received,
+            verified=verified, verified_basis=vbasis)
+        result['input_sent'] = contract['input_sent']
+        result['target_received'] = contract['target_received']
+        result['verified'] = contract['verified']
+        result['verified_basis'] = contract['verified_basis']
+        result['ok'] = (result.get('ok') is True) and contract['ok']
+        return result
+    return wrapper
+
+
+@_with_result_contract
 def desktop_act(env,meta,actions,after_capture=True,observation_path=None,
                 expected_terminal_window=None,focus_check=None,type_check=None,
                 type_x_ranges=None,type_y_ranges=None):

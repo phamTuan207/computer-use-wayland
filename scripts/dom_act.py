@@ -43,11 +43,87 @@ evaluate, and the script then runs with no more vision until VISION 2
 (the outcome screenshot). Nothing in this module takes a screenshot
 to locate a field.
 """
+import action_result
+import dom_asserts
 import fastpath
 
 
 class DomActError(RuntimeError):
     pass
+
+
+def confirm_locate(session, selector):
+    """Re-confirm one element before acting on it (CB-5, step 5).
+
+    Returns the locate_confirmed report: {rect, visible,
+    interactive, uncovered, stable, unique, unique_count}. Raises
+    DomActError when the element is missing or a confirmation
+    fails. A session with locate_confirmed (a real ZenSession)
+    takes the strict path: every confirmation must pass,
+    including stable (two rect reads agreeing) and unique
+    (exactly one match); a moving element refuses instead of
+    being silently re-grounded, and the caller re-plans. A
+    session without it (an older duck-typed session, the test
+    fakes) takes the fallback path, which composes the same
+    checks from locate/hit_check and preserves the legacy
+    re-ground-once behavior: interactive and unique are
+    unknowable there, so they are recorded as None with basis
+    'unprobed' instead of refusing. The report is attached to
+    ground evidence as 'confirmation'.
+    """
+    strict = getattr(session, 'locate_confirmed', None)
+    if callable(strict):
+        report = strict(selector)
+        if report is None:
+            raise DomActError(f"no element matches {selector!r}")
+        if not report.get('visible'):
+            raise DomActError(
+                f"element {selector!r} is not visible; refusing")
+        if not report.get('interactive'):
+            raise DomActError(
+                f"element {selector!r} is not interactive (disabled); "
+                "refusing")
+        if not report.get('uncovered'):
+            raise DomActError(
+                f"rect center of {selector!r} does not hit the element; "
+                "it is covered or off-viewport, refusing the click")
+        if not report.get('stable'):
+            raise DomActError(
+                f"element {selector!r} moved between the re-confirm "
+                "reads; the point is stale, refusing")
+        if not report.get('unique'):
+            raise DomActError(
+                f"selector {selector!r} matches "
+                f"{report.get('unique_count')} elements, not one; "
+                "re-ground with a harvest ref instead")
+        return dict(report)
+    rect = session.locate(selector)
+    if rect is None:
+        raise DomActError(f"no element matches {selector!r}")
+    visible = bool(rect.get('width')) and bool(rect.get('height'))
+    if not visible:
+        raise DomActError(
+            f"element {selector!r} is not visible; refusing")
+    if not session.hit_check(selector):
+        raise DomActError(
+            f"rect center of {selector!r} does not hit the element; "
+            "it is covered or off-viewport, refusing the click")
+    fresh = session.locate(selector)
+    if fresh is not None and fresh != rect:
+        rect = fresh
+        if not session.hit_check(selector):
+            raise DomActError(
+                f"rect center of {selector!r} does not hit the element "
+                "after re-grounding; refusing the click")
+        again = session.locate(selector)
+        if again is not None and again != rect:
+            raise DomActError(
+                f"element {selector!r} moved again during grounding; "
+                "the point is stale, refusing")
+    return {'rect': rect, 'visible': visible, 'interactive': None,
+            'uncovered': True, 'stable': True, 'unique': None,
+            'unique_count': None, 'unique_basis': 'unprobed',
+            'interactive_basis': 'unprobed'}
 
 
 def _window_origin(meta):
@@ -169,16 +245,15 @@ def ground_input(session, meta, selector):
     is read and no observe is taken.
 
     HCU live guard (R7): the hit verdict and the clicked point come
-    from different snapshots (locate, then origin, then hit_check, and
-    hit_check re-reads its own rect), so the rect is re-read after
-    the hit check and the point must still land inside the fresh
-    rect. When the element moved between the reads, the point is
-    re-grounded once from the fresh rect and re-checked; when it
-    moved again, grounding refuses instead of clicking a stale point.
+    from different snapshots, so the rect is re-read after the hit
+    check and the point must still land inside the fresh rect. That
+    guard now lives in confirm_locate (CB-5, step 5): visible,
+    interactive, uncovered, stable, and unique are confirmed there
+    before any point is computed, and the report rides in the
+    evidence as 'confirmation'.
     """
-    rect = session.locate(selector)
-    if rect is None:
-        raise DomActError(f"no element matches {selector!r}")
+    confirmation = confirm_locate(session, selector)
+    rect = confirmation['rect']
     window_origin = _window_origin(meta)
     _check_window_not_moved(session, meta, window_origin)
     window_size = None
@@ -197,30 +272,10 @@ def ground_input(session, meta, selector):
                                                  factor)
     except ValueError as exc:
         raise DomActError(str(exc)) from exc
-    if not session.hit_check(selector):
-        raise DomActError(
-            f"rect center of {selector!r} does not hit the element; "
-            "it is covered or off-viewport, refusing the click")
-    fresh = session.locate(selector)
-    if fresh is not None and fresh != rect:
-        rect = fresh
-        try:
-            point = fastpath.dom_rect_to_image_point(meta, rect, origin,
-                                                     factor)
-        except ValueError as exc:
-            raise DomActError(str(exc)) from exc
-        if not session.hit_check(selector):
-            raise DomActError(
-                f"rect center of {selector!r} does not hit the element "
-                "after re-grounding; refusing the click")
-        again = session.locate(selector)
-        if again is not None and again != rect:
-            raise DomActError(
-                f"element {selector!r} moved again during grounding; "
-                "the point is stale, refusing")
     metrics = getattr(session, 'last_display_metrics', None)
     evidence = {'selector': selector, 'rect': rect,
                 'viewport_origin': origin, 'point': point, 'hit': True,
+                'confirmation': confirmation,
                 'scale_factor': factor}
     if isinstance(metrics, dict):
         evidence['device_pixel_ratio'] = metrics.get('device_pixel_ratio')
@@ -511,10 +566,13 @@ def focus_type(session, act_fn, meta, selector, text, enter=False):
     successful send is not failed by its own Enter clearing the field
     (RT R5). Enter runs as its own batch afterwards, and the send is
     then verified by the V12 sent-bubble check
-    (sent_bubble_contains on the thread DOM) when the session exposes
-    it; when it does not, the Enter batch result is accepted and the
-    basis says so. The DOM flow itself adds zero observes; the act
-    batches use exactly the observes a plain batch uses.
+    (sent_bubble_contains on the thread DOM). P5 mandatory (step 5):
+    the V12 gate is a mandatory assert for a send, so a session
+    that cannot run it refuses the whole send BEFORE any keystroke
+    instead of sending blind and reporting enter-accepted; the old
+    enter-accepted path is gone. The DOM flow itself adds zero
+    observes; the act batches use exactly the observes a plain
+    batch uses.
 
     Exactly-once (RT R6): an intent ledger on the session records
     (selector, text) once a send succeeds, and a pre-send V12 read
@@ -522,35 +580,64 @@ def focus_type(session, act_fn, meta, selector, text, enter=False):
     lost result, or after a failed V12 gate, returns the recorded
     success instead of sending the message a second time. The ledger
     is per session object; a fresh session starts empty.
+
+    CB-1 (step 5): the result carries the three-part contract
+    (input_sent, target_received, verified) plus the P5 assert
+    table for this chain in 'asserts'. ok is the end-state
+    statement computed from the contract, never the bare execution
+    result: a send whose bubble never appears reports ok False
+    even though the keystrokes went out.
     """
     ground = ground_input(session, meta, selector)
     calls = {'dom': 4}
     intents = _sent_intents(session)
+    # P5 assert set for this chain (the S2 task class): click ->
+    # focus_check, type -> type_check, Enter -> sent_bubble, all
+    # mandatory. The table rides in every result, so a caller sees
+    # which asserts were required, not just whether they passed.
+    chain = [{'type': 'click', 'x': ground['point'][0],
+              'y': ground['point'][1]},
+             {'type': 'type', 'text': text}]
+    if enter:
+        chain.append({'type': 'key', 'keys': ['Enter']})
+    asserts = {}
+    for entry in dom_asserts.assert_coverage(chain)['covered']:
+        asserts[entry['action']] = {'assert': entry['assert'],
+                                    'mandatory': entry['mandatory']}
+    has_gate = hasattr(session, 'sent_bubble_contains')
+
+    def _already_sent_result():
+        out = {'completed': 0, 'selector': selector,
+               'rect': ground['rect'],
+               'viewport_origin': ground['viewport_origin'],
+               'point': ground['point'], 'hit': True,
+               'focus_verified': None, 'type_verified': None,
+               'type_verified_basis': 'already-sent',
+               'dom_calls': calls['dom'], 'observes_added': 0,
+               'act_observes': 0, 'error': None, 'error_code': None,
+               'already_sent': True, 'sent_verified': True,
+               'asserts': asserts}
+        out.update(action_result.build_contract(
+            input_sent=False, target_received=True, verified=True,
+            verified_basis='already-sent'))
+        return out
+
     if (selector, text) in intents:
-        return {'ok': True, 'completed': 0, 'selector': selector,
-                'rect': ground['rect'],
-                'viewport_origin': ground['viewport_origin'],
-                'point': ground['point'], 'hit': True,
-                'focus_verified': None, 'type_verified': None,
-                'type_verified_basis': 'already-sent',
-                'dom_calls': calls['dom'], 'observes_added': 0,
-                'act_observes': 0, 'error': None, 'error_code': None,
-                'already_sent': True, 'sent_verified': True}
-    if hasattr(session, 'sent_bubble_contains'):
+        return _already_sent_result()
+    if has_gate:
         calls['dom'] += 1
         if session.sent_bubble_contains(text):
             intents.add((selector, text))
-            return {'ok': True, 'completed': 0, 'selector': selector,
-                    'rect': ground['rect'],
-                    'viewport_origin': ground['viewport_origin'],
-                    'point': ground['point'], 'hit': True,
-                    'focus_verified': None, 'type_verified': None,
-                    'type_verified_basis': 'already-sent',
-                    'dom_calls': calls['dom'], 'observes_added': 0,
-                    'act_observes': 0, 'error': None, 'error_code': None,
-                    'already_sent': True, 'sent_verified': True}
+            return _already_sent_result()
     focus_check, type_check = dom_hooks(session, selector, text)
     calls['dom'] += 2
+    # P5 mandatory, fail closed BEFORE any keystroke: a send whose
+    # V12 gate cannot run refuses here. focus_check and type_check
+    # were just built, so they are always available; the gate is
+    # the one that can be missing.
+    dom_asserts.require_asserts(
+        chain, available={'focus_check': True, 'type_check': True,
+                          'sent_bubble': has_gate})
     # R3a: the band reads only the grounded field's x-range and
     # y-range, so text in another field on the same line, or in a
     # stacked field sharing the x-range, cannot verify this type.
@@ -581,24 +668,51 @@ def focus_type(session, act_fn, meta, selector, text, enter=False):
         raise DomActError('act_fn must return a result dict')
     completed = result.get('completed', 0)
     observes = result.get('observes')
-    out = {'ok': result.get('ok') is True,
-           'completed': completed,
+    # CB-1 for the click+type batch: input_sent is whether both
+    # actions executed (completed counts actions); target_received
+    # is whether the field holds the text; verified is the DOM
+    # value postcondition. A focus failure means the target never
+    # received anything; a type failure means the input went out
+    # but the postcondition failed, so ok is False either way.
+    type_verified = result.get('type_verified')
+    focus_verified = result.get('focus_verified')
+    error_code = result.get('error_code')
+    input_sent = completed == 2
+    if type_verified is not None:
+        target_received = bool(type_verified)
+    elif focus_verified is False:
+        target_received = False
+    else:
+        target_received = None
+    if type_verified is True:
+        verified, verified_basis = True, 'dom-value'
+    elif (type_verified is False
+            or error_code in ('type_unverified', 'focus_unverified')):
+        verified, verified_basis = False, 'dom-value'
+    else:
+        verified, verified_basis = (
+            None, 'no-dom-postcondition: the type check did not run')
+    out = {'completed': completed,
            'selector': selector,
            'rect': ground['rect'],
            'viewport_origin': ground['viewport_origin'],
            'point': ground['point'],
            'hit': True,
-           'focus_verified': result.get('focus_verified'),
-           'type_verified': result.get('type_verified'),
+           'focus_verified': focus_verified,
+           'type_verified': type_verified,
            'type_verified_basis': result.get('type_verified_basis'),
            'dom_calls': calls['dom'],
            'observes_added': 0,
            'act_observes': observes,
            'error': result.get('error'),
-           'error_code': result.get('error_code'),
+           'error_code': error_code,
            'already_sent': False,
            'sent_verified': None,
-           'scale_factor': ground.get('scale_factor')}
+           'scale_factor': ground.get('scale_factor'),
+           'asserts': asserts}
+    out.update(action_result.build_contract(
+        input_sent=input_sent, target_received=target_received,
+        verified=verified, verified_basis=verified_basis))
     if not out['ok'] or not enter:
         return out
     sent = act_fn(meta, [{'type': 'key', 'keys': ['Enter']}])
@@ -608,27 +722,35 @@ def focus_type(session, act_fn, meta, selector, text, enter=False):
     if sent.get('observes') is not None:
         out['act_observes'] = observes
     if sent.get('ok') is not True:
-        out['ok'] = False
+        # The Enter batch failed: the send input did not go out,
+        # so input_sent drops and the V12 gate never ran.
+        out.update(action_result.build_contract(
+            input_sent=False, target_received=target_received,
+            verified=None,
+            verified_basis='send did not execute: the Enter batch '
+                           'failed'))
         out['error'] = sent.get('error')
         out['error_code'] = sent.get('error_code')
         return out
-    if hasattr(session, 'sent_bubble_contains'):
-        calls['dom'] += 1
-        out['dom_calls'] = calls['dom']
-        if session.sent_bubble_contains(text):
-            intents.add((selector, text))
-            out['sent_verified'] = True
-            return out
-        out['ok'] = False
-        out['sent_verified'] = False
-        out['error'] = ('send not verified: no sent bubble holds the '
-                        'typed text in the thread DOM; the message may '
-                        'not have sent, retry checks the bubble first')
-        out['error_code'] = 'send_unverified'
+    # The V12 gate is mandatory for a send (require_asserts above
+    # refused a gateless session before any keystroke), so a gate
+    # exists here; the check below is the postcondition, not an
+    # optional extra.
+    calls['dom'] += 1
+    out['dom_calls'] = calls['dom']
+    if session.sent_bubble_contains(text):
+        intents.add((selector, text))
+        out['sent_verified'] = True
+        out.update(action_result.build_contract(
+            input_sent=True, target_received=target_received,
+            verified=True, verified_basis='sent-bubble'))
         return out
-    intents.add((selector, text))
-    out['sent_verified'] = None
-    out['type_verified_basis'] = (
-        (out.get('type_verified_basis') or 'dom-value')
-        + '+enter-accepted')
+    out['sent_verified'] = False
+    out['error'] = ('send not verified: no sent bubble holds the '
+                    'typed text in the thread DOM; the message may '
+                    'not have sent, retry checks the bubble first')
+    out['error_code'] = 'send_unverified'
+    out.update(action_result.build_contract(
+        input_sent=True, target_received=target_received,
+        verified=False, verified_basis='sent-bubble'))
     return out

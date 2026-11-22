@@ -86,6 +86,8 @@ import time
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+import action_result
+
 OBSERVATION_MAX_AGE_S = 120
 DEFAULT_SESSION_DEADLINE_S = 20.0
 FIRST_VISIBLE_ACTION_TARGET_MS = 30000
@@ -516,6 +518,15 @@ def run(args):
     method = args.method
     envelope = {
         'ok': False,
+        # CB-1 (step 5): the three-part contract rides the envelope
+        # beside ok. ok stays the end-state statement; input_sent
+        # says the input went out, verified says a postcondition
+        # passed. A result from an older build has no contract
+        # fields; the migration below names that instead of
+        # inventing a postcondition.
+        'input_sent': None,
+        'verified': None,
+        'verified_basis': None,
         'path': 'refused',
         'agent': agent,
         'method': method,
@@ -716,6 +727,23 @@ def run(args):
         if isinstance(session_result, dict):
             envelope['type_verified'] = session_result.get('type_verified')
             envelope['error_code'] = session_result.get('error_code')
+            # CB-1 migration (step 5): carry the contract, not just
+            # ok. A session result from an older build carries no
+            # contract fields; migrate_legacy_result maps its bare
+            # ok to input_sent with verified None, never to a
+            # claimed postcondition.
+            if ('input_sent' in session_result
+                    or 'verified' in session_result):
+                envelope['input_sent'] = session_result.get('input_sent')
+                envelope['verified'] = session_result.get('verified')
+                envelope['verified_basis'] = session_result.get(
+                    'verified_basis')
+            else:
+                migrated = action_result.migrate_legacy_result(
+                    session_result)
+                envelope['input_sent'] = migrated['input_sent']
+                envelope['verified'] = migrated['verified']
+                envelope['verified_basis'] = migrated['verified_basis']
             if isinstance(session_result.get('after'), dict):
                 result_after = session_result['after']
         # CB-7: first-pointer time on the session path, from t0:
@@ -738,21 +766,34 @@ def run(args):
         if rc == 0 and not timed_out:
             # Council 1, A3: the exit code alone never proves success.
             # Require the stdout envelope to say ok, or to be the
-            # completed-capture-error shape (full batch ran).
+            # completed-capture-error shape (full batch ran). CB-1
+            # (step 5): ok is read through the contract, so a
+            # session ok that means only "input sent" without a
+            # postcondition cannot pass here as a verified success.
             if (isinstance(session_result, dict)
-                    and session_result.get('ok') is True):
+                    and _is_completed_capture(session_result,
+                                              len(actions))):
+                envelope['path'] = 'session'
+                envelope['ok'] = True
+                envelope['completed'] = len(actions)
+                # The full batch ran but the after-capture failed,
+                # so no postcondition ran: the input went out,
+                # nothing was verified. This branch comes first
+                # because contract_ok would also pass this shape
+                # (verified None, input sent) with a vaguer basis.
+                envelope['input_sent'] = True
+                envelope['verified'] = None
+                envelope['verified_basis'] = (
+                    'completed-capture: after-capture failed, no '
+                    'postcondition ran')
+            elif (isinstance(session_result, dict)
+                    and action_result.contract_ok(session_result)):
                 completed = session_result.get('completed')
                 envelope['path'] = 'session'
                 envelope['ok'] = True
                 envelope['completed'] = (completed
                                          if type(completed) is int
                                          else len(actions))
-            elif (isinstance(session_result, dict)
-                    and _is_completed_capture(session_result,
-                                              len(actions))):
-                envelope['path'] = 'session'
-                envelope['ok'] = True
-                envelope['completed'] = len(actions)
             else:
                 envelope['path'] = 'session'
                 envelope['ok'] = False
@@ -826,10 +867,24 @@ def run(args):
                         # with typing, stale observation, window moved)
                         # lands in the envelope, not as a traceback,
                         # and the after-capture below still runs.
+                        # CB-1: refused before input, so nothing was
+                        # sent and no postcondition ran.
                         envelope['ok'] = False
+                        envelope['input_sent'] = False
+                        envelope['verified'] = None
+                        envelope['verified_basis'] = (
+                            'refused before input')
                         envelope['error'] = str(exc)[:400]
                     else:
                         envelope['ok'] = result.get('ok') is True
+                        # CB-1: the fallback result carries the
+                        # contract (desktop_act stamps it), so the
+                        # envelope reports sent vs verified, not
+                        # just ok.
+                        envelope['input_sent'] = result.get('input_sent')
+                        envelope['verified'] = result.get('verified')
+                        envelope['verified_basis'] = result.get(
+                            'verified_basis')
                         envelope['completed'] = result.get('completed', 0)
                         _fp_action = _first_pointer_action_ms(result)
                         _preflight = result.get('preflight_ms')

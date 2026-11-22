@@ -377,6 +377,11 @@ class R5EnterOrderingTests(unittest.TestCase):
             session.fields['#msg-input']['value'] = text
 
         def _enter():
+            # Step 5 (P5): the app posts the sent bubble on Enter,
+            # which is what the mandatory V12 gate reads. Recording
+            # the send only in act.sent would leave the gate blind.
+            session.sent_bubbles.append(
+                session.fields['#msg-input']['value'])
             act.sent.append(session.fields['#msg-input']['value'])
             session.fields['#msg-input']['value'] = ''
 
@@ -399,6 +404,11 @@ class R5EnterOrderingTests(unittest.TestCase):
             session.fields['#msg-input']['value'] = text
 
         def _enter():
+            # Step 5 (P5): the app posts the sent bubble on Enter,
+            # which is what the mandatory V12 gate reads. The retry
+            # then sees the bubble in the pre-send check and skips.
+            session.sent_bubbles.append(
+                session.fields['#msg-input']['value'])
             act.sent.append(session.fields['#msg-input']['value'])
             session.fields['#msg-input']['value'] = ''
 

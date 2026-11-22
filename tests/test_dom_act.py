@@ -43,8 +43,17 @@ class FakeDomSession:
         self.live_origin = live_origin
         self.dom_calls = 0
         self.sent_intents = set()
+        # Step 5 (P5/CB-1): the base fake models a real ZenSession,
+        # which exposes the V12 sent-bubble gate. A test that needs
+        # a gateless session must delete this attribute, not assume
+        # the base fake lacks it.
+        self.sent_bubbles = []
         self._armed = {}
         self._typed = {}
+
+    def sent_bubble_contains(self, text):
+        self.dom_calls += 1
+        return text in self.sent_bubbles
 
     def live_window_origin(self, address=None):
         return self.live_origin
@@ -397,8 +406,12 @@ class GroundInputTests(unittest.TestCase):
 
 class FocusTypeTests(unittest.TestCase):
     def test_happy_path_click_type_enter_from_one_observation(self):
-        session = FakeDomSession({'#msg-input': G30_FIELD})
-        act = FakeAct(session)
+        # Step 5 (P5): the send runs on a V12 session, so the V12
+        # gate is the postcondition. The old enter-accepted path
+        # (a gateless session reporting ok) is gone: a session
+        # without the gate refuses before any keystroke.
+        session = V12Session({'#msg-input': G30_FIELD})
+        act = V12Act(session)
         result = dom_act.focus_type(session, act, G30_META, '#msg-input',
                                     'hello', enter=True)
         self.assertTrue(result['ok'])
@@ -406,12 +419,17 @@ class FocusTypeTests(unittest.TestCase):
         self.assertEqual(result['point'], [306.0, 1132.5])
         self.assertTrue(result['focus_verified'])
         self.assertTrue(result['type_verified'])
-        self.assertEqual(result['type_verified_basis'],
-                         'dom-value+enter-accepted')
-        self.assertEqual(result['dom_calls'], 8,
+        self.assertEqual(result['type_verified_basis'], 'dom-value')
+        self.assertTrue(result['sent_verified'])
+        self.assertTrue(result['input_sent'])
+        self.assertTrue(result['target_received'])
+        self.assertTrue(result['verified'])
+        self.assertEqual(result['verified_basis'], 'sent-bubble')
+        self.assertEqual(result['dom_calls'], 10,
                          '4 grounding (locate + origin + hit + '
-                         're-locate) + before-value + arm + focus + '
-                         'type, all cheap')
+                         're-locate) + pre-send V12 + before-value + '
+                         'arm + focus + type + post-send V12, all '
+                         'cheap')
         self.assertEqual(result['observes_added'], 0)
         self.assertEqual(result['act_observes'], 0)
         self.assertEqual(act.typed, ['hello'])
@@ -439,17 +457,19 @@ class FocusTypeTests(unittest.TestCase):
 
     def test_click_miss_never_types(self):
         missed = dict(G30_FIELD, focused=False)
-        session = FakeDomSession({'#msg-input': missed})
-        act = FakeAct(session)
+        session = V12Session({'#msg-input': missed})
+        act = V12Act(session)
         result = dom_act.focus_type(session, act, G30_META, '#msg-input',
                                     'hello', enter=True)
         self.assertFalse(result['ok'])
         self.assertEqual(result['error_code'], 'focus_unverified')
         self.assertEqual(result['completed'], 1, 'click only, no type')
         self.assertEqual(act.typed, [], 'no keystroke was sent blind')
-        self.assertEqual(result['dom_calls'], 7,
-                         'grounding 4 + before-value + arm + focus 1, '
-                         'type check never ran')
+        self.assertFalse(result['input_sent'])
+        self.assertFalse(result['target_received'])
+        self.assertEqual(result['dom_calls'], 8,
+                         'grounding 4 + pre-send V12 + before-value + '
+                         'arm + focus 1, type check never ran')
 
     def test_type_unverified_after_typing(self):
         # The click focused the input and the text was typed, but the
