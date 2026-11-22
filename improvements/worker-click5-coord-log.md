@@ -1827,4 +1827,49 @@ workspaces at the same time.
 - Still running: C5-Y13G-R3-FIX (e7f7e026). No stall at last
   check.
 
-## 34. (to be filled as results land)
+## 34. OWNER DIRECT ORDER 16:00: rung 2 live acceptance test RUN NOW, in parallel with step 9; C5-RUNG2 spawned (16:00-16:02 +07)
+
+- Direct order from the owner via Muse, 16:00 +07: run the
+  rung 2 live acceptance test NOW, do not wait for steps 9-10
+  to finish. The owner asked why the acceptance test still has
+  not run after about 14 hours, and he is right to ask: the
+  machinery it needs is ready (S2 flip reopen 5/5, 10/10
+  sends, median 28.6s, EXPAND approved; step 7 P2 done and
+  verified; step 8 broker transport done and live-proven).
+- ACTION: spawned C5-RUNG2 (32c18db1) 16:01 +07. Rung 2 per
+  the final direction section 4, in parallel with step 9:
+  live 0-vision on the real ws2 clone chats (clone1 Brave +
+  clone2 Chrome), DOM harvest/plan/execute/verify, zero
+  screenshots in the machine loop, accuracy >=90% scored by
+  DOM outcome (V12 sent-bubble gate), total wall time end to
+  end including transport, one final screenshot kept as
+  unscored human evidence, reviewed before the run scores as
+  passed; any DOM-vs-render mismatch FAILS the run. Both
+  clones capped, but the STEP8 smoke proved sending into their
+  chats still works, so the cap does not block the test.
+- Briefing includes: read final direction section 4 first and
+  follow its rung 2 protocol exactly (if section 4 leaves the
+  task count open, define 10 tasks, 5 per browser, distinct
+  content, accuracy = verified/attempted, PASS at >=90%, and
+  record the definition before running); reuse the STEP8 smoke
+  procedure; message prefix C5-RUNG2- (distinct from STEP9's
+  and the smoke's); collision control with STEP9 (broker
+  single-owner serialization, start --wait 300, never bypass,
+  never kill STEP9's task; V12 matches own message text
+  exactly; P9 review checks own messages only); step 8 broker
+  transport only (no resurrected spawn, no pill touch);
+  focus rule + live-run lessons in full (focus FIRST, then
+  observe, then act; persistent paths, never /tmp; STATE
+  observation file); window map + relay state (PID 1196429,
+  loaded d490f369f6b7, head 1b5a6e6) to be re-verified live
+  before the first live run.
+- Deliverable: log improvements/worker-click5-rung2-log.md +
+  run JSONs committed under improvements/c5-rung2-runs/ with
+  the final P9 screenshot(s) as unscored human evidence;
+  verdict PASS or FAIL with per-task walls, total wall,
+  accuracy, V12 results per send, and the P9 review outcome.
+  Report to Muse as soon as it lands, pass or fail.
+- Still running: C5-Y13G-R3-FIX (e7f7e026), C5-STEP9
+  (bef08f08). No stall at last check.
+
+## 35. (to be filled as results land)
