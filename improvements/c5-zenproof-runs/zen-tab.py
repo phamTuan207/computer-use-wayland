@@ -8,15 +8,39 @@ navigates, types into, or clicks on any existing tab: the only tab
 ever opened or closed is the scratch tab, and the only tab ever
 navigated is that scratch tab.
 
+Tab identity is the URL, never a stored Marionette handle.
+Handles are ephemeral per session on this Zen (W-ZENPROOF2 run 2
+proved it: 15 of 15 comparable URLs had a different handle between
+two list scans a minute apart), so a handle from one session means
+nothing in the next. Every subcommand resolves its tab by URL
+substring inside its own session, fresh, and refuses on ambiguity.
+The scratch tab is the fixture URL
+'two_vision_fixture.html?clone=zen'. Its document title is the
+static 'Two-vision benchmark fixture' (the fixture JS only sets
+the H1 text to 'Clone zen thread' and never touches
+document.title), so document.title is NEVER used to identify the
+scratch tab. The H1 text is a content confirmation only.
+
+Before any /url navigate or DELETE, open verifies the new tab was
+actually made current (POST /window/new must make the new tab
+current; if it does not, one explicit select is tried, and if that
+still fails the driver refuses to navigate or close anything).
+The open exception handler deletes ONLY when the current tab is
+the fixture tab by URL; it never deletes blind.
+
 Subcommands (each prints one JSON object on stdout):
   list                      list tabs (titles, urls), current first read
   open                      open a NEW tab on the fixture, viewport gate,
                             harvest #msg-input rect
-  switch <handle>           make <handle> the Marionette current tab,
-                            verify by reading it back
-  eval <handle> <expr>      switch to <handle>, evaluate JS expr, print value
-  close <new> <original>    close tab <new>, switch current to <original>,
-                            verify count and current title
+  switch <url-substr>       make the tab whose URL contains <url-substr>
+                            the Marionette current tab, verify by
+                            reading it back
+  eval <url-substr> <expr>  switch to the tab by URL, evaluate JS expr,
+                            print value
+  close <scratch-url> <original-url>
+                            close the scratch tab (by URL), switch
+                            current to the original tab (by URL),
+                            verify count and current URL
   kill-hung                 kill hung remote-control clients (recovery only)
 
 No em dash or en dash anywhere. Exit 0 on success, 1 on failure
@@ -32,7 +56,13 @@ import zen_dom
 
 FIXTURE_URL = ('file:///home/james/computer-use-wayland/tests/'
                'two_vision_fixture.html?clone=zen')
-SCRATCH_TITLE = 'Clone zen thread'
+# URL identity of the scratch tab (fix a). The fixture's document
+# title is the static 'Two-vision benchmark fixture'; its JS only
+# sets the H1 text. Target the tab by this URL substring, never by
+# document.title. SCRATCH_H1 is a content confirmation, read from
+# the page after navigation, not a tab identity.
+SCRATCH_URL_SUBSTR = 'two_vision_fixture.html?clone=zen'
+SCRATCH_H1 = 'Clone zen thread'
 
 
 def _session():
@@ -49,6 +79,70 @@ def _current(z):
 
 def _title(z):
     return z._wd("GET", f"/session/{z.session}/title")["value"]
+
+
+def _url(z):
+    return z._wd("GET", f"/session/{z.session}/url")["value"]
+
+
+def _scan(z):
+    """(entries, full_handles) from a fresh list_tabs scan.
+
+    Entries carry truncated handles (8 chars), titles, and URLs.
+    Full handles come from the handle list. The scan switches
+    through tabs and restores the original tab afterwards (that is
+    list_tabs behavior); it only reads.
+    """
+    return z.list_tabs(), _handles(z)
+
+
+def _full_handle(full_handles, prefix):
+    """The one full handle starting with prefix. Refuses on zero
+    (gone) or more than one (ambiguous prefix)."""
+    matches = [h for h in full_handles if h.startswith(prefix)]
+    if not matches:
+        raise zen_dom.ZenDomError(
+            'no handle starts with %r (%d handles)'
+            % (prefix, len(full_handles)))
+    if len(matches) > 1:
+        raise zen_dom.ZenDomError(
+            'handle prefix %r is ambiguous (%d matches)'
+            % (prefix, len(matches)))
+    return matches[0]
+
+
+def _find_in_scan(entries, substr):
+    """Tab entry whose URL contains substr, or None when no tab
+    matches. Raises on more than one match: URL identity must be
+    unique, and the caller must never pick blindly. Entries with
+    no URL (a failed read) are skipped, never matched.
+    """
+    matches = [e for e in entries
+               if isinstance(e.get('url'), str)
+               and substr in e['url']]
+    if not matches:
+        return None
+    if len(matches) > 1:
+        raise zen_dom.ZenDomError(
+            'URL %r matches %d tabs, refusing to pick one'
+            % (substr, len(matches)))
+    return matches[0]
+
+
+def _resolve_url(z, substr):
+    """Full handle of the one tab whose URL contains substr.
+
+    Resolved fresh inside this session, never from a stored
+    handle. Raises when no tab matches or the match is
+    ambiguous. One scan only, so the entry and the handle list
+    come from the same moment.
+    """
+    entries, full = _scan(z)
+    entry = _find_in_scan(entries, substr)
+    if entry is None:
+        raise zen_dom.ZenDomError(
+            'no tab URL contains %r' % (substr,))
+    return _full_handle(full, entry['handle'])
 
 
 def _switch(z, handle):
@@ -73,9 +167,37 @@ def cmd_open():
         before = _handles(z)
         current_before = _current(z)
         title_before = _title(z)
+        url_before = _url(z)
+        # Pre-check (fix b): no tab may already carry the fixture
+        # URL. Two fixture tabs would make URL identity ambiguous,
+        # and the new tab could not be told apart from the stale
+        # one. Refuse before opening anything.
+        entries, _full = _scan(z)
+        if _find_in_scan(entries, SCRATCH_URL_SUBSTR) is not None:
+            raise zen_dom.ZenDomError(
+                'a tab already shows the fixture URL; refusing to '
+                'open a second one')
         resp = z._wd("POST", f"/session/{z.session}/window/new",
                      {"type": "tab"})
         new_handle = resp["value"]["handle"]
+        # Fix (c): the new tab must actually be current before any
+        # /url navigate or DELETE. Marionette may leave the
+        # previous tab current (the run 2 incident: the navigate
+        # rewrote the owner's tab and the DELETE closed it). Try
+        # one explicit select; if the new tab still is not
+        # current, refuse outright: no navigate, no close.
+        current_now = _current(z)
+        selected_by = 'window/new'
+        if current_now != new_handle:
+            z._wd("POST", f"/session/{z.session}/window",
+                  {"handle": new_handle})
+            current_now = _current(z)
+            selected_by = 'explicit-select'
+        if current_now != new_handle:
+            raise zen_dom.ZenDomError(
+                'new tab was not made current (current %s != new '
+                '%s); refusing to navigate or close'
+                % (current_now[:8], new_handle[:8]))
         try:
             z._wd("POST", f"/session/{z.session}/url",
                   {"url": FIXTURE_URL})
@@ -86,13 +208,25 @@ def cmd_open():
                 if ready == "complete":
                     break
                 time.sleep(0.1)
-            title = _title(z)
-            if title != SCRATCH_TITLE:
+            # Fix (a): identify the scratch tab by URL, never by
+            # document.title. The fixture title is the static
+            # 'Two-vision benchmark fixture'; the H1 text is a
+            # content confirmation that the clone JS ran.
+            url = _url(z)
+            if SCRATCH_URL_SUBSTR not in url:
                 raise zen_dom.ZenDomError(
-                    'scratch tab title %r != %r' % (title, SCRATCH_TITLE))
+                    'navigated tab URL %r does not contain %r'
+                    % (url, SCRATCH_URL_SUBSTR))
+            h1 = z.evaluate(
+                "return document.getElementById('title') ? "
+                "document.getElementById('title').textContent : null;")
+            if h1 != SCRATCH_H1:
+                raise zen_dom.ZenDomError(
+                    'scratch tab H1 %r != %r' % (h1, SCRATCH_H1))
             if ready != "complete":
                 raise zen_dom.ZenDomError(
                     'scratch tab readyState %r, not complete' % (ready,))
+            title = _title(z)
             # Viewport gate (finding C): a Marionette opened tab on
             # live windowed Zen may report a 0x0 viewport, in which
             # case no screen point is meaningful and no input runs.
@@ -123,84 +257,118 @@ def cmd_open():
             harvest = z.harvest(['#msg-input'])
             return {'ok': True, 'new_handle': new_handle,
                     'new_handle_prefix': new_handle[:8],
-                    'title': title, 'ready': ready,
+                    'title': title, 'url': url, 'h1': h1,
+                    'selected_by': selected_by,
+                    'ready': ready,
                     'count_before': len(before),
                     'count_after': len(_handles(z)),
                     'current_before': current_before[:8],
                     'title_before': title_before,
+                    'url_before': url_before,
                     'metrics': metrics, 'rect': rect,
                     'element_at_point': at,
                     'viewport_ok': viewport_ok,
                     'harvest': harvest}
         except Exception:
-            # Best-effort close of the scratch tab we just opened,
-            # then re-raise so the caller records the failure.
+            # Close ONLY the scratch tab. DELETE closes the
+            # CURRENT window, so first confirm the current tab
+            # really is the fixture tab, by URL. When it is not
+            # (the run 2 incident: the current tab was the owner's
+            # Muse tab), delete nothing and leave every tab
+            # untouched. After a scratch DELETE, best-effort
+            # restore the tab that was current before the open.
             try:
-                z._wd("DELETE", f"/session/{z.session}/window", {})
+                cur_url = _url(z)
             except Exception:
-                pass
+                cur_url = None
+            if cur_url is not None and SCRATCH_URL_SUBSTR in cur_url:
+                try:
+                    z._wd("DELETE", f"/session/{z.session}/window", {})
+                except Exception:
+                    pass
+                try:
+                    _switch(z, current_before)
+                except Exception:
+                    pass
             raise
 
 
-def cmd_switch(handle):
+def cmd_switch(url_substr):
     with _session() as z:
-        handles = _handles(z)
-        full = None
-        for h in handles:
-            if h == handle or h.startswith(handle):
-                full = h
-                break
-        if full is None:
-            raise zen_dom.ZenDomError(
-                'no handle matches %r (%d handles)' % (handle, len(handles)))
+        full = _resolve_url(z, url_substr)
         _switch(z, full)
-        return {'ok': True, 'handle': full[:8], 'title': _title(z)}
+        return {'ok': True, 'handle': full[:8], 'title': _title(z),
+                'url': _url(z)}
 
 
-def cmd_eval(handle, expr):
+def cmd_eval(url_substr, expr):
     with _session() as z:
-        handles = _handles(z)
-        full = None
-        for h in handles:
-            if h == handle or h.startswith(handle):
-                full = h
-                break
-        if full is None:
-            raise zen_dom.ZenDomError(
-                'no handle matches %r (%d handles)' % (handle, len(handles)))
+        full = _resolve_url(z, url_substr)
         _switch(z, full)
         value = z.evaluate("return (%s);" % expr)
-        return {'ok': True, 'handle': full[:8], 'value': value}
+        return {'ok': True, 'handle': full[:8], 'url': _url(z),
+                'value': value}
 
 
-def cmd_close(new_handle, original_handle):
+def cmd_close(scratch_substr, original_url):
+    """Close the scratch tab (by URL), restore the original tab
+    (by URL). The scratch close itself is precise by URL, so it
+    runs even when the original tab is gone or ambiguous; the
+    restore step never guesses. When the scratch tab is already
+    gone, the goal is already true and only the restore runs.
+    """
     with _session() as z:
         handles = _handles(z)
         count_before = len(handles)
-        new_full = None
-        orig_full = None
-        for h in handles:
-            if h == new_handle or h.startswith(new_handle):
-                new_full = h
-            if h == original_handle or h.startswith(original_handle):
-                orig_full = h
-        if new_full is None:
-            raise zen_dom.ZenDomError(
-                'scratch handle %r is gone already' % (new_handle,))
-        if orig_full is None:
-            raise zen_dom.ZenDomError(
-                'original handle %r is gone; refusing to close blind'
-                % (original_handle,))
-        _switch(z, new_full)
+        entries, full = _scan(z)
+        scratch = _find_in_scan(entries, scratch_substr)
+        if scratch is None:
+            result = {'ok': True, 'already_closed': True,
+                      'count_before': count_before,
+                      'count_after': count_before}
+            _restore_original(z, original_url, result)
+            return result
+        scratch_full = _full_handle(full, scratch['handle'])
+        _switch(z, scratch_full)
         z._wd("DELETE", f"/session/{z.session}/window", {})
         after = _handles(z)
-        if new_full in after:
-            raise zen_dom.ZenDomError('scratch tab still listed after close')
-        _switch(z, orig_full)
-        title = _title(z)
-        return {'ok': True, 'count_before': count_before,
-                'count_after': len(after), 'current_title': title,
-                'current_handle': orig_full[:8]}
+        # Verify by a fresh scan that the scratch tab is gone, and
+        # re-resolve the original tab after the mutation instead
+        # of trusting a handle from before the DELETE.
+        entries_after, _full_after = _scan(z)
+        if _find_in_scan(entries_after, scratch_substr) is not None:
+            raise zen_dom.ZenDomError(
+                'scratch tab still listed after close')
+        result = {'ok': True, 'count_before': count_before,
+                  'count_after': len(after)}
+        _restore_original(z, original_url, result)
+        return result
+
+
+def _restore_original(z, original_url, result):
+    """Best-effort switch to the original tab, by URL. Never
+    guesses: when the URL is missing or matches more than one
+    tab, the current tab is left as Zen activated it and the
+    result says so.
+    """
+    ambiguous = False
+    try:
+        entries, full = _scan(z)
+        orig = _find_in_scan(entries, original_url)
+    except zen_dom.ZenDomError:
+        orig = None
+        ambiguous = True
+    if orig is None:
+        result['original_missing'] = not ambiguous
+        result['original_ambiguous'] = ambiguous
+        result['current_title'] = _title(z)
+        result['current_url'] = _url(z)
+        return
+    orig_full = _full_handle(full, orig['handle'])
+    _switch(z, orig_full)
+    result['current_title'] = _title(z)
+    result['current_url'] = _url(z)
+    result['current_handle'] = orig_full[:8]
 
 
 def main(argv):
