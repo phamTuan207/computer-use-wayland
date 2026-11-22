@@ -458,3 +458,25 @@ Em da doc ky ca hai muc moi cua Muse tong, ghi nhan vao file nay theo yeu cau.
 - Mei, toi la Pham Tuan. Ban im tu 19:10 toi gio, khong co commit moi, ban khong viet gi vao file nay tu 17:45.
 - Bao ngay tien do vao file nay: (1) danh sach rung-3 100 task toi dau roi, (2) tra loi 4 cau NEEDS CHANGE toi hoi luc 19:08.
 - Neu ket o dau thi noi ro ket o dau, dung im. Viec 3 van la uu tien.
+
+## Tra loi nudge 19:58, bao tien do viec 3 va tra loi 4 cau NEEDS CHANGE viec 2, 2026-11-22 20:11 gio Viet Nam
+
+### (1) Tien do danh sach rung-3 100 task
+
+- Research xong 18:56-18:59: danh muc loai tru 98 task + 18 dang, 50 task ung cu trinh duyet, 50 task ung cu desktop, ban sao du phong o ~/workspace, sha256 da kiem chung.
+- Tong hop xong 19:00-19:11: ban v1, 842 dong, 118752 byte, du 100 ma R3-001 den R3-100, trinh duyet 50, desktop 50, do kho trung binh 40, kho 45, rat kho 15.
+- Review vong 1 xong 19:11-19:20: council 1, council 2, council 3, redteam, ca 4 deu NEEDS CHANGE. Tong hop finding o ~/workspace/rung3-review-findings.md.
+- Fix vong 2 xong 19:16-19:34: ban v2, 912 dong, 147937 byte, sha256 5e144ac8, thay 42 task, sua 56 task, do kho trung binh 29, kho 55, rat kho 16.
+- Review vong 2 xong 19:36-19:43: council A, council B, redteam, ca 3 deu NEEDS CHANGE. Tong hop finding o ~/workspace/rung3-review-findings-v2.md. Phat hien lon nhat: R3-012 trung truc tiep G14 task 1 da chay tren main, cum tra cuu cong cu web thay cum nghien cuu-bang, quy tac task vo hieu pha vo toan hoc 96/100.
+- Fix vong 3 xong 19:44-20:05: ban v3, 953 dong, 164410 byte, sha256 0f9ef109, thay 20 task, sua 25 task, doi do kho 10 task, do kho trung binh 36, kho 44, rat kho 20, ti le terminal desktop 16/50. Script kiem tra tu dong /tmp/rung3-verify-v3.py chay xong exit 0, 1100 muc PASS, 0 FAIL, 138 so grep do lai bang git grep -F deu khop. Ban sao du phong o ~/workspace/rung3-list-draft-v3.md.
+- Dang lam: review vong 3, 3 agent chay tu 20:08 (council A review 20 task moi, council B review quy tac va task giu lai, redteam pha ban v3). Sau do: fix vong 4 neu can, verify doc lap tu dau, commit danh sach len todolist-push, push, kiem tra bang git ls-remote, bao cao hoan thanh viec 3 vao file nay.
+- Khong ket o dau. Lane hoat dong lien tuc, chi la review va fix dien ra trong /tmp va ~/workspace truoc khi commit nen main it thay commit moi. Em se commit bao cao tien do vao file nay thuong xuyen hon de khong im lang lau.
+- Ghi chu: em da viet vao file nay luc 19:56, commit 3b0275e (lam ro lane khong stall va da doc W-PILLVERIFY2 PASS), truoc nudge 19:58 cua anh 2 phut, co the anh chua thay commit do khi viet nudge.
+
+### (2) Tra loi 4 finding NEEDS CHANGE viec 2, moi finding mot dong
+
+- F1 LOW, khoang Brave fill 137-178 ms phai la 133-178 ms: em DONG Y, khi quay lai viec 2 em se sua dong do trong thiet ke thanh 133-178 ms, vi flip co 133.0 ms.
+- F2 HIGH, thiet ke khong co gate pill 18:30, cho phep live harness va CDP tho o E4, E1 pre-check, E7, E2: em DONG Y, khi quay lai viec 2 em se them muc gate pill bat buoc o dau thiet ke, moi live arm phai di qua duong cdp.mjs va s2_flip_live.py duoc bao phu boi pill trung tam cua W-PILLCDP (commit d0602dd, fail closed), va chi chay live sau khi co xac nhan live render bang van ban cua Muse tong (W-PILLVERIFY2 9ac4dcd da PASS, gate 4.29 met, nhung van cho xac nhan bang van ban); cac probe di qua session co pill la E0, E1 chay chinh, E2 bien the, E3, E5, E6, E8 qua duong harness; cac probe VAN DUNG la E4 mo WebSocket moi, E1 pre-check mouseMoved probe, E7 click, E2 regression probe qua /tmp/c5-stall-regression-probe.mjs, cho den khi dua chung ve duong co pill hoac co xac nhan rieng.
+- F3 MEDIUM, thiet ke khong ghi luat 18:23 va van lenh dong scratch tab: em DONG Y, khi quay lai viec 2 em se viet luat 18:23 bang chu o dau thiet ke va trong tung muc thi nghiem, khong bao gio dong hoac dieu huong tab va cua so cua nguoi dung, scratch tab tu tao chi dong sau khi Muse tong xac nhan bang van ban, neu khong thi de tab mo va ghi lai de bao cao, va neu thi nghiem can tab sach thi mo cua so trinh duyet moi ben canh thay vi dong tab cu.
+- F4 LOW, finally block 604-612 phai la 605-612: em DONG Y, khi quay lai viec 2 em se sua dong trich dan trong thiet ke thanh 605-612.
+- Khong chay live gi cho viec 2 luc nay. Viec 3 van la uu tien.
