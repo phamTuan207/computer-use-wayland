@@ -79,5 +79,17 @@
 - Ngoai pham vi, can quyet follow-up: V5, V6, V9, V10 van mo nhu luc audit; V12 doi (700144a resolve duoc, tip branch LOCAL step3-stream-prep, chua co tren remote); V4/V7/V8/V11 van local-only; V13 van PROVISIONAL co khai bao.
 - W-ARIA tien trien: commit f209b3a (close role-map gaps A-D) + 3a358a0 (role-map audit log), van dang chay.
 
+## W-ARIA xong 17:59 (muc 3): 4 gap role-map cung lop run 90, da fix
+- Gap A: div contenteditable harvest thanh "div", chuan ARIA la textbox. Gap B: input role searchbox/combobox bi tu choi. Gap C: div role=textbox khong co trong snapshot vi INTERACTIVE thieu [role="textbox"] (nhanh chet). Gap D: role viet hoa "TextBox" bi tu choi do so sanh case-sensitive, cho duy nhat case-sensitive trong snapshot.
+- Fix landing f209b3a: cdp.mjs INTERACTIVE them [role="textbox"],[role="searchbox"],[role="combobox"], snapshot role chuan hoa contenteditable thanh textbox + lowercase, confirm_click dung cung cong thuc; s2_flip_live.py COMPOSER_ROLES them searchbox, combobox. Log 3a358a0 + d17f805. Toi kiem chung doc lap: doc code (COMPOSER_ROLES co du 5 role, INTERACTIVE co du selector), chay lai test_s2_flip_wiring 21 tests OK.
+- Bang chung failing-first: truoc fix 21 tests FAILED 1 + cdp_snapshot fail; sau fix 21 OK, cdp_snapshot rc=0, khong regression (cdp_validation rc=0, test_code_exec + test_dom_act 79 OK). Live tren Chromium agent 9223 (tab scratch, dong ngay, khong dong vao Zen): truoc fix 9 element, sau fix 10 element (e3/e6/e7 textbox), grounding ra dung e3/e7.
+- Su co push: commit 8d5eb3b cua W-EVID quet edit log cua W-ARIA (broad add), W-ARIA giai quyet bang reset --soft ve 7267e51 roi commit --only thanh d17f805, khong force-push. Da kiem chung 3 commit tren remote.
+- Mo follow-up: live_metrics.py clickable role list va phu song snapshot cho AX role switch/slider/spinbutton/radio (chua consumer nao ground).
+
+## Tien trien lane khac (doc tu log origin)
+- W-TODO commit 44b9a80: Y6 A8-INVEST fix applied (marker file gate, G4 first, teardown copy-out) + re-review GO, 16/16 tests PASS.
+- W-ZENPREP commit cb741fe: prep live proof xong (procedure, scratch target, checklist, risks). Tin cho chay live da gui, dang cho ket qua.
+- C5-AGENT-NATIVE-2 commit 454af5d: full launch-path inventory verified, PWA + open-url + fcc fixes (khong phai lane cua COORD-CLICK-6, ghi de biet).
+
 ## Luat ap cho moi worker
 - Huong cuoi e05fc58 la luat. Chuan Lauren Tan (lenh + output + commit hash + thoi gian). Khong tu cham pass, worker doc lap kiem chung lai. Khong ydotool. Khong dau gach ngang dai. Commit pathspec ro rang, push xong kiem tra ls-remote. Khong dua thong tin ca nhan cua Pham Tuan len GitHub. Worker ket qua 15 phut thi giet ngay. Song song het muc, khong cat buoc.
