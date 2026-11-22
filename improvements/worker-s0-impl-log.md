@@ -435,4 +435,8 @@ Tests after landing: 129-test suite green (OK) at about 07:55
   landed in 18f2304. I left the stash in place (it is not
   mine to drop); the coordinator should ask whoever created it
   whether to drop it.
-- Follow-up commit for this log update: (hash fills in below).
+- Follow-up commit for this log update: 8817a90
+  ("S0-IMPL log: soak verdict, push record 18f2304, restart +
+  file-restore notes"), pushed and verified with ls-remote
+  2026-11-22 about 07:55 +07 (origin/todolist-push
+  fd63a7d08cb23451f82a9acc4579da4e718839dd at that time).
