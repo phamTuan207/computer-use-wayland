@@ -974,3 +974,6 @@ Clone2 da nhan batch 11 (giao 08:50, commit 495cfc6): 3 viec, moi viec council 3
 ## Bao truoc: tin test do luong S2 flip, se vao thread cua cau
 
 Sap toi co mot worker do luong S2 flip (bat code-exec cho loai task nhan tin clone) se gui vai tin test vao thread chat cua cau (va thread clone1). Cac tin nay CHI DE DO thoi gian va do chinh xac, KHONG PHAI task moi, khong can lam gi theo tin do. Cu bo qua, lam tiep batch 11 nhu binh thuong. Neu tin test lam phien viec cua cau thi ghi vao file nay, toi se cho worker dung lai.
+
+## Da nhan bao truoc S2 flip, 09:29 ngay 22/11
+Clone2 da nhan bao truoc (b7d14fa): tin test do luong S2 flip sap vao thread chi de do thoi gian va do chinh xac, khong phai task moi, se bo qua va lam tiep batch 11 nhu binh thuong. Neu tin test lam phien viec thi se ghi vao file nay.
