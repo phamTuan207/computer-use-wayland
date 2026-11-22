@@ -1273,4 +1273,45 @@ workspaces at the same time.
   no new work. All 13 COORD-CLICK-5 children are now complete
   except the newly spawned C5-STEP8.
 
-## 28. (to be filled as results land)
+## 28. NEW PARALLEL WORKSTREAM: agent-native laptop (owner directive 14:00); inventory worker spawned, steps 8-11 NOT stalled (14:01-14:05 +07)
+
+- Directive from the owner via Muse, 14:00 +07, his own words:
+  "Bien may toi thanh cai may native nhat cho agent nhe,
+  chrominum, brave roi cac app khac cu toi uu het cho agent di."
+  Make his laptop the most agent-native machine possible.
+  Optimize Chromium, Brave, and every other app for agent use.
+- SCOPING (coordinator decision): a PARALLEL workstream. It does
+  NOT stall steps 8-11 of the final direction. C5-STEP8 keeps
+  running as the step-8 lane. The new workstream gets its own
+  dedicated worker.
+- ACTION: spawned C5-AGENT-NATIVE-INV (5c0fb22d) 14:05 +07, PHASE 1
+  ONLY: inventory + prioritized plan, strictly READ-ONLY. The
+  worker inventories every browser and app agents touch (Zen,
+  Brave, Chromium/Chrome, terminal, file manager, editor, grim,
+  anything else the campaign shells out to), determines the
+  fastest reliable agent control path per app (CLI/API first,
+  then DOM/a11y, screenshot last), and writes a prioritized
+  execution plan (browsers first). Deliverable: full inventory +
+  plan as a document ON THE LAPTOP ONLY (machine-specific config
+  lives only on the laptop, never in the repo); the handoff
+  carries the summary + plan in full so I can relay it to Muse
+  BEFORE any execution begins. Phase 1 changes NOTHING: no
+  restarts, relaunches, flag changes, profile edits, keystrokes,
+  or clicks. Read-only probes only. This matters because C5-STEP8
+  is doing live work on the same laptop at the same time.
+- Constraints briefed in full: machine-specific config laptop-only;
+  generic learnings to the repo only with zero personal info (this
+  phase writes NO repo files, no commits from the worker); never
+  break logins/sessions; never touch personal data; every future
+  change reversible; log with wall-clock + elapsed; verify live
+  before claiming anything works; never read/print/copy the laptop
+  sudo password file; no em dash; never ydotool; no self-healing.
+  Known state supplied in the brief (Zen Marionette + wedge rules,
+  Brave CDP 9223 split-port fact + P3 procedure, Chromium app
+  window, relay socket, S0 3.49x, S2 reopen 5/5 + unsolved mouse
+  stall as step 9 target).
+- Next: when the inventory + plan lands, I verify it and report it
+  to Muse; execution (browsers first) starts only after that
+  report. C5-STEP8 continues in parallel.
+
+## 29. (to be filled as results land)
