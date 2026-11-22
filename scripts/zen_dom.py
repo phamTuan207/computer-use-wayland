@@ -577,7 +577,7 @@ class ZenSession:
         browsing-context call, never silently drop the target from an
         "every input" harvest.
         """
-        js = ("(function(){" + _FIND_JS +
+        js = ("return (function(){" + _FIND_JS +
               "const e=find(%s);"
               "if(!e) return null;"
               " const r=e.getBoundingClientRect();"
@@ -698,7 +698,8 @@ class ZenSession:
             " window.outerWidth, window.outerHeight];")
         if (not isinstance(raw, (list, tuple)) or len(raw) != 9
                 or any(v is None or isinstance(v, bool)
-                       or not isinstance(v, (int, float)) for v in raw)):
+                       or not isinstance(v, (int, float))
+                       for i, v in enumerate(raw) if i != 3)):
             raise ZenDomError(
                 'viewport origin read is not nine numbers: %r' % (raw,))
         moz_inner = [raw[0], raw[1]]
@@ -830,7 +831,7 @@ class ZenSession:
         the field. A plain text SPAN inside the field still passes.
         """
         return bool(self.evaluate(
-            "(function(){" + _FIND_JS + _FRAME_POINT_JS +
+            "return (function(){" + _FIND_JS + _FRAME_POINT_JS +
             "const e=find(%s);"
             "if(!e) return false;"
             "const r=e.getBoundingClientRect();"
@@ -866,7 +867,7 @@ class ZenSession:
         false-negatived that shape.
         """
         return bool(self.evaluate(
-            "(function(){" + _FIND_JS + _DEEP_ACTIVE_JS +
+            "return (function(){" + _FIND_JS + _DEEP_ACTIVE_JS +
             "const e=find(%s);"
             "if(!e) return false;"
             "const a=deepActive();"
@@ -887,7 +888,7 @@ class ZenSession:
         the target.
         """
         return self.evaluate(
-            "(function(){" + _FIND_JS +
+            "return (function(){" + _FIND_JS +
             "const e=find(%s);"
             "if(!e) return null;"
             "return e.isContentEditable ? e.textContent : "
@@ -911,7 +912,7 @@ class ZenSession:
         callers that never type.
         """
         result = self.evaluate(
-            "(function(){" + _FIND_JS +
+            "return (function(){" + _FIND_JS +
             "const e=find(%s);"
             "if(!e) return null;"
             "/* verify_typed */ return {value: e.isContentEditable"
@@ -966,7 +967,7 @@ class ZenSession:
         pre-locked the name), the arm fails closed.
         """
         return bool(self.evaluate(
-            "(function(){" + _FIND_JS +
+            "return (function(){" + _FIND_JS +
             "const sel=%s;"
             "const e=find(sel);"
             "if(!e) return false;"
@@ -1009,7 +1010,7 @@ class ZenSession:
         current 'hello'. Contenteditable values normalize trailing
         whitespace, the same as verify_typed."""
         return bool(self.evaluate(
-            "(function(){/* zen_typed_flag */" + _FIND_JS +
+            "return (function(){/* zen_typed_flag */" + _FIND_JS +
             "const e=find(%s);"
             "if(!e) return false;"
             "let last=null;"
