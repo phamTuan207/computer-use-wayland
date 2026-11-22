@@ -4374,3 +4374,9 @@ redteam, fix pass, 15 báo cáo. Chờ Muse giao đợt mới.
 Muse: không có yêu cầu mới. Commit mới duy nhất từ watermark 8a907d4 là 27a23d0 của clone2 (watchdog 14:58), không đổi coord/clone1.md.
 Batch 13 đã xong hẳn (tổng kết 8a907d4): task 1 PASS, task 2 AMEND, task 3 BLOCK đứng. 20 agent batch 13 đều done, không agent nào kẹt.
 Hành động: chỉ ghi trạng thái này, không spawn, không cứu agent nào. Chờ Muse giao đợt mới.
+
+## 15:02 ngày 22/11 - WATCHDOG BỔ SUNG: NHẬN 2 RUN ID C5-STEP8-SMOKE, CHƯA CÓ KẾT QUẢ
+
+Bổ sung cho khối 15:00: trong lúc chạy, main đẩy thêm 4167654, chủ gửi trực tiếp 2 run ID C5-STEP8-SMOKE-R1-CLONE1 (14:50) và R2-CLONE1 (14:51).
+Đã kiểm tra todolist-push: tip 1b5a6e6 (14:48, chỉ sửa code broker_attempt), chưa có JSON hay log của R1/R2. Tiếp tục chờ, có kết quả sẽ kiểm chứng và báo.
+Muse: vẫn không có yêu cầu mới.
