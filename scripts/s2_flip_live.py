@@ -1,0 +1,566 @@
+#!/usr/bin/env python3
+"""S2 flip live-run harness, v2 (step 6 of the FINAL direction).
+
+Runs the clone-chat-send class live, one code-exec program per send
+(CU_CODE_EXEC=1), act-now/stepwise as fallback only on program
+failure. Endpoints are named per browser (P3 port split):
+Brave/clone1 on http://[::1]:9223, Chromium/clone2 on
+http://127.0.0.1:9223. Never assume port 9223 is Brave.
+
+Transport split, and why there are two session shapes:
+- Routing (tabs, observe) and the P9 capture run through the broker
+  (one session per run, mux SSH, short calls).
+- The code-exec send itself runs as a one-shot session-driver with
+  CU_CODE_EXEC=1 on its own command line. The broker cannot set env
+  per request: the driver env comes from the relay process env, and
+  the relay was started without the flag. The one-shot is the only
+  place the flag is on, so the flip is scoped to exactly this
+  class's sends. Each one-shot is one mux SSH call (spawn plus
+  program plus teardown, about 7s); the session ends when its stdin
+  closes, so the next send starts clean.
+
+Per browser the flow is:
+  broker tabs -> broker observe (coverage probe) -> P1
+  route_perception (gates the send on complete DOM coverage; a
+  screenshot decision aborts the send, fail closed) -> one-shot
+  code-exec send program (fill, Enter, trailing assert) ->
+  independent V12 verify (fresh DOM read, not the program asserting
+  its own success) -> P9 viewport capture (direct CDP screenshot,
+  no workspace switch, reviewed by a human before the run scores).
+
+Model calls in the loop: zero. The program is written once before
+run 1 and reused unchanged across all runs; the machine loop makes
+no vision call and no per-action model call. The P9 review is the
+only vision read, and it is unscored human evidence (plus the hard
+condition: a DOM-vs-render mismatch fails the run).
+
+Wall time per run is t0 (harness start) to both V12 verifies done,
+including all transport. The P9 capture and review happen after the
+scored wall stops; the run is scored only after the P9 review passes.
+
+SSH uses the S0 mux wrapper (scripts/ssh-laptop-mux.sh): the first
+call creates the master (~3.3s), later calls reuse it (~1s). A dead
+master costs one slow call and self-heals via ControlMaster=auto.
+
+Usage (from the VM):
+  python3 scripts/s2_flip_live.py --run 1 --workdir improvements/s2-flip-runs
+  python3 scripts/s2_flip_live.py --run 1 --dry-run --workdir /tmp/s2-dry
+  python3 scripts/s2_flip_live.py --run 1 --browser chromium --workdir ...
+
+Exit 0 when the run JSON was written (even if a send failed; failure
+is data in the JSON, not a harness crash). Exit 2 on harness error.
+"""
+import argparse
+import base64
+import json
+import os
+import re
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from perception_router import route_perception  # noqa: E402
+
+REPO = Path(__file__).resolve().parents[1]
+SSH = str(REPO / 'scripts' / 'ssh-laptop-mux.sh')
+LAPTOP_CU = '/home/james/computer-use-wayland/scripts/cu.py'
+LAPTOP_REMOTE = '/home/james/computer-use-wayland/scripts/session_remote.py'
+LAPTOP_V12 = '/tmp/s2-v12.mjs'
+LAPTOP_P9 = '/tmp/s2-p9.mjs'
+LAPTOP_SEED = '/tmp/s2-seed.mjs'
+
+BROWSERS = {
+    'brave': {'endpoint': 'http://[::1]:9223', 'label': 'clone1'},
+    'chromium': {'endpoint': 'http://127.0.0.1:9223', 'label': 'clone2'},
+}
+
+BUBBLE_ASSERT_SELECTOR = '[role="log"] > [data-message-item]:last-child'
+PROGRAM_WALL_SECONDS = 20
+V12_TIMEOUT_MS = 10000
+
+
+def build_program(target_id, message):
+    """The fixed send program, parameterized only by target and message.
+
+    One program for every run and both browsers. It grounds the
+    composer from a fresh DOM snapshot, fills it with real input
+    (click plus focus check plus insertText plus read-back, inside
+    cdp.mjs fill), sends with Enter, and ends with the trailing
+    assert (the V12 gate in program form, P5). The assert_state on
+    the dom_act result makes a failed send fail the envelope; the
+    harness still runs its own independent V12 after.
+    """
+    return (
+        'snap = dom_observe(' + json.dumps(target_id) + ')\n'
+        'comp = None\n'
+        'for e in snap["elements"]:\n'
+        '    if e["role"] in ("textarea", "textbox") and e["name"] == "Message":\n'
+        '        comp = e["ref"]\n'
+        '        break\n'
+        'assert_state(comp is not None, "composer not found in snapshot")\n'
+        'res = dom_act(snap, [\n'
+        '    {"type": "fill", "ref": comp, "text": ' + json.dumps(message) + '},\n'
+        '    {"type": "key", "keys": ["Enter"]},\n'
+        '    {"type": "assert", "selector": '
+        + json.dumps(BUBBLE_ASSERT_SELECTOR)
+        + ', "text": ' + json.dumps(message) + ', "timeout_ms": 3000},\n'
+        '])\n'
+        'print("dom_act ok", res.get("ok"), "completed", res.get("completed"), '
+        '"ms", res.get("execution_ms"))\n'
+        'assert_state(res.get("ok") is True, "dom_act failed")\n'
+    )
+
+
+def message_for(run, browser):
+    """Short, unique, clearly marked test message for one send."""
+    return 'S2-FLIP-R%d-%s-IGNORE-TEST' % (run, browser.upper())
+
+
+class Harness:
+    def __init__(self, workdir, run_no, dry_run=False):
+        self.workdir = Path(workdir)
+        self.workdir.mkdir(parents=True, exist_ok=True)
+        self.run_no = run_no
+        self.dry_run = dry_run
+        self.spans = []
+        self.ssh_calls = []
+        self.log_lines = []
+
+    def note(self, text):
+        self.log_lines.append(text)
+        print(text, flush=True)
+
+    def ssh(self, remote_cmd, label, timeout=120, input_text=None):
+        """One mux SSH call. Returns (rc, stdout, stderr, wall_ms)."""
+        start = time.monotonic()
+        proc = subprocess.run([SSH, remote_cmd], capture_output=True,
+                              text=True, timeout=timeout,
+                              input=input_text)
+        wall_ms = (time.monotonic() - start) * 1000.0
+        self.ssh_calls.append({'label': label, 'wall_ms': round(wall_ms, 1),
+                               'rc': proc.returncode})
+        return proc.returncode, proc.stdout, proc.stderr, wall_ms
+
+    def mux_baseline(self):
+        """Mean wall of two trivial SSH calls: the per-call transport cost."""
+        walls = []
+        for _ in range(2):
+            _rc, _out, _err, wall = self.ssh('true', 'mux-probe')
+            walls.append(wall)
+        return sum(walls) / len(walls)
+
+    def broker(self, lease, seq, args, stdin='', image_policy='auto',
+               timeout=120):
+        """One driver command through the broker: request + result.
+
+        Returns (request_wall_ms, result_wall_ms, response_dict). The
+        envelope travels in a heredoc in the same SSH call as the
+        request command, so no scp per command.
+        """
+        envelope = json.dumps({'args': args, 'stdin': stdin,
+                               'image_policy': image_policy},
+                              ensure_ascii=False, separators=(',', ':'))
+        env_path = '/tmp/s2-flip-env-%d.json' % seq
+        remote = (
+            'cat > ' + env_path + " <<'S2EOF'\n" + envelope + '\nS2EOF\n'
+            'python3 ' + LAPTOP_REMOTE + ' request --lease-file ' + lease
+            + ' --sequence %d --request %s' % (seq, env_path))
+        rc, out, err, req_wall = self.ssh(remote, 'broker-request-%d' % seq,
+                                          timeout=timeout)
+        if rc != 0:
+            raise RuntimeError('broker request failed rc=%d: %s %s'
+                               % (rc, out.strip()[:300], err.strip()[:300]))
+        accepted = json.loads(out)
+        if accepted.get('ok') is not True or accepted.get('status') != 'accepted':
+            raise RuntimeError('broker request not accepted: %s' % out[:300])
+        rc, out, err, res_wall = self.ssh(
+            'python3 ' + LAPTOP_REMOTE + ' result --lease-file ' + lease
+            + ' --sequence %d' % seq, 'broker-result-%d' % seq, timeout=timeout)
+        if rc != 0:
+            raise RuntimeError('broker result failed rc=%d: %s %s'
+                               % (rc, out.strip()[:300], err.strip()[:300]))
+        return req_wall, res_wall, json.loads(out)
+
+    def driver_result(self, response):
+        """Unwrap a broker result response to the cu.main() result dict."""
+        inner = response.get('response') or {}
+        if 'result' in inner:
+            return inner.get('result')
+        return inner
+
+    def broker_start(self, lease, owner):
+        rc, out, err, wall = self.ssh(
+            'python3 ' + LAPTOP_REMOTE + ' start --owner ' + owner
+            + ' --lease-file ' + lease, 'broker-start')
+        if rc != 0:
+            raise RuntimeError('broker start failed rc=%d: %s %s'
+                               % (rc, out.strip()[:300], err.strip()[:300]))
+        started = json.loads(out)
+        if started.get('ok') is not True:
+            raise RuntimeError('broker start not ok: %s' % out[:300])
+        self.spans.append({'phase': 'broker-start', 'wall_ms': round(wall, 1),
+                           'laptop_ms': None})
+        return started
+
+    def broker_finish(self, lease):
+        rc, out, err, wall = self.ssh(
+            'python3 ' + LAPTOP_REMOTE + ' finish --lease-file ' + lease,
+            'broker-finish')
+        self.spans.append({'phase': 'broker-finish', 'wall_ms': round(wall, 1),
+                           'laptop_ms': None})
+        try:
+            return json.loads(out)
+        except ValueError:
+            return {'ok': rc == 0, 'raw': out[:300]}
+
+    def oneshot_code_exec(self, endpoint, program, intent):
+        """One code-exec send as a one-shot session-driver.
+
+        CU_CODE_EXEC=1 is set on this command line only: the flag is
+        on for exactly this class's sends, nowhere else. The session
+        ends when the JSONL stdin closes. Returns (wall_ms, envelope).
+        """
+        line = json.dumps({'args': ['code-exec', '--endpoint', endpoint,
+                                    '--program', '-', '--intent', intent],
+                           'stdin': program, 'image_policy': 'auto'},
+                          ensure_ascii=False, separators=(',', ':')) + '\n'
+        remote = ('CU_CODE_EXEC=1 python3 %s session -- python3 %s session-driver'
+                  % (LAPTOP_CU, LAPTOP_CU))
+        start = time.monotonic()
+        rc, out, err, wall = self.ssh(remote, 'oneshot-code-exec',
+                                      timeout=90, input_text=line)
+        wall_ms = (time.monotonic() - start) * 1000.0
+        envelope = None
+        for raw in out.splitlines():
+            try:
+                obj = json.loads(raw)
+            except ValueError:
+                continue
+            if isinstance(obj, dict) and 'result' in obj:
+                envelope = obj['result']
+        if envelope is None:
+            raise RuntimeError(
+                'one-shot code-exec returned no driver result: rc=%d '
+                'stdout=%s stderr=%s' % (rc, out.strip()[-300:],
+                                         err.strip()[-300:]))
+        return wall_ms, envelope
+
+    def v12_check(self, endpoint, target_id, message):
+        """Independent V12: fresh DOM read over CDP, not the program.
+
+        Returns {found, role, side, text_len, ms, error}. Polls up to
+        V12_TIMEOUT_MS for a [data-message-item] whose text contains
+        the message. Read-only: Runtime.evaluate, no input.
+        """
+        start = time.monotonic()
+        rc, out, err, wall = self.ssh(
+            'node %s %s %s %s %d' % (LAPTOP_V12, endpoint, target_id,
+                                    json.dumps(message), V12_TIMEOUT_MS),
+            'v12-check', timeout=60)
+        wall_ms = (time.monotonic() - start) * 1000.0
+        if rc != 0:
+            return {'found': False, 'error': 'v12 script rc=%d: %s'
+                    % (rc, (out + err).strip()[:300]), 'ms': round(wall_ms, 1)}
+        try:
+            found = json.loads(out.strip().splitlines()[-1])
+        except (ValueError, IndexError):
+            return {'found': False, 'error': 'v12 script bad output: %s'
+                    % out.strip()[:300], 'ms': round(wall_ms, 1)}
+        found['ms'] = round(wall_ms, 1)
+        return found
+
+    def p9_capture(self, endpoint, target_id, png_path):
+        """P9 viewport screenshot via direct CDP (no session, no
+        workspace switch). Returns (wall_ms, ok). The PNG is saved
+        on the VM for human review."""
+        start = time.monotonic()
+        rc, out, err, wall = self.ssh(
+            'node %s %s %s' % (LAPTOP_P9, endpoint, target_id),
+            'p9-capture', timeout=60)
+        wall_ms = (time.monotonic() - start) * 1000.0
+        if rc != 0:
+            return wall_ms, False
+        b64 = out.strip().splitlines()[-1].strip()
+        try:
+            png_path.write_bytes(base64.b64decode(b64))
+        except Exception:
+            return wall_ms, False
+        return wall_ms, True
+
+    def route_browser(self, lease, seq, browser, target_id=None):
+        """Broker tabs + observe + P1 routing for one browser.
+
+        Returns (result_dict, next_seq). When target_id is given
+        (dry run), the observe runs against that tab instead of
+        looking the muse.ai tab up.
+        """
+        cfg = BROWSERS[browser]
+        endpoint = cfg['endpoint']
+        out = {'browser': browser, 'label': cfg['label'],
+               'endpoint': endpoint}
+        try:
+            if target_id is None:
+                req_w, res_w, resp = self.broker(
+                    lease, seq, ['browser', 'tabs', '--endpoint', endpoint])
+                seq += 1
+                tabs = self.driver_result(resp)
+                if not isinstance(tabs, list):
+                    raise RuntimeError('tabs did not return a list: %s'
+                                       % str(tabs)[:300])
+                muse_tabs = [t for t in tabs if 'muse.ai' in (t.get('url') or '')]
+                if len(muse_tabs) != 1:
+                    raise RuntimeError('expected exactly one muse.ai tab, got %d'
+                                       % len(muse_tabs))
+                target_id = muse_tabs[0]['id']
+                out['tab_title'] = muse_tabs[0].get('title')
+                self.spans.append({'phase': 'tabs-' + browser,
+                                   'wall_ms': round(req_w + res_w, 1),
+                                   'laptop_ms': None})
+            out['target_id'] = target_id
+            req_w, res_w, resp = self.broker(
+                lease, seq, ['browser', 'observe', '--endpoint', endpoint,
+                             '--target', target_id])
+            seq += 1
+            snap = self.driver_result(resp)
+            if not isinstance(snap, dict) or snap.get('ok') is False:
+                raise RuntimeError('observe failed: %s' % str(snap)[:300])
+            coverage = {'elements': len(snap.get('elements') or []),
+                        'truncated': bool(snap.get('truncated'))}
+            out['observe'] = {'elements': coverage['elements'],
+                              'truncated': coverage['truncated'],
+                              'wall_ms': round(req_w + res_w, 1)}
+            self.spans.append({'phase': 'observe-' + browser,
+                               'wall_ms': round(req_w + res_w, 1),
+                               'laptop_ms': None})
+            routing = []
+            decision = route_perception(
+                {'kind': 'chromium-content'},
+                probes={'dom-chromium': lambda target: coverage},
+                emit=routing.append)
+            out['routing'] = decision
+            for record in routing:
+                self.note('perception_routing ' + json.dumps(record, ensure_ascii=False))
+            if decision['source'] != 'dom-chromium':
+                out['outcome'] = 'aborted-routing'
+                out['error'] = ('router fell through to %s: %s'
+                                % (decision['source'], decision['reason']))
+            else:
+                out['outcome'] = 'routed'
+            return out, seq
+        except Exception as exc:
+            out['outcome'] = 'error'
+            out['error'] = str(exc)[:400]
+            return out, seq
+
+    def send_browser(self, browser, target_id, message):
+        """One-shot code-exec send + independent V12 for one browser."""
+        cfg = BROWSERS[browser]
+        endpoint = cfg['endpoint']
+        out = {'browser': browser, 'label': cfg['label'],
+               'endpoint': endpoint, 'message': message, 'model_calls': 0,
+               'target_id': target_id}
+        t_send = time.monotonic()
+        try:
+            program = build_program(target_id, message)
+            wall_ms, envelope = self.oneshot_code_exec(
+                endpoint, program,
+                'S2 flip run %d %s' % (self.run_no, browser))
+            completed = None
+            if isinstance(envelope, dict):
+                for line in envelope.get('log') or []:
+                    m = re.search(r'dom_act ok (\S+) completed (\d+)', line)
+                    if m:
+                        completed = int(m.group(2))
+            out['program'] = {
+                'ok': envelope.get('ok') if isinstance(envelope, dict) else None,
+                'api_calls': envelope.get('api_calls') if isinstance(envelope, dict) else None,
+                'elapsed_ms': envelope.get('elapsed_ms') if isinstance(envelope, dict) else None,
+                'error': envelope.get('error') if isinstance(envelope, dict) else None,
+                'error_type': envelope.get('error_type') if isinstance(envelope, dict) else None,
+                'log': envelope.get('log') if isinstance(envelope, dict) else None,
+                'wall_ms': round(wall_ms, 1),
+            }
+            self.spans.append({'phase': 'act-' + browser,
+                               'wall_ms': round(wall_ms, 1),
+                               'laptop_ms': out['program']['elapsed_ms']})
+            out['cb1'] = {
+                'input_sent': bool(completed is not None and completed >= 2),
+                'target_received': bool(completed is not None and completed >= 1),
+                'verified': None,
+                'completed': completed,
+            }
+            v12 = self.v12_check(endpoint, target_id, message)
+            out['v12'] = v12
+            out['cb1']['verified'] = bool(v12.get('found'))
+            self.spans.append({'phase': 'verify-' + browser,
+                               'wall_ms': v12.get('ms'),
+                               'laptop_ms': v12.get('ms')})
+            out['wall_ms'] = round((time.monotonic() - t_send) * 1000.0, 1)
+            out['outcome'] = 'sent' if v12.get('found') else 'failed-unverified'
+            return out
+        except Exception as exc:
+            out['outcome'] = 'error'
+            out['error'] = str(exc)[:400]
+            out['wall_ms'] = round((time.monotonic() - t_send) * 1000.0, 1)
+            return out
+
+    def seed_scratch(self, browser):
+        """Create a scratch tab with a fake composer + thread (dry run).
+
+        Returns the tab id. The page mimics the live shape: a textarea
+        with aria-label Message, a [role=log] thread, Enter appends a
+        [data-message-item] with the typed text.
+        """
+        endpoint = BROWSERS[browser]['endpoint']
+        rc, out, err, _wall = self.ssh(
+            'node %s %s' % (LAPTOP_SEED, endpoint), 'seed-scratch', timeout=60)
+        if rc != 0:
+            raise RuntimeError('seed failed rc=%d: %s' % (rc, (out + err)[:300]))
+        tab_id = out.strip().splitlines()[-1].strip()
+        if not tab_id:
+            raise RuntimeError('seed returned no tab id')
+        return tab_id
+
+    def close_scratch(self, browser, target_id):
+        endpoint = BROWSERS[browser]['endpoint']
+        self.ssh('curl -s %s/json/close/%s >/dev/null'
+                 % (endpoint, target_id), 'close-scratch', timeout=30)
+
+    def run(self, browsers):
+        t0 = time.monotonic()
+        mux = self.mux_baseline()
+        lease = '/tmp/s2-flip-run%d.lease' % self.run_no
+        owner = 's2-flip-run%d' % self.run_no
+        results = {'run': self.run_no, 'dry_run': self.dry_run,
+                   'mux_baseline_ms': round(mux, 1), 'browsers': {}}
+        scratch = {}
+        try:
+            if self.dry_run:
+                for browser in browsers:
+                    scratch[browser] = self.seed_scratch(browser)
+            self.broker_start(lease, owner)
+            seq = 1
+            routed = {}
+            try:
+                for browser in browsers:
+                    target = scratch.get(browser)
+                    res, seq = self.route_browser(lease, seq, browser, target)
+                    results['browsers'][browser] = res
+                    if res.get('outcome') == 'routed':
+                        routed[browser] = res['target_id']
+                    else:
+                        self.note('run %d %s outcome %s: %s'
+                                  % (self.run_no, browser, res.get('outcome'),
+                                     res.get('error', '')))
+            finally:
+                try:
+                    self.broker_finish(lease)
+                except Exception as exc:
+                    self.note('broker finish failed (ignored): %s' % exc)
+            # Sends: one-shot code-exec per browser, then V12.
+            for browser in browsers:
+                if browser not in routed:
+                    continue
+                message = message_for(self.run_no, browser)
+                res = self.send_browser(browser, routed[browser], message)
+                results['browsers'][browser].update(res)
+                if res.get('outcome') in ('error', 'failed-unverified'):
+                    self.note('run %d %s outcome %s: %s'
+                              % (self.run_no, browser, res.get('outcome'),
+                                 res.get('error', '')))
+            # Scored wall stops here: both V12 verifies are done.
+            results['wall_ms'] = round((time.monotonic() - t0) * 1000.0, 1)
+        finally:
+            # P9 captures AFTER the scored wall stops: one viewport
+            # screenshot per browser through direct CDP. The run is
+            # scored only after a human reviews these.
+            results['p9'] = {}
+            for browser in browsers:
+                target_id = (results['browsers'].get(browser) or {}).get('target_id')
+                if not target_id:
+                    continue
+                png_path = self.workdir / ('p9-run%d-%s.png'
+                                           % (self.run_no, browser))
+                try:
+                    p9_wall, p9_ok = self.p9_capture(
+                        BROWSERS[browser]['endpoint'], target_id, png_path)
+                    results['p9'][browser] = {
+                        'ok': p9_ok, 'png': str(png_path),
+                        'wall_ms': round(p9_wall, 1)}
+                except Exception as exc:
+                    results['p9'][browser] = {'ok': False,
+                                              'error': str(exc)[:300]}
+            for browser, target in scratch.items():
+                try:
+                    self.close_scratch(browser, target)
+                except Exception as exc:
+                    self.note('scratch close failed (ignored): %s' % exc)
+        results['spans'] = self.spans
+        results['ssh_calls'] = self.ssh_calls
+        # Phase split. Model is 0 (no model call in the loop). Every
+        # span's wall is split into transport (mux hops, measured per
+        # run) and laptop work (the remainder, or the payload timing
+        # when the payload carries one, e.g. code-exec elapsed_ms).
+        # Residual is whatever the split does not attribute; it must
+        # stay small, and a large residual means misattribution.
+        phases = {'observe': 0.0, 'act': 0.0, 'verify': 0.0, 'broker': 0.0}
+        transport = 0.0
+        for span in self.spans:
+            kind = span['phase'].split('-')[0]
+            wall = span['wall_ms'] or 0.0
+            if kind in ('observe', 'tabs'):
+                laptop = max(0.0, wall - 2 * mux)
+                phases['observe'] += laptop
+                transport += wall - laptop
+            elif kind == 'act':
+                laptop = span.get('laptop_ms') or 0.0
+                phases['act'] += laptop
+                transport += max(0.0, wall - laptop)
+            elif kind == 'verify':
+                laptop = max(0.0, wall - mux)
+                phases['verify'] += laptop
+                transport += wall - laptop
+            elif kind == 'broker':
+                laptop = max(0.0, wall - mux)
+                phases['broker'] += laptop
+                transport += wall - laptop
+        transport += 2 * mux  # the two mux-baseline probes
+        accounted = transport + sum(phases.values())
+        results['phase_split_ms'] = {
+            'model': 0,
+            'ssh': round(transport, 1),
+            'broker': round(phases['broker'], 1),
+            'observe': round(phases['observe'], 1),
+            'act': round(phases['act'], 1),
+            'verify': round(phases['verify'], 1),
+            'residual': round(max(0.0, results['wall_ms'] - accounted), 1),
+        }
+        results['model_calls'] = 0
+        return results
+
+
+def main(argv=None):
+    ap = argparse.ArgumentParser(description='S2 flip live-run harness')
+    ap.add_argument('--run', type=int, required=True)
+    ap.add_argument('--browser', choices=['brave', 'chromium', 'both'],
+                    default='both')
+    ap.add_argument('--dry-run', action='store_true')
+    ap.add_argument('--workdir', required=True)
+    args = ap.parse_args(argv)
+    browsers = ['brave', 'chromium'] if args.browser == 'both' else [args.browser]
+    harness = Harness(args.workdir, args.run, dry_run=args.dry_run)
+    results = harness.run(browsers)
+    out_path = Path(args.workdir) / ('run-%d.json' % args.run)
+    out_path.write_text(json.dumps(results, indent=2, ensure_ascii=False) + '\n')
+    print(json.dumps({'run': args.run, 'wall_ms': results.get('wall_ms'),
+                      'outcomes': {b: r.get('outcome')
+                                   for b, r in results.get('browsers', {}).items()},
+                      'json': str(out_path)}, ensure_ascii=False))
+    return 0
+
+
+if __name__ == '__main__':
+    raise SystemExit(main())

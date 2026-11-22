@@ -2437,6 +2437,25 @@ def browser(request):
     if out.strip(): return json.loads(out)
     raise RuntimeError('CDP adapter failed')
 
+def _validate_browser_endpoint(endpoint):
+    """Loopback-only CDP endpoint, same rule browser_start enforces.
+
+    Returns the endpoint unchanged. Raises ValueError otherwise, so a
+    program can never be aimed at a remote browser by a typo.
+    """
+    import urllib.request
+    import urllib.parse
+    url=urllib.parse.urlparse(endpoint)
+    if url.scheme!='http' or url.hostname not in ('localhost','127.0.0.1','::1'):
+        raise ValueError('loopback http endpoint required')
+    try:
+        port=url.port or 9223
+    except ValueError:
+        raise ValueError('endpoint port is not a number') from None
+    if not 1<=port<=65535:
+        raise ValueError('endpoint port must be 1..65535')
+    return endpoint
+
 def browser_start(env,endpoint):
     import urllib.request
     import urllib.parse
@@ -2981,6 +3000,7 @@ def main():
     a.add_argument('--address',help='ground only: Hyprland window address the snapshot belongs to')
     ce=sub.add_parser('code-exec',help='run one allowlisted program as the action (Pick 1, opt-in flag CU_CODE_EXEC=1)')
     ce.add_argument('--program',required=True,help='program source file (mode 600) or - for stdin')
+    ce.add_argument('--endpoint',default=None,help='CDP endpoint for dom_* calls in this program only (e.g. http://[::1]:9223 for Brave); default is the retained BROWSER_ENDPOINT')
     ce.add_argument('--intent',default=None,help='one-line intent, at most 200 chars')
     ce.add_argument('--target',default=None,help='task target path under /tmp, recorded only')
     ce.add_argument('--wall-seconds',type=int,default=30,help='program wall-clock budget, 1..60')
@@ -3051,12 +3071,25 @@ def main():
         require_session()
         check_cancel()
         program=read_code_exec_program(args.program)
-        with locked():
-            result=code_exec.run_program(
-                program, CodeExecBackend(env), state_dir=STATE,
-                session_token=os.environ.get('CU_SESSION_TOKEN'),
-                intent=args.intent, check_cancel=check_cancel,
-                wall_seconds=args.wall_seconds)
+        # P3 port split (step 6 wiring): code-exec had no --endpoint, so
+        # every program drove the default 127.0.0.1:9223 (Chromium/clone2)
+        # even when the class names Brave on [::1]:9223 (clone1). The
+        # override applies to this program only, like the browser tabs
+        # override: the retained default is restored afterwards, so a
+        # later command in the same relay process cannot silently
+        # inherit the other browser's endpoint.
+        previous_endpoint=BROWSER_ENDPOINT
+        if args.endpoint is not None:
+            BROWSER_ENDPOINT=_validate_browser_endpoint(args.endpoint)
+        try:
+            with locked():
+                result=code_exec.run_program(
+                    program, CodeExecBackend(env), state_dir=STATE,
+                    session_token=os.environ.get('CU_SESSION_TOKEN'),
+                    intent=args.intent, check_cancel=check_cancel,
+                    wall_seconds=args.wall_seconds)
+        finally:
+            BROWSER_ENDPOINT=previous_endpoint
         if args.target is not None:
             result['target']=args.target
         print(json.dumps(result,ensure_ascii=False,separators=(',',':')),flush=True)
