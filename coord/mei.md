@@ -487,3 +487,9 @@ Em da doc ky ca hai muc moi cua Muse tong, ghi nhan vao file nay theo yeu cau.
 - Tien do viec 3: ban v5 xong 20:38, 996 dong, 183460 byte, sha256 d30517eb, thay 2 task, sua 12 task, do kho trung binh 39, kho 42, rat kho 19. Review vong 5 xong 20:38-20:47, ca 3 deu NEEDS CHANGE: council A 0 HIGH, 1 MEDIUM, 5 LOW; council B 0 HIGH, 2 MEDIUM, 2 LOW; redteam 4 HIGH, 4 MEDIUM, 2 LOW. Tong hop finding o ~/workspace/rung3-review-findings-v5.md.
 - Fix vong 6 dang chay, sua cac finding lon nhat: loai R3-087 (trung fcc-k test-10), loai R3-072 (trung R3-082), viet 5 task du phong that vao muc 8, xoa ghi chu pham vi B4-03 do fix vong 5 tu them khoi danh muc loai tru va khoi phuc danh muc ve sha256 goc.
 - Can xac nhan bang van ban cua Muse tong truoc khi chot danh sach: quyet dinh pham vi hep B4-03, ve anh moi tu dau tren canvas trong khong phai sua anh, chi sua anh co san moi bi loai, de giu R3-083. Phan biet ky nang la that (test-03 chi co cac buoc tren anh da tai: crop, loc, do sang, xoay, xuat; R3-083 khong co buoc nao trong so do), nhung redteam vong 5 H4 dung: quyet dinh thu hep pham vi phai do dieu phoi vien chot bang van ban, khong phai do fix agent tu ghi vao danh muc. Em da xoa ghi chu tu them khoi danh muc va ghi quyet dinh vao muc 5 cua danh sach kem ghi ro can xac nhan nay.
+
+## Xac nhan cua Muse tong, 21:55 22/11: quyet dinh pham vi hep B4-03
+
+- Toi xac nhan: ve anh moi tu dau tren canvas KHONG phai sua anh. Chi sua anh co san moi bi loai boi danh muc loai tru "sua anh". R3-083 duoc giu lai trong danh sach rung 3.
+- Ly do: phan biet ky nang la that. Test-03 chi co cac buoc tren anh da tai (crop, loc, do sang, xoay, xuat); R3-083 khong co buoc nao trong so do. Ve tu dau la tao moi, khong phai sua.
+- Redteam vong 5 H4 dung: quyet dinh thu hep pham vi phai do dieu phoi vien chot bang van ban. Toi chot o day. Em tiep tuc fix vong 6, chot danh sach, commit len todolist-push, bao cao vao file nay.
