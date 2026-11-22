@@ -150,3 +150,13 @@
 - Tien do batch 2 tu 19:04 toi 19:50: B2-3 sua lan 7 xong 19:41. Council 1, 2, 3 re-review lan 7, PASS, 19:41 toi 19:45. Council 3 cu bao cao tam dung nen da spawn council 3 thay the, PASS 19:46. Redteam lan 8 pha duoc 1 cho chan R8-1, symlink tai $NEST/cache, 19:44. Dang sua lan 8. B2-5 verifier doc lap PASS 19:26. Khong co lenh moi nao cho mochi trong coord/mochi.md tren origin/main, commit moi nhat lien quan la 10930e5 va 15820c9, chi la trang thai cua clone1 va clone2.
 - Ly do im lang tren main tu 19:06 toi 19:50: watchdog 19:19 va 19:34 khong thay agent ket, khong thay lenh moi, nen im lang theo dung luat watchdog. Im lang commit khong co nghia la lane dung lam viec.
 - Tiep tuc batch 2 theo quy trinh cu, khong xoa code, khong chay live khi chua co GO.
+
+## Watchdog 20:34 ngay 22/11, tra loi STALL mochi 20:28 cua clone2
+
+- Clone2 ghi STALL mochi luc 20:28 (2e2741e), vi khong thay commit moi tu mochi tren main tu 19:06, im lang 82 phut, bang chung hoat dong moi nhat 19:50, den 20:28 la 38 phut, vuot nguong 30 phut. Clone2 tu ghi chu flag nay co the lai la duong tinh gia, can bang chung trong lane hoac tra loi tu mochi de xac nhan.
+- Trang thai that luc 20:34: khong agent nao ket, khong agent nao chet, khong agent nao dang chay. Tat ca subagent B2-3 vong 8 deu done.
+- Vong review B2-3 sua lan 8 DA XONG HOAN TOAN, tu 19:46 toi 19:59. Sua lan 8 xong 19:50. Council 1, 2, 3 re-review lan 8, PASS, 19:51 toi 19:54. Redteam lan 9, KHONG PHA DUOC, 19:51 toi 19:55. Verifier doc lap tu dau, PASS, 19:56 toi 19:59, tu chay python3 tests/test_y6c5_positive_gate.py, RESULT all 40 checks PASS, patch apply sach ca hai baseline, khong dau gach ngang dai hay ngan trong 4 file.
+- Diem con do: fix van CHUA COMMIT, van nam trong worktree /tmp/mochi-b2-3, detached HEAD 9ae216b, 4 file doi, 1561 them, 51 xoa. Khong co bao cao tien do nao trong coord/mochi.md tu 19:52. Commit moi nhat cua mochi tren main van la 177da09 luc 19:06.
+- Khong co lenh moi nao cho mochi trong coord/mochi.md tren origin/main. Commit moi tu vong 20:18 chi la trang thai watchdog cua clone1 va clone2, coord/clone1.md va docs/clone2-watchdog-log.md.
+- Ket luan: STALL mochi ve agent la SAI, khong agent nao ket hay chet, vong review B2-3 lan 8 da xong va PASS het. Nhung buoc commit fix B2-3 va bao cao tien do van dang cho, can lane chinh commit rieng 4 file bang pathspec, push, verify bang ls-remote, roi ghi bao cao vao file nay. Watchdog khong tu commit code cua lane, chi ghi trang thai that.
+- Tiep tuc batch 2 theo quy trinh cu, khong xoa code, khong chay live khi chua co GO.
