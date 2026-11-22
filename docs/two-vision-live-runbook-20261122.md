@@ -15,7 +15,7 @@ Sources read for this runbook (all verified before writing):
   else in the repo; see section 2.
 - Script: tests/two_vision_bench.py, 868 lines, commit c267411.
 - Workflow doc: docs/two-vision-benchmark-workflow-20261122.md,
-  660 lines, checklist section 10 (added batch 9 task 2, fixed
+  747 lines, checklist section 10 (added batch 9 task 2, fixed
   batch 9 task 2 fix pass).
 - One-vision design: docs/clone2-one-vision-design-20261122.md,
   731 lines, commit c267411.
@@ -30,9 +30,11 @@ Sources read for this runbook (all verified before writing):
 
 ## 0. Blockers first: read this before anything else
 
-This runbook does NOT make a live run possible today. Four things
-are still missing or unimplemented, listed here up front and again
-in full in section 12. Do not work around them by improvisation.
+This runbook does NOT make a live run possible today. The
+current missing list is in section 12 (2 closed, 3 partial,
+5 open, 2 standing, as of the batch 11 task 2 fix pass).
+The four blockers below are the shape of the gap; do not
+work around them by improvisation.
 
 1. The script cannot drive the live chats as they exist today.
    It always launches its own fresh headless Firefox with a fresh
@@ -141,7 +143,7 @@ change sits on top of the reviewed code; stop and report.
   Run `git log --oneline -1 -- tests/two_vision_bench.py` and
   confirm it prints c267411.
 - Workflow doc: docs/two-vision-benchmark-workflow-20261122.md,
-  660 lines. Checklist section 10 in that doc is the
+  747 lines. Checklist section 10 in that doc is the
   prerequisite checklist this runbook executes.
 - Design doc: docs/clone2-one-vision-design-20261122.md,
   731 lines, commit c267411.
@@ -211,8 +213,11 @@ Rules the operator enforces (the script does not):
   names, or personal information in a plan, inventory, ledger,
   log, or result file.
 - Both windows live in ONE browser instance with two windows
-  (the --instances one shape). Two instances are not
-  implemented and --instances two is refused (exit 2).
+  (the --instances one shape, option A: the script's own
+  Firefox). Two instances are not
+  implemented and --instances two is refused (exit 2). Under
+  option B (primary, CDP driver to Brave/Chrome on ws2) the
+  run uses two browsers, not one instance; see section 13.
 
 ## 5. Step 0: run_id freshness check (do this first)
 
@@ -271,51 +276,103 @@ CU_PICK4_FASTPATH=1 computer-use a11y query --pid <atspi-pid> \
    name contains the text (case-insensitive substring), up to
    20, from one bounded observe (500 nodes, 2 s, 80 items; the
    result carries a `matched` count and a `truncated` flag).
-   Limits, stated plainly: a hit proves the text is present
-   somewhere in that app's accessibility tree, not that it
-   is a bubble in the thread (substring match on a11y names
-   is not the V12 gate's exact textContent === text check
-   on a bubble inside the thread container); a miss does
-   NOT prove the text is absent, because the observe is
-   bounded and scrollback content may not be in the tree,
-   and whether Messenger bubbles are exposed through the
-   a11y tree on Brave/Chrome is UNVERIFIED in any repo
-   record. A visual search of the thread is only a fallback
-   with the same limit: a visual search that finds nothing
-   does not prove the text is absent, and a bubble sitting
-   in scrollback, missed by a visual search, still produces
-   the false PASS this check exists to prevent (reused
-   run_id, zero new sends, outcome PASS). If in doubt, do
-   the a11y query; if the query cannot run, record that and
-   rely on the fresh generation.
+
+   Hard limit on this method, found by the fix-pass redteam
+   (do not ignore it): scripts/a11y.py observe() (lines
+   83-117) only keeps an element in its returned list if it
+   has actions, is editable, or the observe runs in skeleton
+   mode (`if skeleton or item['actions'] or
+   item.get('editable')`), and describe() records only
+   name/role/actions, never text content. query() calls
+   observe() without skeleton and then filters that already
+   pruned list by name substring. A Messenger bubble is
+   static text: no actions, not editable. It is dropped
+   before query() ever sees it, so a bubble-text query
+   returns matched 0 even when bubbles are fully exposed in
+   the tree. The method as specified can only find text that
+   is the NAME of an element that survives the filter (an
+   input, a button, anything with actions). Whether a
+   bubble's text is exposed as an accessible name at all is
+   UNVERIFIED, and the query as written cannot answer it.
+   A miss therefore proves nothing about exposure: it may
+   mean the text is not in the thread, the text is outside
+   the bounded observe, the text is not carried as a name,
+   or the element was pruned by the filter. A hit proves the
+   text is present somewhere in that app's accessibility
+   tree, not that it is a bubble in the thread (substring
+   match on a11y names is not the V12 gate's exact
+   textContent === text check on a bubble inside the thread
+   container). Until a working bubble-text query is
+   demonstrated on the laptop (see the dry probe below),
+   this check cannot catch a reused run_id, and freshness
+   rests on generation alone. A visual search of the thread
+   is only a fallback with the same limit: a visual search
+   that finds nothing does not prove the text is absent,
+   and a bubble sitting in scrollback, missed by a visual
+   search, still produces the false PASS this check exists
+   to prevent (reused run_id, zero new sends, outcome
+   PASS). If in doubt, do the a11y query; if the query
+   cannot run, record that and rely on the fresh
+   generation.
 
    Dry probe of this method (do this once, before the first
    live run, and record the result in the run log; it has
    NOT been run yet). Test the two premises separately, so a
-   failure tells you which premise broke:
-   - Part 1, pid mapping: run `computer-use a11y apps` and
-     confirm Brave and Chrome both appear with PIDs. Then
-     run the a11y query above for a KNOWN existing bubble
-     text (any real message already visible in each thread,
-     not a bench string). If the query returns the known
-     text, the pid mapping works and bubbles are exposed.
-     If it raises "exact app PID required", the pid is
-     wrong; re-list with `a11y apps` and use the listed
-     pid, never the hyprctl client pid.
-   - Part 2, bubble exposure: the Part 1 hit (or miss) for
-     a known bubble text is itself the exposure test. A hit
-     proves Messenger bubbles are exposed through the a11y
-     tree on that browser; a miss for text that is visibly
-     in the thread proves they are NOT exposed (or are
-     outside the bounded observe), and the a11y method
-     cannot be used for freshness on that browser: fall
-     back to fresh generation plus a visual search, and
-     record that the method failed.
-   Until this probe runs, premise A (bubble exposure) is
-   UNVERIFIED and premise B (pid mapping) is contradicted
-   by prior evidence for other apps; the freshness check
-   rests on generation alone, which the runbook states
-   plainly in step 2 above.
+   failure tells you which premise broke. A single query
+   cannot do both: a raise identifies a pid failure and a
+   hit proves both, but a miss is three-way ambiguous
+   (bubbles not exposed, text outside the bounded observe,
+   or the chosen known text wrong), so the probe below
+   separates them with independent steps.
+   - Part 1, pid mapping and app presence: run
+     `computer-use a11y apps` and confirm Brave and Chrome
+     both appear with PIDs. If either is absent, the method
+     fails at step 1: the only count on record is "a11y apps
+     lists only 6 registered apps"
+     (improvements/speed-proto-pick4-summary.md:15), with
+     no Brave/Chrome named, and the probe has no way past
+     an absent app; record the absence and fall back to
+     fresh generation plus a visual search. If both appear,
+     prove the pid mapping with an element that survives
+     the observe() filter: query for a KNOWN name that has
+     actions or is editable (for example the message input
+     itself, name "Message", which is editable, or a named
+     button visible in the thread). A hit proves the pid is
+     right and the tree is readable. If it raises "exact
+     app PID required", the pid is wrong; re-list with
+     `a11y apps` and use the listed pid, never the hyprctl
+     client pid.
+   - Part 2, bubble exposure: only after Part 1 hits, test
+     whether bubble text is searchable at all. Pick a bubble
+     text that is currently VISIBLE in the thread (read it
+     from the thread by eye and record exactly how it was
+     read) and query for it with the a11y query above. On a
+     miss, retry once with a second currently-visible bubble
+     text before concluding anything, so a wrong first
+     choice does not decide the outcome. Then run a skeleton
+     observe (`computer-use a11y observe --pid <atspi-pid>
+     --skeleton`, which keeps every visited element) and
+     search the returned snapshot JSON for the same text.
+     A hit in either proves bubble text is searchable on
+     that browser. A miss in both does NOT prove bubbles
+     are unexposed: the text may sit outside the bounded
+     observe, or may not be carried as an accessible name
+     at all (describe() never records text content). In
+     that case the a11y method is unusable for freshness
+     on that browser until a working query is demonstrated;
+     fall back to fresh generation plus a visual search,
+     and record that the method failed.
+   Until this probe runs and Part 2 hits, premise A
+   (bubble exposure) is UNVERIFIED and premise B (pid
+   mapping) is contradicted by prior evidence for other
+   apps; the freshness check rests on generation alone,
+   which the runbook states plainly in step 2 above.
+   Under option A (section 13.2, script's Firefox, no
+   Brave/Chrome) this a11y method does not apply at all:
+   there are no Brave/Chrome a11y targets, so freshness
+   rests on generation alone plus a visual check of the
+   threads in the script's Firefox after the harvest-first
+   step.
 3. If the exact text is found in either thread, the run_id is
    NOT fresh: discard it, generate a new one, update the plan
    and both messages, and check again from step 2.
@@ -424,8 +481,11 @@ Required outcomes before proceeding:
   (find_input is only called in run mode). Do not hand-log-in
   inside the script's browser unless the coordinator
   explicitly orders that step: which account sends is a
-  coordinator decision (one profile holds one Messenger
-  session), and improvising a login invents it.
+  coordinator decision (assumption, no repo evidence: one
+  profile holds one Messenger session, i.e. a Firefox
+  profile holds one set of Messenger cookies, treat as one
+  session until verified live), and improvising a login
+  invents it.
 
 ## 7. Step 2: the live run
 
@@ -454,7 +514,9 @@ What the flags do:
   (exactly 2 windows, distinct URLs, non-empty run_id). A
   refused plan exits 2 and starts no browser.
 - The script launches its own fresh headless Firefox with a
-  fresh profile under <run-dir>/profile and refuses if ports
+  fresh profile under <run-dir>/profile (option A shape;
+  under option B the CDP driver replaces launch_browser,
+  see section 13.1 step 5) and refuses if ports
   2828 or 9223 are already held. A stale browser holding
   either port makes launch_browser refuse; kill the stale
   browser first, do not attach to it.
@@ -575,12 +637,14 @@ origin/todolist-push, ~06:00 22/11):
   INCOMPLETE. He used a full-screen after-image as the
   observation, and screen observations refuse key actions
   (G28). True, but one level short of the root cause.
-- Root cause: act-now ALWAYS returns a screen-scoped
-  after-image by construction, even when the input observation
-  was window-scoped. scripts/first_action.py (after-capture
-  at lines 875-892 at todolist-push tip 65a2df6, 22/11;
-  the investigation cites ~line 656 at commit 5f5a2fd)
-  captures the after with
+- Root cause (on pre-item-12 code; item 12 fixed this,
+  see the dated correction below): act-now ALWAYS returned
+  a screen-scoped after-image by construction, even when
+  the input observation was window-scoped.
+  scripts/first_action.py (after-capture at lines 875-893
+  at todolist-push tip e702398, 22/11; the investigation
+  cites ~line 656 at commit 5f5a2fd) captures the
+  screen-scope after with
   `cu.observe_screen(env, args.screen, max_width=1920,
   persist=True)` and never consults the input observation's
   scope. desktop_act (scripts/cu.py lines 2235-2244 at
@@ -605,7 +669,7 @@ origin/todolist-push, ~06:00 22/11):
   same trap existed then and did not bite only because the
   next steps used fresh window observes.
 - The gate (scripts/cu.py desktop_act, lines 1773-1775 at
-  todolist-push tip 65a2df6, 22/11, the G28 rule; screen_scope
+  todolist-push tip e702398, 22/11, the G28 rule; screen_scope
   at 1773, raise at 1775; the line moved from 1649 when
   AMEND4 item 3, commit 62b740e, shifted cu.py by 18 lines,
   and later work shifted it again, and the investigation
@@ -617,13 +681,14 @@ origin/todolist-push, ~06:00 22/11):
   The raise happens in desktop_act's preflight, before
   coordinate validation and before any action runs:
   fail-closed, 998 ms, nothing typed or sent. But it is not
-  before all side effects: the overlay acquire and session
-  attempt happen first (998 ms wasted), which is why the
-  investigation recommends moving the scope check earlier (a
-  scope assertion in first_action.py before the overlay step
-  would fail faster and cheaper). That earlier check now
-  exists: AMEND4 item 12 added it in first_action.py lines
-  600-624 (comment at 600: "the scope check runs BEFORE the
+  before all side effects: on pre-amend code the overlay
+  acquire and session attempt happen first (998 ms wasted),
+  which is why the investigation recommends moving the scope
+  check earlier (a scope assertion in first_action.py before
+  the overlay step would fail faster and cheaper). That
+  earlier check now exists: AMEND4 item 12 added it in
+  first_action.py lines 600-627 (comment at 600: "the scope
+  check runs BEFORE the
   overlay"), refusing a key/type batch given a screen-scope
   observation with return 1 before the overlay acquire and
   the session attempt. So the 998 ms waste no longer occurs
@@ -695,7 +760,7 @@ Dated correction, 22/11 (AMEND4 item 12 landed after this
 runbook was written): the code fix that removes the trap at
 the source IS built now, on todolist-push (commit cbab398,
 06:46 22/11). The envelope now carries BOTH captures
-(scripts/first_action.py at todolist-push tip 65a2df6):
+(scripts/first_action.py at todolist-push tip e702398):
 `after` is the scope-matching capture, chainable (the next
 act-now may reuse it as its observation), built by
 _scope_after (def at line 337, docstring names AMEND4 item
@@ -708,7 +773,7 @@ non-chainable (stored at lines 880-883, from the
 observe_screen call at 878), and reusing a screen-scope
 after-image for a key/type step still always fails
 (CL1-SWEEP). The scope check now also fires before the
-overlay (first_action.py lines 600-624, see the gate bullet
+overlay (first_action.py lines 600-627, see the gate bullet
 above), so a key/type batch given a screen-scope
 observation is refused with return 1 before the overlay
 acquire and the session attempt. One residual is recorded
@@ -782,8 +847,9 @@ on the old code per the DOT 9 task 1 council review
   once lost to a /tmp wipe). Also preserve the plan file
   used and the run_id freshness check record from section 5.
 - Delete the profile/ dir under the run workdir after the
-  run (/tmp is a 512M tmpfs; stale Firefox profiles have
-  filled it to 100% before).
+  run, if present (option A only; under option B there is no
+  <run-dir>/profile) (/tmp is a 512M tmpfs; stale Firefox
+  profiles have filled it to 100% before).
 - Report the outcome with the run_id and wall time: outcome
   (PASS/FAIL), per-step statuses, visions_used as recorded in
   results.json (hardcoded 2, script line 745, not a measured
@@ -802,109 +868,132 @@ on the old code per the DOT 9 task 1 council review
 Consolidated, so nobody mistakes this runbook for readiness.
 A live run cannot pass until these are closed or the
 coordinator explicitly accepts them. Status as of 22/11,
-after the batch 11 task 2 closeout (see
-docs/clone2-live-run-readiness-closeout-20261122.md):
-CLOSED items are marked so; OPEN items name their owner.
+after the batch 11 task 2 fix pass (see
+docs/clone2-live-run-readiness-closeout-20261122.md): 2
+fully closed, 3 partial, 5 open, 2 standing. The numbering
+here matches the closeout report exactly. Mapping to the
+readiness report's 11 items: closed are readiness 1 and 9;
+partial are readiness 2, 3, 5; open are readiness 4, 6, 7, 8
+plus new item 12 (cross-origin frames, from the DOM/a11y
+crawl log); standing are readiness 10 and 11.
 
-CLOSED by the closeout (doc fixes, verified against the
-current todolist-push tip 65a2df6):
-- Section 9 corrected for AMEND4 item 12 (cbab398): the
-  code fix IS built on todolist-push, `after` is
-  scope-matching and chainable, `after_screen` is
-  verification only, the scope check fires before the
-  overlay (first_action.py lines 600-624). The guard stays
-  mandatory on pre-amend code; record which code version
-  the laptop runs.
-- Checklist 10 contradictions fixed in the workflow doc
-  (login-wall mode, harvest selector checking, "ONE Zen
-  instance", ledger rationale). The runbook and the
-  checklist now agree.
-- Checklist 10.3 now complete as a definition: method
-  (a11y query with the AT-SPI pid from `a11y apps`),
-  generation rule (fresh timestamp-based run_id), record
-  requirement (run log). The dry probe procedure is
-  written in section 5; the probe itself is UNRUN (open
-  item below).
-- VISION 2 monitor named (eDP-2, expected; confirm live
-  with `hyprctl -j monitors`) and the run log file named
-  (<run-dir>/run-log.md, every look logged with its time).
+CLOSED (2):
+1. Runbook section 9 corrected for AMEND4 item 12
+   (cbab398): the code fix IS built on todolist-push,
+   `after` is scope-matching and chainable, `after_screen`
+   is verification only, the scope check fires before the
+   overlay (first_action.py lines 600-627). The guard stays
+   mandatory on pre-amend code; record which code version
+   the laptop runs. (Readiness item 1.)
+2. VISION 2 monitor named (eDP-2, expected; confirm live
+   with `hyprctl -j monitors`) and the run log file named
+   (<run-dir>/run-log.md, every look logged with its time).
+   The eDP-2 attribution is one inference step: the only
+   repo record naming eDP-2 is a ws1 observe
+   (worker-cl1msg2-log.md:14); the ws2 box matches it, so
+   eDP-2 is expected, not proven, and the live check stands.
+   (Readiness item 9.)
 
-OPEN, still blocking a live run:
-1. Live shape decision (coordinator): option B (primary,
-   CDP driver to the real Brave/Chrome chats on ws2) or
-   option A (fallback, script's Firefox with a pre-seeded
-   logged-in profile). Both procedures are written in full
-   in section 13. No live run until the coordinator picks
-   one. Whichever is picked, the account holding the two
-   threads is still undecided in any repo record.
-2. If option B: the CDP driver build. Building blocks
-   exist (scripts/cdp.mjs, a CDP transport with
-   Runtime.evaluate, DOM.getBoxModel and harvest, used by
-   `computer-use browser observe/act`; scripts/
-   chromium_cli.py, tab listing over DevTools HTTP), but
-   no wiring from tests/two_vision_bench.py to cdp.mjs
-   exists, the script is Marionette-only today, and the
-   user's own Brave/Chrome sessions run without a remote
-   debugging port (verified 2026-11-18 for Chromium: no
-   DevToolsActivePort file, nothing listening on 9222), so
-   no CDP client can attach to them as they run today.
-   Attaching needs the browsers relaunched with a debug
-   port (coordinator decision) plus the driver build. The
-   CDP input path on the Messenger contenteditable input
-   is also UNVERIFIED and needs a dry send first.
-3. If option A: a verified pre-seeded logged-in profile
-   (log in once manually, verify both threads load,
-   re-verify before each run; sessions expire). No such
-   profile exists yet, and the account is undecided.
-4. Dry probe of the a11y freshness method (section 5):
-   UNRUN. Premise A (Messenger bubbles exposed through
-   the a11y tree on Brave/Chrome) is UNVERIFIED; premise
-   B (hyprctl pid is the AT-SPI pid) is contradicted by
-   prior evidence. Run the two-part probe on the laptop
-   before the first live run.
-5. Live Messenger input name verified against the real
-   DOM: the aria-label is UNKNOWN, no DOM or a11y read of
-   the input exists in the repo. Read it live before the
-   run (section 6 rule for a non-"Message" name: stop,
-   record the actual name).
-6. Method approval: the live run is gated on it (workflow
-   doc header; CL1-SWEEP investigation caveat). The live
-   run is the coordinator's acceptance test, not the
-   operator's call.
-7. Thread URLs, thread selector, and bubble selector:
-   must come from the coordinator for the live threads.
-   The script cannot invent them.
-8. textNew in the V12 gate: NOT built. The gate is a
-   presence check only; a stale bubble passes it. VISION 2
+PARTIAL (3: the doc part is done, a live or build part
+remains):
+3. Checklist 10 contradictions fixed in the workflow doc
+   (login-wall mode, harvest selector checking, "ONE Zen
+   instance", ledger rationale in 10.1). The runbook and
+   the checklist now agree on those four. What remains:
+   the workflow doc section 5 Step 0 ledger sentence is
+   fixed in this pass (it said the same wrong rationale),
+   and the shape-conditional wording (one-instance and
+   Firefox paths) is qualified by live shape in this pass.
+   (Readiness item 2.)
+4. Checklist 10.3 now complete as a definition: method
+   (a11y query with the AT-SPI pid from `a11y apps`),
+   generation rule (fresh timestamp-based run_id), record
+   requirement (run log). What remains: the dry probe
+   procedure is written in section 5 but the probe itself
+   is UNRUN, and the probe method as first written cannot
+   work (see item 7 below for the observe() filter limit);
+   the probe is redesigned in this pass. (Readiness
+   item 3, definition done, probe open.)
+5. Live-shape procedures written for both options
+   (section 13). What remains: the coordinator's decision
+   (option B or option A), the account decision, and the
+   verification of whichever option is picked (CDP driver
+   build for B, verified pre-seeded profile for A).
+   (Readiness item 5.)
+
+OPEN (5):
+6. Live Messenger input name verified against the real
+   DOM (owner: operator, on the laptop, before the run):
+   the aria-label is UNKNOWN, no DOM or a11y read of the
+   input exists in the repo. Read it live before the run
+   (section 6 rule for a non-"Message" name: stop, record
+   the actual name). (Readiness item 4.)
+7. Dry probe of the a11y freshness method (owner:
+   operator, on the laptop, before the first live run):
+   UNRUN, and the method as first written cannot work.
+   scripts/a11y.py observe() only keeps elements with
+   actions, editable, or in skeleton mode, and describe()
+   records name/role/actions only, never text content;
+   query() filters that pruned list by name substring, so
+   a bubble (static text, no actions, not editable) is
+   dropped before query() sees it. The probe is redesigned
+   in section 5 (Part 1: pid mapping with a filter
+   surviving element; Part 2: bubble exposure tested
+   explicitly with a skeleton observe, a miss proving
+   nothing). Until Part 2 hits, freshness rests on
+   generation alone. Premise A (bubble exposure) is
+   UNVERIFIED; premise B (hyprctl pid is the AT-SPI pid)
+   is contradicted by prior evidence. Under option A this
+   method does not apply at all (no Brave/Chrome targets).
+   (Readiness item 3, probe part.)
+8. Method approval (owner: coordinator) and thread URLs,
+   thread selector, bubble selector (owner: coordinator).
+   Both are coordinator decisions with no repo record yet.
+   (Readiness items 6 and 7.)
+9. Unbuilt script features (owner: whoever builds them):
+   textNew in the V12 gate (NOT built; the gate is a
+   presence check only, a stale bubble passes it; VISION 2
    removal is conditional on textNew being built and proven
-   plus a cross-window check.
-9. Pre-send reservation (exactly-once across a process
-   death between send and ledger mark): OPEN work, in the
-   design doc section 7 and as a TODO in the script's Ledger
-   docstring. The failed-unverified retry block closes only
-   the narrower v12-timeout case.
-10. V11 MutationObserver flag: NOT built. The fixture counts
-    input events in window.__inputEvents; a Messenger page
-    needs a real observer armed before typing.
-11. D3, ref stability on a mutating page: unaddressed
-    (design doc section 7). The live threads are live chats
-    that can mutate mid-run if the other clone or the owner
-    sends a message between harvest and send. The HCU guard
-    re-reads live geometry before input, so this is likely
-    fail-closed, but no stale-ref fail-fast exists; the short
-    chain and the guard are the mitigation, not a fix.
+   plus a cross-window check); pre-send reservation
+   (exactly-once across a process death between send and
+   ledger mark, OPEN work in the design doc section 7 and
+   as a TODO in the script's Ledger docstring; the
+   failed-unverified retry block closes only the narrower
+   v12-timeout case); V11 MutationObserver flag (NOT built;
+   the fixture counts input events in
+   window.__inputEvents, a Messenger page needs a real
+   observer armed before typing); D3, ref stability on a
+   mutating page (unaddressed, design doc section 7; the
+   live threads are live chats that can mutate mid-run if
+   the other clone or the owner sends a message between
+   harvest and send; the HCU guard re-reads live geometry
+   before input, so this is likely fail-closed, but no
+   stale-ref fail-fast exists; the short chain and the
+   guard are the mitigation, not a fix). None was built by
+   this task. (Readiness item 8.)
+10. Cross-origin frames in the Messenger web app (owner:
+    operator, on the laptop, before the run): DOM rects
+    cannot reach cross-origin iframes from parent JS
+    (same-origin policy); BiDi browsing-context-scoped
+    calls or vision remain the fallback
+    (improvements/worker-click-crawl-doma11y-log.md, open
+    verification item 6). The Messenger web app used in
+    the benchmark must be checked for cross-origin frames
+    before the benchmark runs. This affects both options:
+    HARVEST_JS and the cdp.mjs snapshot both evaluate in
+    the top frame. (New item, not in the readiness
+    report.)
 
-Standing pre-run checks (not closable in advance, checked
-at run time):
-- Live lane must be free: no BASELINE2 or other live run
-  running, and no other agent holding the laptop browser.
-  The installed laptop code must still be the pre-amend
-  code if a baseline is still owed.
-- Live measurement of the 90% accuracy bar: no live
-  measurement exists yet. Synthetic grounding is 7/7 =
-  100%; the live proof is owed, and the run itself must
-  produce it. This is measured by the run, not a
-  prerequisite to start.
+STANDING (2, checked at run time, not closable in advance):
+11. Live lane must be free: no BASELINE2 or other live run
+    running, and no other agent holding the laptop browser.
+    The installed laptop code must still be the pre-amend
+    code if a baseline is still owed. (Readiness item 10.)
+12. Live measurement of the 90% accuracy bar: no live
+    measurement exists yet. Synthetic grounding is 7/7 =
+    100%; the live proof is owed, and the run itself must
+    produce it. This is measured by the run, not a
+    prerequisite to start. (Readiness item 11.)
 
 NOT missing, to avoid confusion: the C12 adjudication does
 NOT apply to this script's clicks and is NOT a prerequisite
@@ -922,8 +1011,9 @@ script can reach those threads. The coordinator decides
 the live shape; both options below are prepared in full
 so the decision can be made on complete procedures, not
 on summaries. Rung 2 acceptance still runs on the real
-clone chats on ws2, NOT the Firefox fixture, under either
-option.
+clone threads, NOT the Firefox fixture, under either
+option (ws2 with Brave/Chrome applies to option B only;
+option A runs the threads in the script's Firefox).
 
 ### 13.1 Option B (primary): CDP driver to the real Brave/Chrome chats
 
@@ -935,14 +1025,34 @@ no profile copy.
 What exists today (verified 22/11):
 - scripts/cdp.mjs exists on main and todolist-push: a
   dependency-free CDP adapter (Node >=22) with
-  Runtime.evaluate, DOM.getBoxModel cross-check, and a
-  harvest/snapshot that returns rects for every actionable
-  element. It is the transport behind `computer-use browser
-  observe/act`.
+  Runtime.evaluate and a snapshot that returns rects via
+  getBoundingClientRect, plus CDP Input click/type. It is
+  the transport behind `computer-use browser observe/act`.
+  On todolist-push only, it also has a harvest operation
+  (line 227) with a DOM.getBoxModel cross-check (line 276)
+  and Accessibility.getFullAXTree (line 253). On main it
+  has NONE of those three: no harvest operation, no
+  DOM.getBoxModel, no getFullAXTree (its operations are
+  tabs/observe/act). DOM.getBoxModel and
+  Accessibility.getFullAXTree are still open, per the
+  bench script's own TODO (tests/two_vision_bench.py
+  lines 61-64). A harvest on main returns rects for the
+  requested scope's interactive elements, capped at 80
+  with a truncated flag; "every actionable element" is
+  not promised on either branch.
 - scripts/chromium_cli.py exists on main and todolist-push:
   a repo-owned Chromium CLI wrapper that lists tabs over
-  the DevTools HTTP endpoints (default http://127.0.0.1:9223,
-  the agent-managed Chromium).
+  the DevTools HTTP endpoints. Default endpoint differs
+  by branch: http://127.0.0.1:9222 on main,
+  http://127.0.0.1:9223 on todolist-push (the whole
+  main-vs-todolist-push diff of this file is the port).
+  The repo contradicts itself on the port: scripts/cu.py
+  lines 32-40 say the agent-managed Chromium lives on
+  9223 and 9222 is Zen's BiDi port, so a run with the
+  main default hits 9222, which per cu.py is Zen's BiDi
+  listener, not a Chromium debug port. Always pass
+  --endpoint explicitly per browser; never rely on the
+  default.
 - The one-vision design doc already maps the harvest and
   gate onto CDP calls (DOM.getBoxModel,
   Accessibility.getFullAXTree) in principle.
@@ -951,18 +1061,43 @@ What does NOT exist, and blocks this option:
 1. No wiring from tests/two_vision_bench.py to cdp.mjs.
    The script is Marionette-only; nothing in it speaks
    CDP. The driver build must implement, at minimum: a
-   harvest equivalent (cdp.mjs harvest), a send chain
-   (click/type via CDP Input or Runtime.evaluate), and
-   the V12 gate (Runtime.evaluate for the bubble check),
-   reusing the ledger and the outcome rule.
+   harvest equivalent (cdp.mjs harvest on todolist-push,
+   or the snapshot plus the missing harvest operation on
+   main), a send chain (click/type via CDP Input or
+   Runtime.evaluate), the V12 gate (Runtime.evaluate for
+   the bubble check), the HCU guard (live geometry and
+   focus re-check before input), the V1 readback, V11,
+   and the exactly-once pre-check, reusing the outcome
+   rule. The ledger is a Python in-process class in
+   tests/two_vision_bench.py while cdp.mjs runs as a
+   separate Node process (cu.py:1829 spawns `node
+   scripts/cdp.mjs`), so "reusing the ledger" across
+   processes needs wiring that does not exist; it is not
+   asserted here.
 2. The user's own Brave/Chrome sessions cannot be
-   attached to as they run today. The user's own Chromium
-   runs WITHOUT a remote debugging port (verified
-   2026-11-18: no DevToolsActivePort file, nothing
-   listening on 9222), so no CDP client can attach to
-   his session. Attaching needs Brave and Chrome
-   relaunched with a debug port, which changes the live
-   sessions and is a coordinator decision.
+   attached to as they run today. What is verified:
+   the user's own Chromium runs WITHOUT a remote
+   debugging port (verified 2026-11-18: no
+   DevToolsActivePort file, nothing listening on 9222,
+   scripts/chromium_cli.py header lines 15-18). Brave
+   and Chrome debug-port state was never checked: it is
+   UNVERIFIED, expected-but-unproven. Check live before
+   asserting option B requires a relaunch (DevToolsActivePort
+   in each browser's profile dir, listening ports).
+   Attaching needs Brave and Chrome relaunched with a
+   debug port, which changes the live sessions and is a
+   coordinator decision. Further caveat, from the DOM/a11y
+   crawl log (improvements/worker-click-crawl-doma11y-log.md,
+   open verification item 4): per the CDP skill docs,
+   Chrome/Brave refuse the --remote-debugging-port flag on
+   the default user data directory and need a custom
+   profile, and the debug port cannot be enabled on an
+   already-running browser (relaunch required). That
+   conflicts with driving the user's already-logged-in
+   Brave; verify the Linux behavior live before building
+   on it. A custom profile would NOT carry the login
+   session, so the relaunch path may defeat its own
+   purpose.
 3. The CDP input path on the Messenger contenteditable
    input is UNVERIFIED. The computer-use TYPE action
    silently fails on this exact input in Brave
@@ -975,9 +1110,19 @@ What does NOT exist, and blocks this option:
 Procedure, once the build lands and the browsers are
 relaunched with a debug port:
 1. Coordinator decides option B and the debug-port
-   relaunch; record the endpoint (port) per browser.
-2. Verify attach: list tabs via chromium_cli.py for each
-   browser and confirm the two thread tabs are visible.
+   relaunch; assign a distinct debug port per browser
+   and record the endpoint (port) per browser. Check
+   the ports against the script's Marionette port 2828
+   and BiDi port 9223 for collisions. Record how the two
+   thread tabs and the logins are preserved across the
+   relaunch; that preservation procedure is still open.
+   Do NOT run `computer-use browser start` as a shortcut:
+   it launches an agent-managed Chromium (cu.py
+   Popen chromium --user-data-dir=... --remote-debugging-port=...),
+   not the user's Brave/Chrome.
+2. Verify attach: list tabs via chromium_cli.py with
+   --endpoint per browser (never the default) and confirm
+   the two thread tabs are visible.
 3. Run the dry probe: harvest both threads through the
    CDP driver, confirm both inputs visible and named
    per the live DOM name (section 6), then a dry send
@@ -1002,26 +1147,45 @@ Procedure:
 2. On the run machine, launch the run machine's own
    Firefox binary with a fresh profile, log into
    Messenger manually once with that account, quit, and
-   preserve the profile directory. Use the laptop's
-   Firefox, not the script's hardcoded path
-   (/home/hatch/workspace/tools/firefox/firefox, this
-   VM's path, script lines 49-50); record the laptop
-   binary path live. The profile holds a live session:
-   local only, never push it to the repo, never copy it
-   into any shared artifact.
+   preserve the profile directory. The script has NO
+   binary-path flag (its arg parser offers no --firefox,
+   --binary, or --geckodriver; FF/GD are module constants,
+   script lines 49-50), so "record the laptop binary path
+   live" consumes nothing as written: on the laptop the
+   script needs an edit to FF/GD (which changes the
+   section 3 pin, c267411, and must be reviewed and
+   re-pinned when it lands) or the exact /home/hatch
+   paths to exist there. Record the laptop binary path and
+   which of those two it is. The profile holds a live
+   session: local only, never push it to the repo, never
+   copy it into any shared artifact.
 3. Verify the profile: launch Firefox with it and confirm
    both threads load. Sessions expire; re-verify before
    each run.
 4. Before the run, copy the profile into <run-dir>/profile,
-   excluding cache (the Cache directory): /tmp is a 512M
-   tmpfs and a full profile copy could exceed it.
-   launch_browser does makedirs with exist_ok and launches
-   with -profile <profile>, so a pre-seeded profile is
-   used as-is.
-5. Coordinator supplies the plan (thread URLs, thread
+   excluding the disk cache: cache2 and startupCache.
+   There is NO `Cache` directory in a Firefox profile
+   (verified live 22/11 with the bundled Firefox 160: a
+   fresh profile contains cache2 and storage, no Cache),
+   so excluding "Cache" excludes nothing. Do NOT exclude
+   storage/ or cookies.sqlite: they may hold the session.
+   Measure the copy size live (`du -sh <run-dir>/profile`)
+   before the run: /tmp is a 512M tmpfs and the copy
+   budget is NOT proven to hold (even an empty profile is
+   about 23M). launch_browser does makedirs with exist_ok
+   and launches with -profile <profile>, so a pre-seeded
+   profile is used as-is.
+5. Verify the COPIED profile, not just the master: launch
+   Firefox with <run-dir>/profile and confirm both threads
+   load. Profile portability is an assumption, not
+   evidence: no repo record addresses whether a copied
+   Firefox profile carries a logged-in Messenger session.
+   If the copy does not load logged in, stop; the
+   procedure fails here.
+6. Coordinator supplies the plan (thread URLs, thread
    selector, bubble selector) for that account's two
    threads.
-6. Run steps 0, 1, 2 per the runbook. The harvest-first
+7. Run steps 0, 1, 2 per the runbook. The harvest-first
    step is the live check that the session works, but it
    cannot rely on the "Message" name until the live DOM
    name verification (section 6) is closed: until then a
@@ -1030,7 +1194,7 @@ Procedure:
    must stop, not proceed. Once the name is DOM-verified
    live, Message inputs visible means logged in; a login
    wall means the session is dead, stop.
-7. After the run, delete the profile copy from /tmp (512M
+8. After the run, delete the profile copy from /tmp (512M
    tmpfs), keep the master profile local for re-runs.
 
 Option C (not a procedure, listed so the choice is
@@ -1056,7 +1220,7 @@ the coordinator to relaunch Zen on the laptop.
   no-message-input-in-inventory line 794; visions_used
   hardcoded at line 745.
 - Workflow doc: docs/two-vision-benchmark-workflow-20261122.md
-  (660 lines); section 5 plan shape; section 6 failure
+  (747 lines); section 5 plan shape; section 6 failure
   meanings; section 9 C12 not used; section 10 checklist.
 - Design doc: docs/clone2-one-vision-design-20261122.md
   (731 lines, c267411); section 1 vision budget; section 3
@@ -1075,24 +1239,39 @@ the coordinator to relaunch Zen on the laptop.
 - run_id freshness check: scripts/a11y.py lines 118-140
   (query, case-insensitive name substring, bounded observe,
   CU_PICK4_FASTPATH=1 required); scripts/a11y.py lines
-  57-60 (app, exact app PID required); scripts/cu.py line
-  2906 (a11y subparser), lines 3150-3151 (query requires
-  --pid plus --name or --role); scripts/cu.py line 30 (STATE,
+  57-60 (app, exact app PID required), lines 83-117
+  (observe, keeps only elements with actions, editable,
+  or in skeleton mode; describe records name/role/actions
+  only, never text content); scripts/cu.py line 2906
+  (a11y subparser), lines 3150-3151 (query requires
+  --pid plus --name or --role), all todolist-push tip
+  e702398 (on main the same code is at cu.py lines 2332
+  and 2519-2520); scripts/cu.py line 30 (STATE,
   ~/.cache/agent-computer-use).
-- Operator-guard code pins (todolist-push tip 65a2df6,
+- Operator-guard code pins (todolist-push tip e702398,
   22/11; line numbers drift as the coordinator's lane
   lands commits, re-verify before citing): scripts/cu.py
   lines 1773-1775 (G28 raise), lines 2235-2244
   (scope-matching _after_capture, result['after'] at 2241);
   scripts/first_action.py line 337 (_scope_after def),
-  lines 600-624 (scope check before the overlay),
-  lines 875-892 (after-capture: observe_screen at 878,
+  lines 600-627 (scope check before the overlay),
+  lines 875-893 (after-capture: observe_screen at 878,
   envelope['after_screen'] at 880-883, envelope['after']
   at 890).
 - CDP building blocks for option B: scripts/cdp.mjs
-  (dependency-free CDP adapter, Runtime.evaluate,
-  DOM.getBoxModel, harvest/snapshot); scripts/
-  chromium_cli.py (tab listing over DevTools HTTP,
-  default http://127.0.0.1:9223).
+  (dependency-free CDP adapter, Runtime.evaluate, snapshot
+  with rects via getBoundingClientRect, CDP Input
+  click/type; harvest with DOM.getBoxModel cross-check and
+  Accessibility.getFullAXTree exist on todolist-push only,
+  lines 227, 253, 276, NOT on main); scripts/
+  chromium_cli.py (tab listing over DevTools HTTP, --endpoint
+  flag; default http://127.0.0.1:9222 on main,
+  http://127.0.0.1:9223 on todolist-push; the repo
+  contradicts itself on the port, cu.py lines 32-40 say the
+  agent-managed Chromium is 9223 and 9222 is Zen's BiDi
+  port).
 - VISION 2 monitor: improvements/worker-cl1msg2-log.md
   (screen eDP-2, region [2464,902,1920,1200]).
+- Cross-origin frames and the Brave debug-port caveat:
+  improvements/worker-click-crawl-doma11y-log.md (open
+  verification items 4 and 6).
