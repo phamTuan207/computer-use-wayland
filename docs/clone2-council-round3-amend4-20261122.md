@@ -54,6 +54,16 @@ PYTHONPATH=../scripts:. python3 -m unittest discover -s . -p "test_*.py"):
 - The log claims 1920 tests, failures=5, errors=6, skipped=17 in
   388.608s. The counts match mine exactly; the timing differs (faster
   here, same counts).
+- Count note, 1920 vs 1927: this review's full discover collects 1920
+  tests, matching the AMEND4 log exactly, while the independent batch
+  10 task 2 re-verification measured 1927 at the same code state. The
+  gap is the same systematic 7-test runner-collection difference
+  already established: this review ran system python3 from tests/ with
+  PYTHONPATH=../scripts:., the re-verification ran the venv python
+  with -s tests and PYTHONPATH=/usr/lib/python3/dist-packages; the
+  same 7 appears in the AMEND3 gap (1855 vs 1862). The failure counts
+  agree (20 before the doubles fix, 5 after), so the gap is
+  collection, not a counting error by either side.
 - Net: 10 RT2 tests fixed; F2 moved from FAIL to ERROR (the refusal,
   by design); 16 new tests added by the pass, all passing; no
   regression anywhere (the post-fix problem set is a strict subset of
@@ -134,6 +144,17 @@ to implement the "or" branch. Repair: rewrite the test to exercise a
 wired path (supply ranges and assert they are honored), or assert at
 the call-site level. No code change.
 
+Dissent, recorded 2026-11-22: an independent re-verification (batch 10
+task 2, docs/clone2-amend4-reverify-20261122.md) judged this same test
+a TRUE negative, a design dispute between fail-closed (the test's
+requirement) and best-effort (the implementation's choice). This review
+disagrees at the desktop_act layer: the test calls cu.desktop_act
+directly with no ranges, so no code fix can satisfy it without breaking
+the passing control test test_click_type_text_in_input_line_verifies,
+which calls desktop_act directly with no ranges and expects ok True
+via the band. Adjudication must decide the fail-closed vs best-effort
+question; this review does not settle it.
+
 ### Items 5-6. WINDOW BOUNDS + STALE ORIGIN (F2/F3) - GO for the fix; F2 and F3 DEFECTIVE
 
 The fix is implemented and tested: _window_origin raises DomActError
@@ -176,8 +197,7 @@ No code change.
 
 ### Item 7. R10 FLAG REDESIGN (F6/F7) - GO for the fix; F6 DEFECTIVE
 
-F7-node and F7-python pass post-fix and fail pre-fix. F8 still
-passes. The redesign is in the diff and does what the log claims:
+F7-node and F7-python pass post-fix and fail pre-fix. The redesign is in the diff and does what the log claims:
 window.__agentCuTyped is gone; arm_typed_flag installs a listener
 recording the field value at each trusted input event in a closure
 variable, exposed through a locked getter (Object.defineProperty,
@@ -319,17 +339,41 @@ The pass cannot close as 15/15: 5 RT proof tests still fail, and all
 5 are proven defective as written (my own proofs above, not the
 worker's claim alone). The AMEND4 worker was forbidden from editing
 tests/test_click3_redteam2.py, so leaving them failing was the
-instructed behavior; the repairs above are test-side only and no code
+instructed behavior; the rule is in the AMEND4 log,
+improvements/worker-click3-amend4-log.md lines 20-22 ("Do NOT edit
+tests/test_click3_redteam2.py or tests/test_click2_redteam.py
+(acceptance tests; may only ADD tests). Do NOT weaken any test: a proof
+test whose expectation is wrong is left failing for adjudication, with
+the evidence in this log."). The repairs above are test-side only and no code
 change is required. Until those 5 tests are repaired, the brief's end
 state (0 failures, 4 pre-existing errors, 15/15 RT proof tests
 passing) is not met.
 
-Also outstanding, unrelated to the fixes: 2 environmental tesseract
-failures (tc02_controller, missing tesseract binary on this VM,
-present identically pre and post); live-browser confirmation still
-owed for the F1 sanitization rule and the 2-vision benchmark as a
+Also outstanding, unrelated to the fixes: 1 failure + 1 error from the
+environmental tesseract pair (tc02_controller, missing tesseract binary
+on this VM, present identically pre and post); live-browser confirmation
+still owed for the F1 sanitization rule and the 2-vision benchmark as a
 whole; the item 7 pre-locked-property residual (outside the R10
 attacker model).
+
+Also outstanding, on the F5 finding itself: the CodeExec path remains
+unwired by construction and the CLI path remains unwired without
+--dom-selector, so the unwired path still verifies via the full-width /
+click-anchored band by design. CodeExecBackend.act (cu.py:2615-2649)
+sets type_ranges = None initially and only sets it when dom_session is
+not None and dom_selector is not None; the code comment states the
+code-exec allowlist does not expose ZenSession yet, so no code-exec
+program can pass a session today and type_ranges is always None on
+that path. CLI act (cu.py:2945-2986) grounds the ranges only when
+--dom-selector is supplied; otherwise the batch keeps the full-width /
+click-anchored band, per the code comment. The F5-behavior test
+faithfully reproduces that production unwired path, and the repair
+above (rewrite the test to exercise a wired path) means after repair
+nothing tests the unwired path at all. The dissent is recorded in the
+item 4 section: the independent re-verification judged F5 a true
+negative, this review judges the test defective at the desktop_act
+layer, and the fail-closed vs best-effort choice is left to
+adjudication.
 
 Patch vs remove vs redesign (the worker's summary, checked against
 the diffs): patch items 1, 2, 3, 4, 8; patch with a removal items
@@ -345,8 +389,10 @@ construction (first_action.py hardcoded observe_screen).
   716 lines), read in full.
 - My worktrees: ~/workspace/tools/amend4-council3/wt-post (0668327),
   wt-pre (14fc139), wt-old12, wt-pre12fix (e05fc58).
-- Logs: /tmp/rt2-post.log (49 tests, failures=4, errors=1),
+- Logs: ~/workspace/tools/amend4-council3/rt2-post.log (49 tests,
+  failures=4, errors=1, re-run in this fix pass),
   /tmp/discover-post2.log (1920 tests, failures=5, errors=6),
   /tmp/discover-pre.log (1904 tests, failures=16, errors=5),
   /tmp/cdp-post.log (node cdp_snapshot.mjs pass),
-  /tmp/sess-pre12fix.log (28 tests, 17 problems at e05fc58).
+  ~/workspace/tools/amend4-council3/sess-pre12fix.log (28 tests,
+  17 problems at e05fc58, re-run in this fix pass).
