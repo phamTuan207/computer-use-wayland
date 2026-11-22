@@ -450,14 +450,17 @@ The remaining verification is unchanged by this landing:
   all 24 run JSONs in the s2-flip-* directories, zero null).
   The manifest paths agree with the JSON paths on all 25 rows.
   The manifest auditor note saying the run JSONs carry p9 as
-  null is wrong and must not be repeated. Verification is
-  hash-level only for 23 of the 25 frames: 2 frames were
-  pixel-viewed and match the manifest ((b1) run-1 Chromium
-  shows bubble C5-B1-R1-CHROMIUM-IGNORE-TEST with the composer
-  empty; flip run-1 Chromium shows no test bubble at the
-  earlier scroll position). The 5 original flip Chromium PNGs
-  show NO test bubble, which agrees with their JSON outcome
-  failed-unverified; they must not be cited as send evidence.
+  null is wrong and must not be repeated. All 25 frames were
+  pixel-viewed by an independent re-audit, not only hash-checked:
+  the CB-8 re-audit worker viewed all 5 (b1), all 10 reopen, and
+  all 10 flip PNGs itself at 15:25 to 15:26 +07 on 22 November
+  2026 (commit 84cc31f on todolist-push,
+  improvements/worker-click5-cb8-reaudit-log.md), each frame
+  matching its manifest row and its JSON message, and reinstated
+  both revoked claims on that basis. The 5 original flip
+  Chromium PNGs show NO test bubble, which agrees with their
+  JSON outcome failed-unverified; they must not be cited as
+  send evidence.
   The 5 a1 PNGs are named by their run JSONs but are not in
   the repo; they are not part of the 25 manifest rows.
 - CB-1 for the landed program: input_sent = completed >= 3,
@@ -764,12 +767,15 @@ Stated plainly. None of these is fixed by writing this spec.
     directories, zero null), and the manifest paths agree with
     the JSON paths on all 25 rows. The manifest auditor note
     saying the run JSONs carry p9 as null is wrong and must not
-    be repeated. Verification is hash-level only for 23 of the
-    25 frames (sha256, byte size, and PNG magic match on 25 of
-    25 rows); 2 frames were pixel-viewed and match the manifest
-    ((b1) run-1 Chromium, flip run-1 Chromium). The 5 original
-    flip Chromium PNGs show no test bubble and must not be
-    cited as send evidence. Precision note: the 5 a1 PNGs are
+    be repeated. All 25 frames were pixel-viewed by an
+    independent re-audit: the CB-8 re-audit worker viewed all 5
+    (b1), all 10 reopen, and all 10 flip PNGs itself at 15:25 to
+    15:26 +07 on 22 November 2026 (commit 84cc31f on
+    todolist-push, improvements/worker-click5-cb8-reaudit-log.md),
+    each frame matching its manifest row and its JSON message,
+    and reinstated both revoked claims on that basis. The 5
+    original flip Chromium PNGs show no test bubble and must not
+    be cited as send evidence. Precision note: the 5 a1 PNGs are
     named by their run JSONs but are not in the repo; they are
     not part of the 25 manifest rows, so this item is still
     closed.
