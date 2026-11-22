@@ -556,7 +556,14 @@ def cmd_close(scratch_substr, original_url):
         try:
             orig_entry = _find_in_scan(entries, original_url)
             if orig_entry is not None:
-                fallback = _full_handle(full, orig_entry['handle'])
+                # REDTEAM (F4, f1cb4d5): the original URL may match
+                # the scratch tab itself, in which case the
+                # fallback would resolve to the tab being deleted.
+                # The orig path needs the same h != scratch_full
+                # guard the loop path has.
+                candidate = _full_handle(full, orig_entry['handle'])
+                if candidate != scratch_full:
+                    fallback = candidate
         except zen_dom.ZenDomError:
             fallback = None
         if fallback is None:
@@ -577,14 +584,26 @@ def cmd_close(scratch_substr, original_url):
                       {"handle": fallback})
             except Exception:
                 pass
-        after = _handles(z)
+            after = _handles(z)
+        else:
+            # REDTEAM (F4, f1cb4d5): the scratch tab was the only
+            # tab, so there is no live window left to read handles
+            # from and the verification read would raise 'Browsing
+            # context has been discarded'. The DELETE itself would
+            # have raised had it failed, so the scratch is gone by
+            # definition; skip the verification reads and report
+            # the count from the DELETE.
+            after = []
         # Verify by a fresh scan that the scratch tab is gone, and
         # re-resolve the original tab after the mutation instead
-        # of trusting a handle from before the DELETE.
-        entries_after, _full_after = _scan(z)
-        if _find_in_scan(entries_after, scratch_substr) is not None:
-            raise zen_dom.ZenDomError(
-                'scratch tab still listed after close')
+        # of trusting a handle from before the DELETE. Skipped
+        # when the scratch was the only tab (no live window left
+        # to scan; the DELETE success is the verification).
+        if fallback is not None:
+            entries_after, _full_after = _scan(z)
+            if _find_in_scan(entries_after, scratch_substr) is not None:
+                raise zen_dom.ZenDomError(
+                    'scratch tab still listed after close')
         result = {'ok': True, 'count_before': count_before,
                   'count_after': len(after)}
         _restore_original(z, original_url, result)

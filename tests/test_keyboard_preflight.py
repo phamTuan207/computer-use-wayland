@@ -335,6 +335,56 @@ class DesktopPreflight(unittest.TestCase):
         self.assertEqual(self.typed.call_count, 1, 'exactly one input, no replay')
         self.assertIn('IME restoration failed', err.getvalue())
 
+    def test_mixed_literal_and_compose_batch_skips_batch_ime_scope(self):
+        # REDTEAM (F4, ccb0f1e): a batch holding a compose type
+        # must NOT enter the batch-level literal scope. The batch
+        # scope holds fcitx5 inactive for the whole batch, and a
+        # compose group's literal_keyboard(env, False) is a no-op
+        # that never reactivates it, so the compose type would run
+        # with the IME inactive and Telex composition could not
+        # happen, while the batch still reports ok. A mixed batch
+        # therefore lets each group manage the IME itself: the
+        # literal type sees state '1', the compose type sees '2'.
+        state = ['2']
+        state_at_typing = []
+
+        def remote(argv, env, timeout=None):
+            if argv == ['fake-remote']:
+                return state[0]
+            if argv[-1] == '-c':
+                state[0] = '1'
+            elif argv[-1] == '-o':
+                state[0] = '2'
+            return ''
+
+        def record_typed(argv, env=None, input=None, timeout=12,
+                         capture_stderr=None):
+            state_at_typing.append(state[0])
+            return ''
+
+        with patch.object(cu.shutil, 'which', return_value='fake-remote'), \
+             patch.object(cu, 'run', side_effect=remote), \
+             patch.object(cu, 'fcitx5_running', return_value=False), \
+             patch.object(cu, 'wait_cancelable'):
+            self.typed.side_effect = record_typed
+            result = cu.desktop_act(
+                {}, self.meta,
+                [{'type': 'type', 'text': 'a'},
+                 {'type': 'type', 'text': 'b', 'ime': 'compose'}])
+        self.assertTrue(result['ok'], result)
+        self.assertEqual(result['completed'], 2)
+        self.assertEqual(state_at_typing, ['1', '2'],
+                         'literal types with the IME inactive, '
+                         'compose types with it active')
+        # No batch-level triple: only the two per-group triples.
+        trace = result['ime_state_trace']
+        self.assertEqual(len(trace), 6,
+                         'one triple per keyboard group, none for '
+                         'a batch-level IME scope')
+        self.assertEqual([t['phase'] for t in trace],
+                         ['before', 'after_switch', 'after_restore',
+                          'before', 'after_switch', 'after_restore'])
+
     def test_restore_flag_envelope_cases(self):
         import io
         from contextlib import redirect_stderr

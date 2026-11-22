@@ -407,12 +407,18 @@ class SettleTests(unittest.TestCase):
         # then the focus was refused). After a successful type the
         # delegate re-observes (and settles) so the next dispatch
         # uses a fresh meta. A click-only dispatch does not refresh.
+        # REDTEAM (F4, 66c34f8): a key has the same failure class
+        # (Enter sends the bubble), so it refreshes too. The
+        # refresh settle is recorded separately: it must NOT
+        # overwrite last_settle, the BEGIN settle.
         delegate, backend, _focused, _session = \
             self._delegate_with_frames(None)
         delegate.begin_batch('0xabc')
         # begin_batch settles: 2 observes, meta obs-2.
         self.assertEqual(len(backend.observe_calls), 2)
         self.assertEqual(delegate._meta['id'], 'obs-2')
+        begin_settle = delegate.last_settle
+        self.assertTrue(begin_settle['stable'])
         # A click does not refresh the meta.
         self.assertTrue(delegate(
             {'type': 'click', 'ref': '#c5-text'}, [2700, 1000]))
@@ -425,12 +431,22 @@ class SettleTests(unittest.TestCase):
             [2700, 1000]))
         self.assertEqual(len(backend.observe_calls), 4)
         self.assertEqual(delegate._meta['id'], 'obs-4')
-        self.assertTrue(delegate.last_settle['stable'])
+        self.assertTrue(delegate.last_refresh_settle['stable'])
+        self.assertIs(delegate.last_settle, begin_settle,
+                      'the refresh must not overwrite the BEGIN settle')
+        self.assertIsNone(delegate.last_refresh_error)
         # The next dispatch stamps with the fresh meta id.
         self.assertTrue(delegate(
             {'type': 'click', 'ref': '#c5-text'}, [2700, 1000]))
         _meta, actions, _path = backend.act_calls[-1]
         self.assertEqual(actions[0]['observation_id'], 'obs-4')
+        # A key (Enter) refreshes it too: 2 more observes.
+        self.assertTrue(delegate(
+            {'type': 'key', 'keys': ['Return']}, [2700, 1000]))
+        self.assertEqual(len(backend.observe_calls), 6)
+        self.assertEqual(delegate._meta['id'], 'obs-6')
+        self.assertTrue(delegate.last_refresh_settle['stable'])
+        self.assertIs(delegate.last_settle, begin_settle)
 
 
 class BackendWiringTests(unittest.TestCase):
@@ -500,10 +516,11 @@ class BackendWiringTests(unittest.TestCase):
         self.assertEqual(session.sent_bubbles, ['hello'])
         # One settled observation for the batch start, plus one
         # refresh after the set_value type (the typed text changes
-        # the screen, so the next dispatch needs a fresh meta);
-        # three dispatches (the trailing assert reads state and
-        # dispatches nothing).
-        self.assertEqual(len(code.observe_calls), 4)
+        # the screen) and one after the Enter key (it sends the
+        # bubble, which also changes the screen), so the next
+        # dispatch needs a fresh meta; three dispatches (the
+        # trailing assert reads state and dispatches nothing).
+        self.assertEqual(len(code.observe_calls), 6)
         self.assertEqual(len(code.act_calls), 3)
         # The set_value click is the image point (440, 223), not
         # the raw screen point (2949, 1137): with the old
@@ -557,16 +574,51 @@ class BackendWiringTests(unittest.TestCase):
         self.assertEqual(basis, 'dom-value')
         backend.close()
 
+    def test_assert_on_a_field_never_passes_by_text(self):
+        # REDTEAM (F4, 9858d9a): the element_text fallback must
+        # NOT let an assert false-pass on a value-bearing element.
+        # An input's textContent is always '', so asserting an
+        # input is empty while it holds 'hello' must fail. A
+        # textarea's textContent is its DEFAULT value, not its
+        # live value, so asserting 'hello' on a textarea whose
+        # default is 'hello' but whose live value is 'goodbye'
+        # must fail.
+        backend, session, _code, _focused = self._backend()
+        backend.dom_start()
+        # Input holding 'hello', asserted empty.
+        session.fields['#c5-text']['value'] = 'hello'
+        verified, basis = backend._verify(
+            session,
+            {'type': 'assert', 'selector': '#c5-text', 'text': ''},
+            '#c5-text', None)
+        self.assertFalse(verified)
+        self.assertEqual(basis, 'dom-value')
+        # Textarea: live value 'goodbye', default text 'hello'.
+        session.fields['#c5-area'] = {
+            'rect': {'x': 0, 'y': 0, 'width': 10, 'height': 10},
+            'value': 'goodbye'}
+        session.texts['#c5-area'] = 'hello'
+        verified, basis = backend._verify(
+            session,
+            {'type': 'assert', 'selector': '#c5-area', 'text': 'hello'},
+            '#c5-area', None)
+        self.assertFalse(verified)
+        self.assertEqual(basis, 'dom-value')
+        backend.close()
+
     def test_viewport_settle_surfaced_on_dom_act_result(self):
         # F2 follow-up: the viewport settle outcome rides the
         # dom_act result top-level, so the run evidence says
         # whether the viewport origin was settled when the batch
-        # grounded its points.
+        # grounded its points. The fake's viewport_origin records
+        # the settle during the click dispatch (like the real
+        # session); dom_act clears any stale settle from a
+        # previous batch at its start, so only this batch's
+        # settle is surfaced.
         backend, session, _code, _focused = self._backend()
         backend.dom_start()
         session.last_viewport_settle = {
-            'reads': 3, 'settled_moz': [240, 8],
-            'elapsed_ms': 201.5}
+            'reads': 99, 'settled_moz': [0, 0], 'elapsed_ms': 0.0}
         snapshot = backend.dom_observe('Example', '#c5-text', 10)
         result = backend.dom_act(
             'Example', snapshot['snapshot'],
@@ -575,6 +627,24 @@ class BackendWiringTests(unittest.TestCase):
         self.assertEqual(result['viewport_settle'],
                          {'reads': 3, 'settled_moz': [240, 8],
                           'elapsed_ms': 201.5})
+        backend.close()
+
+    def test_key_only_batch_surfaces_no_stale_viewport_settle(self):
+        # REDTEAM (F4, f1cb4d5): a key-only batch never calls
+        # viewport_origin, so it must NOT surface a previous
+        # batch's settle. dom_act clears the stale value at its
+        # start; the key dispatch records nothing.
+        backend, session, _code, _focused = self._backend()
+        backend.dom_start()
+        session.last_viewport_settle = {
+            'reads': 99, 'settled_moz': [0, 0], 'elapsed_ms': 0.0}
+        snapshot = backend.dom_observe('Example', '#c5-text', 10)
+        result = backend.dom_act(
+            'Example', snapshot['snapshot'],
+            [self._action(snapshot['snapshot'], type='key',
+                          keys=['Return'])], None, True)
+        self.assertTrue(result['ok'], result)
+        self.assertNotIn('viewport_settle', result)
         backend.close()
 
 
@@ -645,8 +715,9 @@ class RealSignatureTests(unittest.TestCase):
         self.assertEqual(session.fields['#c5-text']['value'], 'hello')
         self.assertEqual(session.sent_bubbles, ['hello'])
         # 2 observes for the begin_batch settle, 2 more for the
-        # post-type refresh after the set_value.
-        self.assertEqual(len(code.observe_calls), 4)
+        # post-type refresh after the set_value, 2 more for the
+        # post-key refresh after the Enter (it sends the bubble).
+        self.assertEqual(len(code.observe_calls), 6)
         self.assertEqual(len(code.act_calls), 3)
         backend.close()
 

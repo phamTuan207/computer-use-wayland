@@ -1290,20 +1290,29 @@ class ZenSession:
             % json.dumps(selector)))
 
     def element_text(self, selector):
-        """Trimmed textContent of one element, or None when it has
-        none. Unlike field_value (which reads value for inputs and
-        textContent only for contenteditables), this reads the
-        rendered text of ANY element, so an assert on a sent bubble
-        (a plain div, no value property) can verify it. The lookup
-        pierces open shadow roots and traverses same-origin
-        iframes, the same as field_value. A cross-origin iframe
-        target returns None and the caller must fall back, never
-        silently pass.
+        """Trimmed textContent of one PLAIN element, or None when
+        it has none. Unlike field_value (which reads value for
+        inputs and textContent only for contenteditables), this
+        reads the rendered text of a plain element, so an assert
+        on a sent bubble (a plain div, no value property) can
+        verify it. REDTEAM (F4, 9858d9a): the fallback must NOT
+        read a value-bearing element, because textContent is not
+        its value: an input's textContent is always '', and a
+        textarea's textContent is its DEFAULT value, not its live
+        value, so an unconditional fallback lets an assert
+        FALSE-PASS on a field. Returns None for any element with
+        a value property ('value' in e) or a contenteditable, and
+        the caller must fail the assert, never pass it on text.
+        The lookup pierces open shadow roots and traverses
+        same-origin iframes, the same as field_value. A
+        cross-origin iframe target returns None and the caller
+        must fall back, never silently pass.
         """
         return self.evaluate(
             "return (function(){" + _FIND_JS +
             "const e=find(%s);"
             "if(!e) return null;"
+            "if(('value' in e) || e.isContentEditable) return null;"
             "const t=e.textContent;"
             "return typeof t==='string' ? t.trim() : null;})()"
             % json.dumps(selector))

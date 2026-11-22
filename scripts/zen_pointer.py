@@ -73,6 +73,15 @@ class ZenPointerDelegate:
         # F4 diagnostic: the begin_batch settle outcome
         # {'reads', 'stable', 'elapsed_ms'}, set by begin_batch.
         self.last_settle = None
+        # F4 follow-up: the post-type/key refresh settle and its
+        # error, kept SEPARATE from last_settle. REDTEAM (F4,
+        # 66c34f8): the refresh overwrote last_settle, so the
+        # dom_act 'settle' no longer described the batch start.
+        # last_settle is the BEGIN settle only; the refresh settle
+        # rides last_refresh_settle, and a refresh failure is
+        # recorded in last_refresh_error instead of swallowed.
+        self.last_refresh_settle = None
+        self.last_refresh_error = None
         # The window address begin_batch observed, kept so a
         # post-type meta refresh can re-observe the same window.
         self._window_address = None
@@ -218,25 +227,33 @@ class ZenPointerDelegate:
         }
         ok = (result.get('ok') is True
               and result.get('completed') == len(desktop))
-        if ok and any(item.get('type') == 'type' for item in desktop):
-            # F4 follow-up: a type changes the screen (the text
-            # now shows in the field), so the batch meta is stale
-            # for the NEXT action's desktop_act preflight, which
-            # would refuse it as 'screen changed' (f4diag run 8:
-            # set_value verified, then the focus was refused).
-            # Refresh the meta (observe + settle) so the next
-            # dispatch compares against the screen WITH the typed
-            # text. A refresh failure must not fail the action
-            # that already succeeded; the next dispatch keeps the
-            # stale meta and its preflight stays the gatekeeper.
+        if ok and any(item.get('type') in ('type', 'key')
+                      for item in desktop):
+            # F4 follow-up: a type or a key changes the screen
+            # (the text now shows in the field; Enter sends the
+            # bubble), so the batch meta is stale for the NEXT
+            # action's desktop_act preflight, which would refuse
+            # it as 'screen changed' (f4diag run 8: set_value
+            # verified, then the focus was refused). REDTEAM (F4,
+            # 66c34f8): a key dispatch has the same failure class
+            # as a type, so it refreshes too. Refresh the meta
+            # (observe + settle) so the next dispatch compares
+            # against the screen WITH the typed text / sent bubble.
+            # A refresh failure must not fail the action that
+            # already succeeded; the next dispatch keeps the stale
+            # meta and its preflight stays the gatekeeper. The
+            # refresh settle is recorded separately (it must not
+            # overwrite last_settle, the BEGIN settle) and a
+            # refresh failure is recorded, never swallowed.
             try:
                 address = self._window_address
                 fresh = self._observe(address)
                 fresh, settle = self._settle_observation(address, fresh)
                 self._meta = fresh
-                self.last_settle = settle
-            except Exception:
-                pass
+                self.last_refresh_settle = settle
+                self.last_refresh_error = None
+            except Exception as exc:
+                self.last_refresh_error = type(exc).__name__
         return ok
 
     def _image_point(self, screen_point):

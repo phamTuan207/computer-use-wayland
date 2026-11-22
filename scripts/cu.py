@@ -2084,6 +2084,24 @@ def desktop_act(env,meta,actions,after_capture=True,observation_path=None,
             isinstance(x,dict) and x.get('type')=='type'
             and x.get('ime','literal')=='literal' for x in g))
         for g in groups)
+    # REDTEAM (F4, ccb0f1e): a batch holding a COMPOSE type must
+    # NOT enter the batch-level literal scope. The batch scope
+    # holds fcitx5 inactive for the whole batch, and a compose
+    # group's literal_keyboard(env, False) is a no-op that never
+    # reactivates it, so the compose type would run with the IME
+    # inactive and Telex composition could not happen: a silent
+    # wrong output while the batch still reports ok. A mixed
+    # batch therefore lets each group manage the IME itself
+    # (literal groups deactivate, compose groups activate), the
+    # pre-ccb0f1e behavior. The Zen delegate never emits compose,
+    # so the F4 fix still holds for the real path.
+    has_compose_type=any(
+        (isinstance(g,dict) and g.get('type')=='type'
+         and g.get('ime','literal')=='compose')
+        or (isinstance(g,list) and any(
+            isinstance(x,dict) and x.get('type')=='type'
+            and x.get('ime','literal')=='compose' for x in g))
+        for g in groups)
     type_anchors=_type_group_anchors(groups)
     type_anchor=type_anchors[0] if type_anchors else None
     preflight_ms=round((time.monotonic()-preflight_start)*1000,3)
@@ -2198,12 +2216,14 @@ def desktop_act(env,meta,actions,after_capture=True,observation_path=None,
     error_code_override=None
     # Batch-level IME scope (F4 follow-up): holds the
     # literal_keyboard for the whole batch when it holds a literal
-    # type, entered inside the try so a failure to deactivate is
+    # type AND no compose type (a mixed batch lets each group
+    # manage the IME itself; see has_compose_type above),
+    # entered inside the try so a failure to deactivate is
     # caught as a batch error, closed in the finally so the input
     # method is always restored.
     batch_ime_stack = ExitStack()
     try:
-        if has_literal_type:
+        if has_literal_type and not has_compose_type:
             batch_ime_stack.enter_context(
                 literal_keyboard(env, True, result=ime_result))
         # A new virtual device at an unchanged cursor position may not cause

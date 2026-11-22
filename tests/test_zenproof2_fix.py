@@ -1032,6 +1032,64 @@ class ZenTabFixTest(unittest.TestCase):
         # original, not whatever the browser auto-activated.
         self.assertEqual(closed['current_url'], OWNER_URL)
 
+    def test_close_only_tab_skips_verification_reads(self):
+        # REDTEAM (F4, f1cb4d5): when the scratch tab is the only
+        # tab there is no live window left after the DELETE, so
+        # the verification reads would raise 'Browsing context
+        # has been discarded'. The DELETE itself would have raised
+        # had it failed, so the scratch is gone by definition;
+        # cmd_close skips the verification reads and reports the
+        # count from the DELETE.
+        tabs = [{'handle': uuid.uuid4().hex, 'title':
+                 'Two-vision benchmark fixture', 'url': FIXTURE_URL}]
+        fake = FakeSession(tabs, current_index=0)
+        closed = self._run_cmd(fake, zen_tab.cmd_close,
+                               FIXTURE_SUBSTR, OWNER_URL)
+        self.assertTrue(closed['ok'])
+        self.assertEqual(closed['count_before'], 1)
+        self.assertEqual(closed['count_after'], 0)
+        self.assertNotIn(FIXTURE_URL, [t['url'] for t in fake.tabs])
+        self.assertEqual(fake.tabs, [])
+
+    def test_close_fallback_never_targets_the_scratch_tab(self):
+        # REDTEAM (F4, f1cb4d5): when the original URL matches the
+        # scratch tab itself, the fallback must NOT resolve to
+        # the tab being deleted. The orig path needs the same
+        # h != scratch_full guard the loop path has; the fallback
+        # POST after the DELETE must target another tab.
+        class _RecordPostDelete(FakeSession):
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+                self.deleted_seen = False
+                self.post_delete_handles = []
+
+            def _wd(self, method, path, body=None):
+                if method == 'DELETE' and path.endswith('/window'):
+                    self.deleted_seen = True
+                if (method == 'POST' and path.endswith('/window')
+                        and body and self.deleted_seen):
+                    self.post_delete_handles.append(
+                        body.get('handle'))
+                return super()._wd(method, path, body)
+
+        tabs = _owner_tabs()
+        tabs.append({'handle': uuid.uuid4().hex, 'title':
+                     'Two-vision benchmark fixture',
+                     'url': FIXTURE_URL})
+        fake = _RecordPostDelete(tabs, current_index=2)
+        scratch_handle = tabs[2]['handle']
+        owner_handle = tabs[0]['handle']
+        # The original URL IS the scratch tab's own URL.
+        closed = self._run_cmd(fake, zen_tab.cmd_close,
+                               FIXTURE_SUBSTR, FIXTURE_URL)
+        self.assertTrue(closed['ok'])
+        self.assertNotIn(FIXTURE_URL, [t['url'] for t in fake.tabs])
+        self.assertNotIn(scratch_handle, fake.post_delete_handles,
+                         'the fallback POST must never target the '
+                         'tab being deleted')
+        self.assertIn(owner_handle, fake.post_delete_handles,
+                      'the fallback POST targets another live tab')
+
     def test_restore_original_full_handle_failure_flagged(self):
         """Council 3 C5, observation 2: when the original tab's
         handle prefix is ambiguous in the full handle list,

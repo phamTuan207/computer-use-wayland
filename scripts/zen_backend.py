@@ -493,6 +493,15 @@ class ZenDomBackend:
         'fresh_snapshot') without executing inside the old batch.
         """
         session = self._require_session()
+        # REDTEAM (F4, f1cb4d5): clear any viewport settle from a
+        # PREVIOUS batch, so a batch that never calls
+        # viewport_origin (key-only, read-only, early-break) does
+        # not surface a stale settle. dom_observe never calls
+        # viewport_origin, so clearing here loses nothing from
+        # the observe phase; only a settle recorded during THIS
+        # batch's dispatches is surfaced.
+        if hasattr(session, 'last_viewport_settle'):
+            session.last_viewport_settle = None
         binding = self._bound_snapshot(snapshot_id)
         for index, action in enumerate(actions):
             try:
@@ -716,6 +725,19 @@ class ZenDomBackend:
         settle = getattr(self._pointer, 'last_settle', None)
         if isinstance(settle, dict):
             result['settle'] = settle
+        # F4 follow-up: the post-type/key refresh settle and its
+        # error, recorded separately from the begin settle
+        # (REDTEAM F4, 66c34f8: the refresh must not overwrite
+        # last_settle, and a refresh failure must be recorded,
+        # never swallowed).
+        refresh_settle = getattr(self._pointer, 'last_refresh_settle',
+                                 None)
+        if isinstance(refresh_settle, dict):
+            result['refresh_settle'] = refresh_settle
+        refresh_error = getattr(self._pointer, 'last_refresh_error',
+                                None)
+        if isinstance(refresh_error, str):
+            result['refresh_error'] = refresh_error
         # F2 follow-up: the viewport settle outcome (reads, settled
         # moz, elapsed ms), so the run evidence says whether the
         # viewport origin was settled (not stale) when the batch

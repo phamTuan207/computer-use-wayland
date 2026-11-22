@@ -954,10 +954,17 @@ class FakeZenSession:
         return None if field is None else field.get('value', '')
 
     def element_text(self, selector):
-        # Trimmed rendered text, or None when the element has none.
-        # Mirrors the real ZenSession: a plain div (a sent bubble)
-        # has text but no value, so field_value returns None for
-        # it while element_text returns its text.
+        # Trimmed rendered text of a PLAIN element, or None.
+        # Mirrors the real ZenSession: a value-bearing element (an
+        # input, a textarea, a select, a contenteditable) returns
+        # None, because its textContent is not its value (an
+        # input's textContent is always '', a textarea's is its
+        # default, not its live value). The fallback in _verify
+        # must never pass an assert on a field by reading its
+        # text (redteam F4). A plain element (a sent bubble div)
+        # is not in self.fields, so its text comes from self.texts.
+        if selector in self.fields:
+            return None
         text = self.texts.get(selector)
         return None if text is None else str(text).strip()
 
@@ -989,7 +996,14 @@ class FakeZenSession:
         # the true origin. It supplies the pixel-proven verified moz
         # [240, 8] (MOZ-GROWTH, log a42ef12), so the backend grounds
         # on the true origin [2749, 922] and returns what the
-        # validator returns.
+        # validator returns. Like the real session, it records the
+        # settle outcome on last_viewport_settle, so a dom_act that
+        # grounds a point surfaces it (and a batch that never calls
+        # viewport_origin surfaces nothing, once dom_act clears
+        # the stale value at its start).
+        self.last_viewport_settle = {
+            'reads': 3, 'settled_moz': [240, 8],
+            'elapsed_ms': 201.5}
         absolute = [window_origin[0] + self.dom_origin[0],
                     window_origin[1] + self.dom_origin[1]]
         return zen_dom.check_viewport_geometry(
