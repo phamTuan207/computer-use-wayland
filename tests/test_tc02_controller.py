@@ -629,6 +629,18 @@ class Tc02EditorLifecycleTests(unittest.TestCase):
                           tc02_controller.window_line(dialog)])
 
 
+def _which_with_tesseract(name):
+    """Fake shutil.which that pretends only tesseract exists.
+
+    Argument-sensitive on purpose: a production change of the binary name
+    (for example 'tesseract' to 'tesseract-ocr') must fail the tests that
+    use this fake, not pass silently behind a blanket return value.
+    """
+    if name == 'tesseract':
+        return '/usr/bin/tesseract'
+    return shutil.which(name)
+
+
 class Tc02MenuBarTests(unittest.TestCase):
     def make_controller(self, temporary):
         plan = tc02_controller.load_json(tc02_controller.DEFAULT_PLAN)
@@ -651,7 +663,7 @@ class Tc02MenuBarTests(unittest.TestCase):
             with patch.object(tc02_controller.subprocess, 'run',
                               return_value=completed), \
                     patch.object(tc02_controller.shutil, 'which',
-                                 return_value='/usr/bin/tesseract'):
+                                 side_effect=_which_with_tesseract):
                 controller._assert_typed_text_visible(observation, step)
 
     def test_typed_text_check_fails_when_fragment_is_absent(self):
@@ -668,10 +680,25 @@ class Tc02MenuBarTests(unittest.TestCase):
             with patch.object(tc02_controller.subprocess, 'run',
                               return_value=completed), \
                     patch.object(tc02_controller.shutil, 'which',
-                                 return_value='/usr/bin/tesseract'):
+                                 side_effect=_which_with_tesseract):
                 with self.assertRaises(tc02_controller.Escalate) as caught:
                     controller._assert_typed_text_visible(observation, step)
             self.assertIn('20:30', caught.exception.reason)
+
+    def test_typed_text_check_escalates_when_tesseract_is_absent(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            controller = self.make_controller(temporary)
+            observation = {'image': str(Path(temporary) / 'after.png')}
+            Path(observation['image']).write_bytes(b'fake')
+            step = {'checkpoint': 's1-check',
+                    'batch': [{'type': 'click', 'point': 'editor_body'},
+                              {'type': 'type', 'text': 'note at 20:30.\n'}]}
+            with patch.object(tc02_controller.shutil, 'which',
+                              return_value=None):
+                with self.assertRaises(tc02_controller.Escalate) as caught:
+                    controller._assert_typed_text_visible(observation, step)
+            self.assertIn('tesseract is unavailable',
+                          caught.exception.reason)
 
     def test_typed_text_check_skips_plans_without_a_time_fragment(self):
         with tempfile.TemporaryDirectory() as temporary:
