@@ -238,4 +238,67 @@ standard: test command, output, commit hash, time log with every claim.
 - Codex live-confirm (PID 945044): three live-browser confirmations.
 - Clone2 batch 11 (495cfc6 on main): 3 tasks, assigned 08:50.
 
-## 9. (to be filled as results land)
+## 9. Step 5 DONE and verified, plateau DEFINED, S2 flip commissioned, 09:21 +07 (T+36m)
+
+- Worker C4-STEP5-P1P5 completed. Log
+  improvements/worker-click4-step5-p1p5-log.md, commits 76d0a56 +
+  4d090fb, ls-remote verified by me (origin todolist-push HEAD 4d090fb).
+  12 files, +1757/-98.
+- What landed: scripts/perception_router.py (one function
+  route_perception; coverage-based routing, Zen chrome to screenshots
+  only, one perception_routing JSON log line per decision; NO live
+  caller wired yet, by design, the S2 flip worker wires it);
+  scripts/dom_asserts.py plus P5 asserts (click family to focus_check,
+  type/fill/set_value to type_check, send Enter to sent_bubble V12 gate,
+  enforced in dom_act.focus_type and code_exec._api_dom_act);
+  DOM_ASSERT_EXCEPTIONS shared between P5 and CB-1 (scroll, hover, move,
+  drag, wait, key non-send; pixel band diagnostic only);
+  scripts/action_result.py (CB-1 three-part contract, build_contract,
+  contract_ok, migrate_legacy_result; desktop_act stamps via decorator,
+  first_action.py envelope carries the fields); CB-5 locate confirmations
+  (ZenSession.locate_confirmed, dom_act.confirm_locate, ground_input
+  rewired). CB-5 eval removal was already done in step 0 (18f2304).
+- Discover after: Ran 2022, failures 0, errors 1, skipped 17 (214.5s).
+  Delta +41 = +37 new tests in tests/test_step5_p1p5.py (37/37 OK) + 4
+  bench_manifest tests. Deliberate behavior change: a send on a session
+  without sent_bubble_contains now raises DomAssertError before any
+  keystroke (was ok True with sent_verified None); 4 existing tests
+  updated to the real V12 session shape, not deleted.
+- MEASUREMENT NOTE (open, not a verdict-changer): the worker's baseline
+  at 36364b1 was Ran 1981 / errors 1, while the step-1 worker measured
+  Ran 1974 / errors 4 at the same commit. Both agree on 0 failures; the
+  difference is collection (different discover invocation). Recorded
+  here so the next discover run states its invocation.
+- PLATEAU DEFINITION (coordinator-set, HARD GATE, step 6): task class
+  clone chat sends (Brave [::1]:9223, Chromium 127.0.0.1:9223, endpoints
+  named per browser). Form: live median wall time over 5 runs after the
+  flip, end to end including transport, DOM-scored by V12. Threshold
+  60s. Plateau reached if the median stays above 60s for 5 runs (this
+  triggers the step 9 prototype decision); below 60s median, S2 is still
+  improving and the class expands. Grounding: fixture bench 10.86s /
+  12.69s; stepwise live baseline 150-243s; 60s is about 5x the fixture
+  bench and about 1/3 of the stepwise live time.
+- B2 lift: all four conditions now MET (fixture green, Y1b fixed, CB-1
+  gate landed for the class, plateau defined). The flip is authorized.
+- Commissioned 09:20 +07 (T+35m): C4-S2-FLIP (6760bda1). Sync the laptop
+  tree first (step 8a pulled forward); wire the P1 router into the live
+  path; flip CU_CODE_EXEC=1 for the clone-chat-send class ONLY with
+  act-now as fallback; 5 live measurement runs with model-call counts,
+  wall times, per-phase splits, CB-1 three-way results; endpoints named
+  per browser; sequence live sends around Codex's Zen live work (check
+  /tmp/codex-live-confirm-out.log before each send). Log:
+  improvements/worker-click4-s2-flip-log.md.
+- Clone2 notice posted: coord/clone2.md on main, commit b7d14fa,
+  ls-remote verified. Clone2 was told to expect and ignore the S2 flip
+  measurement test messages in its thread. Clone2 acked batch 11 at
+  08:52 and is running (watchdog 09:18: batch 11 running, clone1 STALL
+  198 min; batch 11 task 1 progress 49a6e4c: TESTREPAIR-B already landed,
+  15/15 pass).
+
+## 10. Still running (T+36m)
+
+- C4-S2-FLIP (6760bda1): step 6, laptop sync + router wiring + flip + 5 live runs.
+- Codex live-confirm (PID 945044): three live-browser confirmations.
+- Clone2 batch 11 (495cfc6 on main): 3 tasks, assigned 08:50.
+
+## 11. (to be filled as results land)
