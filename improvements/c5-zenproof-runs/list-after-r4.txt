@@ -1,0 +1,92 @@
+[
+ {
+  "handle": "147fa5a7",
+  "title": "YouTube",
+  "url": "https://www.youtube.com/"
+ },
+ {
+  "handle": "f78b5b54",
+  "title": "Problem loading page",
+  "url": "https://www.reddit.com/"
+ },
+ {
+  "handle": "9397f65c",
+  "title": "Today – Todoist",
+  "url": "https://app.todoist.com/app/today"
+ },
+ {
+  "handle": "593458d8",
+  "title": "Inbox (732) - phamtuanhuy1109@gmail.com - Gmail",
+  "url": "https://mail.google.com/mail/u/1/#inbox"
+ },
+ {
+  "handle": "cdf88cd3",
+  "title": "Lịch Google - Tuần 16 tháng 11, 2026",
+  "url": "https://calendar.google.com/calendar/u/1/r/week"
+ },
+ {
+  "handle": "c1f84471",
+  "title": "PCCV CF26 - Google Trang tính",
+  "url": "https://docs.google.com/spreadsheets/d/1WzUJNuCQlYLAj59-gdIPFFQv2P_d3f2KhEYcGeWhRRY/edit?gid=0#gid=0"
+ },
+ {
+  "handle": "0208822f",
+  "title": "Free Claude Code Admin",
+  "url": "http://127.0.0.1:8082/admin/model_config"
+ },
+ {
+  "handle": "2461b738",
+  "title": "Welcome!",
+  "url": "https://zen-browser.app/welcome/"
+ },
+ {
+  "handle": "fe65d877",
+  "title": "",
+  "url": "about:blank"
+ },
+ {
+  "handle": "d3573233",
+  "title": "",
+  "url": "about:blank"
+ },
+ {
+  "handle": "01b108bd",
+  "title": "ModelArk-Coding-Plan",
+  "url": "https://www.byteplus.com/en/activity/codingplan?utm_source=google&utm_medium=pmax&utm_campaign=purchase_codingplan_sea_english_20260605_yuki&utm_term=20260605_deepseek-v4_white_new&utm_content=tecdo&gad_source=2&gad_campaignid=23906536929&gclid=CjwKCAjwqonVBhA4EiwA9wYJ3Xlt3CYq0n0RZg5HqXHeGMFcoLueRZE7Nmv4xOfOy74XBTxxf3dOOxoC4gUQAvD_BwE"
+ },
+ {
+  "handle": "70315306",
+  "title": "Example Domain",
+  "url": "https://example.com/"
+ },
+ {
+  "handle": "3dbf9798",
+  "title": "",
+  "url": "about:blank"
+ },
+ {
+  "handle": "73cd68ba",
+  "title": "",
+  "url": "about:blank"
+ },
+ {
+  "handle": "0df547d0",
+  "title": "Just a moment...",
+  "url": "https://polygon.codeforces.com/login?backLink=%2Fpackage%3Fsession%3Da990539d869d87619249d0c813d8346ec027eda9%26ccid%3D0fb1586e2ab7dcfca7b64c98606cec8f&session=a990539d869d87619249d0c813d8346ec027eda9&ccid=19507fc1baee383a5faae847d1eb920d"
+ },
+ {
+  "handle": "93a67b66",
+  "title": "Just a moment...",
+  "url": "https://codeforces.com/"
+ },
+ {
+  "handle": "2a0bfdfc",
+  "title": "Biome Finder - Minecraft App",
+  "url": "https://www.chunkbase.com/apps/biome-finder#seed=-4216250823719477953&platform=java_1_21_9&dimension=overworld&x=967&z=543&zoom=0.518"
+ },
+ {
+  "handle": "bf06ab05",
+  "title": "Gamerule keepInventory",
+  "url": "https://duck.ai/chat?t=ffab&chatID=5cb263e5-9c80-4dcf-8477-8b990cb70343"
+ }
+]
