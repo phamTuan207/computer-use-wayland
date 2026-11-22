@@ -116,6 +116,7 @@ class ZenPointerDelegate:
             'act_expected': len(desktop),
             'act_error': result.get('error'),
             'act_error_code': result.get('error_code'),
+            'act_screen_change': result.get('screen_change'),
             'type_verified': result.get('type_verified'),
             'type_verified_basis': result.get('type_verified_basis'),
         }

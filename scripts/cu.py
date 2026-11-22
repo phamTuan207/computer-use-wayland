@@ -1984,9 +1984,21 @@ def desktop_act(env,meta,actions,after_capture=True,observation_path=None,
         else:
             fresh=save_observation(settled,settled_meta,meta['max_width'])
             _diagnostic_event('preflight_refused',meta,env,completed=0,error='screen changed',active_window=active_window)
+            # F4 diagnostic: name WHICH comparison refused and why.
+            # The bare 'screen changed' error collapses three
+            # different causes (old-vs-new JPEG/global, new-vs-
+            # settled live change, old-vs-settled action-point
+            # change) into one string; the detail records the
+            # numbers so the next failure is diagnosable from the
+            # result alone. Additive only; ok/completed/error are
+            # unchanged.
             return {'ok':False,'completed':0,'error':'screen changed','error_code':'screen_changed',
                     'preflight_ms':round((time.monotonic()-preflight_start)*1000,3),
-                    'next_step':DESKTOP_REOBSERVE,'after':fresh}
+                    'next_step':DESKTOP_REOBSERVE,'after':fresh,
+                    'screen_change':{
+                        'old_vs_new':screen_change_detail(old,new,actions),
+                        'new_vs_settled':screen_change_detail(new,settled,actions),
+                        'old_vs_settled':screen_change_detail(old,settled,actions)}}
     # A keyboard-only batch must not open the virtual pointer device at all, and an
     # ordinary startup failure belongs in the result envelope, not outside it.
     pointer=None;completed=0;error=None;ime_result={};transient_error=False;outcome_uncertain=False
