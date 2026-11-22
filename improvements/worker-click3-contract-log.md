@@ -148,5 +148,10 @@ prototype worker:
 
 - Staged with explicit pathspec: docs/layer0-cbexec-contract.md and
   improvements/worker-click3-contract-log.md.
-- Commit: (hash recorded below after commit).
-- Push verified with git ls-remote: (recorded below after push).
+- Commit: 03ff589 (contract plus this log).
+- Push verified with git ls-remote: 03ff589 on origin/todolist-push
+  (verified after push; see the second commit below for the log
+  update).
+- Second commit: this log section 4 filled in with the hash above,
+  committed with an explicit pathspec and pushed with the same
+  verification.
