@@ -296,4 +296,6 @@ File: tests/test_zen_pointer.py (only test file changed).
 - 0 em dash, 0 en dash in both changed files.
 - Fixture sha 147494cda4c6ae24a51ced03ccdfb3fc5a79a1bbab
   56dcdfc5afb4f72fba6cbf, unchanged.
-- Commits: (see below).
+- Commits (todolist-push, ls-remote verified 1bc13ca):
+  c3954e3 code + tests (scripts/zen_pointer.py,
+  tests/test_zen_pointer.py); 1bc13ca this log.
