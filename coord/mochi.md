@@ -303,3 +303,17 @@ Doc day du: improvements/lauren-tan-workflow-20261122.md, commit 311eacd tren to
 5. Moi lan sua tay bien thanh luat: (1) xoa van de bang kien truc/cau truc du lieu, (2) bien thanh lint rule hoac test, (3) bien thanh skill hoac rule, (4) human review (cuoi cung).
 
 Quy tac cung: khong tu review chinh minh. Moi claim "xong" phai co bang chung chay duoc. Commit nho, nhieu lan, push ngay. Khong mo track moi ngoai lo trinh.
+
+## Workflow Lauren Tan: da doc, tuan theo tu gio (mochi, 00:19 23/11/2026)
+- Da doc day du improvements/lauren-tan-workflow-20261122.md, 134 dong, commit 311eacd tren todolist-push (talk "All Code Is Slop (Except Mine)", pstack, muc 1-12), va muc moi cua Pham Tuan trong coord/mochi.md, commit add4c56, 00:16:13 23/11/2026.
+- 5 diem cot loi, hieu va ap dung:
+  1. Kim tu thap tin tuong: thiet ke lam lua chon sai khong viet duoc > check xac dinh (lint/type/test) > validation runtime > text rule cuoi cung. Gap loi hoi truoc: bien thanh check duoc khong, tot hon thiet ke de sai khong xay ra duoc khong.
+  2. Coordinator khong tu code: chi chia viec, giam sat, doc diff, viet tom tat. Code do agent khac viet.
+  3. Evidence contract: noi dieu kien hoan thanh TRUOC, dang check chay duoc (lenh + output + hash + log thoi gian). Tu tin khong bang chung la co do. "Inconclusive" la trung thuc, KHONG phai pass. Nguoi cham KHONG BAO GIO la nguoi viet. Lead tu doc diff, khong lap lai claim.
+  4. Merge theo trust + sampling: doc mau, tim pattern xau, sua moi truong sinh ra no.
+  5. Moi lan sua tay bien thanh luat: (1) xoa bang kien truc, (2) lint/test, (3) skill/rule, (4) human review cuoi cung.
+- Quy tac cung: khong tu review chinh minh. Moi claim "xong" phai co bang chung chay duoc. Commit nho, nhieu lan, push ngay. Khong mo track moi ngoai lo trinh.
+- Da ap dung ngay:
+  - Da gui lenh moi cho ca 2 coordinator B2-4 va B2-6 dang chay (23/11 00:19), yeu cau doc workflow day du truoc khi tiep tuc. Thay doi so voi brief cu: moi reviewer TU commit file log review cua chinh no, coordinator khong commit ho; moi worker/reviewer viet dieu kien hoan thanh truoc khi chay check. (Lenh da gui, chua xac nhan coordinator da ap dung, se kiem tra trong bao cao B2-4/B2-6.)
+  - 2 sua log review vua roi (B2-3 eec6141, B2-5 1b4c0f2) da bien thanh luat trong ~/AGENTS.md, muc "Workflow Lauren Tan": dem file chi bao tracked (git ls-files) va on-disk rieng, khong bao so find tho sau test vi __pycache__ bi dem them; bao cao patch apply phai neu ro patch nao tren baseline nao.
+- Tu gio moi bao cao cua mochi tuan theo evidence contract: dieu kien hoan thanh viet truoc, bang chung chay duoc kem theo, khong tu review chinh minh.
