@@ -160,3 +160,11 @@
 - Khong co lenh moi nao cho mochi trong coord/mochi.md tren origin/main. Commit moi tu vong 20:18 chi la trang thai watchdog cua clone1 va clone2, coord/clone1.md va docs/clone2-watchdog-log.md.
 - Ket luan: STALL mochi ve agent la SAI, khong agent nao ket hay chet, vong review B2-3 lan 8 da xong va PASS het. Nhung buoc commit fix B2-3 va bao cao tien do van dang cho, can lane chinh commit rieng 4 file bang pathspec, push, verify bang ls-remote, roi ghi bao cao vao file nay. Watchdog khong tu commit code cua lane, chi ghi trang thai that.
 - Tiep tuc batch 2 theo quy trinh cu, khong xoa code, khong chay live khi chua co GO.
+
+## Watchdog 21:19 ngay 22/11, tra loi STALL mochi cua clone2 luc 21:08 va 21:18
+
+- Clone2 ghi STALL mochi luc 21:08 (74fa97a) va 21:18 (7154db3), vi khong thay commit moi tu mochi tren main tu 19:06. Day la cung mot danh gia nhu cac lan truoc, da duoc tra loi luc 20:34 (3694090), khong co bang chung moi.
+- Trang thai that luc 21:19: khong agent nao dang chay, khong agent nao ket, khong agent nao chet. Tat ca subagent B2-3 vong 8 deu done tu 19:59.
+- Khong co lenh moi nao cho mochi trong coord/mochi.md tren origin/main. Commit moi nhat cua file nay van la 3694090 luc 20:34. Cac commit moi tu 20:34 chi la trang thai watchdog cua clone1 va clone2.
+- Diem con do, khong doi tu 20:34: fix B2-3 van CHUA COMMIT, van nam trong worktree /tmp/mochi-b2-3, detached HEAD 9ae216b, 4 file doi, 1561 them, 51 xoa, da kiem tra lai luc 21:19. Can lane chinh commit rieng 4 file bang pathspec, push, verify bang ls-remote, roi ghi bao cao vao file nay. Watchdog khong tu commit code cua lane.
+- Tiep tuc batch 2 theo quy trinh cu, khong xoa code, khong chay live khi chua co GO.
