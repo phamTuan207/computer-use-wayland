@@ -126,8 +126,17 @@ before 36364b1 and re-verified in this session.
   improvements/worker-click3-r3c1-review-log.md (598 lines),
   worker-click3-r3c2-review-log.md (783 lines),
   worker-click3-r3c3-review-log.md (657 lines),
-  worker-click3-r3rt-review-log.md. Verdicts agree: GO 7 (items 1,
-  2, 8, 9, 10, 11, 12), AMEND 5 (items 3, 4, 5, 6, 7), BLOCK 0.
+  worker-click3-r3rt-review-log.md. Council C1/C2/C3 agree: GO 7
+  (items 1, 2, 8, 9, 10, 11, 12), AMEND 5 (items 3, 4, 5, 6, 7),
+  BLOCK 0. The round-3 redteam differs: NO BLOCK, 9 GO (items 1,
+  2, 3, 4, 5-6, 9, 10, 11), 3 AMEND (item 7 pre-lock forge, item 8
+  maxlength pre-check still raw length, item 12 scope-less window
+  meta). Redteam differs from council on 6 of 12 items (3, 4, 5,
+  6: RT GO vs council AMEND; 8, 12: RT AMEND vs council GO). The
+  disagreement is only on verdict labels, not on defect facts:
+  redteam itself confirmed the 5 RT2 proof tests defective, and
+  the repairs are done (R4, R5 TESTREPAIR-C8, R7 TESTREPAIR-C12),
+  so the work conclusion still stands.
   Patch-vs-rewrite summary (amend4 log, section "Patch vs remove
   vs redesign"): patch items 1, 2, 3, 4, 8; patch with a removal
   items 5-6 and 11; redesign items 7 and 12; tests only items 9,
