@@ -120,3 +120,15 @@
 - Toi thay tin nhan cho em di vao ma KHONG co pill/overlay computer-use nao hien, vi no gui bang CDP tho (Runtime.evaluate), khong qua computer-use session.
 - Tu gio, moi tac dong live len trinh duyet cua em phai qua act-now/computer-use session de pill hien; CAM dung CDP tho de ghi (click/go chu) khi khong co session. Doc CDP (observe/harvest) van duoc.
 - Co che hien pill cho CDP dang duoc lam (worker W-PILLCDP); khi nao xong toi bao. Doc ky truoc khi lam tiep, ghi nhan da doc vao file nay.
+
+## BATCH 2 tu Muse tong (qua Pham Tuan), 18:32 22/11: lam tiep, nhieu viec
+
+- Batch 1 cua may xong, bao cao 16b22b0 tao da doc. Ket luan: Y13G CHUA PASS, Phase B SAI xuyen run, A8 UNDERDETERMINED, buoc 10 CHUA DU. Tot, lam dung quy trinh. Gio lam batch 2, 6 viec, lam song song bang subagent, moi viec council 3 + redteam + verifier doc lap, commit rieng tung viec bang pathspec, push, ls-remote verify. Khong xoa code nao khi chua co GO cua tao.
+- B2-1, A8-AST test theo R9: sua test theo R9 trong bao cao cua may, commit rieng, chay lai 27/27 phai PASS het. Xong thi chuan bi quy trinh chay live Y13G day du, nhung KHONG chay live khi chua co GO cua tao (may dang dung, cho cua so yen tinh).
+- B2-2, Phase B: sua theo de xuat o muc 2 bao cao cua may: counter cap session + kiem tra tuoi nhanh cho None, them test cross-run, review lai. Council + redteam + verifier doc lap phai xac nhan sua dung truoc khi coi la xong.
+- B2-3, A8 fix viet lai thanh patch that: viet lai fix o muc 4 bao cao cua may thanh patch apply duoc, git apply --check phai pass tren HEAD cf11a4b, sua loi layers check (doc status cu), sua loi head echo chet, sua cau reload REFUTED qua manh, viet test 4f thanh code that. Xong thi re-review, roi chuan bi rerun theo quy trinh day du o muc 3 bao cao cua may. Chi chuan bi, KHONG chay live khi chua co GO.
+- B2-4, buoc 10, khong xoa gi: (a) A5 gate 2: migrate S2 flip class sang broker client (scripts/s2_flip_live.py, code-exec send tu one-shot sang broker client), xong chay lai fallback drill tren code sau migration. (b) A3 gate 5: sua danh sach holder thanh 5, them sync-installed.py dong 115. (c) A3 B6: chuan bi wedge drill day du, chi chuan bi, KHONG chay live khi chua co GO. (d) A4 CB-10: chuan bi flicker probe hoac duong dan xin deferral, ghi ro can gi de mo khoa, khong tu ket luan. Do lai toa do o HEAD luc lam, vi toa do da lech tu prep HEAD.
+- B2-5, G-SCRUB: quet ten that trong 45 file tren main, thay bang chu chung chung, giu email bang 0. Lam tren todolist-push, commit rieng, council + redteam kiem tra khong sot ten that nao va khong pha code.
+- B2-6, step 1 close-out: doc het remnant o HEAD 36364b1, sua nhung gi sua duoc tu repo, nhung gi can live-browser thi viet thanh quy trinh cho Muse tong, khong tu chay live.
+- Luat cung: doc ky muc LUAT CUNG MOI THU HAI ve pill 18:30 trong file nay, ghi nhan da doc. Pill hien la bat buoc khi dieu khien may; W-PILLCDP dang lam co che pill cho CDP, khong phai viec cua may, dung trung. Tab trinh duyet cua tao khong duoc dong hay chuyen huong, can thi mo ben canh.
+- Bao cao tien do vao file nay sau moi viec xong. Tac that thi hoi trong file nay, dung nhan ong chu.
