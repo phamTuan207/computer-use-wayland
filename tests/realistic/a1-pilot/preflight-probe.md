@@ -34,13 +34,13 @@ assert_state(started["ok"], "dom start failed")
 wins = windows()
 chrome = [w for w in wins if w["class"] == "chromium"][0]
 obs = observe(window=chrome["address"])
-result = act([{"type": "key", "keys": ["ctrl", "l"]}, {"type": "type", "text": "<FIXTURE_URL_PICK4>\n"}], obs)
+result = act([{"type": "key", "keys": ["ctrl", "l"], "scope": obs["scope"], "observation_id": obs["id"]}, {"type": "type", "text": "<FIXTURE_URL_PICK4>\n", "scope": obs["scope"], "observation_id": obs["id"]}], obs)
 assert_state(result["ok"], "navigate act failed")
 tabs = dom_tabs()
 tab = [t for t in tabs if t["url"] == "<FIXTURE_URL_PICK4>"][0]
 snap = dom_observe(tab["id"])
 btn = [e for e in snap["elements"] if e["name"] == "Show result"][0]
-clicked = dom_act(snap, [{"type": "click", "ref": btn["ref"]}, {"type": "click", "ref": "bad-ref-mid-list"}, {"type": "click", "ref": btn["ref"]}])
+clicked = dom_act(snap, [{"type": "click", "ref": btn["ref"], "scope": tab["id"], "observation_id": snap["snapshot"]}, {"type": "click", "ref": "bad-ref-mid-list", "scope": tab["id"], "observation_id": snap["snapshot"]}, {"type": "click", "ref": btn["ref"], "scope": tab["id"], "observation_id": snap["snapshot"]}])
 ```
 
 P2 program (submit, expect #result still "not clicked yet"):
@@ -67,14 +67,14 @@ assert_state(started["ok"], "dom start failed")
 wins = windows()
 chrome = [w for w in wins if w["class"] == "chromium"][0]
 obs = observe(window=chrome["address"])
-result = act([{"type": "key", "keys": ["ctrl", "l"]}, {"type": "type", "text": "<FIXTURE_URL_F01>\n"}], obs)
+result = act([{"type": "key", "keys": ["ctrl", "l"], "scope": obs["scope"], "observation_id": obs["id"]}, {"type": "type", "text": "<FIXTURE_URL_F01>\n", "scope": obs["scope"], "observation_id": obs["id"]}], obs)
 assert_state(result["ok"], "navigate act failed")
 tabs = dom_tabs()
 tab = [t for t in tabs if t["url"] == "<FIXTURE_URL_F01>"][0]
 snap = dom_observe(tab["id"])
 typed = [e for e in snap["elements"] if e["role"] in ("textbox", "input")][0]
 cell = [e for e in snap["elements"] if e["name"] == "A2"][0]
-filled = dom_act(snap, [{"type": "click", "ref": cell["ref"]}, {"type": "fill", "ref": typed["ref"], "text": "2026-11-16"}, {"type": "fill", "ref": "bad-ref-mid-list", "text": "Widget"}, {"type": "fill", "ref": typed["ref"], "text": "12"}])
+filled = dom_act(snap, [{"type": "click", "ref": cell["ref"], "scope": tab["id"], "observation_id": snap["snapshot"]}, {"type": "fill", "ref": typed["ref"], "text": "2026-11-16", "scope": tab["id"], "observation_id": snap["snapshot"]}, {"type": "fill", "ref": "bad-ref-mid-list", "text": "Widget", "scope": tab["id"], "observation_id": snap["snapshot"]}, {"type": "fill", "ref": typed["ref"], "text": "12", "scope": tab["id"], "observation_id": snap["snapshot"]}])
 ```
 
 P2 program (submit, expect cell A2 still shows its initial text "-",
@@ -111,13 +111,13 @@ assert_state(started["ok"], "dom start failed")
 wins = windows()
 chrome = [w for w in wins if w["class"] == "chromium"][0]
 obs = observe(window=chrome["address"])
-result = act([{"type": "key", "keys": ["ctrl", "l"]}, {"type": "type", "text": "<FIXTURE_URL_PICK4>\n"}], obs)
+result = act([{"type": "key", "keys": ["ctrl", "l"], "scope": obs["scope"], "observation_id": obs["id"]}, {"type": "type", "text": "<FIXTURE_URL_PICK4>\n", "scope": obs["scope"], "observation_id": obs["id"]}], obs)
 assert_state(result["ok"], "navigate act failed")
 tabs = dom_tabs()
 tab = [t for t in tabs if t["url"] == "<FIXTURE_URL_PICK4>"][0]
 snap = dom_observe(tab["id"])
 btn = [e for e in snap["elements"] if e["name"] == "Show result"][0]
-checked = dom_act(snap, [{"type": "click", "ref": btn["ref"]}, {"type": "assert", "ref": "bad-ref-mid-list", "text": "pick4-ok"}, {"type": "click", "ref": btn["ref"]}])
+checked = dom_act(snap, [{"type": "click", "ref": btn["ref"], "scope": tab["id"], "observation_id": snap["snapshot"]}, {"type": "assert", "ref": "bad-ref-mid-list", "text": "pick4-ok", "scope": tab["id"], "observation_id": snap["snapshot"]}, {"type": "click", "ref": btn["ref"], "scope": tab["id"], "observation_id": snap["snapshot"]}])
 ```
 
 P2 program: same as Probe 1 P2, expect #result still "not clicked yet".
@@ -139,17 +139,17 @@ assert_state(started["ok"], "dom start failed")
 wins = windows()
 chrome = [w for w in wins if w["class"] == "chromium"][0]
 obs = observe(window=chrome["address"])
-result = act([{"type": "key", "keys": ["ctrl", "l"]}, {"type": "type", "text": "<FIXTURE_URL_PICK4>\n"}], obs)
+result = act([{"type": "key", "keys": ["ctrl", "l"], "scope": obs["scope"], "observation_id": obs["id"]}, {"type": "type", "text": "<FIXTURE_URL_PICK4>\n", "scope": obs["scope"], "observation_id": obs["id"]}], obs)
 assert_state(result["ok"], "navigate act failed")
 tabs = dom_tabs()
 tab = [t for t in tabs if t["url"] == "<FIXTURE_URL_PICK4>"][0]
 snap = dom_observe(tab["id"])
 btn = [e for e in snap["elements"] if e["name"] == "Show result"][0]
-first = dom_act(snap, [{"type": "assert", "selector": "#result", "text": "pick4-ok"}])
+first = dom_act(snap, [{"type": "assert", "selector": "#result", "text": "pick4-ok", "scope": tab["id"], "observation_id": snap["snapshot"]}])
 if not first["ok"]:
     snap = dom_observe(tab["id"])
     btn = [e for e in snap["elements"] if e["name"] == "Show result"][0]
-    clicked = dom_act(snap, [{"type": "click", "ref": btn["ref"]}])
+    clicked = dom_act(snap, [{"type": "click", "ref": btn["ref"], "scope": tab["id"], "observation_id": snap["snapshot"]}])
     assert_state(clicked["ok"], "retry click failed")
     dom_assert(clicked["after"], selector="#result", text="pick4-ok")
 ```
