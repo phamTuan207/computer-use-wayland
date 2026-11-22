@@ -72,6 +72,7 @@ LAPTOP_REMOTE = '/home/james/computer-use-wayland/scripts/session_remote.py'
 LAPTOP_V12 = '/tmp/s2-v12.mjs'
 LAPTOP_P9 = '/tmp/s2-p9.mjs'
 LAPTOP_SEED = '/tmp/s2-seed.mjs'
+LAPTOP_ACTIVATE = '/tmp/c5-activate.mjs'
 
 BROWSERS = {
     'brave': {'endpoint': 'http://[::1]:9223', 'label': 'clone1'},
@@ -93,6 +94,9 @@ def build_program(target_id, message):
     assert (the V12 gate in program form, P5). The assert_state on
     the dom_act result makes a failed send fail the envelope; the
     harness still runs its own independent V12 after.
+    P2 (step 7) requires every action to carry scope +
+    observation_id bound to this snapshot: scope is the target id,
+    observation_id is snap["snapshot"].
     """
     return (
         'snap = dom_observe(' + json.dumps(target_id) + ')\n'
@@ -103,11 +107,16 @@ def build_program(target_id, message):
         '        break\n'
         'assert_state(comp is not None, "composer not found in snapshot")\n'
         'res = dom_act(snap, [\n'
-        '    {"type": "fill", "ref": comp, "text": ' + json.dumps(message) + '},\n'
-        '    {"type": "key", "keys": ["Enter"]},\n'
+        '    {"type": "fill", "ref": comp, "text": ' + json.dumps(message)
+        + ', "scope": ' + json.dumps(target_id)
+        + ', "observation_id": snap["snapshot"]},\n'
+        '    {"type": "key", "keys": ["Enter"], "scope": ' + json.dumps(target_id)
+        + ', "observation_id": snap["snapshot"]},\n'
         '    {"type": "assert", "selector": '
         + json.dumps(BUBBLE_ASSERT_SELECTOR)
-        + ', "text": ' + json.dumps(message) + ', "timeout_ms": 3000},\n'
+        + ', "text": ' + json.dumps(message) + ', "timeout_ms": 3000'
+        + ', "scope": ' + json.dumps(target_id)
+        + ', "observation_id": snap["snapshot"]},\n'
         '])\n'
         'print("dom_act ok", res.get("ok"), "completed", res.get("completed"), '
         '"ms", res.get("execution_ms"), "error", res.get("error"))\n'
@@ -115,17 +124,20 @@ def build_program(target_id, message):
     )
 
 
-def message_for(run, browser):
+def message_for(run, browser, prefix='S2-FLIP'):
     """Short, unique, clearly marked test message for one send."""
-    return 'S2-FLIP-R%d-%s-IGNORE-TEST' % (run, browser.upper())
+    return '%s-R%d-%s-IGNORE-TEST' % (prefix, run, browser.upper())
 
 
 class Harness:
-    def __init__(self, workdir, run_no, dry_run=False):
+    def __init__(self, workdir, run_no, dry_run=False, activate=False,
+                 message_prefix='S2-FLIP'):
         self.workdir = Path(workdir)
         self.workdir.mkdir(parents=True, exist_ok=True)
         self.run_no = run_no
         self.dry_run = dry_run
+        self.activate = activate
+        self.message_prefix = message_prefix
         self.spans = []
         self.ssh_calls = []
         self.log_lines = []
@@ -357,6 +369,31 @@ class Harness:
             out['error'] = str(exc)[:400]
             return out, seq
 
+    def activate_browser(self, endpoint, target_id):
+        """C5-A1 pre-step: Target.activateTarget + Page.bringToFront.
+
+        CDP-only, no workspace switch, no screen change. Runs as a
+        separate node helper (/tmp/c5-activate.mjs) before the send
+        program. Returns the helper's JSON dict. A failed activation
+        does NOT abort the send: the send result itself is the
+        measurement, and the activation dict records what happened.
+        """
+        start = time.monotonic()
+        rc, out, err, wall = self.ssh(
+            'node %s %s %s' % (LAPTOP_ACTIVATE, endpoint, target_id),
+            'activate', timeout=60)
+        wall_ms = (time.monotonic() - start) * 1000.0
+        try:
+            result = json.loads(out.strip().splitlines()[-1])
+        except (ValueError, IndexError):
+            result = {'ok': False, 'error': 'activate script bad output: %s'
+                      % out.strip()[:300]}
+        result['ms'] = round(wall_ms, 1)
+        result['rc'] = rc
+        self.spans.append({'phase': 'activate',
+                           'wall_ms': round(wall_ms, 1), 'laptop_ms': None})
+        return result
+
     def send_browser(self, browser, target_id, message):
         """One-shot code-exec send + independent V12 for one browser."""
         cfg = BROWSERS[browser]
@@ -366,6 +403,8 @@ class Harness:
                'target_id': target_id}
         t_send = time.monotonic()
         try:
+            if self.activate:
+                out['activation'] = self.activate_browser(endpoint, target_id)
             program = build_program(target_id, message)
             wall_ms, envelope = self.oneshot_code_exec(
                 endpoint, program,
@@ -439,6 +478,8 @@ class Harness:
         lease = '/home/james/.cache/agent-computer-use/s2-flip-run%d.lease' % self.run_no
         owner = 's2-flip-run%d' % self.run_no
         results = {'run': self.run_no, 'dry_run': self.dry_run,
+                   'activate': self.activate,
+                   'message_prefix': self.message_prefix,
                    'mux_baseline_ms': round(mux, 1), 'browsers': {}}
         scratch = {}
         try:
@@ -476,7 +517,8 @@ class Harness:
             for browser in browsers:
                 if browser not in routed:
                     continue
-                message = message_for(self.run_no, browser)
+                message = message_for(self.run_no, browser,
+                                      self.message_prefix)
                 res = self.send_browser(browser, routed[browser], message)
                 results['browsers'][browser].update(res)
                 if res.get('outcome') in ('error', 'failed-unverified'):
@@ -536,9 +578,9 @@ class Harness:
                 laptop = max(0.0, wall - mux)
                 phases['verify'] += laptop
                 transport += wall - laptop
-            elif kind in ('broker', 'setup'):
+            elif kind in ('broker', 'setup', 'activate'):
                 laptop = max(0.0, wall - mux)
-                phases[kind] += laptop
+                phases['setup' if kind == 'activate' else kind] += laptop
                 transport += wall - laptop
         transport += 2 * mux  # the two mux-baseline probes
         accounted = transport + sum(phases.values())
@@ -562,10 +604,17 @@ def main(argv=None):
     ap.add_argument('--browser', choices=['brave', 'chromium', 'both'],
                     default='both')
     ap.add_argument('--dry-run', action='store_true')
+    ap.add_argument('--activate', action='store_true',
+                    help='C5-A1: Target.activateTarget + Page.bringToFront '
+                         'before each send (CDP-only, no screen change)')
+    ap.add_argument('--message-prefix', default='S2-FLIP',
+                    help='prefix for the unique test message per send')
     ap.add_argument('--workdir', required=True)
     args = ap.parse_args(argv)
     browsers = ['brave', 'chromium'] if args.browser == 'both' else [args.browser]
-    harness = Harness(args.workdir, args.run, dry_run=args.dry_run)
+    harness = Harness(args.workdir, args.run, dry_run=args.dry_run,
+                      activate=args.activate,
+                      message_prefix=args.message_prefix)
     results = harness.run(browsers)
     out_path = Path(args.workdir) / ('run-%d.json' % args.run)
     out_path.write_text(json.dumps(results, indent=2, ensure_ascii=False) + '\n')

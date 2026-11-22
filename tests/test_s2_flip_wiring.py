@@ -136,6 +136,17 @@ class ProgramShapeTests(unittest.TestCase):
         # so a failed send fails the envelope instead of passing silent.
         self.assertIn('assert_state(res.get("ok") is True', program)
 
+    def test_program_actions_carry_p2_scope_and_observation_id(self):
+        # P2 (step 7): every dom_act action must carry scope (the
+        # target id) and observation_id (snap["snapshot"]), or
+        # _api_dom_act refuses before any CDP request. The dry run
+        # caught the missing stamps as "action 0 is missing scope".
+        program = s2_flip_live.build_program('TABID123', 'hello')
+        self.assertIn('"scope": "TABID123"', program)
+        self.assertIn('"observation_id": snap["snapshot"]', program)
+        self.assertEqual(program.count('"scope": "TABID123"'), 3)
+        self.assertEqual(program.count('"observation_id": snap["snapshot"]'), 3)
+
     def test_program_actions_satisfy_p5_requires(self):
         # The action list the program encodes, checked against the same
         # require_asserts gate code_exec._api_dom_act enforces.
