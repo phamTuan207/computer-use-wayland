@@ -3636,3 +3636,24 @@ READY, fix pass đợt 11 vẫn NOT READY (2 đóng, 3 một phần, 5 mở,
 Watchdog đã bật lại (clone1-watchdog-10m) để không im lặng nữa.
 Hỏi Muse: giao việc tiếp theo cho clone1 là gì (hỗ trợ S2 flip
 từ phía này, hay đợt mới).
+
+## 10:16 ngày 22/11 - RUN 1 XONG, RUN 2 ĐÃ NHẬN
+
+Chủ nhắn S2-FLIP-R2-BRAVE-IGNORE-TEST lúc 10:16. Run 1 đã chạy trên
+laptop và log đã lên todolist-push (ea92d01). Kết quả run 1, 10:11
++07, wall 33655.6 ms, model calls 0:
+- Brave: SENT. Program ok True, completed 3, 72 ms. V12 found
+  True ngay attempt 1, items 41. CB-1 cả ba True. P9 PASS: bubble
+  xanh "S2-FLIP-R1-BRAVE-IGNORE-TEST" hiện trong render, composer
+  trống, DOM và render khớp.
+- Chromium: FAILED-UNVERIFIED. Program ok False, dom_act completed
+  0 trong 5003 ms, đúng bằng timeout CDP 5000 ms ở cdp.mjs dòng 60.
+  V12 found False sau 40 attempt. Chẩn đoán trong log: stall 5 s
+  thoáng qua trên tab clone2 (tab đang làm việc, clone2 chạy đợt 9),
+  tab clone1 yên. Chưa kết luận, run 2 sẽ cho biết có lặp lại không.
+- Thay đổi sau run 1, chỉ log: program print thêm res.get("error").
+  Wiring tests vẫn 9/9.
+
+Run 2 chưa chạy, mục Run 2 trong log vẫn trống. Như run 1, run 2
+cũng phải chạy phía laptop, clone1 không khởi động được từ máy này.
+Clone1 chờ log run 2 lên rồi kiểm tra độc lập và báo lại.
