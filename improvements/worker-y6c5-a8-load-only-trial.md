@@ -32,6 +32,41 @@ and does NOT prove the liquid readiness window (O3).
    mask=contour namespace=computer-use-indicator` present in the marker
    FILE ($RUN_DIR/y6-profile-applied.txt, copied out at teardown to
    $NEST/y6-profile-applied-<timestamp>.txt) before the liquid gate.
+   Each marker must start its OWN line: one line containing both
+   markers is not a pass. The runner refuses to run if $NEST or
+   $RUN_DIR is a symlink, and the check sits before the first write
+   under $NEST (the run-log tee). That guard covers only $NEST and
+   $RUN_DIR themselves being symlinks: it does NOT cover a symlink
+   planted at a fixed-name file directly under $NEST. Those files are
+   guarded separately: at startup the runner removes any planted link
+   at every fixed-name file under $NEST (the live plugin lists, the
+   nest plugin and glass status files and their after-gate re-checks,
+   the mpv and pill logs, the layers file, the glass-stats files, and
+   the nest stdout log), so a link planted before the run cannot
+   redirect those writes either. Timestamped names are NOT safe by
+   themselves: a link can be planted for every second in a window
+   before the run, so the timestamp alone proves nothing. Each
+   timestamped write is guarded on its own: the run log is removed
+   at startup before the tee, the frames dir is refused outright if
+   it is a symlink before mkdir -p, and each teardown copy
+   destination (the saved nested log and the saved marker file) is
+   removed before the copy. The pill socket dir is guarded the same
+   way: the runner refuses outright if $NEST/cache or
+   $NEST/cache/agent-computer-use is a symlink before mkdir -p,
+   because the pill binds its control socket under that dir and the
+   socket filename carries the pill token, so a planted link there
+   would hand pill control to whoever lists the victim dir. The two fixed-name writes outside $NEST
+   are guarded separately: teardown removes any planted link at the
+   live version file before redirecting into it, and the runner
+   refuses outright if the fixed lock path, its parent dir, or any
+   ancestor dir above the parent up to $HOME is a symlink before
+   opening it. The teardown lock-free check also skips with a warning
+   instead of following a planted link at the lock path, its parent
+   dir, or any ancestor dir above the parent. The runner also removes
+   any planted marker .tmp at startup, so no planted link can
+   redirect the marker write, and teardown re-checks $NEST before
+   writing the live plugin list (after), comparing only against a
+   before-list this run wrote.
    The LIVE per-instance log ($NEST_LOG) is NOT the channel for this
    signal: the A8 trial of 16:18 2026-11-22 proved the log file stops
    flushing after the dmabuf dump, so a log grep cannot observe it
@@ -42,10 +77,15 @@ and does NOT prove the liquid readiness window (O3).
    logs is NOT a failure. Parse-1 `not ready` marker present is
    EXPECTED, not a failure.
 3. Second signal: features.layers.enabled == true in the nested hyprglass
-   status JSON (re-checked after the marker).
+   status JSON re-fetched AFTER the marker file appears. The pre-gate
+   status JSON is never used for this check: it can be stale, and a slow
+   config() could flip layers.enabled after it was fetched.
 4. Version: hyprglass 1.1.1-cu.1, versionCheck match, on both checks.
 5. G4: `nest hyprctl configerrors` output empty after profile application.
-   RECORD the exact output either way, even on pass (empty).
+   RECORD the exact output either way, even on pass (empty). G4 runs
+   TWICE: once before the A2 poll, and once after the marker (the second
+   G4 catches parse-3 errors that appear only after parse 2 applies the
+   profile; see the runner A2 block).
 6. AMEND4: HYPRGLASS_SKIP_VERSION_CHECK unset. AMEND5: no hyprglass load
    path in the live config chain; live plugin list before == after.
    Record the ACTUAL before-list; do NOT assume hyprbars-only. As of

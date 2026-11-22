@@ -43,13 +43,14 @@
 # optics.lua), so a reload buys nothing and risks a parse-3 duplicate
 # layer() registration (open item O1, overwrite vs error unresolved) plus
 # live-touch surface (a wrong-target reload would hit the live session).
-# One application path only: the automatic parse-2 path (R8). The reload
-# hypothesis was tested by the A8 trial (16:18 2026-11-22) and REFUTED as
-# the cause of an absent marker: the reload happens and the profile is
-# applied, but the marker prints never reach the log file (ofstream
-# buffering, see improvements/worker-click5-y6-a8-invest-log.md). A missing
-# marker therefore means a broken observation channel first, and a missing
-# reload only if the marker FILE is also absent. Enforced by
+# One application path only: the automatic parse-2 path (R8). The A8
+# trial (16:18 2026-11-22) tested only the automatic parse-2 reload, not
+# a manual reload, so an absent marker in the LOG does not prove a reload
+# did not happen or the profile was not applied: it proves only that the
+# log did not deliver the marker (ofstream buffering, see
+# improvements/worker-click5-y6-a8-invest-log.md). A missing marker FILE
+# is the signal that separates a broken observation channel from a
+# missing profile. Enforced by
 # tests/test_y6c5_positive_gate.py (no non-comment `hyprctl reload` line).
 set -u
 NEST=/tmp/y6-nested
@@ -62,6 +63,10 @@ BACKDROP_STATIC=$NEST/backdrop-static.mp4
 PILL=$NEST/run-nested-pill.py
 LOG=$NEST/hyprland-wayland.log
 LOCK=$HOME/.cache/agent-computer-use/zen_dom.lock
+# B2-3 redteam R4-1: the live version file has a fixed name in /tmp, so
+# it is a variable, not a literal, so the tests can point it at a temp
+# path and prove the planted-link guard below with the real lines.
+LIVE_VERSION_FILE=/tmp/y6-live-version.txt
 LIVE_SOCK=/run/user/1000/wayland-1
 # Live identity resolved at runtime (U15). Values verified at fix time, kept
 # here only as a comment: LIVE_SIG=11cbc6c577b84ffb1edf4df3fc5b6128c3ae6947_1795249046_1138556825, LIVE_PID=1515.
@@ -77,14 +82,67 @@ SIG=""
 LIVE_SIG=""
 LIVE_PID=""
 NEST_STARTED=0
+BEFORE_LIST_WRITTEN=0
 NEST_OUTPUT="WAYLAND-1"
 NEST_DISPLAY=""
 
-# Tee stdout to the run log (U20). The tee process is created before the flock
-# fd exists, so it cannot inherit the lock.
-exec > >(tee -a "$RUN_LOG") 2>&1
-
 fail() { echo "Y6-WAYLAND: FAIL: $1"; exit 1; }
+
+# B2-3 redteam R3-1: the symlink guard must sit BEFORE the first write
+# under $NEST, not just before the first touch of RUN_DIR. The tee below
+# is the first write under $NEST, and the live-plugin-list-before write
+# is another one; a guard placed after either of them lets a link planted
+# before the run redirect those writes into a victim dir before the
+# refusal, and the refusal itself would be tee'd into the victim dir.
+# fail() is defined here, before the tee, so the refusal goes to the
+# terminal only. No trap is installed yet at this point, so a refusal
+# here exits without teardown; nothing has started yet (no lock held,
+# no nest, no live identity resolved), so there is nothing to tear down.
+# B2-3 redteam R-R1/R2-1: RUN_DIR must not be a symlink, and neither
+# must its parent $NEST. A planted symlink at either would make the
+# rm -rf and mkdir -p below, and the hook marker write, follow it into
+# a victim dir (for example the live runtime dir).
+if [ -L "$NEST" ]; then fail "NEST $NEST is a symlink; refusing to run (planted link could redirect writes)"; fi
+if [ -L "$RUN_DIR" ]; then fail "RUN_DIR $RUN_DIR is a symlink; refusing to run (planted link could redirect writes)"; fi
+
+# B2-3 redteam R6-2: the guard above only refuses when $NEST or $RUN_DIR
+# itself is a symlink. It does NOT protect fixed-name files directly
+# under $NEST: a symlink planted at one of those names before the run is
+# truncated by the redirect that writes it, the same class as R2-2
+# (marker .tmp) and R4-1 (version file). Remove any planted link at every
+# fixed-name file under $NEST before the first write. rm -f removes the
+# link, never its target, so the later redirect always creates a fresh
+# regular file. This block sits after the guard on purpose: through a
+# symlinked $NEST it would remove files in the victim dir. It is a
+# deletion, not a write of content, so it may sit before the tee below.
+# nest-timeout.pid is not listed either: it already has its own rm -f at
+# its launch site below. The two start_mpv log names and the glass-stats
+# names are fixed names too and are listed here, even though the redteam
+# round-6 list named only the first nine.
+rm -f "$NEST/live-plugin-list-before.json" "$NEST/live-plugin-list-after.json" \
+  "$NEST/nest-plugin-list.json" "$NEST/nest-plugin-list.err" \
+  "$NEST/nest-glass-status.json" "$NEST/nest-glass-status.err" \
+  "$NEST/nest-plugin-list-after-gate.json" "$NEST/nest-plugin-list-after-gate.err" \
+  "$NEST/nest-glass-status-after-gate.json" "$NEST/nest-glass-status-after-gate.err" \
+  "$NEST/nest-mpv.log" "$NEST/nest-mpv-static.log" "$NEST/nest-mpv-armB.log" \
+  "$NEST/nest-pill.log" "$NEST/nest-layers.json" \
+  "$NEST/nest-glass-stats-before-arms.json" "$NEST/nest-glass-stats-before-arms.err" \
+  "$NEST/nest-glass-stats-after-arms.json" "$NEST/nest-glass-stats-after-arms.err" \
+  "$LOG"
+
+# B2-3 redteam R7-1: the run log name carries a timestamp, but that does
+# NOT make it safe: a link can be planted for every second in a window
+# before the run (window planting, ~11s to plant 3600 one-second names),
+# and the tee below opens it with O_APPEND, so the whole run log would
+# be appended into the victim file. Remove any planted link first, same
+# pattern as the fixed-name cleanup above. START_TS is already known
+# here (line 73), and this sits after the guard and before the tee.
+rm -f "$RUN_LOG"
+
+# Tee stdout to the run log (U20). The tee process is created before the flock
+# fd exists, so it cannot inherit the lock. The symlink guard above must stay
+# before this line: this tee is the first write under $NEST.
+exec > >(tee -a "$RUN_LOG") 2>&1
 
 check_deadline() {
   local now elapsed
@@ -121,13 +179,29 @@ teardown() {
   echo "Y6-WAYLAND: teardown start $(date +%H:%M:%S)"
   # Copy the nested per-instance log out before removing the runtime dir (U7a).
   if [ "$NEST_STARTED" = "1" ] && [ -n "$SIG" ] && [ -d "$RUN_DIR/hypr/$SIG" ]; then
+    # B2-3 redteam R7-2: the saved-log copy name carries a timestamp,
+    # but that does not make it safe: a link can be planted for every
+    # second in a window before the run, and cp -r through a planted
+    # symlink would write into the victim dir. SIG is already known
+    # here, so remove any planted link at the destination first.
+    # rm -rf on a symlink removes only the link, never its target.
+    rm -rf "$NEST/hypr-saved-$START_TS-$SIG"
     cp -r "$RUN_DIR/hypr/$SIG" "$NEST/hypr-saved-$START_TS-$SIG" 2>/dev/null && echo "Y6-WAYLAND: nested log saved to $NEST/hypr-saved-$START_TS-$SIG" || echo "Y6-WAYLAND: WARN: nested log copy failed"
   fi
   # Y6C5-A8-INVEST: copy the profile-applied marker file out too (same
   # reason: RUN_DIR is removed below). Missing file is a warning only;
   # the gate already failed closed on it during the run if it never appeared.
-  if [ "$NEST_STARTED" = "1" ] && [ -f "$RUN_DIR/y6-profile-applied.txt" ]; then
-    cp "$RUN_DIR/y6-profile-applied.txt" "$NEST/y6-profile-applied-$START_TS.txt" 2>/dev/null && echo "Y6-WAYLAND: profile marker file saved to $NEST/y6-profile-applied-$START_TS.txt" || echo "Y6-WAYLAND: WARN: profile marker file copy failed"
+  if [ "$NEST_STARTED" = "1" ]; then
+    if [ -f "$RUN_DIR/y6-profile-applied.txt" ]; then
+      # B2-3 redteam R7-2: same window-planting class as the hypr-saved
+      # copy above: the marker copy destination carries a timestamp,
+      # and cp through a planted symlink would truncate the victim
+      # file. Remove any planted link at the destination first.
+      rm -f "$NEST/y6-profile-applied-$START_TS.txt"
+      cp "$RUN_DIR/y6-profile-applied.txt" "$NEST/y6-profile-applied-$START_TS.txt" 2>/dev/null && echo "Y6-WAYLAND: profile marker file saved to $NEST/y6-profile-applied-$START_TS.txt" || echo "Y6-WAYLAND: WARN: profile marker file copy failed"
+    else
+      echo "Y6-WAYLAND: WARN: profile marker file missing at teardown, nothing to copy out"
+    fi
   fi
   if [ -n "$PILL_PID" ]; then kill "$PILL_PID" 2>/dev/null; sleep 1; kill -9 "$PILL_PID" 2>/dev/null; fi
   if [ -n "$MPV_PID" ]; then kill "$MPV_PID" 2>/dev/null; sleep 1; kill -9 "$MPV_PID" 2>/dev/null; fi
@@ -137,16 +211,36 @@ teardown() {
     kill -- -$NESTED_PID 2>/dev/null; sleep 2; kill -9 -- -$NESTED_PID 2>/dev/null
   fi
   # Remove the runtime dir only if the nest was actually started (U7b).
-  if [ "$NEST_STARTED" = "1" ]; then rm -rf "$RUN_DIR"; fi
+  # B2-3 redteam R-R1, R2-1: never rm -rf through a symlink, even if one
+  # was planted mid-run. A symlinked RUN_DIR or a symlinked parent NEST
+  # is left in place with a warning.
+  if [ "$NEST_STARTED" = "1" ]; then
+    if [ -L "$RUN_DIR" ] || [ -L "$NEST" ]; then echo "Y6-WAYLAND: WARN: RUN_DIR $RUN_DIR or NEST $NEST is a symlink at teardown, not removing it"; else rm -rf "$RUN_DIR"; fi
+  fi
   echo "Y6-WAYLAND: live check:"
   if [ -n "$LIVE_PID" ]; then ps -o pid,lstart,cmd -p "$LIVE_PID" || echo "Y6-WAYLAND: LIVE PID $LIVE_PID MISSING"; else echo "Y6-WAYLAND: LIVE PID never resolved"; fi
   if [ -n "$LIVE_SIG" ]; then
-    if live hyprctl version > /tmp/y6-live-version.txt 2>&1; then head -4 /tmp/y6-live-version.txt; else echo "Y6-WAYLAND: live hyprctl FAILED"; fi
+    # B2-3 redteam R4-1: the version file has a fixed name, so a symlink
+    # planted there before the run would be truncated by the redirect
+    # below before hyprctl even runs. Remove any planted link first
+    # (rm -f removes the link, never its target), so the redirect always
+    # creates a fresh regular file. Same pattern as the R2-2 marker .tmp
+    # cleanup at startup.
+    rm -f "$LIVE_VERSION_FILE"
+    if live hyprctl version > "$LIVE_VERSION_FILE" 2>&1; then head -4 "$LIVE_VERSION_FILE"; else echo "Y6-WAYLAND: live hyprctl FAILED"; fi
     # Y6C5-A5 (AMEND5, live plugin list AFTER identity): the before/after
     # lists must be identical; any change means the run touched live.
     # A failed after-read warns instead of misreporting a change.
-    if [ -f "$NEST/live-plugin-list-before.json" ]; then
-      if live hyprctl -j plugin list > "$NEST/live-plugin-list-after.json" 2>&1; then
+    # B2-3 redteam R3-1: the after-list write must not follow a symlink
+    # planted mid-run, and it must only compare against a before-list
+    # this run wrote itself. A stale before-list from an earlier run is
+    # not a baseline, and a symlinked $NEST at teardown means the
+    # before-list on disk may not be this run's either. When either
+    # condition fails, fall through to the read-only live plugin print.
+    if [ "$BEFORE_LIST_WRITTEN" = "1" ] && [ -f "$NEST/live-plugin-list-before.json" ]; then
+      if [ -L "$NEST" ]; then
+        echo "Y6-WAYLAND: WARN: NEST $NEST is a symlink at teardown, not writing live plugin list (after)"
+      elif live hyprctl -j plugin list > "$NEST/live-plugin-list-after.json" 2>&1; then
         grep -o '"name": "[^"]*"' "$NEST/live-plugin-list-after.json" || echo "Y6-WAYLAND: (no plugins listed after)"
         if cmp -s "$NEST/live-plugin-list-before.json" "$NEST/live-plugin-list-after.json"; then
           echo "Y6-WAYLAND: live plugin list unchanged (before == after)"
@@ -175,7 +269,28 @@ teardown() {
   # Lock free check (U7f). Close our own fd 9 first, or the test measures
   # our own hold: flock locks are per open file description.
   exec 9>&- 2>/dev/null || true
-  if flock -n "$LOCK" -c true 2>/dev/null; then echo "Y6-WAYLAND: lock free after teardown"; else echo "Y6-WAYLAND: WARN: lock still held after teardown"; fi
+  # B2-3 redteam R5-1: this check runs on every exit, even when the run
+  # died before the lock was opened, so it must not follow a planted
+  # link either. flock never truncates, but it would create and lock a
+  # file in the victim dir. Skip it with a warning when the lock path
+  # or its parent dir is a symlink.
+  # B2-3 redteam R6-1: the open guard checks every lock ancestor; the
+  # teardown check must too, or a $HOME/.cache symlink bypasses it the
+  # same way. Walk the ancestors above the parent and remember a hit;
+  # the if below skips on any of the three: leaf, parent, or ancestor.
+  _lock_ancestor_bad=0
+  _lock_dir=$(dirname "$(dirname "$LOCK")")
+  while [ "$_lock_dir" != "$HOME" ] && [ "$_lock_dir" != "/" ] && [ -n "$_lock_dir" ]; do
+    if [ -L "$_lock_dir" ]; then _lock_ancestor_bad=1; fi
+    _lock_dir=$(dirname "$_lock_dir")
+  done
+  if [ -L "$LOCK" ] || [ -L "$(dirname "$LOCK")" ] || [ "$_lock_ancestor_bad" = "1" ]; then
+    echo "Y6-WAYLAND: WARN: lock path $LOCK or one of its ancestor dirs is a symlink, skipping lock-free check"
+  elif flock -n "$LOCK" -c true 2>/dev/null; then
+    echo "Y6-WAYLAND: lock free after teardown"
+  else
+    echo "Y6-WAYLAND: WARN: lock still held after teardown"
+  fi
   echo "Y6-WAYLAND: teardown done $(date +%H:%M:%S)"
 }
 trap teardown EXIT
@@ -266,6 +381,9 @@ echo "Y6-WAYLAND: live sig $LIVE_SIG pid $LIVE_PID"
 
 # Y6C5-A5 (AMEND5, live plugin list BEFORE): recorded, compared in teardown.
 live hyprctl -j plugin list > "$NEST/live-plugin-list-before.json" 2>&1 || fail "live hyprctl plugin list (before) failed"
+# B2-3 redteam R3-1: only a before-list this run wrote is a baseline.
+# Teardown compares against it only when this flag is 1.
+BEFORE_LIST_WRITTEN=1
 echo "Y6-WAYLAND: live plugin list BEFORE:"
 grep -o '"name": "[^"]*"' "$NEST/live-plugin-list-before.json" || echo "Y6-WAYLAND: (no plugins listed)"
 
@@ -287,14 +405,65 @@ fi
 echo "Y6-WAYLAND: runner-quiet process check OK (no runner scripts, no geckodriver, no mpv/foot)"
 
 # Hold the runner lock for the whole run. flock -n fails if any runner holds it.
+# B2-3 redteam R4-2: opening the lock with > truncates its target, so a
+# symlink planted at the fixed lock path before the run would truncate
+# the victim file. Refuse a symlinked lock path outright. flock itself
+# never truncates, only the open does, so the check must sit before it.
+# B2-3 redteam R5-1: the R4-2 check only covers the lock path itself.
+# A symlink at its parent dir redirects the open just the same (the
+# same class as R2-1, symlink parent of $NEST), and it also breaks the
+# lock mutual exclusion, since the runner would lock a file in the
+# victim dir instead of the real lock. Both the leaf and the parent
+# dir must be plain before the open.
+if [ -L "$LOCK" ]; then fail "lock $LOCK is a symlink; refusing to run (planted link could truncate its target)"; fi
+if [ -L "$(dirname "$LOCK")" ]; then fail "lock parent dir $(dirname "$LOCK") is a symlink; refusing to run (planted link could truncate the lock target)"; fi
+# B2-3 redteam R6-1: the leaf and parent checks are not enough. A symlink
+# at $HOME/.cache (the lock's grandparent) redirects the open just the
+# same, and the same class climbs one level higher each round. Check
+# EVERY ancestor dir above the parent, from $HOME down. $HOME itself is
+# not checked: replacing it needs write access to its parent, outside
+# the planted-link model. The walk starts at the grandparent because
+# the leaf and the parent are already checked above.
+_lock_dir=$(dirname "$(dirname "$LOCK")")
+while [ "$_lock_dir" != "$HOME" ] && [ "$_lock_dir" != "/" ] && [ -n "$_lock_dir" ]; do
+  if [ -L "$_lock_dir" ]; then fail "lock ancestor dir $_lock_dir is a symlink; refusing to run (planted link could truncate the lock target)"; fi
+  _lock_dir=$(dirname "$_lock_dir")
+done
 exec 9>"$LOCK" || fail "cannot open lock $LOCK"
 flock -n 9 || fail "zen_dom.lock held by a runner; abort, do not run"
 echo "Y6-WAYLAND: flock held, runner-quiet window open"
 
 # Clear stale nest runtime state (F0, v3): the socket name is discovered at
 # launch, so remove any wayland-* socket/lock left by a previous run.
+# (The symlink guard for $NEST/$RUN_DIR sits at the top of the script,
+# before the run-log tee, because the tee is the first write under $NEST;
+# see the R3-1 comment there. Do not move the guard back down here.)
 rm -rf "$RUN_DIR/hypr"
+# B2-3 redteam R2-2: remove any planted marker .tmp before the nest runs.
+# The hook writes the marker through a fixed-name .tmp file; a symlink at
+# that name would be truncated by the hook's open before the rename.
+rm -f "$RUN_DIR/y6-profile-applied.txt.tmp"
 for stale in "$RUN_DIR"/wayland-*; do if [ -e "$stale" ] || [ -L "$stale" ]; then rm -rf "$stale"; fi; done
+# B2-3 redteam R7-3: FRAMES carries a timestamp, but that does not make
+# it safe: a link can be planted for every second in a window before the
+# run, mkdir -p would follow it, and grim would then truncate a file
+# inside the victim dir. Refuse outright if FRAMES is a symlink. A
+# plain leftover dir from a crashed run is still reused by mkdir -p,
+# as before; only a planted link is refused.
+if [ -L "$FRAMES" ]; then fail "FRAMES $FRAMES is a symlink; refusing to run (planted link could redirect grim captures)"; fi
+# B2-3 redteam R8-1: $NEST/cache is not just a mkdir target: the pill
+# binds its control socket under $NEST/cache/agent-computer-use, and the
+# socket filename carries the pill token, so a planted link at either
+# level hands pill control to whoever lists the victim dir (recover the
+# token from the socket name, then hide/show/move/label at will). Refuse
+# outright if either level is a symlink, same pattern as FRAMES above.
+# A plain leftover dir from a crashed run is still reused by mkdir -p,
+# as before; only a planted link is refused. Check the outer level
+# first: through a symlinked cache the inner test would read the victim
+# dir. The pill file itself is outside this diff, so the guard belongs
+# in the runner, where both paths are fixed names.
+if [ -L "$NEST/cache" ]; then fail "NEST/cache $NEST/cache is a symlink; refusing to run (planted link could redirect the pill control socket)"; fi
+if [ -L "$NEST/cache/agent-computer-use" ]; then fail "NEST/cache/agent-computer-use $NEST/cache/agent-computer-use is a symlink; refusing to run (planted link could redirect the pill control socket)"; fi
 mkdir -p "$RUN_DIR" "$FRAMES" "$NEST/cache"
 
 # Parent connection: absolute live socket path, so XDG_RUNTIME_DIR is irrelevant
@@ -423,8 +592,10 @@ echo "Y6-WAYLAND: configerrors empty after profile application (G4 OK)"
 # The parse-1 "not ready" marker is EXPECTED on every successful startup
 # (parse 1 runs before the plugin system exists; the profile is applied on
 # parse 2). It must NEVER fail the run. This gate is positive: it requires
-# the applied marker printed AFTER optics.lua returns, plus a second signal,
-# features.layers.enabled == true, read from the status JSON fetched above.
+# BOTH lines of the applied marker in the marker FILE (the optics line and
+# the hook line), plus a second signal,
+# features.layers.enabled == true, read from a status JSON re-fetched
+# AFTER the marker appears, never from the status fetched before the gate.
 # The marker proves config()+layer() returned; layers.enabled proves the
 # config effect (optics.lua is the only setter; the plugin default is false).
 # Y6C5-A8-INVEST (2026-11-22): this gate used to grep the LIVE per-instance
@@ -449,24 +620,24 @@ echo "Y6-WAYLAND: profile gate: parse-1 not-ready marker is expected, waiting fo
 if grep -a -q "Y6-NEST-HOOK: hyprglass not ready" "$LOG" "$NEST_LOG" 2>/dev/null; then
   echo "Y6-WAYLAND: profile gate: parse-1 not-ready marker present (expected, not a failure)"
 fi
-# First signal (IPC, already fetched): layers.enabled must be true in the
-# status JSON fetched above. This is the config effect, and it is read over
-# IPC, so it works regardless of log delivery.
-python3 - "$NEST/nest-glass-status.json" << 'PYEOF' || fail "profile not applied: features.layers.enabled is not true in hyprglass status (see status JSON above)"
-import json, sys
-d = json.load(open(sys.argv[1]))
-layers = (d.get("features") or {}).get("layers") or {}
-print("Y6-WAYLAND: profile gate: features.layers.enabled=" + str(layers.get("enabled")))
-if layers.get("enabled") is not True:
-    sys.exit(1)
-PYEOF
+# layers.enabled is NOT checked here from the status JSON fetched
+# before the gate: that file can be stale, and a slow config() could
+# flip it after the fetch. The marker file is polled first; only after
+# it appears is the status re-fetched, and layers.enabled is checked
+# from that fresh status below.
 MARKER_FILE="$RUN_DIR/y6-profile-applied.txt"
 GATE_TIMEOUT="${Y6C5_GATE_TIMEOUT_S:-15}"
 GATE_INTERVAL="${Y6C5_GATE_INTERVAL_S:-1}"
 GATE_DEADLINE=$(( $(date +%s) + GATE_TIMEOUT ))
 GATE_OK=""
 while [ "$(date +%s)" -le "$GATE_DEADLINE" ]; do
-  if [ -f "$MARKER_FILE" ] && grep -a -q "Y6-NEST-OPTICS: applied" "$MARKER_FILE" 2>/dev/null; then GATE_OK=1; break; fi
+  # B2-3 redteam R-R2: BOTH marker lines are required. The optics line
+  # proves config()+layer() returned, the hook line proves the hook ran
+  # after the dofile; a file with only one line is not a pass.
+  # B2-3 redteam R2-3: each marker must START its own line (the ^ anchor).
+  # A single line containing both strings is not two lines, so a plain
+  # substring grep would pass a forged or mangled one-line marker.
+  if [ -f "$MARKER_FILE" ] && grep -a -q "^Y6-NEST-OPTICS: applied" "$MARKER_FILE" 2>/dev/null && grep -a -q "^Y6-NEST-HOOK: profile applied" "$MARKER_FILE" 2>/dev/null; then GATE_OK=1; break; fi
   sleep "$GATE_INTERVAL"
 done
 if [ -z "$GATE_OK" ]; then
@@ -479,21 +650,43 @@ grep -a -h "Y6-NEST-OPTICS: applied" "$MARKER_FILE" 2>/dev/null | head -3
 grep -a -h "Y6-NEST-HOOK: profile applied" "$MARKER_FILE" 2>/dev/null | head -3
 # Corroboration only: any applied-marker lines that did flush into the logs.
 # Their absence here is NOT a failure (see the A8-INVEST comment above).
-grep -a -h "Y6-NEST-OPTICS: applied" "$LOG" "$NEST_LOG" 2>/dev/null | head -3 || echo "Y6-WAYLAND: profile gate: applied marker not in logs (expected: log delivery lags, file is authoritative)"
+# NOTE: never write `grep ... | head -3 || echo ...` here. The pipeline
+# exit status is head's, always 0, so the echo would never run. Capture
+# the output first, then test whether it is empty.
+LOG_MARKERS=$(grep -a -h "Y6-NEST-OPTICS: applied" "$LOG" "$NEST_LOG" 2>/dev/null | head -3 || true)
+if [ -n "$LOG_MARKERS" ]; then printf '%s\n' "$LOG_MARKERS"; else echo "Y6-WAYLAND: profile gate: applied marker not in logs (expected: log delivery lags, file is authoritative)"; fi
 # Re-run the plugin-list and version checks after the marker: the profile
 # must still be loaded when the gate passes, not only at the earlier check.
 nest hyprctl -j plugin list > "$NEST/nest-plugin-list-after-gate.json" 2> "$NEST/nest-plugin-list-after-gate.err" || fail "nested hyprctl plugin list re-check failed after profile gate"
 grep -q hyprglass "$NEST/nest-plugin-list-after-gate.json" || fail "hyprglass missing from nested plugin list on re-check after profile gate"
 nest hyprctl -j hyprglass status > "$NEST/nest-glass-status-after-gate.json" 2> "$NEST/nest-glass-status-after-gate.err" || fail "nested hyprglass status re-check failed after profile gate"
-python3 - "$NEST/nest-glass-status-after-gate.json" << 'PYEOF' || fail "hyprglass version mismatch on re-check after profile gate"
+python3 - "$NEST/nest-glass-status-after-gate.json" << 'PYEOF' || fail "profile not applied: features.layers.enabled is not true in hyprglass status re-fetched after the marker, or version mismatch (see status JSON above)"
 import json, sys
 d = json.load(open(sys.argv[1]))
+layers = (d.get("features") or {}).get("layers") or {}
 ver = d.get("version"); vc = d.get("versionCheck")
-print("Y6-WAYLAND: profile gate re-check: hyprglass version=" + str(ver) + " versionCheck=" + str(vc))
+print("Y6-WAYLAND: profile gate re-check: features.layers.enabled=" + str(layers.get("enabled")) + " hyprglass version=" + str(ver) + " versionCheck=" + str(vc))
+if layers.get("enabled") is not True:
+    sys.exit(1)
 if ver != "1.1.1-cu.1" or vc != "match":
     sys.exit(1)
 PYEOF
-echo "Y6-WAYLAND: profile gate OK: applied marker file present, layers.enabled true, plugin list and version re-checked"
+# BEGIN Y6C5-A6-G4 second configerrors check (B2-3 redteam R-R3)
+# The batch-1 full rerun procedure requires a second G4 AFTER the marker:
+# a parse-3 error (for example duplicate layer() registration, open item
+# O1) can appear only after parse 2 applies the profile, so the pre-gate
+# G4 cannot catch it. Same fail-closed rule as the first G4: empty passes,
+# non-empty fails with its error text. The trial verdict for a parse-3
+# duplicate-layer error with marker present and layers true is
+# G4-NARROW-NEEDED, not a silent pass (see the trial doc).
+CONFIG_ERRORS_AFTER=$(nest hyprctl configerrors 2>&1) || fail "nest hyprctl configerrors re-check failed after profile gate (see above)"
+if [ -n "$(printf '%s' "$CONFIG_ERRORS_AFTER" | tr -d '[:space:]')" ]; then
+  printf '%s\n' "$CONFIG_ERRORS_AFTER"
+  fail "nest config errors present after profile gate (second G4, see above)"
+fi
+echo "Y6-WAYLAND: configerrors empty after profile gate (G4 second OK)"
+# END Y6C5-A6-G4 second configerrors check
+echo "Y6-WAYLAND: profile gate OK: applied marker file present, layers.enabled true on status re-fetched after the marker, plugin list and version re-checked"
 # END Y6C5-A2 positive profile gate
 
 # Liquid gate: liquid_available(ready=True) semantics exactly (indicator.py).

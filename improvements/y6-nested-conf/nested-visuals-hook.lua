@@ -38,17 +38,51 @@ if glass_count == 1 and glass_version == "1.1.1-cu.1" then
   -- Y6C5-A8-INVEST: same marker, delivered through a file instead of the
   -- buffered log. dofile returned, so optics.lua line 47 already printed
   -- in-process; writing both lines here records the same event. Explicit
-  -- close() flushes to disk at once. A failed open is silent: the gate
-  -- then fails closed on the missing file, and the log print (if it ever
-  -- flushes) is the diagnostic. Path is the nest run dir from the
+  -- close() flushes to disk at once. Path is the nest run dir from the
   -- environment the launcher sets (XDG_RUNTIME_DIR=/tmp/y6-nested/run),
-  -- never the live runtime dir.
-  local marker_path = (os.getenv("XDG_RUNTIME_DIR") or "/tmp/y6-nested/run") .. "/y6-profile-applied.txt"
-  local marker_file = io.open(marker_path, "w")
-  if marker_file then
-    marker_file:write("Y6-NEST-OPTICS: applied blur=0.15 refraction=0.55 mask=contour namespace=computer-use-indicator\n")
-    marker_file:write("Y6-NEST-HOOK: profile applied\n")
-    marker_file:close()
+  -- never the live runtime dir. Guard: the run dir must sit under
+  -- /tmp/y6-nested/. If it does not, no file is written anywhere, and a
+  -- warning print records the refusal. A failed open also prints, it is
+  -- never silent: the gate then fails closed on the missing file, and the
+  -- log print (if it ever flushes) is the diagnostic.
+  -- B2-3 redteam R-R1: the prefix check alone is not enough. A run dir
+  -- of /tmp/y6-nested/run/../../../run/user/1000 still matches the
+  -- prefix, and io.open follows ".." and symlinks, so the marker would
+  -- land in the live dir. Any ".." component is refused outright. The
+  -- runner also refuses a symlinked RUN_DIR before mkdir -p, so no
+  -- planted symlink can redirect the write. A symlinked PARENT dir
+  -- (/tmp/y6-nested itself) is invisible to these string checks; the
+  -- runner refuses a symlinked $NEST before launch, which is the only
+  -- place that check can live, since Lua has no lstat here.
+  local run_dir = os.getenv("XDG_RUNTIME_DIR") or "/tmp/y6-nested/run"
+  if not string.match(run_dir, "^/tmp/y6%-nested/") then
+    print("Y6-NEST-HOOK: marker file NOT written, XDG_RUNTIME_DIR is not a nest run dir: " .. run_dir)
+  elseif string.find(run_dir, "%.%.") then
+    print("Y6-NEST-HOOK: marker file NOT written, XDG_RUNTIME_DIR contains a .. component: " .. run_dir)
+  else
+    local marker_path = run_dir .. "/y6-profile-applied.txt"
+    -- Atomic write (redteam race note): write a temp file in the same
+    -- dir, close it, then rename over the marker, so a reader never
+    -- sees a half-written marker.
+    -- B2-3 redteam R2-2: the .tmp name is fixed, so a planted symlink
+    -- at that name would be truncated by io.open("w") before the
+    -- rename. Remove any pre-existing .tmp first (the runner also
+    -- removes it at startup); the window left between this remove and
+    -- the open is the hook's own write, with no planted link surviving
+    -- the remove.
+    local marker_tmp = marker_path .. ".tmp"
+    os.remove(marker_tmp)
+    local marker_file = io.open(marker_tmp, "w")
+    if marker_file then
+      marker_file:write("Y6-NEST-OPTICS: applied blur=0.15 refraction=0.55 mask=contour namespace=computer-use-indicator\n")
+      marker_file:write("Y6-NEST-HOOK: profile applied\n")
+      marker_file:close()
+      if not os.rename(marker_tmp, marker_path) then
+        print("Y6-NEST-HOOK: marker file rename failed: " .. marker_tmp)
+      end
+    else
+      print("Y6-NEST-HOOK: marker file open failed: " .. marker_tmp)
+    end
   end
 else
   -- EXPECTED on parse 1 of every run (plugin system does not exist yet).
