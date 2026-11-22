@@ -675,17 +675,9 @@ class ZenSession:
         if (isinstance(bounds, (list, tuple)) and len(bounds) == 4):
             window_origin = [bounds[0], bounds[1]]
             window_size = [bounds[2], bounds[3]]
-        elif (isinstance(meta, dict) and
-              (meta.get('scope') in ('window', 'screen') or
-               meta.get('monitor_box') is not None)):
+        else:
             raise ZenDomError('meta needs window_bounds; region is not a '
                               'window origin')
-        elif isinstance(meta, dict) and isinstance(meta.get('region'),
-                                                  (list, tuple)):
-            window_origin = [meta['region'][0], meta['region'][1]]
-            window_size = [meta['region'][2], meta['region'][3]]
-        else:
-            raise ZenDomError('meta needs window_bounds')
         monitor_box = meta.get('monitor_box') if isinstance(meta, dict) \
             else None
         origin = self.viewport_origin(window_origin, window_size,

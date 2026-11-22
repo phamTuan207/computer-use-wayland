@@ -518,7 +518,8 @@ class TestDomHelpers(unittest.TestCase):
         # The G30 Brave window: region [2533,914,901,1176], image
         # 901x1176, so image and region map 1:1.
         return {'image_size': [901, 1176],
-                'region': [2533, 914, 901, 1176]}
+                'region': [2533, 914, 901, 1176],
+                'window_bounds': [2533, 914, 901, 1176]}
 
     def test_viewport_origin_adds_window_origin_to_moz_inner(self):
         # mozInnerScreen is WINDOW-relative (live C12 probe 03:36):
@@ -594,6 +595,13 @@ class TestDomHelpers(unittest.TestCase):
         meta = {'scope': 'screen', 'image_size': [1920, 1080],
                 'region': [0, 0, 3840, 2160],
                 'monitor_box': [0, 0, 3840, 2160]}
+        with self.assertRaisesRegex(ZenDomError, 'needs window_bounds'):
+            session.locate_point(meta, '#msg-input')
+
+    def test_locate_point_refuses_region_without_window_bounds(self):
+        session = self._session()
+        meta = {'image_size': [901, 1176],
+                'region': [2533, 914, 901, 1176]}
         with self.assertRaisesRegex(ZenDomError, 'needs window_bounds'):
             session.locate_point(meta, '#msg-input')
 

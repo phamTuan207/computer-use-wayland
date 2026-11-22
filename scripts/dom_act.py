@@ -57,19 +57,8 @@ def _window_origin(meta):
     bounds = meta.get('window_bounds')
     if (isinstance(bounds, (list, tuple)) and len(bounds) == 4):
         return [bounds[0], bounds[1]]
-    if (meta.get('scope') in ('window', 'screen') or
-            meta.get('monitor_box') is not None):
-        raise DomActError('window-scoped DOM grounding requires '
-                          'window_bounds; region is not a window origin')
-    region = meta.get('region')
-    if (isinstance(region, (list, tuple)) and len(region) == 4):
-        # Only unscoped legacy metadata can reach this compatibility
-        # path. Current window and screen observations identify their
-        # scope, so a monitor region is never accepted as a live window
-        # origin.
-        return [region[0], region[1]]
-    raise DomActError('meta needs window_bounds for the window origin '
-                      '(mozInnerScreen is window-relative)')
+    raise DomActError('window-scoped DOM grounding requires '
+                      'window_bounds; region is not a window origin')
 
 
 def _scale_factor(session):

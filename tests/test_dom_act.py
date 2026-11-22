@@ -208,7 +208,8 @@ class FakeAct:
 
 
 G30_META = {'image_size': [901, 1176],
-            'region': [2533, 914, 901, 1176]}
+            'region': [2533, 914, 901, 1176],
+            'window_bounds': [2533, 914, 901, 1176]}
 G30_FIELD = {'rect': {'x': 86, 'y': 1101, 'width': 440, 'height': 63},
              'focused': True, 'value': 'hello', 'covered': False}
 
@@ -227,6 +228,14 @@ class GroundInputTests(unittest.TestCase):
         meta = {'scope': 'screen', 'image_size': [1920, 1080],
                 'region': [0, 0, 3840, 2160],
                 'monitor_box': [0, 0, 3840, 2160]}
+        with self.assertRaisesRegex(dom_act.DomActError,
+                                    'requires window_bounds'):
+            dom_act.ground_input(session, meta, '#msg-input')
+
+    def test_ground_input_refuses_region_without_window_bounds(self):
+        session = FakeDomSession({'#msg-input': G30_FIELD})
+        meta = {'image_size': [901, 1176],
+                'region': [2533, 914, 901, 1176]}
         with self.assertRaisesRegex(dom_act.DomActError,
                                     'requires window_bounds'):
             dom_act.ground_input(session, meta, '#msg-input')
@@ -302,25 +311,33 @@ class GroundInputTests(unittest.TestCase):
         cases = [
             ({'x': 86, 'y': 1101, 'width': 440, 'height': 63},
              [240, 8],
-             {'image_size': [1200, 757], 'region': [2509, 914, 1863, 1176]}),
+             {'image_size': [1200, 757], 'region': [2509, 914, 1863, 1176],
+              'window_bounds': [2509, 914, 1863, 1176]}),
             ({'x': 86, 'y': 1101, 'width': 440, 'height': 63},
              [240, 8],
-             {'image_size': [450, 588], 'region': [2509, 914, 1863, 1176]}),
+             {'image_size': [450, 588], 'region': [2509, 914, 1863, 1176],
+              'window_bounds': [2509, 914, 1863, 1176]}),
             ({'x': 100, 'y': 5, 'width': 200, 'height': 30},
              [0, 0],
-             {'image_size': [800, 600], 'region': [100, 200, 800, 600]}),
+             {'image_size': [800, 600], 'region': [100, 200, 800, 600],
+              'window_bounds': [100, 200, 800, 600]}),
             ({'x': 400, 'y': 300, 'width': 8, 'height': 8},
              [0, 0],
-             {'image_size': [800, 600], 'region': [0, 0, 800, 600]}),
+             {'image_size': [800, 600], 'region': [0, 0, 800, 600],
+              'window_bounds': [0, 0, 800, 600]}),
             ({'x': 0, 'y': 500, 'width': 800, 'height': 40},
              [0, 0],
-             {'image_size': [900, 700], 'region': [50, 60, 900, 700]}),
+             {'image_size': [900, 700], 'region': [50, 60, 900, 700],
+              'window_bounds': [50, 60, 900, 700]}),
             ({'x': 86, 'y': 1001, 'width': 440, 'height': 63},
              [0, 100],
-             {'image_size': [901, 1176], 'region': [2533, 914, 901, 1176]}),
+             {'image_size': [901, 1176], 'region': [2533, 914, 901, 1176],
+              'window_bounds': [2533, 914, 901, 1176]}),
             ({'x': 86, 'y': 1101, 'width': 440, 'height': 63},
              [240, 8],
-             {'image_size': [1802, 2352], 'region': [2509, 914, 1863, 1176]}),
+             {'image_size': [1802, 2352],
+              'region': [2509, 914, 1863, 1176],
+              'window_bounds': [2509, 914, 1863, 1176]}),
         ]
         hits = 0
         for rect, moz_inner, meta in cases:
