@@ -80,6 +80,13 @@ SEND_PROGRAM = (
     "dom_start()\n"
     "snap = dom_observe('two_vision_fixture.html?clone=zen',"
     " '#msg-input', 80)\n"
+    # The send snapshot URL is printed and gated in phase 4, the
+    # same check as the probe (Redteam F2): phase 4 must not trust
+    # the phase 3 switch from a previous process. A duplicate
+    # fixture tab appearing between phase 3 and phase 4 would
+    # otherwise make the send go to the wrong fixture tab.
+    "print('PROBE', snap['snapshot'], snap.get('url'),"
+    " len(snap.get('elements') or []))\n"
     "res = dom_act(snap, [\n"
     "    {\"type\": \"set_value\", \"ref\": \"#msg-input\", \"text\": \""
     + MESSAGE + "\", \"scope\": \"two_vision_fixture.html?clone=zen\","
@@ -478,6 +485,16 @@ class Runner:
         if str(active.get('address', '')).lower() != \
                 str(self.zen_address).lower():
             raise RuntimeError('active window moved off Zen before send')
+        # Redteam F2: re-switch to the scratch tab by URL
+        # immediately before the send. Phase 3 ran in a previous
+        # process; trusting its switch would let a duplicate
+        # fixture tab appearing in between send the message to the
+        # wrong tab. The switch refuses on ambiguity.
+        switched = self.tab('switch', TARGET, timeout=60)
+        if TARGET not in (switched.get('url') or ''):
+            raise RuntimeError('send switch landed on %r, not the '
+                               'scratch tab' % (switched.get('url'),))
+        self.results['send_switch'] = switched
         wall_ms, envelope = self.oneshot_zen(SEND_PROGRAM, INTENT,
                                              timeout=90)
         self.results['program'] = {
@@ -493,6 +510,16 @@ class Runner:
             if m:
                 completed = int(m.group(2))
         self.results['program']['completed'] = completed
+        # Gate the send snapshot URL with the same check as the
+        # probe (Redteam F2): the send must have observed the
+        # scratch tab, not a stale duplicate fixture tab.
+        send_lines = [l for l in envelope.get('log') or []
+                      if l.startswith('PROBE ')]
+        if not send_lines:
+            raise RuntimeError('send program printed no snapshot line')
+        send_url, send_count = parse_probe_line(send_lines[-1], TARGET)
+        self.results['program']['send_url'] = send_url
+        self.results['program']['send_count'] = send_count
         if envelope.get('ok') is not True or completed != 4:
             raise RuntimeError('send program did not complete 4/4: %s'
                                % (envelope,))
