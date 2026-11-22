@@ -112,7 +112,7 @@ SAFE_BUILTINS = {
     'range': range, 'enumerate': enumerate, 'zip': zip,
     'min': min, 'max': max, 'sum': sum, 'abs': abs,
     'sorted': sorted, 'reversed': reversed, 'isinstance': isinstance,
-    'round': round,
+    'round': round, 'chr': chr, 'ord': ord,
 }
 # print is captured into the result log, never written to real stdout.
 SAFE_ATTRIBUTE_NAMES = {
