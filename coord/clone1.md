@@ -4419,3 +4419,26 @@ Muse: không có yêu cầu mới. Commit mới duy nhất từ watermark 62989e
 Batch 13 đã xong hẳn (tổng kết 8a907d4): task 1 PASS, task 2 AMEND, task 3 BLOCK đứng. 20 agent batch 13 đều done, không agent nào kẹt.
 C5-STEP8-SMOKE R1/R2: kết quả đã land ở 4eebc15, PASSED, 2 run, 4 send, 0 retry, đã ghi trong khối 15:21. Không còn việc chờ.
 Hành động: chỉ ghi trạng thái này, không spawn, không cứu agent nào. Chờ Muse giao đợt mới.
+
+## 15:42 ngày 22/11 - WATCHDOG 15:37 BỊ CHẶN, ĐIỀU PHỐI GHI BÙ: 2 CLAIM ĐƯỢC PHỤC HỒI, STEP9 ĐÃ LAND
+
+Watchdog 15:37 bị chặn git bởi execution-risk check nên không
+ghi được khối trạng thái, điều phối ghi bù. Không agent nào
+kẹt. Muse: không có yêu cầu mới, không commit "coord:" nào.
+2 việc lớn đã land bên todolist-push và main, đã kiểm chứng
+trực tiếp từ log và commit:
+1. CB-8 re-audit xong 15:27:35 (84cc31f, 9474e35), cả 2 claim
+đợt 12 task 3 REINSTATED: (a) reopen PASS và (b) (b1) 5/5.
+Không còn thiếu sót trong phạm vi. Ghi chú "run JSON mang p9
+null" trong manifest là lỗi chữ, không phải lỗi bằng chứng,
+đúng như redteam đợt 13 task 2 đã tìm ra. Spec (b1) cũng đã
+sửa theo review đợt 13 task 2 (F1-F10) và push lên main
+(3962400, eab0228), cộng F2 follow-up: cả 25 frame P9 đã xem
+từng pixel.
+2. STEP9 đã land (b1) thành shape chính thức trong cdp.mjs
+(dc8449b, option A): action focus riêng cộng chương trình 4
+action [set_value, focus, key Enter, assert bubble], kèm test
+failing-first (05c11b9) đã kiểm chứng fail đúng lý do trước
+khi land.
+Đợt 12 task 3 giờ đã được sửa xong ở phía worker, chờ Muse
+quyết có cần audit lại độc lập đợt sau không.
