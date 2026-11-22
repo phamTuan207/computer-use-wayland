@@ -108,6 +108,8 @@ return (function(){
       (e.textContent || '').trim().slice(0, 40) || e.value || '');
     return {ref: cssPath(e),
             tag: tag, role: role, name: name,
+            aria_label: e.getAttribute('aria-label') || '',
+            placeholder: e.placeholder || '',
             x: r.x, y: r.y, w: r.width, h: r.height,
             cx: r.x + r.width / 2, cy: r.y + r.height / 2,
             visible: r.width > 0 && r.height > 0 &&
@@ -162,11 +164,16 @@ return (function(threadSel, bubbleSel, text){
 
 # textNew count (batch 12 task 2): how many bubbles in the thread
 # carry exactly this text. The V12 gate is a textNew gate: it passes
-# only when the count grows past the count measured before this send
-# started, so a stale bubble from an earlier run cannot pass a new
-# send (design doc section 4.2, Turbo textNew). Returns -1 when the
-# thread container is missing, so a wrong thread selector is
-# distinguishable from zero bubbles.
+# only when the count grows past the pre-Enter gate_baseline measured
+# in send_one right before the Enter keypress, so a stale bubble from
+# an earlier run cannot pass a new send (design doc section 4.2,
+# Turbo textNew). before_count, the batch-start snapshot taken in
+# main, is recorded evidence only and is NEVER consulted by the gate:
+# a bubble arriving after batch start but before Enter is inside the
+# baseline and cannot pass it. Returns -1 when the thread container
+# is missing, so a wrong thread selector is distinguishable from
+# zero bubbles; callers must not collapse -1 to 0 (fix pass: a -1
+# collapsed to 0 let a recorded "sent" intent re-send).
 COUNT_JS = """
 return (function(threadSel, bubbleSel, text){
   const t = document.querySelector(threadSel);
@@ -179,26 +186,37 @@ return (function(threadSel, bubbleSel, text){
 })(arguments[0], arguments[1], arguments[2])
 """
 
-# V11 MutationObserver flag (batch 12 task 2): a real observer armed
-# before typing, counting DOM mutations in the page. The fixture
-# counter window.__inputEvents only counts input events; a Messenger
-# page needs a real observer. Armed once per page; later calls return
-# the running count. Observe document.body: typing mutates the input
-# value (not the DOM) but the bubble append is a childList mutation,
-# so a successful send always moves the count.
+# V11 MutationObserver flag (batch 12 task 2, BUILT; fix pass:
+# thread-scoped, record-counted). A real observer armed before
+# typing. It observes the thread container (childList, characterData,
+# subtree) so the delta counts records appended to the thread, not
+# page-wide noise: typing into a contenteditable input mutates the
+# input, not the thread, and no longer moves the count. When the
+# thread container is missing it falls back to document.body and
+# records scope "body-fallback". The callback adds list.length, so
+# the count is a mutation-record count, not a callback-batch count
+# (one callback can carry many records). Armed once per page; later
+# calls return the running count. The delta is recorded evidence
+# only: it is entailed by gate success (a bubble append is a
+# mutation) and can be true on gate failure (an incoming message),
+# so it is NOT a pass criterion (runbook section 14.3).
 OBSERVER_JS = """
-return (function(){
+return (function(threadSel){
   if (window.__v11Observer) {
-    return {armed: true, count: window.__v11Mutations || 0};
+    return {armed: true, count: window.__v11Mutations || 0,
+            scope: window.__v11Scope || 'unknown'};
   }
   window.__v11Mutations = 0;
-  window.__v11Observer = new MutationObserver(function(){
-    window.__v11Mutations += 1;
+  const target = threadSel ? document.querySelector(threadSel) : null;
+  const scopeEl = target || document.body;
+  window.__v11Scope = target ? 'thread' : 'body-fallback';
+  window.__v11Observer = new MutationObserver(function(list){
+    window.__v11Mutations += list.length;
   });
-  window.__v11Observer.observe(document.body, {
+  window.__v11Observer.observe(scopeEl, {
     childList: true, characterData: true, subtree: true});
-  return {armed: true, count: 0};
-})()
+  return {armed: true, count: 0, scope: window.__v11Scope};
+})(arguments[0])
 """
 
 # Frames census (batch 12 task 2, gap 10): HARVEST_JS evaluates in
@@ -261,11 +279,16 @@ return (function(sel){
     .filter(x => { const r = x.getBoundingClientRect();
       return r.width > 0 && r.height > 0; })
     .slice(0, 3)
-    .map(x => ({ref: cssPath(x), name: nameOf(x), role: roleOf(x)}));
+    .map(x => ({ref: cssPath(x), tag: x.tagName.toLowerCase(),
+      name: nameOf(x), role: roleOf(x),
+      aria_label: x.getAttribute('aria-label') || '',
+      placeholder: x.placeholder || ''}));
   if (!e) return {found: false, nearest: nearest};
   const r = e.getBoundingClientRect();
   return {found: true, tag: e.tagName.toLowerCase(),
     role: roleOf(e), name: nameOf(e),
+    aria_label: e.getAttribute('aria-label') || '',
+    placeholder: e.placeholder || '',
     rect: {x: r.x, y: r.y, w: r.width, h: r.height},
     nearest: nearest};
 })(arguments[0])
@@ -307,6 +330,15 @@ class Ledger:
     the thread. A fresh page load with an empty thread re-sends a
     recorded intent once, by design: the bubble is genuinely absent.
 
+    Run registry (fix pass, redteam F3): a run_id is bound to the
+    ledger path of its first run in a shared registry outside the
+    workdir (~/.cache/two_vision_bench/run_registry.json). A later
+    run with the same run_id but a different ledger path (fresh
+    workdir, empty ledger) is refused before the browser starts:
+    its pre-check is blind and it would re-send. Same ledger path
+    is a same-workdir retry, allowed; the outcome rule still
+    requires fresh sends this run for PASS unless --allow-resume.
+
     Pre-send reservation (batch 12 task 2, BUILT): send_one writes
     the intent as "sending" after the V1 readback passes and before
     the Enter keypress, then reconciles it to "sent" or
@@ -316,8 +348,9 @@ class Ledger:
     may have landed, and only a hand check of the thread can tell.
     This closes the process-death gap only when the same ledger is
     reused (same workdir or --ledger); a fresh workdir has an empty
-    ledger, so the run_id freshness check in the runbook still
-    stands. A recorded intent whose bubble is absent is treated as
+    ledger, so the run registry above refuses that case outright and
+    the run_id freshness check in the runbook still stands as the
+    human backstop. A recorded intent whose bubble is absent is treated as
     stale and re-sent once, because the earlier V12 may have failed
     on a slow render rather than on a lost message.
 
@@ -330,8 +363,12 @@ class Ledger:
     only when the ledger says this intent was already sent (status
     "sent") and the bubble is visible: a stale bubble with no ledger
     record does NOT skip, the send proceeds and the textNew gate
-    requires a NEW bubble (count past the before-snapshot), so a
-    stale bubble from an earlier run cannot pass a new send.
+    requires a NEW bubble (count past the pre-Enter gate_baseline),
+    so a stale bubble from an earlier run cannot pass a new send.
+
+    Ledger writes are locked (fcntl flock on <path>.lock) and the
+    file is re-read inside the lock, so two processes sharing one
+    ledger file cannot lose each other's marks (redteam F12).
     """
 
     def __init__(self, path):
@@ -347,12 +384,26 @@ class Ledger:
         return self.data["intents"].get(intent_id, {}).get("status")
 
     def mark(self, intent_id, status, **kw):
+        import fcntl
         rec = {"status": status,
                "wall": datetime.now(timezone.utc).isoformat()}
         rec.update(kw)
-        self.data["intents"][intent_id] = rec
-        with open(self.path, "w", encoding="utf-8") as f:
-            json.dump(self.data, f, indent=2, sort_keys=True)
+        lock_path = self.path + ".lock"
+        with open(lock_path, "w", encoding="utf-8") as lock_f:
+            fcntl.flock(lock_f, fcntl.LOCK_EX)
+            try:
+                # Re-read inside the lock: another process may have
+                # written since this object loaded the file.
+                if os.path.exists(self.path):
+                    with open(self.path, encoding="utf-8") as f:
+                        self.data = json.load(f)
+                self.data["intents"][intent_id] = rec
+                tmp_path = self.path + ".tmp"
+                with open(tmp_path, "w", encoding="utf-8") as f:
+                    json.dump(self.data, f, indent=2, sort_keys=True)
+                os.replace(tmp_path, self.path)
+            finally:
+                fcntl.flock(lock_f, fcntl.LOCK_UN)
 
 
 def format_inventory(label, items, frames=None):
@@ -362,7 +413,9 @@ def format_inventory(label, items, frames=None):
     live DOM of this run only (id when present, else tag index); they
     must not transfer between runs or vendors. send_one re-resolves
     the ref before input and fails fast with ref-stale when the
-    element's tag, role or name changed since this harvest.
+    element's tag, role, name, aria-label or placeholder changed
+    since this harvest (aria-label and placeholder are compared
+    separately, not only through the derived name).
     """
     lines = [f"Window {label}: {len(items)} inputs+buttons"]
     for i, it in enumerate(items, 1):
@@ -478,7 +531,12 @@ def click_at(driver, cx, cy):
 
 def ensure_visible(driver, ref):
     """Scroll the target into view when its center is below the fold,
-    then re-read only its rect (one cheap call, not a full snapshot)."""
+    then re-read only its rect (one cheap call, not a full snapshot).
+    Returns {cx, cy, scrolled} or None when the ref resolves to
+    nothing. The scrolled flag tells the caller whether the live rect
+    legitimately moved from the harvest snapshot: after a scroll the
+    HCU guard must compare against post-scroll geometry, otherwise
+    against the harvested center (fix pass, redteam F7)."""
     vh = driver.execute_script("return window.innerHeight")
     r = driver.execute_script(
         "const e=document.querySelector(arguments[0]);"
@@ -486,6 +544,7 @@ def ensure_visible(driver, ref):
         " return {cx: b.x+b.width/2, cy: b.y+b.height/2};", ref)
     if r is None:
         return None
+    scrolled = False
     if r["cy"] < 0 or r["cy"] > vh:
         driver.execute_script(
             "document.querySelector(arguments[0])"
@@ -494,7 +553,10 @@ def ensure_visible(driver, ref):
             "const e=document.querySelector(arguments[0]);"
             " if(!e) return null; const b=e.getBoundingClientRect();"
             " return {cx: b.x+b.width/2, cy: b.y+b.height/2};", ref)
-    return r
+        if r is None:
+            return None
+        scrolled = True
+    return {"cx": r["cx"], "cy": r["cy"], "scrolled": scrolled}
 
 
 def hcu_guard(driver, item, t0, expect=None):
@@ -510,7 +572,10 @@ def hcu_guard(driver, item, t0, expect=None):
     center by default, or the fresh center from ensure_visible when
     the page was just scrolled (a scroll legitimately moves every
     rect, so the guard must compare against post-scroll geometry,
-    not the stale snapshot)."""
+    not the stale snapshot). The call site must pass the harvested
+    center when nothing scrolled: passing the fresh center always
+    made the 2 px check vacuous, comparing the live rect against
+    itself milliseconds later (fix pass, redteam F7)."""
     v = driver.execute_script(VERIFY_JS, item["ref"])
     if not v.get("found"):
         return False, "target-gone", v
@@ -535,9 +600,17 @@ def send_one(driver, window, item, message, intent_id, ledger,
     textNew (batch 12 task 2): the V12 gate is a count gate, not a
     presence gate. before_count is the number of bubbles carrying
     this exact text in the thread when the run started (snapshot in
-    main, before any send). The gate passes only when the count grows
-    past the count measured right before Enter, so a stale bubble
-    from an earlier run cannot pass a new send. The pre-check skips
+    main, before any send); it is recorded evidence only and the
+    gate NEVER consults it. The gate passes only when the count
+    grows to exactly gate_baseline + 1, where gate_baseline is
+    measured right before Enter, so a stale bubble from an earlier
+    run cannot pass a new send, and a double append (count jumping
+    past baseline + 1) fails as duplicate-bubble instead of passing
+    silently. The gate is appearance-based, not causal: it proves a
+    bubble with this exact text appeared after the baseline, not
+    that our Enter caused it (an echo or incoming message with
+    identical text would pass it; mitigation is unique message text
+    plus a free live lane, see the runbook). The pre-check skips
     only when the ledger says this intent was already sent and the
     bubble is visible; a stale bubble with no ledger record does NOT
     skip, the send proceeds and the gate requires a NEW bubble.
@@ -551,12 +624,16 @@ def send_one(driver, window, item, message, intent_id, ledger,
     v12_timeout = plan.get("timeouts", {}).get("v12_gate_s", 5)
 
     def bubble_count():
-        """COUNT_JS, with a missing thread container read as 0: the
-        pre-check must not skip on a broken selector, and the gate
-        must time out loudly instead of passing."""
+        """COUNT_JS, with -1 preserved: -1 means the thread
+        container is missing, and it must stay distinguishable from
+        0 (fix pass, council 1 issue 2: collapsing -1 to 0 let a
+        recorded "sent" intent re-send through a broken thread
+        selector). Callers fail fast on -1 (thread-missing) instead
+        of typing; the gate times out loudly on it instead of
+        passing. None (JS returned nothing) reads as -1."""
         n = driver.execute_script(
             COUNT_JS, thread_sel, bubble_sel, message)
-        return n if n is not None and n >= 0 else 0
+        return n if isinstance(n, int) else -1
 
     # Exactly-once pre-check (D4): before any send, count the bubbles
     # already carrying this text. A previous attempt ended in a
@@ -568,6 +645,19 @@ def send_one(driver, window, item, message, intent_id, ledger,
     # CAN see the bubble still skips correctly.
     count_now = bubble_count()
     step["count_at_precheck"] = count_now
+    # A missing thread container (-1) is a blocking error, not a
+    # zero count: with a broken thread selector the script can no
+    # longer tell "thread missing" from "bubble genuinely absent",
+    # so it must not type or press Enter (fix pass, council 1
+    # issue 2). This runs before the ledger blocks below.
+    if count_now < 0:
+        step["error"] = "thread-missing"
+        step["elapsed_s"] = round(time.monotonic() - t0, 4)
+        log("thread_missing", t0, window=window["label"],
+            intent_id=intent_id, thread_selector=thread_sel,
+            note="thread container matched nothing; refusing to "
+            "type, fix the thread selector")
+        return step
     if ledger.status(intent_id) == "failed-unverified":
         step["error"] = "retry-blocked-unverified"
         step["elapsed_s"] = round(time.monotonic() - t0, 4)
@@ -602,7 +692,54 @@ def send_one(driver, window, item, message, intent_id, ledger,
         log("ledger_stale_bubble_absent", t0, window=window["label"],
             intent_id=intent_id)
 
-    # Scroll first, then guard: a below-fold target fails the hit test
+    # D3 ref-stability check FIRST, before any scroll: re-resolve
+    # the harvested ref against the live DOM. A renamed or replaced
+    # input fails fast here, before any click and before
+    # ensure_visible scrolls anything (fix pass: scrolling first
+    # moved a possibly-wrong element into view before D3 failed).
+    # Compares tag, role and name, plus aria-label and placeholder
+    # separately, not only through the derived name (fix pass,
+    # council 1 issue 3 and redteam F6/F8: tag was returned but
+    # never compared, and a placeholder-only rename passed when an
+    # aria-label was present). aria-label and placeholder are
+    # compared only when the harvest recorded them, so inventories
+    # from older script versions do not false-fail. The HCU guard
+    # below re-checks geometry; this check catches identity changes
+    # the guard cannot see (same rect, different element).
+    ref_now = driver.execute_script(REF_CHECK_JS, item["ref"])
+    if not ref_now.get("found"):
+        step["error"] = "target-gone"
+        step["elapsed_s"] = round(time.monotonic() - t0, 4)
+        return step
+    aria_mismatch = (item.get("aria_label") is not None
+                     and (ref_now.get("aria_label") or "")
+                     != (item.get("aria_label") or ""))
+    placeholder_mismatch = (item.get("placeholder") is not None
+                            and (ref_now.get("placeholder") or "")
+                            != (item.get("placeholder") or ""))
+    if (ref_now.get("tag") != item.get("tag")
+            or ref_now.get("role") != item.get("role")
+            or ref_now.get("name") != item.get("name")
+            or aria_mismatch or placeholder_mismatch):
+        step["error"] = "ref-stale"
+        step["evidence"] = {
+            "expected": {"tag": item.get("tag"),
+                         "role": item.get("role"),
+                         "name": item.get("name"),
+                         "aria_label": item.get("aria_label"),
+                         "placeholder": item.get("placeholder")},
+            "current": {"tag": ref_now.get("tag"),
+                        "role": ref_now.get("role"),
+                        "name": ref_now.get("name"),
+                        "aria_label": ref_now.get("aria_label"),
+                        "placeholder": ref_now.get("placeholder")},
+            "nearest": ref_now.get("nearest", [])}
+        step["elapsed_s"] = round(time.monotonic() - t0, 4)
+        log("ref_stale", t0, window=window["label"],
+            expected_name=item.get("name"),
+            current_name=ref_now.get("name"))
+        return step
+    # Scroll, then guard: a below-fold target fails the hit test
     # before ensure_visible ever runs, so the guard must run on
     # post-scroll geometry. The click uses the guard-verified center,
     # not the pre-scroll position.
@@ -611,34 +748,13 @@ def send_one(driver, window, item, message, intent_id, ledger,
         step["error"] = "target-gone"
         step["elapsed_s"] = round(time.monotonic() - t0, 4)
         return step
-    # D3 ref-stability check: re-resolve the harvested ref against
-    # the live DOM. A renamed or replaced input fails fast here,
-    # before any click, with the nearest live textboxes listed so
-    # the operator can see what the input became. The HCU guard
-    # below re-checks geometry; this check catches identity changes
-    # the guard cannot see (same rect, different element).
-    ref_now = driver.execute_script(REF_CHECK_JS, item["ref"])
-    if not ref_now.get("found"):
-        step["error"] = "target-gone"
-        step["elapsed_s"] = round(time.monotonic() - t0, 4)
-        return step
-    if (ref_now.get("role") != item.get("role")
-            or ref_now.get("name") != item.get("name")):
-        step["error"] = "ref-stale"
-        step["evidence"] = {
-            "expected": {"role": item.get("role"),
-                         "name": item.get("name")},
-            "current": {"role": ref_now.get("role"),
-                        "name": ref_now.get("name")},
-            "nearest": ref_now.get("nearest", [])}
-        step["elapsed_s"] = round(time.monotonic() - t0, 4)
-        log("ref_stale", t0, window=window["label"],
-            expected_name=item.get("name"),
-            current_name=ref_now.get("name"))
-        return step
     # V5 hit test + HCU guard, from the live DOM, before any input.
-    ok, reason, v = hcu_guard(driver, item, t0,
-                              expect=(pos["cx"], pos["cy"]))
+    # Expect the harvested center when nothing scrolled (the 2 px
+    # check then catches a moved input); after a scroll, expect the
+    # post-scroll center (fix pass, redteam F7).
+    expect = ((item["cx"], item["cy"]) if not pos.get("scrolled")
+              else (pos["cx"], pos["cy"]))
+    ok, reason, v = hcu_guard(driver, item, t0, expect=expect)
     if not ok:
         step["error"] = reason
         step["elapsed_s"] = round(time.monotonic() - t0, 4)
@@ -658,9 +774,13 @@ def send_one(driver, window, item, message, intent_id, ledger,
 
     # V11: arm the real MutationObserver before typing, so the
     # mutation delta covers the type and the bubble append. The
-    # fixture counter window.__inputEvents is kept alongside it.
-    obs = driver.execute_script(OBSERVER_JS)
+    # observer is scoped to the thread container (falling back to
+    # document.body when the thread is missing), and counts mutation
+    # records, not callbacks. The fixture counter
+    # window.__inputEvents is kept alongside it.
+    obs = driver.execute_script(OBSERVER_JS, thread_sel)
     mutations_before = obs.get("count", 0) if obs else 0
+    step["v11_scope"] = obs.get("scope") if obs else None
 
     # Type with real keys, then V1 value readback before Enter.
     # Inputs and textareas hold the text in value; contenteditable
@@ -692,12 +812,17 @@ def send_one(driver, window, item, message, intent_id, ledger,
     # textNew gate passes only on a bubble that appears after it.
     gate_baseline = bubble_count()
     step["gate_baseline"] = gate_baseline
+    if gate_baseline < 0:
+        step["error"] = "thread-missing"
+        step["elapsed_s"] = round(time.monotonic() - t0, 4)
+        log("thread_missing", t0, window=window["label"],
+            intent_id=intent_id, thread_selector=thread_sel,
+            note="thread container vanished after the V1 readback; "
+            "no reservation written, nothing sent")
+        return step
     ledger.mark(intent_id, "sending", window=window["label"],
                 message=message)
     step["reservation"] = "sending"
-
-    from selenium.webdriver.common.keys import Keys
-    driver.find_element("css selector", item["ref"]).send_keys(Keys.ENTER)
 
     def v11_delta():
         """MutationObserver delta since the observer was armed."""
@@ -708,47 +833,122 @@ def send_one(driver, window, item, message, intent_id, ledger,
             return None, None
         return n - mutations_before, n
 
-    # V12 finish gate, textNew: a NEW bubble carrying the exact text
-    # must appear in the thread DOM, counted past the pre-Enter
-    # baseline. A stale bubble from an earlier run cannot pass it.
-    deadline = time.monotonic() + v12_timeout
-    gate_count = gate_baseline
-    while time.monotonic() < deadline:
-        gate_count = bubble_count()
-        if gate_count > gate_baseline:
-            break
-        time.sleep(0.2)
-    else:
-        step["error"] = "v12-timeout"
+    # Everything after the reservation runs inside try/except: an
+    # exception here (Enter failed, driver died mid-gate) must
+    # reconcile the intent to failed-unverified, never leave
+    # "sending" sticky forever, and never let the exception erase
+    # the ledger record (fix pass, council 1 note 5). The handler
+    # only touches the ledger while the status is still "sending",
+    # so a "sent" mark made before the exception is never
+    # overwritten (fix pass, council 1 issue 1).
+    try:
+        from selenium.webdriver.common.keys import Keys
+        driver.find_element("css selector", item["ref"]).send_keys(
+            Keys.ENTER)
+        # Causal tie, recorded evidence only: did the input clear
+        # on Enter? A send that clears the input and appends exactly
+        # one bubble is tied to our Enter; the gate itself stays
+        # appearance-based (see the send_one docstring).
+        v_after = driver.execute_script(VERIFY_JS, item["ref"])
+        if v_after.get("found"):
+            cleared = (v_after.get("innerText")
+                       if v_after.get("innerText") is not None
+                       else v_after.get("value"))
+            step["input_cleared_after_enter"] = (cleared == "")
+        else:
+            step["input_cleared_after_enter"] = None
+
+        # V12 finish gate, textNew: exactly ONE new bubble carrying
+        # the exact text must appear in the thread DOM, counted past
+        # the pre-Enter baseline. A stale bubble from an earlier run
+        # cannot pass it. A count jumping past baseline + 1 is a
+        # double append, not a pass (fix pass, redteam F5).
+        deadline = time.monotonic() + v12_timeout
+        gate_count = gate_baseline
+        duplicate = False
+        while time.monotonic() < deadline:
+            gate_count = bubble_count()
+            if gate_count == gate_baseline + 1:
+                break
+            if gate_count > gate_baseline + 1:
+                duplicate = True
+                break
+            time.sleep(0.2)
+        if duplicate:
+            step["error"] = "duplicate-bubble"
+            step["gate_count"] = gate_count
+            delta, total = v11_delta()
+            step["v11_mutations"] = delta
+            step["v11_mutation_flag"] = bool(delta and delta > 0)
+            step["elapsed_s"] = round(time.monotonic() - t0, 4)
+            # Two identical bubbles landed; the message was sent
+            # (twice), so no later run may re-send it.
+            ledger.mark(intent_id, "failed-unverified",
+                        window=window["label"], message=message,
+                        error="duplicate-bubble",
+                        note="two identical bubbles appeared after "
+                        "one Enter; message sent, check the thread "
+                        "by hand before any new run_id")
+            log("duplicate_bubble", t0, window=window["label"],
+                gate_baseline=gate_baseline, gate_count=gate_count)
+            return step
+        if gate_count != gate_baseline + 1:
+            step["error"] = "v12-timeout"
+            step["gate_count"] = gate_count
+            delta, total = v11_delta()
+            step["v11_mutations"] = delta
+            step["v11_mutation_flag"] = bool(delta and delta > 0)
+            step["elapsed_s"] = round(time.monotonic() - t0, 4)
+            # The message may have landed unseen (the selectors are
+            # the only witness and they just failed to see it). Mark
+            # the intent failed-unverified so no later run re-sends
+            # it with the same selectors; see the block at the top
+            # of send_one.
+            ledger.mark(intent_id, "failed-unverified",
+                        window=window["label"], message=message,
+                        error="v12-timeout",
+                        note="message may have landed unseen; fix "
+                        "selectors and use a new run_id after "
+                        "manually checking the thread")
+            log("v12_gate_timeout", t0, window=window["label"],
+                timeout_s=v12_timeout)
+            return step
+        step["v12_gate_ok"] = True
         step["gate_count"] = gate_count
         delta, total = v11_delta()
         step["v11_mutations"] = delta
         step["v11_mutation_flag"] = bool(delta and delta > 0)
+        ledger.mark(intent_id, "sent", window=window["label"],
+                    message=message)
+        step["status"] = "sent"
         step["elapsed_s"] = round(time.monotonic() - t0, 4)
-        # The message may have landed unseen (the selectors are the
-        # only witness and they just failed to see it). Mark the
-        # intent failed-unverified so no later run re-sends it with
-        # the same selectors; see the block at the top of send_one.
-        ledger.mark(intent_id, "failed-unverified",
-                    window=window["label"], message=message,
-                    error="v12-timeout",
-                    note="message may have landed unseen; fix "
-                    "selectors and use a new run_id after manually "
-                    "checking the thread")
-        log("v12_gate_timeout", t0, window=window["label"],
-            timeout_s=v12_timeout)
+        log("send_ok_v12", t0, window=window["label"],
+            intent_id=intent_id)
         return step
-    step["v12_gate_ok"] = True
-    step["gate_count"] = gate_count
-    delta, total = v11_delta()
-    step["v11_mutations"] = delta
-    step["v11_mutation_flag"] = bool(delta and delta > 0)
-    ledger.mark(intent_id, "sent", window=window["label"],
-                message=message)
-    step["status"] = "sent"
-    step["elapsed_s"] = round(time.monotonic() - t0, 4)
-    log("send_ok_v12", t0, window=window["label"], intent_id=intent_id)
-    return step
+    except Exception as exc:  # noqa: BLE001 - reconcile, then report
+        if step.get("status") == "sent":
+            # The send already completed and was marked sent; the
+            # exception came after (e.g. logging). Keep the record.
+            log("harness_error_after_sent", t0,
+                window=window["label"], error=str(exc))
+            return step
+        if ledger.status(intent_id) == "sending":
+            try:
+                ledger.mark(intent_id, "failed-unverified",
+                            window=window["label"], message=message,
+                            error="harness-error-after-reservation",
+                            note="exception after the reservation "
+                            "was written; the message may have "
+                            "landed, check the thread by hand")
+            except Exception:
+                pass
+        step["error"] = "harness-error-after-reservation"
+        step["evidence"] = {
+            "exception": f"{type(exc).__name__}: {exc}"}
+        step["elapsed_s"] = round(time.monotonic() - t0, 4)
+        log("harness_error_after_reservation", t0,
+            window=window["label"], error=str(exc))
+        return step
 
 
 def harvest_window(driver, label, t_start):
@@ -774,33 +974,76 @@ def frames_census(driver, label, t_start):
     return frames
 
 
+# Thread bubble texts (fix pass, redteam F10): the exact-text
+# COUNT_JS gate cannot see a foreign bubble rendered with a sender
+# name or timestamp prefix ("Alice: <message>"), so the
+# cross-window check also reads the raw bubble texts and matches by
+# containment. Returns null when the thread container is missing.
+TEXTS_JS = """
+return (function(threadSel, bubbleSel){
+  const t = document.querySelector(threadSel);
+  if (!t) return null;
+  return [...t.querySelectorAll(bubbleSel)]
+    .map(b => b.textContent);
+})(arguments[0], arguments[1], arguments[2])
+"""
+
+
+def thread_texts(driver, window):
+    """Raw bubble texts in one window's thread, or None when the
+    thread container is missing."""
+    thread_sel = window.get("thread_selector", "#thread")
+    bubble_sel = window.get("bubble_selector", ".bubble, [data-sender]")
+    return driver.execute_script(TEXTS_JS, thread_sel, bubble_sel)
+
+
 def bubble_count_for(driver, window, message):
     """COUNT_JS for one window: how many bubbles carry exactly this
-    text. -1 (thread container missing) reads as 0 here; the gate
-    times out loudly on a wrong selector instead of passing."""
+    text. -1 (thread container missing) is preserved, never collapsed
+    to 0 (fix pass, council 1 issue 2); callers treat -1 as
+    thread-missing. None (JS returned nothing) reads as -1."""
     thread_sel = window.get("thread_selector", "#thread")
     bubble_sel = window.get("bubble_selector", ".bubble, [data-sender]")
     n = driver.execute_script(COUNT_JS, thread_sel, bubble_sel, message)
-    return n if n is not None and n >= 0 else 0
+    return n if isinstance(n, int) else -1
 
 
 def cross_window_check(driver, handles, plan, t_start):
     """Cross-window check (design doc section 4.2): after both sends,
     each thread must contain only its own message. A thread holding
     the other window's message means a send landed in the wrong
-    thread. Returns {label: {own_count, foreign: {label: count}}}.
+    thread. Foreign matching is by containment on the raw bubble
+    texts (fix pass, redteam F10): a foreign bubble rendered with a
+    sender name or timestamp prefix ("Alice: <message>") still
+    counts, and the matching texts are recorded so near-misses are
+    visible. Bubbles whose text exactly equals this window's own
+    message are excluded from the foreign count. Returns
+    {label: {own_count, foreign: {label: count},
+    foreign_texts: {label: [texts]}, thread_missing: bool}}.
     The caller fails the run on any foreign count above 0."""
     result = {}
     for w in plan["windows"]:
         driver.switch_to.window(handles[w["label"]])
         own = bubble_count_for(driver, w, plan["messages"][w["label"]])
+        texts = thread_texts(driver, w)
         foreign = {}
+        foreign_texts = {}
         for o in plan["windows"]:
             if o["label"] == w["label"]:
                 continue
-            foreign[o["label"]] = bubble_count_for(
-                driver, w, plan["messages"][o["label"]])
-        result[w["label"]] = {"own_count": own, "foreign": foreign}
+            other_msg = plan["messages"][o["label"]]
+            if texts is None:
+                foreign[o["label"]] = 0
+                foreign_texts[o["label"]] = []
+                continue
+            hits = [t for t in texts
+                    if t != plan["messages"][w["label"]]
+                    and other_msg in t]
+            foreign[o["label"]] = len(hits)
+            foreign_texts[o["label"]] = [t[:120] for t in hits[:3]]
+        result[w["label"]] = {"own_count": own, "foreign": foreign,
+                              "foreign_texts": foreign_texts,
+                              "thread_missing": texts is None}
     log("cross_window_check", t_start, result=result)
     return result
 
@@ -914,7 +1157,63 @@ def validate_plan(plan):
             raise ValueError(
                 "plan messages has no entry for window "
                 f"{w['label']!r}")
+        msg = messages[w["label"]]
+        if not isinstance(msg, str) or not msg:
+            raise ValueError(
+                "plan messages must be non-empty strings "
+                f"(window {w['label']!r})")
+    # Distinct messages (fix pass, redteam F11): identical messages
+    # make a correct run FAIL the cross-window check, because the
+    # check identifies messages by text alone. Distinct thread
+    # selectors are NOT required across windows: the fixture uses
+    # "#thread" in both windows, and the windows are different
+    # documents, so the same selector string points at different
+    # threads; distinct URLs (checked above) already enforce
+    # distinct threads.
+    msgs = [messages[w["label"]] for w in windows]
+    if len(set(msgs)) != len(msgs):
+        raise ValueError(
+            "plan messages must be distinct per window; identical "
+            "messages make the cross-window check fail a correct "
+            "run, because it identifies messages by text alone")
     return plan
+
+
+REGISTRY_DEFAULT = os.path.expanduser(
+    "~/.cache/two_vision_bench/run_registry.json")
+
+
+def registry_check_and_record(run_id, ledger_path, registry_path):
+    """Shared run registry (fix pass, redteam F3): bind a run_id to
+    the ledger path of its first run. Returns (ok, previous_path).
+    A later run with the same run_id but a different ledger path
+    (fresh workdir, empty ledger) is refused by the caller: its
+    exactly-once pre-check is blind and it would re-send. The same
+    ledger path is a same-workdir retry and is allowed. Writes are
+    locked (fcntl flock) and atomic (temp file + os.replace)."""
+    import fcntl
+    os.makedirs(os.path.dirname(os.path.abspath(registry_path)),
+                exist_ok=True)
+    ledger_abs = os.path.abspath(ledger_path)
+    lock_path = registry_path + ".lock"
+    with open(lock_path, "w", encoding="utf-8") as lock_f:
+        fcntl.flock(lock_f, fcntl.LOCK_EX)
+        try:
+            reg = {}
+            if os.path.exists(registry_path):
+                with open(registry_path, encoding="utf-8") as f:
+                    reg = json.load(f)
+            prev = reg.get(run_id)
+            if prev is not None and prev != ledger_abs:
+                return False, prev
+            reg[run_id] = ledger_abs
+            tmp_path = registry_path + ".tmp"
+            with open(tmp_path, "w", encoding="utf-8") as f:
+                json.dump(reg, f, indent=2, sort_keys=True)
+            os.replace(tmp_path, registry_path)
+            return True, None
+        finally:
+            fcntl.flock(lock_f, fcntl.LOCK_UN)
 
 
 def main():
@@ -937,10 +1236,30 @@ def main():
                     "(default, D6 open) or two instances")
     ap.add_argument("--strict-input-name", action="store_true",
                     help="fail closed when the picked input's name does "
-                    "not contain the plan's input_name (rung 2, "
-                    "0-vision: no operator reads the inventory, so "
-                    "the script must refuse to type into a wrongly "
-                    "named textbox, e.g. a login email field).")
+                    "not contain the plan's input_name (rung 2: the "
+                    "step-2 run invocation reads no inventory, so "
+                    "the script itself must refuse to type into a "
+                    "wrongly named textbox, e.g. a login email "
+                    "field; in harvest mode it checks the harvested "
+                    "names the same way, so no operator read of "
+                    "inventory.json is needed for the check).")
+    ap.add_argument("--visions-used", type=int, default=2,
+                    help="visions to record in results.json (default "
+                    "2; rung 2 passes 0: the step-2 run invocation "
+                    "uses no vision, the step-1 harvest read is "
+                    "pre-run preparation outside the budget).")
+    ap.add_argument("--allow-resume", action="store_true",
+                    help="score a resume run as PASS when "
+                    "skipped-already-sent steps cover the rest. "
+                    "Without it a run with zero fresh sends never "
+                    "scores PASS, even when both steps skip.")
+    ap.add_argument("--run-registry",
+                    help="shared run_id registry path (default "
+                    "~/.cache/two_vision_bench/run_registry.json)")
+    ap.add_argument("--no-run-registry", action="store_true",
+                    help="disable the run_id registry (test harnesses "
+                    "only; a reused run_id in a fresh workdir then "
+                    "re-sends, because its ledger is empty).")
     ap.add_argument("--plan", help="plan JSON (default: fixture plan)")
     ap.add_argument("--inventory", help="inventory JSON to write "
                     "(VISION 1 output) or read with --inventory-in")
@@ -975,6 +1294,18 @@ def main():
         return 2
 
     os.makedirs(args.workdir, exist_ok=True)
+    # Disk-space guard (fix pass, redteam note): a full disk made
+    # finish() raise while writing results.json, leaving a 0-byte
+    # file even though both sends had succeeded. Refuse early
+    # instead of losing the run record late.
+    import shutil
+    free_b = shutil.disk_usage(args.workdir).free
+    if free_b < 100 * 1024 * 1024:
+        print(f"REFUSED: only {free_b // (1024 * 1024)} MB free in "
+              f"{args.workdir}; free space before running, the run "
+              "record would not survive a full disk.",
+              file=sys.stderr)
+        return 2
     t_start = time.monotonic()
     wall_start = datetime.now(timezone.utc).isoformat()
 
@@ -1013,10 +1344,29 @@ def main():
         return 2
     run_id = plan["run_id"]
     ledger_path = args.ledger or os.path.join(args.workdir, "ledger.json")
+    # Run registry (fix pass, redteam F3): refuse a reused run_id
+    # bound to a different ledger path before the browser starts.
+    if args.no_run_registry:
+        print("WARNING: run_id registry disabled; a reused run_id "
+              "in a fresh workdir re-sends, because its ledger is "
+              "empty.", file=sys.stderr)
+    else:
+        registry_path = args.run_registry or REGISTRY_DEFAULT
+        ok, prev = registry_check_and_record(
+            run_id, ledger_path, registry_path)
+        if not ok:
+            print(f"REFUSED: run_id {run_id!r} already ran with "
+                  f"ledger {prev}; this run would use {ledger_path}, "
+                  "whose ledger is empty, so its exactly-once "
+                  "pre-check is blind and it would re-send. Use a "
+                  "new run_id, or reuse the original workdir/ledger.",
+                  file=sys.stderr)
+            return 2
     ledger = Ledger(ledger_path)
     results = {"run_id": run_id, "mode": args.mode,
                "live": bool(args.live), "instances": args.instances,
-               "wall_start": wall_start, "visions_used": 2,
+               "wall_start": wall_start,
+               "visions_used": args.visions_used,
                "steps": [], "outcome": "FAIL"}
 
     proc = None
@@ -1057,6 +1407,46 @@ def main():
                                        inventory[w["label"]],
                                        results["frames"].get(w["label"])))
         if args.mode == "harvest":
+            # Mechanized name check (fix pass, redteam F13): with
+            # --strict-input-name the script itself refuses to
+            # accept a wrongly named input, so rung 2 step 1 needs
+            # no operator read of inventory.json for the check. The
+            # picked name, aria-label and placeholder per window are
+            # logged and recorded in results["harvest_inputs"].
+            results["harvest_inputs"] = {}
+            if args.strict_input_name:
+                for w in plan["windows"]:
+                    hint = w.get("input_name", "Message")
+                    item = find_input(inventory[w["label"]], hint)
+                    if item is None:
+                        results["steps"].append(
+                            {"step": len(results["steps"]) + 1,
+                             "window": w["label"], "status": "failed",
+                             "error": "no-message-input-in-inventory"})
+                        return finish(results, args, t_start, 1)
+                    results["harvest_inputs"][w["label"]] = {
+                        "name": item["name"],
+                        "aria_label": item.get("aria_label"),
+                        "placeholder": item.get("placeholder"),
+                        "ref": item["ref"]}
+                    log("harvest_input_picked", t_start,
+                        window=w["label"], input_name=item["name"],
+                        aria_label=item.get("aria_label"),
+                        placeholder=item.get("placeholder"),
+                        ref=item["ref"])
+                    if hint.lower() not in item["name"].lower():
+                        results["steps"].append(
+                            {"step": len(results["steps"]) + 1,
+                             "window": w["label"], "status": "failed",
+                             "error": "input-name-mismatch",
+                             "evidence": {
+                                 "expected_name_contains": hint,
+                                 "actual_name": item["name"],
+                                 "ref": item["ref"]}})
+                        log("input_name_mismatch", t_start,
+                            window=w["label"], expected=hint,
+                            actual=item["name"])
+                        return finish(results, args, t_start, 1)
             results["outcome"] = "HARVEST-ONLY"
             results["steps"] = [
                 {"step": i + 1, "window": w["label"],
@@ -1102,14 +1492,34 @@ def main():
                         actual=picked["name"])
                     return finish(results, args, t_start, 1)
 
-        # textNew before-snapshot: count the bubbles carrying each
-        # message before any send. The V12 gate passes only on a NEW
-        # bubble past this count.
+        # Batch-start before-snapshot: count the bubbles carrying
+        # each message before any send. Recorded as evidence in
+        # results["before_counts"] and each step's before_count
+        # only: the V12 gate does NOT use this count, it passes
+        # only on a NEW bubble past the pre-Enter gate_baseline
+        # measured inside send_one (fix pass, redteam correction 2
+        # and council 1 note 4: the old comment claimed the gate
+        # used this count, which was never true in code).
         results["before_counts"] = {}
         for w in plan["windows"]:
             driver.switch_to.window(handles[w["label"]])
             results["before_counts"][w["label"]] = bubble_count_for(
                 driver, w, plan["messages"][w["label"]])
+        # A missing thread container (-1) fails fast here, before
+        # any send is attempted (fix pass, council 1 issue 2).
+        for w in plan["windows"]:
+            if results["before_counts"][w["label"]] < 0:
+                results["steps"].append(
+                    {"step": len(results["steps"]) + 1,
+                     "window": w["label"], "status": "failed",
+                     "error": "thread-missing",
+                     "evidence": {"thread_selector": w.get(
+                         "thread_selector", "#thread")}})
+                log("thread_missing", t_start, window=w["label"],
+                    thread_selector=w.get("thread_selector", "#thread"),
+                    note="thread container matched nothing before "
+                    "any send; fix the thread selector")
+                return finish(results, args, t_start, 1)
 
         # Guarded send chain, stop at first failure, rest not-executed.
         step_no = 0
@@ -1131,15 +1541,31 @@ def main():
             results["steps"].append(step)
             if step["status"] not in ("sent", "skipped-already-sent"):
                 failed = True
-                # Never overwrite failed-unverified: send_one already
-                # marked it, and a plain "failed" would unblock the
-                # retry the block exists to prevent.
-                if ledger.status(intent_id) != "failed-unverified":
+                # Never overwrite a protective ledger record with a
+                # plain "failed": "failed-unverified" blocks the
+                # retry, "sent" is the proof a message landed, and
+                # "sending" means a crashed attempt may have landed.
+                # Overwriting any of them unblocks a re-send (fix
+                # pass, council 1 issue 1 and redteam F1: a failed
+                # retry erased a "sent" record, then the script
+                # re-sent despite a visible identical bubble).
+                if ledger.status(intent_id) not in (
+                        "failed-unverified", "sent", "sending"):
                     ledger.mark(intent_id, "failed",
                                 error=step.get("error"))
 
         sent = [s for s in results["steps"]
                 if s["status"] in ("sent", "skipped-already-sent")]
+        # Fresh sends this invocation only (fix pass, redteam F2):
+        # a run in which no send happened (both steps skipped on a
+        # recorded "sent" ledger) must not score PASS, or a retry
+        # scores PASS with zero new sends and results.json itself
+        # says PASS. --allow-resume explicitly scores a resume run.
+        sent_now = [s for s in results["steps"]
+                    if s["status"] == "sent"]
+        results["sends_this_run"] = len(sent_now)
+        results["allow_resume"] = bool(args.allow_resume)
+        effective = sent_now if not args.allow_resume else sent
         # Cross-window check: each thread must hold only its own
         # message. A thread holding the other window's message
         # fails the run even when both sends report sent.
@@ -1153,13 +1579,19 @@ def main():
             results["outcome_note"] = (
                 "cross-window-contamination: a thread holds the "
                 "other window's message")
+        elif len(sent_now) == 0:
+            results["outcome_note"] = (
+                "no sends this run: both steps skipped on recorded "
+                "sent intents; a retry that only skips does not "
+                "score PASS (pass --allow-resume to score a resume "
+                "run)")
         # Outcome scoring (M1): PASS iff both messages are in their
         # threads. VISION 2 is the agent looking at both threads once;
         # the script's V12 gates are the same check by DOM read.
         # The rule requires exactly 2 sent AND exactly 2 windows:
         # validate_plan already refuses any other window count, but
         # the outcome must not pass on 0 == 0 if that ever changes.
-        results["outcome"] = ("PASS" if len(sent) == 2
+        results["outcome"] = ("PASS" if len(effective) == 2
                               and len(plan["windows"]) == 2
                               and not contaminated
                               else "FAIL")
@@ -1189,8 +1621,13 @@ def main():
 def finish(results, args, t_start, code):
     results["wall_s"] = round(time.monotonic() - t_start, 4)
     out_path = args.out or os.path.join(args.workdir, "results.json")
-    with open(out_path, "w", encoding="utf-8") as f:
+    # Atomic write (fix pass, redteam note): a full disk mid-write
+    # used to leave a 0-byte results.json; write a temp file and
+    # replace, so the previous record survives a failed write.
+    tmp_path = out_path + ".tmp"
+    with open(tmp_path, "w", encoding="utf-8") as f:
         json.dump(results, f, indent=2)
+    os.replace(tmp_path, out_path)
     log("benchmark_finished", t_start, outcome=results["outcome"],
         wall_s=results["wall_s"], out=out_path)
     return code
