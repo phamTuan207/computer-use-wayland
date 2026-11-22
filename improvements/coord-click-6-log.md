@@ -41,5 +41,16 @@
 - Khuyen nghi cua W-SOAK: khong bao cao soak 1 ngay la pass hay dang chay. Neu muon soak 1 ngay that thi khoi dong lai nhu lan chay MOI (master moi ServerAliveInterval=15, setsid/nohup, chu so huu ro rang, cron watchdog 5 phut, tick rows ghi vao ~/workspace thay vi /tmp). Quyet dinh restart hay bo: cho Muse tong.
 - Muc 17 coi nhu xong phan kiem tra, cho quyet dinh.
 
+## W-A1 xong 17:54 (muc 10): quyet dinh SUA ROI RESUME
+- W-A1 dua tren ho so do doc lap (live 19/11, re-measure 19/11, bench PROBE-S2 22/11, step-1 closeout 22/11, S2 flip/re-open 22/11), khong chay live re-measure moi vi session cua no bi safeguard chan git/build/test. Log day du commit 3204fc2 (do COORD-CLICK-6 doc roi commit, kiem tra 0 dau gach ngang dai, 0 chu "dang").
+- Quyet dinh: SUA ROI RESUME, dong xong 6 muc F1-F6, khong live arm nao truoc do. Thiet ke dong bang f31abcf giu nguyen.
+- F1: lenh resume + manifest (lenh do Muse tong ban hanh, worker chi chuan bi). F2: live-validate agy-q2 test-06..10. F3: relay flags CU_CODE_EXEC=1 + CU_PICK4_FASTPATH=1, lam CUOI CUNG sau W-SYNC. F4: Layer-2 preflight probes + checker cross-check. F5: md5 fixture. F6: broker SOLO + desktop state.
+- Han che thanh that: gio 04:27/05:15 trong brief khong tim thay trong file W-A1 doc, chat co co so trong summary, gio lay tu brief, chua kiem chung doc lap. CB-9 manifest cho bench a1a672d khong khoa duoc, chi trich nhu probe pass.
+- W-A1FIX da spawn de dong F1-F6. F1 can Muse tong ban hanh lenh resume sau khi manifest san sang.
+
+## W-TODO tien trien som
+- Commit d60ca6b: tick 4.26 (PR1 merged d322cd77), 4.27 (F1/F2 diffs pushed), 4.19 (Y1b 12/12, gate 4/4); dem lai 114/23.
+- Luu y: checkout dung chung, cac file scripts/cdp.mjs, scripts/s2_flip_live.py, tests/cdp_snapshot.mjs, tests/test_s2_flip_wiring.py, tests/realistic/clone1-batch3/results.json dang dirty va khong phai cua COORD-CLICK-6, tuyet doi khong add/commit chung.
+
 ## Luat ap cho moi worker
 - Huong cuoi e05fc58 la luat. Chuan Lauren Tan (lenh + output + commit hash + thoi gian). Khong tu cham pass, worker doc lap kiem chung lai. Khong ydotool. Khong dau gach ngang dai. Commit pathspec ro rang, push xong kiem tra ls-remote. Khong dua thong tin ca nhan cua Pham Tuan len GitHub. Worker ket qua 15 phut thi giet ngay. Song song het muc, khong cat buoc.
