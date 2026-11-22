@@ -34,7 +34,16 @@ session that models that exact misfire, and prove:
   Redteam H2),
 - phase 4 (re-switch plus snapshot URL gate) is executed by
   behavioral tests on a real Runner, not for the first time in
-  a live run (amend 2, Council 2 C1).
+  a live run (amend 2, Council 2 C1),
+- open refuses when the handle set after /window/new differs
+  from before by more than exactly the new handle added and
+  nothing removed, which a concurrent open plus close plus a
+  stale-handle return would otherwise defeat (amend 3,
+  Redteam P-C),
+- phase 4's active-window check and final ok/completed gate
+  are executed by behavioral tests, and the helper pins the
+  call order (switch before send) and the program identity
+  (SEND_PROGRAM) (amend 3, Council 2 C1 + Redteam H3/C2).
 
 No live tab is opened, navigated, or deleted. The fake session
 never touches a real browser.
@@ -568,6 +577,46 @@ class ZenTabFixTest(unittest.TestCase):
         self.assertEqual(fake.tabs[0]['url'], OWNER_URL)
         self.assertEqual(fake._cur_tab()['url'], OWNER_URL)
 
+    def test_open_refuses_concurrent_open_close_with_stale_handle(self):
+        """Redteam P-C (amend 3): a tab X opens after `before`
+        AND another tab closes in the same window, net count +1,
+        and /window/new returns X's handle. The membership check
+        passes (X was not in `before`) and the count gate passes
+        (net +1), so the set-difference check must refuse: the
+        handle set after the open must differ from `before` by
+        exactly the new handle added and nothing removed.
+        Without it, the (c) check selects X, the navigate
+        rewrites X to the fixture URL, and cleanup close DELETEs
+        X. Adapted from /tmp/redteam-amend2-probes.py P-C, which
+        looked X up by title and missed the hijack; this test
+        checks by position (tabs[1] is X after the churn).
+        """
+        class _ConcurrentOpenClose(FakeSession):
+            def _wd(self, method, path, body=None):
+                if method == 'POST' and path.endswith('/window/new'):
+                    x_handle = uuid.uuid4().hex
+                    self.tabs.append({'handle': x_handle, 'title': 'X',
+                                      'url': 'https://x.example/'})
+                    del self.tabs[1]
+                    handle = uuid.uuid4().hex
+                    self.tabs.append({'handle': handle, 'title': '',
+                                      'url': 'about:blank'})
+                    if self.select_new:
+                        self.current = handle
+                    return {'value': {'handle': x_handle}}
+                return super()._wd(method, path, body)
+
+        fake = _ConcurrentOpenClose(_owner_tabs(), current_index=0,
+                                    select_new=True, select_works=True)
+        with self.assertRaises(ZenDomError) as caught:
+            self._run_cmd(fake, zen_tab.cmd_open)
+        self.assertIn('handle set', str(caught.exception))
+        self.assertEqual(fake.deleted, [])
+        self.assertEqual(len(fake.tabs), 3)
+        self.assertEqual(fake.tabs[0]['url'], OWNER_URL)
+        self.assertEqual(fake.tabs[1]['url'], 'https://x.example/')
+        self.assertEqual(fake.tabs[2]['url'], 'about:blank')
+
     def test_restore_original_scan_error_with_failed_reads_returns_ok(self):
         """Redteam H2 (amend 2): the scan fails inside
         _restore_original AND the _title/_url reads fail too.
@@ -805,26 +854,39 @@ class RunnerFixTest(unittest.TestCase):
         self.assertEqual(url, FIXTURE_URL)
         self.assertEqual(count, '1')
 
-    def _run_phase4(self, switch_url=FIXTURE_URL, log=None):
+    def _run_phase4(self, switch_url=FIXTURE_URL, log=None, ok=True,
+                    hypr_address='0xABC'):
         """Run phase4 on a real Runner with hypr/tab/oneshot_zen
         mocked (Council 2 phase-4 probe shape: Runner() builds a
         Harness that only mkdirs, no SSH). Returns the runner so
-        the test can read results.
+        the test can read results. The tab and oneshot_zen mocks
+        record their calls on runner._phase4_calls (Redteam H3,
+        amend 3): the order must be switch before send, and the
+        program passed to oneshot_zen must be SEND_PROGRAM.
         """
         runner = run2.Runner()
         runner.zen_address = '0xabc'
         runner.results = {'run': run2.RUN_NO}
-        envelope = {'ok': True, 'elapsed_ms': 1, 'error': None,
+        envelope = {'ok': ok, 'elapsed_ms': 1, 'error': None,
                     'log': log if log is not None else [
                         'PROBE zen-9 ' + FIXTURE_URL + ' 1',
                         'dom_act ok True completed 4']}
+        calls = []
+        runner._phase4_calls = calls
+
+        def _tab(*args, **kwargs):
+            calls.append(('tab', args, kwargs))
+            return {'ok': True, 'url': switch_url}
+
+        def _oneshot(program, intent, timeout=90):
+            calls.append(('oneshot', program, intent))
+            return (12.3, envelope)
+
         with mock.patch.object(runner, 'hypr',
-                               return_value={'address': '0xABC'}), \
-             mock.patch.object(runner, 'tab',
-                               return_value={'ok': True,
-                                             'url': switch_url}), \
+                               return_value={'address': hypr_address}), \
+             mock.patch.object(runner, 'tab', side_effect=_tab), \
              mock.patch.object(runner, 'oneshot_zen',
-                               return_value=(12.3, envelope)):
+                               side_effect=_oneshot):
             runner.phase4()
         return runner
 
@@ -878,6 +940,67 @@ class RunnerFixTest(unittest.TestCase):
         with self.assertRaises(RuntimeError) as caught:
             self._run_phase4(switch_url='https://example.com/')
         self.assertIn('send switch landed on', str(caught.exception))
+
+    def test_phase4_active_window_moved_raises(self):
+        """Council 2 C1 (amend 3): the active-window check must
+        raise when hypr reports an address other than the Zen
+        address, before any switch or send runs. The message is
+        the only evidence needed: that check is the first line
+        of phase4, so nothing after it can have run.
+        """
+        with self.assertRaises(RuntimeError) as caught:
+            self._run_phase4(hypr_address='0xDEF')
+        self.assertIn('active window moved off Zen',
+                      str(caught.exception))
+
+    def test_phase4_envelope_ok_false_raises(self):
+        """Council 2 C1 (amend 3): the final ok/completed gate
+        must raise when the envelope says ok False, even with a
+        valid PROBE line and completed 4. This gate is the last
+        line of defense against recording a failed send as
+        success.
+        """
+        with self.assertRaises(RuntimeError) as caught:
+            self._run_phase4(ok=False)
+        self.assertIn('did not complete 4/4', str(caught.exception))
+
+    def test_phase4_completed_three_raises(self):
+        """Council 2 C1 (amend 3): the final gate must raise
+        when the send program completes only 3 of 4 actions.
+        """
+        with self.assertRaises(RuntimeError) as caught:
+            self._run_phase4(
+                log=['PROBE zen-9 ' + FIXTURE_URL + ' 1',
+                     'dom_act ok True completed 3'])
+        self.assertIn('did not complete 4/4', str(caught.exception))
+
+    def test_phase4_missing_dom_act_raises(self):
+        """Council 2 C1 (amend 3): a log with a valid PROBE line
+        but no dom_act line leaves completed None, and the final
+        gate must raise instead of recording a send with no
+        completed count.
+        """
+        with self.assertRaises(RuntimeError) as caught:
+            self._run_phase4(log=['PROBE zen-9 ' + FIXTURE_URL + ' 1'])
+        self.assertIn('did not complete 4/4', str(caught.exception))
+
+    def test_phase4_switch_before_send_and_program_identity(self):
+        """Redteam H3/C2 (amend 3): pin the call order and the
+        program identity in the helper. The re-switch must run
+        before the send, and the program passed to oneshot_zen
+        must be SEND_PROGRAM (not PROBE_PROGRAM or any other
+        program). A future edit reordering the calls or passing
+        the wrong program must fail this test.
+        """
+        runner = self._run_phase4()
+        calls = runner._phase4_calls
+        kinds = [c[0] for c in calls]
+        self.assertEqual(kinds, ['tab', 'oneshot'])
+        tab_call = [c for c in calls if c[0] == 'tab'][0]
+        self.assertEqual(tab_call[1], ('switch', run2.TARGET))
+        oneshot_call = [c for c in calls if c[0] == 'oneshot'][0]
+        self.assertIs(oneshot_call[1], run2.SEND_PROGRAM)
+        self.assertEqual(oneshot_call[2], run2.INTENT)
 
 
 if __name__ == '__main__':
