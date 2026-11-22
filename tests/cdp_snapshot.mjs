@@ -11,7 +11,13 @@ class FakeInput {
   get value(){return this._value??'';}
   set value(value){
     let normalized=String(value).replace(/[\r\n]/g,'');
-    if(this.type==='url'||this.type==='email')
+    if(this.type==='email')
+      // HTML Standard 4.10.5.1.5 (Email state value sanitization
+      // algorithm): split on commas, strip leading and trailing
+      // ASCII whitespace from each token, rejoin with a single
+      // comma. Unconditional for email, with or without multiple.
+      normalized=normalized.split(',').map(token=>token.replace(/^[\t\n\f\r ]+|[\t\n\f\r ]+$/g,'')).join(',');
+    else if(this.type==='url')
       normalized=normalized.replace(/^[\t\n\f\r ]+|[\t\n\f\r ]+$/g,'');
     this._value=normalized;
   }
@@ -231,6 +237,28 @@ const emailField=element('',{tagName:'INPUT',type:'email',value:''});
 runResult=await run([emailField],[{type:'set_value',ref:'e1',text:'\ta@b.com  '}]);
 assert.equal(runResult.result.ok,true,JSON.stringify(runResult.result));
 assert.equal(emailField.value,'a@b.com');
+// AMEND4 item 8 residual (B2-6): email with multiple. The spec
+// strips EACH comma-separated token, not just the whole value
+// ends, so '  a@b.com , c@d.com  ' lands as 'a@b.com,c@d.com'.
+// The rule is the email state's sanitization algorithm, so it
+// holds for a plain email field too, not only multiple ones.
+const multiEmail=element('',{tagName:'INPUT',type:'email',multiple:true,value:''});
+runResult=await run([multiEmail],[{type:'set_value',ref:'e1',text:'  a@b.com , c@d.com\t'}]);
+assert.equal(runResult.result.ok,true,JSON.stringify(runResult.result));
+assert.equal(multiEmail.value,'a@b.com,c@d.com');
+assert.deepEqual((multiEmail.events??[]).map(e=>e.type),['input','change']);
+const singleEmailComma=element('',{tagName:'INPUT',type:'email',value:''});
+runResult=await run([singleEmailComma],[{type:'set_value',ref:'e1',text:'a@b.com, b@c.com'}]);
+assert.equal(runResult.result.ok,true,JSON.stringify(runResult.result));
+assert.equal(singleEmailComma.value,'a@b.com,b@c.com');
+const multiEmptyToken=element('',{tagName:'INPUT',type:'email',multiple:true,value:''});
+runResult=await run([multiEmptyToken],[{type:'set_value',ref:'e1',text:'a@b.com,,c@d.com'}]);
+assert.equal(runResult.result.ok,true,JSON.stringify(runResult.result));
+assert.equal(multiEmptyToken.value,'a@b.com,,c@d.com');
+const multiMaxField=element('',{tagName:'INPUT',type:'email',multiple:true,maxLength:15,value:''});
+runResult=await run([multiMaxField],[{type:'set_value',ref:'e1',text:'  a@b.com , c@d.com  '}]);
+assert.equal(runResult.result.ok,true,JSON.stringify(runResult.result));
+assert.equal(multiMaxField.value,'a@b.com,c@d.com');
 const textField=element('',{tagName:'INPUT',type:'text',value:''});
 runResult=await run([textField],[{type:'set_value',ref:'e1',text:'  hello  '}]);
 assert.equal(runResult.result.ok,true,JSON.stringify(runResult.result));
