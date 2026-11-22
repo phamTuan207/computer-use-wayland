@@ -147,6 +147,32 @@ class ProgramShapeTests(unittest.TestCase):
         self.assertEqual(program.count('"scope": "TABID123"'), 3)
         self.assertEqual(program.count('"observation_id": snap["snapshot"]'), 3)
 
+    def test_set_value_program_carries_p2_stamps_and_passes_p5(self):
+        # C5-B1: the input-free program is set_value plus a value
+        # read-back assert (no key: the Enter comes from the
+        # focus+Enter helper after the program). Same P2 stamps,
+        # and the action list passes the same P5 gate.
+        program = s2_flip_live.build_program_set_value('TABID123', 'hello')
+        self.assertIn('"type": "set_value"', program)
+        self.assertNotIn('"type": "fill"', program)
+        self.assertNotIn('"keys": ["Enter"]', program)
+        self.assertIn('"scope": "TABID123"', program)
+        self.assertIn('"observation_id": snap["snapshot"]', program)
+        self.assertEqual(program.count('"scope": "TABID123"'), 2)
+        self.assertEqual(program.count('"observation_id": snap["snapshot"]'), 2)
+        actions = [
+            {'type': 'set_value', 'ref': 'e1', 'text': 'hello',
+             'scope': 'TABID123', 'observation_id': 'SNAP1'},
+            {'type': 'assert', 'ref': 'e1', 'value': 'hello',
+             'scope': 'TABID123', 'observation_id': 'SNAP1'},
+        ]
+        self.assertTrue(dom_asserts.require_asserts(
+            actions, available={'focus_check': True, 'type_check': True,
+                                'sent_bubble': False}))
+        from code_exec import _validate_dom_actions
+        _validate_dom_actions(actions, {'e1'}, snapshot_id='SNAP1',
+                              target='TABID123')
+
     def test_program_actions_satisfy_p5_requires(self):
         # The action list the program encodes, checked against the same
         # require_asserts gate code_exec._api_dom_act enforces.

@@ -73,6 +73,8 @@ LAPTOP_V12 = '/tmp/s2-v12.mjs'
 LAPTOP_P9 = '/tmp/s2-p9.mjs'
 LAPTOP_SEED = '/tmp/s2-seed.mjs'
 LAPTOP_ACTIVATE = '/tmp/c5-activate.mjs'
+LAPTOP_FOCUSENTER = '/tmp/c5-focusenter.mjs'
+LAPTOP_COUNT = '/tmp/c5-count.mjs'
 
 BROWSERS = {
     'brave': {'endpoint': 'http://[::1]:9223', 'label': 'clone1'},
@@ -124,6 +126,41 @@ def build_program(target_id, message):
     )
 
 
+def build_program_set_value(target_id, message):
+    """The input-free send program (C5-B1): set_value, no mouse.
+
+    Grounds the composer from a fresh DOM snapshot, sets its value
+    with the native setter plus read-back (inside cdp.mjs
+    set_value, zero Input calls), and asserts the value read-back.
+    The Enter itself is NOT in this program: set_value does not
+    focus the composer, and a CDP key Enter goes to the focused
+    element, so the harness focuses the composer and dispatches
+    Enter with the /tmp/c5-focusenter.mjs helper after this
+    program returns. P2 stamps (scope + observation_id) on every
+    action, same as build_program.
+    """
+    return (
+        'snap = dom_observe(' + json.dumps(target_id) + ')\n'
+        'comp = None\n'
+        'for e in snap["elements"]:\n'
+        '    if e["role"] in ("textarea", "textbox") and e["name"] == "Message":\n'
+        '        comp = e["ref"]\n'
+        '        break\n'
+        'assert_state(comp is not None, "composer not found in snapshot")\n'
+        'res = dom_act(snap, [\n'
+        '    {"type": "set_value", "ref": comp, "text": ' + json.dumps(message)
+        + ', "scope": ' + json.dumps(target_id)
+        + ', "observation_id": snap["snapshot"]},\n'
+        '    {"type": "assert", "ref": comp, "value": ' + json.dumps(message)
+        + ', "scope": ' + json.dumps(target_id)
+        + ', "observation_id": snap["snapshot"]},\n'
+        '])\n'
+        'print("dom_act ok", res.get("ok"), "completed", res.get("completed"), '
+        '"ms", res.get("execution_ms"), "error", res.get("error"))\n'
+        'assert_state(res.get("ok") is True, "dom_act failed")\n'
+    )
+
+
 def message_for(run, browser, prefix='S2-FLIP'):
     """Short, unique, clearly marked test message for one send."""
     return '%s-R%d-%s-IGNORE-TEST' % (prefix, run, browser.upper())
@@ -131,13 +168,14 @@ def message_for(run, browser, prefix='S2-FLIP'):
 
 class Harness:
     def __init__(self, workdir, run_no, dry_run=False, activate=False,
-                 message_prefix='S2-FLIP'):
+                 message_prefix='S2-FLIP', program_variant='fill'):
         self.workdir = Path(workdir)
         self.workdir.mkdir(parents=True, exist_ok=True)
         self.run_no = run_no
         self.dry_run = dry_run
         self.activate = activate
         self.message_prefix = message_prefix
+        self.program_variant = program_variant
         self.spans = []
         self.ssh_calls = []
         self.log_lines = []
@@ -394,18 +432,74 @@ class Harness:
                            'wall_ms': round(wall_ms, 1), 'laptop_ms': None})
         return result
 
+    def count_check(self, endpoint, target_id, message):
+        """C5 double-send guard: count bubbles containing the message.
+
+        Single read-only Runtime.evaluate via /tmp/c5-count.mjs.
+        Returns {count, items} (count -1 on error). Pre-send the
+        count must be 0; post-send it must be 1.
+        """
+        rc, out, err, wall = self.ssh(
+            'node %s %s %s %s' % (LAPTOP_COUNT, endpoint, target_id,
+                                 shlex.quote(message)),
+            'count-check', timeout=60)
+        try:
+            result = json.loads(out.strip().splitlines()[-1])
+        except (ValueError, IndexError):
+            result = {'count': -1,
+                      'error': 'count script bad output: %s' % out.strip()[:300]}
+        result['ms'] = round(wall, 1)
+        return result
+
+    def focus_enter(self, endpoint, target_id):
+        """C5-B1 send step: focus the composer + CDP Enter.
+
+        Runs /tmp/c5-focusenter.mjs (Runtime.evaluate focus plus
+        Input.dispatchKeyEvent Enter, zero mouse events). Returns
+        the helper's JSON dict.
+        """
+        start = time.monotonic()
+        rc, out, err, wall = self.ssh(
+            'node %s %s %s' % (LAPTOP_FOCUSENTER, endpoint, target_id),
+            'focus-enter', timeout=60)
+        wall_ms = (time.monotonic() - start) * 1000.0
+        try:
+            result = json.loads(out.strip().splitlines()[-1])
+        except (ValueError, IndexError):
+            result = {'ok': False,
+                      'error': 'focus-enter script bad output: %s'
+                      % out.strip()[:300]}
+        result['ms'] = round(wall_ms, 1)
+        result['rc'] = rc
+        self.spans.append({'phase': 'focus-enter',
+                           'wall_ms': round(wall_ms, 1), 'laptop_ms': None})
+        return result
+
     def send_browser(self, browser, target_id, message):
         """One-shot code-exec send + independent V12 for one browser."""
         cfg = BROWSERS[browser]
         endpoint = cfg['endpoint']
         out = {'browser': browser, 'label': cfg['label'],
                'endpoint': endpoint, 'message': message, 'model_calls': 0,
-               'target_id': target_id}
+               'target_id': target_id,
+               'program_variant': self.program_variant}
         t_send = time.monotonic()
         try:
             if self.activate:
                 out['activation'] = self.activate_browser(endpoint, target_id)
-            program = build_program(target_id, message)
+            if self.program_variant == 'set_value':
+                # Mandatory pre-send already-sent check (CB-2 double-send
+                # guard): a retry must never run when the message is
+                # already in the thread. Unique message per run, so any
+                # count above 0 aborts the send.
+                out['pre_count'] = self.count_check(endpoint, target_id, message)
+                if out['pre_count'].get('count', -1) > 0:
+                    out['outcome'] = 'already-sent'
+                    out['wall_ms'] = round((time.monotonic() - t_send) * 1000.0, 1)
+                    return out
+                program = build_program_set_value(target_id, message)
+            else:
+                program = build_program(target_id, message)
             wall_ms, envelope = self.oneshot_code_exec(
                 endpoint, program,
                 'S2 flip run %d %s' % (self.run_no, browser))
@@ -427,12 +521,24 @@ class Harness:
             self.spans.append({'phase': 'act-' + browser,
                                'wall_ms': round(wall_ms, 1),
                                'laptop_ms': out['program']['elapsed_ms']})
-            out['cb1'] = {
-                'input_sent': bool(completed is not None and completed >= 2),
-                'target_received': bool(completed is not None and completed >= 1),
-                'verified': None,
-                'completed': completed,
-            }
+            if self.program_variant == 'set_value':
+                # The Enter is the helper's, not the program's: CB-1 for
+                # this variant is input_sent = focus+Enter dispatched,
+                # target_received = set_value read-back done.
+                out['focus_enter'] = self.focus_enter(endpoint, target_id)
+                out['cb1'] = {
+                    'input_sent': bool(out['focus_enter'].get('ok')),
+                    'target_received': bool(completed is not None and completed >= 1),
+                    'verified': None,
+                    'completed': completed,
+                }
+            else:
+                out['cb1'] = {
+                    'input_sent': bool(completed is not None and completed >= 2),
+                    'target_received': bool(completed is not None and completed >= 1),
+                    'verified': None,
+                    'completed': completed,
+                }
             v12 = self.v12_check(endpoint, target_id, message)
             out['v12'] = v12
             out['cb1']['verified'] = bool(v12.get('found'))
@@ -480,6 +586,7 @@ class Harness:
         results = {'run': self.run_no, 'dry_run': self.dry_run,
                    'activate': self.activate,
                    'message_prefix': self.message_prefix,
+                   'program_variant': self.program_variant,
                    'mux_baseline_ms': round(mux, 1), 'browsers': {}}
         scratch = {}
         try:
@@ -528,6 +635,23 @@ class Harness:
             # Scored wall stops here: both V12 verifies are done.
             results['wall_ms'] = round((time.monotonic() - t0) * 1000.0, 1)
         finally:
+            # Delayed double-send guard for the set_value variant:
+            # 10s after the scored wall stops, recount the message.
+            # Exactly 1 means no late duplicate arrived.
+            if self.program_variant == 'set_value':
+                results['delayed_count'] = {}
+                time.sleep(10)
+                for browser in browsers:
+                    target_id = (results['browsers'].get(browser) or {}).get('target_id')
+                    message = (results['browsers'].get(browser) or {}).get('message')
+                    if not target_id or not message:
+                        continue
+                    try:
+                        results['delayed_count'][browser] = self.count_check(
+                            BROWSERS[browser]['endpoint'], target_id, message)
+                    except Exception as exc:
+                        results['delayed_count'][browser] = {
+                            'count': -1, 'error': str(exc)[:300]}
             # P9 captures AFTER the scored wall stops: one viewport
             # screenshot per browser through direct CDP. The run is
             # scored only after a human reviews these.
@@ -578,9 +702,9 @@ class Harness:
                 laptop = max(0.0, wall - mux)
                 phases['verify'] += laptop
                 transport += wall - laptop
-            elif kind in ('broker', 'setup', 'activate'):
+            elif kind in ('broker', 'setup', 'activate', 'focus-enter'):
                 laptop = max(0.0, wall - mux)
-                phases['setup' if kind == 'activate' else kind] += laptop
+                phases['setup' if kind in ('activate', 'focus-enter') else kind] += laptop
                 transport += wall - laptop
         transport += 2 * mux  # the two mux-baseline probes
         accounted = transport + sum(phases.values())
@@ -609,12 +733,16 @@ def main(argv=None):
                          'before each send (CDP-only, no screen change)')
     ap.add_argument('--message-prefix', default='S2-FLIP',
                     help='prefix for the unique test message per send')
+    ap.add_argument('--set-value', action='store_true',
+                    help='C5-B1: set_value program (no mouse) + focus+Enter '
+                         'helper instead of the fill program')
     ap.add_argument('--workdir', required=True)
     args = ap.parse_args(argv)
     browsers = ['brave', 'chromium'] if args.browser == 'both' else [args.browser]
     harness = Harness(args.workdir, args.run, dry_run=args.dry_run,
                       activate=args.activate,
-                      message_prefix=args.message_prefix)
+                      message_prefix=args.message_prefix,
+                      program_variant='set_value' if args.set_value else 'fill')
     results = harness.run(browsers)
     out_path = Path(args.workdir) / ('run-%d.json' % args.run)
     out_path.write_text(json.dumps(results, indent=2, ensure_ascii=False) + '\n')
