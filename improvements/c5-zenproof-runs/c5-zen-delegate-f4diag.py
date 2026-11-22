@@ -73,7 +73,6 @@ PROBE_PROGRAM = (
 )
 
 SEND_PROGRAM = (
-    "import json\n"
     "dom_start()\n"
     "snap = dom_observe('two_vision_fixture.html?clone=zen',"
     " '#msg-input', 80)\n"
@@ -102,12 +101,11 @@ SEND_PROGRAM = (
     "print(\"dom_act ok\", res.get(\"ok\"), \"completed\","
     " res.get(\"completed\"), \"ms\", res.get(\"execution_ms\"),"
     " \"error\", res.get(\"error\"))\n"
-    # F4 diagnostic: the full dom_act result (per-action
-    # input_sent/target_received/verified plus the delegate's
-    # dispatch outcome) is the evidence. The summary line above
-    # collapses every cause into the verify basis.
-    "print(\"DOMACT-JSON\", json.dumps(res, default=str))\n"
-    "assert_state(res.get(\"ok\") is True, \"dom_act failed\")\n"
+    # F4 diagnostic: NO assert_state here. The code-exec envelope
+    # keeps the program's variables only when the program
+    # completes without raising, so an assert would discard the
+    # full dom_act result (res) that is the evidence. The runner
+    # reads res from envelope['variables'] instead.
 )
 
 
@@ -602,18 +600,12 @@ class Runner:
             if m:
                 completed = int(m.group(2))
         self.results['program']['completed'] = completed
-        # F4 diagnostic: capture the full dom_act result (the
-        # DOMACT-JSON line) into the run evidence. This is the
+        # F4 diagnostic: capture the full dom_act result from the
+        # envelope variables (the program assigns res and completes
+        # without asserting, so the envelope keeps it). This is the
         # deliverable: per-action input_sent/target_received/
         # verified plus the delegate dispatch outcome.
-        full_result = None
-        for line in envelope.get('log') or []:
-            if line.startswith('DOMACT-JSON '):
-                try:
-                    full_result = json.loads(
-                        line[len('DOMACT-JSON '):])
-                except ValueError:
-                    full_result = {'parse_error': line[:200]}
+        full_result = (envelope.get('variables') or {}).get('res')
         self.results['program']['full_result'] = full_result
         # Gate the send snapshot URL with the same check as the
         # probe (Redteam F2): the send must have observed the
@@ -744,7 +736,7 @@ class Runner:
             else:
                 self.results['outcome'] = 'failed-unverified'
                 self.results['error'] = (
-                    'no DOMACT-JSON line captured from the send program')
+                    'no dom_act result in envelope variables')
         except _Blocked as exc:
             self.results['outcome'] = 'blocked'
             self.results['error'] = str(exc)[:400]
