@@ -442,7 +442,49 @@ this file. No personal info.
   mechanism is identical, only the failure diagnostic is
   richer. Wiring tests still 9/9.
 
-### Run 2
+### Run 2 (10:16 +07, T+55m)
+
+- Wall 33953.2ms, mux 777.8ms. Model calls 0.
+- Brave: SENT. Routing dom-chromium (54 elements, not truncated).
+  Program ok True, completed 3, 51ms. V12 found True, attempt 1,
+  items 45, role user, side user. CB-1 all three True.
+  P9 reviewed: both the R1 and R2 test bubbles are visible, plus
+  a clone1 assistant reply between them (clone1 is responding to
+  the test messages; they are marked IGNORE-TEST). Composer
+  empty. DOM and render agree. P9 PASS.
+- Chromium: FAILED-UNVERIFIED, same sub-step as run 1. Program
+  ok False, dom_act completed 0 in 5002ms, log now names it:
+  "error CDP timeout: Input.dispatchMouseEvent". CB-1 all three
+  False. V12 found False after 40 attempts (10054ms), items 40.
+  P9 reviewed: no R2 bubble, composer empty, identical to run 1.
+  DOM and render agree. P9 confirms the failure is real.
+- Diagnosis, isolated reproduction: a standalone node script
+  (/tmp/s2-diag2.mjs) on the live Chromium tab shows baseline
+  Runtime.evaluate 3ms, scrollIntoView 1ms (the textarea does
+  NOT move, rect top stays 1091, so scrollIntoView is a no-op
+  and is NOT the trigger), post-scroll evaluates 0-1ms, and a
+  bare Input.dispatchMouseEvent mouseMoved TIMES OUT at 5000ms.
+  The renderer answers Runtime.evaluate in 1ms but will not
+  answer Input.dispatchMouseEvent at all. The Input domain
+  specifically is stuck on this tab; it is not a main-thread
+  stall and not the scroll.
+- Leading explanation (not proven): the Chromium window sits
+  on workspace 2 while workspace 1 is active (hyprctl confirms
+  active workspace 1, Brave on ws1 is the last window). The
+  occluded window's input pipeline may not dispatch synthetic
+  mouse events. Brave on the active workspace works 2/2;
+  Chromium on the inactive workspace fails 2/2 at the same
+  sub-step. I did NOT switch workspaces to test this: it would
+  change the user's screen and the measurement conditions
+  mid-run. The finding stands as measured under the as-found
+  conditions.
+- Decision: the program stays unchanged for runs 3-5. The
+  Chromium failure is data, not a reason to redesign the
+  program mid-measurement. Runs 3-5 run under the same
+  conditions; if the pattern holds 5/5, the class does not
+  flip and the verdict follows from that.
+
+### Run 3
 
 - (to be filled)
 
