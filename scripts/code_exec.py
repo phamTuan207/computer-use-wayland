@@ -87,6 +87,7 @@ import os
 import re
 import select
 import signal
+import socket
 import sys
 import time
 from pathlib import Path
@@ -275,15 +276,118 @@ class CodeExecError(ValueError):
     """A program failed a sandbox, budget, or API guard. Fails closed."""
 
 
-def _fork_run(work, wall_seconds):
-    """Run work() in a forked child with a hard wall kill.
+class _ApiChannel:
+    """One end of the parent/child API channel (socketpair, length-prefixed JSON).
 
-    work runs in the child and must return a JSON-serializable dict.
-    Returns (payload, status): status "ok" with the child's dict,
-    "timeout" when the child was killed at the wall, "crashed" when it
-    died without a payload, "refused" when fork or pipe failed. The
-    child always ends with os._exit and never returns to caller code,
-    so it cannot run the parent's finally blocks or atexit handlers.
+    The snippet runs in a forked child; every API call is marshalled to
+    the parent, which executes it against the real backend and session
+    state and returns the result. That keeps all backend interaction,
+    observation binding, and session state in the parent process,
+    exactly as if the snippet ran in-process, while the wall clock is
+    still enforced by the parent killing the child.
+    """
+
+    def __init__(self, sock):
+        self.sock = sock
+        self.buf = b""
+
+    def send(self, obj):
+        data = json.dumps(obj).encode("utf-8")
+        self.sock.sendall(len(data).to_bytes(4, "big") + data)
+
+    def _try_parse(self):
+        if len(self.buf) < 4:
+            return None
+        size = int.from_bytes(self.buf[:4], "big")
+        if len(self.buf) < 4 + size:
+            return None
+        raw, self.buf = self.buf[4:4 + size], self.buf[4 + size:]
+        return json.loads(raw.decode("utf-8"))
+
+    def recv(self):
+        while True:
+            msg = self._try_parse()
+            if msg is not None:
+                return msg
+            chunk = self.sock.recv(65536)
+            if not chunk:
+                raise EOFError("api channel closed")
+            self.buf += chunk
+
+    def recv_deadline(self, deadline):
+        while True:
+            msg = self._try_parse()
+            if msg is not None:
+                return msg
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise TimeoutError("wall-clock budget exceeded")
+            ready, _, _ = select.select([self.sock], [], [], remaining)
+            if not ready:
+                raise TimeoutError("wall-clock budget exceeded")
+            chunk = self.sock.recv(65536)
+            if not chunk:
+                raise EOFError("api channel closed")
+            self.buf += chunk
+
+
+def _kill_child(pid):
+    try:
+        os.kill(pid, signal.SIGKILL)
+    except ProcessLookupError:
+        pass
+    try:
+        os.waitpid(pid, 0)
+    except ChildProcessError:
+        pass
+
+
+def _reap_child(pid):
+    try:
+        os.waitpid(pid, 0)
+    except ChildProcessError:
+        pass
+
+
+_BUILTIN_EXCEPTIONS = {
+    "ValueError": ValueError, "TypeError": TypeError,
+    "RuntimeError": RuntimeError, "KeyError": KeyError,
+    "IndexError": IndexError, "AttributeError": AttributeError,
+    "OSError": OSError, "FileNotFoundError": FileNotFoundError,
+    "PermissionError": PermissionError, "AssertionError": AssertionError,
+}
+
+
+def _exception_from_response(resp):
+    """Rebuild the exception a parent-side API call raised, by name.
+
+    Builtin names map to the real classes so a snippet's except clauses
+    behave as they did in-process; unknown names get a dynamic class
+    carrying the name, which is what the envelope reports anyway.
+    """
+    name = resp.get("type") or "Exception"
+    message = resp.get("error") or ""
+    if name == "CodeExecError":
+        return CodeExecError(message)
+    cls = _BUILTIN_EXCEPTIONS.get(name)
+    if cls is None:
+        if not name.isidentifier():
+            return Exception(message)
+        cls = type(name, (Exception,), {})
+    return cls(message)
+
+
+def _fork_api_session(work, wall_seconds, api_handler):
+    """Run work(channel) in a forked child; the parent serves API calls.
+
+    work receives an _ApiChannel; it runs the snippet with API stubs
+    that marshal calls to the parent, and finishes by sending
+    {"kind": "done", "envelope": {...}}. The parent executes each call
+    via api_handler(name, args, kwargs) and returns the result. Returns
+    (payload, status): "ok" with the child's envelope, "timeout" when
+    the child was killed at the wall, "crashed" when it died without a
+    done message, "refused" when the socketpair or fork failed. The
+    child always ends with os._exit and never returns to caller code.
 
     A SIGALRM timer is the wrong tool here: the handler only runs when
     the interpreter regains the eval loop, so a C loop like
@@ -292,78 +396,62 @@ def _fork_run(work, wall_seconds):
     binds C-level work.
     """
     try:
-        read_fd, write_fd = os.pipe()
+        parent_sock, child_sock = socket.socketpair()
     except OSError:
         return None, "refused"
     try:
         pid = os.fork()
     except OSError:
-        os.close(read_fd)
-        os.close(write_fd)
+        parent_sock.close()
+        child_sock.close()
         return None, "refused"
     if pid == 0:
         try:
-            os.close(read_fd)
+            parent_sock.close()
             signal.signal(signal.SIGALRM, signal.SIG_DFL)
             signal.setitimer(signal.ITIMER_REAL, 0)
-            payload = work()
-            data = json.dumps(payload).encode("utf-8")
-            while data:
-                written = os.write(write_fd, data)
-                data = data[written:]
+            work(_ApiChannel(child_sock))
         except BaseException:
-            try:
-                data = json.dumps({"__child_error__": True}).encode("utf-8")
-                while data:
-                    written = os.write(write_fd, data)
-                    data = data[written:]
-            except BaseException:
-                pass
+            pass
         finally:
             os._exit(0)
-    os.close(write_fd)
+    child_sock.close()
+    channel = _ApiChannel(parent_sock)
     deadline = time.monotonic() + wall_seconds
-    chunks = []
-    status = "ok"
     try:
-        while True:
-            remaining = deadline - time.monotonic()
-            if remaining <= 0:
-                status = "timeout"
-                break
-            ready, _, _ = select.select([read_fd], [], [], remaining)
-            if not ready:
-                status = "timeout"
-                break
-            chunk = os.read(read_fd, 65536)
-            if not chunk:
-                break
-            chunks.append(chunk)
+        try:
+            while True:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    _kill_child(pid)
+                    return None, "timeout"
+                try:
+                    msg = channel.recv_deadline(deadline)
+                except TimeoutError:
+                    _kill_child(pid)
+                    return None, "timeout"
+                except EOFError:
+                    _reap_child(pid)
+                    return None, "crashed"
+                if msg.get("kind") == "done":
+                    _reap_child(pid)
+                    return msg.get("envelope"), "ok"
+                if msg.get("kind") == "api":
+                    resp = api_handler(msg.get("name"), msg.get("args") or [],
+                                       msg.get("kwargs") or {})
+                    try:
+                        channel.send(resp)
+                    except OSError:
+                        _reap_child(pid)
+                        return None, "crashed"
+                    continue
+                _reap_child(pid)
+                return None, "crashed"
+        except BaseException:
+            _kill_child(pid)
+            raise
     finally:
-        os.close(read_fd)
-    if status == "timeout":
-        try:
-            os.kill(pid, signal.SIGKILL)
-        except ProcessLookupError:
-            pass
-        try:
-            os.waitpid(pid, 0)
-        except ChildProcessError:
-            pass
-        return None, "timeout"
-    try:
-        os.waitpid(pid, 0)
-    except ChildProcessError:
-        pass
-    if not chunks:
-        return None, "crashed"
-    try:
-        payload = json.loads(b"".join(chunks).decode("utf-8"))
-    except (ValueError, UnicodeDecodeError):
-        return None, "crashed"
-    if not isinstance(payload, dict) or "__child_error__" in payload:
-        return None, "crashed"
-    return payload, "ok"
+        parent_sock.close()
 
 
 class _Validator(ast.NodeVisitor):
@@ -901,15 +989,16 @@ class CodeExecSession:
     def run(self, source, intent=None):
         """Run one program. Always returns an envelope; raises only on cancel.
 
-        The snippet runs in a forked child (_fork_run) so the wall clock
-        binds C-level work the tracer cannot interrupt; the parent kills
-        the child at the wall. The child's mutations to this session are
-        discarded: variables, api_calls, and log travel back in the
-        envelope and are adopted here. Observations and DOM snapshots
-        recorded by API calls in the child are likewise child-local, so
-        the next run re-observes (they expire after 120s anyway).
-        A cancel raised inside the child comes back as a __cancelled__
-        payload and is re-raised below, after state is saved.
+        The snippet runs in a forked child (_fork_api_session) so the
+        wall clock binds C-level work the tracer cannot interrupt; the
+        parent kills the child at the wall. API calls are marshalled
+        back to the parent and executed there against the real backend
+        and session state, so backend calls, observation bindings, DOM
+        snapshots, api_calls, and the log all behave exactly as if the
+        snippet ran in-process. Only the snippet's own variables travel
+        back in the done envelope and are adopted here. A cancel raised
+        inside the child comes back as a __cancelled__ payload and is
+        re-raised below, after state is saved.
         """
         started = time.monotonic()
         self.api_calls = 0
@@ -926,25 +1015,96 @@ class CodeExecSession:
         try:
             tree = validate_program(source)
             self.check_cancel()
-            namespace = dict(self.variables)
-            namespace.update({
-                '__builtins__': dict(SAFE_BUILTINS),
-                'windows': self.api_windows,
-                'observe': self.api_observe,
-                'act': self.api_act,
-                'read_file': self.api_read_file,
-                'assert_state': self.api_assert_state,
-                'assert_file_contains': self.api_assert_file_contains,
-                'assert_file_exists': self.api_assert_file_exists,
-                'dom_start': self.api_dom_start,
-                'dom_tabs': self.api_dom_tabs,
-                'dom_observe': self.api_dom_observe,
-                'dom_act': self.api_dom_act,
-                'dom_assert': self.api_dom_assert,
-                'print': self._print,
-            })
+            api_methods = {
+                "windows": self.api_windows,
+                "observe": self.api_observe,
+                "act": self.api_act,
+                "read_file": self.api_read_file,
+                "assert_state": self.api_assert_state,
+                "assert_file_contains": self.api_assert_file_contains,
+                "assert_file_exists": self.api_assert_file_exists,
+                "dom_start": self.api_dom_start,
+                "dom_tabs": self.api_dom_tabs,
+                "dom_observe": self.api_dom_observe,
+                "dom_act": self.api_dom_act,
+                "dom_assert": self.api_dom_assert,
+                "print": self._print,
+            }
 
-            def run_child():
+            def api_handler(name, args, kwargs):
+                fn = api_methods.get(name)
+                if fn is None:
+                    return {"ok": False, "error": "unknown api: %s" % name,
+                            "type": "CodeExecError"}
+                old_tracer = sys.gettrace()
+                sys.settrace(self._trace)
+                try:
+                    result = fn(*args, **kwargs)
+                except (KeyboardInterrupt, SystemExit):
+                    raise
+                except BaseException as exc:
+                    try:
+                        self.check_cancel()
+                    except BaseException as cancel_exc:
+                        return {"ok": False, "cancelled": True,
+                                "error": str(cancel_exc)}
+                    return {"ok": False, "error": str(exc)[:400],
+                            "type": type(exc).__name__}
+                finally:
+                    sys.settrace(old_tracer)
+                try:
+                    json.dumps(result)
+                except (TypeError, ValueError):
+                    return {"ok": False,
+                            "error": "api result is not serializable",
+                            "type": "CodeExecError"}
+                return {"ok": True, "result": result}
+
+            def run_child(channel):
+                def make_stub(name):
+                    def stub(*args, **kwargs):
+                        try:
+                            request = {"kind": "api", "name": name,
+                                       "args": list(args),
+                                       "kwargs": dict(kwargs)}
+                            json.dumps(request)
+                        except (TypeError, ValueError):
+                            raise CodeExecError(
+                                "api call argument is not JSON-serializable: %s"
+                                % name)
+                        try:
+                            channel.send(request)
+                        except OSError:
+                            raise CodeExecError("api channel closed")
+                        try:
+                            resp = channel.recv()
+                        except (OSError, EOFError):
+                            raise CodeExecError("api channel closed")
+                        if resp.get("cancelled"):
+                            self.check_cancel()
+                            raise RuntimeError(resp.get("error") or "cancelled")
+                        if not resp.get("ok"):
+                            raise _exception_from_response(resp)
+                        return resp.get("result")
+                    return stub
+
+                namespace = dict(self.variables)
+                namespace.update({
+                    '__builtins__': dict(SAFE_BUILTINS),
+                    'windows': make_stub("windows"),
+                    'observe': make_stub("observe"),
+                    'act': make_stub("act"),
+                    'read_file': make_stub("read_file"),
+                    'assert_state': make_stub("assert_state"),
+                    'assert_file_contains': make_stub("assert_file_contains"),
+                    'assert_file_exists': make_stub("assert_file_exists"),
+                    'dom_start': make_stub("dom_start"),
+                    'dom_tabs': make_stub("dom_tabs"),
+                    'dom_observe': make_stub("dom_observe"),
+                    'dom_act': make_stub("dom_act"),
+                    'dom_assert': make_stub("dom_assert"),
+                    'print': make_stub("print"),
+                })
                 child_envelope = dict(envelope)
                 try:
                     sys.settrace(self._trace)
@@ -956,26 +1116,27 @@ class CodeExecSession:
                     try:
                         self.check_cancel()
                     except BaseException as cancel_exc:
-                        return {'__cancelled__': True,
-                                'error': str(cancel_exc)}
-                    kept = {k: v for k, v in namespace.items()
-                            if k not in ('__builtins__',) and not callable(v)
-                            and k not in ('windows', 'observe', 'act', 'read_file',
-                                          'assert_state', 'assert_file_contains',
-                                          'assert_file_exists', 'dom_start', 'dom_tabs',
-                                          'dom_observe', 'dom_act', 'dom_assert', 'print')
-                            and _is_jsonable(v)}
-                    variables = _jsonable_copy(kept)
-                    candidate = dict(child_envelope, ok=True, variables=variables,
-                                     api_calls=self.api_calls,
-                                     elapsed_ms=round((time.monotonic() - started) * 1000, 3),
-                                     log=list(self.log_lines))
-                    if _serialized_size(candidate) > MAX_ENVELOPE_BYTES:
-                        child_envelope['error'] = 'serialized result envelope exceeds %d bytes' % MAX_ENVELOPE_BYTES
-                        child_envelope['error_type'] = 'result_too_large'
-                        child_envelope['variables'] = previous_variables
+                        child_envelope = {'__cancelled__': True,
+                                          'error': str(cancel_exc)}
                     else:
-                        child_envelope = candidate
+                        kept = {k: v for k, v in namespace.items()
+                                if k not in ('__builtins__',) and not callable(v)
+                                and k not in ('windows', 'observe', 'act', 'read_file',
+                                              'assert_state', 'assert_file_contains',
+                                              'assert_file_exists', 'dom_start', 'dom_tabs',
+                                              'dom_observe', 'dom_act', 'dom_assert', 'print')
+                                and _is_jsonable(v)}
+                        variables = _jsonable_copy(kept)
+                        candidate = dict(child_envelope, ok=True, variables=variables,
+                                         api_calls=self.api_calls,
+                                         elapsed_ms=round((time.monotonic() - started) * 1000, 3),
+                                         log=list(self.log_lines))
+                        if _serialized_size(candidate) > MAX_ENVELOPE_BYTES:
+                            child_envelope['error'] = 'serialized result envelope exceeds %d bytes' % MAX_ENVELOPE_BYTES
+                            child_envelope['error_type'] = 'result_too_large'
+                            child_envelope['variables'] = previous_variables
+                        else:
+                            child_envelope = candidate
                 except AssertionError as exc:
                     child_envelope['error'] = 'assert failed: ' + str(exc)
                     child_envelope['error_type'] = 'assert_failed'
@@ -991,23 +1152,21 @@ class CodeExecSession:
                     try:
                         self.check_cancel()
                     except BaseException as cancel_exc:
-                        return {'__cancelled__': True,
-                                'error': str(cancel_exc)}
-                    child_envelope['error'] = str(exc)[:400]
-                    child_envelope['error_type'] = type(exc).__name__
-                    child_envelope['variables'] = previous_variables
-                child_envelope['api_calls'] = self.api_calls
-                child_envelope['log'] = list(self.log_lines)
-                return child_envelope
+                        child_envelope = {'__cancelled__': True,
+                                          'error': str(cancel_exc)}
+                    else:
+                        child_envelope['error'] = str(exc)[:400]
+                        child_envelope['error_type'] = type(exc).__name__
+                        child_envelope['variables'] = previous_variables
+                channel.send({"kind": "done", "envelope": child_envelope})
 
-            payload, status = _fork_run(run_child, self.wall_seconds)
+            payload, status = _fork_api_session(
+                run_child, self.wall_seconds, api_handler)
             if status == "ok" and payload.get('__cancelled__'):
                 cancelled_message = payload.get('error') or 'cancelled'
             elif status == "ok":
                 envelope = payload
                 self.variables = _jsonable_copy(payload.get('variables', {}))
-                self.api_calls = payload.get('api_calls', 0)
-                self.log_lines = list(payload.get('log', []))
             elif status == "timeout":
                 envelope['error'] = 'wall-clock budget exceeded (%.0fs)' % self.wall_seconds
                 envelope['error_type'] = 'sandbox'
