@@ -1007,3 +1007,33 @@ Tim thay khac da verify: 5 test RT2 defective cu deu pass (RT2 Ran 51, OK); sua 
 ### Tong ket batch 11
 
 3/3 xong. Viec 1: tien de cu, TESTREPAIR-B da sua truoc, clone2 verify doc lap, 14/14 behavioral + 1 pin (49a6e4c + fix 3c805a7). Viec 2: readiness van NOT READY, 2 dong / 3 partial / 5 open / 2 standing (2f6fce3, ba088c0, b7fa920, 9e7b4a2). Viec 3: full discover 1974 test, 1 failure, 5 errors, 17 skipped, Y1b GONE (53ce420). Tat ca bao cao 0 em/en dash, khong thong tin ca nhan. Clone1 van STALL (228 phut luc 09:48), khong co viec chua xong nao duoc giao cho no. Bao truoc S2 flip da nhan (506c728): tin test do luong chi de do, khong phai task moi, se bo qua va lam tiep nhu binh thuong.
+
+---
+
+# BATCH 12 - GIAO 22/11/2026 (từ điều phối COORD-CLICK-5)
+
+Clone2, tao là Phạm Tuấn. Batch 11 mày làm xong rồi, tốt. Giờ là batch 12, việc mới.
+
+Tin thêm: tin nhắn đo S2 flip trong thread của mày đã xong hết rồi, từ giờ không còn tin test nào nữa. Mày cứ làm việc bình thường, không cần chờ tin test.
+
+Repo làm việc: computer-use-wayland, branch main cho báo cáo của mày. Đọc code thì fetch read-only branch todolist-push (HEAD hiện tại dddbddc). Không sửa code trên todolist-push, không push lên todolist-push. Báo cáo và kết quả của mày commit lên main.
+
+Mỗi task làm đủ 3 bước: council 3 người duyệt, redteam soi lỗi, rồi fix pass sửa lại theo góp ý. Kết quả 15 phút thì báo, không ngồi im. Xong task nào commit luôn task đó, đừng dồn cuối.
+
+## Task 1: Điều tra lệch số discover
+
+Batch 11 task 3 của mày báo discover 1974/1/5/17 ở commit 65a2df6 (1 failure, 5 errors), trong khi step-1 close-out đo ở 36364b1 là 0 failure, 4 errors. Tìm ra 1 failure đó là test nào, và error thứ 5 là gì. Chạy lại ở tip hiện tại để xem còn fail không. Nếu là lỗi thật thì sửa (kèm council + redteam + fix pass). Nếu là flake thì ghi lại bằng chứng chạy lại pass, và nêu rõ vì sao nó flake. Không được bỏ qua, không được ghi chung chung.
+
+## Task 2: Đóng nốt 5 gap live-run readiness, chuẩn bị rung 2
+
+DOT 9 task 2 của mày đã viết lại closeout: 2 closed, 3 partial, 5 open, 2 standing. Nhiệm vụ này: đóng nốt 5 gap open, tới mức làm được mà không cần gửi tin live. Chuẩn bị luôn quy trình chạy rung 2 (live 0-vision trên chat clone thật ở ws2) với option A fallback, viết rõ từng bước, điều kiện tiên quyết, và cách kiểm chứng bằng DOM (V12 sent-bubble gate).
+
+Gap nào bắt buộc phải gửi tin live mới đóng được thì ghi rõ là gap đó, không tự gửi tin live. Việc chạy live để điều phối quyết và xếp lịch riêng, mày chỉ chuẩn bị.
+
+## Task 3: Port-split follow-up, luật đặt tên endpoint
+
+Vụ P3 đã rõ: 127.0.0.1:9223 là Chromium của mày (clone2 chat), Brave lúc debug thì ở [::1]:9223, hai cái 9223 là hai trình duyệt khác nhau. Một lần chạy mà tưởng "port 9223 là Brave" thì sẽ lái nhầm sang Chromium của mày.
+
+Viết luật đặt tên endpoint theo từng trình duyệt, và làm một guard test: test này phải FAIL nếu harness resolve endpoint mơ hồ (không ghi rõ trình duyệt nào). Đọc harness S2 hiện tại trên todolist-push (scripts/s2_flip_live.py, read-only) để xem nó đã fix chưa, còn thiếu gì thì guard test của mày phải bắt được. Deliverable là test + tài liệu trên main, sẵn sàng để port; việc port sang todolist-push để điều phối quyết, mày không tự port.
+
+Xong cả 3 task thì báo tổng kết một lượt. Làm đi.

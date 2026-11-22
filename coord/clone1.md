@@ -3764,3 +3764,35 @@ Clone1 còn sống, commit cuối 10:28 (run 5), S2-FLIP xong 5/5.
 Muse: không có yêu cầu mới (chỉ có commit clone2 10:28, docs/clone2-watchdog-log.md).
 Không agent nào kẹt, không cứu agent nào. Cây sạch trừ test-w.txt 0 byte.
 Chờ hướng tiếp theo của Muse (visibility, set_value, hay bước 9).
+
+---
+
+# BATCH 10 - GIAO 22/11/2026 (từ điều phối COORD-CLICK-5)
+
+Clone1, tao là Phạm Tuấn. Mày quay lại rồi, tốt. Batch 9 tao đã chuyển sang clone2 rồi, nó làm xong rồi, mày không cần làm lại batch 9 nữa. Giờ là batch 10, việc mới hoàn toàn.
+
+Chú ý: mày báo là không có đường SSH từ máy mày sang laptop, nên batch này chỉ làm việc trên repo, không đụng tới máy live. Đừng cố SSH nữa.
+
+Repo làm việc: computer-use-wayland, branch main cho báo cáo của mày. Đọc số liệu thì fetch read-only branch todolist-push (HEAD hiện tại dddbddc). Không sửa code trên todolist-push, không push lên todolist-push. Báo cáo và kết quả của mày commit lên main.
+
+Mỗi task làm đủ 3 bước: council 3 người duyệt, redteam soi lỗi, rồi fix pass sửa lại theo góp ý. Kết quả 15 phút thì báo, không ngồi im. Xong task nào commit luôn task đó, đừng dồn cuối.
+
+## Task 1: Kiểm chứng độc lập verdict S2 flip
+
+Verdict hiện tại là DO NOT EXPAND, Muse đã tự kiểm chứng từ file JSON gốc. Mày kiểm chứng lại độc lập, bằng mắt mày, không tin con số của người khác.
+
+File gốc: improvements/s2-flip-runs/run-1..5.json trên todolist-push, kèm log improvements/worker-click4-s2-flip-log.md. Tự tính lại: median wall 5 run, Brave gửi được mấy trên 5, Chromium được mấy trên 5, model call mấy lần, per-send và per-run pass rate. Rồi kết luận: DO NOT EXPAND đúng hay sai, với số liệu của chính mày. Nếu mày tính ra số khác thì nêu rõ số nào khác và vì sao.
+
+## Task 2: Review độc lập code step 5
+
+Step 5 vừa land ở commit 76d0a56 trên todolist-push: scripts/perception_router.py (route_perception), scripts/dom_asserts.py, scripts/action_result.py (hợp đồng CB-1), CB-5 locate confirmations. Đọc hết diff của commit đó.
+
+Tìm lỗi: logic sai, đường nào fail-closed chưa đủ, chỗ nào CB-1 ba phần chưa được enforce đúng, chỗ nào router định tuyến sai coverage. Mỗi lỗi phải có bằng chứng fail-first: test hoặc reproducer chạy được, kèm lệnh chạy và output. Chỉ báo cáo, không sửa code chung. Reproducer ghi luôn trong báo cáo.
+
+## Task 3: Audit CB-8 cho 3 claim DONE làm gate
+
+Luật CB-8: DONE phải có bằng chứng cụ thể (lệnh test, output, commit hash, time log), không thì thu hồi. Mày audit 3 claim DONE đang làm gate cho hướng đi này: (a) S2 Pick 1 DONE, (b) bench 2-vision DONE, (c) DOM-grounding DONE. Mỗi claim: bằng chứng có đủ không, verdict UPHELD hay REVOKED, thiếu cái gì thì nêu cụ thể.
+
+Dựa trên kết quả kiểm chứng batch 7 của clone2 rồi, đừng làm lại từ đầu, chỉ soi 3 claim này. Nếu phát hiện claim nào thiếu bằng chứng thì ghi rõ, không tự bịa bằng chứng.
+
+Xong cả 3 task thì báo tổng kết một lượt. Làm đi.
