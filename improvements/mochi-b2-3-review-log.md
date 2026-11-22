@@ -27,12 +27,12 @@
 
 ## Redteam round 9: KHONG PHA DUOC, completed 19:55 (handoff 19:56:13) 22/11/2026
 
-- Re-ran the suite (40/40 PASS, real 11.876s, rc 0), confirmed patch md5s, reproduced the R8-1 hijack on old lines and the refusal on new lines at both cache levels with the real indicator.listen/serve, listed every write destination in the runner independently and found none left unprotected, proved the new tests non-empty by its own mutant (removing the 2 cache guard lines fails exactly the 2 new checks), and verified both patches apply cleanly on both baselines with 40/40 PASS after apply and all 4 file md5s matching the worktree.
+- Re-ran the suite (40/40 PASS, real 11.876s, rc 0), confirmed patch md5s, reproduced the R8-1 hijack on old lines and the refusal on new lines at both cache levels with the real indicator.listen/serve, listed every write destination in the runner independently and found none left unprotected, proved the new tests non-empty by its own mutant (removing the 2 cache guard lines fails exactly the 2 new checks), and verified each patch applies cleanly on ITS OWN baseline with 40/40 PASS after apply and all 4 file md5s matching the worktree: the incremental patch (vs 9ae216b, md5 30d988952657d3adcd2323909918680e) on baseline 9ae216b, and the full patch (vs cf11a4b, md5 855c19c94ed91887c25452d6a16c6f36) on baseline cf11a4b. (Correction 23/11/2026: the original wording here, "both patches apply cleanly on both baselines", is imprecise; see the Correction section below. Cross-baseline application was never tested, and the ef964a6 commit diff does NOT apply on cf11a4b.)
 - Non-blocking residual: mpv may write shader/icc cache files under XDG_CACHE_HOME (~/.cache/mpv) with hash names, which is litter only (no truncation of existing victim files, no token or control leak), unproven on the VM because mpv is not installed; suggested fix is adding --no-gpu-shader-cache --no-icc-cache to the 2 mpv calls or setting XDG_CACHE_HOME under the guarded RUN_DIR, needs a live probe with real mpv on the laptop.
 
 ## Independent verifier: PASS, completed 19:59:37 22/11/2026
 
-- Read both required docs in full, confirmed the batch 1 procedure steps 3.3, 3.4, 3.6 are implemented correctly in the fix, re-ran python3 tests/test_y6c5_positive_gate.py (40/40 PASS, real 11.679s, rc 0), bash -n OK, verified both patches apply on both baselines with 40/40 PASS after apply and matching md5s, listed every write destination independently (no >>, no mv, only 2 cp both rm-dest-first, only 1 mkdir -p fully guarded), proved tests non-empty with 3 own mutants (M1 remove cache guard fails exactly 1 check, M2 remove rm -f RUN_LOG fails exactly 1 check, M3 remove the second G4 block fails exactly 3 checks), and reproduced the R8-1 hijack and refusal with its own demo.
+- Read both required docs in full, confirmed the batch 1 procedure steps 3.3, 3.4, 3.6 are implemented correctly in the fix, re-ran python3 tests/test_y6c5_positive_gate.py (40/40 PASS, real 11.679s, rc 0), bash -n OK, verified each patch applies on ITS OWN baseline with 40/40 PASS after apply and matching md5s (incremental patch on 9ae216b, full patch on cf11a4b; same correction note as the redteam round 9 section), listed every write destination independently (no >>, no mv, only 2 cp both rm-dest-first, only 1 mkdir -p fully guarded), proved tests non-empty with 3 own mutants (M1 remove cache guard fails exactly 1 check, M2 remove rm -f RUN_LOG fails exactly 1 check, M3 remove the second G4 block fails exactly 3 checks), and reproduced the R8-1 hijack and refusal with its own demo.
 - Note: its report's internal timestamps read 12:56-12:59 (a typo for 19:56-19:59); the handoff time 19:59:37 is the reliable one.
 
 ## Patches
@@ -40,6 +40,15 @@
 - Incremental vs 9ae216b: 1849 lines, md5 30d988952657d3adcd2323909918680e, in ~/workspace/mochi-b2-3-patches/mochi-b2-3-incremental-vs-9ae216b.patch.
 - Full vs cf11a4b: 2069 lines, md5 855c19c94ed91887c25452d6a16c6f36, in ~/workspace/mochi-b2-3-patches/mochi-b2-3-full-vs-cf11a4b.patch.
 - Cumulative patch committed as a file: improvements/mochi-b2-3-cumulative-vs-cf11a4b.patch, commit c597a29 on todolist-push. It is the same bytes as the full vs cf11a4b patch (md5 855c19c94ed91887c25452d6a16c6f36). Independent review found ef964a6's own diff does not apply on cf11a4b (fails all 4 files) because it is diffed against e6b9777; the cumulative patch applies cleanly on cf11a4b (git apply --check PASS, 40/40 PASS after apply, 4 file md5s match ef964a6).
+
+## Correction 23/11/2026 (by mochi, on independent review by Pham Tuan)
+
+The claim in the redteam round 9 and independent verifier sections, "verified both patches apply cleanly on both baselines", is imprecise and is corrected here. What was actually verified, each patch on its own baseline only:
+
+- Incremental patch (vs 9ae216b, 1849 lines, md5 30d988952657d3adcd2323909918680e) applies on baseline 9ae216b. Re-verified by mochi 23/11/2026: `git apply --check` PASS, applied diff 1561 insertions, 51 deletions, 4 file md5s match ef964a6, test 40/40 PASS in 11.6s.
+- Full patch, same bytes as the committed cumulative patch (vs cf11a4b, 2069 lines, md5 855c19c94ed91887c25452d6a16c6f36) applies on baseline cf11a4b. Verified 00:00 23/11/2026: `git apply --check` PASS, applied diff 1691 insertions, 89 deletions, 4 file md5s match ef964a6, test 40/40 PASS in 12.0s.
+
+What was NOT verified, and is admitted here: the ef964a6 commit diff itself (diffed against e6b9777, which holds intermediate changes to these 4 files that cf11a4b lacks, e.g. the 44b9a80 A8 fix) does NOT apply on cf11a4b. Verified by mochi 00:00 23/11/2026: `git show ef964a6 | git apply --check` on a cf11a4b worktree returns rc 1, failing all 4 files (runner line 43, trial doc line 32, hook line 38, test line 64). So anyone taking ef964a6's own diff to cf11a4b would fail. The cumulative patch commit c597a29 closes this gap: it is the correct patch for a cf11a4b base. Cross-baseline application (incremental patch on cf11a4b, full patch on 9ae216b) was never tested and is not claimed.
 
 ## Re-measurement on committed bytes (by mochi, 23:08 22/11/2026)
 
