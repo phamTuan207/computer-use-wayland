@@ -512,7 +512,9 @@ so no duplicate risk; pre_count 0 confirmed in each re-run).
 - (b1) run JSONs + P9 PNGs: improvements/s2-flip-b1-runs/run-1..5.json,
   plus run-2..5-aborted.json (the first-attempt routing aborts),
   to be committed with this log.
-- This log: improvements/worker-click5-input-fix-log.md.
+- This log: improvements/worker-click5-input-fix-log.md, commit
+  4bd6292 (this commit records its own hash; the log text was
+  complete before this one-line addition).
 - Laptop helpers (not in the repo): /tmp/c5-a1.mjs (probe),
   /tmp/c5-a1b.mjs (divergence probe), /tmp/c5-activate.mjs
   (a1 pre-step), /tmp/c5-a1-persist.log, /tmp/c5-key.mjs (D-B1),
