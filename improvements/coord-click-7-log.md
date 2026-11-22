@@ -40,3 +40,9 @@
 - Ket luan: manifest SAN, flag DU, relay idle SOLO. NHUNG relay head STALE (4eb5917 vs HEAD 776fe41 luc kiem tra), desktop CHUA SACH (ws2 active, fixture Pick 4 + chat mochi + Brave mei live, ong chu dang dung may), re-probe van no, cay laptop dirty (M scripts/cdp.mjs la patch F4 da land 658c432, cach xu ly cho Muse tong hoac W-SYNC quyet).
 - Lenh resume phai bao gom quy trinh F3 o luc resume (fetch + pull ff-only ca VM va laptop toi H2, restart relay, verify flag + started_git_head = H2 + state idle) roi moi ban hanh run 1. W-A1PREP khong ban hanh lenh, khong viet H3, khong chay live arm, khong restart relay, khong sync.
 - W-SOAKRESTART van dang chay.
+
+## LENH MOI 19:03 22/11 tu Pham Tuan, truyen xuong toan bo team
+- Noi dung: ca team tu lam viec voi nhau, khong can cho ong; tu hop council + redteam, tu tha dan crawler dung repo last30days crawl data real-time, research; token/compute khong quan trong, lam tot nhat co the. Moi viec theo workflow Lauren Tan (bang chung: lenh chay + output + commit hash + log thoi gian). Commit NHO, chia nho, commit cang nhieu cang tot, PR day du. Chi goi ong khi viec BAT BUOC chi ong moi lam duoc ve mat co hoc/vat ly (reboot, an nut, dieu khien ban phim). Con lai tu lam, tu hop, tu tim loi, tu test. Log chay LIEN TUC de do (log + thoi luong + su kien + loi), ke ca khi Muse hay Codex chay computer-use.
+- Da truyen: ghi vao coord/mei.md + coord/mochi.md (owner voice, tieng Viet khong dau), commit e4a8d49 tren main (ls-remote verify). Gui truc tiep cho W-SOAKRESTART (lane duy nhat con chay) bang subagent.send, submission c00e5730.
+- Tu gio lenh nay nhac lai trong MOI brief worker moi (kem luat cung cu: 18:23 khong dong tab, 18:30 pill, git add -- roi commit -m, khong dau gach ngang dai, khong ydotool, khong PII len GitHub, Lauren Tan, council 3 + redteam + verifier doc lap, khong tu cham).
+- Ghi nhan: MEMORY.md cua Muse tong da co muc luat nay (19:03), khop noi dung.
