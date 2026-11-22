@@ -1988,4 +1988,21 @@ Lanes live now: 9 (STEP10-PREP closed). STEP9, Y13G-R3-FIX, RUNG2, AGENT-NATIVE-
 
 Queued-next unchanged: Y13G round-3 independent re-verification (after the fix lands); step 10 deletions (after step 9, per this plan's proof-tied dates); A1 pilot resume (after the blocker check); final test (last); scrub (quiet window).
 
-## 37. (to be filled as results land)
+## 37. C5-ERRFILE-G31 DONE, todolist 4 mismatches confirmed and fixed by coordinator (16:07-16:11 +07, Sun 2026-11-22, elapsed ~4 min)
+
+Worker C5-ERRFILE-G31 (dbdb70ad) completed 16:07:18 +07. Deliverables: G31 added to `~/workspace/cf26-upload/LOI-VA-GIAI-PHAP-TOAN-BO-20261121.md` lines 311-318 (file 897 to 905 lines, PHAN H moved 312 to 320); worker log `improvements/worker-click5-errfile-g31-log.md`, commits 4b55a21 + 701c942 on todolist-push (701c942 was head at the worker's check; my a451928 push came after). Verified by me: G31 entry present, 0 em/en dashes in the entry, content accurate ((307,1085) vs (306,1130), 45px, CL2-MSG 03:49:27-03:53:30, sent 03:53:30, 4m03s, 1/1; framing correction included: CL1-SWEEP did NOT produce G31, its link is the independent investigation commit 5f5a2fd verifying CL2-MSG's after-image f2bdb0d34ead was also scope=screen).
+
+J1-J50 reconciliation: 44 MATCH, 4 MISMATCH, 16 GAP (no todolist entry). I verified all 4 mismatches against both files and applied the todolist fixes myself (doc-only, reversible):
+- M1 (J7/P0): todolist line 9 said root cause "van CHUA ro"; J7 says DA RO 22:57 (redteam shim self-delete, c16dd4e). Fixed P0 text to the known cause.
+- M2 (J10): 2.3.1 ticked [x] while H2 OPEN (scripted only, think null), 4.18 [ ] open. Kept [x], annotated "(scripted only, think null; H2 VAN OPEN, chi co run agent-driven moi dong, xem 4.18)".
+- M3 (J11): 3.4.1 box [ ] but text says DONG 21/11 20:26 (Y8b). Ticked [x]; the experiment as defined is closed, fresh comparison stays PARKED per 4.22.
+- M4 (J21): 4.28 said "chua xac dinh dua nao"; J21 says DA XAC DINH (F3, click 22:43:15, log 22:48). Fixed 4.28 text to the determined attribution.
+Diff checked: todolist diff shows exactly these 4 changes. Commit to follow with explicit pathspec (todolist + this log only; other lanes' dirty files in the tree left untouched).
+
+Open items from the worker, decided: 16 GAP entries need no todolist homes now (mostly ZT-B/ZT-C scenario findings and worker rules; the todolist is a fix list, not a findings index); G25/G26 numbering gap (G24 jumps to G27) left as-is, do not renumber (renumbering would break cross-references in logs); hl.dsp.focus workspace command verified 23:19 appears in neither file, noted here, no action (already a standing rule in briefs).
+
+Flag: the worker's recorded execution results show one process.kill with exitSignal 15 (SIGTERM) on a session it started, a completed kill, not a deliverable failure.
+
+Lanes live now: 8 (STEP10-PREP and ERRFILE-G31 closed). STEP9, Y13G-R3-FIX, RUNG2, AGENT-NATIVE-EXEC, STALL-INV, Y1B-PROBE, Y6-PAPER, BATCH3-CHECK. Next expected: RUNG2 result, then STEP9. Note from the tree: BATCH3-CHECK has already staged work (commit c48d398, import clone1-batch3 suite verbatim from main @1d23532 as fix base).
+
+## 38. (to be filled as results land)
