@@ -17,13 +17,13 @@ Thu tu theo hang serial trong todolist + lane song song, dieu chinh theo tinh hi
 - P2 thu lai tren laptop dang nested/tach biet, khong dung Zen cua ong: 4.13 + 2.2.3 (Y6 A8 re-review roi re-trial + do pill).
 - P3 cho doi, chi cap nhat trang thai + bang chung moi: 4.7, 4.8, 4.10 (F3, doi cua so live + W-ZENPREP chuan bi proof), 4.9 (ZT-B, doi F3 xong), 4.14 (doi mochi re-verification), 4.15 (W-A1 dang lam), 4.17 (doi live run), 4.16 (doi diff F3 dong bang + clone2 het khoa), 4.20 (doi cua so yen tinh G-SCRUB), 4.21 (cuoi cung), 4.22 (parked), 4.23 (doi clone1 het khoa), 4.25 (chi lam lai neu tai dien), 2.1.7 (doi ong gui lai video goc).
 
-## 4.26 PR #1 CONFLICTING: XONG (tick 17:52)
+## 4.26 PR #1 CONFLICTING: XONG (tick 17:54)
 - Lenh: `gh pr view 1 --json mergedAt,mergeCommit,state` (17:51).
 - Output: state MERGED, mergedAt 2026-11-21T18:06:51Z, mergeCommit d322cd773fe1a2786785573d56af6a6996269882.
 - Lenh: `git merge-base --is-ancestor d322cd77 origin/main` (17:51). Output: IN main.
 - Ket luan: xung dot da giai + merge xong tu 21/11 18:06. Chan G-SCRUB lien quan PR #1 da het (G-SCRUB van doi cua so yen tinh vi ly do khac, xem 4.20).
 
-## 4.27 Commit + push diff F1/F2/F3: XONG (tick 17:52)
+## 4.27 Commit + push diff F1/F2/F3: XONG (tick 17:54)
 - Lenh: `git status --short` (17:49). Output: cay sach ngoai results.json (khong phai cua W-TODO) + file untracked cua worker khac. Khong con edit chua commit tren scripts/cursor_session.py, scripts/cursor_theme.py, scripts/first_action.py.
 - Lenh: `git log --oneline -5 -- scripts/cursor_session.py scripts/cursor_theme.py` (17:51). Output: moi nhat b3fac91 (F1 envelope assertion + test).
 - Lenh: `git log --oneline -5 -- scripts/first_action.py` (17:51). Output: moi nhat 95d3822 (C5-STEP9 CB-2 stamping).
@@ -31,7 +31,7 @@ Thu tu theo hang serial trong todolist + lane song song, dieu chinh theo tinh hi
 - Lenh: `git ls-remote origin todolist-push main` (17:51). Output: todolist-push = ab7c7a5 (= HEAD local), main = d49dbe2.
 - Ket luan: diff F1/F2 da commit + push. Tien de "F1 co edit chua commit, F2 co file chua track" da cu (tu 21/11). Luat D3 (commit nho push ngay) van ap cho moi worker ve sau, khong phai phan tick nay.
 
-## 4.19 Y1b snippets: XONG (tick 17:55)
+## 4.19 Y1b snippets: XONG (tick 17:54)
 - Co so: probe log 16:17 ghi items 1-4 DONE (4/4), items 5-12 OPEN; phaseb log 16:34 ghi items 5-12 DONE (8/8), regression 86/86 OK; commit 0faa3aa (port run_snippet + B2 cap).
 - Kiem chung doc lap (W-TODO, VM, khong dung ket qua cua worker cu):
   - Lenh: `git merge-base --is-ancestor 0faa3aa origin/todolist-push` (17:53). Output: IN todolist-push.
@@ -40,7 +40,7 @@ Thu tu theo hang serial trong todolist + lane song song, dieu chinh theo tinh hi
 - Ket luan: 12-item BLOCK checklist 12/12 DONE; probe 10b/10f + 1e/4a da viet lai va phan biet duoc ban tan cong; gate G-Y1B PASS. Code nam tren todolist-push, CHUA merge vao main (merge nhanh la quyet dinh cua coord, nhu muc 5.4, khong tu merge ca nhanh trong W-TODO).
 - Ghi chu them: Codex PID 184702 (watch) da chet (kiem tra qua ssh-laptop.sh 17:52, output `dead`). Known gaps giu nguyen theo phaseb log: chua co live_only snippet (item 8 chua co live entry), per-entry budget tightening chua enforce, AST scan khong phai isolate that.
 
-## 4.28 Mo menu Omarchy + chuyen workspace bang LENH (J21): XONG (tick 18:02)
+## 4.28 Mo menu Omarchy + chuyen workspace bang LENH (J21): XONG (tick 17:58)
 - Lenh tim lenh launcher (ssh-laptop.sh, chi doc, 17:56): `grep -n -i -E "menu|walker|wofi|rofi|fuzzel|launcher" ~/.config/hypr/bindings.lua`.
 - Output: dong 115 `o.bind("SUPER + SPACE", "Omarchy menu", "omarchy-menu toggle root")`. Lennh chinh xac: `omarchy-menu toggle root`.
 - Lenh chuyen workspace (da co tu truoc, AGENTS.md 21/11 23:19, verify live 2 chieu): `hyprctl dispatch "hl.dsp.focus({ workspace = 2 })"`.
@@ -69,7 +69,7 @@ Thu tu theo hang serial trong todolist + lane song song, dieu chinh theo tinh hi
 - Kiem chung them: `git diff` runner khop tung dong voi diff de xuat muc 4 (4b, 4c, 4d, 4e). Luac khong co tren VM nen khong check cu phap Lua; hook se duoc trial nested kiem tra that (loi cu phap se fail-closed o parse 2).
 - Verdict re-review: GO. Fix da ap dung vao 4 file (runner, hook, tests, trial doc). Re-trial A8 + pill measurement retry CHUA chay (can laptop nested, xem muc tiep).
 
-## 4.7 Zen ket, 4.11 guardian, 4.12 F2: XONG (tick 18:12)
+## 4.7 Zen ket, 4.11 guardian, 4.12 F2: XONG (tick 18:06)
 - 4.7: bang chung la F3b (improvements/worker-f3b-restart-log.md): restart #3 23:44 21/11, final check 23:51:12 probe PROBE1 CREATE OK 3d32d968 + PROBE2 CREATE OK b79465cd, Zen PID 496121, 14 tab that; F1a activation PASS (9bd153b, 5-step proof, click 0px); F2b after-capture example.com rendered; Zen song 22/11 PID 14625 (port 9222 + 2828, ssh 17:52). So 28 tab trong muc da cu (14 tab that sau khi don 55 tab).
 - 4.11: nguyen nhan goc DA RO (shim tu xoa Y13r2 A6e, VMFIX c16dd4e khoi phuc ben vung, xem phan P0 todolist); F1a VERDICT F1 LIVE ACTIVATION PASS (9bd153b: backend works, guard + glass load, 5-step proof, session pill PROVEN visible, teardown clean); STEP8 22/11 14:48 click-only probe PASSED post-reboot (first_pointer_ms 486.8, improvements/worker-click5-step8-log.md:486).
 - 4.12: F2b VERDICT F2 PHASE PASS (improvements/worker-f2b-live-session-log.md:56-59): first visible action 12.262s < 30s tu order (session path, end to end); 5/5 actions 1 batch 2850.639ms; overlay "Computer use active" visible trong raw grim, gone after stop.
@@ -91,7 +91,7 @@ Thu tu theo hang serial trong todolist + lane song song, dieu chinh theo tinh hi
 - MEMORY cap nhat 21/11 23:51 (F3b DONE - SLOT HEALED): dung lam co so tick 4.7 (xem tren). F1a spawned 23:51 chay activation + 5-step proof (da PASS, 9bd153b).
 - Khong dung ydotool. Khong dau gach ngang dai trong file nao. Khong commit results.json (dirty cua nguoi khac). Khong dua thong tin ca nhan len GitHub (grep PII 0 hit tren evidence moi).
 
-## Tong ket phien W-TODO 22/11 17:49-18:12
+## Tong ket phien W-TODO 22/11 17:49-18:07
 - Dem lai: 114 xong / 23 con (cach dem: moi dong checkbox, grep -c), khop COORD-CLICK-6.
 - Tick trong phien: 7 muc (4.26, 4.27, 4.19, 4.28, 4.7, 4.11, 4.12). Commit: d60ca6b (3 muc dau + log), 44b9a80 (Y6 fix + log; 4.28 do W-ZENPREP gom vao cb741fe), sap commit (3 muc sau + notes + evidence).
 - Con lai: 16 muc (2.1.7, 2.2.3, 4.8, 4.9, 4.10, 4.13, 4.14, 4.15, 4.16, 4.17, 4.18, 4.20, 4.21, 4.22, 4.23, 4.25). Tong: 121/137 xong.
