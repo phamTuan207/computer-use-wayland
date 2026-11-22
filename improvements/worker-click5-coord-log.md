@@ -194,13 +194,82 @@ workspaces at the same time.
   context; I record the commit as landed, verdict pending the handoff
   and my verification. Do not quote it as done until then.
 
-## 6. Still running (T+19m)
+## 6. C5-INPUT-INVEST DONE, verified by me, 10:50 +07 (T+20m)
 
-- C5-VISIBILITY (a6260a4f): live laptop probe.
-- C5-INPUT-INVEST (ed0f5f5c): log commit f394291 landed; handoff pending.
+- Worker C5-INPUT-INVEST completed 10:48:48 +07 (about 13 min, no
+  stall). Deliverable: improvements/worker-click5-input-invest-log.md,
+  651 lines, commit f394291 on todolist-push, no live CDP calls, no
+  workspace switches, no sends, no code changes.
+- MY VERIFICATION (git show f394291, this session):
+  - Call chain confirmed: cdp.mjs has the fixed 5000ms per-call timer
+    ("CDP timeout: " + method) and click() issues mouseMoved then
+    mousePressed then mouseReleased via Input.dispatchMouseEvent.
+    The 58s outer worker deadline never fired; the binding timeout
+    is the 5s timer.
+  - No visibility precondition exists: git grep for visibilityState,
+    hasFocus, bringToFront, activateTarget across scripts/*.py and
+    scripts/*.mjs at f394291 returns ZERO hits. All checks are
+    element-level only.
+  - The decisive dry-run contrast confirmed from the flip log
+    (fccf367): dry run 0 first attempt 10:05, programs ran fine
+    (ok True, completed 3, CB-1 input_sent and target_received True;
+    only the V12 JSON-parse helper failed); second attempt 10:08
+    PASS both browsers. Both dry-run Chromium fills ran on the
+    seeded scratch tab (/tmp/s2-seed.mjs, fake composer and thread).
+    Live run 1 at 10:11 then failed on the live clone2 tab, and all
+    5 live runs failed identically. Same browser, same window, same
+    inactive workspace throughout. Pure window occlusion CANNOT
+    explain that. The worker's contrast stands.
+  - Flip log also confirms Stripe tabs exist in the Chromium window
+    (the harness filter url.startswith('https://muse.ai/') exists
+    because of them), which is the basis for the worker's most
+    likely refinement.
+- RANKED CAUSES (worker, verified where checkable): 1) occluded-window
+  input gating, OPEN but refined (workspace form alone insufficient
+  given the dry run); 2) BACKGROUND TAB (clone2 tab not active, a
+  Stripe tab may be frontmost), OPEN, most likely refinement,
+  explains the dry run exactly; 3) live-page state KILLED in
+  main-thread form; 4) CDP session/domain state KILLED (6 fresh
+  sessions fail identically at the first Input call); 5) transport/
+  endpoint confusion KILLED; 6) 5s timeout too short KILLED as a fix
+  (Brave completes the same program in 41-72ms); 7) renderer stall
+  KILLED; 8) second CDP client KILLED-leaning; 9) wrong coordinates/
+  covered element KILLED (hit test passes, rect stable); 10) window
+  focus OPEN as part of the visibility family.
+- FIX RANKING: (a1) CDP tab activation (Target.activateTarget +
+  Page.bringToFront, no screen change) FIRST; (a2) workspace
+  visibility precondition second (works only if the ws2 test passes,
+  costs a screen yank per send); (b2) Input-free send (set_value +
+  JS-dispatched Enter, zero Input calls) third, keeps S2 viable
+  regardless of cause, needs its own dry run + fresh 5-run
+  measurement, mandatory pre-send V12 check before any retry;
+  (d1) screenshot-as-frame-pump one speculative probe; (c) longer
+  timeout/retry LAST (burns 30s per failure, real double-send risk).
+  Variant (b1) set_value + CDP key Enter must NOT be assumed;
+  dispatchKeyEvent is untested on this tab.
+- STEP 9 IMPLICATION: yes, this is the prototype's first target IF
+  the cheap fixes fail (an input channel that works on occluded
+  windows, with that case in its acceptance set). No, step 9 is not
+  the first lever: (a1) and (b2) are cheaper and either could re-open
+  the flip. DO NOT EXPAND stands; the 33.2s median must NOT be
+  quoted as a pass since those runs did not complete.
+- EXTRA FINDING (matters for step 9): dom_act.py is the Zen path
+  and is NOT used here, so the CDP path has no intent ledger and no
+  pre-send already-sent check, which makes retry unsafe. The
+  prototype must carry the intent ledger for the CDP path too.
+- The visibility worker's log commit did not exist at 10:45 (head
+  0dc0dbe); the hypothesis is marked OPEN with the pending result
+  noted. The worker did not block waiting. Correct per its brief.
+
+## 7. Still running (T+20m)
+
+- C5-VISIBILITY (a6260a4f): live laptop probe. Its result now decides
+  between fix (a1)/(a2): if Input answers when visible, (a2) is live;
+  if the background-tab refinement holds, (a1) is the cheap fix and
+  the visibility test alone will NOT settle it.
 - C5-B5-VERIFY (0e1c6847): B5 limb (ii) verification.
 - C5-ITEMS56 (b72898b7): items 5-6 ZenDomError diagnosis.
 - Clone1 batch 10 + clone2 batch 12: assigned 10:40 (0521d6c on main),
-  no commits from either yet (expected; just assigned).
+  no commits from either yet.
 
-## 7. (to be filled as results land)
+## 8. (to be filled as results land)
