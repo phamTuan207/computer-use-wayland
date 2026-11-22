@@ -394,4 +394,7 @@ write 00:51-00:53 +07.
 
 ## 6. Commit record (this redteam's own commit, no push)
 
-(TODO: filled after commit.)
+- This log file: improvements/mochi-b2-6-redteam-2-log.md, commit
+  2b25cad45afe09e0ed6ac609839bc6240e5c35de (2b25cad). The hash line was
+  filled by a follow-up commit on this same file. No push was made
+  (per the brief).
