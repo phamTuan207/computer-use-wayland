@@ -606,7 +606,15 @@ def cmd_close(scratch_substr, original_url):
                     'scratch tab still listed after close')
         result = {'ok': True, 'count_before': count_before,
                   'count_after': len(after)}
-        _restore_original(z, original_url, result)
+        if fallback is not None:
+            _restore_original(z, original_url, result)
+        else:
+            # Re-review follow-up (redteam): when the scratch was
+            # the only tab there is no tab to restore to, and a
+            # restore scan would fail (no windows left) and report
+            # a scan_error on a fully successful close. Skip the
+            # restore; the close is what matters.
+            result['original_missing'] = True
         return result
 
 

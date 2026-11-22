@@ -183,6 +183,12 @@ class ZenPointerDelegate:
         # F4 diagnostic: the settle outcome rides the meta so a
         # later refusal can say whether the batch started stable.
         self.last_settle = settle
+        # Re-review follow-up (council + redteam): reset the
+        # refresh settle and error here, so a later type/key-less
+        # batch does not surface the previous batch's refresh
+        # settle. Same staleness class as the viewport_settle fix.
+        self.last_refresh_settle = None
+        self.last_refresh_error = None
         return meta
 
     def __call__(self, action, screen_point):
@@ -253,6 +259,10 @@ class ZenPointerDelegate:
                 self.last_refresh_settle = settle
                 self.last_refresh_error = None
             except Exception as exc:
+                # Re-review follow-up: clear the settle next to
+                # the error, so a stale refresh settle is not left
+                # in place beside a fresh failure.
+                self.last_refresh_settle = None
                 self.last_refresh_error = type(exc).__name__
         return ok
 

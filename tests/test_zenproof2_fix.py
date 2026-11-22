@@ -1050,6 +1050,11 @@ class ZenTabFixTest(unittest.TestCase):
         self.assertEqual(closed['count_after'], 0)
         self.assertNotIn(FIXTURE_URL, [t['url'] for t in fake.tabs])
         self.assertEqual(fake.tabs, [])
+        # Re-review follow-up (redteam): there is no tab to
+        # restore to, so no restore scan runs and no scan_error
+        # is reported on a fully successful close.
+        self.assertNotIn('scan_error', closed)
+        self.assertTrue(closed.get('original_missing', False))
 
     def test_close_fallback_never_targets_the_scratch_tab(self):
         # REDTEAM (F4, f1cb4d5): when the original URL matches the

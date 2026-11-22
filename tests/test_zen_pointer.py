@@ -448,6 +448,23 @@ class SettleTests(unittest.TestCase):
         self.assertTrue(delegate.last_refresh_settle['stable'])
         self.assertIs(delegate.last_settle, begin_settle)
 
+    def test_begin_batch_resets_refresh_settle_and_error(self):
+        # Re-review follow-up (council + redteam): the refresh
+        # settle and error must not leak into the next batch. A
+        # second begin_batch resets both, so a later type/key-less
+        # batch surfaces no stale refresh settle.
+        delegate, backend, _focused, _session = \
+            self._delegate_with_frames(None)
+        delegate.begin_batch('0xabc')
+        self.assertTrue(delegate(
+            {'type': 'fill', 'ref': '#c5-text', 'text': 'hello'},
+            [2700, 1000]))
+        self.assertIsNotNone(delegate.last_refresh_settle)
+        self.assertIsNone(delegate.last_refresh_error)
+        delegate.begin_batch('0xabc')
+        self.assertIsNone(delegate.last_refresh_settle)
+        self.assertIsNone(delegate.last_refresh_error)
+
 
 class BackendWiringTests(unittest.TestCase):
     def _backend(self):
@@ -645,6 +662,31 @@ class BackendWiringTests(unittest.TestCase):
                           keys=['Return'])], None, True)
         self.assertTrue(result['ok'], result)
         self.assertNotIn('viewport_settle', result)
+        backend.close()
+
+    def test_assert_only_batch_surfaces_no_stale_settle(self):
+        # Re-review follow-up (redteam): a read-only batch skips
+        # begin_batch, so its last_settle / last_refresh_settle
+        # would be stale values from a previous batch. dom_act
+        # only surfaces the settle fields when the batch ran
+        # begin_batch (needs_input).
+        backend, session, code, _focused = self._backend()
+        backend.dom_start()
+        delegate = backend._pointer
+        delegate.last_settle = {
+            'reads': 99, 'stable': True, 'elapsed_ms': 0.0}
+        delegate.last_refresh_settle = {
+            'reads': 99, 'stable': True, 'elapsed_ms': 0.0}
+        delegate.last_refresh_error = 'stale-error'
+        snapshot = backend.dom_observe('Example', '#c5-text', 10)
+        result = backend.dom_act(
+            'Example', snapshot['snapshot'],
+            [self._action(snapshot['snapshot'], type='assert',
+                          text='')], None, True)
+        self.assertTrue(result['ok'], result)
+        self.assertNotIn('settle', result)
+        self.assertNotIn('refresh_settle', result)
+        self.assertNotIn('refresh_error', result)
         backend.close()
 
 

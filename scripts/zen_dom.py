@@ -1300,10 +1300,14 @@ class ZenSession:
         its value: an input's textContent is always '', and a
         textarea's textContent is its DEFAULT value, not its live
         value, so an unconditional fallback lets an assert
-        FALSE-PASS on a field. Returns None for any element with
-        a value property ('value' in e) or a contenteditable, and
-        the caller must fail the assert, never pass it on text.
-        The lookup pierces open shadow roots and traverses
+        FALSE-PASS on a field. Returns None for a live-value
+        element (input, textarea, select) or a contenteditable,
+        and the caller must fail the assert, never pass it on
+        text. Re-review follow-up: the gate is narrowed to those
+        element types (a button, an option, an li carry their
+        label in textContent, so their label asserts must read
+        it; a broad 'value' in e check over-blocked them). The
+        lookup pierces open shadow roots and traverses
         same-origin iframes, the same as field_value. A
         cross-origin iframe target returns None and the caller
         must fall back, never silently pass.
@@ -1312,7 +1316,10 @@ class ZenSession:
             "return (function(){" + _FIND_JS +
             "const e=find(%s);"
             "if(!e) return null;"
-            "if(('value' in e) || e.isContentEditable) return null;"
+            "if(e instanceof HTMLInputElement"
+            " || e instanceof HTMLTextAreaElement"
+            " || e instanceof HTMLSelectElement"
+            " || e.isContentEditable) return null;"
             "const t=e.textContent;"
             "return typeof t==='string' ? t.trim() : null;})()"
             % json.dumps(selector))

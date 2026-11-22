@@ -722,22 +722,28 @@ class ZenDomBackend:
                   'results': results}
         # F4 diagnostic: the begin_batch settle outcome, so the run
         # evidence says whether the batch started on a stable frame.
-        settle = getattr(self._pointer, 'last_settle', None)
-        if isinstance(settle, dict):
-            result['settle'] = settle
-        # F4 follow-up: the post-type/key refresh settle and its
-        # error, recorded separately from the begin settle
-        # (REDTEAM F4, 66c34f8: the refresh must not overwrite
-        # last_settle, and a refresh failure must be recorded,
-        # never swallowed).
-        refresh_settle = getattr(self._pointer, 'last_refresh_settle',
-                                 None)
-        if isinstance(refresh_settle, dict):
-            result['refresh_settle'] = refresh_settle
-        refresh_error = getattr(self._pointer, 'last_refresh_error',
-                                None)
-        if isinstance(refresh_error, str):
-            result['refresh_error'] = refresh_error
+        # Re-review follow-up (redteam): only surface the settle
+        # fields when this batch actually ran begin_batch
+        # (needs_input). A read-only batch (assert only) skips
+        # begin_batch, so its last_settle / last_refresh_settle
+        # would be stale values from a previous batch.
+        if needs_input:
+            settle = getattr(self._pointer, 'last_settle', None)
+            if isinstance(settle, dict):
+                result['settle'] = settle
+            # F4 follow-up: the post-type/key refresh settle and its
+            # error, recorded separately from the begin settle
+            # (REDTEAM F4, 66c34f8: the refresh must not overwrite
+            # last_settle, and a refresh failure must be recorded,
+            # never swallowed).
+            refresh_settle = getattr(
+                self._pointer, 'last_refresh_settle', None)
+            if isinstance(refresh_settle, dict):
+                result['refresh_settle'] = refresh_settle
+            refresh_error = getattr(self._pointer, 'last_refresh_error',
+                                    None)
+            if isinstance(refresh_error, str):
+                result['refresh_error'] = refresh_error
         # F2 follow-up: the viewport settle outcome (reads, settled
         # moz, elapsed ms), so the run evidence says whether the
         # viewport origin was settled (not stale) when the batch
