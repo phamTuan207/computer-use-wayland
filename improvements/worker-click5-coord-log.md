@@ -135,20 +135,31 @@ Live-lane discipline: 2 live lanes max (VISIBILITY now, ITEMS56 later,
 sequenced). INPUT-INVEST makes no live calls. No two workers switch
 workspaces at the same time.
 
-## 3. Clone batches (to queue next)
+## 3. Clone batches QUEUED 10:40 +07 (T+10m)
 
 - Clone1 batch 10 (fresh work, repo-only, no SSH path from its VM):
   (1) independent re-verification of the S2 flip verdict from the raw
   run JSONs; (2) independent code review of the step 5 landing
   (76d0a56); (3) CB-8 scoped DONE audit of the three gating DONE
   claims (S2 Pick 1 DONE, bench DONE, DOM-grounding DONE). Each with
-  council + redteam + fix pass. Assign via coord/clone1.md on main.
+  council + redteam + fix pass. Assigned via coord/clone1.md on main.
 - Clone2 batch 12: (1) investigate the discover discrepancy
   (1974/1/5/17 at 65a2df6 vs 0 failures at 36364b1); (2) close the 5
   open live-run readiness gaps from DOT 9 task 2 and prepare the rung 2
   live procedure (no live sends without coordinator sequencing);
   (3) P3 port-split follow-up: endpoint-naming rule + guard test.
-  Each with council + redteam + fix pass. Assign via coord/clone2.md
-  on main. Also tell clone2 the S2 measurement messages are finished.
+  Each with council + redteam + fix pass. Assigned via coord/clone2.md
+  on main. Clone2 also told the S2 measurement messages are finished.
+- Commit 0521d6c on main, ls-remote verified (main HEAD 0521d6c).
+  Worktree used: ~/workspace/cu-jpegq90-land (fast-forwarded from
+  b7d14fa to 5279722 first; clean tree, 0 ahead / 24 behind before).
+  Note: coord files are append-only logs (assignments + clone reports
+  in one file); the new batches were APPENDED, not overwritten.
 
-## 4. (to be filled as results land)
+## 4. Status 10:40 +07 (T+10m)
+
+- 5 workers running, 0 completed yet. 2 clones queued, both loaded.
+- No errors to report. Waiting on worker results; will react on
+  completion, kill at 15 min of no progress.
+
+## 5. (to be filled as results land)
