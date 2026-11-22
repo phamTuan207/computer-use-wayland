@@ -189,6 +189,20 @@ before 36364b1 and re-verified in this session.
   in a real browser is still owed (procedure P1, section 4).
   This is the only step-1 remnant that was still open and
   repo-fixable.
+- Redteam residuals on the fix itself (close-out round): R-2,
+  multiple is never read anywhere in the exercised path (the
+  template branch reads e.type only, both fakes read this.type
+  only, the Python driver sets el.multiple but nothing consumes
+  it). That is correct per spec, because the sanitization rule
+  is unconditional for email, so it is not a defect. The test
+  name covers the multiple case through the shape of the value
+  (comma-separated tokens with multiple set), not by reading
+  the attribute. R-3, the maxLength pre-check that refuses a
+  set whose sanitized length exceeds maxLength is pre-existing
+  C8 policy, inherited by this fix, not introduced by B2-6: a
+  script set through the value IDL attribute has no maxLength
+  step in the spec, so the refusal pins a policy, not engine
+  behavior. Re-grading C8 belongs to the council, not this fix.
 
 ### R9. CB-9 manifest for the bench build a1a672d, NOT LOCKED (step 3, not step 1), superseded by a re-run manifest
 
@@ -251,7 +265,7 @@ before 36364b1 and re-verified in this session.
   F8 live-DOM run (test_arm_typed_flag_misses_iframe_targets,
   tests/test_click3_redteam2.py:509) and F9/F10 live-DOM runs
   (geometry, item 1, cc964b2), and the 2-vision benchmark as a
-  whole (step 11 rung 2). Procedures P2 and P3, section 4.
+  whole (step 11 rung 2). Sketch P2 and deferral P3, section 4.
 
 ### R12. Environmental: tesseract failures in the full discover, PRE-EXISTING, out of scope
 
@@ -332,14 +346,22 @@ tests/cdp_snapshot.mjs:247 (the multiEmail ok assert), result
 ### 3.3 Design (trust pyramid)
 
 This fix is level 2, a deterministic check, not a text rule. The
-behavior is pinned by two independent checks (node harness plus
-Python named test), both running the REAL template against a
-spec-faithful fake. No new text rule was added anywhere (no AGENTS.md
-change). The design choice that makes the wrong outcome
-unexpressible: the template computes sanitized from the same
-per-token rule the fake models, and the read-back compares e.value
-against sanitized, so any future drift between the two fails loudly
-in the harness instead of silently in production. The live probe
+behavior is pinned by two checks (node harness plus Python named
+test), both running the REAL template against a spec-faithful fake.
+No new text rule was added anywhere (no AGENTS.md change). What the
+two checks prove is template-vs-fake drift: the template computes
+sanitized from the same per-token rule the fake models, and the
+read-back compares e.value against sanitized, so any future drift
+between the two fails loudly in the harness instead of silently in
+production. CORRECTION (close-out round): the two checks are NOT
+independent in the sense that matters, because both fakes were
+written by the same worker from the same reading of the spec, so a
+shared misreading passes both silently. Only the live probe P1
+catches a common-mode spec error. One concrete instance: Chromium
+Blink EmailInputType::SanitizeValue branches on Multiple(),
+trimming the whole value only when multiple is absent, which
+contradicts the spec-text unconditional reading, so the plain-email
+case m2 is the case most likely to FAIL live. The live probe
 (procedure P1) is level-3 validation, still owed: if live behavior
 differs from the spec form, live wins and the template plus fake
 must be corrected to the live behavior.
@@ -407,12 +429,12 @@ coordinates at adc7ae3):
 No other file changed. No em dash or en dash in any changed file
 (python scan, 0 counts for U+2014 and U+2013 in all three files).
 
-## 4. Live procedures for Muse tong (this worker ran no live browser)
+## 4. Live work for Muse tong: P1 is a procedure, P2 is a sketch, P3 is a deferral (this worker ran no live browser)
 
-Every procedure ends with a checkable artifact (probe output plus a
+Every item ends with a checkable artifact (probe output plus a
 verdict line), not prose alone. Run each in a quiet window, never
 touching the owner's tabs: new scratch tab or headless Chromium
-only. Stop conditions are stated per procedure.
+only. Stop conditions are stated per item.
 
 ### P1. Email-multiple live probe (for the R8 fix; MUST pass before the fix is quoted as live-proven)
 
@@ -426,40 +448,84 @@ and do not quote the fix as proven until the probe passes.
 Setup (same F1 method as the microgap log section 3 and W-S1CLOSE
 sections 4-5; headless Chromium only, no user tab):
 
-1. On the laptop, write /tmp/mochi-b2-6-multi-probe.html with four
-   inputs (ids m1, m2, m3, m4) and a script that sets values and
-   records JSON in pre#result:
+1. On the laptop, write /tmp/mochi-b2-6-multi-probe.html with eight
+   inputs (ids m0, m1, m2, m3, m4, m5, m6, m7) and a script that sets
+   values and records JSON in pre#result. LOAD-BEARING STEP: set
+   each value by assigning el.value in page script, never
+   setAttribute. Assigning .value triggers sanitization;
+   setAttribute sets the content attribute only and does not
+   sanitize, so a probe written with setAttribute gets wrong
+   read-backs and a false FAIL.
    - m1: type email, multiple, set '  a@b.com , c@d.com\t',
      expect 'a@b.com,c@d.com'.
    - m2: type email (no multiple), set 'a@b.com, b@c.com',
-     expect 'a@b.com,b@c.com'.
+     expect 'a@b.com,b@c.com'. EXPLICIT GATE: m2 is the case most
+     likely to fail live, because Chromium Blink
+     EmailInputType::SanitizeValue branches on Multiple() and trims
+     the whole value only when multiple is absent. If live reads
+     back 'a@b.com, b@c.com' untrimmed per token, the unconditional
+     reading is wrong for plain email and the template must branch
+     on multiple.
    - m3: type email, multiple, set 'a@b.com,,c@d.com',
      expect 'a@b.com,,c@d.com'.
    - m4: type email, multiple, maxlength 15, set
      '  a@b.com , c@d.com  ', expect 'a@b.com,c@d.com'.
+   - m5: type email, multiple, set 'a@b LF .com, c@d.com' (a line
+     feed in the middle of the first token). Expected per the spec
+     text: 'a@b LF .com,c@d.com', with the line feed KEPT, because
+     the email sanitization algorithm has no newline-strip step.
+     The template and both fakes strip CR/LF globally first, so
+     they predict 'a@b.com,c@d.com'. Record the live read-back
+     verbatim. If live strips the line feed, I-1 closes as
+     engine-confirmed and the template stands; if live keeps it,
+     the template global strip and both fakes must be corrected
+     to the live behavior. Either way, live wins.
+   - m6: type email, multiple, set 'a@b.com NBSP, c@d.com' (a
+     non-breaking space at the end of the first token). Expected
+     per the spec text: 'a@b.com NBSP,c@d.com', with the NBSP
+     kept, because NBSP is not ASCII whitespace.
+   - m7: type email, multiple, set 'a@b.com VT, c@d.com' (a
+     vertical tab at the end of the first token). Expected per the
+     spec text: 'a@b.com VT,c@d.com', with the VT kept, because VT
+     is not ASCII whitespace.
    - Control m0: type url, set '  https://example.com  ',
      expect 'https://example.com' (regression control for the
      existing trim).
 2. Run: chromium --headless --disable-gpu --dump-dom
    file:///tmp/mochi-b2-6-multi-probe.html (record the Chromium
-   version from the run).
-3. Read pre#result JSON. Stop condition: all five read-backs match
-   the expected values above. Any mismatch stops the procedure:
-   record the actual read-back per id, do not adjust the expected
-   values to fit, and send the mismatch back to the B2-6 lane.
+   version from the run; if the binary is named chromium-browser
+   on the laptop, record that name and use it).
+3. Read pre#result JSON. Stop condition: m0-m4, m6, m7 match the
+   expected values above, and m5 is recorded verbatim with its
+   decider outcome (stripped: I-1 closed as engine-confirmed;
+   kept: template and fakes must be corrected). Any mismatch on
+   m0-m4, m6, m7 stops the procedure: record the actual read-back
+   per id, do not adjust the expected values to fit, and send the
+   mismatch back to the B2-6 lane.
 4. Evidence to collect: the probe HTML file, the full JSON output,
    the Chromium version, the time log (+07), and one verdict line
-   (PASS with all five matched, or FAIL naming the mismatched id
+   (PASS with all eight matched, or FAIL naming the mismatched id
    and its actual value).
 5. Optional second leg (same quiet window, only if a live Zen
-   scratch tab is already open for other work): run the same five
+   scratch tab is already open for other work): run the same eight
    sets through the live Zen DOM on a NEW scratch tab beside the
    owner's tabs, using the shipped set_value path, and record the
    same JSON. Never navigate or type into any of the owner's tabs.
    If no scratch tab is open, skip this leg; the headless Chromium
    leg is the gate.
 
-### P2. F8/F9 live-DOM runs (AMEND4 live debt, venue step 11)
+### P2. F8/F9 live-DOM runs (SKETCH, not a runnable procedure; AMEND4 live debt, venue step 11)
+
+This is a sketch, not a runnable procedure: it gives no
+scratch-page HTML, no file path, no exact Marionette or headless
+command, no pin of the zen_dom.py commit the scripts come from
+beyond the commit hash, and no enumerated four-check list. The
+rung-2 live worker writes the real procedure from this sketch.
+The four checks the procedure must enumerate are: arm-false (flag
+False with zero trusted input events), arm-true (flag True with a
+trusted input event), F9 (factor handling and one unit system),
+F10 (CSS px closure, mapped point within 10 px of the live
+getBoundingClientRect center).
 
 Goal: run the same checks the node tests prove, against a real
 browser DOM: F8 (typed-flag arm in an iframe target), F9/F10
@@ -486,7 +552,7 @@ browser DOM: F8 (typed-flag arm in an iframe target), F9/F10
    (commit hash of the zen_dom.py they came from), the JSON
    outputs, the time log, and a verdict line per check.
 
-### P3. 2-vision benchmark as a whole (step 11 rung 2; pointer, not a step-1 procedure)
+### P3. 2-vision benchmark as a whole (step 11 rung 2; deferral, not a step-1 procedure)
 
 - The benchmark runs under the step-11 acceptance ladder
   (final direction section 4), not as a step-1 live session.
