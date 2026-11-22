@@ -45,7 +45,9 @@ T14 (redteam round 2 finding 3): the same run_id with a changed
   ledger record must keep the original message.
 T15 (redteam round 2 finding 4): one Enter appending a second
   identical bubble 700 ms later must fail as duplicate-bubble;
-  the gate settles a full second after first sighting.
+  the gate settles a full second after first sighting. Runs on
+  the shared browser before the CLI tests (T12 and later), which
+  each launch their own Firefox.
 T16 (redteam round 2 finding 5): results.json records the
   registry state: registry_enabled false with --no-run-registry,
   true with the default path otherwise.
@@ -487,6 +489,62 @@ def main():
             and step11.get("v11_scope") == "thread"
             and step11.get("v1_value_ok") is True}
 
+        # T15: round 2 finding 4, delayed double append. Runs
+        # here, on the shared browser, before the CLI tests: a
+        # CLI run launches its own Firefox, and launch_browser
+        # refuses while the shared browser holds the
+        # Marionette/BiDi ports.
+        run_id15 = "bench-fixpass-r2f4"
+        plan15 = make_plan(
+            run_id15, "two_vision_fixture_delayed_double.html", {
+                "clone1": "BENCH-TEST clone1 " + run_id15,
+                "clone2": "BENCH-TEST clone2 " + run_id15})
+        handles15 = bench.open_windows(driver, plan15, t_start)
+        driver.switch_to.window(handles15["clone1"])
+        items15 = bench.harvest_window(driver, "clone1", t_start)
+        item15 = bench.find_input(items15, "Message")
+        ledger15 = bench.Ledger(
+            os.path.join(args.workdir, "ledger-r2f4.json"))
+        step15 = bench.send_one(
+            driver, plan15["windows"][0], item15,
+            plan15["messages"]["clone1"], run_id15 + ":clone1",
+            ledger15, plan15, t_start, 1, before_count=0)
+        bubbles15 = driver.execute_script(
+            "return window.__sentBubbles().length")
+        results["tests"]["r2f4_delayed_double"] = {
+            "error": step15.get("error"),
+            "gate_baseline": step15.get("gate_baseline"),
+            "gate_count": step15.get("gate_count"),
+            "gate_settle_s": step15.get("gate_settle_s"),
+            "bubbles_after": bubbles15,
+            "ledger": ledger15.status(run_id15 + ":clone1"),
+            "pass": step15.get("error") == "duplicate-bubble"
+            and step15.get("gate_count") == 2
+            and step15.get("gate_settle_s") == 1.0
+            and bubbles15 == 2
+            and ledger15.status(run_id15 + ":clone1")
+            == "failed-unverified"}
+
+        # Quit the shared browser before the CLI tests below
+        # (fix pass 2, redteam 4/4 finding 10f): each CLI run
+        # launches its own Firefox, and launch_browser refuses
+        # while the Marionette/BiDi ports are held.
+        try:
+            driver.quit()
+        except Exception:
+            pass
+        driver = None
+        try:
+            proc.terminate()
+            proc.wait(timeout=10)
+        except Exception:
+            try:
+                proc.kill()
+            except Exception:
+                pass
+        proc = None
+        time.sleep(1.0)
+
         # T12: round 2 finding 1, CLI: harvest-then-run, same
         # run_id, different workdirs. The harvest must bind no
         # registry entry, so the run in its own workdir succeeds.
@@ -578,38 +636,6 @@ def main():
             and res_14b.get("sends_this_run") == 0
             and rec14.get("status") == "sent"
             and rec14.get("message") == msgs14["clone1"]}
-
-        # T15: round 2 finding 4, delayed double append.
-        run_id15 = "bench-fixpass-r2f4"
-        plan15 = make_plan(
-            run_id15, "two_vision_fixture_delayed_double.html", {
-                "clone1": "BENCH-TEST clone1 " + run_id15,
-                "clone2": "BENCH-TEST clone2 " + run_id15})
-        handles15 = bench.open_windows(driver, plan15, t_start)
-        driver.switch_to.window(handles15["clone1"])
-        items15 = bench.harvest_window(driver, "clone1", t_start)
-        item15 = bench.find_input(items15, "Message")
-        ledger15 = bench.Ledger(
-            os.path.join(args.workdir, "ledger-r2f4.json"))
-        step15 = bench.send_one(
-            driver, plan15["windows"][0], item15,
-            plan15["messages"]["clone1"], run_id15 + ":clone1",
-            ledger15, plan15, t_start, 1, before_count=0)
-        bubbles15 = driver.execute_script(
-            "return window.__sentBubbles().length")
-        results["tests"]["r2f4_delayed_double"] = {
-            "error": step15.get("error"),
-            "gate_baseline": step15.get("gate_baseline"),
-            "gate_count": step15.get("gate_count"),
-            "gate_settle_s": step15.get("gate_settle_s"),
-            "bubbles_after": bubbles15,
-            "ledger": ledger15.status(run_id15 + ":clone1"),
-            "pass": step15.get("error") == "duplicate-bubble"
-            and step15.get("gate_count") == 2
-            and step15.get("gate_settle_s") == 1.0
-            and bubbles15 == 2
-            and ledger15.status(run_id15 + ":clone1")
-            == "failed-unverified"}
 
         # T16: round 2 finding 5, CLI: results.json records the
         # registry state.
