@@ -388,8 +388,8 @@ fact checks and log write 00:32-00:35 +07.
 
 ## 6. Commit record (this redteam's own commit, no push)
 
-- This log file: improvements/mochi-b2-6-redteam-log.md, commit (to be
-  filled after commit; the hash line is filled by a follow-up commit on
-  this same file, mirroring the worker's own method). No push was made
+- This log file: improvements/mochi-b2-6-redteam-log.md, commit
+  342f1bae8b2e493b14aba2f9d5f57cd0289f4221 (342f1ba). The hash line was
+  filled by a follow-up commit on this same file. No push was made
   (per the brief).
 
