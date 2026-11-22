@@ -402,4 +402,81 @@ workspaces at the same time.
 - Clone1 batch 10 + clone2 batch 12: assigned 10:40 (0521d6c on main).
   Clone status to be checked in the next status pass.
 
-## 13. (to be filled as results land)
+## 13. C5-ITEMS56 DONE, verified by me, 10:59 +07 (T+29m)
+
+- Worker C5-ITEMS56 completed 10:59:09 +07 (about 17 min, no stall).
+  Deliverable: improvements/worker-click5-items56-log.md, commit
+  2942f68 on todolist-push (tip at check). Diagnostic script VM copy
+  workspace/c5-items56-probe.py, SHA-256 8eb04d1e...; same SHA on the
+  laptop at /tmp/click5-items56-probe.py.
+- MY VERIFICATION (git show 2942f68 + source at tip, this session):
+  - The dimension closure check is real in scripts/zen_dom.py
+    (right_gap = size[0] - inner[0] - moz[0], bottom_gap likewise;
+    raises ZenDomError 'dimension closure fails: mozInner %r + inner
+    %r exceeds window size %r (gaps %r, %r)'). Raise site consistent
+    with the worker's zen_dom.py:172.
+  - Arithmetic confirmed: moz (274, 66) + inner (677, 1160) =
+    (951, 1226) vs window (925, 1176): gaps -26, -50, exactly the
+    message the worker captured. C12: moz (240, 8) + inner
+    (1615, 1160) = (1855, 1168) vs (1863, 1176): gaps +8/+8, PASS.
+    Inner width tracked the narrowing exactly (1615 - 938 = 677).
+    Moz grew +34/+58. All numbers reconcile.
+  - Per-call proof (diagnostic 10:55:04-10:55:08 +07, exit 1,
+    elapsed 0.079s): locate OK 1.9ms, _check_window_not_moved OK
+    3.8ms (live origin [2509, 914] equals meta), viewport_origin
+    FAIL 3.5ms with the message, fastpath skipped. Per-call times
+    sum to 9.2ms vs the Codex stage's 9ms. The 09:20 attribution is
+    high confidence, not absolute proof (Codex discarded the
+    message); the worker recorded that caveat honestly.
+- VERDICT: code defect AND environment trigger, not a procedure
+  defect. The items 5-6 landing (b44a5ea) is exonerated: its check
+  passed live and window_bounds was present. The defect is the
+  pre-existing validator check_viewport_geometry (C12/AMEND4-item-1
+  work): its closure model is false for the current live Zen state,
+  and it refuses a real, stable browser state. Environment trigger:
+  Zen's chrome state changed after C12. The Codex run was conducted
+  correctly; its only defects were dropping the exception message
+  and emitting evidence only on success, which hampered diagnosis.
+- FIX SHAPE: scripts/zen_dom.py, check_viewport_geometry /
+  viewport_origin only; no change in dom_act.py or fastpath.py.
+  First identify why moz grew, then correct the closure model or
+  replace the hard refusal with a verified-origin path (independent
+  screenshot/click cross-check, C12-style). Must NOT simply delete
+  the closure check: it guards against factor-forgotten origins
+  (F9/F10). Proof of fix: origin stage PASS live on this same window
+  (0x557052b62dd0, [2509, 914] [925, 1176]) with computed origin
+  (2783, 980), plus the independent cross-check, plus F9/F10 still
+  refused.
+- BLOCKING: step 7 P2/A9 is BLOCKED in the live sense (viewport_origin
+  raises, so the A9 chain cannot run live at all on this window).
+  B5 limb (ii) is NOT blocked (that limb is about the proof tests,
+  already judged MET, and the landing code is exonerated), but it
+  does not cover this separate live-blocker in the shared validator,
+  which needs its own open item. Recorded as open item O-ITEMS56.
+- ACTIONS TAKEN by me on this verdict:
+  - Spawned C5-MOZ-GROWTH (d974f399) 11:00 +07: live investigation of
+    WHY moz grew, by toggling reversible Zen UI states one at a time
+    (sidebar Ctrl+S, compact mode, panels), reading moz/inner/outer
+    after each, restoring each toggle. No window resize, no tab
+    changes, no chat threads, no sends. Log:
+    improvements/worker-click5-moz-growth-log.md.
+  - Sent a follow-up to C5-P2-IMPL (submission 9eecb8a3): the
+    validator fix is IN its scope (zen_dom.py only, failing-first,
+    must not delete the closure check, F9/F10 still refused);
+    incorporate the MOZ-GROWTH result if it lands before it finishes,
+    else implement the cause-independent fix (verified-origin path)
+    and record the cause as an open item; live proof of the fix is a
+    follow-up item for me, not for the repo-only worker; the A9 chain
+    cannot be proven live on this window until the validator is fixed
+    (known live-blocker, not a reason to stop the implementation).
+
+## 14. Still running (T+30m)
+
+- C5-P2-IMPL (7d648508): step 7 implementation + validator fix
+  (follow-up 9eecb8a3 submitted, pending application).
+- C5-MOZ-GROWTH (d974f399): live investigation of the moz growth.
+- Clone1 batch 10 + clone2 batch 12: assigned 10:40 (0521d6c on main).
+  Clone2 acked 10:48 (e8ba70c). Clone1 has not acked batch 10 yet
+  (main unchanged at b2b9a09 as of 10:55 check).
+
+## 15. (to be filled as results land)
