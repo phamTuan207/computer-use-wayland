@@ -485,7 +485,13 @@ or a named owner.
 
 ## 8. Commit and push verification
 
-- Commit: [TO FILL after commit: hash, files, time]
-- Push verification: [TO FILL: git ls-remote output]
+- Commit: 1bbf64b "C5-P2-SPEC: stale-ref disagreement protocol
+  (B5 limb i) + AMEND4 items 2-4 wiring re-verification", 2026-11-22
+  about 10:48 +07 (T+6m), 2 files, 958 insertions, 0 deletions.
+  Committed with an explicit pathspec (both files named on the
+  git commit command) immediately after staging the same two
+  files. No other files staged: `git status --short` on the two
+  paths is empty after the commit.
+- Push verification: [TO FILL: git ls-remote output after push]
 - Dash check: a Python byte-level scan for U+2014 and U+2013
   codepoints in both files returns no matches before commit.
