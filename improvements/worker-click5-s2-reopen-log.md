@@ -334,8 +334,9 @@ elapsed time on every entry.
   improvements/s2-flip-reopen-runs/run-1..5.json plus
   p9-runN-brave.png and p9-runN-chromium.png (to be committed
   with this log).
-- This log: improvements/worker-click5-s2-reopen-log.md
-  (commit hash to be recorded here after the commit lands).
+- This log: improvements/worker-click5-s2-reopen-log.md, commit
+  1a3356d (this commit records its own hash; the log text was
+  complete before this one-line addition).
 - Laptop helpers (not in the repo, reused from the (b1)
   measurement): /tmp/c5-focusenter.mjs, /tmp/c5-count.mjs,
   /tmp/s2-v12.mjs, /tmp/s2-p9.mjs, /tmp/s2-seed.mjs.
