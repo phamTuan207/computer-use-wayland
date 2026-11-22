@@ -1517,4 +1517,163 @@ workspaces at the same time.
   activity 36s ago at check). Clone1 batch 13 queued (e03e288),
   not yet started. Clone2 capped until Nov 25 02:38.
 
-## 31. (to be filled as results land)
+## 31. C5-STEP8 VERIFIED transport DONE (pill BLOCKED); batch 13 verdicts; BOTH clones capped; P9 evidence for step 8 committed; 3 new workers spawned (15:05-15:28 +07)
+
+- C5-STEP8 (be6ff750) COMPLETED 15:13:54 +07 (T+86m). VERIFIED
+  by the coordinator, item by item:
+  - Commits on todolist-push, ls-remote verified: 8c6553a
+    (deletion + tests + log 0-4, 7, 8), 1b5a6e6 (ready-wait fix
+    + 2 tests), 4eebc15 (finished log sections 5-6). Head at
+    verification time 4eebc15, later 704a218 (my evidence
+    commit below).
+  - Code checked directly: session_cmd/attempt_session are
+    stubs raising RuntimeError (first_action.py lines 187/201,
+    raises at 196/208); broker_attempt at 329;
+    _wait_for_task_running at 270; start --wait in
+    session_remote.py (WAIT_POLL_S 5.0, WAIT_BUDGET_S 300.0,
+    _client_start_with_wait at 1494).
+  - Tests re-run INDEPENDENTLY by the coordinator: `python3 -m
+    unittest discover -s tests -q` Ran 2194 tests in 233.1s,
+    FAILED (errors=1, skipped=17), 0 failures. The 1 error is
+    the pre-existing test_cursor_file g++ C++26 error,
+    confirmed by re-running that file alone. (Worker claimed
+    2192 tests; the 2-test difference is discovery variance,
+    both passing; 0 failures in both runs.) test_first_action
+    alone: 84 tests OK.
+  - Concurrency verified from the raw JSONL (run
+    c5-step8-conc-073039, 29 lines): A started 07:30:40, held
+    12s, finished 07:31:01; B started 07:31:03, 3.405s after A
+    finished, B start wall 22.120s, both completed all
+    requests, test-end failures []. Serialization proven live.
+  - Smoke verified from the raw JSONs (smoke-run1/2.json): all
+    4 sends V12 found (attempts 1, role user, side user),
+    delayed count 1, pre-count 0, act_now_rc 0,
+    broker_sequences [1], retries 0. Messages
+    C5-STEP8-SMOKE-R1/R2-CLONE1/CLONE2. Walls 22.6-23.0s per
+    the log (t_start fields 07:50:25/07:51:10 UTC match
+    14:50:14-14:51:56 +07). NOTE (curiosity, not a failure):
+    V12 textLen is 28 for a 24-char message and 31 for a
+    27-char message (drill), consistently +4; V12 found the
+    right bubble (role/side correct, delayed count 1), so this
+    is a measurement quirk, not a wrong send.
+  - Fallback drill verified from the JSON: V12 found, delayed
+    count 1, wall 49.4s, broker_after_restart state idle,
+    loaded d490f369f6b7, head 1b5a6e6. Act details (rc 0,
+    completed 3, input_sent True) are in the log, not the
+    JSON. First attempt failed safely (screen_changed,
+    input_sent False, relay left stopped); root cause proven
+    (given capture showed Zen ws1, after-capture showed ws2);
+    lesson recorded: focus FIRST, then observe, then act.
+  - Relay verified LIVE by the coordinator (15:19 +07):
+    PID 1196429, socket present, status running, loaded
+    d490f369f6b754d200518055025ef956284a759cc49e3ee70ed6b2a4483e3da4,
+    started_git_head 1b5a6e6, state finished, owner
+    c5-step8-drill, generation 4716e037..., driver stopped,
+    guardian clean, recovery none, error null. Exact match to
+    the worker's final check.
+  - Window map verified LIVE (15:21 +07): ws1 Zen
+    0x557052b62dd0 PID 496121 [2509, 914] [1863, 1176] full
+    width; ws2 Brave 0x55705383d420 PID 1185797 [3448, 914]
+    [901, 1176]; ws2 Chrome 0x5570538ed160 PID 8059 [2533, 914]
+    [901, 1176]. The layout change stands (Brave ws1 to ws2,
+    Chrome 1853 to 901 wide); nothing moved back unprompted.
+    Note: Brave/Chrome classes are
+    brave-/chrome-hichoggbhebpgpgcbcgfpkjmohpcflhh-Default, not
+    "Brave-browser"/"chromium"; a plain class filter misses
+    them. hyprctl needs HYPRLAND_INSTANCE_SIGNATURE set in the
+    SSH session (from /run/user/1000/hypr/).
+  - VERDICT: step 8 transport half DONE (per-batch spawn
+    deleted, broker only, proven live: deletion + tests +
+    concurrency + smoke + fallback drill). Pill half BLOCKED
+    on the CB-10 precondition (LIQUID flicker probe not run,
+    no owner deferral). Do not quote step 8 as fully done.
+    Soak advisory-only (60-min soak reached 40 min, VM
+    restart cut it; no cron watchdog on the VM; relay
+    Restart=no, one-shot SSH restart is the documented
+    recovery). Known limit: owner holding a task with over
+    300s between requests loses the session to idle timeout;
+    no keepalive added.
+  - One loose end: the worker's recorded_execution_results
+    shows one exec with exitCode 1 (subprocess.nonzero_exit).
+    The log is complete and all commits pushed, so it is
+    immaterial to the deliverables, but the failing command
+    was not identified in the handoff. Flagged here; no
+    action unless it recurs.
+- CLONE1 BATCH 13 DONE (summary 8a907d4, 14:59:24). Read and
+  verified at the verdict level by the coordinator:
+  - Task 1 (P2-AMEND-FIX re-verify): PASS. 6 items CONFIRMED;
+    root discover re-run Ran 2131, FAILED (failures=1,
+    errors=5, skipped=17), all traced to environment reasons
+    (g++ C++26, missing Firefox binary at
+    /home/hatch/workspace/tools/firefox/firefox for
+    test_bench_manifest, etc.), not code regressions; the
+    failures=1 is a boot-time flake on a long-uptime VM only.
+    My fresh tests/ discover run had 0 failures, which
+    corroborates the flake reading. Redteam 2b09b10, PASS
+    stands, no code changed.
+  - Task 2 ((b1) landing spec review): AMEND, findings F1-F13.
+    F1/F2 HIGH stale (focusenter helper + P9 PNGs are now in
+    the repo, after the spec was written); F3 HIGH design
+    (type listed as a focus-establishing action, it is not);
+    F4 HIGH acceptance criterion (dry-run elapsed wrong);
+    F5/F6/F7 MEDIUM, F8/F9 LOW, F10 MEDIUM (missing test
+    steps), F11/F12/F13 NOTE. The spec fix pass is spawned
+    below.
+  - Task 3 (Y13g round-3 adjudication): BLOCK stands, no live
+    run. F1, F2 HIGH upheld; verifier defect 2 (symlink-unsafe
+    deletion in _check_entry_pyc) upheld; MEDIUM tokenizer +
+    marker-ordering upheld. No finding REJECTED outright; two
+    sub-claims REJECTED. Round-3 fix pass must fix every
+    UPHELD HIGH and MEDIUM item, then independent
+    re-verification before any live run. The fix pass is
+    spawned below.
+- FLEET: BOTH CLONES CAPPED (Muse steer 15:15 +07). Clone1
+  capped at 15:11 (run 65), "Out of usage", reset 8:01 PM Mon
+  23/11/2026. Clone2 capped since 12:14, reset 2:38 AM Wed
+  25/11/2026. Batch 13 finished fully before the clone1 cap,
+  no work lost. NO more batches to either clone until after
+  its reset. Work carries with Codex Luna 6 Max, fcc, and my
+  own subagents. The clone1 cap is INDEPENDENTLY CONFIRMED by
+  the P9 review image I viewed (clone1 "Out of usage. Upgrade",
+  "reset at 8:01 PM on Monday, November 23") and the clone2 cap
+  by its image ("reset at 2:38 AM on Wednesday, November 25").
+- STEP8 SMOKE CHASE (Muse steer 15:15): RESOLVED. The smoke
+  bubbles are visible in clone2's chat AND the results are on
+  todolist-push: the worker log 4eebc15 (sections 5-6) plus my
+  evidence commit 704a218 (8 files: smoke-run1/2.json,
+  fallback-drill.json, concurrency JSONL, review-run2-clone1/
+  clone2-scp.jpg, drill-given/after.jpg; 352KB total,
+  ls-remote verified, head 704a218d5aea0fb8b535d03fc8a554b81ea7dceb).
+  I VIEWED both review images myself before committing: all
+  four smoke bubbles rendered as user bubbles, no DOM-vs-render
+  mismatch; left rails collapsed to icons, right panels only
+  the clones' own profiles/tasks/approvals (already in repo
+  docs); no personal data. The drill images show the ws1 Zen
+  Welcome given capture vs the ws2 after capture, matching
+  the proven root cause.
+- NEW WORKERS SPAWNED (all repo-only, independent, no live
+  laptop work; clones out, so these go to my own subagents):
+  - C5-CB8-REAUIDT (481bc3c9): re-audit the two REVOKED claims
+    against the committed P9 evidence (25 PNGs + manifest +
+    focusenter). Verdict per claim: REINSTATED or REVOKED.
+    Scope is the render-evidence gap only; the JSON numbers
+    were already CONFIRMED (batch 12 task 1, batch 13 task 1).
+  - C5-B1-SPEC-FIX (90ee624b): fix the (b1) landing spec per
+    batch 13 task 2 F1-F13. Spec edited in place on main
+    (cu-jpegq90-land, explicit pathspec only that file); fix
+    log on todolist-push. Clone1 is capped, so this worker
+    does the fix, not clone1.
+  - C5-Y13G-R3-FIX (e7f7e026): round-3 fix pass per the
+    adjudication (F1, F2, verifier defect 2, MEDIUM tokenizer
+    + marker-ordering). Full batteries, NO live runs.
+    Independent re-verification follows by a separate worker.
+- NEXT: step 9 (A1/S3/CB-EXEC merged prototype, gated on
+  proof) spawns after the (b1) spec fix lands, so the
+  prototype lands (b1) against the corrected spec. Its first
+  target is the Chromium mouse stall. Step 9 sequencing
+  stands: (1) (b1) durable landing in cdp.mjs with tests,
+  (2) P2-AMEND-FIX complete (done, verified PASS), then
+  expansion to the next class (not yet defined; coordinator
+  decides at landing time).
+
+## 32. (to be filled as results land)
