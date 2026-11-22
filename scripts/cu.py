@@ -3062,7 +3062,7 @@ def main():
     a.add_argument('--address',help='ground only: Hyprland window address the snapshot belongs to')
     ce=sub.add_parser('code-exec',help='run one allowlisted program as the action (Pick 1, opt-in flag CU_CODE_EXEC=1)')
     ce.add_argument('--program',required=True,help='program source file (mode 600) or - for stdin')
-    ce.add_argument('--endpoint',default=None,help='CDP endpoint for dom_* calls in this program only (e.g. http://[::1]:9223 for Brave); default is the retained BROWSER_ENDPOINT')
+    ce.add_argument('--endpoint',default=None,help='CDP endpoint for dom_* calls in this program only (e.g. http://127.0.0.1:9224 for Brave); default is the retained BROWSER_ENDPOINT')
     ce.add_argument('--intent',default=None,help='one-line intent, at most 200 chars')
     ce.add_argument('--target',default=None,help='task target path under /tmp, recorded only')
     ce.add_argument('--wall-seconds',type=int,default=30,help='program wall-clock budget, 1..60')
@@ -3133,9 +3133,10 @@ def main():
         require_session()
         check_cancel()
         program=read_code_exec_program(args.program)
-        # P3 port split (step 6 wiring): code-exec had no --endpoint, so
-        # every program drove the default 127.0.0.1:9223 (Chromium/clone2)
-        # even when the class names Brave on [::1]:9223 (clone1). The
+        # P3 port split (step 6 wiring), P2 persistent port 2026-11-22:
+        # code-exec had no --endpoint, so every program drove the
+        # default 127.0.0.1:9223 (Chromium/clone2) even when the class
+        # names Brave on 127.0.0.1:9224 (clone1). The
         # override applies to this program only, like the browser tabs
         # override: the retained default is restored afterwards, so a
         # later command in the same relay process cannot silently

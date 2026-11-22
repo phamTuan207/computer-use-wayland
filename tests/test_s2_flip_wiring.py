@@ -1,10 +1,10 @@
 """S2 flip wiring tests (step 6).
 
 Covers the two wiring changes that make the one-class flip possible:
-1. cu.py code-exec --endpoint (P3 port split): a program aimed at
-   Brave on [::1]:9223 must not silently drive Chromium on
-   127.0.0.1:9223. The override applies to that program only and the
-   retained default is restored afterwards.
+1. cu.py code-exec --endpoint (P3 port split, P2 persistent port
+   2026-11-22): a program aimed at Brave on 127.0.0.1:9224 must not
+   silently drive Chromium on 127.0.0.1:9223. The override applies to
+   that program only and the retained default is restored afterwards.
 2. The live harness program shape (scripts/s2_flip_live.py): the
    fixed send program grounds the composer, fills, sends with Enter,
    and ends with the trailing assert (P5 V12 gate in program form);
@@ -95,11 +95,11 @@ class CodeExecEndpointTests(unittest.TestCase):
     def test_endpoint_override_reaches_backend_and_restores_default(self):
         cu.BROWSER_ENDPOINT = 'http://127.0.0.1:9223'
         out, code = self.run_main('code-exec', '--endpoint',
-                                  'http://[::1]:9223', '--program', '-')
+                                  'http://127.0.0.1:9224', '--program', '-')
         self.assertEqual(code, 0)
         self.assertEqual(json.loads(out)['ok'], True)
         self.assertEqual(len(self.fake.calls), 1)
-        self.assertEqual(self.fake.calls[0]['endpoint'], 'http://[::1]:9223')
+        self.assertEqual(self.fake.calls[0]['endpoint'], 'http://127.0.0.1:9224')
         self.assertEqual(cu.BROWSER_ENDPOINT, 'http://127.0.0.1:9223',
                          'a one-program override must not replace the default')
 

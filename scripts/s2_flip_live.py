@@ -3,9 +3,9 @@
 
 Runs the clone-chat-send class live, one code-exec program per send
 (CU_CODE_EXEC=1), act-now/stepwise as fallback only on program
-failure. Endpoints are named per browser (P3 port split):
-Brave/clone1 on http://[::1]:9223, Chromium/clone2 on
-http://127.0.0.1:9223. Never assume port 9223 is Brave.
+failure. Endpoints are named per browser (P3 port split, P2 persistent port
+2026-11-22): Brave/clone1 on http://127.0.0.1:9224, Chromium/clone2
+on http://127.0.0.1:9223. Never assume port 9223 is Brave.
 
 Transport split, and why there are two session shapes:
 - Routing (tabs, observe) and the P9 capture run through the broker
@@ -76,7 +76,7 @@ LAPTOP_ACTIVATE = '/tmp/c5-activate.mjs'
 LAPTOP_COUNT = '/tmp/c5-count.mjs'
 
 BROWSERS = {
-    'brave': {'endpoint': 'http://[::1]:9223', 'label': 'clone1'},
+    'brave': {'endpoint': 'http://127.0.0.1:9224', 'label': 'clone1'},
     'chromium': {'endpoint': 'http://127.0.0.1:9223', 'label': 'clone2'},
 }
 
