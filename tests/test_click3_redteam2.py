@@ -866,5 +866,112 @@ class CdpSetValueTests(unittest.TestCase):
                          'value exceeds maxlength')
 
 
+    @unittest.skipUnless(NODE, 'node is required to run production JS')
+    def test_set_value_email_multiple_trims_each_token(self):
+        # B2-6 (AMEND4 item 8 residual, microgap log section 6):
+        # the email fix trimmed only the whole value ends, but the
+        # HTML Standard Email state value sanitization algorithm
+        # (4.10.5.1.5) splits on commas, strips leading and trailing
+        # ASCII whitespace from EACH token, and rejoins with a single
+        # comma. So '  a@b.com , c@d.com  ' must land as
+        # 'a@b.com,c@d.com', and a plain email field with a comma
+        # value sanitizes the same way: the rule is the email
+        # state's algorithm, not a multiple-only step. Same driver
+        # shape as the maxlength test above, plus a multiple flag
+        # per case; the FakeInput models the engine rule.
+        src = (ROOT / 'scripts' / 'cdp.mjs').read_text()
+        start = src.index('const source=`') + len('const source=`')
+        template = src[start:src.index('`;', start)]
+        hstart = src.index('const HIT_USABLE=`') + len('const HIT_USABLE=`')
+        hit_usable = src[hstart:src.index('`;', hstart)]
+        self.assertIn('oldValue', template)
+        driver = (
+            "var __tpl = " + json.dumps(template) + ";\n"
+            "var __hitUsableSrc = " + json.dumps(hit_usable) + ";\n"
+            "var HIT_USABLE = eval(__hitUsableSrc);\n"
+            "var __current = null;\n"
+            "function pageState(snapshot, locator){ return __current; }\n"
+            "var request = {snapshot: 'before'};\n"
+            "var locator = JSON.stringify({ref: 'e1'});\n"
+            "var document = {elementFromPoint: function(x, y){"
+            " return __current; }};\n"
+            "function getComputedStyle(e){"
+            " return {display: 'block', visibility: 'visible'}; }\n"
+            "var innerWidth = 100, innerHeight = 100;\n"
+            "class InputEvent { constructor(t, o){ this.type = t;"
+            " this.isTrusted = false; Object.assign(this, o || {}); } }\n"
+            "class Event { constructor(t, o){ this.type = t;"
+            " this.isTrusted = false; Object.assign(this, o || {}); } }\n"
+            "class FakeInput { get value(){ return this._value || ''; }"
+            " set value(v){"
+            " var s = String(v).replace(/[\\r\\n]/g, '');"
+            " if(this.type === 'email'){ s = s.split(',').map(function(t){"
+            " return t.replace(/^[\\t\\n\\f\\r ]+|[\\t\\n\\f\\r ]+$/g, ''); }).join(','); }"
+            " this._value = s; } }\n"
+            "class FakeTextarea { get value(){ return this._value || ''; }"
+            " set value(v){"
+            " this._value = String(v).replace(/\\r\\n?/g, '\\n'); } }\n"
+            "var HTMLInputElement = FakeInput;"
+            " var HTMLTextAreaElement = FakeTextarea;\n"
+            "function makeEl(tag, type, initial, maxLength, multiple){\n"
+            " var proto = tag === 'INPUT' ? FakeInput.prototype"
+            " : FakeTextarea.prototype;\n"
+            " var el = Object.create(proto);\n"
+            " el.tagName = tag; el.type = type || 'text';\n"
+            " el._value = initial || ''; el.disabled = false;\n"
+            " el.readOnly = false; el.maxLength = maxLength;\n"
+            " el.multiple = multiple || false;\n"
+            " el.isConnected = true; el.events = [];\n"
+            " el.matches = function(s){ return false; };\n"
+            " el.getAttribute = function(k){ return null; };\n"
+            " el.closest = function(s){ return null; };\n"
+            " el.contains = function(o){ return o === el; };\n"
+            " el.getClientRects = function(){ return [{}]; };\n"
+            " el.getBoundingClientRect = function(){ return {left: 10,"
+            " top: 10, right: 30, bottom: 30, width: 20, height: 20}; };\n"
+            " el.dispatchEvent = function(ev){"
+            " el.events.push({type: ev.type, trusted: ev.isTrusted});"
+            " return true; };\n"
+            " return el; }\n"
+            "function runCase(tag, type, initial, text, maxLength, multiple){\n"
+            " var el = makeEl(tag, type, initial, maxLength, multiple);\n"
+            " __current = el;\n"
+            " var text = JSON.stringify(text);\n"
+            " var __iife = eval('`' + __tpl + '`');\n"
+            " var res = eval(__iife);\n"
+            " return {ok: res.ok, error: res.error || null,"
+            " events: el.events.map(function(e){ return e.type; }),"
+            " value: el.value}; }\n"
+            "var out = {multi_spaces: runCase('INPUT', 'email', '',"
+            " '  a@b.com , c@d.com\\t', -1, true),\n"
+            " single_comma: runCase('INPUT', 'email', '',"
+            " 'a@b.com, b@c.com', -1, false),\n"
+            " multi_maxlen: runCase('INPUT', 'email', '',"
+            " '  a@b.com , c@d.com  ', 15, true),\n"
+            " multi_over: runCase('INPUT', 'email', '',"
+            " '  a@b.com , c@d.com  ', 14, true)};\n"
+            "console.log(JSON.stringify(out));\n")
+        out = json.loads(_run_node(driver))
+        self.assertTrue(out['multi_spaces']['ok'],
+                        'multiple email set failed although the engine '
+                        'lands the per-token trimmed value: %s'
+                        % (out['multi_spaces'],))
+        self.assertEqual(out['multi_spaces']['value'], 'a@b.com,c@d.com')
+        self.assertEqual(out['multi_spaces']['events'],
+                         ['input', 'change'])
+        self.assertTrue(out['single_comma']['ok'],
+                        'plain email with a comma value failed: %s'
+                        % (out['single_comma'],))
+        self.assertEqual(out['single_comma']['value'], 'a@b.com,b@c.com')
+        self.assertTrue(out['multi_maxlen']['ok'],
+                        'multiple email maxLength 15 refused text whose '
+                        'sanitized form is 15 chars: %s'
+                        % (out['multi_maxlen'],))
+        self.assertEqual(out['multi_maxlen']['value'], 'a@b.com,c@d.com')
+        self.assertFalse(out['multi_over']['ok'])
+        self.assertEqual(out['multi_over']['error'],
+                         'value exceeds maxlength')
+
+
 if __name__ == '__main__':
     unittest.main()
