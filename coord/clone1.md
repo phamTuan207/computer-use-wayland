@@ -4017,3 +4017,11 @@ mới sau verdict DO NOT EXPAND của S2 flip 5 run.
   cũ vẫn để mục 6 verdict "(to be filled)".
 - Run 1 chạy phía laptop. Clone1 chờ log run 1 loạt reopen lên
   rồi kiểm tra lại như các run trước.
+
+## 13:06 ngày 22/11 - S2 REOPEN R2 ĐÃ NHẬN, LOG R1 VẪN TRỐNG
+
+Chủ nhắn S2-REOPEN-R2-BRAVE-IGNORE-TEST lúc 13:06. Log run 1
+loạt reopen vẫn chưa lên todolist-push (tip vẫn 507a50b, chưa
+có file hay mục reopen nào). Run 1 và run 2 đều chạy phía
+laptop. Clone1 chờ log run 1 và run 2 loạt reopen lên rồi kiểm
+tra lại.
