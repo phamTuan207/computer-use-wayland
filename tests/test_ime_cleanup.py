@@ -284,8 +284,14 @@ class ImeCleanup(unittest.TestCase):
         # wait out in-flight key delivery while fcitx5 is still
         # inactive, or fcitx5 captures the tail of the text and
         # commits a Telex-composed duplicate (f4diag runs 4-5).
-        # The settle (IME_RESTORE_SETTLE_S) is requested after the
-        # '-c' deactivate and before the '-o' restore.
+        # The restore settle (IME_RESTORE_SETTLE_S) is requested
+        # after the '-c' deactivate and before the '-o' restore.
+        # The deactivate settle (IME_DEACTIVATE_SETTLE_S) is
+        # requested after the '-c' switch and before the body, so
+        # the deactivation propagates to the already-focused
+        # field's text-input connection before the first keystroke
+        # (f4diag run 6 still doubled with only the restore
+        # settle, so the duplicate is composed DURING the type).
         import importlib.util
         from unittest.mock import patch
         spec = importlib.util.spec_from_file_location(
@@ -294,15 +300,12 @@ class ImeCleanup(unittest.TestCase):
         spec.loader.exec_module(cu)
         self.state.write_text('2')
         self.log.write_text('')
-        sleeps = []
-        log_at_settle = []
+        events = []
 
         def recorder(seconds):
-            sleeps.append(seconds)
-            if seconds == cu.IME_RESTORE_SETTLE_S:
-                log_at_settle.append(self.calls())
-            # No real sleep: the test asserts the settle is
-            # requested, not that wall time passes.
+            events.append(('sleep', seconds, tuple(self.calls())))
+            # No real sleep: the test asserts the settles are
+            # requested in order, not that wall time passes.
 
         # shutil.which reads the process PATH, not the env dict
         # passed to literal_keyboard, so the fake binary dir must
@@ -314,18 +317,29 @@ class ImeCleanup(unittest.TestCase):
                                        'FCITX_LOG': str(self.log)}), \
                 patch('time.sleep', side_effect=recorder):
             with cu.literal_keyboard(self.env, True):
-                pass
-        self.assertIn(cu.IME_RESTORE_SETTLE_S, sleeps,
-                      'restore settle not requested')
-        self.assertEqual(len(log_at_settle), 1)
-        self.assertEqual(log_at_settle[0], ['-c'],
-                         'settle must run after deactivate, before restore')
+                events.append(('body',))
+        settles = [(i, e) for i, e in enumerate(events)
+                   if e[0] == 'sleep'
+                   and e[1] in (cu.IME_DEACTIVATE_SETTLE_S,
+                                cu.IME_RESTORE_SETTLE_S)]
+        self.assertEqual(len(settles), 2,
+                         'both IME settles must be requested: %r'
+                         % (events,))
+        # Deactivate settle first (after '-c', before the body),
+        # restore settle last (after the body, before '-o').
+        body_at = events.index(('body',))
+        self.assertEqual(settles[0][1][1], cu.IME_DEACTIVATE_SETTLE_S)
+        self.assertEqual(settles[0][1][2], ('-c',))
+        self.assertLess(settles[0][0], body_at)
+        self.assertEqual(settles[1][1][1], cu.IME_RESTORE_SETTLE_S)
+        self.assertEqual(settles[1][1][2], ('-c',))
+        self.assertGreater(settles[1][0], body_at)
         self.assertEqual(self.calls(), ['-c', '-o'])
         self.assertEqual(self.state.read_text().strip(), '2')
 
     def test_no_settle_when_ime_already_inactive(self):
         # When the IME starts inactive ('1'), there is no
-        # deactivate and no restore, so no settle is requested.
+        # deactivate and no restore, so neither settle is requested.
         import importlib.util
         from unittest.mock import patch
         spec = importlib.util.spec_from_file_location(
@@ -349,6 +363,7 @@ class ImeCleanup(unittest.TestCase):
             with cu.literal_keyboard(self.env, True):
                 pass
         self.assertNotIn(cu.IME_RESTORE_SETTLE_S, sleeps)
+        self.assertNotIn(cu.IME_DEACTIVATE_SETTLE_S, sleeps)
         self.assertEqual(self.calls(), [])
 
 class Fcitx5RunningHelper(unittest.TestCase):

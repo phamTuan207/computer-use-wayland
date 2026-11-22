@@ -1434,6 +1434,22 @@ restore cannot capture any of them. Same class of race as the F4
 batch settle (a mid-transition frame); same shape of fix (wait
 for the transient to drain before the next step)."""
 
+IME_DEACTIVATE_SETTLE_S = 0.3
+"""Settle after deactivating the input method, before typing.
+
+The mirror of the restore settle. fcitx5-remote reports state
+'1' (inactive) as soon as the deactivate command is accepted,
+but the text-input connection for the already-focused field may
+still be composing for a short window after that: keys sent in
+that window are captured into a preedit and committed as a
+Telex-composed duplicate of the text, even though the global
+state reads inactive. Waiting 300ms after the switch and before
+the first keystroke lets the deactivation propagate to the
+active text-input connection, so no key is composed. The restore
+settle alone (6e150f1) did not stop the doubling (f4diag run 6
+still doubled), which points at the deactivation side: the
+duplicate is composed DURING the type, not at the restore."""
+
 
 @contextmanager
 def literal_keyboard(env,enabled=True,result=None):
@@ -1518,6 +1534,14 @@ def literal_keyboard(env,enabled=True,result=None):
                 record('after_switch',status='failed')
                 raise
             record('after_switch',switched,'switch_query','observed')
+            # F4 follow-up: settle after deactivating, before the
+            # first keystroke. The state query reads '1' as soon as
+            # the deactivate is accepted, but the text-input
+            # connection for the already-focused field may still
+            # be composing; keys sent in that window are captured
+            # and committed as a Telex duplicate (f4diag run 6
+            # still doubled with only the restore settle).
+            time.sleep(IME_DEACTIVATE_SETTLE_S)
         else:
             record('after_switch',original,'initial_query','unchanged')
         yield
