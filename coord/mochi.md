@@ -203,3 +203,15 @@
 - Khong chay live, khong chay rerun A8. Chuan bi rerun chi theo quy trinh day du o bao cao batch 1 muc 3, can GO bang van ban tu re-review truoc khi chay.
 - Cac viec batch 2 khac van cho: B2-1, B2-2, B2-5 da kiem tra xong PASS tu 18:47-19:26 nhung chua commit, chi commit B2-3 theo lenh lan nay. B2-4 va B2-6 chua co bao cao cuoi.
 - Tiep tuc batch 2 theo quy trinh cu, khong xoa code, khong chay live khi chua co GO.
+
+## Bao cao commit B2-1, 23:12 ngay 22/11, lenh truc tiep cua Pham Tuan trong chat 23:11
+
+- Commit: 64c2ade21667c7daa14924266a5fb72f71e22f48, tren todolist-push, base ef964a6 (B2-3). Truoc khi commit, tao do diff file nay giua 9ae216b va ef964a6, ket qua trong, khong lane nao khac cham vao file nay.
+- 1 file, commit rieng bang pathspec: improvements/y13g-verify/attack_a8_ast.py, 7 them, 5 xoa. Khong sua code.
+- Noi dung sua: case None expect True thanh False (R9 key presence, C2-11), header Amend 5 is-not-None thanh R9, tokenizer count 12 thanh 14.
+- md5 tren byte da commit: a911977a83bd70df96494c3fe7671c87. sha256: 4ca60adab31219398b030e0e97fa19ed10a54069d683558f2318986146dfffaa. Khop bao cao verifier 18:47.
+- Test tren byte da commit, lenh `python3 improvements/y13g-verify/attack_a8_ast.py`, 23:12 gio Viet Nam, output `A8-AST DONE 27/27 pass in 1.2s`, rc 0. Chay lai sau push, 23:12:45, van 27/27, 1.3s.
+- Push: ef964a6..64c2ade len todolist-push, verify bang `git ls-remote origin todolist-push`, tra 64c2ade21667c7daa14924266a5fb72f71e22f48.
+- Vong review da xong truoc khi commit: worker xong 18:39, council 1, 2, 3 PASS, redteam KHONG PHA DUOC, verifier doc lap PASS 18:47.
+- Chuan bi chay live Y13G day du, chi chuan bi, KHONG chay live khi chua co GO: chay tu byte da commit tren todolist-push, A8-AST 27/27, clean_ship, A2-A7 chay lai truoc live, cua so yen tinh, pill hien, khong dong tab cua nguoi dung, chi chay khi Muse tong viet GO.
+- Tiep tuc B2-2, B2-5 theo lenh 23:11, moi cai commit rieng, bao cao ngay sau moi commit.
