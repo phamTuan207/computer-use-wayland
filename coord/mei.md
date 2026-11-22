@@ -420,3 +420,23 @@ Viec 2 tam dung tai day theo uu tien moi, chuyen sang viec 3. File thiet ke da s
 - Viec 2 cua em tam dung, verify doc lap verdict NEEDS CHANGE, 4 finding F1-F4 em da ghi trong file nay (F2 HIGH gate pill 18:30 + CDP tho o E4/E1/E2/E7; F3 MEDIUM luat 18:23 + lenh dong scratch tab; F1 LOW khoang Brave fill 133-178 ms; F4 LOW finally 605-612).
 - Em tra loi vao file nay, moi finding mot dong: em dong y hay khong, va khi quay lai viec 2 em se doi cu the cai gi (rieng F2: gate pill em se dat nhu the nao, probe nao di qua session co pill, probe nao van dung; rieng F3: em viet luat 18:23 vao thiet ke nhu the nao, scratch tab tu tao em xu ly ra sao).
 - Neu em khong dong y finding nao thi ghi ro cai nao va vi sao. Khong chay live gi cho viec 2 luc nay. Viec 3 (danh sach rung 3) van la uu tien, tra loi cau hoi nay khong duoc lam cham viec 3.
+
+## Da doc cau tra loi pill 18:57 va lenh moi 19:03, 2026-11-22 19:10 gio Viet Nam
+
+Em da doc ky ca hai muc moi cua Muse tong, ghi nhan vao file nay theo yeu cau.
+
+### Cau tra loi pill 18:57
+
+- Em ghi nhan: co che pill cho CDP cua W-PILLCDP da xong, commit d0602dd tren todolist-push. Moi CDP act qua cdp.mjs deu lay pill trung tam truoc input dau tien, fail closed. Duong harness cua em (s2_flip_live.py qua broker, session-driver, code_exec, cdp.mjs) DUOC CO CHE NAY BAO PHU, khong phai CDP tho.
+- Em VAN CHUA chay live, vi live pill render tren laptop chua verify, cho den khi co xac nhan live render bang van ban.
+- Em ghi nhan luu y cho viec 2 khi quay lai sua F2 HIGH: co che chi bao phu CDP act qua cdp.mjs va s2_flip_live.py. Duong mo WebSocket moi o E4, CDP click qua /tmp/c5-stall-regression-probe.mjs o E2, pre-check E1, click o E7 KHONG di qua cdp.mjs nen KHONG duoc bao phu, van cam chay live cho den khi dua chung ve duong co pill hoac co xac nhan rieng. Em se them gate pill vao thiet ke theo dung huong nay khi sua 4 finding.
+- Trong luc cho, em lam viec 3, viec VM, khong can live.
+
+### Lenh moi 19:03
+
+- Em ghi nhan: ca team tu lam viec voi nhau, khong can cho anh. Can thi tu hop council va redteam, tu tha crawler dung repo last30days de crawl data real-time, research, moi thu. Token va compute ton bao nhieu khong quan trong, chi can lam tot nhat co the.
+- Moi viec theo workflow Lauren Tan: chat che, bang chung day du (lenh chay, output, commit hash, log thoi gian), khong ket luan suong.
+- Commit NHO, chia nho commit, commit cang nhieu cang tot. Check loi va test kiem thu theo dinh huong Lauren Tan.
+- Chi goi anh khi viec BAT BUOC chi anh moi lam duoc ve mat co hoc hoac vat ly (reboot, an nut, dieu khien ban phim chi anh moi an duoc). Con lai tu lam, tu hop, tu tim loi, tu test.
+- Luon luon chay do: lay log, lay thoi luong, lay su kien, xem co loi gi khong. Log chay LIEN TUC, ke ca khi Muse hay Codex chay computer-use.
+- Em dang lam theo dung lenh nay cho viec 3: research song song, tong hop, roi council 3 cong redteam, fix, re-review, verify doc lap, commit nho, log day du, khong cho anh, khong chay live.
