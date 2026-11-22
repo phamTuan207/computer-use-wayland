@@ -322,9 +322,21 @@ their contradictory assertions).
 
 ## 8. Commit record
 
-PENDING. To be filled at commit time: log file
-improvements/w-step1-closeout-log.md, commit hash, push
-verification via git ls-remote.
+- Log file: improvements/w-step1-closeout-log.md (this file).
+- Commit: 3e64547
+  ("docs: W-S1CLOSE step-1 closeout, discover 1974 0 fails, V-Z2
+  landed, F1/item8/items5-6 live confirmed"), 1 file, 331
+  insertions, on top of ae2fe52.
+- Push verification: 2026-11-22 about 17:57 +07, `git ls-remote
+  origin todolist-push` returns
+  3e64547b5cb041277ea5f9aac8148436a54c67d7, matching local HEAD.
+- Commit-record follow-up: this section filled in by a second
+  commit (see final report for its hash and ls-remote
+  verification).
+- Worktree ~/workspace/w-s1close-discover removed after the run
+  (`git worktree remove --force`, verified gone from `git
+  worktree list`). Discover raw log kept at
+  ~/workspace/w-s1close-discover.log (not committed).
 
 Elapsed: task received 17:49 +07; pull done 17:49 +07; item-12
 tests 17:51:37 +07; discover launched 17:51:18 +07; hyprctl read
