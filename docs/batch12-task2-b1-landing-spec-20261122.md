@@ -16,8 +16,9 @@ todolist-push. Every technical claim below cites file plus line.
 with the native setter, a focus step puts the caret in the composer,
 and a CDP Enter sends it. It uses zero Input.dispatchMouseEvent
 calls, so it bypasses the mouse stall that killed the Chromium half
-of the original flip (CDP timeout Input.dispatchMouseEvent, 5003 ms,
-0 of 5 sends; improvements/worker-click4-s2-flip-log.md, section 6).
+of the original flip (CDP timeout Input.dispatchMouseEvent, dom_act
+5003 ms in runs 1, 3, 4 and 5 and 5002 ms in run 2, 0 of 5 sends;
+improvements/worker-click4-s2-flip-log.md, section 5).
 
 Measured results, verified first-hand from the run JSONs on
 todolist-push:
@@ -26,6 +27,11 @@ todolist-push:
   18839.7 ms (18.8 s). Program elapsed 91.575 to 106.622 ms,
   focus Enter 17 to 23 ms, pre-send count 0, delayed count 1, model
   calls 0, all 5 runs. Source: improvements/s2-flip-b1-runs/run-1..5.json.
+  The 5 of 5 above is 5 of 5 completed runs, not 5 of 5 attempts:
+  runs 2 to 5 each had a first attempt aborted by the routing gate
+  (outcome aborted-routing, walls 12365.3, 14372.5, 12652.1, 13734.2
+  ms), nothing was sent, and the aborted JSONs are preserved as
+  improvements/s2-flip-b1-runs/run-N-aborted.json.
 - S2 reopen, two browsers: 10 of 10 sends verified, 5 of 5 runs,
   median wall 28560.9 ms (28.6 s). Chromium program elapsed 99.412
   to 113.005 ms, focus Enter 21 to 25 ms, pre-send count 0,
@@ -56,11 +62,11 @@ Three pieces, in three places. Only the first is landed code.
    scripts/s2_flip_live.py:497 to 519 (focus_enter) and
    scripts/s2_flip_live.py:76 (LAPTOP_FOCUSENTER constant).
 3. The program shape is harness-only. scripts/s2_flip_live.py:129
-   to 167 (build_program_set_value) emits set_value plus a value
+   to 161 (build_program_set_value) emits set_value plus a value
    assert, 2 actions, no key, no focus. The Enter comes from the
    helper after the program returns. The per-browser split is
    selected by --chromium-set-value (scripts/s2_flip_live.py:189
-   to 205, variant_for; flags at 780 to 795).
+   to 195, variant_for; flags at 780 to 795).
 
 The count guards are also harness-side and also depend on a
 laptop-only helper, /tmp/c5-count.mjs (scripts/s2_flip_live.py:77,
@@ -118,36 +124,59 @@ cdp.mjs.
 - It reuses the existing element-action machinery: ref or
   selector resolution through pageState (scripts/cdp.mjs:157 to
   167), the stale-snapshot check on every action
-  (scripts/cdp.mjs:467), the P2 scope plus observation_id
-  binding (scripts/code_exec.py:206 to 280), and the completed
+  (scripts/cdp.mjs:467 to 470), the P2 scope plus observation_id
+  binding (scripts/code_exec.py:277 to 284), and the completed
   counter.
 - It is independently testable: one action, one assertion
   (activeElement check), using the same fake-CDP vm pattern as
   tests/cdp_validation.mjs.
 - It keeps set_value a pure value write with read-back. Its
   contract and its type_check assert stay unchanged
-  (scripts/dom_asserts.py:65 to 68).
+  (scripts/dom_asserts.py:66 to 68).
 - It lets any program focus without setting a value.
-- Cost: 4 files to touch (cdp.mjs, code_exec.py, cu.py,
-  dom_asserts.py). That cost is a one-time validation-mirror
+- Cost: 6 files to touch (cdp.mjs, code_exec.py, cu.py,
+  dom_asserts.py, plus the harness scripts/s2_flip_live.py and
+  the tests). The 4 mirror files are a one-time validation-mirror
   update, and the mirror already exists for every other action
-  type.
+  type. One small cost under A: the focus branch duplicates
+  set_value's unavailable-field checks in a second branch. That
+  is a small maintenance duplication; it does not change the
+  recommendation.
 
 Option B (not recommended): add a `focus` boolean field to
 set_value, so set_value focuses the field before or after the
 write.
 
-- Cost: 1 file (cdp.mjs) plus a test. No new action type, no
-  validation-mirror change.
+- Cost: 4 files to touch (cdp.mjs plus dom_asserts.py for the P5
+  rule plus the harness scripts/s2_flip_live.py plus the tests).
+  No new action type, no validation-mirror change in code_exec.py
+  or cu.py.
 - Rejected because it bundles two effects into one action and
-  makes the CB-1 accounting ambiguous: input_sent would depend
-  on a flag inside set_value instead of on a counted action.
+  loses per-step granularity: with a focus flag inside set_value,
+  the completed count cannot distinguish a focus failure from a
+  value failure inside set_value (the error string can, the count
+  cannot). CB-1 stays sound under B: input_sent would be
+  completed >= 2, still a counted action number, so the loss is
+  granularity, not accounting ambiguity.
   It also cannot express focus without a value write, so any
   future program that needs focus alone would need a second
   mechanism anyway. The field would also need its own
   preflight validation (focus must be a boolean, default
-  false) and its own P5 rule, which is the same total work
-  as option A spread across fewer files.
+  false) and its own P5 rule. That is less total work than
+  option A: the real delta is the 2 mirror files (code_exec.py,
+  cu.py) that A needs and B does not.
+
+The strongest argument for A is fidelity to the measured shape.
+The measured (b1) shape is three separate steps: a 2-action
+program plus the focus_enter helper returning {ok, focus, enter}.
+Landing focus as its own action preserves those measured step
+boundaries one to one, so the landed completed count (4) maps
+directly onto the measured evidence (program completed 2 plus
+helper ok). With B the step shape changes and the mapping from
+measured to landed is indirect. Together with the testability
+point (focus testable alone, including the zero-Input-methods
+assertion) and the reusability point (any program can focus
+without setting a value), A is justified.
 
 The coordinator must pick one before landing starts. If option B
 is picked instead, sections 4, 5 and 8 below must be rewritten
@@ -164,18 +193,22 @@ selector:
    167), exactly one of ref or selector, same as every other
    element action (scripts/cdp.mjs:435 to 437).
 2. Reject an unavailable field with the same checks as the
-   set_value branch: disabled, readOnly, aria-disabled, inert
-   (scripts/cdp.mjs:476 to 478). Error text 'field unavailable'.
+   set_value branch: disabled, the :disabled pseudo-class,
+   readOnly, aria-disabled, inert (scripts/cdp.mjs:478). Error
+   text 'field unavailable'.
 3. Call e.focus() in page context. No scroll, no mouse, no key.
+   The evaluate expression is the pageState-resolved element
+   followed by e.focus(), the same resolve-then-act shape the
+   set_value branch uses.
 4. Verify document.activeElement === e. On failure throw
-   'field did not gain focus', the same wording fill uses
-   (scripts/cdp.mjs:537).
+   'field is not editable or did not gain focus', the exact
+   wording fill uses (scripts/cdp.mjs:537).
 5. Return ok. The action counts toward completed like any other
-   action (scripts/cdp.mjs:546 to 547).
+   action (scripts/cdp.mjs:546).
 
 Notes on scope. The focus action does not scroll the element
 into view; set_value already requires the field to be visible
-and hit-testable (scripts/cdp.mjs:503 to 510), and the composer
+and hit-testable (scripts/cdp.mjs:501 to 502), and the composer
 in the S2 class is visible by construction. The activeElement
 check is a direct equality check; if a future target lives in a
 shadow root, the check must walk shadowRoot.activeElement the
@@ -187,7 +220,7 @@ a follow-up, not part of this landing.
 scripts/cdp.mjs:
 
 - Line 434: add 'focus' to the action whitelist.
-- Line 435: add 'focus' to the element-action list (exactly one
+- Line 435 to 437: add 'focus' to the element-action list (exactly one
   ref or selector).
 - Dispatch loop, after line 473 (set_value branch): add a focus
   branch implementing section 4. It must sit between set_value
@@ -203,7 +236,7 @@ scripts/code_exec.py:
   in the bound snapshot, exactly one of ref or selector).
 - No new field validation is needed: focus takes no payload
   beyond ref or selector, and the P2 binding check already
-  covers every action in the batch (lines 206 to 280).
+  covers every action in the batch (lines 277 to 284).
 
 scripts/cu.py:
 
@@ -216,39 +249,55 @@ scripts/dom_asserts.py:
 - Add a 'focus' entry to ASSERTS: {'assert': 'focus_check',
   'mandatory': True, 'check': 'target is document.activeElement
   after the focus, before any keystroke'}. This mirrors the
-  click entry (lines 42 to 45) and the fill entry (lines 62
-  to 64).
+  click entry (lines 48 to 50) and the fill entry (lines 63
+  to 65).
 - Add a send-requires-focus rule to require_asserts: a send key
-  (Enter after set_value, per _is_send_key, lines 100 to 113)
-  with no preceding focus action in the same batch raises
-  DomAssertError. This is the enforcement for section 2.
-  Without it, a program could skip focus and fail silently.
-- No change to the set_value entry (lines 65 to 68) or to the
+  whose nearest preceding value action in the same batch is
+  set_value (per _is_send_key, lines 96 to 114, which covers
+  Enter after type, fill, or set_value) with no preceding focus
+  action in the same batch raises DomAssertError. The scope is
+  set_value-preceded sends only: fill, click, confirm_click,
+  hover_click, and type are focus-establishing actions. Fill
+  focuses internally through its click (scripts/cdp.mjs:536 to
+  537), and a click establishes focus, so the rule must not
+  reject the Brave fill program [fill, key Enter, assert] or the
+  desktop focus_type chain [click, type, key Enter]
+  (scripts/dom_act.py:708 to 712, gated at 748). This is the
+  enforcement for section 2. Without it, a program could skip
+  focus and fail silently.
+- No change to the set_value entry (lines 66 to 68) or to the
   trailing-assert rule (a trailing assert action satisfies the
   sent_bubble requirement).
+- No change to _api_dom_act is needed: it already passes
+  available focus_check True (scripts/code_exec.py:936 to 938),
+  with the comment that focus_check is available by
+  construction.
 
 scripts/s2_flip_live.py:
 
-- Replace build_program_set_value (lines 129 to 167) with a
+- Replace build_program_set_value (lines 129 to 161) with a
   landed builder emitting [set_value, focus, key Enter, assert
   bubble], 4 actions, P2 stamps on all 4. The trailing assert
-  is the bubble assert used by build_program (lines 107 to 127):
-  selector BUBBLE_ASSERT_SELECTOR, text, timeout_ms 3000.
+  is the bubble assert used by build_program (lines 89 to 126),
+  assert action at 117 to 121: selector BUBBLE_ASSERT_SELECTOR,
+  text, timeout_ms 3000.
 - Ordering constraint: the value read-back lives inside
-  set_value (scripts/cdp.mjs:516 to 522), so no separate value
-  assert is needed before the Enter. A value assert AFTER the
-  Enter would fail, because the composer is empty once the
-  message is sent. Do not add one.
+  set_value (scripts/cdp.mjs:517 to 518, repeated at 528), so no
+  separate value assert is needed before the Enter. A value
+  assert AFTER the Enter would fail, because the composer is
+  empty once the message is sent. Do not add one.
 - Remove focus_enter (lines 497 to 519) and the LAPTOP_FOCUSENTER
   constant (line 76). The focus plus Enter step moves inside
   the program.
-- Update send_browser CB-1 for the set_value variant (lines 615
-  to 625): input_sent = completed >= 3 (set_value, focus, Enter
-  all ran), target_received = completed >= 1 (set_value read-back
-  done), verified = V12 found. The old mapping used the helper
-  result for input_sent and completed >= 1 for target_received.
+- Update send_browser CB-1 for the set_value variant (lines 568
+  to 588: set_value branch 568 to 578, fill branch 579 to 585,
+  verified set at 588): input_sent = completed >= 3 (set_value,
+  focus, Enter all ran), target_received = completed >= 1
+  (set_value read-back done), verified = V12 found. The old
+  mapping used the helper result for input_sent and completed
+  >= 1 for target_received.
 - Keep the --chromium-set-value and --set-value flags (lines
-  780 to 795) and variant_for (lines 189 to 205). What they
+  780 to 795) and variant_for (lines 189 to 195). What they
   select changes from the helper-based program to the landed
   program. Brave keeps fill; whether Brave also moves to (b1)
   is a coordinator decision, not part of this landing.
@@ -306,10 +355,10 @@ The remaining verification is unchanged by this landing:
 
 - Independent V12: fresh DOM read over CDP, polls up to 10
   seconds for a [data-message-item] containing the message
-  (scripts/s2_flip_live.py:390 to 415). V12 found attempt 1
+  (scripts/s2_flip_live.py:316 to 338). V12 found attempt 1
   in all 10 reopen sends.
 - P9 viewport capture after the scored wall, reviewed by a
-  human before scoring (scripts/s2_flip_live.py:417 to 435).
+  human before scoring (scripts/s2_flip_live.py:340 to 356).
   P9 PASS 10 of 10 in the reopen.
 - CB-1 for the landed program: input_sent = completed >= 3,
   target_received = completed >= 1, verified = V12 found
@@ -321,7 +370,7 @@ Known measurement artifact, not fixed by this landing: the
 pre-send count-check SSH call appends no span, which
 contributes to the 2750.1 ms median residual in the reopen
 phase split (improvements/worker-click5-s2-reopen-log.md,
-section 4). Leave it as is; do not change the phase split
+section 3, run table). Leave it as is; do not change the phase split
 in the landing change.
 
 ## 8. Tests to write
@@ -362,6 +411,14 @@ Wiring tests, tests/test_s2_flip_wiring.py:
   False (replaces the old 2-action test).
 - [set_value, key Enter, assert] without focus raises
   DomAssertError from require_asserts.
+- [fill, key Enter, assert] still passes require_asserts after
+  the rule lands (the existing
+  test_program_actions_satisfy_p5_requires in
+  tests/test_s2_flip_wiring.py, which must not break: fill
+  focuses internally, so the scoped rule must not reject it).
+- The desktop focus_type chain [click, type, key Enter] still
+  passes require_asserts (scripts/dom_act.py:708 to 712, gated
+  at 748).
 - test_chromium_set_value_splits_variants_per_browser still
   passes (Brave fill, Chromium set_value).
 - The full wiring file still passes 12 of 12 after the swap
@@ -381,7 +438,10 @@ Live dry run, scratch tabs, both browsers:
   for comparison: PASS, wall 30123.9 ms, Chromium elapsed
   85.8 ms, completed 2 (improvements/worker-click5-s2-reopen-
   log.md, section 3). The landed dry run must match it except
-  completed 4 instead of 2.
+  completed 4 instead of 2, and Chromium elapsed about 105 to
+  115 ms instead of 85.8 ms: the landed 4-action program adds a
+  focus step (measured 17 to 25 ms in the helper) and a key step
+  (about 2 ms) to the 85.8 ms baseline.
 
 ## 9. Landing order
 
@@ -395,9 +455,13 @@ Live dry run, scratch tabs, both browsers:
    failing-first proof survives in history.
 3. Run the tests on the VM: node tests/cdp_validation.mjs,
    python3 -m unittest tests.test_s2_flip_wiring -v, plus the
-   full discover for the touched modules. All green required.
-   Also grep the tree for LAPTOP_FOCUSENTER: it must return
-   nothing in scripts/s2_flip_live.py after the change.
+   full discover for the touched modules, naming the dom_act
+   tests explicitly (tests/test_step5_p1p5.py and
+   tests/test_dom_act.py): the rule change touches
+   require_asserts, which dom_act.py also calls (line 748).
+   All green required. Also grep the tree for LAPTOP_FOCUSENTER:
+   it must return nothing in scripts/s2_flip_live.py after the
+   change.
 4. Sync the laptop tree to the landed todolist-push commit.
    Verify on the laptop that the tree carries the new code
    (grep the 'focus' entry in the cdp.mjs action whitelist).
@@ -457,7 +521,7 @@ Stated plainly. None of these is fixed by writing this spec.
    and it is unknown whether the relay needs a restart for
    a cdp.mjs change. Both must be verified on the laptop
    (section 9, step 4).
-7. The 80-element snapshot cap (scripts/cdp.mjs:83,
+7. The 80-element snapshot cap (scripts/cdp.mjs:83 to 84,
    max_elements 1..80) still forces the relaxed routing gate
    on the Chromium live thread: all 5 reopen Chromium runs
    ran relaxed (truncated inventory, composer present). Raising
@@ -474,11 +538,27 @@ Stated plainly. None of these is fixed by writing this spec.
    to (b1) or keeps fill. This landing keeps Brave on fill
    (it sends 5 of 5 with fill in both the flip and the
    reopen). Uniformity is a separate decision.
+10. The shadow-root activeElement walk from section 4 is
+    still a follow-up, not part of this landing. The focus
+    check is a direct equality check; if a future target lives
+    in a shadow root, the check must walk shadowRoot.activeElement
+    the way the harvest does (scripts/cdp.mjs:250 to 251).
+    Section 4 calls it a follow-up; it is listed here so it is
+    tracked.
+11. The P9 evidence for the measurements the spec leans on is
+    missing from the repo. The 10 reopen P9 PNGs (5 runs x 2
+    browsers, promised in improvements/worker-click5-s2-reopen-
+    log.md, section 8) and the 5 (b1) P9 PNGs are not on
+    todolist-push. Section 7 asserts P9 PASS 10 of 10 in the
+    reopen from the log's prose descriptions, but no reviewer
+    can re-check the render from the repo. Either the PNGs land,
+    or the landing records this gap as open.
 
 ## 11. Acceptance criteria for the landing
 
 - All unit and wiring tests in section 8 pass on the VM.
-- Live dry run 0 passes with the conditions in section 8.
+- Live dry run 0 passes with the conditions in section 8
+  (Chromium elapsed about 105 to 115 ms, completed 4).
 - 5 live re-runs: 10 of 10 sends verified, pre-send count 0
   and delayed count 1 in every run, model calls 0, median
   wall comparable to the reopen 28.6 s.
