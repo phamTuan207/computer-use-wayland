@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Shared local computer-use CLI. No model API calls or daemon required."""
 import argparse
-from contextlib import contextmanager
+from contextlib import ExitStack, contextmanager
 import fcntl
 import hashlib
 import io
@@ -2066,6 +2066,24 @@ def desktop_act(env,meta,actions,after_capture=True,observation_path=None,
                  (isinstance(g,list) and any(isinstance(x,dict) and
                                              x.get('type')=='type' for x in g))
                  for g in groups)
+    # F4 follow-up: whether the batch holds a LITERAL type (the
+    # default; 'compose' types want the input method active). A
+    # literal type needs the input method inactive BEFORE the
+    # click that focuses the field, not just around the keystrokes:
+    # fcitx5-remote reports inactive as soon as the deactivate is
+    # accepted, but the text-input connection for a field focused
+    # while fcitx5 was active keeps composing, so keys reach the
+    # app directly AND fcitx5, which commits a Telex duplicate
+    # (f4diag runs 4-7). The batch-level literal_keyboard below
+    # deactivates before the first action and restores after the
+    # last, so the field is focused while inactive.
+    has_literal_type=any(
+        (isinstance(g,dict) and g.get('type')=='type'
+         and g.get('ime','literal')=='literal')
+        or (isinstance(g,list) and any(
+            isinstance(x,dict) and x.get('type')=='type'
+            and x.get('ime','literal')=='literal' for x in g))
+        for g in groups)
     type_anchors=_type_group_anchors(groups)
     type_anchor=type_anchors[0] if type_anchors else None
     preflight_ms=round((time.monotonic()-preflight_start)*1000,3)
@@ -2178,7 +2196,16 @@ def desktop_act(env,meta,actions,after_capture=True,observation_path=None,
     focus_verified=None
     focus_note=None
     error_code_override=None
+    # Batch-level IME scope (F4 follow-up): holds the
+    # literal_keyboard for the whole batch when it holds a literal
+    # type, entered inside the try so a failure to deactivate is
+    # caught as a batch error, closed in the finally so the input
+    # method is always restored.
+    batch_ime_stack = ExitStack()
     try:
+        if has_literal_type:
+            batch_ime_stack.enter_context(
+                literal_keyboard(env, True, result=ime_result))
         # A new virtual device at an unchanged cursor position may not cause
         # Hyprland to deliver enter/motion to a newly mapped surface. Establish
         # real motion without clicking; the action still ends at its exact target.
@@ -2262,6 +2289,14 @@ def desktop_act(env,meta,actions,after_capture=True,observation_path=None,
             except Exception as exc:
                 error=error or 'pointer cleanup failed: '+str(exc)
                 transient_error=False
+        # Restore the input method after the batch. A restore
+        # failure must not mask the batch error or escape as an
+        # exception: record it and keep the batch result.
+        try:
+            batch_ime_stack.close()
+        except Exception as exc:
+            ime_result['ime_restore_failed'] = True
+            error = error or ('IME restoration failed: ' + str(exc)[:200])
     execution_ms=round((time.monotonic()-start)*1000,3)
     # Cheap post-type DOM check (G30, item 12): when the caller can read
     # the field value directly, that read is the verification. It runs

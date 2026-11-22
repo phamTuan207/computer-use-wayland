@@ -296,7 +296,16 @@ class DesktopPreflight(unittest.TestCase):
         self.assertIn('IME restoration failed', err.getvalue())
         self.assertEqual([a for a in calls if a[-1] == '-o'], [['fake-remote', '-o']])
 
-    def test_restore_only_failure_keeps_count_and_runs_no_next_group(self):
+    def test_restore_failure_at_batch_end_keeps_count(self):
+        # F4 follow-up: the IME scope is batch-level (one
+        # deactivate before the click, one restore after the last
+        # group), so a restore failure is detected at the END of
+        # the batch, not mid-batch: the groups that already ran
+        # (type, wait) ran with the input method inactive, which
+        # is the desired state for literal typing, so they stay
+        # counted. The restore failure is still reported (ok
+        # False, error names it, ime_restore_failed set) and the
+        # input is not replayed.
         import io
         from contextlib import redirect_stderr
         state = ['2']
@@ -311,17 +320,19 @@ class DesktopPreflight(unittest.TestCase):
         with patch.object(cu.shutil, 'which', return_value='fake-remote'), \
              patch.object(cu, 'run', side_effect=remote), \
              patch.object(cu, 'fcitx5_running', return_value=False), \
-             patch.object(cu, 'wait_cancelable') as wait:
+             patch.object(cu, 'wait_cancelable'):
             self.typed.reset_mock()
             err = io.StringIO()
             with redirect_stderr(err):
                 result = cu.desktop_act({}, self.meta, [{'type': 'type', 'text': 'hello'},
                                                         {'type': 'wait', 'ms': 10}])
         self.assertFalse(result['ok'])
-        self.assertEqual(result['completed'], 1, 'acknowledged input stays counted')
+        self.assertEqual(result['completed'], 2,
+                         'groups that ran before the end-of-batch '
+                         'restore stay counted')
         self.assertIn('restore failed', result['error'])
+        self.assertTrue(result.get('ime_restore_failed'))
         self.assertEqual(self.typed.call_count, 1, 'exactly one input, no replay')
-        wait.assert_not_called()
         self.assertIn('IME restoration failed', err.getvalue())
 
     def test_restore_flag_envelope_cases(self):
@@ -477,9 +488,26 @@ class DesktopPreflight(unittest.TestCase):
                 self.assertEqual(len(result['wtype_stderr']), stderr_len,
                                  'aggregate stderr capped at 400')
                 trace = result['ime_state_trace']
-                self.assertEqual(len(trace), 3 * groups, 'one triple per keyboard group')
-                self.assertEqual([t['phase'] for t in trace[:3]],
-                                 ['before', 'after_switch', 'after_restore'])
+                # F4 follow-up: the batch-level literal_keyboard
+                # (one triple for the whole batch, entered before
+                # the click so the field is focused while the input
+                # method is inactive) nests around the per-group
+                # triples: the batch 'before'/'after_switch' come
+                # first, the group triples follow, and the batch
+                # 'after_restore' comes last. A batch with a
+                # literal type therefore has (groups + 1) triples,
+                # interleaved as [before, after_switch] +
+                # (per-group triples) + [after_restore].
+                self.assertEqual(len(trace), 3 * (groups + 1),
+                                 'one triple per keyboard group plus '
+                                 'one for the batch-level IME scope')
+                expected_phases = ['before', 'after_switch']
+                for _ in range(groups):
+                    expected_phases += ['before', 'after_switch',
+                                        'after_restore']
+                expected_phases += ['after_restore']
+                self.assertEqual([t['phase'] for t in trace],
+                                 expected_phases)
                 self.assertTrue(all(t['im'] is None for t in trace))
                 self.assertTrue(all(t['status'] == 'remote_absent' for t in trace))
 
