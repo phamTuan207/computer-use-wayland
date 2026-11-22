@@ -932,3 +932,38 @@ Ket luan: hom nay khong the live run tu runbook. 5 tim thay lon, 2 nho, danh sac
 ### Tong ket batch 10 + DOT 9
 
 Batch 10: 4/4 xong (viec 1 G31 5281eda + fix f90590c; viec 2 re-verify 84e4519 + fix b8c908a; viec 3 runbook d2f6c40 + fix 2b98747; viec 4 ef01dab 979e117 + fix ed80241). DOT 9: 2/2 xong (viec 1 council round 3 7aeea01 + fix 9427eeb; viec 2 readiness 2afbde5 + fix 7d256ae). Tat ca bao cao 0 em/en dash, khong thong tin ca nhan. Clone1 van STALL (98 phut luc 07:39), viec batch 9 cua no da chuyen sang clone2 va da xong o day.
+
+## Batch 11, giao 08:50 ngay 22/11 - 3 viec, lam ngay, dung de may idle
+
+Clone1 van im (158 phut luc 08:38), khong cho no nua. Batch 11 la viec cua rieng cau, khong phu thuoc clone1. Moi viec council 3 nguoi + redteam + fix pass nhu moi lan, commit nho push ngay tung phan, dung im lang.
+
+### Viec 1 - Sua 5 test defective RT2 (F2, F3, F4, F5-behavior, F6), B5 lift limb (ii)
+
+Theo chinh bao cao DOT 9 viec 1 cua cau (docs/clone2-council-round3-amend4-20261122.md, commit 7aeea01 + fix 9427eeb): 5 test con fail deu da duoc chung minh defective doc lap, kem cach sua cu the. Gio sua that, khong chi ghi cach sua nua. Lan nay toi cho phep sua file test, lenh cam sua tests/test_click3_redteam2.py o DOT 9 viec 1 khong con ap dung, vi sua test defective chinh la viec nay.
+
+Moi test: failing-first (chay tren code hien tai, ghi lai fail), roi sua theo cach da ghi trong bao cao, roi chay lai pass. Cu the:
+- F2: origin that [2749,922] khong suy ra duoc tu meta, correct behavior la error, test thieu assertRaises.
+- F3: 2 assertion mau thuan, diem map (323.0, 620.25) vs diem that (1527.5, 1027.25), cach 1271.4 px, khong gia tri tra ve nao thoa ca hai.
+- F4: pixel y=126 va control y=110 deu cach anchor 118 dung 8 px, band khong y_range doi xung, sua bang y_range=(100, 120).
+- F5-behavior: goi truc tiep cu.desktop_act khong ranges, threading khong anh huong duoc, nhanh "or" se pha control test pass.
+- F6: dong forge nem TypeError, assertion value khong bao gio pass, value la 'hello', flag false voi zero trusted events, assertion flag da duoc fix.
+
+Sau khi sua: chay lai toan bo RT2 (49 test) + full discover o tip hien tai, ghi so chinh xac. Verdict mong muon: 15/15 pass. Neu test nao sua xong van fail thi ghi ro fail gi, dung sua vo toi.
+
+### Viec 2 - Dong 11 muc thieu san sang live-run tu DOT 9 viec 2
+
+Theo chinh bao cao readiness cua cau (docs/clone2-live-run-readiness-clone1-20261122.md, commit 2afbde5 + fix 7d256ae), verdict NOT READY voi 11 muc thieu. Dong het 11 muc:
+- Sua section 9 runbook cho dung AMEND4 item 12 (cbab398): envelope mang ca after scope-matching chainable va after_screen chi de verify, scope check chay truoc overlay; sua trich dan first_action.py "661-662" sai o tip hien tai.
+- Sua 4 cho mau thuan checklist 10 (10.1 loi login wall, 10.2 harvest verify thread container, 10.2 "ONE Zen instance" cu so voi G3, 10.1 ly do ledger cho fresh workdir).
+- Dinh nghia du checklist 10.3: method, generation rule, record requirement; dry probe ca 2 tien de (tien de A chua verified, tien de B bi bang chung cu bac bo: hyprctl window PID khong phai AT-SPI app PID).
+- Verify ten input Messenger bang DOM read (khong phai visual-only): aria-label that la gi.
+- De xuat quy trinh cu the cho khoang trong attach/profile: ghi ca 2 phuong an, phuong an chinh la cach script toi duoc chat clone that tren ws2 (Brave clone1 + Chrome clone2), phuong an du phong la option A cua cau (Firefox cua script voi profile da login pre-seeded, bo G3). Quet dinh live shape cuoi cung la cua toi, cau chi chuan bi ca 2 phuong an cho du.
+- Dat ten VISION 2 monitor (eDP-2 theo ho so laptop), dat ten file run log cho look count cua operator.
+
+Rang buoc cung: rung 2 acceptance van chay tren chat clone that tren ws2, khong thay bang fixture Firefox. Bao cao moi: san sang hay van thieu gi, thieu cai nao ghi ro.
+
+### Viec 3 - Full discover doc lap o tip hien tai + kiem tra Y1b regression
+
+Chay full discover o tip todolist-push hien tai tren may cau, ghi so chinh xac: Ran bao nhieu test, failures, errors, skipped, thoi gian. Rieng kiem tra cau hoi Y1b: o tip 17fdb9b cau tim thay 8 van de moi o test_code_exec (4 failures, 3 errors) va test_codemode (1 failure), executor ghi zero backend call, khop thay doi Y1b forked-child. O tip hien tai 8 van de nay con khong? Chay rieng 2 file test do, ghi so fail/error tung file, kem traceback ngan. Neu het thi ghi ro het tu commit nao. Neu con thi ghi ro van la Y1b regression hay van de moi.
+
+Ket xong 3 viec thi bao lai file nay. Neu ket o dau thi ghi ro ket cai gi, dung ngoi cho.
