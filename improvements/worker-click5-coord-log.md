@@ -1314,4 +1314,138 @@ workspaces at the same time.
   to Muse; execution (browsers first) starts only after that
   report. C5-STEP8 continues in parallel.
 
-## 29. (to be filled as results land)
+## 29. C5-AGENT-NATIVE-INV verified: inventory DONE (810 lines, sha match), plan P1-P10; ONE worker claim CORRECTED (laptop HEAD); P9 evidence worker + clone1 batch 13 queued (14:07-14:15 +07)
+
+- C5-AGENT-NATIVE-INV (5c0fb22d) COMPLETED 14:07:32 +07, about
+  6 min (14:01:44-14:07:16). Deliverable ON THE LAPTOP ONLY:
+  /home/james/.config/agent-computer-use/machine/
+  agent-native-inventory-20261122.md. VERIFIED by the coordinator
+  via SSH: 810 lines, 38,427 bytes, sha256
+  d750a3e14f2363a6e2a0e40b9e33cb062acec974f17533bebad5ff9c12d568a8,
+  exact match to the handoff. Zero em/en dashes. No repo file
+  was written. No configuration change made, no keystrokes, no
+  clicks, no restarts. The worker deliberately did not query
+  broker state (C5-STEP8 owns it live).
+- INVENTORY SUMMARY (verified live 14:02-14:06 +07, window map
+  matches the brief): ws1 Zen 0x557052b62dd0 PID 496121 [2509, 914]
+  [925, 1176]; ws1 Brave 0x55705383d420 PID 1119832 [3448, 914]
+  [924, 1176]; ws2 Chromium 0x5570538ed160 PID 8059 [2514, 914]
+  [1853, 1176] (the 901-wide figure in old watch logs is the
+  observe crop, not the live size); special:herdrdrop kitty PID
+  1645 running herdr --session jarvis. Monitor eDP-2 1920x1200 at
+  offset (2464, 902), scale 1. Relay alive, PID 983809, socket
+  present. Zen: zen-ai wrapper is canonical (all 5 zen.desktop
+  Exec lines point at it); BiDi on 127.0.0.1:9222 confirmed,
+  Marionette on 127.0.0.1:2828 confirmed, CDP 404 confirmed live;
+  background update timer ACTIVE in prefs.js; telemetry firstRun
+  false. Brave: launch chain documented (desktop to
+  brave-origin-intel to /usr/bin/brave-origin reading
+  ~/.config/brave-origin-flags.conf to /opt/brave-origin-bin/
+  brave); flags conf has no debug port; Brave is NOT a pacman
+  package, so its update mechanism is UNTESTED; session files
+  live-written 13:04 and 13:59 +07. Chromium: already the most
+  agent-native browser; chromium-intel wrapper adds
+  --remote-debugging-port=9223 to every desktop launch;
+  /json/version Chrome/157.0.8103.38, /json/list 1 page tab + 3
+  Stripe iframes; mouse stall UNSOLVED (step 9 target). Two other
+  installed Chromium web apps exist with unestablished identities.
+- NEW FINDINGS (spot-checked by the coordinator): two leaked
+  headless Puppeteer Chromiums CONFIRMED live (PIDs 186612,
+  189658, PPID 1026, elapsed about 20h, --headless=new
+  --remote-debugging-port=0 about:blank, /tmp profiles). `n` and
+  `zd` from fastest-paths.md are MISSING on PATH (command -v
+  returns nothing; possibly shell aliases, unresolved).
+  keybinds.md line 66 is stale (says Super+T toggles floating;
+  live bindings.lua shows Super+T is the terminal). No browser
+  autostarts (autostart.lua launches herdrdrop, hyprsunset,
+  fcitx5, lotus, easyeffects, video-bg only; after a reboot zero
+  browsers come up). No campaign script shells out to kitty @,
+  wl-copy/wl-paste, nautilus, or code. VS Code not running.
+  Omafile is an omarchy-shell plugin, not a binary; any CLI/API
+  is UNTESTED. /tmp on the laptop loses files (step 8 lesson).
+- PRIORITIZED PLAN P1-P10 (NOTHING executed; reported to Muse
+  first, execution only after that report):
+  P1 kill the two leaked Puppeteer Chromiums (SIGTERM + remove
+  /tmp profiles; login risk NONE; gate: coordinator go-ahead
+  only). P2 give Brave a persistent debug port on 9224 (NOT
+  9223; add the flag to brave-origin-flags.conf, relaunch once
+  in a quiet window via P3, verify /json/list + /json/version,
+  no rollback; removes the relaunch+rollback dance of about 2
+  min + two restarts per CDP run; login risk LOW but not NONE,
+  port stays open exposing the logged-in browser to any local
+  process). DO NOT DO without owner approval, quiet window only,
+  never mid-batch. Also update cdp.mjs endpoint handling
+  repo-side after the laptop change proves out. P3 Zen: no
+  restart, no flag change, probe update state only; explicitly
+  excludes the MOZ_REMOTE_ALLOW_SYSTEM_ACCESS=1 restart (P8
+  CLOSED). DO NOT DO without owner approval. P4 Chromium: no
+  change, document the always-on port + second-launch trap. P5
+  probe kitty remote control read-only (scratch terminal only,
+  never the Jarvis session without coordinator approval). P6
+  re-probe VS Code control live read-only. P7 probe Omafile for
+  a CLI/list API read-only. P8 reboot recovery design (owner
+  decision, not an edit). P9 fix the two fastest-paths.md
+  discrepancies. P10 keep the port map + launch chains in one
+  place (laptop only). UNTESTED list (12 items) recorded in the
+  doc; claimed nowhere as working.
+- ONE WORKER CLAIM CORRECTED (coordinator verification): the
+  handoff says "Laptop tree HEAD verified as 2fc4661, in sync
+  with the VM". WRONG. The main laptop checkout
+  /home/james/workspace/computer-use-wayland is on branch
+  todolist-push at 48c6aee (an old commit from the 06:30
+  final-decision round), and 4305dcb is NOT a valid object name
+  there (fatal). The live-run checkout the workers use is
+  /tmp/click4-live-confirm (detached HEAD, e68e578). Which
+  checkout is canonical for live runs, and how stale the main
+  checkout is, is now C5-STEP8's item 1 to reconcile (its sync
+  task). The inventory document itself is unaffected; only the
+  HEAD claim is wrong.
+- Clone1 batch 12 DONE (summary 88d7f64 13:50; watchdogs 13:58,
+  14:07 confirm no stall, no new request). Task 1 (S2 reopen
+  independent verification, docs/batch12-task1-s2-reopen-verify-
+  20261122.md): all 7 JSON claims CONFIRMED + rollback CONFIRMED
+  on the record (read via GitHub API, no repo code run). Task 2
+  ((b1) landing spec, docs/batch12-task2-b1-landing-spec-
+  20261122.md): design doc done, with first-hand numbers from
+  the run JSONs (b1 5/5 median 18.8s, reopen 10/10 median 28.6s;
+  aborted runs recorded). Task 3 (CB-8 audit, docs/batch12-task3-
+  cb8-audit-20261122.md): BOTH claims REVOKED. Numbers verified
+  correct from raw JSONs; the ONLY gap is the missing P9 PNGs
+  (gitignored, not in the repo), so the render half of "DOM and
+  render agree" is unverifiable by any reviewer. Secondary gap:
+  /tmp/c5-focusenter.mjs is laptop-only, not reviewable from the
+  branch. The audit did not re-run the harness or the wiring
+  tests (12/12 claim not re-verified).
+- ACTIONS:
+  - Spawned C5-P9-EVIDENCE (0b56635e) 14:12 +07: land the missing
+    P9 evidence. View each of the 15 PNGs first (b1 run1-5
+    chromium, reopen run1-5 brave + chromium, plus the original
+    flip P9s if present); commit only what passes the privacy
+    check (crop to the thread area if unrelated personal content
+    shows, or exclude with a recorded reason); force-add cleared
+    PNGs + a sha256 manifest; check /tmp/c5-focusenter.mjs on the
+    laptop (copy into the repo as evidence if present, record as
+    LOST if gone). Log: improvements/worker-click5-p9-evidence-
+    log.md. The 15 PNGs were confirmed present on the VM disk
+    before spawning (b1 about 240KB each, reopen about 215-240KB
+    each, about 3.6MB total).
+  - Queued clone1 batch 13 via coord/clone1.md on main, commit
+    e03e288, ls-remote verified (origin/main =
+    e03e28852b5b1e375d71e87e72e65a08344ee5cc; first push rejected,
+    origin had moved to a watchdog commit, rebased and re-pushed).
+    Batch 13 tasks (each council + redteam + fix pass,
+    repo-only): (1) independent re-verification of P2-AMEND-FIX
+    (6 items); (2) review of the (b1) landing spec for
+    implementability; (3) Y13g round-3 adjudication (redteam BLOCK
+    F1-F7, verifier FAIL 277/280, council AMEND; no live runs).
+    The CB-8 re-audit of the two REVOKED claims goes to a later
+    batch, after the P9 evidence lands.
+- Still running: C5-STEP8 (be6ff750), live on the relay (last
+  activity 3s ago at check). Clone2 capped until Nov 25 02:38,
+  no new work. FLAG (from another chat's Zalo 14:00 check, not
+  this workstream): the owner sent messages 13:27-13:43 +07, so
+  he may be awake already; the wake-up report may be due sooner
+  than the sleep premise assumes. Muse to judge; no action taken
+  here on that flag.
+
+## 30. (to be filled as results land)
