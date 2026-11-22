@@ -193,7 +193,21 @@ every 5 min (keeps idle gap under ControlPersist=600), each row logged to
 /tmp/probe-s0/soak.jsonl with time, secs, rc, master liveness (check rc).
 
 Sample t+0: 2026-11-22 06:41:28 +07, 0.894s, rc=0, check_rc=0.
-Soak ends ~07:41 +07. Final numbers go in the closing section below.
+Soak ends ~07:41 +07. Progress at 07:00 +07 (plain master, ControlPersist=600,
+5-min keepalives, NO ServerAliveInterval):
+
+```
+t+0  sample    06:41:28  0.894s rc=0  (master 13662, fast mux)
+t+5  keepalive 06:46:32  4.461s rc=0  (master now 15331: 13662 DEAD, fallback)
+t+10 sample    06:51:38  5.596s rc=0  (master now 19847: 15331 DEAD, fallback)
+t+15 keepalive 06:56:42  4.621s rc=0  (master now 23606: 19847 DEAD, fallback)
+```
+
+Every tick after t+0 paid full fresh cost. Master 19847 was confirmed dead by
+direct check at 06:52:33 +07 (check rc=255, socket gone, no mux master in ps),
+under 1 minute after its creation at 06:51:38. The plain master does not survive
+even one 5-minute idle gap in this environment. Root cause isolated in section 13:
+idle TCP is killed after ~60-90s somewhere on the VM to laptop path.
 
 NOTE (soak harness bug, mine): soak.py reads the master pid with
 `ps -eo pid,args | grep 'ssh: /tmp/cm-probe-'`, which matches only AUTO-created
@@ -228,27 +242,80 @@ No interference with the measurements beyond that; no fight, no shared files tou
 - D1/D3 (~3.5-5x, mux ~0.94-1.29s): CONFIRMED. This probe lands at 3.49x, mux 1.339s,
   squarely in their range.
 
-## 10. Verdict (interim, pending soak completion)
+## 10. Verdict (interim, pending both soaks completing)
 
-- S0 as specified (persistent multiplexed SSH) is FEASIBLE, but NOT at the claimed
-  460x and NOT with a `ssh -f` master. Real delivery: ~3.5x, ~3.3s saved per
+- S0 AS SPECIFIED (plain persistent mux, ControlPersist only) is NOT FEASIBLE as a
+  saving at real cadences: the master dies after ~60-90s idle (section 13), so at
+  5-10 minute spacing every use pays full fresh cost (~4.5s). The plain soak
+  (section 7) shows 3/3 ticks after t+0 falling back to fresh.
+- S0 WITH ONE ADDED OPTION (`-o ServerAliveInterval=15 -o ServerAliveCountMax=3`
+  on the master) is FEASIBLE: same master survived 300s idle with mux speed at
+  every sample (section 13, idle-B). Real delivery then: ~3.5x, ~3.3s saved per
   connection, residual ~1.3s per session that no multiplexing removes.
 - Two hard requirements for the S0 implementation, both measured:
   (a) start the master with setsid/nohup (or let ControlMaster=auto create it),
   never `ssh -M -f -N` (refuses sessions, dies in ~1-2 min);
-  (b) keep ControlMaster=auto on clients so master death self-heals with one
-  slow correct fallback instead of a hard failure.
-- Open: soak result (section 7) decides whether a setsid master actually survives
-  60 minutes idle-with-keepalives. If it dies mid-soak, the verdict stands but the
-  implementation must also handle periodic master restarts.
+  (b) clients use ControlMaster=auto so master death self-heals with one
+  slow correct fallback instead of a hard failure;
+  (c) the master MUST carry ServerAliveInterval (15s) or it dies idle.
+- Open: the 60-minute soaks (plain, section 7, and keepalive, section 13) decide
+  the long-run picture. If the keepalive master survives 60 min, the verdict above
+  is final. If it dies too, S0 needs a master watchdog/restart loop on top.
 
 ## 11. Log commit record
 
-- Interim log commit: (filled after commit; see closing section).
-- Final log commit: (filled after soak completes).
+- Interim log commit: 90eb8be40d42ffa35c72343778764a7affa4ea25 (2026-11-22 ~06:44 +07),
+  pushed c3bf5e0..90eb8be, verified in remote history (ancestor of HEAD 8d0e38a
+  after sibling pushes; git ls-remote origin todolist-push matched local HEAD
+  7124f1e at verify time, before siblings pushed on top).
+- Second interim log commit (idle-death experiment + soak progress): (filled after commit).
+- Final log commit: (filled after both soaks complete).
 
-## 12. Closing section (filled after soak completes)
+## 12. Closing section (filled after both soaks complete)
 
-- Soak samples (t+0..t+60): (pending).
-- Master survived 60 min: (pending).
-- Final verdict: (pending).
+- Plain soak samples (t+0..t+60): t+0 0.894s, t+5 4.461s, t+10 5.596s, t+15 4.621s,
+  rest pending (ends ~07:41 +07).
+- Keepalive soak-B samples: t+0 0.903s (master 25435), rest pending (ends ~08:00 +07).
+- Master survived 60 min (plain): NO (died 3 times in the first 15 min).
+- Master survived 60 min (keepalive): (pending).
+- Final verdict: (pending soak-B).
+
+## 13. Idle-death experiment (added 07:00 +07): plain master dies idle, keepalive master lives
+
+Cause hunt for the soak deaths (section 7). Two masters on separate sockets,
+started in parallel 06:53:27 +07, same setsid/nohup form, one difference:
+- A (plain): /tmp/cm-idle-A-..., no extra opts. Master pid 21199 at start.
+- B (keepalive): /tmp/cm-idle-B-..., `-o ServerAliveInterval=15 -o ServerAliveCountMax=3`.
+  Master pid 21189 at start.
+Each timed `true` at t=0, after 90s idle, after 300s total idle. Full logs:
+ /tmp/probe-s0/idle-A.log, /tmp/probe-s0/idle-B.log. Results (verbatim):
+
+```
+IDLE A: t0   06:53:33  1.141s rc=0  (master 21199, fast mux)
+IDLE A: t90  06:55:10  5.582s rc=0  (master now 23325: 21199 DEAD, fallback)
+IDLE A: t300 06:58:45  4.861s rc=0  (master now 24064: 23325 DEAD, fallback)
+IDLE B: t0   06:53:33  1.135s rc=0  (master 21189, fast mux)
+IDLE B: t90  06:55:05  1.172s rc=0  (master 21189, SAME, alive)
+IDLE B: t300 06:58:36  0.883s rc=0  (master 21189, SAME, alive)
+```
+
+FINDING F5 (measured, controlled A/B, same minute, same path): a plain master dies
+after 60-90s idle; the transport is killed somewhere on the VM to laptop path
+(idle TCP timeout in the egress/Tailscale proxy chain; the proxy itself has no
+documented idle timeout in its 82 lines, only a 30s connect timeout, so the kill
+is downstream of it). ServerAliveInterval=15 defeats it completely: the same
+master (pid 21189) served all three samples at mux speed through 300s idle.
+ControlPersist=600 is IRRELEVANT here: the master never lives long enough to
+reach its persist timeout. Any S0 without transport keepalives is dead on arrival
+at any cadence slower than ~1 minute.
+
+Follow-up: soak-B (ServerAliveInterval=15 master, own socket /tmp/cm-soakb-...,
+master pid 25435, started 07:00:06 +07, check rc=0). Runner /tmp/probe-s0/soak-b.py,
+launched fully detached, same 60-min cadence as the plain soak (7 samples every
+10 min, keepalive every 5 min), t+0 sample 07:00:13 +07: 0.903s rc=0 master 25435.
+Ends ~08:00:12 +07. If it survives, S0-with-keepalive is proven for 60 min.
+
+Context note: at 06:52 +07 the owner went to sleep (headache) with full authority
+to Muse (MEMORY.md update). If the laptop sleeps mid-soak, masters may die for
+that unrelated reason; a fresh connect failing would be the tell. Fresh connects
+still succeed at 07:00, so the laptop is awake as soak-B starts.
