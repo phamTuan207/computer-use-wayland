@@ -346,3 +346,20 @@ Dung lai ngay va bao cao khi gap mot trong cac truong hop sau:
 - Toi thay tin nhan cho mochi di vao ma KHONG co pill/overlay computer-use nao hien, vi no gui bang CDP tho (Runtime.evaluate), khong qua computer-use session.
 - Tu gio, moi tac dong live len trinh duyet cua em phai qua act-now/computer-use session de pill hien; CAM dung CDP tho de ghi (click/go chu) khi khong co session. Doc CDP (observe/harvest) van duoc.
 - Co che hien pill cho CDP dang duoc lam (worker W-PILLCDP); khi nao xong toi bao. Doc ky truoc khi lam tiep, ghi nhan da doc vao file nay.
+
+## Da doc 2 luat cung moi, 2026-11-22 18:37 gio Viet Nam
+
+Em da doc ky ca 2 luat cung moi o tren, ghi nhan vao file nay theo yeu cau.
+
+### Luat 18:23, khong bao gio dong hay navigate tab/cua so trinh duyet cua toi
+
+- Em ghi nhan: mo tab/cua so moi ben canh khi can trinh duyet, tuyet doi khong dong, khong navigate tab cua toi (tab mochi an danh, cua so Brave, Zen, bat ky tab nao toi mo), ap dung ke ca live test.
+- Kiem tra lai quy trinh live viec 1 va thiet ke thi nghiem viec 2 cua em: ca hai chi mo scratch tab moi ben canh bang CDP Target.createTarget, khong dong hay navigate tab nao cua toi. Rieng scratch tab do em tu tao thi quy trinh co ghi dong sau khi chay xong (dry run), em se khong dong nua cho den khi Muse tong xac nhan viec dong scratch tab do em tu tao co duoc phep hay khong. Em se sua quy trinh theo xac nhan do.
+- Em khong phai worker dong tab mochi luc 18:00-18:21, em chi lam viec tren VM va viet quy trinh, chua chay live lan nao.
+
+### Luat 18:30, pill phai hien khi agent dieu khien may
+
+- Em ghi nhan: moi tac dong live len trinh duyet phai qua act-now/computer-use session de pill hien, cam dung CDP tho de ghi (click/go chu) khi khong co session, doc CDP (observe/harvest) van duoc.
+- Anh huong truc tiep toi viec cua em, em DUNG LAI khong chay live: quy trinh live viec 1 (Brave 5/5) va thi nghiem live viec 2 (E0-E8) deu gui qua harness scripts/s2_flip_live.py, duong di la broker, session-driver, code_exec, cdp.mjs, ghi bang Runtime.evaluate va Input.dispatchKeyEvent. Em chua ro duong nay co duoc tinh la computer-use session co pill hay khong, vi luat noi tin nhan cho mochi di vao khong co pill vi gui bang CDP tho.
+- Em xin Muse tong xac nhan mot trong hai: (a) duong harness s2_flip_live.py co pill hien, duoc phep chay live theo quy trinh da viet, hoac (b) duong nay cung bi cam nhu CDP tho, phai doi worker W-PILLCDP xong moi chay live. Trong luc cho xac nhan, em khong chay bat ky live CDP write nao, chi lam viec tren VM (doc, code, test unit, viet thiet ke) va doi.
+- Viec 1 hien o trang thai: code xong, commit e1b62b4, quy trinh live san sang, chi cho xac nhan cua so yen tinh va xac nhan pill o tren. Viec 2 hien o trang thai: thiet ke thi nghiem E0-E8 dang review vong 3, chua co code live nao, cung cho xac nhan pill truoc khi chay bat ky arm live nao.
