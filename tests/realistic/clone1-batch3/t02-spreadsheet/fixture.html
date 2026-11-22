@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Demo Spreadsheet</title>
+<style>
+  body { font-family: sans-serif; margin: 16px; }
+  table { border-collapse: collapse; }
+  th, td { border: 1px solid #999; padding: 0; }
+  th { background: #eee; padding: 4px 8px; }
+  td input { width: 90px; border: none; padding: 6px; font: inherit; }
+  td input.formula { background: #eef6ff; }
+  #status { margin-top: 10px; color: #333; }
+</style>
+</head>
+<body>
+<h1>Demo Spreadsheet</h1>
+<table id="grid"></table>
+<div id="status">Ready.</div>
+<script>
+  const COLS = ['A', 'B', 'C', 'D'];
+  const ROWS = 8;
+  const grid = document.getElementById('grid');
+  const header = document.createElement('tr');
+  header.appendChild(document.createElement('th'));
+  COLS.forEach((c) => {
+    const th = document.createElement('th');
+    th.textContent = c;
+    header.appendChild(th);
+  });
+  grid.appendChild(header);
+  const cells = {};
+  for (let r = 1; r <= ROWS; r++) {
+    const tr = document.createElement('tr');
+    const th = document.createElement('th');
+    th.textContent = r;
+    tr.appendChild(th);
+    COLS.forEach((c) => {
+      const td = document.createElement('td');
+      const input = document.createElement('input');
+      input.id = 'cell-' + c + r;
+      input.dataset.cell = c + r;
+      input.addEventListener('input', () => {
+        input.classList.toggle('formula', input.value.trim().startsWith('='));
+        recalc();
+      });
+      input.addEventListener('focus', () => {
+        if (input.dataset.formula) input.value = input.dataset.formula;
+      });
+      input.addEventListener('blur', () => {
+        if (input.dataset.formula) input.value = input.dataset.computed || '';
+      });
+      td.appendChild(input);
+      tr.appendChild(td);
+      cells[c + r] = input;
+    });
+    grid.appendChild(tr);
+  }
+
+  // Value of a cell as a number, or null when it cannot be used.
+  // Plain empty cells count as 0. Text cells and errors count as null.
+  function cellValue(ref) {
+    const input = cells[ref];
+    if (!input) return null;
+    if (input.dataset.formula) {
+      const v = input.dataset.computed;
+      return v === undefined || v === '#ERR' ? null : Number(v);
+    }
+    const raw = input.value.trim();
+    if (raw === '') return 0;
+    const n = Number(raw);
+    return isNaN(n) ? null : n;
+  }
+  function rangeValues(a, b) {
+    const m1 = a.match(/^([A-D])(\d+)$/);
+    const m2 = b.match(/^([A-D])(\d+)$/);
+    if (!m1 || !m2) return null;
+    const vals = [];
+    for (let r = Number(m1[2]); r <= Number(m2[2]); r++) {
+      for (let c = m1[1].charCodeAt(0); c <= m2[1].charCodeAt(0); c++) {
+        const v = cellValue(String.fromCharCode(c) + r);
+        if (v !== null && typeof v === 'number') vals.push(v);
+      }
+    }
+    return vals;
+  }
+  function evalFormula(expr) {
+    const sum = expr.match(/^SUM\(([A-D]\d+):([A-D]\d+)\)$/i);
+    if (sum) {
+      const vals = rangeValues(sum[1].toUpperCase(), sum[2].toUpperCase());
+      if (vals === null) return '#ERR';
+      return vals.reduce((a, b) => a + b, 0);
+    }
+    const avg = expr.match(/^AVERAGE\(([A-D]\d+):([A-D]\d+)\)$/i);
+    if (avg) {
+      const vals = rangeValues(avg[1].toUpperCase(), avg[2].toUpperCase());
+      if (vals === null || vals.length === 0) return '#ERR';
+      return vals.reduce((a, b) => a + b, 0) / vals.length;
+    }
+    const bin = expr.match(/^([A-D]\d+|\d+(?:\.\d+)?)\s*([+\-*/])\s*([A-D]\d+|\d+(?:\.\d+)?)$/);
+    if (bin) {
+      const left = /^[A-D]\d+$/.test(bin[1]) ? cellValue(bin[1]) : Number(bin[1]);
+      const right = /^[A-D]\d+$/.test(bin[3]) ? cellValue(bin[3]) : Number(bin[3]);
+      if (left === null || right === null) return '#ERR';
+      if (bin[2] === '+') return left + right;
+      if (bin[2] === '-') return left - right;
+      if (bin[2] === '*') return left * right;
+      if (bin[2] === '/') return right === 0 ? '#ERR' : left / right;
+    }
+    const ref = expr.match(/^([A-D]\d+)$/);
+    if (ref) {
+      const v = cellValue(ref[1]);
+      return v === null ? '#ERR' : v;
+    }
+    return '#ERR';
+  }
+  // Re-evaluate every formula. Raw formulas live in dataset.formula,
+  // computed results in dataset.computed, and the visible input shows
+  // the computed result. Several passes resolve formulas that depend
+  // on other formula cells.
+  function recalc() {
+    Object.values(cells).forEach((input) => {
+      if (input.dataset.formula) input.value = input.dataset.formula;
+    });
+    for (let pass = 0; pass < 10; pass++) {
+      let changed = false;
+      Object.values(cells).forEach((input) => {
+        const raw = input.value.trim();
+        if (!raw.startsWith('=')) return;
+        input.dataset.formula = raw;
+        const v = evalFormula(raw.slice(1).replace(/\s+/g, ''));
+        const shown = String(v);
+        if (input.dataset.computed !== shown) {
+          input.dataset.computed = shown;
+          changed = true;
+        }
+      });
+      if (!changed) break;
+    }
+    Object.values(cells).forEach((input) => {
+      if (input.dataset.formula) input.value = input.dataset.computed || '';
+    });
+    document.getElementById('status').textContent = 'Recalculated.';
+  }
+</script>
+</body>
+</html>
