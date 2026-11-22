@@ -2,7 +2,7 @@
 
 - Worker: C5-P9-EVIDENCE, reporting to COORD-CLICK-5 only. Independent evidence work. I did not do the flip, the input fix, or the reopen.
 - Branch: todolist-push. Start HEAD a6dfa3b at 14:09 +07. HEAD moved to f51bca5 during this task (coordinator log commit), so the work below was committed on top of f51bca5 after a fast-forward.
-- Task start: 2026-11-22 14:09 +07. Task end: 2026-11-22 14:13 +07. Elapsed about 4 minutes of work, plus the coordinator handoff time. No 15-minute stall at any point.
+- Task start: 2026-11-22 14:09 +07. Task end: 2026-11-22 14:14 +07. Elapsed about 5 minutes. No 15-minute stall at any point.
 - No em dash or en dash anywhere in this file.
 - Audit read: docs/batch12-task3-cb8-audit-20261122.md, fetched read-only from origin/main (main HEAD 6f80a50 at fetch time). Both revocations rest on the same single gap: the P9 PNGs were missing from the repo. The numbers were verified correct from the raw JSONs.
 
@@ -16,7 +16,8 @@
 - 14:10 +07 (T+1 min): checked the run JSONs for (b1) and reopen. All 15 outcomes are sent and the messages match the bubbles visible in the PNGs. JSON p9 field is null in every JSON, so the PNG paths come from the audit repair list filename convention, recorded in the manifest.
 - 14:10 +07 (T+1 min): SSH to laptop via ~/workspace/ssh-laptop.sh. /tmp/c5-focusenter.mjs EXISTS: 2478 bytes, 42 lines, sha256 94ee467ed3067e044491ad19153c24b73d574a8106a5367db454c0e47e1a695f, mtime Nov 22 12:38. Not lost. Copied it verbatim to improvements/s2-flip-b1-runs/c5-focusenter.mjs. First copy hashed wrong (2479 bytes, extra backslash in the text field). Fixed the single byte and re-verified: 2478 bytes, sha256 matches the laptop file exactly.
 - 14:11 +07 (T+2 min): wrote improvements/s2-flip-p9-manifest.md with all 25 PNGs, sha256, size, run and browser, privacy disposition, and what each frame shows, plus the focusenter note. Verified every manifest row against disk with a section-aware script: 25 rows checked, all verified True. No em dash or en dash in the manifest (grep exit 1, zero matches).
-- 14:12 +07 (T+3 min): wrote this log. Staged 28 files with explicit pathspec, verified each staged, committed as 515f80c, amended the log with the hash, pushed, verified with git ls-remote (see commit record below).
+- 14:13 +07 (T+4 min): amended the log with the commit hash and pushed. The amend re-hashed the commit from 515f80c to 3ef8f55, which made the hash written in the log stale, so a correction commit followed.
+- 14:14 +07 (T+5 min): corrected the commit record in this log to name 3ef8f55 as the evidence commit, committed that correction alone with an explicit pathspec, pushed, and verified with git ls-remote.
 
 ## Per-PNG privacy disposition
 
@@ -41,6 +42,6 @@ Nothing. No PNG was excluded and none was cropped. The only files committed are 
 ## Commit record
 
 - Staging: git add -f with explicit pathspec for the 25 PNGs, the manifest, the focusenter copy, and this log. Verified with git status that each file was actually staged (plain git add would have silently skipped the gitignored PNGs).
-- Commit: 515f80c, "C5-P9-EVIDENCE: commit 25 P9 screenshots plus manifest and focusenter helper", 28 files changed, 152 insertions, on todolist-push on top of f51bca5. Parent f51bca5 was the coordinator log commit that landed while this task ran; the branch was already up to date with it before staging, so no rebase was needed.
-- Push: git push origin todolist-push at 14:13 +07, then git ls-remote origin todolist-push returned 515f80c as the branch head, confirming the push landed.
+- Commit: 3ef8f55, "C5-P9-EVIDENCE: commit 25 P9 screenshots plus manifest and focusenter helper", 28 files changed, 152 insertions, on todolist-push on top of f51bca5. The first commit was 515f80c; amending the log to record the hash re-hashed it to 3ef8f55, and this log was corrected to name 3ef8f55 in a follow-up commit (see git log for that correction commit).
+- Push: git push origin todolist-push at 14:13 +07 (f51bca5..3ef8f55), then git ls-remote origin todolist-push returned 3ef8f5564afd2affc8900b160fe3df8683c4b077 as the branch head, confirming the push landed. The correction commit was pushed separately after that and verified the same way.
 - Unrelated working tree changes were NOT committed: pre-existing modified scripts/* files and other untracked improvements/* files belong to other workers and were left untouched.
