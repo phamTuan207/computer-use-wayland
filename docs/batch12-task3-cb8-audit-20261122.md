@@ -14,8 +14,8 @@
 | improvements/s2-flip-reopen-runs/run-1..5.json | todolist-push, in commit 1a3356d | All 5 runs, both browsers, every field below |
 | improvements/worker-click5-s2-reopen-log.md | commit 1a3356d, 346 lines, hash recorded in 212e0ad | Run table, section 5 P9 review, section 6 verdict, section 8 commit record |
 | improvements/s2-flip-b1-runs/run-1..5.json | todolist-push, in commit 4bd6292 range | All 5 scored (b1) runs, Chromium only |
-| improvements/s2-flip-b1-runs/run-2..5-aborted.json | todolist-push, in commit be2371e range | All 4 aborted first attempts |
-| improvements/worker-click5-input-fix-log.md | commit 4bd6292, 523 lines, hash recorded in 030c227 | (b1) section, abort disclosure, section 7.5 P9 review, section 8 commit record |
+| improvements/s2-flip-b1-runs/run-2..5-aborted.json | todolist-push, in commit 4bd6292 | All 4 aborted first attempts |
+| improvements/worker-click5-input-fix-log.md | commit 4bd6292, 523 lines, hash recorded in 030c227 | (b1) section, abort disclosure, section 7.5 P9 review, section 9 commit record |
 | scripts/s2_flip_live.py | todolist-push HEAD 4305dcb | build_program_set_value and focus_enter docstrings, LAPTOP_FOCUSENTER path |
 | git rev-list --all --objects, grep p9 | whole repo history | Whether any P9 PNG object exists anywhere |
 
@@ -66,7 +66,7 @@ Checks run:
 - git ls-tree at todolist-push HEAD 4305dcb lists only run-1..5.json. No PNG.
 - git rev-list --all --objects, grep p9, returns nothing. No P9 PNG object exists in any commit in the whole repo history.
 
-The reopen log section 8 says the PNGs were "to be committed with this log". They were not committed. The log section 5 claims "P9 PASS 10/10" from reading the PNGs, with one prose description per run. Prose is the claim itself, not evidence for it. The JSON field p9.ok True only proves the capture call returned ok. It does not prove any reviewer read the image.
+The reopen log section 8 says the PNGs were "to be committed with this log". They were not committed. The log section 5 claims "P9 PASS 10/10" from reading the PNGs, with one prose description per run. Prose is the claim itself, not evidence for it. The JSON field p9.<browser>.ok True only proves the capture call returned ok. It does not prove any reviewer read the image.
 
 This matters because P9 is a scoring condition, not a nicety. The log section 0 states it plainly: one final screenshot per run, reviewed before scoring, and any DOM-vs-render mismatch FAILS the run (the B1 condition). V12 and CB-1 both read the DOM. Neither checks rendering. So the render half of "DOM and render agree" is unverified for all 10 sends. A PASS verdict whose render check cannot be checked by any reviewer does not meet CB-8.
 
@@ -99,7 +99,7 @@ Per run, Chromium only, all 5 scored runs:
 | 4 | ok True, completed 2, dom_act 7 ms, elapsed 102.8 ms | focus_enter ok True, enter ok True 18 ms | all True | found True attempt 1 items 50 | pre 0, delayed 1 |
 | 5 | ok True, completed 2, dom_act 8 ms, elapsed 104.6 ms | focus_enter ok True, enter ok True 20 ms | all True | found True attempt 1 items 52 | pre 0, delayed 1 |
 
-- Program elapsed range 91.575 to 106.622 ms. The log figure of 91.6 to 106.6 ms is correct.
+- Program elapsed range 91.575 to 106.622 ms, recomputed from the raw JSONs. The reopen log section 0 line 32 restates the same range as 91.6 to 106.6 ms; the input-fix log does not state this range.
 - Model calls 0 in all 5 runs. dry_run False in all 5 runs. program_variant "set_value" in all 5 runs.
 - Outcome "sent" in 5 of 5. Messages C5-B1-R1 to R5-CHROMIUM-IGNORE-TEST, each exactly once.
 - The (b1) shape is independently re-proven by the reopen Chromium halves: 5 of 5 sent with set_value, focus_enter ok True (enter 21 to 25 ms), CB-1 all True, V12 attempt 1, pre 0, delayed 1. Same mechanism, same outcome measures, a second measurement.
@@ -131,7 +131,7 @@ Checks run:
 
 - git ls-tree at todolist-push HEAD 4305dcb for improvements/s2-flip-b1-runs lists only run-1..5.json and run-2..5-aborted.json. No PNG.
 - git rev-list --all --objects, grep p9, returns nothing. No P9 PNG object exists in any commit in the whole repo history.
-- The input-fix log section 8 says the PNGs were "to be committed with this log". They were not committed. Its section 7.5 claims "P9 PASS all 5 runs" from reading them. As with claim (a), prose is the claim, not evidence for it, and the JSON p9.ok True only proves the capture call returned ok.
+- The input-fix log section 9 says the PNGs were "to be committed with this log". They were not committed. Its section 7.5 claims "P9 PASS all 5 runs" from reading them. As with claim (a), prose is the claim, not evidence for it, and the JSON p9.<browser>.ok True only proves the capture call returned ok.
 
 The same scoring-condition argument applies: P9 is the render check, and the render half of the (b1) result is unverified.
 
