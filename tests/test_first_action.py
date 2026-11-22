@@ -80,6 +80,11 @@ class FakeOverlay:
 class FakeCu:
     """Stand-in for the cu module: no desktop, no Hyprland."""
 
+    # Mirrors scripts/cu.py CAPTURE_MAX_WIDTH (S0): first_action
+    # reads cu.CAPTURE_MAX_WIDTH for its captures, so the fake must
+    # carry the same constant or every run dies with AttributeError.
+    CAPTURE_MAX_WIDTH = 960
+
     def __init__(self, tmp):
         self.tmp = Path(tmp)
         self.state = self.tmp / 'state'
@@ -781,16 +786,19 @@ class TestRun(unittest.TestCase):
     def _write_window_obs(self, obs_id, age_s=10, scope='window'):
         # A production-shaped window (or screen) observation: fresh,
         # with scope, image size, region, and window bounds.
+        # scope=None writes a scope-less meta (a pre-scope build):
+        # it still carries a window and bounds, just no scope field.
+        meta = {'id': obs_id, 'image': '/x.jpg',
+                'monitor_box': [0, 0, 1920, 1200],
+                'window': '0x55705383d420',
+                'window_bounds': [2533, 914, 901, 1176],
+                'image_size': [901, 1176],
+                'region': [2533, 914, 901, 1176],
+                'created': time.time() - age_s}
+        if scope is not None:
+            meta['scope'] = scope
         path = Path(self.tmp.name) / ('obs-' + obs_id + '.json')
-        path.write_text(json.dumps(
-            {'id': obs_id, 'image': '/x.jpg',
-             'monitor_box': [0, 0, 1920, 1200],
-             'scope': scope,
-             'window': '0x55705383d420',
-             'window_bounds': [2533, 914, 901, 1176],
-             'image_size': [901, 1176],
-             'region': [2533, 914, 901, 1176],
-             'created': time.time() - age_s}))
+        path.write_text(json.dumps(meta))
         return str(path)
 
     def test_stale_given_observation_refused_loudly_typing_batch(self):
@@ -1051,6 +1059,76 @@ class TestRun(unittest.TestCase):
         self.assertIn('screen observations support pointer actions',
                       env['error'])
         self.assertEqual(self.fake_overlay.holders, {})
+
+    def test_scope_after_prefers_result_after_for_scopeless_window_meta(self):
+        # TESTREPAIR (round 3, RT item 12 residual): a scope-less
+        # WINDOW meta must prefer a correct window-scope result_after
+        # instead of discarding it for the screen capture. The input
+        # observation carries a window but no scope field (pre-scope
+        # build); the session result carries desktop_act's
+        # window-scope after. The envelope 'after' must be that
+        # result_after, with zero fresh window observes: the correct
+        # after is reused, not recaptured.
+        obs = self._write_window_obs('win-obs-4', scope=None)
+        code, env, _ = self._run(
+            [{'type': 'click', 'x': 250, 'y': 1037},
+             {'type': 'type', 'text': 'hi'}],
+            (0, json.dumps({'ok': True, 'completed': 2,
+                            'after': {'id': 'sess-after-1',
+                                      'observation': '/tmp/sess-after.json',
+                                      'scope': 'window'}}),
+             '', False, 0.5),
+            observation=obs)
+        self.assertEqual(code, 0)
+        self.assertTrue(env['ok'])
+        self.assertEqual(env['path'], 'session')
+        self.assertEqual(env['after']['id'], 'sess-after-1')
+        self.assertEqual(env['after_screen']['id'], 'a1b2c3d4e5f6')
+        self.assertNotIn(('window', '0x55705383d420'),
+                         self.fake_cu.observe_calls,
+                         'a correct window-scope after was discarded '
+                         'for a fresh capture')
+
+    def test_scope_after_mismatched_result_after_recaptures_window(self):
+        # TESTREPAIR (round 3, RT item 12 coverage): a screen-scope
+        # result_after given a window-scope input does NOT match, so
+        # the envelope 'after' is captured fresh in the input window
+        # scope, not the screen capture and not the mismatched after.
+        obs = self._write_window_obs('win-obs-5')
+        code, env, _ = self._run(
+            [{'type': 'click', 'x': 250, 'y': 1037},
+             {'type': 'type', 'text': 'hi'}],
+            (0, json.dumps({'ok': True, 'completed': 2,
+                            'after': {'id': 'sess-after-screen',
+                                      'observation': '/tmp/sess.json',
+                                      'scope': 'screen'}}),
+             '', False, 0.5),
+            observation=obs)
+        self.assertEqual(code, 0)
+        self.assertTrue(env['ok'])
+        self.assertEqual(env['path'], 'session')
+        self.assertEqual(env['after']['id'], 'win-after-1')
+        self.assertEqual(env['after_screen']['id'], 'a1b2c3d4e5f6')
+
+    def test_scope_after_screen_input_reuses_screen_without_recapture(self):
+        # TESTREPAIR (round 3, RT item 12 coverage): a screen-scope
+        # input with no result after reuses the screen capture as
+        # its scope-matching after, with no extra window observe:
+        # the screen capture IS its scope-matching after.
+        obs = self._write_window_obs('scr-obs-2', scope='screen')
+        code, env, _ = self._run(
+            [{'type': 'click', 'x': 100, 'y': 100}],
+            (0, '{"ok": true, "completed": 1}', '', False, 0.5),
+            observation=obs)
+        self.assertEqual(code, 0)
+        self.assertTrue(env['ok'])
+        self.assertEqual(env['path'], 'session')
+        self.assertEqual(env['after']['id'], 'a1b2c3d4e5f6')
+        self.assertEqual(env['after_screen']['id'], 'a1b2c3d4e5f6')
+        self.assertNotIn(('window', '0x55705383d420'),
+                         self.fake_cu.observe_calls,
+                         'a screen input took a needless window '
+                         'recapture')
 
     def test_session_ime_state_trace_surfaced_in_envelope(self):
         # CLICK-PROBE Stage A: ime_state_trace was absent from act-now

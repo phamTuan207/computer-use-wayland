@@ -334,6 +334,43 @@ def _read_given_observation(cu, observation_path, deadline_s):
     return meta, None
 
 
+def _scope_after(cu, env, meta, result_after, screen_meta):
+    """The scope-matching after-capture for the envelope.
+
+    AMEND4 item 12 (CL1-SWEEP): act-now used to capture its envelope
+    after-image with observe_screen regardless of the input scope,
+    overwriting desktop_act's scope-matching after-capture, so EVERY
+    act-now after-image was screen-scoped by construction and reusing
+    one for a key/type step always failed. This helper returns the
+    scope-matching capture: the action result's after when it is a
+    dict whose scope matches the input observation's scope
+    (desktop_act already captures in the input scope, so this costs
+    no extra capture); otherwise a fresh capture in the input scope
+    (a window observation re-observes its window). A screen-scope
+    input reuses the screen capture, which IS its scope-matching
+    after. A scope-less meta WITH a window is treated as window
+    scope (TESTREPAIR item 12 residual): a window-scope
+    result_after is accepted, else a fresh window capture is taken.
+    A scope-less meta with no window reuses the screen capture.
+    Returns a meta dict, or None when no scope-matching capture is
+    available.
+    """
+    input_scope = meta.get('scope')
+    is_window = (input_scope == 'window'
+                 or (input_scope is None and meta.get('window')))
+    if (isinstance(result_after, dict)
+            and result_after.get('scope') is not None
+            and (result_after.get('scope') == input_scope
+                 or (is_window
+                     and result_after.get('scope') == 'window'))):
+        return result_after
+    if is_window and meta.get('window'):
+        return cu.observe(env, meta['window'], crop=meta.get('crop'),
+                          max_width=meta.get('max_width') or cu.CAPTURE_MAX_WIDTH,
+                          activate=False)
+    return screen_meta
+
+
 def _dispatch_ms(order_wall_iso, laptop_wall_iso):
     """VM-to-laptop dispatch in ms (CB-7): wall time from the user
     order on the VM to this process starting on the laptop. That span
@@ -389,31 +426,6 @@ def _capture_params(meta):
     return {'max_width': meta.get('max_width'),
             'jpeg_quality': meta.get('jpeg_quality'),
             'jpeg_subsampling': meta.get('jpeg_subsampling')}
-    """The scope-matching after-capture for the envelope.
-
-    AMEND4 item 12 (CL1-SWEEP): act-now used to capture its envelope
-    after-image with observe_screen regardless of the input scope,
-    overwriting desktop_act's scope-matching after-capture, so EVERY
-    act-now after-image was screen-scoped by construction and reusing
-    one for a key/type step always failed. This helper returns the
-    scope-matching capture: the action result's after when it is a
-    dict whose scope matches the input observation's scope
-    (desktop_act already captures in the input scope, so this costs
-    no extra capture); otherwise a fresh capture in the input scope
-    (a window observation re-observes its window). A screen-scope
-    input, or one with no scope field, reuses the screen capture,
-    which IS its scope-matching after. Returns a meta dict, or None
-    when no scope-matching capture is available.
-    """
-    if (isinstance(result_after, dict)
-            and result_after.get('scope') is not None
-            and result_after.get('scope') == meta.get('scope')):
-        return result_after
-    if meta.get('scope') == 'window' and meta.get('window'):
-        return cu.observe(env, meta['window'], crop=meta.get('crop'),
-                          max_width=meta.get('max_width') or cu.CAPTURE_MAX_WIDTH,
-                          activate=False)
-    return screen_meta
 
 
 def _fresh_observation(cu, env, screen, observation_path,
