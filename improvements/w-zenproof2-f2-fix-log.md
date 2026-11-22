@@ -319,14 +319,12 @@ uncommitted changes), new test file copied in:
 
 ## 7. Commits (todolist-push, ls-remote verified)
 
-- Code + tests: 2 files, 231 insertions, 17 deletions.
-- Log: this file.
-- Hash record: this section, updated after the push.
+- Code + tests: db21dd7 (2 files, 231 insertions, 17 deletions).
+- Log: 14d750b (this file).
+- Hash record: this section, commit below.
 - Other workers' dirty files left untouched and uncommitted:
-  improvements/c5-zenproof-runs/zen-tab.py,
-  tests/realistic/clone1-batch3/results.json,
-  tests/test_zenproof2_fix.py, and the untracked improvement
-  files. None of them are mine; none were staged.
+  tests/realistic/clone1-batch3/results.json, and the untracked
+  improvement files. None of them are mine; none were staged.
 - 0 em dash and 0 en dash in both changed files plus this log
   (grep count 0 each, 21:44:17 +07).
 
