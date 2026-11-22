@@ -225,6 +225,11 @@ class Harness:
         self.spans = []
         self.ssh_calls = []
         self.log_lines = []
+        # Sleeper pid of the current pill hold, set by cdp_pill_hold
+        # for the duration of the hold (None outside a hold). Lets
+        # send_browser re-check the exact holder key before the
+        # visible step (H1, Redteam amend2).
+        self._pill_sleep_pid = None
 
     def variant_for(self, browser):
         """Send program variant for one browser: 'fill' or 'set_value'.
@@ -623,18 +628,20 @@ class Harness:
                 % (self.PILL_SLEEP_SECONDS, LAPTOP_OVERLAY,
                    PILL_AGENT, PILL_METHOD))
 
-    def pill_release_cmd(self, pid=None):
+    def pill_release_cmd(self, pid):
         """SSH command that drops this harness's pill holder.
 
         Takes the sleeper pid from the matching acquire (parsed from
         PILL_SLEEP_PID=). The release passes the same --pid so exactly
-        this run's key is removed, then kills the sleeper. Without a
-        pid the release would only remove the bare key and leave this
-        run's pid-keyed holder behind (E1); pass the pid.
+        this run's key is removed, then kills the sleeper. The pid
+        is required: there is no pid-less release anymore, because a
+        pid-less release only removes the bare key, which could be
+        another run's live bare holder (the bare-bare hazard, H2
+        Redteam amend2), while leaving this run's pid-keyed holder
+        behind. When the pid cannot be parsed, cdp_pill_hold
+        releases nothing and the daemon prunes the holder when the
+        sleeper expires.
         """
-        if pid is None:
-            return ('python3 %s release --agent %s --method %s'
-                    % (LAPTOP_OVERLAY, PILL_AGENT, PILL_METHOD))
         return ('python3 %s release --agent %s --method %s --pid %d; '
                 'kill %d 2>/dev/null || true'
                 % (LAPTOP_OVERLAY, PILL_AGENT, PILL_METHOD, pid, pid))
@@ -654,13 +661,18 @@ class Harness:
         (600s), and a stale S2-flip holder keeps the pill up until
         the next release or daemon restart, which is visible, not
         invisible. When the acquire succeeds but the sleeper pid
-        cannot be parsed from its output, the release falls back to
-        pid-less and cannot remove the pid-keyed holder; the note
-        records that, and the holder heals via prune when the
-        sleeper expires.
+        cannot be parsed from its output, NO release runs: a
+        pid-less release could delete another run's live bare holder
+        (the bare-bare hazard, H2 Redteam amend2) while leaving this
+        run's pid-keyed holder behind, so the holder is left to
+        prune when the sleeper expires. The parsed sleeper pid is
+        kept on self._pill_sleep_pid for the duration of the hold
+        so send_browser can re-check the exact holder key before
+        the visible step (H1).
         """
         held = False
         sleep_pid = None
+        self._pill_sleep_pid = None
         try:
             rc, out, err, _wall = self.ssh(
                 self.pill_acquire_cmd(), 'pill-acquire', timeout=60)
@@ -669,11 +681,14 @@ class Harness:
                 match = re.search(r'PILL_SLEEP_PID=(\d+)', out)
                 if match:
                     sleep_pid = int(match.group(1))
+                    self._pill_sleep_pid = sleep_pid
                 else:
                     self.note('pill acquire ok but no PILL_SLEEP_PID in '
-                              'output; release cannot find the pid-keyed '
-                              'holder (daemon prunes it when the sleeper '
-                              'expires): %s' % out.strip()[:200])
+                              'output; release skipped, no pid-less '
+                              'fallback (it could delete another run\'s '
+                              'bare holder); the daemon prunes this '
+                              'holder when the sleeper expires: %s'
+                              % out.strip()[:200])
             if not held:
                 self.note('pill acquire failed (best effort, send gate '
                           'still applies): rc=%d %s'
@@ -684,13 +699,39 @@ class Harness:
         try:
             yield held
         finally:
-            if held:
+            if held and sleep_pid is not None:
                 try:
                     self.ssh(self.pill_release_cmd(sleep_pid), 'pill-release',
                              timeout=60)
                 except Exception as exc:
                     self.note('pill release failed (ignored): %s'
                               % str(exc)[:200])
+            self._pill_sleep_pid = None
+
+    def pill_holder_alive(self, sleep_pid):
+        """Re-check this run's pill holder is still present (H1).
+
+        Runs overlay.py status on the laptop (read-only; cmd_status
+        prunes dead holders first, so a dead sleeper's key is gone
+        by the time the holders are reported) and checks the exact
+        key S2-flip:<sleep_pid> is in holders. Returns False when
+        the key is absent, when no pid is known (sleep_pid None:
+        the key cannot be identified, so it cannot be confirmed),
+        or when the check itself fails. Fail closed: an unconfirmed
+        holder aborts the send in send_browser.
+        """
+        if sleep_pid is None:
+            return False
+        try:
+            rc, out, err, _wall = self.ssh(
+                'python3 %s status' % LAPTOP_OVERLAY, 'pill-status',
+                timeout=60)
+            if rc != 0:
+                return False
+            holders = (json.loads(out.strip()).get('holders') or {})
+            return ('%s:%d' % (PILL_AGENT, sleep_pid)) in holders
+        except Exception:
+            return False
 
     def send_browser(self, browser, target_id, message):
         """One-shot code-exec send + independent V12 for one browser.
@@ -698,9 +739,28 @@ class Harness:
         The pill is held for the whole send (W-PILLCDP): the activate
         step, the program, and the V12 read. Best effort (see
         cdp_pill_hold); the cdp.mjs hook is the fail-closed gate for
-        the actual input.
+        the actual input. Before the first visible step (activate),
+        the holder is re-checked: if the sleeper died after the
+        acquire and the daemon pruned the holder, the send aborts
+        with outcome aborted-pill-lost and no visible action runs
+        (H1, Redteam amend2). A failed acquire still runs the body
+        (best effort, unchanged): the re-check only applies when
+        the acquire reported held.
         """
-        with self.cdp_pill_hold():
+        t_send = time.monotonic()
+        with self.cdp_pill_hold() as held:
+            if held and not self.pill_holder_alive(self._pill_sleep_pid):
+                cfg = BROWSERS[browser]
+                self.note('pill holder lost between acquire and '
+                          'activate; aborting send before any visible '
+                          'action')
+                return {'browser': browser, 'label': cfg['label'],
+                        'endpoint': cfg['endpoint'], 'message': message,
+                        'model_calls': 0, 'target_id': target_id,
+                        'program_variant': self.variant_for(browser),
+                        'outcome': 'aborted-pill-lost',
+                        'error': 'S2-flip pill holder gone before activate',
+                        'wall_ms': round((time.monotonic() - t_send) * 1000.0, 1)}
             return self._send_browser_inner(browser, target_id, message)
 
     def _send_browser_inner(self, browser, target_id, message):

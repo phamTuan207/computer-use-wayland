@@ -387,6 +387,34 @@ def test_hold_passes_calling_pid():
         'release must drop exactly the key acquire added'
 
 
+def test_hold_acquire_failure_raises_without_release():
+    """C2: when the acquire subprocess fails, hold() raises
+    CalledProcessError before yielding, with exactly 1 subprocess
+    call and no release call (nothing was held, so nothing to
+    release). The subprocess calls are captured, not executed, so
+    no real holder is touched."""
+    import subprocess as sp
+    seen = []
+
+    orig_run = sp.run
+    try:
+        def fake_run(argv, **kwargs):
+            seen.append(list(argv))
+            if 'acquire' in argv:
+                raise sp.CalledProcessError(1, argv)
+            raise AssertionError('unexpected subprocess call: %r' % (argv,))
+        sp.run = fake_run
+        try:
+            with overlay.hold('Muse', 'CDP'):
+                raise AssertionError('hold() must raise before yielding')
+        except sp.CalledProcessError:
+            pass
+    finally:
+        sp.run = orig_run
+    assert len(seen) == 1, seen
+    assert seen[0][2] == 'acquire', seen
+
+
 def test_wayland_env_keeps_caller_display():
     """C2: a caller-provided WAYLAND_DISPLAY is never clobbered by
     signature discovery; the discovered display is only the fallback
@@ -607,6 +635,7 @@ if __name__ == '__main__':
     test_cmd_release_pid_none_keeps_pid_keyed_holder()
     test_cmd_acquire_daemon_failure_keeps_concurrent_holder()
     test_hold_passes_calling_pid()
+    test_hold_acquire_failure_raises_without_release()
     test_wayland_env_keeps_caller_display()
     test_holders_persist_json()
     test_prune_dead_pid()
