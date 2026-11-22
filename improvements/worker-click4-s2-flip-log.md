@@ -238,7 +238,7 @@ this file. No personal info.
 
 - Chromium (127.0.0.1:9223): broker session s2-verify, tabs
   returns exactly 1 tab (D1374C7C994D3DA72678E20C7FD099A0,
-  "Chat — clone2"), observe on that tab returns 70 elements,
+  "Chat - clone2"), observe on that tab returns 70 elements,
   truncated False, composer present. Session finished clean,
   guardian clean. PASS.
 - Brave ([::1]:9223): see section 3.8 (relaunch required first).
@@ -266,7 +266,7 @@ this file. No personal info.
   /tmp/s2-brave-debug.log. New main PID 987006, cmdline
   carries the flag, ver 157.1.99.57.
 - Verified: [::1]:9223 serves exactly 1 tab,
-  06074E282C000A95EF89CC9EBB8F9713, "(2) Chat — clone1",
+  06074E282C000A95EF89CC9EBB8F9713, "(2) Chat - clone1",
   https://muse.ai/?__pwa=1. Login intact (the thread is
   loaded, 2 unread). Chromium 127.0.0.1:9223 untouched
   (4 tabs: clone2 plus 3 Stripe iframe tabs).
