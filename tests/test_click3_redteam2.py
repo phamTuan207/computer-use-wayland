@@ -729,6 +729,98 @@ class CdpSetValueTests(unittest.TestCase):
                          'whitespace-only change fired no events: %s'
                          % (out['whitespace_change'],))
 
+    @unittest.skipUnless(NODE, 'node is required to run production JS')
+    def test_set_value_maxlength_uses_sanitized_length(self):
+        # TESTREPAIR (round 3, RT item 8): the maxLength pre-check
+        # measured the RAW text, so it refused a set the engine
+        # would accept: textarea maxLength 5 with 'ab\r\ncd' (raw 6,
+        # sanitized 'ab\ncd' 5 chars) and input maxLength 4 with
+        # 'ab\ncd' (raw 5, sanitized 'abcd' 4). The pre-check must
+        # compare sanitized.length. Same driver shape as the F1 test
+        # above, plus a maxLength per case.
+        src = (ROOT / 'scripts' / 'cdp.mjs').read_text()
+        start = src.index('const source=`') + len('const source=`')
+        template = src[start:src.index('`;', start)]
+        hstart = src.index('const HIT_USABLE=`') + len('const HIT_USABLE=`')
+        hit_usable = src[hstart:src.index('`;', hstart)]
+        self.assertIn('oldValue', template)
+        driver = (
+            "var __tpl = " + json.dumps(template) + ";\n"
+            "var __hitUsableSrc = " + json.dumps(hit_usable) + ";\n"
+            "var HIT_USABLE = eval(__hitUsableSrc);\n"
+            "var __current = null;\n"
+            "function pageState(snapshot, locator){ return __current; }\n"
+            "var request = {snapshot: 'before'};\n"
+            "var locator = JSON.stringify({ref: 'e1'});\n"
+            "var document = {elementFromPoint: function(x, y){"
+            " return __current; }};\n"
+            "function getComputedStyle(e){"
+            " return {display: 'block', visibility: 'visible'}; }\n"
+            "var innerWidth = 100, innerHeight = 100;\n"
+            "class InputEvent { constructor(t, o){ this.type = t;"
+            " this.isTrusted = false; Object.assign(this, o || {}); } }\n"
+            "class Event { constructor(t, o){ this.type = t;"
+            " this.isTrusted = false; Object.assign(this, o || {}); } }\n"
+            "class FakeInput { get value(){ return this._value || ''; }"
+            " set value(v){"
+            " this._value = String(v).replace(/[\\r\\n]/g, ''); } }\n"
+            "class FakeTextarea { get value(){ return this._value || ''; }"
+            " set value(v){"
+            " this._value = String(v).replace(/\\r\\n?/g, '\\n'); } }\n"
+            "var HTMLInputElement = FakeInput;"
+            " var HTMLTextAreaElement = FakeTextarea;\n"
+            "function makeEl(tag, type, initial, maxLength){\n"
+            " var proto = tag === 'INPUT' ? FakeInput.prototype"
+            " : FakeTextarea.prototype;\n"
+            " var el = Object.create(proto);\n"
+            " el.tagName = tag; el.type = type || 'text';\n"
+            " el._value = initial || ''; el.disabled = false;\n"
+            " el.readOnly = false; el.maxLength = maxLength;\n"
+            " el.isConnected = true; el.events = [];\n"
+            " el.matches = function(s){ return false; };\n"
+            " el.getAttribute = function(k){ return null; };\n"
+            " el.closest = function(s){ return null; };\n"
+            " el.contains = function(o){ return o === el; };\n"
+            " el.getClientRects = function(){ return [{}]; };\n"
+            " el.getBoundingClientRect = function(){ return {left: 10,"
+            " top: 10, right: 30, bottom: 30, width: 20, height: 20}; };\n"
+            " el.dispatchEvent = function(ev){"
+            " el.events.push({type: ev.type, trusted: ev.isTrusted});"
+            " return true; };\n"
+            " return el; }\n"
+            "function runCase(tag, type, initial, text, maxLength){\n"
+            " var el = makeEl(tag, type, initial, maxLength);\n"
+            " __current = el;\n"
+            " var text = JSON.stringify(text);\n"
+            " var __iife = eval('`' + __tpl + '`');\n"
+            " var res = eval(__iife);\n"
+            " return {ok: res.ok, error: res.error || null,"
+            " events: el.events.map(function(e){ return e.type; }),"
+            " value: el.value}; }\n"
+            "var out = {textarea_maxlen: runCase('TEXTAREA', null, '',"
+            " 'ab\\r\\ncd', 5),\n"
+            " input_maxlen: runCase('INPUT', 'text', '', 'ab\\ncd', 4),\n"
+            " textarea_over: runCase('TEXTAREA', null, '', 'ab\\r\\ncd', 4),\n"
+            " input_over: runCase('INPUT', 'text', '', 'abcd', 3)};\n"
+            "console.log(JSON.stringify(out));\n")
+        out = json.loads(_run_node(driver))
+        self.assertTrue(out['textarea_maxlen']['ok'],
+                        'textarea maxLength 5 refused text whose '
+                        'sanitized form is 5 chars: %s'
+                        % (out['textarea_maxlen'],))
+        self.assertEqual(out['textarea_maxlen']['value'], 'ab\ncd')
+        self.assertTrue(out['input_maxlen']['ok'],
+                        'input maxLength 4 refused text whose '
+                        'sanitized form is 4 chars: %s'
+                        % (out['input_maxlen'],))
+        self.assertEqual(out['input_maxlen']['value'], 'abcd')
+        self.assertFalse(out['textarea_over']['ok'])
+        self.assertEqual(out['textarea_over']['error'],
+                         'value exceeds maxlength')
+        self.assertFalse(out['input_over']['ok'])
+        self.assertEqual(out['input_over']['error'],
+                         'value exceeds maxlength')
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -476,7 +476,18 @@ async function assertAction(a) {
             const e=(${pageState.toString()})(${JSON.stringify(request.snapshot)},${locator});
             if(!/^(INPUT|TEXTAREA)$/.test(e.tagName)||e.tagName==='INPUT'&&!/^(text|search|tel|url|email)$/.test(e.type||'text'))return {ok:false,error:'unsupported field'};
             if(e.disabled||e.matches(':disabled')||e.readOnly||e.getAttribute('aria-disabled')==='true'||e.closest('[inert]'))return {ok:false,error:'field unavailable'};
-            if(e.maxLength>=0&&${text}.length>e.maxLength)return {ok:false,error:'value exceeds maxlength'};
+            // The engine sanitizes on assignment (HTML Standard
+            // value sanitization algorithm): a single-line input
+            // strips carriage returns and line feeds, a textarea
+            // normalizes CRLF and CR to LF. The maxLength pre-check
+            // must measure the SANITIZED length, or it refuses a
+            // set the engine would accept. Char codes are used
+            // instead of regex escapes so this template needs no
+            // backslash doubling when it is re-evaluated.
+            const sanitized=e.tagName==='INPUT'
+              ?${text}.split(String.fromCharCode(13)).join('').split(String.fromCharCode(10)).join('')
+              :${text}.split(String.fromCharCode(13,10)).join(String.fromCharCode(10)).split(String.fromCharCode(13)).join(String.fromCharCode(10));
+            if(e.maxLength>=0&&sanitized.length>e.maxLength)return {ok:false,error:'value exceeds maxlength'};
             const r=e.getBoundingClientRect(),style=getComputedStyle(e),x=r.left+r.width/2,y=r.top+r.height/2,hit=document.elementFromPoint(x,y);
             if(!e.getClientRects().length||!r.width||!r.height||style.display==='none'||style.visibility!=='visible'||x<0||x>=innerWidth||y<0||y>=innerHeight||!(${HIT_USABLE})(e,hit))return {ok:false,error:'field is not visible'};
             // No prefill early return: set_value always performs the
@@ -489,18 +500,10 @@ async function assertAction(a) {
             const proto=e.tagName==='INPUT'?HTMLInputElement.prototype:HTMLTextAreaElement.prototype;
             const setter=Object.getOwnPropertyDescriptor(proto,'value')?.set;if(!setter)return {ok:false,error:'field setter unavailable'};
             const oldValue=e.value;
-            // The engine sanitizes on assignment (HTML Standard
-            // value sanitization algorithm): a single-line input
-            // strips carriage returns and line feeds, a textarea
-            // normalizes CRLF and CR to LF. The read-back must
-            // compare against the SANITIZED form, or a set that
-            // landed (normalized) still reports 'value
-            // verification failed'. Char codes are used instead
-            // of regex escapes so this template needs no
-            // backslash doubling when it is re-evaluated.
-            const sanitized=e.tagName==='INPUT'
-              ?${text}.split(String.fromCharCode(13)).join('').split(String.fromCharCode(10)).join('')
-              :${text}.split(String.fromCharCode(13,10)).join(String.fromCharCode(10)).split(String.fromCharCode(13)).join(String.fromCharCode(10));
+            // The read-back compares against the SANITIZED form
+            // (computed above, before the maxLength pre-check), or
+            // a set that landed (normalized) still reports 'value
+            // verification failed'.
             attempted=true;setter.call(e,${text});
             if(!e.isConnected||e.value!==sanitized)return {ok:false,error:'value verification failed',mutation_may_have_occurred:true};
             // Snapshot contract (tests/cdp_snapshot.mjs): unchanged
