@@ -4,7 +4,11 @@ Date: 2026-11-22, 08:51-09:30 +07. Verdict: still NOT READY.
 Count after the fix pass: 2 fully closed, 3 partial, 5 open,
 2 standing. Updated by batch 12 task 2 on 2026-11-22 (see the
 dated note at the end): new count 3 fully closed, 4 partial,
-3 open, 2 standing, verdict still NOT READY. The DOT 9 task 2 readiness check
+3 open, 2 standing, verdict still NOT READY. Updated again
+by the batch 12 task 2 fix pass on 2026-11-22 (see the
+fix-pass dated note at the end): new count 3 fully closed,
+5 partial, 2 open, 2 standing, verdict still NOT READY.
+The DOT 9 task 2 readiness check
 (docs/clone2-live-run-readiness-clone1-20261122.md, 2afbde5 + fix
 7d256ae) returned NOT READY with 11 missing items. The first
 closeout claimed 4 closed and 7 open; council 1, 2, 3 and the
@@ -16,12 +20,14 @@ Numbering in this report matches runbook section 12 exactly
 fully closed are readiness 1 (section 9 / AMEND4 item 12) and
 readiness 9 (VISION 2 monitor + run log named); partial are
 readiness 2 (checklist 10 contradictions), 3 (10.3 definition
-+ dry probe), 5 (live-shape procedures); open are readiness 4
-(input name), 6 (method approval), 7 (thread URLs/selectors),
-8 (unbuilt features), plus new item 10 (cross-origin frames,
-from the DOM/a11y crawl log, not in the readiness report);
-standing are readiness 10 (live lane free) and 11 (90% bar
-live measurement).
++ dry probe), 4 (input name, procedure mechanized in the fix
+pass, live value owed), 5 (live-shape procedures); open are
+readiness 6 (method approval), 7 (thread URLs/selectors),
+plus new item 10 (cross-origin frames, from the DOM/a11y
+crawl log, not in the readiness report); standing are
+readiness 10 (live lane free) and 11 (90% bar live
+measurement). (Readiness 8, unbuilt features, is closed as
+a build since batch 12 task 2.)
 
 Sources verified for this closeout (all read before writing):
 - Readiness report: docs/clone2-live-run-readiness-clone1-20261122.md,
@@ -278,7 +284,9 @@ logs and artifacts in ~/workspace/tools/batch12-t2/.
   --strict-input-name so a wrongly named input fails closed
   instead of being typed into, but the plan's input_name is
   still "Message" from visual-only evidence; only the live
-  harvest-first DOM read closes it.
+  harvest-first DOM read closes it. (Fix pass, same day:
+  item 6 moved to PARTIAL, see the fix-pass note below;
+  the procedure is mechanized, the live value is owed.)
 - Item 7 (a11y dry probe) OPEN: still UNRUN. Probe commands
   re-verified against the code at todolist-push tip da46c4c
   (a11y.py observe() filter and query() unchanged, cu.py
@@ -295,3 +303,68 @@ logs and artifacts in ~/workspace/tools/batch12-t2/.
   accuracy >= 90%, wall time end to end), stop conditions,
   log preservation. Hard constraint kept: rung 2 acceptance
   runs on the real clone threads, not the fixture.
+
+## Batch 12 task 2 fix-pass update, 2026-11-22
+
+New count: 3 fully closed, 5 partial, 2 open, 2 standing.
+Verdict: still NOT READY. Numbering still matches runbook
+section 12 exactly. Council of 3 plus independent redteam
+ran on the batch 12 task 2 build; verdicts: council 1
+ISSUES (1 critical, 1 major, 1 minor, plus 2 notes),
+council 2 ISSUES (minor only, 5 findings), redteam
+(council 3) BROKEN (13 findings F1-F13, 3 HIGH), redteam
+4/4 ISSUES (9 corrections). Every correction was applied
+in script commits c1b623b and 45315d5 and in the runbook,
+workflow doc and design doc; full per-finding record in
+docs/clone2-batch12-readiness-closeout-20261122.md,
+section 7; evidence logs and artifacts in
+~/workspace/tools/batch12-t2-fixpass/.
+
+- Item 9 (script features) CLOSED as a build, hardened:
+  exact +1 textNew gate with duplicate-bubble failure,
+  run registry refusing a reused run_id in a fresh workdir,
+  zero-send retries score FAIL unless --allow-resume, a
+  failed retry never overwrites a "sent" or "sending"
+  record, thread-missing fails fast (-1 preserved), D3
+  compares tag, aria-label and placeholder separately,
+  HCU guard compares against the harvested center unless
+  scrolled, V11 observer is thread-scoped and counts
+  mutation records, cross-window check matches foreign
+  bubbles by containment, validate_plan requires distinct
+  messages, ledger writes are locked, disk-space guard
+  plus atomic results.json write, --visions-used flag,
+  mechanized harvest name check. Fix-pass driver 11/11
+  PASS (wall 54.0356 s); baselines re-verified (happy
+  PASS 10.3707 s, stale PASS 7.1252 s, no-send FAIL as
+  designed 9.3197 s, strict-bad FAIL as designed,
+  iframe HARVEST-ONLY, once and b12t2 drivers PASS).
+  What remains is live proof.
+- Item 6 (input name) moved OPEN to PARTIAL: HARVEST_JS
+  now records aria-label and placeholder as separate
+  fields, --strict-input-name checks the harvested names
+  in harvest mode (mechanized, no operator read needed
+  for the check), and the picked name, aria-label and
+  placeholder per window are logged and recorded in
+  results["harvest_inputs"]. What remains: the live value
+  itself, owed at run time by the harvest-first read.
+- Item 7 (a11y dry probe) OPEN: still UNRUN. Nothing in
+  the fix pass ran it.
+- Item 8 (method approval, thread URLs/selectors) OPEN:
+  coordinator decisions with no repo record yet. The
+  decision packet in the batch 12 report, section 3, was
+  extended with four items: run_id owner/value, option A
+  binary path and re-pin, per-browser debug ports,
+  live-lane-free confirmation (now 10 items).
+- Rung 2 procedure corrected in runbook section 14:
+  0-vision scoped to the step-2 run invocation (the
+  step-1 harvest read is pre-run preparation outside the
+  budget, recorded as 1 vision of preparation); step-2
+  command labeled as the option-A invocation with the CDP
+  substitution noted for option B; --visions-used 0 on the
+  command; wall time is the operator-side command wall
+  time; v11_mutation_flag left the pass criteria.
+
+What remains: gap 7 (a11y dry probe, UNRUN) and gap 8
+(coordinator decisions). The fix pass itself goes to a
+second council + redteam round before this closeout is
+treated as final.
