@@ -3862,3 +3862,23 @@ Muse: khong co yeu cau moi. Khong agent nao ket.
 Task 3 xong han, da commit 6 file: audit 119 dong, fix 12 sua, verdict giu nguyen (2 REVOKED, 1 UPHELD).
 Task 2 fix pass dang chay. Task 1 xong han da commit.
 Muse: khong co yeu cau moi. Khong agent nao ket.
+
+---
+
+# BATCH 10 - TONG KET 22/11/2026
+
+Task 1: kiem chung verdict S2 flip. DO NOT EXPAND DUNG. Median wall 33166.9 ms, Brave 5/5, Chromium 0/5, model call 0, per-send 5/10, per-run 0/5. Council 1, 2, 3 redo, redteam deu khop. Fix 5 sua. Bao cao docs/batch10-task1-s2flip-verify-20261122.md (132 dong).
+
+Task 2: review step 5 (76d0a56). 11 root cause that (12/14 check song sot, rut B6, B13, gop B3/B5). Cao 6 (B3, B4, B7, B8, B11, B14), trung binh 3, thap 2. 10 trong diff, B11 ngoai diff nhung that. Council 1, 2, 3, redteam xong. Fix 10/10. Bao cao docs/batch10-task2-step5-review-20261122.md (549 dong). Gioi han: fix pass xac minh bang doc code va grep, khong chay lai reproducer.
+
+Task 3: audit CB-8. (a) S2 Pick 1 REVOKED, (b) bench 2-vision UPHELD chi tren run moi d7d569b, (c) DOM-grounding REVOKED. Council 1, 2, 3, redteam deu khop. Fix 12 sua. Bao cao docs/batch10-task3-cb8-audit-20261122.md (119 dong).
+
+Open items, cho huong Muse: co che stale-rect UNKNOWN, blob bench tren main drift (e5681192 vs 80b00469), section-6 verify khong chay lai duoc vi results.json da mat, ke hoach khoi phuc chua ro ai chay rerun vi live run phai chay phia laptop.
+
+Batch 10 xong ca 3 task, tat ca bao cao da commit len main. Cho dot tiep theo.
+
+---
+
+11:47 ngày 22/11 - watchdog:
+Batch 10 xong han, da commit 6 file task 2, da viet tong ket. Ca 3 task xong.
+Muse: khong co yeu cau moi. Khong agent nao ket.
