@@ -86,29 +86,199 @@ this file. No personal info.
   is on. Broker stays for routing (tabs, observe) and P9 goes
   direct CDP. Harness v2 rewritten; 9/9 wiring tests still pass;
   /tmp/s2-p9.mjs copied to the laptop.
+- 09:50 +07, T+29m: wiring committed and pushed, 350934a
+  (ls-remote confirms). Laptop sync begins: 3 local files
+  preserved to /tmp/s2-flip-laptop-local-20261122/ (sha256 in
+  section 3.1); lease in /tmp rejected (unsafe_lease_directory),
+  lease moved to ~/.cache/agent-computer-use/; envelope needs
+  umask 077 (unsafe_file at 0644). Trivial broker task moves
+  the relay failed to finished (state finished, explicit_finish).
+  An exec service restart hit mid-chain; the follow-up status
+  call confirmed the chain had completed.
+- 09:51 +07, T+30m: laptop checkout switched to todolist-push,
+  HEAD 350934a. First sync attempt FAILS on the stale
+  native/indicator (555c7de0 vs ledger bf29c610); installed
+  tree untouched, relay not restarted. Root cause pinned by
+  staging-evidence.json (fresh build bf29c610, deterministic).
+- 09:57 +07, T+36m: natives rebuilt in the checkout
+  (scripts/build.py, /tmp/s2-build.log); checkout indicator
+  now bf29c610. Second sync SUCCEEDS 09:59 +07: release
+  ledger 20261122-095940-475319-350934a4bf, --check exit 0
+  (643 managed files), relay restarted to PID 983809, loaded
+  hash matches the source, started_git_head 350934a.
+- 10:00 +07, T+39m: Chromium observe re-verified on the new
+  relay (tabs 1, observe 70 elements, not truncated, session
+  finished clean). Brave SIGTERM (PID 940441, exit about 10s);
+  first relaunch fails (no Wayland display in the SSH env);
+  donor env from zen-bin fixes it; second relaunch 10:02 +07,
+  PID 987006, [::1]:9223 serves the clone1 tab
+  06074E282C000A95EF89CC9EBB8F9713, login intact. Stripe iframe
+  tabs force the harness filter to url.startswith
+  ('https://muse.ai/').
 
 ## 3. Laptop sync (step 8a pulled forward)
 
-- Laptop HEAD before: 56f5af4 (detached HEAD, "Record H6 prefetch
-  results"). Laptop HEAD after: (to be filled).
-- Divergence found at 09:30 +07, BEFORE any sync step: 56f5af4 is NOT
-  an ancestor of origin/todolist-push (ANCESTOR-NO), so a plain
-  fast-forward is impossible. The laptop checkout sits on a different
-  line (speed-swarm/harness-prefetch era). The sync therefore moves
-  the checkout to origin/todolist-push by branch switch, not by
-  fast-forward. The old HEAD stays recoverable via the reflog; the
-  pre-switch HEAD is recorded here (56f5af4).
-- Local modifications found on the laptop checkout (all preserved
-  BEFORE the switch, see below): improvements/live-test-log.md (+654
-  lines, Nov 19 watchdog entries, mtime 2026-11-20 14:41),
-  native/hyprglass-local-optics.lua (6 insertions, 1 deletion, mtime
-  2026-11-21 22:35), scripts/cu.py (OBSERVATION_MAX_AGE 90 to 120,
-  mtime 2026-11-20 18:04; this change is ALREADY upstream on
-  todolist-push, scripts/cu.py line 78 reads 120 there, so restoring
-  it loses nothing). The live-test-log.md additions are NOT in the
-  todolist-push copy (4233 lines upstream vs 4854 local); they are
-  preserved verbatim in the backup below.
-- (sync steps to be filled)
+### 3.1 Before
+
+- Laptop HEAD before: 56f5af4e521e1c20b26b56dc31d662e34f1c2668
+  ("Record H6 prefetch results"), DETACHED HEAD. 56f5af4 is NOT an
+  ancestor of origin/todolist-push (ANCESTOR-NO), so a plain
+  fast-forward is impossible; the sync moves the checkout by branch
+  switch. The old HEAD stays recoverable via reflog.
+- Local modifications, all preserved verbatim to
+  /tmp/s2-flip-laptop-local-20261122/ on the laptop (sha256 below)
+  before any checkout change:
+  - improvements/live-test-log.md (df061165c54ee2c7c6290db442cdced240f950b9a478781e11819227b792dbf0)
+  - native/hyprglass-local-optics.lua (9a15163491b543dde09c8388a8faf01f9b491c831647320ce2949d5737d8993c)
+  - scripts/cu.py (a6b4d7a86a70494e3d0d263df9c038cf1602a96c136eb8f16c5ffe395f68ca2c)
+  The cu.py change (OBSERVATION_MAX_AGE 90 to 120) is ALREADY
+  upstream on todolist-push, so restoring it loses nothing. The
+  live-test-log.md local copy (4854 lines) is NOT in the
+  todolist-push tree (4233 lines upstream); the preserved copy is
+  the only record of the Nov 19 watchdog entries.
+- No untracked-file collisions with the todolist-push tree.
+  Existing stashes on the laptop untouched.
+- Relay before: PID 1821, 18h uptime, state failed, driver failed,
+  guardian clean, broker_generation ee8e59d3, loaded_code_sha256
+  84f65d16, started_git_head 56f5af4, owner probe-s1.
+  No task active. session_remote.py changed 5 lines between
+  56f5af4 and todolist-push, so the sync wants a relay restart.
+- Codex live-confirm (PID 945044) finished 09:29 +07, commit
+  b57f499 on branch live-confirm-codex. No Codex process remains.
+
+### 3.2 Lease and envelope file rules (found by failing first)
+
+- The broker rejects a lease in /tmp: unsafe_lease_directory
+  (/tmp is root-owned, the lease directory must be owned by
+  james). The harness and all manual broker calls use
+  /home/james/.cache/agent-computer-use/ (james, 0700) for leases.
+- The broker request envelope must be a private regular file
+  owned by james (mode 0600): a plain heredoc creates 0644 and
+  fails unsafe_file. The harness writes the envelope with
+  `umask 077` first. The harness also removes a stale per-run
+  lease before start (O_EXCL otherwise blocks a re-run).
+
+### 3.3 Trivial broker task (relay failed to finished)
+
+- 09:50 +07: start (owner s2-flip-trivial) plus a status request
+  plus finish, all through the new relay path. Result: state
+  finished, stop_reason explicit_finish, next_sequence 2, status
+  request completed ok True. The relay is now idle, which the
+  sync's _relay_idle requires. (One exec service restart hit
+  mid-chain; the follow-up status call confirmed the whole
+  chain had completed before the restart.)
+- Relay state after: state finished, owner s2-flip-trivial,
+  driver stopped, guardian clean, recovery none.
+
+### 3.4 Checkout switch
+
+- 09:51 +07: `git checkout --` the 3 preserved files, then
+  `git checkout -B todolist-push origin/todolist-push`.
+  Laptop HEAD after: 350934a4bfc53a7dc2c287b757f4dc1afae99939
+  (the wiring commit, including the --endpoint code). Tree clean
+  except pre-existing untracked files (cf26 lessons, latency
+  CSVs, live-a2t/live-a4r). Previous HEAD 56f5af4 recorded above.
+
+### 3.5 sync-installed.py, first attempt FAILS, root cause, fix
+
+- 09:51 +07: sync launched detached (log /tmp/s2-sync.log).
+  It built the natives, snapshotted, then aborted with:
+  "ledger managed digest differs from repository source:
+  native/indicator; repo sha256 555c7de0; staged bf29c610".
+  The installed tree was NOT changed (publish happens only
+  after the check). Relay NOT restarted (still PID 1821).
+- Root cause (evidence, not guess): the laptop checkout held a
+  STALE generated binary native/indicator (555c7de0, built
+  2026-11-19 17:59 from older sources). The sync treats a
+  generated file present in the checkout as source and demands
+  it match the last published release ledger (bf29c610). The
+  sync's own staged fresh build of the same sources produced
+  bf29c610 (staging-evidence.json: staged and installed rebuild
+  both bf29c610), so the build is deterministic and the checkout
+  binary was simply stale. The other three build outputs
+  (pointer, modifiers, wtype) already matched everywhere.
+  The 2026-11-21 release ledger records the 2026-11-16 hand
+  patches as superseded, so no hand-patch is lost by rebuilding;
+  native/ sources are unchanged between the installed release
+  (b0c17acd3e) and todolist-push HEAD (git diff empty).
+- Fix: rebuilt the natives in the checkout from the current
+  sources (`python3 scripts/build.py`, log /tmp/s2-build.log).
+  After the rebuild the checkout native/indicator is bf29c610,
+  matching the ledger. The checkout's native binaries are the
+  LIVE ones (scripts/indicator.py resolves the binary from the
+  checkout, cu.py checks ROOT/native/pointer and ROOT/native/
+  wtype), so deleting the stale binary instead of rebuilding it
+  would have broken the next session; rebuilding was the right
+  fix. The running indicator process keeps its loaded inode,
+  so replacing the file mid-run is safe.
+
+### 3.6 sync-installed.py, second attempt SUCCEEDS
+
+- 09:59 +07: sync re-run detached (log /tmp/s2-sync2.log).
+  Output: "Release ledger:
+  /home/james/.local/share/agent-computer-use/releases/
+  20261122-095940-475319-350934a4bf.json", "Deploy manifest:
+  /home/james/.local/share/agent-computer-use/
+  deploy-manifest.json", "--check: exit 0 (643 managed files;
+  11 preserved-history exceptions)", "Installed sync published
+  and verified.", "Computer-use relay restarted; loaded broker
+  code hash matches the source."
+- Relay after: NEW PID 983809 (was 1821), started Sun
+  2026-11-22 09:59:40 +07. Status: broker running, generation
+  136fefc43e215fd9b491c857ed98d48f, loaded_code_sha256
+  43a492177f2317a26111c44bddf7526f4b079e4d8aa59451417a11020fdd00ea,
+  started_git_head 350934a4bfc53a7dc2c287b757f4dc1afae99939,
+  state idle, driver idle, guardian idle. This restart is the
+  sync's own restart, authorized by the brief ("unless the sync
+  requires it").
+- Deploy manifest verified (artifacts: indicator bf29c610,
+  modifiers f483faab, pointer ba2786a8, wtype 83b8b9b2).
+
+### 3.7 Browser observe re-verification (new relay, new code)
+
+- Chromium (127.0.0.1:9223): broker session s2-verify, tabs
+  returns exactly 1 tab (D1374C7C994D3DA72678E20C7FD099A0,
+  "Chat — clone2"), observe on that tab returns 70 elements,
+  truncated False, composer present. Session finished clean,
+  guardian clean. PASS.
+- Brave ([::1]:9223): see section 3.8 (relaunch required first).
+- Zen: alive (zen-bin PID 496121), Marionette listening on
+  127.0.0.1:2828. The cu.py browser observe path is CDP-only
+  (no Marionette in cu.py); Zen's path is the fixture bench
+  Marionette driver, not this command. Zen is up; no Zen action
+  is needed for the clone-chat-send class.
+
+### 3.8 Brave relaunch with --remote-debugging-port=9223
+
+- Brave as found: PID 940441, no debug flag (P3 revert),
+  window on workspace 1. SIGTERM 10:00 +07, graceful exit in
+  about 10 s, no brave main remains.
+- First relaunch FAILED: the SSH session has no Wayland env,
+  Brave exited with "Failed to connect to Wayland display".
+  Fix: prefix the donor env from a running GUI process
+  (zen-bin 496121): WAYLAND_DISPLAY=wayland-1,
+  XDG_RUNTIME_DIR=/run/user/1000,
+  DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus.
+  (The P3 log does not record how its relaunch got the env;
+  the donor-env prefix is the explicit fix.)
+- Second relaunch 10:02 +07, same as-found flags plus
+  --remote-debugging-port=9223, detached, log
+  /tmp/s2-brave-debug.log. New main PID 987006, cmdline
+  carries the flag, ver 157.1.99.57.
+- Verified: [::1]:9223 serves exactly 1 tab,
+  06074E282C000A95EF89CC9EBB8F9713, "(2) Chat — clone1",
+  https://muse.ai/?__pwa=1. Login intact (the thread is
+  loaded, 2 unread). Chromium 127.0.0.1:9223 untouched
+  (4 tabs: clone2 plus 3 Stripe iframe tabs).
+- Tab-selection fix (found during verification): the Chromium
+  /json/list Stripe iframe tabs carry "muse.ai" in their
+  fragment (encoded referrer), so a substring filter matches
+  4 tabs, not 1. The harness now filters by
+  url.startswith('https://muse.ai/'). The broker tabs command
+  already returns only the 1 page tab, but the harness filter
+  is now correct on its own.
+- The flag stays on for the 5 runs; the P3 rollback (relaunch
+  without the flag) runs after the runs, per the P3 plan.
 
 ## 4. Wiring: P1 router into the live path, CU_CODE_EXEC=1 per class
 

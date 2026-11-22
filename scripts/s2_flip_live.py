@@ -165,7 +165,7 @@ class Harness:
                               ensure_ascii=False, separators=(',', ':'))
         env_path = '/tmp/s2-flip-env-%d.json' % seq
         remote = (
-            'cat > ' + env_path + " <<'S2EOF'\n" + envelope + '\nS2EOF\n'
+            'umask 077; cat > ' + env_path + " <<'S2EOF'\n" + envelope + '\nS2EOF\n'
             'python3 ' + LAPTOP_REMOTE + ' request --lease-file ' + lease
             + ' --sequence %d --request %s' % (seq, env_path))
         rc, out, err, req_wall = self.ssh(remote, 'broker-request-%d' % seq,
@@ -310,7 +310,8 @@ class Harness:
                 if not isinstance(tabs, list):
                     raise RuntimeError('tabs did not return a list: %s'
                                        % str(tabs)[:300])
-                muse_tabs = [t for t in tabs if 'muse.ai' in (t.get('url') or '')]
+                muse_tabs = [t for t in tabs
+                             if (t.get('url') or '').startswith('https://muse.ai/')]
                 if len(muse_tabs) != 1:
                     raise RuntimeError('expected exactly one muse.ai tab, got %d'
                                        % len(muse_tabs))
@@ -432,7 +433,7 @@ class Harness:
     def run(self, browsers):
         t0 = time.monotonic()
         mux = self.mux_baseline()
-        lease = '/tmp/s2-flip-run%d.lease' % self.run_no
+        lease = '/home/james/.cache/agent-computer-use/s2-flip-run%d.lease' % self.run_no
         owner = 's2-flip-run%d' % self.run_no
         results = {'run': self.run_no, 'dry_run': self.dry_run,
                    'mux_baseline_ms': round(mux, 1), 'browsers': {}}
@@ -441,6 +442,10 @@ class Harness:
             if self.dry_run:
                 for browser in browsers:
                     scratch[browser] = self.seed_scratch(browser)
+            # A stale lease from a crashed run blocks start (O_EXCL);
+            # remove it first. The lease is per-run-number, so this
+            # never touches another run's live lease.
+            self.ssh('rm -f ' + lease, 'lease-cleanup', timeout=30)
             self.broker_start(lease, owner)
             seq = 1
             routed = {}
