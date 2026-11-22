@@ -4149,3 +4149,19 @@ gate cả 5 run, Brave strict.
 Đã giao council 1, 2, 3 + redteam cho task 1 (4 agent riêng).
 Cả 3 task đợt 12 giờ đều đã có báo cáo, đang chờ council và
 redteam rồi fix pass.
+
+## 13:36 ngày 22/11 - BATCH 12 TASK 3: COUNCIL + REDTEAM XONG, FIX PASS ĐÃ GIAO
+
+Cả 4 review task 3 xong và đồng thuận: cả 2 REVOKED giữ
+nguyên. Council 1 (05e6d03) CONFIRMED WITH 2 CORRECTIONS,
+council 2 (9eac655) all STANDS, council 3 (d29a5d3) COMPLETE
+với 1 sửa nhỏ, redteam (bb69ba8) SURVIVES với 3 minor. Các
+sửa đều là trích dẫn: commit record của input-fix log là
+section 9 không phải 8, aborted JSONs vào 4bd6292 không phải
+"be2371e range", khoảng 91.6-106.6 ms chỉ có ở reopen log
+section 0 dòng 32, viết p9.<browser>.ok thay vì "p9.ok True".
+Council 2 ghi thêm F9: spec task 2 khẳng định P9 PASS 10/10
+ở section 7 mà không liệt kê ảnh P9 thiếu ở section 10, đó
+là mục sửa cho fix pass task 2. Đã giao fix pass task 3 (1
+agent riêng) để áp các sửa trên. Task 1 và task 2 vẫn đang
+review.
