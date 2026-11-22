@@ -1972,4 +1972,20 @@ workspaces at the same time.
   deletions (after step 9); final test (last); scrub (quiet
   window).
 
-## 36. (to be filled as results land)
+## 36. C5-STEP10-PREP DONE, step 10 deletion plan landed (16:06 +07, Sun 2026-11-22, elapsed ~5 min from 16:01 spawn)
+
+Worker C5-STEP10-PREP (9d35a4a7) completed 16:06:15 +07. Deliverable: `improvements/worker-click5-step10-prep-log.md`, commit ccb2473 on todolist-push, verified by me: `git ls-remote` head = ccb24736689b670bc8f1991d142f4ca710f090c3, matches local HEAD; 1 file, 873 insertions, explicit pathspec. Design only: no code changes, no live runs, no browser work. No em/en dash (grep checked), no personal info.
+
+Coordinator verification (spot checks at HEAD 5a8c29d, all exact): `scripts/cursor_session.py` owner_lock L73, guardian L136, stop_group L208, terminate_driver L220, supervise L228; `scripts/overlay.py` Daemon L217, serve L344, _ensure_daemon L458; `scripts/s2_flip_live.py` oneshot_code_exec L292-322. Plan ordering: A5 first (replacement proven, one caller), A3 second (gate is step 9 prototype + driver-holds-three live proof), A4 last (three sequential proofs, first BLOCKED on CB-10). No two in one commit: bisection, different risk shapes, A3+A4 must never combine (two visibility mechanisms, one revert point would remove the owner's visibility twice over). Proposed dates tied to proofs, none calendar guesses: A5 on the step-9 decision day if the S2 migration proof is in, else the day after it lands; A3 the day after the step 9 proof plus the driver-holds-three live proof; A4 the day after the stage (b) crash proof lands.
+
+Open items flagged in the plan: driver-held lock/latch/scope design does not exist yet (lives in step 9 prototype, live proof still open); driver-held cancel latency bound has no number yet; whether holders.json stays after A4; step 8 spec UNKNOWN 10 (300s idle timeout vs owner-held session) interacts with A3.
+
+Flag: the worker's recorded execution results show one exec with exitCode 2 (subprocess.nonzero_exit), command unidentified. Immaterial to the deliverable (commit landed and verified), noted only; no action unless it recurs (same pattern as the step 8 worker's unexplained exitCode 1).
+
+Step 9 status note from the prep worker's read of the step 9 log: b1 landed, Zen delegate wired, 175 OK, live proof still open. STEP9 itself still running (34.6 min, last activity seconds ago at 16:07).
+
+Lanes live now: 9 (STEP10-PREP closed). STEP9, Y13G-R3-FIX, RUNG2, AGENT-NATIVE-EXEC, STALL-INV, STEP10-PREP done, Y1B-PROBE, Y6-PAPER, BATCH3-CHECK, ERRFILE-G31. Next expected: RUNG2 result (running ~6.4 min at 16:07), then STEP9.
+
+Queued-next unchanged: Y13G round-3 independent re-verification (after the fix lands); step 10 deletions (after step 9, per this plan's proof-tied dates); A1 pilot resume (after the blocker check); final test (last); scrub (quiet window).
+
+## 37. (to be filled as results land)
