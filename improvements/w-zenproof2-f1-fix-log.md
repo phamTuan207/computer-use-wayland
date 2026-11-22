@@ -178,4 +178,8 @@ tests from this fix.
 
 ## 6. Commits
 
-PENDING; filled in after push + ls-remote verify.
+- 5794c8f fix: direct-read fallback for current tab URL in
+  cmd_list (F1, run 3). 2 files, +241/-3.
+- 8a830c3 docs: W-ZENPROOF2-F1-FIX log.
+- This hash record: committed separately below; push +
+  ls-remote verified before report.
