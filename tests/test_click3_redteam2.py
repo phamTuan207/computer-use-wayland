@@ -309,8 +309,9 @@ class R1StaleOriginTests(unittest.TestCase):
         session.dom_outer = [1863, 1176]
         stale = session.viewport_origin([100, 100], [1863, 1176])
         self.assertEqual(stale, [340, 108],
-                         'a stale window origin must be refused, not '
-                         'returned as if true')
+                         'direct viewport_origin returned the stale '
+                         '[340, 108] the meta implies; the refusal lives '
+                         'in the sibling ground-time test')
         self.assertNotEqual(stale, [2749, 922])
         meta = {'image_size': [1920, 1080],
                 'region': [0, 0, 3840, 2160]}
