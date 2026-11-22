@@ -261,15 +261,142 @@ workspaces at the same time.
   0dc0dbe); the hypothesis is marked OPEN with the pending result
   noted. The worker did not block waiting. Correct per its brief.
 
-## 7. Still running (T+20m)
+## 8. C5-B5-VERIFY DONE, verified by me, 10:52 +07 (T+22m)
 
-- C5-VISIBILITY (a6260a4f): live laptop probe. Its result now decides
-  between fix (a1)/(a2): if Input answers when visible, (a2) is live;
-  if the background-tab refinement holds, (a1) is the cheap fix and
-  the visibility test alone will NOT settle it.
-- C5-B5-VERIFY (0e1c6847): B5 limb (ii) verification.
-- C5-ITEMS56 (b72898b7): items 5-6 ZenDomError diagnosis.
-- Clone1 batch 10 + clone2 batch 12: assigned 10:40 (0521d6c on main),
-  no commits from either yet.
+- Worker C5-B5-VERIFY completed 10:51:30 +07 (about 9 min, no stall).
+  Deliverable: improvements/worker-click5-b5-verify-log.md, commit
+  3724f52 on todolist-push.
+- MY VERIFICATION (git show + test runs, this session):
+  - Branch placement confirmed: repair commit 43b27a1 IS an ancestor
+    of todolist-push, NOT of main; tests/test_click3_redteam2.py does
+    NOT exist on origin/main; AMEND4 production code (type_x_ranges)
+    absent from main. Port problem, not repair problem.
+  - RT2 suite re-run by me at the current tip: Ran 51, OK (1.4s).
+  - I read the full TESTREPAIR-B diff (43b27a1, 110+/24-, 1 file)
+    myself. All 5 repairs fix the defect with equal or stricter
+    assertions, none relaxes one: F2 replaces unsatisfiable
+    assertions with assertRaises(DomActError) on the refusal the fix
+    specifies; F3 splits into a characterization test (dist > 1000)
+    plus a sibling assertRaises ground-time refusal test; F4 adds
+    y_range=(100, 120), the field anchor the test was missing, same
+    assertFalse; F5-behavior rewrites as a two-half wired-path spy
+    plus two-sided band check (wrong-field fails, right-field passes),
+    the Codex "or" branch still refused; F6 guards the forge line in
+    try/catch and corrects the value assertion to assertEqual 'hello'
+    (the page script set it; the flag is the discriminator, and the
+    flag assertion is unchanged).
+  - Discrepancy resolved: clone2 batch 11 task 3 reported 1974/1/5/17
+    at 65a2df6 vs step-1 closeout 0 failures at 36364b1. The 1 failure
+    was tests.test_tc02_controller failing only when tesseract was
+    unavailable in that run's environment; tesseract exists now and
+    tc02 passes 46/46 from repo root (worker-verified 10:49:22, not
+    re-run by me). Count growth 1974 to 2024 is tip movement (S2 flip
+    work). No RT2 problem in any run. Worker full discover at dddbddc:
+    Ran 2024, 0 failures, 4 pre-existing errors, 17 skipped.
+- B5 limb (ii) judgment: MET on todolist-push, NOT MET on main.
+- COORDINATOR DECISION on the port: NO cherry-pick. Main lacks the
+  whole AMEND4 stack (production code + test file), so porting the
+  test file alone would create failing tests on main. The repair
+  travels with the todolist-push into main merge, when that happens.
+  "NOT MET on main" is expected, not a defect to fix by cherry-pick.
+- OPEN follow-ups (non-blocking): (1) F3 message contradicts its
+  assertion, message-only, coordinator's lane (FIXED below, da46c4c);
+  (2) F5-source pin is vacuous by mutation (forcing type_ranges
+  unconditionally still passes); handed to C5-P2-IMPL to assess in
+  its range re-derivation; (3) unwired-path residual stands by
+  design, fail-closed vs best-effort awaits adjudication.
 
-## 8. (to be filled as results land)
+## 9. F3 message fix, done by me, 10:53 +07 (T+23m)
+
+- The assertEqual(stale, [340, 108]) message said "a stale window
+  origin must be refused, not returned as if true", but the test
+  passes precisely because the stale origin IS returned (it
+  documents the stale value; the refusal is the sibling test).
+  Changed the message to match the assertion: "direct
+  viewport_origin returned the stale [340, 108] the meta implies;
+  the refusal lives in the sibling ground-time test". RT2 suite
+  re-run: Ran 51, OK. Commit da46c4c, ls-remote verified.
+
+## 10. C5-VISIBILITY DONE, verified by me from its log, 10:52 +07 (T+22m)
+
+- The worker's log commit a9511de landed on todolist-push before its
+  completion handoff reached me. I verified from the log in git
+  (improvements/worker-click5-visibility-log.md, read in full).
+  The handoff itself is still pending; this section is my
+  verification of the landed log, not a reaction to the handoff.
+- 13 runs, same tab D1374C7C994D3DA72678E20C7FD099A0, same script
+  /tmp/s2-diag2.mjs, no clicks, no typing, no text sent. Visible
+  4/4 ok (all 2ms). Occluded 2/9 ok (A1 3ms, A2 2ms), 7/9 timeout.
+  Pre-state matched the brief exactly (Chromium 8059 on ws2,
+  Zen 496121 on ws1, Brave 1003210 on ws1, [::1]:9223 closed).
+  Post-state restored (ws1 active, same windows/PIDs). One SSH
+  session broke at about 33s on a foreground sleep 240 (documented
+  limit); correctly relaunched detached for run A9.
+- VERDICT: VISIBILITY KILLED as the cause. The same tab, occluded
+  on ws2 while ws1 was active, answered bare Input.dispatchMouseEvent
+  mouseMoved in 3ms (A1) and 2ms (A2). Occlusion does not by itself
+  block Input dispatch. This also kills the pure-workspace form of
+  fix (a2) as a precondition: occluded sends CAN work (A1/A2), so
+  gating every send on visibility would not have prevented the flip
+  failures and would add a workspace switch to every send for no
+  causal benefit.
+- What the data DOES show: (1) the stall is real, intermittent, and
+  STICKY. Onset fell between A2 (10:43:27 ok) and A3 (10:44:01
+  timeout). Once on, 7 consecutive dispatches timed out (A3-A9,
+  10:44:01 to 10:51:03) while Runtime.evaluate stayed 0-6ms. Only
+  the Input domain is wedged; the renderer is fully alive.
+  (2) Visibility is a reliable RECOVERY, not the cause. Switching
+  to ws2 unstuck the tab immediately: B2-B4 all answered in 2ms
+  right after 4 consecutive occluded timeouts. 3/3, zero delay.
+  (3) Re-occlusion re-stalls fast in the second cycle (A7/A8 timeout
+  within seconds of switching away), but the first cycle answered
+  fine while occluded (A1/A2). The trigger is NOT steady occlusion.
+  (4) The stuck state does NOT self-clear with time: A9 still timed
+  out after 240s+ of steady occlusion.
+- Leading candidate for the onset trigger, NOT proven: the
+  workspace-switch / focus-loss transition itself (the only events
+  between A2 ok and A3 timeout were ws1 to ws2, one visible diag,
+  ws2 to ws1). Alternative: a random or time-based onset that
+  happened to fall in that window.
+- FIX IMPLICATION (revised from my earlier note): fix (a1) CDP tab
+  activation is now the leading cheap fix, and the background-tab
+  refinement from C5-INPUT-INVEST is the leading cause candidate.
+  Visibility is a RETRY / UNBLOCK step: when a send times out with
+  "CDP timeout: Input.dispatchMouseEvent", focusing the target
+  window unsticks the Input domain. The onset trigger is now the
+  open question. Suggested next levers from the worker (L1-L4):
+  L1 isolate the switch as trigger (dispatch after EVERY switch,
+  switch without any diag in between); L2 test Page.bringToFront
+  (CDP-only, no workspace switch) as the unblock; L3 fresh CDP
+  session / Input.enable re-issue (fresh session alone does NOT
+  unstick it, proven: each diag opened a fresh WebSocket session);
+  L4 correlate with a pending/unacked dispatch from the broker send
+  path (mousePressed without release, or an Input dispatch issued
+  while the tab was mid-switch). These go to the next investigation
+  commission, not to the P2 worker.
+
+## 11. B5 LIFTS on todolist-push, step 7 UNBLOCKED, C5-P2-IMPL spawned 10:54 +07 (T+24m)
+
+- B5 limb (i) MET (C5-P2-SPEC, section 5) + limb (ii) MET on
+  todolist-push (C5-B5-VERIFY, section 8) = B5 LIFTS on todolist-push.
+  The P2 element-ref interface rewrite (step 7) is unblocked.
+- Spawned C5-P2-IMPL (7d648508): implement the P2 rewrite per the
+  protocol (docs/stale-ref-disagreement-protocol.md); A9 + CB-2 land
+  here; replace the one live dom_rect_to_image_point call site
+  (dom_act.py:271 ground_input) with dom_rect_to_screen_point;
+  re-derive items 3-4 ranges; remove unrestricted zen_dom eval from
+  the default interface (debug only); implement the Zen adapter
+  (OPEN-5); assess the F5-source pin vacuity in its range
+  re-derivation. Failing-first, repo work only, no live machine work.
+  Log: improvements/worker-click5-p2-impl-log.md.
+
+## 12. Still running (T+24m)
+
+- C5-ITEMS56 (b72898b7): items 5-6 ZenDomError diagnosis. Its live
+  diagnostic sequencing condition is now MET (visibility log commit
+  a9511de exists on todolist-push).
+- C5-P2-IMPL (7d648508): step 7 implementation.
+- Clone1 batch 10 + clone2 batch 12: assigned 10:40 (0521d6c on main).
+  Clone status to be checked in the next status pass.
+
+## 13. (to be filled as results land)
