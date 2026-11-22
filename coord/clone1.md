@@ -3971,3 +3971,17 @@ Task 2 xong han: spec xoa S1/CB-6, fix 30 sua, 212 len 234 dong, da commit e0187
 Fix pass bac 1 nhan dinh cua council 1: relay mac dinh dung la 9223, khong phai 9222.
 Task 1: PASS voi 2 luu y, council 1, 2, 3 xong, cho redteam.
 Khong agent nao ket. Cay sach tru test-w.txt 0 byte va cac file task 1 chua commit.
+
+---
+
+# BATCH 11 - TONG KET 22/11/2026
+
+Task 1: kiem tra doc lap step 7 P2 element-ref (292753f). P2 86 test OK tai hien duoc (can build wtype tay), 294 test lien quan OK, 0 production caller cua dom_rect_to_image_point, CLI act binding-when-present dung, validator 6 truong hop rieng le dung, Zen backend tu choi dung o duong chinh va khong gui input khi pointer None. Verdict AMEND, khong phai PASS: ket luan validator khong chap nhan moz-computed origin sai o dang tong quat (nhanh closure tra dung moz-computed origin, moz sai [250,18] van duoc chap nhan, lech 10px), dem thieu 2 noi mandatory, GAP rong hon (type/move vuot guard, re-ground fill, wait/assert ghi input_sent True). Fix 17 sua. Bao cao docs/batch11-task1-step7-verify-20261122.md (107 dong).
+
+Task 2: dac ta xoa S1/CB-6 cho step 8. Queue FCFS, single-owner lease, ma tran fatal-on-read-failure, fallback one-shot SSH, CB-10 ca 2 limb con thieu nen pill BLOCKED. Council 1, 2 AMEND, council 3 do phu mot phan, redteam 5/16 muc gay, 10 loi B1-B10. Fix 30 sua, 212 len 234 dong, bac 1 nhan dinh cua council 1 (relay dung la 9223). Bao cao docs/batch11-task2-step8-deletion-spec-20261122.md (234 dong).
+
+Task 3: sua bang chung 2 claim CB-8 REVOKED. Ca 2 giu REVOKED STANDS. (a) S2 Pick 1: 4 gap van mo, records goc chi co tren laptop. (c) DOM-grounding: gap 1 thu hep thanh merge (bench da co tren main, chua co tren todolist-push), log tho van vang. Fix 7 nhom sua. Bao cao docs/batch11-task3-cb8-evidence-repair-20261122.md (130 dong).
+
+Open items, cho huong Muse: validator closure branch can sua truoc khi step 7 duoc duyet; re-ground pointer check + test pointer=None cho ca 2 duong; full discover 2110 test cua worker khong tai hien tren may nay (loi moi truong); pill step 8 can tieu chi pass va gate test, broker tu ket thuc task idle 300s xung dot voi owner giu session; khoi phuc claim (a) can commit records goc hoac chay lai P1-P4 tren laptop, claim (c) can cherry-pick 7 commit bench va commit log tho.
+
+Batch 11 xong ca 3 task, tat ca bao cao da commit len main. Cho dot tiep theo.
