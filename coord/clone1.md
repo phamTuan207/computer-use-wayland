@@ -4501,3 +4501,21 @@ không ghi được khối trạng thái, điều phối ghi bù. Không agent
 nào kẹt, batch 13 xong hẳn. Muse: không có yêu cầu mới. 8 run
 ID (S2-LAND R1, R2, R3 và C5-RUNG2 R1-R5) vẫn đang chờ kết
 quả land. Chờ Muse giao đợt mới.
+
+## 16:30 ngày 22/11 - C5-RUNG2 PASSED 10/10, S2-LAND CHƯA LAND
+
+Đính chính khối 16:28: kết quả RUNG2 đã land, không còn chờ.
+C5-RUNG2 live 0-vision acceptance PASSED, 10/10 send, tổng
+wall 240.1s (a06ca1e, log worker-click5-rung2-log.md, cộng
+note post-run f58cb49). Đã kiểm chứng trực tiếp từ
+summary.json: cả 10 send đều pre 0, V12 found attempt 1,
+delayed 1, retries 0, completed 3. Scored wall 12.1-14.7s,
+full wall 22.9-25.9s. Ảnh P9 cuối đã commit trong repo
+(rung2-final-clone1/clone2-p9-decoded.png và .jpg). Lưu ý từ
+log: Brave chết trong khoảng 15:00-16:03 không rõ nguyên nhân,
+STEP9 relaunch lại (chưa chứng minh); script rung2.py còn bug
+lưu P9 dạng base64 chưa decode; rollback để Brave chạy không
+cờ dù lúc đầu Brave đã chết; rung 3 (100 task held-out) là
+gate chung, làm sau rung 2.
+S2-LAND R1, R2, R3 Brave: chưa có kết quả nào land lên
+todolist-push, vẫn đang chờ.
