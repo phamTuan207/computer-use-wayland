@@ -359,6 +359,19 @@ refuses until the new manifest is committed + pushed) and
 the clean_ship manifest dry run above. Re-run both after
 push and record here before declaring re-verification ready.
 
+Post-push results (2026-11-22 16:40 +07, commit d889903
+pushed, origin/todolist-push verified via git ls-remote):
+- Redteam A2L: TOTAL 7 cases, 0 FAIL (clean ship main rc 0;
+  legit abspath + relpath entry .pyc verified + removed rc 0;
+  forged refuses "entry .pyc mismatch" rc 2, no marker; legit
+  run_live .pyc rc 0; import run_live then launcher heals rc 0).
+- Verifier clean_ship.py: CLEAN-SHIP DONE 6/6 pass in 2.5s
+  (manifest dry run now passes against the committed manifest
+  d2a2bf08; tampered self-consistent ship still refused by
+  the pin rc 2).
+- All round-3 batteries now pass. Independent re-verification
+  by a separate worker is still required before any live run.
+
 ## 5. Files changed (commit with explicit pathspecs only)
 
 - tests/realistic/run_codex_y5.py
