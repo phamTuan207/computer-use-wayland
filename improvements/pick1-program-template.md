@@ -12,13 +12,15 @@ The observe after `act()` is both the settle interval and the verify image. Put 
 
 For P1 and P2, keep the unchanged shape: `windows()`, `observe()`, `act()`, verify `observe()`, then `verify_image = verify["image"]`. They have no file asserts. The P1 and P2 programs below are the exact programs measured in the A1 live run, with the terminal title kept as speed-pick1-term to match P3 and P4 (the A1 live run copied them with the title changed to speed-a1-term).
 
+CB-2: every action in an `act()` call carries `scope` and `observation_id` taken from the observation the batch is written against (`obs["scope"]`, `obs["id"]`). A batch without them is refused at plan validation.
+
 ## P1 program
 
 ```python
 wins = windows()
 term = [w for w in wins if w["title"] == "speed-pick1-term"][0]
 obs = observe(window=term["address"])
-result = act([{"type": "type", "text": "df -h /\n"}], obs)
+result = act([{"type": "type", "text": "df -h /\n", "scope": obs["scope"], "observation_id": obs["id"]}], obs)
 verify = observe(window=term["address"])
 assert_state(result["ok"], "act failed")
 verify_image = verify["image"]
@@ -30,7 +32,7 @@ verify_image = verify["image"]
 wins = windows()
 term = [w for w in wins if w["title"] == "speed-pick1-term"][0]
 obs = observe(window=term["address"])
-result = act([{"type": "type", "text": "python3 -c \"print(144/150*100)\"\n"}], obs)
+result = act([{"type": "type", "text": "python3 -c \"print(144/150*100)\"\n", "scope": obs["scope"], "observation_id": obs["id"]}], obs)
 verify = observe(window=term["address"])
 assert_state(result["ok"], "act failed")
 verify_image = verify["image"]
@@ -42,7 +44,7 @@ verify_image = verify["image"]
 wins = windows()
 term = [w for w in wins if w["title"] == "speed-pick1-term"][0]
 obs = observe(window=term["address"])
-result = act([{"type": "type", "text": "mkdir -p /tmp/hoc-ky-2/dsa /tmp/hoc-ky-2/ktvm /tmp/hoc-ky-2/oop && find /tmp/hoc-ky-2 -type d\n"}], obs)
+result = act([{"type": "type", "text": "mkdir -p /tmp/hoc-ky-2/dsa /tmp/hoc-ky-2/ktvm /tmp/hoc-ky-2/oop && find /tmp/hoc-ky-2 -type d\n", "scope": obs["scope"], "observation_id": obs["id"]}], obs)
 verify = observe(window=term["address"])
 assert_state(result["ok"], "act failed")
 assert_file_exists("/tmp/hoc-ky-2/dsa")
@@ -59,7 +61,7 @@ The three P3 targets are directories. assert_file_exists checks path existence, 
 wins = windows()
 term = [w for w in wins if w["title"] == "speed-pick1-term"][0]
 obs = observe(window=term["address"])
-result = act([{"type": "type", "text": "printf 'Ý tưởng 1: app nhắc uống nước.\\nÝ tưởng 2: bot tóm tắt bài giảng.\\nÝ tưởng 3: web bán đồ secondhand.\\n' > /tmp/y-tuong.txt && cat /tmp/y-tuong.txt\n"}], obs)
+result = act([{"type": "type", "text": "printf 'Ý tưởng 1: app nhắc uống nước.\\nÝ tưởng 2: bot tóm tắt bài giảng.\\nÝ tưởng 3: web bán đồ secondhand.\\n' > /tmp/y-tuong.txt && cat /tmp/y-tuong.txt\n", "scope": obs["scope"], "observation_id": obs["id"]}], obs)
 verify = observe(window=term["address"])
 assert_state(result["ok"], "act failed")
 assert_file_contains("/tmp/y-tuong.txt", "Ý tưởng 1: app nhắc uống nước.")

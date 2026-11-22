@@ -192,8 +192,49 @@ def _image_point_for_screen(meta, sx, sy):
     return [ix, iy]
 
 
+def screen_point_to_image_point(meta, sx, sy):
+    """Image point for a screen point (A9: the driver-edge map).
+
+    The second half of the old fused rect-to-image function, now
+    public: a screen point (canonical, from
+    dom_rect_to_screen_point) maps into the observation image by
+    the inverse of cu.image_point. Raises ValueError when the meta
+    lacks image_size/region, when the region is degenerate, or
+    when the point falls outside the observed image: fail closed,
+    never guess a point off the image.
+    """
+    if not isinstance(meta, dict):
+        raise ValueError('meta must be an object')
+    size = meta.get('image_size')
+    region = meta.get('region')
+    if (not isinstance(size, (list, tuple)) or len(size) != 2
+            or any(isinstance(v, bool) or not isinstance(v, (int, float))
+                   or v <= 0 for v in size)):
+        raise ValueError('meta needs a positive image_size [w, h]')
+    if (not isinstance(region, (list, tuple)) or len(region) != 4
+            or any(isinstance(v, bool) or not isinstance(v, (int, float))
+                   for v in region)
+            or region[2] <= 0 or region[3] <= 0):
+        raise ValueError('meta needs a region [x, y, w, h] with positive size')
+    point = _image_point_for_screen(meta, sx, sy)
+    if point is not None:
+        return point
+    raise ValueError(
+        'screen point (%s, %s) maps outside the observed image '
+        '(%s, %s) of %sx%s'
+        % (sx, sy, (sx - region[0]) * size[0] / region[2],
+           (sy - region[1]) * size[1] / region[3], size[0], size[1]))
+
+
 def dom_rect_to_image_point(meta, rect, viewport_origin, scale_factor=1):
     """Image point of a DOM rect center for one observation meta.
+
+    Kept for tests and legacy callers only (final direction): no
+    production caller uses it. The live path converts the rect
+    once to a screen point (dom_rect_to_screen_point) and derives
+    the image point at the driver edge
+    (screen_point_to_image_point); this function is exactly that
+    composition, kept so its tests keep passing.
 
     Inverse of cu.image_point (same linear map, region origin and
     image size from the meta): screen = absolute origin + rect center
@@ -217,28 +258,8 @@ def dom_rect_to_image_point(meta, rect, viewport_origin, scale_factor=1):
     net instead of via the fixed chain, and a wrong origin that
     happened to land inside was used with no warning.
     """
-    if not isinstance(meta, dict):
-        raise ValueError('meta must be an object')
-    size = meta.get('image_size')
-    region = meta.get('region')
-    if (not isinstance(size, (list, tuple)) or len(size) != 2
-            or any(isinstance(v, bool) or not isinstance(v, (int, float))
-                   or v <= 0 for v in size)):
-        raise ValueError('meta needs a positive image_size [w, h]')
-    if (not isinstance(region, (list, tuple)) or len(region) != 4
-            or any(isinstance(v, bool) or not isinstance(v, (int, float))
-                   for v in region)
-            or region[2] <= 0 or region[3] <= 0):
-        raise ValueError('meta needs a region [x, y, w, h] with positive size')
     sx, sy = dom_rect_to_screen_point(rect, viewport_origin, scale_factor)
-    point = _image_point_for_screen(meta, sx, sy)
-    if point is not None:
-        return point
-    raise ValueError(
-        'DOM rect center maps outside the observed image: '
-        'screen (%s, %s) maps to image (%s, %s) of %sx%s'
-        % (sx, sy, (sx - region[0]) * size[0] / region[2],
-           (sy - region[1]) * size[1] / region[3], size[0], size[1]))
+    return screen_point_to_image_point(meta, sx, sy)
 
 
 def point_in_rect(rect, x, y):

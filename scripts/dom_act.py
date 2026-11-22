@@ -6,8 +6,9 @@ Codex re-grounded from the DOM rect center and typed at once. This
 module is the code form of that lesson. For a browser target, never
 read a screenshot to locate a field: the DOM rect is ground truth
 (getBoundingClientRect, sub-pixel CSS px), the viewport origin turns
-it into a screen point, and fastpath.dom_rect_to_image_point turns
-that into the observation image point. Verify with cheap JS evals,
+it into a screen point, and fastpath.screen_point_to_image_point
+turns that screen point into the observation image point at the
+driver edge. Verify with cheap JS evals,
 never a fresh observe: hit_check (elementFromPoint) before the click,
 focus_check (document.activeElement) before the type, verify_typed
 (field value) after it. The desktop act batch itself (click + type +
@@ -43,16 +44,21 @@ evaluate, and the script then runs with no more vision until VISION 2
 (the outcome screenshot). Nothing in this module takes a screenshot
 to locate a field.
 """
+import logging
+
 import action_result
 import dom_asserts
+import element_ref
 import fastpath
+
+logger = logging.getLogger('dom_act')
 
 
 class DomActError(RuntimeError):
     pass
 
 
-def confirm_locate(session, selector):
+def confirm_locate(session, selector, strict=False):
     """Re-confirm one element before acting on it (CB-5, step 5).
 
     Returns the locate_confirmed report: {rect, visible,
@@ -70,10 +76,23 @@ def confirm_locate(session, selector):
     unknowable there, so they are recorded as None with basis
     'unprobed' instead of refusing. The report is attached to
     ground evidence as 'confirmation'.
+
+    strict=True (protocol section 5, Zen backend path) closes the
+    fallback: a session that cannot report interactive or unique
+    does not satisfy the protocol, so the call refuses with
+    'unprobed' instead of clicking on an unprobed report.
     """
-    strict = getattr(session, 'locate_confirmed', None)
-    if callable(strict):
-        report = strict(selector)
+    confirm = getattr(session, 'locate_confirmed', None)
+    if not callable(confirm):
+        if strict:
+            raise DomActError(
+                f"session cannot confirm {selector!r}: it has no "
+                "locate_confirmed, so interactive and unique are "
+                "unprobed; a strict-path caller refuses instead of "
+                "clicking on an unprobed report")
+        confirm = None
+    if callable(confirm):
+        report = confirm(selector)
         if report is None:
             raise DomActError(f"no element matches {selector!r}")
         if not report.get('visible'):
@@ -267,16 +286,29 @@ def ground_input(session, meta, selector):
     except TypeError:
         origin = session.viewport_origin()
     factor = _scale_factor(session)
+    # A9: one coordinate system. The rect converts ONCE, at the
+    # driver edge, to a screen point; the image point is derived
+    # from that screen point for the click path, which still
+    # consumes image points. The fused rect-to-image function is
+    # off this path: the screen point is the canonical evidence.
     try:
-        point = fastpath.dom_rect_to_image_point(meta, rect, origin,
-                                                 factor)
+        screen_point = fastpath.dom_rect_to_screen_point(
+            rect, origin, factor)
+    except ValueError as exc:
+        raise DomActError(str(exc)) from exc
+    try:
+        point = fastpath.screen_point_to_image_point(
+            meta, screen_point[0], screen_point[1])
     except ValueError as exc:
         raise DomActError(str(exc)) from exc
     metrics = getattr(session, 'last_display_metrics', None)
     evidence = {'selector': selector, 'rect': rect,
-                'viewport_origin': origin, 'point': point, 'hit': True,
+                'viewport_origin': origin, 'screen_point': screen_point,
+                'point': point, 'hit': True,
                 'confirmation': confirmation,
-                'scale_factor': factor}
+                'scale_factor': factor,
+                'scope': meta.get('scope'),
+                'observation_id': meta.get('id')}
     if isinstance(metrics, dict):
         evidence['device_pixel_ratio'] = metrics.get('device_pixel_ratio')
         evidence['screen_pixels_per_css_pixel'] = \
@@ -286,25 +318,47 @@ def ground_input(session, meta, selector):
     return evidence
 
 
+def _image_center(ground, meta):
+    """Image point of the grounded rect center, from the screen
+    point when the evidence carries one (A9 canonical form), else
+    from the legacy 'point'. Returns None when the map fails."""
+    screen_point = ground.get('screen_point')
+    if screen_point is not None:
+        try:
+            return fastpath.screen_point_to_image_point(
+                meta, screen_point[0], screen_point[1])
+        except Exception:
+            return None
+    point = ground.get('point')
+    if (isinstance(point, (list, tuple)) and len(point) == 2
+            and all(isinstance(v, (int, float))
+                    and not isinstance(v, bool) for v in point)):
+        return [point[0], point[1]]
+    return None
+
+
 def grounded_x_range(ground, meta):
     """Image-px x-range of the grounded field, for the band check.
 
-    ground is ground_input evidence (rect in viewport CSS px, point
-    in image px, scale_factor); meta carries image_size and region.
-    The rect's image width is its CSS width times the CSS-to-screen
-    factor times image px per screen px; the range is centered on
-    the image point (the rect center). Returns [x0, x1] floats, or
-    None when the meta cannot map the rect (the caller then keeps
-    the full-width band).
+    ground is ground_input evidence (rect in viewport CSS px,
+    screen_point canonical, point in image px, scale_factor); meta
+    carries image_size and region. The rect's image width is its
+    CSS width times the CSS-to-screen factor times image px per
+    screen px; the range is centered on the image point (the rect
+    center, derived from the screen point). Returns [x0, x1]
+    floats, or None when the meta cannot map the rect (the caller
+    then keeps the full-width band).
     """
     try:
         rect = ground['rect']
-        point = ground['point']
+        center = _image_center(ground, meta)
+        if center is None:
+            return None
         factor = ground.get('scale_factor', 1)
         size = meta.get('image_size')
         region = meta.get('region')
         half = rect['width'] * factor * size[0] / region[2] / 2
-        return [point[0] - half, point[0] + half]
+        return [center[0] - half, center[0] + half]
     except Exception:
         return None
 
@@ -315,20 +369,54 @@ def grounded_y_range(ground, meta):
     The mirror of grounded_x_range on the y axis: the rect's image
     height is its CSS height times the CSS-to-screen factor times
     image px per screen px; the range is centered on the image
-    point (the rect center). Returns [y0, y1] floats, or None when
-    the meta cannot map the rect (the caller then keeps the
-    click-anchored band).
+    point (the rect center, derived from the screen point).
+    Returns [y0, y1] floats, or None when the meta cannot map the
+    rect (the caller then keeps the click-anchored band).
     """
     try:
         rect = ground['rect']
-        point = ground['point']
+        center = _image_center(ground, meta)
+        if center is None:
+            return None
         factor = ground.get('scale_factor', 1)
         size = meta.get('image_size')
         region = meta.get('region')
         half = rect['height'] * factor * size[1] / region[3] / 2
-        return [point[1] - half, point[1] + half]
+        return [center[1] - half, center[1] + half]
     except Exception:
         return None
+
+
+def ground_field_ranges(session, meta, selector):
+    """(type_x_ranges, type_y_ranges) for one field, or (None, None).
+
+    P2-SPEC observation 2: the old call sites swallowed a failed
+    grounding with a bare try/except pass, so a batch silently kept
+    the full-width band with no trace. The missing range is now
+    logged (selector + range named) instead of silent. Each range
+    is a one-element list [[x0, x1]] / [[y0, y1]] in the
+    desktop_act band shape, or None when the field does not ground
+    or the range cannot be derived.
+    """
+    try:
+        ground = ground_input(session, meta, selector)
+    except DomActError as exc:
+        logger.warning('no grounded range for %r: %s '
+                       '(type_x_ranges/type_y_ranges stay None; the '
+                       'batch keeps the ungrounded band)' % (selector, exc))
+        return None, None
+    x_range = grounded_x_range(ground, meta)
+    y_range = grounded_y_range(ground, meta)
+    if x_range is None:
+        logger.warning('no x range for %r: the grounded rect does '
+                       'not map to the observation image '
+                       '(type_x_ranges stays None)' % (selector,))
+    if y_range is None:
+        logger.warning('no y range for %r: the grounded rect does '
+                       'not map to the observation image '
+                       '(type_y_ranges stays None)' % (selector,))
+    return ([x_range] if x_range is not None else None,
+            [y_range] if y_range is not None else None)
 
 
 class GroundPoints(dict):
@@ -343,12 +431,18 @@ class GroundPoints(dict):
     the guard (they read the stored table directly), so callers must
     use [] access for the point they click. A re-ground that fails
     raises DomActError instead of returning a stale point.
+
+    strict=True (protocol section 5) is the strict-path form: a
+    move refuses with 'stale_ref: rect_moved' instead of silently
+    re-grounding. Silent re-ground is correct only for
+    re-ground-and-continue rows, never for strict-path actions.
     """
 
-    def __init__(self, session, meta, points):
+    def __init__(self, session, meta, points, strict=False):
         super().__init__(points)
         self._session = session
         self._meta = meta
+        self._strict = strict
 
     def __getitem__(self, selector):
         stored = super().__getitem__(selector)
@@ -357,13 +451,19 @@ class GroundPoints(dict):
             raise DomActError(f"no element matches {selector!r} anymore; "
                               "the grounded point is stale, refusing")
         if fresh != stored['rect']:
+            if self._strict:
+                raise DomActError(
+                    'stale_ref: rect_moved: %r moved from %r to %r '
+                    'since grounding; the strict path refuses instead '
+                    'of re-grounding silently' % (selector, stored['rect'],
+                                                  fresh))
             refreshed = ground_input(self._session, self._meta, selector)
             super().__setitem__(selector, refreshed)
             return refreshed
         return stored
 
 
-def ground_many_one_shot(session, meta, selectors):
+def ground_many_one_shot(session, meta, selectors, strict=False):
     """Ground many inputs from ONE evaluate (doma11y C1, VISION 1).
 
     The session must expose harvest(selectors) (zen_dom.ZenSession
@@ -437,9 +537,13 @@ def ground_many_one_shot(session, meta, selectors):
         rect = {'x': raw_rect.get('x'), 'y': raw_rect.get('y'),
                 'width': raw_rect.get('width'),
                 'height': raw_rect.get('height')}
+        # A9: the rect converts once to a screen point; the image
+        # point derives from it at the edge.
         try:
-            point = fastpath.dom_rect_to_image_point(meta, rect, absolute,
-                                                     factor)
+            screen_point = fastpath.dom_rect_to_screen_point(
+                rect, absolute, factor)
+            point = fastpath.screen_point_to_image_point(
+                meta, screen_point[0], screen_point[1])
         except ValueError as exc:
             raise DomActError(str(exc)) from exc
         if not item.get('hit'):
@@ -448,17 +552,20 @@ def ground_many_one_shot(session, meta, selectors):
                 "it is covered or off-viewport, refusing the click")
         points[selector] = {
             'selector': selector, 'rect': rect,
-            'viewport_origin': absolute, 'point': point, 'hit': True,
+            'viewport_origin': absolute, 'screen_point': screen_point,
+            'point': point, 'hit': True,
             'scale_factor': factor,
+            'scope': meta.get('scope'),
+            'observation_id': meta.get('id'),
             'device_pixel_ratio': raw.get('device_pixel_ratio'),
             'screen_pixels_per_css_pixel':
                 raw.get('screen_pixels_per_css_pixel'),
             'zoom': raw.get('zoom'),
             'moz_inner': list(moz_inner)}
-    return GroundPoints(session, meta, points)
+    return GroundPoints(session, meta, points, strict=strict)
 
 
-def ground_many(session, meta, selectors):
+def ground_many(session, meta, selectors, strict=False):
     """Ground many inputs from ONE observation meta.
 
     The 2-vision benchmark shape: VISION 1 grounds BOTH clone
@@ -467,14 +574,17 @@ def ground_many(session, meta, selectors):
     whole inventory), else per-element ground_input (3 evals each).
     Returns a GroundPoints mapping that re-validates on every read.
     Fails fast on the first ungroundable selector, before any click,
-    so a half-grounded batch never starts.
+    so a half-grounded batch never starts. strict=True refuses on a
+    move at read time instead of silently re-grounding (protocol
+    section 5); in both the one-shot and the per-element path.
     """
     if hasattr(session, 'harvest'):
-        return ground_many_one_shot(session, meta, selectors)
+        return ground_many_one_shot(session, meta, selectors,
+                                    strict=strict)
     points = {}
     for selector in selectors:
         points[selector] = ground_input(session, meta, selector)
-    return GroundPoints(session, meta, points)
+    return GroundPoints(session, meta, points, strict=strict)
 
 
 def typed_text_of(actions):

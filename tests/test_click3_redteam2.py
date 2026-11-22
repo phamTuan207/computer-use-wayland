@@ -187,8 +187,10 @@ class R3aUnwiredPathTests(DesktopPreflight):
         with mock.patch.object(cu, 'desktop_act', side_effect=_spy):
             backend.act(
                 self.meta,
-                [{'type': 'click', 'x': 15, 'y': 10},
-                 {'type': 'type', 'text': 'hello'}],
+                [{'type': 'click', 'x': 15, 'y': 10, 'scope': 'window',
+                  'observation_id': self.meta['id']},
+                 {'type': 'type', 'text': 'hello', 'scope': 'window',
+                  'observation_id': self.meta['id']}],
                 None, dom_session=session, dom_selector='#msg-input')
         self.assertEqual(seen.get('type_x_ranges'), [[12.0, 20.0]],
                          'the wired path did not thread the grounded '
@@ -223,19 +225,43 @@ class R3aUnwiredPathTests(DesktopPreflight):
         self.assertIs(result['type_verified'], True)
 
     def test_codeexec_and_cli_act_paths_never_supply_x_ranges(self):
-        # The unwired desktop test above is behavior; this pins the
-        # production call sites. CodeExecBackend.act builds no
-        # type_x_ranges at all, and the CLI act branch never puts
-        # one into act_kwargs, so both run the full-width band.
-        src = (ROOT / 'scripts' / 'cu.py').read_text()
-        act = src[src.index('def act(self, meta, actions, observation_path'):]
-        act = act[:act.index('\n    def ', 1)]
-        self.assertIn('type_x_ranges', act,
-                      'CodeExecBackend.act never supplies type_x_ranges')
-        cli = src[src.index("result=desktop_act(env,read_json_file"):]
-        cli = cli[:cli.index('\n', 1)]
-        self.assertIn('type_x_ranges', cli,
-                      'CLI act never supplies type_x_ranges')
+        # BEHAVIOURAL REPLACEMENT for the old source-text pin (B5
+        # mutation evidence: forcing type_ranges = [[0.0, 20.0]]
+        # unconditionally in CodeExecBackend.act still passed the
+        # pin, because it only asserted the string 'type_x_ranges'
+        # appears in the act source). On the unwired path (no DOM
+        # session, no --dom-selector) act must pass
+        # type_x_ranges=None to desktop_act, so an unconditional
+        # range fails here. The CLI act branch shares the same
+        # helper (dom_act.ground_field_ranges returns (None, None)
+        # when nothing grounds; covered by
+        # test_missing_range_is_logged_not_silent), so the unwired
+        # CLI path is covered by the same unit, not by a source
+        # pin. The test name is kept so the round-2/3 review
+        # references still resolve.
+        from unittest import mock
+        backend = cu.CodeExecBackend({})
+        seen = {}
+
+        def _spy(env, meta, actions, **kwargs):
+            seen['type_x_ranges'] = kwargs.get('type_x_ranges')
+            seen['type_y_ranges'] = kwargs.get('type_y_ranges')
+            return {'ok': True, 'completed': 1}
+
+        with mock.patch.object(cu, 'desktop_act', side_effect=_spy):
+            backend.act(
+                self.meta,
+                [{'type': 'type', 'text': 'hello', 'scope': 'window',
+                  'observation_id': self.meta['id']}],
+                None)
+        self.assertIsNone(
+            seen.get('type_x_ranges'),
+            'the unwired path supplied an x-range to desktop_act: '
+            '%s' % (seen,))
+        self.assertIsNone(
+            seen.get('type_y_ranges'),
+            'the unwired path supplied a y-range to desktop_act: '
+            '%s' % (seen,))
 
 
 class GeometryTests(unittest.TestCase):

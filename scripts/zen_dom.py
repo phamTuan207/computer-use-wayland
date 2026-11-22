@@ -55,12 +55,15 @@ import argparse
 import fcntl
 import http.client
 import json
+import logging
 import os
 import secrets
 import socket
 import subprocess
 import sys
 import time
+
+logger = logging.getLogger('zen_dom')
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -103,7 +106,7 @@ def _wait_http(url, timeout_s=30):
 
 def check_viewport_geometry(moz_inner, absolute_origin, window_origin,
                             window_size, inner_size, monitor_box=None,
-                            factor=None):
+                            factor=None, verified_moz_inner=None):
     """Probe checks that replace the AT-SPI cross-check (C12).
 
     Returns the absolute viewport origin, or raises ZenDomError when
@@ -131,7 +134,30 @@ def check_viewport_geometry(moz_inner, absolute_origin, window_origin,
     raises ZenDomError instead of guessing.
     Checks, in order:
     - dimension closure in CSS px: mozInner + inner size + trailing
-      gap equals the window size on both axes (gaps must be >= 0);
+      gap equals the window size on both axes. A negative trailing
+      gap is a REFUSAL, not a warning: the pixel proof (C5-MOZ-GROWTH,
+      log a42ef12) shows the reported mozInner is DISPLACED from
+      where the viewport actually renders, by (+34, +58) on the live
+      narrowed window (true origin (240, 8), gaps +8/+8). Accepting
+      the moz-computed origin would ground clicks 34px right and
+      58px down from the true origin. The closure invariant itself
+      still holds for the TRUE origin; it is the reported pair that
+      is untrustworthy.
+    - verified-origin override: when closure fails, a verified
+      mozInner (measured independently, C12-style screenshot/click
+      cross-check) may be supplied as verified_moz_inner. The
+      verified numbers must close (closure + origin inside the
+      window + containment); when they do, the function returns the
+      VERIFIED absolute origin and logs the override (reported moz,
+      gaps, verified moz, offset). The absolute_origin argument is
+      ignored on this path: it was computed from the displaced
+      reported moz. When no verified origin is supplied, or the
+      verified numbers fail too, the call refuses.
+    - structural invariants, which DO refuse: the viewport must fit
+      inside its window (inner size larger than the window size on
+      either axis means the size input is wrong). These keep F9/F10
+      refused: a factor-forgotten origin fails exactness, and a
+      factor-2 small window fails the fit invariant.
     - exactness in screen px: the absolute origin must equal the
       window origin plus mozInner times the factor (within half a
       pixel), which is the check that catches a factor-forgotten
@@ -168,12 +194,77 @@ def check_viewport_geometry(moz_inner, absolute_origin, window_origin,
                           % (size, inner))
     right_gap = size[0] - inner[0] - moz[0]
     bottom_gap = size[1] - inner[1] - moz[1]
-    if right_gap < 0 or bottom_gap < 0:
+    if inner[0] > size[0] or inner[1] > size[1]:
         raise ZenDomError(
-            'dimension closure fails: mozInner %r + inner %r exceeds '
-            'window size %r (gaps %r, %r); the viewport origin cannot '
-            'be window-relative with these numbers'
-            % (moz, inner, size, right_gap, bottom_gap))
+            'viewport larger than window: inner %r exceeds window '
+            'size %r; the viewport cannot be wider or taller than '
+            'its window, so the size input is wrong'
+            % (inner, size))
+    if right_gap < 0 or bottom_gap < 0:
+        # The reported mozInner is displaced from the true viewport
+        # origin (MOZ-GROWTH pixel proof, log a42ef12: reported
+        # [274, 66] vs true [240, 8] on the live narrowed window).
+        # Fail closed unless a verified origin is supplied.
+        if verified_moz_inner is None:
+            raise ZenDomError(
+                'dimension closure fails: mozInner %r + inner %r '
+                'exceeds window size %r (gaps %r, %r); the reported '
+                'mozInner is displaced from the true viewport origin '
+                '(pixel proof a42ef12: true origin (240, 8) on the '
+                'live narrowed window); supply a verified mozInner '
+                '(independent screenshot/click cross-check) to '
+                'override' % (moz, inner, size, right_gap, bottom_gap))
+        verified = _pair(verified_moz_inner, 'verified mozInnerScreen')
+        if any(v < 0 for v in verified):
+            raise ZenDomError(
+                'verified mozInnerScreen is negative: %r' % (verified,))
+        v_right_gap = size[0] - inner[0] - verified[0]
+        v_bottom_gap = size[1] - inner[1] - verified[1]
+        if v_right_gap < 0 or v_bottom_gap < 0:
+            raise ZenDomError(
+                'verified mozInner %r + inner %r does not close '
+                'inside window size %r (gaps %r, %r); the verified '
+                'origin is wrong too'
+                % (verified, inner, size, v_right_gap, v_bottom_gap))
+        if verified[0] >= size[0] or verified[1] >= size[1]:
+            raise ZenDomError(
+                'verified viewport origin outside window: verified '
+                'mozInner %r sits at or past the window edge of '
+                'size %r' % (verified, size))
+        verified_absolute = [window[0] + verified[0] * factor,
+                             window[1] + verified[1] * factor]
+        if not (window[0] <= verified_absolute[0]
+                < window[0] + size[0] * factor
+                and window[1] <= verified_absolute[1]
+                < window[1] + size[1] * factor):
+            raise ZenDomError(
+                'verified absolute viewport origin %r falls outside '
+                'the window rect %r size %r at factor %r'
+                % (verified_absolute, window, size, factor))
+        if monitor_box is not None:
+            if (not isinstance(monitor_box, (list, tuple))
+                    or len(monitor_box) != 4
+                    or any(isinstance(v, bool)
+                           or not isinstance(v, (int, float))
+                           for v in monitor_box)):
+                raise ZenDomError('monitor_box must be [x, y, w, h]')
+            if not (monitor_box[0] <= verified_absolute[0]
+                    < monitor_box[0] + monitor_box[2]
+                    and monitor_box[1] <= verified_absolute[1]
+                    < monitor_box[1] + monitor_box[3]):
+                raise ZenDomError(
+                    'verified absolute viewport origin %r falls '
+                    'outside the monitor box %r'
+                    % (verified_absolute, monitor_box))
+        logger.warning(
+            'dimension closure overflow: reported mozInner %r + '
+            'inner %r exceeds window size %r (gaps %r, %r); using '
+            'verified mozInner %r (offset %r, %r) and returning '
+            'verified origin %r (pixel proof a42ef12)'
+            % (moz, inner, size, right_gap, bottom_gap, verified,
+               verified[0] - moz[0], verified[1] - moz[1],
+               verified_absolute))
+        return verified_absolute
     expected = [window[0] + moz[0] * factor,
                 window[1] + moz[1] * factor]
     if (abs(absolute[0] - expected[0]) > 0.5
@@ -327,6 +418,11 @@ class ZenSession:
         self._lock_file = None
         self.last_display_metrics = None
         self.last_scale_factor = 1
+        # Geometry warnings from the last viewport_origin call
+        # (dimension closure overflow, items56 live state): recorded
+        # here so a live probe can read them on the session, not
+        # only from the log.
+        self.last_geometry_warnings = []
         # Per-arm typed-flag property names (TESTREPAIR item 7):
         # arm_typed_flag records the unpredictable name it installed
         # for each selector, and typed_flag reads that name back.
@@ -666,7 +762,7 @@ class ZenSession:
         return factor
 
     def viewport_origin(self, window_origin=None, window_size=None,
-                        monitor_box=None):
+                        monitor_box=None, verified_moz_inner=None):
         """[x, y] of the viewport origin in ABSOLUTE screen coordinates.
 
         Firefox-only. The live C12 probe (2026-11-22 03:36) proved
@@ -688,6 +784,13 @@ class ZenSession:
         getBoundingClientRect are viewport relative, so screen =
         origin + rect center times the factor. One cheap JS eval
         (metrics bundled), no screenshot.
+        verified_moz_inner, when given, is an independently measured
+        origin (C12-style screenshot/click cross-check, pixel proof
+        a42ef12): the reported mozInner is displaced (+34, +58) on
+        the live narrowed window, so closure overflow refuses unless
+        the verified origin is supplied, and the verified origin is
+        what is returned. The override is recorded in
+        last_geometry_warnings.
         """
         if window_origin is None:
             raise ZenDomError(
@@ -734,9 +837,27 @@ class ZenSession:
         # which falsely refused valid factor-2 geometry (F9) and
         # accepted a factor-forgotten origin (F10). The factor is
         # passed explicitly: the validator refuses when it is absent.
-        return check_viewport_geometry(
+        origin = check_viewport_geometry(
             moz_inner, absolute, window_origin, size,
-            [raw[5], raw[6]], monitor_box, factor=factor)
+            [raw[5], raw[6]], monitor_box, factor=factor,
+            verified_moz_inner=verified_moz_inner)
+        # Record a closure overflow on the session (the validator
+        # also logs it): a live probe reads this instead of parsing
+        # the log. Empty when the gaps close. Reaching here with
+        # negative gaps means the verified-origin path was used, so
+        # the warning names the override (reported vs verified moz).
+        inner_size = [raw[5], raw[6]]
+        right_gap = size[0] - inner_size[0] - moz_inner[0]
+        bottom_gap = size[1] - inner_size[1] - moz_inner[1]
+        self.last_geometry_warnings = []
+        if right_gap < 0 or bottom_gap < 0:
+            self.last_geometry_warnings = [
+                'dimension closure overflow: reported mozInner %r + '
+                'inner %r exceeds window size %r (gaps %r, %r); '
+                'using verified mozInner %r, verified origin %r'
+                % (moz_inner, inner_size, size, right_gap, bottom_gap,
+                   verified_moz_inner, origin)]
+        return origin
 
     def live_window_origin(self, address=None):
         """[x, y] live Hyprland origin of a window, re-read now.
@@ -783,21 +904,20 @@ class ZenSession:
         except Exception:
             return None
 
-    def locate_point(self, meta, selector):
-        """Image point of one element's rect center, first-time-right.
-
-        locate() gives the rect, viewport_origin() gives the absolute
-        viewport origin (Hyprland window origin + mozInnerScreen, live
-        probe 03:36), and fastpath.dom_rect_to_image_point maps the
-        rect center into the observation image (same linear map as
-        cu.image_point, inverted), times the CSS-to-screen factor
+    def locate_screen_point(self, meta, selector):
+        """Screen point of one element's rect center (A9: one
+        coordinate system, CSS px rects converted once at the
+        driver edge). locate() gives the rect, viewport_origin()
+        gives the absolute viewport origin (Hyprland window origin
+        + mozInnerScreen, live probe 03:36), and
+        fastpath.dom_rect_to_screen_point converts the rect center
+        to screen coordinates, times the CSS-to-screen factor
         recorded with the origin read. The window origin comes from
-        the meta's window_bounds, else its region. No screenshot is
-        read to locate the element: the DOM rect is ground truth.
-        Raises ZenDomError when the element is missing or the point
-        falls outside the observed image.
+        the meta's window_bounds. No screenshot is read to locate
+        the element: the DOM rect is ground truth. Raises
+        ZenDomError when the element is missing.
         """
-        from fastpath import dom_rect_to_image_point
+        from fastpath import dom_rect_to_screen_point
         rect = self.locate(selector)
         if rect is None:
             raise ZenDomError(f"no element matches {selector!r}")
@@ -817,12 +937,28 @@ class ZenSession:
             else None
         origin = self.viewport_origin(window_origin, window_size,
                                       monitor_box)
+        return dom_rect_to_screen_point(
+            rect, origin, getattr(self, 'last_scale_factor', 1))
+
+    def locate_point(self, meta, selector):
+        """Image point of one element's rect center, first-time-right.
+
+        The screen point is canonical (locate_screen_point); the
+        image point is derived from it at the driver edge, because
+        desktop_act still consumes image points. The fused
+        rect-to-image function is off this path: locate_point keeps
+        its contract (an image point) without calling it.
+        Raises ZenDomError when the element is missing or the point
+        falls outside the observed image.
+        """
+        from fastpath import screen_point_to_image_point
+        screen_point = self.locate_screen_point(meta, selector)
         try:
-            return dom_rect_to_image_point(
-                meta, rect, origin,
-                getattr(self, 'last_scale_factor', 1))
+            return screen_point_to_image_point(
+                meta, screen_point[0], screen_point[1])
         except ValueError as exc:
             raise ZenDomError(str(exc)) from exc
+
 
     def hit_check(self, selector):
         """True when the element's rect center hits the element itself.

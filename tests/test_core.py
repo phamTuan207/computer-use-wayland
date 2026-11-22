@@ -172,13 +172,20 @@ class Coordinates(IsolatedCuState):
         for crop in ([0,0,0,10],[-1,0,10,10],[790,0,20,10]):
             with self.subTest(crop=crop),self.assertRaises(ValueError):cu.screen_region([-800,20,800,1280],crop)
     def test_screen_observation_rejects_keyboard_before_input(self):
+        # Protocol section 8 (P2): the screen-scope legality refusal
+        # is DELETED, so a key batch on a screen observation is no
+        # longer refused for its scope. It proceeds to the guard,
+        # which fails here because hyprctl is unavailable in this
+        # environment, and no input is sent: focus and Pointer are
+        # never called. (The old test pinned the AMEND4 item 12
+        # refusal; the refusal changed form into snapshot binding.)
         meta={'backend':'desktop','observation_schema':cu.OBSERVATION_SCHEMA,
               'image_role':'clean-observation','scope':'screen','monitor':'test',
               'monitor_box':[0,0,20,20],'monitor_scale':1,'monitor_transform':0,
               'image_size':[20,20],'region':[0,0,20,20],'max_width':1280,
               **cu._capture_identity({}),'created':time.time()}
         with patch.object(cu,'focus') as focus,patch.object(cu,'Pointer') as pointer:
-            with self.assertRaisesRegex(ValueError,'pointer actions only'):
+            with self.assertRaises(FileNotFoundError):
                 cu.desktop_act({},meta,[{'type':'key','keys':['a']}])
             focus.assert_not_called();pointer.assert_not_called()
     def test_preparatory_motion_rechecks_state_after_capture(self):

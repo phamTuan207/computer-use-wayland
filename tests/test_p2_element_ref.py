@@ -31,11 +31,13 @@ No live laptop work, no browser tasks, never ydotool. No em dash or
 en dash anywhere. Run:
 python3 tests/test_p2_element_ref.py
 """
+import contextlib
 import logging
 import sys
 import time
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'scripts'))
@@ -44,10 +46,21 @@ import code_exec
 import dom_act
 import element_ref
 import fastpath
+import zen_backend
 import zen_dom
+# cu must be the SAME module object test_keyboard_preflight patches
+# (it loads cu.py by importlib spec, not by plain import); a plain
+# `import cu` here would be a second unpatched copy.
+from test_keyboard_preflight import cu
 from test_code_exec import FakeBackend, FakeDomBackend
 from test_dom_act import FakeDomSession, G30_FIELD, G30_META
+import test_zen_dom
 from test_zen_dom import FakeWdSession
+# test_zen_dom loads zen_dom via importlib.spec_from_file_location,
+# a separate module instance from the plain `import zen_dom` above,
+# so FakeWdSession raises test_zen_dom.ZenDomError, a different
+# class object from zen_dom.ZenDomError. Assertions on errors raised
+# through FakeWdSession must use test_zen_dom.ZenDomError.
 
 G30_META_BOUND = dict(G30_META, id='obs-g30', scope='window')
 G30_SCREEN_POINT = [2839.0, 2046.5]
@@ -63,7 +76,15 @@ LIVE_OUTER = [925, 1176]
 LIVE_WINDOW_ORIGIN = [2509, 914]
 LIVE_WINDOW_SIZE = [925, 1176]
 LIVE_MONITOR = [2464, 902, 1920, 1200]
+# The moz-computed origin (2783, 980) is WRONG: the reported moz is
+# displaced (+34, +58) from the true origin. Kept only to assert it
+# is never returned. The pixel-proven TRUE origin is (2749, 922).
 LIVE_ABSOLUTE_ORIGIN = [2783, 980]
+# The pixel-proven TRUE viewport origin (C5-MOZ-GROWTH, log a42ef12):
+# verified moz (240, 8) + inner (677, 1160) closes with gaps +8/+8,
+# exactly the C12 values.
+VERIFIED_MOZ = [240, 8]
+TRUE_ORIGIN = [2749, 922]
 
 
 class ElementRefTests(unittest.TestCase):
@@ -246,27 +267,43 @@ class ElementRefTests(unittest.TestCase):
 
 
 class ValidatorFixTests(unittest.TestCase):
-    def test_live_zen_state_returns_the_computed_origin(self):
+    def test_live_zen_state_refuses_unverified_moz(self):
         # items56 live numbers: moz [274, 66] + inner [677, 1160]
-        # vs window [925, 1176]. The old closure model refused this
-        # stable state; the corrected model accepts it because the
-        # viewport still fits its window and the origin still
-        # verifies (exactness + containment).
-        origin = zen_dom.check_viewport_geometry(
-            LIVE_MOZ, LIVE_ABSOLUTE_ORIGIN, LIVE_WINDOW_ORIGIN,
-            LIVE_WINDOW_SIZE, LIVE_INNER, LIVE_MONITOR, factor=1)
-        self.assertEqual(origin, LIVE_ABSOLUTE_ORIGIN)
-
-    def test_live_zen_state_logs_the_closure_overflow(self):
-        with self.assertLogs('zen_dom', level='WARNING') as logs:
+        # vs window [925, 1176], gaps -26/-50. The pixel proof
+        # (MOZ-GROWTH, log a42ef12) shows the reported moz is
+        # displaced (+34, +58) from the true origin (240, 8), so
+        # the validator must refuse the unverified state: accepting
+        # the moz-computed origin (2783, 980) would ground clicks
+        # 34px right and 58px down from the true origin. This
+        # corrects the earlier "accept with warning" model, which
+        # returned the wrong origin.
+        with self.assertRaisesRegex(zen_dom.ZenDomError, 'closure'):
             zen_dom.check_viewport_geometry(
                 LIVE_MOZ, LIVE_ABSOLUTE_ORIGIN, LIVE_WINDOW_ORIGIN,
                 LIVE_WINDOW_SIZE, LIVE_INNER, LIVE_MONITOR, factor=1)
+
+    def test_live_zen_state_accepts_verified_moz(self):
+        # The verified-origin path: the pixel-proven moz (240, 8)
+        # closes with gaps +8/+8, so the verified absolute origin
+        # (2749, 922) is returned, never the moz-computed (2783, 980).
+        origin = zen_dom.check_viewport_geometry(
+            LIVE_MOZ, LIVE_ABSOLUTE_ORIGIN, LIVE_WINDOW_ORIGIN,
+            LIVE_WINDOW_SIZE, LIVE_INNER, LIVE_MONITOR, factor=1,
+            verified_moz_inner=VERIFIED_MOZ)
+        self.assertEqual(origin, TRUE_ORIGIN)
+        self.assertNotEqual(origin, LIVE_ABSOLUTE_ORIGIN)
+
+    def test_live_zen_state_logs_the_verified_override(self):
+        with self.assertLogs('zen_dom', level='WARNING') as logs:
+            zen_dom.check_viewport_geometry(
+                LIVE_MOZ, LIVE_ABSOLUTE_ORIGIN, LIVE_WINDOW_ORIGIN,
+                LIVE_WINDOW_SIZE, LIVE_INNER, LIVE_MONITOR, factor=1,
+                verified_moz_inner=VERIFIED_MOZ)
         self.assertTrue(
-            any('closure' in line and '-26' in line
+            any('verified' in line and '-34' in line
                 for line in logs.output),
-            'the overflow warning must name the closure and the gaps: '
-            '%s' % (logs.output,))
+            'the override warning must name the verified moz and the '
+            'offset from the reported moz: %s' % (logs.output,))
 
     def test_c12_state_still_passes(self):
         origin = zen_dom.check_viewport_geometry(
@@ -302,9 +339,10 @@ class ValidatorFixTests(unittest.TestCase):
                 [1615, 1160], None, factor=2)
 
     def test_viewport_origin_outside_window_still_refused(self):
-        # Corrected model, structural invariant: a viewport origin at
-        # or past the window edge cannot be the viewport of that
-        # window.
+        # A viewport origin at or past the window edge cannot close
+        # inside that window, so the closure refusal fires: moz
+        # [1863, 8] + inner [100, 100] overflows the [1863, 1176]
+        # window on the x axis (gap -100).
         with self.assertRaises(zen_dom.ZenDomError):
             zen_dom.check_viewport_geometry(
                 [1863, 8], [4372, 922], [2509, 914], [1863, 1176],
@@ -321,19 +359,25 @@ class ValidatorFixTests(unittest.TestCase):
 
     def test_viewport_origin_live_state_via_session(self):
         # The full viewport_origin chain on the live numbers, through
-        # the scripted session fake: the origin stage that failed
-        # live at 09:20 and 10:55 must now return (2783, 980).
+        # the scripted session fake. Unverified, the origin stage
+        # that failed live at 09:20 and 10:55 still refuses; with
+        # the pixel-proven verified moz (240, 8) it returns the TRUE
+        # origin (2749, 922), never the moz-computed (2783, 980).
         session = FakeWdSession(['aaa11111'])
         session.dom_origin = list(LIVE_MOZ)
         session.dom_inner = list(LIVE_INNER)
         session.dom_outer = list(LIVE_OUTER)
+        with self.assertRaisesRegex(test_zen_dom.ZenDomError, 'closure'):
+            session.viewport_origin(
+                LIVE_WINDOW_ORIGIN, LIVE_WINDOW_SIZE, LIVE_MONITOR)
         origin = session.viewport_origin(
-            LIVE_WINDOW_ORIGIN, LIVE_WINDOW_SIZE, LIVE_MONITOR)
-        self.assertEqual(origin, LIVE_ABSOLUTE_ORIGIN)
+            LIVE_WINDOW_ORIGIN, LIVE_WINDOW_SIZE, LIVE_MONITOR,
+            verified_moz_inner=VERIFIED_MOZ)
+        self.assertEqual(origin, TRUE_ORIGIN)
         self.assertTrue(
-            any('closure' in w for w in session.last_geometry_warnings),
-            'the live call must record its closure overflow: %s'
-            % (session.last_geometry_warnings,))
+            any('verified' in w for w in session.last_geometry_warnings),
+            'the live call must record its verified-origin override: '
+            '%s' % (session.last_geometry_warnings,))
         session.dom_origin = [240, 8]
         session.dom_inner = [1615, 1160]
         session.dom_outer = [1863, 1176]
@@ -342,18 +386,19 @@ class ValidatorFixTests(unittest.TestCase):
         self.assertEqual(session.last_geometry_warnings, [],
                          'no warning is recorded when the gaps close')
 
-    def test_viewport_origin_live_state_records_the_warning(self):
+    def test_viewport_origin_live_state_records_the_override(self):
         session = FakeWdSession(['aaa11111'])
         session.dom_origin = list(LIVE_MOZ)
         session.dom_inner = list(LIVE_INNER)
         session.dom_outer = list(LIVE_OUTER)
         origin = session.viewport_origin(
-            LIVE_WINDOW_ORIGIN, LIVE_WINDOW_SIZE, LIVE_MONITOR)
-        self.assertEqual(origin, LIVE_ABSOLUTE_ORIGIN)
+            LIVE_WINDOW_ORIGIN, LIVE_WINDOW_SIZE, LIVE_MONITOR,
+            verified_moz_inner=VERIFIED_MOZ)
+        self.assertEqual(origin, TRUE_ORIGIN)
         self.assertTrue(
-            any('closure' in w for w in session.last_geometry_warnings),
-            'the session must record the closure overflow for the '
-            'live probe to read: %s'
+            any('verified' in w for w in session.last_geometry_warnings),
+            'the session must record the verified-origin override '
+            'for the live probe to read: %s'
             % (session.last_geometry_warnings,))
 
 
@@ -591,9 +636,11 @@ class FakeZenSession:
         self.exited = False
         self.last_scale_factor = 1
         self.last_display_metrics = {}
-        self.dom_origin = [240, 8]
-        self.dom_inner = [1615, 1160]
-        self.dom_outer = [1863, 1176]
+        # Live narrowed-window fixture (items56, 2026-11-22 10:55):
+        # moz [274, 66], inner [677, 1160], outer [925, 1176].
+        self.dom_origin = [274, 66]
+        self.dom_inner = [677, 1160]
+        self.dom_outer = [925, 1176]
         self.last_geometry_warnings = []
         self.sent_bubbles = []
 
@@ -667,11 +714,18 @@ class FakeZenSession:
 
     def viewport_origin(self, window_origin, window_size,
                         monitor_box=None):
-        zen_dom.check_viewport_geometry(
-            self.dom_origin, self.dom_inner, self.dom_outer,
-            window_origin, window_size, 1, monitor_box)
-        return [window_origin[0] + self.dom_origin[0],
-                window_origin[1] + self.dom_origin[1]]
+        # The fake models the live narrowed window: dom_origin is the
+        # REPORTED moz [274, 66], which is displaced (+34, +58) from
+        # the true origin. It supplies the pixel-proven verified moz
+        # [240, 8] (MOZ-GROWTH, log a42ef12), so the backend grounds
+        # on the true origin [2749, 922] and returns what the
+        # validator returns.
+        absolute = [window_origin[0] + self.dom_origin[0],
+                    window_origin[1] + self.dom_origin[1]]
+        return zen_dom.check_viewport_geometry(
+            self.dom_origin, absolute, window_origin, window_size,
+            self.dom_inner, monitor_box, factor=1,
+            verified_moz_inner=[240, 8])
 
     def live_window_origin(self, address):
         return [2509, 914]
@@ -773,8 +827,9 @@ class ZenBackendTests(unittest.TestCase):
         backend.close()
 
     def test_dom_act_click_dispatches_on_the_fresh_screen_point(self):
-        # Window origin [2509, 914] + moz [240, 8] = viewport origin
-        # [2749, 922]; rect center (200, 215) gives [2949, 1137].
+        # Window origin [2509, 914] + verified moz [240, 8] = true
+        # viewport origin [2749, 922] (MOZ-GROWTH pixel proof);
+        # rect center (200, 215) gives [2949, 1137].
         backend, _session, pointer = self._backend()
         backend.dom_start()
         snapshot = backend.dom_observe('Example', '#c5-text', 10)
@@ -830,7 +885,7 @@ class ZenBackendTests(unittest.TestCase):
     def test_dom_act_nonstrict_move_re_grounds_once_and_acts(self):
         # The same move on a plain click (not strict) re-grounds
         # once and acts on the fresh rect: center (200, 315) gives
-        # [2949, 1237].
+        # [2949, 1237] from the true origin [2749, 922].
         backend, session, pointer = self._backend()
         backend.dom_start()
         snapshot = backend.dom_observe('Example', '#c5-text', 10)
@@ -919,10 +974,12 @@ class ZenBackendTests(unittest.TestCase):
     def test_code_exec_window_wait_uses_the_backend_class(self):
         # code_exec._wait_for_dom_window must match the Zen backend
         # by its DOM_WINDOW_CLASS, not only by class == 'chromium'.
+        # The wait returns None on success (it raises on failure),
+        # so the assertion is that it does not raise.
         backend, _session, _pointer = self._backend()
         self.assertEqual(backend.DOM_WINDOW_CLASS, 'zen')
         session = code_exec.CodeExecSession(backend)
-        self.assertTrue(session._wait_for_dom_window())
+        session._wait_for_dom_window()
 
 
 class BackendRangeTests(unittest.TestCase):
@@ -1002,7 +1059,8 @@ class BackendRangeTests(unittest.TestCase):
         self.setUp_meta()
         actions = [{'type': 'type', 'text': 'hello', 'scope': 'window',
                     'observation_id': 'fixture-observation'}]
-        self.backend.act(self.meta, actions, dom_selector='#msg-input')
+        self.backend.act(self.meta, actions, None,
+                         dom_selector='#msg-input')
         self.assertEqual(len(self.calls), 1)
         kwargs = self.calls[0][1]
         self.assertIsNone(kwargs['type_x_ranges'])
@@ -1015,7 +1073,7 @@ class BackendRangeTests(unittest.TestCase):
             {'#msg-input': {'rect': self.field_rect}})
         actions = [{'type': 'type', 'text': 'hello', 'scope': 'window',
                     'observation_id': 'fixture-observation'}]
-        self.backend.act(self.meta, actions, dom_session=session,
+        self.backend.act(self.meta, actions, None, dom_session=session,
                          dom_selector='#msg-input')
         kwargs = self.calls[0][1]
         self.assertEqual(kwargs['type_x_ranges'], [[12.0, 20.0]])
@@ -1037,7 +1095,22 @@ class ScreenScopeLegalityTests(
                     'observation_id': 'fixture-observation'},
                    {'type': 'key', 'keys': ['Enter'], 'scope': 'screen',
                     'observation_id': 'fixture-observation'}]
-        result = cu.desktop_act({}, meta, actions)
+        # The harness patches observe() (window path) but not
+        # observe_screen(): screen-scope batches never reached the
+        # after-capture before this step, because the legality
+        # refusal stopped them. Patch it the same way here:
+        # persist=True returns the observation dict, persist=False
+        # returns (image, meta).
+        def _observe_screen(*args, **kwargs):
+            if kwargs.get('persist', True):
+                return dict(self.meta,
+                            pixel_sha256=self.after_pixel_sha256,
+                            image='after.png')
+            return self.image, self.meta.copy()
+
+        with patch.object(cu, 'observe_screen',
+                          side_effect=_observe_screen):
+            result = cu.desktop_act({}, meta, actions)
         self.assertTrue(result['ok'], result)
         self.assertEqual(result['completed'], 2)
 

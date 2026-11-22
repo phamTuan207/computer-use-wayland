@@ -466,10 +466,12 @@ def loud_substitution_refusal(rejected, has_keyboard=True):
     rejected, states that a screen capture was substituted and will
     NOT be acted on, and says what to pass instead: a fresh window
     observation captured in the same call as act-now. On the key/type
-    path only that remedy is offered: a type batch with no observation
-    ends at desktop_act on a screen observation, which refuses key/type,
-    so the screen-coordinates remedy would fail with the same scope
-    refusal this message replaces. On a pointer-only batch the screen
+    path only that remedy is offered: a screen-scope observation
+    carries no window to type into, and a screen batch types into
+    the focused window, which is not the named target, so the
+    screen-coordinates remedy would act on the wrong target (the
+    binding check in desktop_act refuses an action bound to a
+    different observation). On a pointer-only batch the screen
     remedy is valid and is offered too.
     """
     given = rejected.get('given_id') or 'unknown id'
@@ -608,34 +610,15 @@ def run(args):
                                     OBSERVATION_MAX_AGE_S))
             envelope['path'] = 'refused'
             return 1
-        # AMEND4 item 12: the scope check runs BEFORE the overlay.
-        # A key/type batch given a screen-scope observation can never
-        # run (desktop_act refuses it), so refuse now instead of
-        # spending the overlay acquire and the session attempt first
-        # (the CL1-SWEEP Enter failure wasted 998ms there). A
-        # rejected given observation is left to the G28 flow below,
-        # which names the substitute capture; a meta with no scope
-        # field is not refused here (older observations predate the
-        # scope field, and the session preflight still guards them).
-        has_keyboard = any(
-            isinstance(a, dict) and a.get('type') in ('key', 'type')
-            for a in actions)
-        if has_keyboard and args.observation:
-            given_meta, _given_rejected = _read_given_observation(
-                cu, args.observation, deadline)
-            if (isinstance(given_meta, dict)
-                    and given_meta.get('scope') == 'screen'):
-                message = ('screen observations support pointer '
-                           'actions only; use a window or accessibility '
-                           'target for typing (given observation %s is '
-                           'screen-scope)'
-                           % given_meta.get('id'))
-                envelope['observation'] = {
-                    'id': given_meta.get('id'), 'source': 'given'}
-                envelope['fallback_reason'] = message
-                envelope['error'] = message
-                envelope['path'] = 'refused'
-                return 1
+        # Protocol section 8 (final direction 2(f)): the pre-overlay
+        # screen-scope key/type refusal is DELETED. The check changed
+        # form into snapshot binding, which desktop_act enforces:
+        # actions bound to the given observation proceed to the
+        # session attempt, and a mismatched binding refuses there
+        # with a stale-ref code. A screen-scope observation with
+        # bound actions is no longer refused for its scope alone;
+        # the scope check that used to live here is the binding
+        # check now.
         env = cu.environment()
         try:
             reply = acquire_overlay(agent, method, label=args.label,

@@ -22,7 +22,8 @@ class FakeBackend:
     def __init__(self):
         self.calls = []
         self.meta = {
-            'id': 'abcdef012345', 'image': '/tmp/x.png',
+            'id': 'abcdef012345', 'scope': 'window',
+            'image': '/tmp/x.png',
             'observation': '/tmp/x.json', 'window': '0xabc',
             'window_bounds': [0, 0, 800, 600], 'image_size': [800, 600],
             'region': [0, 0, 800, 600], 'monitor': 'eDP-2',
@@ -344,7 +345,7 @@ class ApiTests(unittest.TestCase):
             'wins = windows()\n'
             'assert_state(len(wins) == 1, "one window")\n'
             'obs = observe(window="0xabc")\n'
-            'result = act([{"type": "type", "text": "df -h /\\n"}], obs)\n'
+            'result = act([{"type": "type", "text": "df -h /\\n", "scope": obs["scope"], "observation_id": obs["id"]}], obs)\n'
             'assert_state(result["ok"], "act failed")\n'
             'text = read_file("/tmp/y-tuong.txt")\n'
             'assert_file_contains("/tmp/y-tuong.txt", "hello")\n'
@@ -417,7 +418,7 @@ class ApiTests(unittest.TestCase):
                 return {'ok': False, 'completed': 0, 'error': 'screen changed',
                         'error_code': 'screen_changed'}
         result = run('obs = observe(window="0xabc")\n'
-                     'r = act([{"type": "wait", "ms": 0}], obs)\n'
+                     'r = act([{"type": "wait", "ms": 0, "scope": obs["scope"], "observation_id": obs["id"]}], obs)\n'
                      'assert_state(r["ok"] is False, "expected refusal")\n'
                      'obs2 = observe(window="0xabc")\n'
                      'assert_state(obs2["id"] == obs["id"], "same id")\n',
@@ -475,15 +476,15 @@ class DomApiTests(unittest.TestCase):
             'wins = windows()\n'
             'chrome = [w for w in wins if w["class"] == "chromium"][0]\n'
             'obs = observe(window=chrome["address"])\n'
-            'result = act([{"type": "key", "keys": ["ctrl", "l"]}, '
-            '{"type": "type", "text": "file:///fixture\\n"}], obs)\n'
+            'result = act([{"type": "key", "keys": ["ctrl", "l"], "scope": obs["scope"], "observation_id": obs["id"]}, '
+            '{"type": "type", "text": "file:///fixture\\n", "scope": obs["scope"], "observation_id": obs["id"]}], obs)\n'
             'verify = observe(window=chrome["address"])\n'
             'assert_state(result["ok"], "navigate act failed")\n'
             'tabs = dom_tabs()\n'
             'tab = [t for t in tabs if t["url"] == "file:///fixture"][0]\n'
             'snap = dom_observe(tab["id"])\n'
             'btn = [e for e in snap["elements"] if e["name"] == "Show result"][0]\n'
-            'clicked = dom_act(snap, [{"type": "click", "ref": btn["ref"]}])\n'
+            'clicked = dom_act(snap, [{"type": "click", "ref": btn["ref"], "scope": tab["id"], "observation_id": snap["snapshot"]}])\n'
             'assert_state(clicked["ok"], "dom click failed")\n'
             'after = clicked["after"]\n'
             'dom_assert(after, selector="#result", text="pick4-ok")\n'
@@ -510,7 +511,9 @@ class DomApiTests(unittest.TestCase):
         session = code_exec.CodeExecSession(backend)
         snapshot = session.api_dom_observe('tab-1')
         result = session.api_dom_act(
-            snapshot, [{'type': 'click', 'ref': snapshot['elements'][0]['ref']}])
+            snapshot, [{'type': 'click', 'ref': snapshot['elements'][0]['ref'],
+                        'scope': 'tab-1',
+                        'observation_id': snapshot['snapshot']}])
         self.assertEqual(result['ok'], True)
         after_id = result['after']['snapshot']
         self.assertIn(after_id, session.dom_snapshots)
@@ -536,6 +539,11 @@ class DomApiTests(unittest.TestCase):
         session = code_exec.CodeExecSession(backend)
         snapshot = session.api_dom_observe('tab-1')
         action['ref'] = snapshot['elements'][0]['ref']
+        # CB-2: the bound action carries the tab scope and the
+        # snapshot id; the _validate_dom_actions calls above run
+        # without a binding target, so they need no stamp.
+        action['scope'] = 'tab-1'
+        action['observation_id'] = snapshot['snapshot']
         self.assertTrue(session.api_dom_act(snapshot, [action])['ok'])
         self.assertEqual(backend.dom_calls[-1][3][0]['type'], 'confirm_click')
 
@@ -553,7 +561,9 @@ class DomApiTests(unittest.TestCase):
         session = code_exec.CodeExecSession(backend)
         snapshot = session.api_dom_observe('tab-1')
         result = session.api_dom_act(
-            snapshot, [{'type': 'click', 'ref': snapshot['elements'][0]['ref']}])
+            snapshot, [{'type': 'click', 'ref': snapshot['elements'][0]['ref'],
+                        'scope': 'tab-1',
+                        'observation_id': snapshot['snapshot']}])
         self.assertEqual(result, {
             'ok': False, 'completed': 0, 'error': 'DOM action refused',
         })
@@ -619,7 +629,9 @@ class DomApiTests(unittest.TestCase):
         snapshot = session.api_dom_observe('tab-1')
         session.dom_snapshots[snapshot['snapshot']]['created'] = time.time() - 100
         session.api_dom_act(
-            snapshot, [{'type': 'click', 'ref': snapshot['elements'][0]['ref']}])
+            snapshot, [{'type': 'click', 'ref': snapshot['elements'][0]['ref'],
+                        'scope': 'tab-1',
+                        'observation_id': snapshot['snapshot']}])
 
     def test_dom_snapshot_binding_persists_across_runs(self):
         backend = FakeDomBackend()
@@ -629,7 +641,7 @@ class DomApiTests(unittest.TestCase):
                         state_dir=folder, session_token=token)
             self.assertTrue(first['ok'], first)
             second = run(
-                'result = dom_act(snap, [{"type": "click", "ref": snap["elements"][0]["ref"]}])\n'
+                'result = dom_act(snap, [{"type": "click", "ref": snap["elements"][0]["ref"], "scope": "tab-1", "observation_id": snap["snapshot"]}])\n'
                 'assert_state(result["ok"], "DOM act failed")',
                 backend, state_dir=folder, session_token=token)
         self.assertTrue(second['ok'], second)
@@ -638,13 +650,13 @@ class DomApiTests(unittest.TestCase):
         source = (
             'wins = windows()\n'
             'obs = observe(window=wins[0]["address"])\n'
-            'desktop = act([{"type": "wait", "ms": 0}], obs)\n'
+            'desktop = act([{"type": "wait", "ms": 0, "scope": obs["scope"], "observation_id": obs["id"]}], obs)\n'
             'verify = observe(window=wins[0]["address"])\n'
             'assert_state(desktop["ok"], "desktop act failed")\n'
             'started = dom_start()\n'
             'tabs = dom_tabs()\n'
             'snap = dom_observe(tabs[0]["id"])\n'
-            'clicked = dom_act(snap, [{"type": "click", "ref": snap["elements"][0]["ref"]}])\n'
+            'clicked = dom_act(snap, [{"type": "click", "ref": snap["elements"][0]["ref"], "scope": tabs[0]["id"], "observation_id": snap["snapshot"]}])\n'
             'assert_state(clicked["ok"], "DOM act failed")\n'
             'dom_assert(clicked["after"], selector="#result", text="ready")\n'
         )
@@ -688,7 +700,7 @@ class TraceBudgetTests(unittest.TestCase):
         source = (
             'wins = windows()\n'
             'obs = observe(window="0xabc")\n'
-            'result = act([{"type": "wait", "ms": 0}], obs)\n'
+            'result = act([{"type": "wait", "ms": 0, "scope": obs["scope"], "observation_id": obs["id"]}], obs)\n'
             'obs2 = observe(window="0xabc")\n'
             'assert_state(result["ok"], "act failed")\n'
         )
@@ -812,7 +824,7 @@ class TestAssertPoll(unittest.TestCase):
             backend = DelayedFileBackend(path, 'ready\n')
             source = (
                 'obs = observe(window="0xabc")\n'
-                'result = act([{"type": "wait", "ms": 0}], obs)\n'
+                'result = act([{"type": "wait", "ms": 0, "scope": obs["scope"], "observation_id": obs["id"]}], obs)\n'
                 'assert_file_exists(%r)\n' % str(path)
             )
             result = run(source, backend)
@@ -825,7 +837,7 @@ class TestAssertPoll(unittest.TestCase):
             backend = DelayedFileBackend(path, 'needle is ready\n')
             source = (
                 'obs = observe(window="0xabc")\n'
-                'result = act([{"type": "wait", "ms": 0}], obs)\n'
+                'result = act([{"type": "wait", "ms": 0, "scope": obs["scope"], "observation_id": obs["id"]}], obs)\n'
                 'assert_file_contains(%r, "needle")\n' % str(path)
             )
             result = run(source, backend)

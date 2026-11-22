@@ -85,6 +85,15 @@ class PreflightMidListTests(unittest.TestCase):
         self.good_ref = self.snapshot['elements'][0]['ref']
         self.assertEqual(self.good_ref, 'dom-ref-1')
 
+    def _bind(self, actions):
+        # CB-2: DOM actions carry scope (the tab target) and the
+        # observation id of the bound snapshot. Binding is checked
+        # before the ref check, so a bad ref with a correct binding
+        # still reaches the ref refusal these tests pin.
+        return [dict(a, scope='tab-1',
+                     observation_id=self.snapshot['snapshot'])
+                for a in actions]
+
     def _assert_no_backend_act(self):
         self.assertEqual(_act_calls(self.backend), [],
                          'backend dom_act must never be called on refusal')
@@ -97,7 +106,7 @@ class PreflightMidListTests(unittest.TestCase):
         ]
         with self.assertRaisesRegex(
                 code_exec.CodeExecError, 'not present in the bound snapshot'):
-            self.session.api_dom_act(self.snapshot, actions)
+            self.session.api_dom_act(self.snapshot, self._bind(actions))
         self._assert_no_backend_act()
 
     def test_bad_ref_mid_list_fill(self):
@@ -108,7 +117,7 @@ class PreflightMidListTests(unittest.TestCase):
         ]
         with self.assertRaisesRegex(
                 code_exec.CodeExecError, 'not present in the bound snapshot'):
-            self.session.api_dom_act(self.snapshot, actions)
+            self.session.api_dom_act(self.snapshot, self._bind(actions))
         self._assert_no_backend_act()
 
     def test_bad_ref_mid_list_set_value(self):
@@ -119,7 +128,7 @@ class PreflightMidListTests(unittest.TestCase):
         ]
         with self.assertRaisesRegex(
                 code_exec.CodeExecError, 'not present in the bound snapshot'):
-            self.session.api_dom_act(self.snapshot, actions)
+            self.session.api_dom_act(self.snapshot, self._bind(actions))
         self._assert_no_backend_act()
 
     def test_bad_ref_mid_list_assert(self):
@@ -130,7 +139,7 @@ class PreflightMidListTests(unittest.TestCase):
         ]
         with self.assertRaisesRegex(
                 code_exec.CodeExecError, 'not present in the bound snapshot'):
-            self.session.api_dom_act(self.snapshot, actions)
+            self.session.api_dom_act(self.snapshot, self._bind(actions))
         self._assert_no_backend_act()
 
     def test_bad_ref_as_first_and_last_action(self):
@@ -144,7 +153,7 @@ class PreflightMidListTests(unittest.TestCase):
             with self.subTest(bad_pos=bad_pos), self.assertRaisesRegex(
                     code_exec.CodeExecError,
                     'not present in the bound snapshot'):
-                self.session.api_dom_act(self.snapshot, actions)
+                self.session.api_dom_act(self.snapshot, self._bind(actions))
         self._assert_no_backend_act()
 
     def test_all_valid_refs_reach_backend(self):
@@ -155,7 +164,7 @@ class PreflightMidListTests(unittest.TestCase):
             {'type': 'fill', 'ref': self.good_ref, 'text': 'x'},
             {'type': 'click', 'ref': self.good_ref},
         ]
-        result = self.session.api_dom_act(self.snapshot, actions)
+        result = self.session.api_dom_act(self.snapshot, self._bind(actions))
         self.assertTrue(result['ok'])
         self.assertEqual(len(_act_calls(self.backend)), 1)
 

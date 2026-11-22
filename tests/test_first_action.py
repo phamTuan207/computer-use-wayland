@@ -748,10 +748,12 @@ class TestRun(unittest.TestCase):
 
     def test_fallback_desktop_act_raises_valueerror(self):
         # Redteam A5: a preflight refusal (PreflightRefusal is a
-        # ValueError subclass) lands in the envelope, cleanly.
+        # ValueError subclass) lands in the envelope, cleanly. The
+        # refusal message is a current one: the old 'screen
+        # observations support pointer actions only' message is gone
+        # with the deleted legality refusal (protocol section 8).
         self.fake_cu.desktop_act = mock.Mock(
-            side_effect=ValueError(
-                'screen observations support pointer actions only'))
+            side_effect=ValueError('stale_ref: scope_changed'))
         code, env, _ = self._run(
             [{'type': 'click', 'x': 100, 'y': 100}],
             (1, '{"ok": false, "error": "session guardian startup failed"}',
@@ -759,7 +761,7 @@ class TestRun(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertFalse(env['ok'])
         self.assertEqual(env['path'], 'fallback')
-        self.assertIn('pointer actions only', env['error'])
+        self.assertIn('stale_ref: scope_changed', env['error'])
         self.assertEqual(len(self.fake_cu.observe_calls), 2)
 
     def test_stale_monitor_observation_raises_single_json(self):
@@ -1038,27 +1040,24 @@ class TestRun(unittest.TestCase):
         self.assertEqual(env['after']['id'], 'win-after-1')
         self.assertEqual(env['after_screen']['id'], 'a1b2c3d4e5f6')
 
-    def test_screen_observation_key_batch_refused_before_overlay(self):
-        # AMEND4 item 12: a key batch given a screen-scope observation
-        # is refused BEFORE the overlay is acquired (and before any
-        # session attempt), instead of spending both and then failing
-        # the desktop_act scope preflight (the CL1-SWEEP Enter waste).
+    def test_screen_observation_key_batch_proceeds_to_session(self):
+        # Protocol section 8 (P2): the pre-overlay screen-scope
+        # key/type refusal is DELETED. A key batch given a fresh
+        # screen-scope observation now proceeds to the session
+        # attempt, and the outcome is the session's outcome; the
+        # scope alone no longer refuses it. (The old test pinned the
+        # AMEND4 item 12 refusal; the refusal changed form into
+        # snapshot binding, enforced by desktop_act.)
         obs = self._write_window_obs('scr-obs-1', scope='screen')
-        path = _write_actions(self.tmp.name,
-                              [{'type': 'key', 'keys': ['Return']}])
-        with mock.patch.object(first_action, 'attempt_session') as sess:
-            buf = io.StringIO()
-            with contextlib.redirect_stdout(buf):
-                code = first_action.run(
-                    _args(path, observation=obs))
-        env = json.loads(buf.getvalue())
-        sess.assert_not_called()
-        self.assertEqual(code, 1)
-        self.assertFalse(env['ok'])
-        self.assertEqual(env['path'], 'refused')
-        self.assertIn('screen observations support pointer actions',
-                      env['error'])
-        self.assertEqual(self.fake_overlay.holders, {})
+        code, env, _ = self._run(
+            [{'type': 'key', 'keys': ['Return']}],
+            (0, '{"ok": true, "completed": 1}', '', False, 0.5),
+            observation=obs)
+        self.assertEqual(code, 0)
+        self.assertTrue(env['ok'])
+        self.assertEqual(env['path'], 'session')
+        self.assertNotIn('screen observations support pointer actions',
+                         env.get('error') or '')
 
     def test_scope_after_prefers_result_after_for_scopeless_window_meta(self):
         # TESTREPAIR (round 3, RT item 12 residual): a scope-less

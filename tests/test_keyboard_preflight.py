@@ -34,6 +34,7 @@ class DesktopPreflight(unittest.TestCase):
         self.image=Image.new('RGB',(20,20))
         self.monitor={'name':'test','x':0,'y':0,'width':20,'height':20,'scale':1}
         self.meta={'backend':'desktop','observation_schema':cu.OBSERVATION_SCHEMA,
+                   'id':'fixture-observation',
                    'image_role':'clean-observation','scope':'window','created':time.time(),
                    'window':'fixture','window_bounds':[0,0,20,20],
                    'monitor':'test','monitor_box':[0,0,20,20],'monitor_scale':1,

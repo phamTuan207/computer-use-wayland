@@ -92,6 +92,12 @@ import sys
 import time
 from pathlib import Path
 
+try:
+    import element_ref
+except ImportError:  # loaded by file path without the scripts dir on sys.path
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import element_ref
+
 MAX_PROGRAM_CHARS = 8192
 MAX_WALL_SECONDS = 60
 DEFAULT_WALL_SECONDS = 30
@@ -196,8 +202,18 @@ def _dom_key_supported(key):
             and key not in ('\n', '\r', '\u2028', '\u2029'))
 
 
-def _validate_dom_actions(actions, refs):
-    """Mirror cdp.mjs action preflight before any CDP request is made."""
+def _validate_dom_actions(actions, refs, snapshot_id=None, target=None):
+    """Mirror cdp.mjs action preflight before any CDP request is made.
+
+    When snapshot_id and target are given (the _api_dom_act path),
+    CB-2 also applies: every action must carry scope +
+    observation_id bound to this snapshot (scope == target,
+    observation_id == snapshot_id). Direct test-only calls pass
+    neither, so only the shape checks run there. The binding check
+    runs AFTER the shape loop, so a malformed action still reports
+    its shape error first (a non-string ref must say 'ref must
+    be', not 'missing scope').
+    """
     allowed = {'click', 'confirm_click', 'hover_click', 'fill', 'set_value', 'key', 'scroll', 'wait', 'assert'}
     element_actions = {'click', 'confirm_click', 'hover_click', 'fill', 'set_value', 'assert'}
     if not isinstance(actions, list) or not 1 <= len(actions) <= 32:
@@ -258,6 +274,14 @@ def _validate_dom_actions(actions, refs):
                 ms = 100
             if not _finite_number(ms) or ms < 0 or ms > 2000:
                 raise CodeExecError('wait ms must be 0..2000')
+    if snapshot_id is not None and target is not None:
+        for index, action in enumerate(actions):
+            try:
+                element_ref.validate_action_binding(
+                    action, snapshot_id=snapshot_id, scope=target,
+                    index=index)
+            except element_ref.ElementRefError as exc:
+                raise CodeExecError(str(exc)) from exc
         if action_type == 'assert':
             if 'value' in action and not isinstance(action['value'], str):
                 raise CodeExecError('assert value must be a string')
@@ -689,6 +713,7 @@ class CodeExecSession:
         self.observations[meta['id']] = meta
         return {
             'id': meta['id'],
+            'scope': meta.get('scope'),
             'image': meta.get('image'),
             'observation': meta.get('observation'),
             'window': meta.get('window'),
@@ -744,6 +769,19 @@ class CodeExecSession:
         if not isinstance(actions, list) or not actions:
             raise CodeExecError('act actions must be a non-empty list')
         meta = self._bound_observation(observation)
+        # CB-2: scope + observation_id are mandatory in action
+        # data, bound to the observation the batch is written
+        # against. A program holds the observation dict, so it
+        # stamps scope from obs['scope'] and observation_id from
+        # obs['id']; an unstamped or mismatched action refuses
+        # before any input.
+        for index, action in enumerate(actions):
+            try:
+                element_ref.validate_action_binding(
+                    action, snapshot_id=meta['id'],
+                    scope=meta.get('scope'), index=index)
+            except element_ref.ElementRefError as exc:
+                raise CodeExecError(str(exc)) from exc
         result = self._api('act', self.backend.act, meta, actions,
                            meta.get('observation'))
         if not isinstance(result, dict):
@@ -805,7 +843,7 @@ class CodeExecSession:
         return result
 
     def _wait_for_dom_window(self):
-        """Wait for the managed Chromium window to appear in windows().
+        """Wait for the managed browser window to appear in windows().
 
         browser_start returns once CDP answers, but the Wayland window can
         map later; without this wait the D1 program IndexErrors on the
@@ -813,7 +851,14 @@ class CodeExecSession:
         backend.windows(), not through _api, so the wait costs no API-call
         budget. Cancellation and the wall-clock budget are checked every
         poll; a window that never appears fails closed with CodeExecError.
+        The window class comes from the backend (DOM_WINDOW_CLASS):
+        'chromium' for the CDP backend, 'zen' for the Zen adapter. The
+        match is a case-insensitive prefix match, so 'zen' also matches
+        a 'zen-beta' class and 'chromium' still matches exactly.
         """
+        window_class = getattr(self.backend, 'DOM_WINDOW_CLASS',
+                               DOM_WINDOW_CLASS)
+        wanted = str(window_class).lower()
         deadline = time.monotonic() + DOM_WINDOW_WAIT_SECONDS
         while True:
             self.check_cancel()
@@ -822,16 +867,19 @@ class CodeExecSession:
             except Exception as exc:
                 self.check_cancel()
                 raise CodeExecError(
-                    'windows() failed while waiting for Chromium: '
-                    + str(exc)[:200]) from exc
+                    'windows() failed while waiting for the managed '
+                    'browser window: ' + str(exc)[:200]) from exc
             if isinstance(wins, list) and any(
-                    isinstance(w, dict) and w.get('class') == DOM_WINDOW_CLASS
+                    isinstance(w, dict)
+                    and isinstance(w.get('class'), str)
+                    and w['class'].lower().startswith(wanted)
                     for w in wins):
                 return
             if time.monotonic() >= deadline:
                 raise CodeExecError(
-                    'managed Chromium window did not appear within %.0fs; '
-                    'observe windows() again' % DOM_WINDOW_WAIT_SECONDS)
+                    'managed browser window (%s) did not appear within '
+                    '%.0fs; observe windows() again'
+                    % (window_class, DOM_WINDOW_WAIT_SECONDS))
             self._check_budgets()
             time.sleep(DOM_WINDOW_POLL_INTERVAL)
 
@@ -869,7 +917,8 @@ class CodeExecSession:
             if no_after:
                 raise CodeExecError('after_scope is incompatible with no_after')
         refs = set(binding['refs'])
-        _validate_dom_actions(actions, refs)
+        _validate_dom_actions(actions, refs, snapshot_id=snapshot_id,
+                              target=binding['target'])
         # P5 (step 5): a send program (fill/set_value followed by
         # key Enter) must end with an assert action, the V12 gate
         # in program form. focus_check and type_check are
@@ -944,6 +993,12 @@ class CodeExecSession:
             action['value'] = value
         if checked is not None:
             action['checked'] = checked
+        # CB-2: api_dom_assert builds this action itself, so the
+        # session stamps scope + observation_id from the binding;
+        # the program never writes them for this internal action.
+        snapshot_id, binding = self._bound_dom_snapshot(snapshot)
+        action['scope'] = binding['target']
+        action['observation_id'] = snapshot_id
         result = self._api_dom_act(snapshot, [action], no_after=True)
         if result.get('ok') is not True:
             raise AssertionError(str(result.get('error') or 'DOM assertion failed'))

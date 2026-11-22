@@ -1842,8 +1842,30 @@ def desktop_act(env,meta,actions,after_capture=True,observation_path=None,
         verified_image=validate_desktop_observation(meta,env,observation_path,load_image=True)
         validate_actions(actions,'desktop')
         screen_scope=meta.get('scope')=='screen'
-        if screen_scope and any(a['type'] in ('key','type') for a in actions):
-            raise ValueError('screen observations support pointer actions only; use a window or accessibility target for typing')
+        # Protocol section 8 (final direction 2(f)): the
+        # screen-scope key/type legality refusal is DELETED; the
+        # check changes form into snapshot binding. An action that
+        # carries scope/observation_id must match the observation
+        # it is written against, or the batch refuses with a
+        # stale-ref code before any input. Actions without the
+        # fields stay on the legacy pixel path (the observation
+        # freshness check above still applies). Residual risk, on
+        # the record: a key/type batch on a screen observation
+        # types into the focused window; the 120 s freshness
+        # window bounds that, and full mandatory-at-plan-validation
+        # on this JSON batch interface needs the agent loop to
+        # write scope/observation_id into act-now JSON (open item).
+        for index, action in enumerate(actions):
+            if not isinstance(action, dict):
+                continue
+            if 'scope' in action or 'observation_id' in action:
+                import element_ref
+                try:
+                    element_ref.validate_action_binding(
+                        action, snapshot_id=meta.get('id'),
+                        scope=meta.get('scope'), index=index)
+                except element_ref.ElementRefError as exc:
+                    raise ValueError(str(exc)) from exc
         # Validate coordinates and payloads for the entire batch before any side effects.
         for a in actions:
             if a['type'] in ('click','double_click','move','hover','scroll'):
@@ -2811,9 +2833,20 @@ class CodeExecBackend:
     mirrors the observe/act branches in main().
     """
 
-    def __init__(self, env):
+    def __init__(self, env, dom_backend=None):
         self.env = env
         self.browser_endpoint = BROWSER_ENDPOINT
+        # Optional DOM backend (P2 Zen adapter): when set, the
+        # dom_* methods delegate to it instead of CDP. The window
+        # class the code-exec wait matches on follows the delegate.
+        self._dom_backend = dom_backend
+
+    @property
+    def DOM_WINDOW_CLASS(self):
+        if self._dom_backend is not None:
+            return getattr(self._dom_backend, 'DOM_WINDOW_CLASS',
+                           'zen')
+        return 'chromium'
 
     def windows(self):
         keys = ('address', 'class', 'title', 'at', 'size', 'workspace')
@@ -2834,6 +2867,26 @@ class CodeExecBackend:
     def act(self, meta, actions, observation_path, dom_session=None,
             dom_selector=None):
         import session_policy
+        # CB-2: scope + observation_id are mandatory in action data
+        # on this interface. The meta must carry both (every real
+        # observe does); without them the batch cannot be bound, so
+        # it refuses instead of acting on an unbound batch.
+        import element_ref
+        if not isinstance(meta, dict) or not meta.get('id'):
+            raise ValueError(
+                'observation meta has no id; actions cannot be bound '
+                'to a snapshot (CB-2)')
+        if not meta.get('scope'):
+            raise ValueError(
+                'observation meta has no scope; actions cannot be '
+                'bound to a scope (CB-2)')
+        for index, action in enumerate(actions):
+            try:
+                element_ref.validate_action_binding(
+                    action, snapshot_id=meta['id'],
+                    scope=meta['scope'], index=index)
+            except element_ref.ElementRefError as exc:
+                raise ValueError(str(exc)) from exc
         focus_check = type_check = None
         type_ranges = None
         type_y_ranges = None
@@ -2851,20 +2904,12 @@ class CodeExecBackend:
                 # R3a wiring (AMEND4 item 4, mirroring
                 # first_action.py): ground the field and thread its
                 # ranges to desktop_act, so the band reads only that
-                # field instead of the full width. Best-effort: when
-                # no rect grounds, the batch keeps the full-width /
-                # click-anchored band, exactly as before.
-                try:
-                    ground = dom_act.ground_input(
-                        dom_session, meta, dom_selector)
-                    x_range = dom_act.grounded_x_range(ground, meta)
-                    if x_range is not None:
-                        type_ranges = [x_range]
-                    y_range = dom_act.grounded_y_range(ground, meta)
-                    if y_range is not None:
-                        type_y_ranges = [y_range]
-                except Exception:
-                    pass
+                # field instead of the full width. A missing range is
+                # logged by ground_field_ranges (P2-SPEC observation
+                # 2) instead of silently keeping the full-width /
+                # click-anchored band.
+                type_ranges, type_y_ranges = dom_act.ground_field_ranges(
+                    dom_session, meta, dom_selector)
         result = desktop_act(self.env, meta, actions,
                              observation_path=observation_path,
                              focus_check=focus_check,
@@ -2878,6 +2923,8 @@ class CodeExecBackend:
         return result
 
     def dom_start(self):
+        if self._dom_backend is not None:
+            return self._dom_backend.dom_start()
         global BROWSER_ENDPOINT
         endpoint = BROWSER_ENDPOINT
         result = browser_start(self.env, endpoint)
@@ -2887,9 +2934,14 @@ class CodeExecBackend:
         return result
 
     def dom_tabs(self):
+        if self._dom_backend is not None:
+            return self._dom_backend.dom_tabs()
         return browser({'operation': 'tabs', 'endpoint': self.browser_endpoint})
 
     def dom_observe(self, target, scope, max_elements):
+        if self._dom_backend is not None:
+            return self._dom_backend.dom_observe(target, scope,
+                                                 max_elements)
         request = {
             'operation': 'observe', 'endpoint': self.browser_endpoint,
             'target': target, 'max_elements': max_elements,
@@ -2899,6 +2951,9 @@ class CodeExecBackend:
         return browser(request)
 
     def dom_act(self, target, snapshot, actions, after_scope=None, no_after=False):
+        if self._dom_backend is not None:
+            return self._dom_backend.dom_act(
+                target, snapshot, actions, after_scope, no_after)
         import session_policy
         session_policy.require_observation(
             STATE, os.environ.get('CU_SESSION_TOKEN'))
@@ -3081,10 +3136,23 @@ def main():
         previous_endpoint=BROWSER_ENDPOINT
         if args.endpoint is not None:
             BROWSER_ENDPOINT=_validate_browser_endpoint(args.endpoint)
+        # P2 Zen adapter: CU_DOM_BACKEND=zen routes the code-exec
+        # DOM methods to the Marionette-backed ZenDomBackend instead
+        # of CDP. The pointer/keyboard delegate is NOT wired here:
+        # it needs a broker-owned session plus a fresh window
+        # observation meta (CodeExecBackend.act), which only the
+        # step-9 prototype can supply and measure; until then the
+        # backend grounds and verifies but refuses input actions
+        # with a structured error naming the missing delegate.
+        dom_backend=None
+        if os.environ.get('CU_DOM_BACKEND','').strip().lower()=='zen':
+            import zen_backend
+            dom_backend=zen_backend.ZenDomBackend(
+                windows_fn=lambda: hypr(env,'clients'))
         try:
             with locked():
                 result=code_exec.run_program(
-                    program, CodeExecBackend(env), state_dir=STATE,
+                    program, CodeExecBackend(env, dom_backend=dom_backend), state_dir=STATE,
                     session_token=os.environ.get('CU_SESSION_TOKEN'),
                     intent=args.intent, check_cancel=check_cancel,
                     wall_seconds=args.wall_seconds)
@@ -3169,6 +3237,38 @@ def main():
         with locked():
             import session_policy
             session_policy.require_observation(STATE,os.environ.get('CU_SESSION_TOKEN'),args.observation)
+            # The observation meta is read once and reused for the
+            # binding validation, the DOM grounding, and the act
+            # call itself (it used to be re-read per use).
+            obs_meta=read_json_file(args.observation)
+            # CB-2 on this interface is binding-when-present, not
+            # mandatory. The actions file is the agent loop's act-now
+            # JSON, and the loop does not stamp scope/observation_id
+            # yet: first_action passes it through unchanged, and the
+            # session suite simulates exactly that. Mandatory
+            # enforcement here would refuse every live batch and
+            # mask the real refusal reasons (expired observation,
+            # wait ms, focus) that the session machinery reports.
+            # An action that carries a binding must match this
+            # observation or the batch refuses before any input; an
+            # action without the fields proceeds on the legacy pixel
+            # path, where desktop_act enforces the same rule. Full
+            # mandatory enforcement on this interface needs the loop
+            # to stamp both fields (open item). The program and DOM
+            # interfaces, where the plan is built with the
+            # observation in hand, enforce it now.
+            import element_ref
+            for index, action in enumerate(actions):
+                if not isinstance(action, dict):
+                    continue
+                if 'scope' not in action and 'observation_id' not in action:
+                    continue
+                try:
+                    element_ref.validate_action_binding(
+                        action, snapshot_id=obs_meta.get('id'),
+                        scope=obs_meta.get('scope'), index=index)
+                except element_ref.ElementRefError as exc:
+                    raise PreflightRefusal(str(exc)) from exc
             act_kwargs={'after_capture':not args.no_after,
                         'observation_path':args.observation}
             if expected_terminal is not None:
@@ -3193,24 +3293,14 @@ def main():
                         # R3a wiring (AMEND4 item 4, mirroring
                         # first_action.py): ground the field and
                         # thread its ranges to desktop_act, so the
-                        # band reads only that field. Best-effort:
-                        # when no rect grounds, the batch keeps the
-                        # full-width / click-anchored band, and the
-                        # hooks above still stand.
-                        try:
-                            obs_meta = read_json_file(args.observation)
-                            ground = dom_act.ground_input(
+                        # band reads only that field. A missing
+                        # range is logged by ground_field_ranges
+                        # (P2-SPEC observation 2) instead of
+                        # silently keeping the full-width band,
+                        # and the hooks above still stand.
+                        type_ranges, type_y_ranges = \
+                            dom_act.ground_field_ranges(
                                 dom_session, obs_meta, args.dom_selector)
-                            x_range = dom_act.grounded_x_range(
-                                ground, obs_meta)
-                            if x_range is not None:
-                                type_ranges = [x_range]
-                            y_range = dom_act.grounded_y_range(
-                                ground, obs_meta)
-                            if y_range is not None:
-                                type_y_ranges = [y_range]
-                        except Exception:
-                            pass
                     except Exception as exc:
                         result_dom_error = ('dom hooks unavailable: '
                                             + str(exc)[:200])
@@ -3220,7 +3310,7 @@ def main():
             else:
                 result_dom_error = None
             try:
-                result=desktop_act(env,read_json_file(args.observation),actions,type_x_ranges=type_ranges,type_y_ranges=type_y_ranges,**act_kwargs)
+                result=desktop_act(env,obs_meta,actions,type_x_ranges=type_ranges,type_y_ranges=type_y_ranges,**act_kwargs)
             finally:
                 if dom_session is not None:
                     try:
