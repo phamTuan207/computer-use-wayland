@@ -1,0 +1,237 @@
+{
+  "run": 2,
+  "t_start": "09:07:07",
+  "clone1": {
+    "thread": "clone1",
+    "run": 2,
+    "message": "C5-RUNG2-R2-CLONE1-BRAVO",
+    "t_start": "09:07:07",
+    "focus_first": {
+      "address": "0x55705383d420",
+      "verified": true
+    },
+    "window": {
+      "at": [
+        3466,
+        914
+      ],
+      "size": [
+        901,
+        1176
+      ],
+      "pid": 1238495,
+      "title": "Muse"
+    },
+    "ground": {
+      "ok": true,
+      "tab_id": "60CD968B6A1F22A05D66CBC8469B0D51",
+      "tab_title": "Chat — clone1",
+      "rect": {
+        "x": 141,
+        "y": 1091,
+        "width": 291,
+        "height": 24,
+        "cx": 286.5,
+        "cy": 1103
+      },
+      "innerWidth": 901,
+      "innerHeight": 1148,
+      "dpr": 1,
+      "items": 43
+    },
+    "origin": [
+      3466,
+      942
+    ],
+    "screen_point": [
+      3752.5,
+      2045
+    ],
+    "pre_count": {
+      "count": 0,
+      "items": 43
+    },
+    "observation": {
+      "path": "/home/james/.cache/agent-computer-use/6245ceee9678.json",
+      "image_size": [
+        960,
+        600
+      ],
+      "region": [
+        2464,
+        902,
+        1920,
+        1200
+      ]
+    },
+    "image_point": [
+      644.2,
+      571.5
+    ],
+    "act_now_rc": 0,
+    "act_now_out_tail": "\"observation\": \"/home/james/.cache/agent-computer-use/0bf2350b6508.json\", \"capture_params\": {\"max_width\": 960, \"jpeg_quality\": 90, \"jpeg_subsampling\": 0}}, \"after_error\": null, \"error\": null, \"release_error\": null, \"log_error\": null, \"target_breached\": false, \"dispatch_ms\": null, \"dispatch_basis\": \"not_provided\", \"first_pointer_ms\": 466.729, \"target_breached_basis\": \"session_computed (child startup about 60ms unrecorded)\", \"phase_ms\": {\"overlay_acquire_ms\": 326.509, \"observation_ms\": 0.08, \"session_attempt_ms\": 1909.802, \"after_capture_ms\": 92.152}, \"think_ms\": null, \"think_basis\": \"not_in_act_now: think time is measured by the P6 harness in the agent loop, not inside act-now\", \"overlay_flicker\": \"unprobed: LIQUID flicker probe not run (A4 worker precondition)\", \"overlay_owner\": \"daemon\"}\n",
+    "envelope": {
+      "ok": true,
+      "completed": 3,
+      "broker_owner": "c5-rung2",
+      "broker_sequences": [
+        1
+      ],
+      "broker_retries": 0,
+      "broker_finish": {
+        "ok": true,
+        "status": "finished",
+        "generation": "8864ccd11ac83f0cb8d1b9356e46cb00",
+        "driver": "stopped",
+        "guardian": "clean",
+        "error": null
+      },
+      "session_timed_out": false,
+      "error": null,
+      "session_error": null,
+      "first_pointer_ms": 466.729
+    },
+    "v12": {
+      "found": true,
+      "items": 45,
+      "role": "user",
+      "side": "user",
+      "textLen": 28,
+      "attempts": 1,
+      "elapsed_ms": 4,
+      "_wall_ms": 1125.6
+    },
+    "wall_scored_s": 12.1,
+    "phases_ms": {
+      "ground_ms": 1118.5,
+      "pre_count_ms": 1109.4,
+      "observe_ms": 1324.6,
+      "act_now_ms": 3745.5,
+      "v12_ms": 1125.6,
+      "delayed_count_ms": 1002.1
+    },
+    "delayed_count": {
+      "count": 1,
+      "items": 45
+    },
+    "wall_full_s": 23.1,
+    "t_end": "09:07:30"
+  },
+  "clone2": {
+    "thread": "clone2",
+    "run": 2,
+    "message": "C5-RUNG2-R2-CLONE2-BRAVO",
+    "t_start": "09:07:30",
+    "focus_first": {
+      "address": "0x5570538ed160",
+      "verified": true
+    },
+    "window": {
+      "at": [
+        2533,
+        914
+      ],
+      "size": [
+        901,
+        1176
+      ],
+      "pid": 8059,
+      "title": "Muse"
+    },
+    "ground": {
+      "ok": true,
+      "tab_id": "D1374C7C994D3DA72678E20C7FD099A0",
+      "tab_title": "Chat — clone2",
+      "rect": {
+        "x": 141,
+        "y": 1091,
+        "width": 291,
+        "height": 24,
+        "cx": 286.5,
+        "cy": 1103
+      },
+      "innerWidth": 901,
+      "innerHeight": 1148,
+      "dpr": 1,
+      "items": 45
+    },
+    "origin": [
+      2533,
+      942
+    ],
+    "screen_point": [
+      2819.5,
+      2045
+    ],
+    "pre_count": {
+      "count": 0,
+      "items": 45
+    },
+    "observation": {
+      "path": "/home/james/.cache/agent-computer-use/edc0ad215dc3.json",
+      "image_size": [
+        960,
+        600
+      ],
+      "region": [
+        2464,
+        902,
+        1920,
+        1200
+      ]
+    },
+    "image_point": [
+      177.8,
+      571.5
+    ],
+    "act_now_rc": 0,
+    "act_now_out_tail": "\"observation\": \"/home/james/.cache/agent-computer-use/4b3787f0ae90.json\", \"capture_params\": {\"max_width\": 960, \"jpeg_quality\": 90, \"jpeg_subsampling\": 0}}, \"after_error\": null, \"error\": null, \"release_error\": null, \"log_error\": null, \"target_breached\": false, \"dispatch_ms\": null, \"dispatch_basis\": \"not_provided\", \"first_pointer_ms\": 467.52, \"target_breached_basis\": \"session_computed (child startup about 60ms unrecorded)\", \"phase_ms\": {\"overlay_acquire_ms\": 321.022, \"observation_ms\": 0.082, \"session_attempt_ms\": 1932.092, \"after_capture_ms\": 93.104}, \"think_ms\": null, \"think_basis\": \"not_in_act_now: think time is measured by the P6 harness in the agent loop, not inside act-now\", \"overlay_flicker\": \"unprobed: LIQUID flicker probe not run (A4 worker precondition)\", \"overlay_owner\": \"daemon\"}\n",
+    "envelope": {
+      "ok": true,
+      "completed": 3,
+      "broker_owner": "c5-rung2",
+      "broker_sequences": [
+        1
+      ],
+      "broker_retries": 0,
+      "broker_finish": {
+        "ok": true,
+        "status": "finished",
+        "generation": "57f8746c789391ecda0dad0fc7f5857f",
+        "driver": "stopped",
+        "guardian": "clean",
+        "error": null
+      },
+      "session_timed_out": false,
+      "error": null,
+      "session_error": null,
+      "first_pointer_ms": 467.52
+    },
+    "v12": {
+      "found": true,
+      "items": 47,
+      "role": "user",
+      "side": "user",
+      "textLen": 28,
+      "attempts": 1,
+      "elapsed_ms": 4,
+      "_wall_ms": 1178.7
+    },
+    "wall_scored_s": 12.4,
+    "phases_ms": {
+      "ground_ms": 1116.5,
+      "pre_count_ms": 1235.8,
+      "observe_ms": 1430.3,
+      "act_now_ms": 3847.9,
+      "v12_ms": 1178.7,
+      "delayed_count_ms": 794.5
+    },
+    "delayed_count": {
+      "count": 1,
+      "items": 47
+    },
+    "wall_full_s": 23.2,
+    "t_end": "09:07:54"
+  },
+  "t_end": "09:07:54"
+}
