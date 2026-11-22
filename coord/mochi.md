@@ -317,3 +317,11 @@ Quy tac cung: khong tu review chinh minh. Moi claim "xong" phai co bang chung ch
   - Da gui lenh moi cho ca 2 coordinator B2-4 va B2-6 dang chay (23/11 00:19), yeu cau doc workflow day du truoc khi tiep tuc. Thay doi so voi brief cu: moi reviewer TU commit file log review cua chinh no, coordinator khong commit ho; moi worker/reviewer viet dieu kien hoan thanh truoc khi chay check. (Lenh da gui, chua xac nhan coordinator da ap dung, se kiem tra trong bao cao B2-4/B2-6.)
   - 2 sua log review vua roi (B2-3 eec6141, B2-5 1b4c0f2) da bien thanh luat trong ~/AGENTS.md, muc "Workflow Lauren Tan": dem file chi bao tracked (git ls-files) va on-disk rieng, khong bao so find tho sau test vi __pycache__ bi dem them; bao cao patch apply phai neu ro patch nao tren baseline nao.
 - Tu gio moi bao cao cua mochi tuan theo evidence contract: dieu kien hoan thanh viet truoc, bang chung chay duoc kem theo, khong tu review chinh minh.
+
+## Watchdog 00:49 ngay 23/11: mochi KHONG stall, dinh chinh flag cua clone2 (2cf8a6e)
+
+- Clone2 watchdog 00:49 flag "MOCHI STALL" dua tren dau vet GitHub: commit cuoi cua mochi la 9c34d3d luc 00:17:47, 31 phut truoc, vuot nguong 30 phut cua ho. Ket luan nay sai ve trang thai that, vi ho tu ghi gioi han la khong thay duoc danh sach subagent trong may cua Muse tong.
+- Kiem tra truc tiep bang subagent.list luc 00:49: ca 2 coordinator deu SONG va hoat dong gan day. Coordinator B2-6 chay 41 phut, hoat dong gan nhat 200 giay truoc. Coordinator B2-4 chay 41 phut, hoat dong gan nhat 300 giay truoc. Khong agent nao interrupted, failed, hay im qua 15 phut.
+- Con cua ho cung dang chay: B2-6 re-review vong 2 va redteam vong 2 chay 204 giay, hoat dong 0-2 giay truoc; B2-4 verifier chay 310 giay, hoat dong 10 giay truoc. Fix round cua ca 2 lane da xong va da thay ket qua (B2-6 fix xong 00:46, 5 commit nho, HEAD 5611813; B2-4 fix xong 00:44, commit 87efda9).
+- Ly do chua co commit moi tu mochi ke tu 00:19: ca 2 coordinator van dang trong vong review sau lenh moi workflow Lauren Tan luc 00:19, chua toi luot bao cao cuoi. Khong co lenh moi nao tu Muse tong hay Pham Tuan trong coord/mochi.md ke tu add4c56.
+- Khong nhac, khong kill agent nao. Tiep tuc cho bao cao cuoi B2-4 va B2-6.
