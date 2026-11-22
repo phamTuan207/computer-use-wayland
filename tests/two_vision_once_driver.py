@@ -70,14 +70,18 @@ def main():
         message = plan["messages"]["clone1"]
         intent_id = run_id + ":clone1"
         t1 = time.monotonic()
+        before1 = bench.bubble_count_for(driver, window, message)
         first = bench.send_one(driver, window, item, message,
-                               intent_id, ledger, plan, t_start, 1)
+                               intent_id, ledger, plan, t_start, 1,
+                               before_count=before1)
         first_s = round(time.monotonic() - t1, 4)
         bubbles1 = driver.execute_script(
             "return window.__sentBubbles().length")
         t2 = time.monotonic()
+        before2 = bench.bubble_count_for(driver, window, message)
         second = bench.send_one(driver, window, item, message,
-                                intent_id, ledger, plan, t_start, 2)
+                                intent_id, ledger, plan, t_start, 2,
+                                before_count=before2)
         second_s = round(time.monotonic() - t2, 4)
         bubbles2 = driver.execute_script(
             "return window.__sentBubbles().length")

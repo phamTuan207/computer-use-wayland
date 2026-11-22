@@ -61,10 +61,11 @@ DEFAULT_WORKDIR = "/tmp/two_vision_bench"
 # TODO (F5, bulk harvest): this script implements the one-shot bulk
 # harvest as a single evaluate per window, which is the harvest the
 # combined design needs. Still open: Brave CDP DOM.getBoxModel and
-# Accessibility.getFullAXTree in scripts/cdp.mjs (Chromium path only);
-# a production V11 MutationObserver flag (here the fixture counts input
-# events in window.__inputEvents, a Messenger page needs a real
-# observer armed before typing).
+# Accessibility.getFullAXTree in scripts/cdp.mjs (Chromium path only).
+# V11 (batch 12 task 2, BUILT): send_one arms a real
+# MutationObserver before typing (OBSERVER_JS) and records the
+# mutation delta per send; the fixture counter window.__inputEvents
+# is kept alongside it.
 # TODO (D1): no BiDi/Marionette handover protocol exists under the
 # one-session constraint; sequencing for a live run that needs both
 # protocols is unspecified.
@@ -159,6 +160,117 @@ return (function(threadSel, bubbleSel, text){
 })(arguments[0], arguments[1], arguments[2])
 """
 
+# textNew count (batch 12 task 2): how many bubbles in the thread
+# carry exactly this text. The V12 gate is a textNew gate: it passes
+# only when the count grows past the count measured before this send
+# started, so a stale bubble from an earlier run cannot pass a new
+# send (design doc section 4.2, Turbo textNew). Returns -1 when the
+# thread container is missing, so a wrong thread selector is
+# distinguishable from zero bubbles.
+COUNT_JS = """
+return (function(threadSel, bubbleSel, text){
+  const t = document.querySelector(threadSel);
+  if (!t) return -1;
+  let n = 0;
+  for (const b of t.querySelectorAll(bubbleSel)) {
+    if (b.textContent === text) n++;
+  }
+  return n;
+})(arguments[0], arguments[1], arguments[2])
+"""
+
+# V11 MutationObserver flag (batch 12 task 2): a real observer armed
+# before typing, counting DOM mutations in the page. The fixture
+# counter window.__inputEvents only counts input events; a Messenger
+# page needs a real observer. Armed once per page; later calls return
+# the running count. Observe document.body: typing mutates the input
+# value (not the DOM) but the bubble append is a childList mutation,
+# so a successful send always moves the count.
+OBSERVER_JS = """
+return (function(){
+  if (window.__v11Observer) {
+    return {armed: true, count: window.__v11Mutations || 0};
+  }
+  window.__v11Mutations = 0;
+  window.__v11Observer = new MutationObserver(function(){
+    window.__v11Mutations += 1;
+  });
+  window.__v11Observer.observe(document.body, {
+    childList: true, characterData: true, subtree: true});
+  return {armed: true, count: 0};
+})()
+"""
+
+# Frames census (batch 12 task 2, gap 10): HARVEST_JS evaluates in
+# the top frame only, so an input or thread inside an iframe is
+# invisible to it. List every iframe with its origin and whether
+# its document is reachable from the top frame. A cross-origin frame
+# reports accessible false; same-origin policy blocks any DOM read
+# into it, so the live run must stop and record it if the message
+# input or thread could live inside one.
+FRAMES_JS = """
+return [...document.querySelectorAll('iframe')].map(f => {
+  let accessible = false;
+  try { accessible = !!f.contentDocument; } catch (e) { accessible = false; }
+  let origin = null;
+  try { origin = new URL(f.src || '', location.href).origin; }
+  catch (e) { origin = null; }
+  return {src: f.src || '', origin: origin, accessible: accessible};
+});
+"""
+
+# D3 ref-stability check (batch 12 task 2): re-resolve the harvested
+# ref against the live DOM and compare tag, role and name with the
+# harvested item. A ref whose element was renamed or replaced since
+# the harvest fails fast here, before any click. Returns the current
+# element plus up to 3 nearest visible textboxes, so the operator
+# can see what the input became. The name derivation matches
+# HARVEST_JS exactly (aria-label, else placeholder, else textContent
+# slice, else value).
+REF_CHECK_JS = """
+return (function(sel){
+  function cssPath(e) {
+    const parts = [];
+    let n = e;
+    while (n && n.nodeType === 1) {
+      if (n.id) { parts.unshift('#' + CSS.escape(n.id)); break; }
+      let k = 1, sib = n;
+      while ((sib = sib.previousElementSibling)) {
+        if (sib.tagName === n.tagName) k++;
+      }
+      parts.unshift(n.tagName.toLowerCase() + ':nth-of-type(' + k + ')');
+      n = n.parentElement;
+    }
+    return parts.join(' > ');
+  }
+  function nameOf(el) {
+    return (el.getAttribute('aria-label') || el.placeholder ||
+      (el.textContent || '').trim().slice(0, 40) || el.value || '');
+  }
+  function roleOf(el) {
+    const tag = el.tagName.toLowerCase();
+    return el.getAttribute('role') ||
+      (tag === 'input' ? (el.type === 'button' || el.type === 'submit' ? 'button' : 'textbox') :
+       tag === 'textarea' ? 'textbox' :
+       tag === 'button' ? 'button' :
+       el.isContentEditable ? 'textbox' : tag);
+  }
+  const e = document.querySelector(sel);
+  const nearest = [...document.querySelectorAll(
+    'input, textarea, [contenteditable="true"], [role="textbox"]')]
+    .filter(x => { const r = x.getBoundingClientRect();
+      return r.width > 0 && r.height > 0; })
+    .slice(0, 3)
+    .map(x => ({ref: cssPath(x), name: nameOf(x), role: roleOf(x)}));
+  if (!e) return {found: false, nearest: nearest};
+  const r = e.getBoundingClientRect();
+  return {found: true, tag: e.tagName.toLowerCase(),
+    role: roleOf(e), name: nameOf(e),
+    rect: {x: r.x, y: r.y, w: r.width, h: r.height},
+    nearest: nearest};
+})(arguments[0])
+"""
+
 
 def log(name, t0, **kw):
     rec = {"step": name, "wall": datetime.now(timezone.utc).isoformat(),
@@ -195,21 +307,31 @@ class Ledger:
     the thread. A fresh page load with an empty thread re-sends a
     recorded intent once, by design: the bubble is genuinely absent.
 
-    TODO (pre-send reservation, batch 9 fix pass): write the intent
-    as "sending" before the keypress, then reconcile to "sent" or
-    "failed-unverified" after the V12 gate. Covers the process-death
-    case: a crash between Enter and the ledger mark leaves the ledger
-    empty today and a retry re-sends. Open work, not built.
+    Pre-send reservation (batch 12 task 2, BUILT): send_one writes
+    the intent as "sending" after the V1 readback passes and before
+    the Enter keypress, then reconciles it to "sent" or
+    "failed-unverified" after the V12 gate. A later run that finds
+    status "sending" refuses to re-send (retry-blocked-reservation):
+    the process died between Enter and the ledger mark, the message
+    may have landed, and only a hand check of the thread can tell.
+    This closes the process-death gap only when the same ledger is
+    reused (same workdir or --ledger); a fresh workdir has an empty
+    ledger, so the run_id freshness check in the runbook still
+    stands. A recorded intent whose bubble is absent is treated as
+    stale and re-sent once, because the earlier V12 may have failed
+    on a slow render rather than on a lost message.
 
     A JSON file keyed by intent id (run_id + window label). An intent
     is marked sent only after its V12 gate passed. Before any send the
-    chain runs the V12 gate first, regardless of ledger status: a
-    recorded intent whose bubble is present is skipped, never re-sent;
-    a failed gate whose message actually landed is also caught by the
-    same pre-check, so a retry cannot double-send. A recorded intent
-    whose bubble is absent is treated as stale and re-sent once,
-    because the earlier V12 may have failed on a slow render rather
-    than on a lost message.
+    chain runs the V12 pre-check first: a recorded intent whose bubble
+    is present is skipped, never re-sent; a failed gate whose message
+    actually landed is also caught by the same pre-check, so a retry
+    cannot double-send. Since batch 12 task 2 the pre-check skips
+    only when the ledger says this intent was already sent (status
+    "sent") and the bubble is visible: a stale bubble with no ledger
+    record does NOT skip, the send proceeds and the textNew gate
+    requires a NEW bubble (count past the before-snapshot), so a
+    stale bubble from an earlier run cannot pass a new send.
     """
 
     def __init__(self, path):
@@ -233,13 +355,14 @@ class Ledger:
             json.dump(self.data, f, indent=2, sort_keys=True)
 
 
-def format_inventory(label, items):
+def format_inventory(label, items, frames=None):
     """Numbered compact text (Mantis pattern) for the agent's VISION 1.
 
-    TODO (D3): Mantis numbering is Chromium-only and ref stability on
-    a mutating Messenger page is unaddressed. Refs here are derived
-    from the live DOM of this run only (id when present, else tag
-    index); they must not transfer between runs or vendors.
+    D3 (batch 12 task 2, ref check BUILT): refs are derived from the
+    live DOM of this run only (id when present, else tag index); they
+    must not transfer between runs or vendors. send_one re-resolves
+    the ref before input and fails fast with ref-stale when the
+    element's tag, role or name changed since this harvest.
     """
     lines = [f"Window {label}: {len(items)} inputs+buttons"]
     for i, it in enumerate(items, 1):
@@ -248,6 +371,12 @@ def format_inventory(label, items):
             f"rect=({it['x']:.0f},{it['y']:.0f},{it['w']:.0f}x{it['h']:.0f}) "
             f"center=({it['cx']:.0f},{it['cy']:.0f}) "
             f"visible={it['visible']} focused={it['focused']}")
+    if frames is not None:
+        lines.append(
+            f"Frames in {label}: {len(frames)} " +
+            ", ".join(
+                f"{f['src'] or '(no src)'} origin={f['origin']} "
+                f"accessible={f['accessible']}" for f in frames))
     return "\n".join(lines)
 
 
@@ -398,46 +527,76 @@ def hcu_guard(driver, item, t0, expect=None):
 
 
 def send_one(driver, window, item, message, intent_id, ledger,
-             plan, t_start, step_no):
+             plan, t_start, step_no, before_count=0):
     """One guarded send: click, type, Enter, V12 gate. Returns a step
     record. On any failure the caller stops the chain (Anthropic batch
-    loop contract: stop at first failure, rest not-executed)."""
+    loop contract: stop at first failure, rest not-executed).
+
+    textNew (batch 12 task 2): the V12 gate is a count gate, not a
+    presence gate. before_count is the number of bubbles carrying
+    this exact text in the thread when the run started (snapshot in
+    main, before any send). The gate passes only when the count grows
+    past the count measured right before Enter, so a stale bubble
+    from an earlier run cannot pass a new send. The pre-check skips
+    only when the ledger says this intent was already sent and the
+    bubble is visible; a stale bubble with no ledger record does NOT
+    skip, the send proceeds and the gate requires a NEW bubble.
+    """
     t0 = time.monotonic()
     step = {"step": step_no, "window": window["label"],
             "intent_id": intent_id, "status": "failed",
-            "elapsed_s": 0.0}
+            "elapsed_s": 0.0, "before_count": before_count}
     thread_sel = window.get("thread_selector", "#thread")
     bubble_sel = window.get("bubble_selector", ".bubble, [data-sender]")
     v12_timeout = plan.get("timeouts", {}).get("v12_gate_s", 5)
 
-    # Exactly-once pre-check (D4): before any send, check whether the
-    # bubble is already in the thread DOM. If it is, the message was
-    # already sent (by an earlier attempt whose V12 gate timed out, or
-    # by a previous run with the same intent), so mark sent and skip.
-    # This runs regardless of ledger status: a failed gate must not
-    # double-send on retry. Cost is one cheap evaluate per send.
-    present = driver.execute_script(
-        GATE_JS, thread_sel, bubble_sel, message)
-    if present:
-        ledger.mark(intent_id, "sent", window=window["label"],
-                    message=message, note="bubble-already-present")
-        step["status"] = "skipped-already-sent"
-        step["elapsed_s"] = round(time.monotonic() - t0, 4)
-        log("send_skipped_already_sent", t0, window=window["label"],
-            intent_id=intent_id)
-        return step
-    # A previous attempt ended in a v12-timeout: the message may have
-    # landed unseen (wrong thread/bubble selectors make the pre-check
-    # blind), so this intent is never re-attempted with the same
-    # selectors. Fix the selectors and use a new run_id after manually
-    # checking the thread. The pre-check above runs first so a fixed
-    # selector that CAN see the bubble still skips correctly.
+    def bubble_count():
+        """COUNT_JS, with a missing thread container read as 0: the
+        pre-check must not skip on a broken selector, and the gate
+        must time out loudly instead of passing."""
+        n = driver.execute_script(
+            COUNT_JS, thread_sel, bubble_sel, message)
+        return n if n is not None and n >= 0 else 0
+
+    # Exactly-once pre-check (D4): before any send, count the bubbles
+    # already carrying this text. A previous attempt ended in a
+    # v12-timeout: the message may have landed unseen (wrong
+    # thread/bubble selectors make the pre-check blind), so this
+    # intent is never re-attempted with the same selectors. Fix the
+    # selectors and use a new run_id after manually checking the
+    # thread. The pre-check above runs first so a fixed selector that
+    # CAN see the bubble still skips correctly.
+    count_now = bubble_count()
+    step["count_at_precheck"] = count_now
     if ledger.status(intent_id) == "failed-unverified":
         step["error"] = "retry-blocked-unverified"
         step["elapsed_s"] = round(time.monotonic() - t0, 4)
         log("send_retry_blocked", t0, window=window["label"],
             intent_id=intent_id,
             note="previous v12-timeout; message may have landed unseen")
+        return step
+    # A previous attempt left a pre-send reservation (status
+    # "sending"): the process died between Enter and the ledger mark,
+    # so the message may have landed and no later run may re-send it
+    # until an operator checks the thread by hand. Fail closed even
+    # when the bubble is visible: a visible bubble may be the crashed
+    # attempt's message, or a stale bubble from an earlier run with
+    # the same run_id, and the ledger cannot tell them apart.
+    if ledger.status(intent_id) == "sending":
+        step["error"] = "retry-blocked-reservation"
+        step["elapsed_s"] = round(time.monotonic() - t0, 4)
+        log("send_retry_blocked_reservation", t0,
+            window=window["label"], intent_id=intent_id,
+            note="previous attempt reserved but never reconciled; "
+            "message may have landed, check the thread by hand")
+        return step
+    if ledger.status(intent_id) == "sent" and count_now > 0:
+        ledger.mark(intent_id, "sent", window=window["label"],
+                    message=message, note="bubble-already-present")
+        step["status"] = "skipped-already-sent"
+        step["elapsed_s"] = round(time.monotonic() - t0, 4)
+        log("send_skipped_already_sent", t0, window=window["label"],
+            intent_id=intent_id)
         return step
     if ledger.status(intent_id) == "sent":
         log("ledger_stale_bubble_absent", t0, window=window["label"],
@@ -451,6 +610,31 @@ def send_one(driver, window, item, message, intent_id, ledger,
     if pos is None:
         step["error"] = "target-gone"
         step["elapsed_s"] = round(time.monotonic() - t0, 4)
+        return step
+    # D3 ref-stability check: re-resolve the harvested ref against
+    # the live DOM. A renamed or replaced input fails fast here,
+    # before any click, with the nearest live textboxes listed so
+    # the operator can see what the input became. The HCU guard
+    # below re-checks geometry; this check catches identity changes
+    # the guard cannot see (same rect, different element).
+    ref_now = driver.execute_script(REF_CHECK_JS, item["ref"])
+    if not ref_now.get("found"):
+        step["error"] = "target-gone"
+        step["elapsed_s"] = round(time.monotonic() - t0, 4)
+        return step
+    if (ref_now.get("role") != item.get("role")
+            or ref_now.get("name") != item.get("name")):
+        step["error"] = "ref-stale"
+        step["evidence"] = {
+            "expected": {"role": item.get("role"),
+                         "name": item.get("name")},
+            "current": {"role": ref_now.get("role"),
+                        "name": ref_now.get("name")},
+            "nearest": ref_now.get("nearest", [])}
+        step["elapsed_s"] = round(time.monotonic() - t0, 4)
+        log("ref_stale", t0, window=window["label"],
+            expected_name=item.get("name"),
+            current_name=ref_now.get("name"))
         return step
     # V5 hit test + HCU guard, from the live DOM, before any input.
     ok, reason, v = hcu_guard(driver, item, t0,
@@ -471,6 +655,12 @@ def send_one(driver, window, item, message, intent_id, ledger,
         step["elapsed_s"] = round(time.monotonic() - t0, 4)
         log("focus_check_failed", t0, window=window["label"])
         return step
+
+    # V11: arm the real MutationObserver before typing, so the
+    # mutation delta covers the type and the bubble append. The
+    # fixture counter window.__inputEvents is kept alongside it.
+    obs = driver.execute_script(OBSERVER_JS)
+    mutations_before = obs.get("count", 0) if obs else 0
 
     # Type with real keys, then V1 value readback before Enter.
     # Inputs and textareas hold the text in value; contenteditable
@@ -493,18 +683,47 @@ def send_one(driver, window, item, message, intent_id, ledger,
         None if events_before is None or v.get("inputEvents") is None
         else v["inputEvents"] - events_before)
 
+    # Pre-send reservation: write the intent as "sending" after the
+    # V1 readback passes and before the Enter keypress, then
+    # reconcile it after the V12 gate. A crash between Enter and the
+    # mark leaves "sending" in the ledger, and a later run refuses
+    # to re-send it (see the retry-blocked-reservation block above).
+    # gate_baseline is the bubble count right before Enter: the
+    # textNew gate passes only on a bubble that appears after it.
+    gate_baseline = bubble_count()
+    step["gate_baseline"] = gate_baseline
+    ledger.mark(intent_id, "sending", window=window["label"],
+                message=message)
+    step["reservation"] = "sending"
+
     from selenium.webdriver.common.keys import Keys
     driver.find_element("css selector", item["ref"]).send_keys(Keys.ENTER)
 
-    # V12 finish gate: the sent bubble must appear in the thread DOM.
+    def v11_delta():
+        """MutationObserver delta since the observer was armed."""
+        n = driver.execute_script(
+            "return (typeof window.__v11Mutations === 'number') "
+            "? window.__v11Mutations : null")
+        if n is None:
+            return None, None
+        return n - mutations_before, n
+
+    # V12 finish gate, textNew: a NEW bubble carrying the exact text
+    # must appear in the thread DOM, counted past the pre-Enter
+    # baseline. A stale bubble from an earlier run cannot pass it.
     deadline = time.monotonic() + v12_timeout
+    gate_count = gate_baseline
     while time.monotonic() < deadline:
-        if driver.execute_script(GATE_JS, thread_sel, bubble_sel,
-                                 message):
+        gate_count = bubble_count()
+        if gate_count > gate_baseline:
             break
         time.sleep(0.2)
     else:
         step["error"] = "v12-timeout"
+        step["gate_count"] = gate_count
+        delta, total = v11_delta()
+        step["v11_mutations"] = delta
+        step["v11_mutation_flag"] = bool(delta and delta > 0)
         step["elapsed_s"] = round(time.monotonic() - t0, 4)
         # The message may have landed unseen (the selectors are the
         # only witness and they just failed to see it). Mark the
@@ -520,6 +739,10 @@ def send_one(driver, window, item, message, intent_id, ledger,
             timeout_s=v12_timeout)
         return step
     step["v12_gate_ok"] = True
+    step["gate_count"] = gate_count
+    delta, total = v11_delta()
+    step["v11_mutations"] = delta
+    step["v11_mutation_flag"] = bool(delta and delta > 0)
     ledger.mark(intent_id, "sent", window=window["label"],
                 message=message)
     step["status"] = "sent"
@@ -535,6 +758,51 @@ def harvest_window(driver, label, t_start):
     log("vision1_harvest_one_shot", t0, window=label,
         elements=len(items))
     return items
+
+
+def frames_census(driver, label, t_start):
+    """Gap 10: list the iframes in this window with origin and
+    reachability. HARVEST_JS evaluates in the top frame only, so an
+    input or thread inside an iframe is invisible to it; a
+    cross-origin frame reports accessible false. Returns the list
+    (empty when the page has no iframes)."""
+    t0 = time.monotonic()
+    frames = driver.execute_script(FRAMES_JS)
+    log("vision1_frames", t0, window=label, frames=len(frames),
+        cross_origin=sum(1 for f in frames
+                         if not f.get("accessible")))
+    return frames
+
+
+def bubble_count_for(driver, window, message):
+    """COUNT_JS for one window: how many bubbles carry exactly this
+    text. -1 (thread container missing) reads as 0 here; the gate
+    times out loudly on a wrong selector instead of passing."""
+    thread_sel = window.get("thread_selector", "#thread")
+    bubble_sel = window.get("bubble_selector", ".bubble, [data-sender]")
+    n = driver.execute_script(COUNT_JS, thread_sel, bubble_sel, message)
+    return n if n is not None and n >= 0 else 0
+
+
+def cross_window_check(driver, handles, plan, t_start):
+    """Cross-window check (design doc section 4.2): after both sends,
+    each thread must contain only its own message. A thread holding
+    the other window's message means a send landed in the wrong
+    thread. Returns {label: {own_count, foreign: {label: count}}}.
+    The caller fails the run on any foreign count above 0."""
+    result = {}
+    for w in plan["windows"]:
+        driver.switch_to.window(handles[w["label"]])
+        own = bubble_count_for(driver, w, plan["messages"][w["label"]])
+        foreign = {}
+        for o in plan["windows"]:
+            if o["label"] == w["label"]:
+                continue
+            foreign[o["label"]] = bubble_count_for(
+                driver, w, plan["messages"][o["label"]])
+        result[w["label"]] = {"own_count": own, "foreign": foreign}
+    log("cross_window_check", t_start, result=result)
+    return result
 
 
 def default_plan(workdir):
@@ -667,6 +935,12 @@ def main():
     ap.add_argument("--instances", choices=["one", "two"], default="one",
                     help="one browser instance with two windows "
                     "(default, D6 open) or two instances")
+    ap.add_argument("--strict-input-name", action="store_true",
+                    help="fail closed when the picked input's name does "
+                    "not contain the plan's input_name (rung 2, "
+                    "0-vision: no operator reads the inventory, so "
+                    "the script must refuse to type into a wrongly "
+                    "named textbox, e.g. a login email field).")
     ap.add_argument("--plan", help="plan JSON (default: fixture plan)")
     ap.add_argument("--inventory", help="inventory JSON to write "
                     "(VISION 1 output) or read with --inventory-in")
@@ -769,10 +1043,19 @@ def main():
             with open(inv_path, "w", encoding="utf-8") as f:
                 json.dump(inventory, f, indent=2)
             log("vision1_inventory_written", t_start, path=inv_path)
+        # Gap 10 frames census: one evaluate per window, top frame
+        # only. A cross-origin iframe reports accessible false; the
+        # runbook's harvest-first step stops on one.
+        results["frames"] = {}
+        for w in plan["windows"]:
+            driver.switch_to.window(handles[w["label"]])
+            results["frames"][w["label"]] = frames_census(
+                driver, w["label"], t_start)
         if args.print_inventory:
             for w in plan["windows"]:
                 print(format_inventory(w["label"],
-                                       inventory[w["label"]]))
+                                       inventory[w["label"]],
+                                       results["frames"].get(w["label"])))
         if args.mode == "harvest":
             results["outcome"] = "HARVEST-ONLY"
             results["steps"] = [
@@ -795,6 +1078,39 @@ def main():
                 return finish(results, args, t_start, 1)
             targets[w["label"]] = item
 
+        # Rung 2 strict input name: with no operator reading the
+        # inventory, the script itself must refuse to type into a
+        # textbox whose name does not contain the plan's input_name.
+        # Without this flag the old behavior stands: find_input falls
+        # back to the first visible textbox, which on a login page is
+        # the email field (runbook section 0 item 1).
+        if args.strict_input_name:
+            for w in plan["windows"]:
+                hint = w.get("input_name", "Message")
+                picked = targets[w["label"]]
+                if hint.lower() not in picked["name"].lower():
+                    results["steps"].append(
+                        {"step": len(results["steps"]) + 1,
+                         "window": w["label"], "status": "failed",
+                         "error": "input-name-mismatch",
+                         "evidence": {
+                             "expected_name_contains": hint,
+                             "actual_name": picked["name"],
+                             "ref": picked["ref"]}})
+                    log("input_name_mismatch", t_start,
+                        window=w["label"], expected=hint,
+                        actual=picked["name"])
+                    return finish(results, args, t_start, 1)
+
+        # textNew before-snapshot: count the bubbles carrying each
+        # message before any send. The V12 gate passes only on a NEW
+        # bubble past this count.
+        results["before_counts"] = {}
+        for w in plan["windows"]:
+            driver.switch_to.window(handles[w["label"]])
+            results["before_counts"][w["label"]] = bubble_count_for(
+                driver, w, plan["messages"][w["label"]])
+
         # Guarded send chain, stop at first failure, rest not-executed.
         step_no = 0
         failed = False
@@ -809,7 +1125,9 @@ def main():
             intent_id = run_id + ":" + w["label"]
             step = send_one(driver, w, targets[w["label"]],
                             plan["messages"][w["label"]], intent_id,
-                            ledger, plan, t_start, step_no)
+                            ledger, plan, t_start, step_no,
+                            before_count=results["before_counts"][
+                                w["label"]])
             results["steps"].append(step)
             if step["status"] not in ("sent", "skipped-already-sent"):
                 failed = True
@@ -822,6 +1140,19 @@ def main():
 
         sent = [s for s in results["steps"]
                 if s["status"] in ("sent", "skipped-already-sent")]
+        # Cross-window check: each thread must hold only its own
+        # message. A thread holding the other window's message
+        # fails the run even when both sends report sent.
+        results["cross_window_check"] = cross_window_check(
+            driver, handles, plan, t_start)
+        contaminated = any(
+            c > 0
+            for rec in results["cross_window_check"].values()
+            for c in rec["foreign"].values())
+        if contaminated:
+            results["outcome_note"] = (
+                "cross-window-contamination: a thread holds the "
+                "other window's message")
         # Outcome scoring (M1): PASS iff both messages are in their
         # threads. VISION 2 is the agent looking at both threads once;
         # the script's V12 gates are the same check by DOM read.
@@ -830,6 +1161,7 @@ def main():
         # the outcome must not pass on 0 == 0 if that ever changes.
         results["outcome"] = ("PASS" if len(sent) == 2
                               and len(plan["windows"]) == 2
+                              and not contaminated
                               else "FAIL")
         return finish(results, args, t_start,
                       0 if results["outcome"] == "PASS" else 1)

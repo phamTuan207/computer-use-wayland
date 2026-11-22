@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Two-vision benchmark fixture, frame page</title>
+<style>
+  body { font-family: sans-serif; margin: 10px; }
+  #frame-thread { border: 1px solid #888; min-height: 60px; padding: 8px; margin-bottom: 8px; }
+  .bubble { background: #dfe; border-radius: 8px; padding: 6px 10px; margin: 4px 0; }
+  #frame-msg-input { padding: 8px; width: 300px; }
+</style>
+</head>
+<body>
+<h2>Frame thread</h2>
+<div id="frame-thread"></div>
+<input id="frame-msg-input" type="text" placeholder="Message" aria-label="Message" autocomplete="off">
+<button id="frame-send-btn" aria-label="Send">Send</button>
+<script>
+  const input = document.getElementById('frame-msg-input');
+  document.getElementById('frame-send-btn').addEventListener('click', () => {
+    const text = input.value;
+    if (!text) return;
+    const b = document.createElement('div');
+    b.className = 'bubble';
+    b.textContent = text;
+    document.getElementById('frame-thread').appendChild(b);
+    input.value = '';
+  });
+</script>
+</body>
+</html>
