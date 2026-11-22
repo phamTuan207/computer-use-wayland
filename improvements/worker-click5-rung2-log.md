@@ -484,3 +484,23 @@ Asia/Ho_Chi_Minh plus elapsed time on every entry.
   as-found was dead (section 3 rationale); (4) rung 3
   (100-task held-out) remains the general gate and is
   sequenced after rung 2, not a precondition for it.
+
+## 7. Post-run state (16:14 +07, after the push, verification only)
+
+- Broker: state finished, driver stopped, guardian clean,
+  broker idle. Last owner s2-flip-run4, generation
+  d576e45d16479067f084b032794e2f61, next_sequence 5,
+  loaded_code_sha256 still d490f369f6b7. The s2-flip-run4
+  owner is STEP9's own live work (its s2 harness runs),
+  not this worker's: my sessions all finished as owner
+  c5-rung2.
+- Brave: PID 1247845 (was 1245658 at my rollback),
+  [3448, 914] [901, 1176], CDP [::1]:9223 UP again
+  serving Chrome/157.0.8103.79. My rollback verified CDP
+  closed at 16:10:33 +07, so this is a NEW flagged
+  relaunch after my run, almost certainly STEP9's (its dry
+  run needs Brave CDP). Not mine, not interfered with.
+  Chrome back at [2533, 914] [901, 1176], the brief's map
+  geometry restored. Zen unchanged, ws1 full width.
+- This section was added after the a06ca1e push as a
+  verification note; it changes no result.
