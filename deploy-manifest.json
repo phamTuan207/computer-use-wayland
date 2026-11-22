@@ -1,0 +1,78 @@
+{
+  "artifacts": {
+    "bench_script": {
+      "git_blob": "80b00469c4676d7a9a8934626b6bf66ed2a5aeee",
+      "path": "tests/two_vision_bench.py",
+      "sha256": "c993b0ae199129c3e88860c03d17b6db42752a4758dc28bc5075a4510f9c13cc",
+      "size": 38378
+    },
+    "firefox": {
+      "path": "/home/hatch/workspace/tools/firefox/firefox",
+      "sha256": "852ba4c20cbd62e17fa5da95cf9ddfebcab9fceb344c56f89ee803f45f41a50a",
+      "size": 5520,
+      "version": "Mozilla Firefox 160.0.1"
+    },
+    "firefox_bin": {
+      "path": "/home/hatch/workspace/tools/firefox/firefox-bin",
+      "sha256": "181df71ae9179a3953ee6abb1fb94ba2bc4b2557c741c4a53b9ba20a28e5f5f0",
+      "size": 655016
+    },
+    "fixture": {
+      "git_blob": "bac2702efa375ad330cce8130df40d8025d86261",
+      "hardcoded_path": "/home/hatch/workspace/computer-use-wayland/tests/two_vision_fixture.html",
+      "hardcoded_path_sha256": "147494cda4c6ae24a51ced03ccdfb3fc5a79a1bbab56dcdfc5afb4f72fba6cbf",
+      "path": "tests/two_vision_fixture.html",
+      "sha256": "147494cda4c6ae24a51ced03ccdfb3fc5a79a1bbab56dcdfc5afb4f72fba6cbf",
+      "size": 2014
+    },
+    "geckodriver": {
+      "path": "/home/hatch/workspace/tools/geckodriver",
+      "sha256": "ad7cef75f87a17491abb212ae84923dd29f6782b8347959d21bd138efc2b5f99",
+      "size": 6132584,
+      "version": "geckodriver 0.36.0 (a3d508507022 2025-02-24 15:57 +0000)"
+    },
+    "python": "3.12.3",
+    "selenium": "4.53.0"
+  },
+  "bench": {
+    "live": false,
+    "mode": "run",
+    "outcome": "PASS",
+    "results_path": "/tmp/click4-bench-workdir/results.json",
+    "run_id": "bench-20261122T020225Z-3d9270",
+    "steps": [
+      {
+        "elapsed_s": 0.6088,
+        "intent_id": "bench-20261122T020225Z-3d9270:clone1",
+        "status": "sent",
+        "step": 1,
+        "v11_input_events": 47,
+        "v12_gate_ok": true,
+        "v1_value_ok": true,
+        "window": "clone1"
+      },
+      {
+        "elapsed_s": 0.3867,
+        "intent_id": "bench-20261122T020225Z-3d9270:clone2",
+        "status": "sent",
+        "step": 2,
+        "v11_input_events": 47,
+        "v12_gate_ok": true,
+        "v1_value_ok": true,
+        "window": "clone2"
+      }
+    ],
+    "visions_used": 2,
+    "wall_s": 12.6852
+  },
+  "bench_shape": "checkout-run",
+  "format": 1,
+  "git_status": "",
+  "git_status_clean": true,
+  "installed_root": "/tmp/click4-bench-manifest",
+  "installer": "computer-use-wayland/scripts/bench_manifest.py",
+  "log": "improvements/worker-click4-bench-manifest-log.md",
+  "mechanism_note": "18f2304 _write_deploy_manifest covers synced installed trees only; this bench runs from a checkout, so the checkout under test is the installed tree. Same digest functions as sync-installed.py.",
+  "source_commit": "d7d569be5c9f88986abdd8416143c64981667986",
+  "source_content_sha256": "92891523266e1af568e14bdcb65319ee39a2a6ab2fcce9e5fa1c8d4e1966c607"
+}
