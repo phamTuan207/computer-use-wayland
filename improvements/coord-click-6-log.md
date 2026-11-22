@@ -71,8 +71,13 @@
 - Codex-lane item-12 V-Z2 LANDED: ls-remote amend4-codex 06a34e86, laptop worktree clean + HEAD trung, test 67 OK, VM lane 4/4 PASS.
 - Mo: CB-9 manifest cho bench a1a672d van NOT locked (thuoc step 3, khong phai step 1). Phan quyet round-3 cho 5 proof test defective (items 3, 4, 5-6) va khac biet shape VM-vs-Codex o item 12: viec cua council, can lane council sau.
 
-## W-EVID tien trien (chua xong)
-- Commit 69287aa: V3 recover 4 file judge report + tc02 prior-run evidence (test-scores.md 174 dong, bang recompute 130 exact; stress.log, 14 state.json, 20 screenshots van thieu; V3 nay PARTIALLY VERIFIABLE).
+## W-EVID xong 17:58 (muc 13): H3 nhap, V2 khong khoi phuc, V3 khoi phuc mot phan
+- H3 (V1): NHAP da chuan bi, record CHUA viet (chi Muse tong duoc viet). Phat hien moi: noi dung entry 22:57 con nguyen trong log memory cua Muse tong tren VM, ~/memory/2026-11-21.md:2653 va :2917. Nguoi chap nhan theo nguon la Muse (dieu phoi vien), khong phai Pham Tuan va khong phai vote council. Pham Tuan chi noi "Ok thoi may dua tu lam di nhe" sau bao cao Y13r2, do la lenh lam tiep qua dem, khong phai chap nhan H3. Nhap o improvements/w-evidence-h3-draft.md. Gate H3 van UNVERIFIED cho toi khi Muse tong xac nhan va viet record. CAN MUSE TONG QUYET.
+- V2: 14 log F3 KHONG khoi phuc duoc. Tim tren laptop (SSH read-only) va VM: 0 ket qua. Log co luc verdict 23:35-23:44 21/11, mat truoc 17:51 22/11. Duong duy nhat con lai: chay lai arms A-E voi log duoc commit (can slot Zen live khi Pham Tuan roi may).
+- V3: khoi phuc mot phan, tu UNVERIFIABLE thanh PARTIALLY VERIFIABLE. 4/5 file bao cao tim thay tren VM, copy byte-identical vao improvements/v3-judge-evidence-20261117/ (test-scores.md 174 dong, bang recompute 13x10=130 exact). Redact 1 dong Gmail o typing-fix-multipage-report.md:90, thay bang dia chi noreply cong khai, hash goc va sau redact da ghi. Toi kiem tra: khong con dia chi Gmail trong file da commit. Van thieu: stress.log, 14 state.json, cap finish/start JSON, 20 screenshot. Can cac file do hoac chay lai judge voi bang chung duoc commit.
+- Commit 69287aa + 7f30886 + 7267e51, da kiem chung tren origin va doc log + nhap H3. W-EVID khong commit results.json dirty.
+- Ngoai pham vi, can quyet follow-up: V5, V6, V9, V10 van mo nhu luc audit; V12 doi (700144a resolve duoc, tip branch LOCAL step3-stream-prep, chua co tren remote); V4/V7/V8/V11 van local-only; V13 van PROVISIONAL co khai bao.
+- W-ARIA tien trien: commit f209b3a (close role-map gaps A-D) + 3a358a0 (role-map audit log), van dang chay.
 
 ## Luat ap cho moi worker
 - Huong cuoi e05fc58 la luat. Chuan Lauren Tan (lenh + output + commit hash + thoi gian). Khong tu cham pass, worker doc lap kiem chung lai. Khong ydotool. Khong dau gach ngang dai. Commit pathspec ro rang, push xong kiem tra ls-remote. Khong dua thong tin ca nhan cua Pham Tuan len GitHub. Worker ket qua 15 phut thi giet ngay. Song song het muc, khong cat buoc.
