@@ -168,7 +168,8 @@ def message_for(run, browser, prefix='S2-FLIP'):
 
 class Harness:
     def __init__(self, workdir, run_no, dry_run=False, activate=False,
-                 message_prefix='S2-FLIP', program_variant='fill'):
+                 message_prefix='S2-FLIP', program_variant='fill',
+                 chromium_set_value=False):
         self.workdir = Path(workdir)
         self.workdir.mkdir(parents=True, exist_ok=True)
         self.run_no = run_no
@@ -176,9 +177,22 @@ class Harness:
         self.activate = activate
         self.message_prefix = message_prefix
         self.program_variant = program_variant
+        # C5-S2-REOPEN: the re-open flip is split per browser. Brave
+        # already sends 5/5 with fill, so it keeps fill; Chromium
+        # uses the (b1) set_value shape. --set-value still forces
+        # set_value on every browser (the Chromium-only b1 runs).
+        self.chromium_set_value = chromium_set_value
         self.spans = []
         self.ssh_calls = []
         self.log_lines = []
+
+    def variant_for(self, browser):
+        """Send program variant for one browser: 'fill' or 'set_value'."""
+        if self.program_variant == 'set_value':
+            return 'set_value'
+        if browser == 'chromium' and self.chromium_set_value:
+            return 'set_value'
+        return 'fill'
 
     def note(self, text):
         self.log_lines.append(text)
@@ -508,15 +522,16 @@ class Harness:
         """One-shot code-exec send + independent V12 for one browser."""
         cfg = BROWSERS[browser]
         endpoint = cfg['endpoint']
+        variant = self.variant_for(browser)
         out = {'browser': browser, 'label': cfg['label'],
                'endpoint': endpoint, 'message': message, 'model_calls': 0,
                'target_id': target_id,
-               'program_variant': self.program_variant}
+               'program_variant': variant}
         t_send = time.monotonic()
         try:
             if self.activate:
                 out['activation'] = self.activate_browser(endpoint, target_id)
-            if self.program_variant == 'set_value':
+            if variant == 'set_value':
                 # Mandatory pre-send already-sent check (CB-2 double-send
                 # guard): a retry must never run when the message is
                 # already in the thread. Unique message per run, so any
@@ -550,7 +565,7 @@ class Harness:
             self.spans.append({'phase': 'act-' + browser,
                                'wall_ms': round(wall_ms, 1),
                                'laptop_ms': out['program']['elapsed_ms']})
-            if self.program_variant == 'set_value':
+            if variant == 'set_value':
                 # The Enter is the helper's, not the program's: CB-1 for
                 # this variant is input_sent = focus+Enter dispatched,
                 # target_received = set_value read-back done.
@@ -615,7 +630,11 @@ class Harness:
         results = {'run': self.run_no, 'dry_run': self.dry_run,
                    'activate': self.activate,
                    'message_prefix': self.message_prefix,
-                   'program_variant': self.program_variant,
+                   'program_variant':
+                       ('brave=fill,chromium=set_value'
+                        if self.chromium_set_value
+                        else self.program_variant),
+                   'chromium_set_value': self.chromium_set_value,
                    'mux_baseline_ms': round(mux, 1), 'browsers': {}}
         scratch = {}
         try:
@@ -666,11 +685,14 @@ class Harness:
         finally:
             # Delayed double-send guard for the set_value variant:
             # 10s after the scored wall stops, recount the message.
-            # Exactly 1 means no late duplicate arrived.
-            if self.program_variant == 'set_value':
+            # Exactly 1 means no late duplicate arrived. Only the
+            # browsers that actually used set_value are recounted.
+            if any(self.variant_for(b) == 'set_value' for b in browsers):
                 results['delayed_count'] = {}
                 time.sleep(10)
                 for browser in browsers:
+                    if self.variant_for(browser) != 'set_value':
+                        continue
                     target_id = (results['browsers'].get(browser) or {}).get('target_id')
                     message = (results['browsers'].get(browser) or {}).get('message')
                     if not target_id or not message:
@@ -764,14 +786,18 @@ def main(argv=None):
                     help='prefix for the unique test message per send')
     ap.add_argument('--set-value', action='store_true',
                     help='C5-B1: set_value program (no mouse) + focus+Enter '
-                         'helper instead of the fill program')
+                         'helper instead of the fill program, on every browser')
+    ap.add_argument('--chromium-set-value', action='store_true',
+                    help='C5-S2-REOPEN: set_value program + focus+Enter on '
+                         'Chromium only; Brave keeps the fill program')
     ap.add_argument('--workdir', required=True)
     args = ap.parse_args(argv)
     browsers = ['brave', 'chromium'] if args.browser == 'both' else [args.browser]
     harness = Harness(args.workdir, args.run, dry_run=args.dry_run,
                       activate=args.activate,
                       message_prefix=args.message_prefix,
-                      program_variant='set_value' if args.set_value else 'fill')
+                      program_variant='set_value' if args.set_value else 'fill',
+                      chromium_set_value=args.chromium_set_value)
     results = harness.run(browsers)
     out_path = Path(args.workdir) / ('run-%d.json' % args.run)
     out_path.write_text(json.dumps(results, indent=2, ensure_ascii=False) + '\n')

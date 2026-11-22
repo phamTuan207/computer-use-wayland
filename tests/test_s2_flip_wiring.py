@@ -196,6 +196,24 @@ class ProgramShapeTests(unittest.TestCase):
                 actions, available={'focus_check': True, 'type_check': True,
                                     'sent_bubble': False})
 
+    def test_chromium_set_value_splits_variants_per_browser(self):
+        # C5-S2-REOPEN: Brave keeps fill (it already sends 5/5
+        # with fill), Chromium alone uses set_value. The global
+        # --set-value flag still forces set_value on both.
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            split = s2_flip_live.Harness(
+                tmp, 0, chromium_set_value=True)
+            self.assertEqual(split.variant_for('brave'), 'fill')
+            self.assertEqual(split.variant_for('chromium'), 'set_value')
+            plain = s2_flip_live.Harness(tmp, 0)
+            self.assertEqual(plain.variant_for('brave'), 'fill')
+            self.assertEqual(plain.variant_for('chromium'), 'fill')
+            forced = s2_flip_live.Harness(
+                tmp, 0, program_variant='set_value')
+            self.assertEqual(forced.variant_for('brave'), 'set_value')
+            self.assertEqual(forced.variant_for('chromium'), 'set_value')
+
     def test_messages_unique_per_run_and_browser(self):
         seen = set()
         for run in (1, 2, 3, 4, 5):
