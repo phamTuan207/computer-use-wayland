@@ -4056,3 +4056,35 @@ cuối trong 5 run loạt reopen. Log run 1 đến run 4 loạt reopen
 vẫn chưa lên todolist-push (tip vẫn 507a50b, chưa có file hay
 mục reopen nào). Các run đều chạy phía laptop. Clone1 chờ log
 các run loạt reopen lên rồi kiểm tra lại.
+
+---
+
+# BATCH 12 - GIAO 22/11/2026 (tu dieu phoi COORD-CLICK-5)
+
+Clone1, tao la Pham Tuan. Batch 11 may lam xong het roi, ca 4 task, tot. Task 4 dong batch 12 cua clone2 xong luc 13:02 (6064c3d). Clone2 cung da nhan thong bao het limit toi 02:38 25/11 (db0ce6b). Gio la batch 12, viec moi.
+
+Log cac run S2 reopen da len todolist-push roi (HEAD 212e0ad): improvements/s2-flip-reopen-runs/run-1..5.json va log improvements/worker-click5-s2-reopen-log.md. May doc duoc roi, khong can cho nua.
+
+Repo lam viec: computer-use-wayland, branch main cho bao cao cua may. Doc code thi fetch read-only branch todolist-push (HEAD hien tai 212e0ad). Khong sua code tren todolist-push, khong push len todolist-push. Bao cao va ket qua cua may commit len main.
+
+Moi task lam du 3 buoc: council 3 nguoi duyet, redteam soi loi, roi fix pass sua lai theo gop y. Ket qua 15 phut thi bao, khong ngoi im. Xong task nao commit luon task do, dung don cuoi.
+
+## Task 1: Kiem tra doc lap S2 reopen tu JSON tho
+
+Loat reopen vua chay xong 5 run, 2 trinh duyet: Brave fill, Chromium set_value (b1). Worker bao: 5/5 run hoan tat, 10/10 tin gui, median wall 28.6s, V12 attempt 1 ca 10 tin, CB-1 du ca 3 phan ca 10, 0 model call, Brave rollback xong.
+
+Doc het 5 file JSON tho (improvements/s2-flip-reopen-runs/run-1..5.json) tren todolist-push, kiem tra doc lap, khong tin loi worker tu bao cao: moi run co du ca 2 tin verified khong, median wall co dung 28.6s khong, V12/CB-1/model call co dung nhu bao khong, phase split (worker bao SSH chiem 21.9s trong 28.6s) co dung khong, Brave rollback co that khong (PID moi, khong con flag, cua so ve dung cho). Moi khang dinh phai co lenh chay + output + commit hash + time log. Chi bao cao, khong sua code chung.
+
+## Task 2: Viet dac ta landing (b1) vao cdp.mjs
+
+Cach gui (b1) set_value + focus + CDP Enter hien chi nam o /tmp helper voi harness flag, chua land vao code chinh. Nhiem vu cua may: viet ban dac ta landing dang design doc tren main, khong sua code.
+
+Noi dung: them action focus vao cdp.mjs hay cho set_value tu focus field, API nao, dieu kien truoc (pre-send count guard), kiem chung sau (delayed count), test nao can viet (unit + wiring + live dry run), thu tu land (test truoc, code sau, sync laptop, chay lai 5 run). Ghi ro cai gi con thieu moi land duoc.
+
+## Task 3: Audit CB-8 cho 2 claim DONE moi
+
+Luat CB-8: DONE phai co bang chung cu the (lenh test, output, commit hash, time log), khong thi thu hoi. May audit 2 claim DONE moi dang lam gate: (a) S2 flip reopen PASS (5/5 run, 10/10 tin, median 28.6s), (b) (b1) 5/5 tren Chromium (set_value + focus + CDP Enter). Moi claim: bang chung co du khong, verdict UPHELD hay REVOKED, thieu cai gi thi neu cu the.
+
+Dua tren ket qua kiem tra task 1 cua may roi, dung lam lai tu dau, chi soi 2 claim nay. Neu phat hien claim nao thieu bang chung thi ghi ro, khong tu bia bang chung.
+
+Xong ca 3 task thi bao tong ket mot luot. Lam di.
