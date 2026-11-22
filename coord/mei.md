@@ -389,3 +389,14 @@ Em da doc ky ca hai muc moi cua Muse tong luc 18:39, ghi nhan vao file nay.
 - Em ghi nhan: duong harness s2_flip_live.py chay BEN TRONG computer-use session, khac voi tin nhan CDP tho khong co session. Ve ly thuyet pill phai hien khi session dang mo, nhung chua co xac nhan live, nen em van DUNG chay live cho den khi W-PILLCDP tra loi bang bang chung live.
 - Quy tac tam thoi giu nguyen: khong live CDP write nao khi chua co xac nhan pill.
 - Trang thai hien tai: viec 2 thiet ke thi nghiem da qua kiem tra focused vong 3 lan 3, verdict PASS luc 18:52-18:53, dang verify doc lap tu dau, xong se tam dung viec 2 va chuyen sang viec 3 ngay.
+
+## Viec 2 tam dung, verify doc lap: NEEDS CHANGE, 2026-11-22 18:54 gio Viet Nam
+
+Verify doc lap tu dau cho thiet ke thi nghiem E0-E8, verdict NEEDS CHANGE, 4 finding. So lieu trich dan, co che stall theo code, thong ke onset-hazard, tach bien E0-E8, co che unit test E3 bang fake CDP server deu da kiem chung dung voi nguon goc.
+
+- F2 HIGH: thiet ke chua nhac luat pill 18:30. Thiet ke van cho chay live qua harness o E0, E1, E2, E3, E5, E6 ma khong dat gate xac nhan pill, va con cho chay ghi CDP tho ngoai session o E4 (dong 193-198, mo WebSocket moi, gui Input.dispatchKeyEvent va Input.dispatchMouseEvent), pre-check E1 (mouseMoved probe), E7 (dong 248, battery co click), E2 (dong 159, CDP click qua /tmp/c5-stall-regression-probe.mjs). Cac thao tac nay bypass computer-use session, pill khong hien, trai luat 18:30. Can them gate bat buoc: chua chay bat ky arm live nao, ke ca probe E4 va pre-check E1, cho den khi Muse tong xac nhan bang van ban duong nao duoc tinh la session co pill, hoac W-PILLCDP xong, va ghi ro probe nao duoc phep di qua session, probe nao phai dung.
+- F3 MEDIUM: thiet ke chua neu luat 18:23, va con ra lenh dong scratch tab o E7 dong 255, E8 dong 262, muc 1 dong 63. Do la tab do mei tu tao, khong phai tab cua nguoi dung, nhung em da ghi nhan se khong dong nua, ke ca scratch tab tu tao, cho den khi Muse tong xac nhan. Thiet ke can them luat 18:23 bang chu, phan biet tab nguoi dung tuyet doi khong dong va khong navigate, va scratch tab tu tao chi dong sau khi co xac nhan do, hoac ghi ro de tab mo va bao cao thay vi dong.
+- F1 LOW: muc E2 dong 152, khoang elapsed Brave fill ghi 137-178 ms, phai la 133-178 ms, vi flip co 133.0 ms. Can sua headline thanh 133-178 ms, hoac ghi ro khoang nao dung de cham.
+- F4 LOW: muc E3 dong 175, khoi finally ghi dong 604-612, phai la 605-612. Dong 604 la dong catch, finally bat dau dong 605.
+
+Viec 2 tam dung tai day theo uu tien moi, chuyen sang viec 3. File thiet ke da sao luu o ~/workspace/c5-stall-exp-design.md, sha256 e100753c281be4e268b620310bc0af14fe4fc870246ea77637c91b2c93199882, 337 dong, 54557 byte. Khi quay lai viec 2 se sua 4 finding tren, verify lai phan da sua, roi moi commit thiet ke len todolist-push.
