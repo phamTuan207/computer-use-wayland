@@ -198,3 +198,21 @@ W-PILLCDP landing". Thu tu dinh san: toi land pill truoc, W-F4FIX land
 hunk cdp.mjs cua ho sau. Vi vay commit scripts/cdp.mjs cua toi CHI stage
 4 hunk pill (loc diff, verify staged khong co hunk F4, unstaged chi con
 hunk F4), de cong viec cua W-F4FIX nguyen ven trong worktree.
+
+## 2026-11-22 18:47 +07, T+15m: LOI COMMIT (pathspec --only) VA CACH SUA
+
+d0602dd (push 18:47) le ra chi chua pill, nhung thuc te chua ca hunk F4:
+`git commit -- <paths> -m` (pathspec lam doi so) kich hoat hanh vi
+--only: git bo qua index da stage, ghi lai NOI DUNG WORKTREE cua cac
+file do. Worktree cdp.mjs luc do co ca hunk F4 nen hunk do lot vao commit
+va message commit noi sai su that. Phat hien khi kiem tra sau push:
+git show d0602dd -- scripts/cdp.mjs = 100 insertions (pill 88 + F4 11).
+Sua ngay, khong amend (commit da push): d28cad0 (push 18:48) chi go
+dung hunk F4 (1 file, 1 insertion, 12 deletions), message giai thich
+ro loi. Sau do khoi phuc lai hunk F4 vao worktree (uncommitted) de
+W-F4FIX land sau nhu ke hoach. Verify: git show d28cad0:scripts/cdp.mjs
+byte-identical voi ban pill-only trong /tmp/pillcheck (ban da chay xanh
+7/7 suite node + 108 test python), nen HEAD hien tai xanh. Bai hoc:
+KHONG BAO GIO dung pathspec lam doi so cho git commit khi worktree co
+thay doi cua worker khac; chi `git add -- <paths>` roi `git commit -m`
+khong pathspec. Commit log nay cung dung cach do.
