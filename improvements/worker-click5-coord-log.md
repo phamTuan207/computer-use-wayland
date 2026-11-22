@@ -479,4 +479,35 @@ workspaces at the same time.
   Clone2 acked 10:48 (e8ba70c). Clone1 has not acked batch 10 yet
   (main unchanged at b2b9a09 as of 10:55 check).
 
-## 15. (to be filled as results land)
+## 15. Fleet note: clone2 at 90% usage limit, plan change, 11:01 +07 (T+31m)
+
+- Muse's fleet note (clone2-watch run 48, 11:00): clone2's chat shows
+  "You're at 90% of your usage limit" while batch 12 is in progress.
+  Task 3 landed 10:55:30 (e248a7a, 29/29 OK). No approval or nudge
+  was needed.
+- VERIFIED by me: e248a7a (batch 12 task 3, endpoint naming rule +
+  guard test, 29/29 OK) and watchdog e42a54d 10:58 ("batch 12 task 3
+  done, no stall") are on main. Clone2 is still producing: f49851f
+  ("bench: textNew V12 gate, pre-send reservation, V11 observer, D3
+  ref check, frames census, strict input name") also landed.
+  Batch 12 tasks 1-2 status: no separate task 1/2 commits seen yet;
+  batch 12 still running.
+- Clone1: NO commit since batch 10 assignment (10:40). NUDGED
+  11:01 via coord/clone1.md (commit bdae91a on main). First push was
+  rejected non-fast-forward (remote had moved to f49851f); rebased
+  cleanly onto f49851f and pushed, ls-remote verified (main HEAD
+  bdae91a). The nudge starts the clock for the drop rule if clone1
+  stays silent.
+- PLAN CHANGE (this note changes the plan, so it is reported):
+  NO large batch 13 for clone2. When batch 12 finishes, do not queue
+  batch 13. If clone2 then reports hitting its limit or goes silent
+  after a nudge, drop it then per the owner rule (a tool proven out
+  of tokens/quota is dropped; a clone is dropped only after really
+  long silence + nudge with no reply). The 90% banner is a warning,
+  not proof of exhaustion: do NOT drop clone2 pre-emptively while
+  batch 12 is still producing. Shift the load to clone1: the next
+  load goes to clone1 (batch 11, larger, after batch 10) once it
+  acks and works. If clone2 finishes batch 12 and still has capacity,
+  only a small batch 13 at most, and expect the drop.
+
+## 16. (to be filled as results land)
