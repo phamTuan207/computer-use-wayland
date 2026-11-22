@@ -10,20 +10,68 @@ Command, every run: `PYTHONPATH=/usr/lib/python3/dist-packages
 ~/workspace/tools/venv/bin/python -m unittest discover -s tests -p 'test_*.py'`
 (venv python plus system dist-packages, the established suite command).
 
+## Fix pass, 2026-11-22: this report verified a stale tip
+
+Council 1 and 2 and the redteam found this report was published stale.
+Timeline, all UTC: the verification froze its worktree at tip 48c6aee
+(23:49:35Z); the item-4 follow-up fix 0668327 landed 23:58:30Z; the
+AMEND4 log 6f54a4e landed 00:05:46Z; the report was committed 00:21:43Z,
+16 minutes after the log landed, without re-fetching. The claims "there
+is no AMEND4 work log file" and "update the two act_boundary test
+doubles, uncommitted here" were true for the frozen tip and false when
+published. This fix pass re-ran the verification at the current
+todolist-push tip and corrected the report. Cross-check against the
+log's claimed numbers is in the section below; the failure counts agree
+exactly.
+
+Current-tip re-verification, todolist-push tip 17fdb9b, worktree
+~/workspace/tools/amend4/wt-current, same suite command, log
+discover-current.log, wall about 00:30:18Z to 00:33:25Z: Ran 1934 tests
+in 186.909 s, FAILED (failures=10, errors=6, skipped=17). The 17
+session failures are gone: zero test_session entries in the failure
+list, and the 28 tests in the two session modules pass standalone
+(Ran 28 tests, OK, 0.901 s), confirming 0668327 fixed them. The 16
+remaining problems decompose as: 5 RT2 adjudicated defectives (F2
+error, F3, F4, F5-behavior, F6 failures); the pre-existing tc02 pair
+(1 failure, 1 error); the cursor_file setUpClass error (g++
+-std=c++26); and 8 new problems in test_code_exec (4 failures, 3
+errors) and test_codemode (1 failure), all showing the executor
+recording zero backend calls (windows_calls 0 instead of 4, calls list
+empty), consistent with the Y1b forked-child change (17fdb9b) that
+landed after AMEND4. Those 8 pass at the AMEND4 tip (test_code_exec +
+test_codemode, 74 tests OK at 48c6aee), so they are Y1b regressions,
+not AMEND4. The RT2 standalone result is unchanged at the current tip:
+49 tests, 4 failures, 1 error, 0.930 s. The 1934 count is 7 more than
+the 1927 at 48c6aee; the Y1b commits added tests (test_code_exec.py
++23 lines, test_codemode.py +52 lines).
+
 ## Verdict
 
-AMEND4 as landed does NOT pass the full suite on this machine: 1927 tests,
-20 failures, 5 errors, 17 skipped. But 17 of the 25 problem tests share one
-cause that is not a production regression: stale test doubles. With that
-single cause fixed in a diagnostic probe, the suite is 1927 tests,
-5 failures, 3 errors. The 5 remaining failures and 1 remaining error are
-the 5 RT2 proof tests F2, F3, F4, F5, F6. Of those, F6 is openly admitted
-left failing in the item 7 commit body, F2 and F3 are defective or obsolete
-as written (judged independently below), F4 tests the helper fallback
-rather than the fixed production path, and F5 is a TRUE negative: the
-unwired path still verifies wrong-field text. Item 12 is VERIFIED:
-the 4 new after-scope regression tests exist, pass, and fail first on
-the old code.
+CORRECTED by the fix pass: this report verified tip 48c6aee and was
+committed without re-fetching, after the AMEND4 log (6f54a4e) and the
+item-4 follow-up fix (0668327) had already landed. At the current tip
+17fdb9b, re-run in this fix pass, the suite is 1934 tests, 10 failures,
+6 errors, 17 skipped, and the 17 session failures are GONE (the 28
+session-module tests all pass). The remaining 16 problems are: the 5
+RT2 proof tests (F2 error, F3, F4, F5, F6 failures), the pre-existing
+tc02 pair and cursor_file error, and 8 new problems in test_code_exec
+/ test_codemode that pass at the AMEND4 tip and are Y1b regressions,
+not AMEND4. At the verified tip 48c6aee the numbers below were true as
+stated: AMEND4 as landed did NOT pass the full suite on this machine:
+1927 tests, 20 failures, 5 errors, 17 skipped. But 17 of the 25 problem
+tests shared one cause that is not a production regression: stale test
+doubles. With that single cause fixed in a diagnostic probe, the suite
+was 1927 tests, 5 failures, 3 errors. The 5 remaining RT2 problems are
+4 failures + 1 error; the probe run's other problems are the pre-existing
+tc02 pair and the cursor_file setUpClass error. Of the 5 RT2 tests, F6
+is openly admitted left failing in the item 7 commit body, F2 (region
+fallback) and F3 (stale origin) are defective or obsolete as written
+(judged independently below), F4 tests the helper fallback rather than
+the fixed production path, and F5 is CONTESTED: this report judges it a
+TRUE negative (the unwired path still verifies wrong-field text), while
+the AMEND4 log judges the behavior test DEFECTIVE; adjudication must
+decide, see below. Item 12 is VERIFIED: the 4 new after-scope
+regression tests exist, pass, and fail first on the old code.
 
 ## Numbers, all runs on this machine
 
@@ -36,10 +84,12 @@ the old code.
 | AMEND4 run 3 | tip 48c6aee, diagnostic probe (test doubles patched) | 1904 | 5 | 4 | 17 | 172.712 s |
 | AMEND4 run 4 | tip 48c6aee, complete checkout + probe | 1927 | 5 | 3 | 17 | 176.973 s |
 | AMEND4 run 5 | tip 48c6aee, complete checkout, as landed | 1927 | 20 | 5 | 17 | 211.925 s |
+| Fix-pass run | current tip 17fdb9b, complete checkout | 1934 | 10 | 6 | 17 | 186.909 s |
 
 Wall windows: baseline A 2026-11-21T23:58:15Z to 2026-11-22T00:01:09Z;
 baseline B 00:17:01Z to 00:20:11Z; run 2 23:55:02Z to 23:57:53Z; run 4
-00:09:58Z to 00:12:56Z; run 5 00:13:09Z to 00:16:43Z. Elapsed times vary
+00:09:58Z to 00:12:56Z; run 5 00:13:09Z to 00:16:43Z; fix-pass run about
+00:30:18Z to 00:33:25Z (end wall-clock from the log). Elapsed times vary
 with VM contention (run 5 took 211.9 s against run 4 at 177.0 s on the
 same code except the probe patch); wall times are as measured.
 
@@ -54,19 +104,42 @@ Count check: 1862 baseline + 49 (RT2 module as loaded) + 16 (AMEND4 new
 test methods, counted per item commit: item 2: 2, item 3: 3, items 5-6: 3,
 item 7: 1, item 9: 3, item 12: 4) = 1927. Exact.
 
-## The AMEND4 log has no full-suite numbers
+## The AMEND4 log: it exists, and its numbers corroborate this report
 
-There is no AMEND4 work log file on todolist-push. The "log" is the 12
-item commits themselves. Items 3, 4 and 5-6 have empty bodies (subject
-only). The subjects and bodies that say "proof in log", "symmetry proof
-in log" and "see the AMEND4 log" point to a log file that does not exist
-in the repo (grep over the branch finds only the driver log and the
-probe-p3 log mentioning "AMEND4 log"). So there is no AMEND4-claimed
-full-suite number to compare against, and the "RT2 test defective"
-proofs for F2, F3, F4 and F5 are not verifiable from any repo artifact.
-I judged each test myself below, from the test source and the code.
+CORRECTED by the fix pass: the AMEND4 work log DOES exist:
+improvements/worker-click3-amend4-log.md, 716 lines, commit 6f54a4e,
+2026-11-22 00:05:46Z. It landed 16 minutes before this report was
+committed, and the report was written without re-fetching, so the
+original claim that no log file exists was true for the frozen tip
+48c6aee and false when published. The "proof in log" references in the
+item commit subjects DO resolve: the log contains per-item defective
+proofs for all 5 non-passing RT tests (F2, F3, F4, F5-behavior, F6).
+Items 1, 2, 3, 4 and 5-6 have empty bodies (subject only); items 7 to
+12 have bodies.
 
-The nearest claimed numbers are AMEND3's, from
+The log's claimed full-suite numbers, from its Final verification
+section (command from tests/, PYTHONPATH=../scripts:. python3 -m
+unittest discover -s . -p "test_*.py"): first run (before the item-4
+follow-up fix) Ran 1920 tests in 234.840 s, FAILED (failures=20,
+errors=8, skipped=17); final run (after the fix) Ran 1920 tests in
+388.608 s, FAILED (failures=5, errors=6, skipped=17). The failure
+counts agree exactly with this report's runs (20 as landed, 5 after the
+doubles fix). The 7-test count gap (1920 vs 1927) matches the AMEND3
+gap (1855 vs 1862) and suggests a runner-collection difference between
+the two invocations, not a counting error by either side: the log ran
+from tests/ with system python3, while this report used the venv python
+with -s tests. The error totals differ by runner/environment: the log's
+runs show an a11y_skeleton import error and two test_perf_evidence
+errors (missing benchmark JSON) that this machine's runs never saw.
+The log's "10 of 15 pass" list matches this report's exactly (F1,
+F5-source, F7-node, F7-python, F8, F9, F10, F11, F12, F13). The log
+honestly records its end state as NOT met: 5 failures remain, of which
+4 are defective proof tests left for adjudication and 1 is environmental
+(tesseract). The log's "New tests added" list says 13, not 16, because
+it omits the 3 items 5-6 tests; this report's 16 is correct on this
+machine (b44a5ea adds exactly 3 def test_ methods, verified by diff).
+
+The nearest claimed numbers before the log landed were AMEND3's, from
 improvements/worker-click3-amend3-log.md: 1855 tests, 0 failures,
 errors=4, skipped=17. That claim does NOT reproduce on this machine:
 baseline B at the same commit gives 1862 tests, 2 failures, 2 errors,
@@ -122,8 +195,12 @@ scripts/cu.py:1635), so in the real unpatched system the calls work.
 This is a test-double staleness, not a production regression. But the
 suite as landed is red because of it, and the AMEND4 fix pass did not
 update its own test doubles. The fix is a small test-only change
-(accept and forward the two kwargs in both fakes); it is not committed
-here, it belongs to the AMEND4 owner or a follow-up.
+(accept and forward the two kwargs in both fakes). CORRECTED by the
+fix pass: the AMEND4 owner committed exactly this fix as 0668327 at
+23:58:30Z, before this report was published; verified live, the 28
+tests in the two modules pass at 6f54a4e and at the current tip
+17fdb9b, and the full discover at the current tip has zero
+test_session problems.
 
 ## RT proof tests: 10 of 15 pass, 5 do not
 
@@ -139,7 +216,20 @@ R3aUnwiredPathTests subclasses it). Standalone run at the AMEND4 tip:
 - F1 (set_value newline, item 8): PASS.
   test_set_value_newline_text_fails_verification passes. (F1 was also
   confirmed live separately by fcc on Chromium 130 headless.)
-- F2 (stale window origin, items 5-6): FAIL.
+- F2 (region fallback, items 5-6): ERROR.
+  test_region_fallback_readmits_raw_mozinner calls dom_act.ground_input
+  with a meta that has no window_bounds. Items 5-6 made ground_input
+  refuse without window_bounds, so the test now errors with DomActError
+  ("meta needs window_bounds for the window origin"). The test asserts
+  the old fallback contract; under the new refuse rule it cannot pass
+  as written. It is obsolete and needs a rewrite to assert refusal.
+  Whether refusal is the right fix is the adjudication's call, not this
+  test's. The AMEND4 log (items 5-6 section) judges it DEFECTIVE on the
+  same ground: the true origin [2749, 922] is not derivable from a meta
+  with no window_bounds, only a live hyprctl re-read could supply it,
+  and the correct behavior under the new rule is a refusal DomActError,
+  which the test has no assertRaises for.
+- F3 (stale window origin, items 5-6): FAIL.
   test_stale_window_origin_accepted_silently. My judgment: the test is
   self-contradictory as written and can never pass under any fix. It
   asserts the returned stale origin equals [340, 108] AND that the
@@ -148,15 +238,13 @@ R3aUnwiredPathTests subclasses it). Standalone run at the AMEND4 tip:
   the call; if it returned the true origin [2749, 922], the first
   assert would fail. The test needs a rewrite (assert refusal, or
   assert the true origin). AMEND4's "defective" claim stands on my
-  reading. The "proof in log" for it is not in the repo.
-- F3 (region fallback, items 5-6): ERROR. test_region_fallback_readmits_raw_mozinner
-  calls dom_act.ground_input with a meta that has no window_bounds.
-  Items 5-6 made ground_input refuse without window_bounds, so the
-  test now errors with DomActError ("meta needs window_bounds for the
-  window origin"). The test asserts the old fallback contract; under
-  the new refuse rule it cannot pass as written. It is obsolete and
-  needs a rewrite to assert refusal. Whether refusal is the right fix
-  is the adjudication's call, not this test's.
+  reading. The AMEND4 log (items 5-6 section) judges it DEFECTIVE on
+  the same ground: no return value satisfies both assertions, a raise
+  would error the test (no assertRaises), and the test calls
+  viewport_origin directly, so a ground-time re-read cannot affect it.
+  (CORRECTED by the fix pass: the F2/F3 labels were swapped throughout
+  this report; the rtr2 log defines F2 as region fallback and F3 as
+  stale origin, and the AMEND4 log agrees.)
 - F4 (band stacked fields, item 3): FAIL.
   test_band_stacked_fields_low_click_with_x_range_must_not_verify calls
   cu._input_line_changed directly with x_range but no y_range, and the
@@ -169,21 +257,33 @@ R3aUnwiredPathTests subclasses it). Standalone run at the AMEND4 tip:
   item 3. But the fallback is real and still reachable when grounding
   fails (y_range None), and the helper's docstring says so. The test
   is misleading as a proof of a production flaw; it needs a
-  y_range-passing variant to test the fix. The "symmetry proof" for
-  calling it defective is not in any repo file.
-- F5 (unwired path, item 4): FAIL, and this one is a TRUE negative.
+  y_range-passing variant to test the fix. The symmetry proof is in the
+  AMEND4 log, item 3 section: both pixels are 8 px from anchor 118 with
+  no y_range passed, so any symmetric band containing one contains the
+  other; only the field's y-range (not passed) can distinguish them.
+- F5 (unwired path, item 4): FAIL, and this one is CONTESTED, not settled.
   test_band_wrong_field_unwired_path_reports_ok runs a click+type
   batch with no DOM session and expects the wrong-field pixels not to
   verify. Item 4 threads the ranges only when a DOM session and
   selector exist; without them the batch keeps the full-width band
   by design ("best-effort"), and the result is ok True with
-  type_verified True on the input-line-band basis. The test demands
-  fail-closed on the unwired path; the implementation chose
-  best-effort. That is a design dispute, not a test defect, and the
-  test failure is real evidence the fail-closed requirement is unmet
-  on this path. Whether best-effort is acceptable is for the
-  adjudication round to decide. The "proof in log" for calling it
-  defective is not in the repo.
+  type_verified True on the input-line-band basis. This report's
+  independent judgment: the test demands fail-closed on the unwired
+  path, the implementation chose best-effort, so the failure is real
+  evidence the fail-closed requirement is unmet on this path, a TRUE
+  negative and a design dispute. The AMEND4 log judges the behavior
+  test DEFECTIVE with two arguments this report did not address
+  (verified in the log, item 4 section): (a) the test calls
+  cu.desktop_act DIRECTLY, so threading the ranges cannot affect it;
+  (b) the "or" branch the test would need (band-only unverified when
+  no ranges are supplied) would break the control test
+  test_click_type_text_in_input_line_verifies
+  (tests/test_type_verification.py:120), which expects ok True via the
+  band with no ranges. Whether best-effort is acceptable is for the
+  adjudication round to decide between fail-closed (the test's
+  requirement) and best-effort (the implementation's documented choice
+  plus the control test). As written before this fix pass, a reader of
+  this report alone would not know the conflict exists.
 - F6 (typed flag forgeable, item 7): FAIL, openly admitted.
   test_typed_flag_forgeable_by_page_script. Item 7's commit body says:
   "F6 is left failing for adjudication (its forge line assumes the
@@ -192,12 +292,20 @@ R3aUnwiredPathTests subclasses it). Standalone run at the AMEND4 tip:
   has no window property to forge (closure plus locked getter), so the
   test's node harness errors (window.__agentCuTyped is undefined) and
   the test fails. The test is obsolete for the new design and needs a
-  rewrite. The admission is in the commit body; the cited AMEND4 log
-  does not exist in the repo.
+  rewrite. The admission is in the commit body; the AMEND4 log (item 7
+  section, and its Final verification list) also judges F6 defective in
+  two ways: the forge line assumes the removed window property, and the
+  value assertion conflates the field value with the verify outcome.
+- F5-source (test_codeexec_and_cli_act_paths_never_supply_x_ranges):
+  PASS. The 10th passing proof, the source-side test for item 4; it
+  passes at the tip and at the current tip (verified in this fix pass).
 - F7 (typed flag sticky, item 7): PASS. Both the node and the python
   sticky tests pass.
 - F8, F11, F12, F13 (gate traversal and iframe reads, item 2): PASS.
-  All three iframe tests pass (nested iframe, shadow root, harvest).
+  F8 is test_arm_typed_flag_misses_iframe_targets; the three iframe
+  tests are F11 test_field_value_misses_nested_iframe, F12
+  test_field_value_misses_iframe_in_shadow_root, F13
+  test_harvest_misses_iframe_targets. All four pass.
 - F9, F10 (geometry, item 1): PASS. Both geometry tests pass.
 - Item 9 (supply-chain range wiring, C2 A3): PASS. The three new
   tests pass as part of the suite (no failures in test_dom_act or
@@ -247,32 +355,44 @@ failing-first on the old code" in the item 12 commit body holds.
 
 ## What remains, for the coordinator
 
-1. Update the two act_boundary test doubles (test_session_continuation.py:110,
-   test_session_policy.py:101) to accept and forward type_x_ranges and
-   type_y_ranges. Test-only change, verified by probe to clear all 17
-   session problems. Uncommitted here.
+1. STRUCK by the fix pass: update the two act_boundary test doubles.
+   Already done by 0668327 ("AMEND4 item 4 follow-up: session
+   act_boundary fakes forward desktop_act kwargs", 23:58:30Z), verified
+   live: the 28 tests in the two session modules pass at 6f54a4e and at
+   the current tip 17fdb9b.
 2. Decide F5: fail-closed on the unwired path (the test's requirement)
-   or best-effort (item 4's choice). This is the one remaining true
-   negative in the RT proofs.
+   or best-effort (item 4's choice). This is the one remaining
+   contested RT proof: this report judges it a true negative, the
+   AMEND4 log judges the behavior test defective (direct desktop_act
+   call; the "or" branch would break the control test
+   test_click_type_text_in_input_line_verifies). Adjudication must
+   decide; see the F5 bullet above.
 3. Rewrite the obsolete RT2 proof tests F2, F3, F6 (and add a
    y_range-passing variant for F4) to match the landed contracts, or
    rule them defective in the adjudication. F6 is already flagged for
    adjudication in the item 7 commit body.
-4. The AMEND4 "proof in log" references point to a log file that does
-   not exist in the repo. If the proofs exist elsewhere, they need to
-   be put in the repo, or the "defective" verdicts rest on the
-   independent judgments above, not on the cited log.
+4. Cross-check this report's independent judgments against the landed
+   AMEND4 log (improvements/worker-click3-amend4-log.md, 6f54a4e). The
+   failure counts agree exactly (20 as landed, 5 after the doubles
+   fix); the one live dispute is F5.
 5. Pre-existing, not AMEND4: the tc02 typed-text-check pair
    (1 failure, 1 error on this machine), the g++ -std=c++26 limit in
    test_cursor_file, and the flaky test_cli_exit_codes guardian
    leftover. None of these is an AMEND4 regression.
+6. New, not AMEND4: 8 problems in test_code_exec / test_codemode at
+   the current tip 17fdb9b (5 failures, 3 errors), all showing the
+   executor recording zero backend calls, consistent with the Y1b
+   forked-child change. They pass at the AMEND4 tip. The Y1b lane owns
+   them.
 
 ## Logs preserved
 
 ~/workspace/tools/amend4/: discover.log (run 1, invalid), discover2.log
 (run 2), discover3.log (run 3, probe), discover4.log (run 4),
 discover5.log (run 5, as landed), discover-amend3.log (baseline A),
-discover-amend3b.log (baseline B), rt2.log (RT2 standalone).
+discover-amend3b.log (baseline B), rt2.log (RT2 standalone),
+discover-current.log (fix-pass run at current tip 17fdb9b).
 Worktrees: ~/workspace/tools/amend4/wt (tip 48c6aee, reverted to landed
 code after the probe), ~/workspace/tools/amend4/wt-amend3 (9bcfb04),
-~/workspace/tools/amend4/wt-pre12 (5f30908, failing-first check).
+~/workspace/tools/amend4/wt-pre12 (5f30908, failing-first check),
+~/workspace/tools/amend4/wt-current (17fdb9b, fix-pass run).
