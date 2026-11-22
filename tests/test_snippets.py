@@ -122,6 +122,19 @@ DOM_OBSERVE_THEN_ACT = (
     'ref = snap["elements"][0]["ref"]\n'
     'result = dom_act(snap, [{"type": "click", "ref": ref, '
     '"scope": "tab-1", "observation_id": snap["snapshot"]}])\n')
+# B2-2 cross-run regression fixtures. SCOPED_BARE_ACT stamps scope and
+# observation_id so a binding leak is visible as a backend act call,
+# not hidden behind the CB-2 missing-scope refusal. OBS_OUT declares
+# its observation as output so the outer program can hand it to a
+# later snippet in a later run() call.
+SCOPED_BARE_ACT = (
+    'act([{"type": "wait", "ms": 0, "scope": "window", '
+    '"observation_id": "abcdef012345"}])\n')
+OBS_OUT = 'obs = observe(window="0xabc")\n'
+EXPLICIT_ACT = (
+    'result = act([{"type": "wait", "ms": 0, "scope": obs["scope"], '
+    '"observation_id": obs["id"]}], obs)\n')
+DOM_OBSERVE = 'snap = dom_observe("tab-1")\n'
 ECHO_PARAM = 'print(text)\nout = text\n'
 
 
@@ -436,6 +449,82 @@ class RunSnippetTests(unittest.TestCase):
         self.assertTrue(env['ok'], env)
         self.assertEqual(
             sum(1 for c in backend.dom_calls if c[0] == 'act'), 1)
+
+    def test_observation_bindings_cross_run(self):
+        # B2-2: snippet run ids must not repeat across run() calls of
+        # the same session. Before the fix the child-local counter
+        # reset to 1 on every run(), so a snippet in run 2 could act
+        # on a snippet's observation from run 1.
+        backend = FakeBackend()
+        root = _make_root([
+            {'name': 'first-observer', 'source': FIRST_OBSERVER},
+            {'name': 'second-scoped-bare-act', 'source': SCOPED_BARE_ACT},
+            {'name': 'obs-out', 'source': OBS_OUT, 'output': 'obs'},
+            {'name': 'explicit-act', 'source': EXPLICIT_ACT},
+        ])
+        session = _session(backend, root=root)
+        # None fallback, cross-run, scoped so the leak would act.
+        env = session.run('run_snippet("first-observer")\n')
+        self.assertTrue(env['ok'], env)
+        env = session.run('run_snippet("second-scoped-bare-act")\n')
+        self.assertFalse(env['ok'])
+        self.assertIn('not bound to this snippet run', env['error'])
+        self.assertEqual([c for c in backend.calls if c[0] == 'act'], [])
+        # Explicit act, cross-run, via the first snippet's output.
+        env = session.run('holder = run_snippet("obs-out")\n')
+        self.assertTrue(env['ok'], env)
+        env = session.run('obs = holder["output"]\n'
+                          'run_snippet("explicit-act")\n')
+        self.assertFalse(env['ok'])
+        self.assertIn('not bound to this snippet run', env['error'])
+        self.assertEqual([c for c in backend.calls if c[0] == 'act'], [])
+        # Guard: the outer program (run 0) may still reuse its own
+        # observation across run() calls; only snippet ids are fresh.
+        env = session.run('obs = observe(window="0xabc")\n')
+        self.assertTrue(env['ok'], env)
+        env = session.run(
+            'result = act([{"type": "wait", "ms": 0, '
+            '"scope": obs["scope"], "observation_id": obs["id"]}], obs)\n')
+        self.assertTrue(env['ok'], env)
+        self.assertEqual(len([c for c in backend.calls if c[0] == 'act']), 1)
+
+    def test_dom_bindings_cross_run(self):
+        # B2-2, DOM path: a DOM snapshot from run 1 must not be usable
+        # by a snippet in run 2, even though the snapshot id repeats
+        # in the fake backend.
+        backend = FakeDomBackend()
+        root = _make_root([
+            {'name': 'dom-observe', 'source': DOM_OBSERVE, 'output': 'snap'},
+            {'name': 'bare-dom-act', 'source': BARE_DOM_ACT},
+        ])
+        session = _session(backend, root=root)
+        env = session.run('holder = run_snippet("dom-observe")\n')
+        self.assertTrue(env['ok'], env)
+        env = session.run('snap = holder["output"]\n'
+                          'run_snippet("bare-dom-act")\n')
+        self.assertFalse(env['ok'])
+        self.assertIn('not bound to this snippet run', env['error'])
+        self.assertEqual(
+            sum(1 for c in backend.dom_calls if c[0] == 'act'), 0)
+
+    def test_bound_observation_none_rejects_stale(self):
+        # B2-2: the None fallback must check age like the explicit
+        # branch. Age the observation to 200s, past the 120s window.
+        backend = FakeBackend()
+        session = _session(backend, root=None)
+        session._current_snippet_run = 1
+        session.api_observe(window='0xabc')
+        session.observations['abcdef012345']['created'] = time.time() - 200
+        with self.assertRaises(code_exec.CodeExecError) as ctx:
+            session._bound_observation(None)
+        self.assertIn('older than 120s', str(ctx.exception))
+        with self.assertRaises(code_exec.CodeExecError) as ctx:
+            session._bound_observation({'id': 'abcdef012345'})
+        self.assertIn('older than 120s', str(ctx.exception))
+        # A fresh observation from the same run still passes None.
+        session.api_observe(window='0xabc')
+        meta = session._bound_observation(None)
+        self.assertEqual(meta['id'], 'abcdef012345')
 
     def test_param_injection_stays_data(self):
         # Probe 11h: code-shaped param values arrive as plain strings.

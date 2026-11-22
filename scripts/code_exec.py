@@ -1009,6 +1009,15 @@ class CodeExecSession:
         self._observation_runs = {}
         self._dom_snapshot_runs = {}
         self._current_snippet_run = 0
+        # Session-level snippet run counter (B2-2). The parent allocates
+        # every snippet run id from this counter, in _fetch_snippet, so
+        # an id is never reused in one session. It must live here, in
+        # the parent: run_child runs in a forked child that ends with
+        # os._exit, so a counter kept in the child resets on every
+        # run() call and repeats id 1, which is the cross-run leak.
+        # A new session starts with empty run maps, so starting again
+        # at 1 is safe there.
+        self._snippet_run_next = 0
         self.api_calls = 0
         self.log_lines = []
         self._deadline = None
@@ -1209,8 +1218,14 @@ class CodeExecSession:
                         if self._observation_runs.get(key, 0) == self._current_snippet_run]
             if not same_run:
                 raise CodeExecError('observation is not bound to this snippet run; observe again')
-            return max((meta for _, meta in same_run),
-                       key=lambda m: m.get('created', 0))
+            newest = max((meta for _, meta in same_run),
+                         key=lambda m: m.get('created', 0))
+            # B2-2: the None fallback had no age check, unlike the
+            # explicit branch below. A stale observation from this
+            # run must refuse the same way, with the same message.
+            if time.time() - newest.get('created', 0) > OBSERVATION_MAX_AGE:
+                raise CodeExecError('observation is older than 120s; observe again')
+            return newest
         if not isinstance(observation, dict) or not isinstance(observation.get('id'), str):
             raise CodeExecError('act observation must be an observation dict from observe()')
         meta = self.observations.get(observation['id'])
@@ -1604,10 +1619,16 @@ class CodeExecSession:
             raise CodeExecError('applied snippet ledger is full; refusing to act')
         source = _read_snippet_once(entry, root=self.snippet_root)
         validate_program(source)
+        # B2-2: allocate the snippet run id here, in the parent, after
+        # every check has passed. This is the only allocation point,
+        # so an id is never reused in one session, across run() calls.
+        # A failed fetch allocates nothing and can be retried.
+        self._snippet_run_next += 1
         return {'source': source, 'sha256': entry['sha256'],
                 'output': entry.get('output'), 'stale': stale,
                 'ledger_key': ledger_key, 'params_hash': params_hash,
-                'ledger': ledgered, 'params': params}
+                'ledger': ledgered, 'params': params,
+                'snippet_run': self._snippet_run_next}
 
     def _record_snippet_result(self, key, name, params_hash, result):
         """Record a SUCCESSFUL snippet application (item 12).
@@ -1735,13 +1756,17 @@ class CodeExecSession:
 
             def run_child(channel):
                 # Item 10: the current snippet run id. 0 is the outer
-                # program; each run_snippet call gets a FRESH id from a
-                # monotonic counter, carried on every API request so the
-                # parent can scope bindings per snippet run. A binary
-                # in/out flag is not enough: sequential snippets must not
-                # share an id (probe 11g), so the counter never reuses one.
+                # program; each run_snippet call gets a FRESH id,
+                # carried on every API request so the parent can scope
+                # bindings per snippet run. A binary in/out flag is not
+                # enough: sequential snippets must not share an id
+                # (probe 11g), so the id never reuses one. The id is
+                # allocated by the parent in _fetch_snippet, not here:
+                # this child is forked fresh on every run() call and
+                # ends with os._exit, so a counter kept here would
+                # reset to 1 on every run() and leak bindings across
+                # runs (B2-2).
                 snippet_run = [0]
-                snippet_run_next = [0]
                 snippet_depth = [0]
 
                 def make_stub(name):
@@ -1818,9 +1843,12 @@ class CodeExecSession:
                     fetched = resp.get('result')
                     tree = validate_program(fetched['source'])
                     code = compile(tree, PROGRAM_FILENAME, 'exec')
-                    snippet_run_next[0] += 1
+                    allocated = fetched.get('snippet_run')
+                    if not isinstance(allocated, int) or allocated <= 0:
+                        raise CodeExecError(
+                            'parent did not allocate a snippet run id')
                     old_run = snippet_run[0]
-                    snippet_run[0] = snippet_run_next[0]
+                    snippet_run[0] = allocated
                     snippet_depth[0] += 1
                     frame_locals = dict(fetched['params'])
                     outcome = None
