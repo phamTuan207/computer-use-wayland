@@ -592,10 +592,11 @@ Manifest verify (rows 8 and 11):
   test_set_value_email_multiple_trims_each_token (tests/
   test_click3_redteam2.py, 1 file, 107 insertions).
 - This log file: improvements/mochi-b2-6-final-log.md, commit
-  (to be filled when committed; the hash is reported in the
-  completion message to the coordinator). No push was made for
-  any of these commits (per the brief: coordinator commits
-  nothing for this worker, and no push from this worker).
+  b0876ca18a88b4cefda5109dd6f3f0abca2cc34e (b0876ca). The commit
+  record line itself was filled in by a follow-up commit (see
+  below). No push was made for any of these commits (per the
+  brief: coordinator commits nothing for this worker, and no push
+  from this worker).
 
 Elapsed: task received 00:09 +07; docs read by 00:14 +07;
 natives built 00:14:20 +07; pre-fix verification 00:14:41 to
