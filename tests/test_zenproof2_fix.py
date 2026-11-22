@@ -36,10 +36,22 @@ session that models that exact misfire, and prove:
   behavioral tests on a real Runner, not for the first time in
   a live run (amend 2, Council 2 C1),
 - open refuses when the handle set after /window/new differs
-  from before by more than exactly the new handle added and
-  nothing removed, which a concurrent open plus close plus a
-  stale-handle return would otherwise defeat (amend 3,
-  Redteam P-C),
+  from before by anything other than exactly the new handle
+  added and nothing removed (a different singleton added, an
+  empty added set, or anything removed also refuses), which a
+  concurrent open plus close plus a stale-handle return would
+  otherwise defeat (amend 3, Redteam P-C),
+- open also requires the same exact difference against a second
+  baseline captured immediately before POST /window/new, which
+  a concurrent open at the pre-check scan plus a stale return
+  without creation would otherwise defeat (amend 4, Redteam
+  H1); a concurrent open during the POST itself plus a stale
+  return still defeats both baselines and is pinned here as a
+  known residual, not fixed (amend 4, Redteam G1),
+- phase 4's helper records hypr calls too and returns them on
+  raise, so the active-window test asserts no switch or send ran
+  before the raise, and the identity test pins hypr first, then
+  switch, then send (amend 4, Redteam H3),
 - phase 4's active-window check and final ok/completed gate
   are executed by behavioral tests, and the helper pins the
   call order (switch before send) and the program identity
@@ -617,6 +629,93 @@ class ZenTabFixTest(unittest.TestCase):
         self.assertEqual(fake.tabs[1]['url'], 'https://x.example/')
         self.assertEqual(fake.tabs[2]['url'], 'about:blank')
 
+    def test_open_refuses_no_creation_stale_return_at_scan(self):
+        """Redteam H1 (amend 4), Q-J2: a tab X opens during the
+        pre-check scan, and /window/new returns X's handle
+        WITHOUT creating a tab. Against `before` the set
+        difference is exactly {X} == {new_handle} with nothing
+        removed, so the amend-3 check passes; the second
+        baseline `just_before` (captured after the scan, so it
+        already contains X) must refuse: added against it is
+        empty, not {new_handle}. Both select modes, adapted
+        from /tmp/redteam-amend3-probes.py Q-J2.
+        """
+        class _StaleReturnNoCreateAtScan(FakeSession):
+            def __init__(self, *a, **k):
+                super().__init__(*a, **k)
+                self._x_handle = None
+                self._injected = False
+
+            def list_tabs(self, handle_index=None):
+                if not self._injected:
+                    self._injected = True
+                    self._x_handle = uuid.uuid4().hex
+                    self.tabs.append({'handle': self._x_handle,
+                                      'title': 'X',
+                                      'url': 'https://x.example/'})
+                return super().list_tabs(handle_index)
+
+            def _wd(self, method, path, body=None):
+                if method == 'POST' and path.endswith('/window/new'):
+                    if self.select_new:
+                        self.current = self._x_handle
+                    return {'value': {'handle': self._x_handle}}
+                return super()._wd(method, path, body)
+
+        for mode in (True, False):
+            fake = _StaleReturnNoCreateAtScan(
+                _owner_tabs(), current_index=0,
+                select_new=mode, select_works=True)
+            with self.assertRaises(ZenDomError) as caught:
+                self._run_cmd(fake, zen_tab.cmd_open)
+            self.assertIn('handle set', str(caught.exception))
+            self.assertEqual(fake.deleted, [])
+            self.assertEqual(len(fake.tabs), 3)
+            self.assertEqual(fake.tabs[0]['url'], OWNER_URL)
+            self.assertEqual(fake.tabs[1]['url'],
+                             'https://example.com/')
+            self.assertEqual(fake.tabs[2]['url'], 'https://x.example/')
+
+    def test_open_no_creation_stale_return_during_post_is_residual(self):
+        """Redteam G1 (amend 4), Q-J1: a tab X opens DURING the
+        POST /window/new round-trip itself, and /window/new
+        returns X's handle WITHOUT creating a tab. Both
+        baselines miss X (it did not exist when either was
+        captured), so every check passes, the navigate rewrites
+        X to the fixture URL, and cleanup close DELETEs X. This
+        is the irreducible residual of the no-creation variant
+        (no atomic verify-and-create, same class as the F1
+        race), narrowed by the second baseline, not eliminated.
+        This test PINS the residual as a known limitation: it
+        asserts the damage happens, so that a future fix which
+        closes it must update this test, not pass silently.
+        Adapted from /tmp/redteam-amend3-probes.py Q-J1.
+        """
+        class _StaleReturnNoCreateAtNew(FakeSession):
+            def _wd(self, method, path, body=None):
+                if method == 'POST' and path.endswith('/window/new'):
+                    x_handle = uuid.uuid4().hex
+                    self.tabs.append({'handle': x_handle, 'title': 'X',
+                                      'url': 'https://x.example/'})
+                    if self.select_new:
+                        self.current = x_handle
+                    return {'value': {'handle': x_handle}}
+                return super()._wd(method, path, body)
+
+        for mode in (True, False):
+            fake = _StaleReturnNoCreateAtNew(
+                _owner_tabs(), current_index=0,
+                select_new=mode, select_works=True)
+            result = self._run_cmd(fake, zen_tab.cmd_open)
+            self.assertTrue(result['ok'])
+            self.assertIn(FIXTURE_SUBSTR, result['url'])
+            closed = self._run_cmd(fake, zen_tab.cmd_close,
+                                   FIXTURE_SUBSTR, OWNER_URL)
+            self.assertTrue(closed['ok'])
+            self.assertEqual(fake.deleted, [FIXTURE_URL])
+            self.assertNotIn('https://x.example/',
+                             [t['url'] for t in fake.tabs])
+
     def test_restore_original_scan_error_with_failed_reads_returns_ok(self):
         """Redteam H2 (amend 2): the scan fails inside
         _restore_original AND the _title/_url reads fail too.
@@ -855,14 +954,19 @@ class RunnerFixTest(unittest.TestCase):
         self.assertEqual(count, '1')
 
     def _run_phase4(self, switch_url=FIXTURE_URL, log=None, ok=True,
-                    hypr_address='0xABC'):
+                    hypr_address='0xABC', calls_out=None):
         """Run phase4 on a real Runner with hypr/tab/oneshot_zen
         mocked (Council 2 phase-4 probe shape: Runner() builds a
         Harness that only mkdirs, no SSH). Returns the runner so
-        the test can read results. The tab and oneshot_zen mocks
-        record their calls on runner._phase4_calls (Redteam H3,
-        amend 3): the order must be switch before send, and the
-        program passed to oneshot_zen must be SEND_PROGRAM.
+        the test can read results. The hypr, tab, and oneshot_zen
+        mocks record their calls on runner._phase4_calls (Redteam
+        H3, amend 3, extended amend 4 to hypr): the order must be
+        hypr first, then switch, then send, and the program
+        passed to oneshot_zen must be SEND_PROGRAM. When phase4
+        raises, the runner is lost to the test, so a caller that
+        needs the calls on the raise path passes its own list as
+        calls_out: the helper appends to it, and the list survives
+        the raise (Redteam H3, amend 4).
         """
         runner = run2.Runner()
         runner.zen_address = '0xabc'
@@ -871,8 +975,12 @@ class RunnerFixTest(unittest.TestCase):
                     'log': log if log is not None else [
                         'PROBE zen-9 ' + FIXTURE_URL + ' 1',
                         'dom_act ok True completed 4']}
-        calls = []
+        calls = calls_out if calls_out is not None else []
         runner._phase4_calls = calls
+
+        def _hypr(*args, **kwargs):
+            calls.append(('hypr', args, kwargs))
+            return {'address': hypr_address}
 
         def _tab(*args, **kwargs):
             calls.append(('tab', args, kwargs))
@@ -883,7 +991,7 @@ class RunnerFixTest(unittest.TestCase):
             return (12.3, envelope)
 
         with mock.patch.object(runner, 'hypr',
-                               return_value={'address': hypr_address}), \
+                               side_effect=_hypr), \
              mock.patch.object(runner, 'tab', side_effect=_tab), \
              mock.patch.object(runner, 'oneshot_zen',
                                side_effect=_oneshot):
@@ -942,16 +1050,24 @@ class RunnerFixTest(unittest.TestCase):
         self.assertIn('send switch landed on', str(caught.exception))
 
     def test_phase4_active_window_moved_raises(self):
-        """Council 2 C1 (amend 3): the active-window check must
-        raise when hypr reports an address other than the Zen
-        address, before any switch or send runs. The message is
-        the only evidence needed: that check is the first line
-        of phase4, so nothing after it can have run.
+        """Council 2 C1 (amend 3) + Redteam H3 (amend 4): the
+        active-window check must raise when hypr reports an
+        address other than the Zen address, before any switch or
+        send runs. The message alone is not the whole proof any
+        more: the helper records hypr calls and returns them on
+        raise via calls_out, so this test asserts the only call
+        before the raise was the hypr read itself. A future edit
+        moving the check after the switch fails this test.
         """
+        calls = []
         with self.assertRaises(RuntimeError) as caught:
-            self._run_phase4(hypr_address='0xDEF')
+            self._run_phase4(hypr_address='0xDEF', calls_out=calls)
         self.assertIn('active window moved off Zen',
                       str(caught.exception))
+        kinds = [c[0] for c in calls]
+        self.assertEqual(kinds, ['hypr'])
+        hypr_call = [c for c in calls if c[0] == 'hypr'][0]
+        self.assertEqual(hypr_call[1], ('activewindow',))
 
     def test_phase4_envelope_ok_false_raises(self):
         """Council 2 C1 (amend 3): the final ok/completed gate
@@ -985,17 +1101,20 @@ class RunnerFixTest(unittest.TestCase):
         self.assertIn('did not complete 4/4', str(caught.exception))
 
     def test_phase4_switch_before_send_and_program_identity(self):
-        """Redteam H3/C2 (amend 3): pin the call order and the
-        program identity in the helper. The re-switch must run
-        before the send, and the program passed to oneshot_zen
-        must be SEND_PROGRAM (not PROBE_PROGRAM or any other
-        program). A future edit reordering the calls or passing
-        the wrong program must fail this test.
+        """Redteam H3/C2 (amend 3) + Redteam H3 (amend 4): pin the
+        call order and the program identity in the helper. The
+        hypr active-window read must run first, then the
+        re-switch, then the send, and the program passed to
+        oneshot_zen must be SEND_PROGRAM (not PROBE_PROGRAM or
+        any other program). A future edit reordering the calls
+        or passing the wrong program must fail this test.
         """
         runner = self._run_phase4()
         calls = runner._phase4_calls
         kinds = [c[0] for c in calls]
-        self.assertEqual(kinds, ['tab', 'oneshot'])
+        self.assertEqual(kinds, ['hypr', 'tab', 'oneshot'])
+        hypr_call = [c for c in calls if c[0] == 'hypr'][0]
+        self.assertEqual(hypr_call[1], ('activewindow',))
         tab_call = [c for c in calls if c[0] == 'tab'][0]
         self.assertEqual(tab_call[1], ('switch', run2.TARGET))
         oneshot_call = [c for c in calls if c[0] == 'oneshot'][0]
