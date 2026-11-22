@@ -23,6 +23,8 @@ equivalent in this repo (Track 2, Pick 1, merged).
 import ast
 import json
 import os
+import select
+import signal
 import sys
 import time
 from pathlib import Path
@@ -61,6 +63,97 @@ BANNED_NAMES = {
 
 class CodemodeError(Exception):
     """A rejected program or a failed op, returned as an envelope."""
+
+
+def _fork_run(work, wall_seconds):
+    """Run work() in a forked child with a hard wall kill.
+
+    work runs in the child and must return a JSON-serializable dict.
+    Returns (payload, status): status "ok" with the child's dict,
+    "timeout" when the child was killed at the wall, "crashed" when it
+    died without a payload, "refused" when fork or pipe failed. The
+    child always ends with os._exit and never returns to caller code,
+    so it cannot run the parent's finally blocks or atexit handlers.
+
+    A SIGALRM timer is the wrong tool here: the handler only runs when
+    the interpreter regains the eval loop, so a C loop like
+    sum(range(3 * 10**8)) burns to completion before the handler fires
+    (measured: setitimer 1.0s, elapsed 31.48s). Only a parent-side kill
+    binds C-level work.
+    """
+    try:
+        read_fd, write_fd = os.pipe()
+    except OSError:
+        return None, "refused"
+    try:
+        pid = os.fork()
+    except OSError:
+        os.close(read_fd)
+        os.close(write_fd)
+        return None, "refused"
+    if pid == 0:
+        try:
+            os.close(read_fd)
+            signal.signal(signal.SIGALRM, signal.SIG_DFL)
+            signal.setitimer(signal.ITIMER_REAL, 0)
+            payload = work()
+            data = json.dumps(payload).encode("utf-8")
+            while data:
+                written = os.write(write_fd, data)
+                data = data[written:]
+        except BaseException:
+            try:
+                data = json.dumps({"__child_error__": True}).encode("utf-8")
+                while data:
+                    written = os.write(write_fd, data)
+                    data = data[written:]
+            except BaseException:
+                pass
+        finally:
+            os._exit(0)
+    os.close(write_fd)
+    deadline = time.monotonic() + wall_seconds
+    chunks = []
+    status = "ok"
+    try:
+        while True:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                status = "timeout"
+                break
+            ready, _, _ = select.select([read_fd], [], [], remaining)
+            if not ready:
+                status = "timeout"
+                break
+            chunk = os.read(read_fd, 65536)
+            if not chunk:
+                break
+            chunks.append(chunk)
+    finally:
+        os.close(read_fd)
+    if status == "timeout":
+        try:
+            os.kill(pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+        try:
+            os.waitpid(pid, 0)
+        except ChildProcessError:
+            pass
+        return None, "timeout"
+    try:
+        os.waitpid(pid, 0)
+    except ChildProcessError:
+        pass
+    if not chunks:
+        return None, "crashed"
+    try:
+        payload = json.loads(b"".join(chunks).decode("utf-8"))
+    except (ValueError, UnicodeDecodeError):
+        return None, "crashed"
+    if not isinstance(payload, dict) or "__child_error__" in payload:
+        return None, "crashed"
+    return payload, "ok"
 
 
 # ---------------------------------------------------------------- ops
@@ -295,24 +388,41 @@ def execute_op(code, wall_seconds=DEFAULT_WALL_SECONDS):
         return tracer
 
     old_tracer = sys.gettrace()
-    sys.settrace(tracer)
-    try:
-        compiled = compile(_module_code(tree), "<codemode>", "exec")
-        exec(compiled, namespace)  # noqa: S102 - scanned code only
-        result = namespace.get("result")
-    except CodemodeError as exc:
-        message = str(exc)
-        if message == "requires_laptop":
-            return _bounded_envelope({"status": "requires_laptop",
-                    "error": "op needs the laptop, not runnable on the VM"}, started)
-        return _bounded_envelope({"status": "error", "error": message}, started)
-    except Exception as exc:  # noqa: BLE001 - envelope the failure
-        message = str(exc)
-        return _bounded_envelope({"status": "error", "error": "%s: %s" % (type(exc).__name__, message)}, started)
-    finally:
-        sys.settrace(old_tracer)
-    return _bounded_envelope({"status": "completed", "result": result,
-                              "steps": steps[0]}, started)
+
+    def run_child():
+        sys.settrace(tracer)
+        try:
+            compiled = compile(_module_code(tree), "<codemode>", "exec")
+            exec(compiled, namespace)  # noqa: S102 - scanned code only
+            result = namespace.get("result")
+        except CodemodeError as exc:
+            message = str(exc)
+            if message == "requires_laptop":
+                return _bounded_envelope({"status": "requires_laptop",
+                        "error": "op needs the laptop, not runnable on the VM"}, started)
+            return _bounded_envelope({"status": "error", "error": message}, started)
+        except Exception as exc:  # noqa: BLE001 - envelope the failure
+            message = str(exc)
+            return _bounded_envelope({"status": "error", "error": "%s: %s" % (type(exc).__name__, message)}, started)
+        finally:
+            sys.settrace(old_tracer)
+        return _bounded_envelope({"status": "completed", "result": result,
+                                  "steps": steps[0]}, started)
+
+    payload, status = _fork_run(run_child, wall_seconds)
+    if status == "ok":
+        payload["elapsed_ms"] = round((time.monotonic() - started) * 1000, 1)
+        return payload
+    if status == "timeout":
+        return {"status": "error", "error": "wall-clock budget exceeded",
+                "elapsed_ms": round((time.monotonic() - started) * 1000, 1)}
+    if status == "refused":
+        return {"status": "error",
+                "error": "wall-clock preemption unavailable (fork failed); execution refused",
+                "elapsed_ms": round((time.monotonic() - started) * 1000, 1)}
+    return {"status": "error",
+            "error": "snippet process exited without a result",
+            "elapsed_ms": round((time.monotonic() - started) * 1000, 1)}
 
 
 def main():
