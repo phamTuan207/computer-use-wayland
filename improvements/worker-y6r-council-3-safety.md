@@ -131,3 +131,22 @@ The retry may NOT proceed as-is. As-is it deterministically fails at U6 (count=0
 - The determinism of the hook race (Council 1's scope) and the C2 evidence re-verification (Council 2's scope). This paper rules only on measurement validity and on the safety of the reload fix direction.
 - The pill measurement itself: no pill verdict is given here, and the Y6e LOADED verdict must not be read as a pill verdict.
 - Any retry run itself: it needs the AMEND items above implemented, re-reviewed as a diff, and a fresh go from Y6r, per the standing order.
+
+## Errata (Y6C5-A4, Sun 2026-11-22, worker C5-Y6-PAPER; history preserved, nothing above rewritten)
+
+- F3 ("optics.lua was therefore never executed in the Y6e load test, and the
+  profile was NOT applied") is WRONG, per Y6r adjudication R1
+  (improvements/worker-y6r-rereview-log.md, Correction C-V4/V5). Correct:
+  optics.lua executed on parse 2 (layers.enabled true against a default of
+  false proves config() ran); layer() registration and material values were
+  unproven until the A3 positive marker.
+- F6/F7 premise ("status reported layers enabled true WHILE the profile was
+  not applied", "recorded with the profile NOT applied") is WRONG for the
+  same reason. The CONCLUSIONS stand as code facts: hyprglass status carries
+  no blur, refraction, preset, or layer-namespace fields, so the liquid gate
+  cannot prove the profile was applied.
+- Section 1b, line 67 ("When the marker appears, the profile genuinely was
+  not applied... Failing the run there is correct fail-fast behavior") is
+  WRONG, per Y6r R3. The marker appears on parse 1 of every successful run;
+  the profile is applied on parse 2. Failing on it is a false fail; the
+  reconciled gate is positive (marker present + layers.enabled true).

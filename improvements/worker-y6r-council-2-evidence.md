@@ -123,3 +123,14 @@ Gate order with line numbers:
 - Y6e load test: plugin listed in the nest, version 1.1.1-cu.1, versionCheck match, live session untouched before and after (byte-identical plugin-list JSONs), teardown clean, live PID 1515 alive.
 - The two AMEND-5 aborts were correct fail-closed behavior with no nest started.
 - The U6 gate works exactly as designed: it caught a real missing-profile condition that every other gate would have missed.
+
+## Errata (Y6C5-A4, Sun 2026-11-22, worker C5-Y6-PAPER; history preserved, nothing above rewritten)
+
+- Section 1g ("The profile was not applied in the 21:57 load run... any pill
+  measurement from that run would have measured an un-glassed indicator") is
+  WRONG, per Y6r adjudication R1 (improvements/worker-y6r-rereview-log.md,
+  Correction C-V4/V5). Correct: the profile config WAS applied on parse 2
+  (layers.enabled true against a default of false, optics.lua the only
+  setter); layer() registration and material values were unproven until the
+  A3 positive marker. The 21:57 run never measured a pill, so no verdict is
+  affected either way.

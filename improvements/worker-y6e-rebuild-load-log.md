@@ -586,3 +586,14 @@
 1. Commit this log + council/redteam papers + evidence pack + load-test script + new conf on todolist-push BY EXACT PATHS ONLY (other workers have uncommitted changes in the same checkout), verify via ls-remote.
 2. The pill measurement retry (nested, rebuilt plugin + v3 launcher) needs a fresh re-review of the rebuild/fix diff before any retry, per the standing order. The hook-timing note above (hook runs before plugin load, profile not applied) is a known issue the re-review should address: the measurement run needs the profile applied, which the current conf ordering does not guarantee.
 3. Option C is NOT dead: the Wayland-nested mechanism works and the plugin now loads. The remaining question is the pill measurement, not the load.
+
+## Errata (Y6C5-A4, Sun 2026-11-22, worker C5-Y6-PAPER; history preserved, nothing above rewritten)
+
+- Line 561 ("the profile was not applied in this run") is WRONG, per Y6r
+  adjudication R1 (improvements/worker-y6r-rereview-log.md, Correction C-V4/V5).
+  Correct statement: the profile config WAS applied on parse 2 (status
+  features.layers.enabled true against a plugin default of false, optics.lua
+  the only setter in the nest). What was unproven at the time: layer()
+  registration and the material values. Those stay unproven until the A3
+  positive marker (Y6-NEST-OPTICS: applied) lands in a run. The LOADED
+  verdict is unaffected.
