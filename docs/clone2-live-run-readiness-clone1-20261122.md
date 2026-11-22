@@ -1,6 +1,6 @@
 # Live-run readiness check, 2-vision benchmark, clone1 side (DOT 9 task 2)
 
-Date: 2026-11-22, 07:11-07:25 +07. Verdict: NOT READY. No live run has
+Date: 2026-11-22, 07:11-07:15 +07. Verdict: NOT READY. No live run has
 happened, and no live run can happen from the runbook today. The
 runbook itself says so (section 0, section 12). This check, done with
 fresh eyes against the runbook, the script, the workflow doc, and the
@@ -34,7 +34,8 @@ Sources read:
    rule ~line 831, visions_used hardcoded line 745,
    no-message-input-in-inventory line 794, --instances two refused
    lines 696-697. VERIFY_JS reads innerText for contenteditable
-   (lines 133, 477-482). Only subprocess is Popen line 279.
+   (line 133); the V1 readback in send_one that uses it is lines
+   477-482. Only subprocess is Popen line 279.
 2. Login-wall failure mode: correct. HARVEST_JS inventories every
    input, and the role logic maps a non-button input (email,
    password) to textbox. find_input returns the first visible
@@ -66,7 +67,7 @@ Sources read:
 
 AMEND4 item 12 (commit cbab398, 06:46) landed 4 minutes after the
 runbook fix pass (2b98747, ~06:42). Three statements in section 9
-are now false on current todolist-push tip:
+are now wrong or stale on current todolist-push tip:
 
 - "The code fix that would remove the trap at the source ... is NOT
   built." False now. The envelope now carries BOTH `after`
@@ -75,12 +76,18 @@ are now false on current todolist-push tip:
   verification only, documented non-chainable). Four regression
   tests, failing-first on the old code, per the item 12 commit.
 - "The raise ... is not before all side effects: the overlay acquire
-  and session attempt happen first (998 ms wasted)." Item 12 moved
-  the scope check before the overlay attempt: a key/type batch given
-  a screen-scope observation is now refused before the overlay and
-  the session attempt.
+  and session attempt happen first (998 ms wasted)." Superseded
+  for the key/type path, not flatly false: the sentence describes
+  the desktop_act G28 raise, whose position after the overlay is
+  unchanged. Item 12 added an EARLIER refusal in first_action.py
+  (scope check before the overlay, lines 492-521) that intercepts
+  a key/type batch given a screen-scope observation before the
+  overlay and the session attempt, so the 998 ms waste no longer
+  occurs on that path. The runbook should describe the earlier
+  refusal instead of the G28 raise.
 - The first_action.py citation "lines 661-662" is wrong at current
-  tip: lines 661-662 are dom_act ground_input code. The after-capture
+  tip: lines 661-662 are the dom_hooks assignment and try:, and
+  the dom_act ground_input call is at line 663. The after-capture
   is now at ~lines 730-750 (screen_meta at 735, envelope['after']
   at ~743-746). Item 12 shifted the file.
 
@@ -143,14 +150,27 @@ method works before relying on it:
   2 s, 80 items), not the V12 exact-text check.
 - Premise B (not flagged in the runbook): the hyprctl client pid
   must be the AT-SPI application pid that a11y observe(pid)
-  expects (scripts/a11y.py line 83, app(pid)). Whether Hyprland's
-  client pid maps to the right application for Chrome/Brave is
-  untested in any repo record.
-- Missing step: a dry probe of the method. Before the run, run the
-  a11y query for a KNOWN existing bubble text on each thread; a hit
-  proves bubbles are exposed and the pid mapping works. Without
-  that probe, a miss in step 0 proves nothing, and freshness rests
-  only on generation (which the runbook does state plainly).
+  expects (app() at scripts/a11y.py lines 57-60, called by
+  observe() at line 83). The hyprctl pid is not merely untested:
+  prior evidence says the mapping FAILS. The speed-proto probe
+  record states "hyprctl window PID is not the AT-SPI app PID"
+  (improvements/speed-proto-pick4-summary.md:15, for kitty,
+  omacalc, omawrite, and Zen; same record at
+  docs/redteam-council-20261121/worker2-todolist-redteam.md:185).
+  So the runbook's step-2 method (pid from `hyprctl -j clients`)
+  is contradicted by prior evidence for other apps, and the
+  correct lookup (`a11y apps`) appears nowhere in the runbook.
+- Missing step: a dry probe of the method, in two separate parts.
+  First, prove the pid mapping: take the AT-SPI pid from
+  `a11y apps` (not the hyprctl client pid) and run the a11y
+  query for a KNOWN existing bubble text on each thread; a hit
+  proves bubbles are exposed. Test the pid mapping and the
+  bubble exposure separately: a probe using the hyprctl pid
+  would fail at the pid step with "exact app PID required"
+  before testing bubble exposure at all, conflating the two
+  premises. Without that probe, a miss in step 0 proves nothing,
+  and freshness rests only on generation (which the runbook does
+  state plainly).
 
 Verdict on 10.3: sufficient as a rule once runbook section 5 is
 followed, but only with the dry probe added and the two premises
@@ -161,19 +181,28 @@ method and the generation rule, not just the runbook.
 
 The name rule in runbook sections 6 and 8 (a visible textbox
 named "Message", case-insensitive; "Email"/"Password" fails) is
-the only guard against typing into a login field. Its only
-evidence in the repo is the fixture itself (placeholder="Message",
-aria-label="Message" in tests/two_vision_fixture.html). No repo
-record gives the live Messenger input's name in HARVEST_JS terms
-(aria-label, else placeholder, else textContent, else value). If
-the live input is named something else, the operator's name rule
-would FAIL a correct harvest, and in run mode find_input would
-silently fall back to boxes[0], which may not be the message
-input. The runbook does not flag the expected name itself as
-unverified. Needs: a live DOM read of the real Messenger input's
-name before the run (or a plan-supplied input_name verified
-against the live DOM), and a stated rule for what the operator
-does if the name is not "Message".
+the only guard against typing into a login field. Live evidence
+exists but is visual-only: two independent screenshot reads in
+the CL1-MSG logs report the live Messenger input showing a
+"Message" placeholder (improvements/worker-cl1msg-log.md:23:
+"message input bottom bar, '+' at ~(96,1037), 'Message'
+placeholder at ~(142,1037)"; improvements/worker-cl1msg2-log.md:18:
+"input bar with '+' and 'Message' placeholder at ~(180,1026)").
+A "Message" placeholder is directly in HARVEST_JS terms for its
+second branch (name is aria-label, else placeholder, else
+textContent, else value), so the rule is not evidence-free. But
+both records are visual reads from screenshots, not DOM reads
+(the same eye-reading failure mode the G31 draft warns about),
+and the aria-label is still unknown: an aria-label other than
+"Message" would take precedence in HARVEST_JS and break the
+rule. If the live input is named something else, the operator's
+name rule would FAIL a correct harvest, and in run mode
+find_input would silently fall back to boxes[0], which may not
+be the message input. The runbook does not flag the expected
+name itself as unverified. Needs: a live DOM read of the real
+Messenger input's name before the run (or a plan-supplied
+input_name verified against the live DOM), and a stated rule for
+what the operator does if the name is not "Message".
 
 ## Finding 5 (the blocker): no concrete procedure for the attach/profile gap
 
@@ -192,20 +221,30 @@ Proposed procedure, option A (script shape, pre-seeded profile):
    two clones' threads under one account). This abandons G3's
    Brave/Chrome. Which account holds the two threads is a
    coordinator decision, still unmade in any repo record.
-2. On the run machine, launch Firefox with a fresh profile, log
-   into Messenger manually once with that account, quit, and
-   preserve the profile directory. The profile holds a live
-   session: local only, never push it to the repo, never copy it
-   into any shared artifact.
+2. On the run machine, launch the run machine's own Firefox
+   binary with a fresh profile, log into Messenger manually once
+   with that account, quit, and preserve the profile directory.
+   Use the laptop's Firefox, not the script's hardcoded path
+   (/home/hatch/workspace/tools/firefox/firefox, this VM's path,
+   script lines 49-50); record the laptop binary path live. The
+   profile holds a live session: local only, never push it to the
+   repo, never copy it into any shared artifact.
 3. Verify the profile: launch Firefox with it and confirm both
    threads load. Sessions expire; re-verify before each run.
-4. Before the run, copy the profile into <run-dir>/profile.
-   launch_browser does makedirs with exist_ok and launches with
-   -profile <profile>, so a pre-seeded profile is used as-is.
+4. Before the run, copy the profile into <run-dir>/profile,
+   excluding cache (the Cache directory): /tmp is a 512M tmpfs
+   and a full profile copy could exceed it. launch_browser does
+   makedirs with exist_ok and launches with -profile <profile>,
+   so a pre-seeded profile is used as-is.
 5. Coordinator supplies the plan (thread URLs, thread selector,
    bubble selector) for that account's two threads.
 6. Run steps 0, 1, 2 per the runbook. The harvest-first step is
-   the live check that the session works: Message inputs visible
+   the live check that the session works, but it cannot rely on
+   the "Message" name until the live DOM name verification
+   (missing item 4 above) is closed: until then a harvest showing
+   no "Message" input is ambiguous (login wall versus a
+   differently-named input) and the run must stop, not proceed.
+   Once the name is DOM-verified live, Message inputs visible
    means logged in; a login wall means the session is dead, stop.
 7. After the run, delete the profile copy from /tmp (512M tmpfs),
    keep the master profile local for re-runs.
@@ -269,3 +308,12 @@ acceptance test, not the operator's call.
    already in runbook section 12; unchanged by this check).
 9. VISION 2 monitor named (eDP-2 expected) and the run log file
    named (<run-dir>/run-log.md).
+10. Live lane must be free before the run: no BASELINE2 or other
+    live run running, and no other agent holding the laptop
+    browser (runbook section 12 item 9, first half; the second
+    half, the laptop code version, is item 1 above).
+11. Live measurement of the 90% accuracy bar (runbook section 12
+    item 11): no live measurement exists yet; synthetic grounding
+    is 7/7 = 100%, the live proof is owed. This is measured by
+    the run itself, not a prerequisite to start, but it is still
+    owed proof the run must produce.
