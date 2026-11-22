@@ -955,7 +955,11 @@ class CdpSetValueTests(unittest.TestCase):
             " multi_over: runCase('INPUT', 'email', '',"
             " '  a@b.com , c@d.com  ', 14, true),\n"
             " url_trim: runCase('INPUT', 'url', '',"
-            " '  https://example.com/a,b  ', -1, false)};\n"
+            " '  https://example.com/a,b  ', -1, false),\n"
+            " multi_ws_token: runCase('INPUT', 'email', '',"
+            " 'a@b.com, ,c@d.com', -1, true),"
+            " multi_tab_ff: runCase('INPUT', 'email', '',"
+            " 'a@b.com' + String.fromCharCode(9) + ', c@d.com' + String.fromCharCode(12), -1, true)};\n"
             "console.log(JSON.stringify(out));\n")
         out = json.loads(_run_node(driver))
         self.assertTrue(out['multi_spaces']['ok'],
@@ -982,6 +986,16 @@ class CdpSetValueTests(unittest.TestCase):
                         % (out['url_trim'],))
         self.assertEqual(out['url_trim']['value'],
                          'https://example.com/a,b')
+        self.assertTrue(out['multi_ws_token']['ok'],
+                        'whitespace-only email token was dropped: %s'
+                        % (out['multi_ws_token'],))
+        self.assertEqual(out['multi_ws_token']['value'],
+                         'a@b.com,,c@d.com')
+        self.assertTrue(out['multi_tab_ff']['ok'],
+                        'TAB/FF email token end was not trimmed: %s'
+                        % (out['multi_tab_ff'],))
+        self.assertEqual(out['multi_tab_ff']['value'],
+                         'a@b.com,c@d.com')
 
 
 if __name__ == '__main__':
