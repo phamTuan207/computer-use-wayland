@@ -1448,4 +1448,73 @@ workspaces at the same time.
   than the sleep premise assumes. Muse to judge; no action taken
   here on that flag.
 
-## 30. (to be filled as results land)
+## 30. C5-P9-EVIDENCE verified: 25 P9 PNGs + manifest + focusenter landed (3ef8f55, corrected b7d9fad); both REVOKED claims now have complete render evidence; original flip Chromium has NO render proof (14:09-14:19 +07)
+
+- C5-P9-EVIDENCE (0b56635e) COMPLETED 14:13:07 +07, about 5 min
+  (14:09-14:14). Evidence commit 3ef8f55 on todolist-push (28
+  files, 152 insertions), plus correction commit b7d9fad (the
+  amend re-hashed 515f80c to 3ef8f55, so the log named a stale
+  hash; the correction commit names 3ef8f55). VERIFIED by the
+  coordinator: git ls-remote head =
+  b7d9fadc848f01f2414d0d623c61663e3a44086b; git ls-tree counts
+  25 p9-run PNGs in HEAD; manifest, focusenter helper, and log
+  all present.
+- What landed: 5 (b1) Chromium PNGs (1,210,605 bytes), 10
+  reopen PNGs (2,354,937 bytes), 10 original flip PNGs
+  (2,740,488 bytes), total 6,306,030 bytes. Manifest
+  improvements/s2-flip-p9-manifest.md lists all 25 with sha256,
+  size, run/browser, privacy disposition, and what each frame
+  shows; 25/25 verified against disk by the worker's
+  section-aware script. COORDINATOR SPOT CHECK: sha256 of
+  b1 run3 chromium, reopen run1 chromium, and flip run1
+  chromium all match their manifest rows; focusenter sha256
+  94ee467ed3067e044491ad19153c24b73d574a8106a5367db454c0e47e1a695f
+  matches the laptop hash exactly (byte-identical).
+- PRIVACY CHECK: all 25 viewed by the worker, all cleared as-is,
+  none cropped, none excluded. COORDINATOR VIEWED 2 directly:
+  reopen run1 Chromium shows the S2-REOPEN-R1-CHROMIUM-
+  IGNORE-TEST bubble with an empty composer, left rail
+  collapsed to icons (no other chat names), right panel only
+  clone2's own profile + approvals history (already in repo
+  logs); flip run1 Chromium shows NO test bubble, earlier scroll
+  position (batch 9 messages, 5:47 AM approval). Both clean:
+  no personal photos, no other chats, no owner personal data.
+  The flip shot also shows clone2's own batch 9 / last30days
+  messages, which are already in repo docs.
+- FOCUSENTER: FOUND, not lost. /tmp/c5-focusenter.mjs still
+  exists on the laptop (2,478 bytes, 42 lines). Copied verbatim
+  to improvements/s2-flip-b1-runs/c5-focusenter.mjs; the first
+  copy hashed wrong by one byte (extra backslash in the `text`
+  field), fixed and re-verified byte-identical. This closes the
+  audit's secondary gap. No recovery path needed.
+- RENDER EVIDENCE VERDICTS (worker's, accepted after my spot
+  checks): claim (b) (b1) 5/5 on Chromium: YES, complete; all 5
+  PNGs show their C5-B1-RN-CHROMIUM-IGNORE-TEST bubble with an
+  empty composer, helper code committed alongside. Claim (a)
+  reopen PASS 5/5, 10/10: YES, complete; all 10 PNGs show their
+  S2-REOPEN-RN bubble with an empty composer. Both are ready for
+  re-audit. NEXT: the CB-8 re-audit of the two REVOKED claims
+  goes to clone1 batch 14 (queued when batch 13 is underway,
+  not stacked now).
+- MATERIAL FINDING: original flip Chromium has NO render proof.
+  All 5 original flip Chromium PNGs show NO test bubble (same
+  earlier scroll position, batch 9 messages). This agrees with
+  the JSONs (Chromium outcome failed-unverified in all 5 runs)
+  and with clone1's own messages in the Brave frames
+  (Input.dispatchMouseEvent timed out at 5003 ms run 1, 5002 ms
+  run 2, same failure runs 3-5). The worker committed them as
+  the true capture files and recorded honestly in the manifest
+  as evidence that no Chromium bubble was rendered, NOT as proof
+  of a Chromium send. Brave 5/5 in the original flip do show
+  their bubbles. DO NOT cite the original flip Chromium PNGs as
+  send evidence.
+- Process notes: no em/en dashes in the manifest or log (grep
+  count 0). Unrelated working tree changes (modified scripts/*,
+  tests/*, other untracked improvements/* from other workers)
+  were left untouched; only the 28 files were staged, via
+  explicit pathspec.
+- Still running: C5-STEP8 (be6ff750), live on the relay (last
+  activity 36s ago at check). Clone1 batch 13 queued (e03e288),
+  not yet started. Clone2 capped until Nov 25 02:38.
+
+## 31. (to be filled as results land)
