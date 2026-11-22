@@ -103,4 +103,67 @@ Neither `tests/test_click3_redteam2.py` nor `tests/test_click2_redteam.py` was e
 
 ## Push
 
-Before the log commit, `git push origin amend4-codex` succeeded and `git ls-remote origin amend4-codex` returned `81963fa2da170419c82d119c48560e780d563853`. The first log commit `029f9c74c2efd54634a572839456583ca173de86` was pushed at 2026-11-22 07:13:35 and `git ls-remote origin amend4-codex` matched it. This final update is committed last, then pushed and checked against `git ls-remote origin amend4-codex`.
+Before the first log commit, `git push origin amend4-codex` succeeded and `git ls-remote origin amend4-codex` returned `81963fa2da170419c82d119c48560e780d563853`. The first log commit `029f9c74c2efd54634a572839456583ca173de86` was pushed at 2026-11-22 07:13:35 and verified with `git ls-remote origin amend4-codex`.
+
+## Follow-up item 12
+
+Received at 2026-11-22 07:27:16 +07. At receipt, local and remote `amend4-codex` both pointed to `274270c0af25708debb8039501c45bf97a56dcca`. Read `improvements/worker-cl1sweep-fail-invest-log.md` directly from commit `5f5a2fd` with `git show 5f5a2fd:improvements/worker-cl1sweep-fail-invest-log.md` before changing code. The log's source evidence confirmed that `desktop_act` already produced a scope-matching `result['after']`, while `first_action.run` replaced it with `observe_screen` output. This follow-up log update was made at 2026-11-22 07:44:07 +07, 1 hour, 44 minutes, 15 seconds after the 05:59:52 checkpoint.
+
+### First-principles decisions for all 12 items
+
+| Item | Decision | Evidence and reason |
+| --- | --- | --- |
+| 1. Geometry | Redesign the conversion around explicit units and dimension closure. | The live C12 probe establishes window-relative mozInner values. The formula is Hyprland window origin plus mozInner in screen pixels; size inputs remain unchanged. F9 and F10 cover incorrect containment and a forgotten factor. A factor tweak would hide the source-unit error. |
+| 2. DOM traversal | Keep one shared `find` traversal and remove gate-specific top-document lookup. | R7 tests show top-document selectors miss shadow and iframe targets. Same-origin recursion reaches nested frames and shadows; cross-origin access remains fail-closed. The faithful shim exercises real selector traversal. |
+| 3. Band anchor | Keep the image band as a fallback signal, but anchor both axes to the grounded field rectangle. | R3a stacked-field and wrong-field proofs show click-centered pixels can belong to an adjacent input. A band still helps when no DOM value hook exists, while DOM verification remains the stronger signal. |
+| 4. Range wiring | Redesign the act path to carry one grounded x/y range per type group; refuse band-only verification without ranges. | The R3a unwired proof showed the CLI and code-exec paths dropped ranges. `desktop_act` is the common execution seam. This checkout has no `BrowserAdapter` class, so `CodeExecBackend.act` is the actual code-exec adapter. |
+| 5. Region fallback | Remove the region-to-window-origin fallback entirely. | A region may be a monitor or crop and cannot identify the window origin. DOM grounding now requires `window_bounds` in every scope. Region-only refusal tests cover both grounding entry points. |
+| 6. Stale origin | Keep a live bounds check at the grounding boundary. | A stored observation cannot establish that the window still occupies the same location. Grounding rereads Hyprland bounds and refuses moved or unavailable windows before using the DOM rect. |
+| 7. Typed flag | Redesign authority around a closure recorder of trusted event values. | The forgeable boolean is not evidence that the current value came from trusted input. The listener records each trusted value and verification compares it with the current value. The legacy window map remains inert for compatibility and attack coverage; verification never reads it. |
+| 8. `set_value` | Keep the setter, but compare its read-back with the browser-sanitized value. | Input and textarea normalize line breaks differently under the HTML Standard. DOM read-back confirms the setter result only; live application confirmation remains separate. Newline tests cover both elements. |
+| 9. Supply-chain tests | Keep tests at the public handoff boundaries. | The range must survive `focus_type`, grounded range conversion, and `first_action`. Testing only a helper would not catch a caller dropping the data. |
+| 10. Snapshot events | Keep separate changed and unchanged event assertions. | The contract is observable: a changed value fires `input` and `change`, while unchanged content emits neither. The test now checks both paths. |
+| 11. Design docs | Remove superseded statements and replace them with the owner target. | The owner definition at 02:05 names clone1 Brave and clone2 Chrome on ws2. B18 drops V4 because the caret is forgeable and can false-fail legitimate edits. The old Zen-tab target and V4 promise were stale. |
+| 12. act-now envelope | Redesign `after` as the scope-matching chainable observation and expose the full-screen capture separately as `after_screen`. | `desktop_act` already returns the scope-matching after metadata, so overwriting it loses valid chainability. Full-screen capture remains useful for visual verification, but its explicit name and docs mark it non-chainable. A valid explicit screen observation with key/type now refuses before overlay acquisition. |
+
+### Failing-first evidence and implementation
+
+Added tests before the code change. Both tests first failed against the old implementation:
+
+```sh
+python3 tests/test_first_action.py TestRun.test_after_preserves_input_scope_and_labels_screen_capture TestRun.test_screen_scoped_key_refuses_before_overlay
+```
+
+Result before fix: `Ran 2 tests`, `FAILED (failures=2)`. The first saw the screen image in `after`; the second reached overlay/session instead of refusing before overlay.
+
+The fallback branch was separately reproduced before the fix:
+
+```sh
+python3 tests/test_first_action.py TestRun.test_fallback_returns_desktop_act_after_as_chainable
+```
+
+Result before fix: `Ran 1 test`, `FAILED (failures=1)`. The fallback's `desktop_act.after` was overwritten by the screen image.
+
+Fix in `scripts/first_action.py`:
+
+- For an explicit valid observation used with a key/type batch, scope is checked before overlay acquisition. A non-window scope is refused with `scope_mismatch` and no overlay or input.
+- `after` now copies the session result or fallback `desktop_act` scope-matching observation reference.
+- `after_screen` holds the separate full-monitor verification capture and is documented as non-chainable.
+- The test fixture's fresh given observation now includes real window scope and bounds.
+
+After fix, `python3 tests/test_first_action.py` reported `Ran 67 tests`, `OK`. The three new item-12 tests pass. The 15 RT proof tests reported `Ran 15 tests`, `OK`, and `PYTHONPATH=scripts:tests python3 -m unittest test_click2_redteam.R7ShadowTests` reported `Ran 3 tests`, `OK`.
+
+Item-12 commits: `ee8ccb7` added the first two failing-first tests; `aa0fbbb` added the fallback test; `f4c0482` implemented the envelope and preflight change. `git push origin amend4-codex` succeeded and `git ls-remote origin amend4-codex` returned `f4c0482a5126bb6db955c025b225d332ef3b8485`.
+
+### Full discover after item 12
+
+The command remains:
+
+```sh
+cd /home/james/workspace/cu-amend4-codex/tests
+PYTHONPATH=../scripts:. python3 -m unittest discover -p 'test_*.py'
+```
+
+Latest result: `Ran 1925 tests in 127.084s`, `FAILED (failures=2, errors=4, skipped=2)`. This supersedes the 1922-test result above. The two failures and four errors have the same causes listed above: one stale-origin assertion, one ungrounded band assertion, one region-fallback proof error, and three environment errors from import setup and missing benchmark data.
+
+The final log update is committed last, then pushed and checked with `git ls-remote origin amend4-codex`.
