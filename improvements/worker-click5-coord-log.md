@@ -510,4 +510,76 @@ workspaces at the same time.
   acks and works. If clone2 finishes batch 12 and still has capacity,
   only a small batch 13 at most, and expect the drop.
 
-## 16. (to be filled as results land)
+## 16. C5-MOZ-GROWTH DONE, verified by me, 11:27 +07 (T+57m)
+
+- Worker C5-MOZ-GROWTH completed 11:27:17 +07 (about 27 min, no
+  stall). Deliverable: improvements/worker-click5-moz-growth-log.md,
+  348 lines, commit a42ef12 on todolist-push.
+- MY VERIFICATION (git show a42ef12, this session): commit exists,
+  log consistent with the handoff (pixel proof true origin (240, 8),
+  cross-check gaps +8/+8, M1 remediated, M2 flagged, state restored
+  and verified 11:25:24, no toggle moved moz toward (240, 8), H1/H2/H3
+  recorded). The log's toggle table and numbers reconcile with the
+  ITEMS56 numbers (baseline moz [274, 66], inner [677, 1160], gaps
+  -26/-50, same as ITEMS56).
+- VERDICT: no Zen UI element accounts for moz +34/+58. The viewport
+  did not move; Firefox's reported mozInnerScreen is offset (+34, +58)
+  from where the viewport actually renders. Pixel proof: true viewport
+  origin is (240, 8) in the expanded state; (240, 8) + inner
+  (677, 1160) gives gaps +8/+8, exactly the C12 values. Sidebar
+  Ctrl+S moves moz x 274 to 53 (inner 677 to 909) but the true origin
+  moves only 240 to 236, and moz y never leaves 66. Bookmarks toolbar
+  Ctrl+Shift+B: no moz change. Compact mode Ctrl+Alt+C: no change
+  (unbound/no-op). Split test: host not visible while the Welcome tab
+  is active, so no split view in the expanded state.
+- FIX IMPLICATION (evidence-backed now): the validator must not trust
+  moz blindly, since the pixel-proven origin (240, 8) passes closure
+  with +8/+8. The verified-origin path is the fix shape for P2-IMPL.
+- OPEN HYPOTHESES (for the fixer, with deciding tests in the log):
+  H1 moz offset tied to the window narrowing 1863 to 925 (deciding
+  test: widen the window and re-read moz; not done, no resize per
+  task); H2 collapsed-state paint anomaly (scratch host renders only
+  200 of 428 CSS px wide, clipped at window x=443, about 0.465
+  horizontal scale, vertical 1, although layout is normal; the
+  collapsed true-origin reading (236, 8) rests on the solid left
+  edge but carries this caveat); H3 one transient read moz (264, 50)
+  at 11:14:18 while Chrome/ws2 was active, not reproduced.
+- INCIDENTS M1/M2 (worker errors, no-self-healing applies):
+  M1 11:06:26, Ctrl+S went to Brave (focus had moved), opened a Save
+  dialog; worker closed it via hl.dsp.window.close(), no save,
+  verified gone. M2 11:14:17, focus had moved to Chrome (clone2
+  endpoint, ws2) without the worker's input, and Ctrl+Shift+B went
+  to Chrome (toggles its bookmarks bar). Effect on Chrome unknown,
+  NOT undone. The T2 result comes from a clean redo at 11:16:39.
+  The focus moves are unexplained in the worker's log.
+- ACTIONS TAKEN by me on this verdict:
+  - Spawned C5-FOCUS-INCIDENT (6136dafe) 11:28 +07: INDEPENDENT
+    investigation of the M1/M2 focus moves (why focus moved without
+    input; check the clone2-watch log around 11:06/11:14, the watch
+    flipping to ws2 is a strong lead to verify, not a conclusion),
+    the Chrome bookmarks-bar current state (+ pre-M2 state if
+    determinable), the M2 disposition (restore only with verified
+    focus + verified result, else report the safe procedure for me
+    to decide), the M1 assessment, and the procedure fix for future
+    live-machine workers (verify activewindow immediately before
+    each keystroke batch). Log:
+    improvements/worker-click5-focus-incident-log.md.
+  - Sent a follow-up to C5-P2-IMPL (submission 809bcc98): the
+    MOZ-GROWTH result (pixel-proven origin (240, 8), verified-origin
+    path evidence-backed, H1/H2/H3 as open items). The earlier
+    follow-up (9eecb8a3, validator fix in scope) stands.
+- NOTE: P2-IMPL is progressing: commit d2da482 "test: failing-first
+  P2 element-ref tests (protocol, validator fix, Zen backend)" is on
+  todolist-push.
+
+## 17. Still running (T+58m)
+
+- C5-P2-IMPL (7d648508): step 7 implementation + validator fix
+  (follow-ups 9eecb8a3 + 809bcc98 submitted, pending application).
+- C5-FOCUS-INCIDENT (6136dafe): independent investigation of M1/M2.
+- Clone1 batch 10 + clone2 batch 12: clone1 nudged 11:01 (bdae91a);
+  no ack yet as of the 11:01 check. Clone2 batch 12 running; task 3
+  done 10:55 (e248a7a), bench commit f49851f 11:01. Clone2 at 90% of
+  its usage limit: NO large batch 13 (section 15).
+
+## 18. (to be filled as results land)
