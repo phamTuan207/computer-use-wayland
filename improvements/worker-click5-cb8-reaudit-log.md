@@ -110,7 +110,7 @@ Nothing. I viewed all 25 PNGs, all 15 mandated plus all 10 original flip. No fil
 ## Commit record
 
 - Staging: git add with explicit pathspec for this log file only (improvements/worker-click5-cb8-reaudit-log.md).
-- Commit: (hash filled below after commit).
-- Push: git push origin todolist-push, verified with git ls-remote origin todolist-push (hash filled below after push).
+- Commit: 84cc31f, "C5-CB8-REAUIDT: both REVOKED claims REINSTATED, 15/15 P9 PNGs viewed, hashes verified", 1 file changed, 116 insertions, on todolist-push.
+- Push: git push origin todolist-push at 15:27 +07 (ab1c57d..84cc31f), then git ls-remote origin todolist-push returned 84cc31fe67637bca74dcede2a628fa4137febe04 as the branch head, confirming the push landed. This commit record was filled in by a follow-up correction commit (see git log).
 - No code changes, no live runs, no browser work. Read-only on the repo except this log file.
 - Unrelated working tree changes were NOT committed: pre-existing untracked improvements/* files belong to other workers and were left untouched.
