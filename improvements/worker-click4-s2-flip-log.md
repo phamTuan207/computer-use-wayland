@@ -134,6 +134,36 @@ this file. No personal info.
   15.9s); the live runs add the tabs lookups (+4 calls) and
   drop the seeding (-2 calls), so a live wall near 16-19s is
   expected if the live page behaves like the scratch page.
+- 10:11 +07, T+50m: live run 1. Wall 33655.6ms. Brave SENT
+  (program 72ms, V12 attempt 1, items 41). Chromium FAILED:
+  dom_act completed 0 in 5003ms, V12 40 attempts not found.
+  P9 reviewed both: Brave bubble visible, composer empty;
+  Chromium no bubble, composer empty. DOM and render agree
+  both sides. Diagnosis started (section 5, run 1).
+- 10:16 +07, T+55m: live run 2. Wall 33953.2ms. Same pattern.
+  The error print names it: "CDP timeout:
+  Input.dispatchMouseEvent". Isolated reproduction
+  (/tmp/s2-diag2.mjs): Runtime.evaluate 1-3ms, scrollIntoView
+  a no-op (rect top stays 1091), bare mouseMoved times out at
+  5000ms. The Input domain is stuck on the Chromium tab; the
+  renderer is fine. Leading explanation: Chromium sits on
+  workspace 2 while workspace 1 is active (hyprctl confirms).
+  I did not switch workspaces to test it (would change the
+  user's screen and the measurement conditions). Program stays
+  unchanged for runs 3-5.
+- 10:21 +07, T+60m: live run 3. Wall 33061.9ms. Same pattern,
+  third identical Chromium failure. P9 reviewed both.
+- 10:26 +07, T+65m: live run 4. Wall 33121.8ms. Same pattern,
+  fourth identical Chromium failure. P9 reviewed both.
+- 10:31 +07, T+70m: live run 5. Wall 33166.9ms. Same pattern,
+  fifth identical Chromium failure. P9 reviewed both. All 5
+  runs complete and scored.
+- 10:34 +07, T+73m: Brave rolled back to no-flag per the P3
+  plan (SIGTERM PID 987006, relaunch without the flag, new PID
+  1003210, [::1]:9223 closed, Muse window back per hyprctl).
+  Machine returned to as-found state. Median wall 33166.9ms,
+  postcondition pass rate 50% (5/10 sends, 0/5 runs complete).
+  Verdict written (section 6): do not expand.
 
 ## 3. Laptop sync (step 8a pulled forward)
 
@@ -516,9 +546,123 @@ this file. No personal info.
   no R4 bubble, composer empty. DOM and render agree.
 - Pattern is now 4/4. One run remains.
 
-### Run 5
+### Run 5 (10:31 +07, T+70m)
 
-- (to be filled)
+- Wall 33166.9ms, mux 826.9ms. Model calls 0.
+- Brave: SENT. Program ok True, completed 3, 41ms. V12 found
+  True, attempt 1. CB-1 all three True. P9 reviewed: the R5
+  bubble is visible, composer empty. DOM and render agree.
+  P9 PASS. (Clone1's messages summarize runs 1-4 and the
+  pattern.)
+- Chromium: FAILED-UNVERIFIED, fifth identical failure.
+  "CDP timeout: Input.dispatchMouseEvent", completed 0, 5003ms.
+  V12 found False after 40 attempts, items 40. P9 reviewed:
+  no R5 bubble, composer empty. DOM and render agree.
+- Pattern is 5/5. All 5 runs are complete and scored.
+
+### Rollback (P3 plan, after run 5)
+
+- 10:34 +07: SIGTERM to the debug-port Brave main PID 987006,
+  graceful exit, [::1]:9223 closed. Relaunch WITHOUT the flag
+  (same as-found flags, donor env prefix, log
+  /tmp/s2-brave-rollback.log). New main PID 1003210, cmdline
+  carries no debug flag. [::1]:9223 stays closed. hyprctl
+  confirms the Brave "Muse" window is back (pid 1003210).
+  The CDP exposure is closed; the machine is back to its
+  as-found state. Chromium (clone2, PID 8059) was never
+  restarted or touched. Relay stays on 350934a (PID 983809).
+
+## 6. Verdict
+
+### 5-run table (wall ms, end to end including transport)
+
+| run | wall | Brave | Chromium | Brave program | Chromium program |
+|-----|------|-------|----------|---------------|------------------|
+| 1 | 33655.6 | sent | failed-unverified | 163.7ms, completed 3 | 5103.7ms, completed 0, CDP timeout Input.dispatchMouseEvent |
+| 2 | 33953.2 | sent | failed-unverified | 154.0ms, completed 3 | 5106.3ms, completed 0, CDP timeout Input.dispatchMouseEvent |
+| 3 | 33061.9 | sent | failed-unverified | 150.1ms, completed 3 | 5104.5ms, completed 0, CDP timeout Input.dispatchMouseEvent |
+| 4 | 33121.8 | sent | failed-unverified | 134.8ms, completed 3 | 5105.8ms, completed 0, CDP timeout Input.dispatchMouseEvent |
+| 5 | 33166.9 | sent | failed-unverified | 133.0ms, completed 3 | 5102.6ms, completed 0, CDP timeout Input.dispatchMouseEvent |
+
+- Median wall: 33166.9ms (33.2s). Sorted walls: 33061.9,
+  33121.8, 33166.9, 33655.6, 33953.2.
+- Model calls per run: 0 (all 5 runs). The machine loop makes
+  no model call and no vision call; the program is fixed.
+- Per-phase split, median across runs (ms): ssh transport
+  about 15000, broker about 700, observe about 1500, act about
+  5250 (dominated by the Chromium 5s timeout), verify about
+  10400 (dominated by the Chromium 10s V12 poll), setup about
+  150, residual 2.3-2.5 (tiny, the split accounts for the wall).
+  Median mux baseline 790.5ms per SSH call.
+- Brave half, median: program elapsed 150.1ms (dom_act 41-72ms),
+  per-browser wall 2698.9ms. V12 found attempt 1 in all 5 runs.
+  perception_routing dom-chromium in all 10 browser decisions
+  (5 runs x 2 browsers), zero fell through to screenshot.
+- Chromium half, median: program elapsed 5104.5ms (the 5000ms
+  CDP timeout, nothing else), V12 11045.1ms (the 10000ms poll,
+  40 attempts, never found). 0 of 5 sends verified.
+
+### Postcondition pass rate (CB-1 verified, not envelope ok)
+
+- Per send: 5 of 10 verified (50%). Brave 5/5, Chromium 0/5.
+- Per run (both sends verified): 0 of 5 (0%).
+- The CB-1 gate is judged by verified, not by envelope ok:
+  the Brave envelopes are ok True AND verified; the Chromium
+  envelopes are ok False AND unverified. No envelope-ok run
+  hides a failed send.
+
+### Plateau: reached or not
+
+- By the letter of the gate: NO. The median wall is 33.2s,
+  below the 60s threshold, so the "median stays above 60s"
+  condition is not met.
+- But the class does NOT flip. Zero of 5 runs completed both
+  sends, and the postcondition pass rate is 50%. A median
+  below 60s on runs that fail the class is not a pass: the
+  failed runs are fast only because they terminate early (the
+  Chromium half costs a 5s timeout plus a 10s V12 poll instead
+  of a successful send). The gate's spirit is "the class
+  completes faster than 60s"; the class does not complete.
+- The bottleneck is the mechanism, not the model: 0 model
+  calls, Brave sends in 41-72ms of program time, and the
+  Chromium failure is a CDP Input stall that no model call
+  would fix. That is exactly the condition the plateau was
+  designed to detect ("the mechanism (not the model) is the
+  bottleneck").
+- So the honest reading is: the flip works for the Brave half
+  and is blocked on the Chromium half by a mechanism fault.
+  The class as defined does not flip.
+
+### Recommendation: DO NOT EXPAND
+
+- Do not expand the flip to more classes. The clone-chat-send
+  class itself is only half flipped (Brave 5/5, Chromium 0/5).
+  Expanding now would spread a broken half.
+- Next lever, in order:
+  1. Prove or kill the visibility hypothesis: focus the
+     Chromium window (switch to workspace 2) and re-run the
+     isolated mouseMoved diagnostic. If Input answers while
+     the window is visible, the fix is a visibility
+     precondition in the send path (focus the target window
+     before the program runs), not a new mechanism.
+  2. If visibility is not the cause, try set_value instead of
+     fill for the composer (no mouse events, no Input domain).
+     That is a program change, so it needs its own dry run
+     and a fresh 5-run measurement, not a mid-measurement
+     swap.
+  3. If neither works, the Input stall is a mechanism fault
+     for the step 9 prototype to solve (a different input
+     channel for occluded windows, or a longer CDP timeout
+     with a retry that does not count as a new mechanism).
+- Keep the Brave half flipped: it is measured green (5/5,
+  median program 150ms, per-browser wall 2.7s, V12 attempt 1).
+  The Brave half is the proof the S2 mechanism works when the
+  Input domain answers.
+- The step 9 prototype decision is now informed by a concrete
+  mechanism fault (CDP Input.dispatchMouseEvent stalls on the
+  occluded Chromium window) rather than by a slow median.
+  That fault is the prototype's first target if the visibility
+  test kills the cheap fix.
 
 ## 6. Verdict
 

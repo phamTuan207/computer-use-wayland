@@ -1,0 +1,288 @@
+{
+  "run": 5,
+  "dry_run": false,
+  "mux_baseline_ms": 826.9,
+  "browsers": {
+    "brave": {
+      "browser": "brave",
+      "label": "clone1",
+      "endpoint": "http://[::1]:9223",
+      "tab_title": "(2) Chat — clone1",
+      "target_id": "06074E282C000A95EF89CC9EBB8F9713",
+      "observe": {
+        "elements": 54,
+        "truncated": false,
+        "wall_ms": 1991.0
+      },
+      "routing": {
+        "source": "dom-chromium",
+        "target_kind": "chromium-content",
+        "fell_through": [],
+        "reason": "complete coverage: 54 elements, not truncated",
+        "coverage": {
+          "elements": 54,
+          "truncated": false
+        }
+      },
+      "outcome": "sent",
+      "message": "S2-FLIP-R5-BRAVE-IGNORE-TEST",
+      "model_calls": 0,
+      "program": {
+        "ok": true,
+        "api_calls": 2,
+        "elapsed_ms": 133.025,
+        "error": null,
+        "error_type": null,
+        "log": [
+          "dom_act ok True completed 3 ms 41 error None"
+        ],
+        "wall_ms": 1611.0
+      },
+      "cb1": {
+        "input_sent": true,
+        "target_received": true,
+        "verified": true,
+        "completed": 3
+      },
+      "v12": {
+        "found": true,
+        "items": 51,
+        "role": "user",
+        "side": "user",
+        "textLen": 32,
+        "attempts": 1,
+        "elapsed_ms": 2,
+        "ms": 980.8
+      },
+      "wall_ms": 2592.5
+    },
+    "chromium": {
+      "browser": "chromium",
+      "label": "clone2",
+      "endpoint": "http://127.0.0.1:9223",
+      "tab_title": "Chat — clone2",
+      "target_id": "D1374C7C994D3DA72678E20C7FD099A0",
+      "observe": {
+        "elements": 70,
+        "truncated": false,
+        "wall_ms": 2049.5
+      },
+      "routing": {
+        "source": "dom-chromium",
+        "target_kind": "chromium-content",
+        "fell_through": [],
+        "reason": "complete coverage: 70 elements, not truncated",
+        "coverage": {
+          "elements": 70,
+          "truncated": false
+        }
+      },
+      "outcome": "failed-unverified",
+      "message": "S2-FLIP-R5-CHROMIUM-IGNORE-TEST",
+      "model_calls": 0,
+      "program": {
+        "ok": false,
+        "api_calls": 2,
+        "elapsed_ms": 5102.649,
+        "error": "assert failed: dom_act failed",
+        "error_type": "assert_failed",
+        "log": [
+          "dom_act ok False completed 0 ms 5003 error CDP timeout: Input.dispatchMouseEvent"
+        ],
+        "wall_ms": 6719.3
+      },
+      "cb1": {
+        "input_sent": false,
+        "target_received": false,
+        "verified": false,
+        "completed": 0
+      },
+      "v12": {
+        "found": false,
+        "items": 40,
+        "attempts": 40,
+        "elapsed_ms": 10054,
+        "ms": 11034.1
+      },
+      "wall_ms": 17753.6
+    }
+  },
+  "wall_ms": 33166.9,
+  "p9": {
+    "brave": {
+      "ok": true,
+      "png": "improvements/s2-flip-runs/p9-run5-brave.png",
+      "wall_ms": 1456.2
+    },
+    "chromium": {
+      "ok": true,
+      "png": "improvements/s2-flip-runs/p9-run5-chromium.png",
+      "wall_ms": 1231.9
+    }
+  },
+  "spans": [
+    {
+      "phase": "setup-lease",
+      "wall_ms": 935.5,
+      "laptop_ms": null
+    },
+    {
+      "phase": "broker-start",
+      "wall_ms": 1103.8,
+      "laptop_ms": null
+    },
+    {
+      "phase": "tabs-brave",
+      "wall_ms": 1949.8,
+      "laptop_ms": null
+    },
+    {
+      "phase": "observe-brave",
+      "wall_ms": 1991.0,
+      "laptop_ms": null
+    },
+    {
+      "phase": "tabs-chromium",
+      "wall_ms": 1972.0,
+      "laptop_ms": null
+    },
+    {
+      "phase": "observe-chromium",
+      "wall_ms": 2049.5,
+      "laptop_ms": null
+    },
+    {
+      "phase": "broker-finish",
+      "wall_ms": 1164.0,
+      "laptop_ms": null
+    },
+    {
+      "phase": "act-brave",
+      "wall_ms": 1611.0,
+      "laptop_ms": 133.025
+    },
+    {
+      "phase": "verify-brave",
+      "wall_ms": 980.8,
+      "laptop_ms": 980.8
+    },
+    {
+      "phase": "act-chromium",
+      "wall_ms": 6719.3,
+      "laptop_ms": 5102.649
+    },
+    {
+      "phase": "verify-chromium",
+      "wall_ms": 11034.1,
+      "laptop_ms": 11034.1
+    }
+  ],
+  "ssh_calls": [
+    {
+      "label": "mux-probe",
+      "wall_ms": 638.1,
+      "rc": 0
+    },
+    {
+      "label": "mux-probe",
+      "wall_ms": 1015.7,
+      "rc": 0
+    },
+    {
+      "label": "lease-cleanup",
+      "wall_ms": 935.5,
+      "rc": 0
+    },
+    {
+      "label": "broker-start",
+      "wall_ms": 1103.8,
+      "rc": 0
+    },
+    {
+      "label": "broker-request-1",
+      "wall_ms": 993.2,
+      "rc": 0
+    },
+    {
+      "label": "broker-result-1",
+      "wall_ms": 956.6,
+      "rc": 0
+    },
+    {
+      "label": "broker-request-2",
+      "wall_ms": 977.3,
+      "rc": 0
+    },
+    {
+      "label": "broker-result-2",
+      "wall_ms": 1013.7,
+      "rc": 0
+    },
+    {
+      "label": "broker-request-3",
+      "wall_ms": 1005.2,
+      "rc": 0
+    },
+    {
+      "label": "broker-result-3",
+      "wall_ms": 966.8,
+      "rc": 0
+    },
+    {
+      "label": "broker-request-4",
+      "wall_ms": 992.3,
+      "rc": 0
+    },
+    {
+      "label": "broker-result-4",
+      "wall_ms": 1057.1,
+      "rc": 0
+    },
+    {
+      "label": "broker-finish",
+      "wall_ms": 1164.0,
+      "rc": 0
+    },
+    {
+      "label": "oneshot-code-exec",
+      "wall_ms": 1611.0,
+      "rc": 0
+    },
+    {
+      "label": "v12-check",
+      "wall_ms": 980.8,
+      "rc": 0
+    },
+    {
+      "label": "oneshot-code-exec",
+      "wall_ms": 6719.3,
+      "rc": 0
+    },
+    {
+      "label": "v12-check",
+      "wall_ms": 11034.1,
+      "rc": 0
+    },
+    {
+      "label": "p9-capture",
+      "wall_ms": 1456.2,
+      "rc": 0
+    },
+    {
+      "label": "p9-capture",
+      "wall_ms": 1231.9,
+      "rc": 0
+    }
+  ],
+  "phase_split_ms": {
+    "model": 0,
+    "ssh": 15498.0,
+    "broker": 614.0,
+    "observe": 1347.2,
+    "act": 5235.7,
+    "verify": 10361.1,
+    "setup": 108.6,
+    "residual": 2.3
+  },
+  "model_calls": 0
+}
