@@ -857,6 +857,7 @@ class TestFaithfulShadowShim(unittest.TestCase):
 
     @unittest.skipUnless(NODE, 'node is required to run production JS')
     def test_focus_check_faithful_shadow_shim(self):
+        from test_click3_redteam2 import _wrap_bare_return
         script = _capture_js('focus_check', '#msg-input')
         shim = (
             "var __inner = {tagName: 'INPUT', isContentEditable:"
@@ -871,7 +872,7 @@ class TestFaithfulShadowShim(unittest.TestCase):
             " querySelectorAll: function(sel){"
             " return sel === '*' ? [__host] : []; },\n"
             " activeElement: __host};\n")
-        out = _run_node(shim + 'console.log(JSON.stringify(' + script
+        out = _run_node(shim + 'console.log(JSON.stringify(' + _wrap_bare_return(script)
                         + '));')
         self.assertEqual(json.loads(out), True,
                          'focus_check failed a focused shadow input '
@@ -879,6 +880,7 @@ class TestFaithfulShadowShim(unittest.TestCase):
 
     @unittest.skipUnless(NODE, 'node is required to run production JS')
     def test_hit_check_faithful_shadow_shim(self):
+        from test_click3_redteam2 import _wrap_bare_return
         script = _capture_js('hit_check', '#msg-input')
         shim = (
             "var __inner = {tagName: 'INPUT', isContentEditable:"
@@ -897,7 +899,7 @@ class TestFaithfulShadowShim(unittest.TestCase):
             " return sel === '*' ? [__host] : []; },\n"
             " activeElement: __host,\n"
             " elementFromPoint: function(x, y){ return __inner; }};\n")
-        out = _run_node(shim + 'console.log(JSON.stringify(' + script
+        out = _run_node(shim + 'console.log(JSON.stringify(' + _wrap_bare_return(script)
                         + '));')
         self.assertEqual(json.loads(out), True,
                          'hit_check failed an uncovered shadow input '

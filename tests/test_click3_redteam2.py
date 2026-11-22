@@ -60,9 +60,12 @@ def _capture_js(method_name, *args):
 
 
 def _wrap_bare_return(script):
-    """A bare `return ...` script (typed_flag, harvest) needs a
-    function wrapper to run under node -e; IIFEs pass through."""
-    if re.match(r'\s*/\*[^*]*\*/\s*return', script):
+    """A bare `return ...` script (typed_flag, harvest, and since
+    DOMZEN-FIX every zen_dom helper) needs a function wrapper to run
+    under node -e; IIFEs pass through. The leading comment is
+    optional: some helpers carry one (/* zen_harvest */), most do
+    not (bare `return (function(){...})()`)."""
+    if re.match(r'\s*(?:/\*[^*]*\*/\s*)?return\b', script):
         return '(function(){' + script + '})()'
     return script
 
@@ -311,11 +314,11 @@ class R10FlagTests(unittest.TestCase):
         flag = _capture_js('typed_flag', '#msg-input')
         verify = _capture_js('verify_typed', '#msg-input', 'hello')
         code = (_TOP_DOC_SHIM
-                + "var __armed = " + arm + ";\n"
+                + "var __armed = " + _wrap_bare_return(arm) + ";\n"
                 + "window.__agentCuTyped['#msg-input'] = true;\n"
                 + "__el.value = 'hello';\n"
                 + "var __flag = " + _wrap_bare_return(flag) + ";\n"
-                + "var __v = " + verify + ";\n"
+                + "var __v = " + _wrap_bare_return(verify) + ";\n"
                 + "console.log(JSON.stringify({armed: __armed,"
                 " flag: __flag, value: __v && __v.value}));\n")
         out = json.loads(_run_node(code))
@@ -338,12 +341,12 @@ class R10FlagTests(unittest.TestCase):
         flag = _capture_js('typed_flag', '#msg-input')
         verify = _capture_js('verify_typed', '#msg-input', 'hello')
         code = (_TOP_DOC_SHIM
-                + "var __armed = " + arm + ";\n"
+                + "var __armed = " + _wrap_bare_return(arm) + ";\n"
                 + "__el.value = 'h';\n"
                 + "__el.dispatchEvent({type: 'input', isTrusted: true});\n"
                 + "__el.value = 'hello';\n"
                 + "var __flag = " + _wrap_bare_return(flag) + ";\n"
-                + "var __v = " + verify + ";\n"
+                + "var __v = " + _wrap_bare_return(verify) + ";\n"
                 + "console.log(JSON.stringify({armed: __armed,"
                 " flag: __flag, value: __v && __v.value}));\n")
         out = json.loads(_run_node(code))
@@ -414,11 +417,11 @@ class R10IframeArmTests(unittest.TestCase):
             " querySelectorAll: function(sel){"
             " return sel === 'iframe' ? [__frame] : []; }};\n")
         code = (shim
-                + "var __armed = " + arm + ";\n"
+                + "var __armed = " + _wrap_bare_return(arm) + ";\n"
                 + "__el.dispatchEvent({type: 'input',"
                 " isTrusted: true});\n"
                 + "var __flag = " + _wrap_bare_return(flag) + ";\n"
-                + "var __fv = " + field_value + ";\n"
+                + "var __fv = " + _wrap_bare_return(field_value) + ";\n"
                 + "console.log(JSON.stringify({armed: __armed,"
                 " flag: __flag, fieldValue: __fv}));\n")
         out = json.loads(_run_node(code))
@@ -456,7 +459,7 @@ class IframeReadTests(unittest.TestCase):
             " querySelectorAll: function(sel){"
             " return sel === 'iframe' ? [__f1] : []; }};\n")
         out = _run_node(shim + "console.log(JSON.stringify("
-                        + script + "));")
+                        + _wrap_bare_return(script) + "));")
         self.assertEqual(json.loads(out), 'hello',
                          'nested same-origin iframe target unread: %s'
                          % (out,))
@@ -486,7 +489,7 @@ class IframeReadTests(unittest.TestCase):
             " querySelectorAll: function(sel){"
             " return sel === 'iframe' ? [] : [__host]; }};\n")
         out = _run_node(shim + "console.log(JSON.stringify("
-                        + script + "));")
+                        + _wrap_bare_return(script) + "));")
         self.assertEqual(json.loads(out), 'hello',
                          'iframe inside a shadow root unread: %s'
                          % (out,))
