@@ -402,6 +402,218 @@ class ValidatorFixTests(unittest.TestCase):
             % (session.last_geometry_warnings,))
 
 
+class NoPointerDelegateTests(unittest.TestCase):
+    """Step-7 AMEND fix items 1 and 3: with pointer=None the Zen
+    backend must report no_pointer_delegate on EVERY dispatch path,
+    and wait/assert must not claim input was sent.
+
+    Failing-first: before the fix the re-ground path reports
+    action_failed/focus_check (click) or action_failed/dom-value
+    (fill), and the main path reports no-dom-postcondition errors
+    for type/move, because only the 8-type allowlist guard checks
+    the pointer. Wait/assert report input_sent True although no
+    input is dispatched.
+    """
+
+    def _backend_no_pointer(self, fields=None):
+        session = FakeZenSession(fields or _zen_fields())
+        backend = zen_backend.ZenDomBackend(
+            session_factory=lambda: session,
+            windows_fn=_zen_windows,
+            pointer=None)
+        return backend, session
+
+    def _observe(self, backend):
+        backend.dom_start()
+        return backend.dom_observe('Example', '#c5-text', 10)
+
+    def _action(self, snapshot_id, **overrides):
+        action = {'type': 'click', 'ref': '#c5-text',
+                  'scope': 'Example',
+                  'observation_id': snapshot_id}
+        action.update(overrides)
+        return action
+
+    def test_main_path_click_reports_no_pointer_delegate(self):
+        backend, _session = self._backend_no_pointer()
+        snapshot = self._observe(backend)
+        result = backend.dom_act(
+            'Example', snapshot['snapshot'],
+            [self._action(snapshot['snapshot'])], None, True)
+        self.assertFalse(result['ok'])
+        self.assertEqual(result['error']['code'],
+                         'no_pointer_delegate')
+        self.assertFalse(result['results'][0]['input_sent'])
+        self.assertFalse(result['results'][0]['target_received'])
+        self.assertEqual(result['results'][0]['verified_basis'],
+                         'no-pointer-delegate')
+        backend.close()
+
+    def test_main_path_type_reports_no_pointer_delegate(self):
+        # Before the fix this reported action_failed with
+        # no-dom-postcondition:type, hiding the true cause.
+        backend, _session = self._backend_no_pointer()
+        snapshot = self._observe(backend)
+        result = backend.dom_act(
+            'Example', snapshot['snapshot'],
+            [self._action(snapshot['snapshot'], type='type',
+                          text='hello')], None, True)
+        self.assertFalse(result['ok'])
+        self.assertEqual(result['error']['code'],
+                         'no_pointer_delegate')
+        self.assertFalse(result['results'][0]['input_sent'])
+        backend.close()
+
+    def test_main_path_move_reports_no_pointer_delegate(self):
+        # Before the fix this reported action_failed with
+        # no-dom-postcondition:move, hiding the true cause.
+        backend, _session = self._backend_no_pointer()
+        snapshot = self._observe(backend)
+        result = backend.dom_act(
+            'Example', snapshot['snapshot'],
+            [self._action(snapshot['snapshot'], type='move')],
+            None, True)
+        self.assertFalse(result['ok'])
+        self.assertEqual(result['error']['code'],
+                         'no_pointer_delegate')
+        self.assertFalse(result['results'][0]['input_sent'])
+        backend.close()
+
+    def test_reground_click_reports_no_pointer_delegate(self):
+        # The rect moved, the batch is non-strict, so the re-ground
+        # path acts on the fresh rect. Before the fix it called
+        # _dispatch directly and reported action_failed/focus_check.
+        backend, session = self._backend_no_pointer()
+        snapshot = self._observe(backend)
+        session.fields['#c5-text']['rect'] = {
+            'x': 100, 'y': 300, 'width': 200, 'height': 30}
+        result = backend.dom_act(
+            'Example', snapshot['snapshot'],
+            [self._action(snapshot['snapshot'])], None, True)
+        self.assertFalse(result['ok'])
+        self.assertEqual(result['error']['code'],
+                         'no_pointer_delegate')
+        self.assertFalse(result['results'][0]['input_sent'])
+        self.assertFalse(result['results'][0]['target_received'])
+        backend.close()
+
+    def test_reground_fill_reports_no_pointer_delegate(self):
+        # Before the fix the re-ground fill reported
+        # action_failed/dom-value instead of no_pointer_delegate.
+        backend, session = self._backend_no_pointer()
+        snapshot = self._observe(backend)
+        session.fields['#c5-text']['rect'] = {
+            'x': 100, 'y': 300, 'width': 200, 'height': 30}
+        result = backend.dom_act(
+            'Example', snapshot['snapshot'],
+            [self._action(snapshot['snapshot'], type='fill',
+                          text='hello')], None, True)
+        self.assertFalse(result['ok'])
+        self.assertEqual(result['error']['code'],
+                         'no_pointer_delegate')
+        self.assertFalse(result['results'][0]['input_sent'])
+        backend.close()
+
+    def test_wait_reports_no_input_sent(self):
+        # Wait is time.sleep only: no input is dispatched, so
+        # input_sent and target_received must be False, while the
+        # action itself still succeeds.
+        backend, _session = self._backend_no_pointer()
+        snapshot = self._observe(backend)
+        result = backend.dom_act(
+            'Example', snapshot['snapshot'],
+            [self._action(snapshot['snapshot'], type='wait', ms=1)],
+            None, True)
+        self.assertTrue(result['ok'], result)
+        self.assertFalse(result['results'][0]['input_sent'])
+        self.assertFalse(result['results'][0]['target_received'])
+        backend.close()
+
+    def test_assert_reports_no_input_sent(self):
+        # Assert only reads state: no input is dispatched. The
+        # field value is '' and the asserted text is '', so the
+        # assert itself passes on the dom-value postcondition.
+        backend, _session = self._backend_no_pointer()
+        snapshot = self._observe(backend)
+        result = backend.dom_act(
+            'Example', snapshot['snapshot'],
+            [self._action(snapshot['snapshot'], type='assert',
+                          text='')], None, True)
+        self.assertTrue(result['ok'], result)
+        self.assertTrue(result['results'][0]['verified'])
+        self.assertFalse(result['results'][0]['input_sent'])
+        self.assertFalse(result['results'][0]['target_received'])
+        backend.close()
+
+    def test_assert_mismatch_still_fails_without_input_sent(self):
+        # A failing assert must still fail (verified False) even
+        # though no input was sent: ok comes from the postcondition,
+        # not from input_sent.
+        backend, _session = self._backend_no_pointer()
+        snapshot = self._observe(backend)
+        result = backend.dom_act(
+            'Example', snapshot['snapshot'],
+            [self._action(snapshot['snapshot'], type='assert',
+                          text='not-the-value')], None, True)
+        self.assertFalse(result['ok'])
+        self.assertFalse(result['results'][0]['verified'])
+        self.assertFalse(result['results'][0]['input_sent'])
+        backend.close()
+
+
+class ValidatorLimitationTests(unittest.TestCase):
+    """Step-7 AMEND fix item 2 (A1/A2): these tests PIN the known
+    validator limitation, they do not fix it. On the normal passing
+    branch check_viewport_geometry returns the moz-computed origin
+    and ignores verified_moz_inner: the verified-origin path only
+    rescues the closure-overflow branch (right_gap < 0 or
+    bottom_gap < 0, zen_dom.py around line 204, returns the
+    verified origin at line 267 and the moz-computed absolute at
+    line 299). A later step (likely the step 9 prototype) should
+    pass verified moz always or make the validator prefer it.
+    """
+
+    # Redteam attack numbers (verify report section 5): window
+    # [2509, 914], size [925, 1176], monitor [2464, 902, 1920,
+    # 1200]. True origin [2749, 922] from verified moz [240, 8].
+    WINDOW = [2509, 914]
+    SIZE = [925, 1176]
+    MONITOR = [2464, 902, 1920, 1200]
+    TRUE_ORIGIN = [2749, 922]
+
+    def test_a1_self_consistent_but_wrong_moz_is_accepted(self):
+        # Moz [250, 18] is wrong (+10, +10 from true [240, 8]) but
+        # self-consistent with inner [667, 1150] (gaps 8/8), so the
+        # validator ACCEPTS the moz-computed origin [2759, 932],
+        # 10px off the true origin. Pinned as the known limitation.
+        origin = zen_dom.check_viewport_geometry(
+            [250, 18], [2759, 932], self.WINDOW, self.SIZE,
+            [667, 1150], self.MONITOR, factor=1)
+        self.assertEqual(origin, [2759, 932])
+        self.assertNotEqual(origin, self.TRUE_ORIGIN)
+
+    def test_a2_verified_moz_ignored_on_passing_branch(self):
+        # Same wrong-but-consistent inputs, plus the TRUE verified
+        # moz [240, 8]: the validator still returns the
+        # moz-computed [2759, 932] and ignores the verified value,
+        # because the verified branch only runs on closure overflow.
+        origin = zen_dom.check_viewport_geometry(
+            [250, 18], [2759, 932], self.WINDOW, self.SIZE,
+            [667, 1150], self.MONITOR, factor=1,
+            verified_moz_inner=[240, 8])
+        self.assertEqual(origin, [2759, 932])
+        self.assertNotEqual(origin, self.TRUE_ORIGIN)
+
+    def test_a3_true_moz_returns_the_true_origin(self):
+        # Sanity anchor for A1/A2: with the true moz the same
+        # inputs return the true origin, which IS the moz-computed
+        # origin in this case.
+        origin = zen_dom.check_viewport_geometry(
+            [240, 8], [2749, 922], self.WINDOW, self.SIZE,
+            [667, 1150], self.MONITOR, factor=1)
+        self.assertEqual(origin, self.TRUE_ORIGIN)
+
+
 if __name__ == '__main__':
     unittest.main()
 
