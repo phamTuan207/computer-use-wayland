@@ -12,6 +12,41 @@ dependencies — Python with Pillow, a C compiler, `libxkbcommon`, Node and
 and Node code. No compositor is
 required.
 
+## Building only the wtype helper
+
+`native/wtype` is a gitignored build artifact (`.gitignore`), not in the repo,
+so a fresh checkout has no helper and the P2/keyboard suites fail with 21
+errors, all `RuntimeError: private wtype helper is missing: .../native/wtype`
+(the error names this section). The full `python3 scripts/build.py` stops
+before wtype on machines without `gtk4-layer-shell-0`: it builds the pointer,
+then fails at `pkg-config --cflags --libs gtk4-layer-shell-0 gtk4
+wayland-client` with exit status 1. Build only the wtype part instead, from
+the repo root (needs `cc`, `wayland-scanner`, `patch`, and
+`pkg-config wayland-client xkbcommon`; no download, the source is vendored
+under `native/vendor/wtype`):
+
+```sh
+wayland-scanner client-header native/keyboard.xml native/keyboard-protocol.h
+wayland-scanner private-code native/keyboard.xml native/keyboard-protocol.c
+tmpdir=$(mktemp -d)
+patch --batch --fuzz=0 --output "$tmpdir/main.c" \
+  native/vendor/wtype/main.c native/vendor/wtype/keyboard-correction.patch
+flags=$(pkg-config --cflags --libs wayland-client xkbcommon)
+cc -Wall -Wextra -O2 -I native -o native/wtype "$tmpdir/main.c" \
+  native/keyboard-protocol.c $flags
+rm -rf "$tmpdir"
+ls -la native/wtype
+```
+
+Run log on this VM, 2026-11-22 13:01:49 +07: `patching file .../main.c
+(read from native/vendor/wtype/main.c)`, `cc flags: -lwayland-client
+-lxkbcommon`, `wtype built`, `native/wtype` 35984 bytes. The `cc` unused
+parameter warnings are from the vendored source and are harmless. After
+this, `python3 -m unittest test_p2_element_ref` runs without the 21
+wtype errors. The same commands are the wtype block of
+`scripts/build.py`; if the full build ever succeeds on your machine,
+it produces the same helper.
+
 ## What the suite actually exercises
 
 It is a mixed suite, not a uniformly mocked one:

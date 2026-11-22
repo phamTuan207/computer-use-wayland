@@ -389,6 +389,31 @@ class ZenDomBackend:
         sent = self._pointer(action, screen_point)
         return bool(sent), bool(sent)
 
+    def _no_pointer_result(self, index):
+        """The structured refusal when no input delegate is set.
+
+        Used BEFORE any _dispatch call, on every dispatch path
+        (the main path for all types, and the re-ground path), so
+        the error code always names the true cause. The old
+        8-type allowlist guard let type/move through to _dispatch
+        (which failed closed but reported no-dom-postcondition)
+        and let the re-ground path report focus_check or
+        dom-value; all three hid the missing delegate.
+        """
+        return {'action_index': index,
+                'input_sent': False,
+                'target_received': False,
+                'verified': False,
+                'verified_basis': 'no-pointer-delegate',
+                'ok': False,
+                'error': {
+                    'code': 'no_pointer_delegate',
+                    'reason': 'the Zen backend has no pointer '
+                              'delegate: input dispatch needs '
+                              'the step-9 prototype wiring '
+                              '(CodeExecBackend.act on a fresh '
+                              'window observation)'}}
+
     def _verify(self, session, action, selector, typed_text,
                 actions=None):
         """CB-1 postcondition for one dispatched action.
@@ -487,10 +512,13 @@ class ZenDomBackend:
             strict = batch_strict or element_ref.is_strict_action(
                 action, actions)
             if action_type == 'wait':
+                # Wait is time.sleep only: no input is dispatched,
+                # so input_sent and target_received are False even
+                # though the action itself succeeds.
                 time.sleep((action.get('ms') or 0) / 1000.0)
                 results.append({'action_index': index,
-                                'input_sent': True,
-                                'target_received': True,
+                                'input_sent': False,
+                                'target_received': False,
                                 'verified': False,
                                 'verified_basis': 'no-dom-postcondition:wait',
                                 'ok': True})
@@ -528,6 +556,16 @@ class ZenDomBackend:
                             fresh_rect = report['rect']
                             screen_point = self._screen_point(
                                 session, binding, fresh_rect)
+                            if self._pointer is None:
+                                no_pointer = self._no_pointer_result(
+                                    index)
+                                no_pointer['re_ground'] = {
+                                    'plan_rect': plan_rect,
+                                    'live_rect': fresh_rect}
+                                results.append(no_pointer)
+                                error = {'code': 'no_pointer_delegate',
+                                         'reason': 'no-pointer-delegate'}
+                                break
                             sent, received = self._dispatch(
                                 action, screen_point)
                             verified, basis = self._verify(
@@ -573,40 +611,35 @@ class ZenDomBackend:
                 results.append(dict(section7, action_index=index))
                 break
             if action_type == 'assert':
-                # An assert reads state; it needs no pointer.
-                sent = received = True
+                # An assert reads state; it needs no pointer and
+                # dispatches no input, so input_sent and
+                # target_received are False. Its ok comes from the
+                # postcondition below, not from input_sent.
+                sent = received = False
                 screen_point = None
             else:
                 screen_point = None
                 if action_type != 'key':
                     screen_point = self._screen_point(
                         session, binding, live_rect)
-                if self._pointer is None and action_type in (
-                        'click', 'double_click', 'confirm_click',
-                        'hover_click', 'fill', 'set_value', 'key',
-                        'scroll'):
-                    results.append({
-                        'action_index': index,
-                        'input_sent': False,
-                        'target_received': False,
-                        'verified': False,
-                        'verified_basis': 'no-pointer-delegate',
-                        'ok': False,
-                        'error': {
-                            'code': 'no_pointer_delegate',
-                            'reason': 'the Zen backend has no pointer '
-                                      'delegate: input dispatch needs '
-                                      'the step-9 prototype wiring '
-                                      '(CodeExecBackend.act on a fresh '
-                                      'window observation)'}})
+                if self._pointer is None:
+                    # Checked before EVERY _dispatch call, for all
+                    # types, instead of the old 8-type allowlist:
+                    # type/move used to fall through to _dispatch
+                    # and report no-dom-postcondition errors.
+                    no_pointer = self._no_pointer_result(index)
+                    results.append(no_pointer)
                     error = {'code': 'no_pointer_delegate',
                              'reason': 'no-pointer-delegate'}
                     break
                 sent, received = self._dispatch(action, screen_point)
             verified, basis = self._verify(
                 session, action, selector, typed_text, actions)
-            ok = sent and received and (
-                verified or basis.startswith('no-dom-postcondition'))
+            if action_type == 'assert':
+                ok = verified
+            else:
+                ok = sent and received and (
+                    verified or basis.startswith('no-dom-postcondition'))
             results.append({'action_index': index,
                             'input_sent': sent,
                             'target_received': received,

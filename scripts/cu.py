@@ -103,7 +103,14 @@ def key_names(keys):
 def _wtype_executable():
     helper = ROOT / 'native' / 'wtype'
     if not helper.is_file():
-        raise RuntimeError('private wtype helper is missing: ' + str(helper))
+        raise RuntimeError(
+            'private wtype helper is missing: ' + str(helper)
+            + ' (native/wtype is a gitignored build artifact, not '
+              'in the repo: build only the wtype part with the '
+              'steps in docs/testing.md "Building only the wtype '
+              'helper"; the full scripts/build.py stops at the '
+              'indicator step on machines without '
+              'gtk4-layer-shell-0)')
     return str(helper)
 
 
