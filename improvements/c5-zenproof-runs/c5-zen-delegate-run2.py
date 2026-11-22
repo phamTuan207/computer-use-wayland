@@ -36,7 +36,15 @@ import s2_flip_live  # noqa: E402
 RUN_NO = 2
 MESSAGE = 'ZEN-DELEGATE-R2-IGNORE-TEST'
 INTENT = 'c5-zen-delegate-r2'
-TARGET = 'Clone zen thread'
+# Fix (a): target the scratch tab by URL substring, never by
+# document.title. The fixture title is the static 'Two-vision
+# benchmark fixture'; its JS only sets the H1 text. The URL
+# substring is what _resolve_target matches on (title/url/handle
+# substring), and it is also the action scope, which must equal
+# the dom_observe target. SCRATCH_H1 is a content confirmation
+# read from the page, not a tab identity.
+TARGET = 'two_vision_fixture.html?clone=zen'
+SCRATCH_H1 = 'Clone zen thread'
 SCOPE = '#msg-input'
 BUBBLE_SELECTOR = '#thread .bubble:last-child'
 FIXTURE_URL = ('file:///home/james/computer-use-wayland/tests/'
@@ -57,26 +65,34 @@ LAPTOP_HOST = 'james@100.70.92.52'
 
 PROBE_PROGRAM = (
     "dom_start()\n"
-    "snap = dom_observe('Clone zen thread', '#msg-input', 80)\n"
-    "print('PROBE', snap['snapshot'], snap.get('title'),"
+    "snap = dom_observe('two_vision_fixture.html?clone=zen',"
+    " '#msg-input', 80)\n"
+    # PROBE line shape: PROBE <snapshot-id> <url> <count>. The URL
+    # has no spaces, so the runner splits on whitespace. The title
+    # is evidence only, on its own SNAP-TITLE line, never a gate:
+    # the document title is the static fixture title.
+    "print('PROBE', snap['snapshot'], snap.get('url'),"
     " len(snap.get('elements') or []))\n"
+    "print('SNAP-TITLE', snap.get('title'))\n"
 )
 
 SEND_PROGRAM = (
     "dom_start()\n"
-    "snap = dom_observe('Clone zen thread', '#msg-input', 80)\n"
+    "snap = dom_observe('two_vision_fixture.html?clone=zen',"
+    " '#msg-input', 80)\n"
     "res = dom_act(snap, [\n"
     "    {\"type\": \"set_value\", \"ref\": \"#msg-input\", \"text\": \""
-    + MESSAGE + "\", \"scope\": \"Clone zen thread\","
+    + MESSAGE + "\", \"scope\": \"two_vision_fixture.html?clone=zen\","
     " \"observation_id\": snap[\"snapshot\"]},\n"
     "    {\"type\": \"focus\", \"ref\": \"#msg-input\", \"scope\":"
-    " \"Clone zen thread\", \"observation_id\": snap[\"snapshot\"]},\n"
+    " \"two_vision_fixture.html?clone=zen\","
+    " \"observation_id\": snap[\"snapshot\"]},\n"
     "    {\"type\": \"key\", \"ref\": \"#msg-input\", \"keys\": [\"Enter\"],"
-    " \"scope\": \"Clone zen thread\","
+    " \"scope\": \"two_vision_fixture.html?clone=zen\","
     " \"observation_id\": snap[\"snapshot\"]},\n"
     "    {\"type\": \"assert\", \"selector\": \"#thread .bubble:last-child\","
     " \"text\": \"" + MESSAGE + "\", \"timeout_ms\": 3000,"
-    " \"scope\": \"Clone zen thread\","
+    " \"scope\": \"two_vision_fixture.html?clone=zen\","
     " \"observation_id\": snap[\"snapshot\"]},\n"
     "])\n"
     "print(\"dom_act ok\", res.get(\"ok\"), \"completed\","
@@ -84,6 +100,29 @@ SEND_PROGRAM = (
     " \"error\", res.get(\"error\"))\n"
     "assert_state(res.get(\"ok\") is True, \"dom_act failed\")\n"
 )
+
+
+def parse_probe_line(line, target):
+    """Parse one PROBE line into (url, count), gating on the URL.
+
+    Line shape: PROBE <snapshot-id> <url> <count>. Raises
+    ValueError when the shape is wrong, the snapshot URL does
+    not contain the fixture URL substring, or the element count
+    is not 1. The document title is never parsed here: it is
+    the static fixture title and cannot identify the tab.
+    """
+    parts = line.split()
+    if len(parts) != 4 or parts[0] != 'PROBE':
+        raise ValueError('probe line has the wrong shape: %r' % (line,))
+    url = parts[2]
+    count = parts[3]
+    if target not in url:
+        raise ValueError('probe snapshot URL %r does not contain %r'
+                         % (url, target))
+    if count != '1':
+        raise ValueError('probe snapshot has %r elements, not 1'
+                         % (count,))
+    return url, count
 
 
 def scp_to_laptop(local_path, remote_path):
@@ -200,8 +239,15 @@ class Runner:
                         'message': MESSAGE, 'intent': INTENT,
                         'model_calls': 0, 'program_variant': 'set_value',
                         'target': TARGET}
-        self.scratch_handle = None
-        self.original_handle = None
+        # Fix (b): tabs are identified by URL, never by stored
+        # Marionette handles. Handles are ephemeral per session,
+        # so nothing here keeps a handle across zen-tab.py calls.
+        # The scratch tab is TARGET (the fixture URL substring);
+        # the original tab is its URL, captured in phase 1.
+        # self.opened records whether the open succeeded, so
+        # cleanup knows whether a scratch tab exists to close.
+        self.opened = False
+        self.original_url = None
         self.original_title = None
         self.zen_address = None
         self.zen_bounds = None
@@ -226,7 +272,9 @@ class Runner:
         return obj
 
     def ev(self, expr, timeout=60):
-        obj = self.tab('eval', self.scratch_handle, expr, timeout=timeout)
+        # Fix (b): evaluate by scratch URL, resolved fresh inside
+        # the eval call, never by a stored handle.
+        obj = self.tab('eval', TARGET, expr, timeout=timeout)
         return obj['value']
 
     def oneshot_zen(self, program, intent, timeout=90):
@@ -309,9 +357,12 @@ class Runner:
         self.results['tabs_before'] = tabs
         for t in tabs['tabs']:
             if t.get('handle') == tabs['current']:
-                self.original_handle = t['handle']
+                # The current handle is only valid inside this one
+                # list response. Keep the URL (stable across
+                # sessions), never the handle.
+                self.original_url = t.get('url')
                 self.original_title = t.get('title')
-        if not self.original_handle:
+        if not self.original_url:
             raise RuntimeError('could not identify the current tab')
         # Geckodriver check (R14 fix 0cb2b20 supersedes the prep
         # procedure P1.3, which asked for /tmp/geckodriver: the
@@ -365,7 +416,12 @@ class Runner:
     def phase2(self):
         opened = self.tab('open', timeout=60)
         self.results['open'] = opened
-        self.scratch_handle = opened['new_handle']
+        # The scratch tab is TARGET by URL; the open result
+        # confirms its URL and H1, no handle is kept.
+        if TARGET not in (opened.get('url') or ''):
+            raise RuntimeError('open landed on %r, not the scratch tab'
+                               % (opened.get('url'),))
+        self.opened = True
         if opened.get('viewport_ok') is not True:
             self.results['outcome'] = 'blocked'
             self.results['error'] = (
@@ -373,10 +429,10 @@ class Runner:
             raise _Blocked('viewport gate failed')
 
     def phase3(self):
-        switched = self.tab('switch', self.scratch_handle, timeout=60)
-        if switched.get('title') != TARGET:
+        switched = self.tab('switch', TARGET, timeout=60)
+        if TARGET not in (switched.get('url') or ''):
             raise RuntimeError('switch landed on %r, not the scratch tab'
-                               % (switched.get('title'),))
+                               % (switched.get('url'),))
         self.results['switch'] = switched
         active = self.hypr('activewindow')
         if str(active.get('address', '')).lower() != \
@@ -387,17 +443,23 @@ class Runner:
         self.results['probe'] = {'wall_ms': round(_wall, 1),
                                  'envelope': env}
         log = env.get('log') or []
-        probe_lines = [l for l in log if 'PROBE' in l]
+        probe_lines = [l for l in log if l.startswith('PROBE ')]
         if env.get('ok') is not True or not probe_lines:
             raise RuntimeError('read-only probe failed: %s' % (env,))
-        # PROBE line shape: PROBE <snapshot-id> <title words...> <count>
-        parts = probe_lines[-1].split()
-        title = ' '.join(parts[2:-1])
-        count = parts[-1]
-        if len(parts) < 4 or title != TARGET or count != '1':
-            raise RuntimeError('probe snapshot is not the scratch tab: %s'
-                               % (probe_lines,))
+        # Fix (a): the probe gate is the snapshot URL, parsed by
+        # parse_probe_line, never the document title.
+        url, count = parse_probe_line(probe_lines[-1], TARGET)
+        title_lines = [l for l in log if l.startswith('SNAP-TITLE ')]
+        snap_title = (title_lines[-1][len('SNAP-TITLE '):]
+                      if title_lines else None)
+        self.results['probe']['url'] = url
+        self.results['probe']['count'] = count
+        self.results['probe']['snapshot_title'] = snap_title
         self.results['pre'] = {
+            # H1 content confirmation (fix a, second leg): the
+            # page in the switched tab really is the zen clone.
+            'h1': self.ev(
+                "document.getElementById('title').textContent"),
             'bubble_present': self.ev(
                 'window.__bubblePresent(%s)' % json.dumps(MESSAGE)),
             'bubbles': self.ev('window.__sentBubbles()'),
@@ -405,6 +467,9 @@ class Runner:
                 "document.getElementById('msg-input').value"),
             'input_events': self.ev('window.__inputEvents'),
         }
+        if self.results['pre']['h1'] != SCRATCH_H1:
+            raise RuntimeError('pre-check: H1 is %r, not the zen clone'
+                               % (self.results['pre']['h1'],))
         if self.results['pre']['bubble_present']:
             raise RuntimeError('pre-check: message already present')
 
@@ -472,12 +537,19 @@ class Runner:
                               'wall_ms': round(p9_wall, 1)}
 
     def cleanup(self):
-        """Close the scratch tab, restore the owner's tab, verify."""
-        if not self.scratch_handle:
+        """Close the scratch tab, restore the owner's tab, verify.
+
+        Fix (b): close by URL (TARGET for the scratch tab,
+        original_url for the owner's tab), never by stored
+        handle. Runs whenever the open succeeded, even when a
+        later phase blocked: the scratch tab exists then and
+        must be closed.
+        """
+        if not self.opened:
             return {'skipped': True}
         try:
-            closed = self.tab('close', self.scratch_handle,
-                              self.original_handle, timeout=60)
+            closed = self.tab('close', TARGET, self.original_url,
+                              timeout=60)
         except Exception as exc:  # noqa: BLE001 - record, do not mask
             return {'ok': False, 'error': str(exc)[:300]}
         clients = self.hypr('clients')
@@ -486,9 +558,15 @@ class Runner:
         alive = bool(zen) and str(zen[0].get('address', '')).lower() == \
             str(self.zen_address).lower()
         tabs = self.tab('list')
+        current_url = None
+        for t in tabs['tabs']:
+            if t.get('handle') == tabs['current']:
+                current_url = t.get('url')
         return {'ok': True, 'close': closed, 'zen_alive': alive,
                 'same_address': alive,
                 'tabs_after': tabs,
+                'current_url_after': current_url,
+                'original_restored': current_url == self.original_url,
                 'count_restored': tabs['count'] ==
                 self.results['tabs_before']['count']}
 
