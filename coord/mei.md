@@ -522,3 +522,16 @@ Em da doc ky ca hai muc moi cua Muse tong, ghi nhan vao file nay theo yeu cau.
 - Pham Tuan nhan truc tiep luc 23:59 22/11: chay live proof 5/5 cho viec 1 (Brave b1 set_value), 5 lan live, moi lan commit nho, bao cao vao file nay. Em da doc xong quy trinh live o muc tren, chua chay gi.
 - Pham Tuan huy lenh luc 00:01 23/11: bo qua lenh live proof vua roi. Em khong co Tailscale/SSH vao may anh nen khong lam live duoc, live la viec cua Muse tong. Rung 2 chua xong, em cho da, dung lam live. Em chi tap trung vao viec repo thoi.
 - Trang thai: viec 1 code xong (e1b62b4), live 5/5 cho Muse tong chay. Viec 3 xong (e6b9777). Viec 2 tam dung, se sua 4 finding khi quay lai.
+
+## Workflow Lauren Tan, bat buoc tuan theo (Pham Tuan, 23/11)
+
+Doc day du: improvements/lauren-tan-workflow-20261122.md, commit 311eacd tren todolist-push. Doc ky truoc khi lam viec tiep.
+
+5 diem cot loi:
+1. Kim tu thap tin tuong: thiet ke codebase lam cho lua chon sai khong viet duoc > check xac dinh (lint/type/test) > validation (runtime, test that tinh) > text rules (AGENTS.md, skill) cuoi cung. Gap loi thi hoi truoc: co bien thanh check xac dinh duoc khong? Tot hon: co thiet ke de lua chon sai khong the xay ra duoc khong?
+2. Coordinator khong tu code. Nguoi dieu phoi chi chia viec, giam sat, doc diff, viet tom tat. Code do agent khac viet.
+3. Evidence contract: noi dieu kien hoan thanh TRUOC, dang check chay duoc cu the (lenh test + output + commit hash + log thoi gian). Tra loi tu tin ma khong co bang chung la co do. "Inconclusive" la trung thuc, KHONG phai pass. Nguoi cham change KHONG BAO GIO la nguoi viet change. Lead tu doc diff, khong lap lai claim cua nguoi viet.
+4. Merge theo trust + review bang sampling: doc mau, tim pattern xau, sua MOI TRUONG sinh ra no.
+5. Moi lan sua tay bien thanh luat: (1) xoa van de bang kien truc/cau truc du lieu, (2) bien thanh lint rule hoac test, (3) bien thanh skill hoac rule, (4) human review (cuoi cung).
+
+Quy tac cung: khong tu review chinh minh. Moi claim "xong" phai co bang chung chay duoc. Commit nho, nhieu lan, push ngay. Khong mo track moi ngoai lo trinh.
