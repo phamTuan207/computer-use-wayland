@@ -25,8 +25,11 @@ Before any /url navigate or DELETE, open verifies the new tab was
 actually made current (POST /window/new must make the new tab
 current; if it does not, one explicit select is tried, and if that
 still fails the driver refuses to navigate or close anything).
-The open exception handler deletes ONLY when the current tab is
-the fixture tab by URL; it never deletes blind.
+The new tab must also increase the tab count by exactly 1, and
+the current tab is re-verified right after the navigate. The
+open exception handler deletes ONLY when the current tab is the
+fixture tab by URL AND by handle (the new handle from this open);
+it never deletes blind.
 
 Subcommands (each prints one JSON object on stdout):
   list                      list tabs (titles, urls), current first read
@@ -91,7 +94,13 @@ def _scan(z):
     Entries carry truncated handles (8 chars), titles, and URLs.
     Full handles come from the handle list. The scan switches
     through tabs and restores the original tab afterwards (that is
-    list_tabs behavior); it only reads.
+    list_tabs behavior); it only reads. NOTE (Redteam F4): the
+    entries and the handle list are two separate fetches at
+    different moments, not one atomic snapshot. list_tabs fetches
+    the handle list at its own start, switches through tabs, and
+    restores; _handles fetches the list again after list_tabs
+    returns. A tab opening or closing mid-scan makes _full_handle
+    raise (fail-closed), never match the wrong tab.
     """
     return z.list_tabs(), _handles(z)
 
@@ -134,8 +143,10 @@ def _resolve_url(z, substr):
 
     Resolved fresh inside this session, never from a stored
     handle. Raises when no tab matches or the match is
-    ambiguous. One scan only, so the entry and the handle list
-    come from the same moment.
+    ambiguous. One scan only (see _scan: the entry and the
+    handle list are two fetches at different moments, so a tab
+    opening or closing mid-scan makes _full_handle raise
+    instead of matching the wrong tab).
     """
     entries, full = _scan(z)
     entry = _find_in_scan(entries, substr)
@@ -180,6 +191,18 @@ def cmd_open():
         resp = z._wd("POST", f"/session/{z.session}/window/new",
                      {"type": "tab"})
         new_handle = resp["value"]["handle"]
+        # Hardening (Council 1 C4): the new tab must increase the
+        # tab count by exactly 1. If /window/new ever returned a
+        # stale or existing handle, the (c) check below would pass
+        # on the wrong tab. A count that did not grow means no new
+        # tab exists to navigate, so refuse before any navigate
+        # or DELETE.
+        count_after_new = len(_handles(z))
+        if count_after_new != len(before) + 1:
+            raise zen_dom.ZenDomError(
+                'new tab did not increase the tab count '
+                '(%d -> %d); refusing to navigate or close'
+                % (len(before), count_after_new))
         # Fix (c): the new tab must actually be current before any
         # /url navigate or DELETE. Marionette may leave the
         # previous tab current (the run 2 incident: the navigate
@@ -201,6 +224,24 @@ def cmd_open():
         try:
             z._wd("POST", f"/session/{z.session}/url",
                   {"url": FIXTURE_URL})
+            # Hardening (Redteam F1): re-verify the current tab is
+            # still the new scratch tab AFTER the navigate. The (c)
+            # check and the navigate are two separate HTTP calls;
+            # a focus change in between would navigate the wrong
+            # tab (the owner's), and every later check (URL, H1,
+            # readyState) would still pass on it because they
+            # confirm page content, not which tab holds it. The
+            # WebDriver protocol offers no atomic
+            # verify-and-navigate, so detection plus refusal is
+            # the best available: the tab content is changed, but
+            # the tab survives, and the handler below will not
+            # delete it.
+            current_after_nav = _current(z)
+            if current_after_nav != new_handle:
+                raise zen_dom.ZenDomError(
+                    'current tab changed during navigate (current '
+                    '%s != new %s); refusing'
+                    % (current_after_nav[:8], new_handle[:8]))
             deadline = time.perf_counter() + 10
             ready = ""
             while time.perf_counter() < deadline:
@@ -261,6 +302,7 @@ def cmd_open():
                     'selected_by': selected_by,
                     'ready': ready,
                     'count_before': len(before),
+                    'count_after_new': count_after_new,
                     'count_after': len(_handles(z)),
                     'current_before': current_before[:8],
                     'title_before': title_before,
@@ -272,16 +314,27 @@ def cmd_open():
         except Exception:
             # Close ONLY the scratch tab. DELETE closes the
             # CURRENT window, so first confirm the current tab
-            # really is the fixture tab, by URL. When it is not
-            # (the run 2 incident: the current tab was the owner's
-            # Muse tab), delete nothing and leave every tab
-            # untouched. After a scratch DELETE, best-effort
-            # restore the tab that was current before the open.
+            # really is the scratch tab: its URL must contain
+            # the fixture substring AND its handle must be the
+            # new handle from this open. The URL alone is not
+            # enough (Redteam F1): an owner tab navigated to the
+            # fixture URL IS the fixture tab by URL, so a
+            # URL-only check would delete it. When the current
+            # tab is anything else, delete nothing and leave
+            # every tab untouched. After a scratch DELETE,
+            # best-effort restore the tab that was current
+            # before the open.
             try:
                 cur_url = _url(z)
             except Exception:
                 cur_url = None
-            if cur_url is not None and SCRATCH_URL_SUBSTR in cur_url:
+            try:
+                cur_handle = _current(z)
+            except Exception:
+                cur_handle = None
+            if (cur_url is not None
+                    and SCRATCH_URL_SUBSTR in cur_url
+                    and cur_handle == new_handle):
                 try:
                     z._wd("DELETE", f"/session/{z.session}/window", {})
                 except Exception:
@@ -349,23 +402,46 @@ def _restore_original(z, original_url, result):
     """Best-effort switch to the original tab, by URL. Never
     guesses: when the URL is missing or matches more than one
     tab, the current tab is left as Zen activated it and the
-    result says so.
+    result says so. A scan failure is an error, not ambiguity
+    (Council 3 C5): it is reported as scan_error, not
+    original_ambiguous. A failure to resolve or switch to the
+    original tab after the scratch tab is already deleted is
+    reported as restore_failed, not raised: the close already
+    succeeded, and the runner records the outcome instead of
+    masking it with an exception.
     """
-    ambiguous = False
     try:
         entries, full = _scan(z)
+    except zen_dom.ZenDomError:
+        result['original_missing'] = False
+        result['original_ambiguous'] = False
+        result['scan_error'] = True
+        result['current_title'] = _title(z)
+        result['current_url'] = _url(z)
+        return
+    try:
         orig = _find_in_scan(entries, original_url)
     except zen_dom.ZenDomError:
         orig = None
         ambiguous = True
+    else:
+        ambiguous = False
     if orig is None:
         result['original_missing'] = not ambiguous
         result['original_ambiguous'] = ambiguous
         result['current_title'] = _title(z)
         result['current_url'] = _url(z)
         return
-    orig_full = _full_handle(full, orig['handle'])
-    _switch(z, orig_full)
+    try:
+        orig_full = _full_handle(full, orig['handle'])
+        _switch(z, orig_full)
+    except zen_dom.ZenDomError:
+        result['original_missing'] = False
+        result['original_ambiguous'] = False
+        result['restore_failed'] = True
+        result['current_title'] = _title(z)
+        result['current_url'] = _url(z)
+        return
     result['current_title'] = _title(z)
     result['current_url'] = _url(z)
     result['current_handle'] = orig_full[:8]
