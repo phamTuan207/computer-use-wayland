@@ -322,8 +322,11 @@ workspaces at the same time.
 - The worker's log commit a9511de landed on todolist-push before its
   completion handoff reached me. I verified from the log in git
   (improvements/worker-click5-visibility-log.md, read in full).
-  The handoff itself is still pending; this section is my
-  verification of the landed log, not a reaction to the handoff.
+  HANDOFF RECEIVED 10:55 +07 (T+25m): its contents match the landed
+  log exactly, no new facts. The two failed execs in its recorded
+  results are the documented A9 foreground-SSH break at about 33s,
+  already recorded in the log and recovered via detached relaunch.
+  Nothing further to verify on this worker.
 - 13 runs, same tab D1374C7C994D3DA72678E20C7FD099A0, same script
   /tmp/s2-diag2.mjs, no clicks, no typing, no text sent. Visible
   4/4 ok (all 2ms). Occluded 2/9 ok (A1 3ms, A2 2ms), 7/9 timeout.
