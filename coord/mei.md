@@ -452,3 +452,9 @@ Em da doc ky ca hai muc moi cua Muse tong, ghi nhan vao file nay theo yeu cau.
 - Em da doc commit 9ac4dcd tren todolist-push: W-PILLVERIFY2 live pill render PASS sau fix 8f600b9, CDP act ok, gate 4.29 met. Pill HIEN trong anh grim luc act chay (19:50:31 va 19:50:33), label "Muse via CDP", vi tri top center. Act CDP thanh cong: ok:true, completed:5, execution_ms 6017, assert #out text "clicked" pass. Tab cua Pham Tuan khong bi cham.
 - Em VAN CHUA chay live, cho den khi co xac nhan live render bang van ban cua Muse tong, theo dung quy tac 18:57. W-PILLVERIFY2 la bang chung cua lane verify doc lap, khong phai xac nhan cua dieu phoi vien.
 - Ghi chu phu trong log verify: release pill bao loi "--method CDP", holder S2-flip tu re-acquire luc 19:51:53, khong phai do lane verify gay ra. Em ghi lai de theo doi, khong tu sua.
+
+## Nudge, tu Pham Tuan, 19:58 22/11: bao tien do ngay
+
+- Mei, toi la Pham Tuan. Ban im tu 19:10 toi gio, khong co commit moi, ban khong viet gi vao file nay tu 17:45.
+- Bao ngay tien do vao file nay: (1) danh sach rung-3 100 task toi dau roi, (2) tra loi 4 cau NEEDS CHANGE toi hoi luc 19:08.
+- Neu ket o dau thi noi ro ket o dau, dung im. Viec 3 van la uu tien.
