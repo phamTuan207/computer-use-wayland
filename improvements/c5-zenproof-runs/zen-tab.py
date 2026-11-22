@@ -14,7 +14,14 @@ proved it: 15 of 15 comparable URLs had a different handle between
 two list scans a minute apart), so a handle from one session means
 nothing in the next. Every subcommand resolves its tab by URL
 substring inside its own session, fresh, and refuses on ambiguity.
-The scratch tab is the fixture URL
+The membership, count, and set-difference checks in cmd_open
+assume handles are stable within one cmd_open invocation: run 1
+supports this (handles were consistent across before, scan,
+/window/new, the (c) check, navigate, and the post-navigate check
+within one invocation); run 2's ephemerality was cross-session
+(two lists a minute apart, separate processes). If a handle were
+re-minted mid-invocation, the set-difference check refuses
+fail-closed. The scratch tab is the fixture URL
 'two_vision_fixture.html?clone=zen'. Its document title is the
 static 'Two-vision benchmark fixture' (the fixture JS only sets
 the H1 text to 'Clone zen thread' and never touches
@@ -27,8 +34,9 @@ current; if it does not, one explicit select is tried, and if that
 still fails the driver refuses to navigate or close anything).
 The new tab must also increase the tab count by exactly 1, the
 returned handle must not be one that already existed before the
-open, and the current tab is re-verified right after the
-navigate. The
+open, the handle set after the open must differ from before by
+exactly the new handle added and nothing removed, and the current
+tab is re-verified right after the navigate. The
 open exception handler deletes ONLY when the current tab is the
 fixture tab by URL AND by handle (the new handle from this open);
 it never deletes blind.
@@ -213,12 +221,40 @@ def cmd_open():
         # on the wrong tab. A count that did not grow means no new
         # tab exists to navigate, so refuse before any navigate
         # or DELETE.
-        count_after_new = len(_handles(z))
+        handles_after_new = _handles(z)
+        count_after_new = len(handles_after_new)
         if count_after_new != len(before) + 1:
             raise zen_dom.ZenDomError(
                 'new tab did not increase the tab count '
                 '(%d -> %d); refusing to navigate or close'
                 % (len(before), count_after_new))
+        # Set-difference check (Redteam P-C, amend 3): the count
+        # gate alone cannot catch a tab X opening after `before`
+        # AND another tab closing in the same window (net count
+        # +1) when /window/new returns X's handle: the membership
+        # check passes (X was not in `before`), the count gate
+        # passes (net +1), and every later check passes on X.
+        # Keep the full handle LIST from the count fetch, not
+        # just its length, and require the set difference
+        # against `before` to be exactly the new handle added
+        # and nothing removed. Use `before`, not the pre-check
+        # scan's handle list: a concurrent change between
+        # `before` and the scan is already in the scan, so a
+        # difference against the scan would miss it; against
+        # `before`, every ordering is caught. This check also
+        # independently catches the amend-2 H1 stale-handle case
+        # and the within-session re-mint case (Redteam P-A):
+        # both change the handle set by more than {new_handle}.
+        # Keep the membership check and the count gate as
+        # defense in depth with distinct error messages; they
+        # diagnose their own cases most clearly.
+        added = set(handles_after_new) - set(before)
+        removed = set(before) - set(handles_after_new)
+        if added != {new_handle} or removed:
+            raise zen_dom.ZenDomError(
+                'new tab handle set changed unexpectedly '
+                '(added %d, removed %d); refusing to navigate '
+                'or close' % (len(added), len(removed)))
         # Fix (c): the new tab must actually be current before any
         # /url navigate or DELETE. Marionette may leave the
         # previous tab current (the run 2 incident: the navigate
