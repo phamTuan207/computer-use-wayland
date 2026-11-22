@@ -10,6 +10,14 @@ run JSONs improvements/s2-flip-b1-runs/run-1..5.json and
 improvements/s2-flip-reopen-runs/run-1..5.json, all read from
 todolist-push. Every technical claim below cites file plus line.
 
+Fix pass 22 November 2026 (batch 13 task 2 review,
+docs/batch13-task2-b1-spec-review-20261122.md, verdict AMEND):
+findings F1 to F10 applied below; F11 and F12 confirmed no change;
+F13 recorded in section 8. Every corrected number was re-verified
+first-hand against todolist-push HEAD 704a218; the reviewed files
+are unchanged since the review HEAD 3167c76. The fix log is
+improvements/worker-click5-b1-spec-fix-log.md on todolist-push.
+
 ## 0. What (b1) is, and why it needs landing
 
 (b1) is the input-free send shape: set_value writes the composer text
@@ -24,9 +32,12 @@ Measured results, verified first-hand from the run JSONs on
 todolist-push:
 
 - (b1) Chromium-only measurement: 5 of 5 sends verified, median wall
-  18839.7 ms (18.8 s). Program elapsed 91.575 to 106.622 ms,
-  focus Enter 17 to 23 ms, pre-send count 0, delayed count 1, model
-  calls 0, all 5 runs. Source: improvements/s2-flip-b1-runs/run-1..5.json.
+  18839.7 ms (18.8 s). Program elapsed 91.575 to 106.622 ms
+  (field browsers.chromium.program.elapsed_ms in the run JSONs),
+  helper Enter 17 to 23 ms (field
+  browsers.chromium.focus_enter.enter.ms), pre-send count 0,
+  delayed count 1, model calls 0, all 5 runs. Source:
+  improvements/s2-flip-b1-runs/run-1..5.json.
   The 5 of 5 above is 5 of 5 completed runs, not 5 of 5 attempts:
   runs 2 to 5 each had a first attempt aborted by the routing gate
   (outcome aborted-routing, walls 12365.3, 14372.5, 12652.1, 13734.2
@@ -34,14 +45,20 @@ todolist-push:
   improvements/s2-flip-b1-runs/run-N-aborted.json.
 - S2 reopen, two browsers: 10 of 10 sends verified, 5 of 5 runs,
   median wall 28560.9 ms (28.6 s). Chromium program elapsed 99.412
-  to 113.005 ms, focus Enter 21 to 25 ms, pre-send count 0,
+  to 113.005 ms (field browsers.chromium.program.elapsed_ms),
+  helper Enter 21 to 25 ms (field
+  browsers.chromium.focus_enter.enter.ms), pre-send count 0,
   delayed count 1, model calls 0, all 5 runs. Source:
   improvements/s2-flip-reopen-runs/run-1..5.json.
 - The reopen log recommends EXPAND (improvements/worker-click5-
   s2-reopen-log.md, commit 1a3356d, section 6), but records as an
   open item that the durable landing is still missing: the (b1)
   shape lives in /tmp helpers plus harness flags (same log,
-  section 0). This spec is that landing design.
+  section 0). The focusenter helper source is now committed in the
+  repo as evidence (improvements/s2-flip-b1-runs/c5-focusenter.mjs,
+  commit 3ef8f55; see section 10 item 1, closed), but the shape is
+  still not landed code, and the count helper remains /tmp-only
+  (see section 10 item 2, open). This spec is that landing design.
 
 ## 1. Where (b1) lives today
 
@@ -52,15 +69,21 @@ Three pieces, in three places. Only the first is landed code.
    change events. It does NOT focus the field: the branch contains
    no e.focus() call. The read-back is the type_check assert,
    enforced inside cdp.mjs (scripts/dom_asserts.py:26 to 29).
-2. The focus plus Enter step is NOT landed. It is /tmp/c5-focusenter.mjs,
-   a laptop-only helper. Its behavior is documented in
-   improvements/worker-click5-input-fix-log.md, section 7.3:
-   Runtime.evaluate focus on textarea[aria-label="Message"], assert
-   activeElement is the textarea, then Input.dispatchKeyEvent
-   keyDown plus keyUp Enter. Zero mouse events. Returns
-   {ok, focus, enter}. The harness calls it from
-   scripts/s2_flip_live.py:497 to 519 (focus_enter) and
-   scripts/s2_flip_live.py:76 (LAPTOP_FOCUSENTER constant).
+2. The focus plus Enter step is NOT landed. It is /tmp/c5-focusenter.mjs
+   on the laptop, now also committed in the repo at
+   improvements/s2-flip-b1-runs/c5-focusenter.mjs (commit 3ef8f55,
+   42 lines, 2478 bytes, sha256
+   94ee467ed3067e044491ad19153c24b73d574a8106a5367db454c0e47e1a695f).
+   It is committed as evidence only, not as landed code. Its
+   behavior is documented in
+   improvements/worker-click5-input-fix-log.md, section 7.3, and
+   the committed file matches that description: Runtime.evaluate
+   focus on textarea[aria-label="Message"], assert activeElement
+   is the textarea, then Input.dispatchKeyEvent keyDown plus keyUp
+   Enter. Zero mouse events. Returns {ok, focus, enter}. The
+   harness calls it from scripts/s2_flip_live.py:497 to 519
+   (focus_enter) and scripts/s2_flip_live.py:76
+   (LAPTOP_FOCUSENTER constant).
 3. The program shape is harness-only. scripts/s2_flip_live.py:129
    to 161 (build_program_set_value) emits set_value plus a value
    assert, 2 actions, no key, no focus. The Enter comes from the
@@ -100,14 +123,14 @@ scripts/dom_asserts.py, require_asserts, which already fails
 closed on unknown action types (see section 5).
 
 The key dispatch itself is trusted and already landed:
-scripts/cdp.mjs:390 to 412 (key) dispatches Input.dispatchKeyEvent
+scripts/cdp.mjs:390 to 414 (key) dispatches Input.dispatchKeyEvent
 keyDown plus keyUp, with text '\r' for Enter (line 410). The
 D-B1 probe shows dispatchKeyEvent answers in 2 ms on the stuck
 tab, while dispatchMouseEvent times out
 (improvements/worker-click5-input-fix-log.md, section 7.1).
 
 For contrast, fill cannot be used here: scripts/cdp.mjs:534 to
-541 (fill) starts with click(a), and scripts/cdp.mjs:292 to 313
+541 (fill) starts with click(a), and scripts/cdp.mjs:292 to 314
 (click) dispatches mouseMoved, mousePressed and mouseReleased,
 which is the stalled call. The fill path also checks
 document.activeElement === e after the click (line 536), which
@@ -137,8 +160,15 @@ cdp.mjs.
 - Cost: 6 files to touch (cdp.mjs, code_exec.py, cu.py,
   dom_asserts.py, plus the harness scripts/s2_flip_live.py and
   the tests). The 4 mirror files are a one-time validation-mirror
-  update, and the mirror already exists for every other action
-  type. One small cost under A: the focus branch duplicates
+  update. The three browser whitelists do NOT agree by construction
+  today: hover_click is in the cdp.mjs whitelist (line 434) and in
+  the code_exec.py allowed set (line 217), but it is NOT in the
+  cu.py browser allowed set (line 1299) and NOT in the cu.py
+  browser element-action check (line 1341); a grep for hover_click
+  across cu.py returns zero matches. That is a known pre-existing
+  drift, not something this landing fixes. The landing must verify
+  the three whitelists agree for focus (see section 8) instead of
+  assuming the pattern. One small cost under A: the focus branch duplicates
   set_value's unavailable-field checks in a second branch. That
   is a small maintenance duplication; it does not change the
   recommendation.
@@ -184,10 +214,17 @@ for the field shape; sections 6, 7, 9 and 10 stand unchanged.
 
 ## 4. The landed focus action (option A)
 
-Semantics, replicating /tmp/c5-focusenter.mjs as documented in
+Semantics, based on the committed helper
+improvements/s2-flip-b1-runs/c5-focusenter.mjs (commit 3ef8f55),
+cross-checked against its description in
 improvements/worker-click5-input-fix-log.md, section 7.3, but
 resolving the element through the snapshot ref instead of a CSS
-selector:
+selector. Steps 2, 4, and 5 below are design additions borrowed
+from set_value and fill, not helper behavior, as labeled on each
+step. What the helper actually does: if the textarea is missing
+it returns {focused: false, error: 'no-textarea'}; on focus
+failure it throws 'composer did not gain focus'; it performs no
+unavailable-field checks.
 
 1. Resolve the element with pageState (scripts/cdp.mjs:157 to
    167), exactly one of ref or selector, same as every other
@@ -195,16 +232,38 @@ selector:
 2. Reject an unavailable field with the same checks as the
    set_value branch: disabled, the :disabled pseudo-class,
    readOnly, aria-disabled, inert (scripts/cdp.mjs:478). Error
-   text 'field unavailable'.
+   text 'field unavailable'. Design addition borrowed from the
+   set_value branch, not helper behavior.
 3. Call e.focus() in page context. No scroll, no mouse, no key.
    The evaluate expression is the pageState-resolved element
    followed by e.focus(), the same resolve-then-act shape the
    set_value branch uses.
 4. Verify document.activeElement === e. On failure throw
    'field is not editable or did not gain focus', the exact
-   wording fill uses (scripts/cdp.mjs:537).
+   wording fill uses (scripts/cdp.mjs:537). Design addition
+   borrowed from fill, not helper behavior: the helper throws
+   'composer did not gain focus' instead.
 5. Return ok. The action counts toward completed like any other
-   action (scripts/cdp.mjs:546).
+   action (scripts/cdp.mjs:546). Design addition: a deliberate
+   narrowing of the helper's {ok, focus, enter} shape to the
+   focus step alone, since the Enter becomes a separate key
+   action in the landed program.
+
+Note on the Enter wire params (helper versus landed key). The
+helper sends code: 'Enter' on both keyDown and keyUp, and text:
+'\r' on keyDown only (its keyUp carries no text). The landed
+key() never sends a `code` field for any key; it sends key,
+modifiers, windowsVirtualKeyCode, and nativeVirtualKeyCode only
+(scripts/cdp.mjs:402), and it sends the same params object,
+including text '\r', for both keyDown and keyUp (lines 411 to
+412). Both differences are probably harmless: the composer keys
+off e.key, and browsers ignore text on keyUp. But the section 3
+fidelity argument is step-level only, and the landing would
+silently change the wire params of the measured Enter. The
+landing must record the decision: either justify the two
+differences as harmless, or decide whether key() needs a `code`
+field for Enter. Do not change key() silently inside the landing
+without recording the decision.
 
 Notes on scope. The focus action does not scroll the element
 into view; set_value already requires the field to be visible
@@ -223,10 +282,13 @@ scripts/cdp.mjs:
 - Line 435 to 437: add 'focus' to the element-action list (exactly one
   ref or selector).
 - Dispatch loop, after line 473 (set_value branch): add a focus
-  branch implementing section 4. It must sit between set_value
-  and key in the chain; the loop order follows the action list,
-  so no ordering code is needed.
-- No change to key (lines 390 to 412), to set_value (lines 473
+  branch implementing section 4. Keep the branches in action-list
+  order for readability, with the focus branch between set_value
+  and key; that is a style suggestion, not a requirement, because
+  the dispatch chain is an else-if over distinct action types
+  (lines 471 to 545), so branch position is irrelevant to
+  execution order and the action list order decides.
+- No change to key (lines 390 to 414), to set_value (lines 473
   to 533), or to fill (lines 534 to 541).
 
 scripts/code_exec.py:
@@ -252,24 +314,44 @@ scripts/dom_asserts.py:
   click entry (lines 48 to 50) and the fill entry (lines 63
   to 65).
 - Add a send-requires-focus rule to require_asserts: a send key
-  whose nearest preceding value action in the same batch is
-  set_value (per _is_send_key, lines 96 to 114, which covers
-  Enter after type, fill, or set_value) with no preceding focus
-  action in the same batch raises DomAssertError. The scope is
-  set_value-preceded sends only: fill, click, confirm_click,
-  hover_click, and type are focus-establishing actions. Fill
-  focuses internally through its click (scripts/cdp.mjs:536 to
-  537), and a click establishes focus, so the rule must not
-  reject the Brave fill program [fill, key Enter, assert] or the
-  desktop focus_type chain [click, type, key Enter]
-  (scripts/dom_act.py:708 to 712, gated at 748). This is the
+  (per _is_send_key, lines 96 to 114, which covers Enter after
+  type, fill, or set_value) with no preceding focus-establishing
+  action in the same batch raises DomAssertError. "Preceding"
+  means before the send key in the same batch; a focus action
+  after the send key does not satisfy it. "Focus-establishing"
+  is defined through the ASSERTS table, not a hardcoded list:
+  any action whose ASSERTS entry is focus_check (click,
+  double_click, confirm_click, hover_click,
+  scripts/dom_asserts.py lines 48 to 59), plus the new focus
+  action (which this spec adds to ASSERTS with focus_check),
+  plus fill as an explicit exception. Fill is the one action
+  the table definition alone would wrongly exclude: its ASSERTS
+  entry is type_check (dom_asserts.py lines 63 to 65), but it
+  focuses through its internal click (scripts/cdp.mjs:535,
+  await click(a), then the activeElement check on line 536), so
+  a literal ASSERTS-only wording would wrongly reject [fill,
+  key Enter] and break the existing passing shape [fill, key
+  Enter, assert]. Under this wording [set_value, key Enter]
+  raises, [click, type, key Enter] passes (the click is the
+  focus-establishing action; type itself establishes no focus:
+  in dom_act.py focus_type, lines 664 to 712, the click
+  establishes focus and the chain built at lines 708 to 712 is
+  [click, type, key Enter]), [double_click, type, key Enter]
+  passes (the double click focuses, dom_asserts.py lines 51 to
+  53, cu.py lines 2048 to 2054), [fill, key Enter] passes
+  (fill focuses internally through its click,
+  scripts/cdp.mjs:534 to 537), [type, key Enter] raises, and
+  [set_value, focus, key Enter] passes. Note `type` is not a
+  focus-establishing action, and there is no `type` action at
+  all in cdp.mjs (whitelist line 434), so listing it as one
+  would be vacuous on the code-exec path as well. This is the
   enforcement for section 2. Without it, a program could skip
   focus and fail silently.
 - No change to the set_value entry (lines 66 to 68) or to the
   trailing-assert rule (a trailing assert action satisfies the
   sent_bubble requirement).
 - No change to _api_dom_act is needed: it already passes
-  available focus_check True (scripts/code_exec.py:936 to 938),
+  available focus_check True (scripts/code_exec.py:936 to 939),
   with the comment that focus_check is available by
   construction.
 
@@ -359,7 +441,25 @@ The remaining verification is unchanged by this landing:
   in all 10 reopen sends.
 - P9 viewport capture after the scored wall, reviewed by a
   human before scoring (scripts/s2_flip_live.py:340 to 356).
-  P9 PASS 10 of 10 in the reopen.
+  P9 PASS 10 of 10 in the reopen. That claim is now backed by
+  committed render evidence, not only by log prose: all 25 P9
+  PNGs are in the repo (commit 3ef8f55) with a manifest,
+  improvements/s2-flip-p9-manifest.md, and the run JSONs name
+  the PNGs directly through the p9 field (a dict per browser
+  with ok true, the png path, and wall_ms; 34 entries across
+  all 24 run JSONs in the s2-flip-* directories, zero null).
+  The manifest paths agree with the JSON paths on all 25 rows.
+  The manifest auditor note saying the run JSONs carry p9 as
+  null is wrong and must not be repeated. Verification is
+  hash-level only for 23 of the 25 frames: 2 frames were
+  pixel-viewed and match the manifest ((b1) run-1 Chromium
+  shows bubble C5-B1-R1-CHROMIUM-IGNORE-TEST with the composer
+  empty; flip run-1 Chromium shows no test bubble at the
+  earlier scroll position). The 5 original flip Chromium PNGs
+  show NO test bubble, which agrees with their JSON outcome
+  failed-unverified; they must not be cited as send evidence.
+  The 5 a1 PNGs are named by their run JSONs but are not in
+  the repo; they are not part of the 25 manifest rows.
 - CB-1 for the landed program: input_sent = completed >= 3,
   target_received = completed >= 1, verified = V12 found
   (section 5). The program's own trailing bubble assert is
@@ -425,6 +525,66 @@ Wiring tests, tests/test_s2_flip_wiring.py:
   (it is 12 of 12 today; improvements/worker-click5-s2-reopen-
   log.md, section 1).
 
+Missing tests, added by the fix pass (review findings F10 and
+section 4):
+
+- (a) Focus failure path: a focus where the evaluate returns
+  activeElement !== e must throw 'field is not editable or did
+  not gain focus' (the section 4 step 4 wording). The listed
+  tests above cover the unavailable-field error only, not the
+  focus-failure error.
+- (b) Focus via selector: resolve the element by selector, not
+  only by ref. The spec says "exactly one of ref or selector"
+  (section 4 step 1).
+- (c) Missing trailing assert on the landed shape: [set_value,
+  focus, key Enter] without the trailing assert must fail P5.
+  The existing test_program_without_trailing_assert_would_fail_p5
+  covers the fill shape only, not the landed shape.
+- (d) Failing-first anchor for the dom_asserts change: the
+  landed 4-action program must fail require_asserts BEFORE the
+  focus entry lands (unknown action type), and pass after. The
+  failing-first anchor above covers only the cdp.mjs rejection
+  ('unsupported action').
+- (e) The corrected send-requires-focus rule (section 5): [type,
+  key Enter, assert] with no click must raise DomAssertError,
+  and [click, type, key Enter, assert] must pass. A negative
+  test that a program of [set_value, focus, key Enter, assert]
+  where the focus step is placed AFTER the Enter raises
+  DomAssertError under the corrected rule (focus must precede
+  the send key). This pins the "preceding" definition.
+- (f) Whitelist sync: a test asserting the three browser
+  whitelists (scripts/cdp.mjs line 434, scripts/code_exec.py
+  line 217, scripts/cu.py line 1299) contain the same set. This
+  locks in the section 3 drift note and catches future drift.
+  Scoping decision, made by this fix pass: the test is scoped
+  to the landed set plus the recorded drift. It asserts focus
+  is in all three whitelists and the three sets are equal except
+  for the known hover_click drift (cu.py lines 1299 and 1341
+  lack hover_click). Adding hover_click to cu.py is a follow-up,
+  not part of this landing, so the test does not require it.
+- (g) The focus unit tests need the whole-adapter vm run with a
+  fake page carrying globalThis.__agentCu, refs, and an
+  activeElement stub, like the existing harvest test's fake page
+  in tests/cdp_validation.mjs. The existing key-function trick
+  in that file (line 6, slicing the source between
+  'async function key(' and 'async function assertAction(')
+  does not apply to focus, because the focus branch lives
+  inline in the handle() dispatch loop, not in a standalone
+  function. Do not try to slice a function that does not exist.
+- The landed program builder emits the focus action with a ref
+  (not a selector) and that ref is the same composer ref as the
+  set_value action, so a wrong-ref focus cannot silently focus
+  another element.
+- In the live dry run, record the focus step's own timing
+  separately (one Runtime.evaluate) so the section 8 derivation
+  can be checked against a real number instead of the 2 to 3 ms
+  estimate. The current program elapsed_ms covers the whole
+  program; the focus cost inside it is not separately visible.
+  Record the post-Enter bubble latency the same way (one
+  Runtime.evaluate loop after the Enter), so the 0 to 10 ms
+  assert component can be checked against a real number instead
+  of the first-poll assumption.
+
 Live dry run, scratch tabs, both browsers:
 
 - Command: python3 scripts/s2_flip_live.py --run 0 --dry-run
@@ -437,11 +597,45 @@ Live dry run, scratch tabs, both browsers:
   True, completed 3). The reopen dry run 0 is the baseline
   for comparison: PASS, wall 30123.9 ms, Chromium elapsed
   85.8 ms, completed 2 (improvements/worker-click5-s2-reopen-
-  log.md, section 3). The landed dry run must match it except
-  completed 4 instead of 2, and Chromium elapsed about 105 to
-  115 ms instead of 85.8 ms: the landed 4-action program adds a
-  focus step (measured 17 to 25 ms in the helper) and a key step
-  (about 2 ms) to the 85.8 ms baseline.
+  log.md, section 3). That baseline rests on log prose only:
+  no run-0 JSON exists in the repo
+  (improvements/s2-flip-reopen-runs/ holds only run-1..5.json
+  plus the P9 PNGs), so the landing team cannot recompute it
+  from a JSON. The landed dry run must match it except
+  completed 4 instead of 2, and Chromium elapsed about 90 to
+  100 ms instead of 85.8 ms. Derivation, corrected from the
+  spec's first version, which wrongly added the live Enter time
+  as if it were the focus cost: the 17 to 25 ms figure is the
+  ENTER time, not the focus time (field
+  browsers.chromium.focus_enter.enter.ms: 17 to 23 ms for the
+  (b1) runs, 21 to 25 ms for the reopen runs, measured around
+  the two dispatchKeyEvent calls only; the focus evaluate was
+  never timed separately), and it is a LIVE measurement, while
+  the dry run runs on scratch tabs, where Enter measured 2 ms
+  (improvements/worker-click5-input-fix-log.md, section 7.4:
+  "focus_enter ok True (focused TEXTAREA, Enter 2ms)"). The
+  landed 4-action program drops the separate value assert the
+  baseline program carried (one Runtime.evaluate, about 2 to
+  3 ms; the flip log records Runtime.evaluate at 1 to 3 ms and
+  V12 elapsed at 2 to 3 ms) and adds one focus evaluate (one
+  Runtime.evaluate, about 2 to 3 ms, assuming the focus plus
+  activeElement check is one combined evaluate), Enter on
+  scratch (about 2 ms), and the trailing bubble assert polling
+  (assertAction polls every 10 ms, scripts/cdp.mjs:415 to 426,
+  so about 0 to 10 ms incremental over the value assert, which
+  passes on its first poll because set_value already verified
+  the value internally, scripts/cdp.mjs:517 to 518, repeated
+  at 528). Range: 85.8 plus 2 to 3 plus 2 plus 0 to 10 minus
+  2 to 3, which is 86.8 to 98.8 ms, stated as about 90 to
+  100 ms. Caveat: the 0 to 10 ms component assumes the bubble
+  is present at the first poll (assertAction returns on its
+  first passing poll, scripts/cdp.mjs:422). No cited
+  measurement bounds how long the bubble takes to render after
+  the Enter on a scratch tab. The landing must measure the
+  post-Enter bubble latency on a scratch tab (one
+  Runtime.evaluate loop after the Enter) or widen the dry-run
+  range; see the added measurement asks in the missing-tests
+  list above.
 
 ## 9. Landing order
 
@@ -475,30 +669,44 @@ Live dry run, scratch tabs, both browsers:
    improvements/worker-click5-s2-reopen-log.md, section 3):
    avoid clone2-watch holds, record per run the routing gate
    (strict or relaxed), pre_count, delayed_count, program
-   completed (must be 4 on Chromium), V12, CB-1. Write run
-   JSONs to improvements/s2-flip-land-runs/run-1..5.json and
-   P9 PNGs alongside. P9 reviewed before scoring.
+   completed (must be 4 on Chromium), V12, CB-1. Live program
+   elapsed expectation on Chromium: about 110 to 145 ms.
+   Derivation: live (b1) program elapsed 91.575 to 106.622 ms
+   (field browsers.chromium.program.elapsed_ms) plus focus
+   about 2 to 3 ms plus live Enter 17 to 25 ms (field
+   browsers.chromium.focus_enter.enter.ms) plus assert polling
+   about 0 to 10 ms minus the dropped value assert about 2 to
+   3 ms, which is 107.6 to 142.6 ms, stated as about 110 to
+   145 ms. Write run JSONs to
+   improvements/s2-flip-land-runs/run-1..5.json and P9 PNGs
+   alongside. P9 reviewed before scoring.
 7. Write the landing verification log. The reopen EXPAND
    recommendation stands only if the 5 re-runs match the
    reopen numbers: 10 of 10 sends, pre-send count 0,
    delayed count 1, model calls 0, median wall comparable
    to 28.6 s. If they do not match, the log says so and the
-   recommendation is revised, not assumed.
+   recommendation is revised, not assumed. The log repeats
+   the section 7 warning: the 5 original flip Chromium PNGs
+   show no test bubble and must not be cited as send evidence.
 
 ## 10. What is still missing before it can land
 
 Stated plainly. None of these is fixed by writing this spec.
 
-1. The /tmp/c5-focusenter.mjs source is not in the repo. It
-   lives only on the laptop. Its exact semantics must be
-   recovered before the focus action is written. The
-   reconstruction basis is improvements/worker-click5-input-
-   fix-log.md, section 7.3 (Runtime.evaluate focus on
-   textarea[aria-label="Message"], assert activeElement,
-   dispatchKeyEvent keyDown plus keyUp Enter, return {ok,
-   focus, enter}). If the laptop file is gone, the section 4
-   pseudocode is the reconstruction, and it must be re-proven
-   on a scratch tab before the live re-run.
+1. CLOSED by the fix pass (review F1). The /tmp/c5-focusenter.mjs
+   source IS in the repo: improvements/s2-flip-b1-runs/c5-focusenter.mjs,
+   commit 3ef8f55 ("C5-P9-EVIDENCE: commit 25 P9 screenshots plus
+   manifest and focusenter helper", 28 files), 42 lines, 2478 bytes,
+   sha256 94ee467ed3067e044491ad19153c24b73d574a8106a5367db454c0e47e1a695f.
+   Its semantics match the input-fix log section 7.3 description:
+   Runtime.evaluate focus on textarea[aria-label="Message"], assert
+   it is document.activeElement, then Input.dispatchKeyEvent
+   keyDown plus keyUp Enter, zero mouse events, returns {ok,
+   focus, enter}. Section 4 cites the committed file as the
+   reconstruction basis. The "if the laptop file is gone" recovery
+   clause is moot for focusenter. The file is still at /tmp on the
+   laptop, but it is no longer laptop-only. The helper is committed
+   as evidence only; the focus action itself is still not landed.
 2. The /tmp/c5-count.mjs source is also not in the repo, and
    this landing does not move it. Both the pre-send guard and
    the delayed count depend on it being present on the laptop
@@ -545,23 +753,36 @@ Stated plainly. None of these is fixed by writing this spec.
     the way the harvest does (scripts/cdp.mjs:250 to 251).
     Section 4 calls it a follow-up; it is listed here so it is
     tracked.
-11. The P9 evidence for the measurements the spec leans on is
-    missing from the repo. The 10 reopen P9 PNGs (5 runs x 2
-    browsers, promised in improvements/worker-click5-s2-reopen-
-    log.md, section 8) and the 5 (b1) P9 PNGs are not on
-    todolist-push. Section 7 asserts P9 PASS 10 of 10 in the
-    reopen from the log's prose descriptions, but no reviewer
-    can re-check the render from the repo. Either the PNGs land,
-    or the landing records this gap as open.
+11. CLOSED by the fix pass (review F2). All 25 P9 PNGs are in the
+    repo, committed in 3ef8f55 alongside
+    improvements/s2-flip-p9-manifest.md: 5 (b1) Chromium PNGs
+    (1,210,605 bytes), 10 reopen PNGs (2,354,937 bytes), 10
+    original flip PNGs (2,740,488 bytes), 6,306,030 bytes total.
+    The run JSONs name the PNGs directly through the p9 field
+    (a dict per browser with ok true, the png path, and wall_ms;
+    34 entries across all 24 run JSONs in the s2-flip-*
+    directories, zero null), and the manifest paths agree with
+    the JSON paths on all 25 rows. The manifest auditor note
+    saying the run JSONs carry p9 as null is wrong and must not
+    be repeated. Verification is hash-level only for 23 of the
+    25 frames (sha256, byte size, and PNG magic match on 25 of
+    25 rows); 2 frames were pixel-viewed and match the manifest
+    ((b1) run-1 Chromium, flip run-1 Chromium). The 5 original
+    flip Chromium PNGs show no test bubble and must not be
+    cited as send evidence. Precision note: the 5 a1 PNGs are
+    named by their run JSONs but are not in the repo; they are
+    not part of the 25 manifest rows, so this item is still
+    closed.
 
 ## 11. Acceptance criteria for the landing
 
 - All unit and wiring tests in section 8 pass on the VM.
 - Live dry run 0 passes with the conditions in section 8
-  (Chromium elapsed about 105 to 115 ms, completed 4).
+  (Chromium elapsed about 90 to 100 ms, completed 4).
 - 5 live re-runs: 10 of 10 sends verified, pre-send count 0
   and delayed count 1 in every run, model calls 0, median
-  wall comparable to the reopen 28.6 s.
+  wall comparable to the reopen 28.6 s, live Chromium program
+  elapsed about 110 to 145 ms (section 9 step 6).
 - No /tmp helper call remains in the Chromium send path:
   grep for LAPTOP_FOCUSENTER in scripts/s2_flip_live.py
   returns nothing, and the Chromium program is the landed
