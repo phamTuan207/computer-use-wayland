@@ -266,8 +266,16 @@
   (append-only): improvements/worker-y6e-rebuild-load-log.md,
   improvements/worker-y6r-council-2-evidence.md,
   improvements/worker-y6r-council-3-safety.md.
-- [log commit + staging commit to fill below; push verified with git ls-remote]
-- Push verification: [TO FILL after push]
+- 85650af (T+12m): C5-Y6-PAPER work log (sections 0-3, 5). Push verified:
+  ls-remote showed 85650afb875f4058726d7f3200e7d951a2d60994 = HEAD.
+- 8125a8a (T+13m): C5-Y6-PAPER staging record + live-state finding (M4),
+  trial doc baseline fix, ldd evidence. 4 files, 202 insertions, 6 deletions.
+  Push verified: ls-remote showed
+  8125a8a8de1b4ebdd2898ba354e7fa831193c4f7 = HEAD (16:16 +07).
+  Note: remote HEAD had moved to 5f145b3 (rung 2 PASS commits) between my
+  pushes; my commits sit on top of it in order, all four present in the
+  pushed history. Other workers' uncommitted changes were left untouched.
+- Final runner md5 on VM repo and laptop repo copy: b50396bf1c68c1e047733b2a5b24f35a.
 
 ## 4. Staging record (laptop /tmp/y6-nested/conf, after re-review GO)
 
