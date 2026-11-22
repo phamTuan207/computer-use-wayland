@@ -683,4 +683,97 @@ workspaces at the same time.
   passes landed, task 2 running). Clone2 at 90% usage: NO large
   batch 13 (section 15); load shifts to clone1.
 
-## 20. (to be filled as results land)
+## 20. C5-P2-IMPL DONE, verified by me, 11:57 +07 (T+1h27m)
+
+- Worker C5-P2-IMPL completed 11:57:10 +07. Deliverable: step 7 P2
+  implementation, commit 292753f on todolist-push, 17 files,
+  +2227/-266. Log: improvements/worker-click5-p2-impl-log.md.
+  Failing-first tests committed first as d2da482; the file now holds
+  86 tests.
+- MY VERIFICATION (git show + test runs, this session):
+  - Commit 292753f exists on origin/todolist-push (tip at check).
+  - dom_rect_to_image_point has ZERO production callers: the only
+    hit in scripts/*.py at 292753f is the definition itself
+    (fastpath.py:229). Tests only (pick4_fastpath x4,
+    click2_redteam x3, click3_redteam2 x2, p2_element_ref x1). Kept
+    for tests/legacy, cannot be deleted yet. A9 lands as claimed.
+  - New files confirmed: scripts/element_ref.py,
+    scripts/zen_backend.py, tests/test_p2_element_ref.py.
+  - P2 + RT2 suites re-run by me at the tip: Ran 137 (86 + 51), OK
+    in 1.08s. Discover count reconciles exactly: baseline 2024 + 86
+    new P2 tests = 2110, matching the worker's Ran 2110, 0 failures,
+    4 pre-existing errors, 17 skipped.
+  - Validator fix confirmed in code (zen_dom.py): check_viewport_geometry
+    accepts verified_moz_inner; docstring documents the verified-origin
+    override; line 207-208 "Fail closed unless a verified origin is
+    supplied"; verified numbers are validated (non-negative, must close
+    inside window size). zen_backend.py accepts and threads
+    verified_moz_inner (lines 57, 76, 317); zen_dom.py:765
+    viewport_origin accepts it too.
+  - Arithmetic confirmed: verified origin (2749, 922) = window origin
+    [2509, 914] + verified moz (240, 8); moz-computed (2783, 980) =
+    [2509, 914] + reported moz (274, 66). The worker's first validator
+    version (accept the moz-computed origin with a warning) was wrong
+    and it corrected itself: accepting (2783, 980) would ground clicks
+    34px right and 58px down. The rework to the verified-origin path
+    is correct and recorded.
+  - F5 pin vacuity FIXED: the test is rewritten as a behavioral test;
+    the log documents the old mutation (unconditional [[0.0, 20.0]])
+    now fails it. The test file cites the mutation evidence at line
+    229. CLI act branch is binding-when-present, NOT mandatory: the
+    worker proved the loop does not stamp act-now JSON (first_action.py
+    passes it through unstamped), so mandatory enforcement refused
+    every live batch and masked the real refusal reasons. The
+    program/DOM interfaces keep mandatory CB-2. Full mandatory CB-2
+    on the JSON batch interface needs the agent loop to stamp scope
+    and observation_id into act-now JSON (open item for the step-9
+    prototype).
+  - Screen-scope legality refusal deleted (protocol section 8); G28
+    stays. Eval removal verified, no new code (landed step 0, 18f2304;
+    s0 bundle Ran 29, OK). Zen adapter DONE: ZenDomBackend (Marionette
+    session ownership with timeout + finally close, Zen window-class
+    wait, snapshot binding, 120s expiry); pointer delegate wiring is
+    a step-9 prototype gap, until then it grounds and verifies but
+    refuses input with no_pointer_delegate.
+  - Two transient anomalies, both diagnosed by the worker, neither its
+    change: (1) the first final-discover launch was SIGTERM-killed at
+    about 50s; the VM had rebooted (monotonic clock read 267s at
+    11:52 +07). The one failed exec in its recorded results is that
+    kill. (2) The relaunched discover showed 2 failures that pass on
+    re-run: both age a meta by 121s and expect the age refusal, but on
+    a fresh boot the monotonic value goes negative and the identity
+    check fires first. Re-ran both at monotonic 284s: Ran 2, OK. A
+    verbose re-run 4 minutes later gave the clean 0-failure result.
+    Accepted with the evidence given; the boot-related flakiness is
+    noted for the next discover runner.
+- STEP 7 STATUS: implementation DONE with unit/fixture proof. The
+  step 7 gate (P2 proven on the S2 task class, DOM verification
+  mandatory) still needs LIVE proof, which needs the validator proof
+  first (open item below).
+- ACTION: spawned C5-VALIDATOR-PROOF (3b34be64) 11:58 +07: live
+  validator proof on the real Zen window. Re-measure current geometry
+  first (do not assume the 925-wide state); measure the verified moz
+  live with the MOZ-GROWTH pixel-proof method (never hardcoded);
+  run the origin stage with the measured verified moz wired through
+  the backend; independent cross-check; F9/F10 still refused; show
+  the wiring works. Scratch fields only, no real thread, no
+  submission. Follows the focus rule. Log:
+  improvements/worker-click5-validator-proof-log.md.
+- OPEN ITEMS carried forward (from the P2-IMPL log, repo-only worker):
+  live validator proof (now commissioned as C5-VALIDATOR-PROOF);
+  H1/H2/H3 stay open for MOZ-GROWTH follow-ups; full mandatory CB-2
+  on the JSON batch interface needs the agent loop to stamp act-now
+  JSON (step-9 prototype item); step 7 gate live proof needs the
+  validator proof first.
+
+## 21. Still running (T+1h28m)
+
+- C5-VALIDATOR-PROOF (3b34be64): live validator proof.
+- C5-CLONE1-APPROVE (697eeb0f): approve clone1's 2 pending cards.
+  Spawned 11:47, no handoff yet.
+- Clone1 batch 10 running (task 1 fix pass, task 2 council 1-2 done
+  per d2775c4 11:25). Clone2 batch 12 nearly done (tasks 1+3 fix
+  passes landed, task 2 running). Clone2 at 90% usage: NO large
+  batch 13 (section 15); load shifts to clone1.
+
+## 22. (to be filled as results land)
