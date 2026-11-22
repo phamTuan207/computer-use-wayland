@@ -1,0 +1,252 @@
+{
+  "run": 6,
+  "dry_run": false,
+  "activate": true,
+  "message_prefix": "G-PILL-RETRY",
+  "program_variant": "chromium=set_value",
+  "chromium_set_value": true,
+  "mux_baseline_ms": 843.8,
+  "browsers": {
+    "chromium": {
+      "browser": "chromium",
+      "label": "clone2",
+      "endpoint": "http://127.0.0.1:9223",
+      "tab_title": "Muse",
+      "target_id": "A67A718D5E236F894F9863F48834743C",
+      "observe": {
+        "elements": 55,
+        "truncated": false,
+        "wall_ms": 1984.5,
+        "composer_present": true
+      },
+      "routing": {
+        "source": "dom-chromium",
+        "target_kind": "chromium-content",
+        "fell_through": [],
+        "reason": "complete coverage: 55 elements, not truncated",
+        "coverage": {
+          "elements": 55,
+          "truncated": false
+        }
+      },
+      "outcome": "sent",
+      "message": "G-PILL-RETRY-R6-CHROMIUM-IGNORE-TEST",
+      "model_calls": 0,
+      "program_variant": "set_value",
+      "activation": {
+        "ok": true,
+        "before": {
+          "ms": 2,
+          "value": {
+            "visibility": "visible",
+            "hasFocus": false
+          }
+        },
+        "activate": {},
+        "bringToFront": {},
+        "after": {
+          "ms": 18,
+          "value": {
+            "visibility": "visible",
+            "hasFocus": true
+          }
+        },
+        "ms": 1016.9,
+        "rc": 0
+      },
+      "pre_count": {
+        "count": 0,
+        "items": 44,
+        "ms": 954.1
+      },
+      "program": {
+        "ok": true,
+        "api_calls": 2,
+        "elapsed_ms": 319.387,
+        "error": null,
+        "error_type": null,
+        "log": [
+          "dom_act ok True completed 4 ms 38 error None"
+        ],
+        "wall_ms": 1741.1
+      },
+      "cb1": {
+        "input_sent": true,
+        "target_received": true,
+        "verified": true,
+        "completed": 4
+      },
+      "v12": {
+        "found": true,
+        "items": 42,
+        "role": "user",
+        "side": "user",
+        "textLen": 40,
+        "attempts": 1,
+        "elapsed_ms": 2,
+        "ms": 1267.6
+      },
+      "wall_ms": 4980.5
+    }
+  },
+  "wall_ms": 16827.3,
+  "delayed_count": {
+    "chromium": {
+      "count": 1,
+      "items": 42,
+      "ms": 784.5
+    }
+  },
+  "p9": {
+    "chromium": {
+      "ok": true,
+      "png": "improvements/gpill-retry-runs/p9-run6-chromium.png",
+      "wall_ms": 1751.3
+    }
+  },
+  "spans": [
+    {
+      "phase": "setup-lease",
+      "wall_ms": 982.4,
+      "laptop_ms": null
+    },
+    {
+      "phase": "broker-start",
+      "wall_ms": 1200.3,
+      "laptop_ms": null
+    },
+    {
+      "phase": "tabs-chromium",
+      "wall_ms": 1824.4,
+      "laptop_ms": null
+    },
+    {
+      "phase": "observe-chromium",
+      "wall_ms": 1984.5,
+      "laptop_ms": null
+    },
+    {
+      "phase": "broker-finish",
+      "wall_ms": 1153.4,
+      "laptop_ms": null
+    },
+    {
+      "phase": "activate",
+      "wall_ms": 1016.9,
+      "laptop_ms": null
+    },
+    {
+      "phase": "act-chromium",
+      "wall_ms": 1741.1,
+      "laptop_ms": 319.387
+    },
+    {
+      "phase": "verify-chromium",
+      "wall_ms": 1267.6,
+      "laptop_ms": 1267.6
+    }
+  ],
+  "ssh_calls": [
+    {
+      "label": "mux-probe",
+      "wall_ms": 706.1,
+      "rc": 0
+    },
+    {
+      "label": "mux-probe",
+      "wall_ms": 981.5,
+      "rc": 0
+    },
+    {
+      "label": "lease-cleanup",
+      "wall_ms": 982.4,
+      "rc": 0
+    },
+    {
+      "label": "broker-start",
+      "wall_ms": 1200.3,
+      "rc": 0
+    },
+    {
+      "label": "broker-request-1",
+      "wall_ms": 849.0,
+      "rc": 0
+    },
+    {
+      "label": "broker-result-1",
+      "wall_ms": 975.4,
+      "rc": 0
+    },
+    {
+      "label": "broker-request-2",
+      "wall_ms": 982.3,
+      "rc": 0
+    },
+    {
+      "label": "broker-result-2",
+      "wall_ms": 1002.2,
+      "rc": 0
+    },
+    {
+      "label": "broker-finish",
+      "wall_ms": 1153.4,
+      "rc": 0
+    },
+    {
+      "label": "pill-acquire",
+      "wall_ms": 950.7,
+      "rc": 0
+    },
+    {
+      "label": "pill-status",
+      "wall_ms": 792.0,
+      "rc": 0
+    },
+    {
+      "label": "activate",
+      "wall_ms": 1016.9,
+      "rc": 0
+    },
+    {
+      "label": "count-check",
+      "wall_ms": 954.1,
+      "rc": 0
+    },
+    {
+      "label": "oneshot-code-exec",
+      "wall_ms": 1741.1,
+      "rc": 0
+    },
+    {
+      "label": "v12-check",
+      "wall_ms": 1267.6,
+      "rc": 0
+    },
+    {
+      "label": "pill-release",
+      "wall_ms": 1266.7,
+      "rc": 0
+    },
+    {
+      "label": "count-check",
+      "wall_ms": 784.5,
+      "rc": 0
+    },
+    {
+      "label": "p9-capture",
+      "wall_ms": 1751.3,
+      "rc": 0
+    }
+  ],
+  "phase_split_ms": {
+    "model": 0,
+    "ssh": 10703.2,
+    "broker": 666.2,
+    "observe": 433.8,
+    "act": 319.4,
+    "verify": 423.8,
+    "setup": 311.8,
+    "residual": 3969.2
+  },
+  "model_calls": 0
+}

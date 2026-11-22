@@ -1,0 +1,2 @@
+perception_routing {"event": "perception_routing", "target_kind": "chromium-content", "source": "dom-chromium", "fell_through": [], "reason": "complete coverage: 55 elements, not truncated"}
+{"run": 6, "wall_ms": 16827.3, "outcomes": {"chromium": "sent"}, "json": "improvements/gpill-retry-runs/run-6.json"}

@@ -1,0 +1,19 @@
+2026-11-22 21:43:16 +07 START watch
+2026-11-22 21:43:34 +07 HOLDERS=1 grim1
+3bbfc811dea0312d9caf36fc4b731142a44649118192cc197ccac7d51adffbe3  /home/james/gpill-retry/gpill-retry-during1.png
+2026-11-22 21:43:34 +07 grim1 done
+81f3e289406e35e8293a85a9117c1280cab16b30e4ee2da8267cf050550a74c5  /home/james/gpill-retry/gpill-retry-during2.png
+2026-11-22 21:43:37 +07 grim2 done
+{
+  "holders": {
+    "S2-flip:194257": {
+      "acquired": "2026-11-22T21:43:34+07:00",
+      "agent": "S2-flip",
+      "method": "CDP",
+      "pid": 194257
+    }
+  },
+  "label": "S2-flip via CDP",
+  "owner": "daemon",
+  "visible": true
+}
