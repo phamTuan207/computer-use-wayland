@@ -1676,4 +1676,65 @@ workspaces at the same time.
   expansion to the next class (not yet defined; coordinator
   decides at landing time).
 
-## 32. (to be filled as results land)
+## 32. C5-CB8-REAUIDT verified: BOTH claims REINSTATED (15:24-15:27 +07); evidence stronger than the manifest claimed
+
+- C5-CB8-REAUIDT (481bc3c9) COMPLETED 15:27:35 +07, about 4
+  min, no stall. Commits 84cc31f (re-audit log) + 9474e35 (fill
+  in the commit record hash), ls-remote verified, head
+  9474e350b305bdbbf7816b08456cec97dbf3786b. VERIFIED by the
+  coordinator:
+  - Section-aware re-check of all 25 manifest rows against
+    recomputed sha256 + sizes: 25/25 match, 0 mismatches.
+    (First attempt with a naive script reported 15 false
+    mismatches: the same filename appears in three sections
+    for three different files; the section-aware re-run is
+    the correct one.)
+  - The re-audit viewed all 25 PNGs itself; all 15 mandated
+    (5 b1 + 10 reopen) show their bubble with an empty
+    composer, bubble text matching the JSON message exactly.
+    Minor scroll clipping noted (b1 run4 R1, reopen run4/run5
+    Chromium R1/R2 clipped at the top edge but legible; run5
+    frames have R1 scrolled off, R2-R5 visible), all matching
+    the manifest. `git diff 3ef8f55 HEAD` over the P9 paths is
+    empty, so the evidence is unchanged since the evidence
+    commit.
+  - Focusenter helper confirmed committed, 2,478 bytes, sha256
+    94ee467e... (matches the laptop hash), code exactly the
+    described mechanism (Runtime.evaluate focus on
+    textarea[aria-label="Message"], assert activeElement,
+    Input.dispatchKeyEvent keyDown + keyUp Enter, zero mouse
+    calls; the only "mouse"/"click" mention is the comment
+    saying none).
+  - VERDICTS: claim (a) reopen PASS REINSTATED; claim (b)
+    (b1) 5/5 REINSTATED. No remaining gap in scope.
+  - CORRECTION to the evidence worker's record (prose error,
+    not evidence error): the manifest "Auditor note" and the
+    evidence log both claim the run JSONs carry p9 as null
+    and do not name the PNG paths. WRONG. Confirmed by the
+    coordinator: in all 25 JSONs p9 is a populated dict (ok,
+    png, wall_ms) per browser, and every png value names
+    exactly the committed path (e.g. reopen run-1:
+    {"brave": {"ok": true, "png":
+    "improvements/s2-flip-reopen-runs/p9-run1-brave.png",
+    "wall_ms": 4791.2}, ...}; b1 run-1: {"chromium": {"ok":
+    true, "png": "improvements/s2-flip-b1-runs/p9-run1-
+    chromium.png", "wall_ms": 3637.2}}). The evidence is
+    therefore stronger than the manifest claims. Verdicts
+    unaffected.
+  - Original flip Chromium: NO test bubble in any of the 5
+    frames, confirmed by the re-audit's own viewing; agrees
+    with the JSONs' failed-unverified outcomes and the Brave
+    frames' own text (Input.dispatchMouseEvent timeout 5002
+    to 5003 ms, runs 1-5). Do not cite the original flip
+    Chromium PNGs as send evidence.
+  - Standing qualifications unchanged: the Chromium reopen
+    half ran under the disclosed relaxed routing gate, and
+    activate is False in all 5 runs, per the original audit.
+    Numbers were not re-verified from scratch per the brief;
+    scope was the render-evidence gap only.
+- Still running: C5-B1-SPEC-FIX (90ee624b, last activity 2s
+  ago at check) and C5-Y13G-R3-FIX (e7f7e026, last activity
+  55s ago at check). No stall. Step 9 spawns after the (b1)
+  spec fix lands.
+
+## 33. (to be filled as results land)
