@@ -669,6 +669,11 @@ Manifest verify (rows 8 and 11):
   artifact firefox_bin, artifact geckodriver. The manifest
   verifies only at a d7d569b checkout. The R9 conclusion stands:
   quote the d7d569b re-run, never a1a672d, as the gate.
+  Note on the digest: the repo digest 7324498d at adc7ae3 was
+  measured while the 6 native generated files, ignored by git,
+  were present on disk. A clean checkout without those 6 files
+  gives digest 21a7eaf5. Git status does not show ignored files,
+  so record this precondition with the digest.
 
 ## 6. Residuals and commit record
 
