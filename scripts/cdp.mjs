@@ -479,14 +479,24 @@ async function assertAction(a) {
             // The engine sanitizes on assignment (HTML Standard
             // value sanitization algorithm): a single-line input
             // strips carriage returns and line feeds, a textarea
-            // normalizes CRLF and CR to LF. The maxLength pre-check
-            // must measure the SANITIZED length, or it refuses a
-            // set the engine would accept. Char codes are used
-            // instead of regex escapes so this template needs no
-            // backslash doubling when it is re-evaluated.
-            const sanitized=e.tagName==='INPUT'
+            // normalizes CRLF and CR to LF, and the url/email
+            // states also strip leading and trailing ASCII
+            // whitespace. The maxLength pre-check must measure
+            // the SANITIZED length, or it refuses a set the engine
+            // would accept. Char codes are used instead of regex
+            // escapes so this template needs no backslash doubling
+            // when it is re-evaluated. CR/LF are already stripped
+            // above, so only TAB (9), FF (12) and SPACE (32) can
+            // remain at the ends of a url/email value.
+            let sanitized=e.tagName==='INPUT'
               ?${text}.split(String.fromCharCode(13)).join('').split(String.fromCharCode(10)).join('')
               :${text}.split(String.fromCharCode(13,10)).join(String.fromCharCode(10)).split(String.fromCharCode(13)).join(String.fromCharCode(10));
+            if(e.tagName==='INPUT'&&(e.type==='url'||e.type==='email')){
+              let start=0,end=sanitized.length;
+              while(start<end&&(sanitized.charCodeAt(start)===9||sanitized.charCodeAt(start)===12||sanitized.charCodeAt(start)===32))start++;
+              while(end>start&&(sanitized.charCodeAt(end-1)===9||sanitized.charCodeAt(end-1)===12||sanitized.charCodeAt(end-1)===32))end--;
+              sanitized=sanitized.slice(start,end);
+            }
             if(e.maxLength>=0&&sanitized.length>e.maxLength)return {ok:false,error:'value exceeds maxlength'};
             const r=e.getBoundingClientRect(),style=getComputedStyle(e),x=r.left+r.width/2,y=r.top+r.height/2,hit=document.elementFromPoint(x,y);
             if(!e.getClientRects().length||!r.width||!r.height||style.display==='none'||style.visibility!=='visible'||x<0||x>=innerWidth||y<0||y>=innerHeight||!(${HIT_USABLE})(e,hit))return {ok:false,error:'field is not visible'};
