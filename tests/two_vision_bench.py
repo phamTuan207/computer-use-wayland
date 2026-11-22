@@ -1031,6 +1031,7 @@ def send_one(driver, window, item, message, intent_id, ledger,
         gate_count = gate_baseline
         duplicate = False
         settled_at = None
+        step["gate_settle_s"] = 1.0
         while time.monotonic() < deadline:
             gate_count = bubble_count()
             if gate_count > gate_baseline + 1:
@@ -1086,7 +1087,6 @@ def send_one(driver, window, item, message, intent_id, ledger,
             return step
         step["v12_gate_ok"] = True
         step["gate_count"] = gate_count
-        step["gate_settle_s"] = 1.0
         delta, total = v11_delta()
         step["v11_mutations"] = delta
         step["v11_mutation_flag"] = bool(delta and delta > 0)
