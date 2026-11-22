@@ -535,3 +535,43 @@ Doc day du: improvements/lauren-tan-workflow-20261122.md, commit 311eacd tren to
 5. Moi lan sua tay bien thanh luat: (1) xoa van de bang kien truc/cau truc du lieu, (2) bien thanh lint rule hoac test, (3) bien thanh skill hoac rule, (4) human review (cuoi cung).
 
 Quy tac cung: khong tu review chinh minh. Moi claim "xong" phai co bang chung chay duoc. Commit nho, nhieu lan, push ngay. Khong mo track moi ngoai lo trinh.
+
+## Da doc workflow Lauren Tan, bat buoc tuan theo, 2026-11-23 00:16 gio Viet Nam
+
+- Doc day du improvements/lauren-tan-workflow-20261122.md, commit 311eacd tren todolist-push, 134 dong, 16693 byte, va muc moi cua Pham Tuan trong file nay, main add4c56.
+- 5 diem cot loi, viet lai bang loi cua em:
+  1. Kim tu thap tin tuong: thiet ke de lua chon sai khong viet duoc, roi den check xac dinh (lint/type/test), roi validation (runtime, test), text rules cuoi cung. Gap loi hoi truoc: co bien thanh check xac dinh duoc khong, co thiet ke de loi khong xay ra duoc khong.
+  2. Coordinator khong tu code: chi chia viec, giam sat, doc diff, viet tom tat. Code do agent khac viet.
+  3. Evidence contract: noi dieu kien hoan thanh TRUOC, dang check chay duoc (lenh + output + commit hash + log thoi gian). Nguoi cham KHONG BAO GIO la nguoi viet. "Inconclusive" la trung thuc, KHONG phai pass.
+  4. Merge theo trust + review bang sampling: doc mau, tim pattern xau, sua moi truong sinh ra no.
+  5. Moi lan sua tay bien thanh luat: kien truc, roi lint/test, roi skill/rule, human review cuoi cung.
+- Quy tac cung em tuan theo tu gio: khong tu review chinh minh; moi claim xong phai co bang chung chay duoc; commit nho, push ngay.
+- Ap dung ngay vao viec F4 ben duoi: tong hop do em viet, verify doc lap boi agent khac qua 3 vong, den khi het MEDIUM, moi claim co so dong hoac commit kiem chung duoc.
+
+## Dieu tra doc lap F4 (dom-value), ZT-B run 5, 2026-11-23 00:10-00:32 gio Viet Nam
+
+- Lenh cua Pham Tuan 00:10 23/11: dieu tra doc lap root cause F4 song song voi worker fix cua Muse tong. Chi lam repo, khong live.
+- Phuong phap: 3 lane doc lap (bang chung, code, fixture), tong hop do coordinator viet, verify doc lap 3 vong. Vong 1: NEEDS CHANGE, 0 HIGH, 1 MEDIUM, 3 LOW. Vong delta: NEEDS CHANGE, 0 HIGH, 1 MEDIUM, 1 LOW. Vong hep cuoi: NEEDS CHANGE, 0 HIGH, 0 MEDIUM, 1 LOW (phep tinh floor/round o ghi chu image_size), sua xong, chi kiem tra dong da sua.
+- Bang chung chinh, ca 3 lane dong y:
+  * F4 o phase 4, action 0 set_value tren #msg-input, completed 0, error {'code': 'action_failed', 'reason': 'dom-value'}, run-5.json dong 308, elapsed 1632.208 ms. Message "ZEN-DELEGATE-R5-IGNORE-TEST", variant set_value, model_calls 0.
+  * F3 run 4 ("point outside observed image") da het: fix F3 (c3954e3) co mat tren laptop, run 5 toi duoc dom_act.
+  * Fixture la input text thuan, khong framework, send() chi xoa khi Enter (sau buoc verify cua set_value). Fixture khong giai thich duoc loi.
+  * Duong Zen KHONG dung cdp.mjs set_value. CU_DOM_BACKEND=zen, cu.py 3155-3160, ZenDomBackend.dom_act, zen_backend.py 471, delegate dich set_value thanh [click, type] (chuot that + phim that qua wtype), zen_pointer.py 157-161. Ten "set_value" chi la ten, duong ghi that la click + type.
+  * dom-value la verification basis, khong phai error code. zen_backend._verify 426-468, cong thuc ok 660-675. Reason ghi basis NGAY CA KHI dispatch that bai (sent False). Vay run-5.json KHONG phan biet duoc dispatch-fail voi verify-fail. Day la mo lon nhat.
+  * verify_typed (zen_dom.py 1311-1360) so sanh tuyet doi; V11 typed-flag khong duoc hoi tren duong Zen.
+  * Delegate chi tra bool (zen_pointer.py 82-95), ket qua desktop_act bi huy, mang results khong co trong run-5.json.
+  * Duong delegate khong co focus gate ("No hook means no gate", cu.py 2148).
+- Gia thuyet xep hang, sau cap nhat:
+  * H1b (kha nang cao nhat): viewport origin stale duoc chap nhan (db21dd7). Stale (274,66) thay vi (240,8), lech (34,58) px, tam (190, 246.87) thanh click (224, 304.87), vung trong duoi hang control, khong field nao duoc focus. Vung dap xuong thuc te la inconclusive (do lech that luc dispatch chua biet).
+  * H2 (khong loai tru): go phim vao dung field nhung thieu/thua ky tu, so sanh tuyet doi fail.
+  * H3 (khong loai tru): ghi va doc qua 2 kenh khac nhau, hoac race (verify chay truoc khi trinh duyet xu ly het key event).
+- Da loai bo:
+  * H1a (phep doi toa do co scale sai) BI BAC BO bang repro chay duoc improvements/f4-repro-coords.py (cac7d74). Verifier doc lap tu chay lai exit 0, screen point [2957.0, 1181.87] trong rect field, image point [230.85, 138.03] trong anh 960x606, round trip qua cu.image_point chinh xac tuyet doi.
+  * V11 typed-flag, native setter/React, send() xoa gia tri, fixture chuan hoa.
+- De xuat fix, cho worker fix cua Muse tong:
+  * F1 DA XONG (59f8a44, 00:13:12 +07): delegate ghi last_dispatch, dom_act surface theo tung action. Khong lam lai. Worker tiep tuc voi ed4fcd4 (lay day du ket qua dom_act qua envelope).
+  * F2: chi sua huong ma F1 chi ra. Trong so F2 chi con huong settle origin (H1b), huong scale (H1a) da chet, giu repro lam test hoi quy.
+  * F3: truyen dom_session/dom_selector vao delegate de desktop_act chay co focus_check/type_check, click truot fail nhanh voi loi focus thay vi go phim mu roi hien thanh dom-value.
+- Diem mo, inconclusive, khong phai pass: dispatch co toi dich khong (cho F1 o lan chay sau); gia tri field sau run; so settle va meta batch; error_type bi cat o run-5.json dong 316.
+- Luu y nho cho worker: docstring cua improvements/f4-repro-coords.py viet sai phep tinh ("1176 * 960 / 1863 = 606.06 -> 606"); dung la round(605.99) = 606, vi cu.py save_observation dong 872-873 resize bang round. Gia tri 606 van dung, chi sai phep tinh.
+- Ket luan: root cause kha nang cao nhat hien tai la click truot do origin stale (H1b), nhung chua co bang chung truc tiep phan biet dispatch-fail voi verify-fail. F1 da xong se cho cau tra loi o lan chay sau. Khong ket luan bua.
