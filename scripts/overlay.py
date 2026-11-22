@@ -128,9 +128,16 @@ def remove_holder(agent, pid=None):
     """Remove exactly one holder under the lock. Returns (holders, was_present).
 
     With a pid, only that run's entry (agent:pid) is removed. Without a
-    pid, only the bare agent entry is removed. No call ever removes
-    another run's entry: a pid-less removal never touches pid-keyed
-    entries, and a pid-keyed removal never touches the bare entry.
+    pid, only the bare agent entry is removed. A pid-keyed removal never
+    touches the bare entry, and a pid-less removal never touches
+    pid-keyed entries, so no call ever removes another run's PID-KEYED
+    entry. The bare entry is the one exception: two pid-less runs of the
+    same agent share it, so a pid-less removal can drop another
+    pid-less run's holder (H1 bare-bare). That is why every live caller
+    must pass a real pid: overlay.hold keys by the calling process pid,
+    s2_flip keys by a laptop sleeper pid, cdp.mjs and first_action key
+    by their own pid. A bare holder only survives from legacy or manual
+    pid-less callers.
     This is the R6/C1 fix: a failed acquire with pid None used to wipe
     every holder of the same agent, including a live pid-keyed holder
     of a concurrent run, and the pill then dropped mid-run for a run
@@ -217,7 +224,9 @@ def wayland_env():
         from hypr_cmd import desktop_env
         discovered = desktop_env(signature_dir=str(runtime / 'hypr'))
         env['HYPRLAND_INSTANCE_SIGNATURE'] = discovered['HYPRLAND_INSTANCE_SIGNATURE']
-        env['WAYLAND_DISPLAY'] = discovered['WAYLAND_DISPLAY']
+        # C2: never clobber a caller-provided display; the discovered
+        # one is only the fallback (the old code overwrote it).
+        env.setdefault('WAYLAND_DISPLAY', discovered['WAYLAND_DISPLAY'])
     except (ImportError, ValueError):
         env.setdefault('WAYLAND_DISPLAY', 'wayland-1')
     env.setdefault('XDG_RUNTIME_DIR', str(runtime))
@@ -617,17 +626,32 @@ def cmd_daemon(args):
 
 
 @contextmanager
-def hold(agent, method):
-    """Python helper: show the overlay for the block, hide after."""
+def hold(agent, method, pid=None):
+    """Python helper: show the overlay for the block, hide after.
+
+    Pid-keyed by default: the holder key is (agent, pid of the calling
+    process), so two concurrent runs of the same agent never share one
+    bare key (H1 bare-bare). Pass an explicit pid only when the calling
+    process is not the process that lives for the block. The pid must
+    be real on the machine holding the registry: the daemon prunes a
+    holder whose pid does not exist there, so a pid from another
+    machine would be dropped within one monitor tick (~2s). The
+    calling process lives for the whole `with` block by definition,
+    so its pid is alive for the hold and prune can heal the holder if
+    the caller dies mid-block.
+    """
+    if pid is None:
+        pid = os.getpid()
     import subprocess as _sp
     _sp.run([sys.executable, str(Path(__file__).resolve()), 'acquire',
-             '--agent', agent, '--method', method], check=True,
-            capture_output=True)
+             '--agent', agent, '--method', method,
+             '--pid', str(pid)], check=True, capture_output=True)
     try:
         yield
     finally:
         _sp.run([sys.executable, str(Path(__file__).resolve()), 'release',
-                 '--agent', agent], check=True, capture_output=True)
+                 '--agent', agent, '--pid', str(pid)], check=True,
+                capture_output=True)
 
 
 def main(argv=None):
@@ -637,11 +661,21 @@ def main(argv=None):
     acquire.add_argument('--agent', required=True)
     acquire.add_argument('--method', required=True)
     acquire.add_argument('--label', default=None)
-    acquire.add_argument('--pid', type=int, default=None)
+    acquire.add_argument('--pid', type=int, default=None,
+                         help='pid of the calling process; the holder key '
+                         'is agent:pid, so concurrent runs of one agent '
+                         'never share a key (default: none, bare agent key)')
     acquire.set_defaults(func=cmd_acquire)
     release = sub.add_parser('release')
     release.add_argument('--agent', required=True)
-    release.add_argument('--pid', type=int, default=None)
+    # R11: accepted for caller compatibility (cdp.mjs and s2_flip both
+    # pass --method); the holder key is (agent, pid), the method is not
+    # part of it, so the value is ignored for removal.
+    release.add_argument('--method', default=None)
+    release.add_argument('--pid', type=int, default=None,
+                         help='pid of the holder to drop; a pid-less '
+                         'release only removes the bare agent entry, a '
+                         'pid-keyed holder needs its own --pid')
     release.set_defaults(func=cmd_release)
     status = sub.add_parser('status')
     status.set_defaults(func=cmd_status)

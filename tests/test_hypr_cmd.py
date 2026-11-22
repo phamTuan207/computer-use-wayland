@@ -87,6 +87,16 @@ class TestDesktopEnv(unittest.TestCase):
             env = hypr_cmd.desktop_env(signature_dir=tmp)
             self.assertEqual(env["HYPRLAND_INSTANCE_SIGNATURE"], "abc_sig")
 
+    def test_from_dir_listing_skips_files(self):
+        """R4: only directories are signatures; a stray file that
+        sorts first must never be picked as the instance signature."""
+        with tempfile.TemporaryDirectory() as tmp:
+            with open(os.path.join(tmp, "aaa_file"), "w") as handle:
+                handle.write("not a signature")
+            os.mkdir(os.path.join(tmp, "zzz_sig"))
+            env = hypr_cmd.desktop_env(signature_dir=tmp)
+            self.assertEqual(env["HYPRLAND_INSTANCE_SIGNATURE"], "zzz_sig")
+
     def test_empty_dir_fails_closed(self):
         with tempfile.TemporaryDirectory() as tmp:
             with self.assertRaises(ValueError):

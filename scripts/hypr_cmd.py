@@ -198,7 +198,11 @@ def desktop_env(signature=None, signature_dir=HYPR_SIGNATURE_DIR):
     sig = signature or os.environ.get("HYPRLAND_INSTANCE_SIGNATURE")
     if sig is None:
         try:
-            names = sorted(os.listdir(signature_dir))
+            # R4: only directories are signatures; a stray file in the
+            # dir must never be picked as the instance signature.
+            names = sorted(
+                n for n in os.listdir(signature_dir)
+                if os.path.isdir(os.path.join(signature_dir, n)))
         except OSError as exc:
             raise ValueError(
                 "cannot list Hyprland signature dir %s: %s"

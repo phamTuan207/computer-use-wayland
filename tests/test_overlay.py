@@ -263,6 +263,146 @@ def test_cmd_acquire_invisible_keeps_concurrent_holder():
             overlay._send_socket = orig_send
 
 
+def test_cmd_acquire_invisible_pid_keyed_keeps_bare_holder():
+    """H1: a live bare holder (an older pid-less run) must survive a
+    failed pid-keyed acquire by another run of the same agent. After
+    the H1 follow-up every live caller passes a real pid, so a failed
+    acquire only ever removes its own pid-keyed entry; the bare key
+    is never touched by a pid-keyed removal. This is the bare-bare
+    scenario with run B fixed: run A holds bare, run B acquires with
+    a pid and fails, run A keeps its pill."""
+    import types
+    with tempfile.TemporaryDirectory() as tmp:
+        _isolated(tmp)
+        overlay.add_holder('Muse', 'CDP')
+        args = types.SimpleNamespace(agent='Muse', method='CDP',
+                                     pid=777001, label=None)
+        orig_ensure = overlay._ensure_daemon
+        orig_send = overlay._send_socket
+        try:
+            overlay._ensure_daemon = lambda: True
+            overlay._send_socket = lambda *a, **k: {
+                'visible': False, 'owner': 'none',
+                'holders': {'Muse:777001': {'agent': 'Muse',
+                                            'method': 'CDP',
+                                            'acquired': '2026-11-22T19:30:00+07:00',
+                                            'pid': 777001}},
+                'error': 'pill show failed'}
+            out = io.StringIO()
+            with redirect_stdout(out):
+                assert overlay.cmd_acquire(args) == 1
+            assert json.loads(out.getvalue())['visible'] is False
+            assert set(overlay.load_holders()) == {'Muse'}, \
+                'failed pid-keyed acquire must not drop a live bare holder'
+        finally:
+            overlay._ensure_daemon = orig_ensure
+            overlay._send_socket = orig_send
+
+
+def test_cmd_release_pid_none_keeps_pid_keyed_holder():
+    """E1: a pid-less release removes only the bare entry; a pid-keyed
+    holder of the same agent survives and the release output still
+    lists it, so the operator can see the pill stays up and must pass
+    --pid to drop it. The follow-up release with that --pid then
+    removes it."""
+    import types
+    with tempfile.TemporaryDirectory() as tmp:
+        _isolated(tmp)
+        overlay.add_holder('Muse', 'CDP', pid=999001)
+        args = types.SimpleNamespace(agent='Muse', pid=None)
+        out = io.StringIO()
+        with redirect_stdout(out):
+            assert overlay.cmd_release(args) == 0
+        info = json.loads(out.getvalue())
+        assert set(info['holders']) == {'Muse:999001'}
+        assert overlay.load_holders() == info['holders']
+        args = types.SimpleNamespace(agent='Muse', pid=999001)
+        out = io.StringIO()
+        with redirect_stdout(out):
+            assert overlay.cmd_release(args) == 0
+        info = json.loads(out.getvalue())
+        assert info['holders'] == {}
+
+
+def test_cmd_acquire_daemon_failure_keeps_concurrent_holder():
+    """E2: the D1 exception path (daemon ensure failure) must remove
+    only the just-added bare key and keep a concurrent pid-keyed
+    holder, mirroring the invisible-path test. Both failure paths
+    call the same remove_holder with the same args, but the D1 path
+    was unproven end to end."""
+    import types
+    with tempfile.TemporaryDirectory() as tmp:
+        _isolated(tmp)
+        overlay.add_holder('Muse', 'CDP', pid=999001)
+        args = types.SimpleNamespace(agent='Muse', method='CDP',
+                                     pid=None, label=None)
+        orig_ensure = overlay._ensure_daemon
+        try:
+            def fail_daemon():
+                raise RuntimeError('overlay daemon exited during startup')
+            overlay._ensure_daemon = fail_daemon
+            try:
+                overlay.cmd_acquire(args)
+                raise AssertionError('cmd_acquire must raise on daemon failure')
+            except RuntimeError:
+                pass
+            assert set(overlay.load_holders()) == {'Muse:999001'}, \
+                'daemon failure must not drop a concurrent holder'
+        finally:
+            overlay._ensure_daemon = orig_ensure
+
+
+def test_hold_passes_calling_pid():
+    """H1: overlay.hold must acquire and release with the calling
+    process pid, so two concurrent hold() contexts of one agent get
+    distinct keys instead of sharing the bare key. The subprocess
+    calls are captured, not executed, so no real holder is touched."""
+    import subprocess as sp
+    seen = []
+
+    class _FakeCompleted:
+        returncode = 0
+
+    orig_run = sp.run
+    try:
+        def fake_run(argv, **kwargs):
+            seen.append(list(argv))
+            return _FakeCompleted()
+        sp.run = fake_run
+        with overlay.hold('Muse', 'CDP'):
+            pass
+    finally:
+        sp.run = orig_run
+    assert len(seen) == 2, seen
+    acquire, release = seen
+    assert acquire[2] == 'acquire' and acquire[3] == '--agent' \
+        and acquire[4] == 'Muse', acquire
+    assert release[2] == 'release' and release[3] == '--agent' \
+        and release[4] == 'Muse', release
+    assert '--pid' in acquire and '--pid' in release
+    acquire_pid = acquire[acquire.index('--pid') + 1]
+    release_pid = release[release.index('--pid') + 1]
+    assert acquire_pid == str(os.getpid())
+    assert release_pid == acquire_pid, \
+        'release must drop exactly the key acquire added'
+
+
+def test_wayland_env_keeps_caller_display():
+    """C2: a caller-provided WAYLAND_DISPLAY is never clobbered by
+    signature discovery; the discovered display is only the fallback
+    when the caller carries none."""
+    with tempfile.TemporaryDirectory() as tmp:
+        sig_dir = Path(tmp) / 'hypr'
+        sig_dir.mkdir()
+        (sig_dir / 'deadbeef_1_2').mkdir()
+        with patch.dict(os.environ, {'XDG_RUNTIME_DIR': tmp,
+                                     'WAYLAND_DISPLAY': 'wayland-9'},
+                        clear=True):
+            env = overlay.wayland_env()
+        assert env['HYPRLAND_INSTANCE_SIGNATURE'] == 'deadbeef_1_2'
+        assert env['WAYLAND_DISPLAY'] == 'wayland-9'
+
+
 def test_holders_persist_json():
     with tempfile.TemporaryDirectory() as tmp:
         _isolated(tmp)
@@ -463,6 +603,11 @@ if __name__ == '__main__':
     test_remove_holder_pid_none_keeps_pid_keyed_holder()
     test_remove_holder_pid_keeps_bare_holder()
     test_cmd_acquire_invisible_keeps_concurrent_holder()
+    test_cmd_acquire_invisible_pid_keyed_keeps_bare_holder()
+    test_cmd_release_pid_none_keeps_pid_keyed_holder()
+    test_cmd_acquire_daemon_failure_keeps_concurrent_holder()
+    test_hold_passes_calling_pid()
+    test_wayland_env_keeps_caller_display()
     test_holders_persist_json()
     test_prune_dead_pid()
     test_label_command_valid_chars()

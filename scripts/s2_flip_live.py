@@ -593,15 +593,51 @@ class Harness:
         result['ms'] = round(wall, 1)
         return result
 
-    def pill_acquire_cmd(self):
-        """SSH command that raises the pill on the laptop."""
-        return ('python3 %s acquire --agent %s --method %s'
-                % (LAPTOP_OVERLAY, PILL_AGENT, PILL_METHOD))
+    # Laptop sleeper for the pill holder pid (H1 bare-bare): a detached
+    # `sleep` on the laptop, alive for one send step, whose pid keys
+    # this run's holder. The pid must be a laptop pid of a process
+    # alive for the hold: this harness runs on the VM, so its own pid
+    # does not exist on the laptop and the daemon would prune the
+    # holder within one monitor tick (~2s). Verified 20:38 +07: VM pid
+    # 93722 absent on the laptop, prune drops a holder whose pid is
+    # dead. The sleeper lives 600s, covers one send step, and if the
+    # harness dies the daemon prunes the holder when the sleeper
+    # expires. A nohup sleep execs directly (no fork), so $! is the
+    # sleep pid itself, and with stdin/stdout/stderr redirected it
+    # survives the SSH session end.
+    PILL_SLEEP_SECONDS = 600
 
-    def pill_release_cmd(self):
-        """SSH command that drops this harness's pill holder."""
-        return ('python3 %s release --agent %s --method %s'
-                % (LAPTOP_OVERLAY, PILL_AGENT, PILL_METHOD))
+    def pill_acquire_cmd(self):
+        """SSH command that raises the pill on the laptop.
+
+        Starts the laptop sleeper, acquires with its pid, echoes the
+        pid as PILL_SLEEP_PID= for the release call, kills the sleeper
+        inline when the acquire fails, and preserves the acquire rc
+        as the call rc (the trailing echo must not mask a failure).
+        """
+        return ('nohup sleep %d >/dev/null 2>&1 < /dev/null & SLEEP_PID=$!; '
+                'python3 %s acquire --agent %s --method %s --pid $SLEEP_PID; '
+                'ACQ_RC=$?; echo PILL_SLEEP_PID=$SLEEP_PID; '
+                '[ $ACQ_RC -ne 0 ] && kill $SLEEP_PID 2>/dev/null; '
+                'exit $ACQ_RC'
+                % (self.PILL_SLEEP_SECONDS, LAPTOP_OVERLAY,
+                   PILL_AGENT, PILL_METHOD))
+
+    def pill_release_cmd(self, pid=None):
+        """SSH command that drops this harness's pill holder.
+
+        Takes the sleeper pid from the matching acquire (parsed from
+        PILL_SLEEP_PID=). The release passes the same --pid so exactly
+        this run's key is removed, then kills the sleeper. Without a
+        pid the release would only remove the bare key and leave this
+        run's pid-keyed holder behind (E1); pass the pid.
+        """
+        if pid is None:
+            return ('python3 %s release --agent %s --method %s'
+                    % (LAPTOP_OVERLAY, PILL_AGENT, PILL_METHOD))
+        return ('python3 %s release --agent %s --method %s --pid %d; '
+                'kill %d 2>/dev/null || true'
+                % (LAPTOP_OVERLAY, PILL_AGENT, PILL_METHOD, pid, pid))
 
     @contextmanager
     def cdp_pill_hold(self):
@@ -613,16 +649,31 @@ class Harness:
         warns and the send itself still cannot run invisibly. Yields
         True when the pill was acquired, False otherwise; a failed
         acquire skips the release (nothing was held). A failed release
-        is noted, never raised: the holder is pid-less, so the
-        daemon prunes it only when the agent name is reused, and a
-        stale S2-flip holder keeps the pill up until the next release
-        or daemon restart, which is visible, not invisible.
+        is noted, never raised: the holder is pid-keyed by the laptop
+        sleeper pid, so the daemon prunes it when the sleeper expires
+        (600s), and a stale S2-flip holder keeps the pill up until
+        the next release or daemon restart, which is visible, not
+        invisible. When the acquire succeeds but the sleeper pid
+        cannot be parsed from its output, the release falls back to
+        pid-less and cannot remove the pid-keyed holder; the note
+        records that, and the holder heals via prune when the
+        sleeper expires.
         """
         held = False
+        sleep_pid = None
         try:
             rc, out, err, _wall = self.ssh(
                 self.pill_acquire_cmd(), 'pill-acquire', timeout=60)
             held = rc == 0
+            if held:
+                match = re.search(r'PILL_SLEEP_PID=(\d+)', out)
+                if match:
+                    sleep_pid = int(match.group(1))
+                else:
+                    self.note('pill acquire ok but no PILL_SLEEP_PID in '
+                              'output; release cannot find the pid-keyed '
+                              'holder (daemon prunes it when the sleeper '
+                              'expires): %s' % out.strip()[:200])
             if not held:
                 self.note('pill acquire failed (best effort, send gate '
                           'still applies): rc=%d %s'
@@ -635,7 +686,7 @@ class Harness:
         finally:
             if held:
                 try:
-                    self.ssh(self.pill_release_cmd(), 'pill-release',
+                    self.ssh(self.pill_release_cmd(sleep_pid), 'pill-release',
                              timeout=60)
                 except Exception as exc:
                     self.note('pill release failed (ignored): %s'
