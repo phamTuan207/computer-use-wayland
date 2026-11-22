@@ -116,10 +116,33 @@ class WorkerTransport(unittest.TestCase):
             self.worker.request({})
         self.assert_no_replay()
 
-    def test_error_json_closes_child_without_replay(self):
-        self.code = "import sys; sys.stdin.readline(); print('{\"ok\":false,\"error\":\"fixture\"}', flush=True)"
-        self.assertEqual(self.worker.request({}), {'ok': False, 'error': 'fixture'})
-        self.assert_no_replay()
+    def test_error_json_survives_for_in_program_retry(self):
+        # F4: an ok:false response is a RESULT (here a failed
+        # assert), not a dead session. The worker must stay alive
+        # so the next request in the SAME session can run: that is
+        # the in-program retry the runbook template relies on.
+        # The fixture child answers the first request with a failed
+        # assert, then echoes later requests like the base ECHO.
+        self.code = (
+            "import json, sys\n"
+            "first = True\n"
+            "for line in sys.stdin:\n"
+            "    if first:\n"
+            "        first = False\n"
+            "        print(json.dumps({'ok': False, 'completed': 0, 'error': 'assertion failed'}), flush=True)\n"
+            "    else:\n"
+            "        print(json.dumps(json.loads(line), ensure_ascii=False), flush=True)\n"
+        )
+        first = self.worker.request({'operation': 'act'})
+        self.assertEqual(first, {'ok': False, 'completed': 0, 'error': 'assertion failed'})
+        self.assertFalse(self.worker.closed)
+        self.assertIsNotNone(self.worker.process)
+        self.assertIsNone(self.worker.process.poll())
+        second = self.worker.request({'text': 'retry probe'})
+        self.assertEqual(second, {'text': 'retry probe'})
+        self.spawn.assert_called_once()
+        self.worker.close()
+        self.assert_closed()
 
     def test_child_death_is_fatal_without_replay(self):
         self.code = 'import os; os._exit(7)'

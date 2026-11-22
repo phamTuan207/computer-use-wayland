@@ -50,7 +50,13 @@ class BrowserWorker:
                     result=json.loads(response)
                     if not isinstance(result,(dict,list)):raise RuntimeError('invalid browser worker response')
                     cu.check_cancel()
-                    if isinstance(result,dict) and result.get('ok') is False:self.close()
+                    # F4: an ok:false response is a RESULT (a failed
+                    # assert, a refused action), not a dead session.
+                    # The worker stays alive so the same session can
+                    # re-observe and retry in-program. Only a real
+                    # transport failure (process exit, timeout, bad
+                    # framing, non-dict/list response) closes the
+                    # worker, via the except below.
                     return result
         except BaseException:
             self.close()
