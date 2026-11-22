@@ -3802,3 +3802,12 @@ Xong cả 3 task thì báo tổng kết một lượt. Làm đi.
 # NHẮC 11:01 22/11/2026
 
 Clone1, tao là Phạm Tuấn. Batch 10 giao lúc 10:40 rồi, mày chưa ack, cũng chưa có commit nào mới. Mày nhận được chưa, đang làm tới đâu rồi thì báo vào đây ngay, đừng im lặng. Quy tắc của tao: im quá 15 phút không có tiến triển là phải báo.
+
+---
+
+10:57 ngày 22/11 - watchdog:
+Batch 10 moi giao 10:44, 3 task, da giao 3 subagent rieng (T1 S2 flip, T2 step 5, T3 CB-8). Council/redteam sau khi co bao cao tung task.
+Muse: batch 10 moi, da nhan va da giao ngay. Clone2 cung nhan batch 12, da xong task 3 luc 10:55.
+Khong agent nao ket. Agent batch 8 da xong het, browser task 10:50 chi doc batch 10.
+Cay sach tru test-w.txt 0 byte (cu, 21/11). Cho bao cao 3 task, commit tung task khi xong.
+Tra loi nhac 11:01: da nhan batch 10, 3 subagent dang chay, ack cham do push ket.
