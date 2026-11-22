@@ -331,12 +331,26 @@ the same shape with different names. The script already builds the
 whole send sequence from one inventory and runs it with stop at
 first failure (tests/two_vision_bench.py main(), send chain loop;
 workflow docs/two-vision-benchmark-workflow-20261122.md section 1).
-The V12 gate (GATE_JS, tests/two_vision_bench.py:153) checks the
+The V12 gate (GATE_JS, tests/two_vision_bench.py:156) checks the
 exact message text as a bubble in the thread DOM, which is Turbo's
 textMatches; the port adds Turbo's textNew distinction, which our
-gate currently lacks: the gate must count only bubbles whose text
-was NOT in the thread when the batch started, so a stale bubble
-from an earlier run cannot pass a new send. Turbo's README states
+gate now has, built in batch 12 task 2 (script commit f49851f,
+hardened in fix pass c1b623b): the gate counts only bubbles whose
+text appears after the pre-Enter gate_baseline. Dated note,
+22/11, fix pass: the built baseline is deliberately stricter
+than Turbo's spec ("did not match when the batch started"). The
+operative baseline is the count measured right before Enter
+(gate_baseline in send_one); before_count, the batch-start
+snapshot taken in main, is recorded evidence only and is never
+consulted by the gate. A matching bubble arriving after batch
+start but before Enter counts as new under Turbo's spec but does
+not satisfy the built gate. The built gate is strictly stricter,
+safe direction, and the stale-bubble property holds under both.
+The main() comment and the COUNT_JS comment that claimed the
+gate used the before-snapshot were corrected in the same fix
+pass. The gate is appearance-based, not causal: it proves a
+bubble with the exact text appeared after the baseline, not
+that our Enter caused it. Turbo's README states
 why the distinction exists: "textMatches also matches text that
 was already on the page before the click, so prefer textNew for
 verifying a submit: it counts only elements whose text matches and
@@ -389,15 +403,15 @@ by default, or TURBO_BROWSER_LEDGER, or ledgerPath inside the save
 root). A later call with the same key is refused with blockedBy
 "ledger" unless allowDuplicate is true.
 
-Our mapping: the script's Ledger (tests/two_vision_bench.py:184,
-mark at line 227, status at line 224), keyed by intent id
+Our mapping: the script's Ledger (tests/two_vision_bench.py:319,
+mark at line 386, status at line 383), keyed by intent id
 (run_id + window label), written to <workdir>/ledger.json, plus the
 V12 pre-check before every send regardless of ledger status
-(send_one, tests/two_vision_bench.py:400). The submission key for
+(send_one, tests/two_vision_bench.py:594). The submission key for
 the benchmark is the intent id itself, for example
 "bench-20261122-001:clone1" (illustrative only; the script's real
 format is "bench-" + UTC timestamp + "-" + 6 hex chars, default_plan,
-tests/two_vision_bench.py:543-546, so do not copy the example into
+tests/two_vision_bench.py:1051-1054, so do not copy the example into
 an implementation).
 The port keeps the script's shape and adds Turbo's refusal
 semantics as an explicit step status (already present as
@@ -427,14 +441,24 @@ re-send it, because the message may have landed unseen
 verified live as fix2-wrongsel, run 1 FAIL v12-timeout, run 2 FAIL
 retry-blocked-unverified, no second bubble). That mitigation
 depends on the process surviving long enough to write the mark.
-A process death between send and mark is still unhandled. The
-residual gap, recorded as open work and not as done: a pre-send
-reservation (write the intent as "sending" before the keypress,
-then reconcile to "sent" or "failed-unverified" after the gate),
-or a server-side idempotency key if the target ever offers one.
-Until one of those exists, the honest guarantee is the script's
-own docstring: within one session, a retry never re-sends a
-message the V12 pre-check can see in the thread.
+A process death between send and mark is still unhandled by the
+v12-timeout mitigation alone. Dated note, 22/11, fix pass: the
+residual gap is now closed by the pre-send reservation, BUILT in
+batch 12 task 2 (script commit f49851f, hardened in fix pass
+c1b623b): the intent is written as "sending" after the V1
+readback and before Enter, then reconciled to "sent" or
+"failed-unverified" after the gate; a later run finding
+"sending" refuses with retry-blocked-reservation. A failed
+retry never overwrites a "sent" or "sending" record, and the
+run registry refuses a reused run_id in a fresh workdir. What
+remains open is live proof, and the cross-machine case: the
+reservation closes the process-death gap only when the same
+ledger is reused, and the registry is per-machine. A
+server-side idempotency key, if the target ever offers one,
+is still not ported. Until the live proof exists, the honest
+guarantee is the script's own docstring: within one session,
+a retry never re-sends a message the V12 pre-check can see
+in the thread.
 
 The same caveat applies to our ledger's scope. Turbo's ledger is
 per-machine; ours is per-run workdir (DEFAULT_WORKDIR
@@ -648,7 +672,9 @@ is in rect reads and DOM clicks, not in session start.
 - Pre-send reservation (section 4.3.2): write the intent as
   "sending" before the keypress, then reconcile to "sent" or
   "failed-unverified" after the gate; covers the process-death case.
-  TODO added in tests/two_vision_bench.py (Ledger docstring).
+  BUILT in batch 12 task 2 (script commit f49851f, hardened in
+  fix pass c1b623b, fixture-proven by the driver test and the
+  fix-pass driver F1/F2/F3). Live proof still owed.
 - DPR term (section 3.3): the per-part placement is now settled
   (origin never scaled, CSS part takes dpr / monitor_scale), but the
   corrected formula is untested at any scale other than 1, and it
@@ -667,13 +693,20 @@ is in rect reads and DOM clicks, not in session start.
   across two browser processes.
 - D1, BiDi/Marionette handover: no protocol exists under the
   one-session constraint. The design stays Marionette-only.
-- D3, ref stability on a mutating page: unaddressed. Turbo's
-  loaderId stale-ref fail-fast is the pattern to port, not a built
-  feature.
-- V11, production MutationObserver flag: not built. The fixture
-  counts input events in window.__inputEvents; a Messenger page
-  needs a real observer armed before typing (tests/two_vision_bench.py
-  TODO F5).
+- D3, ref stability on a mutating page: BUILT in batch 12 task 2
+  (script commit f49851f, hardened in fix pass c1b623b):
+  REF_CHECK_JS re-resolves the ref before input and fails fast
+  with ref-stale when tag, role, name, aria-label or placeholder
+  changed, and the HCU guard compares against the harvested
+  center unless the page scrolled. Fixture-proven (renamed input,
+  tag swap, placeholder-only rename, moved input). Live proof
+  still owed.
+- V11, production MutationObserver flag: BUILT in batch 12 task 2
+  (script commit f49851f, hardened in fix pass c1b623b):
+  OBSERVER_JS arms a real observer before typing, scoped to the
+  thread container, counting mutation records. The flag is
+  recorded evidence only, not a pass criterion. Live proof still
+  owed.
 - Step-6 loop hygiene beyond the delta: prompt caching,
   diff-gated re-observation, downscale to token tier, context
   editing, low effort, adaptive waiting remain unowned
