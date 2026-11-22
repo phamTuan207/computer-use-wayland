@@ -1,0 +1,469 @@
+{
+  "run": 6,
+  "fixture": "file:///home/james/computer-use-wayland/tests/two_vision_fixture.html?clone=zen",
+  "fixture_sha256": "147494cda4c6ae24a51ced03ccdfb3fc5a79a1bbab56dcdfc5afb4f72fba6cbf",
+  "message": "ZEN-DELEGATE-R6-IGNORE-TEST",
+  "intent": "c5-zen-delegate-r6",
+  "model_calls": 0,
+  "program_variant": "set_value",
+  "target": "two_vision_fixture.html?clone=zen",
+  "pill": {
+    "pid": 373168,
+    "status": {
+      "holders": {
+        "S2-flip:373168": {
+          "acquired": "2026-11-23T01:54:05+07:00",
+          "agent": "S2-flip",
+          "method": "CDP",
+          "pid": 373168
+        }
+      },
+      "label": "Computer use active",
+      "owner": "daemon",
+      "visible": true
+    },
+    "from_env": true
+  },
+  "window": {
+    "address": "0x56307e2771d0",
+    "bounds": [
+      2509,
+      914,
+      1863,
+      1176
+    ],
+    "workspace": {
+      "address": "1",
+      "id": 1,
+      "type": "normal",
+      "name": "1"
+    }
+  },
+  "tabs_before": {
+    "ok": true,
+    "count": 19,
+    "tabs": [
+      {
+        "handle": "2a63e0cb",
+        "title": "YouTube",
+        "url": "https://www.youtube.com/"
+      },
+      {
+        "handle": "91c041bf",
+        "title": "Problem loading page",
+        "url": "https://www.reddit.com/"
+      },
+      {
+        "handle": "e745ef00",
+        "title": "Today \u2013 Todoist",
+        "url": "https://app.todoist.com/app/today"
+      },
+      {
+        "handle": "afaaa803",
+        "title": "Inbox (732) - phamtuanhuy1109@gmail.com - Gmail",
+        "url": "https://mail.google.com/mail/u/1/#inbox"
+      },
+      {
+        "handle": "808ac952",
+        "title": "L\u1ecbch Google - Tu\u1ea7n 23 th\u00e1ng 11, 2026",
+        "url": "https://calendar.google.com/calendar/u/1/r/week"
+      },
+      {
+        "handle": "6ccb70e2",
+        "title": "PCCV CF26 - Google Trang t\u00ednh",
+        "url": "https://docs.google.com/spreadsheets/d/1WzUJNuCQlYLAj59-gdIPFFQv2P_d3f2KhEYcGeWhRRY/edit?gid=0#gid=0"
+      },
+      {
+        "handle": "c957f3c9",
+        "title": "Free Claude Code Admin",
+        "url": "http://127.0.0.1:8082/admin/model_config"
+      },
+      {
+        "handle": "3fb6c74c",
+        "title": "Welcome!",
+        "url": "https://zen-browser.app/welcome/"
+      },
+      {
+        "handle": "c71a3071",
+        "title": "",
+        "url": "about:blank"
+      },
+      {
+        "handle": "110befaf",
+        "title": "Chat \u2014 Muse",
+        "url": "https://muse.ai/thread/750c8dae-58fb-4a65-82ac-753e78d6ce93"
+      },
+      {
+        "handle": "5e60d4df",
+        "title": "",
+        "url": "about:blank"
+      },
+      {
+        "handle": "13b7cf9f",
+        "title": "ModelArk-Coding-Plan",
+        "url": "https://www.byteplus.com/en/activity/codingplan?utm_source=google&utm_medium=pmax&utm_campaign=purchase_codingplan_sea_english_20260605_yuki&utm_term=20260605_deepseek-v4_white_new&utm_content=tecdo&gad_source=2&gad_campaignid=23906536929&gclid=CjwKCAjwqonVBhA4EiwA9wYJ3Xlt3CYq0n0RZg5HqXHeGMFcoLueRZE7Nmv4xOfOy74XBTxxf3dOOxoC4gUQAvD_BwE"
+      },
+      {
+        "handle": "762334fc",
+        "title": "Example Domain",
+        "url": "https://example.com/"
+      },
+      {
+        "handle": "dfea672b",
+        "title": "",
+        "url": "about:blank"
+      },
+      {
+        "handle": "98e7958e",
+        "title": "",
+        "url": "about:blank"
+      },
+      {
+        "handle": "f5106334",
+        "title": "Just a moment...",
+        "url": "https://polygon.codeforces.com/login?backLink=%2Fpackage%3Fsession%3Da990539d869d87619249d0c813d8346ec027eda9%26ccid%3D0fb1586e2ab7dcfca7b64c98606cec8f&session=a990539d869d87619249d0c813d8346ec027eda9&ccid=19507fc1baee383a5faae847d1eb920d"
+      },
+      {
+        "handle": "bf25f823",
+        "title": "Just a moment...",
+        "url": "https://codeforces.com/"
+      },
+      {
+        "handle": "63a66dee",
+        "title": "Biome Finder - Minecraft App",
+        "url": "https://www.chunkbase.com/apps/biome-finder#seed=-4216250823719477953&platform=java_1_21_9&dimension=overworld&x=967&z=543&zoom=0.518"
+      },
+      {
+        "handle": "c50facdf",
+        "title": "Gamerule keepInventory",
+        "url": "https://duck.ai/chat?t=ffab&chatID=5cb263e5-9c80-4dcf-8477-8b990cb70343"
+      }
+    ],
+    "current": "110befaf"
+  },
+  "liveness": {
+    "live": false,
+    "reasons": [],
+    "drivers": [],
+    "relay": {
+      "state": "finished",
+      "owner": "s2-flip-run6",
+      "driver": "stopped",
+      "guardian": "clean",
+      "recovery": "none"
+    },
+    "leases": [
+      "/home/james/.cache/agent-computer-use/c5-heldout-90.lease",
+      "/home/james/.cache/agent-computer-use/c5-heldout-91.lease",
+      "/home/james/.cache/agent-computer-use/s2-flip-run0.lease",
+      "/home/james/.cache/agent-computer-use/s2-flip-run1.lease",
+      "/home/james/.cache/agent-computer-use/s2-flip-run2.lease",
+      "/home/james/.cache/agent-computer-use/s2-flip-run3.lease",
+      "/home/james/.cache/agent-computer-use/s2-flip-run4.lease",
+      "/home/james/.cache/agent-computer-use/s2-flip-run5.lease",
+      "/home/james/.cache/agent-computer-use/s2-flip-run6.lease",
+      "/home/james/.cache/agent-computer-use/s2-flip-trivial.lease",
+      "/home/james/.cache/agent-computer-use/s2-verify.lease"
+    ]
+  },
+  "open": {
+    "ok": true,
+    "new_handle": "75f575da-069e-44fc-809f-590838aae00c",
+    "new_handle_prefix": "75f575da",
+    "title": "Two-vision benchmark fixture",
+    "url": "file:///home/james/computer-use-wayland/tests/two_vision_fixture.html?clone=zen",
+    "h1": "Clone zen thread",
+    "selected_by": "explicit-select",
+    "ready": "complete",
+    "count_before": 19,
+    "count_after_new": 20,
+    "count_after": 20,
+    "current_before": "a0c38fc9",
+    "title_before": "Chat \u2014 Muse",
+    "url_before": "https://muse.ai/thread/750c8dae-58fb-4a65-82ac-753e78d6ce93",
+    "metrics": {
+      "hasFocus": true,
+      "innerHeight": 1160,
+      "innerWidth": 1615
+    },
+    "rect": {
+      "height": 36,
+      "width": 340,
+      "x": 20,
+      "y": 228.86666870117188
+    },
+    "element_at_point": "msg-input",
+    "viewport_ok": true,
+    "harvest": {
+      "device_pixel_ratio": 1,
+      "inner_size": [
+        1615,
+        1160
+      ],
+      "items": {
+        "#msg-input": {
+          "focused": false,
+          "hit": true,
+          "rect": {
+            "center_x": 190,
+            "center_y": 246.86666870117188,
+            "height": 36,
+            "width": 340,
+            "x": 20,
+            "y": 228.86666870117188
+          }
+        }
+      },
+      "moz_inner": [
+        261,
+        23
+      ],
+      "outer_size": [
+        1863,
+        1176
+      ],
+      "screen_pixels_per_css_pixel": null,
+      "zoom": 1
+    }
+  },
+  "switch": {
+    "ok": true,
+    "handle": "ea7f78ef",
+    "title": "Two-vision benchmark fixture",
+    "url": "file:///home/james/computer-use-wayland/tests/two_vision_fixture.html?clone=zen"
+  },
+  "probe": {
+    "wall_ms": 2080.9,
+    "envelope": {
+      "ok": true,
+      "intent": "c5-zen-delegate-r6-probe",
+      "api_calls": 2,
+      "elapsed_ms": 652.935,
+      "log": [
+        "PROBE zen-1 file:///home/james/computer-use-wayland/tests/two_vision_fixture.html?clone=zen 1",
+        "SNAP-TITLE Two-vision benchmark fixture"
+      ],
+      "variables": {
+        "snap": {
+          "snapshot": "zen-1",
+          "title": "Two-vision benchmark fixture",
+          "url": "file:///home/james/computer-use-wayland/tests/two_vision_fixture.html?clone=zen",
+          "elements": [
+            {
+              "ref": "#msg-input",
+              "name": "#msg-input",
+              "rect": {
+                "x": 20,
+                "y": 228.86666870117188,
+                "width": 340,
+                "height": 36
+              },
+              "plan_rect": {
+                "x": 20,
+                "y": 228.86666870117188,
+                "width": 340,
+                "height": 36
+              },
+              "state": ""
+            }
+          ],
+          "window": [
+            2509,
+            914,
+            1863,
+            1176
+          ],
+          "window_bounds": [
+            2509,
+            914,
+            1863,
+            1176
+          ]
+        }
+      }
+    },
+    "url": "file:///home/james/computer-use-wayland/tests/two_vision_fixture.html?clone=zen",
+    "count": "1",
+    "snapshot_title": "Two-vision benchmark fixture"
+  },
+  "pre": {
+    "h1": "Clone zen thread",
+    "bubble_present": false,
+    "bubbles": [],
+    "input_value": "",
+    "input_events": 0
+  },
+  "send_switch": {
+    "ok": true,
+    "handle": "1ad9e225",
+    "title": "Two-vision benchmark fixture",
+    "url": "file:///home/james/computer-use-wayland/tests/two_vision_fixture.html?clone=zen"
+  },
+  "program": {
+    "ok": true,
+    "elapsed_ms": 5745.525,
+    "error": null,
+    "log": [
+      "PROBE zen-1 file:///home/james/computer-use-wayland/tests/two_vision_fixture.html?clone=zen 1",
+      "dom_act ok True completed 4 ms None error None"
+    ],
+    "wall_ms": 7172.5,
+    "completed": 4,
+    "send_url": "file:///home/james/computer-use-wayland/tests/two_vision_fixture.html?clone=zen",
+    "send_count": "1"
+  },
+  "post": {
+    "bubble_present": true,
+    "bubbles": [
+      "ZEN-DELEGATE-R6-IGNORE-TEST"
+    ],
+    "input_value": "",
+    "input_events": 27
+  },
+  "retry": {
+    "pre_present": true,
+    "outcome": "already-sent",
+    "bubbles_after_refusal": [
+      "ZEN-DELEGATE-R6-IGNORE-TEST"
+    ]
+  },
+  "delayed": {
+    "bubbles": [
+      "ZEN-DELEGATE-R6-IGNORE-TEST"
+    ],
+    "count": 1
+  },
+  "p9": {
+    "ok": true,
+    "png": "/tmp/c5-zenproof-6/p9-zen-r6.png",
+    "wall_ms": 1571.0
+  },
+  "pill_during": {
+    "ok": true,
+    "png": "/tmp/c5-zenproof-6/pill-during-r6.png"
+  },
+  "outcome": "sent",
+  "cleanup": {
+    "ok": true,
+    "close": {
+      "ok": true,
+      "count_before": 20,
+      "count_after": 19,
+      "current_title": "Chat \u2014 Muse",
+      "current_url": "https://muse.ai/thread/750c8dae-58fb-4a65-82ac-753e78d6ce93",
+      "current_handle": "aba6ce76"
+    },
+    "zen_alive": true,
+    "same_address": true,
+    "tabs_after": {
+      "ok": true,
+      "count": 19,
+      "tabs": [
+        {
+          "handle": "b4484597",
+          "title": "YouTube",
+          "url": "https://www.youtube.com/"
+        },
+        {
+          "handle": "c4e68bac",
+          "title": "Problem loading page",
+          "url": "https://www.reddit.com/"
+        },
+        {
+          "handle": "f0a396bf",
+          "title": "Today \u2013 Todoist",
+          "url": "https://app.todoist.com/app/today"
+        },
+        {
+          "handle": "1d513cc9",
+          "title": "Inbox (732) - phamtuanhuy1109@gmail.com - Gmail",
+          "url": "https://mail.google.com/mail/u/1/#inbox"
+        },
+        {
+          "handle": "9c0c1bd6",
+          "title": "L\u1ecbch Google - Tu\u1ea7n 23 th\u00e1ng 11, 2026",
+          "url": "https://calendar.google.com/calendar/u/1/r/week"
+        },
+        {
+          "handle": "55c74ee5",
+          "title": "PCCV CF26 - Google Trang t\u00ednh",
+          "url": "https://docs.google.com/spreadsheets/d/1WzUJNuCQlYLAj59-gdIPFFQv2P_d3f2KhEYcGeWhRRY/edit?gid=0#gid=0"
+        },
+        {
+          "handle": "9dce2723",
+          "title": "Free Claude Code Admin",
+          "url": "http://127.0.0.1:8082/admin/model_config"
+        },
+        {
+          "handle": "89ea4456",
+          "title": "Welcome!",
+          "url": "https://zen-browser.app/welcome/"
+        },
+        {
+          "handle": "9b1c4c5d",
+          "title": "",
+          "url": "about:blank"
+        },
+        {
+          "handle": "4b9fa971",
+          "title": "Chat \u2014 Muse",
+          "url": "https://muse.ai/thread/750c8dae-58fb-4a65-82ac-753e78d6ce93"
+        },
+        {
+          "handle": "f17788c8",
+          "title": "",
+          "url": "about:blank"
+        },
+        {
+          "handle": "71772d7a",
+          "title": "ModelArk-Coding-Plan",
+          "url": "https://www.byteplus.com/en/activity/codingplan?utm_source=google&utm_medium=pmax&utm_campaign=purchase_codingplan_sea_english_20260605_yuki&utm_term=20260605_deepseek-v4_white_new&utm_content=tecdo&gad_source=2&gad_campaignid=23906536929&gclid=CjwKCAjwqonVBhA4EiwA9wYJ3Xlt3CYq0n0RZg5HqXHeGMFcoLueRZE7Nmv4xOfOy74XBTxxf3dOOxoC4gUQAvD_BwE"
+        },
+        {
+          "handle": "ed1300c4",
+          "title": "Example Domain",
+          "url": "https://example.com/"
+        },
+        {
+          "handle": "eace0244",
+          "title": "",
+          "url": "about:blank"
+        },
+        {
+          "handle": "886d7792",
+          "title": "",
+          "url": "about:blank"
+        },
+        {
+          "handle": "8915e6dc",
+          "title": "Just a moment...",
+          "url": "https://polygon.codeforces.com/login?backLink=%2Fpackage%3Fsession%3Da990539d869d87619249d0c813d8346ec027eda9%26ccid%3D0fb1586e2ab7dcfca7b64c98606cec8f&session=a990539d869d87619249d0c813d8346ec027eda9&ccid=19507fc1baee383a5faae847d1eb920d"
+        },
+        {
+          "handle": "8e52690a",
+          "title": "Just a moment...",
+          "url": "https://codeforces.com/"
+        },
+        {
+          "handle": "ab9ee645",
+          "title": "Biome Finder - Minecraft App",
+          "url": "https://www.chunkbase.com/apps/biome-finder#seed=-4216250823719477953&platform=java_1_21_9&dimension=overworld&x=967&z=543&zoom=0.518"
+        },
+        {
+          "handle": "46c407b1",
+          "title": "Gamerule keepInventory",
+          "url": "https://duck.ai/chat?t=ffab&chatID=5cb263e5-9c80-4dcf-8477-8b990cb70343"
+        }
+      ],
+      "current": "4b9fa971"
+    },
+    "current_url_after": "https://muse.ai/thread/750c8dae-58fb-4a65-82ac-753e78d6ce93",
+    "original_restored": true,
+    "count_restored": true
+  },
+  "pill_release": {
+    "ok": true,
+    "pid": 373168
+  },
+  "wall_ms": 87387.9
+}
