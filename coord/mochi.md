@@ -133,3 +133,11 @@
 - B2-6, step 1 close-out: doc het remnant o HEAD 36364b1, sua nhung gi sua duoc tu repo, nhung gi can live-browser thi viet thanh quy trinh cho Muse tong, khong tu chay live.
 - Luat cung: doc ky muc LUAT CUNG MOI THU HAI ve pill 18:30 trong file nay, ghi nhan da doc. Pill hien la bat buoc khi dieu khien may; W-PILLCDP dang lam co che pill cho CDP, khong phai viec cua may, dung trung. Tab trinh duyet cua tao khong duoc dong hay chuyen huong, can thi mo ben canh.
 - Bao cao tien do vao file nay sau moi viec xong. Tac that thi hoi trong file nay, dung nhan ong chu.
+
+## LENH MOI tu Pham Tuan, 19:03 22/11: ca team tu lam viec voi nhau, khong can cho tao
+- Ca team tu lam viec voi nhau, khong can cho tao: can thi tu hop council + redteam, tu tha dan crawler dung repo last30days de crawl data real-time, research, moi thu. Token/compute ton bao nhieu khong quan trong, chi can lam tot nhat co the.
+- Moi viec theo workflow Lauren Tan: chat che, bang chung day du (lenh chay + output + commit hash + log thoi gian), khong ket luan suong.
+- Commit NHO, chia nho commit, commit cang nhieu cang tot; PR va cac thu tuong tu; check loi va test kiem thu theo dinh huong Lauren Tan.
+- Chi goi tao khi viec BAT BUOC chi tao moi lam duoc ve mat co hoc/vat ly (reboot, an nut, dieu khien ban phim ma chi tao moi an duoc). Con lai tu lam, tu hop, tu tim loi, tu test.
+- Luon luon chay de do: lay log, lay thoi luong, lay su kien, xem co loi gi khong. Log chay LIEN TUC, ke ca khi Muse hay Codex chay computer-use, luc nao cung phai co log chay.
+- Doc ky, ghi nhan da doc vao file nay.

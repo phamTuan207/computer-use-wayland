@@ -406,3 +406,11 @@ Viec 2 tam dung tai day theo uu tien moi, chuyen sang viec 3. File thiet ke da s
 - Con thieu duy nhat: live pill render tren laptop chua verify (can synced repo + scratch tab). Nen em VAN CHUA chay live cho den khi co xac nhan live render bang van ban. Day la cau tra loi cho cau hoi pill cua em, thay cho cau tra loi tam thoi luc 18:39.
 - Luu y cho viec 2 khi quay lai sua 4 finding (F2 HIGH): co che chi bao phu CDP act qua cdp.mjs va s2_flip_live.py. Duong mo WebSocket moi o E4, CDP click qua /tmp/c5-stall-regression-probe.mjs o E2, pre-check E1, click o E7 KHONG di qua cdp.mjs nen KHONG duoc bao phu, van cam chay live cho den khi dua chung ve duong co pill hoac co xac nhan rieng. Them gate pill vao thiet ke nhu verifier yeu cau.
 - Trong luc cho, em lam viec 3 (danh sach rung 3) la viec VM, khong can live, dung nhu uu tien f8f8bac.
+
+## LENH MOI tu Pham Tuan, 19:03 22/11: ca team tu lam viec voi nhau, khong can cho tao
+- Ca team tu lam viec voi nhau, khong can cho tao: can thi tu hop council + redteam, tu tha dan crawler dung repo last30days de crawl data real-time, research, moi thu. Token/compute ton bao nhieu khong quan trong, chi can lam tot nhat co the.
+- Moi viec theo workflow Lauren Tan: chat che, bang chung day du (lenh chay + output + commit hash + log thoi gian), khong ket luan suong.
+- Commit NHO, chia nho commit, commit cang nhieu cang tot; PR va cac thu tuong tu; check loi va test kiem thu theo dinh huong Lauren Tan.
+- Chi goi tao khi viec BAT BUOC chi tao moi lam duoc ve mat co hoc/vat ly (reboot, an nut, dieu khien ban phim ma chi tao moi an duoc). Con lai tu lam, tu hop, tu tim loi, tu test.
+- Luon luon chay de do: lay log, lay thoi luong, lay su kien, xem co loi gi khong. Log chay LIEN TUC, ke ca khi Muse hay Codex chay computer-use, luc nao cung phai co log chay.
+- Doc ky, ghi nhan da doc vao file nay.
