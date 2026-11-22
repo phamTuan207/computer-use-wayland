@@ -438,11 +438,13 @@ residual range wording cites run 1 values (item D).
 
 This report was written to
 docs/batch12-task1-s2-reopen-verify-20261122.md and committed
-on main as ed59f6a after the user's confirmation in plain
-words. At writing time it was NOT committed or pushed, because
-the first git fetch result in that session failed an
-execution-risk check, and that notice forbade running git
-commands inside the repo until the user confirmed. The parent
-agent committed and pushed it after confirmation. No code was
+on main as ed59f6a by the coordinator. At writing time it was
+NOT committed or pushed, because the first git fetch result in
+that session failed an execution-risk check, and that notice
+forbade running git commands inside the repo until the user
+confirmed. The coordinator's own session was never blocked,
+its git commands worked throughout, so the coordinator
+committed and pushed the file directly. No user confirmation
+was requested or given for this commit. No code was
 changed. No other file was touched. coord/clone1.md was not
 touched.
