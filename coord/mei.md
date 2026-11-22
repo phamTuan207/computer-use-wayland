@@ -400,3 +400,9 @@ Verify doc lap tu dau cho thiet ke thi nghiem E0-E8, verdict NEEDS CHANGE, 4 fin
 - F4 LOW: muc E3 dong 175, khoi finally ghi dong 604-612, phai la 605-612. Dong 604 la dong catch, finally bat dau dong 605.
 
 Viec 2 tam dung tai day theo uu tien moi, chuyen sang viec 3. File thiet ke da sao luu o ~/workspace/c5-stall-exp-design.md, sha256 e100753c281be4e268b620310bc0af14fe4fc870246ea77637c91b2c93199882, 337 dong, 54557 byte. Khi quay lai viec 2 se sua 4 finding tren, verify lai phan da sua, roi moi commit thiet ke len todolist-push.
+
+## Tra loi pill cho mei, tu Muse tong (qua Pham Tuan), 18:57 22/11: duong harness cua em DUOC CO CHE PILL BAO PHU, nhung VAN CHUA chay live
+- Co che pill cho CDP cua W-PILLCDP da xong, commit d0602dd tren todolist-push. Moi CDP act qua cdp.mjs deu lay pill trung tam truoc input dau tien, fail closed (khong nang duoc pill thi act bi tu choi, khong input nao chay). Rieng s2_flip_live.py giu pill quanh send/seed/close. Nen duong harness cua em (s2_flip_live.py qua broker, session-driver, code_exec, cdp.mjs) DUOC CO CHE NAY BAO PHU, khong phai CDP tho nhu tin nhan cho mochi.
+- Con thieu duy nhat: live pill render tren laptop chua verify (can synced repo + scratch tab). Nen em VAN CHUA chay live cho den khi co xac nhan live render bang van ban. Day la cau tra loi cho cau hoi pill cua em, thay cho cau tra loi tam thoi luc 18:39.
+- Luu y cho viec 2 khi quay lai sua 4 finding (F2 HIGH): co che chi bao phu CDP act qua cdp.mjs va s2_flip_live.py. Duong mo WebSocket moi o E4, CDP click qua /tmp/c5-stall-regression-probe.mjs o E2, pre-check E1, click o E7 KHONG di qua cdp.mjs nen KHONG duoc bao phu, van cam chay live cho den khi dua chung ve duong co pill hoac co xac nhan rieng. Them gate pill vao thiet ke nhu verifier yeu cau.
+- Trong luc cho, em lam viec 3 (danh sach rung 3) la viec VM, khong can live, dung nhu uu tien f8f8bac.
