@@ -69,7 +69,8 @@ TOKENIZER_FUNCS = (
     "_script_basename_is_runner", "_is_python_token",
     "_shlex_tokens", "_runner_md5s", "_path_is_runner_copy",
     "_token_is_runner_script", "_c_code_executes_runner",
-    "_python_executes_runner", "_command_executes_runner",
+    "_m_module_is_runner", "_python_executes_runner",
+    "_is_timeout_dur", "_command_executes_runner",
     "_argv_tokens", "_is_runner_cmdline", "_is_codex_process",
 )
 TOKENIZER_CONSTS = (
@@ -79,7 +80,7 @@ TOKENIZER_CONSTS = (
 
 
 def extract_tokenizer(path, ship_dir):
-    """Extract the 12 tokenizer functions from a runner/launcher
+    """Extract the 14 tokenizer functions from a runner/launcher
     copy, with _SHIP_DIR pointed at ship_dir."""
     return extract_funcs(
         path, TOKENIZER_FUNCS, TOKENIZER_CONSTS,

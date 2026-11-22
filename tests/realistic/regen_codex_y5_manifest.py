@@ -34,7 +34,9 @@ script-form-only guard exits 2 on any import, so the deletion is
 hygiene for probes and staging, not for "the next module import").
 
 Script form only (Y13g B1/B4): the staged verify runs as
-`python3 -P run_codex_y5.py --verify-manifest` (PYTHONSAFEPATH=1).
+`python3 -P -E run_codex_y5.py --verify-manifest`
+(PYTHONSAFEPATH=1, all PYTHON* env vars ignored at interpreter
+startup, so a PYTHONPATH plant cannot execute in the verify).
 -m and bare imports are unsupported invocation forms; the runner
 and the launcher both refuse them at the module top (exit 2).
 """
@@ -176,7 +178,7 @@ def stage(dest):
         print(f"removed staged {cache}")
     print(f"staged ship at {dest}")
     proc = subprocess.run(
-        ["python3", "-P", "run_codex_y5.py", "--verify-manifest"],
+        ["python3", "-P", "-E", "run_codex_y5.py", "--verify-manifest"],
         cwd=str(dest), capture_output=True, text=True, timeout=120)
     print(proc.stdout.strip())
     print(proc.stderr.strip(), file=sys.stderr)

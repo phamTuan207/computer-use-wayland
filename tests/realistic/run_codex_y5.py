@@ -100,22 +100,29 @@ check, predecessor ports free, no live geckodriver with a live
 parent) and then execs the runner under flock -w 60. Do NOT
 launch the runner directly; the direct command below is the
 equivalent only for reference.
-  cd /tmp/worker-y13-server && Y13_GO=1 python3 launch_y13.py all \\
+  cd /tmp/worker-y13-server && Y13_GO=1 python3 -P -E launch_y13.py --repo /home/james/workspace/computer-use-wayland all \\
   > /tmp/worker-y13-stdout.log 2>&1
-  Y13_GO=1 python3 launch_y13.py 01 02
-  python3 -P run_codex_y5.py --verify-manifest
+  Y13_GO=1 python3 -P -E launch_y13.py --repo /home/james/workspace/computer-use-wayland 01 02
+  python3 -P -E run_codex_y5.py --verify-manifest
 
 SCRIPT FORM ONLY (Y13g B1/B4): run this file ONLY as a script,
-`python3 -P run_codex_y5.py ...` (PYTHONSAFEPATH=1: the ship
-dir is never added to sys.path from the environment, so a
-planted stdlib .py cannot execute at import). -m and bare
-imports are UNSUPPORTED and exit 2: the guard at the module
-top deletes the three entry .pyc files it may have created, so
-a -m/import probe never bricks the ship; run the script form
+`python3 -P -E run_codex_y5.py ...` (PYTHONSAFEPATH=1: the ship
+dir is never added to sys.path from the environment; -E makes
+the interpreter ignore all PYTHON* env vars. -P does NOT clear
+PYTHONPATH, so without -E a planted stdlib .py in a PYTHONPATH
+dir can still execute at import; worse, the interpreter itself
+imports warnings/re/functools/collections at startup, so a
+PYTHONPATH plant of one of those names executes before any
+module-top code runs (live-proved 2026-11-22). Run with -E as
+documented; the module-top PYTHONPATH refusal below is
+defense-in-depth for an invocation without -E). -m and bare
+imports are UNSUPPORTED and exit 2: the guard at the module top
+deletes the three entry .pyc files it may have created, so a
+-m/import probe never bricks the ship; run the script form
 directly afterwards. Never invoke -m/import on an unverified
-ship: a forged entry .pyc invoked that way executes (the
-forged bytecode IS the running code); the launcher's
-out-of-process check refuses a forged ship before exec.
+ship: a forged entry .pyc invoked that way executes (the forged
+bytecode IS the running code); the launcher's out-of-process
+check refuses a forged ship before exec.
 Output: one JSON summary line per test on stdout, a suite JSON line,
 per-step JSONL at LIVE_LOG (with attempt fields), per-test
 screenshots in /tmp/worker-y13-shots/.
@@ -169,6 +176,32 @@ def _entry_pyc_paths():
     return out
 
 
+def _prune_empty_cache_dirs():
+    # F6: after the guard deletes entry .pyc files, prune the
+    # empty dirs it emptied (bottom-up rmdir), so a nested
+    # __pycache__ dir left empty by the guard does not linger.
+    # Nested dirs only: the top-level __pycache__ stays in
+    # place (it is exempt when empty). Gated on the same
+    # realpath check as _entry_pyc_paths: a symlinked cache dir
+    # is never pruned.
+    try:
+        _cache = os.path.join(_SHIP_DIR, "__pycache__")
+        if os.path.realpath(_cache) != os.path.join(
+                os.path.realpath(_SHIP_DIR), "__pycache__"):
+            return
+    except OSError:
+        return
+    for _root, _dirs, _files in os.walk(_cache, topdown=False,
+                                        followlinks=False):
+        if _root == _cache:
+            continue
+        try:
+            if not os.listdir(_root):
+                os.rmdir(_root)
+        except OSError:
+            pass
+
+
 # Script-form-only (Y13g B1 item 3): refuse at the very top when
 # loaded as a module or via -m (__spec__ is not None). A -m/import
 # writes the entry .pyc during get_code, before this module
@@ -187,6 +220,8 @@ if globals().get("__spec__") is not None:
             os.unlink(_p)
         except OSError:
             pass
+    # F6: prune the empty dirs the guard just emptied.
+    _prune_empty_cache_dirs()
     print("run as a script (python3 run_codex_y5.py), not with -m "
           "and not via import", file=sys.stderr, flush=True)
     sys.exit(2)
@@ -202,8 +237,32 @@ if globals().get("__spec__") is not None:
 # invokes with -P (the launcher execs with -P, the regen staged
 # verify uses -P).
 if not sys.flags.safe_path:
-    print("run with python3 -P (PYTHONSAFEPATH=1): the bare form "
-          "is refused, a planted file could execute at import",
+    print("run with python3 -P -E (PYTHONSAFEPATH=1, PYTHON* env "
+          "ignored): the bare form is refused, a planted file "
+          "could execute at import",
+          file=sys.stderr, flush=True)
+    sys.exit(2)
+
+
+# Y13g R3 (F2): refuse a poisoned PYTHONPATH at the module top.
+# -P removes sys.path[0] only; it does NOT clear PYTHONPATH, so
+# a planted stdlib .py in a PYTHONPATH dir executes at the first
+# post-scan import (a planted shlex.py proved it under -P, rc 0,
+# manifest_ok true). PYTHONPATH must be unset or empty to run.
+# (Residual, documented: without -E, PYTHONHOME and
+# sitecustomize.py fire at interpreter startup, before any
+# module-top code runs, and so do PYTHONPATH plants of the names
+# the interpreter itself imports at startup (warnings, re,
+# functools, collections, live-proved 2026-11-22), so no
+# in-process check can close that channel; invoke with -E as
+# documented, which makes the interpreter ignore all PYTHON*
+# vars. This refusal is defense-in-depth for an invocation
+# without -E.)
+if os.environ.get("PYTHONPATH"):
+    print("run with PYTHONPATH unset or empty (or with -E, which "
+          "ignores PYTHONPATH): -P does not clear PYTHONPATH, "
+          "and a planted stdlib module in a PYTHONPATH dir would "
+          "execute at import",
           file=sys.stderr, flush=True)
     sys.exit(2)
 
@@ -324,9 +383,18 @@ def _refuse_tampered_ship():
     # self-cache before it can brick a later run.
     # sys.dont_write_bytecode stops this process writing .pyc
     # itself, so a clean ship stays clean through the run.
-    # Recovery hint (C3-5): the "fix" field tells the operator
-    # what to do (delete the named file, or re-stage the ship).
+    # Recovery hint (C3-4): the "fix" field tells the operator
+    # what to do (delete the named files and directories, or
+    # re-stage the ship).
     found = []  # (relative path, kind)
+    # C2-4: every allowlist file must exist as a regular file. A
+    # symlink is NOT flagged here (the walk below flags it as
+    # "symlink"); only a genuinely absent path, or a non-file
+    # non-symlink in its place, is "missing-file".
+    for _rel in sorted(_SHIP_FILES):
+        _full = os.path.join(_SHIP_DIR, _rel)
+        if not os.path.isfile(_full) and not os.path.islink(_full):
+            found.append((_rel, "missing-file"))
     for _root, _dirs, _files in os.walk(_SHIP_DIR, followlinks=False):
         _rel_root = os.path.relpath(_root, _SHIP_DIR)
         if _rel_root == ".":
@@ -360,8 +428,8 @@ def _refuse_tampered_ship():
         _files = ", ".join(_json_str(p) for p, _ in sorted(found))
         print('{"refused": true, "kind": ' + _json_str(_kind)
               + ', "files": [' + _files + '], "manifest_ok": false, '
-              '"fix": "delete the named files, or re-stage the ship '
-              'with the regen script"}', flush=True)
+              '"fix": "delete the named files and directories, or '
+              're-stage the ship with the regen script"}', flush=True)
         sys.exit(2)
 
 
@@ -747,10 +815,10 @@ def _verify_manifest():
     allowed.add(f"{SUITE_DIR}/SHIPPED.md")
     # Y13g B1/B4: a __pycache__ directory is exempt from the
     # "unexpected directory" refusal ONLY when it holds nothing but
-    # the two entry .pyc files (0, 1, or 2). The files inside are
-    # still refused as bytecode below (no per-file exemption), so
-    # this exemption exists only to keep an empty __pycache__ left
-    # by a probe from bricking verify.
+    # the three entry .pyc files (0, 1, 2, or 3). The files inside
+    # are still refused as bytecode below (no per-file exemption),
+    # so this exemption exists only to keep an empty __pycache__
+    # left by a probe from bricking verify.
     prefixes = {""}
     for rel, _ in entries:
         parts = rel.split("/")
@@ -3841,22 +3909,31 @@ def _is_python_token(tok):
             or base.startswith("pypy3."))
 
 
-# Y13g B3 (C2 AMEND 3/4, redteam B3; R3 round 2): the Y13f
-# tokenizer used a prev-token heuristic and missed -m forms,
-# flag-with-value forms, renamed/extensionless/symlinked copies,
-# and -c exec forms. This block parses the command the way a
-# shell + python would: wrappers first (env/nohup/setsid/timeout/
-# flock/bash -c, plus nice/stdbuf/taskset/sudo/uv run, exec -a),
-# then a real python argv parse (flags and their values skipped,
-# bundled short flags, -m by last dotted segment with a pdb
-# special case, python3 - as stdin, first positional is the
-# script candidate), then identity by name OR by md5 against the
-# manifest. -c strings go through the exec-sink check (exec(,
-# eval(, os.system(, subprocess.*, runpy.run_path() plus a .py
-# path md5 check). A mere path mention (md5sum, cat, git) never
-# matches: only a token in an execution position is examined.
-# Keep in sync with launch_y13.py (identical block,
-# AST-verified); _SHIP_DIR is the ship dir in both files.
+# Y13g B3 (C2 AMEND 3/4, redteam B3; R3 round 2; R3 round 3):
+# the Y13f tokenizer used a prev-token heuristic and missed -m
+# forms, flag-with-value forms, renamed/extensionless/symlinked
+# copies, and -c exec forms. This block parses the command the
+# way a shell + python would: wrappers first (env/nohup/setsid/
+# timeout/flock/bash -c, plus nice/stdbuf/taskset/sudo/uv run,
+# time/watch/xargs/ionice/chrt/numactl/systemd-run/unshare/su/
+# runuser/prlimit/setarch/firejail/bwrap, exec -a, and a generic
+# path-like unknown-wrapper rule), then a real python argv parse
+# (flags and their values skipped, bundled short flags, -m by
+# last dotted segment with pdb/pudb/trace special cases,
+# python3 - as stdin, python3 -- - as stdin, first positional
+# is the script candidate), then identity by name OR by md5
+# against the manifest. -c strings go through the exec-sink
+# check (exec(, eval(, os.system(, os.popen(, os.exec/spawn,
+# subprocess.* incl. getoutput/getstatusoutput, runpy.run_path(,
+# pty.spawn(, pdb.run() plus a .py path md5 check, with
+# __import__/from-import/alias normalization and sys.argv[N] /
+# os.environ[...] smuggling resolved against the enclosing
+# python's effective sys.argv and environ). All commands in a
+# -c string are scanned, not just the first. A mere path mention
+# (md5sum, cat, git) never matches: only a token in an execution
+# position is examined. Keep in sync with launch_y13.py
+# (identical block, AST-verified); _SHIP_DIR is the ship dir in
+# both files.
 _RUNNER_MODULE_NAMES = (
     "run_codex_y5", "run_live", "run_agyq2", "run_batch3",
     "run_agy_y2", "run-nested-pill", "hand_drive_e1",
@@ -3869,19 +3946,22 @@ def _shlex_tokens(s):
     """Split a -c command string on shell words (shlex, whitespace
     fallback), then split each token on ;, &, | (C2-3: a separator
     glued mid-token, 'python3 run_codex_y5.py;echo done', is the
-    same command as a spaced one; shlex keeps it glued). A ';'
-    inside a QUOTED string is split too (fail-closed: a quoted
-    separator is rare, and the name leg still needs a runner
-    token to match). shlex is imported at the module top (before
-    the sys.path insert), never lazily here, so a planted shlex
-    cannot load (C2-1)."""
+    same command as a spaced one; shlex keeps it glued). The
+    separators are KEPT as their own tokens (;, &, |, &&, ||) so
+    _command_executes_runner can scan EVERY command in the string,
+    not just the first (F3(f): a runner as the second command, or
+    after a pipe, counts). A ';' inside a QUOTED string is split
+    too (fail-closed: a quoted separator is rare, and the name leg
+    still needs a runner token to match). shlex is imported at the
+    module top (before the sys.path insert), never lazily here, so
+    a planted shlex cannot load (C2-1)."""
     try:
         parts = shlex.split(s)
     except Exception:
         parts = s.split()
     out = []
     for p in parts:
-        for _piece in re.split(r"[;&|]", p):
+        for _piece in re.split(r"(&&|\|\||[;&|])", p):
             if _piece:
                 out.append(_piece)
     return out
@@ -3960,59 +4040,155 @@ def _token_is_runner_script(tok, cwd=None):
     return _path_is_runner_copy(tok, cwd)
 
 
-def _c_code_executes_runner(code, cwd=None):
+def _c_code_executes_runner(code, cwd=None, argv=None, environ=None):
     """True if a python -c code string executes a runner. First
     the code is parsed as a shell command (a nested 'python3
     run_codex_y5.py', e.g. via a -c inside -c, is caught by the
     same recursive parse). Then the exec-sink case: a -c string
     that hands code to exec(, eval(, os.system(, a subprocess.*
-    call, or runpy.run_path( executes whatever it names, so a
+    call, runpy.run_path(, an os.exec/spawn call, os.popen(,
+    pty.spawn(, or pdb.run( executes whatever it names, so a
     runner script basename in the code, or a quoted .py path
     that resolves to a runner copy (md5), counts. A bare
     'import run_codex_y5' is NOT an execution (an import runs
     the script-form guard and exits 2, never the suite), and
     neither is runpy.run_module (same guard) nor a mere mention
-    such as print('run_codex_y5.py') (no sink). LIMIT
-    (documented): a -c string that builds the runner name by
-    string concatenation so NO single literal is a full runner
-    path (exec(open('run_codex_'+'y5.py').read())) is not caught
-    unless one literal is the full name; the ports + flock
-    backstop applies."""
+    such as print('run_codex_y5.py') (no sink). The code is
+    NORMALIZED before the sink check: __import__('X').Y( becomes
+    X.Y(, `from X import Y` makes a bare Y( count as X.Y(, and
+    `import X as A` rewrites A. as X. (F3(c): from-import, alias,
+    and __import__ forms are live evasions.) argv/env smuggling
+    (F3(b)): when a sink is present, a path that comes from
+    sys.argv[N] or os.environ[...] / os.getenv(... counts when
+    the argv/env value is a runner script. argv is the enclosing
+    python's effective sys.argv (['-c', arg1, ...], so sys.argv[N]
+    is argv[N]); environ is the process environ dict. When
+    argv/environ is None (unknown, e.g. an unreadable
+    /proc/PID/environ), an unresolvable reference is treated as a
+    runner (fail-closed). When environ is a dict without the key,
+    the reference would raise KeyError in the real program, so it
+    does not count. LIMIT (documented): a -c string that builds
+    the runner name by string concatenation so NO single literal
+    is a full runner path (exec(open('run_codex_'+'y5.py').read()))
+    is not caught unless one literal is the full name; the ports
+    + flock backstop applies."""
     inner = _shlex_tokens(code)
-    if inner and _command_executes_runner(inner, cwd):
+    if inner and _command_executes_runner(inner, cwd, environ):
         return True
-    _SINKS = ("exec(", "eval(", "os.system(",
+    _code = code
+    # __import__('X').Y( -> X.Y( (any quote style, spaces allowed).
+    _code = re.sub(r"__import__\(\s*['\"]([A-Za-z0-9_.]+)['\"]\s*\)",
+                   r"\1", _code)
+    # `from X import Y [, Z ...] [as A]` -> a bare Y( counts as X.Y(.
+    for _m in re.finditer(r"from\s+([A-Za-z0-9_.]+)\s+import\s+"
+                         r"([^;\n]+)", _code):
+        _mod = _m.group(1)
+        _names = _m.group(2)
+        _alias = None
+        _am = re.search(r"\bas\s+([A-Za-z_][A-Za-z0-9_]*)\s*$", _names)
+        if _am:
+            _alias = _am.group(1)
+            _names = _names[:_am.start()]
+        for _part in _names.split(","):
+            _part = _part.strip()
+            if not _part:
+                continue
+            _pm = re.match(r"([A-Za-z_][A-Za-z0-9_]*)\s+as\s+"
+                           r"([A-Za-z_][A-Za-z0-9_]*)", _part)
+            if _pm:
+                _name, _call = _pm.group(1), _pm.group(2)
+            elif _alias:
+                _name, _call = _part, _alias
+            else:
+                _name = _call = _part
+            if not re.match(r"[A-Za-z_][A-Za-z0-9_]*$", _call or ""):
+                continue
+            _code = re.sub(r"\b" + re.escape(_call) + r"\(",
+                           _mod + "." + _name + "(", _code)
+    # `import X as A` -> rewrite A. as X. (word-boundary aware).
+    for _m in re.finditer(r"import\s+([A-Za-z0-9_.]+)\s+as\s+"
+                         r"([A-Za-z_][A-Za-z0-9_]*)", _code):
+        _mod, _alias = _m.group(1), _m.group(2)
+        _code = re.sub(r"\b" + re.escape(_alias) + r"\.",
+                       _mod + ".", _code)
+    _SINKS = ("exec(", "eval(", "os.system(", "os.popen(",
+              "os.execl(", "os.execle(", "os.execlp(", "os.execlpe(",
+              "os.execv(", "os.execve(", "os.execvp(", "os.execvpe(",
+              "os.posix_spawn(", "os.posix_spawnp(",
+              "os.spawnl(", "os.spawnle(", "os.spawnlp(",
+              "os.spawnlpe(", "os.spawnv(", "os.spawnve(",
+              "os.spawnvp(", "os.spawnvpe(",
               "subprocess.call(", "subprocess.run(",
               "subprocess.Popen(", "subprocess.check_output(",
-              "subprocess.check_call(", "runpy.run_path(")
-    if not any(_s in code for _s in _SINKS):
+              "subprocess.check_call(", "subprocess.getoutput(",
+              "subprocess.getstatusoutput(", "runpy.run_path(",
+              "pty.spawn(", "pdb.run(")
+    if not any(_s in _code for _s in _SINKS):
         return False
     for m in re.finditer(r"run_[A-Za-z0-9_.\-]*\.py|"
                          r"run-nested[A-Za-z0-9_.\-]*|"
-                         r"hand_drive_e1\.py", code):
+                         r"hand_drive_e1\.py", _code):
         if _script_basename_is_runner(m.group(0)):
             return True
-    for m in re.finditer(r"['\"]([^'\"]+\.py)['\"]", code):
+    for m in re.finditer(r"['\"]([^'\"]+\.py)['\"]", _code):
         if _path_is_runner_copy(m.group(1), cwd):
+            return True
+    # argv/env smuggling: a sink whose path comes from sys.argv[N]
+    # or os.environ[...] / os.getenv(... counts when the value is
+    # a runner script (or the value is unknown: fail-closed).
+    for _m in re.finditer(r"sys\.argv\[(-?\d+)\]", _code):
+        _n = int(_m.group(1))
+        if argv is None:
+            return True
+        if _n >= 0:
+            _val = argv[_n] if _n < len(argv) else None
+        else:
+            _val = argv[_n] if -_n <= len(argv) else None
+        if _val is not None and _token_is_runner_script(_val, cwd):
+            return True
+    for _m in re.finditer(r"os\.environ\[\s*['\"]([^'\"]+)['\"]\s*\]",
+                          _code):
+        _key = _m.group(1)
+        if environ is None:
+            return True
+        if _key in environ and _token_is_runner_script(
+                environ[_key], cwd):
+            return True
+    for _m in re.finditer(r"os\.(?:getenv|environ\.get)\(\s*"
+                         r"['\"]([^'\"]+)['\"]", _code):
+        _key = _m.group(1)
+        if environ is None:
+            return True
+        if _key in environ and _token_is_runner_script(
+                environ[_key], cwd):
             return True
     return False
 
 
 def _m_module_is_runner(mod, args, start, cwd=None):
     """True if a -m module argument executes a runner. A known
-    runner module (by last dotted segment) counts. `pdb` counts
-    when a following arg is a runner script: pdb runs its script
-    with __spec__ None, so the -m guard does NOT fire (C2-3,
-    proved live). runpy/cProfile are NOT counted: both set
-    __spec__, so the guard kills those forms before the suite
-    runs (C2-3 corrected rows). A .py -m argument is an invalid
+    runner module (by last dotted segment) counts. `pdb` and
+    `pudb` count when a following arg is a runner script: a
+    debugger runs its script with __spec__ None, so the -m
+    guard does NOT fire (C2-3, proved live for pdb). `trace`
+    counts the same way (trace runs the named script), EXCEPT
+    in --module mode: --module / -m in the trace args means the
+    module is IMPORTED, so the guard fires (safe). trace's value
+    flags (--ignore-module, --ignore-dir, --coverdir, --file,
+    -f, -C) skip their following value; a bare '-' is skipped.
+    runpy/cProfile/profile are NOT counted: they set __spec__,
+    so the guard kills those forms before the suite runs (-m
+    profile is live-proved: guard fires, rc 0, no manifest_ok).
+    -m unittest and -m timeit are NOT counted either (timeit
+    exec crashes with NameError in the exec namespace,
+    live-proved, rc 1, no run). A .py -m argument is an invalid
     form and cannot execute."""
     if mod.endswith(".py"):
         return False
     last = mod.rsplit(".", 1)[-1]
     if last in _RUNNER_MODULE_NAMES:
         return True
-    if last == "pdb":
+    if last in ("pdb", "pudb"):
         _skip = False
         for _t in args[start:]:
             if _skip:
@@ -4026,13 +4202,38 @@ def _m_module_is_runner(mod, args, start, cwd=None):
             if _token_is_runner_script(_t, cwd):
                 return True
         return False
+    if last == "trace":
+        # --module mode imports the module (guard fires); any
+        # --module / -m token, or a short-flag bundle containing
+        # 'm', means module mode. (A -f value of literally "-m"
+        # would be misread; that form is vanishingly exotic.)
+        for _t in args[start:]:
+            if _t in ("--module", "-m"):
+                return False
+            if _t.startswith("-") and not _t.startswith("--") \
+                    and "m" in _t[1:]:
+                return False
+        _skip = False
+        for _t in args[start:]:
+            if _skip:
+                _skip = False
+                continue
+            if _t in ("--ignore-module", "--ignore-dir",
+                      "--coverdir", "--file", "-f", "-C"):
+                _skip = True
+                continue
+            if _t.startswith("-"):
+                continue
+            if _token_is_runner_script(_t, cwd):
+                return True
+        return False
     return False
 
 
 _PY_NO_VALUE = frozenset("bBdeEhiIOqSsuv")
 
 
-def _python_executes_runner(args, cwd=None):
+def _python_executes_runner(args, cwd=None, environ=None):
     """Real python argv parse (C2 AMEND 3, R3). Skips interpreter
     flags and their values (-u -B -E -s -v -W <val> -X <val> -O
     -c <code> -m <mod>, -- separator, bundled short flags such as
@@ -4041,9 +4242,14 @@ def _python_executes_runner(args, cwd=None):
     candidate. A -m module is a runner when its LAST dotted
     segment is a known runner module (pkg.run_codex_y5 counts;
     run_codex_y5.py as a -m argument is an invalid form and
-    cannot execute), or when it is pdb with a runner script
-    following. `python3 -` (stdin) is treated as a possible
-    runner (fail-closed: piped runner bytes execute)."""
+    cannot execute), or when it is pdb/pudb/trace with a runner
+    script following. `python3 -` (stdin) is treated as a
+    possible runner (fail-closed: piped runner bytes execute),
+    and so is `python3 -- -` (F3(a): the post--- position is
+    still a script position). A -c string receives the enclosing
+    python's effective sys.argv (['-c', arg1, ...]) and environ
+    so it can resolve sys.argv[N] / os.environ[...] smuggling
+    (F3(b)); environ None means unknown (fail-closed)."""
     i = 0
     n = len(args)
     while i < n:
@@ -4054,7 +4260,9 @@ def _python_executes_runner(args, cwd=None):
         if tok == "-c":
             if i + 1 >= n:
                 return False
-            return _c_code_executes_runner(args[i + 1], cwd)
+            return _c_code_executes_runner(
+                args[i + 1], cwd, ["-c"] + list(args[i + 2:]),
+                environ)
         if tok == "-m":
             if i + 1 >= n:
                 return False
@@ -4084,10 +4292,14 @@ def _python_executes_runner(args, cwd=None):
                 rest = chars[j + 1:]
                 if flag == "c":
                     if rest:
-                        return _c_code_executes_runner(rest, cwd)
+                        return _c_code_executes_runner(
+                            rest, cwd, ["-c"] + list(args[i + 1:]),
+                            environ)
                     if i + 1 >= n:
                         return False
-                    return _c_code_executes_runner(args[i + 1], cwd)
+                    return _c_code_executes_runner(
+                        args[i + 1], cwd,
+                        ["-c"] + list(args[i + 2:]), environ)
                 if flag == "m":
                     mod = rest if rest else (
                         args[i + 1] if i + 1 < n else None)
@@ -4105,6 +4317,10 @@ def _python_executes_runner(args, cwd=None):
             return True
         return _token_is_runner_script(tok, cwd)
     if i < n:
+        # Post--- position: a '-' here is still stdin (a possible
+        # runner), not a flag (F3(a)).
+        if args[i] == "-":
+            return True
         return _token_is_runner_script(args[i], cwd)
     return False
 
@@ -4112,24 +4328,73 @@ def _python_executes_runner(args, cwd=None):
 def _is_timeout_dur(t):
     # timeout durations accept a unit suffix and decimals: 60,
     # 60s, 1m, 1.5m, 90. (C2-3: "60s"/"1m" were misread as the
-    # command.)
+    # command.) Hex durations are accepted too (0x10, 0x10s),
+    # and "inf" (GNU timeout's infinite duration). "1h30m" is
+    # NOT a valid timeout duration (timeout takes one number
+    # with one suffix), so it is not a duration here.
+    if t == "inf":
+        return True
     if t and t[-1] in "smhd":
         t = t[:-1]
-    return bool(t) and t.replace(".", "", 1).isdigit()
+    if not t:
+        return False
+    if t[:2] in ("0x", "0X"):
+        return len(t) > 2 and all(
+            c in "0123456789abcdefABCDEF" for c in t[2:])
+    return t.replace(".", "", 1).isdigit()
 
 
-def _command_executes_runner(tokens, cwd=None):
-    """Recursive shell-ish parse: strips wrappers (env VAR=1,
-    nohup, setsid, exec [-a name] [-l] [-c], command, timeout
-    <dur>, flock <flags> <lock> [-c <cmd>], bash/sh -c <cmd> or
-    <script>, and the command wrappers nice, stdbuf, taskset,
-    sudo, uv run, each with its flags and values skipped), then
-    a python token hands off to _python_executes_runner, and any
-    other token reaching this point is argv[0] of the command
-    and is checked as a shebang exec (./run_codex_y5.py).
-    Only a token in an execution position is ever examined, so
-    'echo python3 run_codex_y5.py' and 'grep python3 ...' do
-    NOT match, while 'exec python3 run_codex_y5.py' does."""
+def _command_executes_runner(tokens, cwd=None, environ=None):
+    """Recursive shell-ish parse: strips wrappers (env VAR=1
+    (and -S <cmd>), nohup, setsid, exec [-a name] [-l] [-c],
+    command, timeout <dur>, flock <flags> <lock> [-c <cmd>],
+    bash/sh -c <cmd> or <script>, and the command wrappers
+    nice, stdbuf, taskset, sudo, uv run, time, watch, xargs,
+    ionice, chrt, numactl, systemd-run, unshare, su, runuser,
+    prlimit, setarch, firejail, bwrap, each with its flags and
+    values skipped), then a python token hands off to
+    _python_executes_runner, and any other token reaching this
+    point is argv[0] of the command and is checked as a shebang
+    exec (./run_codex_y5.py). A path-like argv[0] that is not a
+    known wrapper, python, or shell, followed by a python token,
+    a -c string, or a runner script token, is a renamed
+    interpreter / shell / unknown wrapper around that command
+    (F3(e)). Only a token in an execution position is ever
+    examined, so 'echo python3 run_codex_y5.py' and 'grep
+    python3 ...' do NOT match, while 'exec python3
+    run_codex_y5.py' does. Commands separated by ;, &, |, &&,
+    || are ALL checked (F3(f)): a runner as the second command,
+    or after a pipe, counts. environ is the process environ
+    dict (or None when unknown) for -c argv/env smuggling."""
+    # Multi-command: split on ;, &, |, &&, || and check EVERY
+    # command (F3(f)). _shlex_tokens keeps the separators as
+    # tokens; a plain argv list has none, so the split is a
+    # no-op there. Each slice is re-checked recursively.
+    _seps = (";", "&", "|", "&&", "||")
+    if any(_t in _seps for _t in tokens):
+        i = 0
+        n = len(tokens)
+        while i < n:
+            while i < n and tokens[i] in _seps:
+                i += 1
+            if i >= n:
+                return False
+            j = i
+            while j < n and tokens[j] not in _seps:
+                j += 1
+            if _command_executes_runner(tokens[i:j], cwd, environ):
+                return True
+            i = j
+        return False
+    # Known non-executing basenames (F3(e)): hashing or reading a
+    # runner file is not executing it, so a path-like argv[0]
+    # with one of these basenames never triggers the generic
+    # wrapper rule below.
+    _NO_EXEC = frozenset((
+        "md5sum", "sha1sum", "sha256sum", "sha512sum", "sha384sum",
+        "sha224sum", "b2sum", "cksum", "cat", "grep", "egrep",
+        "fgrep", "wc", "head", "tail", "less", "more", "ls",
+        "sort", "uniq", "cut", "awk", "sed", "tr", "stat", "file"))
     i = 0
     n = len(tokens)
     while i < n:
@@ -4139,6 +4404,19 @@ def _command_executes_runner(tokens, cwd=None):
             i += 1
             while i < n:
                 t = tokens[i]
+                if t in ("-S", "--split-string") and i + 1 < n:
+                    # env -S "VAR=1 python3 run_codex_y5.py":
+                    # the value is a command string, parsed
+                    # recursively.
+                    return _command_executes_runner(
+                        _shlex_tokens(tokens[i + 1]), cwd, environ)
+                if t.startswith("--split-string="):
+                    return _command_executes_runner(
+                        _shlex_tokens(t.split("=", 1)[1]),
+                        cwd, environ)
+                if t.startswith("-S") and len(t) > 2:
+                    return _command_executes_runner(
+                        _shlex_tokens(t[2:]), cwd, environ)
                 if t.startswith("-"):
                     if t == "-u" and i + 1 < n:
                         i += 2
@@ -4152,6 +4430,13 @@ def _command_executes_runner(tokens, cwd=None):
             continue
         if base in ("nohup", "setsid", "command"):
             i += 1
+            if base == "command" and i < n and \
+                    tokens[i] in ("-v", "-V"):
+                # `command -v NAME` only prints the path; it
+                # never executes NAME.
+                return False
+            while i < n and tokens[i].startswith("-"):
+                i += 1
             continue
         if base == "exec":
             # exec [-cl] [-a name] [command]: -a takes a value,
@@ -4192,6 +4477,11 @@ def _command_executes_runner(tokens, cwd=None):
                 if t.startswith("-"):
                     i += 1
                     continue
+                if base == "sudo" and "=" in t:
+                    # sudo VAR=1 python3 ...: VAR= assignments
+                    # after sudo are env, not the command.
+                    i += 1
+                    continue
                 break
             # taskset takes a bare CPU mask (hex/number) before
             # the command; it is not the command.
@@ -4200,6 +4490,150 @@ def _command_executes_runner(tokens, cwd=None):
                 _m = _t[2:] if _t.startswith("0x") else _t
                 if _m.replace(",", "").replace("-", "").isdigit():
                     i += 1
+            continue
+        if base in ("time", "watch", "xargs", "ionice", "numactl",
+                    "systemd-run", "unshare", "prlimit", "firejail"):
+            # More command wrappers (F3(e), redteam FRESH): each
+            # executes the command that follows its flags and
+            # values. Value flags take a separate next token;
+            # attached values (-n1, --interleave=all) and bare
+            # flags are skipped by the "-" check.
+            i += 1
+            _value_flags = {
+                "time": ("-f", "--format", "-o", "--output"),
+                "watch": ("-n", "--interval"),
+                "xargs": ("-I", "--replace", "-n", "--max-args",
+                          "-P", "--max-procs", "-s", "--max-chars",
+                          "-L", "--max-lines", "-d", "--delimiter",
+                          "-a", "--arg-file", "-E", "--eof"),
+                "ionice": ("-c", "--class", "-n", "--classdata",
+                           "-p", "--pid"),
+                "numactl": ("--cpunodebind", "--physcpubind",
+                            "--interleave", "--preferred",
+                            "--membind", "--cpubind", "--file",
+                            "--length", "--offset", "--shmmode",
+                            "--touch", "-m", "-i", "-p", "-C",
+                            "-N"),
+                "systemd-run": ("--unit", "--description",
+                                "--slice", "--property", "--uid",
+                                "--gid", "--nice",
+                                "--working-directory",
+                                "--service-type",
+                                "--timer-property", "--on-active",
+                                "--on-boot", "--on-startup",
+                                "--on-unit-active",
+                                "--on-unit-inactive", "--setenv"),
+                "unshare": ("--map-user", "--map-group",
+                            "--setgroups"),
+                "prlimit": ("--nproc", "--as", "--cpu", "--fsize",
+                            "--nofile", "--rss", "--rttime",
+                            "--rtprio", "--sigpending", "--stack",
+                            "--core", "--data", "--locks",
+                            "--memlock", "--msgqueue", "--nice",
+                            "-p", "--pid"),
+                "firejail": ("--profile",),
+            }[base]
+            while i < n:
+                t = tokens[i]
+                if t in _value_flags and i + 1 < n:
+                    i += 2
+                    continue
+                if t.startswith("-"):
+                    i += 1
+                    continue
+                break
+            continue
+        if base == "bwrap":
+            # bwrap: --bind/--ro-bind/--dev-bind/--symlink/
+            # --setenv take TWO following args; --dir/--tmpfs/
+            # --proc/--dev/--chdir/--hostname/--uid/--gid/
+            # --unsetenv take one. Other --flags are bare.
+            i += 1
+            _two = ("--bind", "--ro-bind", "--dev-bind",
+                    "--symlink", "--setenv")
+            _one = ("--dir", "--tmpfs", "--proc", "--dev",
+                    "--chdir", "--hostname", "--uid", "--gid",
+                    "--unsetenv")
+            while i < n:
+                t = tokens[i]
+                if t in _two and i + 2 < n:
+                    i += 3
+                    continue
+                if t in _one and i + 1 < n:
+                    i += 2
+                    continue
+                if t.startswith("-"):
+                    i += 1
+                    continue
+                break
+            continue
+        if base == "su":
+            # su [user] [-c cmd]: -c takes a command string
+            # (parsed recursively), wherever it appears; the
+            # first bare token is the user, not the command.
+            i += 1
+            _seen_user = False
+            while i < n:
+                t = tokens[i]
+                if t == "-c" and i + 1 < n:
+                    return _command_executes_runner(
+                        _shlex_tokens(tokens[i + 1]), cwd, environ)
+                if t in ("-s", "--shell", "-g", "--group",
+                         "-G") and i + 1 < n:
+                    i += 2
+                    continue
+                if t.startswith("-"):
+                    i += 1
+                    continue
+                if not _seen_user:
+                    _seen_user = True
+                    i += 1
+                    continue
+                break
+            continue
+        if base == "runuser":
+            # runuser -u user [-c cmd] command: the user comes
+            # via -u, so the first bare token IS the command.
+            i += 1
+            while i < n:
+                t = tokens[i]
+                if t == "-c" and i + 1 < n:
+                    return _command_executes_runner(
+                        _shlex_tokens(tokens[i + 1]), cwd, environ)
+                if t in ("-u", "--user", "-g", "--group",
+                         "-s", "--shell") and i + 1 < n:
+                    i += 2
+                    continue
+                if t.startswith("-"):
+                    i += 1
+                    continue
+                break
+            continue
+        if base == "setarch":
+            # setarch [options] personality command: skip flags,
+            # then one bare token (the personality/arch), then
+            # the command.
+            i += 1
+            while i < n and tokens[i].startswith("-"):
+                i += 1
+            if i < n:
+                i += 1
+            continue
+        if base == "chrt":
+            # chrt [flags] priority command: skip flags, then
+            # one bare numeric priority, then the command.
+            i += 1
+            while i < n:
+                t = tokens[i]
+                if t in ("-p", "--pid") and i + 1 < n:
+                    i += 2
+                    continue
+                if t.startswith("-"):
+                    i += 1
+                    continue
+                break
+            if i < n and tokens[i].isdigit():
+                i += 1
             continue
         if base == "timeout":
             i += 1
@@ -4221,7 +4655,7 @@ def _command_executes_runner(tokens, cwd=None):
                     if i + 1 >= n:
                         return False
                     return _command_executes_runner(
-                        _shlex_tokens(tokens[i + 1]), cwd)
+                        _shlex_tokens(tokens[i + 1]), cwd, environ)
                 if t in ("-w", "--timeout", "-E",
                          "--conflict-exit-code"):
                     i += 2
@@ -4239,21 +4673,41 @@ def _command_executes_runner(tokens, cwd=None):
                 if i + 1 >= n:
                     return False
                 return _command_executes_runner(
-                    _shlex_tokens(tokens[i + 1]), cwd)
-            return _command_executes_runner(tokens[i:], cwd)
+                    _shlex_tokens(tokens[i + 1]), cwd, environ)
+            return _command_executes_runner(tokens[i:], cwd, environ)
         if base in ("bash", "sh", "zsh", "dash"):
             j = i + 1
             while j < n:
                 if tokens[j] == "-c" and j + 1 < n:
                     return _command_executes_runner(
-                        _shlex_tokens(tokens[j + 1]), cwd)
+                        _shlex_tokens(tokens[j + 1]), cwd, environ)
                 if tokens[j].startswith("-"):
                     j += 1
                     continue
                 return _token_is_runner_script(tokens[j], cwd)
             return False
         if _is_python_token(tok):
-            return _python_executes_runner(tokens[i + 1:], cwd)
+            return _python_executes_runner(tokens[i + 1:], cwd,
+                                           environ)
+        # Renamed interpreter / shell / unknown wrapper (F3(e)):
+        # a path-like argv[0] (contains '/') that is not a known
+        # wrapper, python, or shell, followed by a python token,
+        # a -c string, or a runner script token, is a wrapper
+        # around that command. A bare-word unknown wrapper (no
+        # slash) is NOT treated this way: a bare-word generic
+        # rule would break 'bash -c echo mention' (False).
+        if "/" in tok and base not in _NO_EXEC:
+            _rest = tokens[i + 1:]
+            if _rest:
+                _first = _rest[0]
+                if _is_python_token(_first):
+                    return _python_executes_runner(
+                        _rest[1:], cwd, environ)
+                if _first == "-c" and len(_rest) > 1:
+                    return _command_executes_runner(
+                        _shlex_tokens(_rest[1]), cwd, environ)
+                if _token_is_runner_script(_first, cwd):
+                    return True
         return _token_is_runner_script(tok, cwd)
     return False
 
@@ -4267,42 +4721,228 @@ def _argv_tokens(cmdline):
     return [t for t in cmdline.split("\x00") if t]
 
 
-def _is_runner_cmdline(cmdline, cwd=None):
+def _is_runner_cmdline(cmdline, cwd=None, environ=None):
     """True if the cmdline EXECUTES a runner script (Y13g B3).
 
     Parses the command like a shell + python would (see
     _command_executes_runner): wrappers, real python argv parse,
-    -m by last dotted segment (plus pdb), -c by first-word
-    semantics plus the exec-sink check, renamed/extensionless/
-    symlinked copies by md5 against the manifest. A mere path
-    mention (md5sum /abs/run_foo.py, echo/grep of a runner
-    name, python -c 'import run_codex_y5') never matches.
-    cwd (the process's /proc/<pid>/cwd) resolves relative
-    script paths for the md5 leg; without it, relative paths
-    resolve against this process's cwd. Keep in sync with
-    launch_y13.py (identical block)."""
-    return _command_executes_runner(_argv_tokens(cmdline), cwd)
+    -m by last dotted segment (plus pdb/pudb/trace), -c by
+    first-word semantics plus the exec-sink check (with argv/env
+    smuggling resolved against the enclosing python's effective
+    sys.argv and environ), renamed/extensionless/symlinked
+    copies by md5 against the manifest. A mere path mention
+    (md5sum /abs/run_foo.py, echo/grep of a runner name, python
+    -c 'import run_codex_y5') never matches. cwd (the process's
+    /proc/<pid>/cwd) resolves relative script paths for the md5
+    leg; without it, relative paths resolve against this
+    process's cwd. environ (the process's /proc/<pid>/environ
+    as a dict, or None when unknown) resolves os.environ[...]
+    references in -c code; None is fail-closed. Keep in sync
+    with launch_y13.py (identical block)."""
+    return _command_executes_runner(_argv_tokens(cmdline), cwd,
+                                    environ)
 
 
 def _is_codex_process(cmdline):
-    """True if the cmdline names a codex executable: argv[0]'s
-    basename is 'codex', or some token is a path ENDING in
-    '/codex' (an execution position, C2-5). A bare 'codex' token
-    elsewhere (grep codex, echo codex) and a path merely
-    containing a codex directory (/path/codex/run_codex_y5.py)
-    do NOT count. Used by the launcher's WARNING branch only;
-    the refuse branch keeps the fail-closed substring rule
+    """True if the cmdline EXECUTES a codex binary (C2-6): the
+    first non-wrapper token's basename is 'codex', or it is a
+    token ending in '/codex' in that execution position. A bare
+    'codex' token elsewhere (grep codex, echo codex), a path
+    merely containing a codex directory
+    (/path/codex/run_codex_y5.py), and a codex path that is an
+    ARGUMENT (ls /usr/bin/codex, grep /usr/bin/codex) do NOT
+    count. Wrapper tokens (env VAR=1, sudo, nice, timeout, and
+    the other wrappers _command_executes_runner strips) are
+    skipped with their flags/values, so 'env codex --help'
+    counts. Used by the launcher's WARNING branch only; the
+    refuse branch keeps the fail-closed substring rule
     (C2 AMEND 6). Kept in both files so the shared block stays
     identical."""
     parts = _argv_tokens(cmdline)
     if not parts:
         return False
-    if parts[0].rsplit("/", 1)[-1].lower() == "codex":
-        return True
-    for tok in parts[1:]:
-        if tok.lower().endswith("/codex"):
-            return True
-    return False
+    # Strip leading wrapper tokens (with flag/value skipping),
+    # mirroring _command_executes_runner, to find the first
+    # non-wrapper token (the executed command).
+    _wrappers = ("env", "nohup", "setsid", "exec", "command",
+                 "nice", "stdbuf", "taskset", "sudo", "uv",
+                 "timeout", "flock", "time", "watch", "xargs",
+                 "ionice", "chrt", "numactl", "systemd-run",
+                 "unshare", "su", "runuser", "prlimit", "setarch",
+                 "firejail", "bwrap")
+    _value_flags = {
+        "env": ("-u",), "sudo": ("-u", "--user", "-g", "--group"),
+        "nice": ("-n", "--adjustment"),
+        "stdbuf": ("-o", "-e", "-i", "--output", "--error",
+                   "--input"),
+        "taskset": ("-c", "--cpu-list"),
+        "uv": ("-p", "--python", "--with", "--group", "--extra"),
+        "timeout": ("-k", "--kill-after", "-s", "--signal"),
+        "flock": ("-w", "--timeout", "-E",
+                  "--conflict-exit-code"),
+        "time": ("-f", "--format", "-o", "--output"),
+        "watch": ("-n", "--interval"),
+        "xargs": ("-I", "--replace", "-n", "--max-args", "-P",
+                  "--max-procs", "-s", "--max-chars", "-L",
+                  "--max-lines", "-d", "--delimiter", "-a",
+                  "--arg-file", "-E", "--eof"),
+        "ionice": ("-c", "--class", "-n", "--classdata", "-p",
+                   "--pid"),
+        "numactl": ("--cpunodebind", "--physcpubind",
+                    "--interleave", "--preferred", "--membind",
+                    "--cpubind", "--file", "--length", "--offset",
+                    "--shmmode", "--touch", "-m", "-i", "-p",
+                    "-C", "-N"),
+        "systemd-run": ("--unit", "--description", "--slice",
+                        "--property", "--uid", "--gid", "--nice",
+                        "--working-directory", "--service-type",
+                        "--timer-property", "--on-active",
+                        "--on-boot", "--on-startup",
+                        "--on-unit-active", "--on-unit-inactive",
+                        "--setenv"),
+        "unshare": ("--map-user", "--map-group", "--setgroups"),
+        "prlimit": ("--nproc", "--as", "--cpu", "--fsize",
+                    "--nofile", "--rss", "--rttime", "--rtprio",
+                    "--sigpending", "--stack", "--core", "--data",
+                    "--locks", "--memlock", "--msgqueue",
+                    "--nice", "-p", "--pid"),
+        "firejail": ("--profile",),
+        "su": ("-s", "--shell", "-g", "--group", "-G"),
+        "runuser": ("-u", "--user", "-g", "--group", "-s",
+                    "--shell"),
+    }
+    i = 0
+    n = len(parts)
+    while i < n:
+        _base = parts[i].rsplit("/", 1)[-1]
+        if _base not in _wrappers:
+            break
+        i += 1
+        if _base == "uv":
+            while i < n and parts[i] == "run":
+                i += 1
+        if _base == "flock":
+            # flock's lock file is a bare token after the flags.
+            while i < n:
+                _t = parts[i]
+                if _t == "-c":
+                    # -c <cmd>: the command is the -c string;
+                    # re-check it as a cmdline.
+                    if i + 1 >= n:
+                        return False
+                    return _is_codex_process(
+                        "\x00".join(_shlex_tokens(parts[i + 1])))
+                if _t in _value_flags.get("flock", ()) and \
+                        i + 1 < n:
+                    i += 2
+                    continue
+                if _t.startswith("-"):
+                    i += 1
+                    continue
+                break
+            if i < n:
+                i += 1
+            continue
+        if _base in ("su", "runuser"):
+            # su's first bare token is the user; runuser's user
+            # comes via -u, so its first bare token is the
+            # command. Both stop stripping here.
+            if _base == "su":
+                while i < n:
+                    _t = parts[i]
+                    if _t == "-c":
+                        # -c <cmd>: the command is the -c string.
+                        if i + 1 >= n:
+                            return False
+                        return _is_codex_process(
+                            "\x00".join(_shlex_tokens(parts[i + 1])))
+                    if _t in _value_flags.get("su", ()) and \
+                            i + 1 < n:
+                        i += 2
+                        continue
+                    if _t.startswith("-"):
+                        i += 1
+                        continue
+                    break
+                if i < n:
+                    i += 1
+            continue
+        if _base in ("setarch", "chrt"):
+            while i < n and parts[i].startswith("-"):
+                i += 1
+            if _base == "setarch" and i < n:
+                i += 1
+            elif _base == "chrt" and i < n and \
+                    parts[i].isdigit():
+                i += 1
+            continue
+        if _base == "bwrap":
+            _two = ("--bind", "--ro-bind", "--dev-bind",
+                    "--symlink", "--setenv")
+            _one = ("--dir", "--tmpfs", "--proc", "--dev",
+                    "--chdir", "--hostname", "--uid", "--gid",
+                    "--unsetenv")
+            while i < n:
+                _t = parts[i]
+                if _t in _two and i + 2 < n:
+                    i += 3
+                    continue
+                if _t in _one and i + 1 < n:
+                    i += 2
+                    continue
+                if _t.startswith("-"):
+                    i += 1
+                    continue
+                break
+            continue
+        if _base == "env":
+            while i < n:
+                _t = parts[i]
+                if _t in ("-S", "--split-string") and i + 1 < n:
+                    # env -S <cmd>: the command is the -S string.
+                    return _is_codex_process(
+                        "\x00".join(_shlex_tokens(parts[i + 1])))
+                if _t.startswith("--split-string="):
+                    return _is_codex_process(
+                        "\x00".join(_shlex_tokens(
+                            _t.split("=", 1)[1])))
+                if _t.startswith("-S") and len(_t) > 2:
+                    return _is_codex_process(
+                        "\x00".join(_shlex_tokens(_t[2:])))
+                if _t.startswith("-"):
+                    if _t == "-u" and i + 1 < n:
+                        i += 2
+                        continue
+                    i += 1
+                    continue
+                if "=" in _t:
+                    i += 1
+                    continue
+                break
+            continue
+        # Generic wrapper: skip flags/values, then the command.
+        while i < n:
+            _t = parts[i]
+            if _t in _value_flags.get(_base, ()) and i + 1 < n:
+                i += 2
+                continue
+            if _t.startswith("-"):
+                i += 1
+                continue
+            break
+        if _base == "taskset" and i < n:
+            _t = parts[i]
+            _m = _t[2:] if _t.startswith("0x") else _t
+            if _m.replace(",", "").replace("-", "").isdigit():
+                i += 1
+        if _base == "timeout" and i < n and \
+                _is_timeout_dur(parts[i]):
+            i += 1
+    if i >= n:
+        return False
+    _first = parts[i]
+    return _first.rsplit("/", 1)[-1].lower() == "codex" or \
+        _first.lower().endswith("/codex")
 
 
 # Codex executor processes that must REFUSE, not just warn (Y13f,
@@ -4436,7 +5076,21 @@ def preflight(base):
             _cwd = os.readlink(f"/proc/{_rpid}/cwd")
         except OSError:
             _cwd = None
-        if _is_runner_cmdline(_cmd, _cwd):
+        # F3(b): read the process environ so -c argv/env smuggling
+        # can be resolved (os.environ[...] / os.getenv(...)).
+        # Unreadable environ (another user, a zombie) is None:
+        # unresolvable env references are then fail-closed (True).
+        try:
+            with open(f"/proc/{_rpid}/environ", "rb") as _f:
+                _env = {}
+                for _item in _f.read().split(b"\x00"):
+                    if _item and b"=" in _item:
+                        _k, _v = _item.split(b"=", 1)
+                        _env[_k.decode("utf-8", "replace")] = \
+                            _v.decode("utf-8", "replace")
+        except OSError:
+            _env = None
+        if _is_runner_cmdline(_cmd, _cwd, _env):
             raise RuntimeError(
                 f"PREFLIGHT: live slot busy, runner process running: "
                 f"pid {_rpid}: {_flat}")
