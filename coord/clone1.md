@@ -4129,3 +4129,23 @@ chờ. Đường sửa: commit 15 PNG đúng path JSON trỏ rồi re-audit
 chỉ phần PNG.
 Đã giao council 1, 2, 3 + redteam cho task 2 và task 3 (8 agent
 riêng). Task 1 vẫn đang chạy.
+
+## 13:32 ngày 22/11 - BATCH 12 TASK 1 XONG, ĐÃ GIAO COUNCIL + REDTEAM
+
+Task 1 xong, báo cáo 428 dòng, điều phối tự commit và push
+(ed59f6a) vì agent task 1 dính execution-risk ở git fetch đầu
+phiên nên không chạy git được, nó đọc nguồn qua GitHub API.
+Phiên điều phối git chạy bình thường, không cần chủ xác nhận.
+Kết quả: cả 7 claim của worker đều CONFIRMED từ JSON thô (5/5
+run, 10/10 tin, median wall 28560.9 ms = 28.6s, V12 attempt 1
+cả 10, CB-1 đủ cả 3 phần cả 10, 0 model call, phase split SSH
+21.9s trong 28.6s tức 76.8%, Brave rollback thật theo log PID
+1112207 về 1119832, cửa sổ về đúng địa chỉ, cổng 9223 đóng).
+Gap vật chất giống task 3: ảnh P9 không có trên branch, review
+P9 10/10 PASS chỉ có trong log, không kiểm chứng độc lập được.
+Ghi chú nhỏ: V12 textLen hơn độ dài message 4 ký tự ở cả 10
+tin, chưa rõ lý do, không đổi verdict; Chromium chạy relaxed
+gate cả 5 run, Brave strict.
+Đã giao council 1, 2, 3 + redteam cho task 1 (4 agent riêng).
+Cả 3 task đợt 12 giờ đều đã có báo cáo, đang chờ council và
+redteam rồi fix pass.
