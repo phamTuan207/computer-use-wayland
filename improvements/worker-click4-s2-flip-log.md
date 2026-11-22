@@ -403,6 +403,47 @@ this file. No personal info.
 
 ## 5. Live runs (5x, V12-scored, P9-reviewed)
 
+### Run 1 (10:11 +07, T+50m)
+
+- Wall 33655.6ms, mux 790.5ms. Model calls 0.
+- Brave: SENT. Routing dom-chromium (56 elements, not truncated).
+  Program ok True, completed 3, 72ms. V12 found True, attempt 1,
+  items 41, role user, side user. CB-1 all three True.
+  P9 reviewed: the blue user bubble
+  "S2-FLIP-R1-BRAVE-IGNORE-TEST" is visible in the render, the
+  composer is empty. DOM and render agree. P9 PASS.
+- Chromium: FAILED-UNVERIFIED. Routing dom-chromium (70 elements,
+  not truncated). Program ok False, "assert failed: dom_act
+  failed", dom_act completed 0 in 5003ms. CB-1 all three False.
+  V12 found False after 40 attempts (10051ms), items 40. P9
+  reviewed: the composer is empty, no sent bubble, the last
+  message is the assistant's confirmation about clone1. DOM and
+  render agree (the send genuinely did not happen). P9 confirms
+  the failure is real, not a V12 false negative.
+- Diagnosis: the dom_act execution time is 5003ms, which is
+  exactly the 5000ms CDP call timeout in cdp.mjs (line 60).
+  One CDP call during the fill never answered within 5s. A
+  read-only diagnostic right after (node /tmp/s2-diag.mjs)
+  shows the composer is fine: exactly one TEXTAREA named
+  Message, rect (452, 1091, 622x24), visible, not disabled, not
+  readOnly, value empty, and the click center hits the TEXTAREA
+  itself. The grounding is correct and the element is
+  clickable. The V12 right after the failure was fast (each
+  evaluate 2-3ms), so the stall cleared. Most likely cause: a
+  transient 5s main-thread stall on the clone2 tab, which is
+  the ACTIVE work thread (clone2 is running batch 9), while
+  the clone1 tab is quiet (clone1 is stalled, out of tokens).
+  The failure is transient until proven otherwise; run 2 will
+  show whether it recurs.
+- Logging-only program change after run 1: the program print
+  now includes res.get("error"), so the next failure names the
+  failing CDP sub-step. The three actions (fill, key Enter,
+  trailing assert) and all their parameters are unchanged; the
+  mechanism is identical, only the failure diagnostic is
+  richer. Wiring tests still 9/9.
+
+### Run 2
+
 - (to be filled)
 
 ## 6. Verdict

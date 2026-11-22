@@ -110,7 +110,7 @@ def build_program(target_id, message):
         + ', "text": ' + json.dumps(message) + ', "timeout_ms": 3000},\n'
         '])\n'
         'print("dom_act ok", res.get("ok"), "completed", res.get("completed"), '
-        '"ms", res.get("execution_ms"))\n'
+        '"ms", res.get("execution_ms"), "error", res.get("error"))\n'
         'assert_state(res.get("ok") is True, "dom_act failed")\n'
     )
 
