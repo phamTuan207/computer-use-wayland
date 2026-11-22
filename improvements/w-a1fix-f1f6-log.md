@@ -451,3 +451,136 @@
   between runs fresh browser session, storage cleared, fixture
   reloaded, desktop verified clean, each reset logged in
   setup-log.jsonl.
+
+## F3. Relay flags and started_git_head (CLOSED, verified at HEAD 4eb5917; resume-time re-verification owed because the final log commit moves HEAD)
+
+- Precondition: W-SYNC done (ae2fe52, laptop tree at ab7c7a5, drift
+  zero, --check exit 0, broker observe verified). W-SYNC did NOT
+  restart the relay, so started_git_head still read 9ec713c at
+  17:57:24 +07 and at every check until this section. F3 done LAST,
+  after F1/F2/F4/F5/F6, per brief.
+- Fix method: persistent systemd drop-in plus relay restart (no
+  runbook amendment needed: the flags are a relay environment
+  property, not a design change). The relay unit is
+  /home/james/.config/systemd/user/computer-use-relay.service
+  (ExecStart: python3 scripts/session_remote.py serve --socket
+  %t/computer-use-wayland/relay.sock; Restart=no). It had no CU_*
+  flags. The flags are consumed by cu.py in the session-driver
+  children: code-exec gate at cu.py line 3101 (env CU_CODE_EXEC
+  must be 1/true/yes) and pick4 fastpath gate at cu.py line 3370.
+  The broker builds child env from its own os.environ
+  (session_remote.py line 474 base_env = dict(os.environ), line
+  523 Popen with env), so flags in the relay process env propagate
+  to every session child.
+- Laptop tree sync, 18:31:38 +07: git fetch origin plus git pull
+  --ff-only origin todolist-push on the laptop. Fast-forward from
+  6594dd9 (a local merge commit, already an ancestor of origin) to
+  4eb591764c7ac5741c7ef34c5102ab387c54c284. Laptop HEAD now equals
+  the VM HEAD 4eb5917 (commit "docs: W-A1FIX F1/F2/F4/F5/F6 log,
+  live Chromium runner, preflight probe driver, F2 evidence",
+  pushed 18:31:27 +07, verified via git ls-remote).
+- Installed-tree check, same call: python3
+  scripts/sync-installed.py --check reports "sync-installed:
+  error: latest release ledger source identity differs from the
+  current checkout". That is the expected staleness after any new
+  commit (the installed tree was last synced at an earlier HEAD);
+  the relay runs from the CHECKOUT (WorkingDirectory
+  /home/james/computer-use-wayland, started_git_head from git
+  rev-parse HEAD in that checkout), not from the installed tree,
+  so this does not block the pilot. The installed-tree re-sync is
+  W-SYNC's lane; recorded here as-is, not silently fixed.
+- Drop-in written 18:31:57 +07:
+  /home/james/.config/systemd/user/computer-use-relay.service.d/flags.conf
+  (69 bytes, verified by cat):
+  [Service]
+  Environment=CU_CODE_EXEC=1
+  Environment=CU_PICK4_FASTPATH=1
+  The drop-in persists across restarts, so every future relay
+  restart keeps the flags without anyone re-passing them.
+- Broker idle check immediately before restart, 18:31:57 +07:
+  state finished, driver stopped, active_sequence null, generation
+  411cfadf, owner w-sync. No live session was running, so the
+  restart could not kill one.
+- Restart, 18:32:03 +07: systemctl --user daemon-reload, then
+  systemctl --user restart computer-use-relay.service. Service
+  active, new MainPID 70985 (old PID 3913, started 17:19).
+- Verification, 18:32:03-18:32:06 +07:
+  - systemctl show Environment:
+    PYTHONDONTWRITEBYTECODE=1 XDG_CACHE_HOME=/home/james/.cache
+    CU_CODE_EXEC=1 CU_PICK4_FASTPATH=1. Both flags present.
+  - /proc/70985/environ: CU_CODE_EXEC=1, CU_PICK4_FASTPATH=1.
+    Both flags present in the live relay process env.
+  - Broker status 18:32:06 +07: {"ok":true,"broker":"running",
+    "broker_generation":
+    "8624ae4023d6dc0d1ea2b6a45b64ef93","loaded_code_sha256":
+    "d490f369f6b754d200518055025ef956284a759cc49e3ee70ed6b2a4483e3da4",
+    "started_git_head":
+    "4eb591764c7ac5741c7ef34c5102ab387c54c284","state":"idle",
+    "owner":null,"generation":null,"driver":"idle","guardian":
+    "idle","cancelled":false,"cancellation_state":"clear",
+    "recovery":"none","next_sequence":1,"active_sequence":null,
+    "last_start_error":null,"last_status_error":null}.
+    started_git_head EQUALS the repo HEAD 4eb5917. New broker
+    generation 8624ae40 (relay restarted). State idle, no owner,
+    no active sequence. The stale cleanup_failed error marker from
+    before the restart is gone (both error fields null).
+- No live through-relay code-exec smoke test was run: the flags
+  are verified in the live relay process env, the inheritance path
+  to session children is code-verified (session_remote.py lines
+  474 and 523), and the gates are code-verified (cu.py lines 3101
+  and 3370). A smoke session would add broker state for little
+  marginal proof; the pilot executor exercises code-exec through
+  the relay on run 1 and the runbook pre-run checks catch a flag
+  problem before any run counts.
+- Verdict: F3 CLOSED at HEAD 4eb5917. Relay has CU_CODE_EXEC=1 and
+  CU_PICK4_FASTPATH=1, started_git_head equals the repo HEAD, and
+  the broker is idle.
+- Resume-time re-verification (REQUIRED, exact commands): this
+  final log commit moves HEAD past 4eb5917, so the relay's
+  started_git_head will be one commit behind at the end of this
+  session. At resume, before run 1, run: (VM) cd
+  ~/workspace/computer-use-wayland && git fetch origin && git
+  pull --ff-only origin todolist-push && git rev-parse HEAD
+  (call it H2); (laptop) git fetch origin && git pull --ff-only
+  origin todolist-push && git rev-parse HEAD (must equal H2);
+  systemctl --user restart computer-use-relay.service (the flags
+  persist via the drop-in, no re-passing needed); then
+  tr '\0' '\n' <
+  /proc/$(systemctl --user show computer-use-relay.service -p
+  MainPID | cut -d= -f2)/environ | grep -E
+  'CU_CODE_EXEC|CU_PICK4_FASTPATH' (both must print =1) and
+  python3 /home/james/computer-use-wayland/scripts/session_remote.py
+  status (started_git_head must equal H2, state idle,
+  active_sequence null). Only then issue run 1.
+- Resume notes from owner decisions 18:21 and 18:30 +07, 22/11:
+  the browser does NOT auto-open after a reboot; only the owner
+  opens it, so if the machine rebooted before resume, the Chromium
+  instance must be opened by the owner (do not auto-start it).
+  And: whenever ANY agent drives the machine by ANY method, the
+  computer-use pill/overlay MUST be visible; interim rule is all
+  live browser writes go through act-now/computer-use session (pill
+  shows) and raw CDP is read-only until a pill-on-CDP mechanism
+  exists. The F2 live runner in this session used raw CDP writes
+  before that rule was issued (18:00-18:02 +07, rule 18:30 +07);
+  any future live re-validation must go through a session that
+  shows the pill.
+
+## Evidence files
+
+- improvements/w-a1fix-f1f6-evidence/f2-results.jsonl (7882 bytes,
+  md5 06a1218435443f735c92268a5cf6a37d, 50 lines): run 1, tests
+  06/07/08/09/10, 18:01:01-18:01:17 +07. Byte-exact copy of
+  /tmp/a1fix-20261122/f2-results.jsonl on the laptop (md5 matched).
+- improvements/w-a1fix-f1f6-evidence/f2-rerun.jsonl (6021 bytes,
+  md5 49821ae631b25ff47373b742f77b9f63, 39 lines): run 2, tests 07
+  and 09 with the fixed runner, 18:01:59-18:02:24 +07. Byte-exact
+  copy of /tmp/a1fix-20261122/f2-rerun.jsonl (md5 matched).
+- The runner stdout logs f2-run.log (9486 bytes) and f2-rerun.log
+  (7076 bytes) remain on the laptop at /tmp/a1fix-20261122/; they
+  mirror the same summaries and were not copied.
+- The F4 probe log and probe dirs no longer exist on the laptop:
+  the remote preflight dir was wiped at 18:24 for a clean full
+  re-run, which the 18:23 hard rule aborted before writing any
+  probe dir (verified empty 18:25:48 +07). The F4 probe evidence in
+  this log is the record until a new-tab-only re-probe is approved
+  and run.
