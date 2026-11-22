@@ -53,6 +53,7 @@ is data in the JSON, not a harness crash). Exit 2 on harness error.
 """
 import argparse
 import base64
+from contextlib import contextmanager
 import json
 import os
 import re
@@ -75,6 +76,14 @@ LAPTOP_P9 = '/tmp/s2-p9.mjs'
 LAPTOP_SEED = '/tmp/s2-seed.mjs'
 LAPTOP_ACTIVATE = '/tmp/c5-activate.mjs'
 LAPTOP_COUNT = '/tmp/c5-count.mjs'
+
+# Pill hold for the live send (W-PILLCDP, rule 18:30 2026-11-22): the
+# overlay pill on the laptop, driven over SSH with the repo's
+# scripts/overlay.py. Distinct agent 'S2-flip' so this release can
+# never drop another agent's holder.
+LAPTOP_OVERLAY = '/home/james/computer-use-wayland/scripts/overlay.py'
+PILL_AGENT = 'S2-flip'
+PILL_METHOD = 'CDP'
 
 BROWSERS = {
     'brave': {'endpoint': 'http://127.0.0.1:9224', 'label': 'clone1'},
@@ -584,7 +593,66 @@ class Harness:
         result['ms'] = round(wall, 1)
         return result
 
+    def pill_acquire_cmd(self):
+        """SSH command that raises the pill on the laptop."""
+        return ('python3 %s acquire --agent %s --method %s'
+                % (LAPTOP_OVERLAY, PILL_AGENT, PILL_METHOD))
+
+    def pill_release_cmd(self):
+        """SSH command that drops this harness's pill holder."""
+        return ('python3 %s release --agent %s --method %s'
+                % (LAPTOP_OVERLAY, PILL_AGENT, PILL_METHOD))
+
+    @contextmanager
+    def cdp_pill_hold(self):
+        """Best-effort pill hold around one browser-control step.
+
+        Acquires the overlay pill on the laptop before the step and
+        releases it after. Best effort only: the hard gate is the
+        cdp.mjs hook (fail closed), so a failed acquire here only
+        warns and the send itself still cannot run invisibly. Yields
+        True when the pill was acquired, False otherwise; a failed
+        acquire skips the release (nothing was held). A failed release
+        is noted, never raised: the holder is pid-less, so the
+        daemon prunes it only when the agent name is reused, and a
+        stale S2-flip holder keeps the pill up until the next release
+        or daemon restart, which is visible, not invisible.
+        """
+        held = False
+        try:
+            rc, out, err, _wall = self.ssh(
+                self.pill_acquire_cmd(), 'pill-acquire', timeout=60)
+            held = rc == 0
+            if not held:
+                self.note('pill acquire failed (best effort, send gate '
+                          'still applies): rc=%d %s'
+                          % (rc, (out + err).strip()[:200]))
+        except Exception as exc:
+            self.note('pill acquire failed (best effort, send gate still '
+                      'applies): %s' % str(exc)[:200])
+        try:
+            yield held
+        finally:
+            if held:
+                try:
+                    self.ssh(self.pill_release_cmd(), 'pill-release',
+                             timeout=60)
+                except Exception as exc:
+                    self.note('pill release failed (ignored): %s'
+                              % str(exc)[:200])
+
     def send_browser(self, browser, target_id, message):
+        """One-shot code-exec send + independent V12 for one browser.
+
+        The pill is held for the whole send (W-PILLCDP): the activate
+        step, the program, and the V12 read. Best effort (see
+        cdp_pill_hold); the cdp.mjs hook is the fail-closed gate for
+        the actual input.
+        """
+        with self.cdp_pill_hold():
+            return self._send_browser_inner(browser, target_id, message)
+
+    def _send_browser_inner(self, browser, target_id, message):
         """One-shot code-exec send + independent V12 for one browser."""
         cfg = BROWSERS[browser]
         endpoint = cfg['endpoint']
@@ -710,7 +778,10 @@ class Harness:
         try:
             if self.dry_run:
                 for browser in browsers:
-                    scratch[browser] = self.seed_scratch(browser)
+                    # The scratch tab is a browser-control step too:
+                    # hold the pill while it is created (W-PILLCDP).
+                    with self.cdp_pill_hold():
+                        scratch[browser] = self.seed_scratch(browser)
             # A stale lease from a crashed run blocks start (O_EXCL);
             # remove it first. The lease is per-run-number, so this
             # never touches another run's live lease.
@@ -800,7 +871,8 @@ class Harness:
                                               'error': str(exc)[:300]}
             for browser, target in scratch.items():
                 try:
-                    self.close_scratch(browser, target)
+                    with self.cdp_pill_hold():
+                        self.close_scratch(browser, target)
                 except Exception as exc:
                     self.note('scratch close failed (ignored): %s' % exc)
         results['spans'] = self.spans

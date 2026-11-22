@@ -55,10 +55,17 @@ Commands (each prints exactly one JSON object on stdout):
 Global flags: --endpoint URL (default http://127.0.0.1:9223),
 --profile DIR (default ~/.config/chromium/Default).
 Exit 0 on success, 1 on error. No REPL mode, no shell, argv only.
+
+Pill (W-PILLCDP, rule 18:30 2026-11-22): the write commands
+(open/activate/close) hold the computer-use pill
+(scripts/overlay.py, agent Muse via CDP) while they run, and refuse
+when the pill cannot be raised. Read-only commands never hold it.
+CU_CDP_PILL=0 disables the hold for fixture tests only, never live.
 """
 
 import argparse
 import base64
+from contextlib import contextmanager
 import datetime
 import hashlib
 import json
@@ -623,6 +630,30 @@ COMMANDS = {
     "status": (cmd_status, "endpoint and profile reachability probe"),
 }
 
+# Commands that control the browser (open/activate/close navigate,
+# focus, or close a tab) hold the overlay pill while they run
+# (W-PILLCDP, rule 18:30 2026-11-22). Read-only commands never hold it.
+WRITE_COMMANDS = frozenset({"open", "activate", "close"})
+
+
+@contextmanager
+def _pill_hold():
+    """Hold the computer-use pill for one browser-control command.
+
+    Uses the central overlay (scripts/overlay.py), the same pill every
+    other lane uses. Disabled only by CU_CDP_PILL=0 (fixture tests, no
+    compositor there), never for live work. Otherwise fail closed: when
+    the pill cannot be raised the command refuses instead of driving
+    the browser invisibly (overlay.hold raises CalledProcessError, a
+    RuntimeError, which main() reports as an error envelope).
+    """
+    if os.environ.get("CU_CDP_PILL") == "0":
+        yield
+        return
+    import overlay
+    with overlay.hold("Muse", "CDP"):
+        yield
+
 
 def build_parser():
     parser = argparse.ArgumentParser(
@@ -659,7 +690,11 @@ def main(argv):
         if not 1 <= limit <= MAX_LIMIT:
             raise ValueError("limit must be 1..%d" % MAX_LIMIT)
         handler = COMMANDS[command][0]
-        result = handler(endpoint, args)
+        if command in WRITE_COMMANDS:
+            with _pill_hold():
+                result = handler(endpoint, args)
+        else:
+            result = handler(endpoint, args)
     except (ValueError, RuntimeError, OSError) as exc:
         print(json.dumps({"ok": False, "command": command,
                           "error": str(exc)}, ensure_ascii=False))

@@ -18,6 +18,7 @@ import contextlib
 import datetime
 import io
 import json
+import os
 import socket
 import sqlite3
 import struct
@@ -121,6 +122,12 @@ class ChromiumCliTests(unittest.TestCase):
         cls.server.server_close()
 
     def setUp(self):
+        # Fixture opt-out for the pill gate (W-PILLCDP): the stub server
+        # runs on this machine with no compositor, so the write-command
+        # tests run with the gate off. The dedicated pill tests below
+        # re-enable it with patch.dict and a mocked hold.
+        self._orig_pill = os.environ.get("CU_CDP_PILL")
+        os.environ["CU_CDP_PILL"] = "0"
         StubCdpHandler.tabs = [
             {"id": "AAA", "title": "First Tab",
              "url": "https://example.com/one", "type": "page"},
@@ -136,8 +143,57 @@ class ChromiumCliTests(unittest.TestCase):
 
     def tearDown(self):
         chromium_cli.STATE_PATH = self._orig_state
+        if self._orig_pill is None:
+            os.environ.pop("CU_CDP_PILL", None)
+        else:
+            os.environ["CU_CDP_PILL"] = self._orig_pill
         import shutil
         shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def test_write_commands_hold_pill_read_commands_do_not(self):
+        """W-PILLCDP: open/activate/close hold the pill, tabs/status do not."""
+        holder = mock.MagicMock()
+        with mock.patch.dict(os.environ, {"CU_CDP_PILL": ""}), \
+                mock.patch.object(chromium_cli, "_pill_hold", holder), \
+                mock.patch.object(chromium_cli, "navigate_tab_via_ws",
+                                  return_value=None):
+            code, opened = self.run_cli(
+                ["--endpoint", self.endpoint, "open", "https://example.com"])
+            self.assertEqual(code, 0)
+            self.assertEqual(holder.call_count, 1)
+            code, _ = self.run_cli(
+                ["--endpoint", self.endpoint, "activate", "BBB"])
+            self.assertEqual(code, 0)
+            self.assertEqual(holder.call_count, 2)
+            code, _ = self.run_cli(
+                ["--endpoint", self.endpoint, "close", "BBB"])
+            self.assertEqual(code, 0)
+            self.assertEqual(holder.call_count, 3)
+            code, _ = self.run_cli(["--endpoint", self.endpoint, "tabs"])
+            self.assertEqual(code, 0)
+            code, _ = self.run_cli(["--endpoint", self.endpoint, "status"])
+            self.assertEqual(code, 0)
+            self.assertEqual(holder.call_count, 3,
+                             "read commands must not hold the pill")
+
+    def test_pill_failure_refuses_open_before_any_tab_created(self):
+        """W-PILLCDP, fail closed: a pill hold failure refuses the write
+        before the tab is created."""
+        @contextlib.contextmanager
+        def _boom():
+            raise RuntimeError("overlay daemon exited")
+            yield
+
+        with mock.patch.dict(os.environ, {"CU_CDP_PILL": ""}), \
+                mock.patch.object(chromium_cli, "_pill_hold", _boom):
+            code, out = self.run_cli(
+                ["--endpoint", self.endpoint, "open", "https://example.com"])
+        self.assertEqual(code, 1)
+        self.assertFalse(out["ok"])
+        self.assertIn("overlay daemon exited", out["error"])
+        self.assertEqual([t["id"] for t in StubCdpHandler.tabs],
+                         ["AAA", "BBB", "SW1"],
+                         "refused open must not create a tab")
 
     def run_cli(self, argv):
         """Run main(argv) capturing stdout; returns (exit_code, parsed)."""

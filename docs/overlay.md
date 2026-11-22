@@ -69,3 +69,39 @@ second to stderr, so an idle repaint loop is now measurable. If the
 pill still flickers, capture the daemon log and count
 `surface_commits` per 1 s window while idle: near zero means the
 indicator is innocent and the loop lives in the compositor or plugin.
+
+## CDP writes (W-PILLCDP, rule 18:30 2026-11-22)
+
+Raw CDP used to drive the browser with no session and no pill at all
+(the mochi message went out through Runtime.evaluate while nothing
+showed). Every CDP write path now raises the same pill above, so the
+user always sees the machine being driven.
+
+- `scripts/cdp.mjs`, operation `act` only: the gate lives in
+  `handle()`, after all act validation and before the first evaluate
+  or input, and releases in the outer `finally` (after the
+  after-snapshot and screenshot). Fail closed: when the pill cannot be
+  raised the act is refused with `CDP pill unavailable` and no input
+  runs. Read-only operations (`tabs`, `observe`, `harvest`) never
+  acquire. The request may carry `agent`/`method` to name the holder
+  (defaults Muse/CDP); `CU_OVERLAY_PY` overrides the overlay.py path.
+  `CU_CDP_PILL=0` disables the gate for fixture tests only, never for
+  live work. Lanes call nothing extra: any act through `cu.browser()`,
+  the session driver, code-exec programs, or `browser_worker.py`
+  (cdp.mjs --worker) is covered automatically.
+- `scripts/chromium_cli.py`: the write commands (`open`, `activate`,
+  `close`) hold the pill with `overlay.hold('Muse', 'CDP')` and refuse
+  when it cannot be raised. Read commands never hold it.
+- `scripts/s2_flip_live.py`: the harness holds the pill on the laptop
+  (SSH, agent `S2-flip`) around each browser-control step: the send
+  (activate + program + V12), the scratch-tab seed, and the scratch-tab
+  close. Best effort only: the cdp.mjs hook is the fail-closed gate
+  for the actual input, so a failed harness acquire only warns.
+
+When an act refuses with `CDP pill unavailable`, do not retry with
+`CU_CDP_PILL=0` on live work. Check the pill on the laptop instead:
+`python3 scripts/overlay.py status`, then the daemon log at
+`~/.cache/agent-computer-use/overlay/daemon.log`. A stale holder from
+a dead process is pruned by pid on the next status call; a holder with
+no pid is dropped by `overlay.py stop` (which clears all holders, so
+use it only when no run is live).

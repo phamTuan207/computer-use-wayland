@@ -1,5 +1,86 @@
 // Dependency-free CDP adapter, Node >=22. Explicit target; no model API calls.
 import crypto from 'node:crypto';
+import {execFile} from 'node:child_process';
+
+// CDP pill gate (W-PILLCDP, rule 18:30 2026-11-22): the pill must show
+// whenever ANY agent controls the machine, whatever the method. The
+// raw CDP act path used to run with no session and no pill at all, so
+// every act operation acquires the central overlay pill first (the
+// same scripts/overlay.py every other lane uses) and releases it when
+// the act is done. Read-only operations (tabs, observe, harvest) never
+// acquire: reading is not control.
+// Fail closed: when the pill cannot be raised, the act is refused with
+// 'CDP pill unavailable' and no input runs. The one opt-out is
+// CU_CDP_PILL=0, fixture tests only (no compositor there), never for
+// live work. Request fields agent/method name the holder; defaults
+// Muse/CDP. CU_OVERLAY_PY overrides the overlay.py path.
+// Test seam: the vm harnesses strip import lines, so execFile is
+// absent there; a harness may inject globalThis.__cdpPill with
+// {acquire, release} instead. With no backend at all the gate is inert
+// by construction, which is exactly the vm sandbox case. Real Node
+// always has execFile, so the gate is always live in production.
+const PILL_ID=/^[A-Za-z0-9_.:@+-]{1,80}$/;
+const PILL_ACQUIRE_TIMEOUT_MS=60000;
+const PILL_RELEASE_TIMEOUT_MS=10000;
+function pillEnabled(){return process.env?.CU_CDP_PILL!=='0';}
+function pillIdentity(request){
+  const agent=typeof request?.agent==='string'&&PILL_ID.test(request.agent)?request.agent:'Muse';
+  const method=typeof request?.method==='string'&&PILL_ID.test(request.method)?request.method:'CDP';
+  return {agent,method};
+}
+function pillHook(){
+  const hook=globalThis.__cdpPill;
+  if(hook&&typeof hook.acquire==='function'&&typeof hook.release==='function')return hook;
+  return null;
+}
+function overlayPyPath(){
+  if(typeof process.env?.CU_OVERLAY_PY==='string'&&process.env.CU_OVERLAY_PY)return process.env.CU_OVERLAY_PY;
+  const script=process.argv?.[1];
+  if(typeof script==='string'&&script)return script.replace(/[^/\\]+$/,'overlay.py');
+  return null;
+}
+function runOverlayCli(args,timeoutMs){
+  return new Promise((resolve,reject)=>{
+    execFile('python3',args,{timeout:timeoutMs},(error,stdout,stderr)=>{
+      if(error){reject(new Error('overlay.py '+args[0]+' failed: '+String(stderr||error.message).trim().slice(0,300)));return;}
+      try{resolve(JSON.parse(stdout));}
+      catch(_){reject(new Error('overlay.py '+args[0]+' returned non-JSON output'));}
+    });
+  });
+}
+async function acquireCdpPill(request){
+  if(!pillEnabled())return false;
+  const {agent,method}=pillIdentity(request);
+  const hook=pillHook();
+  if(hook){
+    try{await hook.acquire(agent,method);}
+    catch(error){throw new Error('CDP pill unavailable: '+(error&&error.message?error.message:String(error)).slice(0,300));}
+    return true;
+  }
+  if(typeof execFile!=='function')return false;
+  const py=overlayPyPath();
+  if(!py)throw new Error('CDP pill unavailable: overlay.py path unknown (set CU_OVERLAY_PY)');
+  let reply;
+  try{
+    reply=await runOverlayCli([py,'acquire','--agent',agent,'--method',method,'--pid',String(process.pid)],PILL_ACQUIRE_TIMEOUT_MS);
+  }catch(error){throw new Error('CDP pill unavailable: '+(error&&error.message?error.message:String(error)).slice(0,300));}
+  if(!reply||reply.visible!==true)throw new Error('CDP pill unavailable: '+JSON.stringify(reply).slice(0,300));
+  return true;
+}
+async function releaseCdpPill(request){
+  if(!pillEnabled())return;
+  const {agent,method}=pillIdentity(request);
+  try{
+    const hook=pillHook();
+    if(hook){await hook.release(agent,method);return;}
+    if(typeof execFile!=='function')return;
+    const py=overlayPyPath();
+    if(!py)return;
+    await runOverlayCli([py,'release','--agent',agent,'--method',method,'--pid',String(process.pid)],PILL_RELEASE_TIMEOUT_MS);
+  }catch(error){
+    if(typeof console!=='undefined'&&typeof console.error==='function')console.error('CDP pill release failed: '+(error&&error.message?error.message:String(error)));
+  }
+}
 
 function createTransport(url) {
   const ws=new WebSocket(url),pending=new Map();
@@ -76,7 +157,7 @@ function createTransport(url) {
 }
 
 async function handle(request,owner=null) {
-let connection,connectionKey;
+let connection,connectionKey,pillHeld=false;
 // Preflight failures must also return completed:0 from the catch.
 let result,completed=0;
 try {
@@ -476,6 +557,11 @@ async function assertAction(a) {
           throw new Error('assert timeout_ms must be a non-negative finite number');
       }
     }
+    // CDP pill gate: raise the pill before the first input or DOM
+    // effect. Throws when the pill cannot be raised, so the act is
+    // refused and nothing runs invisibly. Released in the outer
+    // finally, after the after-snapshot and screenshot.
+    pillHeld=await acquireCdpPill(request);
     const start=Date.now();
     try{
       for(const a of request.actions){
@@ -603,6 +689,7 @@ async function assertAction(a) {
   return result;
 }catch(e){process.exitCode=1;return {ok:false,completed,error:e.message};}
 finally{
+  if(pillHeld){pillHeld=false;await releaseCdpPill(request);}
   if(owner&&connection&&result&&result.ok!==false&&connection.reusable){
     owner.connection=connection;owner.key=connectionKey;
   }else{
@@ -662,8 +749,19 @@ if(process.argv?.includes('--worker')) {
       try{result=await handle(JSON.parse(line),owner);}
       catch(e){result={ok:false,completed:0,error:e.message};}
       console.log(JSON.stringify(result));
-      if(result?.ok===false){process.exitCode=1;break;}
+      // F4: an ok:false response is a RESULT (a failed assert, a
+      // refused action), not a dead worker. The loop stays alive so
+      // the next request in the same session can run (in-program
+      // retry after a failed assert). The process exits only on
+      // stdin close or error, or a transport failure, as before. A
+      // failed result still disposes its CDP connection inside
+      // handle(), so the next request opens a fresh one.
     }
+    // Clean stdin EOF after serving results (including ok:false
+    // ones) is a normal end, not a crash: handle() sets exitCode 1
+    // per failed request, so reset it here. A stream error still
+    // exits 1 via the catch below.
+    process.exitCode = 0;
   }catch(e){process.exitCode=1;console.log(JSON.stringify({ok:false,completed:0,error:e.message}));}
   finally{owner.connection?.dispose();process.stdin.destroy();}
 }else {
