@@ -70,7 +70,31 @@ from pathlib import Path
 
 DEFAULT_MARIONETTE_PORT = int(os.environ.get("ZEN_MARIONETTE_PORT", "2828"))
 DEFAULT_WD_PORT = int(os.environ.get("ZEN_WD_PORT", "4444"))
-GECKODRIVER = os.environ.get("ZEN_GECKODRIVER", "/tmp/geckodriver")
+
+
+def _default_geckodriver(home=None, env=None):
+    """Resolve the geckodriver path (R14, 2026-11-22).
+
+    Precedence: ZEN_GECKODRIVER when set, else the persistent install
+    at ~/.local/bin/geckodriver when it exists, else the old /tmp path.
+    /tmp does not persist on the laptop, so a /tmp-only default
+    silently loses the binary after a reboot or tmp clear (the R14
+    blocker: /tmp/geckodriver vanished, no binary anywhere on PATH).
+    home/env are injectable so unit tests can pin the resolution
+    without touching the real home or environment.
+    """
+    env = os.environ if env is None else env
+    if env.get("ZEN_GECKODRIVER"):
+        return env["ZEN_GECKODRIVER"]
+    installed = (Path.home() if home is None else Path(home)) \
+        / ".local" / "bin" / "geckodriver"
+    if installed.is_file():
+        return str(installed)
+    return "/tmp/geckodriver"
+
+
+GECKODRIVER = _default_geckodriver()
+
 LOCK_PATH = Path(os.environ.get("ZEN_DOM_LOCK",
                                str(Path.home() / ".cache" / "agent-computer-use"
                                    / "zen_dom.lock")))

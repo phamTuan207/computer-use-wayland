@@ -943,5 +943,47 @@ class TestFaithfulShadowShim(unittest.TestCase):
                          'under a faithful shim: %s' % (out,))
 
 
+class TestGeckodriverDefault(unittest.TestCase):
+    """R14: the geckodriver default must survive /tmp being wiped.
+
+    ZEN_GECKODRIVER wins when set; otherwise the persistent install
+    at ~/.local/bin/geckodriver wins when present; the /tmp path is
+    only the last resort. Uses a temp home so the real home is never
+    touched.
+    """
+
+    def setUp(self):
+        import tempfile
+        self._td = tempfile.TemporaryDirectory()
+        self.home = Path(self._td.name)
+
+    def tearDown(self):
+        self._td.cleanup()
+
+    def _install(self):
+        target = self.home / '.local' / 'bin' / 'geckodriver'
+        target.parent.mkdir(parents=True)
+        target.write_text('fake')
+        return str(target)
+
+    def test_env_wins_over_installed(self):
+        self._install()
+        self.assertEqual(
+            zen_dom._default_geckodriver(
+                home=self.home,
+                env={'ZEN_GECKODRIVER': '/opt/custom/geckodriver'}),
+            '/opt/custom/geckodriver')
+
+    def test_installed_persistent_path_wins_over_tmp(self):
+        want = self._install()
+        self.assertEqual(
+            zen_dom._default_geckodriver(home=self.home, env={}), want)
+
+    def test_tmp_fallback_when_nothing_installed(self):
+        self.assertEqual(
+            zen_dom._default_geckodriver(home=self.home, env={}),
+            '/tmp/geckodriver')
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
