@@ -95,6 +95,100 @@ def scp_to_laptop(local_path, remote_path):
     return True
 
 
+def _ps_tokens(line):
+    return line.split()
+
+
+def _is_live_driver_line(line):
+    """True when one ps line is a live session driver process.
+
+    Token-exact on 'session-driver': the old grep check matched the
+    literal pattern text inside its own ssh wrapper command line
+    (bash -c 'ps aux | grep -E ...'), so it counted 1 with zero live
+    drivers. A real driver carries 'session-driver' as its own argv
+    token (cu.py session-driver, or the cu.py session wrapper that
+    spawns it); the grep-pattern literal never does.
+    """
+    return any(tok == 'session-driver' or tok.endswith('/session-driver')
+               for tok in _ps_tokens(line))
+
+
+def _is_live_relay_client_line(line):
+    """True when one ps line is a session_remote client holding a lane.
+
+    session_remote.py subcommands: serve is the idle daemon, status
+    is a read-only probe, neither holds a lane. start, request,
+    result, and finish drive or hold a session, so any of those as
+    the subcommand token after session_remote.py means live.
+    """
+    toks = _ps_tokens(line)
+    for i, tok in enumerate(toks):
+        if tok.endswith('session_remote.py'):
+            if i + 1 < len(toks):
+                return toks[i + 1] in ('start', 'request', 'result',
+                                       'finish')
+            return False
+    return False
+
+
+def assess_lane_liveness(ps_text, relay_status, lease_names):
+    """Decide whether another live lane holds the machine (P1.5 fix).
+
+    Replaces the old check, which aborted whenever any *.lease file
+    existed (prep file section 10.9: stale leases from 16:04 to
+    16:31 with no live driver behind them) and whenever the ps grep
+    matched its own ssh wrapper (measured 2026-11-22 18:11 +07: the
+    old pipeline returned 1 with zero live drivers). Liveness now
+    comes from ps plus relay state only:
+
+    - ps: a live session-driver process, or a session_remote client
+      in start/request/result/finish. The relay serve daemon and
+      read-only status probes do not count.
+    - relay: `session_remote.py status` must answer with state idle,
+      finished, or failed, guardian not active, and recovery none.
+      An unanswered relay fails closed (a run needs the relay).
+    - lease files: recorded as evidence only, never a reason. A
+      lease file carries no PID, so its existence alone proves
+      nothing about liveness.
+
+    ps_text is the raw output of `ps -eo pid,ppid,etime,args` run
+    with no pattern in the remote command, so the probe cannot match
+    itself. Returns a dict with live, reasons, drivers (matching ps
+    lines), relay (summary), and leases.
+    """
+    reasons = []
+    drivers = []
+    for line in (ps_text or '').splitlines():
+        if _is_live_driver_line(line) or _is_live_relay_client_line(line):
+            drivers.append(line.strip())
+    if drivers:
+        reasons.append('live driver process: %s'
+                       % ('; '.join(drivers)[:300],))
+    relay_summary = {}
+    if relay_status is None:
+        reasons.append('relay status unavailable')
+    else:
+        relay_summary = {
+            'state': relay_status.get('state'),
+            'owner': relay_status.get('owner'),
+            'driver': relay_status.get('driver'),
+            'guardian': relay_status.get('guardian'),
+            'recovery': relay_status.get('recovery'),
+        }
+        state = relay_status.get('state')
+        if state not in ('idle', 'finished', 'failed'):
+            reasons.append('relay state is %r (owner %r)'
+                           % (state, relay_status.get('owner')))
+        if relay_status.get('guardian') == 'active':
+            reasons.append('relay guardian is active')
+        if relay_status.get('recovery') not in ('none', None):
+            reasons.append('relay recovery is %r'
+                           % (relay_status.get('recovery'),))
+    return {'live': bool(reasons), 'reasons': reasons,
+            'drivers': drivers, 'relay': relay_summary,
+            'leases': list(lease_names or [])}
+
+
 class Runner:
     def __init__(self):
         self.h = s2_flip_live.Harness(str(WORKDIR), RUN_NO)
@@ -212,16 +306,33 @@ class Runner:
         if FIXTURE_SHA not in out:
             raise RuntimeError('fixture sha mismatch on the laptop: %s'
                                % (out.strip()[:200],))
+        # P1.5 (fixed, prep file section 10.9): liveness comes from ps
+        # plus relay state, never from lease file existence. The remote
+        # ps command carries no pattern, so it cannot match itself the
+        # way the old grep pipeline did.
+        out, _e, _w = self.ssh('ps -eo pid,ppid,etime,args',
+                               'live lanes ps', timeout=30)
+        ps_text = out
+        rc, relay_out, _e2, _w2 = self.h.ssh(
+            'python3 ' + s2_flip_live.LAPTOP_REMOTE + ' status',
+            'relay status', timeout=30)
+        relay = None
+        if rc == 0:
+            try:
+                relay = json.loads(relay_out.strip().splitlines()[-1])
+            except (ValueError, IndexError):
+                relay = None
         out, _e, _w = self.ssh(
-            "ps aux | grep -E 'session-driver|session_remote' | grep -v grep | wc -l",
-            'other lanes check', timeout=30)
-        if int(out.strip() or '0') != 0:
-            raise RuntimeError('another session-driver is running')
-        out, _e, _w = self.ssh(
-            "ls ~/.cache/agent-computer-use/*.lease 2>/dev/null | wc -l",
-            'lease check', timeout=30)
-        if int(out.strip() or '0') != 0:
-            raise RuntimeError('a live lease file exists on the laptop')
+            "ls ~/.cache/agent-computer-use/*.lease 2>/dev/null || true",
+            'lease list', timeout=30)
+        leases = [line.strip() for line in out.strip().splitlines()
+                  if line.strip()]
+        verdict = assess_lane_liveness(ps_text, relay, leases)
+        self.results['liveness'] = verdict
+        if verdict['live']:
+            raise RuntimeError(
+                'another live lane holds the machine: %s'
+                % ('; '.join(verdict['reasons']),))
 
     def phase2(self):
         self.ssh('mkdir -p ' + LAPTOP_RUN, 'mkdir run dir', timeout=30)
