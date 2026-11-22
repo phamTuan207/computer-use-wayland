@@ -56,7 +56,13 @@ def test_a2_gate_present():
     assert "# END Y6C5-A2 positive profile gate" in text, "A2 END marker missing"
     block = extract_block(text, "BEGIN Y6C5-A2", "END Y6C5-A2")
     assert "Y6-NEST-OPTICS: applied" in block, "gate does not poll the optics marker"
+    assert "y6-profile-applied.txt" in block, "gate does not poll the marker file"
     assert "features.layers.enabled" in block, "gate lacks the layers.enabled signal"
+    assert 'grep -a -q "Y6-NEST-OPTICS: applied" "$LOG" "$NEST_LOG"' not in block, (
+        "gate still decides on a log grep for the applied marker")
+    assert "marker file" in block, "gate fail string must name the marker file"
+    assert "applied marker absent" not in block, (
+        "old log-based fail string still in gate")
     assert "Y6C5_GATE_TIMEOUT_S" in block, "gate timeout not overridable for tests"
     assert "nest-plugin-list-after-gate.json" in block, "gate lacks plugin-list re-check"
     assert "nest-glass-status-after-gate.json" in block, "gate lacks status re-check"
@@ -88,13 +94,18 @@ def _plugin_json():
     return [{"name": "hyprglass", "version": "1.1.1-cu.1"}]
 
 
-def run_gate_case(log_content, nest_log_content, layers_enabled, timeout_s="2"):
+def run_gate_case(log_content, nest_log_content, layers_enabled, timeout_s="2",
+                  marker_content=None):
     """Execute the extracted A2 block under bash with stubs. Returns exit code."""
     block = extract_block(runner_text(), "BEGIN Y6C5-A2", "END Y6C5-A2")
     with tempfile.TemporaryDirectory() as tmp:
         tmp = Path(tmp)
         nest_dir = tmp / "nest"
         nest_dir.mkdir()
+        run_dir = tmp / "run"
+        run_dir.mkdir()
+        if marker_content is not None:
+            (run_dir / "y6-profile-applied.txt").write_text(marker_content)
         log_file = tmp / "stdout.log"
         nest_log = tmp / "hyprland.log"
         log_file.write_text(log_content)
@@ -118,6 +129,7 @@ def run_gate_case(log_content, nest_log_content, layers_enabled, timeout_s="2"):
             'LOG="' + str(log_file) + '"\n'
             'NEST_LOG="' + str(nest_log) + '"\n'
             'NEST="' + str(nest_dir) + '"\n'
+            'RUN_DIR="' + str(run_dir) + '"\n'
             'STUB_PLUGIN_JSON="' + str(stub_plugin) + '"\n'
             'STUB_STATUS_JSON="' + str(stub_status) + '"\n'
             'export Y6C5_GATE_TIMEOUT_S="' + timeout_s + '" Y6C5_GATE_INTERVAL_S="0.2"\n'
@@ -135,38 +147,40 @@ HOOK_APPLIED = "Y6-NEST-HOOK: profile applied"
 NOT_READY = "Y6-NEST-HOOK: hyprglass not ready (count=0 version=nil)"
 
 
-def test_a2_gate_exec_healthy_stdout_log():
+MARKER_FILE_CONTENT = OPTICS_MARKER + "\n" + HOOK_APPLIED + "\n"
+
+
+def test_a2_gate_exec_healthy_file():
+    # A8 shape: marker file present, BOTH logs contain ONLY the parse-1
+    # not-ready marker, layers.enabled true. Under the old log-grep gate
+    # this run FAILS; under the file gate it must PASS.
     rc, out = run_gate_case(
-        "\n".join([NOT_READY, OPTICS_MARKER, HOOK_APPLIED]) + "\n", "", True)
-    assert rc == 0, "healthy gate (markers in stdout log) must pass, got rc=" + str(rc) + " out=" + out
+        NOT_READY + "\n", NOT_READY + "\n", True,
+        marker_content=MARKER_FILE_CONTENT)
+    assert rc == 0, "healthy gate (marker file, logs parse-1 only) must pass, got rc=" + str(rc) + " out=" + out
     assert "profile gate OK" in out, "healthy gate must print profile gate OK"
-
-
-def test_a2_gate_exec_healthy_nest_log():
-    rc, out = run_gate_case(
-        "", "\n".join([NOT_READY, OPTICS_MARKER, HOOK_APPLIED]) + "\n", True)
-    assert rc == 0, "healthy gate (markers in nest log) must pass, got rc=" + str(rc) + " out=" + out
 
 
 def test_a2_gate_exec_no_marker_fails():
     rc, out = run_gate_case(NOT_READY + "\n", "", True)
-    assert rc != 0, "gate with no applied marker must fail"
-    assert "applied marker absent" in out, "gate must report the absent marker, out=" + out
+    assert rc != 0, "gate with no marker file must fail"
+    assert "marker file" in out, "gate must report the missing marker file, out=" + out
 
 
 def test_a2_gate_exec_layers_false_fails():
     rc, out = run_gate_case(
-        "\n".join([NOT_READY, OPTICS_MARKER, HOOK_APPLIED]) + "\n", "", False)
+        NOT_READY + "\n", NOT_READY + "\n", False,
+        marker_content=MARKER_FILE_CONTENT)
     assert rc != 0, "gate with layers.enabled false must fail"
     assert "layers.enabled is not true" in out, "gate must report layers.enabled, out=" + out
 
 
 def test_a2_gate_exec_parse1_expected():
-    # Parse-1 marker present AND optics marker present: must pass, and the
+    # Parse-1 marker present AND marker file present: must pass, and the
     # run must log the parse-1 marker as expected, not as a failure.
     rc, out = run_gate_case(
-        "\n".join([NOT_READY, OPTICS_MARKER]) + "\n", "", True)
-    assert rc == 0, "parse-1 marker + optics marker must pass, got rc=" + str(rc)
+        NOT_READY + "\n", "", True, marker_content=MARKER_FILE_CONTENT)
+    assert rc == 0, "parse-1 marker + marker file must pass, got rc=" + str(rc)
     assert "expected, not a failure" in out, "gate must log parse-1 as expected"
 
 
@@ -205,6 +219,12 @@ def test_a3_markers():
     assert hook.index('dofile("/tmp/y6-nested/conf/optics.lua")') < hook.index(
         'print("Y6-NEST-HOOK: profile applied")'), "hook must print AFTER dofile returns"
     assert "pcall(" not in hook, "hook must not swallow dofile errors with pcall"
+    assert "y6-profile-applied.txt" in hook, "hook lacks the marker file write"
+    assert "io.open" in hook, "hook lacks io.open for the marker file"
+    assert "marker_file:close()" in hook, "hook lacks the marker file close"
+    assert "XDG_RUNTIME_DIR" in hook, "hook must resolve the nest run dir from the environment"
+    assert hook.index('print("Y6-NEST-HOOK: profile applied")') < hook.index(
+        'y6-profile-applied.txt'), "hook must write the file AFTER the applied print"
     assert "a missing profile is NO-GO" not in hook, "old false liquid-gate comment remains"
     assert "CANNOT prove the profile" in hook, "hook lacks the corrected liquid-gate comment"
     assert OPTICS_MARKER in optics, "optics lacks the applied marker line"
@@ -260,12 +280,21 @@ def test_a8_stop_flag():
 def test_a10_live_log_only():
     text = runner_text()
     block = extract_block(text, "BEGIN Y6C5-A2", "END Y6C5-A2")
-    assert "$NEST_LOG" in block, "A2 gate must grep the live per-instance log"
+    assert "$NEST_LOG" in block, "A2 gate must still read the live per-instance log for parse-1 + corroboration"
     for line in block.splitlines():
         if line.strip().startswith("#"):
             continue
         assert "hypr-saved" not in line, (
             "A2 gate code must not read a saved-log directory: " + line)
+        # No log grep may decide the gate on the applied marker. The only
+        # log greps for Y6-NEST-OPTICS: applied allowed are corroboration
+        # output (piped to head, never a pass/fail condition).
+        if "grep" in line and "Y6-NEST-OPTICS: applied" in line and (
+                "$LOG" in line or "$NEST_LOG" in line):
+            assert "| head -3" in line, (
+                "log grep for the applied marker must be corroboration output only: " + line)
+            assert "if " not in line and "GATE_OK" not in line, (
+                "log grep for the applied marker must not decide the gate: " + line)
 
 
 def test_a4_record_corrected():
@@ -299,8 +328,7 @@ def test_bash_syntax():
 def main():
     checks = [
         ("A2 gate present", test_a2_gate_present),
-        ("A2 gate exec healthy (stdout log)", test_a2_gate_exec_healthy_stdout_log),
-        ("A2 gate exec healthy (nest log)", test_a2_gate_exec_healthy_nest_log),
+        ("A2 gate exec healthy (marker file)", test_a2_gate_exec_healthy_file),
         ("A2 gate exec no marker fails", test_a2_gate_exec_no_marker_fails),
         ("A2 gate exec layers false fails", test_a2_gate_exec_layers_false_fails),
         ("A2 gate exec parse-1 expected", test_a2_gate_exec_parse1_expected),

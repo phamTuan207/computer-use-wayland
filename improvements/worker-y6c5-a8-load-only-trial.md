@@ -29,11 +29,18 @@ and does NOT prove the liquid readiness window (O3).
 ## What is measured (all must hold; the trial FAILS otherwise)
 
 1. Positive marker: `Y6-NEST-OPTICS: applied blur=0.15 refraction=0.55
-   mask=contour namespace=computer-use-indicator` present in the LIVE
-   per-instance log ($NEST_LOG) before the liquid gate. First amended run
-   must show it or stop (Council 1 item 6).
-2. Hook corroboration: `Y6-NEST-HOOK: profile applied` present in the logs.
-   Parse-1 `not ready` marker present is EXPECTED, not a failure.
+   mask=contour namespace=computer-use-indicator` present in the marker
+   FILE ($RUN_DIR/y6-profile-applied.txt, copied out at teardown to
+   $NEST/y6-profile-applied-<timestamp>.txt) before the liquid gate.
+   The LIVE per-instance log ($NEST_LOG) is NOT the channel for this
+   signal: the A8 trial of 16:18 2026-11-22 proved the log file stops
+   flushing after the dmabuf dump, so a log grep cannot observe it
+   (see improvements/worker-click5-y6-a8-invest-log.md). First amended
+   run must show the file or stop (Council 1 item 6).
+2. Hook corroboration: `Y6-NEST-HOOK: profile applied` present in the
+   marker FILE. Log lines are corroboration only; their absence from the
+   logs is NOT a failure. Parse-1 `not ready` marker present is
+   EXPECTED, not a failure.
 3. Second signal: features.layers.enabled == true in the nested hyprglass
    status JSON (re-checked after the marker).
 4. Version: hyprglass 1.1.1-cu.1, versionCheck match, on both checks.
@@ -61,7 +68,9 @@ and does NOT prove the liquid readiness window (O3).
 - O3: record the shaders field at the status read (pending vs ready) and the
   time from launch to liquid ready. Only "pending at 7 s" was observed before.
 - Marker counts: do NOT count markers in saved logs as parse evidence
-  (A10). The verdict uses the live-log gate result only.
+  (A10). The marker file is the verdict signal; do NOT count markers in saved
+  logs as parse evidence (A10), and do NOT fail on their absence. The verdict
+  uses the marker-file gate result only.
 - ldd: the staged-conf ldd output is saved to
   improvements/y6c5-evidence/ldd-y6e-conf.txt BEFORE the trial; the trial
   re-verifies the conf md5 at launch via the runner pre-flight.

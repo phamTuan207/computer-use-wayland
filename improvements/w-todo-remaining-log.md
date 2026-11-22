@@ -39,3 +39,32 @@ Thu tu theo hang serial trong todolist + lane song song, dieu chinh theo tinh hi
   - Lenh: `python3 tests/y1b_phaseb_real_run.py` (17:53:31, 13.2s). Output: G-Y1B real-implementation gate PASS (4/4); old controls dung nhu mo ta (old 10b wall error, old 10f trace cap).
 - Ket luan: 12-item BLOCK checklist 12/12 DONE; probe 10b/10f + 1e/4a da viet lai va phan biet duoc ban tan cong; gate G-Y1B PASS. Code nam tren todolist-push, CHUA merge vao main (merge nhanh la quyet dinh cua coord, nhu muc 5.4, khong tu merge ca nhanh trong W-TODO).
 - Ghi chu them: Codex PID 184702 (watch) da chet (kiem tra qua ssh-laptop.sh 17:52, output `dead`). Known gaps giu nguyen theo phaseb log: chua co live_only snippet (item 8 chua co live entry), per-entry budget tightening chua enforce, AST scan khong phai isolate that.
+
+## 4.28 Mo menu Omarchy + chuyen workspace bang LENH (J21): XONG (tick 18:02)
+- Lenh tim lenh launcher (ssh-laptop.sh, chi doc, 17:56): `grep -n -i -E "menu|walker|wofi|rofi|fuzzel|launcher" ~/.config/hypr/bindings.lua`.
+- Output: dong 115 `o.bind("SUPER + SPACE", "Omarchy menu", "omarchy-menu toggle root")`. Lennh chinh xac: `omarchy-menu toggle root`.
+- Lenh chuyen workspace (da co tu truoc, AGENTS.md 21/11 23:19, verify live 2 chieu): `hyprctl dispatch "hl.dsp.focus({ workspace = 2 })"`.
+- Lenh kiem tra Zen song (ssh-laptop.sh, chi doc, 17:52-17:53): Zen PID 14625 `/opt/zen-browser-bin/zen-bin --remote-debugging-port=9222 --marionette`, port 127.0.0.1:2828 + 127.0.0.1:9222 lang nghe, Hyprland PID 3638. Khong mo/chuyen tab (dung brief).
+- Viec lam: them rule J21 vao docs/brief-template.md muc 7 (Browser rules, Zen): doi workspace + mo menu Omarchy bang LENH, khong bao gio bam chuot vao nut workspace/menu tren bar; nut (15,30) la app launcher, khong phai workspace 1; log moi click.
+- Attribution (phan cu cua muc): da co trong todolist tu F3 log 22:48 (click 22:43:15, img(15,30) global(2479,932), mo Omarchy launcher menu). Log-moi-click gap vao fix F2/F3: first_action.py da co CB-2 stamping (95d3822, da verify o 4.27).
+- Ket luan: lenh launcher tim duoc tu config, rule ghi vao brief-template, attribution da ghi. Tick.
+
+## 4.13 + 2.2.3 Y6 A8 re-review (fresh, W-TODO doc lap): GO, fix da ap dung, cho re-trial
+- Co so: invest log improvements/worker-click5-y6-a8-invest-log.md (abca0bd), muc 4 (fix diff, CHUA ap) + muc 5 (re-review checklist 8 muc).
+- Re-review item 8 (kiem tra lai nguyen nhan theo bang chung):
+  - Lenh: `git show 5fdc527:...a8-trial-run-20261122-161803.log | md5sum` + `wc -l` (18:00). Output: md5 d71a9a0bff17984d1ec846ff406e2edf, 84 dong. KHAC voi invest log ghi (77 dong, md5 721cb67c...). File repo KHONG doi tu commit trial 5fdc527 (chi 1 commit cham vao file), nen so 77 dong/md5 trong invest log la LOI GHI CHEP (do tren ban copy khac, co le tren laptop truoc khi trial lane append phan teardown), KHONG phai bang chung doi.
+  - Lenh: `grep -n 'Y6-WAYLAND: FAIL\|Y6-NEST\|profile gate'` tren file repo (18:00). Output: FAIL line 67 dung nhu invest log mo ta (chia se dong voi dump line), gate lines 35-37, teardown 16:18:27-16:18:29. Khop verbatim.
+  - Trial log dong 79-81: nested status JSON layers.enabled true, version 1.1.1-cu.1, versionCheck match (nguon thu 2 cho claim profile applied).
+  - Ket luan item 8: DONG Y false fail, voi sua loi ghi chep md5/dong o tren. Nguyen nhan (gate grep log khong flush sau dmabuf dump) dung.
+- Re-review items 1-7 (doi chieu diff voi file that truoc khi ap):
+  - Runner md5 b50396bf1c68c1e047733b2a5b24f35a KHOP base trong invest log; gate lines 387-450, G4 452-470 KHOP.
+  - Hook: print applied dong 30, sau dofile dong 27, khong pcall. Trial doc items 1-2 dung nhu mo ta. Test file ton tai.
+  - Item 1 (hook write file): ap dung dung nhu diff 4a (io.open "w", 2 dong, close, XDG_RUNTIME_DIR, fallback nest run dir, print truoc write).
+  - Item 2 (gate poll file): ap dung dung nhu diff 4b (layers.enabled truoc, poll $RUN_DIR/y6-profile-applied.txt, fail string "marker file", log grep chi corroboration).
+  - Item 3 (G4 truoc A2): ap dung dung nhu diff 4c (G4 dong 397-420, A2 dong 422-497, markers nguyen).
+  - Item 4 (teardown copy-out): ap dung dung nhu diff 4d (cp marker dong 130, truoc rm -rf RUN_DIR dong 140, missing chi warn).
+  - Item 5 (no live-touch): test_a7_no_reload PASS; khong co hyprctl reload moi; moi path duoi /tmp/y6-nested.
+  - Item 6 (test suite): `python3 tests/test_y6c5_positive_gate.py` (17:57:44, 2.9s): all 16 checks PASS (gom case moi A8-shape: marker file present + logs chi parse-1 + layers true = PASS). `bash -n` runner + load-test OK.
+  - Item 7 (staging): conf md5 9ccb2701 + optics md5 85298d20 KHONG doi (git diff chi cham hook/runner/tests/trial doc, khong cham optics.lua); hook md5 doi theo fix (du kien). Re-stage tu repo copy tren laptop khi chay re-trial.
+- Kiem chung them: `git diff` runner khop tung dong voi diff de xuat muc 4 (4b, 4c, 4d, 4e). Luac khong co tren VM nen khong check cu phap Lua; hook se duoc trial nested kiem tra that (loi cu phap se fail-closed o parse 2).
+- Verdict re-review: GO. Fix da ap dung vao 4 file (runner, hook, tests, trial doc). Re-trial A8 + pill measurement retry CHUA chay (can laptop nested, xem muc tiep).

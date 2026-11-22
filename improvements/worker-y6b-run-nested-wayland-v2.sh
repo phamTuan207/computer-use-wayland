@@ -43,9 +43,13 @@
 # optics.lua), so a reload buys nothing and risks a parse-3 duplicate
 # layer() registration (open item O1, overwrite vs error unresolved) plus
 # live-touch surface (a wrong-target reload would hit the live session).
-# One application path only: the automatic parse-2 path (R8). If the
-# positive gate ever shows the applied marker absent, the reload becomes
-# the next hypothesis to test, not a preemptive addition. Enforced by
+# One application path only: the automatic parse-2 path (R8). The reload
+# hypothesis was tested by the A8 trial (16:18 2026-11-22) and REFUTED as
+# the cause of an absent marker: the reload happens and the profile is
+# applied, but the marker prints never reach the log file (ofstream
+# buffering, see improvements/worker-click5-y6-a8-invest-log.md). A missing
+# marker therefore means a broken observation channel first, and a missing
+# reload only if the marker FILE is also absent. Enforced by
 # tests/test_y6c5_positive_gate.py (no non-comment `hyprctl reload` line).
 set -u
 NEST=/tmp/y6-nested
@@ -118,6 +122,12 @@ teardown() {
   # Copy the nested per-instance log out before removing the runtime dir (U7a).
   if [ "$NEST_STARTED" = "1" ] && [ -n "$SIG" ] && [ -d "$RUN_DIR/hypr/$SIG" ]; then
     cp -r "$RUN_DIR/hypr/$SIG" "$NEST/hypr-saved-$START_TS-$SIG" 2>/dev/null && echo "Y6-WAYLAND: nested log saved to $NEST/hypr-saved-$START_TS-$SIG" || echo "Y6-WAYLAND: WARN: nested log copy failed"
+  fi
+  # Y6C5-A8-INVEST: copy the profile-applied marker file out too (same
+  # reason: RUN_DIR is removed below). Missing file is a warning only;
+  # the gate already failed closed on it during the run if it never appeared.
+  if [ "$NEST_STARTED" = "1" ] && [ -f "$RUN_DIR/y6-profile-applied.txt" ]; then
+    cp "$RUN_DIR/y6-profile-applied.txt" "$NEST/y6-profile-applied-$START_TS.txt" 2>/dev/null && echo "Y6-WAYLAND: profile marker file saved to $NEST/y6-profile-applied-$START_TS.txt" || echo "Y6-WAYLAND: WARN: profile marker file copy failed"
   fi
   if [ -n "$PILL_PID" ]; then kill "$PILL_PID" 2>/dev/null; sleep 1; kill -9 "$PILL_PID" 2>/dev/null; fi
   if [ -n "$MPV_PID" ]; then kill "$MPV_PID" 2>/dev/null; sleep 1; kill -9 "$MPV_PID" 2>/dev/null; fi
@@ -384,77 +394,17 @@ if ver != "1.1.1-cu.1" or vc != "match":
     sys.exit(1)
 PYEOF
 
-# BEGIN Y6C5-A2 positive profile gate (Y6r A2, R3; replaces the old U6 block)
-# The parse-1 "not ready" marker is EXPECTED on every successful startup
-# (parse 1 runs before the plugin system exists; the profile is applied on
-# parse 2). It must NEVER fail the run. This gate is positive: it requires
-# the applied marker printed AFTER optics.lua returns, plus a second signal,
-# features.layers.enabled == true, read from the status JSON fetched above.
-# The marker proves config()+layer() returned; layers.enabled proves the
-# config effect (optics.lua is the only setter; the plugin default is false).
-# Y6C5-A10: this greps the LIVE per-instance log ($NEST_LOG) during the run
-# (plus the stdout log $LOG). Saved-log marker counts are NOT parse evidence
-# (ofstream buffering; saved logs are flushed prefixes, tail lost on SIGKILL
-# teardown). No gate here reads a hypr-saved directory.
-# Poll timeout/interval are overridable for tests (Y6C5_GATE_TIMEOUT_S,
-# Y6C5_GATE_INTERVAL_S); production defaults are 15 s / 1 s. By the time
-# this gate runs (about 10 s after launch) parse 2 has already applied the
-# profile, so the poll is a margin for log flush lag, not for the load.
-echo "Y6-WAYLAND: profile gate: parse-1 not-ready marker is expected, waiting for applied marker"
-if grep -a -q "Y6-NEST-HOOK: hyprglass not ready" "$LOG" "$NEST_LOG" 2>/dev/null; then
-  echo "Y6-WAYLAND: profile gate: parse-1 not-ready marker present (expected, not a failure)"
-fi
-GATE_TIMEOUT="${Y6C5_GATE_TIMEOUT_S:-15}"
-GATE_INTERVAL="${Y6C5_GATE_INTERVAL_S:-1}"
-GATE_DEADLINE=$(( $(date +%s) + GATE_TIMEOUT ))
-GATE_OK=""
-while [ "$(date +%s)" -le "$GATE_DEADLINE" ]; do
-  if grep -a -q "Y6-NEST-OPTICS: applied" "$LOG" "$NEST_LOG" 2>/dev/null; then GATE_OK=1; break; fi
-  sleep "$GATE_INTERVAL"
-done
-if [ -z "$GATE_OK" ]; then
-  echo "Y6-WAYLAND: profile gate: applied marker absent after ${GATE_TIMEOUT}s (tail of nested log):"
-  tail -30 "$NEST_LOG" 2>/dev/null || tail -30 "$LOG"
-  fail "profile not applied: Y6-NEST-OPTICS applied marker absent after ${GATE_TIMEOUT}s; see nested log tail above"
-fi
-grep -a -h "Y6-NEST-OPTICS: applied" "$LOG" "$NEST_LOG" 2>/dev/null | head -3
-HOOK_APPLIED=$(grep -a -h "Y6-NEST-HOOK: profile applied" "$LOG" "$NEST_LOG" 2>/dev/null | head -3 || true)
-if [ -n "$HOOK_APPLIED" ]; then printf '%s\n' "$HOOK_APPLIED"; else echo "Y6-WAYLAND: profile gate: hook applied marker not seen in logs (optics marker present, continuing)"; fi
-# Second positive signal: layers.enabled must be true in the status JSON
-# fetched above (optics.lua is the only setter; the plugin default is false).
-# NOTE: this is an early read of the same field the liquid gate already
-# requires (scripts/indicator.py _valid_liquid needs layers.enabled True);
-# its value is failing fast here instead of after a 60 s liquid wait.
-python3 - "$NEST/nest-glass-status.json" << 'PYEOF' || fail "profile not applied: features.layers.enabled is not true in hyprglass status (see status JSON above)"
-import json, sys
-d = json.load(open(sys.argv[1]))
-layers = (d.get("features") or {}).get("layers") or {}
-print("Y6-WAYLAND: profile gate: features.layers.enabled=" + str(layers.get("enabled")))
-if layers.get("enabled") is not True:
-    sys.exit(1)
-PYEOF
-# Re-run the plugin-list and version checks after the marker: the profile
-# must still be loaded when the gate passes, not only at the earlier check.
-nest hyprctl -j plugin list > "$NEST/nest-plugin-list-after-gate.json" 2> "$NEST/nest-plugin-list-after-gate.err" || fail "nested hyprctl plugin list re-check failed after profile gate"
-grep -q hyprglass "$NEST/nest-plugin-list-after-gate.json" || fail "hyprglass missing from nested plugin list on re-check after profile gate"
-nest hyprctl -j hyprglass status > "$NEST/nest-glass-status-after-gate.json" 2> "$NEST/nest-glass-status-after-gate.err" || fail "nested hyprglass status re-check failed after profile gate"
-python3 - "$NEST/nest-glass-status-after-gate.json" << 'PYEOF' || fail "hyprglass version mismatch on re-check after profile gate"
-import json, sys
-d = json.load(open(sys.argv[1]))
-ver = d.get("version"); vc = d.get("versionCheck")
-print("Y6-WAYLAND: profile gate re-check: hyprglass version=" + str(ver) + " versionCheck=" + str(vc))
-if ver != "1.1.1-cu.1" or vc != "match":
-    sys.exit(1)
-PYEOF
-echo "Y6-WAYLAND: profile gate OK: applied marker present, layers.enabled true, plugin list and version re-checked"
-# END Y6C5-A2 positive profile gate
-
 # BEGIN Y6C5-A6-G4 configerrors gate
 # Y6C5-A6 (Council 3 G4, supporting gate): nest configerrors must be empty
 # after profile application. A throwing optics.lua surfaces as a config
 # error, not as a missing marker, so this is the only gate catching that
 # case. Pattern follows scripts/activation_checks.py wait_for_profile
 # (stripped output must be empty). A failed configerrors call fails closed.
+# Y6C5-A8-INVEST (2026-11-22): this block now runs BEFORE the A2 marker
+# poll. configerrors is an IPC query, so it works regardless of log
+# delivery, and in the A8 trial it never ran at all because the A2 gate
+# failed first. A throwing config() must fail here with its error text,
+# not hide behind a marker timeout.
 # KNOWN TENSION (open item O1): if parse-3 duplicate layer() registration
 # errors, configerrors is non-empty while the parse-2 profile stands, and
 # this gate would false-fail a healthy profile. The A8 load-only trial
@@ -468,6 +418,83 @@ if [ -n "$(printf '%s' "$CONFIG_ERRORS" | tr -d '[:space:]')" ]; then
 fi
 echo "Y6-WAYLAND: configerrors empty after profile application (G4 OK)"
 # END Y6C5-A6-G4 configerrors gate
+
+# BEGIN Y6C5-A2 positive profile gate (Y6r A2, R3; replaces the old U6 block)
+# The parse-1 "not ready" marker is EXPECTED on every successful startup
+# (parse 1 runs before the plugin system exists; the profile is applied on
+# parse 2). It must NEVER fail the run. This gate is positive: it requires
+# the applied marker printed AFTER optics.lua returns, plus a second signal,
+# features.layers.enabled == true, read from the status JSON fetched above.
+# The marker proves config()+layer() returned; layers.enabled proves the
+# config effect (optics.lua is the only setter; the plugin default is false).
+# Y6C5-A8-INVEST (2026-11-22): this gate used to grep the LIVE per-instance
+# log ($NEST_LOG) for the applied marker. That channel is broken by
+# construction: the log file stops flushing after the Aquamarine dmabuf dump,
+# and post-parse-2 lines sit in the unflushed ofstream tail until the SIGKILL
+# teardown discards them. The A8 trial (16:18:03 to 16:18:29 2026-11-22)
+# proved it: the profile was applied (layers.enabled true against a default
+# of false) while the marker never reached either log in 15 s of polling.
+# See improvements/worker-click5-y6-a8-invest-log.md. The gate therefore
+# polls the marker FILE the hook writes and closes
+# ($RUN_DIR/y6-profile-applied.txt). A closed file is on disk immediately,
+# so the poll observes the event, not the log flush. Log greps below are
+# corroboration output only and NEVER fail the run. Saved-log marker counts
+# are NOT parse evidence (A10). No gate here reads a hypr-saved directory.
+# Poll timeout/interval are overridable for tests (Y6C5_GATE_TIMEOUT_S,
+# Y6C5_GATE_INTERVAL_S); production defaults are 15 s / 1 s. By the time
+# this gate runs (about 10 s after launch) parse 2 has already applied the
+# profile and written the file, so the poll is a margin for scheduling, not
+# for the load and not for log flush lag.
+echo "Y6-WAYLAND: profile gate: parse-1 not-ready marker is expected, waiting for applied marker"
+if grep -a -q "Y6-NEST-HOOK: hyprglass not ready" "$LOG" "$NEST_LOG" 2>/dev/null; then
+  echo "Y6-WAYLAND: profile gate: parse-1 not-ready marker present (expected, not a failure)"
+fi
+# First signal (IPC, already fetched): layers.enabled must be true in the
+# status JSON fetched above. This is the config effect, and it is read over
+# IPC, so it works regardless of log delivery.
+python3 - "$NEST/nest-glass-status.json" << 'PYEOF' || fail "profile not applied: features.layers.enabled is not true in hyprglass status (see status JSON above)"
+import json, sys
+d = json.load(open(sys.argv[1]))
+layers = (d.get("features") or {}).get("layers") or {}
+print("Y6-WAYLAND: profile gate: features.layers.enabled=" + str(layers.get("enabled")))
+if layers.get("enabled") is not True:
+    sys.exit(1)
+PYEOF
+MARKER_FILE="$RUN_DIR/y6-profile-applied.txt"
+GATE_TIMEOUT="${Y6C5_GATE_TIMEOUT_S:-15}"
+GATE_INTERVAL="${Y6C5_GATE_INTERVAL_S:-1}"
+GATE_DEADLINE=$(( $(date +%s) + GATE_TIMEOUT ))
+GATE_OK=""
+while [ "$(date +%s)" -le "$GATE_DEADLINE" ]; do
+  if [ -f "$MARKER_FILE" ] && grep -a -q "Y6-NEST-OPTICS: applied" "$MARKER_FILE" 2>/dev/null; then GATE_OK=1; break; fi
+  sleep "$GATE_INTERVAL"
+done
+if [ -z "$GATE_OK" ]; then
+  echo "Y6-WAYLAND: profile gate: applied marker file absent after ${GATE_TIMEOUT}s (log corroboration below, then tail of nested log):"
+  grep -a -h "Y6-NEST-HOOK" "$LOG" "$NEST_LOG" 2>/dev/null || echo "Y6-WAYLAND: profile gate: no Y6-NEST lines in either log"
+  tail -30 "$NEST_LOG" 2>/dev/null || tail -30 "$LOG"
+  fail "profile not applied: marker file $MARKER_FILE absent after ${GATE_TIMEOUT}s; see nested log tail above"
+fi
+grep -a -h "Y6-NEST-OPTICS: applied" "$MARKER_FILE" 2>/dev/null | head -3
+grep -a -h "Y6-NEST-HOOK: profile applied" "$MARKER_FILE" 2>/dev/null | head -3
+# Corroboration only: any applied-marker lines that did flush into the logs.
+# Their absence here is NOT a failure (see the A8-INVEST comment above).
+grep -a -h "Y6-NEST-OPTICS: applied" "$LOG" "$NEST_LOG" 2>/dev/null | head -3 || echo "Y6-WAYLAND: profile gate: applied marker not in logs (expected: log delivery lags, file is authoritative)"
+# Re-run the plugin-list and version checks after the marker: the profile
+# must still be loaded when the gate passes, not only at the earlier check.
+nest hyprctl -j plugin list > "$NEST/nest-plugin-list-after-gate.json" 2> "$NEST/nest-plugin-list-after-gate.err" || fail "nested hyprctl plugin list re-check failed after profile gate"
+grep -q hyprglass "$NEST/nest-plugin-list-after-gate.json" || fail "hyprglass missing from nested plugin list on re-check after profile gate"
+nest hyprctl -j hyprglass status > "$NEST/nest-glass-status-after-gate.json" 2> "$NEST/nest-glass-status-after-gate.err" || fail "nested hyprglass status re-check failed after profile gate"
+python3 - "$NEST/nest-glass-status-after-gate.json" << 'PYEOF' || fail "hyprglass version mismatch on re-check after profile gate"
+import json, sys
+d = json.load(open(sys.argv[1]))
+ver = d.get("version"); vc = d.get("versionCheck")
+print("Y6-WAYLAND: profile gate re-check: hyprglass version=" + str(ver) + " versionCheck=" + str(vc))
+if ver != "1.1.1-cu.1" or vc != "match":
+    sys.exit(1)
+PYEOF
+echo "Y6-WAYLAND: profile gate OK: applied marker file present, layers.enabled true, plugin list and version re-checked"
+# END Y6C5-A2 positive profile gate
 
 # Liquid gate: liquid_available(ready=True) semantics exactly (indicator.py).
 # Shaders up to 60s: 30s LIQUID_READY_TIMEOUT + one 30s extension (Council C).

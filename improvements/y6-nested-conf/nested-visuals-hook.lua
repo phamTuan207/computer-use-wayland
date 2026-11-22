@@ -9,6 +9,13 @@
 -- after STAGE_LATE loads the plugin and calls reload(), so the hook sees
 -- count=1 and dofiles optics.lua. The profile IS applied on parse 2. The old
 -- claim that the marker proves the profile missing was wrong and is corrected.
+-- Y6C5-A8-INVEST (2026-11-22): the per-instance log file does NOT deliver
+-- post-parse-2 prints within the run (ofstream buffering, SIGKILL discards
+-- the tail; A8 trial 16:18 2026-11-22 proved the profile applied while the
+-- marker never reached either log). The gate therefore cannot grep the log
+-- for the applied marker. The hook writes the same marker to a plain file
+-- and closes it: a closed file is on disk immediately. Log prints stay as
+-- corroboration only. See improvements/worker-click5-y6-a8-invest-log.md.
 -- The runner checks liquid_available(ready=true) after start, but that gate is
 -- metadata-only (scripts/indicator.py docstring): it CANNOT prove the profile
 -- was applied, because hyprglass status carries no blur, refraction, preset,
@@ -28,6 +35,21 @@ if glass_count == 1 and glass_version == "1.1.1-cu.1" then
   -- Y6C5-A3: printed AFTER the dofile returns, so a dofile error (a throwing
   -- optics.lua) means no marker. Bare dofile, no pcall: errors must propagate.
   print("Y6-NEST-HOOK: profile applied")
+  -- Y6C5-A8-INVEST: same marker, delivered through a file instead of the
+  -- buffered log. dofile returned, so optics.lua line 47 already printed
+  -- in-process; writing both lines here records the same event. Explicit
+  -- close() flushes to disk at once. A failed open is silent: the gate
+  -- then fails closed on the missing file, and the log print (if it ever
+  -- flushes) is the diagnostic. Path is the nest run dir from the
+  -- environment the launcher sets (XDG_RUNTIME_DIR=/tmp/y6-nested/run),
+  -- never the live runtime dir.
+  local marker_path = (os.getenv("XDG_RUNTIME_DIR") or "/tmp/y6-nested/run") .. "/y6-profile-applied.txt"
+  local marker_file = io.open(marker_path, "w")
+  if marker_file then
+    marker_file:write("Y6-NEST-OPTICS: applied blur=0.15 refraction=0.55 mask=contour namespace=computer-use-indicator\n")
+    marker_file:write("Y6-NEST-HOOK: profile applied\n")
+    marker_file:close()
+  end
 else
   -- EXPECTED on parse 1 of every run (plugin system does not exist yet).
   -- The runner must log this, never fail on it.
