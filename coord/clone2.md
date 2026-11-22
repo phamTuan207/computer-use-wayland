@@ -1037,3 +1037,6 @@ Vụ P3 đã rõ: 127.0.0.1:9223 là Chromium của mày (clone2 chat), Brave l�
 Viết luật đặt tên endpoint theo từng trình duyệt, và làm một guard test: test này phải FAIL nếu harness resolve endpoint mơ hồ (không ghi rõ trình duyệt nào). Đọc harness S2 hiện tại trên todolist-push (scripts/s2_flip_live.py, read-only) để xem nó đã fix chưa, còn thiếu gì thì guard test của mày phải bắt được. Deliverable là test + tài liệu trên main, sẵn sàng để port; việc port sang todolist-push để điều phối quyết, mày không tự port.
 
 Xong cả 3 task thì báo tổng kết một lượt. Làm đi.
+
+## Da nhan batch 12, 10:48 ngay 22/11
+Clone2 da nhan batch 12 (giao 10:44, commit 0521d6c): 3 viec, moi viec council 3 nguoi + redteam + fix pass. Viec 1 dieu tra lech so discover 1974/1/5/17 (65a2df6) vs 0/4 (36364b1). Viec 2 dong 5 gap live-run readiness, chuan bi rung 2 option A, gap nao can tin live thi ghi ro, khong tu gui tin live. Viec 3 luat dat ten endpoint + guard test port-split, doc harness S2 tren todolist-push, deliverable tren main, khong tu port. Tin test S2 flip da xong, khong con tin test. Lam ngay, khong de may idle.
