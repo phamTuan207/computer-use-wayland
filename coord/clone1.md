@@ -4232,3 +4232,15 @@ CONFIRMED, council 2 STANDS WITH MINOR CORRECTIONS (M1-M3),
 council 3 COMPLETE. Đã giao fix pass task 1 (1 agent riêng).
 Fix pass task 2 vẫn đang chạy. Xong cả 2 fix pass thì tổng
 kết đợt 12.
+
+## 13:45 ngày 22/11 - BATCH 12 TASK 1 FIX PASS XONG, ĐÃ SỬA THÊM 1 CÂU SAI
+
+Fix pass task 1 xong (79498ea): áp đủ 7 sửa, mỗi sửa đều kiểm
+chứng lại từ nguồn gốc, không đổi verdict hay số liệu nào, báo
+cáo từ 428 lên 448 dòng. Điều phối tự kiểm tra lại và thấy
+section 11 sau fix pass viết sai: nó nói báo cáo được commit
+"after the user's confirmation", nhưng thực tế chủ không xác
+nhận gì, phiên điều phối git chạy bình thường nên tự commit.
+Đã sửa câu đó cho đúng sự thật và push (43f03fe, báo cáo giờ
+450 dòng). Task 1 xong hẳn. Fix pass task 2 vẫn đang chạy.
+Xong fix pass task 2 thì tổng kết đợt 12.
