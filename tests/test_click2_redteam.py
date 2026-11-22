@@ -128,6 +128,17 @@ def _capture_js(method_name, selector='#msg-input'):
     return captured['script']
 
 
+def _wrap_bare_return(script):
+    """A bare `return ...` script (every zen_dom helper since
+    DOMZEN-FIX) needs a function wrapper to run under node -e; IIFEs
+    pass through. Same helper as tests/test_click3_redteam2.py,
+    duplicated here so this frozen file keeps its own harness and
+    imports nothing from the RT2 file."""
+    if re.match(r'\s*(?:/\*[^*]*\*/\s*)?return\b', script):
+        return '(function(){' + script + '})()'
+    return script
+
+
 class R1ConversionTests(unittest.TestCase):
     def test_raw_moz_inner_screen_origin_must_land(self):
         # R1, rewritten in amend3: the point must land through the
@@ -419,7 +430,7 @@ class R6HitCheckTests(unittest.TestCase):
                 "var document = {querySelector: function(){ return"
                 " __target; },\n"
                 " elementFromPoint: function(){ return __child; }};\n")
-        out = _run_node(shim + 'console.log(JSON.stringify(' + script
+        out = _run_node(shim + 'console.log(JSON.stringify(' + _wrap_bare_return(script)
                         + '));')
         self.assertEqual(json.loads(out), False,
                          'hit_check passed with a BUTTON at the center')
@@ -453,7 +464,7 @@ class R7ShadowTests(unittest.TestCase):
                 " {activeElement: __inner}};\n"
                 "var document = {querySelector: function(){ return"
                 " __inner; }, activeElement: __host};\n")
-        out = _run_node(shim + 'console.log(JSON.stringify(' + script
+        out = _run_node(shim + 'console.log(JSON.stringify(' + _wrap_bare_return(script)
                         + '));')
         self.assertEqual(json.loads(out), True,
                          'focus_check failed a focused shadow input')
