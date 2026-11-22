@@ -3899,3 +3899,37 @@ Batch 10 xong han ca 3 task, tong ket da commit e35da2f luc 11:47.
 Muse: khong co yeu cau moi (origin/main dung o f58e0e2, trung watermark).
 Khong agent nao ket, 31 agent deu done. Cay sach tru test-w.txt 0 byte.
 Cho dot tiep theo cua Muse.
+
+---
+
+# BATCH 11 - GIAO 22/11/2026 (tu dieu phoi COORD-CLICK-5)
+
+Clone1, tao la Pham Tuan. Batch 10 may lam xong roi, tot, ca 3 task deu co ket qua ro: task 1 DO NOT EXPAND dung, task 2 tim 11 root cause, task 3 audit CB-8 ra 2 REVOKED 1 UPHELD. Gio la batch 11, viec moi.
+
+Tin them: 2 the "Needs review" trong Brave cua may (IRS Form W-9, Wikipedia Main Page, deu cho scheduled task 'Batch6 Watchdog 10m') da duoc duyet Allow het luc 11:52-11:53, ca 2 deu ghi "Allowed for this scheduled task - just now". Watchdog cua may khong con bi chan nua, cu chay binh thuong.
+
+Repo lam viec: computer-use-wayland, branch main cho bao cao cua may. Doc code thi fetch read-only branch todolist-push (HEAD hien tai e68e578). Khong sua code tren todolist-push, khong push len todolist-push. Bao cao va ket qua cua may commit len main.
+
+Moi task lam du 3 buoc: council 3 nguoi duyet, redteam soi loi, roi fix pass sua lai theo gop y. Ket qua 15 phut thi bao, khong ngoi im. Xong task nao commit luon task do, dung don cuoi.
+
+## Task 1: Kiem tra doc lap step 7, P2 element-ref (commit 292753f)
+
+Step 7 vua land o commit 292753f tren todolist-push: P2 element-ref interface, protocol, A9 screen point, Zen backend, verified-origin validator. Doc het diff cua commit do (read-only).
+
+Kiem tra doc lap, khong tin loi worker tu bao cao: chay lai bo test P2 (worker bao 86 test), kiem tra that su co 0 production caller cua dom_rect_to_image_point khong, kiem tra 2 model correction worker neu (CLI act chi binding-when-present chu khong mandatory; validator fix theo verified-origin path, khong chap nhan moz-computed origin), kiem tra Zen backend tu choi input voi no_pointer_delegate khi chua co pointer delegate.
+
+Moi khang dinh phai co lenh chay + output + commit hash + time log. Chi bao cao, khong sua code chung.
+
+## Task 2: Viet ban dac ta xoa S1/CB-6 cho step 8
+
+Step 8 sap toi la xoa per-batch spawn, chuyen han sang broker (S1/CB-6). Nhiem vu cua may: viet ban dac ta dieu kien truoc khi xoa, dang design doc tren main, khong sua code.
+
+Noi dung: queue discipline (ai duoc chay truoc, cho doi the nao khi 2 worker cung gui), single-owner serialization (chi mot owner giu session tai mot thoi diem, co che khoa ra sao), fatal-on-read-failure decision matrix (doc that bai thi dung ngay hay thu lai, bao nhieu lan), fallback/recovery procedure (one-shot SSH lam fallback the nao, khoi phuc session wedged ra sao), va trang thai CB-10 precondition (LIQUID flicker probe hay owner deferral van con thieu, ghi ro).
+
+## Task 3: Sua bang chung cho 2 claim CB-8 bi REVOKED
+
+Batch 10 task 3 cua may ket luan: (a) S2 Pick 1 REVOKED, (c) DOM-grounding REVOKED, chi (b) bench 2-vision UPHELD tren run moi d7d569b. Bao cao docs/batch10-task3-cb8-audit-20261122.md.
+
+Nhiem vu nay: voi tung claim trong 2 claim bi REVOKED, tim bang chung con thieu trong repo (lenh test, output, commit hash, time log) de khoi phuc neu du, hoac xac nhan REVOKED van dung voi gap cu the neu ro. Bang chung nao chi co tren laptop (chay live) thi ghi ro la chi co tren laptop, khong tu bia bang chung. Deliverable la evidence record tren main.
+
+Xong ca 3 task thi bao tong ket mot luot. Lam di.
