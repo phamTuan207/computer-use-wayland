@@ -125,27 +125,22 @@ def add_holder(agent, method, pid=None):
 
 
 def remove_holder(agent, pid=None):
-    """Remove a holder under the lock. Returns (holders, was_present).
+    """Remove exactly one holder under the lock. Returns (holders, was_present).
 
-    With a pid, only that run's entry is removed, so a concurrent
-    same-agent run keeps its pill (redteam A4). Without a pid, all of
-    the agent's entries are removed (backward compat for the CLI and
-    the hold() helper). A bare-agent key from before the rekey is
-    removed in both cases.
+    With a pid, only that run's entry (agent:pid) is removed. Without a
+    pid, only the bare agent entry is removed. No call ever removes
+    another run's entry: a pid-less removal never touches pid-keyed
+    entries, and a pid-keyed removal never touches the bare entry.
+    This is the R6/C1 fix: a failed acquire with pid None used to wipe
+    every holder of the same agent, including a live pid-keyed holder
+    of a concurrent run, and the pill then dropped mid-run for a run
+    that never failed.
     """
     with _holders_lock():
         holders = load_holders()
-        was_present = False
-        if isinstance(pid, int) and pid > 0:
-            for key in (_holder_key(agent, pid), agent):
-                if key in holders:
-                    holders.pop(key, None)
-                    was_present = True
-        else:
-            for key in list(holders):
-                if key == agent or (agent and key.startswith(agent + ':')):
-                    holders.pop(key, None)
-                    was_present = True
+        key = _holder_key(agent, pid)
+        was_present = key in holders
+        holders.pop(key, None)
         save_holders(holders)
         return holders, was_present
 

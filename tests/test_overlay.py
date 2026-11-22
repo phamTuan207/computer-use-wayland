@@ -199,6 +199,70 @@ def test_same_agent_two_pids_are_independent():
         assert holders == {}
 
 
+def test_remove_holder_pid_none_keeps_pid_keyed_holder():
+    """R6/C1: remove_holder with pid None must delete only the bare
+    agent entry, never a pid-keyed holder of a concurrent same-agent
+    run. The old code wiped every key of the agent, so one failed
+    pid-less acquire dropped the pill mid-run for a live run."""
+    with tempfile.TemporaryDirectory() as tmp:
+        _isolated(tmp)
+        overlay.add_holder('Muse', 'CDP')
+        overlay.add_holder('Muse', 'CDP', pid=999001)
+        assert set(overlay.load_holders()) == {'Muse', 'Muse:999001'}
+        holders, was_present = overlay.remove_holder('Muse', None)
+        assert was_present
+        assert set(holders) == {'Muse:999001'}
+        assert overlay.load_holders() == holders
+
+
+def test_remove_holder_pid_keeps_bare_holder():
+    """R6 reverse direction: remove_holder with a pid must delete only
+    that pid-keyed entry, never the bare agent entry. The old code
+    removed the bare key too, so a failed pid-keyed acquire wiped the
+    holder of overlay.hold."""
+    with tempfile.TemporaryDirectory() as tmp:
+        _isolated(tmp)
+        overlay.add_holder('Muse', 'CDP')
+        overlay.add_holder('Muse', 'CDP', pid=999001)
+        assert set(overlay.load_holders()) == {'Muse', 'Muse:999001'}
+        holders, was_present = overlay.remove_holder('Muse', 999001)
+        assert was_present
+        assert set(holders) == {'Muse'}
+        assert overlay.load_holders() == holders
+
+
+def test_cmd_acquire_invisible_keeps_concurrent_holder():
+    """C1 end to end: a concurrent pid-keyed holder of the same agent
+    is live when a pid-less acquire fails invisible. The failed
+    acquire must exit 1 and remove only its own just-added bare key;
+    the concurrent holder survives, so the other run keeps its pill."""
+    import types
+    with tempfile.TemporaryDirectory() as tmp:
+        _isolated(tmp)
+        overlay.add_holder('Muse', 'CDP', pid=999001)
+        args = types.SimpleNamespace(agent='Muse', method='CDP',
+                                     pid=None, label=None)
+        orig_ensure = overlay._ensure_daemon
+        orig_send = overlay._send_socket
+        try:
+            overlay._ensure_daemon = lambda: True
+            overlay._send_socket = lambda *a, **k: {
+                'visible': False, 'owner': 'none',
+                'holders': {'Muse': {'agent': 'Muse', 'method': 'CDP',
+                                     'acquired': '2026-11-22T19:30:00+07:00',
+                                     'pid': None}},
+                'error': 'pill show failed'}
+            out = io.StringIO()
+            with redirect_stdout(out):
+                assert overlay.cmd_acquire(args) == 1
+            assert json.loads(out.getvalue())['visible'] is False
+            assert set(overlay.load_holders()) == {'Muse:999001'}, \
+                'failed pid-less acquire must not drop a concurrent holder'
+        finally:
+            overlay._ensure_daemon = orig_ensure
+            overlay._send_socket = orig_send
+
+
 def test_holders_persist_json():
     with tempfile.TemporaryDirectory() as tmp:
         _isolated(tmp)
@@ -396,6 +460,9 @@ if __name__ == '__main__':
     test_label_format()
     test_add_release_refcount()
     test_same_agent_two_pids_are_independent()
+    test_remove_holder_pid_none_keeps_pid_keyed_holder()
+    test_remove_holder_pid_keeps_bare_holder()
+    test_cmd_acquire_invisible_keeps_concurrent_holder()
     test_holders_persist_json()
     test_prune_dead_pid()
     test_label_command_valid_chars()
