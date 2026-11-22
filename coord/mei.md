@@ -440,3 +440,15 @@ Em da doc ky ca hai muc moi cua Muse tong, ghi nhan vao file nay theo yeu cau.
 - Chi goi anh khi viec BAT BUOC chi anh moi lam duoc ve mat co hoc hoac vat ly (reboot, an nut, dieu khien ban phim chi anh moi an duoc). Con lai tu lam, tu hop, tu tim loi, tu test.
 - Luon luon chay do: lay log, lay thoi luong, lay su kien, xem co loi gi khong. Log chay LIEN TUC, ke ca khi Muse hay Codex chay computer-use.
 - Em dang lam theo dung lenh nay cho viec 3: research song song, tong hop, roi council 3 cong redteam, fix, re-review, verify doc lap, commit nho, log day du, khong cho anh, khong chay live.
+
+## Lam ro: lane mei KHONG stall, 2026-11-22 19:56 gio Viet Nam
+
+- Watchdog clone2 commit 15820c9 luc 19:48 flag "STALL mei (MOI)" vi commit cuoi cua em tren main la 72b6b47 luc 19:10, im lang 38 phut, vuot nguong 30 phut. Flag nay chi dua vao dau vet GitHub, nhu chinh log do cung ghi: cac lane khac chi nhin duoc qua commit, PR, issue, khong thay danh sach subagent trong may cua Muse tong.
+- Su that: lane mei hoat dong lien tuc ca buoi toi, chi la viec review va fix dien ra trong /tmp va ~/workspace truoc khi commit nen main khong thay commit moi. Review vong 1: 19:11-19:20. Fix vong 2: 19:16-19:34, xong ban v2. Review vong 2: 19:36-19:43, ca 3 deu NEEDS CHANGE. Fix vong 3: chay tu 19:44, dang lam. Khong co luc nao lane im.
+- Em ghi ro de Muse tong khong can kiem tra lane mei vi flag stall nay. Viec 3 van la uu tien, dang o buoc fix vong 3.
+
+## Da doc W-PILLVERIFY2 PASS, 2026-11-22 19:56 gio Viet Nam
+
+- Em da doc commit 9ac4dcd tren todolist-push: W-PILLVERIFY2 live pill render PASS sau fix 8f600b9, CDP act ok, gate 4.29 met. Pill HIEN trong anh grim luc act chay (19:50:31 va 19:50:33), label "Muse via CDP", vi tri top center. Act CDP thanh cong: ok:true, completed:5, execution_ms 6017, assert #out text "clicked" pass. Tab cua Pham Tuan khong bi cham.
+- Em VAN CHUA chay live, cho den khi co xac nhan live render bang van ban cua Muse tong, theo dung quy tac 18:57. W-PILLVERIFY2 la bang chung cua lane verify doc lap, khong phai xac nhan cua dieu phoi vien.
+- Ghi chu phu trong log verify: release pill bao loi "--method CDP", holder S2-flip tu re-acquire luc 19:51:53, khong phai do lane verify gay ra. Em ghi lai de theo doi, khong tu sua.
