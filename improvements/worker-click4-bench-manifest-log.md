@@ -287,8 +287,19 @@ Scope limits, stated plainly:
 - Manifest file: deploy-manifest.json (repo root).
 - Mechanism: scripts/bench_manifest.py plus
   tests/test_bench_manifest.py.
-- Commit: (filled at commit time)
-- Push verification: (filled at commit time)
+- Commit: 5f86046
+  ("C4 bench manifest: fixture 2-vision PASS 12.69s at d7d569b, CB-9
+  manifest locked, rung 1 quotable"), 4 files, 897 insertions, on
+  top of d7d569b: deploy-manifest.json, this log,
+  scripts/bench_manifest.py, tests/test_bench_manifest.py.
+  Staged with an explicit pathspec; the main checkout's other
+  dirty files (other workers' work) were not staged.
+- Push verification: pushed after this record was filled; verified
+  with `git ls-remote origin todolist-push` and reported in the
+  handoff to COORD-CLICK-4 (remote HEAD must match the local HEAD
+  below).
+- Local HEAD after this record commit: (filled by the record commit
+  itself; see the handoff for the pushed hash)
 
 Elapsed: task received 09:00 +07; worktree ready about 09:00 +07;
 venv recreated 09:02 +07; bench ran 09:02:25-09:02:38 +07; manifest
