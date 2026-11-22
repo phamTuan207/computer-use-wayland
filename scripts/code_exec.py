@@ -51,6 +51,11 @@ Allowlisted API (the only names a program may call):
   come from the supplied snapshot; successful after snapshots are bound too.
 - dom_assert(snapshot, ref=None, selector=None, text=None, value=None,
   checked=None, timeout_ms=1000) -> True or raises AssertionError.
+- run_snippet(name, **params) executes one verified registry program inline
+  under these same budgets (shared api_calls, deadline, trace counter).
+  Registry: scripts/snippets/manifest.json; each entry carries the sha256
+  of its file bytes plus the sha256 of the code_exec.py bytes it was
+  verified against. Params bind as frame locals, never interpolated.
 - read_file(path, max_bytes=65536) -> str, only under /tmp, regular file,
   no symlink escape. Used for exact-source verification.
 - assert_state(condition, message="assert failed") -> raises AssertionError
@@ -81,7 +86,11 @@ act() and before file asserts. For shell printf text, use one single-quoted
 argument and write \\n between output lines in the Python source.
 """
 import ast
+import copy
+import difflib
+import hashlib
 import json
+import logging
 import math
 import os
 import re
@@ -90,6 +99,7 @@ import signal
 import socket
 import sys
 import time
+from datetime import date
 from pathlib import Path
 
 try:
@@ -107,6 +117,14 @@ PROGRAM_FILENAME = '<code-exec>'
 MAX_READ_BYTES = 65536
 MAX_ENVELOPE_BYTES = 65536
 OBSERVATION_MAX_AGE = 120
+MAX_OBSERVATIONS = 32
+MAX_DOM_SNAPSHOTS = 32
+MAX_SNIPPET_MANIFEST_BYTES = 1024 * 1024
+MAX_SNIPPET_ENTRIES = 128
+MAX_SNIPPET_LEDGER_ENTRIES = 128
+MAX_SNIPPET_FILE_BYTES = MAX_PROGRAM_CHARS * 4
+SNIPPET_STALE_DAYS_LIVE = 30
+SNIPPET_STALE_DAYS_DEFAULT = 90
 DOM_WINDOW_CLASS = 'chromium'
 DOM_WINDOW_WAIT_SECONDS = 10.0
 DOM_WINDOW_POLL_INTERVAL = 0.2
@@ -137,6 +155,25 @@ BANNED_NAMES = {
     'os', 'sys', 'subprocess', 'socket', 'pathlib', 'shutil', 'time',
     'json', 're', 'io', 'importlib', 'builtins', '__builtins__',
 }
+CODE_EXEC_API_NAMES = frozenset({
+    'windows', 'observe', 'act', 'read_file', 'assert_state',
+    'assert_file_contains', 'assert_file_exists', 'print',
+    'dom_start', 'dom_tabs', 'dom_observe', 'dom_act', 'dom_assert',
+    'run_snippet',
+})
+SNIPPET_RESERVED_PARAM_NAMES = CODE_EXEC_API_NAMES | {'name', 'allow_stale'}
+SNIPPET_OPTIONAL_FIELDS = {
+    'requires_approval', 'live_only', 'output',
+}
+SNIPPET_REQUIRED_FIELDS = {
+    'name', 'file', 'sha256', 'description', 'params', 'source',
+    'last_verified', 'api_sha256', 'expected_result', 'tags',
+}
+SNIPPET_PARAM_TYPES = {'string', 'integer', 'number', 'boolean',
+                       'array', 'object', 'null'}
+SNIPPET_ROOT = Path(__file__).resolve().parent / 'snippets'
+SNIPPET_MANIFEST = SNIPPET_ROOT / 'manifest.json'
+SNIPPET_NAME_RE = re.compile(r'[a-z0-9]+(?:-[a-z0-9]+)*\Z')
 
 
 def is_enabled():
@@ -298,6 +335,10 @@ def _validate_dom_actions(actions, refs, snapshot_id=None, target=None):
 
 class CodeExecError(ValueError):
     """A program failed a sandbox, budget, or API guard. Fails closed."""
+
+
+class SnippetRegistryError(CodeExecError):
+    """The snippets manifest is malformed or unavailable."""
 
 
 class _ApiChannel:
@@ -462,7 +503,8 @@ def _fork_api_session(work, wall_seconds, api_handler):
                     return msg.get("envelope"), "ok"
                 if msg.get("kind") == "api":
                     resp = api_handler(msg.get("name"), msg.get("args") or [],
-                                       msg.get("kwargs") or {})
+                                       msg.get("kwargs") or {},
+                                       msg.get("snippet_run") or 0)
                     try:
                         channel.send(resp)
                     except OSError:
@@ -486,6 +528,7 @@ class _Validator(ast.NodeVisitor):
             'windows', 'observe', 'act', 'read_file', 'assert_state',
             'assert_file_contains', 'assert_file_exists', 'print',
             'dom_start', 'dom_tabs', 'dom_observe', 'dom_act', 'dom_assert',
+            'run_snippet',
         }
 
     def visit_Import(self, node):
@@ -568,6 +611,333 @@ def _resolve_read_path(path):
     return resolved
 
 
+# ---------------------------------------------------------------- snippets
+# Verified-snippet registry (Phase B, items 5-12). The manifest stores the
+# sha256 of each snippet file plus the sha256 of the code_exec.py bytes the
+# snippet was verified against (api_sha256, computed at runtime, never a
+# git commit). run_snippet reads the file once, verifies the hash, and
+# executes those bytes inline in the forked child. The loader reads text
+# only and never imports a snippet file.
+
+def _reject_duplicate_json_keys(pairs):
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise SnippetRegistryError('duplicate manifest JSON key: ' + str(key))
+        result[key] = value
+    return result
+
+
+def _parameter_type_matches(value, type_name):
+    if type_name == 'string':
+        return isinstance(value, str)
+    if type_name == 'integer':
+        return isinstance(value, int) and not isinstance(value, bool)
+    if type_name == 'number':
+        return _finite_number(value)
+    if type_name == 'boolean':
+        return isinstance(value, bool)
+    if type_name == 'array':
+        return isinstance(value, list)
+    if type_name == 'object':
+        return isinstance(value, dict)
+    if type_name == 'null':
+        return value is None
+    return False
+
+
+def _api_surface_sha256():
+    """Runtime-computed hash of this file's bytes (item 6).
+
+    The stale check keys on this hash, never on a git commit. Fail closed
+    when the bytes cannot be read.
+    """
+    try:
+        return hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
+    except OSError as exc:
+        raise SnippetRegistryError(
+            'code_exec API surface hash cannot be computed: ' + str(exc)) from exc
+
+
+def _registered_op_paths():
+    """Read literal op paths from codemode without importing its module."""
+    path = Path(__file__).resolve().parent / 'codemode.py'
+    try:
+        tree = ast.parse(path.read_text(encoding='utf-8'))
+    except (OSError, SyntaxError, UnicodeDecodeError) as exc:
+        raise SnippetRegistryError('could not validate op-name collisions') from exc
+    for node in tree.body:
+        if not isinstance(node, ast.Assign) or not any(
+                isinstance(target, ast.Name) and target.id == 'OPS'
+                for target in node.targets):
+            continue
+        if not isinstance(node.value, ast.List):
+            break
+        paths = set()
+        for item in node.value.elts:
+            if not isinstance(item, ast.Dict):
+                continue
+            for key, value in zip(item.keys, item.values):
+                if (isinstance(key, ast.Constant) and key.value == 'path'
+                        and isinstance(value, ast.Constant)
+                        and isinstance(value.value, str)):
+                    paths.add(value.value)
+        return paths
+    raise SnippetRegistryError('codemode op paths could not be read')
+
+
+def _resolve_snippet_path(entry, root=None):
+    relative = entry.get('file')
+    if not isinstance(relative, str) or not relative or '\\' in relative:
+        raise SnippetRegistryError('snippet file must be a relative path under snippets/')
+    candidate = Path(relative)
+    if candidate.is_absolute() or '..' in candidate.parts:
+        raise SnippetRegistryError('snippet file path must not be absolute or contain ..')
+    try:
+        base = (Path(root) if root is not None else SNIPPET_ROOT).resolve()
+        resolved = (base / candidate).resolve()
+    except (OSError, ValueError) as exc:
+        raise SnippetRegistryError('snippet file path cannot be resolved') from exc
+    if resolved != base and base not in resolved.parents:
+        raise SnippetRegistryError('snippet file resolves outside snippets/')
+    if resolved.suffix != '.py' or not resolved.is_file():
+        raise SnippetRegistryError('snippet file is missing or is not a .py file')
+    return resolved
+
+
+def _validate_snippet_entry(raw, op_paths, root=None):
+    if not isinstance(raw, dict):
+        raise SnippetRegistryError('manifest entry must be an object')
+    missing = SNIPPET_REQUIRED_FIELDS - set(raw)
+    extra = set(raw) - SNIPPET_REQUIRED_FIELDS - SNIPPET_OPTIONAL_FIELDS
+    if missing:
+        raise SnippetRegistryError('missing fields: ' + ', '.join(sorted(missing)))
+    if extra:
+        raise SnippetRegistryError('unknown fields: ' + ', '.join(sorted(extra)))
+    entry = dict(raw)
+    name = entry['name']
+    if not isinstance(name, str) or not SNIPPET_NAME_RE.fullmatch(name):
+        raise SnippetRegistryError('name must be kebab-case')
+    if name in CODE_EXEC_API_NAMES or name in op_paths or '.' in name:
+        raise SnippetRegistryError('snippet name collides with an API or op path')
+    if not isinstance(entry['sha256'], str) or not re.fullmatch(r'[0-9a-f]{64}', entry['sha256']):
+        raise SnippetRegistryError('sha256 must be 64 lowercase hex characters')
+    if not isinstance(entry['api_sha256'], str) or not re.fullmatch(r'[0-9a-f]{64}', entry['api_sha256']):
+        raise SnippetRegistryError('api_sha256 must be 64 lowercase hex characters')
+    for field in ('description', 'source', 'expected_result'):
+        value = entry[field]
+        if not isinstance(value, str) or not value.strip() or '\n' in value or '\r' in value:
+            raise SnippetRegistryError(field + ' must be a non-empty one-line string')
+    if not isinstance(entry['tags'], list) or any(
+            not isinstance(tag, str) or not tag.strip() for tag in entry['tags']):
+        raise SnippetRegistryError('tags must be a list of non-empty strings')
+    if len(set(entry['tags'])) != len(entry['tags']):
+        raise SnippetRegistryError('tags must not contain duplicates')
+    try:
+        verified = date.fromisoformat(entry['last_verified'])
+    except (TypeError, ValueError) as exc:
+        raise SnippetRegistryError('last_verified must be YYYY-MM-DD') from exc
+    if verified.isoformat() != entry['last_verified'] or verified > date.today():
+        raise SnippetRegistryError('last_verified must be a valid date no later than today')
+    if not isinstance(entry['params'], list):
+        raise SnippetRegistryError('params must be a list')
+    param_names = set()
+    for param in entry['params']:
+        if not isinstance(param, dict) or set(param) != {
+                'name', 'type', 'required', 'default', 'description'}:
+            raise SnippetRegistryError('each param needs name, type, required, default, description')
+        param_name = param['name']
+        if (not isinstance(param_name, str)
+                or not re.fullmatch(r'[A-Za-z][A-Za-z0-9_]*', param_name)
+                or param_name.startswith('__')):
+            raise SnippetRegistryError('param name must be a plain Python identifier')
+        if param_name in SNIPPET_RESERVED_PARAM_NAMES or param_name in op_paths:
+            raise SnippetRegistryError('param name collides with an API name: ' + param_name)
+        if param_name in param_names:
+            raise SnippetRegistryError('duplicate param name: ' + param_name)
+        param_names.add(param_name)
+        if not isinstance(param['type'], str) or param['type'] not in SNIPPET_PARAM_TYPES:
+            raise SnippetRegistryError('unsupported param type: ' + str(param['type']))
+        if not isinstance(param['required'], bool):
+            raise SnippetRegistryError('param required must be boolean')
+        if not isinstance(param['description'], str) or not param['description'].strip() \
+                or '\n' in param['description'] or '\r' in param['description']:
+            raise SnippetRegistryError('param description must be a one-line string')
+        if not _is_jsonable(param['default']):
+            raise SnippetRegistryError('param default must be JSON-serializable')
+        try:
+            json.dumps(param['default'], allow_nan=False)
+        except (TypeError, ValueError) as exc:
+            raise SnippetRegistryError('param default must be strict JSON data') from exc
+        if param['default'] is not None and not _parameter_type_matches(
+                param['default'], param['type']):
+            raise SnippetRegistryError('param default does not match its type')
+    output = entry.get('output')
+    if output is not None and (not isinstance(output, str)
+                               or not re.fullmatch(r'[A-Za-z][A-Za-z0-9_]*', output)
+                               or output in SNIPPET_RESERVED_PARAM_NAMES):
+        raise SnippetRegistryError('output must be a non-API Python identifier')
+    if 'requires_approval' in entry and not isinstance(entry['requires_approval'], bool):
+        raise SnippetRegistryError('requires_approval must be boolean')
+    if 'live_only' in entry and not isinstance(entry['live_only'], bool):
+        raise SnippetRegistryError('live_only must be boolean')
+    _resolve_snippet_path(entry, root=root)
+    return entry
+
+
+def load_snippet_manifest(root=None):
+    """Load metadata only. Invalid entries are skipped; duplicate names fail all."""
+    manifest = (Path(root) if root is not None else SNIPPET_ROOT) / 'manifest.json'
+    try:
+        fd = os.open(manifest,
+                     os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC | os.O_NONBLOCK)
+        with os.fdopen(fd, 'rb') as stream:
+            import stat as _stat
+            if not _stat.S_ISREG(os.fstat(stream.fileno()).st_mode):
+                raise SnippetRegistryError('manifest must be a regular file')
+            raw_bytes = stream.read(MAX_SNIPPET_MANIFEST_BYTES + 1)
+    except OSError as exc:
+        raise SnippetRegistryError('manifest unavailable: ' + str(exc)) from exc
+    if len(raw_bytes) > MAX_SNIPPET_MANIFEST_BYTES:
+        raise SnippetRegistryError('manifest exceeds 1MB size cap')
+    try:
+        data = json.loads(raw_bytes.decode('utf-8'), object_pairs_hook=_reject_duplicate_json_keys)
+    except SnippetRegistryError:
+        raise
+    except (UnicodeDecodeError, ValueError, RecursionError) as exc:
+        raise SnippetRegistryError('manifest is malformed JSON: ' + str(exc)[:300]) from exc
+    if not isinstance(data, dict) or set(data) != {'snippets'} \
+            or not isinstance(data['snippets'], list):
+        raise SnippetRegistryError('manifest must contain only a snippets list')
+    raw_entries = data['snippets']
+    if len(raw_entries) > MAX_SNIPPET_ENTRIES:
+        raise SnippetRegistryError('manifest exceeds %d entries' % MAX_SNIPPET_ENTRIES)
+    names = [entry.get('name') for entry in raw_entries if isinstance(entry, dict)
+             and isinstance(entry.get('name'), str)]
+    if len(names) != len(set(names)):
+        duplicates = sorted(name for name in set(names) if names.count(name) > 1)
+        raise SnippetRegistryError('duplicate snippet names: ' + ', '.join(duplicates))
+    op_paths = _registered_op_paths()
+    entries = []
+    for index, raw in enumerate(raw_entries):
+        try:
+            entries.append(_validate_snippet_entry(raw, op_paths, root=root))
+        except Exception as exc:
+            logging.getLogger(__name__).warning(
+                'skipping invalid snippet manifest entry %d: %s', index, exc)
+    return entries
+
+
+def _read_snippet_once(entry, root=None):
+    """Read the snippet file once and verify its sha256. Returns source text."""
+    path = _resolve_snippet_path(entry, root=root)
+    try:
+        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC | os.O_NONBLOCK)
+        with os.fdopen(fd, 'rb') as stream:
+            import stat as _stat
+            if not _stat.S_ISREG(os.fstat(stream.fileno()).st_mode):
+                raise CodeExecError('snippet path is not a regular file')
+            raw = stream.read(MAX_SNIPPET_FILE_BYTES + 1)
+    except OSError as exc:
+        raise CodeExecError('snippet file could not be read: ' + str(exc)) from exc
+    if len(raw) > MAX_SNIPPET_FILE_BYTES:
+        raise CodeExecError('snippet file exceeds program byte cap')
+    digest = hashlib.sha256(raw).hexdigest()
+    if digest != entry['sha256']:
+        raise CodeExecError('snippet sha256 mismatch for %s' % entry['name'])
+    try:
+        return raw.decode('utf-8')
+    except UnicodeDecodeError as exc:
+        raise CodeExecError('snippet file is not valid UTF-8') from exc
+
+
+def _snippet_params(entry, supplied):
+    if not isinstance(supplied, dict):
+        raise CodeExecError('snippet params must be an object')
+    definitions = {param['name']: param for param in entry['params']}
+    extra = set(supplied) - set(definitions)
+    if extra:
+        raise CodeExecError('unknown snippet params: ' + ', '.join(sorted(extra)))
+    values = {}
+    for name, param in definitions.items():
+        if name in supplied:
+            value = supplied[name]
+        elif param['required']:
+            raise CodeExecError('missing required snippet param: ' + name)
+        else:
+            value = param['default']
+        if not _is_jsonable(value):
+            raise CodeExecError('snippet param %s must be JSON-serializable' % name)
+        try:
+            json.dumps(value, allow_nan=False)
+        except (TypeError, ValueError) as exc:
+            raise CodeExecError('snippet param %s must be strict JSON data' % name) from exc
+        if not _parameter_type_matches(value, param['type']):
+            raise CodeExecError('snippet param %s must have type %s' % (name, param['type']))
+        values[name] = _jsonable_copy(value)
+    return values
+
+
+def _snippet_age_days(entry):
+    return (date.today() - date.fromisoformat(entry['last_verified'])).days
+
+
+def _snippet_is_stale(entry):
+    """Stale when the age limit passed OR the API surface hash moved.
+
+    The hash check is keyed on the runtime-computed sha256 of the
+    code_exec.py bytes (item 6); a mismatch means the snippet was
+    verified against different executor code. Fail closed when the
+    hash cannot be computed.
+    """
+    stale_days = SNIPPET_STALE_DAYS_LIVE if entry.get('live_only') else SNIPPET_STALE_DAYS_DEFAULT
+    if _snippet_age_days(entry) > stale_days:
+        return True
+    return entry['api_sha256'] != _api_surface_sha256()
+
+
+def search_snippets(root=None):
+    """Return integrity-checked snippet metadata suitable for search.
+
+    Stale entries are excluded (item 12a): past expiry means not
+    offered. Entries whose file fails the hash check or the AST scan
+    are hidden too. No code body is returned.
+    """
+    entries = load_snippet_manifest(root=root)
+    results = []
+    for entry in entries:
+        try:
+            if _snippet_is_stale(entry):
+                continue
+            source = _read_snippet_once(entry, root=root)
+            validate_program(source)
+        except (CodeExecError, OSError) as exc:
+            logging.getLogger(__name__).warning(
+                'hiding invalid snippet %s from search: %s', entry['name'], exc)
+            continue
+        result = {key: entry[key] for key in (
+            'name', 'description', 'params', 'last_verified', 'tags')}
+        result['stale'] = False
+        result['requires_approval'] = entry.get('requires_approval', False)
+        result['live_only'] = entry.get('live_only', False)
+        results.append(result)
+    return results
+
+
+def describe_snippet(name, root=None):
+    """Return one manifest entry without reading or returning its code body."""
+    entries = load_snippet_manifest(root=root)
+    for entry in entries:
+        if entry['name'] == name:
+            source = _read_snippet_once(entry, root=root)
+            validate_program(source)
+            return dict(entry)
+    matches = difflib.get_close_matches(
+        str(name), [entry['name'] for entry in entries], n=3, cutoff=0.3)
+    suffix = '; closest matches: ' + ', '.join(matches) if matches else ''
+    raise SnippetRegistryError('unknown snippet: ' + str(name) + suffix)
+
+
 # Intent ledger for the CDP path (step-9 prototype, item 3): the
 # JSON batch interface carries its exactly-once ledger in
 # dom_act._sent_intents; the CDP path had none, so a retried
@@ -586,6 +956,24 @@ def _resolve_read_path(path):
 _SENT_INTENTS = set()
 
 
+def _snippet_globals(namespace):
+    """Deep copy of the live namespace for one snippet run (items 9, 11d).
+
+    API stubs and builtins are shared by reference (functions are atomic
+    under deepcopy); plain variables are deep-copied, so a snippet's
+    rebindings and in-place mutations cannot leak into the outer program.
+    The snippet reads outer variables through this snapshot (probe 10e);
+    only a declared output is copied back into the live namespace.
+    """
+    snapshot = {}
+    for key, value in namespace.items():
+        if key in ('__builtins__',) or callable(value):
+            snapshot[key] = value
+        else:
+            snapshot[key] = copy.deepcopy(value)
+    return snapshot
+
+
 class CodeExecSession:
     """One interpreter session: persistent variables plus observation bindings.
 
@@ -598,10 +986,11 @@ class CodeExecSession:
 
     def __init__(self, backend, state_dir=None, session_token=None,
                  check_cancel=None, wall_seconds=DEFAULT_WALL_SECONDS,
-                 max_api_calls=MAX_API_CALLS):
+                 max_api_calls=MAX_API_CALLS, snippet_root=None):
         self.backend = backend
         self.state_dir = Path(state_dir) if state_dir is not None else None
         self.session_token = session_token
+        self.snippet_root = Path(snippet_root) if snippet_root is not None else None
         self.check_cancel = check_cancel or (lambda: None)
         if not isinstance(wall_seconds, (int, float)) or not 1 <= wall_seconds <= MAX_WALL_SECONDS:
             raise CodeExecError('wall_seconds must be 1..%d' % MAX_WALL_SECONDS)
@@ -612,6 +1001,14 @@ class CodeExecSession:
         self.variables = {}
         self.observations = {}
         self.dom_snapshots = {}
+        self.applied_snippets = {}
+        self.approved_snippets = set()
+        # Per-run binding scope (item 10): which snippet run created each
+        # observation / DOM snapshot. Run id 0 is the outer program; each
+        # run_snippet call gets a fresh id. In-memory only, never saved.
+        self._observation_runs = {}
+        self._dom_snapshot_runs = {}
+        self._current_snippet_run = 0
         self.api_calls = 0
         self.log_lines = []
         self._deadline = None
@@ -647,6 +1044,12 @@ class CodeExecSession:
                 k: v for k, v in observations.items()
                 if isinstance(v, dict) and isinstance(v.get('created'), (int, float))
                 and now - v['created'] <= OBSERVATION_MAX_AGE}
+            # Run ids are in-memory only: a loaded observation belongs to
+            # no snippet run, so it is usable by the outer program only
+            # (run id 0), never by a snippet. Prune stale run records.
+            self._observation_runs = {
+                k: v for k, v in self._observation_runs.items()
+                if k in self.observations}
         dom_snapshots = raw.get('dom_snapshots')
         if isinstance(dom_snapshots, dict):
             now = time.time()
@@ -660,11 +1063,34 @@ class CodeExecSession:
                 and all(isinstance(ref, str) for ref in v['refs'])
                 and isinstance(v.get('snapshot'), dict)
                 and v['snapshot'].get('snapshot') == k}
+            self._dom_snapshot_runs = {
+                k: v for k, v in self._dom_snapshot_runs.items()
+                if k in self.dom_snapshots}
 
     def _save_state(self):
         path = self._state_path()
         if path is None:
             return
+        # B2: cap what is saved. Observations accumulate across runs in
+        # one session (each run can add up to MAX_API_CALLS), and the old
+        # code wrote all of them: 5 distinct observations, 1591 bytes,
+        # no cap. Keep only the newest MAX_OBSERVATIONS (and the same cap
+        # for DOM snapshots, the identical hazard in this function), in
+        # memory and on disk, so the state file cannot grow without bound.
+        if len(self.observations) > MAX_OBSERVATIONS:
+            keep = sorted(self.observations.items(),
+                          key=lambda item: item[1].get('created', 0))[-MAX_OBSERVATIONS:]
+            self.observations = dict(keep)
+            self._observation_runs = {
+                k: v for k, v in self._observation_runs.items()
+                if k in self.observations}
+        if len(self.dom_snapshots) > MAX_DOM_SNAPSHOTS:
+            keep = sorted(self.dom_snapshots.items(),
+                          key=lambda item: item[1].get('created', 0))[-MAX_DOM_SNAPSHOTS:]
+            self.dom_snapshots = dict(keep)
+            self._dom_snapshot_runs = {
+                k: v for k, v in self._dom_snapshot_runs.items()
+                if k in self.dom_snapshots}
         try:
             path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
             payload = {
@@ -729,6 +1155,8 @@ class CodeExecSession:
         if not isinstance(meta, dict) or not meta.get('id'):
             raise CodeExecError('backend returned an observation without an id')
         self.observations[meta['id']] = meta
+        # Item 10: remember which snippet run created this observation.
+        self._observation_runs[meta['id']] = self._current_snippet_run
         return {
             'id': meta['id'],
             'scope': meta.get('scope'),
@@ -772,13 +1200,29 @@ class CodeExecSession:
         if observation is None:
             if not self.observations:
                 raise CodeExecError('act needs an observation; call observe() first')
-            newest = max(self.observations.values(), key=lambda m: m.get('created', 0))
-            return newest
+            # Item 10: the no-argument fallback binds to the newest
+            # observation from THIS snippet run only. If observations
+            # exist but none belongs to the current run, the error names
+            # the per-run binding (probe 11e); a snippet must observe
+            # for itself before it can act.
+            same_run = [(key, meta) for key, meta in self.observations.items()
+                        if self._observation_runs.get(key, 0) == self._current_snippet_run]
+            if not same_run:
+                raise CodeExecError('observation is not bound to this snippet run; observe again')
+            return max((meta for _, meta in same_run),
+                       key=lambda m: m.get('created', 0))
         if not isinstance(observation, dict) or not isinstance(observation.get('id'), str):
             raise CodeExecError('act observation must be an observation dict from observe()')
         meta = self.observations.get(observation['id'])
         if meta is None:
             raise CodeExecError('observation id is not bound to this session; observe again')
+        # Item 10: an observation belongs to the snippet run that created
+        # it. The outer program (run 0) cannot act on a snippet's
+        # observation, a snippet cannot act on the outer program's, and a
+        # snippet cannot act on another snippet's. Loaded observations
+        # have no run record and default to run 0 (outer program only).
+        if self._observation_runs.get(observation['id'], 0) != self._current_snippet_run:
+            raise CodeExecError('observation is not bound to this snippet run; observe again')
         if time.time() - meta.get('created', 0) > OBSERVATION_MAX_AGE:
             raise CodeExecError('observation is older than 120s; observe again')
         return meta
@@ -834,6 +1278,8 @@ class CodeExecSession:
             'target': target, 'created': time.time(), 'refs': refs,
             'snapshot': _jsonable_copy(snapshot),
         }
+        # Item 10: same per-run scope as observations.
+        self._dom_snapshot_runs[snapshot_id] = self._current_snippet_run
         return snapshot
 
     def _bound_dom_snapshot(self, snapshot):
@@ -843,6 +1289,8 @@ class CodeExecSession:
         binding = self.dom_snapshots.get(snapshot_id)
         if binding is None:
             raise CodeExecError('DOM snapshot id is not bound to this session; observe again')
+        if self._dom_snapshot_runs.get(snapshot_id, 0) != self._current_snippet_run:
+            raise CodeExecError('DOM snapshot is not bound to this snippet run; observe again')
         if snapshot != binding.get('snapshot'):
             raise CodeExecError('snapshot is not the bound DOM snapshot; observe again')
         if time.time() - binding.get('created', 0) > OBSERVATION_MAX_AGE:
@@ -1095,6 +1543,102 @@ class CodeExecSession:
             raise AssertionError('file does not exist: ' + path)
         return True
 
+    def api_run_snippet(self, name, allow_stale=False, params=None):
+        """Parent-side fetch: verify the registry entry and return its bytes.
+
+        This runs in the parent (the trust boundary). It costs one API
+        call through _api, like every other API call, so the fetch itself
+        shares the outer budget. It returns the verified source; the child
+        executes it inline (see the run_snippet stub in run()).
+        """
+        return self._api('run_snippet', self._fetch_snippet,
+                         name, params or {}, allow_stale)
+
+    def _fetch_snippet(self, name, supplied_params, allow_stale=False):
+        if not isinstance(name, str):
+            raise CodeExecError('snippet name must be a string')
+        if not isinstance(allow_stale, bool):
+            raise CodeExecError('allow_stale must be boolean')
+        entries = load_snippet_manifest(root=self.snippet_root)
+        entry = next((item for item in entries if item['name'] == name), None)
+        if entry is None:
+            matches = difflib.get_close_matches(
+                name, [item['name'] for item in entries], n=3, cutoff=0.3)
+            suffix = '; closest matches: ' + ', '.join(matches) if matches else ''
+            raise CodeExecError('unknown snippet: ' + name + suffix)
+        params = _snippet_params(entry, supplied_params)
+        if entry.get('requires_approval') and name not in self.approved_snippets:
+            raise CodeExecError('snippet requires approval: ' + name)
+        age_days = _snippet_age_days(entry)
+        stale_days = SNIPPET_STALE_DAYS_LIVE if entry.get('live_only') else SNIPPET_STALE_DAYS_DEFAULT
+        stale = age_days > stale_days
+        if not stale:
+            try:
+                stale = entry['api_sha256'] != _api_surface_sha256()
+            except SnippetRegistryError:
+                raise CodeExecError(
+                    'snippet is stale: %s API surface hash cannot be computed; refusing' % name)
+        if stale and not allow_stale:
+            raise CodeExecError(
+                'snippet is stale: %s last_verified=%s age=%d days; '
+                'allow_stale=True is diagnostic only'
+                % (name, entry['last_verified'], age_days))
+        if stale:
+            line = 'run_snippet stale override: %s age=%d days' % (name, age_days)
+            self.log_lines.append(line)
+            logging.getLogger(__name__).warning(line)
+        params_hash = hashlib.sha256(json.dumps(
+            params, sort_keys=True, ensure_ascii=False, separators=(',', ':'),
+            allow_nan=False).encode('utf-8')).hexdigest()
+        # Item 12: the applied-snippet ledger guards NON-IDEMPOTENT
+        # snippets (requires_approval). A blanket ledger would block
+        # deliberate repetition of an idempotent snippet and break probe
+        # 10a (the same snippet called 5 times in a loop must trip the
+        # API budget, not the ledger), so idempotent entries are not
+        # ledgered. The child records only when the fetch says so.
+        ledgered = bool(entry.get('requires_approval'))
+        ledger_key = name + ':' + params_hash
+        if ledgered and ledger_key in self.applied_snippets:
+            raise CodeExecError('snippet already applied for these parameters: ' + name)
+        if ledgered and len(self.applied_snippets) >= MAX_SNIPPET_LEDGER_ENTRIES:
+            raise CodeExecError('applied snippet ledger is full; refusing to act')
+        source = _read_snippet_once(entry, root=self.snippet_root)
+        validate_program(source)
+        return {'source': source, 'sha256': entry['sha256'],
+                'output': entry.get('output'), 'stale': stale,
+                'ledger_key': ledger_key, 'params_hash': params_hash,
+                'ledger': ledgered, 'params': params}
+
+    def _record_snippet_result(self, key, name, params_hash, result):
+        """Record a SUCCESSFUL snippet application (item 12).
+
+        Only ledgered (requires_approval, non-idempotent) snippets are
+        recorded, and only verified applications, never a failed or
+        unconfirmed attempt, so a failed snippet can be retried with the
+        same parameters (same rule as the CDP intent ledger above). The
+        child sends this record after the snippet exec succeeds.
+        """
+        if key in self.applied_snippets:
+            return
+        if len(self.applied_snippets) >= MAX_SNIPPET_LEDGER_ENTRIES:
+            logging.getLogger(__name__).warning(
+                'applied snippet ledger is full; not recording %s', name)
+            return
+        self.applied_snippets[key] = {
+            'name': name, 'params_sha256': params_hash,
+            'result': _jsonable_copy(result), 'created': time.time(),
+        }
+
+    def run_snippet_program(self, name, intent=None, allow_stale=False,
+                            approved=False):
+        """Run one registry snippet as a top-level code-exec program."""
+        if approved:
+            self.approved_snippets.add(name)
+        program = 'run_snippet(%s%s)' % (
+            json.dumps(name),
+            ', allow_stale=True' if allow_stale else '')
+        return self.run(program, intent=intent)
+
     def _print(self, *args):
         self.log_lines.append(' '.join(str(a) for a in args))
 
@@ -1118,6 +1662,7 @@ class CodeExecSession:
         self._intent = intent
         self._trace_steps = 0
         self._trace_events = 0
+        self._current_snippet_run = 0
         previous_variables = _jsonable_copy(self.variables)
         self._deadline = started + self.wall_seconds
         envelope = {
@@ -1141,14 +1686,28 @@ class CodeExecSession:
                 "dom_observe": self.api_dom_observe,
                 "dom_act": self.api_dom_act,
                 "dom_assert": self.api_dom_assert,
+                "run_snippet": self.api_run_snippet,
                 "print": self._print,
             }
 
-            def api_handler(name, args, kwargs):
+            def api_handler(name, args, kwargs, snippet_run=0):
+                # Item 10: the child tags every request with its snippet
+                # run id (0 for the outer program). The parent applies it
+                # for the duration of this one call, so observation and
+                # DOM bindings are scoped per snippet run.
+                if name == "run_snippet_record":
+                    try:
+                        self._record_snippet_result(*args, **kwargs)
+                    except BaseException as exc:
+                        return {"ok": False, "error": str(exc)[:400],
+                                "type": type(exc).__name__}
+                    return {"ok": True, "result": True}
                 fn = api_methods.get(name)
                 if fn is None:
                     return {"ok": False, "error": "unknown api: %s" % name,
                             "type": "CodeExecError"}
+                old_run = self._current_snippet_run
+                self._current_snippet_run = snippet_run
                 old_tracer = sys.gettrace()
                 sys.settrace(self._trace)
                 try:
@@ -1165,6 +1724,7 @@ class CodeExecSession:
                             "type": type(exc).__name__}
                 finally:
                     sys.settrace(old_tracer)
+                    self._current_snippet_run = old_run
                 try:
                     json.dumps(result)
                 except (TypeError, ValueError):
@@ -1174,12 +1734,23 @@ class CodeExecSession:
                 return {"ok": True, "result": result}
 
             def run_child(channel):
+                # Item 10: the current snippet run id. 0 is the outer
+                # program; each run_snippet call gets a FRESH id from a
+                # monotonic counter, carried on every API request so the
+                # parent can scope bindings per snippet run. A binary
+                # in/out flag is not enough: sequential snippets must not
+                # share an id (probe 11g), so the counter never reuses one.
+                snippet_run = [0]
+                snippet_run_next = [0]
+                snippet_depth = [0]
+
                 def make_stub(name):
                     def stub(*args, **kwargs):
                         try:
                             request = {"kind": "api", "name": name,
                                        "args": list(args),
-                                       "kwargs": dict(kwargs)}
+                                       "kwargs": dict(kwargs),
+                                       "snippet_run": snippet_run[0]}
                             json.dumps(request)
                         except (TypeError, ValueError):
                             raise CodeExecError(
@@ -1201,6 +1772,95 @@ class CodeExecSession:
                         return resp.get("result")
                     return stub
 
+                def run_snippet_stub(name, allow_stale=False, **params):
+                    """Execute one verified registry snippet INLINE (item 7).
+
+                    The parent already verified the manifest entry, the
+                    params, the staleness rules, and the file hash, and
+                    returned the source bytes. This stub validates those
+                    bytes again, then execs them in the child under the
+                    live tracer, so the snippet shares the outer program's
+                    trace counter (child copy), deadline (child copy), and
+                    API-call counter (parent, via the marshalled calls).
+                    It never calls run() and never builds a nested session.
+                    Params arrive as values, never interpolated into source
+                    (item 11h); they bind as frame locals (item 9).
+                    """
+                    if snippet_depth[0]:
+                        raise CodeExecError('nested run_snippet is not allowed')
+                    if not isinstance(name, str):
+                        raise CodeExecError('snippet name must be a string')
+                    if not isinstance(allow_stale, bool):
+                        raise CodeExecError('allow_stale must be boolean')
+                    try:
+                        request = {"kind": "api", "name": "run_snippet",
+                                   "args": [name],
+                                   "kwargs": {"allow_stale": allow_stale,
+                                              "params": params},
+                                   "snippet_run": snippet_run[0]}
+                        json.dumps(request)
+                    except (TypeError, ValueError):
+                        raise CodeExecError(
+                            'run_snippet params are not JSON-serializable')
+                    try:
+                        channel.send(request)
+                    except OSError:
+                        raise CodeExecError('api channel closed')
+                    try:
+                        resp = channel.recv()
+                    except (OSError, EOFError):
+                        raise CodeExecError('api channel closed')
+                    if resp.get('cancelled'):
+                        self.check_cancel()
+                        raise RuntimeError(resp.get('error') or 'cancelled')
+                    if not resp.get('ok'):
+                        raise _exception_from_response(resp)
+                    fetched = resp.get('result')
+                    tree = validate_program(fetched['source'])
+                    code = compile(tree, PROGRAM_FILENAME, 'exec')
+                    snippet_run_next[0] += 1
+                    old_run = snippet_run[0]
+                    snippet_run[0] = snippet_run_next[0]
+                    snippet_depth[0] += 1
+                    frame_locals = dict(fetched['params'])
+                    outcome = None
+                    try:
+                        snippet_globals = _snippet_globals(namespace)
+                        exec(code, snippet_globals, frame_locals)  # noqa: S102 - AST-validated, hash-verified bytes
+                        self._check_budgets()
+                        output_name = fetched.get('output')
+                        if output_name and output_name not in frame_locals:
+                            raise CodeExecError('snippet did not assign its declared output: ' + output_name)
+                        output_value = frame_locals.get(output_name) if output_name else None
+                        if not _is_jsonable(output_value) or _serialized_size(output_value) > MAX_ENVELOPE_BYTES:
+                            raise CodeExecError('snippet output must be JSON-serializable and at most 64KB')
+                        if output_name:
+                            namespace[output_name] = _jsonable_copy(output_value)
+                        outcome = {'ok': True, 'name': name,
+                                   'output': _jsonable_copy(output_value),
+                                   'sha256': fetched['sha256'],
+                                   'stale': fetched['stale']}
+                        return outcome
+                    finally:
+                        snippet_depth[0] -= 1
+                        snippet_run[0] = old_run
+                        if outcome is not None and fetched.get('ledger'):
+                            # Record only a successful application of a
+                            # ledgered (requires_approval) snippet, so a
+                            # failed snippet can be retried (item 12).
+                            # Best effort: a broken channel means the run
+                            # is dying anyway.
+                            try:
+                                channel.send({"kind": "api",
+                                              "name": "run_snippet_record",
+                                              "args": [fetched['ledger_key'], name,
+                                                       fetched['params_hash'], outcome],
+                                              "kwargs": {},
+                                              "snippet_run": snippet_run[0]})
+                                channel.recv()
+                            except (OSError, EOFError, ValueError):
+                                pass
+
                 namespace = dict(self.variables)
                 namespace.update({
                     '__builtins__': dict(SAFE_BUILTINS),
@@ -1216,6 +1876,7 @@ class CodeExecSession:
                     'dom_observe': make_stub("dom_observe"),
                     'dom_act': make_stub("dom_act"),
                     'dom_assert': make_stub("dom_assert"),
+                    'run_snippet': run_snippet_stub,
                     'print': make_stub("print"),
                 })
                 child_envelope = dict(envelope)
@@ -1238,6 +1899,7 @@ class CodeExecSession:
                                               'assert_state', 'assert_file_contains',
                                               'assert_file_exists', 'dom_start', 'dom_tabs',
                                               'dom_observe', 'dom_act', 'dom_assert', 'print')
+                                and k != 'run_snippet'
                                 and _is_jsonable(v)}
                         variables = _jsonable_copy(kept)
                         candidate = dict(child_envelope, ok=True, variables=variables,
@@ -1325,11 +1987,29 @@ class CodeExecSession:
 
 def run_program(source, backend, state_dir=None, session_token=None,
                 intent=None, check_cancel=None, wall_seconds=DEFAULT_WALL_SECONDS,
-                max_api_calls=MAX_API_CALLS):
+                max_api_calls=MAX_API_CALLS, snippet_root=None):
     """One-shot entry point: build a session, run one program, return envelope."""
     session = CodeExecSession(backend, state_dir=state_dir,
                               session_token=session_token,
                               check_cancel=check_cancel,
                               wall_seconds=wall_seconds,
-                              max_api_calls=max_api_calls)
+                              max_api_calls=max_api_calls,
+                              snippet_root=snippet_root)
     return session.run(source, intent=intent)
+
+
+def run_snippet_program(name, backend, state_dir=None, session_token=None,
+                        intent=None, check_cancel=None,
+                        wall_seconds=DEFAULT_WALL_SECONDS,
+                        max_api_calls=MAX_API_CALLS, snippet_root=None,
+                        allow_stale=False, approved=False):
+    """One-shot entry point for a named registry snippet."""
+    session = CodeExecSession(backend, state_dir=state_dir,
+                              session_token=session_token,
+                              check_cancel=check_cancel,
+                              wall_seconds=wall_seconds,
+                              max_api_calls=max_api_calls,
+                              snippet_root=snippet_root)
+    return session.run_snippet_program(name, intent=intent,
+                                       allow_stale=allow_stale,
+                                       approved=approved)
