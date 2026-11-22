@@ -954,7 +954,10 @@ class FakeZenSession:
     def typed_flag(self, selector):
         return True
 
-    def sent_bubble_contains(self, selector, text):
+    def sent_bubble_contains(self, text):
+        # One argument, like the real ZenSession (zen_dom.py:1296).
+        # The old two-argument form hid the backend arity mismatch
+        # (W-ZENPREP finding B).
         return text in self.sent_bubbles
 
     def harvest(self, selectors):

@@ -448,11 +448,11 @@ class ZenDomBackend:
             if assert_spec is not None \
                     and assert_spec.get('type') == 'sent_bubble':
                 ok = session.sent_bubble_contains(
-                    selector, assert_spec.get('text', ''))
+                    assert_spec.get('text', ''))
                 return bool(ok), 'sent-bubble'
             if element_ref.is_send_action(action, actions):
                 text = typed_text or action.get('text', '')
-                ok = session.sent_bubble_contains(selector, text)
+                ok = session.sent_bubble_contains(text)
                 return bool(ok), 'sent-bubble'
             return False, 'no-dom-postcondition:key'
         if action_type == 'assert':

@@ -12,6 +12,7 @@ No live laptop work, no browser tasks, never ydotool. No em dash
 or en dash anywhere. Run:
 python3 -m unittest tests.test_zen_pointer
 """
+import inspect
 import sys
 import unittest
 from pathlib import Path
@@ -21,6 +22,7 @@ sys.path.insert(0, str(ROOT / 'scripts'))
 sys.path.insert(0, str(ROOT / 'tests'))
 import test_p2_element_ref as _p2
 import zen_backend
+import zen_dom
 import zen_pointer
 
 
@@ -262,6 +264,77 @@ class BackendWiringTests(unittest.TestCase):
         self.assertTrue(result['ok'], result)
         self.assertEqual(focused, [])
         self.assertEqual(code.observe_calls, [])
+        backend.close()
+
+
+class RealShapeFakeSession(_p2.FakeZenSession):
+    """Fake session with the REAL sent_bubble_contains signature.
+
+    The real ZenSession takes one argument, the text
+    (zen_dom.py:1296). The old fake took two (selector, text),
+    which matched the backend call instead of the real session
+    and let the arity mismatch ship with green tests (W-ZENPREP
+    finding B). This fake is the regression guard for that.
+    """
+
+    def sent_bubble_contains(self, text):
+        return text in self.sent_bubbles
+
+
+class RealSignatureTests(unittest.TestCase):
+    """W-ZENPREP finding B: the backend must call
+    sent_bubble_contains the way the real session defines it."""
+
+    def _backend(self):
+        session = RealShapeFakeSession(_p2._zen_fields())
+        backend = zen_backend.ZenDomBackend(
+            session_factory=lambda: session,
+            windows_fn=_p2._zen_windows,
+            pointer=None)
+        code = FakeCodeBackend(session)
+        focused = []
+        delegate = zen_pointer.ZenPointerDelegate(
+            code, focus_fn=focused.append)
+        backend.set_pointer(delegate)
+        return backend, session, code, focused
+
+    def _action(self, snapshot_id, **overrides):
+        action = {'type': 'click', 'ref': '#c5-text',
+                  'scope': 'Example',
+                  'observation_id': snapshot_id}
+        action.update(overrides)
+        return action
+
+    def test_real_session_signature_is_one_argument(self):
+        params = list(inspect.signature(
+            zen_dom.ZenSession.sent_bubble_contains).parameters)
+        self.assertEqual(params, ['self', 'text'])
+        fake_params = list(inspect.signature(
+            RealShapeFakeSession.sent_bubble_contains).parameters)
+        self.assertEqual(fake_params, ['self', 'text'])
+
+    def test_b1_program_completes_through_the_real_shape_session(self):
+        # The landed (b1) program through the delegate, with the
+        # session shaped like the real one. Pre-fix this raises
+        # TypeError in _verify at the send key, because the backend
+        # called sent_bubble_contains with two arguments.
+        backend, session, code, _focused = self._backend()
+        backend.dom_start()
+        snapshot = backend.dom_observe('Example', '#c5-text', 10)
+        snap_id = snapshot['snapshot']
+        program = [
+            self._action(snap_id, type='set_value', text='hello'),
+            self._action(snap_id, type='focus'),
+            self._action(snap_id, type='key', keys=['Enter']),
+            self._action(snap_id, type='assert', text='hello'),
+        ]
+        result = backend.dom_act('Example', snap_id, program, None, True)
+        self.assertTrue(result['ok'], result)
+        self.assertEqual(result['completed'], 4)
+        self.assertEqual(session.fields['#c5-text']['value'], 'hello')
+        self.assertEqual(session.sent_bubbles, ['hello'])
+        self.assertEqual(len(code.observe_calls), 1)
+        self.assertEqual(len(code.act_calls), 3)
         backend.close()
 
 
