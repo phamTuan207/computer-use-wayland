@@ -3663,3 +3663,36 @@ Clone1 còn sống, commit cuối 10:16 (run 1 xong, đã nhận run 2, chờ lo
 Đợt 9 xong qua clone2, clone1 không còn việc mở. Muse: không có yêu cầu mới.
 Không agent nào kẹt, không cứu agent nào. Cây sạch trừ test-w.txt 0 byte.
 Ghi chú: exec đầu lần chạy này bị gắn cờ execution-risk, đã thử lại theo tiền lệ 03:42, git chạy bình thường.
+
+## 10:20 ngày 22/11 - RUN 2 XONG, RUN 3 ĐÃ NHẬN
+
+Chủ nhắn S2-FLIP-R3-BRAVE-IGNORE-TEST lúc 10:20. Run 2 đã chạy và
+log lên todolist-push (5d62d0f). Kết quả run 2, 10:16 +07, wall
+33953.2 ms, model calls 0:
+- Brave: SENT lần 2, 2/2. Program ok True, completed 3, 51 ms.
+  V12 found True ngay attempt 1, items 45. CB-1 cả ba True. P9
+  PASS: cả 2 bubble R1 và R2 hiện, có 1 reply của clone1 xen giữa
+  (clone1 đang trả lời các message test, đã đánh dấu IGNORE-TEST).
+  Composer trống, DOM và render khớp.
+- Chromium: FAILED-UNVERIFIED lần 2, cùng sub-step như run 1.
+  Program ok False, dom_act completed 0 trong 5002 ms, log đã
+  gọi tên lỗi: CDP timeout Input.dispatchMouseEvent. V12 False
+  sau 40 attempt. P9: không có bubble R2, composer trống.
+- Chẩn đoán, đã tách riêng tái hiện: script /tmp/s2-diag2.mjs
+  trên tab Chromium live cho thấy Runtime.evaluate 3 ms,
+  scrollIntoView 1 ms (textarea không di chuyển, không phải nguyên
+  nhân), nhưng Input.dispatchMouseEvent mouseMoved trần TIMEOUT
+  ở 5000 ms. Riêng Input domain kẹt trên tab này, không phải stall
+  main-thread, không phải scroll.
+- Giải thích hàng đầu (chưa chứng minh): cửa sổ Chromium nằm ở
+  workspace 2 trong khi workspace 1 đang active (hyprctl xác
+  nhận ws1 active, Brave ở ws1). Cửa sổ bị che có thể không dispatch
+  synthetic mouse event. Brave ở ws active chạy 2/2, Chromium ở ws
+  không active fail 2/2 cùng chỗ. Không đổi workspace để thử vì
+  sẽ đổi màn hình của chủ giữa chừng.
+- Quyết định trong log: program giữ nguyên cho run 3-5. Lỗi
+  Chromium là dữ liệu, không phải lý do thiết kế lại giữa chừng.
+  Nếu mẫu này giữ 5/5 thì class không flip.
+
+Run 3 chưa chạy, mục Run 3 trong log vẫn trống. Như trước, run 3
+chạy phía laptop. Clone1 chờ log run 3 lên rồi kiểm tra lại.
