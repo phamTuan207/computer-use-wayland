@@ -102,6 +102,7 @@ class FakeCu:
         meta = {'id': 'a1b2c3d4e5f6',
                 'observation': str(self.state / 'a1b2c3d4e5f6.json'),
                 'image': str(self.state / 'a1b2c3d4e5f6.jpg'),
+                'scope': 'screen',
                 'monitor_box': [0, 0, 1920, 1200],
                 'created': time.time()}
         return meta
@@ -122,6 +123,21 @@ def _write_actions(tmp, actions):
     path = Path(tmp) / 'actions.json'
     path.write_text(json.dumps(actions))
     return str(path)
+
+
+def _write_observation(tmp, scope):
+    path = Path(tmp) / ('observation-' + scope + '.json')
+    meta = {'id': 'observation-' + scope,
+            'image': str(Path(tmp) / 'observation.jpg'),
+            'observation': str(path),
+            'scope': scope,
+            'window': '0x1' if scope == 'window' else None,
+            'window_bounds': [100, 200, 901, 1176]
+            if scope == 'window' else None,
+            'monitor_box': [0, 0, 1920, 1200],
+            'created': time.time()}
+    path.write_text(json.dumps(meta))
+    return str(path), meta
 
 
 def _args(actions_path, **overrides):
@@ -389,6 +405,40 @@ class TestRun(unittest.TestCase):
         self.assertEqual(self.fake_overlay.holders, {})
         log = list(self.fake_cu.state.glob('first-action-*.jsonl'))
         self.assertEqual(len(log), 1)
+
+    def test_after_preserves_input_scope_and_labels_screen_capture(self):
+        observation_path, window_meta = _write_observation(
+            self.tmp.name, 'window')
+        window_after = {'id': 'window-after',
+                        'observation': str(Path(self.tmp.name)
+                                           / 'window-after.json'),
+                        'scope': 'window'}
+        payload = json.dumps({'ok': True, 'completed': 1,
+                              'after': window_after})
+        code, env, _ = self._run(
+            [{'type': 'click', 'x': 100, 'y': 200}],
+            (0, payload, '', False, 0.5),
+            observation=observation_path)
+        self.assertEqual(code, 0)
+        self.assertEqual(env['after'], window_after)
+        self.assertEqual(env['after_screen']['scope'], 'screen')
+        self.assertEqual(env['after_screen']['id'], 'a1b2c3d4e5f6')
+        self.assertEqual(window_meta['scope'], 'window')
+
+    def test_screen_scoped_key_refuses_before_overlay(self):
+        observation_path, _ = _write_observation(self.tmp.name, 'screen')
+        code, env, _ = self._run(
+            [{'type': 'key', 'keys': ['Return']}],
+            (0, '{"ok": true, "completed": 1}', '', False, 0.5),
+            observation=observation_path)
+        self.assertEqual(code, 1)
+        self.assertFalse(env['ok'])
+        self.assertEqual(env['path'], 'refused')
+        self.assertEqual(env['error_code'], 'scope_mismatch')
+        self.assertFalse(any(call[0] == 'add'
+                             for call in self.fake_overlay.calls))
+        self.assertEqual(self.fake_overlay.holders, {})
+        self.assertEqual(self.fake_cu.observe_calls, [])
 
     def test_session_path_rc0_ok_false_not_ok(self):
         # Council 1, A3: the exit code alone never proves success.
