@@ -484,7 +484,24 @@ this file. No personal info.
   conditions; if the pattern holds 5/5, the class does not
   flip and the verdict follows from that.
 
-### Run 3
+### Run 3 (10:21 +07, T+60m)
+
+- Wall 33061.9ms, mux 789.9ms. Model calls 0.
+- Brave: SENT. Program ok True, completed 3, 53ms. V12 found
+  True, attempt 1, items 47, role user, side user. CB-1 all
+  three True. P9 reviewed: the R3 bubble is visible, composer
+  empty. DOM and render agree. P9 PASS. (Clone1's own messages
+  in the thread discuss runs 1 and 2; it is following the test
+  messages.)
+- Chromium: FAILED-UNVERIFIED, third identical failure.
+  "CDP timeout: Input.dispatchMouseEvent", completed 0, 5003ms.
+  V12 found False after 40 attempts (10052ms), items 40. P9
+  reviewed: no R3 bubble, composer empty. DOM and render agree.
+  P9 confirms the failure is real.
+- Pattern is now 3/3: Brave sends in about 50-70ms of program
+  time; Chromium fails at the first mouse event every time.
+
+### Run 4
 
 - (to be filled)
 
