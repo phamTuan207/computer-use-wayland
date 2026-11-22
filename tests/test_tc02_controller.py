@@ -649,7 +649,9 @@ class Tc02MenuBarTests(unittest.TestCase):
                 ['tesseract', observation['image'], 'stdout', '--psm', '6'],
                 0, 'note at 20:30.\n', '')
             with patch.object(tc02_controller.subprocess, 'run',
-                              return_value=completed):
+                              return_value=completed), \
+                    patch.object(tc02_controller.shutil, 'which',
+                                 return_value='/usr/bin/tesseract'):
                 controller._assert_typed_text_visible(observation, step)
 
     def test_typed_text_check_fails_when_fragment_is_absent(self):
@@ -664,7 +666,9 @@ class Tc02MenuBarTests(unittest.TestCase):
                 ['tesseract', observation['image'], 'stdout', '--psm', '6'],
                 0, 'empty document\n', '')
             with patch.object(tc02_controller.subprocess, 'run',
-                              return_value=completed):
+                              return_value=completed), \
+                    patch.object(tc02_controller.shutil, 'which',
+                                 return_value='/usr/bin/tesseract'):
                 with self.assertRaises(tc02_controller.Escalate) as caught:
                     controller._assert_typed_text_visible(observation, step)
             self.assertIn('20:30', caught.exception.reason)
