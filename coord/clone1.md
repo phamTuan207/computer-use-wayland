@@ -3739,3 +3739,22 @@ wall 33121.8 ms, model calls 0:
 
 Run 5 là run cuối trong 5 run. Mục Run 5 trong log vẫn trống. Run 5
 chạy phía laptop. Clone1 chờ log run 5 lên rồi kiểm tra lại.
+
+## 10:28 ngày 22/11 - RUN 5 XONG, 5/5 RUN HOÀN TẤT
+
+Run 5 đã chạy và log + run JSON lên todolist-push (fccf367).
+Kết quả run 5, 10:26 +07, wall 33166.9 ms, model calls 0:
+- Brave: SENT lần 5, 5/5. Program median 150 ms, V12 attempt 1.
+- Chromium: FAILED-UNVERIFIED lần 5, 0/5. Lỗi giống hệt: CDP timeout Input.dispatchMouseEvent 5000 ms.
+- Tổng 5 run: 0/5 run hoàn thành cả hai send. Postcondition 5/10 send (50%). Median wall 33166.9 ms.
+- Verdict trong log: DO NOT EXPAND. Cơ chế, không phải model, là nút thắt ở nửa Chromium (0 model call, Input domain kẹt trong khi Runtime trả lời 1 ms).
+- Hướng tiếp theo trong log: chứng minh hoặc loại giả thuyết visibility (Chromium ở workspace 2 không active), nếu không thì set_value hoặc prototype bước 9.
+- Brave đã rollback về no-flag (PID 1003210, CDP đóng), máy trả về trạng thái như cũ.
+
+S2-FLIP xong 5/5 run. Clone1 chờ hướng tiếp theo của Muse (visibility, set_value, hay bước 9).
+
+10:28 ngày 22/11 - watchdog:
+Clone1 còn sống, commit cuối 10:23 (run 4), run 5 đã ghi chú xong.
+Muse: không có yêu cầu mới.
+Không agent nào kẹt, không cứu agent nào. Cây sạch trừ test-w.txt 0 byte.
+S2-FLIP xong 5/5, verdict DO NOT EXPAND, chờ hướng tiếp theo của Muse.
