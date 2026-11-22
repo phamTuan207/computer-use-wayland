@@ -143,16 +143,24 @@ def check_viewport_geometry(moz_inner, absolute_origin, window_origin,
       58px down from the true origin. The closure invariant itself
       still holds for the TRUE origin; it is the reported pair that
       is untrustworthy.
-    - verified-origin override: when closure fails, a verified
-      mozInner (measured independently, C12-style screenshot/click
-      cross-check) may be supplied as verified_moz_inner. The
-      verified numbers must close (closure + origin inside the
-      window + containment); when they do, the function returns the
-      VERIFIED absolute origin and logs the override (reported moz,
-      gaps, verified moz, offset). The absolute_origin argument is
-      ignored on this path: it was computed from the displaced
-      reported moz. When no verified origin is supplied, or the
-      verified numbers fail too, the call refuses.
+    - verified-origin override (step-9 prototype, A1/A2 fix): when
+      a verified mozInner (measured independently, C12-style
+      screenshot/click cross-check) is supplied as
+      verified_moz_inner, it is PREFERRED on every branch, not
+      only when closure fails. The verified numbers must close
+      (closure + origin inside the window + containment); when
+      they do, the function returns the VERIFIED absolute origin
+      and logs the override (reported moz, verified moz, offset).
+      The absolute_origin argument is ignored on this path: it
+      was computed from the reported moz, which may be displaced
+      or merely wrong. A self-consistent-but-wrong reported moz
+      (e.g. [250, 18], gaps 8/8 against the true [240, 8]) is
+      otherwise accepted 10px off, because no pure consistency
+      check can catch it. When the verified numbers fail their
+      own checks, the call refuses instead of falling back to
+      the reported moz. When no verified origin is supplied, the
+      residual stands: a self-consistent-but-wrong moz is still
+      accepted, so callers must pass verified moz always.
     - structural invariants, which DO refuse: the viewport must fit
       inside its window (inner size larger than the window size on
       either axis means the size input is wrong). These keep F9/F10
@@ -200,20 +208,11 @@ def check_viewport_geometry(moz_inner, absolute_origin, window_origin,
             'size %r; the viewport cannot be wider or taller than '
             'its window, so the size input is wrong'
             % (inner, size))
-    if right_gap < 0 or bottom_gap < 0:
-        # The reported mozInner is displaced from the true viewport
-        # origin (MOZ-GROWTH pixel proof, log a42ef12: reported
-        # [274, 66] vs true [240, 8] on the live narrowed window).
-        # Fail closed unless a verified origin is supplied.
-        if verified_moz_inner is None:
-            raise ZenDomError(
-                'dimension closure fails: mozInner %r + inner %r '
-                'exceeds window size %r (gaps %r, %r); the reported '
-                'mozInner is displaced from the true viewport origin '
-                '(pixel proof a42ef12: true origin (240, 8) on the '
-                'live narrowed window); supply a verified mozInner '
-                '(independent screenshot/click cross-check) to '
-                'override' % (moz, inner, size, right_gap, bottom_gap))
+    # Verified preference (step-9 A1/A2 fix): a supplied verified
+    # mozInner wins on EVERY branch. The checks below are the same
+    # ones the old overflow-only branch ran, moved up front so the
+    # passing branch prefers verified too.
+    if verified_moz_inner is not None:
         verified = _pair(verified_moz_inner, 'verified mozInnerScreen')
         if any(v < 0 for v in verified):
             raise ZenDomError(
@@ -256,15 +255,40 @@ def check_viewport_geometry(moz_inner, absolute_origin, window_origin,
                     'verified absolute viewport origin %r falls '
                     'outside the monitor box %r'
                     % (verified_absolute, monitor_box))
-        logger.warning(
-            'dimension closure overflow: reported mozInner %r + '
-            'inner %r exceeds window size %r (gaps %r, %r); using '
-            'verified mozInner %r (offset %r, %r) and returning '
-            'verified origin %r (pixel proof a42ef12)'
-            % (moz, inner, size, right_gap, bottom_gap, verified,
-               verified[0] - moz[0], verified[1] - moz[1],
-               verified_absolute))
-        return verified_absolute
+        if verified != moz:
+            if right_gap < 0 or bottom_gap < 0:
+                logger.warning(
+                    'dimension closure overflow: reported mozInner %r + '
+                    'inner %r exceeds window size %r (gaps %r, %r); using '
+                    'verified mozInner %r (offset %r, %r) and returning '
+                    'verified origin %r (pixel proof a42ef12)'
+                    % (moz, inner, size, right_gap, bottom_gap, verified,
+                       verified[0] - moz[0], verified[1] - moz[1],
+                       verified_absolute))
+            else:
+                logger.warning(
+                    'reported mozInner %r is self-consistent but '
+                    'disagrees with verified mozInner %r (offset %r, '
+                    '%r); using verified origin %r'
+                    % (moz, verified, verified[0] - moz[0],
+                       verified[1] - moz[1], verified_absolute))
+            return verified_absolute
+    if right_gap < 0 or bottom_gap < 0:
+        # The reported mozInner is displaced from the true viewport
+        # origin (MOZ-GROWTH pixel proof, log a42ef12: reported
+        # [274, 66] vs true [240, 8] on the live narrowed window).
+        # Reaching here means no verified origin was supplied, or
+        # the supplied one equals the reported moz (whose gaps are
+        # the same negative gaps): fail closed, naming the verified
+        # override as the way out.
+        raise ZenDomError(
+            'dimension closure fails: mozInner %r + inner %r '
+            'exceeds window size %r (gaps %r, %r); the reported '
+            'mozInner is displaced from the true viewport origin '
+            '(pixel proof a42ef12: true origin (240, 8) on the '
+            'live narrowed window); supply a verified mozInner '
+            '(independent screenshot/click cross-check) to '
+            'override' % (moz, inner, size, right_gap, bottom_gap))
     expected = [window[0] + moz[0] * factor,
                 window[1] + moz[1] * factor]
     if (abs(absolute[0] - expected[0]) > 0.5
@@ -846,6 +870,10 @@ class ZenSession:
         # the log. Empty when the gaps close. Reaching here with
         # negative gaps means the verified-origin path was used, so
         # the warning names the override (reported vs verified moz).
+        # Step-9 A1/A2: the same recording covers the normal-branch
+        # override (verified supplied, gaps fine, moz disagrees):
+        # a probe that reads this must see that the origin came
+        # from the verified measurement, not the reported moz.
         inner_size = [raw[5], raw[6]]
         right_gap = size[0] - inner_size[0] - moz_inner[0]
         bottom_gap = size[1] - inner_size[1] - moz_inner[1]
@@ -857,6 +885,12 @@ class ZenSession:
                 'using verified mozInner %r, verified origin %r'
                 % (moz_inner, inner_size, size, right_gap, bottom_gap,
                    verified_moz_inner, origin)]
+        elif (verified_moz_inner is not None
+                and list(verified_moz_inner) != moz_inner):
+            self.last_geometry_warnings = [
+                'reported mozInner %r disagrees with verified '
+                'mozInner %r; using verified origin %r'
+                % (moz_inner, verified_moz_inner, origin)]
         return origin
 
     def live_window_origin(self, address=None):

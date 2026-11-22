@@ -562,15 +562,18 @@ class NoPointerDelegateTests(unittest.TestCase):
 
 
 class ValidatorLimitationTests(unittest.TestCase):
-    """Step-7 AMEND fix item 2 (A1/A2): these tests PIN the known
-    validator limitation, they do not fix it. On the normal passing
-    branch check_viewport_geometry returns the moz-computed origin
-    and ignores verified_moz_inner: the verified-origin path only
-    rescues the closure-overflow branch (right_gap < 0 or
-    bottom_gap < 0, zen_dom.py around line 204, returns the
-    verified origin at line 267 and the moz-computed absolute at
-    line 299). A later step (likely the step 9 prototype) should
-    pass verified moz always or make the validator prefer it.
+    """Step-7 AMEND fix item 2 (A1/A2), FIXED by the step-9
+    prototype: on the normal passing branch
+    check_viewport_geometry now PREFERS a supplied
+    verified_moz_inner over the reported moz. The old behavior
+    (return the moz-computed origin and ignore verified_moz_inner
+    unless closure overflowed) is gone: a wrong-but-self-consistent
+    moz is CORRECTED to the verified origin when verified is
+    supplied, never accepted. The residual that cannot be fixed in
+    the validator: with NO verified value supplied, a
+    self-consistent-but-wrong moz is still undetectable, so the
+    prototype must pass verified moz always (test_a2 pins that
+    residual openly instead of hiding it).
     """
 
     # Redteam attack numbers (verify report section 5): window
@@ -581,26 +584,42 @@ class ValidatorLimitationTests(unittest.TestCase):
     MONITOR = [2464, 902, 1920, 1200]
     TRUE_ORIGIN = [2749, 922]
 
-    def test_a1_self_consistent_but_wrong_moz_is_accepted(self):
+    def test_a1_self_consistent_but_wrong_moz_is_corrected(self):
         # Moz [250, 18] is wrong (+10, +10 from true [240, 8]) but
-        # self-consistent with inner [667, 1150] (gaps 8/8), so the
-        # validator ACCEPTS the moz-computed origin [2759, 932],
-        # 10px off the true origin. Pinned as the known limitation.
-        origin = zen_dom.check_viewport_geometry(
-            [250, 18], [2759, 932], self.WINDOW, self.SIZE,
-            [667, 1150], self.MONITOR, factor=1)
-        self.assertEqual(origin, [2759, 932])
-        self.assertNotEqual(origin, self.TRUE_ORIGIN)
-
-    def test_a2_verified_moz_ignored_on_passing_branch(self):
-        # Same wrong-but-consistent inputs, plus the TRUE verified
-        # moz [240, 8]: the validator still returns the
-        # moz-computed [2759, 932] and ignores the verified value,
-        # because the verified branch only runs on closure overflow.
+        # self-consistent with inner [667, 1150] (gaps 8/8). With
+        # the TRUE verified moz [240, 8] supplied, the validator
+        # returns the VERIFIED origin [2749, 922], never the
+        # moz-computed [2759, 932], which is 10px off.
         origin = zen_dom.check_viewport_geometry(
             [250, 18], [2759, 932], self.WINDOW, self.SIZE,
             [667, 1150], self.MONITOR, factor=1,
             verified_moz_inner=[240, 8])
+        self.assertEqual(origin, self.TRUE_ORIGIN)
+        self.assertNotEqual(origin, [2759, 932])
+
+    def test_a1_correction_is_logged(self):
+        # The normal-branch override is logged with the verified
+        # value and the offset, like the overflow-branch override.
+        with self.assertLogs('zen_dom', level='WARNING') as logs:
+            zen_dom.check_viewport_geometry(
+                [250, 18], [2759, 932], self.WINDOW, self.SIZE,
+                [667, 1150], self.MONITOR, factor=1,
+                verified_moz_inner=[240, 8])
+        self.assertTrue(
+            any('verified' in line and '-10' in line
+                for line in logs.output),
+            'the override warning must name the verified moz and the '
+            'offset from the reported moz: %s' % (logs.output,))
+
+    def test_a2_no_verified_moz_still_accepts_wrong_moz(self):
+        # Residual, pinned openly: with NO verified value the
+        # validator cannot detect a self-consistent-but-wrong moz,
+        # so it still ACCEPTS the moz-computed origin [2759, 932],
+        # 10px off. This is why the prototype must pass verified
+        # moz always; the validator alone cannot close this gap.
+        origin = zen_dom.check_viewport_geometry(
+            [250, 18], [2759, 932], self.WINDOW, self.SIZE,
+            [667, 1150], self.MONITOR, factor=1)
         self.assertEqual(origin, [2759, 932])
         self.assertNotEqual(origin, self.TRUE_ORIGIN)
 
@@ -611,6 +630,26 @@ class ValidatorLimitationTests(unittest.TestCase):
         origin = zen_dom.check_viewport_geometry(
             [240, 8], [2749, 922], self.WINDOW, self.SIZE,
             [667, 1150], self.MONITOR, factor=1)
+        self.assertEqual(origin, self.TRUE_ORIGIN)
+
+    def test_a4_wrong_verified_moz_refuses(self):
+        # A verified value that fails its own checks refuses
+        # instead of falling back to the reported moz: a wrong
+        # verified [300, 18] does not close (gap -42), so the call
+        # raises rather than returning either origin.
+        with self.assertRaises(zen_dom.ZenDomError):
+            zen_dom.check_viewport_geometry(
+                [250, 18], [2759, 932], self.WINDOW, self.SIZE,
+                [667, 1150], self.MONITOR, factor=1,
+                verified_moz_inner=[300, 18])
+
+    def test_a5_verified_equal_to_moz_returns_the_origin(self):
+        # Verified equal to the reported moz changes nothing: the
+        # origin is returned with no override.
+        origin = zen_dom.check_viewport_geometry(
+            [240, 8], [2749, 922], self.WINDOW, self.SIZE,
+            [667, 1150], self.MONITOR, factor=1,
+            verified_moz_inner=[240, 8])
         self.assertEqual(origin, self.TRUE_ORIGIN)
 
 
