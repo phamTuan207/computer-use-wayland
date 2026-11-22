@@ -1,0 +1,319 @@
+{
+  "run": 3,
+  "fixture": "file:///home/james/computer-use-wayland/tests/two_vision_fixture.html?clone=zen",
+  "fixture_sha256": "147494cda4c6ae24a51ced03ccdfb3fc5a79a1bbab56dcdfc5afb4f72fba6cbf",
+  "message": "ZEN-DELEGATE-R3-IGNORE-TEST",
+  "intent": "c5-zen-delegate-r3",
+  "model_calls": 0,
+  "program_variant": "set_value",
+  "target": "two_vision_fixture.html?clone=zen",
+  "pill": {
+    "pid": 185033,
+    "status": {
+      "holders": {
+        "S2-flip:185033": {
+          "acquired": "2026-11-22T21:30:50+07:00",
+          "agent": "S2-flip",
+          "method": "CDP",
+          "pid": 185033
+        }
+      },
+      "label": "S2-flip via CDP",
+      "owner": "daemon",
+      "visible": true
+    },
+    "from_env": true
+  },
+  "window": {
+    "address": "0x56307e2771d0",
+    "bounds": [
+      2509,
+      914,
+      925,
+      1176
+    ],
+    "workspace": {
+      "address": "1",
+      "id": 1,
+      "type": "normal",
+      "name": "1"
+    }
+  },
+  "tabs_before": {
+    "ok": true,
+    "count": 18,
+    "tabs": [
+      {
+        "handle": "648b4b4b",
+        "title": "YouTube",
+        "url": "https://www.youtube.com/"
+      },
+      {
+        "handle": "b539d918",
+        "title": "Problem loading page",
+        "url": "https://www.reddit.com/"
+      },
+      {
+        "handle": "59dd7114",
+        "title": "Today \u2013 Todoist",
+        "url": "https://app.todoist.com/app/today"
+      },
+      {
+        "handle": "9151842e",
+        "title": "Inbox (732) - phamtuanhuy1109@gmail.com - Gmail",
+        "url": "https://mail.google.com/mail/u/1/#inbox"
+      },
+      {
+        "handle": "8de3458a",
+        "title": "L\u1ecbch Google - Tu\u1ea7n 16 th\u00e1ng 11, 2026",
+        "url": "https://calendar.google.com/calendar/u/1/r/week"
+      },
+      {
+        "handle": "995e2167",
+        "title": "PCCV CF26 - Google Trang t\u00ednh",
+        "url": "https://docs.google.com/spreadsheets/d/1WzUJNuCQlYLAj59-gdIPFFQv2P_d3f2KhEYcGeWhRRY/edit?gid=0#gid=0"
+      },
+      {
+        "handle": "8fa49345",
+        "title": "Free Claude Code Admin",
+        "url": "http://127.0.0.1:8082/admin/model_config"
+      },
+      {
+        "handle": "01716b50",
+        "title": "Welcome!",
+        "url": "https://zen-browser.app/welcome/"
+      },
+      {
+        "handle": "ad921f4c",
+        "title": "",
+        "url": "about:blank"
+      },
+      {
+        "handle": "ec92f900",
+        "title": "",
+        "url": "about:blank"
+      },
+      {
+        "handle": "0fce93cb",
+        "title": "ModelArk-Coding-Plan",
+        "url": "https://www.byteplus.com/en/activity/codingplan?utm_source=google&utm_medium=pmax&utm_campaign=purchase_codingplan_sea_english_20260605_yuki&utm_term=20260605_deepseek-v4_white_new&utm_content=tecdo&gad_source=2&gad_campaignid=23906536929&gclid=CjwKCAjwqonVBhA4EiwA9wYJ3Xlt3CYq0n0RZg5HqXHeGMFcoLueRZE7Nmv4xOfOy74XBTxxf3dOOxoC4gUQAvD_BwE"
+      },
+      {
+        "handle": "a6927eb9",
+        "title": "Example Domain",
+        "url": "https://example.com/"
+      },
+      {
+        "handle": "c845f13b",
+        "title": "",
+        "url": "about:blank"
+      },
+      {
+        "handle": "0b1ef493",
+        "title": "",
+        "url": "about:blank"
+      },
+      {
+        "handle": "c67545ab",
+        "title": "Just a moment...",
+        "url": "https://polygon.codeforces.com/login?backLink=%2Fpackage%3Fsession%3Da990539d869d87619249d0c813d8346ec027eda9%26ccid%3D0fb1586e2ab7dcfca7b64c98606cec8f&session=a990539d869d87619249d0c813d8346ec027eda9&ccid=19507fc1baee383a5faae847d1eb920d"
+      },
+      {
+        "handle": "df291c17",
+        "title": "Just a moment...",
+        "url": "https://codeforces.com/"
+      },
+      {
+        "handle": "976ea324",
+        "title": "Biome Finder - Minecraft App",
+        "url": "https://www.chunkbase.com/apps/biome-finder#seed=-4216250823719477953&platform=java_1_21_9&dimension=overworld&x=967&z=543&zoom=0.518"
+      },
+      {
+        "handle": "b2fa003d",
+        "title": "Gamerule keepInventory",
+        "url": "https://duck.ai/chat?t=ffab&chatID=5cb263e5-9c80-4dcf-8477-8b990cb70343"
+      }
+    ],
+    "current": "8de3458a"
+  },
+  "liveness": {
+    "live": false,
+    "reasons": [],
+    "drivers": [],
+    "relay": {
+      "state": "idle",
+      "owner": null,
+      "driver": "idle",
+      "guardian": "idle",
+      "recovery": "none"
+    },
+    "leases": [
+      "/home/james/.cache/agent-computer-use/c5-heldout-90.lease",
+      "/home/james/.cache/agent-computer-use/c5-heldout-91.lease",
+      "/home/james/.cache/agent-computer-use/s2-flip-run0.lease",
+      "/home/james/.cache/agent-computer-use/s2-flip-run1.lease",
+      "/home/james/.cache/agent-computer-use/s2-flip-run2.lease",
+      "/home/james/.cache/agent-computer-use/s2-flip-run3.lease",
+      "/home/james/.cache/agent-computer-use/s2-flip-run4.lease",
+      "/home/james/.cache/agent-computer-use/s2-flip-run5.lease",
+      "/home/james/.cache/agent-computer-use/s2-flip-trivial.lease",
+      "/home/james/.cache/agent-computer-use/s2-verify.lease"
+    ]
+  },
+  "open": {
+    "ok": true,
+    "new_handle": "73ae0c84-0ed0-40c8-bbe5-2545fdcd5ac3",
+    "new_handle_prefix": "73ae0c84",
+    "title": "Two-vision benchmark fixture",
+    "url": "file:///home/james/computer-use-wayland/tests/two_vision_fixture.html?clone=zen",
+    "h1": "Clone zen thread",
+    "selected_by": "explicit-select",
+    "ready": "complete",
+    "count_before": 18,
+    "count_after_new": 19,
+    "count_after": 19,
+    "current_before": "39f59338",
+    "title_before": "L\u1ecbch Google - Tu\u1ea7n 16 th\u00e1ng 11, 2026",
+    "url_before": "https://calendar.google.com/calendar/u/1/r/week",
+    "metrics": {
+      "hasFocus": true,
+      "innerHeight": 1160,
+      "innerWidth": 677
+    },
+    "rect": {
+      "height": 36,
+      "width": 340,
+      "x": 20,
+      "y": 228.86666870117188
+    },
+    "element_at_point": "msg-input",
+    "viewport_ok": true,
+    "harvest": {
+      "device_pixel_ratio": 1,
+      "inner_size": [
+        677,
+        1160
+      ],
+      "items": {
+        "#msg-input": {
+          "focused": false,
+          "hit": true,
+          "rect": {
+            "center_x": 190,
+            "center_y": 246.86666870117188,
+            "height": 36,
+            "width": 340,
+            "x": 20,
+            "y": 228.86666870117188
+          }
+        }
+      },
+      "moz_inner": [
+        253,
+        30
+      ],
+      "outer_size": [
+        925,
+        1176
+      ],
+      "screen_pixels_per_css_pixel": null,
+      "zoom": 1
+    }
+  },
+  "switch": {
+    "ok": true,
+    "handle": "d2e473fb",
+    "title": "Two-vision benchmark fixture",
+    "url": "file:///home/james/computer-use-wayland/tests/two_vision_fixture.html?clone=zen"
+  },
+  "probe": {
+    "wall_ms": 2027.7,
+    "envelope": {
+      "ok": true,
+      "intent": "c5-zen-delegate-r3-probe",
+      "api_calls": 2,
+      "elapsed_ms": 502.799,
+      "log": [
+        "PROBE zen-1 file:///home/james/computer-use-wayland/tests/two_vision_fixture.html?clone=zen 1",
+        "SNAP-TITLE Two-vision benchmark fixture"
+      ],
+      "variables": {
+        "snap": {
+          "snapshot": "zen-1",
+          "title": "Two-vision benchmark fixture",
+          "url": "file:///home/james/computer-use-wayland/tests/two_vision_fixture.html?clone=zen",
+          "elements": [
+            {
+              "ref": "#msg-input",
+              "name": "#msg-input",
+              "rect": {
+                "x": 20,
+                "y": 228.86666870117188,
+                "width": 340,
+                "height": 36
+              },
+              "plan_rect": {
+                "x": 20,
+                "y": 228.86666870117188,
+                "width": 340,
+                "height": 36
+              },
+              "state": ""
+            }
+          ],
+          "window": [
+            2509,
+            914,
+            925,
+            1176
+          ],
+          "window_bounds": [
+            2509,
+            914,
+            925,
+            1176
+          ]
+        }
+      }
+    },
+    "url": "file:///home/james/computer-use-wayland/tests/two_vision_fixture.html?clone=zen",
+    "count": "1",
+    "snapshot_title": "Two-vision benchmark fixture"
+  },
+  "pre": {
+    "h1": "Clone zen thread",
+    "bubble_present": false,
+    "bubbles": [],
+    "input_value": "",
+    "input_events": 0
+  },
+  "send_switch": {
+    "ok": true,
+    "handle": "9b629a71",
+    "title": "Two-vision benchmark fixture",
+    "url": "file:///home/james/computer-use-wayland/tests/two_vision_fixture.html?clone=zen"
+  },
+  "program": {
+    "ok": false,
+    "elapsed_ms": 677.055,
+    "error": "dimension closure fails: mozInner [274, 66] + inner [677, 1160] exceeds window size [925, 1176] (gaps -26, -50); the reported mozInner is displaced from the true viewport origin (pixel proof a42ef12: true origin (240, 8) on the live narrowed window); supply a verified mozInner (independent screenshot/click cross-check) to override",
+    "log": [
+      "PROBE zen-1 file:///home/james/computer-use-wayland/tests/two_vision_fixture.html?clone=zen 1"
+    ],
+    "wall_ms": 2170.8,
+    "completed": null,
+    "send_url": "file:///home/james/computer-use-wayland/tests/two_vision_fixture.html?clone=zen",
+    "send_count": "1"
+  },
+  "outcome": "error",
+  "error": "send program did not complete 4/4: {'ok': False, 'intent': 'c5-zen-delegate-r3', 'api_calls': 3, 'elapsed_ms': 677.055, 'log': ['PROBE zen-1 file:///home/james/computer-use-wayland/tests/two_vision_fixture.html?clone=zen 1'], 'variables': {}, 'error': 'dimension closure fails: mozInner [274, 66] + inner [677, 1160] exceeds window size [925, 1176] (gaps -26, -50); the reported mozInner is displaced",
+  "cleanup": {
+    "ok": false,
+    "error": "zen-tab close failed rc=1: ge\\\":\\\"Browsing context has been discarded\\\",\\\"stacktrace\\\":\\\"RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:14:8\\\\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:169:5\\\\nNoSuchWindowError@chrome://remote/content/shared/webdriver/Err"
+  },
+  "pill_release": {
+    "ok": true,
+    "pid": 185033
+  },
+  "wall_ms": 38811.6
+}

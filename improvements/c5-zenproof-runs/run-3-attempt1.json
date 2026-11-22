@@ -1,0 +1,148 @@
+{
+  "run": 3,
+  "fixture": "file:///home/james/computer-use-wayland/tests/two_vision_fixture.html?clone=zen",
+  "fixture_sha256": "147494cda4c6ae24a51ced03ccdfb3fc5a79a1bbab56dcdfc5afb4f72fba6cbf",
+  "message": "ZEN-DELEGATE-R3-IGNORE-TEST",
+  "intent": "c5-zen-delegate-r3",
+  "model_calls": 0,
+  "program_variant": "set_value",
+  "target": "two_vision_fixture.html?clone=zen",
+  "pill": {
+    "pid": 181823,
+    "status": {
+      "holders": {
+        "S2-flip:181823": {
+          "acquired": "2026-11-22T21:26:08+07:00",
+          "agent": "S2-flip",
+          "method": "CDP",
+          "pid": 181823
+        }
+      },
+      "label": "S2-flip via CDP",
+      "owner": "daemon",
+      "visible": true
+    },
+    "from_env": true
+  },
+  "window": {
+    "address": "0x56307e2771d0",
+    "bounds": [
+      2509,
+      914,
+      925,
+      1176
+    ],
+    "workspace": {
+      "address": "1",
+      "id": 1,
+      "type": "normal",
+      "name": "1"
+    }
+  },
+  "tabs_before": {
+    "ok": true,
+    "count": 18,
+    "tabs": [
+      {
+        "handle": "95b60511",
+        "title": "YouTube",
+        "url": "https://www.youtube.com/"
+      },
+      {
+        "handle": "e6c5b133",
+        "title": "Problem loading page",
+        "url": "https://www.reddit.com/"
+      },
+      {
+        "handle": "f057672e",
+        "title": "Today \u2013 Todoist",
+        "url": "https://app.todoist.com/app/today"
+      },
+      {
+        "handle": "2fd0f431",
+        "title": "Inbox (732) - phamtuanhuy1109@gmail.com - Gmail",
+        "url": "https://mail.google.com/mail/u/1/#inbox"
+      },
+      {
+        "handle": "41cc71d7",
+        "error": "HTTP 500 on GET /session/5127488a-9a55-42db-8ddd-8da572654db5/title: {\"value\":{\"error\":\"unexpected alert open\",\"message\":\"Unexpected alert dialog detected. Performed handler \\\"dismiss\\\"\",\"stacktrace\":"
+      },
+      {
+        "handle": "bc6b4bb3",
+        "title": "PCCV CF26 - Google Trang t\u00ednh",
+        "url": "https://docs.google.com/spreadsheets/d/1WzUJNuCQlYLAj59-gdIPFFQv2P_d3f2KhEYcGeWhRRY/edit?gid=0#gid=0"
+      },
+      {
+        "handle": "afa2a674",
+        "title": "Free Claude Code Admin",
+        "url": "http://127.0.0.1:8082/admin/model_config"
+      },
+      {
+        "handle": "1aee13dd",
+        "title": "Welcome!",
+        "url": "https://zen-browser.app/welcome/"
+      },
+      {
+        "handle": "10e6dc50",
+        "title": "",
+        "url": "about:blank"
+      },
+      {
+        "handle": "3e3625ea",
+        "title": "",
+        "url": "about:blank"
+      },
+      {
+        "handle": "b29ae984",
+        "title": "ModelArk-Coding-Plan",
+        "url": "https://www.byteplus.com/en/activity/codingplan?utm_source=google&utm_medium=pmax&utm_campaign=purchase_codingplan_sea_english_20260605_yuki&utm_term=20260605_deepseek-v4_white_new&utm_content=tecdo&gad_source=2&gad_campaignid=23906536929&gclid=CjwKCAjwqonVBhA4EiwA9wYJ3Xlt3CYq0n0RZg5HqXHeGMFcoLueRZE7Nmv4xOfOy74XBTxxf3dOOxoC4gUQAvD_BwE"
+      },
+      {
+        "handle": "1e9c2a8b",
+        "title": "Example Domain",
+        "url": "https://example.com/"
+      },
+      {
+        "handle": "81d0d63b",
+        "title": "",
+        "url": "about:blank"
+      },
+      {
+        "handle": "2572d96e",
+        "title": "",
+        "url": "about:blank"
+      },
+      {
+        "handle": "4db25122",
+        "title": "Just a moment...",
+        "url": "https://polygon.codeforces.com/login?backLink=%2Fpackage%3Fsession%3Da990539d869d87619249d0c813d8346ec027eda9%26ccid%3D0fb1586e2ab7dcfca7b64c98606cec8f&session=a990539d869d87619249d0c813d8346ec027eda9&ccid=19507fc1baee383a5faae847d1eb920d"
+      },
+      {
+        "handle": "166af99e",
+        "title": "Just a moment...",
+        "url": "https://codeforces.com/"
+      },
+      {
+        "handle": "f0ba1c7d",
+        "title": "Biome Finder - Minecraft App",
+        "url": "https://www.chunkbase.com/apps/biome-finder#seed=-4216250823719477953&platform=java_1_21_9&dimension=overworld&x=967&z=543&zoom=0.518"
+      },
+      {
+        "handle": "f3038e04",
+        "title": "Gamerule keepInventory",
+        "url": "https://duck.ai/chat?t=ffab&chatID=5cb263e5-9c80-4dcf-8477-8b990cb70343"
+      }
+    ],
+    "current": "41cc71d7"
+  },
+  "outcome": "error",
+  "error": "could not identify the current tab",
+  "cleanup": {
+    "skipped": true
+  },
+  "pill_release": {
+    "ok": true,
+    "pid": 181823
+  },
+  "wall_ms": 13820.1
+}
