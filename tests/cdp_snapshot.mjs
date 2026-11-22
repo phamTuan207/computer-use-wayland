@@ -259,6 +259,19 @@ const multiMaxField=element('',{tagName:'INPUT',type:'email',multiple:true,maxLe
 runResult=await run([multiMaxField],[{type:'set_value',ref:'e1',text:'  a@b.com , c@d.com  '}]);
 assert.equal(runResult.result.ok,true,JSON.stringify(runResult.result));
 assert.equal(multiMaxField.value,'a@b.com,c@d.com');
+// B2-6 close-out (council 1 F5, council 3 F9): a whitespace-only
+// middle token is kept as an empty token, not dropped, so
+// 'a@b.com, ,c@d.com' lands as 'a@b.com,,c@d.com'.
+const multiWsToken=element('',{tagName:'INPUT',type:'email',multiple:true,value:''});
+runResult=await run([multiWsToken],[{type:'set_value',ref:'e1',text:'a@b.com, ,c@d.com'}]);
+assert.equal(runResult.result.ok,true,JSON.stringify(runResult.result));
+assert.equal(multiWsToken.value,'a@b.com,,c@d.com');
+// B2-6 close-out (council 1 F5, council 3 F9): a token ending in
+// TAB or FF is trimmed, TAB 9 and FF 12 are ASCII whitespace.
+const multiTabFf=element('',{tagName:'INPUT',type:'email',multiple:true,value:''});
+runResult=await run([multiTabFf],[{type:'set_value',ref:'e1',text:'a@b.com\t, c@d.com\f'}]);
+assert.equal(runResult.result.ok,true,JSON.stringify(runResult.result));
+assert.equal(multiTabFf.value,'a@b.com,c@d.com');
 const textField=element('',{tagName:'INPUT',type:'text',value:''});
 runResult=await run([textField],[{type:'set_value',ref:'e1',text:'  hello  '}]);
 assert.equal(runResult.result.ok,true,JSON.stringify(runResult.result));
