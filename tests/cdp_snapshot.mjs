@@ -7,8 +7,19 @@ import { fileURLToPath } from 'node:url';
 import { generateHeldoutCases } from './heldout_dom_cases.mjs';
 const source=fs.readFileSync(new URL('../scripts/cdp.mjs',import.meta.url),'utf8');
 const token='fake-api-token-NEVER-EXPOSE';
-class FakeInput {get value(){return this._value??'';} set value(value){this._value=value;}}
-class FakeTextarea {get value(){return this._value??'';} set value(value){this._value=value;}}
+class FakeInput {
+  get value(){return this._value??'';}
+  set value(value){
+    let normalized=String(value).replace(/[\r\n]/g,'');
+    if(this.type==='url'||this.type==='email')
+      normalized=normalized.replace(/^[\t\n\f\r ]+|[\t\n\f\r ]+$/g,'');
+    this._value=normalized;
+  }
+}
+class FakeTextarea {
+  get value(){return this._value??'';}
+  set value(value){this._value=String(value).replace(/\r\n?/g,'\n');}
+}
 // The fake DOM needs enough selector support for scoped observe: which nodes are
 // interactive, and which live inside a subtree.
 const TAGS=/^(BUTTON|INPUT|TEXTAREA|SELECT|SUMMARY|A)$/;
@@ -191,6 +202,43 @@ for(const field of [
 const unchanged=element('',{tagName:'INPUT',value:'same'});
 runResult=await run([unchanged],[{type:'set_value',ref:'e1',text:'same'}]);
 assert.equal(runResult.result.ok,true);assert.deepEqual(unchanged.events??[],[]);
+// AMEND4 item 8 (Codex 0eb3429): newline set_value cases. The fake
+// models the engine sanitization, so the production read-back must
+// compare against the sanitized form, not the raw text.
+const newlineInput=element('',{tagName:'INPUT',value:''});
+runResult=await run([newlineInput],[{type:'set_value',ref:'e1',text:'one\r\ntwo\rthree\n'}]);
+assert.equal(runResult.result.ok,true,JSON.stringify(runResult.result));
+assert.equal(newlineInput.value,'onetwothree');
+const newlineArea=element('',{tagName:'TEXTAREA',value:''});
+runResult=await run([newlineArea],[{type:'set_value',ref:'e1',text:'one\r\ntwo\rthree\n'}]);
+assert.equal(runResult.result.ok,true,JSON.stringify(runResult.result));
+assert.equal(newlineArea.value,'one\ntwo\nthree\n');
+// AMEND4 item 8 micro-gap: url/email states strip leading and
+// trailing ASCII whitespace (HTML Standard value sanitization
+// algorithm; live-confirmed on Chromium 157: spaces and tabs trim,
+// a text input does not). The maxLength pre-check must measure the
+// TRIMMED length: '  abc  ' (7 raw) fits maxLength 5 as 'abc' (3).
+const urlField=element('',{tagName:'INPUT',type:'url',value:''});
+runResult=await run([urlField],[{type:'set_value',ref:'e1',text:'  https://example.com\t'}]);
+assert.equal(runResult.result.ok,true,JSON.stringify(runResult.result));
+assert.equal(urlField.value,'https://example.com');
+assert.deepEqual((urlField.events??[]).map(e=>e.type),['input','change']);
+const emailField=element('',{tagName:'INPUT',type:'email',value:''});
+runResult=await run([emailField],[{type:'set_value',ref:'e1',text:'\ta@b.com  '}]);
+assert.equal(runResult.result.ok,true,JSON.stringify(runResult.result));
+assert.equal(emailField.value,'a@b.com');
+const textField=element('',{tagName:'INPUT',type:'text',value:''});
+runResult=await run([textField],[{type:'set_value',ref:'e1',text:'  hello  '}]);
+assert.equal(runResult.result.ok,true,JSON.stringify(runResult.result));
+assert.equal(textField.value,'  hello  ');
+const urlMaxField=element('',{tagName:'INPUT',type:'url',maxLength:5,value:''});
+runResult=await run([urlMaxField],[{type:'set_value',ref:'e1',text:'  abc  '}]);
+assert.equal(runResult.result.ok,true,JSON.stringify(runResult.result));
+assert.equal(urlMaxField.value,'abc');
+const blankUrl=element('',{tagName:'INPUT',type:'url',value:''});
+runResult=await run([blankUrl],[{type:'set_value',ref:'e1',text:'   '}]);
+assert.equal(runResult.result.ok,true,JSON.stringify(runResult.result));
+assert.equal(blankUrl.value,'');
 // AMEND4 item 10 (C1 G4): the mirror case, a changed value MUST fire
 // the synthetic notifications, input then change, in that order.
 // The suite used to assert only the zero-event side (unchanged
