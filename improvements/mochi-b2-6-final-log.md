@@ -504,8 +504,10 @@ sections 4-5; headless Chromium only, no user tab):
    mismatch back to the B2-6 lane.
 4. Evidence to collect: the probe HTML file, the full JSON output,
    the Chromium version, the time log (+07), and one verdict line
-   (PASS with all eight matched, or FAIL naming the mismatched id
-   and its actual value).
+   (PASS with m0-m4, m6, m7 matched and m5 recorded with its
+   decider outcome (stripped: I-1 closed; kept: template and fakes
+   must be corrected), or FAIL naming the mismatched id and its
+   actual value).
 5. Optional second leg (same quiet window, only if a live Zen
    scratch tab is already open for other work): run the same eight
    sets through the live Zen DOM on a NEW scratch tab beside the
