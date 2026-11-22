@@ -7,7 +7,7 @@ test-09-copy-format-convert
 Copy data between app A and app B with format conversion.
 
 ## Context
-Pham Tuan has a source table in App A (a spreadsheet-like fixture) and needs the
+the owner has a source table in App A (a spreadsheet-like fixture) and needs the
 same data in App B (a document-style fixture) in a different format: App A holds
 rows of comma-separated values, App B expects a numbered list of `key: value`
 lines. The agent reads App A data, converts the format (strip headers, reorder

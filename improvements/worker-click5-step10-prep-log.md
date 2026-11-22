@@ -1,6 +1,6 @@
 # Worker C5-STEP10-PREP log: deletion plan for A3/A4/A5 (design only)
 
-Owner: Pham Tuan. Coordinator: COORD-CLICK-5. Repo
+Owner: the owner. Coordinator: COORD-CLICK-5. Repo
 ~/workspace/computer-use-wayland, branch todolist-push. This worker
 is the design-only prep lane for step 10, running in parallel with
 step 9, rung 2, and Y13G round-3. NO code changes, NO live runs, NO

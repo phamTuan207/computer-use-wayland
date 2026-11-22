@@ -7,7 +7,7 @@ test-08-form-validation-fix
 Form with validation errors: submit, read errors, fix each, resubmit.
 
 ## Context
-Pham Tuan fills a local registration form that has field-level validation. The
+the owner fills a local registration form that has field-level validation. The
 first submit intentionally fails with multiple errors (empty required fields,
 bad email format, password too short, password mismatch). The agent must submit,
 read each validation error message, fix the offending fields one at a time, and

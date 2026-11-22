@@ -1,7 +1,7 @@
 # Round-3 council review of the AMEND4 fix pass (worker CLICK3-R3C2)
 
 Worker CLICK3-R3C2, round-3 council reviewer 2 for the AMEND4 fix pass,
-subagent of the parent orchestrator. Owner: Pham Tuan (called Pham Tuan
+subagent of the parent orchestrator. Owner: the owner (called the owner
 in repo-facing text, never "dang"). Work in
 `~/workspace/computer-use-wayland`, branch `todolist-push`.
 HEAD reviewed: 8008662
@@ -19,8 +19,7 @@ see the commit time.
   worker's log on trust. Every claim below carries its own command,
   output, commit hash, and time (Lauren Tan standard).
 - NO em dash (U+2014) or en dash (U+2013) anywhere in this log.
-  NEVER ydotool. NO personal info in repo files (owner name Pham
-  Tuan only).
+  NEVER ydotool. NO personal info in repo files (owner name the owner only).
 - Do NOT edit `tests/test_click3_redteam2.py` or the R7 fixture
   (`tests/test_click2_redteam.py`). Do NOT weaken any test. The
   defective proof tests are named with exact repairs in this log;

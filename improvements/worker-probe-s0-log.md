@@ -1,6 +1,6 @@
 # Worker PROBE-S0 log: SPEED Step 0 feasibility probe (persistent SSH multiplexing)
 
-Owner: Pham Tuan. Branch: todolist-push. Worker: PROBE-S0, for COORD-CLICK-3.
+Owner: the owner. Branch: todolist-push. Worker: PROBE-S0, for COORD-CLICK-3.
 Started: 2026-11-22 06:35:59 +07 (Asia/Ho_Chi_Minh). All times below are wall-clock +07 unless noted.
 Method: live tests on the owner laptop (omarchy, 100.70.92.52) via SSH. Timing probes only.
 No GUI driving, no changes to owner files, no touching Zen/Brave/chats. No ydotool used anywhere.

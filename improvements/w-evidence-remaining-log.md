@@ -78,7 +78,7 @@ not fix them; the parent should triage them.
 - Consequence: the acceptance decision is recoverable as TEXT, but it is
   still not a repo record. The acceptor in the source is Muse (the
   coordinator), deciding after Y13r2's proposal. No owner message in
-  the repo or in the memory log accepts H3 specifically. Pham Tuan said
+  the repo or in the memory log accepts H3 specifically. the owner said
   "Ok thoi may dua tu lam di nhe" after the Y13r2 report (same daily
   note, section "dang chot tu lam"); that is a general overnight
   go-ahead, not an H3 acceptance, and the draft says so.
@@ -99,7 +99,7 @@ not fix them; the parent should triage them.
 
 ### 1.4 What is still needed
 
-- Muse tong confirms the acceptor was Muse itself (not Pham Tuan, not
+- Muse tong confirms the acceptor was Muse itself (not the owner, not
   a council vote), then copies the proposed wording into a council paper
   or log entry in the repo (per AM-13). Until then the H3 gate stays
   UNVERIFIED from repo evidence, even though the source text is now
@@ -182,7 +182,7 @@ written or deleted on the laptop.
   recording this failed retrieval with commands and times. No existing
   line was changed.
 - What is needed for a full fix: a re-run of arms A-E with logs committed
-  (the batch 7 alternative). That needs a live Zen slot while Pham Tuan
+  (the batch 7 alternative). That needs a live Zen slot while the owner
   is away from the machine; it was NOT done here (he is using the
   machine now, and this task forbids Zen interaction).
 - Status after this work: the arm verdicts still rest on the inline

@@ -1,6 +1,6 @@
 # Worker PROBE-S2 log: SPEED Step 2 feasibility probe
 
-Owner: Pham Tuan. Probe: fixture 2-vision bench + one-class CU_CODE_EXEC=1 flip test.
+Owner: the owner. Probe: fixture 2-vision bench + one-class CU_CODE_EXEC=1 flip test.
 Branch: todolist-push. Start: 2026-11-22 06:36 +07 (Asia/Ho_Chi_Minh).
 Standing rules recorded here per brief: no-self-healing rule (2026-11-22 05:56,
 dang: when Muse itself errors or fails, an INDEPENDENT worker investigates,

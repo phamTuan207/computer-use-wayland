@@ -1,6 +1,6 @@
 # Worker CLICK3-D2 review log: council reviewer 2, breakthrough discussion
 
-Owner: Pham Tuan. Review start: 2026-11-22 06:08 Asia/Ho_Chi_Minh.
+Owner: the owner. Review start: 2026-11-22 06:08 Asia/Ho_Chi_Minh.
 Repo: ~/workspace/computer-use-wayland, branch todolist-push, HEAD a4ecb49.
 Role: independent council reviewer 2. No coordination with other reviewers
 in this round. Did not follow the current method. Questioned everything.

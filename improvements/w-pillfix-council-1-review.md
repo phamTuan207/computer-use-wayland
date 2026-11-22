@@ -1,6 +1,6 @@
 # Council 1 review: W-PILLFIX 8f600b9 (co che + bang chung)
 
-Review doc lap cho COORD-CLICK-9, khong nhan truc tiep cho Pham Tuan.
+Review doc lap cho COORD-CLICK-9, khong nhan truc tiep cho the owner.
 Lens cua Council 1: co che + bang chung. Moi gio Asia/Ho_Chi_Minh.
 Khong dung dau gach ngang dai. Khong ydotool. Khong thong tin ca nhan.
 Khong tu cham diem. Chuan Lauren Tan: lenh + output + thoi gian.

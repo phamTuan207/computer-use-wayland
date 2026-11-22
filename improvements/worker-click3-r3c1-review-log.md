@@ -1,7 +1,7 @@
 # CLICK3-R3C1 review log: round-3 council review of the AMEND4 fix pass
 
 Worker CLICK3-R3C1, round-3 council reviewer 1 for the AMEND4 fix pass.
-Owner: Pham Tuan (call him Pham Tuan in repo-facing text, never "dang").
+Owner: the owner (call him the owner in repo-facing text, never "dang").
 Work in `~/workspace/computer-use-wayland`, branch `todolist-push`.
 Independent review: no coordination with the other round-3 reviewers.
 Review start: 07:00 22/11/2026 Asia/Ho_Chi_Minh.
@@ -16,7 +16,7 @@ write: about 40 minutes.
 
 - Full access. NO em dash (U+2014) or en dash (U+2013) anywhere in this
   log or in any file I touched. NEVER ydotool. NO personal info in repo
-  files (owner name Pham Tuan only). Log everything with wall-clock +
+  files (owner name the owner only). Log everything with wall-clock +
   elapsed.
 - Commit with an EXPLICIT pathspec immediately after staging, never
   plain `git commit`, never `git add -A`. Verify every push with

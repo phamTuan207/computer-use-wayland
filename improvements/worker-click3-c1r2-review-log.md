@@ -2,7 +2,7 @@
 
 Worker: CLICK3-C1R2 (council reviewer 1, round 2, independent: did not
 write AMEND2 or AMEND3). Coordinator: COORD-CLICK-2.
-Owner: Pham Tuan (repo-facing name). Branch: todolist-push.
+Owner: the owner (repo-facing name). Branch: todolist-push.
 Range reviewed: amend tip 4b7d6ac to HEAD 9bcfb04 (AMEND2 verbatim
 commits 2a25e7a..c01d4a2, AMEND3 fix commits e5c1c47, 0367ec9, 0356389,
 d7b1579, 4110e72, 2dcd5d8, 5d49e51, log 9bcfb04). Two unrelated commits
@@ -431,7 +431,7 @@ the unit suite run here.)
   code or tests. This reviewer used wtype-free node/python checks
   only; no live laptop driving, no browser work.
 - Personal info: no emails, addresses, phones, or credentials in the
-  AMEND3 diff; only the owner name Pham Tuan and the already-published
+  AMEND3 diff; only the owner name the owner and the already-published
   Zen PID 496121 from the probe log.
 - Untracked files from other workers were left untouched; this
   review commits only its own file (explicit pathspec below).

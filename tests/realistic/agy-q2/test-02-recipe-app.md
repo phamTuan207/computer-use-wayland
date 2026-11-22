@@ -7,7 +7,7 @@ test-02-recipe-app
 Recipe catalog application with category filtering, dietary constraints, servings adjustment, meal planning, and shopping list generation.
 
 ## Context
-Pham Tuan needs to assemble a healthy weekly meal plan for three meals adhering to dietary guidelines.
+the owner needs to assemble a healthy weekly meal plan for three meals adhering to dietary guidelines.
 The workstation runs an offline browser application (fixtures/test-02-recipe-app.html).
 The catalog contains 12 diverse recipes. The user must filter for a Gluten-Free dinner, inspect
 Lemon Herb Salmon, scale its servings from 2 to 4 in the detail modal, add it to the meal planner,

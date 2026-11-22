@@ -7,7 +7,7 @@ test-04-notes-app
 Notes and knowledge base app: author markdown notes, text formatting toolbar, bidirectional wiki-style note linking, tag filtering, note pinning, and archiving.
 
 ## Context
-Pham Tuan is drafting a system engineering proposal inside an offline desktop markdown notes
+the owner is drafting a system engineering proposal inside an offline desktop markdown notes
 application (`fixtures/test-04-notes-app.html`). The workspace contains three existing technical notes:
 "System Architecture", "Storage Engine", and "Security Model". The user must author a new RFC document
 titled "Memory Tiering RFC", insert markdown headings and tags, embed bidirectional wiki links

@@ -1,7 +1,7 @@
 # Browser-image failure investigation log (worker BROWSER-IMAGE-FAIL)
 
 Worker BROWSER-IMAGE-FAIL, independent investigation + fix worker for
-coordinator COORD-CLICK-3. Owner: Pham Tuan (repo-facing name).
+coordinator COORD-CLICK-3. Owner: the owner (repo-facing name).
 Branch: todolist-push. Task received 08:29:48 22/11/2026 Asia/Ho_Chi_Minh.
 All times below are Asia/Ho_Chi_Minh wall clock unless noted.
 Elapsed: 08:29:48 to about 08:38, about 8 minutes plus one full-discover
@@ -32,7 +32,7 @@ would show environmental errors, not HEAD evidence.
 Standing rules honored: full access, no em dash (U+2014) or en dash
 (U+2013) anywhere in this file or in the test change (checked with a
 Python scan after writing), never ydotool, no personal info in repo
-files (owner name Pham Tuan only), explicit pathspec commits, never
+files (owner name the owner only), explicit pathspec commits, never
 plain git commit, never git add -A, every push verified with
 git ls-remote. No fabrication: every claim below cites a diff, a
 line number, or a test run I performed myself.

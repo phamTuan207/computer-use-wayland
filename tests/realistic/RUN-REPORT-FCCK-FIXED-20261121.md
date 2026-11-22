@@ -116,10 +116,10 @@ disabled.
 All 16 spec steps ran. Evidence: first submit with name filled, email
 empty, 4-char password, mismatched confirm shows exactly 3 errors
 ("Email is required", "Password must be at least 8 characters",
-"Passwords do not match"); after fixing email to pham@example.com,
+"Passwords do not match"); after fixing email to user@example.com,
 password to password1234 (12 chars), confirm to match, the second
 submit shows zero errors and "Registration successful."; final values
-read back (name Pham Tuan, valid email, password 12 chars, passwords
+read back (name the owner, valid email, password 12 chars, passwords
 match).
 
 ### f09 convert: PASS (2,393 ms)

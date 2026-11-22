@@ -7,7 +7,7 @@ test-03-calendar-conflicts
 Calendar scheduling across conflicts.
 
 ## Context
-Pham Tuan needs to book a 30-minute project sync with two teammates across
+the owner needs to book a 30-minute project sync with two teammates across
 three existing calendar events in a local calendar app. The fixture shows a
 week view with existing busy blocks. The agent must find a free 30-minute slot
 that does not conflict with any existing event on Tuesday, create the event,

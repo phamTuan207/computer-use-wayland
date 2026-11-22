@@ -1,7 +1,7 @@
 # CLICK3-C3R2 review log: council review round 2 of the AMEND3 surgical fix pass
 
 Worker: CLICK3-C3R2 (council reviewer 3, round 2; independent, did not
-write AMEND2 or AMEND3). Coordinator: COORD-CLICK-2. Owner: Pham Tuan
+write AMEND2 or AMEND3). Coordinator: COORD-CLICK-2. Owner: the owner
 (repo-facing name). Branch: todolist-push. Task start: 05:08 +07
 22/11/2026. All times wall-clock Asia/Ho_Chi_Minh on this VM plus
 elapsed from task start. Standing rules: full access, no em dash
@@ -564,7 +564,7 @@ include it or use existing windows.
   recorded with evidence.
 - No 15-minute stall occurred at any point. No em dash or en dash in
   this file (checked by grep before commit). No ydotool. No personal
-  info (owner name Pham Tuan only, as instructed for repo-facing
+  info (owner name the owner only, as instructed for repo-facing
   text).
 
 ## Commit record

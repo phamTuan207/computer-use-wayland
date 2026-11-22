@@ -7,7 +7,7 @@ test-01-whiteboard
 Online whiteboard and drawing board: shapes, colors, undo, and save.
 
 ## Context
-Pham Tuan needs to draw an architecture diagram for a system review.
+the owner needs to draw an architecture diagram for a system review.
 The workstation runs an offline browser whiteboard application (fixtures/test-01-whiteboard.html).
 The user must name the board "Architecture Sprint 2026", configure shapes with specific colors,
 place an API Gateway box, a Green service circle, an API Gateway label, an accidental Red connector

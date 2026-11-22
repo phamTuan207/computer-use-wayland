@@ -7,7 +7,7 @@ test-09-pomodoro-timer
 Pomodoro workflow timer: custom settings configuration (work and break durations, auto-break toggle), timer state controls (start, pause, reset mistake), cycle completions, history logging, and session reporting.
 
 ## Context
-Pham Tuan uses the offline Pomodoro timer to organize structured engineering sprints.
+the owner uses the offline Pomodoro timer to organize structured engineering sprints.
 The workstation runs an offline browser timer (fixtures/test-09-pomodoro-timer.html).
 Default durations are 25 minutes focus and 5 minutes break.
 The user must open the settings modal, configure focus duration to 30 minutes and short break to 6 minutes, enable the "Auto-start next break cycle" checkbox, save the settings, start the first focus session, complete it via the cycle completion control, complete the subsequent short break, begin a second focus session, trigger a reset to simulate accidental interruption recovery, execute and complete the second focus session (totaling 2 focus cycles and 60 minutes of focus time), and save the session log.

@@ -1,6 +1,6 @@
 # Worker C5-P2-AMEND-FIX log: step 7 AMEND fix, 6 tracked items
 
-Owner: Pham Tuan (asleep since 06:52, headache; Muse holds full
+Owner: the owner (asleep since 06:52, headache; Muse holds full
 authority). Coordinator: COORD-CLICK-5. Repo
 ~/workspace/computer-use-wayland, branch todolist-push. This worker
 did NOT do the step 7 implementation (commit 292753f), so this is

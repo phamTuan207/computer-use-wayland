@@ -676,12 +676,12 @@ Passwords do not match
 [f08] CHECK ok success message shown: Registration successful.
 [f08] success message visible ok 1ms detail=True error=None
 [f08] CHECK ok success block visible: True
-[f08] read back final field values ok 1ms detail={'email': 'pham@example.com', 'match': True, 'name': 'Pham Tuan', 'pwLen': 12} error=None
-[f08] CHECK ok final name filled: {'email': 'pham@example.com', 'match': True, 'name': 'Pham Tuan', 'pwLen': 12}
-[f08] CHECK ok final email valid: {'email': 'pham@example.com', 'match': True, 'name': 'Pham Tuan', 'pwLen': 12}
-[f08] CHECK ok final password >= 8 chars: {'email': 'pham@example.com', 'match': True, 'name': 'Pham Tuan', 'pwLen': 12}
-[f08] CHECK ok final passwords match: {'email': 'pham@example.com', 'match': True, 'name': 'Pham Tuan', 'pwLen': 12}
-RESULT {"test": "f08", "pass": true, "failures": [], "details": {"firstErrors": "Email is required\nPassword must be at least 8 characters\nPasswords do not match", "remainingErrors": "", "success": "Registration successful.", "finalValues": {"email": "pham@example.com", "match": true, "name": "Pham Tuan", "pwLen": 12}}, "started_at": "2026-11-21T09:56:35.932100+00:00", "finished_at": "2026-11-21T09:56:38.410815+00:00", "elapsed_ms": 2479}
+[f08] read back final field values ok 1ms detail={'email': 'user@example.com', 'match': True, 'name': 'the owner', 'pwLen': 12} error=None
+[f08] CHECK ok final name filled: {'email': 'user@example.com', 'match': True, 'name': 'the owner', 'pwLen': 12}
+[f08] CHECK ok final email valid: {'email': 'user@example.com', 'match': True, 'name': 'the owner', 'pwLen': 12}
+[f08] CHECK ok final password >= 8 chars: {'email': 'user@example.com', 'match': True, 'name': 'the owner', 'pwLen': 12}
+[f08] CHECK ok final passwords match: {'email': 'user@example.com', 'match': True, 'name': 'the owner', 'pwLen': 12}
+RESULT {"test": "f08", "pass": true, "failures": [], "details": {"firstErrors": "Email is required\nPassword must be at least 8 characters\nPasswords do not match", "remainingErrors": "", "success": "Registration successful.", "finalValues": {"email": "user@example.com", "match": true, "name": "the owner", "pwLen": 12}}, "started_at": "2026-11-21T09:56:35.932100+00:00", "finished_at": "2026-11-21T09:56:38.410815+00:00", "elapsed_ms": 2479}
 127.0.0.1 - - [21/Nov/2026 16:56:39] "GET /fcc-k/fixtures/test-09-convert.html HTTP/1.1" 200 -
 [f09] open fixture ok 1652ms detail=9e2c9453-f620-489b-8c83-9f84633595f0 error=None
 [f09] check body visible ok 2ms detail=visible error=None

@@ -1,6 +1,6 @@
 # Worker CLICK3-F3: final council reviewer 3 position, FINAL DECISION round
 
-Owner: Pham Tuan. Role: final council reviewer 3 (Worker CLICK3-F3). I am
+Owner: the owner. Role: final council reviewer 3 (Worker CLICK3-F3). I am
 independent: I did not coordinate with other final participants in this
 round, and I question everything, including the joint adjudication DRAFT.
 This round finalizes the direction once and for all.

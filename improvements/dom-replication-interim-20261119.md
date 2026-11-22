@@ -1,17 +1,17 @@
 # DOM-first replication, interim results (2026-11-19)
 
-Owner: Pham Tuan. Worker: Luna 6 Max (DOM-replicate 118a9122 + continuation). Status: INTERIM. R1 and R2 pairs complete; R3 pending; final report to follow. Main stays FROZEN; this is a docs-only interim commit on speed-swarm.
+Owner: the owner. Worker: Luna 6 Max (DOM-replicate 118a9122 + continuation). Status: INTERIM. R1 and R2 pairs complete; R3 pending; final report to follow. Main stays FROZEN; this is a docs-only interim commit on speed-swarm.
 
 ## D1 second pair (fixture)
 
-- Baseline (flag OFF): SUCCESS, wall 293.061s from successful start (367.842s from first submit; first start rejected, owner "Pham Tuan" has a space, invalid_owner, no lease; retry as Pham-Tuan ready 0.804s), core-loop think 50.562s, 13 calls, 12 seq, 7 images 187,430B, 0 refusals/misclicks/deaths, tight-crop OCR verified pick4-ok.
+- Baseline (flag OFF): SUCCESS, wall 293.061s from successful start (367.842s from first submit; first start rejected, owner "the owner" has a space, invalid_owner, no lease; retry as the-owner ready 0.804s), core-loop think 50.562s, 13 calls, 12 seq, 7 images 187,430B, 0 refusals/misclicks/deaths, tight-crop OCR verified pick4-ok.
 - DOM-first (CU_PICK4_FASTPATH=1): SUCCESS, wall 75.523s, core-loop think 18.820s, 11 calls, 10 seq, 3 images 95,399B, 1 click+assert (ref e2), 0/0/0.
 - Cumulative core-think means (round 1 + round 2): baseline 74.9s vs DOM 19.8s. No precise speedup factor quoted (baseline core varied 99.2 vs 50.6 across rounds).
 
 ## R1 httpbin form (real task)
 
 - Baseline: SUCCESS, wall 300.242s, think 292.795s, service 7.447s, 23 calls, 22 seq, 19 images 975,889B, 0/0/0, form-fill core think 204.308s (name 81.717s incl 53.198s first-ground observe).
-- DOM-first: SUCCESS, wall 151.881s, think 149.237s, service 2.642s, 12 calls, 11 requests, 3 images 161,248B, 0/0/0, form core (observe-form to assert) 69.848s. ONE browser act did 3 fills + Large radio + Bacon checkbox + Submit; assert body contains Pham Tuan; tabs confirmed https://httpbin.org/post.
+- DOM-first: SUCCESS, wall 151.881s, think 149.237s, service 2.642s, 12 calls, 11 requests, 3 images 161,248B, 0/0/0, form core (observe-form to assert) 69.848s. ONE browser act did 3 fills + Large radio + Bacon checkbox + Submit; assert body contains the owner; tabs confirmed https://httpbin.org/post.
 - Delta: wall -148.361s, think -143.558s, calls -11, images -814,641B.
 
 ## R2 example.com to IANA (real task)
@@ -27,7 +27,7 @@ Owner: Pham Tuan. Worker: Luna 6 Max (DOM-replicate 118a9122 + continuation). St
 
 ## Owner rule (proven from source)
 
-- Owner must match [A-Za-z0-9_.:@+-]{1,80} (session_remote.py:577,1570); "Pham Tuan" with a space is rejected (invalid_owner, no lease). All remaining briefs patched to use the run-dir name as owner; every start since has been clean first try.
+- Owner must match [A-Za-z0-9_.:@+-]{1,80} (session_remote.py:577,1570); "the owner" with a space is rejected (invalid_owner, no lease). All remaining briefs patched to use the run-dir name as owner; every start since has been clean first try.
 
 ## 2-of-3 bar (real tasks R1, R2, R3)
 

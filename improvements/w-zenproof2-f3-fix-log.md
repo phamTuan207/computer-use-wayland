@@ -1,10 +1,10 @@
 # W-ZENPROOF2-F3-FIX log - diagnose and fix the run-4 F3 refusal
 
-Owner: Pham Tuan. Coordinator: Muse tong. Worker: W-ZENPROOF2-F3-FIX.
+Owner: the owner. Coordinator: Muse tong. Worker: W-ZENPROOF2-F3-FIX.
 Repo ~/workspace/computer-use-wayland, branch todolist-push.
 No em dash or en dash anywhere in this file. No personal info.
 Code + unit tests only, on the VM. No live run, no tab opened,
-navigated, or closed in Zen or any browser of Pham Tuan. No laptop
+navigated, or closed in Zen or any browser of the owner. No laptop
 touch at all.
 
 ## 0. Task receipt and sources read

@@ -2,7 +2,7 @@
 
 Worker: CLICK3-C2R2 (council reviewer 2, independent; did not write
 AMEND2 or AMEND3; focus: test quality and the verification chain, not
-fix mechanics). Coordinator: COORD-CLICK-2. Owner: Pham Tuan
+fix mechanics). Coordinator: COORD-CLICK-2. Owner: the owner
 (repo-facing name). Branch: todolist-push, HEAD 9bcfb04 at review.
 Task start: 05:08 +07 22/11/2026. All times wall-clock Asia/Ho_Chi_Minh
 + elapsed from task receipt. Standing rules: full access, no em dash
@@ -430,5 +430,5 @@ worker's final report carries it). No other file touched. The 4
 untracked other-worker files were left untouched. Temp worktree
 /tmp/c2r2-before was removed after the fail-before check. No em
 dash or en dash in this file (checked by grep before commit). No
-ydotool. No personal info (owner name Pham Tuan only, as instructed
+ydotool. No personal info (owner name the owner only, as instructed
 for repo-facing text).

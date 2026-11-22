@@ -1,6 +1,6 @@
 # W-A1FIX log: close F1-F6 (A1 pilot fix list, W-A1 decision 3204fc2)
 
-- Owner: Pham Tuan. Worker: W-A1FIX, for COORD-CLICK-6.
+- Owner: the owner. Worker: W-A1FIX, for COORD-CLICK-6.
 - Branch: todolist-push. Repo: ~/workspace/computer-use-wayland.
 - Task received: 17:55:08 +07, 22/11/2026. Follow-up from COORD-CLICK-6
   received 17:56:29 +07: W-SYNC done (ae2fe52), F3 unlocked after
@@ -329,18 +329,18 @@
   grounded in the F2 mouse selftest, 18:00:44 +07) only if the
   retry lands.
 
-## LUAT CUNG 18:23 22/11, UU TIEN CAO NHAT: KHONG BAO GIO dong hay navigate tab/cua so trinh duyet cua Pham Tuan (xac nhan da doc)
+## LUAT CUNG 18:23 22/11, UU TIEN CAO NHAT: KHONG BAO GIO dong hay navigate tab/cua so trinh duyet cua the owner (xac nhan da doc)
 
 - Nhan luc 18:25:02 +07, 22/11/2026, qua subagent interrupt tu
   COORD-CLICK-6, submission 88a9ebce-3745-4e26-bafa-59f5567f1739.
-  Lenh truc tiep tu Pham Tuan 18:23 22/11: KHONG BAO GIO dong hay
-  chuyen huong (navigate) tab/cua so trinh duyet cua Pham Tuan.
-  Tab mochi la tab an danh Chromium do chinh Pham Tuan mo san de
+  Lenh truc tiep tu the owner 18:23 22/11: KHONG BAO GIO dong hay
+  chuyen huong (navigate) tab/cua so trinh duyet cua the owner.
+  Tab mochi la tab an danh Chromium do chinh the owner mo san de
   dung; mot worker chien dich da dong hoac chuyen huong no mat luc
-  18:00-18:21, Pham Tuan phai dang nhap lai. Tu gio, neu can trinh
+  18:00-18:21, the owner phai dang nhap lai. Tu gio, neu can trinh
   duyet thi MO TAB/CUA SO MOI BEN CANH, workspace 2 cuon duoc,
-  tuyet doi khong dong, khong navigate tab cua Pham Tuan (tab mochi
-  an danh, cua so Brave cua mei, Zen, bat ky tab nao Pham Tuan mo).
+  tuyet doi khong dong, khong navigate tab cua the owner (tab mochi
+  an danh, cua so Brave cua mei, Zen, bat ky tab nao the owner mo).
   Ap dung cho moi lane, moi worker, ke ca live test. Ghi vao log
   coord tai commit a1d36bf.
 - XAC NHAN: toi da doc luat nay. Toi DUNG NGAY moi viec navigate
@@ -589,11 +589,11 @@
 
 - Nhan luc 18:32:44 +07, 22/11/2026, qua subagent task tu
   COORD-CLICK-6 (cung voi luat 18:23 vua gui). Lenh truc tiep tu
-  Pham Tuan 18:30 22/11: bat ky khi nao agent dieu khien may, bang
+  the owner 18:30 22/11: bat ky khi nao agent dieu khien may, bang
   BAT KY phuong phap nao (computer-use, CDP, Playwright, script),
-  thi overlay/pill computer-use PHAI hien len de Pham Tuan thay
+  thi overlay/pill computer-use PHAI hien len de the owner thay
   may dang bi dieu khien. Ly do: tin nhan cho mochi gui bang CDP
-  tho (Runtime.evaluate) nen khong co pill nao hien, Pham Tuan
+  tho (Runtime.evaluate) nen khong co pill nao hien, the owner
   khong thay gi. Quy tac tam thoi, ap dung ngay: moi tac dong live
   len trinh duyet phai qua act-now/computer-use session de pill
   hien; CAM dung CDP tho de ghi (click, go chu) khi khong co
@@ -606,7 +606,7 @@
   trinh duyet (manifest, log, git, relay restart). Khong con tac
   dong trinh duyet nao trong phan viec con lai cua phien nay.
 - Ca hai luat cung deu duoc ghi nhan trong log nay: luat 18:23
-  (khong dong hay navigate tab/cua so cua Pham Tuan) o muc rieng
+  (khong dong hay navigate tab/cua so cua the owner) o muc rieng
   ben tren, luat 18:30 (pill phai hien) o muc nay va o ghi chu
   resume trong muc F3. Moi lan live nao sau nay (re-probe F4,
   re-validation F2, pilot run) phai tuan ca hai luat: chi mo tab

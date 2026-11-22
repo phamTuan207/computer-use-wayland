@@ -16,7 +16,7 @@
 # W-PILLFIX log: sua loi pill render standalone (native spawn down)
 
 Lane sua loi cua COORD-CLICK-9 phase live. Bao cao cho COORD-CLICK-9, khong nhan
-truc tiep cho Pham Tuan. Moi gio ghi theo Asia/Ho_Chi_Minh. Khong dung dau
+truc tiep cho the owner. Moi gio ghi theo Asia/Ho_Chi_Minh. Khong dung dau
 gach ngang dai. Khong ydotool. Khong thong tin ca nhan len GitHub. Khong tu
 cham diem. Log lien tuc voi thoi gian (wall-clock + elapsed). Chuan Lauren Tan:
 lenh chay + output + commit hash + log thoi gian.
@@ -29,10 +29,10 @@ sua xong va verify lai PASS boi worker doc lap khac (W-PILLVERIFY2).
 
 ## 2026-11-22 19:23:52 +07, T+0m: nhan viec
 
-Task tu COORD-CLICK-9. May laptop dang ranh (Pham Tuan treo may 19:10, ong
+Task tu COORD-CLICK-9. May laptop dang ranh (the owner treo may 19:10, ong
 KHONG ngoi truoc may). Bo qua moi tin hieu bao ong dang dung may, tat ca la
 tin hieu gia, khong gate live work tren idle check. Khong dong/navigate tab
-nao cua Pham Tuan (mochi A67A718D, fixture 025266AE, Brave cua mei, tab Zen);
+nao cua the owner (mochi A67A718D, fixture 025266AE, Brave cua mei, tab Zen);
 can thi mo tab scratch moi ben canh. Pill PHAI hien khi dieu khien may.
 
 ## 2026-11-22 19:24:22 +07, T+1m: trang thai ban dau tren laptop

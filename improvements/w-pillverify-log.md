@@ -1,11 +1,11 @@
 # W-PILLVERIFY log: verify live pill render tren laptop
 
 Lane 1 cua COORD-CLICK-9 phase live. Bao cao cho COORD-CLICK-9, khong nhan
-truc tiep cho Pham Tuan. Moi gio ghi theo Asia/Ho_Chi_Minh. Khong dung dau
+truc tiep cho the owner. Moi gio ghi theo Asia/Ho_Chi_Minh. Khong dung dau
 gach ngang dai. Khong ydotool. Khong thong tin ca nhan len GitHub. Khong tu
 cham diem. Log lien tuc voi thoi gian (wall-clock + elapsed).
 
-Luat cung bo sung 19:15 22/11 tu Pham Tuan, ap cho lane nay, khong ngoai le:
+Luat cung bo sung 19:15 22/11 tu the owner, ap cho lane nay, khong ngoai le:
 KHONG TU REVIEW, KHONG TU SUA LOI CUA MINH. Neu verify thay pill KHONG hien
 hoac co loi gi, chi ghi day du bang chung (anh grim, output, log, thoi gian)
 roi bao FAIL va DUNG, tuyet doi khong tu sua, khong tu review lai ket qua
@@ -28,13 +28,13 @@ nhan manh lai luc 19:15.
   tren tab scratch FAIL. Mei chi duoc chay live run sau khi loi nay duoc
   worker doc lap sua xong va lane verify lai PASS.
 - Khong co input nao chay tren tab scratch (completed:0, trang van hien
-  'not clicked yet' trong anh grim). Tab cua Pham Tuan khong bi cham vao:
+  'not clicked yet' trong anh grim). Tab cua the owner khong bi cham vao:
   tab mochi A67A718D5E236F894F9863F48834743C va tab fixture Pick 4
   025266AE11C86425817A3AF6E0FB7B26 con nguyen, tab scratch cua toi da dong.
 
 ## 2026-11-22 19:12:52 +07, T+0m: nhan viec
 
-Task tu COORD-CLICK-9. May laptop dang ranh (Pham Tuan treo may 19:10,
+Task tu COORD-CLICK-9. May laptop dang ranh (the owner treo may 19:10,
 khong ngoi truoc may). Bo qua moi tin hieu bao ong dang dung may, tat ca
 la tin hieu gia, khong gate live work tren idle check. Doc xong log
 W-PILLCDP (improvements/w-pillcdp-log.md) va docs/overlay.md tren
@@ -133,7 +133,7 @@ python3 scripts/chromium_cli.py open http://127.0.0.1:8899/scratch.html
 {"ok": true, "command": "open", "endpoint": "http://127.0.0.1:9223",
 "tab": {"id": "F9F86AFB6CA8D8D2F08C05D6613AF687", "title": "W-PILLVERIFY
 scratch", "url": "http://127.0.0.1:8899/scratch.html"}}
-Tab moi mo ben canh, khong navigate hay dong tab nao cua Pham Tuan.
+Tab moi mo ben canh, khong navigate hay dong tab nao cua the owner.
 /json/list xac nhan 3 tab page: scratch F9F86AFB..., fixture 025266AE...,
 mochi A67A718D... Luu y: open thanh cong mac du pill khong render duoc,
 vi overlay.hold khong kiem tra visible (xem muc 19:14:49).

@@ -1,6 +1,6 @@
 # Worker PROBE-P3 log: GROUNDING P3 feasibility probe (Brave relaunch with debugging port)
 
-Owner: Pham Tuan. Coordinator: COORD-CLICK-3. Branch: todolist-push.
+Owner: the owner. Coordinator: COORD-CLICK-3. Branch: todolist-push.
 Probe target: GROUNDING-REVIEW (d1fc4e9) P3, Brave accepts --remote-debugging-port at launch
 on its existing profile, login persists, tabs restore, scripts/cdp.mjs can drive the clone chats.
 Result: NOT-RUN. Reason: clone1 batch 9 is open and not complete. Safety rule forbids touching

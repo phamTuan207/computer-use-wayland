@@ -7,7 +7,7 @@ test-10-long-document-edit
 Long document edit: find/replace across sections, add table, export.
 
 ## Context
-Pham Tuan edits a long offline document (a report fixture with multiple
+the owner edits a long offline document (a report fixture with multiple
 sections). The agent must replace a term across all sections, insert a table
 with fixed headers and rows, update the document's table of contents count, and
 export the document to a new filename, then verify the export contains the

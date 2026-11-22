@@ -1,6 +1,6 @@
 # CLICK3-FCC-DRIVER log - worker-fcc-amend4-driver
 
-Driver for COORD-CLICK-3. Owner: Pham Tuan. All times Asia/Ho_Chi_Minh.
+Driver for COORD-CLICK-3. Owner: the owner. All times Asia/Ho_Chi_Minh.
 
 ## Standing rules recorded
 

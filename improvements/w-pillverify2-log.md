@@ -1,13 +1,13 @@
 # W-PILLVERIFY2 log: verify lai live pill render sau fix 8f600b9
 
 Lane verify doc lap cua COORD-CLICK-9 phase live. Bao cao cho COORD-CLICK-9,
-khong nhan truc tiep cho Pham Tuan. Moi gio ghi theo Asia/Ho_Chi_Minh. Khong
+khong nhan truc tiep cho the owner. Moi gio ghi theo Asia/Ho_Chi_Minh. Khong
 dung dau gach ngang dai. Khong ydotool. Khong thong tin ca nhan len GitHub.
 Khong tu cham diem. Log lien tuc voi thoi gian (wall-clock + elapsed).
 
 Luat cung ap cho lane nay: CHI VERIFY, KHONG SUA. Neu FAIL thi ghi bang chung
 roi dung, de worker doc lap khac sua (luat 19:15 22/11, no self-healing).
-Moi text repo-facing goi ong chu la Pham Tuan.
+Moi text repo-facing goi ong chu la the owner.
 
 Quy trinh: giong W-PILLVERIFY (improvements/w-pillverify-log.md, e200d6e):
 tab scratch moi tren Chromium CDP 9223, observe truoc, act click #go + assert
@@ -21,7 +21,7 @@ tab scratch moi tren Chromium CDP 9223, observe truoc, act click #go + assert
   #out text "clicked" pass.
 - Gate todolist 4.29 DAT: co che xong + test xanh + live verify tren tab
   scratch PASS.
-- Tab cua Pham Tuan khong bi cham: tab mochi A67A718D5E236F894F9863F48834743C
+- Tab cua the owner khong bi cham: tab mochi A67A718D5E236F894F9863F48834743C
   va tab fixture Pick 4 025266AE11C86425817A3AF6E0FB7B26 con nguyen, tab
   scratch cua toi da dong, /json/list ve dung 2 tab page nhu truoc test.
 - Quan sat phu, khong phai ket luan cua lane nay (xem muc Open item):
@@ -30,7 +30,7 @@ tab scratch moi tren Chromium CDP 9223, observe truoc, act click #go + assert
 
 ## 2026-11-22 19:48:05 +07, T+0m: nhan viec
 
-Task tu COORD-CLICK-9. May laptop dang ranh (Pham Tuan treo may 19:10,
+Task tu COORD-CLICK-9. May laptop dang ranh (the owner treo may 19:10,
 khong ngoi truoc may). Bo qua moi tin hieu bao ong dang dung may, tat ca
 la tin hieu gia, khong gate live work tren idle check. Doc xong log
 W-PILLVERIFY truoc khi lam.
@@ -95,7 +95,7 @@ python3 scripts/chromium_cli.py open http://127.0.0.1:8898/scratch.html
 {"ok": true, "command": "open", "endpoint": "http://127.0.0.1:9223",
 "tab": {"id": "55E81E6295E11E7F44EE517612D766F3", "title":
 "W-PILLVERIFY2 scratch", "url": "http://127.0.0.1:8898/scratch.html"}}
-Tab moi mo ben canh, khong navigate hay dong tab nao cua Pham Tuan.
+Tab moi mo ben canh, khong navigate hay dong tab nao cua the owner.
 /json/list xac nhan 3 tab page: scratch 55E81E62..., fixture 025266AE...,
 mochi A67A718D...
 

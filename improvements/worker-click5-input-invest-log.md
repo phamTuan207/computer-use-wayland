@@ -1,6 +1,6 @@
 # Worker C5-INPUT-INVEST log: Chromium CDP Input.dispatchMouseEvent stall, S2 flip
 
-Owner: Pham Tuan. Coordinator: COORD-CLICK-5. Investigates the
+Owner: the owner. Coordinator: COORD-CLICK-5. Investigates the
 Chromium Input stall from the step 6 S2 flip (worker C4-S2-FLIP).
 This worker did NOT do the flip. Code and log analysis only in this
 phase: no live CDP calls, no workspace switches, no sends into any

@@ -58,8 +58,8 @@ about the audit); the entry lives in the daily note
 
 ## What the record must NOT claim
 
-- It must NOT say Pham Tuan accepted the H3 proposal. No owner message
-  in the repo or in the memory log accepts H3 specifically. Pham Tuan
+- It must NOT say the owner accepted the H3 proposal. No owner message
+  in the repo or in the memory log accepts H3 specifically. the owner
   said "Ok thoi may dua tu lam di nhe" after the Y13r2 report (memory
   2026-11-21.md, section "dang chot tu lam"), which is a general
   go-ahead to keep working overnight under the decided gates, not an
@@ -101,7 +101,7 @@ about the audit); the entry lives in the daily note
 
 ## Open point for Muse tong
 
-- Confirm the acceptor was Muse itself (not Pham Tuan, not a council
+- Confirm the acceptor was Muse itself (not the owner, not a council
   vote). The memory log shows a coordinator decision, no vote and no
   owner message on H3. If that is wrong, correct the wording above
   before copying it into the record.

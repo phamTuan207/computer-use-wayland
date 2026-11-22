@@ -93,7 +93,7 @@ Several commands crash over plain SSH with `KeyError: 'OMARCHY_PATH'` (agent usa
 
 ## 7. Live numbers (23:38-23:40 +07)
 
-- Default agent: opencode. Codex account: sol6.1xhigh@gmail.com, Free plan, signed in, 720h window 1.0 percent used, resets 2026-12-12T12:17:17Z. Claude and Grok accounts: not signed in. All switch modes manual, threshold 95.
+- Default agent: opencode. Codex account: [email redacted], Free plan, signed in, 720h window 1.0 percent used, resets 2026-12-12T12:17:17Z. Claude and Grok accounts: not signed in. All switch modes manual, threshold 95.
 - Codex usage today (21/11): 18 prompts, 18 sessions, 190,927,021 tokens, all gpt-6-luna. Total: 1168 prompts, 403 sessions, 30 active days. Recent days (messageCount, reads as tokens): 15/11 143,943,986; 16/11 161,709,396; 17/11 173,404,828; 18/11 108,771,107; 19/11 271,955,516; 20/11 430,589,581; 21/11 190,927,021. Model cache reads are huge (gpt-6-luna cacheReadInputTokens 1,448,384,768).
 - Shell plugins live: 60+ listed, including james.agents (My Agents, enabled, cloned from omarchy.agents), james.menu (disabled), omarchy.indicators (enabled), omarchy.workspaces (enabled), crmne.todoist (enabled), omarchy.reminders (enabled), omarchy.remote-session (enabled), omarchy.tailscale (disabled). No MCP plugin installed.
 

@@ -1,6 +1,6 @@
 # W-A1 pilot decision log: A1 pilot resume decision
 
-- Owner: Pham Tuan. Worker: W-A1, for COORD-CLICK-6 (queue item 10).
+- Owner: the owner. Worker: W-A1, for COORD-CLICK-6 (queue item 10).
 - Branch: todolist-push. Repo: ~/workspace/computer-use-wayland.
 - HEAD at task start: 05140c1 (05140c10d180ce7d26548df0f5b6f9c4d431e316).
   Verified before work: git ls-remote origin todolist-push returned

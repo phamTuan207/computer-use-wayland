@@ -1,9 +1,9 @@
 # W-ZENPROOF2-FIX: URL tab identity + new-tab current check (close R13 blocker)
 
-Owner: Pham Tuan. Worker: W-ZENPROOF2-FIX, independent (not
+Owner: the owner. Worker: W-ZENPROOF2-FIX, independent (not
 W-ZENPROOF2, not COORD-CLICK-9). Report goes to Muse tong, not
-directly to Pham Tuan. No live proof re-run, no tab opened,
-navigated, or deleted in Pham Tuan's Zen. All verification is
+directly to the owner. No live proof re-run, no tab opened,
+navigated, or deleted in the owner's Zen. All verification is
 code/unit level only. No em dash or en dash anywhere in this
 file. No personal info.
 

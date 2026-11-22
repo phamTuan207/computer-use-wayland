@@ -5,7 +5,7 @@ phai COORD-CLICK-9). Nhiem vu tu Muse tong: dong cac dieu kien con
 lai cua amend 2 (14cf4dc + 448fee6 + 4a4fae3, 4 review deu GO hoac GO
 WITH CONDITIONS). DAY LA VONG CUOI cho pill, khong mo them vong sau.
 Khong chay live proof, khong dong/mo/navigate tab nao trong Zen cua
-Pham Tuan, khong tu spawn reviewer, khong release bat ky holder nao.
+the owner, khong tu spawn reviewer, khong release bat ky holder nao.
 Moi gio Asia/Ho_Chi_Minh. Khong dau gach ngang dai. Khong ydotool.
 Khong thong tin ca nhan. Chuan Lauren Tan: lenh chay + output +
 commit hash + log thoi gian.

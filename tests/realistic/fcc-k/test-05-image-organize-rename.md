@@ -7,7 +7,7 @@ test-05-image-organize-rename
 Image download + organize + rename batch.
 
 ## Context
-Pham Tuan downloaded a batch of images into a local downloads folder (fixture
+the owner downloaded a batch of images into a local downloads folder (fixture
 simulates a file manager view of downloaded images with generic names like
 `img_01.jpg`, `screenshot.png`, `photo from web.jpg`). The agent must move the
 images into an `Organized` subfolder, rename each to a descriptive scheme

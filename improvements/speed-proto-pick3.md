@@ -1,6 +1,6 @@
 # Pick 3 prototype: multi-candidate grounding with tiny-crop verification
 
-Date: 2026-11-18 (overnight run, finished early 2026-11-19). Owner: Pham Tuan.
+Date: 2026-11-18 (overnight run, finished early 2026-11-19). Owner: the owner.
 Repo: phamTuan207/computer-use-wayland, branch `speed-swarm`.
 Status: built, tested, measured live, reported. Flag-gated, default OFF.
 

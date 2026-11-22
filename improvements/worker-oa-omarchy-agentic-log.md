@@ -17,7 +17,7 @@
 
 ## 23:38:20 probe 3: skill read + usage + plugin + menu select
 - omarchy SKILL.md read in full (276 lines): REQUIRED for customization; never modify /usr/share/omarchy (read freely); edit ~/.config/; hyprctl reload plus configerrors validation; shell.json/menus hot-reload; command discovery via `omarchy commands` and `commands --json`; read source via cat $(which omarchy-<name>); hooks, plugins, reminders, debug flags.
-- Default agent: opencode. Account list JSON: codex signed in (sol6.1xhigh@gmail.com, Free, 720h 1.0 percent, resets 2026-12-12); claude and grok not signed in; all manual, threshold 95.
+- Default agent: opencode. Account list JSON: codex signed in ([email redacted], Free, 720h 1.0 percent, resets 2026-12-12); claude and grok not signed in; all manual, threshold 95.
 - `omarchy commands --all` grep agent|mcp|skill: agent lines only, plus `omarchy install ai openclaw`. ZERO mcp lines. No MCP in stock.
 - Usage commands crash over plain SSH: KeyError OMARCHY_PATH. menu select is a GUI picker with stdout result. plugin help: add/clone/disable/enable/list/remove/update/validate.
 - Web (search 23:38): community MCP servers found. bruce-forte/omarchy-mcp-server (plugin, HTTP 127.0.0.1:8765/mcp, bearer token, supervised by omarchy-shell, permissions). hlsitechio Omarchy-MCP (stdio, Node/TS, 466 tools, 17 modules, verified state, agent_grid). Franzferdinan51 agent-room (rooms, MCP Mail, ACP). sergiudanstan omarchy-hardware (states: "Omarchy ships no serial support and no MCP servers").

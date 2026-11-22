@@ -2,7 +2,7 @@
 
 Reviewer: Redteam, independent (not W-ZENPROOF2-FIX, not
 COORD-CLICK-9, not the council reviewers). Report goes to Muse
-tong, not directly to Pham Tuan. No live Zen tab was opened,
+tong, not directly to the owner. No live Zen tab was opened,
 navigated, or deleted. No fix file was edited. No reviewer was
 spawned by me. No em dash or en dash anywhere in this file.
 No personal info.

@@ -1,8 +1,8 @@
 # Pick 1 landing summary (Track 2, 19/11)
 
 - Date: 2026-11-19 17:30 +07
-- Owner: Pham Tuan
-- Approval: Pick 1 landing APPROVED by Pham Tuan at 17:18, rule: if it is measured better than the old version, land it, do not ask.
+- Owner: the owner
+- Approval: Pick 1 landing APPROVED by the owner at 17:18, rule: if it is measured better than the old version, land it, do not ask.
 - Base: origin/main 21684e7 (docs: add shayxo port execution report).
 - Branch: pick1-landing, merged to main with --no-ff. Merge commit is recorded in the campaign live-test-log.
 - Relay: NOT restarted. No live broker measurement during landing. Speed-swarm checkout untouched (D1 worker active).

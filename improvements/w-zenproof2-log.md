@@ -1,14 +1,14 @@
 # W-ZENPROOF2: Zen pointer delegate live proof, run 2 (close R13)
 
-Owner: Pham Tuan. Coordinator: COORD-CLICK-9. Worker: W-ZENPROOF2.
+Owner: the owner. Coordinator: COORD-CLICK-9. Worker: W-ZENPROOF2.
 Repo ~/workspace/computer-use-wayland, branch todolist-push.
 No em dash or en dash anywhere in this file. No personal info.
-Report goes to COORD-CLICK-9, not directly to Pham Tuan.
+Report goes to COORD-CLICK-9, not directly to the owner.
 
 ## 0. Task receipt and sources read (before any live touch)
 
 - Task received 19:55:04 +07, 22/11/2026. T+0m.
-- Laptop is free: Pham Tuan hung may 19:10 22/11, not at the machine.
+- Laptop is free: the owner hung may 19:10 22/11, not at the machine.
   Per task order, ignore every idle/activity signal (IdleHint, input,
   focus, mouse, keyboard) as fake, do not gate live work on idle
   checks, keep running. Order 19:11 22/11.
@@ -58,7 +58,7 @@ Report goes to COORD-CLICK-9, not directly to Pham Tuan.
     after a send; run 1 sent nothing, but this is run 2 with fresh
     intent c5-zen-delegate-r2 and fresh message
     ZEN-DELEGATE-R2-IGNORE-TEST (G0d), so no ledger reuse at all.
-- Hard rules restated: never close or navigate any tab of Pham Tuan
+- Hard rules restated: never close or navigate any tab of the owner
   (18:23); pill must show on any agent control (18:30); no
   self-review, no self-fix of my own failure (19:15: if proof FAILS,
   report and stop, an independent worker fixes via council 3 plus
@@ -197,7 +197,7 @@ Report goes to COORD-CLICK-9, not directly to Pham Tuan.
 - Focus switch 19:59:42 +07: `hyprctl dispatch
   "hl.dsp.focus({ workspace = 1 })"` returned ok; activewindow
   verified Zen 0x56307e2771d0 ws1 'Chat - Muse - Zen Browser'.
-  No tab of Pham Tuan navigated or closed; only the visible
+  No tab of the owner navigated or closed; only the visible
   workspace changed ws2 to ws1 while no lane was live.
 - Baseline grim 19:59 +07: /tmp/w-zenproof2-baseline.png,
   768335 bytes (to be reviewed with the P9 evidence).
@@ -269,7 +269,7 @@ Report goes to COORD-CLICK-9, not directly to Pham Tuan.
   the re-run. The viewport gate P2.4 was never reached (no
   viewport measurement was taken on a scratch tab).
 
-## 6. INCIDENT: the run closed Pham Tuan's Muse chat tab
+## 6. INCIDENT: the run closed the owner's Muse chat tab
 
 - What is missing: the Zen tab 'Chat - Muse',
   https://muse.ai/thread/750c8dae-58fb-4a65-82ac-753e78d6ce93,
@@ -326,8 +326,7 @@ Report goes to COORD-CLICK-9, not directly to Pham Tuan.
   this log), so nothing is lost beyond the open tab. The
   coordinator decides the recovery path. This is reported here
   in full, not hidden.
-- Rule 18:23 was violated in effect by this run (a tab of Pham
-  Tuan was closed), through the mechanism above. Recorded
+- Rule 18:23 was violated in effect by this run (a tab of the owner was closed), through the mechanism above. Recorded
   plainly as my run's incident.
 
 ## 7. Phase 3 pre-select + read-only probe
@@ -385,7 +384,7 @@ Report goes to COORD-CLICK-9, not directly to Pham Tuan.
   switch worked (P1.1 passed in attempt 2), but the proof
   itself could not execute because the procedure's title
   premise is wrong (section 5), and the attempt closed one of
-  Pham Tuan's tabs (section 6).
+  the owner's tabs (section 6).
 - Checklist status: G0a PASS (177 OK), G0b PASS (both programs
   validate), G0c PASS (fixture sha), G0d PASS (fresh intent and
   message), P1.1 PASS (attempt 2, Zen active ws1), P1.2 PASS
@@ -399,7 +398,7 @@ Report goes to COORD-CLICK-9, not directly to Pham Tuan.
 - What the coordinator must decide, in order:
   1. Recovery of the Muse chat tab
      (https://muse.ai/thread/750c8dae-58fb-4a65-82ac-753e78d6ce93):
-     reopen it, or leave it to Pham Tuan/history. Do not let
+     reopen it, or leave it to the owner/history. Do not let
      the next runner attempt recovery through the Marionette
      open/navigate path until the mechanism in section 6 is
      understood.

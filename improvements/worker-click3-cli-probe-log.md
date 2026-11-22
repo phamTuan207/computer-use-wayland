@@ -1,7 +1,7 @@
 # Worker CLICK3-CLI-PROBE log
 
 - Worker: CLICK3-CLI-PROBE (fast availability probe, facts only, changed nothing, ran no real tasks)
-- Owner: Pham Tuan (repo-facing name; never "dang")
+- Owner: the owner (repo-facing name; never "dang")
 - Probe date: 2026-11-22, wall-clock Asia/Ho_Chi_Minh
 - Task start: 05:56. Probes launched: 05:58:15. All probes finished by 05:59:30.
 - Method: laptop via `~/workspace/ssh-laptop.sh` (SSH dies ~30s, so each probe ran detached with `setsid nohup ... > log 2>&1 < /dev/null & disown`, checked with short calls). Probe prompt for every tool: `reply with the single word ok`. Timeout per probe: 120s.

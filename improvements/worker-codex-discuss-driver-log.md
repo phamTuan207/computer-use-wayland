@@ -1,6 +1,6 @@
 # Worker CLICK3-CODEX-DISCUSS driver log
 
-Worker: CLICK3-CODEX-DISCUSS, driver for COORD-CLICK-3. Owner: Pham Tuan.
+Worker: CLICK3-CODEX-DISCUSS, driver for COORD-CLICK-3. Owner: the owner.
 Task: drive Codex (Luna 6 Max) on the laptop via SSH, collect its discussion position on the breakthrough direction, save as improvements/codex-discussion-position.md, commit only that file plus this log on todolist-push.
 
 Standing rules recorded here per owner orders:

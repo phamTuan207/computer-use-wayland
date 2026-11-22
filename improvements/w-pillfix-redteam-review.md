@@ -1,6 +1,6 @@
 # W-PILLFIX redteam review: fix pill commit 8f600b9
 
-Lane redteam doc lap cua COORD-CLICK-9 phase live. Bao cao cho COORD-CLICK-9, khong nhan truc tiep cho Pham Tuan. Moi gio ghi theo Asia/Ho_Chi_Minh. Khong dung dau gach ngang dai. Khong ydotool. Khong thong tin ca nhan len GitHub. Khong tu cham diem. Log lien tuc voi thoi gian (wall-clock + elapsed). Chuan Lauren Tan: lenh chay + output + commit hash + log thoi gian.
+Lane redteam doc lap cua COORD-CLICK-9 phase live. Bao cao cho COORD-CLICK-9, khong nhan truc tiep cho the owner. Moi gio ghi theo Asia/Ho_Chi_Minh. Khong dung dau gach ngang dai. Khong ydotool. Khong thong tin ca nhan len GitHub. Khong tu cham diem. Log lien tuc voi thoi gian (wall-clock + elapsed). Chuan Lauren Tan: lenh chay + output + commit hash + log thoi gian.
 
 Pham vi: chi TAN CONG + REVIEW commit 8f600b9 (`W-PILLFIX: restore standalone pill spawn, fail-closed status and acquire`, tren todolist-push). Khong sua code, khong viet log thay W-PILLFIX. Lam viec tren VM; laptop chi doc qua ssh-laptop.sh, khong sua gi tren laptop.
 

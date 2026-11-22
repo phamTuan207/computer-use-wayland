@@ -7,7 +7,7 @@ test-06-file-converter
 Universal file converter UI: file selection, target format configuration, compression and metadata settings, queue management, invalid file error handling and removal, batch conversion execution, output downloads, and session persistence.
 
 ## Context
-Pham Tuan needs to convert multi-format assets for a web application deployment.
+the owner needs to convert multi-format assets for a web application deployment.
 The workstation runs an offline browser converter tool (fixtures/test-06-file-converter.html).
 The user must select "sample-data.csv" and convert to JSON format, select "photo.png" and convert to WEBP format, configure compression quality to "High", enable metadata preservation, handle an accidentally queued corrupted binary file ("corrupted.bin") by removing it from the queue, execute the batch conversion, download both converted outputs, and save the session.
 

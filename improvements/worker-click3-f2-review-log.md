@@ -1,6 +1,6 @@
 # Worker CLICK3-F2: final council reviewer 2 position for the FINAL DECISION round
 
-Owner: Pham Tuan. Role: independent final council reviewer 2. I did not
+Owner: the owner. Role: independent final council reviewer 2. I did not
 coordinate with any other final participant in this round, I question
 everything, including the adjudication draft. Decision criterion (owner
 standing rule 06:07): the final result must be the MOST ACCURATE and the

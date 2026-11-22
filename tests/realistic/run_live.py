@@ -1646,7 +1646,7 @@ def run_f08(r, d):
     # BLOCKED: the form has no validation logic; submit does nothing.
     url = r.base + "/fcc-k/test-08-form.html"
     r.step("open fixture", "goto", lambda: d.new_tab(url))
-    r.step("type name", "type", lambda: d.type_text("#fullName", "Pham Tuan"))
+    r.step("type name", "type", lambda: d.type_text("#fullName", "the owner"))
     r.step("type short password", "type", lambda: d.type_text("#pw", "abcd"))
     r.step("type mismatched confirm", "type", lambda: d.type_text("#pw2", "wxyz"))
     r.step("submit (expect errors)", "click", lambda: d.click("#submit"))
@@ -1658,7 +1658,7 @@ def run_f08(r, d):
                     lambda: d.visible("#ok"))
     r.check("no success shown either", ok_vis is False, str(ok_vis))
     r.step("fill valid values", "eval",
-           lambda: d.eval("document.querySelector('#email').value='pham@example.com';"
+           lambda: d.eval("document.querySelector('#email').value='user@example.com';"
                           "document.querySelector('#pw').value='longenough1';"
                           "document.querySelector('#pw2').value='longenough1';"))
     r.step("submit valid", "click", lambda: d.click("#submit"))

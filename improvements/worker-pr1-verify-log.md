@@ -36,7 +36,7 @@
 ## 01:03 +07 (T+~150s) hygiene checks (23 staged files)
 - Em/en dashes (U+2014/U+2013): 0 hits. Clean.
 - ydotool: 3 hits, all rule text in coord/clone2.md ("Khong dung ydotool", "khong ydotool"), zero usage. Clean.
-- Personal info: 0 hits for full name (Pham Tuan Huy / Pham Tuan Huy), email phamtuanhuy1109, address Vinh Hung / 339, phone patterns, gmail.com. Clean. ("Pham Tuan" appears once in coord/clone2.md as the owner-voice "Toi la Pham Tuan", the standing handoff practice already on main, not a new exposure.)
+- Personal info: 0 hits for full name (the owner / the owner), email [email redacted], address [redacted], phone patterns, gmail.com. Clean. ("the owner" appears once in coord/clone2.md as the owner-voice "Toi la the owner", the standing handoff practice already on main, not a new exposure.)
 - Conflict markers in merged tree: 0. Merged coord/clone2.md contains both sides: "Batch 5 HOAN THANH" x1, "Batch 6 - kiem tra 2 bug" x1.
 - Destructive-pattern scan in new .py files: only hit is shutil.rmtree(self.ws) in tests/realistic_clone2/common.py, the test-workspace cleanup of a temp dir the test itself created. Benign. Imports are stdlib only (argparse, json, subprocess, tempfile, etc.).
 - Docs honesty spot-check: speed doc marks items "unverified by clone2", notes headless VM / Firefox stand-in; AT-SPI doc states headless VM limits (no pyatspi, no gi, no session bus). Limits stated, not hidden.

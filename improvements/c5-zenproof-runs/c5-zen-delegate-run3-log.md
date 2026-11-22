@@ -1,9 +1,9 @@
 # W-ZT-B: Zen pointer delegate live proof, run 3 (blind run, NEW)
 
-Owner: Pham Tuan. Coordinator: COORD-CLICK-10. Worker: W-ZT-B.
+Owner: the owner. Coordinator: COORD-CLICK-10. Worker: W-ZT-B.
 Repo ~/workspace/computer-use-wayland, branch todolist-push.
 No em dash or en dash anywhere in this file. No personal info.
-Report goes to COORD-CLICK-10, not directly to Pham Tuan.
+Report goes to COORD-CLICK-10, not directly to the owner.
 
 ## 0. Task receipt and sources read (before any live touch)
 
@@ -36,8 +36,7 @@ Report goes to COORD-CLICK-10, not directly to Pham Tuan.
     pre-checks: pill OFF, holders {}, daemon idle-exited after
     the 21:21 cleanup; first acquire in ZT-B must restart it;
     if the pill does not appear on acquire, STOP).
-- Hard rules restated: never close or navigate any tab of Pham
-  Tuan; do NOT reopen the Muse chat tab closed in run 2
+- Hard rules restated: never close or navigate any tab of the owner; do NOT reopen the Muse chat tab closed in run 2
   (https://muse.ai/thread/750c8dae-58fb-4a65-82ac-753e78d6ce93);
   pill must show on any agent control (gate 4.29); on a 'not
   made current' refusal, STOP at once, no retry open in a loop,

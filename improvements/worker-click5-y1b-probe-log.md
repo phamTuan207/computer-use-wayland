@@ -1,6 +1,6 @@
 # Worker C5-Y1B-PROBE log: rewrite Y1b probes 10b/10f + 1e/4a (Gate G-Y1B)
 
-Owner: Pham Tuan. Branch: todolist-push. Parent: COORD-CLICK-5.
+Owner: the owner. Branch: todolist-push. Parent: COORD-CLICK-5.
 Task: todolist 4.19 (Y1b snippets, J13). Phase A BLOCK still stands.
 Probes 10b/10f + 1e/4a must be rewritten BEFORE Phase B is considered.
 

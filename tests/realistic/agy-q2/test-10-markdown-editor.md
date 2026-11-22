@@ -7,7 +7,7 @@ test-10-markdown-editor
 Markdown preview editor: dual-pane editing and live HTML preview, document renaming, markdown syntax formatting, accidental text entry and deletion, word counting, HTML export, and document saving.
 
 ## Context
-Pham Tuan is drafting technical release documentation for version 2.3.0.
+the owner is drafting technical release documentation for version 2.3.0.
 The workstation runs an offline markdown editor (fixtures/test-10-markdown-editor.html).
 The user must rename the document to "Release Notes v2.3.0", compose structured markdown featuring an H1 title ("# Architecture Overview"), an H2 subheading ("## Core Changes"), a bulleted list with two verified entries, handle and remove an accidental entry ("- Broken experimental feature (deprecated)"), add a strong emphasis note ("**Zero regressions** observed in test suite."), verify real-time preview DOM rendering, trigger HTML export, and save the document.
 

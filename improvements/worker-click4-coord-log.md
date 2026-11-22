@@ -48,7 +48,7 @@ standard: test command, output, commit hash, time log with every claim.
 
 - Assigned via coord/clone2.md on main, commit 495cfc6, ls-remote verified
   (495cfc677c053d39f55da1195b9a747bdd1b9d4e). Owner-voice handoff (first
-  person as Pham Tuan). 3 tasks, each council 3 + redteam + fix pass:
+  person as the owner). 3 tasks, each council 3 + redteam + fix pass:
   (1) repair the 5 defective RT2 proof tests (F2, F3, F4, F5-behavior, F6)
   per clone2's own DOT 9 task 1 report, failing-first, editing test files
   explicitly authorized (B5 lift limb (ii)); (2) close the 11 live-run

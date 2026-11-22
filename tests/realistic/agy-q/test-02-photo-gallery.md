@@ -7,7 +7,7 @@ test-02-photo-gallery
 Photo gallery: organize photos into albums, tag management, compound tag search, and metadata export.
 
 ## Context
-Pham Tuan needs to organize and tag visual assets from the Tokyo 2026 tech summit.
+the owner needs to organize and tag visual assets from the Tokyo 2026 tech summit.
 The offline photo organizer (`fixtures/test-02-photo-gallery.html`) contains a catalog of 12 photo
 cards with location metadata and tags. The user must create an album named "Tokyo Architecture",
 filter the gallery for Tokyo landmarks, add three specific photos to the album, open a photo detail

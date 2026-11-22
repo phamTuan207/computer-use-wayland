@@ -1,6 +1,6 @@
 # W-A1PREP2 log: prepare A1 pilot resume order, round 2 (prep only, no issue)
 
-- Owner: Pham Tuan. Worker: W-A1PREP2, for COORD-CLICK-11 (live sequence step 3).
+- Owner: the owner. Worker: W-A1PREP2, for COORD-CLICK-11 (live sequence step 3).
 - Task received: 21:47:10 +07, 22/11/2026. Task: PREPARE the resume order only.
   W-A1PREP2 does NOT issue the resume order (only Muse tong issues it).
   W-A1PREP2 does NOT write any H3 record (only Muse tong writes it).
@@ -8,7 +8,7 @@
   Machine handed over (owner treo may 19:10, not at machine), machine quiet,
   single lane. Idle signals ignored throughout.
 - Rules acknowledged: 18:23 (never close or navigate any tab or window
-  Pham Tuan opened; open a new tab beside it if a browser is needed);
+  the owner opened; open a new tab beside it if a browser is needed);
   18:30 (pill must show when any agent drives the machine; the re-probe
   runs inside real computer-use sessions whose guardian creates the pill
   and fails the session outright when the pill cannot appear, so all
@@ -414,7 +414,7 @@
   HEAD 8b0b32d is neither. The relay head 4eb5917 is stale against
   all three.
 - No live pilot arm was run, no relay restart, no laptop sync, no
-  file changed on the laptop, no tab or window of Pham Tuan was
+  file changed on the laptop, no tab or window of the owner was
   closed or navigated, no workspace change made by me except the
   driver focus step (harness setup, Chromium window only).
   All laptop commands except the re-probe driver were read-only

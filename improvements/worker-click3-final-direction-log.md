@@ -1,6 +1,6 @@
 # Worker CLICK3-FINALIZER: FINAL direction for computer-use-wayland
 
-Owner: Pham Tuan. Role: final adjudicator (Worker CLICK3-FINALIZER). This is
+Owner: the owner. Role: final adjudicator (Worker CLICK3-FINALIZER). This is
 the FINAL direction, not a draft and not a set of options. One direction:
 what to build, in what order, what the acceptance test is, and what stops.
 The coordinator executes it from the plan in section 6. I do not execute

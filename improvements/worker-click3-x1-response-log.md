@@ -1,6 +1,6 @@
 # Worker CLICK3-X1: D1 cross-response to D2, D3, and RTD
 
-Owner: Pham Tuan. Role: I hold the D1 reviewer position from its log
+Owner: the owner. Role: I hold the D1 reviewer position from its log
 (improvements/worker-click3-d1-review-log.md, commit 37f457e, 538 lines).
 The original D1 reviewer completed and cannot receive follow-ups, so I
 answer the other three reviews from D1's position, with D1's verdicts as

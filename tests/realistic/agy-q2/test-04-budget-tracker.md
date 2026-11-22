@@ -7,7 +7,7 @@ test-04-budget-tracker
 Monthly budget and expense tracker: budget limit adjustment, expense logging, category filtering, delete mistake, and running total balance calculation.
 
 ## Context
-Pham Tuan needs to update monthly team project expenditures and ensure operational costs remain within limits.
+the owner needs to update monthly team project expenditures and ensure operational costs remain within limits.
 The workstation runs an offline browser manager (fixtures/test-04-budget-tracker.html).
 There are 4 existing expenses totaling $1475.50 against an initial budget of $2500.00.
 The user must increase the budget limit to $3000.00, log two legitimate expenses ("Cloud Server Hosting" for $85.00

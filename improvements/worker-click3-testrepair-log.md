@@ -1,7 +1,7 @@
 # CLICK3-TESTREPAIR log: repair limb for the AMEND4 round-3 review
 
 Worker: CLICK3-TESTREPAIR (independent repair worker). Coordinator:
-COORD-CLICK-3. Owner: Pham Tuan (repo-facing name). Branch:
+COORD-CLICK-3. Owner: the owner (repo-facing name). Branch:
 todolist-push. Worktree: /tmp/testrepair-head, clean, pinned HEAD
 5dcf2b3 (DOMZEN-FIX). All times Asia/Ho_Chi_Minh wall clock plus
 elapsed from task receipt (07:47). Standing rules: full access, no em

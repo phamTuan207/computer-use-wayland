@@ -1,6 +1,6 @@
 # Worker PROBE-S1 log: SPEED Step 1 feasibility probe (act-now over the persistent relay broker)
 
-- Worker: PROBE-S1, for COORD-CLICK-3. Owner: Pham Tuan.
+- Worker: PROBE-S1, for COORD-CLICK-3. Owner: the owner.
 - Branch: todolist-push. VM HEAD at probe start: 49081aa. Laptop HEAD: 56f5af4e521e1c20b26b56dc31d662e34f1c2668 (broker started_git_head, same).
 - Branch note: the VM branch moved during the probe (HEAD 49081aa at start, 48c6aee at commit time after another worker rewrote the branch). This log commits on 48c6aee. The probe ran against the laptop checkout, which is unaffected by the VM branch move.
 - Task: prove one live batch over the broker FROM THE VM before deleting the per-batch spawn (S1 proof-first, adjudication draft 9d23834). Batch: observe + one click + one type, on a scratch target, never a real chat thread.

@@ -1,6 +1,6 @@
 # Worker Y1B-RPC-LAND log: land the RPC rework of code_exec.py
 
-Owner: Pham Tuan. Branch: todolist-push. Parent: COORD-CLICK-3.
+Owner: the owner. Branch: todolist-push. Parent: COORD-CLICK-3.
 Task: land the uncommitted socketpair RPC rework of scripts/code_exec.py
 (_fork_api_session, _ApiChannel) plus the Y1B-FIX log, one commit,
 message from /tmp/y1b-rpc-commit-msg.txt verbatim.

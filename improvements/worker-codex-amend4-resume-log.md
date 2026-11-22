@@ -1,6 +1,6 @@
 # CODEX-AMEND4-RESUME log
 
-Worker: CODEX-AMEND4-RESUME. Owner: Pham Tuan. Parent: COORD-CLICK-3.
+Worker: CODEX-AMEND4-RESUME. Owner: the owner. Parent: COORD-CLICK-3.
 Start: 2026-11-22 07:26:05 +07 (Asia/Ho_Chi_Minh). Task: resume Codex thread 01a20054-e53a-77c3-a0f1-383a3b6f409f with item-12 follow-up on laptop worktree /home/james/workspace/cu-amend4-codex, branch amend4-codex.
 Rules: no em dash or en dash anywhere; explicit pathspec commits only; never force-push; never touch main laptop checkout; never touch owner tabs or browsers.
 

@@ -3,7 +3,7 @@
 Reviewer: Council 2, independent (not W-ZENPROOF2-FIX, not
 W-ZENPROOF2, not COORD-CLICK-9). Report goes to Muse tong.
 No fix modified, no live proof re-run, no tab opened,
-navigated, or deleted in Pham Tuan's Zen. All verification is
+navigated, or deleted in the owner's Zen. All verification is
 code/unit level only, plus two read-only probes in /tmp.
 No em dash or en dash anywhere in this file. No personal info.
 

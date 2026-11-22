@@ -1,6 +1,6 @@
 # Worker CLICK3: last30days skill path unification (laptop)
 
-- Worker: CLICK3-SKILL-PATH, owner Pham Tuan
+- Worker: CLICK3-SKILL-PATH, owner the owner
 - Start: 2026-11-22 04:33 +07. Symlink live: 04:36 +07. Log written: 04:37 +07.
 - Decision implemented: canonical last30days copy on the laptop is ~/.agents/skills/last30days/ (standard agent skills dir, dated 02:14, 197 files). The workspace copy at /home/james/workspace/custom-skills/last30days/ is now a symlink to it, so the two copies cannot drift.
 

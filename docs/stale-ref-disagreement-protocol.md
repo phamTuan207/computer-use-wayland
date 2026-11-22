@@ -1,6 +1,6 @@
 # Stale-Ref Disagreement Protocol (P2, B5 lift limb (i))
 
-Owner: Pham Tuan. Status: SPECIFICATION, step 7 preparation (COORD-CLICK-5,
+Owner: the owner. Status: SPECIFICATION, step 7 preparation (COORD-CLICK-5,
 worker C5-P2-SPEC). This document specifies B5 lift limb (i) in full: what
 happens when a live rect re-read at execution disagrees with the plan.
 It extends the step 2 contract (docs/layer0-cbexec-contract.md, commit

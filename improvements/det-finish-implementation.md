@@ -1,6 +1,6 @@
 # Deterministic finish: implementation report (Track 2, 19/11)
 
-- Owner: Pham Tuan. Worker: Luna 6 Max (implementation).
+- Owner: the owner. Worker: Luna 6 Max (implementation).
 - Branch: `det-finish`, from `origin/speed-swarm` 8727135 (DOM-first interim commit).
 - Worktree (19:45 coordinator order, shared main checkout churning):
   `/home/james/computer-use-wayland-detfinish`, branch `det-finish`, HEAD
@@ -184,7 +184,7 @@ evidence (task_outcome BLOCKED, reason recorded).
 
 ## Bai hoc
 
-(Danh cho Pham Tuan, viet bang tieng Viet don gian.)
+(Danh cho the owner, viet bang tieng Viet don gian.)
 
 - Doan nghi sau verify la doan de cat nhat vi ket qua da co trong tay roi.
   Bai hoc: cai gi da biet chac thi finish ngay bang script, viet bao cao

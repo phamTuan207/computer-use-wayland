@@ -7,7 +7,7 @@ test-03-rss-reader
 RSS and news reader: subscribe to new feed, category filing, mark read/unread toggles, star/save articles, and export starred reading list.
 
 ## Context
-Pham Tuan manages engineering newsletters and feed aggregations inside an offline desktop
+the owner manages engineering newsletters and feed aggregations inside an offline desktop
 reader fixture (`fixtures/test-03-rss-reader.html`). The reader initially contains two subscriptions
 ("Linux Weekly" and "Rust Digest") totaling 6 unread articles. The user needs to add a new custom feed
 ("Wayland Gazette" under category "Display Servers"), read and triage incoming dispatches, star an

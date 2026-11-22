@@ -1,6 +1,6 @@
 # W-F4FIX log: close F4 of the A1 pilot (adapter fix + CB-2 template + re-probe)
 
-- Owner: Pham Tuan. Worker: W-F4FIX, for COORD-CLICK-6.
+- Owner: the owner. Worker: W-F4FIX, for COORD-CLICK-6.
 - Branch: todolist-push. Repo: ~/workspace/computer-use-wayland.
 - Task received: 18:36:16 +07, 22/11/2026. Decision of COORD-CLICK-6: FIX
   THE ADAPTER, do not amend the runbook retry model. Frozen design
@@ -13,11 +13,11 @@
   commit hash, and wall-clock time (Asia/Ho_Chi_Minh) with elapsed time.
   No self-grading pass; independent verification owed.
 - Hard rules acknowledged in this session, 18:36 +07 22/11/2026:
-  (a) 18:23: NEVER close or navigate any tab/window Pham Tuan opened.
+  (a) 18:23: NEVER close or navigate any tab/window the owner opened.
   Re-probe opens ONLY a NEW tab beside, never navigates an existing
   tab; at the end close ONLY the tab I opened, by its exact tab id;
   NEVER restart Chromium; never touch Zen/Brave/mochi tab/any tab of
-  Pham Tuan. No reckless /json/close.
+  the owner. No reckless /json/close.
   (b) 18:30: the pill MUST show on any live control. Before any live
   re-probe, verify the probe path (one-shot session of the driver)
   shows the pill; if it does not, do NOT run live, finish parts 1

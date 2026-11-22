@@ -1,6 +1,6 @@
 # AMEND4 CLOSE-OUT VERIFICATION LOG (Worker CLOSEOUT-VERIFY)
 
-Owner: Pham Tuan. Parent: COORD-CLICK-3. Branch: todolist-push.
+Owner: the owner. Parent: COORD-CLICK-3. Branch: todolist-push.
 Work window: 2026-11-22 06:59-07:30 Asia/Ho_Chi_Minh. All times below are Asia/Ho_Chi_Minh unless noted.
 Rules honored: evidence with every claim (command + output + commit hash + time log);
 explicit pathspec commits only, never plain `git commit`, never `git add -A`;

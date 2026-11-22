@@ -2,7 +2,7 @@
 
 Reviewer: Council 3, independent (not W-PILLFIX-AMEND2, not
 W-PILLFIX-AMEND, not COORD-CLICK-9). Report goes to Muse tong, not
-directly to Pham Tuan. No amend modified, no live proof run, no
+directly to the owner. No amend modified, no live proof run, no
 holder released, no reviewer spawned. All verification below is my
 own: targeted suites re-run, baseline worktrees built and removed,
 caller audit by grep, laptop state read-only via ssh-laptop.sh.

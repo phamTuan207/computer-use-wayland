@@ -4,7 +4,7 @@ Worker doc lap W-PILLFIX-AMEND2 (khong phai W-PILLFIX-AMEND, khong
 phai COORD-CLICK-9). Nhiem vu tu Muse tong: dong cac dieu kien review
 cua amend 1 (5a272ae + a355002, 4 review deu GO WITH CONDITIONS).
 Khong chay live proof, khong dong/mo/navigate tab nao trong Zen cua
-Pham Tuan, khong tu spawn reviewer. Moi gio Asia/Ho_Chi_Minh. Khong
+the owner, khong tu spawn reviewer. Moi gio Asia/Ho_Chi_Minh. Khong
 dau gach ngang dai. Khong ydotool. Khong thong tin ca nhan. Chuan
 Lauren Tan: lenh chay + output + commit hash + log thoi gian.
 

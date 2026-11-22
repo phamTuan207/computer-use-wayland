@@ -1,6 +1,6 @@
 # Worker C4-S2-FLIP log: S2 one-class flip (CU_CODE_EXEC=1) for clone chat sends
 
-Owner: Pham Tuan. Coordinator: COORD-CLICK-4. Step 6 of the FINAL
+Owner: the owner. Coordinator: COORD-CLICK-4. Step 6 of the FINAL
 direction (improvements/worker-click3-final-direction-log.md, sections
 1.3 S2 row, 2 item (e), 3 step 6, 6 workers 8-9, 4 rung 2 conditions).
 Repo ~/workspace/computer-use-wayland, branch todolist-push.

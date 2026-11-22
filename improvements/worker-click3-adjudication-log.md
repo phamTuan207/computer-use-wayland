@@ -1,6 +1,6 @@
 # Worker CLICK3-ADJ: JOINT adjudication DRAFT of the breakthrough discussion
 
-Owner: Pham Tuan. Role: joint adjudicator (Worker CLICK3-ADJ). I judge from
+Owner: the owner. Role: joint adjudicator (Worker CLICK3-ADJ). I judge from
 the evidence in the logs, not from any one reviewer's verdicts. This is a
 DRAFT, not the final joint adjudication. See section 7 for what happens next.
 

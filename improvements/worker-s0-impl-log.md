@@ -1,6 +1,6 @@
 # Worker S0-IMPL log: SPEED Step 0 (persistent SSH multiplexing) + step-0 measurement bundle
 
-Owner: Pham Tuan. Branch: todolist-push. Worker: S0-IMPL, for COORD-CLICK-3.
+Owner: the owner. Branch: todolist-push. Worker: S0-IMPL, for COORD-CLICK-3.
 Started: 2026-11-22 07:02 +07 (Asia/Ho_Chi_Minh). All times wall-clock +07 unless noted.
 Method: implement, then measure live. No em dash or en dash anywhere in this log or in any file touched.
 

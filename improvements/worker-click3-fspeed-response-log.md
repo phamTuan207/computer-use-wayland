@@ -1,6 +1,6 @@
 # Worker CLICK3-FSPEED log: SPEED position response to the joint adjudication DRAFT
 
-Owner: Pham Tuan. Role: final discussion participant holding the SPEED-REVIEW
+Owner: the owner. Role: final discussion participant holding the SPEED-REVIEW
 position. The original SPEED-REVIEW worker completed and cannot receive
 follow-ups, so I hold its position from its log:
 improvements/worker-speed-review-log.md, commit a4ecb49 (212 lines).

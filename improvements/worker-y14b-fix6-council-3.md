@@ -2,7 +2,7 @@
 
 Reviewer: Council 3 (voice 3, independent). Scope: ONLY the fix-pass-6
 diff, commit d552f4d (parent 0b88ed3), branch todolist-push.
-Repo: ~/workspace/computer-use-wayland. Owner: Pham Tuan.
+Repo: ~/workspace/computer-use-wayland. Owner: the owner.
 
 ## Verdict: AMEND
 

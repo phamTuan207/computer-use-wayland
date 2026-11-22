@@ -1,7 +1,7 @@
 # Track 2 rerun plan: Pick 1 fix + rerun, Pick 2 solo rerun, Masking measurement
 
 - Date: 2026-11-19 (after Pick 4 arm2 finished 02:35 +07)
-- Owner: Pham Tuan. Status: PROVISIONAL (non-Astra, Astra 6 out of credit).
+- Owner: the owner. Status: PROVISIONAL (non-Astra, Astra 6 out of credit).
 - Precondition met: Pick 4 arm2 finished, broker free (state finished, driver stopped, cancelled false). No executor running.
 
 ## First-round results (why a rerun is needed)
@@ -28,7 +28,7 @@ Time estimate (not a commitment): Phase A about 1-2 hours, Phase B about 1 hour,
 
 Root cause (confirmed): scripts/code_exec.py MAX_TRACE_STEPS = 20000 (line 77). The trace counts every Python line executed, including inside the observe() and act() API implementations, so one observe() burns thousands of steps. The docstring (line 50) says the budget is "20000 executed lines". The error is raised at line 323. The Codex sandbox is NOT the issue (Codex is already danger-full-access, verified in ps). Do NOT change the Codex sandbox.
 
-Fix direction (Pham Tuan, 19/11): stop counting API-implementation lines. Two implementation options; the fix worker picks the cleaner one given the code:
+Fix direction (the owner, 19/11): stop counting API-implementation lines. Two implementation options; the fix worker picks the cleaner one given the code:
 - (a) Clear or reset the trace counter around API calls in _api (in CodeExecSession, when an API function is invoked, save and reset the step counter, then restore it after, so only the program's own lines count).
 - (b) Filter the trace to the program's own file (in the trace function, only increment the counter when the executing frame's filename is the program file; skip frames in the API implementation and stdlib).
 - Fallback only if (a) and (b) are not feasible: raise MAX_TRACE_STEPS substantially (for example to 200000), since the wall-clock limit (60s) and the API-call limit (32) already bound runaway execution. The fix worker must measure per-call step counts first to pick a principled value, not guess.
@@ -101,8 +101,8 @@ Merge (coordinator, after Phase A): fast-forward or merge speed-swarm-pick1fix i
 - Timing always on: every test timed precisely, logged with wall-clock timestamps (Asia/Ho_Chi_Minh) in improvements/live-test-log.md.
 - SSH only via ~/workspace/ssh-laptop.sh. SSH dies about 30s, launch laptop jobs detached (nohup ... > log 2>&1 < /dev/null &) and check with short calls. Never use sudo.
 - Kill a stuck subagent immediately without asking, and report it.
-- In repo/handoff text call him Pham Tuan (or Huy), never "dang".
+- In repo/handoff text call him the owner, never "dang".
 - Astra 6 is OUT of credit (blocked). Use Luna 6 Max (Codex). Mark verdicts as PROVISIONAL (non-Astra).
 - A dedicated watchdog is already running (polls every 5 min). Do not spawn another.
 - Do NOT message the user directly. Report back to the coordinator.
-- Pham Tuan's 5 standing orders apply: (1) keep working, do not stop, push through blockers, find workarounds; (2) continue what is unfinished; (3) keep optimizing to reduce think time; (4) cut whatever step can be cut; (5) learn from predecessors' docs and repos (improvements/speed-prior-art.md), do not reinvent. Safety limits hold: never bypass a rate limit or account lock, never break his machine or touch his personal data.
+- the owner's 5 standing orders apply: (1) keep working, do not stop, push through blockers, find workarounds; (2) continue what is unfinished; (3) keep optimizing to reduce think time; (4) cut whatever step can be cut; (5) learn from predecessors' docs and repos (improvements/speed-prior-art.md), do not reinvent. Safety limits hold: never bypass a rate limit or account lock, never break his machine or touch his personal data.

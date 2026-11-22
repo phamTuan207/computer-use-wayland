@@ -7,7 +7,7 @@ test-04-research-notes
 Research + note taking across 3+ sources.
 
 ## Context
-Pham Tuan is researching three competing services and needs to gather facts
+the owner is researching three competing services and needs to gather facts
 from 3 local source pages (offline HTML fixtures) into a single note. The
 agent opens each source page, reads specific facts (price, tier, support
 channel), copies them into a notes page, adds a source URL for each fact, then

@@ -1,6 +1,6 @@
 # Worker Y1B-FIX log: fix the 3 Y1b real fails (1e, 2a, 2b)
 
-Owner: Pham Tuan. Branch: todolist-push. Step 1 of the FINAL DIRECTION
+Owner: the owner. Branch: todolist-push. Step 1 of the FINAL DIRECTION
 (commit e05fc58). Verdict: council 3, commit 9d9bd63, OVERALL Phase A
 BLOCK on 84b88bb, 14/20 PASS, 3 real fails (1e, 2a, 2b), all in
 code_exec/codemode. PROBE-S2 (f1952a5) re-confirmed at this HEAD: "chr"

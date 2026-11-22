@@ -666,7 +666,7 @@ def run_f08(r, d):
     r.step("open fixture", "goto", lambda: d.new_tab(url))
     vis = r.step("check body visible", "eval", lambda: body_visible(d))
     r.check("body renders visible", vis == "visible", vis)
-    r.step("type full name", "type", lambda: d.type_text("#fullName", "Pham Tuan"))
+    r.step("type full name", "type", lambda: d.type_text("#fullName", "the owner"))
     r.step("type short password", "type", lambda: d.type_text("#pw", "abcd"))
     r.step("type mismatched confirm", "type", lambda: d.type_text("#pw2", "wxyz"))
     r.step("click Submit (first)", "click", lambda: d.click("#submit"))
@@ -680,7 +680,7 @@ def run_f08(r, d):
     r.check("error: passwords do not match", "Passwords do not match" in errs1,
             errs1)
     r.step("fix Email", "type",
-           lambda: d.type_text("#email", "pham@example.com"))
+           lambda: d.type_text("#email", "user@example.com"))
     r.step("fix Password to 12 chars", "type",
            lambda: d.type_text("#pw", "password1234"))
     r.step("fix Confirm to match", "type",
@@ -700,8 +700,8 @@ def run_f08(r, d):
                                  "pwLen: document.querySelector('#pw').value.length,"
                                  "match: document.querySelector('#pw').value === document.querySelector('#pw2').value}"))
     r.details["finalValues"] = vals
-    r.check("final name filled", vals["name"] == "Pham Tuan", str(vals))
-    r.check("final email valid", vals["email"] == "pham@example.com", str(vals))
+    r.check("final name filled", vals["name"] == "the owner", str(vals))
+    r.check("final email valid", vals["email"] == "user@example.com", str(vals))
     r.check("final password >= 8 chars", vals["pwLen"] >= 8, str(vals))
     r.check("final passwords match", vals["match"] is True, str(vals))
 

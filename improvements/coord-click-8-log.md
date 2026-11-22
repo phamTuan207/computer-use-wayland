@@ -15,7 +15,7 @@
 2. Hoi mei ve viec 2 NEEDS CHANGE qua coord/mei.md, commit 725485d tren main (ls-remote verify): moi finding mot dong, em dong y hay khong, khi quay lai se doi cu the cai gi (rieng F2 gate pill + probe nao qua session co pill, probe nao van dung; rieng F3 luat 18:23 + scratch tab xu ly ra sao). Neu khong dong y finding nao thi ghi ro cai nao va vi sao. Khong chay live viec 2. Viec 3 van uu tien, tra loi khong duoc lam cham viec 3. Se bao Muse tong khi mei tra loi.
 
 ## Dang giu (chua giao)
-- W-ZENPROOF2 (live proof Zen delegate): doi mei/mochi idle + cua so yen tinh; R13 van mo. Khong chay khi Pham Tuan dang dung may.
+- W-ZENPROOF2 (live proof Zen delegate): doi mei/mochi idle + cua so yen tinh; R13 van mo. Khong chay khi the owner dang dung may.
 - ZT-B: sau W-ZENPROOF2, khong chay song song hai live run tren cung Zen.
 - G-PILL retry: doi slot live.
 - Rung 3: doi danh sach cua mei (viec 3, UU TIEN).
@@ -25,7 +25,7 @@
 
 ## Luat ap cho moi worker (nhac lai trong moi brief)
 - 19:03 team tu lam voi nhau, tu hop council 3 + redteam, tu tha crawler last30days khi can research, token khong quan trong, lam tot nhat co the; moi viec theo workflow Lauren Tan (lenh + output + commit hash + log thoi gian); commit NHO, chia nho, commit cang nhieu cang tot; log chay LIEN TUC de do; chi goi ong chu khi viec bat buoc chi ong moi lam duoc ve mat co hoc/vat ly.
-- 18:23 khong bao gio dong hay navigate tab/cua so trinh duyet cua Pham Tuan, can thi mo tab/cua so moi ben canh.
+- 18:23 khong bao gio dong hay navigate tab/cua so trinh duyet cua the owner, can thi mo tab/cua so moi ben canh.
 - 18:30 pill PHAI hien khi agent dieu khien may, CDP write qua pill gate d0602dd, CDP tho khong pill bi tu choi.
 - Git: CHI `git add -- <pathspec>` roi `git commit -m` (khong pathspec lam doi so). KHONG `git commit -- <paths>`, KHONG commit tran, KHONG `git add -A`, KHONG amend.
 - Khong dau gach ngang dai. Khong ydotool. Khong thong tin ca nhan len GitHub. Commit pathspec tuong minh, push xong verify ls-remote.

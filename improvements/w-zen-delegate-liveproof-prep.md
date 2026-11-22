@@ -1,13 +1,13 @@
 # W-ZENPREP: Zen pointer delegate live proof, preparation only
 
-Owner: Pham Tuan. Coordinator: COORD-CLICK-6. Worker: W-ZENPREP.
+Owner: the owner. Coordinator: COORD-CLICK-6. Worker: W-ZENPREP.
 Repo ~/workspace/computer-use-wayland, branch todolist-push, HEAD
 05140c1 at start (verified equal to origin/todolist-push, section 1).
 No em dash or en dash anywhere in this file. No personal info.
 
 ## Amendment 22/11/2026 (W-ZENPROOF2-AMEND): title premise corrected
 
-Run 2 of this proof (W-ZENPROOF2) closed Pham Tuan's Muse chat tab
+Run 2 of this proof (W-ZENPROOF2) closed the owner's Muse chat tab
 because the procedure and the driver identified the scratch tab by
 document.title ('Clone zen thread'), but the fixture title is the
 static 'Two-vision benchmark fixture': the fixture JS only sets the
@@ -40,10 +40,9 @@ This file prepares the live proof of the Zen pointer delegate
 (scripts/zen_pointer.py, commit 9ec713c). It contains the full
 step by step procedure, the scratch target specification, the
 verification checklist, and the risk register. It contains NO
-live run: no tab was opened, switched, or navigated in Pham
-Tuan's Zen, no focus was taken, no input was sent to the live
+live run: no tab was opened, switched, or navigated in the owner's Zen, no focus was taken, no input was sent to the live
 browser, and no SSH session to the laptop was opened in this
-task. Pham Tuan is using the machine and using Zen right now,
+task. the owner is using the machine and using Zen right now,
 so the live proof itself is deferred by design, not by accident.
 
 What the delegate is, in one paragraph: ZenPointerDelegate
@@ -428,17 +427,16 @@ Evidence, read from the code:
   program runs, a small driver switches the Marionette current
   tab to the scratch tab and verifies the current URL contains
   the fixture substring; after the program, the same driver
-  restores the current tab to Pham Tuan's original tab by URL
+  restores the current tab to the owner's original tab by URL
   and verifies the current URL equals the original URL. The switch is
   visible in Zen's UI (risk R3), and the restore is part of
   cleanup, not an afterthought.
 
 ## 5. Live proof procedure (phases 0 to 7)
 
-Run condition (updated 17:55 +07): Pham Tuan handed the machine
+Run condition (updated 17:55 +07): the owner handed the machine
 over at 17:55 and is not touching it. The original brief's ban on
-live runs is lifted by COORD-CLICK-6 for this run only. If Pham
-Tuan returns to the machine mid-run, STOP at once (cancel latch
+live runs is lifted by COORD-CLICK-6 for this run only. If the owner returns to the machine mid-run, STOP at once (cancel latch
 or Ctrl-C the driver), restore his tab, close the scratch tab,
 record the aborted run, and do not resume without a new go-ahead.
 All laptop work goes over SSH via ~/workspace/ssh-laptop.sh,
@@ -513,7 +511,7 @@ improvements/c5-step9-runs/c5-heldout-fixture.py).
   never run two live lanes at once (step 9 run 2 hit broker busy
   under contention).
 - P1.6: confirm the handover still holds: if anything in P1.1
-  to P1.5 shows Pham Tuan active on the machine (a changed
+  to P1.5 shows the owner active on the machine (a changed
   active window, a new tab, typing), ABORT and re-check with the
   coordinator.
 
@@ -768,7 +766,7 @@ Laptop as-found (phase 1):
 - [ ] P1.3: /tmp/geckodriver exists on the laptop.
 - [ ] P1.4: fixture sha on the laptop matches the manifest hash.
 - [ ] P1.5: no other session-driver and no other live lease.
-- [ ] P1.6: handover still holds (no sign of Pham Tuan active).
+- [ ] P1.6: handover still holds (no sign of the owner active).
 Scratch tab (phase 2):
 - [ ] P2.2: new tab opened and made current (tab count +1), navigated URL contains the fixture substring, H1 'Clone zen thread', readyState complete.
 - [ ] P2.3: #msg-input rect recorded.
@@ -798,9 +796,9 @@ Record (phase 7):
 - [ ] P7.1: section 10 written with the run JSON summary, P9 verdict, wall times, commit hashes.
 - [ ] P7.2: committed with an explicit pathspec, pushed, verified with git ls-remote.
 
-## 8. Risk register (running while Pham Tuan uses the machine)
+## 8. Risk register (running while the owner uses the machine)
 
-The run condition for this proof is the handover: Pham Tuan
+The run condition for this proof is the handover: the owner
 handed the machine over at 17:55 +07 and is not touching it.
 The risks below are written for the case where that condition
 breaks (he returns mid-run) and for the disturbances the run
@@ -808,14 +806,14 @@ causes even under a handover. The procedure aborts on any of
 them rather than pushing through.
 
 - R1 Focus steal. begin_batch focuses the Zen window through
-  hyprctl. If Pham Tuan is on another workspace or another
+  hyprctl. If the owner is on another workspace or another
   window when the program runs, the focus call yanks him to
   ws1 Zen. Mitigation: P1.1 and the P3.2/P4.1 same-call
   activewindow checks; abort unless Zen is already active.
   If he returns mid-run, stop at once (section 5 header).
 - R2 Real pointer clicks at screen points. The delegate moves
   the real pointer and clicks at the field center, and types
-  real keystrokes. If Pham Tuan moves the mouse, clicks, or
+  real keystrokes. If the owner moves the mouse, clicks, or
   types during the batch, input can land in his UI instead of
   the scratch field. The batch is short (program elapsed
   123-161ms on the CDP path; Zen is unmeasured), but the race
@@ -937,7 +935,7 @@ Prep evidence, all on the VM unless stated:
 
 ### 10.1 What changed after section 9 was written
 
-- 17:55 +07: Pham Tuan handed the machine over and stopped
+- 17:55 +07: the owner handed the machine over and stopped
   touching it. COORD-CLICK-6 lifted the original brief's ban on
   live runs for this task only and ordered the live proof to run
   per the section 5 procedure, with the standing condition: if
@@ -1057,7 +1055,7 @@ address, class, title, workspace name):
   abort at 18:02:53 and a direct activewindow read at
   18:03:11, both show the same address).
 - 0x56307e2771d0: zen, ws1, title "Chat - Muse - Zen
-  Browser" (Pham Tuan's Zen, on ws1 as expected, not active).
+  Browser" (the owner's Zen, on ws1 as expected, not active).
 
 Other live lanes, 18:03:40 +07: `ps aux | grep -E
 'session-driver|session_remote' | grep -v grep` shows NO
@@ -1082,8 +1080,7 @@ point.
   new names). Focusing the Zen window would switch the visible
   workspace from ws2 to ws1, away from two live agent lanes.
 - The procedure gate P1.1 exists for exactly this: never yank
-  focus while someone else works. The handover covers Pham
-  Tuan, not the mei and mochi lanes. Whether mochi's work is
+  focus while someone else works. The handover covers the owner, not the mei and mochi lanes. Whether mochi's work is
   CDP-driven (workspace switches harmless) or desktop-input
   driven (a focus switch redirects its clicks) was not verified,
   and verifying it would itself mean probing another lane's live
@@ -1164,7 +1161,7 @@ point.
 ### 10.12 Time log, continued
 
 - 17:58:40 +07, T+9m: prep file finished (877 lines, 0 em or
-  en dashes, owner named only as Pham Tuan throughout).
+  en dashes, owner named only as the owner throughout).
   Commit cb741fe 17:58:44 +07, pushed, verified with git
   ls-remote. Commit incident recorded in 10.2.
 - 18:00:02 +07, T+11m: failing-first RealSignatureTests, 1

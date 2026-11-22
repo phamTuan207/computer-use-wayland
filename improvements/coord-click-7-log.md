@@ -19,7 +19,7 @@
 2. W-A1PREP: CHUAN BI lenh resume A1 (chi chuan bi). Verify manifest F1 sha256 470df41818c2ad5637c9429f32cace50cad18568eb6d2a1069ca1a1107d21bc7 (chi hash + size). Verify lai relay tai HEAD hien tai theo quy trinh F3 (chi doc qua SSH). Neu relay khong khop HEAD thi ghi ro lenh can them, KHONG tu restart/sync. Doc draft order muc F1, viet lai dang DRAFT CHI CHO MUSE TONG. KHONG ban hanh lenh, KHONG viet H3, KHONG chay live arm. Log improvements/w-a1prep-log.md.
 
 ## Dang giu (chua giao)
-- W-ZENPROOF2 (live proof Zen delegate): doi mei/mochi idle + cua so yen tinh; R13 van mo (chua quyet dinh ve cua so chay). Khong chay khi Pham Tuan dang dung may.
+- W-ZENPROOF2 (live proof Zen delegate): doi mei/mochi idle + cua so yen tinh; R13 van mo (chua quyet dinh ve cua so chay). Khong chay khi the owner dang dung may.
 - ZT-B: sau W-ZENPROOF2, khong chay song song hai live run tren cung Zen.
 - G-PILL retry: doi slot live.
 - Rung 3: doi danh sach cua mei (viec 3, UU TIEN).
@@ -27,7 +27,7 @@
 - H3 record + lenh resume A1: cua RIENG Muse tong. Toi KHONG viet H3, KHONG ban hanh lenh resume. Chi chuan bi va bao cao.
 
 ## Luat ap cho moi worker (nhac lai trong moi brief)
-- 18:23 khong bao gio dong hay navigate tab/cua so trinh duyet cua Pham Tuan, can thi mo tab/cua so moi ben canh.
+- 18:23 khong bao gio dong hay navigate tab/cua so trinh duyet cua the owner, can thi mo tab/cua so moi ben canh.
 - 18:30 pill PHAI hien khi agent dieu khien may, CDP write qua pill gate d0602dd, CDP tho khong pill bi tu choi.
 - Git: CHI `git add -- <pathspec>` roi `git commit -m` (khong pathspec lam doi so). KHONG `git commit -- <paths>`, KHONG commit tran, KHONG `git add -A`, KHONG amend.
 - Khong dau gach ngang dai. Khong ydotool. Khong thong tin ca nhan len GitHub. Commit pathspec tuong minh, push xong verify ls-remote.
@@ -41,7 +41,7 @@
 - Lenh resume phai bao gom quy trinh F3 o luc resume (fetch + pull ff-only ca VM va laptop toi H2, restart relay, verify flag + started_git_head = H2 + state idle) roi moi ban hanh run 1. W-A1PREP khong ban hanh lenh, khong viet H3, khong chay live arm, khong restart relay, khong sync.
 - W-SOAKRESTART van dang chay.
 
-## LENH MOI 19:03 22/11 tu Pham Tuan, truyen xuong toan bo team
+## LENH MOI 19:03 22/11 tu the owner, truyen xuong toan bo team
 - Noi dung: ca team tu lam viec voi nhau, khong can cho ong; tu hop council + redteam, tu tha dan crawler dung repo last30days crawl data real-time, research; token/compute khong quan trong, lam tot nhat co the. Moi viec theo workflow Lauren Tan (bang chung: lenh chay + output + commit hash + log thoi gian). Commit NHO, chia nho, commit cang nhieu cang tot, PR day du. Chi goi ong khi viec BAT BUOC chi ong moi lam duoc ve mat co hoc/vat ly (reboot, an nut, dieu khien ban phim). Con lai tu lam, tu hop, tu tim loi, tu test. Log chay LIEN TUC de do (log + thoi luong + su kien + loi), ke ca khi Muse hay Codex chay computer-use.
 - Da truyen: ghi vao coord/mei.md + coord/mochi.md (owner voice, tieng Viet khong dau), commit e4a8d49 tren main (ls-remote verify). Gui truc tiep cho W-SOAKRESTART (lane duy nhat con chay) bang subagent.send, submission c00e5730.
 - Tu gio lenh nay nhac lai trong MOI brief worker moi (kem luat cung cu: 18:23 khong dong tab, 18:30 pill, git add -- roi commit -m, khong dau gach ngang dai, khong ydotool, khong PII len GitHub, Lauren Tan, council 3 + redteam + verifier doc lap, khong tu cham).

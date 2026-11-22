@@ -39,7 +39,7 @@ computer-use cli run zen -- status
 **Prerequisites:**
 - Zen installed (`zen-browser` on PATH).
 - For tab commands: a dedicated session started by the wrapper
-  (`session start`, below). Pham Tuan's own Zen runs WITHOUT a remote
+  (`session start`, below). the owner's own Zen runs WITHOUT a remote
   debugging port (verified 2026-11-18: nothing listening on 9222, 2828
   or 6000), so the wrapper can never attach to his session.
 - For history: a Zen profile dir (default auto-detected from

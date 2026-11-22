@@ -1,6 +1,6 @@
 # Worker CLICK3-D1: council reviewer 1 verdicts on the breakthrough discussion
 
-Owner: Pham Tuan. Role: independent council reviewer 1. I did not coordinate
+Owner: the owner. Role: independent council reviewer 1. I did not coordinate
 with other reviewers in this round, did not follow the current method, and
 questioned everything. Decision criterion (owner standing rule 06:07):
 judge every proposal by the accuracy and speed of its FINAL RESULT, never

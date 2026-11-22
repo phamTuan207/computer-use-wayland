@@ -1,7 +1,7 @@
 # CLICK3-RTR2 log: redteam round 2 against the AMEND3 fix pass
 
 Worker: CLICK3-RTR2 (redteam, round 2). Coordinator: COORD-CLICK-2.
-Owner: Pham Tuan (repo-facing name). Branch: todolist-push.
+Owner: the owner (repo-facing name). Branch: todolist-push.
 Task start: 05:08 +07 22/11/2026 (coordinator stamp; first measured
 wall clock on this VM 05:08 +07, Asia/Ho_Chi_Minh). All times below
 are measured wall-clock Asia/Ho_Chi_Minh on this VM plus elapsed
@@ -436,5 +436,5 @@ in the tree is these two files. The 4 other untracked files in
 the tree (other workers' files) were left untouched. No em
 dash or en dash in either file (checked by grep before
 commit). No ydotool (one mention of the ban in the test file
-docstring only). No personal info (owner name Pham Tuan only,
+docstring only). No personal info (owner name the owner only,
 as instructed for repo-facing text).

@@ -1,6 +1,6 @@
 # Worker C5-P2-SPEC log (COORD-CLICK-5, step 7 preparation)
 
-Owner: Pham Tuan. Role: worker C5-P2-SPEC, reporting to the coordinator
+Owner: the owner. Role: worker C5-P2-SPEC, reporting to the coordinator
 only. Task: write the stale-ref disagreement protocol (B5 lift limb
 (i)) and re-verify the AMEND4 items 2-4 wiring against P2's target
 functions. This unblocks the P2 element-ref interface rewrite. No

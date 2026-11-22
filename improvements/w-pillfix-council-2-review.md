@@ -1,7 +1,7 @@
 # Council 2 review: W-PILLFIX commit 8f600b9
 
-Review doc lap boi Council 2 (y Pham Tuan), cho COORD-CLICK-9. Khong nhan
-truc tiep cho Pham Tuan. Moi gio ghi theo Asia/Ho_Chi_Minh. Khong dung dau
+Review doc lap boi Council 2 (y the owner), cho COORD-CLICK-9. Khong nhan
+truc tiep cho the owner. Moi gio ghi theo Asia/Ho_Chi_Minh. Khong dung dau
 gach ngang dai. Khong ydotool. Khong thong tin ca nhan len GitHub. Log lien
 tuc voi thoi gian (wall-clock + elapsed). Chuan Lauren Tan: lenh chay +
 output + commit hash + log thoi gian.
@@ -38,7 +38,7 @@ Kiem chung truc tiep tren laptop, chi doc, 2026-11-22 19:49:12 +07:
   `/run/user/1000/hypr` ton tai, chua 1 thu muc instance.
 - Ket luan: nguyen nhan goc duoc xac nhan bang bang chung song, khong phai
   doan. Fix sua dung goc (sai duong dan, uy quyen ve nguon dung), khong va
-  trieu chung. Dung huong first principles Pham Tuan da duyet.
+  trieu chung. Dung huong first principles the owner da duyet.
 
 ### 1.2 Fail-closed: that, khong co lo hong moi
 
@@ -100,7 +100,7 @@ Day la bang chung manh nhung chua phai bang chung pixel: log cua indicator
 tu bao show duoc ack, khong phai anh grim. Vi vay dieu kien 1 o verdict van
 can W-PILLVERIFY2 lam.
 
-## 2. Luat 18:23 (khong dong/navigate tab cua Pham Tuan): GIU
+## 2. Luat 18:23 (khong dong/navigate tab cua the owner): GIU
 
 - Diff cua 8f600b9 chi cham 4 file: scripts/indicator.py (+12),
   scripts/overlay.py (+75/-13), tests/test_indicator.py (+21),
@@ -113,7 +113,7 @@ can W-PILLVERIFY2 lam.
 - Council 2 khong mo, khong dong, khong navigate bat ky tab nao trong
   qua trinh review nay.
 
-## 3. Huong Pham Tuan da duyet va chuan bang chung
+## 3. Huong the owner da duyet va chuan bang chung
 
 ### 3.1 Huong dung
 

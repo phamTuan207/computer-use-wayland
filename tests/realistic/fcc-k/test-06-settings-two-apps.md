@@ -7,7 +7,7 @@ test-06-settings-two-apps
 Settings configuration across 2 apps.
 
 ## Context
-Pham Tuan needs to align a preference across two local applications: set the
+the owner needs to align a preference across two local applications: set the
 default font size in the notes app and the default zoom level in the reader app
 to matching values, then confirm both apps reflect the change when a sample
 document is opened. The agent opens app A settings, changes font size, opens app

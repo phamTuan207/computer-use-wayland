@@ -1,6 +1,6 @@
 # Worker CLICK3-FCC-DISCUSS driver log
 
-Owner: Pham Tuan. Coordinator: COORD-CLICK-3. Role: driver worker, I drive fcc-claude on the owner's laptop via SSH and collect its position. I do NOT do the discussion myself.
+Owner: the owner. Coordinator: COORD-CLICK-3. Role: driver worker, I drive fcc-claude on the owner's laptop via SSH and collect its position. I do NOT do the discussion myself.
 
 Rules honored: no em dash (U+2014) or en dash (U+2013) anywhere in this file or any repo file. No personal info on GitHub. Commit with an EXPLICIT pathspec immediately after staging, never plain git commit, never git add -A. Verify push with git ls-remote. Never ydotool. Never touch the owner's live Zen session, tabs, or logged-in chats. Do not disturb clone1/clone2 work. Log everything with wall-clock Asia/Ho_Chi_Minh + elapsed time.
 

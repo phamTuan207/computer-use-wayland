@@ -1,6 +1,6 @@
 # Worker CLICK3-CONTRACT: Layer 0 + CB-EXEC merged contract log
 
-Owner: Pham Tuan. Role: contract writer (Worker CLICK3-CONTRACT). Step 2
+Owner: the owner. Role: contract writer (Worker CLICK3-CONTRACT). Step 2
 of the FINAL DIRECTION (commit e05fc58): one Layer 0 + CB-EXEC merged
 contract written early, proof stays late, at the prototype step. This is a
 DESIGN DOCUMENT, not code. I wrote the contract; I did not implement it.

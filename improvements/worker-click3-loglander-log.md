@@ -1,6 +1,6 @@
 # LOG-LANDER log - landing 5 worker logs via GitHub API (EPERM workaround)
 
-Worker: LOG-LANDER, reporting to COORD-CLICK-3. Owner: Pham Tuan.
+Worker: LOG-LANDER, reporting to COORD-CLICK-3. Owner: the owner.
 Started: 2026-11-22 07:47:58 +07 (task received). All times Asia/Ho_Chi_Minh.
 Method: GitHub Contents API via `gh api` (VM gh logged in as phamTuan207,
 verified with `gh auth status` at 07:48, scopes read:org, repo, workflow).
@@ -23,7 +23,7 @@ No file contents modified. No force-push. No other files touched.
   - worker-click3-r3rt-review-log.md: 34,496 bytes, MISMATCH (brief: 33,702 bytes).
     HELD, not landed. See "Held file" below.
 - Em dash / en dash scan on all five files: 0 matches. No personal info
-  beyond owner name Pham Tuan (per file 5 tail note, checked 07:34 inside file).
+  beyond owner name the owner (per file 5 tail note, checked 07:34 inside file).
 
 ## Landings (each verified: API branch HEAD equals commit sha, blob sha equals
 local `git hash-object`, size equals local byte count)

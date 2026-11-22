@@ -1,6 +1,6 @@
 # Worker CLICK3-FCODEX: response holding the CODEX-BREAKTHROUGH position
 
-Owner: Pham Tuan. Role: final discussion participant holding the
+Owner: the owner. Role: final discussion participant holding the
 CODEX-BREAKTHROUGH position. The original CODEX-BREAKTHROUGH worker
 completed and cannot receive follow-ups, so I hold its position from
 its report: improvements/codex-breakthrough-report.md, commit 2596287

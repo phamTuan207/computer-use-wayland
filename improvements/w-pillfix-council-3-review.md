@@ -1,6 +1,6 @@
 # Council 3 (rui ro) review: W-PILLFIX commit 8f600b9
 
-Bao cao cho COORD-CLICK-9, khong nhan truc tiep cho Pham Tuan.
+Bao cao cho COORD-CLICK-9, khong nhan truc tiep cho the owner.
 Review doc lap, chi review, khong sua code, khong viet log thay W-PILLFIX.
 Moi gio ghi theo Asia/Ho_Chi_Minh. Khong dung dau gach ngang dai.
 Khong ydotool. Khong thong tin ca nhan len GitHub. Khong tu cham diem.

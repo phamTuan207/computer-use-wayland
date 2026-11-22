@@ -1,6 +1,6 @@
 # Layer 0 + CB-EXEC Merged Contract
 
-Owner: Pham Tuan. Status: DESIGN DOCUMENT, step 2 of the FINAL DIRECTION
+Owner: the owner. Status: DESIGN DOCUMENT, step 2 of the FINAL DIRECTION
 (commit e05fc58). This contract is written early; proof stays late, at the
 prototype step (step 9). Nothing in this document authorizes building the
 full executor, deleting any existing path, or flipping any flag. It is the

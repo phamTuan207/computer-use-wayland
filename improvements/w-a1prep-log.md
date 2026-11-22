@@ -1,13 +1,13 @@
 # W-A1PREP log: prepare A1 pilot resume order (prep only, no issue)
 
-- Owner: Pham Tuan. Worker: W-A1PREP, for COORD-CLICK-7 (campaign COORD-CLICK-7).
+- Owner: the owner. Worker: W-A1PREP, for COORD-CLICK-7 (campaign COORD-CLICK-7).
 - Task received: 18:59:46 +07, 22/11/2026. Task: PREPARE the resume order only.
   W-A1PREP does NOT issue the resume order (only Muse tong issues it).
   W-A1PREP does NOT write any H3 record (only Muse tong writes it).
   No live arm run in this session: no pilot run, no probe run, no browser
   driving. Owner is using the machine. All laptop checks are read-only SSH.
 - Rules acknowledged: 18:23 (never close or navigate any tab or window
-  Pham Tuan opened; open a new tab or window beside it if a browser is
+  the owner opened; open a new tab or window beside it if a browser is
   needed); 18:30 (pill must show when any agent drives the machine; this
   session is read-only, no live browser work, so no pill question arises;
   if browser touch were needed I would stop and report first); no em dash

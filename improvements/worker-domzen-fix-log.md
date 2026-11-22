@@ -1,6 +1,6 @@
 # Worker DOMZEN-FIX log: land PROBE-DOMZEN condition-1 fix
 
-Owner: Pham Tuan. Fix worker DOMZEN-FIX, reporting to COORD-CLICK-3.
+Owner: the owner. Fix worker DOMZEN-FIX, reporting to COORD-CLICK-3.
 Date: 2026-11-22, start 07:11 Asia/Ho_Chi_Minh.
 Branch: todolist-push. VM repo HEAD at start: af0d0a2 (PROBE-DOMZEN log).
 Primary source: improvements/worker-probe-domzen-log.md (commit af0d0a2),

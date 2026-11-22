@@ -1,6 +1,6 @@
 # Worker CLICK3-FOLD: fold of the Codex and FCC discussion positions into the FINAL direction
 
-Owner: Pham Tuan. Role: fold worker (Worker CLICK3-FOLD) for COORD-CLICK-3.
+Owner: the owner. Role: fold worker (Worker CLICK3-FOLD) for COORD-CLICK-3.
 Task: the final direction is already decided (commit e05fc58). I do NOT
 re-decide it. Two discussion positions landed after it. I check whether
 either changes any verdict, order step, acceptance criterion, or

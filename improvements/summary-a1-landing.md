@@ -1,7 +1,7 @@
 # A1 landing summary: DOM code-exec generalized to browser tasks (Track 2, 19/11)
 
-Owner: Pham Tuan. Worker: Luna 6 Max (A1 landing worker). Merge: see git log.
-Per Pham Tuan's LAND IF BETTER standing rule (17:18): measured better than
+Owner: the owner. Worker: Luna 6 Max (A1 landing worker). Merge: see git log.
+Per the owner's LAND IF BETTER standing rule (17:18): measured better than
 the old version, landed to main, no asking.
 
 ## What landed

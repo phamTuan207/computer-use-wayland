@@ -2,7 +2,7 @@
 
 Reviewer: Council 1, independent (not W-PILLFIX-AMEND2, not
 W-PILLFIX-AMEND, not COORD-CLICK-9). Report goes to Muse tong, not
-directly to Pham Tuan. No amend modified, no live proof run, no
+directly to the owner. No amend modified, no live proof run, no
 reviewer spawned, S2-flip holder NOT released (brief forbids it).
 All verification is code/unit level plus read-only laptop checks,
 plus my own re-runs of the targeted and full suites. No em dash or

@@ -1,6 +1,6 @@
 # Worker C5-STALL-INV log: Chromium CDP Input stall, read-only investigation
 
-Owner: Pham Tuan. Coordinator: COORD-CLICK-5. Repo
+Owner: the owner. Coordinator: COORD-CLICK-5. Repo
 ~/workspace/computer-use-wayland, branch todolist-push. Read-only
 investigation lane, parallel with C5-STEP9 (owns implementation).
 No code changes, no sends, no keystrokes, no navigation of any

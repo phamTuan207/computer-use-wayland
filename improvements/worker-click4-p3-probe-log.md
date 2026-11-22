@@ -1,6 +1,6 @@
 # Worker C4-P3-PROBE log: P3 Brave relaunch controlled experiment
 
-Owner: Pham Tuan. Coordinator: COORD-CLICK-4. Branch: todolist-push.
+Owner: the owner. Coordinator: COORD-CLICK-4. Branch: todolist-push.
 Probe target: FINAL direction (worker-click3-final-direction-log.md) section 1.2
 P3 row, section 3 step 2 (P3 paragraph), section 6 worker 5, section 7 (P3
 re-run owner). Prior probe PROBE-P3 (7b1006a) was NOT-RUN: clone1 batch 9 open.

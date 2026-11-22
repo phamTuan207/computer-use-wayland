@@ -1,6 +1,6 @@
 # Worker C5-INPUT-FIX log: Chromium CDP Input stall, fix (a1) tab activation
 
-Owner: Pham Tuan. Coordinator: COORD-CLICK-5. Repo
+Owner: the owner. Coordinator: COORD-CLICK-5. Repo
 ~/workspace/computer-use-wayland, branch todolist-push. This worker
 did NOT do the S2 flip, so this is independent fix work. No em dash
 or en dash anywhere in this file. No personal info. Wall-clock

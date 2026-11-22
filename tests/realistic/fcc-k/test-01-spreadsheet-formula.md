@@ -7,8 +7,8 @@ test-01-spreadsheet-formula
 Spreadsheet data entry + formula check.
 
 ## Context
-Pham Tuan needs to reconcile a small weekly sales sheet before a meeting. The
-sheet opens in a local spreadsheet app (offline fixture). Pham Tuan enters
+the owner needs to reconcile a small weekly sales sheet before a meeting. The
+sheet opens in a local spreadsheet app (offline fixture). the owner enters
 several rows of numbers, writes SUM/average formulas in a totals row, then
 verifies the computed values match hand-computed expectations. The agent must
 read cell values, spot a formula that returns wrong text (a typo in the formula

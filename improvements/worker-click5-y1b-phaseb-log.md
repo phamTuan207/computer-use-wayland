@@ -1,6 +1,6 @@
 # Worker C5-Y1B-PHASEB log: port run_snippet onto todolist-push (fork architecture) + B2 fix
 
-Owner: Pham Tuan. Branch: todolist-push. Parent: COORD-CLICK-5.
+Owner: the owner. Branch: todolist-push. Parent: COORD-CLICK-5.
 Task: Phase B items 5-12 (run_snippet), rewritten-probe gate on the real
 implementation, B2 cap/prune on observation save, regression suite.
 

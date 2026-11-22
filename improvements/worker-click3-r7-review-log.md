@@ -1,7 +1,7 @@
 # CLICK3-R7-REVIEW: independent re-verification of the R7 shadow fixture
 
 Worker: CLICK3-R7-REVIEW (fresh independent reviewer, did not write AMEND2 or AMEND3)
-Owner: Pham Tuan
+Owner: the owner
 Repo: ~/workspace/computer-use-wayland, branch todolist-push
 Start: 2026-11-22 05:08 Asia/Ho_Chi_Minh
 End: 2026-11-22 05:12 Asia/Ho_Chi_Minh

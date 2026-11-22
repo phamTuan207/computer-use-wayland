@@ -1,6 +1,6 @@
 # Worker C5-RUNG2 log: rung 2 live 0-vision acceptance test
 
-Owner: Pham Tuan. Coordinator: COORD-CLICK-5. Repo
+Owner: the owner. Coordinator: COORD-CLICK-5. Repo
 ~/workspace/computer-use-wayland, branch todolist-push. Direct
 order from the owner via Muse, 16:00 +07, Sun 2026-11-22: run
 rung 2 NOW, do not wait for steps 9-10 to finish. This worker

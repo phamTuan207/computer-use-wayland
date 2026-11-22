@@ -1,7 +1,7 @@
 # AMEND4 reconciliation log (worker RECONCILE-AMEND4)
 
 Worker RECONCILE-AMEND4, independent reconciliation worker for
-coordinator COORD-CLICK-3. Owner: Pham Tuan (repo-facing name).
+coordinator COORD-CLICK-3. Owner: the owner (repo-facing name).
 Branch: todolist-push. Task received 08:12 22/11/2026 Asia/Ho_Chi_Minh.
 All times below are Asia/Ho_Chi_Minh wall clock unless noted.
 Elapsed: 08:12 to about 08:30, about 18 minutes of wall time plus two
@@ -45,7 +45,7 @@ scripts/cdp.mjs and the test files.
 
 Standing rules honored: full access, no em dash (U+2014) or en dash
 (U+2013) anywhere in this file (grep-checked after writing), never
-ydotool, no personal info in repo files (owner name Pham Tuan only),
+ydotool, no personal info in repo files (owner name the owner only),
 log everything with wall-clock + elapsed, explicit pathspec commits,
 never plain git commit, never git add -A, every push verified with
 git ls-remote. No fabrication: every claim below cites a diff, a line

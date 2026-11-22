@@ -7,7 +7,7 @@ test-07-bug-reproduction
 Bug reproduction: follow written steps to reproduce a UI bug and document it.
 
 ## Context
-Pham Tuan received a written bug report describing a UI defect in a local app:
+the owner received a written bug report describing a UI defect in a local app:
 when a user toggles a setting and immediately clicks Save without waiting, the
 setting reverts to its previous value. The app has a known race: the first Save
 after a toggle writes the previous value back; a second Save commits the

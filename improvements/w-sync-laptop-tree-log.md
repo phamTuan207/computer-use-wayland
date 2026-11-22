@@ -3,7 +3,7 @@
 Worker: W-SYNC. Date: 2026-11-22. All times Asia/Ho_Chi_Minh, wall clock.
 Repo: computer-use-wayland, branch todolist-push.
 Rule followed: only sync code. No restart of Zen, Brave, Chromium, or any
-session of Pham Tuan. No tab opened or switched in his Zen.
+session of the owner. No tab opened or switched in his Zen.
 
 ## 1. Repo baseline (VM and laptop at the same commit)
 
@@ -106,7 +106,7 @@ Relay status (`python3 scripts/session_remote.py status`):
   relay restart was needed for this sync.
 
 Listening ports (same command run):
-- `127.0.0.1:9222` zen-bin pid 14625 (Pham Tuan Zen, BiDi)
+- `127.0.0.1:9222` zen-bin pid 14625 (the owner Zen, BiDi)
 - `127.0.0.1:9223` chromium pid 18451 (agent Chromium)
 - `127.0.0.1:9224` brave pid 17681 (agent Brave, persistent CDP)
 

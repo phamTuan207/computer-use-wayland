@@ -1,6 +1,6 @@
 # Worker C4-STEP5-P1P5: P1 router plus P5 asserts plus CB-1 contract plus CB-5 locate confirmations
 
-Owner: Pham Tuan. Coordinator: COORD-CLICK-4. Step 5 of the FINAL
+Owner: the owner. Coordinator: COORD-CLICK-4. Step 5 of the FINAL
 direction (improvements/worker-click3-final-direction-log.md, sections
 1.2 P1/P5, 1.4 CB-1/CB-5, 2 items (d) and (f), 3 step 5, 6 worker 7).
 Repo ~/workspace/computer-use-wayland, branch todolist-push.

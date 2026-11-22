@@ -7,7 +7,7 @@ test-02-email-triage-reply
 Email triage + reply drafting.
 
 ## Context
-Pham Tuan opens a local offline email client fixture and finds an inbox of
+the owner opens a local offline email client fixture and finds an inbox of
 mixed messages: a vendor quote, a customer complaint, an internal meeting
 request, and two newsletters. The agent must triage by marking read/unread,
 archiving newsletters, flagging the complaint, then draft a reply to the vendor

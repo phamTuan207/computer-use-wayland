@@ -1,5 +1,5 @@
 # W-TODO log, muc 12 hang doi resume (COORD-CLICK-6)
-# Worker: W-TODO. Chu: Pham Tuan. Nhanh: todolist-push.
+# Worker: W-TODO. Chu: the owner. Nhanh: todolist-push.
 # Chuan Lauren Tan: moi claim co lenh + output + commit hash + thoi gian (Asia/Ho_Chi_Minh, elapsed).
 # Khong dau gach ngang dai. Khong ydotool. Khong tu cham pass.
 
@@ -81,7 +81,7 @@ Thu tu theo hang serial trong todolist + lane song song, dieu chinh theo tinh hi
 - Launch: setsid nohup env Y6_HANDOVER_CONFIRMED=1 Y6_STOP_AFTER_GATES=1 bash improvements/worker-y6b-run-nested-wayland-v2.sh, detached, RUNNER_PID 47177, run log /tmp/y6-nested/run-20261122-180149.log.
 - Ket qua (7/7 measured items GIU): (1) marker file 2 dong + (2) hook corroboration trong file; (3) layers.enabled true; (4) version 1.1.1-cu.1 versionCheck match; (5) G4 empty (line 28, chay TRUOC gate); (6) AMEND4 OK + AMEND5-BEFORE OK + live list truoc ghi day du; (7) live untouched (teardown: list truoc == sau, PID 3638 alive, lock free). Profile gate OK line 35.
 - FAIL: liquid gate, "liquid never ready in 60s" (line 67) + "FAIL: liquid gate failed" (line 68). Status JSON shaders = "pending" trong suot 60s (31 lan poll False). Xac nhan them muc (d) cua invest log muc 6: nested log 0 dong applied-marker, chi co parse-1 not-ready (line 15), log delivery lag khong doi, gate khong con phu thuoc no.
-- Bang chung da luu: improvements/y6c5-evidence/a8-rerun-20261122-180149.log (md5 b112292d, khop laptop sau khi sua 1 dong False thieu luc ghi tay) + y6-profile-applied-20261122-180149.txt (md5 d2702bac, khop laptop). Ca hai 0 hit PII (grep gmail/phamtuanhuy/vinh hung/339 = 0).
+- Bang chung da luu: improvements/y6c5-evidence/a8-rerun-20261122-180149.log (md5 b112292d, khop laptop sau khi sua 1 dong False thieu luc ghi tay) + y6-profile-applied-20261122-180149.txt (md5 d2702bac, khop laptop). Ca hai 0 hit PII (grep gmail/username/address = 0).
 - Phan tich (W-TODO, ghi ro la phan tich chua co quyet dinh): liquid_available(ready=True) doi shaders == "ready"; trong nest trong (khong client nao) shaders mai "pending", trong khi live co client thi "ready". Trial doc vua noi trial "does NOT prove the liquid readiness window (O3)" vua liet liquid timeout vao abort/FAIL. Can coord quyet: (i) liquid gate co phai yeu cau cua A8 khong, hay chi can 7/7 items; (ii) neu can, doi thu tu gate (liquid sau khi co client dau tien) hay bo liquid khoi A8. Pill retry van gated: can (a) 7/7 items (DA GIU) + (b) re-review doc lap bang chung re-trial nay (W-TODO chay trial nen KHONG tu re-review).
 - 4.13 + 2.2.3 VAN MO, ly do tren.
 

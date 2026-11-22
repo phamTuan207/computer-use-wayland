@@ -2,8 +2,8 @@
 
 Reviewer: Council 1, independent (not W-ZENPROOF2-AMEND, not
 W-ZENPROOF2-FIX, not W-ZENPROOF2, not COORD-CLICK-9). Report goes
-to Muse tong, not directly to Pham Tuan. No amend file modified,
-no live run, no tab opened, navigated, or deleted in Pham Tuan's
+to Muse tong, not directly to the owner. No amend file modified,
+no live run, no tab opened, navigated, or deleted in the owner's
 Zen. All verification is code/unit level only, plus my own
 re-runs of the unit and G0a suites and my own probes. No em dash
 or en dash anywhere in this file. No personal info.

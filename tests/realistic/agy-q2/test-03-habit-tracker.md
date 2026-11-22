@@ -7,7 +7,7 @@ test-03-habit-tracker
 Habit tracker with daily checkboxes, streak computation, category filtering, habit deletion, and weekly adherence statistics.
 
 ## Context
-Pham Tuan needs to log weekly habits for team productivity and health tracking.
+the owner needs to log weekly habits for team productivity and health tracking.
 The workstation runs an offline browser dashboard (fixtures/test-03-habit-tracker.html).
 There are 4 existing habits with initial checkmarks. The user must add a new habit
 "Deep Work Sprint" under "Productivity" with a 5-day target, check off Monday through Friday,

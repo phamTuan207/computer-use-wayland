@@ -1,6 +1,6 @@
 # Pick 4 a11y fix report
 
-Owner: Pham Tuan. Branch: `speed-swarm-pick4a11y`, based on `0fd2b72`. Verdict: PROVISIONAL, non-Astra.
+Owner: the owner. Branch: `speed-swarm-pick4a11y`, based on `0fd2b72`. Verdict: PROVISIONAL, non-Astra.
 
 ## Findings
 

@@ -1,7 +1,7 @@
 # Worker CLICK3-D3: council review 3 of the breakthrough discussion
 
 Role: independent council reviewer 3. No coordination with other reviewers in this round.
-Owner: Pham Tuan. Repo: ~/workspace/computer-use-wayland, branch todolist-push, HEAD a4ecb49.
+Owner: the owner. Repo: ~/workspace/computer-use-wayland, branch todolist-push, HEAD a4ecb49.
 Start: 2026-11-22 06:08 +07. All times wall-clock Asia/Ho_Chi_Minh plus elapsed from task start.
 Decision criterion (owner standing rule 06:07): judge every proposal by the accuracy and speed of
 its FINAL RESULT, never by rewrite size or cost. Cost (tokens, time, rewrite effort) is IRRELEVANT.

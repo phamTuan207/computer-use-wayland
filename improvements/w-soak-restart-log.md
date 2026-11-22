@@ -1,6 +1,6 @@
 # W-SOAKRESTART log: S0 soak master restarted as a NEW run
 
-Owner: Pham Tuan. Branch: todolist-push. Worker: W-SOAKRESTART, for COORD-CLICK-7.
+Owner: the owner. Branch: todolist-push. Worker: W-SOAKRESTART, for COORD-CLICK-7.
 Run id: soak-restart-20261122-1900. All times wall-clock Asia/Ho_Chi_Minh (+07) unless noted.
 Method: read-only checks plus one master start plus one detached tick loop. No cron
 created, no laptop writes, no process killed, no live browser work, no ydotool.

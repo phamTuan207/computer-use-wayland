@@ -6,7 +6,7 @@
 - Spawned as CL1-MSG. Brief: switch to ws2, open clone1 Brave chat, type + send owner message, verify it appears, switch back to ws1, confirm Zen intact.
 - Coordination first: read improvements/worker-ztb-blind-run-log.md in full. ZT-B is in ZT-00 step 4 work; last logged event redo4 00:40:54 (ok true, 10/10, Ctrl+N still did NOT open a tab, 3 attempts). Next step queued: isolated Ctrl+N test, fallback mouse "+" button. Log mtime 00:41:33, no new entries for ~4-5 min at task start, so ZT-B is in a think/setup gap, not a batch. ZT-B's own mitigation: it checks active workspace before each batch and waits for ws1 to return (cron returns within ~2 min), so a quick ws2 excursion is tolerated if I return to ws1 at once. Aim under 3 min of screen time.
 - Repo: todolist-push, HEAD bf9f1af (Y13g). ZT-B log modified uncommitted (not mine, do not touch). Only my file, explicit pathspec.
-- Message to send (owner first-person voice, exact): "Clone1, tao la Pham Tuan. May im tu 22:41 toi gio, batch 6 giao roi ma chua co commit nao, Muse nudge may luc 23:49 cung khong tra loi. Bao cao ngay: may dang lam toi dau, ket o dau. Roi lam tiep batch 6 di, dung im lang nua. Ket qua 15 phut thi bao, khong ngoi im."
+- Message to send (owner first-person voice, exact): "Clone1, tao la the owner. May im tu 22:41 toi gio, batch 6 giao roi ma chua co commit nao, Muse nudge may luc 23:49 cung khong tra loi. Bao cao ngay: may dang lam toi dau, ket o dau. Roi lam tiep batch 6 di, dung im lang nua. Ket qua 15 phut thi bao, khong ngoi im."
 - Next: fresh observe (owner-activity check) + active workspace, then ws2.
 
 ## 00:46 fresh observe (elapsed 1m)

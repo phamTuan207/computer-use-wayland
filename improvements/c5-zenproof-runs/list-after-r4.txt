@@ -16,7 +16,7 @@
  },
  {
   "handle": "593458d8",
-  "title": "Inbox (732) - phamtuanhuy1109@gmail.com - Gmail",
+  "title": "Inbox (732) - [email redacted] - Gmail",
   "url": "https://mail.google.com/mail/u/1/#inbox"
  },
  {

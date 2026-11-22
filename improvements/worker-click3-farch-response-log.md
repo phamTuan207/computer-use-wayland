@@ -1,6 +1,6 @@
 # Worker CLICK3-FARCH: ARCH position response to the joint adjudication DRAFT
 
-Owner: Pham Tuan. Role: final discussion participant holding the ARCH-REVIEW
+Owner: the owner. Role: final discussion participant holding the ARCH-REVIEW
 position from its log (improvements/worker-arch-review-log.md, commit
 074c1d7). The original ARCH-REVIEW worker completed and cannot receive
 follow-ups, so I answer the draft and the other reports from ARCH's

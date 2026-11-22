@@ -1,6 +1,6 @@
 # ITEM8-MICROGAP log - AMEND4 item 8 url/email trim (VM lane)
 
-- Worker: ITEM8-MICROGAP, for coordinator COORD-CLICK-3 (owner Pham Tuan)
+- Worker: ITEM8-MICROGAP, for coordinator COORD-CLICK-3 (owner the owner)
 - Task received: 2026-11-22 08:29:48 +07
 - Fix commit pushed: 2026-11-22 08:36:25 +07
 - Worktree: ~/workspace/cu-item8-microgap, clean worktree at pinned HEAD e1a4e77

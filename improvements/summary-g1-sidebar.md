@@ -2,7 +2,7 @@
 
 ## Run metadata
 
-- Owner: Pham Tuan
+- Owner: the owner
 - Repo: `/home/james/computer-use-wayland`, branch `speed-swarm`, HEAD `0491c10` (verified at start, no fast-forward needed)
 - Relay: restarted 12:26:41 +07 for the probe (MainPID 113859, drop-in pick4.conf with CU_PICK4_FASTPATH=1, started_git_head 0491c10); restored to clean env 12:33:47 +07 (MainPID 118290, no CU vars, broker idle, next_sequence 1, started_git_head 0491c10)
 - Session owner: `pick4-g1sb`. Run dir: `/tmp/speed-pick4-20261118/g1-sidebar`

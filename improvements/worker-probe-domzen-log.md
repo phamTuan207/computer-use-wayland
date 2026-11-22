@@ -1,6 +1,6 @@
 # Worker PROBE-DOMZEN log: DOM-first feasibility on real Zen
 
-Owner: Pham Tuan. Probe worker PROBE-DOMZEN, reporting to COORD-CLICK-3.
+Owner: the owner. Probe worker PROBE-DOMZEN, reporting to COORD-CLICK-3.
 Date: 2026-11-22, runs 06:40 to 07:04 Asia/Ho_Chi_Minh.
 Branch: todolist-push. VM repo HEAD at probe start: 49081aa
 (AMEND4 item 7). Branch moved during the probe: local HEAD at log

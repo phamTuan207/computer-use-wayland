@@ -1,9 +1,9 @@
 # W-ZENPROOF2-AMEND: close the review conditions on W-ZENPROOF2-FIX
 
-Owner: Pham Tuan. Worker: W-ZENPROOF2-AMEND, independent (not
+Owner: the owner. Worker: W-ZENPROOF2-AMEND, independent (not
 W-ZENPROOF2-FIX, not W-ZENPROOF2, not COORD-CLICK-9). Report goes
-to Muse tong, not directly to Pham Tuan. No live proof re-run, no
-tab opened, navigated, or deleted in Pham Tuan's Zen. All
+to Muse tong, not directly to the owner. No live proof re-run, no
+tab opened, navigated, or deleted in the owner's Zen. All
 verification is code/unit level only. No em dash or en dash
 anywhere in this file. No personal info.
 

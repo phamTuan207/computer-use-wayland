@@ -1,6 +1,6 @@
 # Envelope validator fix: distinct invalid_arg_type error (19/11 12:16-12:24 +07)
 
-Worker: Luna 6 Max (envelope-validator fix worker). Owner: Pham Tuan.
+Worker: Luna 6 Max (envelope-validator fix worker). Owner: the owner.
 Report to the resume coordinator. Main stays FROZEN.
 
 ## Decision implemented

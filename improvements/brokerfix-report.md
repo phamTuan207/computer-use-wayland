@@ -1,6 +1,6 @@
 # Broker reliability fix report
 
-Owner: Pham Tuan
+Owner: the owner
 Branch: `speed-swarm-brokerfix`
 Base: `2aa74ff`
 Verdict: PROVISIONAL, non-Astra

@@ -7,7 +7,7 @@ test-05-contact-book
 Contact book directory: add new contact via modal, edit existing contact phone, star favorite contact, delete invalid contact, search and filter, and save directory state.
 
 ## Context
-Pham Tuan manages the company internal directory.
+the owner manages the company internal directory.
 The workstation runs an offline browser directory (fixtures/test-05-contact-book.html).
 There are 6 initial contacts (Alice Chen, Bob Martin, Clara Vance, David Kim, Eva Rostova, and an unverified entry "Spam Bot").
 The user must add a new teammate "Frank Sinatra" (Engineering, frank.s@example.com, +1-555-0106), update Bob Martin's phone to "+1-555-9999", star David Kim as a favorite contact, delete the "Spam Bot" entry, test search and department filtering, and save the directory.

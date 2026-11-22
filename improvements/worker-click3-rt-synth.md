@@ -1,7 +1,7 @@
 # CLICK3-RT-SYNTH: consolidated fix checklist from the CLICK2 review round
 
 Worker: CLICK3-RT-SYNTH (independent Muse reviewer). Coordinator: COORD-CLICK-2.
-Owner: Pham Tuan (repo-facing name).
+Owner: the owner (repo-facing name).
 Branch: todolist-push. Task start 04:33 +07 22/11/2026. All times wall-clock
 Asia/Ho_Chi_Minh + elapsed from task start.
 
@@ -847,7 +847,7 @@ YES, with two items for the coordinator to decide, neither a contradiction.
   text, not as code, because the code does not contain them.
 - No em dash (U+2014) or en dash (U+2013) in this file (checked by grep
   before commit). No ydotool. No personal info (no real names beyond the
-  owner name Pham Tuan as instructed for repo-facing text, no emails,
+  owner name the owner as instructed for repo-facing text, no emails,
   addresses, phones, schedules, photos, accounts, passwords, tokens).
 
 ## G. Time log (wall-clock +07, elapsed from task start 04:33)

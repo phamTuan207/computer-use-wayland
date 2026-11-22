@@ -1,6 +1,6 @@
 # CODEX-AMEND4 DRIVER LOG (worker CODEX-AMEND4-DRIVER)
 
-Owner: Pham Tuan. Driver start: 2026-11-22 05:56 Asia/Ho_Chi_Minh. Task: launch and monitor a Codex (Luna 6 Max) worker on the laptop implementing the AMEND4 fix pass in parallel with the VM AMEND4 worker (CLICK3-AMEND4), on its own branch amend4-codex, for later reconciliation.
+Owner: the owner. Driver start: 2026-11-22 05:56 Asia/Ho_Chi_Minh. Task: launch and monitor a Codex (Luna 6 Max) worker on the laptop implementing the AMEND4 fix pass in parallel with the VM AMEND4 worker (CLICK3-AMEND4), on its own branch amend4-codex, for later reconciliation.
 
 ## Standing rules recorded
 

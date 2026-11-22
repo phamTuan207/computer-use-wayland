@@ -1,7 +1,7 @@
 # CLICK3-AMEND3 log: surgical re-dispatch of AMEND2
 
 Worker: CLICK3-AMEND3 (fix worker). Coordinator: COORD-CLICK-2.
-Owner: Pham Tuan (repo-facing name). Branch: todolist-push.
+Owner: the owner (repo-facing name). Branch: todolist-push.
 Task start: 04:56 +07 22/11/2026 (task stamp; first measured wall
 clock on this VM 04:46 +07, VM clock runs about 10 min behind the
 coordinator stamp; all times below are measured wall-clock
@@ -234,7 +234,7 @@ HEAD at finish: see the coordinator copy of this log for the hash
 (this worker's final report carries it).
 No 15-minute stall occurred at any point. No em dash or en dash in
 this file (checked by grep before commit). No ydotool. No personal
-info (owner name Pham Tuan only, as instructed for repo-facing
+info (owner name the owner only, as instructed for repo-facing
 text).
 
 ## AMEND2 commits (verbatim, grouped, before the fixes)

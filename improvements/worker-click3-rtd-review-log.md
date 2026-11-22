@@ -1,6 +1,6 @@
 # Worker CLICK3-RTD log: redteam review of the breakthrough proposals
 
-Role: independent adversarial reviewer (redteam) for owner Pham Tuan.
+Role: independent adversarial reviewer (redteam) for owner the owner.
 Repo: ~/workspace/computer-use-wayland, branch todolist-push, HEAD a4ecb49 at start.
 Task start: 06:08 +07 Sun 2026-11-22. All times wall-clock Asia/Ho_Chi_Minh + elapsed from task start.
 Rules honored: no em dash (U+2014) or en dash (U+2013) anywhere in this file; no personal info; evidence with every claim; commit with an explicit pathspec immediately after staging, never plain git commit, never git add -A; verify every push with git ls-remote; never ydotool. This is a review, not my own work: no self-healing question arises.

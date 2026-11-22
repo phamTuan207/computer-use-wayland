@@ -1,7 +1,7 @@
 # CLICK3-R3RT log: round-3 redteam review of the AMEND4 fix pass
 
 Worker: CLICK3-R3RT (redteam, round 3). Coordinator: COORD-CLICK-3.
-Owner: Pham Tuan (repo-facing name). Branch: todolist-push.
+Owner: the owner (repo-facing name). Branch: todolist-push.
 Task start: 06:59 +07 22/11/2026 Asia/Ho_Chi_Minh. HEAD reviewed:
 8008662 (click3-codex-discuss). All times below are wall-clock
 Asia/Ho_Chi_Minh on this VM plus elapsed from task receipt.
@@ -642,5 +642,5 @@ defective-test findings and corroborates two of them.
   and verify with git ls-remote. No production code and no
   test touched. No em dash or en dash in this file (grep -c
   = 0, checked 07:34). No ydotool. No personal info (owner
-  name Pham Tuan only). HEAD reviewed 8008662 is an ancestor
+  name the owner only). HEAD reviewed 8008662 is an ancestor
   of current HEAD 5dcf2b3 (verified 07:45).

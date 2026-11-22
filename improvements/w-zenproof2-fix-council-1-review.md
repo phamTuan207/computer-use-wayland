@@ -2,8 +2,8 @@
 
 Reviewer: Council 1, independent (not W-ZENPROOF2-FIX, not
 W-ZENPROOF2, not COORD-CLICK-9). Report goes to Muse tong, not
-directly to Pham Tuan. No fix modified, no live run, no tab
-opened, navigated, or deleted in Pham Tuan's Zen. All
+directly to the owner. No fix modified, no live run, no tab
+opened, navigated, or deleted in the owner's Zen. All
 verification is code/unit level only, plus my own re-runs of
 the unit and G0a suites. No em dash or en dash anywhere in this
 file. No personal info.
@@ -198,7 +198,7 @@ file. No personal info.
   Marionette-opened tab at all) and names the fallback
   (select through Zen's own UI, or refuse the run).
 
-### 2.6 No tab operation can touch Pham Tuan's tabs
+### 2.6 No tab operation can touch the owner's tabs
 
 - I enumerated every DELETE and /url navigate in the fixed
   zen-tab.py (grep): exactly 2 DELETE sites and 1
@@ -306,7 +306,7 @@ The fix is correct and complete for its scope. All three
 items (a), (b), (c) are implemented as specified, the
 regression test faithfully models the run 2 misfire and
 proves fail-closed behavior, no tab operation can touch
-Pham Tuan's tabs, and G0a/G0b pass on my own re-runs.
+the owner's tabs, and G0a/G0b pass on my own re-runs.
 The 3 open items are real but are correctly scoped out
 of this fix, not hidden.
 

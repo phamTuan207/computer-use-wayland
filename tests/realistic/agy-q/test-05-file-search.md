@@ -7,7 +7,7 @@ test-05-file-search
 File search explorer: filename vs full-text content search, file extension filtering, code preview inspection, file renaming, editor launch simulation, and file permissions.
 
 ## Context
-Pham Tuan needs to audit and update configuration paths in an offline multi-language codebase
+the owner needs to audit and update configuration paths in an offline multi-language codebase
 explorer (`fixtures/test-05-file-search.html`). The simulated file repository contains 15 files
 across `/src`, `/config`, `/docs`, and `/scripts`. The user must execute a filename search for
 "compositor", preview the configuration, switch to full-text content search for the symbol

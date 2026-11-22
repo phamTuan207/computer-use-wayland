@@ -1,7 +1,7 @@
 # CLICK3-R3C3 log: round-3 council review of the AMEND4 fix pass
 
 Worker: CLICK3-R3C3 (council reviewer 3, round 3). Coordinator: COORD-CLICK-3.
-Owner: Pham Tuan (repo-facing name). Branch: todolist-push.
+Owner: the owner (repo-facing name). Branch: todolist-push.
 Task start: 06:59 +07 22/11/2026 Asia/Ho_Chi_Minh (first measured wall
 clock on this VM 06:59:58). All times below are Asia/Ho_Chi_Minh wall
 clock plus elapsed from task receipt. HEAD reviewed: 8008662
@@ -512,7 +512,7 @@ ls-remote. No production code touched, no proof test touched, no
 other worker file touched. Worktrees /tmp/r3c3-base, /tmp/r3c3-pre12,
 /tmp/r3c3-pre66 are scratch in /tmp and will be removed. No em dash
 or en dash in this file (checked before commit). No ydotool. No
-personal info (owner name Pham Tuan only).
+personal info (owner name the owner only).
 
 ## Addendum (07:32 +07 22/11/2026, from COORD-CLICK-3 via CLOSEOUT-VERIFY, landed 07:31)
 

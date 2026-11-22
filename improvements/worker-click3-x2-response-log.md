@@ -1,6 +1,6 @@
 # Worker CLICK3-X2 log: cross-response for the D2 reviewer position
 
-Owner: Pham Tuan. Role: cross-response worker holding D2's position in the
+Owner: the owner. Role: cross-response worker holding D2's position in the
 breakthrough discussion. The original D2 reviewer completed and cannot
 receive follow-ups, so this log answers the other three reviews from D2's
 position, using D2's log (improvements/worker-click3-d2-review-log.md,

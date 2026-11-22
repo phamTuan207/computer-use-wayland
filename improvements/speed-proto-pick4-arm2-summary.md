@@ -1,6 +1,6 @@
 # Pick 4 — ARM 2 (FAST PATH)
 
-- Chủ sở hữu: Pham Tuan.
+- Chủ sở hữu: the owner.
 - Cờ đo: `CU_PICK4_FASTPATH=1`. Kết quả `printenv | rg '^CU_(PICK|CODE)'` chỉ có `CU_PICK4_FASTPATH=1`; không đặt `CU_CODE_EXEC` hay cờ Pick khác.
 - Không tạo drop-in, không khởi động lại relay, không sửa code hoặc đổi branch.
 - Brief ghi commit `5d4d512`, nhưng repo và broker thực tế đang ở `c1b7034b452b24358206009c40bbf450d575da58` trên branch `speed-swarm`. Broker status lúc kiểm tra ban đầu cũng báo `started_git_head=c1b7034b452b24358206009c40bbf450d575da58` và `loaded_code_sha256=f67d8abe5eb5d933e7f0b50c625066df074dd28dbb959ab5d2fb8f0f05c1342b`. Vì vậy các số đo này thu trên `c1b7034`, không phải commit được nêu trong brief.

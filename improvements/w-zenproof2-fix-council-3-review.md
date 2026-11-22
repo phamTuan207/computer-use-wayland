@@ -2,8 +2,8 @@
 
 Reviewer: Council 3, independent (not W-ZENPROOF2-FIX, not
 W-ZENPROOF2, not COORD-CLICK-9). Report to Muse tong, not
-directly to Pham Tuan. No fix modified, no live proof run, no
-tab opened, navigated, or deleted in Pham Tuan's Zen. All
+directly to the owner. No fix modified, no live proof run, no
+tab opened, navigated, or deleted in the owner's Zen. All
 verification is code/unit level plus reading, done on the VM.
 No em dash or en dash anywhere in this file. No personal info.
 

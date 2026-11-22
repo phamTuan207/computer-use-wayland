@@ -1,6 +1,6 @@
 # W-SOAK log: S0 1-day soak status, read-only check
 
-Owner: Phạm Tuấn. Branch: todolist-push. Worker: W-SOAK, for COORD-CLICK-6, queue item 17.
+Owner: the owner. Branch: todolist-push. Worker: W-SOAK, for COORD-CLICK-6, queue item 17.
 Check window: 2026-11-22 17:49:30 +07 to 17:52 +07 (Asia/Ho_Chi_Minh). All times wall-clock +07 unless noted.
 Method: read-only. No config change, no master restart, no new soak, no touching the laptop GUI, no ydotool. Short SSH commands only. One fresh SSH probe, one mux liveness check, local ps/ls/cron reads.
 

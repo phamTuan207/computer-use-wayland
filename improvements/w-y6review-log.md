@@ -1,5 +1,5 @@
 # W-Y6REVIEW log, re-review doc lap bang chung re-trial A8 (COORD-CLICK-6)
-# Worker: W-Y6REVIEW. Chu: Pham Tuan. Nhanh: todolist-push.
+# Worker: W-Y6REVIEW. Chu: the owner. Nhanh: todolist-push.
 # Chuan Lauren Tan: moi claim co lenh + output + commit hash + thoi gian (Asia/Ho_Chi_Minh, elapsed).
 # Khong dau gach ngang dai. Khong ydotool. Khong tu cham pass. Chi DOC, khong chay trial, khong mo Zen.
 

@@ -1,7 +1,7 @@
 # Prior art survey: merged (latency, grounding, planning) - Track 2
 
 - Merger: Luna 6 Max, 2026-11-18 (merge run 22:49 to 23:20 +07, Asia/Ho_Chi_Minh)
-- Owner: Pham Tuan. Repo: phamTuan207/computer-use-wayland, VM clone at 21684e7, branch speed-swarm
+- Owner: the owner. Repo: phamTuan207/computer-use-wayland, VM clone at 21684e7, branch speed-swarm
 - Merged from three surveys, all dated 2026-11-18:
   - speed-prior-art-latency.md (412 lines, 44 entries, W-PA1): LLM latency, prompts, routing, token and latency measurement
   - speed-prior-art-grounding.md (352 lines, about 30 sources, W-PA2): grounding, observation, benchmarks

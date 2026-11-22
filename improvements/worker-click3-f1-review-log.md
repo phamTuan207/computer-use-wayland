@@ -1,6 +1,6 @@
 # Worker CLICK3-F1: final council reviewer 1 position for the FINAL DECISION round
 
-Owner: Pham Tuan. Role: final council reviewer 1, independent. I did not
+Owner: the owner. Role: final council reviewer 1, independent. I did not
 coordinate with any other participant in this round, I question everything,
 including the adjudication draft. This is my position, not a summary of
 others. Where I agree with the draft (9d23834) I say so and give my own

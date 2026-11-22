@@ -1,7 +1,7 @@
 # CLICK3-DIFF-ASSESS: verdict on AMEND2's uncommitted work
 
 Worker: CLICK3-DIFF-ASSESS (independent reviewer). Coordinator: COORD-CLICK-2.
-Owner: Pham Tuan. Branch: todolist-push. Base at task start: da60024.
+Owner: the owner. Branch: todolist-push. Base at task start: da60024.
 Note: HEAD moved under me during assessment to dd45231 (CLICK3-RT-SYNTH,
 a doc-only commit adding improvements/worker-click3-rt-synth.md, 1 file).
 The uncommitted diff is unchanged: 24 files, +2496/-304, same as at start.

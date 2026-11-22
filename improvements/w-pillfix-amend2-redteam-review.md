@@ -2,7 +2,7 @@
 
 Reviewer: Redteam, independent (not W-PILLFIX-AMEND2, not
 W-PILLFIX-AMEND, not COORD-CLICK-9). Report goes to Muse tong, not
-directly to Pham Tuan. No amend modified, no live proof run, no
+directly to the owner. No amend modified, no live proof run, no
 S2-flip holder released, no reviewer spawned. All verification is
 code/unit level plus my own live read-only checks on the laptop
 (holders.json, daemon.json, ps, one throwaway `sleep 120` that I

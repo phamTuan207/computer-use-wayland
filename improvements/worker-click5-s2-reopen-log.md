@@ -1,6 +1,6 @@
 # Worker C5-S2-REOPEN log: S2 flip re-open, two-browser 5-run measurement (Brave fill, Chromium b1 set_value)
 
-Owner: Pham Tuan. Coordinator: COORD-CLICK-5. Repo
+Owner: the owner. Coordinator: COORD-CLICK-5. Repo
 ~/workspace/computer-use-wayland, branch todolist-push. This worker
 did NOT do the original flip or the input fix, so this is
 independent verification work. No em dash or en dash anywhere in

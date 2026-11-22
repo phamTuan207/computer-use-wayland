@@ -37,10 +37,10 @@ Expected end state: 4 entries (gmail, facebook, bank with new username, github.c
 Timing: 180s expected, 300s max.
 
 ### test-04-maps-directions (route)
-Goal: route 339 Vinh Hung to NEU, driving 8.4 km / 22 min, add stop, swap, save.
+Goal: route [address redacted] to NEU, driving 8.4 km / 22 min, add stop, swap, save.
 Fixture: maps UI, origin/destination inputs, mode buttons (driving/walking/transit), route options list, avoid-tolls toggle, stops panel.
-Steps (26): open fixture, verify map empty and no route; type origin "339 Vinh Hung, Hoang Mai"; type destination "NEU, Tran Dai Nghia"; click Driving; verify 3 route options listed, fastest 8.4 km / 22 min; click fastest route, verify summary "8.4 km, 22 min via Giai Phong"; click Add Stop, type "Hoan Kiem Lake", verify route updates to 9.1 km / 27 min; MISTAKE: click Avoid Tolls twice (on then off), verify toggle ends OFF and distance back to 9.1 km; switch mode to Walking, verify "7.9 km, 1h 38m"; switch back to Driving, verify 9.1 km / 27 min; click Swap, verify origin "NEU, Tran Dai Nghia" and destination "339 Vinh Hung, Hoang Mai", distance still 9.1 km; click Save Route, type name "Home to NEU", Save; verify saved routes count 1 and banner "Route saved".
-Expected end state: origin NEU, destination 339 Vinh Hung, driving, 9.1 km / 27 min, 1 stop, 1 saved route, avoid-tolls off.
+Steps (26): open fixture, verify map empty and no route; type origin "[address redacted]"; type destination "NEU, Tran Dai Nghia"; click Driving; verify 3 route options listed, fastest 8.4 km / 22 min; click fastest route, verify summary "8.4 km, 22 min via Giai Phong"; click Add Stop, type "Hoan Kiem Lake", verify route updates to 9.1 km / 27 min; MISTAKE: click Avoid Tolls twice (on then off), verify toggle ends OFF and distance back to 9.1 km; switch mode to Walking, verify "7.9 km, 1h 38m"; switch back to Driving, verify 9.1 km / 27 min; click Swap, verify origin "NEU, Tran Dai Nghia" and destination "[address redacted]", distance still 9.1 km; click Save Route, type name "Home to NEU", Save; verify saved routes count 1 and banner "Route saved".
+Expected end state: origin NEU, destination [address redacted], driving, 9.1 km / 27 min, 1 stop, 1 saved route, avoid-tolls off.
 Timing: 150s expected, 300s max.
 
 ### test-05-calendar-recurring (weekly meeting)

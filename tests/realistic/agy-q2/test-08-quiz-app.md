@@ -7,7 +7,7 @@ test-08-quiz-app
 Interactive quiz application: multi-question progression, timer and progress tracking, selecting multiple-choice answers, correcting accidental option selection, backwards and forwards navigation, quiz submission, score calculation, and result persistence.
 
 ## Context
-Pham Tuan is completing the systems architecture certification module.
+the owner is completing the systems architecture certification module.
 The workstation runs an offline quiz interface (fixtures/test-08-quiz-app.html).
 There are 5 questions covering HTTP protocols, Wayland architecture, data structures, CSS compositing, and Unix signals.
 The user must navigate question by question, select correct answers, correct an accidental selection on question 3 from "Linked List" to "Hash Table", navigate back to verify question state persistence, submit the quiz, verify the 5/5 (100%) score display, and save the verified results.

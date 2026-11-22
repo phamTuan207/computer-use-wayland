@@ -1,6 +1,6 @@
 # Worker C4-BENCH-MANIFEST log: fixture 2-vision bench re-run plus CB-9 manifest lock
 
-Owner: Pham Tuan. Worker: C4-BENCH-MANIFEST, for COORD-CLICK-4.
+Owner: the owner. Worker: C4-BENCH-MANIFEST, for COORD-CLICK-4.
 Branch: todolist-push. Repo HEAD at start: d7d569b
 (d7d569be5c9f88986abdd8416143c64981667986).
 Start: 2026-11-22 09:00 +07 (Asia/Ho_Chi_Minh). All times below are

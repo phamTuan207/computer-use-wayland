@@ -5,7 +5,7 @@ W-PILLFIX-AMEND, not COORD-CLICK-9). This is the same Council 2
 that set conditions E1 and E2 on amend 1 (commit 1f28b3f); this
 review checks whether amend 2 closes them, plus test completeness
 of the whole amend. Report goes to Muse tong, not directly to
-Pham Tuan. No fix modified, no live proof run, no reviewer
+the owner. No fix modified, no live proof run, no reviewer
 spawned, S2-flip holder NOT released (brief forbids it). No em
 dash or en dash anywhere in this file. No personal info.
 

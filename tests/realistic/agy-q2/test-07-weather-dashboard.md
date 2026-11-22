@@ -7,7 +7,7 @@ test-07-weather-dashboard
 Global weather dashboard: temperature unit toggling (Celsius to Fahrenheit and back), station monitoring, adding cities, handling accidental entry and removal, setting primary station, and saving dashboard state.
 
 ## Context
-Pham Tuan monitors operations across multiple regional distribution centers.
+the owner monitors operations across multiple regional distribution centers.
 The workstation runs an offline weather dashboard interface (fixtures/test-07-weather-dashboard.html).
 There are 3 initial monitored stations: Tokyo, London, and New York. The default temperature unit is Celsius (°C).
 The user must test temperature unit toggling to Fahrenheit (°F) and back to verify correct conversion, add "Ho Chi Minh City" station, handle an accidental addition of "Reykjavik" by deleting its card, designate "Ho Chi Minh City" as the primary monitoring station, switch the display unit to Fahrenheit (°F) for final shift handover, and save the dashboard configuration.

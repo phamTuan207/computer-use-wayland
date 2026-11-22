@@ -1,7 +1,7 @@
 # AMEND4 fix pass log (worker CLICK3-AMEND4)
 
-Worker CLICK3-AMEND4, subagent of the parent orchestrator. Owner: Pham Tuan
-(call him Pham Tuan in repo-facing text, never "dang"). Work in
+Worker CLICK3-AMEND4, subagent of the parent orchestrator. Owner: the owner
+(call him the owner in repo-facing text, never "dang"). Work in
 `~/workspace/computer-use-wayland`, branch `todolist-push`.
 Task start: 05:30 22/11/2026 Asia/Ho_Chi_Minh. Log committed last, after
 all 12 items. All times below are Asia/Ho_Chi_Minh unless noted.
@@ -12,7 +12,7 @@ Commit timestamps are converted from the UTC author dates stored in git
 
 - Full access. NO em dash (U+2014) or en dash (U+2013) anywhere, including
   quoted window titles. NEVER ydotool. NO personal info in repo files
-  (owner name Pham Tuan only). Log everything with wall-clock + elapsed.
+  (owner name the owner only). Log everything with wall-clock + elapsed.
 - Small commits, one fix per commit, explicit pathspec immediately after
   staging, never plain `git commit`, never `git add -A`. Push after each
   commit, verify with `git ls-remote`; on non-fast-forward, fetch + rebase

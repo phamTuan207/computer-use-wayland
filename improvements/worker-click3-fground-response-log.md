@@ -1,6 +1,6 @@
 # Worker CLICK3-FGROUND: GROUNDING-REVIEW position response to the draft adjudication and CODEX-BREAKTHROUGH
 
-Owner: Pham Tuan. Role: I hold the GROUNDING-REVIEW position from its log
+Owner: the owner. Role: I hold the GROUNDING-REVIEW position from its log
 (improvements/worker-grounding-review-log.md, commit d1fc4e9, 150 lines).
 The original GROUNDING-REVIEW worker completed and cannot receive
 follow-ups, so I answer the joint adjudication DRAFT and the other reports

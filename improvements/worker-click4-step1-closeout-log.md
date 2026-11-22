@@ -1,6 +1,6 @@
 # Worker C4-STEP1-CLOSEOUT log: AMEND4 step-1 close-out verification
 
-Owner: Pham Tuan. Worker: C4-STEP1-CLOSEOUT, for COORD-CLICK-4.
+Owner: the owner. Worker: C4-STEP1-CLOSEOUT, for COORD-CLICK-4.
 Branch: todolist-push. Repo HEAD at start: 36364b1
 (36364b16c9223b15a415e037fd117593424d064f).
 Start: 2026-11-22 08:48 +07 (Asia/Ho_Chi_Minh). All times below are

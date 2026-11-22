@@ -1,6 +1,6 @@
 # Worker W-S1CLOSE log: step-1 close-out, remaining parts
 
-Owner: Pham Tuan. Worker: W-S1CLOSE, for COORD-CLICK-6.
+Owner: the owner. Worker: W-S1CLOSE, for COORD-CLICK-6.
 Branch: todolist-push. Repo: ~/workspace/computer-use-wayland.
 Start: 2026-11-22 17:49 +07 (Asia/Ho_Chi_Minh). All times below are
 wall-clock +07 unless noted. No em dash (U+2014) or en dash (U+2013)
@@ -263,7 +263,7 @@ This section supplies that live re-read, on the laptop, through
 the real code path.
 
 Read-only SSH checks only (ssh-laptop.sh, short commands, no
-window focus change, no tab open/switch; Pham Tuan is using the
+window focus change, no tab open/switch; the owner is using the
 machine). HYPRLAND_INSTANCE_SIGNATURE set from
 `ls /run/user/1000/hypr/ | head -n1` per the workspace lesson
 (SIG=11cbc6c577b84ffb1edf4df3fc5b6128c3ae6947_1795342782_301493614).
@@ -294,7 +294,7 @@ active-window: [2509, 914]
 ```
 
 Both match the raw hyprctl read exactly ([2509, 914]). The
-active window at that moment is Zen, consistent with Pham Tuan
+active window at that moment is Zen, consistent with the owner
 using Zen.
 
 Verdict: the items 5-6 live re-read works end to end on the

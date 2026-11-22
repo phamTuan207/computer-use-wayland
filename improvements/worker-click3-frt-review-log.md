@@ -1,6 +1,6 @@
 # Worker CLICK3-FRT: final redteam review of the FINAL DECISION round
 
-Owner: Pham Tuan. Role: final redteam reviewer, independent and adversarial.
+Owner: the owner. Role: final redteam reviewer, independent and adversarial.
 Repo: ~/workspace/computer-use-wayland, branch todolist-push.
 Task start: 2026-11-22 06:37 +07. All times wall-clock Asia/Ho_Chi_Minh + elapsed.
 Rules honored: no em dash (U+2014) or en dash (U+2013) anywhere in this file.

@@ -7,7 +7,7 @@ test-01-music-player
 Music player: create playlist, filter library, add tracks, reorder, remove mistake, and save playlist.
 
 ## Context
-Pham Tuan needs to assemble a focused audio tracklist for an engineering sprint.
+the owner needs to assemble a focused audio tracklist for an engineering sprint.
 The workstation runs an offline browser player (`fixtures/test-01-music-player.html`).
 The track catalog holds 12 tracks across four genres (Synthwave, Ambient, Lo-Fi, Classical).
 The user must create a new playlist titled "Deep Work 2026", locate and add four specific

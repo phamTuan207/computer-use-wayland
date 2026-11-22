@@ -2,7 +2,7 @@
 """Unit tests for the W-ZENPROOF2-FIX changes (no live Zen touch).
 
 Guards the run 2 incident (improvements/w-zenproof2-log.md
-section 6): attempt 2 closed Pham Tuan's Muse chat tab because
+section 6): attempt 2 closed the owner's Muse chat tab because
 POST /window/new did not make the scratch tab current, the
 navigate rewrote the owner's tab, and the open exception handler
 deleted the current window blind. These tests run cmd_open,

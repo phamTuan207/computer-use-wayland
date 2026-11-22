@@ -1,6 +1,6 @@
 # PROBE-P8 log: Marionette chrome context on live Zen, no restart
 
-Worker: PROBE-P8. Coordinator: COORD-CLICK-3. Owner: Pham Tuan.
+Worker: PROBE-P8. Coordinator: COORD-CLICK-3. Owner: the owner.
 Branch: todolist-push. All times wall-clock Asia/Ho_Chi_Minh + elapsed.
 Probe script: /tmp/probe-p8.py on the laptop (copy at ~/workspace/probe-p8.py
 on the VM), run detached via setsid nohup, log at /tmp/probe-p8.log.
