@@ -1151,4 +1151,126 @@ workspaces at the same time.
   missing-helper error). Items 2, 5, 6 pending. Clone2 capped
   until Nov 25 02:38, no new work.
 
-## 27. (to be filled as results land)
+## 27. C5-P2-AMEND-FIX verified: all 6 items DONE; STEP 7 COMPLETE (A1/A2 limitation carried to step 9); C5-STEP8 spawned (13:41-13:52 +07)
+
+- C5-P2-AMEND-FIX (738898c2) COMPLETED 13:41:50 +07, T+45m
+  (12:56-13:41). Commits on todolist-push: ce399c7
+  (failing-first tests, 212 lines), 507a50b (fix, 3 files),
+  03d99bc (log), 04bc942 (log hash record). HEAD 04bc942,
+  ls-remote verified (origin todolist-push =
+  04bc9426a155f1738050df8d90e09aca60dc4ba4). Log 500+ lines.
+  VERIFIED by the coordinator, from the diff and by running the
+  tests myself at HEAD 04bc942 (local checkout confirmed at
+  04bc942, 0 behind origin):
+  - Item 1: zen_backend.py diff shows the new _no_pointer_result
+    helper checked BEFORE both _dispatch call sites (re-ground
+    line 559, main path line 625); the old 8-type allowlist guard
+    is replaced by a plain `if self._pointer is None` check.
+    _dispatch still returns (False, False) as the second
+    fail-closed layer.
+  - Item 2: 8 NoPointerDelegateTests (main click/type/move,
+    re-ground click/fill, wait, assert, assert-mismatch) + 3
+    ValidatorLimitationTests (A1/A2/A3). Failing-first per the
+    log: Ran 11, FAILED (failures=7), exactly the predicted 7
+    (main-path click already passed under the old guard). After
+    fix, I ran the P2 suite myself: Ran 97 tests in 0.217s, OK
+    (86 + 11 new). F9/F10 untouched and green.
+  - Item 3: wait reports input_sent/target_received False with ok
+    True; assert reports both False with ok from the postcondition
+    alone (ok = verified).
+  - Item 4: docs/testing.md gained "Building only the wtype
+    helper" (full commands + run log, 35984 bytes; full build.py
+    confirmed failing at the gtk4-layer-shell-0 pkg-config step);
+    cu.py _wtype_executable() names the cause and points at that
+    section.
+  - Item 5: discover from tests/ per the log: Ran 2124 in
+    175.215s, errors=4, skipped=17, failures=0 (a11y_skeleton
+    import, cursor_file g++ C++26, perf_evidence x2 missing
+    r5_cdp_aggregate.json). Discover from repo root per the log:
+    Ran 2131 in 178.664s, errors=1, skipped=17, failures=0.
+    I RE-RAN the root discover myself at HEAD 04bc942: Ran 2131
+    tests in 212.206s, FAILED (errors=1, skipped=17), failures=0,
+    matching the worker's numbers exactly. I confirmed the single
+    error's identity by running tests.test_cursor_file alone:
+    Ran 0 tests, FAILED (errors=1), the setUpClass g++ C++26
+    pre-existing environmental error. The redteam's tc02
+    tesseract and bench_manifest firefox errors do NOT reproduce
+    here (tesseract installed, bench tests pass). None of the
+    five error modules is in the step 7 17-file diff, so none is
+    a step 7 regression. Three previously unrun suites per the
+    log: Ran 131, OK. Seven related suites re-run per the log:
+    Ran 294, OK.
+  - Item 6 (live, first-ever for all three, per the log with
+    timestamps and observation IDs; the code/test/discover limbs
+    I verified myself, the live limbs I take from the log
+    evidence): live Zen with CU_DOM_BACKEND=zen PASSED 13:22:29
+    +07 (wall 2.49s, Example Domain tab, wait input_sent False /
+    ok True, click no_pointer_delegate, tab restored to Welcome!;
+    first attempt failed in 0.09s, program lacked dom_start()).
+    Live CLI act WITH and WITHOUT binding PASSED 13:38:38 +07
+    (session exit 0, wall 1.3s, both rc 0 ok true type_verified
+    true; CDP read-back composer "C5-AMEND-A C5-AMEND-B ", then
+    cleared to ""; no Enter, no send). This confirms
+    binding-when-present live.
+  - Validator scope correction recorded in the log (section 5)
+    with file/line evidence: the P2-IMPL model-correction-2 claim
+    is WRONG in general form; check_viewport_geometry line 107
+    runs the verified branch only when right_gap < 0 or
+    bottom_gap < 0 (line 204, returns verified origin line 267);
+    on the normal branch it returns absolute at line 299, the
+    moz-computed origin, never reading verified_moz_inner. A1/A2
+    tests pin this limitation; the validator is NOT claimed fixed
+    in general.
+  - Incidents recorded in the log: (a) attempt 1 of the A/B run
+    produced no evidence: its three /tmp driver files vanished
+    between 13:25 and 13:32 for an unestablished reason (older
+    /tmp c5-* files survive; no relay journal entries). Worked
+    around by rerunning from ~/c5-amend-run/ (persistent, left
+    on the laptop as evidence). LESSON: do not trust /tmp
+    persistence across minutes on the laptop for live-run
+    drivers; use persistent paths. (b) Attempt 2 failed with
+    "desktop observation required" because the driver passed the
+    observe stdout result as --observation; act needs the
+    persisted STATE file (result['observation'],
+    backend='desktop'), and the failing child calls
+    stop_session_on_error(), which kills the session driver
+    silently mid-run. Both lessons are in the C5-STEP8 brief.
+  - Handoff note: the installed tree (~/.local/share/
+    agent-computer-use/) still has NO zen_backend.py (predates
+    step 7). Live runs used the laptop repo checkout
+    (fast-forwarded to 4305dcb, includes the fix). A
+    sync-installed.py run is still needed before the installed
+    CLI carries this fix. That run is item 1 of C5-STEP8 below.
+- JUDGMENT (coordinator): STEP 7 IS NOW COMPLETE. Implementation
+  (292753f) + AMEND fix (ce399c7, 507a50b) + live validator proof
+  (108fd45) + live send with P2 element refs on the S2 task class
+  (S2 reopen, 5/5 runs, 10/10 sends, 212e0ad) together satisfy
+  the step 7 gate as written (P2 proven on the S2 task class, DOM
+  verification mandatory). The A1/A2 validator limitation is
+  PINNED BY TESTS, not fixed: on the normal branch the validator
+  still trusts a self-consistent moz and ignores verified_moz_inner.
+  It is carried as a KNOWN LIMITATION to step 9 (the prototype
+  should pass verified moz always, or the validator should prefer
+  it when supplied). Step 7 is declared complete WITH that
+  limitation recorded, not as if the validator were fixed in
+  general.
+- ACTION: spawned C5-STEP8 (be6ff750) 13:52 +07: the S1/CB-6
+  broker deletion. Scope: (1) sync laptop tree to 04bc942, run
+  sync-installed.py, verify installed tree + relay loaded hash;
+  (2) decide fatal-on-read-failure in writing first; (3) specify
+  AND implement queue discipline + single-owner serialization,
+  proved by a two-concurrent-worker test; (4) delete the
+  per-batch spawn, keeping fresh-SSH one-shot as fallback AND
+  recovery, proved by a live broker run + a fallback drill;
+  (5) record master watchdog + soak status. EXCLUDED: the
+  session-level pill (CB-10 precondition still owed: LIQUID
+  flicker probe not run, no owner deferral) and the (b1) durable
+  landing in cdp.mjs (separate follow-up; spec coming from
+  clone1 batch 12 task 2). Log:
+  improvements/worker-click5-step8-log.md.
+- Clones: clone1 batch 12 tasks 1-2 in review/fix-pass stage
+  (watchdog 13:38, no stall). Clone2 capped until Nov 25 02:38,
+  no new work. All 13 COORD-CLICK-5 children are now complete
+  except the newly spawned C5-STEP8.
+
+## 28. (to be filled as results land)
