@@ -317,7 +317,12 @@ items 4.7-4.12. Same gap class as the J gaps above.
   `git commit -m "..." -- improvements/worker-click5-errfile-g31-log.md`.
   No other file staged or committed by this worker. Pre-existing worktree
   modifications by other lanes were left untouched.
-- Push verified with `git ls-remote` (record the exact output below at push time).
+- Push verified with `git ls-remote` (16:07 +07): origin todolist-push is
+  4b55a21237c04b334f5fbd1357f5f6f18a9c3fcf, matching local commit 4b55a21
+  ("C5-ERRFILE-G31: G31 added to error file, J1-J50 reconciled vs todolist
+  (4 mismatches, 16 gaps)"). Push output: ccb2473..4b55a21 todolist-push ->
+  todolist-push. This push-verification line was added to the log after the
+  first push and committed as a second small commit (same explicit pathspec).
 - The G31 edit itself is in ~/workspace/cf26-upload/LOI-VA-GIAI-PHAP-TOAN-BO-20261121.md,
   a workspace file, not a repo file. It is NOT committed anywhere; the record of
   it is this log (section 2) plus the file's new line count (905).
