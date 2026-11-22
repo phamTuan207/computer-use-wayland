@@ -60,7 +60,7 @@ land. No shared code was changed by this review. Report only.
 
 ## 2. What checked out
 
-### 2.1 Line citations (all exact at HEAD 3167c76)
+### 2.1 Line citations (all exact at HEAD 3167c76, except key(), corrected in the fix pass)
 
 - cdp.mjs:83 to 84, max_elements 1..80 check. Line 84 is the range
   check. Correct.
@@ -71,8 +71,13 @@ land. No shared code was changed by this review. Report only.
 - cdp.mjs:292 to 314, click. The three dispatchMouseEvent calls are
   on lines 311 to 313. The spec says 292 to 313, which covers the
   calls but not the closing brace on line 314. Trivial slip, see F9.
-- cdp.mjs:390 to 412, key. The text '\r' for Enter is line 410.
-  Correct.
+- cdp.mjs:390 to 414, key. The text '\r' for Enter is line 410.
+  Correct. (Fix pass correction: this report first said 390 to 412.
+  The function closes on line 414, the for loop closes on line 413,
+  and assertAction starts on line 415. The two dispatchKeyEvent
+  calls on lines 411 to 412 and the text on line 410 sit inside
+  both ranges, so the substance was true and only the closing
+  braces fell outside. Council 2 C-1.)
 - cdp.mjs:434, action whitelist. Correct.
 - cdp.mjs:435 to 437, element-action list (exactly one of ref or
   selector). Correct.
@@ -268,18 +273,49 @@ committed in 3ef8f55 alongside improvements/s2-flip-p9-manifest.md:
 bytes), 10 original flip PNGs (2,740,488 bytes), 6,306,030 bytes
 total. I verified all 25 independently against the manifest with a
 section-aware script: sha256, byte size, and PNG magic all match on
-25 of 25 rows, zero mismatches. The section 7 "P9 PASS 10 of 10" claim
-is now backed by committed render evidence, not only by log prose.
+25 of 25 rows, zero mismatches. That verification is hash-level only:
+it proves the committed files are exactly the files the manifest
+describes, not the manifest's "What the frame shows" column. No frame
+pixels were viewed in this review. Council 2 spot-viewed 2 frames
+((b1) run-1 Chromium shows bubble C5-B1-R1-CHROMIUM-IGNORE-TEST
+with the composer empty; flip run-1 Chromium shows no test bubble
+at the earlier scroll position), both matching the manifest, and
+the fix pass viewed the same 2 frames first-hand and confirms both.
+The other 23 frames remain hash-verified only and rest on the
+manifest's viewing record (council 3 C5). The section 7 "P9 PASS
+10 of 10" claim is now backed by committed render evidence, not
+only by log prose.
 
 Fix: strike section 10 item 11. Two notes for the fix pass. First,
-the run JSONs still carry p9 as null in every JSON, so the PNG paths
-come from the audit repair-list filename convention, as the manifest
-records; the spec should say that instead of implying the JSONs name
-the PNGs. Second, the 5 original flip Chromium PNGs show NO test
-bubble, which agrees with their JSON outcome failed-unverified; they
-must not be cited as send evidence, as the manifest states. The spec
-never mentions the flip PNGs, so no spec text is wrong on that point,
-but the landing verification log should repeat the warning.
+the run JSONs do NOT carry p9 as null. Every one of the 24 run
+JSONs in the s2-flip-* directories carries p9 as a dict naming its
+PNG paths (34 entries in total: 5 a1, 5 (b1), 4 aborted, 10 reopen,
+10 flip), each with ok true and a wall_ms. The field was populated
+from the start: (b1) run-1.json carries the p9 object at commit
+4bd6292, reopen run-1.json carries both browser paths at commit
+1a3356d, and the same values hold at the spec base 4305dcb and at
+the review HEAD 3167c76. Commit 3ef8f55 touched zero run JSONs, so
+the evidence commit did not add the field later. The manifest
+auditor note saying "the run JSONs carry p9 as null, so they do
+not name the PNG paths" is wrong, and this report repeated it
+without checking the JSONs (council 1 C1, council 2 C-2,
+council 3 C1, redteam R1). The fix pass must NOT write the
+sentence this report first prescribed: the spec must not be told
+the PNG paths come from the audit repair-list filename convention.
+The correct statement is the opposite: the run JSONs name the PNGs
+directly, and the manifest paths agree with the JSON paths on all
+25 rows. The manifest auditor note should be corrected where it is
+cited, not repeated. Precision note: the 5 a1 PNGs are named by
+their JSONs but are not in the repo; they are not part of the 25
+manifest rows, so the F2 finding is unaffected. Second, the 5
+original flip Chromium PNGs show NO test bubble, which agrees with
+their JSON outcome failed-unverified; they must not be cited as
+send evidence, as the manifest states. That reading rests on the
+manifest's "What the frame shows" column, pixel-confirmed in the
+fix pass for run 1 only; runs 2 to 5 rest on the manifest's
+viewing record. The spec never mentions the flip PNGs, so no spec
+text is wrong on that point, but the landing verification log
+should repeat the warning.
 
 ### F3 (HIGH, design): section 5 lists `type` as a focus-establishing action, it is not
 
@@ -305,16 +341,30 @@ click), so the hole is latent, not live, but the rule as specified
 would bless the unsafe shape if one is ever written.
 
 Fix: reword the section 5 rule to exempt only batches containing an
-actual focus-establishing action before the send key (click,
-confirm_click, hover_click, fill, or the new focus), regardless of
-which value action precedes the key. Define "preceding" explicitly as
-"before the send key in the same batch"; a focus action after the send
-key must not satisfy it. Under this wording [set_value, key Enter]
-raises, [click, type, key Enter] passes (the click is the
-focus-establishing action), [fill, key Enter] passes (fill focuses
-internally through its click, cdp.mjs:534 to 537), [type, key Enter]
-raises, and [set_value, focus, key Enter] passes. Add the
-corresponding test, see F10 item (e).
+actual focus-establishing action before the send key, regardless of
+which value action precedes the key. Define "focus-establishing"
+through the ASSERTS table, not a hardcoded list: any action whose
+ASSERTS entry is focus_check (click, double_click, confirm_click,
+hover_click, dom_asserts.py lines 48 to 56), plus the new focus
+action (which the spec must add to ASSERTS with focus_check), plus
+fill as an explicit exception. Fill is the one action the table
+definition alone would wrongly exclude: its ASSERTS entry is
+type_check (dom_asserts.py lines 63 to 65), but it focuses through
+its internal click (cdp.mjs:535, await click(a), then the
+activeElement check on line 536), so a literal ASSERTS-only
+wording would wrongly reject [fill, key Enter] and break the
+existing passing shape [fill, key Enter, assert]. Define
+"preceding" explicitly as "before the send key in the same batch";
+a focus action after the send key must not satisfy it. Under this
+wording [set_value, key Enter] raises, [click, type, key Enter]
+passes (the click is the focus-establishing action), [double_click,
+type, key Enter] passes (the double click focuses, dom_asserts.py
+lines 51 to 53, cu.py lines 2048 to 2054), [fill, key Enter]
+passes (fill focuses internally through its click, cdp.mjs:534 to
+537), [type, key Enter] raises, and [set_value, focus, key Enter]
+passes. Add the corresponding test, see F10 item (e). (Council 2
+C-3, council 3 C2, redteam R2, applied with the fill carve-out the
+councils' literal wording missed; see section 8.)
 
 ### F4 (HIGH, acceptance criterion): section 8 and section 11 dry-run elapsed is wrong
 
@@ -347,7 +397,7 @@ the flip log section 5 run 1 records each V12 evaluate at 2 to 3 ms,
 so about 2 to 3 ms, assuming the focus plus activeElement check is
 one combined evaluate) plus Enter on scratch (about 2 ms) plus the
 trailing bubble assert polling (assertAction polls every 10 ms,
-cdp.mjs:415 to 427, so about 0 to 10 ms). Corrected dry-run
+cdp.mjs:415 to 426, so about 0 to 10 ms). Corrected dry-run
 expectation: about 90 to 100 ms, not 105 to 115 ms. As written, the
 pass condition would likely fail on a healthy dry run (a false
 failure) or train the landing team to expect live timings on scratch.
@@ -358,6 +408,38 @@ live (b1) program elapsed 91.575 to 106.622 ms plus focus about 2 to
 so about 110 to 145 ms. The spec gives no live elapsed expectation at
 all; section 9 step 6 should state one, using the live components
 above.
+
+Fix pass corrections to this derivation (council 1 C4, council 2
+C-4, council 3 C3, redteam R3). First, the derivation above does
+not subtract the value assert the landed program drops. The
+baseline program is [set_value, value assert]
+(s2_flip_live.py build_program_set_value, lines 129 to 161), and
+the landed 4-action program carries no separate value assert. A
+value assert that returns on its first poll is one
+Runtime.evaluate, about 2 to 3 ms (flip log: each evaluate 2 to
+3 ms). Subtracting it, the dry run is 85.8 plus 2 to 3 plus 2
+plus 0 to 10 minus 2 to 3, which is 86.8 to 98.8 ms (about 87 to
+99 ms), and the live re-run is 91.575 to 106.622 plus 2 to 3 plus
+17 to 25 plus 0 to 10 minus 2 to 3, which is 107.6 to 142.6 ms
+(about 108 to 143 ms). The stated criteria (about 90 to 100 ms
+dry-run, about 110 to 145 ms live) still stand within their
+rounding, so no criterion changes. Second, the 0 to 10 ms assert
+component is the incremental bubble-assert latency over the value
+assert, which passes on its first poll because set_value already
+verified the value internally (cdp.mjs:517 to 518, repeated at
+528). Third, the 0 to 10 ms bound assumes the bubble is present
+at the first poll: assertAction returns on its first passing
+poll (cdp.mjs:422) and only then costs about one evaluate. No
+cited measurement bounds how long the bubble takes to render
+after the Enter. The V12 elapsed_ms figures (2 to 4 ms in the
+(b1) and reopen run JSONs) do not bound it, because V12 runs
+after the focus_enter helper returns (s2_flip_live.py lines 572
+and 586; focus_enter.ms 1244.8 to 1484.6), long after the bubble
+rendered. If the bubble takes longer than about 10 ms to render
+on a scratch tab, the dry-run range could false-fail. The landing
+must measure the post-Enter bubble latency on a scratch tab (one
+Runtime.evaluate loop after the Enter) or widen the dry-run range;
+see the added ask in section 4.
 
 Fix: rewrite the section 8 elapsed paragraph with the corrected
 derivation, set the dry-run criterion to about 90 to 100 ms, add the
@@ -374,7 +456,12 @@ What the code says: hover_click is in the cdp.mjs whitelist (line
 434) and in the code_exec.py allowed set (line 217), but it is NOT in
 the cu.py browser allowed set (line 1299: click, confirm_click, fill,
 set_value, key, scroll, wait, assert). A grep for hover_click across
-cu.py at HEAD 3167c76 returns zero matches. The three-way mirror
+cu.py at HEAD 3167c76 returns zero matches. The drift sits in two
+places in cu.py, not one: the browser element-action check list at
+line 1341 also lists click, confirm_click, fill, set_value, assert
+with no hover_click, while cdp.mjs line 435 and code_exec.py line
+218 list the same six actions including hover_click (council 1 C2,
+council 3 C6). The three-way mirror
 already drifts today on one action type.
 
 Consequence: the section 3 cost argument overstates how routine the
@@ -383,10 +470,10 @@ agree by construction. The spec section 5 edit list does name all
 three files, so no edit is missing, but the landing must verify the
 three whitelists agree for focus instead of assuming the pattern.
 
-Fix: acknowledge the hover_click drift in section 3 (and record it as
-a known pre-existing drift, not something this landing fixes), and add
-a test asserting the three browser whitelists contain the same set,
-see F10 item (f).
+Fix: acknowledge the hover_click drift in section 3, recording both
+facets (cu.py lines 1299 and 1341), as a known pre-existing drift,
+not something this landing fixes, and add a test asserting the three
+browser whitelists contain the same set, see F10 item (f).
 
 ### F6 (MEDIUM): section 4 frames design additions as replication of the helper
 
@@ -412,7 +499,7 @@ enough.
 ### F7 (MEDIUM): the spec never compares the helper Enter params with the landed key params
 
 Verified first-hand from the committed helper and from cdp.mjs
-lines 390 to 412:
+lines 390 to 414:
 
 (a) The helper sends code: 'Enter' on both keyDown and keyUp. The
 landed key() never sends a `code` field for any key; it sends key,
@@ -474,7 +561,15 @@ click must raise DomAssertError under the corrected rule, and [click,
 type, key Enter, assert] must pass.
 (f) Whitelist sync: a test asserting the three browser whitelists
 (cdp.mjs line 434, code_exec.py line 217, cu.py line 1299) contain the
-same set. This locks in the F5 fix and catches future drift.
+same set. This locks in the F5 fix and catches future drift. As
+specified this test cannot pass while the F5 drift is unfixed:
+cu.py line 1299 lacks hover_click, so the test fails today. The
+two directions in this report conflict until the spec fix pass
+picks one: either add hover_click to cu.py (lines 1299 and 1341)
+as part of the landing, or scope the test to the landed set plus
+the recorded drift (council 1 C3, council 3 C7). This fix pass
+does not pick between them, because that choice is landing scope,
+not report scope; the spec fix pass must state which it chose.
 (g) One clarification for the unit-test paragraph: the existing
 cdp_validation.mjs key-function trick slices the source between
 'async function key(' and 'async function assertAction(', which does
@@ -535,7 +630,10 @@ Add to section 8, in addition to F10 items (a) to (g):
   (one Runtime.evaluate) so the F4 derivation can be checked against
   a real number instead of the 2 to 3 ms estimate. The current
   program elapsed_ms covers the whole program; the focus cost inside
-  it is not separately visible.
+  it is not separately visible. Record the post-Enter bubble latency
+  the same way (one Runtime.evaluate loop after the Enter), so the
+  F4 0 to 10 ms assert component can be checked against a real
+  number instead of the first-poll assumption (redteam R3).
 
 ## 5. Recommendation for the fix pass
 
@@ -553,10 +651,20 @@ rework, and the bulk of the spec verified clean, so the fix pass is
 small. After the fix pass, the spec can land without a second full
 review, provided the fix pass re-checks F3 and F4 against the code.
 
+Report fix pass note (batch 13, see section 8): the F2 note 1
+recommendation in this report was wrong and is struck; the spec fix
+pass must not apply it. The F3 rule now uses the ASSERTS-table
+definition with the fill carve-out, the F4 derivation now carries
+the dropped value-assert subtraction and the bubble-latency
+assumption, F5 records both drift facets, and F10 item (f) leaves
+the scoping choice to the spec fix pass. The key() and assertAction
+ranges are corrected in the report record. The AMEND verdict and
+findings F1 to F13 stand.
+
 ## 6. Verification log
 
 Times are Asia/Ho_Chi_Minh, 22 November 2026. Work ran about 14:20
-to 14:33 +07. No live runs, no browser work, no shared code changed.
+to 14:35 +07. No live runs, no browser work, no shared code changed.
 Read-only `git show` and `git grep` against origin/todolist-push, plus
 local scripts over the extracted JSONs.
 
@@ -576,11 +684,14 @@ local scripts over the extracted JSONs.
   This produced F1 and F2.
 - 14:25 to 14:30: verified every line citation in section 2.1 with
   grep and direct reads. All exact except the two one-line slips in
-  F9.
+  F9. (Fix pass correction: the key() range in section 2.1, 390 to
+  412, was also wrong; it is 390 to 414. The reviewer missed it.)
 - 14:30: recomputed all section 2.2 numbers from the 15 run JSONs
   plus 4 aborted JSONs with a script. All match the spec except the
   F4 derivation, which misattributes the Enter time and mixes live
   with scratch timings.
+- 14:31: confirmed the branch moved to 8c6553a during this review;
+  the diff for all reviewed files between 3167c76 and 8c6553a is empty.
 - 14:33: verified the 25 PNGs against the manifest section by section
   (sha256, byte size, PNG magic). First attempt used a naive filename
   match and mismatched 15 rows because the same filenames repeat
@@ -590,8 +701,6 @@ local scripts over the extracted JSONs.
 - 14:35: checked the remaining callers (require_asserts, assert_for,
   assert_coverage, DOM_ASSERT_EXCEPTIONS, validate_actions) and the
   hover_click drift in cu.py. Produced F3, F5, F10, F11.
-- 14:31: confirmed the branch moved to 8c6553a during this review;
-  the diff for all reviewed files between 3167c76 and 8c6553a is empty.
 - 14:33: wrote this report to
   docs/batch13-task2-b1-spec-review-20261122.md, committed only that
   file, pushed to origin/main.
@@ -605,3 +714,107 @@ local scripts over the extracted JSONs.
   with their components, not as new measurements.
 - No council, redteam, or fix pass. Those follow under the batch 13
   brief.
+
+## 8. Fix pass record (batch 13)
+
+Work ran about 14:47 to 14:53 +07 on 22 November 2026. No live runs,
+no browser work, no shared code changed. Read-only `git show` and
+`git archive` against origin/todolist-push at 8c6553a, plus scripts
+over the extracted JSONs and PNGs. Only this file was edited,
+committed, and pushed. The AMEND verdict and findings F1 to F13
+stand; only the corrections below change.
+
+### 8.1 Corrections applied
+
+1. F2 note 1 struck and reversed (council 1 C1, council 2 C-2,
+   council 3 C1, redteam R1). All 24 run JSONs carry p9 as a dict
+   naming the PNG paths (34 entries), populated since 4bd6292 and
+   1a3356d, already non-null at the spec base 4305dcb. The manifest
+   auditor note is wrong and must be corrected where cited, not
+   repeated. The spec fix must not say the paths come from the
+   repair-list convention.
+2. F2 PNG verification qualified as hash-level, not pixel-level
+   (council 3 C5). Council 2 spot-viewed 2 frames; the fix pass
+   viewed the same 2 frames first-hand and confirms both match the
+   manifest. The other 23 frames remain hash-verified only.
+3. F3 rule reworded: focus-establishing is defined through the
+   ASSERTS table (focus_check) with double_click added (council 2
+   C-3, council 3 C2, redteam R2), plus fill as an explicit
+   exception, see 8.2.
+4. F4 derivation completed: the dropped value-assert subtraction
+   (council 2 C-4, council 3 C3), the C4 premise that the 0 to 10
+   ms component is incremental over the value assert (council 1
+   C4), and the R3 caveat that the 0 to 10 ms bound assumes the
+   bubble is present at the first poll, with a new measurement ask
+   in section 4 (redteam R3). Recomputed ranges: dry about 87 to
+   99 ms, live about 108 to 143 ms; the stated criteria (about 90
+   to 100 ms, about 110 to 145 ms) still stand within rounding,
+   so no criterion changes.
+5. F5 drift recorded with both facets, cu.py lines 1299 and 1341
+   (council 1 C2, council 3 C6).
+6. F10 item (f) conflict recorded: the test as specified cannot
+   pass while the drift is unfixed (council 1 C3, council 3 C7).
+   The choice is left to the spec fix pass; this fix pass does
+   not pick it.
+7. key() range corrected to 390 to 414 (council 2 C-1) in section
+   2.1 and F7.
+8. Section 6 log reordered chronologically and the work window
+   corrected to 14:20 to 14:35 (council 3 C4, redteam R4). The log
+   times are approximate: the report commit f5e36e7 is timed
+   14:34:23 +07, so the 14:35 entry is approximate.
+
+### 8.2 Reviewer corrections adjusted, not applied as written
+
+- The literal ASSERTS-table-only definition of focus-establishing
+  (council 2 C-3) would wrongly exclude fill: fill maps to
+  type_check (dom_asserts.py lines 63 to 65) but focuses through
+  its internal click (cdp.mjs:535, await click(a), then the
+  activeElement check on line 536). Applied with fill as an
+  explicit documented exception instead, so the existing passing
+  shape [fill, key Enter, assert] still passes. The double_click
+  addition itself is applied as written.
+- Council 3 C3 printed bounds (dry about 87.8 to 100.3 ms, live
+  about 108.6 to 144.6 ms) do not reproduce from the stated
+  components; recomputed from the same components they are 86.8
+  to 98.8 ms dry and 107.6 to 142.6 ms live. The C3 conclusion
+  (note the subtraction, no range change) is applied; the printed
+  bounds are not.
+- The F10 item (f) scoping choice (add hover_click to cu.py or
+  scope the test) is not decided here. It is landing scope, not
+  report scope; the report now requires the spec fix pass to
+  state which it chose.
+
+### 8.3 Two errors the reviewers missed, found first-hand in this fix pass
+
+- assertAction is cdp.mjs lines 415 to 426, not 415 to 427 as this
+  report and councils 2 and 3 state. The function closes on line
+  426; line 427 is the act-operation check. Corrected in F4.
+- The 5 a1 PNGs are named by their run JSONs but are not in the
+  repo tree. The 25 manifest PNGs all exist and match the JSON
+  paths; the a1 gap is recorded in F2 as a precision note and does
+  not affect the finding.
+
+### 8.4 Fix pass verification log
+
+Times are Asia/Ho_Chi_Minh, 22 November 2026.
+
+- 14:47: fetched origin/main and origin/todolist-push. Local main
+  at 186ddd0 (redteam). todolist-push at 8c6553a, matching the
+  brief note.
+- 14:48: read the task 2 report and the council 1, 2, 3 and
+  redteam reports in full. Extracted the code, run JSONs,
+  manifest, and PNGs from origin/todolist-push to /tmp for
+  read-only checking.
+- 14:49: checked p9 in all 24 run JSONs (34 entries, all dicts,
+  zero null) and at commits 4bd6292, 1a3356d, 4305dcb, and
+  3167c76; confirmed 3ef8f55 touched zero run JSONs. Verified
+  key() 390 to 414, assertAction 415 to 426, dom_asserts.py
+  ASSERTS entries, cu.py lines 1297, 1299, 1341, 2048 to 2054,
+  cdp.mjs:535 fill click, and the manifest auditor note verbatim.
+- 14:50: viewed 2 PNG frames first-hand: (b1) run-1 Chromium
+  shows bubble C5-B1-R1-CHROMIUM-IGNORE-TEST with the composer
+  empty; flip run-1 Chromium shows no test bubble at the earlier
+  scroll position. Both match the manifest.
+- 14:50 to 14:52: applied the corrections above to this file in
+  place.
+- 14:53: committed only this file, pushed to origin/main.
