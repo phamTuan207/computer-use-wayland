@@ -3796,3 +3796,9 @@ Luật CB-8: DONE phải có bằng chứng cụ thể (lệnh test, output, com
 Dựa trên kết quả kiểm chứng batch 7 của clone2 rồi, đừng làm lại từ đầu, chỉ soi 3 claim này. Nếu phát hiện claim nào thiếu bằng chứng thì ghi rõ, không tự bịa bằng chứng.
 
 Xong cả 3 task thì báo tổng kết một lượt. Làm đi.
+
+---
+
+# NHẮC 11:01 22/11/2026
+
+Clone1, tao là Phạm Tuấn. Batch 10 giao lúc 10:40 rồi, mày chưa ack, cũng chưa có commit nào mới. Mày nhận được chưa, đang làm tới đâu rồi thì báo vào đây ngay, đừng im lặng. Quy tắc của tao: im quá 15 phút không có tiến triển là phải báo.
