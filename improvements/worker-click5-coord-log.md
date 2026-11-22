@@ -1051,4 +1051,104 @@ workspaces at the same time.
 - Still running: none at spawn time except the two new workers.
   Clone2 capped until Nov 25 02:38, no new work.
 
-## 26. (to be filled as results land)
+## 26. C5-S2-REOPEN verified: class completes 5/5, median 28.6s; EXPAND approved in principle, sequenced after landing; clone1 batch 12 queued (13:14-13:22 +07)
+
+- C5-S2-REOPEN (d3882370) COMPLETED 13:14:07 +07. Commits on
+  todolist-push: d90d1b9 (harness --chromium-set-value split
+  variant + test), 1a3356d (log + 5 run JSONs), 212e0ad (log hash
+  record). HEAD 212e0ad, ls-remote verified (origin todolist-push
+  = 212e0ad36f8c682b002e6459a76bcb4eb56496b1). Sibling
+  C5-P2-AMEND-FIX landed 507a50b on top of d90d1b9 mid-task; the
+  reopen commits sit on top of it, verified, no conflict.
+  VERIFIED from the raw run JSONs (git show 1a3356d), not the
+  handoff summary:
+  - All 5 runs: BOTH browsers sent, program ok True, V12 True
+    attempt 1, CB-1 all three True, model calls 0. Per-send
+    10/10, per-run complete 5/5. Original flip was 0/5 runs
+    complete; the re-open is 5/5.
+  - Brave (fill, unchanged): elapsed 137.5-144.9ms, strict
+    routing gate all 5 runs (72-79 elements, not truncated),
+    CB-1 completed 3, per-browser wall median about 3.7s.
+  - Chromium (b1): elapsed 99.4-113.0ms, RELAXED routing gate
+    all 5 runs (80 elements, truncated, composer present),
+    CB-1 completed 2, pre-send count 0 and delayed count exactly
+    1 every run (checked runs 1/3/5 directly; handoff states all
+    5), zero mouse events in the Chromium path.
+  - Walls: 29020.4, 27799.1, 28112.6, 28898.1, 28560.9. Sorted
+    median 28560.9ms (28.6s). Below the 60s plateau gate, and the
+    class completes (not fast failures), so the plateau is NOT
+    reached.
+  - Phase split (checked runs 1/3/5 directly): ssh 22.8/22.6/20.7s
+    of walls 29.0/28.1/28.6s, about 77 percent; broker 507-918ms,
+    observe 1.4-2.8s, act about 250ms, verify 273-677ms, residual
+    2.7-2.9s. The worker's median figures (ssh 21.9s of 28.6s)
+    are consistent with the runs checked. Further speed gains must
+    come from transport (S0/S1), not the send mechanism.
+  - P9: worker reports all 10 screenshots read and reviewed
+    before scoring, DOM and render agree in every shot, each run
+    message appears exactly once, composer empty. P9 PASS 10/10.
+    (P9 PNGs are untracked on the VM, *.png in .gitignore, same
+    precedent as the flip and b1 runs. I verified the JSON
+    evidence, not the PNG pixels, and record that plainly.)
+  - Brave relaunch + rollback verified from the log: SIGTERM PID
+    1003210 at 13:02:45, relaunched with the flag as PID 1112207
+    at 13:03, tab FED133417A338D5B1596D60490746672 (tab ids are
+    per-session; the harness looks up by URL), login intact,
+    version Chrome/157.0.8103.79 vs Chromium .38 on 127.0.0.1:9223
+    (no misattribution). Rollback 13:10:52-13:11:18: new main PID
+    1119832, no remote-debugging-port in cmdline, window back at
+    0x55705383d420 ws1, [::1]:9223 closed, Chromium PID 8059
+    untouched. Runs 1-5 ran 13:05-13:09, all before the 13:11:56
+    clone2-watch hold. No keystrokes anywhere, no workspace
+    switch, no Zen touched.
+  - Harness gap found and fixed first: one global program variant
+    would have forced set_value onto Brave too. Added
+    --chromium-set-value (Brave fill, Chromium set_value),
+    variant_for(browser), per-browser variant in run JSONs,
+    delayed-count recount only for set_value browsers. Wiring
+    tests 12/12 pass (was 11/11).
+- DECISION (coordinator): EXPAND APPROVED IN PRINCIPLE,
+  SEQUENCED AFTER LANDING. The gate is met (median 28.6s < 60s,
+  class completes 5/5), so expansion is authorized on
+  measurement per final-direction step 6. But the (b1) shape is
+  NOT durably landed (harness flags + /tmp helpers), and
+  C5-P2-AMEND-FIX is still running. Expansion will build on
+  landed code, not on /tmp helpers: order is (1) (b1) durable
+  landing in cdp.mjs with tests, (2) P2-AMEND-FIX completion,
+  (3) then expansion to the next class, which is NOT yet defined
+  (that definition is a coordinator decision at landing time).
+  The worker recommended EXPAND and did NOT expand itself, as
+  ordered.
+- Caveats carried forward: Chromium ran under the DISCLOSED
+  relaxed routing gate in all 5 runs (live thread past the
+  80-element cap since the b1 runs); the send mechanism is
+  identical to b1 run 1, which passed under the strict gate.
+  Raising the cap is a cdp.mjs change plus laptop sync, weighed
+  at landing time. The mouse stall itself is UNSOLVED: Chromium
+  still cannot answer Input.dispatchMouseEvent on the occluded
+  tab. (b1) routes around it for this class only; any future
+  class needing synthetic mouse input on an occluded tab hits the
+  same wall, and that stays the step 9 prototype's first target.
+- Clones: clone1 batch 11 task 4 DONE (6064c3d 13:02:18 +07,
+  batch 12 close-out, council + redteam + fix pass 2 rounds).
+  Clone2 acknowledged the cap notice (db0ce6b 12:20:44 +07, after
+  the 12:14 cap: "da nhan thong bao het limit toi 02:38 25/11,
+  batch 12 xong"). Clone1 acknowledged all 5 reopen runs (R1-R5
+  received) and waited for the run logs, which have now landed.
+  Clone1 batch 11 is now FULLY done (tasks 1-4). Queued clone1
+  batch 12 via coord/clone1.md on main, commit 26ebe40,
+  ls-remote verified (origin/main =
+  26ebe40bf1d08c52205f2e16397ec8c506959b98). Batch 12 tasks (each
+  council + redteam + fix pass, repo-only): (1) independent
+  re-verification of the S2 reopen verdict from raw JSONs;
+  (2) design spec for the durable (b1) landing in cdp.mjs;
+  (3) CB-8 audit of the two new DONE claims (S2 reopen PASS,
+  (b1) 5/5 on Chromium).
+- Still running: C5-P2-AMEND-FIX (738898c2). Landed so far:
+  ce399c7 (failing-first tests) and 507a50b (items 1, 3, 4:
+  no-pointer check before every _dispatch, wait/assert
+  input_sent False, wtype build guidance + clearer
+  missing-helper error). Items 2, 5, 6 pending. Clone2 capped
+  until Nov 25 02:38, no new work.
+
+## 27. (to be filled as results land)
