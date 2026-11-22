@@ -141,4 +141,63 @@ standard: test command, output, commit hash, time log with every claim.
 - C4-BENCH-MANIFEST (f3fb05a9): bench re-run + manifest lock.
 - Clone2 batch 11 (495cfc6 on main): 3 tasks, assigned 08:50.
 
-## 5. (to be filled as results land)
+## 5. P3 PASS, verified, 09:02 +07 (T+17m)
+
+- Worker C4-P3-PROBE completed. Log improvements/worker-click4-p3-probe-log.md,
+  commits 924ec3f + 0ef5fe5, ls-remote verified by me (origin todolist-push
+  HEAD 0ef5fe5). Probe ran 08:52-08:59 +07, about 7 min.
+- Verdict PASS: Brave accepts --remote-debugging-port=9223 on its existing
+  Default profile, session restores with the clone1 tab and login intact.
+  CDP observe 73ms (51 elements), harvest 108ms (composer box_model equals
+  JS rect), fill + assert on a scratch input 81ms (read-back
+  "P3-SCRATCH-OK"). The Messenger composer is a light-DOM TEXTAREA, not
+  shadow DOM. P3 gates ONLY step 11, and the gate is now MET for the
+  experiment limb.
+- MY VERIFICATION (laptop state, this session): Chromium PID 8059 alive
+  with --remote-debugging-port=9223 on 127.0.0.1:9223; Zen PID 496121 on
+  127.0.0.1:9222; NO [::1]:9223 listener (Brave debug port closed);
+  Brave PID 940441 alive WITHOUT the flag (elapsed 04:42 at check).
+- CRITICAL FINDING, port 9223 is SPLIT: 127.0.0.1:9223 has belonged to the
+  pre-existing agent-managed Chromium (PID 8059, since Nov 21, clone2
+  chat) all along; Brave's IPv4 bind failed EADDRINUSE and it listened
+  on [::1]:9223 only. The worker caught the misattribution mid-probe and
+  re-ran the full round against Brave on [::1]:9223; both rounds pass.
+  CONSEQUENCE for step 11: the endpoint must be named per browser, or
+  Brave must get a free port such as 9224. A run assuming "port 9223 is
+  Brave" will silently drive clone2's Chromium.
+- Chromium fallback: no migration needed. The agent-managed Chromium is
+  already logged in and serving the clone2 chat on 127.0.0.1:9223 since
+  Nov 21. Re-login cost is zero.
+- Laptop cdp.mjs is STALE (25177 bytes, no harvest op; laptop HEAD
+  56f5af4). The worker scp'd the current VM copy to /tmp/p3-cdp.mjs and
+  used that; the installed laptop tree was NOT modified. The laptop-tree
+  sync (step 8a) is still owed.
+- DEVIATION, Brave window on workspace 1, not as-found workspace 2.
+  Window 0x55705383d420, at 3448,914, size 924x1176, same tab and login,
+  only the workspace differs. The worker tried 3 move forms (string
+  dispatcher, hl.dsp.window.movetoworkspace, hl.dsp.movetoworkspace),
+  all failed; I tried one more (hl.dsp.window.move_to_workspace), nil
+  field. STOPPED per rule, not forced. The right hl.dsp call for moving
+  a window is unknown; recorded as an open item. The clone2-watch is
+  unaffected (it observes clone2's Chrome by address on ws2); the next
+  live-run worker re-lists windows each run.
+- STANDING EXPOSURE recorded: Chromium's 127.0.0.1:9223 listener has been
+  live since Nov 21, so any local process can already drive the logged-in
+  clone2 chat. This probe did not open it and left it as found.
+
+## 6. Codex live-confirm LAUNCHED, 09:04 +07 (T+19m)
+
+- P3 is done, so the sequencing constraint is lifted. Launched Codex
+  (Luna 6 Max, full access, detached on the laptop), PID 945044, verified
+  alive via ps. Prompt ~/workspace/codex-live-confirm-prompt.md and
+  launcher ~/workspace/codex-live-confirm-launch.sh written by me and
+  scp'd to /tmp on the laptop; launcher ran detached (setsid nohup).
+- Task: the three live-browser confirmations (F1 sanitization rule, item
+  8 fixed template, items 5-6 live hyprctl re-read). Verification ONLY:
+  a FAIL is recorded with failing-first evidence, no code fix. Work from
+  a fresh worktree of todolist-push at current HEAD; do NOT modify the
+  installed laptop tree. Do NOT touch Brave or the Chromium clone2 chat;
+  scratch inputs only. Deliverable: improvements/worker-codex-live-confirm-log.md
+  on a NEW branch live-confirm-codex, with a PASS/FAIL verdict per item.
+
+## 7. (to be filled as results land)
