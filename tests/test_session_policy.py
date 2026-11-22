@@ -99,12 +99,16 @@ def live(tmp, token, *, active, pre_calls, post, close_error=None):
         real_desktop_act = cu.desktop_act
 
         def act_boundary(env, meta, actions, after_capture=True, observation_path=None,
-                         expected_terminal_window=None):
+                         expected_terminal_window=None, type_x_ranges=None,
+                         type_y_ranges=None, require_type_ranges=False):
             act_open['pre_focus'] = True
             kwargs = {'after_capture': after_capture,
                       'observation_path': observation_path}
             if expected_terminal_window is not None:
                 kwargs['expected_terminal_window'] = expected_terminal_window
+            kwargs['type_x_ranges'] = type_x_ranges
+            kwargs['type_y_ranges'] = type_y_ranges
+            kwargs['require_type_ranges'] = require_type_ranges
             return real_desktop_act(env, meta, actions, **kwargs)
 
         stack.enter_context(patch.object(cu, 'desktop_act', side_effect=act_boundary))
