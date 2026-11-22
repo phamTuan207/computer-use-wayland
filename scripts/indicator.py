@@ -55,6 +55,18 @@ class Native:
         liquid = _valid_liquid(status)
         final = (Path(__file__).resolve().parents[1] / 'native/require-liquid').exists()
         if final and not liquid:
+            # Diagnostic only: the exception text stays pinned (tests and
+            # log greps depend on it), but the next diagnosis should not
+            # have to guess whether the probe never ran (no Hyprland
+            # session in env, e.g. an SSH-started daemon with no
+            # signature) or ran and found an invalid profile. W-PILLFIX:
+            # a missing signature produced this exact error while
+            # hyprglass itself was healthy.
+            probe = ('no_session_env'
+                     if not env.get('HYPRLAND_INSTANCE_SIGNATURE')
+                     or not env.get('WAYLAND_DISPLAY')
+                     else 'invalid_status')
+            _metric('liquid_unavailable', probe=probe)
             raise RuntimeError('final liquid-glass profile unavailable; restore the pinned plugin before computer-use')
         if final:
             env.pop('CU_INDICATOR_ENTRANCE', None)  # accepted profile has no entrance animation

@@ -197,19 +197,34 @@ def session_label(label):
 
 def wayland_env():
     """Env for spawning the native indicator. Steals the live Wayland
-    session vars when the caller (e.g. SSH) does not carry them."""
+    session vars when the caller (e.g. SSH) does not carry them.
+
+    Signature discovery is delegated to hypr_cmd.desktop_env, the one
+    proven source of truth in this repo: the instance directory lives
+    under /run/user/1000/hypr/, NOT /run/user/1000/hyprland/ (which does
+    not exist on this machine; the old code read that dead directory, so
+    an SSH-started daemon never got a signature and every standalone
+    native spawn failed with the liquid-glass error even though hyprglass
+    itself was healthy). A caller-provided signature is kept as-is. When
+    no instance can be discovered, the env is returned without a
+    signature, exactly like before; the spawn then fails loudly instead
+    of crashing here.
+    """
     env = dict(os.environ)
     if env.get('HYPRLAND_INSTANCE_SIGNATURE') and env.get('WAYLAND_DISPLAY'):
         return env
-    runtime = Path('/run/user/1000')
-    hypr = runtime / 'hyprland'
+    if env.get('HYPRLAND_INSTANCE_SIGNATURE'):
+        env.setdefault('WAYLAND_DISPLAY', 'wayland-1')
+        env.setdefault('XDG_RUNTIME_DIR', '/run/user/1000')
+        return env
+    runtime = Path(env.get('XDG_RUNTIME_DIR') or '/run/user/1000')
     try:
-        sig_dirs = [d for d in hypr.iterdir() if d.is_dir()] if hypr.is_dir() else []
-    except OSError:
-        sig_dirs = []
-    if sig_dirs:
-        env['HYPRLAND_INSTANCE_SIGNATURE'] = sig_dirs[0].name
-    env.setdefault('WAYLAND_DISPLAY', 'wayland-1')
+        from hypr_cmd import desktop_env
+        discovered = desktop_env(signature_dir=str(runtime / 'hypr'))
+        env['HYPRLAND_INSTANCE_SIGNATURE'] = discovered['HYPRLAND_INSTANCE_SIGNATURE']
+        env['WAYLAND_DISPLAY'] = discovered['WAYLAND_DISPLAY']
+    except (ImportError, ValueError):
+        env.setdefault('WAYLAND_DISPLAY', 'wayland-1')
     env.setdefault('XDG_RUNTIME_DIR', str(runtime))
     return env
 
@@ -325,6 +340,18 @@ class Daemon:
             return {'visible': True, 'owner': self.owner, 'holders': holders,
                     'label': label}
 
+    def status_reply(self):
+        """Truthful status: reconcile first, then report.
+
+        The old 'status' reply was {'visible': bool(holders)}, which lied
+        (visible True while no pill rendered) and misled a verify lane.
+        apply_holders is what the monitor already runs every 2s, so this
+        adds no new side-effect class: it spawns/shows only when holders
+        exist, and reports visible False with the error when the pill
+        cannot be shown.
+        """
+        return self.apply_holders()
+
     def _monitor(self):
         empty_polls = 0
         while not self.stop_event.wait(2.0):
@@ -396,9 +423,7 @@ class Daemon:
                     elif cmd == 'sync':
                         reply = self.apply_holders()
                     elif cmd == 'status':
-                        holders = load_holders()
-                        reply = {'visible': bool(holders), 'owner': self.owner,
-                                 'holders': holders}
+                        reply = self.status_reply()
                     elif cmd == 'stop':
                         reply = {'stopping': True}
                         self.stop_event.set()
@@ -513,6 +538,24 @@ def cmd_acquire(args):
         except Exception:
             pass
         raise
+    if reply.get('visible') is not True:
+        # Fail closed (W-PILLFIX): the daemon answered but the pill did
+        # not render, so this acquire must refuse instead of letting the
+        # caller drive invisibly. chromium_cli._pill_hold documents that
+        # overlay.hold raises here, and cdp.mjs treats any non-zero exit
+        # as 'CDP pill unavailable'; both were silently bypassed while
+        # cmd_acquire returned 0 with visible False. Remove the
+        # just-added holder (same D1 reasoning as above) so a pid-less
+        # stale entry cannot linger, log the daemon's error to stderr,
+        # and still print the reply JSON for diagnosis.
+        try:
+            remove_holder(args.agent, args.pid)
+        except Exception:
+            pass
+        _log('acquire_invisible', agent=args.agent, method=args.method,
+             error=str(reply.get('error', 'pill show failed')))
+        print(json.dumps(reply, sort_keys=True))
+        return 1
     _log('acquired', agent=args.agent, method=args.method, holders=len(holders))
     print(json.dumps(reply, sort_keys=True))
     return 0
@@ -545,7 +588,13 @@ def cmd_status(args):
         except (OSError, ValueError):
             info['owner'] = 'unknown'
     else:
-        info['owner'] = 'none'
+        # No daemon means no daemon-owned pill. The pill can still be up
+        # via a live session indicator, so report that instead of
+        # bool(holders): with no daemon and no session, holders alone
+        # never render anything (W-PILLFIX).
+        live = bool(holders) and session_live()
+        info = {'visible': live, 'owner': 'session' if live else 'none',
+                'holders': holders}
     print(json.dumps(info, sort_keys=True, indent=2))
     return 0
 

@@ -119,6 +119,27 @@ class NativeStartup(IsolatedNativeTree):
                 indicator.Native({})
             launch.assert_not_called()
 
+    def test_final_profile_rejection_names_probe_cause(self):
+        """W-PILLFIX: the pinned exception text stays the same, but stderr
+        must say whether the probe never ran (no Hyprland session in env)
+        or ran and found an invalid profile. A missing signature produced
+        this exact error while hyprglass was healthy, and the message
+        alone sent the diagnosis hunting a plugin that was never gone."""
+        cases = (({}, 'no_session_env'),
+                 ({'HYPRLAND_INSTANCE_SIGNATURE': 'x',
+                   'WAYLAND_DISPLAY': 'wayland-1'}, 'invalid_status'))
+        for env, probe in cases:
+            with self.subTest(env=env, probe=probe), \
+                    patch.object(indicator.Path, 'exists', return_value=True), \
+                    patch.object(indicator, '_status', return_value=None), \
+                    patch.object(indicator.subprocess, 'Popen'):
+                err = io.StringIO()
+                with redirect_stderr(err):
+                    with self.assertRaisesRegex(
+                            RuntimeError, 'final liquid-glass profile unavailable'):
+                        indicator.Native(env)
+                self.assertIn(probe, err.getvalue())
+
     def test_animated_ready_budget_matches_default_and_overrides(self):
         cases = [({}, 3.0), ({'CU_INDICATOR_ENTRANCE_MS': '4000'}, 3.0),
                  ({'CU_INDICATOR_ENTRANCE': 'sheet', 'CU_INDICATOR_ENTRANCE_MS': '4000'}, 5.0),
