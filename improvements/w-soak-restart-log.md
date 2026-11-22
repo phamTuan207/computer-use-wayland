@@ -213,5 +213,15 @@ and it still depends on the tick loop plus the VM staying up (section 7).
 
 ## 9. Commit record
 
-PENDING. To be filled after section 6: git add with explicit pathspec,
-git commit -m, push, ls-remote verify.
+- Log commit: b2502b6a953b3d80e8b9ed12379133c2250c17ee ("W-SOAKRESTART: S0 soak
+  master restarted as new run, pid 27441, alive t+6"), 1 file, 217 insertions,
+  pushed ba4b298..b2502b6, verified with `git ls-remote origin todolist-push`
+  at about 19:08 +07, local HEAD matches remote.
+- Commit method: `git add -- improvements/w-soak-restart-log.md` then `git
+  commit -m` (no pathspec on commit), per the hard git rule. The dirty
+  results.json (another lane's) and other untracked drafts were NOT touched.
+- Pre-commit checks: 0 em dash, 0 en dash in the file (Python count, 218
+  lines at first write, 217 insertions committed); fetch plus pull --ff-only
+  showed Already up to date at ba4b298 before staging.
+- This section was filled after the push, committed separately (small commits,
+  per the 19:03 team order).
