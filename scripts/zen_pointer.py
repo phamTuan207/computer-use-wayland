@@ -204,6 +204,13 @@ class ZenPointerDelegate:
             'act_screen_change': result.get('screen_change'),
             'type_verified': result.get('type_verified'),
             'type_verified_basis': result.get('type_verified_basis'),
+            # F4 follow-up: the desktop_act IME trace, so a doubled
+            # or mangled typed value can be traced to the input
+            # method state around the type (fcitx5 switch/restore)
+            # instead of guessed. Additive only.
+            'ime_state_trace': result.get('ime_state_trace'),
+            'ime_restore_failed': result.get('ime_restore_failed'),
+            'wtype_stderr': result.get('wtype_stderr'),
         }
         return (result.get('ok') is True
                 and result.get('completed') == len(desktop))

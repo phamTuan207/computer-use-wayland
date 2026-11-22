@@ -111,7 +111,17 @@ class FakeCodeBackend:
                         field.get('value', ''))
         completed = (len(actions) if self.completed is None
                      else self.completed)
-        return {'ok': True, 'completed': completed}
+        return {'ok': True, 'completed': completed,
+                'type_verified': True,
+                'type_verified_basis': 'dom-value',
+                'ime_state_trace': [
+                    {'phase': 'before', 'state': '2',
+                     'status': 'observed'},
+                    {'phase': 'after_switch', 'state': '1',
+                     'status': 'observed'},
+                    {'phase': 'after_restore', 'state': '2',
+                     'status': 'observed'}],
+                'wtype_stderr': ''}
 
 
 class DelegateUnitTests(unittest.TestCase):
@@ -370,6 +380,24 @@ class SettleTests(unittest.TestCase):
         self.assertTrue(result['settle']['stable'])
         self.assertEqual(result['settle']['reads'], 2)
         backend.close()
+
+    def test_last_dispatch_carries_ime_trace(self):
+        # The delegate surfaces the desktop_act IME trace on
+        # last_dispatch, so a doubled or mangled typed value can
+        # be traced to the input-method state around the type.
+        delegate, backend, _focused, _session = \
+            self._delegate_with_frames(None)
+        delegate.begin_batch('0xabc')
+        self.assertTrue(delegate(
+            {'type': 'fill', 'ref': '#c5-text', 'text': 'hello'},
+            [2700, 1000]))
+        trace = delegate.last_dispatch.get('ime_state_trace')
+        self.assertEqual(
+            [t['phase'] for t in trace],
+            ['before', 'after_switch', 'after_restore'])
+        self.assertEqual(trace[0]['state'], '2')
+        self.assertEqual(trace[1]['state'], '1')
+        self.assertEqual(delegate.last_dispatch.get('wtype_stderr'), '')
 
 
 class BackendWiringTests(unittest.TestCase):
