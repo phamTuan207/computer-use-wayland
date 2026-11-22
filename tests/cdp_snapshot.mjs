@@ -23,7 +23,11 @@ class FakeTextarea {
 // The fake DOM needs enough selector support for scoped observe: which nodes are
 // interactive, and which live inside a subtree.
 const TAGS=/^(BUTTON|INPUT|TEXTAREA|SELECT|SUMMARY|A)$/;
-const ROLES=/^(button|checkbox|tab|menuitem)$/;
+// Mirrors the INTERACTIVE selector in scripts/cdp.mjs: the role list
+// must stay in sync with it, including the ARIA text-field roles
+// (W-ARIA GAP C: [role="textbox"], [role="searchbox"],
+// [role="combobox"] are harvested candidates).
+const ROLES=/^(button|checkbox|tab|menuitem|textbox|searchbox|combobox)$/;
 function matchesSelector(node,selector){
   if(selector==='*')return true;
   if(selector==='iframe')return node.tagName==='IFRAME';
@@ -431,6 +435,20 @@ assert.ok(scoped.measured.has(nameField)&&scoped.measured.has(saveButton),
   'in-scope nodes must be measured');
 assert.ok(!scoped.measured.has(strayButton)&&!scoped.measured.has(strayField),
   'outside nodes must never be measured');
+
+// W-ARIA role map, failing-first (GAP A/C/D): a contenteditable field
+// harvests as its implicit ARIA role textbox, not its tag name; an
+// ARIA text-field role on a plain element is inventoried; a role
+// attribute is normalized to lowercase. Before the fix the
+// contenteditable div harvests as "div", the role="textbox" div is
+// absent from the snapshot, and role="TextBox" stays "TextBox".
+const ceDiv=element('Message',{id:'ce',tagName:'DIV',isContentEditable:true,attributes:{'aria-label':'Message'}});
+const ariaTextbox=element('Message',{id:'at',tagName:'DIV',attributes:{role:'textbox','aria-label':'Message'}});
+const ariaSearchbox=element('Message',{id:'as',tagName:'INPUT',attributes:{role:'searchbox','aria-label':'Message'}});
+const mixedCase=element('Message',{id:'mc',tagName:'INPUT',attributes:{role:'TextBox','aria-label':'Message'}});
+const ariaObserved=await run([ceDiv,ariaTextbox,ariaSearchbox,mixedCase],undefined);
+assert.deepEqual(ariaObserved.result.elements.map(e=>[e.ref,e.role]),
+  [['e1','textbox'],['e2','textbox'],['e3','searchbox'],['e4','textbox']]);
 
 // A root that is itself interactive is included exactly once, and refs map 1:1.
 const rootButton=await run([element('root save',{id:'root'}),element('inner',{id:'inner'})],

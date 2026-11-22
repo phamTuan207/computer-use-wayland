@@ -175,7 +175,11 @@ const elementExpression=(a,body)=>`(()=>{const e=(${pageState.toString()})(${JSO
 // path with its hit test. Default off: the snapshot shape is exactly
 // the baseline shape.
 const pick4Rects=process.env?.CU_PICK4_FASTPATH==='1';
-const INTERACTIVE='button,a[href],input,textarea,select,summary,[role="button"],[role="checkbox"],[role="tab"],[role="menuitem"],[contenteditable="true"]';
+const INTERACTIVE='button,a[href],input,textarea,select,summary,[role="button"],[role="checkbox"],[role="tab"],[role="menuitem"],[role="textbox"],[role="searchbox"],[role="combobox"],[contenteditable="true"]';
+// W-ARIA: the ARIA text-field roles are inventoried too. A plain
+// <div role="textbox"> is a text field the grounding accepts, but the
+// old selector never harvested it, so the "textbox" branch was dead
+// for that shape (GAP C, live-proved 2026-11-22).
 // Hit-test rule (RT R8), shared by click, hoverClick, set_value and
 // the harvest: the rect center must resolve to the element itself or
 // a NON-interactive descendant. An interactive child at the center (a
@@ -208,7 +212,17 @@ async function snapshot(explicitScope) {
       const ref='e'+(++index);s.refs.set(ref,e);
       const field=/^(INPUT|TEXTAREA|SELECT)$/.test(e.tagName)||e.isContentEditable;
       const label=e.getAttribute('aria-label')||e.labels?.[0]?.innerText||(!field&&e.innerText)||e.getAttribute('placeholder')||e.getAttribute('title')||e.name||'';
-      const item={ref,role:e.getAttribute('role')||(e.tagName==='A'?'link':e.tagName.toLowerCase()),name:label.trim().slice(0,120)};
+      // Role normalization (W-ARIA): the harvest reports the ARIA
+      // role, not the tag name. A contenteditable element without an
+      // explicit role has the implicit ARIA role textbox (GAP A: it
+      // used to harvest as "div" and the composer grounding missed
+      // it), and the role token is lowercased (GAP D: role="TextBox"
+      // used to survive verbatim while the grounding compares
+      // lowercase). confirm_click recomputes the role with the same
+      // formula, so the two must stay in sync.
+      const rawRole=e.getAttribute('role');
+      const role=(rawRole||(e.isContentEditable?'textbox':(e.tagName==='A'?'link':e.tagName.toLowerCase()))).toLowerCase();
+      const item={ref,role,name:label.trim().slice(0,120)};
       ${pick4Rects?`const __r=e.getBoundingClientRect();
       item.rect={x:Math.round(__r.left),y:Math.round(__r.top),width:Math.round(__r.width),height:Math.round(__r.height)};
       item.center={x:Math.round(__r.left+__r.width/2),y:Math.round(__r.top+__r.height/2)};`:''}
@@ -295,7 +309,7 @@ async function click(a) {
     ${a.type==='confirm_click'?`
     if(e.getAttribute('aria-disabled')==='true'||e.closest('[inert]'))
       throw new Error('element disabled');
-    const role=(e.getAttribute('role')||(e.tagName==='A'?'link':e.tagName.toLowerCase())).toLowerCase();
+    const role=(e.getAttribute('role')||(e.isContentEditable?'textbox':(e.tagName==='A'?'link':e.tagName.toLowerCase()))).toLowerCase();
     const field=/^(INPUT|TEXTAREA|SELECT)$/.test(e.tagName)||e.isContentEditable;
     const name=(e.getAttribute('aria-label')||e.labels?.[0]?.innerText||(!field&&e.innerText)||
       e.getAttribute('placeholder')||e.getAttribute('title')||e.name||'').trim().slice(0,120);

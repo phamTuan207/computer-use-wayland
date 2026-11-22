@@ -219,6 +219,38 @@ class ProgramShapeTests(unittest.TestCase):
             exec(head, ns)  # noqa: S102 - the program source is ours
             self.assertEqual(ns['comp'], 'e1')
 
+    def test_composer_grounding_accepts_aria_text_entry_roles(self):
+        # W-ARIA GAP B (failing-first): the harvest maps an explicit
+        # ARIA text-entry role verbatim, so <input role="searchbox">
+        # arrives as "searchbox" and <input role="combobox"> as
+        # "combobox"; the grounding must accept both, like it accepts
+        # "input" since run 91. "textbox" is covered too: GAP A is
+        # fixed at the harvest (contenteditable harvests as
+        # "textbox"), and the grounding half must accept it.
+        # set_value/focus still fail loudly on a non-editable field,
+        # so a mis-grounded non-text input cannot send silently.
+        def _assert_state(cond, msg):
+            if not cond:
+                raise AssertionError(msg)
+
+        for role in ('textbox', 'searchbox', 'combobox'):
+            fixture_snap = {
+                'snapshot': 'SNAP1',
+                'elements': [
+                    {'ref': 'e1', 'role': role, 'name': 'Message'},
+                    {'ref': 'e2', 'role': 'button', 'name': 'Send'},
+                ],
+            }
+            for build in (s2_flip_live.build_program,
+                          s2_flip_live.build_program_set_value):
+                program = build('TABID123', 'hello')
+                head = program.split('res = dom_act(snap, [')[0]
+                ns = {'dom_observe': lambda _t: fixture_snap,
+                      'assert_state': _assert_state}
+                exec(head, ns)  # noqa: S102 - the program source is ours
+                self.assertEqual(ns['comp'], 'e1',
+                                 'role %r must ground' % role)
+
     def test_set_value_program_without_focus_raises_p5(self):
         # The send-requires-focus rule: [set_value, key Enter,
         # assert] with no focus-establishing action raises

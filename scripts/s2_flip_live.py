@@ -86,9 +86,13 @@ BUBBLE_ASSERT_SELECTOR = '[role="log"] > [data-message-item]:last-child'
 # "textbox". The grounding must accept it: the held-out fixture's
 # #msg-input is a text input, and the textarea/textbox-only predicate
 # missed it (held-out run 90, "composer not found in snapshot").
-# set_value/focus still fail loudly on a non-editable field, so a
-# mis-grounded non-text input cannot send silently.
-COMPOSER_ROLES = ('textarea', 'textbox', 'input')
+# W-ARIA adds the ARIA text-entry roles: the harvest maps an explicit
+# role attribute verbatim, so role="searchbox" and role="combobox"
+# arrive as such (GAP B), and a contenteditable field harvests as
+# "textbox" (GAP A, normalized in cdp.mjs). set_value/focus still fail
+# loudly on a non-editable field, so a mis-grounded non-text input
+# cannot send silently.
+COMPOSER_ROLES = ('textarea', 'textbox', 'input', 'searchbox', 'combobox')
 PROGRAM_WALL_SECONDS = 20
 V12_TIMEOUT_MS = 10000
 
