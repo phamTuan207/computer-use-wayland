@@ -4215,3 +4215,20 @@ và spec khẳng định P9 PASS 10/10 mà không liệt kê ảnh P9
 thiếu ở mục còn thiếu. Số liệu đo đều đúng, wiring test chạy
 lại 12/12. Đã giao fix pass task 2 (1 agent riêng). Redteam
 task 1 vẫn đang chạy, xong là giao fix pass task 1.
+
+## 13:41 ngày 22/11 - BATCH 12 TASK 1: REDTEAM XONG, FIX PASS ĐÃ GIAO
+
+Redteam task 1 xong (0b68524, 298 dòng): verdict SURVIVES, 0
+breaking, 5 minor. M1: giải thích tăng +2 items sai, thực ra
+là 1 bubble user cộng 1 reply của clone1 mỗi run, và run 1
+Chromium lệch +3 là artifact hệ thống của run đầu, b1 cũng
+vậy. M2: chữ textLen +4 nói quá, harness ghi V12 là substring
+match, chỉ 4 ký tự nào là không kiểm được. M3: lệnh ghi run
+2-5 nhưng output bao run 1-5. M4: chữ "Exact" nói quá, tổng
+lệch 0.002-0.044 ms trước làm tròn. M5: thiếu ghi script đếm
+/tmp/c5-count.mjs chỉ có trên laptop. Cả 8 claim đều tái tạo
+đúng từ JSON thô, P9 thiếu đã xác nhận lại. Council 1
+CONFIRMED, council 2 STANDS WITH MINOR CORRECTIONS (M1-M3),
+council 3 COMPLETE. Đã giao fix pass task 1 (1 agent riêng).
+Fix pass task 2 vẫn đang chạy. Xong cả 2 fix pass thì tổng
+kết đợt 12.
