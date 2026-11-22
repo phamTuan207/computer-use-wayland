@@ -374,8 +374,9 @@ coordinator should carry forward:
 
 ## 9. Commit record
 
-- (to be filled: this log, commit hash, push verified with
-  git ls-remote)
+- This log: improvements/worker-click5-stall-inv-log.md,
+  commit 3852b46, push verified with git ls-remote
+  (3852b46e663302cb379ecafdfeb56bac12b710b4).
 - Laptop helpers (not in the repo): /tmp/c5-stall-probe.mjs,
   /tmp/c5-stall-mini.mjs, /tmp/c5-stall-battery2.mjs,
   /tmp/c5-livestate2.mjs, /tmp/c5-dbg.mjs, /tmp/c5-dbg2.mjs.
