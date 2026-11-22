@@ -557,6 +557,26 @@ class BackendWiringTests(unittest.TestCase):
         self.assertEqual(basis, 'dom-value')
         backend.close()
 
+    def test_viewport_settle_surfaced_on_dom_act_result(self):
+        # F2 follow-up: the viewport settle outcome rides the
+        # dom_act result top-level, so the run evidence says
+        # whether the viewport origin was settled when the batch
+        # grounded its points.
+        backend, session, _code, _focused = self._backend()
+        backend.dom_start()
+        session.last_viewport_settle = {
+            'reads': 3, 'settled_moz': [240, 8],
+            'elapsed_ms': 201.5}
+        snapshot = backend.dom_observe('Example', '#c5-text', 10)
+        result = backend.dom_act(
+            'Example', snapshot['snapshot'],
+            [self._action(snapshot['snapshot'])], None, True)
+        self.assertTrue(result['ok'], result)
+        self.assertEqual(result['viewport_settle'],
+                         {'reads': 3, 'settled_moz': [240, 8],
+                          'elapsed_ms': 201.5})
+        backend.close()
+
 
 class RealShapeFakeSession(_p2.FakeZenSession):
     """Fake session with the REAL sent_bubble_contains signature.

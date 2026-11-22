@@ -544,8 +544,39 @@ def cmd_close(scratch_substr, original_url):
             _restore_original(z, original_url, result)
             return result
         scratch_full = _full_handle(full, scratch['handle'])
+        # F4 follow-up (cmd_close spurious error): DELETE closes
+        # the CURRENT window, so the session's browsing context is
+        # discarded and the next read (handles/scan) fails with
+        # 'Browsing context has been discarded' even though the
+        # DELETE succeeded. Resolve a fallback window BEFORE the
+        # DELETE (the original tab, else any non-scratch tab) and
+        # select it right after, to re-establish a valid browsing
+        # context before any verification read.
+        fallback = None
+        try:
+            orig_entry = _find_in_scan(entries, original_url)
+            if orig_entry is not None:
+                fallback = _full_handle(full, orig_entry['handle'])
+        except zen_dom.ZenDomError:
+            fallback = None
+        if fallback is None:
+            for h in full:
+                if h != scratch_full:
+                    fallback = h
+                    break
         _switch(z, scratch_full)
         z._wd("DELETE", f"/session/{z.session}/window", {})
+        if fallback is not None:
+            # Re-establish a live browsing context before any
+            # read. The POST selects a live window; it must not
+            # fail the close when the context is already gone, so
+            # a failure here falls through to the verification
+            # read, which is the real check.
+            try:
+                z._wd("POST", f"/session/{z.session}/window",
+                      {"handle": fallback})
+            except Exception:
+                pass
         after = _handles(z)
         # Verify by a fresh scan that the scratch tab is gone, and
         # re-resolve the original tab after the mutation instead

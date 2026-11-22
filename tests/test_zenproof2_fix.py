@@ -1025,7 +1025,12 @@ class ZenTabFixTest(unittest.TestCase):
         self.assertFalse(closed.get('original_ambiguous', False))
         self.assertFalse(closed.get('original_missing', False))
         self.assertNotIn(FIXTURE_URL, [t['url'] for t in fake.tabs])
-        self.assertEqual(closed['current_url'], 'https://example.com/')
+        # F4 follow-up: cmd_close now selects the original tab
+        # right after the DELETE (to re-establish a valid browsing
+        # context before the verification reads), so when the
+        # restore scan fails the current tab is already the
+        # original, not whatever the browser auto-activated.
+        self.assertEqual(closed['current_url'], OWNER_URL)
 
     def test_restore_original_full_handle_failure_flagged(self):
         """Council 3 C5, observation 2: when the original tab's

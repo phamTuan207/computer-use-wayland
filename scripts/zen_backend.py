@@ -716,6 +716,14 @@ class ZenDomBackend:
         settle = getattr(self._pointer, 'last_settle', None)
         if isinstance(settle, dict):
             result['settle'] = settle
+        # F2 follow-up: the viewport settle outcome (reads, settled
+        # moz, elapsed ms), so the run evidence says whether the
+        # viewport origin was settled (not stale) when the batch
+        # grounded its points. Read from the session, which records
+        # it on every viewport_origin call.
+        viewport_settle = getattr(session, 'last_viewport_settle', None)
+        if isinstance(viewport_settle, dict):
+            result['viewport_settle'] = viewport_settle
         if error is not None:
             result['error'] = error
         if fresh_snapshot is not None:

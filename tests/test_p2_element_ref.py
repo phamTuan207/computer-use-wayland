@@ -894,6 +894,10 @@ class FakeZenSession:
         self.dom_outer = [925, 1176]
         self.last_geometry_warnings = []
         self.sent_bubbles = []
+        # Viewport settle outcome (F2): {'reads', 'settled_moz',
+        # 'elapsed_ms'}, recorded by the real session on every
+        # viewport_origin call. None until a settle runs.
+        self.last_viewport_settle = None
         # Rendered text of plain elements (a sent bubble div has
         # no value property, so field_value returns None for it,
         # while element_text returns its text). Keyed by selector.
