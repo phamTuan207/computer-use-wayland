@@ -239,3 +239,12 @@
 - Push: 1230e79..9fd8400 len todolist-push, verify bang `git ls-remote origin todolist-push`, tra 9fd8400646118640ec60bc980bb8df80a2a2bd84.
 - Con mo, can Muse tong quyet: public handle (94 hit) va noreply (8 hit) van de nguyen, git history van chua ten va email (khong rewrite history, khong force push), dieu kien cua so yen tinh cua gate G-SCRUB (moi push da len, PR xong, khong live run, moi agent re-clone) la dieu kien dieu phoi, khong chung minh duoc tu diff nay. Cay lam viec thi sach, gate G-SCRUB doc chat thi CHUA DAT vi history va handle.
 - B2-1, B2-2, B2-3, B2-5 da commit xong. Con lai B2-4 va B2-6 chua co bao cao cuoi.
+
+## Bao cao patch tich luy B2-3, 00:00 ngay 23/11, lenh truc tiep cua Pham Tuan trong chat 23:57
+
+- Review doc lap bao: patch cua ef964a6 KHONG apply duoc tren cf11a4b, fail ca 4 file. Tao kiem chung lai, dung nhu vay.
+- Nguyen nhan: diff cua ef964a6 tinh tren base e6b9777, trong do co thay doi trung gian cua lane khac len 4 file nay ma cf11a4b khong co (vi du fix A8 44b9a80). Tao chay `git show ef964a6 | git apply --check` tren worktree cf11a4b, ket qua rc 1, fail ca 4 file: runner dong 43, trial doc dong 32, hook dong 38, test dong 64.
+- Cach sua: xuat cumulative patch `git diff cf11a4b ef964a6` cho 4 file, luu thanh file rieng improvements/mochi-b2-3-cumulative-vs-cf11a4b.patch, 2069 dong, md5 855c19c94ed91887c25452d6a16c6f36, 1691 them, 89 xoa. File nay chua ca thay doi trung gian cua lane khac va fix B2-3, nen apply sach tren cf11a4b.
+- Verify tren worktree cf11a4b, 23:58 gio Viet Nam: `git apply --check` PASS, apply xong diff 1691/89, md5 4 file khop ef964a6 (runner e478846e, hook 9e8e66b1, test 200f01e7, trial doc 1965dd89), `python3 tests/test_y6c5_positive_gate.py` 40/40 PASS, 12.0s, bash -n OK. Cach tai hien: checkout cf11a4b, roi `git apply improvements/mochi-b2-3-cumulative-vs-cf11a4b.patch`.
+- Commit file patch rieng: c597a2984c472cafb6f2ee22d8814816b0fbd311, tren todolist-push, base 311eacd (rebase tu a0c457b vi origin tien len trong luc lam). Push: 311eacd..c597a29, verify bang `git ls-remote origin todolist-push`, tra c597a2984c472cafb6f2ee22d8814816b0fbd311.
+- Tiep theo: review log B2-1, B2-2, B2-3, B2-5 theo lenh 23:57, moi cai commit rieng, bao cao ngay sau moi commit.
