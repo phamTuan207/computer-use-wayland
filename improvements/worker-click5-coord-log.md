@@ -776,4 +776,58 @@ workspaces at the same time.
   passes landed, task 2 running). Clone2 at 90% usage: NO large
   batch 13 (section 15); load shifts to clone1.
 
-## 22. (to be filled as results land)
+## 22. C5-CLONE1-APPROVE verified DONE, clone1 batch 11 queued (12:00-12:08 +07)
+
+- C5-CLONE1-APPROVE (697eeb0f) COMPLETED 11:59:17 +07, log commit
+  e68e578 on todolist-push, push verified via ls-remote (origin
+  todolist-push = e68e57850819b80db4716a741de8afb0400ddeee).
+  VERIFIED from the log itself (git show e68e578, 186 lines):
+  pre-click obs 6d20151fdfb1 (11:48:03) confirmed exactly 2 cards
+  pending, footer "2 tasks need review". Click 1 (IRS) 11:52:53 at
+  (642, 543), rc=0, completed 1, post obs e7cd4e0e2ae9: card 1 gone,
+  footer "A task needs review". Click 2 (Wikipedia) 11:53:58 at
+  (642, 543), rc=0, completed 1, post obs 826f9ad42631: "Needs
+  review" section gone. Final obs a09381136fef (11:55:31):
+  Approvals history shows BOTH entries "Allowed for this
+  scheduled task - just now". Focus verified with hyprctl -j
+  activewindow in the SAME SSH call before each click, Brave
+  0x55705383d420 every time; no Deny, no chat button, no banner,
+  no keystrokes. Post-state 11:56:03: ws1 active, same 4 windows
+  and PIDs, no session left running. Both clicks fell outside
+  the clone2-watch hold windows. The focus-incident log landed
+  mid-task (2d198c4); the worker read section 7 after fetching
+  and confirmed compliance. Two minor notes, neither blocking:
+  (a) handoff says 12 min wall, log says about 9 min
+  (11:47-11:56); the 12-min figure includes commit/push time
+  (commit 11:58:31). (b) Log header says HEAD before this log
+  was 350934a; the worker rebased onto f1b85ee before pushing,
+  so the header is stale, harmless.
+- DECISION on the worker's open item (throwaway driver scripts):
+  VM copies at ~/workspace/c5click1.py and ~/workspace/c5click2.py
+  are the kept record; laptop /tmp copies expire with /tmp. No
+  further filing needed.
+- Clone1 batch 10 DONE: summary commit e35da2f 11:47 (task 1 DO
+  NOT EXPAND verified, task 2 11 root causes, task 3 CB-8 audit
+  2 REVOKED 1 UPHELD). Watchdog 11:57 (6e05a0f): batch 10 done,
+  no new instruction. Per the 11:01 plan (no large batch 13 for
+  clone2 at 90%, load shifts to clone1), queued clone1 batch 11
+  via coord/clone1.md on main, commit d9b0c05 (rebased onto
+  6ab0c04 after a rejected push, ls-remote verified origin/main
+  = d9b0c0599d0a4ae2c815afab3de37f82d9d24d55). Batch 11 tasks
+  (each council + redteam + fix pass, repo-only): (1) independent
+  re-verification of step 7 P2 implementation (292753f); (2)
+  step-8 S1/CB-6 deletion-spec draft (queue discipline,
+  single-owner serialization, fatal-on-read-failure matrix,
+  fallback/recovery, CB-10 precondition status); (3) CB-8
+  revoked-claims evidence repair for S2 Pick 1 and DOM-grounding
+  (reinstate with evidence or confirm revocation, laptop-only
+  evidence named plainly, no fabrication).
+- Clone2 batch 12: task 2 fix pass landed 6ab0c04 (report +
+  closeout, counts 3/5/2/2, verdict still NOT READY). No formal
+  batch-12-complete commit yet; watching for the summary.
+- Still running: C5-VALIDATOR-PROOF (3b34be64), live validator
+  proof. Last activity 87s ago at check time, running about
+  6.5 min, no stall flag. Awaiting its handoff for the step 7
+  live-proof gate.
+
+## 23. (to be filled as results land)
