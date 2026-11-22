@@ -830,4 +830,30 @@ workspaces at the same time.
   6.5 min, no stall flag. Awaiting its handoff for the step 7
   live-proof gate.
 
-## 23. (to be filled as results land)
+## 23. Clone2 CAPPED until Nov 25 02:38, batch 12 close-out reassigned (12:14-12:18 +07)
+
+- Fleet update from Muse 12:16 +07: clone2 HIT its weekly usage
+  limit at about 12:14 (run 53). Banner: "You've reached your
+  usage limit... reset 2:38 AM Wed Nov 25". No pending approvals,
+  no nudge sent (useless while capped).
+- DECISION (per Muse's instruction, owner asleep, no upgrade or
+  invite decision made): clone2 is DONE until the Nov 25 02:38
+  reset. No more batches for clone2, no tokens spent trying to
+  revive it. Whether to upgrade or invite on clone2's account is
+  the owner's money decision; NOT decided here.
+- Remaining batch-12 work identified from origin/main: all 3
+  tasks landed (task 1 fix pass 4dd05b0; task 2 fix passes
+  b892918, 6ab0c04, closeout 3/5/2/2, verdict still NOT READY;
+  task 3 done e248a7a + fix pass 9993e25). Clone2's last commit
+  is the 12:09 watchdog log f07da6b. Only the closing summary
+  is missing.
+- REASSIGNMENT: batch 12 close-out given to clone1 as batch 11
+  task 4 (commit 01089dd on main, ls-remote verified origin/main
+  = 01089ddb0def8d619cf080e8c5fd890062a1ebf8). Clone1 already
+  dispatched batch 11 tasks 1-3 to 3 subagents (watchdog 12:07,
+  ed9b469) and is active, so it takes the small summary task as
+  well. No Codex/fcc reassignment needed for this item.
+- Still running: C5-VALIDATOR-PROOF (3b34be64), live validator
+  proof. Awaiting its handoff for the step 7 live-proof gate.
+
+## 24. (to be filled as results land)
