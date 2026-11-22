@@ -937,4 +937,118 @@ workspaces at the same time.
   (12:07) and holds task 4. Clone2 capped until Nov 25 02:38,
   no new work. No batch 13 for clone2.
 
-## 25. (to be filled as results land)
+## 25. C5-INPUT-FIX verified: (a1) FAILED 0/5, (b1) WORKS 5/5; clone1 batch 11 AMEND; two workers spawned (12:53-13:05 +07)
+
+- C5-INPUT-FIX (20a04ede) COMPLETED 12:53:59 +07. Commits on
+  todolist-push: edffb08 (harness --activate + P2 stamps),
+  efbb666 (--set-value variant), be2371e (relaxed routing gate),
+  4bd6292 (log + runs), 030c227 (log hash record). HEAD 030c227,
+  ls-remote verified (origin todolist-push =
+  030c2276892641e11fb8a44f2e5488c3d7452f57). Log 523 lines.
+  VERIFIED from the raw run JSONs (git show 4bd6292), not the
+  handoff summary:
+  - (a1) 0/5. Walls: 32522.8, 33404.3, 33139.5, 32906.6, 32549.9.
+    Sorted median 32906.6ms (32.9s). Every run: outcome
+    failed-unverified, program ok False, completed 0, elapsed
+    5095.5-5105.8ms, error "CDP timeout:
+    Input.dispatchMouseEvent", V12 False after 40 attempts,
+    activation ok True in all 5. Model calls 0.
+  - (b1) 5/5 SENT. Walls: 18477.4, 20592.9, 18839.7, 18738.7,
+    19094.0. Sorted median 18839.7ms (18.8s). Every run: program
+    ok True, completed 2, elapsed 91.6-106.6ms, V12 True attempt
+    1, CB-1 all three True, pre-send count 0, delayed count
+    exactly 1. Model calls 0. Run 1 under the strict routing
+    gate (complete coverage, 78 elements); runs 2-5 under the
+    DISCLOSED relaxed gate (truncated inventory, 80 elements;
+    aborted JSONs preserved as run-2..5-aborted.json). P9
+    reviewed: R1 bubble in run 1 shot, R2-R5 bubbles in run 5
+    shot, composer empty, DOM and render agree.
+  - Divergence diagnostic: Input.dispatchKeyEvent (Shift down/up)
+    answers in 2ms on the stuck tab while mouseMoved times out.
+    The stall is MOUSE-specific. Scratch probe: T1 set_value +
+    CDP Enter with focus on BODY = 0 bubbles; T2 focus() + CDP
+    Enter = 1 bubble; T3 set_value + JS Enter, no focus =
+    1 bubble; T4 Enter again on empty composer = still 1 bubble,
+    composer empty (retry cannot re-send). Wiring tests 11/11
+    pass. Also fixed along the way: the flip program predated P2
+    and refused "action 0 is missing scope"; all program actions
+    now carry scope = target id and observation_id = snapshot.
+- THREE CORRECTIONS to the worker's handoff summary, from the
+  raw JSONs:
+  (1) (a1) median is 32.9s (32906.6ms), not 33.1s as stated.
+  (2) "Tab was already active with hasFocus true throughout" is
+  WRONG: a1 run 1 activation.before hasFocus was False, after
+  True. The (a1) kill is STRONGER than stated: a real focus
+  change False to True still did not unstick the mouse dispatch
+  in run 1. The "already active" claim came from the divergence
+  probes (getTargets), not the live runs.
+  (3) (b1) "completed 2 in 7-9ms" is a SUB-STEP figure, not the
+  program elapsed: raw program elapsed is 91.6-106.6ms.
+  (Program elapsed is what the flip verdicts quote.)
+- VERDICT (coordinator, from the verified numbers): the S2 flip
+  CAN re-open on the Chromium half with the (b1) shape: 0/5
+  (fill) to 5/5 (set_value), same target, same occluded window.
+  The mouse stall itself is UNSOLVED and remains the step 9
+  prototype's natural first target. (b1) routes around it for
+  this class only. Durable landing still open: the measurement
+  used /tmp helpers plus harness flags; landing the (b1) shape
+  in cdp.mjs (a focus action, or set_value focusing the field)
+  with tests is follow-up work for step 8/9.
+- Clone1 batch 11 DONE (summary 8020e31 on main): task 1 AMEND,
+  task 2 spec done, task 3 2 REVOKED stand. Task 4 dispatched
+  (a47a15b), batch 12 close-out summary pending. Watchdog 12:49
+  (32dd8f7): no stall.
+  - Task 1 (docs/batch11-task1-step7-verify-20261122.md): independent
+    re-verification of step 7 (292753f), verdict changed PASS to
+    AMEND. Main claims UPHELD: P2 86 tests OK (after building
+    wtype; first run FAILED errors=21, missing native/wtype
+    build artifact, environment dependency not code bug; redteam
+    reproduced all three numbers), 294 related tests OK, zero
+    production callers of dom_rect_to_image_point, CLI act
+    binding-when-present (mandatory in 4 places, not 2 as first
+    written), Zen backend fail-closed on the main path for the 8
+    guard types. AMENDMENTS (17 fix items, tracked as 6):
+    (i) validator verified-origin scope OVERSTATED in general
+    form: verified-origin only rescues the closure-overflow
+    branch; on the normal branch the validator returns the
+    moz-computed origin and ignores verified_moz_inner. Redteam
+    attack A1/A2 proved live: self-consistent-but-wrong moz
+    [250, 18] ACCEPTED with a 10px error, and with true verified
+    [240, 8] supplied still ACCEPTED [2759, 932]. This is a REAL
+    correctness limitation of the step 7 validator fix, not a doc
+    nit. The live validator proof (108fd45) still stands: it
+    proved exactly the closure-overflow case the verified path
+    handles. (ii) no_pointer_delegate gap is WIDER: re-ground
+    path returns action_failed/focus_check, 'type'/'move' return
+    no-dom-postcondition errors, re-ground fill returns dom-value;
+    wait/assert report input_sent True with no input dispatched;
+    zero P2 tests cover pointer=None directly. No input actually
+    leaks (fail-closed via _dispatch), but error codes mislead.
+    (iii) Full discover 2110 claim NOT reproduced as stated:
+    redteam ran 2110 from tests/ (FAILED failures=1 errors=8
+    skipped=17) and 2117 from repo root (FAILED failures=1
+    errors=5 skipped=17); remaining issues environmental
+    (test_cursor_file g++ C++26, tc02 tesseract, bench_manifest
+    firefox path), not step 7 regressions. The worker's discover
+    number is environment/call-dependent.
+  - Task 2 (e0187d7): S1/CB-6 deletion spec done, fix 30 items,
+    1 council claim refuted. Task 3 (bbe67c3): 2 REVOKED stand.
+- ACTIONS (both spawned 13:05 +07):
+  - C5-P2-AMEND-FIX (738898c2): implement the 6 tracked fix items
+    on todolist-push (re-ground no_pointer_delegate + check pointer
+    before every _dispatch; pointer=None tests main + re-ground
+    + validator A1/A2 pin tests; wait/assert input_sent fix;
+    wtype build guidance; full discover naming errors/skips +
+    the 3 unrun suites; live CLI act with/without scope +
+    CU_DOM_BACKEND=zen run). Failing-first tests first. Also
+    corrects the validator-scope record in its log.
+  - C5-S2-REOPEN (d3882370): full two-browser S2 flip, 5 runs:
+    Brave with FILL (unchanged, it sends 5/5), Chromium with
+    (b1). P3-style Brave relaunch first, roll back after run 5.
+    Keeps the relaxed routing gate with per-run recording. Reports
+    whether the class completes end to end and whether the flip
+    EXPANDS; does not expand itself.
+- Still running: none at spawn time except the two new workers.
+  Clone2 capped until Nov 25 02:38, no new work.
+
+## 26. (to be filled as results land)
