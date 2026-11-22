@@ -1737,4 +1737,94 @@ workspaces at the same time.
   55s ago at check). No stall. Step 9 spawns after the (b1)
   spec fix lands.
 
-## 33. (to be filled as results land)
+## 33. C5-B1-SPEC-FIX verified: F1-F13 applied, spec fixed on main; C5-STEP9 spawned (15:30-15:33 +07)
+
+- C5-B1-SPEC-FIX (90ee624b) COMPLETED 15:30:20 +07, about 6
+  min, no stall. Spec fix on main (2 commits, explicit
+  pathspec, ls-remote verified): 3962400 (F1-F10, 290
+  insertions, 69 deletions) and eab0228 (F2 follow-up, all 25
+  P9 frames pixel-viewed by CB-8 re-audit 84cc31f). Fix log on
+  todolist-push: ae6e437 (improvements/worker-click5-b1-spec-
+  fix-log.md, 127 insertions). VERIFIED by the coordinator:
+  - F1: section 10 item 1 closed; helper cited as committed
+    (improvements/s2-flip-b1-runs/c5-focusenter.mjs, 3ef8f55,
+    42 lines, 2,478 bytes, sha256 94ee467e...1a695f, confirmed
+    present in the spec text by grep).
+  - F2: section 10 item 11 closed; all 25 PNGs cited with
+    byte counts (5 b1 1,210,605 B; 10 reopen 2,354,937 B; 10
+    flip 2,740,488 B; total 6,306,030 B); run JSONs name the
+    PNGs directly via the p9 field (34 entries across all 24
+    run JSONs, zero null); the manifest auditor note saying
+    p9 is null is recorded as wrong, not repeated. The
+    eab0228 follow-up corrects the first commit's stale F2
+    text ("hash-level only for 23 of 25; 2 frames pixel-
+    viewed") to all 25 pixel-viewed by the re-audit.
+  - F3: section 5 rule rewritten; type removed as
+    focus-establishing; focus-establishing defined via the
+    ASSERTS table (focus_check: click, double_click,
+    confirm_click, hover_click, dom_asserts.py lines 48-59)
+    plus the new focus action, plus fill as an explicit
+    exception (type_check entry but focuses via internal
+    click, cdp.mjs:535-536).
+  - F4: dry-run criterion corrected, confirmed in the spec
+    text by grep: "Chromium elapsed about 90 to 100 ms
+    instead of 85.8 ms", derivation "86.8 to 98.8 ms, stated
+    as about 90 to 100 ms", live re-run criterion "about 110
+    to 145 ms" with derivation (live 91.575-106.622 + 2-3 +
+    17-25 + 0-10 - 2-3 = 107.6-142.6 ms). The 17-25 ms figure
+    is the live Enter time, not the focus time; scratch Enter
+    is 2 ms. Bubble-render-latency caveat recorded with a
+    measurement ask.
+  - F5: section 3 mirror claim corrected (hover_click drift,
+    cu.py lines 1299 and 1341; grep -c hover_click scripts/
+    cu.py = 0). Pre-existing drift, not fixed by this
+    landing. F6: section 4 steps 2, 4, 5 labeled as design
+    additions borrowed from set_value/fill. F7: helper-vs-key
+    Enter params comparison added as a section 4 note (helper
+    code 'Enter' both events, text '\r' keyDown only; landed
+    key() no code, same params object both events, cdp.mjs:
+    390-414); decision must be recorded by the landing.
+    F8: branch position softened to a style suggestion. F9:
+    both citation slips fixed (code_exec.py:936-939; cdp.mjs
+    click 292-314; key() 390-412 to 390-414, assertAction
+    415-426). F10: all missing tests added (focus-failure
+    throw, selector focus, missing trailing assert, dom_asserts
+    failing-first anchor, F3 rule tests + focus-after-Enter
+    negative test, whitelist-sync test, whole-adapter vm
+    pattern note, builder-ref test, dry-run timing
+    measurement asks). F10(f) scoping decision: the
+    whitelist-sync test is scoped to the landed set plus the
+    recorded drift (asserts focus in all three whitelists,
+    three sets equal except the known hover_click drift);
+    adding hover_click to cu.py is a follow-up, not part of
+    this landing. F11/F12: no change, confirmed in the log.
+    F13: one sentence added in section 8 (dry-run baseline
+    rests on log prose only, no run-0 JSON in the repo).
+  - No em/en dashes in the spec edits or the log. No personal
+    info. No live runs, no browser work, no code changes.
+- C5-STEP9 SPAWNED (bef08f08) 15:33 +07: A1/S3/CB-EXEC merged
+  prototype, gated on proof. Brief: land (b1) in cdp.mjs per
+  the CORRECTED spec (3962400/eab0228), record the F7 decision
+  explicitly, no silent key() change; Chromium Input stall as
+  first target (cheap fix or recorded investigation, (b1)
+  bypass stays the working path); intent ledger for CDP too;
+  full mandatory CB-2 stamping on the JSON batch interface
+  (prove with a test that fails without the stamp); Zen
+  backend pointer delegate wiring (known gap); A1/A2 validator
+  limitation (pass verified moz always or make the validator
+  prefer it; prove with a test that a wrong-but-self-consistent
+  moz is REJECTED or corrected, never accepted). Proof gate:
+  one live ws2 clone chat + held-out tasks, via the step 8
+  broker transport and smoke procedure, V12 + delayed count +
+  P9 review, run evidence committed like improvements/
+  c5-step8-runs/. Session-level pill BLOCKED (do not touch
+  the overlay server). Focus rule + live-run lessons restated
+  in full (focus FIRST, then observe, then act; persistent
+  paths, never /tmp; STATE observation file, not observe
+  stdout). Window map + relay state (PID 1196429, loaded
+  d490f369f6b7, head 1b5a6e6) supplied and to be re-verified
+  live before the first live run.
+- Still running: C5-Y13G-R3-FIX (e7f7e026). No stall at last
+  check.
+
+## 34. (to be filled as results land)
