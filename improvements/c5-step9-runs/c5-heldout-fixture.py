@@ -27,15 +27,15 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'scripts'))
 import s2_flip_live  # noqa: E402
 
-FIXTURE_URL = ('file:///home/james/computer-use-wayland/tests/'
+FIXTURE_URL = ('file://~/computer-use-wayland/tests/'
                'two_vision_fixture.html?clone=1')
 FIXTURE_SHA = ('147494cda4c6ae24a51ced03ccdfb3fc5a79a1bbab56dcdfc5afb4f72fba6'
                'cbf')
 RUN_NO = 91
 MESSAGE = 'C5-HELDOUT-R91-CHROMIUM-IGNORE-TEST'
 WORKDIR = Path('/tmp/c5-heldout-91')
-LAPTOP_SEED = '/home/james/c5-step9-run/c5-fixture-seed.mjs'
-LAPTOP_EVAL = '/home/james/c5-step9-run/c5-eval.mjs'
+LAPTOP_SEED = '~/c5-step9-run/c5-fixture-seed.mjs'
+LAPTOP_EVAL = '~/c5-step9-run/c5-eval.mjs'
 
 
 def main():
@@ -56,7 +56,7 @@ def main():
             raise RuntimeError('fixture seed failed rc=%d: %s' % (rc, (out + err)[:300]))
         tab_id = out.strip().splitlines()[-1].strip()
         results['target_id'] = tab_id
-        lease = '/home/james/.cache/agent-computer-use/c5-heldout-91.lease'
+        lease = '~/.cache/agent-computer-use/c5-heldout-91.lease'
         owner = 'c5-heldout-91'
         h.ssh('rm -f ' + lease, 'lease-cleanup', timeout=30)
         h.broker_start(lease, owner)

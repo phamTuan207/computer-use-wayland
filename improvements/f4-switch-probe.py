@@ -20,11 +20,11 @@ sys.path.insert(0, 'scripts')
 import s2_flip_live
 
 WORKDIR = Path('/tmp/c5-zenproof-f4diag')
-LAPTOP_RUN = '/home/james/c5-zenproof-run'
+LAPTOP_RUN = '~/c5-zenproof-run'
 LAPTOP_DRIVER = LAPTOP_RUN + '/zen-tab.py'
 VM_DRIVER = Path('improvements/c5-zenproof-runs/zen-tab.py')
 TARGET = 'two_vision_fixture.html?clone=zen'
-FIXTURE_URL = ('file:///home/james/computer-use-wayland/tests/'
+FIXTURE_URL = ('file://~/computer-use-wayland/tests/'
                'two_vision_fixture.html?clone=zen')
 
 h = s2_flip_live.Harness(str(WORKDIR), 'f4probe4')
@@ -105,7 +105,7 @@ try:
              '-o', 'ProxyCommand=python3 /home/hatch/workspace/'
                     'tailscale-proxy.py %h %p',
              '-i', '/home/hatch/.ssh/id_ed25519',
-             'james@100.70.92.52:/tmp/f4-probe4-%s.png' % name,
+             'user@192.0.2.1:/tmp/f4-probe4-%s.png' % name,
              str(WORKDIR / ('probe4-%s.png' % name))],
             capture_output=True, text=True, timeout=120)
         print(name, 'scp rc=%d' % proc.returncode)

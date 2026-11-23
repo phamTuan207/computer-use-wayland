@@ -95,7 +95,7 @@ Gecko log: /tmp/geckodriver-4452.log (copied per test).
 Launch (on the laptop, from /tmp/worker-y13-server, ONLY after the
 Y6c completion marker + Muse's go order + the launch-time checks pass):
   cd /tmp/worker-y13-server && Y13_GO=1 python3 -P -E launch_y13.py \
-    --repo /home/james/workspace/computer-use-wayland all \
+    --repo ~/workspace/computer-use-wayland all \
   > /tmp/worker-y13-stdout.log 2>&1
 
 Manifest: codex-y5-manifest.json, md5 d2a2bf08ae1c942f9bd888793ef7eb2e, 27 files.

@@ -10,7 +10,7 @@
 ## 00:59 +07 (T+0m): setup
 - Read round-1 Council 3 paper improvements/worker-y13g-council-3.md (verdict AMEND, C3-1..C3-11) and fix-log tail (round-2 adjudication R1-R10, implementation 01:12-01:35).
 - Verified pins above via md5sum; manifest md5 7c76383402e4c50b28adab6b25a22e09, 27 paths.
-- Read SHIPPED.md in full: How to verify present, --ship-dir documented (space-form only, existing dir), launch-form + direct form documented, manifest md5 line present, single --repo path /home/james/workspace/computer-use-wayland.
+- Read SHIPPED.md in full: How to verify present, --ship-dir documented (space-form only, existing dir), launch-form + direct form documented, manifest md5 line present, single --repo path ~/workspace/computer-use-wayland.
 - Read launcher module top (lines 1-400) and main() (1451-1508), runner module top (1-420), check_manifest/_check_entry_pyc/_scan_ship, write_token/check_token, _proven_no_body (line 1232: `"eval_error" in diag`), _verify_manifest __pycache__ block (lines 748-795), plan B1-B4/Amends/round-2 section (lines 540-765), regen docstring.
 - Round-1 re-check (code, before probes): C3-2 fixed (check_manifest md5 message names commit+push first); C3-4 fixed in code (3 stems); C3-6 fixed (no old ~/computer-use-wayland path anywhere, grep clean); C3-9 mostly fixed; C3-10 fixed in code (write_token exists); C3-11a/b/c fixed. NOT fixed: C3-7 runner docstring lines 103,105 still `python3 launch_y13.py` without -P; C3-8 plan B1 still "holds only entry .pyc files (0-3)" and runner _verify_manifest comment still "two entry .pyc files (0, 1, or 2)" while _ENTRY_PYC_NAMES has 3.
 

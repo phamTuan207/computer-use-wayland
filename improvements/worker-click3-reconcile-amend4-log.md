@@ -22,7 +22,7 @@ findings F1-F13, 15 proof tests in tests/test_click3_redteam2.py).
   Codex; the final-state comparison uses 77c72be vs 06a34e8.
 - Codex lane: branch amend4-codex, HEAD 06a34e8 (remote HEAD verified
   08:12 by ls-remote: 06a34e8610a9467c3884f6dd7a567293c747da45; laptop
-  worktree /home/james/workspace/cu-amend4-codex verified at 06a34e8
+  worktree ~/workspace/cu-amend4-codex verified at 06a34e8
   with a clean status). Read-only: no file in the Codex lane was
   modified. Its tests were run via SSH on the laptop worktree only.
   Two probe scripts were written to /tmp on the laptop
@@ -307,7 +307,7 @@ keyboard-protocol.c); that number is superseded by the clean
 confused.
 
 Codex lane at 06a34e8, laptop worktree
-/home/james/workspace/cu-amend4-codex (clean status verified),
+~/workspace/cu-amend4-codex (clean status verified),
 same discover command, run detached on the laptop. Result: Ran
 1925 tests in 129.287s, FAILED (failures=2, errors=4, skipped=2).
 The 2 failures are the F3 stale-origin test (contradictory

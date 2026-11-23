@@ -17,7 +17,7 @@
 - Toolchain (laptop): Hyprland 0.57.2 (commit 11cbc6c577b84ffb1edf4df3fc5b6128c3ae6947),
   g++ 16.2.1, aquamarine 0.16.0 (libaquamarine.so.15), hyprgraphics 0.6.0
   (libhyprgraphics.so.5). pkg-config hyprland/aquamarine/hyprgraphics all resolve.
-- Vendor dir /home/james/.local/share/agent-computer-use/vendor/hyprglass/:
+- Vendor dir ~/.local/share/agent-computer-use/vendor/hyprglass/:
   git HEAD 99f30ca (v0.9.1, 2026-10-03), .hyprland-version says 0.56.2,
   tree clean, dead hyprglass.so md5 ddd44a35c38bf698ba2971e58d4d53f4 (26,643,888 B).
 - Canonical build script: repo scripts/build-glass.py (laptop copy byte-identical,
@@ -207,7 +207,7 @@ da0565086a05f77f49985bb92d887875, conf 0d4ac7a9c2437fb48ecfc505ccd9046b
   86s): 3 FAILURES, all analyzed as fixture artifacts, NOT runner bugs.
   (1) ldd pre-flight current conf failed "path in conf missing on disk"
   instead of naming libaquamarine.so.14, because the test runs on the VM
-  where /home/james/... does not exist; the ldd cases must run on the
+  where ~/... does not exist; the ldd cases must run on the
   laptop or use VM-local fixtures. (2) ldd pre-flight good .so failed
   "missing on disk: /tmp/y6d-good-hyprglass.so", because the symlink
   target /usr/lib/libaquamarine.so.15 does not exist on the VM, so the

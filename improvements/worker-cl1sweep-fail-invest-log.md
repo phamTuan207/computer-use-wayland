@@ -75,9 +75,9 @@ Caveat: the LIVE run is still gated on method approval, and any manual computer-
 
 - ~/workspace/cl1sweep-direct-log.md (Muse's log, times 05:46:18 to 05:49:53)
 - ~/workspace/cl1sweep-enter1.json: `[{"keys":["Return"],"type":"key"}]`
-- /home/james/.cache/agent-computer-use/8716a28d6388.json: scope screen, [1920, 1200], max_width 1920, no window field
-- /home/james/.cache/agent-computer-use/0b78b458b8f3.json: scope window, 0x55705383d420, [901, 1176], max_width 960
-- /home/james/.cache/agent-computer-use/f2bdb0d34ead.json: scope screen, [1920, 1200] (CL2-MSG after-image, same pattern)
+- ~/.cache/agent-computer-use/8716a28d6388.json: scope screen, [1920, 1200], max_width 1920, no window field
+- ~/.cache/agent-computer-use/0b78b458b8f3.json: scope window, 0x55705383d420, [901, 1176], max_width 960
+- ~/.cache/agent-computer-use/f2bdb0d34ead.json: scope screen, [1920, 1200] (CL2-MSG after-image, same pattern)
 - ~/workspace/cl1sweep-obs4.jpg: draft in input, no bubble (nothing sent)
 - ~/workspace/cl1sweep-obs5.jpg: blue bubble 5:49 AM, input empty (sent)
 - scripts/cu.py desktop_act line 1649: G28 preflight refusal; lines 2083-2091: scope-matching after-capture (discarded by caller)

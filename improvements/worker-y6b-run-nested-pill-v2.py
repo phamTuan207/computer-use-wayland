@@ -5,7 +5,7 @@ import threading
 import time
 from pathlib import Path
 
-sys.path.insert(0, "/home/james/workspace/computer-use-wayland/scripts")
+sys.path.insert(0, "~/workspace/computer-use-wayland/scripts")
 import indicator
 
 # Minimal idle LIQUID pill inside the nest. STATE is separate from the live

@@ -3,7 +3,7 @@
 - Owner: the owner. Worker: Luna 6 Max (implementation).
 - Branch: `det-finish`, from `origin/speed-swarm` 8727135 (DOM-first interim commit).
 - Worktree (19:45 coordinator order, shared main checkout churning):
-  `/home/james/computer-use-wayland-detfinish`, branch `det-finish`, HEAD
+  `~/computer-use-wayland-detfinish`, branch `det-finish`, HEAD
   e01399d. All further work happens ONLY in the worktree; the main
   checkout is never touched again. The coordinator's urgent message named
   another worker's files (vault-move branch, scripts/cli-anything.py,
@@ -130,7 +130,7 @@ evidence (task_outcome BLOCKED, reason recorded).
   /tmp/det-finish-after-tests.log on the laptop.)
 - After BLOCKED path added: `python3 -m unittest tests.test_det_finish
   tests.test_mcp_bridge` => Ran 87 tests, OK (11 det_finish + 76 mcp_bridge).
-- Final full suite, clean worktree `/home/james/computer-use-wayland-detfinish`
+- Final full suite, clean worktree `~/computer-use-wayland-detfinish`
   at e01399d, native helpers built with scripts/build.py (pointer,
   indicator, modifiers, wtype): Ran 1350 tests, FAILED (failures=7,
   errors=1, skipped=2). The 7 failures are IDENTICAL to the baseline 7.

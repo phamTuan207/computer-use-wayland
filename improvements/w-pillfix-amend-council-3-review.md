@@ -127,7 +127,7 @@ FAILED (failures=1, errors=2, skipped=17)
 ## 5. H2 (trung binh): fix chua co mat tren laptop, daemon van chay code cu
 
 - Kiem tra chi doc tren laptop (ssh-laptop.sh, 20:17 +07):
-  - File /home/james/computer-use-wayland/scripts/overlay.py van
+  - File ~/computer-use-wayland/scripts/overlay.py van
     remove_holder CU: docstring "Without a pid, all of the agent's
     entries are removed", sha256
     b551cf6b2e1503824c690f46dae5ce88c90dfca6cf0f0761699e808717be59b4

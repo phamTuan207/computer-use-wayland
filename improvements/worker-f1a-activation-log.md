@@ -42,7 +42,7 @@
 
 ## 23:53 fresh observe (owner-activity check)
 - Observe 23:53:00 id 9aec1ea20a69, capture 21.7ms, region [2464,902,1920,1200],
-  monitor eDP-2, image /home/james/.cache/agent-computer-use/9aec1ea20a69.jpg,
+  monitor eDP-2, image ~/.cache/agent-computer-use/9aec1ea20a69.jpg,
   indicator inactive (no session). Viewed the screenshot.
 - Screen: Zen on ws1, full screen, sidebar visible (zen basics: PCCV CF26,
   Free Claude Code Admin, Welcome!, 2x New Tab, 2x Just a moment..., Biome
@@ -60,7 +60,7 @@
 ## 23:53-23:54 activation attempt 1: FAILED at the guard step (glass loaded, shaders pending)
 - Launched detached (setsid nohup, stdout /tmp/f1a-activation.out,
   stderr /tmp/f1a-activation.err): python3 scripts/activate-session-backend.py
-  --manifest /home/james/.local/share/agent-computer-use/native/visuals.json,
+  --manifest ~/.local/share/agent-computer-use/native/visuals.json,
   cwd the installed tree. Checked after ~5s: stdout EMPTY, stderr:
   "activate-session-backend: config reload did not reach an accepted ready
   state: accepted glass status is not ready". Wrapper process gone (exit 1).
@@ -201,7 +201,7 @@
 - S2d (sleep 60, launched ~00:06:25) for the pid. pgrep for
   "computer-use-indicator" finds NOTHING: the binary is the installed
   native/indicator (fallback path), not the PATH name. PID 513273,
-  /home/james/.local/share/agent-computer-use/native/indicator,
+  ~/.local/share/agent-computer-use/native/indicator,
   alive during S2d; cu-cursor active True, token present True.
   (The Omarchy input-method indicator.py PID 165692 is a different
   process; ignore it.) Pill proof is now complete: plugin list +
@@ -237,7 +237,7 @@
   click landing.
 - Fix: write /tmp/f1a-click.json with the action, pass
   --actions /tmp/f1a-click.json --observation
-  /home/james/.cache/agent-computer-use/f6edf8b1c426.json. The screen
+  ~/.cache/agent-computer-use/f6edf8b1c426.json. The screen
   is unchanged since f6edf8b1c426, so the observation stays valid.
   require_observation only constrains after a transient refusal
   (no marker here), so the pre-session observe is accepted.

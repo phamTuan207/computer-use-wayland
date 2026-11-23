@@ -24,7 +24,7 @@
 
 ## 1. fcc (fcc-claude) - HAS CAPACITY
 
-- Binary: `/home/james/.local/bin/fcc-claude` -> `/home/james/.local/share/uv/tools/free-claude-code/bin/fcc-claude`
+- Binary: `~/.local/bin/fcc-claude` -> `~/.local/share/uv/tools/free-claude-code/bin/fcc-claude`
 - Version: `2.1.330 (Claude Code)`
 - Auth/config: `~/.claude.json` exists (147154 bytes, 0600, modified 2026-11-16 23:29); `~/.claude/` dir exists; `~/.local/share/free-claude-code/` exists. Top-level keys inspected (names only, no values): no quota/deadline/reset-date field present. Only usage-ish key names seen by grep: `lastModelUsage`, `tengu_context_usage_bulk_counts`, `tengu_usage_overage_included_models`, `tengu_xterm_atlas_reset` (names only, values not read).
 - Probe command: `timeout 120 fcc-claude -p --dangerously-skip-permissions "reply with the single word ok"`
@@ -37,7 +37,7 @@
 
 ## 2. opencode - DROPPED per owner order 05:58 (no capacity verdict)
 
-- Binary: `/home/james/.local/share/mise/shims/opencode`
+- Binary: `~/.local/share/mise/shims/opencode`
 - Version: `opencode v2.3.2`
 - Auth/config: `~/.config/opencode/opencode.json` exists (931 bytes, 0600, modified 2026-10-26). Provider configured: openrouter, apiKey from file `~/.config/opencode/.secrets/openrouter` (file exists, 73 bytes, 0600, modified 2026-09-20; value never read or printed). No quota/deadline field in the config. `opencode auth list` shows stored credentials for: Google, Groq, Nvidia, OpenAI, OpenCode Console, OpenRouter, Z.AI Coding Plan (types only, no values). Background servers running: `opencode serve --port 4096` (PID 1059, since Nov 21) and `opencode.exe serve --service` (PID 190566).
 - Model used: `opencode/deepseek-v4.1-flash-free` (listed by `opencode models`; the free model from the brief).

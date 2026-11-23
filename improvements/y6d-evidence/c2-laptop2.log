@@ -31,7 +31,7 @@ GRIM-C rc=1 (expect invalid geometry above)
 GRIM-D rc=1 (expect mutually exclusive above)
 8 /tmp/y6d-c2/ldd-block.sh
 -- ldd block vs current conf (backup 1, dead ABI): expect FAIL naming libaquamarine.so.14
-FAIL: hyprglass /home/james/.local/share/agent-computer-use/backups/full-1791544423/native/hyprglass.so cannot load (dead ABI): 	libaquamarine.so.14 => not found
+FAIL: hyprglass ~/.local/share/agent-computer-use/backups/full-1791544423/native/hyprglass.so cannot load (dead ABI): 	libaquamarine.so.14 => not found
 	libhyprgraphics.so.4 => not found
 LDD-DEAD rc=1
 -- ldd block vs good .so (all deps resolve): expect plugin ABI OK

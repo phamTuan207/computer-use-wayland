@@ -1,6 +1,6 @@
 # E1 execution comparison log (Worker Y8)
 
-All times Asia/Ho_Chi_Minh. Branch: todolist-push. Repo (VM): ~/workspace/computer-use-wayland. Laptop repo: /home/james/workspace/computer-use-wayland.
+All times Asia/Ho_Chi_Minh. Branch: todolist-push. Repo (VM): ~/workspace/computer-use-wayland. Laptop repo: ~/workspace/computer-use-wayland.
 
 ## Task
 

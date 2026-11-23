@@ -123,7 +123,7 @@ Dieu kien C1 dong lo nay.
 ### H2 (trung binh): fix chua co mat tren laptop, daemon van chay code cu
 
 Kiem tra chi doc tren laptop (ssh-laptop.sh, 20:20 +07):
-- File /home/james/computer-use-wayland/scripts/overlay.py van
+- File ~/computer-use-wayland/scripts/overlay.py van
   remove_holder CU: docstring "Without a pid, all of the agent's
   entries are removed", code xoa het key cua agent khi pid None.
 - Daemon PID 115582, started 19:40:45, elapsed 37:00, van chay;
@@ -159,7 +159,7 @@ code, nhung docstring sai dan nguoi doc sau danh gia sai do an toan.
   trong request socket (JSON true se tao holder 'Muse:1'), thap.
 - prune_dead_holders (overlay.py 149): coi PermissionError (pid ton
   tai nhung thuoc user khac) la chet va prune. Co san truoc fix, fix
-  khong dong den. Tren may live daemon chay cung user james nen
+  khong dong den. Tren may live daemon chay cung user user nen
   khong kich hoat thuc te.
 - R11 (redteam goc muc 4, item 6): release parser khong co --method
   trong khi cdp.mjs releaseCdpPill (dong 81) va s2_flip

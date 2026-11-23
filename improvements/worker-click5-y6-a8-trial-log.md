@@ -65,7 +65,7 @@
   nested socket wayland-1, nest output WAYLAND-1.
 - Gates passed in order (run-log lines quoted verbatim):
   - `Y6-WAYLAND: AMEND4 OK: HYPRGLASS_SKIP_VERSION_CHECK unset (env | grep HYPRGLASS empty)`
-  - `Y6-WAYLAND: plugin ABI OK: /home/james/.local/share/agent-computer-use/worktrees/hyprglass-03a57c4/hyprglass.so`
+  - `Y6-WAYLAND: plugin ABI OK: ~/.local/share/agent-computer-use/worktrees/hyprglass-03a57c4/hyprglass.so`
   - `Y6-WAYLAND: AMEND5-BEFORE OK: no hyprglass load path in live config chain (hyprland.lua + hyprland.conf + sourced files)`
   - `Y6-WAYLAND: live sig 11cbc6c577b84ffb1edf4df3fc5b6128c3ae6947_1795249046_1138556825 pid 1515`
   - Live plugin list BEFORE recorded (hyprbars, hyprglass, computer-use-cursor).

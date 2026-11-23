@@ -10,7 +10,7 @@
 All checks run 22:01-22:05 +07 on Sat 2026-11-21. Repo ~/workspace/computer-use-wayland, branch todolist-push, HEAD 915121d verified via git log (72eb8ad and 915121d both present with the expected subjects).
 
 ### V1: rebuilt .so (F1 fix at the link level) - VERIFIED
-- Command (via ~/workspace/ssh-laptop.sh): ls + md5sum + ldd on /home/james/.local/share/agent-computer-use/worktrees/hyprglass-03a57c4/hyprglass.so.
+- Command (via ~/workspace/ssh-laptop.sh): ls + md5sum + ldd on ~/.local/share/agent-computer-use/worktrees/hyprglass-03a57c4/hyprglass.so.
 - Output: 34,440,704 B, md5 78ac102337ca70842bf604b56c6f4c8e (matches Y6e's claim exactly); ldd "not found" count 0; libaquamarine.so.15 => /usr/lib/libaquamarine.so.15; libhyprgraphics.so.5 => /usr/lib/libhyprgraphics.so.5. The dead ABI (.so.14/.so.4) is gone at the link level. F1 is fixed.
 
 ### V2: conf diff vs v3 (exactly 2 lines) - VERIFIED

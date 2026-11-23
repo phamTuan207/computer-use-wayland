@@ -239,7 +239,7 @@ hanh vi cu, trong do co dung test tai hien loi goc.
 ### 5e. Kiem chung live tren laptop (chi doc, 19:50-19:51 +07)
 
 - Daemon moi PID 115582, started 19:40, chay tu
-  /home/james/computer-use-wayland/scripts/overlay.py daemon.
+  ~/computer-use-wayland/scripts/overlay.py daemon.
   Environ co SIG dung (muc 2e). Native indicator song.
 - Dong native_spawn_failed CUOI CUNG trong daemon.log:
   19:40:29.377 +07; tong 1839 lan trong lich su file log, 0 lan tu

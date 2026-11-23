@@ -223,7 +223,7 @@
 | 1 | Open fixture test-06-video-call.html | open fixture URL in browser | 411 (page.goto in simulateOne) |
 | 2 | Verify lobby state | r.check("initial", #call-status-badge == "Lobby" AND #participant-count == "0") | none |
 | 3 | Type "Sprint Planning" into #input-meeting-id | d.type_text('#input-meeting-id', 'Sprint Planning') | 227 |
-| 4 | Type "James" into #input-display-name | d.type_text('#input-display-name', 'James') | 228 |
+| 4 | Type "Alex" into #input-display-name | d.type_text('#input-display-name', 'Alex') | 228 |
 | 5 | Click #btn-join-meeting | d.click('#btn-join-meeting') | 229 |
 | 6 | Verify connected, 4 participants | r.check("joined", #call-status-badge == "Connected" AND #participant-count == "4") | none |
 | 7 | Verify room name | r.check("room", #room-name-display == "Sprint Planning") | none |

@@ -4,9 +4,9 @@ You are the EXECUTOR in a controlled experiment, condition A (DIRECT). You decid
 
 ## Inputs
 
-1. Task spec: /home/james/workspace/computer-use-wayland/tests/realistic/agy-q2/test-05-contact-book.md (read it fully first)
-2. Fixture: /home/james/workspace/computer-use-wayland/tests/realistic/agy-q2/fixtures/test-05-contact-book.html (read it to confirm every selector: static ids, JS-generated ids, modal behavior, dropdown values, the star element, the delete confirmation, search and filter behavior, the banner text)
-3. Driver reference: /home/james/workspace/computer-use-wayland/tests/realistic/hand_drive.py (read the docstring and the command handlers)
+1. Task spec: ~/workspace/computer-use-wayland/tests/realistic/agy-q2/test-05-contact-book.md (read it fully first)
+2. Fixture: ~/workspace/computer-use-wayland/tests/realistic/agy-q2/fixtures/test-05-contact-book.html (read it to confirm every selector: static ids, JS-generated ids, modal behavior, dropdown values, the star element, the delete confirmation, search and filter behavior, the banner text)
+3. Driver reference: ~/workspace/computer-use-wayland/tests/realistic/hand_drive.py (read the docstring and the command handlers)
 
 ## Environment (already running when you start)
 

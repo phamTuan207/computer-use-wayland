@@ -1788,7 +1788,7 @@ def run_06(r, d):
     r.step("type meeting id", "type",
            lambda: d.type_text("#input-meeting-id", "Sprint Planning"))
     r.step("type display name", "type",
-           lambda: d.type_text("#input-display-name", "James"))
+           lambda: d.type_text("#input-display-name", "Alex"))
     r.step("join meeting", "click", lambda: d.click("#btn-join-meeting"))
     r.check("connected", txt(d, "#call-status-badge") == "Connected",
             txt(d, "#call-status-badge"))

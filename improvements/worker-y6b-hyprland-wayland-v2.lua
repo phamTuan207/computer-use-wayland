@@ -13,7 +13,7 @@
 -- measurement purpose. The launcher starts mpv with explicit nest env and a
 -- recorded PID after the plugin and liquid checks pass.
 hl.monitor({ output = "WAYLAND-1", mode = "960x540@60", position = "0x0", scale = 1 })
-hl.plugin.load("/home/james/.local/share/agent-computer-use/backups/full-1791544423/native/hyprglass.so")
+hl.plugin.load(os.getenv("HOME") .. "/.local/share/agent-computer-use/backups/full-1791544423/native/hyprglass.so")
 -- computer-use-visuals-begin
 dofile("/tmp/y6-nested/conf/nested-visuals-hook.lua")
 -- computer-use-visuals-end

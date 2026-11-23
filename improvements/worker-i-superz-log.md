@@ -53,7 +53,7 @@ on the laptop (except terminal commands) point to the AI-optimized Zen
 
 ## 15:24: the fix, wrapper script
 
-Created /home/james/.local/bin/zen-ai (561 bytes, chmod +x):
+Created ~/.local/bin/zen-ai (561 bytes, chmod +x):
 
   #!/bin/bash
   # zen-ai: Zen Browser with AI agent control flags (BiDi + Marionette).
@@ -73,17 +73,17 @@ private-window probe output identical to plain zen-bin --help.
 
 Backed up the .desktop to zen.desktop.bak-20261121-superz, then
 repointed all 5 Exec lines to the wrapper with sed. Result:
-- line 4 (main): Exec=/home/james/.local/bin/zen-ai %u
-- line 239 (new-window): Exec=/home/james/.local/bin/zen-ai %u
-- line 354 (new-blank-window): Exec=/home/james/.local/bin/zen-ai --blank-window %u
-- line 469 (new-private-window): Exec=/home/james/.local/bin/zen-ai --private-window %u
-- line 584 (profilemanager): Exec=/home/james/.local/bin/zen-ai --ProfileManager %u
+- line 4 (main): Exec=~/.local/bin/zen-ai %u
+- line 239 (new-window): Exec=~/.local/bin/zen-ai %u
+- line 354 (new-blank-window): Exec=~/.local/bin/zen-ai --blank-window %u
+- line 469 (new-private-window): Exec=~/.local/bin/zen-ai --private-window %u
+- line 584 (profilemanager): Exec=~/.local/bin/zen-ai --ProfileManager %u
 - 0 Exec lines still point at the raw binary.
 
 ## 15:24-15:25: verification (all passed)
 
 1. omarchy-launch-browser sed extraction on the new .desktop returns
-   /home/james/.local/bin/zen-ai. Super Z now resolves to the wrapper.
+   ~/.local/bin/zen-ai. Super Z now resolves to the wrapper.
 2. omarchy-cmd-default-browser still returns zen.desktop.
 3. Wrapper --help probe: zen-ai --help | grep -c MOZ_LOG = 3, identical
    to plain zen-bin --help. Private-window detection preserved.

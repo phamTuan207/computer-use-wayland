@@ -31,9 +31,9 @@ assess_lane_liveness = runmod.assess_lane_liveness
 IDLE_PS = (
     "  PID  PPID     ELAPSED COMMAND\n"
     " 1911     1    00:57:12 /usr/bin/python3 "
-    "/home/james/.local/share/agent-computer-use/scripts/mcp_bridge.py\n"
+    "/home/testuser/.local/share/agent-computer-use/scripts/mcp_bridge.py\n"
     " 3913     1    00:52:04 /usr/bin/python3 "
-    "/home/james/computer-use-wayland/scripts/session_remote.py serve "
+    "/home/testuser/computer-use-wayland/scripts/session_remote.py serve "
     "--socket /run/user/1000/computer-use-wayland/relay.sock\n"
     " 5010  5000       00:01 /usr/bin/zen-browser\n"
 )
@@ -81,7 +81,7 @@ class TestP15Liveness(unittest.TestCase):
     def test_session_driver_process_is_live(self):
         ps = IDLE_PS + (
             " 6010  3913       00:00 /usr/bin/python3 "
-            "/home/james/computer-use-wayland/scripts/cu.py "
+            "/home/testuser/computer-use-wayland/scripts/cu.py "
             "session-driver\n")
         verdict = assess_lane_liveness(ps, IDLE_RELAY, [])
         self.assertTrue(verdict['live'])
@@ -91,8 +91,8 @@ class TestP15Liveness(unittest.TestCase):
     def test_session_wrapper_spawning_driver_is_live(self):
         ps = IDLE_PS + (
             " 6011  3913       00:00 /usr/bin/python3 "
-            "/home/james/computer-use-wayland/scripts/cu.py session "
-            "-- python3 /home/james/computer-use-wayland/scripts/cu.py "
+            "/home/testuser/computer-use-wayland/scripts/cu.py session "
+            "-- python3 /home/testuser/computer-use-wayland/scripts/cu.py "
             "session-driver\n")
         verdict = assess_lane_liveness(ps, IDLE_RELAY, [])
         self.assertTrue(verdict['live'])
@@ -100,8 +100,8 @@ class TestP15Liveness(unittest.TestCase):
     def test_relay_request_client_is_live(self):
         ps = IDLE_PS + (
             " 6012  6011       00:00 /usr/bin/python3 "
-            "/home/james/computer-use-wayland/scripts/session_remote.py "
-            "request --lease-file /home/james/.cache/agent-computer-use/"
+            "/home/testuser/computer-use-wayland/scripts/session_remote.py "
+            "request --lease-file /home/testuser/.cache/agent-computer-use/"
             "s2-flip-run1.lease --sequence 3 --request /tmp/x.json\n")
         verdict = assess_lane_liveness(ps, IDLE_RELAY, [])
         self.assertTrue(verdict['live'])
@@ -114,7 +114,7 @@ class TestP15Liveness(unittest.TestCase):
     def test_relay_status_probe_is_not_live(self):
         ps = IDLE_PS + (
             " 6013  6011       00:00 /usr/bin/python3 "
-            "/home/james/computer-use-wayland/scripts/session_remote.py "
+            "/home/testuser/computer-use-wayland/scripts/session_remote.py "
             "status\n")
         verdict = assess_lane_liveness(ps, IDLE_RELAY, [])
         self.assertFalse(verdict['live'], verdict)

@@ -17,7 +17,7 @@
 - Safety: fresh observe first; if the owner is visibly active, do not drive, wait and re-check; one composite batch, safe targets only (New Tab wallpaper center, F1a pattern; then Ctrl+L + type example.com + Enter, F2 run 3 pattern, proven); never ydotool; no em/en dashes.
 
 ## 00:16 state check (elapsed 3m)
-- Laptop 00:16:28. Plugins: hyprbars 1.0 + hyprglass 1.1.1-cu.1 + computer-use-cursor 1.0.0, all loaded. cu-cursor {"active":false,"ok":true,"schema":1,"token":""} (no session). Socket dir has cursor-guard.sock, no session.json. Relay PID 1821 alive; input-method indicator.py PID 165692 (ignore). No stray session/indicator. Zen window 0x557052b62dd0, class zen, title Zen Browser. computer-use on PATH (/home/james/.local/bin/computer-use). md5 match VM vs installed: first_action.py 8caff365..., overlay.py c7e815b5... (F2 deployed versions). Backend UP. SSH round trip fast this time (~4.6s, no broken pipe).
+- Laptop 00:16:28. Plugins: hyprbars 1.0 + hyprglass 1.1.1-cu.1 + computer-use-cursor 1.0.0, all loaded. cu-cursor {"active":false,"ok":true,"schema":1,"token":""} (no session). Socket dir has cursor-guard.sock, no session.json. Relay PID 1821 alive; input-method indicator.py PID 165692 (ignore). No stray session/indicator. Zen window 0x557052b62dd0, class zen, title Zen Browser. computer-use on PATH (~/.local/bin/computer-use). md5 match VM vs installed: first_action.py 8caff365..., overlay.py c7e815b5... (F2 deployed versions). Backend UP. SSH round trip fast this time (~4.6s, no broken pipe).
 - Log commit 80929e5, pushed, ls-remote todolist-push HEAD matches.
 
 ## 00:16:50 fresh window observe 4744b3027373 (elapsed 4m)
@@ -28,12 +28,12 @@
 
 ## 00:19-00:20 THE PROOF RUN (elapsed 6-7m)
 - T_order (VM): 2026-11-22 00:19:50.156 +07 (date at exec start, scp proof script + SSH run).
-- T_LAPTOP_START: 00:20:01.776. Fresh window observe in-script: id 5ba0c52b7d9f, JSON /home/james/.cache/agent-computer-use/5ba0c52b7d9f.json.
+- T_LAPTOP_START: 00:20:01.776. Fresh window observe in-script: id 5ba0c52b7d9f, JSON ~/.cache/agent-computer-use/5ba0c52b7d9f.json.
 - T_ACTNOW_LAUNCH: 00:20:02.009. Envelope wall_time 00:20:02.069. order_to_overlay_ms 349.358, order_to_session_attempt_ms 349.416, total_ms 2850.639.
 - T_overlay = 00:20:02.069 + 0.349s = 00:20:02.418.
 - ORDER-TO-OVERLAY = 00:20:02.418 - 00:19:50.156 = 12.262s. UNDER 30s. PASS.
   - Breakdown: dispatch 11.620s (T_order to T_LAPTOP_START: scp script + SSH connect + shell startup), fresh observe 0.233s, Python startup 0.060s, overlay acquire 0.349s. SSH dispatch dominates; the overlay itself is 349ms, in line with F2's 314-346ms.
-- Envelope (verbatim key fields): {"ok": true, "path": "session", "agent": "Muse", "method": "act-now", "wall_time": "2026-11-22T00:20:02.069+07:00", "order_to_overlay_ms": 349.358, "order_to_session_attempt_ms": 349.416, "total_ms": 2850.639, "session_error": null, "session_timed_out": false, "fallback_reason": null, "completed": 5, "observation": {"id": "5ba0c52b7d9f", "source": "given"}, "after": {"id": "69e207527eb9", "observation": "/home/james/.cache/agent-computer-use/69e207527eb9.json"}, "after_error": null, "error": null, "release_error": null, "log_error": null, "target_breached": false, "overlay_owner": "daemon"}.
+- Envelope (verbatim key fields): {"ok": true, "path": "session", "agent": "Muse", "method": "act-now", "wall_time": "2026-11-22T00:20:02.069+07:00", "order_to_overlay_ms": 349.358, "order_to_session_attempt_ms": 349.416, "total_ms": 2850.639, "session_error": null, "session_timed_out": false, "fallback_reason": null, "completed": 5, "observation": {"id": "5ba0c52b7d9f", "source": "given"}, "after": {"id": "69e207527eb9", "observation": "~/.cache/agent-computer-use/69e207527eb9.json"}, "after_error": null, "error": null, "release_error": null, "log_error": null, "target_breached": false, "overlay_owner": "daemon"}.
 - PATH = session (NOT fallback). First session-path act-now run; F2's rehearsal was all fallback. session_error null, fallback_reason null. JSONL record appended (same values, verified by tail).
 - Completed 5/5 actions in one batch, total 2850.639ms, no gaps. Continuous ops PROVEN.
 - cursorpos after: (3569, 1547). Expected (3569, 1547). 0px error. Click landed exactly.

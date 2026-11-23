@@ -458,7 +458,7 @@ in the repo worktree and /tmp test copies.
   re-stage); "How to verify" note in SHIPPED.md/plan + remove
   stale PYTHONDONTWRITEBYTECODE sentence; recovery hints in
   refusals; single --repo path (verify on laptop:
-  /home/james/workspace/computer-use-wayland); plan B1 wording
+  ~/workspace/computer-use-wayland); plan B1 wording
   (EMPTY __pycache__ only); --ship-dir in SHIPPED.md + value
   validation + name in not-found message + space-form only;
   handover-token writer correction (find the real writer);
@@ -485,11 +485,11 @@ in the repo worktree and /tmp test copies.
   copies codex-y5-manifest.json + codex-y5/SHIPPED.md); the
   first _SHIP_FILES draft (27) would have refused every clean
   ship. Fixed before commit. C3-6 VERIFIED ON LAPTOP via SSH:
-  both /home/james/computer-use-wayland (detached HEAD 56f5af4)
-  and /home/james/workspace/computer-use-wayland (branch
+  both ~/computer-use-wayland (detached HEAD 56f5af4)
+  and ~/workspace/computer-use-wayland (branch
   todolist-push, HEAD 4500a18) exist; neither currently holds
   tests/realistic/launch_y13.py; the todolist-push checkout is
-  /home/james/workspace/computer-use-wayland, now the single
+  ~/workspace/computer-use-wayland, now the single
   --repo path in both docs. Also verified: no .git at
   ~/workspace, ~, or /tmp, so the repo-tree guard cannot
   false-fire on staged ships there. Next: R3 tokenizer rewrite

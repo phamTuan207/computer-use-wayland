@@ -136,7 +136,7 @@ except that F1/F2 are fixed as HIGH items, which this pass does.
 - C3-1: _derive_ship_dir refuses --ship-dir= / --repo= tokens.
   No main() backstop (unreachable by construction, adjudication).
 - C1-F1/C3-3: runner docstring lines 103/105 gain -P and --repo
-  /home/james/workspace/computer-use-wayland.
+  ~/workspace/computer-use-wayland.
 - C1-F3/C3-2: SHIPPED.md "How to verify" rewritten (14 functions
   named + 4 constants + NUL-joined argv + copy-pasteable snippet
   + _fail/SHIP_DIR for _check_entry_pyc extraction).

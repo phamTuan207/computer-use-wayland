@@ -1,6 +1,6 @@
 # Worker B2-4 log (step 10): A5 migrate, A3 holder fix, A3 wedge drill, A4 CB-10 probe
 
-Owner: Pham Tuan (Muse tong). Coordinator: parent orchestrator.
+Owner: the owner. Coordinator: parent orchestrator.
 Repo ~/workspace/mochi-b2-4-work, base code ed4fcd4 for the
 fix round (section 10); the original work in sections 0-9
 was measured at detached HEAD 0400e86 (origin todolist-push,

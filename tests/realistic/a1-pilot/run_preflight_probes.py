@@ -133,7 +133,7 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[3]
 SSH = str(REPO / 'scripts' / 'ssh-laptop-mux.sh')
-LAPTOP_CU = '/home/james/computer-use-wayland/scripts/cu.py'
+LAPTOP_CU = '~/computer-use-wayland/scripts/cu.py'
 ENDPOINT = 'http://127.0.0.1:9223'
 PICK4_URL = 'http://127.0.0.1:8768/pick4-fixture.html'
 F01_URL = 'http://127.0.0.1:8768/test-01-spreadsheet.html'

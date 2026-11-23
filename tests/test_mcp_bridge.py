@@ -248,8 +248,8 @@ class EnvironmentDelegationTests(BridgeTestCase):
                 'DBUS_SESSION_BUS_ADDRESS': 'unix:path=/fixture/bus',
                 'XDG_CURRENT_DESKTOP': 'Hyprland', 'XDG_SESSION_DESKTOP': 'Hyprland',
                 'XDG_SESSION_TYPE': 'wayland', 'XDG_SEAT': 'seat-test', 'XDG_VTNR': '1',
-                'USER': os.environ.get('USER', 'james'), 'HOME': str(Path.home()),
-                'LOGNAME': os.environ.get('LOGNAME', 'james'), 'PATH': '/waybar/bin:/usr/bin',
+                'USER': os.environ.get('USER', 'testuser'), 'HOME': str(Path.home()),
+                'LOGNAME': os.environ.get('LOGNAME', 'testuser'), 'PATH': '/waybar/bin:/usr/bin',
                 'GDK_BACKEND': 'wayland,x11', 'QT_QPA_PLATFORM': 'wayland;xcb',
                 'ELECTRON_OZONE_PLATFORM_HINT': 'wayland', 'MOZ_ENABLE_WAYLAND': '1',
             }

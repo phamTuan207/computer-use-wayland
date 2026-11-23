@@ -57,7 +57,7 @@
 ## F6. Broker SOLO and desktop state (IN PROGRESS, evidence below)
 
 - Broker status, 17:57:24 +07, via
-  `python3 /home/james/computer-use-wayland/scripts/session_remote.py status`
+  `python3 ~/computer-use-wayland/scripts/session_remote.py status`
   over SSH: {"ok":true,"broker":"running","broker_generation":
   "411cfadf0b32da29387fe9dbb59e1886","loaded_code_sha256":
   "d490f369f6b754d200518055025ef956284a759cc49e3ee70ed6b2a4483e3da4",
@@ -232,7 +232,7 @@
   WAYLAND_DISPLAY=wayland-1 succeeded but produced window class
   "chromium-browser" (wrong; probe/pilot programs filter
   class == "chromium"). I killed that instance (PID 55571) and
-  relaunched via the wrapper /home/james/.local/bin/chromium-intel
+  relaunched via the wrapper ~/.local/bin/chromium-intel
   (sets LIBVA_DRIVER_NAME=iHD etc., adds
   --remote-debugging-port=9223); new PID 56452, answering by
   18:13:26 +07, window class "chromium" restored (same window
@@ -269,18 +269,18 @@
   throughout):
   - click, 18:18:24, PASS (4632.9ms): P1 bad-ref error, P2 #result
     still "not clicked yet", same tab true, verify image
-    /home/james/.cache/agent-computer-use/a49f71acb9ba.jpg.
+    ~/.cache/agent-computer-use/a49f71acb9ba.jpg.
   - fill, 18:18:37, PASS (4680.0ms): P1 bad-ref error, P2 #a2
     still "-", same tab true, verify image
-    /home/james/.cache/agent-computer-use/a972398a73b9.jpg.
+    ~/.cache/agent-computer-use/a972398a73b9.jpg.
   - set_value: FAILED navigate 18:18:50 standalone (focus race);
     PASSED 18:19:57 with the focus step (7317.6ms): navigate act ok
     True, P1 bad-ref error, P2 #a2 still "-", same tab true,
     verify image
-    /home/james/.cache/agent-computer-use/740bba056980.jpg.
+    ~/.cache/agent-computer-use/740bba056980.jpg.
   - assert, about 18:19:05, PASS (4689.9ms): P1 bad-ref error, P2
     #result still "not clicked yet", same tab true, verify image
-    /home/james/.cache/agent-computer-use/f0bfb659e9c4.jpg.
+    ~/.cache/agent-computer-use/f0bfb659e9c4.jpg.
   - retry-logging, 18:20:48, FAIL, adapter defect, NOT a setup
     failure: P1 navigate act ok True, first dom_act ok False
     completed 0 (the expected failed assert), then the retry
@@ -462,7 +462,7 @@
 - Fix method: persistent systemd drop-in plus relay restart (no
   runbook amendment needed: the flags are a relay environment
   property, not a design change). The relay unit is
-  /home/james/.config/systemd/user/computer-use-relay.service
+  ~/.config/systemd/user/computer-use-relay.service
   (ExecStart: python3 scripts/session_remote.py serve --socket
   %t/computer-use-wayland/relay.sock; Restart=no). It had no CU_*
   flags. The flags are consumed by cu.py in the session-driver
@@ -485,12 +485,12 @@
   current checkout". That is the expected staleness after any new
   commit (the installed tree was last synced at an earlier HEAD);
   the relay runs from the CHECKOUT (WorkingDirectory
-  /home/james/computer-use-wayland, started_git_head from git
+  ~/computer-use-wayland, started_git_head from git
   rev-parse HEAD in that checkout), not from the installed tree,
   so this does not block the pilot. The installed-tree re-sync is
   W-SYNC's lane; recorded here as-is, not silently fixed.
 - Drop-in written 18:31:57 +07:
-  /home/james/.config/systemd/user/computer-use-relay.service.d/flags.conf
+  ~/.config/systemd/user/computer-use-relay.service.d/flags.conf
   (69 bytes, verified by cat):
   [Service]
   Environment=CU_CODE_EXEC=1
@@ -506,7 +506,7 @@
   active, new MainPID 70985 (old PID 3913, started 17:19).
 - Verification, 18:32:03-18:32:06 +07:
   - systemctl show Environment:
-    PYTHONDONTWRITEBYTECODE=1 XDG_CACHE_HOME=/home/james/.cache
+    PYTHONDONTWRITEBYTECODE=1 XDG_CACHE_HOME=~/.cache
     CU_CODE_EXEC=1 CU_PICK4_FASTPATH=1. Both flags present.
   - /proc/70985/environ: CU_CODE_EXEC=1, CU_PICK4_FASTPATH=1.
     Both flags present in the live relay process env.
@@ -549,7 +549,7 @@
   /proc/$(systemctl --user show computer-use-relay.service -p
   MainPID | cut -d= -f2)/environ | grep -E
   'CU_CODE_EXEC|CU_PICK4_FASTPATH' (both must print =1) and
-  python3 /home/james/computer-use-wayland/scripts/session_remote.py
+  python3 ~/computer-use-wayland/scripts/session_remote.py
   status (started_git_head must equal H2, state idle,
   active_sequence null). Only then issue run 1.
 - Resume notes from owner decisions 18:21 and 18:30 +07, 22/11:

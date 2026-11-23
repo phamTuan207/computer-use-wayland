@@ -1,11 +1,53 @@
 # computer-use-wayland
 
-A GUI-automation tool for AI agents on Wayland, targeting **Hyprland**. One CLI
-drives a virtual pointer, virtual keyboard, screen capture, Chromium DOM and
-native accessibility.
+A GUI-automation tool for AI agents on Wayland, targeting **Hyprland**.
+Built first for **Muse agents**, so they can drive a real desktop fast
+and accurately. One CLI drives a virtual pointer, virtual keyboard,
+screen capture, Chromium DOM and native accessibility.
 
-No model API calls. Commands print bounded JSON. An explicit automation session
-owns the desktop for one task and cleans up afterwards.
+No model API calls. Commands print bounded JSON. An explicit automation
+session owns the desktop for one task and cleans up afterwards.
+
+## Built for Muse agents first
+
+This repo is designed around how Muse agents actually work: one
+observation should yield as many actions as possible, and the tool
+should get out of the way. Every feature is judged by that bar.
+
+**Design principles**
+
+- **One vision, maximum actions.** A single observation (one screenshot,
+  one DOM snapshot, one accessibility tree) should produce a whole batch
+  of actions, not one action per round trip. The agent skill requires
+  one initial model view, one ordered action batch, then final result
+  verification.
+- **Fastest path first.** CLI or API first, then Chromium DOM or
+  accessibility, screenshot and vision last. Where an app ships an
+  agent-native CLI, the agent drives the real application backend
+  instead of screenshots (see the CLI backend section below).
+- **Accuracy is measured, not claimed.** Every fix is proven by a live
+  task on a real desktop. A claim of fixed without a passing live test
+  is worth nothing. Numbers quoted in docs come from specific local
+  runs and are labelled as such.
+- **Evidence contract.** A finished task ships runnable proof: the
+  command, its output, and the log. The verifier is never the author.
+- **Fail closed.** Stale observations, failed cleanup, or an unproven
+  state stop the session rather than guessing. There is no automatic
+  observation, retry, or replay.
+
+## Current state
+
+The tool is in an active acceptance-test campaign. The ladder is:
+
+| Rung | What | Result |
+|---|---|---|
+| Rung 1 | Fixture bench, 2-vision | Passed (twice) |
+| Rung 2 | Live 0-vision on a real desktop, accuracy bar 90 percent | Passed 10/10 |
+| Rung 3 | 100-task held-out benchmark, pass bar 96/100 | Pending |
+
+Rung 3 is gated on a pre-flight check (repo state, machine state,
+task-list health, and a small trial run) before the full benchmark
+starts. See `docs/rung3-list-100-tasks.md` for the task list.
 
 ## What it does
 
@@ -59,7 +101,7 @@ executable FILE, for example `/absolute/path/to/another/checkout/scripts/cu.py`.
 Expose one
 tool, `computer_use_session`, with operations `start`, `request`, `finish`,
 `status`. Run `python3 scripts/setup.py` first (native build + CLI
-symlinks); it does NOT register the MCP launcher above — each client uses the
+symlinks); it does NOT register the MCP launcher above; each client uses the
 JSON snippet instead. One desktop session is controlled at a time per user.
 
 ### Background/SSH environment discovery
@@ -197,7 +239,7 @@ tree's `native/agent-cursor.json`, never an installed copy.
 A task holds a session-owned image lease for its agent cursor: the compositor
 keeps the exact decoded pixels while the lease socket stays open, and no global
 theme or GTK setting is changed. The profile and asset gate alone is not
-sufficient — the backend must also report idle, and the handshake must confirm
+sufficient; the backend must also report idle, and the handshake must confirm
 the session token, or the driver never starts. Losing the lease or the overlay
 stops the session; normal cleanup stops the driver before releasing its image, and a
 release that cannot be proven retains the session record for
@@ -261,7 +303,7 @@ calls speaks JSON lines over the session driver and keeps one stdin handle alive
 computer-use session -- computer-use session-driver
 ```
 
-Do not start one session per `act` — the overlay would vanish between commands.
+Do not start one session per `act`; the overlay would vanish between commands.
 The driver protocol is described in
 [skill/references/usage.md](skill/references/usage.md#interactive-agent-driver).
 
@@ -320,7 +362,7 @@ computer-use browser act --target EXACT_TAB_ID --snapshot ID --actions /tmp/acti
 `--no-after` is opt-in and applies to `act` only: on success the result carries
 `after_skipped: true` and no fresh snapshot, so the response is smaller. It
 cannot be combined with `--image`, and the final action must be an `assert`
-carrying a condition it really evaluates — `value` (string, `""` allowed),
+carrying a condition it really evaluates, `value` (string, `""` allowed),
 non-empty `text`, or boolean `checked`. Execution failures still attempt a
 diagnostic `after` snapshot; preflight errors happen before input. Because no
 fresh snapshot comes back, observe again before any
@@ -402,6 +444,22 @@ pinned commit, builds it and registers the login hook itself.
 [docs/liquid-glass.md](docs/liquid-glass.md) documents that backend and the manual
 build, immutable install and activation steps behind it.
 
+## Remote use over SSH
+
+The SSH multiplexing helper (`scripts/ssh_mux.py`) keeps one persistent SSH
+channel to a remote machine so repeated commands do not pay a fresh
+connection each time. It needs the target from the environment; the repo
+carries no hardcoded host:
+
+```sh
+export CU_LAPTOP_SSH=user@host
+python3 scripts/ssh_mux.py check
+python3 scripts/ssh_mux.py ensure
+```
+
+The shell drop-in `scripts/ssh-laptop-mux.sh` uses the same variable and
+refuses to run without it.
+
 ## Agent skill
 
 `skill/SKILL.md` plus `skill/references/usage.md` are written to be loaded by an
@@ -422,6 +480,7 @@ ln -s "$PWD/skill" ~/.config/opencode/skills/computer-use
 | `scripts/cdp.mjs` | Chromium CDP backend |
 | `scripts/a11y.py` | AT-SPI backend |
 | `scripts/cursor_session.py` | session ownership and cleanup recovery |
+| `scripts/ssh_mux.py` | SSH multiplexing helper for remote use |
 | `native/` | Wayland pointer protocol and C source |
 | `skill/` | agent-facing documentation |
 | `tests/` | unit tests and live fixtures |
@@ -443,6 +502,21 @@ Results are event-level confirmations: `completed` counts dispatched actions,
 not confirmed application outcomes. This is foreground automation on a live
 desktop, not an isolated sandbox. Numbers quoted in docs come from specific
 local runs and are labelled as such.
+
+## Contributing
+
+Fixes land with proof, not just a claim. The working standard is:
+
+- Reproduce the failure live first, then fix it.
+- Every fix ships a test that fails before and passes after, plus a live
+  task run that proves it on a real desktop.
+- An independent reviewer checks the fix; the author never certifies
+  their own work.
+- Small commits, pushed as you go. Record lessons in the repo so the
+  next agent does not repeat the same mistake.
+- Never commit personal information: no real names, addresses, emails,
+  phone numbers, schedules, photos, account IDs, tokens, or passwords.
+  Machine-specific paths stay generic (`~`, `$HOME`, `%h`).
 
 ## License
 

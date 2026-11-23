@@ -164,7 +164,7 @@ commit hash + log thoi gian.
 
 ## 7. Grim trong luc send: pill hien live (21:43:34-37 +07)
 
-- Pre grim (truoc launch): /home/james/gpill-retry/
+- Pre grim (truoc launch): ~/gpill-retry/
   gpill-retry-pre.png, 886956 bytes, sha256
   5fadab479db43eb798b90be5fc5b211597583adf77906af302b26734bb8924ce.
   Xem truc tiep: KHONG co pill top center. Pill tat truoc send.

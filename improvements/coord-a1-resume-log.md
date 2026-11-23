@@ -72,7 +72,7 @@
 
 ## 3. Laptop sync to H2
 
-- Command (laptop, over SSH): `cd /home/james/computer-use-wayland
+- Command (laptop, over SSH): `cd ~/computer-use-wayland
   && git fetch origin && git pull --ff-only origin todolist-push &&
   git rev-parse HEAD`.
 - Output: fast-forward, new files created including

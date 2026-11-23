@@ -1,6 +1,6 @@
 {
   "run": 91,
-  "fixture": "file:///home/james/computer-use-wayland/tests/two_vision_fixture.html?clone=1",
+  "fixture": "file://~/computer-use-wayland/tests/two_vision_fixture.html?clone=1",
   "fixture_sha256": "147494cda4c6ae24a51ced03ccdfb3fc5a79a1bbab56dcdfc5afb4f72fba6cbf",
   "message": "C5-HELDOUT-R91-CHROMIUM-IGNORE-TEST",
   "model_calls": 0,

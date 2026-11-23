@@ -245,7 +245,7 @@
 {"ts": "2026-11-21T13:29:31.029228+00:00", "test": "06", "step": "check: chat sidebar open", "op": "check", "elapsed_ms": 0.0, "ok": true, "detail": "open", "error": null, "attempt": 1}
 {"ts": "2026-11-21T13:29:31.036254+00:00", "test": "06", "step": "type chat message", "op": "type", "elapsed_ms": 7.0, "ok": true, "detail": null, "error": null, "attempt": 1}
 {"ts": "2026-11-21T13:29:31.093006+00:00", "test": "06", "step": "send chat", "op": "click", "elapsed_ms": 56.6, "ok": true, "detail": null, "error": null, "attempt": 1}
-{"ts": "2026-11-21T13:29:31.096627+00:00", "test": "06", "step": "check: chat message recorded", "op": "check", "elapsed_ms": 0.0, "ok": true, "detail": "\n        \n          Sarah Connor\n          Welcome everyone, let us get started.\n        \n      James (You)Ready for updates", "error": null, "attempt": 1}
+{"ts": "2026-11-21T13:29:31.096627+00:00", "test": "06", "step": "check: chat message recorded", "op": "check", "elapsed_ms": 0.0, "ok": true, "detail": "\n        \n          Sarah Connor\n          Welcome everyone, let us get started.\n        \n      Alex (You)Ready for updates", "error": null, "attempt": 1}
 {"ts": "2026-11-21T13:29:31.152125+00:00", "test": "06", "step": "leave meeting", "op": "click", "elapsed_ms": 55.4, "ok": true, "detail": null, "error": null, "attempt": 1}
 {"ts": "2026-11-21T13:29:31.154986+00:00", "test": "06", "step": "check: disconnected", "op": "check", "elapsed_ms": 0.0, "ok": true, "detail": "Disconnected", "error": null, "attempt": 1}
 {"ts": "2026-11-21T13:29:31.156031+00:00", "test": "06", "step": "check: rejoin prompt visible", "op": "check", "elapsed_ms": 0.0, "ok": true, "detail": "visible", "error": null, "attempt": 1}

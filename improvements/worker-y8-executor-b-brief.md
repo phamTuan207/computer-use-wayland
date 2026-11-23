@@ -9,7 +9,7 @@ You are the EXECUTOR in a controlled experiment, condition B (DELIBERATED). A te
 
 ## FORBIDDEN paths (reading any of these makes your run INVALID)
 
-Do NOT read the task spec (/home/james/workspace/computer-use-wayland/tests/realistic/agy-q2/test-05-contact-book.md). Do NOT read the fixture HTML (/home/james/workspace/computer-use-wayland/tests/realistic/agy-q2/fixtures/test-05-contact-book.html). Do NOT read /tmp/e1/plans/ (the drafts). Do NOT read /tmp/e1/run-a-report.md or any A run report. Do NOT read any other agent work. Reading the spec or fixture would break the experiment.
+Do NOT read the task spec (~/workspace/computer-use-wayland/tests/realistic/agy-q2/test-05-contact-book.md). Do NOT read the fixture HTML (~/workspace/computer-use-wayland/tests/realistic/agy-q2/fixtures/test-05-contact-book.html). Do NOT read /tmp/e1/plans/ (the drafts). Do NOT read /tmp/e1/run-a-report.md or any A run report. Do NOT read any other agent work. Reading the spec or fixture would break the experiment.
 
 ## Environment (already running when you start)
 

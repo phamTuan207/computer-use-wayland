@@ -162,10 +162,10 @@ AST-extraction method that lives only in the Y13g log.
 - Files: tests/realistic/launch_y13.py:97
   (`--repo ~/computer-use-wayland`) vs
   tests/realistic/codex-y5/SHIPPED.md:42
-  (`--repo /home/james/workspace/computer-use-wayland`)
+  (`--repo ~/workspace/computer-use-wayland`)
 - Evidence: `~/computer-use-wayland` is
-  /home/james/computer-use-wayland; SHIPPED.md says
-  /home/james/workspace/computer-use-wayland. One of them is not
+  ~/computer-use-wayland; SHIPPED.md says
+  ~/workspace/computer-use-wayland. One of them is not
   the laptop checkout. Fail-closed (a wrong path gives a clear
   "--repo X is not a git checkout"), so the operator recovers by
   guessing the other path, but they should not have to guess on
@@ -324,5 +324,5 @@ AST-extraction method that lives only in the Y13g log.
   verifier runs them (its harnesses were lost with /tmp/y13r2/;
   see C3-3 for the method note it needs). Council 3 ran only the
   10 operability probes above, on scratch copies, no live Zen.
-- Whether /home/james/workspace/computer-use-wayland is the real
+- Whether ~/workspace/computer-use-wayland is the real
   laptop checkout (C3-6): not verifiable from this VM.

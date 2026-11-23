@@ -37,7 +37,7 @@ P5b: outer message above replaced the guard message; the guard text never reache
 FAIL: hyprglass not in nested plugin list
 P6-RC=1 (fail-fast at the plugin-list gate, no ldd/load-error evidence collected)
 P6: conf plugin line:
-16:hl.plugin.load("/home/james/.local/share/agent-computer-use/backups/full-1791544423/native/hyprglass.so")
+16:hl.plugin.load("~/.local/share/agent-computer-use/backups/full-1791544423/native/hyprglass.so")
 P6: runner ldd/backup guard lines (expect none):
 0
 [T+28s] === P7 (H8): C2 coverage gaps ===

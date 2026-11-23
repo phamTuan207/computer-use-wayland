@@ -18,7 +18,7 @@ Exporting DBUS_SESSION_BUS_ADDRESS, WAYLAND_DISPLAY, DISPLAY and every
 XDG_SESSION_* variable does not help, because the gate is the real
 logind/audit session, not env vars. The fix that works, verified twice:
 dispatch the agy run through Hyprland so it becomes a child of the
-graphical session. Helper installed at /home/james/.local/bin/agy-hypr
+graphical session. Helper installed at ~/.local/bin/agy-hypr
 on the laptop; usage: write the prompt to a file, run
 `agy-hypr <prompt-file> [output-log]` over SSH.
 
@@ -86,20 +86,20 @@ Test 1, 15:39: agy -p "Reply with exactly the word OK" dispatched via
 Hyprland. Output: OK. Log cli-20261121_153902.log shows keyringAuth
 loaded token expired=false and ChainedAuth authenticated via keyring.
 
-Test 2, 15:40: helper /home/james/.local/bin/agy-hypr with a real task
+Test 2, 15:40: helper ~/.local/bin/agy-hypr with a real task
 (create /tmp/agy-hypr-proof.txt with two exact lines, reply DONE).
 Output: DONE, exit 0. Proof file contained exactly the two lines.
 So agy via the helper authenticates AND does real tool work over SSH.
 
 ### The helper
 
-Installed at /home/james/.local/bin/agy-hypr (laptop only, not in repo).
+Installed at ~/.local/bin/agy-hypr (laptop only, not in repo).
 A copy of the same script is saved as ~/workspace/agy-hypr-helper.sh
 on the VM for reference. Usage from SSH:
 
 ```
 printf 'your prompt' > /tmp/prompt.txt
-/home/james/.local/bin/agy-hypr /tmp/prompt.txt /tmp/out.log
+~/.local/bin/agy-hypr /tmp/prompt.txt /tmp/out.log
 ```
 
 It discovers the Hyprland instance signature dynamically

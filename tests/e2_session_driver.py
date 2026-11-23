@@ -14,7 +14,7 @@ import subprocess
 import sys
 import time
 
-CU = "/home/james/workspace/computer-use-wayland/scripts/cu.py"
+CU = os.path.expanduser("~/workspace/computer-use-wayland/scripts/cu.py")
 WINDOW = "0x559f8d5adda0"
 ACTIONS = "/tmp/e2-actions.json"
 LOG = "/tmp/e2-session-driver.log"

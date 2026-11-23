@@ -52,7 +52,7 @@
       "items": 51
     },
     "observation": {
-      "path": "/home/james/.cache/agent-computer-use/66b79b01a817.json",
+      "path": "~/.cache/agent-computer-use/66b79b01a817.json",
       "image_size": [
         960,
         600
@@ -69,7 +69,7 @@
       571.5
     ],
     "act_now_rc": 0,
-    "act_now_out_tail": "\"observation\": \"/home/james/.cache/agent-computer-use/f07805435e16.json\", \"capture_params\": {\"max_width\": 960, \"jpeg_quality\": 90, \"jpeg_subsampling\": 0}}, \"after_error\": null, \"error\": null, \"release_error\": null, \"log_error\": null, \"target_breached\": false, \"dispatch_ms\": null, \"dispatch_basis\": \"not_provided\", \"first_pointer_ms\": 462.88, \"target_breached_basis\": \"session_computed (child startup about 60ms unrecorded)\", \"phase_ms\": {\"overlay_acquire_ms\": 320.195, \"observation_ms\": 0.075, \"session_attempt_ms\": 1883.561, \"after_capture_ms\": 94.852}, \"think_ms\": null, \"think_basis\": \"not_in_act_now: think time is measured by the P6 harness in the agent loop, not inside act-now\", \"overlay_flicker\": \"unprobed: LIQUID flicker probe not run (A4 worker precondition)\", \"overlay_owner\": \"daemon\"}\n",
+    "act_now_out_tail": "\"observation\": \"~/.cache/agent-computer-use/f07805435e16.json\", \"capture_params\": {\"max_width\": 960, \"jpeg_quality\": 90, \"jpeg_subsampling\": 0}}, \"after_error\": null, \"error\": null, \"release_error\": null, \"log_error\": null, \"target_breached\": false, \"dispatch_ms\": null, \"dispatch_basis\": \"not_provided\", \"first_pointer_ms\": 462.88, \"target_breached_basis\": \"session_computed (child startup about 60ms unrecorded)\", \"phase_ms\": {\"overlay_acquire_ms\": 320.195, \"observation_ms\": 0.075, \"session_attempt_ms\": 1883.561, \"after_capture_ms\": 94.852}, \"think_ms\": null, \"think_basis\": \"not_in_act_now: think time is measured by the P6 harness in the agent loop, not inside act-now\", \"overlay_flicker\": \"unprobed: LIQUID flicker probe not run (A4 worker precondition)\", \"overlay_owner\": \"daemon\"}\n",
     "envelope": {
       "ok": true,
       "completed": 3,
@@ -168,7 +168,7 @@
       "items": 53
     },
     "observation": {
-      "path": "/home/james/.cache/agent-computer-use/305c1df54163.json",
+      "path": "~/.cache/agent-computer-use/305c1df54163.json",
       "image_size": [
         960,
         600
@@ -185,7 +185,7 @@
       571.5
     ],
     "act_now_rc": 0,
-    "act_now_out_tail": "observation\": \"/home/james/.cache/agent-computer-use/2a5c11ad50f7.json\", \"capture_params\": {\"max_width\": 960, \"jpeg_quality\": 90, \"jpeg_subsampling\": 0}}, \"after_error\": null, \"error\": null, \"release_error\": null, \"log_error\": null, \"target_breached\": false, \"dispatch_ms\": null, \"dispatch_basis\": \"not_provided\", \"first_pointer_ms\": 474.964, \"target_breached_basis\": \"session_computed (child startup about 60ms unrecorded)\", \"phase_ms\": {\"overlay_acquire_ms\": 335.505, \"observation_ms\": 0.099, \"session_attempt_ms\": 1879.515, \"after_capture_ms\": 85.181}, \"think_ms\": null, \"think_basis\": \"not_in_act_now: think time is measured by the P6 harness in the agent loop, not inside act-now\", \"overlay_flicker\": \"unprobed: LIQUID flicker probe not run (A4 worker precondition)\", \"overlay_owner\": \"daemon\"}\n",
+    "act_now_out_tail": "observation\": \"~/.cache/agent-computer-use/2a5c11ad50f7.json\", \"capture_params\": {\"max_width\": 960, \"jpeg_quality\": 90, \"jpeg_subsampling\": 0}}, \"after_error\": null, \"error\": null, \"release_error\": null, \"log_error\": null, \"target_breached\": false, \"dispatch_ms\": null, \"dispatch_basis\": \"not_provided\", \"first_pointer_ms\": 474.964, \"target_breached_basis\": \"session_computed (child startup about 60ms unrecorded)\", \"phase_ms\": {\"overlay_acquire_ms\": 335.505, \"observation_ms\": 0.099, \"session_attempt_ms\": 1879.515, \"after_capture_ms\": 85.181}, \"think_ms\": null, \"think_basis\": \"not_in_act_now: think time is measured by the P6 harness in the agent loop, not inside act-now\", \"overlay_flicker\": \"unprobed: LIQUID flicker probe not run (A4 worker precondition)\", \"overlay_owner\": \"daemon\"}\n",
     "envelope": {
       "ok": true,
       "completed": 3,

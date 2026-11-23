@@ -100,9 +100,9 @@ check, predecessor ports free, no live geckodriver with a live
 parent) and then execs the runner under flock -w 60. Do NOT
 launch the runner directly; the direct command below is the
 equivalent only for reference.
-  cd /tmp/worker-y13-server && Y13_GO=1 python3 -P -E launch_y13.py --repo /home/james/workspace/computer-use-wayland all \\
+  cd /tmp/worker-y13-server && Y13_GO=1 python3 -P -E launch_y13.py --repo ~/workspace/computer-use-wayland all \\
   > /tmp/worker-y13-stdout.log 2>&1
-  Y13_GO=1 python3 -P -E launch_y13.py --repo /home/james/workspace/computer-use-wayland 01 02
+  Y13_GO=1 python3 -P -E launch_y13.py --repo ~/workspace/computer-use-wayland 01 02
   python3 -P -E run_codex_y5.py --verify-manifest
 
 SCRIPT FORM ONLY (Y13g B1/B4): run this file ONLY as a script,

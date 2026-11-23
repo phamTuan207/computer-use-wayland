@@ -68,15 +68,15 @@
 - SSH route: ~/workspace/ssh-laptop.sh (read-only commands only, no
   restart, no sync, no write on the laptop).
 - Relay unit: computer-use-relay.service (user service). Drop-in:
-  /home/james/.config/systemd/user/computer-use-relay.service.d/flags.conf.
+  ~/.config/systemd/user/computer-use-relay.service.d/flags.conf.
 - Command (laptop, over SSH), about 19:00 +07:
-  `cd /home/james/computer-use-wayland && git rev-parse HEAD &&
+  `cd ~/computer-use-wayland && git rev-parse HEAD &&
   git log --oneline -1 && git status --short | head -20`,
   then `systemctl --user show computer-use-relay.service -p MainPID
   -p ActiveState -p Environment`, then `tr '\0' '\n' <
   /proc/$PID/environ | grep -E 'CU_CODE_EXEC|CU_PICK4_FASTPATH'`,
   then `cat` the drop-in, then `python3
-  /home/james/computer-use-wayland/scripts/session_remote.py status`.
+  ~/computer-use-wayland/scripts/session_remote.py status`.
 - Output, laptop checkout:
   - HEAD 331523f83834596e44af5046e880b717eb58f1e1. Log line: "test:
     W-F4FIX probe driver opens a NEW tab per probe (rule 18:23)".
@@ -91,7 +91,7 @@
   - ActiveState=active, MainPID=70985 (same PID as the F3 restart at
     18:32:03 +07; the relay has NOT restarted since F3).
   - Environment=PYTHONDONTWRITEBYTECODE=1
-    XDG_CACHE_HOME=/home/james/.cache CU_CODE_EXEC=1
+    XDG_CACHE_HOME=~/.cache CU_CODE_EXEC=1
     CU_PICK4_FASTPATH=1. Both flags present.
   - /proc/70985/environ: CU_CODE_EXEC=1, CU_PICK4_FASTPATH=1. Both
     flags present in the live relay process env.
@@ -141,7 +141,7 @@
     computer-use-relay.service -p MainPID | cut -d= -f2)/environ |
     grep -E 'CU_CODE_EXEC|CU_PICK4_FASTPATH' (both must print =1)
     and python3
-    /home/james/computer-use-wayland/scripts/session_remote.py status
+    ~/computer-use-wayland/scripts/session_remote.py status
     (started_git_head must equal H2, state idle, active_sequence
     null). Only then issue run 1.
 - Extra flag for the resume order (observation, not an order from me):

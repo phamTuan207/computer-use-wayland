@@ -82,7 +82,7 @@
       <div class="participants-grid" id="grid-container">
         <div class="participant-tile" id="tile-local">
           <div style="font-size: 32px;">👤</div>
-          <div class="participant-name">James (You)</div>
+          <div class="participant-name">Alex (You)</div>
         </div>
         <div class="participant-tile" id="tile-peer-1">
           <div style="font-size: 32px;">👩‍💻</div>
@@ -219,7 +219,7 @@
 
   document.getElementById('btn-join-meeting').onclick = () => {
     const room = document.getElementById('input-meeting-id').value.trim() || 'Sprint Planning';
-    const user = document.getElementById('input-display-name').value.trim() || 'James';
+    const user = document.getElementById('input-display-name').value.trim() || 'Alex';
     callState.room = room;
     callState.user = user;
     callState.connected = true;

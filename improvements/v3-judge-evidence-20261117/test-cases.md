@@ -6,7 +6,7 @@
 - **Date:** 2026-11-15
 - **Pass:** 1 of max 2
 - **Deliverable:** 13 task specifications for Luna 6 to execute later and an independent judge to score. No case was executed while writing this document.
-- **Sources read first:** `/tmp/testcases-IMPROVEMENTS.md` in full, including the nine-item council ranking, dream verdict, §6 checklist and §7 honesty gate; `/tmp/testcases-muse-ssh-measurements.md` in full; relevant sections of `scripts/session_remote.py`, `scripts/cu.py`, `scripts/session_driver.py`, `scripts/a11y.py`, and `native/pointer.c` under `/home/james/computer-use-wayland`; the supplied 21:03 Pinta failure account.
+- **Sources read first:** `/tmp/testcases-IMPROVEMENTS.md` in full, including the nine-item council ranking, dream verdict, §6 checklist and §7 honesty gate; `/tmp/testcases-muse-ssh-measurements.md` in full; relevant sections of `scripts/session_remote.py`, `scripts/cu.py`, `scripts/session_driver.py`, `scripts/a11y.py`, and `native/pointer.c` under `~/computer-use-wayland`; the supplied 21:03 Pinta failure account.
 - **Repository observed:** HEAD `615bac9ad4946f38e5e42d985e63de8cb605dc96`. The working tree contains uncommitted Gate B and other changes. The tree was read, not modified.
 - **Local app inventory:** executable paths were found for Pinta, VS Code, Zen Browser, Nautilus, Kitty and Foot. Installed desktop entries identify Omacalc as Calculator and Omawrite as a text/Markdown editor. App launch, accessibility support and current UI layouts were not tested.
 - **Pinta baseline:** the user the owner scored the 21:03 yellow-circle demo **0/10**. Four attempts produced rectangle selections or no shape, never the requested circle. Pointer arrival does not change that score.

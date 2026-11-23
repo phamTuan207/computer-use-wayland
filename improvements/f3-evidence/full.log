@@ -47,11 +47,11 @@ CLOSED Offline Habit Tracker http://127.0.0.1:8768/agy-q2/fixtures/test-03-habit
 CLOSED Offline Recipe & Meal Planner http://127.0.0.1:8768/agy-q2/fixtures/test-02-recipe-app.html
 CLOSED Offline Whiteboard App http://127.0.0.1:8768/agy-q2/fixtures/test-01-whiteboard.html
 CLOSED Offline Whiteboard App http://127.0.0.1:8768/agy-q2/fixtures/test-01-whiteboard.html
-CLOSED BiDi fixture file:///home/james/workspace/computer-use-wayland/tests/bidi_fixture.html
-CLOSED Calibration Grid E2 file:///home/james/workspace/computer-use-wayland/tests/calibration-grid.html?truth=1
-CLOSED Calibration Grid E2 file:///home/james/workspace/computer-use-wayland/tests/calibration-grid.html?truth=1
-CLOSED Calibration Grid E2 file:///home/james/workspace/computer-use-wayland/tests/calibration-grid.html?truth=1
-CLOSED Calibration Grid E2 file:///home/james/workspace/computer-use-wayland/tests/calibration-grid.html
+CLOSED BiDi fixture file://~/workspace/computer-use-wayland/tests/bidi_fixture.html
+CLOSED Calibration Grid E2 file://~/workspace/computer-use-wayland/tests/calibration-grid.html?truth=1
+CLOSED Calibration Grid E2 file://~/workspace/computer-use-wayland/tests/calibration-grid.html?truth=1
+CLOSED Calibration Grid E2 file://~/workspace/computer-use-wayland/tests/calibration-grid.html?truth=1
+CLOSED Calibration Grid E2 file://~/workspace/computer-use-wayland/tests/calibration-grid.html
 CLOSED  https://httpbin.org/forms/post
 AFTER 16 tabs
 AFTER-TITLES ["YouTube", "Problem loading page", "Today – Todoist", "Inbox (729) - [email redacted] - Gmail", "Lịch Google - Tuần 16 tháng 11, 2026", "Muse", "PCCV CF26 - Google Trang tính", "Free Claude Code Admin", "Welcome!", "Example Domain", "", "Package problem - Polygon", "Just a moment...", "Biome Finder - Minecraft App", "Gamerule keepInventory", "ModelArk-Coding-Plan"]

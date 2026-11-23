@@ -171,7 +171,7 @@ explicit pathspec.
 - scripts/s2_flip_live.py: build_program_set_value lines 136-185
   (landed 4-action (b1) shape); COMPOSER_ROLES line 91
   (textarea, textbox, input); oneshot_code_exec lines 292-322;
-  LAPTOP_CU line 70 (/home/james/computer-use-wayland/scripts/
+  LAPTOP_CU line 70 (~/computer-use-wayland/scripts/
   cu.py); LAPTOP_REMOTE line 71.
 - scripts/element_ref.py: is_send_action lines 167-176;
   SNAPSHOT_MAX_AGE_SECONDS 120 line 29.
@@ -445,8 +445,8 @@ and disown) and is polled with short commands. Never run two Zen
 drivers in parallel: Zen allows ONE remote session total, and a
 second session fails or wedges the slot (finding C background).
 
-Laptop paths used below: repo /home/james/computer-use-wayland,
-cu.py /home/james/computer-use-wayland/scripts/cu.py, run dir
+Laptop paths used below: repo ~/computer-use-wayland,
+cu.py ~/computer-use-wayland/scripts/cu.py, run dir
 ~/c5-zenproof-run/ (persistent home path, per the step 9 lesson:
 do NOT trust /tmp persistence on the laptop for live-run
 drivers). VM paths: this repo, runner
@@ -485,7 +485,7 @@ improvements/c5-step9-runs/c5-heldout-fixture.py).
   ws1 or not the active window, ABORT. Do not move windows.
 - P1.2: record the current Marionette tab without changing
   anything visible: `python3
-  /home/james/computer-use-wayland/scripts/zen_dom.py list`.
+  ~/computer-use-wayland/scripts/zen_dom.py list`.
   It must exit 0 and list the tabs (titles and urls only, no
   content). Record the tab count, the current tab URL and title
   (the owner's tab, to restore in phase 6 by URL, never by
@@ -497,10 +497,10 @@ improvements/c5-step9-runs/c5-heldout-fixture.py).
   GECKODRIVER). If it is missing, ABORT and report it; do not
   install anything on the laptop without a coordinator decision.
 - P1.4: `sha256sum
-  /home/james/computer-use-wayland/tests/two_vision_fixture.html`
+  ~/computer-use-wayland/tests/two_vision_fixture.html`
   must equal the manifest hash from G0c. If the laptop checkout
   is behind, sync it first (`git -C
-  /home/james/computer-use-wayland fetch origin` then fast
+  ~/computer-use-wayland fetch origin` then fast
   forward to the commit that holds this prep file) and re-check
   the hash. On mismatch after sync, ABORT.
 - P1.5: no other live lane holds the machine: `ps aux | grep -E
@@ -530,7 +530,7 @@ improvements/c5-step9-runs/c5-heldout-fixture.py).
   current (one explicit select if needed; if the new tab still
   is not current, refuse outright, no navigate, no close),
   navigate it to
-  file:///home/james/computer-use-wayland/tests/two_vision_fixture.html?clone=zen
+  file://~/computer-use-wayland/tests/two_vision_fixture.html?clone=zen
   (POST /session/{id}/url), re-verify the current tab is still
   the new tab right after the navigate, wait for
   document.readyState complete (10s budget), verify the
@@ -719,7 +719,7 @@ measurements of this path.
 
 - File: tests/two_vision_fixture.html in this repo, 2014 bytes,
   sha256 147494cda4c6ae24a51ced03ccdfb3fc5a79a1bbab56dcdfc5afb4f72fba6cbf
-  (C4 bench manifest). Opened as file:///home/james/
+  (C4 bench manifest). Opened as file://~/
   computer-use-wayland/tests/two_vision_fixture.html?clone=zen.
   The ?clone=zen query makes the fixture JS set the H1 text to
   'Clone zen thread' (the document title stays the static
@@ -1067,7 +1067,7 @@ to 16:31, from the step 9 runs), with no live driver holding
 them.
 
 Fixture on the laptop, 18:03:43 +07: `sha256sum
-/home/james/computer-use-wayland/tests/two_vision_fixture.html`
+~/computer-use-wayland/tests/two_vision_fixture.html`
 returned 147494cda4c6ae24a51ced03ccdfb3fc5a79a1bbab56dcdfc5afb4f72fba6cbf,
 matching the manifest. The laptop checkout is ready on this
 point.
@@ -1096,9 +1096,9 @@ point.
 
 - 18:03:43 +07: `ls -l /tmp/geckodriver` returned "No such
   file or directory". 18:04:04 +07: `which geckodriver` found
-  nothing; no binary at /home/james/geckodriver*,
-  /home/james/.local/bin/geckodriver, /usr/local/bin/geckodriver,
-  or /opt/geckodriver; `find /home/james -maxdepth 3 -name
+  nothing; no binary at ~/geckodriver*,
+  ~/.local/bin/geckodriver, /usr/local/bin/geckodriver,
+  or /opt/geckodriver; `find ~ -maxdepth 3 -name
   '*gecko*'` returned nothing. The only geckodriver reference
   on the laptop is the test script's GECKO = "/tmp/geckodriver"
   constant.

@@ -6,19 +6,19 @@
 - Kết thúc: 2026-11-18 14:47:51 +07
 - Plugin mới SHA-256: 199153aea84a833d86f3eee21708e186c5a722c52259397735898b52f86df07f
 - Plugin cũ SHA-256: 69309243789bee75616b5d260882db7597ab7da4f928755971f813dd77b89748
-- Build source: /home/james/computer-use-handoff/backend/hyprglass-1.1.1, upstream pin 03a57c4451b4abee38feda2ffb725f55ecc0f2fd
+- Build source: ~/computer-use-handoff/backend/hyprglass-1.1.1, upstream pin 03a57c4451b4abee38feda2ffb725f55ecc0f2fd
 
 ## Kết quả theo checklist
 
 | Bước | Lệnh/kết quả | Mã thoát | Thời gian |
 |---|---|---:|---:|
 | 1 | python3 -m unittest discover -s tests -p 'test_glass_*.py' lần đầu: một expected value Fresnel sai; sửa test theo công thức, chạy lại Ran 52, OK (skipped=1). Báo cáo D2 ghi lần chạy cuối của bộ mở rộng: python3 -m unittest discover -s tests -p 'test_glass_*.py' -v, Ran 60, OK (skipped=1). | 1 rồi 0; D2: 0 | 424 s từ mốc repo check đến kết thúc Step 1; lượt test lại 0.13 s |
-| 2 | git clone https://github.com/hyprnux/hyprglass.git /tmp/d3-shayxo-patchcheck.cAUdLj; git checkout --detach 03a57c4451b4abee38feda2ffb725f55ecc0f2fd; git apply --check /home/james/computer-use-wayland/native/hyprglass-shayxo-legacy.patch | 0 cho cả ba | 25 s theo mốc giờ; clone 1.862 s |
+| 2 | git clone https://github.com/hyprnux/hyprglass.git /tmp/d3-shayxo-patchcheck.cAUdLj; git checkout --detach 03a57c4451b4abee38feda2ffb725f55ecc0f2fd; git apply --check ~/computer-use-wayland/native/hyprglass-shayxo-legacy.patch | 0 cho cả ba | 25 s theo mốc giờ; clone 1.862 s |
 | 3 | git checkout -- src/Shaders.hpp; xác minh git status --short chỉ còn M src/GlassLayerSurface.cpp, M src/GlassRenderer.cpp, còn Shaders.hpp sạch. Đọc scripts/build-glass.py: PATCHES = (('local-optics', PATCH), ('shayxo Legacy', SHAYXO_PATCH)). | 0 | 33 s theo mốc giờ |
-| 4 | python3 scripts/build-glass.py /home/james/computer-use-handoff/backend/hyprglass-1.1.1 --local-optics --allow-dirty | 0 | 45.004 s đo bằng Bash time; 101 s tính cả thời gian xử lý của bước |
+| 4 | python3 scripts/build-glass.py ~/computer-use-handoff/backend/hyprglass-1.1.1 --local-optics --allow-dirty | 0 | 45.004 s đo bằng Bash time; 101 s tính cả thời gian xử lý của bước |
 | 5 | Trích 706 dòng liquidglass.frag và biến thể contour 707 dòng; glslangValidator -S frag /tmp/d3-liquidglass.frag; glslangValidator -S frag /tmp/d3-liquidglass-contour.frag | 0 cho cả hai | 66 s theo mốc giờ; mỗi lệnh validator dưới 0.01 s |
 | 6 | Đọc GlassRenderer.cpp và GlassRenderer.hpp: renderer cấp SAMPLE_PADDING_PX = 60 framebuffer px mỗi phía; uvPadding = 60 / fullWidth|fullHeight. | 0 | 54 s theo mốc giờ |
-| 7 | python3 scripts/install-glass.py /home/james/computer-use-handoff/backend/hyprglass-1.1.1/hyprglass.so /home/james/.local/share/agent-computer-use/plugins; xác minh bytes SHA khớp tên file | 0 | 0.021 s |
+| 7 | python3 scripts/install-glass.py ~/computer-use-handoff/backend/hyprglass-1.1.1/hyprglass.so ~/.local/share/agent-computer-use/plugins; xác minh bytes SHA khớp tên file | 0 | 0.021 s |
 | 8 | refresh-visuals-manifest.py và check-visuals-manifest.py qua. sync-installed.py dừng với lỗi bên dưới; sync-installed.py --check không chạy sau khi bước dừng. | 0, 0, rồi 1 | sync 2.658 s; bước dừng tại lỗi |
 | 9 | python3 -m unittest discover -s tests -p 'test_*.py' | 1 do đúng 5 lỗi baseline | 87.832 s |
 | 10 | Các commit port đã có trên origin/main; xác minh bằng git ls-remote. Tôi đẩy commit làm rõ ghi chú công thức/tài liệu sau git fetch origin, xác nhận không bị behind và diff chỉ gồm ba file liên quan. | 0 | git push origin main: 1.746 s; kiểm tra remote: 0.541 s |
@@ -87,17 +87,17 @@ glslangValidator có tại /usr/bin/glslangValidator; glslc cũng có. Shader tr
 
 ## Reproducibility, manifest và cài đặt
 
-Clone mới /tmp/d3-shayxo-patchcheck.cAUdLj checkout đúng commit 03a57c4451b4abee38feda2ffb725f55ecc0f2fd; git apply --check /home/james/computer-use-wayland/native/hyprglass-shayxo-legacy.patch exit 0, không output.
+Clone mới /tmp/d3-shayxo-patchcheck.cAUdLj checkout đúng commit 03a57c4451b4abee38feda2ffb725f55ecc0f2fd; git apply --check ~/computer-use-wayland/native/hyprglass-shayxo-legacy.patch exit 0, không output.
 
 Artifact cài tại:
-/home/james/.local/share/agent-computer-use/plugins/hyprglass-199153aea84a833d86f3eee21708e186c5a722c52259397735898b52f86df07f.so
+~/.local/share/agent-computer-use/plugins/hyprglass-199153aea84a833d86f3eee21708e186c5a722c52259397735898b52f86df07f.so
 
 Refresh manifest thành công với profile_sha256=545455d372f13ff6bf1666768e36c5ae21850c6d67222d6d97a70600f9378107 và ABI 11cbc6c577b84ffb1edf4df3fc5b6128c3ae6947_aq_0.16_hu_0.14_hg_0.6_hc_0.1_hlg_0.6. check-visuals-manifest.py xác nhận profile hash.
 
 sync-installed.py thất bại nguyên văn:
 sync-installed: error: repo source changed before release verification; refusing acceptance
 
-Nó tạo snapshot /home/james/.local/share/agent-computer-use/backups/sync-20261118-142702-887112-de8fcf67; transaction.json ghi status=rolled-back. So sánh evidence cho thấy HEAD chưa đổi nhưng đúng một file tracked đổi trong lúc sync: tests/test_glass_local_optics.py (ghi chú test được thêm trong lúc bộ contract đang hoàn thiện). Vì bước dừng ở lỗi, sync-installed.py --check không chạy; không ghi nhận sync thành công.
+Nó tạo snapshot ~/.local/share/agent-computer-use/backups/sync-20261118-142702-887112-de8fcf67; transaction.json ghi status=rolled-back. So sánh evidence cho thấy HEAD chưa đổi nhưng đúng một file tracked đổi trong lúc sync: tests/test_glass_local_optics.py (ghi chú test được thêm trong lúc bộ contract đang hoàn thiện). Vì bước dừng ở lỗi, sync-installed.py --check không chạy; không ghi nhận sync thành công.
 
 ## Các commit trên origin/main
 

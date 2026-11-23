@@ -144,7 +144,7 @@ written or deleted on the laptop.
   for arm_*run*.log / probe_*.log / relaunch-f3b.log, plus `find
   ~/workspace /tmp -maxdepth 5` for the V3 names, plus `ls -d /tmp/judge`.
   Output: no V2 matches; no V3 matches; /tmp/judge does not exist.
-- 17:52:00-17:52:02, elapsed 2 s. Command: `ls ~`, `find /home/james
+- 17:52:00-17:52:02, elapsed 2 s. Command: `ls ~`, `find ~
   -maxdepth 2 -type d -name "*computer-use*"` (output truncated by the
   local head limit; the needed follow-ups were re-run below). The laptop
   holds many computer-use-wayland copies, so a bounded sweep of them

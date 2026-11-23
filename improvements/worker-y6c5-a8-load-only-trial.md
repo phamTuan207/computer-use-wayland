@@ -17,7 +17,7 @@ and does NOT prove the liquid readiness window (O3).
 - One nested Hyprland only, as a Wayland client of the live compositor
   (parent socket /run/user/1000/wayland-1, nest runtime dir /tmp/y6-nested/run).
 - The rebuilt hyprglass 1.1.1-cu.1 from
-  /home/james/.local/share/agent-computer-use/worktrees/hyprglass-03a57c4/hyprglass.so,
+  ~/.local/share/agent-computer-use/worktrees/hyprglass-03a57c4/hyprglass.so,
   via the STAGED conf /tmp/y6-nested/conf/hyprland-wayland.lua (md5
   9ccb27017ab63a9d2bce1d9651425d3b, verified before launch).
 - The amended hook (/tmp/y6-nested/conf/nested-visuals-hook.lua) and optics

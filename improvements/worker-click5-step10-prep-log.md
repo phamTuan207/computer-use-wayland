@@ -578,7 +578,7 @@ numbers in this subsection are pre-migrate):
   SSH call: the remote command at lines 304-306 is
   `CU_CODE_EXEC=1 python3 <LAPTOP_CU> session -- python3
   <LAPTOP_CU> session-driver`, with LAPTOP_CU at line 70
-  (`/home/james/computer-use-wayland/scripts/cu.py`), the
+  (`~/computer-use-wayland/scripts/cu.py`), the
   JSONL action line built at lines 301-303, and the call made
   through self.ssh at line 306. The call site is line 531.
   The transport underneath is already the S0 mux wrapper

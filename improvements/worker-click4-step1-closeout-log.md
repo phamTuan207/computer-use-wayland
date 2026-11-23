@@ -74,7 +74,7 @@ run. Evidence, in order:
   branch amend4-codex, HEAD 274270c, items 1-11 only. The queued
   follow-ups (item 12, first principles, pragmatic rule, message
   01a20058) never surfaced in the exec log (final grep 0 at 07:21);
-  the queue ID persisted in /home/james/.codex/queue_1.sqlite-wal
+  the queue ID persisted in ~/.codex/queue_1.sqlite-wal
   but the live exec process never consumed it. Item 12 was NOT
   implemented in that run.
 - Resume run (resume log

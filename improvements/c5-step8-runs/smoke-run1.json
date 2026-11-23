@@ -48,7 +48,7 @@
       "items": 40
     },
     "observation": {
-      "path": "/home/james/.cache/agent-computer-use/763bd08a2dd6.json",
+      "path": "~/.cache/agent-computer-use/763bd08a2dd6.json",
       "image_size": [
         960,
         600
@@ -65,7 +65,7 @@
       571.5
     ],
     "act_now_rc": 0,
-    "act_now_out_tail": "observation\": \"/home/james/.cache/agent-computer-use/fe0a94e90331.json\", \"capture_params\": {\"max_width\": 960, \"jpeg_quality\": 90, \"jpeg_subsampling\": 0}}, \"after_error\": null, \"error\": null, \"release_error\": null, \"log_error\": null, \"target_breached\": false, \"dispatch_ms\": null, \"dispatch_basis\": \"not_provided\", \"first_pointer_ms\": 450.476, \"target_breached_basis\": \"session_computed (child startup about 60ms unrecorded)\", \"phase_ms\": {\"overlay_acquire_ms\": 316.952, \"observation_ms\": 0.053, \"session_attempt_ms\": 1842.291, \"after_capture_ms\": 85.071}, \"think_ms\": null, \"think_basis\": \"not_in_act_now: think time is measured by the P6 harness in the agent loop, not inside act-now\", \"overlay_flicker\": \"unprobed: LIQUID flicker probe not run (A4 worker precondition)\", \"overlay_owner\": \"daemon\"}\n",
+    "act_now_out_tail": "observation\": \"~/.cache/agent-computer-use/fe0a94e90331.json\", \"capture_params\": {\"max_width\": 960, \"jpeg_quality\": 90, \"jpeg_subsampling\": 0}}, \"after_error\": null, \"error\": null, \"release_error\": null, \"log_error\": null, \"target_breached\": false, \"dispatch_ms\": null, \"dispatch_basis\": \"not_provided\", \"first_pointer_ms\": 450.476, \"target_breached_basis\": \"session_computed (child startup about 60ms unrecorded)\", \"phase_ms\": {\"overlay_acquire_ms\": 316.952, \"observation_ms\": 0.053, \"session_attempt_ms\": 1842.291, \"after_capture_ms\": 85.071}, \"think_ms\": null, \"think_basis\": \"not_in_act_now: think time is measured by the P6 harness in the agent loop, not inside act-now\", \"overlay_flicker\": \"unprobed: LIQUID flicker probe not run (A4 worker precondition)\", \"overlay_owner\": \"daemon\"}\n",
     "envelope": {
       "ok": true,
       "completed": 3,
@@ -100,9 +100,9 @@
       "count": 1,
       "items": 43
     },
-    "p9_path": "/home/james/c5-step8-run/smoke-run1-clone1-p9.png",
+    "p9_path": "~/c5-step8-run/smoke-run1-clone1-p9.png",
     "p9_rc": 0,
-    "p9_jpg": "/home/james/c5-step8-run/smoke-run1-clone1-p9.jpg",
+    "p9_jpg": "~/c5-step8-run/smoke-run1-clone1-p9.jpg",
     "wall_s": 22.6,
     "t_end": "07:50:48"
   },
@@ -153,7 +153,7 @@
       "items": 40
     },
     "observation": {
-      "path": "/home/james/.cache/agent-computer-use/c547c41887a2.json",
+      "path": "~/.cache/agent-computer-use/c547c41887a2.json",
       "image_size": [
         960,
         600
@@ -170,7 +170,7 @@
       571.5
     ],
     "act_now_rc": 0,
-    "act_now_out_tail": "observation\": \"/home/james/.cache/agent-computer-use/31e87dca4ee5.json\", \"capture_params\": {\"max_width\": 960, \"jpeg_quality\": 90, \"jpeg_subsampling\": 0}}, \"after_error\": null, \"error\": null, \"release_error\": null, \"log_error\": null, \"target_breached\": false, \"dispatch_ms\": null, \"dispatch_basis\": \"not_provided\", \"first_pointer_ms\": 478.533, \"target_breached_basis\": \"session_computed (child startup about 60ms unrecorded)\", \"phase_ms\": {\"overlay_acquire_ms\": 337.808, \"observation_ms\": 0.056, \"session_attempt_ms\": 1927.423, \"after_capture_ms\": 85.337}, \"think_ms\": null, \"think_basis\": \"not_in_act_now: think time is measured by the P6 harness in the agent loop, not inside act-now\", \"overlay_flicker\": \"unprobed: LIQUID flicker probe not run (A4 worker precondition)\", \"overlay_owner\": \"daemon\"}\n",
+    "act_now_out_tail": "observation\": \"~/.cache/agent-computer-use/31e87dca4ee5.json\", \"capture_params\": {\"max_width\": 960, \"jpeg_quality\": 90, \"jpeg_subsampling\": 0}}, \"after_error\": null, \"error\": null, \"release_error\": null, \"log_error\": null, \"target_breached\": false, \"dispatch_ms\": null, \"dispatch_basis\": \"not_provided\", \"first_pointer_ms\": 478.533, \"target_breached_basis\": \"session_computed (child startup about 60ms unrecorded)\", \"phase_ms\": {\"overlay_acquire_ms\": 337.808, \"observation_ms\": 0.056, \"session_attempt_ms\": 1927.423, \"after_capture_ms\": 85.337}, \"think_ms\": null, \"think_basis\": \"not_in_act_now: think time is measured by the P6 harness in the agent loop, not inside act-now\", \"overlay_flicker\": \"unprobed: LIQUID flicker probe not run (A4 worker precondition)\", \"overlay_owner\": \"daemon\"}\n",
     "envelope": {
       "ok": true,
       "completed": 3,
@@ -205,9 +205,9 @@
       "count": 1,
       "items": 43
     },
-    "p9_path": "/home/james/c5-step8-run/smoke-run1-clone2-p9.png",
+    "p9_path": "~/c5-step8-run/smoke-run1-clone2-p9.png",
     "p9_rc": 0,
-    "p9_jpg": "/home/james/c5-step8-run/smoke-run1-clone2-p9.jpg",
+    "p9_jpg": "~/c5-step8-run/smoke-run1-clone2-p9.jpg",
     "wall_s": 22.7,
     "t_end": "07:51:10"
   },

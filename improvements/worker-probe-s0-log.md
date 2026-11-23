@@ -2,7 +2,7 @@
 
 Owner: the owner. Branch: todolist-push. Worker: PROBE-S0, for COORD-CLICK-3.
 Started: 2026-11-22 06:35:59 +07 (Asia/Ho_Chi_Minh). All times below are wall-clock +07 unless noted.
-Method: live tests on the owner laptop (omarchy, 100.70.92.52) via SSH. Timing probes only.
+Method: live tests on the owner laptop (omarchy, 192.0.2.1) via SSH. Timing probes only.
 No GUI driving, no changes to owner files, no touching Zen/Brave/chats. No ydotool used anywhere.
 
 Standing rules recorded here, as briefed:
@@ -20,10 +20,10 @@ Standing rules recorded here, as briefed:
 - Shared script NOT modified: ~/workspace/ssh-laptop.sh (read-only for this probe).
   It runs: ssh -o BatchMode=yes -o ConnectTimeout=25 -o StrictHostKeyChecking=accept-new
   -o IdentitiesOnly=yes -o ProxyCommand="python3 /home/hatch/workspace/tailscale-proxy.py %h %p"
-  -i /home/hatch/.ssh/id_ed25519 james@100.70.92.52
+  -i /home/hatch/.ssh/id_ed25519 user@192.0.2.1
 - TEST wrapper (probe only): /tmp/probe-s0/ssh-mux-test.sh, same base options plus
   -o ControlMaster=auto -o ControlPath=/tmp/cm-probe-%r@%h:%p -o ControlPersist=600.
-  Socket: /tmp/cm-probe-james@100.70.92.52:22.
+  Socket: /tmp/cm-probe-user@192.0.2.1:22.
 - Timing harness: /tmp/probe-s0/measure.py (python time.perf_counter around subprocess,
   records secs + rc per sample, appends /tmp/probe-s0/results.jsonl).
 - Master control: /tmp/probe-s0/master-ctl.sh {start|check|stop} (same base options,
@@ -106,7 +106,7 @@ failed-fast trap D1 caught.
 ## 3. Working master form: setsid nohup, no -f
 
 Master 3, started 06:39:30 +07:
-`setsid nohup ssh <same base opts> -o ControlMaster=yes -o ControlPath=/tmp/cm-probe-%r@%h:%p -o ControlPersist=600 -N james@100.70.92.52 > /tmp/probe-s0/master-A.log 2>&1 < /dev/null &`
+`setsid nohup ssh <same base opts> -o ControlMaster=yes -o ControlPath=/tmp/cm-probe-%r@%h:%p -o ControlPersist=600 -N user@192.0.2.1 > /tmp/probe-s0/master-A.log 2>&1 < /dev/null &`
 (disowned; no -f flag). Check rc=0, pid 12018.
 
 Mux batch `mux-true-A`, 3 samples: 0.985s, 1.577s, 1.249s, all rc=0, no refusal.
@@ -232,7 +232,7 @@ rows. Timing and rc values in the soak rows are unaffected.
 
 During this probe the VM and laptop were busy with sibling work. Seen in ps output:
 - PROBE-S1 (sibling SPEED probe): master pid 13600,
-  `ssh -M -S /tmp/cm-probe-s1-james@100.70.92.52:22 -o ControlPersist=600 -fN ...`,
+  `ssh -M -S /tmp/cm-probe-s1-user@192.0.2.1:22 -o ControlPersist=600 -fN ...`,
   i.e. the same `-fN` master form section 2 shows refuses mux sessions.
 - PROBE-S2 (sibling): committing improvements/worker-probe-s2-log.md (a1a672d).
 - Other workers polling fcc/codex discuss logs on the laptop via ssh-laptop.sh.

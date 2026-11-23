@@ -149,7 +149,7 @@ every entry.
   driver it spawns per task comes from the laptop checkout
   (session_remote.py CU = ROOT/scripts/cu.py, ROOT is the
   checkout holding session_remote.py; the service runs
-  /home/james/computer-use-wayland/scripts/session_remote.py),
+  ~/computer-use-wayland/scripts/session_remote.py),
   so the next start picks up the current cu.py, first_action.py
   and zen_backend.py automatically. Code changed since the
   relay started (cu.py, dom_act.py, code_exec.py, element_ref.py,
@@ -558,7 +558,7 @@ coordinator to overturn, not left open).
   (proves it waited), both workers complete all requests, no
   lost action. Read-only commands only (observe, windows); no
   desktop action, no keystrokes, no test messages. Lease and
-  request files in /home/james/.cache/agent-computer-use,
+  request files in ~/.cache/agent-computer-use,
   cleaned up in finally. Uses scripts/ssh-laptop-mux.sh (S0 mux)
   for all SSH calls; envelopes written via SSH stdin (`umask
   077; cat > <file>; chmod 600`).
@@ -694,7 +694,7 @@ coordinator to overturn, not left open).
   (broker_unavailable, RC 1). Ground rect {x 141, y 1091, w
   291, h 24, cx 286.5, cy 1103}, origin [2533, 942], screen
   [2819.5, 2045], pre-count 0 (items 45), image point [177.8,
-  571.5], obs /home/james/.cache/agent-computer-use/167f25514e55.json.
+  571.5], obs ~/.cache/agent-computer-use/167f25514e55.json.
   One-shot rc 0, driver ready, but the act returned returncode
   1, error `screen changed`, error_code `screen_changed`,
   preflight_ms 361.862, input_sent False, session_continues
@@ -727,7 +727,7 @@ coordinator to overturn, not left open).
   (broker_unavailable). Focus rc 0, active 0x5570538ed160
   (Chrome). Ground rect as above, origin [2533, 942],
   pre-count 0 (items 45), image point [177.8, 571.5], obs
-  /home/james/.cache/agent-computer-use/76f9163771ae.json.
+  ~/.cache/agent-computer-use/76f9163771ae.json.
   One-shot rc 0, driver ready, act returncode 0, completed 3
   (click + type + Return), preflight_ms 111.016,
   execution_ms 222.042, input_sent True, type_verified True

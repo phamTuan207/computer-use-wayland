@@ -1,6 +1,6 @@
 {
   "run": 6,
-  "fixture": "file:///home/james/computer-use-wayland/tests/two_vision_fixture.html?clone=zen",
+  "fixture": "file://~/computer-use-wayland/tests/two_vision_fixture.html?clone=zen",
   "fixture_sha256": "147494cda4c6ae24a51ced03ccdfb3fc5a79a1bbab56dcdfc5afb4f72fba6cbf",
   "message": "ZEN-DELEGATE-R6-IGNORE-TEST",
   "intent": "c5-zen-delegate-r6",
@@ -153,17 +153,17 @@
       "recovery": "none"
     },
     "leases": [
-      "/home/james/.cache/agent-computer-use/c5-heldout-90.lease",
-      "/home/james/.cache/agent-computer-use/c5-heldout-91.lease",
-      "/home/james/.cache/agent-computer-use/s2-flip-run0.lease",
-      "/home/james/.cache/agent-computer-use/s2-flip-run1.lease",
-      "/home/james/.cache/agent-computer-use/s2-flip-run2.lease",
-      "/home/james/.cache/agent-computer-use/s2-flip-run3.lease",
-      "/home/james/.cache/agent-computer-use/s2-flip-run4.lease",
-      "/home/james/.cache/agent-computer-use/s2-flip-run5.lease",
-      "/home/james/.cache/agent-computer-use/s2-flip-run6.lease",
-      "/home/james/.cache/agent-computer-use/s2-flip-trivial.lease",
-      "/home/james/.cache/agent-computer-use/s2-verify.lease"
+      "~/.cache/agent-computer-use/c5-heldout-90.lease",
+      "~/.cache/agent-computer-use/c5-heldout-91.lease",
+      "~/.cache/agent-computer-use/s2-flip-run0.lease",
+      "~/.cache/agent-computer-use/s2-flip-run1.lease",
+      "~/.cache/agent-computer-use/s2-flip-run2.lease",
+      "~/.cache/agent-computer-use/s2-flip-run3.lease",
+      "~/.cache/agent-computer-use/s2-flip-run4.lease",
+      "~/.cache/agent-computer-use/s2-flip-run5.lease",
+      "~/.cache/agent-computer-use/s2-flip-run6.lease",
+      "~/.cache/agent-computer-use/s2-flip-trivial.lease",
+      "~/.cache/agent-computer-use/s2-verify.lease"
     ]
   },
   "open": {
@@ -171,7 +171,7 @@
     "new_handle": "[ID]",
     "new_handle_prefix": "75f575da",
     "title": "Two-vision benchmark fixture",
-    "url": "file:///home/james/computer-use-wayland/tests/two_vision_fixture.html?clone=zen",
+    "url": "file://~/computer-use-wayland/tests/two_vision_fixture.html?clone=zen",
     "h1": "Clone zen thread",
     "selected_by": "explicit-select",
     "ready": "complete",
@@ -230,7 +230,7 @@
     "ok": true,
     "handle": "ea7f78ef",
     "title": "Two-vision benchmark fixture",
-    "url": "file:///home/james/computer-use-wayland/tests/two_vision_fixture.html?clone=zen"
+    "url": "file://~/computer-use-wayland/tests/two_vision_fixture.html?clone=zen"
   },
   "probe": {
     "wall_ms": 2080.9,
@@ -240,14 +240,14 @@
       "api_calls": 2,
       "elapsed_ms": 652.935,
       "log": [
-        "PROBE zen-1 file:///home/james/computer-use-wayland/tests/two_vision_fixture.html?clone=zen 1",
+        "PROBE zen-1 file://~/computer-use-wayland/tests/two_vision_fixture.html?clone=zen 1",
         "SNAP-TITLE Two-vision benchmark fixture"
       ],
       "variables": {
         "snap": {
           "snapshot": "zen-1",
           "title": "Two-vision benchmark fixture",
-          "url": "file:///home/james/computer-use-wayland/tests/two_vision_fixture.html?clone=zen",
+          "url": "file://~/computer-use-wayland/tests/two_vision_fixture.html?clone=zen",
           "elements": [
             {
               "ref": "#msg-input",
@@ -282,7 +282,7 @@
         }
       }
     },
-    "url": "file:///home/james/computer-use-wayland/tests/two_vision_fixture.html?clone=zen",
+    "url": "file://~/computer-use-wayland/tests/two_vision_fixture.html?clone=zen",
     "count": "1",
     "snapshot_title": "Two-vision benchmark fixture"
   },
@@ -297,19 +297,19 @@
     "ok": true,
     "handle": "1ad9e225",
     "title": "Two-vision benchmark fixture",
-    "url": "file:///home/james/computer-use-wayland/tests/two_vision_fixture.html?clone=zen"
+    "url": "file://~/computer-use-wayland/tests/two_vision_fixture.html?clone=zen"
   },
   "program": {
     "ok": true,
     "elapsed_ms": 5745.525,
     "error": null,
     "log": [
-      "PROBE zen-1 file:///home/james/computer-use-wayland/tests/two_vision_fixture.html?clone=zen 1",
+      "PROBE zen-1 file://~/computer-use-wayland/tests/two_vision_fixture.html?clone=zen 1",
       "dom_act ok True completed 4 ms None error None"
     ],
     "wall_ms": 7172.5,
     "completed": 4,
-    "send_url": "file:///home/james/computer-use-wayland/tests/two_vision_fixture.html?clone=zen",
+    "send_url": "file://~/computer-use-wayland/tests/two_vision_fixture.html?clone=zen",
     "send_count": "1"
   },
   "post": {

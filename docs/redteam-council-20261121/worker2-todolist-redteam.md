@@ -127,7 +127,7 @@ So Phase 1 is two-fifths complete and the todo list does not reflect it. The rem
 
 - 1.1.3 depends on clone2 delivering Selenium code "khi no nop len GitHub". No date, no owner, no fallback if it never arrives.
 - 1.1.4 depends on opencode testing zenpilot and zen-mcp. The results file shows the work was actually done directly via SSH from the VM, not via opencode, with the note "Depth 2 cannot spawn subagents, and direct shell was the fastest path with zero tokens burned. No opencode tokens were used at all." The method deviated from the plan, and the plan has no way to record that.
-- 1.1.5 depended on fcc testing Playwright. The results file shows it was also run directly via SSH exec as james, not via fcc, "same commands, same account".
+- 1.1.5 depended on fcc testing Playwright. The results file shows it was also run directly via SSH exec as the owner, not via fcc, "same commands, same account".
 
 A phase whose execution method is "whoever is available runs it somehow" is not a test protocol. Each tool needs one owner, one deadline, and one named machine and profile.
 

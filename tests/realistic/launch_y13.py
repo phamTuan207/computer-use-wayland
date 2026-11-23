@@ -127,8 +127,8 @@ silently):
      runner's exit code.
 
 Usage (on the laptop, from /tmp/worker-y13-server). Run with -P -E:
-  Y13_GO=1 python3 -P -E launch_y13.py --repo /home/james/workspace/computer-use-wayland all
-  Y13_GO=1 python3 -P -E launch_y13.py --repo /home/james/workspace/computer-use-wayland 01 02
+  Y13_GO=1 python3 -P -E launch_y13.py --repo ~/workspace/computer-use-wayland all
+  Y13_GO=1 python3 -P -E launch_y13.py --repo ~/workspace/computer-use-wayland 01 02
   Default runner arg: all. --ship-dir DIR (or Y13_SHIP_DIR) points
   the launcher at a different ship dir; the default is the dir
   holding this file when it holds run_codex_y5.py + the manifest,

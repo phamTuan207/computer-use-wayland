@@ -43,11 +43,11 @@ ssh -o BatchMode=yes -o ConnectTimeout=25 -o StrictHostKeyChecking=accept-new
   -i /home/hatch/.ssh/id_ed25519
   -o ControlMaster=yes -o ControlPath=/tmp/cm-s0-%r@%h:%p
   -o ControlPersist=600 -o ServerAliveInterval=15 -o ServerAliveCountMax=3
-  -N james@100.70.92.52
+  -N user@192.0.2.1
 ```
 
 Key properties: ServerAliveInterval=15 (the load-bearing option, idle test B),
-ControlPersist=600, ControlMaster=yes, socket /tmp/cm-s0-james@100.70.92.52:22.
+ControlPersist=600, ControlMaster=yes, socket /tmp/cm-s0-user@192.0.2.1:22.
 Repo HEAD at start: c97d617 (checked by git log, 18:59 +07; fetch showed up to
 date, see section 2 note). Prior art: soak-B master pid 25435, same keepalive
 form, 07:00:06 +07, 9 confirmed ticks, 40 min (worker-probe-s0-log.md).
@@ -91,10 +91,10 @@ All checks pass. Verbatim outputs:
 - Process, `ps -o pid,ppid,etime,args -p 27441`: PID 27441, PPID 1, ELAPSED 00:03,
   full cmdline matches the section 1 master argv exactly (ControlMaster=yes,
   ControlPath=/tmp/cm-s0-%r@%h:%p, ControlPersist=600, ServerAliveInterval=15,
-  ServerAliveCountMax=3, -N james@100.70.92.52). PPID 1 means fully detached,
+  ServerAliveCountMax=3, -N user@192.0.2.1). PPID 1 means fully detached,
   reparented to init, not attached to my session.
 - Socket, `ls -la /tmp/cm-s0-*`: `srw------- 1 root root 0 Nov 22 12:00
-  /tmp/cm-s0-james@100.70.92.52:22`. Socket exists.
+  /tmp/cm-s0-user@192.0.2.1:22`. Socket exists.
 - Liveness, `python3 scripts/ssh_mux.py check`: `{"alive": true, "check_rc": 0,
   "pid": 27441, "wall": "2026-11-22 19:00:38 +07"}`, process rc=0.
 - Mux sample, `python3 scripts/ssh_mux.py run -- echo SOAK-RESTART-T0-ALIVE`:
@@ -177,7 +177,7 @@ duration 300785ms, exit 0). Verbatim outputs:
   row 1, 19:00:54 +07, secs 0.61; row 2, 19:05:55 +07, secs 0.527. Second tick
   landed 301 s after the first, on schedule (300 s sleep plus about 1 s run).
 - Socket, `ls -la /tmp/cm-s0-*`: `srw------- 1 root root 0 Nov 22 12:00
-  /tmp/cm-s0-james@100.70.92.52:22`. Still exists.
+  /tmp/cm-s0-user@192.0.2.1:22`. Still exists.
 - ssh-mux.jsonl: no new rows since section 4 (no death, no restart). Only the
   two rows from the start (master_death prev 26834, master_restart new 27441).
 

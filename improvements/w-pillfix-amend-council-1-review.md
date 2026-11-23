@@ -213,7 +213,7 @@ cham holder pid-less. Sua docstring trong follow-up.
   doc code caller + test baseline, cua redteam la repro A8.
 - H2 cua redteam: fix chua co mat tren laptop. Toi verify doc lap
   (chi doc, ssh-laptop.sh, 20:29 +07):
-  /home/james/computer-use-wayland/scripts/overlay.py van la
+  ~/computer-use-wayland/scripts/overlay.py van la
   remove_holder CU (docstring "Without a pid, all of the agent's
   entries are removed"); repo laptop tai 331523f, scripts/overlay.py
   dang M (sua local); daemon 115582 chay code cu tu 19:40:45.

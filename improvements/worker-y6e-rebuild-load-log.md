@@ -28,7 +28,7 @@
   md5 76a6ea316491bc7ba48fbcc111038069 (matches Y6d), patches
   local-optics 4255a757, shayxo-legacy 7c10dca5 (match Y6d).
 - Live Hyprland PID 1515 alive, started Sat Nov 21 15:17:25 2026.
-- Vendor repo /home/james/.local/share/agent-computer-use/vendor/hyprglass:
+- Vendor repo ~/.local/share/agent-computer-use/vendor/hyprglass:
   remote origin https://github.com/hyprnux/hyprglass.git (fetch + push).
   HEAD 99f30ca 2026-10-03 github-actions[bot] "chore(release): v0.9.1
   [skip ci]". Pinned commit 03a57c4451b4abee38feda2ffb725f55ecc0f2fd
@@ -454,7 +454,7 @@
 
 ## 21:40 +07: worktree created, AMEND 3 CLOSED
 
-- Worktree: /home/james/.local/share/agent-computer-use/worktrees/
+- Worktree: ~/.local/share/agent-computer-use/worktrees/
   hyprglass-03a57c4, detached HEAD 03a57c4 ("chore(release): v1.1.1
   [skip ci]"), `git rev-parse HEAD` =
   03a57c4451b4abee38feda2ffb725f55ecc0f2fd (exact pin).
@@ -468,8 +468,8 @@
 
 - Exact command (env scrub per Council 2 note 2):
   `CXX=g++ CC=gcc WAYLAND_SCANNER=wayland-scanner python3
-  /home/james/workspace/computer-use-wayland/scripts/build-glass.py
-  /home/james/.local/share/agent-computer-use/worktrees/hyprglass-03a57c4
+  ~/workspace/computer-use-wayland/scripts/build-glass.py
+  ~/.local/share/agent-computer-use/worktrees/hyprglass-03a57c4
   --local-optics`, launched detached via setsid nohup, log
   /tmp/y6e/build.log on the laptop. No --allow-dirty (worktree was
   clean at launch; the script only gates on initial dirt).
@@ -511,13 +511,13 @@
 ## 21:44-21:46 +07: conf wiring (new conf points at the rebuilt .so)
 
 - New conf: /tmp/y6-nested/conf/hyprland-wayland-y6e.lua, copied from the v3 conf /tmp/y6-nested/conf/hyprland-wayland.lua (md5 0d4ac7a9c2437fb48ecfc505ccd9046b, unchanged).
-- Only change: line 16 `hl.plugin.load(...)` now points at /home/james/.local/share/agent-computer-use/worktrees/hyprglass-03a57c4/hyprglass.so instead of backup 1. The v3 runner + pill + hook + optics files on the laptop were verified byte-identical to the repo (runner 692d427174fa1c335eb02a46fc5e0a18, pill da0565086a05f77f49985bb92d887875).
+- Only change: line 16 `hl.plugin.load(...)` now points at ~/.local/share/agent-computer-use/worktrees/hyprglass-03a57c4/hyprglass.so instead of backup 1. The v3 runner + pill + hook + optics files on the laptop were verified byte-identical to the repo (runner 692d427174fa1c335eb02a46fc5e0a18, pill da0565086a05f77f49985bb92d887875).
 - Live-config pre-check (AMEND 5, first half): grep for hyprglass in ~/.config/hypr/hyprland.conf + hyprland.lua returned NOTHING. env | grep HYPRGLASS returned NONE. Live sig 11cbc6c577b84ffb1edf4df3fc5b6128c3ae6947_1795249046_1138556825, one dir only.
 - Repo copy of the new conf: improvements/worker-y6e-hyprland-wayland-rebuilt.lua (pulled from the laptop, md5 verified identical).
 
 ### FINDING: the comment broke the ldd pre-flight grep (caught by the C2 re-run, fixed)
 
-- First version of the new conf's line-8 comment quoted the full backup-1 .so path ("Backup 1 kept as the recorded dead path: /home/james/.../backups/full-1791544423/native/hyprglass.so").
+- First version of the new conf's line-8 comment quoted the full backup-1 .so path ("Backup 1 kept as the recorded dead path: ~/.../backups/full-1791544423/native/hyprglass.so").
 - The v3 runner's ldd pre-flight extracts the plugin path with `grep -o '/[^"]*hyprglass[^"]*\.so' "$CONF" | head -1`, i.e. the FIRST hyprglass.so path in the file. The comment on line 8 came before the load line on line 16, so the block ldd'd the dead backup-1 .so and failed: "FAIL: hyprglass .../backups/full-1791544423/native/hyprglass.so cannot load (dead ABI): libaquamarine.so.14 => not found, libhyprgraphics.so.4 => not found", rc=1, for BOTH the new and old conf.
 - Fix: the comment no longer contains any .so path ("Backup 1 stays the recorded dead path (dead ABI, see Y6c F1); do NOT put its .so path in a comment here, the ldd pre-flight greps the FIRST hyprglass.so path in this file."). Diff old vs new conf after the fix: exactly 2 lines changed (comment line 8, load line 16).
 - Re-verified: grep extraction from the new conf now returns the rebuilt path. New conf md5 9ccb27017ab63a9d2bce1d9651425d3b (repo copy re-pulled, md5 identical).
@@ -526,7 +526,7 @@
 ## 21:46-21:50 +07: C2 re-run on the new bytes
 
 - Load-test script authored: improvements/worker-y6e-nested-load-test.sh (244 lines, v1). Adapts the v3 runner's verified blocks (preconditions, ldd pre-flight, live identity, runner-quiet check, flock, launch, signature discovery, backend gate, socket discovery, plugin checks, teardown) and stops after the plugin status check. No mpv, no grim, no pill, no arms, no liquid gate. bash -n OK on VM and laptop. Static checks: no --socket in code (mentions only in comments explaining why it is NOT used), no hardcoded socket name (the "wayland-y6" grep hits are the conf filename hyprland-wayland-y6e.lua and comments), no pkill, timeout 600 Hyprland present, handover check present.
-- ldd block (verbatim extraction from the v3 runner, 8 lines) vs NEW conf: "Y6-WAYLAND: plugin ABI OK: /home/james/.local/share/agent-computer-use/worktrees/hyprglass-03a57c4/hyprglass.so", rc=0.
+- ldd block (verbatim extraction from the v3 runner, 8 lines) vs NEW conf: "Y6-WAYLAND: plugin ABI OK: ~/.local/share/agent-computer-use/worktrees/hyprglass-03a57c4/hyprglass.so", rc=0.
 - ldd block vs OLD conf (backup 1, regression): FAIL naming libaquamarine.so.14 + libhyprgraphics.so.4, rc=1. The block still fails fast on the dead path.
 - Full C2 laptop script (c2-laptop2.sh) re-run as-is, 21:50:19-21:50:20, reproduces Y6d exactly: C2-1 runner bash -n OK, pill py_compile OK, live sig + pid 1515, md5s match v3; C2-2 parser live layers rc=1 (no pill, no traceback), synthetic rc=0 out='320,0 320x66'; C2-3 grim GRIM-A OK 37,475 B (same as Y6d), GRIM-A2 OK, B0 did-not-intersect, B not invalid geometry, C invalid geometry, D mutually exclusive; C2-3b ldd DEAD rc=1 naming .so.14/.so.4, GOOD rc=0; C2-4 teardown 4/4 asserts (log saved, RUN-DIR-REMOVED, LOCK-FREE, LIVE-1515-ALIVE). Log: /tmp/y6e-c2/c2-laptop2-rerun.log.
 - C2 re-run verdict: ALL PASS on the new bytes.
@@ -540,7 +540,7 @@
 
 ## 21:54 +07: load test attempt 2, ABORTED at AMEND 5 (fail-closed, correct, second false positive)
 
-- Run log /tmp/y6-nested/y6e-load-20261121-215423.log. AMEND4 OK. AMEND 5 (v2: any "hyprglass" string in the live config chain) failed on guarded API refs: /home/james/computer-use-wayland/native/visuals-login.lua:5 (`plugin.name == "hyprglass"`), :11 (dofile of hyprglass-local-optics.lua), and hyprglass-local-optics.lua:2,25,31 (hl.plugin.hyprglass.config / .layer calls).
+- Run log /tmp/y6-nested/y6e-load-20261121-215423.log. AMEND4 OK. AMEND 5 (v2: any "hyprglass" string in the live config chain) failed on guarded API refs: ~/computer-use-wayland/native/visuals-login.lua:5 (`plugin.name == "hyprglass"`), :11 (dofile of hyprglass-local-optics.lua), and hyprglass-local-optics.lua:2,25,31 (hl.plugin.hyprglass.config / .layer calls).
 - Investigation (read all three files in full):
   - hyprland.lua:54 dofiles visuals-login.lua.
   - visuals-login.lua checks the LOADED plugins list: only if exactly one hyprglass 1.1.1-cu.1 is loaded does it dofile the optics file; otherwise it runs scripts/visuals.py. It never loads the plugin.
@@ -572,7 +572,7 @@
 - improvements/y6e-evidence/ (diff + chunks, Makefile-pin + diff, hyprpm-pin.toml, workflows-diff.txt, hyprland-version-pin, scan-added.txt, scan-removed.txt, ls-remote-tags.txt, item-helper-blob-pin.txt, helper-pin.c, item-v1-pin.xml, ItemHints-pin.cpp, ShaderManager-pin.cpp).
 - improvements/worker-y6e-nested-load-test.sh (v3, md5 65fe4c43a026b9aeb89048ff17a3b610 on the laptop).
 - improvements/worker-y6e-hyprland-wayland-rebuilt.lua (new conf, md5 9ccb27017ab63a9d2bce1d9651425d3b).
-- Laptop-side: worktree /home/james/.local/share/agent-computer-use/worktrees/hyprglass-03a57c4 (hyprglass.so 34,440,704 B, md5 78ac102337ca70842bf604b56c6f4c8e), /tmp/y6-nested/y6e-load-test.sh, /tmp/y6-nested/conf/hyprland-wayland-y6e.lua, run logs /tmp/y6-nested/y6e-load-20261121-215203.log (abort 1), -215423.log (abort 2), -215707.log (LOADED), nested log /tmp/y6-nested/hypr-saved-y6e-20261121-215707-*/hyprland.log, C2 rerun log /tmp/y6e-c2/c2-laptop2-rerun.log.
+- Laptop-side: worktree ~/.local/share/agent-computer-use/worktrees/hyprglass-03a57c4 (hyprglass.so 34,440,704 B, md5 78ac102337ca70842bf604b56c6f4c8e), /tmp/y6-nested/y6e-load-test.sh, /tmp/y6-nested/conf/hyprland-wayland-y6e.lua, run logs /tmp/y6-nested/y6e-load-20261121-215203.log (abort 1), -215423.log (abort 2), -215707.log (LOADED), nested log /tmp/y6-nested/hypr-saved-y6e-20261121-215707-*/hyprland.log, C2 rerun log /tmp/y6e-c2/c2-laptop2-rerun.log.
 
 ## What this proves and what it does NOT prove
 

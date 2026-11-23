@@ -113,9 +113,9 @@ Output, verbatim:
 - focus reverted to owner tab just before POST /url (after the
   (c) check passed)
 - cmd_open returned ok = True, selected_by = explicit-select,
-  open url = file:///home/james/computer-use-wayland/tests/
+  open url = file://~/computer-use-wayland/tests/
   two_vision_fixture.html?clone=zen
-- owner tab url now = file:///home/james/computer-use-wayland/
+- owner tab url now = file://~/computer-use-wayland/
   tests/two_vision_fixture.html?clone=zen
 - new tab url now = about:blank
 - cmd_close ok = True, result = {'ok': True, 'count_before': 3,
@@ -124,7 +124,7 @@ Output, verbatim:
   'current_url': 'https://example.com/'}
 - tabs after close = ['https://example.com/', 'about:blank'],
   owner tab still present = False, deleted urls =
-  [file:///home/james/computer-use-wayland/tests/
+  [file://~/computer-use-wayland/tests/
   two_vision_fixture.html?clone=zen]
 
 So the open reports success on the owner tab, and cleanup
@@ -206,7 +206,7 @@ plus tab_at, calling the real ZenDomBackend._resolve_target).
 Part A output, verbatim: _find_in_scan RAISED: URL
 'two_vision_fixture.html?clone=zen' matches 2 tabs, refusing
 to pick one; _resolve_target returned url =
-file:///home/james/computer-use-wayland/tests/
+file://~/computer-use-wayland/tests/
 two_vision_fixture.html?clone=zen2; that is the STALE
 ?clone=zen2 tab: True. Part B output, verbatim: churn: fixture
 tab closed between scans; _resolve_target returned url =

@@ -128,7 +128,7 @@ dash anywhere in this file. No personal info.
   both modes, both orderings: cmd_open RETURNED ok with
   the fixture URL; the X tab URL is now the fixture URL;
   cleanup close ok True; deleted ==
-  ['file:///home/james/computer-use-wayland/tests/'
+  ['file://~/computer-use-wayland/tests/'
   'two_vision_fixture.html?clone=zen']; X deleted True;
   tabs left are the owner Muse tab and the example tab.
   The full P-C damage (wrong navigate + wrong DELETE)

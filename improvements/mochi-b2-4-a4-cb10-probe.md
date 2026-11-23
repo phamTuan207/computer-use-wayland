@@ -51,18 +51,18 @@ file. No personal info.
 - hyprglass is NOT loaded in the live compositor (only
   hyprbars), NOT in hyprland.conf. The .so survives only on
   the laptop, never in the VM worktree. The loadable build is
-  the Y6e rebuild, not a backup: /home/james/.local/share/
+  the Y6e rebuild, not a backup: ~/.local/share/
   agent-computer-use/worktrees/hyprglass-03a57c4/hyprglass.so,
   34,440,704 B, md5 78ac102337ca70842bf604b56c6f4c8e (Y6e
   rebuild log, commit 915121d). Backup 1
-  (/home/james/.local/share/agent-computer-use/backups/
+  (~/.local/share/agent-computer-use/backups/
   full-1791544423/native/hyprglass.so, 26,643,888 B, sha256
   2671d4ac41941ca62ae8100fc3b57bf3153bf6def893334f3a8ecbc1ea0145d5)
   is a recorded DEAD path: its ABI is dead
   (libaquamarine.so.14 and libhyprgraphics.so.4 not found),
   so do NOT load it; the hash is recorded only to identify
   the dead file. Backup 2
-  (/home/james/.local/share/agent-computer-use/backups/
+  (~/.local/share/agent-computer-use/backups/
   sync-20261116-230254-783160-a9a24690/trees/native/
   hyprglass.so, 30,622,520 B, sha256
   ddfff1c2f2cebb66e10b85a739beae0c7c562ccf9d78e3250647c07f8f31fa8b)
@@ -103,10 +103,10 @@ launcher. Before either runner, verify on the laptop which
 
 `grep -o '/[^"]*hyprglass[^"]*\.so' /tmp/y6-nested/conf/hyprland-wayland-y6e.lua | head -1`
 
-Expected: /home/james/.local/share/agent-computer-use/
+Expected: ~/.local/share/agent-computer-use/
 worktrees/hyprglass-03a57c4/hyprglass.so. Then:
 
-`md5sum /home/james/.local/share/agent-computer-use/worktrees/hyprglass-03a57c4/hyprglass.so`
+`md5sum ~/.local/share/agent-computer-use/worktrees/hyprglass-03a57c4/hyprglass.so`
 
 Expected: 78ac102337ca70842bf604b56c6f4c8e. If the grep names
 a backup path, or the md5 differs, STOP: the staged conf is
@@ -143,7 +143,7 @@ same rebuilt .so as step 1:
 
 `grep -o '/[^"]*hyprglass[^"]*\.so' /tmp/y6-nested/conf/hyprland-wayland.lua | head -1`
 
-Expected: /home/james/.local/share/agent-computer-use/
+Expected: ~/.local/share/agent-computer-use/
 worktrees/hyprglass-03a57c4/hyprglass.so, md5
 78ac102337ca70842bf604b56c6f4c8e. Run it only with the owner
 away and the handover re-confirmed at run time (the runner

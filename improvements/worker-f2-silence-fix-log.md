@@ -91,7 +91,7 @@ Why the dispatcher is unknown (live evidence 22:33):
   fix the guard itself; F2's watchdog detects the failure and falls back.
 
 Probe results that cleared the other guardian steps (22:25, installed copy
-`/home/james/.local/share/agent-computer-use/scripts/`):
+`~/.local/share/agent-computer-use/scripts/`):
 
 - owner_lock OK.
 - cursor_theme.snapshot OK (keys gtk/hypr/agent theme+size).
@@ -283,7 +283,7 @@ Design conclusions for the fix:
   the VM working tree (HEAD + act-now wiring) is a safe forward sync.
 - Deployed by exact-path scp: `first_action.py` (new) + `cu.py`
   (HEAD + act-now) to
-  `/home/james/.local/share/agent-computer-use/scripts/`. Verified
+  `~/.local/share/agent-computer-use/scripts/`. Verified
   md5s after copy: first_action.py 68d8e84d..., cu.py 2d208d36...
   (matches the VM working tree). `computer-use act-now --help` works
   on the laptop; `import first_action` OK. No `computer-use session`
@@ -344,9 +344,9 @@ omitted; append as it happens, never batch at the end)
   /tmp/zt00-baseline.json (8974 B). Outcome: PASS. Note: the restart
   restored ALL 67 tabs, undoing the 22:03 cleanup (39 fixture tabs
   back). Example Domain tab at index 10 (F3 likely opened it during
-  verification). ZT doc path /home/james/computer-use-wayland/scripts/
+  verification). ZT doc path ~/computer-use-wayland/scripts/
   zen_dom.py does NOT exist; the file is at
-  /home/james/workspace/computer-use-wayland/scripts/zen_dom.py.
+  ~/workspace/computer-use-wayland/scripts/zen_dom.py.
 - 22:44 (T+240s) ZT-00 gate step 1: ps zen-bin PID 426338 alive
   (etime 07:00). PASS.
 - 22:44 (T+240s) ZT-00 gate step 2: curl 127.0.0.1:9222/ -> 200. PASS.
@@ -359,7 +359,7 @@ omitted; append as it happens, never batch at the end)
 - 22:45:15.749 (T+315s, T_order+0s) fresh observe: id 20a5e52da440,
   capture 39 ms, 1920x1200, image 568,754 B, monitor eDP-2
   [2464,902,1920,1200], scale 1.0. Image
-  /home/james/.cache/agent-computer-use/20a5e52da440.jpg.
+  ~/.cache/agent-computer-use/20a5e52da440.jpg.
 - 22:45 (T+300s) owner correction: open Omarchy menu and switch
   workspaces by COMMAND, never click the bar (hyprctl dispatch in
   hl.dsp form for workspace; find the exact launcher command from the
@@ -757,7 +757,7 @@ omitted; append as it happens, never batch at the end)
 - 23:08 tests: 41 tests, ALL PASS, 0.575 s (21 original + 20 new
   counter-examples). Test file committed fca30c1.
 - 23:09 the fixed first_action.py deployed to the laptop
-  (/home/james/.local/share/agent-computer-use/scripts/),
+  (~/.local/share/agent-computer-use/scripts/),
   md5 dc6b5cfd01bf152f038e36ac8f1c38c0 on both sides,
   `computer-use act-now --help` works, import OK with the new
   START_FAILURE_PREFIXES. cu.py on the laptop unchanged (it already
@@ -1016,15 +1016,15 @@ omitted; append as it happens, never batch at the end)
 
 ### Raw rehearsal envelopes (council 2, Finding 3)
 Fetched from the laptop STATE/first-action-20261121.jsonl
-(/home/james/.cache/agent-computer-use/first-action-20261121.jsonl,
+(~/.cache/agent-computer-use/first-action-20261121.jsonl,
 5 lines, 5041 bytes) and pasted verbatim. The numbers match this
 log exactly. After-capture images are on the laptop at
-/home/james/.cache/agent-computer-use/<id>.jpg; the pill is visible
+~/.cache/agent-computer-use/<id>.jpg; the pill is visible
 in runs 2 (594806e130f1), 3 (de010258f1fd), 4 (c35ef9025e45), 5
 (2155674040fa); run 1 has no after-capture (refused).
 
 {"after": null, "after_error": null, "agent": "Muse", "completed": 0, "fallback_reason": "session guardian startup failed: cursor guard reply is not valid JSON (got: unknown request); the cursor backend may not be loaded, load it with scripts/activate-glass.py and scripts/activate-cursor-guard.py or re-run the fresh-login loader scripts/visuals.py", "method": "act-now", "observation": {"id": "ce2bf0b9a594", "source": "given"}, "ok": false, "order_to_action_start_ms": 356.079, "order_to_overlay_ms": 356.003, "overlay_owner": "daemon", "path": "refused", "session_error": "session guardian startup failed: cursor guard reply is not valid JSON (got: unknown request); the cursor backend may not be loaded, load it with scripts/activate-glass.py and scripts/activate-cursor-guard.py or re-run the fresh-login loader scripts/visuals.py", "session_timed_out": false, "total_ms": 638.216, "wall_time": "2026-11-21T22:53:57.440+07:00"}
-{"after": {"id": "594806e130f1", "observation": "/home/james/.cache/agent-computer-use/594806e130f1.json"}, "after_error": null, "agent": "Muse", "completed": 4, "fallback_reason": "session guardian startup failed: cursor guard reply is not valid JSON (got: unknown request); the cursor backend may not be loaded, load it with scripts/activate-glass.py and scripts/activate-cursor-guard.py or re-run the fresh-login loader scripts/visuals.py", "method": "act-now", "observation": {"id": "cdd81db8e871", "source": "given"}, "ok": true, "order_to_action_start_ms": 333.438, "order_to_overlay_ms": 333.388, "overlay_owner": "daemon", "path": "fallback", "session_error": "session guardian startup failed: cursor guard reply is not valid JSON (got: unknown request); the cursor backend may not be loaded, load it with scripts/activate-glass.py and scripts/activate-cursor-guard.py or re-run the fresh-login loader scripts/visuals.py", "session_timed_out": false, "total_ms": 1477.763, "wall_time": "2026-11-21T22:55:31.694+07:00"}
-{"after": {"id": "de010258f1fd", "observation": "/home/james/.cache/agent-computer-use/de010258f1fd.json"}, "after_error": null, "agent": "Muse", "completed": 3, "fallback_reason": "session guardian startup failed: cursor guard reply is not valid JSON (got: unknown request); the cursor backend may not be loaded, load it with scripts/activate-glass.py and scripts/activate-cursor-guard.py or re-run the fresh-login loader scripts/visuals.py", "method": "act-now", "observation": {"id": "e76537a263e6", "source": "given"}, "ok": true, "order_to_action_start_ms": 314.537, "order_to_overlay_ms": 314.463, "overlay_owner": "daemon", "path": "fallback", "session_error": "session guardian startup failed: cursor guard reply is not valid JSON (got: unknown request); the cursor backend may not be loaded, load it with scripts/activate-glass.py and scripts/activate-cursor-guard.py or re-run the fresh-login loader scripts/visuals.py", "session_timed_out": false, "total_ms": 1591.814, "wall_time": "2026-11-21T22:58:17.815+07:00"}
-{"after": {"id": "c35ef9025e45", "observation": "/home/james/.cache/agent-computer-use/c35ef9025e45.json"}, "after_error": null, "agent": "Muse", "completed": 5, "fallback_reason": "session guardian startup failed: cursor guard reply is not valid JSON (got: unknown request); the cursor backend may not be loaded, load it with scripts/activate-glass.py and scripts/activate-cursor-guard.py or re-run the fresh-login loader scripts/visuals.py", "method": "act-now", "observation": {"id": "70cd5cc023ea", "source": "given"}, "ok": true, "order_to_action_start_ms": 345.817, "order_to_overlay_ms": 345.766, "overlay_owner": "daemon", "path": "fallback", "session_error": "session guardian startup failed: cursor guard reply is not valid JSON (got: unknown request); the cursor backend may not be loaded, load it with scripts/activate-glass.py and scripts/activate-cursor-guard.py or re-run the fresh-login loader scripts/visuals.py", "session_timed_out": false, "total_ms": 1998.431, "wall_time": "2026-11-21T22:59:40.741+07:00"}
-{"after": {"id": "2155674040fa", "observation": "/home/james/.cache/agent-computer-use/2155674040fa.json"}, "after_error": null, "agent": "Muse", "completed": 1, "fallback_reason": "session guardian startup failed: cursor guard reply is not valid JSON (got: unknown request); the cursor backend may not be loaded, load it with scripts/activate-glass.py and scripts/activate-cursor-guard.py or re-run the fresh-login loader scripts/visuals.py", "method": "act-now", "observation": {"id": "e656ed429720", "source": "given"}, "ok": true, "order_to_action_start_ms": 330.067, "order_to_overlay_ms": 329.967, "overlay_owner": "daemon", "path": "fallback", "session_error": "session guardian startup failed: cursor guard reply is not valid JSON (got: unknown request); the cursor backend may not be loaded, load it with scripts/activate-glass.py and scripts/activate-cursor-guard.py or re-run the fresh-login loader scripts/visuals.py", "session_timed_out": false, "total_ms": 865.078, "wall_time": "2026-11-21T23:01:21.680+07:00"}
+{"after": {"id": "594806e130f1", "observation": "~/.cache/agent-computer-use/594806e130f1.json"}, "after_error": null, "agent": "Muse", "completed": 4, "fallback_reason": "session guardian startup failed: cursor guard reply is not valid JSON (got: unknown request); the cursor backend may not be loaded, load it with scripts/activate-glass.py and scripts/activate-cursor-guard.py or re-run the fresh-login loader scripts/visuals.py", "method": "act-now", "observation": {"id": "cdd81db8e871", "source": "given"}, "ok": true, "order_to_action_start_ms": 333.438, "order_to_overlay_ms": 333.388, "overlay_owner": "daemon", "path": "fallback", "session_error": "session guardian startup failed: cursor guard reply is not valid JSON (got: unknown request); the cursor backend may not be loaded, load it with scripts/activate-glass.py and scripts/activate-cursor-guard.py or re-run the fresh-login loader scripts/visuals.py", "session_timed_out": false, "total_ms": 1477.763, "wall_time": "2026-11-21T22:55:31.694+07:00"}
+{"after": {"id": "de010258f1fd", "observation": "~/.cache/agent-computer-use/de010258f1fd.json"}, "after_error": null, "agent": "Muse", "completed": 3, "fallback_reason": "session guardian startup failed: cursor guard reply is not valid JSON (got: unknown request); the cursor backend may not be loaded, load it with scripts/activate-glass.py and scripts/activate-cursor-guard.py or re-run the fresh-login loader scripts/visuals.py", "method": "act-now", "observation": {"id": "e76537a263e6", "source": "given"}, "ok": true, "order_to_action_start_ms": 314.537, "order_to_overlay_ms": 314.463, "overlay_owner": "daemon", "path": "fallback", "session_error": "session guardian startup failed: cursor guard reply is not valid JSON (got: unknown request); the cursor backend may not be loaded, load it with scripts/activate-glass.py and scripts/activate-cursor-guard.py or re-run the fresh-login loader scripts/visuals.py", "session_timed_out": false, "total_ms": 1591.814, "wall_time": "2026-11-21T22:58:17.815+07:00"}
+{"after": {"id": "c35ef9025e45", "observation": "~/.cache/agent-computer-use/c35ef9025e45.json"}, "after_error": null, "agent": "Muse", "completed": 5, "fallback_reason": "session guardian startup failed: cursor guard reply is not valid JSON (got: unknown request); the cursor backend may not be loaded, load it with scripts/activate-glass.py and scripts/activate-cursor-guard.py or re-run the fresh-login loader scripts/visuals.py", "method": "act-now", "observation": {"id": "70cd5cc023ea", "source": "given"}, "ok": true, "order_to_action_start_ms": 345.817, "order_to_overlay_ms": 345.766, "overlay_owner": "daemon", "path": "fallback", "session_error": "session guardian startup failed: cursor guard reply is not valid JSON (got: unknown request); the cursor backend may not be loaded, load it with scripts/activate-glass.py and scripts/activate-cursor-guard.py or re-run the fresh-login loader scripts/visuals.py", "session_timed_out": false, "total_ms": 1998.431, "wall_time": "2026-11-21T22:59:40.741+07:00"}
+{"after": {"id": "2155674040fa", "observation": "~/.cache/agent-computer-use/2155674040fa.json"}, "after_error": null, "agent": "Muse", "completed": 1, "fallback_reason": "session guardian startup failed: cursor guard reply is not valid JSON (got: unknown request); the cursor backend may not be loaded, load it with scripts/activate-glass.py and scripts/activate-cursor-guard.py or re-run the fresh-login loader scripts/visuals.py", "method": "act-now", "observation": {"id": "e656ed429720", "source": "given"}, "ok": true, "order_to_action_start_ms": 330.067, "order_to_overlay_ms": 329.967, "overlay_owner": "daemon", "path": "fallback", "session_error": "session guardian startup failed: cursor guard reply is not valid JSON (got: unknown request); the cursor backend may not be loaded, load it with scripts/activate-glass.py and scripts/activate-cursor-guard.py or re-run the fresh-login loader scripts/visuals.py", "session_timed_out": false, "total_ms": 865.078, "wall_time": "2026-11-21T23:01:21.680+07:00"}

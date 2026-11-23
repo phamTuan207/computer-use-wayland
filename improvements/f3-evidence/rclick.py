@@ -3,7 +3,7 @@
 import importlib.util, json, math, os, subprocess, sys, time
 IMG_W, IMG_H = 1920, 1200
 MX, MY, MW, MH = 2464, 902, 1920, 1200
-spec = importlib.util.spec_from_file_location("cu", "/home/james/.local/share/agent-computer-use/scripts/cu.py")
+spec = importlib.util.spec_from_file_location("cu", "~/.local/share/agent-computer-use/scripts/cu.py")
 cu = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(cu)
 def getenv():

@@ -127,7 +127,7 @@ operator and the verifier can use this as written.
   (probe P7d, rc 2), so the docstring's own launch lines are
   commands that cannot run as written. The launcher docstring
   (:109-110) and SHIPPED.md both use -P with --repo.
-- Fix: add `-P` and `--repo /home/james/workspace/
+- Fix: add `-P` and `--repo ~/workspace/
   computer-use-wayland` to both lines, matching the launcher
   docstring and SHIPPED.md.
 
@@ -253,7 +253,7 @@ operator and the verifier can use this as written.
   name it too. Residuals: nested-dir wording (C3-4) and the
   hint-less legs (C3-7).
 - C3-6 --repo paths: FIXED. Launcher docstring and SHIPPED.md
-  both use /home/james/workspace/computer-use-wayland; the old
+  both use ~/workspace/computer-use-wayland; the old
   ~/computer-use-wayland path appears nowhere in the 6 files
   (grep clean). The runner docstring carries no --repo at all
   (see C3-3).
@@ -320,6 +320,6 @@ operator and the verifier can use this as written.
   the launcher path past check_marker could not be run live;
   check_manifest and _scan_ship were probed by AST-extraction
   only (P5d/P5e), and _check_entry_pyc the same way (P4b).
-- Whether /home/james/workspace/computer-use-wayland is the
+- Whether ~/workspace/computer-use-wayland is the
   real laptop checkout: not verifiable from this VM (same
   limit as round 1).

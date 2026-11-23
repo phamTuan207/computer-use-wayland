@@ -1,6 +1,6 @@
 # Pick 1 P3/P4 re-measure with the NEW template programs (Track 2, Phase B, 19/11)
 
-- Repo: `/home/james/computer-use-wayland`, branch `speed-swarm`, HEAD `2aa74ff` (P3/P4 fix merged). No repo edits, no commits. `git status` clean at end. Both stashes untouched (stash@{0} rust-rewrite-eval, stash@{1} Phase-B pre-merge).
+- Repo: `~/computer-use-wayland`, branch `speed-swarm`, HEAD `2aa74ff` (P3/P4 fix merged). No repo edits, no commits. `git status` clean at end. Both stashes untouched (stash@{0} rust-rewrite-eval, stash@{1} Phase-B pre-merge).
 - Run dir: `/tmp/speed-profile-20261118/pick1-p34remeasure/` (fresh). `records.jsonl` 21 lines, parses OK. `timed.py` and smoke envelope copied from `/tmp/speed-profile-20261118/pick1/` (the rerun dir, not overwritten). `analyze-p34.py` in the run dir reproduces the numbers below.
 - Programs copied from `improvements/pick1-program-template.md` (P3/P4 only), shape `windows() -> observe() -> act() -> observe() -> assert`. One adaptation: the window-title lookup uses `speed-p1p34-term`, the unique kitty title for this run (template text says `speed-pick1-term`; the title must match the actual terminal). Command strings and asserts are byte-identical to the template. P4 runtime repr verified before the run against the template expected repr (three literal backslash-n, one trailing real newline).
 - Terminal: kitty `speed-p1p34-term`, PID 915840, closed by PID at end.

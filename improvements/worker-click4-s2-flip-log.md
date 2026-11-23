@@ -199,10 +199,10 @@ this file. No personal info.
 
 - The broker rejects a lease in /tmp: unsafe_lease_directory
   (/tmp is root-owned, the lease directory must be owned by
-  james). The harness and all manual broker calls use
-  /home/james/.cache/agent-computer-use/ (james, 0700) for leases.
+  user). The harness and all manual broker calls use
+  ~/.cache/agent-computer-use/ (user, 0700) for leases.
 - The broker request envelope must be a private regular file
-  owned by james (mode 0600): a plain heredoc creates 0644 and
+  owned by user (mode 0600): a plain heredoc creates 0644 and
   fails unsafe_file. The harness writes the envelope with
   `umask 077` first. The harness also removes a stale per-run
   lease before start (O_EXCL otherwise blocks a re-run).
@@ -265,9 +265,9 @@ this file. No personal info.
 
 - 09:59 +07: sync re-run detached (log /tmp/s2-sync2.log).
   Output: "Release ledger:
-  /home/james/.local/share/agent-computer-use/releases/
+  ~/.local/share/agent-computer-use/releases/
   20261122-095940-475319-350934a4bf.json", "Deploy manifest:
-  /home/james/.local/share/agent-computer-use/
+  ~/.local/share/agent-computer-use/
   deploy-manifest.json", "--check: exit 0 (643 managed files;
   11 preserved-history exceptions)", "Installed sync published
   and verified.", "Computer-use relay restarted; loaded broker

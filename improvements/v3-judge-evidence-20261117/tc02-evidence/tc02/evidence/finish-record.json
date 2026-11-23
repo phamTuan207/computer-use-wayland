@@ -1,6 +1,6 @@
 {
   "generation": "b601278a0177e70a536d6ea9af17d14b",
-  "lease_file": "/home/james/.cache/agent-computer-use/overnight-tc02-qwazkoku/tc02.lease",
+  "lease_file": "~/.cache/agent-computer-use/overnight-tc02-qwazkoku/tc02.lease",
   "finish_submission_wall": "2026-11-17T01:24:26.644223+07:00",
   "finish_submission_monotonic": 14443.950908663,
   "finish_response_wall": "2026-11-17T01:24:27.063922+07:00",

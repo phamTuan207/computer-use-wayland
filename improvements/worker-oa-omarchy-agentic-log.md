@@ -42,6 +42,6 @@
 - `omarchy menu keybindings --print` over SSH prints only 2 lines (confirms KB). Default-agent file ~/.config/omarchy/default-agent does not exist. Agents plugin dir: Agent.qml, Main.qml, Panel.qml, README.md, collectors.py, manifest.json.
 
 ## 23:40:13 probe 7: shell IPC proven with OMARCHY_PATH
-- With OMARCHY_PATH set: `omarchy-shell shell ping` returns ok. `omarchy-shell shell listPlugins` returns full JSON (60+ plugins), including james.agents (My Agents, enabled, cloned from omarchy.agents), james.menu (disabled), omarchy.agents (disabled), omarchy.indicators (enabled), omarchy.workspaces (enabled), crmne.todoist (enabled), omacal.upcoming (disabled), omarchy.reminders (enabled), omarchy.remote-session (enabled), omarchy.tailscale (disabled). No MCP plugin installed.
+- With OMARCHY_PATH set: `omarchy-shell shell ping` returns ok. `omarchy-shell shell listPlugins` returns full JSON (60+ plugins), including user.agents (My Agents, enabled, cloned from omarchy.agents), user.menu (disabled), omarchy.agents (disabled), omarchy.indicators (enabled), omarchy.workspaces (enabled), crmne.todoist (enabled), omacal.upcoming (disabled), omarchy.reminders (enabled), omarchy.remote-session (enabled), omarchy.tailscale (disabled). No MCP plugin installed.
 - `omarchy plugin list` works with OMARCHY_PATH. `omarchy agent usage muse --limits-only` returns all zeros (the Muse provider slot tracks Meta's Muse coding agent, not this agent).
 - Verdict: IPC is the stock agent API. OMARCHY_PATH export is the one-line fix for SSH use.

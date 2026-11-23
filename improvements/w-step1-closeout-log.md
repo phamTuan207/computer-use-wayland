@@ -148,7 +148,7 @@ Three independent checks, all first-hand this session:
    `git ls-remote origin amend4-codex` returns
    06a34e8610a9467c3884f6dd7a567293c747da45, matching the resume
    log (commit 2de4c31) and the C4 record.
-2. Laptop worktree /home/james/workspace/cu-amend4-codex, clean
+2. Laptop worktree ~/workspace/cu-amend4-codex, clean
    status, HEAD 06a34e8610a9467c3884f6dd7a567293c747da45 (checked
    via ssh-laptop.sh, 17:51 +07). Same hash as the remote.
 3. Codex-lane tests, run on the laptop worktree, 17:52:06 +07:
@@ -277,7 +277,7 @@ Step 1, raw hyprctl (17:51 +07):
   workspace 2.
 
 Step 2, real code path (17:52 +07): in the laptop repo
-/home/james/workspace/computer-use-wayland (HEAD 48c6aee,
+~/workspace/computer-use-wayland (HEAD 48c6aee,
 `live_window_origin` present at scripts/zen_dom.py line 734),
 ran the unbound method on a bare ZenSession instance (the
 method uses only subprocess/json, no browser state):

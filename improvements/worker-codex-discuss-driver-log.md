@@ -18,11 +18,11 @@ Times are Asia/Ho_Chi_Minh wall-clock, with elapsed time from task start.
 
 Task received. Verified on VM: branch todolist-push, HEAD 7b1006a. Adjudication draft improvements/worker-click3-adjudication-log.md present (9d23834), codex-breakthrough-report.md present (2596287), arch/grounding/speed review logs present. Wrote Codex prompt to improvements/codex-discuss-prompt.md (VM side, 5046 bytes).
 
-Note: direct scp to 100.70.92.52:22 failed (Operation not permitted, no proxy). Sent the prompt through ~/workspace/ssh-laptop.sh instead (cat > /tmp/codex-discuss-prompt.md, 5046 bytes confirmed).
+Note: direct scp to 192.0.2.1:22 failed (Operation not permitted, no proxy). Sent the prompt through ~/workspace/ssh-laptop.sh instead (cat > /tmp/codex-discuss-prompt.md, 5046 bytes confirmed).
 
 ## 06:38 +07 (T+1 min): Codex launched
 
-Launched detached on laptop: setsid nohup codex exec -m gpt-6-luna -c model_reasoning_effort=max -s danger-full-access -C /home/james/workspace/computer-use-wayland - < /tmp/codex-discuss-prompt.md > /tmp/codex-discuss-out.log 2>&1 &
+Launched detached on laptop: setsid nohup codex exec -m gpt-6-luna -c model_reasoning_effort=max -s danger-full-access -C ~/workspace/computer-use-wayland - < /tmp/codex-discuss-prompt.md > /tmp/codex-discuss-out.log 2>&1 &
 Codex PID 813390, started 06:38. AMEND4 Codex (PID 774258, since 05:58) still running, separate run, left alone.
 Note: git fetch on laptop showed origin/todolist-push moved 2596287..af0fa87 since my VM HEAD; prompt tells Codex to fast-forward first. VM will need fetch + rebase before committing.
 

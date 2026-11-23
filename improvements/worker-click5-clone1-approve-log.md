@@ -52,8 +52,8 @@
 
 - Command: `computer-use observe --window 0x55705383d420`
 - Observation ID: `6d20151fdfb1`
-  - Image: `/home/james/.cache/agent-computer-use/6d20151fdfb1.jpg`
-  - JSON: `/home/james/.cache/agent-computer-use/6d20151fdfb1.json`
+  - Image: `~/.cache/agent-computer-use/6d20151fdfb1.jpg`
+  - JSON: `~/.cache/agent-computer-use/6d20151fdfb1.json`
   - Image size 924x1176, window bounds [3448, 914, 924, 1176], monitor eDP-2.
   - pixel_sha256 d3599da6ef8464d061ee2ccb390da23d967696ebedf9bd1da14771aa962335b2
 - Visual confirmation from the image: "Needs review" holds exactly 2 cards,
@@ -172,7 +172,7 @@
 - Click 1: fresh 38747a7cdc6e, act after ceb1ae7a08fe, post e7cd4e0e2ae9 (11:52:52-53).
 - Click 2: fresh f5fd1cd02cb7, act after d5fd59128be1, post 826f9ad42631 (11:53:57-58).
 - Final: a09381136fef (11:55:31).
-- All images under /home/james/.cache/agent-computer-use/<id>.jpg on the laptop.
+- All images under ~/.cache/agent-computer-use/<id>.jpg on the laptop.
 - Driver scripts: /tmp/c5click1.py, /tmp/c5click2.py on the laptop
   (copies kept on the VM at ~/workspace/c5click1.py, ~/workspace/c5click2.py).
 

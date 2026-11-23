@@ -113,10 +113,10 @@ cleanup. The only driver command is read-only `doctor`; the fixture does not
 take screenshots, move the pointer, type, focus windows, or launch apps.
 
 ```sh
-env -i HOME=/home/james USER=james LOGNAME=james PATH=/usr/bin:/bin \
+env -i HOME="$HOME" USER="$USER" LOGNAME="$USER" PATH=/usr/bin:/bin \
   PYTHONDONTWRITEBYTECODE=1 /usr/bin/python3 -B tests/envsteal_live.py \
   --case bare --repeat 2
-env -i HOME=/home/james USER=james LOGNAME=james PATH=/usr/bin:/bin \
+env -i HOME="$HOME" USER="$USER" LOGNAME="$USER" PATH=/usr/bin:/bin \
   PYTHONDONTWRITEBYTECODE=1 /usr/bin/python3 -B tests/envsteal_live.py \
   --case stale --repeat 2
 ```

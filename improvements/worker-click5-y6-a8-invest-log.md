@@ -55,12 +55,12 @@
     555-600 (21:57 run, same status shape, same frozen log shape).
 - Sources verified directly on the laptop by this lane (new evidence, not
   taken from any paper):
-  - Hyprglass worktree /home/james/.local/share/agent-computer-use/worktrees/hyprglass-03a57c4/src/PluginConfig.cpp
+  - Hyprglass worktree ~/.local/share/agent-computer-use/worktrees/hyprglass-03a57c4/src/PluginConfig.cpp
     (default false, config/layer handlers, forwardLuaConfig) and
     src/Diagnostics.cpp (featureStatus call site).
-  - Hyprland 0.57.2 source /home/james/backups/omarchy-native-port-20261113/Hyprland-0.57.2/src/
+  - Hyprland 0.57.2 source ~/backups/omarchy-native-port-20261113/Hyprland-0.57.2/src/
     (Compositor.cpp, ConfigManager.cpp, PluginSystem.cpp, Lua bindings).
-  - Live optics file /home/james/.local/share/agent-computer-use/native/hyprglass-local-optics.lua
+  - Live optics file ~/.local/share/agent-computer-use/native/hyprglass-local-optics.lua
     (byte-identical table to the nest optics.lua, applied live every boot).
   - Old optics backup /tmp/y6-nested/conf/optics.lua.bak-y6c5-20261122
     (md5 b011ea91, diffed against the new optics.lua).
@@ -74,7 +74,7 @@
 
 - Conf /tmp/y6-nested/conf/hyprland-wayland.lua, 19 lines, md5
   9ccb27017ab63a9d2bce1d9651425d3b. Line 16:
-  `hl.plugin.load("/home/james/.local/share/agent-computer-use/worktrees/hyprglass-03a57c4/hyprglass.so")`.
+  `hl.plugin.load("~/.local/share/agent-computer-use/worktrees/hyprglass-03a57c4/hyprglass.so")`.
   Line 18: `dofile("/tmp/y6-nested/conf/nested-visuals-hook.lua")`. No
   `plugin:hyprglass` config block anywhere in the file (read in full).
 - Hook /tmp/y6-nested/conf/nested-visuals-hook.lua, md5
@@ -189,7 +189,7 @@
   against the new file shows ONLY the A3 comment block (lines 2-9) and
   the print line 47 as additions. Same keys, same values, same calls.
 - The same table is the LIVE optics file
-  (/home/james/.local/share/agent-computer-use/native/hyprglass-local-optics.lua),
+  (~/.local/share/agent-computer-use/native/hyprglass-local-optics.lua),
   read in full by this lane: identical material table, identical config
   table (including `tint_color = 0xffffff00` and `blur_strength = 0.15`),
   identical config() and layer() calls. The live session applies this
@@ -766,7 +766,7 @@
   applied print), optics.lua 85298d2035697710d95117355c9830ca (line 47
   applied print, last line).
 - Hyprglass worktree source (laptop, read directly):
-  /home/james/.local/share/agent-computer-use/worktrees/hyprglass-03a57c4/src/PluginConfig.cpp
+  ~/.local/share/agent-computer-use/worktrees/hyprglass-03a57c4/src/PluginConfig.cpp
   lines 83 (default false), 226-227 (Lua entry points), 322
   (layersEnabled pointer), 630-652 (forwardLuaConfig), 654-671
   (handleLuaConfig), 823-931 (handleLuaLayer, reports-only);
@@ -775,7 +775,7 @@
   No other setter of the registered layers value exists in src/
   (grep for assignments finds only the getStaticPtr read).
 - Hyprland 0.57.2 source (laptop, read directly):
-  /home/james/backups/omarchy-native-port-20261113/Hyprland-0.57.2/src/
+  ~/backups/omarchy-native-port-20261113/Hyprland-0.57.2/src/
   Compositor.cpp (STAGE_LATE PluginSystem + handlePluginLoads),
   config/lua/ConfigManager.cpp:820 (handlePluginLoads in
   postConfigReload, stdout-disable logged only on first launch),
@@ -789,7 +789,7 @@
   `diff /tmp/y6-nested/conf/optics.lua.bak-y6c5-20261122 /tmp/y6-nested/conf/optics.lua`
   shows ONLY the A3 comment block and the print line 47 as additions.
   Live optics file
-  /home/james/.local/share/agent-computer-use/native/hyprglass-local-optics.lua
+  ~/.local/share/agent-computer-use/native/hyprglass-local-optics.lua
   has the identical table and calls (blur 0.15, tint 0xffffff00).
 - Err files (laptop): /tmp/y6-nested/nest-glass-status.err and
   nest-plugin-list.err, both 0 bytes (hyprctl calls clean).

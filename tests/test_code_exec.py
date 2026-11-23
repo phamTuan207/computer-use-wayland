@@ -403,7 +403,7 @@ class ApiTests(unittest.TestCase):
         self.assertIn('not bound', result['error'])
 
     def test_read_file_restricted_to_tmp(self):
-        for path in ('/etc/passwd', 'relative.txt', '/home/james/x.txt',
+        for path in ('/etc/passwd', 'relative.txt', '/home/testuser/x.txt',
                      '/tmp/../etc/passwd'):
             with self.subTest(path=path):
                 result = run('read_file(%r)' % path)

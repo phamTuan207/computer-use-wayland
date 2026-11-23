@@ -5,7 +5,7 @@ Wants=graphical-session.target
 
 [Service]
 Type=simple
-ExecStart=/home/james/.local/bin/input-stall-monitor.sh
+ExecStart=%h/.local/bin/input-stall-monitor.sh
 Restart=on-failure
 RestartSec=10
 

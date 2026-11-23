@@ -9,7 +9,7 @@ best quality, not speed. Council + redteam debate every phase verdict.
 - Brief: /tmp/y1-codex-brief.md (11,741 bytes). Phases A-E: executor hardening,
   snippets registry, test_cursor_session nesting fix, Part C verification,
   live P1-P4 runs.
-- Codex works in laptop worktree /home/james/workspace/y1-snippets, branch
+- Codex works in laptop worktree ~/workspace/y1-snippets, branch
   y1-snippets, pushes there. Y1b verifies on the VM, then merges to
   todolist-push. NO direct todolist-push pushes until verified.
 - Redteam BLOCK (improvements/worker-y1-redteam.md, 774 lines): 7 attacks,
@@ -29,7 +29,7 @@ best quality, not speed. Council + redteam debate every phase verdict.
 - Codex PID 184702 ALIVE, elapsed 03:34. Log /tmp/y1-codex.log 231,660 bytes
   and growing (0 at 18:01 launch). Log tail shows Codex reading
   scripts/cu.py code-exec section (lines 2239+). Phase A in progress.
-- Worktree /home/james/workspace/y1-snippets HEAD 87cd34f [y1-snippets].
+- Worktree ~/workspace/y1-snippets HEAD 87cd34f [y1-snippets].
   Laptop main repo at 4500a18 [todolist-push]. (Checking what 87cd34f is.)
 - Verification panel: spawning my own council (3) + redteam (1) to define
   a verification probe for each of the 12 must-fix items, so Phase A is

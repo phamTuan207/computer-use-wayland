@@ -86,7 +86,7 @@ Kiem tra chi doc tren laptop, 2026-11-22 19:49 +07:
 
 - Lenh: `ps -eo pid,etime,cmd | grep overlay.py`
 - Output: PID 115582, etime 08:34 (8 phut 34 giay), chay
-  /home/james/computer-use-wayland/scripts/overlay.py daemon; native
+  ~/computer-use-wayland/scripts/overlay.py daemon; native
   indicator PID 115587 cung song. Daemon cu PID 76088 (tu 18:40:32, chua
   bao gio spawn duoc native) da khong con.
 - holders.json luc 19:49: S2-flip acquired 19:36:53 +07:00 (pid null) va

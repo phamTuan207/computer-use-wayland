@@ -5,7 +5,7 @@ Owner asleep since 06:52 with a headache; Muse holds full authority.
 Owner order 16:01 +07 Sun 2026-11-22: execute the agent-native plan
 now, in parallel with step 9, rung 2, Y13G round-3.
 Repo: ~/workspace/computer-use-wayland (VM copy), branch todolist-push.
-Source plan: laptop /home/james/.config/agent-computer-use/machine/
+Source plan: laptop ~/.config/agent-computer-use/machine/
 agent-native-inventory-20261122.md (810 lines, sha256
 d750a3e14f2363a6e2a0e40b9e33cb062acec974f17533bebad5ff9c12d568a8,
 verified live at task start). Every item re-verified live before
@@ -330,7 +330,7 @@ repo. This log is a coordinator log, not machine config.
   the laptop loopback, so curl /json/version + /json/list from the
   laptop is the live proof, same as P3.
 - NOTE FOR COORDINATOR: the LAPTOP tree
-  (/home/james/computer-use-wayland) still carries the old
+  (~/computer-use-wayland) still carries the old
   [::1]:9223 mapping until it is synced from this branch. Next S2
   runs from a stale laptop tree would aim Brave at the dead
   [::1]:9223. Sync the laptop tree before the next Brave CDP run.

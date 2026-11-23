@@ -83,14 +83,14 @@ Evidence, all verified first-hand:
 
 Astra escalation was NOT used for this decision: the evidence was decisive, and Astra already ruled Fix B DEAD (`typing-fix-plan-astra6-v2.md` section 10) with the allocator as the repair.
 
-Backup examined: `/home/james/.local/share/agent-computer-use/backups/sync-20261116-231305-266679-2c5b03c7` (Oct-26 snapshot + Nov-6 partial).
+Backup examined: `~/.local/share/agent-computer-use/backups/sync-20261116-231305-266679-2c5b03c7` (Oct-26 snapshot + Nov-6 partial).
 
 ## 4. Commit, push, sync
 
 - Commit `c9b96a7c73b3f2e2f4864b0d7ddbfefae1cd1efb` on main (4 files, +816/-102), author phamTuan207 <232407559+phamTuan207@users.noreply.github.com>. No force-push, no reset.
 - Push: `129c7f2..c9b96a7 main -> main`. Remote HEAD == local HEAD == `c9b96a7c73b3f2e2f4864b0d7ddbfefae1cd1efb`. Tree clean.
 - Pre-sync state verified: no `~/.cache/agent-computer-use/session.json`; relay PID 106001 alive (`session_remote.py serve --socket /run/user/1000/computer-use-wayland/relay.sock`, user service active); IM `1/keyboard-us`.
-- Sync: ledger `/home/james/.local/share/agent-computer-use/releases/20261117-053025-600262-c9b96a7c73.json`; `--check` exit 0 (191 managed files, 11 preserved-history exceptions). Repo == installed MATCH on all 7 changed files:
+- Sync: ledger `~/.local/share/agent-computer-use/releases/20261117-053025-600262-c9b96a7c73.json`; `--check` exit 0 (191 managed files, 11 preserved-history exceptions). Repo == installed MATCH on all 7 changed files:
   - `native/wtype` `83b8b9b25ff9adaab85b59ba047544a3317d1ea23c45e40b702e6119daa8f65b`
   - `scripts/cu.py` `b104948fac9b670fe4ce193157d08f353c054ef7d337c806654de5808ed750a2`
   - patch `f4cc6a9f889879f741d0c2f0769b3f1eb9b2c5685fb7781cf5f5dd8ecd02267c`
@@ -297,8 +297,8 @@ The user's own VS Code on-tap.txt window (0x55abc9eed380) and his Zen browser wi
 - Report: `~/workspace/omarchy-tasks/cu-fix-20261114/improvements/typing-fix-multipage-report.md` (this file).
 - Log: `~/workspace/omarchy-tasks/cu-fix-20261114/improvements/live-test-log.md`.
 - Spec: `~/workspace/omarchy-tasks/cu-fix-20261114/improvements/typing-fix-multipage-astra6.md`.
-- Repo (laptop): `/home/james/computer-use-wayland`, branch main, HEAD `c9b96a7c73b3f2e2f4864b0d7ddbfefae1cd1efb`.
-- Installed tree: `/home/james/.local/share/agent-computer-use`. Old backup: `/home/james/.local/share/agent-computer-use/backups/sync-20261116-231305-266679-2c5b03c7/`.
+- Repo (laptop): `~/computer-use-wayland`, branch main, HEAD `c9b96a7c73b3f2e2f4864b0d7ddbfefae1cd1efb`.
+- Installed tree: `~/.local/share/agent-computer-use`. Old backup: `~/.local/share/agent-computer-use/backups/sync-20261116-231305-266679-2c5b03c7/`.
 - L3 runs (laptop): `/tmp/opencode/multipage-l3/tc02-t1`, `tc02-t2`, `tc02-t3`, `tc01`, `tc03`, `tc04`, `tc05`, `tc06`, `tc07`, `tc08`, `tc09`, `tc10`, `tc11`, `tc12`, `tc13`, `stress/` (each with `input/`, `output/`, `evidence/`, `executor-log.md`, `state.json`). Prior run: `/tmp/opencode/overnight-fix-20261116-0105/`. Briefs: `/tmp/tc02-exec-prompt-v2.txt`, `/tmp/tc02-brief/combined.txt` (808 lines, on the laptop).
 - Drivers: `/tmp/kbcorr-drivers/`. Live-run base: `/tmp/opencode/multipage-pvjh3iag`. Select probe: `/tmp/opencode/selprobe-1`.
 - Work files (VM `/tmp/mp/`): `main-orig.c`, `main-patched.c`, `main-new.c`, `keyboard-correction.patch`, `keyboard-correction-new.patch`, `wtype_harness.c`, `test_wtype_native.py`, `README.md`, `run_kbcorr.py`, `run_textview.py`, `textview.py`, `kbcorr-{direct,controls,shortcuts,textview}.sh`, `golden/g{1,2,3,4}.bin`, `old/cu-backup.py`, `old/session_driver-backup.py`, `old/a11y-backup.py`, `harness-old.c`, `golden-run.sh`, `native-run*.log`, `mp-fullsuite.log`, `sync-run.log`, `live-run.py`, `select-probe.py`, `l3.py`, `tc08-tkb.html`, `tc11-de-bai.html`, `tc12-lich-tuan.html`, `stress.py`, `stress-rerun.py`, `stress-s5b.py`, `stress-s5c.py`, `stress-s5d.py`, `close-stress-windows.py`, `close-s-windows.py`.

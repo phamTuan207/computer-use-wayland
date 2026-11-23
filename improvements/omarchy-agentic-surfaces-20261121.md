@@ -1,6 +1,6 @@
 # Omarchy agentic surfaces: what is built in, what computer-use can use
 
-Worker OA, Sat 2026-11-21 23:37-23:41 +07. Machine: james laptop, Omarchy 4.0.0.alpha. Method: read-only probes over SSH (help text, --help, JSON output, source reads) plus docs crawl (official manual AI page, GitHub, Glama). Nothing installed, no setting changed, no window or tab touched.
+Worker OA, Sat 2026-11-21 23:37-23:41 +07. Machine: user laptop, Omarchy 4.0.0.alpha. Method: read-only probes over SSH (help text, --help, JSON output, source reads) plus docs crawl (official manual AI page, GitHub, Glama). Nothing installed, no setting changed, no window or tab touched.
 
 ## 0. Verdict
 
@@ -16,8 +16,8 @@ This answers the owner's 23:22 question precisely. `muse.skill_search 'omarchy'`
 - Guides next to it: hyprland.md, plugins.md, theming.md, hooks.md, capture.md, contributing.md
 - /usr/share/omarchy/default/agents/skills/diagnose-crash/SKILL.md (128 lines)
 /usr/share/omarchy/default/agents/skills/omarchy-app/SKILL.md (181 lines, build Qt Quick desktop apps with an agent)
-/home/james/.claude/skills/omarchy, diagnose-crash, omarchy-app, omacal, computer-use (symlinked/installed for Claude Code)
-/home/james/.codex/skills/ (many, including chromium-cdp, claude-handoff, chief-of-staff)
+~/.claude/skills/omarchy, diagnose-crash, omarchy-app, omacal, computer-use (symlinked/installed for Claude Code)
+~/.codex/skills/ (many, including chromium-cdp, claude-handoff, chief-of-staff)
 
 So KB and my catalog search were right in letter (no skill in Muse's catalog) and the owner was right in substance (the skill exists on his machine). The gap is that Muse never had it in its catalog. Adoption item 1 below closes it.
 
@@ -51,7 +51,7 @@ Usable-now means callable from SSH by an agent with no GUI interaction. Value is
 | monitor state | Monitor panel state for the shell | `omarchy monitor state` | Yes | Low | Read-only state. |
 | crash mute | Silence crash notifications per program | `omarchy crash mute [program] [on|off|toggle]` | Yes | Low | Fleet already watches coredumps via watchdog. |
 | hook | Event automation hooks | `omarchy hook [name] [args...]`, `omarchy hook install <type> <file>` into ~/.config/omarchy/hooks/<type>.d/ | Yes | Med | Hook dirs present: battery-low.d, font-set.d, post-boot.d, post-update.d, pre-refresh-pacman.d, theme-set.d. A post-update hook already re-applies the council Fix 2a indicator.py patch after Omarchy updates (pattern to reuse). |
-| plugin | Shell plugins (bar widgets, overlays, panels) | `omarchy plugin add <git-url> [--enable]`, `clone <source-id>`, `list [--json]`, `enable/disable/remove/update/validate` | Yes, with OMARCHY_PATH set | Med | 60+ plugins listed live. `james.agents` (My Agents, cloned from omarchy.agents) and `james.menu` are user clones. No MCP plugin installed. |
+| plugin | Shell plugins (bar widgets, overlays, panels) | `omarchy plugin add <git-url> [--enable]`, `clone <source-id>`, `list [--json]`, `enable/disable/remove/update/validate` | Yes, with OMARCHY_PATH set | Med | 60+ plugins listed live. `user.agents` (My Agents, cloned from omarchy.agents) and `user.menu` are user clones. No MCP plugin installed. |
 | install ai openclaw | Install the OpenClaw agent platform plus Control UI | `omarchy install ai openclaw` | Install, not probe | Low | Out of scope for this read-only task. OpenClaw is a multi-agent harness; needs a separate decision. |
 | commands | Machine-readable command registry | `omarchy commands`, `omarchy commands --all`, `omarchy commands --json`, `omarchy commands --check` | Yes | Med | Self-documenting CLI; the skill's recommended discovery path. |
 | theme/bar/toggle/restart/refresh | Theme, bar layout, feature toggles, restarts, config reset | `omarchy theme set <name>`, `omarchy bar move ...`, `omarchy toggle <flag>`, `omarchy restart shell/terminal/hyprsunset`, `omarchy refresh <app>` | Yes | Low | Refresh backs up first but resets config; never run without owner confirmation. |
@@ -95,7 +95,7 @@ Several commands crash over plain SSH with `KeyError: 'OMARCHY_PATH'` (agent usa
 
 - Default agent: opencode. Codex account: [email redacted], Free plan, signed in, 720h window 1.0 percent used, resets 2026-12-12T12:17:17Z. Claude and Grok accounts: not signed in. All switch modes manual, threshold 95.
 - Codex usage today (21/11): 18 prompts, 18 sessions, 190,927,021 tokens, all gpt-6-luna. Total: 1168 prompts, 403 sessions, 30 active days. Recent days (messageCount, reads as tokens): 15/11 143,943,986; 16/11 161,709,396; 17/11 173,404,828; 18/11 108,771,107; 19/11 271,955,516; 20/11 430,589,581; 21/11 190,927,021. Model cache reads are huge (gpt-6-luna cacheReadInputTokens 1,448,384,768).
-- Shell plugins live: 60+ listed, including james.agents (My Agents, enabled, cloned from omarchy.agents), james.menu (disabled), omarchy.indicators (enabled), omarchy.workspaces (enabled), crmne.todoist (enabled), omarchy.reminders (enabled), omarchy.remote-session (enabled), omarchy.tailscale (disabled). No MCP plugin installed.
+- Shell plugins live: 60+ listed, including user.agents (My Agents, enabled, cloned from omarchy.agents), user.menu (disabled), omarchy.indicators (enabled), omarchy.workspaces (enabled), crmne.todoist (enabled), omarchy.reminders (enabled), omarchy.remote-session (enabled), omarchy.tailscale (disabled). No MCP plugin installed.
 
 ## Sources
 

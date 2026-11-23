@@ -44,7 +44,7 @@ Probe window 05:56:16-05:56:53 +07.
 - Verdict: DEAD.
 
 ### fcc: USABLE (CLI + server alive; live-turn saturation not re-tested)
-- `which fcc-claude` -> /home/james/.local/bin/fcc-claude.
+- `which fcc-claude` -> ~/.local/bin/fcc-claude.
 - `mise ls claude` -> 2.1.327, 2.1.328, 2.1.329, 2.1.330 (latest per omarchy-tools.toml).
 - `fcc-claude --help` -> prints real claude help ("Usage: claude [options] [command] [prompt]", "Claude Code - starts an interactive session by default...").
 - Running process: PID 229108, fcc-server (free-claude-code, --auto-started), running since Nov21, 0:37 CPU.
@@ -53,7 +53,7 @@ Probe window 05:56:16-05:56:53 +07.
 - Verdict: USABLE.
 
 ### opencode: UNKNOWN (server up, provider balance unverified)
-- `which opencode` -> /home/james/.local/share/mise/shims/opencode. `opencode --version` -> opencode v2.3.2, rc=0.
+- `which opencode` -> ~/.local/share/mise/shims/opencode. `opencode --version` -> opencode v2.3.2, rc=0.
 - `opencode --help` -> normal CLI help, no balance or quota command.
 - Running processes: PID 1059 `opencode serve --port 4096` since Nov21, 3:23 CPU; PID 190566 opencode serve --service; PID 2057 opencode-telegram.
 - Liveness: `curl -s -m 5 -o /dev/null -w "%{http_code}" http://127.0.0.1:4096/` -> 200.
@@ -66,4 +66,4 @@ Probe window 05:56:16-05:56:53 +07.
 - fcc: USABLE, claude 2.1.330 installed, help runs, fcc-server alive since Nov21.
 - opencode: UNKNOWN, v2.3.2, serve on 4096 returns HTTP 200, provider balance unverified, deepseek free known exhausted.
 
-Note (not probed, out of scope): codex shim exists at /home/james/.local/share/mise/shims/codex. Not tested in this probe.
+Note (not probed, out of scope): codex shim exists at ~/.local/share/mise/shims/codex. Not tested in this probe.

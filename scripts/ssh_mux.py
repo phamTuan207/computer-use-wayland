@@ -77,7 +77,9 @@ import sys
 import time
 from datetime import datetime, timezone
 
-HOST = "james@100.70.92.52"
+# Laptop SSH target (user@host). Set CU_LAPTOP_SSH in the environment;
+# no default is baked in so the repo carries no personal host info.
+HOST = os.environ.get("CU_LAPTOP_SSH", "")
 PROXY = "python3 /home/hatch/workspace/tailscale-proxy.py %h %p"
 KEY = "/home/hatch/.ssh/id_ed25519"
 CONTROL_PATH = "/tmp/cm-s0-%r@%h:%p"
@@ -124,6 +126,11 @@ class SshMux:
 
     def __init__(self, host=HOST, state_dir=None, runner=None,
                  clock=time.monotonic):
+        if not host:
+            raise ValueError(
+                "CU_LAPTOP_SSH is not set; set it to user@host for the "
+                "laptop (e.g. CU_LAPTOP_SSH=user@host python3 "
+                "scripts/ssh_mux.py ...)")
         self.host = host
         self.state_dir = Path(state_dir) if state_dir else _state_dir()
         self.log_path = self.state_dir / "ssh-mux.jsonl"

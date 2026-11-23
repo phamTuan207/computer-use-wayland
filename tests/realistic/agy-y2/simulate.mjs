@@ -225,7 +225,7 @@ const testSimulators = {
   '06': async (page) => {
     // 1. Join meeting
     await page.type('#input-meeting-id', 'Sprint Planning');
-    await page.type('#input-display-name', 'James');
+    await page.type('#input-display-name', 'Alex');
     await page.click('#btn-join-meeting');
 
     // 2. Toggle mic mute then unmute

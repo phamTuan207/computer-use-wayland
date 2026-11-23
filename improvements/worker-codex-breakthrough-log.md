@@ -7,8 +7,8 @@ Log rule: wall-clock Asia/Ho_Chi_Minh + elapsed time for every step.
 
 - 06:03:15 (T+0s) Prompt + error file copied to laptop: /tmp/codex-breakthrough-prompt.md (3907 bytes), /tmp/LOI-VA-GIAI-PHAP-TOAN-BO-20261121.md (125534 bytes). Verified present on laptop.
 - 06:03:xx Pre-launch state: codex-cli 0.169.0 on laptop. A DIFFERENT Codex already running: PID 774258, started 05:58, prompt /tmp/codex-amend4-prompt.md (COORD-CLICK-3 AMEND4 work). My audit is a second, separate Codex run: own prompt file, own output log, report to /tmp only, no repo writes. No conflict.
-- 06:03:xx Laptop repo /home/james/workspace/computer-use-wayland on branch todolist-push, HEAD 4500a18.
-- 06:04:15 (T+60s) Launched detached via /tmp/codex-breakthrough-launch.sh (proven demo pattern: setsid nohup codex exec -m gpt-6-luna -c model_reasoning_effort=max -s danger-full-access -C /home/james/workspace/computer-use-wayland - < prompt > /tmp/codex-breakthrough-out.log 2>&1 &). Codex PID 781223.
+- 06:03:xx Laptop repo ~/workspace/computer-use-wayland on branch todolist-push, HEAD 4500a18.
+- 06:04:15 (T+60s) Launched detached via /tmp/codex-breakthrough-launch.sh (proven demo pattern: setsid nohup codex exec -m gpt-6-luna -c model_reasoning_effort=max -s danger-full-access -C ~/workspace/computer-use-wayland - < prompt > /tmp/codex-breakthrough-out.log 2>&1 &). Codex PID 781223.
 - 06:04:30 (T+75s) Verified running: PID 781223, elapsed 00:08, /tmp/codex-breakthrough-out.log 4333 bytes, hooks SessionStart + UserPromptSubmit completed.
 
 ## Monitoring

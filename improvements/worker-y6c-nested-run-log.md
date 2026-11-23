@@ -44,7 +44,7 @@ Consequence for a fix: the nest Wayland socket is auto-named `wayland-1`, NOT `w
 
 Probe 2 (nest up 20s, no --socket): nested `hyprctl -j plugin list` returned `[]`; `hyprctl -j hyprglass status` returned `unknown request`. Nested monitors worked (WAYLAND-1, width 924). Per-instance log shows only the hook marker `Y6-NEST-HOOK: hyprglass not ready (count=0 version=nil)`; the config `hl.plugin.load()` call fails silently (no load error in the log).
 
-Probe 3: nested `hyprctl plugin load /home/james/.local/share/agent-computer-use/backups/full-1791544423/native/hyprglass.so` returned:
+Probe 3: nested `hyprctl plugin load ~/.local/share/agent-computer-use/backups/full-1791544423/native/hyprglass.so` returned:
 
 ```
 Plugin .../hyprglass.so could not be loaded: libaquamarine.so.14: cannot open shared object file: No such file or directory
@@ -52,7 +52,7 @@ Plugin .../hyprglass.so could not be loaded: libaquamarine.so.14: cannot open sh
 
 ldd on backup 1: `libaquamarine.so.14 => not found`, `libhyprgraphics.so.4 => not found`. The system has libaquamarine.so.15 (0.16.0) and libhyprgraphics.so.5 (0.6.0) only. Every hyprglass binary on disk shares the dead ABI: vendor copy (Oct 6), backup 1 (Oct 6), 3 sync-20261116 backups (Oct 10), and 6 hashed variants (sampled 2/6, same result). The live session also loads no hyprglass (live plugin list is hyprbars only; live hyprland config has no hyprglass plugin lines). This explains the standing note "plugin version 1.1.1-cu.1 still UNVERIFIED (never loaded anywhere)".
 
-Fix direction (not attempted by Y6c): rebuild hyprglass from the vendor source (src/, Makefile, hyprpm.toml exist under /home/james/.local/share/agent-computer-use/vendor/hyprglass/) against the current aquamarine .15 / hyprgraphics .5, or find another loadable build. Restoring the old .so.14/.so.4 libraries would break the current Hyprland and is not recommended. A rebuilt plugin still needs its version verified as 1.1.1-cu.1 (or the design re-pinned) before any retry.
+Fix direction (not attempted by Y6c): rebuild hyprglass from the vendor source (src/, Makefile, hyprpm.toml exist under ~/.local/share/agent-computer-use/vendor/hyprglass/) against the current aquamarine .15 / hyprgraphics .5, or find another loadable build. Restoring the old .so.14/.so.4 libraries would break the current Hyprland and is not recommended. A rebuilt plugin still needs its version verified as 1.1.1-cu.1 (or the design re-pinned) before any retry.
 
 ## Finding U5b (runner bug): the Wayland-backend gate greps the wrong log
 

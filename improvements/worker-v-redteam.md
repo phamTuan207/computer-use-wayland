@@ -105,7 +105,7 @@ C5. The applied Fix 1 deviates from the proposal. See attack F1-2 below.
 - journalctl --user -u omarchy-fcitx5.service 16:40-16:50 on 21/11: only an
   autosave at 16:47:30. No error, no restart in the stall window. Confirms
   T: fcitx5 logged nothing during the stall.
-- lotus-autostart.sh: /home/james/.local/bin/lotus-autostart.sh, mtime
+- lotus-autostart.sh: ~/.local/bin/lotus-autostart.sh, mtime
   16:52 21/11. Backup .bak-20261121, 258 bytes vs 259 current. diff shows
   exactly one line changed: `-s lotus` to `-s ngosen`. 2>/dev/null still
   present on both lines. Comment still says "switch to Lotus".

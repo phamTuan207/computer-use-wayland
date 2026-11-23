@@ -303,7 +303,7 @@
     stale hyprbars-only assumption); it was re-copied and re-verified.
     (Intermediate md5 f197ac65 was the pre-comment-fix version.)
 - ldd proof (A1, 16:14 +07): plugin path from the staged conf
-  /home/james/.local/share/agent-computer-use/worktrees/hyprglass-03a57c4/hyprglass.so,
+  ~/.local/share/agent-computer-use/worktrees/hyprglass-03a57c4/hyprglass.so,
   ldd rc=0, "not found" count 0, libaquamarine.so.15 and libhyprgraphics.so.5
   resolve. Full output saved to improvements/y6c5-evidence/ldd-y6e-conf.txt
   (closes the Council 2 artifact gap).

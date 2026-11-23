@@ -91,7 +91,7 @@ Step 2, stop the relay. Over mux SSH to the laptop:
 Verify the broker is down from the VM with the exact status
 call:
 
-`scripts/ssh-laptop-mux.sh "python3 /home/james/computer-use-wayland/scripts/session_remote.py status"`
+`scripts/ssh-laptop-mux.sh "python3 ~/computer-use-wayland/scripts/session_remote.py status"`
 
 It must answer `{"ok": false, "error": "broker_unavailable"}`
 with rc 1. Record the time.
@@ -140,7 +140,7 @@ sys.path.insert(0, '/home/hatch/workspace/mochi-b2-4-work/scripts')
 import s2_flip_live
 
 SSH = ['/home/hatch/workspace/mochi-b2-4-work/scripts/ssh-laptop-mux.sh']
-CU = '/home/james/computer-use-wayland/scripts/cu.py'
+CU = '~/computer-use-wayland/scripts/cu.py'
 ENDPOINT = 'http://127.0.0.1:9223'
 MESSAGE = 'A5-DRILL-R901-CHROMIUM-IGNORE-TEST'
 
@@ -232,7 +232,7 @@ value, so the run JSON has no broker_finish field.
 
 Step 6, cleanup check. Over mux SSH to the laptop:
 
-`scripts/ssh-laptop-mux.sh "python3 /home/james/computer-use-wayland/scripts/session_cleanup.py --check"`
+`scripts/ssh-laptop-mux.sh "python3 ~/computer-use-wayland/scripts/session_cleanup.py --check"`
 
 It must exit 0 afterwards: no snapshot, no indicator socket,
 no stop markers, no overlay holders, no guardian process.

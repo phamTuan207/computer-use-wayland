@@ -23,7 +23,7 @@ Stall over 15 min with no progress: report to Muse tong at once.
 - 17:45-17:47 +07, T+0m to T+2m: read prior report
   improvements/worker-click5-agent-native-exec-log.md (P1-P10 done
   16:02-16:22, commit 53639c7) in full. Inventory doc on laptop
-  (/home/james/.config/agent-computer-use/machine/agent-native-inventory-20261122.md,
+  (~/.config/agent-computer-use/machine/agent-native-inventory-20261122.md,
   810 lines) assigned to both inventory workers to read live.
 - 17:47 +07, T+2m: spawned INV-DESKTOP (desktop files + wrappers)
   and INV-SYSTEM (autostart + systemd services + CLIs + live port
@@ -104,7 +104,7 @@ zero changes on the laptop, zero keystrokes/clicks/grim/relaunch.
   Puppeteer leak (P1 still clean). Missing: code, fcc-server.
 - CLI: 13/17 ready. Relay status idle, hyprctl 0.57.2 via guienv,
   kitty @ ls works, omarchy-shell ping ok, gh logged in, tailscale
-  online 100.70.92.52, nvim 0.12.6, zoxide 0.10.0, fcitx5-remote
+  online 192.0.2.1, nvim 0.12.6, zoxide 0.10.0, fcitx5-remote
   ngosen. Not ready: kitty get-text (no scratch terminal),
   code --status (VS Code not running), Omafile API (none, P7
   closed), fcc (missing from PATH, no server).

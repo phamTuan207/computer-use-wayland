@@ -18,7 +18,7 @@ Driver for COORD-CLICK-3. Owner: the owner. All times Asia/Ho_Chi_Minh.
 
 - 05:59:42 +07, Sun 2026-11-22: driver session started. VM repo on branch todolist-push, HEAD 5f5a2fd. Laptop checkout on todolist-push at 4500a18 (behind VM; tests/test_click3_redteam2.py not present on laptop yet).
 - 06:00:40 +07: fcc-claude launched DETACHED on laptop for Task 1 (F1 live confirmation), PID 777384, prompt /tmp/fcc-f1-prompt.md, output /tmp/fcc-f1.log. fcc-server PID 229108 confirmed running since Nov21. fcc-claude --help confirms -p non-interactive form works.
-- Note: direct scp to 100.70.92.52:22 failed (Operation not permitted); scp via tailscale-proxy.py ProxyCommand worked.
+- Note: direct scp to 192.0.2.1:22 failed (Operation not permitted); scp via tailscale-proxy.py ProxyCommand worked.
 - 06:00:40 +07: Task 1 launched. Task 2 (AMEND4 re-verification) waits for the AMEND4 log to land on origin/todolist-push; VM origin/todolist-push HEAD is 5f5a2fd at last fetch 06:00.
 
 ## Task 1 - F1 live confirmation

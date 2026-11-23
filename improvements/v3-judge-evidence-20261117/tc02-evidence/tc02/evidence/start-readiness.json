@@ -1,8 +1,8 @@
 {
   "case": "tc02",
   "owner": "tc02-overnight-fix-20261116-0105",
-  "lease_dir": "/home/james/.cache/agent-computer-use/overnight-tc02-qwazkoku",
-  "lease_file": "/home/james/.cache/agent-computer-use/overnight-tc02-qwazkoku/tc02.lease",
+  "lease_dir": "~/.cache/agent-computer-use/overnight-tc02-qwazkoku",
+  "lease_file": "~/.cache/agent-computer-use/overnight-tc02-qwazkoku/tc02.lease",
   "lease_contents_saved": false,
   "live_pre_start_status": {
     "ok": true,

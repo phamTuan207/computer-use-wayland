@@ -41,7 +41,7 @@
 - Full vs cf11a4b: 2069 lines, md5 855c19c94ed91887c25452d6a16c6f36, in ~/workspace/mochi-b2-3-patches/mochi-b2-3-full-vs-cf11a4b.patch.
 - Cumulative patch committed as a file: improvements/mochi-b2-3-cumulative-vs-cf11a4b.patch, commit c597a29 on todolist-push. It is the same bytes as the full vs cf11a4b patch (md5 855c19c94ed91887c25452d6a16c6f36). Independent review found ef964a6's own diff does not apply on cf11a4b (fails all 4 files) because it is diffed against e6b9777; the cumulative patch applies cleanly on cf11a4b (git apply --check PASS, 40/40 PASS after apply, 4 file md5s match ef964a6).
 
-## Correction 23/11/2026 (by mochi, on independent review by Pham Tuan)
+## Correction 23/11/2026 (by mochi, on independent review by the owner)
 
 The claim in the redteam round 9 and independent verifier sections, "verified both patches apply cleanly on both baselines", is imprecise and is corrected here. What was actually verified, each patch on its own baseline only:
 

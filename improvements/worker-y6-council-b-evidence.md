@@ -78,13 +78,13 @@ Verdict: CONFIRMED, recomputed by me.
 
 Verdict: CONFIRMED, both hashes recomputed by me.
 
-- Backup 1: /home/james/.local/share/agent-computer-use/backups/full-1791544423/native/hyprglass.so, 26,643,888 bytes, sha256 2671d4ac41941ca62ae8100fc3b57bf3153bf6def893334f3a8ecbc1ea0145d5. Matches the report exactly.
-- Backup 2: /home/james/.local/share/agent-computer-use/backups/sync-20261116-230254-783160-a9a24690/trees/native/hyprglass.so, 30,622,520 bytes, sha256 ddfff1c2f2cebb66e10b85a739beae0c7c562ccf9d78e3250647c07f8f31fa8b. Matches the report exactly. Different build, not used.
-- Vendor copy: /home/james/.local/share/agent-computer-use/vendor/hyprglass/hyprglass.so, 26,643,888 bytes, sha256 2671d4ac41941ca62ae8100fc3b57bf3153bf6def893334f3a8ecbc1ea0145d5. Identical to backup 1, as claimed. Correction for the report: name this laptop path explicitly. The bare path "vendor/hyprglass/hyprglass.so" does not exist in the VM repo checkout (no vendor/ dir there, git ls-files shows no hyprglass.so), so a reader of the repo alone cannot verify it.
+- Backup 1: ~/.local/share/agent-computer-use/backups/full-1791544423/native/hyprglass.so, 26,643,888 bytes, sha256 2671d4ac41941ca62ae8100fc3b57bf3153bf6def893334f3a8ecbc1ea0145d5. Matches the report exactly.
+- Backup 2: ~/.local/share/agent-computer-use/backups/sync-20261116-230254-783160-a9a24690/trees/native/hyprglass.so, 30,622,520 bytes, sha256 ddfff1c2f2cebb66e10b85a739beae0c7c562ccf9d78e3250647c07f8f31fa8b. Matches the report exactly. Different build, not used.
+- Vendor copy: ~/.local/share/agent-computer-use/vendor/hyprglass/hyprglass.so, 26,643,888 bytes, sha256 2671d4ac41941ca62ae8100fc3b57bf3153bf6def893334f3a8ecbc1ea0145d5. Identical to backup 1, as claimed. Correction for the report: name this laptop path explicitly. The bare path "vendor/hyprglass/hyprglass.so" does not exist in the VM repo checkout (no vendor/ dir there, git ls-files shows no hyprglass.so), so a reader of the repo alone cannot verify it.
 - Backup 1 is ELF 64-bit LSB shared object, x86-64, BuildID 1fd1cf18ea1648b70ddd779ec4c49fc8304da1e1, with debug_info, not stripped.
 - nm -D on backup 1 shows __hyprland_api_get_client_hash and pluginAPIVersion, as claimed.
 - No version string embedded: strings on backup 1 shows only "Hyprnux" for the name/version area, no 1.1.1 string. The report is correct that plugin version 1.1.1-cu.1 is UNVERIFIED until a successful load.
-- Installed tree check: /home/james/.local/share/agent-computer-use/native/ contains NO hyprglass .so (only hyprglass-LICENSE, patches, and lua files), matching the report and the decision doc.
+- Installed tree check: ~/.local/share/agent-computer-use/native/ contains NO hyprglass .so (only hyprglass-LICENSE, patches, and lua files), matching the report and the decision doc.
 - Live Hyprland version confirmed via hyprctl: 0.57.2, commit 11cbc6c577b84ffb1edf4df3fc5b6128c3ae6947. Terminals foot and kitty both present (/usr/bin/foot, /usr/bin/kitty).
 - Optics profile values confirmed in repo native/hyprglass-local-optics.lua: blur_strength 0.15, refraction_strength 0.55, layers enabled = true. Small precision gap: the report says "mask_mode contour". The lua file has layers mask_mode "region" at line 26 and a "contour" mask_mode at line 37 in a different context. Quote precisely or drop the mask_mode shorthand.
 
@@ -114,7 +114,7 @@ Verdict: CONFIRMED with a timing correction. The notification was caused by the 
 
 ### Preconditions: partly checkable, partly assumed
 
-1. "No Zen runner active: flock on zen_dom.lock free AND no run_agyq2/run_live/E1 process AND Muse confirms no runner scheduled in the next 30 minutes." The first two parts are checkable: the lock file exists (/home/james/.cache/agent-computer-use/zen_dom.lock, 0 bytes, mtime 17:48) and runner processes are visible via ps. The third part names no check and no confirmer. Fix: name who confirms (parent agent, by what check) or replace it with a concrete check.
+1. "No Zen runner active: flock on zen_dom.lock free AND no run_agyq2/run_live/E1 process AND Muse confirms no runner scheduled in the next 30 minutes." The first two parts are checkable: the lock file exists (~/.cache/agent-computer-use/zen_dom.lock, 0 bytes, mtime 17:48) and runner processes are visible via ps. The third part names no check and no confirmer. Fix: name who confirms (parent agent, by what check) or replace it with a concrete check.
 2. "Owner away (handover confirmed 18:24, still in force)." A handover is time-bound. A later run must re-confirm it at run time, not assume it is still in force.
 3. "seatd NOT required (Wayland backend needs no seat)." This is an assertion, not a checkable precondition. Reframe it as an assumption the run itself tests. If the Wayland backend also demands a seat, the run fails at the same place and that is a result, not a precondition violation.
 
@@ -140,7 +140,7 @@ Verdict: CONFIRMED with a timing correction. The notification was caused by the 
 2. Attempt table env column: mark attempts 1, 2, 4, 5 env as report-only (no launch artifact saved). Save the launch command or script for every future attempt. Clarify attempt 3 never pointed at the live Wayland display (WAYLAND_DISPLAY was wayland-y6 in run-nested.sh).
 3. Root-cause wording: change "Attempt 4/5 crash reports contain the Aquamarine log tail. Attempt 5 is the most complete." to "All five crash reports contain the Aquamarine log tail. Attempt 3 is the most complete (extra logind.c:309 line)." Downgrade "Aquamarine needs a seat even for headless" from proven to inference, with the reasoning (seat open precedes backend dispatch; headless never reached). Downgrade logind exclusivity from "proven" to "strongly supported by the attempt-3 EBUSY line".
 4. Notification attribution: the ~18:23 notification was caused by the first four dumps; the fifth is 18:24:52, after the notification.
-5. Vendor path: name the laptop path /home/james/.local/share/agent-computer-use/vendor/hyprglass/hyprglass.so explicitly, since vendor/ does not exist in the repo checkout.
+5. Vendor path: name the laptop path ~/.local/share/agent-computer-use/vendor/hyprglass/hyprglass.so explicitly, since vendor/ does not exist in the repo checkout.
 6. Soften the two unverifiable details: seatd socket mode (keep the EACCES line as the evidence) and seatd PID 219625 (no surviving record; seatd.log plus EACCES prove seatd ran).
 7. Optics profile: fix or drop the "mask_mode contour" shorthand (lua has layers mask_mode "region" at line 26 and "contour" at line 37 in a different context).
 8. Design: create run-nested-wayland.sh and hyprland-wayland.conf before claiming the design runnable; re-confirm handover at run time; make the runner-free check concrete with a named confirmer; add a mid-run abort rule for focus steal or a runner starting; add a teardown step; pre-verify indicator.py honors the nested env; pin the live instance signature deterministically.

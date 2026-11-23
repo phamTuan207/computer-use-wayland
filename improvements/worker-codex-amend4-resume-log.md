@@ -1,7 +1,7 @@
 # CODEX-AMEND4-RESUME log
 
 Worker: CODEX-AMEND4-RESUME. Owner: the owner. Parent: COORD-CLICK-3.
-Start: 2026-11-22 07:26:05 +07 (Asia/Ho_Chi_Minh). Task: resume Codex thread 01a20054-e53a-77c3-a0f1-383a3b6f409f with item-12 follow-up on laptop worktree /home/james/workspace/cu-amend4-codex, branch amend4-codex.
+Start: 2026-11-22 07:26:05 +07 (Asia/Ho_Chi_Minh). Task: resume Codex thread 01a20054-e53a-77c3-a0f1-383a3b6f409f with item-12 follow-up on laptop worktree ~/workspace/cu-amend4-codex, branch amend4-codex.
 Rules: no em dash or en dash anywhere; explicit pathspec commits only; never force-push; never touch main laptop checkout; never touch owner tabs or browsers.
 
 ## TASK 1: commit driver log improvements/worker-codex-amend4-driver-log.md (todolist-push, VM repo)
@@ -13,7 +13,7 @@ Rules: no em dash or en dash anywhere; explicit pathspec commits only; never for
 
 ## TASK 2: resume Codex thread 01a20054-e53a-77c3-a0f1-383a3b6f409f with item-12 follow-up
 
-- 07:26:32 +07: laptop pre-check via ssh-laptop.sh: /tmp/codex-amend4-followup.md present (3,451 bytes), worktree /home/james/workspace/cu-amend4-codex on branch amend4-codex, HEAD 274270c (matches brief), working tree clean, no live `codex exec` process.
+- 07:26:32 +07: laptop pre-check via ssh-laptop.sh: /tmp/codex-amend4-followup.md present (3,451 bytes), worktree ~/workspace/cu-amend4-codex on branch amend4-codex, HEAD 274270c (matches brief), working tree clean, no live `codex exec` process.
 - 07:27:00 +07: LAUNCHED detached resume: `setsid nohup codex -m gpt-6-luna -c model_reasoning_effort=max --sandbox danger-full-access exec resume 01a20054-e53a-77c3-a0f1-383a3b6f409f "$(cat /tmp/codex-amend4-followup.md)" > /tmp/codex-amend4-resume.log 2>&1 < /dev/null & disown`. SSH session died with broken pipe at ~37s as expected; the detached process survived. Log tail confirms the follow-up prompt was received (hooks SessionStart and UserPromptSubmit completed). Resume accepted, thread NOT expired. No fallback needed.
 - Elapsed at launch: ~1 min from task start.
 - 07:37:52 +07 check (11 min in): Codex ACTIVE. Two new commits on amend4-codex: ee8ccb7 "test: reproduce act-now scope and after-image defects", aa0fbbb "test: cover chainable act-now fallback after-image". Working tree: M scripts/first_action.py, M tests/test_first_action.py (fix in progress, uncommitted). Log shows fresh PostToolUse activity at 07:37:52. (ps grep for "codex exec" printed nothing, but commits + fresh log lines prove the process is alive; process argv may differ.)

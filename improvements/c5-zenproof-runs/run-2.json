@@ -1,6 +1,6 @@
 {
   "run": 2,
-  "fixture": "file:///home/james/computer-use-wayland/tests/two_vision_fixture.html?clone=zen",
+  "fixture": "file://~/computer-use-wayland/tests/two_vision_fixture.html?clone=zen",
   "fixture_sha256": "147494cda4c6ae24a51ced03ccdfb3fc5a79a1bbab56dcdfc5afb4f72fba6cbf",
   "message": "ZEN-DELEGATE-R2-IGNORE-TEST",
   "intent": "c5-zen-delegate-r2",
@@ -131,16 +131,16 @@
       "recovery": "none"
     },
     "leases": [
-      "/home/james/.cache/agent-computer-use/c5-heldout-90.lease",
-      "/home/james/.cache/agent-computer-use/c5-heldout-91.lease",
-      "/home/james/.cache/agent-computer-use/s2-flip-run0.lease",
-      "/home/james/.cache/agent-computer-use/s2-flip-run1.lease",
-      "/home/james/.cache/agent-computer-use/s2-flip-run2.lease",
-      "/home/james/.cache/agent-computer-use/s2-flip-run3.lease",
-      "/home/james/.cache/agent-computer-use/s2-flip-run4.lease",
-      "/home/james/.cache/agent-computer-use/s2-flip-run5.lease",
-      "/home/james/.cache/agent-computer-use/s2-flip-trivial.lease",
-      "/home/james/.cache/agent-computer-use/s2-verify.lease"
+      "~/.cache/agent-computer-use/c5-heldout-90.lease",
+      "~/.cache/agent-computer-use/c5-heldout-91.lease",
+      "~/.cache/agent-computer-use/s2-flip-run0.lease",
+      "~/.cache/agent-computer-use/s2-flip-run1.lease",
+      "~/.cache/agent-computer-use/s2-flip-run2.lease",
+      "~/.cache/agent-computer-use/s2-flip-run3.lease",
+      "~/.cache/agent-computer-use/s2-flip-run4.lease",
+      "~/.cache/agent-computer-use/s2-flip-run5.lease",
+      "~/.cache/agent-computer-use/s2-flip-trivial.lease",
+      "~/.cache/agent-computer-use/s2-verify.lease"
     ]
   },
   "outcome": "error",

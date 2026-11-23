@@ -85,8 +85,8 @@ from perception_router import route_perception  # noqa: E402
 
 REPO = Path(__file__).resolve().parents[1]
 SSH = str(REPO / 'scripts' / 'ssh-laptop-mux.sh')
-LAPTOP_CU = '/home/james/computer-use-wayland/scripts/cu.py'
-LAPTOP_REMOTE = '/home/james/computer-use-wayland/scripts/session_remote.py'
+LAPTOP_CU = '~/computer-use-wayland/scripts/cu.py'
+LAPTOP_REMOTE = '~/computer-use-wayland/scripts/session_remote.py'
 LAPTOP_V12 = '/tmp/s2-v12.mjs'
 LAPTOP_P9 = '/tmp/s2-p9.mjs'
 LAPTOP_SEED = '/tmp/s2-seed.mjs'
@@ -97,7 +97,7 @@ LAPTOP_COUNT = '/tmp/c5-count.mjs'
 # overlay pill on the laptop, driven over SSH with the repo's
 # scripts/overlay.py. Distinct agent 'S2-flip' so this release can
 # never drop another agent's holder.
-LAPTOP_OVERLAY = '/home/james/computer-use-wayland/scripts/overlay.py'
+LAPTOP_OVERLAY = '~/computer-use-wayland/scripts/overlay.py'
 PILL_AGENT = 'S2-flip'
 PILL_METHOD = 'CDP'
 
@@ -1186,7 +1186,7 @@ class Harness:
     def run(self, browsers):
         t0 = time.monotonic()
         mux = self.mux_baseline()
-        lease = '/home/james/.cache/agent-computer-use/s2-flip-run%d.lease' % self.run_no
+        lease = '~/.cache/agent-computer-use/s2-flip-run%d.lease' % self.run_no
         owner = 's2-flip-run%d' % self.run_no
         # The label is computed before the try block on purpose: an
         # unknown browser raises ValueError fail-closed after the mux

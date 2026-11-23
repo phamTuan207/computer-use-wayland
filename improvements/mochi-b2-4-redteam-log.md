@@ -375,7 +375,7 @@ mock, kem cua so live cu the o muc 2 (F1).
   hyprglass.so", "sync-20261116-230254-783160-a9a24690/trees/
   native/hyprglass.so") khong ton tai trong worktree (ls bao
   No such file or directory); duong dan day du nam tren laptop
-  (/home/james/.local/share/agent-computer-use/backups/...) chi
+  (~/.local/share/agent-computer-use/backups/...) chi
   co trong improvements/worker-y6-hyprglass-nested-probe.md
   dong 113, 118, khong co trong probe file. Launcher Y6e cung
   khong co duong dan trong file (that ra la

@@ -148,8 +148,8 @@ def find_verified_host_donor():
 
 def _client_environment():
     home = os.environ.get('HOME') or str(Path.home())
-    return {'HOME': home, 'USER': os.environ.get('USER', 'james'),
-            'LOGNAME': os.environ.get('LOGNAME', os.environ.get('USER', 'james')),
+    return {'HOME': home, 'USER': os.environ.get('USER', 'testuser'),
+            'LOGNAME': os.environ.get('LOGNAME', os.environ.get('USER', 'testuser')),
             'PATH': '/usr/bin:/bin', 'PYTHONDONTWRITEBYTECODE': '1'}
 
 

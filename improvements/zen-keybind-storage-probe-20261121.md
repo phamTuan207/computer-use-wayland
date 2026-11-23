@@ -7,8 +7,8 @@ Answer: **file-based for customized shortcuts; defaults live in source, not in a
 
 ### 1. The live file: customKeys.json (FOUND, read 23:04:37 +07)
 
-Path: `/home/james/.config/zen/ae59l0ak.Default (release)/customKeys.json`
-Size: 442 bytes, mtime Nov 13 13:36, owner james, mode 644.
+Path: `~/.config/zen/ae59l0ak.Default (release)/customKeys.json`
+Size: 442 bytes, mtime Nov 13 13:36, owner user, mode 644.
 
 Full contents (verbatim):
 ```json

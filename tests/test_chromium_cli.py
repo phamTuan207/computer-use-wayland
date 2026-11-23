@@ -223,10 +223,10 @@ class ChromiumCliTests(unittest.TestCase):
         conn.execute("INSERT INTO urls VALUES (?,?,?,?)",
                      ("https://example.com/old", "Old Page", 1, t_old))
         conn.execute("INSERT INTO downloads VALUES (?,?,?,?,?,?)",
-                     ("/home/james/Downloads/report.pdf",
+                     ("/home/testuser/Downloads/report.pdf",
                       "https://example.com/report.pdf", t_new, 1, 1234, 1234))
         conn.execute("INSERT INTO downloads VALUES (?,?,?,?,?,?)",
-                     ("/home/james/Downloads/partial.bin",
+                     ("/home/testuser/Downloads/partial.bin",
                       "https://example.com/partial.bin", t_old, 0, 9999, 100))
         conn.commit()
         conn.close()

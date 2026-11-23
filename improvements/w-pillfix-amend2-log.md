@@ -222,7 +222,7 @@ Start daemon moi (detached, GUI env nhu _ensure_daemon):
 SIG=$(ls /run/user/1000/hypr/ | head -n1)
 HYPRLAND_INSTANCE_SIGNATURE=$SIG WAYLAND_DISPLAY=wayland-1 \
 XDG_RUNTIME_DIR=/run/user/1000 setsid nohup python3 \
-/home/james/computer-use-wayland/scripts/overlay.py daemon \
+~/computer-use-wayland/scripts/overlay.py daemon \
 >> /tmp/amend2-daemon.log 2>&1 < /dev/null & disown
 ```
 Verify sau start (20:50:47 +07):

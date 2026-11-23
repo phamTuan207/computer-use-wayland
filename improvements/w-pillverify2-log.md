@@ -37,7 +37,7 @@ W-PILLVERIFY truoc khi lam.
 
 ## 2026-11-22 19:48:12 +07, T+0m: sync repo laptop, buoc 1
 
-Laptop repo /home/james/workspace/computer-use-wayland, nhanh
+Laptop repo ~/workspace/computer-use-wayland, nhanh
 todolist-push. git fetch origin xong, HEAD da la 8f600b9, khong can
 fast-forward. git status co file untracked co san, khong co file dirty nao
 chan viec.
@@ -144,7 +144,7 @@ smoke", chi khac label theo holder CDP.
 
 Canh bao tren stderr cua act (khong anh huong ket qua, ghi de worker
 doc lap xem): "CDP pill release failed: overlay.py
-/home/james/workspace/computer-use-wayland/scripts/overlay.py failed:
+~/workspace/computer-use-wayland/scripts/overlay.py failed:
 usage: overlay.py [-h] {acquire,release,status,stop,daemon} ...
 overlay.py: error: unrecognized arguments: --method CDP". Du bao loi
 release, khong co holder Muse nao sot lai trong status sau act.

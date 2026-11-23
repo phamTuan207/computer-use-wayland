@@ -11,7 +11,7 @@ repo worktree and ~/workspace scratch.
   redteam paper, then the 6-file diff stat (+1413/-259).
 - 00:06 +07 (T+1m): read SHIPPED.md, regen script, manifest in full.
   Noted: SHIPPED.md has no --ship-dir mention; launch command uses
-  --repo /home/james/workspace/computer-use-wayland.
+  --repo ~/workspace/computer-use-wayland.
 - 00:07 +07 (T+2m): read plan Y13g amendments section + Y13f section
   it supersedes. Noted B3 -m list includes hyphenated names.
 - 00:08 +07 (T+3m): read runner top (guard/scan) + launcher top
@@ -54,7 +54,7 @@ repo worktree and ~/workspace scratch.
   check_token); SHIPPED.md + plan + runner comment all claim the
   launcher writes it. --repo paths disagree (launcher docstring
   ~/computer-use-wayland vs SHIPPED.md
-  /home/james/workspace/computer-use-wayland).
+  ~/workspace/computer-use-wayland).
 - 00:16 +07 (T+11m): verdict paper written:
   improvements/worker-y13g-council-3.md, verdict AMEND, findings
   C3-1..C3-11 + 10 verified holds. Dash sweep: 0 em/en dashes in

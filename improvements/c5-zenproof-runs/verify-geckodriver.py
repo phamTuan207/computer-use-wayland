@@ -16,7 +16,7 @@ import sys
 import time
 from pathlib import Path
 
-sys.path.insert(0, '/home/james/computer-use-wayland/scripts')
+sys.path.insert(0, '~/computer-use-wayland/scripts')
 import zen_dom  # noqa: E402
 
 

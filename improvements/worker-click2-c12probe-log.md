@@ -32,11 +32,11 @@ Branch: todolist-push. All times wall-clock Asia/Ho_Chi_Minh + elapsed.
 - Marionette 2828 LISTEN (zen-bin), CDP 9222 LISTEN.
 - No live driving processes: only session_remote.py relay serve (idle
   infrastructure). Chrome/Brave on ws2 are clone windows, untouched.
-- Laptop checkout: /home/james/workspace/computer-use-wayland,
+- Laptop checkout: ~/workspace/computer-use-wayland,
   todolist-push, HEAD 4500a18, has scripts/zen_dom.py, native/pointer,
   /tmp/geckodriver present, wtype present (Escape via wtype, never ydotool).
-- Note: /home/james/computer-use-wayland (old path) lacks zen_dom.py;
-  the live checkout is /home/james/workspace/computer-use-wayland.
+- Note: ~/computer-use-wayland (old path) lacks zen_dom.py;
+  the live checkout is ~/workspace/computer-use-wayland.
 
 ## Probe script
 

@@ -278,7 +278,7 @@ class VscodeCli(unittest.TestCase):
             b"WAYLAND_DISPLAY=wayland-1\0"
             b"XDG_RUNTIME_DIR=/run/user/1000\0"
             b"HYPRLAND_INSTANCE_SIGNATURE=abc\0"
-            b"HOME=/home/james\0")
+            b"HOME=/home/testuser\0")
         other = fake_proc / "5678"
         other.mkdir()
         (other / "status").write_text("Name:\tbash\n")

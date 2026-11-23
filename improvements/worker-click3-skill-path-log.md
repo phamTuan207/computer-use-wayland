@@ -2,9 +2,9 @@
 
 - Worker: CLICK3-SKILL-PATH, owner the owner
 - Start: 2026-11-22 04:33 +07. Symlink live: 04:36 +07. Log written: 04:37 +07.
-- Decision implemented: canonical last30days copy on the laptop is ~/.agents/skills/last30days/ (standard agent skills dir, dated 02:14, 197 files). The workspace copy at /home/james/workspace/custom-skills/last30days/ is now a symlink to it, so the two copies cannot drift.
+- Decision implemented: canonical last30days copy on the laptop is ~/.agents/skills/last30days/ (standard agent skills dir, dated 02:14, 197 files). The workspace copy at ~/workspace/custom-skills/last30days/ is now a symlink to it, so the two copies cannot drift.
 
-## 1. Which agent loads skills from which path (laptop, james)
+## 1. Which agent loads skills from which path (laptop, user)
 
 - ~/.agents/skills/ : canonical agent-skills dir. Holds last30days as a real dir (197 files, dated 2026-11-22 02:14), installed by `npx skills add mvanhorn/last30days-skill -g`.
 - ~/.claude/skills/last30days : SYMLINK already (created 02:14) pointing to ../../.agents/skills/last30days. Claude Code, and fcc-claude (the ~/.local/bin/fcc-claude wrapper), load the canonical copy through a symlink. This is the established pattern on this machine.
@@ -27,8 +27,8 @@
 
 - Backed up the listing first: ls -R of the workspace copy to worker-click3-skill-path-backup-ls-R.txt. No 19M copy made.
 - Saved the pipeline.py diff to worker-click3-skill-path-pipeline-diff.txt.
-- rm -rf /home/james/workspace/custom-skills/last30days ; ln -s /home/james/.agents/skills/last30days /home/james/workspace/custom-skills/last30days
-- Verify: readlink returns /home/james/.agents/skills/last30days; md5sum of SKILL.md identical through both paths (5b69df66a3a716fc21c0f6775284bef6); find -L through the symlink counts 197 files; pipeline.py through the symlink is the canonical 366051-byte version. (Plain find without -L counts 0 because it does not follow the symlink; that is expected, not a failure.)
+- rm -rf ~/workspace/custom-skills/last30days ; ln -s ~/.agents/skills/last30days ~/workspace/custom-skills/last30days
+- Verify: readlink returns ~/.agents/skills/last30days; md5sum of SKILL.md identical through both paths (5b69df66a3a716fc21c0f6775284bef6); find -L through the symlink counts 197 files; pipeline.py through the symlink is the canonical 366051-byte version. (Plain find without -L counts 0 because it does not follow the symlink; that is expected, not a failure.)
 
 ## 4. Result
 

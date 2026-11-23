@@ -1,6 +1,6 @@
 {
   "run": 2,
-  "fixture": "file:///home/james/computer-use-wayland/tests/two_vision_fixture.html?clone=zen",
+  "fixture": "file://~/computer-use-wayland/tests/two_vision_fixture.html?clone=zen",
   "fixture_sha256": "147494cda4c6ae24a51ced03ccdfb3fc5a79a1bbab56dcdfc5afb4f72fba6cbf",
   "message": "ZEN-DELEGATE-R2-IGNORE-TEST",
   "intent": "c5-zen-delegate-r2",
@@ -23,7 +23,7 @@
     }
   },
   "outcome": "error",
-  "error": "zen-tab list failed rc=2:  python3: can't open file '/home/james/c5-zenproof-run/zen-tab.py': [Errno 2] No such file or directory",
+  "error": "zen-tab list failed rc=2:  python3: can't open file '~/c5-zenproof-run/zen-tab.py': [Errno 2] No such file or directory",
   "cleanup": {
     "skipped": true
   },

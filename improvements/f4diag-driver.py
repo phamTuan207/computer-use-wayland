@@ -52,7 +52,7 @@ proc = subprocess.run(
      '-o', 'ProxyCommand=python3 /home/hatch/workspace/'
             'tailscale-proxy.py %h %p',
      '-i', '/home/hatch/.ssh/id_ed25519',
-     'james@100.70.92.52:/tmp/c5-zenproof-f4diag-pill-pre.png',
+     'user@192.0.2.1:/tmp/c5-zenproof-f4diag-pill-pre.png',
      str(WORKDIR / 'pill-pre-f4diag.png')],
     capture_output=True, text=True, timeout=120)
 print('grim copy rc=%d' % proc.returncode)

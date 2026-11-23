@@ -15,7 +15,7 @@ Ghi chu doc lap: cac repro o muc 1 va 2 do redteam nay chay luc 19:50:25-19:50:3
 ## 0. Cai gi da duoc kiem chung la DUNG (ghi nhan cong bang)
 
 - Nguyen nhan goc duoc W-PILLFIX neu la co that: `overlay.wayland_env` cu doc `/run/user/1000/hyprland`, thu muc nay khong ton tai tren laptop (ssh 19:50:45: `ls: cannot access '/run/user/1000/hyprland': No such file or directory`), trong khi signature that nam o `/run/user/1000/hypr/11cbc6c577b84ffb1edf4df3fc5b6128c3ae6947_1795342782_301493614`.
-- Fix hoat dong live: daemon cu PID 76088 chet, daemon moi PID 115582 start 19:40:45.465, `native_spawned` luc 19:40:45.659 (elapsed 206ms), loi `native_spawn_failed` cuoi cung luc 19:40:29.376 (daemon cu), 0 loi tu khi daemon moi chay. Daemon chay tu `/home/james/computer-use-wayland/scripts/overlay.py`, sha256 `b551cf6b2e1503824c690f46dae5ce88c90dfca6cf0f0761699e808717be59b4` khop log W-PILLFIX; indicator sha256 `4008141bc28ca1b6ba2865ef6a05eb8a4d837c3ca7675f5daa2e06d05e3a43ac` cung khop.
+- Fix hoat dong live: daemon cu PID 76088 chet, daemon moi PID 115582 start 19:40:45.465, `native_spawned` luc 19:40:45.659 (elapsed 206ms), loi `native_spawn_failed` cuoi cung luc 19:40:29.376 (daemon cu), 0 loi tu khi daemon moi chay. Daemon chay tu `~/computer-use-wayland/scripts/overlay.py`, sha256 `b551cf6b2e1503824c690f46dae5ce88c90dfca6cf0f0761699e808717be59b4` khop log W-PILLFIX; indicator sha256 `4008141bc28ca1b6ba2865ef6a05eb8a4d837c3ca7675f5daa2e06d05e3a43ac` cung khop.
 - Targeted suites chay lai tren VM 19:50:19: `test_overlay.py` 19 tests OK, `test_indicator.py` 43 tests OK, `test_hypr_cmd.py` 24 tests OK. Full suite dang chay nen luc viet bao cao, ket qua o muc 5.
 - Huong fail-closed la dung: `cmd_acquire` tra 1 khi visible False, `cdp.mjs` `runOverlayCli` reject tren exit non-zero nen act bi tu choi, `chromium_cli._pill_hold` dung `overlay.hold` voi `check=True` nen raise. Huong nay khong bi tan cong do.
 - Cap nhat 19:59: W-PILLVERIFY2 (9ac4dcd) PASS doc lap: pill HIEN trong 2 anh grim luc act chay (19:50:31 va 19:50:33), label "Muse via CDP", act ok:true, completed 5, assert #out "clicked" pass, gate 4.29 DAT. Crop phong dai xac nhan pill la lop layer-shell vat qua ranh 2 cua so Chromium, khong phai tab trinh duyet. Day la bang chung pixel ma W-PILLFIX thieu.
@@ -32,7 +32,7 @@ Code `scripts/overlay.py`, `wayland_env` dong 207-211: neu env co `HYPRLAND_INST
 Chung minh live tren laptop, 19:51:39:
 
 ```
-$ env -i PATH=/usr/bin:/bin HOME=/home/james XDG_RUNTIME_DIR=/run/user/1000 HYPRLAND_INSTANCE_SIGNATURE=deadbeef-stale WAYLAND_DISPLAY=wayland-1 hyprctl -j hyprglass status
+$ env -i PATH=/usr/bin:/bin HOME=~ XDG_RUNTIME_DIR=/run/user/1000 HYPRLAND_INSTANCE_SIGNATURE=deadbeef-stale WAYLAND_DISPLAY=wayland-1 hyprctl -j hyprglass status
 Couldn't connect to /run/user/1000/hypr/deadbeef-stale/.socket.sock. (4)
 ```
 

@@ -3002,7 +3002,7 @@ hit_rate, timing. Shipped scripts/jsonlutil.py (md5 3a2ed1af),
 scripts/hit_rate.py (md5 5fb5a960), scripts/timing.py (md5
 48e7b95b) to BOTH /tmp/y14-server/ AND /tmp/y14-server/scripts/
 (all md5s match the laptop repo copies at
-/home/james/workspace/computer-use-wayland/scripts/). Re-test
+~/workspace/computer-use-wayland/scripts/). Re-test
 on the laptop, all PASS: `import run_live` shows
 `live_metrics: <module 'live_metrics' from
 '/tmp/y14-server/live_metrics.py'>` (NOT None); `import

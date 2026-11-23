@@ -4,8 +4,8 @@ You are the EXECUTOR in a controlled experiment, condition A (DIRECT), SECOND ob
 
 ## Inputs
 
-1. Task spec: /home/james/workspace/computer-use-wayland/tests/realistic/agy-q2/test-05-contact-book.md (read it fully)
-2. Fixture: /home/james/workspace/computer-use-wayland/tests/realistic/agy-q2/fixtures/test-05-contact-book.html (read it to confirm every selector: static ids, JS-generated ids, modal behavior, dropdown values, the star element, the delete confirmation, search and filter behavior, the banner text)
+1. Task spec: ~/workspace/computer-use-wayland/tests/realistic/agy-q2/test-05-contact-book.md (read it fully)
+2. Fixture: ~/workspace/computer-use-wayland/tests/realistic/agy-q2/fixtures/test-05-contact-book.html (read it to confirm every selector: static ids, JS-generated ids, modal behavior, dropdown values, the star element, the delete confirmation, search and filter behavior, the banner text)
 3. Driver reference: /tmp/e1/worker-y8-driver-reference.md (read it fully; it holds the command format and the shared rules)
 
 ## FORBIDDEN paths (reading any of these makes your run INVALID)

@@ -71,15 +71,15 @@
 - SSH route: ~/workspace/ssh-laptop.sh (read-only commands only, no
   restart, no sync, no write on the laptop).
 - Relay unit: computer-use-relay.service (user service). Drop-in:
-  /home/james/.config/systemd/user/computer-use-relay.service.d/flags.conf.
+  ~/.config/systemd/user/computer-use-relay.service.d/flags.conf.
 - Command (laptop, over SSH), about 21:47 +07:
-  `cd /home/james/computer-use-wayland && git rev-parse HEAD &&
+  `cd ~/computer-use-wayland && git rev-parse HEAD &&
   git log --oneline -1 && git status --short | head -20`,
   then `systemctl --user show computer-use-relay.service -p MainPID
   -p ActiveState -p Environment`, then `tr '\0' '\n' <
   /proc/$PID/environ | grep -E 'CU_CODE_EXEC|CU_PICK4_FASTPATH'`,
   then `cat` the drop-in, then `python3
-  /home/james/computer-use-wayland/scripts/session_remote.py status`.
+  ~/computer-use-wayland/scripts/session_remote.py status`.
 - Output, laptop checkout:
   - HEAD 8b0b32d56da168b165dc9fa20b307b5d55319df7. Log line:
     "COORD-CLICK-10: ZT-B run 3 FAIL verified, sequence STOPPED at step 1".
@@ -95,7 +95,7 @@
   - ActiveState=active, MainPID=70985 (same PID as the F3 restart at
     18:32:03 +07; the relay has NOT restarted since F3).
   - Environment=PYTHONDONTWRITEBYTECODE=1
-    XDG_CACHE_HOME=/home/james/.cache CU_CODE_EXEC=1
+    XDG_CACHE_HOME=~/.cache CU_CODE_EXEC=1
     CU_PICK4_FASTPATH=1. Both flags present.
   - /proc/70985/environ: CU_CODE_EXEC=1, CU_PICK4_FASTPATH=1. Both
     flags present in the live relay process env.
@@ -154,7 +154,7 @@
     computer-use-relay.service -p MainPID | cut -d= -f2)/environ |
     grep -E 'CU_CODE_EXEC|CU_PICK4_FASTPATH' (both must print =1)
     and python3
-    /home/james/computer-use-wayland/scripts/session_remote.py status
+    ~/computer-use-wayland/scripts/session_remote.py status
     (started_git_head must equal H2, state idle, active_sequence
     null). Only then issue run 1.
 - Change since prep round 1: the laptop tree is now clean apart from
@@ -312,8 +312,8 @@
     b39829e12b139d6fe4c2f803a356f6789bf90b4515e92c0f69184aa586580f4b.
   - All four present with a 21:42 mtime (freshly present, after the
     W-GPILL-RETRY finding that they went missing between runs).
-    Persistent copies also exist under /home/james/c5-step8-run/,
-    /home/james/c5-step9-run/ and /home/james/c5-rung2-run/ (found
+    Persistent copies also exist under ~/c5-step8-run/,
+    ~/c5-step9-run/ and ~/c5-rung2-run/ (found
     by find, not restored from, not compared by hash: the /tmp
     copies were present, so no restore was needed).
   - Note: the preflight probe driver itself does not call these
@@ -345,26 +345,26 @@
     navigate act ok True, new tab 8C2B463CBE7BE67680140CAF8E20A07D;
     P2 ok true, "#result still not clicked yet", same tab true,
     verify image
-    /home/james/.cache/agent-computer-use/4299a4741de8.jpg. PASS.
+    ~/.cache/agent-computer-use/4299a4741de8.jpg. PASS.
   - fill, probe_ms 8878.1: P1 ok false, same bad-ref error,
     navigate act ok True, new tab 2BD0A28B3368EA445064D7EDC5AC147F;
     P2 ok true, "#a2 still -", same tab true, verify image
-    /home/james/.cache/agent-computer-use/cc519ab55118.jpg. PASS.
+    ~/.cache/agent-computer-use/cc519ab55118.jpg. PASS.
   - set_value, probe_ms 8856.8: P1 ok false, same bad-ref error,
     navigate act ok True, new tab 970FC935D479B0A94F6FF1812D0CA028;
     P2 ok true, "#a2 still -", same tab true, verify image
-    /home/james/.cache/agent-computer-use/6e56c3716dc8.jpg. PASS.
+    ~/.cache/agent-computer-use/6e56c3716dc8.jpg. PASS.
   - assert, probe_ms 8822.8: P1 ok false, same bad-ref error,
     navigate act ok True, new tab 07DA26A3E50478EE1EFA413FE528032F;
     P2 ok true, "#result still not clicked yet", same tab true,
     verify image
-    /home/james/.cache/agent-computer-use/1b9e09a3f4be.jpg. PASS.
+    ~/.cache/agent-computer-use/1b9e09a3f4be.jpg. PASS.
   - retry-logging, probe_ms 10781.8: P1 ok true, retry_logged true:
     "first dom_act ok False completed 0", "retry dom_act ok True
     completed 1", "retry confirmed pick4-ok", new tab
     DF2C789E5A81598D528014A1C647A246; P2 ok true, "#result contains
     pick4-ok", same tab true, verify image
-    /home/james/.cache/agent-computer-use/ea107ed1327a.jpg. PASS.
+    ~/.cache/agent-computer-use/ea107ed1327a.jpg. PASS.
 - Verdict: 5/5 PASS, all_ok true, driver exit 0. Probe 5 now PASSES
   live: the in-program retry after a failed dom_act works, which
   proves the F4 adapter fix (landed 658c432, W-F4LAND, 7/7 suites

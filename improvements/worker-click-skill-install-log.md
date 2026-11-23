@@ -29,7 +29,7 @@ Source review context (from parent): last30days SKILL.md v4.5.0, repo HEAD f5d0e
 
 ## Laptop path used
 
-- /home/james/workspace/custom-skills/last30days/ (james@100.70.92.52 via Tailscale, ~/workspace/ssh-laptop.sh options).
+- ~/workspace/custom-skills/last30days/ (user@192.0.2.1 via Tailscale, ~/workspace/ssh-laptop.sh options).
 
 ## Other skill locations found on laptop
 

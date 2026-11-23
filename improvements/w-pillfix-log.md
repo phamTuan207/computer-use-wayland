@@ -37,21 +37,21 @@ can thi mo tab scratch moi ben canh. Pill PHAI hien khi dieu khien may.
 
 ## 2026-11-22 19:24:22 +07, T+1m: trang thai ban dau tren laptop
 
-- Laptop repo /home/james/workspace/computer-use-wayland, HEAD e200d6e
+- Laptop repo ~/workspace/computer-use-wayland, HEAD e200d6e
   (W-PILLVERIFY log), sach ngoai file untracked co san.
 - Daemon overlay PID 76088, started 18:40:32, chay tu
-  /home/james/computer-use-wayland/scripts/overlay.py (ban install, khong
+  ~/computer-use-wayland/scripts/overlay.py (ban install, khong
   phai workspace repo). holders.json chi con S2-flip (acquired 18:43:50,
   pid null). Khong co session.json nen khong co session indicator nao song.
 - Daemon log: native_spawn_failed lap moi 2s, 1345 lan tinh toi 19:24, cung
   loi liquid-glass. Loi dau tien ngay 18:40:32.524, elapsed_ms 19, tuc la
   daemon nay CHUA BAO GIO spawn duoc native trong ca vong doi cua no.
-- native/require-liquid TON TAI o ban install /home/james/computer-use-wayland
+- native/require-liquid TON TAI o ban install ~/computer-use-wayland
   (0 byte, 15/11 02:00, do setup tao), nen nhanh `final` trong
   indicator.Native BAT. Trong workspace repo thi file nay khong co (generated
   local config, khong tracked), nhung daemon khong chay tu workspace repo.
 - overlay.py va indicator.py giong het nhau giua 3 ban: workspace repo,
-  home checkout /home/james/computer-use-wayland, installed tree
+  home checkout ~/computer-use-wayland, installed tree
   ~/.local/share/agent-computer-use (diff rong).
 
 ## 2026-11-22 19:24-19:28 +07, T+1-5m: nghien cuu, tim nguyen nhan that
@@ -97,7 +97,7 @@ Phat hien 2, NGUYEN NHAN GOC: daemon khong co HYPRLAND_INSTANCE_SIGNATURE.
 
 Phat hien 3, TAI HIEN XAC DINH (clean env, khong SIG):
 
-- `env -i PATH=/usr/bin:/bin HOME=/home/james python3 -c` goi
+- `env -i PATH=/usr/bin:/bin HOME=~ python3 -c` goi
   overlay.wayland_env() roi indicator.liquid_available(env):
   SIG None, WAYLAND wayland-1, liquid_available False, status None.
 - Cung lenh voi SIG dung + WAYLAND_DISPLAY=wayland-1:
@@ -182,7 +182,7 @@ khong co bang chung.
 5. Commit nho (git add -- paths tuong minh, git commit -m, KHONG commit
    tran, KHONG add -A, KHONG amend), push, verify ls-remote.
 6. Deploy len laptop: pull workspace repo (ff-only); cap nhat home checkout
-   /home/james/computer-use-wayland (no bi chan boi cdp.mjs dirty: chi copy
+   ~/computer-use-wayland (no bi chan boi cdp.mjs dirty: chi copy
    file da sua, khong dong cdp.mjs); thu sync-installed.py cho installed
    tree neu chay sach (relay dang idle).
 7. Restart daemon (stop roi acquire moi) sau khi xac minh khong run song;
@@ -253,7 +253,7 @@ Lenh: `python3 -m unittest discover -s tests -p 'test_overlay.py'` etc.
 
 - Laptop workspace repo: fetch + merge --ff-only origin/todolist-push,
   len 8f600b9 (merge output 4 files, 240 insertions).
-- Home checkout /home/james/computer-use-wayland: git pull bi chan nhu du
+- Home checkout ~/computer-use-wayland: git pull bi chan nhu du
   doan (cdp.mjs dirty, upstream doi file nay tu 331523f). Xu ly: chi copy
   4 file da sua (scripts/overlay.py, scripts/indicator.py,
   tests/test_overlay.py, tests/test_indicator.py) tu workspace repo sang,
@@ -310,7 +310,7 @@ Lenh: `python3 -m unittest discover -s tests -p 'test_overlay.py'` etc.
 (Nguon: laptop, doc qua ssh-laptop.sh, kiem tra lai 19:48-19:54.)
 - Daemon cu PID 76088 (started 18:40:32) da chet theo dung ke hoach SIGTERM
   giu holders.json. Daemon moi PID 115582, started 19:40:45.465, chay tu
-  /home/james/computer-use-wayland/scripts/overlay.py daemon.
+  ~/computer-use-wayland/scripts/overlay.py daemon.
   daemon.log: `[overlay] {"elapsed_ms":12,"event":"daemon_started",
   "pid":115582,"wall_time":"2026-11-22T19:40:45.465+07:00"}`.
   daemon.json: `{"pid": 115582, "started": "2026-11-22T19:40:45+07:00"}`.

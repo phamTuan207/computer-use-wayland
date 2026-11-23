@@ -76,8 +76,8 @@ Verification after update:
 - SKILL.md: version "4.5.0".
 - scripts/lib/pipeline.py: _comment_candidates present (4 matches).
 - scripts/lib/env.py: is_tiktok_public_comments_on present.
-- Symlink /home/james/workspace/custom-skills/last30days/ still resolves to
-  /home/james/.agents/skills/last30days, and SKILL.md md5 is identical
+- Symlink ~/workspace/custom-skills/last30days/ still resolves to
+  ~/.agents/skills/last30days, and SKILL.md md5 is identical
   through both paths: 5b69df66a3a716fc21c0f6775284bef6.
 - diff vs ef01dab archive: only the local assets/ dir differs.
 - py_compile of env.py, pipeline.py, tiktok.py: OK.

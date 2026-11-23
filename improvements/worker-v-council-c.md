@@ -154,7 +154,7 @@ Conditions for any revisit (not an endorsement, a gate):
 - indicator.py source (lines 1-160 and 210-322, read live): the Super I chain,
   pending mechanism, 1000ms dbus timeout in call(), 500ms poll, 50ms pending poll,
   all as T described, with one attribution correction below.
-- T's run logs on disk (`/home/james/workspace/worker-t-typing-run.log`,
+- T's run logs on disk (`~/workspace/worker-t-typing-run.log`,
   `worker-t-typing-run2.log`, `worker-t-typing-run3.log`): timestamps, session ids,
   timeouts, and the garbled value "chaof banjhào bạn xin chaoào" match T's narrative
   exactly. Run 2 session c7fd43f8, run 3 session 6917a8c9, 5 wtype timeouts, cycle 7ms,
@@ -269,7 +269,7 @@ Marionette session lifetimes, Chromium scope starts, xkbcomp events, and per-cor
   /usr/share/omarchy/config/fcitx5/config, /usr/share/omarchy/default/input-methods/indicator.py
   (lines 1-160, 210-322), fcitx5-remote -n (ngosen, rc 0, 17:24:26 +07),
   journalctl 16:42:00-16:46:00, nproc (12), ps (Zen, kitty, Brave, Chromium, opencode),
-  /home/james/workspace/worker-t-typing-run*.log.
+  ~/workspace/worker-t-typing-run*.log.
 - Worker T: improvements/worker-t-vietnamese-typing-diagnosis.md and
   improvements/worker-t-vietnamese-typing-log.md, commit 029cb9b.
 - Docs: NixOS wiki Fcitx5 ("Without Active By Default set to True, fcitx5 needs to be

@@ -72,11 +72,12 @@ import sys
 import time
 from pathlib import Path
 
-sys.path.insert(0, '/home/james/computer-use-wayland/scripts')
+_REPO = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(_REPO / 'scripts'))
 import zen_dom
 
-FIXTURE_URL = ('file:///home/james/computer-use-wayland/tests/'
-               'two_vision_fixture.html?clone=zen')
+FIXTURE_URL = ((_REPO / 'tests' / 'two_vision_fixture.html').as_uri()
+               + '?clone=zen')
 # URL identity of the scratch tab (fix a). The fixture's document
 # title is the static 'Two-vision benchmark fixture'; its JS only
 # sets the H1 text. Target the tab by this URL substring, never by

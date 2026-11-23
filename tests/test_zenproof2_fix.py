@@ -77,7 +77,7 @@ class _FakeZenDomError(Exception):
 
 def _load_zen_tab():
     """Import zen-tab.py with a stub zen_dom (the VM has no
-    /home/james path). The stub is restored in sys.modules right
+    laptop home path). The stub is restored in sys.modules right
     after the import; zen-tab.py keeps its own reference to it.
     """
     stub = types.ModuleType('zen_dom')
@@ -103,8 +103,9 @@ zen_tab = _load_zen_tab()
 ZenDomError = _FakeZenDomError
 
 OWNER_URL = 'https://muse.ai/thread/750c8dae-58fb-4a65-82ac-753e78d6ce93'
-FIXTURE_URL = ('file:///home/james/computer-use-wayland/tests/'
-               'two_vision_fixture.html?clone=zen')
+# Same fixture URL as the module under test, so the fake tabs and
+# the module's navigation target always agree.
+FIXTURE_URL = zen_tab.FIXTURE_URL
 FIXTURE_SUBSTR = 'two_vision_fixture.html?clone=zen'
 
 

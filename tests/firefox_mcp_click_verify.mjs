@@ -7,7 +7,7 @@ import { spawn } from 'node:child_process';
 import { performance } from 'node:perf_hooks';
 
 const SERVER = '/tmp/firefox-mcp-test/node_modules/@mozilla/firefox-mcp/dist/index.js';
-const FIXTURE = 'file:///home/james/workspace/computer-use-wayland/tests/bidi_fixture.html';
+const FIXTURE = new URL('./bidi_fixture.html', import.meta.url).href;
 const startedAt = performance.now();
 let nextId = 1;
 let buffer = '';

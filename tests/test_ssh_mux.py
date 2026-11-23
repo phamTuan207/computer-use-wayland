@@ -39,7 +39,8 @@ def _runner_for(calls, script):
 class ConstructionTest(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
-        self.mux = ssh_mux.SshMux(state_dir=self.tmp.name)
+        self.mux = ssh_mux.SshMux(host="testuser@192.0.2.1",
+                                  state_dir=self.tmp.name)
 
     def tearDown(self):
         self.tmp.cleanup()
@@ -72,7 +73,7 @@ class ConstructionTest(unittest.TestCase):
     def test_base_options_match_ssh_laptop_sh(self):
         """Same host, key, proxy, and timeouts as ~/workspace/ssh-laptop.sh."""
         opts = " ".join(self.mux.client_argv(["true"]))
-        self.assertIn("james@100.70.92.52", opts)
+        self.assertIn("testuser@192.0.2.1", opts)
         self.assertIn("/home/hatch/.ssh/id_ed25519", opts)
         self.assertIn("tailscale-proxy.py", opts)
         self.assertIn("BatchMode=yes", opts)
@@ -83,7 +84,7 @@ class FailureClassificationTest(unittest.TestCase):
     def test_markers_are_connection_failures(self):
         for err in ("Control socket connect: No such file or directory",
                     "Master refused session request: Permission denied",
-                    "ssh: connect to host 100.70.92.52 port 22: "
+                    "ssh: connect to host 192.0.2.1 port 22: "
                     "Connection refused",
                     "Connection timed out during banner exchange"):
             proc = FakeProc(255, "", err)
@@ -105,7 +106,8 @@ class FailureClassificationTest(unittest.TestCase):
 class EnsureMasterTest(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
-        self.mux = ssh_mux.SshMux(state_dir=self.tmp.name)
+        self.mux = ssh_mux.SshMux(host="testuser@192.0.2.1",
+                                  state_dir=self.tmp.name)
 
     def tearDown(self):
         self.tmp.cleanup()
@@ -153,7 +155,8 @@ class EnsureMasterTest(unittest.TestCase):
 class RunRetryTest(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
-        self.mux = ssh_mux.SshMux(state_dir=self.tmp.name)
+        self.mux = ssh_mux.SshMux(host="testuser@192.0.2.1",
+                                  state_dir=self.tmp.name)
 
     def tearDown(self):
         self.tmp.cleanup()
@@ -193,7 +196,7 @@ class RunRetryTest(unittest.TestCase):
 class WatchdogTest(unittest.TestCase):
     def test_watchdog_is_ensure(self):
         with tempfile.TemporaryDirectory() as tmp:
-            mux = ssh_mux.SshMux(state_dir=tmp)
+            mux = ssh_mux.SshMux(host="testuser@192.0.2.1", state_dir=tmp)
             with mock.patch.object(
                     mux, "ensure_master",
                     return_value={"alive": True, "pid": 1,

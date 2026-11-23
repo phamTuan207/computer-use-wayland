@@ -70,12 +70,12 @@ TARGET = 'two_vision_fixture.html?clone=zen'
 SCRATCH_H1 = 'Clone zen thread'
 SCOPE = '#msg-input'
 BUBBLE_SELECTOR = '#thread .bubble:last-child'
-FIXTURE_URL = ('file:///home/james/computer-use-wayland/tests/'
+FIXTURE_URL = ('file://~/computer-use-wayland/tests/'
                'two_vision_fixture.html?clone=zen')
 FIXTURE_SHA = ('147494cda4c6ae24a51ced03ccdfb3fc5a79a1bbab56dcdfc5afb4f72fba6'
                'cbf')
 WORKDIR = Path('/tmp/c5-zenproof-6')
-LAPTOP_RUN = '/home/james/c5-zenproof-run'
+LAPTOP_RUN = '~/c5-zenproof-run'
 LAPTOP_DRIVER = LAPTOP_RUN + '/zen-tab.py'
 VM_DRIVER = (Path(__file__).resolve().parent / 'zen-tab.py')
 SCP_OPTS = ['-o', 'BatchMode=yes', '-o', 'ConnectTimeout=25',
@@ -84,7 +84,7 @@ SCP_OPTS = ['-o', 'BatchMode=yes', '-o', 'ConnectTimeout=25',
             '-o', 'ProxyCommand=python3 /home/hatch/workspace/'
                    'tailscale-proxy.py %h %p',
             '-i', '/home/hatch/.ssh/id_ed25519']
-LAPTOP_HOST = 'james@100.70.92.52'
+LAPTOP_HOST = 'user@192.0.2.1'
 
 PROBE_PROGRAM = (
     "dom_start()\n"
@@ -487,7 +487,7 @@ class Runner:
         # exists on the laptop. Ask zen_dom itself for the resolved
         # path and require the file to exist there.
         out, _e, _w = self.ssh(
-            'python3 -c "import sys; sys.path.insert(0, \'/home/james/'
+            'python3 -c "import sys; sys.path.insert(0, \'~/'
             'computer-use-wayland/scripts\'); import zen_dom, os; '
             'print(zen_dom.GECKODRIVER, os.path.isfile('
             'zen_dom.GECKODRIVER))"',
@@ -496,7 +496,7 @@ class Runner:
             raise RuntimeError('geckodriver missing at resolved path: %s'
                                % (out.strip()[:200],))
         out, _e, _w = self.ssh(
-            'sha256sum /home/james/computer-use-wayland/tests/'
+            'sha256sum ~/computer-use-wayland/tests/'
             'two_vision_fixture.html', 'fixture sha', timeout=30)
         if FIXTURE_SHA not in out:
             raise RuntimeError('fixture sha mismatch on the laptop: %s'

@@ -18,7 +18,7 @@ Verdict: the missing part is now done. Validation on real new apps by fresh inde
 ## 2.1.7 I7 - CONFIRMED UNMEASURABLE, stays open
 Search done 21/11 17:52, VM + laptop:
 - VM: find over ~/workspace, ~/memory, /tmp for video files. Only hieu-tutorial.mp4 in cf26-upload (Hieu's tutorial, not the user's video) and IMG_6089.mp4 12:04 20/11 (phone camera video, 7h before the 19:04 video). No file dated 18:00-20:00 20/11 in media_library. No screen recording 20/11 anywhere.
-- Laptop: find over /home/james/workspace, Downloads, Videos, /tmp. Screenrecords end 29/10/2026; nothing from 20/11.
+- Laptop: find over ~/workspace, Downloads, Videos, /tmp. Screenrecords end 29/10/2026; nothing from 20/11.
 - Error file says the video "nam trong chat, chua duoc dua vao file log nao" (LOI-COMPUTER-USE-TU-LICH-SU-CHAT-20261121.md line 68). Messenger is E2EE; the connector cannot decrypt media, so no agent can fetch it from the chat.
 - Verdict: unmeasurable as written. Reopens only if the user re-sends the original video file. The measurable part of I7 (measure hit rate) is already done at 2.1.8 (E2: 17/29 = 58.6% vision, DOM 100%).
 - Todolist line updated with the search evidence. Commit 2afb752.

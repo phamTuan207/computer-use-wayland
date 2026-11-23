@@ -40,7 +40,7 @@ Report goes to COORD-CLICK-9, not directly to the owner.
     4/5 criterion live on Zen. A P1.1 abort on a still-live lane
     would leave R13 open, not closed.
   - R14 cleared by W-GECKO (0cb2b20): geckodriver 0.37.1 at
-    /home/james/.local/bin/geckodriver, sha256 f831b7e6...,
+    ~/.local/bin/geckodriver, sha256 f831b7e6...,
     default now prefers that persistent path; minimal Marionette
     verify 18:11:01 +07 ok, 18 handles. P1.5 cleared by W-GECKO
     (902ffbe): liveness from ps plus relay state, leases evidence
@@ -87,9 +87,9 @@ Report goes to COORD-CLICK-9, not directly to the owner.
   ps plus relay (relay idle, owner null), active window is the
   Pick 4 fixture Chromium on ws2 with no driver behind it.
 - 19:59 +07, T+4m: run-2 runner written (section 2, geckodriver
-  check fix). Two laptop checkouts found: /home/james/workspace/
+  check fix). Two laptop checkouts found: ~/workspace/
   computer-use-wayland at 9ac4dcd (current, pill fix present) and
-  /home/james/computer-use-wayland at 331523f (old, contains fix B,
+  ~/computer-use-wayland at 331523f (old, contains fix B,
   R14, P1.5, missing only pill fix 8f600b9, dirty overlay/indicator
   files from another lane). Relay serve cwd is the old checkout,
   so live sessions run from the old checkout. Decision: do NOT
@@ -97,14 +97,14 @@ Report goes to COORD-CLICK-9, not directly to the owner.
   dirty files and the live relay runs from it; the new one was
   synced by W-PILLVERIFY2 for CDP pill verify). The runner uses
   the old checkout paths, as run 1 did; both checkouts resolve
-  geckodriver to /home/james/.local/bin/geckodriver and both
+  geckodriver to ~/.local/bin/geckodriver and both
   fixture shas match. Session-path pill showed in 6 sessions at
   18:43 with the old code (W-F4FIX); pill will be verified live
   with grim during this run, stop at once if absent.
 - 20:00:37 +07, T+5m: run 2 attempt 1 ABORTED in phase 1, wall
   2.7s, outcome error, no tab opened, no input sent. Error:
   "zen-tab list failed rc=2: python3: can't open file
-  '/home/james/c5-zenproof-run/zen-tab.py': No such file or
+  '~/c5-zenproof-run/zen-tab.py': No such file or
   directory". Cause: phase 1 calls tab('list') but the driver scp
   only happens in phase 2; run 1 never reached phase 2 (it
   aborted at the activewindow gate), so the driver was never on
@@ -165,7 +165,7 @@ Report goes to COORD-CLICK-9, not directly to the owner.
   persistent ~/.local/bin/geckodriver and /tmp/geckodriver no
   longer exists on the laptop (verified 19:57 +07, "No such file
   or directory"; resolved path via zen_dom on the laptop prints
-  /home/james/.local/bin/geckodriver True for both checkouts).
+  ~/.local/bin/geckodriver True for both checkouts).
   The old check would false-abort every run, so the run 2 runner
   asks zen_dom itself for the resolved path and requires the file
   to exist there. py_compile OK. This is a check alignment with
@@ -191,7 +191,7 @@ Report goes to COORD-CLICK-9, not directly to the owner.
 - Geckodriver: /tmp/geckodriver missing (expected, R14 moved
   the default); ~/.local/bin/geckodriver present, 6029440 bytes,
   18:10; zen_dom resolves GECKODRIVER to
-  /home/james/.local/bin/geckodriver in both laptop checkouts.
+  ~/.local/bin/geckodriver in both laptop checkouts.
 - Fixture sha on the laptop (both checkouts) matches the
   manifest hash.
 - Focus switch 19:59:42 +07: `hyprctl dispatch
@@ -442,7 +442,7 @@ Report goes to COORD-CLICK-9, not directly to the owner.
   visible (leftover holder).
 - Run 2 attempt 1, 20:00:37 +07, wall 2.7s, outcome error:
   "zen-tab list failed rc=2: can't open file
-  '/home/james/c5-zenproof-run/zen-tab.py'". JSON preserved
+  '~/c5-zenproof-run/zen-tab.py'". JSON preserved
   as improvements/c5-zenproof-runs/run-2-attempt1.json.
 - Runner fix (driver transfer to phase 1), commit cfa687b,
   pushed, ls-remote cfa687bde2efccce72fbc11635982e6a944f918f.

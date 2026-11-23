@@ -41,7 +41,7 @@ Trang thai truoc release (chi doc, ssh-laptop.sh):
 Lenh (duong release dung cua overlay, khong sua tay holders.json,
 khong restart daemon):
 ```
-~/workspace/ssh-laptop.sh 'python3 /home/james/computer-use-wayland/scripts/overlay.py release --agent W-PILLFIX'
+~/workspace/ssh-laptop.sh 'python3 ~/computer-use-wayland/scripts/overlay.py release --agent W-PILLFIX'
 ```
 Output 20:09:25.866 +07:
 ```

@@ -24,7 +24,7 @@ Join meeting "Sprint Planning", toggle mute/unmute mic, toggle camera off/on, sh
 1. Open fixture tests/realistic/agy-y2/fixtures/test-06-video-call.html in the browser.
 2. Verify element #call-status-badge text is "Lobby" and #participant-count text is "0".
 3. Click input #input-meeting-id and type "Sprint Planning".
-4. Click input #input-display-name and type "James".
+4. Click input #input-display-name and type "Alex".
 5. Click button #btn-join-meeting to enter the video conference.
 6. Verify element #call-status-badge text is "Connected" and #participant-count text is "4".
 7. Verify element #room-name-display text is "Sprint Planning".

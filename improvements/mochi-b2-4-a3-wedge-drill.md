@@ -70,7 +70,7 @@ holdings:
   refused. Run it from a separate shell on the VM, fail fast
   (no --wait), with a fresh probe lease:
 
-  `scripts/ssh-laptop-mux.sh "python3 /home/james/computer-use-wayland/scripts/session_remote.py start --owner a3-wedge-probe --lease-file /home/james/.cache/agent-computer-use/a3-wedge-probe.lease"`
+  `scripts/ssh-laptop-mux.sh "python3 ~/computer-use-wayland/scripts/session_remote.py start --owner a3-wedge-probe --lease-file ~/.cache/agent-computer-use/a3-wedge-probe.lease"`
 
   Expected output is `{"ok": false, "error": "busy", ...}`
   with rc 1: _start answers busy while a task runs
@@ -82,7 +82,7 @@ holdings:
   abort for seeing `busy` instead of that sentence. Record
   the refusal, then do NOT retry it, and remove the probe
   lease on the laptop (`rm -f
-  /home/james/.cache/agent-computer-use/a3-wedge-probe.lease`)
+  ~/.cache/agent-computer-use/a3-wedge-probe.lease`)
   so it cannot confuse a later start. This is the lock limb,
   measured live.
 - Scope: record the driver process group (driver PID and its
@@ -103,7 +103,7 @@ holdings:
 - Latch: record that STATE/cancelled is absent before the
   cancel step (latch clear):
 
-  `scripts/ssh-laptop-mux.sh "test ! -e /home/james/.cache/agent-computer-use/cancelled && echo latch-clear"`
+  `scripts/ssh-laptop-mux.sh "test ! -e ~/.cache/agent-computer-use/cancelled && echo latch-clear"`
 
 Step 2, wedge it. On the laptop, SIGSTOP the session-driver
 child PID recorded in step 1 (kill ONLY that PID, never
@@ -118,7 +118,7 @@ plus lock and answers nothing.
 Step 3, observe the wedge (do not touch anything yet).
 Poll broker status every 5s with the exact command:
 
-`scripts/ssh-laptop-mux.sh "python3 /home/james/computer-use-wayland/scripts/session_remote.py status --lease-file <lease>"`
+`scripts/ssh-laptop-mux.sh "python3 ~/computer-use-wayland/scripts/session_remote.py status --lease-file <lease>"`
 
 Record each poll: state must stay running, active_sequence
 stuck on the in-flight sequence, next_sequence unchanged,
@@ -145,7 +145,7 @@ once (the worker thread starts immediately) or `busy` if a
 request is already active. The 120s wait applies to the
 result of the in-flight sequence only, so poll it once:
 
-`scripts/ssh-laptop-mux.sh "python3 /home/james/computer-use-wayland/scripts/session_remote.py result --lease-file <lease> --sequence <in-flight-seq>"`
+`scripts/ssh-laptop-mux.sh "python3 ~/computer-use-wayland/scripts/session_remote.py result --lease-file <lease> --sequence <in-flight-seq>"`
 
 It waits up to REQUEST_TIMEOUT 120s (plus 5s client margin)
 and returns the record status, expected `running` while the
@@ -155,7 +155,7 @@ time, strictly increasing sequence).
 
 Step 4, cancel latch. Set the cancel latch (the owner's
 cancel path: `computer-use cancel` on the laptop, that is
-`python3 /home/james/computer-use-wayland/scripts/cu.py cancel`,
+`python3 ~/computer-use-wayland/scripts/cu.py cancel`,
 or the Escape binding). Record the time. The wedged driver cannot
 act on the latch while stopped, so nothing is expected to
 stop yet. This step proves the latch was set and is visible
@@ -175,7 +175,7 @@ cleanly or run its cleanup):
 
 Then finish with the owner's lease when held (120s timeout):
 
-`scripts/ssh-laptop-mux.sh "python3 /home/james/computer-use-wayland/scripts/session_remote.py finish --lease-file <lease>"`
+`scripts/ssh-laptop-mux.sh "python3 ~/computer-use-wayland/scripts/session_remote.py finish --lease-file <lease>"`
 
 Expected: the finish call runs the full 120s and returns
 `{"ok": false, "status": "cleaning", "error":
@@ -210,7 +210,7 @@ recovery_required, NOT an acceptance: the failed task plus
 the retained snapshot make _start refuse until recovery
 (step 7). Run it fail fast with a fresh probe lease:
 
-`scripts/ssh-laptop-mux.sh "python3 /home/james/computer-use-wayland/scripts/session_remote.py start --owner a3-wedge-probe2 --lease-file /home/james/.cache/agent-computer-use/a3-wedge-probe2.lease"`
+`scripts/ssh-laptop-mux.sh "python3 ~/computer-use-wayland/scripts/session_remote.py start --owner a3-wedge-probe2 --lease-file ~/.cache/agent-computer-use/a3-wedge-probe2.lease"`
 
 Expected output is `{"ok": false, "error":
 "recovery_required", ...}` with rc 1. Record it, do NOT
@@ -223,7 +223,7 @@ verify the driver is dead and status shows driver failed
 (step 6), then run `computer-use recover` FIRST, before
 anything else touches the snapshot:
 
-`scripts/ssh-laptop-mux.sh "python3 /home/james/computer-use-wayland/scripts/cu.py recover"`
+`scripts/ssh-laptop-mux.sh "python3 ~/computer-use-wayland/scripts/cu.py recover"`
 
 Recover takes the owner lock, stops the session, and
 restores the desktop from session.json, and restore()

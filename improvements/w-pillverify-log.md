@@ -42,7 +42,7 @@ todolist-push truoc khi lam.
 
 ## 2026-11-22 19:13:16 +07, T+1m: sync repo laptop, buoc 1
 
-Laptop repo /home/james/workspace/computer-use-wayland, nhanh
+Laptop repo ~/workspace/computer-use-wayland, nhanh
 todolist-push, HEAD cu 48c6aee, origin/todolist-push 929decf (sau fetch).
 File scripts/cdp.mjs khong dirty nhu mo ta trong task (git status --
 short scripts/cdp.mjs rong), nen khong can checkout rieng file do.

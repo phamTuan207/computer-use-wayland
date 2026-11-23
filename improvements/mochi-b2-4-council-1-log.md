@@ -344,7 +344,7 @@ unless a check names another hash. Times Asia/Ho_Chi_Minh.
   PASS 21:57, commit 915121d exists (git cat-file -t
   915121d returns commit); hyprglass not loaded live, .so
   only in backups (line 74). The backup .so paths named in
-  the probe are laptop backup paths (/home/james/.../backups/,
+  the probe are laptop backup paths (~/.../backups/,
   per zen doc and improvements/worker-y6e-rebuild-load-log.md
   lines 514-520); they do not exist in the VM worktree.
   00:24:16-00:24:25 +07.

@@ -62,7 +62,7 @@ Report goes to COORD-CLICK-10, not directly to the owner.
   sha 65cd45dd (stale, run 2 version) vs VM b881019e (amend 4),
   to be overwritten by the phase 1 scp as in run 2; fixture sha
   matches the manifest on both checkouts; geckodriver present
-  at /home/james/.local/bin/geckodriver.
+  at ~/.local/bin/geckodriver.
 - 21:25:22 +07, T+2m: run3.py created by copying run2.py,
   identical copy verified by diff (no output).
 - 21:25 to 21:26 +07, T+2m to T+3m: run3.py edits (section 2),

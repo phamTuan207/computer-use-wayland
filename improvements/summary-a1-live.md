@@ -4,7 +4,7 @@
 
 ## Preconditions and setup
 
-- Repo: `/home/james/computer-use-wayland`, branch `speed-swarm`, HEAD `f95807d5115b84f527f143e60e1f3a85e850fea5`. The A1 DOM implementation commit `83f4224` is in its history. The worktree was clean before and after. `main` was not touched.
+- Repo: `~/computer-use-wayland`, branch `speed-swarm`, HEAD `f95807d5115b84f527f143e60e1f3a85e850fea5`. The A1 DOM implementation commit `83f4224` is in its history. The worktree was clean before and after. `main` was not touched.
 - Relay at 2026-11-19 14:06 +07: `computer-use-relay` active and running. Drop-in `a1.conf` was present with `CU_CODE_EXEC=1` and `CU_PICK4_FASTPATH=1`. Broker was idle, owner null, driver idle, guardian idle, active sequence null. Its `started_git_head` matched the repo HEAD. I did not change the relay or drop-in.
 - Smoke: fresh broker session, sequence 1 `code-exec`, result `ok: true`, one in-program API call, 2.076 ms. Session finished cleanly.
 - Fixture: recreated at `/tmp/speed-pick4-20261118/pick4-fixture.html`, byte check passed, 320 bytes, SHA-256 `ddfc86fa82d6962dc6409be6eed9ce62a02b810edf7e05b7066a77ba364fc881`. This is a faithful recreation from the specified content, not the byte-original.
@@ -19,7 +19,7 @@
 | P1 | 30.769 s, 14:14:13.519 to 14:14:44.288 | 29.165 s | 29.165 s | 1.604 s | 675.058 ms | 2 | 0 / 0 / 0 | 0 | Sequence 1; 3 images, 1,538,461 bytes |
 | P2 | 19.387 s, 14:15:26.831 to 14:15:46.218 | 17.705 s | 17.705 s | 1.683 s | 757.276 ms | 2 | 0 / 0 / 0 | 0 | Sequence 1; 3 images, 1,555,242 bytes |
 
-D1 had two code-exec attempts. Attempt 1 returned `IndexError: list index out of range` after `dom_start()` and `windows()`, before any desktop input. A read-only status and `windows` diagnostic showed the managed Chromium had appeared as `about:blank`; the same program then succeeded on sequence 3. Successful program evidence: `result.ok: true`, button ref `e2` was `Show result`, DOM click completed, and `dom_assert` returned without error. The post-click screenshot `/home/james/.cache/agent-computer-use/fefd1e5f4a4e.png` shows `pick4-ok hello stranger`.
+D1 had two code-exec attempts. Attempt 1 returned `IndexError: list index out of range` after `dom_start()` and `windows()`, before any desktop input. A read-only status and `windows` diagnostic showed the managed Chromium had appeared as `about:blank`; the same program then succeeded on sequence 3. Successful program evidence: `result.ok: true`, button ref `e2` was `Show result`, DOM click completed, and `dom_assert` returned without error. The post-click screenshot `~/.cache/agent-computer-use/fefd1e5f4a4e.png` shows `pick4-ok hello stranger`.
 
 P1's verified terminal image shows `df -h /`, root available space `18G`, usage `96%`. P2's verified terminal image shows `96.0` from the documented calculation. Both programs had the requested four in-program API calls and no file asserts.
 

@@ -131,7 +131,7 @@
 - `ssh-laptop.sh 'echo SSH_OK'` -> `SSH_OK`, rc=0.
 - Fresh `computer-use observe` on the laptop 22:38:16 +07 -> id
   e64afc7de683, capture 36ms, image
-  /home/james/.cache/agent-computer-use/e64afc7de683.jpg. End-to-end path
+  ~/.cache/agent-computer-use/e64afc7de683.jpg. End-to-end path
   (VM python -> tailscale-proxy -> SSH -> laptop observe) proven.
 - NOTE on `python3 -m test test_re`: reports FAILURE with run=0 because
   `test.test_re` is NOT INSTALLED (libpython3.12-testsuite absent:

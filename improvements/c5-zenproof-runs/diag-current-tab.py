@@ -10,7 +10,7 @@ whatever tab Marionette already has current.
 """
 import sys
 
-sys.path.insert(0, '/home/james/computer-use-wayland/scripts')
+sys.path.insert(0, '~/computer-use-wayland/scripts')
 import zen_dom
 
 

@@ -4,7 +4,7 @@
 #   ldd "$GLASS_SO"
 # Conf: /tmp/y6-nested/conf/hyprland-wayland.lua, md5 9ccb27017ab63a9d2bce1d9651425d3b
 # Plugin path (first hyprglass.so match in the conf):
-#   /home/james/.local/share/agent-computer-use/worktrees/hyprglass-03a57c4/hyprglass.so
+#   ~/.local/share/agent-computer-use/worktrees/hyprglass-03a57c4/hyprglass.so
 # ldd rc=0. "not found" count: 0.
 # Transcribed from the 16:14 +07 run output (worker C5-Y6-PAPER).
 	linux-vdso.so.1 (0x00007f24096fb000)

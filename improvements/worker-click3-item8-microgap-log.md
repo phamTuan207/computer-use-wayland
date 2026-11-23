@@ -11,7 +11,7 @@
 
 ## 1. Codex lane implementation (read-only, laptop worktree)
 
-- Branch amend4-codex, HEAD 06a34e8, worktree /home/james/workspace/cu-amend4-codex, clean status.
+- Branch amend4-codex, HEAD 06a34e8, worktree ~/workspace/cu-amend4-codex, clean status.
 - Commit 0eb3429 "fix: verify sanitized browser field values", files: scripts/cdp.mjs, tests/cdp_snapshot.mjs.
 - scripts/cdp.mjs set_value (Codex form, regex):
   - stripped = requested.replace(/[\r\n]/g, '')

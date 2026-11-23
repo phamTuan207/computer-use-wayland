@@ -49,7 +49,7 @@
 
 ## W-SOAKRESTART xong 19:07 (soak master song tro lai)
 - Log improvements/w-soak-restart-log.md, commit b2502b6 (217 insertions) + 92f49fb (commit record), ca hai tren origin, 1 file duy nhat, 227 dong, 0 em dash, 0 en dash.
-- Toi kiem chung doc lap: master PID 27441 song, elapsed 07:01 luc kiem tra, argv khop (ControlMaster, ControlPersist=600, ServerAliveInterval=15, ServerAliveCountMax=3); socket /tmp/cm-s0-james@100.70.92.52:22 ton tai; tick loop PID 27497 song; tick file 2 row (19:00:54, 19:05:55) deu via mux, cung PID, rc=0; tu chay ssh_mux.py check: {"alive": true, "check_rc": 0, "pid": 27441, "wall": "2026-11-22 19:07:36 +07"}.
+- Toi kiem chung doc lap: master PID 27441 song, elapsed 07:01 luc kiem tra, argv khop (ControlMaster, ControlPersist=600, ServerAliveInterval=15, ServerAliveCountMax=3); socket /tmp/cm-s0-user@192.0.2.1:22 ton tai; tick loop PID 27497 song; tick file 2 row (19:00:54, 19:05:55) deu via mux, cung PID, rc=0; tu chay ssh_mux.py check: {"alive": true, "check_rc": 0, "pid": 27441, "wall": "2026-11-22 19:07:36 +07"}.
 - Ket luan: soak chay lai duoc 7+ phut lien tuc, cung PID, 0 chet, 0 restart. Day KHONG phai soak 1 ngay, moi la khoi dau. Tick loop bat buoc vi ControlPersist=600. Watchdog cron 5 phut KHONG tao (chua duoc uy quyen), de xuat trong log muc 7 cho Muse tong quyet.
 - Ca hai lane cua COORD-CLICK-7 deu xong: W-A1PREP (776fe41) + W-SOAKRESTART (b2502b6, 92f49fb).
 - Ghi nhan ngoai luong: COORD-AGENT-NATIVE-3 da spawn 19:04 lam track CLI-Anything (goal Omarchy), khong phai lane cua toi; correction 19:06 dung CLI-hoa cai da native san (foot/Nautilus/Obsidian).

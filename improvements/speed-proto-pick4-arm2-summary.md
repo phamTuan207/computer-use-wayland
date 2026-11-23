@@ -66,7 +66,7 @@
 - Request bị từ chối: `observe=1` (`sequence_gap`), `a11y=3` (`unsupported_command`) (**4** tổng). Lỗi wrapper P1 xảy ra trước khi gửi broker và không nằm trong các số này.
 - Quan sát độc lập: 8 desktop observe được chấp nhận, 1 browser DOM observe được chấp nhận; thêm 1 desktop observe bị từ chối. Các act P1–P4 trả thêm ảnh after; browser act trả DOM after snapshot.
 - Hyprland object-form close trả `ok` cho terminal kiểm tra và Nautilus. Kiểm tra `hyprctl -j clients` cuối báo `test_windows_remaining=0`; PID Chromium quản lý `767756` không còn. Quét process không còn `cu.py session`, `session-driver`, `cursor_session.py guard` hoặc `native/indicator`.
-- `git status --short` cuối có 4 file tracked sửa đổi: `scripts/cu.py`, `scripts/vscode_cli.py`, `skill/cli-anything/registry.json`, `skill/cli-anything/vscode.md`. Mtime của cả 4 là 2026-11-18 23:16–23:20 +07, trước lượt chạy này; tôi không sửa chúng. `browser start` báo profile quản lý tại `/home/james/computer-use-wayland/browser-profile`; không xóa profile để giữ trạng thái tab.
+- `git status --short` cuối có 4 file tracked sửa đổi: `scripts/cu.py`, `scripts/vscode_cli.py`, `skill/cli-anything/registry.json`, `skill/cli-anything/vscode.md`. Mtime của cả 4 là 2026-11-18 23:16–23:20 +07, trước lượt chạy này; tôi không sửa chúng. `browser start` báo profile quản lý tại `~/computer-use-wayland/browser-profile`; không xóa profile để giữ trạng thái tab.
 
 ## Output analyzer
 == overall ==

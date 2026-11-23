@@ -119,13 +119,13 @@ Launch, 17:52:15 +07 VM time:
   about 30 s. Polling used short SSH calls only.
 
 Sync log (`/tmp/wsync-sync-20261122.log`, laptop):
-- `Snapshot: /home/james/.local/share/agent-computer-use/backups/sync-20261122-175218-845410-f1141526`
+- `Snapshot: ~/.local/share/agent-computer-use/backups/sync-20261122-175218-845410-f1141526`
 - Staged build and installed build both printed `pointer built`,
   `indicator built`, `modifiers built`, `wtype built` (plus the known
   wtype unused-parameter warnings).
-- `Release ledger: /home/james/.local/share/agent-computer-use/releases/20261122-175222-261514-ab7c7a5ec3.json`
-- `Deploy manifest: /home/james/.local/share/agent-computer-use/deploy-manifest.json`
-- `Installed build script: /home/james/.local/share/agent-computer-use/scripts/build.py`
+- `Release ledger: ~/.local/share/agent-computer-use/releases/20261122-175222-261514-ab7c7a5ec3.json`
+- `Deploy manifest: ~/.local/share/agent-computer-use/deploy-manifest.json`
+- `Installed build script: ~/.local/share/agent-computer-use/scripts/build.py`
 - `--check: exit 0 (692 managed files; 11 preserved-history exceptions)`
 - `Installed sync published and verified.`
 

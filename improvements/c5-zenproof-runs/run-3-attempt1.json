@@ -1,6 +1,6 @@
 {
   "run": 3,
-  "fixture": "file:///home/james/computer-use-wayland/tests/two_vision_fixture.html?clone=zen",
+  "fixture": "file://~/computer-use-wayland/tests/two_vision_fixture.html?clone=zen",
   "fixture_sha256": "147494cda4c6ae24a51ced03ccdfb3fc5a79a1bbab56dcdfc5afb4f72fba6cbf",
   "message": "ZEN-DELEGATE-R3-IGNORE-TEST",
   "intent": "c5-zen-delegate-r3",

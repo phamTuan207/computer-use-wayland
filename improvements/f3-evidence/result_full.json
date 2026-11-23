@@ -230,23 +230,23 @@
     },
     {
       "title": "BiDi fixture",
-      "url": "file:///home/james/workspace/computer-use-wayland/tests/bidi_fixture.html"
+      "url": "file://~/workspace/computer-use-wayland/tests/bidi_fixture.html"
     },
     {
       "title": "Calibration Grid E2",
-      "url": "file:///home/james/workspace/computer-use-wayland/tests/calibration-grid.html?truth=1"
+      "url": "file://~/workspace/computer-use-wayland/tests/calibration-grid.html?truth=1"
     },
     {
       "title": "Calibration Grid E2",
-      "url": "file:///home/james/workspace/computer-use-wayland/tests/calibration-grid.html?truth=1"
+      "url": "file://~/workspace/computer-use-wayland/tests/calibration-grid.html?truth=1"
     },
     {
       "title": "Calibration Grid E2",
-      "url": "file:///home/james/workspace/computer-use-wayland/tests/calibration-grid.html?truth=1"
+      "url": "file://~/workspace/computer-use-wayland/tests/calibration-grid.html?truth=1"
     },
     {
       "title": "Calibration Grid E2",
-      "url": "file:///home/james/workspace/computer-use-wayland/tests/calibration-grid.html"
+      "url": "file://~/workspace/computer-use-wayland/tests/calibration-grid.html"
     },
     {
       "title": "",
@@ -320,11 +320,11 @@
     "Offline Recipe & Meal Planner | http://127.0.0.1:8768/agy-q2/fixtures/test-02-recipe-app.html",
     "Offline Whiteboard App | http://127.0.0.1:8768/agy-q2/fixtures/test-01-whiteboard.html",
     "Offline Whiteboard App | http://127.0.0.1:8768/agy-q2/fixtures/test-01-whiteboard.html",
-    "BiDi fixture | file:///home/james/workspace/computer-use-wayland/tests/bidi_fixture.html",
-    "Calibration Grid E2 | file:///home/james/workspace/computer-use-wayland/tests/calibration-grid.html?truth=1",
-    "Calibration Grid E2 | file:///home/james/workspace/computer-use-wayland/tests/calibration-grid.html?truth=1",
-    "Calibration Grid E2 | file:///home/james/workspace/computer-use-wayland/tests/calibration-grid.html?truth=1",
-    "Calibration Grid E2 | file:///home/james/workspace/computer-use-wayland/tests/calibration-grid.html",
+    "BiDi fixture | file://~/workspace/computer-use-wayland/tests/bidi_fixture.html",
+    "Calibration Grid E2 | file://~/workspace/computer-use-wayland/tests/calibration-grid.html?truth=1",
+    "Calibration Grid E2 | file://~/workspace/computer-use-wayland/tests/calibration-grid.html?truth=1",
+    "Calibration Grid E2 | file://~/workspace/computer-use-wayland/tests/calibration-grid.html?truth=1",
+    "Calibration Grid E2 | file://~/workspace/computer-use-wayland/tests/calibration-grid.html",
     " | https://httpbin.org/forms/post"
   ],
   "after": [

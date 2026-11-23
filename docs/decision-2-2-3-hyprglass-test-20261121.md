@@ -3,7 +3,7 @@
 Ngay: 21/11/2026. Nguoi viet: Worker X (danh gia doc lap).
 Trang thai hien tai (da kiem chung lai 21/11 17:52):
 - hyprglass KHONG duoc load (chi co hyprbars), KHONG co trong hyprland.conf.
-- File .so chi con trong backup: /home/james/.local/share/agent-computer-use/backups/full-1791544423/native/hyprglass.so va backups/sync-20261116-230254-783160-a9a24690/trees/native/hyprglass.so (kem cac ban hash khac).
+- File .so chi con trong backup: ~/.local/share/agent-computer-use/backups/full-1791544423/native/hyprglass.so va backups/sync-20261116-230254-783160-a9a24690/trees/native/hyprglass.so (kem cac ban hash khac).
 - Indicator da duoc chung minh KHONG ve lai khi idle 3 lan doc lap: 122 cua so 1 giay 0 callback, 3 phut 0 commit, ban binary da deploy 3 cua so 0. E1 logging (ghi log theo tung su kien) da san sang de bat bat ky lan tai phat nao.
 - Chua co cach nao tai hien che do LIQUID + backdrop dong ma khong dong vao compositor dang chay.
 
