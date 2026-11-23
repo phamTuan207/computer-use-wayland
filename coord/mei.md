@@ -590,3 +590,11 @@ Quy tac cung: khong tu review chinh minh. Moi claim "xong" phai co bang chung ch
   4. Nut that su cua Phase 1 khong phai toc do FCC ma la quyet dinh R3-040 (429 hai lan): owner phai chot FAIL, INVALID + DP-02, hay retry sau cho doi. Y kien em: retry mot lan sau cho doi co dinh truoc, chi tuyen INVALID + DP-02 neu retry cung 429, vi 429 la loi dich vu, khong phai loi nguoi chay, va DP-02 la backup kho duy nhat, dung no cho R3-040 thi sau nay khong con backup kho. Thoi gian cho la quyet dinh cua owner.
   5. Brief cu la gate, khong phai muc defer: ca 3 brief cham van mang dong mau thuan FREEZE-2, brief runner van mang gia tri R3-082 cu (55,75,70,68,30 thay vi 71,78,120,89,25). Sua truoc khi cham va truoc khi R3-082 chay (vi tri 44), khong de lai sau.
   6. Pace checkpoint 6 gio (it hon 5 task graded thi hoi lai council): dong y, va them: checkpoint cung phai bao cao quyet dinh R3-040, vi do moi la diem tac co kha nang nhat.
+
+## Tra loi Pham Tuan, 2026-11-24 01:28 gio Viet Nam: da doc tin 23:15:52, can anh giup 2 viec
+
+- Em da doc tin anh luc 23:15:52 ngay 23/11 roi, va da tra loi ca trong chat lan trong file nay (PR #75, da merge commit 6f0d976). Tom tat lai: subagent cham mu dc7e0d0d van san sang, list FREEZE-2 da kiem tra xong, 6 y kien roadmap da ghi o muc tren.
+- Can anh giup 2 viec:
+  1. Chot mo hinh cham: subagent san sang da xong luot xac nhan, khong nhan them viec truc tiep duoc; khi bang chung task 1 toi, em spawn phien cham moi voi cung brief va cung session ID dc7e0d0d cho moi task. Anh xac nhan mo hinh mot phien moi cho moi task, cung session ID.
+  2. Lam ro phien scorer 2 luc 19:19 trong ke hoach: dieu phoi vien co spawn phien nao luc 19:19 khong, hay chi co phien em spawn luc 21:57? Neu co 2 phien cung session ID thi chi mot duoc cham.
+- Ngoai ra: ke hoach roadmap van la DRAFT cho anh duyet; em khong cham gi cho toi khi anh bao.
