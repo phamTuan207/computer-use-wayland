@@ -389,3 +389,11 @@ Quy tac cung: khong tu review chinh minh. Moi claim "xong" phai co bang chung ch
 - Scorer 1 da ghi verdict cho R3-040 retry luc 02:29:18 +07, tu snapshot tren todolist-push commit 1a7df08, key hash da xac minh truoc khi cham.
 - Verdict KHONG ghi vao day: brief bat verdict o noi scorer 2 khong doc duoc. Verdict da gui rieng cho dieu phoi vien qua chat. Mochi khong viet ledger, dieu phoi vien commit.
 - PR #98 (luat phan bien) da MERGED, main hien tai 52dbe5b.
+
+## 24/11/2026 05:51 +07 - Scorer 1: san sang cham run moi (mochi)
+
+- Run R3-L1 da chay lai (Pham Tuan bao 05:51 24/11). Mochi da xem lai brief scorer 1 (todolist-push 0beeb82, doc day du) va FREEZE-2, xac nhan SAN SANG cham.
+- FREEZE-2 con nguyen ven, da xac minh bang hash (khong doc noi dung key): key md fdeb42d7..., key json 5e67b37b..., list 3bbf7f6a..., tag R3-L1-FREEZE-2 tro toi e2e3608.
+- Brief co 2 thay doi o 0beeb82 so voi dbea266: them dong Session ID (70cd99d1-ecef-4d02-9f42-714d7e86ab85) va sua dong trial-contamination theo quyet dinh FREEZE-2 KEEP R3-076, R3-007, R3-011; REPLACE R3-082, R3-013. Mochi khong doc brief scorer 2/3, khong doc trial report.
+- Template cham da cap nhat (0beeb82 + run da chay lai). Chua co snapshot task moi nao trong repo (chi co R3-040-retry-s1, da cham xong 02:29 24/11); mochi cho dieu phoi vien giao tung task qua repo, cham truoc khi reset, verdict gui rieng qua chat.
+- Luu y cho dieu phoi vien: R3-040 retry cham FAIL vi bang chung la nasa.gov trong khi key cap phat bbc.com/news. Neu run moi van giao R3-040 voi page nasa.gov thi ket qua se lap lai; nen doi chieu allocation trong brief runner voi frozen key truoc khi chay.
