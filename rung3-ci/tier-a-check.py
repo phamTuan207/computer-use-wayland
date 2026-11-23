@@ -23,8 +23,10 @@ Usage:
   totals, top files, grand total and files-with-keyword count; it
   also parses bao-cao.txt (fallback names dp02-bao-cao.txt,
   ket-qua.txt) for the reported totals and top files and compares
-  those. Either source alone can PASS; both present means both are
-  checked. The evidence requirement for DP-02 is bao-cao.txt.
+  those. Both sources are required and both must PASS: a missing
+  report FAILS and missing fixture files FAIL. The evidence
+  requirement for DP-02 is bao-cao.txt plus the 12 fixture files
+  dp02-01.txt to dp02-12.txt under dp02-code/.
 
 Output: one JSON object on stdout:
   {"task": ..., "verdict": "PASS|FAIL|SKIP", "reasons": [...],
@@ -308,16 +310,18 @@ def grep_count(path, keyword):
 def check_keyword_counts(ev_dir, key, reasons):
     """DP-02: compare keyword counts against the frozen key.
 
-    Two evidence sources, either alone can PASS:
+    Both evidence sources are required and both must PASS:
       - fixture files dp02-01.txt..dp02-12.txt (at the evidence root
         or under dp02-code/): recount every keyword with grep -o -F
         and compare the per-file matrix, totals, top files, grand
-        total and files-with-keyword count.
+        total and files-with-keyword count. A fixture file present
+        but unreadable FAILS with reason fixture file unreadable.
       - report bao-cao.txt (or dp02-bao-cao.txt, or ket-qua.txt):
         parse the reported totals and top files in the shape the key
         file shows ("alpha7: tong 12, file nhieu hit nhat
-        dp02-01.txt (4 hit)") and compare them. A grand total or
-        files-with-keyword line, when stated, is compared too.
+        dp02-01.txt (4 hit)") and compare them. The grand total
+        line and the files-with-keyword line MUST be stated and
+        MUST match the key. A missing line FAILS.
     """
     keywords = key.get("keywords", [])
     per_file_key = key.get("per_file", {})
@@ -334,23 +338,41 @@ def check_keyword_counts(ev_dir, key, reasons):
     expected_names = sorted(per_file_key) or \
         ["dp02-%02d.txt" % n for n in range(1, 13)]
 
-    if fixture_files:
-        missing = [n for n in expected_names if n not in fixture_files]
-        if missing:
-            reasons.append("fixture files missing: %s"
-                           % ", ".join(missing))
-        extra = [n for n in sorted(fixture_files)
-                 if n not in expected_names]
-        if extra:
-            reasons.append("unexpected fixture files: %s"
-                           % ", ".join(extra))
+    missing = [n for n in expected_names if n not in fixture_files]
+    if missing:
+        reasons.append("fixture files missing: %s"
+                       % ", ".join(missing))
+    extra = [n for n in sorted(fixture_files)
+             if n not in expected_names]
+    if extra:
+        reasons.append("unexpected fixture files: %s"
+                       % ", ".join(extra))
+    unreadable = []
+    for name in sorted(fixture_files):
+        path = fixture_files[name]
+        try:
+            if os.stat(path).st_mode & 0o444 == 0:
+                unreadable.append(name)
+                continue
+            with open(path, "rb") as f:
+                f.read(1)
+        except OSError:
+            unreadable.append(name)
+    for name in unreadable:
+        reasons.append("fixture file unreadable: %s" % name)
+    readable_files = {n: p for n, p in fixture_files.items()
+                      if n not in unreadable}
+    if readable_files:
         grand = 0
         files_with = set()
         for entry in keywords:
             kw = entry["keyword"]
             counts = {}
-            for name in sorted(fixture_files):
-                counts[name] = grep_count(fixture_files[name], kw)
+            for name in sorted(readable_files):
+                try:
+                    counts[name] = grep_count(readable_files[name], kw)
+                except OSError:
+                    reasons.append("fixture file unreadable: %s" % name)
             total = sum(counts.values())
             grand += total
             for name, count in counts.items():
@@ -363,16 +385,17 @@ def check_keyword_counts(ev_dir, key, reasons):
             if total != entry["total"]:
                 reasons.append("fixture recount %s: total %d, expected %d"
                                % (kw, total, entry["total"]))
-            top_name, top_count = max(sorted(counts.items()),
-                                      key=lambda kv: kv[1])
-            if top_name != entry["top_file"]:
-                reasons.append("fixture recount %s: top file %s, "
-                               "expected %s" % (kw, top_name,
-                                                entry["top_file"]))
-            if top_count != entry["top_count"]:
-                reasons.append("fixture recount %s: top count %d, "
-                               "expected %d" % (kw, top_count,
-                                                entry["top_count"]))
+            if counts:
+                top_name, top_count = max(sorted(counts.items()),
+                                          key=lambda kv: kv[1])
+                if top_name != entry["top_file"]:
+                    reasons.append("fixture recount %s: top file %s, "
+                                   "expected %s" % (kw, top_name,
+                                                    entry["top_file"]))
+                if top_count != entry["top_count"]:
+                    reasons.append("fixture recount %s: top count %d, "
+                                   "expected %d" % (kw, top_count,
+                                                    entry["top_count"]))
         if "grand_total" in key and grand != key["grand_total"]:
             reasons.append("fixture recount grand total %d, expected %d"
                            % (grand, key["grand_total"]))
@@ -389,90 +412,71 @@ def check_keyword_counts(ev_dir, key, reasons):
             report_path = cand
             break
     if report_path is None:
-        if not fixture_files:
-            reasons.append("missing bao-cao.txt (and no dp02-*.txt "
-                           "fixture files) in evidence folder")
+        reasons.append("missing bao-cao.txt in evidence folder")
         return
     report_name = os.path.basename(report_path)
     lines = read_text(report_path).splitlines()
     detail_re = re.compile(r"^(dp02-\d+\.txt)\s*\(\d+\s*dong\)\s*:\s*(.*)$")
     for entry in keywords:
         kw = entry["keyword"]
-        got_total = None
+        strict_re = re.compile(
+            r"^" + re.escape(kw) + r":\s*tong\s+(\d+),\s*"
+            r"file nhieu hit nhat\s+(dp02-\d+\.txt)\s*"
+            r"\(\s*(\d+)\s*hit\s*\)\s*$")
+        m = None
         for line in lines:
-            if kw in line and "tong" in line:
-                m = re.search(r"tong\s*(\d+)", line)
-                if m:
-                    got_total = int(m.group(1))
-                    break
-        if got_total is None:
-            for line in lines:
-                m = re.match(r"\s*" + re.escape(kw) + r"\s*[:\-=]?\s*(\d+)\b",
-                             line)
-                if m:
-                    got_total = int(m.group(1))
-                    break
-        if got_total is None:
-            reasons.append("keyword %s: total not stated in %s"
-                           % (kw, report_name))
-        elif got_total != entry["total"]:
+            m = strict_re.match(line.strip())
+            if m:
+                break
+        if m is None:
+            reasons.append("keyword %s: line not in required format "
+                           "in %s" % (kw, report_name))
+            continue
+        got_total = int(m.group(1))
+        got_top = m.group(2)
+        got_top_count = int(m.group(3))
+        if got_total != entry["total"]:
             reasons.append("keyword %s: report total %d, expected %d"
                            % (kw, got_total, entry["total"]))
-        got_top, got_top_count = None, None
-        top_lines = [l for l in lines
-                     if kw in l and "nhieu" in l and "dp02-" in l]
-        if not top_lines:
-            top_lines = [l for l in lines
-                         if kw in l and "tong" in l and "dp02-" in l]
-        if not top_lines:
-            top_lines = [l for l in lines
-                         if kw in l and "dp02-" in l
-                         and not detail_re.match(l.strip())]
-        for line in top_lines:
-            m = re.search(r"(dp02-\d+\.txt)", line)
-            if m:
-                got_top = m.group(1)
-                m2 = re.search(r"\(\s*(\d+)\s*hit\s*\)", line)
-                if m2:
-                    got_top_count = int(m2.group(1))
-                break
-        if got_top is None:
-            reasons.append("keyword %s: top file not stated in %s"
-                           % (kw, report_name))
-        elif got_top != entry["top_file"]:
+        if got_top != entry["top_file"]:
             reasons.append("keyword %s: report top file %s, expected %s"
                            % (kw, got_top, entry["top_file"]))
-        if got_top_count is not None and \
-                got_top_count != entry["top_count"]:
+        if got_top_count != entry["top_count"]:
             reasons.append("keyword %s: report top count %d, expected %d"
                            % (kw, got_top_count, entry["top_count"]))
-    def stated_number(needle):
-        """Number stated on the line containing needle: the value after
-        the colon when there is one (the line also mentions counts
-        like 'ca 5 tu khoa'), else the last number on the line."""
-        for line in lines:
-            if needle in line:
-                m = re.search(r":\s*(\d+)", line)
-                if m:
-                    return int(m.group(1))
-                nums = re.findall(r"\d+", line)
-                if nums:
-                    return int(nums[-1])
-        return None
-    grand_stated = stated_number("Tong chung")
-    if grand_stated is not None and "grand_total" in key and \
+    grand_stated = None
+    for line in lines:
+        m = re.match(r"^\s*Tong chung\s*:\s*(\d+)\s*$", line)
+        if m:
+            grand_stated = int(m.group(1))
+            break
+    if grand_stated is None:
+        reasons.append("report grand total not stated in %s"
+                       % report_name)
+    elif "grand_total" in key and \
             grand_stated != key["grand_total"]:
         reasons.append("report grand total %d, expected %d"
                        % (grand_stated, key["grand_total"]))
-    files_stated = stated_number("So file chua")
-    if files_stated is not None and "files_with_keyword" in key and \
+    files_stated = None
+    for line in lines:
+        m = re.match(r"^\s*So file chua it nhat 1 tu khoa\s*:\s*(\d+)\s*$",
+                     line)
+        if m:
+            files_stated = int(m.group(1))
+            break
+    if files_stated is None:
+        reasons.append("report files with keyword not stated in %s"
+                       % report_name)
+    elif "files_with_keyword" in key and \
             files_stated != key["files_with_keyword"]:
         reasons.append("report files with keyword %d, expected %d"
                        % (files_stated, key["files_with_keyword"]))
+    detail_seen = set()
     for line in lines:
         dm = detail_re.match(line.strip())
         if not dm:
             continue
+        detail_seen.add(dm.group(1))
         fname, rest = dm.group(1), dm.group(2)
         want = per_file_key.get(fname, {})
         for kw in [e["keyword"] for e in keywords]:
@@ -480,6 +484,10 @@ def check_keyword_counts(ev_dir, key, reasons):
             if m and kw in want and int(m.group(1)) != want[kw]:
                 reasons.append("report %s in %s: %d, expected %d"
                                % (kw, fname, int(m.group(1)), want[kw]))
+    for name in expected_names:
+        if name not in detail_seen:
+            reasons.append("report per-file detail missing for %s in %s"
+                           % (name, report_name))
 
 
 CHECKERS = {

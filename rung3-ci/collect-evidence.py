@@ -18,7 +18,12 @@ Usage:
 A timestamped screenshot is a .png/.jpg file whose name contains
 YYYYMMDD-HHMMSS. manifest.json lists every file in the folder with
 sha256, size, and mtime, plus the check result. The manifest hash is
-recorded in the run ledger for the task.
+recorded in the run ledger for the task. Files in subdirectories
+are listed by path relative to the evidence folder, so a pattern
+such as dp02-code/dp02-*.txt matches the files under dp02-code/.
+For DP-02, before checking, any of the 12 fixture files missing
+from dp02-code/ is copied there from the fixture source
+(~/rung3/dp02-code by default, --fixture-source to override).
 No personal info in this file.
 """
 import argparse
@@ -27,6 +32,7 @@ import hashlib
 import json
 import os
 import re
+import shutil
 import sys
 
 TS_RE = re.compile(r"\d{8}-\d{6}")
@@ -46,6 +52,7 @@ def main():
     ap.add_argument("task")
     ap.add_argument("--evidence-root", default=None)
     ap.add_argument("--requirements", default=None)
+    ap.add_argument("--fixture-source", default=None)
     ap.add_argument("--no-manifest", action="store_true")
     args = ap.parse_args()
     root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -65,20 +72,44 @@ def main():
     if not os.path.isdir(ev_dir):
         print("FAIL: evidence folder missing: %s" % ev_dir)
         return 1
-    names = sorted(os.listdir(ev_dir))
-    files = [n for n in names
-             if os.path.isfile(os.path.join(ev_dir, n))]
+    if args.task == "DP-02":
+        src = args.fixture_source or os.path.expanduser(
+            "~/rung3/dp02-code")
+        dest_dir = os.path.join(ev_dir, "dp02-code")
+        if os.path.isdir(src):
+            os.makedirs(dest_dir, exist_ok=True)
+            for n in range(1, 13):
+                name = "dp02-%02d.txt" % n
+                dest = os.path.join(dest_dir, name)
+                if not os.path.isfile(dest):
+                    shutil.copy2(os.path.join(src, name), dest)
+                    print("COPIED: dp02-code/%s" % name)
+    rel_files = []
+    for dirpath, dirnames, filenames in os.walk(ev_dir):
+        dirnames.sort()
+        for name in sorted(filenames):
+            full = os.path.join(dirpath, name)
+            rel_files.append(os.path.relpath(full, ev_dir))
+    rel_files.sort()
+    names = [os.path.basename(p) for p in rel_files]
+    files = rel_files
     for want in req.get("files", []):
-        if want not in files:
+        if want not in files and want not in names:
             missing.append("missing file: %s" % want)
     for pat in req.get("patterns", []):
-        hits = [n for n in files if fnmatch.fnmatch(n, pat["glob"])]
+        glob = pat["glob"]
+        if "/" in glob:
+            hits = [p for p in files if fnmatch.fnmatch(p, glob)]
+        else:
+            hits = [p for p in files
+                    if fnmatch.fnmatch(os.path.basename(p), glob)]
         if len(hits) < pat["min"]:
             missing.append("pattern %s: found %d, need %d (%s)"
-                           % (pat["glob"], len(hits), pat["min"],
+                           % (glob, len(hits), pat["min"],
                               ", ".join(hits) or "none"))
-    shots = [n for n in files
-             if n.lower().endswith(IMG_EXT) and TS_RE.search(n)]
+    shots = [p for p in files
+             if p.lower().endswith(IMG_EXT)
+             and TS_RE.search(os.path.basename(p))]
     need_shots = req.get("screenshots_min", 0)
     if len(shots) < need_shots:
         missing.append("timestamped screenshots: found %d, need %d"

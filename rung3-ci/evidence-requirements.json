@@ -10,7 +10,12 @@
   "files": [
    "bao-cao.txt"
   ],
-  "patterns": [],
+  "patterns": [
+   {
+    "glob": "dp02-code/dp02-*.txt",
+    "min": 12
+   }
+  ],
   "screenshots_min": 0
  },
  "DP-03": {
