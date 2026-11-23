@@ -253,9 +253,7 @@ manifest.json).
   thu-tu-chay.txt), pushed 2026-11-23 19:52 +07, verified with
   git ls-remote. rung3-checks run 45178370489: completed success.
   Link: https://github.com/phamTuan207/computer-use-wayland/actions/runs/45178370489
-- Liveness config fix + this proof-log update: commit PENDING, to
-  be filled in after the push lands, with the new rung3-checks run
-  link.
+- Liveness config fix + this proof-log update: commit bad3773, pushed 2026-11-23 20:14 +07, verified with git ls-remote. rung3-checks run 45181941881: completed success. Link: https://github.com/phamTuan207/computer-use-wayland/actions/runs/45181941881. Secret-scan run 45181941851: completed success.
 
 ### Secret-scan findings on 56b34f5 and what happened to them
 
