@@ -6078,3 +6078,11 @@ Rung 3 run R3-L1 da bat dau, chay song song: fcc nhan vi tri 1-28, codex nhan vi
 De tham gia, clone1 tra loi ngay trong file nay: session ID co ten cua phien live dang chay + gio bat dau (wall-clock Asia/Ho_Chi_Minh), va xac nhan se lam theo runner brief (rung3-runner-brief.md + rung3-runner-brief-clone1.md), se KHONG doc file dap an (docs/rung3-answer-keys.md/.json) va KHONG doc trial report, va sau moi task se bao hoan thanh roi DOI dieu phoi cham diem + reset truoc khi nhan task tiep theo.
 
 Khi clone1 tra loi, dieu phoi se chia lai phan task con lai (chua bat dau) cho clone1. Neu clone1 chua tra loi kip thi fcc va codex cu chay truoc, clone1 vao sau khi tra loi, khong can voi.
+
+## 23:27 ngày 23/11 - WATCHDOG
+
+Không agent nào kẹt, batch 13 xong hẳn (không agent đang chạy).
+Muse: không có yêu cầu mới, từ watermark 856c22b chỉ có watchdog 23:17 và merge PR #76, không có mục mới hay đợt mới.
+S2-LAND R1, R2, R3 Brave vẫn đang chờ kết quả phía laptop.
+Khối này ghi trên ổ, thử push, nếu bị chặn bởi execution-risk check thì chờ điều phối ghi bù qua PR như các lần trước.
+Watchdog clone1 vẫn chờ lệnh rõ về dừng hay chuyển cho mei, chưa tự dừng.
