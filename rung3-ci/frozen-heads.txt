@@ -3,5 +3,6 @@
 # list_sha256 is the sha256 of docs/rung3-list-100-tasks.md at that commit.
 # verify-list.py fails if the list file no longer matches this hash.
 # Any post-freeze edit to the list voids the run (grading decision section 2).
-list_commit 01dd3b981b551001679bd4deec3d3c954673e768
-list_sha256 3bbf7f6ae27369900491cf66e5936a897da24fe9ed2fdafa36c4c049d34b52bd
+list_commit d88df6a7329fb0432bb4eb450ffc958274147ca8
+list_sha256 4c01cc4631cb140d69773fc4e48a470242e8e748f498ac25b5607d4a9ff46ff1
+# R3-L2 re-freeze 2026-11-24: amended R3-026, R3-041, R3-067, R3-082, R3-088 per verified HIGH findings; R3-089 refresh procedure in thu-tu-chay.txt on the laptop.

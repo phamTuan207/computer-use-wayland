@@ -1,7 +1,7 @@
-# Khoa dap an rung 3, ma lan chay R3-L1 (frozen)
+# Khoa dap an rung 3, ma lan chay R3-L2 (frozen)
 
-- Run code: R3-L1. Danh sach: docs/rung3-list-100-tasks.md, nhanh todolist-push, commit 01dd3b981b551001679bd4deec3d3c954673e768.
-- List sha256: 3bbf7f6ae27369900491cf66e5936a897da24fe9ed2fdafa36c4c049d34b52bd (55 task, trinh duyet 35, desktop 20; trung binh 37, kho 11, rat kho 7).
+- Run code: R3-L2. Danh sach: docs/rung3-list-100-tasks.md, nhanh todolist-push, commit d88df6a7329fb0432bb4eb450ffc958274147ca8.
+- List sha256: 4c01cc4631cb140d69773fc4e48a470242e8e748f498ac25b5607d4a9ff46ff1 (55 task, trinh duyet 35, desktop 20; trung binh 37, kho 11, rat kho 7).
 - Key file nay dong bang truoc task 1. Sau task 1, moi thay doi khoa dap an hoac muc 6, muc 8 cua danh sach deu huy bo lan chay: ma lan chay moi, chay lai tu task 1. Khoa khong bao gio duoc sua giua lan chay. Neu khoa bi chung minh la sai giua lan chay, task do ghi vo hieu, ap dung quy tac du phong.
 - Chuan pass: 53/55. Chu so huu xac nhan qua lenh blanket 19:06 ngay 2026-11-23.
 - Moc san do kho: kho cong rat kho it nhat 30 phan tram, rat kho it nhat 10 phan tram. Hien trang: kho cong rat kho 18/55 (32,7 phan tram), rat kho 7/55 (12,7 phan tram). Dat moc.
@@ -76,10 +76,11 @@
 
 ### R3-067 (ve 3 hinh trong Pinta, 800x600, nen trang)
 
-- Hinh bat buoc, du 3 hinh: (1) hinh chu nhat, vung x 50-350, y 50-250, to mau do; (2) hinh tron, vung x 300-500, y 200-400, to mau xanh duong; (3) hinh tam giac, vung goc phai duoi x 550-750, y 350-550, to mau xanh la.
+- Hinh bat buoc, du 3 hinh: (1) hinh chu nhat, vung x 50-350, y 50-250, to mau do; (2) hinh tron, vung x 300-500, y 200-400, to mau xanh duong (giu Shift khi keo de giu hinh tron); (3) hinh tam giac, vung goc phai duoi x 550-750, y 350-550, to mau xanh la (cong cu Freeform Shape, keo duong khep kin ve dinh dau roi tha chuot, khong bam 3 diem roi).
 - Mau bat buoc: do (red), xanh duong (blue), xanh la (green). Nen trang. Kich thuoc file 800x600.
 - Khong co chu bat buoc.
 - Hinh sai duoc tinh la: thieu 1 trong 3 hinh; hinh sai loai (vi du tron thay cho chu nhat); hinh nam ngoai vung quy dinh (tam hinh ngoai vung); hinh sai mau (vi du chu nhat to mau xanh); hinh khong to mau (chi vien, khong co mau nen).
+- Ca 3 hinh phai dat Fill Style la Fill Shape (to mau dac); hinh chi vien khong co mau nen la sai theo dinh nghia tren.
 - Nguoi cham kiem tra file ~/rung3/nd23-hinh-ve.png, mo lai va doi chieu tung hinh voi rubric, khong cham theo gu tham my.
 - PASS: du 3 hinh dung loai, dung vung, dung mau, nen trang, dung kich thuoc. FAIL: bat ky hinh nao sai theo dinh nghia tren, sai kich thuoc, nen khong trang.
 
@@ -313,9 +314,10 @@
 
 - Bang 1: tao ngau nhien tren coolors.co, 5 ma hex (live, doi chieu voi anh chup).
 - Bang 2: khoa 1 mau trong bang 1, tao lai bang moi, 5 ma hex; mau da khoa khong doi. Ten mau da khoa ghi ro trong ket-qua.txt.
-- Bang 3: tao tu mau goc #1E88E5: mo coolors.co/generate/1E88E5, bam Generate, 5 ma hex (live, doi chieu voi anh chup).
+- Bang 3: tao tu mau goc #1E88E5: mo coolors.co/generate, bam vao ma hex cua 1 cot mau roi go #1E88E5, khoa cot do, bam Generate, 5 ma hex (live, doi chieu voi anh chup); cot mau goc #1E88E5 phai co mat trong bang 3.
 - Ten cua tung mau trong ca 3 bang (ten hien ben duoi moi ma hex) phai ghi dung theo trang.
 - Vat chung cham: 3 anh chup bang mau + ket-qua.txt. Nguoi cham doi chieu ma hex, mau khoa, ten mau voi anh chup.
+- Ghi chu sua doi (R3-L2, 2026-11-24): duong dan coolors.co/generate/1E88E5 tra ve 'Page Not Found' (da xac minh doc lap 2026-11-24); doi sang nhap ma hex vao cot mau tren coolors.co/generate roi khoa cot do truoc khi Generate.
 
 ## R3-027 (Tier B)
 
@@ -381,9 +383,10 @@
 
 - Trang kiem tra: browserleaks.com/javascript (7 thong tin dau) va browserleaks.com/fonts (so luong font).
 - 8 thong tin: tac nhan nguoi dung (user agent), ngon ngu, mui gio, kich thuoc man hinh, do sau mau, cookie co bat hay khong, JavaScript co bat hay khong, so luong font phat hien.
-- Kiem tra lai kich thuoc man hinh bang cach keo canh phai cua so trinh duyet vao trong 200 pixel, ghi kich thuoc moi.
-- Cac gia tri la live tai thoi diem chay; chan ly la anh chup trang kiem tra. Mo lai trang, 8 thong tin van giong lan 1 tru kich thuoc man hinh.
+- Kiem tra lai kich thuoc cua so bang cach keo canh phai cua so trinh duyet vao trong 200 pixel, ghi kich thuoc cua so moi (window.innerWidth x window.innerHeight va window.outerWidth x window.outerHeight); kich thuoc man hinh (Screen Resolution) khong doi khi keo cua so.
+- Cac gia tri la live tai thoi diem chay; chan ly la anh chup trang kiem tra. Mo lai trang, 8 thong tin van giong lan 1; kich thuoc man hinh khong doi, rieng kich thuoc cua so doi theo cua so moi.
 - Vat chung cham: anh chup trang kiem tra + ket-qua.txt. Nguoi cham doi chieu voi anh chup va mo lai trang de kiem tra.
+- Ghi chu sua doi (R3-L2, 2026-11-24): kich thuoc man hinh la do phan giai vat ly, keo cua so khong doi duoc (da xac minh doc lap 2026-11-24); doi sang do kich thuoc cua so, kich thuoc man hinh la gia tri co dinh.
 
 ## R3-042 (Tier B hybrid)
 
@@ -441,10 +444,11 @@
 
 - Xem rubric Tier C o dau file (3 hinh bat buoc, vung, mau, dinh nghia hinh sai).
 - Hinh 1: chu nhat, vung x 50-350, y 50-250, to mau do.
-- Hinh 2: tron, vung x 300-500, y 200-400, to mau xanh duong.
-- Hinh 3: tam giac (cong cu Freeform Shape, 3 diem), vung goc phai duoi x 550-750, y 350-550, to mau xanh la.
+- Hinh 2: tron, vung x 300-500, y 200-400, to mau xanh duong (giu Shift khi keo de giu hinh tron).
+- Hinh 3: tam giac (cong cu Freeform Shape, keo duong khep kin ve dinh dau roi tha chuot, khong bam 3 diem roi), vung goc phai duoi x 550-750, y 350-550, to mau xanh la.
 - File: ~/rung3/nd23-hinh-ve.png, 800x600, nen trang. Khong co chu bat buoc.
 - Vat chung cham: file PNG. Nguoi cham mo file va doi chieu voi rubric.
+- Ghi chu sua doi (R3-L2, 2026-11-24): Freeform Shape la cong cu keo, khong co chuc nang bam diem them dinh (da xac minh tu ma nguon FreeformShapeTool.cs); Fill Style mac dinh la Outline Shape (da xac minh); doi buoc ve tam giac sang keo khep kin, yeu cau Fill Shape cho ca 3 hinh.
 
 ## R3-072 (Tier A)
 
@@ -508,6 +512,7 @@
   - (11 + 9) * 5 / 4 = 25
 - Sai so lam tron 0,01. File ket qua ~/rung3/nd02-ket-qua.txt co bang 6 hang (tieu de + 5 hang phep tinh) va 1 dong ghi chu kiem tra lai theo mau "Kiem tra lai: <phep> = <ket qua>" voi ket qua dung.
 - Vat chung cham: ket-qua.txt + 5 anh chup man hinh may tinh. Checker so sanh phep tinh va ket qua.
+- Ghi chu sua doi (R3-L2, 2026-11-24): khoa da dung (omacalc, khong che do khoa hoc, xem ruling); chi sua buoc 1 cua danh sach cho khop ruling, 5 phep tinh va ket qua khong doi.
 
 ## R3-083 (Tier C)
 
@@ -531,10 +536,11 @@
 ## R3-088 (Tier B)
 
 - Thu muc: ~/rung3/nd28-work, 10 file nd28-file-01.txt den nd28-file-10.txt. File nen: ~/rung3/nd28-luu-tru.tar.gz. Thu muc giai nen kiem tra: ~/rung3/nd28-check.
-- So file trong nen bang so file goc (10). So file sau giai nen bang so file goc (10).
+- So muc trong nen la 11 (thu muc goc + 10 file). So file trong nen (khong tinh muc thu muc ket thuc bang /) bang so file goc (10). So file sau giai nen bang so file goc (10).
 - 3 file so sanh o vi tri co dinh thu 1, thu 5, thu 10 theo thu tu sap xep ten (nd28-file-01.txt, nd28-file-05.txt, nd28-file-10.txt) dung noi dung.
-- Bao cao ~/rung3/nd28-bao-cao.txt gom so file goc, so file trong nen, so file sau giai nen, ket qua so sanh 3 file.
+- Bao cao ~/rung3/nd28-bao-cao.txt gom so file goc, so muc trong nen (11), so file trong nen (10), so file sau giai nen, ket qua so sanh 3 file.
 - Vat chung cham: file tar.gz + bao cao. Nguoi cham liet ke file trong nen va dem.
+- Ghi chu sua doi (R3-L2, 2026-11-24): tar -tzf dem duoc 11 muc gom thu muc goc (da chay thu va xac minh doc lap 2026-11-24); khoa doi sang 11 muc, 10 file.
 
 ## R3-089 (Tier B)
 
