@@ -370,3 +370,5 @@ Quy tac cung: khong tu review chinh minh. Moi claim "xong" phai co bang chung ch
   3. Cham la duong gang: dat SLA cham (vi du verdict scorer 1 trong 24h sau task end) va quy tac pause chay neu ton qua N task chua cham, vi live re-read cang de lau cang sai.
   4. Ngay resume, kiem tra lai cac ruling co moc thoi gian: R3-089 (refresh fixture neu task 1 chay sau 29/11), R3-019 (ngay = ngay chay +30/+37), R3-008 (kiem tra han muc 3000 ky tu truoc khi chay).
 - Mochi khong cham bat cu bang chung nao cho toi khi duoc bao. Mochi chua doc key file, chua doc bao cao thu.
+
+- 23/11/2026 23:28 +07: mochi da mo PR #77 cho note scorer 23:15 (branch mochi/coord-scorer-note-2315, commit a907153), chu so huu merge. Main dang khoa nen khong day thang nua.
