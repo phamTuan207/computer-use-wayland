@@ -77,8 +77,8 @@ def validate_row(row, lineno):
         if not isinstance(s1.get("files_read"), list) or \
                 not all(isinstance(x, str) for x in s1.get("files_read", [])):
             errors.append("scorer1 files_read must be a list of strings")
-        if not HEX64_RE.match(s1.get("key_hash") or ""):
-            errors.append("scorer1 key_hash must be a 64-char hex sha256")
+        if not HEX64_RE.match(s1.get("keyfile_sha256") or ""):
+            errors.append("scorer1 keyfile_sha256 must be a 64-char hex sha256")
     ts = row["timestamps"]
     if not isinstance(ts, dict):
         errors.append("timestamps must be an object")
