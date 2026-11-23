@@ -349,3 +349,26 @@ Quy tac cung: khong tu review chinh minh. Moi claim "xong" phai co bang chung ch
 - Ton du: R13 test_label_format (pill-label lane), R14 bench_manifest x3 + R9 tool FAILs (environment, tools dir da gone), R12 tesseract (environment), R10 F5 DOM-gate (P5 implementer), R9 a1a672d van khong quotable lam gate, I-1 CR/LF mid-token inconclusive cho P1 live qua m5, discover 2381 vs 2380 inconclusive (FAIL/ERROR set giong het 2/8/17). O-1 khong chan: log verifier 68187a5 tu no chua 2 dong sai (def test_label_format dong 25, thuc te dong 24), da dinh chinh bang log re-verify f885b47, khong sua file cua nguoi khac.
 - Push: f1cb4d5..4777441, verify bang `git ls-remote origin todolist-push`, tra 4777441b048fd660ea285c061e92b85bc90e8190.
 - Batch 2 hoan tat: B2-1 64c2ade, B2-2 1230e79, B2-3 ef964a6 + cumulative c597a29, B2-4 ece4c6f, B2-5 9fd8400, B2-6 4777441, review log B2-1 8e9c9d9, B2-2 34899b2, B2-3 55ad3ee + sua eec6141, B2-5 bca11cb + sua 1b4c0f2.
+
+## 23/11/2026 23:15 +07 - Scorer 1: brief da ro, template xong, y kien ve cach cham va lich chay (mochi)
+
+- Kenh lien lac moi: tin chat trong tab cua mochi khong toi duoc Pham Tuan (2 tin tra loi 21:57 va 22:22 deu khong toi). Tu gio moi lan tra loi, mochi ghi ngan gon vao day luon.
+- Brief scorer 1: tim thay o duong dan moi rung3-run-log/scorer-briefs/rung3-scorer1-mochi-brief.md, todolist-push commit dbea266, 81 dong, doc het. RO RANG: vai tro, 8 dieu kien doc lap, allowlist/denylist, cach cham, luat invalid, blind handoff, dang grade co chu ky. Rubric = tier trong frozen key file tung task (A/B/C). Mochi khong doc brief scorer 2, scorer 3.
+- Template cham da cap nhat theo dung dang trong brief: ~/workspace/rung3-scorer1-mochi-template.md.
+- Con thieu 2 thu, can Pham Tuan/dieu phoi vien lo truoc task 1:
+  1. Session ID cua mochi: thu-tu-chay.txt chi ghi target ID trinh duyet (A67A718D5E236F894F9863F48834743C), khong phai session ID. Can cap 1 session ID duy nhat (dang nhu scorer 2: dc7e0d0d-24b2-4d94-9729-f106d21eff16), khac session runner va session tac gia list, ghi vao thu-tu-chay.txt va brief. Khong co no thi grade co chu ky thieu truong bat buoc, khong duoc chap nhan.
+  2. File rung3-scorers.md: brief yeu cau ban khai cua mochi luu o ~/workspace/rung3-scorers.md truoc task 1. File nay khong co tren may nay va khong co trong repo (da tim). Can: hoac copy file vao ~/workspace/rung3-scorers.md tren may nay, hoac xac nhan ban tren laptop la ban chinh va mochi khong can ban local. Noi dung ban khai: mochi khong viet list, khong viet answer key, khong chay task rung 3 nao, khong chay preflight trial, khong viet runner code (da khai 19:17 23/11, thu-tu-chay.txt da ghi nhan).
+- Y kien ve cach cham (de dua vao roadmap):
+  1. Chi doc key cua task dang cham, khong doc ca key file: brief cho phep doc frozen key file, nhung doc het 55 key tu task 1 se lo dap an cac task sau. De nghi dieu phoi vien cat va giao rieng phan key cua task dang cham (kem hash), mochi ghi hash da xac minh vao grade.
+  2. Pre-run package phai danh dau truoc moi task: "snapshot-only" hay "live re-read duoc, tolerance X". Khong de task nao mo, vi live state se doi theo thoi gian va cham sai neu doc lai muon.
+  3. Reset phai doi verdict cua scorer 1: brief bat timestamp verdict truoc muc reset-log. De nghi roadmap ghi ro: khong reset task nao khi scorer 1 chua ghi verdict (hoac chua xac nhan khong can live re-read).
+  4. Verdict KHONG viet vao coord/mochi.md hay file chung: brief bat verdict o noi scorer 2 khong doc duoc, qua dieu phoi vien. Ghi ngan o day chi la tin trang/prep, khong phai verdict. Roadmap can dinh kenh giao verdict rieng cho scorer 1.
+  5. Tier A: neu script deterministic va human check lech nhau, ghi ca 2 vao reason, leo thang theo quy trinh (scorer 3 neu doi verdict).
+- Y kien ve lich chay:
+  1. Task 1 (R3-001) dang chay do thi pause: khi resume, chay lai sach tu dau (run window va mtime sach) thay vi noi tiep bang chung do dang, vi buoc re-read live cua scorer phu thuoc state con song.
+  2. Giu nguyen thu tu co dinh; 2 runner song song (fcc, codex) ghi ro runner session tung task, khong chay dong thoi 2 task dung chung state (cung profile trinh duyet, cung tai khoan).
+  3. Cham la duong gang: dat SLA cham (vi du verdict scorer 1 trong 24h sau task end) va quy tac pause chay neu ton qua N task chua cham, vi live re-read cang de lau cang sai.
+  4. Ngay resume, kiem tra lai cac ruling co moc thoi gian: R3-089 (refresh fixture neu task 1 chay sau 29/11), R3-019 (ngay = ngay chay +30/+37), R3-008 (kiem tra han muc 3000 ky tu truoc khi chay).
+- Mochi khong cham bat cu bang chung nao cho toi khi duoc bao. Mochi chua doc key file, chua doc bao cao thu.
+
+- 23/11/2026 23:28 +07: mochi da mo PR #77 cho note scorer 23:15 (branch mochi/coord-scorer-note-2315, commit a907153), chu so huu merge. Main dang khoa nen khong day thang nua.
