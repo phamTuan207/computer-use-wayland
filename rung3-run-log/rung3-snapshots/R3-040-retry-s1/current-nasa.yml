@@ -1,0 +1,450 @@
+- generic [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e3]:
+      - generic [ref=e4]:
+        - list [ref=e5]:
+          - listitem [ref=e6]:
+            - button "Explore" [ref=e7] [cursor=pointer]
+        - search [ref=e15]:
+          - generic [ref=e16]: Search
+          - searchbox "Search" [ref=e17]
+      - link [ref=e19] [cursor=pointer]:
+        - /url: https://www.nasa.gov/
+        - img "NASA Logo" [ref=e20]
+      - navigation "Primary navigation" [ref=e21]:
+        - list [ref=e23]:
+          - listitem [ref=e24]:
+            - button "News & Events" [ref=e25]
+          - listitem [ref=e30]:
+            - button "Multimedia" [ref=e31]
+          - listitem [ref=e36]:
+            - link "NASA+ Live" [ref=e37] [cursor=pointer]:
+              - /url: https://plus.nasa.gov/
+  - text: Live
+  - main [ref=e38]:
+    - article [ref=e39]:
+      - generic [ref=e40]:
+        - generic [ref=e42]:
+          - heading "LIVE 12 p.m. EST (0500 UTC)" [level=2] [ref=e44]
+          - generic [ref=e46]:
+            - figure [ref=e50]:
+              - img "Northrop Grumman’s Cygnus XL cargo spacecraft, carrying more than 11,000 pounds of new science investigations and supplies for the Expedition 73 crew, approaches the International Space Station. The two spacecraft were orbiting 262 miles above northeastern China just before an orbital sunset. Cygnus XL is an expanded version of Northrop Grumman’s previous Cygnus cargo vehicle, offering increased payload capacity and pressurized cargo volume." [ref=e51]
+            - generic [ref=e53]:
+              - heading "News Conference" [level=2] [ref=e55]
+              - paragraph [ref=e57]: NASA to host a prelaunch teleconference on the agency's Northrop Grumman CRS-25 launch to the International Space Station
+            - link "News Conference" [ref=e59] [cursor=pointer]:
+              - /url: https://www.nasa.gov/live/
+        - group "Mag Highlights" [ref=e64]:
+          - generic [ref=e68]:
+            - generic [ref=e69]:
+              - generic [ref=e72]:
+                - heading "Seeking Next Generation of Explorers" [level=2] [ref=e73]
+                - paragraph [ref=e74]: Applications are now open for the agency’s next class of astronauts, who will play a pivotal role in NASA’s bold next chapter as America returns to the Moon, establishes a lunar base, and lays the groundwork for the first human missions to Mars.
+                - link "Become a NASA Astronaut" [ref=e75] [cursor=pointer]:
+                  - /url: https://www.nasa.gov/news-release/nasa-seeks-next-generation-of-explorers-to-join-astronaut-corps/
+              - generic [ref=e76]:
+                - generic [ref=e78]:
+                  - heading "lunar outpost" [level=3] [ref=e79]
+                  - link "Moon Base" [ref=e80] [cursor=pointer]:
+                    - /url: https://www.nasa.gov/moonbase/
+                - generic [ref=e86]:
+                  - heading "moon to mars" [level=3] [ref=e87]
+                  - link "Artemis" [ref=e88] [cursor=pointer]:
+                    - /url: https://www.nasa.gov/humans-in-space/artemis/
+                - generic [ref=e94]:
+                  - heading "HOUSTON WE HAVE A PODCAST" [level=3] [ref=e95]
+                  - link "Astronaut Application Process" [ref=e96] [cursor=pointer]:
+                    - /url: https://www.nasa.gov/podcasts/houston-we-have-a-podcast/apply-to-be-a-moonwalker/
+            - figure [ref=e102]
+          - generic [ref=e103]:
+            - button "Change Slide to Seeking Next Generation of Explorers" [ref=e104] [cursor=pointer]:
+              - figure [ref=e108]
+            - button "Pause slideshow" [ref=e109] [cursor=pointer]
+        - generic [ref=e114]:
+          - generic [ref=e115]:
+            - heading "Featured News" [level=2] [ref=e117]
+            - link "Recently Published" [ref=e119] [cursor=pointer]:
+              - /url: https://www.nasa.gov/news/recently-published/
+          - generic [ref=e124]:
+            - generic [ref=e125]:
+              - link "News Release 6 Min Read NASA’s Voyager 1 Makes History Reaching One Light-Day From Earth" [ref=e127] [cursor=pointer]:
+                - /url: https://www.nasa.gov/news-release/nasas-voyager-1-makes-history-reaching-one-light-day-from-earth/
+                - generic [ref=e128]:
+                  - generic [ref=e129]:
+                    - generic [ref=e130]: News Release
+                    - generic [ref=e136]:
+                      - generic [ref=e137]: 6 Min Read
+                      - paragraph [ref=e138]: NASA’s Voyager 1 Makes History Reaching One Light-Day From Earth
+                  - figure [ref=e139]
+              - generic [ref=e140]:
+                - link "News Release 4 Min Read NASA Sets Coverage for Northrop Grumman CRS-25 Launch, Prelaunch" [ref=e141] [cursor=pointer]:
+                  - /url: https://www.nasa.gov/news-release/nasa-sets-coverage-for-northrop-grumman-crs-25-launch-prelaunch/
+                  - generic [ref=e142]:
+                    - generic [ref=e143]:
+                      - generic [ref=e144]: News Release
+                      - generic [ref=e150]:
+                        - generic [ref=e151]: 4 Min Read
+                        - paragraph [ref=e152]: NASA Sets Coverage for Northrop Grumman CRS-25 Launch, Prelaunch
+                    - figure [ref=e153]
+                - generic [ref=e154]:
+                  - link "Blog 1 Min Read Dragon Undocks from Station Packed With Science and Cargo" [ref=e155] [cursor=pointer]:
+                    - /url: https://www.nasa.gov/blogs/general-blog/2026/11/20/dragon-undocks-from-station-packed-with-science-and-cargo/
+                    - generic [ref=e156]:
+                      - generic [ref=e157]:
+                        - generic [ref=e158]: Blog
+                        - generic [ref=e163]:
+                          - generic [ref=e164]: 1 Min Read
+                          - paragraph [ref=e165]: Dragon Undocks from Station Packed With Science and Cargo
+                      - figure [ref=e166]
+                  - link "Article 4 Min Read New Album of Baby Star Sounds Shared by NASA’s Chandra" [ref=e167] [cursor=pointer]:
+                    - /url: https://science.nasa.gov/missions/chandra/new-album-of-baby-star-sounds-shared-by-nasas-chandra/
+                    - generic [ref=e168]:
+                      - generic [ref=e169]:
+                        - generic [ref=e170]: Article
+                        - generic [ref=e177]:
+                          - generic [ref=e178]: 4 Min Read
+                          - paragraph [ref=e179]: New Album of Baby Star Sounds Shared by NASA’s Chandra
+                      - figure [ref=e180]
+            - generic [ref=e181]:
+              - link "5 Min Read NASA’s Perseverance, Odyssey Teams Investigate Technical Issues November 19, 2026 Blog" [ref=e182] [cursor=pointer]:
+                - /url: https://science.nasa.gov/blogs/mars/2026/11/19/nasas-perseverance-odyssey-teams-investigate-technical-issues/
+                - generic [ref=e183]:
+                  - figure [ref=e186]
+                  - generic [ref=e187]:
+                    - generic [ref=e188]: 5 Min Read
+                    - paragraph [ref=e189]: NASA’s Perseverance, Odyssey Teams Investigate Technical Issues
+                    - generic [ref=e190]: November 19, 2026
+                    - generic [ref=e191]: Blog
+              - link "5 Min Read NASA Science Data Powers New Method to Discover Hard-to-Find Pulsars November 19, 2026 Article" [ref=e196] [cursor=pointer]:
+                - /url: https://science.nasa.gov/open-science/fermi-data-pulsar-discovery/
+                - generic [ref=e197]:
+                  - figure [ref=e200]
+                  - generic [ref=e201]:
+                    - generic [ref=e202]: 5 Min Read
+                    - paragraph [ref=e203]: NASA Science Data Powers New Method to Discover Hard-to-Find Pulsars
+                    - generic [ref=e204]: November 19, 2026
+                    - generic [ref=e205]: Article
+              - link "2 Min Read NASA Scientists Find Clues to Ancient Ice Beyond Neptune November 18, 2026 Blog" [ref=e212] [cursor=pointer]:
+                - /url: https://science.nasa.gov/blogs/science-news/2026/11/18/nasa-scientists-find-clues-to-ancient-ice-beyond-neptune/
+                - generic [ref=e213]:
+                  - figure [ref=e216]
+                  - generic [ref=e217]:
+                    - generic [ref=e218]: 2 Min Read
+                    - paragraph [ref=e219]: NASA Scientists Find Clues to Ancient Ice Beyond Neptune
+                    - generic [ref=e220]: November 18, 2026
+                    - generic [ref=e221]: Blog
+              - 'link "4 Min Read What’s Up: November 2026 Skywatching Tips from NASA November 2, 2026 Article" [ref=e226] [cursor=pointer]':
+                - /url: https://science.nasa.gov/solar-system/skywatching/whats-up-november-2026-skywatching-tips-from-nasa/
+                - generic [ref=e227]:
+                  - figure [ref=e230]
+                  - generic [ref=e231]:
+                    - generic [ref=e232]: 4 Min Read
+                    - paragraph [ref=e233]: "What’s Up: November 2026 Skywatching Tips from NASA"
+                    - generic [ref=e234]: November 2, 2026
+                    - generic [ref=e235]: Article
+        - generic [ref=e244]:
+          - generic [ref=e246]:
+            - generic [ref=e247]: Featured Video
+            - heading "Surprisingly STEM" [level=3] [ref=e248]
+            - paragraph [ref=e249]: Does the idea of a hands-on career that transforms mission concepts into reality spark your interest? Meet David McClaeb, a senior electronic technician whose expertise helps turn engineers’ and scientists’ designs into the flight hardware that enables groundbreaking discoveries. Learn about McClaeb’s career journey and the vital role he plays in advancing space exploration through a dynamic, rewarding profession that doesn’t require a four-year college degree.
+            - link "Watch More" [ref=e250] [cursor=pointer]:
+              - /url: https://plus.nasa.gov/series/surprisingly-stem/
+          - iframe [ref=e258]:
+            - generic [ref=f1e1]:
+              - generic "YouTube Video Player" [ref=f1e3]
+              - generic [ref=f1e5]:
+                - generic:
+                  - generic:
+                    - generic [ref=f1e6] [cursor=pointer]
+                    - button "Play video" [ref=f1e10] [cursor=pointer]
+                    - button "Hide player controls" [ref=f1e12] [cursor=pointer]
+                    - generic [ref=f1e14]:
+                      - generic [ref=f1e21]:
+                        - generic [ref=f1e22]:
+                          - 'link "Surprisingly STEM: Electronic Technician" [ref=f1e23] [cursor=pointer]':
+                            - /url: https://www.youtube.com/watch?v=AIxqJJOUIKs
+                          - link "Learn With NASA" [ref=f1e24] [cursor=pointer]:
+                            - /url: /channel/UC9SM7V7J1pAhPabOUST01fw
+                        - generic [ref=f1e26]:
+                          - button [ref=f1e27] [cursor=pointer]
+                          - generic [ref=f1e29]:
+                            - generic: Learn With NASA
+                            - generic: 66.2K subscribers
+                      - generic [ref=f1e30]:
+                        - button "Share" [ref=f1e33] [cursor=pointer]
+                        - link "Watch on YouTube" [ref=f1e44] [cursor=pointer]:
+                          - /url: https://www.youtube.com/watch?v=AIxqJJOUIKs
+                          - generic [ref=f1e45]: Watch on
+        - generic [ref=e259]:
+          - generic [ref=e261]:
+            - heading "NASA Missions" [level=2] [ref=e264]
+            - link "Discover More" [ref=e266] [cursor=pointer]:
+              - /url: https://www.nasa.gov/nasa-missions/
+          - generic [ref=e272]:
+            - link [ref=e273] [cursor=pointer]:
+              - /url: https://www.nasa.gov/humans-in-space/artemis/
+              - generic [ref=e274]:
+                - heading "Artemis" [level=3] [ref=e277]
+                - figure [ref=e284]
+            - link [ref=e285] [cursor=pointer]:
+              - /url: https://science.nasa.gov/perseverance-rover/
+              - generic [ref=e286]:
+                - heading "Perseverance Rover" [level=3] [ref=e289]
+                - figure [ref=e296]
+            - link [ref=e297] [cursor=pointer]:
+              - /url: https://science.nasa.gov/james-webb-space-telescope/
+              - generic [ref=e298]:
+                - heading "James Webb Space Telescope" [level=3] [ref=e301]
+                - figure [ref=e308]
+            - link [ref=e309] [cursor=pointer]:
+              - /url: https://science.nasa.gov/hubble/
+              - generic [ref=e310]:
+                - heading "Hubble Space Telescope" [level=3] [ref=e313]
+                - figure [ref=e320]
+        - generic [ref=e323]:
+          - generic [ref=e324]:
+            - generic [ref=e325]:
+              - heading "Today" [level=3] [ref=e326]
+              - heading "Image Of The Day" [level=2] [ref=e327]
+            - paragraph [ref=e328]: NASA’s Curiosity Mars Rover Collects Samples
+            - paragraph [ref=e329]: This collage shows 49 drill holes captured by NASA’s Curiosity Mars rover as of November 2026.
+            - link "Browse Image Archive" [ref=e331] [cursor=pointer]:
+              - /url: https://www.nasa.gov/image-of-the-day/
+          - generic [ref=e335]:
+            - generic [ref=e336]:
+              - link "View full image page" [ref=e337] [cursor=pointer]:
+                - /url: https://www.nasa.gov/image-detail/pia26804/
+                - figure [ref=e339]
+              - link "Download Image of the Day" [ref=e340] [cursor=pointer]:
+                - /url: https://www.nasa.gov/wp-content/uploads/2026/11/pia26804.jpg
+            - link "View full image page" [ref=e346] [cursor=pointer]:
+              - /url: https://www.nasa.gov/image-detail/pia26804/
+        - generic [ref=e350]:
+          - heading "More NASA Images" [level=2] [ref=e355]
+          - generic [ref=e357]:
+            - 'link "Great Observatories: Hubble Space Telescope Gallery 422 Images" [ref=e358] [cursor=pointer]':
+              - /url: https://www.nasa.gov/gallery/hubble/
+              - generic [ref=e359]:
+                - generic [ref=e360]:
+                  - figure [ref=e361]
+                  - figure [ref=e362]
+                  - figure [ref=e363]
+                - generic [ref=e364]:
+                  - 'heading "Great Observatories: Hubble Space Telescope Gallery" [level=3] [ref=e366]'
+                  - generic [ref=e367]: 422 Images
+            - 'link "Great Observatories: James Webb Space Telescope Gallery 39 Images" [ref=e369] [cursor=pointer]':
+              - /url: https://www.nasa.gov/gallery/james-webb-space-telescope/
+              - generic [ref=e370]:
+                - generic [ref=e371]:
+                  - figure [ref=e372]
+                  - figure [ref=e373]
+                  - figure [ref=e374]
+                - generic [ref=e375]:
+                  - 'heading "Great Observatories: James Webb Space Telescope Gallery" [level=3] [ref=e377]'
+                  - generic [ref=e378]: 39 Images
+            - 'link "Great Observatories: Chandra X-ray Observatory Gallery 24 Images" [ref=e380] [cursor=pointer]':
+              - /url: https://www.nasa.gov/gallery/great-observatories-chandra-x-ray-observatory/
+              - generic [ref=e381]:
+                - generic [ref=e382]:
+                  - figure [ref=e383]
+                  - figure [ref=e384]
+                  - figure [ref=e385]
+                - generic [ref=e386]:
+                  - 'heading "Great Observatories: Chandra X-ray Observatory Gallery" [level=3] [ref=e388]'
+                  - generic [ref=e389]: 24 Images
+        - generic [ref=e391]:
+          - generic [ref=e393]:
+            - heading "Explore the Universe from your Inbox" [level=2] [ref=e395]
+            - generic [ref=e396]:
+              - paragraph [ref=e397]: Stay up-to-date on the latest news from NASA–from Earth to the Moon, the Solar System and beyond.
+              - generic [ref=e398]:
+                - paragraph [ref=e399]: We will never share your email address.
+                - paragraph [ref=e400]:
+                  - link "Privacy Policy" [ref=e401] [cursor=pointer]:
+                    - /url: https://www.nasa.gov/privacy/
+            - link "Sign Up" [ref=e402] [cursor=pointer]:
+              - /url: https://lp.constantcontactpages.com/sl/7ThAX6O/signup
+          - figure [ref=e407]:
+            - img "Space image with stars and swirls of colorful orange, red and white." [ref=e408]
+        - generic [ref=e409]:
+          - heading "More Topics from NASA" [level=2] [ref=e414]
+          - generic [ref=e416]:
+            - link [ref=e417] [cursor=pointer]:
+              - /url: https://www.nasa.gov/nasa-missions/
+              - generic [ref=e418]:
+                - heading "Overview of NASA's Missions" [level=3] [ref=e421]
+                - figure [ref=e428]
+            - link [ref=e429] [cursor=pointer]:
+              - /url: https://www.nasa.gov/humans-in-space/
+              - generic [ref=e430]:
+                - heading "Humans In Space" [level=3] [ref=e433]
+                - figure [ref=e440]
+            - link [ref=e441] [cursor=pointer]:
+              - /url: https://science.nasa.gov/earth/
+              - generic [ref=e442]:
+                - heading "Earth" [level=3] [ref=e445]
+                - figure [ref=e452]
+            - link [ref=e453] [cursor=pointer]:
+              - /url: https://science.nasa.gov/solar-system/overview/
+              - generic [ref=e454]:
+                - heading "Our Solar System" [level=3] [ref=e457]
+                - figure [ref=e464]
+            - link [ref=e465] [cursor=pointer]:
+              - /url: https://science.nasa.gov/universe/
+              - generic [ref=e466]:
+                - heading "Universe" [level=3] [ref=e469]
+                - figure [ref=e476]
+            - link [ref=e477] [cursor=pointer]:
+              - /url: https://science.nasa.gov/science-missions/
+              - generic [ref=e478]:
+                - heading "Science Missions" [level=3] [ref=e481]
+                - figure [ref=e488]
+            - link [ref=e489] [cursor=pointer]:
+              - /url: https://www.nasa.gov/aeronautics/
+              - generic [ref=e490]:
+                - heading "Aeronautics" [level=3] [ref=e493]
+                - figure [ref=e500]
+            - link [ref=e501] [cursor=pointer]:
+              - /url: https://www.nasa.gov/technology/
+              - generic [ref=e502]:
+                - heading "Technology" [level=3] [ref=e505]
+                - figure [ref=e512]
+  - contentinfo [ref=e513]:
+    - generic [ref=e514]:
+      - img "NASA Logo" [ref=e516]
+      - generic [ref=e518]:
+        - generic [ref=e520]:
+          - heading "National Aeronautics and Space Administration" [level=3] [ref=e521]
+          - paragraph [ref=e522]: NASA explores the unknown in air and space, innovates for the benefit of humanity, and inspires the world through discovery.
+          - list [ref=e523]:
+            - listitem [ref=e524]:
+              - link "About NASA's Mission" [ref=e525] [cursor=pointer]:
+                - /url: https://www.nasa.gov/about/
+          - link "Join Us" [ref=e526] [cursor=pointer]:
+            - /url: https://www.nasa.gov/get-involved/
+        - list [ref=e533]:
+          - listitem [ref=e534]:
+            - link "Home" [ref=e535] [cursor=pointer]:
+              - /url: https://www.nasa.gov/
+          - listitem [ref=e536]:
+            - link "News & Events" [ref=e537] [cursor=pointer]:
+              - /url: https://www.nasa.gov/news/
+          - listitem [ref=e538]:
+            - link "Multimedia" [ref=e539] [cursor=pointer]:
+              - /url: https://www.nasa.gov/multimedia/
+          - listitem [ref=e540]:
+            - link "NASA+ Live" [ref=e541] [cursor=pointer]:
+              - /url: https://plus.nasa.gov/
+          - listitem [ref=e542]:
+            - link "Missions" [ref=e543] [cursor=pointer]:
+              - /url: https://www.nasa.gov/nasa-missions/
+          - listitem [ref=e544]:
+            - link "Humans in Space" [ref=e545] [cursor=pointer]:
+              - /url: https://www.nasa.gov/humans-in-space/
+          - listitem [ref=e546]:
+            - link "Earth" [ref=e547] [cursor=pointer]:
+              - /url: https://science.nasa.gov/earth/
+          - listitem [ref=e548]:
+            - link "The Solar System" [ref=e549] [cursor=pointer]:
+              - /url: https://science.nasa.gov/solar-system/
+          - listitem [ref=e550]:
+            - link "The Universe" [ref=e551] [cursor=pointer]:
+              - /url: https://science.nasa.gov/universe/
+          - listitem [ref=e552]:
+            - link "Science" [ref=e553] [cursor=pointer]:
+              - /url: https://science.nasa.gov/
+          - listitem [ref=e554]:
+            - link "Aeronautics" [ref=e555] [cursor=pointer]:
+              - /url: https://www.nasa.gov/aeronautics/
+          - listitem [ref=e556]:
+            - link "Technology" [ref=e557] [cursor=pointer]:
+              - /url: https://www.nasa.gov/technology/
+          - listitem [ref=e558]:
+            - link "Learning Resources" [ref=e559] [cursor=pointer]:
+              - /url: https://www.nasa.gov/learning-resources/
+          - listitem [ref=e560]:
+            - link "About NASA" [ref=e561] [cursor=pointer]:
+              - /url: https://www.nasa.gov/about/
+          - listitem [ref=e562]:
+            - link "NASA en Español (opens in new tab)" [ref=e563] [cursor=pointer]:
+              - /url: https://www.nasa.gov/es/
+              - text: NASA en Español
+              - generic [ref=e564]: (opens in new tab)
+        - generic [ref=e566]:
+          - generic [ref=e567]:
+            - heading "Follow NASA" [level=3] [ref=e568]
+            - list [ref=e569]:
+              - listitem [ref=e570]:
+                - link "NASA on Facebook (opens in new tab)" [ref=e571] [cursor=pointer]:
+                  - /url: https://www.facebook.com/NASA
+              - listitem [ref=e574]:
+                - link "NASA on Instagram (opens in new tab)" [ref=e575] [cursor=pointer]:
+                  - /url: https://www.instagram.com/nasa/
+              - listitem [ref=e580]:
+                - link "NASA on X (opens in new tab)" [ref=e581] [cursor=pointer]:
+                  - /url: https://x.com/NASA
+              - listitem [ref=e584]:
+                - link "NASA on YouTube (opens in new tab)" [ref=e585] [cursor=pointer]:
+                  - /url: https://www.youtube.com/@NASA
+          - list [ref=e588]:
+            - listitem [ref=e589]:
+              - link "More NASA Social Accounts" [ref=e590] [cursor=pointer]:
+                - /url: https://www.nasa.gov/social-media/
+            - listitem [ref=e591]:
+              - link "NASA Newsletters" [ref=e592] [cursor=pointer]:
+                - /url: https://www.nasa.gov/nasa-newsletters/
+        - list [ref=e594]:
+          - listitem [ref=e595]:
+            - link "Sitemap" [ref=e596] [cursor=pointer]:
+              - /url: https://www.nasa.gov/sitemap/
+          - listitem [ref=e597]:
+            - link "For Media" [ref=e598] [cursor=pointer]:
+              - /url: https://www.nasa.gov/news/nasa-media-contacts/
+          - listitem [ref=e599]:
+            - link "Privacy Policy" [ref=e600] [cursor=pointer]:
+              - /url: https://www.nasa.gov/nasa-web-privacy-policy-and-important-notices/
+          - listitem [ref=e601]:
+            - link "FOIA" [ref=e602] [cursor=pointer]:
+              - /url: https://www.nasa.gov/foia/
+          - listitem [ref=e603]:
+            - link "No FEAR Act" [ref=e604] [cursor=pointer]:
+              - /url: https://www.nasa.gov/no-fear-act/
+          - listitem [ref=e605]:
+            - link "Office of the IG (opens in new tab)" [ref=e606] [cursor=pointer]:
+              - /url: http://oig.nasa.gov/
+              - text: Office of the IG
+              - generic [ref=e607]: (opens in new tab)
+          - listitem [ref=e608]:
+            - link "Budget & Annual Reports" [ref=e609] [cursor=pointer]:
+              - /url: https://www.nasa.gov/budgets-plans-and-reports/
+          - listitem [ref=e610]:
+            - link "Agency Financial Reports" [ref=e611] [cursor=pointer]:
+              - /url: https://www.nasa.gov/organizations/budget-annual-reports/agency-financial-reports/
+          - listitem [ref=e612]:
+            - link "Contact NASA" [ref=e613] [cursor=pointer]:
+              - /url: https://www.nasa.gov/contact-nasa/
+          - listitem [ref=e614]:
+            - link "Accessibility" [ref=e615] [cursor=pointer]:
+              - /url: https://www.nasa.gov/accessibility/
+        - list [ref=e617]:
+          - listitem [ref=e618]:
+            - generic [ref=e619]: "Page Last Updated:"
+            - generic [ref=e620]: Nov 23, 2026
+          - listitem [ref=e621]:
+            - generic [ref=e622]: "Page Editor:"
+            - generic [ref=e623]: Gary Daines
+          - listitem [ref=e624]:
+            - generic [ref=e625]: "Responsible NASA Official:"
+            - generic [ref=e626]: Abigail Bowman
+  - generic [ref=e629]:
+    - generic [ref=e636]:
+      - group [ref=e639]:
+        - generic [ref=e642]:
+          - generic [ref=e643]:
+            - radio "Yes Was this page helpful?" [checked] [ref=e644]
+            - text: "Yes"
+          - generic [ref=e645]:
+            - radio "No" [ref=e646]
+            - text: "No"
+      - button "Submit" [ref=e648]
+    - button "Close" [ref=e649] [cursor=pointer]: ×

@@ -1,0 +1,31 @@
+R3-040 Phase A comparison
+Page URL: https://www.nasa.gov/
+Archive date used: 1996-12-31
+
+CURRENT VERSION
+Page title: NASA
+Three main content items:
+1. Seeking Next Generation of Explorers: NASA astronaut applications and the agency's next chapter, including return to the Moon, a lunar base, and future Mars missions.
+2. Featured News: Current NASA news and mission updates, including Voyager 1, the Northrop Grumman CRS-25 launch, and science stories.
+3. NASA Missions: A section linking to missions such as Artemis, Perseverance Rover, James Webb Space Telescope, and Hubble.
+
+ARCHIVED VERSION
+Page title: NASA Home Page/Mars Pathfinder Sites
+Archive date: 1996-12-31 (Wayback timestamp 19961231235847)
+Three main content items:
+1. Welcome headline: “Welcome to NASA and the Mars Pathfinder Mission!”
+2. Visitor guidance: “Choose the Mars Pathfinder reflector nearest you.”
+3. Mirror directory: corporate, public-sector, and international mirror sites, with site addresses and daily hit capacities, to help handle traffic for Mars Pathfinder information.
+
+THREE CLEAR CHANGES (OLD -> NEW)
+1. Homepage focus
+   OLD: The page welcomed visitors to the Mars Pathfinder Mission.
+   NEW: The page promotes NASA's next astronaut class and the agency's future Moon and Mars exploration plans.
+
+2. Main visitor action
+   OLD: Visitors were told to choose a Mars Pathfinder reflector site nearest them.
+   NEW: The homepage presents a Featured News feed with current mission and science updates.
+
+3. Main information structure
+   OLD: The page listed corporate, public-sector, and international mirror sites with addresses and hit capacities.
+   NEW: The page has a NASA Missions section linking to Artemis, Perseverance Rover, James Webb Space Telescope, and Hubble.
