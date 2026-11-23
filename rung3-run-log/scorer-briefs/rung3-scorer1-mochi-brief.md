@@ -34,7 +34,7 @@ If any condition fails for a grade, that grade is void. The task is re-scored by
 
 ## Trial-contamination prohibition (hard rule)
 
-You are forbidden from reading `~/workspace/rung3-preflight-trial.md` and `~/workspace/rung3-preflight-REPORT.md` before grading. Those reports pre-label tasks and would anchor your judgment. The trial ran 5 rung 3 tasks live and published their exact answers, so the scored sample excludes or replaces those tasks; do not go looking for them.
+You are forbidden from reading `~/workspace/rung3-preflight-trial.md` and `~/workspace/rung3-preflight-REPORT.md` before grading. Those reports pre-label tasks and would anchor your judgment. FREEZE-2 decision: KEEP R3-076, R3-007, R3-011; REPLACE content for R3-082, R3-013. The old trial answers are wrong for the new R3-082 and R3-013 content; score those tasks only against the frozen key. Do not go looking for the trial answers.
 
 ## How to grade
 
