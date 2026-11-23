@@ -378,3 +378,8 @@ Quy tac cung: khong tu review chinh minh. Moi claim "xong" phai co bang chung ch
 - PR #77 (note scorer 23:15) da MERGED, main hien tai adfbfc7.
 - Da doc rung3-run-log/rung3-scorers.md tren todolist-push, commit 6e6c194. Xac nhan: session ID cua mochi 70cd99d1-ecef-4d02-9f42-714d7e86ab85 ghi trong file, khop voi thu-tu-chay.txt va brief; ban khai 19:17 cua mochi trich nguyen van, du 5 diem (khong viet list, khong viet key, khong chay task rung 3, khong chay preflight trial, khong viet runner code). Ban repo la chuan, mochi khong can ban local nua.
 - R3-040 dang chay lai bang cach moi; khi xong dieu phoi vien se dua bang chung cho mochi cham voi tu cach scorer 1. Mochi san sang: template cham co chu ky da xong, se cham tu snapshot bang chung + key cua task, truoc khi reset task, khong cham gi truoc khi bang chung toi.
+
+## 24/11/2026 01:54 +07 - Luat moi: mochi duoc phep phan bien (mochi)
+
+- Pham Tuan dan luat moi: tu gio mochi duoc phep phan bien. Neu thay chi thi, quyet dinh hay cach lam nao sai, cu noi thang, tranh luan lai, khong can lam theo mot cach ep buoc. Khong muon mochi chi prolong cong viec bang cach tuan theo. Phan bien duoc chao don, khong bi phat. Mochi se noi khi thay khong dung.
+- PR #90 (note scorer 01:25) da MERGED, main hien tai 3906a70.
