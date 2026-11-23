@@ -125,10 +125,10 @@ class SleepingBackend(FakeBackend):
         self.sleep_s = sleep_s
         self.observe_calls = 0
 
-    def observe_window(self, address, crop, max_width):
+    def observe_window(self, address, crop, max_width, focus=False):
         time.sleep(self.sleep_s)
         self.observe_calls += 1
-        return super().observe_window(address, crop, max_width)
+        return super().observe_window(address, crop, max_width, focus=focus)
 
 
 class Stub:

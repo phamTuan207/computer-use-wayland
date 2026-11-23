@@ -46,6 +46,21 @@ class Observe(unittest.TestCase):
         cu.observe({},'0x1',activate=True,persist=False)
         self.focus.assert_called_once_with({},'0x1')
 
+    def test_code_exec_backend_observe_window_focus_threads_activate(self):
+        # Run 64527c3b: the second missing link. CodeExecBackend.
+        # observe_window never passed activate to cu.observe, so even a
+        # focus-aware api_observe would have silently dropped the
+        # request. The flag must arrive at cu.observe as activate.
+        backend = cu.CodeExecBackend({})
+        with patch.object(cu, 'observe', return_value={'id': 'x'}) as spy:
+            backend.observe_window('0x1', None, 960, focus=True)
+        spy.assert_called_once()
+        self.assertTrue(spy.call_args.kwargs.get('activate') is True)
+        with patch.object(cu, 'observe', return_value={'id': 'x'}) as spy:
+            backend.observe_window('0x1', None, 960)
+        spy.assert_called_once()
+        self.assertTrue(spy.call_args.kwargs.get('activate') is False)
+
     def test_invisible_target_refused_before_capture(self):
         for changes in ({'workspace':{'id':2}},{'hidden':True},{'mapped':False}):
             with self.subTest(changes=changes):

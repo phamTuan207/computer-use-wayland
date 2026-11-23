@@ -87,8 +87,8 @@ class DistinctIdBackend(FakeBackend):
         super().__init__()
         self._n = 0
 
-    def observe_window(self, address, crop, max_width):
-        result = super().observe_window(address, crop, max_width)
+    def observe_window(self, address, crop, max_width, focus=False):
+        result = super().observe_window(address, crop, max_width, focus=focus)
         self._n += 1
         result['id'] = 'obs-%04d' % self._n
         result['created'] = time.time() + self._n * 0.001

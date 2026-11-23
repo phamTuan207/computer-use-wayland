@@ -29,7 +29,7 @@ Safety invariants, unchanged from the normal loop:
 
 Allowlisted API (the only names a program may call):
 - windows() -> list of {address, class, title, at, size, workspace}
-- observe(window=None, screen=None, crop=None, max_width=960) -> compact
+- observe(window=None, screen=None, crop=None, max_width=960, focus=False) -> compact
   observation dict {id, image, observation, window, window_bounds,
   image_size, region, monitor}. The id binds the observation; act() only
   accepts an observation dict this interpreter delivered in this session.
@@ -978,7 +978,7 @@ class CodeExecSession:
     """One interpreter session: persistent variables plus observation bindings.
 
     backend is an object with windows(), observe_window(address, crop,
-    max_width), observe_screen(monitor, crop, max_width), and
+    max_width, focus=False), observe_screen(monitor, crop, max_width), and
     act(full_meta, actions, observation_path). check_cancel is a callable
     raising when the session was cancelled; it defaults to a no-op so unit
     tests can run without a live session.
@@ -1181,7 +1181,7 @@ class CodeExecSession:
     def api_windows(self):
         return self._api('windows', self.backend.windows)
 
-    def api_observe(self, window=None, screen=None, crop=None, max_width=960):
+    def api_observe(self, window=None, screen=None, crop=None, max_width=960, focus=False):
         if window is not None and screen is not None:
             raise CodeExecError('observe takes window or screen, not both')
         if crop is not None:
@@ -1191,11 +1191,15 @@ class CodeExecSession:
             crop = list(crop)
         if not isinstance(max_width, int) or not 320 <= max_width <= 3840:
             raise CodeExecError('max_width must be 320..3840')
+        if not isinstance(focus, bool):
+            raise CodeExecError('focus must be a bool')
+        if focus and screen is not None:
+            raise CodeExecError('focus needs a window; focus is only valid with window')
         if window is not None:
             if not isinstance(window, str) or not window:
                 raise CodeExecError('window must be a non-empty address string')
             meta = self._api('observe', self.backend.observe_window,
-                             window, crop, max_width)
+                             window, crop, max_width, focus=focus)
         elif screen is not None:
             if not isinstance(screen, str) or not screen:
                 raise CodeExecError('screen must be a non-empty monitor name')

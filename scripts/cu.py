@@ -2976,9 +2976,9 @@ class CodeExecBackend:
         keys = ('address', 'class', 'title', 'at', 'size', 'workspace')
         return [{k: c.get(k) for k in keys} for c in hypr(self.env, 'clients')]
 
-    def observe_window(self, address, crop, max_width, low_res=False):
+    def observe_window(self, address, crop, max_width, low_res=False, focus=False):
         import session_policy
-        meta = observe(self.env, address, crop, max_width, low_res=low_res)
+        meta = observe(self.env, address, crop, max_width, activate=focus, low_res=low_res)
         session_policy.record_observation(STATE, os.environ.get('CU_SESSION_TOKEN'), meta)
         return meta
 

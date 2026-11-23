@@ -35,8 +35,8 @@ class FakeBackend:
         return [{'address': '0xabc', 'class': 'kitty', 'title': 'speed-pick1-term',
                  'at': [0, 0], 'size': [800, 600], 'workspace': {'id': 1}}]
 
-    def observe_window(self, address, crop, max_width):
-        self.calls.append(('observe_window', address, crop, max_width))
+    def observe_window(self, address, crop, max_width, focus=False):
+        self.calls.append(('observe_window', address, crop, max_width, focus))
         return dict(self.meta)
 
     def observe_screen(self, monitor, crop, max_width):
@@ -184,9 +184,9 @@ class FakeShellBackend(FakeBackend):
         super().__init__()
         self.threads = []
 
-    def observe_window(self, address, crop, max_width):
+    def observe_window(self, address, crop, max_width, focus=False):
         time.sleep(0.15)
-        return super().observe_window(address, crop, max_width)
+        return super().observe_window(address, crop, max_width, focus=focus)
 
     def act(self, meta, actions, observation_path):
         result = super().act(meta, actions, observation_path)
@@ -218,10 +218,10 @@ class FakeTerminalBackend(FakeBackend):
         self.shell_errors = []
         self.observe_count = 0
 
-    def observe_window(self, address, crop, max_width):
+    def observe_window(self, address, crop, max_width, focus=False):
         time.sleep(0.15)
         self.observe_count += 1
-        meta = super().observe_window(address, crop, max_width)
+        meta = super().observe_window(address, crop, max_width, focus=focus)
         meta['id'] = 'fake-observe-%d' % self.observe_count
         meta['created'] = time.time()
         return meta
@@ -434,6 +434,35 @@ class ApiTests(unittest.TestCase):
         self.assertFalse(result['ok'])
         self.assertEqual(result['api_calls'], 1)
         self.assertEqual(backend.calls[0][0], 'observe_window')
+
+    def test_observe_window_focus_reaches_backend(self):
+        # Run 64527c3b: the recovery program called
+        # observe(window=..., focus=True) and died with
+        # "CodeExecSession.api_observe() got an unexpected keyword
+        # argument focus" before any backend call. The focus flag must
+        # reach the backend instead of being refused at binding time.
+        backend = FakeBackend()
+        result = run('obs = observe(window="0xabc", focus=True)\n'
+                     'assert_state(obs["id"] == "abcdef012345", "observe with focus failed")\n',
+                     backend)
+        self.assertTrue(result['ok'], result)
+        self.assertEqual(result['api_calls'], 1)
+        self.assertEqual(backend.calls[0],
+                         ('observe_window', '0xabc', None, 960, True))
+        # focus=True with screen= must refuse, mirroring the CLI guard
+        # "--focus requires --window" (cu.py:3204).
+        result = run('obs = observe(screen="eDP-2", focus=True)\n')
+        self.assertFalse(result['ok'])
+        self.assertIn('focus needs a window', result['error'])
+
+    def test_observe_window_focus_defaults_false(self):
+        # Existing no-focus programs must keep working and must not
+        # focus anything: the default is False.
+        backend = FakeBackend()
+        result = run('obs = observe(window="0xabc")\n', backend)
+        self.assertTrue(result['ok'], result)
+        self.assertEqual(backend.calls[0],
+                         ('observe_window', '0xabc', None, 960, False))
 
     def test_refusal_dict_returned_not_raised(self):
         class Refusing(FakeBackend):
@@ -775,12 +804,12 @@ class TraceBudgetTests(unittest.TestCase):
         # blew the 20000 budget before act() ever ran (Pick 1 round 1).
         # Only the program's own lines may count now.
         class HeavyBackend(FakeBackend):
-            def observe_window(self, address, crop, max_width):
+            def observe_window(self, address, crop, max_width, focus=False):
                 total = 0
                 for i in range(50000):
                     total += i * i
                 assert total > 0
-                return super().observe_window(address, crop, max_width)
+                return super().observe_window(address, crop, max_width, focus=focus)
         source = (
             'wins = windows()\n'
             'obs = observe(window="0xabc")\n'

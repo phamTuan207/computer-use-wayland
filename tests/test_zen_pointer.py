@@ -65,8 +65,8 @@ class FakeCodeBackend:
         self._tmp = tempfile.mkdtemp(prefix='zen-pointer-test-')
         self._frames = frames if frames is not None else [_solid()]
 
-    def observe_window(self, address, crop, max_width):
-        self.observe_calls.append((address, crop, max_width))
+    def observe_window(self, address, crop, max_width, focus=False):
+        self.observe_calls.append((address, crop, max_width, focus))
         self._n += 1
         frame = self._frames[(self._n - 1) % len(self._frames)]
         path = os.path.join(self._tmp, 'obs-%d.jpg' % self._n)
@@ -143,7 +143,7 @@ class DelegateUnitTests(unittest.TestCase):
         meta = delegate.begin_batch('0xabc')
         self.assertEqual(focused, ['0xabc'])
         self.assertEqual(backend.observe_calls,
-                         [('0xabc', None, 960), ('0xabc', None, 960)])
+                         [('0xabc', None, 960, False), ('0xabc', None, 960, False)])
         self.assertEqual(meta['id'], 'obs-2')
         self.assertEqual(meta['scope'], 'window')
         self.assertEqual(delegate.last_settle['reads'], 2)
