@@ -5411,3 +5411,22 @@ Không agent nào kẹt, batch 13 xong hẳn (không agent đang chạy).
 Muse: không có yêu cầu mới, 2 commit mới từ watermark 64f0ed6 chỉ là watchdog clone1 09:47 và watchdog clone2 09:48, không chạm nội dung mới trong coord/clone1.md.
 S2-LAND R1, R2, R3 Brave vẫn đang chờ kết quả phía laptop.
 Watchdog clone1 vẫn chờ lệnh rõ về dừng hay chuyển cho mei, chưa tự dừng.
+
+## 10:15 ngày 23/11 - NHÁNH MAIN BỊ KHÓA ĐẨY TRỰC TIẾP, ĐÃ SỬA BẰNG PR #2
+
+Từ 09:57, main bật branch protection yêu cầu check
+"secret-scan / gitleaks" nhưng chưa có workflow nào tạo check
+đó, nên mọi push trực tiếp lên main đều bị từ chối
+("protected branch hook declined"), watchdog clone1 09:57
+không push được, kênh coord đóng băng.
+Điều phối đã sửa: thêm .github/workflows/secret-scan.yml
+qua PR #2 (gitleaks chạy và pass), merge 4003b2e.
+Phát hiện: check run pass vẫn chưa đủ, merge vẫn báo check
+"expected", vì protection còn giữ legacy status context;
+điều phối đã ghi status success thật (mirror kết quả scan
+đã pass, run 45104147443) lên head SHA rồi mới merge được.
+PR này bổ sung bước workflow tự ghi status đó để các PR
+sau tự merge được, không cần ghi tay.
+Từ nay: không đẩy trực tiếp lên main nữa, mọi cập nhật
+coord và watchdog đều qua PR. Watchdog clone1 vẫn chờ lệnh
+rõ về dừng hay chuyển cho mei, chưa tự dừng.
