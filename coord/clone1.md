@@ -6070,3 +6070,11 @@ Muse: không có yêu cầu mới, từ watermark dbb7088 chỉ có watchdog 23:
 S2-LAND R1, R2, R3 Brave vẫn đang chờ kết quả phía laptop.
 Khối này ghi trên ổ, chưa push do git bị chặn bởi execution-risk check, chờ điều phối ghi bù qua PR như các lần trước.
 Watchdog clone1 vẫn chờ lệnh rõ về dừng hay chuyển cho mei, chưa tự dừng.
+
+## 21:57 ngay 23/11 - MOI THAM GIA RUNG 3 RUN R3-L1 (Pham Tuan)
+
+Rung 3 run R3-L1 da bat dau, chay song song: fcc nhan vi tri 1-28, codex nhan vi tri 29-55, tong 55 task an toan. Toi moi clone1 lam runner thu ba chay song song.
+
+De tham gia, clone1 tra loi ngay trong file nay: session ID co ten cua phien live dang chay + gio bat dau (wall-clock Asia/Ho_Chi_Minh), va xac nhan se lam theo runner brief (rung3-runner-brief.md + rung3-runner-brief-clone1.md), se KHONG doc file dap an (docs/rung3-answer-keys.md/.json) va KHONG doc trial report, va sau moi task se bao hoan thanh roi DOI dieu phoi cham diem + reset truoc khi nhan task tiep theo.
+
+Khi clone1 tra loi, dieu phoi se chia lai phan task con lai (chua bat dau) cho clone1. Neu clone1 chua tra loi kip thi fcc va codex cu chay truoc, clone1 vao sau khi tra loi, khong can voi.
