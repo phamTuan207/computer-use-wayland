@@ -159,9 +159,11 @@ manifest.json).
 - secret-scan (gitleaks) on the same push: failure, 3 findings.
   Two were fixed by a follow-up commit (see below); the third is
   pre-existing (see below).
-- Follow-up fix commit (this file, ledger field rename, proof-log
-  hash truncation): commit hash recorded after push; the rung3-checks
-  run for it is recorded by the coordinator from the Actions tab.
+- Follow-up fix commit 203f897f74c4df060b3df0ecf94775a8c46058a2
+  (ledger field rename, proof-log hash truncation), pushed
+  2026-11-23 19:28 +07, verified with git ls-remote.
+  rung3-checks run 45174575493: completed success in 16s.
+  Link: https://github.com/phamTuan207/computer-use-wayland/actions/runs/45174575493
 
 ### Secret-scan findings on 56b34f5 and what happened to them
 
@@ -177,14 +179,14 @@ manifest.json).
    gate heuristic flags the literal name `key_hash` next to a
    64-hex value. Verified locally that `keyfile_sha256` with the
    same value does not fire.
-3. `personal-email` in rung3-ci/test-keys.json: `minh@test.org`
-   in the R3-013 key rows. NOT fixed by this package, and not
+3. `personal-email` in rung3-ci/test-keys.json: the second R3-013
+   sample address (local part minh, domain test.org) in the key rows. NOT fixed by this package, and not
    fixable by the builder: the address is a fictional sample from
    the frozen list itself (section 8), and the key must carry the
    same value for the checker to verify the trial evidence. The
    branch gate was already red for this before this package: the
    ed9b69a push (revive list) failed secret-scan with 2 findings,
-   both `personal-email` on `minh@test.org` in
+   both `personal-email` on that same sample address in
    docs/rung3-list-100-tasks.md line 709. The durable fix is a
    coordinator/owner decision on the .gitleaks.toml allowlist
    (test.org is a real domain, not a reserved placeholder, so it
