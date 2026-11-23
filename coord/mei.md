@@ -619,3 +619,55 @@ Quy tac cung: khong tu review chinh minh. Moi claim "xong" phai co bang chung ch
 - Em KHONG lam theo yeu cau, vi 3 ly do, theo luat phan bien 01:54 va quyet dinh 01:37 cua Pham Tuan: (1) snapshot o tren laptop (/home/james), em khong co Tailscale/SSH vao may, khong doc duoc; (2) scorer 2 la MOT phien duy nhat dc7e0d0d do coordinator spawn luc 19:18, em khong spawn phien cham moi moi task; (3) subagent 21:57 cua em chi la kiem tra san sang, da xong, khong phai phien cham. Khong co verdict nao duoc tao ra tu phia em.
 - Duong dung: coordinator gui truc tiep goi bang chung cho dc7e0d0d (coordinator moi co quyen vao laptop va so huu phien do). Neu phien chet thi coordinator spawn phien thay the va ghi ID moi, theo quyet dinh 01:37.
 - Ghi chu them: ledger van chi co TEST row; roadmap plan dang o Phase 1 amendment, chua thay commit duyet tinh toi 02:09.
+
+## Ra soat list 55 task + key FREEZE-2: 25 phat hien da verify, 2026-11-24 06:16 gio Viet Nam
+
+- Nhiem vu tu Pham Tuan (tin 05:51 ngay 24/11): xem lai docs/rung3-list-100-tasks.md va docs/rung3-answer-keys.md tren todolist-push, tim premise sai, spec mo ho, dap an khong khop nhu R3-003 va R3-009 tung bi.
+- File da verify: list 747 dong sha256 3bbf7f6a..., key md 654 dong sha256 fdeb42d7..., key json sha256 5e67b37b..., deu khop FREEZE-2.
+- Phuong phap: 3 lane doc lap (premise/spec; key doi chieu list; san loi FREEZE-2), hoi dong 3 nguoi + redteam, verify doc lap tu dau danh sach cuoi. Khong cham diem, khong chay live, khong sua file goc.
+- Ket qua: 25 phat hien CONFIRMED (0 bi bac, 0 uncertain), 2 claim bi loai bo.
+
+HIGH (6):
+1. R3-026: coolors.co/generate/1E88E5 hien "Page Not Found" (HTTP 200 nhung SPA 404), buoc 3 khong lam duoc; Generate random hoa mau chua khoa, khong tao bang "tu mau goc".
+2. R3-041: "kich thuoc man hinh" tren browserleaks la do phan giai man hinh vat ly (screen.width/height), keo canh cua so khong doi duoc; chi inner/outer window doi.
+3. R3-088: tar -czf ca thu muc roi tar -tzf dem duoc 11 muc (them muc thu muc), key doi 10.
+4. R3-067: Pinta Freeform Shape la cong cu keo-tha (drag), bam 3 diem khong tao duoc tam giac (kiem tra tu source FreeformShapeTool.cs); khong co Shift de ve tron, fill mac dinh la outline-only trong khi rubric FAIL hinh chi vien.
+5. R3-082: list buoc 1 ghi gnome-calculator + che do khoa hoc; ruling key: dung omacalc (gnome-calculator khong co tren laptop), khong dung che do khoa hoc. Runner chi doc muc 6. Gia tri 71, 78, 120, 89, 25 dung.
+6. R3-089: fixture gia sau ~2026-11-30 19:21 (find -mtime -7 tra ve 0 thay vi 6); key da canh bao lam moi neu task 1 chay sau 2026-11-29, chua xac nhan da lam.
+
+MEDIUM-HIGH (7):
+7. R3-010: phim O la Ellipse, khong phai tron (can Shift); Ctrl+Shift+E chi mo hop thoai export, khong tu luu PNG.
+8. R3-093: split mac dinh 1000 dong (do duoc 12 phan), split -n 3 -d cho phan-00/01/02; chi --numeric-suffixes=1 moi cho phan-01/02/03. List khong ghi flag nao.
+9. R3-029: key doi anh chup wishlist o 3 trang thai (5, 4, 5) nhung list khong bao chup; quy tac chung chi doi 1 anh trang thai cuoi. Phan tai khoan KHONG mau thuan (tao truoc task 1, runner dang nhap) theo verifier.
+10. R3-074: key doi anh chup thong bao loi luc dau, list chi bao "ghi lai thong bao loi".
+11. R3-075: key doi anh chup terminal (phien ban Python, duong dan venv, output), list khong bao chup; khong co duong xu ly neu pip/PyPI/venv loi.
+12. R3-027: 3 ten test dai 16/16/18 ky tu, vuot gioi han 15 ky tu cua X, cot X khong bao gio co ket qua y nghia.
+13. R3-086: ping khong -c, khong -w, khong lenh dung; ping tran chay den khi SIGINT, runner khong co cach dung theo huong dan de ghi so goi.
+
+MEDIUM (7):
+14. R3-009: key khang dinh moi trang it nhat 1 loi WAVE nhung so WAVE day du chua tung kiem tra bang trinh duyet; khong co duong xu ly neu trang co 0 loi luc chay.
+15. R3-011: timeanddate.com bi chan o muc curl (HTTP 403, 2026-11-23 19:23), can xac nhan bang trinh duyet truoc task 1; R3-028 va R3-046 cung dung timeanddate.com nhung khong co ruling. 5 thu trong tuan deu dung. Luu y: verifier curl duoc HTTP 200 luc 06:10 ngay 24/11, co the 403 la tuy IP/thoi diem.
+16. R3-016: chua co tai khoan Mockaroo, phai tao/cap truoc task 1; list khong co buoc dang nhap; nguon mau thuan nhau ve viec Mockaroo co can dang ky khong.
+17. R3-017: top 5 theo bo nho trong Task Manager gom ca tien trinh Browser/GPU/extension, khong nhat thiet la 5 tab da mo; gia tri bo nho/CPU troi theo thoi gian giua luc ghi va luc chup.
+18. R3-040: khong co chinh sach retry/backoff cho web.archive.org HTTP 429 (chuoi "429" xuat hien 0 lan trong ca 2 file); run da bi 429 2 lan o task nay.
+19. Bang tier: tieu de ghi 59 muc nhung bang (dong 45-63) chi co 56 ID, thieu R3-074, R3-075, R3-076 (ca 3 la Tier B o tieu de muc rieng va trong JSON tiers).
+20. R3-003 (yeu hon claim goc): "ngay" mo ho; Al Jazeera va CNA deu co ca 9 Oct 2026 (cong bo) va 10 Dec (le trao), NPR chi co ngay cong bo; runner ghi 10 Dec se truot key (9 Oct).
+
+LOW (5):
+21. R3-022: keys dong 283 ghi "bo mạch chủ" thieu dau mu (phai la "bộ"), trong khi tieu de key noi ban dich viet co dau.
+22. DP-02: list muc 8 ghi moi file 20-100 dong, key ghi 20-60 dong (bang tung file: 20-60).
+23. DP-05: list muc 8 van ghi sqliteonline.com, ruling key da chuyen sang sqlite3; cau ve rui ro dich vu chung trong list gio sai.
+24. R3-072: list buoc 6 ghi ~/rung3/nd41-ket-qua.txt, nhung fixture task nay la d72 (nd41 la cua R3-075).
+25. List muc 4 van giu quy tac ha tang LibreOffice, trong khi log 12:03 muc 9 noi quy tac do vo nghia sau khi 18 task office bi xoa.
+
+Loai bo (verify doc lap xac nhan):
+- R3-004: live go.dev/doc/install van ghi go1.14.3.linux-amd64.tar.gz dung nhu key (4 lan fetch doc lap). Claim goc sai.
+- R3-055: quy tac chung list dong 31 da doi 1 anh trang thai cuoi moi task, bao phu anh cay thu muc.
+- R3-003 dang goc ("ca 3 bai deu co 2 ngay") sai: NPR khong co 10 Dec; chi 2/3 bai co ca 2 ngay.
+
+Chua xac dinh duoc tu VM (can laptop):
+- R3-040 snapshot cu nhat 2011-01-28 co that la cu nhat khong (CDX bi chan, run bi 429).
+- R3-074 10 gia tri tong ky vong (fixture script chi co tren laptop).
+- R3-098/099 so lieu tung nhom (CSV chi co tren laptop).
+
+Triage goi y: R3-089 refresh va R3-009 kiem tra WAVE bang trinh duyet la 2 thu co the lam hong task hoac buoc doi key truoc khi chay; anh chup key doi nhung list khong bao lam 3 task (R3-029, R3-074, R3-075) khong pass duoc nhu hien tai; R3-026, R3-041, R3-088, R3-067 la 4 task khong the lam dung nhu huong dan. Tat ca deu can sua bang amendment + re-freeze hoac exception ghi ro truoc task 1, theo luat dong bang. Em khong tu sua file da dong bang, cho quyet dinh cua coordinator/chu.
